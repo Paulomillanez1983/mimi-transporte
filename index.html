@@ -70,14 +70,20 @@ body {
   gap: 12px;
 }
 
+/* Imagen del Jeep/SUV estilo Toyota SW4 */
 .vehicle-img {
-  width: 110px;  /* Un poco más grande para que se vea mejor */
-  height: 65px;
+  width: 90px;
+  height: 55px;
   object-fit: contain;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-  /* No usar content: url() aquí, usar src en el HTML */
+  content: url('https://purepng.com/public/uploads/large/purepng.com-black-toyota-fortuner-carcarvehicletransporttoyota-9615246593220qgnl.png');
 }
-  .logo-title {
+
+.logo-section {
+  color: white;
+}
+
+.logo-title {
   font-size: 1.8rem;
   font-weight: 800;
   letter-spacing: 1px;
@@ -679,15 +685,11 @@ body {
 <!-- Header -->
 <header class="header">
   <div class="header-content">
-<!-- Header -->
-<header class="header">
-  <div class="header-content">
     <div class="vehicle-section">
-      <!-- Imagen del Jeep Renegade gris grafito -->
-      <img src="https://www.pngmart.com/files/22/Jeep-Renegade-PNG-Clipart.png" 
-           alt="Jeep Renegade MIMI" 
+      <img src="https://purepng.com/public/uploads/large/purepng.com-black-toyota-fortuner-carcarvehicletransporttoyota-9615246593220qgnl.png" 
+           alt="SUV MIMI" 
            class="vehicle-img"
-           onerror="this.src='https://purepng.com/public/uploads/large/purepng.com-jeep-renegade-carcarvehicletransportjeep-961524660343l6q3e.png'">
+           onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
       <div class="logo-section">
         <div class="logo-title">MIMI</div>
         <div class="logo-subtitle">Transporte Escolar</div>
@@ -701,7 +703,7 @@ body {
       </div>
     </div>
   </div>
-</header>       
+</header>
 
 <div class="container">
   <!-- Hero -->
