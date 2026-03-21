@@ -28,7 +28,6 @@
 
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= MAPS_API_KEY ?>&libraries=places&language=es&region=AR&callback=inicializarAutocomplete" async defer></script>
 
-<script src="https://maps.googleapis.com/maps/api/js?key=<?= MAPS_API_KEY ?>&libraries=places&language=es&region=AR&callback=inicializarAutocomplete" async defer></script>
 
 <style>
 :root {
@@ -970,21 +969,20 @@ body {
       <button type="button" class="dia-btn" onclick="toggleDia(this, 'Jue')">Jue</button>
       <button type="button" class="dia-btn" onclick="toggleDia(this, 'Vie')">Vie</button>
     </div>
-    <!-- Selector de mes de referencia -->
+<!-- Selector de mes de referencia - ARRIBA del formulario -->
 <div class="campo" style="margin: 25px 0 30px; text-align: center;">
   <label style="font-size: 1.1rem; font-weight: bold; color: var(--verde-oscuro); display: block; margin-bottom: 12px;">
     📅 Mes de referencia para el cálculo mensual
   </label>
   <div class="tipo-viaje" style="max-width: 420px; margin: 0 auto;">
-<button type="button" class="activo" id="btn-mes-actual" onclick="cambiarMesReferencia('actual')">
-  Mes actual (<span id="nombre-mes-actual"></span>)
-</button>
-<button type="button" id="btn-mes-siguiente" onclick="cambiarMesReferencia('siguiente')">
-  Mes siguiente (<span id="nombre-mes-siguiente"></span>)
+    <button type="button" class="btn-mes-selector activo" data-mes="actual" onclick="cambiarMesReferencia('actual')">
+      Mes actual (<span class="nombre-mes-actual"></span>)
+    </button>
+    <button type="button" class="btn-mes-selector" data-mes="siguiente" onclick="cambiarMesReferencia('siguiente')">
+      Mes siguiente (<span class="nombre-mes-siguiente"></span>)
     </button>
   </div>
 </div>
-
     <div class="campo" style="margin-top: 24px;">
       <label>🔄 Tipo de viaje</label>
       <div class="tipo-viaje">
@@ -1055,21 +1053,20 @@ body {
         <div class="precio-monto" id="precio-por-viaje">$0</div>
         <span class="precio-periodo" id="tipo-viaje-texto">Solo ida</span>
       </div>
-      <!-- Selector de mes de referencia -->
+<!-- Dentro de #resultado, si querés cambiar el mes desde acá también -->
 <div class="campo" style="margin: 20px 0; text-align: center;">
-  <label style="font-size: 1.1rem; font-weight: bold; color: var(--verde-oscuro);">
-    📅 Mes de referencia para el cálculo mensual
+  <label style="font-size: 0.9rem; color: #666;">
+    Calculado para: <strong id="mes-referencia">este mes</strong>
   </label>
-  <div style="display: flex; justify-content: center; gap: 15px; margin-top: 12px; flex-wrap: wrap;">
-    <button type="button" class="activo" id="btn-mes-actual" onclick="cambiarMesReferencia('actual')">
-      Mes actual (<span id="nombre-mes-actual"></span>)
+  <div style="display: flex; justify-content: center; gap: 10px; margin-top: 8px;">
+    <button type="button" class="btn-mes-selector activo" data-mes="actual" onclick="cambiarMesReferencia('actual')" style="padding: 8px 16px; font-size: 0.85rem;">
+      <span class="nombre-mes-actual"></span>
     </button>
-    <button type="button" id="btn-mes-siguiente" onclick="cambiarMesReferencia('siguiente')">
-      Mes siguiente (<span id="nombre-mes-siguiente"></span>)
+    <button type="button" class="btn-mes-selector" data-mes="siguiente" onclick="cambiarMesReferencia('siguiente')" style="padding: 8px 16px; font-size: 0.85rem;">
+      <span class="nombre-mes-siguiente"></span>
     </button>
   </div>
 </div>
-
       <!-- INFO CLARA DEL VIAJE -->
       <div class="info-viaje-simple">
         <div class="info-item">
@@ -1093,7 +1090,7 @@ body {
       <div class="precio-mensual-section">
         <div class="precio-mensual-header">
           <span class="precio-mensual-label">💰 Precio mensual estimado</span>
-          <span class="precio-mensual-mes" id="mes-referencia">para abril</span>
+          <span class="precio-mensual-mes" id="mes-referencia-texto">para abril</span>
         </div>
         
         <div class="precio-mensual-monto" id="precio-mensual">$0</div>
@@ -1181,33 +1178,76 @@ body {
 let tipoViaje = 'ida';
 let diasSeleccionados = [];
 let datosCotizacion = null;
-let mesReferencia = 'actual';  // por defecto
+let mesReferencia = 'actual';
 
-// Actualiza los nombres de los meses en los botones al cargar
+// CACHE GLOBAL - CLAVE PARA LA OPTIMIZACIÓN
+let cacheCotizacionBase = null;
+
+// Nombres de meses para mostrar
+const nombresMeses = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+];
+
 function actualizarNombresMeses() {
   const hoy = new Date();
-  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", 
-                 "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  let mesActualIdx = hoy.getMonth();
+  let mesSiguienteIdx = (mesActualIdx + 1) % 12;
   
-  let mesActual = meses[hoy.getMonth()];
-  let mesSiguiente = meses[(hoy.getMonth() + 1) % 12];
+  let mesActual = nombresMeses[mesActualIdx];
+  let mesSiguiente = nombresMeses[mesSiguienteIdx];
   
-  // Capitalizar primera letra
+  // Capitalizar
   mesActual = mesActual.charAt(0).toUpperCase() + mesActual.slice(1);
   mesSiguiente = mesSiguiente.charAt(0).toUpperCase() + mesSiguiente.slice(1);
   
-  document.getElementById('nombre-mes-actual').textContent = mesActual;
-  document.getElementById('nombre-mes-siguiente').textContent = mesSiguiente;
+  // Actualizar TODOS los elementos con estas clases (evita duplicados de ID)
+  document.querySelectorAll('.nombre-mes-actual').forEach(el => el.textContent = mesActual);
+  document.querySelectorAll('.nombre-mes-siguiente').forEach(el => el.textContent = mesSiguiente);
 }
 
-function cambiarMesReferencia(modo) {
-  mesReferencia = modo;
-  document.getElementById('btn-mes-actual').classList.toggle('activo', modo === 'actual');
-  document.getElementById('btn-mes-siguiente').classList.toggle('activo', modo === 'siguiente');
-  
-  if (datosCotizacion) {
-    cotizar();  // Recalcula con el nuevo mes
+function calcularViajesMesFrontend(diasSeleccionados, tipoViaje, mesReferencia) {
+  const hoy = new Date();
+  let mes = hoy.getMonth();
+  let anio = hoy.getFullYear();
+
+  if (mesReferencia === 'siguiente') {
+    mes++;
+    if (mes > 11) {
+      mes = 0;
+      anio++;
+    }
   }
+
+  const mapaDias = {
+    'Dom': 0, 'Lun': 1, 'Mar': 2, 'Mié': 3, 'Jue': 4, 'Vie': 5, 'Sáb': 6
+  };
+
+  const diasNumeros = diasSeleccionados.map(d => mapaDias[d]).filter(d => d !== undefined);
+  const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+  let contador = 0;
+
+  for (let dia = 1; dia <= diasEnMes; dia++) {
+    const fecha = new Date(anio, mes, dia);
+    if (diasNumeros.includes(fecha.getDay())) {
+      contador++;
+    }
+  }
+
+  const multiplicador = tipoViaje === 'ida_vuelta' ? 2 : 1;
+  const totalViajes = contador * multiplicador;
+  
+  const minViajes = Math.max(1, Math.floor(totalViajes * 0.85));
+  const rango = minViajes === totalViajes 
+    ? `${totalViajes} viajes` 
+    : `${minViajes}–${totalViajes} viajes`;
+
+  return {
+    cantidad: totalViajes,
+    rango: rango,
+    mesNombre: nombresMeses[mes],
+    anio: anio
+  };
 }
 
 function toggleDia(boton, dia) {
@@ -1227,7 +1267,55 @@ function cambiarTipo(tipo) {
   document.getElementById('btn-ida-vuelta').classList.toggle('activo', tipo === 'ida_vuelta');
   document.getElementById('horario-vuelta-container').classList.toggle('visible', tipo === 'ida_vuelta');
   if (tipo !== 'ida_vuelta') document.getElementById('horario-vuelta').value = '';
+  
+  // Si hay cache, recalcular precios inmediatamente sin llamar backend
+  if (cacheCotizacionBase) {
+    recalcularDesdeCache();
+  }
 }
+
+function cambiarMesReferencia(modo) {
+  mesReferencia = modo;
+  
+  // Actualizar UI de botones (usando clase en lugar de ID duplicado)
+  document.querySelectorAll('.btn-mes-selector').forEach(btn => {
+    btn.classList.remove('activo');
+  });
+  document.querySelectorAll(`[data-mes="${modo}"]`).forEach(btn => {
+    btn.classList.add('activo');
+  });
+  
+  // Si tenemos cache, recalcular sin llamar al backend
+  if (cacheCotizacionBase) {
+    recalcularDesdeCache();
+  } else if (datosCotizacion) {
+    // Si no hay cache pero sí datos, llamar cotizar completo
+    cotizar();
+  }
+}
+
+function recalcularDesdeCache() {
+  if (!cacheCotizacionBase) return;
+  
+  const viajesMes = calcularViajesMesFrontend(
+    cacheCotizacionBase.dias, 
+    cacheCotizacionBase.tipoViaje, 
+    mesReferencia
+  );
+  
+  const precioMensual = cacheCotizacionBase.precioPorViaje * viajesMes.cantidad;
+  
+  // Actualizar UI
+  actualizarUIFinal({
+    ...cacheCotizacionBase,
+    viajesPorMes: viajesMes.cantidad,
+    viajesPorMesRango: viajesMes.rango,
+    mesReferencia: viajesMes.mesNombre,
+    precioMensual: precioMensual,
+    precioMensualFormateado: "$" + precioMensual.toLocaleString('es-AR')
+  });
+}
+
 function inicializarAutocomplete() {
   if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
     mostrarErrorMaps('No se pudo cargar el servicio de mapas');
@@ -1240,44 +1328,36 @@ function inicializarAutocomplete() {
     types: ['geocode', 'establishment']
   };
 
-  const inputDesde = document.getElementById('desde');
-  const inputHasta = document.getElementById('hasta');
-
-  autocompleteDesde = new google.maps.places.Autocomplete(inputDesde, opciones);
-  autocompleteHasta = new google.maps.places.Autocomplete(inputHasta, opciones);
+  const autocompleteDesde = new google.maps.places.Autocomplete(document.getElementById('desde'), opciones);
+  const autocompleteHasta = new google.maps.places.Autocomplete(document.getElementById('hasta'), opciones);
 
   autocompleteDesde.addListener('place_changed', () => {
     const lugar = autocompleteDesde.getPlace();
-    if (lugar.formatted_address) inputDesde.value = lugar.formatted_address;
-    setTimeout(() => document.querySelectorAll('.pac-container').forEach(c => c.style.display = 'none'), 100);
+    if (lugar.formatted_address) document.getElementById('desde').value = lugar.formatted_address;
   });
 
   autocompleteHasta.addListener('place_changed', () => {
     const lugar = autocompleteHasta.getPlace();
-    if (lugar.formatted_address) inputHasta.value = lugar.formatted_address;
-    setTimeout(() => document.querySelectorAll('.pac-container').forEach(c => c.style.display = 'none'), 100);
+    if (lugar.formatted_address) document.getElementById('hasta').value = lugar.formatted_address;
   });
 
-  [inputDesde, inputHasta].forEach(input => {
+  // Prevenir submit con Enter en autocomplete
+  [document.getElementById('desde'), document.getElementById('hasta')].forEach(input => {
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); }
+      if (e.key === 'Enter') { e.preventDefault(); }
     });
   });
 }
 
 function mostrarErrorMaps(mensaje) {
   const errorEl = document.getElementById('maps-error');
-  errorEl.textContent = '⚠️ ' + mensaje + '. Podés escribir la dirección manualmente.';
-  errorEl.classList.add('visible');
+  if (errorEl) {
+    errorEl.textContent = '⚠️ ' + mensaje + '. Podés escribir la dirección manualmente.';
+    errorEl.classList.add('visible');
+  }
 }
 
 window.gm_authFailure = () => mostrarErrorMaps('Error de autenticación con Google Maps');
-
-window.addEventListener('error', (e) => {
-  if (e.target?.src?.includes('maps.googleapis.com')) {
-    mostrarErrorMaps('No se pudo cargar el servicio de mapas');
-  }
-}, true);
 
 function cotizar() {
   const nombre = document.getElementById('nombre').value.trim();
@@ -1286,6 +1366,7 @@ function cotizar() {
   const horarioIda = document.getElementById('horario-ida').value;
   const horarioVuelta = document.getElementById('horario-vuelta').value;
 
+  // Validaciones
   if (!nombre) { mostrarError('Ingresá el nombre del niño/a'); return; }
   if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
   if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
@@ -1301,6 +1382,7 @@ function cotizar() {
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Calculando...';
 
+  // Llamar al backend (SOLO UNA VEZ)
   google.script.run
     .withSuccessHandler((res) => {
       btn.disabled = false;
@@ -1311,24 +1393,68 @@ function cotizar() {
         return; 
       }
 
-      datosCotizacion = {
-        nombre, desde, hasta,
+      // GUARDAR EN CACHE - ESTO ES CLAVE
+      cacheCotizacionBase = {
+        nombre: nombre,
+        desde: desde,
+        hasta: hasta,
         dias: [...diasSeleccionados],
-        tipo: tipoViaje,
-        horarioIda, horarioVuelta,
-        km: res.kmTotal,
+        tipoViaje: tipoViaje,
+        horarioIda: horarioIda,
+        horarioVuelta: horarioVuelta,
+        kmTotal: res.kmTotal,
         precioPorViaje: res.precioPorViaje,
-        precioMensual: res.precioMensual,
-        precio: res.precio,
         duracion: res.duracionIda,
-        mesReferencia: mesReferencia  // guardamos la elección actual
+        ruta: res.ruta,
+        esIdaVuelta: res.esIdaVuelta
       };
-      function animarContador(elementId, valorFinal) {
+
+      // Calcular mes seleccionado
+      const viajesMes = calcularViajesMesFrontend(diasSeleccionados, tipoViaje, mesReferencia);
+      const precioMensual = res.precioPorViaje * viajesMes.cantidad;
+
+      // Completar datos para mostrar
+      const datosCompletos = {
+        ...res,
+        viajesPorMes: viajesMes.cantidad,
+        viajesPorMesRango: viajesMes.rango,
+        mesReferencia: viajesMes.mesNombre,
+        precioMensual: precioMensual,
+        precioMensualFormateado: "$" + precioMensual.toLocaleString('es-AR')
+      };
+
+     datosCotizacion = {
+       nombre: nombre,
+       desde: desde,
+       hasta: hasta,
+       dias: [...diasSeleccionados],
+       tipo: tipoViaje,  // ← Esto ya está bien
+       horarioIda: horarioIda,
+       horarioVuelta: horarioVuelta,
+       km: res.kmTotal,
+       precioMensual: precioMensual,
+       precio: res.precioPorViaje,
+       fecha: new Date().toISOString().split('T')[0], // ← AGREGAR ESTO
+       telefono: ''
+     };
+
+      mostrarResultado(datosCompletos);
+    })
+    .withFailureHandler((err) => {
+      console.error(err);
+      btn.disabled = false;
+      btn.innerHTML = '<span>🧮 Calcular Cotización</span>';
+      mostrarError('Error de conexión. Intentá de nuevo.');
+    })
+    .cotizar(desde, hasta, diasSeleccionados, tipoViaje, null); // null = clientId generado automático
+}
+
+function animarContador(elementId, valorFinal) {
   const elemento = document.getElementById(elementId);
   if (!elemento) return;
   
-  const duracion = 1200;
-  const pasos = 30;
+  const duracion = 1000;
+  const pasos = 20;
   const incremento = valorFinal / pasos;
   let paso = 0;
   
@@ -1344,52 +1470,42 @@ function cotizar() {
   }, duracion / pasos);
 }
 
-      mostrarResultado(res);
-    })
-    .withFailureHandler(() => {
-      btn.disabled = false;
-      btn.innerHTML = '<span>🧮 Calcular Cotización</span>';
-      mostrarError('Error de conexión. Intentá de nuevo.');
-    })
-    .cotizar(desde, hasta, diasSeleccionados, tipoViaje, null, mesReferencia);
-}
-
-function mostrarResultado(res) {
-  // 1. Precio por viaje
+function actualizarUIFinal(res) {
+  // Actualizar precios con animación
   animarContador('precio-por-viaje', res.precioPorViaje || 0);
+  animarContador('precio-mensual', res.precioMensual || 0);
+  animarContador('precio-mensual-alt', res.precioMensual || 0);
+  animarContador('precio-semanal', res.precioSemanal || 0);
+  
+  // Actualizar textos
   document.getElementById('tipo-viaje-texto').textContent = res.esIdaVuelta 
     ? 'Ida y vuelta incluido' 
     : 'Solo ida';
-
-  // 2. Info del viaje
+    
   document.getElementById('info-distancia').textContent = res.kmTotal + ' km';
   document.getElementById('info-duracion').textContent = res.duracionIda + ' min';
   document.getElementById('info-dias-semana').textContent = 
     res.dias.join(', ') + ' (' + res.cantidadDias + (res.cantidadDias === 1 ? ' día' : ' días') + ')';
-
-  // 3. Precio mensual + mes elegido
-  animarContador('precio-mensual', res.precioMensual || 0);
-  animarContador('precio-mensual-alt', res.precioMensual || 0);
-  
+    
   const mesTexto = res.mesReferencia ? `para ${res.mesReferencia}` : 'para este mes';
   document.getElementById('mes-referencia').textContent = mesTexto;
+document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mesReferencia || 'este mes');
   document.getElementById('mes-nombre').textContent = res.mesReferencia || 'este mes';
   
   document.getElementById('viajes-mes-detalle').textContent = `~${res.viajesPorMesRango || '0 viajes'}`;
   document.getElementById('precio-unitario-detalle').textContent = res.precioPorViajeFormateado || '$0';
-  // Nombres de días para el texto
+  
+  // Nombres de días largos
   const nombresDiasLargos = {
     'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miércoles', 
     'Jue': 'jueves', 'Vie': 'viernes'
   };
   const diasLargos = res.dias.map(d => nombresDiasLargos[d]);
   document.getElementById('dias-nombres').textContent = 
-    diasLargos.length === 1 ? diasLargos[0] : diasLargos.slice(0, -1).join(', ') + ' y ' + diasLargos.slice(-1);
+    diasLargos.length === 1 ? diasLargos[0] : 
+    diasLargos.slice(0, -1).join(', ') + ' y ' + diasLargos.slice(-1);
 
-  // 4. PRECIO SEMANAL
-  animarContador('precio-semanal', res.precioSemanal);
-
-  // 5. MENSAJE PERSONALIZADO DE AHORRO
+  // Mensaje personalizado
   const mensajeAhorro = document.getElementById('mensaje-ahorro');
   if (res.cantidadDias >= 3) {
     mensajeAhorro.innerHTML = `✅ <strong>¡Buena elección!</strong> Usando el servicio ${res.cantidadDias} días por semana, 
@@ -1402,37 +1518,29 @@ function mostrarResultado(res) {
       pagar por viaje o consultar por un abono flexible.`;
   }
 
-  // 6. DETALLES TÉCNICOS (ocultos o menores)
   document.getElementById('detalle-ruta').textContent = res.ruta;
   document.getElementById('detalle-id').textContent = 'COT-' + Date.now().toString(36).toUpperCase();
+}
 
-  // Mostrar resultado y scroll
+function mostrarResultado(res) {
+  actualizarUIFinal(res);
+  
+  // Mostrar sección de resultado
   document.getElementById('resultado').classList.add('visible');
   document.getElementById('form-confirmar').classList.remove('visible');
   document.getElementById('success-message').classList.remove('visible');
-  document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-function animarContador(elementId, valorFinal) {
-  const elemento = document.getElementById(elementId);
-  const duracion = 1000;
-  const pasos = 25;
-  const incremento = valorFinal / pasos;
-  let paso = 0;
   
-  const timer = setInterval(() => {
-    paso++;
-    const actual = Math.round(incremento * paso);
-    elemento.textContent = '$' + actual.toLocaleString('es-AR');
-    
-    if (paso >= pasos) {
-      elemento.textContent = '$' + valorFinal.toLocaleString('es-AR');
-      clearInterval(timer);
-    }
-  }, duracion / pasos);
+  // Scroll suave
+  setTimeout(() => {
+    document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
 }
 
 function mostrarConfirmacion() {
-  if (!datosCotizacion) { mostrarError('Primero calculá la cotización'); return; }
+  if (!datosCotizacion) { 
+    mostrarError('Primero calculá la cotización'); 
+    return; 
+  }
   document.getElementById('form-confirmar').classList.add('visible');
   document.getElementById('telefono').focus();
 }
@@ -1441,13 +1549,13 @@ function enviarReserva(boton) {
   const telefono = document.getElementById('telefono').value.trim();
   
   if (!telefono || telefono.replace(/\D/g, '').length < 8) {
-    mostrarError('Ingresá un teléfono válido'); return;
+    mostrarError('Ingresá un teléfono válido'); 
+    return;
   }
 
-    const datos = {
+  const datos = {
     ...datosCotizacion,
-    telefono,
-    precioMensual: datosCotizacion.precioMensual // explícito
+    telefono: telefono
   };
   
   const textoOriginal = boton.innerHTML;
@@ -1459,13 +1567,20 @@ function enviarReserva(boton) {
       boton.disabled = false;
       boton.innerHTML = textoOriginal;
       
-      if (res.error) { mostrarError(res.error); return; }
+      if (res.error) { 
+        mostrarError(res.error); 
+        return; 
+      }
 
       document.getElementById('reserva-id').textContent = res.idReserva;
       document.getElementById('success-message').classList.add('visible');
       document.getElementById('form-confirmar').classList.remove('visible');
-      document.getElementById('success-message').scrollIntoView({ behavior: 'smooth' });
+      
+      setTimeout(() => {
+        document.getElementById('success-message').scrollIntoView({ behavior: 'smooth' });
+      }, 100);
 
+      // Abrir WhatsApp
       setTimeout(() => {
         const mensaje = `Hola! Vi en la web de Mimi Transporte y quiero reservar:
 
@@ -1481,7 +1596,7 @@ function enviarReserva(boton) {
 📱 Tel: ${telefono}`;
 
         window.open('https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje), '_blank');
-      }, 800);
+      }, 500);
     })
     .withFailureHandler(() => {
       boton.disabled = false;
@@ -1495,17 +1610,19 @@ function mostrarError(mensaje) {
   const el = document.getElementById('error');
   el.textContent = mensaje;
   el.classList.add('visible');
-  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  setTimeout(() => {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
 }
 
 function ocultarError() {
   document.getElementById('error').classList.remove('visible');
 }
-// Ejecutar al cargar la página
+
+// Inicializar al cargar
 window.onload = function() {
   actualizarNombresMeses();
 };
 </script>
-
 </body>
 </html>
