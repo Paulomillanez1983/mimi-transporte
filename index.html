@@ -734,103 +734,91 @@ body {
   .precio-box-valor { font-size: 1.2rem; }
 }
 
-/* GOOGLE MAPS AUTOCOMPLETE - CORREGIDO PARA MÓVIL */
+/* GOOGLE MAPS AUTOCOMPLETE */
 .pac-container {
   background-color: #ffffff !important;
-  border-radius: 20px 20px 0 0 !important;
-  box-shadow: 0 -10px 40px rgba(0,0,0,0.3) !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  border-top: 3px solid #e91e63 !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-bottom: none !important;
-  z-index: 2147483647 !important;
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  top: auto !important;
-  width: 100% !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+  font-family: inherit !important;
+  margin-top: 8px !important;
+  border: 1px solid #e8e8e8 !important;
+  z-index: 10000 !important;
+  position: absolute !important;
   max-width: 100% !important;
-  max-height: 70vh !important;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch !important;
-  margin: 0 !important;
-  padding: 10px 0 !important;
+  overflow: hidden;
 }
 
 .pac-item {
   background-color: #ffffff !important;
   color: #333333 !important;
-  padding: 18px 20px !important;
+  padding: 14px 18px !important;
   cursor: pointer !important;
-  border-bottom: 1px solid #f0f0f0 !important;
-  font-size: 16px !important;
+  border-bottom: 1px solid #f5f5f5 !important;
+  font-size: 15px !important;
   line-height: 1.5 !important;
   display: flex !important;
   align-items: flex-start !important;
   text-align: left !important;
-  min-height: 60px !important;
+  transition: background 0.2s;
 }
 
-.pac-item:hover,
-.pac-item-selected {
-  background-color: #fce4ec !important;
-  border-left: 4px solid #e91e63 !important;
-  padding-left: 16px !important;
+.pac-item:hover, .pac-item-selected {
+  background-color: #f8f9fa !important;
 }
 
-.pac-item:last-child {
-  border-bottom: none !important;
-}
+.pac-icon { display: none !important; }
 
 .pac-item::before {
   content: "📍";
   margin-right: 12px;
   flex-shrink: 0;
   font-size: 1.2rem;
-  margin-top: 2px;
 }
 
 .pac-item-query {
-  color: #e91e63 !important;
-  font-size: 16px !important;
-  font-weight: 700 !important;
+  color: #000000 !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
   display: block !important;
-  margin-bottom: 4px !important;
-}
-
-.pac-matched {
-  font-weight: 800 !important;
-  color: #c2185b !important;
 }
 
 .pac-secondary-text {
-  color: #666666 !important;
-  font-size: 14px !important;
+  color: #888888 !important;
+  font-size: 13px !important;
   display: block !important;
-  line-height: 1.4 !important;
-  white-space: normal !important;
-  word-wrap: break-word !important;
+  margin-top: 3px !important;
 }
 
-.pac-icon,
-.pac-logo,
-.pac-logo:after,
-.hdpi .pac-logo:after {
-  display: none !important;
+.pac-matched {
+  font-weight: 700 !important;
+  color: var(--rosa) !important;
 }
 
-/* Handle visual para indicar que se puede arrastrar */
-.pac-container::before {
-  content: "";
-  display: block;
-  width: 40px;
-  height: 5px;
-  background: #ddd;
-  border-radius: 3px;
-  margin: 8px auto 15px;
-}.precio-destacado.simple {
+.pac-logo:after { display: none !important; }
+#btn-mes-actual.activo,
+#btn-mes-siguiente.activo {
+  background: linear-gradient(135deg, var(--verde) 0%, var(--verde-oscuro) 100%) !important;
+  color: white !important;
+  box-shadow: 0 6px 20px rgba(76,175,80,0.4) !important;
+  transform: translateY(-1px) !important;
+}
+  .card-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f7f7f7;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.card-input input {
+  border: none;
+  background: transparent;
+  text-align: right;
+  font-size: 1rem;
+}
+.precio-destacado.simple {
   background: white;
   box-shadow: none;
   color: #2a5298;
