@@ -1121,10 +1121,9 @@ body {
       <!-- NOTA IMPORTANTE -->
       <div class="nota-clara">
         <p>📌 <strong>¿Cómo se calcula?</strong></p>
-        <p>El precio por viaje se calcula según la distancia recorrida. 
-        <p>📌 <strong>¿Cómo se calcula?</strong></p>
-        <p>El precio por viaje se calcula según la distancia recorrida. 
-        El mensual es una estimación basada en los días seleccionados dentro del mes de <span id="mes-nombre">abril</span>.</p> 
+      <p>El precio por viaje se calcula según la distancia recorrida.</p>
+      <p>El mensual es una estimación basada en los días seleccionados dentro del mes de <span id="mes-nombre">abril</span>.</p>
+     .</p> 
         que hay en el mes de <span id="mes-nombre">abril</span>.</p>
         <p style="margin-top: 10px; font-size: 0.85rem; opacity: 0.8;">
         💡 Tip: Si necesitás transporte todos los meses, consultá por nuestros planes de abono con descuento.
@@ -1495,18 +1494,16 @@ function actualizarUIFinal(res) {
     
   document.getElementById('info-distancia').textContent = res.kmTotal + ' km';
   document.getElementById('info-duracion').textContent = res.duracionIda + ' min';
-  const nombresDiasLargos = {
-  'Lun': 'Lunes',
-  'Mar': 'Martes',
-  'Mié': 'Miércoles',
-  'Jue': 'Jueves',
-  'Vie': 'Viernes'
+const nombresDiasLargos = {
+  'Lun': 'lunes',
+  'Mar': 'martes',
+  'Mié': 'miércoles',
+  'Jue': 'jueves',
+  'Vie': 'viernes'
 };
 
 document.getElementById('info-dias-semana').textContent =
   res.dias.map(d => nombresDiasLargos[d]).join(', ');
- 
-  res.dias.join(', ');
 
     
   const mesTexto = res.mesReferencia ? `para ${res.mesReferencia}` : 'para este mes';
@@ -1526,6 +1523,7 @@ document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mes
   document.getElementById('dias-nombres').textContent = 
     diasLargos.length === 1 ? diasLargos[0] : 
     diasLargos.slice(0, -1).join(', ') + ' y ' + diasLargos.slice(-1);
+
 
   // Mensaje personalizado
   const mensajeAhorro = document.getElementById('mensaje-ahorro');
