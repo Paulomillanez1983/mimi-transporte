@@ -76,15 +76,73 @@ body {
   padding-bottom: 40px;
 }
 
-/* HEADER */
+/* HEADER MEJORADO */
 .header { 
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); 
-  padding: 20px; 
+  background: linear-gradient(135deg, var(--azul-cielo) 0%, var(--rosa-claro) 100%); 
+  padding: 50px 20px 60px; 
   text-align: center; 
-  color: white;
+  position: relative;
+  overflow: hidden;
 }
 
-/* CONTENEDOR */
+.header::before, .header::after { 
+  content: '☁️'; 
+  position: absolute; 
+  font-size: 4rem; 
+  opacity: 0.3;
+  animation: float 6s ease-in-out infinite;
+}
+
+.header::before { top: 20px; left: 30px; }
+.header::after { top: 40px; right: 40px; animation-delay: 3s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
+}
+
+.logo-ninos { 
+  font-size: 5rem; 
+  margin-bottom: 15px;
+  display: inline-block;
+  animation: bounce 2s infinite;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.header h1 { 
+  font-family: Georgia, serif;
+  font-size: 3.5rem; 
+  color: var(--rosa); 
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  font-weight: bold;
+  font-style: italic;
+  margin-bottom: 5px;
+}
+
+.header h2 { 
+  font-size: 1rem; 
+  color: #444; 
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.frase { 
+  font-size: 1.4rem; 
+  color: var(--azul-oscuro);
+  font-style: italic;
+  margin-top: 25px;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+}
+
+/* CONTENEDOR PRINCIPAL */
 .container { 
   max-width: 600px; 
   margin: 0 auto; 
@@ -97,242 +155,179 @@ body {
   border-radius: 28px; 
   padding: 35px 25px; 
   box-shadow: var(--sombra);
-  margin: -30px 0 30px;
+  margin: -40px 0 30px;
   position: relative;
   z-index: 10;
 }
 
-/* ============================================ */
-/* 📱 INPUTS DE DOMICILIO - MEJORADOS           */
-/* ============================================ */
-
-.input-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 18px;
-  margin-bottom: 16px;
-  background: #ffffff;
-  border-radius: 18px;
-  border: 2px solid #e0e0e0;
-  cursor: text;
-  transition: all 0.3s ease;
-  position: relative;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+/* SERVICIOS */
+.servicios { 
+  display: grid; 
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 12px;
+  margin-bottom: 30px;
 }
 
-.input-card:focus-within {
-  border-color: #e91e63;
-  box-shadow: 0 4px 20px rgba(233,30,99,0.15);
+.servicio { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  font-size: 0.9rem;
+  font-weight: 600; 
+  color: #555; 
+  padding: 16px 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.servicio:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.servicio-icono { font-size: 1.6rem; }
+
+/* CAMPOS DEL FORMULARIO */
+.campo { margin-bottom: 24px; }
+
+.campo label { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  font-size: 0.95rem;
+  font-weight: 700; 
+  color: #333; 
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+}
+
+.campo input, 
+.campo select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e8e8e8;
+  border-radius: 16px;
+  font-size: 1.05rem;
+  background: white;
+  transition: all 0.3s ease;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.campo input:focus, 
+.campo select:focus {
+  border-color: var(--rosa);
+  box-shadow: 0 0 0 4px rgba(233,30,99,0.08);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+/* DÍAS DE LA SEMANA */
+.dias-semana {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dia-btn {
+  padding: 16px 8px;
+  border: 2px solid #e8e8e8;
+  background: white;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.dia-btn:active { transform: scale(0.96); }
+
+.dia-btn.seleccionado {
+  background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%) !important;
+  color: white !important;
+  border-color: var(--rosa) !important;
+  box-shadow: 0 6px 20px rgba(233,30,99,0.35);
   transform: translateY(-2px);
 }
 
-.input-card span {
-  font-weight: 700;
-  color: #333;
-  font-size: 1rem;
+/* TIPO DE VIAJE */
+.tipo-viaje {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  margin-right: 12px;
+  background: var(--gris-claro);
+  border-radius: 16px;
+  padding: 6px;
+  gap: 6px;
 }
 
-.input-card input {
+.tipo-viaje button {
+  flex: 1;
+  padding: 18px 12px;
   border: none;
   background: transparent;
-  text-align: right;
-  width: 100%;
-  font-size: 1.05rem;
-  color: #333;
-  font-weight: 500;
-  outline: none;
-  min-width: 0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+  touch-action: manipulation;
 }
 
-.input-card input::placeholder {
-  color: #999;
-  font-weight: 400;
+.tipo-viaje button.activo {
+  background: white;
+  color: var(--rosa);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
 }
 
-/* Indicador de carga */
-.input-card.buscando::after {
-  content: "";
-  position: absolute;
-  right: 18px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border: 2px solid #f8bbd9;
-  border-top-color: #e91e63;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+/* HORARIOS */
+.horarios-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
 }
 
-/* ============================================ */
-/* 🎯 AUTOCOMPLETE DE GOOGLE MAPS - CORREGIDO */
-/* ============================================ */
+.horario-vuelta { display: none; }
 
-
-.pac-item {
-  background-color: #ffffff !important;
-  color: #333333 !important;
-  padding: 18px 20px !important;
-  cursor: pointer !important;
-  border-bottom: 1px solid #f0f0f0 !important;
-  font-size: 16px !important;
-  line-height: 1.5 !important;
-  display: flex !important;
-  align-items: flex-start !important;
-  text-align: left !important;
-  transition: all 0.2s ease !important;
-  min-height: 60px !important;
+.horario-vuelta.visible {
+  display: block;
+  animation: fadeIn 0.4s ease;
 }
 
-.pac-item:hover,
-.pac-item-selected {
-  background: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%) !important;
-  border-left: 4px solid #e91e63 !important;
-  padding-left: 16px !important;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.pac-item:last-child {
-  border-bottom: none !important;
+.horario-label {
+  display: block;
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  font-weight: 600;
 }
 
-.pac-item::before {
-  content: "📍";
-  margin-right: 14px;
-  flex-shrink: 0;
-  font-size: 1.3rem;
-  margin-top: 2px;
-}
-
-.pac-item-query {
-  color: #e91e63 !important;
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  display: block !important;
-  margin-bottom: 4px !important;
-  line-height: 1.3 !important;
-}
-
-.pac-matched {
-  font-weight: 800 !important;
-  color: #c2185b !important;
-}
-
-.pac-secondary-text {
-  color: #666666 !important;
-  font-size: 14px !important;
-  display: block !important;
-  line-height: 1.4 !important;
-  white-space: normal !important;
-  word-wrap: break-word !important;
-}
-
-.pac-logo,
-.pac-logo:after,
-.hdpi .pac-logo:after {
-  display: none !important;
-}
-
-.pac-container::-webkit-scrollbar {
-  width: 8px !important;
-}
-
-.pac-container::-webkit-scrollbar-track {
-  background: #f1f1f1 !important;
-  border-radius: 0 16px 16px 0 !important;
-}
-
-.pac-container::-webkit-scrollbar-thumb {
-  background: #e91e63 !important;
-  border-radius: 4px !important;
-}
-
-/* ============================================ */
-/* 🎨 OVERLAY Y ANIMACIONES                     */
-/* ============================================ */
-
-
-
-
-/* ============================================ */
-/* 📱 MODO MÓVIL - BOTTOM SHEET                 */
-/* ============================================ */
-
-@media (max-width: 480px) {
-  .pac-container {
-    border-radius: 24px 24px 0 0 !important;
-    max-height: 75vh !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: auto !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    top: auto !important;
-    transform: none !important;
-    margin: 0 !important;
-    border: none !important;
-    border-top: 4px solid #e91e63 !important;
-    box-shadow: 0 -10px 50px rgba(0,0,0,0.4) !important;
-    animation: slideUp 0.3s ease-out !important;
-  }
-  
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .pac-item {
-    padding: 22px 24px !important;
-    min-height: 70px !important;
-  }
-  
-  .pac-item-query {
-    font-size: 17px !important;
-  }
-  
-  .pac-secondary-text {
-    font-size: 15px !important;
-  }
-  
-  .pac-container::before {
-    content: "";
-    display: block;
-    width: 40px;
-    height: 5px;
-    background: #ddd;
-    border-radius: 3px;
-    margin: 12px auto;
-  }
-}
-
-/* ============================================ */
-/* 🔘 BOTONES                                     */
-/* ============================================ */
-
-.btn-main {
+/* BOTÓN COTIZAR */
+.btn-cotizar {
   width: 100%;
   padding: 22px;
   margin-top: 20px;
   border: none;
   border-radius: 18px;
-  background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+  background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%);
   color: white;
   font-size: 1.15rem;
   font-weight: bold;
   cursor: pointer;
-  box-shadow: 0 10px 30px rgba(42, 82, 152, 0.4);
+  box-shadow: 0 10px 30px rgba(233,30,99,0.4);
   transition: all 0.3s;
   display: flex;
   align-items: center;
@@ -342,44 +337,18 @@ body {
   letter-spacing: 0.5px;
 }
 
-.btn-main:hover:not(:disabled) {
+.btn-cotizar:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 14px 35px rgba(42, 82, 152, 0.45);
+  box-shadow: 0 14px 35px rgba(233,30,99,0.45);
 }
 
-.btn-main:disabled {
+.btn-cotizar:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+  transform: none;
 }
 
-.btn-whatsapp {
-  width: 100%;
-  padding: 22px;
-  border: none;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%) !important;
-  color: white;
-  font-size: 1.15rem;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 15px;
-  box-shadow: 0 10px 30px rgba(37, 211, 102, 0.35) !important;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.btn-whatsapp:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 35px rgba(37, 211, 102, 0.4) !important;
-}
-
-/* ============================================ */
-/* 💰 RESULTADO                                   */
-/* ============================================ */
-
+/* RESULTADO - DISEÑO PREMIUM */
 .resultado {
   margin-top: 35px;
   padding: 0;
@@ -392,14 +361,15 @@ body {
 
 .resultado.visible {
   display: block;
-  animation: slideUpResult 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-@keyframes slideUpResult {
+@keyframes slideUp {
   from { opacity: 0; transform: translateY(30px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* PRECIO DESTACADO */
 .precio-destacado {
   background: linear-gradient(135deg, var(--verde) 0%, #2e7d32 100%);
   color: white;
@@ -412,29 +382,230 @@ body {
   overflow: hidden;
 }
 
-.precio-destacado.simple {
-  background: white;
-  color: #333;
-  border: 2px solid #e8f5e9;
+.precio-destacado::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.precio-label {
+  font-size: 0.9rem;
+  opacity: 0.95;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
 }
 
 .precio-monto {
-  font-size: 3rem;
+  font-size: 3.8rem;
   font-weight: 900;
   margin: 15px 0;
   text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  position: relative;
+  z-index: 1;
   letter-spacing: -1px;
 }
 
-.precio-sub {
-  font-size: 0.9rem;
+.precio-periodo {
+  font-size: 1.1rem;
   opacity: 0.9;
+  position: relative;
+  z-index: 1;
 }
 
-/* ============================================ */
-/* ⚠️ MENSAJES                                    */
-/* ============================================ */
+/* DESGLOSE DE PRECIO */
+.desglose-precio {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  border: 1px solid #f0f0f0;
+}
 
+.desglose-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px dashed #e0e0e0;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.desglose-item:last-child { border-bottom: none; }
+
+.desglose-item span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desglose-item span:last-child {
+  font-weight: 700;
+  color: #333;
+  font-family: 'SF Mono', monospace;
+  font-size: 0.95rem;
+}
+
+.desglose-total {
+  font-weight: 800;
+  color: var(--verde-oscuro);
+  border-top: 2px solid var(--verde);
+  margin-top: 10px;
+  padding-top: 15px;
+  font-size: 1rem;
+}
+
+/* PRECIOS SECUNDARIOS */
+.precios-secundarios {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 25px 0;
+}
+
+.precio-box {
+  background: white;
+  border: 2px solid #e8f5e9;
+  border-radius: 18px;
+  padding: 20px 10px;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+}
+
+.precio-box:hover {
+  transform: translateY(-4px);
+  border-color: var(--verde);
+  box-shadow: 0 8px 25px rgba(76, 175, 80, 0.15);
+}
+
+.precio-box-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.precio-box-valor {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--verde-oscuro);
+  font-family: 'SF Mono', monospace;
+}
+
+/* NOTA INFORMATIVA */
+.nota {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  line-height: 1.7;
+  border-left: 4px solid var(--verde);
+  text-align: left;
+}
+
+/* DETALLES DEL VIAJE */
+.detalles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 25px 0;
+}
+
+.detalle-item {
+  background: white;
+  padding: 18px 15px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s;
+}
+
+.detalle-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.detalle-item strong {
+  display: block;
+  color: var(--verde-oscuro);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  opacity: 0.8;
+}
+
+.detalle-item span {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+/* BOTONES DE ACCIÓN */
+.btn-confirmar {
+  width: 100%;
+  padding: 22px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--verde) 0%, var(--verde-oscuro) 100%);
+  color: white;
+  font-size: 1.15rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 25px 0 10px;
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.35);
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-confirmar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 35px rgba(76, 175, 80, 0.4);
+}
+
+.btn-whatsapp {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%) !important;
+  box-shadow: 0 10px 30px rgba(37, 211, 102, 0.35) !important;
+}
+
+.btn-whatsapp:hover:not(:disabled) {
+  box-shadow: 0 14px 35px rgba(37, 211, 102, 0.4) !important;
+}
+
+.form-confirmar {
+  margin-top: 25px;
+  padding-top: 25px;
+  border-top: 2px dashed #c8e6c9;
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.form-confirmar.visible { display: block; }
+
+/* MENSAJES */
 .error {
   background: #ffebee;
   border: 2px solid #ef5350;
@@ -484,12 +655,8 @@ body {
 
 .success-message.visible { 
   display: block; 
-  animation: slideUpResult 0.5s ease;
+  animation: slideUp 0.5s ease;
 }
-
-/* ============================================ */
-/* 🌀 SPINNER                                     */
-/* ============================================ */
 
 .spinner {
   width: 24px;
@@ -500,21 +667,16 @@ body {
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin { 
-  to { transform: rotate(360deg); } 
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* ============================================ */
-/* 📍 FOOTER                                      */
-/* ============================================ */
-
+/* FOOTER */
 .footer {
   text-align: center;
   padding: 40px 20px;
   color: #555;
 }
 
-.telefono {
+.footer .telefono {
   font-size: 1.5rem;
   color: var(--verde);
   font-weight: 800;
@@ -527,16 +689,191 @@ body {
   border-radius: 50px;
   backdrop-filter: blur(10px);
 }
-/* Mejorar visibilidad del estado buscando */
-.input-card.buscando {
-  border-color: #e91e63 !important;
-  background: #fff5f7;
+/* INFO DEL VIAJE SIMPLE */
+.info-viaje-simple {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin: 20px 0;
 }
 
-/* Asegurar que el pac-container siempre esté por encima */
-.pac-container {
-  z-index: 2147483647 !important;
+.info-item {
+  text-align: center;
+  padding: 15px 10px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  border: 1px solid #e8e8e8;
 }
+
+.info-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.info-valor {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+  .dias-semana { grid-template-columns: repeat(3, 1fr); }
+  .horarios-container { grid-template-columns: 1fr; }
+  .header { padding: 40px 20px 50px; }
+  .header h1 { font-size: 2.8rem; }
+  .precio-monto { font-size: 3rem; }
+  .precios-secundarios { gap: 8px; }
+  .precio-box { padding: 15px 8px; }
+  .precio-box-valor { font-size: 1.2rem; }
+}
+
+/* GOOGLE MAPS AUTOCOMPLETE */
+.pac-container {
+  background-color: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+  font-family: inherit !important;
+  margin-top: 8px !important;
+  border: 1px solid #e8e8e8 !important;
+  z-index: 10000 !important;
+  position: absolute !important;
+  max-width: 100% !important;
+  overflow: hidden;
+}
+
+.pac-item {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+  padding: 14px 18px !important;
+  cursor: pointer !important;
+  border-bottom: 1px solid #f5f5f5 !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+  transition: background 0.2s;
+}
+
+.pac-item:hover, .pac-item-selected {
+  background-color: #f8f9fa !important;
+}
+
+.pac-icon { display: none !important; }
+
+.pac-item::before {
+  content: "📍";
+  margin-right: 12px;
+  flex-shrink: 0;
+  font-size: 1.2rem;
+}
+
+.pac-item-query {
+  color: #000000 !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  display: block !important;
+}
+
+.pac-secondary-text {
+  color: #888888 !important;
+  font-size: 13px !important;
+  display: block !important;
+  margin-top: 3px !important;
+}
+
+.pac-matched {
+  font-weight: 700 !important;
+  color: var(--rosa) !important;
+}
+
+.pac-logo:after { display: none !important; }
+#btn-mes-actual.activo,
+#btn-mes-siguiente.activo {
+  background: linear-gradient(135deg, var(--verde) 0%, var(--verde-oscuro) 100%) !important;
+  color: white !important;
+  box-shadow: 0 6px 20px rgba(76,175,80,0.4) !important;
+  transform: translateY(-1px) !important;
+}
+  .card-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f7f7f7;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.card-input input {
+  border: none;
+  background: transparent;
+  text-align: right;
+  font-size: 1rem;
+}
+.precio-destacado.simple {
+  background: white;
+  box-shadow: none;
+  color: #2a5298;
+}
+
+.precio-sub {
+  font-size: 0.9rem;
+  color: #666;
+}
+.input-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px;
+  margin-bottom: 12px;
+  background: #f5f5f5;
+  border-radius: 14px;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+}
+
+.input-card input {
+  border: none;
+  background: transparent;
+  text-align: right;
+  width: 60%;
+  font-size: 1rem;
+}
+
+.input-card span {
+  font-weight: 600;
+  color: #333;
+}
+.btn-main {
+  width: 100%;
+  padding: 18px;
+  background: #2a5298;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-top: 15px;
+}
+.btn-whatsapp {
+  width: 100%;
+  padding: 18px;
+  background: #25d366;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  margin-top: 15px;
+}
+
 </style>
 <title>Mimi Transporte Infantil - Cotizá ahora</title>
 <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá el viaje de tu hijo en segundos. ¡Tu tranquilidad empieza aquí!">
@@ -650,49 +987,19 @@ function actualizarNombresMeses() {
   document.querySelectorAll('.nombre-mes-actual').forEach(el => el.textContent = mesActual);
   document.querySelectorAll('.nombre-mes-siguiente').forEach(el => el.textContent = mesSiguiente);
 }
-// ============================================
-// 🚀 MEJORAS UX PARA AUTOCOMPLETE
-// ============================================
 
-function mejorarAutocompleteUX() {
-  // Solo mejorar el estilo visual de los inputs, sin interferir con el autocomplete
-  const inputs = [document.getElementById('desde'), document.getElementById('hasta')];
-  
-  inputs.forEach(input => {
-    if (!input) return;
-    
-    // Scroll suave al enfocar
-    input.addEventListener('focus', function() {
-      setTimeout(() => {
-        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
-    });
-  });
-  
-  // Forzar estilos del pac-container cuando aparezca
-  const style = document.createElement('style');
-  style.textContent = `
-    .pac-container {
-      z-index: 999999 !important;
-      position: fixed !important;
-      top: auto !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      right: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      border-radius: 20px 20px 0 0 !important;
-      border-top: 3px solid #e91e63 !important;
-      box-shadow: 0 -10px 40px rgba(0,0,0,0.3) !important;
-      max-height: 60vh !important;
-    }
-    .pac-item {
-      padding: 15px 20px !important;
-      min-height: 60px !important;
-    }
-  `;
-  document.head.appendChild(style);
+
+function toggleDia(boton, dia) {
+  boton.classList.toggle('seleccionado');
+  if (diasSeleccionados.includes(dia)) {
+    diasSeleccionados = diasSeleccionados.filter(d => d !== dia);
+  } else {
+    diasSeleccionados.push(dia);
+  }
+  const ordenDias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
+  diasSeleccionados.sort((a, b) => ordenDias.indexOf(a) - ordenDias.indexOf(b));
 }
+
 function inicializarAutocomplete() {
   if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
     mostrarErrorMaps('No se pudo cargar el servicio de mapas');
@@ -986,10 +1293,8 @@ function ocultarError() {
 }
 
 // Inicializar al cargar
-// Inicializar al cargar
 window.onload = function() {
   actualizarNombresMeses();
-  mejorarAutocompleteUX(); // <-- AGREGAR ESTA LÍNEA
 
   setTimeout(() => {
     if (typeof google === 'undefined') {
