@@ -1123,8 +1123,7 @@ body {
         <p>📌 <strong>¿Cómo se calcula?</strong></p>
       <p>El precio por viaje se calcula según la distancia recorrida.</p>
       <p>El mensual es una estimación basada en los días seleccionados dentro del mes de <span id="mes-nombre">abril</span>.</p>
-     .</p> 
-        que hay en el mes de <span id="mes-nombre">abril</span>.</p>
+      <p>Se calcula considerando la cantidad de días hábiles seleccionados en ese mes.</p>
         <p style="margin-top: 10px; font-size: 0.85rem; opacity: 0.8;">
         💡 Tip: Si necesitás transporte todos los meses, consultá por nuestros planes de abono con descuento.
         </p>
@@ -1513,13 +1512,7 @@ document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mes
   
   document.getElementById('viajes-mes-detalle').textContent = `~${res.viajesPorMesRango || '0 viajes'}`;
   document.getElementById('precio-unitario-detalle').textContent = res.precioPorViajeFormateado || '$0';
-  
-  // Nombres de días largos
-  const nombresDiasLargos = {
-    'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miércoles', 
-    'Jue': 'jueves', 'Vie': 'viernes'
-  };
-  const diasLargos = res.dias.map(d => nombresDiasLargos[d]);
+    const diasLargos = res.dias.map(d => nombresDiasLargos[d]);
   document.getElementById('dias-nombres').textContent = 
     diasLargos.length === 1 ? diasLargos[0] : 
     diasLargos.slice(0, -1).join(', ') + ' y ' + diasLargos.slice(-1);
