@@ -1150,9 +1150,8 @@ function cotizar() {
     callback: callbackName
   });
   
-  // ✅ URL de tu Web App (reemplaza con tu ID actual)
-  script.src = 'https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1sNoyoJoeQ2-5fLygpdOnO7lvbiVXm8PSo5h/exec?' + params.toString();
-  
+// ✅ URL CORRECTA de tu Web App
+script.src = 'https://script.google.com/macros/s/AKfycbwqC4JU6rA46ImbzCtGK3OlUnG6yl9lOQItKcJlkTpRzBZvlj5_HCIjqEkVfgqOssnC/exec?' + params.toString();  
   // Limpiar timeout si carga correctamente
   script.onload = function() {
     clearTimeout(timeout);
