@@ -34,6 +34,12 @@ function cargarMaps() {
   }
 }
 </script>
+<script>
+window.onload = function() {
+  actualizarNombresMeses();
+  inicializarAutocomplete(); // 👈 AGREGAR ESTO
+};
+</script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places"></script>
 
@@ -916,7 +922,7 @@ body {
 <div class="campo" style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
 </div>
 
-<button type="button" class="btn-main" onclick="cotizar()">
+<button id="btn-cotizar" type="button" class="btn-main" onclick="cotizar()">
   Calcular Tarifa
 </button>
 
@@ -953,21 +959,6 @@ body {
       © 2026 Mimi Transporte Infantil • Conductor profesional habilitado
     </p>
   </div>
-function enviarWhatsApp() {
-  const desde = document.getElementById('desde').value;
-  const hasta = document.getElementById('hasta').value;
-  const fecha = document.getElementById('fecha').value;
-  const precio = document.getElementById('precio-por-viaje').textContent;
-
-  const mensaje = `Hola! Quiero reservar un viaje:
-
-📍 Origen: ${desde}
-🎯 Destino: ${hasta}
-📅 Fecha: ${fecha}
-💰 Precio: ${precio}`;
-
-  window.open('https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje), '_blank');
-}
 
 <script>
 let diasSeleccionados = [];
@@ -1096,24 +1087,32 @@ function mostrarErrorMaps(mensaje) {
 }
 
 window.gm_authFailure = () => mostrarErrorMaps('Error de autenticación con Google Maps');
+function enviarWhatsApp() {
+  const desde = document.getElementById('desde').value;
+  const hasta = document.getElementById('hasta').value;
+  const fecha = document.getElementById('fecha').value;
+  const precio = document.getElementById('precio-por-viaje').textContent;
+
+  const mensaje = `Hola! Quiero reservar un viaje:
+
+📍 Origen: ${desde}
+🎯 Destino: ${hasta}
+📅 Fecha: ${fecha}
+💰 Precio: ${precio}`;
+
+  window.open('https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje), '_blank');
+}
 
 function cotizar() {
-  const nombre = document.getElementById('nombre').value.trim();
   const desde = document.getElementById('desde').value.trim();
   const hasta = document.getElementById('hasta').value.trim();
-  const horarioIda = document.getElementById('horario-ida').value;
-  const horarioVuelta = document.getElementById('horario-vuelta').value;
 
 
   // Validaciones
-  if (!nombre) { mostrarError('Ingresá el nombre del niño/a'); return; }
-  if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
-  if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
-  mostrarError('Seleccioná el horario de ida'); 
-  return; 
-}
+if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
+if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
 
-const tipoViaje = horarioVuelta ? 'ida_vuelta' : 'ida';
+const tipoViaje = 'ida';
 
 // Solo exigir vuelta si corresponde
 if (tipoViaje === 'ida_vuelta' && !horarioVuelta) {
