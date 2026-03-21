@@ -1003,7 +1003,7 @@ body {
 </div>
 <div class="campo">
   <label>⏰ Horario de ida</label>
-  <input type="time" id="horario-ida">
+  <input type="datetime-local">
 </div>
 
 <div class="campo horario-vuelta" id="horario-vuelta-container">
@@ -1496,7 +1496,8 @@ document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mes
   document.getElementById('mes-nombre').textContent = res.mesReferencia || 'este mes';
   
   document.getElementById('viajes-mes-detalle').textContent = `~${res.viajesPorMesRango || '0 viajes'}`;
-  document.getElementById('precio-unitario-detalle').textContent = res.precioPorViajeFormateado || '$0';
+  document.getElementById('precio-unitario-detalle').textContent = res.precioPorViajeFormateado = "$" + (res.precioPorViaje || 0).toLocaleString('es-AR');
+ || '$0';
 const diasLargos = res.dias.map(d => nombresDiasLargos[d]);
 document.getElementById('dias-nombres').textContent = 
   diasLargos.length === 1 ? diasLargos[0] : 
