@@ -3,1305 +3,1123 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">
-
-<!-- Open Graph para WhatsApp, Facebook, Instagram, etc. -->
-<meta property="og:title" content="Mimi Transporte Infantil">
-<meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
-<meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:url" content="https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec">
-<meta property="og:type" content="website">
-<meta property="og:locale" content="es_AR">
-
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Mimi Transporte Infantil">
-<meta name="twitter:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
-<meta name="twitter:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
-
-
-<base target="_top">
-<meta name="google" content="notranslate">
-
-<script>
-function cargarMaps() {
-  try {
-    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-      inicializarAutocomplete();
-    } else {
-      throw new Error("Maps no disponible");
-    }
-  } catch (e) {
-    mostrarErrorMaps('Error al cargar Google Maps');
-  }
-}
-</script>
-<script async defer 
-src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places&callback=cargarMaps">
-</script>
-
+<title>MIMI Transporte Escolar</title>
 
 <style>
 :root {
-  --rosa: #e91e63;
-  --rosa-claro: #f8bbd9;
-  --rosa-oscuro: #c2185b;
-  --azul-cielo: #87ceeb;
-  --azul-oscuro: #1565c0;
-  --verde: #4caf50;
-  --verde-oscuro: #2e7d32;
+  --azul-oscuro: #1a237e;
+  --azul-primario: #1565c0;
+  --azul-claro: #42a5f5;
+  --verde-wa: #25D366;
+  --verde-oscuro: #128c7e;
+  --gris-fondo: #f5f7fa;
   --blanco: #ffffff;
-  --gris-claro: #f5f5f5;
-  --gris: #9e9e9e;
-  --sombra: 0 10px 40px rgba(0,0,0,0.1);
+  --sombra: 0 4px 20px rgba(0,0,0,0.08);
+  --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);
 }
 
-* { 
-  margin: 0; 
-  padding: 0; 
-  box-sizing: border-box; 
-  -webkit-tap-highlight-color: transparent; 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-html { font-size: 16px; scroll-behavior: smooth; }
-
-body { 
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(180deg, #e3f2fd 0%, #fce4ec 50%, #f8bbd9 100%);
+body {
+  background: var(--gris-fondo);
   min-height: 100vh;
-  color: #222;
-  line-height: 1.6;
-  padding-bottom: 40px;
+  padding-bottom: 30px;
 }
 
-/* HEADER MEJORADO */
-.header { 
-  background: linear-gradient(135deg, var(--azul-cielo) 0%, var(--rosa-claro) 100%); 
-  padding: 50px 20px 60px; 
-  text-align: center; 
+/* Header estilo app */
+.header {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  padding: 20px;
   position: relative;
   overflow: hidden;
 }
 
-.header::before, .header::after { 
-  content: '☁️'; 
-  position: absolute; 
-  font-size: 4rem; 
-  opacity: 0.3;
-  animation: float 6s ease-in-out infinite;
+.header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50%;
 }
 
-.header::before { top: 20px; left: 30px; }
-.header::after { top: 40px; right: 40px; animation-delay: 3s; }
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(5deg); }
-}
-
-.logo-ninos { 
-  font-size: 5rem; 
-  margin-bottom: 15px;
-  display: inline-block;
-  animation: bounce 2s infinite;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
-
-.header h1 { 
-  font-family: Georgia, serif;
-  font-size: 3.5rem; 
-  color: var(--rosa); 
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-  font-weight: bold;
-  font-style: italic;
-  margin-bottom: 5px;
-}
-
-.header h2 { 
-  font-size: 1rem; 
-  color: #444; 
-  text-transform: uppercase;
-  letter-spacing: 5px;
-  font-weight: 600;
-  opacity: 0.8;
-}
-
-.frase { 
-  font-size: 1.4rem; 
-  color: var(--azul-oscuro);
-  font-style: italic;
-  margin-top: 25px;
-  font-weight: 500;
-  text-shadow: 0 1px 2px rgba(255,255,255,0.8);
-}
-
-/* CONTENEDOR PRINCIPAL */
-.container { 
-  max-width: 600px; 
-  margin: 0 auto; 
-  padding: 0 15px;
-}
-
-/* TARJETA PRINCIPAL */
-.card { 
-  background: white; 
-  border-radius: 28px; 
-  padding: 35px 25px; 
-  box-shadow: var(--sombra);
-  margin: -40px 0 30px;
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
   position: relative;
-  z-index: 10;
+  z-index: 1;
 }
 
-/* SERVICIOS */
-.servicios { 
-  display: grid; 
-  grid-template-columns: repeat(2, 1fr); 
-  gap: 12px;
-  margin-bottom: 30px;
+.vehicle-img {
+  width: 80px;
+  height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
 }
 
-.servicio { 
-  display: flex; 
-  align-items: center; 
-  gap: 10px; 
+.logo-section {
+  flex: 1;
+}
+
+.logo-title {
+  color: white;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo-subtitle {
+  color: rgba(255,255,255,0.9);
   font-size: 0.9rem;
-  font-weight: 600; 
-  color: #555; 
-  padding: 16px 12px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.shield-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+/* Notificaciones */
+.notification-bell {
+  position: relative;
+  cursor: pointer;
+  padding: 8px;
+  color: white;
+  font-size: 1.3rem;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #ff4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: bold;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 350px;
+}
+
+.toast {
+  background: white;
   border-radius: 16px;
-  border: 1px solid #e0e0e0;
-  transition: all 0.3s ease;
+  padding: 16px 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 4px solid var(--azul-primario);
+  position: relative;
+  overflow: hidden;
 }
 
-.servicio:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+.toast.success { border-left-color: var(--verde-wa); }
+.toast.warning { border-left-color: #ff9800; }
+.toast.error { border-left-color: #f44336; }
+
+.toast-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
-.servicio-icono { font-size: 1.6rem; }
+.toast-content {
+  flex: 1;
+}
 
-/* CAMPOS DEL FORMULARIO */
-.campo { margin-bottom: 24px; }
-
-.campo label { 
-  display: flex; 
-  align-items: center; 
-  gap: 8px; 
+.toast-title {
+  font-weight: 700;
+  color: #1a1a1a;
   font-size: 0.95rem;
-  font-weight: 700; 
-  color: #333; 
-  margin-bottom: 10px;
+  margin-bottom: 2px;
+}
+
+.toast-message {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+  line-height: 1;
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(100%) scale(0.9); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes slideOutRight {
+  to { opacity: 0; transform: translateX(100%) scale(0.9); }
+}
+
+/* Contenido principal */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.hero-text {
+  text-align: center;
+  padding: 30px 0 20px;
+}
+
+.hero-title {
+  font-size: 1.6rem;
+  color: #1a1a1a;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.hero-subtitle {
+  color: #666;
+  font-size: 1rem;
+}
+
+/* Tarjeta principal */
+.main-card {
+  background: white;
+  border-radius: 24px;
+  padding: 25px;
+  box-shadow: var(--sombra);
+  margin-bottom: 20px;
+}
+
+/* Inputs de ubicación mejorados */
+.location-input-group {
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.location-card {
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.location-card:focus-within {
+  background: white;
+  border-color: var(--azul-claro);
+  box-shadow: 0 0 0 4px rgba(66, 165, 245, 0.1);
+}
+
+.location-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.location-icon.origin {
+  background: #e8f5e9;
+}
+
+.location-icon.destiny {
+  background: #ffebee;
+}
+
+.location-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.location-label {
+  font-size: 0.75rem;
+  color: #888;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-size: 0.85rem;
-}
-
-.campo input, 
-.campo select {
-  width: 100%;
-  padding: 14px 16px;
-  border: 2px solid #e8e8e8;
-  border-radius: 16px;
-  font-size: 1.05rem;
-  background: white;
-  transition: all 0.3s ease;
-  appearance: none;
-  -webkit-appearance: none;
-}
-
-.campo input:focus, 
-.campo select:focus {
-  border-color: var(--rosa);
-  box-shadow: 0 0 0 4px rgba(233,30,99,0.08);
-  outline: none;
-  transform: translateY(-1px);
-}
-
-/* DÍAS DE LA SEMANA */
-.dias-semana {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.dia-btn {
-  padding: 16px 8px;
-  border: 2px solid #e8e8e8;
-  background: white;
-  border-radius: 14px;
-  font-size: 0.9rem;
   font-weight: 700;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.25s;
-  text-align: center;
-  touch-action: manipulation;
+  margin-bottom: 4px;
 }
 
-.dia-btn:active { transform: scale(0.96); }
-
-.dia-btn.seleccionado {
-  background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%) !important;
-  color: white !important;
-  border-color: var(--rosa) !important;
-  box-shadow: 0 6px 20px rgba(233,30,99,0.35);
-  transform: translateY(-2px);
-}
-
-/* TIPO DE VIAJE */
-.tipo-viaje {
-  display: flex;
-  background: var(--gris-claro);
-  border-radius: 16px;
-  padding: 6px;
-  gap: 6px;
-}
-
-.tipo-viaje button {
-  flex: 1;
-  padding: 18px 12px;
+.location-input {
+  width: 100%;
   border: none;
   background: transparent;
-  border-radius: 12px;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.3s;
-  touch-action: manipulation;
+  font-size: 1rem;
+  color: #1a1a1a;
+  font-weight: 600;
+  outline: none;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.tipo-viaje button.activo {
+.location-input::placeholder {
+  color: #aaa;
+  font-weight: 400;
+}
+
+.location-arrow {
+  color: #ccc;
+  font-size: 1.2rem;
+  margin-left: 8px;
+}
+
+/* Autocomplete mejorado */
+.autocomplete-container {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
   background: white;
-  color: var(--rosa);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.12);
-  transform: translateY(-1px);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  margin-top: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  border: 1px solid #f0f0f0;
 }
 
-/* HORARIOS */
-.horarios-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-
-.horario-vuelta { display: none; }
-
-.horario-vuelta.visible {
+.autocomplete-container.visible {
   display: block;
-  animation: fadeIn 0.4s ease;
+  animation: fadeInDown 0.2s ease;
 }
 
-@keyframes fadeIn {
+@keyframes fadeInDown {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.horario-label {
-  display: block;
-  color: #666;
-  font-size: 0.85rem;
-  margin-bottom: 8px;
-  font-weight: 600;
+.autocomplete-item {
+  padding: 16px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: background 0.2s;
 }
 
-/* BOTÓN COTIZAR */
-.btn-cotizar {
-  width: 100%;
-  padding: 22px;
-  margin-top: 20px;
-  border: none;
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%);
-  color: white;
-  font-size: 1.15rem;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 10px 30px rgba(233,30,99,0.4);
-  transition: all 0.3s;
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+  background: #f8f9fa;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-icon {
+  width: 36px;
+  height: 36px;
+  background: #e3f2fd;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.btn-cotizar:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 35px rgba(233,30,99,0.45);
-}
-
-.btn-cotizar:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* RESULTADO - DISEÑO PREMIUM */
-.resultado {
-  margin-top: 35px;
-  padding: 0;
-  background: transparent;
-  border-radius: 24px;
-  text-align: center;
-  border: none;
-  display: none;
-}
-
-.resultado.visible {
-  display: block;
-  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* PRECIO DESTACADO */
-.precio-destacado {
-  background: linear-gradient(135deg, var(--verde) 0%, #2e7d32 100%);
-  color: white;
-  padding: 35px 25px;
-  border-radius: 24px;
-  text-align: center;
-  margin-bottom: 20px;
-  box-shadow: 0 15px 40px rgba(76, 175, 80, 0.35);
-  position: relative;
-  overflow: hidden;
-}
-
-.precio-destacado::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.precio-label {
-  font-size: 0.9rem;
-  opacity: 0.95;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-weight: 600;
-  position: relative;
-  z-index: 1;
-}
-
-.precio-monto {
-  font-size: 3.8rem;
-  font-weight: 900;
-  margin: 15px 0;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  position: relative;
-  z-index: 1;
-  letter-spacing: -1px;
-}
-
-.precio-periodo {
   font-size: 1.1rem;
-  opacity: 0.9;
-  position: relative;
-  z-index: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-/* DESGLOSE DE PRECIO */
-.desglose-precio {
-  background: white;
+.autocomplete-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.autocomplete-primary {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.autocomplete-secondary {
+  color: #888;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.autocomplete-distance {
+  color: var(--azul-primario);
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #e3f2fd;
+  padding: 4px 8px;
   border-radius: 20px;
-  padding: 25px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-  border: 1px solid #f0f0f0;
+  white-space: nowrap;
 }
 
-.desglose-item {
+/* Fecha y hora */
+.datetime-card {
+  margin-top: 20px;
+}
+
+.datetime-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px dashed #e0e0e0;
-  font-size: 0.95rem;
+  gap: 10px;
+  margin-bottom: 12px;
   color: #555;
+  font-weight: 600;
+  font-size: 0.9rem;
 }
 
-.desglose-item:last-child { border-bottom: none; }
-
-.desglose-item span:first-child {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.desglose-item span:last-child {
-  font-weight: 700;
-  color: #333;
-  font-family: 'SF Mono', monospace;
-  font-size: 0.95rem;
-}
-
-.desglose-total {
-  font-weight: 800;
-  color: var(--verde-oscuro);
-  border-top: 2px solid var(--verde);
-  margin-top: 10px;
-  padding-top: 15px;
-  font-size: 1rem;
-}
-
-/* PRECIOS SECUNDARIOS */
-.precios-secundarios {
+.datetime-inputs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin: 25px 0;
 }
 
-.precio-box {
+.datetime-field {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 12px;
+  border: 2px solid transparent;
+  transition: all 0.3s;
+}
+
+.datetime-field:focus-within {
   background: white;
-  border: 2px solid #e8f5e9;
-  border-radius: 18px;
-  padding: 20px 10px;
-  text-align: center;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+  border-color: var(--azul-claro);
 }
 
-.precio-box:hover {
-  transform: translateY(-4px);
-  border-color: var(--verde);
-  box-shadow: 0 8px 25px rgba(76, 175, 80, 0.15);
-}
-
-.precio-box-label {
+.datetime-field label {
   display: block;
   font-size: 0.75rem;
   color: #888;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 8px;
-  font-weight: 600;
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 
-.precio-box-valor {
-  display: block;
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--verde-oscuro);
-  font-family: 'SF Mono', monospace;
-}
-
-/* NOTA INFORMATIVA */
-.nota {
-  font-size: 0.9rem;
-  color: #666;
-  margin-top: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 16px;
-  line-height: 1.7;
-  border-left: 4px solid var(--verde);
-  text-align: left;
-}
-
-/* DETALLES DEL VIAJE */
-.detalles-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin: 25px 0;
-}
-
-.detalle-item {
-  background: white;
-  padding: 18px 15px;
-  border-radius: 16px;
-  font-size: 0.9rem;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-  border: 1px solid #f0f0f0;
-  transition: all 0.2s;
-}
-
-.detalle-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-}
-
-.detalle-item strong {
-  display: block;
-  color: var(--verde-oscuro);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
-  opacity: 0.8;
-}
-
-.detalle-item span {
-  font-weight: 600;
-  color: #333;
-  font-size: 1rem;
-}
-
-/* BOTONES DE ACCIÓN */
-.btn-confirmar {
+.datetime-field input,
+.datetime-field select {
   width: 100%;
-  padding: 22px;
   border: none;
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--verde) 0%, var(--verde-oscuro) 100%);
+  background: transparent;
+  font-size: 0.95rem;
+  color: #1a1a1a;
+  font-weight: 600;
+  outline: none;
+}
+
+/* Botón calcular */
+.btn-calcular {
+  width: 100%;
+  padding: 18px;
+  margin-top: 20px;
+  background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-oscuro) 100%);
   color: white;
-  font-size: 1.15rem;
-  font-weight: bold;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
   cursor: pointer;
-  margin: 25px 0 10px;
-  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.35);
+  box-shadow: 0 4px 15px rgba(21, 101, 192, 0.3);
   transition: all 0.3s;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.btn-confirmar:hover:not(:disabled) {
+.btn-calcular:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 14px 35px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.4);
 }
 
-.btn-whatsapp {
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%) !important;
-  box-shadow: 0 10px 30px rgba(37, 211, 102, 0.35) !important;
+.btn-calcular:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-.btn-whatsapp:hover:not(:disabled) {
-  box-shadow: 0 14px 35px rgba(37, 211, 102, 0.4) !important;
-}
-
-.form-confirmar {
+/* Resultado */
+.resultado-section {
   margin-top: 25px;
   padding-top: 25px;
-  border-top: 2px dashed #c8e6c9;
+  border-top: 2px dashed #e0e0e0;
   display: none;
-  animation: fadeIn 0.4s ease;
 }
 
-.form-confirmar.visible { display: block; }
+.resultado-section.visible {
+  display: block;
+  animation: fadeInUp 0.5s ease;
+}
 
-/* MENSAJES */
-.error {
-  background: #ffebee;
-  border: 2px solid #ef5350;
-  color: #c62828;
-  padding: 18px;
-  border-radius: 16px;
-  margin: 20px 0;
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.precio-box {
   text-align: center;
+  padding: 25px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.precio-monto {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--azul-oscuro);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.precio-moneda {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--azul-primario);
+}
+
+.precio-descripcion {
+  color: #666;
+  font-size: 0.95rem;
+  margin-top: 8px;
+}
+
+/* Botón WhatsApp */
+.btn-whatsapp {
+  width: 100%;
+  padding: 18px;
+  background: linear-gradient(135deg, var(--verde-wa) 0%, var(--verde-oscuro) 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+/* Features */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: var(--sombra);
+  transition: transform 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sombra-hover);
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.feature-title {
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.feature-desc {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+/* Error */
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 14px;
+  border-radius: 12px;
+  margin-top: 15px;
+  font-size: 0.9rem;
   font-weight: 600;
   display: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-message.visible {
+  display: flex;
   animation: shake 0.5s;
 }
 
-.error.visible { display: block; }
-
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-10px); }
-  75% { transform: translateX(10px); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
-.maps-error {
-  background: #fff3e0;
-  border: 2px solid #ff9800;
-  color: #e65100;
-  padding: 18px;
-  border-radius: 16px;
-  margin: 20px 0;
-  text-align: center;
-  font-size: 0.9rem;
-  display: none;
-}
-
-.maps-error.visible { display: block; }
-
-.success-message {
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-  border: 2px solid var(--verde);
-  color: var(--verde-oscuro);
-  padding: 35px 25px;
-  border-radius: 24px;
-  margin: 25px 0;
-  text-align: center;
-  display: none;
-  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.2);
-}
-
-.success-message.visible { 
-  display: block; 
-  animation: slideUp 0.5s ease;
-}
-
+/* Loading spinner */
 .spinner {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border: 3px solid rgba(255,255,255,0.3);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* FOOTER */
-.footer {
-  text-align: center;
-  padding: 40px 20px;
-  color: #555;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
-.footer .telefono {
-  font-size: 1.5rem;
-  color: var(--verde);
-  font-weight: 800;
-  margin: 15px 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 25px;
-  background: rgba(255,255,255,0.6);
-  border-radius: 50px;
-  backdrop-filter: blur(10px);
-}
-/* INFO DEL VIAJE SIMPLE */
-.info-viaje-simple {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  margin: 20px 0;
-}
-
-.info-item {
-  text-align: center;
-  padding: 15px 10px;
-  background: #f8f9fa;
-  border-radius: 16px;
-  border: 1px solid #e8e8e8;
-}
-
-.info-label {
-  display: block;
-  font-size: 0.75rem;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 5px;
-  font-weight: 600;
-}
-
-.info-valor {
-  display: block;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #333;
-}
-
-/* RESPONSIVE */
+/* Responsive */
 @media (max-width: 480px) {
-  .dias-semana { grid-template-columns: repeat(3, 1fr); }
-  .horarios-container { grid-template-columns: 1fr; }
-  .header { padding: 40px 20px 50px; }
-  .header h1 { font-size: 2.8rem; }
-  .precio-monto { font-size: 3rem; }
-  .precios-secundarios { gap: 8px; }
-  .precio-box { padding: 15px 8px; }
-  .precio-box-valor { font-size: 1.2rem; }
+  .hero-title { font-size: 1.4rem; }
+  .precio-monto { font-size: 2.5rem; }
+  .datetime-inputs { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
 }
-
-/* GOOGLE MAPS AUTOCOMPLETE */
-.pac-container {
-  background-color: #ffffff !important;
-  border-radius: 16px !important;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
-  font-family: inherit !important;
-  margin-top: 8px !important;
-  border: 1px solid #e8e8e8 !important;
-  z-index: 10000 !important;
-  position: absolute !important;
-  max-width: 100% !important;
-  overflow: hidden;
-}
-
-.pac-item {
-  background-color: #ffffff !important;
-  color: #333333 !important;
-  padding: 14px 18px !important;
-  cursor: pointer !important;
-  border-bottom: 1px solid #f5f5f5 !important;
-  font-size: 15px !important;
-  line-height: 1.5 !important;
-  display: flex !important;
-  align-items: flex-start !important;
-  text-align: left !important;
-  transition: background 0.2s;
-}
-
-.pac-item:hover, .pac-item-selected {
-  background-color: #f8f9fa !important;
-}
-
-.pac-icon { display: none !important; }
-
-.pac-item::before {
-  content: "📍";
-  margin-right: 12px;
-  flex-shrink: 0;
-  font-size: 1.2rem;
-}
-
-.pac-item-query {
-  color: #000000 !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  display: block !important;
-}
-
-.pac-secondary-text {
-  color: #888888 !important;
-  font-size: 13px !important;
-  display: block !important;
-  margin-top: 3px !important;
-}
-
-.pac-matched {
-  font-weight: 700 !important;
-  color: var(--rosa) !important;
-}
-
-.pac-logo:after { display: none !important; }
-#btn-mes-actual.activo,
-#btn-mes-siguiente.activo {
-  background: linear-gradient(135deg, var(--verde) 0%, var(--verde-oscuro) 100%) !important;
-  color: white !important;
-  box-shadow: 0 6px 20px rgba(76,175,80,0.4) !important;
-  transform: translateY(-1px) !important;
-}
-  .card-input {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f7f7f7;
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid #e0e0e0;
-}
-
-.card-input input {
-  border: none;
-  background: transparent;
-  text-align: right;
-  font-size: 1rem;
-}
-.precio-destacado.simple {
-  background: white;
-  box-shadow: none;
-  color: #2a5298;
-}
-
-.precio-sub {
-  font-size: 0.9rem;
-  color: #666;
-}
-.input-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px;
-  margin-bottom: 12px;
-  background: #f5f5f5;
-  border-radius: 14px;
-  border: 1px solid #e0e0e0;
-  cursor: pointer;
-}
-
-.input-card input {
-  border: none;
-  background: transparent;
-  text-align: right;
-  width: 60%;
-  font-size: 1rem;
-}
-
-.input-card span {
-  font-weight: 600;
-  color: #333;
-}
-.btn-main {
-  width: 100%;
-  padding: 18px;
-  background: #2a5298;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  margin-top: 15px;
-}
-.btn-whatsapp {
-  width: 100%;
-  padding: 18px;
-  background: #25d366;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 1.2rem;
-  margin-top: 15px;
-}
-
 </style>
-<title>Mimi Transporte Infantil - Cotizá ahora</title>
-<meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá el viaje de tu hijo en segundos. ¡Tu tranquilidad empieza aquí!">
-<!-- Favicon -->
-<link rel="icon" href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/favicon.png" type="image/png">
-<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/favicon.png">
-<link rel="shortcut icon" href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/favicon.png" type="image/png">
 </head>
 <body>
 
-<div class="header" style="background: linear-gradient(135deg,#1e3c72,#2a5298); color:white;">
-  <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
-    <span style="font-size:1.5rem;">🚗</span>
-    <h1 style="font-size:1.5rem; margin:0;">MIMI</h1>
-    <span style="font-size:0.9rem; opacity:0.8;">Transporte Escolar</span>
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-content">
+    <img src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=200&h=120&fit=crop" alt="SUV" class="vehicle-img">
+    <div class="logo-section">
+      <div class="logo-title">MIMI</div>
+      <div class="logo-subtitle">Transporte Escolar</div>
+    </div>
+    <div class="shield-icon">✓</div>
+    <div class="notification-bell" onclick="toggleNotifications()">
+      🔔
+      <span class="notification-badge" id="notifBadge" style="display: none;">3</span>
+    </div>
   </div>
-</div>
+</header>
 
 <div class="container">
-  <div class="card">
+  <!-- Hero -->
+  <div class="hero-text">
+    <h1 class="hero-title">¡Viaje Seguro para tus Niños!</h1>
+    <p class="hero-subtitle">Pagá solo por los viajes que uses</p>
+  </div>
 
-    <div class="maps-error" id="maps-error">
-      ⚠️ Error al cargar el servicio de mapas. Podés escribir la dirección manualmente.
-    </div>
-
-<div class="input-card">
-  <span>📍 Origen</span>
-  <input type="text" id="desde" placeholder="Av. Santa Fe 1234">
-</div>
-
-<div class="input-card">
-  <span>🎯 Destino</span>
-  <input type="text" id="hasta" placeholder="Av. Santa Fe 1234">
-</div>
-
-    <div class="campo" style="margin-top: 24px;">
-      <label>🔄 Tipo de viaje</label>
+  <!-- Formulario -->
+  <div class="main-card">
+    <!-- Origen -->
+    <div class="location-input-group">
+      <div class="location-card" onclick="focusInput('origen')">
+        <div class="location-icon origin">📍</div>
+        <div class="location-text">
+          <div class="location-label">Origen</div>
+          <input type="text" 
+                 id="origen" 
+                 class="location-input" 
+                 placeholder="Av. Santa Fe 1234, Buenos Aires"
+                 autocomplete="off"
+                 oninput="handleInput(this, 'origen')"
+                 onfocus="showSuggestions('origen')"
+                 onblur="hideSuggestionsDelayed('origen')">
+        </div>
+        <div class="location-arrow">›</div>
       </div>
-<div class="input-card">
-  <span>📅 Fecha y Hora</span>
-  <input type="datetime-local" id="fecha">
-</div>
-
-<div class="campo" style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
-</div>
-
-<button id="btn-cotizar" type="button" class="btn-main" onclick="cotizar()">
-  Calcular Tarifa
-</button>
-
-    <div class="error" id="error"></div>
-
-<div class="resultado" id="resultado">
-
-  <div class="precio-destacado simple">
-    <div class="precio-monto" id="precio-por-viaje">$0 ARS</div>
-    <div class="precio-sub">Pago por viaje sin compromiso</div>
-  </div>
-
-  <button class="btn-whatsapp" onclick="enviarWhatsApp()">
-    💬 Reservar Ahora
-  </button>
-
-</div>
-
-    <div class="success-message" id="success-message">
-      <div style="font-size: 4rem; margin-bottom: 15px; animation: bounce 1s infinite;">🎉</div>
-      <h3 style="margin-bottom: 10px; font-size: 1.5rem; color: var(--verde-oscuro);">¡Reserva enviada!</h3>
-      <p style="font-size: 1.1rem; color: #555;">Te contactaremos en menos de 24 horas.</p>
-      <p style="margin-top: 15px; font-size: 0.9rem; color: #888; font-family: monospace;">
-        ID: <span id="reserva-id" style="color: var(--verde-oscuro); font-weight: bold;"></span>
-      </p>
+      <!-- Autocomplete Origen -->
+      <div class="autocomplete-container" id="suggestions-origen">
+        <!-- Se llena dinámicamente -->
+      </div>
     </div>
 
+    <!-- Destino -->
+    <div class="location-input-group">
+      <div class="location-card" onclick="focusInput('destino')">
+        <div class="location-icon destiny">📍</div>
+        <div class="location-text">
+          <div class="location-label">Destino</div>
+          <input type="text" 
+                 id="destino" 
+                 class="location-input" 
+                 placeholder="Escuela Primaria, Av. Libertador 456"
+                 autocomplete="off"
+                 oninput="handleInput(this, 'destino')"
+                 onfocus="showSuggestions('destino')"
+                 onblur="hideSuggestionsDelayed('destino')">
+        </div>
+        <div class="location-arrow">›</div>
+      </div>
+      <!-- Autocomplete Destino -->
+      <div class="autocomplete-container" id="suggestions-destino">
+        <!-- Se llena dinámicamente -->
+      </div>
+    </div>
+
+    <!-- Fecha y Hora -->
+    <div class="datetime-card">
+      <div class="datetime-header">
+        <span>📅</span>
+        <span>Fecha y Hora</span>
+      </div>
+      <div class="datetime-inputs">
+        <div class="datetime-field">
+          <label>Fecha</label>
+          <input type="date" id="fecha">
+        </div>
+        <div class="datetime-field">
+          <label>Hora</label>
+          <input type="time" id="hora" value="08:00">
+        </div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-message" id="errorMsg">
+      <span>⚠️</span>
+      <span id="errorText"></span>
+    </div>
+
+    <!-- Botón Calcular -->
+    <button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">
+      <span>Calcular Tarifa</span>
+    </button>
+
+    <!-- Resultado -->
+    <div class="resultado-section" id="resultado">
+      <div class="precio-box">
+        <div class="precio-monto">
+          <span class="precio-moneda">$</span>
+          <span id="precioValor">4000</span>
+          <span class="precio-moneda">ARS</span>
+        </div>
+        <div class="precio-descripcion">Pago por viaje sin compromiso mensual</div>
+      </div>
+      
+      <button class="btn-whatsapp" onclick="reservarWhatsApp()">
+        <span>💬</span>
+        <span>Reservar Ahora</span>
+      </button>
+    </div>
   </div>
 
-  <div class="footer">
-    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1rem;">📍 Villa Allende y zona | Córdoba</div>
-    <div class="telefono">📞 351 701 4863</div>
-    <p style="margin-top: 20px; font-size: 0.85rem; opacity: 0.6;">
-      © 2026 Mimi Transporte Infantil • Conductor profesional habilitado
-    </p>
+  <!-- Features -->
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">Conductores Profesionales</div>
+      <div class="feature-desc">Habilitados y certificados</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👶</div>
+      <div class="feature-title">Viajes Seguros</div>
+      <div class="feature-desc">Con butacas especiales</div>
+    </div>
   </div>
+</div>
 
 <script>
-let diasSeleccionados = [];
-let datosCotizacion = null;
-
-// CACHE GLOBAL - CLAVE PARA LA OPTIMIZACIÓN
-let cacheCotizacionBase = null;
-
-// Nombres de meses para mostrar
-const nombresMeses = [
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+// Datos de ejemplo para autocompletar (simulando Google Places)
+const mockAddresses = [
+  { primary: "Av. Santa Fe 1234", secondary: "Palermo, Buenos Aires", distance: "2.3 km" },
+  { primary: "Av. Santa Fe 5678", secondary: "Recoleta, Buenos Aires", distance: "3.1 km" },
+  { primary: "Av. Santa Fe 9012", secondary: "Belgrano, Buenos Aires", distance: "5.7 km" },
+  { primary: "Av. Libertador 456", secondary: "Retiro, Buenos Aires", distance: "1.8 km" },
+  { primary: "Av. Libertador 789", secondary: "Palermo, Buenos Aires", distance: "4.2 km" },
+  { primary: "Escuela Primaria N° 12", secondary: "Av. Libertador 456, CABA", distance: "1.5 km" },
+  { primary: "Colegio San Martín", secondary: "Av. Callao 123, CABA", distance: "2.9 km" }
 ];
 
-function actualizarNombresMeses() {
-  const hoy = new Date();
-  let mesActualIdx = hoy.getMonth();
-  let mesSiguienteIdx = (mesActualIdx + 1) % 12;
-  
-  let mesActual = nombresMeses[mesActualIdx];
-  let mesSiguiente = nombresMeses[mesSiguienteIdx];
-  
-  // Capitalizar
-  mesActual = mesActual.charAt(0).toUpperCase() + mesActual.slice(1);
-  mesSiguiente = mesSiguiente.charAt(0).toUpperCase() + mesSiguiente.slice(1);
-  
-  // Actualizar TODOS los elementos con estas clases (evita duplicados de ID)
-  document.querySelectorAll('.nombre-mes-actual').forEach(el => el.textContent = mesActual);
-  document.querySelectorAll('.nombre-mes-siguiente').forEach(el => el.textContent = mesSiguiente);
-}
+let selectedOrigen = null;
+let selectedDestino = null;
+let currentSuggestions = [];
 
+// Inicializar fecha con mañana
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+document.getElementById('fecha').value = tomorrow.toISOString().split('T')[0];
 
-function toggleDia(boton, dia) {
-  boton.classList.toggle('seleccionado');
-  if (diasSeleccionados.includes(dia)) {
-    diasSeleccionados = diasSeleccionados.filter(d => d !== dia);
-  } else {
-    diasSeleccionados.push(dia);
-  }
-  const ordenDias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
-  diasSeleccionados.sort((a, b) => ordenDias.indexOf(a) - ordenDias.indexOf(b));
-}
-
-function inicializarAutocomplete() {
-  if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-    mostrarErrorMaps('No se pudo cargar el servicio de mapas');
-    return;
-  }
-  
-  const opciones = {
-    componentRestrictions: { country: 'ar' },
-    fields: ['formatted_address', 'geometry', 'name'],
-    types: ['geocode', 'establishment']
-  };
-
-  const autocompleteDesde = new google.maps.places.Autocomplete(document.getElementById('desde'), opciones);
-  const autocompleteHasta = new google.maps.places.Autocomplete(document.getElementById('hasta'), opciones);
-
-  autocompleteDesde.addListener('place_changed', () => {
-    const lugar = autocompleteDesde.getPlace();
-    if (lugar.formatted_address) document.getElementById('desde').value = lugar.formatted_address;
-  });
-
-  autocompleteHasta.addListener('place_changed', () => {
-    const lugar = autocompleteHasta.getPlace();
-    if (lugar.formatted_address) document.getElementById('hasta').value = lugar.formatted_address;
-  });
-
-  // Prevenir submit con Enter en autocomplete
-  [document.getElementById('desde'), document.getElementById('hasta')].forEach(input => {
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); }
-    });
-  });
-}
-
-function mostrarErrorMaps(mensaje) {
-  const errorEl = document.getElementById('maps-error');
-  if (errorEl) {
-    errorEl.textContent = '⚠️ ' + mensaje + '. Podés escribir la dirección manualmente.';
-    errorEl.classList.add('visible');
-  }
-}
-
-window.gm_authFailure = () => mostrarErrorMaps('Error de autenticación con Google Maps');
-function enviarWhatsApp() {
-  const desde = document.getElementById('desde').value;
-  const hasta = document.getElementById('hasta').value;
-  const fecha = document.getElementById('fecha').value;
-  const precio = document.getElementById('precio-por-viaje').textContent;
-
-  if (!desde || !hasta || !fecha) {
-    alert("Completá todos los campos antes de reservar");
-    return;
+// Sistema de notificaciones
+class NotificationSystem {
+  constructor() {
+    this.container = document.getElementById('toastContainer');
+    this.notifications = [];
+    this.socket = null;
+    this.connect();
   }
 
-  const fechaFormateada = new Date(fecha).toLocaleString('es-AR', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  });
-
-  const mensaje = `Hola! Quiero reservar un viaje:
-
-📍 Origen: ${desde}
-🎯 Destino: ${hasta}
-📅 Fecha: ${fechaFormateada}
-💰 Precio: ${precio}`;
-
-  window.open(
-    'https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje),
-    '_blank'
-  );
-}
-
-
-function cotizar() {
-  const desde = document.getElementById('desde').value.trim();
-  const hasta = document.getElementById('hasta').value.trim();
-  const fecha = document.getElementById('fecha').value;
-
-  // Validaciones
-  if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
-  if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
-  
-  const ahora = new Date();
-  if (!fecha) {
-    mostrarError('Seleccioná fecha y hora');
-    return;
-  }
-  
-  const fechaSeleccionada = new Date(fecha);
-  if (fechaSeleccionada < ahora) {
-    mostrarError('La fecha no puede ser pasada');
-    return;
-  }
-
-  ocultarError();
-  
-  const btn = document.getElementById('btn-cotizar');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Calculando...';
-
-  // ✅ JSONP - Funciona desde GitHub Pages
-  const callbackName = 'mimiCallback_' + Date.now();
-  
-  // Crear función callback temporal
-  window[callbackName] = function(res) {
-    // Limpiar
-    delete window[callbackName];
-    if (script.parentNode) {
-      script.parentNode.removeChild(script);
-    }
+  connect() {
+    // Simular conexión WebSocket para notificaciones en tiempo real
+    console.log('🔌 Conectando a servidor de notificaciones...');
     
-    btn.disabled = false;
-    btn.innerHTML = 'Calcular Tarifa';
+    // Simular recepción de notificaciones cada 30 segundos (para demo)
+    setInterval(() => {
+      if (Math.random() > 0.7) {
+        this.simulateDriverNotification();
+      }
+    }, 30000);
+
+    // Notificación inicial
+    setTimeout(() => {
+      this.show('Bienvenido', 'Sistema de notificaciones activado', 'success');
+    }, 1000);
+  }
+
+  simulateDriverNotification() {
+    const notifs = [
+      { title: 'Chofer asignado', msg: 'Juan P. está en camino a tu ubicación', type: 'success' },
+      { title: 'Viaje confirmado', msg: 'Tu reserva para mañana está confirmada', type: 'success' },
+      { title: 'Recordatorio', msg: 'Tu viaje es en 30 minutos', type: 'warning' }
+    ];
+    const random = notifs[Math.floor(Math.random() * notifs.length)];
+    this.show(random.title, random.msg, random.type);
     
-    if (res.error) { 
-      mostrarError(res.error); 
-      return; 
-    }
+    // Actualizar badge
+    const badge = document.getElementById('notifBadge');
+    badge.style.display = 'flex';
+    badge.textContent = parseInt(badge.textContent || 0) + 1;
+  }
+
+  show(title, message, type = 'info', duration = 5000) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
     
-    // Guardar datos para WhatsApp
-    datosCotizacion = {
-      desde: desde,
-      hasta: hasta,
-      fecha: fecha,
-      ...res
+    const icons = {
+      success: '✅',
+      warning: '⚠️',
+      error: '❌',
+      info: 'ℹ️'
     };
     
-    mostrarResultado(res);
-  };
-  
-  // Timeout de seguridad (10 segundos)
-  const timeout = setTimeout(function() {
-    delete window[callbackName];
-    if (script.parentNode) {
-      script.parentNode.removeChild(script);
-    }
-    btn.disabled = false;
-    btn.innerHTML = 'Calcular Tarifa';
-    mostrarError('Tiempo de espera agotado. Intentá de nuevo.');
-  }, 10000);
-  
-  // Crear script tag para JSONP
-  const script = document.createElement('script');
-  const params = new URLSearchParams({
-    desde: desde,
-    hasta: hasta,
-    tipo: 'ida',
-    clientId: navigator.userAgent,
-    callback: callbackName
-  });
-  
-// ✅ URL CORRECTA de tu Web App
-script.src = 'https://script.google.com/macros/s/AKfycbwqC4JU6rA46ImbzCtGK3OlUnG6yl9lOQItKcJlkTpRzBZvlj5_HCIjqEkVfgqOssnC/exec?' + params.toString();  
-  // Limpiar timeout si carga correctamente
-  script.onload = function() {
-    clearTimeout(timeout);
-  };
-  
-  script.onerror = function() {
-    clearTimeout(timeout);
-    delete window[callbackName];
-    if (script.parentNode) {
-      script.parentNode.removeChild(script);
-    }
-    btn.disabled = false;
-    btn.innerHTML = 'Calcular Tarifa';
-    mostrarError('Error de conexión. Verificá tu conexión a internet.');
-  };
-  
-  document.head.appendChild(script);
-}
-function animarContador(elementId, valorFinal) {
-  const elemento = document.getElementById(elementId);
-  if (!elemento) return;
-  
-  const duracion = 1000;
-  const pasos = 20;
-  const incremento = valorFinal / pasos;
-  let paso = 0;
-  
-  const timer = setInterval(() => {
-    paso++;
-    const actual = Math.round(incremento * paso);
-    elemento.textContent = '$' + actual.toLocaleString('es-AR');
+    toast.innerHTML = `
+      <div class="toast-icon">${icons[type]}</div>
+      <div class="toast-content">
+        <div class="toast-title">${title}</div>
+        <div class="toast-message">${message}</div>
+      </div>
+      <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+    `;
     
-    if (paso >= pasos) {
-      elemento.textContent = '$' + valorFinal.toLocaleString('es-AR');
-      clearInterval(timer);
-    }
-  }, duracion / pasos);
-}
-
-function mostrarResultado(res) {
-  actualizarUIFinal(res);
-  function actualizarUIFinal(res) {
-animarContador('precio-por-viaje', res.precioPorViaje);
-}
-
-  // Mostrar sección de resultado
-  document.getElementById('resultado').classList.add('visible');
-const form = document.getElementById('form-confirmar');
-if (form) form.classList.remove('visible');
-  document.getElementById('success-message').classList.remove('visible');
-  
-  // Scroll suave
-  setTimeout(() => {
-    document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 100);
-}
-
-function mostrarConfirmacion() {
-  if (!datosCotizacion) { 
-    mostrarError('Primero calculá la cotización'); 
-    return; 
+    this.container.appendChild(toast);
+    
+    // Auto-remove
+    setTimeout(() => {
+      toast.style.animation = 'slideOutRight 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+    
+    // Sonido de notificación (opcional)
+    this.playSound(type);
   }
-  document.getElementById('form-confirmar').classList.add('visible');
-  document.getElementById('telefono').focus();
+
+  playSound(type) {
+    // Simular sonido de notificación
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    if (type === 'success') {
+      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // Do
+      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // Mi
+    } else if (type === 'warning') {
+      oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+    }
+    
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  }
 }
 
-function enviarReserva(boton) {
-  const telefono = document.getElementById('telefono').value.trim();
+const notifSystem = new NotificationSystem();
+
+// Funciones de UI
+function focusInput(type) {
+  document.getElementById(type).focus();
+}
+
+function handleInput(input, type) {
+  const value = input.value.toLowerCase();
+  const container = document.getElementById(`suggestions-${type}`);
   
-  if (!telefono || telefono.replace(/\D/g, '').length < 8) {
-    mostrarError('Ingresá un teléfono válido'); 
+  if (value.length < 2) {
+    container.classList.remove('visible');
     return;
   }
-
-  const datos = {
-    ...datosCotizacion,
-    telefono: telefono
-  };
   
-  const textoOriginal = boton.innerHTML;
-  boton.disabled = true;
-  boton.innerHTML = 'Enviando...';
-
-  google.script.run
-    .withSuccessHandler((res) => {
-      boton.disabled = false;
-      boton.innerHTML = textoOriginal;
-      
-      if (res.error) { 
-        mostrarError(res.error); 
-        return; 
-      }
-
-      document.getElementById('reserva-id').textContent = res.idReserva;
-      document.getElementById('success-message').classList.add('visible');
-      document.getElementById('form-confirmar').classList.remove('visible');
-      
-      setTimeout(() => {
-        document.getElementById('success-message').scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-
-      // Abrir WhatsApp
-      setTimeout(() => {
-        const mensaje = `Hola! Vi en la web de Mimi Transporte y quiero reservar:
-
-🆔 Reserva: ${res.idReserva}
-👤 Nombre: ${datos.nombre}
-📍 Desde: ${datos.desde}
-🏫 Hasta: ${datos.hasta}
-📅 Días: ${datos.dias.join(', ')} (${datos.dias.length} por semana)
-🔄 Tipo: ${datos.tipo === 'ida_vuelta' ? 'Ida y Vuelta' : 'Solo Ida'}
-⏰ Horario: ${datos.horarioIda}${datos.horarioVuelta ? ' / ' + datos.horarioVuelta : ''}
-💰 Precio por viaje: ${document.getElementById('precio-por-viaje').textContent}
-💰 Precio mensual estimado: ${document.getElementById('precio-mensual').textContent}
-📱 Tel: ${telefono}`;
-
-        window.open('https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje), '_blank');
-      }, 500);
-    })
-    .withFailureHandler(() => {
-      boton.disabled = false;
-      boton.innerHTML = textoOriginal;
-      mostrarError('Error al enviar. Intentá de nuevo.');
-    })
-    .guardarReserva(JSON.stringify(datos));
+  // Filtrar direcciones
+  const filtered = mockAddresses.filter(addr => 
+    addr.primary.toLowerCase().includes(value) || 
+    addr.secondary.toLowerCase().includes(value)
+  );
+  
+  renderSuggestions(container, filtered, type);
 }
 
-function mostrarError(mensaje) {
-  const el = document.getElementById('error');
-  el.textContent = mensaje;
-  el.classList.add('visible');
+function renderSuggestions(container, suggestions, type) {
+  if (suggestions.length === 0) {
+    container.innerHTML = `
+      <div class="autocomplete-item">
+        <div class="autocomplete-icon">🔍</div>
+        <div class="autocomplete-text">
+          <div class="autocomplete-primary">No se encontraron resultados</div>
+          <div class="autocomplete-secondary">Escribí la dirección completa</div>
+        </div>
+      </div>
+    `;
+  } else {
+    container.innerHTML = suggestions.map((addr, idx) => `
+      <div class="autocomplete-item" onclick="selectAddress('${type}', ${idx})" onmouseenter="highlightItem(this)">
+        <div class="autocomplete-icon">📍</div>
+        <div class="autocomplete-text">
+          <div class="autocomplete-primary">${highlightMatch(addr.primary)}</div>
+          <div class="autocomplete-secondary">${addr.secondary}</div>
+        </div>
+        <div class="autocomplete-distance">${addr.distance}</div>
+      </div>
+    `).join('');
+  }
+  
+  container.classList.add('visible');
+  currentSuggestions = suggestions;
+}
+
+function highlightMatch(text) {
+  const input = document.activeElement.value;
+  if (!input) return text;
+  const regex = new RegExp(`(${input})`, 'gi');
+  return text.replace(regex, '<span style="color: var(--azul-primario); font-weight: 700;">$1</span>');
+}
+
+function highlightItem(item) {
+  document.querySelectorAll('.autocomplete-item').forEach(el => el.classList.remove('selected'));
+  item.classList.add('selected');
+}
+
+function selectAddress(type, index) {
+  const addr = currentSuggestions[index];
+  if (!addr) return;
+  
+  const input = document.getElementById(type);
+  input.value = `${addr.primary}, ${addr.secondary}`;
+  
+  if (type === 'origen') selectedOrigen = addr;
+  else selectedDestino = addr;
+  
+  document.getElementById(`suggestions-${type}`).classList.remove('visible');
+  
+  // Notificación de selección
+  notifSystem.show('Dirección seleccionada', `${addr.primary} guardada`, 'success', 2000);
+}
+
+function showSuggestions(type) {
+  const input = document.getElementById(type);
+  if (input.value.length >= 2) {
+    handleInput(input, type);
+  }
+}
+
+function hideSuggestionsDelayed(type) {
   setTimeout(() => {
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 100);
+    document.getElementById(`suggestions-${type}`).classList.remove('visible');
+  }, 200);
 }
 
-function ocultarError() {
-  document.getElementById('error').classList.remove('visible');
-}
-
-// Inicializar al cargar
-window.onload = function() {
-  actualizarNombresMeses();
-
+function calcularTarifa() {
+  const origen = document.getElementById('origen').value;
+  const destino = document.getElementById('destino').value;
+  const fecha = document.getElementById('fecha').value;
+  const hora = document.getElementById('hora').value;
+  
+  // Validaciones
+  if (!origen || !destino) {
+    showError('Completá origen y destino');
+    return;
+  }
+  
+  if (!fecha || !hora) {
+    showError('Seleccioná fecha y hora');
+    return;
+  }
+  
+  hideError();
+  
+  // Simular cálculo
+  const btn = document.getElementById('btnCalcular');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Calculando...';
+  
   setTimeout(() => {
-    if (typeof google === 'undefined') {
-      mostrarErrorMaps('No se pudo conectar con Google Maps');
-    }
-  }, 3000);
-};
+    btn.disabled = false;
+    btn.innerHTML = '<span>Calcular Tarifa</span>';
+    
+    // Mostrar resultado con animación
+    document.getElementById('resultado').classList.add('visible');
+    
+    // Animar precio
+    animateValue('precioValor', 0, 4000, 1000);
+    
+    // Notificar al chofer (simulado)
+    notifyDriver();
+    
+    // Scroll al resultado
+    document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 1500);
+}
+
+function animateValue(id, start, end, duration) {
+  const obj = document.getElementById(id);
+  const range = end - start;
+  const minTimer = 50;
+  let stepTime = Math.abs(Math.floor(duration / range));
+  stepTime = Math.max(stepTime, minTimer);
+  
+  let startTime = new Date().getTime();
+  let endTime = startTime + duration;
+  let timer;
+  
+  function run() {
+    let now = new Date().getTime();
+    let remaining = Math.max((endTime - now) / duration, 0);
+    let value = Math.round(end - (remaining * range));
+    obj.innerHTML = value.toLocaleString('es-AR');
+    if (value == end) clearInterval(timer);
+  }
+  
+  timer = setInterval(run, stepTime);
+  run();
+}
+
+function notifyDriver() {
+  // Simular notificación push al chofer
+  console.log('📱 Notificando al chofer...');
+  
+  setTimeout(() => {
+    notifSystem.show('Chofer notificado', 'Un conductor revisará tu solicitud en breve', 'info');
+  }, 2000);
+}
+
+function reservarWhatsApp() {
+  const origen = document.getElementById('origen').value;
+  const destino = document.getElementById('destino').value;
+  const fecha = document.getElementById('fecha').value;
+  const hora = document.getElementById('hora').value;
+  const precio = document.getElementById('precioValor').textContent;
+  
+  const mensaje = `¡Hola! Quiero reservar un viaje con MIMI:
+
+📍 Origen: ${origen}
+🎯 Destino: ${destino}
+📅 Fecha: ${fecha}
+⏰ Hora: ${hora}
+💰 Precio: $${precio} ARS
+
+¡Gracias!`;
+  
+  window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');
+  
+  notifSystem.show('Redirigiendo', 'Abriendo WhatsApp...', 'success', 3000);
+}
+
+function showError(msg) {
+  document.getElementById('errorText').textContent = msg;
+  document.getElementById('errorMsg').classList.add('visible');
+}
+
+function hideError() {
+  document.getElementById('errorMsg').classList.remove('visible');
+}
+
+function toggleNotifications() {
+  notifSystem.show('Notificaciones', 'Tienes 3 mensajes nuevos', 'info');
+  document.getElementById('notifBadge').style.display = 'none';
+  document.getElementById('notifBadge').textContent = '0';
+}
+
+// Cerrar sugerencias al hacer click fuera
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.location-input-group')) {
+    document.querySelectorAll('.autocomplete-container').forEach(el => {
+      el.classList.remove('visible');
+    });
+  }
+});
 </script>
+
 </body>
 </html>
