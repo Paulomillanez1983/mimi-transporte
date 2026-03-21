@@ -88,9 +88,14 @@ body {
 }
 .logo-section {
   color: white;
-  margin-left: 160px;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
-.logo-title {
+  .logo-title {
   font-size: 1.8rem;
   font-weight: 800;
   letter-spacing: 1px;
@@ -698,17 +703,16 @@ body {
 <header class="header">
   <div class="header-content">
     <div class="vehicle-section">
-      <!-- El Jeep está posicionado absolutamente, fuera del flujo normal -->
       <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png" 
            alt="Jeep MIMI" 
            class="vehicle-img"
            onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
-      <div class="logo-section">
-        <div class="logo-title">MIMI</div>
-        <div class="logo-subtitle">Transporte Escolar</div>
-      </div>
     </div>
-    <div style="display:flex; align-items:center;">
+    <div class="logo-section">
+      <div class="logo-title">MIMI</div>
+      <div class="logo-subtitle">Transporte Escolar</div>
+    </div>
+    <div class="header-icons">
       <div class="shield-icon">✓</div>
       <div class="notification-bell" onclick="mostrarNotificaciones()">
         🔔
@@ -717,7 +721,7 @@ body {
     </div>
   </div>
 </header>
-<div class="container">
+  <div class="container">
   <!-- Hero -->
   <div class="hero-text">
     <h1 class="hero-title">¡Viaje Seguro para tus Niños!</h1>
