@@ -1512,10 +1512,10 @@ document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mes
   
   document.getElementById('viajes-mes-detalle').textContent = `~${res.viajesPorMesRango || '0 viajes'}`;
   document.getElementById('precio-unitario-detalle').textContent = res.precioPorViajeFormateado || '$0';
-    const diasLargos = res.dias.map(d => nombresDiasLargos[d]);
-  document.getElementById('dias-nombres').textContent = 
-    diasLargos.length === 1 ? diasLargos[0] : 
-    diasLargos.slice(0, -1).join(', ') + ' y ' + diasLargos.slice(-1);
+const diasLargos = res.dias.map(d => nombresDiasLargos[d]);
+document.getElementById('dias-nombres').textContent = 
+  diasLargos.length === 1 ? diasLargos[0] : 
+  diasLargos.slice(0, -1).join(', ') + ' y ' + diasLargos.slice(-1);
 
 
   // Mensaje personalizado
