@@ -34,8 +34,6 @@ function cargarMaps() {
   }
 }
 </script>
-<script>
-
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places"></script>
 
 
@@ -985,49 +983,6 @@ function actualizarNombresMeses() {
   document.querySelectorAll('.nombre-mes-siguiente').forEach(el => el.textContent = mesSiguiente);
 }
 
-function calcularViajesMesFrontend(diasSeleccionados, tipoViaje, mesReferencia) {
-  const hoy = new Date();
-  let mes = hoy.getMonth();
-  let anio = hoy.getFullYear();
-
-  if (mesReferencia === 'siguiente') {
-    mes++;
-    if (mes > 11) {
-      mes = 0;
-      anio++;
-    }
-  }
-
-  const mapaDias = {
-    'Dom': 0, 'Lun': 1, 'Mar': 2, 'Mié': 3, 'Jue': 4, 'Vie': 5, 'Sáb': 6
-  };
-
-  const diasNumeros = diasSeleccionados.map(d => mapaDias[d]).filter(d => d !== undefined);
-  const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-  let contador = 0;
-
-  for (let dia = 1; dia <= diasEnMes; dia++) {
-    const fecha = new Date(anio, mes, dia);
-    if (diasNumeros.includes(fecha.getDay())) {
-      contador++;
-    }
-  }
-
-  const multiplicador = tipoViaje === 'ida_vuelta' ? 2 : 1;
-  const totalViajes = contador * multiplicador;
-  
-  const minViajes = Math.max(1, Math.floor(totalViajes * 0.85));
-  const rango = minViajes === totalViajes 
-    ? `${totalViajes} viajes` 
-    : `${minViajes}–${totalViajes} viajes`;
-
-  return {
-    cantidad: totalViajes,
-    rango: rango,
-    mesNombre: nombresMeses[mes],
-    anio: anio
-  };
-}
 
 function toggleDia(boton, dia) {
   boton.classList.toggle('seleccionado');
@@ -1137,7 +1092,7 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
         mostrarError(res.error); 
         return; 
       }
-      const precioSemanal = res.precioPorViaje * diasSeleccionados.length * (tipoViaje === 'ida_vuelta' ? 2 : 1);
+const precioSemanal = res.precioPorViaje;
 
 
       // GUARDAR EN CACHE - ESTO ES CLAVE
@@ -1198,63 +1153,6 @@ function animarContador(elementId, valorFinal) {
       clearInterval(timer);
     }
   }, duracion / pasos);
-}
-
-function actualizarUIFinal(res) {
-  // Actualizar precios con animación
-  animarContador('precio-por-viaje', res.precioPorViaje || 0);
-  animarContador('precio-mensual', res.precioMensual || 0);
-  animarContador('precio-mensual-alt', res.precioMensual || 0);
-  animarContador('precio-semanal', res.precioSemanal || 0);
-  
-  // Actualizar textos
-  document.getElementById('tipo-viaje-texto').textContent = res.esIdaVuelta 
-    ? 'Ida y vuelta incluido' 
-    : 'Solo ida';
-    
-  document.getElementById('info-distancia').textContent = res.kmTotal + ' km';
-  document.getElementById('info-duracion').textContent = res.duracionIda + ' min';
-const nombresDiasLargos = {
-  'Lun': 'lunes',
-  'Mar': 'martes',
-  'Mié': 'miércoles',
-  'Jue': 'jueves',
-  'Vie': 'viernes'
-};
-
-document.getElementById('info-dias-semana').textContent =
-  res.dias.map(d => nombresDiasLargos[d]).join(', ');
-
-    
-  const mesTexto = res.mesReferencia ? `para ${res.mesReferencia}` : 'para este mes';
-  document.getElementById('mes-referencia').textContent = mesTexto;
-document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mesReferencia || 'este mes');
-  document.getElementById('mes-nombre').textContent = res.mesReferencia || 'este mes';
-  
-  document.getElementById('viajes-mes-detalle').textContent = `~${res.viajesPorMesRango || '0 viajes'}`;
-document.getElementById('precio-unitario-detalle').textContent = 
-  "$" + (res.precioPorViaje || 0).toLocaleString('es-AR');
-const diasLargos = res.dias.map(d => nombresDiasLargos[d]);
-document.getElementById('dias-nombres').textContent = 
-  diasLargos.length === 1 ? diasLargos[0] : 
-  diasLargos.slice(0, -1).join(', ') + ' y ' + diasLargos.slice(-1);
-
-
-  // Mensaje personalizado
-  const mensajeAhorro = document.getElementById('mensaje-ahorro');
-  if (res.dias.length >= 3) {
-    mensajeAhorro.innerHTML = `✅ <strong>¡Buena elección!</strong> Usando el servicio${res.dias.length} días por semana, 
-      el abono mensual te da previsibilidad y prioridad en tu horario.`;
-  } else if (res.dias.length === 1) {
-    mensajeAhorro.innerHTML = `💡 <strong>¿Solo un día?</strong> Perfecto para actividades puntuales. 
-      Si después necesitás más días, podemos ajustar tu plan.`;
-  } else {
-    mensajeAhorro.innerHTML = `💡 Con ${res.dias.length} días por semana, evaluá si te conviene 
-      pagar por viaje o consultar por un abono flexible.`;
-  }
-
-  document.getElementById('detalle-ruta').textContent = res.ruta;
-  document.getElementById('detalle-id').textContent = 'COT-' + Date.now().toString(36).toUpperCase();
 }
 
 function mostrarResultado(res) {
