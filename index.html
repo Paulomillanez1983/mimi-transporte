@@ -4,15 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Redirección automática al cotizador -->
-    <meta http-equiv="refresh" content="0; url=https://script.google.com/macros/s/AKfycbzlu-KyPgGM7Na6M11WigzrBmYvjsPzwFhCPJq_QwrcA_ILIS21PT3_7OZlZsj6pJQG/exec">
+    <!-- Redirección automática al cotizador (1 segundo para mayor compatibilidad) -->
+    <meta http-equiv="refresh" content="1; url=https://script.google.com/macros/s/AKfycbzlu-KyPgGM7Na6M11WigzrBmYvjsPzwFhCPJq_QwrcA_ILIS21PT3_7OZlZsj6pJQG/exec">
     
-    <!-- Open Graph para WhatsApp/Facebook -->
+    <!-- SEO y compartir en redes -->
+    <title>Mimi Transporte Infantil - Cotizador</title>
+    <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Tu hijo viaja tranquilo, vos también. Cotizá ahora online.">
+    
+    <!-- Open Graph (WhatsApp, Facebook, Instagram, etc.) -->
     <meta property="og:site_name" content="Mimi Transporte Infantil">
     <meta property="og:title" content="Mimi Transporte Infantil">
-    <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
-    <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
-    <meta property="og:image:secure_url" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
+    <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar confiable en Villa Allende y Córdoba. ¡Cotizá en segundos!">
+    <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/raw/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg">
+    <meta property="og:image:secure_url" content="https://github.com/Paulomillanez1983/mimi-transporte/raw/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg">
     <meta property="og:image:type" content="image/jpeg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -20,37 +24,98 @@
     <meta property="og:type" content="website">
     <meta property="og:locale" content="es_AR">
     
-    <!-- Twitter -->
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Mimi Transporte Infantil">
-    <meta name="twitter:description" content="Tu hijo viaja seguro, vos tranquilo.">
-    <meta name="twitter:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
+    <meta name="twitter:description" content="Tu hijo viaja seguro, vos tranquilo. Cotizá el transporte escolar ahora.">
+    <meta name="twitter:image" content="https://github.com/Paulomillanez1983/mimi-transporte/raw/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg">
     
-    <title>Mimi Transporte Infantil</title>
+    <!-- Favicon (subí uno a tu repo si querés) -->
+    <!-- <link rel="icon" href="/favicon.ico" type="image/x-icon"> -->
     
     <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            text-align: center; 
-            padding: 50px; 
-            background: linear-gradient(135deg, #e3f2fd 0%, #fce4ec 100%);
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            text-align: center;
+            padding: 80px 20px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #fce4ec 60%, #f8bbd9 100%);
+            color: #333;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            max-width: 500px;
+        }
+        h1 {
+            color: #e91e63;
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .frase {
+            font-size: 1.3rem;
+            color: #1565c0;
+            font-style: italic;
+            margin: 10px 0 30px;
         }
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #e91e63;
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #e91e63;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 80px;
+            height: 80px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
+            margin: 30px auto;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        a { color: #e91e63; text-decoration: none; font-weight: bold; }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        p {
+            font-size: 1.15rem;
+            margin: 15px 0;
+            line-height: 1.5;
+        }
+        .link-fallback {
+            color: #e91e63;
+            font-weight: bold;
+            text-decoration: underline;
+            font-size: 1.1rem;
+        }
+        .link-fallback:hover {
+            color: #c2185b;
+        }
+        .footer {
+            margin-top: 60px;
+            font-size: 0.9rem;
+            color: #666;
+        }
     </style>
 </head>
 <body>
-    <div class="loader"></div>
-    <p>Redirigiendo a Mimi Transporte Infantil...</p>
-    <p><a href="https://script.google.com/macros/s/AKfycbzlu-KyPgGM7Na6M11WigzrBmYvjsPzwFhCPJq_QwrcA_ILIS21PT3_7OZlZsj6pJQG/exec">Click aquí si no redirige automáticamente</a></p>
+    <div class="container">
+        <h1>Mimi Transporte Infantil</h1>
+        <p class="frase">"Tu hijo viaja seguro,<br>vos tranquilo"</p>
+        
+        <div class="loader"></div>
+        
+        <p>Redirigiendo al cotizador en segundos...</p>
+        <p>Estamos preparándote la mejor cotización para el transporte de tu hijo ❤️</p>
+        
+        <p>
+            <a href="https://script.google.com/macros/s/AKfycbzlu-KyPgGM7Na6M11WigzrBmYvjsPzwFhCPJq_QwrcA_ILIS21PT3_7OZlZsj6pJQG/exec" 
+               class="link-fallback">
+                → Click aquí si no redirige automáticamente
+            </a>
+        </p>
+    </div>
+
+    <div class="footer">
+        © 2026 Mimi Transporte Infantil • Villa Allende y Córdoba
+    </div>
 </body>
 </html>
