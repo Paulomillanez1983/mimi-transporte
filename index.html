@@ -1094,12 +1094,13 @@ const tipo = tipo || 'ida';
   // Llamar al backend (SOLO UNA VEZ)
 fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1sNoyoJoeQ2-5fLygpdOnO7lvbiVXm8PSo5h/exec", {
   method: "POST",
-  body: JSON.stringify({
-    desde: desde,
-    hasta: hasta,
-    dias: [],
-    tipo: tipoViaje
-  })
+body: JSON.stringify({
+  desde: desde,
+  hasta: hasta,
+  dias: [],
+  tipo: tipo,
+  clientId: navigator.userAgent
+})
 })
 .then(res => res.json())
 .then(res => {
