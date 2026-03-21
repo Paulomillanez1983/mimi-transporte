@@ -1080,7 +1080,7 @@ if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
 if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
 if (!fecha) { mostrarError('Seleccioná fecha y hora'); return; }
 
-const tipoViaje = 'ida';
+const tipo = tipo || 'ida';
 
 // Solo exigir vuelta si corresponde
 
