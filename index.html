@@ -1383,8 +1383,17 @@ function cotizar() {
   btn.innerHTML = '<div class="spinner"></div> Calculando...';
 
   // Llamar al backend (SOLO UNA VEZ)
-  google.script.run
-    .withSuccessHandler((res) => {
+fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1sNoyoJoeQ2-5fLygpdOnO7lvbiVXm8PSo5h/exec", {
+  method: "POST",
+  body: JSON.stringify({
+    desde: desde,
+    hasta: hasta,
+    dias: diasSeleccionados,
+    tipo: tipoViaje
+  })
+})
+.then(res => res.json())
+.then(res => {
       btn.disabled = false;
       btn.innerHTML = '<span>🧮 Calcular Cotización</span>';
       
@@ -1440,13 +1449,12 @@ function cotizar() {
 
       mostrarResultado(datosCompletos);
     })
-    .withFailureHandler((err) => {
-      console.error(err);
+    .catch((err) => {
+          console.error(err);
       btn.disabled = false;
       btn.innerHTML = '<span>🧮 Calcular Cotización</span>';
       mostrarError('Error de conexión. Intentá de nuevo.');
     })
-    .cotizar(desde, hasta, diasSeleccionados, tipoViaje, null); // null = clientId generado automático
 }
 
 function animarContador(elementId, valorFinal) {
@@ -1509,7 +1517,7 @@ document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mes
   // Mensaje personalizado
   const mensajeAhorro = document.getElementById('mensaje-ahorro');
   if (res.dias.length >= 3) {
-    mensajeAhorro.innerHTML = `✅ <strong>¡Buena elección!</strong> Usando el servicio ${res.res.dias.length} días por semana, 
+    mensajeAhorro.innerHTML = `✅ <strong>¡Buena elección!</strong> Usando el servicio${res.dias.length} días por semana, 
       el abono mensual te da previsibilidad y prioridad en tu horario.`;
   } else if (res.cantidadDias === 1) {
     mensajeAhorro.innerHTML = `💡 <strong>¿Solo un día?</strong> Perfecto para actividades puntuales. 
