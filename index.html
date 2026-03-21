@@ -1048,7 +1048,11 @@ function enviarWhatsApp() {
 
 📍 Origen: ${desde}
 🎯 Destino: ${hasta}
-📅 Fecha: ${new Date(fecha).toLocaleString('es-AR')}
+📅 Fecha: ${const fechaFormateada = new Date(fecha).toLocaleString('es-AR', {
+  dateStyle: 'short',
+  timeStyle: 'short'
+});
+
 💰 Precio: ${precio}`;
 
   window.open('https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje), '_blank');
@@ -1096,15 +1100,12 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
         mostrarError(res.error); 
         return; 
       }
-const precioSemanal = res.precioPorViaje;
-
-      // Calcular mes seleccionado
-const precioMensual = res.precioPorViaje;
+const precioPorViaje = res.precioPorViaje;
 
       // Completar datos para mostrar
 const datosCompletos = {
   ...res,
-  precioPorViaje: precioSemanal
+precioPorViaje: precioPorViaje
 };
 
 
