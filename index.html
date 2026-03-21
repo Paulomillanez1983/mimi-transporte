@@ -1078,7 +1078,7 @@ body {
           <span class="info-valor" id="info-duracion">-</span>
         </div>
         <div class="info-item">
-          <span class="info-label">Días por semana</span>
+          <span class="info-label">Días seleccionados</span>
           <span class="info-valor" id="info-dias-semana">-</span>
         </div>
       </div>
@@ -1485,7 +1485,8 @@ function actualizarUIFinal(res) {
   document.getElementById('info-distancia').textContent = res.kmTotal + ' km';
   document.getElementById('info-duracion').textContent = res.duracionIda + ' min';
   document.getElementById('info-dias-semana').textContent = 
-    res.dias.join(', ') + ' (' + res.cantidadDias + (res.cantidadDias === 1 ? ' día' : ' días') + ')';
+  res.dias.join(', ');
+
     
   const mesTexto = res.mesReferencia ? `para ${res.mesReferencia}` : 'para este mes';
   document.getElementById('mes-referencia').textContent = mesTexto;
@@ -1507,8 +1508,8 @@ document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mes
 
   // Mensaje personalizado
   const mensajeAhorro = document.getElementById('mensaje-ahorro');
-  if (res.cantidadDias >= 3) {
-    mensajeAhorro.innerHTML = `✅ <strong>¡Buena elección!</strong> Usando el servicio ${res.cantidadDias} días por semana, 
+  if (res.dias.length >= 3) {
+    mensajeAhorro.innerHTML = `✅ <strong>¡Buena elección!</strong> Usando el servicio ${res.res.dias.length} días por semana, 
       el abono mensual te da previsibilidad y prioridad en tu horario.`;
   } else if (res.cantidadDias === 1) {
     mensajeAhorro.innerHTML = `💡 <strong>¿Solo un día?</strong> Perfecto para actividades puntuales. 
