@@ -1096,7 +1096,8 @@ body {
         <div class="precio-mensual-monto" id="precio-mensual">$0</div>
         
         <div class="precio-mensual-detalle">
-          <span id="viajes-mes-detalle">~8 viajes (solo lunares)</span>
+          <span id="viajes-mes-detalle">~8 viajes</span>
+
           <span class="precio-mensual-unitario">a <span id="precio-unitario-detalle">$4.000</span> c/u</span>
         </div>
 
@@ -1121,7 +1122,9 @@ body {
       <div class="nota-clara">
         <p>📌 <strong>¿Cómo se calcula?</strong></p>
         <p>El precio por viaje se calcula según la distancia recorrida. 
-        El mensual es una estimación basada en la cantidad de <span id="dias-nombres">lunes</span> 
+        <p>📌 <strong>¿Cómo se calcula?</strong></p>
+        <p>El precio por viaje se calcula según la distancia recorrida. 
+        El mensual es una estimación basada en los días seleccionados dentro del mes de <span id="mes-nombre">abril</span>.</p> 
         que hay en el mes de <span id="mes-nombre">abril</span>.</p>
         <p style="margin-top: 10px; font-size: 0.85rem; opacity: 0.8;">
         💡 Tip: Si necesitás transporte todos los meses, consultá por nuestros planes de abono con descuento.
@@ -1492,7 +1495,17 @@ function actualizarUIFinal(res) {
     
   document.getElementById('info-distancia').textContent = res.kmTotal + ' km';
   document.getElementById('info-duracion').textContent = res.duracionIda + ' min';
-  document.getElementById('info-dias-semana').textContent = 
+  const nombresDiasLargos = {
+  'Lun': 'Lunes',
+  'Mar': 'Martes',
+  'Mié': 'Miércoles',
+  'Jue': 'Jueves',
+  'Vie': 'Viernes'
+};
+
+document.getElementById('info-dias-semana').textContent =
+  res.dias.map(d => nombresDiasLargos[d]).join(', ');
+ 
   res.dias.join(', ');
 
     
