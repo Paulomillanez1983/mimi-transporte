@@ -27,9 +27,13 @@
 
 <script>
 function cargarMaps() {
-  if (typeof google !== 'undefined' && google.maps) {
-    inicializarAutocomplete();
-  } else {
+  try {
+    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+      inicializarAutocomplete();
+    } else {
+      throw new Error("Maps no disponible");
+    }
+  } catch (e) {
     mostrarErrorMaps('Error al cargar Google Maps');
   }
 }
