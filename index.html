@@ -1075,30 +1075,23 @@ function enviarWhatsApp() {
 function cotizar() {
   const desde = document.getElementById('desde').value.trim();
   const hasta = document.getElementById('hasta').value.trim();
-const fecha = document.getElementById('fecha').value;
-
-
+  const fecha = document.getElementById('fecha').value;
 
   // Validaciones
-if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
-if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
-const ahora = new Date();
+  if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
+  if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
+  
+  const ahora = new Date();
   if (!fecha) {
-  mostrarError('Seleccioná fecha y hora');
-  return;
-}
-
-const fechaSeleccionada = new Date(fecha);
-
-if (fechaSeleccionada < ahora) {
-  mostrarError('La fecha no puede ser pasada');
-  return;
-}
-
-let tipo = 'ida';
-
-// Solo exigir vuelta si corresponde
-
+    mostrarError('Seleccioná fecha y hora');
+    return;
+  }
+  
+  const fechaSeleccionada = new Date(fecha);
+  if (fechaSeleccionada < ahora) {
+    mostrarError('La fecha no puede ser pasada');
+    return;
+  }
 
   ocultarError();
   
@@ -1106,53 +1099,78 @@ let tipo = 'ida';
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Calculando...';
 
-  // Llamar al backend (SOLO UNA VEZ)
-fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1sNoyoJoeQ2-5fLygpdOnO7lvbiVXm8PSo5h/exec", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
+  // ✅ JSONP - Funciona desde GitHub Pages
+  const callbackName = 'mimiCallback_' + Date.now();
+  
+  // Crear función callback temporal
+  window[callbackName] = function(res) {
+    // Limpiar
+    delete window[callbackName];
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = 'Calcular Tarifa';
+    
+    if (res.error) { 
+      mostrarError(res.error); 
+      return; 
+    }
+    
+    // Guardar datos para WhatsApp
+    datosCotizacion = {
+      desde: desde,
+      hasta: hasta,
+      fecha: fecha,
+      ...res
+    };
+    
+    mostrarResultado(res);
+  };
+  
+  // Timeout de seguridad (10 segundos)
+  const timeout = setTimeout(function() {
+    delete window[callbackName];
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
+    btn.disabled = false;
+    btn.innerHTML = 'Calcular Tarifa';
+    mostrarError('Tiempo de espera agotado. Intentá de nuevo.');
+  }, 10000);
+  
+  // Crear script tag para JSONP
+  const script = document.createElement('script');
+  const params = new URLSearchParams({
     desde: desde,
     hasta: hasta,
-    dias: [],
-    tipo: tipo,
-    clientId: navigator.userAgent
-  })
-})
-.then(res => res.json())
-.then(res => {
-      btn.disabled = false;
-      btn.innerHTML = 'Calcular Tarifa';
-      
-      if (res.error) { 
-        mostrarError(res.error); 
-        return; 
-      }
-const precioPorViaje = res.precioPorViaje;
-
-      // Completar datos para mostrar
-const datosCompletos = {
-  ...res,
-precioPorViaje: precioPorViaje
-};
-
-
-datosCotizacion = {
-  desde: desde,
+    tipo: 'ida',
+    clientId: navigator.userAgent,
+    callback: callbackName
+  });
+  
+  // ✅ URL de tu Web App (reemplaza con tu ID actual)
+  script.src = 'https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1sNoyoJoeQ2-5fLygpdOnO7lvbiVXm8PSo5h/exec?' + params.toString();
+  
+  // Limpiar timeout si carga correctamente
+  script.onload = function() {
+    clearTimeout(timeout);
   };
-
-
-      mostrarResultado(datosCompletos);
-    })
-    .catch((err) => {
-          console.error(err);
-      btn.disabled = false;
-      btn.innerHTML = 'Calcular Tarifa';
-      mostrarError('Error de conexión. Intentá de nuevo.');
-    })
+  
+  script.onerror = function() {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
+    btn.disabled = false;
+    btn.innerHTML = 'Calcular Tarifa';
+    mostrarError('Error de conexión. Verificá tu conexión a internet.');
+  };
+  
+  document.head.appendChild(script);
 }
-
 function animarContador(elementId, valorFinal) {
   const elemento = document.getElementById(elementId);
   if (!elemento) return;
