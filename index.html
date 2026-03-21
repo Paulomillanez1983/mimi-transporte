@@ -717,133 +717,6 @@ body {
   color: #333;
 }
 
-/* SECCIÓN PRECIO MENSUAL */
-.precio-mensual-section {
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-  border-radius: 20px;
-  padding: 25px;
-  border: 2px solid var(--verde);
-  margin-bottom: 20px;
-}
-
-.precio-mensual-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.precio-mensual-label {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--verde-oscuro);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.precio-mensual-mes {
-  font-size: 0.85rem;
-  color: #666;
-  background: rgba(255,255,255,0.6);
-  padding: 4px 12px;
-  border-radius: 20px;
-}
-
-.precio-mensual-monto {
-  font-size: 2.8rem;
-  font-weight: 900;
-  color: var(--verde-oscuro);
-  margin: 10px 0;
-  font-family: 'SF Mono', monospace;
-  letter-spacing: -1px;
-}
-
-.precio-mensual-detalle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.9rem;
-  color: #555;
-  padding: 10px 0;
-  border-bottom: 1px dashed rgba(0,0,0,0.1);
-}
-
-.precio-mensual-unitario {
-  font-weight: 600;
-  color: var(--verde-oscuro);
-}
-
-.precio-mensual-ahorro {
-  margin-top: 15px;
-  padding: 15px;
-  background: rgba(255,255,255,0.7);
-  border-radius: 12px;
-  font-size: 0.9rem;
-  color: #2e7d32;
-  font-weight: 500;
-  border-left: 4px solid var(--verde);
-}
-
-/* COMPARACIÓN DE PRECIOS */
-.comparacion-precios {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin: 20px 0;
-}
-
-.comparacion-item {
-  background: white;
-  padding: 20px 15px;
-  border-radius: 16px;
-  text-align: center;
-  border: 2px solid #e8e8e8;
-  transition: all 0.3s;
-}
-
-.comparacion-item.destacado {
-  border-color: var(--verde);
-  background: linear-gradient(135deg, #f1f8e9 0%, #e8f5e9 100%);
-  transform: scale(1.02);
-}
-
-.comparacion-label {
-  display: block;
-  font-size: 0.8rem;
-  color: #888;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
-.comparacion-valor {
-  display: block;
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #333;
-  font-family: 'SF Mono', monospace;
-}
-
-.comparacion-valor.verde {
-  color: var(--verde-oscuro);
-}
-
-/* NOTA CLARA */
-.nota-clara {
-  background: #fff8e1;
-  border-radius: 16px;
-  padding: 20px;
-  margin: 20px 0;
-  text-align: left;
-  border-left: 4px solid #ffc107;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: #555;
-}
-
-.nota-clara strong {
-  color: #f57c00;
-}
 /* RESPONSIVE */
 @media (max-width: 480px) {
   .dias-semana { grid-template-columns: repeat(3, 1fr); }
@@ -924,6 +797,78 @@ body {
   box-shadow: 0 6px 20px rgba(76,175,80,0.4) !important;
   transform: translateY(-1px) !important;
 }
+  .card-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f7f7f7;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.card-input input {
+  border: none;
+  background: transparent;
+  text-align: right;
+  font-size: 1rem;
+}
+.precio-destacado.simple {
+  background: white;
+  box-shadow: none;
+  color: #2a5298;
+}
+
+.precio-sub {
+  font-size: 0.9rem;
+  color: #666;
+}
+.input-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px;
+  margin-bottom: 12px;
+  background: #f5f5f5;
+  border-radius: 14px;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+}
+
+.input-card input {
+  border: none;
+  background: transparent;
+  text-align: right;
+  width: 60%;
+  font-size: 1rem;
+}
+
+.input-card span {
+  font-weight: 600;
+  color: #333;
+}
+.btn-main {
+  width: 100%;
+  padding: 18px;
+  background: #2a5298;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-top: 15px;
+}
+.btn-whatsapp {
+  width: 100%;
+  padding: 18px;
+  background: #25d366;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  margin-top: 15px;
+}
+
 </style>
 <title>Mimi Transporte Infantil - Cotizá ahora</title>
 <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá el viaje de tu hijo en segundos. ¡Tu tranquilidad empieza aquí!">
@@ -949,169 +894,46 @@ body {
       ⚠️ Error al cargar el servicio de mapas. Podés escribir la dirección manualmente.
     </div>
 
-
-    <div class="campo">
-      <label>👤 Nombre del niño/a</label>
-      <input type="text" id="nombre" placeholder="Ej: Martín" required>
-    </div>
-    <div id="dias-nombres"></div>
-
-
-<div class="campo" style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
-  <label>📍 Origen</label>
-  <input type="text" id="desde" placeholder="Ej: Av. Siempre Viva 123, Córdoba" required autocomplete="off">
+<div class="input-card">
+  <span>📍 Origen</span>
+  <input type="text" id="desde" placeholder="Av. Santa Fe 1234">
 </div>
 
-<div class="campo">
-      <label>🎯 Destino</label>
-      <input type="text" id="hasta" placeholder="Ej: Colegio San José, Córdoba" required autocomplete="off">
-    </div>
-
-    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">📅 ¿Qué días necesitás el servicio?</label>
-<!-- Selector de mes de referencia - ARRIBA del formulario -->
-<div class="campo" style="margin: 25px 0 30px; text-align: center;">
-    <button type="button" class="btn-mes-selector activo" data-mes="actual" onclick="cambiarMesReferencia('actual')">
-      Mes actual (<span class="nombre-mes-actual"></span>)
-    </button>
-    <button type="button" class="btn-mes-selector" data-mes="siguiente" onclick="cambiarMesReferencia('siguiente')">
-      Mes siguiente (<span class="nombre-mes-siguiente"></span>)
-    </button>
-  </div>
+<div class="input-card">
+  <span>🎯 Destino</span>
+  <input type="text" id="hasta" placeholder="Av. Santa Fe 1234">
 </div>
+
     <div class="campo" style="margin-top: 24px;">
       <label>🔄 Tipo de viaje</label>
       </div>
     </div>
+<div class="input-card">
+  <span>📅 Fecha y Hora</span>
+  <input type="datetime-local" id="fecha">
+</div>
 
 <div class="campo" style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
 </div>
-<div class="campo">
-  <label>⏰ Horario de ida</label>
-<input type="time" id="horario-ida">
-</div>
 
-<div class="campo horario-vuelta" id="horario-vuelta-container">
-  <label>🔁 Horario de vuelta</label>
-  <input type="time" id="horario-vuelta">
-</div>
-
-    <button type="button" class="btn-cotizar" id="btn-cotizar" style="background:#2a5298;" onclick="cotizar()">
-      <span>🧮 Calcular Cotización</span>
-    </button>
+<button type="button" class="btn-main" onclick="cotizar()">
+  Calcular Tarifa
+</button>
 
     <div class="error" id="error"></div>
 
-    <div class="resultado" id="resultado">
-      
-      <!-- PRECIO POR VIAJE (Principal) -->
-      <div class="precio-destacado" style="background:white;color:#2a5298;box-shadow:none;">
-        <span class="precio-label">Total</span>
-        <div class="precio-monto" id="precio-por-viaje">$0</div>
-        <span class="precio-periodo" id="tipo-viaje-texto">Solo ida</span>
-      </div>
-<!-- Dentro de #resultado, si querés cambiar el mes desde acá también -->
-  <label style="font-size: 0.9rem; color: #666;">
-    Calculado para: <strong id="mes-referencia">este mes</strong>
-  </label>
-  <div style="display: flex; justify-content: center; gap: 10px; margin-top: 8px;">
-    <button type="button" class="btn-mes-selector activo" data-mes="actual" onclick="cambiarMesReferencia('actual')" style="padding: 8px 16px; font-size: 0.85rem;">
-      <span class="nombre-mes-actual"></span>
-    </button>
-    <button type="button" class="btn-mes-selector" data-mes="siguiente" onclick="cambiarMesReferencia('siguiente')" style="padding: 8px 16px; font-size: 0.85rem;">
-      <span class="nombre-mes-siguiente"></span>
-    </button>
+<div class="resultado" id="resultado">
+
+  <div class="precio-destacado simple">
+    <div class="precio-monto" id="precio-por-viaje">$0 ARS</div>
+    <div class="precio-sub">Pago por viaje sin compromiso</div>
   </div>
+
+  <button class="btn-whatsapp" onclick="enviarWhatsApp()">
+    💬 Reservar Ahora
+  </button>
+
 </div>
-      <!-- INFO CLARA DEL VIAJE -->
-      <div class="info-viaje-simple">
-        <div class="info-item">
-          <span class="info-label">Distancia</span>
-          <span class="info-valor" id="info-distancia">-</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">Duración</span>
-          <span class="info-valor" id="info-duracion">-</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">Días seleccionados</span>
-          <span class="info-valor" id="info-dias-semana">-</span>
-        </div>
-      </div>
-
-      <!-- SEPARADOR VISUAL -->
-      <div style="height: 2px; background: linear-gradient(90deg, transparent, var(--verde), transparent); margin: 25px 0;"></div>
-
-      <!-- PRECIO MENSUAL ESTIMADO (Secundario pero destacado) -->
-      <div class="precio-mensual-section">
-        <div class="precio-mensual-header">
-          <span class="precio-mensual-label">💰 Precio mensual estimado</span>
-          <span class="precio-mensual-mes" id="mes-referencia-texto">para abril</span>
-        </div>
-        
-        <div class="precio-mensual-monto" id="precio-mensual">$0</div>
-        
-        <div class="precio-mensual-detalle">
-          <span id="viajes-mes-detalle">~8 viajes</span>
-
-          <span class="precio-mensual-unitario">a <span id="precio-unitario-detalle">$4.000</span> c/u</span>
-        </div>
-
-        <div class="precio-mensual-ahorro" id="mensaje-ahorro">
-          Si usás el servicio todos los días seleccionados del mes, te conviene negociar un abono mensual.
-        </div>
-      </div>
-
-      <!-- COMPARACIÓN RÁPIDA -->
-      <div class="comparacion-precios">
-        <div class="comparacion-item">
-          <span class="comparacion-label">Por semana</span>
-          <span class="comparacion-valor" id="precio-semanal">$0</span>
-        </div>
-        <div class="comparacion-item destacado">
-          <span class="comparacion-label">Por mes estimado</span>
-          <span class="comparacion-valor verde" id="precio-mensual-alt">$0</span>
-        </div>
-      </div>
-
-      <!-- NOTA IMPORTANTE -->
-      <div class="nota-clara">
-        <p>📌 <strong>¿Cómo se calcula?</strong></p>
-      <p>El precio por viaje se calcula según la distancia recorrida.</p>
-      <p>El mensual es una estimación basada en los días seleccionados dentro del mes de <span id="mes-nombre">abril</span>.</p>
-      <p>Se calcula considerando la cantidad de días hábiles seleccionados en ese mes.</p>
-        <p style="margin-top: 10px; font-size: 0.85rem; opacity: 0.8;">
-        💡 Tip: Si necesitás transporte todos los meses, consultá por nuestros planes de abono con descuento.
-        </p>
-      </div>
-
-      <!-- DETALLES TÉCNICOS (colapsables o menos destacados) -->
-      <div class="detalles-grid" style="margin-top: 20px; opacity: 0.7; transform: scale(0.95);">
-        <div class="detalle-item">
-          <strong>Ruta</strong>
-          <span id="detalle-ruta" style="font-size: 0.8rem;">-</span>
-        </div>
-        <div class="detalle-item">
-          <strong>ID Cotización</strong>
-          <span id="detalle-id" style="font-family: monospace; font-size: 0.8rem;">-</span>
-        </div>
-      </div>
-
-      <button class="btn-confirmar" onclick="mostrarConfirmacion()">
-        ✅ Quiero reservar este servicio
-      </button>
-      
-      <div class="form-confirmar" id="form-confirmar">
-        <div class="campo">
-          <label>📱 Tu teléfono de contacto</label>
-          <input type="tel" id="telefono" placeholder="Ej: 351 123 4567" maxlength="20">
-        </div>
-      <button class="btn-confirmar btn-whatsapp" style="font-size:1.2rem;" onclick="enviarReserva(this)">
-  💬 Reservar Ahora
-
-</button>
-
-      </div>
-    </div>
 
     <div class="success-message" id="success-message">
       <div style="font-size: 4rem; margin-bottom: 15px; animation: bounce 1s infinite;">🎉</div>
@@ -1131,6 +953,21 @@ body {
       © 2026 Mimi Transporte Infantil • Conductor profesional habilitado
     </p>
   </div>
+function enviarWhatsApp() {
+  const desde = document.getElementById('desde').value;
+  const hasta = document.getElementById('hasta').value;
+  const fecha = document.getElementById('fecha').value;
+  const precio = document.getElementById('precio-por-viaje').textContent;
+
+  const mensaje = `Hola! Quiero reservar un viaje:
+
+📍 Origen: ${desde}
+🎯 Destino: ${hasta}
+📅 Fecha: ${fecha}
+💰 Precio: ${precio}`;
+
+  window.open('https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje), '_blank');
+}
 
 <script>
 let diasSeleccionados = [];
@@ -1272,16 +1109,16 @@ function cotizar() {
   if (!nombre) { mostrarError('Ingresá el nombre del niño/a'); return; }
   if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
   if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
-  if (diasSeleccionados.length === 0) { mostrarError('Seleccioná al menos un día'); return; }
-  if (!horarioIda) { 
   mostrarError('Seleccioná el horario de ida'); 
   return; 
 }
 
 const tipoViaje = horarioVuelta ? 'ida_vuelta' : 'ida';
- { 
-  mostrarError('Seleccioná el horario de regreso'); 
-  return; 
+
+// Solo exigir vuelta si corresponde
+if (tipoViaje === 'ida_vuelta' && !horarioVuelta) {
+  mostrarError('Seleccioná el horario de regreso');
+  return;
 }
 
 
