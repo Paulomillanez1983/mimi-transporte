@@ -35,11 +35,6 @@ function cargarMaps() {
 }
 </script>
 <script>
-window.onload = function() {
-  actualizarNombresMeses();
-  inicializarAutocomplete(); // 👈 AGREGAR ESTO
-};
-</script>
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places"></script>
 
@@ -1115,10 +1110,6 @@ if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
 const tipoViaje = 'ida';
 
 // Solo exigir vuelta si corresponde
-if (tipoViaje === 'ida_vuelta' && !horarioVuelta) {
-  mostrarError('Seleccioná el horario de regreso');
-  return;
-}
 
 
   ocultarError();
@@ -1133,14 +1124,14 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
   body: JSON.stringify({
     desde: desde,
     hasta: hasta,
-    dias: diasSeleccionados,
+    dias: ['Lun'],
     tipo: tipoViaje
   })
 })
 .then(res => res.json())
 .then(res => {
       btn.disabled = false;
-      btn.innerHTML = '<span>🧮 Calcular Cotización</span>';
+      btn.innerHTML = 'Calcular Tarifa';
       
       if (res.error) { 
         mostrarError(res.error); 
@@ -1150,23 +1141,15 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
 
 
       // GUARDAR EN CACHE - ESTO ES CLAVE
-      cacheCotizacionBase = {
-        nombre: nombre,
-        desde: desde,
-        hasta: hasta,
-        dias: [...diasSeleccionados],
-        tipoViaje: tipoViaje,
-        horarioIda: horarioIda,
-        horarioVuelta: horarioVuelta,
-        kmTotal: res.kmTotal,
-        precioPorViaje: res.precioPorViaje,
-        duracion: res.duracionIda,
-        ruta: res.ruta,
-        esIdaVuelta: res.esIdaVuelta
-      };
+cacheCotizacionBase = {
+  desde: desde,
+  hasta: hasta,
+  dias: [...diasSeleccionados],
+  tipoViaje: tipoViaje,
+  };
 
       // Calcular mes seleccionado
-      const viajesMes = calcularViajesMesFrontend(diasSeleccionados, tipoViaje, mesReferencia);
+const viajesMes = calcularViajesMesFrontend(diasSeleccionados, tipoViaje, 'actual');
       const precioMensual = res.precioPorViaje * viajesMes.cantidad;
 
       // Completar datos para mostrar
@@ -1181,20 +1164,10 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
 };
 
 
-     datosCotizacion = {
-       nombre: nombre,
-       desde: desde,
-       hasta: hasta,
-       dias: [...diasSeleccionados],
-       tipo: tipoViaje,  // ← Esto ya está bien
-       horarioIda: horarioIda,
-       horarioVuelta: horarioVuelta,
-       km: res.kmTotal,
-       precioMensual: precioMensual,
-       precio: res.precioPorViaje,
-       fecha: new Date().toISOString().split('T')[0], // ← AGREGAR ESTO
-       telefono: ''
-     };
+datosCotizacion = {
+  desde: desde,
+  };
+
 
       mostrarResultado(datosCompletos);
     })
@@ -1384,7 +1357,8 @@ function ocultarError() {
 // Inicializar al cargar
 window.onload = function() {
   actualizarNombresMeses();
-  
+  inicializarAutocomplete();
+
   setTimeout(() => {
     if (typeof google === 'undefined') {
       mostrarErrorMaps('No se pudo conectar con Google Maps');
