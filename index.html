@@ -906,7 +906,6 @@ body {
     <div class="campo" style="margin-top: 24px;">
       <label>🔄 Tipo de viaje</label>
       </div>
-    </div>
 <div class="input-card">
   <span>📅 Fecha y Hora</span>
   <input type="datetime-local" id="fecha">
@@ -1079,7 +1078,7 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
   body: JSON.stringify({
     desde: desde,
     hasta: hasta,
-    dias: ['Lun'],
+    dias: [],
     tipo: tipoViaje
   })
 })
@@ -1104,18 +1103,12 @@ cacheCotizacionBase = {
   };
 
       // Calcular mes seleccionado
-const viajesMes = calcularViajesMesFrontend(diasSeleccionados, tipoViaje, 'actual');
-      const precioMensual = res.precioPorViaje * viajesMes.cantidad;
+const precioMensual = res.precioPorViaje;
 
       // Completar datos para mostrar
-      const datosCompletos = {
+const datosCompletos = {
   ...res,
-  precioSemanal: precioSemanal,
-  viajesPorMes: viajesMes.cantidad,
-  viajesPorMesRango: viajesMes.rango,
-  mesReferencia: viajesMes.mesNombre,
-  precioMensual: precioMensual,
-  precioMensualFormateado: "$" + precioMensual.toLocaleString('es-AR')
+  precioPorViaje: precioSemanal
 };
 
 
@@ -1157,7 +1150,11 @@ function animarContador(elementId, valorFinal) {
 
 function mostrarResultado(res) {
   actualizarUIFinal(res);
-  
+  function actualizarUIFinal(res) {
+  document.getElementById('precio-por-viaje').textContent =
+    '$' + res.precioPorViaje.toLocaleString('es-AR');
+}
+
   // Mostrar sección de resultado
   document.getElementById('resultado').classList.add('visible');
   document.getElementById('form-confirmar').classList.remove('visible');
