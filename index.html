@@ -1620,6 +1620,12 @@ function ocultarError() {
 // Inicializar al cargar
 window.onload = function() {
   actualizarNombresMeses();
+  
+  setTimeout(() => {
+    if (typeof google === 'undefined') {
+      mostrarErrorMaps('No se pudo conectar con Google Maps');
+    }
+  }, 3000);
 };
 </script>
 </body>
