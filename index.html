@@ -1519,11 +1519,11 @@ document.getElementById('mes-referencia-texto').textContent = 'para ' + (res.mes
   if (res.dias.length >= 3) {
     mensajeAhorro.innerHTML = `✅ <strong>¡Buena elección!</strong> Usando el servicio${res.dias.length} días por semana, 
       el abono mensual te da previsibilidad y prioridad en tu horario.`;
-  } else if (res.cantidadDias === 1) {
+  } else if (res.dias.length === 1) {
     mensajeAhorro.innerHTML = `💡 <strong>¿Solo un día?</strong> Perfecto para actividades puntuales. 
       Si después necesitás más días, podemos ajustar tu plan.`;
   } else {
-    mensajeAhorro.innerHTML = `💡 Con ${res.cantidadDias} días por semana, evaluá si te conviene 
+    mensajeAhorro.innerHTML = `💡 Con ${res.dias.length} días por semana, evaluá si te conviene 
       pagar por viaje o consultar por un abono flexible.`;
   }
 
