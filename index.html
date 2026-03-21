@@ -34,7 +34,9 @@ function cargarMaps() {
   }
 }
 </script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places"></script>
+<script async defer 
+src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places&callback=cargarMaps">
+</script>
 
 
 <style>
@@ -1046,7 +1048,7 @@ function enviarWhatsApp() {
 
 📍 Origen: ${desde}
 🎯 Destino: ${hasta}
-📅 Fecha: ${fecha}
+📅 Fecha: ${new Date(fecha).toLocaleString('es-AR')}
 💰 Precio: ${precio}`;
 
   window.open('https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje), '_blank');
@@ -1055,11 +1057,14 @@ function enviarWhatsApp() {
 function cotizar() {
   const desde = document.getElementById('desde').value.trim();
   const hasta = document.getElementById('hasta').value.trim();
+const fecha = document.getElementById('fecha').value;
+
 
 
   // Validaciones
 if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
 if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
+if (!fecha) { mostrarError('Seleccioná fecha y hora'); return; }
 
 const tipoViaje = 'ida';
 
@@ -1093,15 +1098,6 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
       }
 const precioSemanal = res.precioPorViaje;
 
-
-      // GUARDAR EN CACHE - ESTO ES CLAVE
-cacheCotizacionBase = {
-  desde: desde,
-  hasta: hasta,
-  dias: [...diasSeleccionados],
-  tipoViaje: tipoViaje,
-  };
-
       // Calcular mes seleccionado
 const precioMensual = res.precioPorViaje;
 
@@ -1122,7 +1118,7 @@ datosCotizacion = {
     .catch((err) => {
           console.error(err);
       btn.disabled = false;
-      btn.innerHTML = '<span>🧮 Calcular Cotización</span>';
+      btn.innerHTML = 'Calcular Tarifa';
       mostrarError('Error de conexión. Intentá de nuevo.');
     })
 }
@@ -1157,7 +1153,8 @@ function mostrarResultado(res) {
 
   // Mostrar sección de resultado
   document.getElementById('resultado').classList.add('visible');
-  document.getElementById('form-confirmar').classList.remove('visible');
+const form = document.getElementById('form-confirmar');
+if (form) form.classList.remove('visible');
   document.getElementById('success-message').classList.remove('visible');
   
   // Scroll suave
@@ -1252,7 +1249,6 @@ function ocultarError() {
 // Inicializar al cargar
 window.onload = function() {
   actualizarNombresMeses();
-  inicializarAutocomplete();
 
   setTimeout(() => {
     if (typeof google === 'undefined') {
