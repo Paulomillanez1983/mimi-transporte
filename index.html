@@ -1102,8 +1102,10 @@ function ocultarError() {
 }
 
 // Inicializar al cargar
+// Inicializar al cargar
 window.onload = function() {
   actualizarNombresMeses();
+  mejorarAutocompleteUX(); // <-- AGREGAR ESTA LÍNEA
 
   setTimeout(() => {
     if (typeof google === 'undefined') {
