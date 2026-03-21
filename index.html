@@ -1,121 +1,1504 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <!-- Redirección automática al cotizador (1 segundo para mayor compatibilidad) -->
-    <meta http-equiv="refresh" content="1; url=https://script.google.com/macros/s/AKfycbzlu-KyPgGM7Na6M11WigzrBmYvjsPzwFhCPJq_QwrcA_ILIS21PT3_7OZlZsj6pJQG/exec">
-    
-    <!-- SEO y compartir en redes -->
-    <title>Mimi Transporte Infantil - Cotizador</title>
-    <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Tu hijo viaja tranquilo, vos también. Cotizá ahora online.">
-    
-    <!-- Open Graph (WhatsApp, Facebook, Instagram, etc.) -->
-    <meta property="og:site_name" content="Mimi Transporte Infantil">
-    <meta property="og:title" content="Mimi Transporte Infantil">
-    <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar confiable en Villa Allende y Córdoba. ¡Cotizá en segundos!">
-    <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/raw/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg">
-    <meta property="og:image:secure_url" content="https://github.com/Paulomillanez1983/mimi-transporte/raw/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg">
-    <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
-    <meta property="og:type" content="website">
-    <meta property="og:locale" content="es_AR">
-    
-    <!-- Twitter / X -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Mimi Transporte Infantil">
-    <meta name="twitter:description" content="Tu hijo viaja seguro, vos tranquilo. Cotizá el transporte escolar ahora.">
-    <meta name="twitter:image" content="https://github.com/Paulomillanez1983/mimi-transporte/raw/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg">
-    
-    <!-- Favicon (subí uno a tu repo si querés) -->
-    <!-- <link rel="icon" href="/favicon.ico" type="image/x-icon"> -->
-    
-    <style>
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            text-align: center;
-            padding: 80px 20px;
-            background: linear-gradient(135deg, #e3f2fd 0%, #fce4ec 60%, #f8bbd9 100%);
-            color: #333;
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .container {
-            max-width: 500px;
-        }
-        h1 {
-            color: #e91e63;
-            font-size: 2.8rem;
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        .frase {
-            font-size: 1.3rem;
-            color: #1565c0;
-            font-style: italic;
-            margin: 10px 0 30px;
-        }
-        .loader {
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid #e91e63;
-            border-radius: 50%;
-            width: 80px;
-            height: 80px;
-            animation: spin 1s linear infinite;
-            margin: 30px auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        p {
-            font-size: 1.15rem;
-            margin: 15px 0;
-            line-height: 1.5;
-        }
-        .link-fallback {
-            color: #e91e63;
-            font-weight: bold;
-            text-decoration: underline;
-            font-size: 1.1rem;
-        }
-        .link-fallback:hover {
-            color: #c2185b;
-        }
-        .footer {
-            margin-top: 60px;
-            font-size: 0.9rem;
-            color: #666;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">
+
+<!-- Open Graph para WhatsApp, Facebook, Instagram, etc. -->
+<meta property="og:title" content="Mimi Transporte Infantil">
+<meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
+<meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_AR">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mimi Transporte Infantil">
+<meta name="twitter:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
+<meta name="twitter:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
+
+
+<title>Mimi Transporte Infantil</title>
+<base target="_top">
+
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= MAPS_API_KEY ?>&libraries=places&language=es&region=AR&callback=inicializarAutocomplete" async defer></script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= MAPS_API_KEY ?>&libraries=places&language=es&region=AR&callback=inicializarAutocomplete" async defer></script>
+
+<style>
+:root {
+  --rosa: #e91e63;
+  --rosa-claro: #f8bbd9;
+  --rosa-oscuro: #c2185b;
+  --azul-cielo: #87ceeb;
+  --azul-oscuro: #1565c0;
+  --verde: #4caf50;
+  --verde-oscuro: #2e7d32;
+  --blanco: #ffffff;
+  --gris-claro: #f5f5f5;
+  --gris: #9e9e9e;
+  --sombra: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+  -webkit-tap-highlight-color: transparent; 
+}
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(180deg, #e3f2fd 0%, #fce4ec 50%, #f8bbd9 100%);
+  min-height: 100vh;
+  color: #222;
+  line-height: 1.6;
+  padding-bottom: 40px;
+}
+
+/* HEADER MEJORADO */
+.header { 
+  background: linear-gradient(135deg, var(--azul-cielo) 0%, var(--rosa-claro) 100%); 
+  padding: 50px 20px 60px; 
+  text-align: center; 
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before, .header::after { 
+  content: '☁️'; 
+  position: absolute; 
+  font-size: 4rem; 
+  opacity: 0.3;
+  animation: float 6s ease-in-out infinite;
+}
+
+.header::before { top: 20px; left: 30px; }
+.header::after { top: 40px; right: 40px; animation-delay: 3s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
+}
+
+.logo-ninos { 
+  font-size: 5rem; 
+  margin-bottom: 15px;
+  display: inline-block;
+  animation: bounce 2s infinite;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.header h1 { 
+  font-family: Georgia, serif;
+  font-size: 3.5rem; 
+  color: var(--rosa); 
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  font-weight: bold;
+  font-style: italic;
+  margin-bottom: 5px;
+}
+
+.header h2 { 
+  font-size: 1rem; 
+  color: #444; 
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.frase { 
+  font-size: 1.4rem; 
+  color: var(--azul-oscuro);
+  font-style: italic;
+  margin-top: 25px;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+}
+
+/* CONTENEDOR PRINCIPAL */
+.container { 
+  max-width: 600px; 
+  margin: 0 auto; 
+  padding: 0 15px;
+}
+
+/* TARJETA PRINCIPAL */
+.card { 
+  background: white; 
+  border-radius: 28px; 
+  padding: 35px 25px; 
+  box-shadow: var(--sombra);
+  margin: -40px 0 30px;
+  position: relative;
+  z-index: 10;
+}
+
+/* SERVICIOS */
+.servicios { 
+  display: grid; 
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.servicio { 
+  display: flex; 
+  align-items: center; 
+  gap: 10px; 
+  font-size: 0.9rem;
+  font-weight: 600; 
+  color: #555; 
+  padding: 16px 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.servicio:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.servicio-icono { font-size: 1.6rem; }
+
+/* CAMPOS DEL FORMULARIO */
+.campo { margin-bottom: 24px; }
+
+.campo label { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  font-size: 0.95rem;
+  font-weight: 700; 
+  color: #333; 
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+}
+
+.campo input, 
+.campo select {
+  width: 100%;
+  padding: 18px 16px;
+  border: 2px solid #e8e8e8;
+  border-radius: 16px;
+  font-size: 1.05rem;
+  background: white;
+  transition: all 0.3s ease;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.campo input:focus, 
+.campo select:focus {
+  border-color: var(--rosa);
+  box-shadow: 0 0 0 4px rgba(233,30,99,0.08);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+/* DÍAS DE LA SEMANA */
+.dias-semana {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dia-btn {
+  padding: 16px 8px;
+  border: 2px solid #e8e8e8;
+  background: white;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.dia-btn:active { transform: scale(0.96); }
+
+.dia-btn.seleccionado {
+  background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%) !important;
+  color: white !important;
+  border-color: var(--rosa) !important;
+  box-shadow: 0 6px 20px rgba(233,30,99,0.35);
+  transform: translateY(-2px);
+}
+
+/* TIPO DE VIAJE */
+.tipo-viaje {
+  display: flex;
+  background: var(--gris-claro);
+  border-radius: 16px;
+  padding: 6px;
+  gap: 6px;
+}
+
+.tipo-viaje button {
+  flex: 1;
+  padding: 18px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+  touch-action: manipulation;
+}
+
+.tipo-viaje button.activo {
+  background: white;
+  color: var(--rosa);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+  transform: translateY(-1px);
+}
+
+/* HORARIOS */
+.horarios-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.horario-vuelta { display: none; }
+
+.horario-vuelta.visible {
+  display: block;
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.horario-label {
+  display: block;
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* BOTÓN COTIZAR */
+.btn-cotizar {
+  width: 100%;
+  padding: 22px;
+  margin-top: 20px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%);
+  color: white;
+  font-size: 1.15rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(233,30,99,0.4);
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-cotizar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 35px rgba(233,30,99,0.45);
+}
+
+.btn-cotizar:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* RESULTADO - DISEÑO PREMIUM */
+.resultado {
+  margin-top: 35px;
+  padding: 0;
+  background: transparent;
+  border-radius: 24px;
+  text-align: center;
+  border: none;
+  display: none;
+}
+
+.resultado.visible {
+  display: block;
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* PRECIO DESTACADO */
+.precio-destacado {
+  background: linear-gradient(135deg, var(--verde) 0%, #2e7d32 100%);
+  color: white;
+  padding: 35px 25px;
+  border-radius: 24px;
+  text-align: center;
+  margin-bottom: 20px;
+  box-shadow: 0 15px 40px rgba(76, 175, 80, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.precio-destacado::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.precio-label {
+  font-size: 0.9rem;
+  opacity: 0.95;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
+}
+
+.precio-monto {
+  font-size: 3.8rem;
+  font-weight: 900;
+  margin: 15px 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  position: relative;
+  z-index: 1;
+  letter-spacing: -1px;
+}
+
+.precio-periodo {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  position: relative;
+  z-index: 1;
+}
+
+/* DESGLOSE DE PRECIO */
+.desglose-precio {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  border: 1px solid #f0f0f0;
+}
+
+.desglose-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px dashed #e0e0e0;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.desglose-item:last-child { border-bottom: none; }
+
+.desglose-item span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.desglose-item span:last-child {
+  font-weight: 700;
+  color: #333;
+  font-family: 'SF Mono', monospace;
+  font-size: 0.95rem;
+}
+
+.desglose-total {
+  font-weight: 800;
+  color: var(--verde-oscuro);
+  border-top: 2px solid var(--verde);
+  margin-top: 10px;
+  padding-top: 15px;
+  font-size: 1rem;
+}
+
+/* PRECIOS SECUNDARIOS */
+.precios-secundarios {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 25px 0;
+}
+
+.precio-box {
+  background: white;
+  border: 2px solid #e8f5e9;
+  border-radius: 18px;
+  padding: 20px 10px;
+  text-align: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+}
+
+.precio-box:hover {
+  transform: translateY(-4px);
+  border-color: var(--verde);
+  box-shadow: 0 8px 25px rgba(76, 175, 80, 0.15);
+}
+
+.precio-box-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.precio-box-valor {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--verde-oscuro);
+  font-family: 'SF Mono', monospace;
+}
+
+/* NOTA INFORMATIVA */
+.nota {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  line-height: 1.7;
+  border-left: 4px solid var(--verde);
+  text-align: left;
+}
+
+/* DETALLES DEL VIAJE */
+.detalles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 25px 0;
+}
+
+.detalle-item {
+  background: white;
+  padding: 18px 15px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s;
+}
+
+.detalle-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.detalle-item strong {
+  display: block;
+  color: var(--verde-oscuro);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  opacity: 0.8;
+}
+
+.detalle-item span {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+/* BOTONES DE ACCIÓN */
+.btn-confirmar {
+  width: 100%;
+  padding: 22px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--verde) 0%, var(--verde-oscuro) 100%);
+  color: white;
+  font-size: 1.15rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 25px 0 10px;
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.35);
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-confirmar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 35px rgba(76, 175, 80, 0.4);
+}
+
+.btn-whatsapp {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%) !important;
+  box-shadow: 0 10px 30px rgba(37, 211, 102, 0.35) !important;
+}
+
+.btn-whatsapp:hover:not(:disabled) {
+  box-shadow: 0 14px 35px rgba(37, 211, 102, 0.4) !important;
+}
+
+.form-confirmar {
+  margin-top: 25px;
+  padding-top: 25px;
+  border-top: 2px dashed #c8e6c9;
+  display: none;
+  animation: fadeIn 0.4s ease;
+}
+
+.form-confirmar.visible { display: block; }
+
+/* MENSAJES */
+.error {
+  background: #ffebee;
+  border: 2px solid #ef5350;
+  color: #c62828;
+  padding: 18px;
+  border-radius: 16px;
+  margin: 20px 0;
+  text-align: center;
+  font-weight: 600;
+  display: none;
+  animation: shake 0.5s;
+}
+
+.error.visible { display: block; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.maps-error {
+  background: #fff3e0;
+  border: 2px solid #ff9800;
+  color: #e65100;
+  padding: 18px;
+  border-radius: 16px;
+  margin: 20px 0;
+  text-align: center;
+  font-size: 0.9rem;
+  display: none;
+}
+
+.maps-error.visible { display: block; }
+
+.success-message {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border: 2px solid var(--verde);
+  color: var(--verde-oscuro);
+  padding: 35px 25px;
+  border-radius: 24px;
+  margin: 25px 0;
+  text-align: center;
+  display: none;
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.2);
+}
+
+.success-message.visible { 
+  display: block; 
+  animation: slideUp 0.5s ease;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* FOOTER */
+.footer {
+  text-align: center;
+  padding: 40px 20px;
+  color: #555;
+}
+
+.footer .telefono {
+  font-size: 1.5rem;
+  color: var(--verde);
+  font-weight: 800;
+  margin: 15px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 25px;
+  background: rgba(255,255,255,0.6);
+  border-radius: 50px;
+  backdrop-filter: blur(10px);
+}
+/* INFO DEL VIAJE SIMPLE */
+.info-viaje-simple {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.info-item {
+  text-align: center;
+  padding: 15px 10px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  border: 1px solid #e8e8e8;
+}
+
+.info-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.info-valor {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+}
+
+/* SECCIÓN PRECIO MENSUAL */
+.precio-mensual-section {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 20px;
+  padding: 25px;
+  border: 2px solid var(--verde);
+  margin-bottom: 20px;
+}
+
+.precio-mensual-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.precio-mensual-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--verde-oscuro);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.precio-mensual-mes {
+  font-size: 0.85rem;
+  color: #666;
+  background: rgba(255,255,255,0.6);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.precio-mensual-monto {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: var(--verde-oscuro);
+  margin: 10px 0;
+  font-family: 'SF Mono', monospace;
+  letter-spacing: -1px;
+}
+
+.precio-mensual-detalle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #555;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(0,0,0,0.1);
+}
+
+.precio-mensual-unitario {
+  font-weight: 600;
+  color: var(--verde-oscuro);
+}
+
+.precio-mensual-ahorro {
+  margin-top: 15px;
+  padding: 15px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  color: #2e7d32;
+  font-weight: 500;
+  border-left: 4px solid var(--verde);
+}
+
+/* COMPARACIÓN DE PRECIOS */
+.comparacion-precios {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.comparacion-item {
+  background: white;
+  padding: 20px 15px;
+  border-radius: 16px;
+  text-align: center;
+  border: 2px solid #e8e8e8;
+  transition: all 0.3s;
+}
+
+.comparacion-item.destacado {
+  border-color: var(--verde);
+  background: linear-gradient(135deg, #f1f8e9 0%, #e8f5e9 100%);
+  transform: scale(1.02);
+}
+
+.comparacion-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.comparacion-valor {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #333;
+  font-family: 'SF Mono', monospace;
+}
+
+.comparacion-valor.verde {
+  color: var(--verde-oscuro);
+}
+
+/* NOTA CLARA */
+.nota-clara {
+  background: #fff8e1;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+  border-left: 4px solid #ffc107;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #555;
+}
+
+.nota-clara strong {
+  color: #f57c00;
+}
+/* RESPONSIVE */
+@media (max-width: 480px) {
+  .dias-semana { grid-template-columns: repeat(3, 1fr); }
+  .horarios-container { grid-template-columns: 1fr; }
+  .header { padding: 40px 20px 50px; }
+  .header h1 { font-size: 2.8rem; }
+  .precio-monto { font-size: 3rem; }
+  .precios-secundarios { gap: 8px; }
+  .precio-box { padding: 15px 8px; }
+  .precio-box-valor { font-size: 1.2rem; }
+}
+
+/* GOOGLE MAPS AUTOCOMPLETE */
+.pac-container {
+  background-color: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+  font-family: inherit !important;
+  margin-top: 8px !important;
+  border: 1px solid #e8e8e8 !important;
+  z-index: 10000 !important;
+  position: absolute !important;
+  max-width: 100% !important;
+  overflow: hidden;
+}
+
+.pac-item {
+  background-color: #ffffff !important;
+  color: #333333 !important;
+  padding: 14px 18px !important;
+  cursor: pointer !important;
+  border-bottom: 1px solid #f5f5f5 !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+  transition: background 0.2s;
+}
+
+.pac-item:hover, .pac-item-selected {
+  background-color: #f8f9fa !important;
+}
+
+.pac-icon { display: none !important; }
+
+.pac-item::before {
+  content: "📍";
+  margin-right: 12px;
+  flex-shrink: 0;
+  font-size: 1.2rem;
+}
+
+.pac-item-query {
+  color: #000000 !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  display: block !important;
+}
+
+.pac-secondary-text {
+  color: #888888 !important;
+  font-size: 13px !important;
+  display: block !important;
+  margin-top: 3px !important;
+}
+
+.pac-matched {
+  font-weight: 700 !important;
+  color: var(--rosa) !important;
+}
+
+.pac-logo:after { display: none !important; }
+#btn-mes-actual.activo,
+#btn-mes-siguiente.activo {
+  background: linear-gradient(135deg, var(--verde) 0%, var(--verde-oscuro) 100%) !important;
+  color: white !important;
+  box-shadow: 0 6px 20px rgba(76,175,80,0.4) !important;
+  transform: translateY(-1px) !important;
+}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Mimi Transporte Infantil</h1>
-        <p class="frase">"Tu hijo viaja seguro,<br>vos tranquilo"</p>
-        
-        <div class="loader"></div>
-        
-        <p>Redirigiendo al cotizador en segundos...</p>
-        <p>Estamos preparándote la mejor cotización para el transporte de tu hijo ❤️</p>
-        
-        <p>
-            <a href="https://script.google.com/macros/s/AKfycbzlu-KyPgGM7Na6M11WigzrBmYvjsPzwFhCPJq_QwrcA_ILIS21PT3_7OZlZsj6pJQG/exec" 
-               class="link-fallback">
-                → Click aquí si no redirige automáticamente
-            </a>
-        </p>
+
+<div class="header">
+  <div class="logo-ninos">👦👧</div>
+  <h1>Mimi</h1>
+  <h2>Transporte Infantil</h2>
+  <p class="frase">"Tu hijo viaja seguro,<br>vos tranquilo"</p>
+</div>
+
+<div class="container">
+  <div class="card">
+
+    <div class="maps-error" id="maps-error">
+      ⚠️ Error al cargar el servicio de mapas. Podés escribir la dirección manualmente.
     </div>
 
-    <div class="footer">
-        © 2026 Mimi Transporte Infantil • Villa Allende y Córdoba
+    <div class="servicios">
+      <div class="servicio"><span class="servicio-icono">🏫</span> Traslados a Colegios</div>
+      <div class="servicio"><span class="servicio-icono">⚽</span> Actividades y Deportes</div>
+      <div class="servicio"><span class="servicio-icono">🛡️</span> Seguridad y Confianza</div>
+      <div class="servicio"><span class="servicio-icono">⏰</span> Puntualidad Garantizada</div>
     </div>
+
+    <div class="campo">
+      <label>👤 Nombre del niño/a</label>
+      <input type="text" id="nombre" placeholder="Ej: Martín" required>
+    </div>
+
+    <div class="campo">
+      <label>📍 ¿Desde dónde lo buscamos?</label>
+      <input type="text" id="desde" placeholder="Ej: Av. Chacabuco 986, Villa Allende" required autocomplete="off">
+    </div>
+
+    <div class="campo">
+      <label>🏫 ¿A qué colegio lo llevamos?</label>
+      <input type="text" id="hasta" placeholder="Ej: Colegio San José, Córdoba" required autocomplete="off">
+    </div>
+
+    <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">📅 ¿Qué días necesitás el servicio?</label>
+    <div class="dias-semana" id="dias-semana">
+      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Lun')">Lun</button>
+      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Mar')">Mar</button>
+      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Mié')">Mié</button>
+      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Jue')">Jue</button>
+      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Vie')">Vie</button>
+    </div>
+    <!-- Selector de mes de referencia -->
+<div class="campo" style="margin: 25px 0 30px; text-align: center;">
+  <label style="font-size: 1.1rem; font-weight: bold; color: var(--verde-oscuro); display: block; margin-bottom: 12px;">
+    📅 Mes de referencia para el cálculo mensual
+  </label>
+  <div class="tipo-viaje" style="max-width: 420px; margin: 0 auto;">
+<button type="button" class="activo" id="btn-mes-actual" onclick="cambiarMesReferencia('actual')">
+  Mes actual (<span id="nombre-mes-actual"></span>)
+</button>
+<button type="button" id="btn-mes-siguiente" onclick="cambiarMesReferencia('siguiente')">
+  Mes siguiente (<span id="nombre-mes-siguiente"></span>)
+    </button>
+  </div>
+</div>
+
+    <div class="campo" style="margin-top: 24px;">
+      <label>🔄 Tipo de viaje</label>
+      <div class="tipo-viaje">
+        <button type="button" class="activo" id="btn-ida" onclick="cambiarTipo('ida')">Solo Ida</button>
+        <button type="button" id="btn-ida-vuelta" onclick="cambiarTipo('ida_vuelta')">Ida y Vuelta</button>
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>⏰ Horarios</label>
+      <div class="horarios-container">
+        <div>
+          <span class="horario-label">Hora de búsqueda</span>
+          <select id="horario-ida" required>
+            <option value="">Seleccionar</option>
+            <option value="06:00">06:00 hs</option>
+            <option value="06:30">06:30 hs</option>
+            <option value="07:00">07:00 hs</option>
+            <option value="07:15">07:15 hs</option>
+            <option value="07:30">07:30 hs</option>
+            <option value="07:45">07:45 hs</option>
+            <option value="08:00">08:00 hs</option>
+            <option value="08:15">08:15 hs</option>
+            <option value="08:30">08:30 hs</option>
+            <option value="08:45">08:45 hs</option>
+            <option value="09:00">09:00 hs</option>
+            <option value="09:30">09:30 hs</option>
+            <option value="10:00">10:00 hs</option>
+          </select>
+        </div>
+        <div class="horario-vuelta" id="horario-vuelta-container">
+          <span class="horario-label">Hora de regreso</span>
+          <select id="horario-vuelta">
+            <option value="">Seleccionar</option>
+            <option value="11:00">11:00 hs</option>
+            <option value="11:30">11:30 hs</option>
+            <option value="12:00">12:00 hs</option>
+            <option value="12:30">12:30 hs</option>
+            <option value="13:00">13:00 hs</option>
+            <option value="13:30">13:30 hs</option>
+            <option value="14:00">14:00 hs</option>
+            <option value="14:30">14:30 hs</option>
+            <option value="15:00">15:00 hs</option>
+            <option value="15:30">15:30 hs</option>
+            <option value="16:00">16:00 hs</option>
+            <option value="16:30">16:30 hs</option>
+            <option value="17:00">17:00 hs</option>
+            <option value="17:30">17:30 hs</option>
+            <option value="18:00">18:00 hs</option>
+            <option value="18:30">18:30 hs</option>
+            <option value="19:00">19:00 hs</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button type="button" class="btn-cotizar" id="btn-cotizar" onclick="cotizar()">
+      <span>🧮 Calcular Cotización</span>
+    </button>
+
+    <div class="error" id="error"></div>
+
+    <div class="resultado" id="resultado">
+      
+      <!-- PRECIO POR VIAJE (Principal) -->
+      <div class="precio-destacado" style="background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%);">
+        <span class="precio-label">Precio por viaje</span>
+        <div class="precio-monto" id="precio-por-viaje">$0</div>
+        <span class="precio-periodo" id="tipo-viaje-texto">Solo ida</span>
+      </div>
+      <!-- Selector de mes de referencia -->
+<div class="campo" style="margin: 20px 0; text-align: center;">
+  <label style="font-size: 1.1rem; font-weight: bold; color: var(--verde-oscuro);">
+    📅 Mes de referencia para el cálculo mensual
+  </label>
+  <div style="display: flex; justify-content: center; gap: 15px; margin-top: 12px; flex-wrap: wrap;">
+    <button type="button" class="activo" id="btn-mes-actual" onclick="cambiarMesReferencia('actual')">
+      Mes actual (<span id="nombre-mes-actual"></span>)
+    </button>
+    <button type="button" id="btn-mes-siguiente" onclick="cambiarMesReferencia('siguiente')">
+      Mes siguiente (<span id="nombre-mes-siguiente"></span>)
+    </button>
+  </div>
+</div>
+
+      <!-- INFO CLARA DEL VIAJE -->
+      <div class="info-viaje-simple">
+        <div class="info-item">
+          <span class="info-label">Distancia</span>
+          <span class="info-valor" id="info-distancia">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Duración</span>
+          <span class="info-valor" id="info-duracion">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">Días por semana</span>
+          <span class="info-valor" id="info-dias-semana">-</span>
+        </div>
+      </div>
+
+      <!-- SEPARADOR VISUAL -->
+      <div style="height: 2px; background: linear-gradient(90deg, transparent, var(--verde), transparent); margin: 25px 0;"></div>
+
+      <!-- PRECIO MENSUAL ESTIMADO (Secundario pero destacado) -->
+      <div class="precio-mensual-section">
+        <div class="precio-mensual-header">
+          <span class="precio-mensual-label">💰 Precio mensual estimado</span>
+          <span class="precio-mensual-mes" id="mes-referencia">para abril</span>
+        </div>
+        
+        <div class="precio-mensual-monto" id="precio-mensual">$0</div>
+        
+        <div class="precio-mensual-detalle">
+          <span id="viajes-mes-detalle">~8 viajes (solo lunares)</span>
+          <span class="precio-mensual-unitario">a <span id="precio-unitario-detalle">$4.000</span> c/u</span>
+        </div>
+
+        <div class="precio-mensual-ahorro" id="mensaje-ahorro">
+          Si usás el servicio todos los días seleccionados del mes, te conviene negociar un abono mensual.
+        </div>
+      </div>
+
+      <!-- COMPARACIÓN RÁPIDA -->
+      <div class="comparacion-precios">
+        <div class="comparacion-item">
+          <span class="comparacion-label">Por semana</span>
+          <span class="comparacion-valor" id="precio-semanal">$0</span>
+        </div>
+        <div class="comparacion-item destacado">
+          <span class="comparacion-label">Por mes estimado</span>
+          <span class="comparacion-valor verde" id="precio-mensual-alt">$0</span>
+        </div>
+      </div>
+
+      <!-- NOTA IMPORTANTE -->
+      <div class="nota-clara">
+        <p>📌 <strong>¿Cómo se calcula?</strong></p>
+        <p>El precio por viaje se calcula según la distancia recorrida. 
+        El mensual es una estimación basada en la cantidad de <span id="dias-nombres">lunes</span> 
+        que hay en el mes de <span id="mes-nombre">abril</span>.</p>
+        <p style="margin-top: 10px; font-size: 0.85rem; opacity: 0.8;">
+        💡 Tip: Si necesitás transporte todos los meses, consultá por nuestros planes de abono con descuento.
+        </p>
+      </div>
+
+      <!-- DETALLES TÉCNICOS (colapsables o menos destacados) -->
+      <div class="detalles-grid" style="margin-top: 20px; opacity: 0.7; transform: scale(0.95);">
+        <div class="detalle-item">
+          <strong>Ruta</strong>
+          <span id="detalle-ruta" style="font-size: 0.8rem;">-</span>
+        </div>
+        <div class="detalle-item">
+          <strong>ID Cotización</strong>
+          <span id="detalle-id" style="font-family: monospace; font-size: 0.8rem;">-</span>
+        </div>
+      </div>
+
+      <button class="btn-confirmar" onclick="mostrarConfirmacion()">
+        ✅ Quiero reservar este servicio
+      </button>
+      
+      <div class="form-confirmar" id="form-confirmar">
+        <div class="campo">
+          <label>📱 Tu teléfono de contacto</label>
+          <input type="tel" id="telefono" placeholder="Ej: 351 123 4567" maxlength="20">
+        </div>
+        <button class="btn-confirmar btn-whatsapp" onclick="enviarReserva(this)">
+          📩 Enviar solicitud por WhatsApp
+        </button>
+      </div>
+    </div>
+
+    <div class="success-message" id="success-message">
+      <div style="font-size: 4rem; margin-bottom: 15px; animation: bounce 1s infinite;">🎉</div>
+      <h3 style="margin-bottom: 10px; font-size: 1.5rem; color: var(--verde-oscuro);">¡Reserva enviada!</h3>
+      <p style="font-size: 1.1rem; color: #555;">Te contactaremos en menos de 24 horas.</p>
+      <p style="margin-top: 15px; font-size: 0.9rem; color: #888; font-family: monospace;">
+        ID: <span id="reserva-id" style="color: var(--verde-oscuro); font-weight: bold;"></span>
+      </p>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1rem;">📍 Villa Allende y zona | Córdoba</div>
+    <div class="telefono">📞 351 701 4863</div>
+    <p style="margin-top: 20px; font-size: 0.85rem; opacity: 0.6;">
+      © 2026 Mimi Transporte Infantil • Conductor profesional habilitado
+    </p>
+  </div>
+
+<script>
+let tipoViaje = 'ida';
+let diasSeleccionados = [];
+let datosCotizacion = null;
+let mesReferencia = 'actual';  // por defecto
+
+// Actualiza los nombres de los meses en los botones al cargar
+function actualizarNombresMeses() {
+  const hoy = new Date();
+  const meses = ["enero", "febrero", "marzo", "abril", "mayo", "junio", 
+                 "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  
+  let mesActual = meses[hoy.getMonth()];
+  let mesSiguiente = meses[(hoy.getMonth() + 1) % 12];
+  
+  // Capitalizar primera letra
+  mesActual = mesActual.charAt(0).toUpperCase() + mesActual.slice(1);
+  mesSiguiente = mesSiguiente.charAt(0).toUpperCase() + mesSiguiente.slice(1);
+  
+  document.getElementById('nombre-mes-actual').textContent = mesActual;
+  document.getElementById('nombre-mes-siguiente').textContent = mesSiguiente;
+}
+
+function cambiarMesReferencia(modo) {
+  mesReferencia = modo;
+  document.getElementById('btn-mes-actual').classList.toggle('activo', modo === 'actual');
+  document.getElementById('btn-mes-siguiente').classList.toggle('activo', modo === 'siguiente');
+  
+  if (datosCotizacion) {
+    cotizar();  // Recalcula con el nuevo mes
+  }
+}
+
+function toggleDia(boton, dia) {
+  boton.classList.toggle('seleccionado');
+  if (diasSeleccionados.includes(dia)) {
+    diasSeleccionados = diasSeleccionados.filter(d => d !== dia);
+  } else {
+    diasSeleccionados.push(dia);
+  }
+  const ordenDias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
+  diasSeleccionados.sort((a, b) => ordenDias.indexOf(a) - ordenDias.indexOf(b));
+}
+
+function cambiarTipo(tipo) {
+  tipoViaje = tipo;
+  document.getElementById('btn-ida').classList.toggle('activo', tipo === 'ida');
+  document.getElementById('btn-ida-vuelta').classList.toggle('activo', tipo === 'ida_vuelta');
+  document.getElementById('horario-vuelta-container').classList.toggle('visible', tipo === 'ida_vuelta');
+  if (tipo !== 'ida_vuelta') document.getElementById('horario-vuelta').value = '';
+}
+function inicializarAutocomplete() {
+  if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+    mostrarErrorMaps('No se pudo cargar el servicio de mapas');
+    return;
+  }
+  
+  const opciones = {
+    componentRestrictions: { country: 'ar' },
+    fields: ['formatted_address', 'geometry', 'name'],
+    types: ['geocode', 'establishment']
+  };
+
+  const inputDesde = document.getElementById('desde');
+  const inputHasta = document.getElementById('hasta');
+
+  autocompleteDesde = new google.maps.places.Autocomplete(inputDesde, opciones);
+  autocompleteHasta = new google.maps.places.Autocomplete(inputHasta, opciones);
+
+  autocompleteDesde.addListener('place_changed', () => {
+    const lugar = autocompleteDesde.getPlace();
+    if (lugar.formatted_address) inputDesde.value = lugar.formatted_address;
+    setTimeout(() => document.querySelectorAll('.pac-container').forEach(c => c.style.display = 'none'), 100);
+  });
+
+  autocompleteHasta.addListener('place_changed', () => {
+    const lugar = autocompleteHasta.getPlace();
+    if (lugar.formatted_address) inputHasta.value = lugar.formatted_address;
+    setTimeout(() => document.querySelectorAll('.pac-container').forEach(c => c.style.display = 'none'), 100);
+  });
+
+  [inputDesde, inputHasta].forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); }
+    });
+  });
+}
+
+function mostrarErrorMaps(mensaje) {
+  const errorEl = document.getElementById('maps-error');
+  errorEl.textContent = '⚠️ ' + mensaje + '. Podés escribir la dirección manualmente.';
+  errorEl.classList.add('visible');
+}
+
+window.gm_authFailure = () => mostrarErrorMaps('Error de autenticación con Google Maps');
+
+window.addEventListener('error', (e) => {
+  if (e.target?.src?.includes('maps.googleapis.com')) {
+    mostrarErrorMaps('No se pudo cargar el servicio de mapas');
+  }
+}, true);
+
+function cotizar() {
+  const nombre = document.getElementById('nombre').value.trim();
+  const desde = document.getElementById('desde').value.trim();
+  const hasta = document.getElementById('hasta').value.trim();
+  const horarioIda = document.getElementById('horario-ida').value;
+  const horarioVuelta = document.getElementById('horario-vuelta').value;
+
+  if (!nombre) { mostrarError('Ingresá el nombre del niño/a'); return; }
+  if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
+  if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
+  if (diasSeleccionados.length === 0) { mostrarError('Seleccioná al menos un día'); return; }
+  if (!horarioIda) { mostrarError('Seleccioná el horario de búsqueda'); return; }
+  if (tipoViaje === 'ida_vuelta' && !horarioVuelta) { 
+    mostrarError('Seleccioná el horario de regreso'); return; 
+  }
+
+  ocultarError();
+  
+  const btn = document.getElementById('btn-cotizar');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Calculando...';
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🧮 Calcular Cotización</span>';
+      
+      if (res.error) { 
+        mostrarError(res.error); 
+        return; 
+      }
+
+      datosCotizacion = {
+        nombre, desde, hasta,
+        dias: [...diasSeleccionados],
+        tipo: tipoViaje,
+        horarioIda, horarioVuelta,
+        km: res.kmTotal,
+        precioPorViaje: res.precioPorViaje,
+        precioMensual: res.precioMensual,
+        precio: res.precio,
+        duracion: res.duracionIda,
+        mesReferencia: mesReferencia  // guardamos la elección actual
+      };
+      function animarContador(elementId, valorFinal) {
+  const elemento = document.getElementById(elementId);
+  if (!elemento) return;
+  
+  const duracion = 1200;
+  const pasos = 30;
+  const incremento = valorFinal / pasos;
+  let paso = 0;
+  
+  const timer = setInterval(() => {
+    paso++;
+    const actual = Math.round(incremento * paso);
+    elemento.textContent = '$' + actual.toLocaleString('es-AR');
+    
+    if (paso >= pasos) {
+      elemento.textContent = '$' + valorFinal.toLocaleString('es-AR');
+      clearInterval(timer);
+    }
+  }, duracion / pasos);
+}
+
+      mostrarResultado(res);
+    })
+    .withFailureHandler(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🧮 Calcular Cotización</span>';
+      mostrarError('Error de conexión. Intentá de nuevo.');
+    })
+    .cotizar(desde, hasta, diasSeleccionados, tipoViaje, null, mesReferencia);
+}
+
+function mostrarResultado(res) {
+  // 1. Precio por viaje
+  animarContador('precio-por-viaje', res.precioPorViaje || 0);
+  document.getElementById('tipo-viaje-texto').textContent = res.esIdaVuelta 
+    ? 'Ida y vuelta incluido' 
+    : 'Solo ida';
+
+  // 2. Info del viaje
+  document.getElementById('info-distancia').textContent = res.kmTotal + ' km';
+  document.getElementById('info-duracion').textContent = res.duracionIda + ' min';
+  document.getElementById('info-dias-semana').textContent = 
+    res.dias.join(', ') + ' (' + res.cantidadDias + (res.cantidadDias === 1 ? ' día' : ' días') + ')';
+
+  // 3. Precio mensual + mes elegido
+  animarContador('precio-mensual', res.precioMensual || 0);
+  animarContador('precio-mensual-alt', res.precioMensual || 0);
+  
+  const mesTexto = res.mesReferencia ? `para ${res.mesReferencia}` : 'para este mes';
+  document.getElementById('mes-referencia').textContent = mesTexto;
+  document.getElementById('mes-nombre').textContent = res.mesReferencia || 'este mes';
+  
+  document.getElementById('viajes-mes-detalle').textContent = `~${res.viajesPorMesRango || '0 viajes'}`;
+  document.getElementById('precio-unitario-detalle').textContent = res.precioPorViajeFormateado || '$0';
+  // Nombres de días para el texto
+  const nombresDiasLargos = {
+    'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miércoles', 
+    'Jue': 'jueves', 'Vie': 'viernes'
+  };
+  const diasLargos = res.dias.map(d => nombresDiasLargos[d]);
+  document.getElementById('dias-nombres').textContent = 
+    diasLargos.length === 1 ? diasLargos[0] : diasLargos.slice(0, -1).join(', ') + ' y ' + diasLargos.slice(-1);
+
+  // 4. PRECIO SEMANAL
+  animarContador('precio-semanal', res.precioSemanal);
+
+  // 5. MENSAJE PERSONALIZADO DE AHORRO
+  const mensajeAhorro = document.getElementById('mensaje-ahorro');
+  if (res.cantidadDias >= 3) {
+    mensajeAhorro.innerHTML = `✅ <strong>¡Buena elección!</strong> Usando el servicio ${res.cantidadDias} días por semana, 
+      el abono mensual te da previsibilidad y prioridad en tu horario.`;
+  } else if (res.cantidadDias === 1) {
+    mensajeAhorro.innerHTML = `💡 <strong>¿Solo un día?</strong> Perfecto para actividades puntuales. 
+      Si después necesitás más días, podemos ajustar tu plan.`;
+  } else {
+    mensajeAhorro.innerHTML = `💡 Con ${res.cantidadDias} días por semana, evaluá si te conviene 
+      pagar por viaje o consultar por un abono flexible.`;
+  }
+
+  // 6. DETALLES TÉCNICOS (ocultos o menores)
+  document.getElementById('detalle-ruta').textContent = res.ruta;
+  document.getElementById('detalle-id').textContent = 'COT-' + Date.now().toString(36).toUpperCase();
+
+  // Mostrar resultado y scroll
+  document.getElementById('resultado').classList.add('visible');
+  document.getElementById('form-confirmar').classList.remove('visible');
+  document.getElementById('success-message').classList.remove('visible');
+  document.getElementById('resultado').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function animarContador(elementId, valorFinal) {
+  const elemento = document.getElementById(elementId);
+  const duracion = 1000;
+  const pasos = 25;
+  const incremento = valorFinal / pasos;
+  let paso = 0;
+  
+  const timer = setInterval(() => {
+    paso++;
+    const actual = Math.round(incremento * paso);
+    elemento.textContent = '$' + actual.toLocaleString('es-AR');
+    
+    if (paso >= pasos) {
+      elemento.textContent = '$' + valorFinal.toLocaleString('es-AR');
+      clearInterval(timer);
+    }
+  }, duracion / pasos);
+}
+
+function mostrarConfirmacion() {
+  if (!datosCotizacion) { mostrarError('Primero calculá la cotización'); return; }
+  document.getElementById('form-confirmar').classList.add('visible');
+  document.getElementById('telefono').focus();
+}
+
+function enviarReserva(boton) {
+  const telefono = document.getElementById('telefono').value.trim();
+  
+  if (!telefono || telefono.replace(/\D/g, '').length < 8) {
+    mostrarError('Ingresá un teléfono válido'); return;
+  }
+
+    const datos = {
+    ...datosCotizacion,
+    telefono,
+    precioMensual: datosCotizacion.precioMensual // explícito
+  };
+  
+  const textoOriginal = boton.innerHTML;
+  boton.disabled = true;
+  boton.innerHTML = 'Enviando...';
+
+  google.script.run
+    .withSuccessHandler((res) => {
+      boton.disabled = false;
+      boton.innerHTML = textoOriginal;
+      
+      if (res.error) { mostrarError(res.error); return; }
+
+      document.getElementById('reserva-id').textContent = res.idReserva;
+      document.getElementById('success-message').classList.add('visible');
+      document.getElementById('form-confirmar').classList.remove('visible');
+      document.getElementById('success-message').scrollIntoView({ behavior: 'smooth' });
+
+      setTimeout(() => {
+        const mensaje = `Hola! Vi en la web de Mimi Transporte y quiero reservar:
+
+🆔 Reserva: ${res.idReserva}
+👤 Nombre: ${datos.nombre}
+📍 Desde: ${datos.desde}
+🏫 Hasta: ${datos.hasta}
+📅 Días: ${datos.dias.join(', ')} (${datos.dias.length} por semana)
+🔄 Tipo: ${datos.tipo === 'ida_vuelta' ? 'Ida y Vuelta' : 'Solo Ida'}
+⏰ Horario: ${datos.horarioIda}${datos.horarioVuelta ? ' / ' + datos.horarioVuelta : ''}
+💰 Precio por viaje: ${document.getElementById('precio-por-viaje').textContent}
+💰 Precio mensual estimado: ${document.getElementById('precio-mensual').textContent}
+📱 Tel: ${telefono}`;
+
+        window.open('https://wa.me/5493517014863?text=' + encodeURIComponent(mensaje), '_blank');
+      }, 800);
+    })
+    .withFailureHandler(() => {
+      boton.disabled = false;
+      boton.innerHTML = textoOriginal;
+      mostrarError('Error al enviar. Intentá de nuevo.');
+    })
+    .guardarReserva(JSON.stringify(datos));
+}
+
+function mostrarError(mensaje) {
+  const el = document.getElementById('error');
+  el.textContent = mensaje;
+  el.classList.add('visible');
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function ocultarError() {
+  document.getElementById('error').classList.remove('visible');
+}
+// Ejecutar al cargar la página
+window.onload = function() {
+  actualizarNombresMeses();
+};
+</script>
+
 </body>
 </html>
