@@ -703,6 +703,15 @@ function mejorarAutocompleteUX() {
   inputs.forEach(input => {
     if (!input) return;
     
+    // Crear overlay una sola vez
+    let overlay = document.querySelector('.autocomplete-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'autocomplete-overlay';
+      document.body.appendChild(overlay);
+    }
+    
+    // Al enfocar
     input.addEventListener('focus', function() {
       // Scroll al input
       setTimeout(() => {
@@ -711,32 +720,17 @@ function mejorarAutocompleteUX() {
       
       // Agregar clase al body
       document.body.classList.add('pac-open');
-      
-      // Crear overlay
-      let overlay = document.querySelector('.autocomplete-overlay');
-      if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.className = 'autocomplete-overlay';
-        document.body.appendChild(overlay);
-        
-        overlay.addEventListener('click', () => {
-          document.body.classList.remove('pac-open');
-          overlay.classList.remove('active');
-          input.blur();
-          // Forzar cierre del dropdown de Google
-          const pacContainer = document.querySelector('.pac-container');
-          if (pacContainer) pacContainer.style.display = 'none';
-        });
-      }
       overlay.classList.add('active');
     });
     
-    input.addEventListener('blur', function() {
-      setTimeout(() => {
-        document.body.classList.remove('pac-open');
-        const overlay = document.querySelector('.autocomplete-overlay');
-        if (overlay) overlay.classList.remove('active');
-      }, 250);
+    // Cerrar al tocar el overlay (no en blur del input)
+    overlay.addEventListener('click', () => {
+      document.body.classList.remove('pac-open');
+      overlay.classList.remove('active');
+      input.blur();
+      // Forzar cierre del dropdown de Google
+      const pacContainer = document.querySelector('.pac-container');
+      if (pacContainer) pacContainer.style.display = 'none';
     });
     
     // Indicador de búsqueda
@@ -749,13 +743,17 @@ function mejorarAutocompleteUX() {
       }
     });
     
-    // Cuando se selecciona un lugar, quitar indicador
+    // Cuando se selecciona un lugar
     input.addEventListener('change', function() {
       this.closest('.input-card').classList.remove('buscando');
+      // Cerrar overlay después de un momento
+      setTimeout(() => {
+        document.body.classList.remove('pac-open');
+        overlay.classList.remove('active');
+      }, 300);
     });
   });
 }
-
 // Inicializar cuando cargue
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', mejorarAutocompleteUX);
