@@ -203,7 +203,7 @@ body {
 .campo input, 
 .campo select {
   width: 100%;
-  padding: 18px 16px;
+  padding: 14px 16px;
   border: 2px solid #e8e8e8;
   border-radius: 16px;
   font-size: 1.05rem;
@@ -268,7 +268,7 @@ body {
   border: none;
   background: transparent;
   border-radius: 12px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #666;
   cursor: pointer;
@@ -968,19 +968,8 @@ body {
     </div>
 
     <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">📅 ¿Qué días necesitás el servicio?</label>
-    <div class="dias-semana" id="dias-semana">
-      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Lun')">Lun</button>
-      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Mar')">Mar</button>
-      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Mié')">Mié</button>
-      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Jue')">Jue</button>
-      <button type="button" class="dia-btn" onclick="toggleDia(this, 'Vie')">Vie</button>
-    </div>
 <!-- Selector de mes de referencia - ARRIBA del formulario -->
 <div class="campo" style="margin: 25px 0 30px; text-align: center;">
-  <label style="font-size: 1.1rem; font-weight: bold; color: var(--verde-oscuro); display: block; margin-bottom: 12px;">
-    📅 Mes de referencia para el cálculo mensual
-  </label>
-  <div class="tipo-viaje" style="max-width: 420px; margin: 0 auto;">
     <button type="button" class="btn-mes-selector activo" data-mes="actual" onclick="cambiarMesReferencia('actual')">
       Mes actual (<span class="nombre-mes-actual"></span>)
     </button>
@@ -991,19 +980,14 @@ body {
 </div>
     <div class="campo" style="margin-top: 24px;">
       <label>🔄 Tipo de viaje</label>
-      <div class="tipo-viaje">
-        <button type="button" class="activo" id="btn-ida" onclick="cambiarTipo('ida')">Solo Ida</button>
-        <button type="button" id="btn-ida-vuelta" onclick="cambiarTipo('ida_vuelta')">Ida y Vuelta</button>
       </div>
     </div>
 
 <div class="campo" style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
-  <label>📅 Fecha y Hora</label>
-  <input type="datetime-local" id="fecha-hora">
 </div>
 <div class="campo">
   <label>⏰ Horario de ida</label>
-   <input type="datetime-local" id="horario-ida">
+<input type="time" id="horario-ida">
 </div>
 
 <div class="campo horario-vuelta" id="horario-vuelta-container">
@@ -1026,7 +1010,6 @@ body {
         <span class="precio-periodo" id="tipo-viaje-texto">Solo ida</span>
       </div>
 <!-- Dentro de #resultado, si querés cambiar el mes desde acá también -->
-<div class="campo" style="margin: 20px 0; text-align: center;">
   <label style="font-size: 0.9rem; color: #666;">
     Calculado para: <strong id="mes-referencia">este mes</strong>
   </label>
@@ -1150,10 +1133,8 @@ body {
   </div>
 
 <script>
-let tipoViaje = 'ida';
 let diasSeleccionados = [];
 let datosCotizacion = null;
-let mesReferencia = 'actual';
 
 // CACHE GLOBAL - CLAVE PARA LA OPTIMIZACIÓN
 let cacheCotizacionBase = null;
@@ -1236,61 +1217,6 @@ function toggleDia(boton, dia) {
   diasSeleccionados.sort((a, b) => ordenDias.indexOf(a) - ordenDias.indexOf(b));
 }
 
-function cambiarTipo(tipo) {
-  tipoViaje = tipo;
-  document.getElementById('btn-ida').classList.toggle('activo', tipo === 'ida');
-  document.getElementById('btn-ida-vuelta').classList.toggle('activo', tipo === 'ida_vuelta');
-  document.getElementById('horario-vuelta-container').classList.toggle('visible', tipo === 'ida_vuelta');
-  if (tipo !== 'ida_vuelta') document.getElementById('horario-vuelta').value = '';
-  
-  // Si hay cache, recalcular precios inmediatamente sin llamar backend
-  if (cacheCotizacionBase) {
-    recalcularDesdeCache();
-  }
-}
-
-function cambiarMesReferencia(modo) {
-  mesReferencia = modo;
-  
-  // Actualizar UI de botones (usando clase en lugar de ID duplicado)
-  document.querySelectorAll('.btn-mes-selector').forEach(btn => {
-    btn.classList.remove('activo');
-  });
-  document.querySelectorAll(`[data-mes="${modo}"]`).forEach(btn => {
-    btn.classList.add('activo');
-  });
-  
-  // Si tenemos cache, recalcular sin llamar al backend
-  if (cacheCotizacionBase) {
-    recalcularDesdeCache();
-  } else if (datosCotizacion) {
-    // Si no hay cache pero sí datos, llamar cotizar completo
-    cotizar();
-  }
-}
-
-function recalcularDesdeCache() {
-  if (!cacheCotizacionBase) return;
-  
-  const viajesMes = calcularViajesMesFrontend(
-    cacheCotizacionBase.dias, 
-    cacheCotizacionBase.tipoViaje, 
-    mesReferencia
-  );
-  
-  const precioMensual = cacheCotizacionBase.precioPorViaje * viajesMes.cantidad;
-  
-  // Actualizar UI
-  actualizarUIFinal({
-    ...cacheCotizacionBase,
-    viajesPorMes: viajesMes.cantidad,
-    viajesPorMesRango: viajesMes.rango,
-    mesReferencia: viajesMes.mesNombre,
-    precioMensual: precioMensual,
-    precioMensualFormateado: "$" + precioMensual.toLocaleString('es-AR')
-  });
-}
-
 function inicializarAutocomplete() {
   if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
     mostrarErrorMaps('No se pudo cargar el servicio de mapas');
@@ -1352,7 +1278,8 @@ function cotizar() {
   return; 
 }
 
-if (tipoViaje === 'ida_vuelta' && !horarioVuelta) { 
+const tipoViaje = horarioVuelta ? 'ida_vuelta' : 'ida';
+ { 
   mostrarError('Seleccioná el horario de regreso'); 
   return; 
 }
