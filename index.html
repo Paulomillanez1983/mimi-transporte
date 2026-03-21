@@ -924,11 +924,12 @@ body {
 </head>
 <body>
 
-<div class="header">
-  <div class="logo-ninos">👦👧</div>
-  <h1>Mimi</h1>
-  <h2>Transporte Infantil</h2>
-  <p class="frase">"Tu hijo viaja seguro,<br>vos tranquilo"</p>
+<div class="header" style="background: linear-gradient(135deg,#1e3c72,#2a5298); color:white;">
+  <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+    <span style="font-size:1.5rem;">🚗</span>
+    <h1 style="font-size:1.5rem; margin:0;">MIMI</h1>
+    <span style="font-size:0.9rem; opacity:0.8;">Transporte Escolar</span>
+  </div>
 </div>
 
 <div class="container">
@@ -938,12 +939,6 @@ body {
       ⚠️ Error al cargar el servicio de mapas. Podés escribir la dirección manualmente.
     </div>
 
-    <div class="servicios">
-      <div class="servicio"><span class="servicio-icono">🏫</span> Traslados a Colegios</div>
-      <div class="servicio"><span class="servicio-icono">⚽</span> Actividades y Deportes</div>
-      <div class="servicio"><span class="servicio-icono">🛡️</span> Seguridad y Confianza</div>
-      <div class="servicio"><span class="servicio-icono">⏰</span> Puntualidad Garantizada</div>
-    </div>
 
     <div class="campo">
       <label>👤 Nombre del niño/a</label>
@@ -952,13 +947,12 @@ body {
     <div id="dias-nombres"></div>
 
 
-    <div class="campo">
-      <label>📍 ¿Desde dónde lo buscamos?</label>
-      <input type="text" id="desde" placeholder="Ej: Av. Chacabuco 986, Villa Allende" required autocomplete="off">
-    </div>
+<div class="campo" style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
+  <label>📍 Origen</label>
+  <input type="text" id="desde"
 
     <div class="campo">
-      <label>🏫 ¿A qué colegio lo llevamos?</label>
+      <label>🎯 Destino</label>
       <input type="text" id="hasta" placeholder="Ej: Colegio San José, Córdoba" required autocomplete="off">
     </div>
 
@@ -992,55 +986,13 @@ body {
       </div>
     </div>
 
-    <div class="campo">
-      <label>⏰ Horarios</label>
-      <div class="horarios-container">
-        <div>
-          <span class="horario-label">Hora de búsqueda</span>
-          <select id="horario-ida" required>
-            <option value="">Seleccionar</option>
-            <option value="06:00">06:00 hs</option>
-            <option value="06:30">06:30 hs</option>
-            <option value="07:00">07:00 hs</option>
-            <option value="07:15">07:15 hs</option>
-            <option value="07:30">07:30 hs</option>
-            <option value="07:45">07:45 hs</option>
-            <option value="08:00">08:00 hs</option>
-            <option value="08:15">08:15 hs</option>
-            <option value="08:30">08:30 hs</option>
-            <option value="08:45">08:45 hs</option>
-            <option value="09:00">09:00 hs</option>
-            <option value="09:30">09:30 hs</option>
-            <option value="10:00">10:00 hs</option>
-          </select>
-        </div>
-        <div class="horario-vuelta" id="horario-vuelta-container">
-          <span class="horario-label">Hora de regreso</span>
-          <select id="horario-vuelta">
-            <option value="">Seleccionar</option>
-            <option value="11:00">11:00 hs</option>
-            <option value="11:30">11:30 hs</option>
-            <option value="12:00">12:00 hs</option>
-            <option value="12:30">12:30 hs</option>
-            <option value="13:00">13:00 hs</option>
-            <option value="13:30">13:30 hs</option>
-            <option value="14:00">14:00 hs</option>
-            <option value="14:30">14:30 hs</option>
-            <option value="15:00">15:00 hs</option>
-            <option value="15:30">15:30 hs</option>
-            <option value="16:00">16:00 hs</option>
-            <option value="16:30">16:30 hs</option>
-            <option value="17:00">17:00 hs</option>
-            <option value="17:30">17:30 hs</option>
-            <option value="18:00">18:00 hs</option>
-            <option value="18:30">18:30 hs</option>
-            <option value="19:00">19:00 hs</option>
-          </select>
-        </div>
-      </div>
-    </div>
+<div class="campo" style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
+  <label>📅 Fecha y Hora</label>
+  <input type="datetime-local" id="fecha-hora">
+</div>
 
-    <button type="button" class="btn-cotizar" id="btn-cotizar" onclick="cotizar()">
+    <button type="button" class="btn-cotizar" style="background:#2a5298;">
+    id="btn-cotizar" onclick="cotizar()">
       <span>🧮 Calcular Cotización</span>
     </button>
 
@@ -1049,8 +1001,9 @@ body {
     <div class="resultado" id="resultado">
       
       <!-- PRECIO POR VIAJE (Principal) -->
-      <div class="precio-destacado" style="background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%);">
-        <span class="precio-label">Precio por viaje</span>
+      <div class="precio-destacado" style="background:white;color:#2a5298;box-shadow:none;">
+      style="background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%);">
+        <span class="precio-label">Total</span>
         <div class="precio-monto" id="precio-por-viaje">$0</div>
         <span class="precio-periodo" id="tipo-viaje-texto">Solo ida</span>
       </div>
@@ -1151,7 +1104,8 @@ body {
           <label>📱 Tu teléfono de contacto</label>
           <input type="tel" id="telefono" placeholder="Ej: 351 123 4567" maxlength="20">
         </div>
-        <button class="btn-confirmar btn-whatsapp" onclick="enviarReserva(this)">
+        <button class="btn-confirmar btn-whatsapp" style="font-size:1.2rem;">
+  💬 Reservar Ahora onclick="enviarReserva(this)">
           📩 Enviar solicitud por WhatsApp
         </button>
       </div>
