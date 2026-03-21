@@ -42,16 +42,17 @@ body {
 }
 
 /* ==========================================
-   HEADER CON JEEP/SUV REAL
+   HEADER CON JEEP/SUV REAL - EFECTO ATRAVEZADO
    ========================================== */
 .header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  padding: 25px 20px;
+  padding: 20px 20px 40px 20px; /* Más padding abajo para dar espacio al Jeep */
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* Cambiado a visible para que el Jeep sobresalga */
   border-bottom-left-radius: 25px;
   border-bottom-right-radius: 25px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  margin-bottom: 40px; /* Espacio para el Jeep */
 }
 
 .header-content {
@@ -68,18 +69,25 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
 }
 
-/* Imagen del Jeep Renegade */
+/* Imagen del Jeep Renegade - POSICIÓN ABSOLUTA */
 .vehicle-img {
-  width: 120px;
-  height: 75px;
+  width: 160px;
+  height: 100px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+  position: absolute;
+  left: -20px; /* Ajustá según necesites */
+  bottom: -60px; /* Esto hace que "baje" sobre el contenido blanco */
+  z-index: 10;
   content: url('https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png');
 }
+
 .logo-section {
   color: white;
+  margin-left: 130px; /* Espacio para que el logo no se superponga con el Jeep */
 }
 
 .logo-title {
@@ -108,7 +116,6 @@ body {
   justify-content: center;
   font-size: 1.3rem;
 }
-
 /* Notificaciones */
 .notification-bell {
   position: relative;
@@ -668,10 +675,16 @@ body {
   .hero-title { font-size: 1.4rem; }
   .precio-monto { font-size: 2rem; }
   .features-section { grid-template-columns: 1fr; }
-  .vehicle-img { width: 200px; height: 90px; }  /* antes era 80x50 */
+  .vehicle-img { 
+    width: 130px; 
+    height: 85px; 
+    bottom: -50px;
+    left: -10px;
+  }
+  .logo-section { margin-left: 110px; }
   .logo-title { font-size: 1.6rem; }
-}
-</style>
+  .header { padding: 15px 15px 35px 15px; }
+}</style>
 
 <!-- Google Maps API -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places"></script>
@@ -685,10 +698,11 @@ body {
 <header class="header">
   <div class="header-content">
     <div class="vehicle-section">
-<img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png" 
-     alt="Jeep MIMI" 
-     class="vehicle-img"
-     onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
+      <!-- El Jeep está posicionado absolutamente, fuera del flujo normal -->
+      <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png" 
+           alt="Jeep MIMI" 
+           class="vehicle-img"
+           onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
       <div class="logo-section">
         <div class="logo-title">MIMI</div>
         <div class="logo-subtitle">Transporte Escolar</div>
@@ -703,7 +717,6 @@ body {
     </div>
   </div>
 </header>
-
 <div class="container">
   <!-- Hero -->
   <div class="hero-text">
