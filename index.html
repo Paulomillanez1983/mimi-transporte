@@ -25,7 +25,17 @@
 <base target="_top">
 <meta name="google" content="notranslate">
 
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&language=es&region=AR&callback=inicializarAutocomplete" async defer></script>
+<script>
+function cargarMaps() {
+  if (typeof google !== 'undefined' && google.maps) {
+    inicializarAutocomplete();
+  } else {
+    mostrarErrorMaps('Error al cargar Google Maps');
+  }
+}
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&language=es&region=AR&callback=cargarMaps" async defer></script>
 
 
 <style>
@@ -949,9 +959,10 @@ body {
 
 <div class="campo" style="background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 15px rgba(0,0,0,0.08);">
   <label>📍 Origen</label>
-  <input type="text" id="desde"
+  <input type="text" id="desde" placeholder="Ej: Av. Argentina 123, Villa Allende" required autocomplete="off">
+</div>
 
-    <div class="campo">
+<div class="campo">
       <label>🎯 Destino</label>
       <input type="text" id="hasta" placeholder="Ej: Colegio San José, Córdoba" required autocomplete="off">
     </div>
@@ -990,9 +1001,17 @@ body {
   <label>📅 Fecha y Hora</label>
   <input type="datetime-local" id="fecha-hora">
 </div>
+<div class="campo">
+  <label>⏰ Horario de ida</label>
+  <input type="time" id="horario-ida">
+</div>
 
-    <button type="button" class="btn-cotizar" style="background:#2a5298;">
-    id="btn-cotizar" onclick="cotizar()">
+<div class="campo horario-vuelta" id="horario-vuelta-container">
+  <label>🔁 Horario de vuelta</label>
+  <input type="time" id="horario-vuelta">
+</div>
+
+    <button type="button" class="btn-cotizar" style="background:#2a5298;" id="btn-cotizar" onclick="cotizar()">
       <span>🧮 Calcular Cotización</span>
     </button>
 
@@ -1002,7 +1021,6 @@ body {
       
       <!-- PRECIO POR VIAJE (Principal) -->
       <div class="precio-destacado" style="background:white;color:#2a5298;box-shadow:none;">
-      style="background: linear-gradient(135deg, var(--rosa) 0%, var(--rosa-oscuro) 100%);">
         <span class="precio-label">Total</span>
         <div class="precio-monto" id="precio-por-viaje">$0</div>
         <span class="precio-periodo" id="tipo-viaje-texto">Solo ida</span>
@@ -1104,10 +1122,10 @@ body {
           <label>📱 Tu teléfono de contacto</label>
           <input type="tel" id="telefono" placeholder="Ej: 351 123 4567" maxlength="20">
         </div>
-        <button class="btn-confirmar btn-whatsapp" style="font-size:1.2rem;">
-  💬 Reservar Ahora onclick="enviarReserva(this)">
-          📩 Enviar solicitud por WhatsApp
-        </button>
+       <button class="btn-confirmar btn-whatsapp" style="font-size:1.2rem;" onclick="enviarReserva(this)">
+  💬 Reservar ahora por WhatsApp
+</button>
+
       </div>
     </div>
 
@@ -1322,15 +1340,22 @@ function cotizar() {
   const horarioIda = document.getElementById('horario-ida').value;
   const horarioVuelta = document.getElementById('horario-vuelta').value;
 
+
   // Validaciones
   if (!nombre) { mostrarError('Ingresá el nombre del niño/a'); return; }
   if (!desde) { mostrarError('Ingresá la dirección de origen'); return; }
   if (!hasta) { mostrarError('Ingresá la dirección de destino'); return; }
   if (diasSeleccionados.length === 0) { mostrarError('Seleccioná al menos un día'); return; }
-  if (!horarioIda) { mostrarError('Seleccioná el horario de búsqueda'); return; }
-  if (tipoViaje === 'ida_vuelta' && !horarioVuelta) { 
-    mostrarError('Seleccioná el horario de regreso'); return; 
-  }
+  if (!horarioIda) { 
+  mostrarError('Seleccioná el horario de ida'); 
+  return; 
+}
+
+if (tipoViaje === 'ida_vuelta' && !horarioVuelta) { 
+  mostrarError('Seleccioná el horario de regreso'); 
+  return; 
+}
+
 
   ocultarError();
   
@@ -1357,6 +1382,8 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
         mostrarError(res.error); 
         return; 
       }
+      const precioSemanal = res.precioPorViaje * diasSeleccionados.length * (tipoViaje === 'ida_vuelta' ? 2 : 1);
+
 
       // GUARDAR EN CACHE - ESTO ES CLAVE
       cacheCotizacionBase = {
@@ -1380,13 +1407,15 @@ fetch("https://script.google.com/macros/s/AKfycbzYgbdQlbMusQQ5qCzGhkxChEWi5N6n1s
 
       // Completar datos para mostrar
       const datosCompletos = {
-        ...res,
-        viajesPorMes: viajesMes.cantidad,
-        viajesPorMesRango: viajesMes.rango,
-        mesReferencia: viajesMes.mesNombre,
-        precioMensual: precioMensual,
-        precioMensualFormateado: "$" + precioMensual.toLocaleString('es-AR')
-      };
+  ...res,
+  precioSemanal: precioSemanal,
+  viajesPorMes: viajesMes.cantidad,
+  viajesPorMesRango: viajesMes.rango,
+  mesReferencia: viajesMes.mesNombre,
+  precioMensual: precioMensual,
+  precioMensualFormateado: "$" + precioMensual.toLocaleString('es-AR')
+};
+
 
      datosCotizacion = {
        nombre: nombre,
