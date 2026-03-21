@@ -580,6 +580,16 @@ body.pac-open {
   border-radius: 50px;
   backdrop-filter: blur(10px);
 }
+/* Mejorar visibilidad del estado buscando */
+.input-card.buscando {
+  border-color: #e91e63 !important;
+  background: #fff5f7;
+}
+
+/* Asegurar que el pac-container siempre esté por encima */
+.pac-container {
+  z-index: 2147483647 !important;
+}
 </style>
 <title>Mimi Transporte Infantil - Cotizá ahora</title>
 <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá el viaje de tu hijo en segundos. ¡Tu tranquilidad empieza aquí!">
@@ -700,44 +710,80 @@ function actualizarNombresMeses() {
 function mejorarAutocompleteUX() {
   const inputs = [document.getElementById('desde'), document.getElementById('hasta')];
   
-  inputs.forEach(input => {
-    if (!input) return;
+  // Crear overlay una sola vez
+  let overlay = document.querySelector('.autocomplete-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'autocomplete-overlay';
+    document.body.appendChild(overlay);
     
-    // Crear overlay una sola vez
-    let overlay = document.querySelector('.autocomplete-overlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.className = 'autocomplete-overlay';
-      document.body.appendChild(overlay);
-    }
-    
-    // Al enfocar
-    input.addEventListener('focus', function() {
-      // Scroll al input
-      setTimeout(() => {
-        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
-      
-      // Agregar clase al body
-      document.body.classList.add('pac-open');
-      overlay.classList.add('active');
-    });
-    
-    // Cerrar al tocar el overlay (no en blur del input)
+    // Cerrar al tocar el overlay
     overlay.addEventListener('click', () => {
       document.body.classList.remove('pac-open');
       overlay.classList.remove('active');
-      input.blur();
-      // Forzar cierre del dropdown de Google
+      inputs.forEach(inp => inp.blur());
       const pacContainer = document.querySelector('.pac-container');
       if (pacContainer) pacContainer.style.display = 'none';
     });
+  }
+  
+  // Observador para detectar cuando aparece/desaparece el dropdown
+  const observer = new MutationObserver((mutations) => {
+    const pacContainer = document.querySelector('.pac-container');
+    const isVisible = pacContainer && pacContainer.style.display !== 'none';
     
-    // Indicador de búsqueda
+    if (isVisible) {
+      // Dropdown visible -> activar overlay
+      document.body.classList.add('pac-open');
+      overlay.classList.add('active');
+      
+      // Asegurar z-index máximo
+      pacContainer.style.zIndex = '2147483647';
+      
+      // En móvil, forzar posición desde abajo
+      if (window.innerWidth <= 480) {
+        pacContainer.style.position = 'fixed';
+        pacContainer.style.bottom = '0';
+        pacContainer.style.top = 'auto';
+        pacContainer.style.left = '0';
+        pacContainer.style.right = '0';
+        pacContainer.style.transform = 'none';
+        pacContainer.style.width = '100%';
+        pacContainer.style.maxWidth = '100%';
+      }
+    } else {
+      // Dropdown oculto -> desactivar overlay
+      document.body.classList.remove('pac-open');
+      overlay.classList.remove('active');
+    }
+  });
+  
+  // Observar cambios en el body (donde se inserta el pac-container)
+  observer.observe(document.body, { childList: true, subtree: true });
+  
+  inputs.forEach(input => {
+    if (!input) return;
+    
+    // Al enfocar: solo scroll, NO activar overlay todavía
+    input.addEventListener('focus', function() {
+      setTimeout(() => {
+        this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    });
+    
+    // Indicador de búsqueda mientras escribe
     input.addEventListener('input', function() {
       const card = this.closest('.input-card');
-      if (this.value.length > 2) {
+      const pacContainer = document.querySelector('.pac-container');
+      
+      // Mostrar spinner solo si tiene 2+ caracteres y el dropdown no está visible aún
+      if (this.value.length >= 2) {
         card.classList.add('buscando');
+        
+        // Quitar spinner después de 2 segundos (timeout de seguridad)
+        setTimeout(() => {
+          card.classList.remove('buscando');
+        }, 2000);
       } else {
         card.classList.remove('buscando');
       }
@@ -746,21 +792,24 @@ function mejorarAutocompleteUX() {
     // Cuando se selecciona un lugar
     input.addEventListener('change', function() {
       this.closest('.input-card').classList.remove('buscando');
-      // Cerrar overlay después de un momento
+    });
+    
+    // Al perder el foco: limpiar todo
+    input.addEventListener('blur', function() {
+      this.closest('.input-card').classList.remove('buscando');
+      
+      // Delay para permitir que se procese la selección primero
       setTimeout(() => {
-        document.body.classList.remove('pac-open');
-        overlay.classList.remove('active');
-      }, 300);
+        // Solo cerrar si no hay otro input de autocomplete enfocado
+        const otrosInputs = inputs.filter(inp => inp !== this && inp === document.activeElement);
+        if (otrosInputs.length === 0) {
+          document.body.classList.remove('pac-open');
+          overlay.classList.remove('active');
+        }
+      }, 200);
     });
   });
-}
-// Inicializar cuando cargue
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', mejorarAutocompleteUX);
-} else {
-  mejorarAutocompleteUX();
-}
-function inicializarAutocomplete() {
+}function inicializarAutocomplete() {
   if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
     mostrarErrorMaps('No se pudo cargar el servicio de mapas');
     return;
