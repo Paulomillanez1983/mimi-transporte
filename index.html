@@ -276,41 +276,8 @@ body {
 /* 🎨 OVERLAY Y ANIMACIONES                     */
 /* ============================================ */
 
-body.pac-open {
-  overflow: hidden;
-}
 
-.autocomplete-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.4);
-  z-index: 2147483646;
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-}
 
-.autocomplete-overlay.active {
-  display: block;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-}
-
-.pac-container:not([style*="display: none"]) {
-  animation: slideDown 0.25s ease-out;
-}
 
 /* ============================================ */
 /* 📱 MODO MÓVIL - BOTTOM SHEET                 */
@@ -708,108 +675,45 @@ function actualizarNombresMeses() {
 // ============================================
 
 function mejorarAutocompleteUX() {
+  // Solo mejorar el estilo visual de los inputs, sin interferir con el autocomplete
   const inputs = [document.getElementById('desde'), document.getElementById('hasta')];
-  
-  // Crear overlay una sola vez
-  let overlay = document.querySelector('.autocomplete-overlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.className = 'autocomplete-overlay';
-    document.body.appendChild(overlay);
-    
-    // Cerrar al tocar el overlay
-    overlay.addEventListener('click', () => {
-      document.body.classList.remove('pac-open');
-      overlay.classList.remove('active');
-      inputs.forEach(inp => inp.blur());
-      const pacContainer = document.querySelector('.pac-container');
-      if (pacContainer) pacContainer.style.display = 'none';
-    });
-  }
-  
-  // Observador para detectar cuando aparece/desaparece el dropdown
-  const observer = new MutationObserver((mutations) => {
-    const pacContainer = document.querySelector('.pac-container');
-    const isVisible = pacContainer && pacContainer.style.display !== 'none';
-    
-    if (isVisible) {
-      // Dropdown visible -> activar overlay
-      document.body.classList.add('pac-open');
-      overlay.classList.add('active');
-      
-      // Asegurar z-index máximo
-      pacContainer.style.zIndex = '2147483647';
-      
-      // En móvil, forzar posición desde abajo
-      if (window.innerWidth <= 480) {
-        pacContainer.style.position = 'fixed';
-        pacContainer.style.bottom = '0';
-        pacContainer.style.top = 'auto';
-        pacContainer.style.left = '0';
-        pacContainer.style.right = '0';
-        pacContainer.style.transform = 'none';
-        pacContainer.style.width = '100%';
-        pacContainer.style.maxWidth = '100%';
-      }
-    } else {
-      // Dropdown oculto -> desactivar overlay
-      document.body.classList.remove('pac-open');
-      overlay.classList.remove('active');
-    }
-  });
-  
-  // Observar cambios en el body (donde se inserta el pac-container)
-  observer.observe(document.body, { childList: true, subtree: true });
   
   inputs.forEach(input => {
     if (!input) return;
     
-    // Al enfocar: solo scroll, NO activar overlay todavía
+    // Scroll suave al enfocar
     input.addEventListener('focus', function() {
       setTimeout(() => {
         this.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 300);
     });
-    
-    // Indicador de búsqueda mientras escribe
-    input.addEventListener('input', function() {
-      const card = this.closest('.input-card');
-      const pacContainer = document.querySelector('.pac-container');
-      
-      // Mostrar spinner solo si tiene 2+ caracteres y el dropdown no está visible aún
-      if (this.value.length >= 2) {
-        card.classList.add('buscando');
-        
-        // Quitar spinner después de 2 segundos (timeout de seguridad)
-        setTimeout(() => {
-          card.classList.remove('buscando');
-        }, 2000);
-      } else {
-        card.classList.remove('buscando');
-      }
-    });
-    
-    // Cuando se selecciona un lugar
-    input.addEventListener('change', function() {
-      this.closest('.input-card').classList.remove('buscando');
-    });
-    
-    // Al perder el foco: limpiar todo
-    input.addEventListener('blur', function() {
-      this.closest('.input-card').classList.remove('buscando');
-      
-      // Delay para permitir que se procese la selección primero
-      setTimeout(() => {
-        // Solo cerrar si no hay otro input de autocomplete enfocado
-        const otrosInputs = inputs.filter(inp => inp !== this && inp === document.activeElement);
-        if (otrosInputs.length === 0) {
-          document.body.classList.remove('pac-open');
-          overlay.classList.remove('active');
-        }
-      }, 200);
-    });
   });
-}function inicializarAutocomplete() {
+  
+  // Forzar estilos del pac-container cuando aparezca
+  const style = document.createElement('style');
+  style.textContent = `
+    .pac-container {
+      z-index: 999999 !important;
+      position: fixed !important;
+      top: auto !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      border-radius: 20px 20px 0 0 !important;
+      border-top: 3px solid #e91e63 !important;
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.3) !important;
+      max-height: 60vh !important;
+    }
+    .pac-item {
+      padding: 15px 20px !important;
+      min-height: 60px !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+function inicializarAutocomplete() {
   if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
     mostrarErrorMaps('No se pudo cargar el servicio de mapas');
     return;
