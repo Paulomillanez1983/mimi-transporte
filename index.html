@@ -71,14 +71,13 @@ body {
 }
 
 .vehicle-img {
-  width: 100px;
-  height: 60px;
+  width: 110px;  /* Un poco más grande para que se vea mejor */
+  height: 65px;
   object-fit: contain;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-  /* Jeep Renegade gris grafito - imagen de alta calidad */
-  content: url('https://www.pngmart.com/files/22/Jeep-Renegade-PNG-Clipart.png');
+  /* No usar content: url() aquí, usar src en el HTML */
 }
-.logo-title {
+  .logo-title {
   font-size: 1.8rem;
   font-weight: 800;
   letter-spacing: 1px;
@@ -680,8 +679,15 @@ body {
 <!-- Header -->
 <header class="header">
   <div class="header-content">
+<!-- Header -->
+<header class="header">
+  <div class="header-content">
     <div class="vehicle-section">
-      content: url('https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png');
+      <!-- Imagen del Jeep Renegade gris grafito -->
+      <img src="https://www.pngmart.com/files/22/Jeep-Renegade-PNG-Clipart.png" 
+           alt="Jeep Renegade MIMI" 
+           class="vehicle-img"
+           onerror="this.src='https://purepng.com/public/uploads/large/purepng.com-jeep-renegade-carcarvehicletransportjeep-961524660343l6q3e.png'">
       <div class="logo-section">
         <div class="logo-title">MIMI</div>
         <div class="logo-subtitle">Transporte Escolar</div>
@@ -695,7 +701,7 @@ body {
       </div>
     </div>
   </div>
-</header>
+</header>       
 
 <div class="container">
   <!-- Hero -->
