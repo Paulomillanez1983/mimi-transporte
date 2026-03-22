@@ -1071,14 +1071,14 @@ function mostrarResultado(res) {
 
     mapaImg.onerror = () => {
       mapaDiv.style.display = 'none';
-      notifSystem.show('Error en mapa', 'No se pudo cargar la ruta (revisá la consola del navegador)', 'error', 6000);
+      notifSystem.show('Error en mapa', 'No se pudo cargar la ruta (revisá consola)', 'error', 6000);
     };
   } else {
     mapaDiv.style.display = 'none';
-    notifSystem.show('Mapa no disponible', 'Usá el autocompletado de direcciones para activarlo', 'info', 5000);
+    notifSystem.show('Mapa no disponible', 'Usá autocompletado para direcciones precisas', 'info', 5000);
   }
 
-  // Scroll suave al resultado (incluye mapa si carga)
+  // Scroll suave al resultado
   setTimeout(() => {
     resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 100);
