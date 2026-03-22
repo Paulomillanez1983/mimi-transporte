@@ -1073,8 +1073,21 @@ function mostrarResultado(res) {
   `&visual_refresh=true` +
   `&markers=size:mid%7Ccolor:green%7Clabel:O%7C${originLatLng}` +
   `&markers=size:mid%7Ccolor:red%7Clabel:D%7C${destLatLng}` +
-  `&path=color:0x1565c0ff%7Cweight:5%7C${originLatLng}%7C${destLatLng}` +
-  `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
+ obtenerRutaReal(originLatLng, destLatLng, function(polyline) {
+  if (!polyline) return;
+
+  const staticMapUrl =
+    `https://maps.googleapis.com/maps/api/staticmap?` +
+    `size=640x360` +
+    `&scale=2` +
+    `&maptype=roadmap` +
+    `&markers=color:green|label:O|${originLatLng}` +
+    `&markers=color:red|label:D|${destLatLng}` +
+    `&path=enc:${polyline.points}` + // 👈 CLAVE
+    `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
+
+  mapaImg.src = staticMapUrl;
+});
 
     mapaImg.src = staticMapUrl;
 
