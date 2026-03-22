@@ -666,9 +666,11 @@ body {
     <span>Reservar Ahora</span>  
   </button>
 
-<div id="mapaRuta" style="margin-top: 20px; border-radius: 12px; overflow: hidden; box-shadow: var(--sombra); display: none;">  
-  <img id="staticMapImg" alt="Ruta estimada" style="width: 100%; height: auto; display: block;">  
-</div>    </div>    <div class="features-section">  
+<div id="mapaRuta" style="margin-top: 20px; display: none;"></div>
+ 
+</div>    
+</div>    
+<div class="features-section">  
     <div class="feature-card">  
       <div class="feature-icon shield">🛡️</div>  
       <div class="feature-title">Conductores Profesionales</div>  
@@ -1022,38 +1024,31 @@ function mostrarResultado(res) {
   const resultadoDiv = document.getElementById('resultado');  
   resultadoDiv.classList.add('visible');  
   
-  // Mostrar mapa estático  
-  const mapaImg = document.getElementById('staticMapImg');  
-  const mapaDiv = document.getElementById('mapaRuta');  
-  
-  if (lugarOrigen?.geometry?.location && lugarDestino?.geometry?.location) {  
-    const latO = lugarOrigen.geometry.location.lat();  
-    const lngO = lugarOrigen.geometry.location.lng();  
-    const latD = lugarDestino.geometry.location.lat();  
-    const lngD = lugarDestino.geometry.location.lng();  
-  
-    const originLatLng = `${latO},${lngO}`;
-const destLatLng   = `${latD},${lngD}`;
+  // Abrir ruta en Google Maps GRATIS
+const origenTexto = document.getElementById('origen').value;
+const destinoTexto = document.getElementById('destino').value;
 
-const staticMapUrl =
-  `https://maps.googleapis.com/maps/api/staticmap?size=600x300` +
-  `&scale=2` +
-  `&markers=color:green%7Clabel:O%7C${originLatLng}` +
-  `&markers=color:red%7Clabel:D%7C${destLatLng}` +
-  `&path=color:0x1565c0%7Cweight:5%7C${originLatLng}%7C${destLatLng}` +
-  `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`; 
-  
-    mapaImg.src = staticMapUrl;  
-  
-    mapaImg.onload = () => {  
-      mapaDiv.style.display = 'block';  
-      notifSystem.show('Ruta cargada', `Origen → Destino (${datosCotizacion?.km || '?'} km)`, 'success', 4000);  
-    };  
-  
-    mapaImg.onerror = () => {  
-      mapaDiv.style.display = 'none';  
-      notifSystem.show('Error en mapa', 'No se pudo cargar la ruta (revisá consola)', 'error', 6000);  
-    };  
+const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
+
+// Mostrar botón en vez de mapa
+const mapaDiv = document.getElementById('mapaRuta');
+mapaDiv.style.display = 'block';
+mapaDiv.innerHTML = `
+  <button onclick="window.open('${mapsUrl}', '_blank')" 
+    style="
+      width:100%;
+      padding:14px;
+      border:none;
+      border-radius:12px;
+      background:#1565c0;
+      color:white;
+      font-weight:700;
+      font-size:0.95rem;
+      cursor:pointer;">
+    🗺️ Ver ruta en Google Maps
+  </button>
+`;
+    
   } else {  
     mapaDiv.style.display = 'none';  
     notifSystem.show('Mapa no disponible', 'Usá autocompletado para direcciones precisas', 'info', 5000);  
