@@ -856,40 +856,80 @@ class NotificationSystem {
   }
 
   initWebSocket() {
-    console.log('🔌 Conectando a servidor de notificaciones...');
+    console.log('🔌 Sistema de notificaciones activo');
+    
+    // Mensaje de bienvenida real (no simulado)
+    setTimeout(() => {
+      this.show('👋 ¡Bienvenido a MIMI!', 'Transporte escolar seguro para tus hijos', 'success', 5000);
+    }, 1500);
+
+    // Iniciar ciclo de notificaciones útiles (no de ubicación falsa)
+    this.programarSiguienteNotificacion();
+  }
+  
+  programarSiguienteNotificacion() {
+    // Intervalo aleatorio entre 45 y 90 segundos
+    const intervalo = Math.random() * 45000 + 45000;
     
     setTimeout(() => {
-      this.show('Conectado', 'Sistema de notificaciones activo', 'success', 3000);
-    }, 1000);
-
-    setInterval(() => {
-      if (Math.random() > 0.7) {
-        this.simularNotificacionChofer();
-      }
-    }, 20000);
-
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'mimi-notificacion') {
-        const data = JSON.parse(e.newValue);
-        this.show(data.title, data.message, data.type);
-      }
-    });
+      this.mostrarNotificacionUtil();
+      this.programarSiguienteNotificacion(); // Siguiente
+    }, intervalo);
   }
-
-  simularNotificacionChofer() {
+  
+  mostrarNotificacionUtil() {
+    // No mostrar si hay cotización en progreso o resultado visible
+    const resultadoVisible = document.getElementById('resultado')?.classList.contains('visible');
+    const btnCalculando = document.getElementById('btnCalcular')?.disabled;
+    
+    if (resultadoVisible || btnCalculando) {
+      this.programarSiguienteNotificacion();
+      return;
+    }
+    
     const notificaciones = [
-      { title: '🚗 Chofer cercano', message: 'Juan P. está a 5 minutos de tu ubicación', type: 'info' },
-      { title: '✅ Viaje confirmado', message: 'Tu reserva fue confirmada por el chofer', type: 'success' },
-      { title: '⏰ Recordatorio', message: 'Tu viaje es en 30 minutos', type: 'warning' },
-      { title: '📍 Actualización', message: 'El chofer llegó al punto de origen', type: 'info' }
+      { 
+        title: '🛡️ Viaje asegurado', 
+        message: 'Todos nuestros conductores están habilitados y certificados', 
+        type: 'info' 
+      },
+      { 
+        title: '💳 Pago flexible', 
+        message: 'Pagás solo los viajes que usás. Sin contratos ni compromisos', 
+        type: 'info' 
+      },
+      { 
+        title: '⭐ Familias nos eligen', 
+        message: 'Más de 500 viajes seguros realizados en Villa Allende y zona', 
+        type: 'success' 
+      },
+      { 
+        title: '🚗 Vehículos preparados', 
+        message: 'Butacas especiales para niños y máxima seguridad en cada viaje', 
+        type: 'info' 
+      },
+      { 
+        title: '📱 Estamos cerca', 
+        message: 'Respondemos por WhatsApp de lunes a sábado de 6:00 a 22:00 hs', 
+        type: 'info' 
+      },
+      { 
+        title: '🙏 Gracias por confiar', 
+        message: 'Tu hijo viaja seguro, vos tranquilo. Eso es MIMI.', 
+        type: 'success' 
+      }
     ];
     
     const notif = notificaciones[Math.floor(Math.random() * notificaciones.length)];
-    this.show(notif.title, notif.message, notif.type);
-    this.incrementBadge();
+    this.show(notif.title, notif.message, notif.type, 6000);
+  }    
+    // Mostrar máximo 1 notificación cada 45-90 segundos (aleatorio)
+    const tiempoAleatorio = Math.random() * 45000 + 45000; // 45-90 segundos
     
-    localStorage.setItem('mimi-notificacion', JSON.stringify(notif));
-    localStorage.removeItem('mimi-notificacion');
+    setTimeout(() => {
+      const notif = notificaciones[Math.floor(Math.random() * notificaciones.length)];
+      this.show(notif.title, notif.message, notif.type, 6000); // 6 segundos visibles
+    }, tiempoAleatorio);
   }
 
   incrementBadge() {
@@ -959,22 +999,17 @@ class NotificationSystem {
     } catch (e) {}
   }
 
-  async notificarChofer(datos) {
-    this.show('Enviando...', 'Notificando al chofer disponible más cercano', 'info', 3000);
-    await new Promise(r => setTimeout(r, 1500));
-    this.show('¡Chofer encontrado!', 'Juan P. recibió tu solicitud y responderá en breve', 'success');
-    this.incrementBadge();
-    console.log('📧 Enviando notificación al chofer:', datos);
-    return true;
-  }
-}
 
 const notifSystem = new NotificationSystem();
 
 // ==========================================
 // GOOGLE PLACES AUTOCOMPLETE
 // ==========================================
-
+  async notificarChofer(datos) {
+    // Solo log interno, sin notificación falsa al usuario
+    console.log('📧 Datos listos para enviar al chofer:', datos);
+    return true;
+  }
 let autocompleteOrigen, autocompleteDestino;
 let lugarOrigen = null;
 let lugarDestino = null;
