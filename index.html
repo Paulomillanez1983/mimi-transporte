@@ -763,7 +763,11 @@ let lugarOrigen = null;
 let lugarDestino = null;  
 let datosCotizacion = null;  
 let isCalculating = false;  
-  
+let sessionToken;
+
+function nuevaSesionAutocomplete() {
+  sessionToken = new google.maps.places.AutocompleteSessionToken();
+} 
 document.addEventListener('DOMContentLoaded', function() {  
   initFecha();  
   if (typeof google !== 'undefined') {  
@@ -841,7 +845,8 @@ function abrirSelectorFecha() {
   }  
 }  
   
-function inicializarAutocomplete() {  
+function inicializarAutocomplete() {
+  nuevaSesionAutocomplete();  
   if (!google.maps || !google.maps.places) {  
     mostrarError('Error al cargar Google Maps. Escribí la dirección manualmente.');  
     return;  
@@ -860,6 +865,8 @@ function inicializarAutocomplete() {
   autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);  
   
   autocompleteOrigen.addListener('place_changed', () => {  
+lugarOrigen = place;
+nuevaSesionAutocomplete(); // 🔥 reinicia sesión
     const place = autocompleteOrigen.getPlace();  
     if (place.formatted_address) {  
       origenInput.value = place.formatted_address;  
@@ -871,6 +878,8 @@ function inicializarAutocomplete() {
   });  
   
   autocompleteDestino.addListener('place_changed', () => {  
+lugarDestino = place;
+nuevaSesionAutocomplete(); // 🔥 reinicia sesión
     const place = autocompleteDestino.getPlace();  
     if (place.formatted_address) {  
       destinoInput.value = place.formatted_address;  
