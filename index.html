@@ -1040,7 +1040,7 @@ function mostrarResultado(res) {
 
   const resultadoDiv = document.getElementById('resultado');
   resultadoDiv.classList.add('visible');
-
+const zoom = calcularZoom(res.km);
   // Mostrar mapa estático
   const mapaImg = document.getElementById('staticMapImg');
   const mapaDiv = document.getElementById('mapaRuta');
@@ -1058,7 +1058,7 @@ const staticMapUrl =
   `https://maps.googleapis.com/maps/api/staticmap?` +
   `size=600x300` +
   `&scale=2` +
-   `&zoom=14` +
+  `&zoom=${zoom}` +
 `  &maptype=roadmap` +
   `&markers=color:green%7Clabel:O%7C${originLatLng}` +
   `&markers=color:red%7Clabel:D%7C${destLatLng}` +
@@ -1167,7 +1167,16 @@ Gracias! 🙌`;
     notifSystem.show('¡Listo!', 'Mensaje preparado en WhatsApp', 'success', 3000);
   }, 800);
 }
+function calcularZoom(km) {
+  if (!km) return 14;
 
+  if (km < 2) return 16;      // muy cerca (ej: barrio)
+  if (km < 5) return 15;
+  if (km < 10) return 14;
+  if (km < 20) return 13;
+  if (km < 40) return 12;
+  return 11;                  // distancias largas
+}
 // ==========================================
 // UTILIDADES
 // ==========================================
