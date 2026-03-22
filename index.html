@@ -848,35 +848,52 @@ function abrirSelectorFecha() {
 }  
   
 function inicializarAutocomplete() {
-  nuevaSesionAutocomplete();  
-  if (!google.maps || !google.maps.places) {  
-    mostrarError('Error al cargar Google Maps. Escribí la dirección manualmente.');  
-    return;  
-  }  
-  
-  const opciones = {  
-    componentRestrictions: { country: 'ar' },  
-    fields: ['formatted_address', 'geometry', 'name'],  
-    types: ['geocode', 'establishment']  
-  };  
-  
-  const origenInput = document.getElementById('origen');  
-  const destinoInput = document.getElementById('destino');  
-  
-  autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);  
-  autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);  
-  
-  autocompleteOrigen.addListener('place_changed', () => {  
-  const place = autocompleteOrigen.getPlace();  
+  nuevaSesionAutocomplete();
 
-  if (place.formatted_address) {  
-    origenInput.value = place.formatted_address;  
-    lugarOrigen = place;  
-    nuevaSesionAutocomplete(); // 🔥 acá sí
-    origenInput.style.color = '#1565c0';  
-    setTimeout(() => origenInput.style.color = '#1a1a1a', 500);  
-  }  
-});
+  const opciones = {
+    componentRestrictions: { country: 'ar' },
+    fields: ['formatted_address', 'geometry', 'name'],
+    types: ['geocode', 'establishment']
+  };
+
+  const origenInput = document.getElementById('origen');
+  const destinoInput = document.getElementById('destino');
+
+  autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
+  autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
+
+  // 🔥 IMPORTANTE: usar sessionToken
+  autocompleteOrigen.setOptions({ sessionToken });
+  autocompleteDestino.setOptions({ sessionToken });
+
+  autocompleteOrigen.addListener('place_changed', () => {
+    const place = autocompleteOrigen.getPlace();
+    if (place.formatted_address) {
+      origenInput.value = place.formatted_address;
+      lugarOrigen = place;
+
+      nuevaSesionAutocomplete();
+      autocompleteOrigen.setOptions({ sessionToken }); // 🔥 renovar token
+
+      origenInput.style.color = '#1565c0';
+      setTimeout(() => origenInput.style.color = '#1a1a1a', 500);
+    }
+  });
+
+  autocompleteDestino.addListener('place_changed', () => {
+    const place = autocompleteDestino.getPlace();
+    if (place.formatted_address) {
+      destinoInput.value = place.formatted_address;
+      lugarDestino = place;
+
+      nuevaSesionAutocomplete();
+      autocompleteDestino.setOptions({ sessionToken });
+
+      destinoInput.style.color = '#1565c0';
+      setTimeout(() => destinoInput.style.color = '#1a1a1a', 500);
+    }
+  });
+}
   
   autocompleteDestino.addListener('place_changed', () => {  
   const place = autocompleteDestino.getPlace();  
