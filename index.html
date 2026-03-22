@@ -1061,36 +1061,69 @@ function animarContador(id, inicio, fin, duracion) {
 }
 
 // ==========================================
-// RESERVA WHATSAPP
+// RESERVA WHATSAPP (versión mejorada)
 // ==========================================
 
 function reservarWhatsApp() {
-  const origen = document.getElementById('origen').value;
-  const destino = document.getElementById('destino').value;
-  const fechaTexto = document.getElementById('textoFecha').textContent;
-  const precio = document.getElementById('precioValor').textContent;
+  // 1. Obtener valores (ya está bien, pero agregamos trim() por seguridad)
+  const origen   = document.getElementById('origen').value.trim();
+  const destino  = document.getElementById('destino').value.trim();
+  const fechaTexto = document.getElementById('textoFecha').textContent.trim();
+  const precio   = document.getElementById('precioValor').textContent.trim();
 
+  // 2. Validación más completa (evita mensajes vacíos o incompletos)
   if (!datosCotizacion) {
-    notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 3000);
+    notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 4000);
     mostrarError('Primero calculá la tarifa');
     return;
   }
 
-  // Notificación de redirección
-  notifSystem.show('Abriendo WhatsApp', 'Preparando mensaje con los datos de tu viaje...', 'info', 3000);
+  if (!origen || !destino || !fechaTexto || precio === '0') {
+    notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 5000);
+    return;
+  }
 
-  const mensaje = `¡Hola! Quiero reservar un viaje con MIMI Transporte Escolar:
+  // 3. Notificación más clara y con ícono de WhatsApp
+  notifSystem.show(
+    'Preparando reserva',
+    'Abriendo WhatsApp con los datos del viaje...',
+    'info',
+    4000
+  );
 
-📍 Origen: ${origen}
-🎯 Destino: ${destino}
-📅 Fecha y Hora: ${fechaTexto}
-💰 Precio: $${precio} ARS
-📏 Distancia: ${datosCotizacion.km} km
-⏱️ Duración: ${datosCotizacion.duracion} min
+  // 4. Mensaje más profesional, limpio y con formato agradable en WhatsApp
+  const mensaje = `¡Hola! Quiero reservar un viaje con *MIMI Transporte Escolar* 🚐
 
-¿Confirmas disponibilidad?`;
+📍 *Origen:* ${origen}
+🎯 *Destino:* ${destino}
+📅 *Fecha y Hora:* ${fechaTexto}
+💰 *Precio estimado:* $${precio} ARS
+📏 *Distancia:* ${datosCotizacion.km || '—'} km
+⏱️ *Duración aproximada:* ${datosCotizacion.duracion || '—'} min
 
-  window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');
+¿Tenés disponibilidad para esta fecha? 😊
+
+Gracias! 🙌`;
+
+  // 5. Mejor manejo de la URL (encodeURIComponent ya está, pero agregamos fallback si falla)
+  const waUrl = `https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`;
+
+  try {
+    window.open(waUrl, '_blank');
+  } catch (err) {
+    console.error('Error al abrir WhatsApp:', err);
+    notifSystem.show(
+      'Problema al abrir WhatsApp',
+      'Intentá copiar el mensaje manualmente o abrí WhatsApp desde tu celular',
+      'warning',
+      6000
+    );
+  }
+
+  // Opcional: toast de éxito después de abrir (en algunos navegadores no se ve si se abre nueva pestaña)
+  setTimeout(() => {
+    notifSystem.show('¡Listo!', 'Mensaje preparado en WhatsApp', 'success', 3000);
+  }, 800);
 }
 
 // ==========================================
