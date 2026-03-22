@@ -1062,21 +1062,24 @@ function mostrarResultado(res) {
     const centerLng = (lngO + lngD) / 2;
     const center = `${centerLat},${centerLng}`;
 
-    const staticMapUrl =
-  `https://maps.googleapis.com/maps/api/staticmap?` +
-  `size=640x360` + // mejor proporción
-  `&scale=2` +
-  `&center=${center}` +
-  `&zoom=${zoom}` +
-  `&maptype=roadmap` +
-  `&format=png` +
-  `&visual_refresh=true` +
-  `&markers=size:mid%7Ccolor:green%7Clabel:O%7C${originLatLng}` +
-  `&markers=size:mid%7Ccolor:red%7Clabel:D%7C${destLatLng}` +
- obtenerRutaReal(originLatLng, destLatLng, function(polyline) {
-  if (!polyline) return;
+    obtenerRutaReal(originLatLng, destLatLng, function(polyline) {
+  if (!polyline) {
+    mapaDiv.style.display = 'none';
+    return;
+  }
 
   const staticMapUrl =
+    `https://maps.googleapis.com/maps/api/staticmap?` +
+    `size=640x360` +
+    `&scale=2` +
+    `&maptype=roadmap` +
+    `&markers=color:green|label:O|${originLatLng}` +
+    `&markers=color:red|label:D|${destLatLng}` +
+    `&path=color:0x1565c0ff|weight:5|enc:${polyline.points}` +
+    `&key=TU_API_KEY`;
+
+  mapaImg.src = staticMapUrl;
+});
     `https://maps.googleapis.com/maps/api/staticmap?` +
     `size=640x360` +
     `&scale=2` +
