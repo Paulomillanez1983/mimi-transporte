@@ -865,29 +865,28 @@ function inicializarAutocomplete() {
   autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);  
   
   autocompleteOrigen.addListener('place_changed', () => {  
-lugarOrigen = place;
-nuevaSesionAutocomplete(); // 🔥 reinicia sesión
-    const place = autocompleteOrigen.getPlace();  
-    if (place.formatted_address) {  
-      origenInput.value = place.formatted_address;  
-      lugarOrigen = place;  
-      // Feedback sutil - sin notificación toast, solo visual  
-      origenInput.style.color = '#1565c0';  
-      setTimeout(() => origenInput.style.color = '#1a1a1a', 500);  
-    }  
-  });  
+  const place = autocompleteOrigen.getPlace();  
+
+  if (place.formatted_address) {  
+    origenInput.value = place.formatted_address;  
+    lugarOrigen = place;  
+    nuevaSesionAutocomplete(); // 🔥 acá sí
+    origenInput.style.color = '#1565c0';  
+    setTimeout(() => origenInput.style.color = '#1a1a1a', 500);  
+  }  
+});
   
   autocompleteDestino.addListener('place_changed', () => {  
-lugarDestino = place;
-nuevaSesionAutocomplete(); // 🔥 reinicia sesión
-    const place = autocompleteDestino.getPlace();  
-    if (place.formatted_address) {  
-      destinoInput.value = place.formatted_address;  
-      lugarDestino = place;  
-      destinoInput.style.color = '#1565c0';  
-      setTimeout(() => destinoInput.style.color = '#1a1a1a', 500);  
-    }  
-  });  
+  const place = autocompleteDestino.getPlace();  
+
+  if (place.formatted_address) {  
+    destinoInput.value = place.formatted_address;  
+    lugarDestino = place;  
+    nuevaSesionAutocomplete();  
+    destinoInput.style.color = '#1565c0';  
+    setTimeout(() => destinoInput.style.color = '#1a1a1a', 500);  
+  }  
+});
   
   origenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });  
   destinoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });  
