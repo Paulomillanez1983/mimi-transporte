@@ -685,7 +685,10 @@ body {
         <span>💬</span>
         <span>Reservar Ahora</span>
       </button>
-    </div>
+<div id="mapaRuta" style="margin-top: 20px; border-radius: 12px; overflow: hidden; box-shadow: var(--sombra); display: none;">
+  <img id="staticMapImg" alt="Ruta estimada" style="width: 100%; height: auto; display: block;">
+</div>
+   
   </div>
 
   <div class="features-section">
@@ -993,13 +996,36 @@ function calcularTarifa() {
 
 function mostrarResultado(res) {
   datosCotizacion = res;
-  
+
   animarContador('precioValor', 0, res.precioPorViaje || res.precio, 800);
-  
+
   const resultadoDiv = document.getElementById('resultado');
   resultadoDiv.classList.add('visible');
-  
-  // Scroll suave al resultado
+
+  // Mostrar mapa estático
+  const mapaImg = document.getElementById('staticMapImg');
+  const mapaDiv = document.getElementById('mapaRuta');
+
+  if (lugarOrigen?.geometry?.location && lugarDestino?.geometry?.location) {
+    const originLatLng = `\( {lugarOrigen.geometry.location.lat()}, \){lugarOrigen.geometry.location.lng()}`;
+    const destLatLng = `\( {lugarDestino.geometry.location.lat()}, \){lugarDestino.geometry.location.lng()}`;
+
+    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?` +
+      `size=600x300` +  // ajustá tamaño según tu diseño (máx 640x640 gratis)
+      `&scale=2` +      // mejor calidad en móviles
+      `&markers=color:green%7Clabel:O%7C${originLatLng}` +
+      `&markers=color:red%7Clabel:D%7C${destLatLng}` +
+      `&path=color:0x1565c0%7Cweight:4%7C\( {originLatLng}%7C \){destLatLng}` +  // línea azul
+      `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;  // tu key actual
+
+    mapaImg.src = staticMapUrl;
+    mapaImg.onload = () => mapaDiv.style.display = 'block';
+  } else {
+    // Fallback si no hay coords (ej. direcciones manuales sin Places)
+    mapaDiv.style.display = 'none';
+  }
+
+  // Scroll suave
   setTimeout(() => {
     resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 100);
