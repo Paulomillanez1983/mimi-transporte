@@ -638,6 +638,44 @@ body {
 .btn-mapa:hover .btn-mapa-arrow {
   transform: translateX(4px);
 }
+.btn-mapa {
+  position: relative;
+  overflow: hidden;
+}
+
+/* EFECTO BRILLO (tipo app premium) */
+.btn-mapa::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    rgba(255,255,255,0.1),
+    rgba(255,255,255,0.4),
+    rgba(255,255,255,0.1)
+  );
+  transform: skewX(-20deg);
+}
+
+/* Animación al hover */
+.btn-mapa:hover::after {
+  animation: brillo 0.8s ease;
+}
+
+@keyframes brillo {
+  100% {
+    left: 130%;
+  }
+}
+
+/* efecto presionado tipo app */
+.btn-mapa:active {
+  transform: scale(0.96);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+}
 </style>  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places"></script>  </head>  
 <body>  <div class="toast-container" id="toastContainer"></div>  <header class="header">  
   <div class="header-content">  
@@ -1103,16 +1141,16 @@ const mapaDiv = document.getElementById('mapaRuta');
 mapaDiv.style.display = 'block';
 
 mapaDiv.innerHTML = `
-  <button class="btn-mapa" onclick="window.open('${mapsUrl}', '_blank')">
+  <button class="btn-mapa" onclick="abrirRuta('${mapsUrl}')">
     
     <span class="btn-mapa-icon">🗺️</span>
     
     <span class="btn-mapa-text">
-      <strong>Ver ruta en Google Maps</strong>
-      <small>Abrir navegación en tiempo real</small>
+      <strong>Ver recorrido del viaje</strong>
+      <small>Tiempo real + navegación GPS</small>
     </span>
     
-    <span class="btn-mapa-arrow">›</span>
+    <span class="btn-mapa-arrow">→</span>
     
   </button>
 `;
@@ -1122,6 +1160,18 @@ mapaDiv.innerHTML = `
     resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });  
   }, 100);  
 }  
+function abrirRuta(url) {
+  notifSystem.show(
+    'Abriendo navegación',
+    'Se abrirá Google Maps con la ruta del viaje',
+    'info',
+    2500
+  );
+
+  setTimeout(() => {
+    window.open(url, '_blank');
+  }, 400);
+}
   
 function animarContador(id, inicio, fin, duracion) {  
   const elemento = document.getElementById(id);  
