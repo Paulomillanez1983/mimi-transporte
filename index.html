@@ -586,6 +586,58 @@ body {
   .logo-title { font-size: 1.6rem; }  
   .header { padding: 15px 15px 35px 15px; }  
 }  
+.btn-mapa {
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1565c0, #1e88e5);
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.25);
+  transition: all 0.25s ease;
+}
+
+.btn-mapa:active {
+  transform: scale(0.97);
+}
+
+.btn-mapa:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(21, 101, 192, 0.35);
+}
+
+.btn-mapa-icon {
+  font-size: 1.4rem;
+}
+
+.btn-mapa-text {
+  flex: 1;
+  text-align: left;
+}
+
+.btn-mapa-text strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.btn-mapa-text small {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.btn-mapa-arrow {
+  font-size: 1.4rem;
+  opacity: 0.7;
+  transition: transform 0.2s;
+}
+
+.btn-mapa:hover .btn-mapa-arrow {
+  transform: translateX(4px);
+}
 </style>  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places"></script>  </head>  
 <body>  <div class="toast-container" id="toastContainer"></div>  <header class="header">  
   <div class="header-content">  
@@ -1047,22 +1099,21 @@ const destinoTexto = document.getElementById('destino').value;
 
 const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
 
-// Mostrar botón en vez de mapa
 const mapaDiv = document.getElementById('mapaRuta');
 mapaDiv.style.display = 'block';
+
 mapaDiv.innerHTML = `
-  <button onclick="window.open('${mapsUrl}', '_blank')" 
-    style="
-      width:100%;
-      padding:14px;
-      border:none;
-      border-radius:12px;
-      background:#1565c0;
-      color:white;
-      font-weight:700;
-      font-size:0.95rem;
-      cursor:pointer;">
-    🗺️ Ver ruta en Google Maps
+  <button class="btn-mapa" onclick="window.open('${mapsUrl}', '_blank')">
+    
+    <span class="btn-mapa-icon">🗺️</span>
+    
+    <span class="btn-mapa-text">
+      <strong>Ver ruta en Google Maps</strong>
+      <small>Abrir navegación en tiempo real</small>
+    </span>
+    
+    <span class="btn-mapa-arrow">›</span>
+    
   </button>
 `;
   
