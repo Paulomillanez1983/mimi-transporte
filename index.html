@@ -952,7 +952,6 @@ function inicializarAutocomplete() {
   autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
   autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
 
-  // 🔥 IMPORTANTE: usar sessionToken
   autocompleteOrigen.setOptions({ sessionToken });
   autocompleteDestino.setOptions({ sessionToken });
 
@@ -963,10 +962,7 @@ function inicializarAutocomplete() {
       lugarOrigen = place;
 
       nuevaSesionAutocomplete();
-      autocompleteOrigen.setOptions({ sessionToken }); // 🔥 renovar token
-
-      origenInput.style.color = '#1565c0';
-      setTimeout(() => origenInput.style.color = '#1a1a1a', 500);
+      autocompleteOrigen.setOptions({ sessionToken });
     }
   });
 
@@ -978,28 +974,18 @@ function inicializarAutocomplete() {
 
       nuevaSesionAutocomplete();
       autocompleteDestino.setOptions({ sessionToken });
-
-      destinoInput.style.color = '#1565c0';
-      setTimeout(() => destinoInput.style.color = '#1a1a1a', 500);
     }
   });
-}
-  
-  autocompleteDestino.addListener('place_changed', () => {  
-  const place = autocompleteDestino.getPlace();  
 
-  if (place.formatted_address) {  
-    destinoInput.value = place.formatted_address;  
-    lugarDestino = place;  
-    nuevaSesionAutocomplete();  
-    destinoInput.style.color = '#1565c0';  
-    setTimeout(() => destinoInput.style.color = '#1a1a1a', 500);  
-  }  
-});
-  
-  origenInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });  
-  destinoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });  
-}  
+  // 🔥 IMPORTANTE: prevenir submit con Enter
+  origenInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.preventDefault();
+  });
+
+  destinoInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') e.preventDefault();
+  });
+}
   
 // ==========================================  
 // CÁLCULO DE TARIFA CON NOTIFICACIONES ÚTILES  
