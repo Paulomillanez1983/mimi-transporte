@@ -1063,16 +1063,18 @@ function mostrarResultado(res) {
     const center = `${centerLat},${centerLng}`;
 
     const staticMapUrl =
-      `https://maps.googleapis.com/maps/api/staticmap?` +
-      `size=600x320` +
-      `&scale=2` +
-      `&center=${center}` +
-      `&zoom=${zoom}` +
-      `&maptype=roadmap` +
-      `&markers=color:green%7Clabel:O%7C${originLatLng}` +
-      `&markers=color:red%7Clabel:D%7C${destLatLng}` +
-      `&path=color:0x1565c0%7Cweight:5%7C${originLatLng}%7C${destLatLng}` +
-      `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
+  `https://maps.googleapis.com/maps/api/staticmap?` +
+  `size=640x360` + // mejor proporción
+  `&scale=2` +
+  `&center=${center}` +
+  `&zoom=${zoom}` +
+  `&maptype=roadmap` +
+  `&format=png` +
+  `&visual_refresh=true` +
+  `&markers=size:mid%7Ccolor:green%7Clabel:O%7C${originLatLng}` +
+  `&markers=size:mid%7Ccolor:red%7Clabel:D%7C${destLatLng}` +
+  `&path=color:0x1565c0ff%7Cweight:5%7C${originLatLng}%7C${destLatLng}` +
+  `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
 
     mapaImg.src = staticMapUrl;
 
@@ -1144,6 +1146,40 @@ function obtenerRutaReal(origen, destino, callback) {
     } else {
       console.error('Error Directions:', status);
       callback(null);
+    }
+  });
+}
+function mostrarMapaReal() {
+  const mapaDiv = document.getElementById('mapaReal');
+
+  const map = new google.maps.Map(mapaDiv, {
+    zoom: 14,
+    center: { lat: -31.4, lng: -64.2 }, // Córdoba base
+    disableDefaultUI: true,
+  });
+
+  const directionsService = new google.maps.DirectionsService();
+  const directionsRenderer = new google.maps.DirectionsRenderer({
+    map: map,
+    suppressMarkers: false,
+    polylineOptions: {
+      strokeColor: "#1565c0",
+      strokeWeight: 5
+    }
+  });
+
+  const request = {
+    origin: lugarOrigen.geometry.location,
+    destination: lugarDestino.geometry.location,
+    travelMode: google.maps.TravelMode.DRIVING
+  };
+
+  directionsService.route(request, function(result, status) {
+    if (status === "OK") {
+      directionsRenderer.setDirections(result);
+    } else {
+      console.error("Error en Directions:", status);
+      notifSystem.show("Error ruta", "No se pudo calcular la ruta real", "error");
     }
   });
 }
