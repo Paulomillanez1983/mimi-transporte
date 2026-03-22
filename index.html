@@ -825,8 +825,47 @@ function actualizarTextoFecha() {
 
 function abrirSelectorFecha() {
   const input = document.getElementById('fechaHora');
+  
+  if (!input) {
+    console.warn('No se encontró el input #fechaHora');
+    notifSystem.show('Error', 'No se pudo abrir el selector de fecha', 'error', 3000);
+    return;
+  }
+
+  // Establecer mínimo = hoy (ya lo tenés bien)
   input.min = new Date().toISOString().slice(0, 16);
-  input.showPicker ? input.showPicker() : input.click();
+
+  // Intentar abrir el picker nativo de forma progresiva
+  try {
+    // 1. Método moderno (mejor experiencia en navegadores compatibles)
+    if (input.showPicker && typeof input.showPicker === 'function') {
+      input.showPicker();
+      return;
+    }
+
+    // 2. Fallback: focus + click (funciona en la mayoría de casos móviles)
+    input.focus();
+    input.click();  // Esto suele abrir el picker en Android/iOS
+
+    // 3. Último recurso: dispatch evento manual (útil en algunos navegadores raros)
+    if (!document.activeElement === input) {
+      const event = new Event('click', { bubbles: true, cancelable: true });
+      input.dispatchEvent(event);
+    }
+  } catch (err) {
+    console.error('Error al intentar abrir el date picker:', err);
+    
+    // Feedback al usuario (muy importante en móviles)
+    notifSystem.show(
+      'Selector no disponible',
+      'Toca directamente el campo de fecha y hora para seleccionarla',
+      'info',
+      5000
+    );
+    
+    // Forzamos focus como último recurso
+    input.focus();
+  }
 }
 
 function inicializarAutocomplete() {
