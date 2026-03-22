@@ -1040,48 +1040,75 @@ function mostrarResultado(res) {
 
   const resultadoDiv = document.getElementById('resultado');
   resultadoDiv.classList.add('visible');
-const zoom = calcularZoom(res.km);
-  // Mostrar mapa estático
+
   const mapaImg = document.getElementById('staticMapImg');
   const mapaDiv = document.getElementById('mapaRuta');
 
   if (lugarOrigen?.geometry?.location && lugarDestino?.geometry?.location) {
+
     const latO = lugarOrigen.geometry.location.lat();
     const lngO = lugarOrigen.geometry.location.lng();
     const latD = lugarDestino.geometry.location.lat();
     const lngD = lugarDestino.geometry.location.lng();
 
     const originLatLng = `${latO},${lngO}`;
-const destLatLng   = `${latD},${lngD}`;
+    const destLatLng   = `${latD},${lngD}`;
 
-const staticMapUrl =
-  `https://maps.googleapis.com/maps/api/staticmap?` +
-  `size=600x300` +
-  `&scale=2` +
-  `&zoom=${zoom}` +
-`  &maptype=roadmap` +
-  `&markers=color:green%7Clabel:O%7C${originLatLng}` +
-  `&markers=color:red%7Clabel:D%7C${destLatLng}` +
-  `&path=color:0x1565c0%7Cweight:5%7C${originLatLng}%7C${destLatLng}` +
-  `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
+    // 🧠 ZOOM INTELIGENTE
+    const zoom = calcularZoom(res.km);
+
+    // 📐 CENTRO AUTOMÁTICO
+    const centerLat = (latO + latD) / 2;
+    const centerLng = (lngO + lngD) / 2;
+    const center = `${centerLat},${centerLng}`;
+
+    const staticMapUrl =
+      `https://maps.googleapis.com/maps/api/staticmap?` +
+      `size=600x320` +
+      `&scale=2` +
+      `&center=${center}` +
+      `&zoom=${zoom}` +
+      `&maptype=roadmap` +
+      `&markers=color:green%7Clabel:O%7C${originLatLng}` +
+      `&markers=color:red%7Clabel:D%7C${destLatLng}` +
+      `&path=color:0x1565c0%7Cweight:5%7C${originLatLng}%7C${destLatLng}` +
+      `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
 
     mapaImg.src = staticMapUrl;
 
     mapaImg.onload = () => {
       mapaDiv.style.display = 'block';
-      notifSystem.show('Ruta cargada', `Origen → Destino (${datosCotizacion?.km || '?'} km)`, 'success', 4000);
+
+      notifSystem.show(
+        'Ruta cargada',
+        `📍 ${res.km || '?'} km · ${res.duracion || '?'} min`,
+        'success',
+        4000
+      );
     };
 
     mapaImg.onerror = () => {
       mapaDiv.style.display = 'none';
-      notifSystem.show('Error en mapa', 'No se pudo cargar la ruta (revisá consola)', 'error', 6000);
+
+      notifSystem.show(
+        'Error en mapa',
+        'No se pudo cargar la ruta',
+        'error',
+        5000
+      );
     };
+
   } else {
     mapaDiv.style.display = 'none';
-    notifSystem.show('Mapa no disponible', 'Usá autocompletado para direcciones precisas', 'info', 5000);
+
+    notifSystem.show(
+      'Mapa no disponible',
+      'Usá el autocompletado para mejores resultados',
+      'info',
+      4000
+    );
   }
 
-  // Scroll suave al resultado
   setTimeout(() => {
     resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 100);
@@ -1101,7 +1128,25 @@ function animarContador(id, inicio, fin, duracion) {
     elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
   }, 16);
 }
+function obtenerRutaReal(origen, destino, callback) {
+  const directionsService = new google.maps.DirectionsService();
 
+  directionsService.route({
+    origin: origen,
+    destination: destino,
+    travelMode: 'DRIVING'
+  }, function(result, status) {
+    if (status === 'OK') {
+      const route = result.routes[0];
+      const polyline = route.overview_polyline;
+
+      callback(polyline);
+    } else {
+      console.error('Error Directions:', status);
+      callback(null);
+    }
+  });
+}
 // ==========================================
 // RESERVA WHATSAPP (versión mejorada)
 // ==========================================
