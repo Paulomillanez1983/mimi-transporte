@@ -1007,25 +1007,39 @@ function mostrarResultado(res) {
   const mapaDiv = document.getElementById('mapaRuta');
 
   if (lugarOrigen?.geometry?.location && lugarDestino?.geometry?.location) {
-    const originLatLng = `\( {lugarOrigen.geometry.location.lat()}, \){lugarOrigen.geometry.location.lng()}`;
-    const destLatLng = `\( {lugarDestino.geometry.location.lat()}, \){lugarDestino.geometry.location.lng()}`;
+    const latO = lugarOrigen.geometry.location.lat();
+    const lngO = lugarOrigen.geometry.location.lng();
+    const latD = lugarDestino.geometry.location.lat();
+    const lngD = lugarDestino.geometry.location.lng();
+
+    const originLatLng = `\( {latO}, \){lngO}`;
+    const destLatLng   = `\( {latD}, \){lngD}`;
 
     const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?` +
-      `size=600x300` +  // ajustá tamaño según tu diseño (máx 640x640 gratis)
-      `&scale=2` +      // mejor calidad en móviles
+      `size=600x300` +
+      `&scale=2` +
       `&markers=color:green%7Clabel:O%7C${originLatLng}` +
       `&markers=color:red%7Clabel:D%7C${destLatLng}` +
-      `&path=color:0x1565c0%7Cweight:4%7C\( {originLatLng}%7C \){destLatLng}` +  // línea azul
-      `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;  // tu key actual
+      `&path=color:0x1565c0%7Cweight:5%7C\( {originLatLng}%7C \){destLatLng}` +  // weight:5 para más visible
+      `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
 
     mapaImg.src = staticMapUrl;
-    mapaImg.onload = () => mapaDiv.style.display = 'block';
+    mapaImg.onload = () => {
+      mapaDiv.style.display = 'block';
+      // Opcional: toast de éxito visual
+      notifSystem.show('Ruta lista', 'Mapa con origen y destino cargado', 'success', 3000);
+    };
+    mapaImg.onerror = () => {
+      mapaDiv.style.display = 'none';
+      notifSystem.show('Problema con mapa', 'No pudimos cargar la ruta. Verificá tu conexión o API key.', 'warning', 5000);
+    };
   } else {
-    // Fallback si no hay coords (ej. direcciones manuales sin Places)
+    // Si no hay coords de Places (direcciones manuales), ocultamos o fallback
     mapaDiv.style.display = 'none';
+    notifSystem.show('Sin coordenadas', 'El mapa requiere direcciones precisas con autocompletado', 'info', 4000);
   }
 
-  // Scroll suave
+  // Scroll suave al resultado (incluye mapa)
   setTimeout(() => {
     resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 100);
