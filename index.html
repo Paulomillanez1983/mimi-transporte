@@ -844,7 +844,7 @@ body {
 
 <script>
 // ==========================================
-// SISTEMA DE NOTIFICACIONES EN TIEMPO REAL
+// SISTEMA DE NOTIFICACIONES - MENSAJES REALES
 // ==========================================
 
 class NotificationSystem {
@@ -858,27 +858,25 @@ class NotificationSystem {
   initWebSocket() {
     console.log('🔌 Sistema de notificaciones activo');
     
-    // Mensaje de bienvenida real (no simulado)
+    // Mensaje de bienvenida
     setTimeout(() => {
       this.show('👋 ¡Bienvenido a MIMI!', 'Transporte escolar seguro para tus hijos', 'success', 5000);
     }, 1500);
 
-    // Iniciar ciclo de notificaciones útiles (no de ubicación falsa)
+    // Iniciar ciclo de notificaciones útiles
     this.programarSiguienteNotificacion();
   }
   
   programarSiguienteNotificacion() {
-    // Intervalo aleatorio entre 45 y 90 segundos
-    const intervalo = Math.random() * 45000 + 45000;
+    const intervalo = Math.random() * 45000 + 45000; // 45-90 segundos
     
     setTimeout(() => {
       this.mostrarNotificacionUtil();
-      this.programarSiguienteNotificacion(); // Siguiente
+      this.programarSiguienteNotificacion();
     }, intervalo);
   }
   
   mostrarNotificacionUtil() {
-    // No mostrar si hay cotización en progreso o resultado visible
     const resultadoVisible = document.getElementById('resultado')?.classList.contains('visible');
     const btnCalculando = document.getElementById('btnCalcular')?.disabled;
     
@@ -922,14 +920,6 @@ class NotificationSystem {
     
     const notif = notificaciones[Math.floor(Math.random() * notificaciones.length)];
     this.show(notif.title, notif.message, notif.type, 6000);
-  }    
-    // Mostrar máximo 1 notificación cada 45-90 segundos (aleatorio)
-    const tiempoAleatorio = Math.random() * 45000 + 45000; // 45-90 segundos
-    
-    setTimeout(() => {
-      const notif = notificaciones[Math.floor(Math.random() * notificaciones.length)];
-      this.show(notif.title, notif.message, notif.type, 6000); // 6 segundos visibles
-    }, tiempoAleatorio);
   }
 
   incrementBadge() {
@@ -999,8 +989,15 @@ class NotificationSystem {
     } catch (e) {}
   }
 
+  async notificarChofer(datos) {
+    // Solo log interno, sin notificación falsa al usuario
+    console.log('📧 Datos listos para enviar al chofer:', datos);
+    return true;
+  }
+}
 
 const notifSystem = new NotificationSystem();
+
 
 // ==========================================
 // GOOGLE PLACES AUTOCOMPLETE
