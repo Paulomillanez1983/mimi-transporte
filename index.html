@@ -952,7 +952,8 @@ function inicializarAutocomplete() {
   autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
   autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
 
-  autocompleteOrigen.setOptions({ sessionToken });
+ activarAutocompleteConDelay(origenInput, autocompleteOrigen);
+activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrigen.setOptions({ sessionToken });
   autocompleteDestino.setOptions({ sessionToken });
 
   autocompleteOrigen.addListener('place_changed', () => {
@@ -1173,7 +1174,17 @@ function animarContador(id, inicio, fin, duracion) {
     elemento.textContent = Math.floor(actual).toLocaleString('es-AR');  
   }, 16);  
 }  
-  
+function activarAutocompleteConDelay(input, autocomplete) {
+  input.addEventListener('input', () => {
+    const valor = input.value;
+
+    if (valor.length < 4) {
+      autocomplete.unbindAll(); // corta predicciones
+    } else {
+      autocomplete.bindTo('bounds', new google.maps.Map(document.createElement('div')));
+    }
+  });
+}
 // ==========================================  
 // RESERVA WHATSAPP (versión mejorada)  
 // ==========================================  
@@ -1239,7 +1250,17 @@ Gracias! 🙌`;
     notifSystem.show('¡Listo!', 'Mensaje preparado en WhatsApp', 'success', 3000);  
   }, 800);  
 }  
-  
+function activarAutocompleteConDelay(input, autocomplete) {
+  input.addEventListener('input', () => {
+    const valor = input.value;
+
+    if (valor.length < 4) {
+      autocomplete.setOptions({ types: [] }); // desactiva predicción
+    } else {
+      autocomplete.setOptions({ types: ['geocode', 'establishment'] });
+    }
+  });
+}
 // ==========================================  
 // UTILIDADES  
 // ==========================================  
