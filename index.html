@@ -1024,22 +1024,22 @@ function mostrarResultado(res) {
       `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
 
     mapaImg.src = staticMapUrl;
+
     mapaImg.onload = () => {
       mapaDiv.style.display = 'block';
-      // Toast de éxito visual (opcional, pero útil para debug)
-      notifSystem.show('Ruta lista', 'Mapa con origen y destino cargado', 'success', 3000);
+      notifSystem.show('Ruta cargada', `Origen → Destino (${datosCotizacion?.km || '?'} km)`, 'success', 4000);
     };
+
     mapaImg.onerror = () => {
       mapaDiv.style.display = 'none';
-      notifSystem.show('Problema con mapa', 'No pudimos cargar la ruta. Verificá tu conexión o API key.', 'warning', 5000);
+      notifSystem.show('Error en mapa', 'URL inválida o API key issue. Revisá consola.', 'error', 6000);
     };
   } else {
-    // Si no hay coords de Places (direcciones manuales), ocultamos o fallback
     mapaDiv.style.display = 'none';
-    notifSystem.show('Sin coordenadas', 'El mapa requiere direcciones precisas con autocompletado', 'info', 4000);
+    notifSystem.show('Mapa no disponible', 'Usá autocompletado para direcciones precisas', 'info', 5000);
   }
 
-  // Scroll suave al resultado (incluye mapa)
+  // Scroll suave
   setTimeout(() => {
     resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 100);
