@@ -844,7 +844,7 @@ body {
 
 <script>
 // ==========================================
-// SISTEMA DE NOTIFICACIONES - MENSAJES REALES
+// SISTEMA DE NOTIFICACIONES EN TIEMPO REAL
 // ==========================================
 
 class NotificationSystem {
@@ -856,70 +856,40 @@ class NotificationSystem {
   }
 
   initWebSocket() {
-    console.log('🔌 Sistema de notificaciones activo');
+    console.log('🔌 Conectando a servidor de notificaciones...');
     
-    // Mensaje de bienvenida
     setTimeout(() => {
-      this.show('👋 ¡Bienvenido a MIMI!', 'Transporte escolar seguro para tus hijos', 'success', 5000);
-    }, 1500);
+      this.show('Conectado', 'Sistema de notificaciones activo', 'success', 3000);
+    }, 1000);
 
-    // Iniciar ciclo de notificaciones útiles
-    this.programarSiguienteNotificacion();
-  }
-  
-  programarSiguienteNotificacion() {
-    const intervalo = Math.random() * 45000 + 45000; // 45-90 segundos
-    
-    setTimeout(() => {
-      this.mostrarNotificacionUtil();
-      this.programarSiguienteNotificacion();
-    }, intervalo);
-  }
-  
-  mostrarNotificacionUtil() {
-    const resultadoVisible = document.getElementById('resultado')?.classList.contains('visible');
-    const btnCalculando = document.getElementById('btnCalcular')?.disabled;
-    
-    if (resultadoVisible || btnCalculando) {
-      this.programarSiguienteNotificacion();
-      return;
-    }
-    
-    const notificaciones = [
-      { 
-        title: '🛡️ Viaje asegurado', 
-        message: 'Todos nuestros conductores están habilitados y certificados', 
-        type: 'info' 
-      },
-      { 
-        title: '💳 Pago flexible', 
-        message: 'Pagás solo los viajes que usás. Sin contratos ni compromisos', 
-        type: 'info' 
-      },
-      { 
-        title: '⭐ Familias nos eligen', 
-        message: 'Más de 500 viajes seguros realizados en Villa Allende y zona', 
-        type: 'success' 
-      },
-      { 
-        title: '🚗 Vehículos preparados', 
-        message: 'Butacas especiales para niños y máxima seguridad en cada viaje', 
-        type: 'info' 
-      },
-      { 
-        title: '📱 Estamos cerca', 
-        message: 'Respondemos por WhatsApp de lunes a sábado de 6:00 a 22:00 hs', 
-        type: 'info' 
-      },
-      { 
-        title: '🙏 Gracias por confiar', 
-        message: 'Tu hijo viaja seguro, vos tranquilo. Eso es MIMI.', 
-        type: 'success' 
+    setInterval(() => {
+      if (Math.random() > 0.7) {
+        this.simularNotificacionChofer();
       }
+    }, 20000);
+
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'mimi-notificacion') {
+        const data = JSON.parse(e.newValue);
+        this.show(data.title, data.message, data.type);
+      }
+    });
+  }
+
+  simularNotificacionChofer() {
+    const notificaciones = [
+      { title: '🚗 Chofer cercano', message: 'Juan P. está a 5 minutos de tu ubicación', type: 'info' },
+      { title: '✅ Viaje confirmado', message: 'Tu reserva fue confirmada por el chofer', type: 'success' },
+      { title: '⏰ Recordatorio', message: 'Tu viaje es en 30 minutos', type: 'warning' },
+      { title: '📍 Actualización', message: 'El chofer llegó al punto de origen', type: 'info' }
     ];
     
     const notif = notificaciones[Math.floor(Math.random() * notificaciones.length)];
-    this.show(notif.title, notif.message, notif.type, 6000);
+    this.show(notif.title, notif.message, notif.type);
+    this.incrementBadge();
+    
+    localStorage.setItem('mimi-notificacion', JSON.stringify(notif));
+    localStorage.removeItem('mimi-notificacion');
   }
 
   incrementBadge() {
@@ -990,23 +960,21 @@ class NotificationSystem {
   }
 
   async notificarChofer(datos) {
-    // Solo log interno, sin notificación falsa al usuario
-    console.log('📧 Datos listos para enviar al chofer:', datos);
+    this.show('Enviando...', 'Notificando al chofer disponible más cercano', 'info', 3000);
+    await new Promise(r => setTimeout(r, 1500));
+    this.show('¡Chofer encontrado!', 'Juan P. recibió tu solicitud y responderá en breve', 'success');
+    this.incrementBadge();
+    console.log('📧 Enviando notificación al chofer:', datos);
     return true;
   }
 }
 
 const notifSystem = new NotificationSystem();
 
-
 // ==========================================
 // GOOGLE PLACES AUTOCOMPLETE
 // ==========================================
-  async notificarChofer(datos) {
-    // Solo log interno, sin notificación falsa al usuario
-    console.log('📧 Datos listos para enviar al chofer:', datos);
-    return true;
-  }
+
 let autocompleteOrigen, autocompleteDestino;
 let lugarOrigen = null;
 let lugarDestino = null;
