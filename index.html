@@ -1020,13 +1020,13 @@ function mostrarResultado(res) {
       `&scale=2` +
       `&markers=color:green%7Clabel:O%7C${originLatLng}` +
       `&markers=color:red%7Clabel:D%7C${destLatLng}` +
-      `&path=color:0x1565c0%7Cweight:5%7C\( {originLatLng}%7C \){destLatLng}` +  // weight:5 para más visible
+      `&path=color:0x1565c0%7Cweight:5%7C\( {originLatLng}%7C \){destLatLng}` +
       `&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ`;
 
     mapaImg.src = staticMapUrl;
     mapaImg.onload = () => {
       mapaDiv.style.display = 'block';
-      // Opcional: toast de éxito visual
+      // Toast de éxito visual (opcional, pero útil para debug)
       notifSystem.show('Ruta lista', 'Mapa con origen y destino cargado', 'success', 3000);
     };
     mapaImg.onerror = () => {
