@@ -1659,10 +1659,10 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHOs0hjvBpt0Jv6JA7t
 function mostrarResultado(res) {  
   datosCotizacion = res;  
   
-  animarContador('precioValor', 0, res.precioPorViaje || res.precio, 800);  
+  animarContador('precioValor', 0, res.precio, 800);  
   
   // 🔥 KM del cliente (solo su viaje, no el del chofer)
-  const kmCliente = parseFloat(res.kmDetalle?.viajePasajero) || parseFloat(res.km) || 0;
+const kmCliente = parseFloat(res.kmDetalle?.kmViajePasajero) || parseFloat(res.km) || 0;
   const duracion = parseInt(res.duracion) || 0;
   
   const resultadoDiv = document.getElementById('resultado');  
@@ -1717,7 +1717,7 @@ function mostrarResultado(res) {
   // Botón de mapa
   const origenTexto = document.getElementById('origen').value;
   const destinoTexto = document.getElementById('destino').value;
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
+  const mapsUrl = res.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
   const mapaDiv = document.getElementById('mapaRuta');
   mapaDiv.style.display = 'block';
   mapaDiv.innerHTML = `
