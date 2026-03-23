@@ -409,28 +409,52 @@ body {
   opacity: 0.5;
 }
   
-.location-icon {  
-  width: 36px;  
-  height: 36px;  
-  border-radius: 50%;  
-  display: flex;  
-  align-items: center;  
-  justify-content: center;  
-  font-size: 1.1rem;  
-  margin-right: 12px;  
-  flex-shrink: 0;  
-  transition: all 0.25s ease;
+.location-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px; /* 🔥 menos circular, más moderno */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-right: 12px;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  position: relative;
 
-}  
+  /* ✨ profundidad */
+  box-shadow: 
+    0 4px 10px rgba(0,0,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+}
     /* cuando el usuario interactúa */
 .location-card:focus-within .location-icon {
-  transform: scale(1.1);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  transform: scale(1.15) rotate(-2deg);
+
+  box-shadow: 
+    0 6px 16px rgba(0,0,0,0.2),
+    0 0 0 4px rgba(66,165,245,0.15);
+}
+@keyframes pulseIcon {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.location-card:focus-within .location-icon.origin {
+  animation: pulseIcon 1s ease;
 }
 
   
-.location-icon.origin { background: #4caf50; color: white; }  
-.location-icon.destiny { background: #f44336; color: white; }  
+.location-icon.origin {
+  background: linear-gradient(135deg, #43a047, #2e7d32);
+  color: white;
+}
+
+.location-icon.destiny {
+  background: linear-gradient(135deg, #e53935, #b71c1c);
+  color: white;
+}
   
 .location-text { flex: 1; min-width: 0; }  
   
