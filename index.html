@@ -25,7 +25,7 @@
   --info: #2196f3; 
 
 }  
-   
+  
 * {  
   margin: 0;  
   padding: 0;  
@@ -933,7 +933,7 @@ window.gm_authFailure = function() {
 
   const script = document.createElement('script');
 
-script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places&callback=inicializarAutocomplete";
+  script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places&callback=inicializarAutocomplete";
   script.async = true;
   script.defer = true;
 
@@ -1639,7 +1639,9 @@ function calcularTarifa() {
   };  
   
   // 🔥 CONSTRUIR URL - REEMPLAZÁ ESTA URL CON LA TUYA
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2LEXupgTNlFu8RAdaz8sxiL33WhSCkbe52ZmVN-aHgLj-mAePpjUPh2T20UecxhOB/exec';  const params = new URLSearchParams({  
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJ3FvqU0fyBgiEbRSCLHr3UpDlRtWZzaqIxvySxmmw7ne5EHtKiaKopQFS2LJNnUp8/exec';
+
+  const params = new URLSearchParams({  
     desde: origen,  
     hasta: destino,  
     tipo: 'ida',  
