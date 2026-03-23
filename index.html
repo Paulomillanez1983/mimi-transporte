@@ -955,30 +955,40 @@ window.gm_authFailure = function() {
   ">
     Hoy
   </button>
+<div style="display:flex; gap:10px;">
 
-  <!-- BOTÓN FECHA (más chico) -->
-  <div class="datetime-card" 
-       onclick="abrirSelectorFecha()" 
-       style="flex:1.2;">
-       
-    <div style="font-size: 1.2rem;">🕐</div>  
-    <div class="datetime-text">  
-      <div class="datetime-label">Cuándo</div>  
-      <div class="datetime-value" id="textoFecha">Mañana, 8:00 AM</div>  
-    </div>  
-    <div class="location-arrow">›</div>  
-    <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">  
+  <!-- BOTÓN AHORA -->
+  <button class="modo-btn activo" onclick="setModo('ahora')" style="
+    flex:1;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    font-weight:700;
+    cursor:pointer;
+    background:#e0e0e0;
+  ">
+    Ahora
+  </button>
 
-  </div>
+  <!-- BOTÓN PROGRAMADO -->
+  <button class="modo-btn" onclick="setModo('programado')" style="
+    flex:1;
+    padding:14px;
+    border:none;
+    border-radius:14px;
+    font-weight:700;
+    cursor:pointer;
+    background:#f5f5f5;
+  ">
+    Programado
+  </button>
 
 </div>
-    <div style="font-size: 1.2rem;">🕐</div>  
-    <div class="datetime-text">  
-      <div class="datetime-label">Cuándo</div>  
-      <div class="datetime-value" id="textoFecha">Mañana, 8:00 AM</div>  
-    </div>  
-    <div class="location-arrow">›</div>  
-    <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">  
+
+<!-- INPUT OCULTO (SE MANTIENE) -->
+<input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
+
+
   </div>  
 </div>  
 
@@ -1094,6 +1104,32 @@ function seleccionarHoy() {
     'success',
     2500
   );
+}
+function setModo(modo) {
+  modoTiempo = modo;
+
+  const botones = document.querySelectorAll('.modo-btn');
+
+  botones.forEach(btn => btn.classList.remove('activo'));
+
+  if (modo === 'ahora') {
+    botones[0].classList.add('activo');
+
+    const ahora = new Date();
+    document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+
+    notifSystem.show(
+      'Modo inmediato',
+      'Se usará la hora actual',
+      'success',
+      2000
+    );
+
+  } else {
+    botones[1].classList.add('activo');
+
+    abrirSelectorFecha();
+  }
 }
 
 // ==========================================  
