@@ -1679,10 +1679,12 @@ if (!infoViaje) {
 
   resultadoDiv.insertBefore(infoViaje, resultadoDiv.children[1]);
 }
-
+const tiempoTexto = duracion > 60 
+  ? `${Math.floor(duracion / 60)}h ${duracion % 60}min`
+  : `${duracion} min`;
 // Mostrar datos
 infoViaje.innerHTML = `
-  📏 ${km.toFixed(1)} km · ⏱️ ${duracion} min
+  📏 ${km.toFixed(1)} km · ⏱️ ${tiempoTexto}
 `;
   
   // 🌧️ Mostrar recargos
