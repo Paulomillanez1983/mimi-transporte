@@ -972,16 +972,6 @@ window.gm_authFailure = function() {
 <!-- INPUT OCULTO (SE MANTIENE) -->
 <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
 
-<!-- TEXTO DINÁMICO DE FECHA -->
-<div id="textoFecha" style="
-  font-size:0.85rem;
-  margin-top:8px;
-  color:#1565c0;
-  font-weight:600;
-">
-  Mañana, 08:00
-</div>
-
 
   </div>  
 </div>  
@@ -1127,10 +1117,14 @@ function setModo(modo) {
       2000
     );
 
-  } else {
-    botones[1].classList.add('activo');
-    abrirSelectorFecha();
-  }
+} else {
+  botones[1].classList.add('activo');
+
+  // 👉 Reset texto antes de elegir fecha
+  document.getElementById('btnProgramado').textContent = 'Elegir fecha';
+
+  abrirSelectorFecha();
+}
 }
 
 // ==========================================  
@@ -1248,29 +1242,12 @@ function actualizarTextoFecha() {
   const fecha = new Date(input.value);
   if (isNaN(fecha.getTime())) return;
 
-  const hoy = new Date();
-  const manana = new Date();
-  manana.setDate(hoy.getDate() + 1);
-
-  let label = '';
-
-  if (fecha.toDateString() === hoy.toDateString()) {
-    label = 'Hoy';
-  } else if (fecha.toDateString() === manana.toDateString()) {
-    label = 'Mañana';
-  } else {
-    label = fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
-  }
-
-  const hora = fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-
-  document.getElementById('textoFecha').textContent = `${label}, ${hora}`;
-  if (modoTiempo === 'programado') {
-  const fecha = new Date(document.getElementById('fechaHora').value);
   const texto = formatearTextoBoton(fecha);
 
-}
-
+  // 👉 Si está en modo programado, lo metemos en el botón
+  if (modoTiempo === 'programado') {
+    document.getElementById('btnProgramado').textContent = texto;
+  }
 }
   
 function abrirSelectorFecha() {  
