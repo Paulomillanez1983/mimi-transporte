@@ -1046,6 +1046,10 @@ window.gm_authFailure = function() {
 ========================= -->
 <div style="text-align:center; margin-top:10px; font-size:0.85rem; color:#666;">
   Más de 20 familias ya confían en nosotros
+  <div style="font-size:0.8rem; opacity:0.6;">
+  Atención personalizada · Cupos limitados
+</div>
+
 </div>
   <script>  
     function guardarEstadoLocal() {
@@ -1098,13 +1102,7 @@ function seleccionarHoy() {
 function setModo(modo) {
   modoTiempo = modo;
 
-  if (modo === 'programado') {
-    abrirSelectorFecha();
-  }
-}
-
   const botones = document.querySelectorAll('.modo-btn');
-
   botones.forEach(btn => btn.classList.remove('activo'));
 
   if (modo === 'ahora') {
@@ -1122,7 +1120,6 @@ function setModo(modo) {
 
   } else {
     botones[1].classList.add('activo');
-
     abrirSelectorFecha();
   }
 }
