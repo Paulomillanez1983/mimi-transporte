@@ -1804,20 +1804,18 @@ function reservarWhatsApp() {
   // 🔥 KM del cliente (solo su viaje)
   const kmCliente = parseFloat(datosCotizacion.kmDetalle?.viajePasajero) || parseFloat(datosCotizacion.km) || 0;
   
-  // 🔥 Crear enlaces de Google Maps para el chofer
-  const mapsOrigen = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(origen)}`;
-  const mapsDestino = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destino)}`;
+  // 🔥 Crear UN SOLO enlace con ruta completa (origen → destino)
+  const mapsRuta = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
   
   notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);  
   
   const mensaje = `*MIMI Transporte Escolar* 🚐
 Hola! Nuevo viaje solicitado:
 
-📍 *Origen:* ${origen}
-🗺️ Ir: ${mapsOrigen}
+📍 ${origen}
+🎯 ${destino}
 
-🎯 *Destino:* ${destino}
-🗺️ Ir: ${mapsDestino}
+🗺️ *Ver ruta completa:* ${mapsRuta}
 
 📅 ${fechaTexto}
 💰 $${precio}
@@ -1825,8 +1823,12 @@ Hola! Nuevo viaje solicitado:
 
 ¿Confirmas el viaje?`;  
   
+  // ✅ SIN ESPACIO después de ?text=
   window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');  
-}    function activarAutocompleteConDelay(input, autocomplete) {
+}
+     
+    
+    function activarAutocompleteConDelay(input, autocomplete) {
   input.addEventListener('input', () => {
     const valor = input.value;
 
