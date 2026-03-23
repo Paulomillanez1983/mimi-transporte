@@ -680,6 +680,9 @@ body {
 <script>
 function cargarGoogleMaps() {
   if (window.google && google.maps) return;
+window.gm_authFailure = function() {
+  console.error("❌ Error de autenticación con Google Maps API");
+};
 
   const script = document.createElement('script');
 
