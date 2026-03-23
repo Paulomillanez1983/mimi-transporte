@@ -682,10 +682,17 @@ function cargarGoogleMaps() {
   if (window.google && google.maps) return;
 
   const script = document.createElement('script');
-script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=inicializarAutocomplete";
+
+  script.src = "https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&libraries=places&callback=inicializarAutocomplete";
   script.async = true;
   script.defer = true;
 
+  // ✅ LOG CUANDO CARGA BIEN
+  script.onload = () => {
+    console.log("✅ Google Maps cargado correctamente");
+  };
+
+  // ❌ ERROR SI FALLA
   script.onerror = () => {
     notifSystem.show(
       'Modo manual',
