@@ -1586,12 +1586,13 @@ function calcularTarifa() {
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
       
-    if (res.error) {   
-      notifSystem.show('Error del servidor', res.error, 'error', 6000);  
-      mostrarError(res.error);   
-      return;   
-    }  
-      
+if (!res || res.error || res.exito === false) {
+  const mensaje = res?.error || 'No se pudo calcular el viaje';
+
+  notifSystem.show('Error del servidor', mensaje, 'error', 6000);
+  mostrarError(mensaje);
+  return;
+}      
     mostrarResultado(res);  
       
     if (modoTiempo === 'ahora' && res.esNocturno) {
