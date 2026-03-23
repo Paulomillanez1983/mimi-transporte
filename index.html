@@ -1801,33 +1801,35 @@ function reservarWhatsApp() {
     return;  
   }  
   
-  // 🔥 KM del cliente (solo su viaje)
   const kmCliente = parseFloat(datosCotizacion.kmDetalle?.viajePasajero) || parseFloat(datosCotizacion.km) || 0;
   
-  // 🔥 Crear UN SOLO enlace con ruta completa (origen → destino)
+  // Enlace de ruta
   const mapsRuta = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
+  
+  // 🔥 NUEVO: Enlace para respuesta rápida del chofer
+  const respuestaSi = `https://wa.me/5493517014863?text=${encodeURIComponent(`✅ *VIAJE ACEPTADO*\n\nHola! Confirmo el viaje.\n\n📍 Me dirijo a: ${origen}\n\nEnviá tu ubicación en tiempo real así te veo llegar:`)}`;
+  
+  const respuestaNo = `https://wa.me/5493517014863?text=${encodeURIComponent(`❌ *NO DISPONIBLE*\n\nHola! No puedo realizar este viaje.\n\nMotivo: `)}`;
   
   notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);  
   
   const mensaje = `*MIMI Transporte Escolar* 🚐
-Hola! Nuevo viaje solicitado:
+Nuevo viaje solicitado:
 
 📍 ${origen}
 🎯 ${destino}
-
-🗺️ *Ver ruta completa:* ${mapsRuta}
+🗺️ Ruta: ${mapsRuta}
 
 📅 ${fechaTexto}
 💰 $${precio}
 📏 ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracion || '—'}min
 
-¿Confirmas el viaje?`;  
+*Responder:*
+✅ Aceptar: ${respuestaSi}
+❌ Rechazar: ${respuestaNo}`;  
   
-  // ✅ SIN ESPACIO después de ?text=
   window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');  
 }
-     
-    
     function activarAutocompleteConDelay(input, autocomplete) {
   input.addEventListener('input', () => {
     const valor = input.value;
