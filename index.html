@@ -1654,65 +1654,89 @@ function mostrarResultado(res) {
   animarContador('precioValor', 0, res.precioPorViaje || res.precio, 800);  
   
   const resultadoDiv = document.getElementById('resultado');  
-  resultadoDiv.classList.add('visible');  
-    // 🌧️ Mostrar recargos si existen
-  const recargosDiv = document.getElementById('recargosInfo') || document.createElement('div');
-  recargosDiv.id = 'recargosInfo';
-  recargosDiv.style.cssText = 'margin: 15px 0; padding: 12px; background: #fff3e0; border-radius: 10px; font-size: 0.9rem;';
+  resultadoDiv.classList.add('visible');
+  
+  // 🌧️ Mostrar recargos
+  let recargosDiv = document.getElementById('recargosInfo');
+  if (!recargosDiv) {
+    recargosDiv = document.createElement('div');
+    recargosDiv.id = 'recargosInfo';
+    resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
+  }
   
   let recargosHtml = '';
   
+  // Clima (con iconos y colores según intensidad)
   if (res.clima && res.clima.llueve) {
-    recargosHtml += '<div style="color: #e65100; margin: 4px 0;">🌧️ Recargo por lluvia activado</div>';
+    const isTormenta = res.clima.tipo === 'tormenta';
+    const isIntensa = res.clima.tipo === 'lluvia_intensa';
+    recargosHtml += `<div style="color: ${isTormenta ? '#c62828' : isIntensa ? '#e65100' : '#1565c0'}; margin: 4px 0; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+      <span style="font-size: 1.2rem;">${isTormenta ? '⛈️' : isIntensa ? '🌧️' : '🌦️'}</span>
+      <span>${res.clima.descripcion} - Recargo ${isTormenta ? '50%' : isIntensa ? '35%' : '25%'}</span>
+    </div>`;
   }
   
+  // Recargos aplicados (nocturno, feriado, fin de semana)
   if (res.recargosAplicados && res.recargosAplicados.length > 0) {
     res.recargosAplicados.forEach(recargo => {
-      recargosHtml += `<div style="color: #666; margin: 2px 0;">${recargo.descripcion} (${recargo.porcentaje})</div>`;
+      const isNocturno = recargo.tipo === 'nocturno';
+      const isFeriado = recargo.tipo === 'feriado';
+      recargosHtml += `<div style="color: ${isNocturno ? '#1a237e' : isFeriado ? '#d32f2f' : '#666'}; margin: 3px 0; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+        <span>${recargo.descripcion}</span>
+        <span style="font-weight: 700; background: ${isNocturno ? '#1a237e' : isFeriado ? '#d32f2f' : '#ff9800'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">${recargo.porcentaje}</span>
+      </div>`;
     });
   }
   
-  if (res.esFeriado) {
-    recargosHtml += '<div style="color: #d32f2f; margin: 4px 0;">🎉 Es feriado</div>';
-  } else if (res.esFinDeSemana) {
-    recargosHtml += '<div style="color: #7b1fa2; margin: 4px 0;">📅 Es fin de semana</div>';
+  // Badge nocturno destacado
+  if (res.esNocturno) {
+    recargosHtml += `<div style="background: linear-gradient(135deg, #1a237e, #3949ab); color: white; padding: 8px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.85rem; font-weight: 700; box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);">
+      <span>🌙</span>
+      <span>Viaje Nocturno ${res.horaViaje || ''}</span>
+    </div>`;
+  }
+  
+  // Precio sin recargos (comparación)
+  if (res.precioSinRecargos && res.precioSinRecargos !== res.precio) {
+    recargosHtml += `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ccc; font-size: 0.8rem; color: #888;">
+      Precio base: <span style="text-decoration: line-through;">$${res.precioSinRecargos.toLocaleString('es-AR')}</span> → Total: <strong style="color: #1565c0; font-size: 1rem;">$${res.precio.toLocaleString('es-AR')}</strong>
+    </div>`;
   }
   
   if (recargosHtml) {
-    recargosDiv.innerHTML = '<strong style="color: #333;">Recargos aplicados:</strong><br>' + recargosHtml;
-    resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
+    recargosDiv.style.cssText = 'margin: 15px 0; padding: 16px; background: linear-gradient(135deg, #fff8e1, #ffecb3); border-radius: 14px; border-left: 4px solid #ff9800; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);';
+    recargosDiv.innerHTML = '<div style="font-weight: 800; color: #e65100; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;"><span>⚡</span><span>Recargos aplicados</span></div>' + recargosHtml;
+  } else {
+    recargosDiv.innerHTML = '';
+    recargosDiv.style.display = 'none';
   }
 
-  // Abrir ruta en Google Maps GRATIS
-const origenTexto = document.getElementById('origen').value;
-const destinoTexto = document.getElementById('destino').value;
+  // Abrir ruta en Google Maps
+  const origenTexto = document.getElementById('origen').value;
+  const destinoTexto = document.getElementById('destino').value;
 
-const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
 
-const mapaDiv = document.getElementById('mapaRuta');
-mapaDiv.style.display = 'block';
+  const mapaDiv = document.getElementById('mapaRuta');
+  mapaDiv.style.display = 'block';
 
-mapaDiv.innerHTML = `
-  <button class="btn-mapa" onclick="abrirRuta('${mapsUrl}')">
-    
-    <span class="btn-mapa-icon">🗺️</span>
-    
-    <span class="btn-mapa-text">
-      <strong>Ver recorrido del viaje</strong>
-      <small>Tiempo real + navegación GPS</small>
-    </span>
-    
-    <span class="btn-mapa-arrow">→</span>
-    
-  </button>
-`;
+  mapaDiv.innerHTML = `
+    <button class="btn-mapa" onclick="abrirRuta('${mapsUrl}')">
+      <span class="btn-mapa-icon">🗺️</span>
+      <span class="btn-mapa-text">
+        <strong>Ver recorrido del viaje</strong>
+        <small>Tiempo real + navegación GPS</small>
+      </span>
+      <span class="btn-mapa-arrow">→</span>
+    </button>
+  `;
   
   // Scroll suave al resultado  
   setTimeout(() => {  
     resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });  
   }, 100);  
-}  
-function abrirRuta(url) {
+}
+    function abrirRuta(url) {
   notifSystem.show(
     'Abriendo navegación',
     'Se abrirá Google Maps con la ruta del viaje',
