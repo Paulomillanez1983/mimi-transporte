@@ -1655,7 +1655,34 @@ function mostrarResultado(res) {
   
   const resultadoDiv = document.getElementById('resultado');  
   resultadoDiv.classList.add('visible');  
+    // 🌧️ Mostrar recargos si existen
+  const recargosDiv = document.getElementById('recargosInfo') || document.createElement('div');
+  recargosDiv.id = 'recargosInfo';
+  recargosDiv.style.cssText = 'margin: 15px 0; padding: 12px; background: #fff3e0; border-radius: 10px; font-size: 0.9rem;';
   
+  let recargosHtml = '';
+  
+  if (res.clima && res.clima.llueve) {
+    recargosHtml += '<div style="color: #e65100; margin: 4px 0;">🌧️ Recargo por lluvia activado</div>';
+  }
+  
+  if (res.recargosAplicados && res.recargosAplicados.length > 0) {
+    res.recargosAplicados.forEach(recargo => {
+      recargosHtml += `<div style="color: #666; margin: 2px 0;">${recargo.descripcion} (${recargo.porcentaje})</div>`;
+    });
+  }
+  
+  if (res.esFeriado) {
+    recargosHtml += '<div style="color: #d32f2f; margin: 4px 0;">🎉 Es feriado</div>';
+  } else if (res.esFinDeSemana) {
+    recargosHtml += '<div style="color: #7b1fa2; margin: 4px 0;">📅 Es fin de semana</div>';
+  }
+  
+  if (recargosHtml) {
+    recargosDiv.innerHTML = '<strong style="color: #333;">Recargos aplicados:</strong><br>' + recargosHtml;
+    resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
+  }
+
   // Abrir ruta en Google Maps GRATIS
 const origenTexto = document.getElementById('origen').value;
 const destinoTexto = document.getElementById('destino').value;
