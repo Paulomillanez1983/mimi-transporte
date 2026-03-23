@@ -1151,6 +1151,11 @@ function cargarEstadoLocal() {
   if (estado.origen) document.getElementById('origen').value = estado.origen;
   if (estado.destino) document.getElementById('destino').value = estado.destino;
   if (estado.fecha) document.getElementById('fechaHora').value = estado.fecha;
+  if (estado.modo === 'programado') {
+  setModo('programado');
+} else {
+  seleccionarHoy();
+}
 
   actualizarTextoFecha();
   notifSystem.show(
@@ -1163,6 +1168,7 @@ function cargarEstadoLocal() {
 }
 function seleccionarHoy() {
   modoTiempo = 'ahora';
+  modo: modoTiempo
 
   const ahora = new Date();
   const btn = document.getElementById('btnHoy');
@@ -1544,7 +1550,7 @@ function calcularTarifa() {
   }  
     
   const fechaSeleccionada = new Date(fechaHora);  
-  if (fechaSeleccionada < new Date()) {  
+if (modoTiempo !== 'ahora' && fechaSeleccionada < new Date()) {
     mostrarError('La fecha no puede ser pasada');  
     return;  
   }  
@@ -1714,7 +1720,9 @@ function reservarWhatsApp() {
   // 1. Obtener valores (ya está bien, pero agregamos trim() por seguridad)  
   const origen   = document.getElementById('origen').value.trim();  
   const destino  = document.getElementById('destino').value.trim();  
-  const fechaTexto = document.getElementById('textoFecha').textContent.trim();  
+const fechaTexto = modoTiempo === 'ahora'
+  ? document.getElementById('btnHoy').textContent.trim()
+  : document.getElementById('btnProgramado').textContent.trim();
   const precio   = document.getElementById('precioValor').textContent.trim();  
   
   // 2. Validación más completa (evita mensajes vacíos o incompletos)  
