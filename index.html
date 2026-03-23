@@ -1524,9 +1524,9 @@ function formatearTextoBoton(fecha) {
   
 function calcularTarifa() {  
   if (isCalculating) return;  
-    if (navigator.vibrate) {
-  navigator.vibrate(30);
-}
+  if (navigator.vibrate) {
+    navigator.vibrate(30);
+  }
 
   const origen = document.getElementById('origen').value.trim();  
   const destino = document.getElementById('destino').value.trim();  
@@ -1543,21 +1543,21 @@ function calcularTarifa() {
     document.getElementById('destino').focus();  
     return;   
   }  
-  if (!fechaHora && modoTiempo !== 'ahora') {
+  if (!fechaHora) {
     mostrarError('Seleccioná fecha y hora');   
     abrirSelectorFecha();   
     return;   
   }  
     
   const fechaSeleccionada = new Date(fechaHora);  
-if (modoTiempo !== 'ahora' && fechaSeleccionada < new Date()) {
+  if (fechaSeleccionada < new Date()) {
     mostrarError('La fecha no puede ser pasada');  
     return;  
   }  
+  
   guardarEstadoLocal();
   ocultarError();  
   isCalculating = true;  
-  guardarEstadoLocal();
   
   const btn = document.getElementById('btnCalcular');  
   btn.disabled = true;  
@@ -1570,7 +1570,6 @@ if (modoTiempo !== 'ahora' && fechaSeleccionada < new Date()) {
     
   window[callbackName] = function(res) {  
     clearTimeout(timeout);
-
     console.log('📥 Respuesta:', res);  
       
     delete window[callbackName];  
@@ -1612,7 +1611,6 @@ if (modoTiempo !== 'ahora' && fechaSeleccionada < new Date()) {
     btn.disabled = false;  
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
-    guardarEstadoLocal();
 
     notifSystem.show('Tiempo agotado', 'La conexión está lenta. Intentá de nuevo.', 'warning', 5000);  
     mostrarError('Tiempo de espera agotado. Intentá de nuevo.');  
@@ -1629,25 +1627,25 @@ if (modoTiempo !== 'ahora' && fechaSeleccionada < new Date()) {
     btn.disabled = false;  
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
-    guardarEstadoLocal();
 
     notifSystem.show('Error de conexión', 'Verificá tu internet e intentá de nuevo.', 'error', 5000);  
     mostrarError('Error de conexión. Verificá tu internet.');  
   };  
     
+  // 🔥 IMPORTANTE: Enviar fechaViaje al backend
   const params = new URLSearchParams({  
     desde: origen,  
     hasta: destino,  
     tipo: 'ida',  
+    fechaViaje: fechaHora,  // <-- ESTE PARÁMETRO ES CLAVE
     clientId: navigator.userAgent + '_' + Date.now(),  
     callback: callbackName  
   });  
     
-  script.src = 'https://script.google.com/macros/s/AKfycbwqC4JU6rA46ImbzCtGK3OlUnG6yl9lOQItKcJlkTpRzBZvlj5_HCIjqEkVfgqOssnC/exec?' + params.toString();  
+  script.src = 'https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec?' + params.toString();  
     
   document.head.appendChild(script);  
 }  
-  
 function mostrarResultado(res) {  
   datosCotizacion = res;  
   
