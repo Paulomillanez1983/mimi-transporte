@@ -810,16 +810,28 @@ body {
 }
 
 
+.modo-btn {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  background: #f5f5f5;
+  color: #555;
+  transition: all 0.25s ease;
+}
+
 /* ACTIVO (naranja pastel) */
 .modo-btn.activo {
   background: #ffe0b2;
   color: #e65100;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-/* efecto presionado */
-.modo-btn:active {
-  transform: scale(0.95);
+/* INACTIVO (apagado) */
+.modo-btn.inactivo {
+  opacity: 0.5;
 }
 
 
@@ -942,48 +954,20 @@ window.gm_authFailure = function() {
 
 <div style="display:flex; gap:10px; align-items:stretch;">
 
-  <!-- BOTÓN HOY -->
-  <button onclick="seleccionarHoy()" style="
-    flex:1;
-    border:none;
-    border-radius:14px;
-    background: linear-gradient(135deg, #ffe0b2, #ffcc80);
-    color:#e65100;
-    font-weight:700;
-    cursor:pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  ">
-    Hoy
-  </button>
-<div style="display:flex; gap:10px;">
+<div style="display:flex; gap:10px; width:100%;">
 
-  <!-- BOTÓN AHORA -->
-  <button class="modo-btn activo" onclick="setModo('ahora')" style="
-    flex:1;
-    padding:14px;
-    border:none;
-    border-radius:14px;
-    font-weight:700;
-    cursor:pointer;
-    background:#e0e0e0;
-  ">
-    Ahora
+  <!-- BOTÓN HOY -->
+  <button id="btnHoy" class="modo-btn" onclick="seleccionarHoy()">
+    Hoy
   </button>
 
   <!-- BOTÓN PROGRAMADO -->
-  <button class="modo-btn" onclick="setModo('programado')" style="
-    flex:1;
-    padding:14px;
-    border:none;
-    border-radius:14px;
-    font-weight:700;
-    cursor:pointer;
-    background:#f5f5f5;
-  ">
+  <button id="btnProgramado" class="modo-btn" onclick="setModo('programado')">
     Programado
   </button>
 
 </div>
+
 
 <!-- INPUT OCULTO (SE MANTIENE) -->
 <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
@@ -1093,20 +1077,31 @@ function cargarEstadoLocal() {
 
 }
 function seleccionarHoy() {
+  modoTiempo = 'ahora';
+
   const ahora = new Date();
+  const texto = formatearTextoBoton(ahora);
 
   document.getElementById('fechaHora').value = formatearFechaInput(ahora);
-  actualizarTextoFecha();
+
+  // UI botones
+  activarBoton('btnHoy', texto);
+  desactivarBoton('btnProgramado');
 
   notifSystem.show(
-    'Fecha actual',
-    'Se seleccionó la hora actual',
+    'Modo inmediato',
+    'Se usará la hora actual',
     'success',
-    2500
+    2000
   );
 }
 function setModo(modo) {
   modoTiempo = modo;
+
+  if (modo === 'programado') {
+    abrirSelectorFecha();
+  }
+}
 
   const botones = document.querySelectorAll('.modo-btn');
 
@@ -1261,6 +1256,14 @@ function actualizarTextoFecha() {
   const hora = fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
 
   document.getElementById('textoFecha').textContent = `${label}, ${hora}`;
+  if (modoTiempo === 'programado') {
+  const fecha = new Date(document.getElementById('fechaHora').value);
+  const texto = formatearTextoBoton(fecha);
+
+  activarBoton('btnProgramado', texto);
+  desactivarBoton('btnHoy');
+}
+
 }
   
 function abrirSelectorFecha() {  
@@ -1360,7 +1363,42 @@ activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrig
     if (e.key === 'Enter') e.preventDefault();
   });
 }
-  
+  function activarBoton(id, texto) {
+  const btn = document.getElementById(id);
+  btn.classList.add('activo');
+  btn.classList.remove('inactivo');
+  btn.textContent = texto;
+}
+
+function desactivarBoton(id) {
+  const btn = document.getElementById(id);
+  btn.classList.remove('activo');
+  btn.classList.add('inactivo');
+}
+
+function formatearTextoBoton(fecha) {
+  const hoy = new Date();
+  const manana = new Date();
+  manana.setDate(hoy.getDate() + 1);
+
+  let dia = '';
+
+  if (fecha.toDateString() === hoy.toDateString()) {
+    dia = 'Hoy';
+  } else if (fecha.toDateString() === manana.toDateString()) {
+    dia = 'Mañana';
+  } else {
+    dia = fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+  }
+
+  const hora = fecha.toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  return `${dia} ${hora}`;
+}
+
 // ==========================================  
 // CÁLCULO DE TARIFA CON NOTIFICACIONES ÚTILES  
 // ==========================================  
