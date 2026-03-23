@@ -821,6 +821,14 @@ body {
   color: #555;
   transition: all 0.25s ease;
 }
+.modo-btn {
+  transition: all 0.25s ease, transform 0.2s ease;
+}
+
+/* ✨ animación cuando cambia */
+.modo-btn.actualizando {
+  transform: scale(1.05);
+}
 
 /* ACTIVO (naranja pastel) */
 .modo-btn.activo {
@@ -957,9 +965,9 @@ window.gm_authFailure = function() {
 <div style="display:flex; gap:10px; width:100%;">
 
   <!-- BOTÓN AHORA -->
-  <button id="btnHoy" class="modo-btn activo" onclick="seleccionarHoy()">
-    Ahora
-  </button>
+<button id="btnHoy" class="modo-btn activo" onclick="seleccionarHoy()">
+  🕒 Ahora
+</button>
 
   <!-- BOTÓN PROGRAMADO -->
   <button id="btnProgramado" class="modo-btn inactivo" onclick="setModo('programado')">
@@ -1085,10 +1093,18 @@ function seleccionarHoy() {
 
   const ahora = new Date();
 
+  // Guardamos en el input oculto
   document.getElementById('fechaHora').value = formatearFechaInput(ahora);
-  document.getElementById('btnProgramado').textContent = 'Programado';
 
-  activarBoton('btnHoy', 'Hoy'); // ✅ SIEMPRE dice "Hoy"
+  // 👉 TEXTO TIPO UBER
+  const hora = ahora.toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  document.getElementById('btnHoy').innerHTML = `🕒 Ahora ${hora}`;
+
+  activarBoton('btnHoy');
   desactivarBoton('btnProgramado');
 
   notifSystem.show(
@@ -1224,7 +1240,29 @@ document.addEventListener('DOMContentLoaded', function() {
   // 🔥 Estado inicial correcto
   seleccionarHoy();
 });
-  
+ // ⏱️ Actualiza la hora del botón "Ahora" cada minuto
+setInterval(() => {
+  if (modoTiempo === 'ahora') {
+    const btn = document.getElementById('btnHoy');
+
+    if (!btn) return;
+
+    btn.classList.add('actualizando');
+
+    const ahora = new Date();
+    const hora = ahora.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    btn.innerHTML = `🕒 Ahora ${hora}`;
+
+    setTimeout(() => {
+      btn.classList.remove('actualizando');
+    }, 200);
+  }
+}, 60000);
+ 
 function initFecha() {  
   const manana = new Date();  
   manana.setDate(manana.getDate() + 1);  
