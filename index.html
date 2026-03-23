@@ -1810,22 +1810,20 @@ function reservarWhatsApp() {
   notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);  
   
   const mensaje = `*MIMI Transporte Escolar* 🚐
-Nuevo viaje solicitado:
 
-📍 Recoger: ${origen}
-🎯 Destino: ${destino}
+📍 *Desde:* ${origen}
+🎯 *Hasta:* ${destino}
 
-🗺️ *RUTA COMPLETA:* ${mapsRutaCompleta}
+🗺️ *Mapa:* ${mapsRutaCompleta}
 
-📅 ${fechaTexto}
-💰 $${precio}
-📏 ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracion || '—'}min
+⏰ *Cuándo:* ${fechaTexto}
+💰 *Precio:* $${precio}
+📏 *Distancia:* ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracion || '—'}min
 
-¿Confirmas el viaje?`;  
+✅ ¿Confirmamos el viaje?`;  
   
   window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');  
-}
-    
+}    
     function activarAutocompleteConDelay(input, autocomplete) {
   input.addEventListener('input', () => {
     const valor = input.value;
