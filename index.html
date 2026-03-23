@@ -7,6 +7,7 @@
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">  
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">  
 <meta property="og:url" content="https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec">  
+  
   <style>  
 :root {  
   --azul-oscuro: #1e3c72;  
@@ -37,7 +38,86 @@ body {
   min-height: 100vh;  
   padding-bottom: 30px;  
 }  
-  
+    /* ==========================================
+   TRUST SECTION
+   ========================================== */
+.trust-section {
+  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Badge */
+.trust-badge {
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  color: #2e7d32;
+  font-weight: 700;
+  text-align: center;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+/* Driver */
+.driver-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: var(--sombra);
+}
+
+.driver-img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.driver-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.driver-info {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Reviews */
+.reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.review {
+  background: white;
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: var(--sombra);
+}
+
+.stars {
+  color: #ffc107;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.review-text {
+  font-size: 0.85rem;
+  color: #444;
+}
+
+.review-author {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 4px;
+}
+
 /* ==========================================  
    HEADER  
    ========================================== */  
@@ -762,85 +842,6 @@ window.gm_authFailure = function() {
   };
 
   document.head.appendChild(script);
-  /* ==========================================
-   TRUST SECTION
-   ========================================== */
-.trust-section {
-  margin: 20px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-/* Badge */
-.trust-badge {
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-  color: #2e7d32;
-  font-weight: 700;
-  text-align: center;
-  padding: 10px;
-  border-radius: 12px;
-  font-size: 0.9rem;
-}
-
-/* Driver */
-.driver-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: white;
-  padding: 12px;
-  border-radius: 14px;
-  box-shadow: var(--sombra);
-}
-
-.driver-img {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.driver-name {
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.driver-info {
-  font-size: 0.8rem;
-  color: #666;
-}
-
-/* Reviews */
-.reviews {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.review {
-  background: white;
-  padding: 12px;
-  border-radius: 14px;
-  box-shadow: var(--sombra);
-}
-
-.stars {
-  color: #ffc107;
-  font-size: 0.9rem;
-  margin-bottom: 4px;
-}
-
-.review-text {
-  font-size: 0.85rem;
-  color: #444;
-}
-
-.review-author {
-  font-size: 0.75rem;
-  color: #888;
-  margin-top: 4px;
-}
 
 
 
@@ -978,29 +979,6 @@ window.gm_authFailure = function() {
     +100 familias confían en nosotros
   </div>
 
-  <div class="driver-card">
-    <img src="https://randomuser.me/api/portraits/men/32.jpg" class="driver-img">
-    <div>
-      <div class="driver-name">Carlos Gómez</div>
-      <div class="driver-info">Chofer habilitado · 5 años de experiencia</div>
-    </div>
-  </div>
-
-  <div class="reviews">
-
-    <div class="review">
-      <div class="stars">★★★★★</div>
-      <div class="review-text">"Súper confiable, siempre puntual. Mis hijos van tranquilos."</div>
-      <div class="review-author">– Laura M.</div>
-    </div>
-
-    <div class="review">
-      <div class="stars">★★★★★</div>
-      <div class="review-text">"Excelente servicio, muy amable y responsable."</div>
-      <div class="review-author">– Martín R.</div>
-    </div>
-
-  </div>
 
 </div>
   <script>  
@@ -1424,7 +1402,7 @@ function abrirRuta(url) {
   );
 
   setTimeout(() => {
-window.location.href = url;
+window.open(url, '_blank');
   }, 400);
 }
   
