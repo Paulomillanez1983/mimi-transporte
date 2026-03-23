@@ -1639,18 +1639,20 @@ if (!res || res.error || res.exito === false) {
     mostrarError('Error de conexión. Verificá tu internet o recargá la página.');  
   };  
   
-  // 🔥 CONSTRUIR URL - REEMPLAZÁ ESTA URL CON LA TUYA
-https://script.google.com/macros/s/AKfycbzndJGdzlc114eKQ8UubNh26U8Ie7RigeZ-2okFFEpiSJ-igwRJXwQ0asxwrN46R2oo/exec  const params = new URLSearchParams({  
+  // 🔥 CONSTRUIR URL - USÁ TU NUEVA URL
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSV5irveYJJqaXnfkAoaPf0ilN5WtH4Z9kou9h6-aUdg3kTTkhSJtgSO1JNVErkw4-/exec';
+
+  const params = new URLSearchParams({
     desde: origen,  
     hasta: destino,  
     tipo: 'ida',  
     fechaViaje: fechaHoraParaEnviar,
     clientId: navigator.userAgent + '_' + Date.now(),  
     callback: callbackName  
-  });  
-    
+  });
+  
   const fullUrl = SCRIPT_URL + '?' + params.toString();
-  console.log('🌐 URL de consulta:', fullUrl); // Para debug
+  console.log('🌐 URL de consulta:', fullUrl);
   
   script.src = fullUrl;  
   document.head.appendChild(script);  
