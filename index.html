@@ -1803,33 +1803,28 @@ function reservarWhatsApp() {
   
   const kmCliente = parseFloat(datosCotizacion.kmDetalle?.viajePasajero) || parseFloat(datosCotizacion.km) || 0;
   
-  // Enlace de ruta
-  const mapsRuta = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
-  
-  // 🔥 NUEVO: Enlace para respuesta rápida del chofer
-  const respuestaSi = `https://wa.me/5493517014863?text=${encodeURIComponent(`✅ *VIAJE ACEPTADO*\n\nHola! Confirmo el viaje.\n\n📍 Me dirijo a: ${origen}\n\nEnviá tu ubicación en tiempo real así te veo llegar:`)}`;
-  
-  const respuestaNo = `https://wa.me/5493517014863?text=${encodeURIComponent(`❌ *NO DISPONIBLE*\n\nHola! No puedo realizar este viaje.\n\nMotivo: `)}`;
+  // 🔥 USAR el enlace que viene del backend (ruta completa: chofer → pasajero → destino)
+  const mapsRutaCompleta = datosCotizacion.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
   
   notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);  
   
   const mensaje = `*MIMI Transporte Escolar* 🚐
 Nuevo viaje solicitado:
 
-📍 ${origen}
-🎯 ${destino}
-🗺️ Ruta: ${mapsRuta}
+📍 Recoger: ${origen}
+🎯 Destino: ${destino}
+
+🗺️ *RUTA COMPLETA:* ${mapsRutaCompleta}
 
 📅 ${fechaTexto}
 💰 $${precio}
 📏 ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracion || '—'}min
 
-*Responder:*
-✅ Aceptar: ${respuestaSi}
-❌ Rechazar: ${respuestaNo}`;  
+¿Confirmas el viaje?`;  
   
   window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');  
 }
+    
     function activarAutocompleteConDelay(input, autocomplete) {
   input.addEventListener('input', () => {
     const valor = input.value;
