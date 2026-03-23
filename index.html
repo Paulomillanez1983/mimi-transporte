@@ -1417,11 +1417,15 @@ activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrig
     if (e.key === 'Enter') e.preventDefault();
   });
 }
-  function activarBoton(id, texto) {
+function activarBoton(id, texto) {
   const btn = document.getElementById(id);
   btn.classList.add('activo');
   btn.classList.remove('inactivo');
-  btn.textContent = texto;
+
+  // ✅ SOLO cambia texto si viene definido
+  if (texto) {
+    btn.textContent = texto;
+  }
 }
 
 function desactivarBoton(id) {
