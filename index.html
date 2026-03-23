@@ -963,6 +963,9 @@ window.gm_authFailure = function() {
 
   <!-- BOTÓN PROGRAMADO -->
   <button id="btnProgramado" class="modo-btn" onclick="setModo('programado')">
+    activarBoton('btnProgramado', 'Elegir fecha');
+desactivarBoton('btnHoy');
+
     Programado
   </button>
 
@@ -1432,7 +1435,7 @@ function calcularTarifa() {
     mostrarError('La fecha no puede ser pasada');  
     return;  
   }  
-  
+  guardarEstadoLocal();
   ocultarError();  
   isCalculating = true;  
   guardarEstadoLocal();
