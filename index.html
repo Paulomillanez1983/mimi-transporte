@@ -1661,9 +1661,29 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJ3FvqU0fyBgiEbRSCL
   datosCotizacion = res;  
   
   animarContador('precioValor', 0, res.precioPorViaje || res.precio, 800);  
-  
+  // 🔥 Normalizar datos
+const km = parseFloat(res.km) || 0;
+const duracion = parseInt(res.duracion) || 0;
   const resultadoDiv = document.getElementById('resultado');  
   resultadoDiv.classList.add('visible');
+      // 🔥 Info de viaje (tipo Uber)
+let infoViaje = document.getElementById('infoViaje');
+
+if (!infoViaje) {
+  infoViaje = document.createElement('div');
+  infoViaje.id = 'infoViaje';
+  infoViaje.style.marginTop = '8px';
+  infoViaje.style.fontSize = '0.85rem';
+  infoViaje.style.color = '#666';
+  infoViaje.style.textAlign = 'center';
+
+  resultadoDiv.insertBefore(infoViaje, resultadoDiv.children[1]);
+}
+
+// Mostrar datos
+infoViaje.innerHTML = `
+  📏 ${km.toFixed(1)} km · ⏱️ ${duracion} min
+`;
   
   // 🌧️ Mostrar recargos
   let recargosDiv = document.getElementById('recargosInfo');
