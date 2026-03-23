@@ -676,8 +676,51 @@ body {
   transform: scale(0.96);
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
-</style>  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places"></script>  </head>  
-<body>  <div class="toast-container" id="toastContainer"></div>  <header class="header">  
+</style>
+<script>
+function cargarGoogleMaps() {
+  if (window.google && google.maps) return;
+
+  const script = document.createElement('script');
+  script.src = "https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&libraries=places&callback=inicializarAutocomplete";
+  script.async = true;
+  script.defer = true;
+
+  script.onerror = () => {
+    notifSystem.show(
+      'Modo manual',
+      'No se pudo cargar Google Maps. Podés escribir la dirección manualmente.',
+      'warning',
+      6000
+    );
+  };
+
+  document.head.appendChild(script);
+}
+
+</script>
+</head>  
+<body> 
+  <div id="loadingGlobal" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+">
+  <div style="
+    background: white;
+    padding: 20px 30px;
+    border-radius: 12px;
+    font-weight: bold;
+  ">
+    Calculando...
+  </div>
+</div>
+
+  <div class="toast-container" id="toastContainer"></div>  <header class="header">  
   <div class="header-content">  
     <div class="vehicle-section">  
       <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png"   
@@ -778,7 +821,37 @@ body {
       © 2026 MIMI Transporte Infantil  
     </div>  
   </div>  
-</div>  <script>  
+</div>  
+  <script>  
+    function guardarEstadoLocal() {
+  const estado = {
+    origen: document.getElementById('origen').value,
+    destino: document.getElementById('destino').value,
+    fecha: document.getElementById('fechaHora').value
+  };
+  localStorage.setItem('mimi_estado', JSON.stringify(estado));
+}
+
+function cargarEstadoLocal() {
+  const data = localStorage.getItem('mimi_estado');
+  if (!data) return;
+
+  const estado = JSON.parse(data);
+
+  if (estado.origen) document.getElementById('origen').value = estado.origen;
+  if (estado.destino) document.getElementById('destino').value = estado.destino;
+  if (estado.fecha) document.getElementById('fechaHora').value = estado.fecha;
+
+  actualizarTextoFecha();
+  notifSystem.show(
+  'Datos recuperados',
+  'Restauramos tu última búsqueda',
+  'info',
+  3000
+);
+
+}
+
 // ==========================================  
 // SISTEMA DE NOTIFICACIONES CONTEXTUALES  
 // ==========================================  
@@ -858,15 +931,19 @@ let isCalculating = false;
 let sessionToken;
 
 function nuevaSesionAutocomplete() {
-  sessionToken = new google.maps.places.AutocompleteSessionToken();
-} 
-document.addEventListener('DOMContentLoaded', function() {  
-  initFecha();  
-  if (typeof google !== 'undefined') {  
-    inicializarAutocomplete();  
-  } else {  
-    window.initMap = inicializarAutocomplete;  
-  }  
+  if (window.google && google.maps && google.maps.places) {
+    sessionToken = new google.maps.places.AutocompleteSessionToken();
+  }
+}
+
+    document.getElementById('origen').addEventListener('input', guardarEstadoLocal);
+document.getElementById('destino').addEventListener('input', guardarEstadoLocal);
+document.getElementById('fechaHora').addEventListener('change', guardarEstadoLocal);
+
+document.addEventListener('DOMContentLoaded', function() {
+  initFecha();
+  cargarEstadoLocal();
+cargarGoogleMaps();
 });  
   
 function initFecha() {  
@@ -917,7 +994,7 @@ function abrirSelectorFecha() {
     input.click();  // Esto suele abrir el picker en Android/iOS  
   
     // 3. Último recurso: dispatch evento manual (útil en algunos navegadores raros)  
-    if (!document.activeElement === input) {  
+    if (document.activeElement !== input) {  
       const event = new Event('click', { bubbles: true, cancelable: true });  
       input.dispatchEvent(event);  
     }  
@@ -961,6 +1038,7 @@ activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrig
     if (place.formatted_address) {
       origenInput.value = place.formatted_address;
       lugarOrigen = place;
+      guardarEstadoLocal();
 
       nuevaSesionAutocomplete();
       autocompleteOrigen.setOptions({ sessionToken });
@@ -972,6 +1050,7 @@ activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrig
     if (place.formatted_address) {
       destinoInput.value = place.formatted_address;
       lugarDestino = place;
+      guardarEstadoLocal();
 
       nuevaSesionAutocomplete();
       autocompleteDestino.setOptions({ sessionToken });
@@ -1024,7 +1103,8 @@ function calcularTarifa() {
   
   ocultarError();  
   isCalculating = true;  
-    
+  guardarEstadoLocal();
+  
   const btn = document.getElementById('btnCalcular');  
   btn.disabled = true;  
   btn.innerHTML = '<div class="spinner"></div> Calculando...';  
@@ -1035,6 +1115,8 @@ function calcularTarifa() {
   const callbackName = 'mimiCallback_' + Date.now();  
     
   window[callbackName] = function(res) {  
+    clearTimeout(timeout);
+
     console.log('📥 Respuesta:', res);  
       
     delete window[callbackName];  
@@ -1076,7 +1158,8 @@ function calcularTarifa() {
     btn.disabled = false;  
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
-      
+    guardarEstadoLocal();
+
     notifSystem.show('Tiempo agotado', 'La conexión está lenta. Intentá de nuevo.', 'warning', 5000);  
     mostrarError('Tiempo de espera agotado. Intentá de nuevo.');  
   }, 15000);  
@@ -1092,7 +1175,8 @@ function calcularTarifa() {
     btn.disabled = false;  
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
-      
+    guardarEstadoLocal();
+
     notifSystem.show('Error de conexión', 'Verificá tu internet e intentá de nuevo.', 'error', 5000);  
     mostrarError('Error de conexión. Verificá tu internet.');  
   };  
@@ -1156,7 +1240,7 @@ function abrirRuta(url) {
   );
 
   setTimeout(() => {
-    window.open(url, '_blank');
+window.location.href = url;
   }, 400);
 }
   
@@ -1174,17 +1258,6 @@ function animarContador(id, inicio, fin, duracion) {
     elemento.textContent = Math.floor(actual).toLocaleString('es-AR');  
   }, 16);  
 }  
-function activarAutocompleteConDelay(input, autocomplete) {
-  input.addEventListener('input', () => {
-    const valor = input.value;
-
-    if (valor.length < 4) {
-      autocomplete.unbindAll(); // corta predicciones
-    } else {
-      autocomplete.bindTo('bounds', new google.maps.Map(document.createElement('div')));
-    }
-  });
-}
 // ==========================================  
 // RESERVA WHATSAPP (versión mejorada)  
 // ==========================================  
