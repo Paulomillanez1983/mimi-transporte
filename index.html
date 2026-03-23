@@ -1662,7 +1662,7 @@ function mostrarResultado(res) {
   animarContador('precioValor', 0, res.precio, 800);  
   
   // 🔥 KM del cliente (solo su viaje, no el del chofer)
-const kmCliente = parseFloat(res.kmDetalle?.kmViajePasajero) || parseFloat(res.km) || 0;
+const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.km) || 0;
   const duracion = parseInt(res.duracion) || 0;
   
   const resultadoDiv = document.getElementById('resultado');  
@@ -1801,7 +1801,7 @@ function reservarWhatsApp() {
     return;  
   }  
   
-  const kmCliente = parseFloat(datosCotizacion.kmDetalle?.viajePasajero) || parseFloat(datosCotizacion.km) || 0;
+  const kmCliente = parseFloat(datosCotizacion.kmDetalle?.kmFinalAplicado) || parseFloat(datosCotizacion.km) || 0;
   
   // 🔥 USAR el enlace que viene del backend (ruta completa: chofer → pasajero → destino)
   const mapsRutaCompleta = datosCotizacion.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
