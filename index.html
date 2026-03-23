@@ -1530,7 +1530,7 @@ function calcularTarifa() {
 
   const origen = document.getElementById('origen').value.trim();  
   const destino = document.getElementById('destino').value.trim();  
-  const fechaHora = document.getElementById('fechaHora').value;  
+  const fechaHoraInput = document.getElementById('fechaHora').value;  
   
   // Validaciones con feedback inmediato  
   if (!origen) {   
@@ -1543,14 +1543,28 @@ function calcularTarifa() {
     document.getElementById('destino').focus();  
     return;   
   }  
-  if (!fechaHora) {
-    mostrarError('Seleccioná fecha y hora');   
-    abrirSelectorFecha();   
-    return;   
-  }  
+  
+  // 🔥 Determinar la fecha/hora a usar según el modo
+  let fechaHoraParaEnviar;
+  let fechaParaValidar;
+  
+  if (modoTiempo === 'ahora') {
+    // Modo "Ahora": usar fecha/hora actual del dispositivo
+    fechaHoraParaEnviar = formatearFechaInput(new Date());
+    fechaParaValidar = new Date();
+  } else {
+    // Modo "Programado": usar la fecha seleccionada por el usuario
+    if (!fechaHoraInput) {
+      mostrarError('Seleccioná fecha y hora');   
+      abrirSelectorFecha();   
+      return;   
+    }
+    fechaHoraParaEnviar = fechaHoraInput;
+    fechaParaValidar = new Date(fechaHoraInput);
+  }
     
-  const fechaSeleccionada = new Date(fechaHora);  
-  if (fechaSeleccionada < new Date()) {
+  // Validar que la fecha no sea pasada (solo para modo programado, "ahora" siempre es presente)
+  if (modoTiempo !== 'ahora' && fechaParaValidar < new Date()) {
     mostrarError('La fecha no puede ser pasada');  
     return;  
   }  
@@ -1590,6 +1604,16 @@ function calcularTarifa() {
     }  
       
     mostrarResultado(res);  
+      
+    // 🌙 Mostrar notificación especial si hay recargos por horario actual
+    if (modoTiempo === 'ahora' && res.esNocturno) {
+      notifSystem.show(
+        '🌙 Horario nocturno',
+        'Se aplicó recargo por ser después de las 21:00 hs',
+        'info',
+        4000
+      );
+    }
       
     // Notificación de éxito con datos útiles  
     notifSystem.show(  
@@ -1632,12 +1656,12 @@ function calcularTarifa() {
     mostrarError('Error de conexión. Verificá tu internet.');  
   };  
     
-  // 🔥 IMPORTANTE: Enviar fechaViaje al backend
+  // 🔥 Enviar fechaViaje al backend (sea "ahora" o programado)
   const params = new URLSearchParams({  
     desde: origen,  
     hasta: destino,  
     tipo: 'ida',  
-    fechaViaje: fechaHora,  // <-- ESTE PARÁMETRO ES CLAVE
+    fechaViaje: fechaHoraParaEnviar,  // Fecha actual si es "ahora", seleccionada si es "programado"
     clientId: navigator.userAgent + '_' + Date.now(),  
     callback: callbackName  
   });  
@@ -1645,8 +1669,8 @@ function calcularTarifa() {
   script.src = 'https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec?' + params.toString();  
     
   document.head.appendChild(script);  
-}  
-function mostrarResultado(res) {  
+}
+    function mostrarResultado(res) {  
   datosCotizacion = res;  
   
   animarContador('precioValor', 0, res.precioPorViaje || res.precio, 800);  
