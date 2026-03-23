@@ -22,7 +22,8 @@
   --sombra: 0 4px 20px rgba(0,0,0,0.08);  
   --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);  
   --exito: #4caf50;  
-  --info: #2196f3;  
+  --info: #2196f3; 
+
 }  
   
 * {  
@@ -807,22 +808,7 @@ body {
   transform: scale(0.96);
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
-      .modo-tiempo {
-  display: flex;
-  gap: 6px;
-}
 
-.modo-btn {
-  border: none;
-  padding: 6px 10px;
-  border-radius: 10px;
-  font-size: 0.7rem;
-  font-weight: 600;
-  background: #eee;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
 
 /* ACTIVO (naranja pastel) */
 .modo-btn.activo {
@@ -836,10 +822,11 @@ body {
   transform: scale(0.95);
 }
 
-let modoTiempo = 'ahora';
 
 </style>
 <script>
+  let modoTiempo = 'ahora';
+
 function cargarGoogleMaps() {
   if (window.google && google.maps) return;
 window.gm_authFailure = function() {
@@ -874,35 +861,6 @@ window.gm_authFailure = function() {
 
   document.head.appendChild(script);
   }
-
-
-function seleccionarAhora() {
-  modoTiempo = 'ahora';
-
-  document.getElementById('btnAhora').classList.add('activo');
-  document.getElementById('btnProgramado').classList.remove('activo');
-
-  const ahora = new Date();
-  document.getElementById('fechaHora').value = formatearFechaInput(ahora);
-
-  actualizarTextoFecha();
-
-  notifSystem.show(
-    'Viaje inmediato',
-    'Se calculará para salir ahora',
-    'info',
-    2500
-  );
-}
-
-function seleccionarProgramado() {
-  modoTiempo = 'programado';
-
-  document.getElementById('btnProgramado').classList.add('activo');
-  document.getElementById('btnAhora').classList.remove('activo');
-
-  abrirSelectorFecha();
-}
 
 
 
@@ -978,15 +936,42 @@ function seleccionarProgramado() {
 </div>  
 
 <div class="datetime-section">  
-<div class="datetime-header" style="justify-content: space-between;">
+<div class="datetime-header">
   <span>📅 Fecha y Hora</span>
-
-  <div class="modo-tiempo">
-    <button id="btnAhora" class="modo-btn activo" onclick="seleccionarAhora()">Ahora</button>
-    <button id="btnProgramado" class="modo-btn" onclick="seleccionarProgramado()">Programado</button>
-  </div>
 </div>
-  <div class="datetime-card" onclick="abrirSelectorFecha()">  
+
+<div style="display:flex; gap:10px; align-items:stretch;">
+
+  <!-- BOTÓN HOY -->
+  <button onclick="seleccionarHoy()" style="
+    flex:1;
+    border:none;
+    border-radius:14px;
+    background: linear-gradient(135deg, #ffe0b2, #ffcc80);
+    color:#e65100;
+    font-weight:700;
+    cursor:pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  ">
+    Hoy
+  </button>
+
+  <!-- BOTÓN FECHA (más chico) -->
+  <div class="datetime-card" 
+       onclick="abrirSelectorFecha()" 
+       style="flex:1.2;">
+       
+    <div style="font-size: 1.2rem;">🕐</div>  
+    <div class="datetime-text">  
+      <div class="datetime-label">Cuándo</div>  
+      <div class="datetime-value" id="textoFecha">Mañana, 8:00 AM</div>  
+    </div>  
+    <div class="location-arrow">›</div>  
+    <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">  
+
+  </div>
+
+</div>
     <div style="font-size: 1.2rem;">🕐</div>  
     <div class="datetime-text">  
       <div class="datetime-label">Cuándo</div>  
@@ -1096,6 +1081,19 @@ function cargarEstadoLocal() {
   3000
 );
 
+}
+function seleccionarHoy() {
+  const ahora = new Date();
+
+  document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+  actualizarTextoFecha();
+
+  notifSystem.show(
+    'Fecha actual',
+    'Se seleccionó la hora actual',
+    'success',
+    2500
+  );
 }
 
 // ==========================================  
