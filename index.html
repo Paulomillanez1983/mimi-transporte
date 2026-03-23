@@ -841,6 +841,24 @@ body {
 .modo-btn.inactivo {
   opacity: 0.5;
 }
+@keyframes pulsoUber {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
+  }
+  70% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 10px rgba(255, 152, 0, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
+  }
+}
+
+.modo-btn.uber-activo {
+  animation: pulsoUber 2s infinite;
+}
 
 
 </style>
@@ -1092,20 +1110,23 @@ function seleccionarHoy() {
   modoTiempo = 'ahora';
 
   const ahora = new Date();
+  const btn = document.getElementById('btnHoy');
 
-  // Guardamos en el input oculto
   document.getElementById('fechaHora').value = formatearFechaInput(ahora);
 
-  // 👉 TEXTO TIPO UBER
   const hora = ahora.toLocaleTimeString('es-AR', {
     hour: '2-digit',
     minute: '2-digit'
   });
 
-  document.getElementById('btnHoy').innerHTML = `🕒 Ahora ${hora}`;
+  btn.textContent = `🕒 Ahora ${hora}`;
 
   activarBoton('btnHoy');
   desactivarBoton('btnProgramado');
+
+  // 🔥 EFECTO UBER
+  btn.classList.add('uber-activo');
+  document.getElementById('btnProgramado').classList.remove('uber-activo');
 
   notifSystem.show(
     'Modo inmediato',
@@ -1119,6 +1140,11 @@ function setModo(modo) {
 
   const botones = document.querySelectorAll('.modo-btn');
   botones.forEach(btn => btn.classList.remove('activo'));
+if (modo === 'ahora') {
+  document.getElementById('btnHoy').classList.add('uber-activo');
+} else {
+  document.getElementById('btnHoy').classList.remove('uber-activo');
+}
 
   if (modo === 'ahora') {
     botones[0].classList.add('activo');
@@ -1255,7 +1281,12 @@ setInterval(() => {
       minute: '2-digit'
     });
 
-    btn.innerHTML = `🕒 Ahora ${hora}`;
+    btn.textContent = `🕒 Ahora ${hora}`;
+
+    // 🔥 mini pulso cada minuto
+    btn.classList.remove('uber-activo');
+    void btn.offsetWidth; // reinicia animación
+    btn.classList.add('uber-activo');
 
     setTimeout(() => {
       btn.classList.remove('actualizando');
