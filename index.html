@@ -1,47 +1,46 @@
-<!DOCTYPE html>  <html lang="es">  
-<head>  
-<meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
-<meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">  
-<title>MIMI Transporte Escolar</title>  <!-- Open Graph -->  <meta property="og:title" content="MIMI Transporte Escolar">  
-<meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">  
-<meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">  
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">
+<title>MIMI Transporte Escolar</title>
+<meta property="og:title" content="MIMI Transporte Escolar">
+<meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
+<meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
   
-  <style>  
-:root {  
-  --azul-oscuro: #1e3c72;  
-  --azul-primario: #1565c0;  
-  --azul-claro: #42a5f5;  
-  --verde-wa: #25D366;  
-  --verde-oscuro: #128c7e;  
-  --rosa: #e91e63;  
-  --naranja: #ff9800;  
-  --gris-fondo: #f5f7fa;  
-  --blanco: #ffffff;  
-  --sombra: 0 4px 20px rgba(0,0,0,0.08);  
-  --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);  
-  --exito: #4caf50;  
-  --info: #2196f3; 
+<style>
+:root {
+  --azul-oscuro: #1e3c72;
+  --azul-primario: #1565c0;
+  --azul-claro: #42a5f5;
+  --verde-wa: #25D366;
+  --verde-oscuro: #128c7e;
+  --rosa: #e91e63;
+  --naranja: #ff9800;
+  --gris-fondo: #f5f7fa;
+  --blanco: #ffffff;
+  --sombra: 0 4px 20px rgba(0,0,0,0.08);
+  --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);
+  --exito: #4caf50;
+  --info: #2196f3;
+}
 
-}  
-  
-* {  
-  margin: 0;  
-  padding: 0;  
-  box-sizing: border-box;  
-  -webkit-tap-highlight-color: transparent;  
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;  
-}  
-  
-body {  
-  background: var(--gris-fondo);  
-  min-height: 100vh;  
-  padding-bottom: 30px;  
-}  
-    /* ==========================================
-   TRUST SECTION
-   ========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+  background: var(--gris-fondo);
+  min-height: 100vh;
+  padding-bottom: 30px;
+}
+
 .trust-section {
   margin: 20px 0;
   display: flex;
@@ -49,7 +48,6 @@ body {
   gap: 15px;
 }
 
-/* Badge */
 .trust-badge {
   background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
   color: #2e7d32;
@@ -60,7 +58,6 @@ body {
   font-size: 0.9rem;
 }
 
-/* Driver */
 .driver-card {
   display: flex;
   align-items: center;
@@ -88,7 +85,6 @@ body {
   color: #666;
 }
 
-/* Reviews */
 .reviews {
   display: flex;
   flex-direction: column;
@@ -119,239 +115,230 @@ body {
   margin-top: 4px;
 }
 
-/* ==========================================  
-   HEADER  
-   ========================================== */  
-.header {  
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);  
-  padding: 20px 20px 40px 20px;  
-  position: relative;  
-  overflow: visible;  
-  border-bottom-left-radius: 25px;  
-  border-bottom-right-radius: 25px;  
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);  
-  margin-bottom: 40px;  
-}  
-  
-.header-content {  
-  display: flex;  
-  align-items: center;  
-  justify-content: space-between;  
-  max-width: 600px;  
-  margin: 0 auto;  
-  position: relative;  
-  z-index: 2;  
-  padding: 0 10px;  
-}  
-  
-.vehicle-section {  
-  display: flex;  
-  align-items: center;  
-  gap: 12px;  
-  position: relative;  
-}  
-  
-.vehicle-img {  
-  width: 160px;  
-  height: auto;  
-  object-fit: contain;  
-  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));  
-  position: absolute;  
-  left: -5px;  
-  bottom: -185px;  
-  z-index: 10;  
-  content: url('https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png');  
-}  
-  
-.logo-section {  
-  color: white;  
-  text-align: center;  
-  flex: 1;  
-  display: flex;  
-  flex-direction: column;  
-  align-items: center;  
-  justify-content: center;  
-}  
-  
-.logo-title {  
-  font-size: 1.8rem;  
-  font-weight: 800;  
-  letter-spacing: 1px;  
-  line-height: 1;  
-}  
-  
-.logo-subtitle {  
-  font-size: 0.75rem;  
-  opacity: 0.9;  
-  font-weight: 500;  
-  letter-spacing: 1.5px;  
-  text-transform: uppercase;  
-}  
-  
-.header-icons {  
-  display: flex;  
-  align-items: center;  
-  gap: 10px;  
-  z-index: 2;  
-}  
-  
-.shield-icon {  
-  width: 40px;  
-  height: 40px;  
-  background: rgba(255,255,255,0.15);  
-  border: 2px solid rgba(255,255,255,0.4);  
-  border-radius: 10px;  
-  display: flex;  
-  align-items: center;  
-  justify-content: center;  
-  font-size: 1.3rem;  
-  color: #4caf50;  
-  font-weight: bold;  
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);  
-}  
-  
-/* ==========================================  
-   TOAST NOTIFICATIONS CONTEXTUALES  
-   ========================================== */  
-.toast-container {  
-  position: fixed;  
-  top: 20px;  
-  right: 20px;  
-  left: 20px;  
-  z-index: 100000;  
-  display: flex;  
-  flex-direction: column;  
-  gap: 10px;  
-  max-width: 400px;  
-  margin: 0 auto;  
-  pointer-events: none;  
-}  
-  
-.toast {  
-  background: white;  
-  border-radius: 16px;  
-  padding: 16px 20px;  
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);  
-  display: flex;  
-  align-items: center;  
-  gap: 12px;  
-  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);  
-  border-left: 4px solid var(--azul-primario);  
-  pointer-events: all;  
-  position: relative;  
-}  
-  
-.toast.success { border-left-color: var(--exito); }  
-.toast.info { border-left-color: var(--info); }  
-.toast.warning { border-left-color: var(--naranja); }  
-.toast.error { border-left-color: #f44336; }  
-  
-.toast-icon {  
-  font-size: 1.4rem;  
-  flex-shrink: 0;  
-}  
-  
-.toast-content {  
-  flex: 1;  
-}  
-  
-.toast-title {  
-  font-weight: 700;  
-  color: #1a1a1a;  
-  font-size: 0.9rem;  
-  margin-bottom: 2px;  
-}  
-  
-.toast-message {  
-  color: #666;  
-  font-size: 0.85rem;  
-  line-height: 1.3;  
-}  
-  
-.toast-close {  
-  background: none;  
-  border: none;  
-  color: #999;  
-  cursor: pointer;  
-  font-size: 1.2rem;  
-  padding: 4px;  
-  line-height: 1;  
-  transition: color 0.2s;  
-}  
-  
-.toast-close:hover {  
-  color: #333;  
-}  
-  
-.toast-progress {  
-  position: absolute;  
-  bottom: 0;  
-  left: 0;  
-  height: 3px;  
-  background: var(--azul-claro);  
-  border-radius: 0 0 0 16px;  
-  animation: progress 4s linear forwards;  
-}  
-  
-.toast.success .toast-progress { background: var(--exito); }  
-.toast.info .toast-progress { background: var(--info); }  
-.toast.warning .toast-progress { background: var(--naranja); }  
-.toast.error .toast-progress { background: #f44336; }  
-  
-@keyframes slideInDown {  
-  from { opacity: 0; transform: translateY(-10px); }  
-  to { opacity: 1; transform: translateY(0); }  
-}  
-  
-@keyframes slideOutUp {  
-  to { opacity: 0; transform: translateY(-10px); }  
-}  
-  
-@keyframes progress {  
-  from { width: 100%; }  
-  to { width: 0%; }  
-}  
-  
-/* ==========================================  
-   RESTO DE ESTILOS  
-   ========================================== */  
-.container {  
-  max-width: 600px;  
-  margin: 0 auto;  
-  padding: 0 20px;  
-}  
-  
-.hero-text {  
-  text-align: center;  
-  padding: 25px 20px 20px;  
-}  
-  
-.hero-title {  
-  font-size: 1.6rem;  
-  color: #1a1a1a;  
-  font-weight: 800;  
-  margin-bottom: 6px;  
-}  
-  
-.hero-subtitle {  
-  color: #666;  
-  font-size: 1rem;  
-}  
-  
-.main-card {  
-  background: white;  
-  border-radius: 20px;  
-  padding: 20px;  
-  box-shadow: var(--sombra);  
-  margin-bottom: 20px;  
-  position: relative;  
-}  
-  
-.location-input-group {  
-  margin-bottom: 12px;  
-  position: relative;  
-}  
-  
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 20px 20px 40px 20px;
+  position: relative;
+  overflow: visible;
+  border-bottom-left-radius: 25px;
+  border-bottom-right-radius: 25px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  margin-bottom: 40px;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  padding: 0 10px;
+}
+
+.vehicle-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.vehicle-img {
+  width: 160px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+  position: absolute;
+  left: -5px;
+  bottom: -185px;
+  z-index: 10;
+  content: url('https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png');
+}
+
+.logo-section {
+  color: white;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.logo-subtitle {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+}
+
+.shield-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #4caf50;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  left: 20px;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+.toast {
+  background: white;
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 4px solid var(--azul-primario);
+  pointer-events: all;
+  position: relative;
+}
+
+.toast.success { border-left-color: var(--exito); }
+.toast.info { border-left-color: var(--info); }
+.toast.warning { border-left-color: var(--naranja); }
+.toast.error { border-left-color: #f44336; }
+
+.toast-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+}
+
+.toast-message {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.toast-close:hover {
+  color: #333;
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--azul-claro);
+  border-radius: 0 0 0 16px;
+  animation: progress 4s linear forwards;
+}
+
+.toast.success .toast-progress { background: var(--exito); }
+.toast.info .toast-progress { background: var(--info); }
+.toast.warning .toast-progress { background: var(--naranja); }
+.toast.error .toast-progress { background: #f44336; }
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideOutUp {
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+@keyframes progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.hero-text {
+  text-align: center;
+  padding: 25px 20px 20px;
+}
+
+.hero-title {
+  font-size: 1.6rem;
+  color: #1a1a1a;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.hero-subtitle {
+  color: #666;
+  font-size: 1rem;
+}
+
+.main-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: var(--sombra);
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.location-input-group {
+  margin-bottom: 12px;
+  position: relative;
+}
+
 .location-card {
   display: flex;
   align-items: center;
@@ -364,6 +351,7 @@ body {
   position: relative;
   overflow: hidden;
 }
+
 .location-card::after {
   content: '';
   position: absolute;
@@ -383,7 +371,6 @@ body {
   transform: scale(0.97);
 }
 
-/* ✨ Mejora visual input activo */
 .location-card:focus-within {
   background: white;
   border-color: var(--azul-claro);
@@ -393,12 +380,17 @@ body {
   transform: scale(1.01);
 }
 
-/* ✨ Cursor más claro */
 .location-input {
   cursor: text;
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: #1a1a1a;
+  font-weight: 600;
+  outline: none;
 }
 
-/* ✨ Placeholder más visible */
 .location-input::placeholder {
   color: #bbb;
   font-weight: 400;
@@ -408,11 +400,11 @@ body {
 .location-input:focus::placeholder {
   opacity: 0.5;
 }
-  
+
 .location-icon {
   width: 42px;
   height: 42px;
-  border-radius: 14px; /* 🔥 menos circular, más moderno */
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -421,20 +413,18 @@ body {
   flex-shrink: 0;
   transition: all 0.3s ease;
   position: relative;
-
-  /* ✨ profundidad */
   box-shadow: 
     0 4px 10px rgba(0,0,0,0.12),
     inset 0 1px 0 rgba(255,255,255,0.2);
 }
-    /* cuando el usuario interactúa */
+
 .location-card:focus-within .location-icon {
   transform: scale(1.15) rotate(-2deg);
-
   box-shadow: 
     0 6px 16px rgba(0,0,0,0.2),
     0 0 0 4px rgba(66,165,245,0.15);
 }
+
 @keyframes pulseIcon {
   0% { transform: scale(1); }
   50% { transform: scale(1.12); }
@@ -445,7 +435,6 @@ body {
   animation: pulseIcon 1s ease;
 }
 
-  
 .location-icon.origin {
   background: linear-gradient(135deg, #43a047, #2e7d32);
   color: white;
@@ -455,30 +444,18 @@ body {
   background: linear-gradient(135deg, #e53935, #b71c1c);
   color: white;
 }
-  
-.location-text { flex: 1; min-width: 0; }  
-  
-.location-label {  
-  font-size: 0.75rem;  
-  color: #888;  
-  font-weight: 700;  
-  text-transform: uppercase;  
-  margin-bottom: 3px;  
-  letter-spacing: 0.5px;  
-}  
-  
-.location-input {  
-  width: 100%;  
-  border: none;  
-  background: transparent;  
-  font-size: 0.95rem;  
-  color: #1a1a1a;  
-  font-weight: 600;  
-  outline: none;  
-}  
-  
-.location-input::placeholder { color: #aaa; font-weight: 400; }  
-  
+
+.location-text { flex: 1; min-width: 0; }
+
+.location-label {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  letter-spacing: 0.5px;
+}
+
 .location-arrow {
   color: #ccc;
   font-size: 1.2rem;
@@ -490,60 +467,60 @@ body {
   transform: translateX(6px);
   color: var(--azul-claro);
 }
-  
-  
-.datetime-section { margin-top: 15px; }  
-  
-.datetime-header {  
-  display: flex;  
-  align-items: center;  
-  gap: 8px;  
-  margin-bottom: 10px;  
-  color: #555;  
-  font-weight: 600;  
-  font-size: 0.85rem;  
-}  
-  
-.datetime-card {  
-  background: #f8f9fa;  
-  border: 2px solid #e8e8e8;  
-  border-radius: 14px;  
-  padding: 14px;  
-  display: flex;  
-  align-items: center;  
-  gap: 12px;  
-  cursor: pointer;  
-  transition: all 0.3s;  
-}  
-  
-.datetime-card:active {  
-  transform: scale(0.98);  
-}  
-  
-.datetime-text { flex: 1; }  
-  
-.datetime-label {  
-  font-size: 0.75rem;  
-  color: #888;  
-  font-weight: 700;  
-  text-transform: uppercase;  
-  margin-bottom: 2px;  
-}  
-  
-.datetime-value {  
-  font-size: 0.95rem;  
-  color: #1a1a1a;  
-  font-weight: 600;  
-}  
-  
-.datetime-input-hidden {  
-  position: absolute;  
-  opacity: 0;  
-  pointer-events: none;  
-  width: 0;  
-  height: 0;  
-}  
-  .btn-calcular::after {
+
+.datetime-section { margin-top: 15px; }
+
+.datetime-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #555;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.datetime-card {
+  background: #f8f9fa;
+  border: 2px solid #e8e8e8;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.datetime-card:active {
+  transform: scale(0.98);
+}
+
+.datetime-text { flex: 1; }
+
+.datetime-label {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.datetime-value {
+  font-size: 0.95rem;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.datetime-input-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.btn-calcular::after {
   content: '';
   position: absolute;
   top: 0;
@@ -591,7 +568,7 @@ body {
   position: relative;
   overflow: hidden;
 }
-  
+
 .btn-calcular:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 0 10px 25px rgba(21, 101, 192, 0.45);
@@ -601,178 +578,180 @@ body {
   transform: scale(0.96);
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
-  
-.btn-calcular:disabled {  
-  opacity: 0.7;  
-  cursor: not-allowed;  
-  transform: none;  
-}  
-  
-.spinner {  
-  width: 20px;  
-  height: 20px;  
-  border: 3px solid rgba(255,255,255,0.3);  
-  border-top-color: white;  
-  border-radius: 50%;  
-  animation: spin 0.8s linear infinite;  
-  display: inline-block;  
-  vertical-align: middle;  
-}  
-  
-@keyframes spin { to { transform: rotate(360deg); } }  
-  
-.resultado-section {  
-  margin-top: 20px;  
-  padding-top: 20px;  
-  border-top: 2px dashed #e0e0e0;  
-  display: none;  
-  text-align: center;  
-}  
-  
-.resultado-section.visible {   
-  display: block;   
-  animation: fadeInUp 0.5s ease;   
-}  
-  
-@keyframes fadeInUp {  
-  from { opacity: 0; transform: translateY(20px); }  
-  to { opacity: 1; transform: translateY(0); }  
-}  
-  
-.precio-monto {  
-  font-size: 2.5rem;  
-  font-weight: 800;  
-  color: var(--azul-oscuro);  
-  margin-bottom: 6px;  
-}  
-  
-.precio-descripcion {  
-  color: #666;  
-  font-size: 0.9rem;  
-  margin-bottom: 15px;  
-}  
-  
-.btn-whatsapp {  
-  width: 100%;  
-  padding: 16px;  
-  background: linear-gradient(135deg, var(--verde-wa) 0%, var(--verde-oscuro) 100%);  
-  color: white;  
-  border: none;  
-  border-radius: 12px;  
-  font-size: 1rem;  
-  font-weight: 700;  
-  cursor: pointer;  
-  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);  
-  display: flex;  
-  align-items: center;  
-  justify-content: center;  
-  gap: 8px;  
-  text-transform: uppercase;  
-  letter-spacing: 0.5px;  
-  transition: all 0.3s;  
-}  
-  
-.btn-whatsapp:hover {  
-  transform: translateY(-2px);  
-  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);  
-}  
-  
-.error-message {  
-  background: #ffebee;  
-  color: #c62828;  
-  padding: 12px;  
-  border-radius: 10px;  
-  margin-top: 12px;  
-  font-size: 0.85rem;  
-  font-weight: 600;  
-  display: none;  
-  align-items: center;  
-  gap: 8px;  
-  border-left: 4px solid #f44336;  
-}  
-  
-.error-message.visible { display: flex; animation: shake 0.5s; }  
-  
-@keyframes shake {  
-  0%, 100% { transform: translateX(0); }  
-  25% { transform: translateX(-5px); }  
-  75% { transform: translateX(5px); }  
-}  
 
-.features-section {  
-  display: grid;  
-  grid-template-columns: repeat(2, 1fr);  
-  gap: 12px;  
-  margin-top: 15px;  
-}  
-  
-.feature-card {  
-  background: white;  
-  border-radius: 16px;  
-  padding: 20px 12px;  
-  text-align: center;  
-  box-shadow: var(--sombra);  
-  transition: all 0.3s;  
-}  
-  
-.feature-card:hover {  
-  transform: translateY(-4px);  
-  box-shadow: var(--sombra-hover);  
-}  
-  
-.feature-icon {  
-  width: 45px;  
-  height: 45px;  
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);  
-  border-radius: 50%;  
-  display: flex;  
-  align-items: center;  
-  justify-content: center;  
-  font-size: 1.3rem;  
-  margin: 0 auto 10px;  
-}  
-  
-.feature-icon.shield {  
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);  
-}  
-  
-.feature-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 3px; }  
-.feature-desc { color: #888; font-size: 0.75rem; }  
-  
-.footer {  
-  text-align: center;  
-  padding: 25px 20px;  
-  color: #666;  
-  font-size: 0.85rem;  
-}  
-  
-.footer-phone {  
-  display: inline-flex;  
-  align-items: center;  
-  gap: 6px;  
-  background: white;  
-  padding: 10px 20px;  
-  border-radius: 50px;  
-  font-weight: 700;  
-  color: var(--azul-primario);  
-  margin: 12px 0;  
-  box-shadow: var(--sombra);  
-}  
-  
-@media (max-width: 480px) {  
-  .hero-title { font-size: 1.4rem; }  
-  .precio-monto { font-size: 2rem; }  
-  .features-section { grid-template-columns: 1fr; }  
-  .vehicle-img {   
-    width: 140px;   
-    height: auto;   
-    bottom: -140px;  
-    left: -5px;  
-  }  
-  .logo-section { margin-left: 110px; }  
-  .logo-title { font-size: 1.6rem; }  
-  .header { padding: 15px 15px 35px 15px; }  
-}  
+.btn-calcular:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.resultado-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px dashed #e0e0e0;
+  display: none;
+  text-align: center;
+}
+
+.resultado-section.visible {
+  display: block;
+  animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.precio-monto {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--azul-oscuro);
+  margin-bottom: 6px;
+}
+
+.precio-descripcion {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.btn-whatsapp {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--verde-wa) 0%, var(--verde-oscuro) 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s;
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  border-left: 4px solid #f44336;
+}
+
+.error-message.visible { display: flex; animation: shake 0.5s; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.features-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 12px;
+  text-align: center;
+  box-shadow: var(--sombra);
+  transition: all 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sombra-hover);
+}
+
+.feature-icon {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin: 0 auto 10px;
+}
+
+.feature-icon.shield {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
+.feature-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 3px; }
+.feature-desc { color: #888; font-size: 0.75rem; }
+
+.footer {
+  text-align: center;
+  padding: 25px 20px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.footer-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-weight: 700;
+  color: var(--azul-primario);
+  margin: 12px 0;
+  box-shadow: var(--sombra);
+  text-decoration: none;
+}
+
+@media (max-width: 480px) {
+  .hero-title { font-size: 1.4rem; }
+  .precio-monto { font-size: 2rem; }
+  .features-section { grid-template-columns: 1fr; }
+  .vehicle-img {
+    width: 140px;
+    height: auto;
+    bottom: -140px;
+    left: -5px;
+  }
+  .logo-section { margin-left: 110px; }
+  .logo-title { font-size: 1.6rem; }
+  .header { padding: 15px 15px 35px 15px; }
+}
+
 .btn-mapa {
   width: 100%;
   padding: 14px 16px;
@@ -786,6 +765,8 @@ body {
   cursor: pointer;
   box-shadow: 0 6px 20px rgba(21, 101, 192, 0.25);
   transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn-mapa:active {
@@ -825,12 +806,7 @@ body {
 .btn-mapa:hover .btn-mapa-arrow {
   transform: translateX(4px);
 }
-.btn-mapa {
-  position: relative;
-  overflow: hidden;
-}
 
-/* EFECTO BRILLO (tipo app premium) */
 .btn-mapa::after {
   content: '';
   position: absolute;
@@ -847,7 +823,6 @@ body {
   transform: skewX(-20deg);
 }
 
-/* Animación al hover */
 .btn-mapa:hover::after {
   animation: brillo 0.8s ease;
 }
@@ -857,13 +832,6 @@ body {
     left: 130%;
   }
 }
-
-/* efecto presionado tipo app */
-.btn-mapa:active {
-  transform: scale(0.96);
-  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-}
-
 
 .modo-btn {
   flex: 1;
@@ -876,26 +844,21 @@ body {
   color: #555;
   transition: all 0.25s ease;
 }
-.modo-btn {
-  transition: all 0.25s ease, transform 0.2s ease;
-}
 
-/* ✨ animación cuando cambia */
 .modo-btn.actualizando {
   transform: scale(1.05);
 }
 
-/* ACTIVO (naranja pastel) */
 .modo-btn.activo {
   background: #ffe0b2;
   color: #e65100;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-/* INACTIVO (apagado) */
 .modo-btn.inactivo {
   opacity: 0.5;
 }
+
 @keyframes pulsoUber {
   0% {
     transform: scale(1);
@@ -914,975 +877,763 @@ body {
 .modo-btn.uber-activo {
   animation: pulsoUber 2s infinite;
 }
-
-
 </style>
-<script>
-  let modoTiempo = 'ahora';
-
-function cargarGoogleMaps() {
-  if (window.google && google.maps) return;
-window.gm_authFailure = function() {
-  notifSystem.show(
-    'Error de Maps',
-    'No se pudo autenticar Google Maps. Podés escribir la dirección manualmente.',
-    'error',
-    6000
-  );
-};
-
-  const script = document.createElement('script');
-
-  script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places&callback=inicializarAutocomplete";
-  script.async = true;
-  script.defer = true;
-
-  // ✅ LOG CUANDO CARGA BIEN
-  script.onload = () => {
-    console.log("✅ Google Maps cargado correctamente");
-  };
-
-  // ❌ ERROR SI FALLA
-  script.onerror = () => {
-    notifSystem.show(
-      'Modo manual',
-      'No se pudo cargar Google Maps. Podés escribir la dirección manualmente.',
-      'warning',
-      6000
-    );
-  };
-
-  document.head.appendChild(script);
-  }
-
-
-
-</script>
-</head>  
-<body> 
+</head>
+<body>
   <div id="loadingGlobal" style="
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-">
-  <div style="
-    background: white;
-    padding: 20px 30px;
-    border-radius: 12px;
-    font-weight: bold;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
   ">
-    Calculando...
+    <div style="
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      font-weight: bold;
+    ">
+      Calculando...
+    </div>
   </div>
-</div>
 
-  <div class="toast-container" id="toastContainer"></div>  <header class="header">  
-  <div class="header-content">  
-    <div class="vehicle-section">  
-      <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png"   
-           alt="Jeep MIMI"   
-           class="vehicle-img"  
-           onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">  
-    </div>  
-    <div class="logo-section">  
-      <div class="logo-title">MIMI</div>  
-      <div class="logo-subtitle">Transporte Escolar</div>  
-    </div>  
-    <div class="header-icons">  
-      <div class="shield-icon">✓</div>  
-    </div>  
-  </div>  
-</header>  <div class="container">  
-  <div class="hero-text">  
-    <h1 class="hero-title">¡Viaje Seguro para tus Niños!</h1>  
-    <p class="hero-subtitle">Pagá solo por los viajes que uses</p>  
-  </div>    <div class="main-card">  
-    <div class="location-input-group">  
-      <div class="location-card" onclick="document.getElementById('origen').focus()">  
-        <div class="location-icon origin">📍</div>  
-        <div class="location-text">  
-          <div class="location-label">Origen</div>  
-          <input type="text"   
-                 id="origen"   
-                 class="location-input"   
-                 placeholder="Av. Santa Fe 1234, Córdoba"  
-                 autocomplete="off">  
-        </div>  
-        <div class="location-arrow">›</div>  
-      </div>  
-    </div>  <div class="location-input-group">  
-  <div class="location-card" onclick="document.getElementById('destino').focus()">  
-    <div class="location-icon destiny">📍</div>  
-    <div class="location-text">  
-      <div class="location-label">Destino</div>  
-      <input type="text"   
-             id="destino"   
-             class="location-input"   
-             placeholder="Escuela Primaria, Villa Allende"  
-             autocomplete="off">  
-    </div>  
-    <div class="location-arrow">›</div>  
-  </div>  
-</div>  
+  <div class="toast-container" id="toastContainer"></div>
+  
+  <header class="header">
+    <div class="header-content">
+      <div class="vehicle-section">
+        <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png" 
+             alt="Jeep MIMI" 
+             class="vehicle-img"
+             onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
+      </div>
+      <div class="logo-section">
+        <div class="logo-title">MIMI</div>
+        <div class="logo-subtitle">Transporte Escolar</div>
+      </div>
+      <div class="header-icons">
+        <div class="shield-icon">✓</div>
+      </div>
+    </div>
+  </header>
+  
+  <div class="container">
+    <div class="hero-text">
+      <h1 class="hero-title">¡Viaje Seguro para tus Niños!</h1>
+      <p class="hero-subtitle">Pagá solo por los viajes que uses</p>
+    </div>
+    
+    <div class="main-card">
+      <div class="location-input-group">
+        <div class="location-card" onclick="document.getElementById('origen').focus()">
+          <div class="location-icon origin">📍</div>
+          <div class="location-text">
+            <div class="location-label">Origen</div>
+            <input type="text" 
+                   id="origen" 
+                   class="location-input" 
+                   placeholder="Av. Santa Fe 1234, Córdoba"
+                   autocomplete="off">
+          </div>
+          <div class="location-arrow">›</div>
+        </div>
+      </div>
+      
+      <div class="location-input-group">
+        <div class="location-card" onclick="document.getElementById('destino').focus()">
+          <div class="location-icon destiny">📍</div>
+          <div class="location-text">
+            <div class="location-label">Destino</div>
+            <input type="text" 
+                   id="destino" 
+                   class="location-input" 
+                   placeholder="Escuela Primaria, Villa Allende"
+                   autocomplete="off">
+          </div>
+          <div class="location-arrow">›</div>
+        </div>
+      </div>
 
-<div class="datetime-section">  
-<div class="datetime-header">
-  <span>📅 Fecha y Hora</span>
-</div>
+      <div class="datetime-section">
+        <div class="datetime-header">
+          <span>📅 Fecha y Hora</span>
+        </div>
+        <div style="display:flex; gap:10px; align-items:stretch;">
+          <div style="display:flex; gap:10px; width:100%;">
+            <button id="btnHoy" class="modo-btn activo" onclick="seleccionarHoy()">
+              🕒 Ahora
+            </button>
+            <button id="btnProgramado" class="modo-btn inactivo" onclick="setModo('programado')">
+              Programado
+            </button>
+          </div>
+          <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
+        </div>
+      </div>
 
-<div style="display:flex; gap:10px; align-items:stretch;">
+      <div class="error-message" id="errorMsg">
+        <span>⚠️</span>
+        <span id="errorText"></span>
+      </div>
 
-<div style="display:flex; gap:10px; width:100%;">
+      <button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">
+        <span>Calcular Tarifa</span>
+      </button>
 
-  <!-- BOTÓN AHORA -->
-<button id="btnHoy" class="modo-btn activo" onclick="seleccionarHoy()">
-  🕒 Ahora
-</button>
-
-  <!-- BOTÓN PROGRAMADO -->
-  <button id="btnProgramado" class="modo-btn inactivo" onclick="setModo('programado')">
-    Programado
-  </button>
-
-</div>
-
-
-<!-- INPUT OCULTO (SE MANTIENE) -->
-<input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
-
-
-  </div>  
-</div>  
-
-<div class="error-message" id="errorMsg">  
-  <span>⚠️</span>  
-  <span id="errorText"></span>  
-</div>  
-
-<button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">  
-  <span>Calcular Tarifa</span>  
-</button>  
-
-<div class="resultado-section" id="resultado">  
-  <div class="precio-monto">$<span id="precioValor">0</span> ARS</div>  
-  <div class="precio-descripcion">Pago por viaje sin compromiso mensual</div>  
-  <button class="btn-whatsapp" onclick="reservarWhatsApp()">  
-    <span>💬</span>  
-    <span>Reservar Ahora</span>  
-  </button>
-
-<div id="mapaRuta" style="margin-top: 20px; display: none;"></div>
- 
-</div>    
-</div>    
-<!-- =========================
-     BLOQUE CONFIANZA SIMPLE
-========================= -->
-<div style="margin:25px 0;">
-
-  <div style="
-    background:white;
-    border-radius:16px;
-    padding:16px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.06);
-  ">
-
-    <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">
-      Un servicio pensado para familias
+      <div class="resultado-section" id="resultado">
+        <div class="precio-monto">$<span id="precioValor">0</span> ARS</div>
+        <div class="precio-descripcion">Pago por viaje sin compromiso mensual</div>
+        <button class="btn-whatsapp" onclick="reservarWhatsApp()">
+          <span>💬</span>
+          <span>Reservar Ahora</span>
+        </button>
+        <div id="mapaRuta" style="margin-top: 20px; display: none;"></div>
+      </div>
+    </div>
+    
+    <div style="margin:25px 0;">
+      <div style="
+        background:white;
+        border-radius:16px;
+        padding:16px;
+        box-shadow:0 6px 20px rgba(0,0,0,0.06);
+      ">
+        <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">
+          Un servicio pensado para familias
+        </div>
+        <div style="font-size:0.9rem; color:#555; line-height:1.5;">
+          Trabajamos con responsabilidad, puntualidad y mucho cuidado en cada viaje.  
+          Sabemos lo importante que es para vos quién lleva a tu hijo.
+        </div>
+      </div>
     </div>
 
-    <div style="font-size:0.9rem; color:#555; line-height:1.5;">
-      Trabajamos con responsabilidad, puntualidad y mucho cuidado en cada viaje.  
-      Sabemos lo importante que es para vos quién lleva a tu hijo.
+    <div class="footer">
+      <div style="margin-bottom:10px;">
+        📍 Villa Allende y zona norte de Córdoba
+      </div>
+      <a href="tel:+543517014863" class="footer-phone">
+        📞 351 701 4863
+      </a>
+      <div style="opacity:0.6; font-size:0.75rem; margin-top:10px;">
+        © 2026 MIMI Transporte Infantil
+      </div>
     </div>
 
+    <div style="text-align:center; margin-top:10px; font-size:0.85rem; color:#666;">
+      Más de 20 familias ya confían en nosotros
+      <div style="font-size:0.8rem; opacity:0.6;">
+        Atención personalizada · Cupos limitados
+      </div>
+    </div>
   </div>
 
-</div>
+  <script>
+    // ==========================================
+    // CONFIGURACIÓN - REEMPLAZAR CON TU URL
+    // ==========================================
+    // ⚠️ IMPORTANTE: Reemplazar esta URL con la de tu deployment de Google Apps Script
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJCfPMFDPAh8sEYwLSbmLyFl-FIZXpytvQUGZS6qeMTTsm4LqJdqAeFNgu7Ly4wuY-/exec';
+    
+    let modoTiempo = 'ahora';
+    let autocompleteOrigen, autocompleteDestino;
+    let lugarOrigen = null;
+    let lugarDestino = null;
+    let datosCotizacion = null;
+    let isCalculating = false;
+    let sessionToken;
 
-<!-- =========================
-     FOOTER SIMPLE
-========================= -->
-<div class="footer">  
+    // ==========================================
+    // SISTEMA DE NOTIFICACIONES
+    // ==========================================
+    class NotificationSystem {
+      constructor() {
+        this.container = document.getElementById('toastContainer');
+        this.activeToasts = [];
+      }
 
-  <div style="margin-bottom:10px;">
-    📍 Villa Allende y zona norte de Córdoba
-  </div>
+      show(title, message, type = 'info', duration = 4000) {
+        this.activeToasts = this.activeToasts.filter(t => {
+          if (t.type === type && t.title === title) {
+            t.element.remove();
+            return false;
+          }
+          return true;
+        });
 
-  <a href="tel:+543517014863" class="footer-phone">
-    📞 351 701 4863
-  </a>
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        const icons = {
+          success: '✅',
+          info: '⏳',
+          warning: '⚠️',
+          error: '❌'
+        };
+        
+        toast.innerHTML = `
+          <div class="toast-icon">${icons[type]}</div>
+          <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+          </div>
+          <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+          <div class="toast-progress"></div>
+        `;
+        
+        this.container.appendChild(toast);
+        
+        const toastObj = { element: toast, type, title };
+        this.activeToasts.push(toastObj);
+        
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.style.animation = 'slideOutUp 0.3s ease forwards';
+            setTimeout(() => {
+              toast.remove();
+              this.activeToasts = this.activeToasts.filter(t => t.element !== toast);
+            }, 300);
+          }
+        }, duration);
+        
+        return toast;
+      }
+    }
 
-  <div style="opacity:0.6; font-size:0.75rem; margin-top:10px;">  
-    © 2026 MIMI Transporte Infantil  
-  </div>  
+    const notifSystem = new NotificationSystem();
 
-</div>
-
-<!-- =========================
-     PRUEBA SOCIAL NATURAL
-========================= -->
-<div style="text-align:center; margin-top:10px; font-size:0.85rem; color:#666;">
-  Más de 20 familias ya confían en nosotros
-  <div style="font-size:0.8rem; opacity:0.6;">
-  Atención personalizada · Cupos limitados
-</div>
-
-</div>
-  <script>  
+    // ==========================================
+    // LOCAL STORAGE
+    // ==========================================
     function guardarEstadoLocal() {
-  const estado = {
-    origen: document.getElementById('origen').value,
-    destino: document.getElementById('destino').value,
-    fecha: document.getElementById('fechaHora').value
-  };
-  localStorage.setItem('mimi_estado', JSON.stringify(estado));
-}
+      const estado = {
+        origen: document.getElementById('origen').value,
+        destino: document.getElementById('destino').value,
+        fecha: document.getElementById('fechaHora').value,
+        modo: modoTiempo
+      };
+      localStorage.setItem('mimi_estado', JSON.stringify(estado));
+    }
 
-function cargarEstadoLocal() {
-  const data = localStorage.getItem('mimi_estado');
-  if (!data) return;
+    function cargarEstadoLocal() {
+      const data = localStorage.getItem('mimi_estado');
+      if (!data) return;
 
-  const estado = JSON.parse(data);
+      try {
+        const estado = JSON.parse(data);
+        if (estado.origen) document.getElementById('origen').value = estado.origen;
+        if (estado.destino) document.getElementById('destino').value = estado.destino;
+        if (estado.fecha) document.getElementById('fechaHora').value = estado.fecha;
+        
+        if (estado.modo === 'programado') {
+          setModo('programado');
+        } else {
+          seleccionarHoy();
+        }
+        
+        actualizarTextoFecha();
+      } catch (e) {
+        console.error('Error cargando estado:', e);
+      }
+    }
 
-  if (estado.origen) document.getElementById('origen').value = estado.origen;
-  if (estado.destino) document.getElementById('destino').value = estado.destino;
-  if (estado.fecha) document.getElementById('fechaHora').value = estado.fecha;
-  if (estado.modo === 'programado') {
-  setModo('programado');
-} else {
-  seleccionarHoy();
-}
+    // ==========================================
+    // MANEJO DE FECHA/HORA
+    // ==========================================
+    function formatearFechaInput(fecha) {
+      const pad = (n) => n < 10 ? '0' + n : n;
+      return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
+    }
 
-  actualizarTextoFecha();
-  notifSystem.show(
-  'Datos recuperados',
-  'Restauramos tu última búsqueda',
-  'info',
-  3000
-);
+    function formatearTextoBoton(fecha) {
+      const hoy = new Date();
+      const manana = new Date();
+      manana.setDate(hoy.getDate() + 1);
 
-}
-function seleccionarHoy() {
-modoTiempo = 'ahora';
+      let dia = '';
+      if (fecha.toDateString() === hoy.toDateString()) {
+        dia = 'Hoy';
+      } else if (fecha.toDateString() === manana.toDateString()) {
+        dia = 'Mañana';
+      } else {
+        dia = fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+      }
 
-  const ahora = new Date();
-  const btn = document.getElementById('btnHoy');
+      const hora = fecha.toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
-  document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+      return `${dia} ${hora}`;
+    }
 
-  const hora = ahora.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+    function seleccionarHoy() {
+      modoTiempo = 'ahora';
+      const ahora = new Date();
+      const btn = document.getElementById('btnHoy');
 
-  btn.textContent = `🕒 Ahora ${hora}`;
+      document.getElementById('fechaHora').value = formatearFechaInput(ahora);
 
-  activarBoton('btnHoy');
-  desactivarBoton('btnProgramado');
+      const hora = ahora.toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
-  // 🔥 EFECTO UBER
-  btn.classList.add('uber-activo');
-  document.getElementById('btnProgramado').classList.remove('uber-activo');
+      btn.textContent = `🕒 Ahora ${hora}`;
+      activarBoton('btnHoy');
+      desactivarBoton('btnProgramado');
+      btn.classList.add('uber-activo');
+      document.getElementById('btnProgramado').classList.remove('uber-activo');
 
-  notifSystem.show(
-    'Modo inmediato',
-    'Se usará la hora actual',
-    'success',
-    2000
-  );
-}
-function setModo(modo) {
-  modoTiempo = modo;
-
-  const botones = document.querySelectorAll('.modo-btn');
-  botones.forEach(btn => btn.classList.remove('activo'));
-if (modo === 'ahora') {
-  document.getElementById('btnHoy').classList.add('uber-activo');
-} else {
-  document.getElementById('btnHoy').classList.remove('uber-activo');
-}
-
-  if (modo === 'ahora') {
-    botones[0].classList.add('activo');
-
-    const ahora = new Date();
-    document.getElementById('fechaHora').value = formatearFechaInput(ahora);
-
-
-    notifSystem.show(
-      'Modo inmediato',
-      'Se usará la hora actual',
-      'success',
-      2000
-    );
-
-} else {
-  botones[1].classList.add('activo');
-
-  // 👉 Reset texto antes de elegir fecha
-  document.getElementById('btnProgramado').textContent = 'Elegir fecha';
-
-  abrirSelectorFecha();
-}
-}
-
-// ==========================================  
-// SISTEMA DE NOTIFICACIONES CONTEXTUALES  
-// ==========================================  
-  
-class NotificationSystem {  
-  constructor() {  
-    this.container = document.getElementById('toastContainer');  
-    this.activeToasts = [];  
-  }  
-  
-  show(title, message, type = 'info', duration = 4000) {  
-    // Remover toast anterior del mismo tipo para evitar spam  
-    this.activeToasts = this.activeToasts.filter(t => {  
-      if (t.type === type && t.title === title) {  
-        t.element.remove();  
-        return false;  
-      }  
-      return true;  
-    });  
-  
-    const toast = document.createElement('div');  
-    toast.className = `toast ${type}`;  
-      
-    const icons = {  
-      success: '✅',  
-      info: '⏳',  
-      warning: '⚠️',  
-      error: '❌'  
-    };  
-      
-    toast.innerHTML = `  
-      <div class="toast-icon">${icons[type]}</div>  
-      <div class="toast-content">  
-        <div class="toast-title">${title}</div>  
-        <div class="toast-message">${message}</div>  
-      </div>  
-      <button class="toast-close" onclick="this.parentElement.remove()">×</button>  
-      <div class="toast-progress"></div>  
-    `;  
-      
-    this.container.appendChild(toast);  
-      
-    const toastObj = { element: toast, type, title };  
-    this.activeToasts.push(toastObj);  
-      
-    // Auto-remove  
-    setTimeout(() => {  
-      if (toast.parentElement) {  
-        toast.style.animation = 'slideOutUp 0.3s ease forwards';  
-        setTimeout(() => {  
-          toast.remove();  
-          this.activeToasts = this.activeToasts.filter(t => t.element !== toast);  
-        }, 300);  
-      }  
-    }, duration);  
-      
-    return toast;  
-  }  
-  
-  clearAll() {  
-    this.activeToasts.forEach(t => t.element.remove());  
-    this.activeToasts = [];  
-  }  
-}  
-  
-const notifSystem = new NotificationSystem();  
-  
-// ==========================================  
-// GOOGLE PLACES AUTOCOMPLETE  
-// ==========================================  
-  
-let autocompleteOrigen, autocompleteDestino;  
-let lugarOrigen = null;  
-let lugarDestino = null;  
-let datosCotizacion = null;  
-let isCalculating = false;  
-let sessionToken;
-
-function nuevaSesionAutocomplete() {
-  if (window.google && google.maps && google.maps.places) {
-    sessionToken = new google.maps.places.AutocompleteSessionToken();
-  }
-}
-
-    document.getElementById('origen').addEventListener('input', guardarEstadoLocal);
-document.getElementById('destino').addEventListener('input', guardarEstadoLocal);
-document.getElementById('fechaHora').addEventListener('change', guardarEstadoLocal);
-
-document.addEventListener('DOMContentLoaded', function() {
-  initFecha();
-  cargarEstadoLocal();
-  cargarGoogleMaps();
-
-  // 🔥 Estado inicial correcto
-  seleccionarHoy();
-});
- // ⏱️ Actualiza la hora del botón "Ahora" cada minuto
-setInterval(() => {
-  if (modoTiempo === 'ahora') {
-    const btn = document.getElementById('btnHoy');
-
-    if (!btn) return;
-
-    btn.classList.add('actualizando');
-
-    const ahora = new Date();
-    const hora = ahora.toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    btn.textContent = `🕒 Ahora ${hora}`;
-
-    // 🔥 mini pulso cada minuto
-    btn.classList.remove('uber-activo');
-    void btn.offsetWidth; // reinicia animación
-    btn.classList.add('uber-activo');
-
-    setTimeout(() => {
-      btn.classList.remove('actualizando');
-    }, 200);
-  }
-}, 60000);
- 
-function initFecha() {  
-  const manana = new Date();  
-  manana.setDate(manana.getDate() + 1);  
-  manana.setHours(8, 0, 0, 0);  
-  document.getElementById('fechaHora').value = formatearFechaInput(manana);  
-  actualizarTextoFecha();  
-}  
-  
-function formatearFechaInput(fecha) {  
-  const pad = (n) => n < 10 ? '0' + n : n;  
-  return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;  
-}  
-  
-function actualizarTextoFecha() {
-  const input = document.getElementById('fechaHora');
-  const fecha = new Date(input.value);
-  if (isNaN(fecha.getTime())) return;
-
-  const texto = formatearTextoBoton(fecha);
-
-  // 👉 Si está en modo programado, lo metemos en el botón
-  if (modoTiempo === 'programado') {
-    document.getElementById('btnProgramado').textContent = texto;
-  }
-}
-  
-function abrirSelectorFecha() {  
-  const input = document.getElementById('fechaHora');  
-    
-  if (!input) {  
-    console.warn('No se encontró el input #fechaHora');  
-    notifSystem.show('Error', 'No se pudo abrir el selector de fecha', 'error', 3000);  
-    return;  
-  }  
-  
-  // Establecer mínimo = hoy (ya lo tenés bien)  
-  input.min = new Date().toISOString().slice(0, 16);  
-  
-  // Intentar abrir el picker nativo de forma progresiva  
-  try {  
-    // 1. Método moderno (mejor experiencia en navegadores compatibles)  
-    if (input.showPicker && typeof input.showPicker === 'function') {  
-      input.showPicker();  
-      return;  
-    }  
-  
-    // 2. Fallback: focus + click (funciona en la mayoría de casos móviles)  
-    input.focus();  
-    input.click();  // Esto suele abrir el picker en Android/iOS  
-  
-    // 3. Último recurso: dispatch evento manual (útil en algunos navegadores raros)  
-    if (document.activeElement !== input) {  
-      const event = new Event('click', { bubbles: true, cancelable: true });  
-      input.dispatchEvent(event);  
-    }  
-  } catch (err) {  
-    console.error('Error al intentar abrir el date picker:', err);  
-      
-    // Feedback al usuario (muy importante en móviles)  
-    notifSystem.show(  
-      'Selector no disponible',  
-      'Toca directamente el campo de fecha y hora para seleccionarla',  
-      'info',  
-      5000  
-    );  
-      
-    // Forzamos focus como último recurso  
-    input.focus();  
-  }  
-}  
-  
-function inicializarAutocomplete() {
-  nuevaSesionAutocomplete();
-
-  const opciones = {
-    componentRestrictions: { country: 'ar' },
-    fields: ['formatted_address', 'geometry', 'name'],
-    types: ['geocode', 'establishment']
-  };
-
-  const origenInput = document.getElementById('origen');
-  const destinoInput = document.getElementById('destino');
-
-  autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
-  autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
-
- activarAutocompleteConDelay(origenInput, autocompleteOrigen);
-activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrigen.setOptions({ sessionToken });
-  autocompleteDestino.setOptions({ sessionToken });
-
-  autocompleteOrigen.addListener('place_changed', () => {
-    const place = autocompleteOrigen.getPlace();
-    if (place.formatted_address) {
-      origenInput.value = place.formatted_address;
-      lugarOrigen = place;
       guardarEstadoLocal();
+    }
 
+    function setModo(modo) {
+      modoTiempo = modo;
+      const botones = document.querySelectorAll('.modo-btn');
+      botones.forEach(btn => btn.classList.remove('activo'));
+
+      if (modo === 'ahora') {
+        document.getElementById('btnHoy').classList.add('uber-activo');
+        botones[0].classList.add('activo');
+        const ahora = new Date();
+        document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+      } else {
+        document.getElementById('btnHoy').classList.remove('uber-activo');
+        botones[1].classList.add('activo');
+        document.getElementById('btnProgramado').textContent = 'Elegir fecha';
+        abrirSelectorFecha();
+      }
+      
+      guardarEstadoLocal();
+    }
+
+    function activarBoton(id) {
+      const btn = document.getElementById(id);
+      btn.classList.add('activo');
+      btn.classList.remove('inactivo');
+    }
+
+    function desactivarBoton(id) {
+      const btn = document.getElementById(id);
+      btn.classList.remove('activo');
+      btn.classList.add('inactivo');
+    }
+
+    function actualizarTextoFecha() {
+      const input = document.getElementById('fechaHora');
+      const fecha = new Date(input.value);
+      if (isNaN(fecha.getTime())) return;
+
+      const texto = formatearTextoBoton(fecha);
+      if (modoTiempo === 'programado') {
+        document.getElementById('btnProgramado').textContent = texto;
+      }
+      
+      guardarEstadoLocal();
+    }
+
+    function abrirSelectorFecha() {
+      const input = document.getElementById('fechaHora');
+      if (!input) {
+        notifSystem.show('Error', 'No se pudo abrir el selector de fecha', 'error', 3000);
+        return;
+      }
+
+      input.min = new Date().toISOString().slice(0, 16);
+
+      try {
+        if (input.showPicker && typeof input.showPicker === 'function') {
+          input.showPicker();
+          return;
+        }
+        input.focus();
+        input.click();
+      } catch (err) {
+        notifSystem.show('Selector no disponible', 'Toca directamente el campo de fecha', 'info', 5000);
+        input.focus();
+      }
+    }
+
+    // ==========================================
+    // GOOGLE MAPS
+    // ==========================================
+    function cargarGoogleMaps() {
+      if (window.google && google.maps) {
+        inicializarAutocomplete();
+        return;
+      }
+
+      window.gm_authFailure = function() {
+        notifSystem.show('Error de Maps', 'No se pudo autenticar Google Maps', 'error', 6000);
+      };
+
+      const script = document.createElement('script');
+      script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places&callback=inicializarAutocomplete";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => console.log("Google Maps cargado");
+      script.onerror = () => notifSystem.show('Modo manual', 'No se pudo cargar Google Maps', 'warning', 6000);
+      document.head.appendChild(script);
+    }
+
+    function nuevaSesionAutocomplete() {
+      if (window.google && google.maps && google.maps.places) {
+        sessionToken = new google.maps.places.AutocompleteSessionToken();
+      }
+    }
+
+    function inicializarAutocomplete() {
       nuevaSesionAutocomplete();
+
+      const opciones = {
+        componentRestrictions: { country: 'ar' },
+        fields: ['formatted_address', 'geometry', 'name'],
+        types: ['geocode', 'establishment']
+      };
+
+      const origenInput = document.getElementById('origen');
+      const destinoInput = document.getElementById('destino');
+
+      autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
+      autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
+
       autocompleteOrigen.setOptions({ sessionToken });
-    }
-  });
-
-  autocompleteDestino.addListener('place_changed', () => {
-    const place = autocompleteDestino.getPlace();
-    if (place.formatted_address) {
-      destinoInput.value = place.formatted_address;
-      lugarDestino = place;
-      guardarEstadoLocal();
-
-      nuevaSesionAutocomplete();
       autocompleteDestino.setOptions({ sessionToken });
+
+      autocompleteOrigen.addListener('place_changed', () => {
+        const place = autocompleteOrigen.getPlace();
+        if (place.formatted_address) {
+          origenInput.value = place.formatted_address;
+          lugarOrigen = place;
+          guardarEstadoLocal();
+          nuevaSesionAutocomplete();
+          autocompleteOrigen.setOptions({ sessionToken });
+        }
+      });
+
+      autocompleteDestino.addListener('place_changed', () => {
+        const place = autocompleteDestino.getPlace();
+        if (place.formatted_address) {
+          destinoInput.value = place.formatted_address;
+          lugarDestino = place;
+          guardarEstadoLocal();
+          nuevaSesionAutocomplete();
+          autocompleteDestino.setOptions({ sessionToken });
+        }
+      });
+
+      origenInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.preventDefault();
+      });
+
+      destinoInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.preventDefault();
+      });
     }
-  });
 
-  // 🔥 IMPORTANTE: prevenir submit con Enter
-  origenInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') e.preventDefault();
-  });
+    // ==========================================
+    // CÁLCULO DE TARIFA
+    // ==========================================
+    function calcularTarifa() {
+      if (isCalculating) return;
+      if (navigator.vibrate) navigator.vibrate(30);
 
-  destinoInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') e.preventDefault();
-  });
-}
-function activarBoton(id, texto) {
-  const btn = document.getElementById(id);
-  btn.classList.add('activo');
-  btn.classList.remove('inactivo');
+      const origen = document.getElementById('origen').value.trim();
+      const destino = document.getElementById('destino').value.trim();
+      const fechaHoraInput = document.getElementById('fechaHora').value;
 
-  // ✅ SOLO cambia texto si viene definido
-  if (texto) {
-    btn.textContent = texto;
-  }
-}
+      // Validaciones
+      if (!origen) {
+        mostrarError('Ingresá la dirección de origen');
+        document.getElementById('origen').focus();
+        return;
+      }
+      if (!destino) {
+        mostrarError('Ingresá la dirección de destino');
+        document.getElementById('destino').focus();
+        return;
+      }
 
-function desactivarBoton(id) {
-  const btn = document.getElementById(id);
-  btn.classList.remove('activo');
-  btn.classList.add('inactivo');
-}
+      // Determinar fecha/hora a enviar
+      let fechaHoraParaEnviar;
+      if (modoTiempo === 'ahora') {
+        fechaHoraParaEnviar = formatearFechaInput(new Date());
+      } else {
+        if (!fechaHoraInput) {
+          mostrarError('Seleccioná fecha y hora');
+          abrirSelectorFecha();
+          return;
+        }
+        fechaHoraParaEnviar = fechaHoraInput;
+        if (new Date(fechaHoraInput) < new Date()) {
+          mostrarError('La fecha no puede ser pasada');
+          return;
+        }
+      }
 
-function formatearTextoBoton(fecha) {
-  const hoy = new Date();
-  const manana = new Date();
-  manana.setDate(hoy.getDate() + 1);
+      guardarEstadoLocal();
+      ocultarError();
+      isCalculating = true;
 
-  let dia = '';
+      const btn = document.getElementById('btnCalcular');
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Calculando...';
 
-  if (fecha.toDateString() === hoy.toDateString()) {
-    dia = 'Hoy';
-  } else if (fecha.toDateString() === manana.toDateString()) {
-    dia = 'Mañana';
-  } else {
-    dia = fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
-  }
+      const calcToast = notifSystem.show('Calculando ruta', 'Consultando precio...', 'info', 15000);
 
-  const hora = fecha.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+      const callbackName = 'mimiCallback_' + Date.now();
 
-  return `${dia} ${hora}`;
-}
+      window[callbackName] = function(res) {
+        clearTimeout(timeout);
+        console.log('Respuesta recibida:', res);
 
-// ==========================================  
-// CÁLCULO DE TARIFA CON NOTIFICACIONES ÚTILES  
-// ==========================================  
-  
-function calcularTarifa() {  
-  if (isCalculating) return;  
-  if (navigator.vibrate) navigator.vibrate(30);
+        delete window[callbackName];
+        const script = document.getElementById('jsonp-' + callbackName);
+        if (script) script.remove();
 
-  const origen = document.getElementById('origen').value.trim();  
-  const destino = document.getElementById('destino').value.trim();  
-  const fechaHoraInput = document.getElementById('fechaHora').value;  
-  
-  if (!origen) {   
-    mostrarError('Ingresá la dirección de origen');   
-    document.getElementById('origen').focus();  
-    return;   
-  }  
-  if (!destino) {   
-    mostrarError('Ingresá la dirección de destino');   
-    document.getElementById('destino').focus();  
-    return;   
-  }  
-  
-  // 🔥 Determinar fecha/hora según modo
-  let fechaHoraParaEnviar;
-  
-  if (modoTiempo === 'ahora') {
-    fechaHoraParaEnviar = formatearFechaInput(new Date());
-  } else {
-    if (!fechaHoraInput) {
-      mostrarError('Seleccioná fecha y hora');   
-      abrirSelectorFecha();   
-      return;   
+        isCalculating = false;
+        btn.disabled = false;
+        btn.innerHTML = '<span>Calcular Tarifa</span>';
+        calcToast.remove();
+
+        if (res.error) {
+          notifSystem.show('Error', res.error, 'error', 6000);
+          mostrarError(res.error);
+          return;
+        }
+
+        mostrarResultado(res);
+        notifSystem.show('¡Listo!', `Precio: $${(res.precio || 0).toLocaleString('es-AR')}`, 'success', 4000);
+      };
+
+      const timeout = setTimeout(() => {
+        if (!isCalculating) return;
+        
+        delete window[callbackName];
+        const script = document.getElementById('jsonp-' + callbackName);
+        if (script) script.remove();
+
+        isCalculating = false;
+        btn.disabled = false;
+        btn.innerHTML = '<span>Calcular Tarifa</span>';
+        calcToast.remove();
+
+        notifSystem.show('Tiempo agotado', 'El servidor no respondió', 'warning', 6000);
+        mostrarError('Tiempo de espera agotado. Intentá de nuevo.');
+      }, 15000);
+
+      const script = document.createElement('script');
+      script.id = 'jsonp-' + callbackName;
+      
+      script.onerror = function() {
+        clearTimeout(timeout);
+        delete window[callbackName];
+        script.remove();
+        
+        isCalculating = false;
+        btn.disabled = false;
+        btn.innerHTML = '<span>Calcular Tarifa</span>';
+        calcToast.remove();
+
+        notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor', 'error', 8000);
+        mostrarError('Error de conexión. Verificá tu internet.');
+      };
+
+      const params = new URLSearchParams({
+        desde: origen,
+        hasta: destino,
+        tipo: 'ida',
+        fechaViaje: fechaHoraParaEnviar,
+        clientId: navigator.userAgent + '_' + Date.now(),
+        callback: callbackName
+      });
+
+      const fullUrl = SCRIPT_URL + '?' + params.toString();
+      console.log('Consultando:', fullUrl);
+      
+      script.src = fullUrl;
+      document.head.appendChild(script);
     }
-    fechaHoraParaEnviar = fechaHoraInput;
-    
-    // Validar que no sea fecha pasada
-    if (new Date(fechaHoraInput) < new Date()) {
-      mostrarError('La fecha no puede ser pasada');  
-      return;  
-    }
-  }
-  
-  guardarEstadoLocal();
-  ocultarError();  
-  isCalculating = true;  
-  
-  const btn = document.getElementById('btnCalcular');  
-  btn.disabled = true;  
-  btn.innerHTML = '<div class="spinner"></div> Calculando...';  
-  
-  const calcToast = notifSystem.show('Calculando ruta', 'Consultando precio...', 'info', 15000);  
-  
-  const callbackName = 'mimiCallback_' + Date.now();  
-    
-  // 🔥 Handler de éxito
-  window[callbackName] = function(res) {  
-    clearTimeout(timeout);
-    console.log('✅ Respuesta recibida:', res);  
-      
-    delete window[callbackName];  
-    const script = document.getElementById('jsonp-' + callbackName);  
-    if (script) script.remove();  
-      
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
-      
-    if (res.error) {   
-      notifSystem.show('Error del servidor', res.error, 'error', 6000);  
-      mostrarError(res.error);   
-      return;   
-    }  
-      
-    mostrarResultado(res);  
-      
-    if (modoTiempo === 'ahora' && res.esNocturno) {
-      notifSystem.show('🌙 Horario nocturno', 'Se aplicó recargo por horario', 'info', 3000);
-    }
-      
-    notifSystem.show('¡Listo!', `Precio: $${res.precio?.toLocaleString('es-AR')}`, 'success', 4000);  
-  };  
-  
-  // 🔥 Handler de timeout
-  const timeout = setTimeout(() => {  
-    if (!isCalculating) return;  
-      
-    delete window[callbackName];  
-    const script = document.getElementById('jsonp-' + callbackName);  
-    if (script) script.remove();  
-      
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
 
-    notifSystem.show('⏱️ Tiempo agotado', 'El servidor no respondió. Intentá de nuevo.', 'warning', 6000);  
-    mostrarError('Tiempo de espera agotado. Intentá de nuevo.');  
-  }, 15000);  
-  
-  // 🔥 Crear script con manejo de errores mejorado
-  const script = document.createElement('script');  
-  script.id = 'jsonp-' + callbackName;  
-  
-  // Error de carga del script (CORS, 404, etc.)
-  script.onerror = function(e) {  
-    clearTimeout(timeout);  
-    delete window[callbackName];  
-    script.remove();  
+    function mostrarResultado(res) {
+      datosCotizacion = res;
       
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
+      animarContador('precioValor', 0, res.precioPorViaje || res.precio || 0, 800);
+      
+      const resultadoDiv = document.getElementById('resultado');
+      resultadoDiv.classList.add('visible');
 
-    console.error('❌ Error cargando script:', e);
-    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor. Verificá tu conexión o intentá más tarde.', 'error', 8000);  
-    mostrarError('Error de conexión. Verificá tu internet o recargá la página.');  
-  };  
-  
-  // 🔥 CONSTRUIR URL - REEMPLAZÁ ESTA URL CON LA TUYA
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzJCfPMFDPAh8sEYwLSbmLyFl-FIZXpytvQUGZS6qeMTTsm4LqJdqAeFNgu7Ly4wuY-/exec';
-  const params = new URLSearchParams({  
-    desde: origen,  
-    hasta: destino,  
-    tipo: 'ida',  
-    fechaViaje: fechaHoraParaEnviar,
-    clientId: navigator.userAgent + '_' + Date.now(),  
-    callback: callbackName  
-  });  
-    
-  const fullUrl = SCRIPT_URL + '?' + params.toString();
-  console.log('🌐 URL de consulta:', fullUrl); // Para debug
-  
-  script.src = fullUrl;  
-  document.head.appendChild(script);  
-}
-    function mostrarResultado(res) {  
-  datosCotizacion = res;  
-  
-  animarContador('precioValor', 0, res.precioPorViaje || res.precio, 800);  
-  
-  const resultadoDiv = document.getElementById('resultado');  
-  resultadoDiv.classList.add('visible');
-  
-  // 🌧️ Mostrar recargos
-  let recargosDiv = document.getElementById('recargosInfo');
-  if (!recargosDiv) {
-    recargosDiv = document.createElement('div');
-    recargosDiv.id = 'recargosInfo';
-    resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
-  }
-  
-  let recargosHtml = '';
-  
-  // Clima (con iconos y colores según intensidad)
-  if (res.clima && res.clima.llueve) {
-    const isTormenta = res.clima.tipo === 'tormenta';
-    const isIntensa = res.clima.tipo === 'lluvia_intensa';
-    recargosHtml += `<div style="color: ${isTormenta ? '#c62828' : isIntensa ? '#e65100' : '#1565c0'}; margin: 4px 0; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 1.2rem;">${isTormenta ? '⛈️' : isIntensa ? '🌧️' : '🌦️'}</span>
-      <span>${res.clima.descripcion} - Recargo ${isTormenta ? '50%' : isIntensa ? '35%' : '25%'}</span>
-    </div>`;
-  }
-  
-  // Recargos aplicados (nocturno, feriado, fin de semana)
-  if (res.recargosAplicados && res.recargosAplicados.length > 0) {
-    res.recargosAplicados.forEach(recargo => {
-      const isNocturno = recargo.tipo === 'nocturno';
-      const isFeriado = recargo.tipo === 'feriado';
-      recargosHtml += `<div style="color: ${isNocturno ? '#1a237e' : isFeriado ? '#d32f2f' : '#666'}; margin: 3px 0; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
-        <span>${recargo.descripcion}</span>
-        <span style="font-weight: 700; background: ${isNocturno ? '#1a237e' : isFeriado ? '#d32f2f' : '#ff9800'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">${recargo.porcentaje}</span>
-      </div>`;
+      // Mostrar recargos
+      let recargosDiv = document.getElementById('recargosInfo');
+      if (!recargosDiv) {
+        recargosDiv = document.createElement('div');
+        recargosDiv.id = 'recargosInfo';
+        resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
+      }
+
+      let recargosHtml = '';
+
+      if (res.clima && res.clima.llueve) {
+        const isTormenta = res.clima.tipo === 'tormenta';
+        const isIntensa = res.clima.tipo === 'lluvia_intensa';
+        recargosHtml += `<div style="color: ${isTormenta ? '#c62828' : isIntensa ? '#e65100' : '#1565c0'}; margin: 4px 0; font-weight: 600;">
+          ${isTormenta ? '⛈️' : isIntensa ? '🌧️' : '🌦️'} ${res.clima.descripcion} - Recargo ${isTormenta ? '50%' : isIntensa ? '35%' : '25%'}
+        </div>`;
+      }
+
+      if (res.recargosAplicados && res.recargosAplicados.length > 0) {
+        res.recargosAplicados.forEach(recargo => {
+          const isNocturno = recargo.tipo === 'nocturno';
+          const isFeriado = recargo.tipo === 'feriado';
+          recargosHtml += `<div style="color: ${isNocturno ? '#1a237e' : isFeriado ? '#d32f2f' : '#666'}; margin: 3px 0; font-size: 0.85rem;">
+            ${recargo.descripcion} 
+            <span style="font-weight: 700; background: ${isNocturno ? '#1a237e' : isFeriado ? '#d32f2f' : '#ff9800'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">${recargo.porcentaje}</span>
+          </div>`;
+        });
+      }
+
+      if (res.esNocturno) {
+        recargosHtml += `<div style="background: linear-gradient(135deg, #1a237e, #3949ab); color: white; padding: 8px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.85rem; font-weight: 700;">
+          🌙 Viaje Nocturno ${res.horaViaje || ''}
+        </div>`;
+      }
+
+      if (recargosHtml) {
+        recargosDiv.style.cssText = 'margin: 15px 0; padding: 16px; background: linear-gradient(135deg, #fff8e1, #ffecb3); border-radius: 14px; border-left: 4px solid #ff9800;';
+        recargosDiv.innerHTML = '<div style="font-weight: 800; color: #e65100; margin-bottom: 10px;">⚡ Recargos aplicados</div>' + recargosHtml;
+      } else {
+        recargosDiv.style.display = 'none';
+      }
+
+      // Botón de mapa
+      const origenTexto = document.getElementById('origen').value;
+      const destinoTexto = document.getElementById('destino').value;
+      const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
+
+      const mapaDiv = document.getElementById('mapaRuta');
+      mapaDiv.style.display = 'block';
+      mapaDiv.innerHTML = `
+        <button class="btn-mapa" onclick="window.open('${mapsUrl}', '_blank')">
+          <span class="btn-mapa-icon">🗺️</span>
+          <span class="btn-mapa-text">
+            <strong>Ver recorrido del viaje</strong>
+            <small>Tiempo real + navegación GPS</small>
+          </span>
+          <span class="btn-mapa-arrow">→</span>
+        </button>
+      `;
+
+      setTimeout(() => {
+        resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+
+    function animarContador(id, inicio, fin, duracion) {
+      const elemento = document.getElementById(id);
+      const incremento = (fin - inicio) / (duracion / 16);
+      let actual = inicio;
+      
+      const timer = setInterval(() => {
+        actual += incremento;
+        if (actual >= fin) {
+          actual = fin;
+          clearInterval(timer);
+        }
+        elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
+      }, 16);
+    }
+
+    // ==========================================
+    // WHATSAPP
+    // ==========================================
+    function reservarWhatsApp() {
+      const origen = document.getElementById('origen').value.trim();
+      const destino = document.getElementById('destino').value.trim();
+      const fechaTexto = modoTiempo === 'ahora'
+        ? document.getElementById('btnHoy').textContent.trim()
+        : document.getElementById('btnProgramado').textContent.trim();
+      const precio = document.getElementById('precioValor').textContent.trim();
+
+      if (!datosCotizacion) {
+        notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 4000);
+        return;
+      }
+
+      if (!origen || !destino || !fechaTexto || precio === '0') {
+        notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 5000);
+        return;
+      }
+
+      notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 4000);
+
+      const mensaje = `¡Hola! Quiero reservar un viaje con *MIMI Transporte Escolar* 🚐
+
+📍 *Origen:* ${origen}
+🎯 *Destino:* ${destino}
+📅 *Fecha y Hora:* ${fechaTexto}
+💰 *Precio estimado:* $${precio} ARS
+📏 *Distancia:* ${datosCotizacion.km || '—'} km
+⏱️ *Duración:* ${datosCotizacion.duracion || '—'} min
+
+¿Tenés disponibilidad? 😊
+
+Gracias! 🙌`;
+
+      const waUrl = `https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`;
+      window.open(waUrl, '_blank');
+    }
+
+    // ==========================================
+    // UTILIDADES
+    // ==========================================
+    function mostrarError(mensaje) {
+      const el = document.getElementById('errorMsg');
+      document.getElementById('errorText').textContent = mensaje;
+      el.classList.add('visible');
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+    }
+
+    function ocultarError() {
+      document.getElementById('errorMsg').classList.remove('visible');
+    }
+
+    // ==========================================
+    // INICIALIZACIÓN
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', function() {
+      // Inputs guardan estado
+      document.getElementById('origen').addEventListener('input', guardarEstadoLocal);
+      document.getElementById('destino').addEventListener('input', guardarEstadoLocal);
+      document.getElementById('fechaHora').addEventListener('change', guardarEstadoLocal);
+
+      // Cargar estado previo
+      cargarEstadoLocal();
+      
+      // Iniciar en modo "ahora"
+      seleccionarHoy();
+      
+      // Cargar Google Maps
+      cargarGoogleMaps();
+
+      // Actualizar hora cada minuto
+      setInterval(() => {
+        if (modoTiempo === 'ahora') {
+          const btn = document.getElementById('btnHoy');
+          if (!btn) return;
+          
+          const ahora = new Date();
+          const hora = ahora.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          
+          btn.textContent = `🕒 Ahora ${hora}`;
+        }
+      }, 60000);
     });
-  }
-  
-  // Badge nocturno destacado
-  if (res.esNocturno) {
-    recargosHtml += `<div style="background: linear-gradient(135deg, #1a237e, #3949ab); color: white; padding: 8px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.85rem; font-weight: 700; box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);">
-      <span>🌙</span>
-      <span>Viaje Nocturno ${res.horaViaje || ''}</span>
-    </div>`;
-  }
-  
-  // Precio sin recargos (comparación)
-  if (res.precioSinRecargos && res.precioSinRecargos !== res.precio) {
-    recargosHtml += `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ccc; font-size: 0.8rem; color: #888;">
-      Precio base: <span style="text-decoration: line-through;">$${res.precioSinRecargos.toLocaleString('es-AR')}</span> → Total: <strong style="color: #1565c0; font-size: 1rem;">$${res.precio.toLocaleString('es-AR')}</strong>
-    </div>`;
-  }
-  
-  if (recargosHtml) {
-    recargosDiv.style.cssText = 'margin: 15px 0; padding: 16px; background: linear-gradient(135deg, #fff8e1, #ffecb3); border-radius: 14px; border-left: 4px solid #ff9800; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);';
-    recargosDiv.innerHTML = '<div style="font-weight: 800; color: #e65100; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;"><span>⚡</span><span>Recargos aplicados</span></div>' + recargosHtml;
-  } else {
-    recargosDiv.innerHTML = '';
-    recargosDiv.style.display = 'none';
-  }
-
-  // Abrir ruta en Google Maps
-  const origenTexto = document.getElementById('origen').value;
-  const destinoTexto = document.getElementById('destino').value;
-
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
-
-  const mapaDiv = document.getElementById('mapaRuta');
-  mapaDiv.style.display = 'block';
-
-  mapaDiv.innerHTML = `
-    <button class="btn-mapa" onclick="abrirRuta('${mapsUrl}')">
-      <span class="btn-mapa-icon">🗺️</span>
-      <span class="btn-mapa-text">
-        <strong>Ver recorrido del viaje</strong>
-        <small>Tiempo real + navegación GPS</small>
-      </span>
-      <span class="btn-mapa-arrow">→</span>
-    </button>
-  `;
-  
-  // Scroll suave al resultado  
-  setTimeout(() => {  
-    resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });  
-  }, 100);  
-}
-    function abrirRuta(url) {
-  notifSystem.show(
-    'Abriendo navegación',
-    'Se abrirá Google Maps con la ruta del viaje',
-    'info',
-    2500
-  );
-
-  setTimeout(() => {
-window.open(url, '_blank');
-  }, 400);
-}
-  
-function animarContador(id, inicio, fin, duracion) {  
-  const elemento = document.getElementById(id);  
-  const incremento = (fin - inicio) / (duracion / 16);  
-  let actual = inicio;  
-    
-  const timer = setInterval(() => {  
-    actual += incremento;  
-    if (actual >= fin) {  
-      actual = fin;  
-      clearInterval(timer);  
-    }  
-    elemento.textContent = Math.floor(actual).toLocaleString('es-AR');  
-  }, 16);  
-}  
-    // Función para testear la conexión al backend
-function testearConexion() {
-  const testCallback = 'testCallback_' + Date.now();
-  
-  window[testCallback] = function(res) {
-    console.log('✅ Backend responde:', res);
-    alert('✅ Conexión OK: ' + JSON.stringify(res));
-    delete window[testCallback];
-  };
-  
-  const script = document.createElement('script');
-  script.src = 'https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec?callback=' + testCallback;
-  
-  script.onerror = function() {
-    alert('❌ Error de conexión. Verificá la URL del script.');
-  };
-  
-  document.head.appendChild(script);
-}
-
-// Llamar al cargar la página para testear
-// testearConexion();
-// ==========================================  
-// RESERVA WHATSAPP (versión mejorada)  
-// ==========================================  
-  
-function reservarWhatsApp() {  
-  // 1. Obtener valores (ya está bien, pero agregamos trim() por seguridad)  
-  const origen   = document.getElementById('origen').value.trim();  
-  const destino  = document.getElementById('destino').value.trim();  
-const fechaTexto = modoTiempo === 'ahora'
-  ? document.getElementById('btnHoy').textContent.trim()
-  : document.getElementById('btnProgramado').textContent.trim();
-  const precio   = document.getElementById('precioValor').textContent.trim();  
-  
-  // 2. Validación más completa (evita mensajes vacíos o incompletos)  
-  if (!datosCotizacion) {  
-    notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 4000);  
-    mostrarError('Primero calculá la tarifa');  
-    return;  
-  }  
-  
-  if (!origen || !destino || !fechaTexto || precio === '0') {  
-    notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 5000);  
-    return;  
-  }  
-  
-  // 3. Notificación más clara y con ícono de WhatsApp  
-  notifSystem.show(  
-    'Preparando reserva',  
-    'Abriendo WhatsApp con los datos del viaje...',  
-    'info',  
-    4000  
-  );  
-  
-  // 4. Mensaje más profesional, limpio y con formato agradable en WhatsApp  
-  const mensaje = `¡Hola! Quiero reservar un viaje con *MIMI Transporte Escolar* 🚐  
-  
-📍 *Origen:* ${origen}  
-🎯 *Destino:* ${destino}  
-📅 *Fecha y Hora:* ${fechaTexto}  
-💰 *Precio estimado:* $${precio} ARS  
-📏 *Distancia:* ${datosCotizacion.km || '—'} km  
-⏱️ *Duración aproximada:* ${datosCotizacion.duracion || '—'} min  
-  
-¿Tenés disponibilidad para esta fecha? 😊  
-  
-Gracias! 🙌`;  
-  
-  // 5. Mejor manejo de la URL (encodeURIComponent ya está, pero agregamos fallback si falla)  
-  const waUrl = `https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`;  
-  
-  try {  
-    window.open(waUrl, '_blank');  
-  } catch (err) {  
-    console.error('Error al abrir WhatsApp:', err);  
-    notifSystem.show(  
-      'Problema al abrir WhatsApp',  
-      'Intentá copiar el mensaje manualmente o abrí WhatsApp desde tu celular',  
-      'warning',  
-      6000  
-    );  
-  }  
-  
-  // Opcional: toast de éxito después de abrir (en algunos navegadores no se ve si se abre nueva pestaña)  
-  setTimeout(() => {  
-    notifSystem.show('¡Listo!', 'Mensaje preparado en WhatsApp', 'success', 3000);  
-  }, 800);  
-}  
-function activarAutocompleteConDelay(input, autocomplete) {
-  input.addEventListener('input', () => {
-    const valor = input.value;
-
-    if (valor.length < 4) {
-      autocomplete.setOptions({ types: [] }); // desactiva predicción
-    } else {
-      autocomplete.setOptions({ types: ['geocode', 'establishment'] });
-    }
-  });
-}
-// ==========================================  
-// UTILIDADES  
-// ==========================================  
-  
-function mostrarError(mensaje) {  
-  const el = document.getElementById('errorMsg');  
-  document.getElementById('errorText').textContent = mensaje;  
-  el.classList.add('visible');  
-  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);  
-}  
-  
-function ocultarError() {  
-  document.getElementById('errorMsg').classList.remove('visible');  
-}  
-</script>  </body>  
+  </script>
+</body>
 </html>
