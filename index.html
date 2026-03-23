@@ -1086,6 +1086,7 @@ function seleccionarHoy() {
   const ahora = new Date();
 
   document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+  document.getElementById('btnProgramado').textContent = 'Programado';
 
   activarBoton('btnHoy', 'Hoy'); // ✅ SIEMPRE dice "Hoy"
   desactivarBoton('btnProgramado');
