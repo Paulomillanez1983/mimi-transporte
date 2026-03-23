@@ -1521,139 +1521,138 @@ function formatearTextoBoton(fecha) {
 // CÁLCULO DE TARIFA CON NOTIFICACIONES ÚTILES  
 // ==========================================  
   
-function calcularTarifa() {  
-  if (isCalculating) return;  
+function calcularTarifa() {
+  if (isCalculating) return;
   if (navigator.vibrate) navigator.vibrate(30);
 
-  const origen = document.getElementById('origen').value.trim();  
-  const destino = document.getElementById('destino').value.trim();  
-  const fechaHoraInput = document.getElementById('fechaHora').value;  
-  
-  if (!origen) {   
-    mostrarError('Ingresá la dirección de origen');   
-    document.getElementById('origen').focus();  
-    return;   
-  }  
-  if (!destino) {   
-    mostrarError('Ingresá la dirección de destino');   
-    document.getElementById('destino').focus();  
-    return;   
-  }  
-  
-  // 🔥 Determinar fecha/hora según modo
-  let fechaHoraParaEnviar;
-  
+  const origen = (document.getElementById('origen')?.value || '').trim();
+  const destino = (document.getElementById('destino')?.value || '').trim();
+  const fechaHoraInput = document.getElementById('fechaHora')?.value || '';
+
+  // Validaciones más estrictas y mensajes claros
+  if (!origen || origen.length < 8) {
+    mostrarError('Ingresá una dirección de origen válida (ej: Av. Colón 2000, Córdoba)');
+    document.getElementById('origen')?.focus();
+    return;
+  }
+  if (!destino || destino.length < 8) {
+    mostrarError('Ingresá una dirección de destino válida (ej: Villa Allende Centro)');
+    document.getElementById('destino')?.focus();
+    return;
+  }
+
+  let fechaHoraParaEnviar = '';
   if (modoTiempo === 'ahora') {
     fechaHoraParaEnviar = formatearFechaInput(new Date());
   } else {
     if (!fechaHoraInput) {
-      mostrarError('Seleccioná fecha y hora');   
-      abrirSelectorFecha();   
-      return;   
+      mostrarError('Seleccioná fecha y hora');
+      abrirSelectorFecha();
+      return;
     }
     fechaHoraParaEnviar = fechaHoraInput;
-    
-    // Validar que no sea fecha pasada
+
+    // Validar fecha no pasada
     if (new Date(fechaHoraInput) < new Date()) {
-      mostrarError('La fecha no puede ser pasada');  
-      return;  
+      mostrarError('La fecha no puede ser en el pasado');
+      return;
     }
   }
-  
+
+  // Guardar estado y limpiar errores
   guardarEstadoLocal();
-  ocultarError();  
-  isCalculating = true;  
-  
-  const btn = document.getElementById('btnCalcular');  
-  btn.disabled = true;  
-  btn.innerHTML = '<div class="spinner"></div> Calculando...';  
-  
-  const calcToast = notifSystem.show('Calculando ruta', 'Consultando precio...', 'info', 15000);  
-  
-  const callbackName = 'mimiCallback_' + Date.now();  
-    
-  // 🔥 Handler de éxito
-  window[callbackName] = function(res) {  
+  ocultarError();
+  isCalculating = true;
+
+  const btn = document.getElementById('btnCalcular');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Calculando...';
+  }
+
+  const calcToast = notifSystem.show('Calculando ruta', 'Consultando precio...', 'info', 15000);
+
+  const callbackName = 'mimiCallback_' + Date.now();
+
+  // Handler de éxito (sin cambios)
+  window[callbackName] = function(res) {
     clearTimeout(timeout);
-    console.log('✅ Respuesta recibida:', res);  
-      
-    delete window[callbackName];  
-    const script = document.getElementById('jsonp-' + callbackName);  
-    if (script) script.remove();  
-      
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
-      
-    if (res.error) {   
-      notifSystem.show('Error del servidor', res.error, 'error', 6000);  
-      mostrarError(res.error);   
-      return;   
-    }  
-      
-    mostrarResultado(res);  
-      
+    console.log('✅ Respuesta recibida:', res);
+
+    delete window[callbackName];
+    const script = document.getElementById('jsonp-' + callbackName);
+    if (script) script.remove();
+
+    isCalculating = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Calcular Tarifa</span>';
+    }
+    calcToast.remove();
+
+    if (res.error) {
+      notifSystem.show('Error del servidor', res.error, 'error', 6000);
+      mostrarError(res.error);
+      return;
+    }
+
+    mostrarResultado(res);
+
     if (modoTiempo === 'ahora' && res.esNocturno) {
       notifSystem.show('🌙 Horario nocturno', 'Se aplicó recargo por horario', 'info', 3000);
     }
-      
-    notifSystem.show('¡Listo!', `Precio: $${res.precio?.toLocaleString('es-AR')}`, 'success', 4000);  
-  };  
-  
-  // 🔥 Handler de timeout
-  const timeout = setTimeout(() => {  
-    if (!isCalculating) return;  
-      
-    delete window[callbackName];  
-    const script = document.getElementById('jsonp-' + callbackName);  
-    if (script) script.remove();  
-      
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
 
-    notifSystem.show('⏱️ Tiempo agotado', 'El servidor no respondió. Intentá de nuevo.', 'warning', 6000);  
-    mostrarError('Tiempo de espera agotado. Intentá de nuevo.');  
-  }, 15000);  
-  
-  // 🔥 Crear script con manejo de errores mejorado
-  const script = document.createElement('script');  
-  script.id = 'jsonp-' + callbackName;  
-  
-  // Error de carga del script (CORS, 404, etc.)
-  script.onerror = function(e) {  
-    clearTimeout(timeout);  
-    delete window[callbackName];  
-    script.remove();  
-      
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
+    notifSystem.show('¡Listo!', `Precio: $${res.precio?.toLocaleString('es-AR')}`, 'success', 4000);
+  };
 
+  // Handler de timeout (sin cambios)
+  const timeout = setTimeout(() => {
+    if (!isCalculating) return;
+    delete window[callbackName];
+    const script = document.getElementById('jsonp-' + callbackName);
+    if (script) script.remove();
+    isCalculating = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Calcular Tarifa</span>';
+    }
+    calcToast.remove();
+    notifSystem.show('⏱️ Tiempo agotado', 'El servidor no respondió. Intentá de nuevo.', 'warning', 6000);
+    mostrarError('Tiempo de espera agotado. Intentá de nuevo.');
+  }, 15000);
+
+  const script = document.createElement('script');
+  script.id = 'jsonp-' + callbackName;
+
+  script.onerror = function(e) {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    script.remove();
+    isCalculating = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>Calcular Tarifa</span>';
+    }
+    calcToast.remove();
     console.error('❌ Error cargando script:', e);
-    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor. Verificá tu conexión o intentá más tarde.', 'error', 8000);  
-    mostrarError('Error de conexión. Verificá tu internet o recargá la página.');  
-  };  
-  
-  // 🔥 CONSTRUIR URL - REEMPLAZÁ ESTA URL CON LA TUYA
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx63nXDUgMwQMx-wOv9G2rIpscEH-iB-6Q3YuqJGq8UwmKJUb7tVyOIc6qeCJqRCzTH/exec';
-  const params = new URLSearchParams({  
-    desde: origen,  
-    hasta: destino,  
-    tipo: 'ida',  
-    fechaViaje: fechaHoraParaEnviar,
-    clientId: navigator.userAgent + '_' + Date.now(),  
-    callback: callbackName  
-  });  
-    
+    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor. Verificá tu conexión o intentá más tarde.', 'error', 8000);
+    mostrarError('Error de conexión. Verificá tu internet o recargá la página.');
+  };
+
+  // Armado seguro de parámetros (nunca undefined)
+  const params = new URLSearchParams();
+  params.append('desde', origen);
+  params.append('hasta', destino);
+  params.append('tipo', 'ida');
+  params.append('fechaViaje', fechaHoraParaEnviar);
+  params.append('clientId', navigator.userAgent + '_' + Date.now());
+  params.append('callback', callbackName);
+
   const fullUrl = SCRIPT_URL + '?' + params.toString();
-  console.log('🌐 URL de consulta:', fullUrl); // Para debug
-  
-  script.src = fullUrl;  
-  document.head.appendChild(script);  
+  console.log('🌐 URL de consulta:', fullUrl);
+
+  script.src = fullUrl;
+  document.head.appendChild(script);
 }
     function mostrarResultado(res) {  
   datosCotizacion = res;  
