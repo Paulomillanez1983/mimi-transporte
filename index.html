@@ -844,7 +844,64 @@ window.gm_authFailure = function() {
   document.head.appendChild(script);
   }
 
-  
+  .modo-tiempo {
+  display: flex;
+  gap: 6px;
+}
+
+.modo-btn {
+  border: none;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: #eee;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+/* ACTIVO (naranja pastel) */
+.modo-btn.activo {
+  background: #ffe0b2;
+  color: #e65100;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* efecto presionado */
+.modo-btn:active {
+  transform: scale(0.95);
+}
+
+let modoTiempo = 'ahora';
+
+function seleccionarAhora() {
+  modoTiempo = 'ahora';
+
+  document.getElementById('btnAhora').classList.add('activo');
+  document.getElementById('btnProgramado').classList.remove('activo');
+
+  const ahora = new Date();
+  document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+
+  actualizarTextoFecha();
+
+  notifSystem.show(
+    'Viaje inmediato',
+    'Se calculará para salir ahora',
+    'info',
+    2500
+  );
+}
+
+function seleccionarProgramado() {
+  modoTiempo = 'programado';
+
+  document.getElementById('btnProgramado').classList.add('activo');
+  document.getElementById('btnAhora').classList.remove('activo');
+
+  abrirSelectorFecha();
+}
 
 
 
@@ -920,7 +977,14 @@ window.gm_authFailure = function() {
 </div>  
 
 <div class="datetime-section">  
-  <div class="datetime-header">📅 Fecha y Hora</div>  
+<div class="datetime-header" style="justify-content: space-between;">
+  <span>📅 Fecha y Hora</span>
+
+  <div class="modo-tiempo">
+    <button id="btnAhora" class="modo-btn activo" onclick="seleccionarAhora()">Ahora</button>
+    <button id="btnProgramado" class="modo-btn" onclick="seleccionarProgramado()">Programado</button>
+  </div>
+</div>
   <div class="datetime-card" onclick="abrirSelectorFecha()">  
     <div style="font-size: 1.2rem;">🕐</div>  
     <div class="datetime-text">  
@@ -1287,7 +1351,7 @@ function calcularTarifa() {
     document.getElementById('destino').focus();  
     return;   
   }  
-  if (!fechaHora) {   
+  if (!fechaHora && modoTiempo !== 'ahora') {
     mostrarError('Seleccioná fecha y hora');   
     abrirSelectorFecha();   
     return;   
