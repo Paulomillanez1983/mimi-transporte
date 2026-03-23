@@ -681,7 +681,12 @@ body {
 function cargarGoogleMaps() {
   if (window.google && google.maps) return;
 window.gm_authFailure = function() {
-  console.error("❌ Error de autenticación con Google Maps API");
+  notifSystem.show(
+    'Error de Maps',
+    'No se pudo autenticar Google Maps. Podés escribir la dirección manualmente.',
+    'error',
+    6000
+  );
 };
 
   const script = document.createElement('script');
