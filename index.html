@@ -1094,12 +1094,10 @@ function seleccionarHoy() {
   modoTiempo = 'ahora';
 
   const ahora = new Date();
-  const texto = formatearTextoBoton(ahora);
 
   document.getElementById('fechaHora').value = formatearFechaInput(ahora);
 
-  // UI botones
-  activarBoton('btnHoy', texto);
+  activarBoton('btnHoy', 'Hoy'); // ✅ SIEMPRE dice "Hoy"
   desactivarBoton('btnProgramado');
 
   notifSystem.show(
@@ -1120,6 +1118,7 @@ function setModo(modo) {
 
     const ahora = new Date();
     document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+
 
     notifSystem.show(
       'Modo inmediato',
