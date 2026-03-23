@@ -1656,37 +1656,39 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxFKiAFX7-RXp8oqlyBe
   script.src = fullUrl;  
   document.head.appendChild(script);  
 }
-    function mostrarResultado(res) {  
+function mostrarResultado(res) {  
   datosCotizacion = res;  
   
   animarContador('precioValor', 0, res.precioPorViaje || res.precio, 800);  
-  // 🔥 Normalizar datos
-const km = parseFloat(res.km) || 0;
-const duracion = parseInt(res.duracion) || 0;
+  
+  // 🔥 KM del cliente (solo su viaje, no el del chofer)
+  const kmCliente = parseFloat(res.kmDetalle?.viajePasajero) || parseFloat(res.km) || 0;
+  const duracion = parseInt(res.duracion) || 0;
+  
   const resultadoDiv = document.getElementById('resultado');  
   resultadoDiv.classList.add('visible');
-      // 🔥 Info de viaje (tipo Uber)
-let infoViaje = document.getElementById('infoViaje');
-
-if (!infoViaje) {
-  infoViaje = document.createElement('div');
-  infoViaje.id = 'infoViaje';
-  infoViaje.style.marginTop = '8px';
-  infoViaje.style.fontSize = '0.85rem';
-  infoViaje.style.color = '#666';
-  infoViaje.style.textAlign = 'center';
-
-  resultadoDiv.insertBefore(infoViaje, resultadoDiv.children[1]);
-}
-const tiempoTexto = duracion > 60 
-  ? `${Math.floor(duracion / 60)}h ${duracion % 60}min`
-  : `${duracion} min`;
-// Mostrar datos
-infoViaje.innerHTML = `
-  📏 ${km.toFixed(1)} km · ⏱️ ${tiempoTexto}
-`;
   
-  // 🌧️ Mostrar recargos
+  // 🔥 Info de viaje (estilo Uber limpio)
+  let infoViaje = document.getElementById('infoViaje');
+  if (!infoViaje) {
+    infoViaje = document.createElement('div');
+    infoViaje.id = 'infoViaje';
+    infoViaje.style.marginTop = '8px';
+    infoViaje.style.fontSize = '0.85rem';
+    infoViaje.style.color = '#666';
+    infoViaje.style.textAlign = 'center';
+    resultadoDiv.insertBefore(infoViaje, resultadoDiv.children[1]);
+  }
+  
+  const tiempoTexto = duracion > 60 
+    ? `${Math.floor(duracion / 60)}h ${duracion % 60}min`
+    : `${duracion} min`;
+    
+  infoViaje.innerHTML = `
+    📏 ${kmCliente.toFixed(1)} km · ⏱️ ${tiempoTexto}
+  `;
+  
+  // 🌧️ Recargos simplificados (estilo Uber: solo lo importante)
   let recargosDiv = document.getElementById('recargosInfo');
   if (!recargosDiv) {
     recargosDiv = document.createElement('div');
@@ -1695,52 +1697,68 @@ infoViaje.innerHTML = `
   }
   
   let recargosHtml = '';
+  let hayRecargoVisible = false;
   
-  // Clima (con iconos y colores según intensidad)
-  if (res.clima && res.clima.llueve) {
-    const isTormenta = res.clima.tipo === 'tormenta';
-    const isIntensa = res.clima.tipo === 'lluvia_intensa';
-    recargosHtml += `<div style="color: ${isTormenta ? '#c62828' : isIntensa ? '#e65100' : '#1565c0'}; margin: 4px 0; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-      <span style="font-size: 1.2rem;">${isTormenta ? '⛈️' : isIntensa ? '🌧️' : '🌦️'}</span>
-      <span>${res.clima.descripcion} - Recargo ${isTormenta ? '50%' : isIntensa ? '35%' : '25%'}</span>
+  // Solo mostrar clima si es grave (tormenta o lluvia intensa)
+  if (res.clima && (res.clima.tipo === 'tormenta' || res.clima.tipo === 'lluvia_intensa')) {
+    const icono = res.clima.tipo === 'tormenta' ? '⛈️' : '🌧️';
+    const texto = res.clima.tipo === 'tormenta' ? 'Tormenta' : 'Lluvia intensa';
+    recargosHtml += `<div style="display:flex;align-items:center;gap:8px;color:#666;font-size:0.85rem;margin-bottom:8px;">
+      <span style="font-size:1.1rem;">${icono}</span>
+      <span>${texto}</span>
     </div>`;
+    hayRecargoVisible = true;
   }
   
-  // Recargos aplicados (nocturno, feriado, fin de semana)
-  if (res.recargosAplicados && res.recargosAplicados.length > 0) {
-    res.recargosAplicados.forEach(recargo => {
-      const isNocturno = recargo.tipo === 'nocturno';
-      const isFeriado = recargo.tipo === 'feriado';
-      recargosHtml += `<div style="color: ${isNocturno ? '#1a237e' : isFeriado ? '#d32f2f' : '#666'}; margin: 3px 0; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
-        <span>${recargo.descripcion}</span>
-        <span style="font-weight: 700; background: ${isNocturno ? '#1a237e' : isFeriado ? '#d32f2f' : '#ff9800'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">${recargo.porcentaje}</span>
-      </div>`;
-    });
-  }
-  
-  // Badge nocturno destacado
+  // Solo mostrar badge de nocturno (el más importante)
   if (res.esNocturno) {
-    recargosHtml += `<div style="background: linear-gradient(135deg, #1a237e, #3949ab); color: white; padding: 8px 16px; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 0.85rem; font-weight: 700; box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);">
+    recargosHtml += `<div style="display:inline-flex;align-items:center;gap:6px;background:#1a237e;color:white;padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;">
       <span>🌙</span>
-      <span>Viaje Nocturno ${res.horaViaje || ''}</span>
+      <span>Nocturno</span>
     </div>`;
+    hayRecargoVisible = true;
   }
   
-  // Precio sin recargos (comparación)
+  // Precio tachado solo si hay recargo significativo (>10%)
   if (res.precioSinRecargos && res.precioSinRecargos !== res.precio) {
-    recargosHtml += `<div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ccc; font-size: 0.8rem; color: #888;">
-      Precio base: <span style="text-decoration: line-through;">$${res.precioSinRecargos.toLocaleString('es-AR')}</span> → Total: <strong style="color: #1565c0; font-size: 1rem;">$${res.precio.toLocaleString('es-AR')}</strong>
-    </div>`;
+    const diferencia = ((res.precio - res.precioSinRecargos) / res.precioSinRecargos) * 100;
+    if (diferencia > 10) {
+      recargosHtml += `<div style="margin-top:10px;font-size:0.8rem;color:#888;">
+        <span style="text-decoration:line-through;">$${res.precioSinRecargos.toLocaleString('es-AR')}</span>
+      </div>`;
+    }
   }
   
-  if (recargosHtml) {
-    recargosDiv.style.cssText = 'margin: 15px 0; padding: 16px; background: linear-gradient(135deg, #fff8e1, #ffecb3); border-radius: 14px; border-left: 4px solid #ff9800; box-shadow: 0 4px 12px rgba(255, 152, 0, 0.15);';
-    recargosDiv.innerHTML = '<div style="font-weight: 800; color: #e65100; margin-bottom: 10px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;"><span>⚡</span><span>Recargos aplicados</span></div>' + recargosHtml;
+  if (hayRecargoVisible) {
+    recargosDiv.style.cssText = 'margin:12px 0;padding:12px;background:#f8f9fa;border-radius:12px;text-align:center;';
+    recargosDiv.innerHTML = recargosHtml;
   } else {
     recargosDiv.innerHTML = '';
     recargosDiv.style.display = 'none';
   }
 
+  // Botón de mapa
+  const origenTexto = document.getElementById('origen').value;
+  const destinoTexto = document.getElementById('destino').value;
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
+  const mapaDiv = document.getElementById('mapaRuta');
+  mapaDiv.style.display = 'block';
+  mapaDiv.innerHTML = `
+    <button class="btn-mapa" onclick="window.open('${mapsUrl}', '_blank')">
+      <span class="btn-mapa-icon">🗺️</span>
+      <span class="btn-mapa-text">
+        <strong>Ver recorrido del viaje</strong>
+        <small>Tiempo real + navegación GPS</small>
+      </span>
+      <span class="btn-mapa-arrow">→</span>
+    </button>
+  `;
+  
+  // Scroll suave al resultado  
+  setTimeout(() => {  
+    resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });  
+  }, 100);  
+}
   // Abrir ruta en Google Maps
   const origenTexto = document.getElementById('origen').value;
   const destinoTexto = document.getElementById('destino').value;
@@ -1820,35 +1838,48 @@ function testearConexion() {
 // ==========================================  
   
 function reservarWhatsApp() {  
-  // 1. Obtener valores (ya está bien, pero agregamos trim() por seguridad)  
-  const origen   = document.getElementById('origen').value.trim();  
-  const destino  = document.getElementById('destino').value.trim();  
-const fechaTexto = modoTiempo === 'ahora'
-  ? document.getElementById('btnHoy').textContent.trim()
-  : document.getElementById('btnProgramado').textContent.trim();
-  const precio   = document.getElementById('precioValor').textContent.trim();  
+  const origen = document.getElementById('origen').value.trim();  
+  const destino = document.getElementById('destino').value.trim();  
+  const fechaTexto = modoTiempo === 'ahora'
+    ? document.getElementById('btnHoy').textContent.trim()
+    : document.getElementById('btnProgramado').textContent.trim();
+  const precio = document.getElementById('precioValor').textContent.trim();  
   
-  // 2. Validación más completa (evita mensajes vacíos o incompletos)  
   if (!datosCotizacion) {  
     notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 4000);  
-    mostrarError('Primero calculá la tarifa');  
     return;  
   }  
   
   if (!origen || !destino || !fechaTexto || precio === '0') {  
-    notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 5000);  
+    notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 4000);  
     return;  
   }  
   
-  // 3. Notificación más clara y con ícono de WhatsApp  
-  notifSystem.show(  
-    'Preparando reserva',  
-    'Abriendo WhatsApp con los datos del viaje...',  
-    'info',  
-    4000  
-  );  
+  // 🔥 KM del cliente (solo su viaje)
+  const kmCliente = parseFloat(datosCotizacion.kmDetalle?.viajePasajero) || parseFloat(datosCotizacion.km) || 0;
   
-  // 4. Mensaje más profesional, limpio y con formato agradable en WhatsApp  
+  notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 3000);  
+  
+  // Mensaje limpio estilo Uber (sin tanto detalle)
+  const mensaje = `¡Hola! Quiero reservar un viaje con *MIMI Transporte Escolar* 🚐
+
+📍 ${origen}
+🎯 ${destino}
+📅 ${fechaTexto}
+💰 $${precio} ARS
+📏 ${kmCliente.toFixed(1)} km · ⏱️ ${datosCotizacion.duracion || '—'} min
+
+¿Tenés disponibilidad? 😊`;  
+  
+  const waUrl = `https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`;  
+  
+  try {  
+    window.open(waUrl, '_blank');  
+  } catch (err) {  
+    notifSystem.show('Problema al abrir WhatsApp', 'Intentá manualmente', 'warning', 4000);  
+  }  
+}
+    // 4. Mensaje más profesional, limpio y con formato agradable en WhatsApp  
   const mensaje = `¡Hola! Quiero reservar un viaje con *MIMI Transporte Escolar* 🚐  
   
 📍 *Origen:* ${origen}  
