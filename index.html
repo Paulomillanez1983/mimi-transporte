@@ -6,7 +6,7 @@
 <title>MIMI Transporte Escolar</title>  <!-- Open Graph -->  <meta property="og:title" content="MIMI Transporte Escolar">  
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">  
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">  
-<meta property="og:url" content="https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec">  
+<meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
   
   <style>  
 :root {  
@@ -1524,15 +1524,12 @@ function formatearTextoBoton(fecha) {
   
 function calcularTarifa() {  
   if (isCalculating) return;  
-  if (navigator.vibrate) {
-    navigator.vibrate(30);
-  }
+  if (navigator.vibrate) navigator.vibrate(30);
 
   const origen = document.getElementById('origen').value.trim();  
   const destino = document.getElementById('destino').value.trim();  
   const fechaHoraInput = document.getElementById('fechaHora').value;  
   
-  // Validaciones con feedback inmediato  
   if (!origen) {   
     mostrarError('Ingresá la dirección de origen');   
     document.getElementById('origen').focus();  
@@ -1544,30 +1541,25 @@ function calcularTarifa() {
     return;   
   }  
   
-  // 🔥 Determinar la fecha/hora a usar según el modo
+  // 🔥 Determinar fecha/hora según modo
   let fechaHoraParaEnviar;
-  let fechaParaValidar;
   
   if (modoTiempo === 'ahora') {
-    // Modo "Ahora": usar fecha/hora actual del dispositivo
     fechaHoraParaEnviar = formatearFechaInput(new Date());
-    fechaParaValidar = new Date();
   } else {
-    // Modo "Programado": usar la fecha seleccionada por el usuario
     if (!fechaHoraInput) {
       mostrarError('Seleccioná fecha y hora');   
       abrirSelectorFecha();   
       return;   
     }
     fechaHoraParaEnviar = fechaHoraInput;
-    fechaParaValidar = new Date(fechaHoraInput);
-  }
     
-  // Validar que la fecha no sea pasada (solo para modo programado, "ahora" siempre es presente)
-  if (modoTiempo !== 'ahora' && fechaParaValidar < new Date()) {
-    mostrarError('La fecha no puede ser pasada');  
-    return;  
-  }  
+    // Validar que no sea fecha pasada
+    if (new Date(fechaHoraInput) < new Date()) {
+      mostrarError('La fecha no puede ser pasada');  
+      return;  
+    }
+  }
   
   guardarEstadoLocal();
   ocultarError();  
@@ -1577,14 +1569,14 @@ function calcularTarifa() {
   btn.disabled = true;  
   btn.innerHTML = '<div class="spinner"></div> Calculando...';  
   
-  // Notificación útil: calculando  
-  const calcToast = notifSystem.show('Calculando ruta', 'Estamos consultando la distancia y el precio...', 'info', 10000);  
+  const calcToast = notifSystem.show('Calculando ruta', 'Consultando precio...', 'info', 15000);  
   
   const callbackName = 'mimiCallback_' + Date.now();  
     
+  // 🔥 Handler de éxito
   window[callbackName] = function(res) {  
     clearTimeout(timeout);
-    console.log('📥 Respuesta:', res);  
+    console.log('✅ Respuesta recibida:', res);  
       
     delete window[callbackName];  
     const script = document.getElementById('jsonp-' + callbackName);  
@@ -1593,37 +1585,24 @@ function calcularTarifa() {
     isCalculating = false;  
     btn.disabled = false;  
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
-      
-    // Limpiar toast de calculando  
     calcToast.remove();  
       
     if (res.error) {   
-      notifSystem.show('Error', res.error, 'error', 5000);  
+      notifSystem.show('Error del servidor', res.error, 'error', 6000);  
       mostrarError(res.error);   
       return;   
     }  
       
     mostrarResultado(res);  
       
-    // 🌙 Mostrar notificación especial si hay recargos por horario actual
     if (modoTiempo === 'ahora' && res.esNocturno) {
-      notifSystem.show(
-        '🌙 Horario nocturno',
-        'Se aplicó recargo por ser después de las 21:00 hs',
-        'info',
-        4000
-      );
+      notifSystem.show('🌙 Horario nocturno', 'Se aplicó recargo por horario', 'info', 3000);
     }
       
-    // Notificación de éxito con datos útiles  
-    notifSystem.show(  
-      'Cotización lista',   
-      `Precio: $${res.precioPorViaje?.toLocaleString('es-AR')} · ${res.km} km · ${res.duracion} min`,   
-      'success',   
-      5000  
-    );  
+    notifSystem.show('¡Listo!', `Precio: $${res.precio?.toLocaleString('es-AR')}`, 'success', 4000);  
   };  
   
+  // 🔥 Handler de timeout
   const timeout = setTimeout(() => {  
     if (!isCalculating) return;  
       
@@ -1636,13 +1615,16 @@ function calcularTarifa() {
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
 
-    notifSystem.show('Tiempo agotado', 'La conexión está lenta. Intentá de nuevo.', 'warning', 5000);  
+    notifSystem.show('⏱️ Tiempo agotado', 'El servidor no respondió. Intentá de nuevo.', 'warning', 6000);  
     mostrarError('Tiempo de espera agotado. Intentá de nuevo.');  
   }, 15000);  
   
+  // 🔥 Crear script con manejo de errores mejorado
   const script = document.createElement('script');  
   script.id = 'jsonp-' + callbackName;  
-  script.onerror = () => {  
+  
+  // Error de carga del script (CORS, 404, etc.)
+  script.onerror = function(e) {  
     clearTimeout(timeout);  
     delete window[callbackName];  
     script.remove();  
@@ -1652,22 +1634,27 @@ function calcularTarifa() {
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
 
-    notifSystem.show('Error de conexión', 'Verificá tu internet e intentá de nuevo.', 'error', 5000);  
-    mostrarError('Error de conexión. Verificá tu internet.');  
+    console.error('❌ Error cargando script:', e);
+    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor. Verificá tu conexión o intentá más tarde.', 'error', 8000);  
+    mostrarError('Error de conexión. Verificá tu internet o recargá la página.');  
   };  
+  
+  // 🔥 CONSTRUIR URL - REEMPLAZÁ ESTA URL CON LA TUYA
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec';
     
-  // 🔥 Enviar fechaViaje al backend (sea "ahora" o programado)
   const params = new URLSearchParams({  
     desde: origen,  
     hasta: destino,  
     tipo: 'ida',  
-    fechaViaje: fechaHoraParaEnviar,  // Fecha actual si es "ahora", seleccionada si es "programado"
+    fechaViaje: fechaHoraParaEnviar,
     clientId: navigator.userAgent + '_' + Date.now(),  
     callback: callbackName  
   });  
     
-  script.src = 'https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec?' + params.toString();  
-    
+  const fullUrl = SCRIPT_URL + '?' + params.toString();
+  console.log('🌐 URL de consulta:', fullUrl); // Para debug
+  
+  script.src = fullUrl;  
   document.head.appendChild(script);  
 }
     function mostrarResultado(res) {  
@@ -1785,6 +1772,28 @@ function animarContador(id, inicio, fin, duracion) {
     elemento.textContent = Math.floor(actual).toLocaleString('es-AR');  
   }, 16);  
 }  
+    // Función para testear la conexión al backend
+function testearConexion() {
+  const testCallback = 'testCallback_' + Date.now();
+  
+  window[testCallback] = function(res) {
+    console.log('✅ Backend responde:', res);
+    alert('✅ Conexión OK: ' + JSON.stringify(res));
+    delete window[testCallback];
+  };
+  
+  const script = document.createElement('script');
+  script.src = 'https://script.google.com/macros/s/AKfycbwLphF46nQn8w-bfLQsuS_1oG7Li7gdNCgQBozQwYTtC_UiTffHCtEptsNOUoQGJxYA/exec?callback=' + testCallback;
+  
+  script.onerror = function() {
+    alert('❌ Error de conexión. Verificá la URL del script.');
+  };
+  
+  document.head.appendChild(script);
+}
+
+// Llamar al cargar la página para testear
+// testearConexion();
 // ==========================================  
 // RESERVA WHATSAPP (versión mejorada)  
 // ==========================================  
