@@ -9,6 +9,9 @@
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
+<script async defer
+src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places">
+</script>
 
 <style>
 :root {
@@ -1528,10 +1531,6 @@ function activarModoManual() {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(direccion)}&key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&region=ar`
       );
-      <script async defer
-src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=inicializarAutocomplete">
-</script>
-
       const data = await response.json();
       
       if (data.results && data.results[0]) {
