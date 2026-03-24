@@ -1526,7 +1526,7 @@ function activarModoManual() {
   window.geocodificarDireccion = async function(direccion) {
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(direccion)}&key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&region=ar`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(direccion)}&key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&region=ar`
       );
       const data = await response.json();
       
