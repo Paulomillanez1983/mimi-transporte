@@ -1102,7 +1102,10 @@ function setTipoViaje(tipo) {
 <button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">  
   <span>Calcular Tarifa</span>  
 </button>  
-
+<div id="resultado" class="resultado-section">
+  <div class="precio-monto">$<span id="precioValor">0</span></div>
+  <div class="precio-descripcion">Precio estimado</div>
+</div>
   <button class="btn-whatsapp" onclick="reservarWhatsApp()">  
     <span>💬</span>  
     <span>Reservar Ahora</span>  
@@ -1580,7 +1583,7 @@ function calcularTarifa() {
   let fechaHoraParaEnviar;
   
   if (modoTiempo === 'ahora') {
-    fechaHoraParaEnviar = formatearFechaInput(new Date());
+    fechaHoraParaEnviar = new Date().toISOString(); // formato ISO completo
   } else {
     if (!fechaHoraInput) {
       mostrarError('Seleccioná fecha y hora');   
@@ -1681,12 +1684,12 @@ window[callbackName] = function(res) {
   };  
   
   // 🔥 CONSTRUIR URL - USÁ TU NUEVA URL
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydpbUdjnzutXynREkwbRB2aRJ2uuw8qOrBnLkYBTJADrONmjo5EzCsk3GiLXcKjFBb/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydpbUdjnzutXynREkwbRB2aRJ2uuw8qOrBnLkYBTJADrONmjo5EzCsk3GiLXcKjFBb/exec';
 const params = new URLSearchParams({
   desde: origen,  
   hasta: destino,  
   tipo: tipoViaje,
-  modalidad: modoTiempo, // 👈 AGREGAR ESTO
+  action: 'cotizar', // 👈 AGREGAR ESTO
   fechaViaje: fechaHoraParaEnviar,
   clientId: navigator.userAgent + '_' + Date.now(),  
   callback: callbackName  
