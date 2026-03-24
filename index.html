@@ -1392,7 +1392,7 @@ function actualizarTextoFechaVuelta() {
 }
 
 // ==========================================
-// GOOGLE MAPS - VERSIÓN ULTRA ROBUSTA
+// GOOGLE MAPS - API CLÁSICA (Más estable)
 // ==========================================
 
 let lugarOrigen = null;
@@ -1400,16 +1400,16 @@ let lugarDestino = null;
 let autocompleteOrigen = null;
 let autocompleteDestino = null;
 
-// ✅ FUNCIÓN: Esperar a que Google Maps esté completamente listo
+// ✅ FUNCIÓN: Esperar a que Google Maps esté listo
 function esperarGoogleMaps() {
   return new Promise((resolve, reject) => {
     let intentos = 0;
-    const maxIntentos = 100; // 10 segundos máximo
+    const maxIntentos = 100;
     
     const intervalo = setInterval(() => {
       intentos++;
       
-      if (window.google && google.maps && google.maps.importLibrary) {
+      if (window.google && google.maps && google.maps.places) {
         clearInterval(intervalo);
         resolve();
       } else if (intentos >= maxIntentos) {
@@ -1420,114 +1420,13 @@ function esperarGoogleMaps() {
   });
 }
 
-// ✅ FUNCIÓN PRINCIPAL: Inicializar autocompletado
+// ✅ FUNCIÓN PRINCIPAL: Inicializar autocompletado clásico
 async function inicializarAutocomplete() {
-  console.log("🚀 Iniciando carga de Google Maps...");
+  console.log("🚀 Iniciando Google Maps...");
   
   try {
-    // Esperar a que Google Maps esté listo
     await esperarGoogleMaps();
     console.log("✅ Google Maps cargado");
-    
-    // Intentar usar la API moderna (PlaceAutocompleteElement)
-    await intentarPlaceAutocompleteElement();
-    
-  } catch (error) {
-    console.error("❌ Error con PlaceAutocompleteElement:", error);
-    console.log("🔄 Intentando con API clásica...");
-    
-    // Fallback a la API clásica
-    await intentarAutocompleteClasico();
-  }
-}
-
-// ✅ INTENTAR: API Moderna (PlaceAutocompleteElement)
-async function intentarPlaceAutocompleteElement() {
-  try {
-    const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
-    console.log("✅ Librería 'places' importada");
-    
-    const inputOrigen = document.getElementById('origen');
-    const inputDestino = document.getElementById('destino');
-    
-    if (!inputOrigen || !inputDestino) {
-      throw new Error('Inputs no encontrados en el DOM');
-    }
-    
-    // Crear elementos de autocompletado
-    const placeOrigen = new PlaceAutocompleteElement({
-      componentRestrictions: { country: 'ar' },
-      types: ['geocode'],
-      placeholder: 'Av. Santa Fe 1234, Córdoba'
-    });
-    
-    const placeDestino = new PlaceAutocompleteElement({
-      componentRestrictions: { country: 'ar' },
-      types: ['geocode'],
-      placeholder: 'Escuela Primaria, Villa Allende'
-    });
-    
-    // Aplicar estilos
-    const estilos = `
-      width: 100%;
-      border: none;
-      background: transparent;
-      font-size: 0.95rem;
-      color: #1a1a1a;
-      font-weight: 600;
-      outline: none;
-      font-family: inherit;
-    `;
-    placeOrigen.style.cssText = estilos;
-    placeDestino.style.cssText = estilos;
-    
-    // Reemplazar inputs
-    const parentOrigen = inputOrigen.parentElement;
-    const parentDestino = inputDestino.parentElement;
-    
-    parentOrigen.innerHTML = '';
-    parentDestino.innerHTML = '';
-    
-    parentOrigen.appendChild(placeOrigen);
-    parentDestino.appendChild(placeDestino);
-    
-    // Event listeners
-    placeOrigen.addEventListener('gmp-placeselect', (event) => {
-      const place = event.detail;
-      lugarOrigen = {
-        direccion: place.formattedAddress || place.displayName,
-        lat: place.location.lat(),
-        lng: place.location.lng()
-      };
-      console.log('✅ Origen seleccionado:', lugarOrigen);
-      parentOrigen.style.backgroundColor = '#e8f5e9';
-      setTimeout(() => parentOrigen.style.backgroundColor = '', 500);
-    });
-    
-    placeDestino.addEventListener('gmp-placeselect', (event) => {
-      const place = event.detail;
-      lugarDestino = {
-        direccion: place.formattedAddress || place.displayName,
-        lat: place.location.lat(),
-        lng: place.location.lng()
-      };
-      console.log('✅ Destino seleccionado:', lugarDestino);
-      parentDestino.style.backgroundColor = '#e8f5e9';
-      setTimeout(() => parentDestino.style.backgroundColor = '', 500);
-    });
-    
-    console.log('✅ PlaceAutocompleteElement funcionando');
-    notifSystem.show('✅ Listo', 'Escribí una dirección para ver sugerencias', 'success', 2000);
-    
-  } catch (error) {
-    throw error; // Propagar para que intente el fallback
-  }
-}
-
-// ✅ INTENTAR: API Clásica (Autocomplete)
-async function intentarAutocompleteClasico() {
-  try {
-    await google.maps.importLibrary("places");
     
     const inputOrigen = document.getElementById('origen');
     const inputDestino = document.getElementById('destino');
@@ -1540,16 +1439,16 @@ async function intentarAutocompleteClasico() {
     autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
       componentRestrictions: { country: 'ar' },
       types: ['geocode'],
-      fields: ['formatted_address', 'geometry', 'name']
+      fields: ['formatted_address', 'geometry', 'name', 'place_id']
     });
     
     autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
       componentRestrictions: { country: 'ar' },
       types: ['geocode'],
-      fields: ['formatted_address', 'geometry', 'name']
+      fields: ['formatted_address', 'geometry', 'name', 'place_id']
     });
     
-    // Listeners
+    // Event listeners
     autocompleteOrigen.addListener('place_changed', () => {
       const place = autocompleteOrigen.getPlace();
       if (place.geometry) {
@@ -1558,7 +1457,13 @@ async function intentarAutocompleteClasico() {
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng()
         };
-        console.log('✅ Origen (clásico):', lugarOrigen);
+        console.log('✅ Origen:', lugarOrigen);
+        
+        // Efecto visual
+        inputOrigen.style.backgroundColor = '#e8f5e9';
+        setTimeout(() => inputOrigen.style.backgroundColor = '', 500);
+      } else {
+        console.log('⚠️ Origen seleccionado sin geometría');
       }
     });
     
@@ -1570,15 +1475,21 @@ async function intentarAutocompleteClasico() {
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng()
         };
-        console.log('✅ Destino (clásico):', lugarDestino);
+        console.log('✅ Destino:', lugarDestino);
+        
+        // Efecto visual
+        inputDestino.style.backgroundColor = '#e8f5e9';
+        setTimeout(() => inputDestino.style.backgroundColor = '', 500);
+      } else {
+        console.log('⚠️ Destino seleccionado sin geometría');
       }
     });
     
-    console.log('✅ Autocomplete clásico funcionando');
-    notifSystem.show('✅ Listo', 'Autocompletado activado (modo clásico)', 'success', 2000);
+    console.log('✅ Autocomplete inicializado correctamente');
+    notifSystem.show('✅ Listo', 'Escribí una dirección para ver sugerencias', 'success', 2000);
     
   } catch (error) {
-    console.error("❌ API clásica también falló:", error);
+    console.error("❌ Error inicializando Autocomplete:", error);
     activarModoManual();
   }
 }
@@ -1591,12 +1502,10 @@ function activarModoManual() {
   const destinoInput = document.getElementById('destino');
   
   if (origenInput) {
-    origenInput.placeholder = "Escribí la dirección completa";
-    origenInput.style.backgroundColor = '#fff3e0';
+    origenInput.placeholder = "Escribí la dirección completa (ej: Av. Santa Fe 1234, Córdoba)";
   }
   if (destinoInput) {
-    destinoInput.placeholder = "Escribí la dirección completa";
-    destinoInput.style.backgroundColor = '#fff3e0';
+    destinoInput.placeholder = "Escribí la dirección completa (ej: Escuela Primaria, Villa Allende)";
   }
   
   // Geocoding manual
