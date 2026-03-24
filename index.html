@@ -915,7 +915,36 @@ body {
   animation: pulsoUber 2s infinite;
 }
 
+.resultado-section {  
+  margin-top: 20px;  
+  padding-top: 20px;  
+  border-top: 2px dashed #e0e0e0;  
+  display: none;  
+  text-align: center;  
+}  
 
+.resultado-section.visible {   
+  display: block;   
+  animation: fadeInUp 0.5s ease;   
+}  
+
+@keyframes fadeInUp {  
+  from { opacity: 0; transform: translateY(20px); }  
+  to { opacity: 1; transform: translateY(0); }  
+}  
+
+.precio-monto {  
+  font-size: 2.5rem;  
+  font-weight: 800;  
+  color: var(--azul-oscuro);  
+  margin-bottom: 6px;  
+}  
+
+.precio-descripcion {  
+  color: #666;  
+  font-size: 0.9rem;  
+  margin-bottom: 15px;  
+}
 </style>
 <script>
   let modoTiempo = 'ahora';
