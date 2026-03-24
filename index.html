@@ -1844,7 +1844,10 @@ function testearConexion() {
   };
   
   const script = document.createElement('script');
+  // ✅ URL CON COMILLAS
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6UctYQrGNyQsmn8aJxL_S7T3KmqA9ZkyyhwaM5NurLJnuQQTlQZ1fGR1KLAPW8wRo/exec';
+  
+  script.src = SCRIPT_URL + '?action=cotizar&desde=test&hasta=test&callback=' + testCallback;
   
   script.onerror = function() {
     alert('❌ Error de conexión. Verificá la URL del script.');
@@ -1852,7 +1855,6 @@ function testearConexion() {
   
   document.head.appendChild(script);
 }
-
 // Llamar al cargar la página para testear
 // testearConexion();
 // ==========================================  
