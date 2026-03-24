@@ -1422,57 +1422,13 @@ function inicializarAutocomplete() {
     return;
   }
   
-  // Crear autocompletados - SIN types para incluir negocios y POIs
+  // Crear autocompletados
   autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
     componentRestrictions: { country: 'ar' },
+    types: ['geocode'],
     fields: ['formatted_address', 'geometry', 'name', 'place_id']
   });
   
-  autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
-    componentRestrictions: { country: 'ar' },
-    fields: ['formatted_address', 'geometry', 'name', 'place_id']
-  });
-  
-  // Event listeners
-  autocompleteOrigen.addListener('place_changed', () => {
-    const place = autocompleteOrigen.getPlace();
-    if (place.geometry) {
-      lugarOrigen = {
-        direccion: place.formatted_address || place.name,
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng()
-      };
-      console.log('✅ Origen:', lugarOrigen);
-      
-      // Efecto visual
-      inputOrigen.style.backgroundColor = '#e8f5e9';
-      setTimeout(() => inputOrigen.style.backgroundColor = '', 500);
-    } else {
-      console.log('⚠️ Origen seleccionado sin geometría');
-    }
-  });
-  
-  autocompleteDestino.addListener('place_changed', () => {
-    const place = autocompleteDestino.getPlace();
-    if (place.geometry) {
-      lugarDestino = {
-        direccion: place.formatted_address || place.name,
-        lat: place.geometry.location.lat(),
-        lng: place.geometry.location.lng()
-      };
-      console.log('✅ Destino:', lugarDestino);
-      
-      // Efecto visual
-      inputDestino.style.backgroundColor = '#e8f5e9';
-      setTimeout(() => inputDestino.style.backgroundColor = '', 500);
-    } else {
-      console.log('⚠️ Destino seleccionado sin geometría');
-    }
-  });
-  
-  console.log('✅ Autocomplete inicializado correctamente');
-  notifSystem.show('✅ Listo', 'Escribí una dirección para ver sugerencias', 'success', 2000);
-}  
   autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
     componentRestrictions: { country: 'ar' },
     types: ['geocode'],
