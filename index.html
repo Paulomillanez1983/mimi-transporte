@@ -1521,9 +1521,14 @@ function cargarGoogleMaps() {
 
 // ✅ Llamar al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
-  console.log("📄 DOM cargado, iniciando Maps...");
-  // Pequeño delay para asegurar que todo esté listo
+  console.log("📄 DOM cargado");
+
   setTimeout(cargarGoogleMaps, 100);
+
+  const input = document.getElementById('fechaHora');
+  if (input && input.value) {
+    actualizarTextoFecha();
+  }
 });
   
 // ==========================================
@@ -1637,14 +1642,6 @@ function actualizarTextoFecha() {
   guardarEstadoLocal();
 }
 
-// ✅ Inicializar al cargar
-document.addEventListener('DOMContentLoaded', function() {
-  // Cargar fecha guardada si existe
-  const input = document.getElementById('fechaHora');
-  if (input && input.value) {
-    actualizarTextoFecha();
-  }
-});
 
 function activarBoton(id, texto) {
   const btn = document.getElementById(id);
@@ -1676,12 +1673,8 @@ function calcularTarifa() {
   }
 
 if (!lugarOrigen || !lugarDestino) {
-  notifSystem.show(
-    'Tip',
-    'Seleccioná una dirección sugerida para mayor precisión',
-    'warning',
-    4000
-  );
+  mostrarError('Seleccioná una dirección de la lista (con sugerencias)');
+  return;
 }
   const origen = document.getElementById('origen').value.trim(); const destino = document.getElementById('destino').value.trim();
   const fechaHoraInput = document.getElementById('fechaHora')?.value;
