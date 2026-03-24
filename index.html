@@ -1721,15 +1721,14 @@ async function calcularTarifa() {
   const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
   
   const params = new URLSearchParams({
-    origen: `${lugarOrigen.lat},${lugarOrigen.lng}`,
-    destino: `${lugarDestino.lat},${lugarDestino.lng}`,
-    origenTxt: lugarOrigen.direccion,
-    destinoTxt: lugarDestino.direccion,
-    servicio: servicioSeleccionado,
-    fechaHora: fechaHoraParaEnviar,
-    esperaMin: esperaMin || '',
-    fechaHoraVuelta: fechaHoraVuelta || ''
-  });
+  origenPasajero: lugarOrigen.direccion,
+  destinoPasajero: lugarDestino.direccion,
+  servicio: servicioSeleccionado,
+  fechaHoraIda: fechaHoraParaEnviar,
+  tiempoEsperaMin: esperaMin || '',
+  fechaHoraVuelta: fechaHoraVuelta || ''
+});
+
 
   const fullUrl = `${CONFIG.SCRIPT_URL}?${params.toString()}`;
 
