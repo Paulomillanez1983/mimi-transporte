@@ -850,16 +850,47 @@ body {
   border: 2px solid #e0e0e0;
   border-radius: 16px;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow: hidden;
+}
+  .servicio-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: transparent;
+  transition: background 0.2s;
 }
 
+
 .servicio-card.urgente {
-  background: #111;
+  background: linear-gradient(135deg, #1a1a2e 0%, #0d1b2a 100%);
   color: white;
-  border: 2px solid #00e676;
-  animation: pulseUrgente 1.6s infinite;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  position: relative;
 }
+.servicio-card.urgente::after {
+  content: '';
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  background: linear-gradient(135deg, #00e676, #00c853);
+  border-radius: 18px;
+  z-index: -1;
+  animation: borderGlow 2s ease-in-out infinite;
+}
+  @keyframes borderGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.servicio-card.dinamico {
+  border-color: var(--naranja);
+  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+}
+
 
 @keyframes pulseUrgente {
   0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,230,118,0.6); }
@@ -867,8 +898,9 @@ body {
   100% { transform: scale(1); }
 }
 
-.servicio-card.dinamico {
-  animation: flotar 2s ease-in-out infinite;
+@keyframes gentleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
 @keyframes flotar {
@@ -880,13 +912,16 @@ body {
 .servicio-card:hover {
   border-color: var(--azul-claro);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
 }
 
 .servicio-card.activo {
   border-color: var(--azul-primario);
   background: linear-gradient(135deg, #e3f2fd 0%, #f5f7fa 100%);
   box-shadow: 0 4px 16px rgba(21, 101, 192, 0.15);
+}
+.servicio-card.activo::before {
+  background: var(--azul-primario);
 }
 
 .servicio-card.destacado {
@@ -1014,7 +1049,39 @@ body {
   0%, 100% { box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3), 0 0 0 0 rgba(21, 101, 192, 0.4); }
   50% { box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3), 0 0 0 8px rgba(21, 101, 192, 0); }
 }
+.servicio-badge.popular {
+  position: absolute;
+  top: -8px;
+  right: 12px;
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  animation: none;
+}
+  .servicio-card.activo {
+  border: 2px solid var(--azul-primario);
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.2), inset 0 0 0 2px rgba(21, 101, 192, 0.1);
+  transform: scale(1.01);
+}
 
+.servicio-card.activo .servicio-check {
+  background: var(--exito);
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.servicio-card.activo .servicio-icon {
+  background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-oscuro) 100%);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
+}
 </style>
 </head>
 <body>
@@ -1111,6 +1178,7 @@ body {
 
 <!-- IDA Y VUELTA -->
 <div class="servicio-card dinamico destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
+  <div class="servicio-badge popular">⭐ Más elegido</div>
   <div class="servicio-icon">🔁</div>
   <div class="servicio-info">
     <strong>Ida y vuelta</strong>
@@ -1118,7 +1186,7 @@ body {
   </div>
   <div class="servicio-check">✓</div>
 </div>
-
+  
 <!-- IDA + VUELTA PROGRAMADA -->
 <div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
   <div class="servicio-icon">📅</div>
