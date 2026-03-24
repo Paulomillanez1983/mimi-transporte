@@ -952,6 +952,27 @@ body {
   border-color: var(--azul-claro);
   background: #f5f7fa;
 }
+  /* Estilo para el nuevo selector de fecha */
+.datetime-card {
+  background: #f8f9fa;
+  border: 2px solid #e8e8e8;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.datetime-card:hover {
+  border-color: var(--azul-claro);
+  background: white;
+}
+
+.datetime-card:active {
+  transform: scale(0.98);
+}
 </style>
 </head>
 <body>
@@ -1005,24 +1026,25 @@ body {
       </div>
     </div>
 
-    <div class="datetime-section">
-      <div class="datetime-header">
-        <span>📅 Fecha y Hora</span>
-      </div>
-      <div style="display:flex; gap:10px; align-items:stretch;">
-        <div style="display:flex; gap:10px; width:100%;">
-          <button id="btnHoy" class="modo-btn activo" onclick="seleccionarHoy()">🕒 Ahora</button>
-          <button id="btnProgramado" class="modo-btn inactivo" onclick="setModo('programado')">Programado</button>
-        </div>
-        <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
-      </div>
-    </div>
-
     <div class="error-message" id="errorMsg">
       <span>⚠️</span>
       <span id="errorText"></span>
     </div>
-
+<div class="datetime-section">
+  <div class="datetime-header">
+    <span>📅 Fecha y Hora del Viaje</span>
+  </div>
+  
+  <!-- ✅ Selector de fecha siempre visible, sin botones -->
+  <div class="datetime-card" onclick="abrirSelectorFecha()">
+    <div class="datetime-text">
+      <div class="datetime-label">Tocá para seleccionar</div>
+      <div class="datetime-value" id="textoFechaSeleccionada">Elegí fecha y hora...</div>
+    </div>
+    <div class="location-arrow">›</div>
+  </div>
+  <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
+</div>
     <!-- SELECTOR DE SERVICIOS -->
     <div class="servicio-selector" id="selectorServicios">
       <div class="servicio-card activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
@@ -1352,10 +1374,95 @@ function actualizarTextoFechaVuelta() {
 }
 
 // ==========================================
-// GOOGLE MAPS
+// GOOGLE MAPS - VERSIÓN CORREGIDA
 // ==========================================
+
+// ✅ Hacer la función global para que el callback de Google Maps la encuentre
+window.inicializarAutocomplete = function() {
+  console.log("🚀 Inicializando Autocomplete...");
+  
+  if (!window.google || !google.maps || !google.maps.places) {
+    console.error('❌ Google Maps no está disponible');
+    notifSystem.show('Error', 'Google Maps no cargó correctamente', 'error', 5000);
+    return;
+  }
+
+  nuevaSesionAutocomplete();
+
+  const opciones = {
+    componentRestrictions: { country: 'ar' },
+    fields: ['formatted_address', 'geometry', 'name'],
+    types: ['geocode', 'establishment']
+  };
+
+  const origenInput = document.getElementById('origen');
+  const destinoInput = document.getElementById('destino');
+
+  if (!origenInput || !destinoInput) {
+    console.error('❌ Inputs no encontrados');
+    return;
+  }
+
+  // ✅ Crear instancias de Autocomplete
+  autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
+  autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
+
+  // ✅ Eliminar la función que bloqueaba el autocomplete
+  // NO usar activarAutocompleteConDelay - dejar que Google maneje todo
+
+  autocompleteOrigen.setOptions({ sessionToken });
+  autocompleteDestino.setOptions({ sessionToken });
+
+  // ✅ Listener para cuando se selecciona un lugar
+  autocompleteOrigen.addListener('place_changed', () => {
+    const place = autocompleteOrigen.getPlace();
+    console.log('📍 Origen seleccionado:', place);
+    if (place.formatted_address) {
+      origenInput.value = place.formatted_address;
+      lugarOrigen = place;
+      guardarEstadoLocal();
+      nuevaSesionAutocomplete();
+      autocompleteOrigen.setOptions({ sessionToken });
+    }
+  });
+
+  autocompleteDestino.addListener('place_changed', () => {
+    const place = autocompleteDestino.getPlace();
+    console.log('📍 Destino seleccionado:', place);
+    if (place.formatted_address) {
+      destinoInput.value = place.formatted_address;
+      lugarDestino = place;
+      guardarEstadoLocal();
+      nuevaSesionAutocomplete();
+      autocompleteDestino.setOptions({ sessionToken });
+    }
+  });
+
+  // ✅ Prevenir submit al presionar Enter
+  origenInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  destinoInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  notifSystem.show('✅ Listo', 'Escribí una dirección para ver sugerencias', 'success', 2000);
+};
+
+// ✅ Función para cargar Google Maps (llamar al inicio)
 function cargarGoogleMaps() {
-  if (window.google && google.maps) return;
+  if (window.google && google.maps && google.maps.places) {
+    console.log("✅ Google Maps ya estaba cargado");
+    window.inicializarAutocomplete();
+    return;
+  }
   
   window.gm_authFailure = function() {
     notifSystem.show(
@@ -1371,10 +1478,6 @@ function cargarGoogleMaps() {
   script.async = true;
   script.defer = true;
 
-  script.onload = () => {
-    console.log("✅ Google Maps cargado correctamente");
-  };
-
   script.onerror = () => {
     notifSystem.show(
       'Modo manual',
@@ -1385,84 +1488,16 @@ function cargarGoogleMaps() {
   };
 
   document.head.appendChild(script);
+  console.log("🔄 Cargando Google Maps...");
 }
 
-function inicializarAutocomplete() {
-  if (!window.google || !google.maps || !google.maps.places) {
-    console.error('Google Maps no está disponible');
-    return;
-  }
-
-  nuevaSesionAutocomplete();
-
-  const opciones = {
-    componentRestrictions: { country: 'ar' },
-    fields: ['formatted_address', 'geometry', 'name'],
-    types: ['geocode', 'establishment']
-  };
-
-  const origenInput = document.getElementById('origen');
-  const destinoInput = document.getElementById('destino');
-
-  if (!origenInput || !destinoInput) return;
-
-  autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
-  autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
-
-  activarAutocompleteConDelay(origenInput, autocompleteOrigen);
-  activarAutocompleteConDelay(destinoInput, autocompleteDestino);
-
-  autocompleteOrigen.setOptions({ sessionToken });
-  autocompleteDestino.setOptions({ sessionToken });
-
-  autocompleteOrigen.addListener('place_changed', () => {
-    const place = autocompleteOrigen.getPlace();
-    if (place.formatted_address) {
-      origenInput.value = place.formatted_address;
-      lugarOrigen = place;
-      guardarEstadoLocal();
-      nuevaSesionAutocomplete();
-      autocompleteOrigen.setOptions({ sessionToken });
-    }
-  });
-
-  autocompleteDestino.addListener('place_changed', () => {
-    const place = autocompleteDestino.getPlace();
-    if (place.formatted_address) {
-      destinoInput.value = place.formatted_address;
-      lugarDestino = place;
-      guardarEstadoLocal();
-      nuevaSesionAutocomplete();
-      autocompleteDestino.setOptions({ sessionToken });
-    }
-  });
-
-  origenInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') e.preventDefault();
-  });
-
-  destinoInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') e.preventDefault();
-  });
-}
-
-function nuevaSesionAutocomplete() {
-  if (window.google && google.maps && google.maps.places) {
-    sessionToken = new google.maps.places.AutocompleteSessionToken();
-  }
-}
-
-function activarAutocompleteConDelay(input, autocomplete) {
-  input.addEventListener('input', () => {
-    const valor = input.value;
-    if (valor.length < 4) {
-      autocomplete.setOptions({ types: [] });
-    } else {
-      autocomplete.setOptions({ types: ['geocode', 'establishment'] });
-    }
-  });
-}
-
+// ✅ Llamar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("📄 DOM cargado, iniciando Maps...");
+  // Pequeño delay para asegurar que todo esté listo
+  setTimeout(cargarGoogleMaps, 100);
+});
+  
 // ==========================================
 // FECHA Y HORA
 // ==========================================
@@ -1514,11 +1549,24 @@ function setModo(modo) {
   }
 }
 
+// Reemplazar las funciones de fecha/hora por estas:
+
 function abrirSelectorFecha() {
   const input = document.getElementById('fechaHora');
   if (!input) return;
   
-  input.min = new Date().toISOString().slice(0, 16);
+  // Establecer mínimo como ahora
+  const ahora = new Date();
+  input.min = ahora.toISOString().slice(0, 16);
+  
+  // Si no hay valor, sugerir mañana a las 7:30 (horario escolar)
+  if (!input.value) {
+    const manana = new Date(ahora);
+    manana.setDate(manana.getDate() + 1);
+    manana.setHours(7, 30, 0, 0);
+    input.value = formatearFechaInput(manana);
+    actualizarTextoFecha();
+  }
   
   try {
     if (input.showPicker && typeof input.showPicker === 'function') {
@@ -1528,39 +1576,47 @@ function abrirSelectorFecha() {
       input.click();
     }
   } catch (err) {
-    notifSystem.show('Selector no disponible', 'Toca directamente el campo de fecha y hora', 'info', 5000);
     input.focus();
   }
 }
 
-function formatearFechaInput(fecha) {
-  const pad = (n) => n < 10 ? '0' + n : n;
-  return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
-}
-
-function formatearTextoBoton(fecha) {
-  const hoy = new Date();
-  const manana = new Date();
-  manana.setDate(hoy.getDate() + 1);
+function actualizarTextoFecha() {
+  const input = document.getElementById('fechaHora');
+  const textoFecha = document.getElementById('textoFechaSeleccionada');
+  if (!input || !textoFecha) return;
   
-  let dia = '';
-  
-  if (fecha.toDateString() === hoy.toDateString()) {
-    dia = 'Hoy';
-  } else if (fecha.toDateString() === manana.toDateString()) {
-    dia = 'Mañana';
-  } else {
-    dia = fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+  const fecha = new Date(input.value);
+  if (isNaN(fecha.getTime())) {
+    textoFecha.textContent = 'Elegí fecha y hora...';
+    textoFecha.style.color = '#888';
+    return;
   }
   
-  const hora = fecha.toLocaleTimeString('es-AR', {
+  // Formatear fecha legible
+  const opciones = { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
-  });
+  };
   
-  return `${dia} ${hora}`;
+  const texto = fecha.toLocaleDateString('es-AR', opciones);
+  textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
+  textoFecha.style.color = '#1a1a1a';
+  
+  guardarEstadoLocal();
 }
 
+// ✅ Inicializar al cargar
+document.addEventListener('DOMContentLoaded', function() {
+  // Cargar fecha guardada si existe
+  const input = document.getElementById('fechaHora');
+  if (input && input.value) {
+    actualizarTextoFecha();
+  }
+});
 function actualizarTextoFecha() {
   const input = document.getElementById('fechaHora');
   const fecha = new Date(input.value);
