@@ -2081,17 +2081,17 @@ function reservarWhatsApp() {
   
   notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);
   
-const mensaje = 
-  "*MIMI Transporte Escolar* 🚐\n\n" +
-  "📍 *Desde:* " + origen + "\n" +
-  "🎯 *Hasta:* " + destino + "\n\n" +
-  "🗺️ *Mapa:* " + mapsRutaCompleta + "\n\n" +
-  "⏰ *Cuándo:* " + fechaTexto + "\n" +
-  "💰 *Precio:* $" + precio + "\n" +
-  "📏 *Distancia:* " + kmCliente.toFixed(1) + "km · " + (datosCotizacion.duracionEstimadaMin || datosCotizacion.duracion || '—') + "min\n" +
-  "✅ ¿Confirmamos el viaje?";
+  const mensaje = 
+    "*MIMI Transporte Escolar* 🚐\n\n" +
+    "📍 *Desde:* " + origen + "\n" +
+    "🎯 *Hasta:* " + destino + "\n\n" +
+    "🗺️ *Mapa:* " + mapsRutaCompleta + "\n\n" +
+    "⏰ *Cuándo:* " + fechaTexto + "\n" +
+    "💰 *Precio:* $" + precio + "\n" +
+    "📏 *Distancia:* " + kmCliente.toFixed(1) + "km · " + (datosCotizacion.duracionEstimadaMin || datosCotizacion.duracion || '—') + "min\n" +
+    "✅ ¿Confirmamos el viaje?";
   
-  window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');  
+  window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
 
 function activarAutocompleteConDelay(input, autocomplete) {
@@ -2099,13 +2099,13 @@ function activarAutocompleteConDelay(input, autocomplete) {
     const valor = input.value;
 
     if (valor.length < 4) {
-      autocomplete.setOptions({ types: [] }); // desactiva predicción
+      autocomplete.setOptions({ types: [] });
     } else {
       autocomplete.setOptions({ types: ['geocode'] });
     }
   });
 }
-// ==========================================  
+  // ==========================================  
 // UTILIDADES  
 // ==========================================  
   function guardarEstadoLocal() {
