@@ -1103,12 +1103,6 @@ function setTipoViaje(tipo) {
   <span>Calcular Tarifa</span>  
 </button>  
 
-<div class="resultado-section" id="resultado">  
-  <div class="precio-monto">$<span id="precioValor">0</span> ARS</div>  
-document.querySelector('.precio-descripcion').textContent =
-  tipoViaje === 'ida'
-    ? 'Precio por viaje (solo ida)'
-    : 'Precio total (ida y vuelta)';
   <button class="btn-whatsapp" onclick="reservarWhatsApp()">  
     <span>💬</span>  
     <span>Reservar Ahora</span>  
@@ -1808,7 +1802,7 @@ function testearConexion() {
   };
   
   const script = document.createElement('script');
-  script.src = 'script.google.com/macros/s/AKfycbxCnQyxy9IcvNgQQqui7rN42vQUtRK1GcZwrl91e5UddcbIlE35y61D5uXan7_WpfM3/exec?callback=' + testCallback;
+  script.src = 'script.google.com/macros/s/script.google.com/macros/s/AKfycbzjiTy9o62hVlVORljJ64Qh375YKNJ_Ul0-P2HtYA7QtMGc8TnnZz39rGXx4NrNBHEK/exec?callback=' + testCallback;
   
   script.onerror = function() {
     alert('❌ Error de conexión. Verificá la URL del script.');
