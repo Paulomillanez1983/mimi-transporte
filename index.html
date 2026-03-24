@@ -945,11 +945,300 @@ body {
   font-size: 0.9rem;  
   margin-bottom: 15px;  
 }
+/* Estilos para selector de servicios profesional */
+.servicio-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 15px 0;
+}
+
+.servicio-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.servicio-card:hover {
+  border-color: var(--azul-claro);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.servicio-card.activo {
+  border-color: var(--azul-primario);
+  background: linear-gradient(135deg, #e3f2fd 0%, #f5f7fa 100%);
+  box-shadow: 0 4px 16px rgba(21, 101, 192, 0.15);
+}
+
+.servicio-card.destacado {
+  border-color: var(--naranja);
+  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+}
+
+.servicio-card.destacado.activo {
+  background: linear-gradient(135deg, #ffe0b2 0%, #fff3e0 100%);
+  border-color: #e65100;
+}
+
+.servicio-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--naranja);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.servicio-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e3f2fd 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.servicio-card.activo .servicio-icon {
+  background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-oscuro) 100%);
+  transform: scale(1.1);
+}
+
+.servicio-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.servicio-info strong {
+  display: block;
+  color: #1a1a1a;
+  font-size: 0.95rem;
+  margin-bottom: 2px;
+}
+
+.servicio-info small {
+  display: block;
+  color: #666;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.servicio-ejemplo {
+  display: block;
+  color: #888;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.servicio-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.servicio-card.activo .servicio-check {
+  background: var(--exito);
+  transform: scale(1.1);
+}
+
+/* Botones de tiempo de espera */
+.tiempo-btn {
+  flex: 1;
+  padding: 12px 8px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  background: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.tiempo-btn.activo {
+  border-color: var(--azul-primario);
+  background: #e3f2fd;
+  color: var(--azul-primario);
+}
+
+.tiempo-btn:hover:not(.activo) {
+  border-color: var(--azul-claro);
+  background: #f5f7fa;
+}    
 </style>
 <script>
-  let modoTiempo = 'ahora';
-  let tipoViaje = 'ida';
+  // ==========================================
+// VARIABLES GLOBALES - NUEVA ARQUITECTURA
+// ==========================================
+let servicioSeleccionado = 'ida_escolar'; // Default: el primero está activo
+let tiempoEsperaSeleccionado = 30;
+let modoTiempo = 'ahora';
 
+// ==========================================
+// SELECTOR DE SERVICIOS
+// ==========================================
+function seleccionarServicio(servicio) {
+  servicioSeleccionado = servicio;
+  
+  // Reset visual de todas las cards
+  document.querySelectorAll('.servicio-card').forEach(c => {
+    c.classList.remove('activo');
+    // Actualizar ID para que coincidan (reemplazar _ por -)
+    const idServicio = servicio.replace(/_/g, '-');
+    if (c.id === `card-${idServicio}`) {
+      c.classList.add('activo');
+    }
+  });
+  
+  // Mostrar/ocultar campos condicionales
+  const campoVuelta = document.getElementById('campo-fecha-vuelta');
+  const campoEspera = document.getElementById('campo-espera');
+  
+  campoVuelta.style.display = (servicio === 'ida_mas_vuelta') ? 'block' : 'none';
+  campoEspera.style.display = (servicio === 'ida_vuelta_inmediata') ? 'block' : 'none';
+  
+  // Notificación contextual específica
+  const descripciones = {
+    'ida_escolar': {
+      titulo: 'Ida al destino',
+      desc: 'El chofer va de su base a tu domicilio y te lleva al destino. Solo pagás el recorrido efectivo.'
+    },
+    'vuelta_escolar': {
+      titulo: 'Vuelta a domicilio',
+      desc: 'El chofer va de su base al destino, te recoge y te trae a tu domicilio.'
+    },
+    'ida_vuelta_inmediata': {
+      titulo: 'Viaje redondo inmediato',
+      desc: 'Incluye 30 min de espera. El chofer te espera en el destino y vuelven juntos.'
+    },
+    'ida_mas_vuelta': {
+      titulo: 'Dos viajes programados',
+      desc: 'Ida y vuelta en horarios distintos. 10% de descuento por contratar ambos.'
+    }
+  };
+  
+  const info = descripciones[servicio];
+  notifSystem.show(info.titulo, info.desc, 'info', 3500);
+  
+  // Si es ida_mas_vuelta, sugerir horarios típicos escolares
+  if (servicio === 'ida_mas_vuelta') {
+    sugerirHorariosEscolares();
+  }
+  
+  guardarEstadoLocal();
+}
+
+function setTiempoEspera(minutos) {
+  tiempoEsperaSeleccionado = minutos;
+  document.getElementById('tiempoEsperaMin').value = minutos;
+  
+  // Actualizar UI
+  document.querySelectorAll('.tiempo-btn').forEach(b => b.classList.remove('activo'));
+  document.getElementById(`espera-${minutos}`).classList.add('activo');
+  
+  // Calcular costo extra
+  const minutosBase = 30;
+  const costoExtraPorMin = 300;
+  const extra = Math.max(0, minutos - minutosBase) * costoExtraPorMin;
+  
+  if (extra > 0) {
+    notifSystem.show(
+      'Tiempo de espera extendido', 
+      `+$${extra.toLocaleString()} por ${minutos - minutosBase} minutos adicionales`, 
+      'info', 
+      2500
+    );
+  }
+}
+
+function sugerirHorariosEscolares() {
+  const ahora = new Date();
+  const manana = new Date(ahora);
+  manana.setDate(manana.getDate() + 1);
+  
+  // Sugerir: mañana 7:30 para ida
+  manana.setHours(7, 30, 0, 0);
+  const horaIda = formatearFechaInput(manana);
+  
+  // Sugerir: mañana 16:00 para vuelta  
+  manana.setHours(16, 0, 0, 0);
+  const horaVuelta = formatearFechaInput(manana);
+  
+  // Auto-completar si los campos están vacíos
+  if (!document.getElementById('fechaHora').value) {
+    document.getElementById('fechaHora').value = horaIda;
+    actualizarTextoFecha();
+  }
+  
+  // Mostrar notificación con sugerencia
+  notifSystem.show(
+    'Horarios escolares sugeridos', 
+    'Ida: 7:30 AM · Vuelta: 4:00 PM. Podés modificarlos.', 
+    'info', 
+    5000
+  );
+}
+
+// Selector de fecha/hora para vuelta
+function abrirSelectorFechaVuelta() {
+  const input = document.getElementById('fechaHoraVuelta');
+  input.min = new Date().toISOString().slice(0, 16);
+  
+  try {
+    if (input.showPicker) {
+      input.showPicker();
+    } else {
+      input.focus();
+      input.click();
+    }
+  } catch (err) {
+    notifSystem.show('Selector', 'Tocá el campo para elegir fecha y hora', 'info', 3000);
+    input.focus();
+  }
+}
+
+function actualizarTextoFechaVuelta() {
+  const input = document.getElementById('fechaHoraVuelta');
+  const fecha = new Date(input.value);
+  if (isNaN(fecha.getTime())) return;
+  
+  const texto = formatearTextoBoton(fecha);
+  document.getElementById('textoFechaVuelta').textContent = texto;
+  
+  // Validar que sea posterior a la ida
+  const fechaIda = new Date(document.getElementById('fechaHora').value);
+  if (fecha <= fechaIda) {
+    notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
+    input.value = '';
+    document.getElementById('textoFechaVuelta').textContent = 'Seleccionar...';
+  }
+}
   
   
 
@@ -988,31 +1277,29 @@ window.gm_authFailure = function() {
   document.head.appendChild(script);
   }
 
+<!-- =========================
+     BLOQUE CONFIANZA SIMPLE
+========================= -->
+<div style="margin:25px 0;">
 
-function setTipoViaje(tipo) {
-  tipoViaje = tipo;
+  <div style="
+    background:white;
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.06);
+  ">
 
-  const btnIda = document.getElementById('btnIda');
-  const btnVuelta = document.getElementById('btnIdaVuelta');
+    <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">
+      Un servicio pensado para familias
+    </div>
 
-  if (tipo === 'ida') {
-    btnIda.classList.add('activo');
-    btnIda.classList.remove('inactivo');
+    <div style="font-size:0.9rem; color:#555; line-height:1.5;">
+      Trabajamos con responsabilidad, puntualidad y mucho cuidado en cada viaje.  
+      Sabemos lo importante que es para vos quién lleva a tu hijo.
+    </div>
 
-    btnVuelta.classList.remove('activo');
-    btnVuelta.classList.add('inactivo');
+  </div>
 
-    notifSystem.show('Modo viaje', 'Calculando solo ida', 'info', 2000);
-  } else {
-    btnVuelta.classList.add('activo');
-    btnVuelta.classList.remove('inactivo');
-
-    btnIda.classList.remove('activo');
-    btnIda.classList.add('inactivo');
-
-    notifSystem.show('Modo viaje', 'Incluye ida y vuelta', 'info', 2000);
-  }
-}
 
 </script>
 </head>  
@@ -1118,14 +1405,116 @@ function setTipoViaje(tipo) {
   <span>⚠️</span>  
   <span id="errorText"></span>  
 </div>  
-<div style="display:flex; gap:10px; margin-top:15px;">
-  <button id="btnIda" class="modo-btn activo" onclick="setTipoViaje('ida')">
-    🚗 Solo ida
-  </button>
+<!-- NUEVO SELECTOR DE SERVICIOS -->
+<div class="servicio-selector" id="selectorServicios">
+  <div class="servicio-card activo" onclick="seleccionarServicio('ida_escolar')" id="card-ida_escolar">
+    <div class="servicio-icon">🌅</div>
+    <div class="servicio-info">
+      <strong>Ida al destino</strong>
+      <small>Te buscamos en tu domicilio y te llevamos</small>
+      <span class="servicio-ejemplo">Ej: Casa → Escuela</span>
+    </div>
+    <div class="servicio-check">✓</div>
+  </div>
 
-  <button id="btnIdaVuelta" class="modo-btn inactivo" onclick="setTipoViaje('ida_vuelta')">
-    🔁 Ida y vuelta
-  </button>
+  <div class="servicio-card" onclick="seleccionarServicio('vuelta_escolar')" id="card-vuelta_escolar">
+    <div class="servicio-icon">🌆</div>
+    <div class="servicio-info">
+      <strong>Vuelta a domicilio</strong>
+      <small>Te buscamos en el destino y te traemos</small>
+      <span class="servicio-ejemplo">Ej: Escuela → Casa</span>
+    </div>
+    <div class="servicio-check">✓</div>
+  </div>
+
+  <div class="servicio-card destacado" onclick="seleccionarServicio('ida_vuelta_inmediata')" id="card-ida_vuelta_inmediata">
+    <div class="servicio-badge">POPULAR</div>
+    <div class="servicio-icon">🔄</div>
+    <div class="servicio-info">
+      <strong>Ida y vuelta inmediata</strong>
+      <small>Te llevamos, esperamos y volvemos juntos</small>
+      <span class="servicio-ejemplo">Ej: Trámite médico, evento escolar</span>
+    </div>
+    <div class="servicio-check">✓</div>
+  </div>
+
+  <div class="servicio-card" onclick="seleccionarServicio('ida_mas_vuelta')" id="card-ida_mas_vuelta">
+    <div class="servicio-icon">📅</div>
+    <div class="servicio-info">
+      <strong>Ida + Vuelta programada</strong>
+      <small>Viajes separados con 10% de descuento</small>
+      <span class="servicio-ejemplo">Ej: Mañana escuela, tarde actividad</span>
+    </div>
+    <div class="servicio-check">✓</div>
+  </div>
+</div>
+
+<!-- CAMPOS CONDICIONALES -->
+<div id="campo-fecha-vuelta" style="display:none; margin-top:15px;">
+  <div class="datetime-header">
+    <span>🕐 Horario de VUELTA (regreso)</span>
+  </div>
+  <div class="datetime-card" onclick="abrirSelectorFechaVuelta()">
+    <div class="datetime-text">
+      <div class="datetime-label">Fecha y hora de regreso</div>
+      <div class="datetime-value" id="textoFechaVuelta">Seleccionar...</div>
+    </div>
+    <div class="location-arrow">›</div>
+  </div>
+  <input type="datetime-local" id="fechaHoraVuelta" class="datetime-input-hidden" onchange="actualizarTextoFechaVuelta()">
+</div>
+
+<div id="campo-espera" style="display:none; margin-top:15px;">
+  <div class="datetime-header">
+    <span>⏱️ Tiempo de espera en destino</span>
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min (incluidos)</button>
+    <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min (+$4.500)</button>
+    <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">1 hora (+$9.000)</button>
+    <button class="tiempo-btn" onclick="setTiempoEspera(90)" id="espera-90">1h 30m (+$18.000)</button>
+  </div>
+  <input type="hidden" id="tiempoEsperaMin" value="30">
+</div>
+</div>
+
+<!-- CAMPOS CONDICIONALES -->
+<div id="campo-fecha-vuelta" style="display:none; margin-top:15px;">
+  <div class="datetime-header">
+    <span>🕐 Horario de VUELTA (regreso)</span>
+  </div>
+  <div class="datetime-card" onclick="abrirSelectorFechaVuelta()">
+    <div class="datetime-text">
+      <div class="datetime-label">Fecha y hora de regreso</div>
+      <div class="datetime-value" id="textoFechaVuelta">Seleccionar...</div>
+    </div>
+    <div class="location-arrow">›</div>
+  </div>
+  <input type="datetime-local" id="fechaHoraVuelta" class="datetime-input-hidden" onchange="actualizarTextoFechaVuelta()">
+</div>
+
+<div id="campo-espera" style="display:none; margin-top:15px;">
+  <div class="datetime-header">
+    <span>⏱️ Tiempo de espera en destino</span>
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min (incluidos)</button>
+    <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min (+$4.500)</button>
+    <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">1 hora (+$9.000)</button>
+    <button class="tiempo-btn" onclick="setTiempoEspera(90)" id="espera-90">1h 30m (+$18.000)</button>
+  </div>
+  <input type="hidden" id="tiempoEsperaMin" value="30">
+</div>
+<div id="campo-espera" style="display:none; margin-top:15px;">
+  <div class="datetime-header">
+    <span>⏱️ Tiempo de espera</span>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min</button>
+    <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min</button>
+    <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">60 min</button>
+  </div>
+  <input type="hidden" id="tiempoEsperaMin" value="30">
 </div>
 
 <button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">  
@@ -1144,30 +1533,7 @@ function setTipoViaje(tipo) {
  
 </div>    
 </div>    
-<!-- =========================
-     BLOQUE CONFIANZA SIMPLE
-========================= -->
-<div style="margin:25px 0;">
 
-  <div style="
-    background:white;
-    border-radius:16px;
-    padding:16px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.06);
-  ">
-
-    <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">
-      Un servicio pensado para familias
-    </div>
-
-    <div style="font-size:0.9rem; color:#555; line-height:1.5;">
-      Trabajamos con responsabilidad, puntualidad y mucho cuidado en cada viaje.  
-      Sabemos lo importante que es para vos quién lleva a tu hijo.
-    </div>
-
-  </div>
-
-</div>
 
 <!-- =========================
      FOOTER SIMPLE
@@ -1198,7 +1564,183 @@ function setTipoViaje(tipo) {
 </div>
 
 </div>
+
   <script>  
+    // ==========================================
+// VARIABLES GLOBALES - NUEVA ARQUITECTURA V2
+// ==========================================
+let servicioSeleccionado = 'ida_escolar'; // Default: ida escolar
+let tiempoEsperaSeleccionado = 30;
+// let modoTiempo = 'ahora'; // Ya existe en tu código, no duplicar
+
+// ==========================================
+// SELECTOR DE SERVICIOS
+// ==========================================
+function seleccionarServicio(servicio) {
+  servicioSeleccionado = servicio;
+  
+  // Reset visual de todas las cards
+  document.querySelectorAll('.servicio-card').forEach(c => {
+    c.classList.remove('activo');
+  });
+  
+  // Activar la card seleccionada
+  const cardSeleccionada = document.getElementById(`card-${servicio}`);
+  if (cardSeleccionada) {
+    cardSeleccionada.classList.add('activo');
+  }
+  
+  // Mostrar/ocultar campos condicionales
+  const campoVuelta = document.getElementById('campo-fecha-vuelta');
+  const campoEspera = document.getElementById('campo-espera');
+  
+  if (campoVuelta) {
+    campoVuelta.style.display = (servicio === 'ida_mas_vuelta') ? 'block' : 'none';
+  }
+  
+  if (campoEspera) {
+    campoEspera.style.display = (servicio === 'ida_vuelta_inmediata') ? 'block' : 'none';
+  }
+  
+  // Notificación contextual específica
+  const descripciones = {
+    'ida_escolar': {
+      titulo: 'Ida al destino',
+      desc: 'El chofer va de su base a tu domicilio y te lleva al destino. Solo pagás el recorrido efectivo.'
+    },
+    'vuelta_escolar': {
+      titulo: 'Vuelta a domicilio',
+      desc: 'El chofer va de su base al destino, te recoge y te trae a tu domicilio.'
+    },
+    'ida_vuelta_inmediata': {
+      titulo: 'Viaje redondo inmediato',
+      desc: 'Incluye 30 min de espera. El chofer te espera en el destino y vuelven juntos.'
+    },
+    'ida_mas_vuelta': {
+      titulo: 'Dos viajes programados',
+      desc: 'Ida y vuelta en horarios distintos. 10% de descuento por contratar ambos.'
+    }
+  };
+  
+  const info = descripciones[servicio];
+  if (info && typeof notifSystem !== 'undefined') {
+    notifSystem.show(info.titulo, info.desc, 'info', 3500);
+  }
+  
+  // Si es ida_mas_vuelta, sugerir horarios típicos escolares
+  if (servicio === 'ida_mas_vuelta') {
+    sugerirHorariosEscolares();
+  }
+  
+  guardarEstadoLocal();
+}
+
+function setTiempoEspera(minutos) {
+  tiempoEsperaSeleccionado = minutos;
+  const inputEspera = document.getElementById('tiempoEsperaMin');
+  if (inputEspera) {
+    inputEspera.value = minutos;
+  }
+  
+  // Actualizar UI
+  document.querySelectorAll('.tiempo-btn').forEach(b => b.classList.remove('activo'));
+  const btnSeleccionado = document.getElementById(`espera-${minutos}`);
+  if (btnSeleccionado) {
+    btnSeleccionado.classList.add('activo');
+  }
+  
+  // Calcular costo extra
+  const minutosBase = 30;
+  const costoExtraPorMin = 300;
+  const extra = Math.max(0, minutos - minutosBase) * costoExtraPorMin;
+  
+  if (extra > 0 && typeof notifSystem !== 'undefined') {
+    notifSystem.show(
+      'Tiempo de espera extendido', 
+      `+$${extra.toLocaleString('es-AR')} por ${minutos - minutosBase} minutos adicionales`, 
+      'info', 
+      2500
+    );
+  }
+}
+
+function sugerirHorariosEscolares() {
+  const ahora = new Date();
+  const manana = new Date(ahora);
+  manana.setDate(manana.getDate() + 1);
+  
+  // Sugerir: mañana 7:30 para ida
+  manana.setHours(7, 30, 0, 0);
+  const horaIda = formatearFechaInput(manana);
+  
+  // Sugerir: mañana 16:00 para vuelta  
+  manana.setHours(16, 0, 0, 0);
+  const horaVuelta = formatearFechaInput(manana);
+  
+  // Auto-completar si los campos están vacíos
+  const inputFechaHora = document.getElementById('fechaHora');
+  if (inputFechaHora && !inputFechaHora.value) {
+    inputFechaHora.value = horaIda;
+    actualizarTextoFecha();
+  }
+  
+  // Mostrar notificación con sugerencia
+  if (typeof notifSystem !== 'undefined') {
+    notifSystem.show(
+      'Horarios escolares sugeridos', 
+      'Ida: 7:30 AM · Vuelta: 4:00 PM. Podés modificarlos.', 
+      'info', 
+      5000
+    );
+  }
+}
+
+// Selector de fecha/hora para vuelta
+function abrirSelectorFechaVuelta() {
+  const input = document.getElementById('fechaHoraVuelta');
+  if (!input) return;
+  
+  input.min = new Date().toISOString().slice(0, 16);
+  
+  try {
+    if (input.showPicker && typeof input.showPicker === 'function') {
+      input.showPicker();
+    } else {
+      input.focus();
+      input.click();
+    }
+  } catch (err) {
+    if (typeof notifSystem !== 'undefined') {
+      notifSystem.show('Selector', 'Tocá el campo para elegir fecha y hora', 'info', 3000);
+    }
+    input.focus();
+  }
+}
+
+function actualizarTextoFechaVuelta() {
+  const input = document.getElementById('fechaHoraVuelta');
+  const textoFecha = document.getElementById('textoFechaVuelta');
+  if (!input || !textoFecha) return;
+  
+  const fecha = new Date(input.value);
+  if (isNaN(fecha.getTime())) return;
+  
+  const texto = formatearTextoBoton(fecha);
+  textoFecha.textContent = texto;
+  
+  // Validar que sea posterior a la ida
+  const inputIda = document.getElementById('fechaHora');
+  if (inputIda && inputIda.value) {
+    const fechaIda = new Date(inputIda.value);
+    if (fecha <= fechaIda) {
+      if (typeof notifSystem !== 'undefined') {
+        notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
+      }
+      input.value = '';
+      textoFecha.textContent = 'Seleccionar...';
+    }
+  }
+}
     function guardarEstadoLocal() {
   const estado = {
     origen: document.getElementById('origen').value,
@@ -1387,12 +1929,16 @@ document.getElementById('fechaHora').addEventListener('change', guardarEstadoLoc
 document.addEventListener('DOMContentLoaded', function() {
   initFecha();
   cargarEstadoLocal();
-document.getElementById('origen').addEventListener('focus', cargarGoogleMaps, { once: true });
-
-  // 🔥 Estado inicial correcto
+  
+  // 🔥 INICIALIZAR SERVICIO POR DEFECTO
+  seleccionarServicio('ida_escolar');
+  
+  document.getElementById('origen').addEventListener('focus', cargarGoogleMaps, { once: true });
+  
+  // Estado inicial de tiempo
   seleccionarHoy();
 });
- // ⏱️ Actualiza la hora del botón "Ahora" cada minuto
+    // ⏱️ Actualiza la hora del botón "Ahora" cada minuto
 setInterval(() => {
   if (modoTiempo === 'ahora') {
     const btn = document.getElementById('btnHoy');
@@ -1586,12 +2132,24 @@ function formatearTextoBoton(fecha) {
 }
 
 // ==========================================  
-// CÁLCULO DE TARIFA CON NOTIFICACIONES ÚTILES  
+// CÁLCULO DE TARIFA - NUEVA ARQUITECTURA V2
+// ==========================================  
+  
+// ==========================================  
+// CÁLCULO DE TARIFA - ARQUITECTURA V2
 // ==========================================  
   
 function calcularTarifa() {  
   if (isCalculating) return;  
   if (navigator.vibrate) navigator.vibrate(30);
+
+  // Validar servicio seleccionado
+  if (!servicioSeleccionado) {
+    mostrarError('Seleccioná un tipo de servicio');
+    const selector = document.getElementById('selectorServicios');
+    if (selector) selector.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
 
   const origen = document.getElementById('origen').value.trim();  
   const destino = document.getElementById('destino').value.trim();  
@@ -1606,16 +2164,32 @@ function calcularTarifa() {
     mostrarError('Ingresá la dirección de destino');   
     document.getElementById('destino').focus();  
     return;   
-  }  
+  }
+
+  // Validaciones específicas por servicio
+  let fechaHoraVuelta = null;
+  let esperaMin = null;
   
-  // 🔥 Determinar fecha/hora según modo
+  if (servicioSeleccionado === 'ida_mas_vuelta') {
+    fechaHoraVuelta = document.getElementById('fechaHoraVuelta').value;
+    if (!fechaHoraVuelta) {
+      mostrarError('Seleccioná fecha y hora de VUELTA');
+      abrirSelectorFechaVuelta();
+      return;
+    }
+  }
+  
+  if (servicioSeleccionado === 'ida_vuelta_inmediata') {
+    esperaMin = parseInt(document.getElementById('tiempoEsperaMin').value) || 30;
+  }
+  
+  // Fecha/hora de ida
   let fechaHoraParaEnviar;
-  
   if (modoTiempo === 'ahora') {
     fechaHoraParaEnviar = new Date().toISOString();
   } else {
     if (!fechaHoraInput) {
-      mostrarError('Seleccioná fecha y hora');   
+      mostrarError('Seleccioná fecha y hora de ida');   
       abrirSelectorFecha();   
       return;   
     }
@@ -1635,16 +2209,17 @@ function calcularTarifa() {
   btn.disabled = true;  
   btn.innerHTML = '<div class="spinner"></div> Calculando...';  
   
-  const calcToast = notifSystem.show('Calculando ruta', 'Consultando precio...', 'info', 15000);  
+  const mensajeCarga = servicioSeleccionado === 'ida_mas_vuelta' 
+    ? 'Cotizando ida y vuelta...' 
+    : 'Consultando precio...';
+    
+  const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);  
   
   const callbackName = 'mimiCallback_' + Date.now();
-  
-  // ✅ DECLARAR TIMEOUT PRIMERO (antes de usarlo)
   let timeout;
     
-  // Handler de éxito
   window[callbackName] = function(res) {  
-    clearTimeout(timeout); // ✅ ahora sí existe
+    clearTimeout(timeout);
     delete window[callbackName];  
     const script = document.getElementById('jsonp-' + callbackName);  
     if (script) script.remove();  
@@ -1669,31 +2244,43 @@ function calcularTarifa() {
     
     mostrarResultado(res);
     
-    if (modoTiempo === 'ahora' && res.esNocturno) {
-      notifSystem.show('🌙 Horario nocturno', 'Se aplicó recargo por horario', 'info', 3000);
-    }
-      
-    notifSystem.show('¡Listo!', `Precio: $${res.precio?.toLocaleString('es-AR')}`, 'success', 4000);  
+    // Notificación específica por tipo de servicio
+    const notifServicio = {
+      'ida_escolar': { 
+        titulo: 'Ida cotizada', 
+        desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` 
+      },
+      'vuelta_escolar': { 
+        titulo: 'Vuelta cotizada', 
+        desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` 
+      },
+      'ida_vuelta_inmediata': { 
+        titulo: 'Viaje redondo listo', 
+        desc: `Total: $${res.precio?.toLocaleString('es-AR')} (incluye espera)` 
+      },
+      'ida_mas_vuelta': { 
+        titulo: 'Combo ida+vuelta', 
+        desc: `Total con descuento: $${res.precio?.toLocaleString('es-AR')}` 
+      }
+    };
+    
+    const n = notifServicio[servicioSeleccionado];
+    notifSystem.show(n.titulo, n.desc, 'success', 4000);
   };  
   
-  // Handler de timeout
   timeout = setTimeout(() => {  
     if (!isCalculating) return;  
-      
     delete window[callbackName];  
     const script = document.getElementById('jsonp-' + callbackName);  
     if (script) script.remove();  
-      
     isCalculating = false;  
     btn.disabled = false;  
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
-
     notifSystem.show('⏱️ Tiempo agotado', 'El servidor no respondió. Intentá de nuevo.', 'warning', 6000);  
     mostrarError('Tiempo de espera agotado. Intentá de nuevo.');  
   }, 15000);  
   
-  // Crear script
   const script = document.createElement('script');  
   script.id = 'jsonp-' + callbackName;  
   
@@ -1701,29 +2288,33 @@ function calcularTarifa() {
     clearTimeout(timeout);  
     delete window[callbackName];  
     script.remove();  
-      
     isCalculating = false;  
     btn.disabled = false;  
     btn.innerHTML = '<span>Calcular Tarifa</span>';  
     calcToast.remove();  
-
-    console.error('❌ Error cargando script:', e);
     notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);  
     mostrarError('Error de conexión. Verificá tu internet.');  
   };  
   
-  // ✅ URL CON COMILLAS CORRECTAS
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6UctYQrGNyQsmn8aJxL_S7T3KmqA9ZkyyhwaM5NurLJnuQQTlQZ1fGR1KLAPW8wRo/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4xy46y3jqCSOZcD3UnNmD8m0q1TtZPzfO742CYdUJwT0t9MV4iov3MX_CpZQT9pXZ/exec;
   
+  // 🔥 NUEVOS PARÁMETROS - ARQUITECTURA V2
   const params = new URLSearchParams({
     action: 'cotizar',
+    servicio: servicioSeleccionado,  // ← ANTES: tipo: tipoViaje
     desde: origen,  
     hasta: destino,  
-    tipo: tipoViaje,
     fechaViaje: fechaHoraParaEnviar,
-    clientId: 'web_' + Date.now(),  
-    callback: callbackName  
+    clientId: 'web_' + Date.now()
   });
+  
+  // Agregar parámetros condicionales
+  if (fechaHoraVuelta) {
+    params.append('fechaVuelta', fechaHoraVuelta);
+  }
+  if (esperaMin) {
+    params.append('esperaMin', esperaMin.toString());
+  }
   
   const fullUrl = SCRIPT_URL + '?' + params.toString();
   console.log('🌐 URL de consulta:', fullUrl);
@@ -1731,8 +2322,7 @@ function calcularTarifa() {
   script.src = fullUrl;  
   document.head.appendChild(script);  
 }
-    
-function mostrarResultado(res) {  
+    function mostrarResultado(res) {  
   datosCotizacion = res;  
   
   animarContador('precioValor', 0, res.precio, 800);  
@@ -1845,7 +2435,7 @@ function testearConexion() {
   
   const script = document.createElement('script');
   // ✅ URL CON COMILLAS
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6UctYQrGNyQsmn8aJxL_S7T3KmqA9ZkyyhwaM5NurLJnuQQTlQZ1fGR1KLAPW8wRo/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4xy46y3jqCSOZcD3UnNmD8m0q1TtZPzfO742CYdUJwT0t9MV4iov3MX_CpZQT9pXZ/exec;
   
   script.src = SCRIPT_URL + '?action=cotizar&desde=test&hasta=test&callback=' + testCallback;
   
