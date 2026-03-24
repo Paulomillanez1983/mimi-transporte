@@ -1720,13 +1720,14 @@ async function calcularTarifa() {
     
   const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
   
-  const params = new URLSearchParams({
-  origenPasajero: lugarOrigen.direccion,
-  destinoPasajero: lugarDestino.direccion,
+const params = new URLSearchParams({
+  desde: lugarOrigen.direccion,
+  hasta: lugarDestino.direccion,
   servicio: servicioSeleccionado,
-  fechaHoraIda: fechaHoraParaEnviar,
-  tiempoEsperaMin: esperaMin || '',
-  fechaHoraVuelta: fechaHoraVuelta || ''
+  fechaHora: fechaHoraParaEnviar,
+  esperaMin: esperaMin || '',
+  fechaHoraVuelta: fechaHoraVuelta || '',
+  callback: 'callbackCotizador' // importante para JSONP
 });
 
 
