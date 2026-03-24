@@ -1180,7 +1180,7 @@ body {
 // CONFIGURACIÓN GLOBAL
 // ==========================================
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxJc2n1rCMxxQta5g62JhjsYyzK79aZ26mC3DbWxVNWMOiPt45FVlhxL3CBFdIXa7uiAKfycbw-ljavDWhNh8BSZObUDZOeK1EWjfW9YRczhEs_QJHQm5FDkYBpI7Y6e3JFVjefgV_X/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw8hpmiIvrJKqCWT-to-LWkKm3c66BJ061-FhZhw0aoYerpidXFGXvdTZp2MW0KRP76AKfycbw-ljavDWhNh8BSZObUDZOeK1EWjfW9YRczhEs_QJHQm5FDkYBpI7Y6e3JFVjefgV_X/exec',
   WHATSAPP_NUMBER: '5493517014863'
 };
 
@@ -1721,15 +1721,14 @@ async function calcularTarifa() {
   const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
   
 const params = new URLSearchParams({
+  action: 'cotizar', // 👈 CLAVE
   desde: lugarOrigen.direccion,
   hasta: lugarDestino.direccion,
   servicio: servicioSeleccionado,
   fechaHora: fechaHoraParaEnviar,
   esperaMin: esperaMin || '',
-  fechaHoraVuelta: fechaHoraVuelta || '',
-  callback: 'callbackCotizador' // importante para JSONP
+  fechaHoraVuelta: fechaHoraVuelta || ''
 });
-
 
   const fullUrl = `${CONFIG.SCRIPT_URL}?${params.toString()}`;
 
