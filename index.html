@@ -1053,25 +1053,26 @@ body {
       </div>
     </div>
 
-    <!-- BOTÓN INTERCAMBIAR - ULTRA MINIMAL -->
-    <div style="display: flex; justify-content: flex-end; margin: -20px 20px 8px 0; position: relative; z-index: 10;">
+    <!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO -->
+    <div style="display: flex; justify-content: center; margin: -8px 0; position: relative; z-index: 5;">
       <button onclick="intercambiarOrigenDestino()" 
-              style="background: transparent; 
+              style="background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-claro) 100%); 
                      border: none; 
-                     width: 28px; 
-                     height: 28px; 
+                     border-radius: 50%; 
+                     width: 40px; 
+                     height: 40px; 
                      display: flex; 
                      align-items: center; 
                      justify-content: center; 
                      cursor: pointer; 
-                     opacity: 0.4;
-                     transition: all 0.2s ease;"
-              onmouseover="this.style.opacity='1'; this.style.transform='rotate(180deg)'"
-              onmouseout="this.style.opacity='0.4'; this.style.transform='rotate(0deg)'"
-              title="Invertir origen y destino">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
-        </svg>
+                     box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3); 
+                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                     font-size: 1.1rem;"
+              onmouseover="this.style.transform='rotate(180deg) scale(1.08)'; this.style.boxShadow='0 6px 16px rgba(21, 101, 192, 0.4)'"
+              onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.boxShadow='0 4px 12px rgba(21, 101, 192, 0.3)'"
+              onmousedown="this.style.transform='rotate(180deg) scale(0.96)'"
+              title="Intercambiar origen y destino">
+        <span style="filter: grayscale(100%) brightness(200%);">⇅</span>
       </button>
     </div>
     
