@@ -1613,17 +1613,6 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarTextoFecha();
   }
 });
-function actualizarTextoFecha() {
-  const input = document.getElementById('fechaHora');
-  const fecha = new Date(input.value);
-  if (isNaN(fecha.getTime())) return;
-  
-  const texto = formatearTextoBoton(fecha);
-  
-  if (modoTiempo === 'programado') {
-    document.getElementById('btnProgramado').textContent = texto;
-  }
-}
 
 function activarBoton(id, texto) {
   const btn = document.getElementById(id);
@@ -1654,9 +1643,9 @@ function calcularTarifa() {
     return;
   }
 
-  const origen = document.getElementById('origen').value.trim();
+  if (!lugarOrigen || !lugarDestino) {   mostrarError('Seleccioná direcciones de la lista');   return; }
   const destino = document.getElementById('destino').value.trim();
-  const fechaHoraInput = new Date().toISOString();
+  const fechaHoraInput = document.getElementById('fechaHora')?.value;
 
   if (!origen) {
     mostrarError('Ingresá la dirección de origen');
@@ -1899,7 +1888,7 @@ function animarContador(id, inicio, fin, duracion) {
 // WHATSAPP
 // ==========================================
 function reservarWhatsApp() {
-  const origen = document.getElementById('origen').value.trim();
+  if (!lugarOrigen || !lugarDestino) {   mostrarError('Seleccioná direcciones de la lista');   return; }
   const destino = document.getElementById('destino').value.trim();
   const fechaTexto = modoTiempo === 'ahora'
     ? document.getElementById('btnHoy').textContent.trim()
