@@ -836,18 +836,27 @@ body {
   margin: 15px 0;
 }
 
-.servicio-card {
-  background: white;
-  border: 2px solid #e0e0e0;
-  border-radius: 16px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  position: relative;
-  overflow: hidden;
+.servicio-card.urgente {
+  background: #111;
+  color: white;
+  border: 2px solid #00e676;
+  animation: pulseUrgente 1.6s infinite;
+}
+
+@keyframes pulseUrgente {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,230,118,0.6); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(0,230,118,0); }
+  100% { transform: scale(1); }
+}
+
+.servicio-card.dinamico {
+  animation: flotar 2s ease-in-out infinite;
+}
+
+@keyframes flotar {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
 }
 
 .servicio-card:hover {
@@ -973,6 +982,17 @@ body {
 .datetime-card:active {
   transform: scale(0.98);
 }
+
+  .btn-push{
+  border-radius:40px;
+  box-shadow:0 8px 0 #0d47a1;
+}
+
+.btn-push:active{
+  transform:translateY(5px);
+  box-shadow:0 3px 0 #0d47a1;
+}
+
 </style>
 </head>
 <body>
@@ -1030,64 +1050,40 @@ body {
       <span>⚠️</span>
       <span id="errorText"></span>
     </div>
-<div class="datetime-section">
-  <div class="datetime-header">
-    <span>📅 Fecha y Hora del Viaje</span>
-  </div>
-  
-  <!-- ✅ Selector de fecha siempre visible, sin botones -->
-  <div class="datetime-card" onclick="abrirSelectorFecha()">
-    <div class="datetime-text">
-      <div class="datetime-label">Tocá para seleccionar</div>
-      <div class="datetime-value" id="textoFechaSeleccionada">Elegí fecha y hora...</div>
-    </div>
-    <div class="location-arrow">›</div>
-  </div>
-  <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
-</div>
     <!-- SELECTOR DE SERVICIOS -->
-    <div class="servicio-selector" id="selectorServicios">
-      <div class="servicio-card activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
-        <div class="servicio-icon">🌅</div>
-        <div class="servicio-info">
-          <strong>Ida al destino</strong>
-          <small>Te buscamos en tu domicilio y te llevamos</small>
-          <span class="servicio-ejemplo">Ej: Casa → Escuela</span>
-        </div>
-        <div class="servicio-check">✓</div>
-      </div>
+<div class="servicio-selector" id="selectorServicios">
 
-      <div class="servicio-card" onclick="seleccionarServicio('VUELTA_ESCOLAR')" id="card-VUELTA_ESCOLAR">
-        <div class="servicio-icon">🌆</div>
-        <div class="servicio-info">
-          <strong>Vuelta a domicilio</strong>
-          <small>Te buscamos en el destino y te traemos</small>
-          <span class="servicio-ejemplo">Ej: Escuela → Casa</span>
-        </div>
-        <div class="servicio-check">✓</div>
-      </div>
+<!-- LO QUIERO YA -->
+<div class="servicio-card urgente activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
+  <div class="servicio-icon">🟢⚡</div>
+  <div class="servicio-info">
+    <strong>Lo quiero YA</strong>
+    <small>Viaje inmediato ahora mismo</small>
+  </div>
+  <div class="servicio-check">✓</div>
+</div>
 
-      <div class="servicio-card destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
-        <div class="servicio-badge">POPULAR</div>
-        <div class="servicio-icon">🔄</div>
-        <div class="servicio-info">
-          <strong>Ida y vuelta inmediata</strong>
-          <small>Te llevamos, esperamos y volvemos juntos</small>
-          <span class="servicio-ejemplo">Ej: Trámite médico, evento escolar</span>
-        </div>
-        <div class="servicio-check">✓</div>
-      </div>
+<!-- IDA Y VUELTA -->
+<div class="servicio-card dinamico destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
+  <div class="servicio-icon">🔁</div>
+  <div class="servicio-info">
+    <strong>Ida y vuelta</strong>
+    <small>Te llevamos y regresamos juntos</small>
+  </div>
+  <div class="servicio-check">✓</div>
+</div>
 
-      <div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
-        <div class="servicio-icon">📅</div>
-        <div class="servicio-info">
-          <strong>Ida + Vuelta programada</strong>
-          <small>Viajes separados con 10% de descuento</small>
-          <span class="servicio-ejemplo">Ej: Mañana escuela, tarde actividad</span>
-        </div>
-        <div class="servicio-check">✓</div>
-      </div>
-    </div>
+<!-- IDA + VUELTA PROGRAMADA -->
+<div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
+  <div class="servicio-icon">📅</div>
+  <div class="servicio-info">
+    <strong>Ida + Vuelta programada</strong>
+    <small>Viajes separados con descuento</small>
+  </div>
+  <div class="servicio-check">✓</div>
+</div>
+
+</div>
 
     <!-- CAMPOS CONDICIONALES -->
     <div id="campo-fecha-vuelta" style="display:none; margin-top:15px;">
@@ -1116,9 +1112,9 @@ body {
       <input type="hidden" id="tiempoEsperaMin" value="30">
     </div>
 
-    <button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">
-      <span>Calcular Tarifa</span>
-    </button>
+<button class="btn-calcular btn-push" id="btnCalcular" onclick="calcularTarifa()">
+  <span>💰 Cotizar viaje</span>
+</button>
 
     <div id="resultado" class="resultado-section">
       <div class="precio-monto">$<span id="precioValor">0</span></div>
@@ -1130,7 +1126,7 @@ body {
       <span>Reservar Ahora</span>
     </button>
 
-    <div id="mapaRuta" style="margin-top: 20px; display: none;"></div>
+<div id="mapaRuta" style="margin-top:25px; display:none;"></div>
   </div>
 </div>
 
@@ -1392,7 +1388,7 @@ window.inicializarAutocomplete = function() {
   const opciones = {
     componentRestrictions: { country: 'ar' },
     fields: ['formatted_address', 'geometry', 'name'],
-    types: ['geocode', 'establishment']
+    types: ['address']
   };
 
   const origenInput = document.getElementById('origen');
@@ -1660,7 +1656,7 @@ function calcularTarifa() {
 
   const origen = document.getElementById('origen').value.trim();
   const destino = document.getElementById('destino').value.trim();
-  const fechaHoraInput = document.getElementById('fechaHora').value;
+  const fechaHoraInput = new Date().toISOString();
 
   if (!origen) {
     mostrarError('Ingresá la dirección de origen');
@@ -1691,7 +1687,7 @@ function calcularTarifa() {
     esperaMin = parseInt(document.getElementById('tiempoEsperaMin').value) || 30;
   }
   
-  let fechaHoraParaEnviar;
+  let fechaHoraParaEnviar = new Date().toISOString();
   if (modoTiempo === 'ahora') {
     fechaHoraParaEnviar = new Date().toISOString();
   } else {
@@ -1947,7 +1943,7 @@ function reservarWhatsApp() {
     if (valor.length < 4) {
       autocomplete.setOptions({ types: [] }); // desactiva predicción
     } else {
-      autocomplete.setOptions({ types: ['geocode', 'establishment'] });
+      autocomplete.setOptions({ types: ['address'] });
     }
   });
 }
