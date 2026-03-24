@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MIMI - Panel Chofer</title>
+  <style>
+    :root {
+      --azul-oscuro: #1e3c72;
+      --azul-primario: #1565c0;
+      --verde: #4caf50;
+      --naranja: #ff9800;
+      --rojo: #f44336;
+      --gris: #f5f7fa;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    
+    body {
+      background: var(--gris);
+      min-height: 100vh;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    
+    .header h1 {
+      font-size: 1.4rem;
+      font-weight: 800;
+    }
+    
+    .header p {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+    
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 15px;
+      background: white;
+      margin: 15px;
+      border-radius: 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    
+    .stat {
+      text-align: center;
+    }
+    
+    .stat-number {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--azul-primario);
+    }
+    
+    .stat-label {
+      font-size: 0.75rem;
+      color: #666;
+      text-transform: uppercase;
+    }
+    
+    .filtros {
+      display: flex;
+      gap: 8px;
+      padding: 0 15px;
+      margin-bottom: 10px;
+      overflow-x: auto;
+    }
+    
+    .filtro-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 20px;
+      background: white;
+      color: #666;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    
+    .filtro-btn.activo {
+      background: var(--azul-primario);
+      color: white;
+    }
+    
+    .viajes-lista {
+      padding: 0 15px 100px;
+    }
+    
+    .viaje-card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border-left: 4px solid var(--azul-primario);
+    }
+    
+    .viaje-card.pendiente { border-left-color: var(--naranja); }
+    .viaje-card.aceptado { border-left-color: var(--azul-primario); }
+    .viaje-card.en-camino { border-left-color: #2196f3; }
+    .viaje-card.completado { border-left-color: var(--verde); }
+    .viaje-card.cancelado { border-left-color: var(--rojo); opacity: 0.7; }
+    
+    .viaje-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+    
+    .viaje-fecha {
+      font-size: 0.75rem;
+      color: #888;
+      font-weight: 600;
+    }
+    
+    .viaje-estado {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    
+    .estado-pendiente { background: #fff3e0; color: #e65100; }
+    .estado-aceptado { background: #e3f2fd; color: var(--azul-primario); }
+    .estado-en-camino { background: #e3f2fd; color: #1976d2; }
+    .estado-completado { background: #e8f5e9; color: #2e7d32; }
+    .estado-cancelado { background: #ffebee; color: #c62828; }
+    
+    .viaje-ruta {
+      margin-bottom: 12px;
+    }
+    
+    .ruta-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .ruta-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    
+    .ruta-icon.origen { background: #e8f5e9; }
+    .ruta-icon.destino { background: #ffebee; }
+    
+    .ruta-text {
+      flex: 1;
+      color: #333;
+      font-weight: 500;
+    }
+    
+    .viaje-info {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 12px;
+      background: var(--gris);
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .info-item {
+      text-align: center;
+    }
+    
+    .info-valor {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--azul-oscuro);
+    }
+    
+    .info-label {
+      font-size: 0.7rem;
+      color: #888;
+      text-transform: uppercase;
+    }
+    
+    .viaje-cliente {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: #fafafa;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    
+    .cliente-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--azul-primario), var(--azul-oscuro));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    
+    .cliente-datos {
+      flex: 1;
+    }
+    
+    .cliente-nombre {
+      font-weight: 700;
+      color: #1a1a1a;
+      font-size: 0.95rem;
+    }
+    
+    .cliente-tel {
+      font-size: 0.8rem;
+      color: #666;
+    }
+    
+    .viaje-acciones {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-accion {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    
+    .btn-accion:active {
+      transform: scale(0.98);
+    }
+    
+    .btn-aceptar {
+      background: var(--verde);
+      color: white;
+    }
+    
+    .btn-iniciar {
+      background: var(--azul-primario);
+      color: white;
+    }
+    
+    .btn-finalizar {
+      background: var(--azul-oscuro);
+      color: white;
+    }
+    
+    .btn-maps {
+      background: #e3f2fd;
+      color: var(--azul-primario);
+    }
+    
+    .btn-cancelar {
+      background: #ffebee;
+      color: var(--rojo);
+    }
+    
+    .btn-llamar {
+      background: #e8f5e9;
+      color: var(--verde);
+    }
+    
+    .btn-whatsapp {
+      background: #25d366;
+      color: white;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e0e0e0;
+      border-top-color: var(--azul-primario);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #888;
+    }
+    
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 15px;
+    }
+    
+    .refresh-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--azul-primario);
+      color: white;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(21, 101, 192, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    
+    .refresh-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .refresh-btn.spinning {
+      animation: spin 1s linear infinite;
+    }
+    
+    .nota-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      resize: vertical;
+      min-height: 60px;
+    }
+    
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🚐 MIMI Chofer</h1>
+    <p>Panel de viajes</p>
+  </div>
+  
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-number" id="statPendientes">0</div>
+      <div class="stat-label">Pendientes</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number" id="statHoy">0</div>
+      <div class="stat-label">Hoy</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number" id="statTotal">0</div>
+      <div class="stat-label">Total</div>
+    </div>
+  </div>
+  
+  <div class="filtros">
+    <button class="filtro-btn activo" onclick="filtrar('todos')">Todos</button>
+    <button class="filtro-btn" onclick="filtrar('pendiente')">Pendientes</button>
+    <button class="filtro-btn" onclick="filtrar('aceptado')">Aceptados</button>
+    <button class="filtro-btn" onclick="filtrar('en-camino')">En curso</button>
+    <button class="filtro-btn" onclick="filtrar('completado')">Completados</button>
+  </div>
+  
+  <div class="viajes-lista" id="listaViajes">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Cargando viajes...</p>
+    </div>
+  </div>
+  
+  <button class="refresh-btn" id="btnRefresh" onclick="cargarViajes()">🔄</button>
+
+  <script>
+    let viajesData = [];
+    let filtroActual = 'todos';
+    
+    // Cargar al iniciar
+    document.addEventListener('DOMContentLoaded', cargarViajes);
+    
+    // Auto-refresh cada 30 segundos
+    setInterval(cargarViajes, 30000);
+    
+    function cargarViajes() {
+      const btn = document.getElementById('btnRefresh');
+      btn.classList.add('spinning');
+      
+      google.script.run
+        .withSuccessHandler(function(data) {
+          viajesData = data;
+          renderizarViajes();
+          actualizarStats();
+          btn.classList.remove('spinning');
+        })
+        .withFailureHandler(function(error) {
+          console.error('Error:', error);
+          document.getElementById('listaViajes').innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">⚠️</div>
+              <p>Error al cargar: ${error.message}</p>
+              <button onclick="cargarViajes()" style="margin-top:15px;padding:10px 20px;border:none;border-radius:8px;background:var(--azul-primario);color:white;">Reintentar</button>
+            </div>
+          `;
+          btn.classList.remove('spinning');
+        })
+        .obtenerViajesParaChofer();
+    }
+    
+    function actualizarStats() {
+      const hoy = new Date().toDateString();
+      const pendientes = viajesData.filter(v => v.estado === 'PENDIENTE').length;
+      const deHoy = viajesData.filter(v => new Date(v.fecha).toDateString() === hoy).length;
+      
+      document.getElementById('statPendientes').textContent = pendientes;
+      document.getElementById('statHoy').textContent = deHoy;
+      document.getElementById('statTotal').textContent = viajesData.length;
+    }
+    
+    function filtrar(estado) {
+      filtroActual = estado;
+      
+      // Actualizar botones
+      document.querySelectorAll('.filtro-btn').forEach(btn => {
+        btn.classList.remove('activo');
+        if (btn.textContent.toLowerCase().includes(estado) || (estado === 'todos' && btn.textContent === 'Todos')) {
+          btn.classList.add('activo');
+        }
+      });
+      
+      renderizarViajes();
+    }
+    
+    function renderizarViajes() {
+      const container = document.getElementById('listaViajes');
+      
+      let viajes = viajesData;
+      if (filtroActual !== 'todos') {
+        viajes = viajes.filter(v => v.estado.toLowerCase() === filtroActual);
+      }
+      
+      // Ordenar: pendientes primero, luego por fecha
+      viajes.sort((a, b) => {
+        const orden = { 'PENDIENTE': 0, 'ACEPTADO': 1, 'EN_CAMINO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
+        if (orden[a.estado] !== orden[b.estado]) return orden[a.estado] - orden[b.estado];
+        return new Date(a.fecha) - new Date(b.fecha);
+      });
+      
+      if (viajes.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🚗</div>
+            <p>No hay viajes ${filtroActual !== 'todos' ? 'en este estado' : ''}</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
+    }
+    
+    function crearCardViaje(v) {
+      const estadoClass = v.estado.toLowerCase().replace('_', '-');
+      const fecha = new Date(v.fecha);
+      const fechaStr = fecha.toLocaleDateString('es-AR', { 
+        weekday: 'short', 
+        day: 'numeric', 
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      
+      const inicial = v.cliente ? v.cliente.charAt(0).toUpperCase() : '?';
+      
+      // Botones según estado
+      let acciones = '';
+      
+      if (v.estado === 'PENDIENTE') {
+        acciones = `
+          <button class="btn-accion btn-aceptar" onclick="cambiarEstado('${v.id}', 'ACEPTADO')">✓ Aceptar</button>
+          <button class="btn-accion btn-maps" onclick="abrirMaps('${v.origen}', '${v.destino}')">🗺️ Maps</button>
+        `;
+      } else if (v.estado === 'ACEPTADO') {
+        acciones = `
+          <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${v.id}', 'EN_CAMINO')">🚀 Iniciar</button>
+          <a href="tel:${v.telefono}" class="btn-accion btn-llamar" style="text-decoration:none;">📞 Llamar</a>
+        `;
+      } else if (v.estado === 'EN_CAMINO') {
+        acciones = `
+          <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${v.id}')">✅ Finalizar</button>
+          <a href="https://wa.me/${v.telefono}" target="_blank" class="btn-accion btn-whatsapp" style="text-decoration:none;">💬 WA</a>
+        `;
+      } else {
+        acciones = `
+          <button class="btn-accion btn-maps" onclick="abrirMaps('${v.origen}', '${v.destino}')">🗺️ Ver ruta</button>
+        `;
+      }
+      
+      return `
+        <div class="viaje-card ${estadoClass}">
+          <div class="viaje-header">
+            <span class="viaje-fecha">${fechaStr}</span>
+            <span class="viaje-estado estado-${estadoClass}">${v.estado.replace('_', ' ')}</span>
+          </div>
+          
+          <div class="viaje-cliente">
+            <div class="cliente-avatar">${inicial}</div>
+            <div class="cliente-datos">
+              <div class="cliente-nombre">${v.cliente || 'Sin nombre'}</div>
+              <div class="cliente-tel">📱 ${v.telefono || 'Sin teléfono'}</div>
+            </div>
+          </div>
+          
+          <div class="viaje-ruta">
+            <div class="ruta-item">
+              <div class="ruta-icon origen">📍</div>
+              <div class="ruta-text">${v.origen}</div>
+            </div>
+            <div class="ruta-item">
+              <div class="ruta-icon destino">🎯</div>
+              <div class="ruta-text">${v.destino}</div>
+            </div>
+          </div>
+          
+          <div class="viaje-info">
+            <div class="info-item">
+              <div class="info-valor">$${v.precio?.toLocaleString() || 0}</div>
+              <div class="info-label">Precio</div>
+            </div>
+            <div class="info-item">
+              <div class="info-valor">${v.km || 0}km</div>
+              <div class="info-label">Distancia</div>
+            </div>
+            <div class="info-item">
+              <div class="info-valor">${v.tipo || 'N/D'}</div>
+              <div class="info-label">Servicio</div>
+            </div>
+          </div>
+          
+          ${v.notas ? `<div style="font-size:0.85rem;color:#666;margin-bottom:10px;padding:8px;background:#fffde7;border-radius:6px;">📝 ${v.notas}</div>` : ''}
+          
+          <div class="viaje-acciones">
+            ${acciones}
+          </div>
+        </div>
+      `;
+    }
+    
+    function cambiarEstado(id, nuevoEstado) {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = '⏳...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.exito) {
+            // Recargar lista
+            cargarViajes();
+            // Notificación simple
+            mostrarNotificacion(`Viaje ${nuevoEstado.toLowerCase()}`, 'success');
+          } else {
+            alert('Error: ' + result.error);
+            btn.disabled = false;
+          }
+        })
+        .withFailureHandler(function(error) {
+          alert('Error: ' + error.message);
+          btn.disabled = false;
+        })
+        .actualizarEstadoViaje(id, nuevoEstado);
+    }
+    
+    function finalizarViaje(id) {
+      const notas = prompt('¿Alguna observación del viaje? (opcional)');
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.exito) {
+            cargarViajes();
+            mostrarNotificacion('Viaje completado ✓', 'success');
+          }
+        })
+        .finalizarViaje(id, notas || '');
+    }
+    
+    function abrirMaps(origen, destino) {
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
+      window.open(url, '_blank');
+    }
+    
+    function mostrarNotificacion(mensaje, tipo) {
+      // Crear toast simple
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: ${tipo === 'success' ? '#4caf50' : '#2196f3'};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-weight: 600;
+        z-index: 10000;
+        animation: slideDown 0.3s ease;
+      `;
+      toast.textContent = mensaje;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.animation = 'slideUp 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
