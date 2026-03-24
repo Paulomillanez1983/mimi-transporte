@@ -1720,54 +1720,78 @@ async function calcularTarifa() {
     
   const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
   
+  // JSONP con callback
+  const callbackName = 'mimiCallback_' + Date.now();
+
   const params = new URLSearchParams({
-    origen: `${lugarOrigen.lat},${lugarOrigen.lng}`,
-    destino: `${lugarDestino.lat},${lugarDestino.lng}`,
     desde: lugarOrigen.direccion,
     hasta: lugarDestino.direccion,
     servicio: servicioSeleccionado,
     fechaHora: fechaHoraParaEnviar,
     esperaMin: esperaMin || '',
-    fechaHoraVuelta: fechaHoraVuelta || ''
+    fechaHoraVuelta: fechaHoraVuelta || '',
+    callback: callbackName
   });
 
   const fullUrl = `${CONFIG.SCRIPT_URL}?${params.toString()}`;
 
-  try {
-    const response = await fetch(fullUrl);
-    const res = await response.json();
+  // Crear función callback temporal
+  window[callbackName] = function(data) {
+    // Limpiar
+    delete window[callbackName];
+    const script = document.querySelector(`script[src*="${callbackName}"]`);
+    if (script) script.remove();
     
+    // Procesar respuesta
     isCalculating = false;
     btn.disabled = false;
     btn.innerHTML = '<span>💰 Cotizar viaje</span>';
     calcToast.remove();
 
-    if (!res || res.error) {
-      const mensaje = res?.error || 'Error desconocido del servidor';
+    if (!data || data.error) {
+      const mensaje = data?.error || 'Error desconocido del servidor';
       notifSystem.show('Error', mensaje, 'error', 6000);
       mostrarError(mensaje);
       return;
     }
 
-    if (res.exito !== true) {
+    if (data.exito !== true) {
       notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
       mostrarError('Error en la cotización');
       return;
     }
 
-    mostrarResultado(res);
+    mostrarResultado(data);
 
     const notifServicio = {
-      'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
-      'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` },
-      'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` }
+      'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${data.precio?.toLocaleString('es-AR')}` },
+      'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${data.precio?.toLocaleString('es-AR')}` },
+      'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total: $${data.precio?.toLocaleString('es-AR')}` }
     };
 
     const n = notifServicio[servicioSeleccionado];
     if (n) {
       notifSystem.show(n.titulo, n.desc, 'success', 4000);
     }
-  } catch (err) {
+  };
+
+  // Crear script tag para JSONP
+  const script = document.createElement('script');
+  script.src = fullUrl;
+  script.onerror = function() {
+    delete window[callbackName];
+    script.remove();
+    isCalculating = false;
+    btn.disabled = false;
+    btn.innerHTML = '<span>💰 Cotizar viaje</span>';
+    calcToast.remove();
+    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);
+    mostrarError('Error de conexión. Verificá tu internet.');
+  };
+  document.head.appendChild(script);
+}
+  
+  catch (err) {
     console.error(err);
     isCalculating = false;
     btn.disabled = false;
