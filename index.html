@@ -13,7 +13,7 @@
 <!-- ✅ GOOGLE MAPS API - Loader moderno con importLibrary -->
 <script>
   (g=>{var h,a,k,p="The Google Maps JavaScript API"... })({
-    key: "AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ",
+    key: "AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc",
     v: "weekly",
     libraries: ["places"]
   });
@@ -1602,7 +1602,7 @@ function activarModoManual() {
   // Geocoding manual
   window.geocodificarDireccion = async function(direccion) {
     try {
-      const apiKey = 'AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ';
+      const apiKey = 'AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc';
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(direccion + ', Córdoba, Argentina')}&key=${apiKey}&region=ar`
       );
