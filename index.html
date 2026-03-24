@@ -1,47 +1,46 @@
-<!DOCTYPE html>  <html lang="es">  
-<head>  
-<meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">  
-<meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">  
-<title>MIMI Transporte Escolar</title>  <!-- Open Graph -->  <meta property="og:title" content="MIMI Transporte Escolar">  
-<meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">  
-<meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">  
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">
+<title>MIMI Transporte Escolar</title>
+<meta property="og:title" content="MIMI Transporte Escolar">
+<meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
+<meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
-  
-  <style>  
-:root {  
-  --azul-oscuro: #1e3c72;  
-  --azul-primario: #1565c0;  
-  --azul-claro: #42a5f5;  
-  --verde-wa: #25D366;  
-  --verde-oscuro: #128c7e;  
-  --rosa: #e91e63;  
-  --naranja: #ff9800;  
-  --gris-fondo: #f5f7fa;  
-  --blanco: #ffffff;  
-  --sombra: 0 4px 20px rgba(0,0,0,0.08);  
-  --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);  
-  --exito: #4caf50;  
-  --info: #2196f3; 
 
-}  
-  
-* {  
-  margin: 0;  
-  padding: 0;  
-  box-sizing: border-box;  
-  -webkit-tap-highlight-color: transparent;  
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;  
-}  
-  
-body {  
-  background: var(--gris-fondo);  
-  min-height: 100vh;  
-  padding-bottom: 30px;  
-}  
-    /* ==========================================
-   TRUST SECTION
-   ========================================== */
+<style>
+:root {
+  --azul-oscuro: #1e3c72;
+  --azul-primario: #1565c0;
+  --azul-claro: #42a5f5;
+  --verde-wa: #25D366;
+  --verde-oscuro: #128c7e;
+  --rosa: #e91e63;
+  --naranja: #ff9800;
+  --gris-fondo: #f5f7fa;
+  --blanco: #ffffff;
+  --sombra: 0 4px 20px rgba(0,0,0,0.08);
+  --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);
+  --exito: #4caf50;
+  --info: #2196f3;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+  background: var(--gris-fondo);
+  min-height: 100vh;
+  padding-bottom: 30px;
+}
+
 .trust-section {
   margin: 20px 0;
   display: flex;
@@ -49,7 +48,6 @@ body {
   gap: 15px;
 }
 
-/* Badge */
 .trust-badge {
   background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
   color: #2e7d32;
@@ -60,7 +58,6 @@ body {
   font-size: 0.9rem;
 }
 
-/* Driver */
 .driver-card {
   display: flex;
   align-items: center;
@@ -88,7 +85,6 @@ body {
   color: #666;
 }
 
-/* Reviews */
 .reviews {
   display: flex;
   flex-direction: column;
@@ -119,239 +115,229 @@ body {
   margin-top: 4px;
 }
 
-/* ==========================================  
-   HEADER  
-   ========================================== */  
-.header {  
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);  
-  padding: 20px 20px 40px 20px;  
-  position: relative;  
-  overflow: visible;  
-  border-bottom-left-radius: 25px;  
-  border-bottom-right-radius: 25px;  
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);  
-  margin-bottom: 40px;  
-}  
-  
-.header-content {  
-  display: flex;  
-  align-items: center;  
-  justify-content: space-between;  
-  max-width: 600px;  
-  margin: 0 auto;  
-  position: relative;  
-  z-index: 2;  
-  padding: 0 10px;  
-}  
-  
-.vehicle-section {  
-  display: flex;  
-  align-items: center;  
-  gap: 12px;  
-  position: relative;  
-}  
-  
-.vehicle-img {  
-  width: 160px;  
-  height: auto;  
-  object-fit: contain;  
-  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));  
-  position: absolute;  
-  left: -5px;  
-  bottom: -185px;  
-  z-index: 10;  
-  content: url('https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png');  
-}  
-  
-.logo-section {  
-  color: white;  
-  text-align: center;  
-  flex: 1;  
-  display: flex;  
-  flex-direction: column;  
-  align-items: center;  
-  justify-content: center;  
-}  
-  
-.logo-title {  
-  font-size: 1.8rem;  
-  font-weight: 800;  
-  letter-spacing: 1px;  
-  line-height: 1;  
-}  
-  
-.logo-subtitle {  
-  font-size: 0.75rem;  
-  opacity: 0.9;  
-  font-weight: 500;  
-  letter-spacing: 1.5px;  
-  text-transform: uppercase;  
-}  
-  
-.header-icons {  
-  display: flex;  
-  align-items: center;  
-  gap: 10px;  
-  z-index: 2;  
-}  
-  
-.shield-icon {  
-  width: 40px;  
-  height: 40px;  
-  background: rgba(255,255,255,0.15);  
-  border: 2px solid rgba(255,255,255,0.4);  
-  border-radius: 10px;  
-  display: flex;  
-  align-items: center;  
-  justify-content: center;  
-  font-size: 1.3rem;  
-  color: #4caf50;  
-  font-weight: bold;  
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);  
-}  
-  
-/* ==========================================  
-   TOAST NOTIFICATIONS CONTEXTUALES  
-   ========================================== */  
-.toast-container {  
-  position: fixed;  
-  top: 20px;  
-  right: 20px;  
-  left: 20px;  
-  z-index: 100000;  
-  display: flex;  
-  flex-direction: column;  
-  gap: 10px;  
-  max-width: 400px;  
-  margin: 0 auto;  
-  pointer-events: none;  
-}  
-  
-.toast {  
-  background: white;  
-  border-radius: 16px;  
-  padding: 16px 20px;  
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);  
-  display: flex;  
-  align-items: center;  
-  gap: 12px;  
-  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);  
-  border-left: 4px solid var(--azul-primario);  
-  pointer-events: all;  
-  position: relative;  
-}  
-  
-.toast.success { border-left-color: var(--exito); }  
-.toast.info { border-left-color: var(--info); }  
-.toast.warning { border-left-color: var(--naranja); }  
-.toast.error { border-left-color: #f44336; }  
-  
-.toast-icon {  
-  font-size: 1.4rem;  
-  flex-shrink: 0;  
-}  
-  
-.toast-content {  
-  flex: 1;  
-}  
-  
-.toast-title {  
-  font-weight: 700;  
-  color: #1a1a1a;  
-  font-size: 0.9rem;  
-  margin-bottom: 2px;  
-}  
-  
-.toast-message {  
-  color: #666;  
-  font-size: 0.85rem;  
-  line-height: 1.3;  
-}  
-  
-.toast-close {  
-  background: none;  
-  border: none;  
-  color: #999;  
-  cursor: pointer;  
-  font-size: 1.2rem;  
-  padding: 4px;  
-  line-height: 1;  
-  transition: color 0.2s;  
-}  
-  
-.toast-close:hover {  
-  color: #333;  
-}  
-  
-.toast-progress {  
-  position: absolute;  
-  bottom: 0;  
-  left: 0;  
-  height: 3px;  
-  background: var(--azul-claro);  
-  border-radius: 0 0 0 16px;  
-  animation: progress 4s linear forwards;  
-}  
-  
-.toast.success .toast-progress { background: var(--exito); }  
-.toast.info .toast-progress { background: var(--info); }  
-.toast.warning .toast-progress { background: var(--naranja); }  
-.toast.error .toast-progress { background: #f44336; }  
-  
-@keyframes slideInDown {  
-  from { opacity: 0; transform: translateY(-10px); }  
-  to { opacity: 1; transform: translateY(0); }  
-}  
-  
-@keyframes slideOutUp {  
-  to { opacity: 0; transform: translateY(-10px); }  
-}  
-  
-@keyframes progress {  
-  from { width: 100%; }  
-  to { width: 0%; }  
-}  
-  
-/* ==========================================  
-   RESTO DE ESTILOS  
-   ========================================== */  
-.container {  
-  max-width: 600px;  
-  margin: 0 auto;  
-  padding: 0 20px;  
-}  
-  
-.hero-text {  
-  text-align: center;  
-  padding: 25px 20px 20px;  
-}  
-  
-.hero-title {  
-  font-size: 1.6rem;  
-  color: #1a1a1a;  
-  font-weight: 800;  
-  margin-bottom: 6px;  
-}  
-  
-.hero-subtitle {  
-  color: #666;  
-  font-size: 1rem;  
-}  
-  
-.main-card {  
-  background: white;  
-  border-radius: 20px;  
-  padding: 20px;  
-  box-shadow: var(--sombra);  
-  margin-bottom: 20px;  
-  position: relative;  
-}  
-  
-.location-input-group {  
-  margin-bottom: 12px;  
-  position: relative;  
-}  
-  
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 20px 20px 40px 20px;
+  position: relative;
+  overflow: visible;
+  border-bottom-left-radius: 25px;
+  border-bottom-right-radius: 25px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  margin-bottom: 40px;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  padding: 0 10px;
+}
+
+.vehicle-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.vehicle-img {
+  width: 160px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+  position: absolute;
+  left: -5px;
+  bottom: -185px;
+  z-index: 10;
+}
+
+.logo-section {
+  color: white;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.logo-subtitle {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+}
+
+.shield-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  color: #4caf50;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  left: 20px;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+
+.toast {
+  background: white;
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 4px solid var(--azul-primario);
+  pointer-events: all;
+  position: relative;
+}
+
+.toast.success { border-left-color: var(--exito); }
+.toast.info { border-left-color: var(--info); }
+.toast.warning { border-left-color: var(--naranja); }
+.toast.error { border-left-color: #f44336; }
+
+.toast-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+}
+
+.toast-title {
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+}
+
+.toast-message {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.toast-close:hover {
+  color: #333;
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--azul-claro);
+  border-radius: 0 0 0 16px;
+  animation: progress 4s linear forwards;
+}
+
+.toast.success .toast-progress { background: var(--exito); }
+.toast.info .toast-progress { background: var(--info); }
+.toast.warning .toast-progress { background: var(--naranja); }
+.toast.error .toast-progress { background: #f44336; }
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideOutUp {
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+@keyframes progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.hero-text {
+  text-align: center;
+  padding: 25px 20px 20px;
+}
+
+.hero-title {
+  font-size: 1.6rem;
+  color: #1a1a1a;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.hero-subtitle {
+  color: #666;
+  font-size: 1rem;
+}
+
+.main-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: var(--sombra);
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.location-input-group {
+  margin-bottom: 12px;
+  position: relative;
+}
+
 .location-card {
   display: flex;
   align-items: center;
@@ -364,6 +350,7 @@ body {
   position: relative;
   overflow: hidden;
 }
+
 .location-card::after {
   content: '';
   position: absolute;
@@ -383,22 +370,17 @@ body {
   transform: scale(0.97);
 }
 
-/* ✨ Mejora visual input activo */
 .location-card:focus-within {
   background: white;
   border-color: var(--azul-claro);
-  box-shadow: 
-    0 0 0 3px rgba(66, 165, 245, 0.15),
-    0 8px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.15), 0 8px 20px rgba(0,0,0,0.08);
   transform: scale(1.01);
 }
 
-/* ✨ Cursor más claro */
 .location-input {
   cursor: text;
 }
 
-/* ✨ Placeholder más visible */
 .location-input::placeholder {
   color: #bbb;
   font-weight: 400;
@@ -408,11 +390,11 @@ body {
 .location-input:focus::placeholder {
   opacity: 0.5;
 }
-  
+
 .location-icon {
   width: 42px;
   height: 42px;
-  border-radius: 14px; /* 🔥 menos circular, más moderno */
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -421,20 +403,14 @@ body {
   flex-shrink: 0;
   transition: all 0.3s ease;
   position: relative;
-
-  /* ✨ profundidad */
-  box-shadow: 
-    0 4px 10px rgba(0,0,0,0.12),
-    inset 0 1px 0 rgba(255,255,255,0.2);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.2);
 }
-    /* cuando el usuario interactúa */
+
 .location-card:focus-within .location-icon {
   transform: scale(1.15) rotate(-2deg);
-
-  box-shadow: 
-    0 6px 16px rgba(0,0,0,0.2),
-    0 0 0 4px rgba(66,165,245,0.15);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2), 0 0 0 4px rgba(66,165,245,0.15);
 }
+
 @keyframes pulseIcon {
   0% { transform: scale(1); }
   50% { transform: scale(1.12); }
@@ -445,7 +421,6 @@ body {
   animation: pulseIcon 1s ease;
 }
 
-  
 .location-icon.origin {
   background: linear-gradient(135deg, #43a047, #2e7d32);
   color: white;
@@ -455,30 +430,30 @@ body {
   background: linear-gradient(135deg, #e53935, #b71c1c);
   color: white;
 }
-  
-.location-text { flex: 1; min-width: 0; }  
-  
-.location-label {  
-  font-size: 0.75rem;  
-  color: #888;  
-  font-weight: 700;  
-  text-transform: uppercase;  
-  margin-bottom: 3px;  
-  letter-spacing: 0.5px;  
-}  
-  
-.location-input {  
-  width: 100%;  
-  border: none;  
-  background: transparent;  
-  font-size: 0.95rem;  
-  color: #1a1a1a;  
-  font-weight: 600;  
-  outline: none;  
-}  
-  
-.location-input::placeholder { color: #aaa; font-weight: 400; }  
-  
+
+.location-text { flex: 1; min-width: 0; }
+
+.location-label {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  letter-spacing: 0.5px;
+}
+
+.location-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: #1a1a1a;
+  font-weight: 600;
+  outline: none;
+}
+
+.location-input::placeholder { color: #aaa; font-weight: 400; }
+
 .location-arrow {
   color: #ccc;
   font-size: 1.2rem;
@@ -490,72 +465,67 @@ body {
   transform: translateX(6px);
   color: var(--azul-claro);
 }
-  
-  
-.datetime-section { margin-top: 15px; }  
-  
-.datetime-header {  
-  display: flex;  
-  align-items: center;  
-  gap: 8px;  
-  margin-bottom: 10px;  
-  color: #555;  
-  font-weight: 600;  
-  font-size: 0.85rem;  
-}  
-  
-.datetime-card {  
-  background: #f8f9fa;  
-  border: 2px solid #e8e8e8;  
-  border-radius: 14px;  
-  padding: 14px;  
-  display: flex;  
-  align-items: center;  
-  gap: 12px;  
-  cursor: pointer;  
-  transition: all 0.3s;  
-}  
-  
-.datetime-card:active {  
-  transform: scale(0.98);  
-}  
-  
-.datetime-text { flex: 1; }  
-  
-.datetime-label {  
-  font-size: 0.75rem;  
-  color: #888;  
-  font-weight: 700;  
-  text-transform: uppercase;  
-  margin-bottom: 2px;  
-}  
-  
-.datetime-value {  
-  font-size: 0.95rem;  
-  color: #1a1a1a;  
-  font-weight: 600;  
-}  
-  
-.datetime-input-hidden {  
-  position: absolute;  
-  opacity: 0;  
-  pointer-events: none;  
-  width: 0;  
-  height: 0;  
-}  
-  .btn-calcular::after {
+
+.datetime-section { margin-top: 15px; }
+
+.datetime-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: #555;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.datetime-card {
+  background: #f8f9fa;
+  border: 2px solid #e8e8e8;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.datetime-card:active {
+  transform: scale(0.98);
+}
+
+.datetime-text { flex: 1; }
+
+.datetime-label {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.datetime-value {
+  font-size: 0.95rem;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+.datetime-input-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.btn-calcular::after {
   content: '';
   position: absolute;
   top: 0;
   left: -75%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(
-    120deg,
-    rgba(255,255,255,0.1),
-    rgba(255,255,255,0.5),
-    rgba(255,255,255,0.1)
-  );
+  background: linear-gradient(120deg, rgba(255,255,255,0.1), rgba(255,255,255,0.5), rgba(255,255,255,0.1));
   transform: skewX(-20deg);
 }
 
@@ -564,9 +534,7 @@ body {
 }
 
 @keyframes brilloBtn {
-  100% {
-    left: 130%;
-  }
+  100% { left: 130%; }
 }
 
 .btn-calcular {
@@ -591,7 +559,7 @@ body {
   position: relative;
   overflow: hidden;
 }
-  
+
 .btn-calcular:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 0 10px 25px rgba(21, 101, 192, 0.45);
@@ -601,178 +569,179 @@ body {
   transform: scale(0.96);
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
-  
-.btn-calcular:disabled {  
-  opacity: 0.7;  
-  cursor: not-allowed;  
-  transform: none;  
-}  
-  
-.spinner {  
-  width: 20px;  
-  height: 20px;  
-  border: 3px solid rgba(255,255,255,0.3);  
-  border-top-color: white;  
-  border-radius: 50%;  
-  animation: spin 0.8s linear infinite;  
-  display: inline-block;  
-  vertical-align: middle;  
-}  
-  
-@keyframes spin { to { transform: rotate(360deg); } }  
-  
-.resultado-section {  
-  margin-top: 20px;  
-  padding-top: 20px;  
-  border-top: 2px dashed #e0e0e0;  
-  display: none;  
-  text-align: center;  
-}  
-  
-.resultado-section.visible {   
-  display: block;   
-  animation: fadeInUp 0.5s ease;   
-}  
-  
-@keyframes fadeInUp {  
-  from { opacity: 0; transform: translateY(20px); }  
-  to { opacity: 1; transform: translateY(0); }  
-}  
-  
-.precio-monto {  
-  font-size: 2.5rem;  
-  font-weight: 800;  
-  color: var(--azul-oscuro);  
-  margin-bottom: 6px;  
-}  
-  
-.precio-descripcion {  
-  color: #666;  
-  font-size: 0.9rem;  
-  margin-bottom: 15px;  
-}  
-  
-.btn-whatsapp {  
-  width: 100%;  
-  padding: 16px;  
-  background: linear-gradient(135deg, var(--verde-wa) 0%, var(--verde-oscuro) 100%);  
-  color: white;  
-  border: none;  
-  border-radius: 12px;  
-  font-size: 1rem;  
-  font-weight: 700;  
-  cursor: pointer;  
-  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);  
-  display: flex;  
-  align-items: center;  
-  justify-content: center;  
-  gap: 8px;  
-  text-transform: uppercase;  
-  letter-spacing: 0.5px;  
-  transition: all 0.3s;  
-}  
-  
-.btn-whatsapp:hover {  
-  transform: translateY(-2px);  
-  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);  
-}  
-  
-.error-message {  
-  background: #ffebee;  
-  color: #c62828;  
-  padding: 12px;  
-  border-radius: 10px;  
-  margin-top: 12px;  
-  font-size: 0.85rem;  
-  font-weight: 600;  
-  display: none;  
-  align-items: center;  
-  gap: 8px;  
-  border-left: 4px solid #f44336;  
-}  
-  
-.error-message.visible { display: flex; animation: shake 0.5s; }  
-  
-@keyframes shake {  
-  0%, 100% { transform: translateX(0); }  
-  25% { transform: translateX(-5px); }  
-  75% { transform: translateX(5px); }  
-}  
 
-.features-section {  
-  display: grid;  
-  grid-template-columns: repeat(2, 1fr);  
-  gap: 12px;  
-  margin-top: 15px;  
-}  
-  
-.feature-card {  
-  background: white;  
-  border-radius: 16px;  
-  padding: 20px 12px;  
-  text-align: center;  
-  box-shadow: var(--sombra);  
-  transition: all 0.3s;  
-}  
-  
-.feature-card:hover {  
-  transform: translateY(-4px);  
-  box-shadow: var(--sombra-hover);  
-}  
-  
-.feature-icon {  
-  width: 45px;  
-  height: 45px;  
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);  
-  border-radius: 50%;  
-  display: flex;  
-  align-items: center;  
-  justify-content: center;  
-  font-size: 1.3rem;  
-  margin: 0 auto 10px;  
-}  
-  
-.feature-icon.shield {  
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);  
-}  
-  
-.feature-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 3px; }  
-.feature-desc { color: #888; font-size: 0.75rem; }  
-  
-.footer {  
-  text-align: center;  
-  padding: 25px 20px;  
-  color: #666;  
-  font-size: 0.85rem;  
-}  
-  
-.footer-phone {  
-  display: inline-flex;  
-  align-items: center;  
-  gap: 6px;  
-  background: white;  
-  padding: 10px 20px;  
-  border-radius: 50px;  
-  font-weight: 700;  
-  color: var(--azul-primario);  
-  margin: 12px 0;  
-  box-shadow: var(--sombra);  
-}  
-  
-@media (max-width: 480px) {  
-  .hero-title { font-size: 1.4rem; }  
-  .precio-monto { font-size: 2rem; }  
-  .features-section { grid-template-columns: 1fr; }  
-  .vehicle-img {   
-    width: 140px;   
-    height: auto;   
-    bottom: -140px;  
-    left: -5px;  
-  }  
-  .logo-section { margin-left: 110px; }  
-  .logo-title { font-size: 1.6rem; }  
-  .header { padding: 15px 15px 35px 15px; }  
-}  
+.btn-calcular:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.resultado-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px dashed #e0e0e0;
+  display: none;
+  text-align: center;
+}
+
+.resultado-section.visible {
+  display: block;
+  animation: fadeInUp 0.5s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.precio-monto {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--azul-oscuro);
+  margin-bottom: 6px;
+}
+
+.precio-descripcion {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+}
+
+.btn-whatsapp {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--verde-wa) 0%, var(--verde-oscuro) 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s;
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  border-left: 4px solid #f44336;
+}
+
+.error-message.visible { display: flex; animation: shake 0.5s; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.features-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 12px;
+  text-align: center;
+  box-shadow: var(--sombra);
+  transition: all 0.3s;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sombra-hover);
+}
+
+.feature-icon {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin: 0 auto 10px;
+}
+
+.feature-icon.shield {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
+.feature-title { font-weight: 700; font-size: 0.85rem; margin-bottom: 3px; }
+.feature-desc { color: #888; font-size: 0.75rem; }
+
+.footer {
+  text-align: center;
+  padding: 25px 20px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.footer-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-weight: 700;
+  color: var(--azul-primario);
+  margin: 12px 0;
+  box-shadow: var(--sombra);
+}
+
+@media (max-width: 480px) {
+  .hero-title { font-size: 1.4rem; }
+  .precio-monto { font-size: 2rem; }
+  .features-section { grid-template-columns: 1fr; }
+  .vehicle-img {
+    width: 140px;
+    height: auto;
+    bottom: -140px;
+    left: -5px;
+  }
+  .logo-section { margin-left: 110px; }
+  .logo-title { font-size: 1.6rem; }
+  .header { padding: 15px 15px 35px 15px; }
+}
+
 .btn-mapa {
   width: 100%;
   padding: 14px 16px;
@@ -788,49 +757,29 @@ body {
   transition: all 0.25s ease;
 }
 
-.btn-mapa:active {
-  transform: scale(0.97);
-}
-
+.btn-mapa:active { transform: scale(0.97); }
 .btn-mapa:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px rgba(21, 101, 192, 0.35);
 }
 
-.btn-mapa-icon {
-  font-size: 1.4rem;
-}
-
-.btn-mapa-text {
-  flex: 1;
-  text-align: left;
-}
-
-.btn-mapa-text strong {
-  display: block;
-  font-size: 0.95rem;
-}
-
-.btn-mapa-text small {
-  font-size: 0.75rem;
-  opacity: 0.85;
-}
-
+.btn-mapa-icon { font-size: 1.4rem; }
+.btn-mapa-text { flex: 1; text-align: left; }
+.btn-mapa-text strong { display: block; font-size: 0.95rem; }
+.btn-mapa-text small { font-size: 0.75rem; opacity: 0.85; }
 .btn-mapa-arrow {
   font-size: 1.4rem;
   opacity: 0.7;
   transition: transform 0.2s;
 }
 
-.btn-mapa:hover .btn-mapa-arrow {
-  transform: translateX(4px);
-}
+.btn-mapa:hover .btn-mapa-arrow { transform: translateX(4px); }
+
 .btn-mapa {
   position: relative;
   overflow: hidden;
 }
 
-/* EFECTO BRILLO (tipo app premium) */
 .btn-mapa::after {
   content: '';
   position: absolute;
@@ -838,32 +787,18 @@ body {
   left: -75%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(
-    120deg,
-    rgba(255,255,255,0.1),
-    rgba(255,255,255,0.4),
-    rgba(255,255,255,0.1)
-  );
+  background: linear-gradient(120deg, rgba(255,255,255,0.1), rgba(255,255,255,0.4), rgba(255,255,255,0.1));
   transform: skewX(-20deg);
 }
 
-/* Animación al hover */
-.btn-mapa:hover::after {
-  animation: brillo 0.8s ease;
-}
+.btn-mapa:hover::after { animation: brillo 0.8s ease; }
 
-@keyframes brillo {
-  100% {
-    left: 130%;
-  }
-}
+@keyframes brillo { 100% { left: 130%; } }
 
-/* efecto presionado tipo app */
 .btn-mapa:active {
   transform: scale(0.96);
   box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
-
 
 .modo-btn {
   flex: 1;
@@ -876,76 +811,24 @@ body {
   color: #555;
   transition: all 0.25s ease;
 }
-.modo-btn {
-  transition: all 0.25s ease, transform 0.2s ease;
-}
 
-/* ✨ animación cuando cambia */
-.modo-btn.actualizando {
-  transform: scale(1.05);
-}
-
-/* ACTIVO (naranja pastel) */
+.modo-btn { transition: all 0.25s ease, transform 0.2s ease; }
+.modo-btn.actualizando { transform: scale(1.05); }
 .modo-btn.activo {
   background: #ffe0b2;
   color: #e65100;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
+.modo-btn.inactivo { opacity: 0.5; }
 
-/* INACTIVO (apagado) */
-.modo-btn.inactivo {
-  opacity: 0.5;
-}
 @keyframes pulsoUber {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
-  }
-  70% {
-    transform: scale(1.04);
-    box-shadow: 0 0 0 10px rgba(255, 152, 0, 0);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(255, 152, 0, 0);
-  }
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4); }
+  70% { transform: scale(1.04); box-shadow: 0 0 0 10px rgba(255, 152, 0, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
 }
 
-.modo-btn.uber-activo {
-  animation: pulsoUber 2s infinite;
-}
+.modo-btn.uber-activo { animation: pulsoUber 2s infinite; }
 
-.resultado-section {  
-  margin-top: 20px;  
-  padding-top: 20px;  
-  border-top: 2px dashed #e0e0e0;  
-  display: none;  
-  text-align: center;  
-}  
-
-.resultado-section.visible {   
-  display: block;   
-  animation: fadeInUp 0.5s ease;   
-}  
-
-@keyframes fadeInUp {  
-  from { opacity: 0; transform: translateY(20px); }  
-  to { opacity: 1; transform: translateY(0); }  
-}  
-
-.precio-monto {  
-  font-size: 2.5rem;  
-  font-weight: 800;  
-  color: var(--azul-oscuro);  
-  margin-bottom: 6px;  
-}  
-
-.precio-descripcion {  
-  color: #666;  
-  font-size: 0.9rem;  
-  margin-bottom: 15px;  
-}
-/* Estilos para selector de servicios profesional */
 .servicio-selector {
   display: flex;
   flex-direction: column;
@@ -1020,31 +903,10 @@ body {
   transform: scale(1.1);
 }
 
-.servicio-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.servicio-info strong {
-  display: block;
-  color: #1a1a1a;
-  font-size: 0.95rem;
-  margin-bottom: 2px;
-}
-
-.servicio-info small {
-  display: block;
-  color: #666;
-  font-size: 0.8rem;
-  margin-bottom: 4px;
-}
-
-.servicio-ejemplo {
-  display: block;
-  color: #888;
-  font-size: 0.75rem;
-  font-style: italic;
-}
+.servicio-info { flex: 1; min-width: 0; }
+.servicio-info strong { display: block; color: #1a1a1a; font-size: 0.95rem; margin-bottom: 2px; }
+.servicio-info small { display: block; color: #666; font-size: 0.8rem; margin-bottom: 4px; }
+.servicio-ejemplo { display: block; color: #888; font-size: 0.75rem; font-style: italic; }
 
 .servicio-check {
   width: 28px;
@@ -1066,7 +928,6 @@ body {
   transform: scale(1.1);
 }
 
-/* Botones de tiempo de espera */
 .tiempo-btn {
   flex: 1;
   padding: 12px 8px;
@@ -1090,444 +951,255 @@ body {
 .tiempo-btn:hover:not(.activo) {
   border-color: var(--azul-claro);
   background: #f5f7fa;
-}    
+}
 </style>
-<script>
-  // ==========================================
-// VARIABLES GLOBALES - NUEVA ARQUITECTURA
-// ==========================================
-let servicioSeleccionado = 'IDA_ESCOLAR'; // Default: el primero está activo
-let tiempoEsperaSeleccionado = 30;
-let modoTiempo = 'ahora';
+</head>
+<body>
+<div id="loadingGlobal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 99999;">
+  <div style="background: white; padding: 20px 30px; border-radius: 12px; font-weight: bold;">Calculando...</div>
+</div>
 
-// ==========================================
-// SELECTOR DE SERVICIOS
-// ==========================================
-function seleccionarServicio(servicio) {
-  servicioSeleccionado = servicio;
-  
-  // Reset visual de todas las cards
-  document.querySelectorAll('.servicio-card').forEach(c => {
-    c.classList.remove('activo');
-    // Actualizar ID para que coincidan (reemplazar _ por -)
-    const idServicio = servicio.replace(/_/g, '-');
-    if (c.id === `card-${idServicio}`) {
-      c.classList.add('activo');
-    }
-  });
-  
-  // Mostrar/ocultar campos condicionales
-  const campoVuelta = document.getElementById('campo-fecha-vuelta');
-  const campoEspera = document.getElementById('campo-espera');
-  
-  campoVuelta.style.display = (servicio === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA') ? 'block' : 'none';
-  campoEspera.style.display = (servicio === 'IDA_Y_VUELTA_INMEDIATA') ? 'block' : 'none';
-  
-  // Notificación contextual específica
-  const descripciones = {
-    'IDA_ESCOLAR': {
-      titulo: 'Ida al destino',
-      desc: 'El chofer va de su base a tu domicilio y te lleva al destino. Solo pagás el recorrido efectivo.'
-    },
-    'VUELTA_ESCOLAR': {
-      titulo: 'Vuelta a domicilio',
-      desc: 'El chofer va de su base al destino, te recoge y te trae a tu domicilio.'
-    },
-    'IDA_Y_VUELTA_INMEDIATA': {
-      titulo: 'Viaje redondo inmediato',
-      desc: 'Incluye 30 min de espera. El chofer te espera en el destino y vuelven juntos.'
-    },
-    'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA_PROGRAMADA': {
-      titulo: 'Dos viajes programados',
-      desc: 'Ida y vuelta en horarios distintos. 10% de descuento por contratar ambos.'
-    }
-  };
-  
-  const info = descripciones[servicio];
-  notifSystem.show(info.titulo, info.desc, 'info', 3500);
-  
-  // Si es IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA_PROGRAMADA, sugerir horarios típicos escolares
-  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA_PROGRAMADA') {
-    sugerirHorariosEscolares();
-  }
-  
-  guardarEstadoLocal();
-}
+<div class="toast-container" id="toastContainer"></div>
 
-function setTiempoEspera(minutos) {
-  tiempoEsperaSeleccionado = minutos;
-  document.getElementById('tiempoEsperaMin').value = minutos;
-  
-  // Actualizar UI
-  document.querySelectorAll('.tiempo-btn').forEach(b => b.classList.remove('activo'));
-  document.getElementById(`espera-${minutos}`).classList.add('activo');
-  
-  // Calcular costo extra
-  const minutosBase = 30;
-  const costoExtraPorMin = 300;
-  const extra = Math.max(0, minutos - minutosBase) * costoExtraPorMin;
-  
-  if (extra > 0) {
-    notifSystem.show(
-      'Tiempo de espera extendido', 
-      `+$${extra.toLocaleString()} por ${minutos - minutosBase} minutos adicionales`, 
-      'info', 
-      2500
-    );
-  }
-}
+<header class="header">
+  <div class="header-content">
+    <div class="vehicle-section">
+      <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png" alt="Jeep MIMI" class="vehicle-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
+    </div>
+    <div class="logo-section">
+      <div class="logo-title">MIMI</div>
+      <div class="logo-subtitle">Transporte Escolar</div>
+    </div>
+    <div class="header-icons">
+      <div class="shield-icon">✓</div>
+    </div>
+  </div>
+</header>
 
-function sugerirHorariosEscolares() {
-  const ahora = new Date();
-  const manana = new Date(ahora);
-  manana.setDate(manana.getDate() + 1);
-  
-  // Sugerir: mañana 7:30 para ida
-  manana.setHours(7, 30, 0, 0);
-  const horaIda = formatearFechaInput(manana);
-  
-  // Sugerir: mañana 16:00 para vuelta  
-  manana.setHours(16, 0, 0, 0);
-  const horaVuelta = formatearFechaInput(manana);
-  
-  // Auto-completar si los campos están vacíos
-  if (!document.getElementById('fechaHora').value) {
-    document.getElementById('fechaHora').value = horaIda;
-    actualizarTextoFecha();
-  }
-  
-  // Mostrar notificación con sugerencia
-  notifSystem.show(
-    'Horarios escolares sugeridos', 
-    'Ida: 7:30 AM · Vuelta: 4:00 PM. Podés modificarlos.', 
-    'info', 
-    5000
-  );
-}
+<div class="container">
+  <div class="hero-text">
+    <h1 class="hero-title">¡Viaje Seguro para tus Niños!</h1>
+    <p class="hero-subtitle">Pagá solo por los viajes que uses</p>
+  </div>
 
-// Selector de fecha/hora para vuelta
-function abrirSelectorFechaVuelta() {
-  const input = document.getElementById('fechaHoraVuelta');
-  input.min = new Date().toISOString().slice(0, 16);
-  
-  try {
-    if (input.showPicker) {
-      input.showPicker();
-    } else {
-      input.focus();
-      input.click();
-    }
-  } catch (err) {
-    notifSystem.show('Selector', 'Tocá el campo para elegir fecha y hora', 'info', 3000);
-    input.focus();
-  }
-}
-
-function actualizarTextoFechaVuelta() {
-  const input = document.getElementById('fechaHoraVuelta');
-  const fecha = new Date(input.value);
-  if (isNaN(fecha.getTime())) return;
-  
-  const texto = formatearTextoBoton(fecha);
-  document.getElementById('textoFechaVuelta').textContent = texto;
-  
-  // Validar que sea posterior a la ida
-  const fechaIda = new Date(document.getElementById('fechaHora').value);
-  if (fecha <= fechaIda) {
-    notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
-    input.value = '';
-    document.getElementById('textoFechaVuelta').textContent = 'Seleccionar...';
-  }
-}
-  
-  
-
-function cargarGoogleMaps() {
-  if (window.google && google.maps) return;
-window.gm_authFailure = function() {
-  notifSystem.show(
-    'Error de Maps',
-    'No se pudo autenticar Google Maps. Podés escribir la dirección manualmente.',
-    'error',
-    6000
-  );
-};
-
-  const script = document.createElement('script');
-
-  script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places&callback=inicializarAutocomplete";
-  script.async = true;
-  script.defer = true;
-
-  // ✅ LOG CUANDO CARGA BIEN
-  script.onload = () => {
-    console.log("✅ Google Maps cargado correctamente");
-  };
-
-  // ❌ ERROR SI FALLA
-  script.onerror = () => {
-    notifSystem.show(
-      'Modo manual',
-      'No se pudo cargar Google Maps. Podés escribir la dirección manualmente.',
-      'warning',
-      6000
-    );
-  };
-
-  document.head.appendChild(script);
-  }
-
-<!-- =========================
-     BLOQUE CONFIANZA SIMPLE
-========================= -->
-<div style="margin:25px 0;">
-
-  <div style="
-    background:white;
-    border-radius:16px;
-    padding:16px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.06);
-  ">
-
-    <div style="font-weight:700; font-size:1rem; margin-bottom:8px;">
-      Un servicio pensado para familias
+  <div class="main-card">
+    <div class="location-input-group">
+      <div class="location-card" onclick="document.getElementById('origen').focus()">
+        <div class="location-icon origin">📍</div>
+        <div class="location-text">
+          <div class="location-label">Origen</div>
+          <input type="text" id="origen" class="location-input" placeholder="Av. Santa Fe 1234, Córdoba" autocomplete="off">
+        </div>
+        <div class="location-arrow">›</div>
+      </div>
     </div>
 
-    <div style="font-size:0.9rem; color:#555; line-height:1.5;">
-      Trabajamos con responsabilidad, puntualidad y mucho cuidado en cada viaje.  
-      Sabemos lo importante que es para vos quién lleva a tu hijo.
+    <div class="location-input-group">
+      <div class="location-card" onclick="document.getElementById('destino').focus()">
+        <div class="location-icon destiny">📍</div>
+        <div class="location-text">
+          <div class="location-label">Destino</div>
+          <input type="text" id="destino" class="location-input" placeholder="Escuela Primaria, Villa Allende" autocomplete="off">
+        </div>
+        <div class="location-arrow">›</div>
+      </div>
     </div>
 
-</script>
-</head>  
-<body> 
-  <div id="loadingGlobal" style="
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-">
-  <div style="
-    background: white;
-    padding: 20px 30px;
-    border-radius: 12px;
-    font-weight: bold;
-  ">
-    Calculando...
-  </div>
-</div>
-
-  <div class="toast-container" id="toastContainer"></div>  <header class="header">  
-  <div class="header-content">  
-    <div class="vehicle-section">  
-      <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png"   
-           alt="Jeep MIMI"   
-           class="vehicle-img"  
-           onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">  
-    </div>  
-    <div class="logo-section">  
-      <div class="logo-title">MIMI</div>  
-      <div class="logo-subtitle">Transporte Escolar</div>  
-    </div>  
-    <div class="header-icons">  
-      <div class="shield-icon">✓</div>  
-    </div>  
-  </div>  
-</header>  <div class="container">  
-  <div class="hero-text">  
-    <h1 class="hero-title">¡Viaje Seguro para tus Niños!</h1>  
-    <p class="hero-subtitle">Pagá solo por los viajes que uses</p>  
-  </div>    <div class="main-card">  
-    <div class="location-input-group">  
-      <div class="location-card" onclick="document.getElementById('origen').focus()">  
-        <div class="location-icon origin">📍</div>  
-        <div class="location-text">  
-          <div class="location-label">Origen</div>  
-          <input type="text"   
-                 id="origen"   
-                 class="location-input"   
-                 placeholder="Av. Santa Fe 1234, Córdoba"  
-                 autocomplete="off">  
-        </div>  
-        <div class="location-arrow">›</div>  
-      </div>  
-    </div>  <div class="location-input-group">  
-  <div class="location-card" onclick="document.getElementById('destino').focus()">  
-    <div class="location-icon destiny">📍</div>  
-    <div class="location-text">  
-      <div class="location-label">Destino</div>  
-      <input type="text"   
-             id="destino"   
-             class="location-input"   
-             placeholder="Escuela Primaria, Villa Allende"  
-             autocomplete="off">  
-    </div>  
-    <div class="location-arrow">›</div>  
-  </div>  
-</div>  
-
-<div class="datetime-section">  
-<div class="datetime-header">
-  <span>📅 Fecha y Hora</span>
-</div>
-
-<div style="display:flex; gap:10px; align-items:stretch;">
-
-<div style="display:flex; gap:10px; width:100%;">
-
-  <!-- BOTÓN AHORA -->
-<button id="btnHoy" class="modo-btn activo" onclick="seleccionarHoy()">
-  🕒 Ahora
-</button>
-
-  <!-- BOTÓN PROGRAMADO -->
-  <button id="btnProgramado" class="modo-btn inactivo" onclick="setModo('programado')">
-    Programado
-  </button>
-
-</div>
-
-
-<!-- INPUT OCULTO (SE MANTIENE) -->
-<input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
-
-
-  </div>  
-</div>  
-
-<div class="error-message" id="errorMsg">  
-  <span>⚠️</span>  
-  <span id="errorText"></span>  
-</div>  
-<!-- NUEVO SELECTOR DE SERVICIOS -->
-<div class="servicio-selector" id="selectorServicios">
-  <div class="servicio-card activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
-    <div class="servicio-icon">🌅</div>
-    <div class="servicio-info">
-      <strong>Ida al destino</strong>
-      <small>Te buscamos en tu domicilio y te llevamos</small>
-      <span class="servicio-ejemplo">Ej: Casa → Escuela</span>
+    <div class="datetime-section">
+      <div class="datetime-header">
+        <span>📅 Fecha y Hora</span>
+      </div>
+      <div style="display:flex; gap:10px; align-items:stretch;">
+        <div style="display:flex; gap:10px; width:100%;">
+          <button id="btnHoy" class="modo-btn activo" onclick="seleccionarHoy()">🕒 Ahora</button>
+          <button id="btnProgramado" class="modo-btn inactivo" onclick="setModo('programado')">Programado</button>
+        </div>
+        <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
+      </div>
     </div>
-    <div class="servicio-check">✓</div>
-  </div>
 
-  <div class="servicio-card" onclick="seleccionarServicio('VUELTA_ESCOLAR')" id="card-VUELTA_ESCOLAR">
-    <div class="servicio-icon">🌆</div>
-    <div class="servicio-info">
-      <strong>Vuelta a domicilio</strong>
-      <small>Te buscamos en el destino y te traemos</small>
-      <span class="servicio-ejemplo">Ej: Escuela → Casa</span>
+    <div class="error-message" id="errorMsg">
+      <span>⚠️</span>
+      <span id="errorText"></span>
     </div>
-    <div class="servicio-check">✓</div>
-  </div>
 
-  <div class="servicio-card destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
-    <div class="servicio-badge">POPULAR</div>
-    <div class="servicio-icon">🔄</div>
-    <div class="servicio-info">
-      <strong>Ida y vuelta inmediata</strong>
-      <small>Te llevamos, esperamos y volvemos juntos</small>
-      <span class="servicio-ejemplo">Ej: Trámite médico, evento escolar</span>
+    <!-- SELECTOR DE SERVICIOS -->
+    <div class="servicio-selector" id="selectorServicios">
+      <div class="servicio-card activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
+        <div class="servicio-icon">🌅</div>
+        <div class="servicio-info">
+          <strong>Ida al destino</strong>
+          <small>Te buscamos en tu domicilio y te llevamos</small>
+          <span class="servicio-ejemplo">Ej: Casa → Escuela</span>
+        </div>
+        <div class="servicio-check">✓</div>
+      </div>
+
+      <div class="servicio-card" onclick="seleccionarServicio('VUELTA_ESCOLAR')" id="card-VUELTA_ESCOLAR">
+        <div class="servicio-icon">🌆</div>
+        <div class="servicio-info">
+          <strong>Vuelta a domicilio</strong>
+          <small>Te buscamos en el destino y te traemos</small>
+          <span class="servicio-ejemplo">Ej: Escuela → Casa</span>
+        </div>
+        <div class="servicio-check">✓</div>
+      </div>
+
+      <div class="servicio-card destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
+        <div class="servicio-badge">POPULAR</div>
+        <div class="servicio-icon">🔄</div>
+        <div class="servicio-info">
+          <strong>Ida y vuelta inmediata</strong>
+          <small>Te llevamos, esperamos y volvemos juntos</small>
+          <span class="servicio-ejemplo">Ej: Trámite médico, evento escolar</span>
+        </div>
+        <div class="servicio-check">✓</div>
+      </div>
+
+      <div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
+        <div class="servicio-icon">📅</div>
+        <div class="servicio-info">
+          <strong>Ida + Vuelta programada</strong>
+          <small>Viajes separados con 10% de descuento</small>
+          <span class="servicio-ejemplo">Ej: Mañana escuela, tarde actividad</span>
+        </div>
+        <div class="servicio-check">✓</div>
+      </div>
     </div>
-    <div class="servicio-check">✓</div>
-  </div>
 
-  <div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA">
-    <div class="servicio-icon">📅</div>
-    <div class="servicio-info">
-      <strong>Ida + Vuelta programada</strong>
-      <small>Viajes separados con 10% de descuento</small>
-      <span class="servicio-ejemplo">Ej: Mañana escuela, tarde actividad</span>
+    <!-- CAMPOS CONDICIONALES -->
+    <div id="campo-fecha-vuelta" style="display:none; margin-top:15px;">
+      <div class="datetime-header">
+        <span>🕐 Horario de VUELTA (regreso)</span>
+      </div>
+      <div class="datetime-card" onclick="abrirSelectorFechaVuelta()">
+        <div class="datetime-text">
+          <div class="datetime-label">Fecha y hora de regreso</div>
+          <div class="datetime-value" id="textoFechaVuelta">Seleccionar...</div>
+        </div>
+        <div class="location-arrow">›</div>
+      </div>
+      <input type="datetime-local" id="fechaHoraVuelta" class="datetime-input-hidden" onchange="actualizarTextoFechaVuelta()">
     </div>
-    <div class="servicio-check">✓</div>
-  </div>
-</div>
 
-<!-- CAMPOS CONDICIONALES -->
-<div id="campo-fecha-vuelta" style="display:none; margin-top:15px;">
-  <div class="datetime-header">
-    <span>🕐 Horario de VUELTA (regreso)</span>
-  </div>
-  <div class="datetime-card" onclick="abrirSelectorFechaVuelta()">
-    <div class="datetime-text">
-      <div class="datetime-label">Fecha y hora de regreso</div>
-      <div class="datetime-value" id="textoFechaVuelta">Seleccionar...</div>
+    <div id="campo-espera" style="display:none; margin-top:15px;">
+      <div class="datetime-header">
+        <span>⏱️ Tiempo de espera</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min</button>
+        <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min</button>
+        <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">60 min</button>
+      </div>
+      <input type="hidden" id="tiempoEsperaMin" value="30">
     </div>
-    <div class="location-arrow">›</div>
+
+    <button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">
+      <span>Calcular Tarifa</span>
+    </button>
+
+    <div id="resultado" class="resultado-section">
+      <div class="precio-monto">$<span id="precioValor">0</span></div>
+      <div class="precio-descripcion">Precio estimado</div>
+    </div>
+
+    <button class="btn-whatsapp" onclick="reservarWhatsApp()">
+      <span>💬</span>
+      <span>Reservar Ahora</span>
+    </button>
+
+    <div id="mapaRuta" style="margin-top: 20px; display: none;"></div>
   </div>
-  <input type="datetime-local" id="fechaHoraVuelta" class="datetime-input-hidden" onchange="actualizarTextoFechaVuelta()">
 </div>
 
-<div id="campo-espera" style="display:none; margin-top:15px;">
-  <div class="datetime-header">
-    <span>⏱️ Tiempo de espera</span>
-  </div>
-  <div style="display:flex; gap:8px;">
-    <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min</button>
-    <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min</button>
-    <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">60 min</button>
-  </div>
-  <input type="hidden" id="tiempoEsperaMin" value="30">
+<!-- FOOTER SIMPLE -->
+<div class="footer">
+  <div style="margin-bottom:10px;">📍 Villa Allende y zona norte de Córdoba</div>
+  <a href="tel:+543517014863" class="footer-phone">📞 351 701 4863</a>
+  <div style="opacity:0.6; font-size:0.75rem; margin-top:10px;">© 2026 MIMI Transporte Infantil</div>
 </div>
 
-<button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">  
-  <span>Calcular Tarifa</span>  
-</button>  
-<div id="resultado" class="resultado-section">
-  <div class="precio-monto">$<span id="precioValor">0</span></div>
-  <div class="precio-descripcion">Precio estimado</div>
-</div>
-  <button class="btn-whatsapp" onclick="reservarWhatsApp()">  
-    <span>💬</span>  
-    <span>Reservar Ahora</span>  
-  </button>
-
-<div id="mapaRuta" style="margin-top: 20px; display: none;"></div>
- 
-</div>    
-</div>    
-
-
-<!-- =========================
-     FOOTER SIMPLE
-========================= -->
-<div class="footer">  
-
-  <div style="margin-bottom:10px;">
-    📍 Villa Allende y zona norte de Córdoba
-  </div>
-
-  <a href="tel:+543517014863" class="footer-phone">
-    📞 351 701 4863
-  </a>
-
-  <div style="opacity:0.6; font-size:0.75rem; margin-top:10px;">  
-    © 2026 MIMI Transporte Infantil  
-  </div>  
-
-</div>
-
-<!-- =========================
-     PRUEBA SOCIAL NATURAL
-========================= -->
+<!-- PRUEBA SOCIAL -->
 <div style="text-align:center; margin-top:10px; font-size:0.85rem; color:#666;">
   Más de 20 familias ya confían en nosotros
-  <div style="font-size:0.8rem; opacity:0.6;">
-  Atención personalizada · Cupos limitados
+  <div style="font-size:0.8rem; opacity:0.6;">Atención personalizada · Cupos limitados</div>
 </div>
 
-</div>
-
-  <script>  
-    // ==========================================
-// VARIABLES GLOBALES - NUEVA ARQUITECTURA V2
+<script>
 // ==========================================
-let servicioSeleccionado = 'IDA_ESCOLAR'; // Default: ida escolar
+// CONFIGURACIÓN GLOBAL
+// ==========================================
+const CONFIG = {
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby4xy46y3jqCSOZcD3UnNmD8m0q1TtZPzfO742CYdUJwT0t9MV4iov3MX_CpZQT9pXZ/exec',
+  WHATSAPP_NUMBER: '5493517014863'
+};
+
+// ==========================================
+// VARIABLES GLOBALES
+// ==========================================
+let servicioSeleccionado = 'IDA_ESCOLAR';
 let tiempoEsperaSeleccionado = 30;
-// let modoTiempo = 'ahora'; // Ya existe en tu código, no duplicar
+let modoTiempo = 'ahora';
+let autocompleteOrigen, autocompleteDestino;
+let lugarOrigen = null;
+let lugarDestino = null;
+let datosCotizacion = null;
+let isCalculating = false;
+let sessionToken;
+
+// ==========================================
+// SISTEMA DE NOTIFICACIONES
+// ==========================================
+class NotificationSystem {
+  constructor() {
+    this.container = document.getElementById('toastContainer');
+    this.activeToasts = [];
+  }
+
+  show(title, message, type = 'info', duration = 4000) {
+    this.activeToasts = this.activeToasts.filter(t => {
+      if (t.type === type && t.title === title) {
+        t.element.remove();
+        return false;
+      }
+      return true;
+    });
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icons = { success: '✅', info: '⏳', warning: '⚠️', error: '❌' };
+    
+    toast.innerHTML = `
+      <div class="toast-icon">${icons[type]}</div>
+      <div class="toast-content">
+        <div class="toast-title">${title}</div>
+        <div class="toast-message">${message}</div>
+      </div>
+      <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+      <div class="toast-progress"></div>
+    `;
+    
+    this.container.appendChild(toast);
+    
+    const toastObj = { element: toast, type, title };
+    this.activeToasts.push(toastObj);
+    
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.style.animation = 'slideOutUp 0.3s ease forwards';
+        setTimeout(() => {
+          toast.remove();
+          this.activeToasts = this.activeToasts.filter(t => t.element !== toast);
+        }, 300);
+      }
+    }, duration);
+    
+    return toast;
+  }
+}
+
+const notifSystem = new NotificationSystem();
 
 // ==========================================
 // SELECTOR DE SERVICIOS
@@ -1535,30 +1207,26 @@ let tiempoEsperaSeleccionado = 30;
 function seleccionarServicio(servicio) {
   servicioSeleccionado = servicio;
   
-  // Reset visual de todas las cards
   document.querySelectorAll('.servicio-card').forEach(c => {
     c.classList.remove('activo');
   });
   
-  // Activar la card seleccionada
   const cardSeleccionada = document.getElementById(`card-${servicio}`);
   if (cardSeleccionada) {
     cardSeleccionada.classList.add('activo');
   }
   
-  // Mostrar/ocultar campos condicionales
   const campoVuelta = document.getElementById('campo-fecha-vuelta');
   const campoEspera = document.getElementById('campo-espera');
   
   if (campoVuelta) {
-    campoVuelta.style.display = (servicio === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA') ? 'block' : 'none';
+    campoVuelta.style.display = (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') ? 'block' : 'none';
   }
   
   if (campoEspera) {
     campoEspera.style.display = (servicio === 'IDA_Y_VUELTA_INMEDIATA') ? 'block' : 'none';
   }
   
-  // Notificación contextual específica
   const descripciones = {
     'IDA_ESCOLAR': {
       titulo: 'Ida al destino',
@@ -1572,19 +1240,18 @@ function seleccionarServicio(servicio) {
       titulo: 'Viaje redondo inmediato',
       desc: 'Incluye 30 min de espera. El chofer te espera en el destino y vuelven juntos.'
     },
-    'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA': {
+    'IDA_MAS_VUELTA_PROGRAMADA': {
       titulo: 'Dos viajes programados',
       desc: 'Ida y vuelta en horarios distintos. 10% de descuento por contratar ambos.'
     }
   };
   
   const info = descripciones[servicio];
-  if (info && typeof notifSystem !== 'undefined') {
+  if (info) {
     notifSystem.show(info.titulo, info.desc, 'info', 3500);
   }
   
-  // Si es IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA, sugerir horarios típicos escolares
-  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA') {
+  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
     sugerirHorariosEscolares();
   }
   
@@ -1598,23 +1265,21 @@ function setTiempoEspera(minutos) {
     inputEspera.value = minutos;
   }
   
-  // Actualizar UI
   document.querySelectorAll('.tiempo-btn').forEach(b => b.classList.remove('activo'));
   const btnSeleccionado = document.getElementById(`espera-${minutos}`);
   if (btnSeleccionado) {
     btnSeleccionado.classList.add('activo');
   }
   
-  // Calcular costo extra
   const minutosBase = 30;
   const costoExtraPorMin = 300;
   const extra = Math.max(0, minutos - minutosBase) * costoExtraPorMin;
   
-  if (extra > 0 && typeof notifSystem !== 'undefined') {
+  if (extra > 0) {
     notifSystem.show(
-      'Tiempo de espera extendido', 
-      `+$${extra.toLocaleString('es-AR')} por ${minutos - minutosBase} minutos adicionales`, 
-      'info', 
+      'Tiempo de espera extendido',
+      `+$${extra.toLocaleString('es-AR')} por ${minutos - minutosBase} minutos adicionales`,
+      'info',
       2500
     );
   }
@@ -1625,33 +1290,26 @@ function sugerirHorariosEscolares() {
   const manana = new Date(ahora);
   manana.setDate(manana.getDate() + 1);
   
-  // Sugerir: mañana 7:30 para ida
   manana.setHours(7, 30, 0, 0);
   const horaIda = formatearFechaInput(manana);
   
-  // Sugerir: mañana 16:00 para vuelta  
   manana.setHours(16, 0, 0, 0);
   const horaVuelta = formatearFechaInput(manana);
   
-  // Auto-completar si los campos están vacíos
   const inputFechaHora = document.getElementById('fechaHora');
   if (inputFechaHora && !inputFechaHora.value) {
     inputFechaHora.value = horaIda;
     actualizarTextoFecha();
   }
   
-  // Mostrar notificación con sugerencia
-  if (typeof notifSystem !== 'undefined') {
-    notifSystem.show(
-      'Horarios escolares sugeridos', 
-      'Ida: 7:30 AM · Vuelta: 4:00 PM. Podés modificarlos.', 
-      'info', 
-      5000
-    );
-  }
+  notifSystem.show(
+    'Horarios escolares sugeridos',
+    'Ida: 7:30 AM · Vuelta: 4:00 PM. Podés modificarlos.',
+    'info',
+    5000
+  );
 }
 
-// Selector de fecha/hora para vuelta
 function abrirSelectorFechaVuelta() {
   const input = document.getElementById('fechaHoraVuelta');
   if (!input) return;
@@ -1666,9 +1324,7 @@ function abrirSelectorFechaVuelta() {
       input.click();
     }
   } catch (err) {
-    if (typeof notifSystem !== 'undefined') {
-      notifSystem.show('Selector', 'Tocá el campo para elegir fecha y hora', 'info', 3000);
-    }
+    notifSystem.show('Selector', 'Tocá el campo para elegir fecha y hora', 'info', 3000);
     input.focus();
   }
 }
@@ -1684,334 +1340,79 @@ function actualizarTextoFechaVuelta() {
   const texto = formatearTextoBoton(fecha);
   textoFecha.textContent = texto;
   
-  // Validar que sea posterior a la ida
   const inputIda = document.getElementById('fechaHora');
   if (inputIda && inputIda.value) {
     const fechaIda = new Date(inputIda.value);
     if (fecha <= fechaIda) {
-      if (typeof notifSystem !== 'undefined') {
-        notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
-      }
+      notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
       input.value = '';
       textoFecha.textContent = 'Seleccionar...';
     }
   }
 }
-    function guardarEstadoLocal() {
-  const estado = {
-    origen: document.getElementById('origen').value,
-    destino: document.getElementById('destino').value,
-    fecha: document.getElementById('fechaHora').value
-  };
-  localStorage.setItem('mimi_estado', JSON.stringify(estado));
-}
 
-function cargarEstadoLocal() {
-  const data = localStorage.getItem('mimi_estado');
-  if (!data) return;
-
-  const estado = JSON.parse(data);
-
-  if (estado.origen) document.getElementById('origen').value = estado.origen;
-  if (estado.destino) document.getElementById('destino').value = estado.destino;
-  if (estado.fecha) document.getElementById('fechaHora').value = estado.fecha;
-  if (estado.modo === 'programado') {
-  setModo('programado');
-} else {
-  seleccionarHoy();
-}
-
-  actualizarTextoFecha();
-  notifSystem.show(
-  'Datos recuperados',
-  'Restauramos tu última búsqueda',
-  'info',
-  3000
-);
-
-}
-function seleccionarHoy() {
-modoTiempo = 'ahora';
-
-  const ahora = new Date();
-  const btn = document.getElementById('btnHoy');
-
-  document.getElementById('fechaHora').value = formatearFechaInput(ahora);
-
-  const hora = ahora.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-
-  btn.textContent = `🕒 Ahora ${hora}`;
-
-  activarBoton('btnHoy');
-  desactivarBoton('btnProgramado');
-
-  // 🔥 EFECTO UBER
-  btn.classList.add('uber-activo');
-  document.getElementById('btnProgramado').classList.remove('uber-activo');
-
-  notifSystem.show(
-    'Modo inmediato',
-    'Se usará la hora actual',
-    'success',
-    2000
-  );
-}
-function setModo(modo) {
-  modoTiempo = modo;
-
-  const botones = document.querySelectorAll('.modo-btn');
-  botones.forEach(btn => btn.classList.remove('activo'));
-if (modo === 'ahora') {
-  document.getElementById('btnHoy').classList.add('uber-activo');
-} else {
-  document.getElementById('btnHoy').classList.remove('uber-activo');
-}
-
-  if (modo === 'ahora') {
-    botones[0].classList.add('activo');
-
-    const ahora = new Date();
-    document.getElementById('fechaHora').value = formatearFechaInput(ahora);
-
-
+// ==========================================
+// GOOGLE MAPS
+// ==========================================
+function cargarGoogleMaps() {
+  if (window.google && google.maps) return;
+  
+  window.gm_authFailure = function() {
     notifSystem.show(
-      'Modo inmediato',
-      'Se usará la hora actual',
-      'success',
-      2000
+      'Error de Maps',
+      'No se pudo autenticar Google Maps. Podés escribir la dirección manualmente.',
+      'error',
+      6000
     );
+  };
 
-} else {
-  botones[1].classList.add('activo');
+  const script = document.createElement('script');
+  script.src = "https://maps.googleapis.com/maps/api/js?key=AIzaSyBLYlObPiq-N9pfdQBQvkNNNFQjCRrk-aQ&libraries=places&callback=inicializarAutocomplete";
+  script.async = true;
+  script.defer = true;
 
-  // 👉 Reset texto antes de elegir fecha
-  document.getElementById('btnProgramado').textContent = 'Elegir fecha';
+  script.onload = () => {
+    console.log("✅ Google Maps cargado correctamente");
+  };
 
-  abrirSelectorFecha();
-}
-}
+  script.onerror = () => {
+    notifSystem.show(
+      'Modo manual',
+      'No se pudo cargar Google Maps. Podés escribir la dirección manualmente.',
+      'warning',
+      6000
+    );
+  };
 
-// ==========================================  
-// SISTEMA DE NOTIFICACIONES CONTEXTUALES  
-// ==========================================  
-  
-class NotificationSystem {  
-  constructor() {  
-    this.container = document.getElementById('toastContainer');  
-    this.activeToasts = [];  
-  }  
-  
-  show(title, message, type = 'info', duration = 4000) {  
-    // Remover toast anterior del mismo tipo para evitar spam  
-    this.activeToasts = this.activeToasts.filter(t => {  
-      if (t.type === type && t.title === title) {  
-        t.element.remove();  
-        return false;  
-      }  
-      return true;  
-    });  
-  
-    const toast = document.createElement('div');  
-    toast.className = `toast ${type}`;  
-      
-    const icons = {  
-      success: '✅',  
-      info: '⏳',  
-      warning: '⚠️',  
-      error: '❌'  
-    };  
-      
-    toast.innerHTML = `  
-      <div class="toast-icon">${icons[type]}</div>  
-      <div class="toast-content">  
-        <div class="toast-title">${title}</div>  
-        <div class="toast-message">${message}</div>  
-      </div>  
-      <button class="toast-close" onclick="this.parentElement.remove()">×</button>  
-      <div class="toast-progress"></div>  
-    `;  
-      
-    this.container.appendChild(toast);  
-      
-    const toastObj = { element: toast, type, title };  
-    this.activeToasts.push(toastObj);  
-      
-    // Auto-remove  
-    setTimeout(() => {  
-      if (toast.parentElement) {  
-        toast.style.animation = 'slideOutUp 0.3s ease forwards';  
-        setTimeout(() => {  
-          toast.remove();  
-          this.activeToasts = this.activeToasts.filter(t => t.element !== toast);  
-        }, 300);  
-      }  
-    }, duration);  
-      
-    return toast;  
-  }  
-  
-  clearAll() {  
-    this.activeToasts.forEach(t => t.element.remove());  
-    this.activeToasts = [];  
-  }  
-}  
-  
-const notifSystem = new NotificationSystem();  
-  
-// ==========================================  
-// GOOGLE PLACES AUTOCOMPLETE  
-// ==========================================  
-  
-let autocompleteOrigen, autocompleteDestino;  
-let lugarOrigen = null;  
-let lugarDestino = null;  
-let datosCotizacion = null;  
-let isCalculating = false;  
-let sessionToken;
-
-function nuevaSesionAutocomplete() {
-  if (window.google && google.maps && google.maps.places) {
-    sessionToken = new google.maps.places.AutocompleteSessionToken();
-  }
+  document.head.appendChild(script);
 }
 
-    document.getElementById('origen').addEventListener('input', guardarEstadoLocal);
-document.getElementById('destino').addEventListener('input', guardarEstadoLocal);
-document.getElementById('fechaHora').addEventListener('change', guardarEstadoLocal);
-
-document.addEventListener('DOMContentLoaded', function() {
-  initFecha();
-  cargarEstadoLocal();
-  
-  // 🔥 INICIALIZAR SERVICIO POR DEFECTO
-  seleccionarServicio('IDA_ESCOLAR');
-  
-  document.getElementById('origen').addEventListener('focus', cargarGoogleMaps, { once: true });
-  
-  // Estado inicial de tiempo
-  seleccionarHoy();
-});
-    // ⏱️ Actualiza la hora del botón "Ahora" cada minuto
-setInterval(() => {
-  if (modoTiempo === 'ahora') {
-    const btn = document.getElementById('btnHoy');
-
-    if (!btn) return;
-
-    btn.classList.add('actualizando');
-
-    const ahora = new Date();
-    const hora = ahora.toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    btn.textContent = `🕒 Ahora ${hora}`;
-
-    // 🔥 mini pulso cada minuto
-    btn.classList.remove('uber-activo');
-    void btn.offsetWidth; // reinicia animación
-    btn.classList.add('uber-activo');
-
-    setTimeout(() => {
-      btn.classList.remove('actualizando');
-    }, 200);
-  }
-}, 60000);
- 
-function initFecha() {  
-  const manana = new Date();  
-  manana.setDate(manana.getDate() + 1);  
-  manana.setHours(8, 0, 0, 0);  
-  document.getElementById('fechaHora').value = formatearFechaInput(manana);  
-  actualizarTextoFecha();  
-}  
-  
-function formatearFechaInput(fecha) {  
-  const pad = (n) => n < 10 ? '0' + n : n;  
-  return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;  
-}  
-  
-function actualizarTextoFecha() {
-  const input = document.getElementById('fechaHora');
-  const fecha = new Date(input.value);
-  if (isNaN(fecha.getTime())) return;
-
-  const texto = formatearTextoBoton(fecha);
-
-  // 👉 Si está en modo programado, lo metemos en el botón
-  if (modoTiempo === 'programado') {
-    document.getElementById('btnProgramado').textContent = texto;
-  }
-}
-  
-function abrirSelectorFecha() {  
-  const input = document.getElementById('fechaHora');  
-    
-  if (!input) {  
-    console.warn('No se encontró el input #fechaHora');  
-    notifSystem.show('Error', 'No se pudo abrir el selector de fecha', 'error', 3000);  
-    return;  
-  }  
-  
-  // Establecer mínimo = hoy (ya lo tenés bien)  
-  input.min = new Date().toISOString().slice(0, 16);  
-  
-  // Intentar abrir el picker nativo de forma progresiva  
-  try {  
-    // 1. Método moderno (mejor experiencia en navegadores compatibles)  
-    if (input.showPicker && typeof input.showPicker === 'function') {  
-      input.showPicker();  
-      return;  
-    }  
-  
-    // 2. Fallback: focus + click (funciona en la mayoría de casos móviles)  
-    input.focus();  
-    input.click();  // Esto suele abrir el picker en Android/iOS  
-  
-    // 3. Último recurso: dispatch evento manual (útil en algunos navegadores raros)  
-    if (document.activeElement !== input) {  
-      const event = new Event('click', { bubbles: true, cancelable: true });  
-      input.dispatchEvent(event);  
-    }  
-  } catch (err) {  
-    console.error('Error al intentar abrir el date picker:', err);  
-      
-    // Feedback al usuario (muy importante en móviles)  
-    notifSystem.show(  
-      'Selector no disponible',  
-      'Toca directamente el campo de fecha y hora para seleccionarla',  
-      'info',  
-      5000  
-    );  
-      
-    // Forzamos focus como último recurso  
-    input.focus();  
-  }  
-}  
-  
 function inicializarAutocomplete() {
-  // Crear token PRIMERO
+  if (!window.google || !google.maps || !google.maps.places) {
+    console.error('Google Maps no está disponible');
+    return;
+  }
+
   nuevaSesionAutocomplete();
 
   const opciones = {
     componentRestrictions: { country: 'ar' },
     fields: ['formatted_address', 'geometry', 'name'],
-    types: ['geocode', 'establishment'],
-    sessionToken: sessionToken // 👈 Incluir aquí
+    types: ['geocode', 'establishment']
   };
 
   const origenInput = document.getElementById('origen');
   const destinoInput = document.getElementById('destino');
 
+  if (!origenInput || !destinoInput) return;
+
   autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
   autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
 
- activarAutocompleteConDelay(origenInput, autocompleteOrigen);
-activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrigen.setOptions({ sessionToken });
+  activarAutocompleteConDelay(origenInput, autocompleteOrigen);
+  activarAutocompleteConDelay(destinoInput, autocompleteDestino);
+
+  autocompleteOrigen.setOptions({ sessionToken });
   autocompleteDestino.setOptions({ sessionToken });
 
   autocompleteOrigen.addListener('place_changed', () => {
@@ -2020,7 +1421,6 @@ activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrig
       origenInput.value = place.formatted_address;
       lugarOrigen = place;
       guardarEstadoLocal();
-
       nuevaSesionAutocomplete();
       autocompleteOrigen.setOptions({ sessionToken });
     }
@@ -2032,13 +1432,11 @@ activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrig
       destinoInput.value = place.formatted_address;
       lugarDestino = place;
       guardarEstadoLocal();
-
       nuevaSesionAutocomplete();
       autocompleteDestino.setOptions({ sessionToken });
     }
   });
 
-  // 🔥 IMPORTANTE: prevenir submit con Enter
   origenInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') e.preventDefault();
   });
@@ -2047,30 +1445,106 @@ activarAutocompleteConDelay(destinoInput, autocompleteDestino); autocompleteOrig
     if (e.key === 'Enter') e.preventDefault();
   });
 }
-function activarBoton(id, texto) {
-  const btn = document.getElementById(id);
-  btn.classList.add('activo');
-  btn.classList.remove('inactivo');
 
-  // ✅ SOLO cambia texto si viene definido
-  if (texto) {
-    btn.textContent = texto;
+function nuevaSesionAutocomplete() {
+  if (window.google && google.maps && google.maps.places) {
+    sessionToken = new google.maps.places.AutocompleteSessionToken();
   }
 }
 
-function desactivarBoton(id) {
-  const btn = document.getElementById(id);
-  btn.classList.remove('activo');
-  btn.classList.add('inactivo');
+function activarAutocompleteConDelay(input, autocomplete) {
+  input.addEventListener('input', () => {
+    const valor = input.value;
+    if (valor.length < 4) {
+      autocomplete.setOptions({ types: [] });
+    } else {
+      autocomplete.setOptions({ types: ['geocode', 'establishment'] });
+    }
+  });
+}
+
+// ==========================================
+// FECHA Y HORA
+// ==========================================
+function seleccionarHoy() {
+  modoTiempo = 'ahora';
+  
+  const ahora = new Date();
+  const btn = document.getElementById('btnHoy');
+  
+  document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+  
+  const hora = ahora.toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  
+  btn.textContent = `🕒 Ahora ${hora}`;
+  
+  activarBoton('btnHoy');
+  desactivarBoton('btnProgramado');
+  
+  btn.classList.add('uber-activo');
+  document.getElementById('btnProgramado').classList.remove('uber-activo');
+  
+  notifSystem.show('Modo inmediato', 'Se usará la hora actual', 'success', 2000);
+}
+
+function setModo(modo) {
+  modoTiempo = modo;
+  
+  const botones = document.querySelectorAll('.modo-btn');
+  botones.forEach(btn => btn.classList.remove('activo'));
+  
+  if (modo === 'ahora') {
+    document.getElementById('btnHoy').classList.add('uber-activo');
+  } else {
+    document.getElementById('btnHoy').classList.remove('uber-activo');
+  }
+  
+  if (modo === 'ahora') {
+    botones[0].classList.add('activo');
+    const ahora = new Date();
+    document.getElementById('fechaHora').value = formatearFechaInput(ahora);
+    notifSystem.show('Modo inmediato', 'Se usará la hora actual', 'success', 2000);
+  } else {
+    botones[1].classList.add('activo');
+    document.getElementById('btnProgramado').textContent = 'Elegir fecha';
+    abrirSelectorFecha();
+  }
+}
+
+function abrirSelectorFecha() {
+  const input = document.getElementById('fechaHora');
+  if (!input) return;
+  
+  input.min = new Date().toISOString().slice(0, 16);
+  
+  try {
+    if (input.showPicker && typeof input.showPicker === 'function') {
+      input.showPicker();
+    } else {
+      input.focus();
+      input.click();
+    }
+  } catch (err) {
+    notifSystem.show('Selector no disponible', 'Toca directamente el campo de fecha y hora', 'info', 5000);
+    input.focus();
+  }
+}
+
+function formatearFechaInput(fecha) {
+  const pad = (n) => n < 10 ? '0' + n : n;
+  return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
 }
 
 function formatearTextoBoton(fecha) {
   const hoy = new Date();
   const manana = new Date();
   manana.setDate(hoy.getDate() + 1);
-
+  
   let dia = '';
-
+  
   if (fecha.toDateString() === hoy.toDateString()) {
     dia = 'Hoy';
   } else if (fecha.toDateString() === manana.toDateString()) {
@@ -2078,55 +1552,77 @@ function formatearTextoBoton(fecha) {
   } else {
     dia = fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
   }
-
+  
   const hora = fecha.toLocaleTimeString('es-AR', {
     hour: '2-digit',
     minute: '2-digit'
   });
-
+  
   return `${dia} ${hora}`;
 }
 
-// ==========================================  
-// CÁLCULO DE TARIFA - NUEVA ARQUITECTURA V2
-// ==========================================  
+function actualizarTextoFecha() {
+  const input = document.getElementById('fechaHora');
+  const fecha = new Date(input.value);
+  if (isNaN(fecha.getTime())) return;
   
-// ==========================================  
-// CÁLCULO DE TARIFA - ARQUITECTURA V2
-// ==========================================  
+  const texto = formatearTextoBoton(fecha);
   
-function calcularTarifa() {  
-  if (isCalculating) return;  
+  if (modoTiempo === 'programado') {
+    document.getElementById('btnProgramado').textContent = texto;
+  }
+}
+
+function activarBoton(id, texto) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.add('activo');
+  btn.classList.remove('inactivo');
+  if (texto) {
+    btn.textContent = texto;
+  }
+}
+
+function desactivarBoton(id) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.remove('activo');
+  btn.classList.add('inactivo');
+}
+
+// ==========================================
+// CÁLCULO DE TARIFA
+// ==========================================
+function calcularTarifa() {
+  if (isCalculating) return;
   if (navigator.vibrate) navigator.vibrate(30);
 
-  // Validar servicio seleccionado
   if (!servicioSeleccionado) {
     mostrarError('Seleccioná un tipo de servicio');
-    const selector = document.getElementById('selectorServicios');
-    if (selector) selector.scrollIntoView({ behavior: 'smooth' });
     return;
   }
 
-  const origen = document.getElementById('origen').value.trim();  
-  const destino = document.getElementById('destino').value.trim();  
-  const fechaHoraInput = document.getElementById('fechaHora').value;  
+  const origen = document.getElementById('origen').value.trim();
+  const destino = document.getElementById('destino').value.trim();
+  const fechaHoraInput = document.getElementById('fechaHora').value;
+
+  if (!origen) {
+    mostrarError('Ingresá la dirección de origen');
+    document.getElementById('origen').focus();
+    return;
+  }
   
-  if (!origen) {   
-    mostrarError('Ingresá la dirección de origen');   
-    document.getElementById('origen').focus();  
-    return;   
-  }  
-  if (!destino) {   
-    mostrarError('Ingresá la dirección de destino');   
-    document.getElementById('destino').focus();  
-    return;   
+  if (!destino) {
+    mostrarError('Ingresá la dirección de destino');
+    document.getElementById('destino').focus();
+    return;
   }
 
   // Validaciones específicas por servicio
   let fechaHoraVuelta = null;
   let esperaMin = null;
   
-  if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA') {
+  if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
     fechaHoraVuelta = document.getElementById('fechaHoraVuelta').value;
     if (!fechaHoraVuelta) {
       mostrarError('Seleccioná fecha y hora de VUELTA');
@@ -2139,50 +1635,49 @@ function calcularTarifa() {
     esperaMin = parseInt(document.getElementById('tiempoEsperaMin').value) || 30;
   }
   
-  // Fecha/hora de ida
   let fechaHoraParaEnviar;
   if (modoTiempo === 'ahora') {
     fechaHoraParaEnviar = new Date().toISOString();
   } else {
     if (!fechaHoraInput) {
-      mostrarError('Seleccioná fecha y hora de ida');   
-      abrirSelectorFecha();   
-      return;   
+      mostrarError('Seleccioná fecha y hora de ida');
+      abrirSelectorFecha();
+      return;
     }
     fechaHoraParaEnviar = fechaHoraInput;
     
     if (new Date(fechaHoraInput) < new Date()) {
-      mostrarError('La fecha no puede ser pasada');  
-      return;  
+      mostrarError('La fecha no puede ser pasada');
+      return;
     }
   }
   
   guardarEstadoLocal();
-  ocultarError();  
-  isCalculating = true;  
+  ocultarError();
+  isCalculating = true;
   
-  const btn = document.getElementById('btnCalcular');  
-  btn.disabled = true;  
-  btn.innerHTML = '<div class="spinner"></div> Calculando...';  
+  const btn = document.getElementById('btnCalcular');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Calculando...';
   
-  const mensajeCarga = servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA' 
+  const mensajeCarga = servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA' 
     ? 'Cotizando ida y vuelta...' 
     : 'Consultando precio...';
     
-  const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);  
+  const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
   
   const callbackName = 'mimiCallback_' + Date.now();
   let timeout;
-    
-  window[callbackName] = function(res) {  
+  
+  window[callbackName] = function(res) {
     clearTimeout(timeout);
-    delete window[callbackName];  
-    const script = document.getElementById('jsonp-' + callbackName);  
-    if (script) script.remove();  
-      
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
+    delete window[callbackName];
+    const script = document.getElementById('jsonp-' + callbackName);
+    if (script) script.remove();
+    
+    isCalculating = false;
+    btn.disabled = false;
+    btn.innerHTML = '<span>Calcular Tarifa</span>';
     calcToast.remove();
     
     if (!res || res.error) {
@@ -2200,71 +1695,56 @@ function calcularTarifa() {
     
     mostrarResultado(res);
     
-    // Notificación específica por tipo de servicio
     const notifServicio = {
-      'IDA_ESCOLAR': { 
-        titulo: 'Ida cotizada', 
-        desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` 
-      },
-      'VUELTA_ESCOLAR': { 
-        titulo: 'Vuelta cotizada', 
-        desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` 
-      },
-      'IDA_Y_VUELTA_INMEDIATA': { 
-        titulo: 'Viaje redondo listo', 
-        desc: `Total: $${res.precio?.toLocaleString('es-AR')} (incluye espera)` 
-      },
-      'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA': { 
-        titulo: 'Combo ida+vuelta', 
-        desc: `Total con descuento: $${res.precio?.toLocaleString('es-AR')}` 
-      }
+      'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
+      'VUELTA_ESCOLAR': { titulo: 'Vuelta cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
+      'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${res.precio?.toLocaleString('es-AR')} (incluye espera)` },
+      'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total con descuento: $${res.precio?.toLocaleString('es-AR')}` }
     };
     
     const n = notifServicio[servicioSeleccionado];
-    notifSystem.show(n.titulo, n.desc, 'success', 4000);
-  };  
+    if (n) {
+      notifSystem.show(n.titulo, n.desc, 'success', 4000);
+    }
+  };
   
-  timeout = setTimeout(() => {  
-    if (!isCalculating) return;  
-    delete window[callbackName];  
-    const script = document.getElementById('jsonp-' + callbackName);  
-    if (script) script.remove();  
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
-    notifSystem.show('⏱️ Tiempo agotado', 'El servidor no respondió. Intentá de nuevo.', 'warning', 6000);  
-    mostrarError('Tiempo de espera agotado. Intentá de nuevo.');  
-  }, 15000);  
+  timeout = setTimeout(() => {
+    if (!isCalculating) return;
+    delete window[callbackName];
+    const script = document.getElementById('jsonp-' + callbackName);
+    if (script) script.remove();
+    isCalculating = false;
+    btn.disabled = false;
+    btn.innerHTML = '<span>Calcular Tarifa</span>';
+    calcToast.remove();
+    notifSystem.show('⏱️ Tiempo agotado', 'El servidor no respondió. Intentá de nuevo.', 'warning', 6000);
+    mostrarError('Tiempo de espera agotado. Intentá de nuevo.');
+  }, 15000);
   
-  const script = document.createElement('script');  
-  script.id = 'jsonp-' + callbackName;  
+  const script = document.createElement('script');
+  script.id = 'jsonp-' + callbackName;
   
-  script.onerror = function(e) {  
-    clearTimeout(timeout);  
-    delete window[callbackName];  
-    script.remove();  
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
-    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);  
-    mostrarError('Error de conexión. Verificá tu internet.');  
-  };  
+  script.onerror = function(e) {
+    clearTimeout(timeout);
+    delete window[callbackName];
+    script.remove();
+    isCalculating = false;
+    btn.disabled = false;
+    btn.innerHTML = '<span>Calcular Tarifa</span>';
+    calcToast.remove();
+    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);
+    mostrarError('Error de conexión. Verificá tu internet.');
+  };
   
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4xy46y3jqCSOZcD3UnNmD8m0q1TtZPzfO742CYdUJwT0t9MV4iov3MX_CpZQT9pXZ/exec';
-  
-  // 🔥 NUEVOS PARÁMETROS - ARQUITECTURA V2
   const params = new URLSearchParams({
     action: 'cotizar',
-    servicio: servicioSeleccionado,  // ← ANTES: tipo: tipoViaje
-    desde: origen,  
-    hasta: destino,  
+    servicio: servicioSeleccionado,
+    desde: origen,
+    hasta: destino,
     fechaViaje: fechaHoraParaEnviar,
     clientId: 'web_' + Date.now()
   });
   
-  // Agregar parámetros condicionales
   if (fechaHoraVuelta) {
     params.append('fechaVuelta', fechaHoraVuelta);
   }
@@ -2272,25 +1752,24 @@ function calcularTarifa() {
     params.append('esperaMin', esperaMin.toString());
   }
   
-  const fullUrl = SCRIPT_URL + '?' + params.toString();
+  const fullUrl = CONFIG.SCRIPT_URL + '?' + params.toString();
   console.log('🌐 URL de consulta:', fullUrl);
   
-  script.src = fullUrl;  
-  document.head.appendChild(script);  
+  script.src = fullUrl;
+  document.head.appendChild(script);
 }
-    function mostrarResultado(res) {  
-  datosCotizacion = res;  
+
+function mostrarResultado(res) {
+  datosCotizacion = res;
   
-  animarContador('precioValor', 0, res.precio, 800);  
+  animarContador('precioValor', 0, res.precio, 800);
   
-  // 🔥 KM del cliente (solo su viaje, no el del chofer)
-const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.km) || 0;
-  const duracion = parseInt(res.duracion) || 0;
+  const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.km) || 0;
+  const duracion = parseInt(res.duracionEstimadaMin) || 0;
   
-  const resultadoDiv = document.getElementById('resultado');  
+  const resultadoDiv = document.getElementById('resultado');
   resultadoDiv.classList.add('visible');
   
-  // 🔥 Info de viaje (tipo Uber limpio)
   let infoViaje = document.getElementById('infoViaje');
   if (!infoViaje) {
     infoViaje = document.createElement('div');
@@ -2308,7 +1787,6 @@ const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.k
     
   infoViaje.innerHTML = `📏 ${kmCliente.toFixed(1)} km · ⏱️ ${tiempoTexto}`;
   
-  // 🌧️ Recargos ULTRA simplificados (estilo Uber)
   let recargosDiv = document.getElementById('recargosInfo');
   if (!recargosDiv) {
     recargosDiv = document.createElement('div');
@@ -2318,12 +1796,10 @@ const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.k
   
   let recargosHtml = '';
   
-  // Solo mostrar clima si es MUY grave (tormenta)
   if (res.clima && res.clima.tipo === 'tormenta') {
     recargosHtml += `<div style="display:flex;align-items:center;justify-content:center;gap:6px;color:#666;font-size:0.8rem;margin-bottom:6px;"><span>⛈️</span><span>Condiciones climáticas adversas</span></div>`;
   }
   
-  // Solo badge de nocturno si aplica
   if (res.esNocturno) {
     recargosHtml += `<div style="display:inline-flex;align-items:center;gap:4px;background:#1a237e;color:white;padding:4px 10px;border-radius:12px;font-size:0.75rem;">🌙 Nocturno</div>`;
   }
@@ -2336,7 +1812,6 @@ const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.k
     recargosDiv.style.display = 'none';
   }
 
-  // Botón de mapa
   const origenTexto = document.getElementById('origen').value;
   const destinoTexto = document.getElementById('destino').value;
   const mapsUrl = res.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
@@ -2352,85 +1827,47 @@ const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.k
   
   setTimeout(() => resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 }
-    function abrirRuta(url) {
-  notifSystem.show(
-    'Abriendo navegación',
-    'Se abrirá Google Maps con la ruta del viaje',
-    'info',
-    2500
-  );
 
-  setTimeout(() => {
-window.open(url, '_blank');
-  }, 400);
+function animarContador(id, inicio, fin, duracion) {
+  const elemento = document.getElementById(id);
+  const incremento = (fin - inicio) / (duracion / 16);
+  let actual = inicio;
+  
+  const timer = setInterval(() => {
+    actual += incremento;
+    if (actual >= fin) {
+      actual = fin;
+      clearInterval(timer);
+    }
+    elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
+  }, 16);
 }
-  
-function animarContador(id, inicio, fin, duracion) {  
-  const elemento = document.getElementById(id);  
-  const incremento = (fin - inicio) / (duracion / 16);  
-  let actual = inicio;  
-    
-  const timer = setInterval(() => {  
-    actual += incremento;  
-    if (actual >= fin) {  
-      actual = fin;  
-      clearInterval(timer);  
-    }  
-    elemento.textContent = Math.floor(actual).toLocaleString('es-AR');  
-  }, 16);  
-}  
-    // Función para testear la conexión al backend
-function testearConexion() {
-  const testCallback = 'testCallback_' + Date.now();
-  
-  window[testCallback] = function(res) {
-    console.log('✅ Backend responde:', res);
-    alert('✅ Conexión OK: ' + JSON.stringify(res));
-    delete window[testCallback];
-  };
-  
-  const script = document.createElement('script');
-  // ✅ URL CON COMILLAS
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4xy46y3jqCSOZcD3UnNmD8m0q1TtZPzfO742CYdUJwT0t9MV4iov3MX_CpZQT9pXZ/exec';
-  
-  script.src = SCRIPT_URL + '?action=cotizar&desde=test&hasta=test&callback=' + testCallback;
-  
-  script.onerror = function() {
-    alert('❌ Error de conexión. Verificá la URL del script.');
-  };
-  
-  document.head.appendChild(script);
-}
-// Llamar al cargar la página para testear
-// testearConexion();
-// ==========================================  
-// RESERVA WHATSAPP (versión mejorada)  
-// ==========================================  
-  
-function reservarWhatsApp() {  
-  const origen = document.getElementById('origen').value.trim();  
-  const destino = document.getElementById('destino').value.trim();  
+
+// ==========================================
+// WHATSAPP
+// ==========================================
+function reservarWhatsApp() {
+  const origen = document.getElementById('origen').value.trim();
+  const destino = document.getElementById('destino').value.trim();
   const fechaTexto = modoTiempo === 'ahora'
     ? document.getElementById('btnHoy').textContent.trim()
     : document.getElementById('btnProgramado').textContent.trim();
-  const precio = document.getElementById('precioValor').textContent.trim();  
+  const precio = document.getElementById('precioValor').textContent.trim();
   
-  if (!datosCotizacion) {  
-    notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 3000);  
-    return;  
-  }  
+  if (!datosCotizacion) {
+    notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 3000);
+    return;
+  }
   
-  if (!origen || !destino || !fechaTexto || precio === '0') {  
-    notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 3000);  
-    return;  
-  }  
+  if (!origen || !destino || !fechaTexto || precio === '0') {
+    notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 3000);
+    return;
+  }
   
   const kmCliente = parseFloat(datosCotizacion.kmDetalle?.kmFinalAplicado) || parseFloat(datosCotizacion.km) || 0;
-  
-  // 🔥 USAR el enlace que viene del backend (ruta completa: chofer → pasajero → destino)
   const mapsRutaCompleta = datosCotizacion.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
   
-  notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);  
+  notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);
   
   const mensaje = `*MIMI Transporte Escolar* 🚐
 
@@ -2441,7 +1878,7 @@ function reservarWhatsApp() {
 
 ⏰ *Cuándo:* ${fechaTexto}
 💰 *Precio:* $${precio}
-📏 *Distancia:* ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracion || '—'}min
+📏 *Distancia:* ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracionEstimada📏 *Distancia:* ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracion || '—'}min
 
 ✅ ¿Confirmamos el viaje?`;  
   
