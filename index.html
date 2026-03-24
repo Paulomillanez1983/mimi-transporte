@@ -1096,7 +1096,7 @@ body {
   // ==========================================
 // VARIABLES GLOBALES - NUEVA ARQUITECTURA
 // ==========================================
-let servicioSeleccionado = 'ida_escolar'; // Default: el primero está activo
+let servicioSeleccionado = 'IDA_ESCOLAR'; // Default: el primero está activo
 let tiempoEsperaSeleccionado = 30;
 let modoTiempo = 'ahora';
 
@@ -1120,24 +1120,24 @@ function seleccionarServicio(servicio) {
   const campoVuelta = document.getElementById('campo-fecha-vuelta');
   const campoEspera = document.getElementById('campo-espera');
   
-  campoVuelta.style.display = (servicio === 'ida_mas_vuelta') ? 'block' : 'none';
-  campoEspera.style.display = (servicio === 'ida_vuelta_inmediata') ? 'block' : 'none';
+  campoVuelta.style.display = (servicio === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA') ? 'block' : 'none';
+  campoEspera.style.display = (servicio === 'IDA_Y_VUELTA_INMEDIATA') ? 'block' : 'none';
   
   // Notificación contextual específica
   const descripciones = {
-    'ida_escolar': {
+    'IDA_ESCOLAR': {
       titulo: 'Ida al destino',
       desc: 'El chofer va de su base a tu domicilio y te lleva al destino. Solo pagás el recorrido efectivo.'
     },
-    'vuelta_escolar': {
+    'VUELTA_ESCOLAR': {
       titulo: 'Vuelta a domicilio',
       desc: 'El chofer va de su base al destino, te recoge y te trae a tu domicilio.'
     },
-    'ida_vuelta_inmediata': {
+    'IDA_Y_VUELTA_INMEDIATA': {
       titulo: 'Viaje redondo inmediato',
       desc: 'Incluye 30 min de espera. El chofer te espera en el destino y vuelven juntos.'
     },
-    'ida_mas_vuelta': {
+    'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA_PROGRAMADA': {
       titulo: 'Dos viajes programados',
       desc: 'Ida y vuelta en horarios distintos. 10% de descuento por contratar ambos.'
     }
@@ -1146,8 +1146,8 @@ function seleccionarServicio(servicio) {
   const info = descripciones[servicio];
   notifSystem.show(info.titulo, info.desc, 'info', 3500);
   
-  // Si es ida_mas_vuelta, sugerir horarios típicos escolares
-  if (servicio === 'ida_mas_vuelta') {
+  // Si es IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA_PROGRAMADA, sugerir horarios típicos escolares
+  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA_PROGRAMADA') {
     sugerirHorariosEscolares();
   }
   
@@ -1404,7 +1404,7 @@ window.gm_authFailure = function() {
 </div>  
 <!-- NUEVO SELECTOR DE SERVICIOS -->
 <div class="servicio-selector" id="selectorServicios">
-  <div class="servicio-card activo" onclick="seleccionarServicio('ida_escolar')" id="card-ida_escolar">
+  <div class="servicio-card activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
     <div class="servicio-icon">🌅</div>
     <div class="servicio-info">
       <strong>Ida al destino</strong>
@@ -1414,7 +1414,7 @@ window.gm_authFailure = function() {
     <div class="servicio-check">✓</div>
   </div>
 
-  <div class="servicio-card" onclick="seleccionarServicio('vuelta_escolar')" id="card-vuelta_escolar">
+  <div class="servicio-card" onclick="seleccionarServicio('VUELTA_ESCOLAR')" id="card-VUELTA_ESCOLAR">
     <div class="servicio-icon">🌆</div>
     <div class="servicio-info">
       <strong>Vuelta a domicilio</strong>
@@ -1424,7 +1424,7 @@ window.gm_authFailure = function() {
     <div class="servicio-check">✓</div>
   </div>
 
-  <div class="servicio-card destacado" onclick="seleccionarServicio('ida_vuelta_inmediata')" id="card-ida_vuelta_inmediata">
+  <div class="servicio-card destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
     <div class="servicio-badge">POPULAR</div>
     <div class="servicio-icon">🔄</div>
     <div class="servicio-info">
@@ -1435,7 +1435,7 @@ window.gm_authFailure = function() {
     <div class="servicio-check">✓</div>
   </div>
 
-  <div class="servicio-card" onclick="seleccionarServicio('ida_mas_vuelta')" id="card-ida_mas_vuelta">
+  <div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA">
     <div class="servicio-icon">📅</div>
     <div class="servicio-info">
       <strong>Ida + Vuelta programada</strong>
@@ -1525,7 +1525,7 @@ window.gm_authFailure = function() {
     // ==========================================
 // VARIABLES GLOBALES - NUEVA ARQUITECTURA V2
 // ==========================================
-let servicioSeleccionado = 'ida_escolar'; // Default: ida escolar
+let servicioSeleccionado = 'IDA_ESCOLAR'; // Default: ida escolar
 let tiempoEsperaSeleccionado = 30;
 // let modoTiempo = 'ahora'; // Ya existe en tu código, no duplicar
 
@@ -1551,28 +1551,28 @@ function seleccionarServicio(servicio) {
   const campoEspera = document.getElementById('campo-espera');
   
   if (campoVuelta) {
-    campoVuelta.style.display = (servicio === 'ida_mas_vuelta') ? 'block' : 'none';
+    campoVuelta.style.display = (servicio === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA') ? 'block' : 'none';
   }
   
   if (campoEspera) {
-    campoEspera.style.display = (servicio === 'ida_vuelta_inmediata') ? 'block' : 'none';
+    campoEspera.style.display = (servicio === 'IDA_Y_VUELTA_INMEDIATA') ? 'block' : 'none';
   }
   
   // Notificación contextual específica
   const descripciones = {
-    'ida_escolar': {
+    'IDA_ESCOLAR': {
       titulo: 'Ida al destino',
       desc: 'El chofer va de su base a tu domicilio y te lleva al destino. Solo pagás el recorrido efectivo.'
     },
-    'vuelta_escolar': {
+    'VUELTA_ESCOLAR': {
       titulo: 'Vuelta a domicilio',
       desc: 'El chofer va de su base al destino, te recoge y te trae a tu domicilio.'
     },
-    'ida_vuelta_inmediata': {
+    'IDA_Y_VUELTA_INMEDIATA': {
       titulo: 'Viaje redondo inmediato',
       desc: 'Incluye 30 min de espera. El chofer te espera en el destino y vuelven juntos.'
     },
-    'ida_mas_vuelta': {
+    'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA': {
       titulo: 'Dos viajes programados',
       desc: 'Ida y vuelta en horarios distintos. 10% de descuento por contratar ambos.'
     }
@@ -1583,8 +1583,8 @@ function seleccionarServicio(servicio) {
     notifSystem.show(info.titulo, info.desc, 'info', 3500);
   }
   
-  // Si es ida_mas_vuelta, sugerir horarios típicos escolares
-  if (servicio === 'ida_mas_vuelta') {
+  // Si es IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA, sugerir horarios típicos escolares
+  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA') {
     sugerirHorariosEscolares();
   }
   
@@ -1887,7 +1887,7 @@ document.addEventListener('DOMContentLoaded', function() {
   cargarEstadoLocal();
   
   // 🔥 INICIALIZAR SERVICIO POR DEFECTO
-  seleccionarServicio('ida_escolar');
+  seleccionarServicio('IDA_ESCOLAR');
   
   document.getElementById('origen').addEventListener('focus', cargarGoogleMaps, { once: true });
   
@@ -2126,7 +2126,7 @@ function calcularTarifa() {
   let fechaHoraVuelta = null;
   let esperaMin = null;
   
-  if (servicioSeleccionado === 'ida_mas_vuelta') {
+  if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA') {
     fechaHoraVuelta = document.getElementById('fechaHoraVuelta').value;
     if (!fechaHoraVuelta) {
       mostrarError('Seleccioná fecha y hora de VUELTA');
@@ -2135,7 +2135,7 @@ function calcularTarifa() {
     }
   }
   
-  if (servicioSeleccionado === 'ida_vuelta_inmediata') {
+  if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
     esperaMin = parseInt(document.getElementById('tiempoEsperaMin').value) || 30;
   }
   
@@ -2165,7 +2165,7 @@ function calcularTarifa() {
   btn.disabled = true;  
   btn.innerHTML = '<div class="spinner"></div> Calculando...';  
   
-  const mensajeCarga = servicioSeleccionado === 'ida_mas_vuelta' 
+  const mensajeCarga = servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA' 
     ? 'Cotizando ida y vuelta...' 
     : 'Consultando precio...';
     
@@ -2202,19 +2202,19 @@ function calcularTarifa() {
     
     // Notificación específica por tipo de servicio
     const notifServicio = {
-      'ida_escolar': { 
+      'IDA_ESCOLAR': { 
         titulo: 'Ida cotizada', 
         desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` 
       },
-      'vuelta_escolar': { 
+      'VUELTA_ESCOLAR': { 
         titulo: 'Vuelta cotizada', 
         desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` 
       },
-      'ida_vuelta_inmediata': { 
+      'IDA_Y_VUELTA_INMEDIATA': { 
         titulo: 'Viaje redondo listo', 
         desc: `Total: $${res.precio?.toLocaleString('es-AR')} (incluye espera)` 
       },
-      'ida_mas_vuelta': { 
+      'IDA_MAS_VUELTA_PROGRAMADA_PROGRAMADA_PROGRAMADA': { 
         titulo: 'Combo ida+vuelta', 
         desc: `Total con descuento: $${res.precio?.toLocaleString('es-AR')}` 
       }
