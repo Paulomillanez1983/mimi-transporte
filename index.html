@@ -1180,7 +1180,7 @@ body {
 // CONFIGURACIÓN GLOBAL
 // ==========================================
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbzkLBINfwxlrk5XzTMo_cqjN9Xi3GaD6QaZDWlD-DQc6D291eOrgEBgblakuIrTsTir/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw-ljavDWhNh8BSZObUDZOeK1EWjfW9YRczhEs_QJHQm5FDkYBpI7Y6e3JFVjefgV_X/exec',
   WHATSAPP_NUMBER: '5493517014863'
 };
 
@@ -1720,78 +1720,54 @@ async function calcularTarifa() {
     
   const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
   
-  // JSONP con callback
-  const callbackName = 'mimiCallback_' + Date.now();
-
   const params = new URLSearchParams({
-    desde: lugarOrigen.direccion,
-    hasta: lugarDestino.direccion,
+    origen: `${lugarOrigen.lat},${lugarOrigen.lng}`,
+    destino: `${lugarDestino.lat},${lugarDestino.lng}`,
+    origenTxt: lugarOrigen.direccion,
+    destinoTxt: lugarDestino.direccion,
     servicio: servicioSeleccionado,
     fechaHora: fechaHoraParaEnviar,
     esperaMin: esperaMin || '',
-    fechaHoraVuelta: fechaHoraVuelta || '',
-    callback: callbackName
+    fechaHoraVuelta: fechaHoraVuelta || ''
   });
 
   const fullUrl = `${CONFIG.SCRIPT_URL}?${params.toString()}`;
 
-  // Crear función callback temporal
-  window[callbackName] = function(data) {
-    // Limpiar
-    delete window[callbackName];
-    const script = document.querySelector(`script[src*="${callbackName}"]`);
-    if (script) script.remove();
+  try {
+    const response = await fetch(fullUrl);
+    const res = await response.json();
     
-    // Procesar respuesta
     isCalculating = false;
     btn.disabled = false;
     btn.innerHTML = '<span>💰 Cotizar viaje</span>';
     calcToast.remove();
 
-    if (!data || data.error) {
-      const mensaje = data?.error || 'Error desconocido del servidor';
+    if (!res || res.error) {
+      const mensaje = res?.error || 'Error desconocido del servidor';
       notifSystem.show('Error', mensaje, 'error', 6000);
       mostrarError(mensaje);
       return;
     }
 
-    if (data.exito !== true) {
+    if (res.exito !== true) {
       notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
       mostrarError('Error en la cotización');
       return;
     }
 
-    mostrarResultado(data);
+    mostrarResultado(res);
 
     const notifServicio = {
-      'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${data.precio?.toLocaleString('es-AR')}` },
-      'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${data.precio?.toLocaleString('es-AR')}` },
-      'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total: $${data.precio?.toLocaleString('es-AR')}` }
+      'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
+      'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` },
+      'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` }
     };
 
     const n = notifServicio[servicioSeleccionado];
     if (n) {
       notifSystem.show(n.titulo, n.desc, 'success', 4000);
     }
-  };
-
-  // Crear script tag para JSONP
-  const script = document.createElement('script');
-  script.src = fullUrl;
-  script.onerror = function() {
-    delete window[callbackName];
-    script.remove();
-    isCalculating = false;
-    btn.disabled = false;
-    btn.innerHTML = '<span>💰 Cotizar viaje</span>';
-    calcToast.remove();
-    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);
-    mostrarError('Error de conexión. Verificá tu internet.');
-  };
-  document.head.appendChild(script);
-}
-  
-  catch (err) {
+  } catch (err) {
     console.error(err);
     isCalculating = false;
     btn.disabled = false;
