@@ -919,6 +919,10 @@ body {
 </style>
 <script>
   let modoTiempo = 'ahora';
+  let tipoViaje = 'ida';
+
+  
+  
 
 function cargarGoogleMaps() {
   if (window.google && google.maps) return;
@@ -956,6 +960,30 @@ window.gm_authFailure = function() {
   }
 
 
+function setTipoViaje(tipo) {
+  tipoViaje = tipo;
+
+  const btnIda = document.getElementById('btnIda');
+  const btnVuelta = document.getElementById('btnIdaVuelta');
+
+  if (tipo === 'ida') {
+    btnIda.classList.add('activo');
+    btnIda.classList.remove('inactivo');
+
+    btnVuelta.classList.remove('activo');
+    btnVuelta.classList.add('inactivo');
+
+    notifSystem.show('Modo viaje', 'Calculando solo ida', 'info', 2000);
+  } else {
+    btnVuelta.classList.add('activo');
+    btnVuelta.classList.remove('inactivo');
+
+    btnIda.classList.remove('activo');
+    btnIda.classList.add('inactivo');
+
+    notifSystem.show('Modo viaje', 'Incluye ida y vuelta', 'info', 2000);
+  }
+}
 
 </script>
 </head>  
@@ -1061,6 +1089,15 @@ window.gm_authFailure = function() {
   <span>⚠️</span>  
   <span id="errorText"></span>  
 </div>  
+<div style="display:flex; gap:10px; margin-top:15px;">
+  <button id="btnIda" class="modo-btn activo" onclick="setTipoViaje('ida')">
+    🚗 Solo ida
+  </button>
+
+  <button id="btnIdaVuelta" class="modo-btn inactivo" onclick="setTipoViaje('ida_vuelta')">
+    🔁 Ida y vuelta
+  </button>
+</div>
 
 <button class="btn-calcular" id="btnCalcular" onclick="calcularTarifa()">  
   <span>Calcular Tarifa</span>  
@@ -1068,7 +1105,10 @@ window.gm_authFailure = function() {
 
 <div class="resultado-section" id="resultado">  
   <div class="precio-monto">$<span id="precioValor">0</span> ARS</div>  
-  <div class="precio-descripcion">Pago por viaje sin compromiso mensual</div>  
+document.querySelector('.precio-descripcion').textContent =
+  tipoViaje === 'ida'
+    ? 'Precio por viaje (solo ida)'
+    : 'Precio total (ida y vuelta)';
   <button class="btn-whatsapp" onclick="reservarWhatsApp()">  
     <span>💬</span>  
     <span>Reservar Ahora</span>  
@@ -1644,7 +1684,7 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyD3X8xMZOZwR1cnr9Yv
   const params = new URLSearchParams({
     desde: origen,  
     hasta: destino,  
-    tipo: 'ida',  
+    tipo: tipoViaje,  
     fechaViaje: fechaHoraParaEnviar,
     clientId: navigator.userAgent + '_' + Date.now(),  
     callback: callbackName  
