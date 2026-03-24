@@ -1476,35 +1476,6 @@ window.gm_authFailure = function() {
   </div>
   <input type="hidden" id="tiempoEsperaMin" value="30">
 </div>
-</div>
-
-<!-- CAMPOS CONDICIONALES -->
-<div id="campo-fecha-vuelta" style="display:none; margin-top:15px;">
-  <div class="datetime-header">
-    <span>🕐 Horario de VUELTA (regreso)</span>
-  </div>
-  <div class="datetime-card" onclick="abrirSelectorFechaVuelta()">
-    <div class="datetime-text">
-      <div class="datetime-label">Fecha y hora de regreso</div>
-      <div class="datetime-value" id="textoFechaVuelta">Seleccionar...</div>
-    </div>
-    <div class="location-arrow">›</div>
-  </div>
-  <input type="datetime-local" id="fechaHoraVuelta" class="datetime-input-hidden" onchange="actualizarTextoFechaVuelta()">
-</div>
-
-<div id="campo-espera" style="display:none; margin-top:15px;">
-  <div class="datetime-header">
-    <span>⏱️ Tiempo de espera en destino</span>
-  </div>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-    <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min (incluidos)</button>
-    <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min (+$4.500)</button>
-    <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">1 hora (+$9.000)</button>
-    <button class="tiempo-btn" onclick="setTiempoEspera(90)" id="espera-90">1h 30m (+$18.000)</button>
-  </div>
-  <input type="hidden" id="tiempoEsperaMin" value="30">
-</div>
 <div id="campo-espera" style="display:none; margin-top:15px;">
   <div class="datetime-header">
     <span>⏱️ Tiempo de espera</span>
