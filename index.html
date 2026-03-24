@@ -1878,9 +1878,9 @@ function reservarWhatsApp() {
 
 ⏰ *Cuándo:* ${fechaTexto}
 💰 *Precio:* $${precio}
-📏 *Distancia:* ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracionEstimada📏 *Distancia:* ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracion || '—'}min
+📏 *Distancia:* ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracionEstimadaMin || datosCotizacion.duracion || '—'}min
 
-✅ ¿Confirmamos el viaje?`;  
+✅ ¿Confirmamos el viaje?`;
   
   window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');  
 }    
