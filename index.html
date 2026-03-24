@@ -645,6 +645,11 @@ body {
   gap: 10px;
   letter-spacing: 0.3px;
 }
+.btn-whatsapp svg {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
 
 .btn-whatsapp:hover {
   transform: translateY(-2px);
@@ -1278,11 +1283,13 @@ body {
       <div class="precio-descripcion">Precio estimado</div>
     </div>
 
-    <button class="btn-whatsapp" onclick="reservarWhatsApp()">
-      <span>💬</span>
-      <span>Reservar Ahora</span>
-    </button>
-
+<button class="btn-whatsapp" onclick="reservarWhatsApp()">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.175L2.546 20.2l3.025-.892A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.615 13.635c-.2.563-1.154 1.035-1.615 1.103-.431.063-.892.09-1.358-.009-.313-.066-.715-.173-1.226-.346-2.17-.715-3.58-2.638-3.688-2.77-.108-.13-.88-1.166-.88-2.225 0-1.06.555-1.58.752-1.796.197-.216.431-.27.575-.27.144 0 .288.002.414.008.13.007.303-.05.475.36.172.412.588 1.424.64 1.528.052.103.086.223.017.36-.069.137-.103.223-.206.341-.103.12-.216.251-.31.337-.103.094-.21.197-.144.388.066.19.288.627.62.997.426.475.784.622 1.06.691.172.043.302-.017.388-.103.086-.086.36-.417.453-.56.094-.144.188-.12.32-.072.13.05.838.395.98.466.145.072.24.103.275.16.035.06.025.345-.175.908z" fill="white"/>
+  </svg>
+  <span>Reservar por WhatsApp</span>
+</button>
+    
 <div id="mapaRuta" style="margin-top:25px; display:none;"></div>
   </div>
 </div>
