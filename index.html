@@ -1692,14 +1692,6 @@ function desactivarBoton(id) {
 // ==========================================
 // CÁLCULO DE TARIFA
 // ==========================================
-function calcularTarifa() {
-  if (isCalculating) return;
-  if (navigator.vibrate) navigator.vibrate(30);
-
-  if (!servicioSeleccionado) {
-    mostrarError('Seleccioná un tipo de servicio');
-    return;
-  }
 
 // ✅ REEMPLAZAR POR ESTO (con fallback manual):
 async function calcularTarifa() {
@@ -1731,7 +1723,7 @@ async function calcularTarifa() {
     return;
   }
   
-  const origen = document.getElementById('origen').value.trim(); const destino = document.getElementById('destino').value.trim();
+  const origen = lugarOrigen?.direccion || ''; const destino = document.getElementById('destino').value.trim();
   const fechaHoraInput = document.getElementById('fechaHora')?.value;
 
   if (!origen) {
@@ -1946,7 +1938,7 @@ function animarContador(id, inicio, fin, duracion) {
 // ==========================================
 function reservarWhatsApp() {
   if (!lugarOrigen || !lugarDestino) {   mostrarError('Seleccioná direcciones de la lista');   return; }
-  const origen = document.getElementById('origen').value.trim(); const destino = document.getElementById('destino').value.trim();
+  const origen = lugarOrigen?.direccion || ''; const destino = document.getElementById('destino').value.trim();
   const fechaTexto = modoTiempo === 'ahora'
     ? document.getElementById('btnHoy').textContent.trim()
     : document.getElementById('btnProgramado').textContent.trim();
