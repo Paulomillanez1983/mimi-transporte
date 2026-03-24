@@ -1851,6 +1851,11 @@ function animarContador(id, inicio, fin, duracion) {
     elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
   }, 16);
 }
+function nuevaSesionAutocomplete() {
+  if (google && google.maps && google.maps.places) {
+    sessionToken = new google.maps.places.AutocompleteSessionToken();
+  }
+}
 
 // ==========================================
 // WHATSAPP
