@@ -1111,6 +1111,22 @@ body {
       </div>
       <input type="hidden" id="tiempoEsperaMin" value="30">
     </div>
+    <div style="margin-top:15px;">
+  <div class="datetime-header">
+    <span>📅 Horario de IDA</span>
+  </div>
+
+  <div class="datetime-card" onclick="abrirSelectorFecha()">
+    <div class="datetime-text">
+      <div class="datetime-label">Fecha y hora de ida</div>
+      <div class="datetime-value" id="textoFechaSeleccionada">Elegí fecha y hora...</div>
+    </div>
+    <div class="location-arrow">›</div>
+  </div>
+
+  <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
+</div>
+
 
 <button class="btn-calcular btn-push" id="btnCalcular" onclick="calcularTarifa()">
   <span>💰 Cotizar viaje</span>
@@ -1643,7 +1659,14 @@ function calcularTarifa() {
     return;
   }
 
-  if (!lugarOrigen || !lugarDestino) {   mostrarError('Seleccioná direcciones de la lista');   return; }
+if (!lugarOrigen || !lugarDestino) {
+  notifSystem.show(
+    'Tip',
+    'Seleccioná una dirección sugerida para mayor precisión',
+    'warning',
+    4000
+  );
+}
   const origen = document.getElementById('origen').value.trim(); const destino = document.getElementById('destino').value.trim();
   const fechaHoraInput = document.getElementById('fechaHora')?.value;
 
