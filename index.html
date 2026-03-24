@@ -1627,15 +1627,16 @@ function desactivarBoton(id) {
 }
 
 // ==========================================
-// CÁLCULO DE TARIFA
+// CÁLCULO DE TARIFA - CON JSONP
 // ==========================================
 async function calcularTarifa() {
   if (isCalculating) return;
   if (navigator.vibrate) navigator.vibrate(30);
-if (!navigator.onLine) {
-  mostrarError('Sin conexión a internet');
-  return;
-}
+  
+  if (!navigator.onLine) {
+    mostrarError('Sin conexión a internet');
+    return;
+  }
 
   if (!servicioSeleccionado) {
     mostrarError('Seleccioná un tipo de servicio');
@@ -1679,8 +1680,8 @@ if (!navigator.onLine) {
   }
 
   // Validaciones específicas por servicio
-  let fechaHoraVuelta = null;
-  let esperaMin = null;
+  let fechaHoraVuelta = '';
+  let esperaMin = '';
   
   if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
     fechaHoraVuelta = document.getElementById('fechaHoraVuelta').value;
@@ -1692,7 +1693,7 @@ if (!navigator.onLine) {
   }
   
   if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
-    esperaMin = parseInt(document.getElementById('tiempoEsperaMin').value) || 30;
+    esperaMin = document.getElementById('tiempoEsperaMin').value || '30';
   }
   
   let fechaHoraParaEnviar = new Date().toISOString();
@@ -1726,27 +1727,45 @@ if (!navigator.onLine) {
     
   const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
   
-const params = new URLSearchParams({
-  action: 'cotizar', // 👈 CLAVE
-  desde: lugarOrigen.direccion,
-  hasta: lugarDestino.direccion,
-  servicio: servicioSeleccionado,
-  fechaHora: fechaHoraParaEnviar,
-  esperaMin: esperaMin || '',
-  fechaHoraVuelta: fechaHoraVuelta || ''
-});
+  // ========== JSONP ==========
+  const callbackName = 'mimi_cb_' + Date.now();
+  
+  const params = new URLSearchParams({
+    action: 'cotizar',
+    desde: lugarOrigen.direccion,
+    hasta: lugarDestino.direccion,
+    servicio: servicioSeleccionado,
+    fechaHora: fechaHoraParaEnviar,
+    esperaMin: esperaMin,
+    fechaHoraVuelta: fechaHoraVuelta,
+    callback: callbackName
+  });
 
-  const fullUrl = `${CONFIG.SCRIPT_URL}?${params.toString()}`;
-
-  try {
-    const response = await fetch(fullUrl);
-    const res = await response.json();
-    
+  const script = document.createElement('script');
+  script.src = CONFIG.SCRIPT_URL + '?' + params.toString();
+  
+  // Cleanup
+  const cleanup = () => {
+    if (script.parentNode) script.parentNode.removeChild(script);
+    delete window[callbackName];
+    clearTimeout(timeout);
     isCalculating = false;
     btn.disabled = false;
     btn.innerHTML = '<span>💰 Cotizar viaje</span>';
     calcToast.remove();
-
+  };
+  
+  // Timeout 15 segundos
+  const timeout = setTimeout(() => {
+    cleanup();
+    notifSystem.show('Error', 'El servidor no respondió', 'error', 6000);
+    mostrarError('Timeout: intentá de nuevo');
+  }, 15000);
+  
+  // Callback exitoso
+  window[callbackName] = (res) => {
+    cleanup();
+    
     if (!res || res.error) {
       const mensaje = res?.error || 'Error desconocido del servidor';
       notifSystem.show('Error', mensaje, 'error', 6000);
@@ -1772,101 +1791,17 @@ const params = new URLSearchParams({
     if (n) {
       notifSystem.show(n.titulo, n.desc, 'success', 4000);
     }
-  } catch (err) {
-    console.error(err);
-    isCalculating = false;
-    btn.disabled = false;
-    btn.innerHTML = '<span>💰 Cotizar viaje</span>';
-    calcToast.remove();
+  };
+  
+  // Error de carga
+  script.onerror = () => {
+    cleanup();
     notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);
     mostrarError('Error de conexión. Verificá tu internet.');
-  }
+  };
+  
+  document.head.appendChild(script);
 }
-
-function mostrarResultado(res) {
-  datosCotizacion = res;
-  
-  animarContador('precioValor', 0, res.precio, 800);
-  
-  const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.km) || 0;
-  const duracion = parseInt(res.duracionEstimadaMin) || 0;
-  
-  const resultadoDiv = document.getElementById('resultado');
-  resultadoDiv.classList.add('visible');
-  
-  let infoViaje = document.getElementById('infoViaje');
-  if (!infoViaje) {
-    infoViaje = document.createElement('div');
-    infoViaje.id = 'infoViaje';
-    infoViaje.style.marginTop = '8px';
-    infoViaje.style.fontSize = '0.85rem';
-    infoViaje.style.color = '#666';
-    infoViaje.style.textAlign = 'center';
-    resultadoDiv.insertBefore(infoViaje, resultadoDiv.children[1]);
-  }
-  
-  const tiempoTexto = duracion > 60 
-    ? `${Math.floor(duracion / 60)}h ${duracion % 60}min`
-    : `${duracion} min`;
-    
-  infoViaje.innerHTML = `📏 ${kmCliente.toFixed(1)} km · ⏱️ ${tiempoTexto}`;
-  
-  let recargosDiv = document.getElementById('recargosInfo');
-  if (!recargosDiv) {
-    recargosDiv = document.createElement('div');
-    recargosDiv.id = 'recargosInfo';
-    resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
-  }
-  
-  let recargosHtml = '';
-  
-  if (res.clima && res.clima.tipo === 'tormenta') {
-    recargosHtml += `<div style="display:flex;align-items:center;justify-content:center;gap:6px;color:#666;font-size:0.8rem;margin-bottom:6px;"><span>⛈️</span><span>Condiciones climáticas adversas</span></div>`;
-  }
-  
-  if (res.esNocturno) {
-    recargosHtml += `<div style="display:inline-flex;align-items:center;gap:4px;background:#1a237e;color:white;padding:4px 10px;border-radius:12px;font-size:0.75rem;">🌙 Nocturno</div>`;
-  }
-  
-  if (recargosHtml) {
-    recargosDiv.style.cssText = 'margin:8px 0;padding:8px;background:#f5f5f5;border-radius:8px;text-align:center;';
-    recargosDiv.innerHTML = recargosHtml;
-  } else {
-    recargosDiv.innerHTML = '';
-    recargosDiv.style.display = 'none';
-  }
-
-  const origenTexto = document.getElementById('origen').value;
-  const destinoTexto = document.getElementById('destino').value;
-  const mapsUrl = res.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
-  const mapaDiv = document.getElementById('mapaRuta');
-  mapaDiv.style.display = 'block';
-  mapaDiv.innerHTML = `
-    <button class="btn-mapa" onclick="window.open('${mapsUrl}', '_blank')">
-      <span class="btn-mapa-icon">🗺️</span>
-      <span class="btn-mapa-text"><strong>Ver recorrido</strong><small>Google Maps</small></span>
-      <span class="btn-mapa-arrow">→</span>
-    </button>
-  `;
-  
-  setTimeout(() => resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
-}
-
-function animarContador(id, inicio, fin, duracion) {
-  const elemento = document.getElementById(id);
-  const incremento = (fin - inicio) / (duracion / 16);
-  let actual = inicio;
-  
-  const timer = setInterval(() => {
-    actual += incremento;
-    if (actual >= fin) {
-      actual = fin;
-      clearInterval(timer);
-    }
-    elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
-  }, 16);
-}
-
 // ==========================================
 // WHATSAPP
 // ==========================================
