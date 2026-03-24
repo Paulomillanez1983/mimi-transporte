@@ -1401,11 +1401,18 @@ window.inicializarAutocomplete = function() {
 
   nuevaSesionAutocomplete();
 
-  const opciones = {
-    componentRestrictions: { country: 'ar' },
-    fields: ['formatted_address', 'geometry', 'name'],
-    types: ['address']
-  };
+const opciones = {
+  componentRestrictions: { country: 'ar' },
+  fields: ['formatted_address', 'geometry', 'name'],
+  types: ['geocode'],
+  
+  // 🔥 ESTO ES CLAVE
+  bounds: new google.maps.LatLngBounds(
+    { lat: -31.5, lng: -64.3 }, // Córdoba sur
+    { lat: -31.2, lng: -64.0 }  // Córdoba norte
+  ),
+  strictBounds: false
+};
 
   const origenInput = document.getElementById('origen');
   const destinoInput = document.getElementById('destino');
@@ -1418,6 +1425,15 @@ window.inicializarAutocomplete = function() {
   // ✅ Crear instancias de Autocomplete
   autocompleteOrigen = new google.maps.places.Autocomplete(origenInput, opciones);
   autocompleteDestino = new google.maps.places.Autocomplete(destinoInput, opciones);
+autocompleteOrigen.setOptions({
+  location: new google.maps.LatLng(-31.4201, -64.1888), // Córdoba centro
+  radius: 30000
+});
+
+autocompleteDestino.setOptions({
+  location: new google.maps.LatLng(-31.4201, -64.1888),
+  radius: 30000
+});
 
   // ✅ Eliminar la función que bloqueaba el autocomplete
   // NO usar activarAutocompleteConDelay - dejar que Google maneje todo
@@ -1930,7 +1946,7 @@ function reservarWhatsApp() {
     if (valor.length < 4) {
       autocomplete.setOptions({ types: [] }); // desactiva predicción
     } else {
-      autocomplete.setOptions({ types: ['address'] });
+      autocomplete.setOptions({ types: ['geocode'] });
     }
   });
 }
