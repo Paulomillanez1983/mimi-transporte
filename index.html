@@ -1612,7 +1612,7 @@ function calcularTarifa() {
   let fechaHoraParaEnviar;
   
   if (modoTiempo === 'ahora') {
-    fechaHoraParaEnviar = new Date().toISOString(); // formato ISO completo
+    fechaHoraParaEnviar = new Date().toISOString();
   } else {
     if (!fechaHoraInput) {
       mostrarError('Seleccioná fecha y hora');   
@@ -1621,7 +1621,6 @@ function calcularTarifa() {
     }
     fechaHoraParaEnviar = fechaHoraInput;
     
-    // Validar que no sea fecha pasada
     if (new Date(fechaHoraInput) < new Date()) {
       mostrarError('La fecha no puede ser pasada');  
       return;  
@@ -1638,36 +1637,38 @@ function calcularTarifa() {
   
   const calcToast = notifSystem.show('Calculando ruta', 'Consultando precio...', 'info', 15000);  
   
-  const callbackName = 'mimiCallback_' + Date.now();  
-    
-  // 🔥 Handler de éxito
-window[callbackName] = function(res) {  
-  clearTimeout(timeout);
-  delete window[callbackName];  
-  const script = document.getElementById('jsonp-' + callbackName);  
-  if (script) script.remove();  
-    
-  isCalculating = false;  
-  btn.disabled = false;  
-  btn.innerHTML = '<span>Calcular Tarifa</span>';  
-  calcToast.remove();
-    
-  // ✅ Verificar si hay error explícito
-  if (!res || res.error) {
-    const mensaje = res?.error || 'Error desconocido del servidor';
-    notifSystem.show('Error', mensaje, 'error', 6000);
-    mostrarError(mensaje);
-    return;
-  }
+  const callbackName = 'mimiCallback_' + Date.now();
   
-  // ✅ Verificar que exito sea true
-  if (res.exito !== true) {
-    notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
-    mostrarError('Error en la cotización');
-    return;
-  }
+  // ✅ DECLARAR TIMEOUT PRIMERO (antes de usarlo)
+  let timeout;
     
-  mostrarResultado(res);
+  // Handler de éxito
+  window[callbackName] = function(res) {  
+    clearTimeout(timeout); // ✅ ahora sí existe
+    delete window[callbackName];  
+    const script = document.getElementById('jsonp-' + callbackName);  
+    if (script) script.remove();  
+      
+    isCalculating = false;  
+    btn.disabled = false;  
+    btn.innerHTML = '<span>Calcular Tarifa</span>';  
+    calcToast.remove();
+    
+    if (!res || res.error) {
+      const mensaje = res?.error || 'Error desconocido del servidor';
+      notifSystem.show('Error', mensaje, 'error', 6000);
+      mostrarError(mensaje);
+      return;
+    }
+    
+    if (res.exito !== true) {
+      notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
+      mostrarError('Error en la cotización');
+      return;
+    }
+    
+    mostrarResultado(res);
+    
     if (modoTiempo === 'ahora' && res.esNocturno) {
       notifSystem.show('🌙 Horario nocturno', 'Se aplicó recargo por horario', 'info', 3000);
     }
@@ -1675,8 +1676,8 @@ window[callbackName] = function(res) {
     notifSystem.show('¡Listo!', `Precio: $${res.precio?.toLocaleString('es-AR')}`, 'success', 4000);  
   };  
   
-  // 🔥 Handler de timeout
-  const timeout = setTimeout(() => {  
+  // Handler de timeout
+  timeout = setTimeout(() => {  
     if (!isCalculating) return;  
       
     delete window[callbackName];  
@@ -1692,11 +1693,10 @@ window[callbackName] = function(res) {
     mostrarError('Tiempo de espera agotado. Intentá de nuevo.');  
   }, 15000);  
   
-  // 🔥 Crear script con manejo de errores mejorado
+  // Crear script
   const script = document.createElement('script');  
   script.id = 'jsonp-' + callbackName;  
   
-  // Error de carga del script (CORS, 404, etc.)
   script.onerror = function(e) {  
     clearTimeout(timeout);  
     delete window[callbackName];  
@@ -1708,21 +1708,22 @@ window[callbackName] = function(res) {
     calcToast.remove();  
 
     console.error('❌ Error cargando script:', e);
-    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor. Verificá tu conexión o intentá más tarde.', 'error', 8000);  
-    mostrarError('Error de conexión. Verificá tu internet o recargá la página.');  
+    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);  
+    mostrarError('Error de conexión. Verificá tu internet.');  
   };  
   
-  // 🔥 CONSTRUIR URL - USÁ TU NUEVA URL
+  // ✅ URL CON COMILLAS CORRECTAS
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6UctYQrGNyQsmn8aJxL_S7T3KmqA9ZkyyhwaM5NurLJnuQQTlQZ1fGR1KLAPW8wRo/exec';
-const params = new URLSearchParams({
-  desde: origen,  
-  hasta: destino,  
-  tipo: tipoViaje,
-  action: 'cotizar', // 👈 AGREGAR ESTO
-  fechaViaje: fechaHoraParaEnviar,
-  clientId: navigator.userAgent + '_' + Date.now(),  
-  callback: callbackName  
-});
+  
+  const params = new URLSearchParams({
+    action: 'cotizar',
+    desde: origen,  
+    hasta: destino,  
+    tipo: tipoViaje,
+    fechaViaje: fechaHoraParaEnviar,
+    clientId: 'web_' + Date.now(),  
+    callback: callbackName  
+  });
   
   const fullUrl = SCRIPT_URL + '?' + params.toString();
   console.log('🌐 URL de consulta:', fullUrl);
@@ -1730,6 +1731,7 @@ const params = new URLSearchParams({
   script.src = fullUrl;  
   document.head.appendChild(script);  
 }
+    
 function mostrarResultado(res) {  
   datosCotizacion = res;  
   
