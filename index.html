@@ -1053,23 +1053,28 @@ body {
       </div>
     </div>
 
-    <!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO -->
-    <div style="display: flex; justify-content: center; margin: -6px 0; position: relative; z-index: 5;">
+    <!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO - VERSIÓN LIMPIA -->
+    <div style="display: flex; justify-content: flex-end; margin: -10px 12px -10px 0; position: relative; z-index: 10;">
       <button onclick="intercambiarOrigenDestino()" 
-              style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                     border: none; border-radius: 50%; width: 44px; height: 44px; 
-                     display: flex; align-items: center; justify-content: center; 
-                     cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); 
-                     transition: all 0.3s ease; font-size: 1.2rem; color: white;"
-              onmouseover="this.style.transform='rotate(180deg) scale(1.1)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.6)'"
-              onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)'"
+              style="background: white; 
+                     border: 2px solid #e0e0e0; 
+                     border-radius: 50%; 
+                     width: 36px; 
+                     height: 36px; 
+                     display: flex; 
+                     align-items: center; 
+                     justify-content: center; 
+                     cursor: pointer; 
+                     box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                     font-size: 1rem;"
+              onmouseover="this.style.borderColor='#1565c0'; this.style.transform='rotate(180deg) scale(1.1)'; this.style.boxShadow='0 4px 12px rgba(21, 101, 192, 0.2)'"
+              onmouseout="this.style.borderColor='#e0e0e0'; this.style.transform='rotate(0deg) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
               onmousedown="this.style.transform='rotate(180deg) scale(0.95)'"
-              onmouseup="this.style.transform='rotate(180deg) scale(1.1)'"
-              title="Intercambiar origen y destino">
-        ⇅
+              title="Invertir origen y destino">
+        <span style="display: inline-block; transition: transform 0.3s;">↕️</span>
       </button>
     </div>
-
     <div class="location-input-group">
       <div class="location-card" onclick="document.getElementById('destino').focus()">
         <div class="location-icon destiny">📍</div>
