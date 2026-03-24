@@ -1054,10 +1054,10 @@ body {
     </div>
 
     <!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO -->
-    <div style="display: flex; justify-content: center; margin: -8px 0; position: relative; z-index: 5;">
+    <div style="display: flex; justify-content: center; margin: -6px 0; position: relative; z-index: 5;">
       <button onclick="intercambiarOrigenDestino()" 
               style="background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-claro) 100%); 
-                     border: none; 
+                     border: none;
                      border-radius: 50%; 
                      width: 40px; 
                      height: 40px; 
@@ -1066,13 +1066,14 @@ body {
                      justify-content: center; 
                      cursor: pointer; 
                      box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3); 
-                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                     font-size: 1.1rem;"
-              onmouseover="this.style.transform='rotate(180deg) scale(1.08)'; this.style.boxShadow='0 6px 16px rgba(21, 101, 192, 0.4)'"
-              onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.boxShadow='0 4px 12px rgba(21, 101, 192, 0.3)'"
-              onmousedown="this.style.transform='rotate(180deg) scale(0.96)'"
+                     transition: all 0.3s ease;
+                     font-size: 1.1rem;
+                     animation: pulseSwap 2s infinite;"
+              onmouseover="this.style.transform='rotate(180deg) scale(1.12)'; this.style.animation='none'"
+              onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.animation='pulseSwap 2s infinite'"
+              onmousedown="this.style.transform='rotate(180deg) scale(0.95)'"
               title="Intercambiar origen y destino">
-        <span style="filter: grayscale(100%) brightness(200%);">⇅</span>
+        <span style="color: white;">⇅</span>
       </button>
     </div>
     
