@@ -1460,12 +1460,14 @@ function abrirSelectorFecha() {
 }  
   
 function inicializarAutocomplete() {
+  // Crear token PRIMERO
   nuevaSesionAutocomplete();
 
   const opciones = {
     componentRestrictions: { country: 'ar' },
     fields: ['formatted_address', 'geometry', 'name'],
-    types: ['geocode', 'establishment']
+    types: ['geocode', 'establishment'],
+    sessionToken: sessionToken // 👈 Incluir aquí
   };
 
   const origenInput = document.getElementById('origen');
@@ -1607,28 +1609,33 @@ function calcularTarifa() {
   const callbackName = 'mimiCallback_' + Date.now();  
     
   // 🔥 Handler de éxito
-  window[callbackName] = function(res) {  
-    clearTimeout(timeout);
-    console.log('✅ Respuesta recibida:', res);  
-      
-    delete window[callbackName];  
-    const script = document.getElementById('jsonp-' + callbackName);  
-    if (script) script.remove();  
-      
-    isCalculating = false;  
-    btn.disabled = false;  
-    btn.innerHTML = '<span>Calcular Tarifa</span>';  
-    calcToast.remove();  
-      
-if (!res || res.error || res.exito === false) {
-  const mensaje = res?.error || 'No se pudo calcular el viaje';
-
-  notifSystem.show('Error del servidor', mensaje, 'error', 6000);
-  mostrarError(mensaje);
-  return;
-}      
-    mostrarResultado(res);  
-      
+window[callbackName] = function(res) {  
+  clearTimeout(timeout);
+  delete window[callbackName];  
+  const script = document.getElementById('jsonp-' + callbackName);  
+  if (script) script.remove();  
+    
+  isCalculating = false;  
+  btn.disabled = false;  
+  btn.innerHTML = '<span>Calcular Tarifa</span>';  
+  calcToast.remove();
+    
+  // ✅ Verificar si hay error explícito
+  if (!res || res.error) {
+    const mensaje = res?.error || 'Error desconocido del servidor';
+    notifSystem.show('Error', mensaje, 'error', 6000);
+    mostrarError(mensaje);
+    return;
+  }
+  
+  // ✅ Verificar que exito sea true
+  if (res.exito !== true) {
+    notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
+    mostrarError('Error en la cotización');
+    return;
+  }
+    
+  mostrarResultado(res);
     if (modoTiempo === 'ahora' && res.esNocturno) {
       notifSystem.show('🌙 Horario nocturno', 'Se aplicó recargo por horario', 'info', 3000);
     }
@@ -1675,14 +1682,15 @@ if (!res || res.error || res.exito === false) {
   
   // 🔥 CONSTRUIR URL - USÁ TU NUEVA URL
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyD3X8xMZOZwR1cnr9YvsmDelBPLxRm6dByiULymFMbmJk-aCl8MDX2jg6MLLXjhqmz/exec';
-  const params = new URLSearchParams({
-    desde: origen,  
-    hasta: destino,  
-    tipo: tipoViaje,  
-    fechaViaje: fechaHoraParaEnviar,
-    clientId: navigator.userAgent + '_' + Date.now(),  
-    callback: callbackName  
-  });
+const params = new URLSearchParams({
+  desde: origen,  
+  hasta: destino,  
+  tipo: tipoViaje,
+  modalidad: modoTiempo, // 👈 AGREGAR ESTO
+  fechaViaje: fechaHoraParaEnviar,
+  clientId: navigator.userAgent + '_' + Date.now(),  
+  callback: callbackName  
+});
   
   const fullUrl = SCRIPT_URL + '?' + params.toString();
   console.log('🌐 URL de consulta:', fullUrl);
@@ -1802,7 +1810,7 @@ function testearConexion() {
   };
   
   const script = document.createElement('script');
-  script.src = 'script.google.com/macros/s/script.google.com/macros/s/AKfycbzjiTy9o62hVlVORljJ64Qh375YKNJ_Ul0-P2HtYA7QtMGc8TnnZz39rGXx4NrNBHEK/exec?callback=' + testCallback;
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyJbMt-p-1S4eBidnNikTJmZl01uQt-KJOSxiu-10gRzxnkbjc-jihKtd_KtzUmqULj/exec';
   
   script.onerror = function() {
     alert('❌ Error de conexión. Verificá la URL del script.');
