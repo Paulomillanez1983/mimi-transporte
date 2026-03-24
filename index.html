@@ -1425,13 +1425,13 @@ function inicializarAutocomplete() {
   // Crear autocompletados
   autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
     componentRestrictions: { country: 'ar' },
-    types: ['geocode'],
+    // BORRADO: types: ['geocode'],
     fields: ['formatted_address', 'geometry', 'name', 'place_id']
   });
   
   autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
     componentRestrictions: { country: 'ar' },
-    types: ['geocode'],
+    // BORRADO: types: ['geocode'],
     fields: ['formatted_address', 'geometry', 'name', 'place_id']
   });
   
