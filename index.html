@@ -11,7 +11,9 @@
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
 
 <!-- GOOGLE MAPS API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap" async defer></script>
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap">
+</script>
 
 <style>
 :root {
@@ -1181,7 +1183,7 @@ body {
 // ==========================================
 const CONFIG = {
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw8hpmiIvrJKqCWT-to-LWkKm3c66BJ061-FhZhw0aoYerpidXFGXvdTZp2MW0KRP76/exec',
+SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw8hpmiIvrJKqCWT-to-LWkKm3c66BJ061-FhZhw0aoYerpidXFGXvdTZp2MW0KRP76AKfycbw-ljavDWhNh8BSZObUDZOeK1EWjfW9YRczhEs_QJHQm5FDkYBpI7Y6e3JFVjefgV_X/exec',
   WHATSAPP_NUMBER: '5493517014863'
 };
 
@@ -1893,21 +1895,20 @@ function reservarWhatsApp() {
   
   notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);
   
-  const mensaje = `*MIMI Transporte Escolar* 🚐
-
-📍 *Desde:* ${origen}
-🎯 *Hasta:* ${destino}
-
-🗺️ *Mapa:* ${mapsRutaCompleta}
-
-⏰ *Cuándo:* ${fechaTexto}
-💰 *Precio:* $${precio}
-📏 *Distancia:* ${kmCliente.toFixed(1)}km · ${datosCotizacion.duracionEstimadaMin || datosCotizacion.duracion || '—'}min
-✅ ¿Confirmamos el viaje?`;
+const mensaje = 
+  "*MIMI Transporte Escolar* 🚐\n\n" +
+  "📍 *Desde:* " + origen + "\n" +
+  "🎯 *Hasta:* " + destino + "\n\n" +
+  "🗺️ *Mapa:* " + mapsRutaCompleta + "\n\n" +
+  "⏰ *Cuándo:* " + fechaTexto + "\n" +
+  "💰 *Precio:* $" + precio + "\n" +
+  "📏 *Distancia:* " + kmCliente.toFixed(1) + "km · " + (datosCotizacion.duracionEstimadaMin || datosCotizacion.duracion || '—') + "min\n" +
+  "✅ ¿Confirmamos el viaje?";
   
   window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');  
-}    
-    function activarAutocompleteConDelay(input, autocomplete) {
+}
+
+function activarAutocompleteConDelay(input, autocomplete) {
   input.addEventListener('input', () => {
     const valor = input.value;
 
