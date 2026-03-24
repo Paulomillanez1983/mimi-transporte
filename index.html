@@ -1053,28 +1053,28 @@ body {
       </div>
     </div>
 
-    <!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO - VERSIÓN LIMPIA -->
-    <div style="display: flex; justify-content: flex-end; margin: -10px 12px -10px 0; position: relative; z-index: 10;">
+    <!-- BOTÓN INTERCAMBIAR - ULTRA MINIMAL -->
+    <div style="display: flex; justify-content: flex-end; margin: -20px 20px 8px 0; position: relative; z-index: 10;">
       <button onclick="intercambiarOrigenDestino()" 
-              style="background: white; 
-                     border: 2px solid #e0e0e0; 
-                     border-radius: 50%; 
-                     width: 36px; 
-                     height: 36px; 
+              style="background: transparent; 
+                     border: none; 
+                     width: 28px; 
+                     height: 28px; 
                      display: flex; 
                      align-items: center; 
                      justify-content: center; 
                      cursor: pointer; 
-                     box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
-                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                     font-size: 1rem;"
-              onmouseover="this.style.borderColor='#1565c0'; this.style.transform='rotate(180deg) scale(1.1)'; this.style.boxShadow='0 4px 12px rgba(21, 101, 192, 0.2)'"
-              onmouseout="this.style.borderColor='#e0e0e0'; this.style.transform='rotate(0deg) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-              onmousedown="this.style.transform='rotate(180deg) scale(0.95)'"
+                     opacity: 0.4;
+                     transition: all 0.2s ease;"
+              onmouseover="this.style.opacity='1'; this.style.transform='rotate(180deg)'"
+              onmouseout="this.style.opacity='0.4'; this.style.transform='rotate(0deg)'"
               title="Invertir origen y destino">
-        <span style="display: inline-block; transition: transform 0.3s;">↕️</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
       </button>
     </div>
+    
     <div class="location-input-group">
       <div class="location-card" onclick="document.getElementById('destino').focus()">
         <div class="location-icon destiny">📍</div>
