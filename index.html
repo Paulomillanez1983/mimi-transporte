@@ -1625,7 +1625,92 @@ function desactivarBoton(id) {
   btn.classList.remove('activo');
   btn.classList.add('inactivo');
 }
+// ==========================================
+// MOSTRAR RESULTADO (va ANTES de calcularTarifa)
+// ==========================================
+function mostrarResultado(res) {
+  datosCotizacion = res;
+  
+  animarContador('precioValor', 0, res.precio, 800);
+  
+  const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.km) || 0;
+  const duracion = parseInt(res.duracionEstimadaMin) || 0;
+  
+  const resultadoDiv = document.getElementById('resultado');
+  resultadoDiv.classList.add('visible');
+  
+  let infoViaje = document.getElementById('infoViaje');
+  if (!infoViaje) {
+    infoViaje = document.createElement('div');
+    infoViaje.id = 'infoViaje';
+    infoViaje.style.marginTop = '8px';
+    infoViaje.style.fontSize = '0.85rem';
+    infoViaje.style.color = '#666';
+    infoViaje.style.textAlign = 'center';
+    resultadoDiv.insertBefore(infoViaje, resultadoDiv.children[1]);
+  }
+  
+  const tiempoTexto = duracion > 60 
+    ? `${Math.floor(duracion / 60)}h ${duracion % 60}min`
+    : `${duracion} min`;
+    
+  infoViaje.innerHTML = `📏 ${kmCliente.toFixed(1)} km · ⏱️ ${tiempoTexto}`;
+  
+  let recargosDiv = document.getElementById('recargosInfo');
+  if (!recargosDiv) {
+    recargosDiv = document.createElement('div');
+    recargosDiv.id = 'recargosInfo';
+    resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
+  }
+  
+  let recargosHtml = '';
+  
+  if (res.clima && res.clima.tipo === 'tormenta') {
+    recargosHtml += `<div style="display:flex;align-items:center;justify-content:center;gap:6px;color:#666;font-size:0.8rem;margin-bottom:6px;"><span>⛈️</span><span>Condiciones climáticas adversas</span></div>`;
+  }
+  
+  if (res.esNocturno) {
+    recargosHtml += `<div style="display:inline-flex;align-items:center;gap:4px;background:#1a237e;color:white;padding:4px 10px;border-radius:12px;font-size:0.75rem;">🌙 Nocturno</div>`;
+  }
+  
+  if (recargosHtml) {
+    recargosDiv.style.cssText = 'margin:8px 0;padding:8px;background:#f5f5f5;border-radius:8px;text-align:center;';
+    recargosDiv.innerHTML = recargosHtml;
+  } else {
+    recargosDiv.innerHTML = '';
+    recargosDiv.style.display = 'none';
+  }
 
+  const origenTexto = document.getElementById('origen').value;
+  const destinoTexto = document.getElementById('destino').value;
+  const mapsUrl = res.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
+  const mapaDiv = document.getElementById('mapaRuta');
+  mapaDiv.style.display = 'block';
+  mapaDiv.innerHTML = `
+    <button class="btn-mapa" onclick="window.open('${mapsUrl}', '_blank')">
+      <span class="btn-mapa-icon">🗺️</span>
+      <span class="btn-mapa-text"><strong>Ver recorrido</strong><small>Google Maps</small></span>
+      <span class="btn-mapa-arrow">→</span>
+    </button>
+  `;
+  
+  setTimeout(() => resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+}
+
+function animarContador(id, inicio, fin, duracion) {
+  const elemento = document.getElementById(id);
+  const incremento = (fin - inicio) / (duracion / 16);
+  let actual = inicio;
+  
+  const timer = setInterval(() => {
+    actual += incremento;
+    if (actual >= fin) {
+      actual = fin;
+      clearInterval(timer);
+    }
+    elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
+  }, 16);
+}
 // ==========================================
 // CÁLCULO DE TARIFA - CON JSONP
 // ==========================================
