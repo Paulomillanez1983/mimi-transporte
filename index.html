@@ -9,10 +9,183 @@
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
-<script async defer
-src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places">
-</script>
+// ==========================================
+// GOOGLE MAPS - VERSIÓN CORREGIDA (PlaceAutocompleteElement)
+// ==========================================
 
+let lugarOrigen = null;
+let lugarDestino = null;
+
+// ✅ FUNCIÓN: Inicializar PlaceAutocompleteElement (API nueva)
+async function inicializarAutocomplete() {
+  console.log("🚀 Inicializando PlaceAutocompleteElement...");
+  
+  if (!window.google || !google.maps) {
+    console.error('❌ Google Maps no está disponible');
+    activarModoManual();
+    return;
+  }
+
+  try {
+    // Importar la librería de places
+    const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+    
+    const origenContainer = document.getElementById('origen').parentElement;
+    const destinoContainer = document.getElementById('destino').parentElement;
+    
+    // Crear elemento de autocompletado para origen
+    const placeAutocompleteOrigen = new PlaceAutocompleteElement({
+      componentRestrictions: { country: 'ar' },
+      types: ['geocode'],
+      placeholder: 'Av. Santa Fe 1234, Córdoba'
+    });
+    
+    // Crear elemento de autocompletado para destino  
+    const placeAutocompleteDestino = new PlaceAutocompleteElement({
+      componentRestrictions: { country: 'ar' },
+      types: ['geocode'],
+      placeholder: 'Escuela Primaria, Villa Allende'
+    });
+    
+    // Estilos para que se vean bien
+    const estilos = `
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 0.95rem;
+      color: #1a1a1a;
+      font-weight: 600;
+      outline: none;
+      font-family: inherit;
+    `;
+    
+    placeAutocompleteOrigen.style.cssText = estilos;
+    placeAutocompleteDestino.style.cssText = estilos;
+    
+    // Reemplazar los inputs originales manteniendo la estructura
+    const inputOrigen = document.getElementById('origen');
+    const inputDestino = document.getElementById('destino');
+    
+    // Guardar referencias a los contenedores padre
+    const parentOrigen = inputOrigen.parentElement;
+    const parentDestino = inputDestino.parentElement;
+    
+    // Limpiar y agregar los nuevos elementos
+    parentOrigen.innerHTML = '';
+    parentDestino.innerHTML = '';
+    
+    parentOrigen.appendChild(placeAutocompleteOrigen);
+    parentDestino.appendChild(placeAutocompleteDestino);
+    
+    // Event listeners para capturar la selección
+    placeAutocompleteOrigen.addEventListener('gmp-placeselect', (event) => {
+      const place = event.detail;
+      lugarOrigen = {
+        direccion: place.formattedAddress || place.displayName,
+        lat: place.location.lat(),
+        lng: place.location.lng()
+      };
+      console.log('✅ Origen seleccionado:', lugarOrigen);
+      
+      // Efecto visual
+      parentOrigen.style.backgroundColor = '#e8f5e9';
+      setTimeout(() => parentOrigen.style.backgroundColor = '', 500);
+    });
+    
+    placeAutocompleteDestino.addEventListener('gmp-placeselect', (event) => {
+      const place = event.detail;
+      lugarDestino = {
+        direccion: place.formattedAddress || place.displayName,
+        lat: place.location.lat(),
+        lng: place.location.lng()
+      };
+      console.log('✅ Destino seleccionado:', lugarDestino);
+      
+      // Efecto visual
+      parentDestino.style.backgroundColor = '#e8f5e9';
+      setTimeout(() => parentDestino.style.backgroundColor = '', 500);
+    });
+    
+    console.log('✅ PlaceAutocompleteElement inicializado correctamente');
+    
+  } catch (error) {
+    console.error('❌ Error con PlaceAutocompleteElement:', error);
+    activarModoManual();
+  }
+}
+
+// ✅ FUNCIÓN: Fallback modo manual
+function activarModoManual() {
+  console.log('⚠️ Activando modo manual');
+  
+  const origenInput = document.getElementById('origen');
+  const destinoInput = document.getElementById('destino');
+  
+  if (origenInput) {
+    origenInput.placeholder = "Escribí la dirección completa (ej: Av. Santa Fe 1234, Córdoba)";
+    origenInput.style.backgroundColor = '#fff3e0';
+  }
+  if (destinoInput) {
+    destinoInput.placeholder = "Escribí la dirección completa (ej: Escuela Primaria, Villa Allende)";
+    destinoInput.style.backgroundColor = '#fff3e0';
+  }
+  
+  // Función de geocoding manual
+  window.geocodificarDireccion = async function(direccion) {
+    try {
+      const apiKey = 'AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc';
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(direccion + ', Córdoba, Argentina')}&key=${apiKey}&region=ar`
+      );
+      const data = await response.json();
+      
+      if (data.results && data.results[0]) {
+        const loc = data.results[0].geometry.location;
+        return {
+          direccion: data.results[0].formatted_address,
+          lat: loc.lat,
+          lng: loc.lng
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error geocodificando:', error);
+      return null;
+    }
+  };
+  
+  notifSystem.show(
+    'Modo manual activado',
+    'Escribí direcciones completas. Ej: "Av. Santa Fe 1234, Córdoba"',
+    'warning',
+    5000
+  );
+}
+
+// ✅ INICIALIZACIÓN
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("📄 DOM cargado");
+  
+  // Esperar a que Google Maps esté listo
+  if (window.google && google.maps) {
+    inicializarAutocomplete();
+  } else {
+    // Esperar un poco por si el script aún está cargando
+    setTimeout(() => {
+      if (window.google && google.maps) {
+        inicializarAutocomplete();
+      } else {
+        activarModoManual();
+      }
+    }, 1000);
+  }
+  
+  // Inicializar fecha si hay valor
+  const input = document.getElementById('fechaHora');
+  if (input && input.value) {
+    actualizarTextoFecha();
+  }
+});
 <style>
 :root {
   --azul-oscuro: #1e3c72;
@@ -1389,48 +1562,45 @@ function actualizarTextoFechaVuelta() {
 }
 
 // ==========================================
-// GOOGLE MAPS - VERSIÓN CORREGIDA
+// GOOGLE MAPS - VERSIÓN CORREGIDA (PlaceAutocompleteElement)
 // ==========================================
 
-// ✅ Hacer la función global para que el callback de Google Maps la encuentre
-// ✅ NUEVO: Reemplazar por esto
-window.inicializarAutocomplete = async function() {
+let lugarOrigen = null;
+let lugarDestino = null;
+
+// ✅ FUNCIÓN: Inicializar PlaceAutocompleteElement (API nueva)
+async function inicializarAutocomplete() {
   console.log("🚀 Inicializando PlaceAutocompleteElement...");
   
-  if (!window.google || !google.maps || !google.maps.places) {
+  if (!window.google || !google.maps) {
     console.error('❌ Google Maps no está disponible');
-    notifSystem.show('Error', 'Google Maps no cargó correctamente', 'error', 5000);
-    return;
-  }
-
-  const origenInput = document.getElementById('origen');
-  const destinoInput = document.getElementById('destino');
-
-  if (!origenInput || !destinoInput) {
-    console.error('❌ Inputs no encontrados');
+    activarModoManual();
     return;
   }
 
   try {
-    // ✅ NUEVO: Usar PlaceAutocompleteElement
+    // Importar la librería de places
     const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
-
-    // Crear elemento para origen
+    
+    const origenContainer = document.getElementById('origen').parentElement;
+    const destinoContainer = document.getElementById('destino').parentElement;
+    
+    // Crear elemento de autocompletado para origen
     const placeAutocompleteOrigen = new PlaceAutocompleteElement({
       componentRestrictions: { country: 'ar' },
       types: ['geocode'],
       placeholder: 'Av. Santa Fe 1234, Córdoba'
     });
     
-    // Crear elemento para destino  
+    // Crear elemento de autocompletado para destino  
     const placeAutocompleteDestino = new PlaceAutocompleteElement({
       componentRestrictions: { country: 'ar' },
       types: ['geocode'],
       placeholder: 'Escuela Primaria, Villa Allende'
     });
-
-    // Estilos
-    placeAutocompleteOrigen.style.cssText = `
+    
+    // Estilos para que se vean bien
+    const estilos = `
       width: 100%;
       border: none;
       background: transparent;
@@ -1438,23 +1608,28 @@ window.inicializarAutocomplete = async function() {
       color: #1a1a1a;
       font-weight: 600;
       outline: none;
+      font-family: inherit;
     `;
     
-    placeAutocompleteDestino.style.cssText = `
-      width: 100%;
-      border: none;
-      background: transparent;
-      font-size: 0.95rem;
-      color: #1a1a1a;
-      font-weight: 600;
-      outline: none;
-    `;
-
-    // Reemplazar los inputs originales
-    origenInput.parentElement.replaceChild(placeAutocompleteOrigen, origenInput);
-    destinoInput.parentElement.replaceChild(placeAutocompleteDestino, destinoInput);
-
-    // Event listeners
+    placeAutocompleteOrigen.style.cssText = estilos;
+    placeAutocompleteDestino.style.cssText = estilos;
+    
+    // Reemplazar los inputs originales manteniendo la estructura
+    const inputOrigen = document.getElementById('origen');
+    const inputDestino = document.getElementById('destino');
+    
+    // Guardar referencias a los contenedores padre
+    const parentOrigen = inputOrigen.parentElement;
+    const parentDestino = inputDestino.parentElement;
+    
+    // Limpiar y agregar los nuevos elementos
+    parentOrigen.innerHTML = '';
+    parentDestino.innerHTML = '';
+    
+    parentOrigen.appendChild(placeAutocompleteOrigen);
+    parentDestino.appendChild(placeAutocompleteDestino);
+    
+    // Event listeners para capturar la selección
     placeAutocompleteOrigen.addEventListener('gmp-placeselect', (event) => {
       const place = event.detail;
       lugarOrigen = {
@@ -1462,9 +1637,13 @@ window.inicializarAutocomplete = async function() {
         lat: place.location.lat(),
         lng: place.location.lng()
       };
-      console.log('Origen seleccionado:', lugarOrigen);
+      console.log('✅ Origen seleccionado:', lugarOrigen);
+      
+      // Efecto visual
+      parentOrigen.style.backgroundColor = '#e8f5e9';
+      setTimeout(() => parentOrigen.style.backgroundColor = '', 500);
     });
-
+    
     placeAutocompleteDestino.addEventListener('gmp-placeselect', (event) => {
       const place = event.detail;
       lugarDestino = {
@@ -1472,17 +1651,93 @@ window.inicializarAutocomplete = async function() {
         lat: place.location.lat(),
         lng: place.location.lng()
       };
-      console.log('Destino seleccionado:', lugarDestino);
+      console.log('✅ Destino seleccionado:', lugarDestino);
+      
+      // Efecto visual
+      parentDestino.style.backgroundColor = '#e8f5e9';
+      setTimeout(() => parentDestino.style.backgroundColor = '', 500);
     });
-
-    notifSystem.show('✅ Listo', 'Escribí una dirección para ver sugerencias', 'success', 2000);
+    
+    console.log('✅ PlaceAutocompleteElement inicializado correctamente');
     
   } catch (error) {
-    console.error('Error inicializando PlaceAutocomplete:', error);
-    notifSystem.show('Modo manual', 'Autocompletado no disponible. Escribí la dirección completa.', 'warning', 5000);
+    console.error('❌ Error con PlaceAutocompleteElement:', error);
+    activarModoManual();
   }
-};
+}
 
+// ✅ FUNCIÓN: Fallback modo manual
+function activarModoManual() {
+  console.log('⚠️ Activando modo manual');
+  
+  const origenInput = document.getElementById('origen');
+  const destinoInput = document.getElementById('destino');
+  
+  if (origenInput) {
+    origenInput.placeholder = "Escribí la dirección completa (ej: Av. Santa Fe 1234, Córdoba)";
+    origenInput.style.backgroundColor = '#fff3e0';
+  }
+  if (destinoInput) {
+    destinoInput.placeholder = "Escribí la dirección completa (ej: Escuela Primaria, Villa Allende)";
+    destinoInput.style.backgroundColor = '#fff3e0';
+  }
+  
+  // Función de geocoding manual
+  window.geocodificarDireccion = async function(direccion) {
+    try {
+      const apiKey = 'AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc';
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(direccion + ', Córdoba, Argentina')}&key=${apiKey}&region=ar`
+      );
+      const data = await response.json();
+      
+      if (data.results && data.results[0]) {
+        const loc = data.results[0].geometry.location;
+        return {
+          direccion: data.results[0].formatted_address,
+          lat: loc.lat,
+          lng: loc.lng
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error geocodificando:', error);
+      return null;
+    }
+  };
+  
+  notifSystem.show(
+    'Modo manual activado',
+    'Escribí direcciones completas. Ej: "Av. Santa Fe 1234, Córdoba"',
+    'warning',
+    5000
+  );
+}
+
+// ✅ INICIALIZACIÓN
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("📄 DOM cargado");
+  
+  // Esperar a que Google Maps esté listo
+  if (window.google && google.maps) {
+    inicializarAutocomplete();
+  } else {
+    // Esperar un poco por si el script aún está cargando
+    setTimeout(() => {
+      if (window.google && google.maps) {
+        inicializarAutocomplete();
+      } else {
+        activarModoManual();
+      }
+    }, 1000);
+  }
+  
+  // Inicializar fecha si hay valor
+  const input = document.getElementById('fechaHora');
+  if (input && input.value) {
+    actualizarTextoFecha();
+  }
+});
 // ✅ NUEVA FUNCIÓN: Carga con importLibrary
 function cargarGoogleMaps() {
   if (window.google && google.maps && google.maps.places) {
