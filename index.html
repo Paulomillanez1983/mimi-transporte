@@ -1148,7 +1148,7 @@ body {
 // CONFIGURACIÓN GLOBAL
 // ==========================================
 const CONFIG = {
-  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbwfWtVZZ_JkUcMpCTu72sMDkQlP3IQiyNn7ygajPC9NXqa5K6gXzn_vv8wt8erSsHs/exec',
+  SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyF5wKtFqxcOaMBx8UXzB_lBeFd6wHlaLiyCL2oNo0hyldJ2XkbQx9XQ7CwDwoOT5iD/exec',
   WHATSAPP_NUMBER: '5493517014863'
 };
 
@@ -1410,29 +1410,29 @@ window.inicializarAutocomplete = function() {
   autocompleteDestino.setOptions({ sessionToken });
 
   // ✅ Listener para cuando se selecciona un lugar
-  autocompleteOrigen.addListener('place_changed', () => {
-    const place = autocompleteOrigen.getPlace();
-    console.log('📍 Origen seleccionado:', place);
-    if (place.formatted_address) {
-      origenInput.value = place.formatted_address;
-      lugarOrigen = place;
-      guardarEstadoLocal();
-      nuevaSesionAutocomplete();
-      autocompleteOrigen.setOptions({ sessionToken });
-    }
-  });
+autocompleteOrigen.addListener('place_changed', () => {
+  const place = autocompleteOrigen.getPlace();
 
-  autocompleteDestino.addListener('place_changed', () => {
-    const place = autocompleteDestino.getPlace();
-    console.log('📍 Destino seleccionado:', place);
-    if (place.formatted_address) {
-      destinoInput.value = place.formatted_address;
-      lugarDestino = place;
-      guardarEstadoLocal();
-      nuevaSesionAutocomplete();
-      autocompleteDestino.setOptions({ sessionToken });
-    }
-  });
+  if (place.geometry) {
+    lugarOrigen = {
+      direccion: place.formatted_address,
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng()
+    };
+  }
+});
+
+autocompleteDestino.addListener('place_changed', () => {
+  const place = autocompleteDestino.getPlace();
+
+  if (place.geometry) {
+    lugarDestino = {
+      direccion: place.formatted_address,
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng()
+    };
+  }
+});
 
   // ✅ Prevenir submit al presionar Enter
   origenInput.addEventListener('keydown', (e) => {
@@ -1711,8 +1711,10 @@ function calcularTarifa() {
   let timeout;
   
 const params = new URLSearchParams({
-  origen: origen,
-  destino: destino,
+  origen: `${lugarOrigen.lat},${lugarOrigen.lng}`,
+  destino: `${lugarDestino.lat},${lugarDestino.lng}`,
+  origenTxt: lugarOrigen.direccion,
+  destinoTxt: lugarDestino.direccion,
   servicio: servicioSeleccionado,
   fechaHora: fechaHoraParaEnviar,
   esperaMin: esperaMin || '',
