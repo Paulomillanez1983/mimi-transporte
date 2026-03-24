@@ -1321,7 +1321,7 @@ document.getElementById('fechaHora').addEventListener('change', guardarEstadoLoc
 document.addEventListener('DOMContentLoaded', function() {
   initFecha();
   cargarEstadoLocal();
-  cargarGoogleMaps();
+document.getElementById('origen').addEventListener('focus', cargarGoogleMaps, { once: true });
 
   // 🔥 Estado inicial correcto
   seleccionarHoy();
@@ -1768,7 +1768,7 @@ function testearConexion() {
   };
   
   const script = document.createElement('script');
-  script.src = 'script.google.com/macros/s/AKfycbzul5qzBF-oTyit-uwPNOx6sHPAUhvH4CxgXzy4N_EXbKCGyo7zoAjDdnKsftfpJPc/exec?callback=' + testCallback;
+  script.src = 'script.google.com/macros/s/AKfycbxCnQyxy9IcvNgQQqui7rN42vQUtRK1GcZwrl91e5UddcbIlE35y61D5uXan7_WpfM3/exec?callback=' + testCallback;
   
   script.onerror = function() {
     alert('❌ Error de conexión. Verificá la URL del script.');
