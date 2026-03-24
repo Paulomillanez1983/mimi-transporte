@@ -1644,11 +1644,11 @@ function calcularTarifa() {
   }
 
   if (!lugarOrigen || !lugarDestino) {   mostrarError('Seleccioná direcciones de la lista');   return; }
-  const destino = document.getElementById('destino').value.trim();
+  const origen = document.getElementById('origen').value.trim(); const destino = document.getElementById('destino').value.trim();
   const fechaHoraInput = document.getElementById('fechaHora')?.value;
 
   if (!origen) {
-    mostrarError('Laques 9835 cordoba, Argentina');
+    mostrarError('Ingresá la dirección de origen');
     document.getElementById('origen').focus();
     return;
   }
@@ -1710,98 +1710,16 @@ function calcularTarifa() {
   const callbackName = 'mimiCallback_' + Date.now();
   let timeout;
   
-  window[callbackName] = function(res) {
-    clearTimeout(timeout);
-    delete window[callbackName];
-    const script = document.getElementById('jsonp-' + callbackName);
-    if (script) script.remove();
-    
-    isCalculating = false;
-    btn.disabled = false;
-    btn.innerHTML = '<span>Calcular Tarifa</span>';
-    calcToast.remove();
-    
-    if (!res || res.error) {
-      const mensaje = res?.error || 'Error desconocido del servidor';
-      notifSystem.show('Error', mensaje, 'error', 6000);
-      mostrarError(mensaje);
-      return;
-    }
-    
-    if (res.exito !== true) {
-      notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
-      mostrarError('Error en la cotización');
-      return;
-    }
-    
-    mostrarResultado(res);
-    
-    const notifServicio = {
-      'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
-      'VUELTA_ESCOLAR': { titulo: 'Vuelta cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
-      'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${res.precio?.toLocaleString('es-AR')} (incluye espera)` },
-      'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total con descuento: $${res.precio?.toLocaleString('es-AR')}` }
-    };
-    
-    const n = notifServicio[servicioSeleccionado];
-    if (n) {
-      notifSystem.show(n.titulo, n.desc, 'success', 4000);
-    }
-  };
-  
-  timeout = setTimeout(() => {
-    if (!isCalculating) return;
-    delete window[callbackName];
-    const script = document.getElementById('jsonp-' + callbackName);
-    if (script) script.remove();
-    isCalculating = false;
-    btn.disabled = false;
-    btn.innerHTML = '<span>Calcular Tarifa</span>';
-    calcToast.remove();
-    notifSystem.show('⏱️ Tiempo agotado', 'El servidor no respondió. Intentá de nuevo.', 'warning', 6000);
-    mostrarError('Tiempo de espera agotado. Intentá de nuevo.');
-  }, 15000);
-  
-const callbackName = 'callback_' + Date.now();
-
-window[callbackName] = function(response) {
-  clearTimeout(timeout);
-  delete window[callbackName];
-  script.remove();
-  isCalculating = false;
-  btn.disabled = false;
-  btn.innerHTML = '<span>Calcular Tarifa</span>';
-  calcToast.remove();
-
-  if (response.error) {
-    notifSystem.show('Error', response.error, 'error', 8000);
-    mostrarError(response.error);
-    return;
-  }
-
-  console.log('✅ Respuesta:', response);
-  mostrarResultado(response); // tu función
-};
-
 const params = new URLSearchParams({
-  action: 'cotizar',
+  origen: origen,
+  destino: destino,
   servicio: servicioSeleccionado,
-  desde: origen,
-  hasta: destino,
-  fechaViaje: fechaHoraParaEnviar,
-  clientId: 'web_' + Date.now(),
-  callback: callbackName   // 👈 ESTO FALTABA
+  fechaHora: fechaHoraParaEnviar,
+  esperaMin: esperaMin || '',
+  fechaHoraVuelta: fechaHoraVuelta || ''
 });
 
-if (fechaHoraVuelta) {
-  params.append('fechaVuelta', fechaHoraVuelta);
-}
-if (esperaMin) {
-  params.append('esperaMin', esperaMin.toString());
-}
-
-const fullUrl = CONFIG.SCRIPT_URL + '?' + params.toString();
-console.log('🌐 URL de consulta:', fullUrl);
+const fullUrl = `${CONFIG.SCRIPT_URL}?${params.toString()}`;
 
 // 🔥 FETCH MODERNO
 fetch(fullUrl)
@@ -1939,7 +1857,7 @@ function animarContador(id, inicio, fin, duracion) {
 // ==========================================
 function reservarWhatsApp() {
   if (!lugarOrigen || !lugarDestino) {   mostrarError('Seleccioná direcciones de la lista');   return; }
-  const destino = document.getElementById('destino').value.trim();
+  const origen = document.getElementById('origen').value.trim(); const destino = document.getElementById('destino').value.trim();
   const fechaTexto = modoTiempo === 'ahora'
     ? document.getElementById('btnHoy').textContent.trim()
     : document.getElementById('btnProgramado').textContent.trim();
