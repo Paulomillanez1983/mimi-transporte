@@ -1632,6 +1632,10 @@ function desactivarBoton(id) {
 async function calcularTarifa() {
   if (isCalculating) return;
   if (navigator.vibrate) navigator.vibrate(30);
+if (!navigator.onLine) {
+  mostrarError('Sin conexión a internet');
+  return;
+}
 
   if (!servicioSeleccionado) {
     mostrarError('Seleccioná un tipo de servicio');
@@ -1921,7 +1925,23 @@ function activarAutocompleteConDelay(input, autocomplete) {
 // ==========================================  
 // UTILIDADES  
 // ==========================================  
-  
+  function guardarEstadoLocal() {
+  try {
+    const estado = {
+      origen: document.getElementById('origen')?.value || '',
+      destino: document.getElementById('destino')?.value || '',
+      fechaHora: document.getElementById('fechaHora')?.value || '',
+      fechaHoraVuelta: document.getElementById('fechaHoraVuelta')?.value || '',
+      servicio: servicioSeleccionado,
+      esperaMin: tiempoEsperaSeleccionado
+    };
+
+    localStorage.setItem('mimi_estado', JSON.stringify(estado));
+  } catch (e) {
+    console.warn('Error guardando estado', e);
+  }
+}
+
 function mostrarError(mensaje) {  
   const el = document.getElementById('errorMsg');  
   document.getElementById('errorText').textContent = mensaje;  
@@ -1932,5 +1952,45 @@ function mostrarError(mensaje) {
 function ocultarError() {  
   document.getElementById('errorMsg').classList.remove('visible');  
 }  
+  window.addEventListener('load', cargarEstadoLocal);
+function formatearFechaInput(fecha) {
+  const pad = n => n.toString().padStart(2, '0');
+  return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
+}
+function cargarEstadoLocal() {
+  try {
+    const estado = JSON.parse(localStorage.getItem('mimi_estado'));
+    if (!estado) return;
+
+    document.getElementById('origen').value = estado.origen || '';
+    document.getElementById('destino').value = estado.destino || '';
+    document.getElementById('fechaHora').value = estado.fechaHora || '';
+    document.getElementById('fechaHoraVuelta').value = estado.fechaHoraVuelta || '';
+
+    if (estado.servicio) {
+      seleccionarServicio(estado.servicio);
+    }
+
+    if (estado.esperaMin) {
+      setTiempoEspera(estado.esperaMin);
+    }
+
+    actualizarTextoFecha();
+    actualizarTextoFechaVuelta();
+
+  } catch (e) {
+    console.warn('Error cargando estado', e);
+  }
+}
+
+function formatearTextoBoton(fecha) {
+  return fecha.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
 </script>  </body>  
 </html>
