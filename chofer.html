@@ -432,19 +432,19 @@
           actualizarStats();
           btn.classList.remove('spinning');
         })
-        .withFailureHandler(function(error) {
-          console.error('Error:', error);
-          document.getElementById('listaViajes').innerHTML = `
-            <div class="empty-state">
-              <div class="empty-state-icon">⚠️</div>
-              <p>Error al cargar: ${error.message}</p>
-              <button onclick="cargarViajes()" style="margin-top:15px;padding:10px 20px;border:none;border-radius:8px;background:var(--azul-primario);color:white;">Reintentar</button>
-            </div>
-          `;
-          btn.classList.remove('spinning');
-        })
-        .obtenerViajesParaChofer();
-    }
+.withFailureHandler(function(error) {
+  console.error('ERROR COMPLETO:', error);
+
+  const mensaje = error?.message || JSON.stringify(error) || 'Error desconocido';
+
+  document.getElementById('listaViajes').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-state-icon">⚠️</div>
+      <p>${mensaje}</p>
+      <button onclick="cargarViajes()" style="margin-top:15px;padding:10px 20px;border:none;border-radius:8px;background:var(--azul-primario);color:white;">Reintentar</button>
+    </div>
+  `;
+});
     
     function actualizarStats() {
       const hoy = new Date().toDateString();
