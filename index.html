@@ -2208,10 +2208,10 @@ function formatearTextoBoton(fecha) {
 }
 </script>
 
-<!-- 1. Cargar Supabase PRIMERO -->
+<!-- 1. Cargar Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- 2. Crear cliente DESPUÉS -->
+<!-- 2. Crear cliente -->
 <script>
   const supabase = window.supabase.createClient(
     "https://xrphpqmutvadjrucqicn.supabase.co",
@@ -2219,7 +2219,7 @@ function formatearTextoBoton(fecha) {
   );
 </script>
 
-<!-- 3. TU CÓDIGO -->
+<!-- 3. Test -->
 <script>
 async function test() {
   const { data, error } = await supabase.from('viajes').select('*');
