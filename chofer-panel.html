@@ -7,14 +7,12 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
   <title>MIMI - Panel Chofer</title>
+
   <meta
     name="description"
     content="Panel de viajes para choferes de MIMI Transporte Infantil."
   />
-  if (localStorage.getItem('choferLogueado') !== 'true') {
-    window.location.href = 'login-chofer.html';
-  }
-</script>
+
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="MIMI - Panel Chofer" />
@@ -53,6 +51,11 @@
     href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
   />
 
+  <script>
+    if (localStorage.getItem('choferLogueado') !== 'true') {
+      window.location.href = 'login-chofer.html';
+    }
+  </script>
   <style>
     :root {
       --azul-oscuro: #1e3c72;
