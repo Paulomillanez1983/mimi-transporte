@@ -595,16 +595,18 @@ function cargarViajes() {
 function cambiarEstado(id, nuevoEstado) {
   if (!id) return alert('ID inválido');
 
-  fetch(`${SCRIPT_URL}?action=estado&id=${id}&estado=${nuevoEstado}`)
-    .then(res => res.json())
-    .then(result => {
-      if (result.exito) {
-        cargarViajes();
-      } else {
-        alert(result.error);
-      }
-    });
-}
+fetch(`${SCRIPT_URL}?action=estado&id=${id}&estado=${nuevoEstado}`)
+  .then(res => res.json())
+  .then(result => {
+    if (result.exito) {
+      cargarViajes();
+    } else {
+      alert(result.error);
+    }
+  })
+  .catch(() => {
+    alert('Error de conexión');
+  });
 
 function finalizarViaje(id) {
   const notas = prompt('¿Observaciones?');
