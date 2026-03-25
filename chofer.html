@@ -421,30 +421,34 @@
     // Auto-refresh cada 30 segundos
     setInterval(cargarViajes, 30000);
     
-    function cargarViajes() {
-      const btn = document.getElementById('btnRefresh');
-      btn.classList.add('spinning');
+function cargarViajes() {
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('spinning');
+  
+  google.script.run
+    .withSuccessHandler(function(data) {
+      viajesData = data || [];
+      renderizarViajes();
+      actualizarStats();
+      btn.classList.remove('spinning');
+    })
+    .withFailureHandler(function(error) {
+      console.error('ERROR COMPLETO:', error);
+
+      const mensaje = error?.message || JSON.stringify(error) || 'Error desconocido';
+
+      document.getElementById('listaViajes').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">⚠️</div>
+          <p>${mensaje}</p>
+          <button onclick="cargarViajes()" style="margin-top:15px;padding:10px 20px;border:none;border-radius:8px;background:var(--azul-primario);color:white;">Reintentar</button>
+        </div>
+      `;
       
-      google.script.run
-        .withSuccessHandler(function(data) {
-          viajesData = data || [];
-          renderizarViajes();
-          actualizarStats();
-          btn.classList.remove('spinning');
-        })
-.withFailureHandler(function(error) {
-  console.error('ERROR COMPLETO:', error);
-
-  const mensaje = error?.message || JSON.stringify(error) || 'Error desconocido';
-
-  document.getElementById('listaViajes').innerHTML = `
-    <div class="empty-state">
-      <div class="empty-state-icon">⚠️</div>
-      <p>${mensaje}</p>
-      <button onclick="cargarViajes()" style="margin-top:15px;padding:10px 20px;border:none;border-radius:8px;background:var(--azul-primario);color:white;">Reintentar</button>
-    </div>
-  `;
-});
+      btn.classList.remove('spinning');
+    })
+    .obtenerViajes(); // 👈 ESTA ES LA LLAMADA FINAL
+}
     
     function actualizarStats() {
       const hoy = new Date().toDateString();
