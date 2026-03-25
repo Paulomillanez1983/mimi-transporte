@@ -1574,31 +1574,28 @@ async function enviarViaje() {
   const destino = document.querySelector('[name="destino"]')?.value || '';
   const precio = document.querySelector('#precio')?.textContent || '0';
 
-  const url = `${CONFIG.SCRIPT_URL}?action=crear`
-    + `&cliente=${encodeURIComponent("Cliente Web")}`
-    + `&telefono=${encodeURIComponent("000000000")}`
-    + `&origen=${encodeURIComponent(origen)}`
-    + `&destino=${encodeURIComponent(destino)}`
-    + `&precio=${encodeURIComponent(precio)}`
-    + `&estado=PENDIENTE`
-    + `&t=${Date.now()}`;
+  console.log("Enviando viaje a Supabase...");
 
-  try {
-    console.log("Enviando viaje...");
+  const { data, error } = await supabase
+    .from('viajes')
+    .insert([
+      {
+        cliente: "Cliente Web",
+        telefono: "000000000",
+        origen: origen,
+        destino: destino,
+        precio: Number(precio),
+        estado: "PENDIENTE"
+      }
+    ]);
 
-    const res = await fetch(url);
-    const result = await res.json();
-
-    if (result.exito) {
-      alert('Viaje solicitado 🚐');
-    } else {
-      alert('Error al guardar');
-    }
-
-  } catch (error) {
+  if (error) {
     console.error(error);
-    alert('Error de conexión');
+    alert('Error al guardar');
+    return;
   }
+
+  alert('Viaje solicitado 🚐');
 }
 // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
