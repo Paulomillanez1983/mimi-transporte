@@ -2206,26 +2206,29 @@ function formatearTextoBoton(fecha) {
     minute: '2-digit'
   });
 }
-
-
-
+<!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-  const supabaseClient = window.supabase.createClient(
+  const supabase = window.supabase.createClient(
     "https://xrphpqmutvadjrucqicn.supabase.co",
     "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq"
   );
 </script>
 
+<!-- TEST -->
 <script>
   async function test() {
-    const { data, error } = await supabaseClient.from('viajes').select('*');
-    console.log(data, error);
+    const { data, error } = await supabase.from('viajes').select('*');
+    console.log("DATA:", data);
+    console.log("ERROR:", error);
   }
 
   test();
 </script>
+
+
+
 
 </body>  
 </html>
