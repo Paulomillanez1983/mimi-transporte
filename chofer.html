@@ -508,11 +508,11 @@
   </div>
   
   <div class="filtros">
-    <button class="filtro-btn activo" onclick="filtrar('todos')">Todos</button>
-    <button class="filtro-btn" onclick="filtrar('pendiente')">Pendientes</button>
-    <button class="filtro-btn" onclick="filtrar('aceptado')">Aceptados</button>
-    <button class="filtro-btn" onclick="filtrar('en-camino')">En curso</button>
-    <button class="filtro-btn" onclick="filtrar('completado')">Completados</button>
+    <button class="filtro-btn activo" data-filtro="todos" onclick="filtrar('todos')">Todos</button>
+    <button class="filtro-btn" data-filtro="pendiente" onclick="filtrar('pendiente')">Pendientes</button>
+    <button class="filtro-btn" data-filtro="aceptado" onclick="filtrar('aceptado')">Aceptados</button>
+    <button class="filtro-btn" data-filtro="en-camino" onclick="filtrar('en-camino')">En curso</button>
+    <button class="filtro-btn" data-filtro="completado" onclick="filtrar('completado')">Completados</button>
   </div>
   
   <div class="viajes-lista" id="listaViajes">
@@ -773,13 +773,15 @@ function showNewTripIndicator() {
 
     function filtrar(estado) {
       filtroActual = estado;
+      
+      // Actualizar botones activos usando data-filtro
       document.querySelectorAll('.filtro-btn').forEach(btn => {
         btn.classList.remove('activo');
-        if (btn.textContent.toLowerCase().includes(estado) || 
-            (estado === 'todos' && btn.textContent === 'Todos')) {
+        if (btn.getAttribute('data-filtro') === estado) {
           btn.classList.add('activo');
         }
       });
+      
       renderizarViajes();
     }
 
@@ -788,10 +790,21 @@ function showNewTripIndicator() {
       let viajes = viajesData;
 
       if (filtroActual !== 'todos') {
-        const estadoBuscado = filtroActual === 'en-camino' ? 'en_curso' : filtroActual;
-        viajes = viajes.filter(v => 
-          normalizarEstado(v.estado) === normalizarEstado(estadoBuscado)
-        );
+        // Mapear filtros a estados normalizados
+        const filtroMap = {
+          'pendiente': 'PENDIENTE',
+          'aceptado': 'ACEPTADO',
+          'en-camino': 'EN_CURSO',
+          'completado': 'COMPLETADO',
+          'cancelado': 'CANCELADO'
+        };
+        
+        const estadoBuscado = filtroMap[filtroActual] || filtroActual.toUpperCase();
+        
+        viajes = viajes.filter(v => {
+          const estadoNormalizado = normalizarEstado(v.estado);
+          return estadoNormalizado === estadoBuscado;
+        });
       }
 
       // Ordenar: pendientes primero, luego por fecha
