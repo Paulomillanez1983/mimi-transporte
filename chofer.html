@@ -423,33 +423,30 @@
     setInterval(cargarViajes, 30000);
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxbPXTwmspxgh-L81JRrJdNlJI_mskvtF-UgMllkWXtkjioC4X6Ds8AvfbP1AkV0s_o/exec';
 
-function cargarViajes() {
+async function cargarViajes() {
   const btn = document.getElementById('btnRefresh');
   if (btn) btn.classList.add('spinning');
 
-  const callbackName = "callbackViajes_" + Date.now();
+  try {
+    const response = await fetch(`${SCRIPT_URL}?action=viajes`);
 
-  window[callbackName] = function(data) {
+    if (!response.ok) {
+      throw new Error('Error en la respuesta del servidor');
+    }
+
+    const data = await response.json();
+
     viajesData = Array.isArray(data) ? data : [];
+
     renderizarViajes();
     actualizarStats();
-    if (btn) btn.classList.remove('spinning');
 
-    // limpiar
-    delete window[callbackName];
-    script.remove();
-  };
-
-  const script = document.createElement('script'); // 👈 primero crear
-
-  script.onerror = () => { // 👈 después asignar
-    if (btn) btn.classList.remove('spinning');
+  } catch (error) {
+    console.error('Error cargando viajes:', error);
     alert('Error cargando viajes');
-  };
-
-  script.src = `${SCRIPT_URL}?action=viajes&callback=${callbackName}`;
-  
-  document.body.appendChild(script);
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
 }
 
   function actualizarStats() {
