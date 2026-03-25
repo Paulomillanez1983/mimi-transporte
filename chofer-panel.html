@@ -11,7 +11,14 @@
     name="description"
     content="Panel de viajes para choferes de MIMI Transporte Infantil."
   />
-
+  <button onclick="cerrarSesion()" style="margin-top:10px;padding:10px 14px;border:none;border-radius:12px;background:#f44336;color:white;font-weight:700;cursor:pointer;">
+  🚪 Cerrar sesión
+</button>
+<script>
+  if (localStorage.getItem('choferLogueado') !== 'true') {
+    window.location.href = 'login-chofer.html';
+  }
+</script>
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="MIMI - Panel Chofer" />
@@ -842,7 +849,11 @@
 
       renderizarViajes();
     }
-
+function cerrarSesion() {
+  localStorage.removeItem('choferLogueado');
+  localStorage.removeItem('choferUsuario');
+  window.location.href = 'login-chofer.html';
+}
     function renderizarViajes() {
       const container = document.getElementById('listaViajes');
       let viajes = [...viajesData];
