@@ -15,7 +15,26 @@
 <script async
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap">
 </script>
-
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Inicializar Supabase UNA SOLA VEZ
+  const supabase = window.supabase.createClient(
+    "https://xrphpqmutvadjrucqicn.supabase.co",
+    "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq"
+  );
+  
+  // Test de conexión al cargar
+  window.addEventListener('load', async () => {
+    try {
+      const { data, error } = await supabase.from('viajes').select('*').limit(1);
+      console.log("✅ Supabase conectado:", data);
+      if (error) console.error("❌ Error Supabase:", error);
+    } catch (err) {
+      console.error("❌ Fallo conexión Supabase:", err);
+    }
+  });
+</script>
 <style>
 :root {
   --azul-oscuro: #1e3c72;
@@ -1572,35 +1591,43 @@ function actualizarTextoFechaVuelta() {
   }
 }
 async function enviarViaje() {
-  const origen = document.querySelector('[name="origen"]')?.value || '';
-  const destino = document.querySelector('[name="destino"]')?.value || '';
-  const precio = document.querySelector('#precio')?.textContent || '0';
+  // Usá los IDs correctos, no name
+  const origen = document.getElementById('origen')?.value || '';
+  const destino = document.getElementById('destino')?.value || '';
+  const precio = document.getElementById('precioValor')?.textContent || '0';
 
   console.log("🚀 Enviando viaje a Supabase...");
 
-  const { data, error } = await supabase
-    .from('viajes')
-    .insert([
-      {
-        cliente: "Cliente Web",
-        telefono: "000000000",
-        origen,
-        destino,
-        precio: Number(precio),
-        estado: "PENDIENTE"
-      }
-    ]);
+  try {
+    const { data, error } = await supabase
+      .from('viajes')
+      .insert([
+        {
+          cliente: "Cliente Web",
+          telefono: "000000000",
+          origen: origen,
+          destino: destino,
+          precio: Number(precio.replace(/\./g, '').replace(',', '.')), // Limpiar formato argentino
+          estado: "PENDIENTE",
+          fecha_solicitud: new Date().toISOString()
+        }
+      ]);
 
-  if (error) {
-    console.error("❌ Error:", error);
-    alert('Error al guardar');
-    return;
+    if (error) {
+      console.error("❌ Error:", error);
+      notifSystem.show('Error', 'No se pudo guardar el viaje', 'error', 3000);
+      return;
+    }
+
+    console.log("✅ Guardado:", data);
+    notifSystem.show('¡Listo!', 'Viaje solicitado correctamente 🚐', 'success', 3000);
+    
+  } catch (err) {
+    console.error("❌ Error inesperado:", err);
+    notifSystem.show('Error', 'Error de conexión', 'error', 3000);
   }
-
-  console.log("✅ Guardado:", data);
-  alert('Viaje solicitado 🚐');
 }
-// ==========================================
+  // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
 function initMap() {
@@ -2208,26 +2235,6 @@ function formatearTextoBoton(fecha) {
     minute: '2-digit'
   });
 }
-</script>
-
-<!-- Supabase ya está declarado arriba en las variables globales -->
-<!-- Solo necesitamos inicializarlo -->
-<script>
-  // Inicializar cliente Supabase (solo UNA vez)
-  supabase = window.supabase.createClient(
-    "https://xrphpqmutvadjrucqicn.supabase.co",
-    "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq"
-  );
-  
-  // Test de conexión
-  async function test() {
-    const { data, error } = await supabase.from('viajes').select('*');
-    console.log("DATA:", data);
-    console.log("ERROR:", error);
-  }
-
-  window.addEventListener('load', test);
-</script>
 
 </body>  
 </html>
