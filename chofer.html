@@ -426,27 +426,26 @@ function cargarViajes() {
   const btn = document.getElementById('btnRefresh');
   if (btn) btn.classList.add('spinning');
 
-  fetch("https://script.google.com/macros/s/AKfycbzAAH2cYLOsrd7mp18FJL4Ub37udbgKfE4tD0z_-HfirhWBkalfXRys_pfZvizaBSsI/exec?action=viajes")
-    .then(res => res.json())
-    .then(data => {
-      viajesData = Array.isArray(data) ? data : [];
-      renderizarViajes();
-      actualizarStats();
-      if (btn) btn.classList.remove('spinning');
-    })
-    .catch(error => {
-      console.error(error);
-      document.getElementById('listaViajes').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">⚠️</div>
-          <p>Error cargando viajes</p>
-        </div>
-      `;
-      if (btn) btn.classList.remove('spinning');
-    });
+  const callbackName = "callbackViajes_" + Date.now();
+
+  window[callbackName] = function(data) {
+    viajesData = Array.isArray(data) ? data : [];
+    renderizarViajes();
+    actualizarStats();
+    if (btn) btn.classList.remove('spinning');
+
+    // limpiar
+    delete window[callbackName];
+    script.remove();
+  };
+
+  const script = document.createElement('script');
+  script.src = `https://script.google.com/macros/s/AKfycbzAAH2cYLOsrd7mp18FJL4Ub37udbgKfE4tD0z_-HfirhWBkalfXRys_pfZvizaBSsI/exec?action=viajes&callback=${callbackName}`;
+  
+  document.body.appendChild(script);
 }
 
-    function actualizarStats() {
+  function actualizarStats() {
       const hoy = new Date().toDateString();
       const pendientes = viajesData.filter(v => String(v.estado || '').toUpperCase() === 'PENDIENTE').length;
       
