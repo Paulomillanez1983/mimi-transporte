@@ -620,19 +620,12 @@ function finalizarViaje(id) {
     .then(result => {
       if (result.exito) {
         cargarViajes();
+      } else {
+        alert('Error al finalizar');
       }
-    });
-}
-
-function finalizarViaje(id) {
-  const notas = prompt('¿Observaciones?');
-
-  fetch(`${SCRIPT_URL}?action=finalizar&id=${id}&notas=${encodeURIComponent(notas || '')}`)
-    .then(res => res.json())
-    .then(result => {
-      if (result.exito) {
-        cargarViajes();
-      }
+    })
+    .catch(() => {
+      alert('Error de conexión');
     });
 }
 
