@@ -16,16 +16,39 @@
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap">
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.0/dist/umd/supabase.min.js"></script>
+<!-- SUPABASE -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.0/dist/umd/supabase.min.js"></script>
 <script>
-  // Inicializar Supabase solo una vez
-  if (!window.supabase) {
-    window.supabase = supabase.createClient(
-      "https://xrphpqmutvadjrucqicn.supabase.co",
-      "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq"
-    );
-    console.log("✅ Supabase inicializado");
+  // Función para inicializar Supabase cuando esté disponible
+  function initSupabase() {
+    if (typeof supabase !== 'undefined' && supabase.createClient) {
+      window.supabase = supabase.createClient(
+        "https://xrphpqmutvadjrucqicn.supabase.co",
+        "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq"
+      );
+      console.log("✅ Supabase inicializado correctamente");
+      return true;
+    }
+    return false;
   }
-</script>  
+
+  // Intentar inicializar inmediatamente
+  if (!initSupabase()) {
+    // Si no está listo, esperar y reintentar
+    let intentos = 0;
+    const maxIntentos = 10;
+    
+    const intervalo = setInterval(function() {
+      intentos++;
+      if (initSupabase() || intentos >= maxIntentos) {
+        clearInterval(intervalo);
+        if (intentos >= maxIntentos) {
+          console.error("❌ No se pudo cargar Supabase después de " + maxIntentos + " intentos");
+        }
+      }
+    }, 500); // Reintentar cada 500ms
+  }
+</script>
 <style>
 :root {
   --azul-oscuro: #1e3c72;
