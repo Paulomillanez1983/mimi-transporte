@@ -1332,6 +1332,8 @@ let datosCotizacion = null;
 let isCalculating = false;
 let autocompleteOrigen = null;
 let autocompleteDestino = null;
+  let supabase = null;  // ← Declarado aquí, se inicializa después
+
 
 // ==========================================
 // SISTEMA DE NOTIFICACIONES
@@ -2208,28 +2210,24 @@ function formatearTextoBoton(fecha) {
 }
 </script>
 
-<!-- 1. Cargar Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- 2. Crear cliente -->
+<!-- Supabase ya está declarado arriba en las variables globales -->
+<!-- Solo necesitamos inicializarlo -->
 <script>
-  const supabase = window.supabase.createClient(
+  // Inicializar cliente Supabase (solo UNA vez)
+  supabase = window.supabase.createClient(
     "https://xrphpqmutvadjrucqicn.supabase.co",
     "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq"
   );
+  
+  // Test de conexión
+  async function test() {
+    const { data, error } = await supabase.from('viajes').select('*');
+    console.log("DATA:", data);
+    console.log("ERROR:", error);
+  }
+
+  window.addEventListener('load', test);
 </script>
-
-<!-- 3. Test -->
-<script>
-async function test() {
-  const { data, error } = await supabase.from('viajes').select('*');
-  console.log("DATA:", data);
-  console.log("ERROR:", error);
-}
-
-window.addEventListener('load', test);
-</script>
-
 
 </body>  
 </html>
