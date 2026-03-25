@@ -1582,9 +1582,11 @@ async function enviarViaje() {
     precio,
     estado: "PENDIENTE"
   };
+  console.log("Enviando viaje...");
+
 
   try {
-    const res = await fetch(`${SCRIPT_URL}?action=crear&t=${Date.now()}`, {
+    const res = await fetch(`${CONFIG.SCRIPT_URL}?action=crear&t=${Date.now()}`, {
       method: 'POST',
       body: JSON.stringify(data)
     });
