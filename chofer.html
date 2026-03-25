@@ -480,7 +480,7 @@ function cargarViajes() {
       let viajes = viajesData;
 if (filtroActual !== 'todos') {
   viajes = viajes.filter(v => 
-    v.estado.toLowerCase().replaceAll('_','-') === filtroActual
+    v.estado.toLowerCase().replace(/_/g, '-') === filtroActual
   );
 }
       
@@ -522,7 +522,7 @@ viajes.sort((a, b) => {
       
       if (v.estado === 'PENDIENTE') {
         acciones = `
-          <button class="btn-accion btn-aceptar" onclick="cambiarEstado('${v.id}', 'ACEPTADO')">✓ Aceptar</button>
+          <button class="btn-accion btn-aceptar" onclick="cambiarEstado(event, '${v.id}', 'ACEPTADO')">✓ Aceptar</button>
           <button class="btn-accion btn-maps" onclick="abrirMaps('${v.origen}', '${v.destino}')">🗺️ Maps</button>
         `;
       } else if (v.estado === 'ACEPTADO') {
@@ -591,10 +591,10 @@ viajes.sort((a, b) => {
       `;
     }
     
-    function cambiarEstado(id, nuevoEstado) {
-      const btn = event.target;
-      btn.disabled = true;
-      btn.textContent = '⏳...';
+function cambiarEstado(e, id, nuevoEstado) {
+  const btn = e.target;
+btn.disabled = true;
+btn.innerHTML = '⏳ Procesando...';
       
       google.script.run
         .withSuccessHandler(function(result) {
