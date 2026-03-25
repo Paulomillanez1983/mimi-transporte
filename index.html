@@ -1278,6 +1278,9 @@ body {
 <button class="btn-calcular btn-push" id="btnCalcular" onclick="calcularTarifa()">
   <span>💰 Cotizar viaje</span>
 </button>
+<button class="btn-calcular btn-push" onclick="enviarViaje()">
+  <span>🚐 Confirmar viaje</span>
+</button>
 
     <div id="resultado" class="resultado-section">
       <div class="precio-monto">$<span id="precioValor">0</span></div>
@@ -1564,6 +1567,39 @@ function actualizarTextoFechaVuelta() {
       input.value = '';
       textoFecha.textContent = 'Seleccionar...';
     }
+  }
+}
+async function enviarViaje() {
+  const origen = document.querySelector('[name="origen"]')?.value || '';
+  const destino = document.querySelector('[name="destino"]')?.value || '';
+  const precio = document.querySelector('#precio')?.textContent || '0';
+
+  const data = {
+    cliente: "Cliente Web",
+    telefono: "000000000",
+    origen,
+    destino,
+    precio,
+    estado: "PENDIENTE"
+  };
+
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=crear&t=${Date.now()}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    if (result.exito) {
+      alert('Viaje solicitado 🚐');
+    } else {
+      alert('Error al guardar');
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert('Error de conexión');
   }
 }
 
