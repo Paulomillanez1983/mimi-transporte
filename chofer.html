@@ -449,7 +449,7 @@
     function actualizarStats() {
       const hoy = new Date().toDateString();
       const pendientes = viajesData.filter(v => v.estado === 'PENDIENTE').length;
-      const deHoy = viajesData.filter(v => new Date(v.fecha).toDateString() === hoy).length;
+      const deHoy = viajesData.filter(v => new Date(v.fechaHora).toDateString() === hoy).length;
       
       document.getElementById('statPendientes').textContent = pendientes;
       document.getElementById('statHoy').textContent = deHoy;
@@ -474,15 +474,18 @@
       const container = document.getElementById('listaViajes');
       
       let viajes = viajesData;
-      if (filtroActual !== 'todos') {
-        viajes = viajes.filter(v => v.estado.toLowerCase() === filtroActual);
-      }
+if (filtroActual !== 'todos') {
+  viajes = viajes.filter(v => 
+    v.estado.toLowerCase().replaceAll('_','-') === filtroActual
+  );
+}
       
-      // Ordenar: pendientes primero, luego por fecha
-      viajes.sort((a, b) => {
+// Ordenar:
+viajes.sort((a, b) => {
+      
         const orden = { 'PENDIENTE': 0, 'ACEPTADO': 1, 'EN_CAMINO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
         if (orden[a.estado] !== orden[b.estado]) return orden[a.estado] - orden[b.estado];
-        return new Date(a.fecha) - new Date(b.fecha);
+        return new Date(a.fechaHora) - new Date(b.fechaHora);
       });
       
       if (viajes.length === 0) {
@@ -499,7 +502,7 @@
     }
     function crearCardViaje(v) {
       const estadoClass = v.estado.toLowerCase().replace('_', '-');
-      const fecha = new Date(v.fecha);
+      const fecha = new Date(v.fechaHora);
       const fechaStr = fecha.toLocaleDateString('es-AR', { 
         weekday: 'short', 
         day: 'numeric', 
