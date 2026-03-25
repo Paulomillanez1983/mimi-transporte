@@ -427,7 +427,7 @@
       
       google.script.run
         .withSuccessHandler(function(data) {
-          viajesData = data;
+          viajesData = data || [];
           renderizarViajes();
           actualizarStats();
           btn.classList.remove('spinning');
