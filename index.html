@@ -1653,6 +1653,11 @@ async function enviarViaje() {
 // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
+
+// Variables globales para los autocompletados
+let autocompleteOrigen = null;
+let autocompleteDestino = null;
+
 function initMap() {
   console.log("🚀 Iniciando Google Maps...");
   
@@ -1761,31 +1766,6 @@ async function geocodificarDireccion(direccion) {
 
 // Asignar al window para el callback de Google Maps
 window.initMap = initMap;
-  
-// Fallback para geocodificación manual
-async function geocodificarDireccion(direccion) {
-  try {
-    const apiKey = 'AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc';
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(direccion + ', Córdoba, Argentina')}&key=${apiKey}&region=ar`
-    );
-    const data = await response.json();
-    
-    if (data.results && data.results[0]) {
-      const loc = data.results[0].geometry.location;
-      return {
-        direccion: data.results[0].formatted_address,
-        lat: loc.lat,
-        lng: loc.lng
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error('Error geocodificando:', error);
-    return null;
-  }
-}
-
 // ==========================================
 // FECHA Y HORA
 // ==========================================
