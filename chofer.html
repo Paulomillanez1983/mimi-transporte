@@ -3,51 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MIMI - Panel Chofer</title>
-<!-- Supabase REST API -->
-<script>
-  const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
-  
-  window.supabase = {
-    from: (table) => ({
-      select: async (columns = '*') => {
-        try {
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${columns}&order=created_at.desc`, {
-            method: 'GET',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`
-            }
-          });
-          const result = await response.json();
-          return { data: result, error: null };
-        } catch (err) {
-          return { data: null, error: { message: err.message } };
-        }
-      },
-      
-      update: async (data) => {
-        try {
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${data.id}`, {
-            method: 'PATCH',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(data)
-          });
-          const result = await response.json();
-          return { data: result, error: null };
-        } catch (err) {
-          return { data: null, error: { message: err.message } };
-        }
-      }
-    })
-  };
-</script>
+
+  <title>MIMI - Portal Choferes</title>
+  <meta name="description" content="Conducí con confianza, trabajá con tranquilidad. Sumate como chofer de MIMI Transporte Infantil.">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="MIMI - Portal Choferes">
+  <meta property="og:description" content="Conducí con confianza, trabajá con tranquilidad. Viajes programados, traslados escolares y soporte directo.">
+  <meta property="og:image" content="https://paulomillanez1983.github.io/mimi-transporte/flyer-chofer.jpg">
+  <meta property="og:image:secure_url" content="https://paulomillanez1983.github.io/mimi-transporte/flyer-chofer.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="1600">
+  <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/chofer.html">
+  <meta property="og:site_name" content="MIMI Transporte Infantil">
+  <meta property="og:locale" content="es_AR">
+
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MIMI - Portal Choferes">
+  <meta name="twitter:description" content="Conducí con confianza, trabajá con tranquilidad.">
+  <meta name="twitter:image" content="https://paulomillanez1983.github.io/mimi-transporte/flyer-chofer.jpg">
+
+  <!-- WhatsApp / Telegram extra compat -->
+  <meta name="theme-color" content="#1a1a2e">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="https://paulomillanez1983.github.io/mimi-transporte/flyer-chofer.jpg">
+
   <style>
     :root {
       --azul-oscuro: #1e3c72;
@@ -57,19 +41,19 @@
       --rojo: #f44336;
       --gris: #f5f7fa;
     }
-    
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    
+
     body {
       background: var(--gris);
       min-height: 100vh;
     }
-    
+
     .header {
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       color: white;
@@ -79,18 +63,18 @@
       top: 0;
       z-index: 100;
     }
-    
+
     .header h1 {
       font-size: 1.4rem;
       font-weight: 800;
     }
-    
+
     .header p {
       font-size: 0.85rem;
       opacity: 0.8;
       margin-top: 4px;
     }
-    
+
     .stats-bar {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -101,23 +85,23 @@
       border-radius: 16px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     }
-    
+
     .stat {
       text-align: center;
     }
-    
+
     .stat-number {
       font-size: 1.8rem;
       font-weight: 800;
       color: var(--azul-primario);
     }
-    
+
     .stat-label {
       font-size: 0.75rem;
       color: #666;
       text-transform: uppercase;
     }
-    
+
     .filtros {
       display: flex;
       gap: 8px;
@@ -125,7 +109,7 @@
       margin-bottom: 10px;
       overflow-x: auto;
     }
-    
+
     .filtro-btn {
       padding: 8px 16px;
       border: none;
@@ -138,16 +122,16 @@
       white-space: nowrap;
       transition: all 0.2s;
     }
-    
+
     .filtro-btn.activo {
       background: var(--azul-primario);
       color: white;
     }
-    
+
     .viajes-lista {
       padding: 0 15px 100px;
     }
-    
+
     .viaje-card {
       background: white;
       border-radius: 16px;
@@ -157,7 +141,7 @@
       border-left: 4px solid var(--azul-primario);
       animation: slideIn 0.4s ease-out;
     }
-    
+
     @keyframes slideIn {
       from {
         opacity: 0;
@@ -168,26 +152,26 @@
         transform: translateY(0) scale(1);
       }
     }
-    
+
     .viaje-card.pendiente { border-left-color: var(--naranja); }
     .viaje-card.aceptado { border-left-color: var(--azul-primario); }
     .viaje-card.en-camino { border-left-color: #2196f3; }
     .viaje-card.completado { border-left-color: var(--verde); }
     .viaje-card.cancelado { border-left-color: var(--rojo); opacity: 0.7; }
-    
+
     .viaje-header {
       display: flex;
       justify-content: space-between;
       align-items: start;
       margin-bottom: 12px;
     }
-    
+
     .viaje-fecha {
       font-size: 0.75rem;
       color: #888;
       font-weight: 600;
     }
-    
+
     .viaje-estado {
       padding: 4px 10px;
       border-radius: 12px;
@@ -195,17 +179,17 @@
       font-weight: 700;
       text-transform: uppercase;
     }
-    
+
     .estado-pendiente { background: #fff3e0; color: #e65100; }
     .estado-aceptado { background: #e3f2fd; color: var(--azul-primario); }
     .estado-en-camino { background: #e3f2fd; color: #1976d2; }
     .estado-completado { background: #e8f5e9; color: #2e7d32; }
     .estado-cancelado { background: #ffebee; color: #c62828; }
-    
+
     .viaje-ruta {
       margin-bottom: 12px;
     }
-    
+
     .ruta-item {
       display: flex;
       align-items: center;
@@ -213,7 +197,7 @@
       margin-bottom: 8px;
       font-size: 0.9rem;
     }
-    
+
     .ruta-icon {
       width: 28px;
       height: 28px;
@@ -224,16 +208,16 @@
       font-size: 0.9rem;
       flex-shrink: 0;
     }
-    
+
     .ruta-icon.origen { background: #e8f5e9; }
     .ruta-icon.destino { background: #ffebee; }
-    
+
     .ruta-text {
       flex: 1;
       color: #333;
       font-weight: 500;
     }
-    
+
     .viaje-info {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -243,23 +227,23 @@
       border-radius: 12px;
       margin-bottom: 12px;
     }
-    
+
     .info-item {
       text-align: center;
     }
-    
+
     .info-valor {
       font-size: 1.1rem;
       font-weight: 700;
       color: var(--azul-oscuro);
     }
-    
+
     .info-label {
       font-size: 0.7rem;
       color: #888;
       text-transform: uppercase;
     }
-    
+
     .viaje-cliente {
       display: flex;
       align-items: center;
@@ -269,7 +253,7 @@
       border-radius: 10px;
       margin-bottom: 12px;
     }
-    
+
     .cliente-avatar {
       width: 40px;
       height: 40px;
@@ -282,27 +266,27 @@
       font-weight: 700;
       font-size: 1rem;
     }
-    
+
     .cliente-datos {
       flex: 1;
     }
-    
+
     .cliente-nombre {
       font-weight: 700;
       color: #1a1a1a;
       font-size: 0.95rem;
     }
-    
+
     .cliente-tel {
       font-size: 0.8rem;
       color: #666;
     }
-    
+
     .viaje-acciones {
       display: flex;
       gap: 8px;
     }
-    
+
     .btn-accion {
       flex: 1;
       padding: 12px;
@@ -317,52 +301,25 @@
       gap: 6px;
       transition: all 0.2s;
     }
-    
+
     .btn-accion:active {
       transform: scale(0.98);
     }
-    
-    .btn-aceptar {
-      background: var(--verde);
-      color: white;
-    }
-    
-    .btn-iniciar {
-      background: var(--azul-primario);
-      color: white;
-    }
-    
-    .btn-finalizar {
-      background: var(--azul-oscuro);
-      color: white;
-    }
-    
-    .btn-maps {
-      background: #e3f2fd;
-      color: var(--azul-primario);
-    }
-    
-    .btn-cancelar {
-      background: #ffebee;
-      color: var(--rojo);
-    }
-    
-    .btn-llamar {
-      background: #e8f5e9;
-      color: var(--verde);
-    }
-    
-    .btn-whatsapp {
-      background: #25d366;
-      color: white;
-    }
-    
+
+    .btn-aceptar { background: var(--verde); color: white; }
+    .btn-iniciar { background: var(--azul-primario); color: white; }
+    .btn-finalizar { background: var(--azul-oscuro); color: white; }
+    .btn-maps { background: #e3f2fd; color: var(--azul-primario); }
+    .btn-cancelar { background: #ffebee; color: var(--rojo); }
+    .btn-llamar { background: #e8f5e9; color: var(--verde); }
+    .btn-whatsapp { background: #25d366; color: white; }
+
     .loading {
       text-align: center;
       padding: 40px;
       color: #666;
     }
-    
+
     .spinner {
       width: 40px;
       height: 40px;
@@ -372,22 +329,22 @@
       animation: spin 1s linear infinite;
       margin: 0 auto 15px;
     }
-    
+
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;
       color: #888;
     }
-    
+
     .empty-state-icon {
       font-size: 4rem;
       margin-bottom: 15px;
     }
-    
+
     .refresh-btn {
       position: fixed;
       bottom: 20px;
@@ -406,15 +363,15 @@
       justify-content: center;
       z-index: 100;
     }
-    
+
     .refresh-btn:active {
       transform: scale(0.95);
     }
-    
+
     .refresh-btn.spinning {
       animation: spin 1s linear infinite;
     }
-    
+
     .nota-input {
       width: 100%;
       padding: 10px;
@@ -425,10 +382,9 @@
       resize: vertical;
       min-height: 60px;
     }
-    
+
     .hidden { display: none !important; }
-    
-    /* Botón de activar sonido */
+
     .sound-btn {
       position: fixed;
       bottom: 90px;
@@ -448,18 +404,17 @@
       z-index: 100;
       transition: all 0.2s;
     }
-    
+
     .sound-btn.muted {
       background: #f5f5f5;
       color: #999;
       border-color: #ddd;
     }
-    
+
     .sound-btn:active {
       transform: scale(0.95);
     }
-    
-    /* Indicador de nuevo viaje */
+
     .new-trip-indicator {
       position: fixed;
       top: 80px;
@@ -475,16 +430,18 @@
       opacity: 0;
       transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
-    
+
     .new-trip-indicator.show {
       transform: translateX(-50%) translateY(0);
       opacity: 1;
     }
-    
+
     .new-trip-indicator::before {
       content: '🔔 ';
     }
   </style>
+</head>
+</style>
 </head>
 <body>
 <div class="header" style="padding: 0; overflow: hidden;">
