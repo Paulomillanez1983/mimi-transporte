@@ -1574,31 +1574,20 @@ async function enviarViaje() {
   const destino = document.querySelector('[name="destino"]')?.value || '';
   const precio = document.querySelector('#precio')?.textContent || '0';
 
-  const data = {
-    cliente: "Cliente Web",
-    telefono: "000000000",
-    origen,
-    destino,
-    precio,
-    estado: "PENDIENTE"
-  };
-
-  console.log("Enviando viaje...");
+  const url = `${CONFIG.SCRIPT_URL}?action=crear`
+    + `&cliente=${encodeURIComponent("Cliente Web")}`
+    + `&telefono=${encodeURIComponent("000000000")}`
+    + `&origen=${encodeURIComponent(origen)}`
+    + `&destino=${encodeURIComponent(destino)}`
+    + `&precio=${encodeURIComponent(precio)}`
+    + `&estado=PENDIENTE`
+    + `&t=${Date.now()}`;
 
   try {
-    const url = `${CONFIG.SCRIPT_URL}?action=crear`
-      + `&cliente=${encodeURIComponent(data.cliente)}`
-      + `&telefono=${encodeURIComponent(data.telefono)}`
-      + `&origen=${encodeURIComponent(data.origen)}`
-      + `&destino=${encodeURIComponent(data.destino)}`
-      + `&precio=${encodeURIComponent(data.precio)}`
-      + `&estado=${encodeURIComponent(data.estado)}`
-      + `&t=${Date.now()}`;
+    console.log("Enviando viaje...");
 
     const res = await fetch(url);
     const result = await res.json();
-
-    console.log(result);
 
     if (result.exito) {
       alert('Viaje solicitado 🚐');
