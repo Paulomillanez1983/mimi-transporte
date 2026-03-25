@@ -421,6 +421,7 @@
 
     // Auto-refresh cada 30 segundos
     setInterval(cargarViajes, 30000);
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyQdFbZFJhEuHLNQntUfabn9Od0SIt5dXlADTtkD1wHeR146OocX1dHCqD-hwKXpy0M/exec';
 
 function cargarViajes() {
   const btn = document.getElementById('btnRefresh');
@@ -522,7 +523,7 @@ function cargarViajes() {
       let acciones = '';
       if (estado === 'PENDIENTE') {
         acciones = `
-          <button class="btn-accion btn-aceptar" onclick="cambiarEstado(event, '${v.id}', 'ACEPTADO')">✓ Aceptar</button>
+          <button class="btn-accion btn-aceptar" onclick="cambiarEstado('${v.id}', 'ACEPTADO')">✓ Aceptar</button>
           <button class="btn-accion btn-maps" onclick="abrirMaps('${v.origen}', '${v.destino}')">🗺️ Maps</button>
         `;
       } else if (estado === 'ACEPTADO') {
@@ -591,8 +592,10 @@ function cargarViajes() {
       `;
     }
 
-function cambiarEstado(e, id, nuevoEstado) {
-  fetch(`https://script.google.com/macros/s/AKfycby5lqkUgcmwN-SrHHPwftoN-b2ZTus5pIvqynQSgsBJUshMciBwZIBWgvaGvwVNVPph/exec?action=estado&id=${id}&estado=${nuevoEstado}`)
+function cambiarEstado(id, nuevoEstado) {
+  if (!id) return alert('ID inválido');
+
+  fetch(`${SCRIPT_URL}?action=estado&id=${id}&estado=${nuevoEstado}`)
     .then(res => res.json())
     .then(result => {
       if (result.exito) {
@@ -606,7 +609,7 @@ function cambiarEstado(e, id, nuevoEstado) {
 function finalizarViaje(id) {
   const notas = prompt('¿Observaciones?');
 
-  fetch(`https://script.google.com/macros/s/TU_URL/exec?action=finalizar&id=${id}&notas=${encodeURIComponent(notas || '')}`)
+  fetch(`${SCRIPT_URL}?action=finalizar&id=${id}&notas=${encodeURIComponent(notas || '')}`)
     .then(res => res.json())
     .then(result => {
       if (result.exito) {
