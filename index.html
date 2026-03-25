@@ -1576,7 +1576,7 @@ async function enviarViaje() {
 
   console.log("🚀 Enviando viaje a Supabase...");
 
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('viajes')
     .insert([
       {
