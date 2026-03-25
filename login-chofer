@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>MIMI - Login Chofer</title>
+  <meta name="theme-color" content="#1a1a2e" />
+
+  <style>
+    :root {
+      --azul-oscuro: #1a1a2e;
+      --azul-sec: #16213e;
+      --azul: #1565c0;
+      --naranja: #ff9800;
+      --gris: #f5f7fa;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--azul-oscuro), var(--azul-sec));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: white;
+      border-radius: 24px;
+      padding: 28px 22px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .logo h1 {
+      font-size: 2rem;
+      color: var(--azul-oscuro);
+      font-weight: 900;
+    }
+
+    .logo p {
+      color: #666;
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #222;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1.5px solid #ddd;
+      border-radius: 14px;
+      font-size: 1rem;
+      outline: none;
+      transition: 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--azul);
+      box-shadow: 0 0 0 4px rgba(21,101,192,0.08);
+    }
+
+    .btn-login {
+      width: 100%;
+      border: none;
+      border-radius: 16px;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--naranja), #f57c00);
+      color: white;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .btn-login:active {
+      transform: scale(0.99);
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 18px;
+      color: var(--azul);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .error-msg {
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .demo-box {
+      margin-top: 18px;
+      background: #f5f7fa;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 0.9rem;
+      color: #444;
+    }
+
+    .demo-box strong {
+      color: #111;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">
+      <h1>🚐 MIMI</h1>
+      <p>Ingreso Chofer</p>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <form onsubmit="loginChofer(event)">
+      <div class="form-group">
+        <label for="usuario">Usuario</label>
+        <input type="text" id="usuario" placeholder="Ingresá tu usuario" required />
+      </div>
+
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" placeholder="Ingresá tu contraseña" required />
+      </div>
+
+      <button type="submit" class="btn-login">Ingresar</button>
+    </form>
+
+    <a class="back-link" href="chofer.html">← Volver</a>
+
+    <div class="demo-box">
+      <strong>Demo:</strong><br>
+      Usuario: <strong>chofer</strong><br>
+      Contraseña: <strong>1234</strong>
+    </div>
+  </div>
+
+  <script>
+    function loginChofer(event) {
+      event.preventDefault();
+
+      const usuario = document.getElementById('usuario').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorMsg = document.getElementById('errorMsg');
+
+      errorMsg.style.display = 'none';
+      errorMsg.textContent = '';
+
+      // Demo simple
+      if (usuario === 'chofer' && password === '1234') {
+        localStorage.setItem('choferLogueado', 'true');
+        localStorage.setItem('choferUsuario', usuario);
+        window.location.href = 'chofer-panel.html';
+        return;
+      }
+
+      errorMsg.textContent = 'Usuario o contraseña incorrectos';
+      errorMsg.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
