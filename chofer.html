@@ -4,7 +4,50 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MIMI - Panel Chofer</title>
-
+<!-- Supabase REST API -->
+<script>
+  const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
+  
+  window.supabase = {
+    from: (table) => ({
+      select: async (columns = '*') => {
+        try {
+          const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${columns}&order=created_at.desc`, {
+            method: 'GET',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+          });
+          const result = await response.json();
+          return { data: result, error: null };
+        } catch (err) {
+          return { data: null, error: { message: err.message } };
+        }
+      },
+      
+      update: async (data) => {
+        try {
+          const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${data.id}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(data)
+          });
+          const result = await response.json();
+          return { data: result, error: null };
+        } catch (err) {
+          return { data: null, error: { message: err.message } };
+        }
+      }
+    })
+  };
+</script>
   <style>
     :root {
       --azul-oscuro: #1e3c72;
@@ -436,27 +479,33 @@ async function cargarViajes() {
   if (btn) btn.classList.add('spinning');
 
   try {
-    const response = await fetch(`${SCRIPT_URL}?action=viajes&t=${Date.now()}`);
-
-    if (!response.ok) {
-      throw new Error('Error en la respuesta del servidor');
+    console.log("📡 Cargando viajes desde Supabase...");
+    
+    const { data, error } = await supabase.from('viajes').select('*');
+    
+    if (error) {
+      throw new Error(error.message);
     }
 
-    const data = await response.json();
-
-    viajesData = Array.isArray(data) ? data : [];
+    viajesData = data || [];
+    console.log(`✅ ${viajesData.length} viajes cargados`);
 
     renderizarViajes();
     actualizarStats();
 
   } catch (error) {
     console.error('Error cargando viajes:', error);
-    alert('Error cargando viajes');
+    document.getElementById('listaViajes').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⚠️</div>
+        <p>Error al cargar: ${error.message}</p>
+        <button onclick="cargarViajes()" style="margin-top:10px;padding:8px 16px;">Reintentar</button>
+      </div>
+    `;
   } finally {
     if (btn) btn.classList.remove('spinning');
   }
 }
-
   function actualizarStats() {
       const hoy = new Date().toDateString();
       const pendientes = viajesData.filter(v => normalizarEstado(v.estado) === 'PENDIENTE').length;
@@ -607,20 +656,48 @@ async function cambiarEstado(id, nuevoEstado) {
   if (!id) return alert('ID inválido');
 
   try {
-    const res = await fetch(`${SCRIPT_URL}?action=estado&id=${id}&estado=${nuevoEstado}&t=${Date.now()}`);
-    const result = await res.json();
+    const { data, error } = await supabase.from('viajes').update({
+      id: id,
+      estado: nuevoEstado
+    });
 
-    if (result.exito) {
-      mostrarNotificacion('Estado actualizado', 'success');
-      cargarViajes();
-    } else {
-      alert(result.error);
+    if (error) {
+      alert('Error: ' + error.message);
+      return;
     }
-  } catch {
+
+    mostrarNotificacion('Estado actualizado', 'success');
+    cargarViajes();
+    
+  } catch (err) {
+    alert('Error de conexión');
+    console.error(err);
+  }
+}
+
+async function finalizarViaje(id) {
+  const notas = prompt('¿Observaciones?');
+
+  try {
+    const { data, error } = await supabase.from('viajes').update({
+      id: id,
+      estado: 'COMPLETADO',
+      notas: notas || null
+    });
+
+    if (error) {
+      alert('Error al finalizar');
+      return;
+    }
+
+    mostrarNotificacion('Viaje finalizado', 'success');
+    cargarViajes();
+    
+  } catch (err) {
     alert('Error de conexión');
   }
 }
-async function finalizarViaje(id) {
+  async function finalizarViaje(id) {
   const notas = prompt('¿Observaciones?');
 
   try {
