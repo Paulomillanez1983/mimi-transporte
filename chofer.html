@@ -411,145 +411,128 @@
   
   <button class="refresh-btn" id="btnRefresh" onclick="cargarViajes()">🔄</button>
 
-  <script>
+<script>
     let viajesData = [];
     let filtroActual = 'todos';
-    
+
     // Cargar al iniciar
     document.addEventListener('DOMContentLoaded', cargarViajes);
-    
+
     // Auto-refresh cada 30 segundos
     setInterval(cargarViajes, 30000);
-    
-function cargarViajes() {
-  const btn = document.getElementById('btnRefresh');
-  btn.classList.add('spinning');
-  
-  google.script.run
-    .withSuccessHandler(function(data) {
-      viajesData = data || [];
-      renderizarViajes();
-      actualizarStats();
-      btn.classList.remove('spinning');
-    })
-    .withFailureHandler(function(error) {
-      console.error('ERROR COMPLETO:', error);
 
-      const mensaje = error?.message || JSON.stringify(error) || 'Error desconocido';
+    function cargarViajes() {
+      const btn = document.getElementById('btnRefresh');
+      if (btn) btn.classList.add('spinning');
 
-      document.getElementById('listaViajes').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">⚠️</div>
-          <p>${mensaje}</p>
-          <button onclick="cargarViajes()" style="margin-top:15px;padding:10px 20px;border:none;border-radius:8px;background:var(--azul-primario);color:white;">Reintentar</button>
-        </div>
-      `;
+      google.script.run
+        .withSuccessHandler(function(data) {
+          viajesData = Array.isArray(data) ? data : [];
+          renderizarViajes();
+          actualizarStats();
+          if (btn) btn.classList.remove('spinning');
+        })
+        .withFailureHandler(function(error) {
+          console.error('ERROR COMPLETO:', error);
+          const mensaje = error?.message || JSON.stringify(error) || 'Error desconocido';
+          document.getElementById('listaViajes').innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">⚠️</div>
+              <p>${mensaje}</p>
+              <button onclick="cargarViajes()" style="margin-top:15px;padding:10px 20px;border:none;border-radius:8px;background:var(--azul-primario);color:white;">Reintentar</button>
+            </div>
+          `;
+          if (btn) btn.classList.remove('spinning');
+        })
+        .obtenerViajesParaChofer();
+    }
+
+    function actualizarStats() {
+      const hoy = new Date().toDateString();
+      const pendientes = viajesData.filter(v => String(v.estado || '').toUpperCase() === 'PENDIENTE').length;
       
-      btn.classList.remove('spinning');
-    })
-    .obtenerViajesParaChofer(); // 👈 ESTA ES LA LLAMADA FINAL
-}
-    
-function actualizarStats() {
-  const hoy = new Date().toDateString();
-  
-  const pendientes = viajesData.filter(v => 
-    String(v.estado).toUpperCase() === 'PENDIENTE'
-  ).length;
+      const deHoy = viajesData.filter(v => {
+        const fecha = v.fecha || v.fechaHora;
+        if (!fecha) return false;
+        return new Date(fecha).toDateString() === hoy;
+      }).length;
 
-  const deHoy = viajesData.filter(v => {
-    if (!v.fecha) return false;
-    return new Date(v.fecha).toDateString() === hoy;
-  }).length;
+      document.getElementById('statPendientes').textContent = pendientes;
+      document.getElementById('statHoy').textContent = deHoy;
+      document.getElementById('statTotal').textContent = viajesData.length;
+    }
 
-  document.getElementById('statPendientes').textContent = pendientes;
-  document.getElementById('statHoy').textContent = deHoy;
-  document.getElementById('statTotal').textContent = viajesData.length;
-}
     function filtrar(estado) {
       filtroActual = estado;
-      
-      // Actualizar botones
       document.querySelectorAll('.filtro-btn').forEach(btn => {
         btn.classList.remove('activo');
-        if (btn.textContent.toLowerCase().includes(estado) || (estado === 'todos' && btn.textContent === 'Todos')) {
+        if (btn.textContent.toLowerCase().includes(estado) || 
+            (estado === 'todos' && btn.textContent === 'Todos')) {
           btn.classList.add('activo');
         }
       });
-      
       renderizarViajes();
     }
-    
-function renderizarViajes() {
-  const container = document.getElementById('listaViajes');
-  let viajes = viajesData;
 
-  if (filtroActual !== 'todos') {
-    const estadoBuscado = filtroActual === 'en-camino' ? 'en_curso' : filtroActual;
-    viajes = viajes.filter(v => 
-      String(v.estado).toLowerCase().replace(/_/g, '-') === estadoBuscado
-    );
-  }
+    function renderizarViajes() {
+      const container = document.getElementById('listaViajes');
+      let viajes = viajesData;
 
-  // Ordenar
-  viajes.sort((a, b) => {
-    const orden = { 
-      'PENDIENTE': 0, 
-      'ACEPTADO': 1, 
-      'EN_CURSO': 2, 
-      'COMPLETADO': 3, 
-      'CANCELADO': 4 
-    };
-    
-    const estadoA = String(a.estado).toUpperCase();
-    const estadoB = String(b.estado).toUpperCase();
-    
-    if (orden[estadoA] !== orden[estadoB]) 
-      return orden[estadoA] - orden[estadoB];
-    
-    return new Date(a.fecha || 0) - new Date(b.fecha || 0);
-  });
+      if (filtroActual !== 'todos') {
+        const estadoBuscado = filtroActual === 'en-camino' ? 'en_curso' : filtroActual;
+        viajes = viajes.filter(v => 
+          String(v.estado || '').toLowerCase().replace(/_/g, '-') === estadoBuscado
+        );
+      }
 
-  if (viajes.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">🚗</div>
-        <p>No hay viajes ${filtroActual !== 'todos' ? 'en este estado' : ''}</p>
-      </div>
-    `;
-    return;
-  }
+      // Ordenar: pendientes primero, luego por fecha
+      viajes.sort((a, b) => {
+        const orden = { 'PENDIENTE': 0, 'ACEPTADO': 1, 'EN_CURSO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
+        const estadoA = String(a.estado || '').toUpperCase();
+        const estadoB = String(b.estado || '').toUpperCase();
+        if (orden[estadoA] !== orden[estadoB]) return orden[estadoA] - orden[estadoB];
+        return new Date(a.fecha || a.fechaHora || 0) - new Date(b.fecha || b.fechaHora || 0);
+      });
 
-  container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
-}
-    
+      if (viajes.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🚗</div>
+            <p>No hay viajes ${filtroActual !== 'todos' ? 'en este estado' : ''}</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
+    }
+
     function crearCardViaje(v) {
-      const estadoClass = v.estado.toLowerCase().replace('_', '-');
-      const fecha = new Date(v.fecha || v.fechaHora);
-      const fechaStr = fecha.toLocaleDateString('es-AR', { 
-        weekday: 'short', 
-        day: 'numeric', 
+      const estado = String(v.estado || 'PENDIENTE');
+      const estadoClass = estado.toLowerCase().replace(/_/g, '-');
+      const fecha = new Date(v.fecha || v.fechaHora || Date.now());
+      const fechaStr = fecha.toLocaleDateString('es-AR', {
+        weekday: 'short',
+        day: 'numeric',
         month: 'short',
         hour: '2-digit',
         minute: '2-digit'
       });
-      
+
       const inicial = v.cliente ? v.cliente.charAt(0).toUpperCase() : '?';
-      
-      // Botones según estado
+
       let acciones = '';
-      
-      if (v.estado === 'PENDIENTE') {
+      if (estado === 'PENDIENTE') {
         acciones = `
           <button class="btn-accion btn-aceptar" onclick="cambiarEstado(event, '${v.id}', 'ACEPTADO')">✓ Aceptar</button>
           <button class="btn-accion btn-maps" onclick="abrirMaps('${v.origen}', '${v.destino}')">🗺️ Maps</button>
         `;
-      } else if (v.estado === 'ACEPTADO') {
+      } else if (estado === 'ACEPTADO') {
         acciones = `
           <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${v.id}', 'EN_CURSO')">🚀 Iniciar</button>
           <a href="tel:${v.telefono}" class="btn-accion btn-llamar" style="text-decoration:none;">📞 Llamar</a>
         `;
-      } else if (v.estado === 'EN_CAMINO') {
+      } else if (estado === 'EN_CURSO' || estado === 'EN_CAMINO') {
         acciones = `
           <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${v.id}')">✅ Finalizar</button>
           <a href="https://wa.me/${v.telefono}" target="_blank" class="btn-accion btn-whatsapp" style="text-decoration:none;">💬 WA</a>
@@ -559,14 +542,14 @@ function renderizarViajes() {
           <button class="btn-accion btn-maps" onclick="abrirMaps('${v.origen}', '${v.destino}')">🗺️ Ver ruta</button>
         `;
       }
-      
+
       return `
         <div class="viaje-card ${estadoClass}">
           <div class="viaje-header">
             <span class="viaje-fecha">${fechaStr}</span>
-            <span class="viaje-estado estado-${estadoClass}">${v.estado.replace('_', ' ')}</span>
+            <span class="viaje-estado estado-${estadoClass}">${estado.replace('_', ' ')}</span>
           </div>
-          
+         
           <div class="viaje-cliente">
             <div class="cliente-avatar">${inicial}</div>
             <div class="cliente-datos">
@@ -574,21 +557,21 @@ function renderizarViajes() {
               <div class="cliente-tel">📱 ${v.telefono || 'Sin teléfono'}</div>
             </div>
           </div>
-          
+         
           <div class="viaje-ruta">
             <div class="ruta-item">
               <div class="ruta-icon origen">📍</div>
-              <div class="ruta-text">${v.origen}</div>
+              <div class="ruta-text">${v.origen || ''}</div>
             </div>
             <div class="ruta-item">
               <div class="ruta-icon destino">🎯</div>
-              <div class="ruta-text">${v.destino}</div>
+              <div class="ruta-text">${v.destino || ''}</div>
             </div>
           </div>
-          
+         
           <div class="viaje-info">
             <div class="info-item">
-              <div class="info-valor">$${v.precio?.toLocaleString() || 0}</div>
+              <div class="info-valor">$${Number(v.precio || 0).toLocaleString()}</div>
               <div class="info-label">Precio</div>
             </div>
             <div class="info-item">
@@ -600,43 +583,40 @@ function renderizarViajes() {
               <div class="info-label">Servicio</div>
             </div>
           </div>
-          
+         
           ${v.notas ? `<div style="font-size:0.85rem;color:#666;margin-bottom:10px;padding:8px;background:#fffde7;border-radius:6px;">📝 ${v.notas}</div>` : ''}
-          
+         
           <div class="viaje-acciones">
             ${acciones}
           </div>
         </div>
       `;
     }
-    
-function cambiarEstado(e, id, nuevoEstado) {
-  const btn = e.target;
-btn.disabled = true;
-btn.innerHTML = '⏳ Procesando...';
-      
+
+    function cambiarEstado(e, id, nuevoEstado) {
+      const btn = e.target;
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Procesando...';
+
       google.script.run
         .withSuccessHandler(function(result) {
           if (result.exito) {
-            // Recargar lista
             cargarViajes();
-            // Notificación simple
             mostrarNotificacion(`Viaje ${nuevoEstado.toLowerCase()}`, 'success');
           } else {
-            alert('Error: ' + result.error);
+            alert('Error: ' + (result.error || 'Desconocido'));
             btn.disabled = false;
           }
         })
         .withFailureHandler(function(error) {
-          alert('Error: ' + error.message);
+          alert('Error: ' + (error.message || error));
           btn.disabled = false;
         })
         .actualizarEstadoViaje(id, nuevoEstado);
     }
-    
+
     function finalizarViaje(id) {
       const notas = prompt('¿Alguna observación del viaje? (opcional)');
-      
       google.script.run
         .withSuccessHandler(function(result) {
           if (result.exito) {
@@ -644,37 +624,27 @@ btn.innerHTML = '⏳ Procesando...';
             mostrarNotificacion('Viaje completado ✓', 'success');
           }
         })
+        .withFailureHandler(function(error) {
+          alert('Error al finalizar: ' + (error.message || error));
+        })
         .finalizarViaje(id, notas || '');
     }
-    
+
     function abrirMaps(origen, destino) {
       const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
       window.open(url, '_blank');
     }
-    
+
     function mostrarNotificacion(mensaje, tipo) {
-      // Crear toast simple
       const toast = document.createElement('div');
       toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: ${tipo === 'success' ? '#4caf50' : '#2196f3'};
-        color: white;
-        padding: 12px 24px;
-        border-radius: 25px;
-        font-weight: 600;
-        z-index: 10000;
-        animation: slideDown 0.3s ease;
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+        background: ${tipo === 'success' ? '#4caf50' : '#2196f3'}; color: white;
+        padding: 12px 24px; border-radius: 25px; font-weight: 600; z-index: 10000;
       `;
       toast.textContent = mensaje;
       document.body.appendChild(toast);
-      
-      setTimeout(() => {
-        toast.style.animation = 'slideUp 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
+      setTimeout(() => toast.remove(), 3000);
     }
   </script>
 </body>
