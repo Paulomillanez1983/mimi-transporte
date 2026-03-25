@@ -413,6 +413,13 @@
   <button class="refresh-btn" id="btnRefresh" onclick="cargarViajes()">🔄</button>
 
 <script>
+  function normalizarEstado(estado) {
+  return String(estado || '')
+    .replace('-', '_')
+    .toUpperCase()
+    .trim();
+}
+
     let viajesData = [];
     let filtroActual = 'todos';
 
@@ -428,7 +435,7 @@ async function cargarViajes() {
   if (btn) btn.classList.add('spinning');
 
   try {
-    const response = await fetch(`${SCRIPT_URL}?action=viajes`);
+    const response = await fetch(`${SCRIPT_URL}?action=viajes&t=${Date.now()}`);
 
     if (!response.ok) {
       throw new Error('Error en la respuesta del servidor');
@@ -483,15 +490,15 @@ async function cargarViajes() {
       if (filtroActual !== 'todos') {
         const estadoBuscado = filtroActual === 'en-camino' ? 'en_curso' : filtroActual;
         viajes = viajes.filter(v => 
-          String(v.estado || '').toLowerCase().replace(/_/g, '-') === estadoBuscado
+          normalizarEstado(v.estado) === normalizarEstado(estadoBuscado)
         );
       }
 
       // Ordenar: pendientes primero, luego por fecha
       viajes.sort((a, b) => {
         const orden = { 'PENDIENTE': 0, 'ACEPTADO': 1, 'EN_CURSO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
-        const estadoA = String(a.estado || '').toUpperCase();
-        const estadoB = String(b.estado || '').toUpperCase();
+        const estadoA = normalizarEstado(a.estado);
+        const estadoB = normalizarEstado(b.estado);
         if (orden[estadoA] !== orden[estadoB]) return orden[estadoA] - orden[estadoB];
         return new Date(a.fecha || a.fechaHora || 0) - new Date(b.fecha || b.fechaHora || 0);
       });
@@ -510,7 +517,7 @@ async function cargarViajes() {
     }
 
     function crearCardViaje(v) {
-      const estado = String(v.estado || 'PENDIENTE');
+      const estado = normalizarEstado(v.estado || 'PENDIENTE');
       const estadoClass = estado.toLowerCase().replace(/_/g, '-');
       const fecha = new Date(v.fecha || v.fechaHora || Date.now());
       const fechaStr = fecha.toLocaleDateString('es-AR', {
@@ -534,7 +541,7 @@ async function cargarViajes() {
           <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${v.id}', 'EN_CURSO')">🚀 Iniciar</button>
           <a href="tel:${v.telefono}" class="btn-accion btn-llamar" style="text-decoration:none;">📞 Llamar</a>
         `;
-      } else if (estado === 'EN_CURSO' || estado === 'EN_CAMINO') {
+      } else if (estado === 'EN_CURSO') {
         acciones = `
           <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${v.id}')">✅ Finalizar</button>
           <a href="https://wa.me/${v.telefono}" target="_blank" class="btn-accion btn-whatsapp" style="text-decoration:none;">💬 WA</a>
@@ -598,7 +605,7 @@ async function cargarViajes() {
 function cambiarEstado(id, nuevoEstado) {
   if (!id) return alert('ID inválido');
 
-  fetch(`${SCRIPT_URL}?action=estado&id=${id}&estado=${nuevoEstado}`)
+  fetch(`${SCRIPT_URL}?action=estado&id=${id}&estado=${nuevoEstado}&t=${Date.now()}`)
     .then(res => res.json())
     .then(result => {
       if (result.exito) {
@@ -615,7 +622,7 @@ function cambiarEstado(id, nuevoEstado) {
 function finalizarViaje(id) {
   const notas = prompt('¿Observaciones?');
 
-  fetch(`${SCRIPT_URL}?action=finalizar&id=${id}&notas=${encodeURIComponent(notas || '')}`)
+  fetch(`${SCRIPT_URL}?action=finalizar&id=${id}&notas=${encodeURIComponent(notas || '')}&t=${Date.now()}`)
     .then(res => res.json())
     .then(result => {
       if (result.exito) {
