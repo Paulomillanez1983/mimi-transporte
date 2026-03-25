@@ -1671,22 +1671,24 @@ function actualizarTextoFechaVuelta() {
 async function enviarViaje() {
   const origen = document.getElementById('origen')?.value || '';
   const destino = document.getElementById('destino')?.value || '';
-  const precio = document.getElementById('precioValor')?.textContent || '0';
+  const precioTexto = document.getElementById('precioValor')?.textContent || '0';
+  const precio = Number(precioTexto.replace(/\./g, '').replace(',', '.'));
 
   console.log("🚀 Enviando viaje a Supabase...");
 
   try {
     const { data, error } = await supabase
       .from('viajes')
-      .insert([
-        {
-          origen: origen,
-          destino: destino,
-          precio: Number(precio.replace(/\./g, '').replace(',', '.')),
-          estado: "PENDIENTE",
-          created_at: new Date().toISOString()  // ← CAMBIADO: fecha_solicitud → created_at
-        }
-      ]);
+      .insert([{
+        origen: origen,
+        destino: destino,
+        precio: precio,
+        estado: "PENDIENTE",
+        servicio: servicioSeleccionado || 'IDA_ESCOLAR',
+        fecha_hora: document.getElementById('fechaHora')?.value || new Date().toISOString(),
+        tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? 
+          (document.getElementById('tiempoEsperaMin')?.value || 30) : null
+      }]);
 
     if (error) {
       console.error("❌ Error:", error);
