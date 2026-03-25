@@ -447,19 +447,25 @@ function cargarViajes() {
       
       btn.classList.remove('spinning');
     })
-    .obtenerViajes(); // 👈 ESTA ES LA LLAMADA FINAL
+    .obtenerViajesParaChofer(); // 👈 ESTA ES LA LLAMADA FINAL
 }
     
-    function actualizarStats() {
-      const hoy = new Date().toDateString();
-      const pendientes = viajesData.filter(v => v.estado === 'PENDIENTE').length;
-      const deHoy = viajesData.filter(v => new Date(v.fechaHora).toDateString() === hoy).length;
-      
-      document.getElementById('statPendientes').textContent = pendientes;
-      document.getElementById('statHoy').textContent = deHoy;
-      document.getElementById('statTotal').textContent = viajesData.length;
-    }
-    
+function actualizarStats() {
+  const hoy = new Date().toDateString();
+  
+  const pendientes = viajesData.filter(v => 
+    String(v.estado).toUpperCase() === 'PENDIENTE'
+  ).length;
+
+  const deHoy = viajesData.filter(v => {
+    if (!v.fecha) return false;
+    return new Date(v.fecha).toDateString() === hoy;
+  }).length;
+
+  document.getElementById('statPendientes').textContent = pendientes;
+  document.getElementById('statHoy').textContent = deHoy;
+  document.getElementById('statTotal').textContent = viajesData.length;
+}    
     function filtrar(estado) {
       filtroActual = estado;
       
@@ -474,39 +480,51 @@ function cargarViajes() {
       renderizarViajes();
     }
     
-    function renderizarViajes() {
-      const container = document.getElementById('listaViajes');
-      
-      let viajes = viajesData;
-if (filtroActual !== 'todos') {
-  viajes = viajes.filter(v => 
-    v.estado.toLowerCase().replace(/_/g, '-') === filtroActual
-  );
+function renderizarViajes() {
+  const container = document.getElementById('listaViajes');
+  let viajes = viajesData;
+
+  if (filtroActual !== 'todos') {
+    const estadoBuscado = filtroActual === 'en-camino' ? 'en_curso' : filtroActual;
+    viajes = viajes.filter(v => 
+      String(v.estado).toLowerCase().replace(/_/g, '-') === estadoBuscado
+    );
+  }
+
+  // Ordenar
+  viajes.sort((a, b) => {
+    const orden = { 
+      'PENDIENTE': 0, 
+      'ACEPTADO': 1, 
+      'EN_CURSO': 2, 
+      'COMPLETADO': 3, 
+      'CANCELADO': 4 
+    };
+    
+    const estadoA = String(a.estado).toUpperCase();
+    const estadoB = String(b.estado).toUpperCase();
+    
+    if (orden[estadoA] !== orden[estadoB]) 
+      return orden[estadoA] - orden[estadoB];
+    
+    return new Date(a.fecha || 0) - new Date(b.fecha || 0);
+  });
+
+  if (viajes.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">🚗</div>
+        <p>No hay viajes ${filtroActual !== 'todos' ? 'en este estado' : ''}</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
 }
-      
-// Ordenar:
-viajes.sort((a, b) => {
-      
-        const orden = { 'PENDIENTE': 0, 'ACEPTADO': 1, 'EN_CAMINO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
-        if (orden[a.estado] !== orden[b.estado]) return orden[a.estado] - orden[b.estado];
-        return new Date(a.fechaHora) - new Date(b.fechaHora);
-      });
-      
-      if (viajes.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">🚗</div>
-            <p>No hay viajes ${filtroActual !== 'todos' ? 'en este estado' : ''}</p>
-          </div>
-        `;
-        return;
-      }
-      
-      container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
-    }
     function crearCardViaje(v) {
       const estadoClass = v.estado.toLowerCase().replace('_', '-');
-      const fecha = new Date(v.fechaHora);
+      const fecha = new Date(v.fecha || v.fechaHora);
       const fechaStr = fecha.toLocaleDateString('es-AR', { 
         weekday: 'short', 
         day: 'numeric', 
@@ -527,7 +545,7 @@ viajes.sort((a, b) => {
         `;
       } else if (v.estado === 'ACEPTADO') {
         acciones = `
-          <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${v.id}', 'EN_CAMINO')">🚀 Iniciar</button>
+          <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${v.id}', 'EN_CURSO')">🚀 Iniciar</button>
           <a href="tel:${v.telefono}" class="btn-accion btn-llamar" style="text-decoration:none;">📞 Llamar</a>
         `;
       } else if (v.estado === 'EN_CAMINO') {
