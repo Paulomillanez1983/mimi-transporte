@@ -1582,16 +1582,23 @@ async function enviarViaje() {
     precio,
     estado: "PENDIENTE"
   };
+
   console.log("Enviando viaje...");
 
-
   try {
-    const res = await fetch(`${CONFIG.SCRIPT_URL}?action=crear&t=${Date.now()}`, {
-      method: 'POST',
-      body: JSON.stringify(data)
-    });
+    const url = `${CONFIG.SCRIPT_URL}?action=crear`
+      + `&cliente=${encodeURIComponent(data.cliente)}`
+      + `&telefono=${encodeURIComponent(data.telefono)}`
+      + `&origen=${encodeURIComponent(data.origen)}`
+      + `&destino=${encodeURIComponent(data.destino)}`
+      + `&precio=${encodeURIComponent(data.precio)}`
+      + `&estado=${encodeURIComponent(data.estado)}`
+      + `&t=${Date.now()}`;
 
+    const res = await fetch(url);
     const result = await res.json();
+
+    console.log(result);
 
     if (result.exito) {
       alert('Viaje solicitado 🚐');
@@ -1604,7 +1611,6 @@ async function enviarViaje() {
     alert('Error de conexión');
   }
 }
-
 // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
