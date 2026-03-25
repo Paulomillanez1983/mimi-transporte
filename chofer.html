@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MIMI - Panel Chofer</title>
-  fetch("https://script.google.com/macros/s/AKfycbzAAH2cYLOsrd7mp18FJL4Ub37udbgKfE4tD0z_-HfirhWBkalfXRys_pfZvizaBSsI/exec?action=viajes")
 
   <style>
     :root {
@@ -423,31 +422,29 @@
     // Auto-refresh cada 30 segundos
     setInterval(cargarViajes, 30000);
 
-    function cargarViajes() {
-      const btn = document.getElementById('btnRefresh');
-      if (btn) btn.classList.add('spinning');
+function cargarViajes() {
+  const btn = document.getElementById('btnRefresh');
+  if (btn) btn.classList.add('spinning');
 
-      google.script.run
-        .withSuccessHandler(function(data) {
-          viajesData = Array.isArray(data) ? data : [];
-          renderizarViajes();
-          actualizarStats();
-          if (btn) btn.classList.remove('spinning');
-        })
-        .withFailureHandler(function(error) {
-          console.error('ERROR COMPLETO:', error);
-          const mensaje = error?.message || JSON.stringify(error) || 'Error desconocido';
-          document.getElementById('listaViajes').innerHTML = `
-            <div class="empty-state">
-              <div class="empty-state-icon">⚠️</div>
-              <p>${mensaje}</p>
-              <button onclick="cargarViajes()" style="margin-top:15px;padding:10px 20px;border:none;border-radius:8px;background:var(--azul-primario);color:white;">Reintentar</button>
-            </div>
-          `;
-          if (btn) btn.classList.remove('spinning');
-        })
-        .obtenerViajesParaChofer();
-    }
+  fetch("https://script.google.com/macros/s/AKfycbzAAH2cYLOsrd7mp18FJL4Ub37udbgKfE4tD0z_-HfirhWBkalfXRys_pfZvizaBSsI/exec?action=viajes")
+    .then(res => res.json())
+    .then(data => {
+      viajesData = Array.isArray(data) ? data : [];
+      renderizarViajes();
+      actualizarStats();
+      if (btn) btn.classList.remove('spinning');
+    })
+    .catch(error => {
+      console.error(error);
+      document.getElementById('listaViajes').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">⚠️</div>
+          <p>Error cargando viajes</p>
+        </div>
+      `;
+      if (btn) btn.classList.remove('spinning');
+    });
+}
 
     function actualizarStats() {
       const hoy = new Date().toDateString();
@@ -595,42 +592,29 @@
       `;
     }
 
-    function cambiarEstado(e, id, nuevoEstado) {
-      const btn = e.target;
-      btn.disabled = true;
-      btn.innerHTML = '⏳ Procesando...';
+function cambiarEstado(e, id, nuevoEstado) {
+  fetch(`https://script.google.com/macros/s/TU_URL/exec?action=estado&id=${id}&estado=${nuevoEstado}`)
+    .then(res => res.json())
+    .then(result => {
+      if (result.exito) {
+        cargarViajes();
+      } else {
+        alert(result.error);
+      }
+    });
+}
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.exito) {
-            cargarViajes();
-            mostrarNotificacion(`Viaje ${nuevoEstado.toLowerCase()}`, 'success');
-          } else {
-            alert('Error: ' + (result.error || 'Desconocido'));
-            btn.disabled = false;
-          }
-        })
-        .withFailureHandler(function(error) {
-          alert('Error: ' + (error.message || error));
-          btn.disabled = false;
-        })
-        .actualizarEstadoViaje(id, nuevoEstado);
-    }
+function finalizarViaje(id) {
+  const notas = prompt('¿Observaciones?');
 
-    function finalizarViaje(id) {
-      const notas = prompt('¿Alguna observación del viaje? (opcional)');
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.exito) {
-            cargarViajes();
-            mostrarNotificacion('Viaje completado ✓', 'success');
-          }
-        })
-        .withFailureHandler(function(error) {
-          alert('Error al finalizar: ' + (error.message || error));
-        })
-        .finalizarViaje(id, notas || '');
-    }
+  fetch(`https://script.google.com/macros/s/TU_URL/exec?action=finalizar&id=${id}&notas=${encodeURIComponent(notas || '')}`)
+    .then(res => res.json())
+    .then(result => {
+      if (result.exito) {
+        cargarViajes();
+      }
+    });
+}
 
     function abrirMaps(origen, destino) {
       const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
