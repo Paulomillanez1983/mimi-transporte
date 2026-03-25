@@ -11,11 +11,17 @@
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
-<!-- GOOGLE MAPS API -->
+<!-- GOOGLE MAPS API - initMap definido antes para evitar error -->
+<script>
+  // Definir initMap temporalmente para evitar error de callback
+  window.initMap = function() {
+    console.log("⏳ Google Maps cargado, esperando inicialización completa...");
+    // La función real se sobrescribirá cuando cargue el script principal
+  };
+</script>
 <script async
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap">
-<!-- SUPABASE -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.0/dist/umd/supabase.min.js"></script>
+</script>
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.0/dist/umd/supabase.min.js"></script>
 <script>
@@ -1640,25 +1646,28 @@ async function enviarViaje() {
     notifSystem.show('Error', 'Error de conexión', 'error', 3000);
   }
 }
-  // ==========================================
+// ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
 function initMap() {
   console.log("🚀 Iniciando Google Maps...");
-  inicializarAutocomplete();
-}
-
-function inicializarAutocomplete() {
-  console.log("✅ Google Maps cargado");
   
-  const inputOrigen = document.getElementById('origen');
-  const inputDestino = document.getElementById('destino');
-  
-  if (!inputOrigen || !inputDestino) {
-    console.error('Inputs no encontrados');
+  // Verificar que el DOM esté listo
+  if (!document.getElementById('origen') || !document.getElementById('destino')) {
+    console.log("⏳ DOM no listo, reintentando...");
+    setTimeout(initMap, 300);
     return;
   }
   
+  inicializarAutocomplete();
+}
+
+// Sobrescribir la función temporal y verificar si Google Maps ya estaba listo
+window.initMap = initMap;
+if (window.googleMapsListo) {
+  console.log("✅ Google Maps ya estaba listo, inicializando ahora...");
+  initMap();
+}
   // Crear autocompletados
   autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
     componentRestrictions: { country: 'ar' },
