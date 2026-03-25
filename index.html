@@ -32,10 +32,17 @@
   // Función para inicializar Supabase cuando esté disponible
   function initSupabase() {
     if (typeof supabase !== 'undefined' && supabase.createClient) {
-      window.supabase = supabase.createClient(
-        "https://xrphpqmutvadjrucqicn.supabase.co",
-        "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq"
-      );
+window.supabase = supabase.createClient(
+  "https://xrphpqmutvadjrucqicn.supabase.co",
+  "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq",
+  {
+    auth: {
+      persistSession: false,  // Desactiva localStorage
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  }
+);
       console.log("✅ Supabase inicializado correctamente");
       return true;
     }
