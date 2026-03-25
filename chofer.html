@@ -155,6 +155,18 @@
       margin-bottom: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.06);
       border-left: 4px solid var(--azul-primario);
+      animation: slideIn 0.4s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
     
     .viaje-card.pendiente { border-left-color: var(--naranja); }
@@ -415,6 +427,63 @@
     }
     
     .hidden { display: none !important; }
+    
+    /* Botón de activar sonido */
+    .sound-btn {
+      position: fixed;
+      bottom: 90px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: white;
+      color: var(--azul-primario);
+      border: 2px solid var(--azul-primario);
+      font-size: 1.3rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: all 0.2s;
+    }
+    
+    .sound-btn.muted {
+      background: #f5f5f5;
+      color: #999;
+      border-color: #ddd;
+    }
+    
+    .sound-btn:active {
+      transform: scale(0.95);
+    }
+    
+    /* Indicador de nuevo viaje */
+    .new-trip-indicator {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: linear-gradient(135deg, var(--naranja), #f57c00);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-weight: 700;
+      box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
+      z-index: 99;
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    
+    .new-trip-indicator.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    
+    .new-trip-indicator::before {
+      content: '🔔 ';
+    }
   </style>
 </head>
 <body>
@@ -453,9 +522,157 @@
     </div>
   </div>
   
+  <div class="new-trip-indicator" id="newTripIndicator">¡Nuevo viaje disponible!</div>
+  
+  <button class="sound-btn" id="soundBtn" onclick="toggleSound()" title="Activar/desactivar sonido">🔔</button>
+  
   <button class="refresh-btn" id="btnRefresh" onclick="cargarViajes()">🔄</button>
 
 <script>
+// ==================== SISTEMA DE SONIDOS TIPO UBER ====================
+
+const SoundSystem = {
+  audioContext: null,
+  enabled: false,
+  lastTripCount: 0,
+  
+  // Inicializar el sistema de audio (requiere interacción del usuario)
+  init() {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    this.enabled = true;
+    this.updateButton();
+  },
+  
+  // Alternar sonido on/off
+  toggle() {
+    if (!this.audioContext) {
+      this.init();
+    }
+    this.enabled = !this.enabled;
+    this.updateButton();
+    return this.enabled;
+  },
+  
+  updateButton() {
+    const btn = document.getElementById('soundBtn');
+    if (btn) {
+      btn.textContent = this.enabled ? '🔔' : '🔕';
+      btn.classList.toggle('muted', !this.enabled);
+      btn.title = this.enabled ? 'Sonido activado' : 'Sonido desactivado';
+    }
+  },
+  
+  // Sonido de nuevo viaje (tipo Uber - ding suave)
+  playNewTrip() {
+    if (!this.enabled || !this.audioContext) return;
+    
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    
+    // Crear oscilador para el "ding"
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Frecuencia tipo campana (A5)
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
+    
+    // Envolvente suave
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    
+    osc.start(now);
+    osc.stop(now + 0.4);
+    
+    // Segunda nota para efecto "ding-dong" suave
+    setTimeout(() => {
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      
+      osc2.frequency.setValueAtTime(698.46, ctx.currentTime); // F5
+      osc2.frequency.exponentialRampToValueAtTime(349.23, ctx.currentTime + 0.4);
+      
+      gain2.gain.setValueAtTime(0, ctx.currentTime);
+      gain2.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      
+      osc2.start(ctx.currentTime);
+      osc2.stop(ctx.currentTime + 0.5);
+    }, 150);
+  },
+  
+  // Sonido de éxito (acción completada)
+  playSuccess() {
+    if (!this.enabled || !this.audioContext) return;
+    
+    const ctx = this.audioContext;
+    const now = ctx.currentTime;
+    
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    // Escala ascendente tipo "check"
+    osc.frequency.setValueAtTime(523.25, now); // C5
+    osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+    osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+    
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.4);
+    
+    osc.start(now);
+    osc.stop(now + 0.4);
+  },
+  
+  // Sonido de notificación suave
+  playNotification() {
+    if (!this.enabled || !this.audioContext) return;
+    
+    const ctx = this.audioContext;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2);
+    
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+    
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.2);
+  },
+  
+  // Vibración del dispositivo (si está disponible)
+  vibrate(pattern = [50, 100, 50]) {
+    if (navigator.vibrate) {
+      navigator.vibrate(pattern);
+    }
+  }
+};
+
+// Función global para alternar sonido
+function toggleSound() {
+  const isEnabled = SoundSystem.toggle();
+  if (isEnabled) {
+    SoundSystem.playNotification(); // Feedback inmediato
+  }
+}
+
 function normalizarEstado(estado) {
   return String(estado || '')
     .replace(/-/g, '_')
@@ -468,7 +685,16 @@ function normalizarEstado(estado) {
     let filtroActual = 'todos';
 
     // Cargar al iniciar
-    document.addEventListener('DOMContentLoaded', cargarViajes);
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarViajes();
+      
+      // Intentar inicializar audio en la primera interacción
+      document.body.addEventListener('click', () => {
+        if (!SoundSystem.audioContext) {
+          SoundSystem.init();
+        }
+      }, { once: true });
+    });
 
     // Auto-refresh cada 30 segundos
     setInterval(cargarViajes, 30000);
@@ -487,7 +713,20 @@ async function cargarViajes() {
       throw new Error(error.message);
     }
 
-    viajesData = data || [];
+    const newData = data || [];
+    
+    // Detectar nuevos viajes pendientes
+    const oldPendingCount = viajesData.filter(v => normalizarEstado(v.estado) === 'PENDIENTE').length;
+    const newPendingCount = newData.filter(v => normalizarEstado(v.estado) === 'PENDIENTE').length;
+    
+    // Si hay más pendientes que antes, es un nuevo viaje
+    if (newPendingCount > oldPendingCount && viajesData.length > 0) {
+      SoundSystem.playNewTrip();
+      SoundSystem.vibrate([100, 50, 100, 50, 200]);
+      showNewTripIndicator();
+    }
+    
+    viajesData = newData;
     console.log(`✅ ${viajesData.length} viajes cargados`);
 
     renderizarViajes();
@@ -504,6 +743,17 @@ async function cargarViajes() {
     `;
   } finally {
     if (btn) btn.classList.remove('spinning');
+  }
+}
+
+// Mostrar indicador visual de nuevo viaje
+function showNewTripIndicator() {
+  const indicator = document.getElementById('newTripIndicator');
+  if (indicator) {
+    indicator.classList.add('show');
+    setTimeout(() => {
+      indicator.classList.remove('show');
+    }, 4000);
   }
 }
   function actualizarStats() {
@@ -666,6 +916,7 @@ async function cambiarEstado(id, nuevoEstado) {
       return;
     }
 
+    SoundSystem.playSuccess(); // Sonido de éxito
     mostrarNotificacion('Estado actualizado', 'success');
     cargarViajes();
     
@@ -690,27 +941,11 @@ async function finalizarViaje(id) {
       return;
     }
 
+    SoundSystem.playSuccess(); // Sonido de éxito
     mostrarNotificacion('Viaje finalizado', 'success');
     cargarViajes();
     
   } catch (err) {
-    alert('Error de conexión');
-  }
-}
-  async function finalizarViaje(id) {
-  const notas = prompt('¿Observaciones?');
-
-  try {
-    const res = await fetch(`${SCRIPT_URL}?action=finalizar&id=${id}&notas=${encodeURIComponent(notas || '')}&t=${Date.now()}`);
-    const result = await res.json();
-
-    if (result.exito) {
-      mostrarNotificacion('Viaje finalizado', 'success');
-      cargarViajes();
-    } else {
-      alert('Error al finalizar');
-    }
-  } catch {
     alert('Error de conexión');
   }
 }
