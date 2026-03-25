@@ -11,10 +11,6 @@
     name="description"
     content="Panel de viajes para choferes de MIMI Transporte Infantil."
   />
-  <button onclick="cerrarSesion()" style="margin-top:10px;padding:10px 14px;border:none;border-radius:12px;background:#f44336;color:white;font-weight:700;cursor:pointer;">
-  🚪 Cerrar sesión
-</button>
-<script>
   if (localStorage.getItem('choferLogueado') !== 'true') {
     window.location.href = 'login-chofer.html';
   }
@@ -560,7 +556,11 @@
       <p>Chofer MIMI Transporte Infantil</p>
     </div>
   </div>
-
+  <div style="padding:15px;">
+    <button onclick="cerrarSesion()" style="padding:10px 14px;border:none;border-radius:12px;background:#f44336;color:white;font-weight:700;cursor:pointer;">
+      🚪 Cerrar sesión
+    </button>
+  </div>
   <div class="stats-bar">
     <div class="stat">
       <div class="stat-number" id="statPendientes">0</div>
