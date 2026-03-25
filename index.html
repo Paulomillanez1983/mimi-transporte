@@ -2218,13 +2218,13 @@ function formatearTextoBoton(fecha) {
 
 <!-- TEST -->
 <script>
-  async function test() {
-    const { data, error } = await supabase.from('viajes').select('*');
-    console.log("DATA:", data);
-    console.log("ERROR:", error);
-  }
+async function test() {
+  const { data, error } = await supabase.from('viajes').select('*');
+  console.log(data, error);
+}
 
-  test();
+// 👇 IMPORTANTE: esperar a que cargue todo
+window.addEventListener('load', test);
 </script>
 
 
