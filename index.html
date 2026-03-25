@@ -26,23 +26,57 @@
     libraries: "places"
   });
 </script>
+<!-- BLOQUEAR localStorage/sessionStorage para evitar warnings de Tracking Prevention -->
+<script>
+  (function() {
+    const mockStorage = {
+      getItem: function() { return null; },
+      setItem: function() {},
+      removeItem: function() {},
+      clear: function() {},
+      key: function() { return null; },
+      length: 0
+    };
+    
+    // Guardar referencia original por si la necesitás después
+    window._originalLocalStorage = window.localStorage;
+    window._originalSessionStorage = window.sessionStorage;
+    
+    // Reemplazar con mock
+    Object.defineProperty(window, 'localStorage', {
+      value: mockStorage,
+      writable: false,
+      configurable: true
+    });
+    
+    Object.defineProperty(window, 'sessionStorage', {
+      value: mockStorage,
+      writable: false,
+      configurable: true
+    });
+    
+    console.log("🔒 Storage bloqueado para evitar Tracking Prevention");
+  })();
+</script>
+
 <!-- SUPABASE -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.0/dist/umd/supabase.min.js"></script>
 <script>
   // Función para inicializar Supabase cuando esté disponible
   function initSupabase() {
     if (typeof supabase !== 'undefined' && supabase.createClient) {
-window.supabase = supabase.createClient(
-  "https://xrphpqmutvadjrucqicn.supabase.co",
-  "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq",
-  {
-    auth: {
-      persistSession: false,  // Desactiva localStorage
-      autoRefreshToken: false,
-      detectSessionInUrl: false
-    }
-  }
-);
+      window.supabase = supabase.createClient(
+        "https://xrphpqmutvadjrucqicn.supabase.co",
+        "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq",
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+            storage: null  // Desactiva storage completamente
+          }
+        }
+      );
       console.log("✅ Supabase inicializado correctamente");
       return true;
     }
@@ -51,7 +85,6 @@ window.supabase = supabase.createClient(
 
   // Intentar inicializar inmediatamente
   if (!initSupabase()) {
-    // Si no está listo, esperar y reintentar
     let intentos = 0;
     const maxIntentos = 10;
     
@@ -63,9 +96,9 @@ window.supabase = supabase.createClient(
           console.error("❌ No se pudo cargar Supabase después de " + maxIntentos + " intentos");
         }
       }
-    }, 500); // Reintentar cada 500ms
+    }, 500);
   }
-</script>
+</script></script>
 <style>
 :root {
   --azul-oscuro: #1e3c72;
