@@ -14,42 +14,18 @@
 <!-- GOOGLE MAPS API -->
 <script async
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap">
-</script>
 <!-- SUPABASE -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.46.0/dist/umd/supabase.min.js"></script>
 <script>
-  // Inicializar Supabase SOLO si no existe ya
-  if (typeof window.supabaseClient === 'undefined') {
-    window.supabaseClient = window.supabase.createClient(
+  // Inicializar Supabase solo una vez
+  if (!window.supabase) {
+    window.supabase = supabase.createClient(
       "https://xrphpqmutvadjrucqicn.supabase.co",
       "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq"
     );
-    
-    // Asignar a variable global 'supabase' para compatibilidad con el resto del código
-    // Usamos Object.defineProperty para evitar reasignación accidental
-    Object.defineProperty(window, 'supabase', {
-      value: window.supabaseClient,
-      writable: false,
-      configurable: false
-    });
-    
-    console.log("✅ Supabase inicializado correctamente");
-    
-    // Test de conexión al cargar
-    window.addEventListener('load', async () => {
-      try {
-        const { data, error } = await window.supabase.from('viajes').select('*').limit(1);
-        console.log("✅ Supabase conectado:", data);
-        if (error) console.error("❌ Error Supabase:", error);
-      } catch (err) {
-        console.error("❌ Fallo conexión Supabase:", err);
-      }
-    });
-  } else {
-    console.log("ℹ️ Supabase ya estaba inicializado, saltando...");
+    console.log("✅ Supabase inicializado");
   }
-</script>
-  
+</script>  
 <style>
 :root {
   --azul-oscuro: #1e3c72;
