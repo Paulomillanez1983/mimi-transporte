@@ -1669,7 +1669,6 @@ function actualizarTextoFechaVuelta() {
   }
 }
 async function enviarViaje() {
-  // Usá los IDs correctos, no name
   const origen = document.getElementById('origen')?.value || '';
   const destino = document.getElementById('destino')?.value || '';
   const precio = document.getElementById('precioValor')?.textContent || '0';
@@ -1681,11 +1680,10 @@ async function enviarViaje() {
       .from('viajes')
       .insert([
         {
-          cliente: "Cliente Web",
-          telefono: "000000000",
+          // Eliminado: cliente y telefono
           origen: origen,
           destino: destino,
-          precio: Number(precio.replace(/\./g, '').replace(',', '.')), // Limpiar formato argentino
+          precio: Number(precio.replace(/\./g, '').replace(',', '.')),
           estado: "PENDIENTE",
           fecha_solicitud: new Date().toISOString()
         }
@@ -1693,7 +1691,7 @@ async function enviarViaje() {
 
     if (error) {
       console.error("❌ Error:", error);
-      notifSystem.show('Error', 'No se pudo guardar el viaje', 'error', 3000);
+      notifSystem.show('Error', error.message || 'No se pudo guardar el viaje', 'error', 3000);
       return;
     }
 
@@ -1705,7 +1703,7 @@ async function enviarViaje() {
     notifSystem.show('Error', 'Error de conexión', 'error', 3000);
   }
 }
-// ==========================================
+  // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
 
