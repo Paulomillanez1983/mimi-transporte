@@ -465,7 +465,7 @@ function actualizarStats() {
   document.getElementById('statPendientes').textContent = pendientes;
   document.getElementById('statHoy').textContent = deHoy;
   document.getElementById('statTotal').textContent = viajesData.length;
-}    
+}
     function filtrar(estado) {
       filtroActual = estado;
       
@@ -522,6 +522,7 @@ function renderizarViajes() {
 
   container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
 }
+    
     function crearCardViaje(v) {
       const estadoClass = v.estado.toLowerCase().replace('_', '-');
       const fecha = new Date(v.fecha || v.fechaHora);
