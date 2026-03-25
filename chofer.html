@@ -592,7 +592,7 @@ function cargarViajes() {
     }
 
 function cambiarEstado(e, id, nuevoEstado) {
-  fetch(`https://script.google.com/macros/s/TU_URL/exec?action=estado&id=${id}&estado=${nuevoEstado}`)
+  fetch(`https://script.google.com/macros/s/AKfycby5lqkUgcmwN-SrHHPwftoN-b2ZTus5pIvqynQSgsBJUshMciBwZIBWgvaGvwVNVPph/exec?action=estado&id=${id}&estado=${nuevoEstado}`)
     .then(res => res.json())
     .then(result => {
       if (result.exito) {
