@@ -20,9 +20,12 @@
     content="Gestioná viajes, estados, rutas y clientes desde el panel de chofer."
   />
   <meta
-<meta property="og:url" content="https://TU-USUARIO.github.io/mimi-transporte/chofer.html" />  <meta
     property="og:url"
-  content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
+    content="https://paulomillanez1983.github.io/mimi-transporte/chofer.html"
+  />
+  <meta
+    property="og:image"
+    content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
   />
   <meta property="og:site_name" content="MIMI Transporte Infantil" />
   <meta property="og:locale" content="es_AR" />
@@ -36,12 +39,17 @@
   />
   <meta
     name="twitter:image"
-  content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
+    content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
   />
 
   <meta name="theme-color" content="#1a1a2e" />
 
-<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" />
+  <link
+    rel="icon"
+    type="image/png"
+    href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
+  />
+
   <style>
     :root {
       --azul-oscuro: #1e3c72;
@@ -410,10 +418,6 @@
       animation: spin 1s linear infinite;
     }
 
-    .hidden {
-      display: none !important;
-    }
-
     .sound-btn {
       position: fixed;
       bottom: 90px;
@@ -470,7 +474,6 @@
     }
   </style>
 
-  <!-- Supabase REST API liviana -->
   <script>
     const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
     const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
@@ -505,10 +508,10 @@
           }
         },
 
-        update: async (data) => {
+        updateById: async (id, data) => {
           try {
             const response = await fetch(
-              `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(data.id)}`,
+              `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,
               {
                 method: 'PATCH',
                 headers: {
@@ -587,24 +590,33 @@
   <button class="refresh-btn" id="btnRefresh" onclick="cargarViajes()">🔄</button>
 
   <script>
-    // ==================== SISTEMA DE SONIDOS ====================
     const SoundSystem = {
       audioContext: null,
       enabled: false,
 
-      init() {
+      async init() {
         if (!this.audioContext) {
           this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
+
+        if (this.audioContext.state === 'suspended') {
+          await this.audioContext.resume();
+        }
+
         this.enabled = true;
         this.updateButton();
       },
 
-      toggle() {
+      async toggle() {
         if (!this.audioContext) {
-          this.init();
+          await this.init();
           return this.enabled;
         }
+
+        if (this.audioContext.state === 'suspended') {
+          await this.audioContext.resume();
+        }
+
         this.enabled = !this.enabled;
         this.updateButton();
         return this.enabled;
@@ -706,8 +718,8 @@
       }
     };
 
-    function toggleSound() {
-      const isEnabled = SoundSystem.toggle();
+    async function toggleSound() {
+      const isEnabled = await SoundSystem.toggle();
       if (isEnabled) {
         SoundSystem.playNotification();
       }
@@ -736,9 +748,9 @@
     document.addEventListener('DOMContentLoaded', () => {
       cargarViajes();
 
-      document.body.addEventListener('click', () => {
+      document.body.addEventListener('click', async () => {
         if (!SoundSystem.audioContext) {
-          SoundSystem.init();
+          await SoundSystem.init();
         }
       }, { once: true });
     });
@@ -925,7 +937,7 @@
           <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${escaparHTML(v.id)}')">
             ✅ Finalizar
           </button>
-          <a href="https://wa.me/${telWA}" target="_blank" class="btn-accion btn-whatsapp">
+          <a href="https://wa.me/${telWA}" target="_blank" class="btn-accion btn-whatsapp" rel="noopener noreferrer">
             💬 WA
           </a>
         `;
@@ -1000,8 +1012,7 @@
       }
 
       try {
-        const { error } = await supabase.from('viajes').update({
-          id: id,
+        const { error } = await supabase.from('viajes').updateById(id, {
           estado: nuevoEstado
         });
 
@@ -1023,8 +1034,7 @@
       const notas = prompt('¿Observaciones?');
 
       try {
-        const { error } = await supabase.from('viajes').update({
-          id: id,
+        const { error } = await supabase.from('viajes').updateById(id, {
           estado: 'COMPLETADO',
           notas: notas || null
         });
@@ -1045,7 +1055,7 @@
 
     function abrirMaps(origen, destino) {
       const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen || '')}&destination=${encodeURIComponent(destino || '')}`;
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
 
     function mostrarNotificacion(mensaje, tipo = 'info') {
