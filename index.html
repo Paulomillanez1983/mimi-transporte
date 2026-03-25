@@ -1680,12 +1680,11 @@ async function enviarViaje() {
       .from('viajes')
       .insert([
         {
-          // Eliminado: cliente y telefono
           origen: origen,
           destino: destino,
           precio: Number(precio.replace(/\./g, '').replace(',', '.')),
           estado: "PENDIENTE",
-          fecha_solicitud: new Date().toISOString()
+          created_at: new Date().toISOString()  // ← CAMBIADO: fecha_solicitud → created_at
         }
       ]);
 
