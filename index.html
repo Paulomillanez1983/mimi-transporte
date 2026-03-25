@@ -98,7 +98,18 @@
       }
     }, 500);
   }
-</script></script>
+</script>
+  // Restaurar localStorage original después de que Supabase cargó
+if (window._originalLocalStorage) {
+  Object.defineProperty(window, 'localStorage', {
+    value: window._originalLocalStorage,
+    writable: false,
+    configurable: true
+  });
+  console.log("🔓 localStorage restaurado");
+}
+  
+</script>
 <style>
 :root {
   --azul-oscuro: #1e3c72;
