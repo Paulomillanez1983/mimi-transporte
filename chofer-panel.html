@@ -858,6 +858,20 @@ let expirandoViajes = new Set(); // para evitar múltiples timeouts simultáneos
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     }
+    function obtenerTiempoRestante(viaje) {
+  const creado = new Date(viaje.created_at || viaje.fecha || viaje.fechaHora || Date.now()).getTime();
+  const ahora = Date.now();
+  const expiracionMs = 2 * 60 * 1000; // 2 minutos
+  const restante = Math.max(0, expiracionMs - (ahora - creado));
+  return Math.floor(restante / 1000);
+}
+    function limpiarViajesExpiradosLocales() {
+  viajesData = viajesData.filter(v => {
+    const estado = normalizarEstado(v.estado);
+    if (estado !== 'DISPONIBLE') return true;
+    return obtenerTiempoRestante(v) > 0;
+  });
+}
     
 function obtenerFechaBaseViaje(viaje) {
   return viaje.asignado_at || viaje.created_at || viaje.fechaHora || viaje.fecha || null;
@@ -971,7 +985,7 @@ async function cargarViajes() {
       if (v && v.id) mapa.set(v.id, v);
     });
 
-    viajesData = Array.from(mapa.values());
+    viajesData = Array.from(mapa.values()).filter(v => !viajesRechazadosLocalmente.has(v.id));
 
     // 8) Nuevos viajes disponibles
     const nuevosPendientes = viajesData.filter(v => {
@@ -1215,8 +1229,8 @@ function filtrar(estado) {
 }
     function renderizarViajes() {
       const container = document.getElementById('listaViajes');
-      let viajes = [...viajesData];
-
+limpiarViajesExpiradosLocales();
+let viajes = [...viajesData];
 if (filtroActual !== 'todos') {
   viajes = viajes.filter(v => normalizarEstado(v.estado) === filtroActual);
 }
@@ -1243,84 +1257,104 @@ if (filtroActual !== 'todos') {
       container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
     }
 
-    function crearCardViaje(v) {
-      const estado = normalizarEstado(v.estado || 'DISPONIBLE');
-      const estadoClass = estado.toLowerCase().replace(/_/g, '-');
-      const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
-      const fechaStr = fecha.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?'; const segundosRestantes = estado === 'DISPONIBLE' ? segundosRestantesViaje(v) : null;
+function crearCardViaje(v) {
+  const estado = normalizarEstado(v.estado || 'DISPONIBLE');
+  const estadoClass = estado.toLowerCase().replace(/_/g, '-');
+  const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
+  const fechaStr = fecha.toLocaleDateString('es-AR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
 
-      let acciones = '';
-      if (estado === 'DISPONIBLE') {
-  acciones = `
-    <button class="btn-accion btn-aceptar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'ACEPTADO')">✓ Aceptar</button>
-    <button class="btn-accion btn-rechazar-card" onclick="rechazarViajeDirecto('${escaparHTML(v.id)}')">❌ Rechazar</button>
-    <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Maps</button>
-  `;
-} else if (estado === 'ACEPTADO') {
-        acciones = `
-          <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'EN_CURSO')">🚀 Iniciar</button>
-          <a href="tel:${escaparHTML(v.telefono || '')}" class="btn-accion btn-llamar">📞 Llamar</a>
-        `;
-      } else if (estado === 'EN_CURSO') {
-        const telWA = String(v.telefono || '').replace(/[^\d]/g, '');
-        acciones = `
-          <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${escaparHTML(v.id)}')">✅ Finalizar</button>
-          <a href="https://wa.me/${telWA}" target="_blank" class="btn-accion btn-whatsapp" rel="noopener noreferrer">💬 WA</a>
-        `;
-      } else {
-        acciones = `<button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver ruta</button>`;
-      }
+  let acciones = '';
+  let timeoutHtml = '';
 
-      return `
-        <div class="viaje-card ${estadoClass}">
-          <div class="viaje-header">
-            <span class="viaje-fecha">${escaparHTML(fechaStr)}</span>
-            <span class="viaje-estado estado-${estadoClass}">${escaparHTML(estado.replace('_', ' '))}</span>
-          </div>
-          <div class="viaje-cliente">
-            <div class="cliente-avatar">${escaparHTML(inicial)}</div>
-            <div class="cliente-datos">
-              <div class="cliente-nombre">${escaparHTML(v.cliente || 'Sin nombre')}</div>
-              <div class="cliente-tel">📱 ${escaparHTML(v.telefono || 'Sin teléfono')}</div>
-            </div>
-          </div>
-          <div class="viaje-ruta">
-            <div class="ruta-item">
-              <div class="ruta-icon origen">📍</div>
-              <div class="ruta-text">${escaparHTML(v.origen || '')}</div>
-            </div>
-            <div class="ruta-item">
-              <div class="ruta-icon destino">🎯</div>
-              <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
-            </div>
-          </div>
-          ${estado === 'DISPONIBLE' ? `
-  <div style="margin-bottom:10px;padding:10px 12px;border-radius:12px;background:#fff8e1;border:1px solid #ffe082;display:flex;justify-content:space-between;align-items:center;">
-    <span style="font-size:0.82rem;font-weight:700;color:#ef6c00;">⏳ Tiempo para tomarlo</span>
-    <span style="font-size:1rem;font-weight:800;color:#e65100;">${segundosRestantes}s</span>
-  </div>
-` : ''}
-          <div class="viaje-info">
-            <div class="info-item">
-              <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
-              <div class="info-label">Precio</div>
-            </div>
-            <div class="info-item">
-              <div class="info-valor">${escaparHTML(v.km || 0)}km</div>
-              <div class="info-label">Distancia</div>
-            </div>
-            <div class="info-item">
-              <div class="info-valor">${escaparHTML(v.tipo || 'N/D')}</div>
-              <div class="info-label">Servicio</div>
-            </div>
-          </div>
-          ${v.notas ? `<div style="font-size:0.85rem;color:#666;margin-bottom:10px;padding:8px;background:#fffde7;border-radius:6px;">📝 ${escaparHTML(v.notas)}</div>` : ''}
-          <div class="viaje-acciones">${acciones}</div>
+  if (estado === 'DISPONIBLE') {
+    const restante = obtenerTiempoRestante(v);
+    const min = Math.floor(restante / 60);
+    const seg = restante % 60;
+
+    timeoutHtml = `
+      <div style="margin-bottom:12px;padding:10px 12px;background:#fff3e0;border-radius:10px;font-size:0.85rem;font-weight:700;color:#e65100;">
+        ⏳ Disponible por: ${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}
+      </div>
+    `;
+
+    acciones = `
+      <button class="btn-accion btn-aceptar" onclick="tomarViaje('${escaparHTML(v.id)}')">✓ Aceptar</button>
+      <button class="btn-accion" style="background:#ffebee;color:#c62828;" onclick="rechazarDisponible('${escaparHTML(v.id)}')">✕ Rechazar</button>
+      <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Maps</button>
+    `;
+  } else if (estado === 'ACEPTADO') {
+    acciones = `
+      <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'EN_CURSO')">🚀 Iniciar</button>
+      <a href="tel:${escaparHTML(v.telefono || '')}" class="btn-accion btn-llamar">📞 Llamar</a>
+    `;
+  } else if (estado === 'EN_CURSO') {
+    const telWA = String(v.telefono || '').replace(/[^\d]/g, '');
+    acciones = `
+      <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${escaparHTML(v.id)}')">✅ Finalizar</button>
+      <a href="https://wa.me/${telWA}" target="_blank" class="btn-accion btn-whatsapp" rel="noopener noreferrer">💬 WA</a>
+    `;
+  } else {
+    acciones = `
+      <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver ruta</button>
+    `;
+  }
+
+  return `
+    <div class="viaje-card ${estadoClass}">
+      <div class="viaje-header">
+        <span class="viaje-fecha">${escaparHTML(fechaStr)}</span>
+        <span class="viaje-estado estado-${estadoClass}">${escaparHTML(estado.replace('_', ' '))}</span>
+      </div>
+
+      <div class="viaje-cliente">
+        <div class="cliente-avatar">${escaparHTML(inicial)}</div>
+        <div class="cliente-datos">
+          <div class="cliente-nombre">${escaparHTML(v.cliente || 'Sin nombre')}</div>
+          <div class="cliente-tel">📱 ${escaparHTML(v.telefono || 'Sin teléfono')}</div>
         </div>
-      `;
-    }
+      </div>
 
+      <div class="viaje-ruta">
+        <div class="ruta-item">
+          <div class="ruta-icon origen">📍</div>
+          <div class="ruta-text">${escaparHTML(v.origen || '')}</div>
+        </div>
+        <div class="ruta-item">
+          <div class="ruta-icon destino">🎯</div>
+          <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
+        </div>
+      </div>
+
+      <div class="viaje-info">
+        <div class="info-item">
+          <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
+          <div class="info-label">Precio</div>
+        </div>
+        <div class="info-item">
+          <div class="info-valor">${escaparHTML(v.km || 0)}km</div>
+          <div class="info-label">Distancia</div>
+        </div>
+        <div class="info-item">
+          <div class="info-valor">${escaparHTML(v.tipo || 'N/D')}</div>
+          <div class="info-label">Servicio</div>
+        </div>
+      </div>
+
+      ${timeoutHtml}
+
+      ${v.notas ? `<div style="font-size:0.85rem;color:#666;margin-bottom:10px;padding:8px;background:#fffde7;border-radius:6px;">📝 ${escaparHTML(v.notas)}</div>` : ''}
+
+      <div class="viaje-acciones">${acciones}</div>
+    </div>
+  `;
+}
     // ==========================================
     // ACCIONES DE VIAJE
     // ==========================================
@@ -1409,7 +1443,7 @@ async function rechazarDisponible(id) {
     });
 
     // Lo sacamos SOLO de la vista local de este chofer
-    viajesData = viajesData.filter(v => v.id !== id);
+    viajesRechazadosLocalmente.add(id); viajesData = viajesData.filter(v => v.id !== id);
 
     SoundSystem.playNotification();
     mostrarNotificacion('Viaje rechazado', 'info');
