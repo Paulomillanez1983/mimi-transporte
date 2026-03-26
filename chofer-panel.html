@@ -1604,18 +1604,29 @@ async function cambiarEstado(id, nuevoEstado) {
   }
 
   const choferId = obtenerChoferId();
+  const now = new Date().toISOString();
+
   const payload = {
     estado: nuevoEstado,
-    updated_at: new Date().toISOString()
+    updated_at: now
   };
 
   if (nuevoEstado === 'ACEPTADO') {
     payload.chofer_id = choferId;
-    payload.aceptado_at = new Date().toISOString();
+    payload.asignado_a = choferId;
+    payload.aceptado_at = now;
   }
 
   if (nuevoEstado === 'EN_CURSO') {
-    payload.iniciado_at = new Date().toISOString();
+    payload.iniciado_at = now;
+  }
+
+  if (nuevoEstado === 'COMPLETADO') {
+    payload.completado_at = now;
+  }
+
+  if (nuevoEstado === 'CANCELADO') {
+    payload.cancelado_at = now;
   }
 
   try {
@@ -1629,67 +1640,86 @@ async function cambiarEstado(id, nuevoEstado) {
   }
 }
     async function tomarViaje(id) {
-      const choferId = obtenerChoferId();
+  const choferId = obtenerChoferId();
 
-      try {
-await supabase.updateById('viajes', id, {
-  estado: 'ACEPTADO',
-  chofer_id: choferId,
-  aceptado_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-});
-        SoundSystem.playSuccess();
-        mostrarNotificacion('✓ Viaje aceptado', 'success');
-        await cargarViajesSeguro();
-      } catch (err) {
-        alert('Error al aceptar: ' + err.message);
-        console.error(err);
-      }
+  try {
+    const viaje = await supabase.select('viajes', {
+      filters: [`id=eq.${id}`],
+      limit: 1
+    });
+
+    const actual = Array.isArray(viaje) ? viaje[0] : null;
+
+    if (!actual) {
+      mostrarNotificacion('El viaje ya no existe', 'error');
+      return;
     }
 
-    async function rechazarDisponible(id) {
-      const choferId = obtenerChoferId();
-
-      if (!confirm('¿Querés rechazar este viaje?')) return;
-
-      try {
-        await supabase.updateById('viajes', id, {
-          rechazado_por: choferId,
-          rechazado_at: new Date().toISOString()
-        });
-
-        viajesRechazadosLocalmente.add(id);
-        viajesData = viajesData.filter(v => v.id !== id);
-
-        SoundSystem.playNotification();
-        mostrarNotificacion('Viaje rechazado', 'info');
-        renderizarViajes();
-        actualizarStats();
-      } catch (err) {
-        alert('Error al rechazar: ' + err.message);
-        console.error(err);
-      }
+    if (actual.estado !== 'DISPONIBLE') {
+      mostrarNotificacion('Este viaje ya fue tomado por otro chofer', 'warning');
+      await cargarViajesSeguro();
+      return;
     }
 
-    async function finalizarViaje(id) {
-      const notas = prompt('¿Observaciones del viaje? (opcional)');
+    await supabase.updateById('viajes', id, {
+      estado: 'ACEPTADO',
+      chofer_id: choferId,
+      asignado_a: choferId,
+      aceptado_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
 
-      try {
-await supabase.updateById('viajes', id, {
-  estado: 'COMPLETADO',
-  notas: notas || null,
-  completado_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-});
-        SoundSystem.playSuccess();
-        mostrarNotificacion('Viaje finalizado', 'success');
-        await cargarViajesSeguro();
-      } catch (err) {
-        alert('Error al finalizar: ' + err.message);
-        console.error(err);
-      }
-    }
+    SoundSystem.playSuccess();
+    mostrarNotificacion('✓ Viaje aceptado', 'success');
+    await cargarViajesSeguro();
+  } catch (err) {
+    alert('Error al aceptar: ' + err.message);
+    console.error(err);
+  }
+}
+async function rechazarDisponible(id) {
+  const choferId = obtenerChoferId();
 
+  if (!confirm('¿Querés rechazar este viaje?')) return;
+
+  try {
+    await supabase.updateById('viajes', id, {
+      rechazado_por: choferId,
+      rechazado_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    viajesRechazadosLocalmente.add(id);
+    viajesData = viajesData.filter(v => v.id !== id);
+
+    SoundSystem.playNotification();
+    mostrarNotificacion('Viaje rechazado', 'info');
+    renderizarViajes();
+    actualizarStats();
+  } catch (err) {
+    alert('Error al rechazar: ' + err.message);
+    console.error(err);
+  }
+}
+async function finalizarViaje(id) {
+  const notas = prompt('¿Observaciones del viaje? (opcional)');
+
+  try {
+    await supabase.updateById('viajes', id, {
+      estado: 'COMPLETADO',
+      notas: notas || null,
+      completado_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    SoundSystem.playSuccess();
+    mostrarNotificacion('Viaje finalizado', 'success');
+    await cargarViajesSeguro();
+  } catch (err) {
+    alert('Error al finalizar: ' + err.message);
+    console.error(err);
+  }
+}
     // ==========================================
     // INICIALIZACIÓN
     // ==========================================
