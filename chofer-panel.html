@@ -24,7 +24,7 @@
       window.location.href = 'login-chofer.html';
     }
   </script>
-  
+
   <style>
     :root {
       --azul-oscuro: #1e3c72;
@@ -33,6 +33,13 @@
       --naranja: #ff9800;
       --rojo: #f44336;
       --gris: #f5f7fa;
+      --gris-2: #eef2f7;
+      --texto: #1b1f2a;
+      --texto-suave: #6b7280;
+      --sombra: 0 8px 24px rgba(0,0,0,0.08);
+      --radio-xl: 20px;
+      --radio-lg: 16px;
+      --radio-md: 12px;
     }
 
     * {
@@ -40,85 +47,142 @@
       padding: 0;
       box-sizing: border-box;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      background: var(--gris);
+      min-height: 100vh;
+      color: var(--texto);
     }
 
     body {
-      background: var(--gris);
-      min-height: 100vh;
+      padding-bottom: 110px;
     }
 
     .header {
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      background: linear-gradient(135deg, #101827 0%, #172554 100%);
       color: white;
       position: relative;
-      top: 0;
-      z-index: 100;
-      padding: 0;
+      z-index: 10;
       overflow: hidden;
-      min-height: 200px;
+      min-height: 220px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
     }
 
     .header img {
       width: 100%;
-      height: 200px;
+      height: 220px;
       object-fit: cover;
       object-position: center;
       display: block;
+      filter: saturate(1.05);
     }
-    
+
     .header-overlay {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(to top, rgba(26,26,46,0.92), transparent);
-      padding: 20px;
+      inset: 0;
+      background: linear-gradient(to top, rgba(16,24,39,0.96), rgba(16,24,39,0.25), transparent);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 22px 18px 16px;
     }
-    
-    .header-overlay h1 {
-      font-size: 1.3rem;
+
+    .header-top {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      padding: 10px 14px;
+      border-radius: 999px;
       font-weight: 800;
+      font-size: 0.9rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+    }
+
+    .logout-btn {
+      padding: 11px 16px;
+      border: none;
+      border-radius: 14px;
+      background: rgba(244,67,54,0.95);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(244,67,54,0.28);
+      transition: transform 0.15s ease;
+    }
+
+    .logout-btn:active {
+      transform: scale(0.97);
+    }
+
+    .header-overlay h1 {
+      font-size: 1.45rem;
+      font-weight: 900;
       margin: 0;
+      letter-spacing: -0.02em;
     }
 
     .header-overlay p {
-      font-size: 0.85rem;
-      opacity: 0.85;
-      margin-top: 4px;
+      font-size: 0.92rem;
+      opacity: 0.9;
+      margin-top: 6px;
     }
 
     .stats-bar {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      padding: 15px;
+      gap: 12px;
+      padding: 16px;
       background: white;
-      margin: 15px;
-      border-radius: 16px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin: -18px 15px 16px;
+      border-radius: 22px;
+      box-shadow: var(--sombra);
+      position: relative;
+      z-index: 11;
     }
 
     .stat {
       text-align: center;
+      padding: 8px 6px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     }
 
     .stat-number {
-      font-size: 1.8rem;
-      font-weight: 800;
+      font-size: 1.85rem;
+      font-weight: 900;
       color: var(--azul-primario);
+      letter-spacing: -0.03em;
     }
 
     .stat-label {
-      font-size: 0.75rem;
-      color: #666;
+      font-size: 0.73rem;
+      color: #6b7280;
       text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-top: 3px;
     }
 
     .filtros {
       display: flex;
-      gap: 8px;
+      gap: 10px;
       padding: 0 15px;
-      margin-bottom: 10px;
+      margin-bottom: 14px;
       overflow-x: auto;
       scrollbar-width: none;
     }
@@ -128,41 +192,56 @@
     }
 
     .filtro-btn {
-      padding: 8px 16px;
+      padding: 10px 16px;
       border: none;
-      border-radius: 20px;
+      border-radius: 999px;
       background: white;
-      color: #666;
-      font-size: 0.85rem;
-      font-weight: 600;
+      color: #667085;
+      font-size: 0.88rem;
+      font-weight: 800;
       cursor: pointer;
       white-space: nowrap;
-      transition: all 0.2s;
+      transition: all 0.18s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     .filtro-btn.activo {
       background: var(--azul-primario);
       color: white;
+      box-shadow: 0 8px 20px rgba(21,101,192,0.28);
     }
 
     .viajes-lista {
-      padding: 0 15px 100px;
+      padding: 0 15px 20px;
     }
 
     .viaje-card {
       background: white;
-      border-radius: 16px;
+      border-radius: 22px;
       padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      border-left: 4px solid var(--azul-primario);
-      animation: slideIn 0.35s ease-out;
+      margin-bottom: 14px;
+      box-shadow: var(--sombra);
+      border-left: 5px solid var(--azul-primario);
+      animation: slideIn 0.32s ease-out;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .viaje-card::after {
+      content: "";
+      position: absolute;
+      inset: auto -40px -40px auto;
+      width: 110px;
+      height: 110px;
+      background: radial-gradient(circle, rgba(21,101,192,0.05), transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
     }
 
     @keyframes slideIn {
       from {
         opacity: 0;
-        transform: translateY(-20px) scale(0.97);
+        transform: translateY(12px) scale(0.985);
       }
       to {
         opacity: 1;
@@ -170,61 +249,64 @@
       }
     }
 
-    .viaje-card.pendiente { border-left-color: var(--naranja); }
+    .viaje-card.disponible { border-left-color: var(--naranja); }
+    .viaje-card.asignado { border-left-color: #7c3aed; }
     .viaje-card.aceptado { border-left-color: var(--azul-primario); }
     .viaje-card.en-curso { border-left-color: #2196f3; }
     .viaje-card.completado { border-left-color: var(--verde); }
-    .viaje-card.cancelado { border-left-color: var(--rojo); opacity: 0.75; }
+    .viaje-card.cancelado { border-left-color: var(--rojo); opacity: 0.82; }
 
     .viaje-header {
       display: flex;
       justify-content: space-between;
       align-items: start;
       gap: 10px;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
 
     .viaje-fecha {
-      font-size: 0.75rem;
-      color: #888;
-      font-weight: 600;
+      font-size: 0.78rem;
+      color: #7b8190;
+      font-weight: 800;
     }
 
     .viaje-estado {
-      padding: 4px 10px;
-      border-radius: 12px;
+      padding: 6px 11px;
+      border-radius: 999px;
       font-size: 0.7rem;
-      font-weight: 700;
+      font-weight: 900;
       text-transform: uppercase;
       white-space: nowrap;
+      letter-spacing: 0.03em;
     }
 
-    .estado-pendiente { background: #fff3e0; color: #e65100; }
+    .estado-disponible { background: #fff3e0; color: #e65100; }
+    .estado-asignado { background: #ede9fe; color: #6d28d9; }
     .estado-aceptado { background: #e3f2fd; color: var(--azul-primario); }
     .estado-en-curso { background: #e3f2fd; color: #1976d2; }
     .estado-completado { background: #e8f5e9; color: #2e7d32; }
     .estado-cancelado { background: #ffebee; color: #c62828; }
 
     .viaje-ruta {
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
 
     .ruta-item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 10px;
-      margin-bottom: 8px;
-      font-size: 0.9rem;
+      margin-bottom: 10px;
+      font-size: 0.92rem;
     }
 
     .ruta-icon {
-      width: 28px;
-      height: 28px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       flex-shrink: 0;
     }
 
@@ -233,8 +315,9 @@
 
     .ruta-text {
       flex: 1;
-      color: #333;
-      font-weight: 500;
+      color: #2a2f3a;
+      font-weight: 700;
+      line-height: 1.35;
     }
 
     .viaje-info {
@@ -242,9 +325,9 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
       padding: 12px;
-      background: var(--gris);
-      border-radius: 12px;
-      margin-bottom: 12px;
+      background: var(--gris-2);
+      border-radius: 16px;
+      margin-bottom: 14px;
     }
 
     .info-item {
@@ -252,54 +335,64 @@
     }
 
     .info-valor {
-      font-size: 1.05rem;
-      font-weight: 700;
+      font-size: 1.04rem;
+      font-weight: 900;
       color: var(--azul-oscuro);
+      letter-spacing: -0.02em;
     }
 
     .info-label {
-      font-size: 0.7rem;
-      color: #888;
+      font-size: 0.68rem;
+      color: #7b8190;
       text-transform: uppercase;
+      font-weight: 800;
+      margin-top: 4px;
+      letter-spacing: 0.04em;
     }
 
     .viaje-cliente {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 10px;
+      gap: 12px;
+      padding: 12px;
       background: #fafafa;
-      border-radius: 10px;
-      margin-bottom: 12px;
+      border-radius: 14px;
+      margin-bottom: 14px;
+      border: 1px solid #f0f0f0;
     }
 
     .cliente-avatar {
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--azul-primario), var(--azul-oscuro));
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
+      font-weight: 900;
       font-size: 1rem;
       flex-shrink: 0;
+      box-shadow: 0 6px 16px rgba(21,101,192,0.22);
     }
 
     .cliente-datos {
       flex: 1;
+      min-width: 0;
     }
 
     .cliente-nombre {
-      font-weight: 700;
-      color: #1a1a1a;
-      font-size: 0.95rem;
+      font-weight: 900;
+      color: #111827;
+      font-size: 0.96rem;
+      line-height: 1.2;
     }
 
     .cliente-tel {
-      font-size: 0.8rem;
-      color: #666;
+      font-size: 0.82rem;
+      color: #6b7280;
+      margin-top: 4px;
+      word-break: break-word;
     }
 
     .viaje-acciones {
@@ -311,45 +404,47 @@
     .btn-accion {
       flex: 1;
       min-width: 120px;
-      padding: 12px;
+      padding: 13px 12px;
       border: none;
-      border-radius: 12px;
-      font-size: 0.9rem;
-      font-weight: 700;
+      border-radius: 14px;
+      font-size: 0.92rem;
+      font-weight: 900;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      transition: all 0.2s;
+      transition: all 0.16s ease;
       text-decoration: none;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
     }
 
     .btn-accion:active {
       transform: scale(0.98);
     }
 
-.btn-aceptar { background: var(--verde); color: white; }
-.btn-rechazar-card { background: #ffebee; color: var(--rojo); border: 1px solid #ffcdd2; }
-.btn-iniciar { background: var(--azul-primario); color: white; }
-.btn-finalizar { background: var(--azul-oscuro); color: white; }
-.btn-maps { background: #e3f2fd; color: var(--azul-primario); }
-.btn-llamar { background: #e8f5e9; color: var(--verde); }
-.btn-whatsapp { background: #25d366; color: white; }
+    .btn-aceptar { background: var(--verde); color: white; }
+    .btn-rechazar-card { background: #ffebee; color: var(--rojo); border: 1px solid #ffcdd2; }
+    .btn-iniciar { background: var(--azul-primario); color: white; }
+    .btn-finalizar { background: var(--azul-oscuro); color: white; }
+    .btn-maps { background: #e3f2fd; color: var(--azul-primario); }
+    .btn-llamar { background: #e8f5e9; color: var(--verde); }
+    .btn-whatsapp { background: #25d366; color: white; }
+
     .loading {
       text-align: center;
-      padding: 40px;
-      color: #666;
+      padding: 60px 20px;
+      color: #667085;
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #e0e0e0;
+      width: 42px;
+      height: 42px;
+      border: 4px solid #e5e7eb;
       border-top-color: var(--azul-primario);
       border-radius: 50%;
       animation: spin 1s linear infinite;
-      margin: 0 auto 15px;
+      margin: 0 auto 16px;
     }
 
     @keyframes spin {
@@ -358,28 +453,31 @@
 
     .empty-state {
       text-align: center;
-      padding: 60px 20px;
-      color: #888;
+      padding: 70px 20px;
+      color: #7b8190;
+      background: white;
+      border-radius: 24px;
+      box-shadow: var(--sombra);
     }
 
     .empty-state-icon {
       font-size: 4rem;
-      margin-bottom: 15px;
+      margin-bottom: 16px;
     }
 
     .refresh-btn {
       position: fixed;
-      bottom: 20px;
+      bottom: 22px;
       right: 20px;
-      width: 56px;
-      height: 56px;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
       background: var(--azul-primario);
       color: white;
       border: none;
-      font-size: 1.5rem;
+      font-size: 1.45rem;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(21, 101, 192, 0.4);
+      box-shadow: 0 10px 24px rgba(21, 101, 192, 0.35);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -396,22 +494,22 @@
 
     .sound-btn {
       position: fixed;
-      bottom: 90px;
+      bottom: 92px;
       right: 20px;
-      width: 50px;
-      height: 50px;
+      width: 52px;
+      height: 52px;
       border-radius: 50%;
       background: white;
       color: var(--azul-primario);
       border: 2px solid var(--azul-primario);
       font-size: 1.3rem;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 100;
-      transition: all 0.2s;
+      transition: all 0.18s ease;
     }
 
     .sound-btn.muted {
@@ -426,18 +524,18 @@
 
     .new-trip-indicator {
       position: fixed;
-      top: 80px;
+      top: 18px;
       left: 50%;
       transform: translateX(-50%) translateY(-100px);
       background: linear-gradient(135deg, var(--naranja), #f57c00);
       color: white;
-      padding: 12px 24px;
-      border-radius: 25px;
-      font-weight: 700;
-      box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
-      z-index: 99;
+      padding: 13px 24px;
+      border-radius: 999px;
+      font-weight: 900;
+      box-shadow: 0 10px 26px rgba(255, 152, 0, 0.34);
+      z-index: 9999;
       opacity: 0;
-      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      transition: all 0.38s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
 
     .new-trip-indicator.show {
@@ -449,18 +547,22 @@
       content: '🔔 ';
     }
 
-    /* Modal tipo Uber */
     @keyframes slideUp {
-      from { transform: translateY(100px); opacity: 0; }
+      from { transform: translateY(90px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
-    
+
     @keyframes pulse-ring {
-      0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7); }
-      70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(255, 152, 0, 0); }
-      100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
+      0% { transform: scale(0.82); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.65); }
+      70% { transform: scale(1); box-shadow: 0 0 0 22px rgba(255, 152, 0, 0); }
+      100% { transform: scale(0.82); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
     }
-    
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.75; }
+    }
+
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
       25% { transform: translateX(-5px); }
@@ -470,20 +572,18 @@
     .modal-viaje {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.9);
+      inset: 0;
+      background: rgba(0,0,0,0.88);
       z-index: 10000;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 20px;
+      padding: 18px;
+      backdrop-filter: blur(4px);
     }
 
     .modal-viaje.urgente .timer-bar {
-      animation: pulse 0.5s infinite;
+      animation: pulse 0.55s infinite;
     }
 
     .timer-container {
@@ -506,11 +606,11 @@
       padding: 16px;
       border: 2px solid #ddd;
       background: white;
-      border-radius: 14px;
-      font-weight: 700;
+      border-radius: 16px;
+      font-weight: 900;
       color: #666;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.18s ease;
     }
 
     .btn-rechazar:hover {
@@ -524,22 +624,42 @@
       padding: 16px;
       border: none;
       background: linear-gradient(135deg, #4caf50, #45a049);
-      border-radius: 14px;
-      font-weight: 800;
+      border-radius: 16px;
+      font-weight: 900;
       color: white;
-      font-size: 1.1rem;
+      font-size: 1.08rem;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(76,175,80,0.3);
-      transition: all 0.2s;
+      box-shadow: 0 8px 20px rgba(76,175,80,0.28);
+      transition: all 0.18s ease;
     }
 
     .btn-aceptar-modal:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(76,175,80,0.4);
+      transform: translateY(-1px);
+      box-shadow: 0 10px 26px rgba(76,175,80,0.35);
     }
 
     .pulse-icon {
       animation: pulse-ring 2s infinite;
+    }
+
+    .countdown-chip {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: #fff3e0;
+      border-radius: 12px;
+      font-size: 0.86rem;
+      font-weight: 900;
+      color: #e65100;
+    }
+
+    @media (max-width: 420px) {
+      .btn-accion {
+        min-width: 100%;
+      }
+
+      .viaje-info {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
     }
   </style>
 </head>
@@ -548,13 +668,12 @@
   <div class="header">
     <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" alt="Panel Chofer MIMI" onerror="this.style.display='none';" />
     <div class="header-overlay">
-      <h1>🚐 Panel de Viajes</h1>
+      <div class="header-top">
+        <div class="brand-badge">🚐 MIMI Driver</div>
+        <button onclick="cerrarSesion()" class="logout-btn">🚪 Cerrar sesión</button>
+      </div>
+      <h1>Panel de Viajes</h1>
       <p>Chofer MIMI Transporte Infantil</p>
-    </div>
-    <div style="padding: 14px 15px 0;">
-      <button onclick="cerrarSesion()" style="padding: 12px 18px; border: none; border-radius: 14px; background: #f44336; color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px 10px rgba(244,67,54,0.25);">
-        🚪 Cerrar sesión
-      </button>
     </div>
   </div>
 
@@ -575,14 +694,14 @@
   </div>
 
   <!-- FILTROS -->
-<div class="filtros">
-  <button class="filtro-btn activo" data-filtro="todos" onclick="filtrar('todos')">Todos</button>
-  <button class="filtro-btn" data-filtro="DISPONIBLE" onclick="filtrar('DISPONIBLE')">Pendientes</button>
-  <button class="filtro-btn" data-filtro="aceptado" onclick="filtrar('aceptado')">Aceptados</button>
-  <button class="filtro-btn" data-filtro="en-camino" onclick="filtrar('en-camino')">En curso</button>
-  <button class="filtro-btn" data-filtro="completado" onclick="filtrar('completado')">Completados</button>
-</div>
-  
+  <div class="filtros">
+    <button class="filtro-btn activo" data-filtro="TODOS" onclick="filtrar('TODOS')">Todos</button>
+    <button class="filtro-btn" data-filtro="DISPONIBLE" onclick="filtrar('DISPONIBLE')">Pendientes</button>
+    <button class="filtro-btn" data-filtro="ACEPTADO" onclick="filtrar('ACEPTADO')">Aceptados</button>
+    <button class="filtro-btn" data-filtro="EN_CURSO" onclick="filtrar('EN_CURSO')">En curso</button>
+    <button class="filtro-btn" data-filtro="COMPLETADO" onclick="filtrar('COMPLETADO')">Completados</button>
+  </div>
+
   <!-- LISTA VIAJES -->
   <div class="viajes-lista" id="listaViajes">
     <div class="loading">
@@ -596,26 +715,26 @@
 
   <!-- BOTONES FLOTANTES -->
   <button class="sound-btn" id="soundBtn" onclick="toggleSound()" title="Activar/desactivar sonido">🔔</button>
-  <button class="refresh-btn" id="btnRefresh" onclick="cargarViajes()">🔄</button>
+  <button class="refresh-btn" id="btnRefresh" onclick="cargarViajesSeguro()">🔄</button>
 
   <!-- MODAL SOLICITUD ENTRANTE -->
   <div id="incomingModal" class="modal-viaje">
-    <div style="background: white; border-radius: 24px; width: 100%; max-width: 400px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.4); animation: slideUp 0.4s ease-out;">
+    <div id="incomingModalCard" style="background: white; border-radius: 28px; width: 100%; max-width: 420px; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,0.42); animation: slideUp 0.38s ease-out;">
       <div class="timer-container">
         <div id="timerBar" class="timer-bar"></div>
       </div>
-      
+
       <div style="padding: 24px;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <div class="pulse-icon" style="width: 100px; height: 100px; background: linear-gradient(135deg, #ff9800, #f57c00); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 3rem;">🚐</div>
-          <h2 style="font-size: 1.5rem; color: #1a1a2e; margin-bottom: 8px;">¡Nuevo viaje!</h2>
-          <p style="color: #666; font-size: 1rem;">Decidí en <span id="timerText" style="font-weight: 800; color: #ff9800; font-size: 1.2rem;">30</span> segundos</p>
+          <div class="pulse-icon" style="width: 102px; height: 102px; background: linear-gradient(135deg, #ff9800, #f57c00); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 3rem;">🚐</div>
+          <h2 style="font-size: 1.55rem; color: #1a1a2e; margin-bottom: 8px; font-weight: 900;">¡Nuevo viaje!</h2>
+          <p style="color: #666; font-size: 1rem;">Decidí en <span id="timerText" style="font-weight: 900; color: #ff9800; font-size: 1.2rem;">30</span> segundos</p>
         </div>
-        
-        <div id="incomingDetails" style="background: #f5f7fa; border-radius: 16px; padding: 16px; margin-bottom: 20px;">
+
+        <div id="incomingDetails" style="background: #f5f7fa; border-radius: 18px; padding: 16px; margin-bottom: 20px;">
           <!-- Se llena dinámicamente -->
         </div>
-        
+
         <div style="display: flex; gap: 12px;">
           <button class="btn-rechazar" onclick="rechazarViaje()">❌ Rechazar</button>
           <button class="btn-aceptar-modal" onclick="aceptarViaje()">✓ Aceptar</button>
@@ -624,40 +743,37 @@
     </div>
   </div>
 
-  <!-- SCRIPTS -->
   <script>
     // ==========================================
-    // CONFIGURACIÓN SUPABASE (CORREGIDO)
+    // CONFIGURACIÓN SUPABASE
     // ==========================================
     const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
     const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
 
-    // Cliente Supabase manual con soporte para filtros
     const supabase = {
       async select(table, options = {}) {
         let url = `${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(options.columns || '*')}`;
-        
-        // Aplicar filtros
+
         if (options.eq) {
           Object.entries(options.eq).forEach(([col, val]) => {
             url += `&${col}=eq.${encodeURIComponent(val)}`;
           });
         }
-        
+
         if (options.neq) {
           Object.entries(options.neq).forEach(([col, val]) => {
             url += `&${col}=neq.${encodeURIComponent(val)}`;
           });
         }
-        
+
         if (options.or) {
-         url += `&or=(${options.or})`;
+          url += `&or=(${options.or})`;
         }
-        
+
         if (options.order) {
           url += `&order=${encodeURIComponent(options.order)}`;
         }
-        
+
         if (options.limit) {
           url += `&limit=${options.limit}`;
         }
@@ -671,8 +787,8 @@
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Error en consulta');
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.message || error.error_description || 'Error en consulta');
         }
 
         return await response.json();
@@ -680,7 +796,7 @@
 
       async updateById(table, id, data) {
         const url = `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
-        
+
         const response = await fetch(url, {
           method: 'PATCH',
           headers: {
@@ -693,8 +809,8 @@
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Error actualizando');
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.message || error.error_description || 'Error actualizando');
         }
 
         return await response.json();
@@ -702,7 +818,7 @@
 
       async insert(table, data) {
         const url = `${SUPABASE_URL}/rest/v1/${table}`;
-        
+
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -714,8 +830,8 @@
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || 'Error insertando');
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.message || error.error_description || 'Error insertando');
         }
 
         return await response.json();
@@ -745,9 +861,11 @@
           await this.init();
           return this.enabled;
         }
+
         if (this.audioContext.state === 'suspended') {
           await this.audioContext.resume();
         }
+
         this.enabled = !this.enabled;
         this.updateButton();
         return this.enabled;
@@ -755,26 +873,32 @@
 
       updateButton() {
         const btn = document.getElementById('soundBtn');
-        if (btn) {
-          btn.textContent = this.enabled ? '🔔' : '🔕';
-          btn.classList.toggle('muted', !this.enabled);
-          btn.title = this.enabled ? 'Sonido activado' : 'Sonido desactivado';
-        }
+        if (!btn) return;
+
+        btn.textContent = this.enabled ? '🔔' : '🔕';
+        btn.classList.toggle('muted', !this.enabled);
+        btn.title = this.enabled ? 'Sonido activado' : 'Sonido desactivado';
       },
 
       playNewTrip() {
         if (!this.enabled || !this.audioContext) return;
         const ctx = this.audioContext;
         const now = ctx.currentTime;
+
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+
         osc.connect(gain);
         gain.connect(ctx.destination);
+
+        osc.type = 'triangle';
         osc.frequency.setValueAtTime(880, now);
         osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
+
         gain.gain.setValueAtTime(0, now);
         gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
         osc.start(now);
         osc.stop(now + 0.4);
       },
@@ -783,15 +907,21 @@
         if (!this.enabled || !this.audioContext) return;
         const ctx = this.audioContext;
         const now = ctx.currentTime;
+
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+
         osc.connect(gain);
         gain.connect(ctx.destination);
+
+        osc.type = 'sine';
         osc.frequency.setValueAtTime(523.25, now);
         osc.frequency.setValueAtTime(659.25, now + 0.1);
         osc.frequency.setValueAtTime(783.99, now + 0.2);
+
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.4);
+
         osc.start(now);
         osc.stop(now + 0.4);
       },
@@ -799,28 +929,36 @@
       playNotification() {
         if (!this.enabled || !this.audioContext) return;
         const ctx = this.audioContext;
+        const now = ctx.currentTime;
+
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+
         osc.connect(gain);
         gain.connect(ctx.destination);
+
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.2);
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.2);
+
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+        osc.start(now);
+        osc.stop(now + 0.2);
       },
 
-vibrate(pattern = [50, 100, 50]) {
-  try {
-    if (navigator.vibrate && document.hasFocus()) {
-      navigator.vibrate(pattern);
-    }
-  } catch (_) {
-    // Silencioso: algunos navegadores bloquean vibración sin interacción
-  }
-}
+      vibrate(pattern = [50, 100, 50]) {
+        try {
+          if (navigator.vibrate && document.hasFocus()) {
+            navigator.vibrate(pattern);
+          }
+        } catch (_) {
+          // algunos navegadores bloquean vibración
+        }
+      }
+    };
+
     async function toggleSound() {
       const isEnabled = await SoundSystem.toggle();
       if (isEnabled) {
@@ -831,15 +969,17 @@ vibrate(pattern = [50, 100, 50]) {
     // ==========================================
     // VARIABLES GLOBALES
     // ==========================================
-let viajesData = [];
-let viajePendiente = null;
-let timerInterval = null;
-let TIMEOUT_SEGUNDOS = 30;
-let ultimosViajesVistos = new Set();
-let filtroActual = 'todos';
-let expirandoViajes = new Set(); // para evitar múltiples timeouts simultáneos
+    let viajesData = [];
+    let viajePendiente = null;
+    let timerInterval = null;
+    let TIMEOUT_SEGUNDOS = 30;
+    let ultimosViajesVistos = new Set();
+    let viajesRechazadosLocalmente = new Set();
+    let filtroActual = 'TODOS';
+    let cargandoViajes = false;
+
     // ==========================================
-    // FUNCIONES UTILITARIAS
+    // UTILIDADES
     // ==========================================
     function normalizarEstado(estado) {
       return String(estado || '')
@@ -857,40 +997,36 @@ let expirandoViajes = new Set(); // para evitar múltiples timeouts simultáneos
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     }
+
+    function obtenerChoferId() {
+      return localStorage.getItem('choferUsuario') || 'chofer_anon';
+    }
+
+    function obtenerFechaBaseViaje(viaje) {
+      return viaje.asignado_at || viaje.created_at || viaje.fechaHora || viaje.fecha || null;
+    }
+
     function obtenerTiempoRestante(viaje) {
-  const creado = new Date(viaje.created_at || viaje.fecha || viaje.fechaHora || Date.now()).getTime();
-  const ahora = Date.now();
-  const expiracionMs = 2 * 60 * 1000; // 2 minutos
-  const restante = Math.max(0, expiracionMs - (ahora - creado));
-  return Math.floor(restante / 1000);
-}
+      const base = obtenerFechaBaseViaje(viaje);
+      if (!base) return 0;
+
+      const creado = new Date(base).getTime();
+      if (Number.isNaN(creado)) return 0;
+
+      const ahora = Date.now();
+      const expiracionMs = 2 * 60 * 1000; // 2 minutos para DISPONIBLE
+      const restante = Math.max(0, expiracionMs - (ahora - creado));
+      return Math.floor(restante / 1000);
+    }
+
     function limpiarViajesExpiradosLocales() {
-  viajesData = viajesData.filter(v => {
-    const estado = normalizarEstado(v.estado);
-    if (estado !== 'DISPONIBLE') return true;
-    return obtenerTiempoRestante(v) > 0;
-  });
-}
-    
-function obtenerFechaBaseViaje(viaje) {
-  return viaje.asignado_at || viaje.created_at || viaje.fechaHora || viaje.fecha || null;
-}
+      viajesData = viajesData.filter(v => {
+        const estado = normalizarEstado(v.estado);
+        if (estado !== 'DISPONIBLE') return true;
+        return obtenerTiempoRestante(v) > 0;
+      });
+    }
 
-function segundosRestantesViaje(viaje) {
-  const base = obtenerFechaBaseViaje(viaje);
-  if (!base) return TIMEOUT_SEGUNDOS;
-
-  const inicio = new Date(base).getTime();
-  if (Number.isNaN(inicio)) return TIMEOUT_SEGUNDOS;
-
-  const ahora = Date.now();
-  const transcurridos = Math.floor((ahora - inicio) / 1000);
-  return Math.max(0, TIMEOUT_SEGUNDOS - transcurridos);
-}
-
-function viajeExpirado(viaje) {
-  return segundosRestantesViaje(viaje) <= 0;
-}
     function cerrarSesion() {
       localStorage.removeItem('choferLogueado');
       localStorage.removeItem('choferUsuario');
@@ -899,209 +1035,258 @@ function viajeExpirado(viaje) {
 
     function showNewTripIndicator() {
       const indicator = document.getElementById('newTripIndicator');
-      if (indicator) {
-        indicator.classList.add('show');
-        setTimeout(() => {
-          indicator.classList.remove('show');
-        }, 4000);
+      if (!indicator) return;
+
+      indicator.classList.add('show');
+      setTimeout(() => {
+        indicator.classList.remove('show');
+      }, 4000);
+    }
+
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+      const colores = {
+        success: '#4caf50',
+        error: '#f44336',
+        warning: '#ff9800',
+        info: '#2196f3'
+      };
+
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: ${colores[tipo] || colores.info};
+        color: white;
+        padding: 13px 24px;
+        border-radius: 999px;
+        font-weight: 900;
+        z-index: 10001;
+        box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+        max-width: 92%;
+        text-align: center;
+      `;
+      toast.textContent = mensaje;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3200);
+    }
+
+    function abrirMaps(origen, destino) {
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen || '')}&destination=${encodeURIComponent(destino || '')}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    // ==========================================
+    // CARGA DE VIAJES
+    // ==========================================
+    async function cargarViajesSeguro() {
+      if (cargandoViajes) return;
+      cargandoViajes = true;
+      try {
+        await cargarViajes();
+      } finally {
+        cargandoViajes = false;
       }
     }
 
-    // ==========================================
-    // CARGA DE VIAJES (CORREGIDO)
-    // ==========================================
-async function cargarViajes() {
-  const btn = document.getElementById('btnRefresh');
-  if (btn) btn.classList.add('spinning');
+    async function cargarViajes() {
+      const btn = document.getElementById('btnRefresh');
+      if (btn) btn.classList.add('spinning');
 
-  try {
-    const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+      try {
+        const choferId = obtenerChoferId();
 
-    // 1) Viaje asignado a este chofer (modal tipo Uber)
-    const asignados = await supabase.select('viajes', {
-      eq: {
-        estado: 'ASIGNADO',
-        chofer_id: choferId
-      },
-      order: 'asignado_at.desc',
-      limit: 1
-    });
+        // 1) Viaje asignado a este chofer (modal tipo Uber)
+        const asignados = await supabase.select('viajes', {
+          eq: {
+            estado: 'ASIGNADO',
+            chofer_id: choferId
+          },
+          order: 'asignado_at.desc',
+          limit: 1
+        });
 
-    if (
-      asignados &&
-      asignados.length > 0 &&
-      !viajePendiente &&
-      !ultimosViajesVistos.has(asignados[0].id)
-    ) {
-      mostrarSolicitudEntrante(asignados[0]);
+        const viajeAsignado = asignados?.[0];
+
+        if (
+          viajeAsignado &&
+          !viajePendiente &&
+          !ultimosViajesVistos.has(viajeAsignado.id)
+        ) {
+          mostrarSolicitudEntrante(viajeAsignado);
+        }
+
+        // 2) Viajes disponibles
+        const disponibles = await supabase.select('viajes', {
+          eq: { estado: 'DISPONIBLE' },
+          order: 'created_at.desc'
+        });
+
+        // 3) Viajes aceptados por este chofer
+        const aceptados = await supabase.select('viajes', {
+          eq: {
+            estado: 'ACEPTADO',
+            chofer_id: choferId
+          },
+          order: 'aceptado_at.desc'
+        });
+
+        // 4) Viajes en curso por este chofer
+        const enCurso = await supabase.select('viajes', {
+          eq: {
+            estado: 'EN_CURSO',
+            chofer_id: choferId
+          },
+          order: 'iniciado_at.desc'
+        });
+
+        // 5) Viajes completados por este chofer
+        const completados = await supabase.select('viajes', {
+          eq: {
+            estado: 'COMPLETADO',
+            chofer_id: choferId
+          },
+          order: 'completado_at.desc',
+          limit: 30
+        });
+
+        const todos = [
+          ...(disponibles || []),
+          ...(aceptados || []),
+          ...(enCurso || []),
+          ...(completados || [])
+        ];
+
+        const mapa = new Map();
+        todos.forEach(v => {
+          if (v && v.id) mapa.set(v.id, v);
+        });
+
+        viajesData = Array.from(mapa.values()).filter(v => !viajesRechazadosLocalmente.has(v.id));
+
+        limpiarViajesExpiradosLocales();
+
+        const nuevosPendientes = viajesData.filter(v => {
+          const estado = normalizarEstado(v.estado);
+          return estado === 'DISPONIBLE' && !ultimosViajesVistos.has(v.id);
+        });
+
+        if (nuevosPendientes.length > 0) {
+          SoundSystem.playNewTrip();
+          SoundSystem.vibrate([100, 50, 100, 50, 200]);
+          showNewTripIndicator();
+          nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
+        }
+
+        renderizarViajes();
+        actualizarStats();
+
+      } catch (error) {
+        console.error('Error cargando viajes:', error);
+        document.getElementById('listaViajes').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <p>Error al cargar: ${escaparHTML(error.message)}</p>
+            <button onclick="cargarViajesSeguro()" style="margin-top:12px;padding:10px 16px;border:none;border-radius:12px;background:#1565c0;color:white;cursor:pointer;font-weight:800;">
+              Reintentar
+            </button>
+          </div>
+        `;
+      } finally {
+        if (btn) btn.classList.remove('spinning');
+      }
     }
 
-    // 2) Viajes disponibles
-    const disponibles = await supabase.select('viajes', {
-      eq: { estado: 'DISPONIBLE' },
-      order: 'created_at.desc'
-    });
-
-    // 3) Viajes aceptados por este chofer
-    const aceptados = await supabase.select('viajes', {
-      eq: {
-        estado: 'ACEPTADO',
-        chofer_id: choferId
-      },
-      order: 'aceptado_at.desc'
-    });
-
-    // 4) Viajes en curso por este chofer
-    const enCurso = await supabase.select('viajes', {
-      eq: {
-        estado: 'EN_CURSO',
-        chofer_id: choferId
-      },
-      order: 'created_at.desc'
-    });
-
-    // 5) Viajes completados por este chofer
-    const completados = await supabase.select('viajes', {
-      eq: {
-        estado: 'COMPLETADO',
-        chofer_id: choferId
-      },
-      order: 'created_at.desc',
-      limit: 30
-    });
-
-    // 6) Unificar
-    const todos = [
-      ...(disponibles || []),
-      ...(aceptados || []),
-      ...(enCurso || []),
-      ...(completados || [])
-    ];
-
-    // 7) Evitar duplicados
-    const mapa = new Map();
-    todos.forEach(v => {
-      if (v && v.id) mapa.set(v.id, v);
-    });
-
-    viajesData = Array.from(mapa.values()).filter(v => !viajesRechazadosLocalmente.has(v.id));
-
-    // 8) Nuevos viajes disponibles
-    const nuevosPendientes = viajesData.filter(v => {
-      const estado = normalizarEstado(v.estado);
-      return estado === 'DISPONIBLE' && !ultimosViajesVistos.has(v.id);
-    });
-
-    if (nuevosPendientes.length > 0) {
-      SoundSystem.playNewTrip();
-      SoundSystem.vibrate([100, 50, 100, 50, 200]);
-      showNewTripIndicator();
-      nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
-    }
-
-    renderizarViajes();
-    actualizarStats();
-
-  } catch (error) {
-    console.error('Error cargando viajes:', error);
-    document.getElementById('listaViajes').innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state-icon">⚠️</div>
-        <p>Error al cargar: ${escaparHTML(error.message)}</p>
-        <button onclick="cargarViajes()" style="margin-top:10px;padding:8px 16px;border:none;border-radius:10px;background:#1565c0;color:white;cursor:pointer;">
-          Reintentar
-        </button>
-      </div>
-    `;
-  } finally {
-    if (btn) btn.classList.remove('spinning');
-  }
-}
     // ==========================================
     // MODAL SOLICITUD ENTRANTE
     // ==========================================
     function mostrarSolicitudEntrante(viaje) {
       viajePendiente = viaje;
       ultimosViajesVistos.add(viaje.id);
-      
+
       const modal = document.getElementById('incomingModal');
       const detalles = document.getElementById('incomingDetails');
       const timerBar = document.getElementById('timerBar');
       const timerText = document.getElementById('timerText');
-      
+
       if (!modal || !detalles || !timerBar || !timerText) {
         console.error('Elementos del modal no encontrados');
         return;
       }
-      
-      // Llenar detalles del viaje
+
       detalles.innerHTML = `
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-          <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #1565c0, #1e3c72); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.4rem;">
+          <div style="width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg, #1565c0, #1e3c72); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4rem; box-shadow: 0 8px 20px rgba(21,101,192,0.22);">
             ${(viaje.cliente || '?').charAt(0).toUpperCase()}
           </div>
-          <div style="flex: 1;">
-            <div style="font-weight: 800; color: #1a1a2e; font-size: 1.15rem;">${escaparHTML(viaje.cliente || 'Cliente')}</div>
-            <div style="font-size: 0.9rem; color: #666;">📱 ${escaparHTML(viaje.telefono || 'Sin teléfono')}</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 900; color: #1a1a2e; font-size: 1.12rem; line-height: 1.2;">${escaparHTML(viaje.cliente || 'Cliente')}</div>
+            <div style="font-size: 0.9rem; color: #666; margin-top: 4px;">📱 ${escaparHTML(viaje.telefono || 'Sin teléfono')}</div>
           </div>
         </div>
+
         <div style="border-top: 1px solid #e0e0e0; padding-top: 12px;">
           <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.95rem;">
             <span style="color: #4caf50; font-size: 1.2rem;">●</span>
-            <span style="color: #333; font-weight: 500; line-height: 1.4;">${escaparHTML(viaje.origen || 'Origen no especificado')}</span>
+            <span style="color: #333; font-weight: 700; line-height: 1.4;">${escaparHTML(viaje.origen || 'Origen no especificado')}</span>
           </div>
           <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.95rem;">
             <span style="color: #f44336; font-size: 1.2rem;">●</span>
-            <span style="color: #333; font-weight: 500; line-height: 1.4;">${escaparHTML(viaje.destino || 'Destino no especificado')}</span>
+            <span style="color: #333; font-weight: 700; line-height: 1.4;">${escaparHTML(viaje.destino || 'Destino no especificado')}</span>
           </div>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
-          <div style="text-align: center;">
-            <div style="font-size: 1.3rem; font-weight: 800; color: #1565c0;">$${Number(viaje.precio || 0).toLocaleString('es-AR')}</div>
-            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Precio</div>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e0e0e0; gap: 10px;">
+          <div style="text-align: center; flex: 1;">
+            <div style="font-size: 1.25rem; font-weight: 900; color: #1565c0;">$${Number(viaje.precio || 0).toLocaleString('es-AR')}</div>
+            <div style="font-size: 0.74rem; color: #888; text-transform: uppercase; font-weight: 800;">Precio</div>
           </div>
-          <div style="text-align: center;">
-            <div style="font-size: 1.3rem; font-weight: 800; color: #1565c0;">${escaparHTML(viaje.km || 0)}km</div>
-            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Distancia</div>
+          <div style="text-align: center; flex: 1;">
+            <div style="font-size: 1.25rem; font-weight: 900; color: #1565c0;">${escaparHTML(viaje.km || 0)}km</div>
+            <div style="font-size: 0.74rem; color: #888; text-transform: uppercase; font-weight: 800;">Distancia</div>
           </div>
-          <div style="text-align: center;">
-            <div style="font-size: 1.3rem; font-weight: 800; color: #1565c0;">${escaparHTML(viaje.tipo || 'Standard')}</div>
-            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Servicio</div>
+          <div style="text-align: center; flex: 1;">
+            <div style="font-size: 1.05rem; font-weight: 900; color: #1565c0;">${escaparHTML(viaje.tipo || 'Standard')}</div>
+            <div style="font-size: 0.74rem; color: #888; text-transform: uppercase; font-weight: 800;">Servicio</div>
           </div>
         </div>
       `;
-      
-      // Mostrar modal
+
       modal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
-      
-      // Sonido de alerta
+
       SoundSystem.playNewTrip();
       SoundSystem.vibrate([100, 50, 100, 50, 200, 100, 200]);
-      
-      // Iniciar countdown
+
+      clearInterval(timerInterval);
+
       let segundosRestantes = TIMEOUT_SEGUNDOS;
+      timerText.textContent = segundosRestantes;
+      timerText.style.color = '#ff9800';
+      modal.classList.remove('urgente');
+
       timerBar.style.width = '100%';
       timerBar.style.transition = 'none';
       void timerBar.offsetWidth;
       timerBar.style.transition = `width ${TIMEOUT_SEGUNDOS}s linear`;
       timerBar.style.width = '0%';
-      
+
       timerInterval = setInterval(() => {
         segundosRestantes--;
         timerText.textContent = segundosRestantes;
-        
+
         if (segundosRestantes <= 10) {
           timerText.style.color = '#f44336';
           modal.classList.add('urgente');
         } else if (segundosRestantes <= 20) {
           timerText.style.color = '#ff9800';
         }
-        
+
         if (segundosRestantes <= 10 && segundosRestantes > 0) {
           SoundSystem.vibrate([50]);
         }
-        
+
         if (segundosRestantes <= 0) {
           clearInterval(timerInterval);
           timeoutViaje();
@@ -1111,23 +1296,24 @@ async function cargarViajes() {
 
     async function aceptarViaje() {
       if (!viajePendiente) return;
-      
+
       clearInterval(timerInterval);
-      const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-      
+      const choferId = obtenerChoferId();
+
       try {
-await supabase.updateById('viajes', viajePendiente.id, {
-  estado: 'ACEPTADO',
-  chofer_id: choferId,
-  aceptado_at: new Date().toISOString(),
-  asignado_a: null,
-  asignado_at: null
-});
+        await supabase.updateById('viajes', viajePendiente.id, {
+          estado: 'ACEPTADO',
+          chofer_id: choferId,
+          aceptado_at: new Date().toISOString(),
+          asignado_a: null,
+          asignado_at: null
+        });
+
         SoundSystem.playSuccess();
         cerrarModal();
         mostrarNotificacion('✓ Viaje aceptado correctamente', 'success');
-        cargarViajes();
-        
+        await cargarViajesSeguro();
+
       } catch (err) {
         mostrarNotificacion('Error al aceptar: ' + err.message, 'error');
         console.error(err);
@@ -1136,51 +1322,58 @@ await supabase.updateById('viajes', viajePendiente.id, {
 
     async function rechazarViaje() {
       if (!viajePendiente) return;
-      
+
       if (!confirm('¿Seguro que querés rechazar este viaje? Se asignará a otro chofer.')) {
         return;
       }
-      
+
       clearInterval(timerInterval);
-      const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-      
+      const choferId = obtenerChoferId();
+
       try {
-await supabase.updateById('viajes', viajePendiente.id, {
-  estado: 'DISPONIBLE',
-  chofer_id: null,
-  rechazado_por: choferId,
-  rechazado_at: new Date().toISOString(),
-  asignado_a: null,
-  asignado_at: null
-});
+        await supabase.updateById('viajes', viajePendiente.id, {
+          estado: 'DISPONIBLE',
+          chofer_id: null,
+          rechazado_por: choferId,
+          rechazado_at: new Date().toISOString(),
+          asignado_a: null,
+          asignado_at: null
+        });
+
         SoundSystem.playNotification();
         cerrarModal();
         mostrarNotificacion('Viaje rechazado. Buscando otro chofer...', 'info');
-        
+        viajesRechazadosLocalmente.add(viajePendiente.id);
+        await cargarViajesSeguro();
+
       } catch (err) {
-        mostrarNotificacion('Error al rechazar', 'error');
+        mostrarNotificacion('Error al rechazar: ' + err.message, 'error');
         console.error(err);
       }
     }
 
     async function timeoutViaje() {
       if (!viajePendiente) return;
-      
-      const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-      
+
+      const choferId = obtenerChoferId();
+
       try {
-await supabase.updateById('viajes', viajePendiente.id, {
-  estado: 'DISPONIBLE',
-  chofer_id: null,
-  timeout_por: choferId,
-  timeout_at: new Date().toISOString(),
-  asignado_a: null,
-  asignado_at: null
-});
+        await supabase.updateById('viajes', viajePendiente.id, {
+          estado: 'DISPONIBLE',
+          chofer_id: null,
+          timeout_por: choferId,
+          timeout_at: new Date().toISOString(),
+          asignado_a: null,
+          asignado_at: null
+        });
+
+        const idExpirado = viajePendiente.id;
         cerrarModal();
+        viajesRechazadosLocalmente.add(idExpirado);
         mostrarNotificacion('⏰ Tiempo agotado. El viaje se ofreció a otro chofer.', 'warning');
         SoundSystem.vibrate([100, 100, 100]);
-        
+        await cargarViajesSeguro();
+
       } catch (err) {
         console.error(err);
       }
@@ -1192,17 +1385,21 @@ await supabase.updateById('viajes', viajePendiente.id, {
         modal.style.display = 'none';
         modal.classList.remove('urgente');
       }
+
       document.body.style.overflow = '';
-      viajePendiente = null;
+      clearInterval(timerInterval);
       timerInterval = null;
+      viajePendiente = null;
     }
 
     // ==========================================
-    // RENDERIZADO
+    // STATS / FILTROS / RENDER
     // ==========================================
     function actualizarStats() {
       const hoy = new Date().toDateString();
+
       const pendientes = viajesData.filter(v => normalizarEstado(v.estado) === 'DISPONIBLE').length;
+
       const deHoy = viajesData.filter(v => {
         const fecha = v.fecha || v.fechaHora || v.created_at;
         if (!fecha) return false;
@@ -1214,40 +1411,54 @@ await supabase.updateById('viajes', viajePendiente.id, {
       document.getElementById('statTotal').textContent = viajesData.length;
     }
 
-function filtrar(estado) {
-  filtroActual = estado;
+    function filtrar(estado) {
+      filtroActual = estado;
 
-  document.querySelectorAll('.filtro-btn').forEach(btn => {
-    btn.classList.remove('activo');
-    if (btn.dataset.filtro === estado) {
-      btn.classList.add('activo');
+      document.querySelectorAll('.filtro-btn').forEach(btn => {
+        btn.classList.remove('activo');
+        if (btn.dataset.filtro === estado) {
+          btn.classList.add('activo');
+        }
+      });
+
+      renderizarViajes();
     }
-  });
 
-  renderizarViajes();
-}
     function renderizarViajes() {
       const container = document.getElementById('listaViajes');
-limpiarViajesExpiradosLocales();
-let viajes = [...viajesData];
-if (filtroActual !== 'todos') {
-  viajes = viajes.filter(v => normalizarEstado(v.estado) === filtroActual);
-}
+      limpiarViajesExpiradosLocales();
+
+      let viajes = [...viajesData];
+
+      if (filtroActual !== 'TODOS') {
+        viajes = viajes.filter(v => normalizarEstado(v.estado) === filtroActual);
+      }
+
       viajes.sort((a, b) => {
-        const orden = { 'DISPONIBLE': 0, 'ACEPTADO': 1, 'EN_CURSO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
+        const orden = {
+          'DISPONIBLE': 0,
+          'ASIGNADO': 1,
+          'ACEPTADO': 2,
+          'EN_CURSO': 3,
+          'COMPLETADO': 4,
+          'CANCELADO': 5
+        };
+
         const estadoA = normalizarEstado(a.estado);
         const estadoB = normalizarEstado(b.estado);
+
         if ((orden[estadoA] ?? 99) !== (orden[estadoB] ?? 99)) {
           return (orden[estadoA] ?? 99) - (orden[estadoB] ?? 99);
         }
-        return new Date(a.fecha || a.fechaHora || a.created_at || 0) - new Date(b.fecha || b.fechaHora || b.created_at || 0);
+
+        return new Date(b.fecha || b.fechaHora || b.created_at || 0) - new Date(a.fecha || a.fechaHora || a.created_at || 0);
       });
 
       if (viajes.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon">🚗</div>
-            <p>No hay viajes ${filtroActual !== 'todos' ? 'en este estado' : ''}</p>
+            <p>No hay viajes ${filtroActual !== 'TODOS' ? 'en este estado' : ''}</p>
           </div>
         `;
         return;
@@ -1256,261 +1467,209 @@ if (filtroActual !== 'todos') {
       container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
     }
 
-function crearCardViaje(v) {
-  const estado = normalizarEstado(v.estado || 'DISPONIBLE');
-  const estadoClass = estado.toLowerCase().replace(/_/g, '-');
-  const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
-  const fechaStr = fecha.toLocaleDateString('es-AR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
+    function crearCardViaje(v) {
+      const estado = normalizarEstado(v.estado || 'DISPONIBLE');
+      const estadoClass = estado.toLowerCase().replace(/_/g, '-');
+      const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
 
-  let acciones = '';
-  let timeoutHtml = '';
+      const fechaStr = fecha.toLocaleDateString('es-AR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
-  if (estado === 'DISPONIBLE') {
-    const restante = obtenerTiempoRestante(v);
-    const min = Math.floor(restante / 60);
-    const seg = restante % 60;
+      const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
 
-    timeoutHtml = `
-      <div style="margin-bottom:12px;padding:10px 12px;background:#fff3e0;border-radius:10px;font-size:0.85rem;font-weight:700;color:#e65100;">
-        ⏳ Disponible por: ${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}
-      </div>
-    `;
+      let acciones = '';
+      let timeoutHtml = '';
 
-    acciones = `
-      <button class="btn-accion btn-aceptar" onclick="tomarViaje('${escaparHTML(v.id)}')">✓ Aceptar</button>
-      <button class="btn-accion" style="background:#ffebee;color:#c62828;" onclick="rechazarDisponible('${escaparHTML(v.id)}')">✕ Rechazar</button>
-      <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Maps</button>
-    `;
-  } else if (estado === 'ACEPTADO') {
-    acciones = `
-      <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'EN_CURSO')">🚀 Iniciar</button>
-      <a href="tel:${escaparHTML(v.telefono || '')}" class="btn-accion btn-llamar">📞 Llamar</a>
-    `;
-  } else if (estado === 'EN_CURSO') {
-    const telWA = String(v.telefono || '').replace(/[^\d]/g, '');
-    acciones = `
-      <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${escaparHTML(v.id)}')">✅ Finalizar</button>
-      <a href="https://wa.me/${telWA}" target="_blank" class="btn-accion btn-whatsapp" rel="noopener noreferrer">💬 WA</a>
-    `;
-  } else {
-    acciones = `
-      <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver ruta</button>
-    `;
-  }
+      if (estado === 'DISPONIBLE') {
+        const restante = obtenerTiempoRestante(v);
+        const min = Math.floor(restante / 60);
+        const seg = restante % 60;
 
-  return `
-    <div class="viaje-card ${estadoClass}">
-      <div class="viaje-header">
-        <span class="viaje-fecha">${escaparHTML(fechaStr)}</span>
-        <span class="viaje-estado estado-${estadoClass}">${escaparHTML(estado.replace('_', ' '))}</span>
-      </div>
+        timeoutHtml = `
+          <div class="countdown-chip">
+            ⏳ Disponible por: ${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}
+          </div>
+        `;
 
-      <div class="viaje-cliente">
-        <div class="cliente-avatar">${escaparHTML(inicial)}</div>
-        <div class="cliente-datos">
-          <div class="cliente-nombre">${escaparHTML(v.cliente || 'Sin nombre')}</div>
-          <div class="cliente-tel">📱 ${escaparHTML(v.telefono || 'Sin teléfono')}</div>
+        acciones = `
+          <button class="btn-accion btn-aceptar" onclick="tomarViaje('${escaparHTML(v.id)}')">✓ Aceptar</button>
+          <button class="btn-accion btn-rechazar-card" onclick="rechazarDisponible('${escaparHTML(v.id)}')">✕ Rechazar</button>
+          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Maps</button>
+        `;
+      } else if (estado === 'ACEPTADO') {
+        acciones = `
+          <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'EN_CURSO')">🚀 Iniciar</button>
+          <a href="tel:${escaparHTML(v.telefono || '')}" class="btn-accion btn-llamar">📞 Llamar</a>
+          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ruta</button>
+        `;
+      } else if (estado === 'EN_CURSO') {
+        const telWA = String(v.telefono || '').replace(/[^\d]/g, '');
+        acciones = `
+          <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${escaparHTML(v.id)}')">✅ Finalizar</button>
+          <a href="https://wa.me/${telWA}" target="_blank" rel="noopener noreferrer" class="btn-accion btn-whatsapp">💬 WA</a>
+          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Navegar</button>
+        `;
+      } else {
+        acciones = `
+          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver ruta</button>
+        `;
+      }
+
+      return `
+        <div class="viaje-card ${estadoClass}">
+          <div class="viaje-header">
+            <span class="viaje-fecha">${escaparHTML(fechaStr)}</span>
+            <span class="viaje-estado estado-${estadoClass}">${escaparHTML(estado.replace('_', ' '))}</span>
+          </div>
+
+          <div class="viaje-cliente">
+            <div class="cliente-avatar">${escaparHTML(inicial)}</div>
+            <div class="cliente-datos">
+              <div class="cliente-nombre">${escaparHTML(v.cliente || 'Sin nombre')}</div>
+              <div class="cliente-tel">📱 ${escaparHTML(v.telefono || 'Sin teléfono')}</div>
+            </div>
+          </div>
+
+          <div class="viaje-ruta">
+            <div class="ruta-item">
+              <div class="ruta-icon origen">📍</div>
+              <div class="ruta-text">${escaparHTML(v.origen || '')}</div>
+            </div>
+            <div class="ruta-item">
+              <div class="ruta-icon destino">🎯</div>
+              <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
+            </div>
+          </div>
+
+          <div class="viaje-info">
+            <div class="info-item">
+              <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
+              <div class="info-label">Precio</div>
+            </div>
+            <div class="info-item">
+              <div class="info-valor">${escaparHTML(v.km || 0)}km</div>
+              <div class="info-label">Distancia</div>
+            </div>
+            <div class="info-item">
+              <div class="info-valor">${escaparHTML(v.tipo || 'N/D')}</div>
+              <div class="info-label">Servicio</div>
+            </div>
+          </div>
+
+          ${timeoutHtml}
+
+          ${v.notas ? `<div style="font-size:0.86rem;color:#666;margin-bottom:12px;padding:10px 12px;background:#fffde7;border-radius:12px;font-weight:700;">📝 ${escaparHTML(v.notas)}</div>` : ''}
+
+          <div class="viaje-acciones">${acciones}</div>
         </div>
-      </div>
+      `;
+    }
 
-      <div class="viaje-ruta">
-        <div class="ruta-item">
-          <div class="ruta-icon origen">📍</div>
-          <div class="ruta-text">${escaparHTML(v.origen || '')}</div>
-        </div>
-        <div class="ruta-item">
-          <div class="ruta-icon destino">🎯</div>
-          <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
-        </div>
-      </div>
-
-      <div class="viaje-info">
-        <div class="info-item">
-          <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
-          <div class="info-label">Precio</div>
-        </div>
-        <div class="info-item">
-          <div class="info-valor">${escaparHTML(v.km || 0)}km</div>
-          <div class="info-label">Distancia</div>
-        </div>
-        <div class="info-item">
-          <div class="info-valor">${escaparHTML(v.tipo || 'N/D')}</div>
-          <div class="info-label">Servicio</div>
-        </div>
-      </div>
-
-      ${timeoutHtml}
-
-      ${v.notas ? `<div style="font-size:0.85rem;color:#666;margin-bottom:10px;padding:8px;background:#fffde7;border-radius:6px;">📝 ${escaparHTML(v.notas)}</div>` : ''}
-
-      <div class="viaje-acciones">${acciones}</div>
-    </div>
-  `;
-}
     // ==========================================
     // ACCIONES DE VIAJE
     // ==========================================
-    async function rechazarViajeDirecto(id) {
-  if (!id) return;
+    async function cambiarEstado(id, nuevoEstado) {
+      if (!id) {
+        alert('ID inválido');
+        return;
+      }
 
-  if (!confirm('¿Seguro que querés rechazar este viaje?')) {
-    return;
-  }
+      const choferId = obtenerChoferId();
+      const payload = { estado: nuevoEstado };
 
-  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+      if (nuevoEstado === 'ACEPTADO') {
+        payload.chofer_id = choferId;
+        payload.aceptado_at = new Date().toISOString();
+      }
 
-  try {
-    await supabase.updateById('viajes', id, {
-      estado: 'RECHAZADO',
-      rechazado_por: choferId,
-      rechazado_at: new Date().toISOString()
-    });
+      if (nuevoEstado === 'EN_CURSO') {
+        payload.iniciado_at = new Date().toISOString();
+      }
 
-    SoundSystem.playNotification();
-    mostrarNotificacion('Viaje rechazado', 'info');
-    cargarViajes();
-  } catch (err) {
-    console.error(err);
-    mostrarNotificacion('Error al rechazar viaje', 'error');
-  }
-}
-
-async function cambiarEstado(id, nuevoEstado) {
-  if (!id) {
-    alert('ID inválido');
-    return;
-  }
-
-  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-  const payload = { estado: nuevoEstado };
-
-  if (nuevoEstado === 'ACEPTADO') {
-    payload.chofer_id = choferId;
-    payload.aceptado_at = new Date().toISOString();
-  }
-
-  if (nuevoEstado === 'EN_CURSO') {
-    payload.iniciado_at = new Date().toISOString();
-  }
-
-  try {
-    await supabase.updateById('viajes', id, payload);
-    SoundSystem.playSuccess();
-    mostrarNotificacion('Estado actualizado', 'success');
-    cargarViajes();
-  } catch (err) {
-    alert('Error: ' + err.message);
-    console.error(err);
-  }
-}
-
-    async function tomarViaje(id) {
-  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-
-  try {
-    await supabase.updateById('viajes', id, {
-      estado: 'ACEPTADO',
-      chofer_id: choferId,
-      aceptado_at: new Date().toISOString()
-    });
-
-    SoundSystem.playSuccess();
-    mostrarNotificacion('✓ Viaje aceptado', 'success');
-    cargarViajes();
-  } catch (err) {
-    alert('Error al aceptar: ' + err.message);
-    console.error(err);
-  }
-}
-
-async function rechazarDisponible(id) {
-  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-
-  if (!confirm('¿Querés rechazar este viaje?')) return;
-
-  try {
-    await supabase.updateById('viajes', id, {
-      rechazado_por: choferId,
-      rechazado_at: new Date().toISOString()
-    });
-
-    // Lo sacamos SOLO de la vista local de este chofer
-    viajesRechazadosLocalmente.add(id); viajesData = viajesData.filter(v => v.id !== id);
-
-    SoundSystem.playNotification();
-    mostrarNotificacion('Viaje rechazado', 'info');
-    renderizarViajes();
-    actualizarStats();
-  } catch (err) {
-    alert('Error al rechazar: ' + err.message);
-    console.error(err);
-  }
-}
-    async function finalizarViaje(id) {
-  const notas = prompt('¿Observaciones?');
-
-  try {
-await supabase.updateById('viajes', id, {
-  estado: 'COMPLETADO',
-  notas: notas || null,
-  completado_at: new Date().toISOString(),
-  created_at: new Date().toISOString()
-});
-    SoundSystem.playSuccess();
-    mostrarNotificacion('Viaje finalizado', 'success');
-    cargarViajes();
-  } catch (err) {
-    alert('Error al finalizar: ' + err.message);
-    console.error(err);
-  }
-}
-    
-    function abrirMaps(origen, destino) {
-      const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen || '')}&destination=${encodeURIComponent(destino || '')}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
+      try {
+        await supabase.updateById('viajes', id, payload);
+        SoundSystem.playSuccess();
+        mostrarNotificacion('Estado actualizado', 'success');
+        await cargarViajesSeguro();
+      } catch (err) {
+        alert('Error: ' + err.message);
+        console.error(err);
+      }
     }
 
-function mostrarNotificacion(mensaje, tipo = 'info') {
-  const colores = {
-    success: '#4caf50',
-    error: '#f44336',
-    warning: '#ff9800',
-    info: '#2196f3'
-  };
+    async function tomarViaje(id) {
+      const choferId = obtenerChoferId();
 
-  const toast = document.createElement('div');
-  toast.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: ${colores[tipo] || colores.info};
-    color: white;
-    padding: 12px 24px;
-    border-radius: 25px;
-    font-weight: 700;
-    z-index: 10000;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-    max-width: 90%;
-    text-align: center;
-  `;
-  toast.textContent = mensaje;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3200);
-}
+      try {
+        await supabase.updateById('viajes', id, {
+          estado: 'ACEPTADO',
+          chofer_id: choferId,
+          aceptado_at: new Date().toISOString()
+        });
+
+        SoundSystem.playSuccess();
+        mostrarNotificacion('✓ Viaje aceptado', 'success');
+        await cargarViajesSeguro();
+      } catch (err) {
+        alert('Error al aceptar: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    async function rechazarDisponible(id) {
+      const choferId = obtenerChoferId();
+
+      if (!confirm('¿Querés rechazar este viaje?')) return;
+
+      try {
+        await supabase.updateById('viajes', id, {
+          rechazado_por: choferId,
+          rechazado_at: new Date().toISOString()
+        });
+
+        viajesRechazadosLocalmente.add(id);
+        viajesData = viajesData.filter(v => v.id !== id);
+
+        SoundSystem.playNotification();
+        mostrarNotificacion('Viaje rechazado', 'info');
+        renderizarViajes();
+        actualizarStats();
+      } catch (err) {
+        alert('Error al rechazar: ' + err.message);
+        console.error(err);
+      }
+    }
+
+    async function finalizarViaje(id) {
+      const notas = prompt('¿Observaciones del viaje? (opcional)');
+
+      try {
+        await supabase.updateById('viajes', id, {
+          estado: 'COMPLETADO',
+          notas: notas || null,
+          completado_at: new Date().toISOString()
+        });
+
+        SoundSystem.playSuccess();
+        mostrarNotificacion('Viaje finalizado', 'success');
+        await cargarViajesSeguro();
+      } catch (err) {
+        alert('Error al finalizar: ' + err.message);
+        console.error(err);
+      }
+    }
+
     // ==========================================
     // INICIALIZACIÓN
     // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-  cargarViajesSeguro();
-  
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarViajesSeguro();
+
       // Inicializar audio en primer click
       document.body.addEventListener('click', async () => {
         if (!SoundSystem.audioContext) {
@@ -1518,24 +1677,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }, { once: true });
 
-      // Event listener para cerrar modal al hacer click fuera (CORREGIDO)
+      // Click fuera del modal
       const modal = document.getElementById('incomingModal');
-      if (modal) {
+      const card = document.getElementById('incomingModalCard');
+
+      if (modal && card) {
         modal.addEventListener('click', (e) => {
           if (e.target.id === 'incomingModal') {
-            const card = e.target.querySelector('div');
-            if (card) {
-              card.style.animation = 'shake 0.4s ease-in-out';
-              setTimeout(() => card.style.animation = '', 400);
-            }
+            card.style.animation = 'shake 0.4s ease-in-out';
+            setTimeout(() => {
+              card.style.animation = 'slideUp 0.38s ease-out';
+            }, 400);
             SoundSystem.vibrate([30, 30, 30]);
           }
         });
       }
+
+      // Re-render de countdowns locales cada 1 segundo
+      setInterval(() => {
+        if (!document.hidden) {
+          renderizarViajes();
+          actualizarStats();
+        }
+      }, 1000);
     });
 
-    // Auto-refresh cada 30 segundos
-    let cargandoViajes = false;  async function cargarViajesSeguro() {   if (cargandoViajes) return;   cargandoViajes = true;   try {     await cargarViajes();   } finally {     cargandoViajes = false;   } }  setInterval(cargarViajesSeguro, 30000);
+    // Auto-refresh backend cada 15 segundos (más tipo Uber)
+    setInterval(() => {
+      if (!document.hidden) {
+        cargarViajesSeguro();
+      }
+    }, 15000);
   </script>
 </body>
 </html>
