@@ -983,12 +983,6 @@ body {
   color: var(--naranja) !important;
   font-weight: 800;
 }
-  .servicio-card.urgente.activo {
-  background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%) !important;
-  border: none !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important;
-}
-
 
   @keyframes borderGlow {
   0%, 100% { opacity: 1; }
@@ -1288,47 +1282,6 @@ body {
   border-radius: 12px;
   white-space: nowrap;
 }
-.servicio-card.programada {
-  border-color: #cfd8dc;
-  background: linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
-}
-
-.servicio-card.programada.activo {
-  border-color: #1565c0;
-  background: linear-gradient(135deg, #e3f2fd 0%, #f8fbff 100%);
-}
-
-.horarios-programados {
-  margin-top: 8px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.horarios-programados span {
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 5px 10px;
-  border-radius: 12px;
-  background: rgba(21, 101, 192, 0.1);
-  color: #1565c0;
-  white-space: nowrap;
-}
-.servicio-card.programada .horarios-programados {
-  margin-top: 8px;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.servicio-card.programada .horarios-programados span {
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 5px 10px;
-  border-radius: 12px;
-  background: rgba(21, 101, 192, 0.12);
-  color: #1565c0;
-}
 
 </style>
 </head>
@@ -1438,19 +1391,14 @@ body {
 </div>
 
 <!-- IDA + VUELTA PROGRAMADA -->
-<div class="servicio-card programada" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
+<div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
   <div class="servicio-icon">📅</div>
+<div class="servicio-info">
+  <strong id="txt-IDA_MAS_VUELTA_PROGRAMADA">Ida + Vuelta programada</strong>
+  <small id="subtxt-IDA_MAS_VUELTA_PROGRAMADA">Dos viajes separados</small>
+</div>
 
-  <div class="servicio-info">
-    <strong>Ida + Vuelta programada</strong>
-    <small>Dos viajes separados</small>
-
-    <div class="horarios-programados" id="horariosProgramados" style="display:none;">
-      <span id="txtHoraIdaProg">IDA: --</span>
-      <span id="txtHoraVueltaProg">VUELTA: --</span>
-    </div>
-  </div>
-
+<div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">🕒 --:--</div>
   <div class="servicio-check">✓</div>
 </div>
   
@@ -1646,22 +1594,6 @@ function intercambiarOrigenDestino() {
   
   guardarEstadoLocal();
 }
-  function actualizarHorasProgramadasUI() {
-  const cont = document.getElementById("horariosProgramados");
-  const ida = document.getElementById("txtHoraIdaProg");
-  const vuelta = document.getElementById("txtHoraVueltaProg");
-
-  const txtIda = document.getElementById("textoFechaSeleccionada")?.textContent || "Elegí IDA";
-  const txtVuelta = document.getElementById("textoFechaVuelta")?.textContent || "Elegí VUELTA";
-
-  if (!cont || !ida || !vuelta) return;
-
-  ida.textContent = "IDA: " + txtIda;
-  vuelta.textContent = "VUELTA: " + txtVuelta;
-
-  cont.style.display = "flex";
-}
-
 // ==========================================
 // UI DE BOTONES POST-COTIZACIÓN
 // ==========================================
@@ -1693,32 +1625,6 @@ function setButtonLoading(buttonId, textId, loadingText) {
   btn.dataset.originalText = text.innerHTML;
   text.innerHTML = `⏳ ${loadingText}`;
 }
-function actualizarHorasProgramadas() {
-  const contenedor = document.getElementById("horarios-IDA_MAS_VUELTA_PROGRAMADA");
-  const idaSpan = document.getElementById("hora-ida-programada");
-  const vueltaSpan = document.getElementById("hora-vuelta-programada");
-
-  const inputIda = document.getElementById("fechaHora");
-  const inputVuelta = document.getElementById("fechaHoraVuelta");
-
-  if (!contenedor || !idaSpan || !vueltaSpan) return;
-
-  let textoIda = "--:--";
-  let textoVuelta = "--:--";
-
-  if (inputIda && inputIda.value) {
-    textoIda = document.getElementById("textoFechaSeleccionada")?.textContent || "--:--";
-  }
-
-  if (inputVuelta && inputVuelta.value) {
-    textoVuelta = document.getElementById("textoFechaVuelta")?.textContent || "--:--";
-  }
-
-  idaSpan.textContent = `IDA: ${textoIda}`;
-  vueltaSpan.textContent = `VUELTA: ${textoVuelta}`;
-
-  contenedor.style.display = "flex";
-}
 
 function clearButtonLoading(buttonId, textId) {
   const btn = document.getElementById(buttonId);
@@ -1742,9 +1648,6 @@ function seleccionarServicio(servicio) {
   document.querySelectorAll('.servicio-card').forEach(c => {
     c.classList.remove('activo');
   });
-  const contHorarios = document.getElementById("horarios-IDA_MAS_VUELTA_PROGRAMADA");
-if (contHorarios) contHorarios.style.display = "none";
-
 
   const cardSeleccionada = document.getElementById(`card-${servicio}`);
   if (cardSeleccionada) {
@@ -1764,15 +1667,9 @@ if (campoVuelta) campoVuelta.style.display = 'none';
 if (campoEspera) campoEspera.style.display = 'none';
 
 if (servicio === 'IDA_ESCOLAR') {
-  if (campoIda) campoIda.style.display = 'none';
-  
-  // Setear hora automática (ahora)
-  const ahora = new Date();
-  const inputFechaHora = document.getElementById('fechaHora');
-  if (inputFechaHora) {
-    inputFechaHora.value = formatearFechaInput(ahora);
-    actualizarTextoFecha();
-  }
+  if (campoIda) campoIda.style.display = 'block';
+  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
 }
 
 if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
@@ -1790,8 +1687,6 @@ if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
   if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
 
   sugerirHorariosEscolares();
-  actualizarHorasProgramadas();
-
 }
 
   const descripciones = {
@@ -1928,9 +1823,6 @@ function actualizarTextoFechaVuelta() {
       notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
       input.value = '';
       textoFecha.textContent = 'Seleccionar...';
-      if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
-  actualizarHorasProgramadas();
-
     }
   }
 }
@@ -2020,21 +1912,23 @@ function inicializarAutocomplete(inputOrigen, inputDestino) {
     if (autocompleteInicializado) return;
 
     // Crear autocompletados
-autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
-  componentRestrictions: { country: 'ar' },
-  fields: ['formatted_address', 'geometry', 'name', 'place_id']
-});
+    autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
+      componentRestrictions: { country: 'ar' },
+      fields: ['formatted_address', 'geometry', 'name', 'place_id'],
+      types: ['geocode']
+    });
 
-autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
-  componentRestrictions: { country: 'ar' },
-  fields: ['formatted_address', 'geometry', 'name', 'place_id']
-});
+    autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
+      componentRestrictions: { country: 'ar' },
+      fields: ['formatted_address', 'geometry', 'name', 'place_id'],
+      types: ['geocode']
+    });
 
     // Sesgo opcional hacia Córdoba
-const cordobaBounds = new google.maps.LatLngBounds(
-  { lat: -31.70, lng: -64.60 },
-  { lat: -31.10, lng: -63.90 }
-);
+    const cordobaBounds = new google.maps.LatLngBounds(
+      { lat: -31.50, lng: -64.30 },
+      { lat: -31.30, lng: -64.05 }
+    );
 
     autocompleteOrigen.setBounds(cordobaBounds);
     autocompleteDestino.setBounds(cordobaBounds);
@@ -2258,10 +2152,6 @@ function actualizarTextoFecha() {
   if (servicioSeleccionado) {
   actualizarHoraServicio(servicioSeleccionado, texto);
 }
-if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
-  actualizarHorasProgramadasUI();
-}
-
 
   // Formatear fecha legible
   const opciones = { 
@@ -2273,15 +2163,12 @@ if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
     minute: '2-digit'
   };
   
-const texto = fecha.toLocaleDateString('es-AR', opciones);
-textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
-textoFecha.style.color = '#1a1a1a';
-
-if (servicioSeleccionado) {
-  actualizarHoraServicio(servicioSeleccionado, textoFecha.textContent);
+  const texto = fecha.toLocaleDateString('es-AR', opciones);
+  textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
+  textoFecha.style.color = '#1a1a1a';
+  
+  guardarEstadoLocal();
 }
-
-guardarEstadoLocal();
 
 function activarBoton(id, texto) {
   const btn = document.getElementById(id);
