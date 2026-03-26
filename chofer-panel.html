@@ -1693,7 +1693,6 @@ async function rechazarDisponible(id) {
   if (!confirm('¿Querés rechazar este viaje?')) return;
 
   try {
-    // Buscar viaje actual antes de tocarlo
     const viajeActual = viajesData.find(v => v.id === id);
 
     if (!viajeActual) {
@@ -1710,15 +1709,20 @@ async function rechazarDisponible(id) {
       return;
     }
 
-    await supabase.updateById('viajes', id, {
+    const actualizado = await supabase.updateById('viajes', id, {
       rechazado_por: choferId,
       rechazado_at: new Date().toISOString()
+    }, {
+      estado: 'DISPONIBLE'
     });
 
-    // Ocultarlo localmente para no volver a verlo en esta sesión
-    viajesRechazadosLocalmente.add(id);
+    if (!actualizado || actualizado.length === 0) {
+      mostrarNotificacion('El viaje ya fue tomado por otro chofer', 'warning');
+      await cargarViajesSeguro();
+      return;
+    }
 
-    // Removerlo del estado local inmediatamente
+    viajesRechazadosLocalmente.add(id);
     viajesData = viajesData.filter(v => v.id !== id);
 
     SoundSystem.playNotification();
