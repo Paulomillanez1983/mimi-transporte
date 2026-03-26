@@ -477,6 +477,97 @@
     .new-trip-indicator::before {
       content: '🔔 ';
     }
+/* AGREGAR: Estilos del Modal tipo Uber */
+@keyframes slideUp {
+  from { transform: translateY(100px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(255, 152, 0, 0); }
+  100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.modal-viaje {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.9);
+  z-index: 10000;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.modal-viaje.urgente .timer-bar {
+  animation: pulse 0.5s infinite;
+}
+
+.timer-container {
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.timer-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50 0%, #ff9800 50%, #f44336 100%);
+  width: 100%;
+  transition: width 1s linear;
+}
+
+.btn-rechazar {
+  flex: 1;
+  padding: 16px;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 14px;
+  font-weight: 700;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-rechazar:hover {
+  background: #ffebee;
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.btn-aceptar-modal {
+  flex: 2;
+  padding: 16px;
+  border: none;
+  background: linear-gradient(135deg, #4caf50, #45a049);
+  border-radius: 14px;
+  font-weight: 800;
+  color: white;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(76,175,80,0.3);
+  transition: all 0.2s;
+}
+
+.btn-aceptar-modal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76,175,80,0.4);
+}
+
+.pulse-icon {
+  animation: pulse-ring 2s infinite;
+}
+    
   </style>
 
   <script>
@@ -765,6 +856,11 @@
     }
 
     let viajesData = [];
+    // AGREGAR: Variables para sistema tipo Uber
+    let viajePendiente = null;      // Viaje actual en modal
+    let timerInterval = null;       // Intervalo del countdown
+    let TIMEOUT_SEGUNDOS = 30;      // Tiempo para aceptar (configurable)
+    let ultimosViajesVistos = new Set(); // Para trackear cuáles ya mostramos
     let filtroActual = 'todos';
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -779,53 +875,264 @@
 
     setInterval(cargarViajes, 30000);
 
-    async function cargarViajes() {
-      const btn = document.getElementById('btnRefresh');
-      if (btn) btn.classList.add('spinning');
+async function cargarViajes() {
+  const btn = document.getElementById('btnRefresh');
+  if (btn) btn.classList.add('spinning');
 
-      try {
-        console.log("📡 Cargando viajes desde Supabase...");
+  try {
+    const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+    
+    // 1. Buscar viajes ASIGNADOS específicamente a este chofer
+    const { data: asignados, error: errAsign } = await supabase
+      .from('viajes')
+      .select('*')
+      .eq('estado', `ASIGNADO_${choferId}`)
+      .order('asignado_at', { ascending: false });
 
-        const { data, error } = await supabase.from('viajes').select('*');
+    if (errAsign) throw errAsign;
 
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        const newData = Array.isArray(data) ? data : [];
-
-        const oldPendingCount = viajesData.filter(v => normalizarEstado(v.estado) === 'PENDIENTE').length;
-        const newPendingCount = newData.filter(v => normalizarEstado(v.estado) === 'PENDIENTE').length;
-
-        if (newPendingCount > oldPendingCount && viajesData.length > 0) {
-          SoundSystem.playNewTrip();
-          SoundSystem.vibrate([100, 50, 100, 50, 200]);
-          showNewTripIndicator();
-        }
-
-        viajesData = newData;
-
-        console.log(`✅ ${viajesData.length} viajes cargados`);
-
-        renderizarViajes();
-        actualizarStats();
-      } catch (error) {
-        console.error('Error cargando viajes:', error);
-
-        document.getElementById('listaViajes').innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">⚠️</div>
-            <p>Error al cargar: ${escaparHTML(error.message)}</p>
-            <button onclick="cargarViajes()" style="margin-top:10px;padding:8px 16px;border:none;border-radius:10px;background:#1565c0;color:white;cursor:pointer;">
-              Reintentar
-            </button>
-          </div>
-        `;
-      } finally {
-        if (btn) btn.classList.remove('spinning');
-      }
+    // Si hay viaje asignado, no está ya en modal, y no lo rechazó antes
+    if (asignados && asignados.length > 0 && !viajePendiente && !ultimosViajesVistos.has(asignados[0].id)) {
+      mostrarSolicitudEntrante(asignados[0]);
     }
 
+    // 2. Cargar viajes del chofer (aceptados, en curso, completados)
+    const { data, error } = await supabase
+      .from('viajes')
+      .select('*')
+      .or(`estado.eq.ACEPTADO,estado.eq.EN_CURSO,estado.eq.COMPLETADO,estado.eq.CANCELADO,chofer_id.eq.${choferId}`);
+
+    if (error) throw error;
+
+    viajesData = data || [];
+    
+    // Notificar nuevos en lista (no asignados directos)
+    const nuevosPendientes = viajesData.filter(v => {
+      const estado = normalizarEstado(v.estado);
+      return estado === 'PENDIENTE' && !ultimosViajesVistos.has(v.id);
+    });
+    
+    if (nuevosPendientes.length > 0 && viajesData.length > 0) {
+      SoundSystem.playNewTrip();
+      SoundSystem.vibrate([100, 50, 100, 50, 200]);
+      showNewTripIndicator();
+      nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
+    }
+
+    renderizarViajes();
+    actualizarStats();
+
+  } catch (error) {
+    console.error('Error cargando viajes:', error);
+    document.getElementById('listaViajes').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⚠️</div>
+        <p>Error al cargar: ${escaparHTML(error.message)}</p>
+        <button onclick="cargarViajes()" style="margin-top:10px;padding:8px 16px;border:none;border-radius:10px;background:#1565c0;color:white;cursor:pointer;">
+          Reintentar
+        </button>
+      </div>
+    `;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
+    // AGREGAR: Funciones del sistema tipo Uber
+
+function mostrarSolicitudEntrante(viaje) {
+  viajePendiente = viaje;
+  ultimosViajesVistos.add(viaje.id); // Marcar como visto
+  
+  const modal = document.getElementById('incomingModal');
+  const detalles = document.getElementById('incomingDetails');
+  const timerBar = document.getElementById('timerBar');
+  const timerText = document.getElementById('timerText');
+  
+  // Llenar detalles del viaje
+  detalles.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+      <div style="
+        width: 56px; height: 56px; border-radius: 50%; 
+        background: linear-gradient(135deg, #1565c0, #1e3c72);
+        color: white; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 1.4rem;
+      ">${(viaje.cliente || '?').charAt(0).toUpperCase()}</div>
+      <div style="flex: 1;">
+        <div style="font-weight: 800; color: #1a1a2e; font-size: 1.15rem;">${escaparHTML(viaje.cliente || 'Cliente')}</div>
+        <div style="font-size: 0.9rem; color: #666;">📱 ${escaparHTML(viaje.telefono || 'Sin teléfono')}</div>
+      </div>
+    </div>
+    <div style="border-top: 1px solid #e0e0e0; padding-top: 12px;">
+      <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.95rem;">
+        <span style="color: #4caf50; font-size: 1.2rem;">●</span>
+        <span style="color: #333; font-weight: 500; line-height: 1.4;">${escaparHTML(viaje.origen || 'Origen no especificado')}</span>
+      </div>
+      <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.95rem;">
+        <span style="color: #f44336; font-size: 1.2rem;">●</span>
+        <span style="color: #333; font-weight: 500; line-height: 1.4;">${escaparHTML(viaje.destino || 'Destino no especificado')}</span>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+      <div style="text-align: center;">
+        <div style="font-size: 1.3rem; font-weight: 800; color: #1565c0;">$${Number(viaje.precio || 0).toLocaleString('es-AR')}</div>
+        <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Precio</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="font-size: 1.3rem; font-weight: 800; color: #1565c0;">${escaparHTML(viaje.km || 0)}km</div>
+        <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Distancia</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="font-size: 1.3rem; font-weight: 800; color: #1565c0;">${escaparHTML(viaje.tipo || 'Standard')}</div>
+        <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Servicio</div>
+      </div>
+    </div>
+  `;
+  
+  // Mostrar modal
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden'; // Bloquear scroll
+  
+  // Sonido de alerta
+  SoundSystem.playNewTrip();
+  SoundSystem.vibrate([100, 50, 100, 50, 200, 100, 200]);
+  
+  // Iniciar countdown
+  let segundosRestantes = TIMEOUT_SEGUNDOS;
+  timerBar.style.width = '100%';
+  timerBar.style.transition = 'none';
+  
+  // Forzar reflow
+  void timerBar.offsetWidth;
+  
+  // Iniciar animación de barra
+  timerBar.style.transition = `width ${TIMEOUT_SEGUNDOS}s linear`;
+  timerBar.style.width = '0%';
+  
+  timerInterval = setInterval(() => {
+    segundosRestantes--;
+    timerText.textContent = segundosRestantes;
+    
+    // Cambiar color según urgencia
+    if (segundosRestantes <= 10) {
+      timerText.style.color = '#f44336';
+      modal.classList.add('urgente');
+    } else if (segundosRestantes <= 20) {
+      timerText.style.color = '#ff9800';
+    }
+    
+    // Vibración en los últimos 10 segundos
+    if (segundosRestantes <= 10 && segundosRestantes > 0) {
+      SoundSystem.vibrate([50]);
+    }
+    
+    if (segundosRestantes <= 0) {
+      clearInterval(timerInterval);
+      timeoutViaje();
+    }
+  }, 1000);
+}
+
+async function aceptarViaje() {
+  if (!viajePendiente) return;
+  
+  clearInterval(timerInterval);
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+  
+  try {
+    const { error } = await supabase.from('viajes').updateById(viajePendiente.id, {
+      estado: 'ACEPTADO',
+      chofer_id: choferId,
+      aceptado_at: new Date().toISOString(),
+      asignado_a: null // Limpiar asignación
+    });
+    
+    if (error) throw error;
+    
+    SoundSystem.playSuccess();
+    cerrarModal();
+    mostrarNotificacion('✓ Viaje aceptado correctamente', 'success');
+    cargarViajes();
+    
+  } catch (err) {
+    mostrarNotificacion('Error al aceptar: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+async function rechazarViaje() {
+  if (!viajePendiente) return;
+  
+  // Confirmar rechazo
+  if (!confirm('¿Seguro que querés rechazar este viaje? Se asignará a otro chofer.')) {
+    return;
+  }
+  
+  clearInterval(timerInterval);
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+  
+  try {
+    const { error } = await supabase.from('viajes').updateById(viajePendiente.id, {
+      estado: 'DISPONIBLE', // Vuelve al pool
+      rechazado_por: choferId,
+      rechazado_at: new Date().toISOString(),
+      asignado_a: null
+    });
+    
+    if (error) throw error;
+    
+    SoundSystem.playNotification();
+    cerrarModal();
+    mostrarNotificacion('Viaje rechazado. Buscando otro chofer...', 'info');
+    
+    // El viaje desaparece de su pantalla (no lo verá más)
+    
+  } catch (err) {
+    mostrarNotificacion('Error al rechazar', 'error');
+    console.error(err);
+  }
+}
+
+async function timeoutViaje() {
+  if (!viajePendiente) return;
+  
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+  
+  try {
+    await supabase.from('viajes').updateById(viajePendiente.id, {
+      estado: 'DISPONIBLE', // Vuelve al pool por timeout
+      timeout_por: choferId,
+      timeout_at: new Date().toISOString(),
+      asignado_a: null
+    });
+    
+    cerrarModal();
+    mostrarNotificacion('⏰ Tiempo agotado. El viaje se ofreció a otro chofer.', 'warning');
+    SoundSystem.vibrate([100, 100, 100]);
+    
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function cerrarModal() {
+  const modal = document.getElementById('incomingModal');
+  modal.style.display = 'none';
+  modal.classList.remove('urgente');
+  document.body.style.overflow = ''; // Restaurar scroll
+  viajePendiente = null;
+  timerInterval = null;
+}
+
+// Prevenir cierre accidental del modal
+document.getElementById('incomingModal').addEventListener('click', (e) => {
+  if (e.target.id === 'incomingModal') {
+    // Shake animation para indicar que debe elegir
+    const card = e.target.querySelector('div');
+    card.style.animation = 'shake 0.4s ease-in-out';
+    setTimeout(() => card.style.animation = '', 400);
+    SoundSystem.vibrate([30, 30, 30]);
+  }
+});
     function showNewTripIndicator() {
       const indicator = document.getElementById('newTripIndicator');
       if (indicator) {
@@ -1109,5 +1416,57 @@ function cerrarSesion() {
       }, 3000);
     }
   </script>
+  <!-- AGREGAR: Modal de Solicitud Entrante tipo Uber -->
+<div id="incomingModal" class="modal-viaje">
+  <div style="
+    background: white;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 400px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    animation: slideUp 0.4s ease-out;
+  ">
+    <div class="timer-container">
+      <div id="timerBar" class="timer-bar"></div>
+    </div>
+    
+    <div style="padding: 24px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div class="pulse-icon" style="
+          width: 100px;
+          height: 100px;
+          background: linear-gradient(135deg, #ff9800, #f57c00);
+          border-radius: 50%;
+          margin: 0 auto 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 3rem;
+        ">🚐</div>
+        <h2 style="font-size: 1.5rem; color: #1a1a2e; margin-bottom: 8px;">¡Nuevo viaje!</h2>
+        <p style="color: #666; font-size: 1rem;">Decidí en <span id="timerText" style="font-weight: 800; color: #ff9800; font-size: 1.2rem;">30</span> segundos</p>
+      </div>
+      
+      <div id="incomingDetails" style="
+        background: #f5f7fa;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 20px;
+      ">
+        <!-- Se llena dinámicamente -->
+      </div>
+      
+      <div style="display: flex; gap: 12px;">
+        <button class="btn-rechazar" onclick="rechazarViaje()">
+          ❌ Rechazar
+        </button>
+        <button class="btn-aceptar-modal" onclick="aceptarViaje()">
+          ✓ Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
