@@ -937,35 +937,36 @@ body {
 .servicio-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 4px;
 }
 
 /* ==========================================
-   CARD BASE
+   CARD BASE - ESTRUCTURA MEJORADA
 ========================================== */
 .servicio-card {
   position: relative;
-  min-height: 82px;
-  padding: 12px;
-  border-radius: 16px;
+  min-height: 90px;
+  padding: 14px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   background: white;
   border: 2px solid #e8e8e8;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 }
 
 .servicio-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
-/* Línea lateral cuando está activo */
+/* Línea lateral indicadora */
 .servicio-card::before {
   content: '';
   position: absolute;
@@ -977,179 +978,589 @@ body {
   transition: background 0.2s;
 }
 
-/* ==========================================
-   ICONO
-========================================== */
-.servicio-icon {
-  width: 42px;
-  height: 42px;
-  background: #f5f7fa;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.35rem;
-  flex-shrink: 0;
-  transition: all 0.2s;
+/* Efecto de onda al click */
+.servicio-card::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease, height 0.4s ease;
+  pointer-events: none;
+}
+
+.servicio-card:active::after {
+  width: 200px;
+  height: 200px;
 }
 
 /* ==========================================
-   INFO
+   ICONOS - ESTILO MEJORADO
+========================================== */
+.servicio-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ==========================================
+   INFO - TIPOGRAFÍA JERÁRQUICA
 ========================================== */
 .servicio-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .servicio-info strong {
   display: block;
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 800;
   line-height: 1.1;
-  margin-bottom: 2px;
   color: #1a1a1a;
+  letter-spacing: -0.3px;
 }
 
 .servicio-info small {
   display: block;
-  font-size: 0.74rem;
-  opacity: 0.75;
-  color: #777;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #666;
+  line-height: 1.2;
 }
 
 /* ==========================================
-   CHECK
+   CHECK - ESTADO SELECCIONADO
 ========================================== */
 .servicio-check {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: #e0e0e0;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: bold;
   flex-shrink: 0;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 /* ==========================================
-   HORA (solo hora corta)
+   HORA - BADGE DE TIEMPO
 ========================================== */
 .servicio-hora {
-  font-size: 0.75rem;
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 0.7rem;
   font-weight: 800;
-  color: #ff9800;
-  background: rgba(255,152,0,0.12);
+  color: white;
+  background: rgba(0,0,0,0.7);
   padding: 4px 8px;
   border-radius: 10px;
-  white-space: nowrap;
+  display: none;
 }
 
 /* ==========================================
-   ACTIVO (UNIFICADO)
+   ESTADO ACTIVO GENERAL
 ========================================== */
 .servicio-card.activo {
-  border-color: var(--azul-primario);
-  background: #f0f7ff;
-  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px currentColor;
 }
 
 .servicio-card.activo::before {
-  background: var(--azul-primario);
+  background: currentColor;
 }
 
 .servicio-card.activo .servicio-check {
-  background: var(--azul-primario);
-  transform: scale(1.08);
+  background: currentColor;
+  transform: scale(1.1);
 }
 
 .servicio-card.activo .servicio-icon {
-  background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-oscuro) 100%);
-  transform: scale(1.06);
-  color: white;
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
 
 /* ==========================================
-   LO QUIERO YA (NEGRO)
+   LO QUIERO YA - NEGRO PREMIUM
 ========================================== */
 .servicio-card.urgente {
-  background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
-  border: none;
+  background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%);
+  border: 2px solid #333;
   color: white;
 }
 
-.servicio-card.urgente .servicio-info strong {
+.servicio-card.urgente .servicio-icon {
+  background: linear-gradient(135deg, #ff6b00 0%, #ff8533 100%);
   color: white;
+  box-shadow: 0 4px 15px rgba(255, 107, 0, 0.4);
+}
+
+.servicio-card.urgente .servicio-info strong {
+  color: #ff6b00;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .servicio-card.urgente .servicio-info small {
   color: rgba(255,255,255,0.7);
 }
 
-.servicio-card.urgente .servicio-icon {
-  background: rgba(255,255,255,0.15);
-  color: #ff9800;
+.servicio-card.urgente .servicio-check {
+  background: #333;
+  border: 2px solid #ff6b00;
 }
 
-/* activo en urgente: letras naranjas */
-.servicio-card.urgente.activo .servicio-info strong,
-.servicio-card.urgente.activo .servicio-info small {
-  color: var(--naranja) !important;
-  font-weight: 900;
+/* Activo - modo urgencia */
+.servicio-card.urgente.activo {
+  border-color: #ff6b00;
+  box-shadow: 
+    0 0 0 3px rgba(255, 107, 0, 0.3),
+    0 8px 30px rgba(255, 107, 0, 0.2),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  animation: urgentGlow 2s infinite;
+}
+
+@keyframes urgentGlow {
+  0%, 100% { 
+    box-shadow: 
+      0 0 0 3px rgba(255, 107, 0, 0.3),
+      0 8px 30px rgba(255, 107, 0, 0.2);
+  }
+  50% { 
+    box-shadow: 
+      0 0 0 5px rgba(255, 107, 0, 0.5),
+      0 12px 40px rgba(255, 107, 0, 0.4);
+  }
+}
+
+.servicio-card.urgente.activo .servicio-check {
+  background: #ff6b00;
+  border-color: #ff6b00;
+  animation: checkPulse 1.5s infinite;
+}
+
+@keyframes checkPulse {
+  0%, 100% { transform: scale(1.1); }
+  50% { transform: scale(1.2); }
 }
 
 /* ==========================================
-   IDA Y VUELTA (destacado)
+   IDA Y VUELTA - DORADO PREMIUM
 ========================================== */
 .servicio-card.dinamico {
-  border-color: #ff9800;
-  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+  background: linear-gradient(145deg, #fff9e6 0%, #ffeebb 50%, #ffe4a1 100%);
+  border: 2px solid #ffb347;
 }
 
 .servicio-card.dinamico .servicio-icon {
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  background: linear-gradient(135deg, #ffb347 0%, #ff8c00 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 179, 71, 0.4);
+}
+
+.servicio-card.dinamico .servicio-info strong {
+  color: #cc7700;
+}
+
+.servicio-card.dinamico .servicio-info small {
+  color: #996600;
+}
+
+.servicio-card.dinamico .servicio-check {
+  background: #ffe4a1;
+  color: #cc7700;
+}
+
+/* Activo */
+.servicio-card.dinamico.activo {
+  border-color: #ff8c00;
+  box-shadow: 
+    0 0 0 3px rgba(255, 140, 0, 0.2),
+    0 8px 25px rgba(255, 140, 0, 0.15);
+}
+
+.servicio-card.dinamico.activo .servicio-check {
+  background: #ff8c00;
   color: white;
 }
 
-/* ==========================================
-   PROGRAMADO
-========================================== */
-.servicio-card.programado {
-  background: white;
-}
-
-/* ==========================================
-   OTROS SERVICIOS
-========================================== */
-.servicio-card.otros {
-  opacity: 0.6;
-}
-
-.servicio-card.otros:hover {
-  opacity: 0.85;
-}
-
-/* ==========================================
-   BADGE "MÁS ELEGIDO"
-========================================== */
+/* Badge más elegante */
 .servicio-badge.popular {
   position: absolute;
-  top: -6px;
-  right: 12px;
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  top: -8px;
+  right: 10px;
+  background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
   color: white;
-  font-size: 0.58rem;
+  font-size: 0.6rem;
   font-weight: 900;
-  padding: 3px 10px;
+  padding: 4px 12px;
   border-radius: 20px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  box-shadow: 0 2px 8px rgba(255,107,53,0.3);
+  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+  animation: badgeFloat 2s ease-in-out infinite;
+  z-index: 2;
 }
 
-  
+@keyframes badgeFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* ==========================================
+   IDA + VUELTA PROGRAMADA - AZUL CALM
+========================================== */
+.servicio-card.programado {
+  background: linear-gradient(145deg, #f0f7ff 0%, #e1f0ff 100%);
+  border: 2px solid #90caf9;
+}
+
+.servicio-card.programado .servicio-icon {
+  background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(66, 165, 245, 0.3);
+}
+
+.servicio-card.programado .servicio-info strong {
+  color: #1565c0;
+}
+
+.servicio-card.programado .servicio-info small {
+  color: #5472a3;
+}
+
+.servicio-card.programado .servicio-check {
+  background: #bbdefb;
+  color: #1565c0;
+}
+
+/* Activo */
+.servicio-card.programado.activo {
+  border-color: #42a5f5;
+  box-shadow: 
+    0 0 0 3px rgba(66, 165, 245, 0.2),
+    0 8px 25px rgba(66, 165, 245, 0.15);
+}
+
+.servicio-card.programado.activo .servicio-check {
+  background: #42a5f5;
+  color: white;
+}
+
+/* ==========================================
+   OTROS SERVICIOS - GRIS ELEGANTE
+========================================== */
+.servicio-card.otros {
+  background: linear-gradient(145deg, #fafafa 0%, #f0f0f0 100%);
+  border: 2px dashed #ccc;
+  opacity: 0.8;
+}
+
+.servicio-card.otros .servicio-icon {
+  background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
+  color: #757575;
+  box-shadow: none;
+}
+
+.servicio-card.otros .servicio-info strong {
+  color: #616161;
+}
+
+.servicio-card.otros .servicio-info small {
+  color: #9e9e9e;
+  font-style: italic;
+}
+
+.servicio-card.otros .servicio-check {
+  background: #e0e0e0;
+  color: #9e9e9e;
+}
+
+.servicio-card.otros:hover {
+  opacity: 1;
+  border-style: solid;
+  border-color: #bdbdbd;
+}
+
+/* ==========================================
+   BOTÓN COTIZAR - PREMIUM
+========================================== */
+.btn-calcular {
+  width: 100%;
+  padding: 20px;
+  margin-top: 24px;
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 50%, #1565c0 100%);
+  background-size: 200% 200%;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 
+    0 4px 0 #0a357a,
+    0 8px 25px rgba(21, 101, 192, 0.35),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+
+.btn-calcular::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.3),
+    transparent
+  );
+  transition: left 0.6s ease;
+}
+
+.btn-calcular:hover::before {
+  left: 100%;
+}
+
+.btn-calcular:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 0 #0a357a,
+    0 12px 35px rgba(21, 101, 192, 0.45),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+  animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.btn-calcular:active {
+  transform: translateY(4px);
+  box-shadow: 
+    0 0 0 #0a357a,
+    0 4px 15px rgba(21, 101, 192, 0.3);
+}
+
+.btn-calcular span {
+  position: relative;
+  z-index: 2;
+}
+
+/* Icono animado */
+.btn-calcular .icono-auto {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.btn-calcular:hover .icono-auto {
+  animation: carBounce 0.6s ease infinite alternate;
+}
+
+@keyframes carBounce {
+  from { transform: translateX(-3px) scale(1); }
+  to { transform: translateX(3px) scale(1.1); }
+}
+
+/* ==========================================
+   BOTÓN WHATSAPP - VERDE VIBRANTE
+========================================== */
+.btn-whatsapp {
+  width: 100%;
+  padding: 18px;
+  margin-top: 16px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 50%, #25d366 100%);
+  background-size: 200% 200%;
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 
+    0 4px 0 #0d6b3d,
+    0 8px 25px rgba(37, 211, 102, 0.35),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-whatsapp::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s ease, height 0.5s ease;
+}
+
+.btn-whatsapp:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 0 #0d6b3d,
+    0 12px 35px rgba(37, 211, 102, 0.45),
+    inset 0 1px 0 rgba(255,255,255,0.3);
+  animation: whatsappPulse 2s infinite, gradientShift 3s ease infinite;
+}
+
+@keyframes whatsappPulse {
+  0%, 100% { 
+    box-shadow: 
+      0 6px 0 #0d6b3d,
+      0 12px 35px rgba(37, 211, 102, 0.45),
+      0 0 0 0 rgba(37, 211, 102, 0.4);
+  }
+  50% { 
+    box-shadow: 
+      0 6px 0 #0d6b3d,
+      0 12px 35px rgba(37, 211, 102, 0.45),
+      0 0 0 15px rgba(37, 211, 102, 0);
+  }
+}
+
+.btn-whatsapp:active {
+  transform: translateY(2px);
+  box-shadow: 
+    0 0 0 #0d6b3d,
+    0 4px 15px rgba(37, 211, 102, 0.3);
+}
+
+/* ==========================================
+   BOTÓN INTERCAMBIAR (SWAP) - CENTRADO
+========================================== */
+.btn-swap {
+  background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
+  border: 3px solid white;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(21, 101, 192, 0.4), 0 0 0 4px rgba(255,255,255,0.8);
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  font-size: 1.2rem;
+  position: relative;
+  z-index: 10;
+}
+
+.btn-swap span {
+  color: white;
+  font-weight: bold;
+  transition: transform 0.3s ease;
+  display: block;
+}
+
+.btn-swap:hover {
+  transform: rotate(180deg) scale(1.15);
+  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.5), 0 0 0 6px rgba(255,255,255,0.6);
+}
+
+.btn-swap:active {
+  transform: rotate(180deg) scale(0.95);
+}
+
+/* ==========================================
+   BOTONES DE TIEMPO DE ESPERA
+========================================== */
+.tiempo-btn {
+  flex: 1;
+  padding: 14px 8px;
+  border: 2px solid #e0e0e0;
+  border-radius: 14px;
+  background: white;
+  color: #666;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tiempo-btn:hover {
+  border-color: #90caf9;
+  color: #1565c0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.tiempo-btn.activo {
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  color: white;
+  border-color: #1565c0;
+  box-shadow: 0 4px 15px rgba(21, 101, 192, 0.35);
+  transform: scale(1.05);
+}
+
+/* ==========================================
+   ANIMACIONES DE ENTRADA
+========================================== */
+.servicio-card {
+  animation: cardEnter 0.5s ease backwards;
+}
+
+.servicio-card:nth-child(1) { animation-delay: 0.1s; }
+.servicio-card:nth-child(2) { animation-delay: 0.2s; }
+.servicio-card:nth-child(3) { animation-delay: 0.3s; }
+.servicio-card:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
   /* ==============================
    GOOGLE AUTOCOMPLETE FIX
 ============================== */
