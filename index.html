@@ -939,19 +939,37 @@ body {
 }
 
 .servicio-card {
+  min-height: 90px;
+  padding: 14px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px 18px;
-  background: white;
-  border: 2px solid #e8e8e8;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  flex: 1;
-  min-width: 0;
+  justify-content: space-between;
+  gap: 10px;
+}
 
+.servicio-info strong {
+  font-size: 0.95rem;
+  line-height: 1.1;
+}
+
+.servicio-info small {
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.servicio-hora {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ff9800;
+  background: rgba(255,152,0,0.12);
+  padding: 6px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.servicio-card.otros {
+  opacity: 0.75;
 }
   .servicio-card::before {
   content: '';
@@ -1727,15 +1745,6 @@ if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
   sugerirHorariosEscolares();
 }
 
-if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
-  if (campoIda) campoIda.style.display = 'block';
-  if (campoVuelta) campoVuelta.style.display = 'block';
-
-  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
-  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
-
-  sugerirHorariosEscolares();
-}
     if (servicio === "OTROS_SERVICIOS") {
   notifSystem.show("Otros servicios", "Próximamente vas a poder elegir más opciones.", "info", 2500);
 }
