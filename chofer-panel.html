@@ -744,9 +744,9 @@
   </div>
 
   <script>
-    // ==========================================
-    // CONFIGURACIÓN SUPABASE
-    // ==========================================
+// ==========================================
+// CONFIGURACIÓN SUPABASE
+// ==========================================
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
 
@@ -764,79 +764,111 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, 
 });
 
 window.supabaseClient = supabaseClient;
-<script>
-  // ==========================================
-  // CONFIGURACIÓN SUPABASE
-  // ==========================================
-  const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
 
-  // Cliente oficial Supabase para Realtime
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10
-      }
-    }
-  });
+// Cliente REST simple
+const supabase = {
+  async select(table, options = {}) {
+    let url = `${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(options.columns || '*')}`;
 
-  window.supabaseClient = supabaseClient;
-
-  // Cliente REST simple
-  const supabase = {
-    async select(table, options = {}) {
-      let url = `${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(options.columns || '*')}`;
-
-      if (options.eq) {
-        Object.entries(options.eq).forEach(([col, val]) => {
-          url += `&${col}=eq.${encodeURIComponent(val)}`;
-        });
-      }
-
-      if (options.neq) {
-        Object.entries(options.neq).forEach(([col, val]) => {
-          url += `&${col}=neq.${encodeURIComponent(val)}`;
-        });
-      }
-
-      if (Array.isArray(options.filters)) {
-        options.filters.forEach(filter => {
-          url += `&${filter}`;
-        });
-      }
-
-      if (options.or) {
-        url += `&or=(${options.or})`;
-      }
-
-      if (options.order) {
-        url += `&order=${encodeURIComponent(options.order)}`;
-      }
-
-      if (options.limit) {
-        url += `&limit=${options.limit}`;
-      }
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`
-        }
+    if (options.eq) {
+      Object.entries(options.eq).forEach(([col, val]) => {
+        url += `&${col}=eq.${encodeURIComponent(val)}`;
       });
+    }
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || error.error_description || 'Error en consulta');
+    if (options.neq) {
+      Object.entries(options.neq).forEach(([col, val]) => {
+        url += `&${col}=neq.${encodeURIComponent(val)}`;
+      });
+    }
+
+    if (Array.isArray(options.filters)) {
+      options.filters.forEach(filter => {
+        url += `&${filter}`;
+      });
+    }
+
+    if (options.or) {
+      url += `&or=(${options.or})`;
+    }
+
+    if (options.order) {
+      url += `&order=${encodeURIComponent(options.order)}`;
+    }
+
+    if (options.limit) {
+      url += `&limit=${options.limit}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`
       }
+    });
 
-      return await response.json();
-    },
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || error.error_description || 'Error en consulta');
+    }
 
+    return await response.json();
+  },
+
+  async insert(table, data) {
+    const url = `${SUPABASE_URL}/rest/v1/${table}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || error.error_description || 'Error insertando');
+    }
+
+    return await response.json();
+  },
+
+  async updateById(table, id, data, extraEq = {}) {
+    let url = `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
+
+    Object.entries(extraEq).forEach(([col, val]) => {
+      url += `&${col}=eq.${encodeURIComponent(val)}`;
+    });
+
+    const payload = {
+      ...data,
+      updated_at: new Date().toISOString()
+    };
+
+    const response = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || error.error_description || 'Error actualizando');
+    }
+
+    return await response.json();
+  }
+};
     async insert(table, data) {
       const url = `${SUPABASE_URL}/rest/v1/${table}`;
 
