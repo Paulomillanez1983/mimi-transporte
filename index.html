@@ -1227,6 +1227,18 @@ body {
   font-size: 14px !important;
   color: #222 !important;
 }
+  /* =========================
+   BOTONES LOADING / HIDDEN
+========================= */
+.btn-loading {
+  opacity: 0.75;
+  pointer-events: none;
+  filter: saturate(0.9);
+}
+
+.btn-hidden-after-reset {
+  display: none !important;
+}
 </style>
 </head>
 <body>
@@ -1388,22 +1400,22 @@ body {
 
 
 <button class="btn-calcular btn-push" id="btnCalcular" onclick="calcularTarifa()">
-  <span>💰 Cotizar viaje</span>
-</button>
-<button class="btn-calcular btn-push" onclick="enviarViaje()">
-  <span>🚐 Confirmar viaje</span>
+  <span id="btnCalcularText">💰 Cotizar viaje</span>
 </button>
 
+<button class="btn-calcular btn-push" id="btnConfirmarViaje" onclick="enviarViaje()" style="display:none;">
+  <span id="btnConfirmarViajeText">🚐 Confirmar viaje</span>
+</button>
     <div id="resultado" class="resultado-section">
       <div class="precio-monto">$<span id="precioValor">0</span></div>
       <div class="precio-descripcion">Precio estimado</div>
     </div>
 
-<button class="btn-whatsapp" onclick="reservarWhatsApp()">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+<button class="btn-whatsapp" id="btnWhatsappReserva" onclick="reservarWhatsApp()" style="display:none;">
+  <svg id="btnWhatsappIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
     <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.175L2.546 20.2l3.025-.892A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.615 13.635c-.2.563-1.154 1.035-1.615 1.103-.431.063-.892.09-1.358-.009-.313-.066-.715-.173-1.226-.346-2.17-.715-3.58-2.638-3.688-2.77-.108-.13-.88-1.166-.88-2.225 0-1.06.555-1.58.752-1.796.197-.216.431-.27.575-.27.144 0 .288.002.414.008.13.007.303-.05.475.36.172.412.588 1.424.64 1.528.052.103.086.223.017.36-.069.137-.103.223-.206.341-.103.12-.216.251-.31.337-.103.094-.21.197-.144.388.066.19.288.627.62.997.426.475.784.622 1.06.691.172.043.302-.017.388-.103.086-.086.36-.417.453-.56.094-.144.188-.12.32-.072.13.05.838.395.98.466.145.072.24.103.275.16.035.06.025.345-.175.908z" fill="white"/>
   </svg>
-  <span>Reservar por WhatsApp</span>
+  <span id="btnWhatsappReservaText">Reservar por WhatsApp</span>
 </button>
     
 <div id="mapaRuta" style="margin-top:25px; display:none;"></div>
@@ -1532,7 +1544,51 @@ function intercambiarOrigenDestino() {
   
   guardarEstadoLocal();
 }
+// ==========================================
+// UI DE BOTONES POST-COTIZACIÓN
+// ==========================================
 
+function mostrarBotonesPostCotizacion() {
+  const btnConfirmar = document.getElementById("btnConfirmarViaje");
+  const btnWhatsapp = document.getElementById("btnWhatsappReserva");
+
+  if (btnConfirmar) btnConfirmar.style.display = "flex";
+  if (btnWhatsapp) btnWhatsapp.style.display = "flex";
+}
+
+function ocultarBotonesPostCotizacion() {
+  const btnConfirmar = document.getElementById("btnConfirmarViaje");
+  const btnWhatsapp = document.getElementById("btnWhatsappReserva");
+
+  if (btnConfirmar) btnConfirmar.style.display = "none";
+  if (btnWhatsapp) btnWhatsapp.style.display = "none";
+}
+
+function setButtonLoading(buttonId, textId, loadingText) {
+  const btn = document.getElementById(buttonId);
+  const text = document.getElementById(textId);
+
+  if (!btn || !text) return;
+
+  btn.disabled = true;
+  btn.classList.add("btn-loading");
+  btn.dataset.originalText = text.innerHTML;
+  text.innerHTML = `⏳ ${loadingText}`;
+}
+
+function clearButtonLoading(buttonId, textId) {
+  const btn = document.getElementById(buttonId);
+  const text = document.getElementById(textId);
+
+  if (!btn || !text) return;
+
+  btn.disabled = false;
+  btn.classList.remove("btn-loading");
+
+  if (btn.dataset.originalText) {
+    text.innerHTML = btn.dataset.originalText;
+  }
+}
 // ==========================================
 // SELECTOR DE SERVICIOS
 // ==========================================
@@ -1689,6 +1745,7 @@ async function enviarViaje() {
   const precio = Number(precioTexto.replace(/\./g, '').replace(',', '.'));
 
   console.log("🚀 Enviando viaje a Supabase...");
+  setButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText", "Confirmando...");
 
   try {
     const { data, error } = await supabase
@@ -1712,13 +1769,16 @@ async function enviarViaje() {
 
     console.log("✅ Guardado:", data);
     notifSystem.show('¡Listo!', 'Viaje solicitado correctamente 🚐', 'success', 3000);
-    
-  } catch (err) {
-    console.error("❌ Error inesperado:", err);
-    notifSystem.show('Error', 'Error de conexión', 'error', 3000);
+    clearButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText");
+  } catch (error) {
+    console.error('❌ Error en enviarViaje:', error);
+    notifSystem.show('Error', 'No se pudo confirmar el viaje', 'error', 5000);
+  } finally {
+    clearButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText");
   }
 }
-// ==========================================
+  
+  // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
 
@@ -2124,223 +2184,249 @@ function animarContador(id, inicio, fin, duracion) {
 // ==========================================
 // CÁLCULO DE TARIFA - CON JSONP
 // ==========================================
+// ==========================================
+// CÁLCULO DE TARIFA - CON JSONP
+// ==========================================
 async function calcularTarifa() {
   if (isCalculating) return;
+
   if (navigator.vibrate) navigator.vibrate(30);
-  
-  if (!navigator.onLine) {
-    mostrarError('Sin conexión a internet');
-    return;
-  }
 
-  if (!servicioSeleccionado) {
-    mostrarError('Seleccioná un tipo de servicio');
-    return;
-  }
+  setButtonLoading("btnCalcular", "btnCalcularText", "Cotizando...");
+  ocultarBotonesPostCotizacion();
 
-  // Si no hay lugares seleccionados, intentar geocodificar manualmente
-  if (!lugarOrigen) {
-    const origenInput = document.getElementById('origen');
-    if (origenInput && origenInput.value) {
-      lugarOrigen = await geocodificarDireccion(origenInput.value);
-    }
-  }
-  
-  if (!lugarDestino) {
-    const destinoInput = document.getElementById('destino');
-    if (destinoInput && destinoInput.value) {
-      lugarDestino = await geocodificarDireccion(destinoInput.value);
-    }
-  }
-
-  if (!lugarOrigen || !lugarDestino) {
-    mostrarError('Seleccioná direcciones válidas de la lista o escribí direcciones completas');
-    return;
-  }
-  
-  const origen = lugarOrigen?.direccion || '';
-  const destino = lugarDestino?.direccion || '';
-  const fechaHoraInput = document.getElementById('fechaHora')?.value;
-
-  if (!origen) {
-    mostrarError('Ingresá la dirección de origen');
-    document.getElementById('origen').focus();
-    return;
-  }
-  
-  if (!destino) {
-    mostrarError('Ingresá la dirección de destino');
-    document.getElementById('destino').focus();
-    return;
-  }
-
-  // Validaciones específicas por servicio
-  let fechaHoraVuelta = '';
-  let esperaMin = '';
-  
-  if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
-    fechaHoraVuelta = document.getElementById('fechaHoraVuelta').value;
-    if (!fechaHoraVuelta) {
-      mostrarError('Seleccioná fecha y hora de VUELTA');
-      abrirSelectorFechaVuelta();
-      return;
-    }
-  }
-  
-  if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
-    esperaMin = document.getElementById('tiempoEsperaMin').value || '30';
-  }
-  
-  let fechaHoraParaEnviar = new Date().toISOString();
-  if (modoTiempo === 'ahora') {
-    fechaHoraParaEnviar = new Date().toISOString();
-  } else {
-    if (!fechaHoraInput) {
-      mostrarError('Seleccioná fecha y hora de ida');
-      abrirSelectorFecha();
-      return;
-    }
-    fechaHoraParaEnviar = fechaHoraInput;
-    
-    if (new Date(fechaHoraInput) < new Date()) {
-      mostrarError('La fecha no puede ser pasada');
-      return;
-    }
-  }
-  
-  guardarEstadoLocal();
-  ocultarError();
-  isCalculating = true;
-  
-  const btn = document.getElementById('btnCalcular');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner"></div> Calculando...';
-  
-  const mensajeCarga = servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA' 
-    ? 'Cotizando ida y vuelta...' 
-    : 'Consultando precio...';
-    
-  const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
-  
-  // ========== JSONP ==========
-  const callbackName = 'mimi_cb_' + Date.now();
-  
-  const params = new URLSearchParams({
-    action: 'cotizar',
-    desde: lugarOrigen.direccion,
-    hasta: lugarDestino.direccion,
-    servicio: servicioSeleccionado,
-    fechaHora: fechaHoraParaEnviar,
-    esperaMin: esperaMin,
-    fechaHoraVuelta: fechaHoraVuelta,
-    callback: callbackName
-  });
-
-  const script = document.createElement('script');
-  script.src = CONFIG.SCRIPT_URL + '?' + params.toString();
-  
-  // Cleanup
-  const cleanup = () => {
-    if (script.parentNode) script.parentNode.removeChild(script);
-    delete window[callbackName];
-    clearTimeout(timeout);
-    isCalculating = false;
-    btn.disabled = false;
-    btn.innerHTML = '<span>💰 Cotizar viaje</span>';
-    calcToast.remove();
-  };
-  
-  // Timeout 15 segundos
-  const timeout = setTimeout(() => {
-    cleanup();
-    notifSystem.show('Error', 'El servidor no respondió', 'error', 6000);
-    mostrarError('Timeout: intentá de nuevo');
-  }, 15000);
-  
-  // Callback exitoso
-  window[callbackName] = (res) => {
-    cleanup();
-    
-    if (!res || res.error) {
-      const mensaje = res?.error || 'Error desconocido del servidor';
-      notifSystem.show('Error', mensaje, 'error', 6000);
-      mostrarError(mensaje);
+  try {
+    if (!navigator.onLine) {
+      mostrarError('Sin conexión a internet');
       return;
     }
 
-    if (res.exito !== true) {
-      notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
-      mostrarError('Error en la cotización');
+    if (!servicioSeleccionado) {
+      mostrarError('Seleccioná un tipo de servicio');
       return;
     }
 
-    mostrarResultado(res);
+    // Si no hay lugares seleccionados, intentar geocodificar manualmente
+    if (!lugarOrigen) {
+      const origenInput = document.getElementById('origen');
+      if (origenInput && origenInput.value) {
+        lugarOrigen = await geocodificarDireccion(origenInput.value);
+      }
+    }
 
-    const notifServicio = {
-      'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
-      'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` },
-      'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` }
+    if (!lugarDestino) {
+      const destinoInput = document.getElementById('destino');
+      if (destinoInput && destinoInput.value) {
+        lugarDestino = await geocodificarDireccion(destinoInput.value);
+      }
+    }
+
+    if (!lugarOrigen || !lugarDestino) {
+      mostrarError('Seleccioná direcciones válidas de la lista o escribí direcciones completas');
+      return;
+    }
+
+    const origen = lugarOrigen?.direccion || '';
+    const destino = lugarDestino?.direccion || '';
+    const fechaHoraInput = document.getElementById('fechaHora')?.value;
+
+    if (!origen) {
+      mostrarError('Ingresá la dirección de origen');
+      document.getElementById('origen')?.focus();
+      return;
+    }
+
+    if (!destino) {
+      mostrarError('Ingresá la dirección de destino');
+      document.getElementById('destino')?.focus();
+      return;
+    }
+
+    // Validaciones específicas por servicio
+    let fechaHoraVuelta = '';
+    let esperaMin = '';
+
+    if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
+      fechaHoraVuelta = document.getElementById('fechaHoraVuelta')?.value || '';
+      if (!fechaHoraVuelta) {
+        mostrarError('Seleccioná fecha y hora de VUELTA');
+        abrirSelectorFechaVuelta();
+        return;
+      }
+    }
+
+    if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
+      esperaMin = document.getElementById('tiempoEsperaMin')?.value || '30';
+    }
+
+    let fechaHoraParaEnviar = new Date().toISOString();
+    if (modoTiempo === 'ahora') {
+      fechaHoraParaEnviar = new Date().toISOString();
+    } else {
+      if (!fechaHoraInput) {
+        mostrarError('Seleccioná fecha y hora de ida');
+        abrirSelectorFecha();
+        return;
+      }
+
+      fechaHoraParaEnviar = fechaHoraInput;
+
+      if (new Date(fechaHoraInput) < new Date()) {
+        mostrarError('La fecha no puede ser pasada');
+        return;
+      }
+    }
+
+    guardarEstadoLocal();
+    ocultarError();
+    isCalculating = true;
+
+    const mensajeCarga = servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
+      ? 'Cotizando ida y vuelta...'
+      : 'Consultando precio...';
+
+    const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
+
+    // ========== JSONP ==========
+    const callbackName = 'mimi_cb_' + Date.now();
+
+    const params = new URLSearchParams({
+      action: 'cotizar',
+      desde: lugarOrigen.direccion,
+      hasta: lugarDestino.direccion,
+      servicio: servicioSeleccionado,
+      fechaHora: fechaHoraParaEnviar,
+      esperaMin: esperaMin,
+      fechaHoraVuelta: fechaHoraVuelta,
+      callback: callbackName
+    });
+
+    const script = document.createElement('script');
+    script.src = CONFIG.SCRIPT_URL + '?' + params.toString();
+
+    let finalizado = false;
+
+    const cleanup = () => {
+      if (finalizado) return;
+      finalizado = true;
+
+      if (script.parentNode) script.parentNode.removeChild(script);
+      delete window[callbackName];
+      clearTimeout(timeout);
+      isCalculating = false;
+      calcToast.remove();
+      clearButtonLoading("btnCalcular", "btnCalcularText");
     };
 
-    const n = notifServicio[servicioSeleccionado];
-    if (n) {
-      notifSystem.show(n.titulo, n.desc, 'success', 4000);
-    }
-  };
-  
-  // Error de carga
-  script.onerror = () => {
-    cleanup();
-    notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);
-    mostrarError('Error de conexión. Verificá tu internet.');
-  };
-  
-  document.head.appendChild(script);
+    // Timeout 15 segundos
+    const timeout = setTimeout(() => {
+      cleanup();
+      notifSystem.show('Error', 'El servidor no respondió', 'error', 6000);
+      mostrarError('Timeout: intentá de nuevo');
+    }, 15000);
+
+    // Callback exitoso
+    window[callbackName] = (res) => {
+      cleanup();
+
+      if (!res || res.error) {
+        const mensaje = res?.error || 'Error desconocido del servidor';
+        notifSystem.show('Error', mensaje, 'error', 6000);
+        mostrarError(mensaje);
+        return;
+      }
+
+      if (res.exito !== true) {
+        notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
+        mostrarError('Error en la cotización');
+        return;
+      }
+
+      mostrarResultado(res);
+      mostrarBotonesPostCotizacion();
+
+      const notifServicio = {
+        'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
+        'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` },
+        'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` }
+      };
+
+      const n = notifServicio[servicioSeleccionado];
+      if (n) {
+        notifSystem.show(n.titulo, n.desc, 'success', 4000);
+      }
+    };
+
+    // Error de carga
+    script.onerror = () => {
+      cleanup();
+      notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);
+      mostrarError('Error de conexión. Verificá tu internet.');
+    };
+
+    document.head.appendChild(script);
+
+  } catch (error) {
+    console.error('❌ Error general en calcularTarifa:', error);
+    mostrarError('Ocurrió un error inesperado al cotizar');
+    notifSystem.show('Error', 'No se pudo completar la cotización', 'error', 5000);
+    isCalculating = false;
+    clearButtonLoading("btnCalcular", "btnCalcularText");
+  }
 }
 // ==========================================
 // WHATSAPP
 // ==========================================
 function reservarWhatsApp() {
-  if (!lugarOrigen || !lugarDestino) {
-    mostrarError('Seleccioná direcciones de la lista');
-    return;
-  }
-  
-  const origen = lugarOrigen?.direccion || '';
-  const destino = lugarDestino?.direccion || '';
-  const fechaTexto = modoTiempo === 'ahora'
-    ? 'Ahora'
-    : document.getElementById('textoFechaSeleccionada')?.textContent || '';
-  const precio = document.getElementById('precioValor').textContent.trim();
-  
-  if (!datosCotizacion) {
-    notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 3000);
-    return;
-  }
-  
-  if (!origen || !destino || !fechaTexto || precio === '0') {
-    notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 3000);
-    return;
-  }
-  
-  const kmCliente = parseFloat(datosCotizacion.kmDetalle?.kmFinalAplicado) || parseFloat(datosCotizacion.km) || 0;
-  const mapsRutaCompleta = datosCotizacion.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
-  
-  notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);
-  
-  const mensaje = 
-    "*MIMI Transporte Escolar* 🚐\n\n" +
-    "📍 *Desde:* " + origen + "\n" +
-    "🎯 *Hasta:* " + destino + "\n\n" +
-    "🗺️ *Mapa:* " + mapsRutaCompleta + "\n\n" +
-    "⏰ *Cuándo:* " + fechaTexto + "\n" +
-    "💰 *Precio:* $" + precio + "\n" +
-    "📏 *Distancia:* " + kmCliente.toFixed(1) + "km · " + (datosCotizacion.duracionEstimadaMin || datosCotizacion.duracion || '—') + "min\n" +
-    "✅ ¿Confirmamos el viaje?";
-  
-  window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');
-}
+  setButtonLoading("btnWhatsappReserva", "btnWhatsappReservaText", "Abriendo WhatsApp...");
 
+  try {
+    if (!lugarOrigen || !lugarDestino) {
+      mostrarError('Seleccioná direcciones de la lista');
+      return;
+    }
+
+    const origen = lugarOrigen?.direccion || '';
+    const destino = lugarDestino?.direccion || '';
+    const fechaTexto = modoTiempo === 'ahora'
+      ? 'Ahora'
+      : document.getElementById('textoFechaSeleccionada')?.textContent || '';
+    const precio = document.getElementById('precioValor')?.textContent?.trim() || '0';
+
+    if (!datosCotizacion) {
+      notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 3000);
+      return;
+    }
+
+    if (!origen || !destino || !fechaTexto || precio === '0') {
+      notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 3000);
+      return;
+    }
+
+    const kmCliente = parseFloat(datosCotizacion.kmDetalle?.kmFinalAplicado) || parseFloat(datosCotizacion.km) || 0;
+    const mapsRutaCompleta = datosCotizacion.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
+
+    notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);
+
+    const mensaje =
+      "*MIMI Transporte Escolar* 🚐\n\n" +
+      "📍 *Desde:* " + origen + "\n" +
+      "🎯 *Hasta:* " + destino + "\n\n" +
+      "🗺️ *Mapa:* " + mapsRutaCompleta + "\n\n" +
+      "⏰ *Cuándo:* " + fechaTexto + "\n" +
+      "💰 *Precio:* $" + precio + "\n" +
+      "📏 *Distancia:* " + kmCliente.toFixed(1) + "km · " + (datosCotizacion.duracionEstimadaMin || datosCotizacion.duracion || '—') + "min\n" +
+      "✅ ¿Confirmamos el viaje?";
+
+    window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');
+
+  } catch (error) {
+    console.error('❌ Error en reservarWhatsApp:', error);
+    notifSystem.show('Error', 'No se pudo abrir WhatsApp', 'error', 4000);
+  } finally {
+    clearButtonLoading("btnWhatsappReserva", "btnWhatsappReservaText");
+  }
+}
 function activarAutocompleteConDelay(input, autocomplete) {
   input.addEventListener('input', () => {
     const valor = input.value;
@@ -2384,7 +2470,9 @@ function ocultarError() {
 }  
 window.addEventListener('load', () => {
   cargarEstadoLocal();
-  
+  window.addEventListener("load", () => {
+  ocultarBotonesPostCotizacion();
+});
   // Esperar a que Google Maps Places esté listo
   const intentarInitAutocomplete = () => {
     if (typeof google !== 'undefined' && google.maps && google.maps.places) {
