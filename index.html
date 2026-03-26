@@ -44,27 +44,10 @@
     console.log("🔒 Storage bloqueado preventivamente");
   })();
 </script>
-
 <!-- GOOGLE MAPS API -->
-<script>
-  window.initMap = function() {
-    console.log("✅ Google Maps cargado");
-    setTimeout(() => {
-      if (typeof initMap === 'function') {
-        initMap();
-      }
-    }, 300);
-  };
+<script async defer
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap&region=AR&language=es">
 </script>
-  <script>
-  (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.googleapis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({
-    key: "AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc",
-    v: "weekly",
-    libraries: "places"
-  });
-</script>
-
-<!-- REEMPLAZAR todo el bloque de Supabase por esto: -->
 
 <script>
   // Supabase REST API directa (sin SDK, sin warnings)
@@ -1217,6 +1200,32 @@ body {
   background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-oscuro) 100%);
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
+}
+  /* ==============================
+   GOOGLE AUTOCOMPLETE FIX
+============================== */
+.pac-container {
+  z-index: 99999 !important;
+  border-radius: 14px !important;
+  margin-top: 6px !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18) !important;
+  border: 1px solid #eee !important;
+  font-family: inherit !important;
+}
+
+.pac-item {
+  padding: 12px 14px !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+}
+
+.pac-item:hover {
+  background: #f8f9fa !important;
+}
+
+.pac-item-query {
+  font-size: 14px !important;
+  color: #222 !important;
 }
 </style>
 </head>
