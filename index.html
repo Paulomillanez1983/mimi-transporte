@@ -931,6 +931,10 @@ body {
 
 .modo-btn.uber-activo { animation: pulsoUber 2s infinite; }
 
+/* ======================================
+   SELECTOR DE SERVICIOS (GRID 2x2)
+====================================== */
+
 .servicio-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -938,40 +942,40 @@ body {
   margin-top: 15px;
 }
 
+/* ======================================
+   CARD BASE
+====================================== */
+
 .servicio-card {
-  min-height: 90px;
-  padding: 14px;
+  position: relative;
+  min-height: 82px;
+  padding: 12px;
   border-radius: 18px;
+  border: 2px solid #e0e0e0;
+  background: white;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
 
-.servicio-info strong {
-  font-size: 0.95rem;
-  line-height: 1.1;
+.servicio-card:hover {
+  border-color: #d0d0d0;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
 }
 
-.servicio-info small {
-  font-size: 0.78rem;
-  opacity: 0.7;
+.servicio-card:active {
+  transform: scale(0.98);
 }
 
-.servicio-hora {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #ff9800;
-  background: rgba(255,152,0,0.12);
-  padding: 6px 10px;
-  border-radius: 12px;
-  white-space: nowrap;
-}
-
-.servicio-card.otros {
-  opacity: 0.75;
-}
-  .servicio-card::before {
+/* BARRA LATERAL ACTIVA */
+.servicio-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -979,244 +983,103 @@ body {
   width: 4px;
   height: 100%;
   background: transparent;
+  border-radius: 18px 0 0 18px;
   transition: background 0.2s;
 }
 
+/* ======================================
+   ICONOS
+====================================== */
 
-/* LO QUIERO YA - Estilo especial */
-.servicio-card.urgente {
-  background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
-  border: none;
-  color: white;
-}
-.servicio-card.urgente .servicio-info strong {
-  color: white;
-}
-  .servicio-card.urgente .servicio-info small {
-  color: rgba(255,255,255,0.7);
-}
-.servicio-card.urgente .servicio-icon {
-  background: rgba(255,255,255,0.15);
-  color: #00e676;
-}
-.servicio-card.urgente.activo .servicio-info strong,
-.servicio-card.urgente.activo .servicio-info small {
-  color: var(--naranja) !important;
-  font-weight: 800;
-}
-
-  @keyframes borderGlow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-/* IDA Y VUELTA - Destacado sutil */
-.servicio-card.dinamico {
-  border-color: #ff9800;
-  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
-}
-.servicio-card.dinamico .servicio-icon {
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-  color: white;
-}
-
-
-@keyframes pulseUrgente {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,230,118,0.6); }
-  70% { transform: scale(1.05); box-shadow: 0 0 0 12px rgba(0,230,118,0); }
-  100% { transform: scale(1); }
-}
-
-@keyframes gentleFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-
-@keyframes flotar {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-  100% { transform: translateY(0); }
-}
-
-.servicio-card:hover {
-  border-color: #d0d0d0;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-}
-
-.servicio-card.activo {
-  border-color: var(--azul-primario);
-  background: linear-gradient(135deg, #e3f2fd 0%, #f5f7fa 100%);
-  box-shadow: 0 4px 16px rgba(21, 101, 192, 0.15);
-}
-.servicio-card.activo::before {
-  background: var(--azul-primario);
-}
-
-.servicio-card.destacado {
-  border-color: var(--naranja);
-  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
-}
-
-.servicio-card.destacado.activo {
-  background: linear-gradient(135deg, #ffe0b2 0%, #fff3e0 100%);
-  border-color: #e65100;
-}
-
-.servicio-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--naranja);
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Iconos más limpios */
 .servicio-icon {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   background: #f5f7fa;
-  border-radius: 12px;
+  border-radius: 14px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+
+  font-size: 1.25rem;
   flex-shrink: 0;
   transition: all 0.2s;
 }
+
 .servicio-card:hover .servicio-icon {
   transform: scale(1.05);
 }
 
-  
-.servicio-card.activo .servicio-icon {
-  background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-oscuro) 100%);
-  transform: scale(1.1);
+/* ======================================
+   TEXTOS
+====================================== */
+
+.servicio-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.servicio-info { 
-  flex: 1; 
-  min-width: 0; 
-}
-.servicio-info strong { 
-  display: block; 
-  color: #1a1a1a; 
-  font-size: 0.95rem; 
-  font-weight: 700;
-  margin-bottom: 3px; 
-}
-.servicio-info small { 
-  display: block; 
-  color: #888; 
-  font-size: 0.8rem; 
+.servicio-info strong {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 3px;
+  color: #1a1a1a;
 }
 
+.servicio-info small {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  line-height: 1.1;
+  color: #555;
+}
+
+/* HORA */
+.servicio-hora {
+  display: none;
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #ff9800;
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+/* ======================================
+   CHECK
+====================================== */
 
 .servicio-check {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #e0e0e0;
+  background: #d9d9d9;
   color: white;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   font-size: 0.85rem;
   flex-shrink: 0;
   transition: all 0.2s;
 }
 
-.servicio-card.activo .servicio-check {
-  background: var(--exito);
-  transform: scale(1.1);
-}
+/* ======================================
+   ESTADO ACTIVO (UNIFICADO)
+====================================== */
 
-.tiempo-btn {
-  flex: 1;
-  padding: 12px 8px;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  background: white;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #555;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-}
-
-.tiempo-btn.activo {
-  border-color: var(--azul-primario);
-  background: #e3f2fd;
-  color: var(--azul-primario);
-}
-
-.tiempo-btn:hover:not(.activo) {
-  border-color: var(--azul-claro);
-  background: #f5f7fa;
-}
-  /* Estilo para el nuevo selector de fecha */
-.datetime-card {
-  background: #f8f9fa;
-  border: 2px solid #e8e8e8;
-  border-radius: 14px;
-  padding: 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.datetime-card:hover {
-  border-color: var(--azul-claro);
-  background: white;
-}
-
-.datetime-card:active {
-  transform: scale(0.98);
-}
-
-  .btn-push{
-  border-radius:40px;
-  box-shadow:0 8px 0 #0d47a1;
-}
-
-.btn-push:active{
-  transform:translateY(5px);
-  box-shadow:0 3px 0 #0d47a1;
-}
-  @keyframes pulseSwap {
-  0%, 100% { box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3), 0 0 0 0 rgba(21, 101, 192, 0.4); }
-  50% { box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3), 0 0 0 8px rgba(21, 101, 192, 0); }
-}
-/* Badge más elegante */
-.servicio-badge.popular {
-  position: absolute;
-  top: -6px;
-  right: 16px;
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
-  color: white;
-  font-size: 0.6rem;
-  font-weight: 800;
-  padding: 3px 10px;
-  border-radius: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  box-shadow: 0 2px 8px rgba(255,107,53,0.3);
-}
-/* Estado activo unificado */
 .servicio-card.activo {
   border-color: var(--azul-primario);
   background: #f0f7ff;
   box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
 }
 
+.servicio-card.activo::before {
+  background: var(--azul-primario);
+}
+
 .servicio-card.activo .servicio-check {
   background: var(--azul-primario);
   transform: scale(1.1);
@@ -1224,8 +1087,99 @@ body {
 
 .servicio-card.activo .servicio-icon {
   background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-oscuro) 100%);
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.25);
+}
+
+/* ======================================
+   LO QUIERO YA (NEGRO)
+====================================== */
+
+.servicio-card.urgente {
+  background: #000;
+  border: 2px solid rgba(255,255,255,0.10);
+  color: white;
+}
+
+.servicio-card.urgente .servicio-info strong {
+  color: white;
+}
+
+.servicio-card.urgente .servicio-info small {
+  color: rgba(255,255,255,0.7);
+}
+
+.servicio-card.urgente .servicio-icon {
+  background: rgba(255,255,255,0.12);
+  color: #ffcc00;
+}
+
+/* ACTIVO EN NEGRO + TEXTO NARANJA */
+.servicio-card.urgente.activo {
+  border: 2px solid #ff9800;
+  background: #000;
+}
+
+.servicio-card.urgente.activo .servicio-info strong,
+.servicio-card.urgente.activo .servicio-info small {
+  color: #ff9800 !important;
+  font-weight: 900;
+}
+
+/* ======================================
+   IDA Y VUELTA (DESTACADO)
+====================================== */
+
+.servicio-card.dinamico {
+  border-color: #ff9800;
+  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+}
+
+.servicio-card.dinamico .servicio-icon {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+}
+
+/* ======================================
+   IDA + VUELTA PROGRAMADA (SUAVE)
+====================================== */
+
+.servicio-card.programado {
+  border-color: #e0e0e0;
+  background: #ffffff;
+}
+
+/* ======================================
+   OTROS SERVICIOS (APAGADO)
+====================================== */
+
+.servicio-card.otros {
+  opacity: 0.65;
+}
+
+/* ======================================
+   BADGE "MÁS ELEGIDO"
+====================================== */
+
+.servicio-badge.popular {
+  position: absolute;
+  top: -7px;
+  right: 12px;
+
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
+  color: white;
+
+  font-size: 0.6rem;
+  font-weight: 900;
+
+  padding: 3px 10px;
+  border-radius: 999px;
+
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+
+  box-shadow: 0 4px 10px rgba(255,107,53,0.25);
 }
   /* ==============================
    GOOGLE AUTOCOMPLETE FIX
