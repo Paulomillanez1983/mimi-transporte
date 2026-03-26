@@ -6,6 +6,9 @@
   <title>MIMI - Login Chofer</title>
   <meta name="theme-color" content="#1a1a2e" />
 
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
     :root {
       --azul-oscuro: #1a1a2e;
@@ -101,6 +104,54 @@
       transform: scale(0.99);
     }
 
+    .btn-google {
+      width: 100%;
+      border: 2px solid #ddd;
+      border-radius: 16px;
+      padding: 14px;
+      background: white;
+      color: #444;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .btn-google:hover {
+      background: #f8f9fa;
+      border-color: #ccc;
+    }
+
+    .btn-google img {
+      width: 20px;
+      height: 20px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 20px 0;
+      color: #888;
+      font-size: 0.85rem;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #ddd;
+    }
+
+    .divider span {
+      padding: 0 15px;
+    }
+
     .back-link {
       display: block;
       text-align: center;
@@ -143,6 +194,17 @@
 
     <div class="error-msg" id="errorMsg"></div>
 
+    <!-- Login con Google -->
+    <button type="button" class="btn-google" onclick="loginConGoogle()">
+      <img src="https://www.google.com/favicon.ico" alt="Google" />
+      Continuar con Google
+    </button>
+
+    <div class="divider">
+      <span>o</span>
+    </div>
+
+    <!-- Login tradicional (TU CÓDIGO ORIGINAL INTACTO) -->
     <form onsubmit="loginChofer(event)">
       <div class="form-group">
         <label for="usuario">Usuario</label>
@@ -167,17 +229,63 @@
   </div>
 
   <script>
+    // 🔷 CONFIGURACIÓN SUPABASE - Reemplazá con tus datos
+    const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
+    const SUPABASE_KEY = 'tu-anon-key-publica';
+
+    // Inicializar Supabase
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ========== LOGIN CON GOOGLE ==========
+    async function loginConGoogle() {
+      try {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin + '/login-chofer.html' // o tu URL
+          }
+        });
+
+        if (error) throw error;
+        
+        // El redirect lo maneja Supabase automáticamente
+      } catch (error) {
+        console.error('Error:', error);
+        mostrarError('Error al conectar con Google: ' + error.message);
+      }
+    }
+
+    // ========== MANEJAR SESIÓN AL CARGAR (para el redirect de Google) ==========
+    async function checkSession() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (session) {
+        // Usuario logueado con Google
+        const user = session.user;
+        
+        localStorage.setItem('choferLogueado', 'true');
+        localStorage.setItem('choferUsuario', user.email);
+        localStorage.setItem('choferNombre', user.user_metadata.full_name || user.email);
+        localStorage.setItem('choferFoto', user.user_metadata.avatar_url || '');
+        localStorage.setItem('choferId', user.id);
+        
+        window.location.href = 'chofer-panel.html';
+      }
+    }
+
+    // Verificar sesión al cargar la página
+    checkSession();
+
+    // ========== LOGIN TRADICIONAL (TU CÓDIGO ORIGINAL - SIN CAMBIOS) ==========
     function loginChofer(event) {
       event.preventDefault();
 
       const usuario = document.getElementById('usuario').value.trim();
       const password = document.getElementById('password').value.trim();
-      const errorMsg = document.getElementById('errorMsg');
 
-      errorMsg.style.display = 'none';
-      errorMsg.textContent = '';
+      ocultarError();
 
-      // Demo simple
+      // Tu lógica de demo intacta
       if (usuario === 'chofer' && password === '1234') {
         localStorage.setItem('choferLogueado', 'true');
         localStorage.setItem('choferUsuario', usuario);
@@ -185,8 +293,19 @@
         return;
       }
 
-      errorMsg.textContent = 'Usuario o contraseña incorrectos';
+      mostrarError('Usuario o contraseña incorrectos');
+    }
+
+    function mostrarError(mensaje) {
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.textContent = mensaje;
       errorMsg.style.display = 'block';
+    }
+
+    function ocultarError() {
+      const errorMsg = document.getElementById('errorMsg');
+      errorMsg.style.display = 'none';
+      errorMsg.textContent = '';
     }
   </script>
 </body>
