@@ -2533,25 +2533,41 @@ async function enviarViaje() {
     // =========================
     // PAYLOAD
     // =========================
-    const payload = {
-      origen: origen,
-      destino: destino,
-      origen_lat: Number(lugarOrigen?.lat) || null,
-      origen_lng: Number(lugarOrigen?.lng) || null,
-      destino_lat: Number(lugarDestino?.lat) || null,
-      destino_lng: Number(lugarDestino?.lng) || null,
-      precio: precio,
-      estado: "DISPONIBLE",
-      servicio: servicioSeleccionado || 'IDA_ESCOLAR',
-      fecha_hora: fechaHoraIda,
-      fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
-        ? fechaHoraVuelta
-        : null,
-      tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
-        ? tiempoEspera
-        : null
-    };
+const payload = {
+  cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
+  telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
 
+  origen: origen,
+  destino: destino,
+
+  origen_lat: Number(lugarOrigen?.lat) || null,
+  origen_lng: Number(lugarOrigen?.lng) || null,
+  destino_lat: Number(lugarDestino?.lat) || null,
+  destino_lng: Number(lugarDestino?.lng) || null,
+
+  precio: precio,
+  estado: "DISPONIBLE",
+  servicio: servicioSeleccionado || 'IDA_ESCOLAR',
+
+  fecha_hora: fechaHoraIda,
+  fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
+    ? fechaHoraVuelta
+    : null,
+
+  tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
+    ? tiempoEspera
+    : null,
+
+  notas: null,
+  chofer_id: null,
+  asignado_a: null,
+  asignado_at: null,
+  aceptado_at: null,
+  rechazado_por: null,
+  rechazado_at: null,
+  timeout_por: null,
+  timeout_at: null
+};
     console.log("📦 Payload viaje:", payload);
 
     // =========================
