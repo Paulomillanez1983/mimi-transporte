@@ -1723,8 +1723,45 @@ async function finalizarViaje(id) {
     // ==========================================
     // INICIALIZACIÓN
     // ==========================================
-    document.addEventListener('DOMContentLoaded', () => {
-      cargarViajesSeguro();
+    let realtimeChannel = null;
+
+function iniciarRealtimeViajes() {
+  try {
+    if (!window.supabaseClient) {
+      console.warn('No hay cliente realtime disponible');
+      return;
+    }
+
+    if (realtimeChannel) {
+      window.supabaseClient.removeChannel(realtimeChannel);
+    }
+
+    realtimeChannel = window.supabaseClient
+      .channel('viajes-live')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'viajes'
+        },
+        async (payload) => {
+          console.log('🔄 Cambio realtime en viajes:', payload);
+          await cargarViajesSeguro();
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Realtime viajes:', status);
+      });
+
+  } catch (err) {
+    console.error('Error iniciando realtime:', err);
+  }
+}
+    document.addEventListener('DOMContentLoaded', async () => {
+  await cargarViajesSeguro();
+  iniciarRealtimeViajes();
+});
 
       // Inicializar audio en primer click
       document.body.addEventListener('click', async () => {
