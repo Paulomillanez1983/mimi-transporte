@@ -978,6 +978,11 @@ body {
   background: rgba(255,255,255,0.15);
   color: #00e676;
 }
+.servicio-card.urgente.activo .servicio-info strong,
+.servicio-card.urgente.activo .servicio-info small {
+  color: var(--naranja) !important;
+  font-weight: 800;
+}
 
   @keyframes borderGlow {
   0%, 100% { opacity: 1; }
@@ -1268,6 +1273,16 @@ body {
     transform: translateY(0);
   }
 }
+  .servicio-hora {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ff9800;
+  background: rgba(255, 152, 0, 0.15);
+  padding: 6px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
 </style>
 </head>
 <body>
@@ -1355,31 +1370,35 @@ body {
 <!-- LO QUIERO YA -->
 <div class="servicio-card urgente activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
   <div class="servicio-icon">⚡</div>
-  <div class="servicio-info">
-    <strong>Lo quiero YA</strong>
-    <small>Viaje inmediato</small>
-  </div>
-  <div class="servicio-check">✓</div>
+<div class="servicio-info">
+  <strong id="txt-IDA_ESCOLAR">Lo quiero YA</strong>
+  <small id="subtxt-IDA_ESCOLAR">Viaje inmediato</small>
+</div>
+<div class="servicio-hora" id="hora-IDA_ESCOLAR" style="display:none;">🕒 --:--</div> <div class="servicio-check">✓</div>
 </div>
 
 <!-- IDA Y VUELTA -->
 <div class="servicio-card dinamico destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
   <div class="servicio-badge popular">Más elegido</div>
   <div class="servicio-icon">↔️</div>
-  <div class="servicio-info">
-    <strong>Ida y vuelta</strong>
-    <small>Te esperamos y volvemos</small>
-  </div>
+<div class="servicio-info">
+  <strong id="txt-IDA_Y_VUELTA_INMEDIATA">Ida y vuelta</strong>
+  <small id="subtxt-IDA_Y_VUELTA_INMEDIATA">Te esperamos y volvemos</small>
+</div>
+
+<div class="servicio-hora" id="hora-IDA_Y_VUELTA_INMEDIATA" style="display:none;">🕒 --:--</div>
   <div class="servicio-check">✓</div>
 </div>
 
 <!-- IDA + VUELTA PROGRAMADA -->
 <div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
   <div class="servicio-icon">📅</div>
-  <div class="servicio-info">
-    <strong>Ida + Vuelta programada</strong>
-    <small>Dos viajes separados</small>
-  </div>
+<div class="servicio-info">
+  <strong id="txt-IDA_MAS_VUELTA_PROGRAMADA">Ida + Vuelta programada</strong>
+  <small id="subtxt-IDA_MAS_VUELTA_PROGRAMADA">Dos viajes separados</small>
+</div>
+
+<div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">🕒 --:--</div>
   <div class="servicio-check">✓</div>
 </div>
   
@@ -1412,7 +1431,7 @@ body {
       <input type="hidden" id="tiempoEsperaMin" value="30">
     </div>
 <!-- HORARIO DE IDA -->
-<div id="campo-fecha-ida" style="margin-top:15px;">
+<div id="campo-fecha-ida" style="display:none; margin-top:15px;">
   <div class="datetime-header">
     <span id="tituloHorarioIda">📅 Horario de IDA</span>
   </div>
@@ -1431,7 +1450,7 @@ body {
 
 
 <button class="btn-calcular btn-push" id="btnCalcular" onclick="calcularTarifa()">
-  <span id="btnCalcularText">💰 Cotizar viaje</span>
+  <span id="btnCalcularText">🚐 Cotizar viaje</span>
 </button>
 
 <button class="btn-calcular btn-push" id="btnConfirmarViaje" onclick="enviarViaje()" style="display:none;">
@@ -1642,31 +1661,33 @@ function seleccionarServicio(servicio) {
   const tituloHorarioIda = document.getElementById('tituloHorarioIda');
   const labelHorarioIda = document.getElementById('labelHorarioIda');
 
-  // Reset visual base
+// Reset visual base
+if (campoIda) campoIda.style.display = 'none';
+if (campoVuelta) campoVuelta.style.display = 'none';
+if (campoEspera) campoEspera.style.display = 'none';
+
+if (servicio === 'IDA_ESCOLAR') {
   if (campoIda) campoIda.style.display = 'block';
-  if (campoVuelta) campoVuelta.style.display = 'none';
-  if (campoEspera) campoEspera.style.display = 'none';
+  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+}
 
-  // Configuración por servicio
-  if (servicio === 'IDA_ESCOLAR') {
-    if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
-    if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
-  }
+if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
+  if (campoIda) campoIda.style.display = 'block';
+  if (tituloHorarioIda) tituloHorarioIda.textContent = '⚡ Horario de SALIDA';
+  if (labelHorarioIda) labelHorarioIda.textContent = 'Salida del viaje';
+  if (campoEspera) campoEspera.style.display = 'block';
+}
 
-  if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
-    if (tituloHorarioIda) tituloHorarioIda.textContent = '⚡ Horario de SALIDA';
-    if (labelHorarioIda) labelHorarioIda.textContent = 'Salida del viaje';
-    if (campoEspera) campoEspera.style.display = 'block';
-  }
+if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
+  if (campoIda) campoIda.style.display = 'block';
+  if (campoVuelta) campoVuelta.style.display = 'block';
 
-  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
-    if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
-    if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
 
-    if (campoVuelta) campoVuelta.style.display = 'block';
-
-    sugerirHorariosEscolares();
-  }
+  sugerirHorariosEscolares();
+}
 
   const descripciones = {
     'IDA_ESCOLAR': {
@@ -1694,6 +1715,14 @@ function seleccionarServicio(servicio) {
 
   guardarEstadoLocal();
 }  
+  function actualizarHoraServicio(servicio, textoHora) {
+  const horaDiv = document.getElementById(`hora-${servicio}`);
+  if (!horaDiv) return;
+
+  horaDiv.style.display = "block";
+  horaDiv.textContent = `🕒 ${textoHora}`;
+}
+
 function setTiempoEspera(minutos) {
   tiempoEsperaSeleccionado = minutos;
   const inputEspera = document.getElementById('tiempoEsperaMin');
@@ -1788,6 +1817,8 @@ function actualizarTextoFechaVuelta() {
   const inputIda = document.getElementById('fechaHora');
   if (inputIda && inputIda.value) {
     const fechaIda = new Date(inputIda.value);
+    actualizarHoraServicio("IDA_MAS_VUELTA_PROGRAMADA", textoFecha.textContent);
+
     if (fecha <= fechaIda) {
       notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
       input.value = '';
@@ -2118,7 +2149,10 @@ function actualizarTextoFecha() {
     textoFecha.style.color = '#888';
     return;
   }
-  
+  if (servicioSeleccionado) {
+  actualizarHoraServicio(servicioSeleccionado, texto);
+}
+
   // Formatear fecha legible
   const opciones = { 
     weekday: 'long', 
