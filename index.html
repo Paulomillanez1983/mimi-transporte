@@ -2142,31 +2142,31 @@ function actualizarTextoFecha() {
   const input = document.getElementById('fechaHora');
   const textoFecha = document.getElementById('textoFechaSeleccionada');
   if (!input || !textoFecha) return;
-  
+
   const fecha = new Date(input.value);
   if (isNaN(fecha.getTime())) {
     textoFecha.textContent = 'Elegí fecha y hora...';
     textoFecha.style.color = '#888';
     return;
   }
-  if (servicioSeleccionado) {
-  actualizarHoraServicio(servicioSeleccionado, texto);
-}
 
-  // Formatear fecha legible
-  const opciones = { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
+  const opciones = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   };
-  
+
   const texto = fecha.toLocaleDateString('es-AR', opciones);
   textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
   textoFecha.style.color = '#1a1a1a';
-  
+
+  if (servicioSeleccionado) {
+    actualizarHoraServicio(servicioSeleccionado, textoFecha.textContent);
+  }
+
   guardarEstadoLocal();
 }
 
