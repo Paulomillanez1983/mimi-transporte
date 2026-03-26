@@ -1912,23 +1912,23 @@ function inicializarAutocomplete(inputOrigen, inputDestino) {
     if (autocompleteInicializado) return;
 
     // Crear autocompletados
-    autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
-      componentRestrictions: { country: 'ar' },
-      fields: ['formatted_address', 'geometry', 'name', 'place_id'],
-      types: ['geocode']
-    });
+autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
+  componentRestrictions: { country: 'ar' },
+  fields: ['formatted_address', 'geometry', 'name', 'place_id'],
+  types: ['geocode']
+});
 
-    autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
-      componentRestrictions: { country: 'ar' },
-      fields: ['formatted_address', 'geometry', 'name', 'place_id'],
-      types: ['geocode']
-    });
+autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
+  componentRestrictions: { country: 'ar' },
+  fields: ['formatted_address', 'geometry', 'name', 'place_id'],
+  types: ['establishment']
+});
 
     // Sesgo opcional hacia Córdoba
-    const cordobaBounds = new google.maps.LatLngBounds(
-      { lat: -31.50, lng: -64.30 },
-      { lat: -31.30, lng: -64.05 }
-    );
+const cordobaBounds = new google.maps.LatLngBounds(
+  { lat: -31.70, lng: -64.60 },
+  { lat: -31.10, lng: -63.90 }
+);
 
     autocompleteOrigen.setBounds(cordobaBounds);
     autocompleteDestino.setBounds(cordobaBounds);
