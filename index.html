@@ -931,50 +931,41 @@ body {
 
 .modo-btn.uber-activo { animation: pulsoUber 2s infinite; }
 
-/* ======================================
+/* ==========================================
    SELECTOR DE SERVICIOS (GRID 2x2)
-====================================== */
-
+========================================== */
 .servicio-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
   margin-top: 15px;
 }
 
-/* ======================================
+/* ==========================================
    CARD BASE
-====================================== */
-
+========================================== */
 .servicio-card {
   position: relative;
   min-height: 82px;
   padding: 12px;
-  border-radius: 18px;
-  border: 2px solid #e0e0e0;
-  background: white;
-
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-
+  background: white;
+  border: 2px solid #e8e8e8;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  overflow: hidden;
 }
 
 .servicio-card:hover {
-  border-color: #d0d0d0;
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
 }
 
-.servicio-card:active {
-  transform: scale(0.98);
-}
-
-/* BARRA LATERAL ACTIVA */
+/* Línea lateral cuando está activo */
 .servicio-card::before {
   content: '';
   position: absolute;
@@ -983,37 +974,28 @@ body {
   width: 4px;
   height: 100%;
   background: transparent;
-  border-radius: 18px 0 0 18px;
   transition: background 0.2s;
 }
 
-/* ======================================
-   ICONOS
-====================================== */
-
+/* ==========================================
+   ICONO
+========================================== */
 .servicio-icon {
   width: 42px;
   height: 42px;
   background: #f5f7fa;
-  border-radius: 14px;
-
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   flex-shrink: 0;
   transition: all 0.2s;
 }
 
-.servicio-card:hover .servicio-icon {
-  transform: scale(1.05);
-}
-
-/* ======================================
-   TEXTOS
-====================================== */
-
+/* ==========================================
+   INFO
+========================================== */
 .servicio-info {
   flex: 1;
   min-width: 0;
@@ -1021,59 +1003,57 @@ body {
 
 .servicio-info strong {
   display: block;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 800;
   line-height: 1.1;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
   color: #1a1a1a;
 }
 
 .servicio-info small {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   opacity: 0.75;
-  line-height: 1.1;
-  color: #555;
+  color: #777;
 }
 
-/* HORA */
-.servicio-hora {
-  display: none;
-  font-size: 0.72rem;
-  font-weight: 900;
-  color: #ff9800;
-  margin-top: 4px;
-  white-space: nowrap;
-}
-
-/* ======================================
+/* ==========================================
    CHECK
-====================================== */
-
+========================================== */
 .servicio-check {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #d9d9d9;
+  background: #e0e0e0;
   color: white;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   flex-shrink: 0;
   transition: all 0.2s;
 }
 
-/* ======================================
-   ESTADO ACTIVO (UNIFICADO)
-====================================== */
+/* ==========================================
+   HORA (solo hora corta)
+========================================== */
+.servicio-hora {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #ff9800;
+  background: rgba(255,152,0,0.12);
+  padding: 4px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
 
+/* ==========================================
+   ACTIVO (UNIFICADO)
+========================================== */
 .servicio-card.activo {
   border-color: var(--azul-primario);
   background: #f0f7ff;
-  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
 }
 
 .servicio-card.activo::before {
@@ -1082,23 +1062,21 @@ body {
 
 .servicio-card.activo .servicio-check {
   background: var(--azul-primario);
-  transform: scale(1.1);
+  transform: scale(1.08);
 }
 
 .servicio-card.activo .servicio-icon {
   background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-oscuro) 100%);
+  transform: scale(1.06);
   color: white;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.25);
 }
 
-/* ======================================
+/* ==========================================
    LO QUIERO YA (NEGRO)
-====================================== */
-
+========================================== */
 .servicio-card.urgente {
-  background: #000;
-  border: 2px solid rgba(255,255,255,0.10);
+  background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+  border: none;
   color: white;
 }
 
@@ -1111,26 +1089,20 @@ body {
 }
 
 .servicio-card.urgente .servicio-icon {
-  background: rgba(255,255,255,0.12);
-  color: #ffcc00;
+  background: rgba(255,255,255,0.15);
+  color: #ff9800;
 }
 
-/* ACTIVO EN NEGRO + TEXTO NARANJA */
-.servicio-card.urgente.activo {
-  border: 2px solid #ff9800;
-  background: #000;
-}
-
+/* activo en urgente: letras naranjas */
 .servicio-card.urgente.activo .servicio-info strong,
 .servicio-card.urgente.activo .servicio-info small {
-  color: #ff9800 !important;
+  color: var(--naranja) !important;
   font-weight: 900;
 }
 
-/* ======================================
-   IDA Y VUELTA (DESTACADO)
-====================================== */
-
+/* ==========================================
+   IDA Y VUELTA (destacado)
+========================================== */
 .servicio-card.dinamico {
   border-color: #ff9800;
   background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
@@ -1141,46 +1113,43 @@ body {
   color: white;
 }
 
-/* ======================================
-   IDA + VUELTA PROGRAMADA (SUAVE)
-====================================== */
-
+/* ==========================================
+   PROGRAMADO
+========================================== */
 .servicio-card.programado {
-  border-color: #e0e0e0;
-  background: #ffffff;
+  background: white;
 }
 
-/* ======================================
-   OTROS SERVICIOS (APAGADO)
-====================================== */
-
+/* ==========================================
+   OTROS SERVICIOS
+========================================== */
 .servicio-card.otros {
-  opacity: 0.65;
+  opacity: 0.6;
 }
 
-/* ======================================
-   BADGE "MÁS ELEGIDO"
-====================================== */
+.servicio-card.otros:hover {
+  opacity: 0.85;
+}
 
+/* ==========================================
+   BADGE "MÁS ELEGIDO"
+========================================== */
 .servicio-badge.popular {
   position: absolute;
-  top: -7px;
+  top: -6px;
   right: 12px;
-
   background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);
   color: white;
-
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 900;
-
   padding: 3px 10px;
-  border-radius: 999px;
-
+  border-radius: 20px;
   text-transform: uppercase;
-  letter-spacing: 0.7px;
-
-  box-shadow: 0 4px 10px rgba(255,107,53,0.25);
+  letter-spacing: 0.8px;
+  box-shadow: 0 2px 8px rgba(255,107,53,0.3);
 }
+
+  
   /* ==============================
    GOOGLE AUTOCOMPLETE FIX
 ============================== */
