@@ -936,8 +936,7 @@ async function cargarViajes() {
   } finally {
     if (btn) btn.classList.remove('spinning');
   }
-}
-    
+}    
     // AGREGAR: Funciones del sistema tipo Uber
 
 function mostrarSolicitudEntrante(viaje) {
@@ -1040,11 +1039,11 @@ async function aceptarViaje() {
   const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
   
   try {
-    const { error } = await supabase.from('viajes').updateById(viajePendiente.id, {
+    const { error } = await supabaseUpdate('viajes', 'id', viajePendiente.id, {
       estado: 'ACEPTADO',
       chofer_id: choferId,
       aceptado_at: new Date().toISOString(),
-      asignado_a: null // Limpiar asignación
+      asignado_a: null
     });
     
     if (error) throw error;
@@ -1060,6 +1059,108 @@ async function aceptarViaje() {
   }
 }
 
+async function rechazarViaje() {
+  if (!viajePendiente) return;
+  
+  if (!confirm('¿Seguro que querés rechazar este viaje?')) {
+    return;
+  }
+  
+  clearInterval(timerInterval);
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+  
+  try {
+    const { error } = await supabaseUpdate('viajes', 'id', viajePendiente.id, {
+      estado: 'DISPONIBLE',
+      rechazado_por: choferId,
+      rechazado_at: new Date().toISOString(),
+      asignado_a: null
+    });
+    
+    if (error) throw error;
+    
+    SoundSystem.playNotification();
+    cerrarModal();
+    mostrarNotificacion('Viaje rechazado', 'info');
+    
+  } catch (err) {
+    mostrarNotificacion('Error al rechazar', 'error');
+    console.error(err);
+  }
+}
+
+async function timeoutViaje() {
+  if (!viajePendiente) return;
+  
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+  
+  try {
+    await supabaseUpdate('viajes', 'id', viajePendiente.id, {
+      estado: 'DISPONIBLE',
+      timeout_por: choferId,
+      timeout_at: new Date().toISOString(),
+      asignado_a: null
+    });
+    
+    cerrarModal();
+    mostrarNotificacion('⏰ Tiempo agotado', 'warning');
+    SoundSystem.vibrate([100, 100, 100]);
+    
+  } catch (err) {
+    console.error(err);
+  }
+}
+   async function rechazarViaje() {
+  if (!viajePendiente) return;
+  
+  if (!confirm('¿Seguro que querés rechazar este viaje?')) {
+    return;
+  }
+  
+  clearInterval(timerInterval);
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+  
+  try {
+    const { error } = await supabaseUpdate('viajes', 'id', viajePendiente.id, {
+      estado: 'DISPONIBLE',
+      rechazado_por: choferId,
+      rechazado_at: new Date().toISOString(),
+      asignado_a: null
+    });
+    
+    if (error) throw error;
+    
+    SoundSystem.playNotification();
+    cerrarModal();
+    mostrarNotificacion('Viaje rechazado', 'info');
+    
+  } catch (err) {
+    mostrarNotificacion('Error al rechazar', 'error');
+    console.error(err);
+  }
+}
+
+async function timeoutViaje() {
+  if (!viajePendiente) return;
+  
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+  
+  try {
+    await supabaseUpdate('viajes', 'id', viajePendiente.id, {
+      estado: 'DISPONIBLE',
+      timeout_por: choferId,
+      timeout_at: new Date().toISOString(),
+      asignado_a: null
+    });
+    
+    cerrarModal();
+    mostrarNotificacion('⏰ Tiempo agotado', 'warning');
+    SoundSystem.vibrate([100, 100, 100]);
+    
+  } catch (err) {
+    console.error(err);
+  }
+}
 async function rechazarViaje() {
   if (!viajePendiente) return;
   
@@ -1339,31 +1440,53 @@ function cerrarSesion() {
       `;
     }
 
-    async function cambiarEstado(id, nuevoEstado) {
-      if (!id) {
-        alert('ID inválido');
-        return;
-      }
+async function cambiarEstado(id, nuevoEstado) {
+  if (!id) {
+    alert('ID inválido');
+    return;
+  }
 
-      try {
-        const { error } = await supabase.from('viajes').updateById(id, {
-          estado: nuevoEstado
-        });
+  try {
+    const { error } = await supabaseUpdate('viajes', 'id', id, {
+      estado: nuevoEstado
+    });
 
-        if (error) {
-          alert('Error: ' + error.message);
-          return;
-        }
-
-        SoundSystem.playSuccess();
-        mostrarNotificacion('Estado actualizado', 'success');
-        cargarViajes();
-      } catch (err) {
-        alert('Error de conexión');
-        console.error(err);
-      }
+    if (error) {
+      alert('Error: ' + error.message);
+      return;
     }
 
+    SoundSystem.playSuccess();
+    mostrarNotificacion('Estado actualizado', 'success');
+    cargarViajes();
+  } catch (err) {
+    alert('Error de conexión');
+    console.error(err);
+  }
+}
+
+async function finalizarViaje(id) {
+  const notas = prompt('¿Observaciones?');
+
+  try {
+    const { error } = await supabaseUpdate('viajes', 'id', id, {
+      estado: 'COMPLETADO',
+      notas: notas || null
+    });
+
+    if (error) {
+      alert('Error al finalizar: ' + error.message);
+      return;
+    }
+
+    SoundSystem.playSuccess();
+    mostrarNotificacion('Viaje finalizado', 'success');
+    cargarViajes();
+  } catch (err) {
+    alert('Error de conexión');
+    console.error(err);
+  }
+}
     async function finalizarViaje(id) {
       const notas = prompt('¿Observaciones?');
 
