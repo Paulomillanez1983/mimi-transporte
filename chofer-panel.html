@@ -904,7 +904,7 @@ async function cargarViajes() {
   try {
     const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
 
-    // 1) Viaje entrante asignado a este chofer (para modal)
+    // 1) Viaje asignado a este chofer (modal tipo Uber)
     const asignados = await supabase.select('viajes', {
       eq: {
         estado: 'ASIGNADO',
@@ -923,13 +923,13 @@ async function cargarViajes() {
       mostrarSolicitudEntrante(asignados[0]);
     }
 
-    // 2) Viajes disponibles para tomar
+    // 2) Viajes disponibles
     const disponibles = await supabase.select('viajes', {
       eq: { estado: 'DISPONIBLE' },
       order: 'created_at.desc'
     });
 
-    // 3) Viajes ya tomados por este chofer
+    // 3) Viajes aceptados por este chofer
     const aceptados = await supabase.select('viajes', {
       eq: {
         estado: 'ACEPTADO',
@@ -938,6 +938,7 @@ async function cargarViajes() {
       order: 'aceptado_at.desc'
     });
 
+    // 4) Viajes en curso por este chofer
     const enCurso = await supabase.select('viajes', {
       eq: {
         estado: 'EN_CURSO',
@@ -946,6 +947,7 @@ async function cargarViajes() {
       order: 'created_at.desc'
     });
 
+    // 5) Viajes completados por este chofer
     const completados = await supabase.select('viajes', {
       eq: {
         estado: 'COMPLETADO',
@@ -955,7 +957,7 @@ async function cargarViajes() {
       limit: 30
     });
 
-    // 4) Unificar todos los viajes visibles
+    // 6) Unificar
     const todos = [
       ...(disponibles || []),
       ...(aceptados || []),
@@ -963,7 +965,7 @@ async function cargarViajes() {
       ...(completados || [])
     ];
 
-    // 5) Evitar duplicados por ID
+    // 7) Evitar duplicados
     const mapa = new Map();
     todos.forEach(v => {
       if (v && v.id) mapa.set(v.id, v);
@@ -971,7 +973,7 @@ async function cargarViajes() {
 
     viajesData = Array.from(mapa.values());
 
-    // 6) Detectar nuevos viajes disponibles
+    // 8) Nuevos viajes disponibles
     const nuevosPendientes = viajesData.filter(v => {
       const estado = normalizarEstado(v.estado);
       return estado === 'DISPONIBLE' && !ultimosViajesVistos.has(v.id);
@@ -983,34 +985,6 @@ async function cargarViajes() {
       showNewTripIndicator();
       nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
     }
-
-    // 7) Detectar viajes DISPONIBLE vencidos (timeout visual/lista)
-    const expirados = viajesData.filter(v => {
-      const estado = normalizarEstado(v.estado);
-      return estado === 'DISPONIBLE' && viajeExpirado(v);
-    });
-
-    // 8) Marcar expirados en Supabase sin duplicar requests
-    for (const viaje of expirados) {
-      if (!expirandoViajes.has(viaje.id)) {
-        expirandoViajes.add(viaje.id);
-
-        supabase.updateById('viajes', viaje.id, {
-          estado: 'CANCELADO_TIMEOUT',
-          timeout_at: new Date().toISOString()
-        }).catch(err => {
-          console.error('Error expirando viaje:', err);
-        }).finally(() => {
-          expirandoViajes.delete(viaje.id);
-        });
-      }
-    }
-
-    // 9) Sacar de pantalla los DISPONIBLE ya vencidos
-    viajesData = viajesData.filter(v => {
-      const estado = normalizarEstado(v.estado);
-      return !(estado === 'DISPONIBLE' && viajeExpirado(v));
-    });
 
     renderizarViajes();
     actualizarStats();
