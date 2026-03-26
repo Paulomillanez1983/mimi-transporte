@@ -2571,8 +2571,25 @@ function ocultarError() {
 }  
 window.addEventListener('load', () => {
   cargarEstadoLocal();
-  window.addEventListener("load", () => {
   ocultarBotonesPostCotizacion();
+
+  // Selección por defecto si no hay servicio guardado
+  if (!servicioSeleccionado) {
+    seleccionarServicio("IDA_ESCOLAR");
+  }
+
+  // Esperar a que Google Maps Places esté listo
+  const intentarInitAutocomplete = () => {
+    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+      console.log("✅ Google Maps Places listo, inicializando autocomplete...");
+      initMap();
+    } else {
+      console.log("⏳ Esperando Google Maps Places...");
+      setTimeout(intentarInitAutocomplete, 500);
+    }
+  };
+
+  intentarInitAutocomplete();
 });
   // Esperar a que Google Maps Places esté listo
   const intentarInitAutocomplete = () => {
