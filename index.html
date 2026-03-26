@@ -1195,41 +1195,6 @@ body {
   background: #f0f7ff;
   box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
 }
-/* ===========================
-   FIX UI: LO QUIERO YA NEGRO
-=========================== */
-
-.servicio-card.urgente {
-  background: #111 !important;
-  border: 2px solid rgba(255,255,255,0.08) !important;
-  color: white !important;
-}
-
-.servicio-card.urgente .servicio-info strong,
-.servicio-card.urgente .servicio-info small {
-  color: white !important;
-}
-
-.servicio-card.urgente.activo {
-  background: #111 !important; /* NO CAMBIA */
-  border: 2px solid rgba(255,152,0,0.6) !important;
-  box-shadow: 0 0 0 4px rgba(255,152,0,0.15) !important;
-}
-
-.servicio-card.urgente.activo .servicio-info strong,
-.servicio-card.urgente.activo .servicio-info small {
-  color: #ff9800 !important; /* SOLO LETRAS NARANJA */
-}
-
-.servicio-card.urgente .servicio-check {
-  background: rgba(255,255,255,0.15) !important;
-  color: white !important;
-}
-
-.servicio-card.urgente.activo .servicio-check {
-  background: #1565c0 !important; /* tilde azul */
-  color: white !important;
-}
 
 .servicio-card.activo .servicio-check {
   background: var(--azul-primario);
@@ -1485,7 +1450,7 @@ body {
 
 
 <button class="btn-calcular btn-push" id="btnCalcular" onclick="calcularTarifa()">
-  <span id="btnCalcularText">Cotizar viaje</span>
+  <span id="btnCalcularText">🚐 Cotizar viaje</span>
 </button>
 
 <button class="btn-calcular btn-push" id="btnConfirmarViaje" onclick="enviarViaje()" style="display:none;">
@@ -1693,112 +1658,70 @@ function seleccionarServicio(servicio) {
   const campoVuelta = document.getElementById('campo-fecha-vuelta');
   const campoEspera = document.getElementById('campo-espera');
 
-  // Reset visual base
-  if (campoIda) campoIda.style.display = 'none';
-  if (campoVuelta) campoVuelta.style.display = 'none';
-  if (campoEspera) campoEspera.style.display = 'none';
+  const tituloHorarioIda = document.getElementById('tituloHorarioIda');
+  const labelHorarioIda = document.getElementById('labelHorarioIda');
 
-  // SOLO mostrar espera si es ida y vuelta inmediata
-  if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
-    if (campoEspera) campoEspera.style.display = 'block';
-  }
+// Reset visual base
+if (campoIda) campoIda.style.display = 'none';
+if (campoVuelta) campoVuelta.style.display = 'none';
+if (campoEspera) campoEspera.style.display = 'none';
 
-  // SOLO mostrar fecha ida + vuelta si es programado
-  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
-    if (campoIda) campoIda.style.display = 'block';
-    if (campoVuelta) campoVuelta.style.display = 'block';
+if (servicio === 'IDA_ESCOLAR') {
+  if (campoIda) campoIda.style.display = 'block';
+  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+}
 
-    sugerirHorariosEscolares();
-  }
+if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
+  if (campoIda) campoIda.style.display = 'block';
+  if (tituloHorarioIda) tituloHorarioIda.textContent = '⚡ Horario de SALIDA';
+  if (labelHorarioIda) labelHorarioIda.textContent = 'Salida del viaje';
+  if (campoEspera) campoEspera.style.display = 'block';
+}
+
+if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
+  if (campoIda) campoIda.style.display = 'block';
+  if (campoVuelta) campoVuelta.style.display = 'block';
+
+  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+
+  sugerirHorariosEscolares();
+}
 
   const descripciones = {
     'IDA_ESCOLAR': {
-      titulo: 'Viaje inmediato',
-      desc: 'Lo quiero YA. Se calcula como viaje directo al destino.'
+      titulo: 'Ida al destino',
+      desc: 'El chofer va de su base a tu domicilio y te lleva al destino. Solo pagás el recorrido efectivo.'
+    },
+    'VUELTA_ESCOLAR': {
+      titulo: 'Vuelta a domicilio',
+      desc: 'El chofer va de su base al destino, te recoge y te trae a tu domicilio.'
     },
     'IDA_Y_VUELTA_INMEDIATA': {
-      titulo: 'Ida y vuelta inmediata',
-      desc: 'Incluye 30 min de espera. El chofer te espera y vuelven juntos.'
+      titulo: 'Viaje redondo inmediato',
+      desc: 'Incluye 30 min de espera. El chofer te espera en el destino y vuelven juntos.'
     },
     'IDA_MAS_VUELTA_PROGRAMADA': {
       titulo: 'Dos viajes programados',
-      desc: 'Elegí el horario de ida y luego el horario de regreso.'
+      desc: 'Primero elegí el horario de ida y luego el de regreso.'
     }
   };
 
   const info = descripciones[servicio];
   if (info) {
-    notifSystem.show(info.titulo, info.desc, 'info', 3000);
-  }
-
-  // Ocultar todas las horas
-  document.querySelectorAll(".servicio-hora").forEach(h => {
-    h.style.display = "none";
-  });
-
-  // Mostrar solo la del servicio seleccionado
-  const horaSeleccionada = document.getElementById(`hora-${servicio}`);
-  if (horaSeleccionada) {
-    horaSeleccionada.style.display = "block";
+    notifSystem.show(info.titulo, info.desc, 'info', 3500);
   }
 
   guardarEstadoLocal();
-}
-
-// ==========================================
-// MOSTRAR HORA EN BOTÓN
-// ==========================================
-function actualizarHoraServicio(servicio, textoHora) {
-  const elHora = document.getElementById(`hora-${servicio}`);
-  if (!elHora) return;
-
-  elHora.style.display = "block";
-  elHora.textContent = "🕒 " + textoHora;
-}
-
-// ==========================================
-// ACTUALIZAR TEXTO FECHA IDA
-// ==========================================
-function actualizarTextoFecha() {
-  const input = document.getElementById('fechaHora');
-  const textoFecha = document.getElementById('textoFechaSeleccionada');
-  if (!input || !textoFecha) return;
-
-  const fecha = new Date(input.value);
-  if (isNaN(fecha.getTime())) {
-    textoFecha.textContent = 'Elegí fecha y hora...';
-    textoFecha.style.color = '#888';
-    return;
-  }
-
-  const opciones = { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  };
-
-  const texto = fecha.toLocaleDateString('es-AR', opciones);
-  textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
-  textoFecha.style.color = '#1a1a1a';
-
-  // Actualizar hora SOLO en programado
-  if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
-    actualizarHoraServicio("IDA_MAS_VUELTA_PROGRAMADA", formatearTextoBoton(fecha));
-  }
-
-  guardarEstadoLocal();
-}
+}  
   function actualizarHoraServicio(servicio, textoHora) {
-  const elHora = document.getElementById(`hora-${servicio}`);
-  if (!elHora) return;
+  const horaDiv = document.getElementById(`hora-${servicio}`);
+  if (!horaDiv) return;
 
-  elHora.style.display = "block";
-  elHora.textContent = "🕒 " + textoHora;
+  horaDiv.style.display = "block";
+  horaDiv.textContent = `🕒 ${textoHora}`;
 }
-
 
 function setTiempoEspera(minutos) {
   tiempoEsperaSeleccionado = minutos;
@@ -2648,6 +2571,7 @@ function ocultarError() {
 }  
 window.addEventListener('load', () => {
   cargarEstadoLocal();
+  window.addEventListener("load", () => {
   ocultarBotonesPostCotizacion();
 });
   // Esperar a que Google Maps Places esté listo
