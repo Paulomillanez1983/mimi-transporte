@@ -1301,7 +1301,7 @@ async function cambiarEstado(id, nuevoEstado) {
     const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
     const payload = {
       estado: nuevoEstado,
-      updated_at: new Date().toISOString()
+      created_at: new Date().toISOString()
     };
 
     if (nuevoEstado === 'ACEPTADO') {
@@ -1331,7 +1331,7 @@ await supabase.updateById('viajes', id, {
   estado: 'COMPLETADO',
   notas: notas || null,
   completado_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
+  created_at: new Date().toISOString()
 });
     SoundSystem.playSuccess();
     mostrarNotificacion('Viaje finalizado', 'success');
