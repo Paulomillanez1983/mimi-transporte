@@ -2459,8 +2459,8 @@ function actualizarTextoFechaVuelta() {
   }
 }
 async function enviarViaje() {
-  const origen = document.getElementById('origen')?.value || '';
-  const destino = document.getElementById('destino')?.value || '';
+  const origen = document.getElementById('origen')?.value?.trim() || '';
+  const destino = document.getElementById('destino')?.value?.trim() || '';
   const precioTexto = document.getElementById('precioValor')?.textContent || '0';
   const precio = Number(precioTexto.replace(/\./g, '').replace(',', '.'));
 
@@ -2468,36 +2468,83 @@ async function enviarViaje() {
   setButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText", "Confirmando...");
 
   try {
-    const { data, error } = await supabase
-      .from('viajes')
-      .insert([{
-        origen: origen,
-        destino: destino,
-        precio: precio,
-        estado: "PENDIENTE",
-        servicio: servicioSeleccionado || 'IDA_ESCOLAR',
-        fecha_hora: document.getElementById('fechaHora')?.value || new Date().toISOString(),
-        tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? 
-          (document.getElementById('tiempoEsperaMin')?.value || 30) : null
-      }]);
-
-    if (error) {
-      console.error("❌ Error:", error);
-      notifSystem.show('Error', error.message || 'No se pudo guardar el viaje', 'error', 3000);
+    // Validaciones duras
+    if (!lugarOrigen || !lugarDestino) {
+      notifSystem.show('Error', 'Seleccioná origen y destino válidos desde la lista', 'error', 3500);
+      mostrarError('Seleccioná direcciones válidas');
       return;
     }
 
-    console.log("✅ Guardado:", data);
-    notifSystem.show('¡Listo!', 'Viaje solicitado correctamente 🚐', 'success', 3000);
-    clearButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText");
+    if (!datosCotizacion) {
+      notifSystem.show('Error', 'Primero cotizá el viaje', 'error', 3000);
+      mostrarError('Primero calculá la tarifa');
+      return;
+    }
+
+    if (!origen || !destino || !precio || precio <= 0) {
+      notifSystem.show('Error', 'Faltan datos para confirmar el viaje', 'error', 3500);
+      mostrarError('Datos incompletos para confirmar');
+      return;
+    }
+
+    const fechaHoraIda =
+      document.getElementById('fechaHora')?.value || new Date().toISOString();
+
+    const fechaHoraVuelta =
+      document.getElementById('fechaHoraVuelta')?.value || null;
+
+    const payload = {
+      origen: origen,
+      destino: destino,
+      origen_lat: lugarOrigen?.lat ?? null,
+      origen_lng: lugarOrigen?.lng ?? null,
+      destino_lat: lugarDestino?.lat ?? null,
+      destino_lng: lugarDestino?.lng ?? null,
+      precio: precio,
+      estado: "PENDIENTE",
+      servicio: servicioSeleccionado || 'IDA_ESCOLAR',
+      fecha_hora: fechaHoraIda,
+      fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
+        ? fechaHoraVuelta
+        : null,
+      tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
+        ? Number(document.getElementById('tiempoEsperaMin')?.value || 30)
+        : null,
+      creado_en: new Date().toISOString()
+    };
+
+    console.log("📦 Payload viaje:", payload);
+
+    // ✅ USAR TU HELPER REAL DE INSERT
+    const { data, error } = await window.supabaseInsert('viajes', payload);
+
+    if (error) {
+      console.error("❌ Error Supabase:", error);
+      notifSystem.show('Error', error.message || 'No se pudo guardar el viaje', 'error', 4000);
+      mostrarError(error.message || 'No se pudo guardar el viaje');
+      return;
+    }
+
+    console.log("✅ Viaje guardado:", data);
+
+    notifSystem.show('¡Listo!', 'Viaje solicitado correctamente 🚐', 'success', 3500);
+    ocultarError();
+
+    // UX pro
+    const btnConfirmar = document.getElementById("btnConfirmarViaje");
+    if (btnConfirmar) {
+      btnConfirmar.disabled = true;
+      btnConfirmar.style.opacity = "0.7";
+    }
+
   } catch (error) {
     console.error('❌ Error en enviarViaje:', error);
     notifSystem.show('Error', 'No se pudo confirmar el viaje', 'error', 5000);
+    mostrarError('No se pudo confirmar el viaje');
   } finally {
     clearButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText");
   }
-}
-  
+}  
   // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
