@@ -1653,45 +1653,55 @@ async function cambiarEstado(id, nuevoEstado) {
     console.error(err);
   }
 }
-    async function tomarViaje(id) {
-  const choferId = obtenerChoferId();
+async select(table, options = {}) {
+  let url = `${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(options.columns || '*')}`;
 
-  try {
-    const viaje = await supabase.select('viajes', {
-      filters: [`id=eq.${id}`],
-      limit: 1
+  if (options.eq) {
+    Object.entries(options.eq).forEach(([col, val]) => {
+      url += `&${col}=eq.${encodeURIComponent(val)}`;
     });
-
-    const actual = Array.isArray(viaje) ? viaje[0] : null;
-
-    if (!actual) {
-      mostrarNotificacion('El viaje ya no existe', 'error');
-      return;
-    }
-
-    if (actual.estado !== 'DISPONIBLE') {
-      mostrarNotificacion('Este viaje ya fue tomado por otro chofer', 'warning');
-      await cargarViajesSeguro();
-      return;
-    }
-
-    await supabase.updateById('viajes', id, {
-      estado: 'ACEPTADO',
-      chofer_id: choferId,
-      asignado_a: choferId,
-      aceptado_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
-
-    SoundSystem.playSuccess();
-    mostrarNotificacion('✓ Viaje aceptado', 'success');
-    await cargarViajesSeguro();
-  } catch (err) {
-    alert('Error al aceptar: ' + err.message);
-    console.error(err);
   }
-}
-async function rechazarDisponible(id) {
+
+  if (options.neq) {
+    Object.entries(options.neq).forEach(([col, val]) => {
+      url += `&${col}=neq.${encodeURIComponent(val)}`;
+    });
+  }
+
+  if (Array.isArray(options.filters)) {
+    options.filters.forEach(filter => {
+      url += `&${filter}`;
+    });
+  }
+
+  if (options.or) {
+    url += `&or=(${options.or})`;
+  }
+
+  if (options.order) {
+    url += `&order=${encodeURIComponent(options.order)}`;
+  }
+
+  if (options.limit) {
+    url += `&limit=${options.limit}`;
+  }
+
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || error.error_description || 'Error en consulta');
+  }
+
+  return await response.json();
+},
+    async function rechazarDisponible(id) {
   const choferId = obtenerChoferId();
 
   if (!confirm('¿Querés rechazar este viaje?')) return;
