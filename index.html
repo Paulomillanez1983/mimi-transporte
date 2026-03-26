@@ -1390,55 +1390,50 @@ body {
     <!-- SELECTOR DE SERVICIOS -->
 <div class="servicio-selector" id="selectorServicios">
 
-<!-- LO QUIERO YA -->
-<div class="servicio-card urgente activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
-  <div class="servicio-icon">⚡</div>
-<div class="servicio-info">
-  <strong id="txt-IDA_ESCOLAR">Lo quiero YA</strong>
-  <small id="subtxt-IDA_ESCOLAR">Viaje inmediato</small>
-</div>
-<div class="servicio-hora" id="hora-IDA_ESCOLAR" style="display:none;">🕒 --:--</div> <div class="servicio-check">✓</div>
-</div>
-
-<!-- IDA Y VUELTA -->
-<div class="servicio-card dinamico destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
-  <div class="servicio-badge popular">Más elegido</div>
-  <div class="servicio-icon">↔️</div>
-<div class="servicio-info">
-  <strong id="txt-IDA_Y_VUELTA_INMEDIATA">Ida y vuelta</strong>
-  <small id="subtxt-IDA_Y_VUELTA_INMEDIATA">Te esperamos y volvemos</small>
-</div>
-
-<div class="servicio-hora" id="hora-IDA_Y_VUELTA_INMEDIATA" style="display:none;">🕒 --:--</div>
-  <div class="servicio-check">✓</div>
-</div>
-
-<!-- IDA + VUELTA PROGRAMADA -->
-<div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
-  <div class="servicio-icon">📅</div>
-  <div class="servicio-info">
-    <strong>Ida + Vuelta programada</strong>
-    <small>Dos viajes separados</small>
-    <div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">🕒 --:--</div>
+  <!-- LO QUIERO YA -->
+  <div class="servicio-card urgente activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
+    <div class="servicio-icon">⚡</div>
+    <div class="servicio-info">
+      <strong id="txt-IDA_ESCOLAR">Lo quiero YA</strong>
+      <small id="subtxt-IDA_ESCOLAR">Viaje inmediato</small>
+    </div>
+    <div class="servicio-hora" id="hora-IDA_ESCOLAR" style="display:none;">--:--</div>
+    <div class="servicio-check">✓</div>
   </div>
-  <div class="servicio-check">✓</div>
-</div>
 
-<!-- OTROS SERVICIOS -->
-<div class="servicio-card" onclick="seleccionarServicio('OTROS_SERVICIOS')" id="card-OTROS_SERVICIOS">
-  <div class="servicio-icon">➕</div>
-  <div class="servicio-info">
-    <strong>Otros servicios</strong>
-    <small>Próximamente</small>
+  <!-- IDA Y VUELTA -->
+  <div class="servicio-card dinamico destacado" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
+    <div class="servicio-badge popular">Más elegido</div>
+    <div class="servicio-icon">↔️</div>
+    <div class="servicio-info">
+      <strong id="txt-IDA_Y_VUELTA_INMEDIATA">Ida y vuelta</strong>
+      <small id="subtxt-IDA_Y_VUELTA_INMEDIATA">Te esperamos y volvemos</small>
+    </div>
+    <div class="servicio-hora" id="hora-IDA_Y_VUELTA_INMEDIATA" style="display:none;">--:--</div>
+    <div class="servicio-check">✓</div>
   </div>
-  <div class="servicio-check">✓</div>
-</div>
 
+  <!-- IDA + VUELTA PROGRAMADA -->
+  <div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
+    <div class="servicio-icon">📅</div>
+    <div class="servicio-info">
+      <strong id="txt-IDA_MAS_VUELTA_PROGRAMADA">Ida + Vuelta</strong>
+      <small id="subtxt-IDA_MAS_VUELTA_PROGRAMADA">Programada</small>
+    </div>
+    <div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">--:--</div>
+    <div class="servicio-check">✓</div>
+  </div>
 
-<div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">🕒 --:--</div>
-  <div class="servicio-check">✓</div>
-</div>
-  
+  <!-- OTROS SERVICIOS -->
+  <div class="servicio-card otros" onclick="seleccionarServicio('OTROS_SERVICIOS')" id="card-OTROS_SERVICIOS">
+    <div class="servicio-icon">➕</div>
+    <div class="servicio-info">
+      <strong id="txt-OTROS_SERVICIOS">Otros</strong>
+      <small id="subtxt-OTROS_SERVICIOS">Servicios</small>
+    </div>
+    <div class="servicio-check">✓</div>
+  </div>
+
 </div>
 
     <!-- CAMPOS CONDICIONALES -->
