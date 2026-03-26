@@ -808,28 +808,33 @@ window.supabaseClient = supabaseClient;
         return await response.json();
       },
 
-      async updateById(table, id, data) {
-        const url = `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
+async updateById(table, id, data) {
+  const url = `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
 
-        const response = await fetch(url, {
-          method: 'PATCH',
-          headers: {
-            apikey: SUPABASE_KEY,
-            Authorization: `Bearer ${SUPABASE_KEY}`,
-            'Content-Type': 'application/json',
-            Prefer: 'return=representation'
-          },
-          body: JSON.stringify(data)
-        });
+  const payload = {
+    ...data,
+    updated_at: new Date().toISOString()
+  };
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(error.message || error.error_description || 'Error actualizando');
-        }
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation'
+    },
+    body: JSON.stringify(payload)
+  });
 
-        return await response.json();
-      },
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || error.error_description || 'Error actualizando');
+  }
 
+  return await response.json();
+},
+      
       async insert(table, data) {
         const url = `${SUPABASE_URL}/rest/v1/${table}`;
 
@@ -1782,47 +1787,51 @@ function iniciarRealtimeViajes() {
     console.error('Error iniciando realtime:', err);
   }
 }
-document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('DOMContentLoaded', async () => {
   await cargarViajesSeguro();
   iniciarRealtimeViajes();
-});
 
+  // Inicializar audio en primer click
+  document.body.addEventListener('click', async () => {
     if (!SoundSystem.audioContext) {
-          await SoundSystem.init();
-        }
-      }, { once: true });
+      await SoundSystem.init();
+    }
+  }, { once: true });
 
-      // Click fuera del modal
-      const modal = document.getElementById('incomingModal');
-      const card = document.getElementById('incomingModalCard');
+  // Click fuera del modal
+  const modal = document.getElementById('incomingModal');
+  const card = document.getElementById('incomingModalCard');
 
-      if (modal && card) {
-        modal.addEventListener('click', (e) => {
-          if (e.target.id === 'incomingModal') {
-            card.style.animation = 'shake 0.4s ease-in-out';
-            setTimeout(() => {
-              card.style.animation = 'slideUp 0.38s ease-out';
-            }, 400);
-            SoundSystem.vibrate([30, 30, 30]);
-          }
-        });
+  if (modal && card) {
+    modal.addEventListener('click', (e) => {
+      if (e.target.id === 'incomingModal') {
+        card.style.animation = 'shake 0.4s ease-in-out';
+        setTimeout(() => {
+          card.style.animation = 'slideUp 0.38s ease-out';
+        }, 400);
+        SoundSystem.vibrate([30, 30, 30]);
       }
-
-      // Re-render de countdowns locales cada 1 segundo
-      setInterval(() => {
-        if (!document.hidden) {
-          renderizarViajes();
-          actualizarStats();
-        }
-      }, 1000);
     });
+  }
 
-    // Auto-refresh backend cada 15 segundos (más tipo Uber)
-    setInterval(() => {
-      if (!document.hidden) {
-        cargarViajesSeguro();
-      }
-    }, 15000);
+  // Re-render local solo visual (countdowns)
+  setInterval(() => {
+    if (!document.hidden) {
+      renderizarViajes();
+      actualizarStats();
+    }
+  }, 1000);
+});
+    window.addEventListener('beforeunload', async () => {
+  try {
+    if (realtimeChannel && window.supabaseClient) {
+      await window.supabaseClient.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+  } catch (e) {
+    console.warn('No se pudo limpiar realtime:', e);
+  }
+});
   </script>
 </body>
 </html>
