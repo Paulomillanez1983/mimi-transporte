@@ -1723,11 +1723,12 @@ async function enviarViaje() {
 // ==========================================
 
 let autocompleteInicializado = false;
-let autocompleteOrigen = null;
-let autocompleteDestino = null;
-let lugarOrigen = null;
-let lugarDestino = null;
 
+// IMPORTANTE:
+// autocompleteOrigen, autocompleteDestino,
+// lugarOrigen y lugarDestino
+// ya fueron declarados arriba globalmente.
+// NO redeclararlos acá.
 function initMap() {
   console.log("🚀 Iniciando Google Maps...");
 
