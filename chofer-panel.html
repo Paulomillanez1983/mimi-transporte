@@ -1377,6 +1377,49 @@ async function cambiarEstado(id, nuevoEstado) {
     console.error(err);
   }
 }
+
+    async function tomarViaje(id) {
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+
+  try {
+    await supabase.updateById('viajes', id, {
+      estado: 'ACEPTADO',
+      chofer_id: choferId,
+      aceptado_at: new Date().toISOString()
+    });
+
+    SoundSystem.playSuccess();
+    mostrarNotificacion('✓ Viaje aceptado', 'success');
+    cargarViajes();
+  } catch (err) {
+    alert('Error al aceptar: ' + err.message);
+    console.error(err);
+  }
+}
+
+async function rechazarDisponible(id) {
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+
+  if (!confirm('¿Querés rechazar este viaje?')) return;
+
+  try {
+    await supabase.updateById('viajes', id, {
+      rechazado_por: choferId,
+      rechazado_at: new Date().toISOString()
+    });
+
+    // Lo sacamos SOLO de la vista local de este chofer
+    viajesData = viajesData.filter(v => v.id !== id);
+
+    SoundSystem.playNotification();
+    mostrarNotificacion('Viaje rechazado', 'info');
+    renderizarViajes();
+    actualizarStats();
+  } catch (err) {
+    alert('Error al rechazar: ' + err.message);
+    console.error(err);
+  }
+}
     async function finalizarViaje(id) {
   const notas = prompt('¿Observaciones?');
 
