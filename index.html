@@ -1693,50 +1693,33 @@ function seleccionarServicio(servicio) {
   const campoVuelta = document.getElementById('campo-fecha-vuelta');
   const campoEspera = document.getElementById('campo-espera');
 
-  // Reset visual base
+  // ocultar todo siempre
   if (campoIda) campoIda.style.display = 'none';
   if (campoVuelta) campoVuelta.style.display = 'none';
   if (campoEspera) campoEspera.style.display = 'none';
 
-  // SOLO mostrar espera si es ida y vuelta inmediata
+  // IDA ESCOLAR = inmediato (no muestra fecha)
+  if (servicio === 'IDA_ESCOLAR') {
+    // nada
+  }
+
+  // ida y vuelta inmediata = espera
   if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
     if (campoEspera) campoEspera.style.display = 'block';
   }
 
-  // SOLO mostrar fecha ida + vuelta si es programado
+  // programado = ida + vuelta
   if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
     if (campoIda) campoIda.style.display = 'block';
     if (campoVuelta) campoVuelta.style.display = 'block';
-
     sugerirHorariosEscolares();
   }
 
-  const descripciones = {
-    'IDA_ESCOLAR': {
-      titulo: 'Viaje inmediato',
-      desc: 'Lo quiero YA. Se calcula como viaje directo al destino.'
-    },
-    'IDA_Y_VUELTA_INMEDIATA': {
-      titulo: 'Ida y vuelta inmediata',
-      desc: 'Incluye 30 min de espera. El chofer te espera y vuelven juntos.'
-    },
-    'IDA_MAS_VUELTA_PROGRAMADA': {
-      titulo: 'Dos viajes programados',
-      desc: 'Elegí el horario de ida y luego el horario de regreso.'
-    }
-  };
-
-  const info = descripciones[servicio];
-  if (info) {
-    notifSystem.show(info.titulo, info.desc, 'info', 3000);
-  }
-
-  // Ocultar todas las horas
+  // Mostrar solo la hora del servicio seleccionado
   document.querySelectorAll(".servicio-hora").forEach(h => {
     h.style.display = "none";
   });
 
-  // Mostrar solo la del servicio seleccionado
   const horaSeleccionada = document.getElementById(`hora-${servicio}`);
   if (horaSeleccionada) {
     horaSeleccionada.style.display = "block";
