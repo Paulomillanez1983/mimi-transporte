@@ -891,12 +891,12 @@ async function cargarViajes() {
 
     if (errAsign) throw errAsign;
 
-    // Si hay viaje asignado, no está ya en modal, y no lo rechazó antes
+    // Si hay viaje asignado, mostrar modal
     if (asignados && asignados.length > 0 && !viajePendiente && !ultimosViajesVistos.has(asignados[0].id)) {
       mostrarSolicitudEntrante(asignados[0]);
     }
 
-    // 2. Cargar viajes del chofer (aceptados, en curso, completados)
+    // 2. Cargar viajes del chofer
     const { data, error } = await supabase
       .from('viajes')
       .select('*')
@@ -906,7 +906,7 @@ async function cargarViajes() {
 
     viajesData = data || [];
     
-    // Notificar nuevos en lista (no asignados directos)
+    // Notificar nuevos pendientes
     const nuevosPendientes = viajesData.filter(v => {
       const estado = normalizarEstado(v.estado);
       return estado === 'PENDIENTE' && !ultimosViajesVistos.has(v.id);
@@ -937,6 +937,7 @@ async function cargarViajes() {
     if (btn) btn.classList.remove('spinning');
   }
 }
+    
     // AGREGAR: Funciones del sistema tipo Uber
 
 function mostrarSolicitudEntrante(viaje) {
