@@ -1282,6 +1282,53 @@ body {
   border-radius: 12px;
   white-space: nowrap;
 }
+/* ==========================
+   FIX BOTON "LO QUIERO YA"
+========================== */
+
+.servicio-card.urgente {
+  background: #0f1b2b !important;
+  border: 2px solid transparent !important;
+}
+
+.servicio-card.urgente strong,
+.servicio-card.urgente small {
+  color: white !important;
+}
+
+/* Cuando está seleccionado */
+.servicio-card.urgente.activo {
+  background: #0f1b2b !important;
+  border: 2px solid transparent !important;
+}
+
+/* Solo cambia el color de las letras */
+.servicio-card.urgente.activo strong,
+.servicio-card.urgente.activo small {
+  color: #ff9800 !important;
+}
+/* ==========================
+   MEJORA TARJETA PROGRAMADA
+========================== */
+
+#card-IDA_MAS_VUELTA_PROGRAMADA {
+  border: 2px solid #d6e4ff;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+}
+
+#card-IDA_MAS_VUELTA_PROGRAMADA.activo {
+  border: 2px solid #1565c0;
+  box-shadow: 0 8px 20px rgba(21, 101, 192, 0.18);
+}
+
+#card-IDA_MAS_VUELTA_PROGRAMADA.activo strong {
+  color: #1565c0;
+  font-weight: 800;
+}
+
+#card-IDA_MAS_VUELTA_PROGRAMADA.activo small {
+  color: #444;
+}
 
 </style>
 </head>
@@ -1368,7 +1415,7 @@ body {
 <div class="servicio-selector" id="selectorServicios">
 
 <!-- LO QUIERO YA -->
-<div class="servicio-card urgente activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
+<div class="servicio-card urgente" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
   <div class="servicio-icon">⚡</div>
 <div class="servicio-info">
   <strong id="txt-IDA_ESCOLAR">Lo quiero YA</strong>
@@ -1667,9 +1714,17 @@ if (campoVuelta) campoVuelta.style.display = 'none';
 if (campoEspera) campoEspera.style.display = 'none';
 
 if (servicio === 'IDA_ESCOLAR') {
-  if (campoIda) campoIda.style.display = 'block';
-  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
-  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+  if (campoIda) campoIda.style.display = 'none';
+  if (campoVuelta) campoVuelta.style.display = 'none';
+  if (campoEspera) campoEspera.style.display = 'none';
+
+  // Setear fecha/hora automática = ahora
+  const ahora = new Date();
+  const inputFechaHora = document.getElementById('fechaHora');
+  if (inputFechaHora) {
+    inputFechaHora.value = formatearFechaInput(ahora);
+    actualizarTextoFecha();
+  }
 }
 
 if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
@@ -2571,8 +2626,8 @@ function ocultarError() {
 }  
 window.addEventListener('load', () => {
   cargarEstadoLocal();
-  window.addEventListener("load", () => {
   ocultarBotonesPostCotizacion();
+  seleccionarServicio("IDA_ESCOLAR");
 });
   // Esperar a que Google Maps Places esté listo
   const intentarInitAutocomplete = () => {
