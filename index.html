@@ -1412,7 +1412,7 @@ body {
     </div>
 
 <button class="btn-whatsapp" id="btnWhatsappReserva" onclick="reservarWhatsApp()" style="display:none;">
-  <svg id="btnWhatsappIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
     <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.175L2.546 20.2l3.025-.892A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.615 13.635c-.2.563-1.154 1.035-1.615 1.103-.431.063-.892.09-1.358-.009-.313-.066-.715-.173-1.226-.346-2.17-.715-3.58-2.638-3.688-2.77-.108-.13-.88-1.166-.88-2.225 0-1.06.555-1.58.752-1.796.197-.216.431-.27.575-.27.144 0 .288.002.414.008.13.007.303-.05.475.36.172.412.588 1.424.64 1.528.052.103.086.223.017.36-.069.137-.103.223-.206.341-.103.12-.216.251-.31.337-.103.094-.21.197-.144.388.066.19.288.627.62.997.426.475.784.622 1.06.691.172.043.302-.017.388-.103.086-.086.36-.417.453-.56.094-.144.188-.12.32-.072.13.05.838.395.98.466.145.072.24.103.275.16.035.06.025.345-.175.908z" fill="white"/>
   </svg>
   <span id="btnWhatsappReservaText">Reservar por WhatsApp</span>
@@ -2181,9 +2181,12 @@ function animarContador(id, inicio, fin, duracion) {
     elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
   }, 16);
 }
-// ==========================================
-// CÁLCULO DE TARIFA - CON JSONP
-// ==========================================
+
+function resetCotizacionUI() {
+  isCalculating = false;
+  clearButtonLoading("btnCalcular", "btnCalcularText");
+}
+
 // ==========================================
 // CÁLCULO DE TARIFA - CON JSONP
 // ==========================================
@@ -2198,11 +2201,13 @@ async function calcularTarifa() {
   try {
     if (!navigator.onLine) {
       mostrarError('Sin conexión a internet');
+      resetCotizacionUI();
       return;
     }
 
     if (!servicioSeleccionado) {
       mostrarError('Seleccioná un tipo de servicio');
+      resetCotizacionUI();
       return;
     }
 
@@ -2223,6 +2228,7 @@ async function calcularTarifa() {
 
     if (!lugarOrigen || !lugarDestino) {
       mostrarError('Seleccioná direcciones válidas de la lista o escribí direcciones completas');
+      resetCotizacionUI();
       return;
     }
 
@@ -2233,12 +2239,14 @@ async function calcularTarifa() {
     if (!origen) {
       mostrarError('Ingresá la dirección de origen');
       document.getElementById('origen')?.focus();
+      resetCotizacionUI();
       return;
     }
 
     if (!destino) {
       mostrarError('Ingresá la dirección de destino');
       document.getElementById('destino')?.focus();
+      resetCotizacionUI();
       return;
     }
 
@@ -2251,6 +2259,7 @@ async function calcularTarifa() {
       if (!fechaHoraVuelta) {
         mostrarError('Seleccioná fecha y hora de VUELTA');
         abrirSelectorFechaVuelta();
+        resetCotizacionUI();
         return;
       }
     }
@@ -2266,6 +2275,7 @@ async function calcularTarifa() {
       if (!fechaHoraInput) {
         mostrarError('Seleccioná fecha y hora de ida');
         abrirSelectorFecha();
+        resetCotizacionUI();
         return;
       }
 
@@ -2273,6 +2283,7 @@ async function calcularTarifa() {
 
       if (new Date(fechaHoraInput) < new Date()) {
         mostrarError('La fecha no puede ser pasada');
+        resetCotizacionUI();
         return;
       }
     }
@@ -2370,11 +2381,10 @@ async function calcularTarifa() {
     console.error('❌ Error general en calcularTarifa:', error);
     mostrarError('Ocurrió un error inesperado al cotizar');
     notifSystem.show('Error', 'No se pudo completar la cotización', 'error', 5000);
-    isCalculating = false;
-    clearButtonLoading("btnCalcular", "btnCalcularText");
+    resetCotizacionUI();
   }
 }
-// ==========================================
+  // ==========================================
 // WHATSAPP
 // ==========================================
 function reservarWhatsApp() {
