@@ -51,39 +51,143 @@
 
 <script>
   // Supabase REST API directa (sin SDK, sin warnings)
-  const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
-  
-  window.supabase = {
-    from: (table) => ({
-      insert: async (data) => {
-        try {
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-            method: 'POST',
-            headers: {
-              'apikey': SUPABASE_KEY,
-              'Authorization': `Bearer ${SUPABASE_KEY}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(data)
-          });
-          
-          if (!response.ok) {
-            const error = await response.text();
-            return { data: null, error: { message: error } };
-          }
-          
-          const result = await response.json();
-          return { data: result, error: null };
-        } catch (err) {
-          return { data: null, error: { message: err.message } };
-        }
+const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
+
+// Cliente Supabase completo con métodos de filtrado
+window.supabase = {
+  from: (table) => {
+    let query = {
+      table: table,
+      filters: [],
+      ordering: null,
+      selectedColumns: '*',
+      
+      // Métodos de filtrado
+      eq: function(column, value) {
+        this.filters.push({ type: 'eq', column, value });
+        return this;
       },
       
-      select: async (columns = '*') => {
+      neq: function(column, value) {
+        this.filters.push({ type: 'neq', column, value });
+        return this;
+      },
+      
+      gt: function(column, value) {
+        this.filters.push({ type: 'gt', column, value });
+        return this;
+      },
+      
+      lt: function(column, value) {
+        this.filters.push({ type: 'lt', column, value });
+        return this;
+      },
+      
+      gte: function(column, value) {
+        this.filters.push({ type: 'gte', column, value });
+        return this;
+      },
+      
+      lte: function(column, value) {
+        this.filters.push({ type: 'lte', column, value });
+        return this;
+      },
+      
+      like: function(column, pattern) {
+        this.filters.push({ type: 'like', column, value: pattern });
+        return this;
+      },
+      
+      ilike: function(column, pattern) {
+        this.filters.push({ type: 'ilike', column, value: pattern });
+        return this;
+      },
+      
+      in: function(column, values) {
+        this.filters.push({ type: 'in', column, value: values });
+        return this;
+      },
+      
+      is: function(column, value) {
+        this.filters.push({ type: 'is', column, value });
+        return this;
+      },
+      
+      or: function(conditions) {
+        this.filters.push({ type: 'or', value: conditions });
+        return this;
+      },
+      
+      // Ordenamiento
+      order: function(column, { ascending = true } = {}) {
+        this.ordering = { column, ascending };
+        return this;
+      },
+      
+      // Selección de columnas
+      select: function(columns = '*') {
+        this.selectedColumns = columns;
+        return this;
+      },
+      
+      // Ejecutar query (GET)
+      then: async function(callback) {
+        const result = await this.execute();
+        return callback(result);
+      },
+      
+      execute: async function() {
         try {
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=${columns}`, {
+          let url = `${SUPABASE_URL}/rest/v1/${this.table}?select=${encodeURIComponent(this.selectedColumns)}`;
+          
+          // Aplicar filtros
+          this.filters.forEach(filter => {
+            switch(filter.type) {
+              case 'eq':
+                url += `&${encodeURIComponent(filter.column)}=eq.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'neq':
+                url += `&${encodeURIComponent(filter.column)}=neq.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'gt':
+                url += `&${encodeURIComponent(filter.column)}=gt.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'lt':
+                url += `&${encodeURIComponent(filter.column)}=lt.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'gte':
+                url += `&${encodeURIComponent(filter.column)}=gte.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'lte':
+                url += `&${encodeURIComponent(filter.column)}=lte.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'like':
+                url += `&${encodeURIComponent(filter.column)}=like.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'ilike':
+                url += `&${encodeURIComponent(filter.column)}=ilike.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'in':
+                const values = Array.isArray(filter.value) ? filter.value.join(',') : filter.value;
+                url += `&${encodeURIComponent(filter.column)}=in.(${encodeURIComponent(values)})`;
+                break;
+              case 'is':
+                url += `&${encodeURIComponent(filter.column)}=is.${encodeURIComponent(filter.value)}`;
+                break;
+              case 'or':
+                url += `&or=(${encodeURIComponent(filter.value)})`;
+                break;
+            }
+          });
+          
+          // Aplicar ordenamiento
+          if (this.ordering) {
+            const direction = this.ordering.ascending ? 'asc' : 'desc';
+            url += `&order=${encodeURIComponent(this.ordering.column)}.${direction}`;
+          }
+          
+          const response = await fetch(url, {
             method: 'GET',
             headers: {
               'apikey': SUPABASE_KEY,
@@ -91,16 +195,84 @@
             }
           });
           
-          const result = await response.json();
-          return { data: result, error: null };
+          const data = await response.json();
+          
+          if (!response.ok) {
+            return { data: null, error: { message: data?.message || 'Error en la consulta' } };
+          }
+          
+          return { data, error: null };
+          
         } catch (err) {
           return { data: null, error: { message: err.message } };
         }
       }
-    })
-  };
+    };
+    
+    // Hacer que .select() sea opcional (default '*')
+    return query.select();
+  },
   
-  console.log("✅ Supabase REST API inicializada (sin warnings)");
+  // Método directo para updates por ID
+  updateById: async function(table, id, data) {
+    try {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(data)
+        }
+      );
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { data: null, error: { message: result?.message || 'Error actualizando' } };
+      }
+      
+      return { data: result, error: null };
+      
+    } catch (err) {
+      return { data: null, error: { message: err.message } };
+    }
+  },
+  
+  // Insert
+  insert: async function(table, data) {
+    try {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/${table}`,
+        {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify(data)
+        }
+      );
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        return { data: null, error: { message: result?.message || 'Error insertando' } };
+      }
+      
+      return { data: result, error: null };
+      
+    } catch (err) {
+      return { data: null, error: { message: err.message } };
+    }
+  }
+};
 </script>
 <style>
 :root {
