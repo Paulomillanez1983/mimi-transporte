@@ -229,9 +229,9 @@
   </div>
 
   <script>
-    // 🔷 CONFIGURACIÓN SUPABASE - Reemplazá con tus datos
-    const SUPABASE_URL = 'https://tu-proyecto.supabase.co';
-    const SUPABASE_KEY = 'tu-anon-key-publica';
+    // 🔷 CONFIGURACIÓN SUPABASE - Tus datos reales
+    const SUPABASE_URL = 'https://xrphpqmutvadjrucqicn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM';
 
     // Inicializar Supabase
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -242,7 +242,7 @@
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.origin + '/login-chofer.html' // o tu URL
+            redirectTo: window.location.href // Vuelve a esta misma página
           }
         });
 
@@ -263,12 +263,15 @@
         // Usuario logueado con Google
         const user = session.user;
         
+        // Guardar en localStorage (mismo formato que tu login tradicional)
         localStorage.setItem('choferLogueado', 'true');
         localStorage.setItem('choferUsuario', user.email);
         localStorage.setItem('choferNombre', user.user_metadata.full_name || user.email);
         localStorage.setItem('choferFoto', user.user_metadata.avatar_url || '');
         localStorage.setItem('choferId', user.id);
+        localStorage.setItem('choferAuthProvider', 'google');
         
+        // Redirigir al panel
         window.location.href = 'chofer-panel.html';
       }
     }
@@ -289,6 +292,7 @@
       if (usuario === 'chofer' && password === '1234') {
         localStorage.setItem('choferLogueado', 'true');
         localStorage.setItem('choferUsuario', usuario);
+        localStorage.setItem('choferAuthProvider', 'manual');
         window.location.href = 'chofer-panel.html';
         return;
       }
