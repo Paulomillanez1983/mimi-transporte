@@ -18,8 +18,12 @@
   <meta name="twitter:image" content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" />
   <meta name="theme-color" content="#1a1a2e" />
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Supabase con defer para evitar bloqueo -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  
   <script>
+    // Redirección temprana si no está logueado
     if (localStorage.getItem('choferLogueado') !== 'true') {
       window.location.href = 'login-chofer.html';
     }
@@ -744,135 +748,106 @@
   </div>
 
   <script>
-// ==========================================
-// CONFIGURACIÓN SUPABASE
-// ==========================================
-const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
+    // ==========================================
+    // CONFIGURACIÓN Y CLIENTE SUPABASE (ÚNICO)
+    // ==========================================
+    const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
 
-// Cliente oficial Supabase para Realtime
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  }
-});
+    // Cliente único que combina Realtime + REST
+    let supabaseClient = null;
+    let supabaseRest = null;
 
-window.supabaseClient = supabaseClient;
-
-// Cliente REST simple
-const supabase = {
-  async select(table, options = {}) {
-    let url = `${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(options.columns || '*')}`;
-
-    if (options.eq) {
-      Object.entries(options.eq).forEach(([col, val]) => {
-        url += `&${col}=eq.${encodeURIComponent(val)}`;
-      });
-    }
-
-    if (options.neq) {
-      Object.entries(options.neq).forEach(([col, val]) => {
-        url += `&${col}=neq.${encodeURIComponent(val)}`;
-      });
-    }
-
-    if (Array.isArray(options.filters)) {
-      options.filters.forEach(filter => {
-        url += `&${filter}`;
-      });
-    }
-
-    if (options.or) {
-      url += `&or=(${options.or})`;
-    }
-
-    if (options.order) {
-      url += `&order=${encodeURIComponent(options.order)}`;
-    }
-
-    if (options.limit) {
-      url += `&limit=${options.limit}`;
-    }
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`
+    function inicializarSupabase() {
+      if (typeof window.supabase === 'undefined') {
+        console.error('Supabase library not loaded');
+        return false;
       }
-    });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || error.error_description || 'Error en consulta');
+      // Evitar reinicialización
+      if (supabaseClient) return true;
+
+      try {
+        // Cliente oficial con Realtime
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            storageKey: 'mimi_chofer_session'
+          },
+          realtime: {
+            params: {
+              eventsPerSecond: 10
+            }
+          }
+        });
+
+        // Wrapper REST simple (usando el mismo cliente para evitar conflictos)
+        supabaseRest = {
+          async select(table, options = {}) {
+            let query = supabaseClient.from(table).select(options.columns || '*');
+            
+            if (options.eq) {
+              Object.entries(options.eq).forEach(([col, val]) => {
+                query = query.eq(col, val);
+              });
+            }
+            
+            if (options.neq) {
+              Object.entries(options.neq).forEach(([col, val]) => {
+                query = query.neq(col, val);
+              });
+            }
+            
+            if (options.order) {
+              const [col, dir] = options.order.split('.');
+              query = query.order(col, { ascending: dir === 'asc' });
+            }
+            
+            if (options.limit) {
+              query = query.limit(options.limit);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            return data || [];
+          },
+
+          async insert(table, data) {
+            const { data: result, error } = await supabaseClient
+              .from(table)
+              .insert(data)
+              .select();
+            if (error) throw error;
+            return result;
+          },
+
+          async updateById(table, id, data, extraEq = {}) {
+            let query = supabaseClient
+              .from(table)
+              .update({ ...data, updated_at: new Date().toISOString() })
+              .eq('id', id);
+            
+            Object.entries(extraEq).forEach(([col, val]) => {
+              query = query.eq(col, val);
+            });
+
+            const { data: result, error } = await query.select();
+            if (error) throw error;
+            return result;
+          }
+        };
+
+        return true;
+      } catch (err) {
+        console.error('Error inicializando Supabase:', err);
+        return false;
+      }
     }
 
-    return await response.json();
-  },
-
-  async insert(table, data) {
-    const url = `${SUPABASE_URL}/rest/v1/${table}`;
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation'
-      },
-      body: JSON.stringify(data)
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || error.error_description || 'Error insertando');
-    }
-
-    return await response.json();
-  },
-
-  async updateById(table, id, data, extraEq = {}) {
-    let url = `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
-
-    Object.entries(extraEq).forEach(([col, val]) => {
-      url += `&${col}=eq.${encodeURIComponent(val)}`;
-    });
-
-    const payload = {
-      ...data,
-      updated_at: new Date().toISOString()
-    };
-
-    const response = await fetch(url, {
-      method: 'PATCH',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=representation'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || error.error_description || 'Error actualizando');
-    }
-
-    return await response.json();
-  }
-};
-
-// ==========================================
-// SISTEMA DE SONIDO
-// ==========================================    
+    // ==========================================
+    // SISTEMA DE SONIDO
+    // ==========================================
     const SoundSystem = {
       audioContext: null,
       enabled: false,
@@ -893,11 +868,9 @@ const supabase = {
           await this.init();
           return this.enabled;
         }
-
         if (this.audioContext.state === 'suspended') {
           await this.audioContext.resume();
         }
-
         this.enabled = !this.enabled;
         this.updateButton();
         return this.enabled;
@@ -906,7 +879,6 @@ const supabase = {
       updateButton() {
         const btn = document.getElementById('soundBtn');
         if (!btn) return;
-
         btn.textContent = this.enabled ? '🔔' : '🔕';
         btn.classList.toggle('muted', !this.enabled);
         btn.title = this.enabled ? 'Sonido activado' : 'Sonido desactivado';
@@ -916,21 +888,16 @@ const supabase = {
         if (!this.enabled || !this.audioContext) return;
         const ctx = this.audioContext;
         const now = ctx.currentTime;
-
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-
         osc.connect(gain);
         gain.connect(ctx.destination);
-
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(880, now);
         osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
-
         gain.gain.setValueAtTime(0, now);
         gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-
         osc.start(now);
         osc.stop(now + 0.4);
       },
@@ -939,21 +906,16 @@ const supabase = {
         if (!this.enabled || !this.audioContext) return;
         const ctx = this.audioContext;
         const now = ctx.currentTime;
-
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-
         osc.connect(gain);
         gain.connect(ctx.destination);
-
         osc.type = 'sine';
         osc.frequency.setValueAtTime(523.25, now);
         osc.frequency.setValueAtTime(659.25, now + 0.1);
         osc.frequency.setValueAtTime(783.99, now + 0.2);
-
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.4);
-
         osc.start(now);
         osc.stop(now + 0.4);
       },
@@ -962,20 +924,15 @@ const supabase = {
         if (!this.enabled || !this.audioContext) return;
         const ctx = this.audioContext;
         const now = ctx.currentTime;
-
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-
         osc.connect(gain);
         gain.connect(ctx.destination);
-
         osc.type = 'sine';
         osc.frequency.setValueAtTime(600, now);
         osc.frequency.exponentialRampToValueAtTime(300, now + 0.2);
-
         gain.gain.setValueAtTime(0.15, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-
         osc.start(now);
         osc.stop(now + 0.2);
       },
@@ -985,17 +942,13 @@ const supabase = {
           if (navigator.vibrate && document.hasFocus()) {
             navigator.vibrate(pattern);
           }
-        } catch (_) {
-          // algunos navegadores bloquean vibración
-        }
+        } catch (_) {}
       }
     };
 
     async function toggleSound() {
       const isEnabled = await SoundSystem.toggle();
-      if (isEnabled) {
-        SoundSystem.playNotification();
-      }
+      if (isEnabled) SoundSystem.playNotification();
     }
 
     // ==========================================
@@ -1004,11 +957,12 @@ const supabase = {
     let viajesData = [];
     let viajePendiente = null;
     let timerInterval = null;
-    let TIMEOUT_SEGUNDOS = 30;
+    const TIMEOUT_SEGUNDOS = 30;
     let ultimosViajesVistos = new Set();
     let viajesRechazadosLocalmente = new Set();
     let filtroActual = 'TODOS';
     let cargandoViajes = false;
+    let realtimeChannel = null;
 
     // ==========================================
     // UTILIDADES
@@ -1034,46 +988,38 @@ const supabase = {
       return localStorage.getItem('choferUsuario') || 'chofer_anon';
     }
 
-function obtenerFechaBaseViaje(viaje) {
-  return (
-    viaje.iniciado_at ||
-    viaje.aceptado_at ||
-    viaje.asignado_at ||
-    viaje.completado_at ||
-    viaje.updated_at ||
-    viaje.created_at ||
-    viaje.fechaHora ||
-    viaje.fecha ||
-    null
-  );
-}
+    function obtenerFechaBaseViaje(viaje) {
+      return (
+        viaje.iniciado_at ||
+        viaje.aceptado_at ||
+        viaje.asignado_at ||
+        viaje.completado_at ||
+        viaje.updated_at ||
+        viaje.created_at ||
+        viaje.fechaHora ||
+        viaje.fecha ||
+        null
+      );
+    }
 
-function obtenerCampoOrdenSeguro(estado) {
-  switch (estado) {
-    case 'ASIGNADO':
-      return 'asignado_at.desc';
-    case 'ACEPTADO':
-      return 'aceptado_at.desc';
-    case 'EN_CURSO':
-      // ⚠️ iniciado_at no existe en tu tabla
-      return 'updated_at.desc';
-    case 'COMPLETADO':
-      return 'completado_at.desc';
-    default:
-      return 'created_at.desc';
-  }
-}
+    function obtenerCampoOrdenSeguro(estado) {
+      switch (estado) {
+        case 'ASIGNADO': return 'asignado_at.desc';
+        case 'ACEPTADO': return 'aceptado_at.desc';
+        case 'EN_CURSO': return 'updated_at.desc';
+        case 'COMPLETADO': return 'completado_at.desc';
+        default: return 'created_at.desc';
+      }
+    }
+
     function obtenerTiempoRestante(viaje) {
       const base = obtenerFechaBaseViaje(viaje);
       if (!base) return 0;
-
       const creado = new Date(base).getTime();
       if (Number.isNaN(creado)) return 0;
-
       const ahora = Date.now();
-      const expiracionMs = 2 * 60 * 1000; // 2 minutos para DISPONIBLE
-      const restante = Math.max(0, expiracionMs - (ahora - creado));
-      return Math.floor(restante / 1000);
+      const expiracionMs = 2 * 60 * 1000;
+      return Math.floor(Math.max(0, expiracionMs - (ahora - creado)) / 1000);
     }
 
     function limpiarViajesExpiradosLocales() {
@@ -1093,11 +1039,8 @@ function obtenerCampoOrdenSeguro(estado) {
     function showNewTripIndicator() {
       const indicator = document.getElementById('newTripIndicator');
       if (!indicator) return;
-
       indicator.classList.add('show');
-      setTimeout(() => {
-        indicator.classList.remove('show');
-      }, 4000);
+      setTimeout(() => indicator.classList.remove('show'), 4000);
     }
 
     function mostrarNotificacion(mensaje, tipo = 'info') {
@@ -1107,7 +1050,6 @@ function obtenerCampoOrdenSeguro(estado) {
         warning: '#ff9800',
         info: '#2196f3'
       };
-
       const toast = document.createElement('div');
       toast.style.cssText = `
         position: fixed;
@@ -1154,73 +1096,48 @@ function obtenerCampoOrdenSeguro(estado) {
       try {
         const choferId = obtenerChoferId();
 
-        // 1) Viaje asignado a este chofer (modal tipo Uber)
-        const asignados = await supabase.select('viajes', {
-          eq: {
-            estado: 'ASIGNADO',
-            chofer_id: choferId
-          },
+        // 1) Viaje asignado a este chofer
+        const asignados = await supabaseRest.select('viajes', {
+          eq: { estado: 'ASIGNADO', chofer_id: choferId },
           order: 'asignado_at.desc',
           limit: 1
         });
 
         const viajeAsignado = asignados?.[0];
-
-        if (
-          viajeAsignado &&
-          !viajePendiente &&
-          !ultimosViajesVistos.has(viajeAsignado.id)
-        ) {
+        if (viajeAsignado && !viajePendiente && !ultimosViajesVistos.has(viajeAsignado.id)) {
           mostrarSolicitudEntrante(viajeAsignado);
         }
 
         // 2) Viajes disponibles
-        const disponibles = await supabase.select('viajes', {
+        const disponibles = await supabaseRest.select('viajes', {
           eq: { estado: 'DISPONIBLE' },
           order: 'created_at.desc'
         });
 
-        // 3) Viajes aceptados por este chofer
-        const aceptados = await supabase.select('viajes', {
-          eq: {
-            estado: 'ACEPTADO',
-            chofer_id: choferId
-          },
+        // 3) Viajes aceptados
+        const aceptados = await supabaseRest.select('viajes', {
+          eq: { estado: 'ACEPTADO', chofer_id: choferId },
           order: 'aceptado_at.desc'
         });
 
-// 4) Viajes en curso por este chofer
-const enCurso = await supabase.select('viajes', {
-  eq: {
-    estado: 'EN_CURSO',
-    chofer_id: choferId
-  },
-  order: obtenerCampoOrdenSeguro('EN_CURSO')
-});
-        // 5) Viajes completados por este chofer
-        const completados = await supabase.select('viajes', {
-          eq: {
-            estado: 'COMPLETADO',
-            chofer_id: choferId
-          },
+        // 4) Viajes en curso
+        const enCurso = await supabaseRest.select('viajes', {
+          eq: { estado: 'EN_CURSO', chofer_id: choferId },
+          order: 'updated_at.desc'
+        });
+
+        // 5) Viajes completados
+        const completados = await supabaseRest.select('viajes', {
+          eq: { estado: 'COMPLETADO', chofer_id: choferId },
           order: 'completado_at.desc',
           limit: 30
         });
 
-        const todos = [
-          ...(disponibles || []),
-          ...(aceptados || []),
-          ...(enCurso || []),
-          ...(completados || [])
-        ];
-
+        const todos = [...(disponibles || []), ...(aceptados || []), ...(enCurso || []), ...(completados || [])];
         const mapa = new Map();
-        todos.forEach(v => {
-          if (v && v.id) mapa.set(v.id, v);
-        });
+        todos.forEach(v => { if (v?.id) mapa.set(v.id, v); });
 
         viajesData = Array.from(mapa.values()).filter(v => !viajesRechazadosLocalmente.has(v.id));
-
         limpiarViajesExpiradosLocales();
 
         const nuevosPendientes = viajesData.filter(v => {
@@ -1281,7 +1198,6 @@ const enCurso = await supabase.select('viajes', {
             <div style="font-size: 0.9rem; color: #666; margin-top: 4px;">📱 ${escaparHTML(viaje.telefono || 'Sin teléfono')}</div>
           </div>
         </div>
-
         <div style="border-top: 1px solid #e0e0e0; padding-top: 12px;">
           <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.95rem;">
             <span style="color: #4caf50; font-size: 1.2rem;">●</span>
@@ -1292,7 +1208,6 @@ const enCurso = await supabase.select('viajes', {
             <span style="color: #333; font-weight: 700; line-height: 1.4;">${escaparHTML(viaje.destino || 'Destino no especificado')}</span>
           </div>
         </div>
-
         <div style="display: flex; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e0e0e0; gap: 10px;">
           <div style="text-align: center; flex: 1;">
             <div style="font-size: 1.25rem; font-weight: 900; color: #1565c0;">$${Number(viaje.precio || 0).toLocaleString('es-AR')}</div>
@@ -1311,12 +1226,10 @@ const enCurso = await supabase.select('viajes', {
 
       modal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
-
       SoundSystem.playNewTrip();
       SoundSystem.vibrate([100, 50, 100, 50, 200, 100, 200]);
 
       clearInterval(timerInterval);
-
       let segundosRestantes = TIMEOUT_SEGUNDOS;
       timerText.textContent = segundosRestantes;
       timerText.style.color = '#ff9800';
@@ -1352,12 +1265,11 @@ const enCurso = await supabase.select('viajes', {
 
     async function aceptarViaje() {
       if (!viajePendiente) return;
-
       clearInterval(timerInterval);
       const choferId = obtenerChoferId();
 
       try {
-        await supabase.updateById('viajes', viajePendiente.id, {
+        await supabaseRest.updateById('viajes', viajePendiente.id, {
           estado: 'ACEPTADO',
           chofer_id: choferId,
           aceptado_at: new Date().toISOString(),
@@ -1369,7 +1281,6 @@ const enCurso = await supabase.select('viajes', {
         cerrarModal();
         mostrarNotificacion('✓ Viaje aceptado correctamente', 'success');
         await cargarViajesSeguro();
-
       } catch (err) {
         mostrarNotificacion('Error al aceptar: ' + err.message, 'error');
         console.error(err);
@@ -1378,16 +1289,13 @@ const enCurso = await supabase.select('viajes', {
 
     async function rechazarViaje() {
       if (!viajePendiente) return;
-
-      if (!confirm('¿Seguro que querés rechazar este viaje? Se asignará a otro chofer.')) {
-        return;
-      }
+      if (!confirm('¿Seguro que querés rechazar este viaje? Se asignará a otro chofer.')) return;
 
       clearInterval(timerInterval);
       const choferId = obtenerChoferId();
 
       try {
-        await supabase.updateById('viajes', viajePendiente.id, {
+        await supabaseRest.updateById('viajes', viajePendiente.id, {
           estado: 'DISPONIBLE',
           chofer_id: null,
           rechazado_por: choferId,
@@ -1401,7 +1309,6 @@ const enCurso = await supabase.select('viajes', {
         mostrarNotificacion('Viaje rechazado. Buscando otro chofer...', 'info');
         viajesRechazadosLocalmente.add(viajePendiente.id);
         await cargarViajesSeguro();
-
       } catch (err) {
         mostrarNotificacion('Error al rechazar: ' + err.message, 'error');
         console.error(err);
@@ -1410,11 +1317,10 @@ const enCurso = await supabase.select('viajes', {
 
     async function timeoutViaje() {
       if (!viajePendiente) return;
-
       const choferId = obtenerChoferId();
 
       try {
-        await supabase.updateById('viajes', viajePendiente.id, {
+        await supabaseRest.updateById('viajes', viajePendiente.id, {
           estado: 'DISPONIBLE',
           chofer_id: null,
           timeout_por: choferId,
@@ -1429,7 +1335,6 @@ const enCurso = await supabase.select('viajes', {
         mostrarNotificacion('⏰ Tiempo agotado. El viaje se ofreció a otro chofer.', 'warning');
         SoundSystem.vibrate([100, 100, 100]);
         await cargarViajesSeguro();
-
       } catch (err) {
         console.error(err);
       }
@@ -1441,7 +1346,6 @@ const enCurso = await supabase.select('viajes', {
         modal.style.display = 'none';
         modal.classList.remove('urgente');
       }
-
       document.body.style.overflow = '';
       clearInterval(timerInterval);
       timerInterval = null;
@@ -1453,13 +1357,10 @@ const enCurso = await supabase.select('viajes', {
     // ==========================================
     function actualizarStats() {
       const hoy = new Date().toDateString();
-
       const pendientes = viajesData.filter(v => normalizarEstado(v.estado) === 'DISPONIBLE').length;
-
       const deHoy = viajesData.filter(v => {
         const fecha = v.fecha || v.fechaHora || v.created_at;
-        if (!fecha) return false;
-        return new Date(fecha).toDateString() === hoy;
+        return fecha && new Date(fecha).toDateString() === hoy;
       }).length;
 
       document.getElementById('statPendientes').textContent = pendientes;
@@ -1469,14 +1370,10 @@ const enCurso = await supabase.select('viajes', {
 
     function filtrar(estado) {
       filtroActual = estado;
-
       document.querySelectorAll('.filtro-btn').forEach(btn => {
         btn.classList.remove('activo');
-        if (btn.dataset.filtro === estado) {
-          btn.classList.add('activo');
-        }
+        if (btn.dataset.filtro === estado) btn.classList.add('activo');
       });
-
       renderizarViajes();
     }
 
@@ -1485,28 +1382,17 @@ const enCurso = await supabase.select('viajes', {
       limpiarViajesExpiradosLocales();
 
       let viajes = [...viajesData];
-
       if (filtroActual !== 'TODOS') {
         viajes = viajes.filter(v => normalizarEstado(v.estado) === filtroActual);
       }
 
       viajes.sort((a, b) => {
-        const orden = {
-          'DISPONIBLE': 0,
-          'ASIGNADO': 1,
-          'ACEPTADO': 2,
-          'EN_CURSO': 3,
-          'COMPLETADO': 4,
-          'CANCELADO': 5
-        };
-
+        const orden = { 'DISPONIBLE': 0, 'ASIGNADO': 1, 'ACEPTADO': 2, 'EN_CURSO': 3, 'COMPLETADO': 4, 'CANCELADO': 5 };
         const estadoA = normalizarEstado(a.estado);
         const estadoB = normalizarEstado(b.estado);
-
         if ((orden[estadoA] ?? 99) !== (orden[estadoB] ?? 99)) {
           return (orden[estadoA] ?? 99) - (orden[estadoB] ?? 99);
         }
-
         return new Date(b.fecha || b.fechaHora || b.created_at || 0) - new Date(a.fecha || a.fechaHora || a.created_at || 0);
       });
 
@@ -1527,15 +1413,9 @@ const enCurso = await supabase.select('viajes', {
       const estado = normalizarEstado(v.estado || 'DISPONIBLE');
       const estadoClass = estado.toLowerCase().replace(/_/g, '-');
       const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
-
       const fechaStr = fecha.toLocaleDateString('es-AR', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
+        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
       });
-
       const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
 
       let acciones = '';
@@ -1545,13 +1425,7 @@ const enCurso = await supabase.select('viajes', {
         const restante = obtenerTiempoRestante(v);
         const min = Math.floor(restante / 60);
         const seg = restante % 60;
-
-        timeoutHtml = `
-          <div class="countdown-chip">
-            ⏳ Disponible por: ${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}
-          </div>
-        `;
-
+        timeoutHtml = `<div class="countdown-chip">⏳ Disponible por: ${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}</div>`;
         acciones = `
           <button class="btn-accion btn-aceptar" onclick="tomarViaje('${escaparHTML(v.id)}')">✓ Aceptar</button>
           <button class="btn-accion btn-rechazar-card" onclick="rechazarDisponible('${escaparHTML(v.id)}')">✕ Rechazar</button>
@@ -1571,9 +1445,7 @@ const enCurso = await supabase.select('viajes', {
           <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Navegar</button>
         `;
       } else {
-        acciones = `
-          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver ruta</button>
-        `;
+        acciones = `<button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver ruta</button>`;
       }
 
       return `
@@ -1582,7 +1454,6 @@ const enCurso = await supabase.select('viajes', {
             <span class="viaje-fecha">${escaparHTML(fechaStr)}</span>
             <span class="viaje-estado estado-${estadoClass}">${escaparHTML(estado.replace('_', ' '))}</span>
           </div>
-
           <div class="viaje-cliente">
             <div class="cliente-avatar">${escaparHTML(inicial)}</div>
             <div class="cliente-datos">
@@ -1590,7 +1461,6 @@ const enCurso = await supabase.select('viajes', {
               <div class="cliente-tel">📱 ${escaparHTML(v.telefono || 'Sin teléfono')}</div>
             </div>
           </div>
-
           <div class="viaje-ruta">
             <div class="ruta-item">
               <div class="ruta-icon origen">📍</div>
@@ -1601,7 +1471,6 @@ const enCurso = await supabase.select('viajes', {
               <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
             </div>
           </div>
-
           <div class="viaje-info">
             <div class="info-item">
               <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
@@ -1616,11 +1485,8 @@ const enCurso = await supabase.select('viajes', {
               <div class="info-label">Servicio</div>
             </div>
           </div>
-
           ${timeoutHtml}
-
           ${v.notas ? `<div style="font-size:0.86rem;color:#666;margin-bottom:12px;padding:10px 12px;background:#fffde7;border-radius:12px;font-weight:700;">📝 ${escaparHTML(v.notas)}</div>` : ''}
-
           <div class="viaje-acciones">${acciones}</div>
         </div>
       `;
@@ -1629,206 +1495,196 @@ const enCurso = await supabase.select('viajes', {
     // ==========================================
     // ACCIONES DE VIAJE
     // ==========================================
-async function cambiarEstado(id, nuevoEstado) {
-  if (!id) {
-    alert('ID inválido');
-    return;
-  }
+    async function cambiarEstado(id, nuevoEstado) {
+      if (!id) {
+        alert('ID inválido');
+        return;
+      }
 
-  const choferId = obtenerChoferId();
-  const now = new Date().toISOString();
+      const choferId = obtenerChoferId();
+      const now = new Date().toISOString();
+      const payload = { estado: nuevoEstado, updated_at: now };
 
-  const payload = {
-    estado: nuevoEstado,
-    updated_at: now
-  };
+      if (nuevoEstado === 'ACEPTADO') {
+        payload.chofer_id = choferId;
+        payload.asignado_a = choferId;
+        payload.aceptado_at = now;
+      }
+      if (nuevoEstado === 'EN_CURSO') {
+        payload.updated_at = now;
+      }
+      if (nuevoEstado === 'COMPLETADO') {
+        payload.completado_at = now;
+      }
 
-  if (nuevoEstado === 'ACEPTADO') {
-    payload.chofer_id = choferId;
-    payload.asignado_a = choferId;
-    payload.aceptado_at = now;
-  }
-
-if (nuevoEstado === 'EN_CURSO') {
-  payload.updated_at = now;
-}
-
-if (nuevoEstado === 'COMPLETADO') {
-  payload.completado_at = now;
-}
-  try {
-    await supabase.updateById('viajes', id, payload);
-    SoundSystem.playSuccess();
-    mostrarNotificacion('Estado actualizado', 'success');
-    await cargarViajesSeguro();
-  } catch (err) {
-    alert('Error: ' + err.message);
-    console.error(err);
-  }
-}
-async function rechazarDisponible(id) {
-  const choferId = obtenerChoferId();
-
-  if (!id) {
-    mostrarNotificacion('ID de viaje inválido', 'error');
-    return;
-  }
-
-  if (!confirm('¿Querés rechazar este viaje?')) return;
-
-  try {
-    const viajeActual = viajesData.find(v => v.id === id);
-
-    if (!viajeActual) {
-      mostrarNotificacion('El viaje ya no está disponible', 'warning');
-      await cargarViajesSeguro();
-      return;
+      try {
+        await supabaseRest.updateById('viajes', id, payload);
+        SoundSystem.playSuccess();
+        mostrarNotificacion('Estado actualizado', 'success');
+        await cargarViajesSeguro();
+      } catch (err) {
+        alert('Error: ' + err.message);
+        console.error(err);
+      }
     }
 
-    const estadoActual = normalizarEstado(viajeActual.estado);
+    async function rechazarDisponible(id) {
+      const choferId = obtenerChoferId();
+      if (!id) {
+        mostrarNotificacion('ID de viaje inválido', 'error');
+        return;
+      }
+      if (!confirm('¿Querés rechazar este viaje?')) return;
 
-    if (estadoActual !== 'DISPONIBLE') {
-      mostrarNotificacion('Este viaje ya no está disponible', 'warning');
-      await cargarViajesSeguro();
-      return;
+      try {
+        const viajeActual = viajesData.find(v => v.id === id);
+        if (!viajeActual) {
+          mostrarNotificacion('El viaje ya no está disponible', 'warning');
+          await cargarViajesSeguro();
+          return;
+        }
+
+        const estadoActual = normalizarEstado(viajeActual.estado);
+        if (estadoActual !== 'DISPONIBLE') {
+          mostrarNotificacion('Este viaje ya no está disponible', 'warning');
+          await cargarViajesSeguro();
+          return;
+        }
+
+        const actualizado = await supabaseRest.updateById('viajes', id, {
+          rechazado_por: choferId,
+          rechazado_at: new Date().toISOString()
+        }, { estado: 'DISPONIBLE' });
+
+        if (!actualizado || actualizado.length === 0) {
+          mostrarNotificacion('El viaje ya fue tomado por otro chofer', 'warning');
+          await cargarViajesSeguro();
+          return;
+        }
+
+        viajesRechazadosLocalmente.add(id);
+        viajesData = viajesData.filter(v => v.id !== id);
+        SoundSystem.playNotification();
+        mostrarNotificacion('Viaje rechazado', 'info');
+        renderizarViajes();
+        actualizarStats();
+      } catch (err) {
+        console.error('Error al rechazar viaje disponible:', err);
+        mostrarNotificacion('Error al rechazar: ' + err.message, 'error');
+      }
     }
 
-    const actualizado = await supabase.updateById('viajes', id, {
-      rechazado_por: choferId,
-      rechazado_at: new Date().toISOString()
-    }, {
-      estado: 'DISPONIBLE'
-    });
-
-    if (!actualizado || actualizado.length === 0) {
-      mostrarNotificacion('El viaje ya fue tomado por otro chofer', 'warning');
-      await cargarViajesSeguro();
-      return;
-    }
-
-    viajesRechazadosLocalmente.add(id);
-    viajesData = viajesData.filter(v => v.id !== id);
-
-    SoundSystem.playNotification();
-    mostrarNotificacion('Viaje rechazado', 'info');
-
-    renderizarViajes();
-    actualizarStats();
-
-  } catch (err) {
-    console.error('Error al rechazar viaje disponible:', err);
-    mostrarNotificacion('Error al rechazar: ' + err.message, 'error');
-  }
-}
     async function finalizarViaje(id) {
-  const notas = prompt('¿Observaciones del viaje? (opcional)');
+      const notas = prompt('¿Observaciones del viaje? (opcional)');
+      try {
+        await supabaseRest.updateById('viajes', id, {
+          estado: 'COMPLETADO',
+          notas: notas || null,
+          completado_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        SoundSystem.playSuccess();
+        mostrarNotificacion('Viaje finalizado', 'success');
+        await cargarViajesSeguro();
+      } catch (err) {
+        alert('Error al finalizar: ' + err.message);
+        console.error(err);
+      }
+    }
 
-  try {
-    await supabase.updateById('viajes', id, {
-      estado: 'COMPLETADO',
-      notas: notas || null,
-      completado_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
+    // Alias para compatibilidad
+    async function tomarViaje(id) {
+      await cambiarEstado(id, 'ACEPTADO');
+    }
 
-    SoundSystem.playSuccess();
-    mostrarNotificacion('Viaje finalizado', 'success');
-    await cargarViajesSeguro();
-  } catch (err) {
-    alert('Error al finalizar: ' + err.message);
-    console.error(err);
-  }
-}
     // ==========================================
     // INICIALIZACIÓN
     // ==========================================
-    let realtimeChannel = null;
-
-function iniciarRealtimeViajes() {
-  try {
-    if (!window.supabaseClient) {
-      console.warn('No hay cliente realtime disponible');
-      return;
-    }
-
-    if (realtimeChannel) {
-      window.supabaseClient.removeChannel(realtimeChannel);
-      realtimeChannel = null;
-    }
-
-    let refreshTimeout = null;
-
-    realtimeChannel = window.supabaseClient
-      .channel('viajes-live')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'viajes'
-        },
-        (payload) => {
-          console.log('🔄 Cambio realtime en viajes:', payload);
-
-          clearTimeout(refreshTimeout);
-          refreshTimeout = setTimeout(() => {
-            cargarViajesSeguro();
-          }, 350);
+    function iniciarRealtimeViajes() {
+      try {
+        if (!supabaseClient) {
+          console.warn('No hay cliente realtime disponible');
+          return;
         }
-      )
-      .subscribe((status) => {
-        console.log('📡 Realtime viajes:', status);
-      });
 
-  } catch (err) {
-    console.error('Error iniciando realtime:', err);
-  }
-}        
-document.addEventListener('DOMContentLoaded', async () => {
-  await cargarViajesSeguro();
-  iniciarRealtimeViajes();
+        if (realtimeChannel) {
+          supabaseClient.removeChannel(realtimeChannel);
+          realtimeChannel = null;
+        }
 
-  // Inicializar audio en primer click
-  document.body.addEventListener('click', async () => {
-    if (!SoundSystem.audioContext) {
-      await SoundSystem.init();
+        let refreshTimeout = null;
+        realtimeChannel = supabaseClient
+          .channel('viajes-live')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'viajes' }, (payload) => {
+            console.log('🔄 Cambio realtime en viajes:', payload);
+            clearTimeout(refreshTimeout);
+            refreshTimeout = setTimeout(() => cargarViajesSeguro(), 350);
+          })
+          .subscribe((status) => {
+            console.log('📡 Realtime viajes:', status);
+          });
+
+      } catch (err) {
+        console.error('Error iniciando realtime:', err);
+      }
     }
-  }, { once: true });
 
-  // Click fuera del modal
-  const modal = document.getElementById('incomingModal');
-  const card = document.getElementById('incomingModalCard');
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Inicializar Supabase primero
+      if (!inicializarSupabase()) {
+        document.getElementById('listaViajes').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <p>Error al inicializar la conexión. Recargá la página.</p>
+          </div>
+        `;
+        return;
+      }
 
-  if (modal && card) {
-    modal.addEventListener('click', (e) => {
-      if (e.target.id === 'incomingModal') {
-        card.style.animation = 'shake 0.4s ease-in-out';
-        setTimeout(() => {
-          card.style.animation = 'slideUp 0.38s ease-out';
-        }, 400);
-        SoundSystem.vibrate([30, 30, 30]);
+      await cargarViajesSeguro();
+      iniciarRealtimeViajes();
+
+      // Inicializar audio en primer click
+      document.body.addEventListener('click', async () => {
+        if (!SoundSystem.audioContext) {
+          await SoundSystem.init();
+        }
+      }, { once: true });
+
+      // Click fuera del modal
+      const modal = document.getElementById('incomingModal');
+      const card = document.getElementById('incomingModalCard');
+      if (modal && card) {
+        modal.addEventListener('click', (e) => {
+          if (e.target.id === 'incomingModal') {
+            card.style.animation = 'shake 0.4s ease-in-out';
+            setTimeout(() => {
+              card.style.animation = 'slideUp 0.38s ease-out';
+            }, 400);
+            SoundSystem.vibrate([30, 30, 30]);
+          }
+        });
+      }
+
+      // Re-render local solo visual (countdowns)
+      setInterval(() => {
+        if (!document.hidden) {
+          renderizarViajes();
+          actualizarStats();
+        }
+      }, 1000);
+    });
+
+    window.addEventListener('beforeunload', async () => {
+      try {
+        if (realtimeChannel && supabaseClient) {
+          await supabaseClient.removeChannel(realtimeChannel);
+          realtimeChannel = null;
+        }
+      } catch (e) {
+        console.warn('No se pudo limpiar realtime:', e);
       }
     });
-  }
-
-  // Re-render local solo visual (countdowns)
-  setInterval(() => {
-    if (!document.hidden) {
-      renderizarViajes();
-      actualizarStats();
-    }
-  }, 1000);
-});
-    window.addEventListener('beforeunload', async () => {
-  try {
-    if (realtimeChannel && window.supabaseClient) {
-      await window.supabaseClient.removeChannel(realtimeChannel);
-      realtimeChannel = null;
-    }
-  } catch (e) {
-    console.warn('No se pudo limpiar realtime:', e);
-  }
-});
   </script>
 </body>
 </html>
