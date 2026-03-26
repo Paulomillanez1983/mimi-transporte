@@ -983,6 +983,12 @@ body {
   color: var(--naranja) !important;
   font-weight: 800;
 }
+  .servicio-card.urgente.activo {
+  background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important;
+}
+
 
   @keyframes borderGlow {
   0%, 100% { opacity: 1; }
@@ -1667,9 +1673,15 @@ if (campoVuelta) campoVuelta.style.display = 'none';
 if (campoEspera) campoEspera.style.display = 'none';
 
 if (servicio === 'IDA_ESCOLAR') {
-  if (campoIda) campoIda.style.display = 'block';
-  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
-  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+  if (campoIda) campoIda.style.display = 'none';
+  
+  // Setear hora automática (ahora)
+  const ahora = new Date();
+  const inputFechaHora = document.getElementById('fechaHora');
+  if (inputFechaHora) {
+    inputFechaHora.value = formatearFechaInput(ahora);
+    actualizarTextoFecha();
+  }
 }
 
 if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
