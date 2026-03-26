@@ -2493,26 +2493,24 @@ async function enviarViaje() {
     const fechaHoraVuelta =
       document.getElementById('fechaHoraVuelta')?.value || null;
 
-    const payload = {
-      origen: origen,
-      destino: destino,
-      origen_lat: lugarOrigen?.lat ?? null,
-      origen_lng: lugarOrigen?.lng ?? null,
-      destino_lat: lugarDestino?.lat ?? null,
-      destino_lng: lugarDestino?.lng ?? null,
-      precio: precio,
-      estado: "PENDIENTE",
-      servicio: servicioSeleccionado || 'IDA_ESCOLAR',
-      fecha_hora: fechaHoraIda,
-      fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
-        ? fechaHoraVuelta
-        : null,
-      tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
-        ? Number(document.getElementById('tiempoEsperaMin')?.value || 30)
-        : null,
-      creado_en: new Date().toISOString()
-    };
-
+const payload = {
+  origen: origen,
+  destino: destino,
+  origen_lat: lugarOrigen?.lat ?? null,
+  origen_lng: lugarOrigen?.lng ?? null,
+  destino_lat: lugarDestino?.lat ?? null,
+  destino_lng: lugarDestino?.lng ?? null,
+  precio: precio,
+  estado: "PENDIENTE",
+  servicio: servicioSeleccionado || 'IDA_ESCOLAR',
+  fecha_hora: fechaHoraIda,
+  fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
+    ? fechaHoraVuelta
+    : null,
+  tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
+    ? Number(document.getElementById('tiempoEsperaMin')?.value || 30)
+    : null
+};
     console.log("📦 Payload viaje:", payload);
 
     // ✅ USAR TU HELPER REAL DE INSERT
