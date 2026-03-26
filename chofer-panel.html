@@ -1002,10 +1002,35 @@
       return localStorage.getItem('choferUsuario') || 'chofer_anon';
     }
 
-    function obtenerFechaBaseViaje(viaje) {
-      return viaje.asignado_at || viaje.created_at || viaje.fechaHora || viaje.fecha || null;
-    }
+function obtenerFechaBaseViaje(viaje) {
+  return (
+    viaje.iniciado_at ||
+    viaje.aceptado_at ||
+    viaje.asignado_at ||
+    viaje.completado_at ||
+    viaje.updated_at ||
+    viaje.created_at ||
+    viaje.fechaHora ||
+    viaje.fecha ||
+    null
+  );
+}
 
+function obtenerCampoOrdenSeguro(estado) {
+  switch (estado) {
+    case 'ASIGNADO':
+      return 'asignado_at.desc';
+    case 'ACEPTADO':
+      return 'aceptado_at.desc';
+    case 'EN_CURSO':
+      // ⚠️ iniciado_at no existe en tu tabla
+      return 'updated_at.desc';
+    case 'COMPLETADO':
+      return 'completado_at.desc';
+    default:
+      return 'created_at.desc';
+  }
+}
     function obtenerTiempoRestante(viaje) {
       const base = obtenerFechaBaseViaje(viaje);
       if (!base) return 0;
@@ -1132,15 +1157,14 @@
           order: 'aceptado_at.desc'
         });
 
-        // 4) Viajes en curso por este chofer
-        const enCurso = await supabase.select('viajes', {
-          eq: {
-            estado: 'EN_CURSO',
-            chofer_id: choferId
-          },
-          order: 'iniciado_at.desc'
-        });
-
+// 4) Viajes en curso por este chofer
+const enCurso = await supabase.select('viajes', {
+  eq: {
+    estado: 'EN_CURSO',
+    chofer_id: choferId
+  },
+  order: obtenerCampoOrdenSeguro('EN_CURSO')
+});
         // 5) Viajes completados por este chofer
         const completados = await supabase.select('viajes', {
           eq: {
@@ -1573,24 +1597,37 @@
     // ==========================================
     // ACCIONES DE VIAJE
     // ==========================================
-    async function cambiarEstado(id, nuevoEstado) {
-      if (!id) {
-        alert('ID inválido');
-        return;
-      }
+async function cambiarEstado(id, nuevoEstado) {
+  if (!id) {
+    alert('ID inválido');
+    return;
+  }
 
-      const choferId = obtenerChoferId();
-      const payload = { estado: nuevoEstado };
+  const choferId = obtenerChoferId();
+  const payload = {
+    estado: nuevoEstado,
+    updated_at: new Date().toISOString()
+  };
 
-      if (nuevoEstado === 'ACEPTADO') {
-        payload.chofer_id = choferId;
-        payload.aceptado_at = new Date().toISOString();
-      }
+  if (nuevoEstado === 'ACEPTADO') {
+    payload.chofer_id = choferId;
+    payload.aceptado_at = new Date().toISOString();
+  }
 
-      if (nuevoEstado === 'EN_CURSO') {
-        payload.iniciado_at = new Date().toISOString();
-      }
+  if (nuevoEstado === 'EN_CURSO') {
+    payload.updated_at = new Date().toISOString();
+  }
 
+  try {
+    await supabase.updateById('viajes', id, payload);
+    SoundSystem.playSuccess();
+    mostrarNotificacion('Estado actualizado', 'success');
+    await cargarViajesSeguro();
+  } catch (err) {
+    alert('Error: ' + err.message);
+    console.error(err);
+  }
+}
       try {
         await supabase.updateById('viajes', id, payload);
         SoundSystem.playSuccess();
@@ -1606,12 +1643,12 @@
       const choferId = obtenerChoferId();
 
       try {
-        await supabase.updateById('viajes', id, {
-          estado: 'ACEPTADO',
-          chofer_id: choferId,
-          aceptado_at: new Date().toISOString()
-        });
-
+await supabase.updateById('viajes', id, {
+  estado: 'ACEPTADO',
+  chofer_id: choferId,
+  aceptado_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+});
         SoundSystem.playSuccess();
         mostrarNotificacion('✓ Viaje aceptado', 'success');
         await cargarViajesSeguro();
@@ -1649,12 +1686,12 @@
       const notas = prompt('¿Observaciones del viaje? (opcional)');
 
       try {
-        await supabase.updateById('viajes', id, {
-          estado: 'COMPLETADO',
-          notas: notas || null,
-          completado_at: new Date().toISOString()
-        });
-
+await supabase.updateById('viajes', id, {
+  estado: 'COMPLETADO',
+  notas: notas || null,
+  completado_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+});
         SoundSystem.playSuccess();
         mostrarNotificacion('Viaje finalizado', 'success');
         await cargarViajesSeguro();
