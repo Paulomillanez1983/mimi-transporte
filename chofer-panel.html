@@ -577,7 +577,7 @@
   <!-- FILTROS -->
   <div class="filtros">
     <button class="filtro-btn activo" data-filtro="todos" onclick="filtrar('todos')">Todos</button>
-    <button class="filtro-btn" data-filtro="pendiente" onclick="filtrar('pendiente')">Pendientes</button>
+    <button class="filtro-btn" data-filtro="pendiente" onclick="filtrar('DISPONIBLE')">Pendientes</button>
     <button class="filtro-btn" data-filtro="aceptado" onclick="filtrar('aceptado')">Aceptados</button>
     <button class="filtro-btn" data-filtro="en-camino" onclick="filtrar('en-camino')">En curso</button>
     <button class="filtro-btn" data-filtro="completado" onclick="filtrar('completado')">Completados</button>
@@ -894,17 +894,16 @@ const asignados = await supabase.select('viajes', {
         }
 
         // 2. Cargar viajes del chofer (múltiples estados)
-const viajes = await supabase.select('viajes', {
-  eq: { chofer_id: choferId },
-  or: `estado.eq.ASIGNADO,estado.eq.ACEPTADO,estado.eq.EN_CURSO,estado.eq.COMPLETADO,estado.eq.CANCELADO`,
+const disponibles = await supabase.select('viajes', {
+  eq: { estado: 'DISPONIBLE' },
   order: 'created_at.desc'
-});
-viajesData = viajes || [];
+});        
+        viajesData = viajes || [];
         
         // Notificar nuevos pendientes
         const nuevosPendientes = viajesData.filter(v => {
           const estado = normalizarEstado(v.estado);
-          return estado === 'PENDIENTE' && !ultimosViajesVistos.has(v.id);
+          return estado === 'DISPONIBLE' && !ultimosViajesVistos.has(v.id);
         });
         
         if (nuevosPendientes.length > 0 && viajesData.length > 0) {
@@ -1116,7 +1115,7 @@ viajesData = viajes || [];
     // ==========================================
     function actualizarStats() {
       const hoy = new Date().toDateString();
-      const pendientes = viajesData.filter(v => normalizarEstado(v.estado) === 'PENDIENTE').length;
+      const pendientes = viajesData.filter(v => normalizarEstado(v.estado) === 'DISPONIBLE').length;
       const deHoy = viajesData.filter(v => {
         const fecha = v.fecha || v.fechaHora || v.created_at;
         if (!fecha) return false;
@@ -1145,7 +1144,7 @@ viajesData = viajes || [];
 
       if (filtroActual !== 'todos') {
         const filtroMap = {
-          'pendiente': 'PENDIENTE',
+          'DISPONIBLE': 'DISPONIBLE',
           'aceptado': 'ACEPTADO',
           'en-camino': 'EN_CURSO',
           'completado': 'COMPLETADO',
@@ -1159,7 +1158,7 @@ viajesData = viajes || [];
       }
 
       viajes.sort((a, b) => {
-        const orden = { 'PENDIENTE': 0, 'ACEPTADO': 1, 'EN_CURSO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
+        const orden = { 'DISPONIBLE': 0, 'ACEPTADO': 1, 'EN_CURSO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
         const estadoA = normalizarEstado(a.estado);
         const estadoB = normalizarEstado(b.estado);
         if ((orden[estadoA] ?? 99) !== (orden[estadoB] ?? 99)) {
@@ -1182,14 +1181,14 @@ viajesData = viajes || [];
     }
 
     function crearCardViaje(v) {
-      const estado = normalizarEstado(v.estado || 'PENDIENTE');
+      const estado = normalizarEstado(v.estado || 'DISPONIBLE');
       const estadoClass = estado.toLowerCase().replace(/_/g, '-');
       const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
       const fechaStr = fecha.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
       const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
 
       let acciones = '';
-      if (estado === 'PENDIENTE') {
+      if (estado === 'DISPONIBLE') {
         acciones = `
           <button class="btn-accion btn-aceptar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'ACEPTADO')">✓ Aceptar</button>
           <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Maps</button>
