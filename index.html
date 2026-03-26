@@ -1724,6 +1724,7 @@ if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
   if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
   if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
 
+
   sugerirHorariosEscolares();
 }
 
@@ -1736,6 +1737,10 @@ if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
 
   sugerirHorariosEscolares();
 }
+    if (servicio === "OTROS_SERVICIOS") {
+  notifSystem.show("Otros servicios", "Próximamente vas a poder elegir más opciones.", "info", 2500);
+}
+
 
   const descripciones = {
     'IDA_ESCOLAR': {
