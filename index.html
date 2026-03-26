@@ -941,7 +941,7 @@ body {
 .servicio-card {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   padding: 16px 18px;
   background: white;
   border: 2px solid #e8e8e8;
@@ -949,6 +949,9 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
+  flex: 1;
+  min-width: 0;
+
 }
   .servicio-card::before {
   content: '';
@@ -1273,14 +1276,14 @@ body {
     transform: translateY(0);
   }
 }
-  .servicio-hora {
-  font-size: 0.78rem;
-  font-weight: 800;
+.servicio-hora {
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 4px;
   color: #ff9800;
-  background: rgba(255, 152, 0, 0.15);
-  padding: 6px 10px;
-  border-radius: 12px;
+  display: none;
   white-space: nowrap;
+  text-align: left;
 }
 /* LO QUIERO YA - SIEMPRE NEGRO */
 .servicio-card.urgente {
@@ -1673,6 +1676,15 @@ function seleccionarServicio(servicio) {
   if (cardSeleccionada) {
     cardSeleccionada.classList.add('activo');
   }
+// ============================
+// HORARIO AUTOMÁTICO SISTEMA
+// ============================
+const ahora = new Date();
+
+// Si es inmediato, asignar hora del sistema automáticamente
+if (servicio === "IDA_ESCOLAR" || servicio === "IDA_Y_VUELTA_INMEDIATA") {
+  actualizarHoraServicio(servicio, formatearTextoBoton(ahora));
+}
 
   const campoIda = document.getElementById('campo-fecha-ida');
   const campoVuelta = document.getElementById('campo-fecha-vuelta');
@@ -1687,16 +1699,22 @@ if (campoVuelta) campoVuelta.style.display = 'none';
 if (campoEspera) campoEspera.style.display = 'none';
 
 if (servicio === 'IDA_ESCOLAR') {
-  if (campoIda) campoIda.style.display = 'block';
-  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
-  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+  // NO mostrar selector fecha/hora
 }
 
 if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
-  if (campoIda) campoIda.style.display = 'block';
-  if (tituloHorarioIda) tituloHorarioIda.textContent = '⚡ Horario de SALIDA';
-  if (labelHorarioIda) labelHorarioIda.textContent = 'Salida del viaje';
+  // NO mostrar selector fecha/hora
   if (campoEspera) campoEspera.style.display = 'block';
+}
+
+if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
+  if (campoIda) campoIda.style.display = 'block';
+  if (campoVuelta) campoVuelta.style.display = 'block';
+
+  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+
+  sugerirHorariosEscolares();
 }
 
 if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
@@ -2164,6 +2182,7 @@ function actualizarTextoFecha() {
   if (!input || !textoFecha) return;
 
   const fecha = new Date(input.value);
+
   if (isNaN(fecha.getTime())) {
     textoFecha.textContent = 'Elegí fecha y hora...';
     textoFecha.style.color = '#888';
@@ -2180,15 +2199,13 @@ function actualizarTextoFecha() {
   };
 
   const texto = fecha.toLocaleDateString('es-AR', opciones);
-  const textoFinal = texto.charAt(0).toUpperCase() + texto.slice(1);
-
-  textoFecha.textContent = textoFinal;
+  textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
   textoFecha.style.color = '#1a1a1a';
 
-  // Mostrar horario al lado del servicio seleccionado
-  if (servicioSeleccionado) {
-    actualizarHoraServicio(servicioSeleccionado, formatearTextoBoton(fecha));
-  }
+  // ✅ MOSTRAR HORA EN EL SERVICIO SELECCIONADO (cualquiera sea)
+if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
+  actualizarHoraServicio(servicioSeleccionado, formatearTextoBoton(fecha));
+}
 
   guardarEstadoLocal();
 }
