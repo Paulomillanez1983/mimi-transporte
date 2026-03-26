@@ -2609,8 +2609,6 @@ window.addEventListener('load', () => {
   intentarInitAutocomplete();
 });
 
-  intentarInitAutocomplete();
-});
   function formatearFechaInput(fecha) {
   const pad = n => n.toString().padStart(2, '0');
   return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
