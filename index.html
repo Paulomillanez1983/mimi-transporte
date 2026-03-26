@@ -2626,8 +2626,9 @@ function ocultarError() {
 }  
 window.addEventListener('load', () => {
   cargarEstadoLocal();
-  ocultarBotonesPostCotizacion();
-  seleccionarServicio("IDA_ESCOLAR");
+  window.addEventListener("load", () => {
+    ocultarBotonesPostCotizacion();
+  });
 });
   // Esperar a que Google Maps Places esté listo
   const intentarInitAutocomplete = () => {
