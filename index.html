@@ -2142,31 +2142,31 @@ function actualizarTextoFecha() {
   const input = document.getElementById('fechaHora');
   const textoFecha = document.getElementById('textoFechaSeleccionada');
   if (!input || !textoFecha) return;
-
+  
   const fecha = new Date(input.value);
   if (isNaN(fecha.getTime())) {
     textoFecha.textContent = 'Elegí fecha y hora...';
     textoFecha.style.color = '#888';
     return;
   }
+  if (servicioSeleccionado) {
+  actualizarHoraServicio(servicioSeleccionado, texto);
+}
 
-  const opciones = {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
+  // Formatear fecha legible
+  const opciones = { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   };
-
+  
   const texto = fecha.toLocaleDateString('es-AR', opciones);
   textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
   textoFecha.style.color = '#1a1a1a';
-
-  if (servicioSeleccionado) {
-    actualizarHoraServicio(servicioSeleccionado, textoFecha.textContent);
-  }
-
+  
   guardarEstadoLocal();
 }
 
@@ -2571,25 +2571,8 @@ function ocultarError() {
 }  
 window.addEventListener('load', () => {
   cargarEstadoLocal();
+  window.addEventListener("load", () => {
   ocultarBotonesPostCotizacion();
-
-  // Selección por defecto si no hay servicio guardado
-  if (!servicioSeleccionado) {
-    seleccionarServicio("IDA_ESCOLAR");
-  }
-
-  // Esperar a que Google Maps Places esté listo
-  const intentarInitAutocomplete = () => {
-    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-      console.log("✅ Google Maps Places listo, inicializando autocomplete...");
-      initMap();
-    } else {
-      console.log("⏳ Esperando Google Maps Places...");
-      setTimeout(intentarInitAutocomplete, 500);
-    }
-  };
-
-  intentarInitAutocomplete();
 });
   // Esperar a que Google Maps Places esté listo
   const intentarInitAutocomplete = () => {
