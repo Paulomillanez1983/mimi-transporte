@@ -938,8 +938,10 @@
       },
 
       vibrate(pattern = [50, 100, 50]) {
+        // Solo vibrar si el usuario ya interactuó con la página
+        if (!document.hasFocus()) return;
         try {
-          if (navigator.vibrate && document.hasFocus()) {
+          if (navigator.vibrate) {
             navigator.vibrate(pattern);
           }
         } catch (_) {}
@@ -963,6 +965,7 @@
     let filtroActual = 'TODOS';
     let cargandoViajes = false;
     let realtimeChannel = null;
+    let userHasInteracted = false;
 
     // ==========================================
     // UTILIDADES
@@ -1147,7 +1150,9 @@
 
         if (nuevosPendientes.length > 0) {
           SoundSystem.playNewTrip();
-          SoundSystem.vibrate([100, 50, 100, 50, 200]);
+          if (userHasInteracted) {
+            SoundSystem.vibrate([100, 50, 100, 50, 200]);
+          }
           showNewTripIndicator();
           nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
         }
@@ -1227,7 +1232,9 @@
       modal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
       SoundSystem.playNewTrip();
-      SoundSystem.vibrate([100, 50, 100, 50, 200, 100, 200]);
+      if (userHasInteracted) {
+        SoundSystem.vibrate([100, 50, 100, 50, 200, 100, 200]);
+      }
 
       clearInterval(timerInterval);
       let segundosRestantes = TIMEOUT_SEGUNDOS;
@@ -1252,7 +1259,7 @@
           timerText.style.color = '#ff9800';
         }
 
-        if (segundosRestantes <= 10 && segundosRestantes > 0) {
+        if (segundosRestantes <= 10 && segundosRestantes > 0 && userHasInteracted) {
           SoundSystem.vibrate([50]);
         }
 
@@ -1333,7 +1340,9 @@
         cerrarModal();
         viajesRechazadosLocalmente.add(idExpirado);
         mostrarNotificacion('⏰ Tiempo agotado. El viaje se ofreció a otro chofer.', 'warning');
-        SoundSystem.vibrate([100, 100, 100]);
+        if (userHasInteracted) {
+          SoundSystem.vibrate([100, 100, 100]);
+        }
         await cargarViajesSeguro();
       } catch (err) {
         console.error(err);
@@ -1646,6 +1655,7 @@
 
       // Inicializar audio en primer click
       document.body.addEventListener('click', async () => {
+        userHasInteracted = true;
         if (!SoundSystem.audioContext) {
           await SoundSystem.init();
         }
