@@ -329,13 +329,13 @@
       transform: scale(0.98);
     }
 
-    .btn-aceptar { background: var(--verde); color: white; }
-    .btn-iniciar { background: var(--azul-primario); color: white; }
-    .btn-finalizar { background: var(--azul-oscuro); color: white; }
-    .btn-maps { background: #e3f2fd; color: var(--azul-primario); }
-    .btn-llamar { background: #e8f5e9; color: var(--verde); }
-    .btn-whatsapp { background: #25d366; color: white; }
-
+.btn-aceptar { background: var(--verde); color: white; }
+.btn-rechazar-card { background: #ffebee; color: var(--rojo); border: 1px solid #ffcdd2; }
+.btn-iniciar { background: var(--azul-primario); color: white; }
+.btn-finalizar { background: var(--azul-oscuro); color: white; }
+.btn-maps { background: #e3f2fd; color: var(--azul-primario); }
+.btn-llamar { background: #e8f5e9; color: var(--verde); }
+.btn-whatsapp { background: #25d366; color: white; }
     .loading {
       text-align: center;
       padding: 40px;
@@ -812,10 +812,15 @@
         osc.stop(ctx.currentTime + 0.2);
       },
 
-      vibrate(pattern = [50, 100, 50]) {
-        if (navigator.vibrate) navigator.vibrate(pattern);
-      }
-    };
+vibrate(pattern = [50, 100, 50]) {
+  try {
+    if (navigator.vibrate && document.hasFocus()) {
+      navigator.vibrate(pattern);
+    }
+  } catch (_) {
+    // Silencioso: algunos navegadores bloquean vibración sin interacción
+  }
+};    
 
     async function toggleSound() {
       const isEnabled = await SoundSystem.toggle();
@@ -827,13 +832,13 @@
     // ==========================================
     // VARIABLES GLOBALES
     // ==========================================
-    let viajesData = [];
-    let viajePendiente = null;
-    let timerInterval = null;
-    let TIMEOUT_SEGUNDOS = 30;
-    let ultimosViajesVistos = new Set();
-    let filtroActual = 'todos';
-
+let viajesData = [];
+let viajePendiente = null;
+let timerInterval = null;
+let TIMEOUT_SEGUNDOS = 30;
+let ultimosViajesVistos = new Set();
+let filtroActual = 'todos';
+let expirandoViajes = new Set(); // para evitar múltiples timeouts simultáneos
     // ==========================================
     // FUNCIONES UTILITARIAS
     // ==========================================
@@ -853,7 +858,26 @@
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     }
+    
+function obtenerFechaBaseViaje(viaje) {
+  return viaje.asignado_at || viaje.created_at || viaje.fechaHora || viaje.fecha || null;
+}
 
+function segundosRestantesViaje(viaje) {
+  const base = obtenerFechaBaseViaje(viaje);
+  if (!base) return TIMEOUT_SEGUNDOS;
+
+  const inicio = new Date(base).getTime();
+  if (Number.isNaN(inicio)) return TIMEOUT_SEGUNDOS;
+
+  const ahora = Date.now();
+  const transcurridos = Math.floor((ahora - inicio) / 1000);
+  return Math.max(0, TIMEOUT_SEGUNDOS - transcurridos);
+}
+
+function viajeExpirado(viaje) {
+  return segundosRestantesViaje(viaje) <= 0;
+}
     function cerrarSesion() {
       localStorage.removeItem('choferLogueado');
       localStorage.removeItem('choferUsuario');
@@ -959,6 +983,34 @@ async function cargarViajes() {
       showNewTripIndicator();
       nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
     }
+
+    // 7) Detectar viajes DISPONIBLE vencidos (timeout visual/lista)
+    const expirados = viajesData.filter(v => {
+      const estado = normalizarEstado(v.estado);
+      return estado === 'DISPONIBLE' && viajeExpirado(v);
+    });
+
+    // 8) Marcar expirados en Supabase sin duplicar requests
+    for (const viaje of expirados) {
+      if (!expirandoViajes.has(viaje.id)) {
+        expirandoViajes.add(viaje.id);
+
+        supabase.updateById('viajes', viaje.id, {
+          estado: 'CANCELADO_TIMEOUT',
+          timeout_at: new Date().toISOString()
+        }).catch(err => {
+          console.error('Error expirando viaje:', err);
+        }).finally(() => {
+          expirandoViajes.delete(viaje.id);
+        });
+      }
+    }
+
+    // 9) Sacar de pantalla los DISPONIBLE ya vencidos
+    viajesData = viajesData.filter(v => {
+      const estado = normalizarEstado(v.estado);
+      return !(estado === 'DISPONIBLE' && viajeExpirado(v));
+    });
 
     renderizarViajes();
     actualizarStats();
@@ -1222,15 +1274,16 @@ if (filtroActual !== 'todos') {
       const estadoClass = estado.toLowerCase().replace(/_/g, '-');
       const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
       const fechaStr = fecha.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-      const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
+      const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?'; const segundosRestantes = estado === 'DISPONIBLE' ? segundosRestantesViaje(v) : null;
 
       let acciones = '';
       if (estado === 'DISPONIBLE') {
-        acciones = `
-          <button class="btn-accion btn-aceptar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'ACEPTADO')">✓ Aceptar</button>
-          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Maps</button>
-        `;
-      } else if (estado === 'ACEPTADO') {
+  acciones = `
+    <button class="btn-accion btn-aceptar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'ACEPTADO')">✓ Aceptar</button>
+    <button class="btn-accion btn-rechazar-card" onclick="rechazarViajeDirecto('${escaparHTML(v.id)}')">❌ Rechazar</button>
+    <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Maps</button>
+  `;
+} else if (estado === 'ACEPTADO') {
         acciones = `
           <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'EN_CURSO')">🚀 Iniciar</button>
           <a href="tel:${escaparHTML(v.telefono || '')}" class="btn-accion btn-llamar">📞 Llamar</a>
@@ -1268,6 +1321,12 @@ if (filtroActual !== 'todos') {
               <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
             </div>
           </div>
+          ${estado === 'DISPONIBLE' ? `
+  <div style="margin-bottom:10px;padding:10px 12px;border-radius:12px;background:#fff8e1;border:1px solid #ffe082;display:flex;justify-content:space-between;align-items:center;">
+    <span style="font-size:0.82rem;font-weight:700;color:#ef6c00;">⏳ Tiempo para tomarlo</span>
+    <span style="font-size:1rem;font-weight:800;color:#e65100;">${segundosRestantes}s</span>
+  </div>
+` : ''}
           <div class="viaje-info">
             <div class="info-item">
               <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
@@ -1291,30 +1350,51 @@ if (filtroActual !== 'todos') {
     // ==========================================
     // ACCIONES DE VIAJE
     // ==========================================
+    async function rechazarViajeDirecto(id) {
+  if (!id) return;
+
+  if (!confirm('¿Seguro que querés rechazar este viaje?')) {
+    return;
+  }
+
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+
+  try {
+    await supabase.updateById('viajes', id, {
+      estado: 'RECHAZADO',
+      rechazado_por: choferId,
+      rechazado_at: new Date().toISOString()
+    });
+
+    SoundSystem.playNotification();
+    mostrarNotificacion('Viaje rechazado', 'info');
+    cargarViajes();
+  } catch (err) {
+    console.error(err);
+    mostrarNotificacion('Error al rechazar viaje', 'error');
+  }
+}
+
 async function cambiarEstado(id, nuevoEstado) {
   if (!id) {
     alert('ID inválido');
     return;
   }
 
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+  const payload = { estado: nuevoEstado };
+
+  if (nuevoEstado === 'ACEPTADO') {
+    payload.chofer_id = choferId;
+    payload.aceptado_at = new Date().toISOString();
+  }
+
+  if (nuevoEstado === 'EN_CURSO') {
+    payload.iniciado_at = new Date().toISOString();
+  }
+
   try {
-    const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-    const payload = {
-      estado: nuevoEstado,
-      created_at: new Date().toISOString()
-    };
-
-    if (nuevoEstado === 'ACEPTADO') {
-      payload.chofer_id = choferId;
-      payload.aceptado_at = new Date().toISOString();
-    }
-
-    if (nuevoEstado === 'EN_CURSO') {
-      payload.iniciado_at = new Date().toISOString();
-    }
-
     await supabase.updateById('viajes', id, payload);
-
     SoundSystem.playSuccess();
     mostrarNotificacion('Estado actualizado', 'success');
     cargarViajes();
