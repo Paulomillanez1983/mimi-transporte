@@ -2691,49 +2691,51 @@ window.addEventListener('load', () => {
   esperarGoogleMaps();
 });
 // ==========================================
-// CÁLCULO DE DISTANCIA (VERSIÓN CORREGIDA)
+// CÁLCULO DE DISTANCIA (VERSIÓN FINAL CORREGIDA)
 // ==========================================
 
 /**
- * Calcula la distancia en km entre dos puntos
- * Primero intenta con Distance Matrix API, si falla usa Haversine
- * @param {Object|string} origen - {lat, lng} o dirección string
- * @param {Object|string} destino - {lat, lng} o dirección string
- * @returns {Promise<{km: number, duracionMin: number, error: string|null, esEstimado: boolean}>}
+ * Calcula la distancia en km entre dos puntos usando Haversine (línea recta)
+ * Fallback cuando Distance Matrix no está disponible
+ */
+function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+/**
+ * Calcula distancia entre dos puntos (coordenadas u objetos lugar)
+ * @param {Object} origen - objeto con lat/lng o {direccion, lat, lng}
+ * @param {Object} destino - objeto con lat/lng o {direccion, lat, lng}
+ * @returns {Promise<{km: number, duracionMin: number, error: string|null}>}
  */
 async function calcularDistancia(origen, destino) {
   try {
-    let origenCoords = origen;
-    let destinoCoords = destino;
+    // Extraer coordenadas de los objetos lugarOrigen/lugarDestino si existen
+    let lat1 = origen?.lat;
+    let lng1 = origen?.lng;
+    let lat2 = destino?.lat;
+    let lng2 = destino?.lng;
     
-    // Normalizar origen a coordenadas
-    if (typeof origen === 'string') {
-      const geoOrigen = await geocodificarDireccion(origen);
-      if (!geoOrigen) throw new Error('No se pudo geocodificar el origen');
-      origenCoords = { lat: geoOrigen.lat, lng: geoOrigen.lng };
+    // Validar coordenadas
+    if (!lat1 || !lng1 || !lat2 || !lng2) {
+      throw new Error('Coordenadas no disponibles');
     }
     
-    // Normalizar destino a coordenadas
-    if (typeof destino === 'string') {
-      const geoDestino = await geocodificarDireccion(destino);
-      if (!geoDestino) throw new Error('No se pudo geocodificar el destino');
-      destinoCoords = { lat: geoDestino.lat, lng: geoDestino.lng };
-    }
-    
-    // Validar que tenemos coordenadas válidas
-    if (!origenCoords?.lat || !origenCoords?.lng || !destinoCoords?.lat || !destinoCoords?.lng) {
-      throw new Error('Coordenadas inválidas');
-    }
-    
-    // Intentar con Distance Matrix API (si está disponible)
-    try {
-      if (typeof google !== 'undefined' && google.maps?.DistanceMatrixService) {
+    // Intentar Distance Matrix API si está disponible
+    if (typeof google !== 'undefined' && google.maps?.DistanceMatrixService) {
+      try {
         const service = new google.maps.DistanceMatrixService();
-        
         const response = await new Promise((resolve, reject) => {
           service.getDistanceMatrix({
-            origins: [{ lat: origenCoords.lat, lng: origenCoords.lng }],
-            destinations: [{ lat: destinoCoords.lat, lng: destinoCoords.lng }],
+            origins: [{ lat: lat1, lng: lng1 }],
+            destinations: [{ lat: lat2, lng: lng2 }],
             travelMode: google.maps.TravelMode.DRIVING,
             unitSystem: google.maps.UnitSystem.METRIC,
           }, (result, status) => {
@@ -2747,69 +2749,28 @@ async function calcularDistancia(origen, destino) {
           return {
             km: parseFloat((element.distance.value / 1000).toFixed(2)),
             duracionMin: Math.round(element.duration.value / 60),
-            distanciaTexto: element.distance.text,
-            duracionTexto: element.duration.text,
-            error: null,
-            esEstimado: false
+            error: null
           };
         }
+      } catch (apiErr) {
+        console.warn('Distance Matrix falló, usando Haversine:', apiErr.message);
       }
-    } catch (apiError) {
-      console.warn('Distance Matrix API no disponible, usando fallback:', apiError.message);
     }
     
-    // Fallback: Fórmula de Haversine (línea recta)
-    const kmRecta = calcularDistanciaHaversine(
-      origenCoords.lat, origenCoords.lng,
-      destinoCoords.lat, destinoCoords.lng
-    );
-    
-    // Ajustar por factor de ruta real (generalmente 1.3x más que línea recta)
+    // Fallback: Haversine con factor de ajuste 1.3x para ruta real estimada
+    const kmRecta = calcularDistanciaHaversine(lat1, lng1, lat2, lng2);
     const kmEstimado = kmRecta * 1.3;
-    const duracionEstimada = Math.round(kmEstimado * 2); // ~2 min por km en ciudad
     
     return {
       km: parseFloat(kmEstimado.toFixed(2)),
-      duracionMin: duracionEstimada,
-      distanciaTexto: `${kmEstimado.toFixed(1)} km (estimado)`,
-      duracionTexto: `${duracionEstimada} min (estimado)`,
-      error: null,
-      esEstimado: true
+      duracionMin: Math.round(kmEstimado * 2), // ~2 min/km en ciudad
+      error: null
     };
     
   } catch (error) {
     console.error('❌ Error en calcularDistancia:', error);
-    return {
-      km: 0,
-      duracionMin: 0,
-      error: error.message,
-      esEstimado: true
-    };
+    return { km: 0, duracionMin: 0, error: error.message };
   }
-}
-
-/**
- * Fórmula de Haversine - Distancia en línea recta entre dos coordenadas
- */
-function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radio de la Tierra en km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) ** 2 + 
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-  function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radio de la Tierra en km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
 }
   // ==========================================
 // FECHA Y HORA
