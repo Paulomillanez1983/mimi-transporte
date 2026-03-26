@@ -820,8 +820,7 @@ vibrate(pattern = [50, 100, 50]) {
   } catch (_) {
     // Silencioso: algunos navegadores bloquean vibración sin interacción
   }
-};    
-
+}
     async function toggleSound() {
       const isEnabled = await SoundSystem.toggle();
       if (isEnabled) {
