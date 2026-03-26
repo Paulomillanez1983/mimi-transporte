@@ -1288,6 +1288,32 @@ body {
   border-radius: 12px;
   white-space: nowrap;
 }
+.servicio-card.programada {
+  border-color: #cfd8dc;
+  background: linear-gradient(135deg, #ffffff 0%, #f7fbff 100%);
+}
+
+.servicio-card.programada.activo {
+  border-color: #1565c0;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f8fbff 100%);
+}
+
+.horarios-programados {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.horarios-programados span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 5px 10px;
+  border-radius: 12px;
+  background: rgba(21, 101, 192, 0.1);
+  color: #1565c0;
+  white-space: nowrap;
+}
 
 </style>
 </head>
@@ -1397,14 +1423,20 @@ body {
 </div>
 
 <!-- IDA + VUELTA PROGRAMADA -->
-<div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
-  <div class="servicio-icon">📅</div>
-<div class="servicio-info">
-  <strong id="txt-IDA_MAS_VUELTA_PROGRAMADA">Ida + Vuelta programada</strong>
-  <small id="subtxt-IDA_MAS_VUELTA_PROGRAMADA">Dos viajes separados</small>
-</div>
+<div class="servicio-card programada" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
 
-<div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">🕒 --:--</div>
+  <div class="servicio-icon">📅</div>
+
+  <div class="servicio-info">
+    <strong id="txt-IDA_MAS_VUELTA_PROGRAMADA">Ida + Vuelta programada</strong>
+    <small id="subtxt-IDA_MAS_VUELTA_PROGRAMADA">Dos viajes separados</small>
+
+    <div class="horarios-programados" id="horarios-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">
+      <span id="hora-ida-programada">IDA: --:--</span>
+      <span id="hora-vuelta-programada">VUELTA: --:--</span>
+    </div>
+  </div>
+
   <div class="servicio-check">✓</div>
 </div>
   
@@ -1631,6 +1663,32 @@ function setButtonLoading(buttonId, textId, loadingText) {
   btn.dataset.originalText = text.innerHTML;
   text.innerHTML = `⏳ ${loadingText}`;
 }
+function actualizarHorasProgramadas() {
+  const contenedor = document.getElementById("horarios-IDA_MAS_VUELTA_PROGRAMADA");
+  const idaSpan = document.getElementById("hora-ida-programada");
+  const vueltaSpan = document.getElementById("hora-vuelta-programada");
+
+  const inputIda = document.getElementById("fechaHora");
+  const inputVuelta = document.getElementById("fechaHoraVuelta");
+
+  if (!contenedor || !idaSpan || !vueltaSpan) return;
+
+  let textoIda = "--:--";
+  let textoVuelta = "--:--";
+
+  if (inputIda && inputIda.value) {
+    textoIda = document.getElementById("textoFechaSeleccionada")?.textContent || "--:--";
+  }
+
+  if (inputVuelta && inputVuelta.value) {
+    textoVuelta = document.getElementById("textoFechaVuelta")?.textContent || "--:--";
+  }
+
+  idaSpan.textContent = `IDA: ${textoIda}`;
+  vueltaSpan.textContent = `VUELTA: ${textoVuelta}`;
+
+  contenedor.style.display = "flex";
+}
 
 function clearButtonLoading(buttonId, textId) {
   const btn = document.getElementById(buttonId);
@@ -1654,6 +1712,9 @@ function seleccionarServicio(servicio) {
   document.querySelectorAll('.servicio-card').forEach(c => {
     c.classList.remove('activo');
   });
+  const contHorarios = document.getElementById("horarios-IDA_MAS_VUELTA_PROGRAMADA");
+if (contHorarios) contHorarios.style.display = "none";
+
 
   const cardSeleccionada = document.getElementById(`card-${servicio}`);
   if (cardSeleccionada) {
@@ -1699,6 +1760,8 @@ if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
   if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
 
   sugerirHorariosEscolares();
+  actualizarHorasProgramadas();
+
 }
 
   const descripciones = {
@@ -1835,6 +1898,9 @@ function actualizarTextoFechaVuelta() {
       notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
       input.value = '';
       textoFecha.textContent = 'Seleccionar...';
+      if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
+  actualizarHorasProgramadas();
+
     }
   }
 }
@@ -2162,6 +2228,10 @@ function actualizarTextoFecha() {
   if (servicioSeleccionado) {
   actualizarHoraServicio(servicioSeleccionado, texto);
 }
+  if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
+  actualizarHorasProgramadas();
+}
+
 
   // Formatear fecha legible
   const opciones = { 
