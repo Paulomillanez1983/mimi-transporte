@@ -1710,14 +1710,16 @@ button:disabled,
   </div>
 </div>
 
-<!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO -->
+<!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO - CENTRADO -->
 <div style="display: flex; justify-content: center; margin: -20px 0; position: relative; z-index: 10;">
   <button onclick="intercambiarOrigenDestino()" 
-          class="btn-swap">
+          class="btn-swap"
+          title="Intercambiar origen y destino"
+          aria-label="Intercambiar origen y destino">
     <span>⇅</span>
   </button>
 </div>
-
+    
 <div class="location-input-group">
   <div class="location-card">
     <div class="location-icon destiny">📍</div>
@@ -1734,6 +1736,7 @@ button:disabled,
       <span id="errorText"></span>
     </div>
     <!-- SELECTOR DE SERVICIOS -->
+<!-- SELECTOR DE SERVICIOS -->
 <div class="servicio-selector" id="selectorServicios">
 
   <!-- LO QUIERO YA -->
@@ -1741,14 +1744,14 @@ button:disabled,
        onclick="seleccionarServicio('IDA_ESCOLAR')"
        id="card-IDA_ESCOLAR">
 
-    <div class="servicio-icon">⚡</div>
+    <div class="servicio-icon">🚀</div>
 
     <div class="servicio-info">
-      <strong id="txt-IDA_ESCOLAR">Lo quiero YA</strong>
-      <small id="subtxt-IDA_ESCOLAR">Viaje inmediato</small>
+      <strong>Lo quiero YA</strong>
+      <small>Salida inmediata</small>
     </div>
 
-    <div class="servicio-hora" id="hora-IDA_ESCOLAR" style="display:none;">--:--</div>
+    <div class="servicio-hora" id="hora-IDA_ESCOLAR">--:--</div>
     <div class="servicio-check">✓</div>
   </div>
 
@@ -1760,14 +1763,14 @@ button:disabled,
 
     <div class="servicio-badge popular">Más elegido</div>
 
-    <div class="servicio-icon">↔️</div>
+    <div class="servicio-icon">🔄</div>
 
     <div class="servicio-info">
-      <strong id="txt-IDA_Y_VUELTA_INMEDIATA">Ida y vuelta</strong>
-      <small id="subtxt-IDA_Y_VUELTA_INMEDIATA">Te esperamos y volvemos</small>
+      <strong>Ida y vuelta</strong>
+      <small>Te esperamos y volvemos</small>
     </div>
 
-    <div class="servicio-hora" id="hora-IDA_Y_VUELTA_INMEDIATA" style="display:none;">--:--</div>
+    <div class="servicio-hora" id="hora-IDA_Y_VUELTA_INMEDIATA">--:--</div>
     <div class="servicio-check">✓</div>
   </div>
 
@@ -1777,14 +1780,14 @@ button:disabled,
        onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')"
        id="card-IDA_MAS_VUELTA_PROGRAMADA">
 
-    <div class="servicio-icon">📅</div>
+    <div class="servicio-icon">📆</div>
 
     <div class="servicio-info">
-      <strong id="txt-IDA_MAS_VUELTA_PROGRAMADA">Ida + Vuelta</strong>
-      <small id="subtxt-IDA_MAS_VUELTA_PROGRAMADA">Programada</small>
+      <strong>Ida + Vuelta</strong>
+      <small>Programá ambos horarios</small>
     </div>
 
-    <div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">--:--</div>
+    <div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA">--:--</div>
     <div class="servicio-check">✓</div>
   </div>
 
@@ -1794,18 +1797,17 @@ button:disabled,
        onclick="seleccionarServicio('OTROS_SERVICIOS')"
        id="card-OTROS_SERVICIOS">
 
-    <div class="servicio-icon">➕</div>
+    <div class="servicio-icon">✨</div>
 
     <div class="servicio-info">
-      <strong id="txt-OTROS_SERVICIOS">Otros</strong>
-      <small id="subtxt-OTROS_SERVICIOS">Próximamente</small>
+      <strong>Otros</strong>
+      <small>Próximamente más opciones</small>
     </div>
 
     <div class="servicio-check">✓</div>
   </div>
 
 </div>
-
     <!-- CAMPOS CONDICIONALES -->
     <div id="campo-fecha-vuelta" style="display:none; margin-top:15px;">
       <div class="datetime-header">
