@@ -1711,7 +1711,12 @@ button:disabled,
 </div>
 
 <!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO -->
-<div style="display: flex; justify-content: center; margin: -6px 0; position: relative; z-index: 5;">
+<div style="display: flex; justify-content: center; margin: -20px 0; position: relative; z-index: 10;">
+  <button onclick="intercambiarOrigenDestino()" 
+          class="btn-swap">
+    <span>⇅</span>
+  </button>
+</div>
   <button onclick="intercambiarOrigenDestino()" 
           style="background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-claro) 100%); 
                  border: none;
