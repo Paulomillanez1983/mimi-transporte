@@ -919,7 +919,7 @@ async function cargarViajes() {
         estado: 'EN_CURSO',
         chofer_id: choferId
       },
-      order: 'updated_at.desc'
+      order: 'created_at.desc'
     });
 
     const completados = await supabase.select('viajes', {
@@ -927,7 +927,7 @@ async function cargarViajes() {
         estado: 'COMPLETADO',
         chofer_id: choferId
       },
-      order: 'updated_at.desc',
+      order: 'created_at.desc',
       limit: 30
     });
 
