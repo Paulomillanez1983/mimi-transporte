@@ -1758,14 +1758,14 @@ function iniciarRealtimeViajes() {
     console.error('Error iniciando realtime:', err);
   }
 }
-    document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
   await cargarViajesSeguro();
   iniciarRealtimeViajes();
 });
 
-      // Inicializar audio en primer click
-      document.body.addEventListener('click', async () => {
-        if (!SoundSystem.audioContext) {
+  // Inicializar audio en primer click
+  document.body.addEventListener('click', async () => {
+    if (!SoundSystem.audioContext) {
           await SoundSystem.init();
         }
       }, { once: true });
