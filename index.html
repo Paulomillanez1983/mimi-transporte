@@ -1914,14 +1914,12 @@ function inicializarAutocomplete(inputOrigen, inputDestino) {
     // Crear autocompletados
 autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
   componentRestrictions: { country: 'ar' },
-  fields: ['formatted_address', 'geometry', 'name', 'place_id'],
-  types: ['geocode']
+  fields: ['formatted_address', 'geometry', 'name', 'place_id']
 });
 
 autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
   componentRestrictions: { country: 'ar' },
-  fields: ['formatted_address', 'geometry', 'name', 'place_id'],
-  types: ['establishment']
+  fields: ['formatted_address', 'geometry', 'name', 'place_id']
 });
 
     // Sesgo opcional hacia Córdoba
