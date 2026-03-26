@@ -1420,6 +1420,16 @@ body {
   <strong id="txt-IDA_MAS_VUELTA_PROGRAMADA">Ida + Vuelta programada</strong>
   <small id="subtxt-IDA_MAS_VUELTA_PROGRAMADA">Dos viajes separados</small>
 </div>
+  <!-- OTROS SERVICIOS -->
+<div class="servicio-card" onclick="seleccionarServicio('OTROS_SERVICIOS')" id="card-OTROS_SERVICIOS">
+  <div class="servicio-icon">➕</div>
+  <div class="servicio-info">
+    <strong id="txt-OTROS_SERVICIOS">Otros servicios</strong>
+    <small id="subtxt-OTROS_SERVICIOS">Próximamente</small>
+  </div>
+  <div class="servicio-check">✓</div>
+</div>
+
 
 <div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA" style="display:none;">🕒 --:--</div>
   <div class="servicio-check">✓</div>
@@ -2657,9 +2667,7 @@ function cargarEstadoLocal() {
 }
 
 function formatearTextoBoton(fecha) {
-  return fecha.toLocaleString('es-AR', {
-    day: '2-digit',
-    month: 'short',
+  return fecha.toLocaleTimeString('es-AR', {
     hour: '2-digit',
     minute: '2-digit'
   });
