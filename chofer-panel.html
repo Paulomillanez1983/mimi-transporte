@@ -747,9 +747,23 @@
     // ==========================================
     // CONFIGURACIÓN SUPABASE
     // ==========================================
-    const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
+const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
 
+// Cliente oficial Supabase para Realtime
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+});
+
+window.supabaseClient = supabaseClient;
     const supabase = {
       async select(table, options = {}) {
         let url = `${SUPABASE_URL}/rest/v1/${table}?select=${encodeURIComponent(options.columns || '*')}`;
