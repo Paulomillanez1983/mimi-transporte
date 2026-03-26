@@ -2691,6 +2691,117 @@ window.addEventListener('load', () => {
   esperarGoogleMaps();
 });
   // ==========================================
+// CÁLCULO DE DISTANCIA (Añadir antes de usar)
+// ==========================================
+
+/**
+ * Calcula la distancia en km entre dos puntos usando la API de Google Maps
+ * @param {Object} origen - {lat, lng} o dirección string
+ * @param {Object} destino - {lat, lng} o dirección string
+ * @returns {Promise<{km: number, duracionMin: number, error: string|null}>}
+ */
+async function calcularDistancia(origen, destino) {
+  try {
+    // Si son objetos con lat/lng, usamos eso directamente
+    // Si son strings (direcciones), necesitamos geocodificar primero
+    
+    let origenCoords = origen;
+    let destinoCoords = destino;
+    
+    // Si son direcciones en string, geocodificar
+    if (typeof origen === 'string') {
+      const geoOrigen = await geocodificarDireccion(origen);
+      if (!geoOrigen) throw new Error('No se pudo geocodificar el origen');
+      origenCoords = { lat: geoOrigen.lat, lng: geoOrigen.lng };
+    }
+    
+    if (typeof destino === 'string') {
+      const geoDestino = await geocodificarDireccion(destino);
+      if (!geoDestino) throw new Error('No se pudo geocodificar el destino');
+      destinoCoords = { lat: geoDestino.lat, lng: geoDestino.lng };
+    }
+    
+    // Usar Distance Matrix API de Google Maps
+    const service = new google.maps.DistanceMatrixService();
+    
+    const response = await new Promise((resolve, reject) => {
+      service.getDistanceMatrix({
+        origins: [{ lat: origenCoords.lat, lng: origenCoords.lng }],
+        destinations: [{ lat: destinoCoords.lat, lng: destinoCoords.lng }],
+        travelMode: google.maps.TravelMode.DRIVING,
+        unitSystem: google.maps.UnitSystem.METRIC,
+        avoidHighways: false,
+        avoidTolls: false,
+      }, (result, status) => {
+        if (status === 'OK') {
+          resolve(result);
+        } else {
+          reject(new Error(`Distance Matrix error: ${status}`));
+        }
+      });
+    });
+    
+    const element = response.rows[0].elements[0];
+    
+    if (element.status !== 'OK') {
+      throw new Error(`No se pudo calcular la ruta: ${element.status}`);
+    }
+    
+    // Convertir a km y minutos
+    const distanciaKm = element.distance.value / 1000;
+    const duracionMin = Math.round(element.duration.value / 60);
+    
+    return {
+      km: parseFloat(distanciaKm.toFixed(2)),
+      duracionMin: duracionMin,
+      distanciaTexto: element.distance.text,
+      duracionTexto: element.duration.text,
+      error: null
+    };
+    
+  } catch (error) {
+    console.error('❌ Error en calcularDistancia:', error);
+    
+    // Fallback: calcular distancia en línea recta (Haversine)
+    if (typeof origen === 'object' && typeof destino === 'object' && 
+        origen.lat && origen.lng && destino.lat && destino.lng) {
+      const kmRecta = calcularDistanciaHaversine(
+        origen.lat, origen.lng, 
+        destino.lat, destino.lng
+      );
+      return {
+        km: parseFloat(kmRecta.toFixed(2)),
+        duracionMin: Math.round(kmRecta * 2), // Estimado: 2 min por km
+        distanciaTexto: `${kmRecta.toFixed(1)} km (estimado)`,
+        duracionTexto: `${Math.round(kmRecta * 2)} min (estimado)`,
+        error: null,
+        esEstimado: true
+      };
+    }
+    
+    return {
+      km: 0,
+      duracionMin: 0,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Calcula distancia en línea recta usando la fórmula de Haversine
+ * Útil como fallback cuando Distance Matrix no está disponible
+ */
+function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+  // ==========================================
 // FECHA Y HORA
 // ==========================================
 function seleccionarHoy() {
