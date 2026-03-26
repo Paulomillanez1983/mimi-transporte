@@ -575,14 +575,14 @@
   </div>
 
   <!-- FILTROS -->
-  <div class="filtros">
-    <button class="filtro-btn activo" data-filtro="todos" onclick="filtrar('todos')">Todos</button>
-    <button class="filtro-btn" data-filtro="pendiente" onclick="filtrar('DISPONIBLE')">Pendientes</button>
-    <button class="filtro-btn" data-filtro="aceptado" onclick="filtrar('aceptado')">Aceptados</button>
-    <button class="filtro-btn" data-filtro="en-camino" onclick="filtrar('en-camino')">En curso</button>
-    <button class="filtro-btn" data-filtro="completado" onclick="filtrar('completado')">Completados</button>
-  </div>
-
+<div class="filtros">
+  <button class="filtro-btn activo" data-filtro="todos" onclick="filtrar('todos')">Todos</button>
+  <button class="filtro-btn" data-filtro="DISPONIBLE" onclick="filtrar('DISPONIBLE')">Pendientes</button>
+  <button class="filtro-btn" data-filtro="ACEPTADO" onclick="filtrar('ACEPTADO')">Aceptados</button>
+  <button class="filtro-btn" data-filtro="EN_CURSO" onclick="filtrar('EN_CURSO')">En curso</button>
+  <button class="filtro-btn" data-filtro="COMPLETADO" onclick="filtrar('COMPLETADO')">Completados</button>
+</div>
+  
   <!-- LISTA VIAJES -->
   <div class="viajes-lista" id="listaViajes">
     <div class="loading">
@@ -873,65 +873,87 @@
     // ==========================================
     // CARGA DE VIAJES (CORREGIDO)
     // ==========================================
-    async function cargarViajes() {
-      const btn = document.getElementById('btnRefresh');
-      if (btn) btn.classList.add('spinning');
+async function cargarViajes() {
+  const btn = document.getElementById('btnRefresh');
+  if (btn) btn.classList.add('spinning');
 
-      try {
-        const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-        
-        // 1. Buscar viajes ASIGNADOS específicamente a este chofer
-const asignados = await supabase.select('viajes', {
-  eq: { 
-    estado: 'ASIGNADO',
-    chofer_id: choferId
-  },
-  order: 'asignado_at.desc'
-});
-        // Si hay viaje asignado, mostrar modal
-        if (asignados && asignados.length > 0 && !viajePendiente && !ultimosViajesVistos.has(asignados[0].id)) {
-          mostrarSolicitudEntrante(asignados[0]);
-        }
+  try {
+    const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
 
-        // 2. Cargar viajes del chofer (múltiples estados)
-const disponibles = await supabase.select('viajes', {
-  eq: { estado: 'DISPONIBLE' },
-  order: 'created_at.desc'
-});        
-        viajesData = viajes || [];
-        
-        // Notificar nuevos pendientes
-        const nuevosPendientes = viajesData.filter(v => {
-          const estado = normalizarEstado(v.estado);
-          return estado === 'DISPONIBLE' && !ultimosViajesVistos.has(v.id);
-        });
-        
-        if (nuevosPendientes.length > 0 && viajesData.length > 0) {
-          SoundSystem.playNewTrip();
-          SoundSystem.vibrate([100, 50, 100, 50, 200]);
-          showNewTripIndicator();
-          nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
-        }
+    // 1) Viaje reservado/asignado para ESTE chofer (modal de oferta)
+    const asignados = await supabase.select('viajes', {
+      eq: {
+        estado: 'ASIGNADO',
+        chofer_id: choferId
+      },
+      order: 'asignado_at.desc',
+      limit: 1
+    });
 
-        renderizarViajes();
-        actualizarStats();
+    // 2) Viajes disponibles para tomar
+    const disponibles = await supabase.select('viajes', {
+      eq: { estado: 'DISPONIBLE' },
+      order: 'created_at.desc'
+    });
 
-      } catch (error) {
-        console.error('Error cargando viajes:', error);
-        document.getElementById('listaViajes').innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">⚠️</div>
-            <p>Error al cargar: ${escaparHTML(error.message)}</p>
-            <button onclick="cargarViajes()" style="margin-top:10px;padding:8px 16px;border:none;border-radius:10px;background:#1565c0;color:white;cursor:pointer;">
-              Reintentar
-            </button>
-          </div>
-        `;
-      } finally {
-        if (btn) btn.classList.remove('spinning');
-      }
+    // 3) Viajes ya aceptados/en curso/completados por ESTE chofer
+    const misViajes = await supabase.select('viajes', {
+      eq: { chofer_id: choferId },
+      neq: { estado: 'ASIGNADO' },
+      order: 'created_at.desc'
+    });
+
+    // 4) Mostrar modal SOLO si hay un viaje asignado pendiente para este chofer
+    if (
+      asignados &&
+      asignados.length > 0 &&
+      !viajePendiente &&
+      !ultimosViajesVistos.has(asignados[0].id)
+    ) {
+      mostrarSolicitudEntrante(asignados[0]);
     }
 
+    // 5) Unificar sin duplicados
+    const mapaViajes = new Map();
+
+    [...(disponibles || []), ...(misViajes || [])].forEach(v => {
+      if (v && v.id) {
+        mapaViajes.set(v.id, v);
+      }
+    });
+
+    viajesData = Array.from(mapaViajes.values());
+
+    // 6) Detectar nuevos DISPONIBLES
+    const nuevosPendientes = (disponibles || []).filter(v => {
+      return v?.id && !ultimosViajesVistos.has(v.id);
+    });
+
+    if (nuevosPendientes.length > 0) {
+      SoundSystem.playNewTrip();
+      SoundSystem.vibrate([100, 50, 100, 50, 200]);
+      showNewTripIndicator();
+      nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
+    }
+
+    renderizarViajes();
+    actualizarStats();
+
+  } catch (error) {
+    console.error('Error cargando viajes:', error);
+    document.getElementById('listaViajes').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⚠️</div>
+        <p>Error al cargar: ${escaparHTML(error.message)}</p>
+        <button onclick="cargarViajes()" style="margin-top:10px;padding:8px 16px;border:none;border-radius:10px;background:#1565c0;color:white;cursor:pointer;">
+          Reintentar
+        </button>
+      </div>
+    `;
+  } finally {
+    if (btn) btn.classList.remove('spinning');
+  }
+}
     // ==========================================
     // MODAL SOLICITUD ENTRANTE
     // ==========================================
@@ -1031,13 +1053,11 @@ const disponibles = await supabase.select('viajes', {
       const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
       
       try {
-        await supabase.updateById('viajes', viajePendiente.id, {
-          estado: 'ACEPTADO',
-          chofer_id: choferId,
-          aceptado_at: new Date().toISOString(),
-          asignado_a: null
-        });
-        
+await supabase.updateById('viajes', viajePendiente.id, {
+  estado: 'ACEPTADO',
+  chofer_id: choferId,
+  aceptado_at: new Date().toISOString()
+});        
         SoundSystem.playSuccess();
         cerrarModal();
         mostrarNotificacion('✓ Viaje aceptado correctamente', 'success');
@@ -1060,13 +1080,12 @@ const disponibles = await supabase.select('viajes', {
       const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
       
       try {
-        await supabase.updateById('viajes', viajePendiente.id, {
-          estado: 'DISPONIBLE',
-          rechazado_por: choferId,
-          rechazado_at: new Date().toISOString(),
-          asignado_a: null
-        });
-        
+await supabase.updateById('viajes', viajePendiente.id, {
+  estado: 'DISPONIBLE',
+  chofer_id: null,
+  rechazado_por: choferId,
+  rechazado_at: new Date().toISOString()
+});        
         SoundSystem.playNotification();
         cerrarModal();
         mostrarNotificacion('Viaje rechazado. Buscando otro chofer...', 'info');
@@ -1083,13 +1102,12 @@ const disponibles = await supabase.select('viajes', {
       const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
       
       try {
-        await supabase.updateById('viajes', viajePendiente.id, {
-          estado: 'DISPONIBLE',
-          timeout_por: choferId,
-          timeout_at: new Date().toISOString(),
-          asignado_a: null
-        });
-        
+await supabase.updateById('viajes', viajePendiente.id, {
+  estado: 'DISPONIBLE',
+  chofer_id: null,
+  rechazado_por: choferId,
+  rechazado_at: new Date().toISOString()
+});        
         cerrarModal();
         mostrarNotificacion('⏰ Tiempo agotado. El viaje se ofreció a otro chofer.', 'warning');
         SoundSystem.vibrate([100, 100, 100]);
@@ -1127,36 +1145,25 @@ const disponibles = await supabase.select('viajes', {
       document.getElementById('statTotal').textContent = viajesData.length;
     }
 
-    function filtrar(estado) {
-      filtroActual = estado;
-      document.querySelectorAll('.filtro-btn').forEach(btn => {
-        btn.classList.remove('activo');
-        if (btn.getAttribute('data-filtro') === estado) {
-          btn.classList.add('activo');
-        }
-      });
-      renderizarViajes();
-    }
+function filtrar(estado) {
+  filtroActual = estado;
 
+  document.querySelectorAll('.filtro-btn').forEach(btn => {
+    btn.classList.remove('activo');
+    if (btn.dataset.filtro === estado) {
+      btn.classList.add('activo');
+    }
+  });
+
+  renderizarViajes();
+}
     function renderizarViajes() {
       const container = document.getElementById('listaViajes');
       let viajes = [...viajesData];
 
-      if (filtroActual !== 'todos') {
-        const filtroMap = {
-          'DISPONIBLE': 'DISPONIBLE',
-          'aceptado': 'ACEPTADO',
-          'en-camino': 'EN_CURSO',
-          'completado': 'COMPLETADO',
-          'cancelado': 'CANCELADO'
-        };
-        const estadoBuscado = filtroMap[filtroActual] || filtroActual.toUpperCase();
-        viajes = viajes.filter(v => {
-          const estadoNormalizado = normalizarEstado(v.estado);
-          return estadoNormalizado === estadoBuscado;
-        });
-      }
-
+if (filtroActual !== 'todos') {
+  viajes = viajes.filter(v => normalizarEstado(v.estado) === filtroActual);
+}
       viajes.sort((a, b) => {
         const orden = { 'DISPONIBLE': 0, 'ACEPTADO': 1, 'EN_CURSO': 2, 'COMPLETADO': 3, 'CANCELADO': 4 };
         const estadoA = normalizarEstado(a.estado);
@@ -1254,63 +1261,88 @@ const disponibles = await supabase.select('viajes', {
     // ==========================================
     // ACCIONES DE VIAJE
     // ==========================================
-    async function cambiarEstado(id, nuevoEstado) {
-      if (!id) {
-        alert('ID inválido');
-        return;
-      }
-      try {
-        await supabase.updateById('viajes', id, { estado: nuevoEstado });
-        SoundSystem.playSuccess();
-        mostrarNotificacion('Estado actualizado', 'success');
-        cargarViajes();
-      } catch (err) {
-        alert('Error: ' + err.message);
-        console.error(err);
-      }
+async function cambiarEstado(id, nuevoEstado) {
+  if (!id) {
+    alert('ID inválido');
+    return;
+  }
+
+  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+
+  try {
+    const payload = { estado: nuevoEstado };
+
+    if (nuevoEstado === 'ACEPTADO') {
+      payload.chofer_id = choferId;
+      payload.aceptado_at = new Date().toISOString();
     }
 
-    async function finalizarViaje(id) {
-      const notas = prompt('¿Observaciones?');
-      try {
-        await supabase.updateById('viajes', id, {
-          estado: 'COMPLETADO',
-          notas: notas || null
-        });
-        SoundSystem.playSuccess();
-        mostrarNotificacion('Viaje finalizado', 'success');
-        cargarViajes();
-      } catch (err) {
-        alert('Error al finalizar: ' + err.message);
-        console.error(err);
-      }
+    if (nuevoEstado === 'EN_CURSO') {
+      payload.iniciado_at = new Date().toISOString();
     }
 
+    await supabase.updateById('viajes', id, payload);
+
+    SoundSystem.playSuccess();
+    mostrarNotificacion('Estado actualizado', 'success');
+    cargarViajes();
+  } catch (err) {
+    alert('Error: ' + err.message);
+    console.error(err);
+  }
+}
+async function finalizarViaje(id) {
+  const notas = prompt('¿Observaciones?');
+
+  try {
+    await supabase.updateById('viajes', id, {
+      estado: 'COMPLETADO',
+      notas: notas || null,
+      completado_at: new Date().toISOString()
+    });
+
+    SoundSystem.playSuccess();
+    mostrarNotificacion('Viaje finalizado', 'success');
+    cargarViajes();
+  } catch (err) {
+    alert('Error al finalizar: ' + err.message);
+    console.error(err);
+  }
+}
+    
     function abrirMaps(origen, destino) {
       const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen || '')}&destination=${encodeURIComponent(destino || '')}`;
       window.open(url, '_blank', 'noopener,noreferrer');
     }
 
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-      const toast = document.createElement('div');
-      toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: ${tipo === 'success' ? '#4caf50' : '#2196f3'};
-        color: white;
-        padding: 12px 24px;
-        border-radius: 25px;
-        font-weight: 600;
-        z-index: 10000;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-      `;
-      toast.textContent = mensaje;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 3000);
-    }
+function mostrarNotificacion(mensaje, tipo = 'info') {
+  const colores = {
+    success: '#4caf50',
+    info: '#2196f3',
+    warning: '#ff9800',
+    error: '#f44336'
+  };
 
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: ${colores[tipo] || colores.info};
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-weight: 600;
+    z-index: 10000;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+    max-width: 90vw;
+    text-align: center;
+  `;
+  toast.textContent = mensaje;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
     // ==========================================
     // INICIALIZACIÓN
     // ==========================================
