@@ -869,61 +869,10 @@ const supabase = {
     return await response.json();
   }
 };
-    async insert(table, data) {
-      const url = `${SUPABASE_URL}/rest/v1/${table}`;
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=representation'
-        },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || error.error_description || 'Error insertando');
-      }
-
-      return await response.json();
-    },
-
-async updateById(table, id, data, extraEq = {}) {
-  let url = `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`;
-
-  Object.entries(extraEq).forEach(([col, val]) => {
-    url += `&${col}=eq.${encodeURIComponent(val)}`;
-  });
-
-  const payload = {
-    ...data,
-    updated_at: new Date().toISOString()
-  };
-
-  const response = await fetch(url, {
-    method: 'PATCH',
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      Prefer: 'return=representation'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || error.error_description || 'Error actualizando');
-  }
-
-  return await response.json();
-}
-    // ==========================================
-    // SISTEMA DE SONIDO
-    // ==========================================
+// ==========================================
+// SISTEMA DE SONIDO
+// ==========================================    
     const SoundSystem = {
       audioContext: null,
       enabled: false,
