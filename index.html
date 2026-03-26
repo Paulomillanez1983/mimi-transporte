@@ -1258,50 +1258,52 @@ body {
   </div>
 
   <div class="main-card">
-    <div class="location-input-group">
-      <div class="location-card" onclick="document.getElementById('origen').focus()">
-        <div class="location-icon origin">📍</div>
-        <div class="location-text">
-          <div class="location-label">Origen</div>
-          <div id="origenAutocompleteWrapper" class="location-autocomplete-wrapper"></div>        </div>
-        <div class="location-arrow">›</div>
-      </div>
+<div class="location-input-group">
+  <div class="location-card">
+    <div class="location-icon origin">📍</div>
+    <div class="location-text">
+      <div class="location-label">Origen</div>
+      <input type="text" id="origen" class="location-input" placeholder="Av. Santa Fe 1234, Córdoba" autocomplete="off">
     </div>
+    <div class="location-arrow">›</div>
+  </div>
+</div>
 
-    <!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO -->
-    <div style="display: flex; justify-content: center; margin: -6px 0; position: relative; z-index: 5;">
-      <button onclick="intercambiarOrigenDestino()" 
-              style="background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-claro) 100%); 
-                     border: none;
-                     border-radius: 50%; 
-                     width: 40px; 
-                     height: 40px; 
-                     display: flex; 
-                     align-items: center; 
-                     justify-content: center; 
-                     cursor: pointer; 
-                     box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3); 
-                     transition: all 0.3s ease;
-                     font-size: 1.1rem;
-                     animation: pulseSwap 2s infinite;"
-              onmouseover="this.style.transform='rotate(180deg) scale(1.12)'; this.style.animation='none'"
-              onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.animation='pulseSwap 2s infinite'"
-              onmousedown="this.style.transform='rotate(180deg) scale(0.95)'"
-              title="Intercambiar origen y destino">
-        <span style="color: white;">⇅</span>
-      </button>
+<!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO -->
+<div style="display: flex; justify-content: center; margin: -6px 0; position: relative; z-index: 5;">
+  <button onclick="intercambiarOrigenDestino()" 
+          style="background: linear-gradient(135deg, var(--azul-primario) 0%, var(--azul-claro) 100%); 
+                 border: none;
+                 border-radius: 50%; 
+                 width: 40px; 
+                 height: 40px; 
+                 display: flex; 
+                 align-items: center; 
+                 justify-content: center; 
+                 cursor: pointer; 
+                 box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3); 
+                 transition: all 0.3s ease;
+                 font-size: 1.1rem;
+                 animation: pulseSwap 2s infinite;"
+          onmouseover="this.style.transform='rotate(180deg) scale(1.12)'; this.style.animation='none'"
+          onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.animation='pulseSwap 2s infinite'"
+          onmousedown="this.style.transform='rotate(180deg) scale(0.95)'"
+          title="Intercambiar origen y destino">
+    <span style="color: white;">⇅</span>
+  </button>
+</div>
+
+<div class="location-input-group">
+  <div class="location-card">
+    <div class="location-icon destiny">📍</div>
+    <div class="location-text">
+      <div class="location-label">Destino</div>
+      <input type="text" id="destino" class="location-input" placeholder="Ej: Shopping Villa Allende" autocomplete="off">
     </div>
+    <div class="location-arrow">›</div>
+  </div>
+</div>
     
-    <div class="location-input-group">
-      <div class="location-card" onclick="document.getElementById('destino').focus()">
-        <div class="location-icon destiny">📍</div>
-        <div class="location-text">
-          <div class="location-label">Destino</div>
-        </div>
-        <div class="location-arrow">›</div>
-      </div>
-    </div>
-
     <div class="error-message" id="errorMsg">
       <span>⚠️</span>
       <span id="errorText"></span>
