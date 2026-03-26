@@ -1239,6 +1239,35 @@ body {
 .btn-hidden-after-reset {
   display: none !important;
 }
+  #campo-fecha-ida,
+#campo-fecha-vuelta {
+  animation: fadeInUp 0.25s ease;
+}
+
+#campo-fecha-vuelta .datetime-card {
+  border-color: #d6e4ff;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+}
+
+#campo-fecha-vuelta .datetime-header span {
+  color: #1565c0;
+  font-weight: 700;
+}
+
+#campo-fecha-ida .datetime-header span {
+  font-weight: 700;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 </style>
 </head>
 <body>
@@ -1382,14 +1411,15 @@ body {
       </div>
       <input type="hidden" id="tiempoEsperaMin" value="30">
     </div>
-    <div style="margin-top:15px;">
+<!-- HORARIO DE IDA -->
+<div id="campo-fecha-ida" style="margin-top:15px;">
   <div class="datetime-header">
-    <span>📅 Horario de IDA</span>
+    <span id="tituloHorarioIda">📅 Horario de IDA</span>
   </div>
 
   <div class="datetime-card" onclick="abrirSelectorFecha()">
     <div class="datetime-text">
-      <div class="datetime-label">Fecha y hora de ida</div>
+      <div class="datetime-label" id="labelHorarioIda">Fecha y hora de ida</div>
       <div class="datetime-value" id="textoFechaSeleccionada">Elegí fecha y hora...</div>
     </div>
     <div class="location-arrow">›</div>
@@ -1397,6 +1427,7 @@ body {
 
   <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
 </div>
+    
 
 
 <button class="btn-calcular btn-push" id="btnCalcular" onclick="calcularTarifa()">
@@ -1594,27 +1625,49 @@ function clearButtonLoading(buttonId, textId) {
 // ==========================================
 function seleccionarServicio(servicio) {
   servicioSeleccionado = servicio;
-  
+
   document.querySelectorAll('.servicio-card').forEach(c => {
     c.classList.remove('activo');
   });
-  
+
   const cardSeleccionada = document.getElementById(`card-${servicio}`);
   if (cardSeleccionada) {
     cardSeleccionada.classList.add('activo');
   }
-  
+
+  const campoIda = document.getElementById('campo-fecha-ida');
   const campoVuelta = document.getElementById('campo-fecha-vuelta');
   const campoEspera = document.getElementById('campo-espera');
-  
-  if (campoVuelta) {
-    campoVuelta.style.display = (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') ? 'block' : 'none';
+
+  const tituloHorarioIda = document.getElementById('tituloHorarioIda');
+  const labelHorarioIda = document.getElementById('labelHorarioIda');
+
+  // Reset visual base
+  if (campoIda) campoIda.style.display = 'block';
+  if (campoVuelta) campoVuelta.style.display = 'none';
+  if (campoEspera) campoEspera.style.display = 'none';
+
+  // Configuración por servicio
+  if (servicio === 'IDA_ESCOLAR') {
+    if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+    if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
   }
-  
-  if (campoEspera) {
-    campoEspera.style.display = (servicio === 'IDA_Y_VUELTA_INMEDIATA') ? 'block' : 'none';
+
+  if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
+    if (tituloHorarioIda) tituloHorarioIda.textContent = '⚡ Horario de SALIDA';
+    if (labelHorarioIda) labelHorarioIda.textContent = 'Salida del viaje';
+    if (campoEspera) campoEspera.style.display = 'block';
   }
-  
+
+  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
+    if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+    if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+
+    if (campoVuelta) campoVuelta.style.display = 'block';
+
+    sugerirHorariosEscolares();
+  }
+
   const descripciones = {
     'IDA_ESCOLAR': {
       titulo: 'Ida al destino',
@@ -1630,22 +1683,17 @@ function seleccionarServicio(servicio) {
     },
     'IDA_MAS_VUELTA_PROGRAMADA': {
       titulo: 'Dos viajes programados',
-      desc: 'Ida y vuelta en horarios distintos. 10% de descuento por contratar ambos.'
+      desc: 'Primero elegí el horario de ida y luego el de regreso.'
     }
   };
-  
+
   const info = descripciones[servicio];
   if (info) {
     notifSystem.show(info.titulo, info.desc, 'info', 3500);
   }
-  
-  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
-    sugerirHorariosEscolares();
-  }
-  
-  guardarEstadoLocal();
-}
 
+  guardarEstadoLocal();
+}  
 function setTiempoEspera(minutos) {
   tiempoEsperaSeleccionado = minutos;
   const inputEspera = document.getElementById('tiempoEsperaMin');
@@ -1675,29 +1723,38 @@ function setTiempoEspera(minutos) {
 
 function sugerirHorariosEscolares() {
   const ahora = new Date();
-  const manana = new Date(ahora);
-  manana.setDate(manana.getDate() + 1);
-  
-  manana.setHours(7, 30, 0, 0);
-  const horaIda = formatearFechaInput(manana);
-  
-  manana.setHours(16, 0, 0, 0);
-  const horaVuelta = formatearFechaInput(manana);
-  
+
+  const ida = new Date(ahora);
+  ida.setDate(ida.getDate() + 1);
+  ida.setHours(7, 30, 0, 0);
+
+  const vuelta = new Date(ahora);
+  vuelta.setDate(vuelta.getDate() + 1);
+  vuelta.setHours(16, 0, 0, 0);
+
+  const horaIda = formatearFechaInput(ida);
+  const horaVuelta = formatearFechaInput(vuelta);
+
   const inputFechaHora = document.getElementById('fechaHora');
+  const inputFechaHoraVuelta = document.getElementById('fechaHoraVuelta');
+
   if (inputFechaHora && !inputFechaHora.value) {
     inputFechaHora.value = horaIda;
     actualizarTextoFecha();
   }
-  
+
+  if (inputFechaHoraVuelta && !inputFechaHoraVuelta.value) {
+    inputFechaHoraVuelta.value = horaVuelta;
+    actualizarTextoFechaVuelta();
+  }
+
   notifSystem.show(
-    'Horarios escolares sugeridos',
-    'Ida: 7:30 AM · Vuelta: 4:00 PM. Podés modificarlos.',
+    'Horarios sugeridos',
+    'Primero elegí la ida y después el regreso. Ya te dejamos una base sugerida.',
     'info',
     5000
   );
 }
-
 function abrirSelectorFechaVuelta() {
   const input = document.getElementById('fechaHoraVuelta');
   if (!input) return;
