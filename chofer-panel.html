@@ -881,23 +881,25 @@
         const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
         
         // 1. Buscar viajes ASIGNADOS específicamente a este chofer
-        const asignados = await supabase.select('viajes', {
-          eq: { estado: `ASIGNADO_${choferId}` },
-          order: 'asignado_at.desc'
-        });
-
+const asignados = await supabase.select('viajes', {
+  eq: { 
+    estado: 'ASIGNADO',
+    chofer_id: choferId
+  },
+  order: 'asignado_at.desc'
+});
         // Si hay viaje asignado, mostrar modal
         if (asignados && asignados.length > 0 && !viajePendiente && !ultimosViajesVistos.has(asignados[0].id)) {
           mostrarSolicitudEntrante(asignados[0]);
         }
 
         // 2. Cargar viajes del chofer (múltiples estados)
-        const viajes = await supabase.select('viajes', {
-          or: `estado.eq.ACEPTADO,estado.eq.EN_CURSO,estado.eq.COMPLETADO,estado.eq.CANCELADO,chofer_id.eq.${choferId}`,
-          order: 'created_at.desc'
-        });
-
-        viajesData = viajes || [];
+const viajes = await supabase.select('viajes', {
+  eq: { chofer_id: choferId },
+  or: `estado.eq.ASIGNADO,estado.eq.ACEPTADO,estado.eq.EN_CURSO,estado.eq.COMPLETADO,estado.eq.CANCELADO`,
+  order: 'created_at.desc'
+});
+viajesData = viajes || [];
         
         // Notificar nuevos pendientes
         const nuevosPendientes = viajesData.filter(v => {
