@@ -2217,10 +2217,10 @@ function actualizarTextoFecha() {
   textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
   textoFecha.style.color = '#1a1a1a';
 
-  // ✅ MOSTRAR HORA EN EL SERVICIO SELECCIONADO (cualquiera sea)
-if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
-  actualizarHoraServicio(servicioSeleccionado, formatearTextoBoton(fecha));
-}
+  // ✅ SOLO actualizar hora del botón cuando es PROGRAMADO
+  if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
+    actualizarHoraServicio("IDA_MAS_VUELTA_PROGRAMADA", formatearTextoBoton(fecha));
+  }
 
   guardarEstadoLocal();
 }
