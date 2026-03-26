@@ -1615,7 +1615,7 @@ async function cambiarEstado(id, nuevoEstado) {
   }
 
   if (nuevoEstado === 'EN_CURSO') {
-    payload.updated_at = new Date().toISOString();
+    payload.iniciado_at = new Date().toISOString();
   }
 
   try {
@@ -1628,17 +1628,6 @@ async function cambiarEstado(id, nuevoEstado) {
     console.error(err);
   }
 }
-      try {
-        await supabase.updateById('viajes', id, payload);
-        SoundSystem.playSuccess();
-        mostrarNotificacion('Estado actualizado', 'success');
-        await cargarViajesSeguro();
-      } catch (err) {
-        alert('Error: ' + err.message);
-        console.error(err);
-      }
-    }
-
     async function tomarViaje(id) {
       const choferId = obtenerChoferId();
 
