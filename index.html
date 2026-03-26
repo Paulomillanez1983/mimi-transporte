@@ -1771,22 +1771,24 @@ function actualizarTextoFecha() {
     return;
   }
 
-  const opciones = { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
+  const opciones = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   };
 
   const texto = fecha.toLocaleDateString('es-AR', opciones);
-  textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
+  const textoFinal = texto.charAt(0).toUpperCase() + texto.slice(1);
+
+  textoFecha.textContent = textoFinal;
   textoFecha.style.color = '#1a1a1a';
 
-  // Actualizar hora SOLO en programado
-  if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
-    actualizarHoraServicio("IDA_MAS_VUELTA_PROGRAMADA", formatearTextoBoton(fecha));
+  // actualizar hora en el botón del servicio
+  if (servicioSeleccionado) {
+    actualizarHoraServicio(servicioSeleccionado, textoFinal);
   }
 
   guardarEstadoLocal();
