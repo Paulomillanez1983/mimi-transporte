@@ -1682,31 +1682,57 @@ if (nuevoEstado === 'COMPLETADO') {
     console.error(err);
   }
 }
-    async function rechazarDisponible(id) {
+async function rechazarDisponible(id) {
   const choferId = obtenerChoferId();
+
+  if (!id) {
+    mostrarNotificacion('ID de viaje inválido', 'error');
+    return;
+  }
 
   if (!confirm('¿Querés rechazar este viaje?')) return;
 
   try {
+    // Buscar viaje actual antes de tocarlo
+    const viajeActual = viajesData.find(v => v.id === id);
+
+    if (!viajeActual) {
+      mostrarNotificacion('El viaje ya no está disponible', 'warning');
+      await cargarViajesSeguro();
+      return;
+    }
+
+    const estadoActual = normalizarEstado(viajeActual.estado);
+
+    if (estadoActual !== 'DISPONIBLE') {
+      mostrarNotificacion('Este viaje ya no está disponible', 'warning');
+      await cargarViajesSeguro();
+      return;
+    }
+
     await supabase.updateById('viajes', id, {
       rechazado_por: choferId,
-      rechazado_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      rechazado_at: new Date().toISOString()
     });
 
+    // Ocultarlo localmente para no volver a verlo en esta sesión
     viajesRechazadosLocalmente.add(id);
+
+    // Removerlo del estado local inmediatamente
     viajesData = viajesData.filter(v => v.id !== id);
 
     SoundSystem.playNotification();
     mostrarNotificacion('Viaje rechazado', 'info');
+
     renderizarViajes();
     actualizarStats();
+
   } catch (err) {
-    alert('Error al rechazar: ' + err.message);
-    console.error(err);
+    console.error('Error al rechazar viaje disponible:', err);
+    mostrarNotificacion('Error al rechazar: ' + err.message, 'error');
   }
 }
-async function finalizarViaje(id) {
+    async function finalizarViaje(id) {
   const notas = prompt('¿Observaciones del viaje? (opcional)');
 
   try {
