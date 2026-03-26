@@ -2468,7 +2468,9 @@ async function enviarViaje() {
   setButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText", "Confirmando...");
 
   try {
-    // Validaciones duras
+    // =========================
+    // VALIDACIONES
+    // =========================
     if (!lugarOrigen || !lugarDestino) {
       notifSystem.show('Error', 'Seleccioná origen y destino válidos desde la lista', 'error', 3500);
       mostrarError('Seleccioná direcciones válidas');
@@ -2481,39 +2483,80 @@ async function enviarViaje() {
       return;
     }
 
-    if (!origen || !destino || !precio || precio <= 0) {
+    if (!origen || !destino || !precio || precio <= 0 || Number.isNaN(precio)) {
       notifSystem.show('Error', 'Faltan datos para confirmar el viaje', 'error', 3500);
       mostrarError('Datos incompletos para confirmar');
       return;
     }
 
-    const fechaHoraIda =
-      document.getElementById('fechaHora')?.value || new Date().toISOString();
+    const fechaHoraInput = document.getElementById('fechaHora')?.value || '';
+    const fechaHoraVueltaInput = document.getElementById('fechaHoraVuelta')?.value || '';
+    const tiempoEsperaInput = document.getElementById('tiempoEsperaMin')?.value || '';
 
-    const fechaHoraVuelta =
-      document.getElementById('fechaHoraVuelta')?.value || null;
+    const fechaHoraIda = fechaHoraInput
+      ? new Date(fechaHoraInput).toISOString()
+      : new Date().toISOString();
 
-const payload = {
-  origen: origen,
-  destino: destino,
-  origen_lat: lugarOrigen?.lat ?? null,
-  origen_lng: lugarOrigen?.lng ?? null,
-  destino_lat: lugarDestino?.lat ?? null,
-  destino_lng: lugarDestino?.lng ?? null,
-  precio: precio,
-  estado: "DISPONIBLE",
-  servicio: servicioSeleccionado || 'IDA_ESCOLAR',
-  fecha_hora: fechaHoraIda,
-  fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
-    ? fechaHoraVuelta
-    : null,
-  tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
-    ? Number(document.getElementById('tiempoEsperaMin')?.value || 30)
-    : null
-};
+    const fechaHoraVuelta = fechaHoraVueltaInput
+      ? new Date(fechaHoraVueltaInput).toISOString()
+      : null;
+
+    const tiempoEspera = tiempoEsperaInput
+      ? Number(tiempoEsperaInput)
+      : 30;
+
+    // =========================
+    // VALIDACIONES POR TIPO DE SERVICIO
+    // =========================
+    if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
+      if (!fechaHoraInput || !fechaHoraVueltaInput) {
+        notifSystem.show('Error', 'Debés seleccionar horario de ida y de vuelta', 'error', 3500);
+        mostrarError('Completá ida y vuelta programada');
+        return;
+      }
+
+      if (new Date(fechaHoraVuelta) <= new Date(fechaHoraIda)) {
+        notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3500);
+        mostrarError('Horario de vuelta inválido');
+        return;
+      }
+    }
+
+    if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
+      if (Number.isNaN(tiempoEspera) || tiempoEspera < 1) {
+        notifSystem.show('Error', 'Ingresá un tiempo de espera válido', 'error', 3500);
+        mostrarError('Tiempo de espera inválido');
+        return;
+      }
+    }
+
+    // =========================
+    // PAYLOAD
+    // =========================
+    const payload = {
+      origen: origen,
+      destino: destino,
+      origen_lat: Number(lugarOrigen?.lat) || null,
+      origen_lng: Number(lugarOrigen?.lng) || null,
+      destino_lat: Number(lugarDestino?.lat) || null,
+      destino_lng: Number(lugarDestino?.lng) || null,
+      precio: precio,
+      estado: "DISPONIBLE",
+      servicio: servicioSeleccionado || 'IDA_ESCOLAR',
+      fecha_hora: fechaHoraIda,
+      fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
+        ? fechaHoraVuelta
+        : null,
+      tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
+        ? tiempoEspera
+        : null
+    };
+
     console.log("📦 Payload viaje:", payload);
 
-    // ✅ USAR TU HELPER REAL DE INSERT
+    // =========================
+    // INSERT
+    // =========================
     const { data, error } = await window.supabaseInsert('viajes', payload);
 
     if (error) {
@@ -2528,12 +2571,17 @@ const payload = {
     notifSystem.show('¡Listo!', 'Viaje solicitado correctamente 🚐', 'success', 3500);
     ocultarError();
 
-    // UX pro
+    // =========================
+    // UX POST ÉXITO
+    // =========================
     const btnConfirmar = document.getElementById("btnConfirmarViaje");
     if (btnConfirmar) {
       btnConfirmar.disabled = true;
       btnConfirmar.style.opacity = "0.7";
     }
+
+    // Si tenés modal de confirmación, podés cerrarlo acá:
+    // cerrarModalConfirmacion?.();
 
   } catch (error) {
     console.error('❌ Error en enviarViaje:', error);
@@ -2542,7 +2590,7 @@ const payload = {
   } finally {
     clearButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText");
   }
-}  
+}
   // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
