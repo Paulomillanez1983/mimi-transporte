@@ -1282,6 +1282,26 @@ body {
   border-radius: 12px;
   white-space: nowrap;
 }
+/* LO QUIERO YA - SIEMPRE NEGRO */
+.servicio-card.urgente {
+  background: #000 !important;
+  border: 2px solid rgba(255,255,255,0.08) !important;
+}
+
+.servicio-card.urgente strong,
+.servicio-card.urgente small {
+  color: white !important;
+}
+
+.servicio-card.urgente.activo {
+  background: #000 !important;
+  border: 2px solid #ff9800 !important;
+}
+
+.servicio-card.urgente.activo strong,
+.servicio-card.urgente.activo small {
+  color: #ff9800 !important;
+}
 
 </style>
 </head>
@@ -2142,18 +2162,14 @@ function actualizarTextoFecha() {
   const input = document.getElementById('fechaHora');
   const textoFecha = document.getElementById('textoFechaSeleccionada');
   if (!input || !textoFecha) return;
-  
+
   const fecha = new Date(input.value);
   if (isNaN(fecha.getTime())) {
     textoFecha.textContent = 'Elegí fecha y hora...';
     textoFecha.style.color = '#888';
     return;
   }
-  if (servicioSeleccionado) {
-  actualizarHoraServicio(servicioSeleccionado, texto);
-}
 
-  // Formatear fecha legible
   const opciones = { 
     weekday: 'long', 
     year: 'numeric', 
@@ -2162,11 +2178,18 @@ function actualizarTextoFecha() {
     hour: '2-digit',
     minute: '2-digit'
   };
-  
+
   const texto = fecha.toLocaleDateString('es-AR', opciones);
-  textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
+  const textoFinal = texto.charAt(0).toUpperCase() + texto.slice(1);
+
+  textoFecha.textContent = textoFinal;
   textoFecha.style.color = '#1a1a1a';
-  
+
+  // Mostrar horario al lado del servicio seleccionado
+  if (servicioSeleccionado) {
+    actualizarHoraServicio(servicioSeleccionado, formatearTextoBoton(fecha));
+  }
+
   guardarEstadoLocal();
 }
 
@@ -2571,10 +2594,8 @@ function ocultarError() {
 }  
 window.addEventListener('load', () => {
   cargarEstadoLocal();
-  window.addEventListener("load", () => {
   ocultarBotonesPostCotizacion();
-});
-  // Esperar a que Google Maps Places esté listo
+
   const intentarInitAutocomplete = () => {
     if (typeof google !== 'undefined' && google.maps && google.maps.places) {
       console.log("✅ Google Maps Places listo, inicializando autocomplete...");
@@ -2584,6 +2605,9 @@ window.addEventListener('load', () => {
       setTimeout(intentarInitAutocomplete, 500);
     }
   };
+
+  intentarInitAutocomplete();
+});
 
   intentarInitAutocomplete();
 });
