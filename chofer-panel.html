@@ -578,9 +578,9 @@
 <div class="filtros">
   <button class="filtro-btn activo" data-filtro="todos" onclick="filtrar('todos')">Todos</button>
   <button class="filtro-btn" data-filtro="DISPONIBLE" onclick="filtrar('DISPONIBLE')">Pendientes</button>
-  <button class="filtro-btn" data-filtro="ACEPTADO" onclick="filtrar('ACEPTADO')">Aceptados</button>
-  <button class="filtro-btn" data-filtro="EN_CURSO" onclick="filtrar('EN_CURSO')">En curso</button>
-  <button class="filtro-btn" data-filtro="COMPLETADO" onclick="filtrar('COMPLETADO')">Completados</button>
+  <button class="filtro-btn" data-filtro="aceptado" onclick="filtrar('aceptado')">Aceptados</button>
+  <button class="filtro-btn" data-filtro="en-camino" onclick="filtrar('en-camino')">En curso</button>
+  <button class="filtro-btn" data-filtro="completado" onclick="filtrar('completado')">Completados</button>
 </div>
   
   <!-- LISTA VIAJES -->
@@ -880,7 +880,7 @@ async function cargarViajes() {
   try {
     const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
 
-    // 1) Viaje reservado/asignado para ESTE chofer (modal de oferta)
+    // 1) Viaje entrante asignado a este chofer (para modal)
     const asignados = await supabase.select('viajes', {
       eq: {
         estado: 'ASIGNADO',
@@ -890,20 +890,6 @@ async function cargarViajes() {
       limit: 1
     });
 
-    // 2) Viajes disponibles para tomar
-    const disponibles = await supabase.select('viajes', {
-      eq: { estado: 'DISPONIBLE' },
-      order: 'created_at.desc'
-    });
-
-    // 3) Viajes ya aceptados/en curso/completados por ESTE chofer
-    const misViajes = await supabase.select('viajes', {
-      eq: { chofer_id: choferId },
-      neq: { estado: 'ASIGNADO' },
-      order: 'created_at.desc'
-    });
-
-    // 4) Mostrar modal SOLO si hay un viaje asignado pendiente para este chofer
     if (
       asignados &&
       asignados.length > 0 &&
@@ -913,20 +899,58 @@ async function cargarViajes() {
       mostrarSolicitudEntrante(asignados[0]);
     }
 
-    // 5) Unificar sin duplicados
-    const mapaViajes = new Map();
-
-    [...(disponibles || []), ...(misViajes || [])].forEach(v => {
-      if (v && v.id) {
-        mapaViajes.set(v.id, v);
-      }
+    // 2) Viajes disponibles para tomar
+    const disponibles = await supabase.select('viajes', {
+      eq: { estado: 'DISPONIBLE' },
+      order: 'created_at.desc'
     });
 
-    viajesData = Array.from(mapaViajes.values());
+    // 3) Viajes ya tomados por este chofer
+    const aceptados = await supabase.select('viajes', {
+      eq: {
+        estado: 'ACEPTADO',
+        chofer_id: choferId
+      },
+      order: 'aceptado_at.desc'
+    });
 
-    // 6) Detectar nuevos DISPONIBLES
-    const nuevosPendientes = (disponibles || []).filter(v => {
-      return v?.id && !ultimosViajesVistos.has(v.id);
+    const enCurso = await supabase.select('viajes', {
+      eq: {
+        estado: 'EN_CURSO',
+        chofer_id: choferId
+      },
+      order: 'updated_at.desc'
+    });
+
+    const completados = await supabase.select('viajes', {
+      eq: {
+        estado: 'COMPLETADO',
+        chofer_id: choferId
+      },
+      order: 'updated_at.desc',
+      limit: 30
+    });
+
+    // 4) Unificar todos los viajes visibles
+    const todos = [
+      ...(disponibles || []),
+      ...(aceptados || []),
+      ...(enCurso || []),
+      ...(completados || [])
+    ];
+
+    // 5) Evitar duplicados por ID
+    const mapa = new Map();
+    todos.forEach(v => {
+      if (v && v.id) mapa.set(v.id, v);
+    });
+
+    viajesData = Array.from(mapa.values());
+
+    // 6) Detectar nuevos viajes disponibles
+    const nuevosPendientes = viajesData.filter(v => {
+      const estado = normalizarEstado(v.estado);
+      return estado === 'DISPONIBLE' && !ultimosViajesVistos.has(v.id);
     });
 
     if (nuevosPendientes.length > 0) {
@@ -1056,8 +1080,10 @@ async function cargarViajes() {
 await supabase.updateById('viajes', viajePendiente.id, {
   estado: 'ACEPTADO',
   chofer_id: choferId,
-  aceptado_at: new Date().toISOString()
-});        
+  aceptado_at: new Date().toISOString(),
+  asignado_a: null,
+  asignado_at: null
+});
         SoundSystem.playSuccess();
         cerrarModal();
         mostrarNotificacion('✓ Viaje aceptado correctamente', 'success');
@@ -1084,8 +1110,10 @@ await supabase.updateById('viajes', viajePendiente.id, {
   estado: 'DISPONIBLE',
   chofer_id: null,
   rechazado_por: choferId,
-  rechazado_at: new Date().toISOString()
-});        
+  rechazado_at: new Date().toISOString(),
+  asignado_a: null,
+  asignado_at: null
+});
         SoundSystem.playNotification();
         cerrarModal();
         mostrarNotificacion('Viaje rechazado. Buscando otro chofer...', 'info');
@@ -1105,9 +1133,11 @@ await supabase.updateById('viajes', viajePendiente.id, {
 await supabase.updateById('viajes', viajePendiente.id, {
   estado: 'DISPONIBLE',
   chofer_id: null,
-  rechazado_por: choferId,
-  rechazado_at: new Date().toISOString()
-});        
+  timeout_por: choferId,
+  timeout_at: new Date().toISOString(),
+  asignado_a: null,
+  asignado_at: null
+});
         cerrarModal();
         mostrarNotificacion('⏰ Tiempo agotado. El viaje se ofreció a otro chofer.', 'warning');
         SoundSystem.vibrate([100, 100, 100]);
@@ -1267,10 +1297,12 @@ async function cambiarEstado(id, nuevoEstado) {
     return;
   }
 
-  const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
-
   try {
-    const payload = { estado: nuevoEstado };
+    const choferId = localStorage.getItem('choferUsuario') || 'chofer_anon';
+    const payload = {
+      estado: nuevoEstado,
+      updated_at: new Date().toISOString()
+    };
 
     if (nuevoEstado === 'ACEPTADO') {
       payload.chofer_id = choferId;
@@ -1291,16 +1323,16 @@ async function cambiarEstado(id, nuevoEstado) {
     console.error(err);
   }
 }
-async function finalizarViaje(id) {
+    async function finalizarViaje(id) {
   const notas = prompt('¿Observaciones?');
 
   try {
-    await supabase.updateById('viajes', id, {
-      estado: 'COMPLETADO',
-      notas: notas || null,
-      completado_at: new Date().toISOString()
-    });
-
+await supabase.updateById('viajes', id, {
+  estado: 'COMPLETADO',
+  notas: notas || null,
+  completado_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+});
     SoundSystem.playSuccess();
     mostrarNotificacion('Viaje finalizado', 'success');
     cargarViajes();
@@ -1318,9 +1350,9 @@ async function finalizarViaje(id) {
 function mostrarNotificacion(mensaje, tipo = 'info') {
   const colores = {
     success: '#4caf50',
-    info: '#2196f3',
+    error: '#f44336',
     warning: '#ff9800',
-    error: '#f44336'
+    info: '#2196f3'
   };
 
   const toast = document.createElement('div');
@@ -1333,22 +1365,22 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
     color: white;
     padding: 12px 24px;
     border-radius: 25px;
-    font-weight: 600;
+    font-weight: 700;
     z-index: 10000;
     box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-    max-width: 90vw;
+    max-width: 90%;
     text-align: center;
   `;
   toast.textContent = mensaje;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  setTimeout(() => toast.remove(), 3200);
 }
     // ==========================================
     // INICIALIZACIÓN
     // ==========================================
-    document.addEventListener('DOMContentLoaded', () => {
-      cargarViajes();
-
+document.addEventListener('DOMContentLoaded', () => {
+  cargarViajesSeguro();
+  
       // Inicializar audio en primer click
       document.body.addEventListener('click', async () => {
         if (!SoundSystem.audioContext) {
@@ -1373,7 +1405,7 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
     });
 
     // Auto-refresh cada 30 segundos
-    setInterval(cargarViajes, 30000);
+    let cargandoViajes = false;  async function cargarViajesSeguro() {   if (cargandoViajes) return;   cargandoViajes = true;   try {     await cargarViajes();   } finally {     cargandoViajes = false;   } }  setInterval(cargarViajesSeguro, 30000);
   </script>
 </body>
 </html>
