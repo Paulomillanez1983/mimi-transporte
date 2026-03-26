@@ -1763,8 +1763,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   iniciarRealtimeViajes();
 });
 
-  // Inicializar audio en primer click
-  document.body.addEventListener('click', async () => {
     if (!SoundSystem.audioContext) {
           await SoundSystem.init();
         }
