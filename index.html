@@ -2995,7 +2995,7 @@ function resetCotizacionUI() {
 }
 
 // ==========================================
-// CÁLCULO DE TARIFA - CON JSONP
+// CÁLCULO DE TARIFA - CON JSONP (CORREGIDO)
 // ==========================================
 async function calcularTarifa() {
   if (isCalculating) return;
@@ -3018,7 +3018,7 @@ async function calcularTarifa() {
       return;
     }
 
-    // Si no hay lugares seleccionados, intentar geocodificar manualmente
+    // Geocodificar si no hay lugares seleccionados
     if (!lugarOrigen) {
       const origenInput = document.getElementById('origen');
       if (origenInput && origenInput.value) {
@@ -3041,7 +3041,6 @@ async function calcularTarifa() {
 
     const origen = lugarOrigen?.direccion || '';
     const destino = lugarDestino?.direccion || '';
-    const fechaHoraInput = document.getElementById('fechaHora')?.value;
 
     if (!origen) {
       mostrarError('Ingresá la dirección de origen');
@@ -3057,11 +3056,45 @@ async function calcularTarifa() {
       return;
     }
 
-    // Validaciones específicas por servicio
+    // ✅ CORREGIDO: Determinar fecha/hora según el tipo de servicio
+    let fechaHoraParaEnviar;
     let fechaHoraVuelta = '';
     let esperaMin = '';
 
-    if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
+    // Servicios INMEDIATOS (ahora): IDA_ESCOLAR, IDA_Y_VUELTA_INMEDIATA
+    const esServicioInmediato = ['IDA_ESCOLAR', 'IDA_Y_VUELTA_INMEDIATA'].includes(servicioSeleccionado);
+    
+    // Servicios PROGRAMADOS: IDA_MAS_VUELTA_PROGRAMADA
+    const esServicioProgramado = servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA';
+
+    if (esServicioInmediato) {
+      // ✅ Usar hora actual para servicios inmediatos
+      fechaHoraParaEnviar = new Date().toISOString();
+      
+      // Para IDA_Y_VUELTA_INMEDIATA, capturar tiempo de espera
+      if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
+        esperaMin = document.getElementById('tiempoEsperaMin')?.value || '30';
+      }
+      
+    } else if (esServicioProgramado) {
+      // ✅ Validar fecha/hora de IDA
+      const fechaHoraInput = document.getElementById('fechaHora')?.value;
+      if (!fechaHoraInput) {
+        mostrarError('Seleccioná fecha y hora de ida');
+        abrirSelectorFecha();
+        resetCotizacionUI();
+        return;
+      }
+      
+      if (new Date(fechaHoraInput) < new Date()) {
+        mostrarError('La fecha no puede ser pasada');
+        resetCotizacionUI();
+        return;
+      }
+      
+      fechaHoraParaEnviar = fechaHoraInput;
+      
+      // ✅ Validar fecha/hora de VUELTA
       fechaHoraVuelta = document.getElementById('fechaHoraVuelta')?.value || '';
       if (!fechaHoraVuelta) {
         mostrarError('Seleccioná fecha y hora de VUELTA');
@@ -3069,37 +3102,17 @@ async function calcularTarifa() {
         resetCotizacionUI();
         return;
       }
-    }
-
-    if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
-      esperaMin = document.getElementById('tiempoEsperaMin')?.value || '30';
-    }
-
-    let fechaHoraParaEnviar = new Date().toISOString();
-    if (modoTiempo === 'ahora') {
-      fechaHoraParaEnviar = new Date().toISOString();
+      
     } else {
-      if (!fechaHoraInput) {
-        mostrarError('Seleccioná fecha y hora de ida');
-        abrirSelectorFecha();
-        resetCotizacionUI();
-        return;
-      }
-
-      fechaHoraParaEnviar = fechaHoraInput;
-
-      if (new Date(fechaHoraInput) < new Date()) {
-        mostrarError('La fecha no puede ser pasada');
-        resetCotizacionUI();
-        return;
-      }
+      // Otros servicios - usar ahora por defecto
+      fechaHoraParaEnviar = new Date().toISOString();
     }
 
     guardarEstadoLocal();
     ocultarError();
     isCalculating = true;
 
-    const mensajeCarga = servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
+    const mensajeCarga = esServicioProgramado
       ? 'Cotizando ida y vuelta...'
       : 'Consultando precio...';
 
