@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel de Chofer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- Google Maps -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY"></script>
+</head>
+
+<body>
+
+  <header class="header">
+    <h1>🚐 Panel de Chofer</h1>
+    <button onclick="logout()">Cerrar sesión</button>
+  </header>
+
+  <main>
+
+    <!-- INFO CHOFER -->
+    <section id="driverInfo">
+      <h2>Bienvenido</h2>
+      <p id="driverName">Cargando...</p>
+    </section>
+
+    <!-- ESTADO -->
+    <section>
+      <button id="btnToggleDisponibilidad">
+        Cambiar disponibilidad
+      </button>
+      <p id="estadoChofer">Estado: Desconocido</p>
+    </section>
+
+    <!-- MAPA -->
+    <section>
+      <div id="map" style="height: 300px;"></div>
+    </section>
+
+    <!-- VIAJES -->
+    <section>
+      <h2>Viajes disponibles</h2>
+      <div id="tripList"></div>
+    </section>
+
+  </main>
+
+  <!-- APP PRINCIPAL -->
+  <script type="module">
+    import DriverApp from './js/driver-app.js';
+
+    const app = new DriverApp();
+    app.init();
+
+    // Logout simple
+    window.logout = () => {
+      localStorage.removeItem('choferData');
+      window.location.href = 'login-chofer.html';
+    };
+  </script>
+
+</body>
+</html>
