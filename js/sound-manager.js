@@ -123,8 +123,8 @@ class SoundManager {
       notification: [100]
     };
 
-    const pattern = typeof pattern === 'string' ? patterns[pattern] : pattern;
-    navigator.vibrate(pattern || patterns.notification);
+    const vibrationPattern = typeof pattern === 'string' ? patterns[pattern] : pattern;
+navigator.vibrate(vibrationPattern || patterns.notification);
   }
 
   // Método para activar audio tras interacción del usuario (requerido por browsers)
