@@ -1,6 +1,6 @@
 /**
  * MIMI Driver - Map Service
- * MapLibre GL with custom styling and routing
+ * MapLibre GL with custom styling and routing (sin CORS)
  */
 
 class MapService {
@@ -176,26 +176,51 @@ class MapService {
     if (!this.map) return null;
 
     try {
-      // Fetch route from Valhalla
-      const response = await fetch(CONFIG.VALHALLA_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          locations: [
-            { lon: from.lng, lat: from.lat },
-            { lon: to.lng, lat: to.lat }
-          ],
-          costing: 'auto',
-          directions_options: { units: 'kilometers' }
-        })
-      });
+      // CORREGIDO: Intentar fetch con CORS proxy, si falla usar línea recta
+      let routeData = null;
+      
+      try {
+        // Intentar con timeout corto
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch(CONFIG.VALHALLA_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            locations: [
+              { lon: from.lng, lat: from.lat },
+              { lon: to.lng, lat: to.lat }
+            ],
+            costing: 'auto',
+            directions_options: { units: 'kilometers' }
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.trip?.legs?.[0]) {
+            routeData = {
+              geometry: data.trip.legs[0].shape,
+              distance: data.trip.legs[0].summary.length * 1000,
+              duration: data.trip.legs[0].summary.time
+            };
+          }
+        }
+      } catch (corsError) {
+        console.warn('[Map] CORS error, using fallback:', corsError.message);
+      }
 
-      if (!response.ok) throw new Error('Route fetch failed');
-
-      const data = await response.json();
-      const leg = data.trip.legs[0];
+      // Si no hay datos de ruta, usar línea recta
+      if (!routeData) {
+        routeData = this._getStraightLineRoute(from, to);
+      }
 
       // Update route line
       this.map.getSource('route').setData({
@@ -203,49 +228,34 @@ class MapService {
         properties: {},
         geometry: {
           type: 'LineString',
-          coordinates: leg.shape
+          coordinates: routeData.geometry
         }
       });
 
       // Fit bounds
-      const coordinates = leg.shape;
-      const bounds = coordinates.reduce((bounds, coord) => {
+      const bounds = routeData.geometry.reduce((bounds, coord) => {
         return bounds.extend(coord);
-      }, new window.maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+      }, new window.maplibregl.LngLatBounds(routeData.geometry[0], routeData.geometry[0]));
 
       this.map.fitBounds(bounds, {
         padding: 100,
         duration: 1000
       });
 
-      return {
-        distance: leg.summary.length * 1000, // meters
-        duration: leg.summary.time, // seconds
-        geometry: leg.shape
-      };
+      return routeData;
 
     } catch (error) {
       console.error('[Map] Route error:', error);
-      
-      // Fallback to straight line
-      this._showStraightLine(from, to);
       return null;
     }
   }
 
-  _showStraightLine(from, to) {
-    const coordinates = [[from.lng, from.lat], [to.lng, to.lat]];
+  _getStraightLineRoute(from, to) {
+    console.log('[Map] Using straight line fallback');
     
-    this.map.getSource('route').setData({
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'LineString',
-        coordinates
-      }
-    });
+    const coordinates = [[from.lng, from.lat], [to.lng, to.lat]];
 
-    // Calculate distance
+    // Calculate distance (Haversine)
     const R = 6371e3;
     const φ1 = from.lat * Math.PI / 180;
     const φ2 = to.lat * Math.PI / 180;
@@ -256,11 +266,12 @@ class MapService {
               Math.cos(φ1) * Math.cos(φ2) *
               Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
 
     return {
-      distance: R * c,
-      duration: (R * c) / 8.33, // ~30km/h average
       geometry: coordinates,
+      distance: distance,
+      duration: distance / 8.33, // ~30km/h
       isFallback: true
     };
   }
