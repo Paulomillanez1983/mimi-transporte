@@ -17,7 +17,7 @@ class TripManager {
 
     console.log('[TripManager] Initializing for driver:', driverId);
 
-    // Load initial state
+    // Load initial state PRIMERO (antes de suscribirse)
     await this._loadInitialState();
 
     // Subscribe to realtime
@@ -33,49 +33,62 @@ class TripManager {
     const driverId = supabaseClient.getDriverId();
 
     try {
-      // Check for active trip first
+      // Check for active trip first (PRIORIDAD MÁXIMA)
       const { data: activeTrip, error: tripError } = await supabaseClient.getActiveTrip(driverId);
-      
+
       if (tripError) {
         console.error('[TripManager] Error loading active trip:', tripError);
       }
-      
+
+      // Si hay viaje activo, ignorar todo lo demás y poner en ese estado
       if (activeTrip) {
         console.log('[TripManager] Active trip found:', activeTrip.id);
         this.currentTrip = activeTrip;
         stateManager.set('trip.current', activeTrip);
+
+        // Determinar estado correcto basado en el estado del viaje
+        let driverState;
+        if (activeTrip.estado === 'ACEPTADO') {
+          driverState = CONFIG.DRIVER_STATES.GOING_TO_PICKUP;
+        } else if (activeTrip.estado === 'EN_CURSO') {
+          driverState = CONFIG.DRIVER_STATES.IN_PROGRESS;
+        } else {
+          driverState = CONFIG.DRIVER_STATES.GOING_TO_PICKUP;
+        }
+
+        // CORREGIDO: Setear el estado online primero, luego hacer transición
+        stateManager.set('driver.isOnline', true);
+        stateManager.set('driver.status', driverState);
         
-        // Determine correct state
-        const driverState = activeTrip.estado === 'ACEPTADO' 
-          ? CONFIG.DRIVER_STATES.GOING_TO_PICKUP
-          : CONFIG.DRIVER_STATES.IN_PROGRESS;
-        
-        stateManager.transitionDriver(driverState);
-        return;
+        console.log('[TripManager] Setting driver state to:', driverState);
+        return; // Salir temprano, no revisar ofertas
       }
 
-      // Check for pending offers
+      // Solo si NO hay viaje activo, revisar ofertas pendientes
       const { data: offers, error: offerError } = await supabaseClient.getPendingOffers(driverId);
-      
+
       if (offerError) {
         console.error('[TripManager] Error loading offers:', offerError);
       }
-      
+
       if (offers && offers.length > 0) {
         const offer = offers[0];
         console.log('[TripManager] Pending offer found:', offer.id);
-        
+
         this.pendingOffer = {
           ...offer.viajes,
           offerId: offer.id,
           expiresAt: offer.expires_at
         };
-        
+
         stateManager.set('trip.pending', this.pendingOffer);
+        // El driver debe estar online para recibir ofertas
+        stateManager.set('driver.isOnline', true);
         stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
       } else {
         console.log('[TripManager] No pending offers');
         stateManager.set('trip.pending', null);
+        // Mantener estado actual (OFFLINE u ONLINE según lo que elija el usuario)
       }
 
     } catch (error) {
@@ -100,6 +113,12 @@ class TripManager {
 
   _handleOfferUpdate(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
+
+    // Si hay viaje activo, ignorar nuevas ofertas
+    if (this.currentTrip) {
+      console.log('[TripManager] Ignoring offer, already have active trip');
+      return;
+    }
 
     switch (eventType) {
       case 'INSERT':
@@ -193,8 +212,10 @@ class TripManager {
 
   _startRefreshInterval() {
     this.refreshInterval = setInterval(() => {
-      // Only refresh if no recent activity
-      this._loadInitialState();
+      // Solo refrescar si no hay viaje activo (para no interrumpir)
+      if (!this.currentTrip) {
+        this._loadInitialState();
+      }
     }, CONFIG.TRIP_REFRESH_INTERVAL);
   }
 
