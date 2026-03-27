@@ -1,5 +1,6 @@
 /**
  * Gestión de estado de viajes y lógica de negocio
+ * FASE 1 UBER-LIKE: ofertas individuales por chofer
  */
 
 import CONFIG from './config.js';
@@ -9,11 +10,14 @@ class TripManager {
   constructor() {
     this.currentTrip = null;
     this.pendingTrip = null;
+    this.pendingOffer = null;
     this.availableTrips = [];
     this.tripHistory = [];
     this.subscribers = {};
-    this.realtimeChannel = null;
+    this.realtimeOfferChannel = null;
+    this.realtimeTripChannel = null;
     this.refreshInterval = null;
+    this.presenceInterval = null;
     this.initialized = false;
   }
 
@@ -23,6 +27,7 @@ class TripManager {
     await this.loadCurrentTrip();
     await this.refreshTrips();
     this._subscribeToRealtime();
+    this._startPresenceHeartbeat();
 
     this.refreshInterval = setInterval(() => {
       if (!document.hidden) {
@@ -47,11 +52,12 @@ class TripManager {
     try {
       this.currentTrip = null;
       this.pendingTrip = null;
+      this.pendingOffer = null;
 
       // Viaje activo
       const activeTrips = await supabaseService.rest.select('viajes', {
         eq: { chofer_id: driverId },
-        in: { estado: [CONFIG.ESTADOS.ACEPTADO, CONFIG.ESTADOS.EN_CURSO] },
+        in: { estado: ['ACEPTADO', 'EN_CURSO'] },
         order: 'updated_at.desc',
         limit: 1
       });
@@ -61,21 +67,26 @@ class TripManager {
         this._notify('tripUpdated', this.currentTrip);
       }
 
-      // Viaje asignado pendiente
-      const assigned = await supabaseService.rest.select('viajes', {
+      // Oferta pendiente más reciente
+      const pendingOffers = await supabaseService.rest.select('viaje_ofertas', {
         eq: {
-          estado: CONFIG.ESTADOS.ASIGNADO,
-          chofer_id: driverId
+          chofer_id: driverId,
+          estado: 'PENDIENTE'
         },
-        order: 'asignado_at.desc',
+        order: 'offered_at.desc',
         limit: 1
       });
 
-      if (Array.isArray(assigned) && assigned.length > 0 && !this.currentTrip) {
-        this.pendingTrip = assigned[0];
-        this._notify('newPendingTrip', this.pendingTrip);
-      }
+      if (Array.isArray(pendingOffers) && pendingOffers.length > 0 && !this.currentTrip) {
+        const offer = pendingOffers[0];
+        const trip = await this._fetchTripById(offer.viaje_id);
 
+        if (trip) {
+          this.pendingOffer = offer;
+          this.pendingTrip = trip;
+          this._notify('newPendingTrip', this.pendingTrip);
+        }
+      }
     } catch (error) {
       console.error('Error loading current trip:', error);
     }
@@ -89,38 +100,45 @@ class TripManager {
     if (!driverId) return;
 
     try {
-      const [available, history] = await Promise.all([
-        supabaseService.rest.select('viajes', {
-          eq: { estado: CONFIG.ESTADOS.DISPONIBLE },
-          order: 'created_at.desc',
-          limit: 20
-        }),
+      const [history, freshPendingOffer] = await Promise.all([
         supabaseService.rest.select('viajes', {
           eq: {
             chofer_id: driverId,
-            estado: CONFIG.ESTADOS.COMPLETADO
+            estado: 'COMPLETADO'
           },
           order: 'completado_at.desc',
           limit: 10
+        }),
+        supabaseService.rest.select('viaje_ofertas', {
+          eq: {
+            chofer_id: driverId,
+            estado: 'PENDIENTE'
+          },
+          order: 'offered_at.desc',
+          limit: 1
         })
       ]);
 
-      this.availableTrips = (Array.isArray(available) ? available : []).filter(t => {
-        const estado = this._normalizeState(t.estado);
-        const choferId = t.chofer_id ?? null;
-        return estado === CONFIG.ESTADOS.DISPONIBLE && !choferId;
-      });
-
       this.tripHistory = Array.isArray(history) ? history : [];
-
-      this.availableTrips = this._dedupeById(this.availableTrips);
       this.tripHistory = this._dedupeById(this.tripHistory);
 
-      console.log('[Trips refresh] disponibles:', this.availableTrips);
-      console.log('[Trips refresh] historial:', this.tripHistory);
+      if (!this.currentTrip && Array.isArray(freshPendingOffer) && freshPendingOffer.length > 0) {
+        const offer = freshPendingOffer[0];
+        const trip = await this._fetchTripById(offer.viaje_id);
+
+        if (trip) {
+          const changedTrip = this.pendingTrip?.id !== trip.id;
+          this.pendingOffer = offer;
+          this.pendingTrip = trip;
+
+          if (changedTrip) {
+            this._notify('newPendingTrip', this.pendingTrip);
+          }
+        }
+      }
 
       this._notify('tripsRefreshed', {
-        available: this.availableTrips,
+        available: [],
         history: this.tripHistory
       });
 
@@ -143,21 +161,25 @@ class TripManager {
 
     try {
       const driverId = supabaseService.getCurrentDriverId();
+      const rpcResult = await supabaseService.aceptarOfertaViaje(tripId, driverId);
 
-      const result = await supabaseService.rest.update('viajes', tripId, {
-        estado: CONFIG.ESTADOS.ACEPTADO,
-        chofer_id: driverId,
-        aceptado_at: new Date().toISOString()
-      });
+      if (!rpcResult?.ok) {
+        return {
+          success: false,
+          error: rpcResult?.reason || 'No se pudo aceptar la oferta'
+        };
+      }
 
-      this.currentTrip = Array.isArray(result) ? result[0] : result || null;
+      const freshTrip = await this._fetchTripById(tripId);
+
+      this.currentTrip = freshTrip || this.pendingTrip || null;
       this.pendingTrip = null;
-      this.availableTrips = this.availableTrips.filter(t => t.id !== tripId);
+      this.pendingOffer = null;
 
       this._notify('tripAccepted', this.currentTrip);
       this._notify('tripUpdated', this.currentTrip);
       this._notify('tripsRefreshed', {
-        available: this.availableTrips,
+        available: [],
         history: this.tripHistory
       });
 
@@ -169,28 +191,24 @@ class TripManager {
     }
   }
 
-  async rejectTrip(tripId) {
+  async rejectTrip(tripId, reason = 'RECHAZADO_POR_CHOFER') {
     if (!tripId) {
       return { success: false, error: 'Trip ID inválido' };
     }
 
     try {
-      await supabaseService.rest.update('viajes', tripId, {
-        estado: CONFIG.ESTADOS.DISPONIBLE,
-        chofer_id: null,
-        rechazado_por: supabaseService.getCurrentDriverId(),
-        rechazado_at: new Date().toISOString()
-      });
+      const driverId = supabaseService.getCurrentDriverId();
+      await supabaseService.rechazarOfertaViaje(tripId, driverId, reason);
 
       if (this.pendingTrip?.id === tripId) {
         this.pendingTrip = null;
       }
 
-      this.availableTrips = this.availableTrips.filter(t => t.id !== tripId);
+      this.pendingOffer = null;
 
       this._notify('tripRejected', { tripId });
       this._notify('tripsRefreshed', {
-        available: this.availableTrips,
+        available: [],
         history: this.tripHistory
       });
 
@@ -208,12 +226,11 @@ class TripManager {
     }
 
     try {
-      const result = await supabaseService.rest.update('viajes', tripId, {
-        estado: CONFIG.ESTADOS.EN_CURSO,
-        iniciado_at: new Date().toISOString()
-      });
+      const driverId = supabaseService.getCurrentDriverId();
+      await supabaseService.iniciarViaje(tripId, driverId);
 
-      this.currentTrip = Array.isArray(result) ? result[0] : result || this.currentTrip;
+      const freshTrip = await this._fetchTripById(tripId);
+      this.currentTrip = freshTrip || this.currentTrip;
 
       this._notify('tripStarted', this.currentTrip);
       this._notify('tripUpdated', this.currentTrip);
@@ -232,13 +249,10 @@ class TripManager {
     }
 
     try {
-      const result = await supabaseService.rest.update('viajes', tripId, {
-        estado: CONFIG.ESTADOS.COMPLETADO,
-        completado_at: new Date().toISOString(),
-        notas_chofer: notes
-      });
+      const driverId = supabaseService.getCurrentDriverId();
+      await supabaseService.completarViaje(tripId, driverId);
 
-      const completedTrip = Array.isArray(result) ? result[0] : result || null;
+      const completedTrip = await this._fetchTripById(tripId);
 
       if (completedTrip) {
         this.tripHistory.unshift(completedTrip);
@@ -247,10 +261,11 @@ class TripManager {
 
       this.currentTrip = null;
       this.pendingTrip = null;
+      this.pendingOffer = null;
 
       this._notify('tripCompleted', completedTrip);
       this._notify('tripsRefreshed', {
-        available: this.availableTrips,
+        available: [],
         history: this.tripHistory
       });
 
@@ -269,10 +284,10 @@ class TripManager {
 
     try {
       await supabaseService.rest.update('viajes', tripId, {
-        estado: CONFIG.ESTADOS.CANCELADO,
+        estado: 'CANCELADO',
         cancelado_at: new Date().toISOString(),
         cancelado_por: supabaseService.getCurrentDriverId(),
-        motivo_cancelacion: reason
+        cancel_reason: reason
       });
 
       if (this.currentTrip?.id === tripId) {
@@ -283,9 +298,11 @@ class TripManager {
         this.pendingTrip = null;
       }
 
+      this.pendingOffer = null;
+
       this._notify('tripCancelled', { tripId });
       this._notify('tripsRefreshed', {
-        available: this.availableTrips,
+        available: [],
         history: this.tripHistory
       });
 
@@ -301,146 +318,162 @@ class TripManager {
   // REALTIME
   // =========================================
   _subscribeToRealtime() {
-    if (this.realtimeChannel) {
-      try {
-        this.realtimeChannel.unsubscribe?.();
-      } catch (e) {
-        console.warn('No se pudo limpiar canal anterior:', e);
-      }
-      this.realtimeChannel = null;
-    }
+    const driverId = supabaseService.getCurrentDriverId();
+    if (!driverId) return;
 
-    this.realtimeChannel = supabaseService.subscribeToTrips((payload) => {
-      console.log('[Realtime payload viajes]', payload);
+    this._cleanupRealtime();
+
+    // Escuchar SOLO ofertas de este chofer
+    this.realtimeOfferChannel = supabaseService.subscribeToDriverOffers(driverId, async (payload) => {
+      console.log('[Realtime oferta chofer]', payload);
 
       const { eventType, new: newRecord, old: oldRecord } = payload;
-      const driverId = supabaseService.getCurrentDriverId();
 
-      if (!newRecord && eventType !== 'DELETE') return;
+      if (eventType === 'INSERT' || eventType === 'UPDATE') {
+        const estado = this._normalizeState(newRecord?.estado);
 
-      switch (eventType) {
-        case 'INSERT': {
-          const estado = this._normalizeState(newRecord.estado);
+        if (estado === 'PENDIENTE') {
+          const trip = await this._fetchTripById(newRecord.viaje_id);
 
-          // Nuevo viaje disponible
-          if (estado === CONFIG.ESTADOS.DISPONIBLE && !newRecord.chofer_id) {
-            const exists = this.availableTrips.some(t => t.id === newRecord.id);
+          if (trip && !this.currentTrip) {
+            const isNewTrip = this.pendingTrip?.id !== trip.id;
+            this.pendingOffer = newRecord;
+            this.pendingTrip = trip;
 
-            if (!exists) {
-              this.availableTrips.unshift(newRecord);
-              this.availableTrips = this._dedupeById(this.availableTrips);
+            if (isNewTrip) {
+              this._notify('newPendingTrip', trip);
             }
+          }
+        }
 
-            this._notify('newAvailableTrip', newRecord);
-            this._notify('tripsRefreshed', {
-              available: this.availableTrips,
-              history: this.tripHistory
+        if (['ACEPTADA', 'RECHAZADA', 'TIMEOUT', 'CANCELADA'].includes(estado)) {
+          if (this.pendingOffer?.id === newRecord.id) {
+            this.pendingOffer = null;
+            this.pendingTrip = null;
+
+            this._notify('pendingTripCleared', {
+              reason: estado,
+              offer: newRecord
             });
           }
-
-          // Viaje asignado específicamente a este chofer
-          if (
-            estado === CONFIG.ESTADOS.ASIGNADO &&
-            newRecord.chofer_id === driverId
-          ) {
-            this.pendingTrip = newRecord;
-            this._notify('newPendingTrip', newRecord);
-          }
-
-          break;
         }
+      }
 
-        case 'UPDATE': {
-          const estado = this._normalizeState(newRecord.estado);
+      if (eventType === 'DELETE') {
+        if (this.pendingOffer?.id === oldRecord?.id) {
+          this.pendingOffer = null;
+          this.pendingTrip = null;
 
-          if (this.currentTrip?.id === newRecord.id) {
-            this.currentTrip = newRecord;
-            this._notify('tripUpdated', newRecord);
-          }
-
-          if (this.pendingTrip?.id === newRecord.id) {
-            if (
-              estado === CONFIG.ESTADOS.ASIGNADO &&
-              newRecord.chofer_id === driverId
-            ) {
-              this.pendingTrip = newRecord;
-            } else {
-              this.pendingTrip = null;
-            }
-          }
-
-          const idx = this.availableTrips.findIndex(t => t.id === newRecord.id);
-
-          if (estado === CONFIG.ESTADOS.DISPONIBLE && !newRecord.chofer_id) {
-            if (idx >= 0) {
-              this.availableTrips[idx] = newRecord;
-            } else {
-              this.availableTrips.unshift(newRecord);
-            }
-          } else if (idx >= 0) {
-            this.availableTrips.splice(idx, 1);
-          }
-
-          if (
-            estado === CONFIG.ESTADOS.ACEPTADO &&
-            newRecord.chofer_id === driverId
-          ) {
-            this.currentTrip = newRecord;
-            this.pendingTrip = null;
-            this.availableTrips = this.availableTrips.filter(t => t.id !== newRecord.id);
-
-            this._notify('tripAccepted', newRecord);
-            this._notify('tripUpdated', newRecord);
-          }
-
-          if (
-            [CONFIG.ESTADOS.COMPLETADO, CONFIG.ESTADOS.CANCELADO].includes(estado) &&
-            newRecord.chofer_id === driverId
-          ) {
-            if (this.currentTrip?.id === newRecord.id) {
-              this.currentTrip = null;
-            }
-            if (this.pendingTrip?.id === newRecord.id) {
-              this.pendingTrip = null;
-            }
-          }
-
-          this.availableTrips = this._dedupeById(this.availableTrips);
-
-          this._notify('tripsRefreshed', {
-            available: this.availableTrips,
-            history: this.tripHistory
+          this._notify('pendingTripCleared', {
+            reason: 'DELETE',
+            offer: oldRecord
           });
+        }
+      }
 
-          break;
+      this._notify('tripsRefreshed', {
+        available: [],
+        history: this.tripHistory
+      });
+    });
+
+    // Escuchar SOLO viajes de este chofer
+    this.realtimeTripChannel = supabaseService.subscribeToDriverTrips(driverId, (payload) => {
+      console.log('[Realtime viaje chofer]', payload);
+
+      const { eventType, new: newRecord, old: oldRecord } = payload;
+
+      if (eventType === 'INSERT' || eventType === 'UPDATE') {
+        const estado = this._normalizeState(newRecord?.estado);
+
+        if (['ACEPTADO', 'EN_CURSO'].includes(estado)) {
+          this.currentTrip = newRecord;
+          this.pendingTrip = null;
+          this.pendingOffer = null;
+
+          this._notify('tripUpdated', newRecord);
         }
 
-        case 'DELETE': {
-          const deletedId = oldRecord?.id;
-          if (!deletedId) break;
-
-          this.availableTrips = this.availableTrips.filter(t => t.id !== deletedId);
-
-          if (this.currentTrip?.id === deletedId) {
+        if (['COMPLETADO', 'CANCELADO', 'SIN_CHOFER'].includes(estado)) {
+          if (this.currentTrip?.id === newRecord.id) {
             this.currentTrip = null;
           }
 
-          if (this.pendingTrip?.id === deletedId) {
-            this.pendingTrip = null;
+          if (estado === 'COMPLETADO') {
+            this.tripHistory.unshift(newRecord);
+            this.tripHistory = this._dedupeById(this.tripHistory);
           }
 
-          this._notify('tripsRefreshed', {
-            available: this.availableTrips,
-            history: this.tripHistory
-          });
+          this._notify('tripUpdated', newRecord);
+        }
+      }
 
-          break;
+      if (eventType === 'DELETE') {
+        const deletedId = oldRecord?.id;
+
+        if (this.currentTrip?.id === deletedId) {
+          this.currentTrip = null;
         }
 
-        default:
-          break;
+        if (this.pendingTrip?.id === deletedId) {
+          this.pendingTrip = null;
+        }
       }
+
+      this._notify('tripsRefreshed', {
+        available: [],
+        history: this.tripHistory
+      });
     });
+  }
+
+  _cleanupRealtime() {
+    for (const ch of [this.realtimeOfferChannel, this.realtimeTripChannel]) {
+      if (ch) {
+        try {
+          ch.unsubscribe?.();
+        } catch (e) {
+          console.warn('No se pudo limpiar canal realtime:', e);
+        }
+      }
+    }
+
+    this.realtimeOfferChannel = null;
+    this.realtimeTripChannel = null;
+  }
+
+  _startPresenceHeartbeat() {
+    const driverId = supabaseService.getCurrentDriverId();
+    if (!driverId) return;
+
+    if (this.presenceInterval) {
+      clearInterval(this.presenceInterval);
+      this.presenceInterval = null;
+    }
+
+    this.presenceInterval = setInterval(() => {
+      if (!document.hidden) {
+        supabaseService.pingDriverOnline(driverId).catch((e) => {
+          console.warn('Heartbeat chofer falló:', e);
+        });
+      }
+    }, 30000);
+  }
+
+  async _fetchTripById(tripId) {
+    if (!tripId) return null;
+
+    try {
+      const trip = await supabaseService.rest.select('viajes', {
+        eq: { id: tripId },
+        single: true
+      });
+
+      return trip || null;
+    } catch (error) {
+      console.error('No se pudo obtener viaje por ID:', error);
+      return null;
+    }
   }
 
   // =========================================
@@ -497,13 +530,17 @@ class TripManager {
     return this.pendingTrip;
   }
 
+  getPendingOffer() {
+    return this.pendingOffer;
+  }
+
   getStats() {
     return {
       currentTrip: this.currentTrip,
       pendingTrip: this.pendingTrip,
-      pending: this.availableTrips.length,
+      pending: this.pendingTrip ? 1 : 0,
       today: this.tripHistory.length,
-      availableCount: this.availableTrips.length,
+      availableCount: 0,
       completedCount: this.tripHistory.length
     };
   }
@@ -512,18 +549,16 @@ class TripManager {
   // DESTROY
   // =========================================
   destroy() {
-    if (this.realtimeChannel) {
-      try {
-        this.realtimeChannel.unsubscribe?.();
-      } catch (e) {
-        console.warn('Error cerrando realtime:', e);
-      }
-      this.realtimeChannel = null;
-    }
+    this._cleanupRealtime();
 
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
+    }
+
+    if (this.presenceInterval) {
+      clearInterval(this.presenceInterval);
+      this.presenceInterval = null;
     }
 
     this.subscribers = {};
