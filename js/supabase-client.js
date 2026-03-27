@@ -15,6 +15,13 @@ class SupabaseClient {
   async initialize() {
     if (this.client) return true;
 
+    console.log('[Supabase] Initializing...');
+
+    if (!window.supabase) {
+      console.error('[Supabase] Library not loaded');
+      return false;
+    }
+
     try {
       this.client = window.supabase.createClient(
         CONFIG.SUPABASE_URL,
@@ -38,7 +45,11 @@ class SupabaseClient {
 
       // Test connection
       const { error } = await this.client.from('choferes').select('count').limit(1);
-      if (error) throw error;
+      
+      if (error) {
+        console.error('[Supabase] Connection test failed:', error);
+        return false;
+      }
 
       this.reconnectAttempts = 0;
       console.log('[Supabase] Connected');
@@ -197,21 +208,24 @@ class SupabaseClient {
   }
 
   async getActiveTrip(driverId) {
+    // CORREGIDO: Usar .in() en lugar de .or() para evitar error 406
+    // Y NO usar .single() para evitar error cuando no hay resultados
+    
     const { data, error } = await this.client
       .from('viajes')
       .select('*')
       .eq('chofer_id', driverId)
-      .or('estado.eq.ACEPTADO,estado.eq.EN_CURSO')
+      .in('estado', ['ACEPTADO', 'EN_CURSO'])
       .order('updated_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
 
-    // PGRST116 = no rows returned (not an error for us)
-    if (error && error.code === 'PGRST116') {
-      return { data: null, error: null };
+    if (error) {
+      console.error('[Supabase] getActiveTrip error:', error);
+      return { data: null, error };
     }
 
-    return { data, error };
+    // Devolver el primer resultado o null
+    return { data: data && data.length > 0 ? data[0] : null, error: null };
   }
 
   // RPC Calls
