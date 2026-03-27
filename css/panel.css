@@ -734,3 +734,18 @@
     transform: translateX(-50%) translateY(0);
   }
 }
+/* Countdown gradient definition */
+.countdown-progress {
+  fill: none;
+  stroke: url(#countdown-gradient);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  stroke-dashoffset: 283;
+  transition: stroke-dashoffset 1s linear;
+}
+
+@keyframes countdown {
+  from { stroke-dashoffset: 283; }
+  to { stroke-dashoffset: 0; }
+}
