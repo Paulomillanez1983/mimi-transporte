@@ -28,15 +28,16 @@ class DriverApp {
         return;
       }
 
-// 2. Inicializar Supabase (CRÍTICO)
-const dbReady = await supabaseService.init();
-if (!dbReady) {
-  throw new Error('No se pudo conectar a la base de datos');
-}
+      // 2. Inicializar Supabase (CRÍTICO)
+      const dbReady = await supabaseService.init();
+      if (!dbReady) {
+        throw new Error('No se pudo conectar a la base de datos');
+      }
 
-// 2.5. Asegurar fila del chofer
-const driverData = supabaseService.getCurrentDriverData() || {};
-await supabaseService.ensureDriverExists(driverData);
+      // 2.5. Asegurar fila del chofer
+      const driverData = supabaseService.getCurrentDriverData() || {};
+      await supabaseService.ensureDriverExists(driverData);
+
       // 3. Inicializar UI (CRÍTICO)
       uiController.init();
 
@@ -53,13 +54,17 @@ await supabaseService.ensureDriverExists(driverData);
       this._subscribeToEvents();
 
       // 8. Activar audio en primera interacción
-      document.body.addEventListener('click', () => {
-        try {
-          soundManager.enableOnUserInteraction();
-        } catch (e) {
-          console.warn('No se pudo habilitar audio:', e);
-        }
-      }, { once: true });
+      document.body.addEventListener(
+        'click',
+        () => {
+          try {
+            soundManager.enableOnUserInteraction();
+          } catch (e) {
+            console.warn('No se pudo habilitar audio:', e);
+          }
+        },
+        { once: true }
+      );
 
       this.initialized = true;
 
@@ -72,10 +77,12 @@ await supabaseService.ensureDriverExists(driverData);
       } else {
         uiController.showToast('Panel iniciado con limitaciones', 'warning');
       }
-
     } catch (error) {
       console.error('App initialization failed:', error);
-      uiController.showToast('Error al iniciar: ' + (error?.message || 'desconocido'), 'error');
+      uiController.showToast(
+        'Error al iniciar: ' + (error?.message || 'desconocido'),
+        'error'
+      );
     }
   }
 
@@ -118,7 +125,6 @@ await supabaseService.ensureDriverExists(driverData);
   }
 
   _subscribeToEvents() {
-    // Eventos del TripManager
     this.unsubscribers.push(
       tripManager.on('newPendingTrip', (trip) => {
         uiController.showIncomingModal(
@@ -174,7 +180,6 @@ await supabaseService.ensureDriverExists(driverData);
       })
     );
 
-    // Eventos de acciones de UI
     document.addEventListener('driverAction', (e) => {
       this._handleDriverAction(e.detail);
     });
@@ -264,7 +269,7 @@ await supabaseService.ensureDriverExists(driverData);
     }
   }
 
-  _openWhatsApp(tripId) {
+  _openWhatsApp() {
     const trip = tripManager.getCurrentTrip();
     if (!trip) return;
 
@@ -278,7 +283,6 @@ await supabaseService.ensureDriverExists(driverData);
   }
 
   _onPositionUpdate(position) {
-    // Actualizar marcador en el mapa solo si el mapa está disponible
     if (this.mapReady) {
       try {
         mapService.updateDriverPosition(position.lng, position.lat, position.heading);
@@ -287,7 +291,6 @@ await supabaseService.ensureDriverExists(driverData);
       }
     }
 
-    // Si hay viaje en curso, actualizar distancia
     const currentTrip = tripManager.getCurrentTrip();
     if (
       currentTrip &&
@@ -325,22 +328,20 @@ await supabaseService.ensureDriverExists(driverData);
   }
 
   destroy() {
-    // Limpiar suscripciones
-    this.unsubscribers.forEach(unsub => {
+    this.unsubscribers.forEach((unsub) => {
       try {
         unsub?.();
       } catch (e) {
         console.warn('Error liberando suscripción:', e);
       }
     });
+
     this.unsubscribers = [];
 
-    // Detener servicios
     try { locationTracker.stop(); } catch (e) {}
     try { tripManager.destroy(); } catch (e) {}
     try { mapService.destroy(); } catch (e) {}
   }
 }
 
-// Inicializar cuando DOM esté listo
 export default DriverApp;
