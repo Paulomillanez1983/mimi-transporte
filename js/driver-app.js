@@ -30,6 +30,8 @@ class DriverApp {
 
       // 2. Inicializar Supabase (CRÍTICO)
       const dbReady = await supabaseService.init();
+      const driverData = supabaseService.getCurrentDriverData() || {};
+await supabaseService.ensureDriverExists(driverData);
       if (!dbReady) {
         throw new Error('No se pudo conectar a la base de datos');
       }
