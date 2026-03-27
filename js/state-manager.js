@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - State Manager
+ * MIMI Driver - State Manager (PRODUCTION FINAL)
  * Finite State Machine for driver and trip states
  */
 
@@ -30,115 +30,148 @@ class StateManager {
         error: null
       }
     };
-    
+
     this.listeners = new Map();
     this.previousState = null;
   }
 
-  // Get current state (immutable copy)
+  // =========================================================
+  // GETTERS
+  // =========================================================
+
   getState() {
     return JSON.parse(JSON.stringify(this.state));
   }
 
-  // Get specific path
   get(path) {
     return path.split('.').reduce((obj, key) => obj?.[key], this.state);
   }
 
-  // Set state with path
+  // =========================================================
+  // SETTERS
+  // =========================================================
+
   set(path, value) {
     this.previousState = JSON.parse(JSON.stringify(this.state));
-    
+
     const keys = path.split('.');
     const lastKey = keys.pop();
     const target = keys.reduce((obj, key) => {
       if (!obj[key]) obj[key] = {};
       return obj[key];
     }, this.state);
-    
+
     target[lastKey] = value;
-    
+
     this._notify(path, value, this.previousState);
   }
 
-  // Merge state
   merge(updates) {
     this.previousState = JSON.parse(JSON.stringify(this.state));
     this._deepMerge(this.state, updates);
     this._notify('state', this.state, this.previousState);
   }
 
-  // Subscribe to changes
+  // =========================================================
+  // SUBSCRIPTIONS
+  // =========================================================
+
   subscribe(path, callback) {
     if (!this.listeners.has(path)) {
       this.listeners.set(path, new Set());
     }
+
     this.listeners.get(path).add(callback);
-    
-    // Return unsubscribe
+
     return () => {
       this.listeners.get(path)?.delete(callback);
     };
   }
 
-  // Transition driver state
+  // =========================================================
+  // FSM TRANSITION (PRODUCTION SAFE)
+  // =========================================================
+
   transitionDriver(newState, data = {}) {
-    // CORREGIDO: Transiciones válidas actualizadas
     const validTransitions = {
       [CONFIG.DRIVER_STATES.OFFLINE]: [
-        CONFIG.DRIVER_STATES.ONLINE
+        CONFIG.DRIVER_STATES.ONLINE,
+        CONFIG.DRIVER_STATES.RECEIVING_OFFER
       ],
+
       [CONFIG.DRIVER_STATES.ONLINE]: [
         CONFIG.DRIVER_STATES.OFFLINE,
         CONFIG.DRIVER_STATES.RECEIVING_OFFER,
-        CONFIG.DRIVER_STATES.GOING_TO_PICKUP  // Permitir ir directo si hay viaje activo
-      ],
-      [CONFIG.DRIVER_STATES.RECEIVING_OFFER]: [
-        CONFIG.DRIVER_STATES.ONLINE,
         CONFIG.DRIVER_STATES.GOING_TO_PICKUP
       ],
+
+      [CONFIG.DRIVER_STATES.RECEIVING_OFFER]: [
+        CONFIG.DRIVER_STATES.ONLINE,
+        CONFIG.DRIVER_STATES.GOING_TO_PICKUP,
+        CONFIG.DRIVER_STATES.OFFLINE
+      ],
+
       [CONFIG.DRIVER_STATES.GOING_TO_PICKUP]: [
         CONFIG.DRIVER_STATES.ONLINE,
         CONFIG.DRIVER_STATES.PASSENGER_ONBOARD,
-        CONFIG.DRIVER_STATES.IN_PROGRESS  // Permitir saltar si ya está en viaje
+        CONFIG.DRIVER_STATES.IN_PROGRESS,
+        CONFIG.DRIVER_STATES.OFFLINE
       ],
+
       [CONFIG.DRIVER_STATES.PASSENGER_ONBOARD]: [
         CONFIG.DRIVER_STATES.IN_PROGRESS,
-        CONFIG.DRIVER_STATES.GOING_TO_PICKUP
+        CONFIG.DRIVER_STATES.GOING_TO_PICKUP,
+        CONFIG.DRIVER_STATES.OFFLINE
       ],
+
       [CONFIG.DRIVER_STATES.IN_PROGRESS]: [
         CONFIG.DRIVER_STATES.ARRIVED,
-        CONFIG.DRIVER_STATES.ONLINE
+        CONFIG.DRIVER_STATES.ONLINE,
+        CONFIG.DRIVER_STATES.OFFLINE
       ],
+
       [CONFIG.DRIVER_STATES.ARRIVED]: [
         CONFIG.DRIVER_STATES.ONLINE,
-        CONFIG.DRIVER_STATES.IN_PROGRESS  // Permitir volver si se arrepiente
+        CONFIG.DRIVER_STATES.IN_PROGRESS,
+        CONFIG.DRIVER_STATES.OFFLINE
       ]
     };
 
     const currentState = this.state.driver.status;
     const allowed = validTransitions[currentState] || [];
 
-    // CORREGIDO: Permitir transición si es al mismo estado o está en lista permitida
     if (currentState !== newState && !allowed.includes(newState)) {
-      console.warn(`Invalid transition: ${currentState} -> ${newState}`);
-      // Forzar transición de todos modos en desarrollo
-      console.log(`[StateManager] Forcing transition ${currentState} -> ${newState}`);
+      console.warn(`[StateManager] Invalid transition blocked: ${currentState} -> ${newState}`);
+      return false;
     }
 
-    this.set('driver.status', newState);
-    this.set('driver', { ...this.state.driver, ...data });
-    
-    // Trigger side effects
+    const isOnline = newState !== CONFIG.DRIVER_STATES.OFFLINE;
+
+    this.merge({
+      driver: {
+        ...this.state.driver,
+        ...data,
+        status: newState,
+        isOnline: isOnline,
+        isAvailable: isOnline
+      }
+    });
+
     this._onStateChange(currentState, newState);
-    
     return true;
   }
 
-  // Private: Deep merge
+  // =========================================================
+  // PRIVATE
+  // =========================================================
+
   _deepMerge(target, source) {
     for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      if (
+        source[key] &&
+        typeof source[key] === 'object' &&
+        !Array.isArray(source[key])
+      ) {
         if (!target[key]) target[key] = {};
         this._deepMerge(target[key], source[key]);
       } else {
@@ -147,42 +180,46 @@ class StateManager {
     }
   }
 
-  // Private: Notify listeners
   _notify(path, value, previous) {
-    // Notify specific path
-    this.listeners.get(path)?.forEach(cb => {
-      try { cb(value, previous); } catch (e) { console.error(e); }
+    this.listeners.get(path)?.forEach((cb) => {
+      try {
+        cb(value, previous);
+      } catch (e) {
+        console.error(e);
+      }
     });
-    
-    // Notify wildcards
+
     const parts = path.split('.');
     let currentPath = '';
+
     for (const part of parts) {
       currentPath = currentPath ? `${currentPath}.${part}` : part;
       const wildcard = `${currentPath}.*`;
-      this.listeners.get(wildcard)?.forEach(cb => {
-        try { cb(value, previous); } catch (e) { console.error(e); }
+
+      this.listeners.get(wildcard)?.forEach((cb) => {
+        try {
+          cb(value, previous);
+        } catch (e) {
+          console.error(e);
+        }
       });
     }
-    
-    // Notify global
-    this.listeners.get('*')?.forEach(cb => {
-      try { cb(this.state, previous); } catch (e) { console.error(e); }
+
+    this.listeners.get('*')?.forEach((cb) => {
+      try {
+        cb(this.state, previous);
+      } catch (e) {
+        console.error(e);
+      }
     });
   }
 
-  // Private: Side effects on state change
   _onStateChange(from, to) {
-    // Update online status based on driver state
-    const isOnline = to !== CONFIG.DRIVER_STATES.OFFLINE;
-    if (isOnline !== this.state.driver.isOnline) {
-      this.set('driver.isOnline', isOnline);
-    }
-
-    // Emit custom event
-    window.dispatchEvent(new CustomEvent('driverStateChange', {
-      detail: { from, to, state: this.getState() }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('driverStateChange', {
+        detail: { from, to, state: this.getState() }
+      })
+    );
   }
 }
 
