@@ -1,5 +1,6 @@
 /**
  * Servicio de mapas con MapLibre - Optimizado para producción
+ * Versión estable: NO debe bloquear viajes si el mapa falla
  */
 
 import CONFIG from './config.js';
@@ -18,6 +19,7 @@ class MapService {
     this.hasFatalError = false;
     this._boundResize = null;
     this._loadTimeout = null;
+    this._loadResolved = false;
   }
 
   async init(containerId) {
@@ -31,6 +33,10 @@ class MapService {
             console.warn('No se pudo limpiar mapa previo:', e);
           }
         }
+
+        this.isReady = false;
+        this.hasFatalError = false;
+        this._loadResolved = false;
 
         // Validar librería
         if (typeof window.maplibregl === 'undefined') {
@@ -54,7 +60,7 @@ class MapService {
           touchZoomRotate: true
         });
 
-        // Resize seguro (muy importante en Android / mobile browser)
+        // Resize seguro (clave en mobile)
         this._boundResize = () => {
           try {
             this.map?.resize?.();
@@ -63,7 +69,7 @@ class MapService {
           }
         };
 
-        // Reintentos de resize para móviles
+        // Reintentos de resize para Android / viewport dinámico
         setTimeout(this._boundResize, 300);
         setTimeout(this._boundResize, 900);
         setTimeout(this._boundResize, 1800);
@@ -79,14 +85,17 @@ class MapService {
         this.map.on('error', (e) => {
           console.warn('Map warning (no fatal):', e);
 
-          // Solo avisar si todavía no terminó de cargar estilo
           if (!this.isReady && !this.map?.isStyleLoaded?.()) {
             console.warn('El estilo del mapa aún no cargó correctamente.');
           }
         });
 
+        // Cuando carga OK
         this.map.on('load', () => {
           try {
+            if (this._loadResolved) return;
+            this._loadResolved = true;
+
             this.isReady = true;
             this.hasFatalError = false;
 
@@ -103,13 +112,21 @@ class MapService {
           }
         });
 
-        // Failsafe: si load no llega, no bloquear eternamente
+        /**
+         * MUY IMPORTANTE:
+         * Si el mapa no carga, NO queremos romper la app de viajes.
+         * Entonces marcamos fallo, pero resolvemos igualmente para no trabar init().
+         */
         this._loadTimeout = setTimeout(() => {
-          if (!this.isReady) {
-            console.warn('Mapa no terminó de cargar a tiempo. Continuando en modo degradado.');
-            this.hasFatalError = true;
-            reject(new Error('El mapa no pudo inicializarse correctamente'));
-          }
+          if (this._loadResolved) return;
+
+          console.warn('Mapa no terminó de cargar a tiempo. Continuando en modo degradado.');
+          this.hasFatalError = true;
+          this.isReady = false;
+          this._loadResolved = true;
+
+          // Resolvemos igual para no bloquear viajes
+          resolve(null);
         }, 8000);
 
       } catch (error) {
@@ -177,12 +194,13 @@ class MapService {
           .addTo(this.map);
       } else {
         this.markers.driver.setLngLat([lng, lat]);
+
         if (typeof this.markers.driver.setRotation === 'function') {
           this.markers.driver.setRotation(heading);
         }
       }
 
-      // Solo recentrar si el usuario no está manipulando el mapa
+      // Solo recentrar si el usuario no está interactuando
       if (!this.map.isMoving() && !this.map.isZooming()) {
         this.map.easeTo({
           center: [lng, lat],
@@ -362,6 +380,7 @@ class MapService {
       this.hasFatalError = false;
       this.pendingOperations = [];
       this._boundResize = null;
+      this._loadResolved = false;
     }
   }
 
