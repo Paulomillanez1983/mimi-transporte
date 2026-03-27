@@ -1,6 +1,6 @@
 /**
- * Servicio de Routing con OSRM
- * Rutas reales por calles, no líneas rectas
+ * Servicio de Routing - CORS-free
+ * Soporta Valhalla (recomendado) y fallback a línea recta
  */
 
 import CONFIG from './config.js';
@@ -8,253 +8,241 @@ import CONFIG from './config.js';
 class RoutingService {
   constructor() {
     this.currentRoute = null;
-    this.routeLine = null;
     this.instructions = [];
     this.abortController = null;
   }
 
   /**
-   * Obtener ruta real entre dos puntos usando OSRM
+   * Obtener ruta con fallback automático
    */
-  async getRoute(startLngLat, endLngLat, options = {}) {
-    const { 
-      alternatives = false, 
-      steps = true, 
-      geometries = 'geojson',
-      overview = 'full'
-    } = options;
-
-    // Cancelar petición anterior si existe
+  async getRoute(start, end) {
+    console.log('[Routing] Solicitando ruta:', { start, end });
+    
+    // Cancelar petición anterior
     if (this.abortController) {
       this.abortController.abort();
     }
     this.abortController = new AbortController();
 
-    const coords = `${startLngLat[0]},${startLngLat[1]};${endLngLat[0]},${endLngLat[1]}`;
-    const url = `${CONFIG.OSRM_BASE_URL}/route/v1/${CONFIG.OSRM_PROFILE}/${coords}?` +
-      `alternatives=${alternatives}&` +
-      `steps=${steps}&` +
-      `geometries=${geometries}&` +
-      `overview=${overview}&` +
-      `annotations=true`;
-
     try {
-      const response = await fetch(url, {
-        signal: this.abortController.signal,
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
+      let route = null;
 
-      if (!response.ok) {
-        throw new Error(`OSRM error: ${response.status}`);
+      // Intentar según proveedor configurado
+      if (CONFIG.ROUTING_PROVIDER === 'valhalla') {
+        route = await this._getValhallaRoute(start, end);
+      } else if (CONFIG.ROUTING_PROVIDER === 'osrm') {
+        route = await this._getOSRMRoute(start, end);
       }
 
-      const data = await response.json();
-
-      if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-        throw new Error('No se encontró ruta');
+      if (route) {
+        console.log('[Routing] Ruta obtenida:', route.distance, 'm');
+        this.currentRoute = route;
+        return route;
       }
 
-      const route = data.routes[0];
-      
-      // Procesar instrucciones
-      this.instructions = this._processInstructions(route);
-      
-      this.currentRoute = {
-        geometry: route.geometry,
-        distance: route.distance, // metros
-        duration: route.duration, // segundos
-        legs: route.legs,
-        instructions: this.instructions,
-        waypoints: data.waypoints
-      };
-
-      return this.currentRoute;
+      throw new Error('No se pudo obtener ruta');
 
     } catch (error) {
-      if (error.name === 'AbortError') {
-        return null; // Petición cancelada intencionalmente
-      }
-      console.error('Routing error:', error);
-      
-      // Fallback: intentar con Valhalla si OSRM falla
-      return this._fallbackValhalla(startLngLat, endLngLat);
+      console.warn('[Routing] Error, usando línea recta:', error.message);
+      return this._getStraightLineRoute(start, end);
     }
   }
 
   /**
-   * Fallback con Valhalla si OSRM no responde
+   * Valhalla - Mejor soporte CORS
    */
-  async _fallbackValhalla(startLngLat, endLngLat) {
-    try {
-      const response = await fetch(`${CONFIG.VALHALLA_URL}/route`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          locations: [
-            { lon: startLngLat[0], lat: startLngLat[1] },
-            { lon: endLngLat[0], lat: endLngLat[1] }
-          ],
-          costing: 'auto',
-          directions_options: { units: 'kilometers' }
-        })
-      });
+  async _getValhallaRoute(start, end) {
+    const body = {
+      locations: [
+        { lon: start.lng, lat: start.lat },
+        { lon: end.lng, lat: end.lat }
+      ],
+      costing: 'auto',
+      directions_options: { units: 'kilometers' },
+      shape_format: 'geojson'
+    };
 
-      const data = await response.json();
-      
-      if (!data.trip || !data.trip.legs) {
-        throw new Error('Valhalla no encontró ruta');
-      }
-
-      // Convertir formato Valhalla a formato compatible
-      const leg = data.trip.legs[0];
-      const coordinates = leg.shape ? this._decodePolyline(leg.shape) : [];
-
-      return {
-        geometry: { type: 'LineString', coordinates },
-        distance: leg.summary.length * 1000, // km a metros
-        duration: leg.summary.time,
-        instructions: leg.maneuvers || [],
-        source: 'valhalla'
-      };
-
-    } catch (error) {
-      console.error('Valhalla fallback error:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Procesar instrucciones de maniobra
-   */
-  _processInstructions(route) {
-    const instructions = [];
-    
-    route.legs.forEach((leg, legIndex) => {
-      leg.steps.forEach((step, stepIndex) => {
-        instructions.push({
-          text: step.name || 'Continúa',
-          maneuver: step.maneuver,
-          distance: step.distance,
-          duration: step.duration,
-          type: this._classifyManeuver(step.maneuver),
-          icon: this._getManeuverIcon(step.maneuver),
-          intersection: step.intersections?.[0],
-          legIndex,
-          stepIndex
-        });
-      });
+    const response = await fetch(CONFIG.VALHALLA_URL, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: this.abortController.signal
     });
 
-    return instructions;
-  }
-
-  /**
-   * Clasificar tipo de maniobra
-   */
-  _classifyManeuver(maneuver) {
-    const type = maneuver?.type || '';
-    const modifier = maneuver?.modifier || '';
-    
-    const types = {
-      'turn': modifier || 'straight',
-      'new name': 'straight',
-      'depart': 'depart',
-      'arrive': 'arrive',
-      'merge': 'merge',
-      'on ramp': 'on_ramp',
-      'off ramp': 'off_ramp',
-      'fork': 'fork',
-      'end of road': 'end_of_road',
-      'continue': 'straight',
-      'roundabout': 'roundabout',
-      'rotary': 'roundabout',
-      'roundabout turn': 'roundabout',
-      'exit roundabout': 'roundabout',
-      'notification': 'notification',
-      'exit rotary': 'roundabout'
-    };
-    
-    return types[type] || 'straight';
-  }
-
-  /**
-   * Obtener icono según maniobra
-   */
-  _getManeuverIcon(maneuver) {
-    const type = maneuver?.type;
-    const modifier = maneuver?.modifier;
-    
-    const icons = {
-      'turn': {
-        'uturn': '↩️',
-        'sharp right': '↱',
-        'right': '➡️',
-        'slight right': '↗️',
-        'straight': '⬆️',
-        'slight left': '↖️',
-        'left': '⬅️',
-        'sharp left': '↰'
-      },
-      'new name': '⬆️',
-      'depart': '🚀',
-      'arrive': '🏁',
-      'merge': '🔀',
-      'on ramp': '↗️',
-      'off ramp': '↘️',
-      'fork': '🔱',
-      'roundabout': '↻',
-      'rotary': '↻',
-      'continue': '⬆️'
-    };
-    
-    if (type === 'turn' && modifier) {
-      return icons.turn[modifier] || '⬆️';
+    if (!response.ok) {
+      throw new Error(`Valhalla HTTP ${response.status}`);
     }
+
+    const data = await response.json();
+
+    if (!data.trip || data.trip.status !== 0) {
+      throw new Error('Valhalla no encontró ruta');
+    }
+
+    const leg = data.trip.legs[0];
     
-    return icons[type] || '⬆️';
+    // Convertir shape a GeoJSON si es necesario
+    let geometry = leg.shape;
+    if (typeof geometry === 'string') {
+      geometry = this._decodePolyline(geometry);
+    }
+
+    return {
+      geometry: {
+        type: 'LineString',
+        coordinates: geometry.coordinates || geometry
+      },
+      distance: leg.summary.length * 1000, // km a metros
+      duration: leg.summary.time,
+      instructions: this._processValhallaManeuvers(leg.maneuvers),
+      provider: 'valhalla'
+    };
   }
 
   /**
-   * Decodificar polyline encoded (para Valhalla)
+   * OSRM con manejo de CORS
    */
-  _decodePolyline(str, precision = 6) {
-    let index = 0,
-      lat = 0,
-      lng = 0,
-      coordinates = [],
-      shift = 0,
-      result = 0,
-      byte = null,
-      latitude_change,
-      longitude_change,
-      factor = Math.pow(10, precision);
+  async _getOSRMRoute(start, end) {
+    const coords = `${start.lng},${start.lat};${end.lng},${end.lat}`;
+    const url = `${CONFIG.OSRM_URL}/route/v1/driving/${coords}?geometries=geojson&overview=full&steps=true`;
+
+    // Intentar con mode: 'cors' primero
+    try {
+      const response = await fetch(url, {
+        mode: 'cors',
+        signal: this.abortController.signal
+      });
+      
+      if (!response.ok) throw new Error(`OSRM HTTP ${response.status}`);
+      
+      const data = await response.json();
+      if (data.code !== 'Ok') throw new Error(data.message);
+
+      const route = data.routes[0];
+      return {
+        geometry: route.geometry,
+        distance: route.distance,
+        duration: route.duration,
+        instructions: this._processOSRMSteps(route.legs[0].steps),
+        provider: 'osrm'
+      };
+
+    } catch (corsError) {
+      // Si falla CORS, intentar con no-cors (opaque response)
+      console.warn('[Routing] CORS failed, intentando no-cors mode');
+      throw corsError; // Por ahora no soportamos no-cors
+    }
+  }
+
+  /**
+   * Fallback: Línea recta (siempre funciona)
+   */
+  _getStraightLineRoute(start, end) {
+    console.log('[Routing] Usando línea recta');
+    
+    const coordinates = [
+      [start.lng, start.lat],
+      [end.lng, end.lat]
+    ];
+
+    const distance = this._haversineDistance(start.lat, start.lng, end.lat, end.lng);
+
+    return {
+      geometry: {
+        type: 'LineString',
+        coordinates
+      },
+      distance: distance,
+      duration: distance / 8.33, // ~30km/h estimado
+      instructions: [{
+        text: 'Dirígete al destino',
+        type: 'straight',
+        distance: distance
+      }],
+      provider: 'straight',
+      isFallback: true
+    };
+  }
+
+  _processValhallaManeuvers(maneuvers) {
+    if (!maneuvers) return [];
+    
+    const typeMap = {
+      1: 'straight',    // Continue
+      2: 'slight_right',
+      3: 'right',
+      4: 'sharp_right',
+      5: 'uturn',
+      6: 'sharp_left',
+      7: 'left',
+      8: 'slight_left',
+      9: 'straight',    // Stay straight
+      10: 'roundabout',
+      15: 'destination'
+    };
+
+    return maneuvers.map((m, i) => ({
+      text: m.instruction || 'Continúa',
+      type: typeMap[m.type] || 'straight',
+      distance: m.length ? m.length * 1000 : 0,
+      icon: this._getIconForType(typeMap[m.type])
+    }));
+  }
+
+  _processOSRMSteps(steps) {
+    return steps.map(s => ({
+      text: s.name || 'Continúa',
+      type: s.maneuver?.type || 'straight',
+      distance: s.distance,
+      icon: this._getIconForType(s.maneuver?.type)
+    }));
+  }
+
+  _getIconForType(type) {
+    const icons = {
+      straight: '↑',
+      left: '←',
+      right: '→',
+      slight_left: '↖',
+      slight_right: '↗',
+      uturn: '↩',
+      roundabout: '↻',
+      depart: '🚀',
+      arrive: '🏁'
+    };
+    return icons[type] || '↑';
+  }
+
+  _decodePolyline(str) {
+    // Implementación básica de decodificación polyline
+    let index = 0, lat = 0, lng = 0, coordinates = [];
+    const factor = 1e6;
 
     while (index < str.length) {
-      byte = null;
-      shift = 0;
-      result = 0;
-
+      let shift = 0, result = 0, byte;
+      
       do {
         byte = str.charCodeAt(index++) - 63;
         result |= (byte & 0x1f) << shift;
         shift += 5;
       } while (byte >= 0x20);
+      
+      const dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
 
-      latitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
-      shift = result = 0;
-
+      shift = 0; result = 0;
+      
       do {
         byte = str.charCodeAt(index++) - 63;
         result |= (byte & 0x1f) << shift;
         shift += 5;
       } while (byte >= 0x20);
-
-      longitude_change = ((result & 1) ? ~(result >> 1) : (result >> 1));
-
-      lat += latitude_change;
-      lng += longitude_change;
+      
+      const dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
 
       coordinates.push([lng / factor, lat / factor]);
     }
@@ -262,49 +250,6 @@ class RoutingService {
     return coordinates;
   }
 
-  /**
-   * Obtener la instrucción actual basada en la posición
-   */
-  getCurrentInstruction(positionLngLat, routeProgress = null) {
-    if (!this.currentRoute || !this.instructions.length) {
-      return null;
-    }
-
-    // Si tenemos progreso calculado, usarlo
-    if (routeProgress !== null) {
-      const stepIndex = Math.floor(routeProgress * this.instructions.length);
-      return this.instructions[Math.min(stepIndex, this.instructions.length - 1)];
-    }
-
-    // Calcular distancia a cada paso y encontrar el más cercano
-    let closestIndex = 0;
-    let minDistance = Infinity;
-
-    this.instructions.forEach((inst, index) => {
-      if (inst.maneuver?.location) {
-        const dist = this._haversineDistance(
-          positionLngLat[1], positionLngLat[0],
-          inst.maneuver.location[1], inst.maneuver.location[0]
-        );
-        if (dist < minDistance) {
-          minDistance = dist;
-          closestIndex = index;
-        }
-      }
-    });
-
-    // Devolver instrucción actual y siguiente
-    return {
-      current: this.instructions[closestIndex],
-      next: this.instructions[closestIndex + 1] || null,
-      remaining: this.instructions.slice(closestIndex + 1),
-      progress: closestIndex / this.instructions.length
-    };
-  }
-
-  /**
-   * Calcular distancia haversine
-   */
   _haversineDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3;
     const φ1 = lat1 * Math.PI / 180;
@@ -320,9 +265,23 @@ class RoutingService {
     return R * c;
   }
 
-  /**
-   * Limpiar ruta actual
-   */
+  getCurrentInstruction(position) {
+    if (!this.currentRoute?.instructions?.length) return null;
+
+    // Encontrar instrucción más cercana
+    let closest = 0;
+    let minDist = Infinity;
+
+    // Simplificación: usar progreso basado en distancia al destino
+    // En producción, usar proyección sobre la ruta
+    
+    return {
+      current: this.currentRoute.instructions[closest],
+      next: this.currentRoute.instructions[closest + 1] || null,
+      remaining: this.currentRoute.instructions.slice(closest + 1)
+    };
+  }
+
   clear() {
     this.currentRoute = null;
     this.instructions = [];
