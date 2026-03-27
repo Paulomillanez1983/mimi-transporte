@@ -15,12 +15,24 @@ class MapService {
     this.routeLayer = null;
     this.isReady = false;
     this.pendingOperations = [];
+    this.hasFatalError = false;
   }
 
   async init(containerId) {
     return new Promise((resolve, reject) => {
       try {
-        this.map = new maplibregl.Map({
+        // Validar librería
+        if (typeof window.maplibregl === 'undefined') {
+          throw new Error('MapLibre no está cargado');
+        }
+
+        // Validar contenedor
+        const container = document.getElementById(containerId);
+        if (!container) {
+          throw new Error(`No existe el contenedor del mapa: ${containerId}`);
+        }
+
+        this.map = new window.maplibregl.Map({
           container: containerId,
           style: CONFIG.MAP_STYLE,
           center: CONFIG.DEFAULT_CENTER,
@@ -31,18 +43,34 @@ class MapService {
           touchZoomRotate: true
         });
 
+        // Error NO fatal: tiles, glyphs, sprites, etc.
+        this.map.on('error', (e) => {
+          console.warn('Map warning (no fatal):', e);
+
+          // Solo marcar fatal si el mapa todavía ni cargó y no existe estilo
+          if (!this.isReady && !this.map?.isStyleLoaded?.()) {
+            console.warn('El estilo del mapa aún no cargó correctamente.');
+          }
+        });
+
         this.map.on('load', () => {
           this.isReady = true;
+          this.hasFatalError = false;
           this._executePending();
           resolve(this.map);
         });
 
-        this.map.on('error', (e) => {
-          console.error('Map error:', e);
-          reject(e);
-        });
+        // Failsafe: si load no llega, no bloquear eternamente
+        setTimeout(() => {
+          if (!this.isReady) {
+            console.warn('Mapa no terminó de cargar a tiempo. Continuando en modo degradado.');
+            this.hasFatalError = true;
+            reject(new Error('El mapa no pudo inicializarse correctamente'));
+          }
+        }, 8000);
 
       } catch (error) {
+        this.hasFatalError = true;
         reject(error);
       }
     });
@@ -51,13 +79,21 @@ class MapService {
   _executePending() {
     while (this.pendingOperations.length > 0) {
       const op = this.pendingOperations.shift();
-      op();
+      try {
+        op();
+      } catch (e) {
+        console.warn('Error ejecutando operación pendiente del mapa:', e);
+      }
     }
   }
 
   _whenReady(operation) {
-    if (this.isReady) {
-      operation();
+    if (this.isReady && this.map && !this.hasFatalError) {
+      try {
+        operation();
+      } catch (e) {
+        console.warn('Operación de mapa falló:', e);
+      }
     } else {
       this.pendingOperations.push(operation);
     }
@@ -86,17 +122,21 @@ class MapService {
 
   updateDriverPosition(lng, lat, heading = 0) {
     this._whenReady(() => {
+      if (!this.map) return;
+
       if (!this.markers.driver) {
         const el = this._createMarkerElement('driver', '🚐');
-        this.markers.driver = new maplibregl.Marker({ 
+        this.markers.driver = new window.maplibregl.Marker({
           element: el,
-          rotation: heading 
+          rotation: heading
         })
           .setLngLat([lng, lat])
           .addTo(this.map);
       } else {
         this.markers.driver.setLngLat([lng, lat]);
-        this.markers.driver.setRotation(heading);
+        if (typeof this.markers.driver.setRotation === 'function') {
+          this.markers.driver.setRotation(heading);
+        }
       }
 
       // Smooth flyTo solo si el usuario no está interactuando
@@ -104,7 +144,7 @@ class MapService {
         this.map.easeTo({
           center: [lng, lat],
           duration: 1000,
-          easing: (t) => t * (2 - t) // easeOutQuad
+          easing: (t) => t * (2 - t)
         });
       }
     });
@@ -112,31 +152,30 @@ class MapService {
 
   showTripRoute(pickup, destination, fitBounds = true) {
     this._whenReady(() => {
-      // Limpiar marcadores anteriores
+      if (!this.map) return;
+
       this.clearTripMarkers();
 
-      // Marcador de pickup (origen)
+      // Marcador de pickup
       const pickupEl = this._createMarkerElement('pickup', '👤');
-      this.markers.pickup = new maplibregl.Marker({ element: pickupEl })
+      this.markers.pickup = new window.maplibregl.Marker({ element: pickupEl })
         .setLngLat([pickup.lng, pickup.lat])
         .addTo(this.map);
 
       // Marcador de destino
       const destEl = this._createMarkerElement('destination', '🏁');
-      this.markers.destination = new maplibregl.Marker({ element: destEl })
+      this.markers.destination = new window.maplibregl.Marker({ element: destEl })
         .setLngLat([destination.lng, destination.lat])
         .addTo(this.map);
 
-      // Dibujar línea de ruta
       this._drawRouteLine(pickup, destination);
 
-      // Ajustar vista
       if (fitBounds) {
-        const bounds = new maplibregl.LngLatBounds()
+        const bounds = new window.maplibregl.LngLatBounds()
           .extend([pickup.lng, pickup.lat])
           .extend([destination.lng, destination.lat]);
-        
-        this.map.fitBounds(bounds, { 
+
+        this.map.fitBounds(bounds, {
           padding: { top: 100, bottom: 300, left: 50, right: 50 },
           duration: 1000
         });
@@ -145,6 +184,8 @@ class MapService {
   }
 
   _drawRouteLine(from, to) {
+    if (!this.map || !this.isReady) return;
+
     const coordinates = [
       [from.lng, from.lat],
       [to.lng, to.lat]
@@ -159,9 +200,13 @@ class MapService {
       properties: {}
     };
 
-    if (this.map.getSource('route')) {
-      this.map.getSource('route').setData(geojson);
-    } else {
+    try {
+      const existingSource = this.map.getSource?.('route');
+      if (existingSource) {
+        existingSource.setData(geojson);
+        return;
+      }
+
       this.map.addSource('route', {
         type: 'geojson',
         data: geojson,
@@ -190,59 +235,72 @@ class MapService {
           ]
         }
       });
-
-      // Efecto de animación de la línea
-      this._animateRoute();
+    } catch (e) {
+      console.warn('No se pudo dibujar la ruta:', e);
     }
-  }
-
-  _animateRoute() {
-    let progress = 0;
-    const animate = () => {
-      progress += 0.01;
-      if (progress > 1) progress = 0;
-      
-      if (this.map.getLayer('route-line')) {
-        this.map.setPaintProperty('route-line', 'line-dasharray', [0, 2, 1]);
-      }
-      
-      requestAnimationFrame(animate);
-    };
-    // Simplificado: en producción usar line-gradient animado
   }
 
   clearTripMarkers() {
-    if (this.markers.pickup) {
-      this.markers.pickup.remove();
-      this.markers.pickup = null;
-    }
-    if (this.markers.destination) {
-      this.markers.destination.remove();
-      this.markers.destination = null;
+    try {
+      if (this.markers.pickup) {
+        this.markers.pickup.remove();
+        this.markers.pickup = null;
+      }
+      if (this.markers.destination) {
+        this.markers.destination.remove();
+        this.markers.destination = null;
+      }
+    } catch (e) {
+      console.warn('No se pudieron limpiar marcadores de viaje:', e);
     }
   }
 
   clearAll() {
-    this.clearTripMarkers();
-    if (this.map.getLayer('route-line')) {
-      this.map.removeLayer('route-line');
-    }
-    if (this.map.getSource('route')) {
-      this.map.removeSource('route');
+    try {
+      this.clearTripMarkers();
+
+      if (!this.map) return;
+
+      if (this.map.getLayer?.('route-line')) {
+        this.map.removeLayer('route-line');
+      }
+      if (this.map.getSource?.('route')) {
+        this.map.removeSource('route');
+      }
+    } catch (e) {
+      console.warn('No se pudo limpiar el mapa:', e);
     }
   }
 
   resize() {
-    if (this.map) {
-      this.map.resize();
+    try {
+      if (this.map) {
+        this.map.resize();
+      }
+    } catch (e) {
+      console.warn('No se pudo redimensionar el mapa:', e);
     }
   }
 
   destroy() {
-    if (this.map) {
-      this.map.remove();
-      this.map = null;
+    try {
+      this.clearAll();
+
+      if (this.markers.driver) {
+        this.markers.driver.remove();
+        this.markers.driver = null;
+      }
+
+      if (this.map) {
+        this.map.remove();
+        this.map = null;
+      }
+    } catch (e) {
+      console.warn('Error destruyendo mapa:', e);
+    } finally {
       this.isReady = false;
+      this.hasFatalError = false;
+      this.pendingOperations = [];
     }
   }
 
