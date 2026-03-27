@@ -324,6 +324,19 @@ class DriverApp {
     );
   }
 
+  // MÉTODOS FALTANTES - AÑADIDOS
+  async _handleAcceptTrip(tripId) {
+    return await this._runTripActionLock(tripId, async () => {
+      return await tripManager.acceptTrip(tripId);
+    });
+  }
+
+  async _handleRejectTrip(tripId) {
+    return await this._runTripActionLock(tripId, async () => {
+      return await tripManager.rejectTrip(tripId);
+    });
+  }
+
   async _handleDriverAction(detail = {}) {
     const { action, tripId } = detail || {};
     if (!action) return;
