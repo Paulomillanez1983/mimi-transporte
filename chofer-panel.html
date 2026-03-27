@@ -12,17 +12,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   
   <link rel="icon" href="/mimi-transporte/favicon.ico" />
-  <link rel="apple-touch-icon" href="/mimi-transporte/icon-192.png" />
   
   <!-- CSS -->
   <link rel="stylesheet" href="/mimi-transporte/css/driver.css" />
   
   <!-- MapLibre -->
-  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" crossorigin="anonymous" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js" crossorigin="anonymous"></script>
   
   <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -134,11 +133,6 @@
     // Inicializar app
     const app = new DriverApp();
     app.init();
-    
-    // Service Worker para PWA (opcional)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/mimi-transporte/sw.js').catch(console.error);
-    }
   </script>
 </body>
 </html>
