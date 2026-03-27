@@ -9,6 +9,10 @@ class SupabaseService {
     this.client = null;
     this.rest = null;
     this.initialized = false;
+
+    // 🔥 IMPORTANTE:
+    // Cambiá esto por el nombre REAL de tu tabla de choferes
+    this.DRIVERS_TABLE = 'choferes';
   }
 
   async init() {
@@ -58,6 +62,13 @@ class SupabaseService {
           return await fn(...args);
         } catch (error) {
           lastError = error;
+
+          // 🚫 No reintentar si la tabla no existe
+          if (error?.code === 'PGRST205') {
+            console.error('Supabase schema/table error (sin retry):', error);
+            throw error;
+          }
+
           console.warn(`Supabase retry ${i + 1}/${retries}:`, error);
 
           if (i < retries - 1) {
@@ -152,14 +163,26 @@ class SupabaseService {
       throw new Error('No se pudo actualizar ubicación: driverId inválido');
     }
 
-    return this.rest.update('choferes', driverId, {
-      lat: position.lat,
-      lng: position.lng,
-      heading: position.heading || null,
-      speed: position.speed || null,
-      last_update: new Date().toISOString(),
-      online: true
-    });
+    try {
+      return await this.rest.update(this.DRIVERS_TABLE, driverId, {
+        lat: position.lat,
+        lng: position.lng,
+        heading: position.heading || null,
+        speed: position.speed || null,
+        last_update: new Date().toISOString(),
+        online: true
+      });
+    } catch (error) {
+      // 🚫 No romper la app si la tabla aún no está alineada
+      if (error?.code === 'PGRST205') {
+        console.error(
+          `La tabla "${this.DRIVERS_TABLE}" no existe en schema public. Revisá el nombre real de la tabla de choferes.`
+        );
+        return [];
+      }
+
+      throw error;
+    }
   }
 
   subscribeToTrips(callback) {
@@ -206,10 +229,8 @@ class SupabaseService {
   getCurrentDriverId() {
     const choferData = this.getCurrentDriverData();
 
-    // Prioridad: ID real estructurado si existe
     if (choferData?.id) return choferData.id;
 
-    // Fallback legacy
     const legacyId = localStorage.getItem('choferUsuario');
     return legacyId || null;
   }
@@ -236,6 +257,5 @@ class SupabaseService {
   }
 }
 
-// Singleton
 const supabaseService = new SupabaseService();
 export default supabaseService;
