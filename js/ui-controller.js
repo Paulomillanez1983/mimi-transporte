@@ -18,20 +18,23 @@ class UIController {
 
   init() {
     // Cachear elementos DOM frecuentes
-    this.elements = {
-      toast: document.getElementById('toast'),
-      tripPanel: document.getElementById('tripPanel'),
-      panelContent: document.getElementById('panelContent'),
-      tripList: document.getElementById('tripList'),
-      incomingModal: document.getElementById('incomingModal'),
-      navPanel: document.getElementById('navPanel'),
-      statsPendientes: document.getElementById('statPendientes'),
-      statsHoy: document.getElementById('statHoy'),
-      driverName: document.getElementById('driverName'),
-      btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
-      btnRejectIncoming: document.getElementById('btnRejectIncoming')
-    };
-
+this.elements = {
+  toast: document.getElementById('toast'),
+  tripPanel: document.getElementById('tripPanel'),
+  panelContent: document.getElementById('panelContent'),
+  tripList: document.getElementById('tripList'),
+  incomingModal: document.getElementById('incomingModal'),
+  navPanel: document.getElementById('navPanel'),
+  statsPendientes: document.getElementById('statPendientes'),
+  statsHoy: document.getElementById('statHoy'),
+  driverName: document.getElementById('driverName'),
+  driverStatus: document.getElementById('estadoChofer'),
+  panelHandle: document.getElementById('panelHandle'),
+  panelSubtitle: document.getElementById('panelSubtitle'),
+  tripCountBadge: document.getElementById('tripCountBadge'),
+  btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
+  btnRejectIncoming: document.getElementById('btnRejectIncoming')
+};
     // Cargar nombre del chofer
     try {
       const driverData = JSON.parse(localStorage.getItem('choferData') || '{}');
