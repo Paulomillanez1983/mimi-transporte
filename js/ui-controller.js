@@ -138,6 +138,16 @@ renderAvailableTrips(trips) {
   this.hideNavigation();
 
   const safeTrips = Array.isArray(trips) ? trips : [];
+  if (this.elements.tripCountBadge) {
+  this.elements.tripCountBadge.textContent = String(safeTrips.length);
+}
+
+if (this.elements.panelSubtitle) {
+  this.elements.panelSubtitle.textContent =
+    safeTrips.length > 0
+      ? `${safeTrips.length} viaje${safeTrips.length === 1 ? '' : 's'} esperando`
+      : 'Esperando solicitudes...';
+}
 
   if (safeTrips.length === 0) {
     container.innerHTML = this._getEmptyStateHTML();
@@ -477,33 +487,59 @@ renderAvailableTrips(trips) {
     `;
   }
 
-  _createTripCardHTML(trip) {
-    const exp = new Date(trip.created_at || Date.now()).getTime() + 2 * 60 * 1000;
-    const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
-    const min = Math.floor(rest / 60);
-    const seg = rest % 60;
+_createTripCardHTML(trip) {
+  const exp = new Date(trip.created_at || Date.now()).getTime() + 2 * 60 * 1000;
+  const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
+  const min = Math.floor(rest / 60);
+  const seg = rest % 60;
 
-    return `
-      <div class="trip-card-mini" data-trip-id="${this._escapeHtml(trip.id || '')}">
-        <div class="trip-card-header">
-          <span class="client-name">${this._escapeHtml(trip.cliente || 'Sin nombre')}</span>
-          <span class="countdown-badge">⏱️ ${min}:${seg.toString().padStart(2, '0')}</span>
+  const servicio = this._escapeHtml(trip.servicio || 'Viaje');
+  const cliente = this._escapeHtml(trip.cliente || 'Pasajero');
+  const origen = this._escapeHtml(trip.origen || 'Sin origen');
+  const destino = this._escapeHtml(trip.destino || 'Sin destino');
+  const precio = Number(trip.precio || 0).toLocaleString('es-AR');
+  const km = Number(trip.km || 0).toFixed(1);
+
+  return `
+    <div class="trip-card-mini trip-card-premium" data-trip-id="${this._escapeHtml(trip.id || '')}">
+      <div class="trip-card-header">
+        <div>
+          <span class="client-name">${cliente}</span>
+          <div class="trip-service-chip">${servicio}</div>
         </div>
+        <span class="countdown-badge">⏱️ ${min}:${seg.toString().padStart(2, '0')}</span>
+      </div>
 
-        <div class="trip-route-mini">
-          ${this._escapeHtml(trip.origen || 'Sin origen')} → ${this._escapeHtml(trip.destino || 'Sin destino')}
-        </div>
-
-        <div class="trip-card-footer">
-          <span class="price">$${Number(trip.precio || 0).toLocaleString('es-AR')}</span>
-          <button class="btn btn-primary btn-small" data-action="accept" data-trip-id="${this._escapeHtml(trip.id || '')}">
-            Aceptar
-          </button>
+      <div class="trip-route-block">
+        <div class="route-point pickup-point"></div>
+        <div class="trip-route-text">
+          <div class="trip-route-line"><strong>Origen:</strong> ${origen}</div>
+          <div class="trip-route-line"><strong>Destino:</strong> ${destino}</div>
         </div>
       </div>
-    `;
-  }
 
+      <div class="trip-meta-row">
+        <div class="trip-meta-box">
+          <span class="trip-meta-label">Ganancia</span>
+          <span class="trip-meta-value">$${precio}</span>
+        </div>
+        <div class="trip-meta-box">
+          <span class="trip-meta-label">Distancia</span>
+          <span class="trip-meta-value">${km} km</span>
+        </div>
+      </div>
+
+      <div class="trip-card-footer">
+        <button class="btn btn-ghost btn-small" data-action="whatsapp" data-trip-id="${this._escapeHtml(trip.id || '')}">
+          WhatsApp
+        </button>
+        <button class="btn btn-primary btn-small btn-accept-strong" data-action="accept" data-trip-id="${this._escapeHtml(trip.id || '')}">
+          Aceptar viaje
+        </button>
+      </div>
+    </div>
+  `;
+}
   _normalizeState(s) {
     return String(s || '').toUpperCase().replace(/[-\s]/g, '_');
   }
