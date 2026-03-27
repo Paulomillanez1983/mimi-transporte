@@ -343,8 +343,15 @@ class UIController {
     }
   }
 
-  // Actions
+  // CORREGIDO: Bloquear desconexión si hay viaje activo
   async _toggleOnline() {
+    // No permitir desconectarse si hay viaje activo
+    const currentTrip = stateManager.get('trip.current');
+    if (currentTrip) {
+      this._showToast('No puedes desconectarte con un viaje en curso', 'warning');
+      return;
+    }
+
     const isOnline = !stateManager.get('driver.isOnline');
     const driverId = supabaseClient.getDriverId();
     
