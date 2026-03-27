@@ -170,19 +170,6 @@
       margin-bottom: 16px;
       display: none;
     }
-
-    .demo-box {
-      margin-top: 18px;
-      background: #f5f7fa;
-      border-radius: 14px;
-      padding: 14px;
-      font-size: 0.9rem;
-      color: #444;
-    }
-
-    .demo-box strong {
-      color: #111;
-    }
   </style>
 </head>
 <body>
@@ -204,7 +191,7 @@
       <span>o</span>
     </div>
 
-    <!-- Login tradicional (TU CÓDIGO ORIGINAL INTACTO) -->
+    <!-- Login tradicional -->
     <form onsubmit="loginChofer(event)">
       <div class="form-group">
         <label for="usuario">Usuario</label>
@@ -220,50 +207,40 @@
     </form>
 
     <a class="back-link" href="chofer.html">← Volver</a>
-
-    <div class="demo-box">
-      <strong>Demo:</strong><br>
-      Usuario: <strong>chofer</strong><br>
-      Contraseña: <strong>1234</strong>
-    </div>
   </div>
 
   <script>
-    // 🔷 CONFIGURACIÓN SUPABASE - Tus datos reales
+    // 🔷 CONFIGURACIÓN SUPABASE
     const SUPABASE_URL = 'https://xrphpqmutvadjrucqicn.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM';
 
-    // Inicializar Supabase
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Inicializar Supabase (usamos window.supabase para evitar conflicto)
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // ========== LOGIN CON GOOGLE ==========
     async function loginConGoogle() {
       try {
-        const { data, error } = await supabase.auth.signInWithOAuth({
+        const { data, error } = await supabaseClient.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.href // Vuelve a esta misma página
+            redirectTo: window.location.href
           }
         });
 
         if (error) throw error;
-        
-        // El redirect lo maneja Supabase automáticamente
       } catch (error) {
         console.error('Error:', error);
         mostrarError('Error al conectar con Google: ' + error.message);
       }
     }
 
-    // ========== MANEJAR SESIÓN AL CARGAR (para el redirect de Google) ==========
+    // ========== MANEJAR SESIÓN AL CARGAR ==========
     async function checkSession() {
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
       
       if (session) {
-        // Usuario logueado con Google
         const user = session.user;
         
-        // Guardar en localStorage (mismo formato que tu login tradicional)
         localStorage.setItem('choferLogueado', 'true');
         localStorage.setItem('choferUsuario', user.email);
         localStorage.setItem('choferNombre', user.user_metadata.full_name || user.email);
@@ -271,15 +248,13 @@
         localStorage.setItem('choferId', user.id);
         localStorage.setItem('choferAuthProvider', 'google');
         
-        // Redirigir al panel
         window.location.href = 'chofer-panel.html';
       }
     }
 
-    // Verificar sesión al cargar la página
     checkSession();
 
-    // ========== LOGIN TRADICIONAL (TU CÓDIGO ORIGINAL - SIN CAMBIOS) ==========
+    // ========== LOGIN TRADICIONAL ==========
     function loginChofer(event) {
       event.preventDefault();
 
@@ -288,7 +263,6 @@
 
       ocultarError();
 
-      // Tu lógica de demo intacta
       if (usuario === 'chofer' && password === '1234') {
         localStorage.setItem('choferLogueado', 'true');
         localStorage.setItem('choferUsuario', usuario);
