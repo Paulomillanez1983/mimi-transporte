@@ -232,12 +232,4 @@ class DriverApp {
 }
 
 // Inicializar cuando DOM esté listo
-document.addEventListener('DOMContentLoaded', () => {
-  const app = new DriverApp();
-  app.init();
-
-  // Cleanup al cerrar
-  window.addEventListener('beforeunload', () => {
-    app.destroy();
-  });
-});
+document.export default DriverApp;
