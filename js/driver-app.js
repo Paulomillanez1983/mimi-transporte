@@ -1,31 +1,23 @@
 /**
- * MIMI Driver App - Orquestador Principal Premium
+ * MIMI Driver App - Experiencia Uber Driver
+ * Mapa siempre visible, flujo de pantallas limpio
  */
 
-import CONFIG from '/mimi-transporte/js/config.js';
-import supabaseService from '/mimi-transporte/js/supabase-client.js';
-import mapService from '/mimi-transporte/js/map-service.js';
-import locationTracker from '/mimi-transporte/js/location-tracker.js';
-import tripManager from '/mimi-transporte/js/trip-manager.js';
-import soundManager from '/mimi-transporte/js/sound-manager.js';
-import uiController from '/mimi-transporte/js/ui-controller.js';
+import CONFIG from './config.js';
+import supabaseService from './supabase-client.js';
+import mapService from './map-service.js';
+import locationTracker from './location-tracker.js';
+import tripManager from './trip-manager.js';
+import uiController from './ui-controller.js';
+import routingService from './routing-service.js';
 
 class DriverApp {
   constructor() {
     this.initialized = false;
     this.unsubscribers = [];
-    this.mapReady = false;
-    this.locationReady = false;
-    this.tripsReady = false;
-    this.lastIncomingTripId = null;
-    this.currentState = 'INIT';
-    this._handlingTripAction = new Set();
-    this._driverActionBound = null;
-    this._visibilityBound = null;
     this._onlineStatus = false;
-    this._arrivalAnnounced = false;
-    this._audioInitialized = false;
     this._currentTripId = null;
+    this._routeRefreshInterval = null;
   }
 
   async init() {
@@ -36,563 +28,270 @@ class DriverApp {
       }
 
       const dbReady = await supabaseService.init();
-      if (!dbReady) {
-        throw new Error('No se pudo conectar a la base de datos');
-      }
-
-      const driverData = supabaseService.getCurrentDriverData() || {};
-      await supabaseService.ensureDriverExists(driverData);
+      if (!dbReady) throw new Error('No se pudo conectar a la base de datos');
 
       uiController.init();
-      uiController.showToast('Iniciando sistema...', 'info', 2000);
+      uiController.showToast('Iniciando...', 'info');
 
-      // Inicializar servicios (no bloqueantes entre sí)
-      await Promise.allSettled([
-        this._safeInitMap(),
-        this._safeInitLocation(),
-        this._safeInitAudio()
+      // Inicializar servicios
+      await Promise.all([
+        mapService.init('mainMap'),
+        locationTracker.start(pos => this._onPositionUpdate(pos))
       ]);
 
-      await this._safeInitTrips();
-
+      await tripManager.init();
       this._subscribeToEvents();
-      this._bindDisponibilidadButton();
-      this._bindVisibilityHandler();
-
-      // Audio se desbloquea en primera interacción
-      this._bindAudioUnlock();
+      this._bindUI();
 
       this.initialized = true;
-      this._setState('ONLINE');
-      this._updateDriverStatus();
-
-      setTimeout(() => this._safeResizeMap(), 300);
-      setTimeout(() => this._safeResizeMap(), 1000);
-
-      this._renderInitialState();
-
-      // Toast de éxito sin sonido (audio aún no desbloqueado)
-      const initMessage = this.mapReady && this.locationReady 
-        ? 'Sistema listo' 
-        : 'Sistema listo (modo limitado)';
-      uiController.showToast(initMessage, 'success');
+      uiController.updateDriverState('ONLINE', false);
+      uiController.showWaitingState();
 
     } catch (error) {
-      console.error('App initialization failed:', error);
-      uiController.showToast('Error: ' + (error?.message || 'desconocido'), 'error');
+      console.error('Init error:', error);
+      uiController.showToast('Error al iniciar: ' + error.message, 'error');
     }
-  }
-
-  async _safeInitAudio() {
-    try {
-      await soundManager.init();
-    } catch (e) {
-      console.warn('Audio no disponible:', e);
-    }
-  }
-
-  _bindAudioUnlock() {
-    const unlockHandler = async () => {
-      if (this._audioInitialized) return;
-      this._audioInitialized = true;
-      
-      try {
-        await soundManager.enableOnUserInteraction();
-        console.log('🔊 Audio y haptics desbloqueados');
-      } catch (e) {
-        console.warn('No se pudo desbloquear audio:', e);
-      }
-    };
-
-    ['click', 'touchstart', 'keydown'].forEach(event => {
-      document.body.addEventListener(event, unlockHandler, { once: true, passive: true });
-    });
-  }
-
-  _setState(newState) {
-    const validStates = ['INIT', 'ONLINE', 'BUSY', 'OFFLINE', 'ERROR'];
-    if (!validStates.includes(newState)) return;
-
-    this.currentState = newState;
-    uiController.updateDriverState(newState, this._onlineStatus);
-  }
-
-  _bindDisponibilidadButton() {
-    const btn = document.getElementById('btnToggleDisponibilidad');
-    if (!btn) return;
-
-    let isProcessing = false;
-
-    btn.addEventListener('click', async () => {
-      if (isProcessing) return;
-      isProcessing = true;
-
-      try {
-        btn.disabled = true;
-        const originalHTML = btn.innerHTML;
-        
-        btn.innerHTML = '<span class="spinner"></span> Actualizando...';
-
-        const driverId = supabaseService.getCurrentDriverId();
-        const newStatus = !this._onlineStatus;
-        
-        await supabaseService.setDriverAvailability(driverId, newStatus);
-        
-        this._onlineStatus = newStatus;
-        this._updateDriverStatus();
-        
-        const message = newStatus ? 'Estás ONLINE' : 'Estás OFFLINE';
-        uiController.showToast(message, newStatus ? 'success' : 'warning');
-        
-        // Sonido solo si audio está desbloqueado
-        if (this._audioInitialized) {
-          soundManager.notify(newStatus ? 'success' : 'notification');
-        }
-
-        btn.classList.toggle('btn-online', newStatus);
-        btn.classList.toggle('btn-offline', !newStatus);
-        btn.innerHTML = newStatus 
-          ? '<span>🔴</span> Desconectarse' 
-          : '<span>🟢</span> Conectarse';
-
-      } catch (e) {
-        console.error('Error:', e);
-        uiController.showToast('Error al actualizar estado', 'error');
-      } finally {
-        btn.disabled = false;
-        isProcessing = false;
-      }
-    });
-  }
-
-  _bindVisibilityHandler() {
-    this._visibilityBound = () => {
-      if (!document.hidden) {
-        this._safeResizeMap();
-        tripManager.refreshTrips?.();
-      }
-    };
-    document.addEventListener('visibilitychange', this._visibilityBound);
-  }
-
-  async _safeInitMap() {
-    try {
-      await mapService.init('mainMap');
-      this.mapReady = true;
-      console.log('🗺️ Mapa inicializado');
-    } catch (error) {
-      this.mapReady = false;
-      console.warn('Mapa no disponible:', error);
-    }
-  }
-
-  async _safeInitLocation() {
-    try {
-      await locationTracker.start((position) => {
-        this._onPositionUpdate(position);
-      });
-      this.locationReady = true;
-      console.log('📍 Location tracking activo');
-    } catch (error) {
-      this.locationReady = false;
-      console.warn('Ubicación no disponible:', error);
-    }
-  }
-
-  async _safeInitTrips() {
-    try {
-      await tripManager.init();
-      this.tripsReady = true;
-      console.log('🚗 TripManager inicializado');
-    } catch (error) {
-      this.tripsReady = false;
-      throw error;
-    }
-  }
-
-  _safeResizeMap() {
-    try { mapService.resize(); } catch (e) {}
   }
 
   _subscribeToEvents() {
+    // Nueva oferta de viaje
     this.unsubscribers.push(
       tripManager.on('newPendingTrip', (trip) => {
-        this._handleIncomingTrip(trip, { force: true });
+        uiController.showIncomingTrip(
+          trip,
+          () => this._acceptTrip(trip.id),
+          () => this._rejectTrip(trip.id)
+        );
       })
     );
 
+    // Viaje aceptado
     this.unsubscribers.push(
-      tripManager.on('pendingTripCleared', ({ reason }) => {
-        this.lastIncomingTripId = null;
-        uiController.closeIncomingModal();
-        if (['TIMEOUT', 'EXPIRED_LOCAL', 'CANCELADA'].includes(reason)) {
-          uiController.showToast('La oferta ya no está disponible', 'warning');
-          if (this._audioInitialized) soundManager.notify('notification');
-        }
-      })
-    );
-
-    this.unsubscribers.push(
-      tripManager.on('tripAccepted', (trip) => {
-        this._setState('BUSY');
+      tripManager.on('tripAccepted', async (trip) => {
         this._currentTripId = trip.id;
-        this.lastIncomingTripId = null;
-        uiController.closeIncomingModal();
+        uiController.hideIncomingModal();
         uiController.showToast('Viaje aceptado', 'success');
         
-        if (this._audioInitialized) {
-          soundManager.speak('Viaje aceptado. Dirígete al punto de recogida.', 'urgent');
-          soundManager.notify('success');
-        }
+        // Mostrar ruta REAL en el mapa
+        await this._showRouteOnMap(trip);
         
-        this._showTripOnMap(trip);
-        uiController.renderActiveTrip(trip);
-        uiController.updateStats(tripManager.getStats?.() || {});
+        // Cambiar a modo navegación
+        uiController.showNavigationState(trip);
+        
+        // Iniciar actualización de ruta periódica
+        this._startRouteRefresh(trip);
       })
     );
 
+    // Viaje iniciado
     this.unsubscribers.push(
       tripManager.on('tripStarted', (trip) => {
-        this._currentTripId = trip.id;
         uiController.showToast('Viaje iniciado', 'success');
-        if (this._audioInitialized) {
-          soundManager.speak('Viaje iniciado. Buen camino.', 'normal');
-          soundManager.notify('success');
-        }
-        this._showTripOnMap(trip);
-        uiController.renderActiveTrip(trip);
-        uiController.updateStats(tripManager.getStats?.() || {});
+        uiController.showNavigationState(trip);
       })
     );
 
+    // Viaje completado
     this.unsubscribers.push(
       tripManager.on('tripCompleted', (trip) => {
-        this._setState('ONLINE');
         this._currentTripId = null;
-        this.lastIncomingTripId = null;
-        uiController.closeIncomingModal();
-        
-        const earnings = trip?.precio || 0;
-        uiController.showToast(`Viaje completado +$${earnings}`, 'success', 5000);
-        
-        if (this._audioInitialized) {
-          soundManager.speak(`Viaje completado. Ganancia ${earnings} pesos.`, 'normal');
-          soundManager.notify('success');
-        }
-
-        this._clearTripFromMap();
+        this._stopRouteRefresh();
+        mapService.clearRoute();
         uiController.hideNavigation();
-        uiController.renderAvailableTrips([]);
-        uiController.updateStats(tripManager.getStats?.() || {});
+        uiController.showToast(`Viaje completado +$${trip.precio}`, 'success');
+        uiController.showWaitingState();
       })
     );
 
+    // Viaje cancelado
     this.unsubscribers.push(
       tripManager.on('tripCancelled', () => {
-        this._setState('ONLINE');
         this._currentTripId = null;
-        this.lastIncomingTripId = null;
-        uiController.closeIncomingModal();
-        uiController.showToast('Viaje cancelado', 'warning');
-        if (this._audioInitialized) soundManager.notify('error');
-
-        this._clearTripFromMap();
+        this._stopRouteRefresh();
+        mapService.clearRoute();
         uiController.hideNavigation();
-        uiController.renderAvailableTrips([]);
-        uiController.updateStats(tripManager.getStats?.() || {});
+        uiController.showToast('Viaje cancelado', 'warning');
+        uiController.showWaitingState();
       })
     );
-
-    this._driverActionBound = (e) => this._handleDriverAction(e.detail);
-    document.addEventListener('driverAction', this._driverActionBound);
   }
 
-  _handleIncomingTrip(trip, options = {}) {
-    const { force = false } = options;
-    if (!trip?.id) return;
-    if (tripManager.getCurrentTrip?.()) return;
-    if (!force && tripManager.getPendingTrip?.()) return;
+  async _showRouteOnMap(trip) {
+    // Determinar origen y destino según el estado
+    const isEnCurso = trip.estado === 'EN_CURSO';
+    
+    const origin = {
+      lat: trip.origen_lat,
+      lng: trip.origen_lng
+    };
+    
+    const destination = {
+      lat: trip.destino_lat,
+      lng: trip.destino_lng
+    };
 
-    if (this.lastIncomingTripId === trip.id && uiController.isIncomingModalOpen()) return;
-
-    this.lastIncomingTripId = trip.id;
-
-    if (this._audioInitialized) {
-      soundManager.notify('newTrip');
-      soundManager.speak(`Nueva solicitud. ${trip.km || 0} kilómetros. $${trip.precio || 0} pesos.`, 'urgent');
+    // Mostrar ruta REAL usando OSRM
+    const route = await mapService.showRealRoute(origin, destination);
+    
+    if (route && route.instructions) {
+      // Actualizar instrucciones de navegación
+      this._updateNavigationInstructions(route);
     }
-
-    uiController.showIncomingModal(
-      trip,
-      () => this._handleAcceptTrip(trip.id),
-      () => this._handleRejectTrip(trip.id)
-    );
   }
 
-  // MÉTODOS FALTANTES - AÑADIDOS
-  async _handleAcceptTrip(tripId) {
-    return await this._runTripActionLock(tripId, async () => {
-      return await tripManager.acceptTrip(tripId);
-    });
-  }
-
-  async _handleRejectTrip(tripId) {
-    return await this._runTripActionLock(tripId, async () => {
-      return await tripManager.rejectTrip(tripId);
-    });
-  }
-
-  async _handleDriverAction(detail = {}) {
-    const { action, tripId } = detail || {};
-    if (!action) return;
-
-    const result = await this._runTripActionLock(tripId, async () => {
-      switch (action) {
-        case 'accept':
-          return await tripManager.acceptTrip(tripId);
-        case 'reject':
-          return await tripManager.rejectTrip(tripId);
-        case 'start':
-          return await tripManager.startTrip(tripId);
-        case 'finish':
-          return await this._handleFinishWithConfirmation(tripId);
-        case 'cancel':
-          return await this._handleCancelWithConfirmation(tripId);
-        case 'whatsapp':
-          this._openWhatsApp(tripId);
-          return { success: true };
-        case 'navigate':
-          this._openExternalNavigation(tripId);
-          return { success: true };
-        default:
-          return { success: false, error: 'Acción desconocida' };
+  _startRouteRefresh(trip) {
+    // Recalcular ruta periódicamente (cada 10 segundos)
+    this._routeRefreshInterval = setInterval(async () => {
+      if (trip.estado === 'EN_CURSO') {
+        await this._showRouteOnMap(trip);
       }
-    });
+    }, CONFIG.ROUTE_REFRESH_INTERVAL);
+  }
 
-    if (!result?.success && result?.error) {
-      uiController.showToast(result.error, 'error');
-      if (this._audioInitialized) soundManager.notify('error');
+  _stopRouteRefresh() {
+    if (this._routeRefreshInterval) {
+      clearInterval(this._routeRefreshInterval);
+      this._routeRefreshInterval = null;
     }
   }
 
-  async _handleFinishWithConfirmation(tripId) {
-    const confirmed = await uiController.showConfirmationModal({
-      title: '¿Finalizar viaje?',
-      message: 'Verifica que has llegado al destino',
-      confirmText: 'Finalizar',
-      cancelText: 'Volver',
-      type: 'success'
-    });
+  _updateNavigationInstructions(route) {
+    // Actualizar UI con instrucciones de OSRM
+    const currentPos = locationTracker.getLastPosition();
+    if (!currentPos) return;
 
-    if (!confirmed) return { success: false, cancelled: true };
+    const instruction = routingService.getCurrentInstruction(
+      [currentPos.lng, currentPos.lat]
+    );
 
-    const notes = await uiController.showInputModal({
-      title: 'Observaciones',
-      placeholder: '¿Alguna nota? (opcional)',
-      confirmText: 'Guardar'
-    });
-
-    return await tripManager.finishTrip(tripId, notes || '');
+    if (instruction) {
+      uiController.updateNavigationDisplay({
+        text: instruction.current?.text,
+        distance: instruction.current?.distance,
+        type: instruction.current?.type,
+        next: instruction.next
+      });
+    }
   }
 
-  async _handleCancelWithConfirmation(tripId) {
-    const confirmed = await uiController.showConfirmationModal({
-      title: '¿Cancelar viaje?',
-      message: 'Esta acción afectará tu reputación',
-      confirmText: 'Sí, cancelar',
-      cancelText: 'Continuar',
-      type: 'danger'
-    });
-
-    if (!confirmed) {
-      // CORRECCIÓN: Asegurar que el loading se oculte si se cancela la confirmación
-      return { success: false, cancelled: true };
-    }
-
-    const reason = await uiController.showInputModal({
-      title: 'Motivo de cancelación',
-      placeholder: 'Indica el motivo',
-      required: true
-    });
-
-    if (!reason) {
-      // CORRECCIÓN: Asegurar que el loading se oculte si no se proporciona motivo
-      return { success: false, error: 'Motivo requerido', cancelled: true };
-    }
-
-    return await tripManager.cancelTrip(tripId, reason);
-  }
-
-  async _runTripActionLock(tripId, fn) {
-    const key = String(tripId || 'global');
-    if (this._handlingTripAction.has(key)) {
-      return { success: false, error: 'Acción en progreso...' };
-    }
-
-    this._handlingTripAction.add(key);
-    uiController.setGlobalLoading(true);
-
+  async _acceptTrip(tripId) {
+    uiController.setGlobalLoading(true, 'Aceptando viaje...');
     try {
-      const result = await fn();
-      return result;
-    } catch (error) {
-      console.error('Error en acción de viaje:', error);
-      return { success: false, error: error.message || 'Error desconocido' };
+      const result = await tripManager.acceptTrip(tripId);
+      if (!result.success) {
+        uiController.showToast(result.error || 'No se pudo aceptar', 'error');
+      }
     } finally {
-      this._handlingTripAction.delete(key);
-      // CORRECCIÓN: Asegurar que el loading siempre se oculte
       uiController.setGlobalLoading(false);
     }
   }
 
-  _onPositionUpdate(position) {
-    if (!position) return;
-
-    if (this.mapReady) {
-      try {
-        mapService.updateDriverPosition(position.lng, position.lat, position.heading);
-      } catch (e) {}
-    }
-
-    const currentTrip = tripManager.getCurrentTrip?.();
-    if (currentTrip?.estado === CONFIG.ESTADOS.EN_CURSO) {
-      this._updateNavigationInfo(position, currentTrip);
-    }
-  }
-
-  _updateNavigationInfo(position, trip) {
-    if (!this.mapReady || !trip?.destino_lat || !trip?.destino_lng) return;
-
+  async _rejectTrip(tripId) {
     try {
-      const distance = mapService.constructor.calculateDistance(
-        position.lat, position.lng,
-        trip.destino_lat, trip.destino_lng
-      );
-
-      uiController.updateNavigationDistance(distance);
-
-      if (this._audioInitialized) {
-        soundManager.vibrateArrival(distance);
-      }
-
-      if (distance < 50 && !this._arrivalAnnounced) {
-        this._arrivalAnnounced = true;
-        if (this._audioInitialized) {
-          soundManager.speak('Has llegado al destino.', 'urgent');
-          soundManager.notify('arrival');
-        }
-      } else if (distance > 100) {
-        this._arrivalAnnounced = false;
-      }
-    } catch (e) {}
+      await tripManager.rejectTrip(tripId);
+      uiController.hideIncomingModal();
+      uiController.showWaitingState();
+    } catch (e) {
+      console.error('Error rechazando:', e);
+    }
   }
 
-  _showTripOnMap(trip) {
-    if (!this.mapReady || !trip) return;
+  _onPositionUpdate(position) {
+    // Actualizar marcador del conductor
+    mapService.updateDriverPosition(position.lng, position.lat, position.heading);
+
+    // Si hay viaje en curso, actualizar navegación
+    const currentTrip = tripManager.getCurrentTrip();
+    if (currentTrip?.estado === CONFIG.ESTADOS.EN_CURSO) {
+      this._checkArrival(position, currentTrip);
+      this._updateNavigationInstructions(routingService.currentRoute);
+    }
+  }
+
+  _checkArrival(position, trip) {
+    const distance = this._calculateDistance(
+      position.lat, position.lng,
+      trip.destino_lat, trip.destino_lng
+    );
+
+    // Mostrar panel de llegada si está cerca
+    if (distance < 100) {
+      uiController.showArrival();
+    }
+  }
+
+  _calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c;
+  }
+
+  _bindUI() {
+    // Botón de disponibilidad
+    document.getElementById('btnToggleDisponibilidad')?.addEventListener('click', async () => {
+      const driverId = supabaseService.getCurrentDriverId();
+      this._onlineStatus = !this._onlineStatus;
+      
+      await supabaseService.setDriverAvailability(driverId, this._onlineStatus);
+      uiController.updateDriverState('ONLINE', this._onlineStatus);
+      uiController.showToast(this._onlineStatus ? 'Online' : 'Offline', 'success');
+    });
+
+    // Escuchar acciones de UI
+    document.addEventListener('driverAction', (e) => {
+      this._handleAction(e.detail.action, e.detail.tripId);
+    });
+  }
+
+  async _handleAction(action, tripId) {
+    switch (action) {
+      case 'accept':
+        await this._acceptTrip(tripId);
+        break;
+      case 'reject':
+        await this._rejectTrip(tripId);
+        break;
+      case 'start':
+        await tripManager.startTrip(tripId);
+        break;
+      case 'finish':
+        await tripManager.finishTrip(tripId);
+        break;
+      case 'cancel':
+        await tripManager.cancelTrip(tripId, 'Cancelado por conductor');
+        break;
+      case 'navigate':
+        this._openExternalNav(tripId);
+        break;
+      case 'whatsapp':
+        this._openWhatsApp(tripId);
+        break;
+    }
+  }
+
+  _openExternalNav(tripId) {
+    const trip = tripManager.getCurrentTrip();
+    if (!trip) return;
     
-    if (typeof trip.origen_lat === 'number' && typeof trip.origen_lng === 'number' &&
-        typeof trip.destino_lat === 'number' && typeof trip.destino_lng === 'number') {
-      try {
-        mapService.showTripRoute(
-          { lat: trip.origen_lat, lng: trip.origen_lng },
-          { lat: trip.destino_lat, lng: trip.destino_lng }
-        );
-      } catch (e) {}
-    }
-  }
-
-  _clearTripFromMap() {
-    if (!this.mapReady) return;
-    try { mapService.clearTripMarkers(); } catch (e) {}
-  }
-
-  _openWhatsApp(tripId = null) {
-    const targetTrip = this._findTripById(tripId);
-    if (!targetTrip?.telefono) {
-      uiController.showToast('No hay teléfono disponible', 'warning');
-      return;
-    }
-
-    const phone = String(targetTrip.telefono).replace(/\D/g, '');
-    const message = encodeURIComponent('Hola, soy tu conductor de MIMI. Ya estoy en camino. 🚐');
-    window.open(`https://wa.me/${phone}?text=${message}`, '_blank', 'noopener,noreferrer');
-  }
-
-  _openExternalNavigation(tripId = null) {
-    const targetTrip = this._findTripById(tripId);
-    if (!targetTrip?.destino_lat || !targetTrip?.destino_lng) {
-      uiController.showToast('Coordenadas no disponibles', 'warning');
-      return;
-    }
-
-    const { destino_lat, destino_lng, destino } = targetTrip;
-    const label = encodeURIComponent(destino || 'Destino MIMI');
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    
-    const url = isIOS 
-      ? `http://maps.apple.com/?daddr=${destino_lat},${destino_lng}&q=${label}`
-      : `https://www.google.com/maps/dir/?api=1&destination=${destino_lat},${destino_lng}`;
-
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${trip.destino_lat},${trip.destino_lng}`;
     window.open(url, '_blank');
   }
 
-  _findTripById(tripId) {
-    const currentTrip = tripManager.getCurrentTrip?.();
-    const pendingTrip = tripManager.getPendingTrip?.();
+  _openWhatsApp(tripId) {
+    const trip = tripManager.getCurrentTrip();
+    if (!trip?.telefono) return;
     
-    if (currentTrip?.id === tripId) return currentTrip;
-    if (pendingTrip?.id === tripId) return pendingTrip;
-    return currentTrip || pendingTrip;
-  }
-
-  _renderInitialState() {
-    const currentTrip = tripManager.getCurrentTrip?.();
-    const pendingTrip = tripManager.getPendingTrip?.();
-
-    if (currentTrip) {
-      this._setState('BUSY');
-      this._currentTripId = currentTrip.id;
-      uiController.renderActiveTrip(currentTrip);
-      this._showTripOnMap(currentTrip);
-    } else if (pendingTrip) {
-      uiController.renderAvailableTrips([pendingTrip]);
-    } else {
-      uiController.renderAvailableTrips([]);
-    }
-
-    uiController.updateStats(tripManager.getStats?.() || {});
-  }
-
-  _updateDriverStatus() {
-    const statusEl = document.getElementById('estadoChofer');
-    if (!statusEl) return;
-
-    const statusText = !this.locationReady 
-      ? '⚠️ Sin GPS' 
-      : this._onlineStatus 
-        ? '🟢 ONLINE' 
-        : '🔴 OFFLINE';
-    
-    statusEl.textContent = statusText;
-    statusEl.className = this._onlineStatus ? 'status-online' : 'status-offline';
-  }
-
-  destroy() {
-    this.unsubscribers.forEach(unsub => {
-      try { unsub?.(); } catch (e) {}
-    });
-    this.unsubscribers = [];
-
-    if (this._driverActionBound) {
-      document.removeEventListener('driverAction', this._driverActionBound);
-    }
-    if (this._visibilityBound) {
-      document.removeEventListener('visibilitychange', this._visibilityBound);
-    }
-
-    try { locationTracker.stop(); } catch (e) {}
-    try { tripManager.destroy(); } catch (e) {}
-    try { mapService.destroy(); } catch (e) {}
+    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI. Ya estoy en camino 🚐');
+    window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
   }
 }
 
