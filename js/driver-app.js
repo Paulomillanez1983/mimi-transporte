@@ -18,42 +18,32 @@ class DriverApp {
     this.mapReady = false;
     this.locationReady = false;
     this.tripsReady = false;
+    this.lastIncomingTripId = null;
   }
 
   async init() {
     try {
-      // 1. Verificar autenticación
       if (!supabaseService.isAuthenticated()) {
         window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
 
-      // 2. Inicializar Supabase (CRÍTICO)
       const dbReady = await supabaseService.init();
       if (!dbReady) {
         throw new Error('No se pudo conectar a la base de datos');
       }
 
-      // 2.5. Asegurar fila del chofer
       const driverData = supabaseService.getCurrentDriverData() || {};
       await supabaseService.ensureDriverExists(driverData);
 
-      // 3. Inicializar UI (CRÍTICO)
       uiController.init();
 
-      // 4. Inicializar mapa (NO CRÍTICO)
       await this._safeInitMap();
-
-      // 5. Inicializar tracking de ubicación (SEMI-CRÍTICO)
       await this._safeInitLocation();
-
-      // 6. Inicializar gestión de viajes (CRÍTICO OPERATIVO)
       await this._safeInitTrips();
 
-      // 7. Suscribirse a eventos
       this._subscribeToEvents();
 
-      // 8. Activar audio en primera interacción
       document.body.addEventListener(
         'click',
         () => {
@@ -66,30 +56,29 @@ class DriverApp {
         { once: true }
       );
 
-this.initialized = true;
+      this.initialized = true;
 
-// Reflejar estado visual del chofer
-const estadoChofer = document.getElementById('estadoChofer');
-if (estadoChofer) {
-  estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
-}
+      const estadoChofer = document.getElementById('estadoChofer');
+      if (estadoChofer) {
+        estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
+      }
 
-// Reacomodar mapa en mobile después del layout final
-setTimeout(() => {
-  try {
-    mapService.resize();
-  } catch (e) {
-    console.warn('No se pudo redimensionar el mapa al iniciar:', e);
-  }
-}, 300);
+      setTimeout(() => {
+        try {
+          mapService.resize();
+        } catch (e) {
+          console.warn('No se pudo redimensionar el mapa al iniciar:', e);
+        }
+      }, 300);
 
-setTimeout(() => {
-  try {
-    mapService.resize();
-  } catch (e) {
-    console.warn('No se pudo redimensionar el mapa al iniciar:', e);
-  }
-}, 1200);
+      setTimeout(() => {
+        try {
+          mapService.resize();
+        } catch (e) {
+          console.warn('No se pudo redimensionar el mapa al iniciar:', e);
+        }
+      }, 1200);
+
       if (this.tripsReady) {
         if (this.mapReady && this.locationReady) {
           uiController.showToast('Panel listo', 'success');
@@ -147,8 +136,29 @@ setTimeout(() => {
   }
 
   _subscribeToEvents() {
+    // NUEVO: viajes disponibles también disparan solicitud entrante
+    this.unsubscribers.push(
+      tripManager.on('newAvailableTrip', (trip) => {
+        if (tripManager.getCurrentTrip()) return;
+        if (tripManager.getPendingTrip()) return;
+        if (!trip?.id) return;
+        if (this.lastIncomingTripId === trip.id) return;
+
+        this.lastIncomingTripId = trip.id;
+
+        uiController.showIncomingModal(
+          trip,
+          () => this._handleAcceptTrip(trip.id),
+          () => this._handleRejectTrip(trip.id)
+        );
+      })
+    );
+
     this.unsubscribers.push(
       tripManager.on('newPendingTrip', (trip) => {
+        if (!trip?.id) return;
+        this.lastIncomingTripId = trip.id;
+
         uiController.showIncomingModal(
           trip,
           () => this._handleAcceptTrip(trip.id),
@@ -318,7 +328,9 @@ setTimeout(() => {
       currentTrip &&
       currentTrip.estado === CONFIG.ESTADOS.EN_CURSO &&
       this.mapReady &&
-      typeof mapService.constructor.calculateDistance === 'function'
+      typeof mapService.constructor.calculateDistance === 'function' &&
+      typeof currentTrip.destino_lat === 'number' &&
+      typeof currentTrip.destino_lng === 'number'
     ) {
       try {
         const distance = mapService.constructor.calculateDistance(
