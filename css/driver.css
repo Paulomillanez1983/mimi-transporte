@@ -137,12 +137,14 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--bg-card);
+  background: rgba(20,20,22,0.96);
+  backdrop-filter: blur(22px);
+  border-top: 1px solid rgba(255,255,255,0.06);
   border-radius: 24px 24px 0 0;
   max-height: min(82vh, calc(var(--app-vh, 1vh) * 82));
   min-height: 118px;
   padding-bottom: max(var(--sab), 10px);
-  transform: translateY(calc(100% - 118px));
+  transform: translate3d(0, calc(100% - 118px), 0);
   transition: transform 0.3s ease;
   box-shadow: var(--shadow-lg);
   display: flex;
@@ -151,8 +153,9 @@ body {
   z-index: 30;
 }
 .trip-panel.expanded {
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0);
 }
+
 /* SCROLL */
 .panel-content {
   overflow-y: auto;
@@ -531,10 +534,12 @@ body {
   background: rgba(0,0,0,0.28);
   pointer-events: none;
 }
+.incoming-modal.show,
 .incoming-modal.active {
   display: flex;
   pointer-events: auto;
 }
+
 .incoming-modal-card {
   width: 100%;
   max-width: 420px;
@@ -600,7 +605,7 @@ body {
 
 .trip-panel {
   border-radius: 26px 26px 0 0;
-  transform: translateY(calc(100% - 126px));
+  transform: translate3d(0, calc(100% - 126px), 0);
   max-height: min(78vh, calc(var(--app-vh, 1vh) * 78));
   min-height: 126px;
 }
@@ -649,14 +654,6 @@ body {
 .incoming-modal {
   width: 100%;
   max-width: 100vw;
-}
-
-.trip-panel,
-.incoming-modal,
-.header-float,
-.stats-float,
-.nav-panel,
-.toast {
 }
 
 .panel-content {
