@@ -227,69 +227,118 @@
     const SUPABASE_URL = 'https://xrphpqmutvadjrucqicn.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM';
 
-    // Inicializar Supabase
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Inicializar Supabase
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
-    // ========== MANEJAR SESIÓN AL CARGAR (incluye redirect de Google) ==========
-    async function initAuth() {
-      // Mostrar loading si viene de redirect
-      const urlParams = new URLSearchParams(window.location.search);
-      const hasAuthParams = urlParams.has('code') || urlParams.has('access_token');
-      
-      if (hasAuthParams) {
-        document.getElementById('loading').style.display = 'block';
-      }
+// Detecta automáticamente la URL actual (localhost o GitHub Pages)
+function getRedirectURL() {
+  return `${window.location.origin}${window.location.pathname}`;
+}
 
-      // Esperar a que Supabase procese el redirect
-      const { data: { session }, error } = await supabaseClient.auth.getSession();
-      
-      if (error) {
-        console.error('Error de sesión:', error);
-        mostrarError('Error al iniciar sesión: ' + error.message);
-        document.getElementById('loading').style.display = 'none';
-        return;
-      }
+// Guardar datos de sesión del chofer
+function persistirChofer(user) {
+  localStorage.setItem('choferLogueado', 'true');
+  localStorage.setItem('choferUsuario', user.email || '');
+  localStorage.setItem('choferNombre', user.user_metadata?.full_name || user.email || '');
+  localStorage.setItem('choferFoto', user.user_metadata?.avatar_url || '');
+  localStorage.setItem('choferId', user.id || '');
+  localStorage.setItem('choferAuthProvider', 'google');
+}
 
-      if (session) {
-        // Usuario logueado con Google
-        const user = session.user;
-        
-        localStorage.setItem('choferLogueado', 'true');
-        localStorage.setItem('choferUsuario', user.email);
-        localStorage.setItem('choferNombre', user.user_metadata?.full_name || user.email);
-        localStorage.setItem('choferFoto', user.user_metadata?.avatar_url || '');
-        localStorage.setItem('choferId', user.id);
-        localStorage.setItem('choferAuthProvider', 'google');
-        
-        // Limpiar URL y redirigir
-        window.history.replaceState({}, document.title, window.location.pathname);
-        window.location.href = 'chofer-panel.html';
-        return;
-      }
+// ========== MANEJAR SESIÓN AL CARGAR ==========
+async function initAuth() {
+  try {
+    const loadingEl = document.getElementById('loading');
 
-      document.getElementById('loading').style.display = 'none';
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    const vieneDeOAuth =
+      hash.includes('access_token') ||
+      hash.includes('refresh_token') ||
+      search.includes('code=');
+
+    if (vieneDeOAuth && loadingEl) {
+      loadingEl.style.display = 'block';
     }
 
-    // Ejecutar al cargar
-    initAuth();
+    // IMPORTANTE:
+    // Esto permite que Supabase procese correctamente el callback OAuth
+    const {
+      data: { session },
+      error
+    } = await supabaseClient.auth.getSession();
 
-    // ========== LOGIN CON GOOGLE ==========
-    async function loginConGoogle() {
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: 'https://paulomillanez1983.github.io/mimi-transporte/login-chofer.html'
-          }
-        });
-
-        if (error) throw error;
-      } catch (error) {
-        console.error('Error:', error);
-        mostrarError('Error al conectar con Google: ' + error.message);
-      }
+    if (error) {
+      console.error('Error obteniendo sesión:', error);
+      mostrarError('Error al recuperar la sesión: ' + error.message);
+      if (loadingEl) loadingEl.style.display = 'none';
+      return;
     }
 
+    if (session?.user) {
+      persistirChofer(session.user);
+
+      // Limpiar la URL para que no queden tokens visibles
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      // Redirigir al panel
+      window.location.replace('chofer-panel.html');
+      return;
+    }
+
+    if (loadingEl) loadingEl.style.display = 'none';
+  } catch (err) {
+    console.error('Error en initAuth:', err);
+    mostrarError('No se pudo completar el inicio de sesión.');
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) loadingEl.style.display = 'none';
+  }
+}
+
+// Escuchar cambios reales de sesión (más robusto)
+supabaseClient.auth.onAuthStateChange((event, session) => {
+  console.log('Auth event:', event);
+
+  if (session?.user) {
+    persistirChofer(session.user);
+
+    // Evitar que queden tokens en hash
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    if (!window.location.pathname.includes('chofer-panel.html')) {
+      window.location.replace('chofer-panel.html');
+    }
+  }
+});
+
+// Ejecutar al cargar
+initAuth();
+
+// ========== LOGIN CON GOOGLE ==========
+async function loginConGoogle() {
+  try {
+    const redirectURL = getRedirectURL();
+
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectURL,
+        skipBrowserRedirect: false
+      }
+    });
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error en login Google:', error);
+    mostrarError('Error al conectar con Google: ' + error.message);
+  }
+}
     // ========== LOGIN TRADICIONAL ==========
     function loginChofer(event) {
       event.preventDefault();
