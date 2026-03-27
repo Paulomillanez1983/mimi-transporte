@@ -117,31 +117,43 @@ class UIController {
   // =========================================
   // VIAJES DISPONIBLES
   // =========================================
-  renderAvailableTrips(trips) {
-    const container = this.elements.tripList;
-    const panel = this.elements.tripPanel;
+renderAvailableTrips(trips) {
+  const container = this.elements.tripList;
+  const panel = this.elements.tripPanel;
 
-    if (!container) return;
+  if (!container) return;
 
-    if (panel) {
-      panel.classList.remove('has-trip');
-    }
-
-    this.hideNavigation();
-
-    if (!Array.isArray(trips) || trips.length === 0) {
-      container.innerHTML = this._getEmptyStateHTML();
-      return;
-    }
-
-    // Ordenar por más reciente
-    const orderedTrips = [...trips].sort((a, b) => {
-      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-    });
-
-    container.innerHTML = orderedTrips.map(t => this._createTripCardHTML(t)).join('');
+  if (panel) {
+    panel.classList.remove('has-trip');
   }
 
+  this.hideNavigation();
+
+  const safeTrips = Array.isArray(trips) ? trips : [];
+
+  if (safeTrips.length === 0) {
+    container.innerHTML = this._getEmptyStateHTML();
+
+    // Si no hay viajes, dejamos el panel semi-colapsado
+    if (panel) {
+      panel.classList.remove('expanded');
+    }
+
+    return;
+  }
+
+  // Ordenar por más reciente
+  const orderedTrips = [...safeTrips].sort((a, b) => {
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
+
+  container.innerHTML = orderedTrips.map(t => this._createTripCardHTML(t)).join('');
+
+  // AUTO-ABRIR si hay viajes
+  if (panel) {
+    panel.classList.add('expanded');
+  }
+}
   // =========================================
   // VIAJE ACTIVO
   // =========================================
