@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>MIMI Driver</title>
+  <title>MIMI Driver - Modo Uber</title>
   
   <!-- MapLibre -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" />
@@ -38,117 +38,84 @@
     html, body {
       background: var(--bg-primary);
       color: var(--text-primary);
-      min-height: 100vh;
-      overflow-x: hidden;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    body {
-      padding-bottom: 100px;
-    }
-
-    /* HEADER UBER-STYLE */
-    .header {
-      background: var(--bg-primary);
-      border-bottom: 1px solid var(--border);
-      padding: 16px;
-      position: sticky;
+    /* MAPA FULLSCREEN - ESTILO UBER */
+    #mainMap {
+      position: fixed;
       top: 0;
-      z-index: 100;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1;
     }
 
-    .header-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
+    /* UI SUPERPOSICIONADA */
+    .ui-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10;
+      pointer-events: none;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
+    .ui-layer > * {
+      pointer-events: auto;
     }
 
-    .brand-icon {
-      width: 48px;
-      height: 48px;
-      background: var(--accent);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-    }
-
-    .brand-text h1 {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-
-    .brand-text span {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    .logout-btn {
-      background: var(--bg-card);
-      color: var(--danger);
-      border: 1px solid var(--border);
-      padding: 10px 16px;
-      border-radius: 20px;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .logout-btn:active {
-      transform: scale(0.95);
-      opacity: 0.8;
-    }
-
-    /* DRIVER STATUS CARD */
-    .driver-card {
-      background: var(--bg-card);
+    /* HEADER FLOTANTE */
+    .header-float {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      background: rgba(28, 28, 30, 0.95);
+      backdrop-filter: blur(20px);
       border-radius: 16px;
       padding: 16px;
       display: flex;
       align-items: center;
-      gap: 14px;
-      border: 1px solid var(--border);
+      gap: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
 
-    .driver-avatar {
-      width: 56px;
-      height: 56px;
+    .driver-mini {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .driver-mini-avatar {
+      width: 44px;
+      height: 44px;
       background: linear-gradient(135deg, var(--accent), var(--accent-light));
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
+      font-size: 20px;
     }
 
-    .driver-info {
-      flex: 1;
-    }
-
-    .driver-name {
-      font-weight: 700;
+    .driver-mini-info h3 {
       font-size: 16px;
-      margin-bottom: 4px;
+      font-weight: 700;
     }
 
-    .driver-status {
+    .driver-mini-info p {
+      font-size: 13px;
+      color: var(--success);
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 14px;
-      color: var(--success);
     }
 
-    .driver-status::before {
+    .driver-mini-info p::before {
       content: '';
       width: 8px;
       height: 8px;
@@ -157,92 +124,70 @@
       animation: pulse 2s infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .status-badge {
-      background: var(--success);
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: none;
       color: white;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    /* STATS BAR */
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 16px;
-      margin: 0 16px;
-    }
-
-    .stat {
-      background: var(--bg-card);
-      border-radius: 16px;
-      padding: 16px;
-      text-align: center;
-      border: 1px solid var(--border);
-    }
-
-    .stat-number {
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--accent);
-      margin-bottom: 4px;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-    }
-
-    /* FILTERS */
-    .filters {
-      display: flex;
-      gap: 8px;
-      padding: 0 16px 16px;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    .filters::-webkit-scrollbar { display: none; }
-
-    .filter-btn {
-      padding: 10px 20px;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      background: var(--bg-card);
-      color: var(--text-secondary);
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 18px;
       cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .filter-btn.active {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
-
-    /* TRIP CARDS */
-    .trips-list {
-      padding: 0 16px;
-    }
-
-    .trip-card {
+    /* PANEL INFERIOR DE VIAJES */
+    .trip-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
       background: var(--bg-card);
+      border-radius: 24px 24px 0 0;
+      max-height: 70vh;
+      transform: translateY(calc(100% - 80px));
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
+    }
+
+    .trip-panel.expanded {
+      transform: translateY(0);
+    }
+
+    .trip-panel.has-trip {
+      transform: translateY(0);
+    }
+
+    .panel-handle {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .panel-handle::before {
+      content: '';
+      width: 40px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .panel-content {
+      padding: 0 20px 20px;
+      max-height: calc(70vh - 40px);
+      overflow-y: auto;
+    }
+
+    /* CARD DE VIAJE ESTILO UBER */
+    .trip-card-uber {
+      background: var(--bg-secondary);
       border-radius: 20px;
+      padding: 20px;
       margin-bottom: 16px;
-      overflow: hidden;
       border: 1px solid var(--border);
       animation: slideUp 0.4s ease-out;
     }
@@ -252,201 +197,142 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .trip-card::before {
-      content: '';
-      display: block;
-      height: 4px;
-      background: var(--accent);
-    }
-
-    .trip-card.disponible::before { background: var(--warning); }
-    .trip-card.aceptado::before { background: var(--accent); }
-    .trip-card.en-curso::before { background: var(--accent-light); }
-    .trip-card.completado::before { background: var(--success); }
-    .trip-card.cancelado::before { background: var(--danger); }
-
-    .trip-header {
-      padding: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .trip-date {
-      font-size: 13px;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-
-    .trip-status {
-      padding: 6px 12px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .status-disponible { background: rgba(255, 173, 13, 0.15); color: var(--warning); }
-    .status-aceptado { background: rgba(39, 110, 241, 0.15); color: var(--accent); }
-    .status-en-curso { background: rgba(62, 138, 255, 0.15); color: var(--accent-light); }
-    .status-completado { background: rgba(5, 148, 79, 0.15); color: var(--success); }
-    .status-cancelado { background: rgba(225, 25, 0, 0.15); color: var(--danger); }
-
-    .trip-body {
-      padding: 16px;
-    }
-
-    .client-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .client-avatar {
-      width: 44px;
-      height: 44px;
-      background: var(--bg-secondary);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 18px;
-      color: var(--accent);
-    }
-
-    .client-info h3 {
-      font-size: 16px;
-      font-weight: 700;
-      margin-bottom: 2px;
-    }
-
-    .client-info p {
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    /* ROUTE */
-    .route {
-      margin: 16px 0;
-    }
-
-    .route-stop {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-
-    .route-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      margin-top: 4px;
-      flex-shrink: 0;
-    }
-
-    .route-dot.pickup { background: var(--success); box-shadow: 0 0 0 4px rgba(5, 148, 79, 0.2); }
-    .route-dot.dropoff { background: var(--danger); box-shadow: 0 0 0 4px rgba(225, 25, 0, 0.2); }
-
-    .route-line {
-      width: 2px;
-      height: 24px;
-      background: var(--border);
-      margin-left: 5px;
-      margin-bottom: 4px;
-    }
-
-    .route-text {
-      flex: 1;
-      font-size: 15px;
-      line-height: 1.4;
-      color: var(--text-primary);
-    }
-
-    /* MAP */
-    .map-container {
-      height: 180px;
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      margin: 16px 0;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .map-container .maplibregl-map {
-      width: 100%;
-      height: 100%;
-    }
-
-    .map-placeholder {
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-secondary);
-      font-size: 13px;
-    }
-
-    /* TRIP INFO */
-    .trip-info {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-radius: 12px;
-      margin-bottom: 16px;
-    }
-
-    .info-item {
-      text-align: center;
-    }
-
-    .info-value {
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--text-primary);
-      margin-bottom: 2px;
-    }
-
-    .info-label {
-      font-size: 11px;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      font-weight: 600;
-    }
-
-    /* COUNTDOWN */
-    .countdown {
-      background: rgba(255, 173, 13, 0.1);
-      border: 1px solid rgba(255, 173, 13, 0.3);
-      color: var(--warning);
-      padding: 12px 16px;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 700;
+    .trip-status-bar {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
     }
 
-    /* ACTIONS */
-    .trip-actions {
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.disponible { background: var(--warning); }
+    .status-indicator.aceptado { background: var(--accent); }
+    .status-indicator.en-curso { background: var(--accent-light); }
+
+    .trip-timer {
+      margin-left: auto;
+      background: rgba(255, 173, 13, 0.15);
+      color: var(--warning);
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* RUTA VISUAL */
+    .route-visual {
       display: flex;
-      gap: 10px;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .route-dots {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot.pickup { 
+      background: var(--success); 
+      box-shadow: 0 0 0 4px rgba(5, 148, 79, 0.2);
+    }
+
+    .dot.dropoff { 
+      background: var(--danger);
+      box-shadow: 0 0 0 4px rgba(225, 25, 0, 0.2);
+    }
+
+    .line {
+      width: 2px;
+      height: 30px;
+      background: var(--border);
+      flex: 1;
+    }
+
+    .route-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .route-stop {
+      padding: 8px 0;
+    }
+
+    .route-stop h4 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .route-stop p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* INFO DEL CLIENTE */
+    .client-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+      border-radius: 12px;
+      margin: 16px 0;
+    }
+
+    .client-avatar {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .client-details h4 {
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .client-details p {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* BOTONES DE ACCIÓN */
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
     }
 
     .btn {
       flex: 1;
-      padding: 14px;
+      padding: 16px;
       border: none;
-      border-radius: 12px;
-      font-size: 15px;
+      border-radius: 14px;
+      font-size: 16px;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.2s;
@@ -464,13 +350,13 @@
     }
 
     .btn-secondary {
-      background: var(--bg-secondary);
-      color: var(--text-primary);
+      background: rgba(255,255,255,0.1);
+      color: white;
       border: 1px solid var(--border);
     }
 
     .btn-danger {
-      background: rgba(225, 25, 0, 0.1);
+      background: rgba(225, 25, 0, 0.15);
       color: var(--danger);
       border: 1px solid rgba(225, 25, 0, 0.3);
     }
@@ -480,69 +366,38 @@
       color: white;
     }
 
-    /* FLOATING BUTTONS */
-    .fab {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: var(--accent);
-      color: white;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-      box-shadow: 0 4px 20px rgba(39, 110, 241, 0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      transition: all 0.3s;
-    }
-
-    .fab.spinning {
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* MODAL */
-    .modal {
-      display: none;
+    /* MODAL DE VIAJE ENTRANTE - ESTILO UBER */
+    .incoming-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.9);
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
       z-index: 1000;
+      display: none;
       flex-direction: column;
       justify-content: flex-end;
-      backdrop-filter: blur(10px);
     }
 
-    .modal.active { display: flex; }
+    .incoming-overlay.active { display: flex; }
 
-    .modal-content {
+    .incoming-card {
       background: var(--bg-card);
-      border-radius: 24px 24px 0 0;
-      padding: 24px;
-      animation: slideUpModal 0.3s ease-out;
-      max-height: 90vh;
-      overflow-y: auto;
+      border-radius: 30px 30px 0 0;
+      padding: 30px;
+      animation: slideUpBig 0.4s ease-out;
     }
 
-    @keyframes slideUpModal {
+    @keyframes slideUpBig {
       from { transform: translateY(100%); }
       to { transform: translateY(0); }
     }
 
-    .modal-header {
+    .incoming-header {
       text-align: center;
       margin-bottom: 24px;
     }
 
-    .modal-icon {
+    .incoming-icon {
       width: 80px;
       height: 80px;
       background: linear-gradient(135deg, var(--warning), #FF9500);
@@ -561,7 +416,7 @@
       100% { box-shadow: 0 0 0 0 rgba(255, 173, 13, 0); }
     }
 
-    .timer-bar {
+    .countdown-bar {
       height: 4px;
       background: var(--border);
       border-radius: 2px;
@@ -569,56 +424,56 @@
       overflow: hidden;
     }
 
-    .timer-progress {
+    .countdown-progress {
       height: 100%;
       background: linear-gradient(90deg, var(--success), var(--warning), var(--danger));
       width: 100%;
       transition: width 1s linear;
     }
 
-    .modal-actions {
+    /* STATS FLOTANTES */
+    .stats-float {
+      position: absolute;
+      top: 100px;
+      right: 16px;
       display: flex;
-      gap: 12px;
-      margin-top: 24px;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .modal-actions .btn {
-      padding: 16px;
+    .stat-pill {
+      background: rgba(28, 28, 30, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 10px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .stat-pill span {
+      color: var(--accent);
+      font-size: 16px;
+      font-weight: 800;
     }
 
     /* EMPTY STATE */
-    .empty-state {
+    .empty-illustration {
       text-align: center;
-      padding: 60px 20px;
+      padding: 40px 20px;
       color: var(--text-secondary);
     }
 
-    .empty-state-icon {
+    .empty-illustration .icon {
       font-size: 64px;
       margin-bottom: 16px;
       opacity: 0.5;
     }
 
-    /* LOADING */
-    .loading {
-      text-align: center;
-      padding: 60px 20px;
-    }
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 16px;
-    }
-
-    /* NOTIFICATION */
+    /* TOAST */
     .toast {
       position: fixed;
-      top: 20px;
+      top: 100px;
       left: 50%;
       transform: translateX(-50%) translateY(-100px);
       background: var(--bg-card);
@@ -639,89 +494,172 @@
       opacity: 1;
     }
 
-    .toast.success { border-color: var(--success); }
-    .toast.error { border-color: var(--danger); }
-    .toast.warning { border-color: var(--warning); }
+    /* MARCADORES DEL MAPA */
+    .marker-driver {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border-radius: 50%;
+      border: 4px solid white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .marker-client {
+      width: 36px;
+      height: 36px;
+      background: var(--success);
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    .marker-destination {
+      width: 36px;
+      height: 36px;
+      background: var(--danger);
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    /* PANEL DE NAVEGACIÓN ACTIVA */
+    .nav-panel {
+      position: absolute;
+      top: 100px;
+      left: 16px;
+      right: 16px;
+      background: rgba(39, 110, 241, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 20px;
+      display: none;
+      animation: slideDown 0.3s ease-out;
+    }
+
+    .nav-panel.active { display: block; }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .nav-instruction {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .nav-arrow {
+      font-size: 40px;
+    }
+
+    .nav-text h3 {
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .nav-text p {
+      font-size: 15px;
+      opacity: 0.9;
+    }
+
+    .nav-distance {
+      margin-left: auto;
+      text-align: right;
+    }
+
+    .nav-distance .number {
+      font-size: 28px;
+      font-weight: 800;
+    }
+
+    .nav-distance .unit {
+      font-size: 13px;
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
 
-  <!-- HEADER -->
-  <header class="header">
-    <div class="header-top">
-      <div class="brand">
-        <div class="brand-icon">🚐</div>
-        <div class="brand-text">
-          <h1>MIMI Driver</h1>
-          <span>Transporte Escolar</span>
+  <!-- MAPA FULLSCREEN -->
+  <div id="mainMap"></div>
+
+  <!-- UI SUPERPOSICIONADA -->
+  <div class="ui-layer">
+    
+    <!-- HEADER -->
+    <div class="header-float">
+      <div class="driver-mini">
+        <div class="driver-mini-avatar">👤</div>
+        <div class="driver-mini-info">
+          <h3 id="driverName">Chofer MIMI</h3>
+          <p>En línea</p>
         </div>
       </div>
-      <button class="logout-btn" onclick="logout()">🚪 Salir</button>
+      <button class="btn-icon" onclick="togglePanel()">📋</button>
+      <button class="btn-icon" onclick="logout()" style="color: var(--danger);">🚪</button>
     </div>
-    
-    <div class="driver-card">
-      <div class="driver-avatar">👤</div>
-      <div class="driver-info">
-        <div class="driver-name" id="driverName">Chofer MIMI</div>
-        <div class="driver-status">Online</div>
+
+    <!-- STATS -->
+    <div class="stats-float">
+      <div class="stat-pill">Pendientes: <span id="statPendientes">0</span></div>
+      <div class="stat-pill">Hoy: <span id="statHoy">0</span></div>
+    </div>
+
+    <!-- PANEL DE NAVEGACIÓN (visible durante viaje) -->
+    <div class="nav-panel" id="navPanel">
+      <div class="nav-instruction">
+        <div class="nav-arrow" id="navArrow">⬆️</div>
+        <div class="nav-text">
+          <h3 id="navStreet">Calle Principal</h3>
+          <p id="navNext">Girar izquierda en 200m</p>
+        </div>
+        <div class="nav-distance">
+          <div class="number" id="navDistance">200</div>
+          <div class="unit">metros</div>
+        </div>
       </div>
-      <span class="status-badge">Activo</span>
     </div>
-  </header>
 
-  <!-- STATS -->
-  <div class="stats-bar">
-    <div class="stat">
-      <div class="stat-number" id="statPendientes">0</div>
-      <div class="stat-label">Pendientes</div>
+    <!-- PANEL INFERIOR DE VIAJES -->
+    <div class="trip-panel" id="tripPanel">
+      <div class="panel-handle" onclick="togglePanel()"></div>
+      <div class="panel-content" id="panelContent">
+        <!-- Contenido dinámico -->
+      </div>
     </div>
-    <div class="stat">
-      <div class="stat-number" id="statHoy">0</div>
-      <div class="stat-label">Hoy</div>
-    </div>
-    <div class="stat">
-      <div class="stat-number" id="statTotal">0</div>
-      <div class="stat-label">Total</div>
-    </div>
+
   </div>
 
-  <!-- FILTERS -->
-  <div class="filters">
-    <button class="filter-btn active" data-filter="TODOS" onclick="filter('TODOS')">Todos</button>
-    <button class="filter-btn" data-filter="DISPONIBLE" onclick="filter('DISPONIBLE')">Pendientes</button>
-    <button class="filter-btn" data-filter="ACEPTADO" onclick="filter('ACEPTADO')">Aceptados</button>
-    <button class="filter-btn" data-filter="EN_CURSO" onclick="filter('EN_CURSO')">En curso</button>
-    <button class="filter-btn" data-filter="COMPLETADO" onclick="filter('COMPLETADO')">Completados</button>
-  </div>
-
-  <!-- TRIPS LIST -->
-  <div class="trips-list" id="tripsList">
-    <div class="loading">
-      <div class="spinner"></div>
-      <p style="color: var(--text-secondary);">Cargando viajes...</p>
-    </div>
-  </div>
-
-  <!-- FLOATING BUTTON -->
-  <button class="fab" id="refreshBtn" onclick="loadTrips()">🔄</button>
-
-  <!-- MODAL -->
-  <div class="modal" id="incomingModal">
-    <div class="modal-content">
-      <div class="timer-bar">
-        <div class="timer-progress" id="timerProgress"></div>
+  <!-- MODAL DE VIAJE ENTRANTE -->
+  <div class="incoming-overlay" id="incomingModal">
+    <div class="incoming-card">
+      <div class="countdown-bar">
+        <div class="countdown-progress" id="countdownProgress"></div>
       </div>
       
-      <div class="modal-header">
-        <div class="modal-icon">🚐</div>
-        <h2 style="font-size: 24px; margin-bottom: 8px;">¡Nuevo viaje!</h2>
-        <p style="color: var(--text-secondary);">Decidí en <span id="timerText" style="color: var(--warning); font-weight: 800;">30</span> segundos</p>
+      <div class="incoming-header">
+        <div class="incoming-icon">🚐</div>
+        <h2 style="font-size: 24px; margin-bottom: 8px;">¡Nuevo viaje disponible!</h2>
+        <p style="color: var(--text-secondary);">Decidí en <span id="countdownText" style="color: var(--warning); font-weight: 800;">30</span> segundos</p>
       </div>
 
-      <div id="modalDetails"></div>
+      <div id="incomingDetails"></div>
 
-      <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="rejectTrip()" style="flex: 1;">Rechazar</button>
+      <div class="action-buttons" style="margin-top: 24px;">
+        <button class="btn btn-secondary" onclick="rejectTrip()">Rechazar</button>
         <button class="btn btn-primary" onclick="acceptTrip()" style="flex: 2;">Aceptar viaje</button>
       </div>
     </div>
@@ -732,22 +670,28 @@
 
   <script>
     // ==========================================
-    // CONFIG
+    // CONFIGURACIÓN
     // ==========================================
     const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM"; // REEMPLAZAR CON TU ANON KEY REAL
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
     
     let supabaseClient = null;
     let supabaseRest = null;
-    let tripsData = [];
+    let map = null;
+    let driverMarker = null;
+    let clientMarker = null;
+    let destinationMarker = null;
+    let routeLine = null;
+    
+    let currentTrip = null;
     let pendingTrip = null;
-    let timerInterval = null;
-    let currentFilter = 'TODOS';
-    let maps = {};
-    let userInteracted = false;
+    let watchId = null;
+    let countdownInterval = null;
+    let tripsData = [];
+    let isPanelExpanded = false;
 
     // ==========================================
-    // INIT
+    // INICIALIZACIÓN
     // ==========================================
     function initSupabase() {
       if (typeof window.supabase === 'undefined') return false;
@@ -789,46 +733,154 @@
     }
 
     // ==========================================
-    // MAPS
+    // MAPA
     // ==========================================
-    function initMap(tripId, origen, destino) {
-      if (!origen?.lat || !destino?.lat) return;
-      
-      const container = document.getElementById(`map-${tripId}`);
-      if (!container || maps[tripId]) return;
+    function initMap() {
+      map = new maplibregl.Map({
+        container: 'mainMap',
+        style: 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json',
+        center: [-64.1888, -31.4201], // Córdoba, Argentina
+        zoom: 14,
+        attributionControl: false
+      });
 
-      try {
-        const map = new maplibregl.Map({
-          container: container,
-          style: 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json',
-          center: [(origen.lng + destino.lng) / 2, (origen.lat + destino.lat) / 2],
-          zoom: 13,
-          attributionControl: false
-        });
+      map.on('load', () => {
+        // Marcador del chofer
+        const el = document.createElement('div');
+        el.className = 'marker-driver';
+        el.innerHTML = '🚐';
+        
+        driverMarker = new maplibregl.Marker({ element: el })
+          .setLngLat([-64.1888, -31.4201])
+          .addTo(map);
 
-        map.on('load', () => {
-          new maplibregl.Marker({ color: '#05944F' })
-            .setLngLat([origen.lng, origen.lat])
-            .addTo(map);
+        // Iniciar tracking de ubicación
+        startLocationTracking();
+      });
+    }
+
+    function startLocationTracking() {
+      if (!navigator.geolocation) return;
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
           
-          new maplibregl.Marker({ color: '#E11900' })
-            .setLngLat([destino.lng, destino.lat])
-            .addTo(map);
+          // Actualizar marcador del chofer
+          if (driverMarker) {
+            driverMarker.setLngLat([longitude, latitude]);
+          }
 
-          const bounds = new maplibregl.LngLatBounds()
-            .extend([origen.lng, origen.lat])
-            .extend([destino.lng, destino.lat]);
-          map.fitBounds(bounds, { padding: 50 });
+          // Si hay viaje en curso, actualizar ruta
+          if (currentTrip && currentTrip.estado === 'EN_CURSO') {
+            updateNavigation(latitude, longitude);
+          }
+
+          // Centrar mapa en el chofer
+          map.flyTo({ center: [longitude, latitude], zoom: 16, duration: 1000 });
+        },
+        (err) => console.error('Geolocation error:', err),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+
+    function showRoute(origen, destino) {
+      // Limpiar marcadores anteriores
+      if (clientMarker) clientMarker.remove();
+      if (destinationMarker) destinationMarker.remove();
+      if (routeLine) map.removeLayer('route');
+
+      // Marcador de origen (cliente)
+      const clientEl = document.createElement('div');
+      clientEl.className = 'marker-client';
+      clientEl.innerHTML = '👤';
+      clientMarker = new maplibregl.Marker({ element: clientEl })
+        .setLngLat([origen.lng, origen.lat])
+        .addTo(map);
+
+      // Marcador de destino
+      const destEl = document.createElement('div');
+      destEl.className = 'marker-destination';
+      destEl.innerHTML = '🏁';
+      destinationMarker = new maplibregl.Marker({ element: destEl })
+        .setLngLat([destino.lng, destino.lat])
+        .addTo(map);
+
+      // Línea de ruta (simplificada - en producción usar routing API)
+      const coordinates = [
+        [origen.lng, origen.lat],
+        [destino.lng, destino.lat]
+      ];
+
+      if (map.getSource('route')) {
+        map.getSource('route').setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates }
         });
+      } else {
+        map.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates }
+          }
+        });
+        
+        map.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': '#276EF1', 'line-width': 4, 'line-opacity': 0.8 }
+        });
+      }
 
-        maps[tripId] = map;
-      } catch (e) {
-        console.error('Map error:', e);
+      // Ajustar vista para mostrar toda la ruta
+      const bounds = new maplibregl.LngLatBounds()
+        .extend([origen.lng, origen.lat])
+        .extend([destino.lng, destino.lat]);
+      map.fitBounds(bounds, { padding: 100 });
+    }
+
+    function updateNavigation(lat, lng) {
+      if (!currentTrip) return;
+      
+      // Calcular distancia al destino (simplificado)
+      const distance = calculateDistance(lat, lng, currentTrip.destino_lat, currentTrip.destino_lng);
+      
+      // Actualizar panel de navegación
+      document.getElementById('navDistance').textContent = Math.round(distance);
+      
+      // Cambiar instrucción según distancia
+      const navArrow = document.getElementById('navArrow');
+      const navNext = document.getElementById('navNext');
+      
+      if (distance < 50) {
+        navArrow.textContent = '🏁';
+        navNext.textContent = 'Has llegado al destino';
+      } else if (distance < 200) {
+        navArrow.textContent = '⬇️';
+        navNext.textContent = 'Preparate para detenerte';
       }
     }
 
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371e3; // Radio de la Tierra en metros
+      const φ1 = lat1 * Math.PI/180;
+      const φ2 = lat2 * Math.PI/180;
+      const Δφ = (lat2-lat1) * Math.PI/180;
+      const Δλ = (lng2-lng1) * Math.PI/180;
+
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+      return R * c;
+    }
+
     // ==========================================
-    // SOUND
+    // SONIDO
     // ==========================================
     const Sound = {
       ctx: null,
@@ -872,7 +924,7 @@
       },
 
       vibrate(pattern) {
-        if (navigator.vibrate && userInteracted) navigator.vibrate(pattern);
+        if (navigator.vibrate) navigator.vibrate(pattern);
       }
     };
 
@@ -884,6 +936,12 @@
       t.textContent = msg;
       t.className = `toast ${type} show`;
       setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function togglePanel() {
+      const panel = document.getElementById('tripPanel');
+      isPanelExpanded = !isPanelExpanded;
+      panel.classList.toggle('expanded', isPanelExpanded);
     }
 
     function normalizeState(s) {
@@ -899,76 +957,62 @@
     }
 
     function logout() {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
       localStorage.clear();
       location.href = 'login-chofer.html';
     }
 
     // ==========================================
-    // DATA
+    // DATOS Y RENDER
     // ==========================================
     async function loadTrips() {
-      const btn = document.getElementById('refreshBtn');
-      btn.classList.add('spinning');
-
       try {
         const driverId = getDriverId();
         
-        // Fetch all trip types in parallel
-        const [disponibles, aceptados, enCurso, completados] = await Promise.all([
-          supabaseRest.select('viajes', { eq: { estado: 'DISPONIBLE' }, order: 'created_at.desc' }),
-          supabaseRest.select('viajes', { eq: { estado: 'ACEPTADO', chofer_id: driverId }, order: 'aceptado_at.desc' }),
-          supabaseRest.select('viajes', { eq: { estado: 'EN_CURSO', chofer_id: driverId }, order: 'updated_at.desc' }),
-          supabaseRest.select('viajes', { eq: { estado: 'COMPLETADO', chofer_id: driverId }, order: 'completado_at.desc', limit: 20 })
-        ]);
-
-        // Check for new assigned trips
+        // Buscar viajes asignados primero
         const asignados = await supabaseRest.select('viajes', { 
           eq: { estado: 'ASIGNADO', chofer_id: driverId }, 
           order: 'asignado_at.desc',
           limit: 1 
         });
 
-        if (asignados[0] && !pendingTrip) {
+        if (asignados[0] && !pendingTrip && !currentTrip) {
           showIncomingModal(asignados[0]);
+          return;
         }
 
-        // Merge and deduplicate
-        const map = new Map();
-        [...disponibles, ...aceptados, ...enCurso, ...completados].forEach(t => {
-          if (t?.id) map.set(t.id, t);
-        });
-        
-        tripsData = Array.from(map.values());
-        
-        // Check for new available trips
-        const newTrips = tripsData.filter(t => 
-          normalizeState(t.estado) === 'DISPONIBLE' && 
-          !window.seenTrips?.has(t.id)
-        );
-        
-        if (newTrips.length > 0) {
-          Sound.play('new');
-          Sound.vibrate([100, 50, 100]);
-          newTrips.forEach(t => {
-            if (!window.seenTrips) window.seenTrips = new Set();
-            window.seenTrips.add(t.id);
-          });
-        }
+        // Cargar otros estados
+        const [disponibles, aceptados, enCurso] = await Promise.all([
+          supabaseRest.select('viajes', { eq: { estado: 'DISPONIBLE' }, order: 'created_at.desc' }),
+          supabaseRest.select('viajes', { eq: { estado: 'ACEPTADO', chofer_id: driverId }, order: 'aceptado_at.desc' }),
+          supabaseRest.select('viajes', { eq: { estado: 'EN_CURSO', chofer_id: driverId }, order: 'updated_at.desc' })
+        ]);
 
-        renderTrips();
+        // Determinar viaje activo
+        currentTrip = enCurso[0] || aceptados[0] || null;
+        
+        tripsData = [...disponibles, ...aceptados, ...enCurso];
+        
         updateStats();
+        renderTripCard();
+        
+        // Si hay viaje activo, mostrar ruta
+        if (currentTrip && currentTrip.origen_lat) {
+          showRoute(
+            { lat: currentTrip.origen_lat, lng: currentTrip.origen_lng },
+            { lat: currentTrip.destino_lat, lng: currentTrip.destino_lng }
+          );
+          
+          // Mostrar panel de navegación si está en curso
+          if (currentTrip.estado === 'EN_CURSO') {
+            document.getElementById('navPanel').classList.add('active');
+            document.getElementById('tripPanel').classList.add('has-trip');
+          }
+        }
 
       } catch (err) {
         console.error(err);
-        document.getElementById('tripsList').innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">⚠️</div>
-            <p>Error al cargar viajes</p>
-            <button class="btn btn-primary" onclick="loadTrips()" style="margin-top: 16px;">Reintentar</button>
-          </div>
-        `;
-      } finally {
-        btn.classList.remove('spinning');
+        showToast('Error al cargar viajes', 'error');
       }
     }
 
@@ -977,195 +1021,182 @@
       document.getElementById('statPendientes').textContent = 
         tripsData.filter(t => normalizeState(t.estado) === 'DISPONIBLE').length;
       document.getElementById('statHoy').textContent = 
-        tripsData.filter(t => new Date(t.fecha || t.created_at).toDateString() === hoy).length;
-      document.getElementById('statTotal').textContent = tripsData.length;
+        tripsData.filter(t => new Date(t.created_at).toDateString() === hoy).length;
     }
 
-    function filter(f) {
-      currentFilter = f;
-      document.querySelectorAll('.filter-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.filter === f);
-      });
-      renderTrips();
-    }
-
-    // ==========================================
-    // RENDER
-    // ==========================================
-    function renderTrips() {
-      const container = document.getElementById('tripsList');
+    function renderTripCard() {
+      const container = document.getElementById('panelContent');
       
-      let trips = tripsData;
-      if (currentFilter !== 'TODOS') {
-        trips = trips.filter(t => normalizeState(t.estado) === currentFilter);
-      }
+      if (!currentTrip) {
+        // Mostrar lista de disponibles o empty state
+        const disponibles = tripsData.filter(t => normalizeState(t.estado) === 'DISPONIBLE');
+        
+        if (disponibles.length === 0) {
+          container.innerHTML = `
+            <div class="empty-illustration">
+              <div class="icon">🚗</div>
+              <p>No hay viajes disponibles</p>
+              <p style="font-size: 13px; margin-top: 8px;">Esperando solicitudes...</p>
+            </div>
+          `;
+          return;
+        }
 
-      trips.sort((a, b) => {
-        const order = { 'DISPONIBLE': 0, 'ASIGNADO': 1, 'ACEPTADO': 2, 'EN_CURSO': 3, 'COMPLETADO': 4 };
-        const diff = (order[normalizeState(a.estado)] || 99) - (order[normalizeState(b.estado)] || 99);
-        if (diff !== 0) return diff;
-        return new Date(b.fecha || b.created_at) - new Date(a.fecha || a.created_at);
-      });
-
-      if (trips.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">🚗</div>
-            <p>No hay viajes ${currentFilter !== 'TODOS' ? 'en este estado' : ''}</p>
-          </div>
-        `;
+        // Lista de viajes disponibles
+        container.innerHTML = disponibles.map(t => createMiniCard(t)).join('');
         return;
       }
 
-      container.innerHTML = trips.map(t => createTripCard(t)).join('');
-      
-      // Initialize maps after render
-      setTimeout(() => {
-        trips.forEach(t => {
-          if (t.origen_lat && t.destino_lat) {
-            initMap(t.id, 
-              { lat: t.origen_lat, lng: t.origen_lng },
-              { lat: t.destino_lat, lng: t.destino_lng }
-            );
-          }
-        });
-      }, 100);
+      // Card del viaje activo
+      const t = currentTrip;
+      const estado = normalizeState(t.estado);
+      const isEnCurso = estado === 'EN_CURSO';
+
+      container.innerHTML = `
+        <div class="trip-card-uber">
+          <div class="trip-status-bar">
+            <div class="status-indicator ${estado.toLowerCase()}"></div>
+            <span style="font-weight: 700; text-transform: uppercase; font-size: 13px;">${estado.replace('_', ' ')}</span>
+            <span style="margin-left: auto; color: var(--text-secondary); font-size: 13px;">
+              ${new Date(t.fecha || t.created_at).toLocaleTimeString('es-AR', {hour: '2-digit', minute:'2-digit'})}
+            </span>
+          </div>
+
+          <div class="client-bar">
+            <div class="client-avatar">${escapeHtml((t.cliente || '?')[0])}</div>
+            <div class="client-details">
+              <h4>${escapeHtml(t.cliente || 'Sin nombre')}</h4>
+              <p>📱 ${escapeHtml(t.telefono || 'Sin teléfono')}</p>
+            </div>
+          </div>
+
+          <div class="route-visual">
+            <div class="route-dots">
+              <div class="dot pickup"></div>
+              <div class="line"></div>
+              <div class="dot dropoff"></div>
+            </div>
+            <div class="route-info">
+              <div class="route-stop">
+                <h4>${isEnCurso ? 'Recoger en' : 'Origen'}</h4>
+                <p>${escapeHtml(t.origen)}</p>
+              </div>
+              <div class="route-stop">
+                <h4>Destino</h4>
+                <p>${escapeHtml(t.destino)}</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; padding: 16px; background: rgba(255,255,255,0.05); border-radius: 12px;">
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: 800; color: var(--accent);">$${Number(t.precio || 0).toLocaleString('es-AR')}</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Precio</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: 800; color: var(--accent);">${t.km || 0} km</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Distancia</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: var(--accent);">${escapeHtml(t.tipo || 'Standard')}</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Servicio</div>
+            </div>
+          </div>
+
+          ${t.notas ? `<p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">📝 ${escapeHtml(t.notas)}</p>` : ''}
+
+          <div class="action-buttons">
+            ${isEnCurso ? `
+              <button class="btn btn-whatsapp" onclick="openWhatsApp('${t.telefono}')">WhatsApp</button>
+              <button class="btn btn-primary" onclick="finishTrip()">Finalizar</button>
+            ` : `
+              <button class="btn btn-secondary" onclick="cancelTrip()">Cancelar</button>
+              <button class="btn btn-primary" onclick="startTrip()">Iniciar viaje</button>
+            `}
+          </div>
+        </div>
+      `;
+
+      // Expandir panel automáticamente si hay viaje
+      document.getElementById('tripPanel').classList.add('has-trip');
     }
 
-    function createTripCard(t) {
-      const estado = normalizeState(t.estado);
-      const estadoClass = estado.toLowerCase();
-      const fecha = new Date(t.fecha || t.created_at).toLocaleString('es-AR', {
-        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-      });
-      
-      const hasCoords = t.origen_lat && t.destino_lat;
-      
-      let actions = '';
-      let countdown = '';
-      
-      if (estado === 'DISPONIBLE') {
-        const exp = new Date(t.created_at).getTime() + 2*60*1000;
-        const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
-        const min = Math.floor(rest / 60);
-        const seg = rest % 60;
-        
-        countdown = `<div class="countdown">⏱️ Disponible: ${min}:${seg.toString().padStart(2,'0')}</div>`;
-        actions = `
-          <button class="btn btn-primary" onclick="acceptTripId('${t.id}')">✓ Aceptar</button>
-          <button class="btn btn-danger" onclick="rejectTripId('${t.id}')">✕ Rechazar</button>
-        `;
-      } else if (estado === 'ACEPTADO') {
-        actions = `
-          <button class="btn btn-primary" onclick="startTrip('${t.id}')">🚀 Iniciar</button>
-          <a href="tel:${t.telefono}" class="btn btn-secondary">📞 Llamar</a>
-        `;
-      } else if (estado === 'EN_CURSO') {
-        const wa = String(t.telefono).replace(/\D/g, '');
-        actions = `
-          <button class="btn btn-primary" onclick="finishTrip('${t.id}')">✅ Finalizar</button>
-          <a href="https://wa.me/${wa}" target="_blank" class="btn btn-whatsapp">💬 WhatsApp</a>
-        `;
-      } else {
-        actions = `<button class="btn btn-secondary" onclick="openMaps('${t.origen}', '${t.destino}')">🗺️ Maps</button>`;
-      }
+    function createMiniCard(t) {
+      const exp = new Date(t.created_at).getTime() + 2*60*1000;
+      const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
+      const min = Math.floor(rest / 60);
+      const seg = rest % 60;
 
       return `
-        <div class="trip-card ${estadoClass}">
-          <div class="trip-header">
-            <span class="trip-date">${escapeHtml(fecha)}</span>
-            <span class="trip-status status-${estadoClass}">${estado.replace('_', ' ')}</span>
+        <div class="trip-card-uber" style="opacity: 0.9;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-weight: 700;">${escapeHtml(t.cliente || 'Sin nombre')}</span>
+            <span style="color: var(--warning); font-size: 13px; font-weight: 600;">
+              ⏱️ ${min}:${seg.toString().padStart(2,'0')}
+            </span>
           </div>
-          
-          <div class="trip-body">
-            <div class="client-row">
-              <div class="client-avatar">${escapeHtml((t.cliente || '?')[0])}</div>
-              <div class="client-info">
-                <h3>${escapeHtml(t.cliente || 'Sin nombre')}</h3>
-                <p>📱 ${escapeHtml(t.telefono || 'Sin teléfono')}</p>
-              </div>
-            </div>
-
-            <div class="route">
-              <div class="route-stop">
-                <div class="route-dot pickup"></div>
-                <div class="route-text">${escapeHtml(t.origen)}</div>
-              </div>
-              <div class="route-line"></div>
-              <div class="route-stop">
-                <div class="route-dot dropoff"></div>
-                <div class="route-text">${escapeHtml(t.destino)}</div>
-              </div>
-            </div>
-
-            ${hasCoords ? `<div class="map-container"><div id="map-${t.id}"></div></div>` : ''}
-
-            <div class="trip-info">
-              <div class="info-item">
-                <div class="info-value">$${Number(t.precio || 0).toLocaleString('es-AR')}</div>
-                <div class="info-label">Precio</div>
-              </div>
-              <div class="info-item">
-                <div class="info-value">${t.km || 0} km</div>
-                <div class="info-label">Distancia</div>
-              </div>
-              <div class="info-item">
-                <div class="info-value">${escapeHtml(t.tipo || 'Standard')}</div>
-                <div class="info-label">Servicio</div>
-              </div>
-            </div>
-
-            ${countdown}
-            ${t.notas ? `<p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">📝 ${escapeHtml(t.notas)}</p>` : ''}
-            
-            <div class="trip-actions">${actions}</div>
+          <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+            ${escapeHtml(t.origen)} → ${escapeHtml(t.destino)}
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; color: var(--accent);">$${Number(t.precio || 0).toLocaleString('es-AR')}</span>
+            <button class="btn btn-primary" style="padding: 10px 20px; font-size: 14px;" onclick="acceptTripId('${t.id}')">
+              Aceptar
+            </button>
           </div>
         </div>
       `;
     }
 
     // ==========================================
-    // MODAL
+    // MODAL ENTRANTE
     // ==========================================
     function showIncomingModal(trip) {
       pendingTrip = trip;
       const modal = document.getElementById('incomingModal');
-      const details = document.getElementById('modalDetails');
+      const details = document.getElementById('incomingDetails');
       
       details.innerHTML = `
-        <div style="background: var(--bg-secondary); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-            <div style="width: 56px; height: 56px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;">
-              ${escapeHtml((trip.cliente || '?')[0])}
+        <div class="client-bar" style="background: rgba(255,255,255,0.05);">
+          <div class="client-avatar" style="width: 56px; height: 56px; font-size: 24px;">
+            ${escapeHtml((trip.cliente || '?')[0])}
+          </div>
+          <div class="client-details">
+            <h4 style="font-size: 20px;">${escapeHtml(trip.cliente)}</h4>
+            <p style="font-size: 15px;">📱 ${escapeHtml(trip.telefono)}</p>
+          </div>
+        </div>
+
+        <div class="route-visual" style="margin: 20px 0;">
+          <div class="route-dots">
+            <div class="dot pickup"></div>
+            <div class="line"></div>
+            <div class="dot dropoff"></div>
+          </div>
+          <div class="route-info">
+            <div class="route-stop">
+              <h4>Origen</h4>
+              <p>${escapeHtml(trip.origen)}</p>
             </div>
-            <div>
-              <div style="font-weight: 700; font-size: 18px;">${escapeHtml(trip.cliente)}</div>
-              <div style="color: var(--text-secondary); font-size: 14px;">📱 ${escapeHtml(trip.telefono)}</div>
+            <div class="route-stop">
+              <h4>Destino</h4>
+              <p>${escapeHtml(trip.destino)}</p>
             </div>
           </div>
-          
-          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; font-size: 15px;">
-            <span style="color: var(--success);">●</span>
-            <span>${escapeHtml(trip.origen)}</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center;">
+          <div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--accent);">$${Number(trip.precio || 0).toLocaleString('es-AR')}</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">Precio</div>
           </div>
-          <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 15px;">
-            <span style="color: var(--danger);">●</span>
-            <span>${escapeHtml(trip.destino)}</span>
+          <div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--accent);">${trip.km || 0} km</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">Distancia</div>
           </div>
-          
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
-            <div style="text-align: center;">
-              <div style="font-size: 20px; font-weight: 800; color: var(--accent);">$${Number(trip.precio).toLocaleString('es-AR')}</div>
-              <div style="font-size: 11px; color: var(--text-secondary);">Precio</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 20px; font-weight: 800; color: var(--accent);">${trip.km}km</div>
-              <div style="font-size: 11px; color: var(--text-secondary);">Distancia</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 18px; font-weight: 800; color: var(--accent);">${escapeHtml(trip.tipo || 'Standard')}</div>
-              <div style="font-size: 11px; color: var(--text-secondary);">Servicio</div>
-            </div>
+          <div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--accent);">${escapeHtml(trip.tipo || 'Standard')}</div>
+            <div style="font-size: 12px; color: var(--text-secondary);">Servicio</div>
           </div>
         </div>
       `;
@@ -1174,28 +1205,31 @@
       Sound.play('new');
       Sound.vibrate([100, 50, 100, 50, 200]);
       
-      // Timer
+      // Countdown
       let seg = 30;
-      const bar = document.getElementById('timerProgress');
-      const txt = document.getElementById('timerText');
+      const bar = document.getElementById('countdownProgress');
+      const txt = document.getElementById('countdownText');
       
-      clearInterval(timerInterval);
+      clearInterval(countdownInterval);
       bar.style.width = '100%';
       setTimeout(() => bar.style.width = '0%', 50);
       
-      timerInterval = setInterval(() => {
+      countdownInterval = setInterval(() => {
         seg--;
         txt.textContent = seg;
         if (seg <= 0) {
-          clearInterval(timerInterval);
-          timeoutTrip();
+          clearInterval(countdownInterval);
+          rejectTrip();
         }
       }, 1000);
     }
 
+    // ==========================================
+    // ACCIONES
+    // ==========================================
     async function acceptTrip() {
       if (!pendingTrip) return;
-      clearInterval(timerInterval);
+      clearInterval(countdownInterval);
       
       try {
         await supabaseRest.update('viajes', pendingTrip.id, {
@@ -1205,8 +1239,21 @@
         });
         
         Sound.play('success');
-        closeModal();
+        document.getElementById('incomingModal').classList.remove('active');
         showToast('✓ Viaje aceptado', 'success');
+        
+        currentTrip = pendingTrip;
+        currentTrip.estado = 'ACEPTADO';
+        pendingTrip = null;
+        
+        // Mostrar ruta inmediatamente
+        if (currentTrip.origen_lat) {
+          showRoute(
+            { lat: currentTrip.origen_lat, lng: currentTrip.origen_lng },
+            { lat: currentTrip.destino_lat, lng: currentTrip.destino_lng }
+          );
+        }
+        
         loadTrips();
       } catch (err) {
         showToast('Error al aceptar', 'error');
@@ -1215,7 +1262,7 @@
 
     async function rejectTrip() {
       if (!pendingTrip) return;
-      clearInterval(timerInterval);
+      clearInterval(countdownInterval);
       
       try {
         await supabaseRest.update('viajes', pendingTrip.id, {
@@ -1224,27 +1271,15 @@
           rechazado_por: getDriverId()
         });
         
-        closeModal();
+        document.getElementById('incomingModal').classList.remove('active');
         showToast('Viaje rechazado', 'warning');
+        pendingTrip = null;
         loadTrips();
       } catch (err) {
         showToast('Error al rechazar', 'error');
       }
     }
 
-    function timeoutTrip() {
-      rejectTrip();
-      showToast('⏰ Tiempo agotado', 'warning');
-    }
-
-    function closeModal() {
-      document.getElementById('incomingModal').classList.remove('active');
-      pendingTrip = null;
-    }
-
-    // ==========================================
-    // ACTIONS
-    // ==========================================
     async function acceptTripId(id) {
       try {
         await supabaseRest.update('viajes', id, {
@@ -1260,50 +1295,77 @@
       }
     }
 
-    async function rejectTripId(id) {
-      if (!confirm('¿Rechazar este viaje?')) return;
+    async function startTrip() {
+      if (!currentTrip) return;
+      
       try {
-        await supabaseRest.update('viajes', id, {
-          estado: 'DISPONIBLE',
-          chofer_id: null,
-          rechazado_por: getDriverId()
+        await supabaseRest.update('viajes', currentTrip.id, { 
+          estado: 'EN_CURSO',
+          iniciado_at: new Date().toISOString()
         });
-        showToast('Viaje rechazado', 'warning');
-        loadTrips();
-      } catch (err) {
-        showToast('Error', 'error');
-      }
-    }
-
-    async function startTrip(id) {
-      try {
-        await supabaseRest.update('viajes', id, { estado: 'EN_CURSO' });
+        
         Sound.play('success');
-        showToast('Viaje iniciado', 'success');
+        showToast('🚀 Viaje iniciado', 'success');
+        
+        // Activar navegación
+        document.getElementById('navPanel').classList.add('active');
+        
         loadTrips();
       } catch (err) {
-        showToast('Error', 'error');
+        showToast('Error al iniciar', 'error');
       }
     }
 
-    async function finishTrip(id) {
-      const notas = prompt('¿Observaciones? (opcional)');
+    async function finishTrip() {
+      if (!currentTrip) return;
+      
+      const notas = prompt('¿Alguna observación del viaje?');
+      
       try {
-        await supabaseRest.update('viajes', id, {
+        await supabaseRest.update('viajes', currentTrip.id, {
           estado: 'COMPLETADO',
           completado_at: new Date().toISOString(),
           notas: notas || null
         });
+        
         Sound.play('success');
-        showToast('Viaje completado', 'success');
+        showToast('✅ Viaje completado', 'success');
+        
+        // Limpiar
+        document.getElementById('navPanel').classList.remove('active');
+        document.getElementById('tripPanel').classList.remove('has-trip');
+        
+        if (clientMarker) clientMarker.remove();
+        if (destinationMarker) destinationMarker.remove();
+        if (routeLine) map.removeLayer('route');
+        
+        currentTrip = null;
+        loadTrips();
+      } catch (err) {
+        showToast('Error al finalizar', 'error');
+      }
+    }
+
+    async function cancelTrip() {
+      if (!currentTrip || !confirm('¿Cancelar este viaje?')) return;
+      
+      try {
+        await supabaseRest.update('viajes', currentTrip.id, {
+          estado: 'CANCELADO',
+          cancelado_at: new Date().toISOString()
+        });
+        
+        showToast('Viaje cancelado', 'warning');
+        currentTrip = null;
         loadTrips();
       } catch (err) {
         showToast('Error', 'error');
       }
     }
 
-    function openMaps(origen, destino) {
-      window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`, '_blank');
+    function openWhatsApp(tel) {
+      const num = String(tel).replace(/\D/g, '');
+      window.open(`https://wa.me/${num}`, '_blank');
     }
 
     // ==========================================
@@ -1321,25 +1383,35 @@
         return;
       }
 
+      // Inicializar mapa primero
+      initMap();
+      
+      // Cargar datos
       await loadTrips();
       
-      // Realtime
+      // Realtime subscription
       supabaseClient.channel('trips')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'viajes' }, () => {
-          setTimeout(loadTrips, 500);
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'viajes' }, (payload) => {
+          // Si hay un nuevo ASIGNADO para este chofer, mostrar modal
+          if (payload.new.estado === 'ASIGNADO' && payload.new.chofer_id === getDriverId()) {
+            if (!pendingTrip && !currentTrip) {
+              showIncomingModal(payload.new);
+            }
+          } else {
+            setTimeout(loadTrips, 500);
+          }
         })
         .subscribe();
 
-      // User interaction for sound
+      // Sound init on first interaction
       document.body.addEventListener('click', () => {
-        userInteracted = true;
         if (!Sound.ctx) Sound.init();
       }, { once: true });
 
-      // Refresh countdowns
+      // Auto refresh
       setInterval(() => {
-        if (!document.hidden) renderTrips();
-      }, 1000);
+        if (!document.hidden && !pendingTrip) loadTrips();
+      }, 10000);
     });
   </script>
 </body>
