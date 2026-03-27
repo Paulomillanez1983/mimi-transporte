@@ -19,6 +19,8 @@ class UIController {
     this._panelHandleBound = false;
     this._loadingOverlay = null;
     this._swipeHandlers = new Map();
+    this._navigationMode = false;
+    this._arrivalShown = false;
   }
 
   // =========================
@@ -31,8 +33,8 @@ class UIController {
     this._bindIncomingButtons();
     this._bindPanelHandle();
     this._setupViewportFix();
-    this._createLoadingOverlay();
     this._bindKeyboardShortcuts();
+    this._bindArrivalActions();
 
     return this;
   }
@@ -42,7 +44,10 @@ class UIController {
       'toast', 'tripPanel', 'panelContent', 'tripList', 'incomingModal',
       'navPanel', 'statPendientes', 'statHoy', 'driverName', 'estadoChofer',
       'panelHandle', 'panelSubtitle', 'tripCountBadge', 'btnAcceptIncoming',
-      'btnRejectIncoming', 'panelTitle', 'mainMap', 'globalLoading'
+      'btnRejectIncoming', 'panelTitle', 'mainMap', 'globalLoading',
+      'navArrow', 'navStreet', 'navNext', 'navDistance',
+      'navInstructionBar', 'navInstructionIcon', 'navInstructionText',
+      'arrivalPanel', 'arrivalText', 'btnContinueNav', 'btnFinishTrip'
     ];
 
     ids.forEach(id => {
@@ -50,44 +55,39 @@ class UIController {
     });
   }
 
-  _createLoadingOverlay() {
-    if (document.getElementById('globalLoading')) return;
+  _bindArrivalActions() {
+    // Botón continuar navegación
+    this.elements.btnContinueNav?.addEventListener('click', () => {
+      this.hideArrivalPanel();
+    });
 
-    const overlay = document.createElement('div');
-    overlay.id = 'globalLoading';
-    overlay.className = 'global-loading';
-    overlay.innerHTML = `
-      <div class="loading-spinner"></div>
-      <span class="loading-text">Procesando...</span>
-    `;
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 16px;
-      z-index: 9999;
-      backdrop-filter: blur(4px);
-    `;
-    
-    document.body.appendChild(overlay);
-    this._loadingOverlay = overlay;
+    // Botón finalizar viaje desde panel de llegada
+    this.elements.btnFinishTrip?.addEventListener('click', () => {
+      this.hideArrivalPanel();
+      const event = new CustomEvent('driverAction', {
+        detail: { action: 'finish', tripId: this._currentTripId, timestamp: Date.now() }
+      });
+      document.dispatchEvent(event);
+    });
   }
 
   // =========================
-  // GLOBAL LOADING
+  // GLOBAL LOADING - CORREGIDO
   // =========================
   setGlobalLoading(show, text = 'Procesando...') {
-    if (!this._loadingOverlay) return;
+    const loading = this.elements.globalLoading;
+    if (!loading) return;
     
-    const textEl = this._loadingOverlay.querySelector('.loading-text');
+    const textEl = loading.querySelector('.loading-text');
     if (textEl) textEl.textContent = text;
     
-    this._loadingOverlay.style.display = show ? 'flex' : 'none';
-    document.body.style.overflow = show ? 'hidden' : '';
+    if (show) {
+      loading.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    } else {
+      loading.classList.remove('active');
+      document.body.style.overflow = '';
+    }
   }
 
   // =========================
@@ -622,9 +622,9 @@ class UIController {
 
     this.elements.tripCountBadge && (this.elements.tripCountBadge.textContent = '1');
     
-    if (this.elements.navPanel) {
-      this.elements.navPanel.classList.add('active');
-      this._updateNavigation(trip);
+    // Mostrar navegación si está en curso
+    if (isEnCurso) {
+      this.showNavigation(trip);
     }
 
     this.expandPanel();
@@ -776,12 +776,36 @@ class UIController {
   }
 
   // =========================
-  // NAVIGATION PANEL
+  // NAVIGATION PANEL - ESTILO GOOGLE MAPS
   // =========================
+  showNavigation(trip) {
+    this._navigationMode = true;
+    this._arrivalShown = false;
+    this._currentTripId = trip.id;
+    
+    // Mostrar panel principal de navegación
+    this.elements.navPanel?.classList.add('active');
+    
+    // Actualizar información inicial
+    this._updateNavigation(trip);
+    
+    // Ocultar panel de viaje para dar más espacio al mapa
+    this.collapsePanel();
+  }
+
+  hideNavigation() {
+    this._navigationMode = false;
+    this._arrivalShown = false;
+    
+    this.elements.navPanel?.classList.remove('active');
+    this.elements.navInstructionBar?.classList.remove('active');
+    this.hideArrivalPanel();
+  }
+
   _updateNavigation(trip) {
-    const navStreet = document.getElementById('navStreet');
-    const navNext = document.getElementById('navNext');
-    const navArrow = document.getElementById('navArrow');
+    const navStreet = this.elements.navStreet;
+    const navNext = this.elements.navNext;
+    const navArrow = this.elements.navArrow;
 
     const isEnCurso = trip.estado === 'EN_CURSO';
 
@@ -797,48 +821,80 @@ class UIController {
         : 'Dirígete al punto de recogida';
     }
 
-    if (navArrow) navArrow.textContent = isEnCurso ? '🏁' : '📍';
+    if (navArrow) {
+      // Cambiar icono según el contexto
+      navArrow.innerHTML = isEnCurso 
+        ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>';
+    }
   }
 
   updateNavigationDistance(distanceMeters) {
-    const navDistance = document.getElementById('navDistance');
-    const navNext = document.getElementById('navNext');
-    const navArrow = document.getElementById('navArrow');
+    const navDistance = this.elements.navDistance;
+    const navNext = this.elements.navNext;
+    const navArrow = this.elements.navArrow;
+    const navStreet = this.elements.navStreet;
 
     if (typeof distanceMeters !== 'number') return;
 
-    const formatted = distanceMeters < 1000
-      ? `${Math.round(distanceMeters)} m`
-      : `${(distanceMeters / 1000).toFixed(1)} km`;
+    // Formatear distancia
+    let formatted;
+    if (distanceMeters < 100) {
+      formatted = `${Math.round(distanceMeters)}<small>m</small>`;
+    } else if (distanceMeters < 1000) {
+      formatted = `${Math.round(distanceMeters)}<small>m</small>`;
+    } else {
+      formatted = `${(distanceMeters / 1000).toFixed(1)}<small>km</small>`;
+    }
 
     if (navDistance) {
-      navDistance.textContent = formatted;
+      navDistance.innerHTML = formatted;
       navDistance.classList.toggle('arriving', distanceMeters < 100);
     }
 
     if (navNext && navArrow) {
-      if (distanceMeters < 50) {
-        navArrow.textContent = '🏁';
-        navNext.textContent = '¡Has llegado!';
-        navNext.classList.add('arriving');
+      if (distanceMeters < 50 && !this._arrivalShown) {
+        // Mostrar panel de llegada
+        this._showArrivalPanel();
       } else if (distanceMeters < 200) {
-        navArrow.textContent = '⬇️';
+        // Preparación para llegada
+        navArrow.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>';
         navNext.textContent = 'Preparate para detenerte';
         navNext.classList.remove('arriving');
+        if (navStreet) navStreet.textContent = 'Llegando...';
       } else {
-        navArrow.textContent = '⬆️';
+        // Navegación normal
+        navArrow.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>';
         navNext.textContent = 'Continúa derecho';
         navNext.classList.remove('arriving');
       }
     }
   }
 
-  hideNavigation() {
-    this.elements.navPanel?.classList.remove('active');
+  _showArrivalPanel() {
+    this._arrivalShown = true;
+    
+    // Actualizar texto según el tipo de llegada
+    const arrivalText = this.elements.arrivalText;
+    if (arrivalText) {
+      arrivalText.textContent = 'Has llegado al destino. ¿Deseas finalizar el viaje?';
+    }
+    
+    this.elements.arrivalPanel?.classList.add('active');
+    
+    // Vibración y sonido de llegada
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 100, 100, 100, 500]);
+    }
+  }
+
+  hideArrivalPanel() {
+    this._arrivalShown = false;
+    this.elements.arrivalPanel?.classList.remove('active');
   }
 
   // =========================
-  // MODAL SYSTEM (Nuevo)
+  // MODAL SYSTEM
   // =========================
   showConfirmationModal(options = {}) {
     return new Promise((resolve) => {
