@@ -372,8 +372,12 @@ class UIController {
       console.warn('No se pudo reproducir sonido/vibración:', e);
     }
 
-    const timeoutMs = Number(CONFIG.INCOMING_MODAL_TIMEOUT || 30000);
-    this._startCountdown(Math.floor(timeoutMs / 1000));
+    const realSeconds = this._getOfferSecondsLeft(trip);
+    this._startCountdown(
+      realSeconds > 0
+        ? realSeconds
+        : Math.floor(Number(CONFIG.INCOMING_MODAL_TIMEOUT || 30000) / 1000)
+    );
   }
 
   closeIncomingModal() {
@@ -452,12 +456,11 @@ class UIController {
 
       cards.forEach(card => {
         const countdown = card.querySelector('.countdown-badge');
-        const createdAt = card.getAttribute('data-created-at');
+        const expiresAt = card.getAttribute('data-expires-at');
 
-        if (!countdown || !createdAt) return;
+        if (!countdown || !expiresAt) return;
 
-        const exp = new Date(createdAt).getTime() + 2 * 60 * 1000;
-        const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
+        const rest = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
         const min = Math.floor(rest / 60);
         const seg = rest % 60;
 
@@ -467,6 +470,10 @@ class UIController {
           countdown.classList.add('urgent');
         } else {
           countdown.classList.remove('urgent');
+        }
+
+        if (rest <= 0) {
+          card.style.opacity = '0.5';
         }
       });
     }, 1000);
@@ -566,8 +573,7 @@ class UIController {
   }
 
   _createTripCardHTML(trip) {
-    const exp = new Date(trip.created_at || Date.now()).getTime() + 2 * 60 * 1000;
-    const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
+    const rest = this._getOfferSecondsLeft(trip);
     const min = Math.floor(rest / 60);
     const seg = rest % 60;
 
@@ -578,16 +584,18 @@ class UIController {
     const precio = Number(trip.precio || 0).toLocaleString('es-AR');
     const km = Number(trip.km || 0).toFixed(1);
     const tripId = this._escapeHtml(trip.id || '');
-    const createdAt = this._escapeHtml(trip.created_at || new Date().toISOString());
+    const expiresAt = this._escapeHtml(trip.offer_expires_at || trip.current_offer_expires_at || '');
 
     return `
-      <div class="trip-card-mini trip-card-premium" data-trip-id="${tripId}" data-created-at="${createdAt}">
+      <div class="trip-card-mini trip-card-premium" data-trip-id="${tripId}" data-expires-at="${expiresAt}">
         <div class="trip-card-header">
           <div>
             <span class="client-name">${cliente}</span>
             <div class="trip-service-chip">${servicio}</div>
           </div>
-          <span class="countdown-badge">⏱️ ${min}:${seg.toString().padStart(2, '0')}</span>
+          <span class="countdown-badge ${rest <= 15 ? 'urgent' : ''}">
+            ⏱️ ${min}:${seg.toString().padStart(2, '0')}
+          </span>
         </div>
 
         <div class="trip-route-block">
@@ -635,6 +643,14 @@ class UIController {
     } catch {
       return '--:--';
     }
+  }
+
+  _getOfferSecondsLeft(trip) {
+    const exp = trip?.offer_expires_at || trip?.current_offer_expires_at;
+    if (!exp) return 0;
+
+    const diff = Math.floor((new Date(exp).getTime() - Date.now()) / 1000);
+    return Math.max(diff, 0);
   }
 
   _escapeHtml(text) {
