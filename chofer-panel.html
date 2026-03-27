@@ -52,14 +52,14 @@
 
   <!-- APP -->
   <script type="module">
-    import DriverApp from './js/driver-app.js';
+    import DriverApp from '/mimi-transporte/js/driver-app.js';
 
     const app = new DriverApp();
     app.init();
 
     window.logout = () => {
       localStorage.removeItem('choferData');
-      window.location.href = './login-chofer.html';
+      window.location.href = '/mimi-transporte/login-chofer.html';
     };
   </script>
 
