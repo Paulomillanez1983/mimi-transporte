@@ -40,13 +40,12 @@ html, body {
   height: 100%;
   background: var(--bg-primary);
   color: var(--text-primary);
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-  /* Prevenir bounce en iOS */
   overscroll-behavior: none;
 }
 
+body {
+  overflow: hidden;
+}
 /* MAPA FULLSCREEN */
 #mainMap {
   position: fixed;
