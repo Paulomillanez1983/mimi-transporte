@@ -74,6 +74,11 @@ this.elements = {
         }
       };
     }
+    if (this.elements.panelHandle) {
+  this.elements.panelHandle.addEventListener('click', () => {
+    this.togglePanel();
+  });
+}
 
     return this;
   }
