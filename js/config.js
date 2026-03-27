@@ -6,7 +6,7 @@
 const CONFIG = {
   // Supabase
   SUPABASE_URL: "https://xrphpqmutvadjrucqicn.supabase.co",
-  SUPABASE_KEY: "TU_ANON_KEY",
+  SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM",
 
   // Mapas
   MAP_STYLE: 'https://demotiles.maplibre.org/style.json',
