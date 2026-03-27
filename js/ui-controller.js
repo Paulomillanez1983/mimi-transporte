@@ -64,6 +64,7 @@ class UIController {
     if (this.elements.btnAcceptIncoming) {
       this.elements.btnAcceptIncoming.onclick = () => {
         if (this._modalCallbacks?.onAccept) {
+          this._setIncomingButtonsLoading(true);
           this._modalCallbacks.onAccept();
         }
       };
@@ -72,6 +73,7 @@ class UIController {
     if (this.elements.btnRejectIncoming) {
       this.elements.btnRejectIncoming.onclick = () => {
         if (this._modalCallbacks?.onReject) {
+          this._setIncomingButtonsLoading(true);
           this._modalCallbacks.onReject();
         }
       };
@@ -87,10 +89,25 @@ class UIController {
   }
 
   _handleAction(action, tripId, btn) {
+    if (btn?.disabled) return;
+
     const event = new CustomEvent('driverAction', {
       detail: { action, tripId, button: btn }
     });
+
     document.dispatchEvent(event);
+  }
+
+  isIncomingModalOpen() {
+    return this.currentModal === 'incoming' && this.elements.incomingModal?.classList.contains('active');
+  }
+
+  _setIncomingButtonsLoading(isLoading) {
+    const acceptBtn = this.elements.btnAcceptIncoming;
+    const rejectBtn = this.elements.btnRejectIncoming;
+
+    if (acceptBtn) acceptBtn.disabled = !!isLoading;
+    if (rejectBtn) rejectBtn.disabled = !!isLoading;
   }
 
   // =========================================
@@ -222,7 +239,7 @@ class UIController {
           </div>
           <div class="route-info">
             <div class="route-stop">
-              <h4>${isEnCurso ? 'Recoger en' : 'Origen'}</h4>
+              <h4>${isEnCurso ? 'Punto de recogida' : 'Origen'}</h4>
               <p>${this._escapeHtml(trip.origen || 'Sin origen')}</p>
             </div>
             <div class="route-stop">
@@ -253,17 +270,17 @@ class UIController {
 
         <div class="action-buttons">
           ${isEnCurso ? `
-            <button class="btn btn-whatsapp" data-action="whatsapp" data-trip-id="${trip.id}">
+            <button class="btn btn-whatsapp" data-action="whatsapp" data-trip-id="${this._escapeHtml(trip.id || '')}">
               WhatsApp
             </button>
-            <button class="btn btn-primary" data-action="finish" data-trip-id="${trip.id}">
+            <button class="btn btn-primary" data-action="finish" data-trip-id="${this._escapeHtml(trip.id || '')}">
               Finalizar
             </button>
           ` : `
-            <button class="btn btn-secondary" data-action="cancel" data-trip-id="${trip.id}">
+            <button class="btn btn-secondary" data-action="cancel" data-trip-id="${this._escapeHtml(trip.id || '')}">
               Cancelar
             </button>
-            <button class="btn btn-primary" data-action="start" data-trip-id="${trip.id}">
+            <button class="btn btn-primary" data-action="start" data-trip-id="${this._escapeHtml(trip.id || '')}">
               Iniciar viaje
             </button>
           `}
@@ -271,11 +288,17 @@ class UIController {
       </div>
     `;
 
-    if (isEnCurso && this.elements.navPanel) {
+    if (this.elements.panelSubtitle) {
+      this.elements.panelSubtitle.textContent = 'Viaje activo';
+    }
+
+    if (this.elements.tripCountBadge) {
+      this.elements.tripCountBadge.textContent = '1';
+    }
+
+    if (this.elements.navPanel) {
       this.elements.navPanel.classList.add('active');
       this._updateNavigation(trip);
-    } else {
-      this.hideNavigation();
     }
   }
 
@@ -291,6 +314,7 @@ class UIController {
     if (!modal || !details || !trip) return;
 
     this._stopCountdown();
+    this._setIncomingButtonsLoading(false);
 
     this._modalCallbacks = { onAccept, onReject };
 
@@ -359,6 +383,7 @@ class UIController {
     }
 
     this._stopCountdown();
+    this._setIncomingButtonsLoading(false);
     this.currentModal = null;
     this._modalCallbacks = null;
   }
@@ -372,21 +397,27 @@ class UIController {
       this.countdownInterval = null;
     }
 
+    const safeSeconds = Math.max(1, Number(seconds || 30));
+    let remaining = safeSeconds;
+
     if (bar) {
       bar.style.transition = 'none';
       bar.style.width = '100%';
     }
 
-    let remaining = Number(seconds || 30);
-
-    if (text) text.textContent = String(remaining);
+    if (text) {
+      text.textContent = String(remaining);
+    }
 
     this.countdownInterval = setInterval(() => {
       remaining--;
 
-      if (text) text.textContent = String(Math.max(remaining, 0));
+      if (text) {
+        text.textContent = String(Math.max(remaining, 0));
+      }
+
       if (bar) {
-        bar.style.width = `${Math.max((remaining / seconds) * 100, 0)}%`;
+        bar.style.width = `${Math.max((remaining / safeSeconds) * 100, 0)}%`;
       }
 
       if (remaining <= 0) {
@@ -400,7 +431,7 @@ class UIController {
 
     setTimeout(() => {
       if (bar) {
-        bar.style.transition = `width ${seconds}s linear`;
+        bar.style.transition = `width ${safeSeconds}s linear`;
         bar.style.width = '0%';
       }
     }, 50);
@@ -417,10 +448,9 @@ class UIController {
     this._stopTripListCountdown();
 
     this._tripListCountdownInterval = setInterval(() => {
-      const badges = document.querySelectorAll('.trip-card-mini[data-trip-id], .trip-card-premium[data-trip-id]');
+      const cards = document.querySelectorAll('.trip-card-mini[data-trip-id], .trip-card-premium[data-trip-id]');
 
-      badges.forEach(card => {
-        const tripId = card.getAttribute('data-trip-id');
+      cards.forEach(card => {
         const countdown = card.querySelector('.countdown-badge');
         const createdAt = card.getAttribute('data-created-at');
 
@@ -432,6 +462,12 @@ class UIController {
         const seg = rest % 60;
 
         countdown.textContent = `⏱️ ${min}:${seg.toString().padStart(2, '0')}`;
+
+        if (rest <= 15) {
+          countdown.classList.add('urgent');
+        } else {
+          countdown.classList.remove('urgent');
+        }
       });
     }, 1000);
   }
@@ -452,8 +488,13 @@ class UIController {
     const navNext = document.getElementById('navNext');
     const navArrow = document.getElementById('navArrow');
 
+    const estado = this._normalizeState(trip.estado);
+    const isEnCurso = estado === 'EN_CURSO';
+
     if (navStreet) {
-      navStreet.textContent = (trip.origen || 'Destino').split(',')[0];
+      navStreet.textContent = isEnCurso
+        ? (trip.destino || 'Destino').split(',')[0]
+        : (trip.origen || 'Punto de recogida').split(',')[0];
     }
 
     if (navDistance) {
@@ -461,7 +502,9 @@ class UIController {
     }
 
     if (navNext) {
-      navNext.textContent = 'Dirigite al punto de recogida';
+      navNext.textContent = isEnCurso
+        ? 'Dirigite al destino final'
+        : 'Dirigite al punto de recogida';
     }
 
     if (navArrow) {
@@ -473,6 +516,8 @@ class UIController {
     const navDistance = document.getElementById('navDistance');
     const navNext = document.getElementById('navNext');
     const navArrow = document.getElementById('navArrow');
+
+    if (typeof distanceMeters !== 'number' || Number.isNaN(distanceMeters)) return;
 
     if (navDistance) {
       navDistance.textContent = distanceMeters < 1000
