@@ -38,7 +38,7 @@ const CONFIG = {
   
   // URLs
   REDIRECTS: {
-    LOGIN: 'login-chofer.html',
+    LOGIN: 'chofer-panel.html',
     PANEL: 'chofer.html'
   }
 };
