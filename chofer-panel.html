@@ -6,152 +6,139 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <title>Panel de Chofer - Mimi</title>
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
-  />
+  <meta name="theme-color" content="#000000" />
+  
+  <title>Panel de Chofer - MIMI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  
   <link rel="icon" href="/mimi-transporte/favicon.ico" />
-
-  <!-- CSS APP -->
+  <link rel="apple-touch-icon" href="/mimi-transporte/icon-192.png" />
+  
+  <!-- CSS -->
   <link rel="stylesheet" href="/mimi-transporte/css/driver.css" />
-
-  <!-- MAPLIBRE -->
+  
+  <!-- MapLibre -->
   <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
-
-  <!-- SUPABASE -->
+  
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
-  <!-- MAPA -->
+  <!-- Mapa -->
   <div id="mainMap"></div>
-
-  <!-- UI -->
+  
+  <!-- Capa UI -->
   <div class="ui-layer">
-    <!-- HEADER -->
-    <div class="header-float glass-card">
+    <!-- Header -->
+    <header class="header-float">
       <div class="driver-mini">
         <div class="driver-mini-avatar">🚐</div>
         <div class="driver-mini-info">
           <h3 id="driverName">Cargando...</h3>
-          <p id="estadoChofer">Offline</p>
+          <p id="estadoChofer">Iniciando...</p>
         </div>
       </div>
-
       <button class="btn-icon" onclick="logout()" aria-label="Cerrar sesión">🚪</button>
-    </div>
-
-    <!-- STATS -->
+    </header>
+    
+    <!-- Stats -->
     <div class="stats-float">
-      <div class="stat-card glass-card">
+      <div class="stat-card">
         <div class="stat-value" id="statPendientes">0</div>
         <div class="stat-label">Ofertas</div>
       </div>
-      <div class="stat-card glass-card">
+      <div class="stat-card">
         <div class="stat-value" id="statHoy">0</div>
         <div class="stat-label">Hoy</div>
       </div>
     </div>
-
-    <!-- PANEL -->
-    <div class="trip-panel glass-panel" id="tripPanel">
+    
+    <!-- Panel de Viajes -->
+    <div class="trip-panel" id="tripPanel">
       <div class="panel-handle" id="panelHandle">
         <div class="panel-grabber"></div>
         <div class="panel-title-row">
           <div>
             <h3 id="panelTitle">Solicitudes</h3>
-            <p id="panelSubtitle">Esperando solicitudes asignadas...</p>
+            <p id="panelSubtitle">Esperando solicitudes...</p>
           </div>
           <div id="tripCountBadge" class="trip-count-badge">0</div>
         </div>
       </div>
-
+      
       <div class="panel-content" id="panelContent">
         <button class="btn btn-primary btn-disponibilidad" id="btnToggleDisponibilidad">
-          Cambiar disponibilidad
+          <span>🟢</span> Conectarse
         </button>
-
-        <div id="tripList"></div>
+        
+        <div id="tripList" class="trip-list"></div>
       </div>
     </div>
-
-    <!-- NAV PANEL -->
+    
+    <!-- Panel de Navegación -->
     <div id="navPanel" class="nav-panel">
       <div class="nav-main">
         <div class="nav-arrow" id="navArrow">⬆️</div>
         <div class="nav-info">
-          <div class="nav-street" id="navStreet">Ruta activa</div>
-          <div class="nav-next" id="navNext">Esperando navegación</div>
+          <div class="nav-street" id="navStreet">Esperando...</div>
+          <div class="nav-next" id="navNext">Inicia un viaje para navegar</div>
         </div>
         <div class="nav-distance" id="navDistance">--</div>
       </div>
     </div>
-
-    <!-- TOAST -->
+    
+    <!-- Toast -->
     <div id="toast" class="toast"></div>
-
-    <!-- MODAL VIAJE ENTRANTE -->
+    
+    <!-- Modal de Viaje Entrante -->
     <div id="incomingModal" class="incoming-modal">
       <div class="incoming-modal-card">
         <div class="incoming-header">
           <div>
-            <h3>Solicitud de viaje</h3>
-            <p class="incoming-subtitle">Nueva oferta disponible</p>
+            <h3>🚗 Nueva solicitud</h3>
+            <p class="incoming-subtitle">Toca aceptar para tomar el viaje</p>
           </div>
-
           <div class="countdown-box">
             <span id="countdownText">30</span>s
           </div>
         </div>
-
+        
         <div class="countdown-bar-wrap">
           <div id="countdownProgress" class="countdown-bar"></div>
         </div>
-
+        
         <div id="incomingDetails"></div>
-
+        
         <div class="incoming-actions">
-          <button id="btnRejectIncoming" class="btn btn-danger">Rechazar</button>
-          <button id="btnAcceptIncoming" class="btn btn-success">Aceptar</button>
+          <button id="btnRejectIncoming" class="btn btn-secondary">
+            <span>✕</span> Rechazar
+          </button>
+          <button id="btnAcceptIncoming" class="btn btn-success">
+            <span>✓</span> Aceptar
+          </button>
         </div>
       </div>
     </div>
   </div>
-
-  <script>
-    if (typeof maplibregl === 'undefined') {
-      alert('Error cargando el mapa. Revisá conexión o bloqueador.');
-    }
-  </script>
-
-  <script>
-    // Fix viewport real en mobile
-    (function () {
-      const setAppHeight = () => {
-        const vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--app-vh', `${vh}px`);
-      };
-
-      setAppHeight();
-      window.addEventListener('resize', setAppHeight);
-      window.addEventListener('orientationchange', setAppHeight);
-
-      if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', setAppHeight);
-      }
-    })();
-  </script>
-
+  
+  <!-- Scripts -->
   <script type="module">
     import DriverApp from '/mimi-transporte/js/driver-app.js';
     import supabaseService from '/mimi-transporte/js/supabase-client.js';
-
-    const app = new DriverApp();
+    
+    // Exponer logout globalmente
     window.logout = () => supabaseService.logout();
-
+    
+    // Inicializar app
+    const app = new DriverApp();
     app.init();
+    
+    // Service Worker para PWA (opcional)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/mimi-transporte/sw.js').catch(console.error);
+    }
   </script>
 </body>
 </html>
