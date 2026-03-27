@@ -1,6 +1,5 @@
 /**
  * Servicio de mapas con MapLibre - Optimizado para producción
- * Versión estable: NO debe bloquear viajes si el mapa falla
  */
 
 import CONFIG from './config.js';
@@ -13,40 +12,30 @@ class MapService {
       pickup: null,
       destination: null
     };
-    this.routeLayer = null;
     this.isReady = false;
     this.pendingOperations = [];
     this.hasFatalError = false;
     this._boundResize = null;
-    this._loadTimeout = null;
-    this._loadResolved = false;
   }
 
   async init(containerId) {
     return new Promise((resolve, reject) => {
       try {
-        // Evitar doble init
-        if (this.map) {
-          try {
-            this.destroy();
-          } catch (e) {
-            console.warn('No se pudo limpiar mapa previo:', e);
-          }
-        }
-
-        this.isReady = false;
-        this.hasFatalError = false;
-        this._loadResolved = false;
-
-        // Validar librería
         if (typeof window.maplibregl === 'undefined') {
           throw new Error('MapLibre no está cargado');
         }
 
-        // Validar contenedor
         const container = document.getElementById(containerId);
         if (!container) {
           throw new Error(`No existe el contenedor del mapa: ${containerId}`);
+        }
+
+        if (this.map) {
+          try {
+            this.destroy();
+          } catch (e) {
+            console.warn('No se pudo destruir mapa previo:', e);
+          }
         }
 
         this.map = new window.maplibregl.Map({
@@ -60,7 +49,6 @@ class MapService {
           touchZoomRotate: true
         });
 
-        // Resize seguro (clave en mobile)
         this._boundResize = () => {
           try {
             this.map?.resize?.();
@@ -69,7 +57,6 @@ class MapService {
           }
         };
 
-        // Reintentos de resize para Android / viewport dinámico
         setTimeout(this._boundResize, 300);
         setTimeout(this._boundResize, 900);
         setTimeout(this._boundResize, 1800);
@@ -81,7 +68,6 @@ class MapService {
           window.visualViewport.addEventListener('resize', this._boundResize);
         }
 
-        // Error NO fatal: tiles, glyphs, sprites, etc.
         this.map.on('error', (e) => {
           console.warn('Map warning (no fatal):', e);
 
@@ -90,20 +76,10 @@ class MapService {
           }
         });
 
-        // Cuando carga OK
         this.map.on('load', () => {
           try {
-            if (this._loadResolved) return;
-            this._loadResolved = true;
-
             this.isReady = true;
             this.hasFatalError = false;
-
-            if (this._loadTimeout) {
-              clearTimeout(this._loadTimeout);
-              this._loadTimeout = null;
-            }
-
             this.map.resize();
             this._executePending();
             resolve(this.map);
@@ -112,21 +88,12 @@ class MapService {
           }
         });
 
-        /**
-         * MUY IMPORTANTE:
-         * Si el mapa no carga, NO queremos romper la app de viajes.
-         * Entonces marcamos fallo, pero resolvemos igualmente para no trabar init().
-         */
-        this._loadTimeout = setTimeout(() => {
-          if (this._loadResolved) return;
-
-          console.warn('Mapa no terminó de cargar a tiempo. Continuando en modo degradado.');
-          this.hasFatalError = true;
-          this.isReady = false;
-          this._loadResolved = true;
-
-          // Resolvemos igual para no bloquear viajes
-          resolve(null);
+        setTimeout(() => {
+          if (!this.isReady) {
+            console.warn('Mapa no terminó de cargar a tiempo. Continuando en modo degradado.');
+            this.hasFatalError = true;
+            reject(new Error('El mapa no pudo inicializarse correctamente'));
+          }
         }, 8000);
 
       } catch (error) {
@@ -159,7 +126,6 @@ class MapService {
     }
   }
 
-  // Crear elemento de marcador personalizado
   _createMarkerElement(type, content) {
     const el = document.createElement('div');
     el.className = `marker-${type}`;
@@ -194,13 +160,11 @@ class MapService {
           .addTo(this.map);
       } else {
         this.markers.driver.setLngLat([lng, lat]);
-
         if (typeof this.markers.driver.setRotation === 'function') {
           this.markers.driver.setRotation(heading);
         }
       }
 
-      // Solo recentrar si el usuario no está interactuando
       if (!this.map.isMoving() && !this.map.isZooming()) {
         this.map.easeTo({
           center: [lng, lat],
@@ -217,13 +181,11 @@ class MapService {
 
       this.clearTripMarkers();
 
-      // Marcador de pickup
       const pickupEl = this._createMarkerElement('pickup', '👤');
       this.markers.pickup = new window.maplibregl.Marker({ element: pickupEl })
         .setLngLat([pickup.lng, pickup.lat])
         .addTo(this.map);
 
-      // Marcador de destino
       const destEl = this._createMarkerElement('destination', '🏁');
       this.markers.destination = new window.maplibregl.Marker({ element: destEl })
         .setLngLat([destination.lng, destination.lat])
@@ -307,7 +269,6 @@ class MapService {
         this.markers.pickup.remove();
         this.markers.pickup = null;
       }
-
       if (this.markers.destination) {
         this.markers.destination.remove();
         this.markers.destination = null;
@@ -326,7 +287,6 @@ class MapService {
       if (this.map.getLayer?.('route-line')) {
         this.map.removeLayer('route-line');
       }
-
       if (this.map.getSource?.('route')) {
         this.map.removeSource('route');
       }
@@ -354,11 +314,6 @@ class MapService {
         this.markers.driver = null;
       }
 
-      if (this.map) {
-        this.map.remove();
-        this.map = null;
-      }
-
       if (this._boundResize) {
         window.removeEventListener('resize', this._boundResize);
         window.removeEventListener('orientationchange', this._boundResize);
@@ -368,11 +323,10 @@ class MapService {
         }
       }
 
-      if (this._loadTimeout) {
-        clearTimeout(this._loadTimeout);
-        this._loadTimeout = null;
+      if (this.map) {
+        this.map.remove();
+        this.map = null;
       }
-
     } catch (e) {
       console.warn('Error destruyendo mapa:', e);
     } finally {
@@ -380,29 +334,24 @@ class MapService {
       this.hasFatalError = false;
       this.pendingOperations = [];
       this._boundResize = null;
-      this._loadResolved = false;
     }
   }
 
-  // Calcular distancia entre dos puntos (Haversine)
   static calculateDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371e3; // metros
+    const R = 6371e3;
     const φ1 = lat1 * Math.PI / 180;
     const φ2 = lat2 * Math.PI / 180;
     const Δφ = (lat2 - lat1) * Math.PI / 180;
     const Δλ = (lng2 - lng1) * Math.PI / 180;
 
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) *
-      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return Math.round(R * c);
   }
 
-  // Calcular tiempo estimado (asumiendo velocidad promedio)
   static calculateETA(distanceMeters, speedKmh = 30) {
     const seconds = (distanceMeters / 1000) / speedKmh * 3600;
     const minutes = Math.ceil(seconds / 60);
