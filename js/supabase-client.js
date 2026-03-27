@@ -1,26 +1,19 @@
 /**
- * Cliente Supabase con realtime robusto
+ * MIMI Driver - Supabase Client
+ * Real-time subscriptions and database operations
  */
 
-import CONFIG from './config.js';
-
-class SupabaseService {
+class SupabaseClient {
   constructor() {
-    console.log('[SupabaseService] Constructor');
     this.client = null;
-    this.initialized = false;
-    this.channels = [];
+    this.channels = new Map();
+    this.subscriptions = new Map();
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
   }
 
-  async init() {
-    if (this.initialized) return true;
-
-    console.log('[SupabaseService] Inicializando...');
-
-    if (!window.supabase) {
-      console.error('[SupabaseService] Librería Supabase no cargada');
-      return false;
-    }
+  async initialize() {
+    if (this.client) return true;
 
     try {
       this.client = window.supabase.createClient(
@@ -33,34 +26,58 @@ class SupabaseService {
             detectSessionInUrl: false
           },
           realtime: {
-            params: { eventsPerSecond: 10 }
+            params: {
+              eventsPerSecond: 10
+            }
+          },
+          db: {
+            schema: 'public'
           }
         }
       );
 
+      // Test connection
       const { error } = await this.client.from('choferes').select('count').limit(1);
-      
-      if (error) {
-        console.error('[SupabaseService] Error de conexión:', error);
-        return false;
-      }
+      if (error) throw error;
 
-      console.log('[SupabaseService] Conexión exitosa');
-      this.initialized = true;
+      this.reconnectAttempts = 0;
+      console.log('[Supabase] Connected');
       return true;
 
     } catch (error) {
-      console.error('[SupabaseService] Error inicializando:', error);
+      console.error('[Supabase] Connection failed:', error);
       return false;
     }
   }
 
-  subscribeToDriverOffers(driverId, callback) {
-    console.log('[SupabaseService] Suscribiendo a ofertas para:', driverId);
+  // Auth
+  getCurrentUser() {
+    return this.client?.auth?.getUser();
+  }
+
+  getDriverId() {
+    // Try to get from localStorage or auth
+    const stored = localStorage.getItem('mimi_driver_id');
+    if (stored) return stored;
+    
+    // Fallback to auth
+    const user = this.client?.auth?.user?.();
+    return user?.id;
+  }
+
+  isAuthenticated() {
+    return !!this.getDriverId();
+  }
+
+  // Real-time subscriptions
+  subscribeToOffers(driverId, callbacks) {
     if (!this.client) return null;
 
-    const channelName = `driver-offers-${driverId}-${Date.now()}`;
+    const channelName = `offers:${driverId}`;
     
+    // Unsubscribe existing
+    this.unsubscribe(channelName);
+
     const channel = this.client
       .channel(channelName)
       .on(
@@ -72,31 +89,29 @@ class SupabaseService {
           filter: `chofer_id=eq.${driverId}`
         },
         (payload) => {
-          console.log('[SupabaseService] [Realtime] Evento recibido:', payload);
-          callback(payload);
+          console.log('[Realtime] Offer update:', payload);
+          callbacks.onOffer?.(payload);
         }
       )
       .subscribe((status, err) => {
-        console.log(`[SupabaseService] [Realtime] Canal ${channelName} status:`, status);
-        
-        if (status === 'SUBSCRIBED') {
-          console.log('[SupabaseService] [Realtime] ✅ Suscrito correctamente');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[SupabaseService] [Realtime] ❌ Error de canal:', err);
-        } else if (status === 'TIMED_OUT') {
-          console.error('[SupabaseService] [Realtime] ⏱️ Timeout');
+        console.log(`[Realtime] Channel ${channelName}: ${status}`);
+        if (status === 'CHANNEL_ERROR') {
+          callbacks.onError?.(err);
+          this._handleReconnect(driverId, callbacks);
         }
       });
 
-    this.channels.push(channel);
+    this.channels.set(channelName, channel);
     return channel;
   }
 
-  subscribeToDriverTrips(driverId, callback) {
-    console.log('[SupabaseService] Suscribiendo a viajes para:', driverId);
+  subscribeToTrips(driverId, callbacks) {
+    if (!this.client) return null;
 
-    const channelName = `driver-trips-${driverId}-${Date.now()}`;
+    const channelName = `trips:${driverId}`;
     
+    this.unsubscribe(channelName);
+
     const channel = this.client
       .channel(channelName)
       .on(
@@ -108,42 +123,80 @@ class SupabaseService {
           filter: `chofer_id=eq.${driverId}`
         },
         (payload) => {
-          console.log('[SupabaseService] [Realtime] Viaje evento:', payload);
-          callback(payload);
+          console.log('[Realtime] Trip update:', payload);
+          callbacks.onTrip?.(payload);
         }
       )
-      .subscribe((status) => {
-        console.log(`[SupabaseService] [Realtime] Viajes ${channelName} status:`, status);
-      });
+      .subscribe();
 
-    this.channels.push(channel);
+    this.channels.set(channelName, channel);
     return channel;
   }
 
+  unsubscribe(channelName) {
+    const channel = this.channels.get(channelName);
+    if (channel) {
+      channel.unsubscribe();
+      this.channels.delete(channelName);
+    }
+  }
+
+  unsubscribeAll() {
+    this.channels.forEach((channel, name) => {
+      channel.unsubscribe();
+    });
+    this.channels.clear();
+  }
+
+  // Database operations
+  async updateDriverLocation(driverId, position) {
+    if (!driverId || !position) return { error: 'Missing params' };
+
+    const { error } = await this.client
+      .from('choferes')
+      .update({
+        lat: position.lat,
+        lng: position.lng,
+        heading: position.heading || 0,
+        speed: position.speed || 0,
+        accuracy: position.accuracy || 0,
+        last_location_at: new Date().toISOString(),
+        last_seen_at: new Date().toISOString()
+      })
+      .eq('id', driverId);
+
+    return { error };
+  }
+
+  async setDriverOnline(driverId, isOnline) {
+    const { error } = await this.client
+      .from('choferes')
+      .update({
+        online: isOnline,
+        disponible: isOnline,
+        last_seen_at: new Date().toISOString()
+      })
+      .eq('id', driverId);
+
+    return { error };
+  }
+
   async getPendingOffers(driverId) {
-    console.log('[SupabaseService] Buscando ofertas pendientes para:', driverId);
-    
     const { data, error } = await this.client
       .from('viaje_ofertas')
-      .select(`*, viajes:viaje_id (*)`)
+      .select(`
+        *,
+        viajes:viaje_id (*)
+      `)
       .eq('chofer_id', driverId)
       .eq('estado', 'PENDIENTE')
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('[SupabaseService] Error obteniendo ofertas:', error);
-      return [];
-    }
-
-    console.log('[SupabaseService] Ofertas encontradas:', data?.length || 0);
-    return data || [];
+    return { data, error };
   }
 
   async getActiveTrip(driverId) {
-    console.log('[SupabaseService] Buscando viaje activo para:', driverId);
-    
-    // CORRECCIÓN: Usar .or() en lugar de .in() para evitar error 406
     const { data, error } = await this.client
       .from('viajes')
       .select('*')
@@ -153,133 +206,63 @@ class SupabaseService {
       .limit(1)
       .single();
 
-    if (error && error.code !== 'PGRST116') {
-      console.error('[SupabaseService] Error obteniendo viaje activo:', error);
-      return null;
+    // PGRST116 = no rows returned (not an error for us)
+    if (error && error.code === 'PGRST116') {
+      return { data: null, error: null };
     }
 
-    if (data) {
-      console.log('[SupabaseService] Viaje activo encontrado:', data.id);
-    } else {
-      console.log('[SupabaseService] No hay viaje activo');
-    }
-
-    return data;
+    return { data, error };
   }
 
-  async updateDriverLocation(driverId, position) {
-    if (!driverId) return;
-    
-    const { error } = await this.client
-      .from('choferes')
-      .update({
-        lat: position.lat,
-        lng: position.lng,
-        heading: position.heading,
-        speed: position.speed,
-        accuracy: position.accuracy,
-        last_location_at: new Date().toISOString(),
-        last_seen_at: new Date().toISOString()
-      })
-      .eq('id', driverId);
-
-    if (error) {
-      console.error('[SupabaseService] Error actualizando ubicación:', error);
-    }
-  }
-
-  async setDriverAvailability(driverId, disponible) {
-    const { error } = await this.client
-      .from('choferes')
-      .update({
-        disponible,
-        online: disponible,
-        last_seen_at: new Date().toISOString()
-      })
-      .eq('id', driverId);
-
-    if (error) throw error;
-  }
-
-  // RPC Functions
-  async aceptarOfertaViaje(viajeId, choferId) {
-    console.log('[SupabaseService] RPC: aceptar_oferta_viaje', viajeId, choferId);
+  // RPC Calls
+  async acceptOffer(tripId, driverId) {
     const { data, error } = await this.client.rpc('aceptar_oferta_viaje', {
-      p_viaje_id: viajeId,
-      p_chofer_id: choferId
+      p_viaje_id: tripId,
+      p_chofer_id: driverId
     });
-    
-    if (error) {
-      console.error('[SupabaseService] RPC Error:', error);
-      throw error;
-    }
-    
-    return data;
+    return { data, error };
   }
 
-  async rechazarOfertaViaje(viajeId, choferId, motivo = null) {
+  async rejectOffer(tripId, driverId, reason = null) {
     const { data, error } = await this.client.rpc('rechazar_oferta_viaje', {
-      p_viaje_id: viajeId,
-      p_chofer_id: choferId,
-      p_motivo: motivo
+      p_viaje_id: tripId,
+      p_chofer_id: driverId,
+      p_motivo: reason
     });
-    
-    if (error) throw error;
-    return data;
+    return { data, error };
   }
 
-  async iniciarViaje(viajeId, choferId) {
+  async startTrip(tripId, driverId) {
     const { data, error } = await this.client.rpc('iniciar_viaje', {
-      p_viaje_id: viajeId,
-      p_chofer_id: choferId
+      p_viaje_id: tripId,
+      p_chofer_id: driverId
     });
-    
-    if (error) throw error;
-    return data;
+    return { data, error };
   }
 
-  async completarViaje(viajeId, choferId) {
+  async completeTrip(tripId, driverId) {
     const { data, error } = await this.client.rpc('completar_viaje', {
-      p_viaje_id: viajeId,
-      p_chofer_id: choferId
+      p_viaje_id: tripId,
+      p_chofer_id: driverId
     });
-    
-    if (error) throw error;
-    return data;
+    return { data, error };
   }
 
-  getCurrentDriverId() {
-    const choferData = this.getCurrentDriverData();
-    return choferData?.id || localStorage.getItem('choferUsuario') || null;
-  }
-
-  getCurrentDriverData() {
-    try {
-      return JSON.parse(localStorage.getItem('choferData') || '{}');
-    } catch {
-      return null;
+  // Private: Reconnection logic
+  _handleReconnect(driverId, callbacks) {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('[Supabase] Max reconnection attempts reached');
+      return;
     }
-  }
 
-  isAuthenticated() {
-    return localStorage.getItem('choferLogueado') === 'true' 
-      && this.getCurrentDriverId() !== null;
-  }
+    this.reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
 
-  logout() {
-    console.log('[SupabaseService] Logout');
-    this.channels.forEach(ch => {
-      try { ch.unsubscribe(); } catch (e) {}
-    });
-    this.channels = [];
-    
-    localStorage.removeItem('choferLogueado');
-    localStorage.removeItem('choferUsuario');
-    localStorage.removeItem('choferData');
-    
-    window.location.href = CONFIG.REDIRECTS.LOGIN;
+    setTimeout(() => {
+      console.log(`[Supabase] Reconnecting attempt ${this.reconnectAttempts}...`);
+      this.subscribeToOffers(driverId, callbacks);
+    }, delay);
   }
 }
 
-const supabaseService = new SupabaseService();
-export default supabaseService;
+const supabaseClient = new SupabaseClient();
