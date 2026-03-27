@@ -3,18 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="format-detection" content="telephone=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
+  />
+
   <title>Panel de Chofer - Mimi</title>
-  <meta   name="viewport"   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <link rel="icon" href="/mimi-transporte/favicon.ico" />
 
-  <!-- CSS APP -->
+  <!-- CSS PANEL CHOFER -->
   <link rel="stylesheet" href="/mimi-transporte/css/driver.css" />
 
   <!-- MAPLIBRE -->
-  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <link
+    href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"
+    rel="stylesheet"
+  />
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
   <!-- SUPABASE -->
@@ -37,7 +44,7 @@
         </div>
       </div>
 
-      <div class="btn-icon" onclick="logout()">🚪</div>
+      <button class="btn-icon" id="btnLogout" type="button" aria-label="Cerrar sesión">🚪</button>
     </div>
 
     <!-- STATS -->
@@ -53,28 +60,41 @@
     </div>
 
     <!-- PANEL -->
-<div class="trip-panel" id="tripPanel">
-  <div class="panel-handle" id="panelHandle">
-    <div class="panel-grabber"></div>
-    <div class="panel-title-row">
-      <div>
-        <h3 id="panelTitle">Solicitudes</h3>
-<p id="panelSubtitle">Esperando solicitudes asignadas...</p>
+    <div class="trip-panel" id="tripPanel">
+      <div class="panel-handle" id="panelHandle">
+        <div class="panel-grabber"></div>
+        <div class="panel-title-row">
+          <div>
+            <h3 id="panelTitle">Solicitudes</h3>
+            <p id="panelSubtitle">Esperando solicitudes asignadas...</p>
+          </div>
+          <div id="tripCountBadge" class="trip-count-badge">0</div>
+        </div>
       </div>
-      <div id="tripCountBadge" class="trip-count-badge">0</div>
+
+      <div class="panel-content" id="panelContent">
+        <button class="btn btn-primary btn-disponibilidad" id="btnToggleDisponibilidad" type="button">
+          Cambiar disponibilidad
+        </button>
+
+        <div id="tripList"></div>
+      </div>
     </div>
-  </div>
 
-  <div class="panel-content" id="panelContent">
-    <button class="btn btn-primary btn-disponibilidad" id="btnToggleDisponibilidad">
-      Cambiar disponibilidad
-    </button>
-
-    <div id="tripList"></div>
-  </div>
-</div>
     <!-- NAV PANEL -->
-<div id="navPanel" class="nav-panel"></div>
+    <div id="navPanel" class="nav-panel">
+      <div class="nav-card">
+        <div class="nav-left">
+          <div class="nav-arrow" id="navArrow">⬆️</div>
+          <div>
+            <div class="nav-street" id="navStreet">Destino</div>
+            <div class="nav-next" id="navNext">Esperando navegación</div>
+          </div>
+        </div>
+        <div class="nav-distance" id="navDistance">--</div>
+      </div>
+    </div>
+
     <!-- TOAST -->
     <div id="toast" class="toast"></div>
 
@@ -95,8 +115,8 @@
         <div id="incomingDetails"></div>
 
         <div class="incoming-actions">
-          <button id="btnRejectIncoming" class="btn btn-danger">Rechazar</button>
-          <button id="btnAcceptIncoming" class="btn btn-success">Aceptar</button>
+          <button id="btnRejectIncoming" class="btn btn-danger" type="button">Rechazar</button>
+          <button id="btnAcceptIncoming" class="btn btn-success" type="button">Aceptar</button>
         </div>
       </div>
     </div>
@@ -107,30 +127,36 @@
       alert('Error cargando el mapa. Revisá conexión o bloqueador.');
     }
   </script>
+
   <script>
-  // Fix viewport real en mobile
-  (function () {
-    const setAppHeight = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--app-vh', `${vh}px`);
-    };
+    // Fix viewport real en mobile
+    (function () {
+      const setAppHeight = () => {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+      };
 
-    setAppHeight();
-    window.addEventListener('resize', setAppHeight);
-    window.addEventListener('orientationchange', setAppHeight);
+      setAppHeight();
+      window.addEventListener('resize', setAppHeight);
+      window.addEventListener('orientationchange', setAppHeight);
 
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', setAppHeight);
-    }
-  })();
-</script>
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', setAppHeight);
+      }
+    })();
+  </script>
 
   <script type="module">
     import DriverApp from '/mimi-transporte/js/driver-app.js';
     import supabaseService from '/mimi-transporte/js/supabase-client.js';
 
     const app = new DriverApp();
+
     window.logout = () => supabaseService.logout();
+
+    document.getElementById('btnLogout')?.addEventListener('click', () => {
+      supabaseService.logout();
+    });
 
     app.init();
   </script>
