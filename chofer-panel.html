@@ -49,17 +49,26 @@
     </div>
 
     <!-- PANEL -->
-    <div class="trip-panel" id="tripPanel">
-      <div class="panel-content" id="panelContent">
-        <button class="btn btn-primary" id="btnToggleDisponibilidad">
-          Cambiar disponibilidad
-        </button>
-
-        <h3 style="margin-top: 15px;">Viajes disponibles</h3>
-        <div id="tripList"></div>
+<div class="trip-panel" id="tripPanel">
+  <div class="panel-handle" id="panelHandle">
+    <div class="panel-grabber"></div>
+    <div class="panel-title-row">
+      <div>
+        <h3 id="panelTitle">Viajes disponibles</h3>
+        <p id="panelSubtitle">Esperando solicitudes...</p>
       </div>
+      <div id="tripCountBadge" class="trip-count-badge">0</div>
     </div>
+  </div>
 
+  <div class="panel-content" id="panelContent">
+    <button class="btn btn-primary btn-disponibilidad" id="btnToggleDisponibilidad">
+      Cambiar disponibilidad
+    </button>
+
+    <div id="tripList"></div>
+  </div>
+</div>
     <!-- NAV PANEL -->
     <div id="navPanel" class="nav-panel"></div>
 
