@@ -701,3 +701,65 @@ body {
     font-size: 17px;
   }
 }
+/* =========================================
+   FIX TOUCH / MOBILE REAL
+========================================= */
+
+#mainMap canvas,
+#mainMap .maplibregl-canvas,
+#mainMap .maplibregl-control-container {
+  touch-action: pan-x pan-y !important;
+}
+
+.trip-panel,
+.panel-handle,
+.panel-content,
+.incoming-modal-card,
+.incoming-actions,
+.btn,
+.btn-icon,
+.trip-card-footer button {
+  pointer-events: auto !important;
+}
+
+.panel-handle,
+.btn,
+.btn-icon,
+.trip-card-footer button,
+.incoming-actions button {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.incoming-modal.active {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.incoming-modal:not(.active) {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.trip-panel {
+  will-change: transform;
+}
+
+@media (max-width: 768px) {
+  .trip-panel {
+    z-index: 999 !important;
+  }
+
+  .incoming-modal {
+    z-index: 9999 !important;
+  }
+
+  .header-float,
+  .stats-float,
+  .nav-panel,
+  .toast {
+    z-index: 1000;
+  }
+}
