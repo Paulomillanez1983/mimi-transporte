@@ -11,7 +11,9 @@ class LocationService {
     this.isTracking = false;
     this.updateTimer = null;
     this.throttleTimer = null;
-    this.accuracyThreshold = 50; // meters
+
+    // Subimos tolerancia para desktop / wifi positioning
+    this.accuracyThreshold = 200; // meters
   }
 
   async start(callback) {
@@ -19,51 +21,60 @@ class LocationService {
       throw new Error('Geolocation not supported');
     }
 
-    // Stop existing
     this.stop();
-    
+
     if (callback) {
       this.callbacks.push(callback);
     }
 
-    return new Promise((resolve, reject) => {
-      // Get initial position
+    this.isTracking = true;
+
+    return new Promise((resolve) => {
+      let resolved = false;
+
+      // 1) Intento inicial (no bloqueante)
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           this._handlePosition(pos, true);
-          resolve(this.position);
+
+          if (!resolved) {
+            resolved = true;
+            resolve(this.position);
+          }
         },
         (err) => {
           console.warn('[Location] Initial position error:', err);
-          reject(err);
+
+          // No rechazamos, porque igual watchPosition puede funcionar
+          if (!resolved) {
+            resolved = true;
+            resolve(null);
+          }
         },
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 5000
+          timeout: 20000,     // antes 10000
+          maximumAge: 10000
         }
       );
 
-      // Start watching
+      // 2) Tracking continuo
       this.watchId = navigator.geolocation.watchPosition(
         (pos) => this._handlePosition(pos),
         (err) => this._handleError(err),
         {
           enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 5000,
-          distanceFilter: 10
+          timeout: 20000,     // antes 10000
+          maximumAge: 5000
         }
       );
 
-      this.isTracking = true;
-
-      // Backup refresh timer
+      // 3) Backup refresh timer
       this.updateTimer = setInterval(() => {
         this._refreshPosition();
       }, CONFIG.LOCATION_UPDATE_INTERVAL);
 
-      // Handle visibility changes
+      // 4) Visibility
       document.addEventListener('visibilitychange', () => {
         this._handleVisibilityChange();
       });
@@ -71,10 +82,12 @@ class LocationService {
   }
 
   _handlePosition(position, isInitial = false) {
+    if (!position?.coords) return;
+
     const coords = position.coords;
-    
-    // Filter low accuracy (except initial)
-    if (coords.accuracy > this.accuracyThreshold && !isInitial) {
+
+    // Si accuracy es demasiado mala, ignorar excepto si todavía no tenemos nada
+    if (coords.accuracy > this.accuracyThreshold && this.position && !isInitial) {
       return;
     }
 
@@ -82,22 +95,33 @@ class LocationService {
       lat: coords.latitude,
       lng: coords.longitude,
       accuracy: coords.accuracy,
-      heading: coords.heading || this.position?.heading || 0,
-      speed: coords.speed ? Math.round(coords.speed * 3.6) : 0, // km/h
+      heading: coords.heading ?? this.position?.heading ?? 0,
+      speed: coords.speed ? Math.round(coords.speed * 3.6) : 0,
       timestamp: Date.now()
     };
 
-    // Skip if no significant change
+    // Validación dura para evitar null/NaN
+    if (
+      typeof newPosition.lat !== 'number' ||
+      typeof newPosition.lng !== 'number' ||
+      Number.isNaN(newPosition.lat) ||
+      Number.isNaN(newPosition.lng)
+    ) {
+      console.warn('[Location] Invalid coordinates received:', newPosition);
+      return;
+    }
+
+    // Evitar spam si no se movió
     if (this.position && this._distance(newPosition, this.position) < 5) {
       return;
     }
 
     this.position = newPosition;
 
-    // Throttle updates to Supabase
+    // Update Supabase (throttled)
     this._throttleUpdate(newPosition);
 
-    // Notify local callbacks
+    // Notify UI
     this.callbacks.forEach(cb => {
       try { cb(newPosition); } catch (e) {}
     });
@@ -109,11 +133,21 @@ class LocationService {
     }
 
     this.throttleTimer = setTimeout(async () => {
-      const driverId = supabaseClient.getDriverId();
-      if (driverId) {
+      try {
+        const driverId = supabaseClient.getDriverId();
+
+        // Si driverId no existe no mandamos nada
+        if (!driverId) return;
+
+        // No enviar si todavía no hay posición real
+        if (!position?.lat || !position?.lng) return;
+
         await supabaseClient.updateDriverLocation(driverId, position);
+
+      } catch (err) {
+        console.warn('[Location] Supabase update error:', err);
       }
-    }, 2000);
+    }, 2500);
   }
 
   _refreshPosition() {
@@ -124,16 +158,15 @@ class LocationService {
       (err) => console.warn('[Location] Refresh error:', err),
       {
         enableHighAccuracy: true,
-        timeout: 8000,
+        timeout: 20000,     // antes 8000
         maximumAge: 10000
       }
     );
   }
 
   _handleError(error) {
-    console.error('[Location] Error:', error.message);
-    
-    // Notify UI
+    console.error('[Location] Error:', error);
+
     window.dispatchEvent(new CustomEvent('locationError', {
       detail: error
     }));
@@ -145,15 +178,14 @@ class LocationService {
     clearInterval(this.updateTimer);
 
     if (document.hidden) {
-      // Slow down when hidden
       this.updateTimer = setInterval(() => {
         this._refreshPosition();
       }, 30000);
     } else {
-      // Normal speed when visible
       this.updateTimer = setInterval(() => {
         this._refreshPosition();
       }, CONFIG.LOCATION_UPDATE_INTERVAL);
+
       this._refreshPosition();
     }
   }
@@ -165,11 +197,12 @@ class LocationService {
     const Δφ = (pos2.lat - pos1.lat) * Math.PI / 180;
     const Δλ = (pos2.lng - pos1.lng) * Math.PI / 180;
 
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+      Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ/2) * Math.sin(Δλ/2);
 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
   }
 
@@ -191,6 +224,7 @@ class LocationService {
 
     this.isTracking = false;
     this.callbacks = [];
+    this.position = null;
   }
 
   getPosition() {
@@ -199,6 +233,7 @@ class LocationService {
 
   onUpdate(callback) {
     this.callbacks.push(callback);
+
     return () => {
       const idx = this.callbacks.indexOf(callback);
       if (idx > -1) this.callbacks.splice(idx, 1);
