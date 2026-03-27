@@ -62,11 +62,8 @@
     const app = new DriverApp();
     app.init();
 
-    window.logout = () => {
-      localStorage.removeItem('choferData');
-      window.location.href = '/mimi-transporte/login-chofer.html';
-    };
-  </script>
+import supabaseService from './js/supabase-client.js';
+window.logout = () => supabaseService.logout();  </script>
 
 </body>
 </html>
