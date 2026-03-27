@@ -11,57 +11,85 @@ class UIController {
     this.elements = {};
     this.countdownInterval = null;
     this.currentModal = null;
+    this._toastTimeout = null;
+    this._modalCallbacks = null;
+    this._documentClickBound = false;
   }
 
   init() {
     // Cachear elementos DOM frecuentes
-this.elements = {
-  toast: document.getElementById('toast'),
-  tripPanel: document.getElementById('tripPanel'),
-  panelContent: document.getElementById('panelContent'),
-  tripList: document.getElementById('tripList'),
-  incomingModal: document.getElementById('incomingModal'),
-  navPanel: document.getElementById('navPanel'),
-  statsPendientes: document.getElementById('statPendientes'),
-  statsHoy: document.getElementById('statHoy'),
-  driverName: document.getElementById('driverName'),
-  btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
-  btnRejectIncoming: document.getElementById('btnRejectIncoming')
-};
-    
+    this.elements = {
+      toast: document.getElementById('toast'),
+      tripPanel: document.getElementById('tripPanel'),
+      panelContent: document.getElementById('panelContent'),
+      tripList: document.getElementById('tripList'),
+      incomingModal: document.getElementById('incomingModal'),
+      navPanel: document.getElementById('navPanel'),
+      statsPendientes: document.getElementById('statPendientes'),
+      statsHoy: document.getElementById('statHoy'),
+      driverName: document.getElementById('driverName'),
+      btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
+      btnRejectIncoming: document.getElementById('btnRejectIncoming')
+    };
+
     // Cargar nombre del chofer
-    const driverData = JSON.parse(localStorage.getItem('choferData') || '{}');
-    if (driverData.nombre && this.elements.driverName) {
-      this.elements.driverName.textContent = driverData.nombre;
+    try {
+      const driverData = JSON.parse(localStorage.getItem('choferData') || '{}');
+      if (driverData.nombre && this.elements.driverName) {
+        this.elements.driverName.textContent = driverData.nombre;
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar choferData:', e);
     }
 
-    // Delegación de eventos para botones dinámicos
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action]');
-      if (btn) {
-        const action = btn.dataset.action;
-        const tripId = btn.dataset.tripId;
-        this._handleAction(action, tripId, btn);
-      }
-    });
+    // Delegación de eventos para botones dinámicos (solo una vez)
+    if (!this._documentClickBound) {
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (btn) {
+          const action = btn.dataset.action;
+          const tripId = btn.dataset.tripId;
+          this._handleAction(action, tripId, btn);
+        }
+      });
+      this._documentClickBound = true;
+    }
+
+    // Botones fijos del modal entrante
+    if (this.elements.btnAcceptIncoming) {
+      this.elements.btnAcceptIncoming.onclick = () => {
+        if (this._modalCallbacks?.onAccept) {
+          this._modalCallbacks.onAccept();
+        }
+      };
+    }
+
+    if (this.elements.btnRejectIncoming) {
+      this.elements.btnRejectIncoming.onclick = () => {
+        if (this._modalCallbacks?.onReject) {
+          this._modalCallbacks.onReject();
+        }
+      };
+    }
 
     return this;
   }
 
   _handleAction(action, tripId, btn) {
-    // Emitir evento para que driver-app.js maneje la lógica
     const event = new CustomEvent('driverAction', {
       detail: { action, tripId, button: btn }
     });
     document.dispatchEvent(event);
   }
 
-  // Toast notifications
+  // =========================================
+  // TOASTS
+  // =========================================
   showToast(message, type = 'info', duration = 3000) {
     const toast = this.elements.toast;
     if (!toast) return;
 
-    toast.textContent = message;
+    toast.textContent = message || '';
     toast.className = `toast ${type} show`;
 
     if (this._toastTimeout) {
@@ -73,52 +101,71 @@ this.elements = {
     }, duration);
   }
 
-  // Actualizar estadísticas
-  updateStats(stats) {
+  // =========================================
+  // STATS
+  // =========================================
+  updateStats(stats = {}) {
     if (this.elements.statsPendientes) {
-      this.elements.statsPendientes.textContent = stats.pending;
+      this.elements.statsPendientes.textContent = String(stats.pending ?? 0);
     }
+
     if (this.elements.statsHoy) {
-      this.elements.statsHoy.textContent = stats.today;
+      this.elements.statsHoy.textContent = String(stats.today ?? 0);
     }
   }
 
-  // Renderizar lista de viajes disponibles
-renderAvailableTrips(trips) {
-  const container = this.elements.tripList;
-  if (!container) return;
+  // =========================================
+  // VIAJES DISPONIBLES
+  // =========================================
+  renderAvailableTrips(trips) {
+    const container = this.elements.tripList;
+    const panel = this.elements.tripPanel;
 
-  if (!Array.isArray(trips) || trips.length === 0) {
-    container.innerHTML = this._getEmptyStateHTML();
-    return;
+    if (!container) return;
+
+    if (panel) {
+      panel.classList.remove('has-trip');
+    }
+
+    this.hideNavigation();
+
+    if (!Array.isArray(trips) || trips.length === 0) {
+      container.innerHTML = this._getEmptyStateHTML();
+      return;
+    }
+
+    // Ordenar por más reciente
+    const orderedTrips = [...trips].sort((a, b) => {
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
+
+    container.innerHTML = orderedTrips.map(t => this._createTripCardHTML(t)).join('');
   }
 
-  container.innerHTML = trips.map(t => this._createTripCardHTML(t)).join('');
-}
-
-  
-  // Renderizar viaje activo
+  // =========================================
+  // VIAJE ACTIVO
+  // =========================================
   renderActiveTrip(trip) {
     const container = this.elements.tripList;
     const panel = this.elements.tripPanel;
-    if (!container || !panel) return;
+
+    if (!container || !panel || !trip) return;
 
     panel.classList.add('has-trip');
-    
+
     const estado = this._normalizeState(trip.estado);
     const isEnCurso = estado === 'EN_CURSO';
+    const servicioLabel = trip.servicio || trip.tipo || 'Standard';
 
     container.innerHTML = `
       <div class="trip-card-uber">
         <div class="trip-status-bar">
           <div class="status-indicator ${estado.toLowerCase()}"></div>
           <span style="font-weight: 700; text-transform: uppercase; font-size: 13px;">
-            ${estado.replace('_', ' ')}
+            ${this._escapeHtml(estado.replaceAll('_', ' '))}
           </span>
           <span style="margin-left: auto; color: var(--text-secondary); font-size: 13px;">
-            ${new Date(trip.fecha || trip.created_at).toLocaleTimeString('es-AR', {
-              hour: '2-digit', minute: '2-digit'
-            })}
+            ${this._formatTime(trip.fecha_hora || trip.fecha || trip.created_at)}
           </span>
         </div>
 
@@ -139,11 +186,11 @@ renderAvailableTrips(trips) {
           <div class="route-info">
             <div class="route-stop">
               <h4>${isEnCurso ? 'Recoger en' : 'Origen'}</h4>
-              <p>${this._escapeHtml(trip.origen)}</p>
+              <p>${this._escapeHtml(trip.origen || 'Sin origen')}</p>
             </div>
             <div class="route-stop">
               <h4>Destino</h4>
-              <p>${this._escapeHtml(trip.destino)}</p>
+              <p>${this._escapeHtml(trip.destino || 'Sin destino')}</p>
             </div>
           </div>
         </div>
@@ -154,11 +201,11 @@ renderAvailableTrips(trips) {
             <div class="metric-label">Precio</div>
           </div>
           <div class="metric">
-            <div class="metric-value">${trip.km || 0} km</div>
+            <div class="metric-value">${Number(trip.km || 0).toFixed(1)} km</div>
             <div class="metric-label">Distancia</div>
           </div>
           <div class="metric">
-            <div class="metric-value">${this._escapeHtml(trip.tipo || 'Standard')}</div>
+            <div class="metric-value">${this._escapeHtml(servicioLabel)}</div>
             <div class="metric-label">Servicio</div>
           </div>
         </div>
@@ -191,26 +238,36 @@ renderAvailableTrips(trips) {
     if (isEnCurso && this.elements.navPanel) {
       this.elements.navPanel.classList.add('active');
       this._updateNavigation(trip);
+    } else {
+      this.hideNavigation();
     }
   }
 
-  // Mostrar modal de viaje entrante
+  // =========================================
+  // MODAL VIAJE ENTRANTE
+  // =========================================
   showIncomingModal(trip, onAccept, onReject) {
     this.currentModal = 'incoming';
+
     const modal = this.elements.incomingModal;
     const details = document.getElementById('incomingDetails');
-    
-    if (!modal || !details) return;
+
+    if (!modal || !details || !trip) return;
+
+    // Reiniciar estado previo
+    this._stopCountdown();
 
     // Guardar callbacks
     this._modalCallbacks = { onAccept, onReject };
+
+    const servicioLabel = trip.servicio || trip.tipo || 'Standard';
 
     details.innerHTML = `
       <div class="incoming-client">
         <div class="client-avatar large">${this._escapeHtml((trip.cliente || '?')[0])}</div>
         <div class="client-details">
-          <h4>${this._escapeHtml(trip.cliente)}</h4>
-          <p>📱 ${this._escapeHtml(trip.telefono)}</p>
+          <h4>${this._escapeHtml(trip.cliente || 'Sin nombre')}</h4>
+          <p>📱 ${this._escapeHtml(trip.telefono || 'Sin teléfono')}</p>
         </div>
       </div>
 
@@ -223,11 +280,11 @@ renderAvailableTrips(trips) {
         <div class="route-info">
           <div class="route-stop">
             <h4>Origen</h4>
-            <p>${this._escapeHtml(trip.origen)}</p>
+            <p>${this._escapeHtml(trip.origen || 'Sin origen')}</p>
           </div>
           <div class="route-stop">
             <h4>Destino</h4>
-            <p>${this._escapeHtml(trip.destino)}</p>
+            <p>${this._escapeHtml(trip.destino || 'Sin destino')}</p>
           </div>
         </div>
       </div>
@@ -238,22 +295,27 @@ renderAvailableTrips(trips) {
           <div class="metric-label">Precio</div>
         </div>
         <div class="metric">
-          <div class="metric-value">${trip.km || 0} km</div>
+          <div class="metric-value">${Number(trip.km || 0).toFixed(1)} km</div>
           <div class="metric-label">Distancia</div>
         </div>
         <div class="metric">
-          <div class="metric-value">${this._escapeHtml(trip.tipo || 'Standard')}</div>
+          <div class="metric-value">${this._escapeHtml(servicioLabel)}</div>
           <div class="metric-label">Servicio</div>
         </div>
       </div>
     `;
 
     modal.classList.add('active');
-    soundManager.play('newTrip');
-    soundManager.vibrate('newTrip');
 
-    // Iniciar countdown
-    this._startCountdown(CONFIG.INCOMING_MODAL_TIMEOUT / 1000);
+    try {
+      soundManager.play('newTrip');
+      soundManager.vibrate('newTrip');
+    } catch (e) {
+      console.warn('No se pudo reproducir sonido/vibración:', e);
+    }
+
+    const timeoutMs = Number(CONFIG.INCOMING_MODAL_TIMEOUT || 30000);
+    this._startCountdown(Math.floor(timeoutMs / 1000));
   }
 
   closeIncomingModal() {
@@ -261,6 +323,7 @@ renderAvailableTrips(trips) {
     if (modal) {
       modal.classList.remove('active');
     }
+
     this._stopCountdown();
     this.currentModal = null;
     this._modalCallbacks = null;
@@ -269,30 +332,44 @@ renderAvailableTrips(trips) {
   _startCountdown(seconds) {
     const bar = document.getElementById('countdownProgress');
     const text = document.getElementById('countdownText');
-    
-    if (bar) bar.style.width = '100%';
-    
-    let remaining = seconds;
-    
+
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+
+    if (bar) {
+      bar.style.transition = 'none';
+      bar.style.width = '100%';
+    }
+
+    let remaining = Number(seconds || 30);
+
+    if (text) text.textContent = String(remaining);
+
     this.countdownInterval = setInterval(() => {
       remaining--;
-      
-      if (text) text.textContent = remaining;
+
+      if (text) text.textContent = String(Math.max(remaining, 0));
       if (bar) {
-        bar.style.width = `${(remaining / seconds) * 100}%`;
+        bar.style.width = `${Math.max((remaining / seconds) * 100, 0)}%`;
       }
 
       if (remaining <= 0) {
         this._stopCountdown();
+
         if (this._modalCallbacks?.onReject) {
           this._modalCallbacks.onReject();
         }
       }
     }, 1000);
 
-    // Animación inicial de la barra
+    // Activar transición visual luego del primer frame
     setTimeout(() => {
-      if (bar) bar.style.width = '0%';
+      if (bar) {
+        bar.style.transition = `width ${seconds}s linear`;
+        bar.style.width = '0%';
+      }
     }, 50);
   }
 
@@ -303,13 +380,29 @@ renderAvailableTrips(trips) {
     }
   }
 
+  // =========================================
+  // NAVEGACIÓN
+  // =========================================
   _updateNavigation(trip) {
-    // Actualizar panel de navegación con distancia/tiempo estimado
-    const navDistance = document.getElementById('navDistance');
     const navStreet = document.getElementById('navStreet');
-    
+    const navDistance = document.getElementById('navDistance');
+    const navNext = document.getElementById('navNext');
+    const navArrow = document.getElementById('navArrow');
+
     if (navStreet) {
-      navStreet.textContent = trip.origen?.split(',')[0] || 'Destino';
+      navStreet.textContent = (trip.origen || 'Destino').split(',')[0];
+    }
+
+    if (navDistance) {
+      navDistance.textContent = '--';
+    }
+
+    if (navNext) {
+      navNext.textContent = 'Dirigite al punto de recogida';
+    }
+
+    if (navArrow) {
+      navArrow.textContent = '⬆️';
     }
   }
 
@@ -317,14 +410,13 @@ renderAvailableTrips(trips) {
     const navDistance = document.getElementById('navDistance');
     const navNext = document.getElementById('navNext');
     const navArrow = document.getElementById('navArrow');
-    
+
     if (navDistance) {
-      navDistance.textContent = distanceMeters < 1000 
-        ? `${Math.round(distanceMeters)}` 
-        : `${(distanceMeters / 1000).toFixed(1)}`;
+      navDistance.textContent = distanceMeters < 1000
+        ? `${Math.round(distanceMeters)} m`
+        : `${(distanceMeters / 1000).toFixed(1)} km`;
     }
 
-    // Cambiar instrucciones según distancia
     if (navNext && navArrow) {
       if (distanceMeters < 50) {
         navArrow.textContent = '🏁';
@@ -343,9 +435,6 @@ renderAvailableTrips(trips) {
     if (this.elements.navPanel) {
       this.elements.navPanel.classList.remove('active');
     }
-    if (this.elements.tripPanel) {
-      this.elements.tripPanel.classList.remove('has-trip');
-    }
   }
 
   togglePanel() {
@@ -355,7 +444,9 @@ renderAvailableTrips(trips) {
     }
   }
 
-  // HTML Helpers
+  // =========================================
+  // HELPERS HTML
+  // =========================================
   _getEmptyStateHTML() {
     return `
       <div class="empty-illustration">
@@ -367,23 +458,25 @@ renderAvailableTrips(trips) {
   }
 
   _createTripCardHTML(trip) {
-    const exp = new Date(trip.created_at).getTime() + 2 * 60 * 1000;
+    const exp = new Date(trip.created_at || Date.now()).getTime() + 2 * 60 * 1000;
     const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
     const min = Math.floor(rest / 60);
     const seg = rest % 60;
 
     return `
-      <div class="trip-card-mini" data-trip-id="${trip.id}">
+      <div class="trip-card-mini" data-trip-id="${this._escapeHtml(trip.id || '')}">
         <div class="trip-card-header">
           <span class="client-name">${this._escapeHtml(trip.cliente || 'Sin nombre')}</span>
           <span class="countdown-badge">⏱️ ${min}:${seg.toString().padStart(2, '0')}</span>
         </div>
+
         <div class="trip-route-mini">
-          ${this._escapeHtml(trip.origen)} → ${this._escapeHtml(trip.destino)}
+          ${this._escapeHtml(trip.origen || 'Sin origen')} → ${this._escapeHtml(trip.destino || 'Sin destino')}
         </div>
+
         <div class="trip-card-footer">
           <span class="price">$${Number(trip.precio || 0).toLocaleString('es-AR')}</span>
-          <button class="btn btn-primary btn-small" data-action="accept" data-trip-id="${trip.id}">
+          <button class="btn btn-primary btn-small" data-action="accept" data-trip-id="${this._escapeHtml(trip.id || '')}">
             Aceptar
           </button>
         </div>
@@ -395,9 +488,21 @@ renderAvailableTrips(trips) {
     return String(s || '').toUpperCase().replace(/[-\s]/g, '_');
   }
 
+  _formatTime(dateLike) {
+    try {
+      if (!dateLike) return '--:--';
+      return new Date(dateLike).toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return '--:--';
+    }
+  }
+
   _escapeHtml(text) {
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = String(text ?? '');
     return div.innerHTML;
   }
 }
