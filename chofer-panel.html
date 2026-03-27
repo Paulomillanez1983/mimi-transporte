@@ -5,13 +5,12 @@
   <title>Panel de Chofer - Mimi</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- CSS (FIX ruta relativa) -->
+  <!-- TU CSS -->
   <link rel="stylesheet" href="./css/styles.css">
 
-  <!-- Google Maps (FIX performance + async) -->
-  <script async defer
-    src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&callback=initMap">
-  </script>
+  <!-- MAPLIBRE -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 </head>
 
 <body>
@@ -19,10 +18,10 @@
   <!-- MAPA -->
   <div id="mainMap"></div>
 
-  <!-- CAPA UI -->
+  <!-- UI -->
   <div class="ui-layer">
 
-    <!-- HEADER FLOTANTE -->
+    <!-- HEADER -->
     <div class="header-float">
       <div class="driver-mini">
         <div class="driver-mini-avatar">🚐</div>
@@ -35,9 +34,8 @@
       <div class="btn-icon" onclick="logout()">🚪</div>
     </div>
 
-    <!-- PANEL INFERIOR -->
+    <!-- PANEL -->
     <div class="trip-panel" id="tripPanel">
-
       <div class="panel-content">
 
         <button class="btn btn-primary" id="btnToggleDisponibilidad">
@@ -45,7 +43,6 @@
         </button>
 
         <h3 style="margin-top: 15px;">Viajes disponibles</h3>
-
         <div id="tripList"></div>
 
       </div>
@@ -58,13 +55,8 @@
     import DriverApp from './js/driver-app.js';
 
     const app = new DriverApp();
+    app.init();
 
-    // Google Maps callback (FIX error init)
-    window.initMap = () => {
-      app.init();
-    };
-
-    // Logout
     window.logout = () => {
       localStorage.removeItem('choferData');
       window.location.href = './login-chofer.html';
