@@ -21,12 +21,12 @@ class TripManager {
     if (this.initialized) return this;
 
     await this.loadCurrentTrip();
-    await this.refreshTrips();
+    await this.refreshTrips(true);
     this._subscribeToRealtime();
 
     this.refreshInterval = setInterval(() => {
       if (!document.hidden) {
-        this.refreshTrips();
+        this.refreshTrips(false);
       }
     }, CONFIG.TRIP_REFRESH_INTERVAL || 10000);
 
@@ -84,11 +84,13 @@ class TripManager {
   // =========================================
   // REFRESH
   // =========================================
-  async refreshTrips() {
+  async refreshTrips(isInitialLoad = false) {
     const driverId = supabaseService.getCurrentDriverId();
     if (!driverId) return;
 
     try {
+      const previousIds = new Set((this.availableTrips || []).map(t => t.id));
+
       const [available, history] = await Promise.all([
         supabaseService.rest.select('viajes', {
           eq: { estado: CONFIG.ESTADOS.DISPONIBLE },
@@ -109,7 +111,11 @@ class TripManager {
       this.availableTrips = (Array.isArray(available) ? available : []).filter(t => {
         const estado = this._normalizeState(t.estado);
         const choferId = t.chofer_id ?? null;
-        return estado === CONFIG.ESTADOS.DISPONIBLE && !choferId;
+
+        return (
+          estado === CONFIG.ESTADOS.DISPONIBLE &&
+          (choferId === null || choferId === '' || typeof choferId === 'undefined')
+        );
       });
 
       this.tripHistory = Array.isArray(history) ? history : [];
@@ -120,6 +126,15 @@ class TripManager {
 
       console.log('[Trips refresh] disponibles:', this.availableTrips);
       console.log('[Trips refresh] historial:', this.tripHistory);
+
+      // Detectar NUEVOS viajes disponibles
+      const newTrips = this.availableTrips.filter(t => !previousIds.has(t.id));
+
+      if (!isInitialLoad && !this.currentTrip && !this.pendingTrip && newTrips.length > 0) {
+        for (const trip of newTrips) {
+          this._notify('newAvailableTrip', trip);
+        }
+      }
 
       this._notify('tripsRefreshed', {
         available: this.availableTrips,
@@ -324,11 +339,10 @@ class TripManager {
         case 'INSERT': {
           const estado = this._normalizeState(newRecord.estado);
 
-          // Nuevo viaje disponible para todos
           if (estado === CONFIG.ESTADOS.DISPONIBLE && !newRecord.chofer_id) {
             const exists = this.availableTrips.some(t => t.id === newRecord.id);
 
-            if (!exists && !this.currentTrip && !this.pendingTrip) {
+            if (!exists) {
               this.availableTrips.unshift(newRecord);
               this.availableTrips = this._dedupeById(this.availableTrips);
             }
@@ -340,7 +354,6 @@ class TripManager {
             });
           }
 
-          // Viaje asignado específicamente a este chofer
           if (
             estado === CONFIG.ESTADOS.ASIGNADO &&
             newRecord.chofer_id === driverId
@@ -355,13 +368,11 @@ class TripManager {
         case 'UPDATE': {
           const estado = this._normalizeState(newRecord.estado);
 
-          // Actualizar viaje actual
           if (this.currentTrip?.id === newRecord.id) {
             this.currentTrip = newRecord;
             this._notify('tripUpdated', newRecord);
           }
 
-          // Actualizar viaje pendiente
           if (this.pendingTrip?.id === newRecord.id) {
             if (
               estado === CONFIG.ESTADOS.ASIGNADO &&
@@ -373,23 +384,20 @@ class TripManager {
             }
           }
 
-          // Si el viaje pasa a estar disponible
           const idx = this.availableTrips.findIndex(t => t.id === newRecord.id);
 
           if (estado === CONFIG.ESTADOS.DISPONIBLE && !newRecord.chofer_id) {
             if (idx >= 0) {
               this.availableTrips[idx] = newRecord;
-            } else if (!this.currentTrip && !this.pendingTrip) {
+            } else {
               this.availableTrips.unshift(newRecord);
             }
           } else {
-            // Si dejó de estar disponible, removerlo
             if (idx >= 0) {
               this.availableTrips.splice(idx, 1);
             }
           }
 
-          // Si este viaje fue aceptado por este chofer, convertirlo en currentTrip
           if (
             estado === CONFIG.ESTADOS.ACEPTADO &&
             newRecord.chofer_id === driverId
@@ -402,7 +410,6 @@ class TripManager {
             this._notify('tripUpdated', newRecord);
           }
 
-          // Si fue completado/cancelado, limpiarlo si era del chofer actual
           if (
             [CONFIG.ESTADOS.COMPLETADO, CONFIG.ESTADOS.CANCELADO].includes(estado) &&
             newRecord.chofer_id === driverId
