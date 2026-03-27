@@ -36,15 +36,56 @@
       <div class="btn-icon" onclick="logout()">🚪</div>
     </div>
 
+    <!-- STATS -->
+    <div class="stats-float">
+      <div class="stat-card">
+        <div class="stat-value" id="statPendientes">0</div>
+        <div class="stat-label">Pendientes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statHoy">0</div>
+        <div class="stat-label">Hoy</div>
+      </div>
+    </div>
+
     <!-- PANEL -->
     <div class="trip-panel" id="tripPanel">
-      <div class="panel-content">
+      <div class="panel-content" id="panelContent">
         <button class="btn btn-primary" id="btnToggleDisponibilidad">
           Cambiar disponibilidad
         </button>
 
         <h3 style="margin-top: 15px;">Viajes disponibles</h3>
         <div id="tripList"></div>
+      </div>
+    </div>
+
+    <!-- NAV PANEL -->
+    <div id="navPanel" class="nav-panel"></div>
+
+    <!-- TOAST -->
+    <div id="toast" class="toast"></div>
+
+    <!-- MODAL VIAJE ENTRANTE -->
+    <div id="incomingModal" class="incoming-modal">
+      <div class="incoming-modal-card">
+        <div class="incoming-header">
+          <h3>Nuevo viaje</h3>
+          <div class="countdown-box">
+            <span id="countdownText">30</span>s
+          </div>
+        </div>
+
+        <div class="countdown-bar-wrap">
+          <div id="countdownProgress" class="countdown-bar"></div>
+        </div>
+
+        <div id="incomingDetails"></div>
+
+        <div class="incoming-actions">
+          <button id="btnRejectIncoming" class="btn btn-danger">Rechazar</button>
+          <button id="btnAcceptIncoming" class="btn btn-success">Aceptar</button>
+        </div>
       </div>
     </div>
   </div>
