@@ -21,12 +21,12 @@ class TripManager {
     if (this.initialized) return this;
 
     await this.loadCurrentTrip();
-    await this.refreshTrips(true);
+    await this.refreshTrips();
     this._subscribeToRealtime();
 
     this.refreshInterval = setInterval(() => {
       if (!document.hidden) {
-        this.refreshTrips(false);
+        this.refreshTrips();
       }
     }, CONFIG.TRIP_REFRESH_INTERVAL || 10000);
 
@@ -84,13 +84,11 @@ class TripManager {
   // =========================================
   // REFRESH
   // =========================================
-  async refreshTrips(isInitialLoad = false) {
+  async refreshTrips() {
     const driverId = supabaseService.getCurrentDriverId();
     if (!driverId) return;
 
     try {
-      const previousIds = new Set((this.availableTrips || []).map(t => t.id));
-
       const [available, history] = await Promise.all([
         supabaseService.rest.select('viajes', {
           eq: { estado: CONFIG.ESTADOS.DISPONIBLE },
@@ -107,34 +105,19 @@ class TripManager {
         })
       ]);
 
-      // Filtrar viajes válidos y evitar que aparezcan viajes ya tomados
       this.availableTrips = (Array.isArray(available) ? available : []).filter(t => {
         const estado = this._normalizeState(t.estado);
         const choferId = t.chofer_id ?? null;
-
-        return (
-          estado === CONFIG.ESTADOS.DISPONIBLE &&
-          (choferId === null || choferId === '' || typeof choferId === 'undefined')
-        );
+        return estado === CONFIG.ESTADOS.DISPONIBLE && !choferId;
       });
 
       this.tripHistory = Array.isArray(history) ? history : [];
 
-      // Quitar duplicados por seguridad
       this.availableTrips = this._dedupeById(this.availableTrips);
       this.tripHistory = this._dedupeById(this.tripHistory);
 
       console.log('[Trips refresh] disponibles:', this.availableTrips);
       console.log('[Trips refresh] historial:', this.tripHistory);
-
-      // Detectar NUEVOS viajes disponibles
-      const newTrips = this.availableTrips.filter(t => !previousIds.has(t.id));
-
-      if (!isInitialLoad && !this.currentTrip && !this.pendingTrip && newTrips.length > 0) {
-        for (const trip of newTrips) {
-          this._notify('newAvailableTrip', trip);
-        }
-      }
 
       this._notify('tripsRefreshed', {
         available: this.availableTrips,
@@ -339,6 +322,7 @@ class TripManager {
         case 'INSERT': {
           const estado = this._normalizeState(newRecord.estado);
 
+          // Nuevo viaje disponible
           if (estado === CONFIG.ESTADOS.DISPONIBLE && !newRecord.chofer_id) {
             const exists = this.availableTrips.some(t => t.id === newRecord.id);
 
@@ -354,6 +338,7 @@ class TripManager {
             });
           }
 
+          // Viaje asignado específicamente a este chofer
           if (
             estado === CONFIG.ESTADOS.ASIGNADO &&
             newRecord.chofer_id === driverId
@@ -392,10 +377,8 @@ class TripManager {
             } else {
               this.availableTrips.unshift(newRecord);
             }
-          } else {
-            if (idx >= 0) {
-              this.availableTrips.splice(idx, 1);
-            }
+          } else if (idx >= 0) {
+            this.availableTrips.splice(idx, 1);
           }
 
           if (
@@ -518,6 +501,8 @@ class TripManager {
     return {
       currentTrip: this.currentTrip,
       pendingTrip: this.pendingTrip,
+      pending: this.availableTrips.length,
+      today: this.tripHistory.length,
       availableCount: this.availableTrips.length,
       completedCount: this.tripHistory.length
     };
