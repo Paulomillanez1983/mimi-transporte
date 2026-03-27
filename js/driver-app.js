@@ -47,12 +47,15 @@ class DriverApp {
 
       this._subscribeToEvents();
       this._bindAudioUnlock();
+      this._bindDisponibilidadButton();
 
       this.initialized = true;
       this._updateDriverStatus();
 
       setTimeout(() => this._safeResizeMap(), 300);
       setTimeout(() => this._safeResizeMap(), 1200);
+
+      this._renderInitialState();
 
       if (this.tripsReady) {
         if (this.mapReady && this.locationReady) {
@@ -84,6 +87,52 @@ class DriverApp {
       },
       { once: true }
     );
+  }
+
+  _bindDisponibilidadButton() {
+    const btn = document.getElementById('btnToggleDisponibilidad');
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      try {
+        btn.disabled = true;
+        btn.textContent = 'Actualizando...';
+
+        if (typeof tripManager.toggleAvailability === 'function') {
+          const result = await tripManager.toggleAvailability();
+
+          if (result?.success) {
+            uiController.showToast('Disponibilidad actualizada', 'success');
+          } else {
+            uiController.showToast(result?.error || 'No se pudo actualizar', 'warning');
+          }
+        } else {
+          uiController.showToast('Función de disponibilidad no implementada aún', 'warning');
+        }
+      } catch (e) {
+        console.error('Error cambiando disponibilidad:', e);
+        uiController.showToast('Error al cambiar disponibilidad', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Cambiar disponibilidad';
+      }
+    });
+  }
+
+  _renderInitialState() {
+    const currentTrip = tripManager.getCurrentTrip?.();
+    const pendingTrip = tripManager.getPendingTrip?.();
+
+    if (currentTrip) {
+      uiController.renderActiveTrip(currentTrip);
+      this._showTripOnMap(currentTrip);
+    } else if (pendingTrip) {
+      uiController.renderAvailableTrips([pendingTrip]);
+    } else {
+      uiController.renderAvailableTrips([]);
+    }
+
+    uiController.updateStats(tripManager.getStats?.() || {});
   }
 
   _updateDriverStatus() {
@@ -142,21 +191,18 @@ class DriverApp {
   }
 
   _subscribeToEvents() {
-    // NUEVO DISPONIBLE
     this.unsubscribers.push(
       tripManager.on('newAvailableTrip', (trip) => {
         this._handleIncomingTrip(trip);
       })
     );
 
-    // NUEVO PENDIENTE
     this.unsubscribers.push(
       tripManager.on('newPendingTrip', (trip) => {
         this._handleIncomingTrip(trip, { force: true });
       })
     );
 
-    // LIMPIEZA DE OFERTA VENCIDA / CANCELADA / TIMEOUT
     this.unsubscribers.push(
       tripManager.on('pendingTripCleared', ({ reason }) => {
         this.lastIncomingTripId = null;
@@ -176,6 +222,7 @@ class DriverApp {
         this._safePlaySound('success');
         this._showTripOnMap(trip);
         uiController.renderActiveTrip(trip);
+        uiController.updateStats(tripManager.getStats?.() || {});
       })
     );
 
@@ -185,6 +232,7 @@ class DriverApp {
         this._safePlaySound('success');
         this._showTripOnMap(trip);
         uiController.renderActiveTrip(trip);
+        uiController.updateStats(tripManager.getStats?.() || {});
       })
     );
 
@@ -229,7 +277,7 @@ class DriverApp {
     );
 
     this.unsubscribers.push(
-      tripManager.on('tripsRefreshed', ({ available }) => {
+      tripManager.on('tripsRefreshed', () => {
         const currentTrip = tripManager.getCurrentTrip?.();
         const pendingTrip = tripManager.getPendingTrip?.();
 
@@ -259,7 +307,6 @@ class DriverApp {
     if (tripManager.getCurrentTrip()) return;
     if (!force && tripManager.getPendingTrip()) return;
 
-    // Evita repetir el mismo modal muchas veces
     if (this.lastIncomingTripId === trip.id && uiController.isIncomingModalOpen()) {
       return;
     }
@@ -283,7 +330,6 @@ class DriverApp {
 
   async _handleDriverAction(detail = {}) {
     const { action, tripId } = detail || {};
-
     if (!action) return;
 
     switch (action) {
