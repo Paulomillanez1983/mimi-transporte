@@ -3,52 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>MIMI - Panel Chofer</title>
-  <meta name="description" content="Panel de viajes para choferes de MIMI Transporte Infantil." />
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="MIMI - Panel Chofer" />
-  <meta property="og:description" content="Gestioná viajes, estados, rutas y clientes desde el panel de chofer." />
-  <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/chofer.html" />
-  <meta property="og:image" content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" />
-  <meta property="og:site_name" content="MIMI Transporte Infantil" />
-  <meta property="og:locale" content="es_AR" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="MIMI - Panel Chofer" />
-  <meta name="twitter:description" content="Panel operativo de choferes MIMI." />
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" />
-  <meta name="theme-color" content="#1a1a2e" />
-  <!-- MAPLIBRE GL JS - Estilo Uber -->
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" />
-<script src="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js"></script>
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" />
+  <title>MIMI Driver</title>
   
-  <!-- Supabase con defer para evitar bloqueo -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <!-- MapLibre -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" />
+  <script src="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js"></script>
   
-  <script>
-    // Redirección temprana si no está logueado
-    if (localStorage.getItem('choferLogueado') !== 'true') {
-      window.location.href = 'login-chofer.html';
-    }
-  </script>
-
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
   <style>
-    :root {
-      --azul-oscuro: #1e3c72;
-      --azul-primario: #1565c0;
-      --verde: #4caf50;
-      --naranja: #ff9800;
-      --rojo: #f44336;
-      --gris: #f5f7fa;
-      --gris-2: #eef2f7;
-      --texto: #1b1f2a;
-      --texto-suave: #6b7280;
-      --sombra: 0 8px 24px rgba(0,0,0,0.08);
-      --radio-xl: 20px;
-      --radio-lg: 16px;
-      --radio-md: 12px;
-    }
-
     * {
       margin: 0;
       padding: 0;
@@ -57,665 +21,654 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-html, body {
-  background: #0a0a0a;           /* Fondo oscuro como Uber */
-  color: #e0e0e0;
-  min-height: 100vh;
-}
+    :root {
+      --bg-primary: #000000;
+      --bg-secondary: #121212;
+      --bg-card: #1C1C1E;
+      --accent: #276EF1;
+      --accent-light: #3E8AFF;
+      --success: #05944F;
+      --warning: #FFAD0D;
+      --danger: #E11900;
+      --text-primary: #FFFFFF;
+      --text-secondary: #A0A0A0;
+      --border: #2C2C2E;
+    }
 
-body {
-  padding-bottom: 110px;
-}
+    html, body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body {
+      padding-bottom: 100px;
+    }
+
+    /* HEADER UBER-STYLE */
     .header {
-      background: linear-gradient(135deg, #101827 0%, #172554 100%);
-      color: white;
-      position: relative;
-      z-index: 10;
-      overflow: hidden;
-      min-height: 220px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
-    }
-
-    .header img {
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
-      object-position: center;
-      display: block;
-      filter: saturate(1.05);
-    }
-
-    .header-overlay {
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(to top, rgba(16,24,39,0.96), rgba(16,24,39,0.25), transparent);
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-end;
-      padding: 22px 18px 16px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border);
+      padding: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     .header-top {
-      position: absolute;
-      top: 14px;
-      left: 14px;
-      right: 14px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .brand {
+      display: flex;
       align-items: center;
       gap: 12px;
     }
 
-    .brand-badge {
-      display: inline-flex;
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent);
+      border-radius: 12px;
+      display: flex;
       align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,0.12);
-      backdrop-filter: blur(10px);
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-weight: 800;
-      font-size: 0.9rem;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.14);
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-text span {
+      font-size: 13px;
+      color: var(--text-secondary);
     }
 
     .logout-btn {
-      padding: 11px 16px;
-      border: none;
-      border-radius: 14px;
-      background: rgba(244,67,54,0.95);
-      color: white;
-      font-weight: 800;
+      background: var(--bg-card);
+      color: var(--danger);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
       cursor: pointer;
-      box-shadow: 0 8px 20px rgba(244,67,54,0.28);
-      transition: transform 0.15s ease;
+      transition: all 0.2s;
     }
 
     .logout-btn:active {
-      transform: scale(0.97);
+      transform: scale(0.95);
+      opacity: 0.8;
     }
 
-    .header-overlay h1 {
-      font-size: 1.45rem;
-      font-weight: 900;
-      margin: 0;
-      letter-spacing: -0.02em;
+    /* DRIVER STATUS CARD */
+    .driver-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border: 1px solid var(--border);
     }
 
-    .header-overlay p {
-      font-size: 0.92rem;
-      opacity: 0.9;
-      margin-top: 6px;
+    .driver-avatar {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-light));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
     }
 
+    .driver-info {
+      flex: 1;
+    }
+
+    .driver-name {
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .driver-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: var(--success);
+    }
+
+    .driver-status::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-badge {
+      background: var(--success);
+      color: white;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* STATS BAR */
     .stats-bar {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       padding: 16px;
-      background: white;
-      margin: -18px 15px 16px;
-      border-radius: 22px;
-      box-shadow: var(--sombra);
-      position: relative;
-      z-index: 11;
+      margin: 0 16px;
     }
 
     .stat {
-      text-align: center;
-      padding: 8px 6px;
+      background: var(--bg-card);
       border-radius: 16px;
-      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      padding: 16px;
+      text-align: center;
+      border: 1px solid var(--border);
     }
 
     .stat-number {
-      font-size: 1.85rem;
-      font-weight: 900;
-      color: var(--azul-primario);
-      letter-spacing: -0.03em;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 4px;
     }
 
     .stat-label {
-      font-size: 0.73rem;
-      color: #6b7280;
+      font-size: 11px;
+      color: var(--text-secondary);
       text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      margin-top: 3px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
     }
 
-    .filtros {
+    /* FILTERS */
+    .filters {
       display: flex;
-      gap: 10px;
-      padding: 0 15px;
-      margin-bottom: 14px;
+      gap: 8px;
+      padding: 0 16px 16px;
       overflow-x: auto;
       scrollbar-width: none;
     }
 
-    .filtros::-webkit-scrollbar {
-      display: none;
-    }
+    .filters::-webkit-scrollbar { display: none; }
 
-    .filtro-btn {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 999px;
-      background: white;
-      color: #667085;
-      font-size: 0.88rem;
-      font-weight: 800;
+    .filter-btn {
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
-      transition: all 0.18s ease;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      transition: all 0.2s;
     }
 
-    .filtro-btn.activo {
-      background: var(--azul-primario);
+    .filter-btn.active {
+      background: var(--accent);
       color: white;
-      box-shadow: 0 8px 20px rgba(21,101,192,0.28);
+      border-color: var(--accent);
     }
 
-    .viajes-lista {
-      padding: 0 15px 20px;
+    /* TRIP CARDS */
+    .trips-list {
+      padding: 0 16px;
     }
 
-    .viaje-card {
-      background: white;
-      border-radius: 22px;
-      padding: 16px;
-      margin-bottom: 14px;
-      box-shadow: var(--sombra);
-      border-left: 5px solid var(--azul-primario);
-      animation: slideIn 0.32s ease-out;
-      position: relative;
+    .trip-card {
+      background: var(--bg-card);
+      border-radius: 20px;
+      margin-bottom: 16px;
       overflow: hidden;
+      border: 1px solid var(--border);
+      animation: slideUp 0.4s ease-out;
     }
 
-    .viaje-card::after {
-      content: "";
-      position: absolute;
-      inset: auto -40px -40px auto;
-      width: 110px;
-      height: 110px;
-      background: radial-gradient(circle, rgba(21,101,192,0.05), transparent 70%);
-      border-radius: 50%;
-      pointer-events: none;
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(12px) scale(0.985);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+    .trip-card::before {
+      content: '';
+      display: block;
+      height: 4px;
+      background: var(--accent);
     }
 
-    .viaje-card.disponible { border-left-color: var(--naranja); }
-    .viaje-card.asignado { border-left-color: #7c3aed; }
-    .viaje-card.aceptado { border-left-color: var(--azul-primario); }
-    .viaje-card.en-curso { border-left-color: #2196f3; }
-    .viaje-card.completado { border-left-color: var(--verde); }
-    .viaje-card.cancelado { border-left-color: var(--rojo); opacity: 0.82; }
+    .trip-card.disponible::before { background: var(--warning); }
+    .trip-card.aceptado::before { background: var(--accent); }
+    .trip-card.en-curso::before { background: var(--accent-light); }
+    .trip-card.completado::before { background: var(--success); }
+    .trip-card.cancelado::before { background: var(--danger); }
 
-    .viaje-header {
+    .trip-header {
+      padding: 16px;
       display: flex;
       justify-content: space-between;
-      align-items: start;
-      gap: 10px;
-      margin-bottom: 14px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
     }
 
-    .viaje-fecha {
-      font-size: 0.78rem;
-      color: #7b8190;
-      font-weight: 800;
+    .trip-date {
+      font-size: 13px;
+      color: var(--text-secondary);
+      font-weight: 500;
     }
 
-    .viaje-estado {
-      padding: 6px 11px;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 900;
+    .trip-status {
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
-      white-space: nowrap;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.5px;
     }
 
-    .estado-disponible { background: #fff3e0; color: #e65100; }
-    .estado-asignado { background: #ede9fe; color: #6d28d9; }
-    .estado-aceptado { background: #e3f2fd; color: var(--azul-primario); }
-    .estado-en-curso { background: #e3f2fd; color: #1976d2; }
-    .estado-completado { background: #e8f5e9; color: #2e7d32; }
-    .estado-cancelado { background: #ffebee; color: #c62828; }
+    .status-disponible { background: rgba(255, 173, 13, 0.15); color: var(--warning); }
+    .status-aceptado { background: rgba(39, 110, 241, 0.15); color: var(--accent); }
+    .status-en-curso { background: rgba(62, 138, 255, 0.15); color: var(--accent-light); }
+    .status-completado { background: rgba(5, 148, 79, 0.15); color: var(--success); }
+    .status-cancelado { background: rgba(225, 25, 0, 0.15); color: var(--danger); }
 
-    .viaje-ruta {
-      margin-bottom: 14px;
+    .trip-body {
+      padding: 16px;
     }
 
-    .ruta-item {
+    .client-row {
       display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 10px;
-      font-size: 0.92rem;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
     }
 
-    .ruta-icon {
-      width: 30px;
-      height: 30px;
+    .client-avatar {
+      width: 44px;
+      height: 44px;
+      background: var(--bg-secondary);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.92rem;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--accent);
+    }
+
+    .client-info h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .client-info p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    /* ROUTE */
+    .route {
+      margin: 16px 0;
+    }
+
+    .route-stop {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .route-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-top: 4px;
       flex-shrink: 0;
     }
 
-    .ruta-icon.origen { background: #e8f5e9; }
-    .ruta-icon.destino { background: #ffebee; }
+    .route-dot.pickup { background: var(--success); box-shadow: 0 0 0 4px rgba(5, 148, 79, 0.2); }
+    .route-dot.dropoff { background: var(--danger); box-shadow: 0 0 0 4px rgba(225, 25, 0, 0.2); }
 
-    .ruta-text {
-      flex: 1;
-      color: #2a2f3a;
-      font-weight: 700;
-      line-height: 1.35;
+    .route-line {
+      width: 2px;
+      height: 24px;
+      background: var(--border);
+      margin-left: 5px;
+      margin-bottom: 4px;
     }
 
-    .viaje-info {
+    .route-text {
+      flex: 1;
+      font-size: 15px;
+      line-height: 1.4;
+      color: var(--text-primary);
+    }
+
+    /* MAP */
+    .map-container {
+      height: 180px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      margin: 16px 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .map-container .maplibregl-map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .map-placeholder {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    /* TRIP INFO */
+    .trip-info {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      padding: 12px;
-      background: var(--gris-2);
-      border-radius: 16px;
-      margin-bottom: 14px;
+      gap: 12px;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      margin-bottom: 16px;
     }
 
     .info-item {
       text-align: center;
     }
 
-    .info-valor {
-      font-size: 1.04rem;
-      font-weight: 900;
-      color: var(--azul-oscuro);
-      letter-spacing: -0.02em;
+    .info-value {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-bottom: 2px;
     }
 
     .info-label {
-      font-size: 0.68rem;
-      color: #7b8190;
+      font-size: 11px;
+      color: var(--text-secondary);
       text-transform: uppercase;
-      font-weight: 800;
-      margin-top: 4px;
-      letter-spacing: 0.04em;
+      font-weight: 600;
     }
 
-    .viaje-cliente {
+    /* COUNTDOWN */
+    .countdown {
+      background: rgba(255, 173, 13, 0.1);
+      border: 1px solid rgba(255, 173, 13, 0.3);
+      color: var(--warning);
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px;
-      background: #fafafa;
-      border-radius: 14px;
-      margin-bottom: 14px;
-      border: 1px solid #f0f0f0;
-    }
-
-    .cliente-avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--azul-primario), var(--azul-oscuro));
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      font-size: 1rem;
-      flex-shrink: 0;
-      box-shadow: 0 6px 16px rgba(21,101,192,0.22);
-    }
-
-    .cliente-datos {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .cliente-nombre {
-      font-weight: 900;
-      color: #111827;
-      font-size: 0.96rem;
-      line-height: 1.2;
-    }
-
-    .cliente-tel {
-      font-size: 0.82rem;
-      color: #6b7280;
-      margin-top: 4px;
-      word-break: break-word;
-    }
-
-    .viaje-acciones {
-      display: flex;
       gap: 8px;
-      flex-wrap: wrap;
+      margin-bottom: 16px;
     }
 
-    .btn-accion {
+    /* ACTIONS */
+    .trip-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
       flex: 1;
-      min-width: 120px;
-      padding: 13px 12px;
+      padding: 14px;
       border: none;
-      border-radius: 14px;
-      font-size: 0.92rem;
-      font-weight: 900;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
       cursor: pointer;
+      transition: all 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      transition: all 0.16s ease;
-      text-decoration: none;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+      gap: 8px;
     }
 
-    .btn-accion:active {
-      transform: scale(0.98);
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--success);
+      color: white;
     }
 
-    .btn-aceptar { background: var(--verde); color: white; }
-    .btn-rechazar-card { background: #ffebee; color: var(--rojo); border: 1px solid #ffcdd2; }
-    .btn-iniciar { background: var(--azul-primario); color: white; }
-    .btn-finalizar { background: var(--azul-oscuro); color: white; }
-    .btn-maps { background: #e3f2fd; color: var(--azul-primario); }
-    .btn-llamar { background: #e8f5e9; color: var(--verde); }
-    .btn-whatsapp { background: #25d366; color: white; }
-
-    .loading {
-      text-align: center;
-      padding: 60px 20px;
-      color: #667085;
+    .btn-secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
     }
 
-    .spinner {
-      width: 42px;
-      height: 42px;
-      border: 4px solid #e5e7eb;
-      border-top-color: var(--azul-primario);
+    .btn-danger {
+      background: rgba(225, 25, 0, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(225, 25, 0, 0.3);
+    }
+
+    .btn-whatsapp {
+      background: #25D366;
+      color: white;
+    }
+
+    /* FLOATING BUTTONS */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(39, 110, 241, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: all 0.3s;
+    }
+
+    .fab.spinning {
       animation: spin 1s linear infinite;
-      margin: 0 auto 16px;
     }
 
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
 
-    .empty-state {
-      text-align: center;
-      padding: 70px 20px;
-      color: #7b8190;
-      background: white;
-      border-radius: 24px;
-      box-shadow: var(--sombra);
-    }
-
-    .empty-state-icon {
-      font-size: 4rem;
-      margin-bottom: 16px;
-    }
-
-    .refresh-btn {
-      position: fixed;
-      bottom: 22px;
-      right: 20px;
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
-      background: var(--azul-primario);
-      color: white;
-      border: none;
-      font-size: 1.45rem;
-      cursor: pointer;
-      box-shadow: 0 10px 24px rgba(21, 101, 192, 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-
-    .refresh-btn:active {
-      transform: scale(0.95);
-    }
-
-    .refresh-btn.spinning {
-      animation: spin 1s linear infinite;
-    }
-
-    .sound-btn {
-      position: fixed;
-      bottom: 92px;
-      right: 20px;
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      background: white;
-      color: var(--azul-primario);
-      border: 2px solid var(--azul-primario);
-      font-size: 1.3rem;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      transition: all 0.18s ease;
-    }
-
-    .sound-btn.muted {
-      background: #f5f5f5;
-      color: #999;
-      border-color: #ddd;
-    }
-
-    .sound-btn:active {
-      transform: scale(0.95);
-    }
-
-    .new-trip-indicator {
-      position: fixed;
-      top: 18px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-100px);
-      background: linear-gradient(135deg, var(--naranja), #f57c00);
-      color: white;
-      padding: 13px 24px;
-      border-radius: 999px;
-      font-weight: 900;
-      box-shadow: 0 10px 26px rgba(255, 152, 0, 0.34);
-      z-index: 9999;
-      opacity: 0;
-      transition: all 0.38s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    }
-
-    .new-trip-indicator.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
-
-    .new-trip-indicator::before {
-      content: '🔔 ';
-    }
-
-    @keyframes slideUp {
-      from { transform: translateY(90px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-
-    @keyframes pulse-ring {
-      0% { transform: scale(0.82); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.65); }
-      70% { transform: scale(1); box-shadow: 0 0 0 22px rgba(255, 152, 0, 0); }
-      100% { transform: scale(0.82); box-shadow: 0 0 0 0 rgba(255, 152, 0, 0); }
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.75; }
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-5px); }
-      75% { transform: translateX(5px); }
-    }
-
-    .modal-viaje {
+    /* MODAL */
+    .modal {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.88);
-      z-index: 10000;
+      background: rgba(0,0,0,0.9);
+      z-index: 1000;
       flex-direction: column;
-      justify-content: center;
+      justify-content: flex-end;
+      backdrop-filter: blur(10px);
+    }
+
+    .modal.active { display: flex; }
+
+    .modal-content {
+      background: var(--bg-card);
+      border-radius: 24px 24px 0 0;
+      padding: 24px;
+      animation: slideUpModal 0.3s ease-out;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    @keyframes slideUpModal {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .modal-icon {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--warning), #FF9500);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
       align-items: center;
-      padding: 18px;
-      backdrop-filter: blur(4px);
+      justify-content: center;
+      font-size: 40px;
+      animation: pulse-ring 2s infinite;
     }
 
-    .modal-viaje.urgente .timer-bar {
-      animation: pulse 0.55s infinite;
-    }
-
-    .timer-container {
-      height: 6px;
-      background: #e0e0e0;
-      border-radius: 3px;
-      overflow: hidden;
-      margin-bottom: 20px;
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(255, 173, 13, 0.4); }
+      70% { box-shadow: 0 0 0 20px rgba(255, 173, 13, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 173, 13, 0); }
     }
 
     .timer-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .timer-progress {
       height: 100%;
-      background: linear-gradient(90deg, #4caf50 0%, #ff9800 50%, #f44336 100%);
+      background: linear-gradient(90deg, var(--success), var(--warning), var(--danger));
       width: 100%;
       transition: width 1s linear;
     }
 
-    .btn-rechazar {
-      flex: 1;
-      padding: 16px;
-      border: 2px solid #ddd;
-      background: white;
-      border-radius: 16px;
-      font-weight: 900;
-      color: #666;
-      cursor: pointer;
-      transition: all 0.18s ease;
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
     }
 
-    .btn-rechazar:hover {
-      background: #ffebee;
-      border-color: #f44336;
-      color: #f44336;
+    .modal-actions .btn {
+      padding: 16px;
     }
 
-    .btn-aceptar-modal {
-      flex: 2;
-      padding: 16px;
-      border: none;
-      background: linear-gradient(135deg, #4caf50, #45a049);
-      border-radius: 16px;
-      font-weight: 900;
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* LOADING */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    /* NOTIFICATION */
+    .toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: var(--bg-card);
       color: white;
-      font-size: 1.08rem;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(76,175,80,0.28);
-      transition: all 0.18s ease;
-    }
-
-    .btn-aceptar-modal:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 26px rgba(76,175,80,0.35);
-    }
-
-    .pulse-icon {
-      animation: pulse-ring 2s infinite;
-    }
-
-    .countdown-chip {
-      margin-bottom: 12px;
-      padding: 10px 12px;
-      background: #fff3e0;
+      padding: 14px 24px;
       border-radius: 12px;
-      font-size: 0.86rem;
-      font-weight: 900;
-      color: #e65100;
+      font-weight: 600;
+      font-size: 14px;
+      z-index: 10000;
+      opacity: 0;
+      transition: all 0.3s;
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     }
 
-    @media (max-width: 420px) {
-      .btn-accion {
-        min-width: 100%;
-      }
-
-      .viaje-info {
-        grid-template-columns: 1fr 1fr 1fr;
-      }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
     }
+
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--danger); }
+    .toast.warning { border-color: var(--warning); }
   </style>
 </head>
 <body>
-<!-- HEADER ESTILO UBER DRIVER (mejorado) -->
-<div style="background: #0a0a0a; padding: 16px 16px 24px; border-bottom: 1px solid #1f1f1f;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <div style="width: 52px; height: 52px; background: #1565c0; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px;">
-        🚐
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-icon">🚐</div>
+        <div class="brand-text">
+          <h1>MIMI Driver</h1>
+          <span>Transporte Escolar</span>
+        </div>
       </div>
-      <div>
-        <div style="color: white; font-size: 1.45rem; font-weight: 800;">MIMI Driver</div>
-        <div style="color: #888; font-size: 0.9rem;">Transporte Escolar</div>
-      </div>
+      <button class="logout-btn" onclick="logout()">🚪 Salir</button>
     </div>
     
-    <button onclick="cerrarSesion()" style="background: #1f1f1f; color: #ff5252; border: none; padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 0.92rem; cursor: pointer;">
-      🚪 Salir
-    </button>
-  </div>
+    <div class="driver-card">
+      <div class="driver-avatar">👤</div>
+      <div class="driver-info">
+        <div class="driver-name" id="driverName">Chofer MIMI</div>
+        <div class="driver-status">Online</div>
+      </div>
+      <span class="status-badge">Activo</span>
+    </div>
+  </header>
 
-  <!-- Info Chofer -->
-  <div style="background: #1a1a1a; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 14px;">
-    <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #1565c0, #42a5f5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; color: white;">
-      👤
-    </div>
-    <div style="flex: 1;">
-      <div style="color: white; font-weight: 700; font-size: 1.05rem;">Chofer MIMI</div>
-      <div style="color: #4caf50; font-size: 0.9rem;">● Online</div>
-    </div>
-    <div style="text-align: right;">
-      <div style="background: #4caf50; color: white; font-size: 0.8rem; padding: 6px 14px; border-radius: 999px; font-weight: 700;">Activo</div>
-    </div>
-  </div>
-</div>
-  <!-- Info del chofer (debajo) -->
-  <div style="margin-top: 28px; display: flex; align-items: center; gap: 14px; background: rgba(255,255,255,0.06); padding: 12px 16px; border-radius: 16px;">
-    <div style="width: 52px; height: 52px; background: linear-gradient(135deg, #1565c0, #1e88e5); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: bold;">
-      👤
-    </div>
-    <div style="flex: 1;">
-      <div style="color: white; font-weight: 700;">Chofer MIMI</div>
-      <div style="color: #aaa; font-size: 0.9rem;">★★★★☆ • Online</div>
-    </div>
-    <div style="text-align: right;">
-      <div style="background: #4caf50; color: white; font-size: 0.75rem; padding: 4px 12px; border-radius: 999px; font-weight: 700;">Activo</div>
-    </div>
-  </div>
-</div>
   <!-- STATS -->
   <div class="stats-bar">
     <div class="stat">
@@ -732,1067 +685,661 @@ body {
     </div>
   </div>
 
-  <!-- FILTROS -->
-  <div class="filtros">
-    <button class="filtro-btn activo" data-filtro="TODOS" onclick="filtrar('TODOS')">Todos</button>
-    <button class="filtro-btn" data-filtro="DISPONIBLE" onclick="filtrar('DISPONIBLE')">Pendientes</button>
-    <button class="filtro-btn" data-filtro="ACEPTADO" onclick="filtrar('ACEPTADO')">Aceptados</button>
-    <button class="filtro-btn" data-filtro="EN_CURSO" onclick="filtrar('EN_CURSO')">En curso</button>
-    <button class="filtro-btn" data-filtro="COMPLETADO" onclick="filtrar('COMPLETADO')">Completados</button>
+  <!-- FILTERS -->
+  <div class="filters">
+    <button class="filter-btn active" data-filter="TODOS" onclick="filter('TODOS')">Todos</button>
+    <button class="filter-btn" data-filter="DISPONIBLE" onclick="filter('DISPONIBLE')">Pendientes</button>
+    <button class="filter-btn" data-filter="ACEPTADO" onclick="filter('ACEPTADO')">Aceptados</button>
+    <button class="filter-btn" data-filter="EN_CURSO" onclick="filter('EN_CURSO')">En curso</button>
+    <button class="filter-btn" data-filter="COMPLETADO" onclick="filter('COMPLETADO')">Completados</button>
   </div>
 
-  <!-- LISTA VIAJES -->
-  <div class="viajes-lista" id="listaViajes">
+  <!-- TRIPS LIST -->
+  <div class="trips-list" id="tripsList">
     <div class="loading">
       <div class="spinner"></div>
-      <p>Cargando viajes...</p>
+      <p style="color: var(--text-secondary);">Cargando viajes...</p>
     </div>
   </div>
 
-  <!-- INDICADOR NUEVO VIAJE -->
-  <div class="new-trip-indicator" id="newTripIndicator">¡Nuevo viaje disponible!</div>
+  <!-- FLOATING BUTTON -->
+  <button class="fab" id="refreshBtn" onclick="loadTrips()">🔄</button>
 
-  <!-- BOTONES FLOTANTES -->
-  <button class="sound-btn" id="soundBtn" onclick="toggleSound()" title="Activar/desactivar sonido">🔔</button>
-  <button class="refresh-btn" id="btnRefresh" onclick="cargarViajesSeguro()">🔄</button>
-
-  <!-- MODAL SOLICITUD ENTRANTE -->
-  <div id="incomingModal" class="modal-viaje">
-    <div id="incomingModalCard" style="background: white; border-radius: 28px; width: 100%; max-width: 420px; overflow: hidden; box-shadow: 0 24px 70px rgba(0,0,0,0.42); animation: slideUp 0.38s ease-out;">
-      <div class="timer-container">
-        <div id="timerBar" class="timer-bar"></div>
+  <!-- MODAL -->
+  <div class="modal" id="incomingModal">
+    <div class="modal-content">
+      <div class="timer-bar">
+        <div class="timer-progress" id="timerProgress"></div>
+      </div>
+      
+      <div class="modal-header">
+        <div class="modal-icon">🚐</div>
+        <h2 style="font-size: 24px; margin-bottom: 8px;">¡Nuevo viaje!</h2>
+        <p style="color: var(--text-secondary);">Decidí en <span id="timerText" style="color: var(--warning); font-weight: 800;">30</span> segundos</p>
       </div>
 
-      <div style="padding: 24px;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <div class="pulse-icon" style="width: 102px; height: 102px; background: linear-gradient(135deg, #ff9800, #f57c00); border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 3rem;">🚐</div>
-          <h2 style="font-size: 1.55rem; color: #1a1a2e; margin-bottom: 8px; font-weight: 900;">¡Nuevo viaje!</h2>
-          <p style="color: #666; font-size: 1rem;">Decidí en <span id="timerText" style="font-weight: 900; color: #ff9800; font-size: 1.2rem;">30</span> segundos</p>
-        </div>
+      <div id="modalDetails"></div>
 
-        <div id="incomingDetails" style="background: #f5f7fa; border-radius: 18px; padding: 16px; margin-bottom: 20px;">
-          <!-- Se llena dinámicamente -->
-        </div>
-
-        <div style="display: flex; gap: 12px;">
-          <button class="btn-rechazar" onclick="rechazarViaje()">❌ Rechazar</button>
-          <button class="btn-aceptar-modal" onclick="aceptarViaje()">✓ Aceptar</button>
-        </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="rejectTrip()" style="flex: 1;">Rechazar</button>
+        <button class="btn btn-primary" onclick="acceptTrip()" style="flex: 2;">Aceptar viaje</button>
       </div>
     </div>
   </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
 
   <script>
     // ==========================================
-    // CONFIGURACIÓN Y CLIENTE SUPABASE (ÚNICO)
+    // CONFIG
     // ==========================================
     const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_ZoEziWmg0PUy2lNVsiw1XA_zO40DAoq";
-
-    // Cliente único que combina Realtime + REST
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZHJ1Y3FpY24iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcwNDA2NjY2MCwiZXhwIjoyMDE5NjQyNjYwfQ.example"; // REEMPLAZAR CON TU ANON KEY REAL
+    
     let supabaseClient = null;
     let supabaseRest = null;
+    let tripsData = [];
+    let pendingTrip = null;
+    let timerInterval = null;
+    let currentFilter = 'TODOS';
+    let maps = {};
+    let userInteracted = false;
 
-    function inicializarSupabase() {
-      if (typeof window.supabase === 'undefined') {
-        console.error('Supabase library not loaded');
-        return false;
-      }
-
-      // Evitar reinicialización
-      if (supabaseClient) return true;
-
+    // ==========================================
+    // INIT
+    // ==========================================
+    function initSupabase() {
+      if (typeof window.supabase === 'undefined') return false;
+      
       try {
-        // Cliente oficial con Realtime
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            storageKey: 'mimi_chofer_session'
-          },
-          realtime: {
-            params: {
-              eventsPerSecond: 10
-            }
-          }
+          auth: { persistSession: false, autoRefreshToken: false }
         });
 
-        // Wrapper REST simple (usando el mismo cliente para evitar conflictos)
         supabaseRest = {
-          async select(table, options = {}) {
-            let query = supabaseClient.from(table).select(options.columns || '*');
-            
-            if (options.eq) {
-              Object.entries(options.eq).forEach(([col, val]) => {
-                query = query.eq(col, val);
-              });
+          async select(table, opts = {}) {
+            let q = supabaseClient.from(table).select(opts.columns || '*');
+            if (opts.eq) Object.entries(opts.eq).forEach(([k,v]) => q = q.eq(k,v));
+            if (opts.neq) Object.entries(opts.neq).forEach(([k,v]) => q = q.neq(k,v));
+            if (opts.order) {
+              const [col, dir] = opts.order.split('.');
+              q = q.order(col, { ascending: dir === 'asc' });
             }
-            
-            if (options.neq) {
-              Object.entries(options.neq).forEach(([col, val]) => {
-                query = query.neq(col, val);
-              });
-            }
-            
-            if (options.order) {
-              const [col, dir] = options.order.split('.');
-              query = query.order(col, { ascending: dir === 'asc' });
-            }
-            
-            if (options.limit) {
-              query = query.limit(options.limit);
-            }
-
-            const { data, error } = await query;
+            if (opts.limit) q = q.limit(opts.limit);
+            const { data, error } = await q;
             if (error) throw error;
             return data || [];
           },
-
-          async insert(table, data) {
-            const { data: result, error } = await supabaseClient
-              .from(table)
-              .insert(data)
-              .select();
-            if (error) throw error;
-            return result;
-          },
-
-          async updateById(table, id, data, extraEq = {}) {
-            let query = supabaseClient
+          async update(table, id, data) {
+            const { data: res, error } = await supabaseClient
               .from(table)
               .update({ ...data, updated_at: new Date().toISOString() })
-              .eq('id', id);
-            
-            Object.entries(extraEq).forEach(([col, val]) => {
-              query = query.eq(col, val);
-            });
-
-            const { data: result, error } = await query.select();
+              .eq('id', id)
+              .select();
             if (error) throw error;
-            return result;
+            return res;
           }
         };
-
         return true;
-      } catch (err) {
-        console.error('Error inicializando Supabase:', err);
+      } catch (e) {
+        console.error('Supabase init error:', e);
         return false;
       }
     }
-// ==========================================
-// MAPLIBRE - MAPA ESTILO UBER
-// ==========================================
-let mapasActivos = {}; // para evitar duplicados
 
-function mostrarMapaEnCard(viajeId, origen, destino) {
-  const mapContainerId = `map-${viajeId}`;
-  const container = document.getElementById(mapContainerId);
-  if (!container || !origen || !destino) return;
-
-  // Evitar crear múltiples mapas en la misma card
-  if (mapasActivos[viajeId]) return;
-
-  const map = new maplibregl.Map({
-    container: mapContainerId,
-    style: 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json', // estilo oscuro Uber-like
-    center: [(origen.lng + destino.lng) / 2, (origen.lat + destino.lat) / 2],
-    zoom: 13,
-    attributionControl: false
-  });
-
-  map.on('load', () => {
-    // Pin Origen (verde)
-    new maplibregl.Marker({ color: '#22c55e' })
-      .setLngLat([origen.lng, origen.lat])
-      .addTo(map);
-
-    // Pin Destino (azul)
-    new maplibregl.Marker({ color: '#3b82f6' })
-      .setLngLat([destino.lng, destino.lat])
-      .addTo(map);
-
-    // Ajustar vista
-    const bounds = new maplibregl.LngLatBounds()
-      .extend([origen.lng, origen.lat])
-      .extend([destino.lng, destino.lat]);
-
-    map.fitBounds(bounds, { padding: 60 });
-  });
-
-  mapasActivos[viajeId] = map;
-}
     // ==========================================
-    // SISTEMA DE SONIDO
+    // MAPS
     // ==========================================
-    const SoundSystem = {
-      audioContext: null,
+    function initMap(tripId, origen, destino) {
+      if (!origen?.lat || !destino?.lat) return;
+      
+      const container = document.getElementById(`map-${tripId}`);
+      if (!container || maps[tripId]) return;
+
+      try {
+        const map = new maplibregl.Map({
+          container: container,
+          style: 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json',
+          center: [(origen.lng + destino.lng) / 2, (origen.lat + destino.lat) / 2],
+          zoom: 13,
+          attributionControl: false
+        });
+
+        map.on('load', () => {
+          new maplibregl.Marker({ color: '#05944F' })
+            .setLngLat([origen.lng, origen.lat])
+            .addTo(map);
+          
+          new maplibregl.Marker({ color: '#E11900' })
+            .setLngLat([destino.lng, destino.lat])
+            .addTo(map);
+
+          const bounds = new maplibregl.LngLatBounds()
+            .extend([origen.lng, origen.lat])
+            .extend([destino.lng, destino.lat]);
+          map.fitBounds(bounds, { padding: 50 });
+        });
+
+        maps[tripId] = map;
+      } catch (e) {
+        console.error('Map error:', e);
+      }
+    }
+
+    // ==========================================
+    // SOUND
+    // ==========================================
+    const Sound = {
+      ctx: null,
       enabled: false,
-
+      
       async init() {
-        if (!this.audioContext) {
-          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        if (this.audioContext.state === 'suspended') {
-          await this.audioContext.resume();
-        }
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
         this.enabled = true;
-        this.updateButton();
       },
 
-      async toggle() {
-        if (!this.audioContext) {
-          await this.init();
-          return this.enabled;
+      play(type) {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        const now = this.ctx.currentTime;
+        
+        if (type === 'new') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
+        } else if (type === 'success') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(523, now);
+          osc.frequency.setValueAtTime(659, now + 0.1);
+          osc.frequency.setValueAtTime(784, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0, now + 0.4);
+          osc.start(now);
+          osc.stop(now + 0.4);
         }
-        if (this.audioContext.state === 'suspended') {
-          await this.audioContext.resume();
-        }
-        this.enabled = !this.enabled;
-        this.updateButton();
-        return this.enabled;
       },
 
-      updateButton() {
-        const btn = document.getElementById('soundBtn');
-        if (!btn) return;
-        btn.textContent = this.enabled ? '🔔' : '🔕';
-        btn.classList.toggle('muted', !this.enabled);
-        btn.title = this.enabled ? 'Sonido activado' : 'Sonido desactivado';
-      },
-
-      playNewTrip() {
-        if (!this.enabled || !this.audioContext) return;
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(880, now);
-        osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-        osc.start(now);
-        osc.stop(now + 0.4);
-      },
-
-      playSuccess() {
-        if (!this.enabled || !this.audioContext) return;
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, now);
-        osc.frequency.setValueAtTime(659.25, now + 0.1);
-        osc.frequency.setValueAtTime(783.99, now + 0.2);
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.4);
-        osc.start(now);
-        osc.stop(now + 0.4);
-      },
-
-      playNotification() {
-        if (!this.enabled || !this.audioContext) return;
-        const ctx = this.audioContext;
-        const now = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(600, now);
-        osc.frequency.exponentialRampToValueAtTime(300, now + 0.2);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-        osc.start(now);
-        osc.stop(now + 0.2);
-      },
-
-      vibrate(pattern = [50, 100, 50]) {
-        // Solo vibrar si el usuario ya interactuó con la página
-        if (!document.hasFocus()) return;
-        try {
-          if (navigator.vibrate) {
-            navigator.vibrate(pattern);
-          }
-        } catch (_) {}
+      vibrate(pattern) {
+        if (navigator.vibrate && userInteracted) navigator.vibrate(pattern);
       }
     };
 
-    async function toggleSound() {
-      const isEnabled = await SoundSystem.toggle();
-      if (isEnabled) SoundSystem.playNotification();
+    // ==========================================
+    // UI HELPERS
+    // ==========================================
+    function showToast(msg, type = 'info') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `toast ${type} show`;
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function normalizeState(s) {
+      return String(s || '').toUpperCase().replace(/[-\s]/g, '_');
+    }
+
+    function escapeHtml(t) {
+      return String(t || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
+    }
+
+    function getDriverId() {
+      return localStorage.getItem('choferUsuario') || 'driver_001';
+    }
+
+    function logout() {
+      localStorage.clear();
+      location.href = 'login-chofer.html';
     }
 
     // ==========================================
-    // VARIABLES GLOBALES
+    // DATA
     // ==========================================
-    let viajesData = [];
-    let viajePendiente = null;
-    let timerInterval = null;
-    const TIMEOUT_SEGUNDOS = 30;
-    let ultimosViajesVistos = new Set();
-    let viajesRechazadosLocalmente = new Set();
-    let filtroActual = 'TODOS';
-    let cargandoViajes = false;
-    let realtimeChannel = null;
-    let userHasInteracted = false;
-
-    // ==========================================
-    // UTILIDADES
-    // ==========================================
-    function normalizarEstado(estado) {
-      return String(estado || '')
-        .replace(/-/g, '_')
-        .replace(/\s+/g, '_')
-        .toUpperCase()
-        .trim();
-    }
-
-    function escaparHTML(texto) {
-      return String(texto || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    function obtenerChoferId() {
-      return localStorage.getItem('choferUsuario') || 'chofer_anon';
-    }
-
-    function obtenerFechaBaseViaje(viaje) {
-      return (
-        viaje.iniciado_at ||
-        viaje.aceptado_at ||
-        viaje.asignado_at ||
-        viaje.completado_at ||
-        viaje.updated_at ||
-        viaje.created_at ||
-        viaje.fechaHora ||
-        viaje.fecha ||
-        null
-      );
-    }
-
-    function obtenerCampoOrdenSeguro(estado) {
-      switch (estado) {
-        case 'ASIGNADO': return 'asignado_at.desc';
-        case 'ACEPTADO': return 'aceptado_at.desc';
-        case 'EN_CURSO': return 'updated_at.desc';
-        case 'COMPLETADO': return 'completado_at.desc';
-        default: return 'created_at.desc';
-      }
-    }
-
-    function obtenerTiempoRestante(viaje) {
-      const base = obtenerFechaBaseViaje(viaje);
-      if (!base) return 0;
-      const creado = new Date(base).getTime();
-      if (Number.isNaN(creado)) return 0;
-      const ahora = Date.now();
-      const expiracionMs = 2 * 60 * 1000;
-      return Math.floor(Math.max(0, expiracionMs - (ahora - creado)) / 1000);
-    }
-
-    function limpiarViajesExpiradosLocales() {
-      viajesData = viajesData.filter(v => {
-        const estado = normalizarEstado(v.estado);
-        if (estado !== 'DISPONIBLE') return true;
-        return obtenerTiempoRestante(v) > 0;
-      });
-    }
-
-    function cerrarSesion() {
-      localStorage.removeItem('choferLogueado');
-      localStorage.removeItem('choferUsuario');
-      window.location.href = 'login-chofer.html';
-    }
-
-    function showNewTripIndicator() {
-      const indicator = document.getElementById('newTripIndicator');
-      if (!indicator) return;
-      indicator.classList.add('show');
-      setTimeout(() => indicator.classList.remove('show'), 4000);
-    }
-
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-      const colores = {
-        success: '#4caf50',
-        error: '#f44336',
-        warning: '#ff9800',
-        info: '#2196f3'
-      };
-      const toast = document.createElement('div');
-      toast.style.cssText = `
-        position: fixed;
-        top: 18px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: ${colores[tipo] || colores.info};
-        color: white;
-        padding: 13px 24px;
-        border-radius: 999px;
-        font-weight: 900;
-        z-index: 10001;
-        box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-        max-width: 92%;
-        text-align: center;
-      `;
-      toast.textContent = mensaje;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 3200);
-    }
-
-    function abrirMaps(origen, destino) {
-      const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen || '')}&destination=${encodeURIComponent(destino || '')}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-
-    // ==========================================
-    // CARGA DE VIAJES
-    // ==========================================
-    async function cargarViajesSeguro() {
-      if (cargandoViajes) return;
-      cargandoViajes = true;
-      try {
-        await cargarViajes();
-      } finally {
-        cargandoViajes = false;
-      }
-    }
-
-    async function cargarViajes() {
-      const btn = document.getElementById('btnRefresh');
-      if (btn) btn.classList.add('spinning');
+    async function loadTrips() {
+      const btn = document.getElementById('refreshBtn');
+      btn.classList.add('spinning');
 
       try {
-        const choferId = obtenerChoferId();
+        const driverId = getDriverId();
+        
+        // Fetch all trip types in parallel
+        const [disponibles, aceptados, enCurso, completados] = await Promise.all([
+          supabaseRest.select('viajes', { eq: { estado: 'DISPONIBLE' }, order: 'created_at.desc' }),
+          supabaseRest.select('viajes', { eq: { estado: 'ACEPTADO', chofer_id: driverId }, order: 'aceptado_at.desc' }),
+          supabaseRest.select('viajes', { eq: { estado: 'EN_CURSO', chofer_id: driverId }, order: 'updated_at.desc' }),
+          supabaseRest.select('viajes', { eq: { estado: 'COMPLETADO', chofer_id: driverId }, order: 'completado_at.desc', limit: 20 })
+        ]);
 
-        // 1) Viaje asignado a este chofer
-        const asignados = await supabaseRest.select('viajes', {
-          eq: { estado: 'ASIGNADO', chofer_id: choferId },
+        // Check for new assigned trips
+        const asignados = await supabaseRest.select('viajes', { 
+          eq: { estado: 'ASIGNADO', chofer_id: driverId }, 
           order: 'asignado_at.desc',
-          limit: 1
+          limit: 1 
         });
 
-        const viajeAsignado = asignados?.[0];
-        if (viajeAsignado && !viajePendiente && !ultimosViajesVistos.has(viajeAsignado.id)) {
-          mostrarSolicitudEntrante(viajeAsignado);
+        if (asignados[0] && !pendingTrip) {
+          showIncomingModal(asignados[0]);
         }
 
-        // 2) Viajes disponibles
-        const disponibles = await supabaseRest.select('viajes', {
-          eq: { estado: 'DISPONIBLE' },
-          order: 'created_at.desc'
+        // Merge and deduplicate
+        const map = new Map();
+        [...disponibles, ...aceptados, ...enCurso, ...completados].forEach(t => {
+          if (t?.id) map.set(t.id, t);
         });
-
-        // 3) Viajes aceptados
-        const aceptados = await supabaseRest.select('viajes', {
-          eq: { estado: 'ACEPTADO', chofer_id: choferId },
-          order: 'aceptado_at.desc'
-        });
-
-        // 4) Viajes en curso
-        const enCurso = await supabaseRest.select('viajes', {
-          eq: { estado: 'EN_CURSO', chofer_id: choferId },
-          order: 'updated_at.desc'
-        });
-
-        // 5) Viajes completados
-        const completados = await supabaseRest.select('viajes', {
-          eq: { estado: 'COMPLETADO', chofer_id: choferId },
-          order: 'completado_at.desc',
-          limit: 30
-        });
-
-        const todos = [...(disponibles || []), ...(aceptados || []), ...(enCurso || []), ...(completados || [])];
-        const mapa = new Map();
-        todos.forEach(v => { if (v?.id) mapa.set(v.id, v); });
-
-        viajesData = Array.from(mapa.values()).filter(v => !viajesRechazadosLocalmente.has(v.id));
-        limpiarViajesExpiradosLocales();
-
-        const nuevosPendientes = viajesData.filter(v => {
-          const estado = normalizarEstado(v.estado);
-          return estado === 'DISPONIBLE' && !ultimosViajesVistos.has(v.id);
-        });
-
-        if (nuevosPendientes.length > 0) {
-          SoundSystem.playNewTrip();
-          if (userHasInteracted) {
-            SoundSystem.vibrate([100, 50, 100, 50, 200]);
-          }
-          showNewTripIndicator();
-          nuevosPendientes.forEach(v => ultimosViajesVistos.add(v.id));
+        
+        tripsData = Array.from(map.values());
+        
+        // Check for new available trips
+        const newTrips = tripsData.filter(t => 
+          normalizeState(t.estado) === 'DISPONIBLE' && 
+          !window.seenTrips?.has(t.id)
+        );
+        
+        if (newTrips.length > 0) {
+          Sound.play('new');
+          Sound.vibrate([100, 50, 100]);
+          newTrips.forEach(t => {
+            if (!window.seenTrips) window.seenTrips = new Set();
+            window.seenTrips.add(t.id);
+          });
         }
 
-        renderizarViajes();
-        actualizarStats();
+        renderTrips();
+        updateStats();
 
-      } catch (error) {
-        console.error('Error cargando viajes:', error);
-        document.getElementById('listaViajes').innerHTML = `
+      } catch (err) {
+        console.error(err);
+        document.getElementById('tripsList').innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon">⚠️</div>
-            <p>Error al cargar: ${escaparHTML(error.message)}</p>
-            <button onclick="cargarViajesSeguro()" style="margin-top:12px;padding:10px 16px;border:none;border-radius:12px;background:#1565c0;color:white;cursor:pointer;font-weight:800;">
-              Reintentar
-            </button>
+            <p>Error al cargar viajes</p>
+            <button class="btn btn-primary" onclick="loadTrips()" style="margin-top: 16px;">Reintentar</button>
           </div>
         `;
       } finally {
-        if (btn) btn.classList.remove('spinning');
+        btn.classList.remove('spinning');
       }
     }
 
-    // ==========================================
-    // MODAL SOLICITUD ENTRANTE
-    // ==========================================
-    function mostrarSolicitudEntrante(viaje) {
-      viajePendiente = viaje;
-      ultimosViajesVistos.add(viaje.id);
-
-      const modal = document.getElementById('incomingModal');
-      const detalles = document.getElementById('incomingDetails');
-      const timerBar = document.getElementById('timerBar');
-      const timerText = document.getElementById('timerText');
-
-      if (!modal || !detalles || !timerBar || !timerText) {
-        console.error('Elementos del modal no encontrados');
-        return;
-      }
-
-      detalles.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-          <div style="width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg, #1565c0, #1e3c72); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.4rem; box-shadow: 0 8px 20px rgba(21,101,192,0.22);">
-            ${(viaje.cliente || '?').charAt(0).toUpperCase()}
-          </div>
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 900; color: #1a1a2e; font-size: 1.12rem; line-height: 1.2;">${escaparHTML(viaje.cliente || 'Cliente')}</div>
-            <div style="font-size: 0.9rem; color: #666; margin-top: 4px;">📱 ${escaparHTML(viaje.telefono || 'Sin teléfono')}</div>
-          </div>
-        </div>
-        <div style="border-top: 1px solid #e0e0e0; padding-top: 12px;">
-          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; font-size: 0.95rem;">
-            <span style="color: #4caf50; font-size: 1.2rem;">●</span>
-            <span style="color: #333; font-weight: 700; line-height: 1.4;">${escaparHTML(viaje.origen || 'Origen no especificado')}</span>
-          </div>
-          <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.95rem;">
-            <span style="color: #f44336; font-size: 1.2rem;">●</span>
-            <span style="color: #333; font-weight: 700; line-height: 1.4;">${escaparHTML(viaje.destino || 'Destino no especificado')}</span>
-          </div>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 14px; padding-top: 12px; border-top: 1px solid #e0e0e0; gap: 10px;">
-          <div style="text-align: center; flex: 1;">
-            <div style="font-size: 1.25rem; font-weight: 900; color: #1565c0;">$${Number(viaje.precio || 0).toLocaleString('es-AR')}</div>
-            <div style="font-size: 0.74rem; color: #888; text-transform: uppercase; font-weight: 800;">Precio</div>
-          </div>
-          <div style="text-align: center; flex: 1;">
-            <div style="font-size: 1.25rem; font-weight: 900; color: #1565c0;">${escaparHTML(viaje.km || 0)}km</div>
-            <div style="font-size: 0.74rem; color: #888; text-transform: uppercase; font-weight: 800;">Distancia</div>
-          </div>
-          <div style="text-align: center; flex: 1;">
-            <div style="font-size: 1.05rem; font-weight: 900; color: #1565c0;">${escaparHTML(viaje.tipo || 'Standard')}</div>
-            <div style="font-size: 0.74rem; color: #888; text-transform: uppercase; font-weight: 800;">Servicio</div>
-          </div>
-        </div>
-      `;
-
-      modal.style.display = 'flex';
-      document.body.style.overflow = 'hidden';
-      SoundSystem.playNewTrip();
-      if (userHasInteracted) {
-        SoundSystem.vibrate([100, 50, 100, 50, 200, 100, 200]);
-      }
-
-      clearInterval(timerInterval);
-      let segundosRestantes = TIMEOUT_SEGUNDOS;
-      timerText.textContent = segundosRestantes;
-      timerText.style.color = '#ff9800';
-      modal.classList.remove('urgente');
-
-      timerBar.style.width = '100%';
-      timerBar.style.transition = 'none';
-      void timerBar.offsetWidth;
-      timerBar.style.transition = `width ${TIMEOUT_SEGUNDOS}s linear`;
-      timerBar.style.width = '0%';
-
-      timerInterval = setInterval(() => {
-        segundosRestantes--;
-        timerText.textContent = segundosRestantes;
-
-        if (segundosRestantes <= 10) {
-          timerText.style.color = '#f44336';
-          modal.classList.add('urgente');
-        } else if (segundosRestantes <= 20) {
-          timerText.style.color = '#ff9800';
-        }
-
-        if (segundosRestantes <= 10 && segundosRestantes > 0 && userHasInteracted) {
-          SoundSystem.vibrate([50]);
-        }
-
-        if (segundosRestantes <= 0) {
-          clearInterval(timerInterval);
-          timeoutViaje();
-        }
-      }, 1000);
-    }
-
-    async function aceptarViaje() {
-      if (!viajePendiente) return;
-      clearInterval(timerInterval);
-      const choferId = obtenerChoferId();
-
-      try {
-        await supabaseRest.updateById('viajes', viajePendiente.id, {
-          estado: 'ACEPTADO',
-          chofer_id: choferId,
-          aceptado_at: new Date().toISOString(),
-          asignado_a: null,
-          asignado_at: null
-        });
-
-        SoundSystem.playSuccess();
-        cerrarModal();
-        mostrarNotificacion('✓ Viaje aceptado correctamente', 'success');
-        await cargarViajesSeguro();
-      } catch (err) {
-        mostrarNotificacion('Error al aceptar: ' + err.message, 'error');
-        console.error(err);
-      }
-    }
-
-    async function rechazarViaje() {
-      if (!viajePendiente) return;
-      if (!confirm('¿Seguro que querés rechazar este viaje? Se asignará a otro chofer.')) return;
-
-      clearInterval(timerInterval);
-      const choferId = obtenerChoferId();
-
-      try {
-        await supabaseRest.updateById('viajes', viajePendiente.id, {
-          estado: 'DISPONIBLE',
-          chofer_id: null,
-          rechazado_por: choferId,
-          rechazado_at: new Date().toISOString(),
-          asignado_a: null,
-          asignado_at: null
-        });
-
-        SoundSystem.playNotification();
-        cerrarModal();
-        mostrarNotificacion('Viaje rechazado. Buscando otro chofer...', 'info');
-        viajesRechazadosLocalmente.add(viajePendiente.id);
-        await cargarViajesSeguro();
-      } catch (err) {
-        mostrarNotificacion('Error al rechazar: ' + err.message, 'error');
-        console.error(err);
-      }
-    }
-
-    async function timeoutViaje() {
-      if (!viajePendiente) return;
-      const choferId = obtenerChoferId();
-
-      try {
-        await supabaseRest.updateById('viajes', viajePendiente.id, {
-          estado: 'DISPONIBLE',
-          chofer_id: null,
-          timeout_por: choferId,
-          timeout_at: new Date().toISOString(),
-          asignado_a: null,
-          asignado_at: null
-        });
-
-        const idExpirado = viajePendiente.id;
-        cerrarModal();
-        viajesRechazadosLocalmente.add(idExpirado);
-        mostrarNotificacion('⏰ Tiempo agotado. El viaje se ofreció a otro chofer.', 'warning');
-        if (userHasInteracted) {
-          SoundSystem.vibrate([100, 100, 100]);
-        }
-        await cargarViajesSeguro();
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    function cerrarModal() {
-      const modal = document.getElementById('incomingModal');
-      if (modal) {
-        modal.style.display = 'none';
-        modal.classList.remove('urgente');
-      }
-      document.body.style.overflow = '';
-      clearInterval(timerInterval);
-      timerInterval = null;
-      viajePendiente = null;
-    }
-
-    // ==========================================
-    // STATS / FILTROS / RENDER
-    // ==========================================
-    function actualizarStats() {
+    function updateStats() {
       const hoy = new Date().toDateString();
-      const pendientes = viajesData.filter(v => normalizarEstado(v.estado) === 'DISPONIBLE').length;
-      const deHoy = viajesData.filter(v => {
-        const fecha = v.fecha || v.fechaHora || v.created_at;
-        return fecha && new Date(fecha).toDateString() === hoy;
-      }).length;
-
-      document.getElementById('statPendientes').textContent = pendientes;
-      document.getElementById('statHoy').textContent = deHoy;
-      document.getElementById('statTotal').textContent = viajesData.length;
+      document.getElementById('statPendientes').textContent = 
+        tripsData.filter(t => normalizeState(t.estado) === 'DISPONIBLE').length;
+      document.getElementById('statHoy').textContent = 
+        tripsData.filter(t => new Date(t.fecha || t.created_at).toDateString() === hoy).length;
+      document.getElementById('statTotal').textContent = tripsData.length;
     }
 
-    function filtrar(estado) {
-      filtroActual = estado;
-      document.querySelectorAll('.filtro-btn').forEach(btn => {
-        btn.classList.remove('activo');
-        if (btn.dataset.filtro === estado) btn.classList.add('activo');
+    function filter(f) {
+      currentFilter = f;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === f);
       });
-      renderizarViajes();
+      renderTrips();
     }
 
-    function renderizarViajes() {
-      const container = document.getElementById('listaViajes');
-      limpiarViajesExpiradosLocales();
-
-      let viajes = [...viajesData];
-      if (filtroActual !== 'TODOS') {
-        viajes = viajes.filter(v => normalizarEstado(v.estado) === filtroActual);
+    // ==========================================
+    // RENDER
+    // ==========================================
+    function renderTrips() {
+      const container = document.getElementById('tripsList');
+      
+      let trips = tripsData;
+      if (currentFilter !== 'TODOS') {
+        trips = trips.filter(t => normalizeState(t.estado) === currentFilter);
       }
 
-      viajes.sort((a, b) => {
-        const orden = { 'DISPONIBLE': 0, 'ASIGNADO': 1, 'ACEPTADO': 2, 'EN_CURSO': 3, 'COMPLETADO': 4, 'CANCELADO': 5 };
-        const estadoA = normalizarEstado(a.estado);
-        const estadoB = normalizarEstado(b.estado);
-        if ((orden[estadoA] ?? 99) !== (orden[estadoB] ?? 99)) {
-          return (orden[estadoA] ?? 99) - (orden[estadoB] ?? 99);
-        }
-        return new Date(b.fecha || b.fechaHora || b.created_at || 0) - new Date(a.fecha || a.fechaHora || a.created_at || 0);
+      trips.sort((a, b) => {
+        const order = { 'DISPONIBLE': 0, 'ASIGNADO': 1, 'ACEPTADO': 2, 'EN_CURSO': 3, 'COMPLETADO': 4 };
+        const diff = (order[normalizeState(a.estado)] || 99) - (order[normalizeState(b.estado)] || 99);
+        if (diff !== 0) return diff;
+        return new Date(b.fecha || b.created_at) - new Date(a.fecha || a.created_at);
       });
 
-      if (viajes.length === 0) {
+      if (trips.length === 0) {
         container.innerHTML = `
           <div class="empty-state">
             <div class="empty-state-icon">🚗</div>
-            <p>No hay viajes ${filtroActual !== 'TODOS' ? 'en este estado' : ''}</p>
+            <p>No hay viajes ${currentFilter !== 'TODOS' ? 'en este estado' : ''}</p>
           </div>
         `;
         return;
       }
 
-      container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
-    }
-
-function crearCardViaje(v) {
-  const estado = normalizarEstado(v.estado || 'DISPONIBLE');
-  const estadoClass = estado.toLowerCase().replace(/_/g, '-');
-  const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
-  const fechaStr = fecha.toLocaleDateString('es-AR', {
-    weekday: 'short', 
-    day: 'numeric', 
-    month: 'short', 
-    hour: '2-digit', 
-    minute: '2-digit'
-  });
-  const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
-
-  let acciones = '';
-  let timeoutHtml = '';
-  let mapaHtml = '';
-
-  // ==================== MAPA INTEGRADO (Estilo Uber) ====================
-  if (v.origen_lat && v.origen_lng && v.destino_lat && v.destino_lng) {
-    mapaHtml = `
-      <div style="margin: 16px 0; height: 210px; border-radius: 18px; overflow: hidden; background: #111; border: 1px solid #222;">
-        <div id="map-${escaparHTML(v.id)}" style="width: 100%; height: 100%;"></div>
-      </div>
-    `;
-  }
-
-  // ==================== ACCIONES SEGÚN ESTADO ====================
-  if (estado === 'DISPONIBLE') {
-    const restante = obtenerTiempoRestante(v);
-    const min = Math.floor(restante / 60);
-    const seg = restante % 60;
-    timeoutHtml = `<div class="countdown-chip">⏳ Disponible por: ${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}</div>`;
-
-    acciones = `
-      <button class="btn-accion btn-aceptar" onclick="tomarViaje('${escaparHTML(v.id)}')">✓ Aceptar</button>
-      <button class="btn-accion btn-rechazar-card" onclick="rechazarDisponible('${escaparHTML(v.id)}')">✕ Rechazar</button>
-    `;
-  } 
-  else if (estado === 'ACEPTADO') {
-    acciones = `
-      <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'EN_CURSO')">🚀 Iniciar viaje</button>
-      <a href="tel:${escaparHTML(v.telefono || '')}" class="btn-accion btn-llamar">📞 Llamar</a>
-    `;
-  } 
-  else if (estado === 'EN_CURSO') {
-    const telWA = String(v.telefono || '').replace(/[^\d]/g, '');
-    acciones = `
-      <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${escaparHTML(v.id)}')">✅ Finalizar viaje</button>
-      <a href="https://wa.me/${telWA}" target="_blank" rel="noopener noreferrer" class="btn-accion btn-whatsapp">💬 WhatsApp</a>
-    `;
-  } 
-  else {
-    acciones = `<button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver en Maps</button>`;
-  }
-
-  return `
-    <div class="viaje-card ${estadoClass}">
-      <div class="viaje-header">
-        <span class="viaje-fecha">${escaparHTML(fechaStr)}</span>
-        <span class="viaje-estado estado-${estadoClass}">${escaparHTML(estado.replace('_', ' '))}</span>
-      </div>
-
-      <div class="viaje-cliente">
-        <div class="cliente-avatar">${escaparHTML(inicial)}</div>
-        <div class="cliente-datos">
-          <div class="cliente-nombre">${escaparHTML(v.cliente || 'Sin nombre')}</div>
-          <div class="cliente-tel">📱 ${escaparHTML(v.telefono || 'Sin teléfono')}</div>
-        </div>
-      </div>
-
-      <div class="viaje-ruta">
-        <div class="ruta-item">
-          <div class="ruta-icon origen">📍</div>
-          <div class="ruta-text">${escaparHTML(v.origen || '')}</div>
-        </div>
-        <div class="ruta-item">
-          <div class="ruta-icon destino">🎯</div>
-          <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
-        </div>
-      </div>
-
-      <!-- MAPA INTEGRADO -->
-      ${mapaHtml}
-
-      <div class="viaje-info">
-        <div class="info-item">
-          <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
-          <div class="info-label">Precio</div>
-        </div>
-        <div class="info-item">
-          <div class="info-valor">${escaparHTML(v.km || 0)} km</div>
-          <div class="info-label">Distancia</div>
-        </div>
-        <div class="info-item">
-          <div class="info-valor">${escaparHTML(v.tipo || 'Standard')}</div>
-          <div class="info-label">Servicio</div>
-        </div>
-      </div>
-
-      ${timeoutHtml}
-      ${v.notas ? `<div style="font-size:0.86rem;color:#666;margin:12px 0;padding:12px;background:#1f1f1f;border-radius:12px;">📝 ${escaparHTML(v.notas)}</div>` : ''}
-
-      <div class="viaje-acciones">${acciones}</div>
-    </div>
-  `;
-}
-    // ==========================================
-    // ACCIONES DE VIAJE
-    // ==========================================
-    async function cambiarEstado(id, nuevoEstado) {
-      if (!id) {
-        alert('ID inválido');
-        return;
-      }
-
-      const choferId = obtenerChoferId();
-      const now = new Date().toISOString();
-      const payload = { estado: nuevoEstado, updated_at: now };
-
-      if (nuevoEstado === 'ACEPTADO') {
-        payload.chofer_id = choferId;
-        payload.asignado_a = choferId;
-        payload.aceptado_at = now;
-      }
-      if (nuevoEstado === 'EN_CURSO') {
-        payload.updated_at = now;
-      }
-      if (nuevoEstado === 'COMPLETADO') {
-        payload.completado_at = now;
-      }
-
-      try {
-        await supabaseRest.updateById('viajes', id, payload);
-        SoundSystem.playSuccess();
-        mostrarNotificacion('Estado actualizado', 'success');
-        await cargarViajesSeguro();
-      } catch (err) {
-        alert('Error: ' + err.message);
-        console.error(err);
-      }
-    }
-
-    async function rechazarDisponible(id) {
-      const choferId = obtenerChoferId();
-      if (!id) {
-        mostrarNotificacion('ID de viaje inválido', 'error');
-        return;
-      }
-      if (!confirm('¿Querés rechazar este viaje?')) return;
-
-      try {
-        const viajeActual = viajesData.find(v => v.id === id);
-        if (!viajeActual) {
-          mostrarNotificacion('El viaje ya no está disponible', 'warning');
-          await cargarViajesSeguro();
-          return;
-        }
-
-        const estadoActual = normalizarEstado(viajeActual.estado);
-        if (estadoActual !== 'DISPONIBLE') {
-          mostrarNotificacion('Este viaje ya no está disponible', 'warning');
-          await cargarViajesSeguro();
-          return;
-        }
-
-        const actualizado = await supabaseRest.updateById('viajes', id, {
-          rechazado_por: choferId,
-          rechazado_at: new Date().toISOString()
-        }, { estado: 'DISPONIBLE' });
-
-        if (!actualizado || actualizado.length === 0) {
-          mostrarNotificacion('El viaje ya fue tomado por otro chofer', 'warning');
-          await cargarViajesSeguro();
-          return;
-        }
-
-        viajesRechazadosLocalmente.add(id);
-        viajesData = viajesData.filter(v => v.id !== id);
-        SoundSystem.playNotification();
-        mostrarNotificacion('Viaje rechazado', 'info');
-        renderizarViajes();
-        actualizarStats();
-      } catch (err) {
-        console.error('Error al rechazar viaje disponible:', err);
-        mostrarNotificacion('Error al rechazar: ' + err.message, 'error');
-      }
-    }
-
-    async function finalizarViaje(id) {
-      const notas = prompt('¿Observaciones del viaje? (opcional)');
-      try {
-        await supabaseRest.updateById('viajes', id, {
-          estado: 'COMPLETADO',
-          notas: notas || null,
-          completado_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        SoundSystem.playSuccess();
-        mostrarNotificacion('Viaje finalizado', 'success');
-        await cargarViajesSeguro();
-      } catch (err) {
-        alert('Error al finalizar: ' + err.message);
-        console.error(err);
-      }
-    }
-
-    // Alias para compatibilidad
-    async function tomarViaje(id) {
-      await cambiarEstado(id, 'ACEPTADO');
-    }
-
-    // ==========================================
-    // INICIALIZACIÓN
-    // ==========================================
-    function iniciarRealtimeViajes() {
-      try {
-        if (!supabaseClient) {
-          console.warn('No hay cliente realtime disponible');
-          return;
-        }
-
-        if (realtimeChannel) {
-          supabaseClient.removeChannel(realtimeChannel);
-          realtimeChannel = null;
-        }
-
-        let refreshTimeout = null;
-        realtimeChannel = supabaseClient
-          .channel('viajes-live')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'viajes' }, (payload) => {
-            console.log('🔄 Cambio realtime en viajes:', payload);
-            clearTimeout(refreshTimeout);
-            refreshTimeout = setTimeout(() => cargarViajesSeguro(), 350);
-          })
-          .subscribe((status) => {
-            console.log('📡 Realtime viajes:', status);
-          });
-
-      } catch (err) {
-        console.error('Error iniciando realtime:', err);
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      // Inicializar Supabase primero
-      if (!inicializarSupabase()) {
-        document.getElementById('listaViajes').innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">⚠️</div>
-            <p>Error al inicializar la conexión. Recargá la página.</p>
-          </div>
-        `;
-        return;
-      }
-
-      await cargarViajesSeguro();
-      iniciarRealtimeViajes();
-
-      // Inicializar audio en primer click
-      document.body.addEventListener('click', async () => {
-        userHasInteracted = true;
-        if (!SoundSystem.audioContext) {
-          await SoundSystem.init();
-        }
-      }, { once: true });
-
-      // Click fuera del modal
-      const modal = document.getElementById('incomingModal');
-      const card = document.getElementById('incomingModalCard');
-      if (modal && card) {
-        modal.addEventListener('click', (e) => {
-          if (e.target.id === 'incomingModal') {
-            card.style.animation = 'shake 0.4s ease-in-out';
-            setTimeout(() => {
-              card.style.animation = 'slideUp 0.38s ease-out';
-            }, 400);
-            SoundSystem.vibrate([30, 30, 30]);
+      container.innerHTML = trips.map(t => createTripCard(t)).join('');
+      
+      // Initialize maps after render
+      setTimeout(() => {
+        trips.forEach(t => {
+          if (t.origen_lat && t.destino_lat) {
+            initMap(t.id, 
+              { lat: t.origen_lat, lng: t.origen_lng },
+              { lat: t.destino_lat, lng: t.destino_lng }
+            );
           }
         });
+      }, 100);
+    }
+
+    function createTripCard(t) {
+      const estado = normalizeState(t.estado);
+      const estadoClass = estado.toLowerCase();
+      const fecha = new Date(t.fecha || t.created_at).toLocaleString('es-AR', {
+        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+      });
+      
+      const hasCoords = t.origen_lat && t.destino_lat;
+      
+      let actions = '';
+      let countdown = '';
+      
+      if (estado === 'DISPONIBLE') {
+        const exp = new Date(t.created_at).getTime() + 2*60*1000;
+        const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
+        const min = Math.floor(rest / 60);
+        const seg = rest % 60;
+        
+        countdown = `<div class="countdown">⏱️ Disponible: ${min}:${seg.toString().padStart(2,'0')}</div>`;
+        actions = `
+          <button class="btn btn-primary" onclick="acceptTripId('${t.id}')">✓ Aceptar</button>
+          <button class="btn btn-danger" onclick="rejectTripId('${t.id}')">✕ Rechazar</button>
+        `;
+      } else if (estado === 'ACEPTADO') {
+        actions = `
+          <button class="btn btn-primary" onclick="startTrip('${t.id}')">🚀 Iniciar</button>
+          <a href="tel:${t.telefono}" class="btn btn-secondary">📞 Llamar</a>
+        `;
+      } else if (estado === 'EN_CURSO') {
+        const wa = String(t.telefono).replace(/\D/g, '');
+        actions = `
+          <button class="btn btn-primary" onclick="finishTrip('${t.id}')">✅ Finalizar</button>
+          <a href="https://wa.me/${wa}" target="_blank" class="btn btn-whatsapp">💬 WhatsApp</a>
+        `;
+      } else {
+        actions = `<button class="btn btn-secondary" onclick="openMaps('${t.origen}', '${t.destino}')">🗺️ Maps</button>`;
       }
 
-      // Re-render local solo visual (countdowns)
-      setInterval(() => {
-        if (!document.hidden) {
-          renderizarViajes();
-          actualizarStats();
+      return `
+        <div class="trip-card ${estadoClass}">
+          <div class="trip-header">
+            <span class="trip-date">${escapeHtml(fecha)}</span>
+            <span class="trip-status status-${estadoClass}">${estado.replace('_', ' ')}</span>
+          </div>
+          
+          <div class="trip-body">
+            <div class="client-row">
+              <div class="client-avatar">${escapeHtml((t.cliente || '?')[0])}</div>
+              <div class="client-info">
+                <h3>${escapeHtml(t.cliente || 'Sin nombre')}</h3>
+                <p>📱 ${escapeHtml(t.telefono || 'Sin teléfono')}</p>
+              </div>
+            </div>
+
+            <div class="route">
+              <div class="route-stop">
+                <div class="route-dot pickup"></div>
+                <div class="route-text">${escapeHtml(t.origen)}</div>
+              </div>
+              <div class="route-line"></div>
+              <div class="route-stop">
+                <div class="route-dot dropoff"></div>
+                <div class="route-text">${escapeHtml(t.destino)}</div>
+              </div>
+            </div>
+
+            ${hasCoords ? `<div class="map-container"><div id="map-${t.id}"></div></div>` : ''}
+
+            <div class="trip-info">
+              <div class="info-item">
+                <div class="info-value">$${Number(t.precio || 0).toLocaleString('es-AR')}</div>
+                <div class="info-label">Precio</div>
+              </div>
+              <div class="info-item">
+                <div class="info-value">${t.km || 0} km</div>
+                <div class="info-label">Distancia</div>
+              </div>
+              <div class="info-item">
+                <div class="info-value">${escapeHtml(t.tipo || 'Standard')}</div>
+                <div class="info-label">Servicio</div>
+              </div>
+            </div>
+
+            ${countdown}
+            ${t.notas ? `<p style="color: var(--text-secondary); font-size: 13px; margin-bottom: 16px;">📝 ${escapeHtml(t.notas)}</p>` : ''}
+            
+            <div class="trip-actions">${actions}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // MODAL
+    // ==========================================
+    function showIncomingModal(trip) {
+      pendingTrip = trip;
+      const modal = document.getElementById('incomingModal');
+      const details = document.getElementById('modalDetails');
+      
+      details.innerHTML = `
+        <div style="background: var(--bg-secondary); border-radius: 16px; padding: 20px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 56px; height: 56px; background: var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700;">
+              ${escapeHtml((trip.cliente || '?')[0])}
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 18px;">${escapeHtml(trip.cliente)}</div>
+              <div style="color: var(--text-secondary); font-size: 14px;">📱 ${escapeHtml(trip.telefono)}</div>
+            </div>
+          </div>
+          
+          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; font-size: 15px;">
+            <span style="color: var(--success);">●</span>
+            <span>${escapeHtml(trip.origen)}</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 15px;">
+            <span style="color: var(--danger);">●</span>
+            <span>${escapeHtml(trip.destino)}</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: 800; color: var(--accent);">$${Number(trip.precio).toLocaleString('es-AR')}</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Precio</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 20px; font-weight: 800; color: var(--accent);">${trip.km}km</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Distancia</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 18px; font-weight: 800; color: var(--accent);">${escapeHtml(trip.tipo || 'Standard')}</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">Servicio</div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      modal.classList.add('active');
+      Sound.play('new');
+      Sound.vibrate([100, 50, 100, 50, 200]);
+      
+      // Timer
+      let seg = 30;
+      const bar = document.getElementById('timerProgress');
+      const txt = document.getElementById('timerText');
+      
+      clearInterval(timerInterval);
+      bar.style.width = '100%';
+      setTimeout(() => bar.style.width = '0%', 50);
+      
+      timerInterval = setInterval(() => {
+        seg--;
+        txt.textContent = seg;
+        if (seg <= 0) {
+          clearInterval(timerInterval);
+          timeoutTrip();
         }
       }, 1000);
-    });
+    }
 
-    window.addEventListener('beforeunload', async () => {
+    async function acceptTrip() {
+      if (!pendingTrip) return;
+      clearInterval(timerInterval);
+      
       try {
-        if (realtimeChannel && supabaseClient) {
-          await supabaseClient.removeChannel(realtimeChannel);
-          realtimeChannel = null;
-        }
-      } catch (e) {
-        console.warn('No se pudo limpiar realtime:', e);
+        await supabaseRest.update('viajes', pendingTrip.id, {
+          estado: 'ACEPTADO',
+          chofer_id: getDriverId(),
+          aceptado_at: new Date().toISOString()
+        });
+        
+        Sound.play('success');
+        closeModal();
+        showToast('✓ Viaje aceptado', 'success');
+        loadTrips();
+      } catch (err) {
+        showToast('Error al aceptar', 'error');
       }
+    }
+
+    async function rejectTrip() {
+      if (!pendingTrip) return;
+      clearInterval(timerInterval);
+      
+      try {
+        await supabaseRest.update('viajes', pendingTrip.id, {
+          estado: 'DISPONIBLE',
+          chofer_id: null,
+          rechazado_por: getDriverId()
+        });
+        
+        closeModal();
+        showToast('Viaje rechazado', 'warning');
+        loadTrips();
+      } catch (err) {
+        showToast('Error al rechazar', 'error');
+      }
+    }
+
+    function timeoutTrip() {
+      rejectTrip();
+      showToast('⏰ Tiempo agotado', 'warning');
+    }
+
+    function closeModal() {
+      document.getElementById('incomingModal').classList.remove('active');
+      pendingTrip = null;
+    }
+
+    // ==========================================
+    // ACTIONS
+    // ==========================================
+    async function acceptTripId(id) {
+      try {
+        await supabaseRest.update('viajes', id, {
+          estado: 'ACEPTADO',
+          chofer_id: getDriverId(),
+          aceptado_at: new Date().toISOString()
+        });
+        Sound.play('success');
+        showToast('Viaje aceptado', 'success');
+        loadTrips();
+      } catch (err) {
+        showToast('Error', 'error');
+      }
+    }
+
+    async function rejectTripId(id) {
+      if (!confirm('¿Rechazar este viaje?')) return;
+      try {
+        await supabaseRest.update('viajes', id, {
+          estado: 'DISPONIBLE',
+          chofer_id: null,
+          rechazado_por: getDriverId()
+        });
+        showToast('Viaje rechazado', 'warning');
+        loadTrips();
+      } catch (err) {
+        showToast('Error', 'error');
+      }
+    }
+
+    async function startTrip(id) {
+      try {
+        await supabaseRest.update('viajes', id, { estado: 'EN_CURSO' });
+        Sound.play('success');
+        showToast('Viaje iniciado', 'success');
+        loadTrips();
+      } catch (err) {
+        showToast('Error', 'error');
+      }
+    }
+
+    async function finishTrip(id) {
+      const notas = prompt('¿Observaciones? (opcional)');
+      try {
+        await supabaseRest.update('viajes', id, {
+          estado: 'COMPLETADO',
+          completado_at: new Date().toISOString(),
+          notas: notas || null
+        });
+        Sound.play('success');
+        showToast('Viaje completado', 'success');
+        loadTrips();
+      } catch (err) {
+        showToast('Error', 'error');
+      }
+    }
+
+    function openMaps(origen, destino) {
+      window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`, '_blank');
+    }
+
+    // ==========================================
+    // INIT
+    // ==========================================
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Auth check
+      if (localStorage.getItem('choferLogueado') !== 'true') {
+        location.href = 'login-chofer.html';
+        return;
+      }
+
+      if (!initSupabase()) {
+        showToast('Error de conexión', 'error');
+        return;
+      }
+
+      await loadTrips();
+      
+      // Realtime
+      supabaseClient.channel('trips')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'viajes' }, () => {
+          setTimeout(loadTrips, 500);
+        })
+        .subscribe();
+
+      // User interaction for sound
+      document.body.addEventListener('click', () => {
+        userInteracted = true;
+        if (!Sound.ctx) Sound.init();
+      }, { once: true });
+
+      // Refresh countdowns
+      setInterval(() => {
+        if (!document.hidden) renderTrips();
+      }, 1000);
     });
   </script>
 </body>
