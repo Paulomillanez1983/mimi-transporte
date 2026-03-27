@@ -1,40 +1,39 @@
 /**
  * MIMI Driver - UI Controller
- * Experiencia Uber Driver: Mapa siempre visible, UI flotante minimalista
+ * Renders UI based on state, handles interactions
  */
-
-import CONFIG from './config.js';
-import routingService from './routing-service.js';
 
 class UIController {
   constructor() {
     this.elements = {};
     this.countdownInterval = null;
-    this.currentModal = null;
-    this._navigationMode = false;
-    this._currentInstruction = null;
-    this._currentTrip = null;
+    this.currentCountdown = 0;
+    this.touchStartY = 0;
+    this.sheetOpen = false;
   }
 
-  init() {
+  initialize() {
     this._cacheElements();
-    this._loadDriverName();
     this._bindEvents();
+    this._subscribeToState();
     this._setupViewport();
-    return this;
+    
+    // Initial render
+    this._renderForState(stateManager.get('driver.status'));
   }
 
   _cacheElements() {
     const ids = [
-      'toast', 'tripPanel', 'panelContent', 'tripList', 
-      'navPanel', 'navStreet', 'navNext', 'navDistance',
-      'navInstructionBar', 'navInstructionIcon', 'navInstructionText',
-      'arrivalPanel', 'arrivalText', 'btnFinishTrip',
-      'statPendientes', 'statHoy', 'driverName', 'estadoChofer',
-      'panelHandle', 'panelSubtitle', 'tripCountBadge',
-      'btnToggleDisponibilidad', 'incomingModal', 'incomingDetails',
-      'countdownText', 'countdownProgress', 'btnAcceptIncoming',
-      'btnRejectIncoming', 'globalLoading'
+      'header', 'driver-name', 'driver-initial', 'status-dot', 'status-text',
+      'stats-panel', 'stat-earnings', 'stat-trips', 'stat-rating',
+      'nav-bar', 'nav-street', 'nav-next', 'nav-distance', 'nav-progress-bar',
+      'fab-online', 'bottom-sheet', 'sheet-content',
+      'incoming-modal', 'countdown-number', 'countdown-circle',
+      'trip-pickup', 'trip-dropoff', 'pickup-time', 'trip-distance',
+      'trip-price', 'trip-duration', 'client-name', 'client-phone',
+      'btn-accept', 'btn-reject', 'btn-call', 'btn-whatsapp',
+      'arrival-panel', 'btn-finish', 'btn-continue',
+      'toast-container', 'global-loading', 'offline-banner'
     ];
 
     ids.forEach(id => {
@@ -43,334 +42,281 @@ class UIController {
   }
 
   _bindEvents() {
-    // Panel handle - swipe up/down
-    const handle = this.elements.panelHandle;
-    const panel = this.elements.tripPanel;
-    
-    if (handle && panel) {
-      let startY = 0;
-      let isDragging = false;
-
-      handle.addEventListener('touchstart', (e) => {
-        isDragging = true;
-        startY = e.touches[0].clientY;
-        panel.style.transition = 'none';
-      }, { passive: true });
-
-      handle.addEventListener('touchmove', (e) => {
-        if (!isDragging) return;
-        const delta = startY - e.touches[0].clientY;
-        const newHeight = Math.max(80, Math.min(window.innerHeight * 0.85, panel.offsetHeight + delta));
-        panel.style.height = `${newHeight}px`;
-      }, { passive: true });
-
-      handle.addEventListener('touchend', () => {
-        isDragging = false;
-        panel.style.transition = 'height 0.3s ease';
-        const currentHeight = parseInt(panel.style.height);
-        
-        if (currentHeight > window.innerHeight * 0.5) {
-          this.expandPanel();
-        } else {
-          this.collapsePanel();
-        }
-      });
-
-      handle.addEventListener('click', () => this.togglePanel());
-    }
-
-    // Botones de acción delegados
-    document.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
-
-      const action = btn.dataset.action;
-      const tripId = btn.dataset.tripId;
-
-      // Feedback táctil
-      btn.style.transform = 'scale(0.95)';
-      setTimeout(() => btn.style.transform = '', 100);
-
-      this._emitAction(action, tripId);
+    // FAB Online/Offline toggle
+    this.elements['fab-online']?.addEventListener('click', () => {
+      this._toggleOnline();
     });
 
-    // Botones del modal entrante
-    this.elements.btnAcceptIncoming?.addEventListener('click', () => {
-      this._modalCallbacks?.onAccept?.();
+    // Bottom sheet drag
+    const sheet = this.elements['bottom-sheet'];
+    const handle = sheet?.querySelector('.sheet-handle');
+
+    handle?.addEventListener('touchstart', (e) => {
+      this.touchStartY = e.touches[0].clientY;
+      sheet.style.transition = 'none';
+    }, { passive: true });
+
+    handle?.addEventListener('touchmove', (e) => {
+      const delta = this.touchStartY - e.touches[0].clientY;
+      const currentHeight = sheet.offsetHeight;
+      const newHeight = Math.max(80, Math.min(window.innerHeight * 0.85, currentHeight + delta));
+      sheet.style.transform = `translateY(calc(100% - ${newHeight}px))`;
+    }, { passive: true });
+
+    handle?.addEventListener('touchend', () => {
+      sheet.style.transition = '';
+      const currentHeight = parseInt(sheet.style.height) || 80;
+      
+      if (currentHeight > window.innerHeight * 0.4) {
+        this._expandSheet();
+      } else {
+        this._collapseSheet();
+      }
     });
 
-    this.elements.btnRejectIncoming?.addEventListener('click', () => {
-      this._modalCallbacks?.onReject?.();
+    // Incoming modal actions
+    this.elements['btn-accept']?.addEventListener('click', () => {
+      this._acceptCurrentOffer();
     });
 
-    // Botones de llegada
-    this.elements.btnFinishTrip?.addEventListener('click', () => {
-      this._emitAction('finish', this._currentTrip?.id);
-      this.hideArrivalPanel();
+    this.elements['btn-reject']?.addEventListener('click', () => {
+      this._rejectCurrentOffer();
     });
+
+    // Arrival panel
+    this.elements['btn-finish']?.addEventListener('click', () => {
+      this._finishTrip();
+    });
+
+    this.elements['btn-continue']?.addEventListener('click', () => {
+      this.elements['arrival-panel']?.classList.remove('active');
+    });
+
+    // Sound unlock on first interaction
+    document.addEventListener('click', () => {
+      soundService.enable();
+    }, { once: true });
   }
 
-  _emitAction(action, tripId) {
-    document.dispatchEvent(new CustomEvent('driverAction', {
-      detail: { action, tripId, timestamp: Date.now() }
-    }));
+  _subscribeToState() {
+    // Driver status changes
+    stateManager.subscribe('driver.status', (newStatus, oldStatus) => {
+      this._renderForState(newStatus);
+    });
+
+    // Trip changes
+    stateManager.subscribe('trip.current', (trip) => {
+      if (trip) {
+        this._renderActiveTrip(trip);
+      }
+    });
+
+    stateManager.subscribe('trip.pending', (pending) => {
+      if (pending) {
+        this._showIncomingOffer(pending);
+      } else {
+        this._hideIncomingOffer();
+      }
+    });
+
+    // Online status
+    stateManager.subscribe('driver.isOnline', (isOnline) => {
+      this._updateOnlineUI(isOnline);
+    });
   }
 
   _setupViewport() {
-    const setHeight = () => {
+    // Fix for mobile viewport height
+    const setVH = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     };
-    setHeight();
-    window.addEventListener('resize', setHeight);
+    
+    setVH();
+    window.addEventListener('resize', setVH);
   }
 
-  // =========================
-  // ESTADOS DEL PANEL (Uber-style)
-  // =========================
+  // Render based on state
+  _renderForState(state) {
+    console.log('[UI] Rendering state:', state);
 
-  /**
-   * Estado 1: Esperando solicitudes - Panel colapsado, solo header
-   */
-  showWaitingState() {
-    this._navigationMode = false;
-    this.hideNavigation();
-    this.collapsePanel();
-    
-    if (this.elements.panelSubtitle) {
-      this.elements.panelSubtitle.textContent = 'Esperando solicitudes...';
+    switch (state) {
+      case CONFIG.DRIVER_STATES.OFFLINE:
+        this._renderOffline();
+        break;
+      case CONFIG.DRIVER_STATES.ONLINE:
+        this._renderOnline();
+        break;
+      case CONFIG.DRIVER_STATES.RECEIVING_OFFER:
+        // Modal handles this
+        break;
+      case CONFIG.DRIVER_STATES.GOING_TO_PICKUP:
+        this._renderGoingToPickup();
+        break;
+      case CONFIG.DRIVER_STATES.IN_PROGRESS:
+        this._renderInProgress();
+        break;
+      case CONFIG.DRIVER_STATES.ARRIVED:
+        this._renderArrived();
+        break;
     }
-    if (this.elements.tripCountBadge) {
-      this.elements.tripCountBadge.textContent = '0';
-      this.elements.tripCountBadge.classList.remove('has-items');
+  }
+
+  _renderOffline() {
+    this._updateStatus('Desconectado', false);
+    this._collapseSheet();
+    this._setSheetContent(`
+      <div class="waiting-state">
+        <div class="pulse-ring"></div>
+        <h3>Estás desconectado</h3>
+        <p>Toca "CONECTAR" para recibir viajes</p>
+      </div>
+    `);
+    
+    this.elements['nav-bar']?.classList.remove('active');
+    this.elements['fab-online']?.classList.remove('online');
+  }
+
+  _renderOnline() {
+    this._updateStatus('Conectado • Buscando viajes', true);
+    this._collapseSheet();
+    this._setSheetContent(`
+      <div class="waiting-state">
+        <div class="pulse-ring animate-pulse"></div>
+        <h3>Buscando viajes cercanos...</h3>
+        <p>Mantente en zonas con alta demanda</p>
+      </div>
+    `);
+    
+    this.elements['nav-bar']?.classList.remove('active');
+  }
+
+  _renderGoingToPickup() {
+    const trip = stateManager.get('trip.current');
+    if (!trip) return;
+
+    this._updateStatus('Yendo a buscar pasajero', true);
+    this._showNavigation(trip, 'pickup');
+    
+    // Show route on map
+    const driverPos = locationService.getPosition();
+    if (driverPos) {
+      mapService.showRoute(
+        { lat: driverPos.lat, lng: driverPos.lng },
+        { lat: trip.origen_lat, lng: trip.origen_lng }
+      );
+      mapService.addPickupMarker(trip.origen_lng, trip.origen_lat);
     }
-    
-    this.elements.tripList.innerHTML = `
-      <div class="empty-state">
-        <div class="pulse-indicator"></div>
-        <p>Buscando viajes cercanos...</p>
-      </div>
-    `;
-  }
 
-  /**
-   * Estado 2: Solicitud entrante - Modal sobre el mapa (no bloquea)
-   */
-  showIncomingTrip(trip, onAccept, onReject) {
-    this._modalCallbacks = { onAccept, onReject };
-    this._currentTrip = trip;
-
-    const modal = this.elements.incomingModal;
-    const details = this.elements.incomingDetails;
-    
-    if (!modal || !details) return;
-
-    // Llenar detalles
-    details.innerHTML = `
-      <div class="trip-preview">
-        <div class="route-quick">
-          <span class="from">📍 ${this._escape(trip.origen)}</span>
-          <span class="arrow">↓</span>
-          <span class="to">🏁 ${this._escape(trip.destino)}</span>
-        </div>
-        <div class="trip-metrics-row">
-          <div class="metric">
-            <span class="value">$${Number(trip.precio).toLocaleString()}</span>
-            <span class="label">Ganancia</span>
-          </div>
-          <div class="metric">
-            <span class="value">${Number(trip.km).toFixed(1)} km</span>
-            <span class="label">Distancia</span>
+    this._setSheetContent(`
+      <div class="trip-active">
+        <div class="trip-header">
+          <div class="trip-avatar">👤</div>
+          <div class="trip-info">
+            <h4>${this._escape(trip.cliente || 'Pasajero')}</h4>
+            <p>${trip.telefono || ''}</p>
           </div>
         </div>
+        <div class="trip-actions">
+          <button class="btn btn-success btn-lg" data-action="start">
+            ▶ Pasajero a bordo
+          </button>
+          <button class="btn btn-secondary" data-action="navigate">
+            🧭 Abrir navegación
+          </button>
+        </div>
       </div>
-    `;
+    `);
 
-    modal.classList.add('active');
-    this._startCountdown(30);
+    this._attachTripActions(trip);
   }
 
-  hideIncomingModal() {
-    this.elements.incomingModal?.classList.remove('active');
+  _renderInProgress() {
+    const trip = stateManager.get('trip.current');
+    if (!trip) return;
+
+    this._updateStatus('Viaje en curso', true);
+    this._showNavigation(trip, 'dropoff');
+    
+    // Update route to destination
+    const driverPos = locationService.getPosition();
+    if (driverPos) {
+      mapService.showRoute(
+        { lat: driverPos.lat, lng: driverPos.lng },
+        { lat: trip.destino_lat, lng: trip.destino_lng }
+      );
+      mapService.addDropoffMarker(trip.destino_lng, trip.destino_lat);
+    }
+
+    this._setSheetContent(`
+      <div class="trip-active">
+        <div class="trip-header">
+          <div class="trip-avatar">👤</div>
+          <div class="trip-info">
+            <h4>En camino al destino</h4>
+            <p>${this._escape(trip.destino)}</p>
+          </div>
+        </div>
+        <div class="trip-actions">
+          <button class="btn btn-success btn-lg" data-action="arrived">
+            ✓ He llegado
+          </button>
+          <button class="btn btn-secondary" data-action="navigate">
+            🧭 Abrir navegación
+          </button>
+        </div>
+      </div>
+    `);
+
+    this._attachTripActions(trip);
+  }
+
+  _renderArrived() {
+    this.elements['arrival-panel']?.classList.add('active');
+    soundService.vibrate('arrival');
+  }
+
+  // Incoming offer modal
+  _showIncomingOffer(offer) {
+    soundService.feedback('newTrip');
+    
+    // Fill data
+    this.elements['trip-pickup'].textContent = this._escape(offer.origen);
+    this.elements['trip-dropoff'].textContent = this._escape(offer.destino);
+    this.elements['trip-price'].textContent = `$${Number(offer.precio).toLocaleString()}`;
+    this.elements['trip-duration'].textContent = `${Math.ceil(offer.km * 2)} min`; // Rough estimate
+    this.elements['trip-distance'].textContent = `${Number(offer.km).toFixed(1)} km`;
+    this.elements['client-name'].textContent = this._escape(offer.cliente || 'Pasajero');
+    this.elements['client-phone'].textContent = offer.telefono || '';
+
+    // Show modal
+    this.elements['incoming-modal']?.classList.add('active');
+    
+    // Start countdown
+    this._startCountdown(CONFIG.INCOMING_OFFER_TIMEOUT);
+  }
+
+  _hideIncomingOffer() {
+    this.elements['incoming-modal']?.classList.remove('active');
     this._stopCountdown();
-  }
-
-  /**
-   * Estado 3: Viaje aceptado - Navegación activa, panel minimalista
-   */
-  showNavigationState(trip) {
-    this._currentTrip = trip;
-    this._navigationMode = true;
-    this.hideIncomingModal();
-    
-    // Mostrar barra de navegación superior (estilo Google Maps)
-    this.showNavigationBar(trip);
-    
-    // Panel inferior colapsado con info esencial
-    this.showTripInfoPanel(trip);
-  }
-
-  showNavigationBar(trip) {
-    const nav = this.elements.navPanel;
-    if (!nav) return;
-
-    nav.classList.add('active');
-    
-    // Actualizar con primera instrucción cuando esté disponible
-    this.updateNavigationDisplay({
-      text: 'Calculando ruta...',
-      distance: trip.km * 1000,
-      type: 'straight'
-    });
-  }
-
-  updateNavigationDisplay(instruction) {
-    if (!instruction) return;
-
-    const { text, distance, type, next } = instruction;
-
-    // Calle actual
-    if (this.elements.navStreet) {
-      this.elements.navStreet.textContent = text || 'Continúa';
-    }
-
-    // Siguiente maniobra
-    if (this.elements.navNext && next) {
-      this.elements.navNext.textContent = `Luego: ${next.text}`;
-    }
-
-    // Distancia
-    if (this.elements.navDistance) {
-      const formatted = distance < 1000 
-        ? `${Math.round(distance)} m` 
-        : `${(distance/1000).toFixed(1)} km`;
-      this.elements.navDistance.textContent = formatted;
-    }
-
-    // Icono de dirección
-    const iconEl = this.elements.navPanel?.querySelector('.nav-arrow');
-    if (iconEl) {
-      const icons = {
-        straight: '↑',
-        left: '←',
-        right: '→',
-        slight_left: '↖',
-        slight_right: '↗',
-        uturn: '↩',
-        roundabout: '↻'
-      };
-      iconEl.textContent = icons[type] || '↑';
-    }
-  }
-
-  showTripInfoPanel(trip) {
-    const container = this.elements.tripList;
-    if (!container) return;
-
-    container.innerHTML = `
-      <div class="active-trip-compact">
-        <div class="client-bar">
-          <span class="client-name">${this._escape(trip.cliente)}</span>
-          <a href="tel:${trip.telefono}" class="call-btn">📞</a>
-          <button class="whatsapp-btn" data-action="whatsapp" data-trip-id="${trip.id}">💬</button>
-        </div>
-        
-        <div class="action-bar">
-          ${trip.estado === 'ACEPTADO' ? `
-            <button class="btn btn-success" data-action="start" data-trip-id="${trip.id}">
-              ▶ Iniciar viaje
-            </button>
-            <button class="btn btn-danger" data-action="cancel" data-trip-id="${trip.id}">
-              ✕ Cancelar
-            </button>
-          ` : `
-            <button class="btn btn-navigate" data-action="navigate" data-trip-id="${trip.id}">
-              🧭 Navegar
-            </button>
-            <button class="btn btn-success" data-action="finish" data-trip-id="${trip.id}">
-              ✓ Llegué al destino
-            </button>
-          `}
-        </div>
-      </div>
-    `;
-
-    this.collapsePanel();
-  }
-
-  /**
-   * Estado 4: Llegada al destino
-   */
-  showArrival() {
-    this.elements.arrivalPanel?.classList.add('active');
-    if (navigator.vibrate) {
-      navigator.vibrate([100, 100, 300]);
-    }
-  }
-
-  hideArrivalPanel() {
-    this.elements.arrivalPanel?.classList.remove('active');
-  }
-
-  hideNavigation() {
-    this._navigationMode = false;
-    this.elements.navPanel?.classList.remove('active');
-    this.elements.navInstructionBar?.classList.remove('active');
-  }
-
-  // =========================
-  // UTILIDADES
-  // =========================
-
-  expandPanel() {
-    const panel = this.elements.tripPanel;
-    if (panel) {
-      panel.style.height = '85vh';
-      panel.classList.add('expanded');
-    }
-  }
-
-  collapsePanel() {
-    const panel = this.elements.tripPanel;
-    if (panel) {
-      panel.style.height = '80px';
-      panel.classList.remove('expanded');
-    }
-  }
-
-  togglePanel() {
-    const panel = this.elements.tripPanel;
-    if (panel?.classList.contains('expanded')) {
-      this.collapsePanel();
-    } else {
-      this.expandPanel();
-    }
   }
 
   _startCountdown(seconds) {
-    const bar = this.elements.countdownProgress;
-    const text = this.elements.countdownText;
+    this.currentCountdown = seconds;
+    const circle = this.elements['countdown-circle'];
+    const number = this.elements['countdown-number'];
     
-    this._stopCountdown();
+    // Reset animation
+    circle.style.animation = 'none';
+    circle.offsetHeight; // Trigger reflow
+    circle.style.animation = `countdown ${seconds}s linear forwards`;
     
-    let remaining = seconds;
-    if (text) text.textContent = remaining;
-    
-    if (bar) {
-      bar.style.transition = 'none';
-      bar.style.width = '100%';
-      setTimeout(() => {
-        bar.style.transition = `width ${seconds}s linear`;
-        bar.style.width = '0%';
-      }, 50);
-    }
-
     this.countdownInterval = setInterval(() => {
-      remaining--;
-      if (text) text.textContent = remaining;
-      if (remaining <= 0) {
-        this._stopCountdown();
-        this._modalCallbacks?.onReject?.();
+      this.currentCountdown--;
+      if (number) number.textContent = this.currentCountdown;
+      
+      if (this.currentCountdown <= 0) {
+        this._rejectCurrentOffer();
       }
     }, 1000);
   }
@@ -382,61 +328,169 @@ class UIController {
     }
   }
 
-  showToast(message, type = 'info', duration = 3000) {
-    const toast = this.elements.toast;
-    if (!toast) return;
-
-    toast.textContent = message;
-    toast.className = `toast toast-${type} show`;
+  // Actions
+  async _toggleOnline() {
+    const isOnline = !stateManager.get('driver.isOnline');
+    const driverId = supabaseClient.getDriverId();
     
-    setTimeout(() => {
-      toast.classList.remove('show');
-    }, duration);
-  }
-
-  setGlobalLoading(show, text = 'Procesando...') {
-    const loading = this.elements.globalLoading;
-    if (!loading) return;
+    this._setLoading(true);
     
-    const textEl = loading.querySelector('.loading-text');
-    if (textEl) textEl.textContent = text;
+    const { error } = await supabaseClient.setDriverOnline(driverId, isOnline);
     
-    loading.classList.toggle('active', show);
-    document.body.style.overflow = show ? 'hidden' : '';
-  }
-
-  updateStats(stats) {
-    if (this.elements.statPendientes) {
-      this.elements.statPendientes.textContent = stats.pending || 0;
-    }
-    if (this.elements.statHoy) {
-      this.elements.statHoy.textContent = stats.today || 0;
-    }
-  }
-
-  updateDriverState(state, isOnline) {
-    const el = this.elements.estadoChofer;
-    if (!el) return;
-
-    const states = {
-      INIT: { text: 'Iniciando...', color: '#666' },
-      ONLINE: { text: isOnline ? '🟢 ONLINE' : '🔴 OFFLINE', color: isOnline ? '#05944F' : '#E11900' },
-      BUSY: { text: '🚗 EN VIAJE', color: '#276EF1' },
-      OFFLINE: { text: '⚪ DESCONECTADO', color: '#666' }
-    };
-
-    const config = states[state] || states.INIT;
-    el.textContent = config.text;
-    el.style.color = config.color;
-  }
-
-  _loadDriverName() {
-    try {
-      const data = JSON.parse(localStorage.getItem('choferData') || '{}');
-      if (this.elements.driverName && data.nombre) {
-        this.elements.driverName.textContent = data.nombre;
+    if (error) {
+      this._showToast('Error al cambiar estado', 'error');
+    } else {
+      stateManager.set('driver.isOnline', isOnline);
+      if (isOnline) {
+        stateManager.transitionDriver(CONFIG.DRIVER_STATES.ONLINE);
+      } else {
+        stateManager.transitionDriver(CONFIG.DRIVER_STATES.OFFLINE);
       }
-    } catch (e) {}
+    }
+    
+    this._setLoading(false);
+  }
+
+  async _acceptCurrentOffer() {
+    const offer = stateManager.get('trip.pending');
+    if (!offer) return;
+
+    this._setLoading(true);
+    const result = await tripManager.acceptOffer(offer.id);
+    this._setLoading(false);
+
+    if (result.success) {
+      this._hideIncomingOffer();
+    } else {
+      this._showToast(result.error || 'No se pudo aceptar', 'error');
+      this._hideIncomingOffer();
+    }
+  }
+
+  async _rejectCurrentOffer() {
+    const offer = stateManager.get('trip.pending');
+    if (!offer) return;
+
+    await tripManager.rejectOffer(offer.id);
+    this._hideIncomingOffer();
+  }
+
+  async _finishTrip() {
+    const trip = stateManager.get('trip.current');
+    if (!trip) return;
+
+    this._setLoading(true);
+    const result = await tripManager.completeTrip(trip.id);
+    this._setLoading(false);
+
+    if (result.success) {
+      this.elements['arrival-panel']?.classList.remove('active');
+      this._showToast(`Viaje completado +$${trip.precio}`, 'success');
+    } else {
+      this._showToast(result.error || 'Error al finalizar', 'error');
+    }
+  }
+
+  // Helpers
+  _updateStatus(text, isOnline) {
+    if (this.elements['status-text']) {
+      this.elements['status-text'].textContent = text;
+    }
+    if (this.elements['status-dot']) {
+      this.elements['status-dot'].classList.toggle('online', isOnline);
+    }
+  }
+
+  _updateOnlineUI(isOnline) {
+    const fab = this.elements['fab-online'];
+    if (fab) {
+      fab.classList.toggle('online', isOnline);
+      const text = fab.querySelector('.fab-text');
+      if (text) {
+        text.textContent = isOnline ? 'CONECTADO' : 'CONECTAR';
+      }
+    }
+  }
+
+  _showNavigation(trip, phase) {
+    const navBar = this.elements['nav-bar'];
+    const street = this.elements['nav-street'];
+    const next = this.elements['nav-next'];
+    
+    if (phase === 'pickup') {
+      street.textContent = 'Yendo a buscar pasajero';
+      next.textContent = this._escape(trip.origen);
+    } else {
+      street.textContent = 'Yendo al destino';
+      next.textContent = this._escape(trip.destino);
+    }
+    
+    navBar?.classList.add('active');
+  }
+
+  _setSheetContent(html) {
+    const content = this.elements['sheet-content'];
+    if (content) {
+      content.innerHTML = html;
+    }
+  }
+
+  _expandSheet() {
+    this.elements['bottom-sheet']?.classList.add('expanded');
+    this.sheetOpen = true;
+  }
+
+  _collapseSheet() {
+    this.elements['bottom-sheet']?.classList.remove('expanded');
+    this.sheetOpen = false;
+  }
+
+  _attachTripActions(trip) {
+    const container = this.elements['sheet-content'];
+    if (!container) return;
+
+    container.querySelectorAll('[data-action]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const action = e.currentTarget.dataset.action;
+        
+        switch (action) {
+          case 'start':
+            tripManager.startTrip(trip.id);
+            break;
+          case 'arrived':
+            stateManager.transitionDriver(CONFIG.DRIVER_STATES.ARRIVED);
+            break;
+          case 'navigate':
+            const url = `https://www.google.com/maps/dir/?api=1&destination=${trip.destino_lat},${trip.destino_lng}`;
+            window.open(url, '_blank');
+            break;
+        }
+      });
+    });
+  }
+
+  _setLoading(show) {
+    this.elements['global-loading']?.classList.toggle('active', show);
+  }
+
+  _showToast(message, type = 'info') {
+    const container = this.elements['toast-container'];
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type} animate-slide-down`;
+    toast.innerHTML = `
+      <span class="toast-icon">${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
+      <span>${message}</span>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-20px)';
+      setTimeout(() => toast.remove(), 300);
+    }, CONFIG.TOAST_DURATION);
   }
 
   _escape(text) {
@@ -447,4 +501,3 @@ class UIController {
 }
 
 const uiController = new UIController();
-export default uiController;
