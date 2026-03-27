@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <title>Panel de Chofer - Mimi</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<link rel="icon" href="/mimi-transporte/favicon.ico">
   <!-- TU CSS -->
 <link rel="stylesheet" href="/mimi-transporte/css/driver.css">
   <!-- MAPLIBRE -->
   <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js" defer></script></head>
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+</head>
 
 <body>
 
@@ -47,7 +49,11 @@
     </div>
 
   </div>
-
+<script>
+  if (typeof maplibregl === 'undefined') {
+    console.error('MapLibre no cargó');
+  }
+</script>
   <!-- APP -->
   <script type="module">
     import DriverApp from './js/driver-app.js';
