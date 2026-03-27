@@ -15,6 +15,8 @@ class TripManager {
     const driverId = supabaseClient.getDriverId();
     if (!driverId) throw new Error('Not authenticated');
 
+    console.log('[TripManager] Initializing for driver:', driverId);
+
     // Load initial state
     await this._loadInitialState();
 
@@ -32,7 +34,11 @@ class TripManager {
 
     try {
       // Check for active trip first
-      const { data: activeTrip } = await supabaseClient.getActiveTrip(driverId);
+      const { data: activeTrip, error: tripError } = await supabaseClient.getActiveTrip(driverId);
+      
+      if (tripError) {
+        console.error('[TripManager] Error loading active trip:', tripError);
+      }
       
       if (activeTrip) {
         console.log('[TripManager] Active trip found:', activeTrip.id);
@@ -49,11 +55,15 @@ class TripManager {
       }
 
       // Check for pending offers
-      const { data: offers } = await supabaseClient.getPendingOffers(driverId);
+      const { data: offers, error: offerError } = await supabaseClient.getPendingOffers(driverId);
+      
+      if (offerError) {
+        console.error('[TripManager] Error loading offers:', offerError);
+      }
       
       if (offers && offers.length > 0) {
         const offer = offers[0];
-        console.log('[TripManager] Pending offer:', offer.id);
+        console.log('[TripManager] Pending offer found:', offer.id);
         
         this.pendingOffer = {
           ...offer.viajes,
@@ -64,6 +74,7 @@ class TripManager {
         stateManager.set('trip.pending', this.pendingOffer);
         stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
       } else {
+        console.log('[TripManager] No pending offers');
         stateManager.set('trip.pending', null);
       }
 
@@ -120,11 +131,16 @@ class TripManager {
 
   async _fetchAndShowOffer(offerRecord) {
     try {
-      const { data: trip } = await supabaseClient.client
+      const { data: trip, error } = await supabaseClient.client
         .from('viajes')
         .select('*')
         .eq('id', offerRecord.viaje_id)
         .single();
+
+      if (error) {
+        console.error('[TripManager] Fetch offer error:', error);
+        return;
+      }
 
       if (trip) {
         this.pendingOffer = {
@@ -137,7 +153,7 @@ class TripManager {
         stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
       }
     } catch (error) {
-      console.error('[TripManager] Fetch offer error:', error);
+      console.error('[TripManager] Fetch error:', error);
     }
   }
 
