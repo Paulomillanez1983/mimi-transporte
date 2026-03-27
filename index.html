@@ -2546,10 +2546,11 @@ const payload = {
   destino_lng: Number(lugarDestino?.lng) || null,
 
   precio: precio,
-  estado: "DISPONIBLE",
+
   servicio: servicioSeleccionado || 'IDA_ESCOLAR',
 
   fecha_hora: fechaHoraIda,
+
   fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
     ? fechaHoraVuelta
     : null,
@@ -2558,22 +2559,10 @@ const payload = {
     ? tiempoEspera
     : null,
 
-  notas: null,
-  chofer_id: null,
-  chofer_id: null,
-  chofer_id: null,
-  aceptado_at: null,
-  rechazado_por: null,
-  rechazado_at: null,
-  timeout_por: null,
-  timeout_at: null,
-  iniciado_at: null,
-  completado_at: null,
-  cancelado_at: null
+  notas: null
 };
-    console.log("📦 Payload viaje:", payload);
 
-    // =========================
+console.log("📦 Payload viaje limpio:", payload);    // =========================
     // INSERT
     // =========================
     const { data, error } = await window.supabaseInsert('viajes', payload);
