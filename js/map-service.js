@@ -16,11 +16,22 @@ class MapService {
     this.isReady = false;
     this.pendingOperations = [];
     this.hasFatalError = false;
+    this._boundResize = null;
+    this._loadTimeout = null;
   }
 
   async init(containerId) {
     return new Promise((resolve, reject) => {
       try {
+        // Evitar doble init
+        if (this.map) {
+          try {
+            this.destroy();
+          } catch (e) {
+            console.warn('No se pudo limpiar mapa previo:', e);
+          }
+        }
+
         // Validar librería
         if (typeof window.maplibregl === 'undefined') {
           throw new Error('MapLibre no está cargado');
@@ -42,37 +53,58 @@ class MapService {
           dragRotate: false,
           touchZoomRotate: true
         });
-        setTimeout(() => {
-  try {
-    this.map?.resize?.();
-  } catch (e) {
-    console.warn('No se pudo forzar resize del mapa:', e);
-  }
-}, 500);
+
+        // Resize seguro (muy importante en Android / mobile browser)
+        this._boundResize = () => {
+          try {
+            this.map?.resize?.();
+          } catch (e) {
+            console.warn('No se pudo forzar resize del mapa:', e);
+          }
+        };
+
+        // Reintentos de resize para móviles
+        setTimeout(this._boundResize, 300);
+        setTimeout(this._boundResize, 900);
+        setTimeout(this._boundResize, 1800);
+
+        window.addEventListener('resize', this._boundResize);
+        window.addEventListener('orientationchange', this._boundResize);
+
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', this._boundResize);
+        }
 
         // Error NO fatal: tiles, glyphs, sprites, etc.
         this.map.on('error', (e) => {
           console.warn('Map warning (no fatal):', e);
 
-          // Solo marcar fatal si el mapa todavía ni cargó y no existe estilo
+          // Solo avisar si todavía no terminó de cargar estilo
           if (!this.isReady && !this.map?.isStyleLoaded?.()) {
             console.warn('El estilo del mapa aún no cargó correctamente.');
           }
         });
 
-this.map.on('load', () => {
-  try {
-    this.isReady = true;
-    this.hasFatalError = false;
-    this.map.resize();
-    this._executePending();
-    resolve(this.map);
-  } catch (e) {
-    reject(e);
-  }
-});
+        this.map.on('load', () => {
+          try {
+            this.isReady = true;
+            this.hasFatalError = false;
+
+            if (this._loadTimeout) {
+              clearTimeout(this._loadTimeout);
+              this._loadTimeout = null;
+            }
+
+            this.map.resize();
+            this._executePending();
+            resolve(this.map);
+          } catch (e) {
+            reject(e);
+          }
+        });
+
         // Failsafe: si load no llega, no bloquear eternamente
-        setTimeout(() => {
+        this._loadTimeout = setTimeout(() => {
           if (!this.isReady) {
             console.warn('Mapa no terminó de cargar a tiempo. Continuando en modo degradado.');
             this.hasFatalError = true;
@@ -150,7 +182,7 @@ this.map.on('load', () => {
         }
       }
 
-      // Smooth flyTo solo si el usuario no está interactuando
+      // Solo recentrar si el usuario no está manipulando el mapa
       if (!this.map.isMoving() && !this.map.isZooming()) {
         this.map.easeTo({
           center: [lng, lat],
@@ -257,6 +289,7 @@ this.map.on('load', () => {
         this.markers.pickup.remove();
         this.markers.pickup = null;
       }
+
       if (this.markers.destination) {
         this.markers.destination.remove();
         this.markers.destination = null;
@@ -275,6 +308,7 @@ this.map.on('load', () => {
       if (this.map.getLayer?.('route-line')) {
         this.map.removeLayer('route-line');
       }
+
       if (this.map.getSource?.('route')) {
         this.map.removeSource('route');
       }
@@ -306,12 +340,28 @@ this.map.on('load', () => {
         this.map.remove();
         this.map = null;
       }
+
+      if (this._boundResize) {
+        window.removeEventListener('resize', this._boundResize);
+        window.removeEventListener('orientationchange', this._boundResize);
+
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', this._boundResize);
+        }
+      }
+
+      if (this._loadTimeout) {
+        clearTimeout(this._loadTimeout);
+        this._loadTimeout = null;
+      }
+
     } catch (e) {
       console.warn('Error destruyendo mapa:', e);
     } finally {
       this.isReady = false;
       this.hasFatalError = false;
       this.pendingOperations = [];
+      this._boundResize = null;
     }
   }
 
@@ -323,9 +373,11 @@ this.map.on('load', () => {
     const Δφ = (lat2 - lat1) * Math.PI / 180;
     const Δλ = (lng2 - lng1) * Math.PI / 180;
 
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return Math.round(R * c);
