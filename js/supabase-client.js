@@ -140,22 +140,20 @@ class SupabaseService {
   }
 
   // Suscribirse a cambios de viajes
-  subscribeToTrips(callback) {
-    return this.client
-      .channel('trips-channel')
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'viajes',
-          filter: `chofer_id=eq.${this.getCurrentDriverId()}`
-        },
-        callback
-      )
-      .subscribe();
-  }
-
+subscribeToTrips(callback) {
+  return this.client
+    .channel('trips-channel')
+    .on(
+      'postgres_changes',
+      { 
+        event: '*', 
+        schema: 'public', 
+        table: 'viajes'
+      },
+      callback
+    )
+    .subscribe();
+}
   getCurrentDriverId() {
     return localStorage.getItem('choferUsuario') || null;
   }
