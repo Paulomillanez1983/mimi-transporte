@@ -47,6 +47,12 @@
   
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
+  
+  /* Nuevos colores para navegación */
+  --nav-bg: #1E3A2F;
+  --nav-green: #2E7D32;
+  --nav-accent: #4CAF50;
+  --nav-street: #4285F4;
 }
 
 /* =========================
@@ -1006,21 +1012,22 @@ body {
 }
 
 /* =========================
-   NAVIGATION PANEL
+   NAVIGATION PANEL - ESTILO GOOGLE MAPS
    ========================= */
 .nav-panel {
   position: absolute;
-  bottom: 100px;
+  top: calc(80px + var(--safe-top));
   left: 12px;
   right: 12px;
-  background: rgba(28, 28, 30, 0.98);
+  background: rgba(30, 58, 47, 0.98);
   backdrop-filter: blur(20px);
   border-radius: var(--radius-xl);
   padding: 16px;
-  border: 1px solid var(--border);
-  transform: translateY(200%);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  transform: translateY(-200%);
   transition: transform var(--transition-slow);
   z-index: 50;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 
 .nav-panel.active {
@@ -1037,12 +1044,19 @@ body {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--accent);
+  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 24px;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.nav-arrow svg {
+  width: 28px;
+  height: 28px;
+  fill: var(--nav-green);
 }
 
 .nav-info {
@@ -1050,31 +1064,133 @@ body {
 }
 
 .nav-street {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  color: white;
 }
 
 .nav-next {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 14px;
+  color: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-next::before {
+  content: '•';
+  color: var(--nav-accent);
 }
 
 .nav-next.arriving {
-  color: var(--success);
+  color: var(--nav-accent);
   font-weight: 700;
   animation: pulse 1s infinite;
 }
 
 .nav-distance {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 800;
-  color: var(--accent);
+  color: white;
   text-align: right;
+  line-height: 1;
 }
 
 .nav-distance.arriving {
-  color: var(--success);
+  color: var(--nav-accent);
+}
+
+.nav-distance small {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  display: block;
+}
+
+/* Barra de instrucciones siguiente */
+.nav-instruction-bar {
+  position: absolute;
+  top: calc(160px + var(--safe-top));
+  left: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateY(-200%);
+  transition: transform var(--transition-slow);
+  z-index: 45;
+}
+
+.nav-instruction-bar.active {
+  transform: translateY(0);
+}
+
+.nav-instruction-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--nav-green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.nav-instruction-text {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+}
+
+/* Panel de llegada */
+.arrival-panel {
+  position: absolute;
+  bottom: 100px;
+  left: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  border: 1px solid var(--nav-green);
+  transform: translateY(200%);
+  transition: transform var(--transition-slow);
+  z-index: 55;
+  text-align: center;
+}
+
+.arrival-panel.active {
+  transform: translateY(0);
+}
+
+.arrival-panel h3 {
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: var(--nav-accent);
+}
+
+.arrival-panel p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.arrival-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.arrival-actions .btn {
+  flex: 1;
+  padding: 16px;
 }
 
 /* =========================
@@ -1252,6 +1368,10 @@ body {
   z-index: 9999;
 }
 
+.global-loading.active {
+  display: flex;
+}
+
 .loading-spinner {
   width: 48px;
   height: 48px;
@@ -1342,6 +1462,18 @@ body {
   }
   
   .nav-panel {
+    max-width: 420px;
+    left: auto;
+    right: 20px;
+  }
+  
+  .arrival-panel {
+    max-width: 420px;
+    left: auto;
+    right: 20px;
+  }
+  
+  .nav-instruction-bar {
     max-width: 420px;
     left: auto;
     right: 20px;
