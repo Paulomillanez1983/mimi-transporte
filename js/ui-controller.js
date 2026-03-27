@@ -1,5 +1,6 @@
 /**
  * Controlador de interfaz - Renderizado y manipulación del DOM
+ * Producción Mobile-First / Uber-like
  */
 
 import CONFIG from './config.js';
@@ -15,120 +16,123 @@ class UIController {
     this._modalCallbacks = null;
     this._documentClickBound = false;
     this._tripListCountdownInterval = null;
+    this._panelTouchState = null;
   }
 
-init() {
-  // Cachear elementos DOM frecuentes
-  this.elements = {
-    toast: document.getElementById('toast'),
-    tripPanel: document.getElementById('tripPanel'),
-    panelContent: document.getElementById('panelContent'),
-    tripList: document.getElementById('tripList'),
-    incomingModal: document.getElementById('incomingModal'),
-    navPanel: document.getElementById('navPanel'),
-    statsPendientes: document.getElementById('statPendientes'),
-    statsHoy: document.getElementById('statHoy'),
-    driverName: document.getElementById('driverName'),
-    driverStatus: document.getElementById('estadoChofer'),
-    panelHandle: document.getElementById('panelHandle'),
-    panelSubtitle: document.getElementById('panelSubtitle'),
-    tripCountBadge: document.getElementById('tripCountBadge'),
-    btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
-    btnRejectIncoming: document.getElementById('btnRejectIncoming')
-  };
+  init() {
+    // Cachear elementos DOM frecuentes
+    this.elements = {
+      toast: document.getElementById('toast'),
+      tripPanel: document.getElementById('tripPanel'),
+      panelContent: document.getElementById('panelContent'),
+      tripList: document.getElementById('tripList'),
+      incomingModal: document.getElementById('incomingModal'),
+      navPanel: document.getElementById('navPanel'),
+      statsPendientes: document.getElementById('statPendientes'),
+      statsHoy: document.getElementById('statHoy'),
+      driverName: document.getElementById('driverName'),
+      driverStatus: document.getElementById('estadoChofer'),
+      panelHandle: document.getElementById('panelHandle'),
+      panelSubtitle: document.getElementById('panelSubtitle'),
+      tripCountBadge: document.getElementById('tripCountBadge'),
+      btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
+      btnRejectIncoming: document.getElementById('btnRejectIncoming')
+    };
 
-  // Cargar nombre del chofer
-  try {
-    const driverData = JSON.parse(localStorage.getItem('choferData') || '{}');
-    if (driverData.nombre && this.elements.driverName) {
-      this.elements.driverName.textContent = driverData.nombre;
+    // Cargar nombre del chofer
+    try {
+      const driverData = JSON.parse(localStorage.getItem('choferData') || '{}');
+      if (driverData.nombre && this.elements.driverName) {
+        this.elements.driverName.textContent = driverData.nombre;
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar choferData:', e);
     }
-  } catch (e) {
-    console.warn('No se pudo cargar choferData:', e);
+
+    // Delegación global de botones dinámicos
+    if (!this._documentClickBound) {
+      const delegatedHandler = (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        if (btn.disabled) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const action = btn.dataset.action;
+        const tripId = btn.dataset.tripId;
+        this._handleAction(action, tripId, btn);
+      };
+
+      document.addEventListener('click', delegatedHandler, { passive: false });
+      this._documentClickBound = true;
+    }
+
+    // Botones fijos del modal entrante
+    if (this.elements.btnAcceptIncoming) {
+      this.elements.btnAcceptIncoming.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (this._modalCallbacks?.onAccept) {
+          this._setIncomingButtonsLoading(true);
+          this._modalCallbacks.onAccept();
+        }
+      }, { passive: false });
+    }
+
+    if (this.elements.btnRejectIncoming) {
+      this.elements.btnRejectIncoming.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (this._modalCallbacks?.onReject) {
+          this._setIncomingButtonsLoading(true);
+          this._modalCallbacks.onReject();
+        }
+      }, { passive: false });
+    }
+
+    // Toggle panel
+    if (this.elements.panelHandle) {
+      this._bindPanelHandle();
+    }
+
+    return this;
   }
 
-  // Delegación de eventos para botones dinámicos (solo una vez)
-  if (!this._documentClickBound) {
-    const delegatedHandler = (e) => {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
+  _bindPanelHandle() {
+    const handle = this.elements.panelHandle;
+    if (!handle) return;
 
-      e.preventDefault();
-      e.stopPropagation();
-
-      const action = btn.dataset.action;
-      const tripId = btn.dataset.tripId;
-      this._handleAction(action, tripId, btn);
-    };
-
-    document.addEventListener('click', delegatedHandler);
-    document.addEventListener('touchend', delegatedHandler, { passive: false });
-
-    this._documentClickBound = true;
-  }
-
-  // Botones fijos del modal entrante
-  if (this.elements.btnAcceptIncoming) {
-    const handleAccept = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (this._modalCallbacks?.onAccept) {
-        this._setIncomingButtonsLoading(true);
-        this._modalCallbacks.onAccept();
-      }
-    };
-
-    this.elements.btnAcceptIncoming.addEventListener('click', handleAccept);
-    this.elements.btnAcceptIncoming.addEventListener('touchend', handleAccept, { passive: false });
-  }
-
-  if (this.elements.btnRejectIncoming) {
-    const handleReject = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (this._modalCallbacks?.onReject) {
-        this._setIncomingButtonsLoading(true);
-        this._modalCallbacks.onReject();
-      }
-    };
-
-    this.elements.btnRejectIncoming.addEventListener('click', handleReject);
-    this.elements.btnRejectIncoming.addEventListener('touchend', handleReject, { passive: false });
-  }
-
-  if (this.elements.panelHandle) {
     let touchMoved = false;
     let startY = 0;
 
-    this.elements.panelHandle.addEventListener('touchstart', (e) => {
+    handle.addEventListener('touchstart', (e) => {
       touchMoved = false;
       startY = e.touches?.[0]?.clientY || 0;
     }, { passive: true });
 
-    this.elements.panelHandle.addEventListener('touchmove', (e) => {
+    handle.addEventListener('touchmove', (e) => {
       const currentY = e.touches?.[0]?.clientY || 0;
       if (Math.abs(currentY - startY) > 8) {
         touchMoved = true;
       }
     }, { passive: true });
 
-    this.elements.panelHandle.addEventListener('touchend', (e) => {
+    handle.addEventListener('touchend', (e) => {
       if (!touchMoved) {
         e.preventDefault();
         this.togglePanel();
       }
     }, { passive: false });
 
-    this.elements.panelHandle.addEventListener('click', (e) => {
+    handle.addEventListener('click', (e) => {
       e.preventDefault();
       this.togglePanel();
-    });
+    }, { passive: false });
   }
 
-  return this;
-}
   _handleAction(action, tripId, btn) {
     if (btn?.disabled) return;
 
@@ -140,7 +144,8 @@ init() {
   }
 
   isIncomingModalOpen() {
-    return this.currentModal === 'incoming' && this.elements.incomingModal?.classList.contains('active');
+    return this.currentModal === 'incoming' &&
+      this.elements.incomingModal?.classList.contains('active');
   }
 
   _setIncomingButtonsLoading(isLoading) {
@@ -245,7 +250,6 @@ init() {
     if (!container || !panel || !trip) return;
 
     this._stopTripListCountdown();
-
     panel.classList.add('has-trip');
 
     const estado = this._normalizeState(trip.estado);
@@ -311,14 +315,14 @@ init() {
 
         <div class="action-buttons">
           ${isEnCurso ? `
-            <button class="btn btn-whatsapp" data-action="whatsapp" data-trip-id="${this._escapeHtml(trip.id || '')}">
+            <button class="btn btn-ghost" data-action="whatsapp" data-trip-id="${this._escapeHtml(trip.id || '')}">
               WhatsApp
             </button>
             <button class="btn btn-primary" data-action="finish" data-trip-id="${this._escapeHtml(trip.id || '')}">
               Finalizar
             </button>
           ` : `
-            <button class="btn btn-secondary" data-action="cancel" data-trip-id="${this._escapeHtml(trip.id || '')}">
+            <button class="btn btn-danger" data-action="cancel" data-trip-id="${this._escapeHtml(trip.id || '')}">
               Cancelar
             </button>
             <button class="btn btn-primary" data-action="start" data-trip-id="${this._escapeHtml(trip.id || '')}">
@@ -593,11 +597,16 @@ init() {
     }
   }
 
-  togglePanel() {
+  togglePanel(forceExpanded = null) {
     const panel = this.elements.tripPanel;
-    if (panel) {
-      panel.classList.toggle('expanded');
+    if (!panel) return;
+
+    if (typeof forceExpanded === 'boolean') {
+      panel.classList.toggle('expanded', forceExpanded);
+      return;
     }
+
+    panel.classList.toggle('expanded');
   }
 
   // =========================================
