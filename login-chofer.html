@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#000000" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   
   <title>MIMI - Acceso Chofer</title>
   
   <link rel="stylesheet" href="/mimi-transporte/css/login.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -65,15 +65,16 @@
   </div>
   
   <script>
-    // Configuración
-    const SUPABASE_URL = 'https://xrphpqmutvadjrucqicn.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM';
+    // Evitar redeclaración si ya existe
+    if (typeof supabaseClient === 'undefined') {
+      var supabaseClient = window.supabase.createClient(
+        'https://xrphpqmutvadjrucqicn.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM',
+        { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
+      );
+    }
     
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-    });
-    
-    // Estado
+    // Estado UI
     function setLoading(loading) {
       document.getElementById('loadingState').style.display = loading ? 'flex' : 'none';
       document.getElementById('loginBtn').disabled = loading;
@@ -86,7 +87,7 @@
       setTimeout(() => el.style.display = 'none', 5000);
     }
     
-    // Persistir sesión
+    // Guardar sesión
     function saveSession(user) {
       localStorage.setItem('choferLogueado', 'true');
       localStorage.setItem('choferData', JSON.stringify({
@@ -97,10 +98,10 @@
       }));
     }
     
-    // Login con Google
+    // Login Google
     async function loginWithGoogle() {
       try {
-        const { error } = await supabase.auth.signInWithOAuth({
+        const { error } = await supabaseClient.auth.signInWithOAuth({
           provider: 'google',
           options: {
             redirectTo: window.location.origin + '/mimi-transporte/chofer-panel.html'
@@ -108,17 +109,16 @@
         });
         if (error) throw error;
       } catch (err) {
-        showError('Error al conectar con Google: ' + err.message);
+        showError('Error: ' + err.message);
       }
     }
     
     // Login manual
-    async function loginManual(e) {
+    function loginManual(e) {
       e.preventDefault();
       const usuario = document.getElementById('usuario').value;
       const password = document.getElementById('password').value;
       
-      // Demo credentials
       if (usuario === 'chofer' && password === '1234') {
         localStorage.setItem('choferLogueado', 'true');
         localStorage.setItem('choferData', JSON.stringify({
@@ -133,10 +133,10 @@
       showError('Usuario o contraseña incorrectos');
     }
     
-    // Check sesión existente
+    // Verificar sesión existente
     async function checkSession() {
       setLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabaseClient.auth.getSession();
       
       if (session?.user) {
         saveSession(session.user);
@@ -147,15 +147,15 @@
       setLoading(false);
     }
     
-    // Auth state changes
-    supabase.auth.onAuthStateChange((event, session) => {
+    // Escuchar cambios de auth
+    supabaseClient.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         saveSession(session.user);
         window.location.replace('/mimi-transporte/chofer-panel.html');
       }
     });
     
-    // Init
+    // Iniciar
     checkSession();
   </script>
 </body>
