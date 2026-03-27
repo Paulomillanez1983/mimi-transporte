@@ -58,6 +58,7 @@ class UIController {
 
     handle?.addEventListener('touchmove', (e) => {
       const delta = this.touchStartY - e.touches[0].clientY;
+      const currentTransform = sheet.style.transform;
       const currentHeight = sheet.offsetHeight;
       const newHeight = Math.max(80, Math.min(window.innerHeight * 0.85, currentHeight + delta));
       sheet.style.transform = `translateY(calc(100% - ${newHeight}px))`;
@@ -126,7 +127,6 @@ class UIController {
   }
 
   _setupViewport() {
-    // Fix for mobile viewport height
     const setVH = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -276,6 +276,19 @@ class UIController {
     soundService.vibrate('arrival');
   }
 
+  // CORREGIDO: Agregar método _renderActiveTrip que faltaba
+  _renderActiveTrip(trip) {
+    console.log('[UI] Rendering active trip:', trip.id);
+    // Este método se llama cuando hay un viaje activo
+    // La lógica específica ya está en _renderGoingToPickup y _renderInProgress
+    const state = stateManager.get('driver.status');
+    if (state === CONFIG.DRIVER_STATES.GOING_TO_PICKUP) {
+      this._renderGoingToPickup();
+    } else if (state === CONFIG.DRIVER_STATES.IN_PROGRESS) {
+      this._renderInProgress();
+    }
+  }
+
   // Incoming offer modal
   _showIncomingOffer(offer) {
     soundService.feedback('newTrip');
@@ -284,7 +297,7 @@ class UIController {
     this.elements['trip-pickup'].textContent = this._escape(offer.origen);
     this.elements['trip-dropoff'].textContent = this._escape(offer.destino);
     this.elements['trip-price'].textContent = `$${Number(offer.precio).toLocaleString()}`;
-    this.elements['trip-duration'].textContent = `${Math.ceil(offer.km * 2)} min`; // Rough estimate
+    this.elements['trip-duration'].textContent = `${Math.ceil(offer.km * 2)} min`;
     this.elements['trip-distance'].textContent = `${Number(offer.km).toFixed(1)} km`;
     this.elements['client-name'].textContent = this._escape(offer.cliente || 'Pasajero');
     this.elements['client-phone'].textContent = offer.telefono || '';
@@ -310,6 +323,8 @@ class UIController {
     circle.style.animation = 'none';
     circle.offsetHeight; // Trigger reflow
     circle.style.animation = `countdown ${seconds}s linear forwards`;
+    
+    if (number) number.textContent = seconds;
     
     this.countdownInterval = setInterval(() => {
       this.currentCountdown--;
