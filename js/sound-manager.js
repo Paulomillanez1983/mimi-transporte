@@ -1,6 +1,9 @@
 /**
- * Gestión de audio y vibración con Web Audio API
+ * MIMI Driver - Sound & Haptics Manager Premium
+ * Web Audio API + Vibration API optimizados
  */
+
+import CONFIG from './config.js';
 
 class SoundManager {
   constructor() {
@@ -8,6 +11,8 @@ class SoundManager {
     this.enabled = false;
     this.initialized = false;
     this.sounds = {};
+    this.masterGain = null;
+    this.analyzer = null;
   }
 
   async init() {
@@ -17,6 +22,15 @@ class SoundManager {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioContext();
       
+      // Master gain para control de volumen
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.8;
+      this.masterGain.connect(this.ctx.destination);
+
+      // Analizador para visualizaciones (futuro)
+      this.analyzer = this.ctx.createAnalyser();
+      this.analyzer.fftSize = 256;
+
       if (this.ctx.state === 'suspended') {
         await this.ctx.resume();
       }
@@ -24,8 +38,8 @@ class SoundManager {
       this.enabled = true;
       this.initialized = true;
 
-      // Precargar sonidos sintetizados
       this._generateSounds();
+      console.log('🔊 SoundManager Premium inicializado');
 
     } catch (error) {
       console.warn('Audio init failed:', error);
@@ -34,36 +48,15 @@ class SoundManager {
   }
 
   _generateSounds() {
-    // Sonido de nueva solicitud (urgente)
-    this.sounds.newTrip = () => this._playTone({
-      frequencies: [880, 1100, 880],
-      durations: [0.15, 0.15, 0.3],
-      type: 'triangle',
-      gain: 0.4
-    });
+    const { SOUNDS } = CONFIG;
 
-    // Sonido de éxito/confirmación
-    this.sounds.success = () => this._playTone({
-      frequencies: [523.25, 659.25, 783.99], // Do-Mi-Sol
-      durations: [0.1, 0.1, 0.3],
-      type: 'sine',
-      gain: 0.3
-    });
-
-    // Sonido de alerta/rechazo
-    this.sounds.error = () => this._playTone({
-      frequencies: [300, 200],
-      durations: [0.2, 0.4],
-      type: 'sawtooth',
-      gain: 0.3
-    });
-
-    // Sonido de notificación suave
-    this.sounds.notification = () => this._playTone({
-      frequencies: [600],
-      durations: [0.1],
-      type: 'sine',
-      gain: 0.2
+    Object.entries(SOUNDS).forEach(([name, config]) => {
+      this.sounds[name] = () => this._playTone({
+        frequencies: config.freq,
+        durations: config.duration,
+        type: config.type,
+        gain: name === 'newTrip' ? 0.5 : 0.35
+      });
     });
   }
 
@@ -72,8 +65,8 @@ class SoundManager {
 
     const now = this.ctx.currentTime;
     const masterGain = this.ctx.createGain();
-    masterGain.connect(this.ctx.destination);
-    masterGain.gain.value = gain;
+    masterGain.connect(this.masterGain);
+    masterGain.gain.setValueAtTime(gain, now);
 
     frequencies.forEach((freq, i) => {
       const osc = this.ctx.createOscillator();
@@ -82,6 +75,7 @@ class SoundManager {
       osc.type = type;
       osc.frequency.setValueAtTime(freq, now);
       
+      // Envelope ADSR suave
       noteGain.connect(masterGain);
       osc.connect(noteGain);
       
@@ -90,11 +84,14 @@ class SoundManager {
       
       noteGain.gain.setValueAtTime(0, startTime);
       noteGain.gain.linearRampToValueAtTime(1, startTime + 0.02);
-      noteGain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration - 0.05);
       
       osc.start(startTime);
       osc.stop(startTime + duration);
     });
+
+    // Fade out master
+    masterGain.gain.exponentialRampToValueAtTime(0.001, now + 2);
   }
 
   play(soundName) {
@@ -112,31 +109,92 @@ class SoundManager {
     }
   }
 
-  vibrate(pattern) {
-    if (!navigator.vibrate) return;
+  // =========================
+  // HAPTICS PREMIUM
+  // =========================
+  vibrate(patternName) {
+    if (!navigator.vibrate || !CONFIG.FEATURES.enableHaptics) return;
     
-    // Patrones predefinidos
-    const patterns = {
-      newTrip: [100, 50, 100, 50, 200, 100, 500],
-      success: [50, 100],
-      error: [200, 100, 200],
-      notification: [100]
-    };
-
-    const vibrationPattern = typeof pattern === 'string' ? patterns[pattern] : pattern;
-navigator.vibrate(vibrationPattern || patterns.notification);
+    const pattern = CONFIG.HAPTICS[patternName] || CONFIG.HAPTICS.notification;
+    navigator.vibrate(pattern);
   }
 
-  // Método para activar audio tras interacción del usuario (requerido por browsers)
+  // Patrón de llegada (intensidad creciente)
+  vibrateArrival(distance) {
+    if (!navigator.vibrate) return;
+    
+    if (distance < 50) {
+      navigator.vibrate(CONFIG.HAPTICS.arrival);
+    } else if (distance < 200) {
+      navigator.vibrate([100, 50, 100]);
+    } else {
+      navigator.vibrate([60]);
+    }
+  }
+
+  // Doble feedback (sonido + haptic)
+  notify(type) {
+    this.play(type);
+    this.vibrate(type);
+  }
+
+  // =========================
+  // VOICE SYNTHESIS (Nuevo)
+  // =========================
+  speak(text, priority = 'normal') {
+    if (!CONFIG.FEATURES.enableVoiceSynthesis || !window.speechSynthesis) return;
+
+    // Cancelar speech anterior si es urgente
+    if (priority === 'urgent') {
+      window.speechSynthesis.cancel();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-AR';
+    utterance.rate = 1.1;
+    utterance.pitch = 1;
+    
+    // Seleccionar voz española si disponible
+    const voices = window.speechSynthesis.getVoices();
+    const spanishVoice = voices.find(v => v.lang.includes('es'));
+    if (spanishVoice) utterance.voice = spanishVoice;
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // =========================
+  // AUDIO UNLOCK (iOS/Android)
+  // =========================
   async enableOnUserInteraction() {
     if (!this.initialized) {
       await this.init();
     }
     
-    // Intentar reproducir silencio para desbloquear audio en iOS
     if (this.ctx && this.ctx.state === 'suspended') {
       await this.ctx.resume();
     }
+
+    // Precargar voices
+    if (window.speechSynthesis) {
+      window.speechSynthesis.getVoices();
+    }
+  }
+
+  // =========================
+  // UTILIDADES
+  // =========================
+  setVolume(level) {
+    if (this.masterGain) {
+      this.masterGain.gain.setValueAtTime(level, this.ctx.currentTime);
+    }
+  }
+
+  mute() {
+    this.setVolume(0);
+  }
+
+  unmute() {
+    this.setVolume(0.8);
   }
 }
 
