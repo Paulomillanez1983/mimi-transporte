@@ -10,10 +10,14 @@ import locationTracker from '/mimi-transporte/js/location-tracker.js';
 import tripManager from '/mimi-transporte/js/trip-manager.js';
 import soundManager from '/mimi-transporte/js/sound-manager.js';
 import uiController from '/mimi-transporte/js/ui-controller.js';
+
 class DriverApp {
   constructor() {
     this.initialized = false;
     this.unsubscribers = [];
+    this.mapReady = false;
+    this.locationReady = false;
+    this.tripsReady = false;
   }
 
   async init() {
@@ -24,40 +28,89 @@ class DriverApp {
         return;
       }
 
-      // 2. Inicializar Supabase
+      // 2. Inicializar Supabase (CRÍTICO)
       const dbReady = await supabaseService.init();
       if (!dbReady) {
         throw new Error('No se pudo conectar a la base de datos');
       }
 
-      // 3. Inicializar UI
+      // 3. Inicializar UI (CRÍTICO)
       uiController.init();
 
-      // 4. Inicializar mapa
-      await mapService.init('mainMap');
+      // 4. Inicializar mapa (NO CRÍTICO)
+      await this._safeInitMap();
 
-      // 5. Inicializar tracking de ubicación
-      await locationTracker.start((position) => {
-        this._onPositionUpdate(position);
-      });
+      // 5. Inicializar tracking de ubicación (SEMI-CRÍTICO)
+      await this._safeInitLocation();
 
-      // 6. Inicializar gestión de viajes
-      await tripManager.init();
+      // 6. Inicializar gestión de viajes (CRÍTICO OPERATIVO)
+      await this._safeInitTrips();
 
       // 7. Suscribirse a eventos
       this._subscribeToEvents();
 
       // 8. Activar audio en primera interacción
       document.body.addEventListener('click', () => {
-        soundManager.enableOnUserInteraction();
+        try {
+          soundManager.enableOnUserInteraction();
+        } catch (e) {
+          console.warn('No se pudo habilitar audio:', e);
+        }
       }, { once: true });
 
       this.initialized = true;
-      uiController.showToast('Panel listo', 'success');
+
+      if (this.tripsReady) {
+        if (this.mapReady && this.locationReady) {
+          uiController.showToast('Panel listo', 'success');
+        } else {
+          uiController.showToast('Panel listo (modo reducido)', 'warning');
+        }
+      } else {
+        uiController.showToast('Panel iniciado con limitaciones', 'warning');
+      }
 
     } catch (error) {
       console.error('App initialization failed:', error);
-      uiController.showToast('Error al iniciar: ' + error.message, 'error');
+      uiController.showToast('Error al iniciar: ' + (error?.message || 'desconocido'), 'error');
+    }
+  }
+
+  async _safeInitMap() {
+    try {
+      await mapService.init('mainMap');
+      this.mapReady = true;
+      console.log('Mapa inicializado correctamente');
+    } catch (error) {
+      this.mapReady = false;
+      console.error('Mapa no disponible, continuando sin mapa:', error);
+      uiController.showToast('Mapa no disponible temporalmente', 'warning');
+    }
+  }
+
+  async _safeInitLocation() {
+    try {
+      await locationTracker.start((position) => {
+        this._onPositionUpdate(position);
+      });
+      this.locationReady = true;
+      console.log('Tracking de ubicación iniciado');
+    } catch (error) {
+      this.locationReady = false;
+      console.error('No se pudo iniciar ubicación:', error);
+      uiController.showToast('Ubicación no disponible', 'warning');
+    }
+  }
+
+  async _safeInitTrips() {
+    try {
+      await tripManager.init();
+      this.tripsReady = true;
+      console.log('Gestión de viajes iniciada');
+    } catch (error) {
+      this.tripsReady = false;
+      console.error('No se pudo iniciar gestión de viajes:', error);
+      throw new Error('No se pudo iniciar la gestión de viajes');
     }
   }
 
@@ -77,7 +130,7 @@ class DriverApp {
       tripManager.on('tripAccepted', (trip) => {
         uiController.closeIncomingModal();
         uiController.showToast('Viaje aceptado', 'success');
-        soundManager.play('success');
+        this._safePlaySound('success');
         this._showTripOnMap(trip);
         uiController.renderActiveTrip(trip);
       })
@@ -86,7 +139,7 @@ class DriverApp {
     this.unsubscribers.push(
       tripManager.on('tripStarted', (trip) => {
         uiController.showToast('Viaje iniciado', 'success');
-        soundManager.play('success');
+        this._safePlaySound('success');
         uiController.renderActiveTrip(trip);
       })
     );
@@ -94,8 +147,16 @@ class DriverApp {
     this.unsubscribers.push(
       tripManager.on('tripCompleted', () => {
         uiController.showToast('Viaje completado', 'success');
-        soundManager.play('success');
-        mapService.clearTripMarkers();
+        this._safePlaySound('success');
+
+        if (this.mapReady) {
+          try {
+            mapService.clearTripMarkers();
+          } catch (e) {
+            console.warn('No se pudieron limpiar marcadores:', e);
+          }
+        }
+
         uiController.hideNavigation();
         uiController.renderAvailableTrips(tripManager.availableTrips);
       })
@@ -114,6 +175,14 @@ class DriverApp {
     document.addEventListener('driverAction', (e) => {
       this._handleDriverAction(e.detail);
     });
+  }
+
+  _safePlaySound(name) {
+    try {
+      soundManager.play(name);
+    } catch (e) {
+      console.warn('No se pudo reproducir sonido:', e);
+    }
   }
 
   async _handleDriverAction({ action, tripId }) {
@@ -171,13 +240,21 @@ class DriverApp {
 
   async _handleCancelTrip(tripId) {
     if (!confirm('¿Cancelar este viaje?')) return;
-    
+
     const reason = prompt('Motivo de cancelación:') || '';
     const result = await tripManager.cancelTrip(tripId, reason);
-    
+
     if (result.success) {
       uiController.showToast('Viaje cancelado', 'warning');
-      mapService.clearTripMarkers();
+
+      if (this.mapReady) {
+        try {
+          mapService.clearTripMarkers();
+        } catch (e) {
+          console.warn('No se pudieron limpiar marcadores:', e);
+        }
+      }
+
       uiController.hideNavigation();
     } else {
       uiController.showToast('Error: ' + result.error, 'error');
@@ -187,46 +264,78 @@ class DriverApp {
   _openWhatsApp(tripId) {
     const trip = tripManager.getCurrentTrip();
     if (!trip) return;
-    
-    const phone = String(trip.telefono).replace(/\D/g, '');
+
+    const phone = String(trip.telefono || '').replace(/\D/g, '');
+    if (!phone) {
+      uiController.showToast('No hay teléfono disponible', 'warning');
+      return;
+    }
+
     window.open(`https://wa.me/${phone}`, '_blank');
   }
 
   _onPositionUpdate(position) {
-    // Actualizar marcador en el mapa
-    mapService.updateDriverPosition(position.lng, position.lat, position.heading);
+    // Actualizar marcador en el mapa solo si el mapa está disponible
+    if (this.mapReady) {
+      try {
+        mapService.updateDriverPosition(position.lng, position.lat, position.heading);
+      } catch (e) {
+        console.warn('No se pudo actualizar posición en mapa:', e);
+      }
+    }
 
     // Si hay viaje en curso, actualizar distancia
     const currentTrip = tripManager.getCurrentTrip();
-    if (currentTrip && currentTrip.estado === CONFIG.ESTADOS.EN_CURSO) {
-      const distance = mapService.constructor.calculateDistance(
-        position.lat,
-        position.lng,
-        currentTrip.destino_lat,
-        currentTrip.destino_lng
-      );
-      uiController.updateNavigationDistance(distance);
+    if (
+      currentTrip &&
+      currentTrip.estado === CONFIG.ESTADOS.EN_CURSO &&
+      this.mapReady &&
+      typeof mapService.constructor.calculateDistance === 'function'
+    ) {
+      try {
+        const distance = mapService.constructor.calculateDistance(
+          position.lat,
+          position.lng,
+          currentTrip.destino_lat,
+          currentTrip.destino_lng
+        );
+        uiController.updateNavigationDistance(distance);
+      } catch (e) {
+        console.warn('No se pudo calcular distancia:', e);
+      }
     }
   }
 
   _showTripOnMap(trip) {
+    if (!this.mapReady) return;
+
     if (trip.origen_lat && trip.destino_lat) {
-      mapService.showTripRoute(
-        { lat: trip.origen_lat, lng: trip.origen_lng },
-        { lat: trip.destino_lat, lng: trip.destino_lng }
-      );
+      try {
+        mapService.showTripRoute(
+          { lat: trip.origen_lat, lng: trip.origen_lng },
+          { lat: trip.destino_lat, lng: trip.destino_lng }
+        );
+      } catch (e) {
+        console.warn('No se pudo mostrar ruta en mapa:', e);
+      }
     }
   }
 
   destroy() {
     // Limpiar suscripciones
-    this.unsubscribers.forEach(unsub => unsub());
+    this.unsubscribers.forEach(unsub => {
+      try {
+        unsub?.();
+      } catch (e) {
+        console.warn('Error liberando suscripción:', e);
+      }
+    });
     this.unsubscribers = [];
 
     // Detener servicios
-    locationTracker.stop();
-    tripManager.destroy();
-    mapService.destroy();
+    try { locationTracker.stop(); } catch (e) {}
+    try { tripManager.destroy(); } catch (e) {}
+    try { mapService.destroy(); } catch (e) {}
   }
 }
 
