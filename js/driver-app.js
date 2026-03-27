@@ -66,14 +66,30 @@ class DriverApp {
         { once: true }
       );
 
-      this.initialized = true;
+this.initialized = true;
 
-      // Reflejar estado visual del chofer
-      const estadoChofer = document.getElementById('estadoChofer');
-      if (estadoChofer) {
-        estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
-      }
+// Reflejar estado visual del chofer
+const estadoChofer = document.getElementById('estadoChofer');
+if (estadoChofer) {
+  estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
+}
 
+// Reacomodar mapa en mobile después del layout final
+setTimeout(() => {
+  try {
+    mapService.resize();
+  } catch (e) {
+    console.warn('No se pudo redimensionar el mapa al iniciar:', e);
+  }
+}, 300);
+
+setTimeout(() => {
+  try {
+    mapService.resize();
+  } catch (e) {
+    console.warn('No se pudo redimensionar el mapa al iniciar:', e);
+  }
+}, 1200);
       if (this.tripsReady) {
         if (this.mapReady && this.locationReady) {
           uiController.showToast('Panel listo', 'success');
