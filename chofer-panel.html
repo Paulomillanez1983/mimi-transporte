@@ -1,154 +1,231 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="theme-color" content="#000000" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
-  <title>MIMI Driver - Panel</title>
+  <title>MIMI Driver</title>
   
-  <link rel="stylesheet" href="/mimi-transporte/css/driver.css" />
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
   <!-- MapLibre -->
-  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet">
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-
-<body>
-  <!-- MAPA - Siempre visible, ocupa toda la pantalla -->
-  <div id="mainMap"></div>
   
-  <!-- UI FLOTANTE -->
-  <div class="ui-layer">
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+  <!-- MAPA BASE -->
+  <div id="map-container"></div>
+  
+  <!-- CAPA UI -->
+  <div id="ui-layer">
     
-    <!-- Header -->
-    <header class="header-float">
-      <div class="driver-mini">
-        <div class="driver-mini-avatar">🚐</div>
-        <div class="driver-mini-info">
-          <h3 id="driverName">Conductor</h3>
-          <p id="estadoChofer">Iniciando...</p>
+    <!-- HEADER -->
+    <header class="header" id="header">
+      <div class="header-content">
+        <div class="driver-profile">
+          <div class="avatar">
+            <span id="driver-initial">M</span>
+            <div class="status-dot" id="status-dot"></div>
+          </div>
+          <div class="driver-info">
+            <h1 id="driver-name">Conductor</h1>
+            <span class="status-text" id="status-text">Desconectado</span>
+          </div>
         </div>
+        <button class="icon-btn" id="menu-btn" aria-label="Menú">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
-      <button class="btn-icon" onclick="logout()" title="Salir">🚪</button>
     </header>
-    
-    <!-- Stats -->
-    <div class="stats-float">
+
+    <!-- STATS FLOATING -->
+    <div class="stats-floating" id="stats-panel">
       <div class="stat-card">
-        <div class="stat-value" id="statPendientes">0</div>
-        <div class="stat-label">Ofertas</div>
+        <span class="stat-value" id="stat-earnings">$0</span>
+        <span class="stat-label">Hoy</span>
       </div>
       <div class="stat-card">
-        <div class="stat-value" id="statHoy">0</div>
-        <div class="stat-label">Hoy</div>
+        <span class="stat-value" id="stat-trips">0</span>
+        <span class="stat-label">Viajes</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-rating">5.0</span>
+        <span class="stat-label">Rating</span>
       </div>
     </div>
-    
-    <!-- Barra de Navegación (estilo Google Maps) -->
-    <div id="navPanel" class="nav-panel">
-      <div class="nav-arrow">↑</div>
-      <div class="nav-info">
-        <div class="nav-street" id="navStreet">Esperando...</div>
-        <div class="nav-next" id="navNext">Inicia un viaje para navegar</div>
-      </div>
-      <div class="nav-distance" id="navDistance">--</div>
-    </div>
-    
-    <!-- Panel de Llegada -->
-    <div id="arrivalPanel" class="arrival-panel">
-      <h3>🏁 Has llegado</h3>
-      <p id="arrivalText">¿Deseas finalizar el viaje?</p>
-      <div class="arrival-actions">
-        <button class="btn btn-secondary" onclick="uiController.hideArrivalPanel()">
-          Continuar
-        </button>
-        <button class="btn btn-success" id="btnFinishTrip">
-          Finalizar Viaje
-        </button>
-      </div>
-    </div>
-    
-    <!-- Panel Inferior (Uber-style) -->
-    <div class="trip-panel" id="tripPanel">
-      <div class="panel-handle" id="panelHandle">
-        <div class="panel-grabber"></div>
-        <div class="panel-title-row">
-          <div>
-            <h3>Solicitudes</h3>
-            <p id="panelSubtitle">Esperando solicitudes...</p>
+
+    <!-- BARRA DE NAVEGACIÓN (Google Maps style) -->
+    <div class="nav-bar" id="nav-bar">
+      <div class="nav-content">
+        <div class="nav-maneuver">
+          <div class="maneuver-icon" id="maneuver-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+              <path d="M12 19V5M12 5L5 12M12 5L19 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </div>
-          <div id="tripCountBadge" class="trip-count-badge">0</div>
+          <div class="nav-text">
+            <div class="nav-street" id="nav-street">Esperando...</div>
+            <div class="nav-next" id="nav-next">Conectate para recibir viajes</div>
+          </div>
         </div>
+        <div class="nav-distance" id="nav-distance">--</div>
       </div>
-      
-      <div class="panel-content" id="panelContent">
-        <button class="btn btn-primary" id="btnToggleDisponibilidad" style="width:100%; margin-bottom:16px;">
-          🟢 Conectarse
-        </button>
+      <div class="nav-progress">
+        <div class="nav-progress-bar" id="nav-progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- BOTÓN FLOTANTE ONLINE/OFFLINE -->
+    <button class="fab-online" id="fab-online">
+      <div class="fab-content">
+        <span class="fab-icon">🔴</span>
+        <span class="fab-text">CONECTAR</span>
+      </div>
+      <div class="fab-pulse"></div>
+    </button>
+
+    <!-- BOTTOM SHEET -->
+    <div class="bottom-sheet" id="bottom-sheet">
+      <div class="sheet-handle">
+        <div class="handle-bar"></div>
+      </div>
+      <div class="sheet-content" id="sheet-content">
+        <!-- Contenido dinámico por estado -->
+      </div>
+    </div>
+
+    <!-- MODAL VIAJE ENTRANTE -->
+    <div class="incoming-modal" id="incoming-modal">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="countdown-ring">
+          <svg class="countdown-svg" viewBox="0 0 100 100">
+            <circle class="countdown-bg" cx="50" cy="50" r="45"/>
+            <circle class="countdown-progress" id="countdown-circle" cx="50" cy="50" r="45"/>
+          </svg>
+          <span class="countdown-number" id="countdown-number">15</span>
+        </div>
         
-        <div id="tripList" class="trip-list">
-          <div class="empty-state">
-            <div class="pulse-indicator"></div>
-            <p>Buscando viajes cercanos...</p>
+        <div class="trip-preview">
+          <div class="route-visual">
+            <div class="route-dot pickup"></div>
+            <div class="route-line"></div>
+            <div class="route-dot dropoff"></div>
+          </div>
+          <div class="route-info">
+            <div class="location pickup">
+              <span class="location-name" id="trip-pickup">--</span>
+              <span class="location-time" id="pickup-time">-- min</span>
+            </div>
+            <div class="location dropoff">
+              <span class="location-name" id="trip-dropoff">--</span>
+              <span class="location-distance" id="trip-distance">-- km</span>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <!-- Modal de Viaje Entrante (flotante, no bloquea mapa) -->
-    <div id="incomingModal" class="incoming-modal">
-      <div class="incoming-header">
-        <div>
-          <h3>🚗 Nueva solicitud</h3>
-          <p style="color:#888; font-size:13px;">Desliza hacia arriba para ver detalles</p>
+
+        <div class="trip-metrics">
+          <div class="metric">
+            <span class="metric-value" id="trip-price">$--</span>
+            <span class="metric-label">Ganancia</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value" id="trip-duration">-- min</span>
+            <span class="metric-label">Duración</span>
+          </div>
         </div>
-        <div class="countdown-box">
-          <span id="countdownText">30</span>s
+
+        <div class="trip-client" id="client-info">
+          <div class="client-avatar">👤</div>
+          <div class="client-details">
+            <span class="client-name" id="client-name">--</span>
+            <span class="client-phone" id="client-phone">--</span>
+          </div>
+          <div class="client-actions">
+            <button class="action-btn call" id="btn-call">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button class="action-btn whatsapp" id="btn-whatsapp">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-reject" id="btn-reject">
+            <span>✕</span>
+            <small>Rechazar</small>
+          </button>
+          <button class="btn-accept" id="btn-accept">
+            <span>✓</span>
+            <small>Aceptar</small>
+          </button>
         </div>
       </div>
-      
-      <div class="countdown-bar-wrap">
-        <div id="countdownProgress" class="countdown-bar"></div>
-      </div>
-      
-      <div id="incomingDetails"></div>
-      
-      <div class="incoming-actions">
-        <button id="btnRejectIncoming" class="btn btn-secondary">
-          ✕ Rechazar
-        </button>
-        <button id="btnAcceptIncoming" class="btn btn-success">
-          ✓ Aceptar
-        </button>
+    </div>
+
+    <!-- PANEL LLEGADA -->
+    <div class="arrival-panel" id="arrival-panel">
+      <div class="arrival-content">
+        <div class="arrival-icon">🏁</div>
+        <h2>¡Has llegado!</h2>
+        <p>¿Deseas finalizar el viaje?</p>
+        <div class="arrival-actions">
+          <button class="btn-secondary" id="btn-continue">Continuar</button>
+          <button class="btn-primary" id="btn-finish">Finalizar</button>
+        </div>
       </div>
     </div>
-    
-    <!-- Toast -->
-    <div id="toast" class="toast"></div>
-    
-    <!-- Loading -->
-    <div id="globalLoading" class="global-loading">
-      <div class="loading-spinner"></div>
-      <span class="loading-text">Procesando...</span>
+
+    <!-- TOAST -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- LOADING GLOBAL -->
+    <div class="global-loading" id="global-loading">
+      <div class="spinner"></div>
+      <span class="loading-text">Cargando...</span>
     </div>
-    
+
+    <!-- OFFLINE BANNER -->
+    <div class="offline-banner" id="offline-banner">
+      <span>⚠ Sin conexión</span>
+    </div>
   </div>
 
-  <script type="module">
-    import DriverApp from '/mimi-transporte/js/driver-app.js';
-    import supabaseService from '/mimi-transporte/js/supabase-client.js';
-    
-    window.logout = () => supabaseService.logout();
-    
-    const app = new DriverApp();
-    app.init();
-  </script>
+  <!-- SCRIPTS -->
+  <script src="js/config.js"></script>
+  <script src="js/state-manager.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/sound-service.js"></script>
+  <script src="js/location-service.js"></script>
+  <script src="js/map-service.js"></script>
+  <script src="js/trip-manager.js"></script>
+  <script src="js/ui-controller.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
