@@ -19,6 +19,9 @@ class DriverApp {
     this.locationReady = false;
     this.tripsReady = false;
     this.lastIncomingTripId = null;
+
+    this._handlingTripAction = new Set();
+    this._driverActionBound = null;
   }
 
   async init() {
@@ -43,41 +46,13 @@ class DriverApp {
       await this._safeInitTrips();
 
       this._subscribeToEvents();
-
-      document.body.addEventListener(
-        'click',
-        () => {
-          try {
-            soundManager.enableOnUserInteraction();
-          } catch (e) {
-            console.warn('No se pudo habilitar audio:', e);
-          }
-        },
-        { once: true }
-      );
+      this._bindAudioUnlock();
 
       this.initialized = true;
+      this._updateDriverStatus();
 
-      const estadoChofer = document.getElementById('estadoChofer');
-      if (estadoChofer) {
-        estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
-      }
-
-      setTimeout(() => {
-        try {
-          mapService.resize();
-        } catch (e) {
-          console.warn('No se pudo redimensionar el mapa al iniciar:', e);
-        }
-      }, 300);
-
-      setTimeout(() => {
-        try {
-          mapService.resize();
-        } catch (e) {
-          console.warn('No se pudo redimensionar el mapa al iniciar:', e);
-        }
-      }, 1200);
+      setTimeout(() => this._safeResizeMap(), 300);
+      setTimeout(() => this._safeResizeMap(), 1200);
 
       if (this.tripsReady) {
         if (this.mapReady && this.locationReady) {
@@ -94,6 +69,35 @@ class DriverApp {
         'Error al iniciar: ' + (error?.message || 'desconocido'),
         'error'
       );
+    }
+  }
+
+  _bindAudioUnlock() {
+    document.body.addEventListener(
+      'click',
+      () => {
+        try {
+          soundManager.enableOnUserInteraction();
+        } catch (e) {
+          console.warn('No se pudo habilitar audio:', e);
+        }
+      },
+      { once: true }
+    );
+  }
+
+  _updateDriverStatus() {
+    const estadoChofer = document.getElementById('estadoChofer');
+    if (!estadoChofer) return;
+
+    estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
+  }
+
+  _safeResizeMap() {
+    try {
+      mapService.resize();
+    } catch (e) {
+      console.warn('No se pudo redimensionar el mapa:', e);
     }
   }
 
@@ -115,9 +119,11 @@ class DriverApp {
         this._onPositionUpdate(position);
       });
       this.locationReady = true;
+      this._updateDriverStatus();
       console.log('Tracking de ubicación iniciado');
     } catch (error) {
       this.locationReady = false;
+      this._updateDriverStatus();
       console.error('No se pudo iniciar ubicación:', error);
       uiController.showToast('Ubicación no disponible', 'warning');
     }
@@ -136,39 +142,23 @@ class DriverApp {
   }
 
   _subscribeToEvents() {
-    // NUEVO: viajes disponibles también disparan solicitud entrante
+    // NUEVO DISPONIBLE
     this.unsubscribers.push(
       tripManager.on('newAvailableTrip', (trip) => {
-        if (tripManager.getCurrentTrip()) return;
-        if (tripManager.getPendingTrip()) return;
-        if (!trip?.id) return;
-        if (this.lastIncomingTripId === trip.id) return;
-
-        this.lastIncomingTripId = trip.id;
-
-        uiController.showIncomingModal(
-          trip,
-          () => this._handleAcceptTrip(trip.id),
-          () => this._handleRejectTrip(trip.id)
-        );
+        this._handleIncomingTrip(trip);
       })
     );
 
+    // NUEVO PENDIENTE
     this.unsubscribers.push(
       tripManager.on('newPendingTrip', (trip) => {
-        if (!trip?.id) return;
-        this.lastIncomingTripId = trip.id;
-
-        uiController.showIncomingModal(
-          trip,
-          () => this._handleAcceptTrip(trip.id),
-          () => this._handleRejectTrip(trip.id)
-        );
+        this._handleIncomingTrip(trip, { force: true });
       })
     );
 
     this.unsubscribers.push(
       tripManager.on('tripAccepted', (trip) => {
+        this.lastIncomingTripId = null;
         uiController.closeIncomingModal();
         uiController.showToast('Viaje aceptado', 'success');
         this._safePlaySound('success');
@@ -181,12 +171,15 @@ class DriverApp {
       tripManager.on('tripStarted', (trip) => {
         uiController.showToast('Viaje iniciado', 'success');
         this._safePlaySound('success');
+        this._showTripOnMap(trip);
         uiController.renderActiveTrip(trip);
       })
     );
 
     this.unsubscribers.push(
       tripManager.on('tripCompleted', () => {
+        this.lastIncomingTripId = null;
+        uiController.closeIncomingModal();
         uiController.showToast('Viaje completado', 'success');
         this._safePlaySound('success');
 
@@ -199,22 +192,65 @@ class DriverApp {
         }
 
         uiController.hideNavigation();
-        uiController.renderAvailableTrips(tripManager.availableTrips);
+        uiController.renderAvailableTrips(tripManager.availableTrips || []);
+        uiController.updateStats(tripManager.getStats?.() || {});
+      })
+    );
+
+    this.unsubscribers.push(
+      tripManager.on('tripCancelled', () => {
+        this.lastIncomingTripId = null;
+        uiController.closeIncomingModal();
+
+        if (this.mapReady) {
+          try {
+            mapService.clearTripMarkers();
+          } catch (e) {
+            console.warn('No se pudieron limpiar marcadores:', e);
+          }
+        }
+
+        uiController.hideNavigation();
+        uiController.renderAvailableTrips(tripManager.availableTrips || []);
+        uiController.updateStats(tripManager.getStats?.() || {});
       })
     );
 
     this.unsubscribers.push(
       tripManager.on('tripsRefreshed', ({ available }) => {
         if (!tripManager.getCurrentTrip()) {
-          uiController.renderAvailableTrips(available);
+          uiController.renderAvailableTrips(available || []);
         }
-        uiController.updateStats(tripManager.getStats());
+        uiController.updateStats(tripManager.getStats?.() || {});
       })
     );
 
-    document.addEventListener('driverAction', (e) => {
+    this._driverActionBound = (e) => {
       this._handleDriverAction(e.detail);
-    });
+    };
+
+    document.addEventListener('driverAction', this._driverActionBound);
+  }
+
+  _handleIncomingTrip(trip, options = {}) {
+    const { force = false } = options;
+
+    if (!trip?.id) return;
+    if (tripManager.getCurrentTrip()) return;
+    if (!force && tripManager.getPendingTrip()) return;
+
+    // Evita repetir el mismo modal muchas veces
+    if (this.lastIncomingTripId === trip.id && uiController.isIncomingModalOpen()) {
+      return;
+    }
+
+    this.lastIncomingTripId = trip.id;
+
+    uiController.showIncomingModal(
+      trip,
+      () => this._handleAcceptTrip(trip.id),
+      () => this._handleRejectTrip(trip.id)
+    );
   }
 
   _safePlaySound(name) {
@@ -225,7 +261,11 @@ class DriverApp {
     }
   }
 
-  async _handleDriverAction({ action, tripId }) {
+  async _handleDriverAction(detail = {}) {
+    const { action, tripId } = detail || {};
+
+    if (!action) return;
+
     switch (action) {
       case 'accept':
         await this._handleAcceptTrip(tripId);
@@ -248,33 +288,68 @@ class DriverApp {
     }
   }
 
+  async _runTripActionLock(tripId, fn) {
+    const key = String(tripId || 'global');
+
+    if (this._handlingTripAction.has(key)) {
+      return { success: false, error: 'Acción en progreso' };
+    }
+
+    this._handlingTripAction.add(key);
+
+    try {
+      return await fn();
+    } finally {
+      this._handlingTripAction.delete(key);
+    }
+  }
+
   async _handleAcceptTrip(tripId) {
-    const result = await tripManager.acceptTrip(tripId);
-    if (!result.success) {
-      uiController.showToast('Error al aceptar: ' + result.error, 'error');
+    const result = await this._runTripActionLock(tripId, async () => {
+      return await tripManager.acceptTrip(tripId);
+    });
+
+    if (!result?.success) {
+      uiController.showToast('Error al aceptar: ' + (result?.error || 'desconocido'), 'error');
     }
   }
 
   async _handleRejectTrip(tripId) {
-    const result = await tripManager.rejectTrip(tripId);
-    if (result.success) {
+    const result = await this._runTripActionLock(tripId, async () => {
+      return await tripManager.rejectTrip(tripId);
+    });
+
+    if (result?.success) {
+      if (this.lastIncomingTripId === tripId) {
+        this.lastIncomingTripId = null;
+      }
+
       uiController.closeIncomingModal();
       uiController.showToast('Viaje rechazado', 'warning');
+    } else if (result?.error && result.error !== 'Acción en progreso') {
+      uiController.showToast('Error al rechazar: ' + result.error, 'error');
     }
   }
 
   async _handleStartTrip(tripId) {
-    const result = await tripManager.startTrip(tripId);
-    if (!result.success) {
-      uiController.showToast('Error al iniciar: ' + result.error, 'error');
+    const result = await this._runTripActionLock(tripId, async () => {
+      return await tripManager.startTrip(tripId);
+    });
+
+    if (!result?.success) {
+      uiController.showToast('Error al iniciar: ' + (result?.error || 'desconocido'), 'error');
     }
   }
 
   async _handleFinishTrip(tripId) {
     const notes = prompt('¿Alguna observación del viaje?') || '';
-    const result = await tripManager.finishTrip(tripId, notes);
-    if (!result.success) {
-      uiController.showToast('Error al finalizar: ' + result.error, 'error');
+
+    const result = await this._runTripActionLock(tripId, async () => {
+      return await tripManager.finishTrip(tripId, notes);
+    });
+
+    if (!result?.success) {
+      uiController.showToast('Error al finalizar: ' + (result?.error || 'desconocido'), 'error');
     }
   }
 
@@ -282,9 +357,13 @@ class DriverApp {
     if (!confirm('¿Cancelar este viaje?')) return;
 
     const reason = prompt('Motivo de cancelación:') || '';
-    const result = await tripManager.cancelTrip(tripId, reason);
 
-    if (result.success) {
+    const result = await this._runTripActionLock(tripId, async () => {
+      return await tripManager.cancelTrip(tripId, reason);
+    });
+
+    if (result?.success) {
+      this.lastIncomingTripId = null;
       uiController.showToast('Viaje cancelado', 'warning');
 
       if (this.mapReady) {
@@ -296,25 +375,42 @@ class DriverApp {
       }
 
       uiController.hideNavigation();
+      uiController.renderAvailableTrips(tripManager.availableTrips || []);
+      uiController.updateStats(tripManager.getStats?.() || {});
     } else {
-      uiController.showToast('Error: ' + result.error, 'error');
+      uiController.showToast('Error: ' + (result?.error || 'desconocido'), 'error');
     }
   }
 
-  _openWhatsApp() {
-    const trip = tripManager.getCurrentTrip();
-    if (!trip) return;
+  _openWhatsApp(tripId = null) {
+    const currentTrip = tripManager.getCurrentTrip?.();
+    const pendingTrip = tripManager.getPendingTrip?.();
+    const availableTrips = Array.isArray(tripManager.availableTrips) ? tripManager.availableTrips : [];
 
-    const phone = String(trip.telefono || '').replace(/\D/g, '');
+    const targetTrip =
+      currentTrip?.id === tripId ? currentTrip :
+      pendingTrip?.id === tripId ? pendingTrip :
+      availableTrips.find(t => String(t.id) === String(tripId)) ||
+      currentTrip ||
+      pendingTrip;
+
+    if (!targetTrip) {
+      uiController.showToast('No se encontró el viaje', 'warning');
+      return;
+    }
+
+    const phone = String(targetTrip.telefono || '').replace(/\D/g, '');
     if (!phone) {
       uiController.showToast('No hay teléfono disponible', 'warning');
       return;
     }
 
-    window.open(`https://wa.me/${phone}`, '_blank');
+    window.open(`https://wa.me/${phone}`, '_blank', 'noopener,noreferrer');
   }
 
   _onPositionUpdate(position) {
+    if (!position) return;
+
     if (this.mapReady) {
       try {
         mapService.updateDriverPosition(position.lng, position.lat, position.heading);
@@ -323,7 +419,8 @@ class DriverApp {
       }
     }
 
-    const currentTrip = tripManager.getCurrentTrip();
+    const currentTrip = tripManager.getCurrentTrip?.();
+
     if (
       currentTrip &&
       currentTrip.estado === CONFIG.ESTADOS.EN_CURSO &&
@@ -347,7 +444,7 @@ class DriverApp {
   }
 
   _showTripOnMap(trip) {
-    if (!this.mapReady) return;
+    if (!this.mapReady || !trip) return;
 
     const hasOrigin =
       typeof trip.origen_lat === 'number' &&
@@ -379,6 +476,11 @@ class DriverApp {
     });
 
     this.unsubscribers = [];
+
+    if (this._driverActionBound) {
+      document.removeEventListener('driverAction', this._driverActionBound);
+      this._driverActionBound = null;
+    }
 
     try { locationTracker.stop(); } catch (e) {}
     try { tripManager.destroy(); } catch (e) {}
