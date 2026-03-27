@@ -4,14 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#000000">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   
   <title>MIMI Driver</title>
-  
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,7 +72,7 @@
       </div>
     </div>
 
-    <!-- BARRA DE NAVEGACIÓN (Google Maps style) -->
+    <!-- BARRA DE NAVEGACIÓN -->
     <div class="nav-bar" id="nav-bar">
       <div class="nav-content">
         <div class="nav-maneuver">
@@ -111,7 +108,11 @@
         <div class="handle-bar"></div>
       </div>
       <div class="sheet-content" id="sheet-content">
-        <!-- Contenido dinámico por estado -->
+        <div class="waiting-state">
+          <div class="pulse-ring"></div>
+          <h3>Estás desconectado</h3>
+          <p>Toca "CONECTAR" para recibir viajes</p>
+        </div>
       </div>
     </div>
 
@@ -121,6 +122,12 @@
       <div class="modal-content">
         <div class="countdown-ring">
           <svg class="countdown-svg" viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id="countdown-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" style="stop-color:#05944F"/>
+                <stop offset="100%" style="stop-color:#276EF1"/>
+              </linearGradient>
+            </defs>
             <circle class="countdown-bg" cx="50" cy="50" r="45"/>
             <circle class="countdown-progress" id="countdown-circle" cx="50" cy="50" r="45"/>
           </svg>
