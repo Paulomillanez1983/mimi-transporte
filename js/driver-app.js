@@ -1,298 +1,231 @@
 /**
- * MIMI Driver App - Experiencia Uber Driver
- * Mapa siempre visible, flujo de pantallas limpio
+ * Map Service - Con integración de routing real
  */
 
 import CONFIG from './config.js';
-import supabaseService from './supabase-client.js';
-import mapService from './map-service.js';
-import locationTracker from './location-tracker.js';
-import tripManager from './trip-manager.js';
-import uiController from './ui-controller.js';
 import routingService from './routing-service.js';
 
-class DriverApp {
+class MapService {
   constructor() {
-    this.initialized = false;
-    this.unsubscribers = [];
-    this._onlineStatus = false;
-    this._currentTripId = null;
-    this._routeRefreshInterval = null;
+    this.map = null;
+    this.markers = {};
+    this.isReady = false;
+    this.pendingOps = [];
   }
 
-  async init() {
-    try {
-      if (!supabaseService.isAuthenticated()) {
-        window.location.href = CONFIG.REDIRECTS.LOGIN;
+  async init(containerId) {
+    return new Promise((resolve, reject) => {
+      console.log('[MapService] Iniciando mapa...');
+      
+      if (!window.maplibregl) {
+        reject(new Error('MapLibre no cargado'));
         return;
       }
 
-      const dbReady = await supabaseService.init();
-      if (!dbReady) throw new Error('No se pudo conectar a la base de datos');
-
-      uiController.init();
-      uiController.showToast('Iniciando...', 'info');
-
-      // Inicializar servicios
-      await Promise.all([
-        mapService.init('mainMap'),
-        locationTracker.start(pos => this._onPositionUpdate(pos))
-      ]);
-
-      await tripManager.init();
-      this._subscribeToEvents();
-      this._bindUI();
-
-      this.initialized = true;
-      uiController.updateDriverState('ONLINE', false);
-      uiController.showWaitingState();
-
-    } catch (error) {
-      console.error('Init error:', error);
-      uiController.showToast('Error al iniciar: ' + error.message, 'error');
-    }
-  }
-
-  _subscribeToEvents() {
-    // Nueva oferta de viaje
-    this.unsubscribers.push(
-      tripManager.on('newPendingTrip', (trip) => {
-        uiController.showIncomingTrip(
-          trip,
-          () => this._acceptTrip(trip.id),
-          () => this._rejectTrip(trip.id)
-        );
-      })
-    );
-
-    // Viaje aceptado
-    this.unsubscribers.push(
-      tripManager.on('tripAccepted', async (trip) => {
-        this._currentTripId = trip.id;
-        uiController.hideIncomingModal();
-        uiController.showToast('Viaje aceptado', 'success');
-        
-        // Mostrar ruta REAL en el mapa
-        await this._showRouteOnMap(trip);
-        
-        // Cambiar a modo navegación
-        uiController.showNavigationState(trip);
-        
-        // Iniciar actualización de ruta periódica
-        this._startRouteRefresh(trip);
-      })
-    );
-
-    // Viaje iniciado
-    this.unsubscribers.push(
-      tripManager.on('tripStarted', (trip) => {
-        uiController.showToast('Viaje iniciado', 'success');
-        uiController.showNavigationState(trip);
-      })
-    );
-
-    // Viaje completado
-    this.unsubscribers.push(
-      tripManager.on('tripCompleted', (trip) => {
-        this._currentTripId = null;
-        this._stopRouteRefresh();
-        mapService.clearRoute();
-        uiController.hideNavigation();
-        uiController.showToast(`Viaje completado +$${trip.precio}`, 'success');
-        uiController.showWaitingState();
-      })
-    );
-
-    // Viaje cancelado
-    this.unsubscribers.push(
-      tripManager.on('tripCancelled', () => {
-        this._currentTripId = null;
-        this._stopRouteRefresh();
-        mapService.clearRoute();
-        uiController.hideNavigation();
-        uiController.showToast('Viaje cancelado', 'warning');
-        uiController.showWaitingState();
-      })
-    );
-  }
-
-  async _showRouteOnMap(trip) {
-    // Determinar origen y destino según el estado
-    const isEnCurso = trip.estado === 'EN_CURSO';
-    
-    const origin = {
-      lat: trip.origen_lat,
-      lng: trip.origen_lng
-    };
-    
-    const destination = {
-      lat: trip.destino_lat,
-      lng: trip.destino_lng
-    };
-
-    // Mostrar ruta REAL usando OSRM
-    const route = await mapService.showRealRoute(origin, destination);
-    
-    if (route && route.instructions) {
-      // Actualizar instrucciones de navegación
-      this._updateNavigationInstructions(route);
-    }
-  }
-
-  _startRouteRefresh(trip) {
-    // Recalcular ruta periódicamente (cada 10 segundos)
-    this._routeRefreshInterval = setInterval(async () => {
-      if (trip.estado === 'EN_CURSO') {
-        await this._showRouteOnMap(trip);
+      const container = document.getElementById(containerId);
+      if (!container) {
+        reject(new Error(`Contenedor ${containerId} no encontrado`));
+        return;
       }
-    }, CONFIG.ROUTE_REFRESH_INTERVAL);
-  }
 
-  _stopRouteRefresh() {
-    if (this._routeRefreshInterval) {
-      clearInterval(this._routeRefreshInterval);
-      this._routeRefreshInterval = null;
-    }
-  }
-
-  _updateNavigationInstructions(route) {
-    // Actualizar UI con instrucciones de OSRM
-    const currentPos = locationTracker.getLastPosition();
-    if (!currentPos) return;
-
-    const instruction = routingService.getCurrentInstruction(
-      [currentPos.lng, currentPos.lat]
-    );
-
-    if (instruction) {
-      uiController.updateNavigationDisplay({
-        text: instruction.current?.text,
-        distance: instruction.current?.distance,
-        type: instruction.current?.type,
-        next: instruction.next
+      this.map = new window.maplibregl.Map({
+        container: containerId,
+        style: {
+          version: 8,
+          sources: {
+            osm: {
+              type: 'raster',
+              tiles: [
+                'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+              ],
+              tileSize: 256
+            }
+          },
+          layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+        },
+        center: CONFIG.DEFAULT_CENTER,
+        zoom: CONFIG.DEFAULT_ZOOM,
+        attributionControl: false
       });
+
+      this.map.on('load', () => {
+        console.log('[MapService] Mapa cargado');
+        this.isReady = true;
+        this._executePending();
+        resolve(this.map);
+      });
+
+      this.map.on('error', (e) => {
+        console.warn('[MapService] Error:', e.error?.message);
+      });
+
+      setTimeout(() => {
+        if (!this.isReady) {
+          console.warn('[MapService] Timeout cargando mapa');
+          resolve(null);
+        }
+      }, 10000);
+    });
+  }
+
+  _executePending() {
+    while (this.pendingOps.length) {
+      const op = this.pendingOps.shift();
+      try { op(); } catch (e) {}
     }
   }
 
-  async _acceptTrip(tripId) {
-    uiController.setGlobalLoading(true, 'Aceptando viaje...');
+  _whenReady(op) {
+    if (this.isReady) {
+      try { op(); } catch (e) {}
+    } else {
+      this.pendingOps.push(op);
+    }
+  }
+
+  /**
+   * Mostrar ruta REAL usando el servicio de routing
+   */
+  async showRealRoute(origin, destination) {
+    console.log('[MapService] Solicitando ruta real...');
+    
+    const route = await routingService.getRoute(origin, destination);
+    
+    if (!route) {
+      console.warn('[MapService] No se obtuvo ruta');
+      return null;
+    }
+
+    this._whenReady(() => {
+      // Limpiar ruta anterior
+      this.clearRoute();
+
+      // Dibujar nueva ruta
+      this.map.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: route.geometry
+        }
+      });
+
+      // Borde blanco
+      this.map.addLayer({
+        id: 'route-border',
+        type: 'line',
+        source: 'route',
+        paint: {
+          'line-color': CONFIG.COLORS.routeBorder,
+          'line-width': 8,
+          'line-opacity': 0.9
+        }
+      });
+
+      // Línea negra interior
+      this.map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        paint: {
+          'line-color': CONFIG.COLORS.routeLine,
+          'line-width': 5,
+          'line-opacity': 1
+        }
+      });
+
+      // Marcadores
+      this._addMarker('pickup', origin, '#05944F', '👤');
+      this._addMarker('destination', destination, '#E11900', '🏁');
+
+      // Ajustar vista
+      this._fitBounds(route.geometry.coordinates);
+    });
+
+    return route;
+  }
+
+  _addMarker(id, coords, color, emoji) {
+    if (this.markers[id]) {
+      this.markers[id].setLngLat([coords.lng, coords.lat]);
+      return;
+    }
+
+    const el = document.createElement('div');
+    el.style.cssText = `
+      width: 40px; height: 40px; background: ${color};
+      border-radius: 50%; border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    `;
+    el.textContent = emoji;
+
+    this.markers[id] = new window.maplibregl.Marker({ element: el })
+      .setLngLat([coords.lng, coords.lat])
+      .addTo(this.map);
+  }
+
+  _fitBounds(coordinates) {
     try {
-      const result = await tripManager.acceptTrip(tripId);
-      if (!result.success) {
-        uiController.showToast(result.error || 'No se pudo aceptar', 'error');
-      }
-    } finally {
-      uiController.setGlobalLoading(false);
-    }
-  }
-
-  async _rejectTrip(tripId) {
-    try {
-      await tripManager.rejectTrip(tripId);
-      uiController.hideIncomingModal();
-      uiController.showWaitingState();
-    } catch (e) {
-      console.error('Error rechazando:', e);
-    }
-  }
-
-  _onPositionUpdate(position) {
-    // Actualizar marcador del conductor
-    mapService.updateDriverPosition(position.lng, position.lat, position.heading);
-
-    // Si hay viaje en curso, actualizar navegación
-    const currentTrip = tripManager.getCurrentTrip();
-    if (currentTrip?.estado === CONFIG.ESTADOS.EN_CURSO) {
-      this._checkArrival(position, currentTrip);
-      this._updateNavigationInstructions(routingService.currentRoute);
-    }
-  }
-
-  _checkArrival(position, trip) {
-    const distance = this._calculateDistance(
-      position.lat, position.lng,
-      trip.destino_lat, trip.destino_lng
-    );
-
-    // Mostrar panel de llegada si está cerca
-    if (distance < 100) {
-      uiController.showArrival();
-    }
-  }
-
-  _calculateDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371e3;
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lng2 - lng1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c;
-  }
-
-  _bindUI() {
-    // Botón de disponibilidad
-    document.getElementById('btnToggleDisponibilidad')?.addEventListener('click', async () => {
-      const driverId = supabaseService.getCurrentDriverId();
-      this._onlineStatus = !this._onlineStatus;
+      const bounds = new window.maplibregl.LngLatBounds();
+      coordinates.forEach(coord => bounds.extend(coord));
       
-      await supabaseService.setDriverAvailability(driverId, this._onlineStatus);
-      uiController.updateDriverState('ONLINE', this._onlineStatus);
-      uiController.showToast(this._onlineStatus ? 'Online' : 'Offline', 'success');
-    });
-
-    // Escuchar acciones de UI
-    document.addEventListener('driverAction', (e) => {
-      this._handleAction(e.detail.action, e.detail.tripId);
-    });
-  }
-
-  async _handleAction(action, tripId) {
-    switch (action) {
-      case 'accept':
-        await this._acceptTrip(tripId);
-        break;
-      case 'reject':
-        await this._rejectTrip(tripId);
-        break;
-      case 'start':
-        await tripManager.startTrip(tripId);
-        break;
-      case 'finish':
-        await tripManager.finishTrip(tripId);
-        break;
-      case 'cancel':
-        await tripManager.cancelTrip(tripId, 'Cancelado por conductor');
-        break;
-      case 'navigate':
-        this._openExternalNav(tripId);
-        break;
-      case 'whatsapp':
-        this._openWhatsApp(tripId);
-        break;
+      this.map.fitBounds(bounds, {
+        padding: { top: 100, bottom: 300, left: 50, right: 50 },
+        duration: 1000
+      });
+    } catch (e) {
+      console.warn('[MapService] Error ajustando bounds:', e);
     }
   }
 
-  _openExternalNav(tripId) {
-    const trip = tripManager.getCurrentTrip();
-    if (!trip) return;
-    
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${trip.destino_lat},${trip.destino_lng}`;
-    window.open(url, '_blank');
+  updateDriverPosition(lng, lat, heading) {
+    this._whenReady(() => {
+      if (!this.markers.driver) {
+        const el = document.createElement('div');
+        el.style.cssText = `
+          width: 48px; height: 48px; background: #276EF1;
+          border-radius: 50%; border: 3px solid white;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 24px;
+        `;
+        el.textContent = '🚐';
+        
+        this.markers.driver = new window.maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .addTo(this.map);
+      } else {
+        this.markers.driver.setLngLat([lng, lat]);
+      }
+    });
   }
 
-  _openWhatsApp(tripId) {
-    const trip = tripManager.getCurrentTrip();
-    if (!trip?.telefono) return;
+  clearRoute() {
+    this._whenReady(() => {
+      ['route-line', 'route-border'].forEach(layer => {
+        if (this.map.getLayer(layer)) this.map.removeLayer(layer);
+      });
+      if (this.map.getSource('route')) this.map.removeSource('route');
+    });
     
-    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI. Ya estoy en camino 🚐');
-    window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
+    ['pickup', 'destination'].forEach(id => {
+      if (this.markers[id]) {
+        this.markers[id].remove();
+        delete this.markers[id];
+      }
+    });
+  }
+
+  destroy() {
+    if (this.map) {
+      this.map.remove();
+      this.map = null;
+    }
+    this.isReady = false;
   }
 }
 
-export default DriverApp;
+export default new MapService();
