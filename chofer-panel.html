@@ -54,6 +54,38 @@
       </div>
     </div>
     
+    <!-- Panel de Navegación Principal (estilo Google Maps) -->
+    <div id="navPanel" class="nav-panel">
+      <div class="nav-main">
+        <div class="nav-arrow" id="navArrow">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
+          </svg>
+        </div>
+        <div class="nav-info">
+          <div class="nav-street" id="navStreet">Esperando...</div>
+          <div class="nav-next" id="navNext">Inicia un viaje para navegar</div>
+        </div>
+        <div class="nav-distance" id="navDistance">--</div>
+      </div>
+    </div>
+    
+    <!-- Barra de instrucción siguiente -->
+    <div id="navInstructionBar" class="nav-instruction-bar">
+      <div class="nav-instruction-icon" id="navInstructionIcon">↱</div>
+      <div class="nav-instruction-text" id="navInstructionText">Continúa recto</div>
+    </div>
+    
+    <!-- Panel de llegada -->
+    <div id="arrivalPanel" class="arrival-panel">
+      <h3>🏁 Has llegado</h3>
+      <p id="arrivalText">Destino alcanzado</p>
+      <div class="arrival-actions">
+        <button class="btn btn-secondary" id="btnContinueNav">Continuar</button>
+        <button class="btn btn-success" id="btnFinishTrip">Finalizar</button>
+      </div>
+    </div>
+    
     <!-- Panel de Viajes -->
     <div class="trip-panel" id="tripPanel">
       <div class="panel-handle" id="panelHandle">
@@ -73,18 +105,6 @@
         </button>
         
         <div id="tripList" class="trip-list"></div>
-      </div>
-    </div>
-    
-    <!-- Panel de Navegación -->
-    <div id="navPanel" class="nav-panel">
-      <div class="nav-main">
-        <div class="nav-arrow" id="navArrow">⬆️</div>
-        <div class="nav-info">
-          <div class="nav-street" id="navStreet">Esperando...</div>
-          <div class="nav-next" id="navNext">Inicia un viaje para navegar</div>
-        </div>
-        <div class="nav-distance" id="navDistance">--</div>
       </div>
     </div>
     
@@ -119,6 +139,12 @@
           </button>
         </div>
       </div>
+    </div>
+    
+    <!-- Loading Global -->
+    <div id="globalLoading" class="global-loading">
+      <div class="loading-spinner"></div>
+      <span class="loading-text">Procesando...</span>
     </div>
   </div>
   
