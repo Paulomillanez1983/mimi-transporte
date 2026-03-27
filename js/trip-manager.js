@@ -77,7 +77,7 @@ class TripManager {
     try {
       const [available, history] = await Promise.all([
         supabaseService.rest.select('viajes', {
-          eq: { estado: CONFIG.ESTADOS.DISPONIBLE },
+          eq: { estado: CONFIG.ESTADOS.DISPONIBLE }, neq: { chofer_id: supabaseService.getCurrentDriverId() },
           order: 'created_at.desc',
           limit: 20
         }),
