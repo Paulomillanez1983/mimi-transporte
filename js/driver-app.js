@@ -85,6 +85,10 @@ class DriverApp {
       );
     }
   }
+  const estadoChofer = document.getElementById('estadoChofer');
+if (estadoChofer) {
+  estadoChofer.textContent = 'Online';
+}
 
   async _safeInitMap() {
     try {
