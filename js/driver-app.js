@@ -3,14 +3,13 @@
  * Inicializa todos los servicios y coordina la lógica
  */
 
-import CONFIG from './config.js';
-import supabaseService from './supabase-client.js';
-import mapService from './map-service.js';
-import locationTracker from './location-tracker.js';
-import tripManager from './trip-manager.js';
-import soundManager from './sound-manager.js';
-import uiController from './ui-controller.js';
-
+import CONFIG from '/mimi-transporte/js/config.js';
+import supabaseService from '/mimi-transporte/js/supabase-client.js';
+import mapService from '/mimi-transporte/js/map-service.js';
+import locationTracker from '/mimi-transporte/js/location-tracker.js';
+import tripManager from '/mimi-transporte/js/trip-manager.js';
+import soundManager from '/mimi-transporte/js/sound-manager.js';
+import uiController from '/mimi-transporte/js/ui-controller.js';
 class DriverApp {
   constructor() {
     this.initialized = false;
