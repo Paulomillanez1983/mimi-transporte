@@ -1,469 +1,327 @@
-Tracking Prevention blocked access to storage for <URL>.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.
-chofer-panel.html:1 Tracking Prevention blocked access to storage for https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.
+/**
+ * Cliente Supabase inicializado con manejo de errores
+ */
 
-driver-app.js:83 Mapa inicializado correctamente
-driver-app.js:97 Tracking de ubicación iniciado
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&chofer_id=eq.paulomillanez%40gmail.com&estado=in.%28ACEPTADO%2CEN_CURSO%29&order=updated_at.desc&limit=1 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-loadCurrentTrip @ trip-manager.js:46
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 1/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-loadCurrentTrip @ trip-manager.js:46
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&chofer_id=eq.paulomillanez%40gmail.com&estado=in.%28ACEPTADO%2CEN_CURSO%29&order=updated_at.desc&limit=1 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-(anonymous) @ supabase-client.js:75
-(anonymous) @ supabase-client.js:75
-await in (anonymous)
-loadCurrentTrip @ trip-manager.js:46
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-await in (anonymous)
-loadCurrentTrip @ trip-manager.js:46
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 2/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-loadCurrentTrip @ trip-manager.js:46
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase.js:20  PATCH https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/choferes?id=eq.paulomillanez%40gmail.com&select=* 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase-client.js:140 Supabase UPDATE error [choferes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_update @ supabase-client.js:140
-await in _update
-(anonymous) @ supabase-client.js:62
-updateDriverLocation @ supabase-client.js:167
-(anonymous) @ location-tracker.js:129
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase-client.js:72 Supabase retry 1/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-updateDriverLocation @ supabase-client.js:167
-(anonymous) @ location-tracker.js:129
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase.js:20  PATCH https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/choferes?id=eq.paulomillanez%40gmail.com&select=* 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-(anonymous) @ supabase-client.js:75
-(anonymous) @ supabase-client.js:75
-await in (anonymous)
-updateDriverLocation @ supabase-client.js:167
-(anonymous) @ location-tracker.js:129
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase-client.js:140 Supabase UPDATE error [choferes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_update @ supabase-client.js:140
-await in _update
-(anonymous) @ supabase-client.js:62
-await in (anonymous)
-updateDriverLocation @ supabase-client.js:167
-(anonymous) @ location-tracker.js:129
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase-client.js:72 Supabase retry 2/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-updateDriverLocation @ supabase-client.js:167
-(anonymous) @ location-tracker.js:129
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&chofer_id=eq.paulomillanez%40gmail.com&estado=in.%28ACEPTADO%2CEN_CURSO%29&order=updated_at.desc&limit=1 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-(anonymous) @ supabase-client.js:75
-(anonymous) @ supabase-client.js:75
-await in (anonymous)
-loadCurrentTrip @ trip-manager.js:46
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-await in (anonymous)
-loadCurrentTrip @ trip-manager.js:46
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 3/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-loadCurrentTrip @ trip-manager.js:46
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-trip-manager.js:74 Error loading current trip: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-loadCurrentTrip @ trip-manager.js:74
-await in loadCurrentTrip
-init @ trip-manager.js:23
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&estado=eq.DISPONIBLE&chofer_id=neq.paulomillanez%40gmail.com&order=created_at.desc&limit=20 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&chofer_id=eq.paulomillanez%40gmail.com&estado=eq.COMPLETADO&order=completado_at.desc&limit=10 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-refreshTrips @ trip-manager.js:84
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 1/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-refreshTrips @ trip-manager.js:84
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-refreshTrips @ trip-manager.js:90
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 1/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-refreshTrips @ trip-manager.js:90
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&chofer_id=eq.paulomillanez%40gmail.com&estado=eq.COMPLETADO&order=completado_at.desc&limit=10 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-(anonymous) @ supabase-client.js:75
-(anonymous) @ supabase-client.js:75
-await in (anonymous)
-refreshTrips @ trip-manager.js:90
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&estado=eq.DISPONIBLE&chofer_id=neq.paulomillanez%40gmail.com&order=created_at.desc&limit=20 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-(anonymous) @ supabase-client.js:75
-(anonymous) @ supabase-client.js:75
-await in (anonymous)
-refreshTrips @ trip-manager.js:84
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-await in (anonymous)
-refreshTrips @ trip-manager.js:90
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 2/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-refreshTrips @ trip-manager.js:90
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-await in (anonymous)
-refreshTrips @ trip-manager.js:84
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 2/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-refreshTrips @ trip-manager.js:84
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase.js:20  PATCH https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/choferes?id=eq.paulomillanez%40gmail.com&select=* 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-(anonymous) @ supabase-client.js:75
-(anonymous) @ supabase-client.js:75
-await in (anonymous)
-updateDriverLocation @ supabase-client.js:167
-(anonymous) @ location-tracker.js:129
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase-client.js:140 Supabase UPDATE error [choferes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_update @ supabase-client.js:140
-await in _update
-(anonymous) @ supabase-client.js:62
-await in (anonymous)
-updateDriverLocation @ supabase-client.js:167
-(anonymous) @ location-tracker.js:129
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase-client.js:72 Supabase retry 3/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-updateDriverLocation @ supabase-client.js:167
-(anonymous) @ location-tracker.js:129
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-location-tracker.js:130 Location update failed: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ location-tracker.js:130
-Promise.catch
-(anonymous) @ location-tracker.js:130
-setTimeout
-_throttledUpdate @ location-tracker.js:126
-_handlePosition @ location-tracker.js:102
-(anonymous) @ location-tracker.js:35
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&estado=eq.DISPONIBLE&chofer_id=neq.paulomillanez%40gmail.com&order=created_at.desc&limit=20 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-(anonymous) @ supabase-client.js:75
-(anonymous) @ supabase-client.js:75
-await in (anonymous)
-refreshTrips @ trip-manager.js:84
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase.js:20  GET https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viajes?select=*&chofer_id=eq.paulomillanez%40gmail.com&estado=eq.COMPLETADO&order=completado_at.desc&limit=10 401 (Unauthorized)
-(anonymous) @ supabase.js:20
-(anonymous) @ supabase.js:20
-await in (anonymous)
-then @ supabase.js:1
-setTimeout
-(anonymous) @ supabase-client.js:75
-(anonymous) @ supabase-client.js:75
-await in (anonymous)
-refreshTrips @ trip-manager.js:90
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-await in (anonymous)
-refreshTrips @ trip-manager.js:84
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 3/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-refreshTrips @ trip-manager.js:84
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-trip-manager.js:109 Error refreshing trips: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-refreshTrips @ trip-manager.js:109
-await in refreshTrips
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-driver-app.js:109 Gestión de viajes iniciada
-supabase-client.js:116 Supabase SELECT error [viajes] {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-_select @ supabase-client.js:116
-await in _select
-(anonymous) @ supabase-client.js:62
-await in (anonymous)
-refreshTrips @ trip-manager.js:90
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase-client.js:72 Supabase retry 3/3: {message: 'Invalid API key', hint: 'Double check your Supabase `anon` or `service_role` API key.'}
-(anonymous) @ supabase-client.js:72
-await in (anonymous)
-refreshTrips @ trip-manager.js:90
-init @ trip-manager.js:24
-await in init
-_safeInitTrips @ driver-app.js:107
-init @ driver-app.js:47
-await in init
-(anonymous) @ chofer-panel.html:63
-supabase.js:4 WebSocket connection to 'wss://xrphpqmutvadjrucqicn.supabase.co/realtime/v1/websocket?apikey=TU_ANON_KEY_REAL_AQUI&vsn=2.0.0' failed: HTTP Authentication failed; no valid credentials available
-transportConnect @ supabase.js:4
-connect @ supabase.js:4
-connect @ supabase.js:4
-connect @ supabase.js:4
-subscribe @ supabase.js:4
-subscribeToTrips @ supabase-client.js:204
-_subscribeToRealtime @ trip-manager.js:250
-init @ trip-manager.js:25
-supabase-client.js:205 [Realtime viajes] CHANNEL_ERROR
-supabase-client.js:208 Realtime viajes: CHANNEL_ERROR
-(anonymous) @ supabase-client.js:208
-(anonymous) @ supabase.js:4
-(anonymous) @ supabase.js:3
-trigger @ supabase.js:3
-(anonymous) @ supabase.js:4
-triggerChanError @ supabase.js:4
-onConnError @ supabase.js:4
-conn.onerror @ supabase.js:4
-supabase.js:4 WebSocket connection to 'wss://xrphpqmutvadjrucqicn.supabase.co/realtime/v1/websocket?apikey=TU_ANON_KEY_REAL_AQUI&vsn=2.0.0' failed: HTTP Authentication failed; no valid credentials available
-transportConnect @ supabase.js:4
-connect @ supabase.js:4
-connect @ supabase.js:4
-connect @ supabase.js:4
-_reconnectAuth @ supabase.js:20
-supabase.js:4 WebSocket connection to 'wss://xrphpqmutvadjrucqicn.supabase.co/realtime/v1/websocket?apikey=TU_ANON_KEY_REAL_AQUI&vsn=2.0.0' failed: HTTP Authentication failed; no valid credentials available
-transportConnect @ supabase.js:4
-connect @ supabase.js:4
-connect @ supabase.js:4
-connect @ supabase.js:4
-_reconnectAuth @ supabase.js:20
+import CONFIG from './config.js';
+
+class SupabaseService {
+  constructor() {
+    this.client = null;
+    this.rest = null;
+    this.initialized = false;
+  }
+
+  async init() {
+    if (this.initialized) return true;
+
+    if (typeof window.supabase === 'undefined') {
+      console.error('Supabase library not loaded');
+      return false;
+    }
+
+    if (
+      !CONFIG.SUPABASE_URL ||
+      !CONFIG.SUPABASE_KEY ||
+      CONFIG.SUPABASE_KEY.includes('TU_ANON_KEY')
+    ) {
+      console.error('Supabase key inválida o placeholder detectado');
+      return false;
+    }
+
+    try {
+      console.log('SUPABASE_URL =>', CONFIG.SUPABASE_URL);
+      console.log('SUPABASE_KEY (inicio) =>', CONFIG.SUPABASE_KEY?.slice(0, 20));
+
+      this.client = window.supabase.createClient(
+        CONFIG.SUPABASE_URL,
+        CONFIG.SUPABASE_KEY,
+        {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: false
+          },
+          realtime: {
+            timeout: 20000
+          }
+        }
+      );
+
+      this.rest = {
+        select: this._withRetry(this._select.bind(this)),
+        update: this._withRetry(this._update.bind(this)),
+        insert: this._withRetry(this._insert.bind(this)),
+        upsert: this._withRetry(this._upsert.bind(this))
+      };
+
+      this.initialized = true;
+      console.log('Supabase inicializado correctamente');
+      return true;
+    } catch (error) {
+      console.error('Supabase initialization failed:', error);
+      return false;
+    }
+  }
+
+  _withRetry(fn, retries = 3) {
+    return async (...args) => {
+      let lastError;
+
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await fn(...args);
+        } catch (error) {
+          lastError = error;
+          console.warn(`Supabase retry ${i + 1}/${retries}:`, error);
+
+          if (i < retries - 1) {
+            await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+          }
+        }
+      }
+
+      throw lastError;
+    };
+  }
+
+  async _select(table, opts = {}) {
+    let query = this.client.from(table).select(opts.columns || '*');
+
+    if (opts.eq) {
+      Object.entries(opts.eq).forEach(([k, v]) => {
+        query = query.eq(k, v);
+      });
+    }
+
+    if (opts.neq) {
+      Object.entries(opts.neq).forEach(([k, v]) => {
+        query = query.neq(k, v);
+      });
+    }
+
+    if (opts.in) {
+      Object.entries(opts.in).forEach(([k, v]) => {
+        query = query.in(k, Array.isArray(v) ? v : [v]);
+      });
+    }
+
+    if (opts.order) {
+      const [col, dir] = opts.order.split('.');
+      query = query.order(col, { ascending: dir === 'asc' });
+    }
+
+    if (opts.limit) query = query.limit(opts.limit);
+    if (opts.single) query = query.single();
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error(`Supabase SELECT error [${table}]`, error);
+      throw error;
+    }
+
+    return data || [];
+  }
+
+  async _update(table, id, data) {
+    if (!id) {
+      throw new Error(`UPDATE abortado: id inválido para tabla "${table}"`);
+    }
+
+    const updateData = {
+      ...data,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data: result, error } = await this.client
+      .from(table)
+      .update(updateData)
+      .eq('id', id)
+      .select();
+
+    if (error) {
+      console.error(`Supabase UPDATE error [${table}]`, error);
+      throw error;
+    }
+
+    return result || [];
+  }
+
+  async _insert(table, data) {
+    const { data: result, error } = await this.client
+      .from(table)
+      .insert(data)
+      .select();
+
+    if (error) {
+      console.error(`Supabase INSERT error [${table}]`, error);
+      throw error;
+    }
+
+    return result || [];
+  }
+
+  async _upsert(table, data, onConflict = 'id') {
+    const payload = Array.isArray(data) ? data : [data];
+
+    const { data: result, error } = await this.client
+      .from(table)
+      .upsert(payload, { onConflict })
+      .select();
+
+    if (error) {
+      console.error(`Supabase UPSERT error [${table}]`, error);
+      throw error;
+    }
+
+    return result || [];
+  }
+
+  // =====================================================
+  // TRACKING DEL CHOFER EN TIEMPO REAL
+  // Respeta tu tabla `choferes`
+  // =====================================================
+  async updateDriverLocation(driverId, position) {
+    if (!driverId) {
+      throw new Error('No se pudo actualizar ubicación: driverId inválido');
+    }
+
+    return this.rest.upsert(
+      'choferes',
+      {
+        id: driverId,
+        lat: position.lat,
+        lng: position.lng,
+        heading: position.heading ?? null,
+        speed: position.speed ?? null,
+        online: true,
+        disponible: true,
+        last_update: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      'id'
+    );
+  }
+
+  // =====================================================
+  // DISPONIBILIDAD DEL CHOFER
+  // =====================================================
+  async setDriverAvailability(driverId, disponible, online = true) {
+    if (!driverId) {
+      throw new Error('driverId inválido');
+    }
+
+    return this.rest.upsert(
+      'choferes',
+      {
+        id: driverId,
+        disponible,
+        online,
+        last_update: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      },
+      'id'
+    );
+  }
+
+  // =====================================================
+  // SUBSCRIPCIÓN REALTIME A VIAJES
+  // =====================================================
+  subscribeToTrips(callback) {
+    if (!this.client) {
+      throw new Error('Supabase client no inicializado');
+    }
+
+    const channel = this.client
+      .channel('trips-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'viajes'
+        },
+        callback
+      )
+      .subscribe((status) => {
+        console.log('[Realtime viajes]', status);
+
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Realtime viajes: CHANNEL_ERROR');
+        }
+
+        if (status === 'TIMED_OUT') {
+          console.error('Realtime viajes: TIMED_OUT');
+        }
+      });
+
+    return channel;
+  }
+
+  getCurrentDriverData() {
+    try {
+      const raw = localStorage.getItem('choferData');
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      console.warn('No se pudo parsear choferData:', error);
+      return null;
+    }
+  }
+
+  getCurrentDriverId() {
+    const choferData = this.getCurrentDriverData();
+
+    // Prioridad: id real estructurado
+    if (choferData?.id) return choferData.id;
+
+    // Fallback legacy
+    const legacyId = localStorage.getItem('choferUsuario');
+    return legacyId || null;
+  }
+
+  isAuthenticated() {
+    return (
+      localStorage.getItem('choferLogueado') === 'true' &&
+      this.getCurrentDriverId() !== null
+    );
+  }
+
+  logout() {
+    try {
+      this.client?.removeAllChannels?.();
+    } catch (e) {
+      console.warn('Error limpiando canales realtime:', e);
+    }
+
+    const driverId = this.getCurrentDriverId();
+
+    // intento marcar offline sin bloquear logout
+    if (driverId && this.client) {
+      this.client
+        .from('choferes')
+        .upsert({
+          id: driverId,
+          online: false,
+          disponible: false,
+          last_update: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' })
+        .then(() => {
+          console.log('Chofer marcado offline');
+        })
+        .catch((e) => {
+          console.warn('No se pudo marcar chofer offline:', e);
+        });
+    }
+
+    localStorage.removeItem('choferLogueado');
+    localStorage.removeItem('choferUsuario');
+    localStorage.removeItem('choferData');
+
+    window.location.href = CONFIG.REDIRECTS.LOGIN;
+  }
+}
+
+// Singleton
+const supabaseService = new SupabaseService();
+export default supabaseService;
