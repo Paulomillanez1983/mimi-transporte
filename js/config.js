@@ -37,10 +37,10 @@ const CONFIG = {
   },
   
   // URLs
-  REDIRECTS: {
-    LOGIN: 'chofer-panel.html',
-    PANEL: 'chofer.html'
-  }
+REDIRECTS: {
+  LOGIN: 'login-chofer.html',
+  PANEL: 'chofer-panel.html'
+}
 };
 
 // Prevenir modificaciones
