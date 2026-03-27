@@ -42,6 +42,13 @@ class MapService {
           dragRotate: false,
           touchZoomRotate: true
         });
+        setTimeout(() => {
+  try {
+    this.map?.resize?.();
+  } catch (e) {
+    console.warn('No se pudo forzar resize del mapa:', e);
+  }
+}, 500);
 
         // Error NO fatal: tiles, glyphs, sprites, etc.
         this.map.on('error', (e) => {
@@ -53,13 +60,17 @@ class MapService {
           }
         });
 
-        this.map.on('load', () => {
-          this.isReady = true;
-          this.hasFatalError = false;
-          this._executePending();
-          resolve(this.map);
-        });
-
+this.map.on('load', () => {
+  try {
+    this.isReady = true;
+    this.hasFatalError = false;
+    this.map.resize();
+    this._executePending();
+    resolve(this.map);
+  } catch (e) {
+    reject(e);
+  }
+});
         // Failsafe: si load no llega, no bloquear eternamente
         setTimeout(() => {
           if (!this.isReady) {
