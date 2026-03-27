@@ -2,17 +2,13 @@
  * Cliente Supabase inicializado con manejo de errores
  */
 
-import CONFIG from './config.js';
+import CONFIG from '/mimi-transporte/js/config.js';
 
 class SupabaseService {
   constructor() {
     this.client = null;
     this.rest = null;
     this.initialized = false;
-
-    // 🔥 IMPORTANTE:
-    // Cambiá esto por el nombre REAL de tu tabla de choferes
-    this.DRIVERS_TABLE = 'choferes';
   }
 
   async init() {
@@ -20,6 +16,19 @@ class SupabaseService {
 
     if (typeof window.supabase === 'undefined') {
       console.error('Supabase library not loaded');
+      return false;
+    }
+
+    if (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_KEY) {
+      console.error('Supabase config incompleta');
+      return false;
+    }
+
+    if (
+      CONFIG.SUPABASE_KEY.includes('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM') ||
+      CONFIG.SUPABASE_KEY.includes('TU_ANON_KEY_REAL_AQUI')
+    ) {
+      console.error('Supabase key inválida: sigue siendo placeholder');
       return false;
     }
 
@@ -42,10 +51,12 @@ class SupabaseService {
       this.rest = {
         select: this._withRetry(this._select.bind(this)),
         update: this._withRetry(this._update.bind(this)),
-        insert: this._withRetry(this._insert.bind(this))
+        insert: this._withRetry(this._insert.bind(this)),
+        upsert: this._withRetry(this._upsert.bind(this))
       };
 
       this.initialized = true;
+      console.log('Supabase inicializado correctamente');
       return true;
     } catch (error) {
       console.error('Supabase initialization failed:', error);
@@ -62,13 +73,6 @@ class SupabaseService {
           return await fn(...args);
         } catch (error) {
           lastError = error;
-
-          // 🚫 No reintentar si la tabla no existe
-          if (error?.code === 'PGRST205') {
-            console.error('Supabase schema/table error (sin retry):', error);
-            throw error;
-          }
-
           console.warn(`Supabase retry ${i + 1}/${retries}:`, error);
 
           if (i < retries - 1) {
@@ -158,31 +162,51 @@ class SupabaseService {
     return result || [];
   }
 
+  async _upsert(table, data, onConflict = 'id') {
+    const { data: result, error } = await this.client
+      .from(table)
+      .upsert(data, { onConflict })
+      .select();
+
+    if (error) {
+      console.error(`Supabase UPSERT error [${table}]`, error);
+      throw error;
+    }
+
+    return result || [];
+  }
+
+  async ensureDriverExists(driverData = {}) {
+    const driverId = this.getCurrentDriverId();
+    if (!driverId) throw new Error('Driver ID inválido');
+
+    const payload = {
+      id: driverId,
+      nombre: driverData.nombre || driverData.name || null,
+      email: driverData.email || null,
+      telefono: driverData.telefono || null,
+      online: true,
+      disponible: true,
+      last_update: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    return this.rest.upsert(CONFIG.TABLES.CHOFERES, payload, 'id');
+  }
+
   async updateDriverLocation(driverId, position) {
     if (!driverId) {
       throw new Error('No se pudo actualizar ubicación: driverId inválido');
     }
 
-    try {
-      return await this.rest.update(this.DRIVERS_TABLE, driverId, {
-        lat: position.lat,
-        lng: position.lng,
-        heading: position.heading || null,
-        speed: position.speed || null,
-        last_update: new Date().toISOString(),
-        online: true
-      });
-    } catch (error) {
-      // 🚫 No romper la app si la tabla aún no está alineada
-      if (error?.code === 'PGRST205') {
-        console.error(
-          `La tabla "${this.DRIVERS_TABLE}" no existe en schema public. Revisá el nombre real de la tabla de choferes.`
-        );
-        return [];
-      }
-
-      throw error;
-    }
+    return this.rest.update(CONFIG.TABLES.CHOFERES, driverId, {
+      lat: position.lat,
+      lng: position.lng,
+      heading: position.heading || null,
+      speed: position.speed || null,
+      last_update: new Date().toISOString(),
+      online: true
+    });
   }
 
   subscribeToTrips(callback) {
@@ -197,7 +221,7 @@ class SupabaseService {
         {
           event: '*',
           schema: 'public',
-          table: 'viajes'
+          table: CONFIG.TABLES.VIAJES
         },
         callback
       )
