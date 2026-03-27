@@ -25,6 +25,7 @@ class DriverApp {
     this._onlineStatus = false;
     this._arrivalAnnounced = false;
     this._audioInitialized = false;
+    this._currentTripId = null;
   }
 
   async init() {
@@ -234,6 +235,7 @@ class DriverApp {
     this.unsubscribers.push(
       tripManager.on('tripAccepted', (trip) => {
         this._setState('BUSY');
+        this._currentTripId = trip.id;
         this.lastIncomingTripId = null;
         uiController.closeIncomingModal();
         uiController.showToast('Viaje aceptado', 'success');
@@ -251,6 +253,7 @@ class DriverApp {
 
     this.unsubscribers.push(
       tripManager.on('tripStarted', (trip) => {
+        this._currentTripId = trip.id;
         uiController.showToast('Viaje iniciado', 'success');
         if (this._audioInitialized) {
           soundManager.speak('Viaje iniciado. Buen camino.', 'normal');
@@ -265,6 +268,7 @@ class DriverApp {
     this.unsubscribers.push(
       tripManager.on('tripCompleted', (trip) => {
         this._setState('ONLINE');
+        this._currentTripId = null;
         this.lastIncomingTripId = null;
         uiController.closeIncomingModal();
         
@@ -286,6 +290,7 @@ class DriverApp {
     this.unsubscribers.push(
       tripManager.on('tripCancelled', () => {
         this._setState('ONLINE');
+        this._currentTripId = null;
         this.lastIncomingTripId = null;
         uiController.closeIncomingModal();
         uiController.showToast('Viaje cancelado', 'warning');
@@ -399,7 +404,10 @@ class DriverApp {
       type: 'danger'
     });
 
-    if (!confirmed) return { success: false, cancelled: true };
+    if (!confirmed) {
+      // CORRECCIÓN: Asegurar que el loading se oculte si se cancela la confirmación
+      return { success: false, cancelled: true };
+    }
 
     const reason = await uiController.showInputModal({
       title: 'Motivo de cancelación',
@@ -407,7 +415,10 @@ class DriverApp {
       required: true
     });
 
-    if (!reason) return { success: false, error: 'Motivo requerido' };
+    if (!reason) {
+      // CORRECCIÓN: Asegurar que el loading se oculte si no se proporciona motivo
+      return { success: false, error: 'Motivo requerido', cancelled: true };
+    }
 
     return await tripManager.cancelTrip(tripId, reason);
   }
@@ -422,9 +433,14 @@ class DriverApp {
     uiController.setGlobalLoading(true);
 
     try {
-      return await fn();
+      const result = await fn();
+      return result;
+    } catch (error) {
+      console.error('Error en acción de viaje:', error);
+      return { success: false, error: error.message || 'Error desconocido' };
     } finally {
       this._handlingTripAction.delete(key);
+      // CORRECCIÓN: Asegurar que el loading siempre se oculte
       uiController.setGlobalLoading(false);
     }
   }
@@ -535,6 +551,7 @@ class DriverApp {
 
     if (currentTrip) {
       this._setState('BUSY');
+      this._currentTripId = currentTrip.id;
       uiController.renderActiveTrip(currentTrip);
       this._showTripOnMap(currentTrip);
     } else if (pendingTrip) {
