@@ -1,5 +1,5 @@
 /**
- * Gestión de viajes - Con logs de debug y manejo de errores mejorado
+ * Trip Manager con polling de respaldo y manejo robusto de realtime
  */
 
 import CONFIG from './config.js';
@@ -7,120 +7,74 @@ import supabaseService from './supabase-client.js';
 
 class TripManager {
   constructor() {
+    console.log('[TripManager] Constructor');
     this.currentTrip = null;
     this.pendingTrip = null;
-    this.availableTrips = [];
     this.subscribers = {};
     this.realtimeChannels = [];
     this.refreshInterval = null;
     this.initialized = false;
-    
-    console.log('[TripManager] Constructor');
+    this.lastPollTime = 0;
   }
 
   async init() {
     console.log('[TripManager] Iniciando...');
     
-    if (this.initialized) {
-      console.log('[TripManager] Ya inicializado');
-      return this;
+    if (this.initialized) return this;
+
+    const driverId = supabaseService.getCurrentDriverId();
+    if (!driverId) {
+      console.error('[TripManager] No hay driverId, no se puede inicializar');
+      throw new Error('No autenticado');
     }
 
-    try {
-      await this._loadInitialState();
-      this._subscribeToRealtime();
-      this._startRefreshInterval();
-      
-      this.initialized = true;
-      console.log('[TripManager] Inicializado correctamente');
-      
-    } catch (error) {
-      console.error('[TripManager] Error inicializando:', error);
-      throw error;
-    }
+    // 1. Carga inicial inmediata
+    await this._loadInitialState();
 
+    // 2. Suscribirse a realtime
+    this._subscribeToRealtime();
+
+    // 3. Polling de respaldo (cada 5 segundos, solo si no hay actividad reciente)
+    this._startPolling();
+
+    this.initialized = true;
+    console.log('[TripManager] Inicializado correctamente');
     return this;
   }
 
   async _loadInitialState() {
-    console.log('[TripManager] Cargando estado inicial...');
+    console.log('[TripManager] _loadInitialState');
     const driverId = supabaseService.getCurrentDriverId();
-    
-    if (!driverId) {
-      console.warn('[TripManager] No hay driverId');
-      return;
-    }
-
-    console.log('[TripManager] Driver ID:', driverId);
 
     try {
-      // 1. Buscar viaje activo
-      console.log('[TripManager] Buscando viaje activo...');
-      const { data: activeTrips, error: activeError } = await supabaseService.client
-        .from(CONFIG.TABLES.VIAJES)
-        .select('*')
-        .eq('chofer_id', driverId)
-        .in('estado', ['ACEPTADO', 'EN_CURSO'])
-        .order('updated_at', { ascending: false })
-        .limit(1);
-
-      if (activeError) {
-        console.error('[TripManager] Error buscando viaje activo:', activeError);
-      }
-
-      console.log('[TripManager] Viajes activos encontrados:', activeTrips?.length || 0);
-
-      if (activeTrips && activeTrips.length > 0) {
-        this.currentTrip = activeTrips[0];
-        console.log('[TripManager] Viaje activo asignado:', this.currentTrip.id);
-        this._notify('tripUpdated', this.currentTrip);
+      // Verificar viaje activo primero
+      const activeTrip = await supabaseService.getActiveTrip(driverId);
+      
+      if (activeTrip) {
+        console.log('[TripManager] Viaje activo encontrado:', activeTrip.id);
+        this.currentTrip = activeTrip;
+        this._notify('tripUpdated', activeTrip);
         return;
       }
 
-      // 2. Buscar oferta pendiente
-      console.log('[TripManager] Buscando ofertas pendientes...');
-      const { data: offers, error: offersError } = await supabaseService.client
-        .from(CONFIG.TABLES.VIAJE_OFERTAS)
-        .select('*')
-        .eq('chofer_id', driverId)
-        .eq('estado', 'PENDIENTE')
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (offersError) {
-        console.error('[TripManager] Error buscando ofertas:', offersError);
-      }
-
-      console.log('[TripManager] Ofertas encontradas:', offers?.length || 0);
-
+      // Buscar ofertas pendientes
+      const offers = await supabaseService.getPendingOffers(driverId);
+      
       if (offers && offers.length > 0) {
+        // Tomar la oferta más reciente
         const offer = offers[0];
-        console.log('[TripManager] Procesando oferta:', offer.id);
+        console.log('[TripManager] Oferta pendiente encontrada:', offer.id);
         
-        // Obtener datos del viaje
-        const { data: tripData, error: tripError } = await supabaseService.client
-          .from(CONFIG.TABLES.VIAJES)
-          .select('*')
-          .eq('id', offer.viaje_id)
-          .single();
-
-        if (tripError) {
-          console.error('[TripManager] Error obteniendo viaje:', tripError);
-          return;
-        }
-
-        if (tripData) {
-          this.pendingTrip = {
-            ...tripData,
-            offer_id: offer.id,
-            offer_expires_at: offer.expires_at
-          };
-          console.log('[TripManager] Oferta pendiente establecida:', this.pendingTrip.id);
-          this._notify('newPendingTrip', this.pendingTrip);
-        }
+        this.pendingTrip = {
+          ...offer.viajes,
+          offer_id: offer.id,
+          offer_expires_at: offer.expires_at
+        };
+        
+        this._notify('newPendingTrip', this.pendingTrip);
       } else {
         console.log('[TripManager] No hay ofertas pendientes');
+        this._notify('noPendingTrips');
       }
 
     } catch (error) {
@@ -129,87 +83,72 @@ class TripManager {
   }
 
   _subscribeToRealtime() {
+    console.log('[TripManager] Suscribiendo a realtime...');
     const driverId = supabaseService.getCurrentDriverId();
-    if (!driverId) {
-      console.warn('[TripManager] No se puede suscribir realtime: sin driverId');
-      return;
+
+    // Limpiar suscripciones anteriores
+    this._cleanupChannels();
+
+    // Suscribirse a ofertas
+    const offersChannel = supabaseService.subscribeToDriverOffers(driverId, (payload) => {
+      console.log('[TripManager] [Realtime] Payload recibido:', payload);
+      this._handleOfferPayload(payload);
+    });
+
+    if (offersChannel) {
+      this.realtimeChannels.push(offersChannel);
     }
 
-    console.log('[TripManager] Suscribiendo a realtime...');
+    // Suscribirse a viajes
+    const tripsChannel = supabaseService.subscribeToDriverTrips(driverId, (payload) => {
+      console.log('[TripManager] [Realtime] Viaje payload:', payload);
+      this._handleTripPayload(payload);
+    });
 
-    // Canal 1: Ofertas para este chofer
-    const offersChannel = supabaseService.client
-      .channel(`driver-offers-${driverId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: CONFIG.TABLES.VIAJE_OFERTAS,
-          filter: `chofer_id=eq.${driverId}`
-        },
-        (payload) => {
-          console.log('[TripManager] [Realtime] Oferta recibida:', payload);
-          this._handleOfferChange(payload);
-        }
-      )
-      .subscribe((status) => {
-        console.log('[TripManager] [Realtime] Ofertas status:', status);
-      });
-
-    // Canal 2: Viajes asignados a este chofer
-    const tripsChannel = supabaseService.client
-      .channel(`driver-trips-${driverId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: CONFIG.TABLES.VIAJES,
-          filter: `chofer_id=eq.${driverId}`
-        },
-        (payload) => {
-          console.log('[TripManager] [Realtime] Viaje recibido:', payload);
-          this._handleTripChange(payload);
-        }
-      )
-      .subscribe((status) => {
-        console.log('[TripManager] [Realtime] Viajes status:', status);
-      });
-
-    this.realtimeChannels.push(offersChannel, tripsChannel);
+    if (tripsChannel) {
+      this.realtimeChannels.push(tripsChannel);
+    }
   }
 
-  _handleOfferChange(payload) {
+  _handleOfferPayload(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
-    console.log('[TripManager] Procesando cambio de oferta:', eventType);
+    console.log(`[TripManager] Procesando ${eventType}:`, newRecord || oldRecord);
 
-    if (eventType === 'INSERT' && newRecord?.estado === 'PENDIENTE') {
-      // Nueva oferta
-      this._fetchAndSetPendingTrip(newRecord);
-    } else if (eventType === 'UPDATE') {
-      if (newRecord?.estado !== 'PENDIENTE') {
-        // Oferta ya no está pendiente
-        if (this.pendingTrip?.offer_id === newRecord.id) {
+    switch (eventType) {
+      case 'INSERT':
+        if (newRecord?.estado === 'PENDIENTE') {
+          this._fetchTripAndNotify(newRecord);
+        }
+        break;
+
+      case 'UPDATE':
+        // Si la oferta ya no está pendiente, limpiar
+        if (newRecord?.estado !== 'PENDIENTE' && this.pendingTrip?.offer_id === newRecord.id) {
           console.log('[TripManager] Oferta ya no pendiente:', newRecord.estado);
           this.pendingTrip = null;
           this._notify('pendingTripCleared', { reason: newRecord.estado });
         }
-      }
-    } else if (eventType === 'DELETE') {
-      if (this.pendingTrip?.offer_id === oldRecord?.id) {
-        this.pendingTrip = null;
-        this._notify('pendingTripCleared', { reason: 'DELETED' });
-      }
+        // Si cambió a PENDIENTE (raro pero posible)
+        else if (newRecord?.estado === 'PENDIENTE' && !this.pendingTrip) {
+          this._fetchTripAndNotify(newRecord);
+        }
+        break;
+
+      case 'DELETE':
+        if (this.pendingTrip?.offer_id === oldRecord?.id) {
+          this.pendingTrip = null;
+          this._notify('pendingTripCleared', { reason: 'DELETED' });
+        }
+        break;
     }
   }
 
-  async _fetchAndSetPendingTrip(offer) {
+  async _fetchTripAndNotify(offer) {
     console.log('[TripManager] Fetching trip for offer:', offer.viaje_id);
     
     try {
       const { data: trip, error } = await supabaseService.client
-        .from(CONFIG.TABLES.VIAJES)
+        .from('viajes')
         .select('*')
         .eq('id', offer.viaje_id)
         .single();
@@ -225,100 +164,136 @@ class TripManager {
           offer_id: offer.id,
           offer_expires_at: offer.expires_at
         };
-        console.log('[TripManager] Nueva oferta pendiente:', this.pendingTrip.id);
+        
+        console.log('[TripManager] Notificando newPendingTrip:', this.pendingTrip.id);
         this._notify('newPendingTrip', this.pendingTrip);
       }
     } catch (error) {
-      console.error('[TripManager] Error en _fetchAndSetPendingTrip:', error);
+      console.error('[TripManager] Error en _fetchTripAndNotify:', error);
     }
   }
 
-  _handleTripChange(payload) {
+  _handleTripPayload(payload) {
     const { eventType, new: newRecord } = payload;
-    console.log('[TripManager] Procesando cambio de viaje:', eventType, newRecord?.estado);
-
+    
     if (!newRecord) return;
 
     const estado = newRecord.estado;
+    console.log(`[TripManager] Viaje ${newRecord.id} estado: ${estado}`);
 
     if (['ACEPTADO', 'EN_CURSO'].includes(estado)) {
       this.currentTrip = newRecord;
-      this.pendingTrip = null;
-      this._notify('tripUpdated', newRecord);
+      this.pendingTrip = null; // Limpiar cualquier oferta pendiente
       
       if (estado === 'ACEPTADO') {
         this._notify('tripAccepted', newRecord);
-      } else if (estado === 'EN_CURSO') {
+      } else {
         this._notify('tripStarted', newRecord);
       }
-    } else if (['COMPLETADO', 'CANCELADO'].includes(estado)) {
+    } 
+    else if (['COMPLETADO', 'CANCELADO'].includes(estado)) {
       const wasCurrent = this.currentTrip?.id === newRecord.id;
       this.currentTrip = null;
       
-      if (estado === 'COMPLETADO') {
-        this._notify('tripCompleted', newRecord);
-      } else {
-        this._notify('tripCancelled', newRecord);
+      if (wasCurrent) {
+        if (estado === 'COMPLETADO') {
+          this._notify('tripCompleted', newRecord);
+        } else {
+          this._notify('tripCancelled', newRecord);
+        }
       }
     }
   }
 
-  _startRefreshInterval() {
-    console.log('[TripManager] Iniciando refresh interval');
-    this.refreshInterval = setInterval(() => {
-      if (!document.hidden) {
-        this._loadInitialState();
+  _startPolling() {
+    console.log('[TripManager] Iniciando polling de respaldo');
+    
+    this.refreshInterval = setInterval(async () => {
+      // Solo hacer poll si no hay actividad reciente (más de 10 segundos)
+      const now = Date.now();
+      if (now - this.lastPollTime > 10000) {
+        console.log('[TripManager] Polling...');
+        await this._loadInitialState();
+        this.lastPollTime = now;
       }
-    }, CONFIG.TRIP_REFRESH_INTERVAL);
+    }, 5000);
   }
 
   // Acciones públicas
   async acceptTrip(tripId) {
     console.log('[TripManager] Aceptando viaje:', tripId);
-    // Implementar llamada a RPC o API
-    return { success: true };
+    const driverId = supabaseService.getCurrentDriverId();
+    
+    try {
+      const result = await supabaseService.aceptarOfertaViaje(tripId, driverId);
+      console.log('[TripManager] Resultado aceptar:', result);
+      
+      if (result?.ok) {
+        // El realtime debería notificar, pero actualizamos optimistamente
+        this.pendingTrip = null;
+        return { success: true };
+      } else {
+        return { success: false, error: result?.reason || 'Error desconocido' };
+      }
+    } catch (error) {
+      console.error('[TripManager] Error aceptando:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   async rejectTrip(tripId) {
     console.log('[TripManager] Rechazando viaje:', tripId);
-    this.pendingTrip = null;
-    this._notify('pendingTripCleared', { reason: 'REJECTED' });
-    return { success: true };
+    const driverId = supabaseService.getCurrentDriverId();
+    
+    try {
+      await supabaseService.rechazarOfertaViaje(tripId, driverId, 'RECHAZADO_POR_CHOFER');
+      this.pendingTrip = null;
+      this._notify('pendingTripCleared', { reason: 'REJECTED' });
+      return { success: true };
+    } catch (error) {
+      console.error('[TripManager] Error rechazando:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   async startTrip(tripId) {
-    console.log('[TripManager] Iniciando viaje:', tripId);
-    return { success: true };
+    const driverId = supabaseService.getCurrentDriverId();
+    const result = await supabaseService.iniciarViaje(tripId, driverId);
+    return result?.ok ? { success: true } : { success: false, error: 'No se pudo iniciar' };
   }
 
   async finishTrip(tripId) {
-    console.log('[TripManager] Finalizando viaje:', tripId);
+    const driverId = supabaseService.getCurrentDriverId();
+    const result = await supabaseService.completarViaje(tripId, driverId);
+    return result?.ok ? { success: true } : { success: false, error: 'No se pudo finalizar' };
+  }
+
+  async cancelTrip(tripId) {
+    // Implementar si es necesario
     return { success: true };
   }
 
-  // Eventos
+  // Event system
   on(event, callback) {
     if (!this.subscribers[event]) {
       this.subscribers[event] = [];
     }
     this.subscribers[event].push(callback);
-    return () => this._unsubscribe(event, callback);
-  }
-
-  _unsubscribe(event, callback) {
-    if (this.subscribers[event]) {
+    
+    // Devolver función para unsubscribe
+    return () => {
       this.subscribers[event] = this.subscribers[event].filter(cb => cb !== callback);
-    }
+    };
   }
 
   _notify(event, data) {
-    console.log('[TripManager] Notificando:', event, data?.id || data);
+    console.log(`[TripManager] Emitiendo evento: ${event}`, data?.id || '');
     if (this.subscribers[event]) {
       this.subscribers[event].forEach(cb => {
         try {
           cb(data);
         } catch (e) {
-          console.error('[TripManager] Error en callback:', e);
+          console.error(`[TripManager] Error en callback de ${event}:`, e);
         }
       });
     }
@@ -332,11 +307,18 @@ class TripManager {
     return this.pendingTrip;
   }
 
+  _cleanupChannels() {
+    this.realtimeChannels.forEach(ch => {
+      try {
+        ch.unsubscribe();
+      } catch (e) {}
+    });
+    this.realtimeChannels = [];
+  }
+
   destroy() {
     console.log('[TripManager] Destruyendo...');
-    this.realtimeChannels.forEach(ch => {
-      try { ch.unsubscribe(); } catch (e) {}
-    });
+    this._cleanupChannels();
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
     }
