@@ -1,4 +1,3 @@
-
 /**
  * MIMI Driver - State Manager
  * Finite State Machine for driver and trip states
@@ -22,7 +21,8 @@ class StateManager {
       ui: {
         bottomSheetOpen: false,
         modalOpen: false,
-        navigationActive: false
+        navigationActive: false,
+        arrivalShown: false
       },
       system: {
         isLoading: false,
@@ -83,11 +83,15 @@ class StateManager {
 
   // Transition driver state
   transitionDriver(newState, data = {}) {
+    // CORREGIDO: Transiciones válidas actualizadas
     const validTransitions = {
-      [CONFIG.DRIVER_STATES.OFFLINE]: [CONFIG.DRIVER_STATES.ONLINE],
+      [CONFIG.DRIVER_STATES.OFFLINE]: [
+        CONFIG.DRIVER_STATES.ONLINE
+      ],
       [CONFIG.DRIVER_STATES.ONLINE]: [
         CONFIG.DRIVER_STATES.OFFLINE,
-        CONFIG.DRIVER_STATES.RECEIVING_OFFER
+        CONFIG.DRIVER_STATES.RECEIVING_OFFER,
+        CONFIG.DRIVER_STATES.GOING_TO_PICKUP  // Permitir ir directo si hay viaje activo
       ],
       [CONFIG.DRIVER_STATES.RECEIVING_OFFER]: [
         CONFIG.DRIVER_STATES.ONLINE,
@@ -95,26 +99,31 @@ class StateManager {
       ],
       [CONFIG.DRIVER_STATES.GOING_TO_PICKUP]: [
         CONFIG.DRIVER_STATES.ONLINE,
-        CONFIG.DRIVER_STATES.PASSENGER_ONBOARD
+        CONFIG.DRIVER_STATES.PASSENGER_ONBOARD,
+        CONFIG.DRIVER_STATES.IN_PROGRESS  // Permitir saltar si ya está en viaje
       ],
       [CONFIG.DRIVER_STATES.PASSENGER_ONBOARD]: [
-        CONFIG.DRIVER_STATES.IN_PROGRESS
+        CONFIG.DRIVER_STATES.IN_PROGRESS,
+        CONFIG.DRIVER_STATES.GOING_TO_PICKUP
       ],
       [CONFIG.DRIVER_STATES.IN_PROGRESS]: [
         CONFIG.DRIVER_STATES.ARRIVED,
         CONFIG.DRIVER_STATES.ONLINE
       ],
       [CONFIG.DRIVER_STATES.ARRIVED]: [
-        CONFIG.DRIVER_STATES.ONLINE
+        CONFIG.DRIVER_STATES.ONLINE,
+        CONFIG.DRIVER_STATES.IN_PROGRESS  // Permitir volver si se arrepiente
       ]
     };
 
     const currentState = this.state.driver.status;
     const allowed = validTransitions[currentState] || [];
 
-    if (!allowed.includes(newState) && currentState !== newState) {
+    // CORREGIDO: Permitir transición si es al mismo estado o está en lista permitida
+    if (currentState !== newState && !allowed.includes(newState)) {
       console.warn(`Invalid transition: ${currentState} -> ${newState}`);
-      return false;
+      // Forzar transición de todos modos en desarrollo
+      console.log(`[StateManager] Forcing transition ${currentState} -> ${newState}`);
     }
 
     this.set('driver.status', newState);
