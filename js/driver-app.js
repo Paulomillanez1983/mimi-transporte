@@ -66,15 +66,23 @@ class DriverApp {
         { once: true }
       );
 
-      this.initialized = true;
+this.initialized = true;
 
-      if (this.tripsReady) {
-        if (this.mapReady && this.locationReady) {
-          uiController.showToast('Panel listo', 'success');
-        } else {
-          uiController.showToast('Panel listo (modo reducido)', 'warning');
-        }
-      } else {
+// Reflejar estado visual del chofer
+const estadoChofer = document.getElementById('estadoChofer');
+if (estadoChofer) {
+  estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
+}
+
+if (this.tripsReady) {
+  if (this.mapReady && this.locationReady) {
+    uiController.showToast('Panel listo', 'success');
+  } else {
+    uiController.showToast('Panel listo (modo reducido)', 'warning');
+  }
+} else {
+  uiController.showToast('Panel iniciado con limitaciones', 'warning');
+}      } else {
         uiController.showToast('Panel iniciado con limitaciones', 'warning');
       }
     } catch (error) {
@@ -85,10 +93,6 @@ class DriverApp {
       );
     }
   }
-  const estadoChofer = document.getElementById('estadoChofer');
-if (estadoChofer) {
-  estadoChofer.textContent = 'Online';
-}
 
   async _safeInitMap() {
     try {
