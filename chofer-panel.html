@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Panel de Chofer - Mimi</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="/mimi-transporte/favicon.ico">
-  <!-- TU CSS -->
-<link rel="stylesheet" href="/mimi-transporte/css/driver.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/mimi-transporte/favicon.ico" />
+
+  <!-- CSS APP -->
+  <link rel="stylesheet" href="/mimi-transporte/css/driver.css" />
+
   <!-- MAPLIBRE -->
   <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
+  <!-- SUPABASE -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
-
   <!-- MAPA -->
   <div id="mainMap"></div>
 
   <!-- UI -->
   <div class="ui-layer">
-
     <!-- HEADER -->
     <div class="header-float">
       <div class="driver-mini">
@@ -37,33 +39,30 @@
     <!-- PANEL -->
     <div class="trip-panel" id="tripPanel">
       <div class="panel-content">
-
         <button class="btn btn-primary" id="btnToggleDisponibilidad">
           Cambiar disponibilidad
         </button>
 
         <h3 style="margin-top: 15px;">Viajes disponibles</h3>
         <div id="tripList"></div>
-
       </div>
     </div>
-
   </div>
-<script>
-  if (typeof maplibregl === 'undefined') {
-    alert('Error cargando el mapa. Revisá conexión o bloqueador.');
-  }
-</script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- APP -->
+
+  <script>
+    if (typeof maplibregl === 'undefined') {
+      alert('Error cargando el mapa. Revisá conexión o bloqueador.');
+    }
+  </script>
+
   <script type="module">
-    import DriverApp from './js/driver-app.js';
+    import DriverApp from '/mimi-transporte/js/driver-app.js';
+    import supabaseService from '/mimi-transporte/js/supabase-client.js';
 
     const app = new DriverApp();
+    window.logout = () => supabaseService.logout();
+
     app.init();
-
-import supabaseService from './js/supabase-client.js';
-window.logout = () => supabaseService.logout();  </script>
-
+  </script>
 </body>
 </html>
