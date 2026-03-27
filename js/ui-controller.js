@@ -14,27 +14,29 @@ class UIController {
     this._toastTimeout = null;
     this._modalCallbacks = null;
     this._documentClickBound = false;
+    this._tripListCountdownInterval = null;
   }
 
   init() {
     // Cachear elementos DOM frecuentes
-this.elements = {
-  toast: document.getElementById('toast'),
-  tripPanel: document.getElementById('tripPanel'),
-  panelContent: document.getElementById('panelContent'),
-  tripList: document.getElementById('tripList'),
-  incomingModal: document.getElementById('incomingModal'),
-  navPanel: document.getElementById('navPanel'),
-  statsPendientes: document.getElementById('statPendientes'),
-  statsHoy: document.getElementById('statHoy'),
-  driverName: document.getElementById('driverName'),
-  driverStatus: document.getElementById('estadoChofer'),
-  panelHandle: document.getElementById('panelHandle'),
-  panelSubtitle: document.getElementById('panelSubtitle'),
-  tripCountBadge: document.getElementById('tripCountBadge'),
-  btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
-  btnRejectIncoming: document.getElementById('btnRejectIncoming')
-};
+    this.elements = {
+      toast: document.getElementById('toast'),
+      tripPanel: document.getElementById('tripPanel'),
+      panelContent: document.getElementById('panelContent'),
+      tripList: document.getElementById('tripList'),
+      incomingModal: document.getElementById('incomingModal'),
+      navPanel: document.getElementById('navPanel'),
+      statsPendientes: document.getElementById('statPendientes'),
+      statsHoy: document.getElementById('statHoy'),
+      driverName: document.getElementById('driverName'),
+      driverStatus: document.getElementById('estadoChofer'),
+      panelHandle: document.getElementById('panelHandle'),
+      panelSubtitle: document.getElementById('panelSubtitle'),
+      tripCountBadge: document.getElementById('tripCountBadge'),
+      btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
+      btnRejectIncoming: document.getElementById('btnRejectIncoming')
+    };
+
     // Cargar nombre del chofer
     try {
       const driverData = JSON.parse(localStorage.getItem('choferData') || '{}');
@@ -74,11 +76,12 @@ this.elements = {
         }
       };
     }
+
     if (this.elements.panelHandle) {
-  this.elements.panelHandle.addEventListener('click', () => {
-    this.togglePanel();
-  });
-}
+      this.elements.panelHandle.addEventListener('click', () => {
+        this.togglePanel();
+      });
+    }
 
     return this;
   }
@@ -125,53 +128,55 @@ this.elements = {
   // =========================================
   // VIAJES DISPONIBLES
   // =========================================
-renderAvailableTrips(trips) {
-  const container = this.elements.tripList;
-  const panel = this.elements.tripPanel;
+  renderAvailableTrips(trips) {
+    const container = this.elements.tripList;
+    const panel = this.elements.tripPanel;
 
-  if (!container) return;
+    if (!container) return;
 
-  if (panel) {
-    panel.classList.remove('has-trip');
-  }
-
-  this.hideNavigation();
-
-  const safeTrips = Array.isArray(trips) ? trips : [];
-  if (this.elements.tripCountBadge) {
-  this.elements.tripCountBadge.textContent = String(safeTrips.length);
-}
-
-if (this.elements.panelSubtitle) {
-  this.elements.panelSubtitle.textContent =
-    safeTrips.length > 0
-      ? `${safeTrips.length} viaje${safeTrips.length === 1 ? '' : 's'} esperando`
-      : 'Esperando solicitudes...';
-}
-
-  if (safeTrips.length === 0) {
-    container.innerHTML = this._getEmptyStateHTML();
-
-    // Si no hay viajes, dejamos el panel semi-colapsado
     if (panel) {
-      panel.classList.remove('expanded');
+      panel.classList.remove('has-trip');
     }
 
-    return;
+    this.hideNavigation();
+    this._stopTripListCountdown();
+
+    const safeTrips = Array.isArray(trips) ? trips : [];
+
+    if (this.elements.tripCountBadge) {
+      this.elements.tripCountBadge.textContent = String(safeTrips.length);
+    }
+
+    if (this.elements.panelSubtitle) {
+      this.elements.panelSubtitle.textContent =
+        safeTrips.length > 0
+          ? `${safeTrips.length} viaje${safeTrips.length === 1 ? '' : 's'} esperando`
+          : 'Esperando solicitudes...';
+    }
+
+    if (safeTrips.length === 0) {
+      container.innerHTML = this._getEmptyStateHTML();
+
+      if (panel) {
+        panel.classList.remove('expanded');
+      }
+
+      return;
+    }
+
+    const orderedTrips = [...safeTrips].sort((a, b) => {
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
+
+    container.innerHTML = orderedTrips.map(t => this._createTripCardHTML(t)).join('');
+
+    if (panel) {
+      panel.classList.add('expanded');
+    }
+
+    this._startTripListCountdown();
   }
 
-  // Ordenar por más reciente
-  const orderedTrips = [...safeTrips].sort((a, b) => {
-    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-  });
-
-  container.innerHTML = orderedTrips.map(t => this._createTripCardHTML(t)).join('');
-
-  // AUTO-ABRIR si hay viajes
-  if (panel) {
-    panel.classList.add('expanded');
-  }
-}
   // =========================================
   // VIAJE ACTIVO
   // =========================================
@@ -180,6 +185,8 @@ if (this.elements.panelSubtitle) {
     const panel = this.elements.tripPanel;
 
     if (!container || !panel || !trip) return;
+
+    this._stopTripListCountdown();
 
     panel.classList.add('has-trip');
 
@@ -264,7 +271,6 @@ if (this.elements.panelSubtitle) {
       </div>
     `;
 
-    // Mostrar navegación si está en curso
     if (isEnCurso && this.elements.navPanel) {
       this.elements.navPanel.classList.add('active');
       this._updateNavigation(trip);
@@ -284,10 +290,8 @@ if (this.elements.panelSubtitle) {
 
     if (!modal || !details || !trip) return;
 
-    // Reiniciar estado previo
     this._stopCountdown();
 
-    // Guardar callbacks
     this._modalCallbacks = { onAccept, onReject };
 
     const servicioLabel = trip.servicio || trip.tipo || 'Standard';
@@ -394,7 +398,6 @@ if (this.elements.panelSubtitle) {
       }
     }, 1000);
 
-    // Activar transición visual luego del primer frame
     setTimeout(() => {
       if (bar) {
         bar.style.transition = `width ${seconds}s linear`;
@@ -407,6 +410,36 @@ if (this.elements.panelSubtitle) {
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
+    }
+  }
+
+  _startTripListCountdown() {
+    this._stopTripListCountdown();
+
+    this._tripListCountdownInterval = setInterval(() => {
+      const badges = document.querySelectorAll('.trip-card-mini[data-trip-id], .trip-card-premium[data-trip-id]');
+
+      badges.forEach(card => {
+        const tripId = card.getAttribute('data-trip-id');
+        const countdown = card.querySelector('.countdown-badge');
+        const createdAt = card.getAttribute('data-created-at');
+
+        if (!countdown || !createdAt) return;
+
+        const exp = new Date(createdAt).getTime() + 2 * 60 * 1000;
+        const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
+        const min = Math.floor(rest / 60);
+        const seg = rest % 60;
+
+        countdown.textContent = `⏱️ ${min}:${seg.toString().padStart(2, '0')}`;
+      });
+    }, 1000);
+  }
+
+  _stopTripListCountdown() {
+    if (this._tripListCountdownInterval) {
+      clearInterval(this._tripListCountdownInterval);
+      this._tripListCountdownInterval = null;
     }
   }
 
@@ -487,59 +520,62 @@ if (this.elements.panelSubtitle) {
     `;
   }
 
-_createTripCardHTML(trip) {
-  const exp = new Date(trip.created_at || Date.now()).getTime() + 2 * 60 * 1000;
-  const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
-  const min = Math.floor(rest / 60);
-  const seg = rest % 60;
+  _createTripCardHTML(trip) {
+    const exp = new Date(trip.created_at || Date.now()).getTime() + 2 * 60 * 1000;
+    const rest = Math.max(0, Math.floor((exp - Date.now()) / 1000));
+    const min = Math.floor(rest / 60);
+    const seg = rest % 60;
 
-  const servicio = this._escapeHtml(trip.servicio || 'Viaje');
-  const cliente = this._escapeHtml(trip.cliente || 'Pasajero');
-  const origen = this._escapeHtml(trip.origen || 'Sin origen');
-  const destino = this._escapeHtml(trip.destino || 'Sin destino');
-  const precio = Number(trip.precio || 0).toLocaleString('es-AR');
-  const km = Number(trip.km || 0).toFixed(1);
+    const servicio = this._escapeHtml(trip.servicio || 'Viaje');
+    const cliente = this._escapeHtml(trip.cliente || 'Pasajero');
+    const origen = this._escapeHtml(trip.origen || 'Sin origen');
+    const destino = this._escapeHtml(trip.destino || 'Sin destino');
+    const precio = Number(trip.precio || 0).toLocaleString('es-AR');
+    const km = Number(trip.km || 0).toFixed(1);
+    const tripId = this._escapeHtml(trip.id || '');
+    const createdAt = this._escapeHtml(trip.created_at || new Date().toISOString());
 
-  return `
-    <div class="trip-card-mini trip-card-premium" data-trip-id="${this._escapeHtml(trip.id || '')}">
-      <div class="trip-card-header">
-        <div>
-          <span class="client-name">${cliente}</span>
-          <div class="trip-service-chip">${servicio}</div>
+    return `
+      <div class="trip-card-mini trip-card-premium" data-trip-id="${tripId}" data-created-at="${createdAt}">
+        <div class="trip-card-header">
+          <div>
+            <span class="client-name">${cliente}</span>
+            <div class="trip-service-chip">${servicio}</div>
+          </div>
+          <span class="countdown-badge">⏱️ ${min}:${seg.toString().padStart(2, '0')}</span>
         </div>
-        <span class="countdown-badge">⏱️ ${min}:${seg.toString().padStart(2, '0')}</span>
-      </div>
 
-      <div class="trip-route-block">
-        <div class="route-point pickup-point"></div>
-        <div class="trip-route-text">
-          <div class="trip-route-line"><strong>Origen:</strong> ${origen}</div>
-          <div class="trip-route-line"><strong>Destino:</strong> ${destino}</div>
+        <div class="trip-route-block">
+          <div class="route-point pickup-point"></div>
+          <div class="trip-route-text">
+            <div class="trip-route-line"><strong>Origen:</strong> ${origen}</div>
+            <div class="trip-route-line"><strong>Destino:</strong> ${destino}</div>
+          </div>
+        </div>
+
+        <div class="trip-meta-row">
+          <div class="trip-meta-box">
+            <span class="trip-meta-label">Ganancia</span>
+            <span class="trip-meta-value">$${precio}</span>
+          </div>
+          <div class="trip-meta-box">
+            <span class="trip-meta-label">Distancia</span>
+            <span class="trip-meta-value">${km} km</span>
+          </div>
+        </div>
+
+        <div class="trip-card-footer">
+          <button class="btn btn-ghost btn-small" data-action="whatsapp" data-trip-id="${tripId}">
+            WhatsApp
+          </button>
+          <button class="btn btn-primary btn-small btn-accept-strong" data-action="accept" data-trip-id="${tripId}">
+            Aceptar viaje
+          </button>
         </div>
       </div>
+    `;
+  }
 
-      <div class="trip-meta-row">
-        <div class="trip-meta-box">
-          <span class="trip-meta-label">Ganancia</span>
-          <span class="trip-meta-value">$${precio}</span>
-        </div>
-        <div class="trip-meta-box">
-          <span class="trip-meta-label">Distancia</span>
-          <span class="trip-meta-value">${km} km</span>
-        </div>
-      </div>
-
-      <div class="trip-card-footer">
-        <button class="btn btn-ghost btn-small" data-action="whatsapp" data-trip-id="${this._escapeHtml(trip.id || '')}">
-          WhatsApp
-        </button>
-        <button class="btn btn-primary btn-small btn-accept-strong" data-action="accept" data-trip-id="${this._escapeHtml(trip.id || '')}">
-          Aceptar viaje
-        </button>
-      </div>
-    </div>
-  `;
-}
   _normalizeState(s) {
     return String(s || '').toUpperCase().replace(/[-\s]/g, '_');
   }
