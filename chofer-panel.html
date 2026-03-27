@@ -6,22 +6,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
+  <title>Panel de Chofer - Mimi</title>
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover"
   />
-
-  <title>Panel de Chofer - Mimi</title>
   <link rel="icon" href="/mimi-transporte/favicon.ico" />
 
-  <!-- CSS PANEL CHOFER -->
+  <!-- CSS APP -->
   <link rel="stylesheet" href="/mimi-transporte/css/driver.css" />
 
   <!-- MAPLIBRE -->
-  <link
-    href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"
-    rel="stylesheet"
-  />
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
   <!-- SUPABASE -->
@@ -35,7 +31,7 @@
   <!-- UI -->
   <div class="ui-layer">
     <!-- HEADER -->
-    <div class="header-float">
+    <div class="header-float glass-card">
       <div class="driver-mini">
         <div class="driver-mini-avatar">🚐</div>
         <div class="driver-mini-info">
@@ -44,23 +40,23 @@
         </div>
       </div>
 
-      <button class="btn-icon" id="btnLogout" type="button" aria-label="Cerrar sesión">🚪</button>
+      <button class="btn-icon" onclick="logout()" aria-label="Cerrar sesión">🚪</button>
     </div>
 
     <!-- STATS -->
     <div class="stats-float">
-      <div class="stat-card">
+      <div class="stat-card glass-card">
         <div class="stat-value" id="statPendientes">0</div>
         <div class="stat-label">Ofertas</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card glass-card">
         <div class="stat-value" id="statHoy">0</div>
         <div class="stat-label">Hoy</div>
       </div>
     </div>
 
     <!-- PANEL -->
-    <div class="trip-panel" id="tripPanel">
+    <div class="trip-panel glass-panel" id="tripPanel">
       <div class="panel-handle" id="panelHandle">
         <div class="panel-grabber"></div>
         <div class="panel-title-row">
@@ -73,7 +69,7 @@
       </div>
 
       <div class="panel-content" id="panelContent">
-        <button class="btn btn-primary btn-disponibilidad" id="btnToggleDisponibilidad" type="button">
+        <button class="btn btn-primary btn-disponibilidad" id="btnToggleDisponibilidad">
           Cambiar disponibilidad
         </button>
 
@@ -83,13 +79,11 @@
 
     <!-- NAV PANEL -->
     <div id="navPanel" class="nav-panel">
-      <div class="nav-card">
-        <div class="nav-left">
-          <div class="nav-arrow" id="navArrow">⬆️</div>
-          <div>
-            <div class="nav-street" id="navStreet">Destino</div>
-            <div class="nav-next" id="navNext">Esperando navegación</div>
-          </div>
+      <div class="nav-main">
+        <div class="nav-arrow" id="navArrow">⬆️</div>
+        <div class="nav-info">
+          <div class="nav-street" id="navStreet">Ruta activa</div>
+          <div class="nav-next" id="navNext">Esperando navegación</div>
         </div>
         <div class="nav-distance" id="navDistance">--</div>
       </div>
@@ -102,7 +96,11 @@
     <div id="incomingModal" class="incoming-modal">
       <div class="incoming-modal-card">
         <div class="incoming-header">
-          <h3>Solicitud de viaje</h3>
+          <div>
+            <h3>Solicitud de viaje</h3>
+            <p class="incoming-subtitle">Nueva oferta disponible</p>
+          </div>
+
           <div class="countdown-box">
             <span id="countdownText">30</span>s
           </div>
@@ -115,8 +113,8 @@
         <div id="incomingDetails"></div>
 
         <div class="incoming-actions">
-          <button id="btnRejectIncoming" class="btn btn-danger" type="button">Rechazar</button>
-          <button id="btnAcceptIncoming" class="btn btn-success" type="button">Aceptar</button>
+          <button id="btnRejectIncoming" class="btn btn-danger">Rechazar</button>
+          <button id="btnAcceptIncoming" class="btn btn-success">Aceptar</button>
         </div>
       </div>
     </div>
@@ -151,12 +149,7 @@
     import supabaseService from '/mimi-transporte/js/supabase-client.js';
 
     const app = new DriverApp();
-
     window.logout = () => supabaseService.logout();
-
-    document.getElementById('btnLogout')?.addEventListener('click', () => {
-      supabaseService.logout();
-    });
 
     app.init();
   </script>
