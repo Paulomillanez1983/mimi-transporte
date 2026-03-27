@@ -1,8 +1,10 @@
 /**
- * Servicio de mapas con MapLibre - Optimizado para producción
+ * Servicio de mapas con MapLibre + OSRM Routing
+ * Rutas reales por calles, no líneas rectas
  */
 
 import CONFIG from './config.js';
+import routingService from './routing-service.js';
 
 class MapService {
   constructor() {
@@ -12,11 +14,11 @@ class MapService {
       pickup: null,
       destination: null
     };
+    this.routeLayer = null;
     this.isReady = false;
     this.pendingOperations = [];
-    this.hasFatalError = false;
     this._boundResize = null;
-    this._styleLoaded = false;
+    this._navigationMode = false;
   }
 
   async init(containerId) {
@@ -28,15 +30,11 @@ class MapService {
 
         const container = document.getElementById(containerId);
         if (!container) {
-          throw new Error(`No existe el contenedor del mapa: ${containerId}`);
+          throw new Error(`Contenedor no encontrado: ${containerId}`);
         }
 
         if (this.map) {
-          try {
-            this.destroy();
-          } catch (e) {
-            console.warn('No se pudo destruir mapa previo:', e);
-          }
+          this.destroy();
         }
 
         this.map = new window.maplibregl.Map({
@@ -73,84 +71,270 @@ class MapService {
           preserveDrawingBuffer: false
         });
 
-        this._boundResize = () => {
-          try {
-            this.map?.resize?.();
-          } catch (e) {
-            console.warn('No se pudo forzar resize del mapa:', e);
-          }
-        };
-
-        // Resize inicial
-        setTimeout(this._boundResize, 100);
-        setTimeout(this._boundResize, 500);
-        setTimeout(this._boundResize, 1000);
-
-        window.addEventListener('resize', this._boundResize);
-        window.addEventListener('orientationchange', this._boundResize);
-
-        if (window.visualViewport) {
-          window.visualViewport.addEventListener('resize', this._boundResize);
-        }
-
-        // Manejar errores de carga de tiles silenciosamente
-        this.map.on('error', (e) => {
-          // Silenciar errores de tiles que no afectan funcionalidad
-          if (e?.error?.status === 404 || e?.error?.message?.includes('tile')) {
-            return;
-          }
-          console.warn('Map warning:', e.error?.message || e);
-        });
-
+        this._setupEventListeners();
+        
         this.map.on('load', () => {
-          try {
-            this.isReady = true;
-            this.hasFatalError = false;
-            this.map.resize();
-            this._executePending();
-            resolve(this.map);
-          } catch (e) {
-            reject(e);
-          }
+          this.isReady = true;
+          this.map.resize();
+          this._executePending();
+          resolve(this.map);
         });
 
         // Timeout de seguridad
         setTimeout(() => {
           if (!this.isReady) {
             console.warn('Mapa cargando lentamente...');
-            // No rechazamos, permitimos modo degradado
-            this.hasFatalError = false;
             resolve(null);
           }
         }, 10000);
 
       } catch (error) {
-        this.hasFatalError = true;
         reject(error);
       }
+    });
+  }
+
+  _setupEventListeners() {
+    this._boundResize = () => {
+      try { this.map?.resize(); } catch (e) {}
+    };
+
+    window.addEventListener('resize', this._boundResize);
+    window.addEventListener('orientationchange', this._boundResize);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this._boundResize);
+    }
+
+    // Silenciar errores de tiles
+    this.map.on('error', (e) => {
+      if (e?.error?.status === 404 || e?.error?.message?.includes('tile')) {
+        return;
+      }
+      console.warn('Map warning:', e.error?.message || e);
     });
   }
 
   _executePending() {
     while (this.pendingOperations.length > 0) {
       const op = this.pendingOperations.shift();
-      try {
-        op();
-      } catch (e) {
-        console.warn('Error ejecutando operación pendiente:', e);
-      }
+      try { op(); } catch (e) {}
     }
   }
 
   _whenReady(operation) {
-    if (this.isReady && this.map && !this.hasFatalError) {
-      try {
-        operation();
-      } catch (e) {
-        console.warn('Operación de mapa falló:', e);
-      }
+    if (this.isReady && this.map) {
+      try { operation(); } catch (e) {}
     } else {
       this.pendingOperations.push(operation);
+    }
+  }
+
+  /**
+   * Mostrar ruta REAL por calles usando OSRM
+   */
+  async showRealRoute(pickup, destination, fitBounds = true) {
+    if (!this.isReady || !pickup || !destination) return;
+
+    // Limpiar ruta anterior
+    this.clearRoute();
+
+    try {
+      // Obtener ruta real de OSRM
+      const route = await routingService.getRoute(
+        [pickup.lng, pickup.lat],
+        [destination.lng, destination.lat]
+      );
+
+      if (!route || !route.geometry) {
+        console.warn('No se pudo obtener ruta, usando línea recta como fallback');
+        this._drawStraightLine(pickup, destination);
+        return;
+      }
+
+      // Dibujar la ruta real en el mapa
+      this._drawRouteLine(route.geometry);
+
+      // Actualizar marcadores
+      this._updateMarkers(pickup, destination);
+
+      // Ajustar vista
+      if (fitBounds) {
+        this._fitRouteBounds(route.geometry);
+      }
+
+      return route;
+
+    } catch (error) {
+      console.error('Error mostrando ruta:', error);
+      this._drawStraightLine(pickup, destination);
+    }
+  }
+
+  /**
+   * Dibujar línea de ruta real
+   */
+  _drawRouteLine(geometry) {
+    this._whenReady(() => {
+      // Remover capa anterior si existe
+      if (this.map.getLayer('route-line')) {
+        this.map.removeLayer('route-line');
+      }
+      if (this.map.getSource('route')) {
+        this.map.removeSource('route');
+      }
+
+      // Agregar fuente con la geometría real
+      this.map.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: geometry
+        },
+        lineMetrics: true
+      });
+
+      // Línea de ruta estilo Uber (negra con borde blanco)
+      this.map.addLayer({
+        id: 'route-line-border',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': CONFIG.COLORS.routeLineBorder,
+          'line-width': CONFIG.COLORS.routeLineWidth + 4,
+          'line-opacity': 0.9
+        }
+      }, 'osm');
+
+      this.map.addLayer({
+        id: 'route-line',
+        type: 'line',
+        source: 'route',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': CONFIG.COLORS.routeLine,
+          'line-width': CONFIG.COLORS.routeLineWidth,
+          'line-opacity': 1
+        }
+      }, 'route-line-border');
+
+      // Animar la línea (efecto de progreso)
+      this._animateRouteLine();
+    });
+  }
+
+  /**
+   * Animar línea de ruta
+   */
+  _animateRouteLine() {
+    let offset = 0;
+    const animate = () => {
+      if (!this.map.getLayer('route-line')) return;
+      
+      offset = (offset + 1) % 100;
+      this.map.setPaintProperty('route-line', 'line-dasharray', [
+        0.5, 
+        0.5
+      ]);
+      
+      requestAnimationFrame(animate);
+    };
+    // animate(); // Descomentar para animación continua
+  }
+
+  /**
+   * Fallback: línea recta si OSRM falla
+   */
+  _drawStraightLine(from, to) {
+    this._whenReady(() => {
+      const coordinates = [
+        [from.lng, from.lat],
+        [to.lng, to.lat]
+      ];
+
+      const geojson = {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates
+        }
+      };
+
+      if (this.map.getSource('route')) {
+        this.map.getSource('route').setData(geojson);
+      } else {
+        this.map.addSource('route', {
+          type: 'geojson',
+          data: geojson
+        });
+
+        this.map.addLayer({
+          id: 'route-line',
+          type: 'line',
+          source: 'route',
+          paint: {
+            'line-color': '#276EF1',
+            'line-width': 4,
+            'line-dasharray': [2, 2]
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * Ajustar bounds a la ruta
+   */
+  _fitRouteBounds(geometry) {
+    try {
+      const coords = geometry.coordinates;
+      if (!coords || coords.length === 0) return;
+
+      const bounds = new window.maplibregl.LngLatBounds();
+      coords.forEach(coord => bounds.extend(coord));
+
+      this.map.fitBounds(bounds, {
+        padding: { 
+          top: 120, 
+          bottom: 350, // Espacio para panel inferior
+          left: 50, 
+          right: 50 
+        },
+        duration: 1000,
+        maxZoom: 16
+      });
+    } catch (e) {
+      console.warn('Error ajustando bounds:', e);
+    }
+  }
+
+  _updateMarkers(pickup, destination) {
+    // Pickup marker
+    if (this.markers.pickup) {
+      this.markers.pickup.setLngLat([pickup.lng, pickup.lat]);
+    } else {
+      const el = this._createMarkerElement('pickup', '👤');
+      this.markers.pickup = new window.maplibregl.Marker({ element: el })
+        .setLngLat([pickup.lng, pickup.lat])
+        .addTo(this.map);
+    }
+
+    // Destination marker
+    if (this.markers.destination) {
+      this.markers.destination.setLngLat([destination.lng, destination.lat]);
+    } else {
+      const el = this._createMarkerElement('destination', '🏁');
+      this.markers.destination = new window.maplibregl.Marker({ element: el })
+        .setLngLat([destination.lng, destination.lat])
+        .addTo(this.map);
     }
   }
 
@@ -165,15 +349,9 @@ class MapService {
       destination: '#E11900'
     };
     
-    const sizes = {
-      driver: '48px',
-      pickup: '40px',
-      destination: '40px'
-    };
-    
     el.style.cssText = `
-      width: ${sizes[type]};
-      height: ${sizes[type]};
+      width: ${type === 'driver' ? '48px' : '40px'};
+      height: ${type === 'driver' ? '48px' : '40px'};
       background: ${colors[type]};
       border-radius: 50%;
       border: 3px solid white;
@@ -208,209 +386,80 @@ class MapService {
         }
       }
 
-      // Seguimiento suave solo si no está interactuando
-      if (!this.map.isMoving() && !this.map.isZooming()) {
+      // Seguimiento suave en modo navegación
+      if (this._navigationMode && !this.map.isMoving()) {
         this.map.easeTo({
           center: [lng, lat],
-          duration: 1000,
-          easing: (t) => t * (2 - t)
+          bearing: heading || 0,
+          pitch: 60,
+          duration: 1000
         });
       }
     });
   }
 
-  showTripRoute(pickup, destination, fitBounds = true) {
+  setNavigationMode(enabled) {
+    this._navigationMode = enabled;
+    if (enabled && this.isReady) {
+      this.map.setPitch(60);
+    } else if (this.isReady) {
+      this.map.setPitch(0);
+    }
+  }
+
+  clearRoute() {
     this._whenReady(() => {
-      if (!this.map || !pickup || !destination) return;
-
-      this.clearTripMarkers();
-
-      // Validar coordenadas
-      if (typeof pickup.lng !== 'number' || typeof pickup.lat !== 'number' ||
-          typeof destination.lng !== 'number' || typeof destination.lat !== 'number') {
-        console.warn('Coordenadas inválidas para ruta');
-        return;
+      if (this.map.getLayer('route-line')) {
+        this.map.removeLayer('route-line');
       }
+      if (this.map.getLayer('route-line-border')) {
+        this.map.removeLayer('route-line-border');
+      }
+      if (this.map.getSource('route')) {
+        this.map.removeSource('route');
+      }
+    });
+    routingService.clear();
+  }
 
-      const pickupEl = this._createMarkerElement('pickup', '👤');
-      this.markers.pickup = new window.maplibregl.Marker({ element: pickupEl })
-        .setLngLat([pickup.lng, pickup.lat])
-        .addTo(this.map);
-
-      const destEl = this._createMarkerElement('destination', '🏁');
-      this.markers.destination = new window.maplibregl.Marker({ element: destEl })
-        .setLngLat([destination.lng, destination.lat])
-        .addTo(this.map);
-
-      this._drawRouteLine(pickup, destination);
-
-      if (fitBounds) {
-        try {
-          const bounds = new window.maplibregl.LngLatBounds()
-            .extend([pickup.lng, pickup.lat])
-            .extend([destination.lng, destination.lat]);
-
-          this.map.fitBounds(bounds, {
-            padding: { top: 100, bottom: 300, left: 50, right: 50 },
-            duration: 1000,
-            maxZoom: 16
-          });
-        } catch (e) {
-          console.warn('Error ajustando bounds:', e);
-        }
+  clearTripMarkers() {
+    ['pickup', 'destination'].forEach(type => {
+      if (this.markers[type]) {
+        this.markers[type].remove();
+        this.markers[type] = null;
       }
     });
   }
 
-  _drawRouteLine(from, to) {
-    if (!this.map || !this.isReady) return;
-
-    const coordinates = [
-      [from.lng, from.lat],
-      [to.lng, to.lat]
-    ];
-
-    const geojson = {
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates
-      },
-      properties: {}
-    };
-
-    try {
-      const existingSource = this.map.getSource?.('route');
-      if (existingSource) {
-        existingSource.setData(geojson);
-        return;
-      }
-
-      this.map.addSource('route', {
-        type: 'geojson',
-        data: geojson,
-        lineMetrics: true
-      });
-
-      this.map.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#276EF1',
-          'line-width': 5,
-          'line-opacity': 0.9
-        }
-      });
-    } catch (e) {
-      console.warn('No se pudo dibujar la ruta:', e);
-    }
-  }
-
-  clearTripMarkers() {
-    try {
-      if (this.markers.pickup) {
-        this.markers.pickup.remove();
-        this.markers.pickup = null;
-      }
-      if (this.markers.destination) {
-        this.markers.destination.remove();
-        this.markers.destination = null;
-      }
-    } catch (e) {
-      console.warn('Error limpiando marcadores:', e);
-    }
-  }
-
   clearAll() {
-    try {
-      this.clearTripMarkers();
-
-      if (!this.map) return;
-
-      if (this.map.getLayer?.('route-line')) {
-        this.map.removeLayer('route-line');
-      }
-      if (this.map.getSource?.('route')) {
-        this.map.removeSource('route');
-      }
-    } catch (e) {
-      console.warn('Error limpiando mapa:', e);
-    }
+    this.clearRoute();
+    this.clearTripMarkers();
   }
 
   resize() {
-    try {
-      if (this.map) {
-        this.map.resize();
-      }
-    } catch (e) {
-      console.warn('Error redimensionando mapa:', e);
-    }
+    try { this.map?.resize(); } catch (e) {}
   }
 
   destroy() {
     try {
       this.clearAll();
-
       if (this.markers.driver) {
         this.markers.driver.remove();
         this.markers.driver = null;
       }
-
       if (this._boundResize) {
         window.removeEventListener('resize', this._boundResize);
         window.removeEventListener('orientationchange', this._boundResize);
-
         if (window.visualViewport) {
           window.visualViewport.removeEventListener('resize', this._boundResize);
         }
       }
-
       if (this.map) {
         this.map.remove();
         this.map = null;
       }
-    } catch (e) {
-      console.warn('Error destruyendo mapa:', e);
-    } finally {
-      this.isReady = false;
-      this.hasFatalError = false;
-      this.pendingOperations = [];
-      this._boundResize = null;
-    }
-  }
-
-  static calculateDistance(lat1, lng1, lat2, lng2) {
-    if (typeof lat1 !== 'number' || typeof lng1 !== 'number' || 
-        typeof lat2 !== 'number' || typeof lng2 !== 'number') {
-      return 0;
-    }
-
-    const R = 6371e3;
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lng2 - lng1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return Math.round(R * c);
-  }
-
-  static calculateETA(distanceMeters, speedKmh = 30) {
-    if (typeof distanceMeters !== 'number' || distanceMeters < 0) return '--';
-    
-    const seconds = (distanceMeters / 1000) / speedKmh * 3600;
-    const minutes = Math.ceil(seconds / 60);
-    return minutes <= 1 ? '1 min' : `${minutes} mins`;
+    } catch (e) {}
+    this.isReady = false;
   }
 }
 
