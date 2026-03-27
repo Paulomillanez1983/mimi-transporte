@@ -51,9 +51,10 @@
   </div>
 <script>
   if (typeof maplibregl === 'undefined') {
-    console.error('MapLibre no cargó');
+    alert('Error cargando el mapa. Revisá conexión o bloqueador.');
   }
 </script>
+  
   <!-- APP -->
   <script type="module">
     import DriverApp from './js/driver-app.js';
