@@ -65,18 +65,14 @@ body {
 /* UI LAYER */
 .ui-layer {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  height: calc(var(--app-vh, 1vh) * 100);
+  inset: 0;
   z-index: 10;
-  pointer-events: none;
-}
-.ui-layer > * {
   pointer-events: auto;
 }
 
+.ui-layer > * {
+  pointer-events: auto;
+}
 /* HEADER */
 .header-float {
   position: absolute;
