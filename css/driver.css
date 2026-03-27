@@ -522,22 +522,21 @@ body {
 }
 
 .incoming-modal {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 9999;
   display: none;
   align-items: flex-start;
   justify-content: center;
-  padding: calc(110px + var(--sat)) 16px 16px;
-  background: rgba(0,0,0,0.18);
+  padding: calc(110px + var(--sat)) 16px calc(16px + var(--sab));
+  background: rgba(0,0,0,0.35);
   pointer-events: none;
 }
 
-.incoming-modal.show {
+.incoming-modal.active {
   display: flex;
   pointer-events: auto;
 }
-
 .incoming-modal-card {
   width: 100%;
   max-width: 420px;
