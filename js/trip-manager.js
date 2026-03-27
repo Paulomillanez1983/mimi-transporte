@@ -13,18 +13,24 @@ class TripManager {
     this.tripHistory = [];
     this.subscribers = {};
     this.realtimeChannel = null;
+    this.refreshInterval = null;
+    this.initialized = false;
   }
 
   async init() {
+    if (this.initialized) return this;
+
     await this.loadCurrentTrip();
+    await this.refreshTrips();
     this._subscribeToRealtime();
 
-    setInterval(() => {
+    this.refreshInterval = setInterval(() => {
       if (!document.hidden) {
         this.refreshTrips();
       }
     }, CONFIG.TRIP_REFRESH_INTERVAL);
 
+    this.initialized = true;
     return this;
   }
 
@@ -33,7 +39,10 @@ class TripManager {
     if (!driverId) return;
 
     try {
-      // 🔥 Viaje activo
+      this.currentTrip = null;
+      this.pendingTrip = null;
+
+      // Viaje activo
       const activeTrips = await supabaseService.rest.select('viajes', {
         eq: { chofer_id: driverId },
         in: { estado: [CONFIG.ESTADOS.ACEPTADO, CONFIG.ESTADOS.EN_CURSO] },
@@ -46,7 +55,7 @@ class TripManager {
         this._notify('tripUpdated', this.currentTrip);
       }
 
-      // 🔥 Viaje asignado pendiente
+      // Viaje asignado pendiente
       const assigned = await supabaseService.rest.select('viajes', {
         eq: {
           estado: CONFIG.ESTADOS.ASIGNADO,
@@ -88,8 +97,8 @@ class TripManager {
         })
       ]);
 
-      this.availableTrips = available;
-      this.tripHistory = history;
+      this.availableTrips = Array.isArray(available) ? available : [];
+      this.tripHistory = Array.isArray(history) ? history : [];
 
       this._notify('tripsRefreshed', {
         available: this.availableTrips,
@@ -102,7 +111,6 @@ class TripManager {
   }
 
   async acceptTrip(tripId) {
-    // 🔥 BLOQUEO PRO
     if (this.currentTrip) {
       return { success: false, error: 'Ya tenés un viaje activo' };
     }
@@ -114,10 +122,15 @@ class TripManager {
         aceptado_at: new Date().toISOString()
       });
 
-      this.currentTrip = result[0];
+      this.currentTrip = result?.[0] || null;
       this.pendingTrip = null;
+      this.availableTrips = this.availableTrips.filter(t => t.id !== tripId);
 
       this._notify('tripAccepted', this.currentTrip);
+      this._notify('tripsRefreshed', {
+        available: this.availableTrips,
+        history: this.tripHistory
+      });
 
       return { success: true, trip: this.currentTrip };
 
@@ -140,7 +153,14 @@ class TripManager {
         this.pendingTrip = null;
       }
 
+      this.availableTrips = this.availableTrips.filter(t => t.id !== tripId);
+
       this._notify('tripRejected', { tripId });
+      this._notify('tripsRefreshed', {
+        available: this.availableTrips,
+        history: this.tripHistory
+      });
+
       return { success: true };
 
     } catch (error) {
@@ -156,7 +176,7 @@ class TripManager {
         iniciado_at: new Date().toISOString()
       });
 
-      this.currentTrip = result[0];
+      this.currentTrip = result?.[0] || this.currentTrip;
       this._notify('tripStarted', this.currentTrip);
 
       return { success: true };
@@ -174,12 +194,20 @@ class TripManager {
         notas_chofer: notes
       });
 
-      const completedTrip = result[0];
+      const completedTrip = result?.[0];
 
-      this.tripHistory.unshift(completedTrip);
+      if (completedTrip) {
+        this.tripHistory.unshift(completedTrip);
+      }
+
       this.currentTrip = null;
+      this.pendingTrip = null;
 
       this._notify('tripCompleted', completedTrip);
+      this._notify('tripsRefreshed', {
+        available: this.availableTrips,
+        history: this.tripHistory
+      });
 
       return { success: true };
 
@@ -201,7 +229,15 @@ class TripManager {
         this.currentTrip = null;
       }
 
+      if (this.pendingTrip?.id === tripId) {
+        this.pendingTrip = null;
+      }
+
       this._notify('tripCancelled', { tripId });
+      this._notify('tripsRefreshed', {
+        available: this.availableTrips,
+        history: this.tripHistory
+      });
 
       return { success: true };
 
@@ -213,22 +249,27 @@ class TripManager {
   _subscribeToRealtime() {
     this.realtimeChannel = supabaseService.subscribeToTrips((payload) => {
       const { eventType, new: newRecord } = payload;
-
       const driverId = supabaseService.getCurrentDriverId();
 
       switch (eventType) {
-
         case 'INSERT':
-          // 🔥 viajes nuevos tipo Uber
           if (
             newRecord.estado === CONFIG.ESTADOS.DISPONIBLE &&
             !this.currentTrip &&
             !this.pendingTrip
           ) {
+            const exists = this.availableTrips.some(t => t.id === newRecord.id);
+            if (!exists) {
+              this.availableTrips.unshift(newRecord);
+            }
+
             this._notify('newAvailableTrip', newRecord);
+            this._notify('tripsRefreshed', {
+              available: this.availableTrips,
+              history: this.tripHistory
+            });
           }
 
-          // 🔥 asignado a este chofer
           if (
             newRecord.estado === CONFIG.ESTADOS.ASIGNADO &&
             newRecord.chofer_id === driverId
@@ -239,10 +280,40 @@ class TripManager {
           break;
 
         case 'UPDATE':
+          // Actualizar current trip
           if (this.currentTrip?.id === newRecord.id) {
             this.currentTrip = newRecord;
             this._notify('tripUpdated', newRecord);
           }
+
+          // Actualizar pending trip
+          if (this.pendingTrip?.id === newRecord.id) {
+            if (newRecord.estado === CONFIG.ESTADOS.ASIGNADO) {
+              this.pendingTrip = newRecord;
+            } else {
+              this.pendingTrip = null;
+            }
+          }
+
+          // Mantener availableTrips sincronizado
+          const idx = this.availableTrips.findIndex(t => t.id === newRecord.id);
+
+          if (newRecord.estado === CONFIG.ESTADOS.DISPONIBLE) {
+            if (idx >= 0) {
+              this.availableTrips[idx] = newRecord;
+            } else if (!this.currentTrip && !this.pendingTrip) {
+              this.availableTrips.unshift(newRecord);
+            }
+          } else {
+            if (idx >= 0) {
+              this.availableTrips.splice(idx, 1);
+            }
+          }
+
+          this._notify('tripsRefreshed', {
+            available: this.availableTrips,
+            history: this.tripHistory
+          });
           break;
       }
     });
@@ -281,11 +352,32 @@ class TripManager {
     return this.pendingTrip;
   }
 
+  getStats() {
+    return {
+      currentTrip: this.currentTrip,
+      pendingTrip: this.pendingTrip,
+      availableCount: this.availableTrips.length,
+      completedCount: this.tripHistory.length
+    };
+  }
+
   destroy() {
     if (this.realtimeChannel) {
-      this.realtimeChannel.unsubscribe();
+      try {
+        this.realtimeChannel.unsubscribe?.();
+      } catch (e) {
+        console.warn('Error cerrando realtime:', e);
+      }
+      this.realtimeChannel = null;
     }
+
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+
     this.subscribers = {};
+    this.initialized = false;
   }
 }
 
