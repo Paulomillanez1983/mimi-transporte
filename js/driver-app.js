@@ -156,6 +156,18 @@ class DriverApp {
       })
     );
 
+    // LIMPIEZA DE OFERTA VENCIDA / CANCELADA / TIMEOUT
+    this.unsubscribers.push(
+      tripManager.on('pendingTripCleared', ({ reason }) => {
+        this.lastIncomingTripId = null;
+        uiController.closeIncomingModal();
+
+        if (reason === 'TIMEOUT' || reason === 'EXPIRED_LOCAL' || reason === 'CANCELADA') {
+          uiController.showToast('La oferta ya no está disponible', 'warning');
+        }
+      })
+    );
+
     this.unsubscribers.push(
       tripManager.on('tripAccepted', (trip) => {
         this.lastIncomingTripId = null;
@@ -192,7 +204,7 @@ class DriverApp {
         }
 
         uiController.hideNavigation();
-        uiController.renderAvailableTrips(tripManager.availableTrips || []);
+        uiController.renderAvailableTrips([]);
         uiController.updateStats(tripManager.getStats?.() || {});
       })
     );
@@ -211,16 +223,24 @@ class DriverApp {
         }
 
         uiController.hideNavigation();
-        uiController.renderAvailableTrips(tripManager.availableTrips || []);
+        uiController.renderAvailableTrips([]);
         uiController.updateStats(tripManager.getStats?.() || {});
       })
     );
 
     this.unsubscribers.push(
       tripManager.on('tripsRefreshed', ({ available }) => {
-        if (!tripManager.getCurrentTrip()) {
-          uiController.renderAvailableTrips(available || []);
+        const currentTrip = tripManager.getCurrentTrip?.();
+        const pendingTrip = tripManager.getPendingTrip?.();
+
+        if (currentTrip) {
+          uiController.renderActiveTrip(currentTrip);
+        } else if (pendingTrip) {
+          uiController.renderAvailableTrips([pendingTrip]);
+        } else {
+          uiController.renderAvailableTrips([]);
         }
+
         uiController.updateStats(tripManager.getStats?.() || {});
       })
     );
@@ -375,7 +395,7 @@ class DriverApp {
       }
 
       uiController.hideNavigation();
-      uiController.renderAvailableTrips(tripManager.availableTrips || []);
+      uiController.renderAvailableTrips([]);
       uiController.updateStats(tripManager.getStats?.() || {});
     } else {
       uiController.showToast('Error: ' + (result?.error || 'desconocido'), 'error');
