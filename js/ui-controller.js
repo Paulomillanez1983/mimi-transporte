@@ -84,21 +84,22 @@ this.elements = {
   }
 
   // Renderizar lista de viajes disponibles
-  renderAvailableTrips(trips) {
-    const container = this.elements.panelContent;
-    if (!container) return;
+renderAvailableTrips(trips) {
+  const container = this.elements.tripList;
+  if (!container) return;
 
-    if (trips.length === 0) {
-      container.innerHTML = this._getEmptyStateHTML();
-      return;
-    }
-
-    container.innerHTML = trips.map(t => this._createTripCardHTML(t)).join('');
+  if (!Array.isArray(trips) || trips.length === 0) {
+    container.innerHTML = this._getEmptyStateHTML();
+    return;
   }
 
+  container.innerHTML = trips.map(t => this._createTripCardHTML(t)).join('');
+}
+
+  
   // Renderizar viaje activo
   renderActiveTrip(trip) {
-    const container = this.elements.panelContent;
+    const container = this.elements.tripList;
     const panel = this.elements.tripPanel;
     if (!container || !panel) return;
 
