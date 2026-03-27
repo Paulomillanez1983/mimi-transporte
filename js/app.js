@@ -12,16 +12,15 @@ class DriverApp {
     console.log('[App] Starting MIMI Driver...');
 
     try {
-      // 1. Check auth
-      if (!this._checkAuth()) {
-        return;
-      }
-
-      // 2. Initialize Supabase
+      // 1. Initialize Supabase FIRST
       const dbReady = await supabaseClient.initialize();
       if (!dbReady) {
         throw new Error('Database connection failed');
       }
+
+      // 2. Check auth AFTER Supabase is ready
+      const authOk = await this._checkAuth();
+      if (!authOk) return;
 
       // 3. Initialize Map
       await mapService.init('map-container');
@@ -29,7 +28,7 @@ class DriverApp {
       // 4. Initialize Location
       await locationService.start((pos) => {
         mapService.updateDriverMarker(pos.lng, pos.lat, pos.heading);
-        
+
         // Check arrival proximity
         this._checkProximity(pos);
       });
@@ -52,21 +51,23 @@ class DriverApp {
     }
   }
 
-  _checkAuth() {
-    const driverId = localStorage.getItem('mimi_driver_id');
-    
+  async _checkAuth() {
+    const driverId = supabaseClient.getDriverId();
+
     if (!driverId) {
+      console.warn('[Auth] No driver session found. Redirecting to login...');
       window.location.href = CONFIG.REDIRECTS.LOGIN;
       return false;
     }
 
+    console.log('[Auth] Driver authenticated UID:', driverId);
     return true;
   }
 
   _checkProximity(position) {
     const state = stateManager.get('driver.status');
     const trip = stateManager.get('trip.current');
-    
+
     if (!trip) return;
 
     let target;
@@ -78,14 +79,19 @@ class DriverApp {
       return;
     }
 
+    // Validación fuerte para evitar crash si coords vienen null
+    if (!target.lat || !target.lng) return;
+
     const distance = this._calculateDistance(position, target);
-    
+
     // Update UI distance
     const distanceEl = document.getElementById('nav-distance');
     if (distanceEl) {
-      const formatted = distance < 1000 
-        ? `${Math.round(distance)} m` 
-        : `${(distance/1000).toFixed(1)} km`;
+      const formatted =
+        distance < 1000
+          ? `${Math.round(distance)} m`
+          : `${(distance / 1000).toFixed(1)} km`;
+
       distanceEl.textContent = formatted;
     }
 
@@ -105,10 +111,12 @@ class DriverApp {
     const Δφ = (pos2.lat - pos1.lat) * Math.PI / 180;
     const Δλ = (pos2.lng - pos1.lng) * Math.PI / 180;
 
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
   }
