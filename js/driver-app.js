@@ -66,23 +66,21 @@ class DriverApp {
         { once: true }
       );
 
-this.initialized = true;
+      this.initialized = true;
 
-// Reflejar estado visual del chofer
-const estadoChofer = document.getElementById('estadoChofer');
-if (estadoChofer) {
-  estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
-}
+      // Reflejar estado visual del chofer
+      const estadoChofer = document.getElementById('estadoChofer');
+      if (estadoChofer) {
+        estadoChofer.textContent = this.locationReady ? 'Online' : 'Sin ubicación';
+      }
 
-if (this.tripsReady) {
-  if (this.mapReady && this.locationReady) {
-    uiController.showToast('Panel listo', 'success');
-  } else {
-    uiController.showToast('Panel listo (modo reducido)', 'warning');
-  }
-} else {
-  uiController.showToast('Panel iniciado con limitaciones', 'warning');
-}      } else {
+      if (this.tripsReady) {
+        if (this.mapReady && this.locationReady) {
+          uiController.showToast('Panel listo', 'success');
+        } else {
+          uiController.showToast('Panel listo (modo reducido)', 'warning');
+        }
+      } else {
         uiController.showToast('Panel iniciado con limitaciones', 'warning');
       }
     } catch (error) {
@@ -323,7 +321,15 @@ if (this.tripsReady) {
   _showTripOnMap(trip) {
     if (!this.mapReady) return;
 
-    if (trip.origen_lat && trip.destino_lat) {
+    const hasOrigin =
+      typeof trip.origen_lat === 'number' &&
+      typeof trip.origen_lng === 'number';
+
+    const hasDestination =
+      typeof trip.destino_lat === 'number' &&
+      typeof trip.destino_lng === 'number';
+
+    if (hasOrigin && hasDestination) {
       try {
         mapService.showTripRoute(
           { lat: trip.origen_lat, lng: trip.origen_lng },
