@@ -15,17 +15,20 @@ class UIController {
 
   init() {
     // Cachear elementos DOM frecuentes
-    this.elements = {
-      toast: document.getElementById('toast'),
-      tripPanel: document.getElementById('tripPanel'),
-      panelContent: document.getElementById('panelContent'),
-      incomingModal: document.getElementById('incomingModal'),
-      navPanel: document.getElementById('navPanel'),
-      statsPendientes: document.getElementById('statPendientes'),
-      statsHoy: document.getElementById('statHoy'),
-      driverName: document.getElementById('driverName')
-    };
-
+this.elements = {
+  toast: document.getElementById('toast'),
+  tripPanel: document.getElementById('tripPanel'),
+  panelContent: document.getElementById('panelContent'),
+  tripList: document.getElementById('tripList'),
+  incomingModal: document.getElementById('incomingModal'),
+  navPanel: document.getElementById('navPanel'),
+  statsPendientes: document.getElementById('statPendientes'),
+  statsHoy: document.getElementById('statHoy'),
+  driverName: document.getElementById('driverName'),
+  btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
+  btnRejectIncoming: document.getElementById('btnRejectIncoming')
+};
+    
     // Cargar nombre del chofer
     const driverData = JSON.parse(localStorage.getItem('choferData') || '{}');
     if (driverData.nombre && this.elements.driverName) {
