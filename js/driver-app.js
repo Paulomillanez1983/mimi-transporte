@@ -231,4 +231,4 @@ class DriverApp {
 }
 
 // Inicializar cuando DOM esté listo
-document.export default DriverApp;
+export default DriverApp;
