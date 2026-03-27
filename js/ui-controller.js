@@ -243,110 +243,114 @@ class UIController {
   // =========================================
   // VIAJE ACTIVO
   // =========================================
-  renderActiveTrip(trip) {
-    const container = this.elements.tripList;
-    const panel = this.elements.tripPanel;
+renderActiveTrip(trip) {
+  const container = this.elements.tripList;
+  const panel = this.elements.tripPanel;
 
-    if (!container || !panel || !trip) return;
+  if (!container || !panel || !trip) return;
 
-    this._stopTripListCountdown();
-    panel.classList.add('has-trip');
+  this._stopTripListCountdown();
 
-    const estado = this._normalizeState(trip.estado);
-    const isEnCurso = estado === 'EN_CURSO';
-    const servicioLabel = trip.servicio || trip.tipo || 'Standard';
+  panel.classList.add('has-trip');
 
-    container.innerHTML = `
-      <div class="trip-card-uber">
-        <div class="trip-status-bar">
-          <div class="status-indicator ${estado.toLowerCase()}"></div>
-          <span style="font-weight: 700; text-transform: uppercase; font-size: 13px;">
-            ${this._escapeHtml(estado.replaceAll('_', ' '))}
-          </span>
-          <span style="margin-left: auto; color: var(--text-secondary); font-size: 13px;">
-            ${this._formatTime(trip.fecha_hora || trip.fecha || trip.created_at)}
-          </span>
-        </div>
+  const estado = this._normalizeState(trip.estado);
+  const isEnCurso = estado === 'EN_CURSO';
+  const servicioLabel = this._formatServiceLabel(trip.servicio || trip.tipo || 'Standard');
+  const clienteNombre = this._escapeHtml(trip.cliente || 'Pasajero');
+  const clienteInicial = this._escapeHtml((trip.cliente || '?')[0]);
 
-        <div class="client-bar">
-          <div class="client-avatar">${this._escapeHtml((trip.cliente || '?')[0])}</div>
-          <div class="client-details">
-            <h4>${this._escapeHtml(trip.cliente || 'Sin nombre')}</h4>
-            <p>📱 ${this._escapeHtml(trip.telefono || 'Sin teléfono')}</p>
-          </div>
-        </div>
+  container.innerHTML = `
+    <div class="trip-card-uber">
+      <div class="trip-status-bar">
+        <div class="status-indicator ${estado.toLowerCase()}"></div>
+        <span style="font-weight: 900; text-transform: uppercase; font-size: 13px;">
+          ${this._escapeHtml(estado.replaceAll('_', ' '))}
+        </span>
+        <span style="margin-left: auto; color: var(--text-secondary); font-size: 13px;">
+          ${this._formatTime(trip.fecha_hora || trip.fecha || trip.created_at)}
+        </span>
+      </div>
 
-        <div class="route-visual">
-          <div class="route-dots">
-            <div class="dot pickup"></div>
-            <div class="line"></div>
-            <div class="dot dropoff"></div>
-          </div>
-          <div class="route-info">
-            <div class="route-stop">
-              <h4>${isEnCurso ? 'Punto de recogida' : 'Origen'}</h4>
-              <p>${this._escapeHtml(trip.origen || 'Sin origen')}</p>
-            </div>
-            <div class="route-stop">
-              <h4>Destino</h4>
-              <p>${this._escapeHtml(trip.destino || 'Sin destino')}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="trip-metrics">
-          <div class="metric">
-            <div class="metric-value">$${Number(trip.precio || 0).toLocaleString('es-AR')}</div>
-            <div class="metric-label">Precio</div>
-          </div>
-          <div class="metric">
-            <div class="metric-value">${Number(trip.km || 0).toFixed(1)} km</div>
-            <div class="metric-label">Distancia</div>
-          </div>
-          <div class="metric">
-            <div class="metric-value">${this._escapeHtml(servicioLabel)}</div>
-            <div class="metric-label">Servicio</div>
-          </div>
-        </div>
-
-        ${trip.notas ? `
-          <p class="trip-notes">📝 ${this._escapeHtml(trip.notas)}</p>
-        ` : ''}
-
-        <div class="action-buttons">
-          ${isEnCurso ? `
-            <button class="btn btn-ghost" data-action="whatsapp" data-trip-id="${this._escapeHtml(trip.id || '')}">
-              WhatsApp
-            </button>
-            <button class="btn btn-primary" data-action="finish" data-trip-id="${this._escapeHtml(trip.id || '')}">
-              Finalizar
-            </button>
-          ` : `
-            <button class="btn btn-danger" data-action="cancel" data-trip-id="${this._escapeHtml(trip.id || '')}">
-              Cancelar
-            </button>
-            <button class="btn btn-primary" data-action="start" data-trip-id="${this._escapeHtml(trip.id || '')}">
-              Iniciar viaje
-            </button>
-          `}
+      <div class="client-bar">
+        <div class="client-avatar">${clienteInicial}</div>
+        <div class="client-details">
+          <h4>${clienteNombre}</h4>
+          <p>📱 ${this._escapeHtml(trip.telefono || 'Sin teléfono')}</p>
         </div>
       </div>
-    `;
 
-    if (this.elements.panelSubtitle) {
-      this.elements.panelSubtitle.textContent = 'Viaje activo';
-    }
+      <div class="route-visual">
+        <div class="route-dots">
+          <div class="dot pickup"></div>
+          <div class="line"></div>
+          <div class="dot dropoff"></div>
+        </div>
+        <div class="route-info">
+          <div class="route-stop">
+            <h4>${isEnCurso ? 'Punto de recogida' : 'Origen'}</h4>
+            <p>${this._escapeHtml(trip.origen || 'Sin origen')}</p>
+          </div>
+          <div class="route-stop">
+            <h4>Destino</h4>
+            <p>${this._escapeHtml(trip.destino || 'Sin destino')}</p>
+          </div>
+        </div>
+      </div>
 
-    if (this.elements.tripCountBadge) {
-      this.elements.tripCountBadge.textContent = '1';
-    }
+      <div class="trip-metrics">
+        <div class="metric">
+          <div class="metric-value">$${Number(trip.precio || 0).toLocaleString('es-AR')}</div>
+          <div class="metric-label">Ganancia</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">${Number(trip.km || 0).toFixed(1)} km</div>
+          <div class="metric-label">Distancia</div>
+        </div>
+        <div class="metric">
+          <div class="metric-value">${this._escapeHtml(servicioLabel)}</div>
+          <div class="metric-label">Servicio</div>
+        </div>
+      </div>
 
-    if (this.elements.navPanel) {
-      this.elements.navPanel.classList.add('active');
-      this._updateNavigation(trip);
-    }
+      ${trip.notas ? `
+        <p class="trip-notes">📝 ${this._escapeHtml(trip.notas)}</p>
+      ` : ''}
+
+      <div class="action-buttons">
+        ${isEnCurso ? `
+          <button class="btn btn-whatsapp" data-action="whatsapp" data-trip-id="${this._escapeHtml(trip.id || '')}">
+            WhatsApp
+          </button>
+          <button class="btn btn-primary" data-action="finish" data-trip-id="${this._escapeHtml(trip.id || '')}">
+            Finalizar viaje
+          </button>
+        ` : `
+          <button class="btn btn-secondary" data-action="cancel" data-trip-id="${this._escapeHtml(trip.id || '')}">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" data-action="start" data-trip-id="${this._escapeHtml(trip.id || '')}">
+            Iniciar viaje
+          </button>
+        `}
+      </div>
+    </div>
+  `;
+
+  if (this.elements.panelSubtitle) {
+    this.elements.panelSubtitle.textContent = isEnCurso
+      ? 'Viaje en curso'
+      : 'Viaje aceptado';
   }
 
+  if (this.elements.tripCountBadge) {
+    this.elements.tripCountBadge.textContent = '1';
+  }
+
+  if (this.elements.navPanel) {
+    this.elements.navPanel.classList.add('active');
+    this._updateNavigation(trip);
+  }
+}
   // =========================================
   // MODAL VIAJE ENTRANTE
   // =========================================
