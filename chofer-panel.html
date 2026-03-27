@@ -2,44 +2,41 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="format-detection" content="telephone=no" />
   <meta name="theme-color" content="#000000" />
   
-  <title>Panel de Chofer - MIMI</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
+  <title>MIMI Driver - Panel</title>
   
-  <link rel="icon" href="/mimi-transporte/favicon.ico" />
-  
-  <!-- CSS -->
   <link rel="stylesheet" href="/mimi-transporte/css/driver.css" />
   
   <!-- MapLibre -->
-  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" crossorigin="anonymous" />
-  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js" crossorigin="anonymous"></script>
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   
   <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
-  <!-- Mapa -->
+  <!-- MAPA - Siempre visible, ocupa toda la pantalla -->
   <div id="mainMap"></div>
   
-  <!-- Capa UI -->
+  <!-- UI FLOTANTE -->
   <div class="ui-layer">
+    
     <!-- Header -->
     <header class="header-float">
       <div class="driver-mini">
         <div class="driver-mini-avatar">🚐</div>
         <div class="driver-mini-info">
-          <h3 id="driverName">Cargando...</h3>
+          <h3 id="driverName">Conductor</h3>
           <p id="estadoChofer">Iniciando...</p>
         </div>
       </div>
-      <button class="btn-icon" onclick="logout()" aria-label="Cerrar sesión">🚪</button>
+      <button class="btn-icon" onclick="logout()" title="Salir">🚪</button>
     </header>
     
     <!-- Stats -->
@@ -54,45 +51,37 @@
       </div>
     </div>
     
-    <!-- Panel de Navegación Principal (estilo Google Maps) -->
+    <!-- Barra de Navegación (estilo Google Maps) -->
     <div id="navPanel" class="nav-panel">
-      <div class="nav-main">
-        <div class="nav-arrow" id="navArrow">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/>
-          </svg>
-        </div>
-        <div class="nav-info">
-          <div class="nav-street" id="navStreet">Esperando...</div>
-          <div class="nav-next" id="navNext">Inicia un viaje para navegar</div>
-        </div>
-        <div class="nav-distance" id="navDistance">--</div>
+      <div class="nav-arrow">↑</div>
+      <div class="nav-info">
+        <div class="nav-street" id="navStreet">Esperando...</div>
+        <div class="nav-next" id="navNext">Inicia un viaje para navegar</div>
       </div>
+      <div class="nav-distance" id="navDistance">--</div>
     </div>
     
-    <!-- Barra de instrucción siguiente -->
-    <div id="navInstructionBar" class="nav-instruction-bar">
-      <div class="nav-instruction-icon" id="navInstructionIcon">↱</div>
-      <div class="nav-instruction-text" id="navInstructionText">Continúa recto</div>
-    </div>
-    
-    <!-- Panel de llegada -->
+    <!-- Panel de Llegada -->
     <div id="arrivalPanel" class="arrival-panel">
       <h3>🏁 Has llegado</h3>
-      <p id="arrivalText">Destino alcanzado</p>
+      <p id="arrivalText">¿Deseas finalizar el viaje?</p>
       <div class="arrival-actions">
-        <button class="btn btn-secondary" id="btnContinueNav">Continuar</button>
-        <button class="btn btn-success" id="btnFinishTrip">Finalizar</button>
+        <button class="btn btn-secondary" onclick="uiController.hideArrivalPanel()">
+          Continuar
+        </button>
+        <button class="btn btn-success" id="btnFinishTrip">
+          Finalizar Viaje
+        </button>
       </div>
     </div>
     
-    <!-- Panel de Viajes -->
+    <!-- Panel Inferior (Uber-style) -->
     <div class="trip-panel" id="tripPanel">
       <div class="panel-handle" id="panelHandle">
         <div class="panel-grabber"></div>
         <div class="panel-title-row">
           <div>
-            <h3 id="panelTitle">Solicitudes</h3>
+            <h3>Solicitudes</h3>
             <p id="panelSubtitle">Esperando solicitudes...</p>
           </div>
           <div id="tripCountBadge" class="trip-count-badge">0</div>
@@ -100,63 +89,64 @@
       </div>
       
       <div class="panel-content" id="panelContent">
-        <button class="btn btn-primary btn-disponibilidad" id="btnToggleDisponibilidad">
-          <span>🟢</span> Conectarse
+        <button class="btn btn-primary" id="btnToggleDisponibilidad" style="width:100%; margin-bottom:16px;">
+          🟢 Conectarse
         </button>
         
-        <div id="tripList" class="trip-list"></div>
+        <div id="tripList" class="trip-list">
+          <div class="empty-state">
+            <div class="pulse-indicator"></div>
+            <p>Buscando viajes cercanos...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal de Viaje Entrante (flotante, no bloquea mapa) -->
+    <div id="incomingModal" class="incoming-modal">
+      <div class="incoming-header">
+        <div>
+          <h3>🚗 Nueva solicitud</h3>
+          <p style="color:#888; font-size:13px;">Desliza hacia arriba para ver detalles</p>
+        </div>
+        <div class="countdown-box">
+          <span id="countdownText">30</span>s
+        </div>
+      </div>
+      
+      <div class="countdown-bar-wrap">
+        <div id="countdownProgress" class="countdown-bar"></div>
+      </div>
+      
+      <div id="incomingDetails"></div>
+      
+      <div class="incoming-actions">
+        <button id="btnRejectIncoming" class="btn btn-secondary">
+          ✕ Rechazar
+        </button>
+        <button id="btnAcceptIncoming" class="btn btn-success">
+          ✓ Aceptar
+        </button>
       </div>
     </div>
     
     <!-- Toast -->
     <div id="toast" class="toast"></div>
     
-    <!-- Modal de Viaje Entrante -->
-    <div id="incomingModal" class="incoming-modal">
-      <div class="incoming-modal-card">
-        <div class="incoming-header">
-          <div>
-            <h3>🚗 Nueva solicitud</h3>
-            <p class="incoming-subtitle">Toca aceptar para tomar el viaje</p>
-          </div>
-          <div class="countdown-box">
-            <span id="countdownText">30</span>s
-          </div>
-        </div>
-        
-        <div class="countdown-bar-wrap">
-          <div id="countdownProgress" class="countdown-bar"></div>
-        </div>
-        
-        <div id="incomingDetails"></div>
-        
-        <div class="incoming-actions">
-          <button id="btnRejectIncoming" class="btn btn-secondary">
-            <span>✕</span> Rechazar
-          </button>
-          <button id="btnAcceptIncoming" class="btn btn-success">
-            <span>✓</span> Aceptar
-          </button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Loading Global -->
+    <!-- Loading -->
     <div id="globalLoading" class="global-loading">
       <div class="loading-spinner"></div>
       <span class="loading-text">Procesando...</span>
     </div>
+    
   </div>
-  
-  <!-- Scripts -->
+
   <script type="module">
     import DriverApp from '/mimi-transporte/js/driver-app.js';
     import supabaseService from '/mimi-transporte/js/supabase-client.js';
     
-    // Exponer logout globalmente
     window.logout = () => supabaseService.logout();
     
-    // Inicializar app
     const app = new DriverApp();
     app.init();
   </script>
