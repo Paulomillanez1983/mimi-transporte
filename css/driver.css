@@ -66,6 +66,9 @@ body {
 .ui-layer {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: calc(var(--app-vh, 1vh) * 100);
   z-index: 10;
   pointer-events: auto;
 }
@@ -73,6 +76,7 @@ body {
 .ui-layer > * {
   pointer-events: auto;
 }
+
 /* HEADER */
 .header-float {
   position: absolute;
@@ -524,11 +528,10 @@ body {
   display: none;
   align-items: flex-start;
   justify-content: center;
-  padding: calc(110px + var(--sat)) 16px calc(16px + var(--sab));
-  background: rgba(0,0,0,0.35);
+  padding: calc(110px + var(--sat)) 16px 16px;
+  background: rgba(0,0,0,0.28);
   pointer-events: none;
 }
-
 .incoming-modal.active {
   display: flex;
   pointer-events: auto;
