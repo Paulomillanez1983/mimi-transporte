@@ -49,42 +49,82 @@ class UIController {
 
     // Delegación de eventos para botones dinámicos (solo una vez)
     if (!this._documentClickBound) {
-      document.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-action]');
-        if (btn) {
-          const action = btn.dataset.action;
-          const tripId = btn.dataset.tripId;
-          this._handleAction(action, tripId, btn);
-        }
-      });
-      this._documentClickBound = true;
-    }
+if (!this._documentClickBound) {
+  const delegatedHandler = (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
 
-    // Botones fijos del modal entrante
-    if (this.elements.btnAcceptIncoming) {
-      this.elements.btnAcceptIncoming.onclick = () => {
-        if (this._modalCallbacks?.onAccept) {
-          this._setIncomingButtonsLoading(true);
-          this._modalCallbacks.onAccept();
-        }
-      };
-    }
+    e.preventDefault();
+    e.stopPropagation();
 
-    if (this.elements.btnRejectIncoming) {
-      this.elements.btnRejectIncoming.onclick = () => {
-        if (this._modalCallbacks?.onReject) {
-          this._setIncomingButtonsLoading(true);
-          this._modalCallbacks.onReject();
-        }
-      };
-    }
+    const action = btn.dataset.action;
+    const tripId = btn.dataset.tripId;
+    this._handleAction(action, tripId, btn);
+  };
 
-    if (this.elements.panelHandle) {
-      this.elements.panelHandle.addEventListener('click', () => {
-        this.togglePanel();
-      });
-    }
+  document.addEventListener('click', delegatedHandler);
+  document.addEventListener('touchend', delegatedHandler, { passive: false });
 
+  this._documentClickBound = true;
+}
+      // Botones fijos del modal entrante
+if (this.elements.btnAcceptIncoming) {
+  const handleAccept = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (this._modalCallbacks?.onAccept) {
+      this._setIncomingButtonsLoading(true);
+      this._modalCallbacks.onAccept();
+    }
+  };
+
+  this.elements.btnAcceptIncoming.addEventListener('click', handleAccept);
+  this.elements.btnAcceptIncoming.addEventListener('touchend', handleAccept, { passive: false });
+}
+
+if (this.elements.btnRejectIncoming) {
+  const handleReject = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (this._modalCallbacks?.onReject) {
+      this._setIncomingButtonsLoading(true);
+      this._modalCallbacks.onReject();
+    }
+  };
+
+  this.elements.btnRejectIncoming.addEventListener('click', handleReject);
+  this.elements.btnRejectIncoming.addEventListener('touchend', handleReject, { passive: false });
+}
+if (this.elements.panelHandle) {
+  let touchMoved = false;
+  let startY = 0;
+
+  this.elements.panelHandle.addEventListener('touchstart', (e) => {
+    touchMoved = false;
+    startY = e.touches?.[0]?.clientY || 0;
+  }, { passive: true });
+
+  this.elements.panelHandle.addEventListener('touchmove', (e) => {
+    const currentY = e.touches?.[0]?.clientY || 0;
+    if (Math.abs(currentY - startY) > 8) {
+      touchMoved = true;
+    }
+  }, { passive: true });
+
+  this.elements.panelHandle.addEventListener('touchend', (e) => {
+    if (!touchMoved) {
+      e.preventDefault();
+      this.togglePanel();
+    }
+  }, { passive: false });
+
+  this.elements.panelHandle.addEventListener('click', (e) => {
+    e.preventDefault();
+    this.togglePanel();
+  });
+}
     return this;
   }
 
