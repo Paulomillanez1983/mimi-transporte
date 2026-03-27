@@ -16,24 +16,10 @@ class UIController {
     this._modalCallbacks = null;
     this._documentClickBound = false;
     this._tripListCountdownInterval = null;
-    this._panelHandleBound = false;
+    this._panelTouchState = null;
   }
 
-  // =========================================
-  // INIT
-  // =========================================
   init() {
-    this._cacheElements();
-    this._loadDriverName();
-    this._bindDelegatedActions();
-    this._bindIncomingButtons();
-    this._bindPanelHandle();
-    this._setupViewportFix();
-
-    return this;
-  }
-
-  _cacheElements() {
     this.elements = {
       toast: document.getElementById('toast'),
       tripPanel: document.getElementById('tripPanel'),
@@ -47,61 +33,39 @@ class UIController {
       driverStatus: document.getElementById('estadoChofer'),
       panelHandle: document.getElementById('panelHandle'),
       panelSubtitle: document.getElementById('panelSubtitle'),
+      panelTitle: document.getElementById('panelTitle'),
       tripCountBadge: document.getElementById('tripCountBadge'),
       btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
-      btnRejectIncoming: document.getElementById('btnRejectIncoming')
+      btnRejectIncoming: document.getElementById('btnRejectIncoming'),
+      btnToggleDisponibilidad: document.getElementById('btnToggleDisponibilidad')
     };
-  }
 
-  _loadDriverName() {
     try {
       const driverData = JSON.parse(localStorage.getItem('choferData') || '{}');
-
-      if (driverData?.nombre && this.elements.driverName) {
+      if (driverData.nombre && this.elements.driverName) {
         this.elements.driverName.textContent = driverData.nombre;
       }
     } catch (e) {
       console.warn('No se pudo cargar choferData:', e);
     }
-  }
 
-  _setupViewportFix() {
-    const setAppHeight = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--app-vh', `${vh}px`);
-    };
+    if (!this._documentClickBound) {
+      const delegatedHandler = (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn || btn.disabled) return;
 
-    setAppHeight();
-    window.addEventListener('resize', setAppHeight);
-    window.addEventListener('orientationchange', setAppHeight);
-  }
+        e.preventDefault();
+        e.stopPropagation();
 
-  // =========================================
-  // EVENTOS GLOBALES
-  // =========================================
-  _bindDelegatedActions() {
-    if (this._documentClickBound) return;
+        const action = btn.dataset.action;
+        const tripId = btn.dataset.tripId;
+        this._handleAction(action, tripId, btn);
+      };
 
-    const delegatedHandler = (e) => {
-      const btn = e.target.closest('[data-action]');
-      if (!btn) return;
-      if (btn.disabled) return;
+      document.addEventListener('click', delegatedHandler, { passive: false });
+      this._documentClickBound = true;
+    }
 
-      e.preventDefault();
-      e.stopPropagation();
-
-      const action = btn.dataset.action;
-      const tripId = btn.dataset.tripId || null;
-
-      this._handleAction(action, tripId, btn);
-    };
-
-    document.addEventListener('click', delegatedHandler, { passive: false });
-
-    this._documentClickBound = true;
-  }
-
-  _bindIncomingButtons() {
     if (this.elements.btnAcceptIncoming) {
       this.elements.btnAcceptIncoming.addEventListener('click', (e) => {
         e.preventDefault();
@@ -125,11 +89,15 @@ class UIController {
         }
       }, { passive: false });
     }
+
+    if (this.elements.panelHandle) {
+      this._bindPanelHandle();
+    }
+
+    return this;
   }
 
   _bindPanelHandle() {
-    if (this._panelHandleBound) return;
-
     const handle = this.elements.panelHandle;
     if (!handle) return;
 
@@ -159,8 +127,6 @@ class UIController {
       e.preventDefault();
       this.togglePanel();
     }, { passive: false });
-
-    this._panelHandleBound = true;
   }
 
   _handleAction(action, tripId, btn) {
@@ -173,9 +139,26 @@ class UIController {
     document.dispatchEvent(event);
   }
 
-  // =========================================
-  // TOASTS
-  // =========================================
+  isIncomingModalOpen() {
+    return this.currentModal === 'incoming' &&
+      this.elements.incomingModal?.classList.contains('active');
+  }
+
+  _setIncomingButtonsLoading(isLoading) {
+    const acceptBtn = this.elements.btnAcceptIncoming;
+    const rejectBtn = this.elements.btnRejectIncoming;
+
+    if (acceptBtn) {
+      acceptBtn.disabled = !!isLoading;
+      acceptBtn.textContent = isLoading ? 'Procesando...' : 'Aceptar';
+    }
+
+    if (rejectBtn) {
+      rejectBtn.disabled = !!isLoading;
+      rejectBtn.textContent = isLoading ? 'Procesando...' : 'Rechazar';
+    }
+  }
+
   showToast(message, type = 'info', duration = 3000) {
     const toast = this.elements.toast;
     if (!toast) return;
@@ -192,9 +175,6 @@ class UIController {
     }, duration);
   }
 
-  // =========================================
-  // STATS
-  // =========================================
   updateStats(stats = {}) {
     if (this.elements.statsPendientes) {
       this.elements.statsPendientes.textContent = String(stats.pending ?? 0);
@@ -205,19 +185,6 @@ class UIController {
     }
   }
 
-  // =========================================
-  // DISPONIBILIDAD / ESTADO CHOFER
-  // =========================================
-  updateDriverStatus(isOnline = false, customText = null) {
-    if (!this.elements.driverStatus) return;
-
-    this.elements.driverStatus.textContent = customText || (isOnline ? 'Online' : 'Offline');
-    this.elements.driverStatus.style.color = isOnline ? 'var(--success)' : 'var(--text-secondary)';
-  }
-
-  // =========================================
-  // VIAJES DISPONIBLES
-  // =========================================
   renderAvailableTrips(trips) {
     const container = this.elements.tripList;
     const panel = this.elements.tripPanel;
@@ -235,6 +202,10 @@ class UIController {
 
     if (this.elements.tripCountBadge) {
       this.elements.tripCountBadge.textContent = String(safeTrips.length);
+    }
+
+    if (this.elements.panelTitle) {
+      this.elements.panelTitle.textContent = 'Solicitudes';
     }
 
     if (this.elements.panelSubtitle) {
@@ -258,7 +229,7 @@ class UIController {
       return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
     });
 
-    container.innerHTML = orderedTrips.map((trip) => this._createTripCardHTML(trip)).join('');
+    container.innerHTML = orderedTrips.map(t => this._createTripCardHTML(t)).join('');
 
     if (panel) {
       panel.classList.add('expanded');
@@ -267,9 +238,6 @@ class UIController {
     this._startTripListCountdown();
   }
 
-  // =========================================
-  // VIAJE ACTIVO
-  // =========================================
   renderActiveTrip(trip) {
     const container = this.elements.tripList;
     const panel = this.elements.tripPanel;
@@ -286,13 +254,13 @@ class UIController {
     const clienteInicial = this._escapeHtml((trip.cliente || '?')[0]);
 
     container.innerHTML = `
-      <div class="trip-card-uber trip-card-active">
+      <div class="trip-card-uber">
         <div class="trip-status-bar">
           <div class="status-indicator ${estado.toLowerCase()}"></div>
-          <span class="trip-status-text">
+          <span style="font-weight: 900; text-transform: uppercase; font-size: 13px;">
             ${this._escapeHtml(estado.replaceAll('_', ' '))}
           </span>
-          <span class="trip-status-time">
+          <span style="margin-left: auto; color: var(--text-secondary); font-size: 13px;">
             ${this._formatTime(trip.fecha_hora || trip.fecha || trip.created_at)}
           </span>
         </div>
@@ -311,13 +279,11 @@ class UIController {
             <div class="line"></div>
             <div class="dot dropoff"></div>
           </div>
-
           <div class="route-info">
             <div class="route-stop">
               <h4>${isEnCurso ? 'Punto de recogida' : 'Origen'}</h4>
               <p>${this._escapeHtml(trip.origen || 'Sin origen')}</p>
             </div>
-
             <div class="route-stop">
               <h4>Destino</h4>
               <p>${this._escapeHtml(trip.destino || 'Sin destino')}</p>
@@ -330,12 +296,10 @@ class UIController {
             <div class="metric-value">$${Number(trip.precio || 0).toLocaleString('es-AR')}</div>
             <div class="metric-label">Ganancia</div>
           </div>
-
           <div class="metric">
             <div class="metric-value">${Number(trip.km || 0).toFixed(1)} km</div>
             <div class="metric-label">Distancia</div>
           </div>
-
           <div class="metric">
             <div class="metric-value">${this._escapeHtml(servicioLabel)}</div>
             <div class="metric-label">Servicio</div>
@@ -366,6 +330,10 @@ class UIController {
       </div>
     `;
 
+    if (this.elements.panelTitle) {
+      this.elements.panelTitle.textContent = 'Viaje activo';
+    }
+
     if (this.elements.panelSubtitle) {
       this.elements.panelSubtitle.textContent = isEnCurso
         ? 'Viaje en curso'
@@ -382,9 +350,6 @@ class UIController {
     }
   }
 
-  // =========================================
-  // MODAL VIAJE ENTRANTE
-  // =========================================
   showIncomingModal(trip, onAccept, onReject) {
     this.currentModal = 'incoming';
 
@@ -415,13 +380,11 @@ class UIController {
           <div class="line"></div>
           <div class="dot dropoff"></div>
         </div>
-
         <div class="route-info">
           <div class="route-stop">
             <h4>Origen</h4>
             <p>${this._escapeHtml(trip.origen || 'Sin origen')}</p>
           </div>
-
           <div class="route-stop">
             <h4>Destino</h4>
             <p>${this._escapeHtml(trip.destino || 'Sin destino')}</p>
@@ -432,14 +395,12 @@ class UIController {
       <div class="incoming-metrics">
         <div class="metric">
           <div class="metric-value">$${Number(trip.precio || 0).toLocaleString('es-AR')}</div>
-          <div class="metric-label">Ganancia</div>
+          <div class="metric-label">Precio</div>
         </div>
-
         <div class="metric">
           <div class="metric-value">${Number(trip.km || 0).toFixed(1)} km</div>
           <div class="metric-label">Distancia</div>
         </div>
-
         <div class="metric">
           <div class="metric-value">${this._escapeHtml(servicioLabel)}</div>
           <div class="metric-label">Servicio</div>
@@ -457,7 +418,6 @@ class UIController {
     }
 
     const realSeconds = this._getOfferSecondsLeft(trip);
-
     this._startCountdown(
       realSeconds > 0
         ? realSeconds
@@ -475,26 +435,6 @@ class UIController {
     this._setIncomingButtonsLoading(false);
     this.currentModal = null;
     this._modalCallbacks = null;
-  }
-
-  isIncomingModalOpen() {
-    return this.currentModal === 'incoming' &&
-      this.elements.incomingModal?.classList.contains('active');
-  }
-
-  _setIncomingButtonsLoading(isLoading) {
-    const acceptBtn = this.elements.btnAcceptIncoming;
-    const rejectBtn = this.elements.btnRejectIncoming;
-
-    if (acceptBtn) {
-      acceptBtn.disabled = !!isLoading;
-      acceptBtn.style.opacity = isLoading ? '0.7' : '1';
-    }
-
-    if (rejectBtn) {
-      rejectBtn.disabled = !!isLoading;
-      rejectBtn.style.opacity = isLoading ? '0.7' : '1';
-    }
   }
 
   _startCountdown(seconds) {
@@ -553,26 +493,19 @@ class UIController {
     }
   }
 
-  // =========================================
-  // COUNTDOWN LISTA VIAJES
-  // =========================================
   _startTripListCountdown() {
     this._stopTripListCountdown();
 
     this._tripListCountdownInterval = setInterval(() => {
       const cards = document.querySelectorAll('.trip-card-mini[data-trip-id], .trip-card-premium[data-trip-id]');
 
-      cards.forEach((card) => {
+      cards.forEach(card => {
         const countdown = card.querySelector('.countdown-badge');
         const expiresAt = card.getAttribute('data-expires-at');
 
         if (!countdown || !expiresAt) return;
 
-        const rest = Math.max(
-          0,
-          Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
-        );
-
+        const rest = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
         const min = Math.floor(rest / 60);
         const seg = rest % 60;
 
@@ -585,7 +518,7 @@ class UIController {
         }
 
         if (rest <= 0) {
-          card.style.opacity = '0.55';
+          card.style.opacity = '0.5';
         }
       });
     }, 1000);
@@ -598,9 +531,6 @@ class UIController {
     }
   }
 
-  // =========================================
-  // NAVEGACIÓN
-  // =========================================
   _updateNavigation(trip) {
     const navStreet = document.getElementById('navStreet');
     const navDistance = document.getElementById('navDistance');
@@ -664,9 +594,6 @@ class UIController {
     }
   }
 
-  // =========================================
-  // PANEL
-  // =========================================
   togglePanel(forceExpanded = null) {
     const panel = this.elements.tripPanel;
     if (!panel) return;
@@ -679,17 +606,6 @@ class UIController {
     panel.classList.toggle('expanded');
   }
 
-  collapsePanel() {
-    this.togglePanel(false);
-  }
-
-  expandPanel() {
-    this.togglePanel(true);
-  }
-
-  // =========================================
-  // HTML HELPERS
-  // =========================================
   _getEmptyStateHTML() {
     return `
       <div class="empty-illustration">
@@ -705,7 +621,7 @@ class UIController {
     const min = Math.floor(rest / 60);
     const seg = rest % 60;
 
-    const servicio = this._escapeHtml(this._formatServiceLabel(trip.servicio || trip.tipo || 'Viaje'));
+    const servicio = this._formatServiceLabel(trip.servicio || 'Viaje');
     const cliente = this._escapeHtml(trip.cliente || 'Pasajero');
     const origen = this._escapeHtml(trip.origen || 'Sin origen');
     const destino = this._escapeHtml(trip.destino || 'Sin destino');
@@ -719,20 +635,22 @@ class UIController {
         <div class="trip-card-header">
           <div>
             <span class="client-name">${cliente}</span>
-            <div class="trip-service-chip">${servicio}</div>
+            <div class="trip-service-chip">${this._escapeHtml(servicio)}</div>
           </div>
-
           <span class="countdown-badge ${rest <= 15 ? 'urgent' : ''}">
             ⏱️ ${min}:${seg.toString().padStart(2, '0')}
           </span>
         </div>
 
         <div class="trip-route-block">
-          <div class="route-point pickup-point"></div>
-
+          <div class="route-dots">
+            <div class="dot pickup"></div>
+            <div class="line"></div>
+            <div class="dot dropoff"></div>
+          </div>
           <div class="trip-route-text">
-            <div class="trip-route-line"><strong>Origen:</strong> ${origen}</div>
-            <div class="trip-route-line"><strong>Destino:</strong> ${destino}</div>
+            <div class="trip-route-line"><strong>Origen</strong> ${origen}</div>
+            <div class="trip-route-line"><strong>Destino</strong> ${destino}</div>
           </div>
         </div>
 
@@ -741,7 +659,6 @@ class UIController {
             <span class="trip-meta-label">Ganancia</span>
             <span class="trip-meta-value">$${precio}</span>
           </div>
-
           <div class="trip-meta-box">
             <span class="trip-meta-label">Distancia</span>
             <span class="trip-meta-value">${km} km</span>
@@ -752,7 +669,6 @@ class UIController {
           <button class="btn btn-ghost btn-small" data-action="whatsapp" data-trip-id="${tripId}">
             WhatsApp
           </button>
-
           <button class="btn btn-primary btn-small btn-accept-strong" data-action="accept" data-trip-id="${tripId}">
             Aceptar viaje
           </button>
@@ -761,27 +677,20 @@ class UIController {
     `;
   }
 
-  // =========================================
-  // FORMAT / NORMALIZE
-  // =========================================
   _normalizeState(s) {
     return String(s || '').toUpperCase().replace(/[-\s]/g, '_');
   }
 
   _formatServiceLabel(service) {
-    const raw = String(service || 'Standard').trim();
-    if (!raw) return 'Standard';
-
-    return raw
+    return String(service || '')
       .replaceAll('_', ' ')
       .toLowerCase()
-      .replace(/\b\w/g, (l) => l.toUpperCase());
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   _formatTime(dateLike) {
     try {
       if (!dateLike) return '--:--';
-
       return new Date(dateLike).toLocaleTimeString('es-AR', {
         hour: '2-digit',
         minute: '2-digit'
