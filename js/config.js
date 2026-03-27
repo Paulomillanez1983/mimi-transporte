@@ -1,6 +1,5 @@
 /**
  * MIMI Transporte - Configuración Producción
- * Solución CORS-free para routing
  */
 
 const CONFIG = {
@@ -13,20 +12,9 @@ const CONFIG = {
     VIAJE_OFERTAS: 'viaje_ofertas'
   },
 
-  // =========================
-  // ROUTING - Solución CORS-free
-  // =========================
-  
-  // Opción 1: Proxy CORS gratuito (para desarrollo/pruebas)
-  // CORS_PROXY: 'https://corsproxy.io/?',
-  
-  // Opción 2: Usar Valhalla directamente (mejor soporte CORS)
-  ROUTING_PROVIDER: 'valhalla', // 'osrm' | 'valhalla' | 'straight'
-  
+  // Routing - Valhalla (mejor soporte CORS)
+  ROUTING_PROVIDER: 'valhalla',
   VALHALLA_URL: 'https://valhalla.openstreetmap.de/route',
-  
-  // OSRM con fallback (si se hostea propio en el futuro)
-  OSRM_URL: 'https://router.project-osrm.org',
 
   // Mapas
   MAP_STYLE: 'https://tiles.openfreemap.org/styles/liberty',
