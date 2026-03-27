@@ -2,63 +2,72 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Panel de Chofer</title>
+  <title>Panel de Chofer - Mimi</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Estilos -->
-  <link rel="stylesheet" href="css/styles.css">
+  <!-- CSS (FIX ruta relativa) -->
+  <link rel="stylesheet" href="./css/styles.css">
 
-  <!-- Google Maps -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY"></script>
+  <!-- Google Maps (FIX performance + async) -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&callback=initMap">
+  </script>
 </head>
 
 <body>
 
-  <header class="header">
-    <h1>🚐 Panel de Chofer</h1>
-    <button onclick="logout()">Cerrar sesión</button>
-  </header>
+  <!-- MAPA -->
+  <div id="mainMap"></div>
 
-  <main>
+  <!-- CAPA UI -->
+  <div class="ui-layer">
 
-    <!-- INFO CHOFER -->
-    <section id="driverInfo">
-      <h2>Bienvenido</h2>
-      <p id="driverName">Cargando...</p>
-    </section>
+    <!-- HEADER FLOTANTE -->
+    <div class="header-float">
+      <div class="driver-mini">
+        <div class="driver-mini-avatar">🚐</div>
+        <div class="driver-mini-info">
+          <h3 id="driverName">Cargando...</h3>
+          <p id="estadoChofer">Offline</p>
+        </div>
+      </div>
 
-    <!-- ESTADO -->
-    <section>
-      <button id="btnToggleDisponibilidad">
-        Cambiar disponibilidad
-      </button>
-      <p id="estadoChofer">Estado: Desconocido</p>
-    </section>
+      <div class="btn-icon" onclick="logout()">🚪</div>
+    </div>
 
-    <!-- MAPA -->
-    <section>
-      <div id="map" style="height: 300px;"></div>
-    </section>
+    <!-- PANEL INFERIOR -->
+    <div class="trip-panel" id="tripPanel">
 
-    <!-- VIAJES -->
-    <section>
-      <h2>Viajes disponibles</h2>
-      <div id="tripList"></div>
-    </section>
+      <div class="panel-content">
 
-  </main>
+        <button class="btn btn-primary" id="btnToggleDisponibilidad">
+          Cambiar disponibilidad
+        </button>
 
-  <!-- APP PRINCIPAL -->
+        <h3 style="margin-top: 15px;">Viajes disponibles</h3>
+
+        <div id="tripList"></div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- APP -->
   <script type="module">
     import DriverApp from './js/driver-app.js';
 
     const app = new DriverApp();
-    app.init();
 
-    // Logout simple
+    // Google Maps callback (FIX error init)
+    window.initMap = () => {
+      app.init();
+    };
+
+    // Logout
     window.logout = () => {
       localStorage.removeItem('choferData');
-      window.location.href = 'login-chofer.html';
+      window.location.href = './login-chofer.html';
     };
   </script>
 
