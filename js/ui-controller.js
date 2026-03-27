@@ -37,7 +37,8 @@ class UIController {
       tripCountBadge: document.getElementById('tripCountBadge'),
       btnAcceptIncoming: document.getElementById('btnAcceptIncoming'),
       btnRejectIncoming: document.getElementById('btnRejectIncoming'),
-      btnToggleDisponibilidad: document.getElementById('btnToggleDisponibilidad')
+      btnToggleDisponibilidad: document.getElementById('btnToggleDisponibilidad'),
+      statsFloat: document.querySelector('.stats-float')
     };
 
     try {
@@ -193,9 +194,11 @@ class UIController {
 
     if (panel) {
       panel.classList.remove('has-trip');
+      panel.classList.remove('expanded');
     }
 
     this.hideNavigation();
+    this._showStats(true);
     this._stopTripListCountdown();
 
     const safeTrips = Array.isArray(trips) ? trips : [];
@@ -217,11 +220,6 @@ class UIController {
 
     if (safeTrips.length === 0) {
       container.innerHTML = this._getEmptyStateHTML();
-
-      if (panel) {
-        panel.classList.remove('expanded');
-      }
-
       return;
     }
 
@@ -231,9 +229,8 @@ class UIController {
 
     container.innerHTML = orderedTrips.map(t => this._createTripCardHTML(t)).join('');
 
-    if (panel) {
-      panel.classList.add('expanded');
-    }
+    // Lista de ofertas = expandido
+    panel.classList.add('expanded');
 
     this._startTripListCountdown();
   }
@@ -245,7 +242,12 @@ class UIController {
     if (!container || !panel || !trip) return;
 
     this._stopTripListCountdown();
+
+    // viaje activo = mapa protagonista, panel colapsado por defecto
     panel.classList.add('has-trip');
+    panel.classList.remove('expanded');
+
+    this._showStats(false);
 
     const estado = this._normalizeState(trip.estado);
     const isEnCurso = estado === 'EN_CURSO';
@@ -281,7 +283,7 @@ class UIController {
           </div>
           <div class="route-info">
             <div class="route-stop">
-              <h4>${isEnCurso ? 'Punto de recogida' : 'Origen'}</h4>
+              <h4>${isEnCurso ? 'Recogida completada desde' : 'Origen'}</h4>
               <p>${this._escapeHtml(trip.origen || 'Sin origen')}</p>
             </div>
             <div class="route-stop">
@@ -331,13 +333,13 @@ class UIController {
     `;
 
     if (this.elements.panelTitle) {
-      this.elements.panelTitle.textContent = 'Viaje activo';
+      this.elements.panelTitle.textContent = isEnCurso ? 'En viaje' : 'Viaje aceptado';
     }
 
     if (this.elements.panelSubtitle) {
       this.elements.panelSubtitle.textContent = isEnCurso
-        ? 'Viaje en curso'
-        : 'Viaje aceptado';
+        ? 'Seguimiento activo'
+        : 'Listo para iniciar';
     }
 
     if (this.elements.tripCountBadge) {
@@ -594,6 +596,11 @@ class UIController {
     }
   }
 
+  _showStats(show = true) {
+    if (!this.elements.statsFloat) return;
+    this.elements.statsFloat.classList.toggle('hidden', !show);
+  }
+
   togglePanel(forceExpanded = null) {
     const panel = this.elements.tripPanel;
     if (!panel) return;
@@ -621,7 +628,7 @@ class UIController {
     const min = Math.floor(rest / 60);
     const seg = rest % 60;
 
-    const servicio = this._formatServiceLabel(trip.servicio || 'Viaje');
+    const servicio = this._escapeHtml(this._formatServiceLabel(trip.servicio || 'Viaje'));
     const cliente = this._escapeHtml(trip.cliente || 'Pasajero');
     const origen = this._escapeHtml(trip.origen || 'Sin origen');
     const destino = this._escapeHtml(trip.destino || 'Sin destino');
@@ -635,7 +642,7 @@ class UIController {
         <div class="trip-card-header">
           <div>
             <span class="client-name">${cliente}</span>
-            <div class="trip-service-chip">${this._escapeHtml(servicio)}</div>
+            <div class="trip-service-chip">${servicio}</div>
           </div>
           <span class="countdown-badge ${rest <= 15 ? 'urgent' : ''}">
             ⏱️ ${min}:${seg.toString().padStart(2, '0')}
@@ -643,14 +650,10 @@ class UIController {
         </div>
 
         <div class="trip-route-block">
-          <div class="route-dots">
-            <div class="dot pickup"></div>
-            <div class="line"></div>
-            <div class="dot dropoff"></div>
-          </div>
+          <div class="route-point pickup-point"></div>
           <div class="trip-route-text">
-            <div class="trip-route-line"><strong>Origen</strong> ${origen}</div>
-            <div class="trip-route-line"><strong>Destino</strong> ${destino}</div>
+            <div class="trip-route-line"><strong>Origen:</strong> ${origen}</div>
+            <div class="trip-route-line"><strong>Destino:</strong> ${destino}</div>
           </div>
         </div>
 
@@ -681,13 +684,6 @@ class UIController {
     return String(s || '').toUpperCase().replace(/[-\s]/g, '_');
   }
 
-  _formatServiceLabel(service) {
-    return String(service || '')
-      .replaceAll('_', ' ')
-      .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-
   _formatTime(dateLike) {
     try {
       if (!dateLike) return '--:--';
@@ -698,6 +694,13 @@ class UIController {
     } catch {
       return '--:--';
     }
+  }
+
+  _formatServiceLabel(service) {
+    return String(service || '')
+      .replaceAll('_', ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase());
   }
 
   _getOfferSecondsLeft(trip) {
