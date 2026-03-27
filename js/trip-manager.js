@@ -65,25 +65,33 @@ class TripManager {
       if (Array.isArray(activeTrips) && activeTrips.length > 0) {
         this.currentTrip = activeTrips[0];
         this._notify('tripUpdated', this.currentTrip);
+        return;
       }
 
-      // Oferta pendiente más reciente
+      // Oferta pendiente viva
       const pendingOffers = await supabaseService.rest.select('viaje_ofertas', {
         eq: {
           chofer_id: driverId,
           estado: 'PENDIENTE'
         },
-        order: 'offered_at.desc',
-        limit: 1
+        order: 'expires_at.desc',
+        limit: 5
       });
 
-      if (Array.isArray(pendingOffers) && pendingOffers.length > 0 && !this.currentTrip) {
-        const offer = pendingOffers[0];
-        const trip = await this._fetchTripById(offer.viaje_id);
+      const aliveOffer = (pendingOffers || []).find(o => {
+        return o?.expires_at && new Date(o.expires_at).getTime() > Date.now();
+      });
+
+      if (aliveOffer) {
+        const trip = await this._fetchTripById(aliveOffer.viaje_id);
 
         if (trip) {
-          this.pendingOffer = offer;
-          this.pendingTrip = trip;
+          this.pendingOffer = aliveOffer;
+          this.pendingTrip = {
+            ...trip,
+            offer_expires_at: aliveOffer.expires_at,
+            offer_id: aliveOffer.id || null
+          };
           this._notify('newPendingTrip', this.pendingTrip);
         }
       }
@@ -100,7 +108,7 @@ class TripManager {
     if (!driverId) return;
 
     try {
-      const [history, freshPendingOffer] = await Promise.all([
+      const [history, freshPendingOffers] = await Promise.all([
         supabaseService.rest.select('viajes', {
           eq: {
             chofer_id: driverId,
@@ -114,27 +122,40 @@ class TripManager {
             chofer_id: driverId,
             estado: 'PENDIENTE'
           },
-          order: 'offered_at.desc',
-          limit: 1
+          order: 'expires_at.desc',
+          limit: 5
         })
       ]);
 
       this.tripHistory = Array.isArray(history) ? history : [];
       this.tripHistory = this._dedupeById(this.tripHistory);
 
-      if (!this.currentTrip && Array.isArray(freshPendingOffer) && freshPendingOffer.length > 0) {
-        const offer = freshPendingOffer[0];
-        const trip = await this._fetchTripById(offer.viaje_id);
+      const aliveOffer = (freshPendingOffers || []).find(o => {
+        return o?.expires_at && new Date(o.expires_at).getTime() > Date.now();
+      });
+
+      if (!this.currentTrip && aliveOffer) {
+        const trip = await this._fetchTripById(aliveOffer.viaje_id);
 
         if (trip) {
+          const enrichedTrip = {
+            ...trip,
+            offer_expires_at: aliveOffer.expires_at,
+            offer_id: aliveOffer.id || null
+          };
+
           const changedTrip = this.pendingTrip?.id !== trip.id;
-          this.pendingOffer = offer;
-          this.pendingTrip = trip;
+          this.pendingOffer = aliveOffer;
+          this.pendingTrip = enrichedTrip;
 
           if (changedTrip) {
             this._notify('newPendingTrip', this.pendingTrip);
           }
         }
+      } else if (!aliveOffer && this.pendingTrip) {
+        this.pendingTrip = null;
+        this.pendingOffer = null;
+        this._notify('pendingTripCleared', { reason: 'EXPIRED_LOCAL' });
       }
 
       this._notify('tripsRefreshed', {
@@ -332,16 +353,22 @@ class TripManager {
       if (eventType === 'INSERT' || eventType === 'UPDATE') {
         const estado = this._normalizeState(newRecord?.estado);
 
-        if (estado === 'PENDIENTE') {
+        if (estado === 'PENDIENTE' && this._isOfferAlive(newRecord)) {
           const trip = await this._fetchTripById(newRecord.viaje_id);
 
           if (trip && !this.currentTrip) {
+            const enrichedTrip = {
+              ...trip,
+              offer_expires_at: newRecord.expires_at,
+              offer_id: newRecord.id || null
+            };
+
             const isNewTrip = this.pendingTrip?.id !== trip.id;
             this.pendingOffer = newRecord;
-            this.pendingTrip = trip;
+            this.pendingTrip = enrichedTrip;
 
             if (isNewTrip) {
-              this._notify('newPendingTrip', trip);
+              this._notify('newPendingTrip', enrichedTrip);
             }
           }
         }
@@ -517,6 +544,11 @@ class TripManager {
       if (item?.id) map.set(item.id, item);
     }
     return Array.from(map.values());
+  }
+
+  _isOfferAlive(offer) {
+    if (!offer?.expires_at) return false;
+    return new Date(offer.expires_at).getTime() > Date.now();
   }
 
   // =========================================
