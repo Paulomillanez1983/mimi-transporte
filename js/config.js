@@ -21,7 +21,7 @@ const CONFIG = {
   // =========================
   // MAPAS
   // =========================
-  MAP_STYLE: 'https://demotiles.maplibre.org/style.json',
+  MAP_STYLE: 'https://tiles.openfreemap.org/styles/liberty',
   DEFAULT_CENTER: [-64.1888, -31.4201], // Córdoba, Argentina
   DEFAULT_ZOOM: 14,
 
