@@ -17,6 +17,9 @@
   <meta name="twitter:description" content="Panel operativo de choferes MIMI." />
   <meta name="twitter:image" content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" />
   <meta name="theme-color" content="#1a1a2e" />
+  <!-- MAPLIBRE GL JS - Estilo Uber -->
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" />
+<script src="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.js"></script>
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png" />
   
   <!-- Supabase con defer para evitar bloqueo -->
@@ -54,16 +57,15 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
-      background: var(--gris);
-      min-height: 100vh;
-      color: var(--texto);
-    }
+html, body {
+  background: #0a0a0a;           /* Fondo oscuro como Uber */
+  color: #e0e0e0;
+  min-height: 100vh;
+}
 
-    body {
-      padding-bottom: 110px;
-    }
-
+body {
+  padding-bottom: 110px;
+}
     .header {
       background: linear-gradient(135deg, #101827 0%, #172554 100%);
       color: white;
@@ -668,28 +670,38 @@
   </style>
 </head>
 <body>
-<!-- HEADER ESTILO UBER DRIVER -->
-<div class="header" style="background: #0a0a0a; min-height: 180px; padding: 20px 16px 16px; position: relative;">
-  <div style="display: flex; justify-content: space-between; align-items: center;">
-    <!-- Izquierda: Logo + Nombre -->
+<!-- HEADER ESTILO UBER DRIVER (mejorado) -->
+<div style="background: #0a0a0a; padding: 16px 16px 24px; border-bottom: 1px solid #1f1f1f;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <div style="display: flex; align-items: center; gap: 12px;">
-      <div style="width: 48px; height: 48px; background: #1565c0; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; font-weight: bold;">
+      <div style="width: 52px; height: 52px; background: #1565c0; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 28px;">
         🚐
       </div>
       <div>
-        <div style="color: white; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.5px;">MIMI Driver</div>
-        <div style="color: #888; font-size: 0.85rem;">Transporte Escolar</div>
+        <div style="color: white; font-size: 1.45rem; font-weight: 800;">MIMI Driver</div>
+        <div style="color: #888; font-size: 0.9rem;">Transporte Escolar</div>
       </div>
     </div>
-
-    <!-- Derecha: Perfil + Cerrar sesión -->
-    <div style="display: flex; align-items: center; gap: 12px;">
-      <div onclick="cerrarSesion()" style="background: #1f1f1f; color: #ff5252; padding: 10px 16px; border-radius: 999px; font-weight: 700; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-        🚪 Salir
-      </div>
-    </div>
+    
+    <button onclick="cerrarSesion()" style="background: #1f1f1f; color: #ff5252; border: none; padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 0.92rem; cursor: pointer;">
+      🚪 Salir
+    </button>
   </div>
 
+  <!-- Info Chofer -->
+  <div style="background: #1a1a1a; border-radius: 16px; padding: 14px; display: flex; align-items: center; gap: 14px;">
+    <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #1565c0, #42a5f5); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; color: white;">
+      👤
+    </div>
+    <div style="flex: 1;">
+      <div style="color: white; font-weight: 700; font-size: 1.05rem;">Chofer MIMI</div>
+      <div style="color: #4caf50; font-size: 0.9rem;">● Online</div>
+    </div>
+    <div style="text-align: right;">
+      <div style="background: #4caf50; color: white; font-size: 0.8rem; padding: 6px 14px; border-radius: 999px; font-weight: 700;">Activo</div>
+    </div>
+  </div>
+</div>
   <!-- Info del chofer (debajo) -->
   <div style="margin-top: 28px; display: flex; align-items: center; gap: 14px; background: rgba(255,255,255,0.06); padding: 12px 16px; border-radius: 16px;">
     <div style="width: 52px; height: 52px; background: linear-gradient(135deg, #1565c0, #1e88e5); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; font-weight: bold;">
@@ -867,7 +879,48 @@
         return false;
       }
     }
+// ==========================================
+// MAPLIBRE - MAPA ESTILO UBER
+// ==========================================
+let mapasActivos = {}; // para evitar duplicados
 
+function mostrarMapaEnCard(viajeId, origen, destino) {
+  const mapContainerId = `map-${viajeId}`;
+  const container = document.getElementById(mapContainerId);
+  if (!container || !origen || !destino) return;
+
+  // Evitar crear múltiples mapas en la misma card
+  if (mapasActivos[viajeId]) return;
+
+  const map = new maplibregl.Map({
+    container: mapContainerId,
+    style: 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json', // estilo oscuro Uber-like
+    center: [(origen.lng + destino.lng) / 2, (origen.lat + destino.lat) / 2],
+    zoom: 13,
+    attributionControl: false
+  });
+
+  map.on('load', () => {
+    // Pin Origen (verde)
+    new maplibregl.Marker({ color: '#22c55e' })
+      .setLngLat([origen.lng, origen.lat])
+      .addTo(map);
+
+    // Pin Destino (azul)
+    new maplibregl.Marker({ color: '#3b82f6' })
+      .setLngLat([destino.lng, destino.lat])
+      .addTo(map);
+
+    // Ajustar vista
+    const bounds = new maplibregl.LngLatBounds()
+      .extend([origen.lng, origen.lat])
+      .extend([destino.lng, destino.lat]);
+
+    map.fitBounds(bounds, { padding: 60 });
+  });
+
+  mapasActivos[viajeId] = map;
+}
     // ==========================================
     // SISTEMA DE SONIDO
     // ==========================================
@@ -1441,89 +1494,112 @@
       container.innerHTML = viajes.map(v => crearCardViaje(v)).join('');
     }
 
-    function crearCardViaje(v) {
-      const estado = normalizarEstado(v.estado || 'DISPONIBLE');
-      const estadoClass = estado.toLowerCase().replace(/_/g, '-');
-      const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
-      const fechaStr = fecha.toLocaleDateString('es-AR', {
-        weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-      });
-      const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
+function crearCardViaje(v) {
+  const estado = normalizarEstado(v.estado || 'DISPONIBLE');
+  const estadoClass = estado.toLowerCase().replace(/_/g, '-');
+  const fecha = new Date(v.fecha || v.fechaHora || v.created_at || Date.now());
+  const fechaStr = fecha.toLocaleDateString('es-AR', {
+    weekday: 'short', 
+    day: 'numeric', 
+    month: 'short', 
+    hour: '2-digit', 
+    minute: '2-digit'
+  });
+  const inicial = v.cliente ? String(v.cliente).charAt(0).toUpperCase() : '?';
 
-      let acciones = '';
-      let timeoutHtml = '';
+  let acciones = '';
+  let timeoutHtml = '';
+  let mapaHtml = '';
 
-      if (estado === 'DISPONIBLE') {
-        const restante = obtenerTiempoRestante(v);
-        const min = Math.floor(restante / 60);
-        const seg = restante % 60;
-        timeoutHtml = `<div class="countdown-chip">⏳ Disponible por: ${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}</div>`;
-        acciones = `
-          <button class="btn-accion btn-aceptar" onclick="tomarViaje('${escaparHTML(v.id)}')">✓ Aceptar</button>
-          <button class="btn-accion btn-rechazar-card" onclick="rechazarDisponible('${escaparHTML(v.id)}')">✕ Rechazar</button>
-          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Maps</button>
-        `;
-      } else if (estado === 'ACEPTADO') {
-        acciones = `
-          <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'EN_CURSO')">🚀 Iniciar</button>
-          <a href="tel:${escaparHTML(v.telefono || '')}" class="btn-accion btn-llamar">📞 Llamar</a>
-          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ruta</button>
-        `;
-      } else if (estado === 'EN_CURSO') {
-        const telWA = String(v.telefono || '').replace(/[^\d]/g, '');
-        acciones = `
-          <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${escaparHTML(v.id)}')">✅ Finalizar</button>
-          <a href="https://wa.me/${telWA}" target="_blank" rel="noopener noreferrer" class="btn-accion btn-whatsapp">💬 WA</a>
-          <button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Navegar</button>
-        `;
-      } else {
-        acciones = `<button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver ruta</button>`;
-      }
+  // ==================== MAPA INTEGRADO (Estilo Uber) ====================
+  if (v.origen_lat && v.origen_lng && v.destino_lat && v.destino_lng) {
+    mapaHtml = `
+      <div style="margin: 16px 0; height: 210px; border-radius: 18px; overflow: hidden; background: #111; border: 1px solid #222;">
+        <div id="map-${escaparHTML(v.id)}" style="width: 100%; height: 100%;"></div>
+      </div>
+    `;
+  }
 
-      return `
-        <div class="viaje-card ${estadoClass}">
-          <div class="viaje-header">
-            <span class="viaje-fecha">${escaparHTML(fechaStr)}</span>
-            <span class="viaje-estado estado-${estadoClass}">${escaparHTML(estado.replace('_', ' '))}</span>
-          </div>
-          <div class="viaje-cliente">
-            <div class="cliente-avatar">${escaparHTML(inicial)}</div>
-            <div class="cliente-datos">
-              <div class="cliente-nombre">${escaparHTML(v.cliente || 'Sin nombre')}</div>
-              <div class="cliente-tel">📱 ${escaparHTML(v.telefono || 'Sin teléfono')}</div>
-            </div>
-          </div>
-          <div class="viaje-ruta">
-            <div class="ruta-item">
-              <div class="ruta-icon origen">📍</div>
-              <div class="ruta-text">${escaparHTML(v.origen || '')}</div>
-            </div>
-            <div class="ruta-item">
-              <div class="ruta-icon destino">🎯</div>
-              <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
-            </div>
-          </div>
-          <div class="viaje-info">
-            <div class="info-item">
-              <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
-              <div class="info-label">Precio</div>
-            </div>
-            <div class="info-item">
-              <div class="info-valor">${escaparHTML(v.km || 0)}km</div>
-              <div class="info-label">Distancia</div>
-            </div>
-            <div class="info-item">
-              <div class="info-valor">${escaparHTML(v.tipo || 'N/D')}</div>
-              <div class="info-label">Servicio</div>
-            </div>
-          </div>
-          ${timeoutHtml}
-          ${v.notas ? `<div style="font-size:0.86rem;color:#666;margin-bottom:12px;padding:10px 12px;background:#fffde7;border-radius:12px;font-weight:700;">📝 ${escaparHTML(v.notas)}</div>` : ''}
-          <div class="viaje-acciones">${acciones}</div>
+  // ==================== ACCIONES SEGÚN ESTADO ====================
+  if (estado === 'DISPONIBLE') {
+    const restante = obtenerTiempoRestante(v);
+    const min = Math.floor(restante / 60);
+    const seg = restante % 60;
+    timeoutHtml = `<div class="countdown-chip">⏳ Disponible por: ${String(min).padStart(2, '0')}:${String(seg).padStart(2, '0')}</div>`;
+
+    acciones = `
+      <button class="btn-accion btn-aceptar" onclick="tomarViaje('${escaparHTML(v.id)}')">✓ Aceptar</button>
+      <button class="btn-accion btn-rechazar-card" onclick="rechazarDisponible('${escaparHTML(v.id)}')">✕ Rechazar</button>
+    `;
+  } 
+  else if (estado === 'ACEPTADO') {
+    acciones = `
+      <button class="btn-accion btn-iniciar" onclick="cambiarEstado('${escaparHTML(v.id)}', 'EN_CURSO')">🚀 Iniciar viaje</button>
+      <a href="tel:${escaparHTML(v.telefono || '')}" class="btn-accion btn-llamar">📞 Llamar</a>
+    `;
+  } 
+  else if (estado === 'EN_CURSO') {
+    const telWA = String(v.telefono || '').replace(/[^\d]/g, '');
+    acciones = `
+      <button class="btn-accion btn-finalizar" onclick="finalizarViaje('${escaparHTML(v.id)}')">✅ Finalizar viaje</button>
+      <a href="https://wa.me/${telWA}" target="_blank" rel="noopener noreferrer" class="btn-accion btn-whatsapp">💬 WhatsApp</a>
+    `;
+  } 
+  else {
+    acciones = `<button class="btn-accion btn-maps" onclick="abrirMaps('${escaparHTML(v.origen || '')}', '${escaparHTML(v.destino || '')}')">🗺️ Ver en Maps</button>`;
+  }
+
+  return `
+    <div class="viaje-card ${estadoClass}">
+      <div class="viaje-header">
+        <span class="viaje-fecha">${escaparHTML(fechaStr)}</span>
+        <span class="viaje-estado estado-${estadoClass}">${escaparHTML(estado.replace('_', ' '))}</span>
+      </div>
+
+      <div class="viaje-cliente">
+        <div class="cliente-avatar">${escaparHTML(inicial)}</div>
+        <div class="cliente-datos">
+          <div class="cliente-nombre">${escaparHTML(v.cliente || 'Sin nombre')}</div>
+          <div class="cliente-tel">📱 ${escaparHTML(v.telefono || 'Sin teléfono')}</div>
         </div>
-      `;
-    }
+      </div>
 
+      <div class="viaje-ruta">
+        <div class="ruta-item">
+          <div class="ruta-icon origen">📍</div>
+          <div class="ruta-text">${escaparHTML(v.origen || '')}</div>
+        </div>
+        <div class="ruta-item">
+          <div class="ruta-icon destino">🎯</div>
+          <div class="ruta-text">${escaparHTML(v.destino || '')}</div>
+        </div>
+      </div>
+
+      <!-- MAPA INTEGRADO -->
+      ${mapaHtml}
+
+      <div class="viaje-info">
+        <div class="info-item">
+          <div class="info-valor">$${Number(v.precio || 0).toLocaleString('es-AR')}</div>
+          <div class="info-label">Precio</div>
+        </div>
+        <div class="info-item">
+          <div class="info-valor">${escaparHTML(v.km || 0)} km</div>
+          <div class="info-label">Distancia</div>
+        </div>
+        <div class="info-item">
+          <div class="info-valor">${escaparHTML(v.tipo || 'Standard')}</div>
+          <div class="info-label">Servicio</div>
+        </div>
+      </div>
+
+      ${timeoutHtml}
+      ${v.notas ? `<div style="font-size:0.86rem;color:#666;margin:12px 0;padding:12px;background:#1f1f1f;border-radius:12px;">📝 ${escaparHTML(v.notas)}</div>` : ''}
+
+      <div class="viaje-acciones">${acciones}</div>
+    </div>
+  `;
+}
     // ==========================================
     // ACCIONES DE VIAJE
     // ==========================================
