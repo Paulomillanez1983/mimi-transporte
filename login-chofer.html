@@ -287,7 +287,7 @@ async function initAuth() {
       window.history.replaceState({}, document.title, window.location.pathname);
 
       // Redirigir al panel
-      window.location.replace('chofer-panel.html');
+      window.location.replace('/mimi-transporte/chofer-panel.html');
       return;
     }
 
@@ -311,7 +311,7 @@ supabaseClient.auth.onAuthStateChange((event, session) => {
     window.history.replaceState({}, document.title, window.location.pathname);
 
     if (!window.location.pathname.includes('chofer-panel.html')) {
-      window.location.replace('chofer-panel.html');
+      window.location.replace('/mimi-transporte/chofer-panel.html');
     }
   }
 });
