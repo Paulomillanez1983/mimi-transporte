@@ -250,4 +250,219 @@ body {
 @keyframes pulse {
   0%,100% { transform: scale(1); }
   50% { transform: scale(0.95); }
+}/* =========================================
+   PANEL UBER-LIKE
+========================================= */
+.trip-panel {
+  background: rgba(20,20,22,0.96);
+  backdrop-filter: blur(22px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  max-height: calc(82vh - var(--sab));
+  transform: translateY(calc(100% - 110px));
+}
+
+.trip-panel.expanded {
+  transform: translateY(0);
+}
+
+.panel-handle {
+  padding: 14px 20px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.panel-grabber {
+  width: 48px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.20);
+  margin: 0 auto 12px;
+}
+
+.panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.panel-title-row h3 {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.panel-title-row p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.trip-count-badge {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-disponibilidad {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+/* =========================================
+   CARDS PREMIUM
+========================================= */
+.trip-card-mini {
+  background: linear-gradient(180deg, rgba(38,38,42,0.95), rgba(24,24,26,0.98));
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+}
+
+.trip-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.client-name {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.trip-service-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(39,110,241,0.14);
+  color: #9fc0ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.countdown-badge {
+  background: rgba(255,173,13,0.15);
+  color: #ffd166;
+  border: 1px solid rgba(255,173,13,0.25);
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.trip-route-block {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.trip-route-text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.trip-route-line {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.route-point {
+  width: 12px;
+  min-width: 12px;
+  border-radius: 999px;
+  background: var(--success);
+  margin-top: 4px;
+  box-shadow: 0 0 0 6px rgba(5,148,79,0.12);
+}
+
+.trip-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.trip-meta-box {
+  background: rgba(255,255,255,0.04);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.trip-meta-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.trip-meta-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.trip-card-footer {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-small {
+  flex: 1;
+  padding: 14px 16px;
+}
+
+.btn-ghost {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+}
+
+.btn-accept-strong {
+  box-shadow: 0 10px 24px rgba(39,110,241,0.28);
+}
+
+/* =========================================
+   EMPTY STATE
+========================================= */
+.empty-illustration {
+  text-align: center;
+  padding: 32px 18px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-illustration .icon {
+  font-size: 42px;
+  margin-bottom: 12px;
+}
+
+/* =========================================
+   HEADER MEJORADO
+========================================= */
+.header-float {
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.driver-mini-info p {
+  font-size: 12px;
+  color: #5ce38b;
+  font-weight: 700;
 }
