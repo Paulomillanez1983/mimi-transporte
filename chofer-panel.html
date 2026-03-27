@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Panel de Chofer - Mimi</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta   name="viewport"   content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <link rel="icon" href="/mimi-transporte/favicon.ico" />
 
   <!-- CSS APP -->
@@ -104,6 +104,23 @@
       alert('Error cargando el mapa. Revisá conexión o bloqueador.');
     }
   </script>
+  <script>
+  // Fix viewport real en mobile
+  (function () {
+    const setAppHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--app-vh', `${vh}px`);
+    };
+
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+    window.addEventListener('orientationchange', setAppHeight);
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', setAppHeight);
+    }
+  })();
+</script>
 
   <script type="module">
     import DriverApp from '/mimi-transporte/js/driver-app.js';
