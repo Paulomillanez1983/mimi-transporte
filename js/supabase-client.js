@@ -24,10 +24,15 @@ class SupabaseService {
       return false;
     }
 
-    if (
-      CONFIG.SUPABASE_KEY.includes('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM') ||
-      CONFIG.SUPABASE_KEY.includes('TU_ANON_KEY_REAL_AQUI')
-    ) {
+    // SOLO detectar placeholders reales, NO tu key real
+    const invalidKeys = [
+      'TU_ANON_KEY_REAL_AQUI',
+      'YOUR_SUPABASE_ANON_KEY',
+      'SUPABASE_ANON_KEY',
+      'YOUR_KEY_HERE'
+    ];
+
+    if (invalidKeys.includes(CONFIG.SUPABASE_KEY.trim())) {
       console.error('Supabase key inválida: sigue siendo placeholder');
       return false;
     }
@@ -209,6 +214,18 @@ class SupabaseService {
     });
   }
 
+  async setDriverAvailability(driverId, disponible) {
+    if (!driverId) {
+      throw new Error('No se pudo actualizar disponibilidad: driverId inválido');
+    }
+
+    return this.rest.update(CONFIG.TABLES.CHOFERES, driverId, {
+      disponible,
+      online: true,
+      last_update: new Date().toISOString()
+    });
+  }
+
   subscribeToTrips(callback) {
     if (!this.client) {
       throw new Error('Supabase client no inicializado');
@@ -254,6 +271,7 @@ class SupabaseService {
     const choferData = this.getCurrentDriverData();
 
     if (choferData?.id) return choferData.id;
+    if (choferData?.email) return choferData.email;
 
     const legacyId = localStorage.getItem('choferUsuario');
     return legacyId || null;
