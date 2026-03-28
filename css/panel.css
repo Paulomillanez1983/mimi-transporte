@@ -748,4 +748,14 @@
 @keyframes countdown {
   from { stroke-dashoffset: 283; }
   to { stroke-dashoffset: 0; }
+}/* Evita que el fondo oscuro bloquee los clicks */
+.modal-backdrop {
+  pointer-events: none;
+}
+
+/* El contenido del modal y botones deben capturar clicks */
+.modal-content,
+.btn-accept,
+.btn-reject {
+  pointer-events: auto;
 }
