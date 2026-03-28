@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - UI Controller (CORREGIDO PARA TU HTML)
+ * MIMI Driver - UI Controller (CORREGIDO FINAL)
  */
 
 import CONFIG from "./config.js";
@@ -23,7 +23,6 @@ class UIController {
   }
 
   _cacheElements() {
-    // Todos los IDs que existen en tu HTML
     const ids = [
       "driver-name",
       "driver-initial", 
@@ -66,29 +65,23 @@ class UIController {
   _bindEvents() {
     // Delegación de eventos para los botones del modal
     document.addEventListener('click', (e) => {
-      // Aceptar
       if (e.target.closest('#btn-accept')) {
         e.preventDefault();
         e.stopPropagation();
-        console.log("[UI] ✅ Botón ACEPTAR clickeado");
         this._handleAccept();
       }
       
-      // Rechazar
       if (e.target.closest('#btn-reject')) {
         e.preventDefault();
         e.stopPropagation();
-        console.log("[UI] ❌ Botón RECHAZAR clickeado");
         this._handleReject();
       }
     });
 
-    // Permitir clicks en el backdrop para cerrar (opcional - comportamiento UX)
+    // Cerrar al clickear backdrop (opcional)
     if (this.elements["modal-backdrop"]) {
       this.elements["modal-backdrop"].addEventListener('click', (e) => {
-        // Solo si no se hizo click en el contenido del modal
         if (e.target === this.elements["modal-backdrop"]) {
-          console.log("[UI] Click en backdrop - rechazando viaje");
           this._handleReject();
         }
       });
@@ -98,33 +91,64 @@ class UIController {
   _handleAccept() {
     if (!this.isModalActive) return;
     
-    console.log("[UI] Procesando ACEPTAR...");
+    console.log("[UI] ✅ Botón ACEPTAR clickeado");
+    
+    // Cerrar PRIMERO el modal, luego ejecutar callback
     this._clearCountdown();
     this._closeModal();
     
+    // Ejecutar callback con protección de errores
     if (this.currentTripCallbacks.onAccept) {
-      this.currentTripCallbacks.onAccept();
+      try {
+        console.log("[UI] Ejecutando callback onAccept...");
+        this.currentTripCallbacks.onAccept();
+        console.log("[UI] Callback onAccept ejecutado OK");
+      } catch (error) {
+        console.error("[UI] ❌ Error en callback onAccept:", error);
+        this.showToast("Error al aceptar viaje", "error");
+      }
     }
   }
 
   _handleReject() {
     if (!this.isModalActive) return;
     
-    console.log("[UI] Procesando RECHAZAR...");
+    console.log("[UI] ❌ Botón RECHAZAR clickeado");
+    
+    // Cerrar PRIMERO el modal, luego ejecutar callback
     this._clearCountdown();
     this._closeModal();
     
+    // Ejecutar callback con protección de errores
     if (this.currentTripCallbacks.onReject) {
-      this.currentTripCallbacks.onReject();
+      try {
+        console.log("[UI] Ejecutando callback onReject...");
+        this.currentTripCallbacks.onReject();
+        console.log("[UI] Callback onReject ejecutado OK");
+      } catch (error) {
+        console.error("[UI] ❌ Error en callback onReject:", error);
+      }
     }
   }
 
   _closeModal() {
+    console.log("[UI] Cerrando modal...");
     const modal = this.elements["incoming-modal"];
+    
     if (modal) {
+      // Forzar cierre inmediato sin animaciones que puedan trabar
       modal.classList.remove("active");
+      
+      // Forzar display none para evitar que quede "tildado" visualmente
+      modal.style.display = "none";
+      setTimeout(() => {
+        if (!modal.classList.contains("active")) {
+          modal.style.display = "";
+        }
+      }, 100);
+      
       this.isModalActive = false;
-      console.log("[UI] Modal cerrado");
+      console.log("[UI] ✅ Modal cerrado correctamente");
     }
   }
 
@@ -204,9 +228,6 @@ class UIController {
     if (loading) loading.classList.toggle("active", show);
   }
 
-  // =========================================================
-  // 🚗 MOSTRAR VIAJE ENTRANTE
-  // =========================================================
   showIncomingTrip(trip, onAccept, onReject) {
     console.log("[UI] 📦 Mostrando viaje:", trip);
 
@@ -241,11 +262,10 @@ class UIController {
     this._setText("trip-duration", duracion !== "--" ? `${duracion} min` : "-- min");
     this._setText("client-name", cliente);
     this._setText("client-phone", telefono || "Sin teléfono");
-    
-    // También actualizar el tiempo de pickup si existe
     this._setText("pickup-time", duracion !== "--" ? `${duracion} min` : "-- min");
 
-    // Mostrar modal
+    // Resetear display por si estaba oculto por un cierre anterior
+    modal.style.display = "";
     modal.classList.add("active");
     this.isModalActive = true;
     console.log("[UI] Modal activado");
@@ -271,7 +291,6 @@ class UIController {
 
     if (countdownText) countdownText.textContent = this.currentCountdown;
     
-    // Resetear círculo (circunferencia = 2 * PI * 45 ≈ 283)
     if (circle) {
       circle.style.strokeDasharray = "283";
       circle.style.strokeDashoffset = "0";
@@ -284,7 +303,6 @@ class UIController {
       
       if (countdownText) countdownText.textContent = this.currentCountdown;
       
-      // Actualizar círculo (de 0 a 283)
       if (circle) {
         const offset = 283 - ((this.currentCountdown / 15) * 283);
         circle.style.strokeDashoffset = offset;
@@ -295,7 +313,13 @@ class UIController {
         this._clearCountdown();
         this._closeModal();
         
-        if (onTimeout) onTimeout();
+        if (onTimeout) {
+          try {
+            onTimeout();
+          } catch (error) {
+            console.error("[UI] Error en callback timeout:", error);
+          }
+        }
       }
     }, 1000);
   }
@@ -308,7 +332,6 @@ class UIController {
     }
   }
 
-  // Utilidad para cerrar manualmente si es necesario
   closeTripModal() {
     this._clearCountdown();
     this._closeModal();
