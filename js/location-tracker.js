@@ -126,7 +126,7 @@ class LocationTracker {
             last_location_at: new Date().toISOString(),
             last_seen_at: new Date().toISOString()
           })
-          .eq('user_id', user.id);
+          .eq('id', user.id);
 
         if (error) {
           console.error('[LocationTracker] ❌ Error update ubicación:', error);
