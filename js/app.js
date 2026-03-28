@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - Main Application (PRODUCTION FINAL)
+ * MIMI Driver - Main Application (PRODUCTION FINAL + REALTIME)
  */
 
 import CONFIG from './config.js';
@@ -20,48 +20,27 @@ class DriverApp {
     console.log('[DriverApp] Starting initialization...');
 
     try {
-      // 1. INICIALIZAR UI PRIMERO (para mostrar loading)
       uiController.init();
 
-      // 2. INICIALIZAR SUPABASE
-      console.log('[DriverApp] Initializing Supabase...');
       const dbReady = await supabaseService.init();
-      if (!dbReady) {
-        throw new Error('Could not connect to Supabase');
-      }
+      if (!dbReady) throw new Error('Could not connect to Supabase');
 
-      // Verificar autenticación
       const { data: { user } } = await supabaseService.client.auth.getUser();
       if (!user) {
-        console.log('[DriverApp] Not authenticated, redirecting to login');
         window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
 
       console.log('[DriverApp] User authenticated:', user.id);
 
-      // 3. INICIALIZAR MAPA (con timeout y fallback)
-      console.log('[DriverApp] Initializing map...');
-      const mapReady = await this._initMapWithFallback();
-      if (!mapReady) {
-        console.warn('[DriverApp] Map initialization failed, continuing without map');
-      }
+      await this._initMapWithFallback();
+      await this._initLocationWithFallback();
 
-      // 4. INICIAR TRACKING DE UBICACIÓN (con manejo de permisos)
-      console.log('[DriverApp] Starting location tracking...');
-      const locationReady = await this._initLocationWithFallback();
-      if (!locationReady) {
-        console.warn('[DriverApp] Location tracking failed');
-        uiController.showToast('⚠️ No se pudo acceder a la ubicación. Verifica los permisos.', 'warning', 5000);
-      }
-
-      // 5. CONFIGURAR UI
       this._setupUI();
 
       this.initialized = true;
       console.log('[DriverApp] ✅ Initialization complete');
 
-      // Estado inicial
       uiController.updateDriverState('ONLINE', false);
 
     } catch (error) {
@@ -70,80 +49,87 @@ class DriverApp {
     }
   }
 
+  // =========================
+  // REALTIME 🔥
+  // =========================
+
+  _setupRealtime() {
+    const supabase = supabaseService.client;
+    const driverId = supabaseService.getDriverId();
+
+    if (!driverId) {
+      console.warn('[Realtime] No driverId');
+      return;
+    }
+
+    console.log('📡 Realtime activo para:', driverId);
+
+    const channel = supabase
+      .channel('ofertas')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'viaje_ofertas',
+          // ⚠️ AJUSTAR SI TU COLUMNA ES DISTINTA
+          filter: `chofer_id_uuid=eq.${driverId}`
+        },
+        payload => {
+          console.log('🚗 Nueva oferta:', payload);
+          this._onNuevaOferta(payload.new);
+        }
+      )
+      .subscribe();
+
+    this._unsubscribers.push(() => {
+      supabase.removeChannel(channel);
+    });
+  }
+
+  _cleanupRealtime() {
+    this._unsubscribers.forEach(unsub => unsub());
+    this._unsubscribers = [];
+    console.log('🔌 Realtime detenido');
+  }
+
+  _onNuevaOferta(oferta) {
+    console.log('[DriverApp] Oferta recibida:', oferta);
+
+    const modal = document.getElementById('incoming-modal');
+    if (modal) {
+      modal.classList.add('active');
+    }
+
+    const pickup = document.getElementById('trip-pickup');
+    if (pickup) pickup.textContent = 'Nuevo viaje disponible';
+
+    uiController.showToast('🚗 Nueva oferta de viaje', 'success');
+  }
+
+  // =========================
+
   async _initMapWithFallback() {
     try {
-      const success = await mapService.init('map-container');
-      if (success) {
-        console.log('[DriverApp] Map initialized successfully');
-        return true;
-      }
-    } catch (error) {
-      console.error('[DriverApp] Map init error:', error);
+      return await mapService.init('map-container');
+    } catch {
+      return false;
     }
-
-    // Mostrar mensaje en UI
-    const mapContainer = document.getElementById('map-container');
-    if (mapContainer) {
-      mapContainer.innerHTML = `
-        <div style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 100%;
-          background: #1a1a2e;
-          color: white;
-          flex-direction: column;
-          gap: 16px;
-        ">
-          <div style="font-size: 48px;">🗺️</div>
-          <div>No se pudo cargar el mapa</div>
-          <button onclick="location.reload()" style="
-            padding: 12px 24px;
-            background: #276EF1;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-          ">Reintentar</button>
-        </div>
-      `;
-    }
-
-    return false;
   }
 
   async _initLocationWithFallback() {
     try {
-      const success = await locationTracker.start((position) => {
+      return await locationTracker.start((position) => {
         this._onPositionUpdate(position);
       });
-
-      if (success) {
-        console.log('[DriverApp] Location tracking started');
-        
-        // Forzar actualización inicial del marcador si tenemos posición
-        const pos = locationTracker.getLastPosition();
-        if (pos) {
-          mapService.updateDriverMarker(pos.lng, pos.lat, pos.heading);
-          mapService.setCenter(pos.lng, pos.lat, 16);
-        }
-        
-        return true;
-      }
-    } catch (error) {
-      console.error('[DriverApp] Location init error:', error);
+    } catch {
+      return false;
     }
-
-    return false;
   }
 
   _onPositionUpdate(position) {
-    console.log('[DriverApp] Position update:', position);
-
-    // Actualizar marcador en el mapa
     mapService.updateDriverMarker(position.lng, position.lat, position.heading);
 
-    // Actualizar UI con stats
     uiController.updateStats({
       speed: position.speed,
       accuracy: position.accuracy
@@ -151,17 +137,15 @@ class DriverApp {
   }
 
   _setupUI() {
-    // Botón online/offline
     const btnFab = document.getElementById('fab-online');
+
     if (btnFab) {
       btnFab.addEventListener('click', async () => {
         await this._toggleOnlineStatus();
       });
     }
 
-    // Escuchar errores de ubicación
     window.addEventListener('locationError', (e) => {
-      console.error('[DriverApp] Location error event:', e.detail);
       uiController.showToast('Error de ubicación: ' + e.detail.message, 'error');
     });
   }
@@ -186,22 +170,31 @@ class DriverApp {
         .eq('id_uuid', supabaseService.getDriverId());
 
       if (error) {
-        console.error('[DriverApp] Error updating status:', error);
         uiController.showToast('No se pudo actualizar estado', 'error');
         return;
       }
 
       uiController.updateDriverState('ONLINE', this._onlineStatus);
-      uiController.showToast(this._onlineStatus ? '🟢 Online' : '🔴 Offline', 'success');
+
+      // 🔥 ACTIVAR / DESACTIVAR REALTIME
+      if (this._onlineStatus) {
+        this._setupRealtime();
+      } else {
+        this._cleanupRealtime();
+      }
+
+      uiController.showToast(
+        this._onlineStatus ? '🟢 Online' : '🔴 Offline',
+        'success'
+      );
 
     } catch (e) {
-      console.error('[DriverApp] Error toggling status:', e);
       uiController.showToast('Error cambiando estado', 'error');
     }
   }
 }
 
-// Inicializar cuando el DOM esté listo
+// INIT
 document.addEventListener('DOMContentLoaded', () => {
   const app = new DriverApp();
   app.init();
