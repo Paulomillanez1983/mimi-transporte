@@ -69,7 +69,7 @@ class TripManager {
         .from('viajes')
         .select('*')
         .eq('chofer_id_uuid', driverId)
-        .in('estado', ['ACEPTADO', 'EN_CURSO'])
+        .in('estado', ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'])
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -200,58 +200,42 @@ class TripManager {
   // =========================================================
   // REFRESH
   // =========================================================
-  _startRefreshInterval(driverId) {
-    if (this.refreshInterval) clearInterval(this.refreshInterval);
+_startRefreshInterval(driverId) {
+  if (this.refreshInterval) clearInterval(this.refreshInterval);
 
-    this.refreshInterval = setInterval(() => {
-      if (!this.currentTrip) {
-        this._loadInitialState(driverId);
-      }
-    }, CONFIG.TRIP_REFRESH_INTERVAL || 5000);
-  }
+  this.refreshInterval = setInterval(() => {
+    this._loadInitialState(driverId);
+  }, CONFIG.TRIP_REFRESH_INTERVAL || 5000);
+}
 
   // =========================================================
   // ACTIONS
   // =========================================================
-  async acceptTrip(tripId) {
-    const { data: { user } } = await supabaseService.client.auth.getUser();
-    if (!user) return { success: false, error: 'No autenticado' };
+async acceptTrip(tripId) {
+  const { data: { user } } = await supabaseService.client.auth.getUser();
+  if (!user) return { success: false, error: 'No autenticado' };
 
-    const driverId = await this._getDriverUuid();
+  const driverId = await this._getDriverUuid();
 
-    // Aceptar: actualizar oferta + viaje
-    const { error: offerError } = await supabaseService.client
-      .from('viaje_ofertas')
-      .update({
-        estado: 'ACEPTADA',
-        responded_at: new Date().toISOString()
-      })
-      .eq('viaje_id', tripId)
-      .eq('chofer_id_uuid', driverId)
-      .eq('estado', 'PENDIENTE');
+  const { data: ok, error } = await supabaseService.client.rpc('aceptar_viaje', {
+    p_viaje_id: tripId,
+    p_chofer_id: driverId
+  });
 
-    if (offerError) {
-      console.error('[TripManager] Error accepting offer:', offerError);
-      return { success: false, error: offerError.message };
-    }
-
-    const { error: tripError } = await supabaseService.client
-      .from('viajes')
-      .update({
-        estado: 'ACEPTADO',
-        chofer_id_uuid: driverId,
-        aceptado_at: new Date().toISOString()
-      })
-      .eq('id', tripId);
-
-    if (tripError) {
-      console.error('[TripManager] Error updating trip:', tripError);
-      return { success: false, error: tripError.message };
-    }
-
-    return { success: true };
+  if (error) {
+    console.error('[TripManager] RPC accept error:', error);
+    return { success: false, error: error.message };
   }
-async _getDriverUuid() {
+
+  if (!ok) {
+    return { success: false, error: 'Otro chofer aceptó este viaje antes' };
+  }
+
+  return { success: true };
+}
+
+  
+  async _getDriverUuid() {
   const { data: { user } } = await supabaseService.client.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
