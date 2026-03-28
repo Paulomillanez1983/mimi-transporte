@@ -896,23 +896,23 @@ class UIController {
     });
   }
 
-  _haptic(type = 'light') {
-    if (!navigator.vibrate) return;
-    
-    const patterns = {
-      light: [10],
-      medium: [20],
-      heavy: [30],
-      success: [10, 50, 10],
-      error: [30, 30, 30],
-      countdown: [5]
-    };
-    
-    try {
-      navigator.vibrate(patterns[type] || patterns.light);
-    } catch (e) {
-      // Silent fail
-    }
+_haptic(type = 'light') {
+  if (!navigator.vibrate) return;
+  if (!soundManager?._hapticsUnlocked) return; // ✅ evita warning de Chrome
+
+  const patterns = {
+    light: [10],
+    medium: [20],
+    heavy: [30],
+    success: [10, 50, 10],
+    error: [30, 30, 30],
+    countdown: [5]
+  };
+
+  try {
+    navigator.vibrate(patterns[type] || patterns.light);
+  } catch (e) {
+    // Silent fail
   }
 }
 
