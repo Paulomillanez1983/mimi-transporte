@@ -308,22 +308,29 @@ class UIController {
     }, 15000);
   }
 
-  _populateTripData(trip) {
-    const data = {
-      'trip-pickup': trip.origen_direccion || trip.origen || 'Origen no disponible',
-      'trip-dropoff': trip.destino_direccion || trip.destino || 'Destino no disponible',
-      'trip-distance': trip.km ? `${Number(trip.km).toFixed(1)} km` : '-- km',
-      'trip-price': trip.precio ? `$${Math.round(trip.precio).toLocaleString('es-AR')}` : '$--',
-      'trip-duration': '-- min',
-      'trip-km': trip.km ? `${Number(trip.km).toFixed(1)} km` : '-- km',
-      'client-name': trip.pasajero_nombre || trip.cliente || 'Cliente',
-      'client-phone': trip.pasajero_telefono || trip.telefono || 'Sin teléfono',
-      'pickup-time': trip.tiempo_llegada_estimado 
-        ? `${Math.round(trip.tiempo_llegada_estimado / 60)} min` 
-        : '-- min',
-      'pickup-address': trip.origen_direccion || trip.origen || '',
-      'dropoff-address': trip.destino_direccion || trip.destino || ''
-    };
+_populateTripData(trip) {
+  const data = {
+    'trip-pickup': trip.origen_direccion || trip.origen || 'Origen no disponible',
+    'trip-dropoff': trip.destino_direccion || trip.destino || 'Destino no disponible',
+
+    'trip-distance': trip.km ? `${Number(trip.km).toFixed(1)} km` : '-- km',
+    'trip-km': trip.km ? `${Number(trip.km).toFixed(1)} km` : '-- km',
+
+    'trip-price': trip.precio ? `$${Math.round(trip.precio).toLocaleString('es-AR')}` : '$--',
+
+    'trip-duration': trip.tiempo_espera ? `${trip.tiempo_espera} min` : '-- min',
+
+    'client-name': trip.pasajero_nombre || trip.cliente || 'Cliente',
+    'client-phone': trip.pasajero_telefono || trip.telefono || 'Sin teléfono',
+
+    'pickup-time': trip.tiempo_espera ? `${trip.tiempo_espera} min` : '-- min',
+
+    'pickup-address': trip.origen_direccion || trip.origen || '',
+    'dropoff-address': trip.destino_direccion || trip.destino || ''
+  };
+
+  ...
+}
 
     Object.entries(data).forEach(([key, value]) => {
       const el = this.elements[key];
