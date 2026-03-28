@@ -20,18 +20,24 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; background: #000; color: #fff; overflow: hidden; }
-    
-    #map-container { 
-      position: fixed; 
-      top: 0; left: 0; 
-      width: 100%; height: 100%; 
+
+    #map-container {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       z-index: 0;
       background: #1a1a2e;
     }
-    
-    #ui-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+
+    #ui-layer {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+      pointer-events: none;
+    }
     #ui-layer > * { pointer-events: auto; }
-    
+
     .header {
       position: fixed;
       top: 12px;
@@ -45,11 +51,11 @@
       align-items: center;
       justify-content: space-between;
     }
-    
+
     .driver-profile { display: flex; align-items: center; gap: 12px; }
-    .avatar { 
-      width: 44px; height: 44px; 
-      border-radius: 50%; 
+    .avatar {
+      width: 44px; height: 44px;
+      border-radius: 50%;
       background: linear-gradient(135deg, #276EF1, #448AFF);
       display: flex; align-items: center; justify-content: center;
       font-weight: 700; font-size: 18px;
@@ -64,10 +70,10 @@
       border: 2px solid #1C1C1E;
     }
     .status-dot.online { background: #05944F; }
-    
+
     .driver-info h1 { font-size: 15px; font-weight: 700; }
     .status-text { font-size: 12px; color: rgba(255,255,255,0.6); }
-    
+
     .stats-floating {
       position: fixed;
       top: 85px;
@@ -76,7 +82,7 @@
       flex-direction: column;
       gap: 8px;
     }
-    
+
     .stat-card {
       background: rgba(28,28,30,0.95);
       backdrop-filter: blur(20px);
@@ -87,7 +93,7 @@
     }
     .stat-value { font-size: 20px; font-weight: 800; }
     .stat-label { font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; }
-    
+
     .fab-online {
       position: fixed;
       bottom: 100px;
@@ -108,7 +114,7 @@
       border-color: #05944F;
     }
     .fab-text { font-weight: 700; font-size: 14px; }
-    
+
     .bottom-sheet {
       position: fixed;
       bottom: 0;
@@ -120,7 +126,7 @@
       transform: translateY(calc(100% - 80px));
       transition: transform 0.3s ease;
     }
-    
+
     .sheet-handle {
       display: flex;
       justify-content: center;
@@ -128,7 +134,7 @@
       cursor: pointer;
     }
     .handle-bar { width: 36px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
-    
+
     .waiting-state { text-align: center; padding: 40px 20px; }
     .pulse-ring {
       width: 60px; height: 60px;
@@ -141,7 +147,7 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.5; transform: scale(1.05); }
     }
-    
+
     .toast-container {
       position: fixed;
       top: 20px;
@@ -153,7 +159,7 @@
       align-items: center;
       pointer-events: none;
     }
-    
+
     .global-loading {
       position: fixed;
       inset: 0;
@@ -166,7 +172,7 @@
       z-index: 9998;
     }
     .global-loading.active { display: flex; }
-    
+
     .loading-screen {
       position: fixed;
       inset: 0;
@@ -179,7 +185,7 @@
       transition: opacity 0.3s;
     }
     .loading-screen.hidden { opacity: 0; pointer-events: none; }
-    
+
     .spinner {
       width: 48px; height: 48px;
       border: 3px solid rgba(255,255,255,0.1);
@@ -188,15 +194,38 @@
       animation: spin 1s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Logout button */
+    .logout-btn {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 99999;
+      background: rgba(255,0,0,0.85);
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      font-size: 13px;
+      display: none;
+      backdrop-filter: blur(10px);
+    }
+    .logout-btn.visible { display: block; }
   </style>
 </head>
 
 <body>
+
   <!-- Loading inicial -->
   <div class="loading-screen" id="initial-loading">
     <div class="spinner"></div>
     <p style="margin-top:16px;color:rgba(255,255,255,0.8)">Iniciando...</p>
   </div>
+
+  <!-- Logout -->
+  <button class="logout-btn" id="logoutBtn">SALIR</button>
 
   <!-- Mapa -->
   <div id="map-container"></div>
@@ -218,18 +247,18 @@
 
     <div class="stats-floating">
       <div class="stat-card">
-        <span class="stat-value">$0</span>
+        <span class="stat-value" id="stat-earnings">$0</span>
         <span class="stat-label">Hoy</span>
       </div>
       <div class="stat-card">
-        <span class="stat-value">0</span>
+        <span class="stat-value" id="stat-trips">0</span>
         <span class="stat-label">Viajes</span>
       </div>
     </div>
 
     <button class="fab-online" id="fab-online">
-      <span class="fab-icon">🔴</span>
-      <span class="fab-text">CONECTAR</span>
+      <span class="fab-icon" id="fab-icon">🔴</span>
+      <span class="fab-text" id="fab-text">CONECTAR</span>
     </button>
 
     <div class="bottom-sheet">
@@ -244,6 +273,7 @@
     </div>
 
     <div class="toast-container" id="toast-container"></div>
+
     <div class="global-loading" id="global-loading">
       <div class="spinner"></div>
       <span style="color:white">Cargando...</span>
@@ -253,14 +283,95 @@
   <!-- Scripts -->
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
-  
-  <script type="module" src="js/app.js"></script>
-  
+
+  <!-- 🔐 SUPABASE AUTH -->
   <script>
-    // Ocultar loading después de 2 segundos
-    setTimeout(() => {
-      document.getElementById('initial-loading')?.classList.add('hidden');
-    }, 2000);
+    // ⚠️ PEGAR TU SUPABASE REAL
+    const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
+    const SUPABASE_ANON_KEY = "PEGAR_TU_ANON_KEY_AQUI";
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function protegerPanel() {
+      const loading = document.getElementById("initial-loading");
+
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+
+        if (error) {
+          console.error("Auth error:", error);
+          window.location.href = "login-chofer.html";
+          return;
+        }
+
+        if (!data.session) {
+          window.location.href = "login-chofer.html";
+          return;
+        }
+
+        const user = data.session.user;
+
+        // Mostrar datos en UI
+        const nameEl = document.getElementById("driver-name");
+        const initialEl = document.getElementById("driver-initial");
+
+        if (nameEl) nameEl.textContent = user.email || "Conductor";
+        if (initialEl) initialEl.textContent = (user.email || "M").substring(0, 1).toUpperCase();
+
+        // Mostrar logout
+        document.getElementById("logoutBtn").classList.add("visible");
+
+        // Ocultar loading
+        loading?.classList.add("hidden");
+
+        console.log("✅ Sesión activa:", user.email);
+
+      } catch (err) {
+        console.error("Error protegiendo panel:", err);
+        window.location.href = "login-chofer.html";
+      }
+    }
+
+    protegerPanel();
+
+    // LOGOUT
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = "login-chofer.html";
+    });
   </script>
+
+  <!-- Tu app real -->
+  <script type="module" src="js/app.js"></script>
+
+  <!-- Conectar/Desconectar UI demo -->
+  <script>
+    const fab = document.getElementById("fab-online");
+    const dot = document.getElementById("status-dot");
+    const statusText = document.getElementById("status-text");
+    const fabText = document.getElementById("fab-text");
+    const fabIcon = document.getElementById("fab-icon");
+
+    let online = false;
+
+    fab.addEventListener("click", () => {
+      online = !online;
+
+      if (online) {
+        dot.classList.add("online");
+        statusText.textContent = "Conectado";
+        fab.classList.add("online");
+        fabText.textContent = "DESCONECTAR";
+        fabIcon.textContent = "🟢";
+      } else {
+        dot.classList.remove("online");
+        statusText.textContent = "Desconectado";
+        fab.classList.remove("online");
+        fabText.textContent = "CONECTAR";
+        fabIcon.textContent = "🔴";
+      }
+    });
+  </script>
+
 </body>
 </html>
