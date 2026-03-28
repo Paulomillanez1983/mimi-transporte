@@ -523,7 +523,9 @@ const { data, error } = await this.client
       console.log(`[Supabase] Reconnecting attempt ${this.reconnectAttempts}...`);
 
       try {
-        this.subscribeToOffers(callbacks);
+this.subscribeToOffers(callbacks);
+this.subscribeToTrips(callbacks);
+        
       } catch (e) {
         console.error('[Supabase] reconnect failed:', e);
       }
