@@ -1,70 +1,53 @@
-
 /**
- * MIMI Driver - Sound & Haptics Service
- * Web Audio API with fallback
+ * Sound Manager - Uber Style Audio Feedback
  */
 
-class SoundService {
+class SoundManager {
   constructor() {
     this.ctx = null;
     this.enabled = false;
     this.initialized = false;
-    this.unlocked = false;
     this.sounds = {};
   }
 
   async init() {
     if (this.initialized) return;
-
+    
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContext) {
-        console.warn('Web Audio API not supported');
-        return;
-      }
-
+      if (!AudioContext) return;
+      
       this.ctx = new AudioContext();
-      
-      // Generate sounds procedurally
-      this._generateSounds();
-      
       this.enabled = true;
       this.initialized = true;
       
-      console.log('[Sound] Initialized');
-
-    } catch (error) {
-      console.warn('[Sound] Init failed:', error);
-    }
-  }
-
-  async unlock() {
-    if (this.unlocked || !this.ctx) return;
-    
-    try {
-      if (this.ctx.state === 'suspended') {
-        await this.ctx.resume();
-      }
-      this.unlocked = true;
-      console.log('[Sound] Unlocked');
+      this._generateSounds();
     } catch (e) {
-      console.warn('[Sound] Unlock failed:', e);
+      console.warn('[Sound] Init failed:', e);
     }
   }
 
   _generateSounds() {
-    // New trip notification - urgent, attention-grabbing
+    // New trip - urgent notification
     this.sounds.newTrip = () => this._playTone({
-      frequencies: [880, 1100, 880, 1100],
-      durations: [0.15, 0.15, 0.15, 0.4],
+      frequencies: [880, 1100, 880, 1100, 880],
+      durations: [0.1, 0.1, 0.1, 0.1, 0.3],
+      type: 'sine',
+      gain: 0.5
+    });
+
+    // Accept - positive chime
+    this.sounds.accept = () => this._playTone({
+      frequencies: [523.25, 659.25, 783.99, 1046.50],
+      durations: [0.08, 0.08, 0.08, 0.4],
       type: 'sine',
       gain: 0.4
     });
 
-    // Accept - positive confirmation
-    this.sounds.accept = () => this._playTone({
-      frequencies: [523.25, 659.25, 783.99], // C major chord
-      durations: [0.1, 0.1, 0.3],
+    // Reject - subtle down
+    this.sounds.reject = () => this._playTone({
+      frequencies: [400, 300],
+      durations: [0.15, 0.3],
       type: 'sine',
       gain: 0.3
     });
@@ -72,23 +55,23 @@ class SoundService {
     // Arrival - success
     this.sounds.arrival = () => this._playTone({
       frequencies: [523.25, 659.25, 783.99, 1046.50],
-      durations: [0.1, 0.1, 0.1, 0.4],
+      durations: [0.1, 0.1, 0.1, 0.6],
       type: 'sine',
-      gain: 0.3
+      gain: 0.4
     });
 
-    // Error - negative feedback
-    this.sounds.error = () => this._playTone({
-      frequencies: [200, 150],
-      durations: [0.2, 0.3],
-      type: 'sawtooth',
+    // Tick - countdown
+    this.sounds.tick = () => this._playTone({
+      frequencies: [800],
+      durations: [0.05],
+      type: 'sine',
       gain: 0.2
     });
   }
 
   _playTone({ frequencies, durations, type, gain }) {
-    if (!this.enabled || !this.unlocked || !this.ctx) return;
-
+    if (!this.enabled || !this.ctx) return;
+    
     try {
       const now = this.ctx.currentTime;
       const masterGain = this.ctx.createGain();
@@ -108,7 +91,6 @@ class SoundService {
         const startTime = now + durations.slice(0, i).reduce((a, b) => a + b, 0);
         const duration = durations[i];
         
-        // Envelope
         noteGain.gain.setValueAtTime(0, startTime);
         noteGain.gain.linearRampToValueAtTime(1, startTime + 0.02);
         noteGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration - 0.05);
@@ -116,7 +98,6 @@ class SoundService {
         osc.start(startTime);
         osc.stop(startTime + duration);
       });
-
     } catch (e) {
       console.warn('[Sound] Play error:', e);
     }
@@ -124,42 +105,30 @@ class SoundService {
 
   play(soundName) {
     if (!this.initialized) {
-      this.init().then(() => this.play(soundName));
+      this.init().then(() => {
+        if (this.sounds[soundName]) this.sounds[soundName]();
+      });
       return;
     }
     
-    if (this.unlocked && this.sounds[soundName]) {
+    // Resume context if suspended (browser policy)
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    
+    if (this.sounds[soundName]) {
       this.sounds[soundName]();
     }
-  }
-
-  // Haptics
-  vibrate(pattern) {
-    if (!navigator.vibrate || !CONFIG.FEATURES.enableHaptics) return;
-    
-    const patterns = {
-      notification: [100, 50, 100],
-      success: [50, 100, 50],
-      error: [100, 50, 100, 50, 100],
-      arrival: [100, 50, 100, 50, 300]
-    };
-    
-    try {
-      navigator.vibrate(patterns[pattern] || pattern);
-    } catch (e) {}
-  }
-
-  // Combined feedback
-  feedback(type) {
-    this.play(type);
-    this.vibrate(type === 'error' ? 'error' : 'notification');
   }
 
   // Enable on user interaction (required by browsers)
   enable() {
     this.init();
-    this.unlock();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
   }
 }
 
-const soundService = new SoundService();
+const soundManager = new SoundManager();
+export default soundManager;
