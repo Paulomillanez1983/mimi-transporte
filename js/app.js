@@ -1,12 +1,11 @@
 /**
- * Driver App producción (RLS + UUID + robusto)
+ * MIMI Driver - Main Application (PRODUCTION FINAL)
  */
 
 import CONFIG from './config.js';
 import supabaseService from './supabase-client.js';
 import mapService from './map-service.js';
 import locationTracker from './location-tracker.js';
-import tripManager from './trip-manager.js';
 import uiController from './ui-controller.js';
 
 class DriverApp {
@@ -18,247 +17,194 @@ class DriverApp {
   }
 
   async init() {
-    try {
-      // 1) Inicializar Supabase
-      const dbReady = await supabaseService.init();
-      if (!dbReady) throw new Error('No se pudo conectar a Supabase');
+    console.log('[DriverApp] Starting initialization...');
 
-      // 2) Verificar usuario logueado (RLS necesita auth)
+    try {
+      // 1. INICIALIZAR UI PRIMERO (para mostrar loading)
+      uiController.init();
+
+      // 2. INICIALIZAR SUPABASE
+      console.log('[DriverApp] Initializing Supabase...');
+      const dbReady = await supabaseService.init();
+      if (!dbReady) {
+        throw new Error('Could not connect to Supabase');
+      }
+
+      // Verificar autenticación
       const { data: { user } } = await supabaseService.client.auth.getUser();
       if (!user) {
+        console.log('[DriverApp] Not authenticated, redirecting to login');
         window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
 
-      // 3) UI
-      uiController.init();
+      console.log('[DriverApp] User authenticated:', user.id);
 
-      // 4) Map + Location
-      await Promise.allSettled([
-        mapService.init('map-container'),
-        locationTracker.start(pos => this._onPositionUpdate(pos))
-      ]);
+      // 3. INICIALIZAR MAPA (con timeout y fallback)
+      console.log('[DriverApp] Initializing map...');
+      const mapReady = await this._initMapWithFallback();
+      if (!mapReady) {
+        console.warn('[DriverApp] Map initialization failed, continuing without map');
+      }
 
-      // 5) Trip Manager
-      await tripManager.init();
+      // 4. INICIAR TRACKING DE UBICACIÓN (con manejo de permisos)
+      console.log('[DriverApp] Starting location tracking...');
+      const locationReady = await this._initLocationWithFallback();
+      if (!locationReady) {
+        console.warn('[DriverApp] Location tracking failed');
+        uiController.showToast('⚠️ No se pudo acceder a la ubicación. Verifica los permisos.', 'warning', 5000);
+      }
 
-      // 6) Subscripciones
-      this._subscribeToEvents();
-
-      // 7) Setup UI actions
+      // 5. CONFIGURAR UI
       this._setupUI();
 
       this.initialized = true;
+      console.log('[DriverApp] ✅ Initialization complete');
 
       // Estado inicial
       uiController.updateDriverState('ONLINE', false);
 
-      const currentTrip = tripManager.getCurrentTrip();
-      const pendingTrip = tripManager.getPendingTrip();
-
-      if (currentTrip) {
-        await this._showRouteOnMap(currentTrip);
-        uiController.showNavigationState(currentTrip);
-      } else if (pendingTrip) {
-        uiController.showIncomingTrip(
-          pendingTrip,
-          () => this._acceptTrip(pendingTrip.id),
-          () => this._rejectTrip(pendingTrip.id)
-        );
-      } else {
-        uiController.showWaitingState();
-      }
-
     } catch (error) {
-      console.error('[DriverApp] Error fatal:', error);
+      console.error('[DriverApp] ❌ Fatal error:', error);
       uiController.showToast('Error: ' + error.message, 'error', 5000);
     }
   }
 
-  _subscribeToEvents() {
-    const unsubOffer = tripManager.on('newPendingTrip', (trip) => {
-      uiController.showIncomingTrip(
-        trip,
-        () => this._acceptTrip(trip.id),
-        () => this._rejectTrip(trip.id)
-      );
-    });
-
-    const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
-      this._currentTripId = trip.id;
-      uiController.hideIncomingModal();
-      uiController.showToast('¡Viaje aceptado!', 'success');
-      await this._showRouteOnMap(trip);
-      uiController.showNavigationState(trip);
-    });
-
-    const unsubStarted = tripManager.on('tripStarted', (trip) => {
-      uiController.showToast('Viaje iniciado', 'success');
-      uiController.showNavigationState(trip);
-    });
-
-    const unsubCompleted = tripManager.on('tripCompleted', (trip) => {
-      this._currentTripId = null;
-      mapService.clearRoute();
-      uiController.hideNavigation();
-      uiController.showToast(`Viaje completado +$${trip.precio}`, 'success', 5000);
-      uiController.showWaitingState();
-    });
-
-    const unsubCancelled = tripManager.on('tripCancelled', () => {
-      this._currentTripId = null;
-      mapService.clearRoute();
-      uiController.hideNavigation();
-      uiController.showToast('Viaje cancelado', 'warning');
-      uiController.showWaitingState();
-    });
-
-    const unsubCleared = tripManager.on('pendingTripCleared', () => {
-      uiController.hideIncomingModal();
-      uiController.showWaitingState();
-    });
-
-    const unsubNoPending = tripManager.on('noPendingTrips', () => {
-      uiController.showWaitingState();
-    });
-
-    this._unsubscribers.push(
-      unsubOffer, unsubAccepted, unsubStarted,
-      unsubCompleted, unsubCancelled, unsubCleared, unsubNoPending
-    );
-  }
-
-  async _showRouteOnMap(trip) {
+  async _initMapWithFallback() {
     try {
-      const origin = { lat: trip.origen_lat, lng: trip.origen_lng };
-      const destination = { lat: trip.destino_lat, lng: trip.destino_lng };
-      await mapService.showRealRoute(origin, destination);
-    } catch (error) {
-      console.error('[DriverApp] Error mostrando ruta:', error);
-    }
-  }
-
-  async _acceptTrip(tripId) {
-    uiController.setGlobalLoading(true, 'Aceptando viaje...');
-    try {
-      const result = await tripManager.acceptTrip(tripId);
-      if (!result.success) {
-        uiController.showToast(result.error || 'Error aceptando viaje', 'error');
-        uiController.hideIncomingModal();
-        uiController.showWaitingState();
+      const success = await mapService.init('map-container');
+      if (success) {
+        console.log('[DriverApp] Map initialized successfully');
+        return true;
       }
-    } finally {
-      uiController.setGlobalLoading(false);
+    } catch (error) {
+      console.error('[DriverApp] Map init error:', error);
     }
+
+    // Mostrar mensaje en UI
+    const mapContainer = document.getElementById('map-container');
+    if (mapContainer) {
+      mapContainer.innerHTML = `
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          background: #1a1a2e;
+          color: white;
+          flex-direction: column;
+          gap: 16px;
+        ">
+          <div style="font-size: 48px;">🗺️</div>
+          <div>No se pudo cargar el mapa</div>
+          <button onclick="location.reload()" style="
+            padding: 12px 24px;
+            background: #276EF1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+          ">Reintentar</button>
+        </div>
+      `;
+    }
+
+    return false;
   }
 
-  async _rejectTrip(tripId) {
-    await tripManager.rejectTrip(tripId);
-    uiController.showWaitingState();
+  async _initLocationWithFallback() {
+    try {
+      const success = await locationTracker.start((position) => {
+        this._onPositionUpdate(position);
+      });
+
+      if (success) {
+        console.log('[DriverApp] Location tracking started');
+        
+        // Forzar actualización inicial del marcador si tenemos posición
+        const pos = locationTracker.getLastPosition();
+        if (pos) {
+          mapService.updateDriverMarker(pos.lng, pos.lat, pos.heading);
+          mapService.setCenter(pos.lng, pos.lat, 16);
+        }
+        
+        return true;
+      }
+    } catch (error) {
+      console.error('[DriverApp] Location init error:', error);
+    }
+
+    return false;
   }
 
   _onPositionUpdate(position) {
-    mapService.updateDriverPosition(position.lng, position.lat, position.heading);
+    console.log('[DriverApp] Position update:', position);
 
-    const currentTrip = tripManager.getCurrentTrip();
-    if (currentTrip?.estado === 'EN_CURSO') {
-      const dist = this._calculateDistance(
-        position.lat, position.lng,
-        currentTrip.destino_lat, currentTrip.destino_lng
-      );
+    // Actualizar marcador en el mapa
+    mapService.updateDriverMarker(position.lng, position.lat, position.heading);
 
-      if (dist < 100) uiController.showArrival();
-    }
-  }
-
-  _calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3;
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) ** 2 +
-      Math.cos(φ1) * Math.cos(φ2) *
-      Math.sin(Δλ / 2) ** 2;
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  _setupUI() {
-    const btnFab = document.getElementById('fab-online');
-
-    if (btnFab) {
-      btnFab.addEventListener('click', async () => {
-        try {
-          this._onlineStatus = !this._onlineStatus;
-
-          const { data: { user } } = await supabaseService.client.auth.getUser();
-          if (!user) {
-            uiController.showToast("No autenticado", "error");
-            return;
-          }
-
-          const { error } = await supabaseService.client
-            .from('choferes')
-            .update({
-              disponible: this._onlineStatus,
-              online: this._onlineStatus,
-              last_seen_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id);
-
-          if (error) {
-            console.error('[DriverApp] Error update chofer:', error);
-            uiController.showToast("No se pudo actualizar estado", "error");
-            return;
-          }
-
-          uiController.updateDriverState('ONLINE', this._onlineStatus);
-          uiController.showToast(this._onlineStatus ? '🟢 Online' : '🔴 Offline', 'success');
-
-        } catch (e) {
-          console.error('[DriverApp] Error botón online:', e);
-          uiController.showToast("Error cambiando estado", "error");
-        }
-      });
-    }
-
-    document.addEventListener('driverAction', (e) => {
-      const { action, tripId } = e.detail;
-      this._handleAction(action, tripId);
+    // Actualizar UI con stats
+    uiController.updateStats({
+      speed: position.speed,
+      accuracy: position.accuracy
     });
   }
 
-  async _handleAction(action, tripId) {
-    switch (action) {
-      case 'accept': return this._acceptTrip(tripId);
-      case 'reject': return this._rejectTrip(tripId);
-      case 'start': return tripManager.startTrip(tripId);
-      case 'finish': return tripManager.finishTrip(tripId);
-      case 'cancel': return tripManager.cancelTrip(tripId);
-      case 'navigate': return this._openExternalNav();
-      case 'whatsapp': return this._openWhatsApp();
+  _setupUI() {
+    // Botón online/offline
+    const btnFab = document.getElementById('fab-online');
+    if (btnFab) {
+      btnFab.addEventListener('click', async () => {
+        await this._toggleOnlineStatus();
+      });
     }
+
+    // Escuchar errores de ubicación
+    window.addEventListener('locationError', (e) => {
+      console.error('[DriverApp] Location error event:', e.detail);
+      uiController.showToast('Error de ubicación: ' + e.detail.message, 'error');
+    });
   }
 
-  _openExternalNav() {
-    const trip = tripManager.getCurrentTrip();
-    if (!trip) return;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${trip.destino_lat},${trip.destino_lng}`;
-    window.open(url, '_blank');
-  }
+  async _toggleOnlineStatus() {
+    try {
+      this._onlineStatus = !this._onlineStatus;
 
-  _openWhatsApp() {
-    const trip = tripManager.getCurrentTrip();
-    if (!trip?.telefono) return;
-    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI 🚐');
-    window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
+      const { data: { user } } = await supabaseService.client.auth.getUser();
+      if (!user) {
+        uiController.showToast('No autenticado', 'error');
+        return;
+      }
+
+      const { error } = await supabaseService.client
+        .from('choferes')
+        .update({
+          disponible: this._onlineStatus,
+          online: this._onlineStatus,
+          last_seen_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[DriverApp] Error updating status:', error);
+        uiController.showToast('No se pudo actualizar estado', 'error');
+        return;
+      }
+
+      uiController.updateDriverState('ONLINE', this._onlineStatus);
+      uiController.showToast(this._onlineStatus ? '🟢 Online' : '🔴 Offline', 'success');
+
+    } catch (e) {
+      console.error('[DriverApp] Error toggling status:', e);
+      uiController.showToast('Error cambiando estado', 'error');
+    }
   }
 }
 
-const app = new DriverApp();
-app.init();
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+  const app = new DriverApp();
+  app.init();
+});
 
 export default DriverApp;
