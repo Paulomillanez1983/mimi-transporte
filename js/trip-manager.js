@@ -10,6 +10,8 @@ class TripManager {
   constructor() {
     this.currentTrip = null;
     this.pendingOffer = null;
+    this.emit('noPendingTrips');
+
 
     this.refreshInterval = null;
     this.isLoadingInitial = false;
