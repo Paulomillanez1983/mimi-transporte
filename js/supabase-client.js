@@ -129,6 +129,9 @@ class SupabaseClient {
       await new Promise((r) => setTimeout(r, 100));
       if (Date.now() - start > timeoutMs) return false;
     }
+if (!this.driverId) {
+  console.warn('[Supabase] driverId still null after ensureDriverProfile');
+}
 
     return true;
   }
