@@ -7,15 +7,17 @@ import CONFIG from './config.js';
 import supabaseService from './supabase-client.js';
 
 class TripManager {
-  constructor() {
-    this.currentTrip = null;
-    this.pendingOffer = null;
+constructor() {
+  this.currentTrip = null;
+  this.pendingOffer = null;
 
-    this.refreshInterval = null;
-    this.isLoadingInitial = false;
+  this.refreshInterval = null;
+  this.isLoadingInitial = false;
 
-    this.listeners = new Map();
-  }
+  this.listeners = new Map();
+
+  this.driverId = null; // ✅ guardar chofer_id_uuid
+}
 
   // =========================================================
   // EVENT EMITTER SIMPLE
