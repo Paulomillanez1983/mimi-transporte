@@ -8,16 +8,15 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- SUPABASE LOCAL (NO CDN) -->
+  <!-- LIB SUPABASE LOCAL -->
   <script src="./libs/supabase-js.js"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #000000;
-      color: #ffffff;
+      font-family: 'Inter', sans-serif;
+      background: #000;
+      color: #fff;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -25,26 +24,11 @@
       justify-content: center;
       padding: 20px;
     }
-
     .logo { font-size: 48px; margin-bottom: 8px; }
-
-    h1 {
-      font-size: 28px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      text-align: center;
-    }
-
-    .subtitle {
-      color: rgba(255,255,255,0.6);
-      margin-bottom: 30px;
-      text-align: center;
-    }
-
+    h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; text-align: center; }
+    .subtitle { color: rgba(255,255,255,0.6); margin-bottom: 30px; text-align: center; }
     .login-form { width: 100%; max-width: 320px; }
-
     .form-group { margin-bottom: 16px; }
-
     label {
       display: block;
       font-size: 13px;
@@ -52,9 +36,7 @@
       margin-bottom: 6px;
       color: rgba(255,255,255,0.8);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
-
     input {
       width: 100%;
       padding: 16px;
@@ -63,15 +45,8 @@
       border-radius: 12px;
       color: white;
       font-size: 16px;
-      transition: all 0.2s;
     }
-
-    input:focus {
-      outline: none;
-      border-color: #276EF1;
-      background: #242426;
-    }
-
+    input:focus { outline: none; border-color: #276EF1; }
     button {
       width: 100%;
       padding: 18px;
@@ -82,42 +57,13 @@
       font-size: 16px;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s;
       margin-top: 8px;
     }
-
     button:hover { background: #448AFF; }
-    button:active { transform: scale(0.98); }
-
-    .google-btn {
-      margin-top: 12px;
-      background: #ffffff;
-      color: #000;
-      font-weight: 800;
-    }
-
-    .google-btn:hover {
-      background: #e5e5e5;
-    }
-
-    .error {
-      color: #E11900;
-      font-size: 14px;
-      margin-top: 12px;
-      text-align: center;
-      display: none;
-    }
-
+    .google-btn { margin-top: 12px; background: #fff; color: #000; font-weight: 800; }
+    .error { color: #E11900; font-size: 14px; margin-top: 12px; text-align: center; display: none; }
     .error.visible { display: block; }
-
-    .ok {
-      color: #22c55e;
-      font-size: 14px;
-      margin-top: 12px;
-      text-align: center;
-      display: none;
-    }
-
+    .ok { color: #22c55e; font-size: 14px; margin-top: 12px; text-align: center; display: none; }
     .ok.visible { display: block; }
   </style>
 </head>
@@ -130,24 +76,12 @@
   <form class="login-form" id="loginForm">
     <div class="form-group">
       <label for="email">Email</label>
-      <input
-        type="email"
-        id="email"
-        placeholder="chofer@mimi.com"
-        required
-        autocomplete="username"
-      >
+      <input type="email" id="email" required autocomplete="username">
     </div>
 
     <div class="form-group">
       <label for="password">Contraseña</label>
-      <input
-        type="password"
-        id="password"
-        placeholder="••••••••"
-        required
-        autocomplete="current-password"
-      >
+      <input type="password" id="password" required autocomplete="current-password">
     </div>
 
     <button type="submit">Ingresar</button>
@@ -160,11 +94,10 @@
     <div class="ok" id="ok"></div>
   </form>
 
-  <script>
-    const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
-
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  <!-- LOGIN CONTROLADO (UN SOLO CLIENT) -->
+  <script type="module">
+    import supabaseService from "./js/supabase-client.js";
+    import CONFIG from "./js/config.js";
 
     const errorEl = document.getElementById("error");
     const okEl = document.getElementById("ok");
@@ -182,23 +115,27 @@
     }
 
     async function checkSession() {
-      const { data } = await supabaseClient.auth.getSession();
-      if (data.session) {
-        window.location.href = "chofer-panel.html";
+      await supabaseService.init();
+      const { data } = await supabaseService.client.auth.getSession();
+
+      if (data?.session) {
+        window.location.replace("chofer-panel.html");
       }
     }
+
     checkSession();
 
-    // LOGIN EMAIL/PASSWORD
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+
+      await supabaseService.init();
 
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value;
 
       showOk("Ingresando...");
 
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
+      const { error } = await supabaseService.client.auth.signInWithPassword({
         email,
         password
       });
@@ -208,18 +145,16 @@
         return;
       }
 
-      showOk("✅ Login correcto. Entrando...");
-
-      setTimeout(() => {
-        window.location.href = "chofer-panel.html";
-      }, 700);
+      showOk("✅ Login correcto...");
+      window.location.replace("chofer-panel.html");
     });
 
-    // LOGIN GOOGLE
     document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+      await supabaseService.init();
+
       showOk("Abriendo Google...");
 
-      const { data, error } = await supabaseClient.auth.signInWithOAuth({
+      const { error } = await supabaseService.client.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/chofer-panel.html"
