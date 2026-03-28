@@ -239,7 +239,6 @@ class UIController {
   }
 
   _getOfferTripId(offer) {
-    // Algunas veces viene offer.id como viaje_id y otras como offerId
     return offer?.id || offer?.viaje_id || offer?.trip_id;
   }
 
@@ -259,7 +258,6 @@ class UIController {
         break;
 
       case CONFIG.DRIVER_STATES.RECEIVING_OFFER:
-        // modal manages
         break;
 
       case CONFIG.DRIVER_STATES.GOING_TO_PICKUP:
@@ -314,7 +312,6 @@ class UIController {
     this._updateStatus("Yendo a buscar pasajero", true);
     this._showNavigation(trip, "pickup");
 
-    // Show route on map
     const driverPos = locationService.getPosition();
     if (driverPos && trip.origen_lat && trip.origen_lng) {
       mapService.showRoute(
@@ -357,7 +354,6 @@ class UIController {
     this._updateStatus("Viaje en curso", true);
     this._showNavigation(trip, "dropoff");
 
-    // Update route to destination
     const driverPos = locationService.getPosition();
     if (driverPos && trip.destino_lat && trip.destino_lng) {
       mapService.showRoute(
@@ -421,40 +417,31 @@ class UIController {
       const km = this._getTripDistanceKm(offer);
       const min = this._getTripDurationMin(offer);
 
-      // Origen / destino
       this.elements["trip-pickup"].textContent = this._safeText(offer.origen, "--");
       this.elements["trip-dropoff"].textContent = this._safeText(offer.destino, "--");
 
-      // Precio
       this.elements["trip-price"].textContent =
         price > 0 ? `$${price.toLocaleString()}` : "$--";
 
-      // Distancia
       this.elements["trip-distance"].textContent =
         km > 0 ? `${km.toFixed(1)} km` : "-- km";
 
-      // Duración
       this.elements["trip-duration"].textContent =
         min > 0 ? `${Math.round(min)} min` : "-- min";
 
-      // Tiempo pickup
       this.elements["pickup-time"].textContent =
         min > 0 ? `${Math.round(min)} min` : "-- min";
 
-      // Cliente
       const clientName = offer.cliente || offer.cliente_nombre || "Pasajero";
       const clientPhone = offer.telefono || offer.cliente_telefono || "";
 
       this.elements["client-name"].textContent = this._escape(clientName);
       this.elements["client-phone"].textContent = this._escape(clientPhone);
 
-      // Botón llamar / WhatsApp (si hay número)
       this._bindClientActions(clientPhone);
 
-      // Show modal
       this.elements["incoming-modal"]?.classList.add("active");
 
-      // Start countdown
       this._startCountdown(CONFIG.INCOMING_OFFER_TIMEOUT);
     } catch (err) {
       console.error("[UI] Error showing offer:", err);
@@ -600,7 +587,6 @@ class UIController {
   _bindClientActions(phone) {
     const clean = String(phone || "").replace(/[^\d+]/g, "");
 
-    // Call
     this.elements["btn-call"]?.addEventListener("click", () => {
       if (!clean) {
         this._showToast("Teléfono no disponible", "warning");
@@ -609,7 +595,6 @@ class UIController {
       window.location.href = `tel:${clean}`;
     });
 
-    // WhatsApp
     this.elements["btn-whatsapp"]?.addEventListener("click", () => {
       if (!clean) {
         this._showToast("WhatsApp no disponible", "warning");
@@ -762,3 +747,5 @@ class UIController {
 
 // Singleton
 const uiController = new UIController();
+
+export default uiController;
