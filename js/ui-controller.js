@@ -153,7 +153,112 @@ class UIController {
 }
 
 const uiController = new UIController();
-export default uiController;// =========================================================
+export default uiController;
+// =========================================================
+// 🚗 MOSTRAR VIAJE ENTRANTE
+// =========================================================
+showIncomingTrip(trip, onAccept, onReject) {
+  console.log("[UI] Mostrando viaje:", trip);
+
+  const modal = document.getElementById("incoming-modal");
+  if (!modal) {
+    console.warn("[UI] Modal no encontrado");
+    return;
+  }
+
+  modal.classList.add("active");
+
+  // =========================
+  // DATOS
+  // =========================
+  document.getElementById("trip-pickup").textContent =
+    trip.origen || "Origen";
+
+  document.getElementById("trip-dropoff").textContent =
+    trip.destino || "Destino";
+
+  document.getElementById("trip-distance").textContent =
+    (trip.distancia_km || "--") + " km";
+
+  document.getElementById("trip-price").textContent =
+    "$" + (trip.precio || "--");
+
+  document.getElementById("trip-duration").textContent =
+    (trip.duracion_min || "--") + " min";
+
+  document.getElementById("client-name").textContent =
+    trip.cliente || "Cliente";
+
+  document.getElementById("client-phone").textContent =
+    trip.telefono || "";
+
+  // =========================
+  // BOTONES
+  // =========================
+  const btnAccept = document.getElementById("btn-accept");
+  const btnReject = document.getElementById("btn-reject");
+
+  if (btnAccept) {
+    btnAccept.onclick = () => {
+      console.log("✅ Aceptar viaje");
+      this._clearCountdown();
+      onAccept && onAccept();
+      modal.classList.remove("active");
+    };
+  }
+
+  if (btnReject) {
+    btnReject.onclick = () => {
+      console.log("❌ Rechazar viaje");
+      this._clearCountdown();
+      onReject && onReject();
+      modal.classList.remove("active");
+    };
+  }
+
+  // =========================
+  // ⏱️ COUNTDOWN
+  // =========================
+  this._clearCountdown();
+  this.currentCountdown = 15;
+
+  const countdownText = document.getElementById("countdown-number");
+  const circle = document.getElementById("countdown-circle");
+
+  if (countdownText) countdownText.textContent = this.currentCountdown;
+
+  this.countdownInterval = setInterval(() => {
+    this.currentCountdown--;
+
+    if (countdownText) {
+      countdownText.textContent = this.currentCountdown;
+    }
+
+    if (circle) {
+      const offset = (this.currentCountdown / 15) * 283;
+      circle.style.strokeDashoffset = offset;
+    }
+
+    if (this.currentCountdown <= 0) {
+      this._clearCountdown();
+      modal.classList.remove("active");
+
+      console.log("⏱️ Tiempo agotado");
+      onReject && onReject();
+    }
+  }, 1000);
+}
+
+// limpiar contador
+_clearCountdown() {
+  if (this.countdownInterval) {
+    clearInterval(this.countdownInterval);
+    this.countdownInterval = null;
+  }
+}
+
+
+// =========================================================
 // 🚗 MOSTRAR VIAJE ENTRANTE
 // =========================================================
 showIncomingTrip(trip, onAccept, onReject) {
