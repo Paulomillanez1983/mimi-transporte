@@ -63,18 +63,28 @@ class SoundManager {
     this._hapticsUnlocked = true;
   }
 
-  _generateSounds() {
-    const { SOUNDS } = CONFIG;
+_generateSounds() {
+  const SOUNDS = CONFIG?.SOUNDS || {};
 
-    Object.entries(SOUNDS).forEach(([name, config]) => {
-      this.sounds[name] = () => this._playTone({
-        frequencies: config.freq,
-        durations: config.duration,
-        type: config.type,
-        gain: name === 'newTrip' ? 0.5 : 0.35
-      });
-    });
+  if (!SOUNDS || typeof SOUNDS !== 'object') {
+    console.warn('[SoundManager] CONFIG.SOUNDS inválido');
+    return;
   }
+
+  Object.entries(SOUNDS).forEach(([name, config]) => {
+    if (!config || !config.freq || !config.duration) {
+      console.warn(`[SoundManager] Sound config inválido para: ${name}`, config);
+      return;
+    }
+
+    this.sounds[name] = () => this._playTone({
+      frequencies: config.freq,
+      durations: config.duration,
+      type: config.type || 'sine',
+      gain: name === 'newTrip' ? 0.5 : 0.35
+    });
+  });
+}
 
   _playTone({ frequencies, durations, type, gain }) {
     if (!this.enabled || !this.ctx || !this._audioUnlocked) return;
