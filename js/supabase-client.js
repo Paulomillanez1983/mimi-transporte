@@ -35,21 +35,29 @@ class SupabaseClient {
     }
 
     try {
-      this.client = window.supabase.createClient(
-        CONFIG.SUPABASE_URL,
-        CONFIG.SUPABASE_KEY,
-        {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: false
-          },
-          realtime: {
-            params: { eventsPerSecond: 10 }
-          },
-          db: { schema: 'public' }
-        }
-      );
+this.client = window.supabase.createClient(
+  CONFIG.SUPABASE_URL,
+  CONFIG.SUPABASE_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+
+      // ✅ IMPORTANTE para Google OAuth (captura token del redirect)
+      detectSessionInUrl: true,
+
+      // ✅ evita locks colgados entre pestañas / recargas
+      storageKey: "mimi-driver-auth",
+
+      // ✅ recomendado por Supabase para OAuth moderno
+      flowType: "pkce"
+    },
+    realtime: {
+      params: { eventsPerSecond: 10 }
+    },
+    db: { schema: "public" }
+  }
+);
 
       // Load session
       const { data: sessionData, error: sessionError } =
