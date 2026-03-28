@@ -93,20 +93,54 @@ class DriverApp {
     console.log('🔌 Realtime detenido');
   }
 
-  _onNuevaOferta(oferta) {
-    console.log('[DriverApp] Oferta recibida:', oferta);
+async _onNuevaOferta(oferta) {
+  console.log('[DriverApp] Oferta recibida:', oferta);
 
-    const modal = document.getElementById('incoming-modal');
-    if (modal) {
-      modal.classList.add('active');
-    }
+  const supabase = supabaseService.client;
 
-    const pickup = document.getElementById('trip-pickup');
-    if (pickup) pickup.textContent = 'Nuevo viaje disponible';
+  // 🔥 TRAER DATOS REALES DEL VIAJE
+  const { data: viaje, error } = await supabase
+    .from('viajes')
+    .select('*')
+    .eq('id', oferta.viaje_id)
+    .single();
 
-    uiController.showToast('🚗 Nueva oferta de viaje', 'success');
+  if (error || !viaje) {
+    console.error('❌ Error cargando viaje:', error);
+    uiController.showToast('Error cargando viaje', 'error');
+    return;
   }
 
+  console.log('📦 Viaje completo:', viaje);
+
+  // 🔥 MOSTRAR MODAL
+  const modal = document.getElementById('incoming-modal');
+  if (modal) modal.classList.add('active');
+
+  // 🔥 CARGAR DATOS EN UI
+  document.getElementById('trip-pickup').textContent =
+    viaje.origen || 'Origen no disponible';
+
+  document.getElementById('trip-dropoff').textContent =
+    viaje.destino || 'Destino no disponible';
+
+  document.getElementById('trip-distance').textContent =
+    (viaje.distancia_km || '--') + ' km';
+
+  document.getElementById('trip-price').textContent =
+    '$' + (viaje.precio || '--');
+
+  document.getElementById('client-name').textContent =
+    viaje.cliente || 'Cliente';
+
+  document.getElementById('client-phone').textContent =
+    viaje.telefono || '';
+
+  // 🔥 GUARDAR VIAJE ACTUAL
+  this._currentTripId = viaje.id;
+
+  uiController.showToast('🚗 Nueva oferta recibida', 'success');
+}
   // =========================
 
   async _initMapWithFallback() {
