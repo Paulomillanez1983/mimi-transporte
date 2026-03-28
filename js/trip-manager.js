@@ -1,7 +1,10 @@
 /**
- * MIMI Driver - Trip Manager (PRODUCTION FINAL)
+ * MIMI Driver - Trip Manager (PRODUCTION FINAL FIX)
  * Business logic for trip lifecycle
  */
+
+import CONFIG from './config.js';
+import supabaseService from './supabase-client.js';
 
 class TripManager {
   constructor() {
@@ -10,18 +13,45 @@ class TripManager {
 
     this.refreshInterval = null;
     this.isLoadingInitial = false;
+
+    this.listeners = new Map();
   }
 
-  async initialize() {
-    const driverId = supabaseClient.getDriverId();
-    if (!driverId) throw new Error('Not authenticated');
+  // =========================================================
+  // EVENT EMITTER SIMPLE
+  // =========================================================
+  on(event, callback) {
+    if (!this.listeners.has(event)) this.listeners.set(event, []);
+    this.listeners.get(event).push(callback);
+
+    return () => {
+      const arr = this.listeners.get(event) || [];
+      this.listeners.set(event, arr.filter(cb => cb !== callback));
+    };
+  }
+
+  emit(event, payload) {
+    const arr = this.listeners.get(event) || [];
+    arr.forEach(cb => {
+      try { cb(payload); } catch (e) {}
+    });
+  }
+
+  // =========================================================
+  // INIT
+  // =========================================================
+  async init() {
+    const { data: { user } } = await supabaseService.client.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const driverId = user.id;
 
     console.log('[TripManager] Initializing for driver UID:', driverId);
 
-    await this._loadInitialState();
+    await this._loadInitialState(driverId);
 
     this._subscribeToRealtime(driverId);
-    this._startRefreshInterval();
+    this._startRefreshInterval(driverId);
 
     return this;
   }
@@ -29,21 +59,20 @@ class TripManager {
   // =========================================================
   // LOAD INITIAL STATE
   // =========================================================
-
-  async _loadInitialState() {
+  async _loadInitialState(driverId) {
     if (this.isLoadingInitial) return;
     this.isLoadingInitial = true;
 
-    const driverId = supabaseClient.getDriverId();
-    if (!driverId) {
-      this.isLoadingInitial = false;
-      return;
-    }
-
     try {
-      // 1) CHECK ACTIVE TRIP
-      const { data: activeTrip, error: tripError } =
-        await supabaseClient.getActiveTrip(driverId);
+      // 1) ACTIVE TRIP
+      const { data: activeTrip, error: tripError } = await supabaseService.client
+        .from('viajes')
+        .select('*')
+        .eq('chofer_id', driverId)
+        .in('estado', ['ACEPTADO', 'EN_CURSO'])
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (tripError) {
         console.error('[TripManager] Error loading active trip:', tripError);
@@ -55,24 +84,19 @@ class TripManager {
         this.currentTrip = activeTrip;
         this.pendingOffer = null;
 
-        stateManager.set('trip.current', activeTrip);
-        stateManager.set('trip.pending', null);
-
-        if (activeTrip.estado === 'ACEPTADO') {
-          stateManager.transitionDriver(CONFIG.DRIVER_STATES.GOING_TO_PICKUP);
-        } else if (activeTrip.estado === 'EN_CURSO') {
-          stateManager.transitionDriver(CONFIG.DRIVER_STATES.IN_PROGRESS);
-        } else {
-          stateManager.transitionDriver(CONFIG.DRIVER_STATES.GOING_TO_PICKUP);
-        }
-
+        this.emit('tripAccepted', activeTrip);
         this.isLoadingInitial = false;
         return;
       }
 
-      // 2) CHECK PENDING OFFERS
-      const { data: offers, error: offerError } =
-        await supabaseClient.getPendingOffers(driverId);
+      // 2) PENDING OFFERS
+      const { data: offers, error: offerError } = await supabaseService.client
+        .from('viaje_ofertas')
+        .select('id, viaje_id, chofer_id, estado, expires_at, offered_at')
+        .eq('chofer_id', driverId)
+        .eq('estado', 'PENDIENTE')
+        .order('offered_at', { ascending: false })
+        .limit(1);
 
       if (offerError) {
         console.error('[TripManager] Error loading offers:', offerError);
@@ -81,34 +105,28 @@ class TripManager {
       if (offers && offers.length > 0) {
         const offer = offers[0];
 
-        // Anti spam: if already loaded, skip
-        if (this.pendingOffer?.offerId === offer.id) {
-          console.log('[TripManager] Offer already loaded, skipping refresh');
-          this.isLoadingInitial = false;
-          return;
-        }
+        const { data: trip, error: tripErr } = await supabaseService.client
+          .from('viajes')
+          .select('*')
+          .eq('id', offer.viaje_id)
+          .single();
 
-        console.log('[TripManager] Pending offer found:', offer.id);
+        if (tripErr) {
+          console.error('[TripManager] Error fetching trip for offer:', tripErr);
+        } else if (trip) {
+          this.pendingOffer = {
+            ...trip,
+            offerId: offer.id,
+            expiresAt: offer.expires_at
+          };
 
-        this.pendingOffer = {
-          ...offer.viajes,
-          offerId: offer.id,
-          expiresAt: offer.expires_at
-        };
-
-        stateManager.set('trip.pending', this.pendingOffer);
-
-        // IMPORTANT: allow transition from OFFLINE too
-        const ok = stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
-
-        if (!ok) {
-          console.warn('[TripManager] Could not transition to RECEIVING_OFFER');
+          console.log('[TripManager] Pending offer found:', offer.id);
+          this.emit('newPendingTrip', this.pendingOffer);
         }
 
       } else {
-        console.log('[TripManager] No pending offers');
         this.pendingOffer = null;
-        stateManager.set('trip.pending', null);
+        this.emit('noPendingTrips');
       }
 
     } catch (error) {
@@ -121,261 +139,200 @@ class TripManager {
   // =========================================================
   // REALTIME
   // =========================================================
-
   _subscribeToRealtime(driverId) {
     console.log('[TripManager] Subscribing to realtime channels...');
 
-    supabaseClient.subscribeToOffers(driverId, {
-      onOffer: (payload) => this._handleOfferUpdate(payload),
-      onError: (err) => console.error('[TripManager] Offer subscription error:', err)
-    });
+    // OFERTAS
+    supabaseService.client
+      .channel(`offers-${driverId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'viaje_ofertas',
+          filter: `chofer_id=eq.${driverId}`
+        },
+        async (payload) => {
+          console.log('[TripManager] Offer realtime event:', payload.eventType);
 
-    supabaseClient.subscribeToTrips(driverId, {
-      onTrip: (payload) => this._handleTripUpdate(payload)
-    });
-  }
+          if (payload.eventType === 'INSERT') {
+            if (payload.new?.estado === 'PENDIENTE') {
+              await this._loadInitialState(driverId);
+            }
+          }
 
-  async _handleOfferUpdate(payload) {
-    const { eventType, new: newRecord, old: oldRecord } = payload;
-
-    if (this.currentTrip) {
-      console.log('[TripManager] Ignoring offer (active trip exists)');
-      return;
-    }
-
-    if (eventType === 'INSERT') {
-      if (newRecord?.estado === 'PENDIENTE') {
-        await this._fetchAndShowOffer(newRecord);
-      }
-    }
-
-    if (eventType === 'UPDATE') {
-      if (
-        newRecord?.estado !== 'PENDIENTE' &&
-        this.pendingOffer?.offerId === newRecord?.id
-      ) {
-        console.log('[TripManager] Offer no longer pending');
-
-        this.pendingOffer = null;
-        stateManager.set('trip.pending', null);
-
-        if (stateManager.get('driver.status') === CONFIG.DRIVER_STATES.RECEIVING_OFFER) {
-          stateManager.transitionDriver(CONFIG.DRIVER_STATES.ONLINE);
+          if (payload.eventType === 'UPDATE') {
+            await this._loadInitialState(driverId);
+          }
         }
-      }
-    }
+      )
+      .subscribe();
 
-    if (eventType === 'DELETE') {
-      if (this.pendingOffer?.offerId === oldRecord?.id) {
-        console.log('[TripManager] Offer deleted');
+    // VIAJES
+    supabaseService.client
+      .channel(`trips-${driverId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'viajes',
+          filter: `chofer_id=eq.${driverId}`
+        },
+        (payload) => {
+          const trip = payload.new;
+          if (!trip) return;
 
-        this.pendingOffer = null;
-        stateManager.set('trip.pending', null);
+          console.log('[TripManager] Trip update:', trip.id, trip.estado);
 
-        if (stateManager.get('driver.status') === CONFIG.DRIVER_STATES.RECEIVING_OFFER) {
-          stateManager.transitionDriver(CONFIG.DRIVER_STATES.ONLINE);
+          if (trip.estado === 'ACEPTADO') this.emit('tripAccepted', trip);
+          if (trip.estado === 'EN_CURSO') this.emit('tripStarted', trip);
+          if (trip.estado === 'COMPLETADO') this.emit('tripCompleted', trip);
+          if (trip.estado === 'CANCELADO') this.emit('tripCancelled', trip);
+
+          this.currentTrip = trip;
         }
-      }
-    }
-  }
-
-  async _fetchAndShowOffer(offerRecord) {
-    try {
-      const { data: trip, error } = await supabaseClient.client
-        .from('viajes')
-        .select('*')
-        .eq('id', offerRecord.viaje_id)
-        .single();
-
-      if (error) {
-        console.error('[TripManager] Fetch offer error:', error);
-        return;
-      }
-
-      if (!trip) return;
-
-      this.pendingOffer = {
-        ...trip,
-        offerId: offerRecord.id,
-        expiresAt: offerRecord.expires_at
-      };
-
-      console.log('[TripManager] Showing new offer trip:', trip.id);
-
-      stateManager.set('trip.pending', this.pendingOffer);
-
-      const ok = stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
-      if (!ok) {
-        console.warn('[TripManager] Transition RECEIVING_OFFER blocked');
-      }
-
-    } catch (error) {
-      console.error('[TripManager] Fetch error:', error);
-    }
-  }
-
-  _handleTripUpdate(payload) {
-    const { eventType, new: newRecord } = payload;
-    if (!newRecord) return;
-
-    const estado = newRecord.estado;
-    console.log(`[TripManager] Trip ${newRecord.id} -> ${estado}`);
-
-    if (['ACEPTADO', 'EN_CURSO'].includes(estado)) {
-      this.currentTrip = newRecord;
-      stateManager.set('trip.current', newRecord);
-
-      this.pendingOffer = null;
-      stateManager.set('trip.pending', null);
-
-      if (estado === 'ACEPTADO') {
-        stateManager.transitionDriver(CONFIG.DRIVER_STATES.GOING_TO_PICKUP);
-      } else {
-        stateManager.transitionDriver(CONFIG.DRIVER_STATES.IN_PROGRESS);
-      }
-    }
-
-    if (['COMPLETADO', 'CANCELADO'].includes(estado)) {
-      const wasCurrent = this.currentTrip?.id === newRecord.id;
-
-      this.currentTrip = null;
-      stateManager.set('trip.current', null);
-
-      if (wasCurrent) {
-        stateManager.transitionDriver(CONFIG.DRIVER_STATES.ONLINE);
-
-        if (estado === 'COMPLETADO') {
-          soundService.feedback('arrival');
-        }
-      }
-    }
+      )
+      .subscribe();
   }
 
   // =========================================================
   // REFRESH
   // =========================================================
-
-  _startRefreshInterval() {
+  _startRefreshInterval(driverId) {
     if (this.refreshInterval) clearInterval(this.refreshInterval);
 
     this.refreshInterval = setInterval(() => {
       if (!this.currentTrip) {
-        this._loadInitialState();
+        this._loadInitialState(driverId);
       }
     }, CONFIG.TRIP_REFRESH_INTERVAL || 5000);
   }
 
   // =========================================================
-  // PUBLIC ACTIONS
+  // ACTIONS
   // =========================================================
+  async acceptTrip(tripId) {
+    const { data: { user } } = await supabaseService.client.auth.getUser();
+    if (!user) return { success: false, error: 'No autenticado' };
 
-  async acceptOffer(tripId) {
-    const driverId = supabaseClient.getDriverId();
+    const driverId = user.id;
 
-    try {
-      const { data, error } = await supabaseClient.acceptOffer(tripId, driverId);
+    // Aceptar: actualizar oferta + viaje
+    const { error: offerError } = await supabaseService.client
+      .from('viaje_ofertas')
+      .update({
+        estado: 'ACEPTADA',
+        responded_at: new Date().toISOString()
+      })
+      .eq('viaje_id', tripId)
+      .eq('chofer_id', driverId)
+      .eq('estado', 'PENDIENTE');
 
-      if (error) throw error;
-
-      if (data?.ok) {
-        soundService.feedback('accept');
-        return { success: true };
-      }
-
-      return { success: false, error: data?.reason || 'Unknown error' };
-
-    } catch (error) {
-      console.error('[TripManager] Accept error:', error);
-      soundService.feedback('error');
-      return { success: false, error: error.message };
+    if (offerError) {
+      console.error('[TripManager] Error accepting offer:', offerError);
+      return { success: false, error: offerError.message };
     }
+
+    const { error: tripError } = await supabaseService.client
+      .from('viajes')
+      .update({
+        estado: 'ACEPTADO',
+        chofer_id: driverId,
+        aceptado_at: new Date().toISOString()
+      })
+      .eq('id', tripId);
+
+    if (tripError) {
+      console.error('[TripManager] Error updating trip:', tripError);
+      return { success: false, error: tripError.message };
+    }
+
+    return { success: true };
   }
 
-  async rejectOffer(tripId, reason = 'RECHAZADO_POR_CHOFER') {
-    const driverId = supabaseClient.getDriverId();
+  async rejectTrip(tripId, reason = 'RECHAZADO_POR_CHOFER') {
+    const { data: { user } } = await supabaseService.client.auth.getUser();
+    if (!user) return { success: false, error: 'No autenticado' };
 
-    try {
-      await supabaseClient.rejectOffer(tripId, driverId, reason);
+    const driverId = user.id;
 
-      this.pendingOffer = null;
-      stateManager.set('trip.pending', null);
+    const { error } = await supabaseService.client
+      .from('viaje_ofertas')
+      .update({
+        estado: 'RECHAZADA',
+        rechazo_motivo: reason,
+        responded_at: new Date().toISOString()
+      })
+      .eq('viaje_id', tripId)
+      .eq('chofer_id', driverId)
+      .eq('estado', 'PENDIENTE');
 
-      stateManager.transitionDriver(CONFIG.DRIVER_STATES.ONLINE);
-
-      return { success: true };
-
-    } catch (error) {
+    if (error) {
       console.error('[TripManager] Reject error:', error);
       return { success: false, error: error.message };
     }
+
+    return { success: true };
   }
 
   async startTrip(tripId) {
-    const driverId = supabaseClient.getDriverId();
+    const { data: { user } } = await supabaseService.client.auth.getUser();
+    if (!user) return { success: false, error: 'No autenticado' };
 
-    try {
-      const { data, error } = await supabaseClient.startTrip(tripId, driverId);
+    const driverId = user.id;
 
-      if (error) throw error;
+    const { error } = await supabaseService.client
+      .from('viajes')
+      .update({
+        estado: 'EN_CURSO',
+        iniciado_at: new Date().toISOString()
+      })
+      .eq('id', tripId)
+      .eq('chofer_id', driverId);
 
-      if (data?.ok) {
-        stateManager.transitionDriver(CONFIG.DRIVER_STATES.IN_PROGRESS);
-        return { success: true };
-      }
-
-      return { success: false, error: 'Could not start trip' };
-
-    } catch (error) {
-      console.error('[TripManager] Start error:', error);
+    if (error) {
+      console.error('[TripManager] Start trip error:', error);
       return { success: false, error: error.message };
     }
+
+    return { success: true };
   }
 
-  async completeTrip(tripId) {
-    const driverId = supabaseClient.getDriverId();
+  async finishTrip(tripId) {
+    const { data: { user } } = await supabaseService.client.auth.getUser();
+    if (!user) return { success: false, error: 'No autenticado' };
 
-    try {
-      const { data, error } = await supabaseClient.completeTrip(tripId, driverId);
+    const driverId = user.id;
 
-      if (error) throw error;
+    const { error } = await supabaseService.client
+      .from('viajes')
+      .update({
+        estado: 'COMPLETADO',
+        completado_at: new Date().toISOString()
+      })
+      .eq('id', tripId)
+      .eq('chofer_id', driverId);
 
-      if (data?.ok) {
-        soundService.feedback('arrival');
-        return { success: true };
-      }
-
-      return { success: false, error: 'Could not complete trip' };
-
-    } catch (error) {
-      console.error('[TripManager] Complete error:', error);
+    if (error) {
+      console.error('[TripManager] Finish trip error:', error);
       return { success: false, error: error.message };
     }
+
+    return { success: true };
   }
 
   // =========================================================
   // GETTERS
   // =========================================================
-
   getCurrentTrip() {
     return this.currentTrip;
   }
 
-  getPendingOffer() {
+  getPendingTrip() {
     return this.pendingOffer;
-  }
-
-  // =========================================================
-  // DESTROY
-  // =========================================================
-
-  destroy() {
-    supabaseClient.unsubscribeAll();
-
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-      this.refreshInterval = null;
-    }
   }
 }
 
-const tripManager = new TripManager();
+export default new TripManager();
