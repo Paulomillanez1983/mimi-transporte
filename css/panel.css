@@ -759,3 +759,50 @@
 .btn-reject {
   pointer-events: auto;
 }
+/* -------------------------
+   INCOMING MODAL FIXES
+   ------------------------- */
+
+/* El backdrop NO debe capturar clicks */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  pointer-events: none !important; /* Fuerza que no bloquee */
+  z-index: 1;
+}
+
+/* El contenido SÍ captura clicks */
+.modal-content {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  /* Asegurar que esté por encima */
+  transform: translateZ(0);
+}
+
+/* Botones específicamente habilitados */
+.btn-accept,
+.btn-reject {
+  pointer-events: auto !important;
+  cursor: pointer;
+  position: relative;
+  z-index: 10;
+  /* Prevenir selección de texto que puede interferir en móviles */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Asegurar que el modal esté realmente oculto cuando no está activo */
+.incoming-modal {
+  display: none;
+  /* ... resto de tus estilos ... */
+}
+
+.incoming-modal.active {
+  display: flex;
+  /* Forzar renderizado por encima de todo */
+  z-index: 9999;
+}
