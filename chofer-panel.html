@@ -28,9 +28,11 @@
 
   <link rel="stylesheet" href="./libs/maplibre-gl.css" />
 
-  <script src="./libs/supabase-js.js" defer></script>
+  <!-- LIBS -->
+  <script src="./libs/supabase-js.js"></script>
   <script src="./libs/maplibre-gl.js" defer></script>
 
+  <!-- CSS -->
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/animations.css" />
@@ -38,10 +40,35 @@
 
   <style>
     html { -webkit-text-size-adjust: 100%; }
+
+    /* Botón cerrar sesión */
+    .logout-btn {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 9999;
+      background: rgba(255, 0, 0, 0.85);
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 13px;
+      backdrop-filter: blur(10px);
+      display: none;
+    }
+
+    .logout-btn.visible {
+      display: block;
+    }
   </style>
 </head>
 
 <body>
+
+  <!-- Botón Logout -->
+  <button class="logout-btn" id="logoutBtn">Salir</button>
 
   <div id="map-container"></div>
 
@@ -233,9 +260,64 @@
 
   </div>
 
-  <!-- JS Modules -->
-  <script type="module" src="js/app.js"></script>
+  <!-- ============================= -->
+  <!-- 🔐 SUPABASE AUTH PROTECTION -->
+  <!-- ============================= -->
+  <script>
+    // ⚠️ REEMPLAZAR POR TU SUPABASE REAL
+    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+    const SUPABASE_ANON_KEY = "TU_ANON_KEY";
 
+    // Usa el supabase-js que ya cargaste en /libs/supabase-js.js
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function protegerPanel() {
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+
+        if (error) {
+          console.error("Auth error:", error);
+          window.location.href = "login-chofer.html";
+          return;
+        }
+
+        if (!data.session) {
+          window.location.href = "login-chofer.html";
+          return;
+        }
+
+        // Usuario autenticado
+        const user = data.session.user;
+
+        console.log("✅ Chofer autenticado:", user.email);
+
+        // Mostrar datos básicos en UI
+        const driverNameEl = document.getElementById("driver-name");
+        const driverInitialEl = document.getElementById("driver-initial");
+
+        if (driverNameEl) driverNameEl.textContent = user.email || "Conductor";
+        if (driverInitialEl) driverInitialEl.textContent = (user.email || "M").substring(0, 1).toUpperCase();
+
+        // Mostrar botón logout
+        document.getElementById("logoutBtn").classList.add("visible");
+
+      } catch (err) {
+        console.error("Error protegiendo panel:", err);
+        window.location.href = "login-chofer.html";
+      }
+    }
+
+    protegerPanel();
+
+    // LOGOUT
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabaseClient.auth.signOut();
+      window.location.href = "login-chofer.html";
+    });
+  </script>
+
+  <!-- JS APP -->
+  <script type="module" src="js/app.js"></script>
 
 </body>
 </html>
