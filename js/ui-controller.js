@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - UI Controller (VERSIÓN ANTI-BLOQUEO)
+ * MIMI Driver - UI Controller (FINAL ANTI-BLOQUEO)
  */
 
 import CONFIG from "./config.js";
@@ -13,6 +13,7 @@ class UIController {
     this.sheetOpen = false;
     this.currentTripCallbacks = {};
     this.isModalActive = false;
+    this._isProcessing = false; // Lock para evitar doble click
   }
 
   init() {
@@ -38,78 +39,98 @@ class UIController {
   }
 
   _bindEvents() {
-    // Usar capture phase para asegurar que capturamos el evento
+    // Delegación con capture phase y lock anti-doble-click
     document.addEventListener('click', (e) => {
-      if (!this.isModalActive) return;
+      if (!this.isModalActive || this._isProcessing) return;
       
       const btnAccept = e.target.closest('#btn-accept');
       const btnReject = e.target.closest('#btn-reject');
       
-      if (btnAccept) {
-        e.preventDefault();
-        e.stopImmediatePropagation(); // Detener otros listeners
-        console.log("[UI] ✅ ACEPTAR detectado");
-        this._handleAccept();
-      }
-      
-      if (btnReject) {
+      if (btnAccept || btnReject) {
         e.preventDefault();
         e.stopImmediatePropagation();
-        console.log("[UI] ❌ RECHAZAR detectado");
-        this._handleReject();
+        
+        this._isProcessing = true; // Lock
+        
+        if (btnAccept) {
+          console.log("[UI] ✅ ACEPTAR clickeado");
+          this._handleAccept();
+        } else {
+          console.log("[UI] ❌ RECHAZAR clickeado");
+          this._handleReject();
+        }
+        
+        // Liberar lock después de un tiempo
+        setTimeout(() => {
+          this._isProcessing = false;
+        }, 500);
       }
-    }, true); // true = capture phase
+    }, true);
   }
 
   _handleAccept() {
     if (!this.isModalActive) return;
     
-    console.log("[UI] Procesando ACEPTAR...");
+    console.log("[UI] Iniciando ACEPTAR...");
     
-    // 1. Cerrar modal INMEDIATAMENTE (síncrono)
-    this._forceCloseModal();
-    
-    // 2. Ejecutar callback DESPUÉS de liberar el UI thread
+    // Guardar callback antes de cerrar
     const callback = this.currentTripCallbacks.onAccept;
+    
+    // 1. CERRAR INMEDIATAMENTE (síncrono)
+    this._emergencyClose();
+    
+    // 2. Ejecutar callback DESPUÉS de que el browser renderice
+    // Usamos requestAnimationFrame + setTimeout para asegurar que la UI se actualice
     if (callback) {
-      // Usar setTimeout 0 para que el navegador repinte primero
-      setTimeout(() => {
-        try {
-          console.log("[UI] Ejecutando callback Aceptar...");
-          callback();
-          console.log("[UI] Callback Aceptar finalizado");
-        } catch (err) {
-          console.error("[UI] Error en callback:", err);
-        }
-      }, 50);
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          try {
+            console.log("[UI] Ejecutando callback Aceptar...");
+            const result = callback();
+            // Si el callback devuelve una promesa, esperarla sin bloquear
+            if (result && typeof result.then === 'function') {
+              result.catch(err => {
+                console.error("[UI] Error en Promise del callback:", err);
+              });
+            }
+            console.log("[UI] Callback Aceptar ejecutado");
+          } catch (err) {
+            console.error("[UI] Error en callback Aceptar:", err);
+          }
+        }, 100); // 100ms da tiempo al browser para repintar
+      });
     }
   }
 
   _handleReject() {
     if (!this.isModalActive) return;
     
-    console.log("[UI] Procesando RECHAZAR...");
+    console.log("[UI] Iniciando RECHAZAR...");
     
-    // 1. Cerrar modal INMEDIATAMENTE
-    this._forceCloseModal();
+    const callback = this.currentTripCallbacks.onReject;
+    
+    // 1. CERRAR INMEDIATAMENTE
+    this._emergencyClose();
     
     // 2. Ejecutar callback asíncrono
-    const callback = this.currentTripCallbacks.onReject;
     if (callback) {
-      setTimeout(() => {
-        try {
-          console.log("[UI] Ejecutando callback Rechazar...");
-          callback();
-          console.log("[UI] Callback Rechazar finalizado");
-        } catch (err) {
-          console.error("[UI] Error en callback:", err);
-        }
-      }, 50);
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          try {
+            console.log("[UI] Ejecutando callback Rechazar...");
+            callback();
+            console.log("[UI] Callback Rechazar ejecutado");
+          } catch (err) {
+            console.error("[UI] Error en callback Rechazar:", err);
+          }
+        }, 100);
+      });
     }
   }
 
-  _forceCloseModal() {
-    console.log("[UI] Forzando cierre de modal...");
+  // Cierre de emergencia que garantiza liberar la pantalla
+  _emergencyClose() {
+    console.log("[UI] Cierre de emergencia...");
     
     // Detener countdown
     if (this.countdownInterval) {
@@ -118,24 +139,31 @@ class UIController {
     }
     
     const modal = this.elements["incoming-modal"];
+    
     if (modal) {
-      // Remover clase activa
+      // Remover clase active
       modal.classList.remove("active");
       
-      // Forzar display none para liberar la pantalla inmediatamente
-      modal.style.cssText = "display: none !important; visibility: hidden !important; opacity: 0 !important;";
+      // FORZAR OCULTAMIENTO INMEDIATO CON !IMPORTANT
+      modal.setAttribute('style', 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; z-index: -9999 !important;');
       
-      // Restaurar después para futuros usos (pero mantener oculto)
+      // Limpiar después de un momento para permitir re-apertura
       setTimeout(() => {
-        modal.style.cssText = "";
-        modal.style.display = "none";
-      }, 100);
+        modal.removeAttribute('style');
+        modal.style.display = 'none';
+      }, 200);
     }
     
     this.isModalActive = false;
-    this.currentTripCallbacks = {}; // Limpiar referencias
+    this.currentTripCallbacks = {};
     
-    console.log("[UI] ✅ Modal cerrado y UI liberada");
+    // Forzar reflow del body para liberar cualquier bloqueo visual
+    document.body.style.pointerEvents = 'none';
+    setTimeout(() => {
+      document.body.style.pointerEvents = '';
+    }, 50);
+    
+    console.log("[UI] ✅ Modal cerrado");
   }
 
   _setupViewport() {
@@ -215,13 +243,15 @@ class UIController {
   }
 
   showIncomingTrip(trip, onAccept, onReject) {
-    console.log("[UI] 📦 Mostrando viaje:", trip);
+    console.log("[UI] 📦 Mostrando viaje:", trip.id || trip);
+
+    // Limpiar estado previo si existe
+    if (this.isModalActive) {
+      this._emergencyClose();
+    }
 
     // Guardar callbacks
     this.currentTripCallbacks = { onAccept, onReject };
-    
-    // Limpiar cualquier estado previo
-    this._forceCloseModal();
     
     const modal = this.elements["incoming-modal"];
     if (!modal) {
@@ -247,12 +277,12 @@ class UIController {
     this._setText("client-name", cliente);
     this._setText("client-phone", telefono || "Sin teléfono");
 
-    // Mostrar modal (resetear estilos primero)
-    modal.style.cssText = "";
+    // Mostrar modal
+    modal.style.display = ""; // Resetear display
     modal.classList.add("active");
     this.isModalActive = true;
     
-    console.log("[UI] ✅ Modal activado, iniciando countdown");
+    console.log("[UI] ✅ Modal activado");
 
     // Iniciar countdown
     this._startCountdown(onReject);
@@ -285,15 +315,15 @@ class UIController {
       }
 
       if (this.currentCountdown <= 0) {
-        this._forceCloseModal();
+        this._emergencyClose();
         if (onTimeout) {
           setTimeout(() => {
             try {
               onTimeout();
             } catch (err) {
-              console.error("[UI] Error en timeout callback:", err);
+              console.error("[UI] Error en timeout:", err);
             }
-          }, 50);
+          }, 100);
         }
       }
     }, 1000);
