@@ -223,15 +223,21 @@ async _acceptTrip(tripId) {
 
       uiController.hideIncomingModal();
       uiController.showWaitingState();
-      return; // ✅ IMPORTANTE
+      return result; // ✅ DEVOLVER RESULT
     }
 
-    await tripManager.refresh();
+    // ✅ refrescar estado real
+    await tripManager._loadInitialState(tripManager.driverId);
+
+    return result; // ✅ DEVOLVER RESULT
 
   } catch (err) {
     console.error('[DriverApp] Error aceptando viaje:', err);
     uiController.showToast('Error aceptando viaje', 'error');
     uiController.showWaitingState();
+
+    return { success: false, error: err.message }; // ✅ IMPORTANTE
+
   } finally {
     uiController.setGlobalLoading(false);
   }
