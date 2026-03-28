@@ -98,10 +98,10 @@ if (activeTrip) {
         .from('viaje_ofertas')
         .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
         .eq('chofer_id_uuid', driverId)
-.eq('estado', 'PENDIENTE')
-.gte('expires_at', new Date().toISOString())
-.order('offered_at', { ascending: false })
-.limit(1);
+        .eq('estado', 'PENDIENTE')
+        .gte('expires_at', new Date().toISOString())
+        .order('offered_at', { ascending: false })
+        .limit(1);
 
       if (offerError) {
         console.error('[TripManager] Error loading offers:', offerError);
