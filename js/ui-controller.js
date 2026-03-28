@@ -539,6 +539,7 @@ class UIController {
   // DRIVER STATES
   // =========================
 
+
   updateDriverState(mode, isOnline) {
     this.state.isOnline = isOnline;
     
@@ -915,6 +916,8 @@ _haptic(type = 'light') {
     // Silent fail
   }
 }
+}
+
 
 // Singleton
 const uiController = new UIController();
