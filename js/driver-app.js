@@ -15,6 +15,10 @@ class DriverApp {
     this._onlineStatus = false;
     this._currentTripId = null;
     this._unsubscribers = [];
+
+    // ✅ CONTROL PARA NO SPAMEAR SUPABASE
+    this._lastLocationUpdate = 0;
+    this._locationUpdateInterval = 8000; // cada 8 segundos
   }
 
   async init() {
@@ -216,9 +220,47 @@ class DriverApp {
     uiController.showWaitingState();
   }
 
-  _onPositionUpdate(position) {
+  // ✅ GUARDAR UBICACIÓN + ACTUALIZAR MAPA + DETECTAR LLEGADA
+  async _onPositionUpdate(position) {
     mapService.updateDriverPosition(position.lng, position.lat, position.heading);
 
+    // ------------------------------------------------------
+    // ✅ Guardar ubicación en Supabase (cada X segundos)
+    // ------------------------------------------------------
+    const now = Date.now();
+    if (now - this._lastLocationUpdate >= this._locationUpdateInterval) {
+      this._lastLocationUpdate = now;
+
+      try {
+        const { data: { user } } = await supabaseService.client.auth.getUser();
+        if (!user) return;
+
+        const { error } = await supabaseService.client
+          .from('choferes')
+          .update({
+            lat: position.lat,
+            lng: position.lng,
+            heading: position.heading || 0,
+            speed: position.speed || 0,
+            accuracy: position.accuracy || null,
+            last_seen_at: new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('[DriverApp] ❌ Error guardando ubicación:', error);
+        } else {
+          console.log('[DriverApp] ✅ Ubicación guardada en Supabase');
+        }
+
+      } catch (err) {
+        console.error('[DriverApp] ❌ Falló update ubicación:', err);
+      }
+    }
+
+    // ------------------------------------------------------
+    // Detectar llegada si hay viaje en curso
+    // ------------------------------------------------------
     const currentTrip = tripManager.getCurrentTrip();
     if (currentTrip?.estado === 'EN_CURSO') {
       const dist = this._calculateDistance(
@@ -304,6 +346,8 @@ class DriverApp {
       case 'cancel': return tripManager.cancelTrip(tripId);
       case 'navigate': return this._openExternalNav();
       case 'whatsapp': return this._openWhatsApp();
+      default:
+        console.warn('[DriverApp] Acción desconocida:', action);
     }
   }
 
