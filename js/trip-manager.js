@@ -219,22 +219,37 @@ async acceptTrip(tripId) {
   const driverId = this.driverId;
   if (!driverId) return { success: false, error: 'No driverId' };
 
-  const { data, error } = await supabaseService.client.rpc('aceptar_oferta_viaje', {
+  console.log('[TripManager] Calling RPC aceptar_oferta_viaje...', tripId, driverId);
+
+  const rpcPromise = supabaseService.client.rpc('aceptar_oferta_viaje', {
     p_viaje_id: tripId,
     p_chofer_id: driverId
   });
 
-  if (error) {
-    console.error('[TripManager] RPC accept error:', error);
-    return { success: false, error: error.message };
-  }
-console.log('[TripManager] RPC aceptar_oferta_viaje response:', data);
+  const timeoutPromise = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("RPC_TIMEOUT")), 8000)
+  );
 
-  if (!data?.ok) {
-    return { success: false, error: data?.reason || 'No se pudo aceptar el viaje' };
-  }
+  try {
+    const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
 
-  return { success: true };
+    if (error) {
+      console.error('[TripManager] RPC accept error:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('[TripManager] RPC response:', data);
+
+    if (!data?.ok) {
+      return { success: false, error: data?.reason || 'No se pudo aceptar el viaje' };
+    }
+
+    return { success: true };
+
+  } catch (err) {
+    console.error('[TripManager] RPC FAILED:', err);
+    return { success: false, error: err.message };
+  }
 }
 
   async rejectTrip(tripId, reason = 'RECHAZADO_POR_CHOFER') {
