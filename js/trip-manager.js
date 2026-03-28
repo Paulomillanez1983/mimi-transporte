@@ -73,6 +73,10 @@ class TripManager {
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (tripError) {
+  console.error('[TripManager] Error loading active trip:', tripError);
+}
+
 
 if (activeTrip) {
   console.log('[TripManager] Active trip found:', activeTrip.id);
