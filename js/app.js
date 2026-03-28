@@ -183,7 +183,7 @@ class DriverApp {
           online: this._onlineStatus,
           last_seen_at: new Date().toISOString()
         })
-        .eq('user_id', user.id);
+        .eq('id_uuid', driverUuid);
 
       if (error) {
         console.error('[DriverApp] Error updating status:', error);
