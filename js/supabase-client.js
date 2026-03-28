@@ -255,7 +255,7 @@ if (!this.driverId) {
           event: '*',
           schema: 'public',
           table: 'viaje_ofertas',
-          filter: `chofer_id=eq.${this.driverId}`
+          filter: `chofer_id_uuid=eq.${this.driverId}`
         },
         (payload) => {
           try {
@@ -298,7 +298,7 @@ if (!this.driverId) {
           event: '*',
           schema: 'public',
           table: 'viajes',
-          filter: `chofer_id=eq.${this.driverId}`
+          filter: `chofer_id_uuid=eq.${this.driverId}`
         },
         (payload) => {
           try {
@@ -395,7 +395,7 @@ const { data, error } = await this.client
   .select(`
     id,
     viaje_id,
-    chofer_id,
+    chofer_id_uuid,
     estado,
     expires_at,
     offered_at,
@@ -415,7 +415,7 @@ const { data, error } = await this.client
       created_at
     )
   `)
-  .eq('chofer_id', this.driverId)
+  .eq('chofer_id_uuid', this.driverId)
   .eq('estado', 'PENDIENTE')
   .gt('expires_at', new Date().toISOString())
   .order('offered_at', { ascending: false });
@@ -434,7 +434,7 @@ const { data, error } = await this.client
     const { data, error } = await this.client
       .from('viajes')
       .select('*')
-      .eq('chofer_id', this.driverId)
+      .eq('chofer_id_uuid', this.driverId)
       .in('estado', ['ACEPTADO', 'EN_CURSO'])
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -457,7 +457,7 @@ const { data, error } = await this.client
 
     const { data, error } = await this.client.rpc('aceptar_oferta_viaje', {
       p_viaje_id: tripId,
-      p_chofer_id: this.driverId
+      p_chofer_id_uuid: this.driverId
     });
 
     if (error) console.error('[Supabase] acceptOffer error:', error);
@@ -471,7 +471,7 @@ const { data, error } = await this.client
 
     const { data, error } = await this.client.rpc('rechazar_oferta_viaje', {
       p_viaje_id: tripId,
-      p_chofer_id: this.driverId,
+      p_chofer_id_uuid: this.driverId,
       p_motivo: reason
     });
 
@@ -486,7 +486,7 @@ const { data, error } = await this.client
 
     const { data, error } = await this.client.rpc('iniciar_viaje', {
       p_viaje_id: tripId,
-      p_chofer_id: this.driverId
+      p_chofer_id_uuid: this.driverId
     });
 
     if (error) console.error('[Supabase] startTrip error:', error);
@@ -500,7 +500,7 @@ const { data, error } = await this.client
 
     const { data, error } = await this.client.rpc('completar_viaje', {
       p_viaje_id: tripId,
-      p_chofer_id: this.driverId
+      p_chofer_id_uuid: this.driverId
     });
 
     if (error) console.error('[Supabase] completeTrip error:', error);
