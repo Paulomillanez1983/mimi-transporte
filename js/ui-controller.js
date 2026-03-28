@@ -408,70 +408,73 @@ class UIController {
     }, 1000);
   }
 
-  async _handleAccept(e) {
-    if (e) e.stopPropagation();
-    if (!this.state.isModalOpen || this.state.isProcessing) return;
+async _handleAccept(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  if (!this.state.isModalOpen || this.state.isProcessing) return;
 
-    console.log('[UI] Trip accepted');
-    this.state.isProcessing = true;
+  console.log('[UI] Trip accepted');
+  this.state.isProcessing = true;
 
-    // Visual feedback
-    const btn = this.elements['btn-accept'];
-    if (btn) {
-      btn.classList.add('accepting');
-      btn.innerHTML = '<span class="spinner-small"></span><small>Aceptando...</small>';
-    }
-
-    soundManager.play('accept');
-    this._haptic('success');
-
-    const callback = this.state.callbacks.onAccept;
-
-    // Close modal with animation
-    this._closeIncomingModal();
-
-    // Execute callback
-    if (callback) {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        const result = callback();
-        if (result && typeof result.then === 'function') {
-          await result;
-        }
-      } catch (err) {
-        console.error('[UI] Error in accept callback:', err);
-        this.showToast('Error al procesar aceptación', 'error');
-      }
-    }
-
-    this.state.isProcessing = false;
+  const btn = this.elements['btn-accept'];
+  if (btn) {
+    btn.classList.add('accepting');
+    btn.innerHTML = '<span class="spinner-small"></span><small>Aceptando...</small>';
   }
 
-  async _handleReject(e) {
-    if (e) e.stopPropagation();
-    if (!this.state.isModalOpen || this.state.isProcessing) return;
+  soundManager.play('accept');
+  this._haptic('success');
 
-    console.log('[UI] Trip rejected');
-    this.state.isProcessing = true;
+  const callback = this.state.callbacks.onAccept;
 
-    soundManager.play('reject');
-    this._haptic('light');
+  this._closeIncomingModal();
 
-    const callback = this.state.callbacks.onReject;
-
-    this._closeIncomingModal();
-
-    if (callback) {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        callback();
-      } catch (err) {
-        console.error('[UI] Error in reject callback:', err);
+  if (callback) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const result = callback();
+      if (result && typeof result.then === 'function') {
+        await result;
       }
+    } catch (err) {
+      console.error('[UI] Error in accept callback:', err);
+      this.showToast('Error al procesar aceptación', 'error');
     }
-
-    this.state.isProcessing = false;
   }
+
+  this.state.isProcessing = false;
+}
+
+async _handleReject(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  if (!this.state.isModalOpen || this.state.isProcessing) return;
+
+  console.log('[UI] Trip rejected');
+  this.state.isProcessing = true;
+
+  soundManager.play('reject');
+  this._haptic('light');
+
+  const callback = this.state.callbacks.onReject;
+
+  this._closeIncomingModal();
+
+  if (callback) {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      callback();
+    } catch (err) {
+      console.error('[UI] Error in reject callback:', err);
+    }
+  }
+
+  this.state.isProcessing = false;
+}
 
   _onBackdropClick(e) {
     if (e.target === this.elements['modal-backdrop']) {
