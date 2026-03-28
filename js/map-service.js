@@ -3,12 +3,15 @@
  * MapLibre GL stable + safe coords
  */
 
+import CONFIG from './config.js';
+
 class MapService {
   constructor() {
     this.map = null;
     this.markers = {};
     this.isInitialized = false;
     this.isLoaded = false;
+    this.containerId = null;
   }
 
   // =========================================================
@@ -16,12 +19,27 @@ class MapService {
   // =========================================================
 
   async init(containerId) {
-    if (this.isInitialized) return true;
+    if (this.isInitialized) {
+      console.log('[Map] Already initialized');
+      return true;
+    }
 
+    this.containerId = containerId;
     const container = document.getElementById(containerId);
-    if (!container) throw new Error('Map container not found');
+    
+    if (!container) {
+      console.error('[Map] Container not found:', containerId);
+      return false;
+    }
 
-    await this._waitForMapLibre();
+    console.log('[Map] Initializing...');
+
+    // Esperar a que MapLibre esté disponible
+    const mapLibreReady = await this._waitForMapLibre();
+    if (!mapLibreReady) {
+      console.error('[Map] MapLibre GL not loaded');
+      return false;
+    }
 
     const fallbackCenter = [-64.1888, -31.4201]; // Córdoba
     const center = this._sanitizeLngLat(
@@ -32,53 +50,78 @@ class MapService {
 
     const zoom = this._sanitizeNumber(CONFIG.DEFAULT_ZOOM, 14);
 
-    const style = CONFIG.MAP_STYLE || "https://demotiles.maplibre.org/style.json";
-
-    this.map = new window.maplibregl.Map({
-      container: containerId,
-      style: style,
-      center: center,
-      zoom: zoom,
-      pitch: 0,
-      bearing: 0,
-      attributionControl: false,
-      minZoom: 10,
-      maxZoom: 18
-    });
-
-    this.map.addControl(
-      new window.maplibregl.NavigationControl({
-        showCompass: true,
-        showZoom: false
-      }),
-      'bottom-right'
-    );
-
-    await new Promise(resolve => {
-      this.map.on('load', () => {
-        this.isLoaded = true;
-        resolve();
+    try {
+      this.map = new window.maplibregl.Map({
+        container: containerId,
+        style: CONFIG.MAP_STYLE,
+        center: center,
+        zoom: zoom,
+        pitch: 0,
+        bearing: 0,
+        attributionControl: false,
+        minZoom: 10,
+        maxZoom: 18,
+        failIfMajorPerformanceCaveat: false // Permitir fallback si WebGL lento
       });
-    });
 
-    this._addCustomLayers();
+      // Manejar errores de carga del estilo
+      this.map.on('error', (e) => {
+        console.error('[Map] Map error:', e);
+      });
 
-    this.isInitialized = true;
-    console.log('[Map] Initialized');
-    return true;
+      // Esperar a que cargue
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Map load timeout'));
+        }, 30000); // 30 segundos timeout
+
+        this.map.on('load', () => {
+          clearTimeout(timeout);
+          this.isLoaded = true;
+          console.log('[Map] Loaded successfully');
+          resolve();
+        });
+
+        this.map.on('style.load', () => {
+          console.log('[Map] Style loaded');
+        });
+      });
+
+      // Agregar controles
+      this.map.addControl(
+        new window.maplibregl.NavigationControl({
+          showCompass: true,
+          showZoom: false
+        }),
+        'bottom-right'
+      );
+
+      this._addCustomLayers();
+      this.isInitialized = true;
+
+      return true;
+
+    } catch (error) {
+      console.error('[Map] Initialization failed:', error);
+      return false;
+    }
   }
 
-  async _waitForMapLibre() {
+  async _waitForMapLibre(timeoutMs = 10000) {
     if (window.maplibregl) return true;
 
-    return new Promise(resolve => {
-      const check = setInterval(() => {
-        if (window.maplibregl) {
-          clearInterval(check);
-          resolve(true);
-        }
-      }, 100);
-    });
+    console.log('[Map] Waiting for MapLibre...');
+    const start = Date.now();
+
+    while (!window.maplibregl) {
+      await new Promise((r) => setTimeout(r, 100));
+      if (Date.now() - start > timeoutMs) {
+        console.error('[Map] Timeout waiting for MapLibre');
+        return false;
+      }
+    }
+
+    return true;
   }
 
   // =========================================================
@@ -121,41 +164,24 @@ class MapService {
   _addCustomLayers() {
     if (!this.map || !this.isLoaded) return;
 
-    if (!this.map.getSource('route')) {
-      this.map.addSource('route', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: []
+    try {
+      if (!this.map.getSource('route')) {
+        this.map.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: []
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    if (!this.map.getLayer('route-line')) {
-      this.map.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#000000',
-          'line-width': 6,
-          'line-opacity': 0.9
-        }
-      });
-    }
-
-    if (!this.map.getLayer('route-line-border')) {
-      this.map.addLayer(
-        {
-          id: 'route-line-border',
+      if (!this.map.getLayer('route-line')) {
+        this.map.addLayer({
+          id: 'route-line',
           type: 'line',
           source: 'route',
           layout: {
@@ -163,14 +189,34 @@ class MapService {
             'line-cap': 'round'
           },
           paint: {
-            'line-color': '#FFFFFF',
-            'line-width': 10,
-            'line-opacity': 0.3,
-            'line-gap-width': 6
+            'line-color': '#276EF1',
+            'line-width': 6,
+            'line-opacity': 0.9
           }
-        },
-        'route-line'
-      );
+        });
+      }
+
+      if (!this.map.getLayer('route-line-border')) {
+        this.map.addLayer(
+          {
+            id: 'route-line-border',
+            type: 'line',
+            source: 'route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round'
+            },
+            paint: {
+              'line-color': '#FFFFFF',
+              'line-width': 10,
+              'line-opacity': 0.3
+            }
+          },
+          'route-line'
+        );
+      }
+    } catch (e) {
+      console.error('[Map] Error adding layers:', e);
     }
   }
 
@@ -179,9 +225,15 @@ class MapService {
   // =========================================================
 
   setCenter(lng, lat, zoom = null) {
-    if (!this.map) return;
+    if (!this.map || !this.isLoaded) {
+      console.warn('[Map] Not ready for setCenter');
+      return;
+    }
 
-    if (!this._isValidLatLng(lat, lng)) return;
+    if (!this._isValidLatLng(lat, lng)) {
+      console.warn('[Map] Invalid coordinates:', lat, lng);
+      return;
+    }
 
     const safeZoom = zoom !== null
       ? this._sanitizeNumber(zoom, this.map.getZoom())
@@ -199,8 +251,15 @@ class MapService {
   // =========================================================
 
   updateDriverMarker(lng, lat, heading = 0) {
-    if (!this.map) return;
-    if (!this._isValidLatLng(lat, lng)) return;
+    if (!this.map || !this.isLoaded) {
+      console.warn('[Map] Not ready for driver marker');
+      return;
+    }
+
+    if (!this._isValidLatLng(lat, lng)) {
+      console.warn('[Map] Invalid driver coordinates:', lat, lng);
+      return;
+    }
 
     const safeHeading = this._sanitizeNumber(heading, 0);
 
@@ -223,12 +282,17 @@ class MapService {
         .setLngLat([lng, lat])
         .addTo(this.map);
 
+      console.log('[Map] Driver marker added at:', lat, lng);
+
     } else {
       this.markers.driver.setLngLat([lng, lat]);
 
       const arrow = this.markers.driver.getElement()?.querySelector('.marker-arrow');
       if (arrow) arrow.style.transform = `rotate(${safeHeading}deg)`;
     }
+
+    // Centrar mapa en el conductor (opcional, puede ser molesto si el usuario está viendo otra zona)
+    // this.setCenter(lng, lat);
   }
 
   addPickupMarker(lng, lat) {
@@ -240,7 +304,7 @@ class MapService {
   }
 
   _addPOIMarker(key, lng, lat, emoji, color) {
-    if (!this.map) return;
+    if (!this.map || !this.isLoaded) return;
     if (!this._isValidLatLng(lat, lng)) return;
 
     if (this.markers[key]) {
@@ -250,7 +314,18 @@ class MapService {
 
     const el = document.createElement('div');
     el.className = 'poi-marker';
-    el.style.backgroundColor = color;
+    el.style.cssText = `
+      background: ${color};
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      border: 3px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    `;
     el.textContent = emoji;
 
     this.markers[key] = new window.maplibregl.Marker({
@@ -262,48 +337,64 @@ class MapService {
   }
 
   // =========================================================
-  // ROUTING (FALLBACK ONLY)
+  // ROUTING
   // =========================================================
 
   async showRoute(from, to) {
-    if (!this.map || !this.isLoaded) return null;
-    if (!from || !to) return null;
+    if (!this.map || !this.isLoaded) {
+      console.warn('[Map] Not ready for route');
+      return null;
+    }
 
-    if (!this._isValidLatLng(from.lat, from.lng)) return null;
-    if (!this._isValidLatLng(to.lat, to.lng)) return null;
+    if (!from || !to) {
+      console.warn('[Map] Missing from/to for route');
+      return null;
+    }
 
+    if (!this._isValidLatLng(from.lat, from.lng)) {
+      console.warn('[Map] Invalid from coordinates');
+      return null;
+    }
+
+    if (!this._isValidLatLng(to.lat, to.lng)) {
+      console.warn('[Map] Invalid to coordinates');
+      return null;
+    }
+
+    // Usar línea recta como fallback (puedes integrar Valhalla después)
     const routeData = this._getStraightLineRoute(from, to);
 
-    const source = this.map.getSource('route');
-    if (!source) {
-      this._addCustomLayers();
+    try {
+      const source = this.map.getSource('route');
+      if (source) {
+        source.setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: routeData.geometry
+          }
+        });
+      }
+
+      // Ajustar vista a la ruta
+      if (routeData.geometry.length >= 2) {
+        const bounds = routeData.geometry.reduce(
+          (b, coord) => b.extend(coord),
+          new window.maplibregl.LngLatBounds(routeData.geometry[0], routeData.geometry[0])
+        );
+
+        this.map.fitBounds(bounds, {
+          padding: 100,
+          duration: 1000
+        });
+      }
+
+      return routeData;
+    } catch (e) {
+      console.error('[Map] Error showing route:', e);
+      return null;
     }
-
-    const finalSource = this.map.getSource('route');
-    if (finalSource) {
-      finalSource.setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: routeData.geometry
-        }
-      });
-    }
-
-    if (routeData.geometry.length >= 2) {
-      const bounds = routeData.geometry.reduce(
-        (b, coord) => b.extend(coord),
-        new window.maplibregl.LngLatBounds(routeData.geometry[0], routeData.geometry[0])
-      );
-
-      this.map.fitBounds(bounds, {
-        padding: 100,
-        duration: 1000
-      });
-    }
-
-    return routeData;
   }
 
   _getStraightLineRoute(from, to) {
@@ -337,24 +428,28 @@ class MapService {
   clearRoute() {
     if (!this.map || !this.isLoaded) return;
 
-    const source = this.map.getSource('route');
-    if (source) {
-      source.setData({
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: []
+    try {
+      const source = this.map.getSource('route');
+      if (source) {
+        source.setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: []
+          }
+        });
+      }
+
+      ['pickup', 'dropoff'].forEach(key => {
+        if (this.markers[key]) {
+          this.markers[key].remove();
+          delete this.markers[key];
         }
       });
+    } catch (e) {
+      console.error('[Map] Error clearing route:', e);
     }
-
-    ['pickup', 'dropoff'].forEach(key => {
-      if (this.markers[key]) {
-        this.markers[key].remove();
-        delete this.markers[key];
-      }
-    });
   }
 
   destroy() {
@@ -382,3 +477,4 @@ class MapService {
 }
 
 const mapService = new MapService();
+export default mapService;
