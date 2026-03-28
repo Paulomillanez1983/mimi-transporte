@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - UI Controller (FINAL ANTI-BLOQUEO)
+ * MIMI Driver - UI Controller (COMPLETO + GPS-SAFE)
  */
 
 import CONFIG from "./config.js";
@@ -13,7 +13,7 @@ class UIController {
     this.sheetOpen = false;
     this.currentTripCallbacks = {};
     this.isModalActive = false;
-    this._isProcessing = false; // Lock para evitar doble click
+    this._isProcessing = false;
   }
 
   init() {
@@ -25,12 +25,31 @@ class UIController {
 
   _cacheElements() {
     const ids = [
-      "driver-name", "driver-initial", "status-dot", "status-text",
-      "stat-earnings", "stat-trips", "fab-online", "fab-text", "fab-icon",
-      "toast-container", "global-loading", "incoming-modal", "trip-pickup",
-      "trip-dropoff", "trip-distance", "trip-price", "trip-duration",
-      "client-name", "client-phone", "btn-accept", "btn-reject",
-      "countdown-number", "countdown-circle", "pickup-time", "arrival-panel"
+      "driver-name",
+      "driver-initial", 
+      "status-dot",
+      "status-text",
+      "stat-earnings",
+      "stat-trips",
+      "fab-online",
+      "fab-text",
+      "fab-icon",
+      "toast-container",
+      "global-loading",
+      "incoming-modal",
+      "trip-pickup",
+      "trip-dropoff",
+      "trip-distance",
+      "trip-price",
+      "trip-duration",
+      "client-name",
+      "client-phone",
+      "btn-accept",
+      "btn-reject",
+      "countdown-number",
+      "countdown-circle",
+      "pickup-time",
+      "arrival-panel"
     ];
 
     ids.forEach((id) => {
@@ -39,131 +58,31 @@ class UIController {
   }
 
   _bindEvents() {
-    // Delegación con capture phase y lock anti-doble-click
-    document.addEventListener('click', (e) => {
-      if (!this.isModalActive || this._isProcessing) return;
-      
-      const btnAccept = e.target.closest('#btn-accept');
-      const btnReject = e.target.closest('#btn-reject');
-      
-      if (btnAccept || btnReject) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        
-        this._isProcessing = true; // Lock
-        
-        if (btnAccept) {
-          console.log("[UI] ✅ ACEPTAR clickeado");
+    // ✅ BIND DIRECTO A BOTONES - NO usar document.addEventListener con capture
+    const btnAccept = this.elements["btn-accept"];
+    const btnReject = this.elements["btn-reject"];
+
+    if (btnAccept) {
+      btnAccept.onclick = (e) => {
+        e.stopPropagation();
+        if (!this._isProcessing && this.isModalActive) {
+          this._isProcessing = true;
           this._handleAccept();
-        } else {
-          console.log("[UI] ❌ RECHAZAR clickeado");
-          this._handleReject();
+          setTimeout(() => this._isProcessing = false, 500);
         }
-        
-        // Liberar lock después de un tiempo
-        setTimeout(() => {
-          this._isProcessing = false;
-        }, 500);
-      }
-    }, true);
-  }
+      };
+    }
 
-  _handleAccept() {
-    if (!this.isModalActive) return;
-    
-    console.log("[UI] Iniciando ACEPTAR...");
-    
-    // Guardar callback antes de cerrar
-    const callback = this.currentTripCallbacks.onAccept;
-    
-    // 1. CERRAR INMEDIATAMENTE (síncrono)
-    this._emergencyClose();
-    
-    // 2. Ejecutar callback DESPUÉS de que el browser renderice
-    // Usamos requestAnimationFrame + setTimeout para asegurar que la UI se actualice
-    if (callback) {
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          try {
-            console.log("[UI] Ejecutando callback Aceptar...");
-            const result = callback();
-            // Si el callback devuelve una promesa, esperarla sin bloquear
-            if (result && typeof result.then === 'function') {
-              result.catch(err => {
-                console.error("[UI] Error en Promise del callback:", err);
-              });
-            }
-            console.log("[UI] Callback Aceptar ejecutado");
-          } catch (err) {
-            console.error("[UI] Error en callback Aceptar:", err);
-          }
-        }, 100); // 100ms da tiempo al browser para repintar
-      });
+    if (btnReject) {
+      btnReject.onclick = (e) => {
+        e.stopPropagation();
+        if (!this._isProcessing && this.isModalActive) {
+          this._isProcessing = true;
+          this._handleReject();
+          setTimeout(() => this._isProcessing = false, 500);
+        }
+      };
     }
-  }
-
-  _handleReject() {
-    if (!this.isModalActive) return;
-    
-    console.log("[UI] Iniciando RECHAZAR...");
-    
-    const callback = this.currentTripCallbacks.onReject;
-    
-    // 1. CERRAR INMEDIATAMENTE
-    this._emergencyClose();
-    
-    // 2. Ejecutar callback asíncrono
-    if (callback) {
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          try {
-            console.log("[UI] Ejecutando callback Rechazar...");
-            callback();
-            console.log("[UI] Callback Rechazar ejecutado");
-          } catch (err) {
-            console.error("[UI] Error en callback Rechazar:", err);
-          }
-        }, 100);
-      });
-    }
-  }
-
-  // Cierre de emergencia que garantiza liberar la pantalla
-  _emergencyClose() {
-    console.log("[UI] Cierre de emergencia...");
-    
-    // Detener countdown
-    if (this.countdownInterval) {
-      clearInterval(this.countdownInterval);
-      this.countdownInterval = null;
-    }
-    
-    const modal = this.elements["incoming-modal"];
-    
-    if (modal) {
-      // Remover clase active
-      modal.classList.remove("active");
-      
-      // FORZAR OCULTAMIENTO INMEDIATO CON !IMPORTANT
-      modal.setAttribute('style', 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; z-index: -9999 !important;');
-      
-      // Limpiar después de un momento para permitir re-apertura
-      setTimeout(() => {
-        modal.removeAttribute('style');
-        modal.style.display = 'none';
-      }, 200);
-    }
-    
-    this.isModalActive = false;
-    this.currentTripCallbacks = {};
-    
-    // Forzar reflow del body para liberar cualquier bloqueo visual
-    document.body.style.pointerEvents = 'none';
-    setTimeout(() => {
-      document.body.style.pointerEvents = '';
-    }, 50);
-    
-    console.log("[UI] ✅ Modal cerrado");
   }
 
   _setupViewport() {
@@ -173,6 +92,67 @@ class UIController {
     };
     setVH();
     window.addEventListener("resize", setVH);
+  }
+
+  _handleAccept() {
+    if (!this.isModalActive) return;
+    
+    console.log("[UI] Procesando ACEPTAR...");
+    const callback = this.currentTripCallbacks.onAccept;
+    
+    // Cerrar primero
+    this._closeModal();
+    
+    // Ejecutar callback después
+    if (callback) {
+      setTimeout(() => {
+        try {
+          const result = callback();
+          if (result && typeof result.then === 'function') {
+            result.catch(err => console.error("[UI] Error en Promise:", err));
+          }
+        } catch (err) {
+          console.error("[UI] Error en callback:", err);
+        }
+      }, 50);
+    }
+  }
+
+  _handleReject() {
+    if (!this.isModalActive) return;
+    
+    console.log("[UI] Procesando RECHAZAR...");
+    const callback = this.currentTripCallbacks.onReject;
+    
+    this._closeModal();
+    
+    if (callback) {
+      setTimeout(() => {
+        try {
+          callback();
+        } catch (err) {
+          console.error("[UI] Error en callback:", err);
+        }
+      }, 50);
+    }
+  }
+
+  _closeModal() {
+    console.log("[UI] Cerrando modal...");
+    
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+    
+    const modal = this.elements["incoming-modal"];
+    if (modal) {
+      modal.classList.remove("active");
+      // ✅ NO manipular style agresivamente, NO tocar pointer-events del body
+    }
+    
+    this.isModalActive = false;
+    this.currentTripCallbacks = {};
   }
 
   showToast(message, type = "info", duration = 3000) {
@@ -196,8 +176,8 @@ class UIController {
       max-width: 90vw;
       text-align: center;
       font-size: 14px;
-      z-index: 100000;
-      position: relative;
+      transition: opacity 0.3s;
+      z-index: 10000;
     `;
 
     const icons = { info: "ℹ️", success: "✅", error: "❌", warning: "⚠️" };
@@ -227,30 +207,39 @@ class UIController {
     }
   }
 
+  updateStats(stats = {}) {
+    // Implementar si es necesario
+    if (stats.speed !== undefined) {
+      // Actualizar velocidad si existe elemento
+    }
+  }
+
   setDriverProfile(nameOrEmail) {
     const nameEl = this.elements["driver-name"];
     const initialEl = this.elements["driver-initial"];
 
     if (nameEl) nameEl.textContent = nameOrEmail || "Conductor";
     if (initialEl) {
-      initialEl.textContent = (nameOrEmail || "M").substring(0, 1).toUpperCase();
+      initialEl.textContent = (nameOrEmail || "M")
+        .substring(0, 1)
+        .toUpperCase();
     }
   }
 
   setLoading(show) {
     const loading = this.elements["global-loading"];
-    if (loading) loading.classList.toggle("active", show);
+    if (!loading) return;
+    loading.classList.toggle("active", show);
   }
 
   showIncomingTrip(trip, onAccept, onReject) {
     console.log("[UI] 📦 Mostrando viaje:", trip.id || trip);
 
-    // Limpiar estado previo si existe
+    // Limpiar estado previo
     if (this.isModalActive) {
-      this._emergencyClose();
+      this._closeModal();
     }
 
-    // Guardar callbacks
     this.currentTripCallbacks = { onAccept, onReject };
     
     const modal = this.elements["incoming-modal"];
@@ -259,14 +248,16 @@ class UIController {
       return;
     }
 
-    // Extraer datos
-    const origen = trip.origen || trip.origin || "Dirección no disponible";
-    const destino = trip.destino || trip.destination || "Destino no disponible";
+    // Extraer datos con fallbacks
+    const origen = trip.origen || trip.origin || trip.pickup || "Dirección no disponible";
+    const destino = trip.destino || trip.destination || trip.dropoff || "Destino no disponible";
     const distancia = trip.distancia_km || trip.distancia || trip.distance || "--";
-    const duracion = trip.duracion_min || trip.duracion || trip.duration || "--";
-    const precio = trip.precio || trip.price || "--";
-    const cliente = trip.cliente || trip.client_name || "Cliente";
-    const telefono = trip.telefono || trip.phone || "";
+    const duracion = trip.duracion_min || trip.duracion || trip.duration || trip.time || "--";
+    const precio = trip.precio || trip.price || trip.fare || trip.cost || "--";
+    const cliente = trip.cliente || trip.client_name || trip.passenger || "Cliente";
+    const telefono = trip.telefono || trip.phone || trip.celular || "";
+
+    console.log("[UI] Datos:", { origen, destino, distancia, duracion, precio, cliente });
 
     // Actualizar DOM
     this._setText("trip-pickup", origen);
@@ -276,13 +267,14 @@ class UIController {
     this._setText("trip-duration", duracion !== "--" ? `${duracion} min` : "-- min");
     this._setText("client-name", cliente);
     this._setText("client-phone", telefono || "Sin teléfono");
+    
+    // Actualizar pickup-time si existe
+    this._setText("pickup-time", duracion !== "--" ? `${duracion} min` : "-- min");
 
     // Mostrar modal
-    modal.style.display = ""; // Resetear display
     modal.classList.add("active");
     this.isModalActive = true;
-    
-    console.log("[UI] ✅ Modal activado");
+    console.log("[UI] Modal activado");
 
     // Iniciar countdown
     this._startCountdown(onReject);
@@ -290,7 +282,11 @@ class UIController {
 
   _setText(elementId, text) {
     const el = this.elements[elementId];
-    if (el) el.textContent = text;
+    if (el) {
+      el.textContent = text;
+    } else {
+      console.warn(`[UI] Elemento '${elementId}' no encontrado`);
+    }
   }
 
   _startCountdown(onTimeout) {
@@ -300,33 +296,44 @@ class UIController {
     const circle = this.elements["countdown-circle"];
 
     if (countdownText) countdownText.textContent = this.currentCountdown;
+    
+    // Resetear círculo
     if (circle) {
       circle.style.strokeDasharray = "283";
       circle.style.strokeDashoffset = "0";
     }
 
+    console.log("[UI] Countdown iniciado:", this.currentCountdown);
+
     this.countdownInterval = setInterval(() => {
       this.currentCountdown--;
       
       if (countdownText) countdownText.textContent = this.currentCountdown;
+      
       if (circle) {
         const offset = 283 - ((this.currentCountdown / 15) * 283);
         circle.style.strokeDashoffset = offset;
       }
 
       if (this.currentCountdown <= 0) {
-        this._emergencyClose();
+        console.log("[UI] Countdown finalizado");
+        this._closeModal();
+        
         if (onTimeout) {
           setTimeout(() => {
             try {
               onTimeout();
             } catch (err) {
-              console.error("[UI] Error en timeout:", err);
+              console.error("[UI] Error en timeout callback:", err);
             }
-          }, 100);
+          }, 50);
         }
       }
     }, 1000);
+  }
+
+  closeTripModal() {
+    this._closeModal();
   }
 }
 
