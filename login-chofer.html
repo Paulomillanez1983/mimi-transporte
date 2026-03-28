@@ -5,15 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#000000">
   <title>MIMI Driver - Login</title>
-  
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
+
+  <!-- SUPABASE -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -27,10 +26,7 @@
       padding: 20px;
     }
 
-    .logo {
-      font-size: 48px;
-      margin-bottom: 8px;
-    }
+    .logo { font-size: 48px; margin-bottom: 8px; }
 
     h1 {
       font-size: 28px;
@@ -41,18 +37,13 @@
 
     .subtitle {
       color: rgba(255,255,255,0.6);
-      margin-bottom: 40px;
+      margin-bottom: 30px;
       text-align: center;
     }
 
-    .login-form {
-      width: 100%;
-      max-width: 320px;
-    }
+    .login-form { width: 100%; max-width: 320px; }
 
-    .form-group {
-      margin-bottom: 16px;
-    }
+    .form-group { margin-bottom: 16px; }
 
     label {
       display: block;
@@ -95,12 +86,18 @@
       margin-top: 8px;
     }
 
-    button:hover {
-      background: #448AFF;
+    button:hover { background: #448AFF; }
+    button:active { transform: scale(0.98); }
+
+    .google-btn {
+      margin-top: 12px;
+      background: #ffffff;
+      color: #000;
+      font-weight: 800;
     }
 
-    button:active {
-      transform: scale(0.98);
+    .google-btn:hover {
+      background: #e5e5e5;
     }
 
     .error {
@@ -111,11 +108,20 @@
       display: none;
     }
 
-    .error.visible {
-      display: block;
+    .error.visible { display: block; }
+
+    .ok {
+      color: #22c55e;
+      font-size: 14px;
+      margin-top: 12px;
+      text-align: center;
+      display: none;
     }
+
+    .ok.visible { display: block; }
   </style>
 </head>
+
 <body>
   <div class="logo">🚐</div>
   <h1>MIMI Driver</h1>
@@ -123,11 +129,11 @@
 
   <form class="login-form" id="loginForm">
     <div class="form-group">
-      <label for="driverId">ID de Conductor</label>
-      <input 
-        type="text" 
-        id="driverId" 
-        placeholder="Ej: CHOFER_001"
+      <label for="email">Email</label>
+      <input
+        type="email"
+        id="email"
+        placeholder="chofer@mimi.com"
         required
         autocomplete="username"
       >
@@ -135,9 +141,9 @@
 
     <div class="form-group">
       <label for="password">Contraseña</label>
-      <input 
-        type="password" 
-        id="password" 
+      <input
+        type="password"
+        id="password"
         placeholder="••••••••"
         required
         autocomplete="current-password"
@@ -145,26 +151,88 @@
     </div>
 
     <button type="submit">Ingresar</button>
+
+    <button type="button" class="google-btn" id="googleLoginBtn">
+      Continuar con Google
+    </button>
+
     <div class="error" id="error"></div>
+    <div class="ok" id="ok"></div>
   </form>
 
   <script>
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    // ⚠️ PONÉ TUS DATOS REALES
+    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+    const SUPABASE_ANON_KEY = "TU_ANON_KEY";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const errorEl = document.getElementById("error");
+    const okEl = document.getElementById("ok");
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.classList.add("visible");
+      okEl.classList.remove("visible");
+    }
+
+    function showOk(msg) {
+      okEl.textContent = msg;
+      okEl.classList.add("visible");
+      errorEl.classList.remove("visible");
+    }
+
+    // Si ya está logueado, entra directo
+    async function checkSession() {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        window.location.href = "chofer-panel.html";
+      }
+    }
+    checkSession();
+
+    // LOGIN EMAIL/PASSWORD
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      
-      const driverId = document.getElementById('driverId').value.trim();
-      const password = document.getElementById('password').value;
-      const errorEl = document.getElementById('error');
-      
-      // Simple validation (replace with real auth)
-      if (driverId && password.length >= 4) {
-        localStorage.setItem('mimi_driver_id', driverId);
-        window.location.href = 'chofer-panel.html';
-      } else {
-        errorEl.textContent = 'Credenciales inválidas';
-        errorEl.classList.add('visible');
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      showOk("Ingresando...");
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        showError("❌ " + error.message);
+        return;
+      }
+
+      showOk("✅ Login correcto. Entrando...");
+
+      setTimeout(() => {
+        window.location.href = "chofer-panel.html";
+      }, 700);
+    });
+
+    // LOGIN GOOGLE
+    document.getElementById("googleLoginBtn").addEventListener("click", async () => {
+      showOk("Abriendo Google...");
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + "/mimi-transporte/chofer-panel.html"
+        }
+      });
+
+      if (error) {
+        showError("❌ Error Google: " + error.message);
       }
     });
   </script>
+
 </body>
 </html>
