@@ -141,7 +141,7 @@ _generateSounds() {
   // HAPTICS
   // =========================
   vibrate(patternName) {
-    if (!navigator.vibrate || !CONFIG.FEATURES.enableHaptics || !this._hapticsUnlocked) return;
+    if (!navigator.vibrate || !CONFIG?.FEATURES?.enableHaptics || !this._hapticsUnlocked) return;
     
     try {
       const pattern = CONFIG.HAPTICS[patternName] || CONFIG.HAPTICS.notification;
