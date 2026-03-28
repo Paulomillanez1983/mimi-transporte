@@ -8,6 +8,8 @@ import mapService from './map-service.js';
 import locationTracker from './location-tracker.js';
 import tripManager from './trip-manager.js';
 import uiController from './ui-controller.js';
+import soundManager from './sound-manager.js';
+
 
 class DriverApp {
   constructor() {
@@ -40,6 +42,15 @@ class DriverApp {
 
       // 3) Inicializar UI
       uiController.init();
+      // 🔓 desbloqueo audio/haptics en primer toque real
+window.addEventListener('click', () => {
+  soundManager.enableOnUserInteraction();
+}, { once: true });
+
+window.addEventListener('touchstart', () => {
+  soundManager.enableOnUserInteraction();
+}, { once: true });
+
 
       // 4) Inicializar mapa + GPS
       console.log('[DriverApp] Inicializando servicios...');
@@ -176,7 +187,6 @@ class DriverApp {
       unsubNoPending
     );
   }
-
   async _showRouteOnMap(trip) {
     console.log('[DriverApp] Mostrando ruta en mapa...');
 
