@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - UI Controller (CORREGIDO FINAL)
+ * MIMI Driver - UI Controller (VERSIÓN ANTI-BLOQUEO)
  */
 
 import CONFIG from "./config.js";
@@ -24,132 +24,118 @@ class UIController {
 
   _cacheElements() {
     const ids = [
-      "driver-name",
-      "driver-initial", 
-      "status-dot",
-      "status-text",
-      "stat-earnings",
-      "stat-trips",
-      "fab-online",
-      "fab-text",
-      "fab-icon",
-      "toast-container",
-      "global-loading",
-      "incoming-modal",
-      "trip-pickup",
-      "trip-dropoff",
-      "trip-distance",
-      "trip-price",
-      "trip-duration",
-      "client-name",
-      "client-phone",
-      "btn-accept",
-      "btn-reject",
-      "countdown-number",
-      "countdown-circle",
-      "pickup-time",
-      "arrival-panel"
+      "driver-name", "driver-initial", "status-dot", "status-text",
+      "stat-earnings", "stat-trips", "fab-online", "fab-text", "fab-icon",
+      "toast-container", "global-loading", "incoming-modal", "trip-pickup",
+      "trip-dropoff", "trip-distance", "trip-price", "trip-duration",
+      "client-name", "client-phone", "btn-accept", "btn-reject",
+      "countdown-number", "countdown-circle", "pickup-time", "arrival-panel"
     ];
 
     ids.forEach((id) => {
       this.elements[id] = document.getElementById(id);
     });
-
-    // Cachear backdrop específicamente
-    const modal = this.elements["incoming-modal"];
-    if (modal) {
-      this.elements["modal-backdrop"] = modal.querySelector(".modal-backdrop");
-    }
   }
 
   _bindEvents() {
-    // Delegación de eventos para los botones del modal
+    // Usar capture phase para asegurar que capturamos el evento
     document.addEventListener('click', (e) => {
-      if (e.target.closest('#btn-accept')) {
+      if (!this.isModalActive) return;
+      
+      const btnAccept = e.target.closest('#btn-accept');
+      const btnReject = e.target.closest('#btn-reject');
+      
+      if (btnAccept) {
         e.preventDefault();
-        e.stopPropagation();
+        e.stopImmediatePropagation(); // Detener otros listeners
+        console.log("[UI] ✅ ACEPTAR detectado");
         this._handleAccept();
       }
       
-      if (e.target.closest('#btn-reject')) {
+      if (btnReject) {
         e.preventDefault();
-        e.stopPropagation();
+        e.stopImmediatePropagation();
+        console.log("[UI] ❌ RECHAZAR detectado");
         this._handleReject();
       }
-    });
-
-    // Cerrar al clickear backdrop (opcional)
-    if (this.elements["modal-backdrop"]) {
-      this.elements["modal-backdrop"].addEventListener('click', (e) => {
-        if (e.target === this.elements["modal-backdrop"]) {
-          this._handleReject();
-        }
-      });
-    }
+    }, true); // true = capture phase
   }
 
   _handleAccept() {
     if (!this.isModalActive) return;
     
-    console.log("[UI] ✅ Botón ACEPTAR clickeado");
+    console.log("[UI] Procesando ACEPTAR...");
     
-    // Cerrar PRIMERO el modal, luego ejecutar callback
-    this._clearCountdown();
-    this._closeModal();
+    // 1. Cerrar modal INMEDIATAMENTE (síncrono)
+    this._forceCloseModal();
     
-    // Ejecutar callback con protección de errores
-    if (this.currentTripCallbacks.onAccept) {
-      try {
-        console.log("[UI] Ejecutando callback onAccept...");
-        this.currentTripCallbacks.onAccept();
-        console.log("[UI] Callback onAccept ejecutado OK");
-      } catch (error) {
-        console.error("[UI] ❌ Error en callback onAccept:", error);
-        this.showToast("Error al aceptar viaje", "error");
-      }
+    // 2. Ejecutar callback DESPUÉS de liberar el UI thread
+    const callback = this.currentTripCallbacks.onAccept;
+    if (callback) {
+      // Usar setTimeout 0 para que el navegador repinte primero
+      setTimeout(() => {
+        try {
+          console.log("[UI] Ejecutando callback Aceptar...");
+          callback();
+          console.log("[UI] Callback Aceptar finalizado");
+        } catch (err) {
+          console.error("[UI] Error en callback:", err);
+        }
+      }, 50);
     }
   }
 
   _handleReject() {
     if (!this.isModalActive) return;
     
-    console.log("[UI] ❌ Botón RECHAZAR clickeado");
+    console.log("[UI] Procesando RECHAZAR...");
     
-    // Cerrar PRIMERO el modal, luego ejecutar callback
-    this._clearCountdown();
-    this._closeModal();
+    // 1. Cerrar modal INMEDIATAMENTE
+    this._forceCloseModal();
     
-    // Ejecutar callback con protección de errores
-    if (this.currentTripCallbacks.onReject) {
-      try {
-        console.log("[UI] Ejecutando callback onReject...");
-        this.currentTripCallbacks.onReject();
-        console.log("[UI] Callback onReject ejecutado OK");
-      } catch (error) {
-        console.error("[UI] ❌ Error en callback onReject:", error);
-      }
+    // 2. Ejecutar callback asíncrono
+    const callback = this.currentTripCallbacks.onReject;
+    if (callback) {
+      setTimeout(() => {
+        try {
+          console.log("[UI] Ejecutando callback Rechazar...");
+          callback();
+          console.log("[UI] Callback Rechazar finalizado");
+        } catch (err) {
+          console.error("[UI] Error en callback:", err);
+        }
+      }, 50);
     }
   }
 
-  _closeModal() {
-    console.log("[UI] Cerrando modal...");
-    const modal = this.elements["incoming-modal"];
+  _forceCloseModal() {
+    console.log("[UI] Forzando cierre de modal...");
     
+    // Detener countdown
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+    
+    const modal = this.elements["incoming-modal"];
     if (modal) {
-      // Forzar cierre inmediato sin animaciones que puedan trabar
+      // Remover clase activa
       modal.classList.remove("active");
       
-      // Forzar display none para evitar que quede "tildado" visualmente
-      modal.style.display = "none";
-      setTimeout(() => {
-        if (!modal.classList.contains("active")) {
-          modal.style.display = "";
-        }
-      }, 100);
+      // Forzar display none para liberar la pantalla inmediatamente
+      modal.style.cssText = "display: none !important; visibility: hidden !important; opacity: 0 !important;";
       
-      this.isModalActive = false;
-      console.log("[UI] ✅ Modal cerrado correctamente");
+      // Restaurar después para futuros usos (pero mantener oculto)
+      setTimeout(() => {
+        modal.style.cssText = "";
+        modal.style.display = "none";
+      }, 100);
     }
+    
+    this.isModalActive = false;
+    this.currentTripCallbacks = {}; // Limpiar referencias
+    
+    console.log("[UI] ✅ Modal cerrado y UI liberada");
   }
 
   _setupViewport() {
@@ -182,8 +168,8 @@ class UIController {
       max-width: 90vw;
       text-align: center;
       font-size: 14px;
-      transition: opacity 0.3s;
-      z-index: 10000;
+      z-index: 100000;
+      position: relative;
     `;
 
     const icons = { info: "ℹ️", success: "✅", error: "❌", warning: "⚠️" };
@@ -233,9 +219,9 @@ class UIController {
 
     // Guardar callbacks
     this.currentTripCallbacks = { onAccept, onReject };
-
-    // Limpiar estado previo
-    this._clearCountdown();
+    
+    // Limpiar cualquier estado previo
+    this._forceCloseModal();
     
     const modal = this.elements["incoming-modal"];
     if (!modal) {
@@ -243,16 +229,14 @@ class UIController {
       return;
     }
 
-    // Extraer datos con múltiples fallbacks
-    const origen = trip.origen || trip.origin || trip.pickup || "Dirección no disponible";
-    const destino = trip.destino || trip.destination || trip.dropoff || "Destino no disponible";
+    // Extraer datos
+    const origen = trip.origen || trip.origin || "Dirección no disponible";
+    const destino = trip.destino || trip.destination || "Destino no disponible";
     const distancia = trip.distancia_km || trip.distancia || trip.distance || "--";
-    const duracion = trip.duracion_min || trip.duracion || trip.duration || trip.time || "--";
-    const precio = trip.precio || trip.price || trip.fare || trip.cost || "--";
-    const cliente = trip.cliente || trip.client_name || trip.passenger || "Cliente";
-    const telefono = trip.telefono || trip.phone || trip.celular || "";
-
-    console.log("[UI] Datos procesados:", { origen, destino, distancia, duracion, precio, cliente });
+    const duracion = trip.duracion_min || trip.duracion || trip.duration || "--";
+    const precio = trip.precio || trip.price || "--";
+    const cliente = trip.cliente || trip.client_name || "Cliente";
+    const telefono = trip.telefono || trip.phone || "";
 
     // Actualizar DOM
     this._setText("trip-pickup", origen);
@@ -262,13 +246,13 @@ class UIController {
     this._setText("trip-duration", duracion !== "--" ? `${duracion} min` : "-- min");
     this._setText("client-name", cliente);
     this._setText("client-phone", telefono || "Sin teléfono");
-    this._setText("pickup-time", duracion !== "--" ? `${duracion} min` : "-- min");
 
-    // Resetear display por si estaba oculto por un cierre anterior
-    modal.style.display = "";
+    // Mostrar modal (resetear estilos primero)
+    modal.style.cssText = "";
     modal.classList.add("active");
     this.isModalActive = true;
-    console.log("[UI] Modal activado");
+    
+    console.log("[UI] ✅ Modal activado, iniciando countdown");
 
     // Iniciar countdown
     this._startCountdown(onReject);
@@ -276,11 +260,7 @@ class UIController {
 
   _setText(elementId, text) {
     const el = this.elements[elementId];
-    if (el) {
-      el.textContent = text;
-    } else {
-      console.warn(`[UI] Elemento '${elementId}' no encontrado`);
-    }
+    if (el) el.textContent = text;
   }
 
   _startCountdown(onTimeout) {
@@ -290,51 +270,33 @@ class UIController {
     const circle = this.elements["countdown-circle"];
 
     if (countdownText) countdownText.textContent = this.currentCountdown;
-    
     if (circle) {
       circle.style.strokeDasharray = "283";
       circle.style.strokeDashoffset = "0";
     }
 
-    console.log("[UI] ⏱️ Countdown iniciado:", this.currentCountdown);
-
     this.countdownInterval = setInterval(() => {
       this.currentCountdown--;
       
       if (countdownText) countdownText.textContent = this.currentCountdown;
-      
       if (circle) {
         const offset = 283 - ((this.currentCountdown / 15) * 283);
         circle.style.strokeDashoffset = offset;
       }
 
       if (this.currentCountdown <= 0) {
-        console.log("[UI] ⏱️ Countdown finalizado");
-        this._clearCountdown();
-        this._closeModal();
-        
+        this._forceCloseModal();
         if (onTimeout) {
-          try {
-            onTimeout();
-          } catch (error) {
-            console.error("[UI] Error en callback timeout:", error);
-          }
+          setTimeout(() => {
+            try {
+              onTimeout();
+            } catch (err) {
+              console.error("[UI] Error en timeout callback:", err);
+            }
+          }, 50);
         }
       }
     }, 1000);
-  }
-
-  _clearCountdown() {
-    if (this.countdownInterval) {
-      clearInterval(this.countdownInterval);
-      this.countdownInterval = null;
-      console.log("[UI] Countdown limpiado");
-    }
-  }
-
-  closeTripModal() {
-    this._clearCountdown();
-    this._closeModal();
   }
 }
 
