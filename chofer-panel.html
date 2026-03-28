@@ -41,7 +41,6 @@
   <style>
     html { -webkit-text-size-adjust: 100%; }
 
-    /* Botón cerrar sesión */
     .logout-btn {
       position: fixed;
       top: 14px;
@@ -67,7 +66,6 @@
 
 <body>
 
-  <!-- Botón Logout -->
   <button class="logout-btn" id="logoutBtn">Salir</button>
 
   <div id="map-container"></div>
@@ -260,56 +258,41 @@
 
   </div>
 
-  <!-- ============================= -->
   <!-- 🔐 SUPABASE AUTH PROTECTION -->
-  <!-- ============================= -->
   <script>
-    // ⚠️ REEMPLAZAR POR TU SUPABASE REAL
-    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-    const SUPABASE_ANON_KEY = "TU_ANON_KEY";
+    const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
-    // Usa el supabase-js que ya cargaste en /libs/supabase-js.js
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function protegerPanel() {
       try {
         const { data, error } = await supabaseClient.auth.getSession();
 
-        if (error) {
-          console.error("Auth error:", error);
+        if (error || !data.session) {
           window.location.href = "login-chofer.html";
           return;
         }
 
-        if (!data.session) {
-          window.location.href = "login-chofer.html";
-          return;
-        }
-
-        // Usuario autenticado
         const user = data.session.user;
 
         console.log("✅ Chofer autenticado:", user.email);
 
-        // Mostrar datos básicos en UI
         const driverNameEl = document.getElementById("driver-name");
         const driverInitialEl = document.getElementById("driver-initial");
 
         if (driverNameEl) driverNameEl.textContent = user.email || "Conductor";
         if (driverInitialEl) driverInitialEl.textContent = (user.email || "M").substring(0, 1).toUpperCase();
 
-        // Mostrar botón logout
         document.getElementById("logoutBtn").classList.add("visible");
 
       } catch (err) {
-        console.error("Error protegiendo panel:", err);
         window.location.href = "login-chofer.html";
       }
     }
 
     protegerPanel();
 
-    // LOGOUT
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       await supabaseClient.auth.signOut();
       window.location.href = "login-chofer.html";
