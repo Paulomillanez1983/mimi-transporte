@@ -44,7 +44,7 @@ class TripManager {
     const { data: { user } } = await supabaseService.client.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const driverId = user.id;
+    const driverId = await this._getDriverUuid();
 
     console.log('[TripManager] Initializing for driver UID:', driverId);
 
@@ -68,7 +68,7 @@ class TripManager {
       const { data: activeTrip, error: tripError } = await supabaseService.client
         .from('viajes')
         .select('*')
-        .eq('chofer_id', driverId)
+        .eq('chofer_id_uuid', driverId)
         .in('estado', ['ACEPTADO', 'EN_CURSO'])
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -92,8 +92,8 @@ class TripManager {
       // 2) PENDING OFFERS
       const { data: offers, error: offerError } = await supabaseService.client
         .from('viaje_ofertas')
-        .select('id, viaje_id, chofer_id, estado, expires_at, offered_at')
-        .eq('chofer_id', driverId)
+        .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
+        .eq('chofer_id_uuid', driverId)
         .eq('estado', 'PENDIENTE')
         .order('offered_at', { ascending: false })
         .limit(1);
@@ -151,7 +151,7 @@ class TripManager {
           event: '*',
           schema: 'public',
           table: 'viaje_ofertas',
-          filter: `chofer_id=eq.${driverId}`
+          filter: `chofer_id_uuid=eq.${driverId}`
         },
         async (payload) => {
           console.log('[TripManager] Offer realtime event:', payload.eventType);
@@ -178,7 +178,7 @@ class TripManager {
           event: '*',
           schema: 'public',
           table: 'viajes',
-          filter: `chofer_id=eq.${driverId}`
+          filter: `chofer_id_uuid=eq.${driverId}`
         },
         (payload) => {
           const trip = payload.new;
@@ -217,7 +217,7 @@ class TripManager {
     const { data: { user } } = await supabaseService.client.auth.getUser();
     if (!user) return { success: false, error: 'No autenticado' };
 
-    const driverId = user.id;
+    const driverId = await this._getDriverUuid();
 
     // Aceptar: actualizar oferta + viaje
     const { error: offerError } = await supabaseService.client
@@ -227,7 +227,7 @@ class TripManager {
         responded_at: new Date().toISOString()
       })
       .eq('viaje_id', tripId)
-      .eq('chofer_id', driverId)
+      .eq('chofer_id_uuid', driverId)
       .eq('estado', 'PENDIENTE');
 
     if (offerError) {
@@ -239,7 +239,7 @@ class TripManager {
       .from('viajes')
       .update({
         estado: 'ACEPTADO',
-        chofer_id: driverId,
+        chofer_id_uuid: driverId,
         aceptado_at: new Date().toISOString()
       })
       .eq('id', tripId);
@@ -251,12 +251,28 @@ class TripManager {
 
     return { success: true };
   }
+async _getDriverUuid() {
+  const { data: { user } } = await supabaseService.client.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const { data: chofer, error } = await supabaseService.client
+    .from('choferes')
+    .select('id_uuid')
+    .eq('user_id', user.id)
+    .single();
+
+  if (error || !chofer?.id_uuid) {
+    throw new Error('No se encontró chofer para este usuario');
+  }
+
+  return chofer.id_uuid;
+}
 
   async rejectTrip(tripId, reason = 'RECHAZADO_POR_CHOFER') {
     const { data: { user } } = await supabaseService.client.auth.getUser();
     if (!user) return { success: false, error: 'No autenticado' };
 
-    const driverId = user.id;
+    const driverId = await this._getDriverUuid();
 
     const { error } = await supabaseService.client
       .from('viaje_ofertas')
@@ -266,7 +282,7 @@ class TripManager {
         responded_at: new Date().toISOString()
       })
       .eq('viaje_id', tripId)
-      .eq('chofer_id', driverId)
+      .eq('chofer_id_uuid', driverId)
       .eq('estado', 'PENDIENTE');
 
     if (error) {
@@ -281,7 +297,7 @@ class TripManager {
     const { data: { user } } = await supabaseService.client.auth.getUser();
     if (!user) return { success: false, error: 'No autenticado' };
 
-    const driverId = user.id;
+    const driverId = await this._getDriverUuid();
 
     const { error } = await supabaseService.client
       .from('viajes')
@@ -290,7 +306,7 @@ class TripManager {
         iniciado_at: new Date().toISOString()
       })
       .eq('id', tripId)
-      .eq('chofer_id', driverId);
+      .eq('chofer_id_uuid', driverId);
 
     if (error) {
       console.error('[TripManager] Start trip error:', error);
@@ -304,7 +320,7 @@ class TripManager {
     const { data: { user } } = await supabaseService.client.auth.getUser();
     if (!user) return { success: false, error: 'No autenticado' };
 
-    const driverId = user.id;
+    const driverId = await this._getDriverUuid();
 
     const { error } = await supabaseService.client
       .from('viajes')
@@ -313,7 +329,7 @@ class TripManager {
         completado_at: new Date().toISOString()
       })
       .eq('id', tripId)
-      .eq('chofer_id', driverId);
+      .eq('chofer_id_uuid', driverId);
 
     if (error) {
       console.error('[TripManager] Finish trip error:', error);
