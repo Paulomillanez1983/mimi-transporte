@@ -240,22 +240,37 @@ async acceptTrip(tripId) {
 
     console.log('[TripManager] RPC raw response:', data);
 
-    // Caso 1: RPC devuelve directamente {ok:true}
+    let result = null;
+
+    // Caso 1: devuelve directo {ok:true}
     if (data?.ok !== undefined) {
-      if (!data.ok) return { success: false, error: data.reason || 'No se pudo aceptar el viaje' };
-      return { success: true };
+      result = data;
     }
 
-    // Caso 2: RPC devuelve array [{aceptar_oferta_viaje:{ok,reason}}]
-    const result = data?.[0]?.aceptar_oferta_viaje;
+    // Caso 2: devuelve array [{aceptar_oferta_viaje:{ok,reason}}]
+    if (!result && Array.isArray(data)) {
+      result = data?.[0]?.aceptar_oferta_viaje;
+    }
 
     if (!result) {
+      console.error('[TripManager] Invalid RPC response format:', data);
       return { success: false, error: 'Respuesta RPC inválida' };
     }
 
     if (!result.ok) {
+      console.warn('[TripManager] Offer rejected:', result.reason);
+
+      // 🔥 si ya no está disponible, refrescamos ofertas automáticamente
+      if (result.reason === 'OFERTA_NO_DISPONIBLE') {
+        console.log('[TripManager] Refreshing offers (offer not available)...');
+        await this.loadPendingOffer();
+      }
+
       return { success: false, error: result.reason || 'No se pudo aceptar el viaje' };
     }
+
+    // si aceptó OK, limpiamos pending offer
+    this.pendingOffer = null;
 
     return { success: true };
 
