@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - UI Controller (CORREGIDO)
+ * MIMI Driver - UI Controller (CORREGIDO PARA TU HTML)
  */
 
 import CONFIG from "./config.js";
@@ -11,7 +11,8 @@ class UIController {
     this.currentCountdown = 0;
     this.touchStartY = 0;
     this.sheetOpen = false;
-    this.currentTripCallbacks = {}; // Guardar callbacks actuales
+    this.currentTripCallbacks = {};
+    this.isModalActive = false;
   }
 
   init() {
@@ -22,9 +23,10 @@ class UIController {
   }
 
   _cacheElements() {
+    // Todos los IDs que existen en tu HTML
     const ids = [
       "driver-name",
-      "driver-initial",
+      "driver-initial", 
       "status-dot",
       "status-text",
       "stat-earnings",
@@ -34,10 +36,9 @@ class UIController {
       "fab-icon",
       "toast-container",
       "global-loading",
-      // Elementos del modal de viaje
       "incoming-modal",
       "trip-pickup",
-      "trip-dropoff", 
+      "trip-dropoff",
       "trip-distance",
       "trip-price",
       "trip-duration",
@@ -46,41 +47,60 @@ class UIController {
       "btn-accept",
       "btn-reject",
       "countdown-number",
-      "countdown-circle"
+      "countdown-circle",
+      "pickup-time",
+      "arrival-panel"
     ];
 
     ids.forEach((id) => {
       this.elements[id] = document.getElementById(id);
     });
+
+    // Cachear backdrop específicamente
+    const modal = this.elements["incoming-modal"];
+    if (modal) {
+      this.elements["modal-backdrop"] = modal.querySelector(".modal-backdrop");
+    }
   }
 
   _bindEvents() {
-    // Binding seguro para botones del modal (delegación de eventos)
+    // Delegación de eventos para los botones del modal
     document.addEventListener('click', (e) => {
-      const btnAccept = e.target.closest('#btn-accept');
-      const btnReject = e.target.closest('#btn-reject');
-      
-      if (btnAccept) {
+      // Aceptar
+      if (e.target.closest('#btn-accept')) {
         e.preventDefault();
         e.stopPropagation();
-        console.log("[UI] Click ACEPTAR detectado");
+        console.log("[UI] ✅ Botón ACEPTAR clickeado");
         this._handleAccept();
       }
       
-      if (btnReject) {
+      // Rechazar
+      if (e.target.closest('#btn-reject')) {
         e.preventDefault();
         e.stopPropagation();
-        console.log("[UI] Click RECHAZAR detectado");
+        console.log("[UI] ❌ Botón RECHAZAR clickeado");
         this._handleReject();
       }
     });
+
+    // Permitir clicks en el backdrop para cerrar (opcional - comportamiento UX)
+    if (this.elements["modal-backdrop"]) {
+      this.elements["modal-backdrop"].addEventListener('click', (e) => {
+        // Solo si no se hizo click en el contenido del modal
+        if (e.target === this.elements["modal-backdrop"]) {
+          console.log("[UI] Click en backdrop - rechazando viaje");
+          this._handleReject();
+        }
+      });
+    }
   }
 
   _handleAccept() {
-    console.log("[UI] Procesando aceptación...");
+    if (!this.isModalActive) return;
+    
+    console.log("[UI] Procesando ACEPTAR...");
     this._clearCountdown();
-    const modal = this.elements["incoming-modal"];
-    if (modal) modal.classList.remove("active");
+    this._closeModal();
     
     if (this.currentTripCallbacks.onAccept) {
       this.currentTripCallbacks.onAccept();
@@ -88,13 +108,23 @@ class UIController {
   }
 
   _handleReject() {
-    console.log("[UI] Procesando rechazo...");
+    if (!this.isModalActive) return;
+    
+    console.log("[UI] Procesando RECHAZAR...");
     this._clearCountdown();
-    const modal = this.elements["incoming-modal"];
-    if (modal) modal.classList.remove("active");
+    this._closeModal();
     
     if (this.currentTripCallbacks.onReject) {
       this.currentTripCallbacks.onReject();
+    }
+  }
+
+  _closeModal() {
+    const modal = this.elements["incoming-modal"];
+    if (modal) {
+      modal.classList.remove("active");
+      this.isModalActive = false;
+      console.log("[UI] Modal cerrado");
     }
   }
 
@@ -110,7 +140,6 @@ class UIController {
   showToast(message, type = "info", duration = 3000) {
     const container = this.elements["toast-container"];
     if (!container) {
-      console.warn("[UI] Toast container no existe");
       alert(message);
       return;
     }
@@ -130,14 +159,11 @@ class UIController {
       text-align: center;
       font-size: 14px;
       transition: opacity 0.3s;
+      z-index: 10000;
     `;
 
-    let icon = "ℹ️";
-    if (type === "success") icon = "✅";
-    if (type === "error") icon = "❌";
-    if (type === "warning") icon = "⚠️";
-
-    toast.textContent = `${icon} ${message}`;
+    const icons = { info: "ℹ️", success: "✅", error: "❌", warning: "⚠️" };
+    toast.textContent = `${icons[type] || "ℹ️"} ${message}`;
     container.appendChild(toast);
 
     setTimeout(() => {
@@ -163,10 +189,6 @@ class UIController {
     }
   }
 
-  updateStats(stats = {}) {
-    // Implementar si es necesario
-  }
-
   setDriverProfile(nameOrEmail) {
     const nameEl = this.elements["driver-name"];
     const initialEl = this.elements["driver-initial"];
@@ -183,52 +205,56 @@ class UIController {
   }
 
   // =========================================================
-  // 🚗 MOSTRAR VIAJE ENTRANTE - CORREGIDO
+  // 🚗 MOSTRAR VIAJE ENTRANTE
   // =========================================================
   showIncomingTrip(trip, onAccept, onReject) {
-    console.log("[UI] Mostrando viaje:", trip);
+    console.log("[UI] 📦 Mostrando viaje:", trip);
 
-    // Guardar callbacks para uso posterior
+    // Guardar callbacks
     this.currentTripCallbacks = { onAccept, onReject };
 
+    // Limpiar estado previo
+    this._clearCountdown();
+    
     const modal = this.elements["incoming-modal"];
     if (!modal) {
-      console.error("[UI] ERROR: Modal 'incoming-modal' no encontrado en DOM");
+      console.error("[UI] ERROR: Modal no encontrado");
       return;
     }
 
-    // Asegurar que no haya countdown previo activo
-    this._clearCountdown();
-
-    // Extraer datos con múltiples fallback por si vienen con nombres diferentes
-    const origen = trip.origen || trip.origin || "Origen no disponible";
-    const destino = trip.destino || trip.destination || "Destino no disponible";
-    const distancia = trip.distancia_km || trip.distancia || trip.distance || trip.km || "--";
-    const duracion = trip.duracion_min || trip.duracion || trip.duration || trip.tiempo || "--";
-    const precio = trip.precio || trip.price || trip.costo || trip.valor || "--";
-    const cliente = trip.cliente || trip.client_name || trip.nombre_cliente || "Cliente";
+    // Extraer datos con múltiples fallbacks
+    const origen = trip.origen || trip.origin || trip.pickup || "Dirección no disponible";
+    const destino = trip.destino || trip.destination || trip.dropoff || "Destino no disponible";
+    const distancia = trip.distancia_km || trip.distancia || trip.distance || "--";
+    const duracion = trip.duracion_min || trip.duracion || trip.duration || trip.time || "--";
+    const precio = trip.precio || trip.price || trip.fare || trip.cost || "--";
+    const cliente = trip.cliente || trip.client_name || trip.passenger || "Cliente";
     const telefono = trip.telefono || trip.phone || trip.celular || "";
 
-    console.log("[UI] Datos extraídos:", { origen, destino, distancia, duracion, precio, cliente });
+    console.log("[UI] Datos procesados:", { origen, destino, distancia, duracion, precio, cliente });
 
-    // Actualizar DOM con verificación de existencia
-    this._setTextContent("trip-pickup", origen);
-    this._setTextContent("trip-dropoff", destino);
-    this._setTextContent("trip-distance", distancia + " km");
-    this._setTextContent("trip-price", "$" + precio);
-    this._setTextContent("trip-duration", duracion + " min");
-    this._setTextContent("client-name", cliente);
-    this._setTextContent("client-phone", telefono);
+    // Actualizar DOM
+    this._setText("trip-pickup", origen);
+    this._setText("trip-dropoff", destino);
+    this._setText("trip-distance", distancia !== "--" ? `${distancia} km` : "-- km");
+    this._setText("trip-price", precio !== "--" ? `$${precio}` : "$--");
+    this._setText("trip-duration", duracion !== "--" ? `${duracion} min` : "-- min");
+    this._setText("client-name", cliente);
+    this._setText("client-phone", telefono || "Sin teléfono");
+    
+    // También actualizar el tiempo de pickup si existe
+    this._setText("pickup-time", duracion !== "--" ? `${duracion} min` : "-- min");
 
     // Mostrar modal
     modal.classList.add("active");
+    this.isModalActive = true;
     console.log("[UI] Modal activado");
 
     // Iniciar countdown
     this._startCountdown(onReject);
   }
 
-  _setTextContent(elementId, text) {
+  _setText(elementId, text) {
     const el = this.elements[elementId];
     if (el) {
       el.textContent = text;
@@ -244,27 +270,30 @@ class UIController {
     const circle = this.elements["countdown-circle"];
 
     if (countdownText) countdownText.textContent = this.currentCountdown;
-    if (circle) circle.style.strokeDashoffset = 0;
+    
+    // Resetear círculo (circunferencia = 2 * PI * 45 ≈ 283)
+    if (circle) {
+      circle.style.strokeDasharray = "283";
+      circle.style.strokeDashoffset = "0";
+    }
 
-    console.log("[UI] Iniciando countdown:", this.currentCountdown);
+    console.log("[UI] ⏱️ Countdown iniciado:", this.currentCountdown);
 
     this.countdownInterval = setInterval(() => {
       this.currentCountdown--;
-      console.log("[UI] Countdown:", this.currentCountdown);
-
+      
       if (countdownText) countdownText.textContent = this.currentCountdown;
       
+      // Actualizar círculo (de 0 a 283)
       if (circle) {
         const offset = 283 - ((this.currentCountdown / 15) * 283);
         circle.style.strokeDashoffset = offset;
       }
 
       if (this.currentCountdown <= 0) {
-        console.log("[UI] Countdown finalizado");
+        console.log("[UI] ⏱️ Countdown finalizado");
         this._clearCountdown();
-        
-        const modal = this.elements["incoming-modal"];
-        if (modal) modal.classList.remove("active");
+        this._closeModal();
         
         if (onTimeout) onTimeout();
       }
@@ -279,10 +308,10 @@ class UIController {
     }
   }
 
+  // Utilidad para cerrar manualmente si es necesario
   closeTripModal() {
     this._clearCountdown();
-    const modal = this.elements["incoming-modal"];
-    if (modal) modal.classList.remove("active");
+    this._closeModal();
   }
 }
 
