@@ -1,182 +1,264 @@
 /**
- * MIMI Driver - Main Application
- * Bootstraps all services and coordinates initialization
+ * Driver App producción (RLS + UUID + robusto)
  */
+
+import CONFIG from './config.js';
+import supabaseService from './supabase-client.js';
+import mapService from './map-service.js';
+import locationTracker from './location-tracker.js';
+import tripManager from './trip-manager.js';
+import uiController from './ui-controller.js';
 
 class DriverApp {
   constructor() {
     this.initialized = false;
+    this._onlineStatus = false;
+    this._currentTripId = null;
+    this._unsubscribers = [];
   }
 
-  async start() {
-    console.log('[App] Starting MIMI Driver...');
-
+  async init() {
     try {
-      // 1. Initialize Supabase FIRST
-      const dbReady = await supabaseClient.initialize();
-      if (!dbReady) {
-        throw new Error('Database connection failed');
+      // 1) Inicializar Supabase
+      const dbReady = await supabaseService.init();
+      if (!dbReady) throw new Error('No se pudo conectar a Supabase');
+
+      // 2) Verificar usuario logueado (RLS necesita auth)
+      const { data: { user } } = await supabaseService.client.auth.getUser();
+      if (!user) {
+        window.location.href = CONFIG.REDIRECTS.LOGIN;
+        return;
       }
 
-      // 2. Check auth AFTER Supabase is ready
-      const authOk = await this._checkAuth();
-      if (!authOk) return;
+      // 3) UI
+      uiController.init();
 
-      // 3. Initialize Map
-      await mapService.init('map-container');
+      // 4) Map + Location
+      await Promise.allSettled([
+        mapService.init('map-container'),
+        locationTracker.start(pos => this._onPositionUpdate(pos))
+      ]);
 
-      // 4. Initialize Location
-      await locationService.start((pos) => {
-        mapService.updateDriverMarker(pos.lng, pos.lat, pos.heading);
+      // 5) Trip Manager
+      await tripManager.init();
 
-        // Check arrival proximity
-        this._checkProximity(pos);
-      });
+      // 6) Subscripciones
+      this._subscribeToEvents();
 
-      // 5. Initialize Trip Manager
-      await tripManager.initialize();
-
-      // 6. Initialize UI
-      uiController.initialize();
-
-      // 7. Setup global error handling
-      this._setupErrorHandling();
+      // 7) Setup UI actions
+      this._setupUI();
 
       this.initialized = true;
-      console.log('[App] Ready');
+
+      // Estado inicial
+      uiController.updateDriverState('ONLINE', false);
+
+      const currentTrip = tripManager.getCurrentTrip();
+      const pendingTrip = tripManager.getPendingTrip();
+
+      if (currentTrip) {
+        await this._showRouteOnMap(currentTrip);
+        uiController.showNavigationState(currentTrip);
+      } else if (pendingTrip) {
+        uiController.showIncomingTrip(
+          pendingTrip,
+          () => this._acceptTrip(pendingTrip.id),
+          () => this._rejectTrip(pendingTrip.id)
+        );
+      } else {
+        uiController.showWaitingState();
+      }
 
     } catch (error) {
-      console.error('[App] Fatal error:', error);
-      this._showFatalError(error.message);
+      console.error('[DriverApp] Error fatal:', error);
+      uiController.showToast('Error: ' + error.message, 'error', 5000);
     }
   }
 
-  async _checkAuth() {
-    const driverId = supabaseClient.getDriverId();
+  _subscribeToEvents() {
+    const unsubOffer = tripManager.on('newPendingTrip', (trip) => {
+      uiController.showIncomingTrip(
+        trip,
+        () => this._acceptTrip(trip.id),
+        () => this._rejectTrip(trip.id)
+      );
+    });
 
-    if (!driverId) {
-      console.warn('[Auth] No driver session found. Redirecting to login...');
-      window.location.href = CONFIG.REDIRECTS.LOGIN;
-      return false;
-    }
+    const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
+      this._currentTripId = trip.id;
+      uiController.hideIncomingModal();
+      uiController.showToast('¡Viaje aceptado!', 'success');
+      await this._showRouteOnMap(trip);
+      uiController.showNavigationState(trip);
+    });
 
-    console.log('[Auth] Driver authenticated UID:', driverId);
-    return true;
+    const unsubStarted = tripManager.on('tripStarted', (trip) => {
+      uiController.showToast('Viaje iniciado', 'success');
+      uiController.showNavigationState(trip);
+    });
+
+    const unsubCompleted = tripManager.on('tripCompleted', (trip) => {
+      this._currentTripId = null;
+      mapService.clearRoute();
+      uiController.hideNavigation();
+      uiController.showToast(`Viaje completado +$${trip.precio}`, 'success', 5000);
+      uiController.showWaitingState();
+    });
+
+    const unsubCancelled = tripManager.on('tripCancelled', () => {
+      this._currentTripId = null;
+      mapService.clearRoute();
+      uiController.hideNavigation();
+      uiController.showToast('Viaje cancelado', 'warning');
+      uiController.showWaitingState();
+    });
+
+    const unsubCleared = tripManager.on('pendingTripCleared', () => {
+      uiController.hideIncomingModal();
+      uiController.showWaitingState();
+    });
+
+    const unsubNoPending = tripManager.on('noPendingTrips', () => {
+      uiController.showWaitingState();
+    });
+
+    this._unsubscribers.push(
+      unsubOffer, unsubAccepted, unsubStarted,
+      unsubCompleted, unsubCancelled, unsubCleared, unsubNoPending
+    );
   }
 
-  _checkProximity(position) {
-    const state = stateManager.get('driver.status');
-    const trip = stateManager.get('trip.current');
-
-    if (!trip) return;
-
-    let target;
-    if (state === CONFIG.DRIVER_STATES.GOING_TO_PICKUP) {
-      target = { lat: trip.origen_lat, lng: trip.origen_lng };
-    } else if (state === CONFIG.DRIVER_STATES.IN_PROGRESS) {
-      target = { lat: trip.destino_lat, lng: trip.destino_lng };
-    } else {
-      return;
+  async _showRouteOnMap(trip) {
+    try {
+      const origin = { lat: trip.origen_lat, lng: trip.origen_lng };
+      const destination = { lat: trip.destino_lat, lng: trip.destino_lng };
+      await mapService.showRealRoute(origin, destination);
+    } catch (error) {
+      console.error('[DriverApp] Error mostrando ruta:', error);
     }
+  }
 
-    // Validación fuerte para evitar crash si coords vienen null
-    if (!target.lat || !target.lng) return;
-
-    const distance = this._calculateDistance(position, target);
-
-    // Update UI distance
-    const distanceEl = document.getElementById('nav-distance');
-    if (distanceEl) {
-      const formatted =
-        distance < 1000
-          ? `${Math.round(distance)} m`
-          : `${(distance / 1000).toFixed(1)} km`;
-
-      distanceEl.textContent = formatted;
-    }
-
-    // Check arrival
-    if (distance < 100 && state === CONFIG.DRIVER_STATES.IN_PROGRESS) {
-      if (!stateManager.get('ui.arrivalShown')) {
-        stateManager.set('ui.arrivalShown', true);
-        stateManager.transitionDriver(CONFIG.DRIVER_STATES.ARRIVED);
+  async _acceptTrip(tripId) {
+    uiController.setGlobalLoading(true, 'Aceptando viaje...');
+    try {
+      const result = await tripManager.acceptTrip(tripId);
+      if (!result.success) {
+        uiController.showToast(result.error || 'Error aceptando viaje', 'error');
+        uiController.hideIncomingModal();
+        uiController.showWaitingState();
       }
+    } finally {
+      uiController.setGlobalLoading(false);
     }
   }
 
-  _calculateDistance(pos1, pos2) {
-    const R = 6371e3;
-    const φ1 = pos1.lat * Math.PI / 180;
-    const φ2 = pos2.lat * Math.PI / 180;
-    const Δφ = (pos2.lat - pos1.lat) * Math.PI / 180;
-    const Δλ = (pos2.lng - pos1.lng) * Math.PI / 180;
+  async _rejectTrip(tripId) {
+    await tripManager.rejectTrip(tripId);
+    uiController.showWaitingState();
+  }
 
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+  _onPositionUpdate(position) {
+    mapService.updateDriverPosition(position.lng, position.lat, position.heading);
+
+    const currentTrip = tripManager.getCurrentTrip();
+    if (currentTrip?.estado === 'EN_CURSO') {
+      const dist = this._calculateDistance(
+        position.lat, position.lng,
+        currentTrip.destino_lat, currentTrip.destino_lng
+      );
+
+      if (dist < 100) uiController.showArrival();
+    }
+  }
+
+  _calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) ** 2 +
       Math.cos(φ1) * Math.cos(φ2) *
-      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      Math.sin(Δλ / 2) ** 2;
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
     return R * c;
   }
 
-  _setupErrorHandling() {
-    // Global error handler
-    window.addEventListener('error', (e) => {
-      console.error('[Global Error]', e.error);
-      uiController._showToast('Error inesperado', 'error');
-    });
+  _setupUI() {
+    const btnFab = document.getElementById('fab-online');
 
-    // Unhandled promise rejections
-    window.addEventListener('unhandledrejection', (e) => {
-      console.error('[Unhandled Rejection]', e.reason);
-    });
+    if (btnFab) {
+      btnFab.addEventListener('click', async () => {
+        try {
+          this._onlineStatus = !this._onlineStatus;
 
-    // Online/offline detection
-    window.addEventListener('online', () => {
-      document.getElementById('offline-banner')?.classList.remove('visible');
-      uiController._showToast('Conexión restaurada', 'success');
-    });
+          const { data: { user } } = await supabaseService.client.auth.getUser();
+          if (!user) {
+            uiController.showToast("No autenticado", "error");
+            return;
+          }
 
-    window.addEventListener('offline', () => {
-      document.getElementById('offline-banner')?.classList.add('visible');
+          const { error } = await supabaseService.client
+            .from('choferes')
+            .update({
+              disponible: this._onlineStatus,
+              online: this._onlineStatus,
+              last_seen_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+
+          if (error) {
+            console.error('[DriverApp] Error update chofer:', error);
+            uiController.showToast("No se pudo actualizar estado", "error");
+            return;
+          }
+
+          uiController.updateDriverState('ONLINE', this._onlineStatus);
+          uiController.showToast(this._onlineStatus ? '🟢 Online' : '🔴 Offline', 'success');
+
+        } catch (e) {
+          console.error('[DriverApp] Error botón online:', e);
+          uiController.showToast("Error cambiando estado", "error");
+        }
+      });
+    }
+
+    document.addEventListener('driverAction', (e) => {
+      const { action, tripId } = e.detail;
+      this._handleAction(action, tripId);
     });
   }
 
-  _showFatalError(message) {
-    document.body.innerHTML = `
-      <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        padding: 20px;
-        text-align: center;
-        background: #000;
-        color: #fff;
-      ">
-        <h1 style="margin-bottom: 16px;">⚠️ Error</h1>
-        <p style="color: #888; margin-bottom: 24px;">${message}</p>
-        <button onclick="location.reload()" style="
-          padding: 16px 32px;
-          background: #276EF1;
-          color: white;
-          border: none;
-          border-radius: 12px;
-          font-size: 16px;
-          cursor: pointer;
-        ">
-          Reintentar
-        </button>
-      </div>
-    `;
+  async _handleAction(action, tripId) {
+    switch (action) {
+      case 'accept': return this._acceptTrip(tripId);
+      case 'reject': return this._rejectTrip(tripId);
+      case 'start': return tripManager.startTrip(tripId);
+      case 'finish': return tripManager.finishTrip(tripId);
+      case 'cancel': return tripManager.cancelTrip(tripId);
+      case 'navigate': return this._openExternalNav();
+      case 'whatsapp': return this._openWhatsApp();
+    }
+  }
+
+  _openExternalNav() {
+    const trip = tripManager.getCurrentTrip();
+    if (!trip) return;
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${trip.destino_lat},${trip.destino_lng}`;
+    window.open(url, '_blank');
+  }
+
+  _openWhatsApp() {
+    const trip = tripManager.getCurrentTrip();
+    if (!trip?.telefono) return;
+    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI 🚐');
+    window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
   }
 }
 
-// Start app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  const app = new DriverApp();
-  app.start();
-});
+const app = new DriverApp();
+app.init();
+
+export default DriverApp;
