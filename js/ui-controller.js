@@ -1,10 +1,11 @@
 /**
- * MIMI Driver - UI Controller
- * Versión: Production Ready (Uber-style)
- * Features: GPS-Safe, Non-blocking, Full Animation Support
+ * MIMI Driver - UI Controller v2.0 (Uber-Style)
+ * Features: Map-first design, fluid animations, haptic feedback, gesture support
+ * Compatible con: driver-app.js, trip-manager.js, supabase-client.js (sin cambios)
  */
 
 import CONFIG from './config.js';
+import soundManager from './sound-manager.js';
 
 class UIController {
   constructor() {
@@ -14,67 +15,104 @@ class UIController {
       currentCount: 15,
       isModalOpen: false,
       isProcessing: false,
-      callbacks: {}
+      callbacks: {},
+      currentTrip: null,
+      isOnline: false,
+      bottomSheetExpanded: false
     };
-    
-    // Bindings para mantener contexto
+
+    // Bindings
     this._handleAccept = this._handleAccept.bind(this);
     this._handleReject = this._handleReject.bind(this);
     this._onBackdropClick = this._onBackdropClick.bind(this);
+    this._onTouchStart = this._onTouchStart.bind(this);
+    this._onTouchMove = this._onTouchMove.bind(this);
+    this._onTouchEnd = this._onTouchEnd.bind(this);
+    
+    // Touch handling for bottom sheet
+    this.touchStartY = 0;
+    this.touchCurrentY = 0;
+    this.sheetHeight = 0;
   }
 
-  /**
-   * Inicialización completa del sistema de UI
-   */
   init() {
     this._cacheElements();
     this._setupEventListeners();
     this._setupViewport();
-    console.log('[UI] Controller initialized - Production Mode');
+    this._setupGestures();
+    console.log('[UI] Controller v2.0 initialized - Uber Style');
   }
 
-  /**
-   * Cache de elementos DOM
-   */
   _cacheElements() {
     const selectors = {
-      // Header & Profile
+      // Header
       'driver-name': 'driver-name',
-      'driver-initial': 'driver-initial', 
+      'driver-initial': 'driver-initial',
       'status-dot': 'status-dot',
       'status-text': 'status-text',
       
       // Stats
       'stat-earnings': 'stat-earnings',
       'stat-trips': 'stat-trips',
+      'stat-rating': 'stat-rating',
       
-      // FAB
+      // FAB Online
       'fab-online': 'fab-online',
       'fab-text': 'fab-text',
       'fab-icon': 'fab-icon',
+      'fab-pulse': 'fab-pulse',
       
-      // Modal de viaje entrante
+      // Bottom Sheet
+      'bottom-sheet': 'bottom-sheet',
+      'sheet-handle': 'sheet-handle',
+      'sheet-content': 'sheet-content',
+      'sheet-header': 'sheet-header',
+      
+      // Modal Incoming
       'incoming-modal': 'incoming-modal',
       'modal-backdrop': 'modal-backdrop',
+      'modal-content': 'modal-content',
+      'countdown-ring': 'countdown-ring',
+      'countdown-number': 'countdown-number',
+      'countdown-circle': 'countdown-circle',
+      
+      // Trip info
       'trip-pickup': 'trip-pickup',
       'trip-dropoff': 'trip-dropoff',
       'trip-distance': 'trip-distance',
       'trip-price': 'trip-price',
       'trip-duration': 'trip-duration',
+      'trip-km': 'trip-km',
       'client-name': 'client-name',
       'client-phone': 'client-phone',
+      'client-avatar': 'client-avatar',
       'pickup-time': 'pickup-time',
-      'countdown-number': 'countdown-number',
-      'countdown-circle': 'countdown-circle',
+      'pickup-address': 'pickup-address',
+      'dropoff-address': 'dropoff-address',
+      
+      // Buttons
       'btn-accept': 'btn-accept',
       'btn-reject': 'btn-reject',
+      'btn-call': 'btn-call',
+      'btn-whatsapp': 'btn-whatsapp',
+      'btn-navigate': 'btn-navigate',
+      'btn-arrived': 'btn-arrived',
+      'btn-finish': 'btn-finish',
       
-      // Otros paneles
+      // Navigation bar
+      'nav-bar': 'nav-bar',
+      'nav-street': 'nav-street',
+      'nav-next': 'nav-next',
+      'nav-distance': 'nav-distance',
+      'nav-progress-bar': 'nav-progress-bar',
+      'maneuver-icon': 'maneuver-icon',
+      
+      // Panels
       'arrival-panel': 'arrival-panel',
+      'trip-actions': 'trip-actions',
       'toast-container': 'toast-container',
       'global-loading': 'global-loading',
-      'bottom-sheet': 'bottom-sheet',
-      'nav-bar': 'nav-bar'
+      'offline-banner': 'offline-banner'
     };
 
     Object.entries(selectors).forEach(([key, id]) => {
@@ -82,263 +120,705 @@ class UIController {
     });
   }
 
-  /**
-   * Setup de event listeners - GPS Safe
-   * Usa delegación específica sin bloquear el document
-   */
   _setupEventListeners() {
-    // Bind directo a botones (no document.addEventListener global)
+    // Modal buttons
     const acceptBtn = this.elements['btn-accept'];
     const rejectBtn = this.elements['btn-reject'];
     const backdrop = this.elements['modal-backdrop'];
 
     if (acceptBtn) {
       acceptBtn.addEventListener('click', this._handleAccept);
+      acceptBtn.addEventListener('touchstart', () => this._haptic('light'));
     }
 
     if (rejectBtn) {
       rejectBtn.addEventListener('click', this._handleReject);
+      rejectBtn.addEventListener('touchstart', () => this._haptic('light'));
     }
 
-    // Cerrar al clickear backdrop (opcional UX)
     if (backdrop) {
       backdrop.addEventListener('click', this._onBackdropClick);
     }
 
-    // Touch handling para mobile (prevenir scroll cuando modal abierto)
+    // Sheet handle for expanding/collapsing
+    const sheetHandle = this.elements['sheet-handle'];
+    if (sheetHandle) {
+      sheetHandle.addEventListener('click', () => this._toggleBottomSheet());
+    }
+
+    // Prevent scroll when modal is open
     const modal = this.elements['incoming-modal'];
     if (modal) {
       modal.addEventListener('touchmove', (e) => {
-        if (this.state.isModalOpen && e.target === modal) {
+        if (e.target === modal || e.target.classList.contains('modal-backdrop')) {
           e.preventDefault();
         }
       }, { passive: false });
     }
+
+    // Action buttons
+    const callBtn = this.elements['btn-call'];
+    const whatsappBtn = this.elements['btn-whatsapp'];
+    const navigateBtn = this.elements['btn-navigate'];
+
+    if (callBtn) callBtn.addEventListener('click', () => this._haptic('medium'));
+    if (whatsappBtn) whatsappBtn.addEventListener('click', () => this._haptic('medium'));
+    if (navigateBtn) navigateBtn.addEventListener('click', () => this._haptic('medium'));
   }
 
-  /**
-   * Handler de aceptación
-   */
+  _setupGestures() {
+    const sheet = this.elements['bottom-sheet'];
+    const handle = this.elements['sheet-handle'];
+    
+    if (!sheet || !handle) return;
+
+    // Touch events for sheet dragging
+    handle.addEventListener('touchstart', this._onTouchStart, { passive: true });
+    sheet.addEventListener('touchstart', this._onTouchStart, { passive: true });
+    
+    document.addEventListener('touchmove', this._onTouchMove, { passive: false });
+    document.addEventListener('touchend', this._onTouchEnd, { passive: true });
+  }
+
+  _onTouchStart(e) {
+    const sheet = this.elements['bottom-sheet'];
+    if (!sheet) return;
+    
+    this.touchStartY = e.touches[0].clientY;
+    this.sheetHeight = sheet.offsetHeight;
+    sheet.style.transition = 'none';
+  }
+
+  _onTouchMove(e) {
+    if (!this.touchStartY) return;
+    
+    const sheet = this.elements['bottom-sheet'];
+    if (!sheet) return;
+
+    this.touchCurrentY = e.touches[0].clientY;
+    const deltaY = this.touchStartY - this.touchCurrentY;
+    
+    // Only allow dragging up from collapsed or down from expanded
+    const isCollapsed = !this.state.bottomSheetExpanded;
+    const currentTransform = isCollapsed ? 0 : -this.sheetHeight + 80;
+    
+    if ((isCollapsed && deltaY > 0) || (!isCollapsed && deltaY < 0)) {
+      const newTransform = currentTransform + deltaY;
+      const clampedTransform = Math.max(-this.sheetHeight + 80, Math.min(0, newTransform));
+      sheet.style.transform = `translateY(${Math.abs(clampedTransform)}px)`;
+    }
+  }
+
+  _onTouchEnd() {
+    const sheet = this.elements['bottom-sheet'];
+    if (!sheet) return;
+
+    sheet.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    const deltaY = this.touchStartY - this.touchCurrentY;
+    const threshold = 50;
+
+    if (Math.abs(deltaY) > threshold) {
+      if (deltaY > 0 && !this.state.bottomSheetExpanded) {
+        this._expandBottomSheet();
+      } else if (deltaY < 0 && this.state.bottomSheetExpanded) {
+        this._collapseBottomSheet();
+      }
+    } else {
+      // Snap back to current state
+      if (this.state.bottomSheetExpanded) {
+        this._expandBottomSheet();
+      } else {
+        this._collapseBottomSheet();
+      }
+    }
+
+    this.touchStartY = 0;
+    this.touchCurrentY = 0;
+  }
+
+  _toggleBottomSheet() {
+    if (this.state.bottomSheetExpanded) {
+      this._collapseBottomSheet();
+    } else {
+      this._expandBottomSheet();
+    }
+  }
+
+  _expandBottomSheet() {
+    const sheet = this.elements['bottom-sheet'];
+    if (!sheet) return;
+    
+    sheet.classList.add('expanded');
+    this.state.bottomSheetExpanded = true;
+    this._haptic('light');
+  }
+
+  _collapseBottomSheet() {
+    const sheet = this.elements['bottom-sheet'];
+    if (!sheet) return;
+    
+    sheet.classList.remove('expanded');
+    this.state.bottomSheetExpanded = false;
+  }
+
+  // =========================
+  // INCOMING TRIP MODAL (Uber Style)
+  // =========================
+
+  showIncomingTrip(tripData, onAccept, onReject) {
+    console.log('[UI] Showing incoming trip:', tripData?.id);
+
+    // Close existing if open
+    if (this.state.isModalOpen) {
+      this._closeIncomingModal();
+    }
+
+    // Play sound and haptic
+    soundManager.play('newTrip');
+    this._haptic('heavy');
+    this._playCountdownSound();
+
+    // Store callbacks
+    this.state.callbacks = { onAccept, onReject };
+    this.state.currentTrip = tripData;
+
+    const modal = this.elements['incoming-modal'];
+    if (!modal) {
+      console.error('[UI] Modal element not found');
+      return;
+    }
+
+    // Populate data
+    this._populateTripData(tripData);
+
+    // Show modal with animation
+    modal.classList.add('active');
+    this.state.isModalOpen = true;
+    this.state.currentCount = 15;
+
+    // Start countdown
+    this._startCountdown();
+
+    // Auto-reject after timeout
+    this.state.countdownTimeout = setTimeout(() => {
+      if (this.state.isModalOpen) {
+        this._handleReject();
+      }
+    }, 15000);
+  }
+
+  _populateTripData(trip) {
+    const data = {
+      'trip-pickup': trip.origen_direccion || trip.origen || 'Origen no disponible',
+      'trip-dropoff': trip.destino_direccion || trip.destino || 'Destino no disponible',
+      'trip-distance': trip.distancia_km ? `${trip.distancia_km.toFixed(1)} km` : '-- km',
+      'trip-price': trip.precio_total ? `$${Math.round(trip.precio_total).toLocaleString('es-AR')}` : '$--',
+      'trip-duration': trip.tiempo_estimado_min ? `${trip.tiempo_estimado_min} min` : '-- min',
+      'trip-km': trip.distancia_km ? `${trip.distancia_km.toFixed(1)} km` : '-- km',
+      'client-name': trip.pasajero_nombre || trip.cliente || 'Cliente',
+      'client-phone': trip.pasajero_telefono || trip.telefono || 'Sin teléfono',
+      'pickup-time': trip.tiempo_llegada_estimado 
+        ? `${Math.round(trip.tiempo_llegada_estimado / 60)} min` 
+        : '-- min',
+      'pickup-address': trip.origen_direccion || trip.origen || '',
+      'dropoff-address': trip.destino_direccion || trip.destino || ''
+    };
+
+    Object.entries(data).forEach(([key, value]) => {
+      const el = this.elements[key];
+      if (el) {
+        // Animate text change
+        el.style.opacity = '0';
+        setTimeout(() => {
+          el.textContent = value;
+          el.style.opacity = '1';
+        }, 150);
+      }
+    });
+
+    // Set client avatar initial
+    const avatarEl = this.elements['client-avatar'];
+    if (avatarEl && data['client-name']) {
+      const initial = data['client-name'].charAt(0).toUpperCase();
+      avatarEl.textContent = initial;
+    }
+  }
+
+  _startCountdown() {
+    const circle = this.elements['countdown-circle'];
+    const number = this.elements['countdown-number'];
+    const ring = this.elements['countdown-ring'];
+
+    if (number) {
+      number.textContent = '15';
+      number.classList.remove('urgent');
+    }
+    
+    if (circle) {
+      circle.style.strokeDasharray = '283';
+      circle.style.strokeDashoffset = '0';
+      circle.style.transition = 'stroke-dashoffset 1s linear';
+    }
+
+    if (ring) {
+      ring.classList.remove('urgent');
+    }
+
+    let count = 15;
+    
+    this.state.countdown = setInterval(() => {
+      count--;
+      
+      if (number) {
+        number.textContent = count;
+        
+        // Add urgency styling
+        if (count <= 5) {
+          number.classList.add('urgent');
+          if (ring) ring.classList.add('urgent');
+          this._haptic('error');
+        } else if (count <= 10) {
+          this._haptic('light');
+        }
+      }
+
+      if (circle) {
+        const offset = 283 - ((count / 15) * 283);
+        circle.style.strokeDashoffset = offset;
+      }
+
+      if (count <= 0) {
+        this._handleReject();
+      }
+    }, 1000);
+  }
+
+  _playCountdownSound() {
+    // Play ticking sound every second for last 5 seconds
+    let ticks = 0;
+    const tickInterval = setInterval(() => {
+      ticks++;
+      if (ticks >= 10) { // Start at 5 seconds remaining
+        soundManager.play('tick');
+      }
+      if (ticks >= 15 || !this.state.isModalOpen) {
+        clearInterval(tickInterval);
+      }
+    }, 1000);
+  }
+
   async _handleAccept(e) {
     if (e) e.stopPropagation();
-    
     if (!this.state.isModalOpen || this.state.isProcessing) return;
-    
+
     console.log('[UI] Trip accepted');
     this.state.isProcessing = true;
-    
+
+    // Visual feedback
+    const btn = this.elements['btn-accept'];
+    if (btn) {
+      btn.classList.add('accepting');
+      btn.innerHTML = '<span class="spinner-small"></span><small>Aceptando...</small>';
+    }
+
+    soundManager.play('accept');
+    this._haptic('success');
+
     const callback = this.state.callbacks.onAccept;
-    
-    // Cerrar UI inmediatamente
+
+    // Close modal with animation
     this._closeIncomingModal();
-    
-    // Ejecutar callback de forma no-bloqueante
+
+    // Execute callback
     if (callback) {
       try {
-        // Dar tiempo al browser para renderizar el cierre
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 300));
         const result = callback();
         if (result && typeof result.then === 'function') {
-          result.catch(err => console.error('[UI] Async error in accept:', err));
+          await result;
         }
       } catch (err) {
         console.error('[UI] Error in accept callback:', err);
         this.showToast('Error al procesar aceptación', 'error');
       }
     }
-    
+
     this.state.isProcessing = false;
   }
 
-  /**
-   * Handler de rechazo
-   */
   async _handleReject(e) {
     if (e) e.stopPropagation();
-    
     if (!this.state.isModalOpen || this.state.isProcessing) return;
-    
+
     console.log('[UI] Trip rejected');
     this.state.isProcessing = true;
-    
+
+    soundManager.play('reject');
+    this._haptic('light');
+
     const callback = this.state.callbacks.onReject;
-    
+
     this._closeIncomingModal();
-    
+
     if (callback) {
       try {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 100));
         callback();
       } catch (err) {
         console.error('[UI] Error in reject callback:', err);
       }
     }
-    
+
     this.state.isProcessing = false;
   }
 
-  /**
-   * Click en backdrop = rechazar (UX pattern estándar)
-   */
   _onBackdropClick(e) {
     if (e.target === this.elements['modal-backdrop']) {
       this._handleReject();
     }
   }
 
-  /**
-   * Cierre limpio del modal
-   */
   _closeIncomingModal() {
     if (!this.state.isModalOpen) return;
-    
+
     console.log('[UI] Closing incoming modal');
-    
-    // Limpiar countdown
+
+    // Clear timers
     if (this.state.countdown) {
       clearInterval(this.state.countdown);
       this.state.countdown = null;
     }
-    
-    // Cerrar con animación
-    const modal = this.elements['incoming-modal'];
-    if (modal) {
-      modal.classList.remove('active');
-      
-      // Resetear después de la animación CSS
-      setTimeout(() => {
-        if (!this.state.isModalOpen) {
-          // Resetear valores para próximo uso
-          this._resetCountdownUI();
-        }
-      }, 300);
+    if (this.state.countdownTimeout) {
+      clearTimeout(this.state.countdownTimeout);
+      this.state.countdownTimeout = null;
     }
+
+    // Animate out
+    const modal = this.elements['incoming-modal'];
+    const content = this.elements['modal-content'];
     
+    if (content) {
+      content.style.animation = 'slideDownOut 0.3s ease forwards';
+    }
+
+    setTimeout(() => {
+      if (modal) modal.classList.remove('active');
+      if (content) content.style.animation = '';
+      this._resetCountdownUI();
+    }, 300);
+
     this.state.isModalOpen = false;
     this.state.callbacks = {};
   }
 
-  /**
-   * Reset de UI del countdown
-   */
   _resetCountdownUI() {
     const circle = this.elements['countdown-circle'];
     const number = this.elements['countdown-number'];
-    
+    const btn = this.elements['btn-accept'];
+
     if (circle) {
-      circle.style.strokeDashoffset = 283;
+      circle.style.strokeDashoffset = '283';
+      circle.style.transition = 'none';
     }
     if (number) {
       number.textContent = '15';
+      number.classList.remove('urgent');
+    }
+    if (btn) {
+      btn.classList.remove('accepting');
+      btn.innerHTML = '<span>✓</span><small>Aceptar</small>';
     }
   }
 
-  /**
-   * Mostrar modal de viaje entrante (Uber-style)
-   */
-  showIncomingTrip(tripData, onAccept, onReject) {
-    console.log('[UI] Showing incoming trip:', tripData?.id);
-    
-    // Si hay uno abierto, cerrarlo primero
-    if (this.state.isModalOpen) {
-      this._closeIncomingModal();
-    }
-    
-    // Guardar callbacks
-    this.state.callbacks = { onAccept, onReject };
-    
-    const modal = this.elements['incoming-modal'];
-    if (!modal) {
-      console.error('[UI] Modal element not found');
-      return;
-    }
-    
-    // Popular datos
-    this._populateTripData(tripData);
-    
-    // Mostrar
-    modal.classList.add('active');
-    this.state.isModalOpen = true;
-    this.state.currentCount = 15;
-    
-    // Iniciar countdown visual
-    this._startCountdown();
-    
-    // Haptic feedback si está disponible (mobile)
-    if (navigator.vibrate) {
-      navigator.vibrate([100, 50, 100]);
-    }
-  }
-
-  /**
-   * Popular datos del viaje en la UI
-   */
-  _populateTripData(trip) {
-    const data = {
-      'trip-pickup': trip.origen || 'Origen no disponible',
-      'trip-dropoff': trip.destino || 'Destino no disponible',
-      'trip-distance': trip.distancia_km ? `${trip.distancia_km} km` : '-- km',
-      'trip-price': trip.precio ? `$${trip.precio}` : '$--',
-      'trip-duration': trip.duracion_min ? `${trip.duracion_min} min` : '-- min',
-      'client-name': trip.cliente || 'Cliente',
-      'client-phone': trip.telefono || 'Sin teléfono',
-      'pickup-time': trip.duracion_min ? `${trip.duracion_min} min` : '-- min'
-    };
-    
-    Object.entries(data).forEach(([key, value]) => {
-      const el = this.elements[key];
-      if (el) el.textContent = value;
-    });
-  }
-
-  /**
-   * Countdown visual con animación SVG
-   */
-  _startCountdown() {
-    const circle = this.elements['countdown-circle'];
-    const number = this.elements['countdown-number'];
-    
-    if (number) number.textContent = '15';
-    if (circle) {
-      circle.style.strokeDasharray = '283';
-      circle.style.strokeDashoffset = '0';
-    }
-    
-    this.state.countdown = setInterval(() => {
-      this.state.currentCount--;
-      
-      if (number) {
-        number.textContent = this.state.currentCount;
-      }
-      
-      if (circle) {
-        const offset = 283 - ((this.state.currentCount / 15) * 283);
-        circle.style.strokeDashoffset = offset;
-      }
-      
-      if (this.state.currentCount <= 0) {
-        this._handleReject();
-      }
-    }, 1000);
-  }
-
-  /**
-   * Force close (para cleanup)
-   */
-  closeIncomingModal() {
+  hideIncomingModal() {
     this._closeIncomingModal();
   }
 
-  /**
-   * Toast notifications
-   */
+  // =========================
+  // DRIVER STATES
+  // =========================
+
+  updateDriverState(mode, isOnline) {
+    this.state.isOnline = isOnline;
+    
+    const dot = this.elements['status-dot'];
+    const text = this.elements['status-text'];
+    const fab = this.elements['fab-online'];
+    const fabText = this.elements['fab-text'];
+    const fabIcon = this.elements['fab-icon'];
+    const fabPulse = this.elements['fab-pulse'];
+    const navText = this.elements['nav-next'];
+
+    // Status dot animation
+    if (dot) {
+      dot.classList.toggle('online', isOnline);
+      if (isOnline) {
+        dot.style.animation = 'pulse-ring 2s infinite';
+      } else {
+        dot.style.animation = '';
+      }
+    }
+
+    if (text) {
+      text.textContent = isOnline ? 'Conectado · Buscando viajes' : 'Desconectado';
+      text.classList.toggle('online', isOnline);
+    }
+
+    // FAB styling
+    if (fab) {
+      fab.classList.toggle('online', isOnline);
+      if (isOnline) {
+        fab.style.background = 'linear-gradient(135deg, #05944F 0%, #06C167 100%)';
+        fab.style.boxShadow = '0 4px 20px rgba(5, 148, 79, 0.4)';
+      } else {
+        fab.style.background = '';
+        fab.style.boxShadow = '';
+      }
+    }
+
+    if (fabText) {
+      fabText.textContent = isOnline ? 'DESCONECTAR' : 'CONECTAR';
+    }
+
+    if (fabIcon) {
+      fabIcon.textContent = isOnline ? '●' : '○';
+      fabIcon.style.color = isOnline ? '#fff' : '';
+    }
+
+    if (fabPulse) {
+      fabPulse.style.display = isOnline ? 'block' : 'none';
+    }
+
+    // Nav bar text
+    if (navText) {
+      navText.textContent = isOnline 
+        ? 'Buscando viajes cercanos...' 
+        : 'Conectate para recibir viajes';
+    }
+
+    // Update bottom sheet
+    this._updateBottomSheetState(isOnline);
+
+    // Haptic feedback
+    this._haptic(isOnline ? 'success' : 'light');
+  }
+
+  _updateBottomSheetState(isOnline) {
+    const sheetContent = this.elements['sheet-content'];
+    if (!sheetContent) return;
+
+    if (isOnline) {
+      sheetContent.innerHTML = `
+        <div class="waiting-state uber-style">
+          <div class="pulse-rings">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="ring ring-3"></div>
+          </div>
+          <div class="waiting-text">
+            <h3>Conectado</h3>
+            <p>Buscando viajes en tu zona...</p>
+          </div>
+          <div class="zone-indicator">
+            <span class="zone-dot"></span>
+            <span>Zona activa</span>
+          </div>
+        </div>
+      `;
+    } else {
+      sheetContent.innerHTML = `
+        <div class="waiting-state offline">
+          <div class="offline-icon">⚪</div>
+          <div class="waiting-text">
+            <h3>Estás desconectado</h3>
+            <p>Tocá el botón verde para empezar a recibir viajes</p>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  showWaitingState() {
+    this._collapseBottomSheet();
+    this._updateBottomSheetState(this.state.isOnline);
+  }
+
+  // =========================
+  // NAVIGATION STATE (Trip Active)
+  // =========================
+
+  showNavigationState(trip) {
+    this.state.currentTrip = trip;
+    
+    const navBar = this.elements['nav-bar'];
+    const sheet = this.elements['bottom-sheet'];
+    
+    // Show navigation bar
+    if (navBar) {
+      navBar.classList.add('active');
+      navBar.style.transform = 'translateY(0)';
+    }
+
+    // Expand sheet to show trip details
+    if (sheet) {
+      sheet.classList.add('has-trip');
+      this._expandBottomSheet();
+    }
+
+    // Update navigation info
+    this._updateNavigationInfo(trip);
+    
+    // Show trip actions
+    this._showTripActions(trip);
+    
+    // Haptic
+    this._haptic('success');
+  }
+
+  _updateNavigationInfo(trip) {
+    const streetEl = this.elements['nav-street'];
+    const nextEl = this.elements['nav-next'];
+    const distanceEl = this.elements['nav-distance'];
+    
+    if (streetEl) {
+      streetEl.textContent = 'Dirígete al punto de recogida';
+    }
+    if (nextEl) {
+      nextEl.textContent = trip.origen_direccion || trip.origen || 'Recoger pasajero';
+    }
+    if (distanceEl) {
+      const dist = trip.distancia_al_origen 
+        ? (trip.distancia_al_origen / 1000).toFixed(1) + ' km'
+        : '--';
+      distanceEl.textContent = dist;
+    }
+  }
+
+  _showTripActions(trip) {
+    const sheetContent = this.elements['sheet-content'];
+    if (!sheetContent) return;
+
+    sheetContent.innerHTML = `
+      <div class="trip-active-panel">
+        <div class="trip-header">
+          <div class="client-info-large">
+            <div class="client-avatar-large">${(trip.pasajero_nombre || trip.cliente || 'C').charAt(0)}</div>
+            <div class="client-details">
+              <h4>${trip.pasajero_nombre || trip.cliente || 'Cliente'}</h4>
+              <span class="trip-destination">${trip.destino_direccion || trip.destino || 'Destino'}</span>
+            </div>
+            <div class="trip-price-large">$${Math.round(trip.precio_total || trip.precio || 0).toLocaleString('es-AR')}</div>
+          </div>
+        </div>
+        
+        <div class="action-buttons-grid">
+          <button class="action-btn-large navigate" id="btn-navigate" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${trip.origen_lat},${trip.origen_lng}', '_blank')">
+            <span class="icon">🧭</span>
+            <span>Navegar</span>
+          </button>
+          
+          <button class="action-btn-large call" id="btn-call" onclick="window.location.href='tel:${trip.pasajero_telefono || trip.telefono}'">
+            <span class="icon">📞</span>
+            <span>Llamar</span>
+          </button>
+          
+          <button class="action-btn-large whatsapp" id="btn-whatsapp" onclick="window.open('https://wa.me/${(trip.pasajero_telefono || trip.telefono || '').replace(/\D/g, '')}?text=Hola, soy tu conductor de MIMI 🚐', '_blank')">
+            <span class="icon">💬</span>
+            <span>WhatsApp</span>
+          </button>
+        </div>
+        
+        <div class="trip-progress-steps">
+          <div class="step active" data-step="pickup">
+            <div class="step-dot"></div>
+            <span>Recoger</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="trip">
+            <div class="step-dot"></div>
+            <span>En viaje</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="finish">
+            <div class="step-dot"></div>
+            <span>Finalizar</span>
+          </div>
+        </div>
+        
+        <button class="btn-arrived" id="btn-arrived" onclick="this.dispatchEvent(new CustomEvent('driverAction', {detail: {action: 'start', tripId: '${trip.id}'}, bubbles: true}))">
+          <span>✓</span>
+          <span>He llegado · Iniciar viaje</span>
+        </button>
+      </div>
+    `;
+  }
+
+  updateTripStep(step) {
+    const steps = document.querySelectorAll('.trip-progress-steps .step');
+    steps.forEach((el, idx) => {
+      const stepName = el.dataset.step;
+      if (stepName === step) {
+        el.classList.add('active');
+        // Animate previous steps as completed
+        for (let i = 0; i < idx; i++) {
+          steps[i].classList.add('completed');
+        }
+      }
+    });
+  }
+
+  hideNavigation() {
+    const navBar = this.elements['nav-bar'];
+    const sheet = this.elements['bottom-sheet'];
+    
+    if (navBar) {
+      navBar.classList.remove('active');
+      navBar.style.transform = 'translateY(-100%)';
+    }
+    
+    if (sheet) {
+      sheet.classList.remove('has-trip');
+      this._collapseBottomSheet();
+    }
+    
+    this.state.currentTrip = null;
+  }
+
+  showArrival() {
+    const panel = this.elements['arrival-panel'];
+    if (panel) {
+      panel.classList.add('active');
+      soundManager.play('arrival');
+      this._haptic('success');
+      
+      // Auto-hide after 10 seconds if not interacted
+      setTimeout(() => {
+        if (panel.classList.contains('active')) {
+          this.hideArrival();
+        }
+      }, 10000);
+    }
+  }
+
+  hideArrival() {
+    const panel = this.elements['arrival-panel'];
+    if (panel) {
+      panel.classList.remove('active');
+    }
+  }
+
+  // =========================
+  // TOAST NOTIFICATIONS
+  // =========================
+
   showToast(message, type = 'info', duration = 3000) {
     const container = this.elements['toast-container'];
     if (!container) {
       console.log('[Toast]', message);
       return;
     }
-    
+
     const toast = document.createElement('div');
     const icons = {
       info: 'ℹ️',
@@ -346,161 +826,96 @@ class UIController {
       error: '❌',
       warning: '⚠️'
     };
-    
+
     toast.className = `toast toast-${type}`;
-    toast.style.cssText = `
-      background: rgba(28,28,30,0.95);
-      border: 1px solid rgba(255,255,255,0.1);
-      padding: 12px 16px;
-      border-radius: 12px;
-      margin-top: 8px;
-      color: white;
-      font-weight: 600;
-      font-size: 14px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-      animation: slideDown 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      z-index: 100000;
-      position: relative;
+    toast.innerHTML = `
+      <span class="toast-icon">${icons[type] || icons.info}</span>
+      <span class="toast-message">${message}</span>
     `;
-    
-    toast.textContent = `${icons[type] || icons.info} ${message}`;
+
     container.appendChild(toast);
-    
+
+    // Animate in
+    requestAnimationFrame(() => {
+      toast.style.transform = 'translateX(-50%) translateY(0)';
+      toast.style.opacity = '1';
+    });
+
+    // Haptic
+    const hapticType = type === 'error' ? 'error' : type === 'success' ? 'success' : 'light';
+    this._haptic(hapticType);
+
     setTimeout(() => {
+      toast.style.transform = 'translateX(-50%) translateY(-20px)';
       toast.style.opacity = '0';
-      toast.style.transform = 'translateY(-10px)';
       setTimeout(() => toast.remove(), 300);
     }, duration);
   }
 
-  /**
-   * Actualizar estado del conductor
-   */
-  updateDriverState(mode, isOnline) {
-    const dot = this.elements['status-dot'];
-    const text = this.elements['status-text'];
-    const fab = this.elements['fab-online'];
-    const fabText = this.elements['fab-text'];
-    const fabIcon = this.elements['fab-icon'];
-    
-    if (dot) {
-      dot.classList.toggle('online', isOnline);
-    }
-    
-    if (text) {
-      text.textContent = isOnline ? 'Conectado' : 'Desconectado';
-    }
-    
-    if (fab) {
-      fab.classList.toggle('online', isOnline);
-    }
-    
-    if (fabText) {
-      fabText.textContent = isOnline ? 'DESCONECTAR' : 'CONECTAR';
-    }
-    
-    if (fabIcon) {
-      fabIcon.textContent = isOnline ? '🟢' : '🔴';
-    }
-    
-    // Actualizar bottom sheet si existe
-    this._updateBottomSheetState(isOnline);
-  }
+  // =========================
+  // LOADING & UTILS
+  // =========================
 
-  /**
-   * Actualizar contenido del bottom sheet según estado
-   */
-  _updateBottomSheetState(isOnline) {
-    const sheetContent = document.getElementById('sheet-content');
-    if (!sheetContent) return;
-    
-    if (isOnline) {
-      sheetContent.innerHTML = `
-        <div class="waiting-state">
-          <div class="pulse-ring"></div>
-          <h3>Conectado</h3>
-          <p>Esperando viajes...</p>
-        </div>
-      `;
+  setGlobalLoading(show, message = 'Cargando...') {
+    const loading = this.elements['global-loading'];
+    if (!loading) return;
+
+    if (show) {
+      loading.classList.add('active');
+      const text = loading.querySelector('.loading-text');
+      if (text) text.textContent = message;
     } else {
-      sheetContent.innerHTML = `
-        <div class="waiting-state">
-          <div class="pulse-ring" style="background: var(--color-text-tertiary)"></div>
-          <h3>Estás desconectado</h3>
-          <p>Toca "CONECTAR" para recibir viajes</p>
-        </div>
-      `;
+      loading.classList.remove('active');
     }
   }
 
-  /**
-   * Set profile del conductor
-   */
   setDriverProfile(nameOrEmail) {
     const nameEl = this.elements['driver-name'];
     const initialEl = this.elements['driver-initial'];
-    
+
     if (nameEl) {
       nameEl.textContent = nameOrEmail || 'Conductor';
     }
-    
+
     if (initialEl) {
       const initial = (nameOrEmail || 'C').charAt(0).toUpperCase();
       initialEl.textContent = initial;
     }
   }
 
-  /**
-   * Loading global
-   */
-  setLoading(show, message = 'Cargando...') {
-    const loading = this.elements['global-loading'];
-    if (!loading) return;
-    
-    loading.classList.toggle('active', show);
-    const text = loading.querySelector('.loading-text');
-    if (text && message) text.textContent = message;
-  }
-
-  /**
-   * Mostrar panel de llegada
-   */
-  showArrivalPanel() {
-    const panel = this.elements['arrival-panel'];
-    if (panel) panel.classList.add('active');
-  }
-
-  /**
-   * Hide arrival panel
-   */
-  hideArrivalPanel() {
-    const panel = this.elements['arrival-panel'];
-    if (panel) panel.classList.remove('active');
-  }
-
-  /**
-   * Setup viewport para mobile
-   */
   _setupViewport() {
     const setVH = () => {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     };
-    
+
     setVH();
     window.addEventListener('resize', setVH);
-    
-    // Detectar cambio de orientación
     window.addEventListener('orientationchange', () => {
       setTimeout(setVH, 100);
     });
   }
+
+  _haptic(type = 'light') {
+    if (!navigator.vibrate) return;
+    
+    const patterns = {
+      light: [10],
+      medium: [20],
+      heavy: [30],
+      success: [10, 50, 10],
+      error: [30, 30, 30],
+      countdown: [5]
+    };
+    
+    try {
+      navigator.vibrate(patterns[type] || patterns.light);
+    } catch (e) {
+      // Silent fail
+    }
+  }
 }
 
-// Singleton export
+// Singleton
 const uiController = new UIController();
 export default uiController;
