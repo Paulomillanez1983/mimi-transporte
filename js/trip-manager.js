@@ -72,7 +72,7 @@ class TripManager {
       const { data: activeTrip, error: tripError } = await supabaseService.client
         .from('viajes')
         .select('*')
-        .eq('chofer_id', driverId)
+        .eq('chofer_id_uuid', driverId)
         .in('estado', ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'])
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -101,8 +101,8 @@ class TripManager {
       // 2) PENDING OFFERS
       const { data: offers, error: offerError } = await supabaseService.client
         .from('viaje_ofertas')
-        .select('id, viaje_id, chofer_id, estado, expires_at, offered_at')
-        .eq('chofer_id', driverId)
+        .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
+        .eq('chofer_id_uuid', driverId)
         .eq('estado', 'PENDIENTE')
         .gt('expires_at', new Date().toISOString())
         .order('offered_at', { ascending: false })
@@ -160,7 +160,7 @@ class TripManager {
           event: '*',
           schema: 'public',
           table: 'viaje_ofertas',
-          filter: `chofer_id=eq.${driverId}`
+          filter: `chofer_id_uuid=eq.${driverId}`
         },
         async (payload) => {
           console.log('[TripManager] Offer realtime event:', payload.eventType);
@@ -178,7 +178,7 @@ class TripManager {
           event: '*',
           schema: 'public',
           table: 'viajes',
-          filter: `chofer_id=eq.${driverId}`
+          filter: `chofer_id_uuid=eq.${driverId}`
         },
         (payload) => {
           const trip = payload.new;
@@ -217,7 +217,7 @@ class TripManager {
 
     const { data, error } = await supabaseService.client.rpc('aceptar_oferta_viaje', {
       p_viaje_id: tripId,
-      p_chofer_id: driverId
+      p_chofer_id_uuid: driverId
     });
 
     if (error) {
@@ -244,7 +244,7 @@ class TripManager {
         responded_at: new Date().toISOString()
       })
       .eq('viaje_id', tripId)
-      .eq('chofer_id', driverId)
+      .eq('chofer_id_uuid', driverId)
       .eq('estado', 'PENDIENTE');
 
     if (error) {
@@ -266,7 +266,7 @@ class TripManager {
         iniciado_at: new Date().toISOString()
       })
       .eq('id', tripId)
-      .eq('chofer_id', driverId);
+      .eq('chofer_id_uuid', driverId);
 
     if (error) {
       console.error('[TripManager] Start trip error:', error);
@@ -287,7 +287,7 @@ class TripManager {
         completado_at: new Date().toISOString()
       })
       .eq('id', tripId)
-      .eq('chofer_id', driverId);
+      .eq('chofer_id_uuid', driverId);
 
     if (error) {
       console.error('[TripManager] Finish trip error:', error);
