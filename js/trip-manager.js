@@ -211,26 +211,26 @@ class TripManager {
   // =========================================================
   // ACTIONS
   // =========================================================
-  async acceptTrip(tripId) {
-    const driverId = supabaseService.getDriverId();
-    if (!driverId) return { success: false, error: 'No driverId' };
+async acceptTrip(tripId) {
+  const driverId = supabaseService.getDriverId();
+  if (!driverId) return { success: false, error: 'No driverId' };
 
-    const { data, error } = await supabaseService.client.rpc('aceptar_oferta_viaje', {
-      p_viaje_id: tripId,
-      p_chofer_id_uuid: driverId
-    });
+  const { data, error } = await supabaseService.client.rpc('aceptar_oferta_viaje', {
+    p_viaje_id: tripId,
+    p_chofer_id: driverId
+  });
 
-    if (error) {
-      console.error('[TripManager] RPC accept error:', error);
-      return { success: false, error: error.message };
-    }
-
-    if (!data?.ok) {
-      return { success: false, error: data?.reason || 'No se pudo aceptar el viaje' };
-    }
-
-    return { success: true };
+  if (error) {
+    console.error('[TripManager] RPC accept error:', error);
+    return { success: false, error: error.message };
   }
+
+  if (!data?.ok) {
+    return { success: false, error: data?.reason || 'No se pudo aceptar el viaje' };
+  }
+
+  return { success: true };
+}
 
   async rejectTrip(tripId, reason = 'RECHAZADO_POR_CHOFER') {
     const driverId = supabaseService.getDriverId();
