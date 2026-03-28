@@ -18,7 +18,9 @@
   <meta property="og:description" content="Panel de conductor MIMI" />
   <meta property="og:type" content="website" />
 
-  <link rel="icon" href="./favicon.ico" />
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚐</text></svg>">
+
   <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png" />
   <link rel="manifest" href="./manifest.json" />
 
@@ -28,7 +30,7 @@
 
   <link rel="stylesheet" href="./libs/maplibre-gl.css" />
 
-  <!-- LIBS -->
+  <!-- LIBS (solo UNA vez) -->
   <script src="./libs/supabase-js.js"></script>
   <script src="./libs/maplibre-gl.js" defer></script>
 
@@ -66,10 +68,13 @@
 
 <body>
 
+  <!-- Botón Logout -->
   <button class="logout-btn" id="logoutBtn">Salir</button>
 
+  <!-- MAP -->
   <div id="map-container"></div>
 
+  <!-- UI -->
   <div id="ui-layer">
 
     <header class="header" id="header">
@@ -258,48 +263,32 @@
 
   </div>
 
-  <!-- 🔐 SUPABASE AUTH PROTECTION -->
-  <script>
-    const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
+  <!-- LOGOUT (sin crear otro supabase client) -->
+  <script type="module">
+    import supabaseService from "./js/supabase-client.js";
+    import CONFIG from "./js/config.js";
 
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const logoutBtn = document.getElementById("logoutBtn");
 
-    async function protegerPanel() {
-      try {
-        const { data, error } = await supabaseClient.auth.getSession();
+    async function initLogout() {
+      await supabaseService.init();
 
-        if (error || !data.session) {
-          window.location.href = "login-chofer.html";
-          return;
-        }
+      const { data } = await supabaseService.client.auth.getSession();
 
-        const user = data.session.user;
-
-        console.log("✅ Chofer autenticado:", user.email);
-
-        const driverNameEl = document.getElementById("driver-name");
-        const driverInitialEl = document.getElementById("driver-initial");
-
-        if (driverNameEl) driverNameEl.textContent = user.email || "Conductor";
-        if (driverInitialEl) driverInitialEl.textContent = (user.email || "M").substring(0, 1).toUpperCase();
-
-        document.getElementById("logoutBtn").classList.add("visible");
-
-      } catch (err) {
-        window.location.href = "login-chofer.html";
+      if (data?.session) {
+        logoutBtn.classList.add("visible");
       }
+
+      logoutBtn.addEventListener("click", async () => {
+        await supabaseService.client.auth.signOut();
+        window.location.href = CONFIG.REDIRECTS.LOGIN;
+      });
     }
 
-    protegerPanel();
-
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-      await supabaseClient.auth.signOut();
-      window.location.href = "login-chofer.html";
-    });
+    initLogout();
   </script>
 
-  <!-- JS APP -->
+  <!-- APP PRINCIPAL -->
   <script type="module" src="js/app.js"></script>
 
 </body>
