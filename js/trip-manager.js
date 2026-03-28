@@ -226,8 +226,8 @@ async acceptTrip(tripId) {
     p_chofer_id: driverId
   });
 
-  const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error("RPC_TIMEOUT")), 8000)
+  const timeoutPromise = new Promise((resolve) =>
+    setTimeout(() => resolve({ data: null, error: new Error("RPC_TIMEOUT") }), 8000)
   );
 
   try {
@@ -238,10 +238,23 @@ async acceptTrip(tripId) {
       return { success: false, error: error.message };
     }
 
-    console.log('[TripManager] RPC response:', data);
+    console.log('[TripManager] RPC raw response:', data);
 
-    if (!data?.ok) {
-      return { success: false, error: data?.reason || 'No se pudo aceptar el viaje' };
+    // Caso 1: RPC devuelve directamente {ok:true}
+    if (data?.ok !== undefined) {
+      if (!data.ok) return { success: false, error: data.reason || 'No se pudo aceptar el viaje' };
+      return { success: true };
+    }
+
+    // Caso 2: RPC devuelve array [{aceptar_oferta_viaje:{ok,reason}}]
+    const result = data?.[0]?.aceptar_oferta_viaje;
+
+    if (!result) {
+      return { success: false, error: 'Respuesta RPC inválida' };
+    }
+
+    if (!result.ok) {
+      return { success: false, error: result.reason || 'No se pudo aceptar el viaje' };
     }
 
     return { success: true };
