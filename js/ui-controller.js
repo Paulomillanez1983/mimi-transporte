@@ -434,10 +434,19 @@ async _handleAccept(e) {
   if (callback) {
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
+
       const result = callback();
+
+      // ✅ si devuelve promesa la esperamos
       if (result && typeof result.then === 'function') {
-        await result;
+        const res = await result;
+
+        // ✅ si el callback devolvió error, avisar
+        if (res && res.success === false) {
+          this.showToast(res.error || 'No se pudo aceptar el viaje', 'error');
+        }
       }
+
     } catch (err) {
       console.error('[UI] Error in accept callback:', err);
       this.showToast('Error al procesar aceptación', 'error');
@@ -712,7 +721,7 @@ async _handleReject(e) {
               <h4>${trip.pasajero_nombre || trip.cliente || 'Cliente'}</h4>
               <span class="trip-destination">${trip.destino_direccion || trip.destino || 'Destino'}</span>
             </div>
-            <div class="trip-price-large">$${Math.round(trip.precio_total || trip.precio || 0).toLocaleString('es-AR')}</div>
+            <div class="trip-price-large">$${Math.round(trip.precio || 0).toLocaleString('es-AR')}</div>
           </div>
         </div>
         
