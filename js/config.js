@@ -14,7 +14,7 @@ const CONFIG = {
   // MAP (MAPLIBRE)
   // =========================================================
   // IMPORTANTE: Tiene que ser un style.json real
-  MAP_STYLE: 'https://demotiles.maplibre.org/style.json',
+MAP_STYLE: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
 
   DEFAULT_CENTER: [-64.1888, -31.4201], // Córdoba, Argentina
   DEFAULT_ZOOM: 14,
