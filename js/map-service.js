@@ -335,7 +335,13 @@ class MapService {
       .setLngLat([lng, lat])
       .addTo(this.map);
   }
-
+  // =========================================================
+  // ACTUALIZAR POSICIÓN DEL CONDUCTOR (método usado por DriverApp)
+  // =========================================================
+  updateDriverPosition(lng, lat, heading = 0) {
+    // Redirigimos al método real que ya tienes implementado
+    this.updateDriverMarker(lng, lat, heading);
+  }
   // =========================================================
   // ROUTING
   // =========================================================
