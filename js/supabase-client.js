@@ -163,8 +163,8 @@ this.client = window.supabase.createClient(
       // RLS SAFE: always by user_id
       const { data: existing, error: selectError } = await this.client
         .from('choferes')
-        .select('id, user_id')
-        .eq('user_id', this.driverId)
+.select('id')
+.eq('id', this.driverId)
         .maybeSingle();
 
       if (selectError) {
@@ -180,16 +180,16 @@ this.client = window.supabase.createClient(
 
       const user = await this.getCurrentUser();
 
-      const payload = {
-        user_id: this.driverId,
-        email: user?.email || this.driverEmail || null,
-        nombre: user?.user_metadata?.full_name || user?.email || 'Chofer',
-        telefono: user?.user_metadata?.phone || null,
-        online: false,
-        disponible: false,
-        bloqueado: false,
-        last_seen_at: new Date().toISOString()
-      };
+const payload = {
+  id: this.driverId,
+  email: user?.email || this.driverEmail || null,
+  nombre: user?.user_metadata?.full_name || user?.email || 'Chofer',
+  telefono: user?.user_metadata?.phone || null,
+  online: false,
+  disponible: false,
+  bloqueado: false,
+  last_seen_at: new Date().toISOString()
+};
 
       const { error: insertError } = await this.client
         .from('choferes')
@@ -230,7 +230,7 @@ this.client = window.supabase.createClient(
           event: '*',
           schema: 'public',
           table: 'viaje_ofertas',
-          filter: `chofer_user_id=eq.${this.driverId}`
+          filter: `chofer_id=eq.${this.driverId}`
         },
         (payload) => {
           try {
@@ -273,7 +273,7 @@ this.client = window.supabase.createClient(
           event: '*',
           schema: 'public',
           table: 'viajes',
-          filter: `chofer_user_id=eq.${this.driverId}`
+          filter: `chofer_id=eq.${this.driverId}`
         },
         (payload) => {
           try {
@@ -333,7 +333,7 @@ this.client = window.supabase.createClient(
     const { error } = await this.client
       .from('choferes')
       .update(updatePayload)
-      .eq('user_id', this.driverId);
+      .eq('id', this.driverId);
 
     if (error) {
       console.warn('[Supabase] updateDriverLocation blocked:', error);
@@ -353,7 +353,7 @@ this.client = window.supabase.createClient(
         disponible: isOnline,
         last_seen_at: new Date().toISOString()
       })
-      .eq('user_id', this.driverId);
+      .eq('id', this.driverId);
 
     if (error) {
       console.warn('[Supabase] setDriverOnline blocked:', error);
@@ -392,7 +392,7 @@ this.client = window.supabase.createClient(
           created_at
         )
       `)
-      .eq('chofer_user_id', this.driverId)
+      .eq('chofer_id', this.driverId)
       .eq('estado', 'PENDIENTE')
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
@@ -411,7 +411,7 @@ this.client = window.supabase.createClient(
     const { data, error } = await this.client
       .from('viajes')
       .select('*')
-      .eq('chofer_user_id', this.driverId)
+      .eq('chofer_id', this.driverId)
       .in('estado', ['ACEPTADO', 'EN_CURSO'])
       .order('updated_at', { ascending: false })
       .limit(1)
