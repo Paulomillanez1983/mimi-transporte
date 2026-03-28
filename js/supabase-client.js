@@ -387,21 +387,35 @@ class SupabaseClient {
     if (!this.client) return { data: null, error: 'No client' };
     if (!this.driverId) return { data: null, error: 'No driverId' };
 
-    const { data, error } = await this.client
-      .from('viaje_ofertas')
-      .select(`
-        id,
-        viaje_id,
-        chofer_id,
-        estado,
-        expires_at,
-        offered_at,
-        created_at
-      `)
-      .eq('chofer_id', this.driverId)
-      .eq('estado', 'PENDIENTE')
-      .gt('expires_at', new Date().toISOString())
-      .order('offered_at', { ascending: false });
+const { data, error } = await this.client
+  .from('viaje_ofertas')
+  .select(`
+    id,
+    viaje_id,
+    chofer_id,
+    estado,
+    expires_at,
+    offered_at,
+    viajes (
+      id,
+      estado,
+      origen,
+      destino,
+      origen_lat,
+      origen_lng,
+      destino_lat,
+      destino_lng,
+      precio,
+      km,
+      cliente,
+      telefono,
+      created_at
+    )
+  `)
+  .eq('chofer_id', this.driverId)
+  .eq('estado', 'PENDIENTE')
+  .gt('expires_at', new Date().toISOString())
+  .order('offered_at', { ascending: false });
 
     if (error) {
       console.error('[Supabase] getPendingOffers error:', error);
