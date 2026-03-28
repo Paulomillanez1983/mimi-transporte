@@ -211,9 +211,12 @@ async _acceptTrip(tripId) {
   uiController.setGlobalLoading(true, 'Aceptando viaje...');
 
   try {
-    const result = await tripManager.acceptTrip(tripId); console.log("[DriverApp] acceptTrip result:", result);
+    const result = await tripManager.acceptTrip(tripId);
+    console.log("[DriverApp] acceptTrip result:", result);
 
     if (!result.success) {
+      uiController.setGlobalLoading(false); // 🔥 FORZAR APAGADO
+
       uiController.showToast(
         result.error === 'VIAJE_YA_TOMADO'
           ? '❌ Otro chofer tomó el viaje'
@@ -223,20 +226,22 @@ async _acceptTrip(tripId) {
 
       uiController.hideIncomingModal();
       uiController.showWaitingState();
-      return result; // ✅ DEVOLVER RESULT
+      return result;
     }
 
     // ✅ refrescar estado real
-    await tripManager._loadInitialState(tripManager.driverId);
+    await tripManager.refresh();
 
-    return result; // ✅ DEVOLVER RESULT
+    return result;
 
   } catch (err) {
     console.error('[DriverApp] Error aceptando viaje:', err);
+
+    uiController.setGlobalLoading(false); // 🔥 FORZAR APAGADO
     uiController.showToast('Error aceptando viaje', 'error');
     uiController.showWaitingState();
 
-    return { success: false, error: err.message }; // ✅ IMPORTANTE
+    return { success: false, error: err.message };
 
   } finally {
     uiController.setGlobalLoading(false);
