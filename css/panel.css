@@ -805,4 +805,17 @@
   display: flex;
   /* Forzar renderizado por encima de todo */
   z-index: 9999;
+}/* Fix anti-bloqueo */
+.incoming-modal {
+  will-change: transform;
+}
+
+.incoming-modal.active {
+  display: flex !important;
+}
+
+.btn-accept, .btn-reject {
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
