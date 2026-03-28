@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - Trip Manager (FINAL FIXED)
+ * MIMI Driver - Trip Manager (PRODUCTION FINAL)
  * Business logic for trip lifecycle
  */
 
@@ -7,8 +7,9 @@ class TripManager {
   constructor() {
     this.currentTrip = null;
     this.pendingOffer = null;
-    this.subscriptions = [];
+
     this.refreshInterval = null;
+    this.isLoadingInitial = false;
   }
 
   async initialize() {
@@ -17,24 +18,30 @@ class TripManager {
 
     console.log('[TripManager] Initializing for driver UID:', driverId);
 
-    // Load initial state FIRST
     await this._loadInitialState();
 
-    // Subscribe to realtime
     this._subscribeToRealtime(driverId);
-
-    // Start background refresh
     this._startRefreshInterval();
 
     return this;
   }
 
+  // =========================================================
+  // LOAD INITIAL STATE
+  // =========================================================
+
   async _loadInitialState() {
+    if (this.isLoadingInitial) return;
+    this.isLoadingInitial = true;
+
     const driverId = supabaseClient.getDriverId();
-    if (!driverId) return;
+    if (!driverId) {
+      this.isLoadingInitial = false;
+      return;
+    }
 
     try {
-      // 1) Check active trip FIRST
+      // 1) CHECK ACTIVE TRIP
       const { data: activeTrip, error: tripError } =
         await supabaseClient.getActiveTrip(driverId);
 
@@ -46,27 +53,24 @@ class TripManager {
         console.log('[TripManager] Active trip found:', activeTrip.id);
 
         this.currentTrip = activeTrip;
-        stateManager.set('trip.current', activeTrip);
+        this.pendingOffer = null;
 
-        // Determine correct state
-        let driverState;
+        stateManager.set('trip.current', activeTrip);
+        stateManager.set('trip.pending', null);
 
         if (activeTrip.estado === 'ACEPTADO') {
-          driverState = CONFIG.DRIVER_STATES.GOING_TO_PICKUP;
+          stateManager.transitionDriver(CONFIG.DRIVER_STATES.GOING_TO_PICKUP);
         } else if (activeTrip.estado === 'EN_CURSO') {
-          driverState = CONFIG.DRIVER_STATES.IN_PROGRESS;
+          stateManager.transitionDriver(CONFIG.DRIVER_STATES.IN_PROGRESS);
         } else {
-          driverState = CONFIG.DRIVER_STATES.GOING_TO_PICKUP;
+          stateManager.transitionDriver(CONFIG.DRIVER_STATES.GOING_TO_PICKUP);
         }
 
-        stateManager.set('driver.isOnline', true);
-        stateManager.set('driver.status', driverState);
-
-        console.log('[TripManager] Driver state set to:', driverState);
+        this.isLoadingInitial = false;
         return;
       }
 
-      // 2) If no active trip, check pending offers
+      // 2) CHECK PENDING OFFERS
       const { data: offers, error: offerError } =
         await supabaseClient.getPendingOffers(driverId);
 
@@ -77,6 +81,13 @@ class TripManager {
       if (offers && offers.length > 0) {
         const offer = offers[0];
 
+        // Anti spam: if already loaded, skip
+        if (this.pendingOffer?.offerId === offer.id) {
+          console.log('[TripManager] Offer already loaded, skipping refresh');
+          this.isLoadingInitial = false;
+          return;
+        }
+
         console.log('[TripManager] Pending offer found:', offer.id);
 
         this.pendingOffer = {
@@ -86,8 +97,13 @@ class TripManager {
         };
 
         stateManager.set('trip.pending', this.pendingOffer);
-        stateManager.set('driver.isOnline', true);
-        stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
+
+        // IMPORTANT: allow transition from OFFLINE too
+        const ok = stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
+
+        if (!ok) {
+          console.warn('[TripManager] Could not transition to RECEIVING_OFFER');
+        }
 
       } else {
         console.log('[TripManager] No pending offers');
@@ -98,29 +114,30 @@ class TripManager {
     } catch (error) {
       console.error('[TripManager] Load error:', error);
     }
+
+    this.isLoadingInitial = false;
   }
+
+  // =========================================================
+  // REALTIME
+  // =========================================================
 
   _subscribeToRealtime(driverId) {
     console.log('[TripManager] Subscribing to realtime channels...');
 
-    // Offers subscription
-    const offersSub = supabaseClient.subscribeToOffers(driverId, {
+    supabaseClient.subscribeToOffers(driverId, {
       onOffer: (payload) => this._handleOfferUpdate(payload),
       onError: (err) => console.error('[TripManager] Offer subscription error:', err)
     });
 
-    // Trips subscription
-    const tripsSub = supabaseClient.subscribeToTrips(driverId, {
+    supabaseClient.subscribeToTrips(driverId, {
       onTrip: (payload) => this._handleTripUpdate(payload)
     });
-
-    this.subscriptions.push(offersSub, tripsSub);
   }
 
   async _handleOfferUpdate(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
 
-    // Ignore offers if already in active trip
     if (this.currentTrip) {
       console.log('[TripManager] Ignoring offer (active trip exists)');
       return;
@@ -137,6 +154,8 @@ class TripManager {
         newRecord?.estado !== 'PENDIENTE' &&
         this.pendingOffer?.offerId === newRecord?.id
       ) {
+        console.log('[TripManager] Offer no longer pending');
+
         this.pendingOffer = null;
         stateManager.set('trip.pending', null);
 
@@ -148,8 +167,14 @@ class TripManager {
 
     if (eventType === 'DELETE') {
       if (this.pendingOffer?.offerId === oldRecord?.id) {
+        console.log('[TripManager] Offer deleted');
+
         this.pendingOffer = null;
         stateManager.set('trip.pending', null);
+
+        if (stateManager.get('driver.status') === CONFIG.DRIVER_STATES.RECEIVING_OFFER) {
+          stateManager.transitionDriver(CONFIG.DRIVER_STATES.ONLINE);
+        }
       }
     }
   }
@@ -167,18 +192,23 @@ class TripManager {
         return;
       }
 
-      if (trip) {
-        this.pendingOffer = {
-          ...trip,
-          offerId: offerRecord.id,
-          expiresAt: offerRecord.expires_at
-        };
+      if (!trip) return;
 
-        console.log('[TripManager] Showing new offer trip:', trip.id);
+      this.pendingOffer = {
+        ...trip,
+        offerId: offerRecord.id,
+        expiresAt: offerRecord.expires_at
+      };
 
-        stateManager.set('trip.pending', this.pendingOffer);
-        stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
+      console.log('[TripManager] Showing new offer trip:', trip.id);
+
+      stateManager.set('trip.pending', this.pendingOffer);
+
+      const ok = stateManager.transitionDriver(CONFIG.DRIVER_STATES.RECEIVING_OFFER);
+      if (!ok) {
+        console.warn('[TripManager] Transition RECEIVING_OFFER blocked');
       }
+
     } catch (error) {
       console.error('[TripManager] Fetch error:', error);
     }
@@ -221,6 +251,10 @@ class TripManager {
     }
   }
 
+  // =========================================================
+  // REFRESH
+  // =========================================================
+
   _startRefreshInterval() {
     if (this.refreshInterval) clearInterval(this.refreshInterval);
 
@@ -228,7 +262,7 @@ class TripManager {
       if (!this.currentTrip) {
         this._loadInitialState();
       }
-    }, CONFIG.TRIP_REFRESH_INTERVAL);
+    }, CONFIG.TRIP_REFRESH_INTERVAL || 5000);
   }
 
   // =========================================================
@@ -318,6 +352,10 @@ class TripManager {
     }
   }
 
+  // =========================================================
+  // GETTERS
+  // =========================================================
+
   getCurrentTrip() {
     return this.currentTrip;
   }
@@ -325,6 +363,10 @@ class TripManager {
   getPendingOffer() {
     return this.pendingOffer;
   }
+
+  // =========================================================
+  // DESTROY
+  // =========================================================
 
   destroy() {
     supabaseClient.unsubscribeAll();
