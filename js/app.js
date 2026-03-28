@@ -1,107 +1,220 @@
-/* ================================
-   MODAL SYSTEM - UBER STYLE
-   ================================ */
+/**
+ * MIMI Driver - Main Application (STABLE)
+ */
 
-/* Estado cerrado - NO interferir con el mapa */
-.incoming-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: none;
-  /* Importante: no usar pointer-events: none aquí */
+import CONFIG from './config.js';
+import supabaseService from './supabase-client.js';
+import mapService from './map-service.js';
+import locationTracker from './location-tracker.js';
+import uiController from './ui-controller.js';
+
+class DriverApp {
+  constructor() {
+    this.initialized = false;
+    this._onlineStatus = false;
+    this._currentTripId = null;
+    this._unsubscribers = [];
+  }
+
+  async init() {
+    console.log('[DriverApp] Starting...');
+
+    try {
+      // Inicializar UI
+      uiController.init();
+
+      // Conectar DB
+      const dbReady = await supabaseService.init();
+      if (!dbReady) throw new Error('No DB connection');
+
+      // Verificar auth
+      const { data: { user } } = await supabaseService.client.auth.getUser();
+      if (!user) {
+        window.location.href = CONFIG.REDIRECTS.LOGIN;
+        return;
+      }
+
+      console.log('[DriverApp] User:', user.id);
+
+      // Inicializar servicios
+      await this._initMapWithFallback();
+      await this._initLocationWithFallback();
+
+      this._setupUI();
+
+      this.initialized = true;
+      uiController.updateDriverState('ONLINE', false);
+      console.log('[DriverApp] Ready');
+
+    } catch (error) {
+      console.error('[DriverApp] Error:', error);
+      uiController.showToast('Error: ' + error.message, 'error');
+    }
+  }
+
+  _setupRealtime() {
+    const driverId = supabaseService.getDriverId();
+    if (!driverId) return;
+
+    console.log('[Realtime] Subscribing:', driverId);
+
+    const channel = supabaseService.client
+      .channel('ofertas')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'viaje_ofertas',
+          filter: `chofer_id_uuid=eq.${driverId}`
+        },
+        payload => {
+          this._onNuevaOferta(payload.new);
+        }
+      )
+      .subscribe();
+
+    this._unsubscribers.push(() => {
+      supabaseService.client.removeChannel(channel);
+    });
+  }
+
+  _cleanupRealtime() {
+    this._unsubscribers.forEach(fn => fn());
+    this._unsubscribers = [];
+  }
+
+  async _onNuevaOferta(oferta) {
+    console.log('[DriverApp] Offer:', oferta);
+
+    try {
+      const { data: viaje, error } = await supabaseService.client
+        .from('viajes')
+        .select('*')
+        .eq('id', oferta.viaje_id)
+        .single();
+
+      if (error || !viaje) {
+        console.error('Error loading trip:', error);
+        return;
+      }
+
+      console.log('[DriverApp] Trip:', viaje);
+      this._currentTripId = viaje.id;
+
+      // MOSTRAR MODAL VIA UICONTROLLER
+      uiController.showIncomingTrip(
+        viaje,
+        () => this._acceptTrip(viaje.id),
+        () => this._rejectTrip(viaje.id)
+      );
+
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  }
+
+  async _acceptTrip(tripId) {
+    console.log('Accepting:', tripId);
+    uiController.setLoading(true, 'Aceptando...');
+    
+    try {
+      const { error } = await supabaseService.client
+        .from('viajes')
+        .update({ 
+          estado: 'ACEPTADO',
+          chofer_id_uuid: supabaseService.getDriverId(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tripId);
+
+      if (error) throw error;
+      uiController.showToast('Viaje aceptado', 'success');
+      
+    } catch (err) {
+      uiController.showToast('Error al aceptar', 'error');
+    } finally {
+      uiController.setLoading(false);
+    }
+  }
+
+  async _rejectTrip(tripId) {
+    console.log('Rejecting:', tripId);
+    
+    try {
+      await supabaseService.client
+        .from('viaje_ofertas')
+        .update({ estado: 'RECHAZADA' })
+        .eq('viaje_id', tripId);
+      
+      this._currentTripId = null;
+      uiController.showToast('Viaje rechazado', 'warning');
+      
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  }
+
+  async _toggleOnlineStatus() {
+    try {
+      this._onlineStatus = !this._onlineStatus;
+
+      const { error } = await supabaseService.client
+        .from('choferes')
+        .update({
+          disponible: this._onlineStatus,
+          online: this._onlineStatus,
+          last_seen_at: new Date().toISOString()
+        })
+        .eq('id_uuid', supabaseService.getDriverId());
+
+      if (error) throw error;
+
+      uiController.updateDriverState('ONLINE', this._onlineStatus);
+      
+      if (this._onlineStatus) {
+        this._setupRealtime();
+        uiController.showToast('🟢 Online', 'success');
+      } else {
+        this._cleanupRealtime();
+        uiController.showToast('🔴 Offline', 'success');
+      }
+      
+    } catch (e) {
+      console.error('Error:', e);
+      uiController.showToast('Error', 'error');
+    }
+  }
+
+  async _initMapWithFallback() {
+    try {
+      return await mapService.init('map-container');
+    } catch (e) {
+      console.warn('Map error:', e);
+      return false;
+    }
+  }
+
+  async _initLocationWithFallback() {
+    try {
+      return await locationTracker.start(pos => {
+        mapService.updateDriverMarker(pos.lng, pos.lat, pos.heading);
+      });
+    } catch (e) {
+      console.warn('GPS error:', e);
+      return false;
+    }
+  }
+
+  _setupUI() {
+    const btnFab = document.getElementById('fab-online');
+    if (btnFab) {
+      btnFab.addEventListener('click', () => this._toggleOnlineStatus());
+    }
+  }
 }
 
-/* Estado abierto */
-.incoming-modal.active {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 20px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom));
-}
-
-/* Backdrop oscuro */
-.incoming-modal.active .modal-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.2s ease;
-}
-
-/* Contenido del modal */
-.modal-content {
-  position: relative;
-  z-index: 1001;
-  background: var(--color-bg-elevated);
-  border-radius: 24px;
-  padding: 24px;
-  width: 100%;
-  max-width: 420px;
-  max-height: 85vh;
-  overflow-y: auto;
-  border: 1px solid var(--color-border);
-  box-shadow: 0 -4px 30px rgba(0,0,0,0.5);
-  animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  
-  /* Asegurar que esté por encima y capture clicks */
-  pointer-events: auto;
-  transform: translateZ(0);
-}
-
-/* Botones - Z-index superior */
-.modal-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-  position: relative;
-  z-index: 1002;
-}
-
-.btn-accept,
-.btn-reject {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 16px;
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: transform 0.1s;
-  position: relative;
-  z-index: 1003;
-  pointer-events: auto;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btn-accept {
-  background: var(--color-success);
-  color: white;
-  flex: 1.5;
-}
-
-.btn-reject {
-  background: var(--color-bg-card);
-  color: var(--color-text-primary);
-}
-
-.btn-accept:active,
-.btn-reject:active {
-  transform: scale(0.96);
-}
-
-/* Asegurar que el mapa funcione siempre */
-#map-container {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-}
-
-/* Prevenir scroll del body cuando modal abierto */
-body.modal-open {
-  overflow: hidden;
-}
+// INIT
+document.addEventListener('DOMContentLoaded', () => {
+  new DriverApp().init();
+});
