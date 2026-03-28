@@ -211,7 +211,7 @@ async _acceptTrip(tripId) {
   uiController.setGlobalLoading(true, 'Aceptando viaje...');
 
   try {
-    const result = await tripManager.acceptTrip(tripId);
+    const result = await tripManager.acceptTrip(tripId); console.log("[DriverApp] acceptTrip result:", result);
 
     if (!result.success) {
       uiController.showToast(
