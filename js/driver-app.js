@@ -206,23 +206,31 @@ window.addEventListener('touchstart', () => {
     }
   }
 
-  async _acceptTrip(tripId) {
-    console.log('[DriverApp] Aceptando viaje:', tripId);
-    uiController.setGlobalLoading(true, 'Aceptando viaje...');
+async _acceptTrip(tripId) {
+  console.log('[DriverApp] Aceptando viaje:', tripId);
+  uiController.setGlobalLoading(true, 'Aceptando viaje...');
 
-    try {
-      const result = await tripManager.acceptTrip(tripId);
+  try {
+    const result = await tripManager.acceptTrip(tripId);
 
-      if (!result.success) {
-        uiController.showToast(result.error || 'Error aceptando viaje', 'error');
-        uiController.hideIncomingModal();
-        uiController.showWaitingState();
-      }
-
-    } finally {
-      uiController.setGlobalLoading(false);
+    if (!result.success) {
+      uiController.showToast(result.error || 'Error aceptando viaje', 'error');
+      uiController.hideIncomingModal();
+      uiController.showWaitingState();
+      return;
     }
+
+    // ✅ FORZAR REFRESH DE ESTADO (no depender solo de realtime)
+    await tripManager._loadInitialState(tripManager.driverId);
+
+  } catch (err) {
+    console.error('[DriverApp] Error aceptando viaje:', err);
+    uiController.showToast('Error aceptando viaje', 'error');
+    uiController.showWaitingState();
+  } finally {
+    uiController.setGlobalLoading(false);
   }
+}
 
   async _rejectTrip(tripId) {
     console.log('[DriverApp] Rechazando viaje:', tripId);
