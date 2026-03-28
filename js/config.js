@@ -1,32 +1,46 @@
 /**
- * MIMI Driver - Configuration
+ * MIMI Driver - Configuration (PRODUCTION FINAL)
  * Centralized config with environment detection
  */
 
 const CONFIG = {
-  // Supabase
+  // =========================================================
+  // SUPABASE
+  // =========================================================
   SUPABASE_URL: 'https://xrphpqmutvadjrucqicn.supabase.co',
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM',
-  
-  // Map
-  MAP_STYLE: 'https://tiles.openfreemap.org/styles/liberty',
+
+  // =========================================================
+  // MAP (MAPLIBRE)
+  // =========================================================
+  // IMPORTANTE: Tiene que ser un style.json real
+  MAP_STYLE: 'https://demotiles.maplibre.org/style.json',
+
   DEFAULT_CENTER: [-64.1888, -31.4201], // Córdoba, Argentina
   DEFAULT_ZOOM: 14,
-  
-  // Routing
+
+  // =========================================================
+  // ROUTING
+  // =========================================================
   ROUTING_PROVIDER: 'valhalla',
   VALHALLA_URL: 'https://valhalla.openstreetmap.de/route',
-  
-  // Intervals (ms)
+
+  // =========================================================
+  // INTERVALS (ms)
+  // =========================================================
   LOCATION_UPDATE_INTERVAL: 3000,
   TRIP_REFRESH_INTERVAL: 5000,
   PRESENCE_INTERVAL: 30000,
-  
-  // Timeouts
+
+  // =========================================================
+  // TIMEOUTS
+  // =========================================================
   INCOMING_OFFER_TIMEOUT: 15, // seconds
   COUNTDOWN_WARNING: 5, // seconds
-  
-  // States
+
+  // =========================================================
+  // STATES
+  // =========================================================
   DRIVER_STATES: {
     OFFLINE: 'OFFLINE',
     ONLINE: 'ONLINE',
@@ -36,7 +50,7 @@ const CONFIG = {
     IN_PROGRESS: 'IN_PROGRESS',
     ARRIVED: 'ARRIVED'
   },
-  
+
   TRIP_STATES: {
     DISPONIBLE: 'DISPONIBLE',
     OFERTADO: 'OFERTADO',
@@ -45,21 +59,27 @@ const CONFIG = {
     COMPLETADO: 'COMPLETADO',
     CANCELADO: 'CANCELADO'
   },
-  
+
+  // =========================================================
   // UI
+  // =========================================================
   ANIMATION_DURATION: 300,
   TOAST_DURATION: 4000,
   BOTTOM_SHEET_SNAP_POINTS: [80, 400, '85vh'],
-  
-  // Features
+
+  // =========================================================
+  // FEATURES
+  // =========================================================
   FEATURES: {
     enableSounds: true,
     enableHaptics: true,
     enableVoice: false,
     enableBackgroundLocation: true
   },
-  
-  // Redirects
+
+  // =========================================================
+  // REDIRECTS
+  // =========================================================
   REDIRECTS: {
     LOGIN: '/mimi-transporte/login-chofer.html',
     PANEL: '/mimi-transporte/chofer-panel.html'
