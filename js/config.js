@@ -92,3 +92,5 @@ Object.freeze(CONFIG.DRIVER_STATES);
 Object.freeze(CONFIG.TRIP_STATES);
 Object.freeze(CONFIG.FEATURES);
 Object.freeze(CONFIG.REDIRECTS);
+
+export default CONFIG;
