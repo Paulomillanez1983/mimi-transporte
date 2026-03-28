@@ -1,237 +1,225 @@
 /**
- * MIMI Driver - Main Application (PRODUCTION FINAL + REALTIME)
+ * MIMI Driver - UI Controller (FINAL)
  */
 
-import CONFIG from './config.js';
-import supabaseService from './supabase-client.js';
-import mapService from './map-service.js';
-import locationTracker from './location-tracker.js';
-import uiController from './ui-controller.js';
+import CONFIG from "./config.js";
 
-class DriverApp {
+class UIController {
   constructor() {
-    this.initialized = false;
-    this._onlineStatus = false;
-    this._currentTripId = null;
-    this._unsubscribers = [];
+    this.elements = {};
+    this.countdownInterval = null;
+    this.currentCountdown = 0;
+    this.currentCallbacks = {};
+    this.isModalOpen = false;
   }
 
-  async init() {
-    console.log('[DriverApp] Starting initialization...');
+  init() {
+    this._cacheElements();
+    this._bindEvents();
+    console.log("[UI] ✅ UIController iniciado");
+  }
 
-    try {
-      uiController.init();
+  _cacheElements() {
+    const ids = [
+      "driver-name", "driver-initial", "status-dot", "status-text",
+      "stat-earnings", "stat-trips", "fab-online", "fab-text", "fab-icon",
+      "toast-container", "global-loading", "incoming-modal", "trip-pickup",
+      "trip-dropoff", "trip-distance", "trip-price", "trip-duration",
+      "client-name", "client-phone", "btn-accept", "btn-reject",
+      "countdown-number", "countdown-circle", "pickup-time"
+    ];
 
-      const dbReady = await supabaseService.init();
-      if (!dbReady) throw new Error('Could not connect to Supabase');
+    ids.forEach((id) => {
+      this.elements[id] = document.getElementById(id);
+    });
+  }
 
-      const { data: { user } } = await supabaseService.client.auth.getUser();
-      if (!user) {
-        window.location.href = CONFIG.REDIRECTS.LOGIN;
-        return;
+  _bindEvents() {
+    // Delegación simple y efectiva
+    document.addEventListener('click', (e) => {
+      if (!this.isModalOpen) return;
+      
+      if (e.target.closest('#btn-accept')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._accept();
       }
+      
+      if (e.target.closest('#btn-reject')) {
+        e.preventDefault();
+        e.stopPropagation();
+        this._reject();
+      }
+    });
+  }
 
-      console.log('[DriverApp] User authenticated:', user.id);
-
-      await this._initMapWithFallback();
-      await this._initLocationWithFallback();
-
-      this._setupUI();
-
-      this.initialized = true;
-      console.log('[DriverApp] ✅ Initialization complete');
-
-      uiController.updateDriverState('ONLINE', false);
-
-    } catch (error) {
-      console.error('[DriverApp] ❌ Fatal error:', error);
-      uiController.showToast('Error: ' + error.message, 'error', 5000);
+  _accept() {
+    console.log("[UI] Aceptar clickeado");
+    this._closeModal();
+    
+    // Ejecutar callback asíncrono para no bloquear
+    if (this.currentCallbacks.onAccept) {
+      setTimeout(() => {
+        try {
+          this.currentCallbacks.onAccept();
+        } catch (err) {
+          console.error("[UI] Error callback accept:", err);
+        }
+      }, 50);
     }
   }
 
-  // =========================
-  // REALTIME 🔥
-  // =========================
+  _reject() {
+    console.log("[UI] Rechazar clickeado");
+    this._closeModal();
+    
+    if (this.currentCallbacks.onReject) {
+      setTimeout(() => {
+        try {
+          this.currentCallbacks.onReject();
+        } catch (err) {
+          console.error("[UI] Error callback reject:", err);
+        }
+      }, 50);
+    }
+  }
 
-  _setupRealtime() {
-    const supabase = supabaseService.client;
-    const driverId = supabaseService.getDriverId();
+  _closeModal() {
+    console.log("[UI] Cerrando modal");
+    
+    clearInterval(this.countdownInterval);
+    this.countdownInterval = null;
+    
+    const modal = this.elements["incoming-modal"];
+    if (modal) {
+      modal.classList.remove("active");
+    }
+    
+    this.isModalOpen = false;
+    this.currentCallbacks = {};
+  }
 
-    if (!driverId) {
-      console.warn('[Realtime] No driverId');
+  showToast(message, type = "info", duration = 3000) {
+    const container = this.elements["toast-container"];
+    if (!container) {
+      alert(message);
       return;
     }
 
-    console.log('📡 Realtime activo para:', driverId);
+    const toast = document.createElement("div");
+    toast.style.cssText = `
+      background: rgba(28,28,30,0.95);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 12px 16px;
+      border-radius: 12px;
+      margin-top: 8px;
+      color: white;
+      font-weight: 700;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      max-width: 90vw;
+      text-align: center;
+      font-size: 14px;
+      z-index: 100000;
+    `;
 
-    const channel = supabase
-      .channel('ofertas')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'viaje_ofertas',
-          // ⚠️ AJUSTAR SI TU COLUMNA ES DISTINTA
-          filter: `chofer_id_uuid=eq.${driverId}`
-        },
-        payload => {
-          console.log('🚗 Nueva oferta:', payload);
-          this._onNuevaOferta(payload.new);
+    const icons = { info: "ℹ️", success: "✅", error: "❌", warning: "⚠️" };
+    toast.textContent = `${icons[type] || "ℹ️"} ${message}`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+
+  updateDriverState(mode, isOnline) {
+    const dot = this.elements["status-dot"];
+    const text = this.elements["status-text"];
+    const fab = this.elements["fab-online"];
+
+    if (dot) dot.classList.toggle("online", isOnline);
+    if (text) text.textContent = isOnline ? "Conectado" : "Desconectado";
+
+    if (fab) {
+      fab.classList.toggle("online", isOnline);
+      const fabText = this.elements["fab-text"];
+      const fabIcon = this.elements["fab-icon"];
+      if (fabText) fabText.textContent = isOnline ? "DESCONECTAR" : "CONECTAR";
+      if (fabIcon) fabIcon.textContent = isOnline ? "🟢" : "🔴";
+    }
+  }
+
+  setDriverProfile(nameOrEmail) {
+    const nameEl = this.elements["driver-name"];
+    const initialEl = this.elements["driver-initial"];
+    if (nameEl) nameEl.textContent = nameOrEmail || "Conductor";
+    if (initialEl) {
+      initialEl.textContent = (nameOrEmail || "M").substring(0, 1).toUpperCase();
+    }
+  }
+
+  setLoading(show) {
+    const loading = this.elements["global-loading"];
+    if (loading) loading.classList.toggle("active", show);
+  }
+
+  showIncomingTrip(trip, onAccept, onReject) {
+    console.log("[UI] Mostrando viaje:", trip.id || trip);
+
+    // Cerrar si hay uno abierto
+    if (this.isModalOpen) {
+      this._closeModal();
+    }
+
+    this.currentCallbacks = { onAccept, onReject };
+    const modal = this.elements["incoming-modal"];
+    
+    if (!modal) {
+      console.error("[UI] Modal no encontrado");
+      return;
+    }
+
+    // Actualizar datos
+    this._setText("trip-pickup", trip.origen || "Origen no disponible");
+    this._setText("trip-dropoff", trip.destino || "Destino no disponible");
+    this._setText("trip-distance", (trip.distancia_km || '--') + " km");
+    this._setText("trip-price", "$" + (trip.precio || '--'));
+    this._setText("trip-duration", (trip.duracion_min || '--') + " min");
+    this._setText("client-name", trip.cliente || "Cliente");
+    this._setText("client-phone", trip.telefono || "Sin teléfono");
+
+    // Mostrar
+    modal.classList.add("active");
+    this.isModalOpen = true;
+    
+    // Countdown
+    this._startCountdown(onReject);
+  }
+
+  _setText(elementId, text) {
+    const el = this.elements[elementId];
+    if (el) el.textContent = text;
+  }
+
+  _startCountdown(onTimeout) {
+    this.currentCountdown = 15;
+    const text = this.elements["countdown-number"];
+    if (text) text.textContent = this.currentCountdown;
+
+    this.countdownInterval = setInterval(() => {
+      this.currentCountdown--;
+      if (text) text.textContent = this.currentCountdown;
+      
+      if (this.currentCountdown <= 0) {
+        this._closeModal();
+        if (onTimeout) {
+          setTimeout(() => onTimeout(), 50);
         }
-      )
-      .subscribe();
-
-    this._unsubscribers.push(() => {
-      supabase.removeChannel(channel);
-    });
-  }
-
-  _cleanupRealtime() {
-    this._unsubscribers.forEach(unsub => unsub());
-    this._unsubscribers = [];
-    console.log('🔌 Realtime detenido');
-  }
-
-async _onNuevaOferta(oferta) {
-  console.log('[DriverApp] Oferta recibida:', oferta);
-
-  const supabase = supabaseService.client;
-
-  // 🔥 TRAER DATOS REALES DEL VIAJE
-  const { data: viaje, error } = await supabase
-    .from('viajes')
-    .select('*')
-    .eq('id', oferta.viaje_id)
-    .single();
-
-  if (error || !viaje) {
-    console.error('❌ Error cargando viaje:', error);
-    uiController.showToast('Error cargando viaje', 'error');
-    return;
-  }
-
-  console.log('📦 Viaje completo:', viaje);
-
-  // 🔥 MOSTRAR MODAL
-  const modal = document.getElementById('incoming-modal');
-  if (modal) modal.classList.add('active');
-
-  // 🔥 CARGAR DATOS EN UI
-  document.getElementById('trip-pickup').textContent =
-    viaje.origen || 'Origen no disponible';
-
-  document.getElementById('trip-dropoff').textContent =
-    viaje.destino || 'Destino no disponible';
-
-  document.getElementById('trip-distance').textContent =
-    (viaje.distancia_km || '--') + ' km';
-
-  document.getElementById('trip-price').textContent =
-    '$' + (viaje.precio || '--');
-
-  document.getElementById('client-name').textContent =
-    viaje.cliente || 'Cliente';
-
-  document.getElementById('client-phone').textContent =
-    viaje.telefono || '';
-
-  // 🔥 GUARDAR VIAJE ACTUAL
-  this._currentTripId = viaje.id;
-
-  uiController.showToast('🚗 Nueva oferta recibida', 'success');
-}
-  // =========================
-
-  async _initMapWithFallback() {
-    try {
-      return await mapService.init('map-container');
-    } catch {
-      return false;
-    }
-  }
-
-  async _initLocationWithFallback() {
-    try {
-      return await locationTracker.start((position) => {
-        this._onPositionUpdate(position);
-      });
-    } catch {
-      return false;
-    }
-  }
-
-  _onPositionUpdate(position) {
-    mapService.updateDriverMarker(position.lng, position.lat, position.heading);
-
-    uiController.updateStats({
-      speed: position.speed,
-      accuracy: position.accuracy
-    });
-  }
-
-  _setupUI() {
-    const btnFab = document.getElementById('fab-online');
-
-    if (btnFab) {
-      btnFab.addEventListener('click', async () => {
-        await this._toggleOnlineStatus();
-      });
-    }
-
-    window.addEventListener('locationError', (e) => {
-      uiController.showToast('Error de ubicación: ' + e.detail.message, 'error');
-    });
-  }
-
-  async _toggleOnlineStatus() {
-    try {
-      this._onlineStatus = !this._onlineStatus;
-
-      const { data: { user } } = await supabaseService.client.auth.getUser();
-      if (!user) {
-        uiController.showToast('No autenticado', 'error');
-        return;
       }
-
-      const { error } = await supabaseService.client
-        .from('choferes')
-        .update({
-          disponible: this._onlineStatus,
-          online: this._onlineStatus,
-          last_seen_at: new Date().toISOString()
-        })
-        .eq('id_uuid', supabaseService.getDriverId());
-
-      if (error) {
-        uiController.showToast('No se pudo actualizar estado', 'error');
-        return;
-      }
-
-      uiController.updateDriverState('ONLINE', this._onlineStatus);
-
-      // 🔥 ACTIVAR / DESACTIVAR REALTIME
-      if (this._onlineStatus) {
-        this._setupRealtime();
-      } else {
-        this._cleanupRealtime();
-      }
-
-      uiController.showToast(
-        this._onlineStatus ? '🟢 Online' : '🔴 Offline',
-        'success'
-      );
-
-    } catch (e) {
-      uiController.showToast('Error cambiando estado', 'error');
-    }
+    }, 1000);
   }
 }
 
-// INIT
-document.addEventListener('DOMContentLoaded', () => {
-  const app = new DriverApp();
-  app.init();
-});
-
-export default DriverApp;
+const uiController = new UIController();
+export default uiController;
