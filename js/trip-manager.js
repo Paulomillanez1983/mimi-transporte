@@ -238,7 +238,7 @@ console.log('[TripManager] RPC aceptar_oferta_viaje response:', data);
 }
 
   async rejectTrip(tripId, reason = 'RECHAZADO_POR_CHOFER') {
-    const driverId = supabaseService.getDriverId();
+    const driverId = this.driverId;
     if (!driverId) return { success: false, error: 'No driverId' };
 
     const { error } = await supabaseService.client
@@ -301,6 +301,14 @@ console.log('[TripManager] RPC aceptar_oferta_viaje response:', data);
 
     return { success: true };
   }
+    // =========================================================
+  // MANUAL REFRESH (para forzar recarga después de aceptar)
+  // =========================================================
+  async refresh() {
+    if (!this.driverId) return;
+    await this._loadInitialState(this.driverId);
+  }
+
 
   // =========================================================
   // GETTERS
