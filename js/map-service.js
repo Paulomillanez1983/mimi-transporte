@@ -1,6 +1,6 @@
 /**
  * MIMI Driver - Map Service (PRODUCTION FINAL)
- * MapLibre GL with custom styling and routing (sin CORS)
+ * MapLibre GL stable + safe coords
  */
 
 class MapService {
@@ -14,27 +14,29 @@ class MapService {
   // =========================================================
   // INIT
   // =========================================================
+
   async init(containerId) {
     if (this.isInitialized) return true;
 
     const container = document.getElementById(containerId);
     if (!container) throw new Error('Map container not found');
 
-    // Wait for MapLibre library
     await this._waitForMapLibre();
 
-    // Validate config
+    const fallbackCenter = [-64.1888, -31.4201]; // Córdoba
     const center = this._sanitizeLngLat(
       CONFIG.DEFAULT_CENTER?.[0],
       CONFIG.DEFAULT_CENTER?.[1],
-      [-64.1888, -31.4201] // fallback Córdoba
+      fallbackCenter
     );
 
     const zoom = this._sanitizeNumber(CONFIG.DEFAULT_ZOOM, 14);
 
+    const style = CONFIG.MAP_STYLE || "https://demotiles.maplibre.org/style.json";
+
     this.map = new window.maplibregl.Map({
       container: containerId,
-      style: CONFIG.MAP_STYLE,
+      style: style,
       center: center,
       zoom: zoom,
       pitch: 0,
@@ -44,7 +46,6 @@ class MapService {
       maxZoom: 18
     });
 
-    // Add navigation control
     this.map.addControl(
       new window.maplibregl.NavigationControl({
         showCompass: true,
@@ -53,7 +54,6 @@ class MapService {
       'bottom-right'
     );
 
-    // Wait for map load
     await new Promise(resolve => {
       this.map.on('load', () => {
         this.isLoaded = true;
@@ -61,7 +61,6 @@ class MapService {
       });
     });
 
-    // Add layers after load
     this._addCustomLayers();
 
     this.isInitialized = true;
@@ -83,8 +82,9 @@ class MapService {
   }
 
   // =========================================================
-  // HELPERS (VALIDATION)
+  // HELPERS
   // =========================================================
+
   _sanitizeNumber(value, fallback = 0) {
     const num = Number(value);
     return Number.isFinite(num) ? num : fallback;
@@ -117,10 +117,10 @@ class MapService {
   // =========================================================
   // LAYERS
   // =========================================================
+
   _addCustomLayers() {
     if (!this.map || !this.isLoaded) return;
 
-    // Prevent duplicate source/layer if re-init
     if (!this.map.getSource('route')) {
       this.map.addSource('route', {
         type: 'geojson',
@@ -177,15 +177,15 @@ class MapService {
   // =========================================================
   // CAMERA
   // =========================================================
+
   setCenter(lng, lat, zoom = null) {
     if (!this.map) return;
 
-    if (!this._isValidLatLng(lat, lng)) {
-      console.warn('[Map] setCenter ignored invalid coords:', lng, lat);
-      return;
-    }
+    if (!this._isValidLatLng(lat, lng)) return;
 
-    const safeZoom = zoom !== null ? this._sanitizeNumber(zoom, this.map.getZoom()) : this.map.getZoom();
+    const safeZoom = zoom !== null
+      ? this._sanitizeNumber(zoom, this.map.getZoom())
+      : this.map.getZoom();
 
     this.map.easeTo({
       center: [lng, lat],
@@ -197,13 +197,10 @@ class MapService {
   // =========================================================
   // MARKERS
   // =========================================================
+
   updateDriverMarker(lng, lat, heading = 0) {
     if (!this.map) return;
-
-    if (!this._isValidLatLng(lat, lng)) {
-      // Evita el error "Expected number but found null"
-      return;
-    }
+    if (!this._isValidLatLng(lat, lng)) return;
 
     const safeHeading = this._sanitizeNumber(heading, 0);
 
@@ -244,11 +241,7 @@ class MapService {
 
   _addPOIMarker(key, lng, lat, emoji, color) {
     if (!this.map) return;
-
-    if (!this._isValidLatLng(lat, lng)) {
-      console.warn(`[Map] POI marker ${key} ignored invalid coords`, lng, lat);
-      return;
-    }
+    if (!this._isValidLatLng(lat, lng)) return;
 
     if (this.markers[key]) {
       this.markers[key].remove();
@@ -269,98 +262,48 @@ class MapService {
   }
 
   // =========================================================
-  // ROUTING
+  // ROUTING (FALLBACK ONLY)
   // =========================================================
+
   async showRoute(from, to) {
     if (!this.map || !this.isLoaded) return null;
-
     if (!from || !to) return null;
+
     if (!this._isValidLatLng(from.lat, from.lng)) return null;
     if (!this._isValidLatLng(to.lat, to.lng)) return null;
 
-    try {
-      let routeData = null;
+    const routeData = this._getStraightLineRoute(from, to);
 
-      // Try Valhalla
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-        const response = await fetch(CONFIG.VALHALLA_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            locations: [
-              { lon: from.lng, lat: from.lat },
-              { lon: to.lng, lat: to.lat }
-            ],
-            costing: 'auto',
-            directions_options: { units: 'kilometers' }
-          }),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data?.trip?.legs?.[0]?.shape) {
-            const leg = data.trip.legs[0];
-
-            // Valhalla shape es polyline encoded -> si no lo decodificas, NO sirve.
-            // Como no tenemos decoder acá, lo tratamos como FAIL y usamos fallback.
-            console.warn('[Map] Valhalla returned encoded polyline, using fallback');
-          }
-        }
-      } catch (corsError) {
-        console.warn('[Map] Routing error, fallback:', corsError.message);
-      }
-
-      // Fallback straight line
-      if (!routeData) {
-        routeData = this._getStraightLineRoute(from, to);
-      }
-
-      const source = this.map.getSource('route');
-      if (!source) {
-        console.warn('[Map] Route source missing, re-adding layers...');
-        this._addCustomLayers();
-      }
-
-      const finalSource = this.map.getSource('route');
-      if (finalSource) {
-        finalSource.setData({
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: routeData.geometry
-          }
-        });
-      }
-
-      // Fit bounds safely
-      if (routeData.geometry.length >= 2) {
-        const bounds = routeData.geometry.reduce((b, coord) => b.extend(coord),
-          new window.maplibregl.LngLatBounds(routeData.geometry[0], routeData.geometry[0])
-        );
-
-        this.map.fitBounds(bounds, {
-          padding: 100,
-          duration: 1000
-        });
-      }
-
-      return routeData;
-
-    } catch (error) {
-      console.error('[Map] showRoute fatal error:', error);
-      return null;
+    const source = this.map.getSource('route');
+    if (!source) {
+      this._addCustomLayers();
     }
+
+    const finalSource = this.map.getSource('route');
+    if (finalSource) {
+      finalSource.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: routeData.geometry
+        }
+      });
+    }
+
+    if (routeData.geometry.length >= 2) {
+      const bounds = routeData.geometry.reduce(
+        (b, coord) => b.extend(coord),
+        new window.maplibregl.LngLatBounds(routeData.geometry[0], routeData.geometry[0])
+      );
+
+      this.map.fitBounds(bounds, {
+        padding: 100,
+        duration: 1000
+      });
+    }
+
+    return routeData;
   }
 
   _getStraightLineRoute(from, to) {
@@ -369,7 +312,6 @@ class MapService {
       [to.lng, to.lat]
     ];
 
-    // Haversine distance
     const R = 6371e3;
     const φ1 = from.lat * Math.PI / 180;
     const φ2 = to.lat * Math.PI / 180;
@@ -387,7 +329,7 @@ class MapService {
     return {
       geometry: coordinates,
       distance: distance,
-      duration: distance / 8.33, // ~30 km/h
+      duration: distance / 8.33,
       isFallback: true
     };
   }
@@ -415,9 +357,6 @@ class MapService {
     });
   }
 
-  // =========================================================
-  // DESTROY
-  // =========================================================
   destroy() {
     try {
       this.clearRoute();
