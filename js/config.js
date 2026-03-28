@@ -7,7 +7,7 @@ const CONFIG = {
   // =========================================================
   // SUPABASE
   // =========================================================
-  SUPABASE_URL: 'https://xrphpqmutvadjrucqicn.supabase.co',
+SUPABASE_URL: 'https://xrphpqmutvadjrucqicn.supabase.co',
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM',
 
   // =========================================================
@@ -23,7 +23,7 @@ MAP_STYLE: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   // ROUTING
   // =========================================================
   ROUTING_PROVIDER: 'valhalla',
-  VALHALLA_URL: 'https://valhalla.openstreetmap.de/route',
+VALHALLA_URL: 'https://valhalla.openstreetmap.de/route',
 
   // =========================================================
   // INTERVALS (ms)
