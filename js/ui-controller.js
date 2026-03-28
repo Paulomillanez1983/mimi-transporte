@@ -464,6 +464,7 @@ async _handleAccept(e) {
 
         // 🔥 volver botón normal y NO cerrar modal
         this._resetCountdownUI();
+        this._startCountdown();
         this.state.isProcessing = false;
         return;
       }
