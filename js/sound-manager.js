@@ -144,7 +144,7 @@ _generateSounds() {
     if (!navigator.vibrate || !CONFIG?.FEATURES?.enableHaptics || !this._hapticsUnlocked) return;
     
     try {
-      const pattern = CONFIG.HAPTICS[patternName] || CONFIG.HAPTICS.notification;
+      const pattern = CONFIG?.HAPTICS?.[patternName] || CONFIG?.HAPTICS?.notification || [80];
       navigator.vibrate(pattern);
     } catch (e) {
       // Silencioso - algunos navegadores bloquean vibración
