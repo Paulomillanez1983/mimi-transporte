@@ -312,10 +312,10 @@ class UIController {
     const data = {
       'trip-pickup': trip.origen_direccion || trip.origen || 'Origen no disponible',
       'trip-dropoff': trip.destino_direccion || trip.destino || 'Destino no disponible',
-      'trip-distance': trip.distancia_km ? `${trip.distancia_km.toFixed(1)} km` : '-- km',
-      'trip-price': trip.precio_total ? `$${Math.round(trip.precio_total).toLocaleString('es-AR')}` : '$--',
-      'trip-duration': trip.tiempo_estimado_min ? `${trip.tiempo_estimado_min} min` : '-- min',
-      'trip-km': trip.distancia_km ? `${trip.distancia_km.toFixed(1)} km` : '-- km',
+      'trip-distance': trip.km ? `${Number(trip.km).toFixed(1)} km` : '-- km',
+      'trip-price': trip.precio ? `$${Math.round(trip.precio).toLocaleString('es-AR')}` : '$--',
+      'trip-duration': '-- min',
+      'trip-km': trip.km ? `${Number(trip.km).toFixed(1)} km` : '-- km',
       'client-name': trip.pasajero_nombre || trip.cliente || 'Cliente',
       'client-phone': trip.pasajero_telefono || trip.telefono || 'Sin teléfono',
       'pickup-time': trip.tiempo_llegada_estimado 
