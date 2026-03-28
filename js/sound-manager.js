@@ -176,7 +176,7 @@ _generateSounds() {
   // VOICE (con fallback)
   // =========================
   speak(text, priority = 'normal') {
-    if (!CONFIG.FEATURES.enableVoiceSynthesis || !window.speechSynthesis) return;
+    if (!CONFIG?.FEATURES?.enableVoiceSynthesis || !window.speechSynthesis) return;
 
     try {
       if (priority === 'urgent') {
