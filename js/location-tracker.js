@@ -2,7 +2,7 @@
  * Servicio de geolocalización
  */
 
-import CONFIG from './config.js';
+import { CONFIG } from './config.js';
 import supabaseService from './supabase-client.js';
 
 class LocationTracker {
