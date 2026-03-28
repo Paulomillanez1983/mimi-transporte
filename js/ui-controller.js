@@ -413,6 +413,7 @@ async _handleAccept(e) {
     e.preventDefault();
     e.stopPropagation();
   }
+
   if (!this.state.isModalOpen || this.state.isProcessing) return;
 
   console.log('[UI] Trip accepted');
@@ -429,27 +430,31 @@ async _handleAccept(e) {
 
   const callback = this.state.callbacks.onAccept;
 
-  this._closeIncomingModal();
-
   if (callback) {
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      const result = callback();
+      const res = await callback(); // ✅ esperar callback SI O SI
 
-      // ✅ si devuelve promesa la esperamos
-      if (result && typeof result.then === 'function') {
-        const res = await result;
+      if (res && res.success === false) {
+        this.showToast(res.error || 'No se pudo aceptar el viaje', 'warning');
 
-        // ✅ si el callback devolvió error, avisar
-        if (res && res.success === false) {
-          this.showToast(res.error || 'No se pudo aceptar el viaje', 'error');
-        }
+        // 🔥 volver botón normal y NO cerrar modal
+        this._resetCountdownUI();
+        this.state.isProcessing = false;
+        return;
       }
+
+      // ✅ solo cerrar modal si aceptó bien
+      this._closeIncomingModal();
 
     } catch (err) {
       console.error('[UI] Error in accept callback:', err);
       this.showToast('Error al procesar aceptación', 'error');
+
+      this._resetCountdownUI();
+      this.state.isProcessing = false;
+      return;
     }
   }
 
