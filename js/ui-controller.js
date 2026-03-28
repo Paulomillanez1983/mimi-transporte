@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - UI Controller (FINAL COMPATIBLE)
+ * MIMI Driver - UI Controller (CORREGIDO)
  */
 
 import CONFIG from "./config.js";
@@ -11,9 +11,9 @@ class UIController {
     this.currentCountdown = 0;
     this.touchStartY = 0;
     this.sheetOpen = false;
+    this.currentTripCallbacks = {}; // Guardar callbacks actuales
   }
 
-  // ✅ ESTE ES EL METODO QUE APP.JS ESPERA
   init() {
     this._cacheElements();
     this._bindEvents();
@@ -21,9 +21,6 @@ class UIController {
     console.log("[UI] ✅ UIController iniciado");
   }
 
-  // =========================================================
-  // CACHE ELEMENTS
-  // =========================================================
   _cacheElements() {
     const ids = [
       "driver-name",
@@ -36,7 +33,20 @@ class UIController {
       "fab-text",
       "fab-icon",
       "toast-container",
-      "global-loading"
+      "global-loading",
+      // Elementos del modal de viaje
+      "incoming-modal",
+      "trip-pickup",
+      "trip-dropoff", 
+      "trip-distance",
+      "trip-price",
+      "trip-duration",
+      "client-name",
+      "client-phone",
+      "btn-accept",
+      "btn-reject",
+      "countdown-number",
+      "countdown-circle"
     ];
 
     ids.forEach((id) => {
@@ -44,11 +54,48 @@ class UIController {
     });
   }
 
-  // =========================================================
-  // EVENTS
-  // =========================================================
   _bindEvents() {
-    // nada crítico por ahora
+    // Binding seguro para botones del modal (delegación de eventos)
+    document.addEventListener('click', (e) => {
+      const btnAccept = e.target.closest('#btn-accept');
+      const btnReject = e.target.closest('#btn-reject');
+      
+      if (btnAccept) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("[UI] Click ACEPTAR detectado");
+        this._handleAccept();
+      }
+      
+      if (btnReject) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log("[UI] Click RECHAZAR detectado");
+        this._handleReject();
+      }
+    });
+  }
+
+  _handleAccept() {
+    console.log("[UI] Procesando aceptación...");
+    this._clearCountdown();
+    const modal = this.elements["incoming-modal"];
+    if (modal) modal.classList.remove("active");
+    
+    if (this.currentTripCallbacks.onAccept) {
+      this.currentTripCallbacks.onAccept();
+    }
+  }
+
+  _handleReject() {
+    console.log("[UI] Procesando rechazo...");
+    this._clearCountdown();
+    const modal = this.elements["incoming-modal"];
+    if (modal) modal.classList.remove("active");
+    
+    if (this.currentTripCallbacks.onReject) {
+      this.currentTripCallbacks.onReject();
+    }
   }
 
   _setupViewport() {
@@ -56,14 +103,9 @@ class UIController {
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     };
-
     setVH();
     window.addEventListener("resize", setVH);
   }
-
-  // =========================================================
-  // ✅ FUNCIONES QUE APP.JS USA
-  // =========================================================
 
   showToast(message, type = "info", duration = 3000) {
     const container = this.elements["toast-container"];
@@ -87,6 +129,7 @@ class UIController {
       max-width: 90vw;
       text-align: center;
       font-size: 14px;
+      transition: opacity 0.3s;
     `;
 
     let icon = "ℹ️";
@@ -104,32 +147,24 @@ class UIController {
   }
 
   updateDriverState(mode, isOnline) {
-    // mode viene "ONLINE"
     const dot = this.elements["status-dot"];
     const text = this.elements["status-text"];
-    const fab = document.getElementById("fab-online");
+    const fab = this.elements["fab-online"];
 
     if (dot) dot.classList.toggle("online", isOnline);
-
-    if (text) {
-      text.textContent = isOnline ? "Conectado" : "Desconectado";
-    }
+    if (text) text.textContent = isOnline ? "Conectado" : "Desconectado";
 
     if (fab) {
       fab.classList.toggle("online", isOnline);
-
-      const fabText = document.getElementById("fab-text");
-      const fabIcon = document.getElementById("fab-icon");
-
+      const fabText = this.elements["fab-text"];
+      const fabIcon = this.elements["fab-icon"];
       if (fabText) fabText.textContent = isOnline ? "DESCONECTAR" : "CONECTAR";
       if (fabIcon) fabIcon.textContent = isOnline ? "🟢" : "🔴";
     }
   }
 
   updateStats(stats = {}) {
-    // stats.speed / stats.accuracy (vienen del tracker)
-    // acá solo mostramos lo básico si querés
-    // no rompe si faltan
+    // Implementar si es necesario
   }
 
   setDriverProfile(nameOrEmail) {
@@ -137,121 +172,117 @@ class UIController {
     const initialEl = this.elements["driver-initial"];
 
     if (nameEl) nameEl.textContent = nameOrEmail || "Conductor";
-
     if (initialEl) {
-      initialEl.textContent = (nameOrEmail || "M")
-        .substring(0, 1)
-        .toUpperCase();
+      initialEl.textContent = (nameOrEmail || "M").substring(0, 1).toUpperCase();
     }
   }
 
   setLoading(show) {
     const loading = this.elements["global-loading"];
-    if (!loading) return;
-    loading.classList.toggle("active", show);
+    if (loading) loading.classList.toggle("active", show);
   }
 
   // =========================================================
-  // 🚗 MOSTRAR VIAJE ENTRANTE
+  // 🚗 MOSTRAR VIAJE ENTRANTE - CORREGIDO
   // =========================================================
   showIncomingTrip(trip, onAccept, onReject) {
     console.log("[UI] Mostrando viaje:", trip);
 
-    const modal = document.getElementById("incoming-modal");
+    // Guardar callbacks para uso posterior
+    this.currentTripCallbacks = { onAccept, onReject };
+
+    const modal = this.elements["incoming-modal"];
     if (!modal) {
-      console.warn("[UI] Modal no encontrado");
+      console.error("[UI] ERROR: Modal 'incoming-modal' no encontrado en DOM");
       return;
     }
 
-    modal.classList.add("active");
-
-    // =========================
-    // DATOS
-    // =========================
-    document.getElementById("trip-pickup").textContent =
-      trip.origen || "Origen";
-
-    document.getElementById("trip-dropoff").textContent =
-      trip.destino || "Destino";
-
-    document.getElementById("trip-distance").textContent =
-      (trip.distancia_km || "--") + " km";
-
-    document.getElementById("trip-price").textContent =
-      "$" + (trip.precio || "--");
-
-    document.getElementById("trip-duration").textContent =
-      (trip.duracion_min || "--") + " min";
-
-    document.getElementById("client-name").textContent =
-      trip.cliente || "Cliente";
-
-    document.getElementById("client-phone").textContent =
-      trip.telefono || "";
-
-    // =========================
-    // BOTONES
-    // =========================
-    const btnAccept = document.getElementById("btn-accept");
-    const btnReject = document.getElementById("btn-reject");
-
-    if (btnAccept) {
-      btnAccept.onclick = () => {
-        console.log("✅ Aceptar viaje");
-        this._clearCountdown();
-        onAccept && onAccept();
-        modal.classList.remove("active");
-      };
-    }
-
-    if (btnReject) {
-      btnReject.onclick = () => {
-        console.log("❌ Rechazar viaje");
-        this._clearCountdown();
-        onReject && onReject();
-        modal.classList.remove("active");
-      };
-    }
-
-    // =========================
-    // ⏱️ COUNTDOWN
-    // =========================
+    // Asegurar que no haya countdown previo activo
     this._clearCountdown();
-    this.currentCountdown = 15;
 
-    const countdownText = document.getElementById("countdown-number");
-    const circle = document.getElementById("countdown-circle");
+    // Extraer datos con múltiples fallback por si vienen con nombres diferentes
+    const origen = trip.origen || trip.origin || "Origen no disponible";
+    const destino = trip.destino || trip.destination || "Destino no disponible";
+    const distancia = trip.distancia_km || trip.distancia || trip.distance || trip.km || "--";
+    const duracion = trip.duracion_min || trip.duracion || trip.duration || trip.tiempo || "--";
+    const precio = trip.precio || trip.price || trip.costo || trip.valor || "--";
+    const cliente = trip.cliente || trip.client_name || trip.nombre_cliente || "Cliente";
+    const telefono = trip.telefono || trip.phone || trip.celular || "";
+
+    console.log("[UI] Datos extraídos:", { origen, destino, distancia, duracion, precio, cliente });
+
+    // Actualizar DOM con verificación de existencia
+    this._setTextContent("trip-pickup", origen);
+    this._setTextContent("trip-dropoff", destino);
+    this._setTextContent("trip-distance", distancia + " km");
+    this._setTextContent("trip-price", "$" + precio);
+    this._setTextContent("trip-duration", duracion + " min");
+    this._setTextContent("client-name", cliente);
+    this._setTextContent("client-phone", telefono);
+
+    // Mostrar modal
+    modal.classList.add("active");
+    console.log("[UI] Modal activado");
+
+    // Iniciar countdown
+    this._startCountdown(onReject);
+  }
+
+  _setTextContent(elementId, text) {
+    const el = this.elements[elementId];
+    if (el) {
+      el.textContent = text;
+    } else {
+      console.warn(`[UI] Elemento '${elementId}' no encontrado`);
+    }
+  }
+
+  _startCountdown(onTimeout) {
+    this.currentCountdown = 15;
+    
+    const countdownText = this.elements["countdown-number"];
+    const circle = this.elements["countdown-circle"];
 
     if (countdownText) countdownText.textContent = this.currentCountdown;
+    if (circle) circle.style.strokeDashoffset = 0;
+
+    console.log("[UI] Iniciando countdown:", this.currentCountdown);
 
     this.countdownInterval = setInterval(() => {
       this.currentCountdown--;
+      console.log("[UI] Countdown:", this.currentCountdown);
 
-      if (countdownText) {
-        countdownText.textContent = this.currentCountdown;
-      }
-
+      if (countdownText) countdownText.textContent = this.currentCountdown;
+      
       if (circle) {
-        const offset = (this.currentCountdown / 15) * 283;
+        const offset = 283 - ((this.currentCountdown / 15) * 283);
         circle.style.strokeDashoffset = offset;
       }
 
       if (this.currentCountdown <= 0) {
+        console.log("[UI] Countdown finalizado");
         this._clearCountdown();
-        modal.classList.remove("active");
-
-        console.log("⏱️ Tiempo agotado");
-        onReject && onReject();
+        
+        const modal = this.elements["incoming-modal"];
+        if (modal) modal.classList.remove("active");
+        
+        if (onTimeout) onTimeout();
       }
     }, 1000);
   }
 
-  // limpiar contador
   _clearCountdown() {
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
+      console.log("[UI] Countdown limpiado");
     }
+  }
+
+  closeTripModal() {
+    this._clearCountdown();
+    const modal = this.elements["incoming-modal"];
+    if (modal) modal.classList.remove("active");
   }
 }
 
