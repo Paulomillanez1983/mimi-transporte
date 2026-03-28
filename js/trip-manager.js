@@ -228,6 +228,7 @@ async acceptTrip(tripId) {
     console.error('[TripManager] RPC accept error:', error);
     return { success: false, error: error.message };
   }
+console.log('[TripManager] RPC aceptar_oferta_viaje response:', data);
 
   if (!data?.ok) {
     return { success: false, error: data?.reason || 'No se pudo aceptar el viaje' };
