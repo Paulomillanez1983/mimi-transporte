@@ -214,14 +214,19 @@ async _acceptTrip(tripId) {
     const result = await tripManager.acceptTrip(tripId);
 
     if (!result.success) {
-      uiController.showToast(result.error || 'Error aceptando viaje', 'error');
+      uiController.showToast(
+        result.error === 'VIAJE_YA_TOMADO'
+          ? '❌ Otro chofer tomó el viaje'
+          : (result.error || 'Error aceptando viaje'),
+        'warning'
+      );
+
       uiController.hideIncomingModal();
       uiController.showWaitingState();
-      return;
+      return; // ✅ IMPORTANTE
     }
 
-    // ✅ FORZAR REFRESH DE ESTADO (no depender solo de realtime)
-    await tripManager._loadInitialState(tripManager.driverId);
+    await tripManager.refresh();
 
   } catch (err) {
     console.error('[DriverApp] Error aceptando viaje:', err);
