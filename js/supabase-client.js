@@ -1,7 +1,9 @@
 /**
  * MIMI Driver - Supabase Client (PRODUCTION FINAL)
- * Real-time subscriptions and database operations
+ * Compatible with RLS + auth.uid() (UUID)
  */
+
+import CONFIG from "./config.js";
 
 class SupabaseClient {
   constructor() {
@@ -12,15 +14,12 @@ class SupabaseClient {
     this.maxReconnectAttempts = 8;
     this.reconnectTimer = null;
 
-    // Cache UID in memory
     this.driverId = null;
     this.driverEmail = null;
 
-    // Prevent repeated profile creation spam
     this.profileEnsured = false;
     this.profileEnsuring = false;
 
-    // Auth listener ref
     this.authSubscription = null;
   }
 
@@ -28,7 +27,7 @@ class SupabaseClient {
   // INIT
   // =========================================================
 
-  async initialize() {
+  async init() {
     if (this.client) return true;
 
     console.log("[Supabase] Initializing...");
@@ -56,19 +55,6 @@ class SupabaseClient {
         }
       );
 
-      // Connection test (read-only)
-      const { error: testError } = await this.client
-        .from("choferes")
-        .select("id")
-        .limit(1);
-
-      if (testError) {
-        console.error("[Supabase] Connection test failed:", testError);
-        return false;
-      }
-
-      console.log("[Supabase] Connected");
-
       // Load session
       const { data: sessionData, error: sessionError } =
         await this.client.auth.getSession();
@@ -83,7 +69,7 @@ class SupabaseClient {
       console.log("[Supabase] Driver UID:", this.driverId);
       console.log("[Supabase] Driver Email:", this.driverEmail);
 
-      // Avoid multiple auth listeners
+      // Auth listener
       if (!this.authSubscription) {
         const { data: authListener } = this.client.auth.onAuthStateChange(
           async (event, session) => {
@@ -92,18 +78,15 @@ class SupabaseClient {
 
             console.log("[Supabase] Auth event:", event, "UID:", this.driverId);
 
-            // Reset ensure flags
             this.profileEnsured = false;
             this.profileEnsuring = false;
 
-            // Logout cleanup
             if (!this.driverId) {
               console.log("[Supabase] Logout detected, cleaning channels...");
               this.unsubscribeAll();
               return;
             }
 
-            // Ensure profile after login
             await this.ensureDriverProfile();
           }
         );
@@ -111,12 +94,13 @@ class SupabaseClient {
         this.authSubscription = authListener?.subscription || null;
       }
 
-      // Ensure profile if already logged
       if (this.driverId) {
         await this.ensureDriverProfile();
       }
 
+      console.log("[Supabase] Connected");
       this.reconnectAttempts = 0;
+
       return true;
     } catch (error) {
       console.error("[Supabase] Connection failed:", error);
@@ -141,16 +125,12 @@ class SupabaseClient {
   // AUTH
   // =========================================================
 
-  getDriverId() {
-    return this.driverId;
-  }
-
-  getDriverEmail() {
-    return this.driverEmail;
-  }
-
   isAuthenticated() {
     return !!this.driverId;
+  }
+
+  getCurrentDriverId() {
+    return this.driverId;
   }
 
   async getCurrentUser() {
@@ -168,7 +148,7 @@ class SupabaseClient {
 
   async ensureDriverProfile() {
     if (!this.client) return { ok: false, error: "No client" };
-    if (!this.driverId) return { ok: false, error: "No driverId" };
+    if (!this.driverId) return { ok: false, error: "No auth user id" };
 
     if (this.profileEnsured) return { ok: true, cached: true };
     if (this.profileEnsuring) return { ok: true, pending: true };
@@ -176,17 +156,18 @@ class SupabaseClient {
     this.profileEnsuring = true;
 
     try {
+      // RLS SAFE: always by user_id
       const { data: existing, error: selectError } = await this.client
         .from("choferes")
-        .select("id")
-        .eq("id", this.driverId)
+        .select("id, user_id")
+        .eq("user_id", this.driverId)
         .maybeSingle();
 
       if (selectError) {
         console.warn("[Supabase] ensureDriverProfile select error:", selectError);
       }
 
-      if (existing?.id) {
+      if (existing?.user_id) {
         console.log("[Supabase] Driver profile already exists");
         this.profileEnsured = true;
         this.profileEnsuring = false;
@@ -196,13 +177,13 @@ class SupabaseClient {
       const user = await this.getCurrentUser();
 
       const payload = {
-        id: this.driverId,
+        user_id: this.driverId,
         email: user?.email || this.driverEmail || null,
         nombre: user?.user_metadata?.full_name || user?.email || "Chofer",
         telefono: user?.user_metadata?.phone || null,
 
         online: false,
-        disponible: true,
+        disponible: false,
         bloqueado: false,
 
         last_seen_at: new Date().toISOString()
@@ -233,10 +214,10 @@ class SupabaseClient {
   // REALTIME SUBSCRIPTIONS
   // =========================================================
 
-  subscribeToOffers(driverId, callbacks) {
-    if (!this.client || !driverId) return null;
+  subscribeToOffers(callbacks) {
+    if (!this.client || !this.driverId) return null;
 
-    const channelName = `offers:${driverId}`;
+    const channelName = `offers:${this.driverId}`;
     this.unsubscribe(channelName);
 
     const channel = this.client
@@ -247,7 +228,7 @@ class SupabaseClient {
           event: "*",
           schema: "public",
           table: "viaje_ofertas",
-          filter: `chofer_id=eq.${driverId}`
+          filter: `chofer_user_id=eq.${this.driverId}`
         },
         (payload) => {
           try {
@@ -263,12 +244,12 @@ class SupabaseClient {
         if (status === "CHANNEL_ERROR") {
           console.error("[Realtime] CHANNEL_ERROR:", err);
           callbacks?.onError?.(err);
-          this._handleReconnect(driverId, callbacks);
+          this._handleReconnect(callbacks);
         }
 
         if (status === "TIMED_OUT") {
           console.warn("[Realtime] TIMED_OUT -> reconnect");
-          this._handleReconnect(driverId, callbacks);
+          this._handleReconnect(callbacks);
         }
       });
 
@@ -276,10 +257,10 @@ class SupabaseClient {
     return channel;
   }
 
-  subscribeToTrips(driverId, callbacks) {
-    if (!this.client || !driverId) return null;
+  subscribeToTrips(callbacks) {
+    if (!this.client || !this.driverId) return null;
 
-    const channelName = `trips:${driverId}`;
+    const channelName = `trips:${this.driverId}`;
     this.unsubscribe(channelName);
 
     const channel = this.client
@@ -290,7 +271,7 @@ class SupabaseClient {
           event: "*",
           schema: "public",
           table: "viajes",
-          filter: `chofer_id=eq.${driverId}`
+          filter: `chofer_user_id=eq.${this.driverId}`
         },
         (payload) => {
           try {
@@ -332,9 +313,10 @@ class SupabaseClient {
   // DATABASE OPERATIONS
   // =========================================================
 
-  async updateDriverLocation(driverId, position) {
+  async updateDriverLocation(position) {
     if (!this.client) return { error: "No client" };
-    if (!driverId || !position) return { error: "Missing params" };
+    if (!this.driverId) return { error: "No auth user id" };
+    if (!position) return { error: "Missing position" };
 
     const updatePayload = {
       lat: position.lat,
@@ -349,7 +331,7 @@ class SupabaseClient {
     const { error } = await this.client
       .from("choferes")
       .update(updatePayload)
-      .eq("id", driverId);
+      .eq("user_id", this.driverId);
 
     if (error) {
       console.warn("[Supabase] updateDriverLocation blocked:", error);
@@ -358,9 +340,9 @@ class SupabaseClient {
     return { error };
   }
 
-  async setDriverOnline(driverId, isOnline) {
+  async setDriverOnline(isOnline) {
     if (!this.client) return { error: "No client" };
-    if (!driverId) return { error: "Missing driverId" };
+    if (!this.driverId) return { error: "No auth user id" };
 
     const { error } = await this.client
       .from("choferes")
@@ -369,7 +351,7 @@ class SupabaseClient {
         disponible: isOnline,
         last_seen_at: new Date().toISOString()
       })
-      .eq("id", driverId);
+      .eq("user_id", this.driverId);
 
     if (error) {
       console.warn("[Supabase] setDriverOnline blocked:", error);
@@ -378,21 +360,16 @@ class SupabaseClient {
     return { error };
   }
 
-  /**
-   * IMPORTANTE:
-   * No confiar en joins "viajes:viaje_id (*)" porque puede venir null
-   * Por eso traemos SOLO los datos necesarios del viaje.
-   */
-  async getPendingOffers(driverId) {
+  async getPendingOffers() {
     if (!this.client) return { data: null, error: "No client" };
-    if (!driverId) return { data: null, error: "Missing driverId" };
+    if (!this.driverId) return { data: null, error: "No auth user id" };
 
     const { data, error } = await this.client
       .from("viaje_ofertas")
       .select(`
         id,
         viaje_id,
-        chofer_id,
+        chofer_user_id,
         estado,
         expires_at,
         created_at,
@@ -413,7 +390,7 @@ class SupabaseClient {
           created_at
         )
       `)
-      .eq("chofer_id", driverId)
+      .eq("chofer_user_id", this.driverId)
       .eq("estado", "PENDIENTE")
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false });
@@ -425,14 +402,14 @@ class SupabaseClient {
     return { data, error };
   }
 
-  async getActiveTrip(driverId) {
+  async getActiveTrip() {
     if (!this.client) return { data: null, error: "No client" };
-    if (!driverId) return { data: null, error: "Missing driverId" };
+    if (!this.driverId) return { data: null, error: "No auth user id" };
 
     const { data, error } = await this.client
       .from("viajes")
       .select("*")
-      .eq("chofer_id", driverId)
+      .eq("chofer_user_id", this.driverId)
       .in("estado", ["ACEPTADO", "EN_CURSO"])
       .order("updated_at", { ascending: false })
       .limit(1)
@@ -450,12 +427,13 @@ class SupabaseClient {
   // RPC CALLS
   // =========================================================
 
-  async acceptOffer(tripId, driverId) {
+  async acceptOffer(tripId) {
     if (!this.client) return { data: null, error: "No client" };
+    if (!this.driverId) return { data: null, error: "No auth user id" };
 
     const { data, error } = await this.client.rpc("aceptar_oferta_viaje", {
       p_viaje_id: tripId,
-      p_chofer_id: driverId
+      p_chofer_user_id: this.driverId
     });
 
     if (error) console.error("[Supabase] acceptOffer error:", error);
@@ -463,12 +441,13 @@ class SupabaseClient {
     return { data, error };
   }
 
-  async rejectOffer(tripId, driverId, reason = null) {
+  async rejectOffer(tripId, reason = null) {
     if (!this.client) return { data: null, error: "No client" };
+    if (!this.driverId) return { data: null, error: "No auth user id" };
 
     const { data, error } = await this.client.rpc("rechazar_oferta_viaje", {
       p_viaje_id: tripId,
-      p_chofer_id: driverId,
+      p_chofer_user_id: this.driverId,
       p_motivo: reason
     });
 
@@ -477,12 +456,13 @@ class SupabaseClient {
     return { data, error };
   }
 
-  async startTrip(tripId, driverId) {
+  async startTrip(tripId) {
     if (!this.client) return { data: null, error: "No client" };
+    if (!this.driverId) return { data: null, error: "No auth user id" };
 
     const { data, error } = await this.client.rpc("iniciar_viaje", {
       p_viaje_id: tripId,
-      p_chofer_id: driverId
+      p_chofer_user_id: this.driverId
     });
 
     if (error) console.error("[Supabase] startTrip error:", error);
@@ -490,12 +470,13 @@ class SupabaseClient {
     return { data, error };
   }
 
-  async completeTrip(tripId, driverId) {
+  async completeTrip(tripId) {
     if (!this.client) return { data: null, error: "No client" };
+    if (!this.driverId) return { data: null, error: "No auth user id" };
 
     const { data, error } = await this.client.rpc("completar_viaje", {
       p_viaje_id: tripId,
-      p_chofer_id: driverId
+      p_chofer_user_id: this.driverId
     });
 
     if (error) console.error("[Supabase] completeTrip error:", error);
@@ -507,7 +488,7 @@ class SupabaseClient {
   // PRIVATE: RECONNECTION LOGIC
   // =========================================================
 
-  _handleReconnect(driverId, callbacks) {
+  _handleReconnect(callbacks) {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       console.error("[Supabase] Max reconnection attempts reached");
       return;
@@ -522,7 +503,7 @@ class SupabaseClient {
       console.log(`[Supabase] Reconnecting attempt ${this.reconnectAttempts}...`);
 
       try {
-        this.subscribeToOffers(driverId, callbacks);
+        this.subscribeToOffers(callbacks);
       } catch (e) {
         console.error("[Supabase] reconnect failed:", e);
       }
@@ -530,5 +511,5 @@ class SupabaseClient {
   }
 }
 
-// Singleton
-const supabaseClient = new SupabaseClient();
+const supabaseService = new SupabaseClient();
+export default supabaseService;
