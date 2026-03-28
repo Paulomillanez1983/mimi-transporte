@@ -49,8 +49,10 @@ constructor() {
     // aseguramos perfil
     await supabaseService.ensureDriverProfile();
 
-    const driverId = supabaseService.getDriverId();
-    if (!driverId) throw new Error('No driverId available');
+const driverId = supabaseService.getDriverId();
+if (!driverId) throw new Error('No driverId available');
+
+this.driverId = driverId; // ✅ guardar
 
     console.log('[TripManager] Initializing for driver UUID:', driverId);
 
@@ -214,7 +216,7 @@ constructor() {
   // ACTIONS
   // =========================================================
 async acceptTrip(tripId) {
-  const driverId = supabaseService.getDriverId();
+  const driverId = this.driverId;
   if (!driverId) return { success: false, error: 'No driverId' };
 
   const { data, error } = await supabaseService.client.rpc('aceptar_oferta_viaje', {
@@ -258,7 +260,7 @@ async acceptTrip(tripId) {
   }
 
   async startTrip(tripId) {
-    const driverId = supabaseService.getDriverId();
+    const driverId = this.driverId;
     if (!driverId) return { success: false, error: 'No driverId' };
 
     const { error } = await supabaseService.client
@@ -279,7 +281,7 @@ async acceptTrip(tripId) {
   }
 
   async finishTrip(tripId) {
-    const driverId = supabaseService.getDriverId();
+    const driverId = this.driverId;
     if (!driverId) return { success: false, error: 'No driverId' };
 
     const { error } = await supabaseService.client
