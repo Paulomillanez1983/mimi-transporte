@@ -12,64 +12,41 @@
 
   <title>MIMI Driver</title>
 
-  <!-- SEO -->
   <meta name="description" content="Panel de conductor MIMI - Transporte seguro" />
 
-  <!-- OpenGraph -->
   <meta property="og:title" content="MIMI Driver" />
   <meta property="og:description" content="Panel de conductor MIMI" />
   <meta property="og:type" content="website" />
 
-  <!-- Favicon -->
   <link rel="icon" href="./favicon.ico" />
   <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png" />
-
-  <!-- Manifest (PWA) -->
   <link rel="manifest" href="./manifest.json" />
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- ======================================================
-       MAPLIBRE + SUPABASE
-       RECOMENDADO PRODUCCIÓN: LOCAL (sin tracking prevention)
-       ====================================================== -->
-
-  <!-- MapLibre LOCAL -->
   <link rel="stylesheet" href="./libs/maplibre-gl.css" />
 
-  <!-- Supabase LOCAL -->
   <script src="./libs/supabase-js.js" defer></script>
-
-  <!-- MapLibre LOCAL -->
   <script src="./libs/maplibre-gl.js" defer></script>
 
-  <!-- ======================================================
-       STYLES
-       ====================================================== -->
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/panel.css" />
 
-  <!-- Prevent iOS text auto zoom -->
   <style>
-    html {
-      -webkit-text-size-adjust: 100%;
-    }
+    html { -webkit-text-size-adjust: 100%; }
   </style>
 </head>
 
 <body>
-  <!-- MAP BASE -->
+
   <div id="map-container"></div>
 
-  <!-- UI LAYER -->
   <div id="ui-layer">
 
-    <!-- HEADER -->
     <header class="header" id="header">
       <div class="header-content">
         <div class="driver-profile">
@@ -91,7 +68,6 @@
       </div>
     </header>
 
-    <!-- STATS FLOATING -->
     <div class="stats-floating" id="stats-panel">
       <div class="stat-card">
         <span class="stat-value" id="stat-earnings">$0</span>
@@ -107,7 +83,6 @@
       </div>
     </div>
 
-    <!-- NAV BAR -->
     <div class="nav-bar" id="nav-bar">
       <div class="nav-content">
         <div class="nav-maneuver">
@@ -130,7 +105,6 @@
       </div>
     </div>
 
-    <!-- FAB ONLINE/OFFLINE -->
     <button class="fab-online" id="fab-online">
       <div class="fab-content">
         <span class="fab-icon">🔴</span>
@@ -139,7 +113,6 @@
       <div class="fab-pulse"></div>
     </button>
 
-    <!-- BOTTOM SHEET -->
     <div class="bottom-sheet" id="bottom-sheet">
       <div class="sheet-handle">
         <div class="handle-bar"></div>
@@ -154,7 +127,6 @@
       </div>
     </div>
 
-    <!-- INCOMING MODAL -->
     <div class="incoming-modal" id="incoming-modal">
       <div class="modal-backdrop"></div>
 
@@ -216,18 +188,8 @@
           </div>
 
           <div class="client-actions">
-            <button class="action-btn call" id="btn-call" aria-label="Llamar">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
-                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-
-            <button class="action-btn whatsapp" id="btn-whatsapp" aria-label="WhatsApp">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-            </button>
+            <button class="action-btn call" id="btn-call" aria-label="Llamar"></button>
+            <button class="action-btn whatsapp" id="btn-whatsapp" aria-label="WhatsApp"></button>
           </div>
         </div>
 
@@ -245,7 +207,6 @@
       </div>
     </div>
 
-    <!-- ARRIVAL PANEL -->
     <div class="arrival-panel" id="arrival-panel">
       <div class="arrival-content">
         <div class="arrival-icon">🏁</div>
@@ -259,34 +220,21 @@
       </div>
     </div>
 
-    <!-- TOAST -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- GLOBAL LOADING -->
     <div class="global-loading" id="global-loading">
       <div class="spinner"></div>
       <span class="loading-text">Cargando...</span>
     </div>
 
-    <!-- OFFLINE BANNER -->
     <div class="offline-banner" id="offline-banner">
       <span>⚠ Sin conexión</span>
     </div>
 
   </div>
 
-  <!-- ======================================================
-       SCRIPTS APP (ORDEN CORRECTO + DEFER)
-       ====================================================== -->
-  <script src="js/config.js" defer></script>
-  <script src="js/state-manager.js" defer></script>
-  <script src="js/supabase-client.js" defer></script>
-  <script src="js/sound-service.js" defer></script>
-  <script src="js/location-service.js" defer></script>
-  <script src="js/map-service.js" defer></script>
-  <script src="js/trip-manager.js" defer></script>
-  <script src="js/ui-controller.js" defer></script>
-  <script src="js/app.js" defer></script>
+  <!-- JS Modules -->
+  <script type="module" src="js/app.js"></script>
 
 </body>
 </html>
