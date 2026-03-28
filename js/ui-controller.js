@@ -457,19 +457,38 @@ async _handleAccept(e) {
     try {
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      const res = await callback(); // ✅ esperar callback SI O SI
+      const res = await callback();
 
       if (res && res.success === false) {
         this.showToast(res.error || 'No se pudo aceptar el viaje', 'warning');
 
-        // 🔥 volver botón normal y NO cerrar modal
+        // 🔥 limpiar countdown viejo
+        if (this.state.countdown) {
+          clearInterval(this.state.countdown);
+          this.state.countdown = null;
+        }
+        if (this.state.countdownTimeout) {
+          clearTimeout(this.state.countdownTimeout);
+          this.state.countdownTimeout = null;
+        }
+
+        // reset UI y reiniciar countdown
         this._resetCountdownUI();
+        this.state.currentCount = 15;
         this._startCountdown();
+
+        // volver a programar auto-reject
+        this.state.countdownTimeout = setTimeout(() => {
+          if (this.state.isModalOpen) {
+            this._handleReject();
+          }
+        }, 15000);
+
         this.state.isProcessing = false;
         return;
       }
 
-      // ✅ solo cerrar modal si aceptó bien
+      // ✅ aceptar OK
       this._closeIncomingModal();
 
     } catch (err) {
