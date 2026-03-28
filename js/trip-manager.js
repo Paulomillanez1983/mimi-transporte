@@ -74,29 +74,30 @@ class TripManager {
         .limit(1)
         .maybeSingle();
 
-      if (tripError) {
-        console.error('[TripManager] Error loading active trip:', tripError);
-      }
+if (activeTrip) {
+  console.log('[TripManager] Active trip found:', activeTrip.id);
 
-      if (activeTrip) {
-        console.log('[TripManager] Active trip found:', activeTrip.id);
+  this.currentTrip = activeTrip;
+  this.pendingOffer = null;
 
-        this.currentTrip = activeTrip;
-        this.pendingOffer = null;
+  if (activeTrip.estado === 'ASIGNADO') {
+    this.emit('newPendingTrip', activeTrip);
+  } else {
+    this.emit('tripAccepted', activeTrip);
+  }
 
-        this.emit('tripAccepted', activeTrip);
-        this.isLoadingInitial = false;
-        return;
-      }
-
+  this.isLoadingInitial = false;
+  return;
+}
       // 2) PENDING OFFERS
       const { data: offers, error: offerError } = await supabaseService.client
         .from('viaje_ofertas')
         .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
         .eq('chofer_id_uuid', driverId)
-        .eq('estado', 'PENDIENTE')
-        .order('offered_at', { ascending: false })
-        .limit(1);
+.eq('estado', 'PENDIENTE')
+.gte('expires_at', new Date().toISOString())
+.order('offered_at', { ascending: false })
+.limit(1);
 
       if (offerError) {
         console.error('[TripManager] Error loading offers:', offerError);
