@@ -329,7 +329,23 @@ _populateTripData(trip) {
     'dropoff-address': trip.destino_direccion || trip.destino || ''
   };
 
-  ...
+  Object.entries(data).forEach(([key, value]) => {
+    const el = this.elements[key];
+    if (el) {
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.textContent = value;
+        el.style.opacity = '1';
+      }, 150);
+    }
+  });
+
+  // Avatar
+  const avatarEl = this.elements['client-avatar'];
+  if (avatarEl && data['client-name']) {
+    const initial = data['client-name'].charAt(0).toUpperCase();
+    avatarEl.textContent = initial;
+  }
 }
 
     Object.entries(data).forEach(([key, value]) => {
