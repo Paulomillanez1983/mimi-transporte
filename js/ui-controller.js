@@ -348,25 +348,6 @@ _populateTripData(trip) {
   }
 }
 
-    Object.entries(data).forEach(([key, value]) => {
-      const el = this.elements[key];
-      if (el) {
-        // Animate text change
-        el.style.opacity = '0';
-        setTimeout(() => {
-          el.textContent = value;
-          el.style.opacity = '1';
-        }, 150);
-      }
-    });
-
-    // Set client avatar initial
-    const avatarEl = this.elements['client-avatar'];
-    if (avatarEl && data['client-name']) {
-      const initial = data['client-name'].charAt(0).toUpperCase();
-      avatarEl.textContent = initial;
-    }
-  }
 
   _startCountdown() {
     const circle = this.elements['countdown-circle'];
