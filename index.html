@@ -2529,9 +2529,6 @@ async function enviarViaje() {
       }
     }
 
-    // =========================
-    // PAYLOAD
-    // =========================
 const payload = {
   cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
   telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
@@ -2544,19 +2541,21 @@ const payload = {
   destino_lat: Number(lugarDestino?.lat) || null,
   destino_lng: Number(lugarDestino?.lng) || null,
 
-  precio: precio,
+  precio: Number(precio) || 0,
 
   servicio: servicioSeleccionado || 'IDA_ESCOLAR',
 
-  fecha_hora: fechaHoraIda,
+  fecha_hora: new Date(fechaHoraIda).toISOString(),
 
   fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
-    ? fechaHoraVuelta
+    ? new Date(fechaHoraVuelta).toISOString()
     : null,
 
   tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
-    ? tiempoEspera
+    ? Number(tiempoEspera) || 0
     : null,
+
+  estado: "DISPONIBLE",
 
   notas: null
 };
