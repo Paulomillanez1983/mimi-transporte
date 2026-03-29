@@ -354,7 +354,20 @@ class MapService {
     this.addPickupMarker(from.lng, from.lat);
     this.addDropoffMarker(to.lng, to.lat);
 
-    const routeData = this._getStraightLineRoute(from, to);
+let routeData = null;
+
+try {
+  routeData = await this._getOSRMRoute(from, to);
+
+  if (!routeData?.geometry || routeData.geometry.length < 2) {
+    throw new Error("Ruta inválida o vacía");
+  }
+
+  console.log("[Map] Ruta OSRM cargada (calles reales)");
+} catch (err) {
+  console.warn("[Map] OSRM falló, usando línea recta:", err);
+  routeData = this._getStraightLineRoute(from, to);
+}
 
     try {
       const source = this.map.getSource('route');
@@ -453,6 +466,25 @@ class MapService {
       console.error('[Map] Error clearing route:', e);
     }
   }
+async _getOSRMRoute(from, to) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!data.routes || !data.routes[0]) {
+    throw new Error("OSRM no devolvió rutas");
+  }
+
+  const route = data.routes[0];
+
+  return {
+    geometry: route.geometry.coordinates,
+    distance: route.distance,
+    duration: route.duration,
+    isFallback: false
+  };
+}
 
   destroy() {
     try {
