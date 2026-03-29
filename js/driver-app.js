@@ -187,24 +187,40 @@ window.addEventListener('touchstart', () => {
       unsubNoPending
     );
   }
-  async _showRouteOnMap(trip) {
-    console.log('[DriverApp] Mostrando ruta en mapa...');
+async _showRouteOnMap(trip) {
+  console.log('[DriverApp] Mostrando ruta en mapa...');
 
-    try {
-      if (!trip.origen_lat || !trip.origen_lng || !trip.destino_lat || !trip.destino_lng) {
-        console.warn('[DriverApp] Viaje sin coordenadas, no se puede trazar ruta');
-        return;
-      }
-
-      const origin = { lat: trip.origen_lat, lng: trip.origen_lng };
-      const destination = { lat: trip.destino_lat, lng: trip.destino_lng };
-
-      await mapService.showRealRoute(origin, destination);
-
-    } catch (error) {
-      console.error('[DriverApp] Error mostrando ruta:', error);
+  try {
+    if (!trip.origen_lat || !trip.origen_lng || !trip.destino_lat || !trip.destino_lng) {
+      console.warn('[DriverApp] Viaje sin coordenadas, no se puede trazar ruta');
+      return;
     }
+
+    const origin = { lat: trip.origen_lat, lng: trip.origen_lng };
+    const destination = { lat: trip.destino_lat, lng: trip.destino_lng };
+
+    // ✅ FIX: usar la función real que sí existe
+    if (typeof mapService.showRoute === "function") {
+      await mapService.showRoute(origin, destination);
+      return;
+    }
+
+    if (typeof mapService.drawRoute === "function") {
+      await mapService.drawRoute(origin, destination);
+      return;
+    }
+
+    if (typeof mapService.showTripRoute === "function") {
+      await mapService.showTripRoute(origin, destination);
+      return;
+    }
+
+    console.warn('[DriverApp] No existe método para mostrar ruta en mapService');
+
+  } catch (error) {
+    console.error('[DriverApp] Error mostrando ruta:', error);
   }
+}
 
 async _acceptTrip(tripId) {
   console.log('[DriverApp] Aceptando viaje:', tripId);
