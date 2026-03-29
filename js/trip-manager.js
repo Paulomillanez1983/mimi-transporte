@@ -66,7 +66,7 @@ this.driverId = driverId; // ✅ guardar
   }
 
 // =========================================================
-// LOAD INITIAL STATE
+// LOAD INITIAL STATE - CORREGIDO
 // =========================================================
 async _loadInitialState(driverId) {
   if (this.isLoadingInitial) return;
@@ -125,13 +125,29 @@ async _loadInitialState(driverId) {
     }
 
     if (offers && offers.length > 0) {
-      const now = Date.now();
+      // ✅ CORREGIDO: Usar UTC para comparación de timestamps
+      const nowUtc = new Date().toISOString();
+      const nowTimestamp = new Date(nowUtc).getTime();
 
       // 🔥 filtramos manualmente las que todavía no vencieron
       const validOffer = offers.find(o => {
         if (!o.expires_at) return false;
-        const exp = new Date(o.expires_at).getTime();
-        return exp > now;
+        
+        // expires_at viene en UTC desde PostgreSQL
+        const expTimestamp = new Date(o.expires_at).getTime();
+        
+        // Debug: mostrar comparación
+        console.log('[TripManager] Offer check:', {
+          id: o.id,
+          expires_at: o.expires_at,
+          expTimestamp: expTimestamp,
+          nowUtc: nowUtc,
+          nowTimestamp: nowTimestamp,
+          diffSeconds: Math.round((expTimestamp - nowTimestamp) / 1000),
+          isValid: expTimestamp > nowTimestamp
+        });
+        
+        return expTimestamp > nowTimestamp;
       });
 
       if (!validOffer) {
@@ -171,7 +187,6 @@ async _loadInitialState(driverId) {
 
   this.isLoadingInitial = false;
 }
-
   // =========================================================
   // REALTIME
   // =========================================================
