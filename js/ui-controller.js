@@ -869,19 +869,13 @@ ${(() => {
     detail: { action: 'start', tripId: '${trip.id}' },
     bubbles: true
   }));
-  
-          <span>✓</span>
-          <span>He llegado · Iniciar viaje</span>
-        </button>
+">
+  <span>✓</span>
+  <span>He llegado · Iniciar viaje</span>
+</button>
       </div>
     `;
   }
-  <button class="btn-arrived" id="btn-arrived" onclick="
-  this.dispatchEvent(new CustomEvent('driverAction', {
-    detail: { action: 'start', tripId: '${trip.id}' },
-    bubbles: true
-  }));
-">
 
 
   updateTripStep(step) {
