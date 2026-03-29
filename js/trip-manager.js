@@ -295,7 +295,6 @@ class TripManager {
         console.log('[TripManager] Trip channel status:', status);
       });
   }
-
   // =========================================================
   // REFRESH
   // =========================================================
@@ -456,7 +455,9 @@ async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
     .update({
       estado: 'CANCELADO',
       cancelado_at: new Date().toISOString(),
-      cancelado_motivo: motivo
+      cancelado_por: 'CHOFER',
+      cancel_reason: motivo,
+      updated_at: new Date().toISOString()
     })
     .eq('id', tripId)
     .eq('chofer_id_uuid', driverId);
@@ -466,12 +467,10 @@ async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
     return { success: false, error: error.message };
   }
 
-  // limpiar estado local
   this.currentTrip = null;
   this.pendingOffer = null;
   this.lastOfferIdShown = null;
 
-  // emitir evento manual por si realtime tarda
   this.emit('tripCancelled', { id: tripId });
 
   return { success: true };
