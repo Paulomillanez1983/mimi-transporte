@@ -1,11 +1,6 @@
 const icono = `
-  <span style="
-    width:22px;
-    height:22px;
-    display:inline-block;
-    background-image:url('https://www.gstatic.com/images/branding/product/1x/maps_96in128dp.png');
-    background-size:contain;
-    background-repeat:no-repeat;
-    background-position:center;
-  "></span>
+  <img 
+    src="./assets/icons/google-maps.svg"
+    style="width:22px;height:22px;"
+  />
 `;
