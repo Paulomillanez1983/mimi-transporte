@@ -506,5 +506,7 @@ class MapService {
       console.warn('[Map] destroy error:', error);
     }
   }
+} // ✅ ESTA LLAVE FALTABA (CIERRA LA CLASE)
+
 const mapService = new MapService();
 export default mapService;
