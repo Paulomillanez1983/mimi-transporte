@@ -27,10 +27,11 @@ class SupabaseClient {
     // choferes.id_uuid
     this.driverId = null;
 
-    this.profileEnsured = false;
-    this.profileEnsuring = false;
-
-    this.authSubscription = null;
+if (event === 'SIGNED_OUT') {
+  this.profileEnsured = false;
+  this.profileEnsuring = false;
+  this.driverId = null;
+}
   }
 
 // =========================================================
@@ -166,80 +167,81 @@ async init() {
   // =========================================================
   // DRIVER PROFILE (SAFE ENSURE)
   // =========================================================
-  async ensureDriverProfile() {
-    if (!this.client) return { ok: false, error: 'No client' };
-    if (!this.userId) return { ok: false, error: 'No auth user id' };
+async ensureDriverProfile() {
+  if (!this.client) return { ok: false, error: 'No client' };
+  if (!this.userId) return { ok: false, error: 'No auth user id' };
 
-    if (this.profileEnsured && this.driverId) {
-      return { ok: true, cached: true, driverId: this.driverId };
+  if (this.profileEnsured && this.driverId) {
+    return { ok: true, cached: true, driverId: this.driverId };
+  }
+
+  if (this.profileEnsuring) {
+    return { ok: true, pending: true };
+  }
+
+  this.profileEnsuring = true;
+
+  try {
+    const { data: existing, error: selectError } = await this.client
+      .from('choferes')
+      .select('id_uuid, user_id, email, nombre, telefono, online, disponible, bloqueado')
+      .eq('user_id', this.userId)
+      .maybeSingle();
+
+    if (selectError) {
+      console.warn('[Supabase] ensureDriverProfile select error:', selectError);
     }
 
-    if (this.profileEnsuring) return { ok: true, pending: true };
+    if (existing?.id_uuid) {
+      console.log('[Supabase] Driver profile already exists:', existing.id_uuid);
 
-    this.profileEnsuring = true;
-
-    try {
-      // Buscar chofer por user_id
-      const { data: existing, error: selectError } = await this.client
-        .from('choferes')
-        .select('id_uuid, user_id, email, nombre, telefono, online, disponible, bloqueado')
-        .eq('user_id', this.userId)
-        .maybeSingle();
-
-      if (selectError) {
-        console.warn('[Supabase] ensureDriverProfile select error:', selectError);
-      }
-
-      if (existing?.id_uuid) {
-        console.log('[Supabase] Driver profile already exists:', existing.id_uuid);
-
-        this.driverId = existing.id_uuid;
-        this.profileEnsured = true;
-        this.profileEnsuring = false;
-
-        return { ok: true, existed: true, driverId: this.driverId };
-      }
-
-      const user = await this.getCurrentUser();
-
-      // Crear chofer
-      const payload = {
-        user_id: this.userId,
-        email: user?.email || this.userEmail || null,
-        nombre: user?.user_metadata?.full_name || user?.email || 'Chofer',
-        telefono: user?.user_metadata?.phone || null,
-        online: false,
-        disponible: true,
-        bloqueado: false,
-        last_seen_at: new Date().toISOString()
-      };
-
-      const { data: created, error: insertError } = await this.client
-        .from('choferes')
-        .insert(payload)
-        .select('id_uuid, user_id')
-        .single();
-
-      if (insertError) {
-        console.error('[Supabase] ensureDriverProfile INSERT blocked:', insertError);
-        this.profileEnsuring = false;
-        return { ok: false, error: insertError };
-      }
-
-      console.log('[Supabase] Driver profile created:', created.id_uuid);
-
-      this.driverId = created.id_uuid;
+      this.driverId = existing.id_uuid;
       this.profileEnsured = true;
       this.profileEnsuring = false;
 
-      return { ok: true, created: true, driverId: this.driverId };
-
-    } catch (err) {
-      console.error('[Supabase] ensureDriverProfile fatal error:', err);
-      this.profileEnsuring = false;
-      return { ok: false, error: err.message };
+      return { ok: true, existed: true, driverId: this.driverId };
     }
+
+    const user = await this.getCurrentUser();
+
+    const payload = {
+      user_id: this.userId,
+      email: user?.email || this.userEmail || null,
+      nombre: user?.user_metadata?.full_name || user?.email || 'Chofer',
+      telefono: user?.user_metadata?.phone || null,
+      online: false,
+      disponible: true,
+      bloqueado: false,
+      last_seen_at: new Date().toISOString()
+    };
+
+    // 🔥 SOLUCIÓN DEFINITIVA: UPSERT
+    const { data: created, error: upsertError } = await this.client
+      .from('choferes')
+      .upsert(payload, { onConflict: 'user_id' })
+      .select('id_uuid, user_id')
+      .single();
+
+    if (upsertError) {
+      console.error('[Supabase] ensureDriverProfile UPSERT failed:', upsertError);
+      this.profileEnsuring = false;
+      return { ok: false, error: upsertError };
+    }
+
+    console.log('[Supabase] Driver profile ensured:', created.id_uuid);
+
+    this.driverId = created.id_uuid;
+    this.profileEnsured = true;
+    this.profileEnsuring = false;
+
+    return { ok: true, ensured: true, driverId: this.driverId };
+
+  } catch (err) {
+    console.error('[Supabase] ensureDriverProfile fatal error:', err);
+    this.profileEnsuring = false;
+    return { ok: false, error: err.message };
   }
+}
 
   // =========================================================
   // REALTIME SUBSCRIPTIONS
