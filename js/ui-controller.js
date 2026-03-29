@@ -735,6 +735,18 @@ this.lastTripModalId = null; // ✅ reset
     this._collapseBottomSheet();
     this._updateBottomSheetState(this.state.isOnline);
   }
+setTimeout(() => {
+  const btnCancel = document.getElementById("btn-cancel");
+  if (!btnCancel) return;
+
+  btnCancel.onclick = () => {
+    if (confirm("¿Seguro que querés cancelar este viaje?")) {
+      window.dispatchEvent(new CustomEvent("driverAction", {
+        detail: { action: "cancel", tripId: trip.id }
+      }));
+    }
+  };
+}, 50);
 
   // =========================
   // NAVIGATION STATE (Trip Active)
@@ -796,63 +808,100 @@ _updateNavigationInfo(trip) {
   }
 }
 
-  _showTripActions(trip) {
-    const sheetContent = this.elements['sheet-content'];
-    if (!sheetContent) return;
+_showTripActions(trip) {
+  const sheetContent = this.elements['sheet-content'];
+  if (!sheetContent) return;
 
-    sheetContent.innerHTML = `
-      <div class="trip-active-panel">
-        <div class="trip-header">
-          <div class="client-info-large">
-            <div class="client-avatar-large">${(trip.pasajero_nombre || trip.cliente || 'C').charAt(0)}</div>
-            <div class="client-details">
-              <h4>${trip.pasajero_nombre || trip.cliente || 'Cliente'}</h4>
-              <span class="trip-destination">${trip.destino_direccion || trip.destino || 'Destino'}</span>
-            </div>
-            <div class="trip-price-large">$${Math.round(trip.precio || 0).toLocaleString('es-AR')}</div>
+  sheetContent.innerHTML = `
+    <div class="trip-active-panel">
+      <div class="trip-header">
+        <div class="client-info-large">
+          <div class="client-avatar-large">${(trip.pasajero_nombre || trip.cliente || 'C').charAt(0)}</div>
+          <div class="client-details">
+            <h4>${trip.pasajero_nombre || trip.cliente || 'Cliente'}</h4>
+            <span class="trip-destination">${trip.destino_direccion || trip.destino || 'Destino'}</span>
           </div>
+          <div class="trip-price-large">$${Math.round(trip.precio || 0).toLocaleString('es-AR')}</div>
         </div>
-        
-<div class="action-buttons-grid">
+      </div>
+      
+      <div class="action-buttons-grid">
 
-${(() => {
-  const estado = (trip.estado || '').toLowerCase();
-  const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
+        ${(() => {
+          const estado = (trip.estado || '').toLowerCase();
+          const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
 
-  const lat = irADestino ? trip.destino_lat : trip.origen_lat;
-  const lng = irADestino ? trip.destino_lng : trip.origen_lng;
+          const lat = irADestino ? trip.destino_lat : trip.origen_lat;
+          const lng = irADestino ? trip.destino_lng : trip.origen_lng;
 
-  const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
-  const icono = `🏁`;
+          const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
+          const icono = `🏁`;
 
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+          const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
 
-  return `
-    <button class="action-btn-large navigate" id="btn-navigate"
-      onclick="window.open('${url}', '_blank')">
-      <span class="icon">${icono}</span>
-      <span>${texto}</span>
-    </button>
+          return `
+            <button class="action-btn-large navigate" id="btn-navigate">
+              <span class="icon">${icono}</span>
+              <span>${texto}</span>
+            </button>
+          `;
+        })()}
+
+        <button class="action-btn-large call" id="btn-call">
+          <span class="icon">📞</span>
+          <span>Llamar</span>
+        </button>
+
+        <button class="action-btn-large cancel" id="btn-cancel">
+          <span class="icon">❌</span>
+          <span>Cancelar</span>
+        </button>
+
+      </div>
+    </div>
   `;
-})()}
 
-<button class="action-btn-large call" id="btn-call"
-  onclick="window.location.href='tel:${trip.pasajero_telefono || trip.telefono}'">
-  <span class="icon">📞</span>
-  <span>Llamar</span>
-</button>
+  // ✅ ACTIVAR BOTONES (después de renderizar el HTML)
+  setTimeout(() => {
+    const btnNavigate = document.getElementById("btn-navigate");
+    const btnCall = document.getElementById("btn-call");
+    const btnCancel = document.getElementById("btn-cancel");
 
-<button class="action-btn-large cancel" id="btn-cancel" onclick="
-  if(confirm('¿Seguro que querés cancelar este viaje?')) {
-    window.dispatchEvent(new CustomEvent('driverAction', {
-      detail: { action: 'cancel', tripId: '${trip.id}' }
-    }));
-  }
-">
-  <span class="icon">❌</span>
-  <span>Cancelar</span>
-</button>
+    // --- Navegar ---
+    if (btnNavigate) {
+      const estado = (trip.estado || '').toLowerCase();
+      const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
 
+      const lat = irADestino ? trip.destino_lat : trip.origen_lat;
+      const lng = irADestino ? trip.destino_lng : trip.origen_lng;
+
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+
+      btnNavigate.onclick = () => window.open(url, "_blank");
+    }
+
+    // --- Llamar ---
+    if (btnCall) {
+      const phone = trip.pasajero_telefono || trip.telefono;
+      btnCall.onclick = () => {
+        if (phone) window.location.href = `tel:${phone}`;
+        else alert("Teléfono no disponible");
+      };
+    }
+
+    // --- Cancelar ---
+    if (btnCancel) {
+      btnCancel.onclick = () => {
+        if (confirm("¿Seguro que querés cancelar este viaje?")) {
+          window.dispatchEvent(new CustomEvent("driverAction", {
+            detail: { action: "cancel", tripId: trip.id }
+          }));
+        }
+      };
+    }
+
+  }, 50);
+}
 </div>
         
         <div class="trip-progress-steps">
