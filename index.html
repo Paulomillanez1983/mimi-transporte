@@ -296,7 +296,12 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
 
     clearTimeout(timeout);
 
-    const result = await response.json();
+let result = null;
+try {
+  result = await response.json();
+} catch(e) {
+  result = null;
+}
 
     if (!response.ok) {
       return { data: null, error: result };
@@ -332,7 +337,12 @@ const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
 
 clearTimeout(timeout);
 
-    const result = await response.json();
+let result = null;
+try {
+  result = await response.json();
+} catch(e) {
+  result = null;
+}
 
     if (!response.ok) {
       console.error("❌ RESPUESTA RAW:", result);
