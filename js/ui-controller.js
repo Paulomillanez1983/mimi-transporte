@@ -134,13 +134,7 @@ _updateNavigateButton(trip) {
   const lng = irADestino ? trip.destino_lng : trip.origen_lng;
 
   const texto = irADestino ? "Ir a destino" : "Ir a recogida";
-
-  const icono = `
-    <img 
-      src="./assets/icons/google-maps.svg"
-      style="width:22px;height:22px;"
-    />
-  `;
+  const icono = "🏁";
 
   const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
 
