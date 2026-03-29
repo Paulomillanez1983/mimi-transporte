@@ -6,7 +6,11 @@
 <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">
 <title>MIMI Transporte Escolar</title>
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/854/854878.png">
-  
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
 <meta property="og:title" content="MIMI Transporte Escolar">
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
@@ -29,10 +33,6 @@
     window._originalSessionStorage = window.sessionStorage;
     
 })();
-</script>
-<!-- GOOGLE MAPS API -->
-<script async defer
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap&region=AR&language=es">
 </script>
 
 <!-- SUPABASE REST CLIENT -->
@@ -1887,6 +1887,32 @@ body {
 .servicio-card.urgente.activo small {
   color: #ff9800 !important;
 }
+  .sugerencias {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  margin-top: 6px;
+  overflow: hidden;
+  display: none;
+  position: relative;
+  z-index: 99999;
+}
+
+.sugerencia-item {
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #eee;
+}
+
+.sugerencia-item:hover {
+  background: #f5f7fa;
+}
+
+.sugerencia-item:last-child {
+  border-bottom: none;
+}
+
 </style>
 </head>
 <body>
@@ -1928,6 +1954,8 @@ body {
     <div class="location-arrow">›</div>
   </div>
 </div>
+    <div id="sugerenciasOrigen" class="sugerencias"></div>
+
 
 <!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO - CENTRADO -->
 <div style="display: flex; justify-content: center; margin: -20px 0; position: relative; z-index: 10;">
@@ -1938,6 +1966,8 @@ body {
     <span>⇅</span>
   </button>
 </div>
+    <div id="sugerenciasDestino" class="sugerencias"></div>
+
     
 <div class="location-input-group">
   <div class="location-card">
@@ -2091,7 +2121,7 @@ body {
   <span id="btnWhatsappReservaText">Reservar por WhatsApp</span>
 </button>
     
-<div id="mapaRuta" style="margin-top:25px; display:none;"></div>
+<div id="mapaRuta" style="margin-top:25px; display:none; height:280px; border-radius:16px; overflow:hidden;"></div>
   </div>
 </div>
 
@@ -3066,7 +3096,70 @@ function mostrarResultado(res) {
 
   const origenTexto = document.getElementById('origen').value;
   const destinoTexto = document.getElementById('destino').value;
-  const mapsUrl = res.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origenTexto)}&destination=${encodeURIComponent(destinoTexto)}`;
+const mapaDiv = document.getElementById("mapaRuta");
+mapaDiv.style.display = "block";
+mapaDiv.innerHTML = ""; // limpiar
+
+const map = new maplibregl.Map({
+  container: "mapaRuta",
+  style: "https://demotiles.maplibre.org/style.json",
+  center: [lugarOrigen.lng, lugarOrigen.lat],
+  zoom: 13
+});
+
+map.on("load", async () => {
+  // markers
+  new maplibregl.Marker({ color: "green" })
+    .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
+    .addTo(map);
+
+  new maplibregl.Marker({ color: "red" })
+    .setLngLat([lugarDestino.lng, lugarDestino.lat])
+    .addTo(map);
+
+  // pedir ruta OSRM
+  const url = `https://router.project-osrm.org/route/v1/driving/` +
+    `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
+    `?overview=full&geometries=geojson`;
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (!data.routes || !data.routes.length) return;
+
+  const route = data.routes[0].geometry;
+
+  map.addSource("route", {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      geometry: route
+    }
+  });
+
+  map.addLayer({
+    id: "route-line",
+    type: "line",
+    source: "route",
+    layout: {
+      "line-join": "round",
+      "line-cap": "round"
+    },
+    paint: {
+      "line-color": "#1565c0",
+      "line-width": 6
+    }
+  });
+
+  // ajustar vista
+  const coords = route.coordinates;
+  const bounds = coords.reduce(
+    (b, c) => b.extend(c),
+    new maplibregl.LngLatBounds(coords[0], coords[0])
+  );
+
+  map.fitBounds(bounds, { padding: 40 });
+});
   const mapaDiv = document.getElementById('mapaRuta');
   mapaDiv.style.display = 'block';
   mapaDiv.innerHTML = `
