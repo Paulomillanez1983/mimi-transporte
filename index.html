@@ -314,12 +314,13 @@ window.supabaseInsert = async function(table, data) {
         'Accept': 'application/json',
         'Prefer': 'return=representation'
       },
-      body: JSON.stringify([data]) // 👈 IMPORTANTE: ARRAY
+      body: JSON.stringify([data])  // 👈 ARRAY
     });
 
     const result = await response.json();
 
     if (!response.ok) {
+      console.error("❌ RESPUESTA RAW:", result);
       return { data: null, error: result };
     }
 
