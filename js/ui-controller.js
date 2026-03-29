@@ -914,37 +914,6 @@ _showTripActions(trip) {
 
   }, 50);
 }
-</div>
-        
-        <div class="trip-progress-steps">
-          <div class="step active" data-step="pickup">
-            <div class="step-dot"></div>
-            <span>Recoger</span>
-          </div>
-          <div class="step-line"></div>
-          <div class="step" data-step="trip">
-            <div class="step-dot"></div>
-            <span>En viaje</span>
-          </div>
-          <div class="step-line"></div>
-          <div class="step" data-step="finish">
-            <div class="step-dot"></div>
-            <span>Finalizar</span>
-          </div>
-        </div>
-        
-<button class="btn-arrived" id="btn-arrived" onclick="
-  this.dispatchEvent(new CustomEvent('driverAction', {
-    detail: { action: 'start', tripId: '${trip.id}' },
-    bubbles: true
-  }));
-">
-  <span>✓</span>
-  <span>He llegado · Iniciar viaje</span>
-</button>
-      </div>
-    `;
-  }
 
 
   updateTripStep(step) {
