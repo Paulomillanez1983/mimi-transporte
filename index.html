@@ -40,9 +40,9 @@
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
-// ================================
-// Query Builder tipo supabase-js
-// ================================
+// =========================================================
+// Query Builder tipo supabase-js (REST API directa)
+// =========================================================
 function createQueryBuilder(table) {
   let state = {
     table,
@@ -55,154 +55,170 @@ function createQueryBuilder(table) {
   };
 
   const builder = {
-    select: function(columns = '*') {
+    select(columns = '*') {
       state.columns = columns;
       return this;
     },
 
-    eq: function(column, value) {
+    eq(column, value) {
       state.filters.push({ type: 'eq', column, value });
       return this;
     },
 
-    neq: function(column, value) {
+    neq(column, value) {
       state.filters.push({ type: 'neq', column, value });
       return this;
     },
 
-    gt: function(column, value) {
+    gt(column, value) {
       state.filters.push({ type: 'gt', column, value });
       return this;
     },
 
-    lt: function(column, value) {
+    lt(column, value) {
       state.filters.push({ type: 'lt', column, value });
       return this;
     },
 
-    gte: function(column, value) {
+    gte(column, value) {
       state.filters.push({ type: 'gte', column, value });
       return this;
     },
 
-    lte: function(column, value) {
+    lte(column, value) {
       state.filters.push({ type: 'lte', column, value });
       return this;
     },
 
-    like: function(column, pattern) {
+    like(column, pattern) {
       state.filters.push({ type: 'like', column, value: pattern });
       return this;
     },
 
-    ilike: function(column, pattern) {
+    ilike(column, pattern) {
       state.filters.push({ type: 'ilike', column, value: pattern });
       return this;
     },
 
-    in: function(column, values) {
+    in(column, values) {
+      if (!Array.isArray(values)) values = [values];
       state.filters.push({ type: 'in', column, value: values });
       return this;
     },
 
-    is: function(column, value) {
+    is(column, value) {
       state.filters.push({ type: 'is', column, value });
       return this;
     },
 
-    or: function(conditions) {
+    or(conditions) {
       state.filters.push({ type: 'or', value: conditions });
       return this;
     },
 
-    order: function(column, { ascending = true } = {}) {
+    order(column, { ascending = true } = {}) {
       state.orderBy = column;
       state.orderAscending = ascending;
       return this;
     },
 
-    limit: function(n) {
+    limit(n) {
       state.limit = n;
       return this;
     },
 
-    single: function() {
+    single() {
       state.single = true;
       return this;
     },
 
-    then: function(onResolve, onReject) {
+    then(onResolve, onReject) {
       return this.execute().then(onResolve, onReject);
     },
 
-    execute: async function() {
+    async execute() {
       try {
         let url = `${SUPABASE_URL}/rest/v1/${state.table}?select=${encodeURIComponent(state.columns)}`;
 
+        // filtros
         state.filters.forEach(filter => {
-          switch(filter.type) {
+          switch (filter.type) {
             case 'eq':
               url += `&${encodeURIComponent(filter.column)}=eq.${encodeURIComponent(filter.value)}`;
               break;
+
             case 'neq':
               url += `&${encodeURIComponent(filter.column)}=neq.${encodeURIComponent(filter.value)}`;
               break;
+
             case 'gt':
               url += `&${encodeURIComponent(filter.column)}=gt.${encodeURIComponent(filter.value)}`;
               break;
+
             case 'lt':
               url += `&${encodeURIComponent(filter.column)}=lt.${encodeURIComponent(filter.value)}`;
               break;
+
             case 'gte':
               url += `&${encodeURIComponent(filter.column)}=gte.${encodeURIComponent(filter.value)}`;
               break;
+
             case 'lte':
               url += `&${encodeURIComponent(filter.column)}=lte.${encodeURIComponent(filter.value)}`;
               break;
+
             case 'like':
               url += `&${encodeURIComponent(filter.column)}=like.${encodeURIComponent(filter.value)}`;
               break;
+
             case 'ilike':
               url += `&${encodeURIComponent(filter.column)}=ilike.${encodeURIComponent(filter.value)}`;
               break;
-            case 'in':
-              const vals = Array.isArray(filter.value) ? filter.value.join(',') : filter.value;
+
+            case 'in': {
+              const vals = filter.value.map(v => `"${String(v).replace(/"/g, '\\"')}"`).join(",");
               url += `&${encodeURIComponent(filter.column)}=in.(${encodeURIComponent(vals)})`;
               break;
+            }
+
             case 'is':
               url += `&${encodeURIComponent(filter.column)}=is.${encodeURIComponent(filter.value)}`;
               break;
+
             case 'or':
-              url += `&or=(${encodeURIComponent(filter.value)})`;
+              url += `&or=(${filter.value})`;
               break;
           }
         });
 
+        // orden
         if (state.orderBy) {
           const direction = state.orderAscending ? 'asc' : 'desc';
           url += `&order=${encodeURIComponent(state.orderBy)}.${direction}`;
         }
 
+        // límite
         if (state.limit) {
           url += `&limit=${state.limit}`;
         }
 
         const response = await fetch(url, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'apikey': SUPABASE_KEY,
-            'Authorization': `Bearer ${SUPABASE_KEY}`
+            "apikey": SUPABASE_KEY,
+            "Authorization": `Bearer ${SUPABASE_KEY}`,
+            "Accept": "application/json"
           }
         });
 
-        let data = await response.json();
+        const data = await response.json();
 
         if (!response.ok) {
           return { data: null, error: data };
         }
 
         if (state.single && Array.isArray(data)) {
-          data = data[0] || null;
+          return { data: data[0] || null, error: null };
         }
 
         return { data, error: null };
@@ -216,22 +232,23 @@ function createQueryBuilder(table) {
   return builder;
 }
 
-// ================================
-// Cliente global tipo supabase
-// ================================
+// =========================================================
+// Cliente global tipo Supabase
+// =========================================================
 window.supabase = {
-  from: function(table) {
+  from(table) {
     return createQueryBuilder(table);
   },
 
-  rpc: async function(functionName, params = {}) {
+  async rpc(functionName, params = {}) {
     try {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json'
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
         },
         body: JSON.stringify(params)
       });
@@ -250,20 +267,21 @@ window.supabase = {
   }
 };
 
-// ================================
+// =========================================================
 // Helper UPDATE
-// ================================
+// =========================================================
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/${table}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`,
       {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Prefer": "return=representation"
         },
         body: JSON.stringify(data)
       }
@@ -282,18 +300,19 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   }
 };
 
-// ================================
+// =========================================================
 // Helper INSERT
-// ================================
+// =========================================================
 window.supabaseInsert = async function(table, data) {
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
+        "apikey": SUPABASE_KEY,
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Prefer": "return=representation"
       },
       body: JSON.stringify(data)
     });
