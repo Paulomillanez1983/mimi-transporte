@@ -35,11 +35,14 @@
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc&libraries=places&callback=initMap&region=AR&language=es">
 </script>
 
-  // Supabase REST API directa (sin SDK, sin warnings)
+<!-- SUPABASE REST CLIENT -->
+<script>
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
-// Cliente Supabase con sintaxis tipo SDK oficial
+// ================================
+// Query Builder tipo supabase-js
+// ================================
 function createQueryBuilder(table) {
   let state = {
     table,
@@ -52,13 +55,11 @@ function createQueryBuilder(table) {
   };
 
   const builder = {
-    // Selección de columnas
     select: function(columns = '*') {
       state.columns = columns;
       return this;
     },
 
-    // Filtros
     eq: function(column, value) {
       state.filters.push({ type: 'eq', column, value });
       return this;
@@ -114,14 +115,12 @@ function createQueryBuilder(table) {
       return this;
     },
 
-    // Ordenamiento
     order: function(column, { ascending = true } = {}) {
       state.orderBy = column;
       state.orderAscending = ascending;
       return this;
     },
 
-    // Límites
     limit: function(n) {
       state.limit = n;
       return this;
@@ -132,7 +131,6 @@ function createQueryBuilder(table) {
       return this;
     },
 
-    // Ejecución - retorna Promise
     then: function(onResolve, onReject) {
       return this.execute().then(onResolve, onReject);
     },
@@ -141,7 +139,6 @@ function createQueryBuilder(table) {
       try {
         let url = `${SUPABASE_URL}/rest/v1/${state.table}?select=${encodeURIComponent(state.columns)}`;
 
-        // Aplicar filtros
         state.filters.forEach(filter => {
           switch(filter.type) {
             case 'eq':
@@ -181,13 +178,11 @@ function createQueryBuilder(table) {
           }
         });
 
-        // Ordenamiento
         if (state.orderBy) {
           const direction = state.orderAscending ? 'asc' : 'desc';
           url += `&order=${encodeURIComponent(state.orderBy)}.${direction}`;
         }
 
-        // Límite
         if (state.limit) {
           url += `&limit=${state.limit}`;
         }
@@ -203,10 +198,9 @@ function createQueryBuilder(table) {
         let data = await response.json();
 
         if (!response.ok) {
-          return { data: null, error: { message: data?.message || 'Error en la consulta', details: data } };
+          return { data: null, error: data };
         }
 
-        // Si pidió single, retornar solo el primero o null
         if (state.single && Array.isArray(data)) {
           data = data[0] || null;
         }
@@ -222,13 +216,14 @@ function createQueryBuilder(table) {
   return builder;
 }
 
-// Cliente global
+// ================================
+// Cliente global tipo supabase
+// ================================
 window.supabase = {
   from: function(table) {
     return createQueryBuilder(table);
   },
 
-  // RPC para llamadas a funciones
   rpc: async function(functionName, params = {}) {
     try {
       const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
@@ -244,7 +239,7 @@ window.supabase = {
       const data = await response.json();
 
       if (!response.ok) {
-        return { data: null, error: { message: data?.message || 'Error en RPC' } };
+        return { data: null, error: data };
       }
 
       return { data, error: null };
@@ -255,7 +250,9 @@ window.supabase = {
   }
 };
 
-// Helper para updates (no es encadenable, es directo)
+// ================================
+// Helper UPDATE
+// ================================
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
     const response = await fetch(
@@ -275,7 +272,7 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
     const result = await response.json();
 
     if (!response.ok) {
-      return { data: null, error: { message: result?.message || 'Error actualizando' } };
+      return { data: null, error: result };
     }
 
     return { data: result, error: null };
@@ -285,32 +282,26 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   }
 };
 
-// Helper para insert
+// ================================
+// Helper INSERT
+// ================================
 window.supabaseInsert = async function(table, data) {
   try {
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/${table}`,
-      {
-        method: 'POST',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify(data)
-      }
-    );
-  </script>
-
-  </script>
-
-
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(data)
+    });
 
     const result = await response.json();
 
     if (!response.ok) {
-      return { data: null, error: { message: result?.message || 'Error insertando' } };
+      return { data: null, error: result };
     }
 
     return { data: result, error: null };
@@ -319,7 +310,6 @@ window.supabaseInsert = async function(table, data) {
     return { data: null, error: { message: err.message } };
   }
 };
-
 </script>
 <style>
 :root {
