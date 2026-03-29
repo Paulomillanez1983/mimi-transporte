@@ -841,10 +841,17 @@ ${(() => {
             <span>Llamar</span>
           </button>
           
-          <button class="action-btn-large whatsapp" id="btn-whatsapp" onclick="window.open('https://wa.me/${(trip.pasajero_telefono || trip.telefono || '').replace(/\D/g, '')}?text=Hola, soy tu conductor de MIMI 🚐', '_blank')">
-            <span class="icon">💬</span>
-            <span>WhatsApp</span>
-          </button>
+<button class="action-btn-large cancel" id="btn-cancel" onclick="
+  if(confirm('¿Seguro que querés cancelar este viaje?')) {
+    this.dispatchEvent(new CustomEvent('driverAction', {
+      detail: { action: 'cancel', tripId: '${trip.id}' },
+      bubbles: true
+    }));
+  }
+">
+  <span class="icon">❌</span>
+  <span>Cancelar</span>
+</button>
         </div>
         
         <div class="trip-progress-steps">
