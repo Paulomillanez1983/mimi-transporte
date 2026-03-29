@@ -1,6 +1,6 @@
 /**
  * MIMI Driver - Map Service (PRODUCTION FINAL)
- * MapLibre GL stable + safe coords + OSRM routing + navigation follow
+ * MapLibre GL stable + safe coords + OSRM routing + navigation follow + remaining route (Uber style)
  */
 
 import CONFIG from './config.js';
@@ -16,6 +16,15 @@ class MapService {
     // Seguimiento tipo Uber
     this.followDriver = true;
     this.navigationMode = false;
+
+    // Routing + reroute
+    this.currentDestination = null;
+    this.lastRouteUpdate = 0;
+    this.routeUpdateCooldown = 15000; // 15s
+    this.rerouteDistanceThreshold = 60; // metros
+
+    // Ruta completa guardada (OSRM)
+    this.routeGeometry = [];
   }
 
   // =========================================================
@@ -56,8 +65,8 @@ class MapService {
       this.map = new window.maplibregl.Map({
         container: containerId,
         style: CONFIG.MAP_STYLE,
-        center: center,
-        zoom: zoom,
+        center,
+        zoom,
         pitch: 0,
         bearing: 0,
         attributionControl: false,
@@ -94,9 +103,9 @@ class MapService {
       this._addCustomLayers();
 
       // Si el usuario mueve el mapa, se desactiva el follow
-      this.map.on("dragstart", () => {
+      this.map.on('dragstart', () => {
         this.followDriver = false;
-        console.log("[Map] Follow disabled (user dragged map)");
+        console.log('[Map] Follow disabled (user dragged map)');
       });
 
       // Botón 🎯
@@ -158,6 +167,22 @@ class MapService {
     if (ln < -180 || ln > 180) return false;
 
     return true;
+  }
+
+  _haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a =
+      Math.sin(Δφ / 2) ** 2 +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   // =========================================================
@@ -227,12 +252,12 @@ class MapService {
     const container = document.getElementById(this.containerId);
     if (!container) return;
 
-    if (document.getElementById("btn-recenter")) return;
+    if (document.getElementById('btn-recenter')) return;
 
-    const btn = document.createElement("button");
-    btn.id = "btn-recenter";
-    btn.innerHTML = "🎯";
-    btn.title = "Centrar";
+    const btn = document.createElement('button');
+    btn.id = 'btn-recenter';
+    btn.innerHTML = '🎯';
+    btn.title = 'Centrar';
 
     btn.style.cssText = `
       position: absolute;
@@ -253,14 +278,14 @@ class MapService {
       justify-content: center;
     `;
 
-    btn.addEventListener("click", () => {
+    btn.addEventListener('click', () => {
       this.recenterOnDriver();
     });
 
-    container.style.position = "relative";
+    container.style.position = 'relative';
     container.appendChild(btn);
 
-    console.log("[Map] Recenter button created");
+    console.log('[Map] Recenter button created');
   }
 
   // =========================================================
@@ -268,11 +293,7 @@ class MapService {
   // =========================================================
   setCenter(lng, lat, zoom = null) {
     if (!this.map || !this.isLoaded) return;
-
-    if (!this._isValidLatLng(lat, lng)) {
-      console.warn('[Map] Invalid coordinates:', lat, lng);
-      return;
-    }
+    if (!this._isValidLatLng(lat, lng)) return;
 
     const safeZoom = zoom !== null
       ? this._sanitizeNumber(zoom, this.map.getZoom())
@@ -305,7 +326,7 @@ class MapService {
       });
     }
 
-    console.log("[Map] Navigation mode:", enabled);
+    console.log('[Map] Navigation mode:', enabled);
   }
 
   recenterOnDriver() {
@@ -324,7 +345,51 @@ class MapService {
       duration: 700
     });
 
-    console.log("[Map] Recentered on driver");
+    console.log('[Map] Recentered on driver');
+  }
+
+  // =========================================================
+  // ROUTE TRIM (UBER STYLE)
+  // =========================================================
+  _getClosestRouteIndex(lat, lng) {
+    if (!this.routeGeometry || this.routeGeometry.length < 2) return 0;
+
+    let minDist = Infinity;
+    let bestIndex = 0;
+
+    for (let i = 0; i < this.routeGeometry.length; i++) {
+      const coord = this.routeGeometry[i];
+      const d = this._haversine(lat, lng, coord[1], coord[0]);
+
+      if (d < minDist) {
+        minDist = d;
+        bestIndex = i;
+      }
+    }
+
+    return bestIndex;
+  }
+
+  _updateRemainingRoute(lat, lng) {
+    if (!this.map || !this.isLoaded) return;
+    if (!this.routeGeometry || this.routeGeometry.length < 2) return;
+
+    const idx = this._getClosestRouteIndex(lat, lng);
+    const remaining = this.routeGeometry.slice(idx);
+
+    if (remaining.length < 2) return;
+
+    const source = this.map.getSource('route');
+    if (source) {
+      source.setData({
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'LineString',
+          coordinates: remaining
+        }
+      });
+    }
   }
 
   // =========================================================
@@ -369,24 +434,31 @@ class MapService {
     this.updateDriverMarker(lng, lat, heading);
 
     if (!this.map || !this.isLoaded) return;
-    if (!this.followDriver) return;
 
     const safeHeading = this._sanitizeNumber(heading, 0);
 
-    if (this.navigationMode) {
-      this.map.easeTo({
-        center: [lng, lat],
-        bearing: safeHeading,
-        pitch: 45,
-        zoom: 16.5,
-        duration: 700
-      });
-    } else {
-      this.map.easeTo({
-        center: [lng, lat],
-        duration: 800
-      });
+    if (this.followDriver) {
+      if (this.navigationMode) {
+        this.map.easeTo({
+          center: [lng, lat],
+          bearing: safeHeading,
+          pitch: 45,
+          zoom: 16.5,
+          duration: 700
+        });
+      } else {
+        this.map.easeTo({
+          center: [lng, lat],
+          duration: 800
+        });
+      }
     }
+
+    // actualizar ruta tipo Uber (solo lo que falta)
+    this._updateRemainingRoute(lat, lng);
+
+    // reroute automático
+    this._checkReroute(lat, lng);
   }
 
   addPickupMarker(lng, lat) {
@@ -434,25 +506,10 @@ class MapService {
   // ROUTING
   // =========================================================
   async showRoute(from, to) {
-    if (!this.map || !this.isLoaded) {
-      console.warn('[Map] Not ready for route');
-      return null;
-    }
-
-    if (!from || !to) {
-      console.warn('[Map] Missing from/to for route');
-      return null;
-    }
-
-    if (!this._isValidLatLng(from.lat, from.lng)) {
-      console.warn('[Map] Invalid from coordinates', from);
-      return null;
-    }
-
-    if (!this._isValidLatLng(to.lat, to.lng)) {
-      console.warn('[Map] Invalid to coordinates', to);
-      return null;
-    }
+    if (!this.map || !this.isLoaded) return null;
+    if (!from || !to) return null;
+    if (!this._isValidLatLng(from.lat, from.lng)) return null;
+    if (!this._isValidLatLng(to.lat, to.lng)) return null;
 
     this.setNavigationMode(true);
     this.clearRoute();
@@ -466,15 +523,19 @@ class MapService {
       routeData = await this._getOSRMRoute(from, to);
 
       if (!routeData?.geometry || routeData.geometry.length < 2) {
-        throw new Error("Ruta inválida o vacía");
+        throw new Error('Ruta inválida o vacía');
       }
 
-      console.log("[Map] Ruta OSRM cargada (calles reales)");
+      console.log('[Map] Ruta OSRM cargada (calles reales)');
 
     } catch (err) {
-      console.warn("[Map] OSRM falló, usando línea recta:", err);
+      console.warn('[Map] OSRM falló, usando línea recta:', err);
       routeData = this._getStraightLineRoute(from, to);
     }
+
+    // guardar destino y ruta completa
+    this.currentDestination = to;
+    this.routeGeometry = routeData.geometry || [];
 
     try {
       const source = this.map.getSource('route');
@@ -490,6 +551,7 @@ class MapService {
         });
       }
 
+      // mostrar ruta completa inicialmente y luego se va recortando
       if (routeData.geometry.length >= 2) {
         const bounds = routeData.geometry.reduce(
           (b, coord) => b.extend(coord),
@@ -516,6 +578,63 @@ class MapService {
     }
   }
 
+  _distanceToRoute(lat, lng) {
+    if (!this.routeGeometry || this.routeGeometry.length < 2) return 0;
+
+    let minDist = Infinity;
+
+    for (const coord of this.routeGeometry) {
+      const d = this._haversine(lat, lng, coord[1], coord[0]);
+      if (d < minDist) minDist = d;
+    }
+
+    return minDist;
+  }
+
+  async _checkReroute(lat, lng) {
+    if (!this.navigationMode) return;
+    if (!this.currentDestination) return;
+
+    const now = Date.now();
+    if (now - this.lastRouteUpdate < this.routeUpdateCooldown) return;
+
+    const distToRoute = this._distanceToRoute(lat, lng);
+
+    if (distToRoute > this.rerouteDistanceThreshold) {
+      console.log('[Map] 🚨 Driver desviándose, recalculando ruta...', distToRoute);
+
+      this.lastRouteUpdate = now;
+
+      const from = { lat, lng };
+      const to = this.currentDestination;
+
+      try {
+        const routeData = await this._getOSRMRoute(from, to);
+
+        if (routeData?.geometry?.length > 2) {
+          this.routeGeometry = routeData.geometry;
+
+          const source = this.map.getSource('route');
+          if (source) {
+            source.setData({
+              type: 'Feature',
+              properties: {},
+              geometry: {
+                type: 'LineString',
+                coordinates: routeData.geometry
+              }
+            });
+          }
+
+          console.log('[Map] ✅ Ruta actualizada en vivo');
+        }
+
+      } catch (err) {
+        console.warn('[Map] ❌ Falló reroute OSRM:', err);
+      }
+    }
+  }
+
   async _getOSRMRoute(from, to) {
     const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
 
@@ -523,7 +642,7 @@ class MapService {
     const data = await res.json();
 
     if (!data.routes || !data.routes[0]) {
-      throw new Error("OSRM no devolvió rutas");
+      throw new Error('OSRM no devolvió rutas');
     }
 
     const route = data.routes[0];
@@ -542,19 +661,7 @@ class MapService {
       [to.lng, to.lat]
     ];
 
-    const R = 6371e3;
-    const φ1 = from.lat * Math.PI / 180;
-    const φ2 = to.lat * Math.PI / 180;
-    const Δφ = (to.lat - from.lat) * Math.PI / 180;
-    const Δλ = (to.lng - from.lng) * Math.PI / 180;
-
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) *
-      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
+    const distance = this._haversine(from.lat, from.lng, to.lat, to.lng);
 
     return {
       geometry: coordinates,
@@ -587,6 +694,9 @@ class MapService {
           delete this.markers[key];
         }
       });
+
+      this.currentDestination = null;
+      this.routeGeometry = [];
 
       console.log('[Map] Route cleared');
 
