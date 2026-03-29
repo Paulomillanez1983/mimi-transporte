@@ -831,8 +831,10 @@ ${(() => {
   const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
 const icono = `
   <img 
-    src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Google_Maps_icon_%282020%29.svg"
-    style="width:22px;height:22px;"
+const icono = `
+  <img 
+    src="/mimi-transporte/assets/icons/google-maps.png"
+    style="width:22px;height:22px;display:block;"
   />
 `;
 
