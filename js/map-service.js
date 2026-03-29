@@ -245,54 +245,56 @@ class MapService {
     }
   }
 
-  // =========================================================
-  // UI BUTTON
-  // =========================================================
-  _createRecenterButton() {
-    const container = document.getElementById(this.containerId);
-    if (!container) return;
+// =========================================================
+// UI BUTTON
+// =========================================================
+_createRecenterButton() {
+  const container = document.getElementById(this.containerId);
+  if (!container) return;
 
-    if (document.getElementById('btn-recenter')) return;
+  // si ya existe, lo borramos para recrearlo actualizado
+  const old = document.getElementById("btn-recenter");
+  if (old) old.remove();
 
-    const btn = document.createElement('button');
-    btn.id = 'btn-recenter';
-    btn.innerHTML = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="white">
-    <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3a8.99 8.99 0 0 0-7.94-7.94V2h-2v1.06A8.99 8.99 0 0 0 3.06 11H2v2h1.06a8.99 8.99 0 0 0 7.94 7.94V22h2v-1.06a8.99 8.99 0 0 0 7.94-7.94H22v-2h-1.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/>
-  </svg>
-`;
+  const btn = document.createElement("button");
+  btn.id = "btn-recenter";
+  btn.title = "Centrar";
 
-    btn.title = 'Centrar';
+  btn.innerHTML = `
+    <img 
+      src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Google_Maps_icon_%282020%29.svg"
+      style="width:26px;height:26px;"
+    />
+  `;
 
-    btn.style.cssText = `
-      position: absolute;
-      bottom: 180px;
-      right: 14px;
-      width: 52px;
-      height: 52px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(28,28,30,0.95);
-      color: white;
-      font-size: 22px;
-      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
-      z-index: 9999;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
+  btn.style.cssText = `
+    position: absolute;
+    bottom: 180px;
+    right: 14px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(28,28,30,0.95);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    z-index: 9999;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `;
 
-    btn.addEventListener('click', () => {
-      this.recenterOnDriver();
-    });
+  btn.addEventListener("click", () => {
+    this.recenterOnDriver();
+  });
 
-    container.style.position = 'relative';
-    container.appendChild(btn);
+  container.style.position = "relative";
+  container.appendChild(btn);
 
-    console.log('[Map] Recenter button created');
-  }
+  console.log("[Map] Recenter button created/updated");
+}
 
+  
   // =========================================================
   // CAMERA
   // =========================================================
