@@ -1961,6 +1961,21 @@ body {
 .maplibregl-ctrl-bottom-left {
   z-index: 10 !important;
 }
+  /* ==========================================
+   FIX DEFINITIVO AUTOCOMPLETE EN SMARTPHONE
+========================================== */
+.pac-container {
+  z-index: 999999999 !important;
+  position: fixed !important;
+  top: auto !important;
+  left: auto !important;
+}
+
+.pac-item {
+  font-size: 16px !important; /* importante para que no haga zoom iPhone */
+  padding: 14px 14px !important;
+}
+
 
 
 </style>
