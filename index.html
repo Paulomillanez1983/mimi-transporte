@@ -1975,6 +1975,19 @@ body {
   font-size: 16px !important; /* importante para que no haga zoom iPhone */
   padding: 14px 14px !important;
 }
+.location-text {
+  position: relative;
+}
+
+.sugerencias {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 999999;
+}
 
 
 
@@ -2011,18 +2024,21 @@ body {
 <div class="main-card">
 
   <!-- ORIGEN -->
-  <div class="location-input-group">
-    <div class="location-card">
-      <div class="location-icon origin">📍</div>
-      <div class="location-text">
-        <div class="location-label">Origen</div>
-        <input type="text" id="origen" class="location-input" placeholder="Origen" autocomplete="off">
-      </div>
-      <div class="location-arrow">›</div>
+<div class="location-input-group">
+  <div class="location-card">
+    <div class="location-icon origin">📍</div>
+
+    <div class="location-text">
+      <div class="location-label">Origen</div>
+      <input type="text" id="origen" class="location-input" placeholder="Origen" autocomplete="off">
+
+      <!-- ✅ SUGERENCIAS DENTRO -->
+      <div id="sugerenciasOrigen" class="sugerencias"></div>
     </div>
 
-    <div id="sugerenciasOrigen" class="sugerencias"></div>
+    <div class="location-arrow">›</div>
   </div>
+</div>
 
   <!-- BOTÓN SWAP -->
   <div style="display: flex; justify-content: center; margin: -20px 0; position: relative; z-index: 10;">
@@ -2035,17 +2051,21 @@ body {
   </div>
 
   <!-- DESTINO -->
-  <div class="location-input-group">
-    <div class="location-card">
-      <div class="location-icon destiny">📍</div>
-      <div class="location-text">
-        <div class="location-label">Destino</div>
-        <input type="text" id="destino" class="location-input" placeholder="Destino" autocomplete="off">
-      </div>
-      <div class="location-arrow">›</div>
+<div class="location-input-group">
+  <div class="location-card">
+    <div class="location-icon destiny">📍</div>
+
+    <div class="location-text">
+      <div class="location-label">Destino</div>
+      <input type="text" id="destino" class="location-input" placeholder="Destino" autocomplete="off">
+
+      <!-- ✅ SUGERENCIAS DENTRO -->
+      <div id="sugerenciasDestino" class="sugerencias"></div>
     </div>
 
-    <div id="sugerenciasDestino" class="sugerencias"></div>
+    <div class="location-arrow">›</div>
+  </div>
+</div>
   </div>
     
     <div class="error-message" id="errorMsg">
@@ -2848,19 +2868,6 @@ function setDestino(displayName, lat, lng) {
 // ==========================
 // AUTOCOMPLETE INPUTS
 // ==========================
-window.addEventListener("load", () => {
-  const inputOrigen = document.getElementById("origen");
-  const inputDestino = document.getElementById("destino");
-
-  if (!inputOrigen || !inputDestino) return;
-
-  inputOrigen.addEventListener("input", async () => {
-    const resultados = await buscarDireccion(inputOrigen.value);
-    mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
-      inputOrigen.value = r.display_name;
-      setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-    });
-  });
 
   inputDestino.addEventListener("input", async () => {
     const resultados = await buscarDireccion(inputDestino.value);
