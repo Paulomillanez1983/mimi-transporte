@@ -3,7 +3,7 @@ const icono = `
     width:22px;
     height:22px;
     display:inline-block;
-    background-image:url('./assets/icons/google-maps.png');
+    background-image:url('https://www.gstatic.com/images/branding/product/1x/maps_96in128dp.png');
     background-size:contain;
     background-repeat:no-repeat;
     background-position:center;
