@@ -829,23 +829,17 @@ ${(() => {
 
   const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
 
-  const icono = `
-    <img 
-      src="/mimi-transporte/assets/icons/google-maps.png"
-      style="width:22px;height:22px;display:block;"
-    />
-  `;
+const icono = `🏁`;
 
   const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
 
-  return `
-    <button class="action-btn-large navigate" id="btn-navigate"
-      onclick="window.open('${url}', '_blank')">
-      <span class="icon">${icono}</span>
-      <span>${texto}</span>
-    </button>
-  `;
-})()}
+return `
+  <button class="action-btn-large navigate" id="btn-navigate"
+    onclick="window.open('${url}', '_blank')">
+    <span class="icon">${icono}</span>
+    <span>${texto}</span>
+  </button>
+`;
           
           <button class="action-btn-large call" id="btn-call" onclick="window.location.href='tel:${trip.pasajero_telefono || trip.telefono}'">
             <span class="icon">📞</span>
