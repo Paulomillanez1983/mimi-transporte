@@ -10,6 +10,9 @@ class TripManager {
 constructor() {
   this.currentTrip = null;
   this.pendingOffer = null;
+  this.offerChannel = null;
+ this.tripChannel = null;
+
 
   this.refreshInterval = null;
   this.isLoadingInitial = false;
@@ -152,54 +155,70 @@ this.driverId = driverId; // ✅ guardar
   // =========================================================
   // REALTIME
   // =========================================================
-  _subscribeToRealtime(driverId) {
-    console.log('[TripManager] Subscribing to realtime channels...');
+_subscribeToRealtime(driverId) {
+  console.log('[TripManager] Subscribing to realtime channels...', driverId);
 
-    // OFERTAS
-    supabaseService.client
-      .channel(`offers-${driverId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'viaje_ofertas',
-          filter: `chofer_id_uuid=eq.${driverId}`
-        },
-        async (payload) => {
-          console.log('[TripManager] Offer realtime event:', payload.eventType);
-          await this._loadInitialState(driverId);
-        }
-      )
-      .subscribe();
-
-    // VIAJES
-    supabaseService.client
-      .channel(`trips-${driverId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'viajes',
-          filter: `chofer_id_uuid=eq.${driverId}`
-        },
-        (payload) => {
-          const trip = payload.new;
-          if (!trip) return;
-
-          console.log('[TripManager] Trip update:', trip.id, trip.estado);
-
-          if (trip.estado === 'ACEPTADO') this.emit('tripAccepted', trip);
-          if (trip.estado === 'EN_CURSO') this.emit('tripStarted', trip);
-          if (trip.estado === 'COMPLETADO') this.emit('tripCompleted', trip);
-          if (trip.estado === 'CANCELADO') this.emit('tripCancelled', trip);
-
-          this.currentTrip = trip;
-        }
-      )
-      .subscribe();
+  // 🔥 limpiar canales anteriores
+  if (this.offerChannel) {
+    supabaseService.client.removeChannel(this.offerChannel);
+    this.offerChannel = null;
   }
+  if (this.tripChannel) {
+    supabaseService.client.removeChannel(this.tripChannel);
+    this.tripChannel = null;
+  }
+
+  // OFERTAS
+  this.offerChannel = supabaseService.client
+    .channel(`offers-${driverId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'viaje_ofertas',
+        filter: `chofer_id_uuid=eq.${driverId}`
+      },
+      async (payload) => {
+        console.log('[TripManager] Offer realtime payload:', payload);
+        await this._loadInitialState(driverId);
+      }
+    )
+    .subscribe((status) => {
+      console.log('[TripManager] Offer channel status:', status);
+    });
+
+  // VIAJES
+  this.tripChannel = supabaseService.client
+    .channel(`trips-${driverId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'viajes',
+        filter: `chofer_id_uuid=eq.${driverId}`
+      },
+      (payload) => {
+        console.log('[TripManager] Trip realtime payload:', payload);
+
+        const trip = payload.new;
+        if (!trip) return;
+
+        console.log('[TripManager] Trip update:', trip.id, trip.estado);
+
+        if (trip.estado === 'ACEPTADO') this.emit('tripAccepted', trip);
+        if (trip.estado === 'EN_CURSO') this.emit('tripStarted', trip);
+        if (trip.estado === 'COMPLETADO') this.emit('tripCompleted', trip);
+        if (trip.estado === 'CANCELADO') this.emit('tripCancelled', trip);
+
+        this.currentTrip = trip;
+      }
+    )
+    .subscribe((status) => {
+      console.log('[TripManager] Trip channel status:', status);
+    });
+}
 
   // =========================================================
   // REFRESH
@@ -263,7 +282,7 @@ async acceptTrip(tripId) {
       // 🔥 si ya no está disponible, refrescamos ofertas automáticamente
       if (result.reason === 'OFERTA_NO_DISPONIBLE') {
         console.log('[TripManager] Refreshing offers (offer not available)...');
-        await this.loadPendingOffer();
+        await this._loadInitialState(driverId);
       }
 
       return { success: false, error: result.reason || 'No se pudo aceptar el viaje' };
