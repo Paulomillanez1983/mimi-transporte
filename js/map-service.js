@@ -1,6 +1,6 @@
 /**
  * MIMI Driver - Map Service (PRODUCTION FINAL)
- * MapLibre GL stable + safe coords
+ * MapLibre GL stable + safe coords + OSRM routing + navigation follow
  */
 
 import CONFIG from './config.js';
@@ -12,6 +12,10 @@ class MapService {
     this.isInitialized = false;
     this.isLoaded = false;
     this.containerId = null;
+
+    // Seguimiento tipo Uber
+    this.followDriver = true;
+    this.navigationMode = false;
   }
 
   // =========================================================
@@ -88,8 +92,17 @@ class MapService {
       );
 
       this._addCustomLayers();
-      this.isInitialized = true;
 
+      // Si el usuario mueve el mapa, se desactiva el follow
+      this.map.on("dragstart", () => {
+        this.followDriver = false;
+        console.log("[Map] Follow disabled (user dragged map)");
+      });
+
+      // Botón 🎯
+      this._createRecenterButton();
+
+      this.isInitialized = true;
       return true;
 
     } catch (error) {
@@ -168,6 +181,23 @@ class MapService {
         });
       }
 
+      if (!this.map.getLayer('route-line-border')) {
+        this.map.addLayer({
+          id: 'route-line-border',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round'
+          },
+          paint: {
+            'line-color': '#FFFFFF',
+            'line-width': 10,
+            'line-opacity': 0.3
+          }
+        });
+      }
+
       if (!this.map.getLayer('route-line')) {
         this.map.addLayer({
           id: 'route-line',
@@ -185,39 +215,59 @@ class MapService {
         });
       }
 
-      if (!this.map.getLayer('route-line-border')) {
-        this.map.addLayer(
-          {
-            id: 'route-line-border',
-            type: 'line',
-            source: 'route',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#FFFFFF',
-              'line-width': 10,
-              'line-opacity': 0.3
-            }
-          },
-          'route-line'
-        );
-      }
-
     } catch (e) {
       console.error('[Map] Error adding layers:', e);
     }
   }
 
   // =========================================================
+  // UI BUTTON
+  // =========================================================
+  _createRecenterButton() {
+    const container = document.getElementById(this.containerId);
+    if (!container) return;
+
+    if (document.getElementById("btn-recenter")) return;
+
+    const btn = document.createElement("button");
+    btn.id = "btn-recenter";
+    btn.innerHTML = "🎯";
+    btn.title = "Centrar";
+
+    btn.style.cssText = `
+      position: absolute;
+      bottom: 180px;
+      right: 14px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(28,28,30,0.95);
+      color: white;
+      font-size: 22px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      z-index: 9999;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+
+    btn.addEventListener("click", () => {
+      this.recenterOnDriver();
+    });
+
+    container.style.position = "relative";
+    container.appendChild(btn);
+
+    console.log("[Map] Recenter button created");
+  }
+
+  // =========================================================
   // CAMERA
   // =========================================================
   setCenter(lng, lat, zoom = null) {
-    if (!this.map || !this.isLoaded) {
-      console.warn('[Map] Not ready for setCenter');
-      return;
-    }
+    if (!this.map || !this.isLoaded) return;
 
     if (!this._isValidLatLng(lat, lng)) {
       console.warn('[Map] Invalid coordinates:', lat, lng);
@@ -235,19 +285,54 @@ class MapService {
     });
   }
 
+  setNavigationMode(enabled = true) {
+    this.navigationMode = enabled;
+
+    if (!this.map || !this.isLoaded) return;
+
+    if (enabled) {
+      this.map.easeTo({
+        pitch: 45,
+        zoom: 16,
+        duration: 800
+      });
+    } else {
+      this.map.easeTo({
+        pitch: 0,
+        zoom: 14,
+        bearing: 0,
+        duration: 800
+      });
+    }
+
+    console.log("[Map] Navigation mode:", enabled);
+  }
+
+  recenterOnDriver() {
+    if (!this.map || !this.isLoaded) return;
+    if (!this.markers.driver) return;
+
+    const pos = this.markers.driver.getLngLat();
+    if (!pos) return;
+
+    this.followDriver = true;
+
+    this.map.easeTo({
+      center: [pos.lng, pos.lat],
+      zoom: this.navigationMode ? 16.5 : 15,
+      pitch: this.navigationMode ? 45 : 0,
+      duration: 700
+    });
+
+    console.log("[Map] Recentered on driver");
+  }
+
   // =========================================================
   // MARKERS
   // =========================================================
   updateDriverMarker(lng, lat, heading = 0) {
-    if (!this.map || !this.isLoaded) {
-      console.warn('[Map] Not ready for driver marker');
-      return;
-    }
-
-    if (!this._isValidLatLng(lat, lng)) {
-      console.warn('[Map] Invalid driver coordinates:', lat, lng);
-      return;
-    }
+    if (!this.map || !this.isLoaded) return;
+    if (!this._isValidLatLng(lat, lng)) return;
 
     const safeHeading = this._sanitizeNumber(heading, 0);
 
@@ -282,6 +367,26 @@ class MapService {
 
   updateDriverPosition(lng, lat, heading = 0) {
     this.updateDriverMarker(lng, lat, heading);
+
+    if (!this.map || !this.isLoaded) return;
+    if (!this.followDriver) return;
+
+    const safeHeading = this._sanitizeNumber(heading, 0);
+
+    if (this.navigationMode) {
+      this.map.easeTo({
+        center: [lng, lat],
+        bearing: safeHeading,
+        pitch: 45,
+        zoom: 16.5,
+        duration: 700
+      });
+    } else {
+      this.map.easeTo({
+        center: [lng, lat],
+        duration: 800
+      });
+    }
   }
 
   addPickupMarker(lng, lat) {
@@ -349,25 +454,27 @@ class MapService {
       return null;
     }
 
+    this.setNavigationMode(true);
     this.clearRoute();
 
     this.addPickupMarker(from.lng, from.lat);
     this.addDropoffMarker(to.lng, to.lat);
 
-let routeData = null;
+    let routeData = null;
 
-try {
-  routeData = await this._getOSRMRoute(from, to);
+    try {
+      routeData = await this._getOSRMRoute(from, to);
 
-  if (!routeData?.geometry || routeData.geometry.length < 2) {
-    throw new Error("Ruta inválida o vacía");
-  }
+      if (!routeData?.geometry || routeData.geometry.length < 2) {
+        throw new Error("Ruta inválida o vacía");
+      }
 
-  console.log("[Map] Ruta OSRM cargada (calles reales)");
-} catch (err) {
-  console.warn("[Map] OSRM falló, usando línea recta:", err);
-  routeData = this._getStraightLineRoute(from, to);
-}
+      console.log("[Map] Ruta OSRM cargada (calles reales)");
+
+    } catch (err) {
+      console.warn("[Map] OSRM falló, usando línea recta:", err);
+      routeData = this._getStraightLineRoute(from, to);
+    }
 
     try {
       const source = this.map.getSource('route');
@@ -397,7 +504,8 @@ try {
 
       console.log('[Map] Route drawn', {
         distance: Math.round(routeData.distance),
-        duration: Math.round(routeData.duration)
+        duration: Math.round(routeData.duration),
+        fallback: routeData.isFallback
       });
 
       return routeData;
@@ -406,6 +514,26 @@ try {
       console.error('[Map] Error showing route:', e);
       return null;
     }
+  }
+
+  async _getOSRMRoute(from, to) {
+    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.routes || !data.routes[0]) {
+      throw new Error("OSRM no devolvió rutas");
+    }
+
+    const route = data.routes[0];
+
+    return {
+      geometry: route.geometry.coordinates,
+      distance: route.distance,
+      duration: route.duration,
+      isFallback: false
+    };
   }
 
   _getStraightLineRoute(from, to) {
@@ -466,26 +594,10 @@ try {
       console.error('[Map] Error clearing route:', e);
     }
   }
-async _getOSRMRoute(from, to) {
-  const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
 
-  const res = await fetch(url);
-  const data = await res.json();
-
-  if (!data.routes || !data.routes[0]) {
-    throw new Error("OSRM no devolvió rutas");
-  }
-
-  const route = data.routes[0];
-
-  return {
-    geometry: route.geometry.coordinates,
-    distance: route.distance,
-    duration: route.duration,
-    isFallback: false
-  };
-}
-
+  // =========================================================
+  // DESTROY
+  // =========================================================
   destroy() {
     try {
       this.clearRoute();
