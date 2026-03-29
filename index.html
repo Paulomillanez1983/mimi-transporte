@@ -2508,9 +2508,9 @@ async function enviarViaje() {
       ? new Date(fechaHoraInput).toISOString()
       : new Date().toISOString();
 
-    const fechaHoraVuelta = fechaHoraVueltaInput
-      ? new Date(fechaHoraVueltaInput).toISOString()
-      : null;
+fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
+  ? new Date(fechaHoraVuelta).toISOString()
+  : null,
 
     const tiempoEspera = tiempoEsperaInput
       ? Number(tiempoEsperaInput)
@@ -2545,8 +2545,8 @@ const payload = {
   cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
   telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
 
-  origen: origen,
-  destino: destino,
+  origen,
+  destino,
 
   origen_lat: Number(lugarOrigen?.lat) || null,
   origen_lng: Number(lugarOrigen?.lng) || null,
@@ -2557,10 +2557,10 @@ const payload = {
 
   servicio: servicioSeleccionado || 'IDA_ESCOLAR',
 
-  fecha_hora: new Date(fechaHoraIda).toISOString(),
+  fecha_hora: fechaHoraIda,
 
   fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
-    ? new Date(fechaHoraVuelta).toISOString()
+    ? fechaHoraVuelta
     : null,
 
   tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
@@ -2568,7 +2568,6 @@ const payload = {
     : null,
 
   estado: "DISPONIBLE",
-
   notas: null
 };
 
