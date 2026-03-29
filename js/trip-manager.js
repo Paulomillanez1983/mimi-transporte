@@ -67,93 +67,113 @@ this.driverId = driverId; // ✅ guardar
     return this;
   }
 
-  // =========================================================
-  // LOAD INITIAL STATE
-  // =========================================================
-  async _loadInitialState(driverId) {
-    if (this.isLoadingInitial) return;
-    this.isLoadingInitial = true;
+// =========================================================
+// LOAD INITIAL STATE
+// =========================================================
+async _loadInitialState(driverId) {
+  if (this.isLoadingInitial) return;
+  this.isLoadingInitial = true;
 
-    try {
-      // 1) ACTIVE TRIP
-      const { data: activeTrip, error: tripError } = await supabaseService.client
-        .from('viajes')
-        .select('*')
-        .eq('chofer_id_uuid', driverId)
-        .in('estado', ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'])
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  try {
+    // =====================================================
+    // 1) ACTIVE TRIP (si ya tiene viaje asignado/aceptado)
+    // =====================================================
+    const { data: activeTrip, error: tripError } = await supabaseService.client
+      .from('viajes')
+      .select('*')
+      .eq('chofer_id_uuid', driverId)
+      .in('estado', ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'])
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-      if (tripError) {
-        console.error('[TripManager] Error loading active trip:', tripError);
+    if (tripError) {
+      console.error('[TripManager] Error loading active trip:', tripError);
+    }
+
+    if (activeTrip) {
+      console.log('[TripManager] Active trip found:', activeTrip.id, activeTrip.estado);
+
+      this.currentTrip = activeTrip;
+      this.pendingOffer = null;
+
+      if (activeTrip.estado === 'ASIGNADO') {
+        this.emit('newPendingTrip', activeTrip);
+      } else {
+        this.emit('tripAccepted', activeTrip);
       }
 
-      if (activeTrip) {
-        console.log('[TripManager] Active trip found:', activeTrip.id);
+      this.isLoadingInitial = false;
+      return;
+    }
 
-        this.currentTrip = activeTrip;
+    console.log('[TripManager] Checking offers for driver:', driverId);
+
+    // =====================================================
+    // 2) OFFERS (PENDIENTE + TIMEOUT para debug)
+    // =====================================================
+    const { data: offers, error: offerError } = await supabaseService.client
+      .from('viaje_ofertas')
+      .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
+      .eq('chofer_id_uuid', driverId)
+      .in('estado', ['PENDIENTE', 'TIMEOUT'])
+      .order('offered_at', { ascending: false })
+      .limit(5);
+
+    console.log('[TripManager] Offers fetched:', offers, offerError);
+
+    if (offerError) {
+      console.error('[TripManager] Error loading offers:', offerError);
+    }
+
+    if (offers && offers.length > 0) {
+      // buscamos la primera oferta válida (PENDIENTE y no vencida)
+      const now = new Date().toISOString();
+
+      const validOffer = offers.find(o =>
+        o.estado === 'PENDIENTE' &&
+        o.expires_at &&
+        o.expires_at > now
+      );
+
+      if (!validOffer) {
+        console.warn('[TripManager] No valid pending offer (all expired or timeout)');
         this.pendingOffer = null;
-
-        if (activeTrip.estado === 'ASIGNADO') {
-          this.emit('newPendingTrip', activeTrip);
-        } else {
-          this.emit('tripAccepted', activeTrip);
-        }
-
+        this.emit('noPendingTrips');
         this.isLoadingInitial = false;
         return;
       }
-      console.log('[TripManager] Checking offers for driver:', driverId);
 
+      const { data: trip, error: tripErr } = await supabaseService.client
+        .from('viajes')
+        .select('*')
+        .eq('id', validOffer.viaje_id)
+        .single();
 
-      // 2) PENDING OFFERS
-const { data: offers, error: offerError } = await supabaseService.client
-  .from('viaje_ofertas')
-  .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
-  .eq('chofer_id_uuid', driverId)
-  .in('estado', ['PENDIENTE', 'TIMEOUT'])
-  .order('offered_at', { ascending: false })
-  .limit(5);
-      console.log('[TripManager] Offers fetched:', offers, offerError);
+      if (tripErr) {
+        console.error('[TripManager] Error fetching trip for offer:', tripErr);
+      } else if (trip) {
+        this.pendingOffer = {
+          ...trip,
+          offerId: validOffer.id,
+          expiresAt: validOffer.expires_at
+        };
 
-
-      if (offerError) {
-        console.error('[TripManager] Error loading offers:', offerError);
+        console.log('[TripManager] Pending offer found:', validOffer.id);
+        this.emit('newPendingTrip', this.pendingOffer);
       }
 
-      if (offers && offers.length > 0) {
-        const offer = offers[0];
-
-        const { data: trip, error: tripErr } = await supabaseService.client
-          .from('viajes')
-          .select('*')
-          .eq('id', offer.viaje_id)
-          .single();
-
-        if (tripErr) {
-          console.error('[TripManager] Error fetching trip for offer:', tripErr);
-        } else if (trip) {
-          this.pendingOffer = {
-            ...trip,
-            offerId: offer.id,
-            expiresAt: offer.expires_at
-          };
-
-          console.log('[TripManager] Pending offer found:', offer.id);
-          this.emit('newPendingTrip', this.pendingOffer);
-        }
-      } else {
-        this.pendingOffer = null;
-        this.emit('noPendingTrips');
-      }
-
-    } catch (error) {
-      console.error('[TripManager] Load error:', error);
+    } else {
+      this.pendingOffer = null;
+      this.emit('noPendingTrips');
     }
 
-    this.isLoadingInitial = false;
+  } catch (error) {
+    console.error('[TripManager] Load error:', error);
   }
+
+  this.isLoadingInitial = false;
+}
 
   // =========================================================
   // REALTIME
