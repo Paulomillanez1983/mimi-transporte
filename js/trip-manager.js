@@ -104,6 +104,8 @@ this.driverId = driverId; // ✅ guardar
         this.isLoadingInitial = false;
         return;
       }
+      console.log('[TripManager] Checking offers for driver:', driverId);
+
 
       // 2) PENDING OFFERS
       const { data: offers, error: offerError } = await supabaseService.client
@@ -114,6 +116,8 @@ this.driverId = driverId; // ✅ guardar
         .gt('expires_at', new Date().toISOString())
         .order('offered_at', { ascending: false })
         .limit(1);
+      console.log('[TripManager] Offers fetched:', offers, offerError);
+
 
       if (offerError) {
         console.error('[TripManager] Error loading offers:', offerError);
