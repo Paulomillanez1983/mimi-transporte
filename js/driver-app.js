@@ -389,10 +389,10 @@ async _acceptTrip(tripId) {
       });
     }
 
-    document.addEventListener('driverAction', (e) => {
-      const { action, tripId } = e.detail;
-      this._handleAction(action, tripId);
-    });
+    window.addEventListener('driverAction', (e) => {
+     const { action, tripId } = e.detail || {};
+     this._handleAction(action, tripId);
+   });
   }
 
   async _handleAction(action, tripId) {
