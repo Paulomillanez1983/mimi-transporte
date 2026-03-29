@@ -223,13 +223,16 @@ _subscribeToRealtime(driverId) {
   // =========================================================
   // REFRESH
   // =========================================================
-  _startRefreshInterval(driverId) {
-    if (this.refreshInterval) clearInterval(this.refreshInterval);
+_startRefreshInterval(driverId) {
+  if (this.refreshInterval) clearInterval(this.refreshInterval);
 
-    this.refreshInterval = setInterval(() => {
-      this._loadInitialState(driverId);
-    }, CONFIG.TRIP_REFRESH_INTERVAL || 5000);
-  }
+  this.refreshInterval = setInterval(() => {
+    // si ya hay viaje activo, no spamear
+    if (this.currentTrip) return;
+
+    this._loadInitialState(driverId);
+  }, 2000); // 🔥 cada 2 segundos
+}
 
   // =========================================================
   // ACTIONS
