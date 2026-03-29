@@ -182,16 +182,22 @@ function createQueryBuilder(table) {
           url += `&limit=${state.limit}`;
         }
 
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "apikey": SUPABASE_KEY,
-            "Authorization": `Bearer ${SUPABASE_KEY}`,
-            "Accept": "application/json"
-          }
-        });
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 15000); // 15 segundos
 
-        const data = await response.json();
+const response = await fetch(url, {
+  method: "GET",
+  signal: controller.signal,
+  headers: {
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY,
+    "Accept": "application/json"
+  }
+});
+
+clearTimeout(timeout);
+
+const data = await response.json();
 
         if (!response.ok) {
           return { data: null, error: data };
@@ -220,45 +226,54 @@ window.supabase = {
     return createQueryBuilder(table);
   },
 
-  async rpc(functionName, params = {}) {
-    try {
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify(params)
-      });
+async rpc(functionName, params = {}) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-      const data = await response.json();
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(params)
+    });
 
-      if (!response.ok) {
-        return { data: null, error: data };
-      }
+    clearTimeout(timeout);
 
-      return { data, error: null };
+    const data = await response.json();
 
-    } catch (err) {
-      return { data: null, error: { message: err.message } };
+    if (!response.ok) {
+      return { data: null, error: data };
     }
+
+    return { data, error: null };
+
+  } catch (err) {
+    return { data: null, error: { message: err.message } };
   }
-};
+}
 
 // =========================================================
 // Helper UPDATE
 // =========================================================
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/${table}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`,
       {
         method: "PATCH",
+        signal: controller.signal,
         headers: {
           "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Authorization": "Bearer " + SUPABASE_KEY,
           "Content-Type": "application/json",
           "Accept": "application/json",
           "Prefer": "return=representation"
@@ -266,6 +281,8 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
         body: JSON.stringify(data)
       }
     );
+
+    clearTimeout(timeout);
 
     const result = await response.json();
 
@@ -285,17 +302,23 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
 // =========================================================
 window.supabaseInsert = async function(table, data) {
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify([data])  // 👈 ARRAY
-    });
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 15000);
+
+const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+  method: 'POST',
+  signal: controller.signal,
+  headers: {
+    'apikey': SUPABASE_KEY,
+    'Authorization': "Bearer " + SUPABASE_KEY,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Prefer': 'return=representation'
+  },
+  body: JSON.stringify([data])
+});
+
+clearTimeout(timeout);
 
     const result = await response.json();
 
