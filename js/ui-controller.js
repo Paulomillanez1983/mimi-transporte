@@ -822,16 +822,19 @@ _updateNavigationInfo(trip) {
         <div class="action-buttons-grid">
 ${(() => {
   const estado = (trip.estado || '').toLowerCase();
-
   const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
 
   const lat = irADestino ? trip.destino_lat : trip.origen_lat;
   const lng = irADestino ? trip.destino_lng : trip.origen_lng;
 
   const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
-    style="width:22px;height:22px;display:block;"
-  />
-`;
+
+  const icono = `
+    <img 
+      src="/mimi-transporte/assets/icons/google-maps.png"
+      style="width:22px;height:22px;display:block;"
+    />
+  `;
 
   const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
 
