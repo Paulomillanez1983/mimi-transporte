@@ -46,8 +46,6 @@ constructor() {
   // INIT
   // =========================================================
   async init() {
-    const { data: { user } } = await supabaseService.client.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
 
     // aseguramos perfil
     await supabaseService.ensureDriverProfile();
