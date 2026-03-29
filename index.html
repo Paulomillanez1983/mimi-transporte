@@ -2008,42 +2008,45 @@ body {
     <p class="hero-subtitle">Pagá solo por los viajes que uses</p>
   </div>
 
-  <div class="main-card">
-<div class="location-input-group">
-  <div class="location-card">
-    <div class="location-icon origin">📍</div>
-    <div class="location-text">
-      <div class="location-label">Origen</div>
-      <input type="text" id="origen" class="location-input" placeholder="Av. Santa Fe 1234, Córdoba" autocomplete="off">
+<div class="main-card">
+
+  <!-- ORIGEN -->
+  <div class="location-input-group">
+    <div class="location-card">
+      <div class="location-icon origin">📍</div>
+      <div class="location-text">
+        <div class="location-label">Origen</div>
+        <input type="text" id="origen" class="location-input" placeholder="Origen" autocomplete="off">
+      </div>
+      <div class="location-arrow">›</div>
     </div>
-    <div class="location-arrow">›</div>
-  </div>
-</div>
+
     <div id="sugerenciasOrigen" class="sugerencias"></div>
-
-
-<!-- BOTÓN INTERCAMBIAR ORIGEN/DESTINO - CENTRADO -->
-<div style="display: flex; justify-content: center; margin: -20px 0; position: relative; z-index: 10;">
-  <button onclick="intercambiarOrigenDestino()" 
-          class="btn-swap"
-          title="Intercambiar origen y destino"
-          aria-label="Intercambiar origen y destino">
-    <span>⇅</span>
-  </button>
-</div>
-    <div id="sugerenciasDestino" class="sugerencias"></div>
-
-    
-<div class="location-input-group">
-  <div class="location-card">
-    <div class="location-icon destiny">📍</div>
-    <div class="location-text">
-      <div class="location-label">Destino</div>
-      <input type="text" id="destino" class="location-input" placeholder="Ej: Shopping Villa Allende" autocomplete="off">
-    </div>
-    <div class="location-arrow">›</div>
   </div>
-</div>
+
+  <!-- BOTÓN SWAP -->
+  <div style="display: flex; justify-content: center; margin: -20px 0; position: relative; z-index: 10;">
+    <button onclick="intercambiarOrigenDestino()"
+            class="btn-swap"
+            title="Intercambiar origen y destino"
+            aria-label="Intercambiar origen y destino">
+      <span>⇅</span>
+    </button>
+  </div>
+
+  <!-- DESTINO -->
+  <div class="location-input-group">
+    <div class="location-card">
+      <div class="location-icon destiny">📍</div>
+      <div class="location-text">
+        <div class="location-label">Destino</div>
+        <input type="text" id="destino" class="location-input" placeholder="Destino" autocomplete="off">
+      </div>
+      <div class="location-arrow">›</div>
+    </div>
+
+    <div id="sugerenciasDestino" class="sugerencias"></div>
+  </div>
     
     <div class="error-message" id="errorMsg">
       <span>⚠️</span>
