@@ -134,17 +134,20 @@ _updateNavigateButton(trip) {
   const lng = irADestino ? trip.destino_lng : trip.origen_lng;
 
   const texto = irADestino ? "Ir a destino" : "Ir a recogida";
-const icono = `
-  <img 
-    src="https://upload.wikimedia.org/wikipedia/commons/9/9d/Google_Maps_icon_%282020%29.svg"
-    style="width:22px;height:22px;"
-  />
-`;
 
-btn.innerHTML = `
-  <span class="icon">${icono}</span>
-  <span>${texto}</span>
-`;
+  const icono = `
+    <img 
+      src="./assets/icons/google-maps.svg"
+      style="width:22px;height:22px;"
+    />
+  `;
+
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+
+  btn.innerHTML = `
+    <span class="icon">${icono}</span>
+    <span>${texto}</span>
+  `;
 
   btn.onclick = () => window.open(url, "_blank");
 }
