@@ -8,35 +8,36 @@ import CONFIG from './config.js';
 import soundManager from './sound-manager.js';
 
 class UIController {
-  constructor() {
-    this.elements = {};
-    this.state = {
-      countdown: null,
-      currentCount: 15,
-      isModalOpen: false,
-      isProcessing: false,
-      callbacks: {},
-      currentTrip: null,
-      isOnline: false,
-      bottomSheetExpanded: false
-    };
+constructor() {
+  this.elements = {};
 
-    // Bindings
-    this._handleAccept = this._handleAccept.bind(this);this.lastTripModalId = null;
+  this.state = {
+    countdown: null,
+    currentCount: 15,
+    isModalOpen: false,
+    isProcessing: false,
+    callbacks: {},
+    currentTrip: null,
+    isOnline: false,
+    bottomSheetExpanded: false
+  };
 
-    this._handleReject = this._handleReject.bind(this);this.lastTripModalId = null;
+  // ✅ FIX anti-parpadeo modal
+  this.lastTripModalId = null;
 
-    this._onBackdropClick = this._onBackdropClick.bind(this);
-    this._onTouchStart = this._onTouchStart.bind(this);
-    this._onTouchMove = this._onTouchMove.bind(this);
-    this._onTouchEnd = this._onTouchEnd.bind(this);
-    this.lastTripModalId = null;
+  // Bindings
+  this._handleAccept = this._handleAccept.bind(this);
+  this._handleReject = this._handleReject.bind(this);
+  this._onBackdropClick = this._onBackdropClick.bind(this);
+  this._onTouchStart = this._onTouchStart.bind(this);
+  this._onTouchMove = this._onTouchMove.bind(this);
+  this._onTouchEnd = this._onTouchEnd.bind(this);
 
-    // Touch handling for bottom sheet
-    this.touchStartY = 0;
-    this.touchCurrentY = 0;
-    this.sheetHeight = 0;
-  }
+  // Touch handling for bottom sheet
+  this.touchStartY = 0;
+  this.touchCurrentY = 0;
+  this.sheetHeight = 0;
+}
 
   init() {
     this._cacheElements();
@@ -483,8 +484,9 @@ async _handleAccept(e) {
         return;
       }
 
-      // ✅ aceptar OK
-      this._closeIncomingModal();
+// ✅ aceptar OK
+this.lastTripModalId = null;
+this._closeIncomingModal();
 
     } catch (err) {
       console.error('[UI] Error in accept callback:', err);
@@ -514,7 +516,8 @@ async _handleReject(e) {
 
   const callback = this.state.callbacks.onReject;
 
-  this._closeIncomingModal();
+this.lastTripModalId = null;
+this._closeIncomingModal();
 
   if (callback) {
     try {
