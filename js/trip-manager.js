@@ -112,9 +112,9 @@ const { data: offers, error: offerError } = await supabaseService.client
   .from('viaje_ofertas')
   .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
   .eq('chofer_id_uuid', driverId)
-  .in('estado', ['PENDIENTE'])  // por ahora solo pendiente
+  .in('estado', ['PENDIENTE', 'TIMEOUT'])
   .order('offered_at', { ascending: false })
-  .limit(1);
+  .limit(5);
       console.log('[TripManager] Offers fetched:', offers, offerError);
 
 
