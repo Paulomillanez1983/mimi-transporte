@@ -36,8 +36,10 @@ class SupabaseClient {
   // =========================================================
   // INIT
   // =========================================================
-  async init() {
-    if (this.client) return true;
+async init() {
+  const { data: { session } } = await this.client.auth.getSession();
+  this.session = session;
+}
 
     console.log('[Supabase] Initializing...');
 
