@@ -343,7 +343,7 @@ class MapService {
     this.updateDriverMarker(lng, lat, heading);
   }
   // =========================================================
-  // ROUTING
+  // ROUTING (FINAL FIX)
   // =========================================================
 
   async showRoute(from, to) {
@@ -358,20 +358,28 @@ class MapService {
     }
 
     if (!this._isValidLatLng(from.lat, from.lng)) {
-      console.warn('[Map] Invalid from coordinates');
+      console.warn('[Map] Invalid from coordinates', from);
       return null;
     }
 
     if (!this._isValidLatLng(to.lat, to.lng)) {
-      console.warn('[Map] Invalid to coordinates');
+      console.warn('[Map] Invalid to coordinates', to);
       return null;
     }
 
-    // Usar línea recta como fallback (puedes integrar Valhalla después)
+    // 🔥 limpiar ruta anterior antes de dibujar nueva
+    this.clearRoute();
+
+    // ✅ agregar markers pickup/dropoff
+    this.addPickupMarker(from.lng, from.lat);
+    this.addDropoffMarker(to.lng, to.lat);
+
+    // Usar línea recta como fallback (luego se integra OSRM/Valhalla)
     const routeData = this._getStraightLineRoute(from, to);
 
     try {
       const source = this.map.getSource('route');
+
       if (source) {
         source.setData({
           type: 'Feature',
@@ -381,6 +389,8 @@ class MapService {
             coordinates: routeData.geometry
           }
         });
+      } else {
+        console.warn('[Map] route source not found');
       }
 
       // Ajustar vista a la ruta
@@ -391,12 +401,18 @@ class MapService {
         );
 
         this.map.fitBounds(bounds, {
-          padding: 100,
+          padding: 120,
           duration: 1000
         });
       }
 
+      console.log('[Map] Route drawn (fallback line)', {
+        distance: Math.round(routeData.distance),
+        duration: Math.round(routeData.duration)
+      });
+
       return routeData;
+
     } catch (e) {
       console.error('[Map] Error showing route:', e);
       return null;
@@ -426,7 +442,7 @@ class MapService {
     return {
       geometry: coordinates,
       distance: distance,
-      duration: distance / 8.33,
+      duration: distance / 8.33, // aprox 30km/h
       isFallback: true
     };
   }
@@ -436,6 +452,7 @@ class MapService {
 
     try {
       const source = this.map.getSource('route');
+
       if (source) {
         source.setData({
           type: 'Feature',
@@ -447,12 +464,19 @@ class MapService {
         });
       }
 
+      // borrar markers pickup/dropoff
       ['pickup', 'dropoff'].forEach(key => {
         if (this.markers[key]) {
-          this.markers[key].remove();
+          try {
+            this.markers[key].remove();
+          } catch (e) {}
+
           delete this.markers[key];
         }
       });
+
+      console.log('[Map] Route cleared');
+
     } catch (e) {
       console.error('[Map] Error clearing route:', e);
     }
@@ -476,11 +500,9 @@ class MapService {
       this.isInitialized = false;
       this.isLoaded = false;
 
+      console.log('[Map] Destroy complete');
+
     } catch (error) {
       console.warn('[Map] destroy error:', error);
     }
   }
-}
-
-const mapService = new MapService();
-export default mapService;
