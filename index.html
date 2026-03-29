@@ -197,7 +197,12 @@ const response = await fetch(url, {
 
 clearTimeout(timeout);
 
-const data = await response.json();
+let data = null;
+try {
+  data = await response.json();
+} catch(e) {
+  data = null;
+}
 
         if (!response.ok) {
           return { data: null, error: data };
@@ -216,7 +221,7 @@ const data = await response.json();
   };
 
   return builder;
-},
+}
 
 // =========================================================
 // Cliente global tipo Supabase
@@ -257,6 +262,8 @@ async rpc(functionName, params = {}) {
     return { data: null, error: { message: err.message } };
   }
 }
+  };
+
 
 // =========================================================
 // Helper UPDATE
