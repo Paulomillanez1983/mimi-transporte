@@ -2790,50 +2790,6 @@ window.addEventListener("load", () => {
 });
 
     
-    // Intentar Distance Matrix API si está disponible
-    if (typeof google !== 'undefined' && google.maps?.DistanceMatrixService) {
-      try {
-        const service = new google.maps.DistanceMatrixService();
-        const response = await new Promise((resolve, reject) => {
-          service.getDistanceMatrix({
-            origins: [{ lat: lat1, lng: lng1 }],
-            destinations: [{ lat: lat2, lng: lng2 }],
-            travelMode: google.maps.TravelMode.DRIVING,
-            unitSystem: google.maps.UnitSystem.METRIC,
-          }, (result, status) => {
-            if (status === 'OK') resolve(result);
-            else reject(new Error(status));
-          });
-        });
-        
-        const element = response.rows[0]?.elements[0];
-        if (element?.status === 'OK') {
-          return {
-            km: parseFloat((element.distance.value / 1000).toFixed(2)),
-            duracionMin: Math.round(element.duration.value / 60),
-            error: null
-          };
-        }
-      } catch (apiErr) {
-        console.warn('Distance Matrix falló, usando Haversine:', apiErr.message);
-      }
-    }
-    
-    // Fallback: Haversine con factor de ajuste 1.3x para ruta real estimada
-    const kmRecta = calcularDistanciaHaversine(lat1, lng1, lat2, lng2);
-    const kmEstimado = kmRecta * 1.3;
-    
-    return {
-      km: parseFloat(kmEstimado.toFixed(2)),
-      duracionMin: Math.round(kmEstimado * 2), // ~2 min/km en ciudad
-      error: null
-    };
-    
-  } catch (error) {
-    console.error('❌ Error en calcularDistancia:', error);
-    return { km: 0, duracionMin: 0, error: error.message };
-  }
-}
   // ==========================================
 // FECHA Y HORA
 // ==========================================
