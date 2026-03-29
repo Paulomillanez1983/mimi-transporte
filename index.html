@@ -2561,7 +2561,12 @@ const payload = {
   notas: null
 };
 
-console.log("📦 Payload viaje limpio:", payload);    // =========================
+console.log("📦 Payload viaje limpio:", payload);
+    console.log("🔥 JSON FINAL:", JSON.stringify(payload));
+
+    
+    
+    // =========================
     // INSERT
     // =========================
     const { data, error } = await window.supabaseInsert('viajes', payload);
