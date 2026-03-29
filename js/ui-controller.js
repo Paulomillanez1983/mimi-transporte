@@ -773,10 +773,27 @@ this.lastTripModalId = null; // ✅ reset
         </div>
         
         <div class="action-buttons-grid">
-          <button class="action-btn-large navigate" id="btn-navigate" onclick="window.open('https://www.google.com/maps/dir/?api=1&destination=${trip.origen_lat},${trip.origen_lng}', '_blank')">
-            <span class="icon">🧭</span>
-            <span>Navegar</span>
-          </button>
+<button class="action-btn-large navigate" id="btn-navigate"
+  onclick="
+    (function(){
+      const estado = ('${trip.estado || ''}').toLowerCase();
+
+      let lat = ${trip.origen_lat};
+      let lng = ${trip.origen_lng};
+
+      // Si ya está en curso => ir al destino
+      if (estado === 'en_curso' || estado === 'en_viaje') {
+        lat = ${trip.destino_lat};
+        lng = ${trip.destino_lng};
+      }
+
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+      window.open(url, '_blank');
+    })();
+  ">
+  <span class="icon">🧭</span>
+  <span>Navegar</span>
+</button>
           
           <button class="action-btn-large call" id="btn-call" onclick="window.location.href='tel:${trip.pasajero_telefono || trip.telefono}'">
             <span class="icon">📞</span>
