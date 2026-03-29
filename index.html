@@ -8,8 +8,6 @@
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/854/854878.png">
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 
 <meta property="og:title" content="MIMI Transporte Escolar">
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
@@ -2812,100 +2810,6 @@ window.addEventListener("load", () => {
   });
 });
 
-  // ==========================================
-// GOOGLE MAPS - INICIALIZACIÓN
-// ==========================================
-
-let autocompleteInicializado = false;
-
-// IMPORTANTE:
-// autocompleteOrigen, autocompleteDestino,
-// lugarOrigen y lugarDestino
-// ya fueron declarados arriba globalmente.
-// NO redeclararlos acá.
-// Fallback para geocodificación manual
-async function geocodificarDireccion(direccion) {
-  try {
-    const apiKey = 'AIzaSyBqjzyKtwApTL6cgYf3EAJwvHT5Y4ithJc';
-
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(direccion + ', Córdoba, Argentina')}&key=${apiKey}&region=ar`
-    );
-
-    const data = await response.json();
-
-    if (data.results && data.results[0]) {
-      const loc = data.results[0].geometry.location;
-      return {
-        direccion: data.results[0].formatted_address,
-        lat: loc.lat,
-        lng: loc.lng
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.error('❌ Error geocodificando:', error);
-    return null;
-  }
-}
-
-// Asignar callback global
-window.initMap = initMap;
-
-// Forzar inicialización al cargar la página
-window.addEventListener('load', () => {
-  console.log("🌍 Página cargada, verificando Google Maps...");
-
-  const esperarGoogleMaps = () => {
-    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-      console.log("✅ Google Maps Places disponible");
-      initMap();
-    } else {
-      console.log("⏳ Esperando librería Places...");
-      setTimeout(esperarGoogleMaps, 500);
-    }
-  };
-
-  esperarGoogleMaps();
-});
-// ==========================================
-// CÁLCULO DE DISTANCIA (VERSIÓN FINAL CORREGIDA)
-// ==========================================
-
-/**
- * Calcula la distancia en km entre dos puntos usando Haversine (línea recta)
- * Fallback cuando Distance Matrix no está disponible
- */
-function calcularDistanciaHaversine(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Radio de la Tierra en km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
-/**
- * Calcula distancia entre dos puntos (coordenadas u objetos lugar)
- * @param {Object} origen - objeto con lat/lng o {direccion, lat, lng}
- * @param {Object} destino - objeto con lat/lng o {direccion, lat, lng}
- * @returns {Promise<{km: number, duracionMin: number, error: string|null}>}
- */
-async function calcularDistancia(origen, destino) {
-  try {
-    // Extraer coordenadas de los objetos lugarOrigen/lugarDestino si existen
-    let lat1 = origen?.lat;
-    let lng1 = origen?.lng;
-    let lat2 = destino?.lat;
-    let lng2 = destino?.lng;
-    
-    // Validar coordenadas
-    if (!lat1 || !lng1 || !lat2 || !lng2) {
-      throw new Error('Coordenadas no disponibles');
-    }
     
     // Intentar Distance Matrix API si está disponible
     if (typeof google !== 'undefined' && google.maps?.DistanceMatrixService) {
@@ -3203,15 +3107,6 @@ map.on("load", async () => {
 
   map.fitBounds(bounds, { padding: 40 });
 });
-  const mapaDiv = document.getElementById('mapaRuta');
-  mapaDiv.style.display = 'block';
-  mapaDiv.innerHTML = `
-    <button class="btn-mapa" onclick="window.open('${mapsUrl}', '_blank')">
-      <span class="btn-mapa-icon">🗺️</span>
-      <span class="btn-mapa-text"><strong>Ver recorrido</strong><small>Google Maps</small></span>
-      <span class="btn-mapa-arrow">→</span>
-    </button>
-  `;
   
   setTimeout(() => resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
 }
