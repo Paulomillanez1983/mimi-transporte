@@ -250,7 +250,12 @@ async rpc(functionName, params = {}) {
 
     clearTimeout(timeout);
 
-    const data = await response.json();
+let data = null;
+try {
+  data = await response.json();
+} catch(e) {
+  data = null;
+}
 
     if (!response.ok) {
       return { data: null, error: data };
@@ -3060,7 +3065,12 @@ map.on("load", async () => {
     `?overview=full&geometries=geojson`;
 
   const response = await fetch(url);
-  const data = await response.json();
+let data = null;
+try {
+  data = await response.json();
+} catch(e) {
+  data = null;
+}
 
   if (!data.routes || !data.routes.length) return;
 
