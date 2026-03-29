@@ -2634,6 +2634,184 @@ console.log("📦 Payload viaje limpio:", payload);
     clearButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText");
   }
 }
+  let lugarOrigen = null;
+let lugarDestino = null;
+
+let mapaCliente = null;
+let markerOrigen = null;
+let markerDestino = null;
+
+async function buscarDireccion(query) {
+  if (!query || query.length < 4) return [];
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=ar&q=${encodeURIComponent(query)}`;
+
+  const res = await fetch(url, {
+    headers: {
+      "Accept": "application/json"
+    }
+  });
+
+  return await res.json();
+}
+
+function mostrarSugerencias(containerId, resultados, callbackSeleccion) {
+  const cont = document.getElementById(containerId);
+  if (!cont) return;
+
+  cont.innerHTML = "";
+
+  if (!resultados.length) {
+    cont.style.display = "none";
+    return;
+  }
+
+  resultados.forEach(r => {
+    const div = document.createElement("div");
+    div.className = "sugerencia-item";
+    div.textContent = r.display_name;
+
+    div.onclick = () => {
+      cont.style.display = "none";
+      callbackSeleccion(r);
+    };
+
+    cont.appendChild(div);
+  });
+
+  cont.style.display = "block";
+}
+
+function ocultarSugerencias() {
+  const o = document.getElementById("sugerenciasOrigen");
+  const d = document.getElementById("sugerenciasDestino");
+  if (o) o.style.display = "none";
+  if (d) d.style.display = "none";
+}
+
+function initMapaCliente() {
+  if (mapaCliente) return;
+
+  const mapaDiv = document.getElementById("mapaRuta");
+  if (!mapaDiv) return;
+
+  mapaDiv.style.display = "block";
+
+  mapaCliente = new maplibregl.Map({
+    container: "mapaRuta",
+    style: "https://demotiles.maplibre.org/style.json",
+    center: [-64.19, -31.42],
+    zoom: 12
+  });
+}
+
+async function dibujarRutaOSRM() {
+  if (!mapaCliente || !lugarOrigen || !lugarDestino) return;
+
+  // limpiar ruta anterior
+  if (mapaCliente.getLayer("route-line")) mapaCliente.removeLayer("route-line");
+  if (mapaCliente.getSource("route")) mapaCliente.removeSource("route");
+
+  const url = `https://router.project-osrm.org/route/v1/driving/` +
+    `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
+    `?overview=full&geometries=geojson`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!data.routes || !data.routes.length) return;
+
+  const route = data.routes[0].geometry;
+
+  mapaCliente.addSource("route", {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      geometry: route
+    }
+  });
+
+  mapaCliente.addLayer({
+    id: "route-line",
+    type: "line",
+    source: "route",
+    layout: {
+      "line-join": "round",
+      "line-cap": "round"
+    },
+    paint: {
+      "line-color": "#1565c0",
+      "line-width": 6
+    }
+  });
+
+  const coords = route.coordinates;
+  const bounds = coords.reduce(
+    (b, c) => b.extend(c),
+    new maplibregl.LngLatBounds(coords[0], coords[0])
+  );
+
+  mapaCliente.fitBounds(bounds, { padding: 50 });
+}
+
+function setOrigen(displayName, lat, lng) {
+  lugarOrigen = { direccion: displayName, lat, lng };
+
+  if (!mapaCliente) initMapaCliente();
+
+  if (markerOrigen) markerOrigen.remove();
+  markerOrigen = new maplibregl.Marker({ color: "green" })
+    .setLngLat([lng, lat])
+    .addTo(mapaCliente);
+
+  dibujarRutaOSRM();
+}
+
+function setDestino(displayName, lat, lng) {
+  lugarDestino = { direccion: displayName, lat, lng };
+
+  if (!mapaCliente) initMapaCliente();
+
+  if (markerDestino) markerDestino.remove();
+  markerDestino = new maplibregl.Marker({ color: "red" })
+    .setLngLat([lng, lat])
+    .addTo(mapaCliente);
+
+  dibujarRutaOSRM();
+}
+
+// ==========================
+// AUTOCOMPLETE INPUTS
+// ==========================
+window.addEventListener("load", () => {
+  const inputOrigen = document.getElementById("origen");
+  const inputDestino = document.getElementById("destino");
+
+  if (!inputOrigen || !inputDestino) return;
+
+  inputOrigen.addEventListener("input", async () => {
+    const resultados = await buscarDireccion(inputOrigen.value);
+    mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
+      inputOrigen.value = r.display_name;
+      setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+    });
+  });
+
+  inputDestino.addEventListener("input", async () => {
+    const resultados = await buscarDireccion(inputDestino.value);
+    mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
+      inputDestino.value = r.display_name;
+      setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.classList.contains("location-input")) {
+      ocultarSugerencias();
+    }
+  });
+});
+
   // ==========================================
 // GOOGLE MAPS - INICIALIZACIÓN
 // ==========================================
@@ -2645,141 +2823,6 @@ let autocompleteInicializado = false;
 // lugarOrigen y lugarDestino
 // ya fueron declarados arriba globalmente.
 // NO redeclararlos acá.
-function initMap() {
-  console.log("🚀 Iniciando Google Maps...");
-
-  // Evitar inicialización múltiple
-  if (autocompleteInicializado) {
-    console.log("ℹ️ Autocomplete ya inicializado");
-    return;
-  }
-
-  // Verificar que el DOM esté listo
-  const inputOrigen = document.getElementById('origen');
-  const inputDestino = document.getElementById('destino');
-
-  if (!inputOrigen || !inputDestino) {
-    console.log("⏳ DOM no listo, reintentando...");
-    setTimeout(initMap, 300);
-    return;
-  }
-
-  // Verificar que Google Maps esté cargado
-  if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-    console.log("⏳ Google Maps no listo, reintentando...");
-    setTimeout(initMap, 500);
-    return;
-  }
-
-  inicializarAutocomplete(inputOrigen, inputDestino);
-}
-
-function inicializarAutocomplete(inputOrigen, inputDestino) {
-  try {
-    // Evitar doble inicialización
-    if (autocompleteInicializado) return;
-
-    // Crear autocompletados
-    autocompleteOrigen = new google.maps.places.Autocomplete(inputOrigen, {
-      componentRestrictions: { country: 'ar' },
-      fields: ['formatted_address', 'geometry', 'name', 'place_id'],
-      types: ['geocode']
-    });
-
-    autocompleteDestino = new google.maps.places.Autocomplete(inputDestino, {
-      componentRestrictions: { country: 'ar' },
-      fields: ['formatted_address', 'geometry', 'name', 'place_id'],
-      types: ['geocode']
-    });
-
-    // Sesgo opcional hacia Córdoba
-    const cordobaBounds = new google.maps.LatLngBounds(
-      { lat: -31.50, lng: -64.30 },
-      { lat: -31.30, lng: -64.05 }
-    );
-
-    autocompleteOrigen.setBounds(cordobaBounds);
-    autocompleteDestino.setBounds(cordobaBounds);
-
-    // Eventos de selección
-    autocompleteOrigen.addListener('place_changed', () => {
-      const place = autocompleteOrigen.getPlace();
-
-      if (place && place.geometry) {
-        lugarOrigen = {
-          direccion: place.formatted_address || place.name,
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng()
-        };
-
-        console.log('✅ Origen seleccionado:', lugarOrigen);
-
-        inputOrigen.style.backgroundColor = '#e8f5e9';
-        setTimeout(() => inputOrigen.style.backgroundColor = '', 500);
-      } else {
-        console.log('⚠️ Origen seleccionado sin geometría');
-      }
-    });
-
-    autocompleteDestino.addListener('place_changed', () => {
-      const place = autocompleteDestino.getPlace();
-
-      if (place && place.geometry) {
-        lugarDestino = {
-          direccion: place.formatted_address || place.name,
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng()
-        };
-
-        console.log('✅ Destino seleccionado:', lugarDestino);
-
-        inputDestino.style.backgroundColor = '#e8f5e9';
-        setTimeout(() => inputDestino.style.backgroundColor = '', 500);
-      } else {
-        console.log('⚠️ Destino seleccionado sin geometría');
-      }
-    });
-
-    // Fallback manual si el usuario escribe pero no toca sugerencia
-    inputOrigen.addEventListener('blur', async () => {
-      if (inputOrigen.value.trim() && !lugarOrigen) {
-        console.log("🔎 Intentando geocodificar origen manualmente...");
-        const resultado = await geocodificarDireccion(inputOrigen.value.trim());
-        if (resultado) {
-          lugarOrigen = resultado;
-          console.log("✅ Origen geocodificado manualmente:", lugarOrigen);
-        }
-      }
-    });
-
-    inputDestino.addEventListener('blur', async () => {
-      if (inputDestino.value.trim() && !lugarDestino) {
-        console.log("🔎 Intentando geocodificar destino manualmente...");
-        const resultado = await geocodificarDireccion(inputDestino.value.trim());
-        if (resultado) {
-          lugarDestino = resultado;
-          console.log("✅ Destino geocodificado manualmente:", lugarDestino);
-        }
-      }
-    });
-
-    autocompleteInicializado = true;
-
-    console.log('✅ Autocomplete inicializado correctamente');
-
-    if (typeof notifSystem !== 'undefined' && notifSystem?.show) {
-      notifSystem.show('✅ Listo', 'Escribí una dirección para ver sugerencias', 'success', 2000);
-    }
-
-  } catch (error) {
-    console.error('❌ Error inicializando autocomplete:', error);
-
-    if (typeof notifSystem !== 'undefined' && notifSystem?.show) {
-      notifSystem.show('Error', 'No se pudo cargar el buscador de direcciones', 'error', 5000);
-    }
-  }
-}
-
 // Fallback para geocodificación manual
 async function geocodificarDireccion(direccion) {
   try {
