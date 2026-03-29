@@ -128,6 +128,10 @@ window.addEventListener('touchstart', () => {
     });
 
     const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
+      window.dispatchEvent(new CustomEvent("tripStateChanged", {
+  detail: { estado: trip.estado }
+}));
+
       console.log('[DriverApp] ✅ tripAccepted', trip.id);
 
       this._currentTripId = trip.id;
@@ -138,11 +142,17 @@ window.addEventListener('touchstart', () => {
       uiController.showNavigationState(trip);
     });
 
-    const unsubStarted = tripManager.on('tripStarted', (trip) => {
-      console.log('[DriverApp] 🚀 tripStarted', trip.id);
-      uiController.showToast('Viaje iniciado', 'success');
-      uiController.showNavigationState(trip);
-    });
+const unsubStarted = tripManager.on('tripStarted', (trip) => {
+  console.log('[DriverApp] 🚀 tripStarted', trip.id);
+
+  uiController.showToast('Viaje iniciado', 'success');
+  uiController.showNavigationState(trip);
+
+  // ✅ PRO: disparar cambio real de estado confirmado
+  window.dispatchEvent(new CustomEvent("tripStateChanged", {
+    detail: { estado: trip.estado }
+  }));
+});
 
     const unsubCompleted = tripManager.on('tripCompleted', (trip) => {
       console.log('[DriverApp] 🏁 tripCompleted', trip.id);
