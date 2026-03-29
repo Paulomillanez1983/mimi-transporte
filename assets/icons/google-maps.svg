@@ -1,6 +1,6 @@
 const icono = `
   <img 
-    src="assets/icons/google-maps.png"
+    src="https://www.google.com/images/branding/product/ico/maps_32dp.ico"
     style="width:22px;height:22px;"
   />
 `;
