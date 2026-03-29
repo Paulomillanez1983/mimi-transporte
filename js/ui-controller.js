@@ -819,7 +819,8 @@ _updateNavigationInfo(trip) {
           </div>
         </div>
         
-        <div class="action-buttons-grid">
+<div class="action-buttons-grid">
+
 ${(() => {
   const estado = (trip.estado || '').toLowerCase();
   const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
@@ -828,36 +829,37 @@ ${(() => {
   const lng = irADestino ? trip.destino_lng : trip.origen_lng;
 
   const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
-
-const icono = `🏁`;
+  const icono = `🏁`;
 
   const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
 
-return `
-  <button class="action-btn-large navigate" id="btn-navigate"
-    onclick="window.open('${url}', '_blank')">
-    <span class="icon">${icono}</span>
-    <span>${texto}</span>
-  </button>
-`;
-          
-          <button class="action-btn-large call" id="btn-call" onclick="window.location.href='tel:${trip.pasajero_telefono || trip.telefono}'">
-            <span class="icon">📞</span>
-            <span>Llamar</span>
-          </button>
-          
+  return `
+    <button class="action-btn-large navigate" id="btn-navigate"
+      onclick="window.open('${url}', '_blank')">
+      <span class="icon">${icono}</span>
+      <span>${texto}</span>
+    </button>
+  `;
+})()}
+
+<button class="action-btn-large call" id="btn-call"
+  onclick="window.location.href='tel:${trip.pasajero_telefono || trip.telefono}'">
+  <span class="icon">📞</span>
+  <span>Llamar</span>
+</button>
+
 <button class="action-btn-large cancel" id="btn-cancel" onclick="
   if(confirm('¿Seguro que querés cancelar este viaje?')) {
-    this.dispatchEvent(new CustomEvent('driverAction', {
-      detail: { action: 'cancel', tripId: '${trip.id}' },
-      bubbles: true
+    window.dispatchEvent(new CustomEvent('driverAction', {
+      detail: { action: 'cancel', tripId: '${trip.id}' }
     }));
   }
 ">
   <span class="icon">❌</span>
   <span>Cancelar</span>
 </button>
-        </div>
+
+</div>
         
         <div class="trip-progress-steps">
           <div class="step active" data-step="pickup">
