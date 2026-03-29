@@ -123,12 +123,44 @@ constructor() {
       this.elements[key] = document.getElementById(id);
     });
   }
+_updateNavigateButton(trip) {
+  const btn = document.getElementById("btn-navigate");
+  if (!btn) return;
+
+  const estado = (trip.estado || "").toLowerCase();
+  const irADestino = (estado === "en_curso" || estado === "en_viaje");
+
+  const lat = irADestino ? trip.destino_lat : trip.origen_lat;
+  const lng = irADestino ? trip.destino_lng : trip.origen_lng;
+
+  const texto = irADestino ? "Ir a destino" : "Ir a recogida";
+  const icono = irADestino ? "🏁" : "🧭";
+
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+
+  btn.innerHTML = `
+    <span class="icon">${icono}</span>
+    <span>${texto}</span>
+  `;
+
+  btn.onclick = () => window.open(url, "_blank");
+}
 
   _setupEventListeners() {
     // Modal buttons
     const acceptBtn = this.elements['btn-accept'];
     const rejectBtn = this.elements['btn-reject'];
     const backdrop = this.elements['modal-backdrop'];
+window.addEventListener("tripStateChanged", (e) => {
+  const estado = e.detail?.estado;
+  if (!estado) return;
+
+  if (this.state.currentTrip) {
+    this.state.currentTrip.estado = estado;
+    this._updateNavigateButton(this.state.currentTrip);
+    this._updateNavigationInfo(this.state.currentTrip);
+  }
+});
 
     if (acceptBtn) {
       acceptBtn.addEventListener('click', this._handleAccept);
@@ -736,24 +768,33 @@ this.lastTripModalId = null; // ✅ reset
     this._haptic('success');
   }
 
-  _updateNavigationInfo(trip) {
-    const streetEl = this.elements['nav-street'];
-    const nextEl = this.elements['nav-next'];
-    const distanceEl = this.elements['nav-distance'];
-    
-    if (streetEl) {
-      streetEl.textContent = 'Dirígete al punto de recogida';
-    }
-    if (nextEl) {
-      nextEl.textContent = trip.origen_direccion || trip.origen || 'Recoger pasajero';
-    }
-    if (distanceEl) {
-      const dist = trip.distancia_al_origen 
-        ? (trip.distancia_al_origen / 1000).toFixed(1) + ' km'
-        : '--';
-      distanceEl.textContent = dist;
-    }
+_updateNavigationInfo(trip) {
+  const streetEl = this.elements['nav-street'];
+  const nextEl = this.elements['nav-next'];
+  const distanceEl = this.elements['nav-distance'];
+
+  const estado = (trip.estado || "").toLowerCase();
+  const irADestino = (estado === "en_curso" || estado === "en_viaje");
+
+  if (streetEl) {
+    streetEl.textContent = irADestino
+      ? "Dirígete al destino final"
+      : "Dirígete al punto de recogida";
   }
+
+  if (nextEl) {
+    nextEl.textContent = irADestino
+      ? (trip.destino_direccion || trip.destino || "Destino")
+      : (trip.origen_direccion || trip.origen || "Recoger pasajero");
+  }
+
+  if (distanceEl) {
+    const dist = trip.distancia_al_origen
+      ? (trip.distancia_al_origen / 1000).toFixed(1) + " km"
+      : "--";
+    distanceEl.textContent = dist;
+  }
+}
 
   _showTripActions(trip) {
     const sheetContent = this.elements['sheet-content'];
@@ -773,27 +814,27 @@ this.lastTripModalId = null; // ✅ reset
         </div>
         
         <div class="action-buttons-grid">
-<button class="action-btn-large navigate" id="btn-navigate"
-  onclick="
-    (function(){
-      const estado = ('${trip.estado || ''}').toLowerCase();
+${(() => {
+  const estado = (trip.estado || '').toLowerCase();
 
-      let lat = ${trip.origen_lat};
-      let lng = ${trip.origen_lng};
+  const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
 
-      // Si ya está en curso => ir al destino
-      if (estado === 'en_curso' || estado === 'en_viaje') {
-        lat = ${trip.destino_lat};
-        lng = ${trip.destino_lng};
-      }
+  const lat = irADestino ? trip.destino_lat : trip.origen_lat;
+  const lng = irADestino ? trip.destino_lng : trip.origen_lng;
 
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
-      window.open(url, '_blank');
-    })();
-  ">
-  <span class="icon">🧭</span>
-  <span>Navegar</span>
-</button>
+  const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
+  const icono = irADestino ? '🏁' : '🧭';
+
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+
+  return `
+    <button class="action-btn-large navigate" id="btn-navigate"
+      onclick="window.open('${url}', '_blank')">
+      <span class="icon">${icono}</span>
+      <span>${texto}</span>
+    </button>
+  `;
+})()}
           
           <button class="action-btn-large call" id="btn-call" onclick="window.location.href='tel:${trip.pasajero_telefono || trip.telefono}'">
             <span class="icon">📞</span>
@@ -823,13 +864,25 @@ this.lastTripModalId = null; // ✅ reset
           </div>
         </div>
         
-        <button class="btn-arrived" id="btn-arrived" onclick="this.dispatchEvent(new CustomEvent('driverAction', {detail: {action: 'start', tripId: '${trip.id}'}, bubbles: true}))">
+<button class="btn-arrived" id="btn-arrived" onclick="
+  this.dispatchEvent(new CustomEvent('driverAction', {
+    detail: { action: 'start', tripId: '${trip.id}' },
+    bubbles: true
+  }));
+  
           <span>✓</span>
           <span>He llegado · Iniciar viaje</span>
         </button>
       </div>
     `;
   }
+  <button class="btn-arrived" id="btn-arrived" onclick="
+  this.dispatchEvent(new CustomEvent('driverAction', {
+    detail: { action: 'start', tripId: '${trip.id}' },
+    bubbles: true
+  }));
+">
+
 
   updateTripStep(step) {
     const steps = document.querySelectorAll('.trip-progress-steps .step');
