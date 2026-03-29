@@ -16,22 +16,6 @@
 
 <!-- ⚠️ PRIMER SCRIPT: Bloquear storage ANTES de todo -->
 <script>
-  (function() {
-    const mockStorage = {
-      getItem: function() { return null; },
-      setItem: function() {},
-      removeItem: function() {},
-      clear: function() {},
-      key: function() { return null; },
-      length: 0
-    };
-    
-    // Guardar referencia original
-    window._originalLocalStorage = window.localStorage;
-    window._originalSessionStorage = window.sessionStorage;
-    
-})();
-</script>
 
 <!-- SUPABASE REST CLIENT -->
 <script>
