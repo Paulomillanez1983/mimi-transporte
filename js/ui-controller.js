@@ -735,18 +735,6 @@ this.lastTripModalId = null; // ✅ reset
     this._collapseBottomSheet();
     this._updateBottomSheetState(this.state.isOnline);
   }
-setTimeout(() => {
-  const btnCancel = document.getElementById("btn-cancel");
-  if (!btnCancel) return;
-
-  btnCancel.onclick = () => {
-    if (confirm("¿Seguro que querés cancelar este viaje?")) {
-      window.dispatchEvent(new CustomEvent("driverAction", {
-        detail: { action: "cancel", tripId: trip.id }
-      }));
-    }
-  };
-}, 50);
 
   // =========================
   // NAVIGATION STATE (Trip Active)
@@ -812,40 +800,43 @@ _showTripActions(trip) {
   const sheetContent = this.elements['sheet-content'];
   if (!sheetContent) return;
 
+  const estado = (trip.estado || '').toLowerCase();
+  const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
+
+  const lat = irADestino ? trip.destino_lat : trip.origen_lat;
+  const lng = irADestino ? trip.destino_lng : trip.origen_lng;
+
+  const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
+  const icono = `🏁`;
+
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+
   sheetContent.innerHTML = `
     <div class="trip-active-panel">
+
       <div class="trip-header">
         <div class="client-info-large">
-          <div class="client-avatar-large">${(trip.pasajero_nombre || trip.cliente || 'C').charAt(0)}</div>
+          <div class="client-avatar-large">
+            ${(trip.pasajero_nombre || trip.cliente || 'C').charAt(0)}
+          </div>
+
           <div class="client-details">
             <h4>${trip.pasajero_nombre || trip.cliente || 'Cliente'}</h4>
             <span class="trip-destination">${trip.destino_direccion || trip.destino || 'Destino'}</span>
           </div>
-          <div class="trip-price-large">$${Math.round(trip.precio || 0).toLocaleString('es-AR')}</div>
+
+          <div class="trip-price-large">
+            $${Math.round(trip.precio || 0).toLocaleString('es-AR')}
+          </div>
         </div>
       </div>
-      
+
       <div class="action-buttons-grid">
 
-        ${(() => {
-          const estado = (trip.estado || '').toLowerCase();
-          const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
-
-          const lat = irADestino ? trip.destino_lat : trip.origen_lat;
-          const lng = irADestino ? trip.destino_lng : trip.origen_lng;
-
-          const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
-          const icono = `🏁`;
-
-          const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
-
-          return `
-            <button class="action-btn-large navigate" id="btn-navigate">
-              <span class="icon">${icono}</span>
-              <span>${texto}</span>
-            </button>
-          `;
-        })()}
+        <button class="action-btn-large navigate" id="btn-navigate">
+          <span class="icon">${icono}</span>
+          <span>${texto}</span>
+        </button>
 
         <button class="action-btn-large call" id="btn-call">
           <span class="icon">📞</span>
@@ -858,29 +849,43 @@ _showTripActions(trip) {
         </button>
 
       </div>
+
+      <div class="trip-progress-steps">
+        <div class="step active" data-step="pickup">
+          <div class="step-dot"></div>
+          <span>Recoger</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="trip">
+          <div class="step-dot"></div>
+          <span>En viaje</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" data-step="finish">
+          <div class="step-dot"></div>
+          <span>Finalizar</span>
+        </div>
+      </div>
+
+      <button class="btn-arrived" id="btn-arrived">
+        <span>✓</span>
+        <span>He llegado · Iniciar viaje</span>
+      </button>
+
     </div>
   `;
 
-  // ✅ ACTIVAR BOTONES (después de renderizar el HTML)
+  // Activar botones
   setTimeout(() => {
     const btnNavigate = document.getElementById("btn-navigate");
     const btnCall = document.getElementById("btn-call");
     const btnCancel = document.getElementById("btn-cancel");
+    const btnArrived = document.getElementById("btn-arrived");
 
-    // --- Navegar ---
     if (btnNavigate) {
-      const estado = (trip.estado || '').toLowerCase();
-      const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
-
-      const lat = irADestino ? trip.destino_lat : trip.origen_lat;
-      const lng = irADestino ? trip.destino_lng : trip.origen_lng;
-
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
-
       btnNavigate.onclick = () => window.open(url, "_blank");
     }
 
-    // --- Llamar ---
     if (btnCall) {
       const phone = trip.pasajero_telefono || trip.telefono;
       btnCall.onclick = () => {
@@ -889,7 +894,6 @@ _showTripActions(trip) {
       };
     }
 
-    // --- Cancelar ---
     if (btnCancel) {
       btnCancel.onclick = () => {
         if (confirm("¿Seguro que querés cancelar este viaje?")) {
@@ -897,6 +901,14 @@ _showTripActions(trip) {
             detail: { action: "cancel", tripId: trip.id }
           }));
         }
+      };
+    }
+
+    if (btnArrived) {
+      btnArrived.onclick = () => {
+        window.dispatchEvent(new CustomEvent("driverAction", {
+          detail: { action: "start", tripId: trip.id }
+        }));
       };
     }
 
