@@ -3065,16 +3065,24 @@ function resetCotizacionUI() {
   isCalculating = false;
   clearButtonLoading("btnCalcular", "btnCalcularText");
 }
-// ==========================
-// GEOCODIFICAR DIRECCIÓN (fallback)
-// ==========================
 async function geocodificarDireccion(direccion) {
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(direccion)}&limit=1`;
+    if (!direccion || direccion.length < 4) return null;
+
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `format=json&limit=1&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(direccion)}`;
 
     const res = await fetch(url, {
-      headers: { "Accept": "application/json" }
+      headers: {
+        "Accept": "application/json",
+        "Accept-Language": "es-AR"
+      }
     });
+
+    if (!res.ok) {
+      console.warn("⚠️ Nominatim respondió:", res.status);
+      return null;
+    }
 
     const data = await res.json();
 
