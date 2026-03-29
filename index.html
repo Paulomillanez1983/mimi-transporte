@@ -2500,21 +2500,21 @@ async function enviarViaje() {
       return;
     }
 
-    const fechaHoraInput = document.getElementById('fechaHora')?.value || '';
-    const fechaHoraVueltaInput = document.getElementById('fechaHoraVuelta')?.value || '';
-    const tiempoEsperaInput = document.getElementById('tiempoEsperaMin')?.value || '';
+const fechaHoraInput = document.getElementById('fechaHora')?.value || '';
+const fechaHoraVueltaInput = document.getElementById('fechaHoraVuelta')?.value || '';
+const tiempoEsperaInput = document.getElementById('tiempoEsperaMin')?.value || '';
 
-    const fechaHoraIda = fechaHoraInput
-      ? new Date(fechaHoraInput).toISOString()
-      : new Date().toISOString();
+const fechaHoraIda = fechaHoraInput
+  ? new Date(fechaHoraInput).toISOString()
+  : new Date().toISOString();
 
-fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
-  ? new Date(fechaHoraVuelta).toISOString()
-  : null,
+const fechaHoraVuelta = fechaHoraVueltaInput
+  ? new Date(fechaHoraVueltaInput).toISOString()
+  : null;
 
-    const tiempoEspera = tiempoEsperaInput
-      ? Number(tiempoEsperaInput)
-      : 30;
+const tiempoEspera = tiempoEsperaInput
+  ? Number(tiempoEsperaInput)
+  : 30;
 
     // =========================
     // VALIDACIONES POR TIPO DE SERVICIO
