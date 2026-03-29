@@ -829,11 +829,6 @@ ${(() => {
   const lng = irADestino ? trip.destino_lng : trip.origen_lng;
 
   const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
-const icono = `
-  <img 
-const icono = `
-  <img 
-    src="/mimi-transporte/assets/icons/google-maps.png"
     style="width:22px;height:22px;display:block;"
   />
 `;
