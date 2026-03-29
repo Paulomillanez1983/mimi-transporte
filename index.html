@@ -219,6 +219,25 @@ window.supabase = {
   from(table) {
     return createQueryBuilder(table);
   },
+async function geocodificarDireccion(direccion) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ar&q=${encodeURIComponent(direccion)}`;
+
+  const res = await fetch(url, {
+    headers: { "Accept": "application/json" }
+  });
+
+  const data = await res.json();
+
+  if (!data || !data.length) {
+    throw new Error("No se encontró la dirección: " + direccion);
+  }
+
+  return {
+    lat: parseFloat(data[0].lat),
+    lng: parseFloat(data[0].lon),
+    display: data[0].display_name
+  };
+}
 
   async rpc(functionName, params = {}) {
     try {
