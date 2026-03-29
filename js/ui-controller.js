@@ -22,13 +22,16 @@ class UIController {
     };
 
     // Bindings
-    this._handleAccept = this._handleAccept.bind(this);
-    this._handleReject = this._handleReject.bind(this);
+    this._handleAccept = this._handleAccept.bind(this);this.lastTripModalId = null;
+
+    this._handleReject = this._handleReject.bind(this);this.lastTripModalId = null;
+
     this._onBackdropClick = this._onBackdropClick.bind(this);
     this._onTouchStart = this._onTouchStart.bind(this);
     this._onTouchMove = this._onTouchMove.bind(this);
     this._onTouchEnd = this._onTouchEnd.bind(this);
-    
+    this.lastTripModalId = null;
+
     // Touch handling for bottom sheet
     this.touchStartY = 0;
     this.touchCurrentY = 0;
@@ -266,47 +269,58 @@ class UIController {
   // INCOMING TRIP MODAL (Uber Style)
   // =========================
 
-  showIncomingTrip(tripData, onAccept, onReject) {
-    console.log('[UI] Showing incoming trip:', tripData?.id);
+showIncomingTrip(tripData, onAccept, onReject) {
+  if (!tripData?.id) return;
 
-    // Close existing if open
-    if (this.state.isModalOpen) {
-      this._closeIncomingModal();
-    }
+  console.log('[UI] Showing incoming trip:', tripData.id);
 
-    // Play sound and haptic
-    soundManager.play('newTrip');
-    this._haptic('heavy');
-    this._playCountdownSound();
-
-    // Store callbacks
-    this.state.callbacks = { onAccept, onReject };
-    this.state.currentTrip = tripData;
-
-    const modal = this.elements['incoming-modal'];
-    if (!modal) {
-      console.error('[UI] Modal element not found');
-      return;
-    }
-
-    // Populate data
-    this._populateTripData(tripData);
-
-    // Show modal with animation
-    modal.classList.add('active');
-    this.state.isModalOpen = true;
-    this.state.currentCount = 15;
-
-    // Start countdown
-    this._startCountdown();
-
-    // Auto-reject after timeout
-    this.state.countdownTimeout = setTimeout(() => {
-      if (this.state.isModalOpen) {
-        this._handleReject();
-      }
-    }, 15000);
+  // ✅ FIX: si ya está mostrando este mismo viaje, no reiniciar modal
+  if (this.state.isModalOpen && this.lastTripModalId === tripData.id) {
+    console.log('[UI] Same trip already displayed, skipping reopen');
+    return;
   }
+
+  // Close existing if open (pero solo si es otro viaje)
+  if (this.state.isModalOpen) {
+    this._closeIncomingModal();
+  }
+
+  // Guardar trip mostrado
+  this.lastTripModalId = tripData.id;
+
+  // Play sound and haptic SOLO si es nuevo
+  soundManager.play('newTrip');
+  this._haptic('heavy');
+  this._playCountdownSound();
+
+  // Store callbacks
+  this.state.callbacks = { onAccept, onReject };
+  this.state.currentTrip = tripData;
+
+  const modal = this.elements['incoming-modal'];
+  if (!modal) {
+    console.error('[UI] Modal element not found');
+    return;
+  }
+
+  // Populate data
+  this._populateTripData(tripData);
+
+  // Show modal with animation
+  modal.classList.add('active');
+  this.state.isModalOpen = true;
+  this.state.currentCount = 15;
+
+  // Start countdown
+  this._startCountdown();
+
+  // Auto-reject after timeout
+  this.state.countdownTimeout = setTimeout(() => {
+    if (this.state.isModalOpen) {
+      this._handleReject();
+    }
+  }, 15000);
+}
 
 _populateTripData(trip) {
   const data = {
@@ -549,8 +563,9 @@ async _handleReject(e) {
       this._resetCountdownUI();
     }, 300);
 
-    this.state.isModalOpen = false;
-    this.state.callbacks = {};
+this.state.isModalOpen = false;
+this.state.callbacks = {};
+this.lastTripModalId = null; // ✅ reset
   }
 
   _resetCountdownUI() {
