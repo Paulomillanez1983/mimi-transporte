@@ -135,18 +135,9 @@ async init() {
       await new Promise((r) => setTimeout(r, 100));
       if (Date.now() - start > timeoutMs) return false;
     }
-async _waitForSupabaseLib(timeoutMs = 8000) {
-  if (window.supabase) return true;
 
-  const start = Date.now();
-
-  while (!window.supabase) {
-    await new Promise((r) => setTimeout(r, 100));
-    if (Date.now() - start > timeoutMs) return false;
+    return true;
   }
-
-  return true;
-}
 
   // =========================================================
   // AUTH
