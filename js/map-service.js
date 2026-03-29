@@ -17,7 +17,6 @@ class MapService {
   // =========================================================
   // INIT
   // =========================================================
-
   async init(containerId) {
     if (this.isInitialized) {
       console.log('[Map] Already initialized');
@@ -26,7 +25,7 @@ class MapService {
 
     this.containerId = containerId;
     const container = document.getElementById(containerId);
-    
+
     if (!container) {
       console.error('[Map] Container not found:', containerId);
       return false;
@@ -34,7 +33,6 @@ class MapService {
 
     console.log('[Map] Initializing...');
 
-    // Esperar a que MapLibre esté disponible
     const mapLibreReady = await this._waitForMapLibre();
     if (!mapLibreReady) {
       console.error('[Map] MapLibre GL not loaded');
@@ -61,19 +59,17 @@ class MapService {
         attributionControl: false,
         minZoom: 10,
         maxZoom: 18,
-        failIfMajorPerformanceCaveat: false // Permitir fallback si WebGL lento
+        failIfMajorPerformanceCaveat: false
       });
 
-      // Manejar errores de carga del estilo
       this.map.on('error', (e) => {
         console.error('[Map] Map error:', e);
       });
 
-      // Esperar a que cargue
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Map load timeout'));
-        }, 30000); // 30 segundos timeout
+        }, 30000);
 
         this.map.on('load', () => {
           clearTimeout(timeout);
@@ -81,13 +77,8 @@ class MapService {
           console.log('[Map] Loaded successfully');
           resolve();
         });
-
-        this.map.on('style.load', () => {
-          console.log('[Map] Style loaded');
-        });
       });
 
-      // Agregar controles
       this.map.addControl(
         new window.maplibregl.NavigationControl({
           showCompass: true,
@@ -127,7 +118,6 @@ class MapService {
   // =========================================================
   // HELPERS
   // =========================================================
-
   _sanitizeNumber(value, fallback = 0) {
     const num = Number(value);
     return Number.isFinite(num) ? num : fallback;
@@ -160,7 +150,6 @@ class MapService {
   // =========================================================
   // LAYERS
   // =========================================================
-
   _addCustomLayers() {
     if (!this.map || !this.isLoaded) return;
 
@@ -215,6 +204,7 @@ class MapService {
           'route-line'
         );
       }
+
     } catch (e) {
       console.error('[Map] Error adding layers:', e);
     }
@@ -223,7 +213,6 @@ class MapService {
   // =========================================================
   // CAMERA
   // =========================================================
-
   setCenter(lng, lat, zoom = null) {
     if (!this.map || !this.isLoaded) {
       console.warn('[Map] Not ready for setCenter');
@@ -249,7 +238,6 @@ class MapService {
   // =========================================================
   // MARKERS
   // =========================================================
-
   updateDriverMarker(lng, lat, heading = 0) {
     if (!this.map || !this.isLoaded) {
       console.warn('[Map] Not ready for driver marker');
@@ -290,9 +278,10 @@ class MapService {
       const arrow = this.markers.driver.getElement()?.querySelector('.marker-arrow');
       if (arrow) arrow.style.transform = `rotate(${safeHeading}deg)`;
     }
+  }
 
-    // Centrar mapa en el conductor (opcional, puede ser molesto si el usuario está viendo otra zona)
-    // this.setCenter(lng, lat);
+  updateDriverPosition(lng, lat, heading = 0) {
+    this.updateDriverMarker(lng, lat, heading);
   }
 
   addPickupMarker(lng, lat) {
@@ -335,17 +324,10 @@ class MapService {
       .setLngLat([lng, lat])
       .addTo(this.map);
   }
-  // =========================================================
-  // ACTUALIZAR POSICIÓN DEL CONDUCTOR (método usado por DriverApp)
-  // =========================================================
-  updateDriverPosition(lng, lat, heading = 0) {
-    // Redirigimos al método real que ya tienes implementado
-    this.updateDriverMarker(lng, lat, heading);
-  }
-  // =========================================================
-  // ROUTING (FINAL FIX)
-  // =========================================================
 
+  // =========================================================
+  // ROUTING
+  // =========================================================
   async showRoute(from, to) {
     if (!this.map || !this.isLoaded) {
       console.warn('[Map] Not ready for route');
@@ -367,14 +349,11 @@ class MapService {
       return null;
     }
 
-    // 🔥 limpiar ruta anterior antes de dibujar nueva
     this.clearRoute();
 
-    // ✅ agregar markers pickup/dropoff
     this.addPickupMarker(from.lng, from.lat);
     this.addDropoffMarker(to.lng, to.lat);
 
-    // Usar línea recta como fallback (luego se integra OSRM/Valhalla)
     const routeData = this._getStraightLineRoute(from, to);
 
     try {
@@ -389,11 +368,8 @@ class MapService {
             coordinates: routeData.geometry
           }
         });
-      } else {
-        console.warn('[Map] route source not found');
       }
 
-      // Ajustar vista a la ruta
       if (routeData.geometry.length >= 2) {
         const bounds = routeData.geometry.reduce(
           (b, coord) => b.extend(coord),
@@ -406,7 +382,7 @@ class MapService {
         });
       }
 
-      console.log('[Map] Route drawn (fallback line)', {
+      console.log('[Map] Route drawn', {
         distance: Math.round(routeData.distance),
         duration: Math.round(routeData.duration)
       });
@@ -442,7 +418,7 @@ class MapService {
     return {
       geometry: coordinates,
       distance: distance,
-      duration: distance / 8.33, // aprox 30km/h
+      duration: distance / 8.33,
       isFallback: true
     };
   }
@@ -464,13 +440,9 @@ class MapService {
         });
       }
 
-      // borrar markers pickup/dropoff
       ['pickup', 'dropoff'].forEach(key => {
         if (this.markers[key]) {
-          try {
-            this.markers[key].remove();
-          } catch (e) {}
-
+          try { this.markers[key].remove(); } catch (e) {}
           delete this.markers[key];
         }
       });
@@ -506,7 +478,7 @@ class MapService {
       console.warn('[Map] destroy error:', error);
     }
   }
-} // ✅ ESTA LLAVE FALTABA (CIERRA LA CLASE)
+}
 
 const mapService = new MapService();
 export default mapService;
