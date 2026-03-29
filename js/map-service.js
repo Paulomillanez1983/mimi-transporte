@@ -256,7 +256,12 @@ class MapService {
 
     const btn = document.createElement('button');
     btn.id = 'btn-recenter';
-    btn.innerHTML = '🎯';
+    btn.innerHTML = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="white">
+    <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm8.94 3a8.99 8.99 0 0 0-7.94-7.94V2h-2v1.06A8.99 8.99 0 0 0 3.06 11H2v2h1.06a8.99 8.99 0 0 0 7.94 7.94V22h2v-1.06a8.99 8.99 0 0 0 7.94-7.94H22v-2h-1.06zM12 19a7 7 0 1 1 0-14 7 7 0 0 1 0 14z"/>
+  </svg>
+`;
+
     btn.title = 'Centrar';
 
     btn.style.cssText = `
