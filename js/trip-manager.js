@@ -76,7 +76,7 @@ async _loadInitialState(driverId) {
 
   try {
     // =====================================================
-    // 1) ACTIVE TRIP (si ya tiene viaje asignado/aceptado)
+    // 1) ACTIVE TRIP
     // =====================================================
     const { data: activeTrip, error: tripError } = await supabaseService.client
       .from('viajes')
@@ -110,13 +110,13 @@ async _loadInitialState(driverId) {
     console.log('[TripManager] Checking offers for driver:', driverId);
 
     // =====================================================
-    // 2) OFFERS (PENDIENTE + TIMEOUT para debug)
+    // 2) PENDING OFFERS
     // =====================================================
     const { data: offers, error: offerError } = await supabaseService.client
       .from('viaje_ofertas')
       .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
       .eq('chofer_id_uuid', driverId)
-      .in('estado', ['PENDIENTE', 'TIMEOUT'])
+      .eq('estado', 'PENDIENTE')
       .order('offered_at', { ascending: false })
       .limit(5);
 
@@ -127,17 +127,17 @@ async _loadInitialState(driverId) {
     }
 
     if (offers && offers.length > 0) {
-      // buscamos la primera oferta válida (PENDIENTE y no vencida)
-      const now = new Date().toISOString();
+      const now = Date.now();
 
-      const validOffer = offers.find(o =>
-        o.estado === 'PENDIENTE' &&
-        o.expires_at &&
-        o.expires_at > now
-      );
+      // 🔥 filtramos manualmente las que todavía no vencieron
+      const validOffer = offers.find(o => {
+        if (!o.expires_at) return false;
+        const exp = new Date(o.expires_at).getTime();
+        return exp > now;
+      });
 
       if (!validOffer) {
-        console.warn('[TripManager] No valid pending offer (all expired or timeout)');
+        console.warn('[TripManager] No valid pending offer (all expired)');
         this.pendingOffer = null;
         this.emit('noPendingTrips');
         this.isLoadingInitial = false;
@@ -162,7 +162,6 @@ async _loadInitialState(driverId) {
         console.log('[TripManager] Pending offer found:', validOffer.id);
         this.emit('newPendingTrip', this.pendingOffer);
       }
-
     } else {
       this.pendingOffer = null;
       this.emit('noPendingTrips');
