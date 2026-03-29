@@ -135,12 +135,18 @@ async init() {
       await new Promise((r) => setTimeout(r, 100));
       if (Date.now() - start > timeoutMs) return false;
     }
-if (!this.driverId) {
-  console.warn('[Supabase] driverId still null after ensureDriverProfile');
-}
+async _waitForSupabaseLib(timeoutMs = 8000) {
+  if (window.supabase) return true;
 
-    return true;
+  const start = Date.now();
+
+  while (!window.supabase) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (Date.now() - start > timeoutMs) return false;
   }
+
+  return true;
+}
 
   // =========================================================
   // AUTH
