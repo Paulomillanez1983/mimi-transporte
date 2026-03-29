@@ -108,14 +108,13 @@ this.driverId = driverId; // ✅ guardar
 
 
       // 2) PENDING OFFERS
-      const { data: offers, error: offerError } = await supabaseService.client
-        .from('viaje_ofertas')
-        .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
-        .eq('chofer_id_uuid', driverId)
-        .eq('estado', 'PENDIENTE')
-        .gt('expires_at', new Date().toISOString())
-        .order('offered_at', { ascending: false })
-        .limit(1);
+const { data: offers, error: offerError } = await supabaseService.client
+  .from('viaje_ofertas')
+  .select('id, viaje_id, chofer_id_uuid, estado, expires_at, offered_at')
+  .eq('chofer_id_uuid', driverId)
+  .in('estado', ['PENDIENTE'])  // por ahora solo pendiente
+  .order('offered_at', { ascending: false })
+  .limit(1);
       console.log('[TripManager] Offers fetched:', offers, offerError);
 
 
