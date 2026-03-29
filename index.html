@@ -306,15 +306,15 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
 window.supabaseInsert = async function(table, data) {
   try {
     const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Prefer": "return=representation"
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Prefer': 'return=representation'
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify([data]) // 👈 IMPORTANTE: ARRAY
     });
 
     const result = await response.json();
@@ -329,6 +329,7 @@ window.supabaseInsert = async function(table, data) {
     return { data: null, error: { message: err.message } };
   }
 };
+
 </script>
 <style>
 :root {
