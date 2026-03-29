@@ -445,6 +445,37 @@ class TripManager {
 
     return { success: true };
   }
+async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
+  const driverId = this.driverId;
+  if (!driverId) return { success: false, error: 'No driverId' };
+
+  console.log('[TripManager] Cancelando viaje:', tripId);
+
+  const { error } = await supabaseService.client
+    .from('viajes')
+    .update({
+      estado: 'CANCELADO',
+      cancelado_at: new Date().toISOString(),
+      cancelado_motivo: motivo
+    })
+    .eq('id', tripId)
+    .eq('chofer_id_uuid', driverId);
+
+  if (error) {
+    console.error('[TripManager] Cancel trip error:', error);
+    return { success: false, error: error.message };
+  }
+
+  // limpiar estado local
+  this.currentTrip = null;
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+
+  // emitir evento manual por si realtime tarda
+  this.emit('tripCancelled', { id: tripId });
+
+  return { success: true };
+}
 
   // =========================================================
   // MANUAL REFRESH
