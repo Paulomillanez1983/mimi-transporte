@@ -695,7 +695,7 @@ body {
   transition: all 0.25s ease;
   cursor: text;
   position: relative;
-  overflow: hidden;
+  overflow: visible !important;
 }
 
 .location-card::after {
@@ -1993,15 +1993,24 @@ body {
   border: 1px solid #ddd;
 }
 .location-card {
-  pointer-events: none;
+  pointer-events: auto !important;
 }
 
 .location-input {
   pointer-events: auto;
-}
+}  
+
 
 .sugerencias {
   z-index: 9999999;
+}
+.main-card {
+  overflow: visible !important;
+}
+
+.location-input-group {
+  overflow: visible !important;
+  position: relative;
 }
 
 
