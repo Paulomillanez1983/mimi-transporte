@@ -2939,23 +2939,27 @@ window.addEventListener("load", () => {
   let timerDestino = null;
 
   // ==========================
-  // ORIGEN (DEBOUNCE + MOBILE SAFE)
+  // ORIGEN
   // ==========================
   inputOrigen.addEventListener("input", () => {
     clearTimeout(timerOrigen);
 
+    const texto = inputOrigen.value.trim();
+
+    if (texto.length < 3) {
+      lugarOrigen = null;
+      ocultarSugerencias();
+      return;
+    }
+
     timerOrigen = setTimeout(async () => {
       try {
-        const resultados = await buscarDireccion(inputOrigen.value);
+        const resultados = await buscarDireccion(texto);
 
         mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
-          const textoCorto = formatearDireccionCorta(r);
-
-          // Mostrar texto corto tipo Google
-          inputOrigen.value = textoCorto;
-
-          // Guardar dirección completa real
+          inputOrigen.value = formatearDireccionCorta(r);
           setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+          ocultarSugerencias();
         });
 
       } catch (err) {
@@ -2964,85 +2968,38 @@ window.addEventListener("load", () => {
     }, 350);
   });
 
-// ==========================
-// ORIGEN (DEBOUNCE + MOBILE SAFE)
-// ==========================
-inputOrigen.addEventListener("input", () => {
-  clearTimeout(timerOrigen);
+  // ==========================
+  // DESTINO
+  // ==========================
+  inputDestino.addEventListener("input", () => {
+    clearTimeout(timerDestino);
 
-  const texto = inputOrigen.value.trim();
+    const texto = inputDestino.value.trim();
 
-  // si borran texto, limpiar origen y ocultar lista
-  if (texto.length < 3) {
-    lugarOrigen = null;
-    ocultarSugerencias();
-    return;
-  }
-
-  timerOrigen = setTimeout(async () => {
-    try {
-      const resultados = await buscarDireccion(texto);
-
-      mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
-        const textoCorto = formatearDireccionCorta(r);
-
-        // mostrar texto corto tipo Google
-        inputOrigen.value = textoCorto;
-
-        // guardar dirección completa real (para OSRM / backend)
-        setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-
-        // ocultar sugerencias al elegir
-        ocultarSugerencias();
-      });
-
-    } catch (err) {
-      console.error("❌ Error autocomplete origen:", err);
+    if (texto.length < 3) {
+      lugarDestino = null;
+      ocultarSugerencias();
+      return;
     }
-  }, 350);
-});
 
+    timerDestino = setTimeout(async () => {
+      try {
+        const resultados = await buscarDireccion(texto);
 
-// ==========================
-// DESTINO (DEBOUNCE + MOBILE SAFE)
-// ==========================
-inputDestino.addEventListener("input", () => {
-  clearTimeout(timerDestino);
+        mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
+          inputDestino.value = formatearDireccionCorta(r);
+          setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+          ocultarSugerencias();
+        });
 
-  const texto = inputDestino.value.trim();
-
-  // si borran texto, limpiar destino y ocultar lista
-  if (texto.length < 3) {
-    lugarDestino = null;
-    ocultarSugerencias();
-    return;
-  }
-
-  timerDestino = setTimeout(async () => {
-    try {
-      const resultados = await buscarDireccion(texto);
-
-      mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
-        const textoCorto = formatearDireccionCorta(r);
-
-        // mostrar texto corto tipo Google
-        inputDestino.value = textoCorto;
-
-        // guardar dirección completa real (para OSRM / backend)
-        setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-
-        // ocultar sugerencias al elegir
-        ocultarSugerencias();
-      });
-
-    } catch (err) {
-      console.error("❌ Error autocomplete destino:", err);
-    }
-  }, 350);
-});
+      } catch (err) {
+        console.error("❌ Error autocomplete destino:", err);
+      }
+    }, 350);
+  });
 
   // ==========================
-  // CERRAR SUGERENCIAS (MOBILE + DESKTOP)
+  // CERRAR SUGERENCIAS
   // ==========================
   document.addEventListener("touchstart", (e) => {
     if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
