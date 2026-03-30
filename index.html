@@ -2769,7 +2769,7 @@ let markerDestino = null;
 async function buscarDireccion(query) {
   if (!query || query.length < 3) return [];
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(query)}`;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&q=${encodeURIComponent(query)}`;
 
   try {
     const res = await fetch(url, {
@@ -2779,10 +2779,7 @@ async function buscarDireccion(query) {
       }
     });
 
-    if (!res.ok) {
-      console.warn("⚠️ Nominatim respondió:", res.status);
-      return [];
-    }
+    if (!res.ok) return [];
 
     const data = await res.json();
     return Array.isArray(data) ? data : [];
@@ -2796,18 +2793,17 @@ async function buscarDireccion(query) {
 function formatearDireccionCorta(r) {
   if (!r) return "";
 
-  const a = r.address || {};
+  // Nominatim siempre trae display_name
+  const texto = (r.display_name || "").trim();
+  if (!texto) return "Dirección";
 
-  const calle = a.road || a.pedestrian || a.footway || "";
-  const numero = a.house_number || "";
-  const barrio = a.suburb || a.neighbourhood || "";
-  const ciudad = a.city || a.town || a.village || a.municipality || "";
-  const provincia = a.state || "";
+  // Cortar por partes separadas por coma
+  const partes = texto.split(",").map(p => p.trim()).filter(Boolean);
 
-  let linea1 = `${calle} ${numero}`.trim();
-  if (!linea1) linea1 = r.name || r.display_name || "Dirección";
-
-  let linea2 = [barrio, ciudad, provincia].filter(Boolean).join(", ");
+  // Ejemplo: "Av. Colón 1234, Centro, Córdoba, Argentina"
+  // Queremos: "Av. Colón 1234 · Córdoba"
+  const linea1 = partes[0] || "Dirección";
+  const linea2 = partes.length >= 3 ? partes[2] : (partes[1] || "");
 
   return linea2 ? `${linea1} · ${linea2}` : linea1;
 }
@@ -2957,31 +2953,82 @@ window.addEventListener("load", () => {
     }, 350);
   });
 
-  // ==========================
-  // DESTINO (DEBOUNCE + MOBILE SAFE)
-  // ==========================
-  inputDestino.addEventListener("input", () => {
-    clearTimeout(timerDestino);
+// ==========================
+// ORIGEN (DEBOUNCE + MOBILE SAFE)
+// ==========================
+inputOrigen.addEventListener("input", () => {
+  clearTimeout(timerOrigen);
 
-    timerDestino = setTimeout(async () => {
-      try {
-        const resultados = await buscarDireccion(inputDestino.value);
+  const texto = inputOrigen.value.trim();
 
-        mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
-          const textoCorto = formatearDireccionCorta(r);
+  // si borran texto, limpiar origen y ocultar lista
+  if (texto.length < 3) {
+    lugarOrigen = null;
+    ocultarSugerencias();
+    return;
+  }
 
-          // Mostrar texto corto tipo Google
-          inputDestino.value = textoCorto;
+  timerOrigen = setTimeout(async () => {
+    try {
+      const resultados = await buscarDireccion(texto);
 
-          // Guardar dirección completa real
-          setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-        });
+      mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
+        const textoCorto = formatearDireccionCorta(r);
 
-      } catch (err) {
-        console.error("❌ Error autocomplete destino:", err);
-      }
-    }, 350);
-  });
+        // mostrar texto corto tipo Google
+        inputOrigen.value = textoCorto;
+
+        // guardar dirección completa real (para OSRM / backend)
+        setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+
+        // ocultar sugerencias al elegir
+        ocultarSugerencias();
+      });
+
+    } catch (err) {
+      console.error("❌ Error autocomplete origen:", err);
+    }
+  }, 350);
+});
+
+
+// ==========================
+// DESTINO (DEBOUNCE + MOBILE SAFE)
+// ==========================
+inputDestino.addEventListener("input", () => {
+  clearTimeout(timerDestino);
+
+  const texto = inputDestino.value.trim();
+
+  // si borran texto, limpiar destino y ocultar lista
+  if (texto.length < 3) {
+    lugarDestino = null;
+    ocultarSugerencias();
+    return;
+  }
+
+  timerDestino = setTimeout(async () => {
+    try {
+      const resultados = await buscarDireccion(texto);
+
+      mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
+        const textoCorto = formatearDireccionCorta(r);
+
+        // mostrar texto corto tipo Google
+        inputDestino.value = textoCorto;
+
+        // guardar dirección completa real (para OSRM / backend)
+        setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+
+        // ocultar sugerencias al elegir
+        ocultarSugerencias();
+      });
+
+    } catch (err) {
+      console.error("❌ Error autocomplete destino:", err);
+    }
+  }, 350);
+});
 
   // ==========================
   // CERRAR SUGERENCIAS (MOBILE + DESKTOP)
