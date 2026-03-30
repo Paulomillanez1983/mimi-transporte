@@ -2919,18 +2919,18 @@ window.addEventListener("load", () => {
     });
   });
 
-document.addEventListener("touchstart", (e) => {
-  if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
-    ocultarSugerencias();
-  }
-});
-  document.addEventListener("click", (e) => {
-  if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
-    ocultarSugerencias();
-  }
-});
-  }); // <-- cierre del window.addEventListener("load")
+  document.addEventListener("touchstart", (e) => {
+    if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
+      ocultarSugerencias();
+    }
+  });
 
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
+      ocultarSugerencias();
+    }
+  });
+});
     
   // ==========================================
 // FECHA Y HORA
