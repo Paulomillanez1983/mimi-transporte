@@ -2818,6 +2818,22 @@ function formatearDireccionCorta(r) {
 
   return linea2 ? `${linea1} · ${linea2}` : linea1;
 }
+  // ==================== DIRECCIÓN COMPLETA ====================
+function formatearDireccionCompleta(r) {
+  if (!r || !r.display_name) return "Dirección no válida";
+
+  let direccion = r.display_name.trim();
+
+  // Limpiar partes innecesarias al final (Córdoba, Argentina)
+  direccion = direccion.replace(/,\s*Córdoba,\s*Argentina$/i, '');
+  direccion = direccion.replace(/,\s*Argentina$/i, '');
+  direccion = direccion.replace(/,\s*Córdoba$/i, '');
+
+  // Capitalizar primera letra
+  direccion = direccion.charAt(0).toUpperCase() + direccion.slice(1);
+
+  return direccion;
+}
 
   function ocultarSugerencias() {
   const o = document.getElementById("sugerenciasOrigen");
@@ -2892,11 +2908,17 @@ async function dibujarRutaOSRM() {
 }
 
 function setOrigen(displayName, lat, lng) {
-  lugarOrigen = { direccion: displayName, lat, lng };
+  lugarOrigen = {
+    direccion: displayName,                    // Dirección completa (para backend y WhatsApp)
+    direccionCorta: formatearDireccionCorta({ display_name: displayName }), // solo para mostrar
+    lat: parseFloat(lat),
+    lng: parseFloat(lng)
+  };
 
   if (!mapaCliente) initMapaCliente();
 
   if (markerOrigen) markerOrigen.remove();
+
   markerOrigen = new maplibregl.Marker({ color: "green" })
     .setLngLat([lng, lat])
     .addTo(mapaCliente);
@@ -2904,6 +2926,24 @@ function setOrigen(displayName, lat, lng) {
   dibujarRutaOSRM();
 }
 
+function setDestino(displayName, lat, lng) {
+  lugarDestino = {
+    direccion: displayName,                    // Dirección completa
+    direccionCorta: formatearDireccionCorta({ display_name: displayName }),
+    lat: parseFloat(lat),
+    lng: parseFloat(lng)
+  };
+
+  if (!mapaCliente) initMapaCliente();
+
+  if (markerDestino) markerDestino.remove();
+
+  markerDestino = new maplibregl.Marker({ color: "red" })
+    .setLngLat([lng, lat])
+    .addTo(mapaCliente);
+
+  dibujarRutaOSRM();
+}
 function setDestino(displayName, lat, lng) {
   lugarDestino = { direccion: displayName, lat, lng };
 
@@ -2918,10 +2958,7 @@ function setDestino(displayName, lat, lng) {
 }
 
 // ==========================
-// AUTOCOMPLETE INPUTS (FIX CELULAR - FULL)
-// ==========================
-// ==========================
-// AUTOCOMPLETE INPUTS (FIX CELULAR - FINAL)
+// AUTOCOMPLETE INPUTS - VERSIÓN CORREGIDA
 // ==========================
 window.addEventListener("load", () => {
   cargarEstadoLocal();
@@ -2938,12 +2975,9 @@ window.addEventListener("load", () => {
   let timerOrigen = null;
   let timerDestino = null;
 
-  // ==========================
   // ORIGEN
-  // ==========================
   inputOrigen.addEventListener("input", () => {
     clearTimeout(timerOrigen);
-
     const texto = inputOrigen.value.trim();
 
     if (texto.length < 3) {
@@ -2953,27 +2987,19 @@ window.addEventListener("load", () => {
     }
 
     timerOrigen = setTimeout(async () => {
-      try {
-        const resultados = await buscarDireccion(texto);
-
-        mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
-          inputOrigen.value = formatearDireccionCorta(r);
-          setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-          ocultarSugerencias();
-        });
-
-      } catch (err) {
-        console.error("❌ Error autocomplete origen:", err);
-      }
-    }, 350);
+      const resultados = await buscarDireccion(texto);
+      mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
+        // ✅ AQUÍ USAMOS LA DIRECCIÓN COMPLETA
+        inputOrigen.value = formatearDireccionCompleta(r);
+        setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+        ocultarSugerencias();
+      });
+    }, 380);
   });
 
-  // ==========================
   // DESTINO
-  // ==========================
   inputDestino.addEventListener("input", () => {
     clearTimeout(timerDestino);
-
     const texto = inputDestino.value.trim();
 
     if (texto.length < 3) {
@@ -2983,37 +3009,29 @@ window.addEventListener("load", () => {
     }
 
     timerDestino = setTimeout(async () => {
-      try {
-        const resultados = await buscarDireccion(texto);
-
-        mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
-          inputDestino.value = formatearDireccionCorta(r);
-          setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-          ocultarSugerencias();
-        });
-
-      } catch (err) {
-        console.error("❌ Error autocomplete destino:", err);
-      }
-    }, 350);
+      const resultados = await buscarDireccion(texto);
+      mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
+        // ✅ AQUÍ USAMOS LA DIRECCIÓN COMPLETA
+        inputDestino.value = formatearDireccionCompleta(r);
+        setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+        ocultarSugerencias();
+      });
+    }, 380);
   });
 
-  // ==========================
-  // CERRAR SUGERENCIAS
-  // ==========================
+  // Cerrar sugerencias al tocar fuera
   document.addEventListener("touchstart", (e) => {
-    if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
+    if (!e.target.closest(".location-input-group") && !e.target.closest(".sugerencias")) {
       ocultarSugerencias();
     }
   }, { passive: true });
 
   document.addEventListener("click", (e) => {
-    if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
+    if (!e.target.closest(".location-input-group") && !e.target.closest(".sugerencias")) {
       ocultarSugerencias();
     }
   });
-});
-function mostrarSugerencias(contenedorId, resultados, callbackSeleccion) {
+});function mostrarSugerencias(contenedorId, resultados, callbackSeleccion) {
   const contenedor = document.getElementById(contenedorId);
   if (!contenedor) return;
 
