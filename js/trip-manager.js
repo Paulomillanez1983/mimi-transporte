@@ -52,7 +52,6 @@ class TripManager {
   // INIT
   // =========================================================
   async init() {
-    // aseguramos perfil
     await supabaseService.ensureDriverProfile();
 
     const driverId = supabaseService.getDriverId();
@@ -111,126 +110,48 @@ class TripManager {
         return;
       }
 
-// =====================================================
-// 2) PENDING OFFERS (FIXED TO REAL DB)
-// =====================================================
-console.log('[TripManager] Checking offers for driver:', driverId);
+      // =====================================================
+      // 2) PENDING OFFERS (FIXED TO REAL DB)
+      // =====================================================
+      console.log('[TripManager] Checking offers for driver:', driverId);
 
-const { data: offers, error: offerError } = await supabaseService.client
-  .from('viaje_ofertas')
-  .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en')
-  .eq('chofer_id', driverId)
-  .eq('estado', 'pendiente')
-  .order('enviada_en', { ascending: false })
-  .limit(5);
+      const { data: offers, error: offerError } = await supabaseService.client
+        .from('viaje_ofertas')
+        .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en')
+        .eq('chofer_id', driverId)
+        .eq('estado', 'pendiente')
+        .order('enviada_en', { ascending: false })
+        .limit(5);
 
-console.log('[TripManager] Offers fetched:', offers, offerError);
+      console.log('[TripManager] Offers fetched:', offers, offerError);
 
-if (offerError) {
-  console.error('[TripManager] Error loading offers:', offerError);
-}
+      if (offerError) {
+        console.error('[TripManager] Error loading offers:', offerError);
+      }
 
-// si no hay ofertas
-if (!offers || offers.length === 0) {
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
-  this.emit('noPendingTrips');
+      if (!offers || offers.length === 0) {
+        this.pendingOffer = null;
+        this.lastOfferIdShown = null;
+        this.emit('noPendingTrips');
 
-  this.isLoadingInitial = false;
-  return;
-}
-
-// =====================================================
-// 3) VALID OFFER FILTER (NO EXPIRES_AT AVAILABLE)
-// =====================================================
-// como no tenés expires_at en la tabla, tomamos la primera oferta pendiente
-const validOffer = offers[0];
-
-if (!validOffer?.viaje_id) {
-  console.warn('[TripManager] Offer has no viaje_id:', validOffer);
-
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
-  this.emit('noPendingTrips');
-
-  this.isLoadingInitial = false;
-  return;
-}
-
-// =====================================================
-// 4) FETCH TRIP DATA
-// =====================================================
-const { data: trip, error: tripErr } = await supabaseService.client
-  .from('viajes')
-  .select('*')
-  .eq('id', validOffer.viaje_id)
-  .single();
-
-if (tripErr) {
-  console.error('[TripManager] Error fetching trip for offer:', tripErr);
-  this.isLoadingInitial = false;
-  return;
-}
-
-if (!trip) {
-  console.warn('[TripManager] Trip not found for offer:', validOffer.id);
-  this.isLoadingInitial = false;
-  return;
-}
-
-// =====================================================
-// 5) SET PENDING OFFER
-// =====================================================
-this.pendingOffer = {
-  ...trip,
-  offerId: validOffer.id,
-  enviadaEn: validOffer.enviada_en
-};
-
-console.log('[TripManager] Pending offer found:', validOffer.id);
-
-// =====================================================
-// 6) ANTI-PARPadeo (solo emitir si es nueva)
-// =====================================================
-if (this.lastOfferIdShown === validOffer.id) {
-  console.log('[TripManager] Offer already shown, skipping emit');
-} else {
-  this.lastOfferIdShown = validOffer.id;
-  this.emit('newPendingTrip', this.pendingOffer);
-}
+        this.isLoadingInitial = false;
+        return;
+      }
 
       // =====================================================
-      // 3) VALID OFFER FILTER (NO EXPIRED)
+      // 3) SELECT FIRST VALID OFFER
       // =====================================================
-      const nowTimestamp = Date.now();
+      const validOffer = offers[0];
 
-      const validOffer = offers.find(o => {
-        if (!o.expires_at) return false;
-
-        const expTimestamp = new Date(o.expires_at).getTime();
-
-        console.log('[TripManager] Offer check:', {
-          id: o.id,
-          expires_at: o.expires_at,
-          expTimestamp,
-          nowTimestamp,
-          diffSeconds: Math.round((expTimestamp - nowTimestamp) / 1000),
-          isValid: expTimestamp > nowTimestamp
-        });
-
-        return expTimestamp > nowTimestamp;
-      });
-
-      // si todas expiraron
-      if (!validOffer) {
-        console.warn('[TripManager] No valid pending offer (all expired)');
+      if (!validOffer?.viaje_id) {
+        console.warn('[TripManager] Offer has no viaje_id:', validOffer);
 
         this.pendingOffer = null;
         this.lastOfferIdShown = null;
         this.emit('noPendingTrips');
 
         this.isLoadingInitial = false;
-        return; // ✅ ESTO TE FALTABA (si no, rompe todo)
+        return;
       }
 
       // =====================================================
@@ -260,13 +181,13 @@ if (this.lastOfferIdShown === validOffer.id) {
       this.pendingOffer = {
         ...trip,
         offerId: validOffer.id,
-        expiresAt: validOffer.expires_at
+        enviadaEn: validOffer.enviada_en
       };
 
       console.log('[TripManager] Pending offer found:', validOffer.id);
 
       // =====================================================
-      // 6) ANTI-PARPadeo (solo emitir si es nueva)
+      // 6) ANTI-PARPADEO (solo emitir si es nueva)
       // =====================================================
       if (this.lastOfferIdShown === validOffer.id) {
         console.log('[TripManager] Offer already shown, skipping emit');
@@ -310,7 +231,7 @@ if (this.lastOfferIdShown === validOffer.id) {
           event: '*',
           schema: 'public',
           table: 'viaje_ofertas',
-          filter: `chofer_id_uuid=eq.${driverId}`
+          filter: `chofer_id=eq.${driverId}`
         },
         async (payload) => {
           console.log('[TripManager] Offer realtime payload:', payload);
@@ -354,6 +275,7 @@ if (this.lastOfferIdShown === validOffer.id) {
         console.log('[TripManager] Trip channel status:', status);
       });
   }
+
   // =========================================================
   // REFRESH
   // =========================================================
@@ -420,9 +342,8 @@ if (this.lastOfferIdShown === validOffer.id) {
         return { success: false, error: result.reason || 'No se pudo aceptar el viaje' };
       }
 
-      // OK accepted
       this.pendingOffer = null;
-      this.lastOfferIdShown = null; // ✅ reset
+      this.lastOfferIdShown = null;
       await this._loadInitialState(driverId);
 
       return { success: true };
@@ -440,20 +361,18 @@ if (this.lastOfferIdShown === validOffer.id) {
     const { error } = await supabaseService.client
       .from('viaje_ofertas')
       .update({
-        estado: 'RECHAZADA',
-        rechazo_motivo: reason,
-        responded_at: new Date().toISOString()
+        estado: 'rechazada',
+        respondida_en: new Date().toISOString()
       })
       .eq('viaje_id', tripId)
-      .eq('chofer_id_uuid', driverId)
-      .eq('estado', 'PENDIENTE');
+      .eq('chofer_id', driverId)
+      .eq('estado', 'pendiente');
 
     if (error) {
       console.error('[TripManager] Reject error:', error);
       return { success: false, error: error.message };
     }
 
-    // reset para que la próxima oferta pueda mostrarse
     this.pendingOffer = null;
     this.lastOfferIdShown = null;
 
@@ -503,37 +422,38 @@ if (this.lastOfferIdShown === validOffer.id) {
 
     return { success: true };
   }
-async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
-  const driverId = this.driverId;
-  if (!driverId) return { success: false, error: 'No driverId' };
 
-  console.log('[TripManager] Cancelando viaje:', tripId);
+  async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
+    const driverId = this.driverId;
+    if (!driverId) return { success: false, error: 'No driverId' };
 
-  const { error } = await supabaseService.client
-    .from('viajes')
-    .update({
-      estado: 'CANCELADO',
-      cancelado_at: new Date().toISOString(),
-      cancelado_por: 'CHOFER',
-      cancel_reason: motivo,
-      updated_at: new Date().toISOString()
-    })
-    .eq('id', tripId)
-    .eq('chofer_id_uuid', driverId);
+    console.log('[TripManager] Cancelando viaje:', tripId);
 
-  if (error) {
-    console.error('[TripManager] Cancel trip error:', error);
-    return { success: false, error: error.message };
+    const { error } = await supabaseService.client
+      .from('viajes')
+      .update({
+        estado: 'CANCELADO',
+        cancelado_at: new Date().toISOString(),
+        cancelado_por: 'CHOFER',
+        cancel_reason: motivo,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', tripId)
+      .eq('chofer_id_uuid', driverId);
+
+    if (error) {
+      console.error('[TripManager] Cancel trip error:', error);
+      return { success: false, error: error.message };
+    }
+
+    this.currentTrip = null;
+    this.pendingOffer = null;
+    this.lastOfferIdShown = null;
+
+    this.emit('tripCancelled', { id: tripId });
+
+    return { success: true };
   }
-
-  this.currentTrip = null;
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
-
-  this.emit('tripCancelled', { id: tripId });
-
-  return { success: true };
-}
 
   // =========================================================
   // MANUAL REFRESH
