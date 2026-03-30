@@ -3256,7 +3256,7 @@ function mostrarResultado(res) {
   }
 
 // =============================
-// MAPA RUTA - ESTILO UBER PREMIUM + ANIMACIÓN DE MOVIMIENTO
+// MAPA RUTA - ESTILO UBER PREMIUM + ANIMACIÓN
 // =============================
 const mapaDiv = document.getElementById("mapaRuta");
 if (!mapaDiv) {
@@ -3297,22 +3297,22 @@ const map = new maplibregl.Map({
   zoom: 13
 });
 
-// Resize inicial
+// Resize inicial para móviles
 setTimeout(() => { try { map.resize(); } catch(e) {} }, 600);
 
 map.on("load", async () => {
   try { map.resize(); } catch(e) {}
 
   // Marcadores mejorados
-  new maplibregl.Marker({ color: "#22c55e", scale: 0.95 })
+  new maplibregl.Marker({ color: "#22c55e", scale: 0.9 })
     .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
     .addTo(map);
 
-  new maplibregl.Marker({ color: "#ef4444", scale: 0.95 })
+  new maplibregl.Marker({ color: "#ef4444", scale: 0.9 })
     .setLngLat([lugarDestino.lng, lugarDestino.lat])
     .addTo(map);
 
-  // Ruta OSRM
+  // Ruta con efecto Uber
   const url = `https://router.project-osrm.org/route/v1/driving/` +
     `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
     `?overview=full&geometries=geojson`;
@@ -3338,7 +3338,7 @@ map.on("load", async () => {
     data: { type: "Feature", geometry: route }
   });
 
-  // 1. Glow suave (iluminación de fondo)
+  // Glow suave
   map.addLayer({
     id: "route-glow",
     type: "line",
@@ -3347,11 +3347,11 @@ map.on("load", async () => {
     paint: {
       "line-color": "#60a5fa",
       "line-width": 14,
-      "line-opacity": 0.28
+      "line-opacity": 0.25
     }
   });
 
-  // 2. Línea principal (azul fuerte)
+  // Línea principal
   map.addLayer({
     id: "route-line",
     type: "line",
@@ -3364,32 +3364,19 @@ map.on("load", async () => {
     }
   });
 
-  // 3. Línea animada con movimiento (el efecto "flujo" que querés)
+  // Dash animado sutil
   map.addLayer({
-    id: "route-flow",
+    id: "route-dash",
     type: "line",
     source: "route",
     layout: { "line-join": "round", "line-cap": "round" },
     paint: {
       "line-color": "#ffffff",
-      "line-width": 3,
-      "line-opacity": 0.75,
-      "line-dasharray": [1, 3]   // patrón de guiones
+      "line-width": 2.5,
+      "line-opacity": 0.6,
+      "line-dasharray": [0.5, 3]
     }
   });
-
-  // === ANIMACIÓN DEL MOVIMIENTO ===
-  // Esto crea el efecto de "línea corriendo" como en Uber
-  let dashOffset = 0;
-  const animateLine = () => {
-    dashOffset -= 0.8; // velocidad del movimiento (ajustá si querés más lento/rápido)
-    map.setPaintProperty("route-flow", "line-dasharray", [1, 3]);
-    map.setPaintProperty("route-flow", "line-dash-offset", dashOffset);
-    requestAnimationFrame(animateLine);
-  };
-
-  // Iniciar la animación
-  animateLine();
 
   // Ajustar vista
   const coords = route.coordinates;
@@ -3406,7 +3393,9 @@ map.on("load", async () => {
 setTimeout(() => {
   resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }, 300);
-} // ← Cierre correcto de mostrarResultado
+
+}   // ←←← ESTE CIERRE ES OBLIGATORIO (cierra la función mostrarResultado)
+
 // ==========================================
 // ANIMAR CONTADOR
 // ==========================================
@@ -3424,7 +3413,8 @@ function animarContador(id, inicio, fin, duracion) {
     elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
   }, 16);
 }
-function resetCotizacionUI() {
+  
+  function resetCotizacionUI() {
   isCalculating = false;
   clearButtonLoading("btnCalcular", "btnCalcularText");
 }
