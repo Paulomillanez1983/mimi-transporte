@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
-<head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">
@@ -2331,6 +2331,7 @@ let lugarOrigen = null;
 let lugarDestino = null;
 let datosCotizacion = null;
 let isCalculating = false;
+  let lastCotizacionAt = 0;
 let autocompleteOrigen = null;
 let autocompleteDestino = null;
 
@@ -2955,24 +2956,64 @@ async function dibujarRutaOSRM() {
 }
 
 function setOrigen(displayName, lat, lng) {
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+
+  if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
+    console.error("❌ setOrigen recibió coords inválidas", { displayName, lat, lng });
+    return;
+  }
+
   lugarOrigen = {
-    direccion: displayName,                    // Dirección completa (para backend y WhatsApp)
-    direccionCorta: formatearDireccionCorta({ display_name: displayName }), // solo para mostrar
-    lat: parseFloat(lat),
-    lng: parseFloat(lng)
+    direccion: displayName,
+    direccionCorta: formatearDireccionCorta({ display_name: displayName }),
+    lat: latNum,
+    lng: lngNum,
+    actualizadoEn: Date.now()
   };
+
+  console.log("📍 ORIGEN SET", lugarOrigen);
 
   if (!mapaCliente) initMapaCliente();
 
   if (markerOrigen) markerOrigen.remove();
 
   markerOrigen = new maplibregl.Marker({ color: "green" })
-    .setLngLat([lng, lat])
+    .setLngLat([lngNum, latNum])
     .addTo(mapaCliente);
 
   dibujarRutaOSRM();
 }
 
+function setDestino(displayName, lat, lng) {
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+
+  if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
+    console.error("❌ setDestino recibió coords inválidas", { displayName, lat, lng });
+    return;
+  }
+
+  lugarDestino = {
+    direccion: displayName,
+    direccionCorta: formatearDireccionCorta({ display_name: displayName }),
+    lat: latNum,
+    lng: lngNum,
+    actualizadoEn: Date.now()
+  };
+
+  console.log("🎯 DESTINO SET", lugarDestino);
+
+  if (!mapaCliente) initMapaCliente();
+
+  if (markerDestino) markerDestino.remove();
+
+  markerDestino = new maplibregl.Marker({ color: "red" })
+    .setLngLat([lngNum, latNum])
+    .addTo(mapaCliente);
+
+  dibujarRutaOSRM();
+}
 function setDestino(displayName, lat, lng) {
   lugarDestino = {
     direccion: displayName,                    // Dirección completa
@@ -2985,18 +3026,6 @@ function setDestino(displayName, lat, lng) {
 
   if (markerDestino) markerDestino.remove();
 
-  markerDestino = new maplibregl.Marker({ color: "red" })
-    .setLngLat([lng, lat])
-    .addTo(mapaCliente);
-
-  dibujarRutaOSRM();
-}
-function setDestino(displayName, lat, lng) {
-  lugarDestino = { direccion: displayName, lat, lng };
-
-  if (!mapaCliente) initMapaCliente();
-
-  if (markerDestino) markerDestino.remove();
   markerDestino = new maplibregl.Marker({ color: "red" })
     .setLngLat([lng, lat])
     .addTo(mapaCliente);
@@ -3023,16 +3052,17 @@ window.addEventListener("load", () => {
   let timerDestino = null;
 
   // ORIGEN
-  inputOrigen.addEventListener("input", () => {
-    clearTimeout(timerOrigen);
-    const texto = inputOrigen.value.trim();
+inputOrigen.addEventListener("input", () => {
+  clearTimeout(timerOrigen);
+  const texto = inputOrigen.value.trim();
 
-    if (texto.length < 3) {
-      lugarOrigen = null;
-      ocultarSugerencias();
-      return;
-    }
+  // IMPORTANTE: si el usuario escribe, invalido la selección anterior
+  lugarOrigen = null;
 
+  if (texto.length < 3) {
+    ocultarSugerencias();
+    return;
+  }
     timerOrigen = setTimeout(async () => {
       const resultados = await buscarDireccion(texto);
       mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
@@ -3045,16 +3075,17 @@ window.addEventListener("load", () => {
   });
 
   // DESTINO
-  inputDestino.addEventListener("input", () => {
-    clearTimeout(timerDestino);
-    const texto = inputDestino.value.trim();
+inputDestino.addEventListener("input", () => {
+  clearTimeout(timerDestino);
+  const texto = inputDestino.value.trim();
 
-    if (texto.length < 3) {
-      lugarDestino = null;
-      ocultarSugerencias();
-      return;
-    }
+  // IMPORTANTE: si el usuario escribe, invalido la selección anterior
+  lugarDestino = null;
 
+  if (texto.length < 3) {
+    ocultarSugerencias();
+    return;
+  }
     timerDestino = setTimeout(async () => {
       const resultados = await buscarDireccion(texto);
       mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
@@ -3078,11 +3109,13 @@ window.addEventListener("load", () => {
       ocultarSugerencias();
     }
   });
-});function mostrarSugerencias(contenedorId, resultados, callbackSeleccion) {
+});
+  
+function mostrarSugerencias(contenedorId, resultados, callbackSeleccion) {
   const contenedor = document.getElementById(contenedorId);
   if (!contenedor) return;
 
-  contenedor.innerHTML = ''; // limpiar
+  contenedor.innerHTML = '';
 
   if (!resultados || resultados.length === 0) {
     contenedor.style.display = 'none';
@@ -3093,15 +3126,21 @@ window.addEventListener("load", () => {
     const item = document.createElement('div');
     item.className = 'sugerencia-item';
     item.textContent = formatearDireccionCorta(resultado);
-    
-    item.addEventListener('click', () => {
+
+    let yaSeleccionado = false;
+
+    const seleccionar = () => {
+      if (yaSeleccionado) return;
+      yaSeleccionado = true;
       callbackSeleccion(resultado);
-    });
-    
-    // Soporte táctil adicional
+    };
+
+    item.addEventListener('click', seleccionar);
+
     item.addEventListener('touchend', (e) => {
       e.preventDefault();
-      callbackSeleccion(resultado);
+      e.stopPropagation();
+      seleccionar();
     }, { passive: false });
 
     contenedor.appendChild(item);
@@ -3109,6 +3148,7 @@ window.addEventListener("load", () => {
 
   contenedor.style.display = 'block';
 }
+  
   // ==========================================
 // FECHA Y HORA
 // ==========================================
@@ -3505,8 +3545,15 @@ async function geocodificarDireccion(direccion) {
 // CÁLCULO DE TARIFA - SUPABASE EDGE FUNCTION (FINAL)
 // ==========================================
 async function calcularTarifa() {
-  if (isCalculating) return;
+if (isCalculating) return;
 
+const now = Date.now();
+if (now - lastCotizacionAt < 2500) {
+  console.warn("⛔ Cotización bloqueada por anti-doble-disparo");
+  return;
+}
+lastCotizacionAt = now;
+  
   if (navigator.vibrate) navigator.vibrate(30);
 
   setButtonLoading("btnCalcular", "btnCalcularText", "Cotizando...");
@@ -3634,19 +3681,45 @@ async function calcularTarifa() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
-    const payload = {
-      servicio: servicioSeleccionado,
+const origenLat = Number(lugarOrigen?.lat);
+const origenLng = Number(lugarOrigen?.lng);
+const destinoLat = Number(lugarDestino?.lat);
+const destinoLng = Number(lugarDestino?.lng);
 
-      origen_lat: Number(lugarOrigen.lat),
-      origen_lng: Number(lugarOrigen.lng),
+if (
+  !Number.isFinite(origenLat) ||
+  !Number.isFinite(origenLng) ||
+  !Number.isFinite(destinoLat) ||
+  !Number.isFinite(destinoLng)
+) {
+  mostrarError("Las coordenadas del origen o destino no son válidas");
+  resetCotizacionUI();
+  return;
+}
 
-      destino_lat: Number(lugarDestino.lat),
-      destino_lng: Number(lugarDestino.lng),
+const payload = {
+  servicio: servicioSeleccionado,
 
-      fechaHora: fechaHoraParaEnviar,
-      tiempoEsperaMin: esperaMin
-    };
+  origen,
+  destino,
 
+  origen_lat: origenLat,
+  origen_lng: origenLng,
+
+  destino_lat: destinoLat,
+  destino_lng: destinoLng,
+
+  fechaHora: fechaHoraParaEnviar,
+  tiempoEsperaMin: esperaMin
+};
+
+console.log("📦 PAYLOAD COTIZAR", payload);
+console.log("📏 DISTANCIA HYPER-DEBUG", {
+  origen: { lat: origenLat, lng: origenLng },
+  destino: { lat: destinoLat, lng: destinoLng },
+  lugarOrigen,
+  lugarDestino
+});
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: "POST",
       signal: controller.signal,
