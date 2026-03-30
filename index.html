@@ -1,362 +1,137 @@
 <!DOCTYPE html>
 <html lang="es">
-
+<head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">
+<meta name="theme-color" content="#1e3c72">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>MIMI Transporte Escolar</title>
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/854/854878.png">
-  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 
 <meta property="og:title" content="MIMI Transporte Escolar">
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
 
-
 <!-- SUPABASE REST CLIENT -->
 <script>
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
-// =========================================================
-// Query Builder tipo supabase-js (REST API directa)
-// =========================================================
 function createQueryBuilder(table) {
-  let state = {
-    table,
-    columns: '*',
-    filters: [],
-    orderBy: null,
-    orderAscending: true,
-    single: false,
-    limit: null
-  };
-
+  let state = { table, columns: '*', filters: [], orderBy: null, orderAscending: true, single: false, limit: null };
   const builder = {
-    select(columns = '*') {
-      state.columns = columns;
-      return this;
-    },
-
-    eq(column, value) {
-      state.filters.push({ type: 'eq', column, value });
-      return this;
-    },
-
-    neq(column, value) {
-      state.filters.push({ type: 'neq', column, value });
-      return this;
-    },
-
-    gt(column, value) {
-      state.filters.push({ type: 'gt', column, value });
-      return this;
-    },
-
-    lt(column, value) {
-      state.filters.push({ type: 'lt', column, value });
-      return this;
-    },
-
-    gte(column, value) {
-      state.filters.push({ type: 'gte', column, value });
-      return this;
-    },
-
-    lte(column, value) {
-      state.filters.push({ type: 'lte', column, value });
-      return this;
-    },
-
-    like(column, pattern) {
-      state.filters.push({ type: 'like', column, value: pattern });
-      return this;
-    },
-
-    ilike(column, pattern) {
-      state.filters.push({ type: 'ilike', column, value: pattern });
-      return this;
-    },
-
-    in(column, values) {
-      if (!Array.isArray(values)) values = [values];
-      state.filters.push({ type: 'in', column, value: values });
-      return this;
-    },
-
-    is(column, value) {
-      state.filters.push({ type: 'is', column, value });
-      return this;
-    },
-
-    or(conditions) {
-      state.filters.push({ type: 'or', value: conditions });
-      return this;
-    },
-
-    order(column, { ascending = true } = {}) {
-      state.orderBy = column;
-      state.orderAscending = ascending;
-      return this;
-    },
-
-    limit(n) {
-      state.limit = n;
-      return this;
-    },
-
-    single() {
-      state.single = true;
-      return this;
-    },
-
-    then(onResolve, onReject) {
-      return this.execute().then(onResolve, onReject);
-    },
-
+    select(columns = '*') { state.columns = columns; return this; },
+    eq(column, value) { state.filters.push({ type: 'eq', column, value }); return this; },
+    neq(column, value) { state.filters.push({ type: 'neq', column, value }); return this; },
+    gt(column, value) { state.filters.push({ type: 'gt', column, value }); return this; },
+    lt(column, value) { state.filters.push({ type: 'lt', column, value }); return this; },
+    gte(column, value) { state.filters.push({ type: 'gte', column, value }); return this; },
+    lte(column, value) { state.filters.push({ type: 'lte', column, value }); return this; },
+    like(column, pattern) { state.filters.push({ type: 'like', column, value: pattern }); return this; },
+    ilike(column, pattern) { state.filters.push({ type: 'ilike', column, value: pattern }); return this; },
+    in(column, values) { if (!Array.isArray(values)) values = [values]; state.filters.push({ type: 'in', column, value: values }); return this; },
+    is(column, value) { state.filters.push({ type: 'is', column, value }); return this; },
+    or(conditions) { state.filters.push({ type: 'or', value: conditions }); return this; },
+    order(column, { ascending = true } = {}) { state.orderBy = column; state.orderAscending = ascending; return this; },
+    limit(n) { state.limit = n; return this; },
+    single() { state.single = true; return this; },
+    then(onResolve, onReject) { return this.execute().then(onResolve, onReject); },
     async execute() {
       try {
         let url = `${SUPABASE_URL}/rest/v1/${state.table}?select=${encodeURIComponent(state.columns)}`;
-
-        // filtros
         state.filters.forEach(filter => {
           switch (filter.type) {
-            case 'eq':
-              url += `&${encodeURIComponent(filter.column)}=eq.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'neq':
-              url += `&${encodeURIComponent(filter.column)}=neq.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'gt':
-              url += `&${encodeURIComponent(filter.column)}=gt.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'lt':
-              url += `&${encodeURIComponent(filter.column)}=lt.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'gte':
-              url += `&${encodeURIComponent(filter.column)}=gte.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'lte':
-              url += `&${encodeURIComponent(filter.column)}=lte.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'like':
-              url += `&${encodeURIComponent(filter.column)}=like.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'ilike':
-              url += `&${encodeURIComponent(filter.column)}=ilike.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'in': {
-              const vals = filter.value.map(v => `"${String(v).replace(/"/g, '\\"')}"`).join(",");
-              url += `&${encodeURIComponent(filter.column)}=in.(${encodeURIComponent(vals)})`;
-              break;
-            }
-
-            case 'is':
-              url += `&${encodeURIComponent(filter.column)}=is.${encodeURIComponent(filter.value)}`;
-              break;
-
-            case 'or':
-              url += `&or=(${filter.value})`;
-              break;
+            case 'eq': url += `&${encodeURIComponent(filter.column)}=eq.${encodeURIComponent(filter.value)}`; break;
+            case 'neq': url += `&${encodeURIComponent(filter.column)}=neq.${encodeURIComponent(filter.value)}`; break;
+            case 'gt': url += `&${encodeURIComponent(filter.column)}=gt.${encodeURIComponent(filter.value)}`; break;
+            case 'lt': url += `&${encodeURIComponent(filter.column)}=lt.${encodeURIComponent(filter.value)}`; break;
+            case 'gte': url += `&${encodeURIComponent(filter.column)}=gte.${encodeURIComponent(filter.value)}`; break;
+            case 'lte': url += `&${encodeURIComponent(filter.column)}=lte.${encodeURIComponent(filter.value)}`; break;
+            case 'like': url += `&${encodeURIComponent(filter.column)}=like.${encodeURIComponent(filter.value)}`; break;
+            case 'ilike': url += `&${encodeURIComponent(filter.column)}=ilike.${encodeURIComponent(filter.value)}`; break;
+            case 'in': { const vals = filter.value.map(v => `"${String(v).replace(/"/g, '\\"')}"`).join(","); url += `&${encodeURIComponent(filter.column)}=in.(${encodeURIComponent(vals)})`; break; }
+            case 'is': url += `&${encodeURIComponent(filter.column)}=is.${encodeURIComponent(filter.value)}`; break;
+            case 'or': url += `&or=(${filter.value})`; break;
           }
         });
-
-        // orden
-        if (state.orderBy) {
-          const direction = state.orderAscending ? 'asc' : 'desc';
-          url += `&order=${encodeURIComponent(state.orderBy)}.${direction}`;
-        }
-
-        // límite
-        if (state.limit) {
-          url += `&limit=${state.limit}`;
-        }
-
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 15000); // 15 segundos
-
-const response = await fetch(url, {
-  method: "GET",
-  signal: controller.signal,
-  headers: {
-    "apikey": SUPABASE_KEY,
-    "Authorization": "Bearer " + SUPABASE_KEY,
-    "Accept": "application/json"
-  }
-});
-
-clearTimeout(timeout);
-
-let data = null;
-try {
-  data = await response.json();
-} catch(e) {
-  data = null;
-}
-
-        if (!response.ok) {
-          return { data: null, error: data };
-        }
-
-        if (state.single && Array.isArray(data)) {
-          return { data: data[0] || null, error: null };
-        }
-
+        if (state.orderBy) { const direction = state.orderAscending ? 'asc' : 'desc'; url += `&order=${encodeURIComponent(state.orderBy)}.${direction}`; }
+        if (state.limit) { url += `&limit=${state.limit}`; }
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch(url, { method: "GET", signal: controller.signal, headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Accept": "application/json" } });
+        clearTimeout(timeout);
+        let data = null;
+        try { data = await response.json(); } catch(e) { data = null; }
+        if (!response.ok) return { data: null, error: data };
+        if (state.single && Array.isArray(data)) return { data: data[0] || null, error: null };
         return { data, error: null };
-
-      } catch (err) {
-        return { data: null, error: { message: err.message } };
-      }
+      } catch (err) { return { data: null, error: { message: err.message } }; }
     }
   };
-
   return builder;
 }
 
-// =========================================================
-// Cliente global tipo Supabase
-// =========================================================
 window.supabase = {
-  from(table) {
-    return createQueryBuilder(table);
-  },
-
-async rpc(functionName, params = {}) {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY,
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      },
-      body: JSON.stringify(params)
-    });
-
-    clearTimeout(timeout);
-
-let data = null;
-try {
-  data = await response.json();
-} catch(e) {
-  data = null;
-}
-
-    if (!response.ok) {
-      return { data: null, error: data };
-    }
-
-    return { data, error: null };
-
-  } catch (err) {
-    return { data: null, error: { message: err.message } };
+  from(table) { return createQueryBuilder(table); },
+  async rpc(functionName, params = {}) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
+        method: "POST", signal: controller.signal,
+        headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(params)
+      });
+      clearTimeout(timeout);
+      let data = null;
+      try { data = await response.json(); } catch(e) { data = null; }
+      if (!response.ok) return { data: null, error: data };
+      return { data, error: null };
+    } catch (err) { return { data: null, error: { message: err.message } }; }
   }
-}
-  };
+};
 
-
-// =========================================================
-// Helper UPDATE
-// =========================================================
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
-
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/${table}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`,
-      {
-        method: "PATCH",
-        signal: controller.signal,
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": "Bearer " + SUPABASE_KEY,
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Prefer": "return=representation"
-        },
-        body: JSON.stringify(data)
-      }
-    );
-
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`, {
+      method: "PATCH", signal: controller.signal,
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Accept": "application/json", "Prefer": "return=representation" },
+      body: JSON.stringify(data)
+    });
     clearTimeout(timeout);
-
-let result = null;
-try {
-  result = await response.json();
-} catch(e) {
-  result = null;
-}
-
-    if (!response.ok) {
-      return { data: null, error: result };
-    }
-
+    let result = null;
+    try { result = await response.json(); } catch(e) { result = null; }
+    if (!response.ok) return { data: null, error: result };
     return { data: result, error: null };
-
-  } catch (err) {
-    return { data: null, error: { message: err.message } };
-  }
+  } catch (err) { return { data: null, error: { message: err.message } }; }
 };
 
-// =========================================================
-// Helper INSERT
-// =========================================================
 window.supabaseInsert = async function(table, data) {
   try {
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 15000);
-
-const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-  method: 'POST',
-  signal: controller.signal,
-  headers: {
-    'apikey': SUPABASE_KEY,
-    'Authorization': "Bearer " + SUPABASE_KEY,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Prefer': 'return=representation'
-  },
-  body: JSON.stringify([data])
-});
-
-clearTimeout(timeout);
-
-let result = null;
-try {
-  result = await response.json();
-} catch(e) {
-  result = null;
-}
-
-    if (!response.ok) {
-      console.error("❌ RESPUESTA RAW:", result);
-      return { data: null, error: result };
-    }
-
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST', signal: controller.signal,
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': "Bearer " + SUPABASE_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json', 'Prefer': 'return=representation' },
+      body: JSON.stringify([data])
+    });
+    clearTimeout(timeout);
+    let result = null;
+    try { result = await response.json(); } catch(e) { result = null; }
+    if (!response.ok) { console.error("❌ RESPUESTA RAW:", result); return { data: null, error: result }; }
     return { data: result, error: null };
-
-  } catch (err) {
-    return { data: null, error: { message: err.message } };
-  }
+  } catch (err) { return { data: null, error: { message: err.message } }; }
 };
-
 </script>
+
 <style>
 /* ==========================================
    VARIABLES GLOBALES
@@ -375,38 +150,53 @@ try {
   --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);
   --exito: #4caf50;
   --info: #2196f3;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 /* ==========================================
-   RESET Y BASE
+   RESET Y BASE MOBILE-FIRST
 ========================================== */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
 body {
-  background: #f5f7fa;
+  background: var(--gris-fondo);
   min-height: 100vh;
-  padding-bottom: 30px;
+  min-height: -webkit-fill-available;
+  padding-bottom: calc(30px + var(--safe-bottom));
   -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  position: relative;
 }
 
 /* ==========================================
-   HEADER
+   HEADER OPTIMIZADO MOBILE
 ========================================== */
 .header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  padding: 20px 20px 40px 20px;
+  padding: calc(20px + var(--safe-top)) 20px 40px 20px;
   position: relative;
   overflow: visible;
   border-bottom-left-radius: 25px;
   border-bottom-right-radius: 25px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   margin-bottom: 40px;
+  isolation: isolate;
 }
 
 .header-content {
@@ -418,6 +208,7 @@ body {
   position: relative;
   z-index: 2;
   padding: 0 10px;
+  gap: 10px;
 }
 
 .vehicle-section {
@@ -425,17 +216,20 @@ body {
   align-items: center;
   gap: 12px;
   position: relative;
+  flex-shrink: 0;
 }
 
 .vehicle-img {
-  width: 160px;
+  width: clamp(120px, 35vw, 160px);
   height: auto;
   object-fit: contain;
   filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
   position: absolute;
   left: -5px;
-  bottom: -185px;
+  bottom: clamp(-140px, -35vw, -185px);
   z-index: 10;
+  pointer-events: none;
+  will-change: transform;
 }
 
 .logo-section {
@@ -446,21 +240,24 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-width: 0;
 }
 
 .logo-title {
-  font-size: 1.8rem;
+  font-size: clamp(1.4rem, 5vw, 1.8rem);
   font-weight: 800;
   letter-spacing: 1px;
   line-height: 1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .logo-subtitle {
-  font-size: 0.75rem;
+  font-size: clamp(0.65rem, 2vw, 0.75rem);
   opacity: 0.9;
   font-weight: 500;
   letter-spacing: 1.5px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .header-icons {
@@ -468,61 +265,68 @@ body {
   align-items: center;
   gap: 10px;
   z-index: 2;
+  flex-shrink: 0;
 }
 
 .shield-icon {
-  width: 40px;
-  height: 40px;
+  width: clamp(36px, 10vw, 40px);
+  height: clamp(36px, 10vw, 40px);
   background: rgba(255,255,255,0.15);
   border: 2px solid rgba(255,255,255,0.4);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: clamp(1.1rem, 3vw, 1.3rem);
   color: #4caf50;
   font-weight: bold;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* ==========================================
-   CONTENEDOR PRINCIPAL
+   CONTENEDOR PRINCIPAL RESPONSIVE
 ========================================== */
 .container {
   max-width: 600px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 clamp(12px, 4vw, 20px);
+  width: 100%;
 }
 
 .hero-text {
   text-align: center;
-  padding: 25px 20px 20px;
+  padding: clamp(15px, 4vw, 25px) clamp(12px, 3vw, 20px) clamp(15px, 3vw, 20px);
 }
 
 .hero-title {
-  font-size: 1.6rem;
+  font-size: clamp(1.25rem, 4.5vw, 1.6rem);
   color: #1a1a1a;
   font-weight: 800;
   margin-bottom: 6px;
+  line-height: 1.2;
 }
 
 .hero-subtitle {
   color: #666;
-  font-size: 1rem;
+  font-size: clamp(0.875rem, 3vw, 1rem);
+  line-height: 1.4;
 }
 
 .main-card {
   background: white;
-  border-radius: 20px;
-  padding: 20px;
+  border-radius: clamp(16px, 5vw, 20px);
+  padding: clamp(16px, 4vw, 20px);
   box-shadow: var(--sombra);
   margin-bottom: 20px;
   position: relative;
   overflow: visible !important;
+  width: 100%;
 }
 
 /* ==========================================
-   ORIGEN / DESTINO (UI iOS)
+   ORIGEN / DESTINO (UI iOS OPTIMIZADA)
 ========================================== */
 .location-swap-group {
   display: flex;
@@ -543,12 +347,14 @@ body {
   align-items: center;
   gap: 12px;
   background: #f4f4f7;
-  border-radius: 20px;
-  padding: 14px 16px;
+  border-radius: clamp(16px, 4vw, 20px);
+  padding: clamp(12px, 3.5vw, 14px) clamp(12px, 3vw, 16px);
   border: 1px solid rgba(0,0,0,0.06);
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
   cursor: pointer;
+  min-height: 64px;
+  touch-action: manipulation;
 }
 
 .location-card:active {
@@ -556,14 +362,15 @@ body {
 }
 
 .location-icon {
-  width: 46px;
-  height: 46px;
+  width: clamp(40px, 10vw, 46px);
+  height: clamp(40px, 10vw, 46px);
   border-radius: 16px;
   background: #e6e6ef;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 20px;
+  font-size: clamp(18px, 4vw, 20px);
+  flex-shrink: 0;
   box-shadow: none;
 }
 
@@ -580,15 +387,17 @@ body {
 .location-text {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .location-label {
-  font-size: 12px;
+  font-size: clamp(11px, 3vw, 12px);
   font-weight: 900;
   color: #666;
   letter-spacing: 1px;
   text-transform: uppercase;
   margin-bottom: 4px;
+  white-space: nowrap;
 }
 
 .location-input {
@@ -596,10 +405,14 @@ body {
   border: none;
   background: transparent;
   outline: none;
-  font-size: 16px;
+  font-size: clamp(14px, 4vw, 16px);
   font-weight: 800;
   color: #111;
   cursor: text;
+  min-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .location-input::placeholder {
@@ -614,13 +427,14 @@ body {
   font-weight: 900;
   color: rgba(0,0,0,0.35);
   margin-left: 6px;
+  flex-shrink: 0;
 }
 
-/* Botón Swap */
+/* Botón Swap optimizado para touch */
 .btn-swap {
   align-self: center;
-  width: 52px;
-  height: 52px;
+  width: clamp(48px, 12vw, 52px);
+  height: clamp(48px, 12vw, 52px);
   border-radius: 999px;
   border: 5px solid white;
   background: linear-gradient(180deg, #3d8bff, #1b55cc);
@@ -632,13 +446,16 @@ body {
   z-index: 200;
   margin: -8px 0;
   transition: transform 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
 }
 
 .btn-swap span {
-  font-size: 20px;
+  font-size: clamp(18px, 4vw, 20px);
   color: white;
   font-weight: 900;
   transition: transform 0.4s ease;
+  pointer-events: none;
 }
 
 .btn-swap:hover {
@@ -659,23 +476,28 @@ body {
   width: 100%;
   background: white;
   z-index: 999999999 !important;
-  max-height: 250px;
+  max-height: min(250px, 50vh);
   overflow-y: auto;
   border-radius: 14px;
   border: 1px solid rgba(0,0,0,0.08);
   box-shadow: 0 14px 35px rgba(0,0,0,0.18);
   display: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .sugerencia-item {
-  padding: 14px;
+  padding: clamp(12px, 3vw, 14px);
   cursor: pointer;
-  font-size: 15px;
+  font-size: clamp(14px, 3.5vw, 15px);
   font-weight: 600;
   border-bottom: 1px solid rgba(0,0,0,0.06);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  touch-action: manipulation;
 }
 
-.sugerencia-item:hover {
+.sugerencia-item:hover, .sugerencia-item:active {
   background: #f4f4f7;
 }
 
@@ -695,6 +517,7 @@ body {
 .pac-item {
   padding: 14px !important;
   font-size: 16px !important;
+  min-height: 44px;
 }
 
 /* ==========================================
@@ -703,16 +526,17 @@ body {
 .servicio-selector {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
-  gap: 12px !important;
+  gap: clamp(8px, 2vw, 12px) !important;
   margin-top: 14px !important;
+  width: 100%;
 }
 
 .servicio-card {
   position: relative !important;
   background: #f4f4f7 !important;
-  border-radius: 18px !important;
-  padding: 14px !important;
-  min-height: 108px !important;
+  border-radius: clamp(16px, 4vw, 18px) !important;
+  padding: clamp(12px, 3vw, 14px) !important;
+  min-height: clamp(100px, 25vw, 108px) !important;
   border: 1px solid rgba(0,0,0,0.06) !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
   display: flex !important;
@@ -720,8 +544,9 @@ body {
   align-items: flex-start !important;
   justify-content: flex-start !important;
   cursor: pointer !important;
-  transition: transform 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.2s ease;
   overflow: hidden !important;
+  touch-action: manipulation;
 }
 
 .servicio-card:active {
@@ -741,29 +566,43 @@ body {
 }
 
 .servicio-icon {
-  font-size: 22px !important;
+  font-size: clamp(20px, 5vw, 22px) !important;
   margin-bottom: 6px !important;
+  flex-shrink: 0;
+}
+
+.servicio-info {
+  width: 100%;
+  overflow: hidden;
 }
 
 .servicio-info strong {
-  font-size: 16px !important;
+  font-size: clamp(14px, 3.8vw, 16px) !important;
   font-weight: 900 !important;
   color: #111 !important;
   display: block;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .servicio-info small {
-  font-size: 13px !important;
+  font-size: clamp(11px, 3vw, 13px) !important;
   font-weight: 700 !important;
   color: #666 !important;
   margin-top: 2px;
   display: block;
   line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .servicio-hora {
-  margin-top: 10px !important;
-  font-size: 14px !important;
+  margin-top: 8px !important;
+  font-size: clamp(12px, 3.2vw, 14px) !important;
   font-weight: 900 !important;
   color: #111 !important;
   display: block;
@@ -784,6 +623,8 @@ body {
   justify-content: center !important;
   font-weight: 900 !important;
   opacity: 0.7 !important;
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
 /* Activo */
@@ -828,11 +669,13 @@ body {
   left: 10px !important;
   background: #ffd54f !important;
   color: #111 !important;
-  font-size: 11px !important;
+  font-size: clamp(9px, 2.5vw, 11px) !important;
   font-weight: 900 !important;
-  padding: 4px 10px !important;
+  padding: 3px 8px !important;
   border-radius: 999px !important;
   text-transform: uppercase !important;
+  white-space: nowrap;
+  z-index: 2;
 }
 
 /* ==========================================
@@ -840,6 +683,7 @@ body {
 ========================================== */
 .datetime-section {
   margin-top: 15px;
+  width: 100%;
 }
 
 .datetime-header {
@@ -849,19 +693,21 @@ body {
   margin-bottom: 10px;
   color: #555;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: clamp(0.8rem, 3vw, 0.85rem);
 }
 
 .datetime-card {
   background: #f8f9fa;
   border: 2px solid #e8e8e8;
   border-radius: 14px;
-  padding: 14px;
+  padding: clamp(12px, 3vw, 14px);
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
   transition: all 0.3s;
+  touch-action: manipulation;
+  min-height: 56px;
 }
 
 .datetime-card:active {
@@ -870,20 +716,25 @@ body {
 
 .datetime-text {
   flex: 1;
+  min-width: 0;
 }
 
 .datetime-label {
-  font-size: 0.75rem;
+  font-size: clamp(0.7rem, 2.5vw, 0.75rem);
   color: #888;
   font-weight: 700;
   text-transform: uppercase;
   margin-bottom: 2px;
+  white-space: nowrap;
 }
 
 .datetime-value {
-  font-size: 0.95rem;
+  font-size: clamp(0.875rem, 3.5vw, 0.95rem);
   color: #1a1a1a;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .datetime-input-hidden {
@@ -898,6 +749,7 @@ body {
 #campo-fecha-ida,
 #campo-fecha-vuelta {
   animation: fadeInUp 0.25s ease;
+  width: 100%;
 }
 
 #campo-fecha-vuelta .datetime-card {
@@ -915,21 +767,25 @@ body {
 ========================================== */
 .tiempo-selector {
   display: flex;
-  gap: 10px;
+  gap: clamp(6px, 2vw, 10px);
   margin-top: 12px;
+  width: 100%;
 }
 
 .tiempo-btn {
   flex: 1;
-  padding: 14px 10px;
+  padding: clamp(12px, 3vw, 14px) clamp(6px, 2vw, 10px);
   border-radius: 14px;
   border: 1px solid rgba(0,0,0,0.08);
   background: #f4f4f7;
   color: #333;
   font-weight: 900;
-  font-size: 15px;
+  font-size: clamp(13px, 3.5vw, 15px);
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, background 0.2s, color 0.2s;
+  touch-action: manipulation;
+  min-height: 48px;
+  white-space: nowrap;
 }
 
 .tiempo-btn:active {
@@ -948,17 +804,17 @@ body {
 ========================================== */
 .btn-calcular {
   width: 100%;
-  padding: 15px;
+  padding: clamp(14px, 4vw, 16px);
   margin-top: 18px;
   border: none;
   border-radius: 22px;
   background: linear-gradient(180deg, #3d8bff, #1b55cc);
   color: white;
-  font-size: 16px;
+  font-size: clamp(15px, 4vw, 16px);
   font-weight: 900;
   cursor: pointer;
   box-shadow: 0 8px 18px rgba(0,0,0,0.20);
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.2s;
   text-transform: uppercase;
   display: flex;
   align-items: center;
@@ -966,6 +822,9 @@ body {
   gap: 10px;
   position: relative;
   overflow: hidden;
+  touch-action: manipulation;
+  min-height: 56px;
+  -webkit-tap-highlight-color: rgba(255,255,255,0.2);
 }
 
 .btn-calcular:active {
@@ -1006,6 +865,7 @@ body {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 @keyframes spin {
@@ -1021,6 +881,7 @@ body {
   border-top: 2px dashed #e0e0e0;
   display: none;
   text-align: center;
+  width: 100%;
 }
 
 .resultado-section.visible {
@@ -1029,28 +890,29 @@ body {
 }
 
 .precio-monto {
-  font-size: 2.5rem;
+  font-size: clamp(2rem, 6vw, 2.5rem);
   font-weight: 800;
   color: var(--azul-oscuro);
   margin-bottom: 6px;
+  line-height: 1.2;
 }
 
 .precio-descripcion {
   color: #666;
-  font-size: 0.9rem;
+  font-size: clamp(0.85rem, 3vw, 0.9rem);
   margin-bottom: 15px;
 }
 
 .btn-whatsapp {
   width: 100%;
-  padding: 16px;
+  padding: clamp(14px, 4vw, 16px);
   margin-top: 12px;
   background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
   color: white;
   border: none;
   border-radius: 14px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: clamp(0.95rem, 3.5vw, 1rem);
+  font-weight: 700;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
   transition: all 0.2s ease;
@@ -1058,12 +920,17 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  touch-action: manipulation;
+  min-height: 56px;
+  text-decoration: none;
+  -webkit-tap-highlight-color: rgba(255,255,255,0.2);
 }
 
 .btn-whatsapp svg {
   width: 20px;
   height: 20px;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+  flex-shrink: 0;
 }
 
 .btn-whatsapp:hover {
@@ -1077,21 +944,25 @@ body {
 }
 
 /* ==========================================
-   MAPA
+   MAPA RESPONSIVE CON ANIMACIÓN
 ========================================== */
 #mapaRuta {
   width: 100%;
-  height: 310px;
-  border-radius: 18px;
+  height: clamp(250px, 50vw, 310px);
+  min-height: 250px;
+  border-radius: clamp(14px, 4vw, 18px);
   overflow: hidden;
   margin-top: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  position: relative;
+  background: #e5e5e5;
+  isolation: isolate;
 }
 
 #map {
   width: 100%;
-  height: 280px;
-  border-radius: 18px;
+  height: 100%;
+  border-radius: clamp(14px, 4vw, 18px);
   overflow: hidden;
   touch-action: pan-x pan-y;
 }
@@ -1107,12 +978,37 @@ body {
   z-index: 10 !important;
 }
 
+/* Control de replay de animación */
+.map-replay-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255,255,255,0.95);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1565c0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 100;
+  display: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  touch-action: manipulation;
+}
+
+.map-replay-btn.visible {
+  display: block;
+}
+
 /* ==========================================
    TOAST NOTIFICATIONS
 ========================================== */
 .toast-container {
   position: fixed;
-  top: 20px;
+  top: calc(20px + var(--safe-top));
   right: 20px;
   left: 20px;
   z-index: 100000;
@@ -1122,6 +1018,7 @@ body {
   max-width: 400px;
   margin: 0 auto;
   pointer-events: none;
+  padding: 0 var(--safe-right) 0 var(--safe-left);
 }
 
 .toast {
@@ -1136,6 +1033,7 @@ body {
   border-left: 4px solid var(--azul-primario);
   pointer-events: all;
   position: relative;
+  min-height: 60px;
 }
 
 .toast.success { border-left-color: var(--exito); }
@@ -1150,18 +1048,20 @@ body {
 
 .toast-content {
   flex: 1;
+  min-width: 0;
 }
 
 .toast-title {
   font-weight: 700;
   color: #1a1a1a;
-  font-size: 0.9rem;
+  font-size: clamp(0.85rem, 3vw, 0.9rem);
   margin-bottom: 2px;
+  line-height: 1.2;
 }
 
 .toast-message {
   color: #666;
-  font-size: 0.85rem;
+  font-size: clamp(0.8rem, 2.8vw, 0.85rem);
   line-height: 1.3;
 }
 
@@ -1174,6 +1074,12 @@ body {
   padding: 4px;
   line-height: 1;
   transition: color 0.2s;
+  flex-shrink: 0;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toast-close:hover {
@@ -1203,6 +1109,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  width: 100%;
 }
 
 .trust-badge {
@@ -1212,7 +1119,8 @@ body {
   text-align: center;
   padding: 10px;
   border-radius: 12px;
-  font-size: 0.9rem;
+  font-size: clamp(0.85rem, 3vw, 0.9rem);
+  word-break: break-word;
 }
 
 .driver-card {
@@ -1226,26 +1134,30 @@ body {
 }
 
 .driver-img {
-  width: 50px;
-  height: 50px;
+  width: clamp(44px, 10vw, 50px);
+  height: clamp(44px, 10vw, 50px);
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .driver-name {
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: clamp(0.85rem, 3vw, 0.9rem);
+  line-height: 1.2;
 }
 
 .driver-info {
-  font-size: 0.8rem;
+  font-size: clamp(0.75rem, 2.5vw, 0.8rem);
   color: #666;
+  line-height: 1.3;
 }
 
 .reviews {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
 }
 
 .review {
@@ -1257,17 +1169,18 @@ body {
 
 .stars {
   color: #ffc107;
-  font-size: 0.9rem;
+  font-size: clamp(0.8rem, 3vw, 0.9rem);
   margin-bottom: 4px;
 }
 
 .review-text {
-  font-size: 0.85rem;
+  font-size: clamp(0.8rem, 3vw, 0.85rem);
   color: #444;
+  line-height: 1.4;
 }
 
 .review-author {
-  font-size: 0.75rem;
+  font-size: clamp(0.7rem, 2.5vw, 0.75rem);
   color: #888;
   margin-top: 4px;
 }
@@ -1278,34 +1191,37 @@ body {
 .features-section {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: clamp(8px, 2vw, 12px);
   margin-top: 15px;
+  width: 100%;
 }
 
 .feature-card {
   background: white;
-  border-radius: 16px;
-  padding: 20px 12px;
+  border-radius: clamp(14px, 3.5vw, 16px);
+  padding: clamp(16px, 4vw, 20px) clamp(10px, 2.5vw, 12px);
   text-align: center;
   box-shadow: var(--sombra);
   transition: all 0.3s;
+  touch-action: manipulation;
 }
 
-.feature-card:hover {
+.feature-card:hover, .feature-card:active {
   transform: translateY(-4px);
   box-shadow: var(--sombra-hover);
 }
 
 .feature-icon {
-  width: 45px;
-  height: 45px;
+  width: clamp(40px, 10vw, 45px);
+  height: clamp(40px, 10vw, 45px);
   background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
+  font-size: clamp(1.1rem, 3.5vw, 1.3rem);
   margin: 0 auto 10px;
+  flex-shrink: 0;
 }
 
 .feature-icon.shield {
@@ -1314,13 +1230,15 @@ body {
 
 .feature-title {
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: clamp(0.8rem, 3vw, 0.85rem);
   margin-bottom: 3px;
+  line-height: 1.2;
 }
 
 .feature-desc {
   color: #888;
-  font-size: 0.75rem;
+  font-size: clamp(0.7rem, 2.5vw, 0.75rem);
+  line-height: 1.3;
 }
 
 /* ==========================================
@@ -1328,9 +1246,10 @@ body {
 ========================================== */
 .footer {
   text-align: center;
-  padding: 25px 20px;
+  padding: clamp(20px, 5vw, 25px) clamp(15px, 4vw, 20px) calc(20px + var(--safe-bottom));
   color: #666;
-  font-size: 0.85rem;
+  font-size: clamp(0.8rem, 3vw, 0.85rem);
+  width: 100%;
 }
 
 .footer-phone {
@@ -1344,6 +1263,9 @@ body {
   color: var(--azul-primario);
   margin: 12px 0;
   box-shadow: var(--sombra);
+  text-decoration: none;
+  touch-action: manipulation;
+  min-height: 44px;
 }
 
 /* ==========================================
@@ -1355,12 +1277,14 @@ body {
   padding: 12px;
   border-radius: 10px;
   margin-top: 12px;
-  font-size: 0.85rem;
+  font-size: clamp(0.8rem, 3vw, 0.85rem);
   font-weight: 600;
   display: none;
   align-items: center;
   gap: 8px;
   border-left: 4px solid #f44336;
+  width: 100%;
+  word-break: break-word;
 }
 
 .error-message.visible {
@@ -1413,57 +1337,99 @@ body {
 }
 
 /* ==========================================
-   RESPONSIVE
+   RESPONSIVE BREAKPOINTS ESPECÍFICOS
 ========================================== */
-@media (max-width: 480px) {
-  .hero-title {
-    font-size: 1.35rem;
-  }
-  
-  .precio-monto {
-    font-size: 2rem;
-  }
-  
-  .vehicle-img {
-    width: 140px;
-    height: auto;
-    bottom: -140px;
-    left: -5px;
-  }
-  
-  .logo-section {
-    margin-left: 110px;
-  }
-  
-  .logo-title {
-    font-size: 1.6rem;
-  }
-  
-  .header {
-    padding: 15px 15px 35px 15px;
-  }
-  
-  .btn-calcular {
-    font-size: 15px;
-    padding: 14px;
-  }
+
+/* iPhone SE, 5, 5S (320px) */
+@media (max-width: 320px) {
+  html { font-size: 14px; }
+  .servicio-selector { grid-template-columns: 1fr !important; }
+  .features-section { grid-template-columns: 1fr; }
+  .vehicle-img { width: 100px; bottom: -100px; }
 }
 
-@media (max-width: 360px) {
-  .servicio-selector {
-    grid-template-columns: 1fr !important;
-  }
-  
-  .features-section {
-    grid-template-columns: 1fr;
-  }
+/* iPhone 6/7/8, SE 2020/2022 (375px) */
+@media (min-width: 321px) and (max-width: 375px) {
+  .vehicle-img { width: 130px; bottom: -130px; }
+  .logo-section { margin-left: 90px; }
 }
 
-/* Touch optimization */
-button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card, .location-card {
+/* iPhone 6/7/8 Plus, X, XS, 11 Pro, 12 Mini, 13 Mini (414px) */
+@media (min-width: 376px) and (max-width: 414px) {
+  .vehicle-img { width: 140px; bottom: -140px; }
+  .logo-section { margin-left: 100px; }
+}
+
+/* iPhone 12, 13, 14, 15, 15 Pro (390px) */
+@media (min-width: 385px) and (max-width: 395px) {
+  .vehicle-img { width: 145px; bottom: -145px; }
+}
+
+/* iPhone 12/13/14/15 Pro Max, Plus (428px+) */
+@media (min-width: 415px) and (max-width: 428px) {
+  .vehicle-img { width: 150px; bottom: -150px; }
+}
+
+/* Tablets pequeñas y grandes */
+@media (min-width: 768px) {
+  .container { max-width: 600px; padding: 0 24px; }
+  .vehicle-img { width: 180px; bottom: -180px; left: -10px; }
+}
+
+/* Pantallas grandes */
+@media (min-width: 1024px) {
+  .container { max-width: 640px; }
+  .vehicle-img { width: 200px; bottom: -200px; }
+}
+
+/* Altura reducida (landscape en móvil) */
+@media (max-height: 500px) and (orientation: landscape) {
+  .header { padding-top: calc(10px + var(--safe-top)); padding-bottom: 30px; margin-bottom: 20px; }
+  .vehicle-img { width: 100px; bottom: -80px; }
+  .hero-text { padding-top: 10px; padding-bottom: 10px; }
+  #mapaRuta { height: 200px; min-height: 200px; }
+}
+
+/* Dark mode support básico */
+@media (prefers-color-scheme: dark) {
+  :root { --gris-fondo: #0f0f0f; }
+  body { background: var(--gris-fondo); }
+  .main-card, .feature-card, .review, .driver-card { background: #1c1c1e; }
+  .hero-title, .feature-title, .driver-name { color: #fff; }
+  .hero-subtitle, .feature-desc, .review-text, .driver-info { color: #aaa; }
+  .location-card, .servicio-card:not(.urgente), .datetime-card, .tiempo-btn:not(.activo) { background: #2c2c2e; }
+  .location-input, .servicio-info strong, .datetime-value { color: #fff; }
+  .location-label, .servicio-info small, .datetime-label { color: #aaa; }
+}
+
+/* Reducir motion para accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
+/* Touch optimization global */
+button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card, .location-card, .tiempo-btn, .sugerencia-item {
   touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.05);
 }
-  
+
+/* Mejoras para inputs en iOS */
+input, textarea, select {
+  font-size: 16px !important; /* Previene zoom en iOS */
+  -webkit-appearance: none;
+  border-radius: 0;
+}
+
+/* Scrollbar styling suave */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
+
+/* Fix para Safari 100vh issue */
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen { min-height: -webkit-fill-available; }
+}
 </style>
 </head>
 <body>
@@ -1504,7 +1470,7 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card, .location-card 
         <div class="location-icon origin">📍</div>
         <div class="location-text">
           <div class="location-label">Origen</div>
-          <input type="text" id="origen" class="location-input" placeholder="Origen" autocomplete="off">
+          <input type="text" id="origen" class="location-input" placeholder="Origen" autocomplete="off" enterkeyhint="search">
           <div id="sugerenciasOrigen" class="sugerencias"></div>
         </div>
       </div>
@@ -1524,7 +1490,7 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card, .location-card 
         <div class="location-icon destiny">📍</div>
         <div class="location-text">
           <div class="location-label">Destino</div>
-          <input type="text" id="destino" class="location-input" placeholder="Destino" autocomplete="off">
+          <input type="text" id="destino" class="location-input" placeholder="Destino" autocomplete="off" enterkeyhint="search">
           <div id="sugerenciasDestino" class="sugerencias"></div>
         </div>
       </div>
@@ -1630,7 +1596,7 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card, .location-card 
       <div class="datetime-header">
         <span>⏱️ Tiempo de espera</span>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div class="tiempo-selector">
         <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min</button>
         <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min</button>
         <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">60 min</button>
@@ -1675,7 +1641,10 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card, .location-card 
   <span id="btnWhatsappReservaText">Reservar por WhatsApp</span>
 </button>
     
-<div id="mapaRuta" style="margin-top:25px; display:none; height:280px; border-radius:16px; overflow:hidden;"></div>
+<div id="mapaRuta" style="margin-top:25px; display:none; position: relative;">
+  <div id="map"></div>
+  <button id="replayAnimacion" class="map-replay-btn" onclick="reproducirAnimacionRuta()">▶️ Ver recorrido</button>
+</div>
   </div>
 </div>
 
@@ -1687,7 +1656,7 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card, .location-card 
 </div>
 
 <!-- PRUEBA SOCIAL -->
-<div style="text-align:center; margin-top:10px; font-size:0.85rem; color:#666;">
+<div style="text-align:center; margin-top:10px; font-size:0.85rem; color:#666; padding: 0 20px 20px;">
   Más de 20 familias ya confían en nosotros
   <div style="font-size:0.8rem; opacity:0.6;">Atención personalizada · Cupos limitados</div>
 </div>
@@ -1700,8 +1669,9 @@ const CONFIG = {
   COTIZAR_URL: 'https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/cotizar',
   WHATSAPP_NUMBER: '5493517014863'
 };
+
 // ==========================================
-// VARIABLES GLOBALES (SOLO UNA DECLARACIÓN)
+// VARIABLES GLOBALES
 // ==========================================
 let servicioSeleccionado = 'IDA_ESCOLAR';
 let tiempoEsperaSeleccionado = 30;
@@ -1710,10 +1680,17 @@ let lugarOrigen = null;
 let lugarDestino = null;
 let datosCotizacion = null;
 let isCalculating = false;
-  let lastCotizacionAt = 0;
+let lastCotizacionAt = 0;
 let autocompleteOrigen = null;
 let autocompleteDestino = null;
-
+let mapaCliente = null;
+let markerOrigen = null;
+let markerDestino = null;
+let rutaAnimacion = null;
+let puntoAnimado = null;
+let counterAnimacion = 0;
+let animationId = null;
+let coordenadasRuta = [];
 
 // ==========================================
 // SISTEMA DE NOTIFICACIONES
@@ -1768,11 +1745,11 @@ class NotificationSystem {
 }
 
 const notifSystem = new NotificationSystem();
+
 // ==========================================
 // INTERCAMBIAR ORIGEN Y DESTINO
 // ==========================================
 function intercambiarOrigenDestino() {
-  // Intercambiar valores de los inputs
   const inputOrigen = document.getElementById('origen');
   const inputDestino = document.getElementById('destino');
   
@@ -1780,12 +1757,10 @@ function intercambiarOrigenDestino() {
   inputOrigen.value = inputDestino.value;
   inputDestino.value = tempValor;
   
-  // Intercambiar los objetos de lugar (coordenadas)
   const tempLugar = lugarOrigen;
   lugarOrigen = lugarDestino;
   lugarDestino = tempLugar;
   
-  // Efecto visual en los inputs
   inputOrigen.style.backgroundColor = '#e3f2fd';
   inputDestino.style.backgroundColor = '#e3f2fd';
   
@@ -1794,17 +1769,22 @@ function intercambiarOrigenDestino() {
     inputDestino.style.backgroundColor = '';
   }, 400);
   
-  // Feedback al usuario
   if (navigator.vibrate) navigator.vibrate(20);
   
   notifSystem.show('↔️ Intercambiado', 'Origen y destino invertidos', 'success', 2000);
   
   guardarEstadoLocal();
+  
+  // Actualizar mapa si existe
+  if (mapaCliente && lugarOrigen && lugarDestino) {
+    actualizarMarcadoresMapa();
+    dibujarRutaOSRM();
+  }
 }
+
 // ==========================================
 // UI DE BOTONES POST-COTIZACIÓN
 // ==========================================
-
 function mostrarBotonesPostCotizacion() {
   const btnConfirmar = document.getElementById("btnConfirmarViaje");
   const btnWhatsapp = document.getElementById("btnWhatsappReserva");
@@ -1830,7 +1810,7 @@ function setButtonLoading(buttonId, textId, loadingText) {
   btn.disabled = true;
   btn.classList.add("btn-loading");
   btn.dataset.originalText = text.innerHTML;
-  text.innerHTML = `⏳ ${loadingText}`;
+  text.innerHTML = `<span class="spinner"></span> ${loadingText}`;
 }
 
 function clearButtonLoading(buttonId, textId) {
@@ -1846,6 +1826,7 @@ function clearButtonLoading(buttonId, textId) {
     text.innerHTML = btn.dataset.originalText;
   }
 }
+
 // ==========================================
 // SELECTOR DE SERVICIOS
 // ==========================================
@@ -1860,15 +1841,12 @@ function seleccionarServicio(servicio) {
   if (cardSeleccionada) {
     cardSeleccionada.classList.add('activo');
   }
-// ============================
-// HORARIO AUTOMÁTICO SISTEMA
-// ============================
-const ahora = new Date();
+  
+  const ahora = new Date();
 
-// Si es inmediato, asignar hora del sistema automáticamente
-if (servicio === "IDA_ESCOLAR" || servicio === "IDA_Y_VUELTA_INMEDIATA") {
-  actualizarHoraServicio(servicio, formatearTextoBoton(ahora));
-}
+  if (servicio === "IDA_ESCOLAR" || servicio === "IDA_Y_VUELTA_INMEDIATA") {
+    actualizarHoraServicio(servicio, formatearTextoBoton(ahora));
+  }
 
   const campoIda = document.getElementById('campo-fecha-ida');
   const campoVuelta = document.getElementById('campo-fecha-vuelta');
@@ -1877,35 +1855,27 @@ if (servicio === "IDA_ESCOLAR" || servicio === "IDA_Y_VUELTA_INMEDIATA") {
   const tituloHorarioIda = document.getElementById('tituloHorarioIda');
   const labelHorarioIda = document.getElementById('labelHorarioIda');
 
-// Reset visual base
-if (campoIda) campoIda.style.display = 'none';
-if (campoVuelta) campoVuelta.style.display = 'none';
-if (campoEspera) campoEspera.style.display = 'none';
+  if (campoIda) campoIda.style.display = 'none';
+  if (campoVuelta) campoVuelta.style.display = 'none';
+  if (campoEspera) campoEspera.style.display = 'none';
 
-if (servicio === 'IDA_ESCOLAR') {
-  // NO mostrar selector fecha/hora
-}
+  if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
+    if (campoEspera) campoEspera.style.display = 'block';
+  }
 
-if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
-  // NO mostrar selector fecha/hora
-  if (campoEspera) campoEspera.style.display = 'block';
-}
+  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
+    if (campoIda) campoIda.style.display = 'block';
+    if (campoVuelta) campoVuelta.style.display = 'block';
 
-if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
-  if (campoIda) campoIda.style.display = 'block';
-  if (campoVuelta) campoVuelta.style.display = 'block';
+    if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
+    if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
 
-  if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
-  if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
+    sugerirHorariosEscolares();
+  }
 
-
-  sugerirHorariosEscolares();
-}
-
-    if (servicio === "OTROS_SERVICIOS") {
-  notifSystem.show("Otros servicios", "Próximamente vas a poder elegir más opciones.", "info", 2500);
-}
-
+  if (servicio === "OTROS_SERVICIOS") {
+    notifSystem.show("Otros servicios", "Próximamente vas a poder elegir más opciones.", "info", 2500);
+  }
 
   const descripciones = {
     'IDA_ESCOLAR': {
@@ -1933,7 +1903,8 @@ if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
 
   guardarEstadoLocal();
 }  
-  function actualizarHoraServicio(servicio, textoHora) {
+
+function actualizarHoraServicio(servicio, textoHora) {
   const horaDiv = document.getElementById(`hora-${servicio}`);
   if (!horaDiv) return;
 
@@ -2002,6 +1973,7 @@ function sugerirHorariosEscolares() {
     5000
   );
 }
+
 function abrirSelectorFechaVuelta() {
   const input = document.getElementById('fechaHoraVuelta');
   if (!input) return;
@@ -2044,6 +2016,7 @@ function actualizarTextoFechaVuelta() {
     }
   }
 }
+
 async function enviarViaje() {
   const origen = document.getElementById('origen')?.value?.trim() || '';
   const destino = document.getElementById('destino')?.value?.trim() || '';
@@ -2054,9 +2027,6 @@ async function enviarViaje() {
   setButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText", "Confirmando...");
 
   try {
-    // =========================
-    // VALIDACIONES
-    // =========================
     if (!lugarOrigen || !lugarDestino) {
       notifSystem.show('Error', 'Seleccioná origen y destino válidos desde la lista', 'error', 3500);
       mostrarError('Seleccioná direcciones válidas');
@@ -2075,25 +2045,14 @@ async function enviarViaje() {
       return;
     }
 
-const fechaHoraInput = document.getElementById('fechaHora')?.value || '';
-const fechaHoraVueltaInput = document.getElementById('fechaHoraVuelta')?.value || '';
-const tiempoEsperaInput = document.getElementById('tiempoEsperaMin')?.value || '';
+    const fechaHoraInput = document.getElementById('fechaHora')?.value || '';
+    const fechaHoraVueltaInput = document.getElementById('fechaHoraVuelta')?.value || '';
+    const tiempoEsperaInput = document.getElementById('tiempoEsperaMin')?.value || '';
 
-const fechaHoraIda = fechaHoraInput
-  ? new Date(fechaHoraInput).toISOString()
-  : new Date().toISOString();
+    const fechaHoraIda = fechaHoraInput ? new Date(fechaHoraInput).toISOString() : new Date().toISOString();
+    const fechaHoraVuelta = fechaHoraVueltaInput ? new Date(fechaHoraVueltaInput).toISOString() : null;
+    const tiempoEspera = tiempoEsperaInput ? Number(tiempoEsperaInput) : 30;
 
-const fechaHoraVuelta = fechaHoraVueltaInput
-  ? new Date(fechaHoraVueltaInput).toISOString()
-  : null;
-
-const tiempoEspera = tiempoEsperaInput
-  ? Number(tiempoEsperaInput)
-  : 30;
-
-    // =========================
-    // VALIDACIONES POR TIPO DE SERVICIO
-    // =========================
     if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
       if (!fechaHoraInput || !fechaHoraVueltaInput) {
         notifSystem.show('Error', 'Debés seleccionar horario de ida y de vuelta', 'error', 3500);
@@ -2116,44 +2075,27 @@ const tiempoEspera = tiempoEsperaInput
       }
     }
 
-const payload = {
-  cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
-  telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
+    const payload = {
+      cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
+      telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
+      origen,
+      destino,
+      origen_lat: Number(lugarOrigen?.lat) || null,
+      origen_lng: Number(lugarOrigen?.lng) || null,
+      destino_lat: Number(lugarDestino?.lat) || null,
+      destino_lng: Number(lugarDestino?.lng) || null,
+      precio: Number(precio) || 0,
+      servicio: servicioSeleccionado || 'IDA_ESCOLAR',
+      fecha_hora: fechaHoraIda,
+      fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA' ? fechaHoraVuelta : null,
+      tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? Number(tiempoEspera) || 0 : null,
+      estado: "DISPONIBLE",
+      notas: null
+    };
 
-  origen,
-  destino,
-
-  origen_lat: Number(lugarOrigen?.lat) || null,
-  origen_lng: Number(lugarOrigen?.lng) || null,
-  destino_lat: Number(lugarDestino?.lat) || null,
-  destino_lng: Number(lugarDestino?.lng) || null,
-
-  precio: Number(precio) || 0,
-
-  servicio: servicioSeleccionado || 'IDA_ESCOLAR',
-
-  fecha_hora: fechaHoraIda,
-
-  fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA'
-    ? fechaHoraVuelta
-    : null,
-
-  tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA'
-    ? Number(tiempoEspera) || 0
-    : null,
-
-  estado: "DISPONIBLE",
-  notas: null
-};
-
-console.log("📦 Payload viaje limpio:", payload);
+    console.log("📦 Payload viaje limpio:", payload);
     console.log("🔥 JSON FINAL:", JSON.stringify(payload));
-
     
-    
-    // =========================
-    // INSERT
-    // =========================
     const { data, error } = await window.supabaseInsert('viajes', payload);
 
     if (error) {
@@ -2168,17 +2110,11 @@ console.log("📦 Payload viaje limpio:", payload);
     notifSystem.show('¡Listo!', 'Viaje solicitado correctamente 🚐', 'success', 3500);
     ocultarError();
 
-    // =========================
-    // UX POST ÉXITO
-    // =========================
     const btnConfirmar = document.getElementById("btnConfirmarViaje");
     if (btnConfirmar) {
       btnConfirmar.disabled = true;
       btnConfirmar.style.opacity = "0.7";
     }
-
-    // Si tenés modal de confirmación, podés cerrarlo acá:
-    // cerrarModalConfirmacion?.();
 
   } catch (error) {
     console.error('❌ Error en enviarViaje:', error);
@@ -2189,17 +2125,15 @@ console.log("📦 Payload viaje limpio:", payload);
   }
 }
 
-let mapaCliente = null;
-let markerOrigen = null;
-let markerDestino = null;
-
+// ==========================================
+// MAPA Y RUTA CON ANIMACIÓN
+// ==========================================
 async function buscarDireccion(query) {
   if (!query || query.trim().length < 3) return [];
 
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(query)}`;
 
   console.log("🔎 Buscando dirección:", query);
-  console.log("🌍 URL:", url);
 
   try {
     const res = await fetch(url, {
@@ -2230,45 +2164,31 @@ async function buscarDireccion(query) {
 
 function formatearDireccionCorta(r) {
   if (!r) return "";
-
-  // Nominatim siempre trae display_name
   const texto = (r.display_name || "").trim();
   if (!texto) return "Dirección";
-
-  // Cortar por partes separadas por coma
   const partes = texto.split(",").map(p => p.trim()).filter(Boolean);
-
-  // Ejemplo: "Av. Colón 1234, Centro, Córdoba, Argentina"
-  // Queremos: "Av. Colón 1234 · Córdoba"
   const linea1 = partes[0] || "Dirección";
   const linea2 = partes.length >= 3 ? partes[2] : (partes[1] || "");
-
   return linea2 ? `${linea1} · ${linea2}` : linea1;
 }
-  // ==================== DIRECCIÓN COMPLETA ====================
+
 function formatearDireccionCompleta(r) {
   if (!r || !r.display_name) return "Dirección no válida";
-
   let direccion = r.display_name.trim();
-
-  // Limpiar partes innecesarias al final (Córdoba, Argentina)
   direccion = direccion.replace(/,\s*Córdoba,\s*Argentina$/i, '');
   direccion = direccion.replace(/,\s*Argentina$/i, '');
   direccion = direccion.replace(/,\s*Córdoba$/i, '');
-
-  // Capitalizar primera letra
   direccion = direccion.charAt(0).toUpperCase() + direccion.slice(1);
-
   return direccion;
 }
 
-  function ocultarSugerencias() {
+function ocultarSugerencias() {
   const o = document.getElementById("sugerenciasOrigen");
   const d = document.getElementById("sugerenciasDestino");
-
   if (o) o.style.display = "none";
   if (d) d.style.display = "none";
 }
+
 function initMapaCliente() {
   if (mapaCliente) return;
 
@@ -2278,60 +2198,285 @@ function initMapaCliente() {
   mapaDiv.style.display = "block";
 
   mapaCliente = new maplibregl.Map({
-    container: "mapaRuta",
-    style: "https://demotiles.maplibre.org/style.json",
+    container: "map",
+    style: {
+      "version": 8,
+      "sources": {
+        "osm": {
+          "type": "raster",
+          "tiles": [
+            "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          ],
+          "tileSize": 256,
+          "attribution": "© OpenStreetMap contributors"
+        }
+      },
+      "layers": [
+        { "id": "osm", "type": "raster", "source": "osm" }
+      ]
+    },
     center: [-64.19, -31.42],
-    zoom: 12
+    zoom: 12,
+    attributionControl: false
   });
+  
+  mapaCliente.addControl(new maplibregl.AttributionControl({
+    compact: true
+  }), 'bottom-right');
+
+  // Resize handler para responsive
+  window.addEventListener('resize', () => {
+    if (mapaCliente) {
+      setTimeout(() => mapaCliente.resize(), 100);
+    }
+  });
+}
+
+function actualizarMarcadoresMapa() {
+  if (!mapaCliente) return;
+  
+  if (markerOrigen) markerOrigen.remove();
+  if (markerDestino) markerDestino.remove();
+  
+  if (lugarOrigen) {
+    const el = document.createElement('div');
+    el.className = 'custom-marker';
+    el.innerHTML = '<div style="background:#22c55e;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>';
+    markerOrigen = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
+      .addTo(mapaCliente);
+  }
+  
+  if (lugarDestino) {
+    const el = document.createElement('div');
+    el.className = 'custom-marker';
+    el.innerHTML = '<div style="background:#ef4444;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>';
+    markerDestino = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([lugarDestino.lng, lugarDestino.lat])
+      .addTo(mapaCliente);
+  }
 }
 
 async function dibujarRutaOSRM() {
   if (!mapaCliente || !lugarOrigen || !lugarDestino) return;
 
-  // limpiar ruta anterior
+  // Limpiar capas anteriores
+  if (mapaCliente.getLayer("route-glow")) mapaCliente.removeLayer("route-glow");
   if (mapaCliente.getLayer("route-line")) mapaCliente.removeLayer("route-line");
+  if (mapaCliente.getLayer("route-dash")) mapaCliente.removeLayer("route-dash");
+  if (mapaCliente.getLayer("point-animado")) mapaCliente.removeLayer("point-animado");
   if (mapaCliente.getSource("route")) mapaCliente.removeSource("route");
+  if (mapaCliente.getSource("point")) mapaCliente.removeSource("point");
 
   const url = `https://router.project-osrm.org/route/v1/driving/` +
     `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
     `?overview=full&geometries=geojson`;
 
-  const res = await fetch(url);
-  const data = await res.json();
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
 
-  if (!data.routes || !data.routes.length) return;
+    if (!data.routes || !data.routes.length) {
+      console.warn("⚠️ OSRM no devolvió rutas");
+      return;
+    }
 
-  const route = data.routes[0].geometry;
+    const route = data.routes[0].geometry;
+    coordenadasRuta = route.coordinates;
+    
+    // Guardar para animación
+    rutaAnimacion = route;
 
-  mapaCliente.addSource("route", {
+    mapaCliente.addSource("route", {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        geometry: route
+      }
+    });
+
+    // Glow suave
+    mapaCliente.addLayer({
+      id: "route-glow",
+      type: "line",
+      source: "route",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round"
+      },
+      paint: {
+        "line-color": "#60a5fa",
+        "line-width": 14,
+        "line-opacity": 0.25
+      }
+    });
+
+    // Línea principal
+    mapaCliente.addLayer({
+      id: "route-line",
+      type: "line",
+      source: "route",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round"
+      },
+      paint: {
+        "line-color": "#2563eb",
+        "line-width": 6.5,
+        "line-opacity": 0.95
+      }
+    });
+
+    // Dash animado sutil
+    mapaCliente.addLayer({
+      id: "route-dash",
+      type: "line",
+      source: "route",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round"
+      },
+      paint: {
+        "line-color": "#ffffff",
+        "line-width": 2.5,
+        "line-opacity": 0.6,
+        "line-dasharray": [0.5, 3]
+      }
+    });
+
+    // Ajustar vista
+    const bounds = coordenadasRuta.reduce(
+      (b, c) => b.extend(c),
+      new maplibregl.LngLatBounds(coordenadasRuta[0], coordenadasRuta[0])
+    );
+
+    mapaCliente.fitBounds(bounds, { 
+      padding: { top: 50, bottom: 50, left: 30, right: 30 },
+      duration: 1000,
+      maxZoom: 16
+    });
+
+    // Iniciar animación de punto
+    setTimeout(() => {
+      iniciarAnimacionRuta();
+    }, 1000);
+
+  } catch (err) {
+    console.error("❌ Error dibujando ruta:", err);
+  }
+}
+
+// ==========================================
+// ANIMACIÓN DEL PUNTO SOBRE LA RUTA
+// ==========================================
+function iniciarAnimacionRuta() {
+  if (!mapaCliente || !rutaAnimacion || !coordenadasRuta.length) return;
+  
+  // Crear fuente para el punto animado
+  const puntoInicial = coordenadasRuta[0];
+  
+  const pointGeoJSON = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: { bearing: 0 },
+        geometry: {
+          type: "Point",
+          coordinates: puntoInicial
+        }
+      }
+    ]
+  };
+  
+  mapaCliente.addSource("point", {
     type: "geojson",
-    data: {
-      type: "Feature",
-      geometry: route
-    }
+    data: pointGeoJSON
   });
-
+  
+  // Agregar capa del punto con icono de auto/bus
   mapaCliente.addLayer({
-    id: "route-line",
-    type: "line",
-    source: "route",
+    id: "point-animado",
+    source: "point",
+    type: "symbol",
     layout: {
-      "line-join": "round",
-      "line-cap": "round"
-    },
-    paint: {
-      "line-color": "#1565c0",
-      "line-width": 6
+      "icon-image": "bus", // Usaremos un círculo con estilo si no hay icono
+      "icon-size": 1.5,
+      "icon-rotate": ["get", "bearing"],
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true
     }
   });
+  
+  // Si no hay icono de bus, usar un círculo
+  try {
+    mapaCliente.addLayer({
+      id: "point-circle",
+      source: "point",
+      type: "circle",
+      paint: {
+        "circle-radius": 8,
+        "circle-color": "#ff9800",
+        "circle-stroke-width": 3,
+        "circle-stroke-color": "#ffffff",
+        "circle-pitch-alignment": "map"
+      }
+    });
+  } catch(e) {
+    // Ya existe o error menor
+  }
+  
+  // Preparar datos para animación
+  const line = turf.lineString(coordenadasRuta);
+  const lineDistance = turf.length(line, { units: 'kilometers' });
+  const steps = Math.min(Math.floor(lineDistance * 20), 200); // 20 puntos por km, max 200
+  const arc = [];
+  
+  for (let i = 0; i <= steps; i++) {
+    const segment = turf.along(line, (lineDistance * i) / steps, { units: 'kilometers' });
+    arc.push(segment.geometry.coordinates);
+  }
+  
+  counterAnimacion = 0;
+  
+  // Mostrar botón de replay
+  const replayBtn = document.getElementById('replayAnimacion');
+  if (replayBtn) replayBtn.classList.add('visible');
+  
+  function animate() {
+    if (counterAnimacion >= arc.length - 1) {
+      // Animación completada
+      return;
+    }
+    
+    const start = arc[counterAnimacion];
+    const end = arc[counterAnimacion + 1];
+    
+    if (!start || !end) return;
+    
+    // Calcular bearing
+    const bearing = turf.bearing(turf.point(start), turf.point(end));
+    
+    pointGeoJSON.features[0].geometry.coordinates = start;
+    pointGeoJSON.features[0].properties.bearing = bearing;
+    
+    mapaCliente.getSource("point").setData(pointGeoJSON);
+    
+    counterAnimacion++;
+    animationId = requestAnimationFrame(animate);
+  }
+  
+  // Iniciar animación
+  animate();
+}
 
-  const coords = route.coordinates;
-  const bounds = coords.reduce(
-    (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coords[0], coords[0])
-  );
-
-  mapaCliente.fitBounds(bounds, { padding: 50 });
+function reproducirAnimacionRuta() {
+  if (animationId) cancelAnimationFrame(animationId);
+  counterAnimacion = 0;
+  iniciarAnimacionRuta();
 }
 
 function setOrigen(displayName, lat, lng) {
@@ -2354,13 +2499,7 @@ function setOrigen(displayName, lat, lng) {
   console.log("📍 ORIGEN SET", lugarOrigen);
 
   if (!mapaCliente) initMapaCliente();
-
-  if (markerOrigen) markerOrigen.remove();
-
-  markerOrigen = new maplibregl.Marker({ color: "green" })
-    .setLngLat([lngNum, latNum])
-    .addTo(mapaCliente);
-
+  actualizarMarcadoresMapa();
   dibujarRutaOSRM();
 }
 
@@ -2384,36 +2523,12 @@ function setDestino(displayName, lat, lng) {
   console.log("🎯 DESTINO SET", lugarDestino);
 
   if (!mapaCliente) initMapaCliente();
-
-  if (markerDestino) markerDestino.remove();
-
-  markerDestino = new maplibregl.Marker({ color: "red" })
-    .setLngLat([lngNum, latNum])
-    .addTo(mapaCliente);
-
-  dibujarRutaOSRM();
-}
-function setDestino(displayName, lat, lng) {
-  lugarDestino = {
-    direccion: displayName,                    // Dirección completa
-    direccionCorta: formatearDireccionCorta({ display_name: displayName }),
-    lat: parseFloat(lat),
-    lng: parseFloat(lng)
-  };
-
-  if (!mapaCliente) initMapaCliente();
-
-  if (markerDestino) markerDestino.remove();
-
-  markerDestino = new maplibregl.Marker({ color: "red" })
-    .setLngLat([lng, lat])
-    .addTo(mapaCliente);
-
+  actualizarMarcadoresMapa();
   dibujarRutaOSRM();
 }
 
 // ==========================
-// AUTOCOMPLETE INPUTS - VERSIÓN CORREGIDA
+// AUTOCOMPLETE INPUTS
 // ==========================
 window.addEventListener("load", () => {
   cargarEstadoLocal();
@@ -2431,21 +2546,19 @@ window.addEventListener("load", () => {
   let timerDestino = null;
 
   // ORIGEN
-inputOrigen.addEventListener("input", () => {
-  clearTimeout(timerOrigen);
-  const texto = inputOrigen.value.trim();
+  inputOrigen.addEventListener("input", () => {
+    clearTimeout(timerOrigen);
+    const texto = inputOrigen.value.trim();
+    lugarOrigen = null;
 
-  // IMPORTANTE: si el usuario escribe, invalido la selección anterior
-  lugarOrigen = null;
-
-  if (texto.length < 3) {
-    ocultarSugerencias();
-    return;
-  }
+    if (texto.length < 3) {
+      ocultarSugerencias();
+      return;
+    }
+    
     timerOrigen = setTimeout(async () => {
       const resultados = await buscarDireccion(texto);
       mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
-        // ✅ AQUÍ USAMOS LA DIRECCIÓN COMPLETA
         inputOrigen.value = formatearDireccionCompleta(r);
         setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
         ocultarSugerencias();
@@ -2454,21 +2567,19 @@ inputOrigen.addEventListener("input", () => {
   });
 
   // DESTINO
-inputDestino.addEventListener("input", () => {
-  clearTimeout(timerDestino);
-  const texto = inputDestino.value.trim();
+  inputDestino.addEventListener("input", () => {
+    clearTimeout(timerDestino);
+    const texto = inputDestino.value.trim();
+    lugarDestino = null;
 
-  // IMPORTANTE: si el usuario escribe, invalido la selección anterior
-  lugarDestino = null;
-
-  if (texto.length < 3) {
-    ocultarSugerencias();
-    return;
-  }
+    if (texto.length < 3) {
+      ocultarSugerencias();
+      return;
+    }
+    
     timerDestino = setTimeout(async () => {
       const resultados = await buscarDireccion(texto);
       mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
-        // ✅ AQUÍ USAMOS LA DIRECCIÓN COMPLETA
         inputDestino.value = formatearDireccionCompleta(r);
         setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
         ocultarSugerencias();
@@ -2528,7 +2639,7 @@ function mostrarSugerencias(contenedorId, resultados, callbackSeleccion) {
   contenedor.style.display = 'block';
 }
   
-  // ==========================================
+// ==========================================
 // FECHA Y HORA
 // ==========================================
 function seleccionarHoy() {
@@ -2583,11 +2694,9 @@ function abrirSelectorFecha() {
   const input = document.getElementById('fechaHora');
   if (!input) return;
   
-  // Establecer mínimo como ahora
   const ahora = new Date();
   input.min = ahora.toISOString().slice(0, 16);
   
-  // Si no hay valor, sugerir mañana a las 7:30 (horario escolar)
   if (!input.value) {
     const manana = new Date(ahora);
     manana.setDate(manana.getDate() + 1);
@@ -2634,7 +2743,6 @@ function actualizarTextoFecha() {
   textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
   textoFecha.style.color = '#1a1a1a';
 
-  // ✅ SOLO actualizar hora del botón cuando es PROGRAMADO
   if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
     actualizarHoraServicio("IDA_MAS_VUELTA_PROGRAMADA", formatearTextoBoton(fecha));
   }
@@ -2658,8 +2766,9 @@ function desactivarBoton(id) {
   btn.classList.remove('activo');
   btn.classList.add('inactivo');
 }
+
 // ==========================================
-// MOSTRAR RESULTADO (va ANTES de calcularTarifa)
+// MOSTRAR RESULTADO
 // ==========================================
 function mostrarResultado(res) {
   datosCotizacion = res;
@@ -2722,146 +2831,26 @@ function mostrarResultado(res) {
     recargosDiv.style.display = 'none';
   }
 
-// =============================
-// MAPA RUTA - ESTILO UBER PREMIUM + ANIMACIÓN
-// =============================
-const mapaDiv = document.getElementById("mapaRuta");
-if (!mapaDiv) {
-  console.warn("❌ No existe #mapaRuta");
-  return;
-}
+  // Mostrar mapa con ruta
+  const mapaDiv = document.getElementById("mapaRuta");
+  if (!mapaDiv) return;
 
-mapaDiv.style.display = "block";
-mapaDiv.innerHTML = "";
-
-if (!lugarOrigen || !lugarDestino || !lugarOrigen.lng || !lugarDestino.lng) {
-  console.warn("❌ No hay coordenadas válidas para mostrar el mapa");
-  mapaDiv.style.display = "none";
-  return;
-}
-
-const map = new maplibregl.Map({
-  container: "mapaRuta",
-  style: {
-    "version": 8,
-    "sources": {
-      "osm": {
-        "type": "raster",
-        "tiles": [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        ],
-        "tileSize": 256,
-        "attribution": "© OpenStreetMap contributors"
-      }
-    },
-    "layers": [
-      { "id": "osm", "type": "raster", "source": "osm" }
-    ]
-  },
-  center: [lugarOrigen.lng, lugarOrigen.lat],
-  zoom: 13
-});
-
-// Resize inicial para móviles
-setTimeout(() => { try { map.resize(); } catch(e) {} }, 600);
-
-map.on("load", async () => {
-  try { map.resize(); } catch(e) {}
-
-  // Marcadores mejorados
-  new maplibregl.Marker({ color: "#22c55e", scale: 0.9 })
-    .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
-    .addTo(map);
-
-  new maplibregl.Marker({ color: "#ef4444", scale: 0.9 })
-    .setLngLat([lugarDestino.lng, lugarDestino.lat])
-    .addTo(map);
-
-  // Ruta con efecto Uber
-  const url = `https://router.project-osrm.org/route/v1/driving/` +
-    `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
-    `?overview=full&geometries=geojson`;
-
-  let data = null;
-  try {
-    const response = await fetch(url);
-    data = await response.json();
-  } catch (err) {
-    console.error("❌ Error OSRM:", err);
-    return;
+  mapaDiv.style.display = "block";
+  
+  if (!mapaCliente) {
+    initMapaCliente();
+  }
+  
+  // Asegurar que los marcadores y ruta se actualicen
+  if (lugarOrigen && lugarDestino) {
+    actualizarMarcadoresMapa();
+    dibujarRutaOSRM();
   }
 
-  if (!data?.routes?.length) {
-    console.warn("⚠️ OSRM no devolvió rutas");
-    return;
-  }
-
-  const route = data.routes[0].geometry;
-
-  map.addSource("route", {
-    type: "geojson",
-    data: { type: "Feature", geometry: route }
-  });
-
-  // Glow suave
-  map.addLayer({
-    id: "route-glow",
-    type: "line",
-    source: "route",
-    layout: { "line-join": "round", "line-cap": "round" },
-    paint: {
-      "line-color": "#60a5fa",
-      "line-width": 14,
-      "line-opacity": 0.25
-    }
-  });
-
-  // Línea principal
-  map.addLayer({
-    id: "route-line",
-    type: "line",
-    source: "route",
-    layout: { "line-join": "round", "line-cap": "round" },
-    paint: {
-      "line-color": "#2563eb",
-      "line-width": 6.5,
-      "line-opacity": 0.95
-    }
-  });
-
-  // Dash animado sutil
-  map.addLayer({
-    id: "route-dash",
-    type: "line",
-    source: "route",
-    layout: { "line-join": "round", "line-cap": "round" },
-    paint: {
-      "line-color": "#ffffff",
-      "line-width": 2.5,
-      "line-opacity": 0.6,
-      "line-dasharray": [0.5, 3]
-    }
-  });
-
-  // Ajustar vista
-  const coords = route.coordinates;
-  const bounds = coords.reduce((b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coords[0], coords[0]));
-
-  map.fitBounds(bounds, { padding: 60 });
-
-  // Resize final
-  setTimeout(() => { try { map.resize(); } catch(e) {} }, 400);
-});
-
-// Scroll suave al resultado
-setTimeout(() => {
-  resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}, 300);
-
-}   // ←←← ESTE CIERRE ES OBLIGATORIO (cierra la función mostrarResultado)
+  setTimeout(() => {
+    resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 300);
+}
 
 // ==========================================
 // ANIMAR CONTADOR
@@ -2881,10 +2870,11 @@ function animarContador(id, inicio, fin, duracion) {
   }, 16);
 }
   
-  function resetCotizacionUI() {
+function resetCotizacionUI() {
   isCalculating = false;
   clearButtonLoading("btnCalcular", "btnCalcularText");
 }
+
 async function geocodificarDireccion(direccion) {
   try {
     if (!direccion || direccion.length < 4) return null;
@@ -2899,10 +2889,7 @@ async function geocodificarDireccion(direccion) {
       }
     });
 
-    if (!res.ok) {
-      console.warn("⚠️ Nominatim respondió:", res.status);
-      return null;
-    }
+    if (!res.ok) return null;
 
     const data = await res.json();
 
@@ -2921,17 +2908,17 @@ async function geocodificarDireccion(direccion) {
 }
 
 // ==========================================
-// CÁLCULO DE TARIFA - SUPABASE EDGE FUNCTION (FINAL)
+// CÁLCULO DE TARIFA
 // ==========================================
 async function calcularTarifa() {
-if (isCalculating) return;
+  if (isCalculating) return;
 
-const now = Date.now();
-if (now - lastCotizacionAt < 2500) {
-  console.warn("⛔ Cotización bloqueada por anti-doble-disparo");
-  return;
-}
-lastCotizacionAt = now;
+  const now = Date.now();
+  if (now - lastCotizacionAt < 2500) {
+    console.warn("⛔ Cotización bloqueada por anti-doble-disparo");
+    return;
+  }
+  lastCotizacionAt = now;
   
   if (navigator.vibrate) navigator.vibrate(30);
 
@@ -2951,7 +2938,6 @@ lastCotizacionAt = now;
       return;
     }
 
-    // Geocodificar si no hay lugares seleccionados
     if (!lugarOrigen) {
       const origenInput = document.getElementById("origen");
       if (origenInput && origenInput.value) {
@@ -2989,9 +2975,6 @@ lastCotizacionAt = now;
       return;
     }
 
-    // ==================================================
-    // FECHA/HORA según servicio
-    // ==================================================
     let fechaHoraParaEnviar;
     let fechaHoraVuelta = "";
     let esperaMin = 0;
@@ -3000,7 +2983,6 @@ lastCotizacionAt = now;
     const esServicioProgramado = servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA";
 
     if (esServicioInmediato) {
-      // Hora actual
       fechaHoraParaEnviar = new Date().toISOString();
 
       if (servicioSeleccionado === "IDA_Y_VUELTA_INMEDIATA") {
@@ -3054,51 +3036,34 @@ lastCotizacionAt = now;
 
     const calcToast = notifSystem.show("Calculando ruta", mensajeCarga, "info", 15000);
 
-    // ==================================================
-    // LLAMADA SUPABASE EDGE FUNCTION
-    // ==================================================
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
-const origenLat = Number(lugarOrigen?.lat);
-const origenLng = Number(lugarOrigen?.lng);
-const destinoLat = Number(lugarDestino?.lat);
-const destinoLng = Number(lugarDestino?.lng);
+    const origenLat = Number(lugarOrigen?.lat);
+    const origenLng = Number(lugarOrigen?.lng);
+    const destinoLat = Number(lugarDestino?.lat);
+    const destinoLng = Number(lugarDestino?.lng);
 
-if (
-  !Number.isFinite(origenLat) ||
-  !Number.isFinite(origenLng) ||
-  !Number.isFinite(destinoLat) ||
-  !Number.isFinite(destinoLng)
-) {
-  mostrarError("Las coordenadas del origen o destino no son válidas");
-  resetCotizacionUI();
-  return;
-}
+    if (!Number.isFinite(origenLat) || !Number.isFinite(origenLng) || !Number.isFinite(destinoLat) || !Number.isFinite(destinoLng)) {
+      mostrarError("Las coordenadas del origen o destino no son válidas");
+      resetCotizacionUI();
+      return;
+    }
 
-const payload = {
-  servicio: servicioSeleccionado,
+    const payload = {
+      servicio: servicioSeleccionado,
+      origen,
+      destino,
+      origen_lat: origenLat,
+      origen_lng: origenLng,
+      destino_lat: destinoLat,
+      destino_lng: destinoLng,
+      fechaHora: fechaHoraParaEnviar,
+      tiempoEsperaMin: esperaMin
+    };
 
-  origen,
-  destino,
+    console.log("📦 PAYLOAD COTIZAR", payload);
 
-  origen_lat: origenLat,
-  origen_lng: origenLng,
-
-  destino_lat: destinoLat,
-  destino_lng: destinoLng,
-
-  fechaHora: fechaHoraParaEnviar,
-  tiempoEsperaMin: esperaMin
-};
-
-console.log("📦 PAYLOAD COTIZAR", payload);
-console.log("📏 DISTANCIA HYPER-DEBUG", {
-  origen: { lat: origenLat, lng: origenLng },
-  destino: { lat: destinoLat, lng: destinoLng },
-  lugarOrigen,
-  lugarDestino
-});
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: "POST",
       signal: controller.signal,
@@ -3136,9 +3101,6 @@ console.log("📏 DISTANCIA HYPER-DEBUG", {
       return;
     }
 
-    // ==================================================
-    // Mostrar resultado
-    // ==================================================
     mostrarResultado(res);
     mostrarBotonesPostCotizacion();
 
@@ -3168,7 +3130,8 @@ console.log("📏 DISTANCIA HYPER-DEBUG", {
     isCalculating = false;
   }
 }
-  // ==========================================
+
+// ==========================================
 // WHATSAPP
 // ==========================================
 function reservarWhatsApp() {
@@ -3221,21 +3184,11 @@ function reservarWhatsApp() {
     clearButtonLoading("btnWhatsappReserva", "btnWhatsappReservaText");
   }
 }
-function activarAutocompleteConDelay(input, autocomplete) {
-  input.addEventListener('input', () => {
-    const valor = input.value;
 
-    if (valor.length < 4) {
-      autocomplete.setOptions({ types: [] });
-    } else {
-      autocomplete.setOptions({ types: ['geocode'] });
-    }
-  });
-}
-  // ==========================================  
+// ==========================================  
 // UTILIDADES  
 // ==========================================  
-  function guardarEstadoLocal() {
+function guardarEstadoLocal() {
   try {
     const estado = {
       origen: document.getElementById('origen')?.value || '',
@@ -3263,11 +3216,11 @@ function ocultarError() {
   document.getElementById('errorMsg').classList.remove('visible');  
 }  
 
-
-  function formatearFechaInput(fecha) {
+function formatearFechaInput(fecha) {
   const pad = n => n.toString().padStart(2, '0');
   return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
 }
+
 function cargarEstadoLocal() {
   try {
     const estado = JSON.parse(localStorage.getItem('mimi_estado'));
@@ -3301,6 +3254,6 @@ function formatearTextoBoton(fecha) {
   });
 }
 
-  </script>
+</script>
 </body>
 </html>
