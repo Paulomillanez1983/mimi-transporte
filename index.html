@@ -2793,43 +2793,24 @@ async function buscarDireccion(query) {
   }
 }
 
-function mostrarSugerencias(containerId, resultados, callbackSeleccion) {
-  const cont = document.getElementById(containerId);
-  if (!cont) return;
+function formatearDireccionCorta(r) {
+  const a = r.address || {};
 
-  cont.innerHTML = "";
+  const calle = a.road || a.pedestrian || a.footway || "";
+  const numero = a.house_number || "";
+  const barrio = a.suburb || a.neighbourhood || "";
+  const ciudad = a.city || a.town || a.village || a.municipality || "";
+  const provincia = a.state || "";
 
-  if (!resultados.length) {
-    cont.style.display = "none";
-    return;
-  }
+  let linea1 = `${calle} ${numero}`.trim();
+  if (!linea1) linea1 = r.name || "Dirección";
 
-  resultados.forEach(r => {
-    const div = document.createElement("div");
-    div.className = "sugerencia-item";
-    div.textContent = r.display_name;
+  let linea2 = [barrio, ciudad, provincia].filter(Boolean).join(", ");
 
-    // 🔥 MOBILE (clave)
-    div.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      cont.style.display = "none";
-      callbackSeleccion(r);
-    });
-
-    // 💻 DESKTOP
-    div.addEventListener("click", (e) => {
-      e.stopPropagation();
-      cont.style.display = "none";
-      callbackSeleccion(r);
-    });
-
-    cont.appendChild(div);
-  });
-
-  cont.style.display = "block";
+  return linea2 ? `${linea1} · ${linea2}` : linea1;
 }
-function ocultarSugerencias() {
+
+  function ocultarSugerencias() {
   const o = document.getElementById("sugerenciasOrigen");
   const d = document.getElementById("sugerenciasDestino");
 
