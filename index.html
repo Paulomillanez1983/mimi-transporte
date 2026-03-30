@@ -3257,7 +3257,7 @@ function mostrarResultado(res) {
   }
 
 // =============================
-// MAPA RUTA - SOLO DESPUÉS DE COTIZAR + EFECTO UBER
+// MAPA RUTA - ESTILO UBER PREMIUM + ANIMACIÓN
 // =============================
 const mapaDiv = document.getElementById("mapaRuta");
 if (!mapaDiv) {
@@ -3266,9 +3266,8 @@ if (!mapaDiv) {
 }
 
 mapaDiv.style.display = "block";
-mapaDiv.innerHTML = ""; // limpiar
+mapaDiv.innerHTML = ""; 
 
-// Seguridad: si no hay coordenadas válidas
 if (!lugarOrigen || !lugarDestino || !lugarOrigen.lng || !lugarDestino.lng) {
   console.warn("❌ No hay coordenadas válidas para mostrar el mapa");
   mapaDiv.style.display = "none";
@@ -3292,35 +3291,37 @@ const map = new maplibregl.Map({
       }
     },
     "layers": [
-      {
-        "id": "osm",
-        "type": "raster",
-        "source": "osm"
-      }
+      { "id": "osm", "type": "raster", "source": "osm" }
     ]
   },
   center: [lugarOrigen.lng, lugarOrigen.lat],
   zoom: 13
 });
 
-// FIX MOBILE - resize inicial
-setTimeout(() => {
-  try { map.resize(); } catch(e) {}
-}, 500);
+// Resize inicial para móviles
+setTimeout(() => { try { map.resize(); } catch(e) {} }, 600);
 
 map.on("load", async () => {
   try { map.resize(); } catch(e) {}
 
-  // Markers
-  new maplibregl.Marker({ color: "#22c55e" })  // Verde más bonito
+  // ==================== MARCADORES MEJORADOS ====================
+  // Marcador Origen (Verde con borde blanco)
+  new maplibregl.Marker({
+    color: "#22c55e",
+    scale: 0.9
+  })
     .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
     .addTo(map);
 
-  new maplibregl.Marker({ color: "#ef4444" })  // Rojo más bonito
+  // Marcador Destino (Rojo con borde blanco)
+  new maplibregl.Marker({
+    color: "#ef4444",
+    scale: 0.9
+  })
     .setLngLat([lugarDestino.lng, lugarDestino.lat])
     .addTo(map);
 
-  // === RUTA CON EFECTO ILUMINACIÓN (ESTILO UBER) ===
+  // ==================== RUTA CON EFECTO UBER + ANIMACIÓN ====================
   const url = `https://router.project-osrm.org/route/v1/driving/` +
     `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
     `?overview=full&geometries=geojson`;
@@ -3334,70 +3335,70 @@ map.on("load", async () => {
     return;
   }
 
-  if (!data || !data.routes || !data.routes.length) {
+  if (!data?.routes?.length) {
     console.warn("⚠️ OSRM no devolvió rutas");
     return;
   }
 
   const route = data.routes[0].geometry;
 
-  // Agregamos DOS capas para efecto glow:
   map.addSource("route", {
     type: "geojson",
-    data: {
-      type: "Feature",
-      geometry: route
-    }
+    data: { type: "Feature", geometry: route }
   });
 
-  // 1. Línea de brillo / glow (más ancha y semi-transparente)
+  // 1. Glow suave (iluminación)
   map.addLayer({
     id: "route-glow",
     type: "line",
     source: "route",
-    layout: {
-      "line-join": "round",
-      "line-cap": "round"
-    },
+    layout: { "line-join": "round", "line-cap": "round" },
     paint: {
-      "line-color": "#60a5fa",        // Azul claro
-      "line-width": 12,
+      "line-color": "#60a5fa",
+      "line-width": 14,
       "line-opacity": 0.25
     }
   });
 
-  // 2. Línea principal (más fina y brillante - estilo Uber)
+  // 2. Línea principal con animación sutil
   map.addLayer({
     id: "route-line",
     type: "line",
     source: "route",
-    layout: {
-      "line-join": "round",
-      "line-cap": "round"
-    },
+    layout: { "line-join": "round", "line-cap": "round" },
     paint: {
-      "line-color": "#2563eb",        // Azul Uber intenso
-      "line-width": 6,
+      "line-color": "#2563eb",
+      "line-width": 6.5,
       "line-opacity": 0.95
     }
   });
 
-  // Ajustar vista al recorrido
+  // 3. Animación sutil de "dash" (efecto de movimiento ligero)
+  map.addLayer({
+    id: "route-dash",
+    type: "line",
+    source: "route",
+    layout: { "line-join": "round", "line-cap": "round" },
+    paint: {
+      "line-color": "#ffffff",
+      "line-width": 2.5,
+      "line-opacity": 0.6,
+      "line-dasharray": [0.5, 3]   // efecto punteado sutil
+    }
+  });
+
+  // Ajustar vista
   const coords = route.coordinates;
-  const bounds = coords.reduce(
-    (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coords[0], coords[0])
-  );
+  const bounds = coords.reduce((b, c) => b.extend(c), 
+    new maplibregl.LngLatBounds(coords[0], coords[0]));
 
-  map.fitBounds(bounds, { padding: 50 });
+  map.fitBounds(bounds, { padding: 60 });
 
-  // Resize final para móviles
-  setTimeout(() => {
-    try { map.resize(); } catch(e) {}
-  }, 400);
+  // Resize final
+  setTimeout(() => { try { map.resize(); } catch(e) {} }, 400);
 });
 
-// Scroll suave hacia el resultado
+// Scroll suave al resultado
 setTimeout(() => {
   resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }, 300);
