@@ -143,16 +143,16 @@ class TripManager {
       // =====================================================
       const validOffer = offers[0];
 
-      if (!validOffer?.viaje_id) {
-        console.warn('[TripManager] Offer has no viaje_id:', validOffer);
+if (!validOffer?.viaje_id && !validOffer?.cotizacion_id) {
+  console.warn('[TripManager] Offer has no viaje_id and no cotizacion_id:', validOffer);
 
-        this.pendingOffer = null;
-        this.lastOfferIdShown = null;
-        this.emit('noPendingTrips');
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+  this.emit('noPendingTrips');
 
-        this.isLoadingInitial = false;
-        return;
-      }
+  this.isLoadingInitial = false;
+  return;
+}
 
       // =====================================================
       // 4) FETCH TRIP DATA
