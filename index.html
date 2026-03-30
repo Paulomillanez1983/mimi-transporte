@@ -2012,6 +2012,13 @@ body {
   overflow: visible !important;
   position: relative;
 }
+#mapaRuta {
+  width: 100%;
+  height: 280px;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-top: 15px;
+}
 
 
 </style>
@@ -3121,15 +3128,15 @@ function desactivarBoton(id) {
 // ==========================================
 function mostrarResultado(res) {
   datosCotizacion = res;
-  
+
   animarContador('precioValor', 0, res.precio, 800);
-  
+
   const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.km) || 0;
   const duracion = parseInt(res.duracionEstimadaMin) || 0;
-  
+
   const resultadoDiv = document.getElementById('resultado');
   resultadoDiv.classList.add('visible');
-  
+
   let infoViaje = document.getElementById('infoViaje');
   if (!infoViaje) {
     infoViaje = document.createElement('div');
@@ -3140,114 +3147,156 @@ function mostrarResultado(res) {
     infoViaje.style.textAlign = 'center';
     resultadoDiv.insertBefore(infoViaje, resultadoDiv.children[1]);
   }
-  
-  const tiempoTexto = duracion > 60 
+
+  const tiempoTexto = duracion > 60
     ? `${Math.floor(duracion / 60)}h ${duracion % 60}min`
     : `${duracion} min`;
-    
+
   infoViaje.innerHTML = `📏 ${kmCliente.toFixed(1)} km · ⏱️ ${tiempoTexto}`;
-  
+
   let recargosDiv = document.getElementById('recargosInfo');
   if (!recargosDiv) {
     recargosDiv = document.createElement('div');
     recargosDiv.id = 'recargosInfo';
     resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
   }
-  
+
   let recargosHtml = '';
-  
+
   if (res.clima && res.clima.tipo === 'tormenta') {
-    recargosHtml += `<div style="display:flex;align-items:center;justify-content:center;gap:6px;color:#666;font-size:0.8rem;margin-bottom:6px;"><span>⛈️</span><span>Condiciones climáticas adversas</span></div>`;
+    recargosHtml += `
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;color:#666;font-size:0.8rem;margin-bottom:6px;">
+        <span>⛈️</span>
+        <span>Condiciones climáticas adversas</span>
+      </div>`;
   }
-  
+
   if (res.esNocturno) {
-    recargosHtml += `<div style="display:inline-flex;align-items:center;gap:4px;background:#1a237e;color:white;padding:4px 10px;border-radius:12px;font-size:0.75rem;">🌙 Nocturno</div>`;
+    recargosHtml += `
+      <div style="display:inline-flex;align-items:center;gap:4px;background:#1a237e;color:white;padding:4px 10px;border-radius:12px;font-size:0.75rem;">
+        🌙 Nocturno
+      </div>`;
   }
-  
+
   if (recargosHtml) {
     recargosDiv.style.cssText = 'margin:8px 0;padding:8px;background:#f5f5f5;border-radius:8px;text-align:center;';
     recargosDiv.innerHTML = recargosHtml;
+    recargosDiv.style.display = "block";
   } else {
     recargosDiv.innerHTML = '';
     recargosDiv.style.display = 'none';
   }
 
-  const origenTexto = document.getElementById('origen').value;
-  const destinoTexto = document.getElementById('destino').value;
-const mapaDiv = document.getElementById("mapaRuta");
-mapaDiv.style.display = "block";
-mapaDiv.innerHTML = ""; // limpiar
+  // =============================
+  // MAPA RUTA (FIX MOBILE FINAL)
+  // =============================
+  const mapaDiv = document.getElementById("mapaRuta");
+  if (!mapaDiv) {
+    console.warn("❌ No existe #mapaRuta");
+    return;
+  }
 
-const map = new maplibregl.Map({
-  container: "mapaRuta",
-  style: "https://demotiles.maplibre.org/style.json",
-  center: [lugarOrigen.lng, lugarOrigen.lat],
-  zoom: 13
-});
+  mapaDiv.style.display = "block";
+  mapaDiv.innerHTML = ""; // limpiar
 
-map.on("load", async () => {
-  // markers
-  new maplibregl.Marker({ color: "green" })
-    .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
-    .addTo(map);
+  // Seguridad: si no hay coords no creamos mapa
+  if (!lugarOrigen || !lugarDestino || !lugarOrigen.lng || !lugarDestino.lng) {
+    console.warn("❌ No hay coordenadas válidas para mostrar el mapa");
+    return;
+  }
 
-  new maplibregl.Marker({ color: "red" })
-    .setLngLat([lugarDestino.lng, lugarDestino.lat])
-    .addTo(map);
-
-  // pedir ruta OSRM
-  const url = `https://router.project-osrm.org/route/v1/driving/` +
-    `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
-    `?overview=full&geometries=geojson`;
-
-  const response = await fetch(url);
-let data = null;
-try {
-  data = await response.json();
-} catch(e) {
-  data = null;
-}
-
-  if (!data.routes || !data.routes.length) return;
-
-  const route = data.routes[0].geometry;
-
-  map.addSource("route", {
-    type: "geojson",
-    data: {
-      type: "Feature",
-      geometry: route
-    }
+  const map = new maplibregl.Map({
+    container: "mapaRuta",
+    style: "https://demotiles.maplibre.org/style.json",
+    center: [lugarOrigen.lng, lugarOrigen.lat],
+    zoom: 13
   });
 
-  map.addLayer({
-    id: "route-line",
-    type: "line",
-    source: "route",
-    layout: {
-      "line-join": "round",
-      "line-cap": "round"
-    },
-    paint: {
-      "line-color": "#1565c0",
-      "line-width": 6
+  // ✅ FIX DEFINITIVO MOBILE (map invisible)
+  setTimeout(() => {
+    try { map.resize(); } catch(e) {}
+  }, 500);
+
+  map.on("load", async () => {
+    // ✅ resize otra vez por seguridad
+    try { map.resize(); } catch(e) {}
+
+    // markers
+    new maplibregl.Marker({ color: "green" })
+      .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
+      .addTo(map);
+
+    new maplibregl.Marker({ color: "red" })
+      .setLngLat([lugarDestino.lng, lugarDestino.lat])
+      .addTo(map);
+
+    // pedir ruta OSRM
+    const url =
+      `https://router.project-osrm.org/route/v1/driving/` +
+      `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
+      `?overview=full&geometries=geojson`;
+
+    let data = null;
+
+    try {
+      const response = await fetch(url);
+      data = await response.json();
+    } catch (err) {
+      console.error("❌ Error OSRM:", err);
+      return;
     }
+
+    if (!data || !data.routes || !data.routes.length) {
+      console.warn("⚠️ OSRM no devolvió rutas");
+      return;
+    }
+
+    const route = data.routes[0].geometry;
+
+    map.addSource("route", {
+      type: "geojson",
+      data: {
+        type: "Feature",
+        geometry: route
+      }
+    });
+
+    map.addLayer({
+      id: "route-line",
+      type: "line",
+      source: "route",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round"
+      },
+      paint: {
+        "line-color": "#1565c0",
+        "line-width": 6
+      }
+    });
+
+    // ajustar vista
+    const coords = route.coordinates;
+    const bounds = coords.reduce(
+      (b, c) => b.extend(c),
+      new maplibregl.LngLatBounds(coords[0], coords[0])
+    );
+
+    map.fitBounds(bounds, { padding: 40 });
+
+    // 🔥 resize final después de fitBounds (celular)
+    setTimeout(() => {
+      try { map.resize(); } catch(e) {}
+    }, 300);
   });
 
-  // ajustar vista
-  const coords = route.coordinates;
-  const bounds = coords.reduce(
-    (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coords[0], coords[0])
-  );
-
-  map.fitBounds(bounds, { padding: 40 });
-});
-  
-  setTimeout(() => resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+  // Scroll hacia el resultado
+  setTimeout(() => {
+    resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 200);
 }
 
-function animarContador(id, inicio, fin, duracion) {
+  function animarContador(id, inicio, fin, duracion) {
   const elemento = document.getElementById(id);
   const incremento = (fin - inicio) / (duracion / 16);
   let actual = inicio;
