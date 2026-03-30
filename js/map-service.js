@@ -642,75 +642,116 @@ _createRecenterButton() {
     }
   }
 
-  async _getOSRMRoute(from, to) {
-    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+async _getOSRMRoute(from, to) {
 
-    const res = await fetch(url);
-    const data = await res.json();
+  // ===========================
+  // VALHALLA (RECOMENDADO)
+  // ===========================
+  if (CONFIG.ROUTING_PROVIDER === "valhalla") {
+    const body = {
+      locations: [
+        { lat: from.lat, lon: from.lng },
+        { lat: to.lat, lon: to.lng }
+      ],
+      costing: "auto",
+      directions_options: {
+        units: "kilometers"
+      }
+    };
 
-    if (!data.routes || !data.routes[0]) {
-      throw new Error('OSRM no devolvió rutas');
+    const res = await fetch(CONFIG.VALHALLA_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      throw new Error("Valhalla error HTTP " + res.status);
     }
 
-    const route = data.routes[0];
+    const data = await res.json();
+
+    if (!data.trip || !data.trip.legs || !data.trip.legs[0]) {
+      throw new Error("Valhalla no devolvió ruta");
+    }
+
+    const leg = data.trip.legs[0];
+
+    // decode polyline -> devuelve [lat,lng]
+    const decoded = this._decodePolyline(leg.shape);
 
     return {
-      geometry: route.geometry.coordinates,
-      distance: route.distance,
-      duration: route.duration,
+      geometry: decoded.map(p => [p[1], p[0]]), // a formato MapLibre: [lng, lat]
+      distance: (data.trip.summary.length || 0) * 1000,
+      duration: data.trip.summary.time || 0,
       isFallback: false
     };
   }
 
-  _getStraightLineRoute(from, to) {
-    const coordinates = [
-      [from.lng, from.lat],
-      [to.lng, to.lat]
-    ];
+  // ===========================
+  // OSRM (FALLBACK)
+  // ===========================
+  const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
 
-    const distance = this._haversine(from.lat, from.lng, to.lat, to.lng);
+  const res = await fetch(url);
 
-    return {
-      geometry: coordinates,
-      distance: distance,
-      duration: distance / 8.33,
-      isFallback: true
-    };
+  if (!res.ok) {
+    throw new Error("OSRM error HTTP " + res.status);
   }
 
-  clearRoute() {
-    if (!this.map || !this.isLoaded) return;
+  const data = await res.json();
 
-    try {
-      const source = this.map.getSource('route');
-
-      if (source) {
-        source.setData({
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: []
-          }
-        });
-      }
-
-      ['pickup', 'dropoff'].forEach(key => {
-        if (this.markers[key]) {
-          try { this.markers[key].remove(); } catch (e) {}
-          delete this.markers[key];
-        }
-      });
-
-      this.currentDestination = null;
-      this.routeGeometry = [];
-
-      console.log('[Map] Route cleared');
-
-    } catch (e) {
-      console.error('[Map] Error clearing route:', e);
-    }
+  if (!data.routes || !data.routes[0]) {
+    throw new Error("OSRM no devolvió rutas");
   }
+
+  const route = data.routes[0];
+
+  return {
+    geometry: route.geometry.coordinates,
+    distance: route.distance,
+    duration: route.duration,
+    isFallback: false
+  };
+}
+_decodePolyline(str, precision = 6) {
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  const coordinates = [];
+  const factor = Math.pow(10, precision);
+
+  while (index < str.length) {
+    let b, shift = 0, result = 0;
+
+    do {
+      b = str.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+
+    const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lat += dlat;
+
+    shift = 0;
+    result = 0;
+
+    do {
+      b = str.charCodeAt(index++) - 63;
+      result |= (b & 0x1f) << shift;
+      shift += 5;
+    } while (b >= 0x20);
+
+    const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lng += dlng;
+
+    coordinates.push([lat / factor, lng / factor]);
+  }
+
+  return coordinates;
+}
 
   // =========================================================
   // DESTROY
