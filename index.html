@@ -3205,12 +3205,33 @@ function mostrarResultado(res) {
     return;
   }
 
-  const map = new maplibregl.Map({
-    container: "mapaRuta",
-    style: "https://demotiles.maplibre.org/style.json",
-    center: [lugarOrigen.lng, lugarOrigen.lat],
-    zoom: 13
-  });
+const map = new maplibregl.Map({
+  container: "mapaRuta",
+  style: {
+    "version": 8,
+    "sources": {
+      "osm": {
+        "type": "raster",
+        "tiles": [
+          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        ],
+        "tileSize": 256,
+        "attribution": "© OpenStreetMap contributors"
+      }
+    },
+    "layers": [
+      {
+        "id": "osm",
+        "type": "raster",
+        "source": "osm"
+      }
+    ]
+  },
+  center: [lugarOrigen.lng, lugarOrigen.lat],
+  zoom: 13
+});
 
   // ✅ FIX DEFINITIVO MOBILE (map invisible)
   setTimeout(() => {
