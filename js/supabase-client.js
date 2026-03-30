@@ -391,46 +391,58 @@ async ensureDriverProfile() {
     return { error };
   }
 
-  async getPendingOffers() {
-    if (!this.client) return { data: null, error: 'No client' };
-    if (!this.driverId) return { data: null, error: 'No driverId' };
+async getPendingOffers() {
+  if (!this.client) return { data: null, error: 'No client' };
+  if (!this.driverId) return { data: null, error: 'No driverId' };
 
-const { data, error } = await this.client
-  .from('viaje_ofertas')
-  .select(`
-    id,
-    viaje_id,
-    chofer_id_uuid,
-    estado,
-    expires_at,
-    offered_at,
-    viajes (
+  const { data, error } = await this.client
+    .from('viaje_ofertas')
+    .select(`
       id,
+      viaje_id,
+      chofer_id,
       estado,
-      origen,
-      destino,
-      origen_lat,
-      origen_lng,
-      destino_lat,
-      destino_lng,
-      precio,
-      km,
-      cliente,
-      telefono,
-      created_at
-    )
-  `)
-  .eq('chofer_id_uuid', this.driverId)
-  .eq('estado', 'PENDIENTE')
-  .gt('expires_at', new Date().toISOString())
-  .order('offered_at', { ascending: false });
+      enviada_en,
+      respondida_en,
+      viajes (
+        id,
+        estado,
+        origen,
+        destino,
+        origen_lat,
+        origen_lng,
+        destino_lat,
+        destino_lng,
+        precio,
+        km,
+        cliente,
+        telefono,
+        created_at,
+        current_offer_expires_at
+      )
+    `)
+    .eq('chofer_id', this.driverId)
+    .eq('estado', 'PENDIENTE')
+    .order('enviada_en', { ascending: false });
 
-    if (error) {
-      console.error('[Supabase] getPendingOffers error:', error);
-    }
-
-    return { data, error };
+  if (error) {
+    console.error('[Supabase] getPendingOffers error:', error);
+    return { data: null, error };
   }
+
+  // ============================
+  // FILTRAR OFERTAS EXPIRADAS
+  // ============================
+  const now = new Date();
+
+  const filtered = (data || []).filter((offer) => {
+    const exp = offer?.viajes?.current_offer_expires_at;
+    if (!exp) return true; // si no tiene expiración, no la descartamos
+    return new Date(exp) > now;
+  });
+
+  return { data: filtered, error: null };
+}
 
   async getActiveTrip() {
     if (!this.client) return { data: null, error: 'No client' };
