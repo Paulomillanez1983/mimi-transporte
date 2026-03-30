@@ -3256,23 +3256,24 @@ function mostrarResultado(res) {
     recargosDiv.style.display = 'none';
   }
 
-  // =============================
-  // MAPA RUTA (FIX MOBILE FINAL)
-  // =============================
-  const mapaDiv = document.getElementById("mapaRuta");
-  if (!mapaDiv) {
-    console.warn("❌ No existe #mapaRuta");
-    return;
-  }
+// =============================
+// MAPA RUTA - SOLO DESPUÉS DE COTIZAR + EFECTO UBER
+// =============================
+const mapaDiv = document.getElementById("mapaRuta");
+if (!mapaDiv) {
+  console.warn("❌ No existe #mapaRuta");
+  return;
+}
 
-  mapaDiv.style.display = "block";
-  mapaDiv.innerHTML = ""; // limpiar
+mapaDiv.style.display = "block";
+mapaDiv.innerHTML = ""; // limpiar
 
-  // Seguridad: si no hay coords no creamos mapa
-  if (!lugarOrigen || !lugarDestino || !lugarOrigen.lng || !lugarDestino.lng) {
-    console.warn("❌ No hay coordenadas válidas para mostrar el mapa");
-    return;
-  }
+// Seguridad: si no hay coordenadas válidas
+if (!lugarOrigen || !lugarDestino || !lugarOrigen.lng || !lugarDestino.lng) {
+  console.warn("❌ No hay coordenadas válidas para mostrar el mapa");
+  mapaDiv.style.display = "none";
+  return;
+}
 
 const map = new maplibregl.Map({
   container: "mapaRuta",
@@ -3302,90 +3303,105 @@ const map = new maplibregl.Map({
   zoom: 13
 });
 
-  // ✅ FIX DEFINITIVO MOBILE (map invisible)
-  setTimeout(() => {
-    try { map.resize(); } catch(e) {}
-  }, 500);
+// FIX MOBILE - resize inicial
+setTimeout(() => {
+  try { map.resize(); } catch(e) {}
+}, 500);
 
-  map.on("load", async () => {
-    // ✅ resize otra vez por seguridad
-    try { map.resize(); } catch(e) {}
+map.on("load", async () => {
+  try { map.resize(); } catch(e) {}
 
-    // markers
-    new maplibregl.Marker({ color: "green" })
-      .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
-      .addTo(map);
+  // Markers
+  new maplibregl.Marker({ color: "#22c55e" })  // Verde más bonito
+    .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
+    .addTo(map);
 
-    new maplibregl.Marker({ color: "red" })
-      .setLngLat([lugarDestino.lng, lugarDestino.lat])
-      .addTo(map);
+  new maplibregl.Marker({ color: "#ef4444" })  // Rojo más bonito
+    .setLngLat([lugarDestino.lng, lugarDestino.lat])
+    .addTo(map);
 
-    // pedir ruta OSRM
-    const url =
-      `https://router.project-osrm.org/route/v1/driving/` +
-      `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
-      `?overview=full&geometries=geojson`;
+  // === RUTA CON EFECTO ILUMINACIÓN (ESTILO UBER) ===
+  const url = `https://router.project-osrm.org/route/v1/driving/` +
+    `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
+    `?overview=full&geometries=geojson`;
 
-    let data = null;
+  let data = null;
+  try {
+    const response = await fetch(url);
+    data = await response.json();
+  } catch (err) {
+    console.error("❌ Error OSRM:", err);
+    return;
+  }
 
-    try {
-      const response = await fetch(url);
-      data = await response.json();
-    } catch (err) {
-      console.error("❌ Error OSRM:", err);
-      return;
+  if (!data || !data.routes || !data.routes.length) {
+    console.warn("⚠️ OSRM no devolvió rutas");
+    return;
+  }
+
+  const route = data.routes[0].geometry;
+
+  // Agregamos DOS capas para efecto glow:
+  map.addSource("route", {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      geometry: route
     }
-
-    if (!data || !data.routes || !data.routes.length) {
-      console.warn("⚠️ OSRM no devolvió rutas");
-      return;
-    }
-
-    const route = data.routes[0].geometry;
-
-    map.addSource("route", {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        geometry: route
-      }
-    });
-
-    map.addLayer({
-      id: "route-line",
-      type: "line",
-      source: "route",
-      layout: {
-        "line-join": "round",
-        "line-cap": "round"
-      },
-      paint: {
-        "line-color": "#1565c0",
-        "line-width": 6
-      }
-    });
-
-    // ajustar vista
-    const coords = route.coordinates;
-    const bounds = coords.reduce(
-      (b, c) => b.extend(c),
-      new maplibregl.LngLatBounds(coords[0], coords[0])
-    );
-
-    map.fitBounds(bounds, { padding: 40 });
-
-    // 🔥 resize final después de fitBounds (celular)
-    setTimeout(() => {
-      try { map.resize(); } catch(e) {}
-    }, 300);
   });
 
-  // Scroll hacia el resultado
-  setTimeout(() => {
-    resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 200);
-}
+  // 1. Línea de brillo / glow (más ancha y semi-transparente)
+  map.addLayer({
+    id: "route-glow",
+    type: "line",
+    source: "route",
+    layout: {
+      "line-join": "round",
+      "line-cap": "round"
+    },
+    paint: {
+      "line-color": "#60a5fa",        // Azul claro
+      "line-width": 12,
+      "line-opacity": 0.25
+    }
+  });
 
+  // 2. Línea principal (más fina y brillante - estilo Uber)
+  map.addLayer({
+    id: "route-line",
+    type: "line",
+    source: "route",
+    layout: {
+      "line-join": "round",
+      "line-cap": "round"
+    },
+    paint: {
+      "line-color": "#2563eb",        // Azul Uber intenso
+      "line-width": 6,
+      "line-opacity": 0.95
+    }
+  });
+
+  // Ajustar vista al recorrido
+  const coords = route.coordinates;
+  const bounds = coords.reduce(
+    (b, c) => b.extend(c),
+    new maplibregl.LngLatBounds(coords[0], coords[0])
+  );
+
+  map.fitBounds(bounds, { padding: 50 });
+
+  // Resize final para móviles
+  setTimeout(() => {
+    try { map.resize(); } catch(e) {}
+  }, 400);
+});
+
+// Scroll suave hacia el resultado
+setTimeout(() => {
+  resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}, 300);
+  
   function animarContador(id, inicio, fin, duracion) {
   const elemento = document.getElementById(id);
   const incremento = (fin - inicio) / (duracion / 16);
