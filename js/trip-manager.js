@@ -157,51 +157,74 @@ if (!validOffer?.viaje_id && !validOffer?.cotizacion_id) {
       // =====================================================
       // 4) FETCH TRIP DATA
       // =====================================================
-      const { data: trip, error: tripErr } = await supabaseService.client
-        .from('viajes')
-        .select('*')
-        .eq('id', validOffer.viaje_id)
-        .single();
+let trip = null;
 
-      if (tripErr) {
-        console.error('[TripManager] Error fetching trip for offer:', tripErr);
-        this.isLoadingInitial = false;
-        return;
-      }
+if (validOffer.viaje_id) {
+  const { data, error } = await supabaseService.client
+    .from('viajes')
+    .select('*')
+    .eq('id', validOffer.viaje_id)
+    .single();
 
-      if (!trip) {
-        console.warn('[TripManager] Trip not found for offer:', validOffer.id);
-        this.isLoadingInitial = false;
-        return;
-      }
+  if (error) {
+    console.error('[TripManager] Error fetching trip for offer:', error);
+    this.isLoadingInitial = false;
+    return;
+  }
 
-      // =====================================================
-      // 5) SET PENDING OFFER
-      // =====================================================
-      this.pendingOffer = {
-        ...trip,
-        offerId: validOffer.id,
-        enviadaEn: validOffer.enviada_en
-      };
+  trip = data;
+} else {
+  const { data, error } = await supabaseService.client
+    .from('cotizaciones')
+    .select('*')
+    .eq('id', validOffer.cotizacion_id)
+    .single();
 
-      console.log('[TripManager] Pending offer found:', validOffer.id);
+  if (error) {
+    console.error('[TripManager] Error fetching cotizacion for offer:', error);
+    this.isLoadingInitial = false;
+    return;
+  }
 
-      // =====================================================
-      // 6) ANTI-PARPADEO (solo emitir si es nueva)
-      // =====================================================
-      if (this.lastOfferIdShown === validOffer.id) {
-        console.log('[TripManager] Offer already shown, skipping emit');
-      } else {
-        this.lastOfferIdShown = validOffer.id;
-        this.emit('newPendingTrip', this.pendingOffer);
-      }
+  trip = data;
+}
 
+if (!trip) {
+  console.warn('[TripManager] Trip/Cotizacion not found for offer:', validOffer.id);
+  this.isLoadingInitial = false;
+  return;
+}
+
+// =====================================================
+// 5) SET PENDING OFFER
+// =====================================================
+this.pendingOffer = {
+  ...trip,
+  offerId: validOffer.id,
+  viajeId: validOffer.viaje_id || null,
+  cotizacionId: validOffer.cotizacion_id || null,
+  enviadaEn: validOffer.enviada_en,
+  tipo: validOffer.viaje_id ? 'VIAJE' : 'COTIZACION'
+};
+
+console.log('[TripManager] Pending offer found:', validOffer.id);
+
+// =====================================================
+// 6) ANTI-PARPADEO
+// =====================================================
+if (this.lastOfferIdShown === validOffer.id) {
+  console.log('[TripManager] Offer already shown, skipping emit');
+} else {
+  this.lastOfferIdShown = validOffer.id;
+  this.emit('newPendingTrip', this.pendingOffer);
+}
     } catch (error) {
       console.error('[TripManager] Load error:', error);
     }
 
     this.isLoadingInitial = false;
   }
+
 
   // =========================================================
   // REALTIME
@@ -354,53 +377,36 @@ if (!validOffer?.viaje_id && !validOffer?.cotizacion_id) {
     }
   }
 
-  async rejectTrip(tripId, reason = 'RECHAZADO_POR_CHOFER') {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
+async rejectTrip(reason = 'RECHAZADO_POR_CHOFER') {
+  const driverId = this.driverId;
+  if (!driverId) return { success: false, error: 'No driverId' };
 
-    const { error } = await supabaseService.client
-      .from('viaje_ofertas')
-      .update({
-        estado: 'rechazada',
-        respondida_en: new Date().toISOString()
-      })
-      .eq('viaje_id', tripId)
-      .eq('chofer_id', driverId)
-      .eq('estado', 'pendiente');
-
-    if (error) {
-      console.error('[TripManager] Reject error:', error);
-      return { success: false, error: error.message };
-    }
-
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
-
-    await this._loadInitialState(driverId);
-
-    return { success: true };
+  if (!this.pendingOffer?.offerId) {
+    return { success: false, error: 'No offerId disponible' };
   }
 
-  async startTrip(tripId) {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
+  const { error } = await supabaseService.client
+    .from('viaje_ofertas')
+    .update({
+      estado: 'rechazada',
+      respondida_en: new Date().toISOString()
+    })
+    .eq('id', this.pendingOffer.offerId)
+    .eq('chofer_id', driverId)
+    .eq('estado', 'pendiente');
 
-    const { error } = await supabaseService.client
-      .from('viajes')
-      .update({
-        estado: 'EN_CURSO',
-        iniciado_at: new Date().toISOString()
-      })
-      .eq('id', tripId)
-      .eq('chofer_id_uuid', driverId);
-
-    if (error) {
-      console.error('[TripManager] Start trip error:', error);
-      return { success: false, error: error.message };
-    }
-
-    return { success: true };
+  if (error) {
+    console.error('[TripManager] Reject error:', error);
+    return { success: false, error: error.message };
   }
+
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+
+  await this._loadInitialState(driverId);
+
+  return { success: true };
+}
 
   async finishTrip(tripId) {
     const driverId = this.driverId;
