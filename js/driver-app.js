@@ -96,14 +96,15 @@ window.addEventListener('touchstart', () => {
         console.log('[DriverApp] Estado inicial: viaje activo');
         await this._showRouteOnMap(currentTrip);
         uiController.showNavigationState(currentTrip);
-      } else if (pendingTrip) {
-        console.log('[DriverApp] Estado inicial: oferta pendiente');
-        uiController.showIncomingTrip(
-          pendingTrip,
-          () => this._acceptTrip(pendingTrip.id),
-          () => this._rejectTrip(pendingTrip.id)
-        );
-      } else {
+} else if (pendingTrip) {
+  console.log('[DriverApp] Estado inicial: oferta pendiente');
+  uiController.showIncomingTrip(
+    pendingTrip,
+    () => this._acceptOffer(pendingTrip.id),
+    () => this._rejectOffer(pendingTrip.id)
+  );
+}
+   else {
         console.log('[DriverApp] Estado inicial: esperando');
         uiController.showWaitingState();
       }
@@ -122,8 +123,8 @@ window.addEventListener('touchstart', () => {
 
       uiController.showIncomingTrip(
         trip,
-        () => this._acceptTrip(trip.id),
-        () => this._rejectTrip(trip.id)
+        () => this._acceptOffer(trip.id),
+        () => this._rejectOffer(trip.id)
       );
     });
 
@@ -231,6 +232,46 @@ async _showRouteOnMap(trip) {
     console.error('[DriverApp] Error mostrando ruta:', error);
   }
 }
+  async _acceptOffer(offerId) {
+  console.log('[DriverApp] Aceptando oferta:', offerId);
+  uiController.setGlobalLoading(true, 'Aceptando viaje...');
+
+  try {
+    const result = await tripManager.acceptOffer(offerId);
+
+    if (!result.success) {
+      uiController.showToast(result.error || 'Error aceptando viaje', 'warning');
+      uiController.hideIncomingModal();
+      uiController.showWaitingState();
+      return result;
+    }
+
+    await tripManager.refresh();
+    return result;
+
+  } catch (err) {
+    console.error('[DriverApp] Error aceptando oferta:', err);
+    uiController.showToast('Error aceptando viaje', 'error');
+    return { success: false, error: err.message };
+
+  } finally {
+    uiController.setGlobalLoading(false);
+  }
+}
+
+async _rejectOffer(offerId) {
+  console.log('[DriverApp] Rechazando oferta:', offerId);
+
+  try {
+    await tripManager.rejectOffer(offerId);
+    uiController.showWaitingState();
+    return { success: true };
+  } catch (err) {
+    console.error('[DriverApp] Error rechazando oferta:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 
 async _acceptTrip(tripId) {
   console.log('[DriverApp] Aceptando viaje:', tripId);
