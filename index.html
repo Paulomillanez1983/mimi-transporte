@@ -2745,13 +2745,26 @@ async function buscarDireccion(query) {
 
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=ar&q=${encodeURIComponent(query)}`;
 
-  const res = await fetch(url, {
-    headers: {
-      "Accept": "application/json"
-    }
-  });
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "Accept": "application/json",
+        "Accept-Language": "es-AR"
+      }
+    });
 
-  return await res.json();
+    if (!res.ok) {
+      console.warn("⚠️ Nominatim bloqueó:", res.status);
+      return [];
+    }
+
+    const data = await res.json();
+    return data;
+
+  } catch (err) {
+    console.error("❌ Error fetch Nominatim:", err);
+    return [];
+  }
 }
 
 function mostrarSugerencias(containerId, resultados, callbackSeleccion) {
