@@ -100,8 +100,8 @@ window.addEventListener('touchstart', () => {
   console.log('[DriverApp] Estado inicial: oferta pendiente');
   uiController.showIncomingTrip(
     pendingTrip,
-    () => this._acceptOffer(pendingTrip.id),
-    () => this._rejectOffer(pendingTrip.id)
+      () => this._acceptOffer(pendingTrip.offerId),
+      () => this._rejectOffer(pendingTrip.offerId)
   );
 }
    else {
@@ -123,8 +123,8 @@ window.addEventListener('touchstart', () => {
 
       uiController.showIncomingTrip(
         trip,
-        () => this._acceptOffer(trip.id),
-        () => this._rejectOffer(trip.id)
+      () => this._acceptOffer(trip.offerId),
+      () => this._rejectOffer(trip.offerId)
       );
     });
 
