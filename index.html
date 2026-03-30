@@ -2767,9 +2767,12 @@ let markerOrigen = null;
 let markerDestino = null;
 
 async function buscarDireccion(query) {
-  if (!query || query.length < 3) return [];
+  if (!query || query.trim().length < 3) return [];
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&q=${encodeURIComponent(query)}`;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(query)}`;
+
+  console.log("🔎 Buscando dirección:", query);
+  console.log("🌍 URL:", url);
 
   try {
     const res = await fetch(url, {
@@ -2779,9 +2782,17 @@ async function buscarDireccion(query) {
       }
     });
 
-    if (!res.ok) return [];
+    console.log("📡 Status Nominatim:", res.status);
+
+    if (!res.ok) {
+      console.warn("⚠️ Nominatim bloqueó:", res.status);
+      return [];
+    }
 
     const data = await res.json();
+
+    console.log("✅ Resultados Nominatim:", data);
+
     return Array.isArray(data) ? data : [];
 
   } catch (err) {
