@@ -2143,15 +2143,13 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
       </div>
     </div>
 
-    <!-- BOTÓN SWAP CENTRADO -->
-    <div class="swap-container">
-      <button onclick="intercambiarOrigenDestino()" 
-              class="btn-swap"
-              title="Intercambiar origen y destino"
-              aria-label="Intercambiar origen y destino">
-        <span>⇄</span>
-      </button>
-    </div>
+    <!-- BOTÓN SWAP -->
+    <button onclick="intercambiarOrigenDestino()" 
+            class="btn-swap" 
+            title="Intercambiar origen y destino"
+            aria-label="Intercambiar origen y destino">
+      <span>⇄</span>
+    </button>
 
     <!-- DESTINO -->
     <div class="location-input-group">
@@ -2167,7 +2165,8 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
 
   </div>
 
-</div>  
+</div>
+  
   <div class="error-message" id="errorMsg">
       <span>⚠️</span>
       <span id="errorText"></span>
