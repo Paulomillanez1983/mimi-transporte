@@ -1192,50 +1192,45 @@ body {
 .servicio-selector {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
   margin-top: 20px;
   padding: 4px;
-  align-items: stretch;
 }
 
 /* ==========================================
-   CARD BASE - ESTRUCTURA PREMIUM UNIFICADA
+   CARD BASE - ESTRUCTURA MEJORADA
 ========================================== */
 .servicio-card {
   position: relative;
-  min-height: 96px;
-  padding: 16px 14px;
-  border-radius: 20px;
+  min-height: 90px;
+  padding: 14px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  background: white;
+  border: 2px solid #e8e8e8;
   cursor: pointer;
-  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.06);
 }
 
-/* Hover elegante */
 .servicio-card:hover {
-  transform: translateY(-3px) scale(1.015);
-  box-shadow: 0 14px 28px rgba(0,0,0,0.10);
-  border-color: rgba(0,0,0,0.12);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
 /* Línea lateral indicadora */
 .servicio-card::before {
   content: '';
   position: absolute;
-  top: 12px;
+  top: 0;
   left: 0;
   width: 4px;
-  height: calc(100% - 24px);
-  border-radius: 0 8px 8px 0;
+  height: 100%;
   background: transparent;
-  transition: background 0.25s ease;
+  transition: background 0.2s;
 }
 
 /* Efecto de onda al click */
@@ -1246,32 +1241,32 @@ body {
   left: 50%;
   width: 0;
   height: 0;
-  background: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.4);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  transition: width 0.45s ease, height 0.45s ease;
+  transition: width 0.4s ease, height 0.4s ease;
   pointer-events: none;
 }
 
 .servicio-card:active::after {
-  width: 220px;
-  height: 220px;
+  width: 200px;
+  height: 200px;
 }
 
 /* ==========================================
    ICONOS - ESTILO MEJORADO
 ========================================== */
 .servicio-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.45rem;
+  font-size: 1.5rem;
   flex-shrink: 0;
-  transition: all 0.28s ease;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 /* ==========================================
@@ -1287,38 +1282,37 @@ body {
 
 .servicio-info strong {
   display: block;
-  font-size: 0.96rem;
+  font-size: 0.95rem;
   font-weight: 800;
   line-height: 1.1;
-  color: #111827;
-  letter-spacing: -0.25px;
+  color: #1a1a1a;
+  letter-spacing: -0.3px;
 }
 
 .servicio-info small {
   display: block;
   font-size: 0.75rem;
-  font-weight: 600;
-  color: #6b7280;
+  font-weight: 500;
+  color: #666;
   line-height: 1.2;
 }
 
 /* ==========================================
-   CHECK - ESTADO VISUAL
+   CHECK - ESTADO SELECCIONADO
 ========================================== */
 .servicio-check {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: #e5e7eb;
-  color: transparent;
+  background: #e0e0e0;
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.82rem;
-  font-weight: 800;
+  font-size: 0.85rem;
+  font-weight: bold;
   flex-shrink: 0;
-  transition: all 0.22s ease;
-  border: 1px solid rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
 }
 
 /* ==========================================
@@ -1328,164 +1322,177 @@ body {
   position: absolute;
   bottom: 8px;
   right: 8px;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: white;
-  background: rgba(17, 24, 39, 0.78);
+  background: rgba(0,0,0,0.7);
   padding: 4px 8px;
-  border-radius: 999px;
+  border-radius: 10px;
   display: none;
-  backdrop-filter: blur(6px);
 }
 
 /* ==========================================
    ESTADO ACTIVO GENERAL
-   (TODAS OSCURECEN AL SELECCIONAR)
 ========================================== */
 .servicio-card.activo {
-  background: linear-gradient(145deg, #111827 0%, #1f2937 100%);
-  border-color: #111827;
-  box-shadow:
-    0 0 0 3px rgba(17, 24, 39, 0.12),
-    0 16px 34px rgba(17, 24, 39, 0.22);
-  transform: translateY(-2px) scale(1.01);
+  border-color: currentColor;
+  box-shadow: 0 0 0 3px currentColor;
 }
 
 .servicio-card.activo::before {
-  background: rgba(255,255,255,0.9);
-}
-
-.servicio-card.activo .servicio-info strong,
-.servicio-card.activo .servicio-info small,
-.servicio-card.activo .servicio-hora {
-  color: white !important;
+  background: currentColor;
 }
 
 .servicio-card.activo .servicio-check {
-  background: white;
-  color: #111827;
-  transform: scale(1.08);
-  border-color: white;
+  background: currentColor;
+  transform: scale(1.1);
 }
 
 .servicio-card.activo .servicio-icon {
-  transform: scale(1.08) rotate(-4deg);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.20);
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
 
 /* ==========================================
-   LO QUIERO YA - BASE CLARA / ACTIVO OSCURO
+   LO QUIERO YA - NEGRO PREMIUM
 ========================================== */
 .servicio-card.urgente {
-  background: linear-gradient(145deg, #fff7f2 0%, #fff1e8 100%);
-  border: 1.5px solid rgba(255, 107, 0, 0.18);
+  background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 50%, #2d2d2d 100%);
+  border: 2px solid #333;
+  color: white;
 }
 
 .servicio-card.urgente .servicio-icon {
   background: linear-gradient(135deg, #ff6b00 0%, #ff8533 100%);
   color: white;
-  box-shadow: 0 6px 16px rgba(255, 107, 0, 0.28);
+  box-shadow: 0 4px 15px rgba(255, 107, 0, 0.4);
 }
 
 .servicio-card.urgente .servicio-info strong {
-  color: #c2410c;
-  font-size: 0.98rem;
+  color: #ff6b00;
+  font-size: 1rem;
   text-transform: uppercase;
-  letter-spacing: 0.25px;
+  letter-spacing: 0.5px;
 }
 
 .servicio-card.urgente .servicio-info small {
-  color: #9a3412;
+  color: rgba(255,255,255,0.7);
 }
 
 .servicio-card.urgente .servicio-check {
-  background: #ffe8d9;
-  color: #c2410c;
-  border: 1px solid rgba(255, 107, 0, 0.15);
+  background: #333;
+  border: 2px solid #ff6b00;
 }
 
-/* Activo */
+/* Activo - modo urgencia */
 .servicio-card.urgente.activo {
-  background: linear-gradient(145deg, #111827 0%, #1f2937 100%);
   border-color: #ff6b00;
-  box-shadow:
-    0 0 0 3px rgba(255, 107, 0, 0.18),
-    0 16px 34px rgba(255, 107, 0, 0.18);
+  box-shadow: 
+    0 0 0 3px rgba(255, 107, 0, 0.3),
+    0 8px 30px rgba(255, 107, 0, 0.2),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  animation: urgentGlow 2s infinite;
 }
 
-.servicio-card.urgente.activo::before {
-  background: #ff6b00;
+@keyframes urgentGlow {
+  0%, 100% { 
+    box-shadow: 
+      0 0 0 3px rgba(255, 107, 0, 0.3),
+      0 8px 30px rgba(255, 107, 0, 0.2);
+  }
+  50% { 
+    box-shadow: 
+      0 0 0 5px rgba(255, 107, 0, 0.5),
+      0 12px 40px rgba(255, 107, 0, 0.4);
+  }
 }
 
 .servicio-card.urgente.activo .servicio-check {
   background: #ff6b00;
-  color: white;
   border-color: #ff6b00;
+  animation: checkPulse 1.5s infinite;
 }
 
-.servicio-card.urgente.activo .servicio-icon {
-  box-shadow: 0 8px 20px rgba(255, 107, 0, 0.35);
+@keyframes checkPulse {
+  0%, 100% { transform: scale(1.1); }
+  50% { transform: scale(1.2); }
 }
 
 /* ==========================================
    IDA Y VUELTA - DORADO PREMIUM
 ========================================== */
 .servicio-card.dinamico {
-  background: linear-gradient(145deg, #fff9e6 0%, #fff3cf 100%);
-  border: 1.5px solid rgba(255, 179, 71, 0.28);
+  background: linear-gradient(145deg, #fff9e6 0%, #ffeebb 50%, #ffe4a1 100%);
+  border: 2px solid #ffb347;
 }
 
 .servicio-card.dinamico .servicio-icon {
   background: linear-gradient(135deg, #ffb347 0%, #ff8c00 100%);
   color: white;
-  box-shadow: 0 6px 16px rgba(255, 179, 71, 0.28);
+  box-shadow: 0 4px 15px rgba(255, 179, 71, 0.4);
 }
 
 .servicio-card.dinamico .servicio-info strong {
-  color: #b45309;
+  color: #cc7700;
 }
 
 .servicio-card.dinamico .servicio-info small {
-  color: #92400e;
+  color: #996600;
 }
 
 .servicio-card.dinamico .servicio-check {
-  background: #fff0c2;
-  color: #b45309;
-  border: 1px solid rgba(255, 179, 71, 0.18);
+  background: #ffe4a1;
+  color: #cc7700;
 }
 
 /* Activo */
 .servicio-card.dinamico.activo {
-  background: linear-gradient(145deg, #111827 0%, #1f2937 100%);
   border-color: #ff8c00;
-  box-shadow:
-    0 0 0 3px rgba(255, 140, 0, 0.16),
-    0 16px 34px rgba(255, 140, 0, 0.16);
-}
-
-.servicio-card.dinamico.activo::before {
-  background: #ff8c00;
+  box-shadow: 
+    0 0 0 3px rgba(255, 140, 0, 0.2),
+    0 8px 25px rgba(255, 140, 0, 0.15);
 }
 
 .servicio-card.dinamico.activo .servicio-check {
   background: #ff8c00;
   color: white;
-  border-color: #ff8c00;
+}
+
+/* Badge más elegante */
+.servicio-badge.popular {
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+  animation: badgeFloat 2s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes badgeFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
 }
 
 /* ==========================================
    IDA + VUELTA PROGRAMADA - AZUL CALM
 ========================================== */
 .servicio-card.programado {
-  background: linear-gradient(145deg, #f0f7ff 0%, #e6f2ff 100%);
-  border: 1.5px solid rgba(66, 165, 245, 0.22);
+  background: linear-gradient(145deg, #f0f7ff 0%, #e1f0ff 100%);
+  border: 2px solid #90caf9;
 }
 
 .servicio-card.programado .servicio-icon {
   background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
   color: white;
-  box-shadow: 0 6px 16px rgba(66, 165, 245, 0.25);
+  box-shadow: 0 4px 15px rgba(66, 165, 245, 0.3);
 }
 
 .servicio-card.programado .servicio-info strong {
@@ -1497,108 +1504,56 @@ body {
 }
 
 .servicio-card.programado .servicio-check {
-  background: #dbeafe;
+  background: #bbdefb;
   color: #1565c0;
-  border: 1px solid rgba(66, 165, 245, 0.16);
 }
 
 /* Activo */
 .servicio-card.programado.activo {
-  background: linear-gradient(145deg, #111827 0%, #1f2937 100%);
   border-color: #42a5f5;
-  box-shadow:
-    0 0 0 3px rgba(66, 165, 245, 0.16),
-    0 16px 34px rgba(66, 165, 245, 0.16);
-}
-
-.servicio-card.programado.activo::before {
-  background: #42a5f5;
+  box-shadow: 
+    0 0 0 3px rgba(66, 165, 245, 0.2),
+    0 8px 25px rgba(66, 165, 245, 0.15);
 }
 
 .servicio-card.programado.activo .servicio-check {
   background: #42a5f5;
   color: white;
-  border-color: #42a5f5;
 }
 
 /* ==========================================
    OTROS SERVICIOS - GRIS ELEGANTE
 ========================================== */
 .servicio-card.otros {
-  background: linear-gradient(145deg, #fafafa 0%, #f3f4f6 100%);
-  border: 1.5px dashed #d1d5db;
-  opacity: 0.92;
+  background: linear-gradient(145deg, #fafafa 0%, #f0f0f0 100%);
+  border: 2px dashed #ccc;
+  opacity: 0.8;
 }
 
 .servicio-card.otros .servicio-icon {
-  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
-  color: #6b7280;
+  background: linear-gradient(135deg, #e0e0e0 0%, #bdbdbd 100%);
+  color: #757575;
   box-shadow: none;
 }
 
 .servicio-card.otros .servicio-info strong {
-  color: #4b5563;
+  color: #616161;
 }
 
 .servicio-card.otros .servicio-info small {
-  color: #9ca3af;
+  color: #9e9e9e;
   font-style: italic;
 }
 
 .servicio-card.otros .servicio-check {
-  background: #e5e7eb;
-  color: #9ca3af;
-  border: 1px solid rgba(0,0,0,0.05);
+  background: #e0e0e0;
+  color: #9e9e9e;
 }
 
 .servicio-card.otros:hover {
   opacity: 1;
   border-style: solid;
-  border-color: #cbd5e1;
-}
-
-/* Activo */
-.servicio-card.otros.activo {
-  background: linear-gradient(145deg, #111827 0%, #1f2937 100%);
-  border-color: #9ca3af;
-  box-shadow:
-    0 0 0 3px rgba(156, 163, 175, 0.14),
-    0 16px 34px rgba(17, 24, 39, 0.20);
-}
-
-.servicio-card.otros.activo::before {
-  background: #9ca3af;
-}
-
-.servicio-card.otros.activo .servicio-check {
-  background: #9ca3af;
-  color: white;
-  border-color: #9ca3af;
-}
-
-/* ==========================================
-   BADGE POPULAR - MÁS LIMPIO
-========================================== */
-.servicio-badge.popular {
-  position: absolute;
-  top: -8px;
-  right: 10px;
-  background: linear-gradient(135deg, #ff4757 0%, #ff6348 100%);
-  color: white;
-  font-size: 0.6rem;
-  font-weight: 900;
-  padding: 4px 12px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.32);
-  animation: badgeFloat 2s ease-in-out infinite;
-  z-index: 2;
-}
-
-@keyframes badgeFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  border-color: #bdbdbd;
 }
 
 /* ==========================================
@@ -1613,19 +1568,19 @@ body {
   color: white;
   border: none;
   border-radius: 16px;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow:
+  box-shadow: 
     0 4px 0 #0a357a,
     0 8px 25px rgba(21, 101, 192, 0.35),
-    inset 0 1px 0 rgba(255,255,255,0.18);
-  transition: all 0.22s ease;
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   position: relative;
   overflow: hidden;
   text-transform: uppercase;
@@ -1635,28 +1590,28 @@ body {
   content: '';
   position: absolute;
   top: 0;
-  left: -120%;
+  left: -100%;
   width: 100%;
   height: 100%;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255,255,255,0.26),
+    rgba(255,255,255,0.3),
     transparent
   );
-  transition: left 0.7s ease;
+  transition: left 0.6s ease;
 }
 
 .btn-calcular:hover::before {
-  left: 120%;
+  left: 100%;
 }
 
 .btn-calcular:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow:
+  box-shadow: 
     0 6px 0 #0a357a,
-    0 12px 35px rgba(21, 101, 192, 0.42),
-    inset 0 1px 0 rgba(255,255,255,0.24);
+    0 12px 35px rgba(21, 101, 192, 0.45),
+    inset 0 1px 0 rgba(255,255,255,0.3);
   animation: gradientShift 3s ease infinite;
 }
 
@@ -1667,9 +1622,9 @@ body {
 
 .btn-calcular:active {
   transform: translateY(4px);
-  box-shadow:
+  box-shadow: 
     0 0 0 #0a357a,
-    0 4px 15px rgba(21, 101, 192, 0.28);
+    0 4px 15px rgba(21, 101, 192, 0.3);
 }
 
 .btn-calcular span {
@@ -1689,44 +1644,9 @@ body {
 
 @keyframes carBounce {
   from { transform: translateX(-3px) scale(1); }
-  to { transform: translateX(3px) scale(1.08); }
+  to { transform: translateX(3px) scale(1.1); }
 }
 
-/* ==========================================
-   RESPONSIVE
-========================================== */
-@media (max-width: 640px) {
-  .servicio-selector {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .servicio-card {
-    min-height: 92px;
-    padding: 14px 12px;
-    border-radius: 18px;
-  }
-
-  .servicio-icon {
-    width: 44px;
-    height: 44px;
-    font-size: 1.3rem;
-  }
-
-  .servicio-info strong {
-    font-size: 0.9rem;
-  }
-
-  .servicio-info small {
-    font-size: 0.72rem;
-  }
-
-  .servicio-check {
-    width: 24px;
-    height: 24px;
-    font-size: 0.78rem;
-  }
-}
 /* ==========================================
    BOTÓN WHATSAPP - VERDE VIBRANTE
 ========================================== */
@@ -2110,6 +2030,7 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
   margin-top: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
+/* ====================== ORIGEN + BOTÓN SWAP + DESTINO (VERSIÓN QUE FUNCIONA) ====================== */
 .location-swap-group {
   display: flex;
   flex-direction: column;
@@ -2134,8 +2055,36 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
   transition: all 0.35s ease;
   font-size: 1.55rem;
   z-index: 50;
-  margin: -6px 0;
-}  
+  margin: -6px 0;   /* superposición suave */
+}
+
+.btn-swap span {
+  color: white;
+  transition: transform 0.4s ease;
+}
+
+.btn-swap:hover {
+  transform: rotate(180deg) scale(1.18);
+}
+
+.btn-swap:active {
+  transform: rotate(180deg) scale(0.9);
+}
+
+/* Achicamos un poco los campos para que quede más equilibrado */
+.location-card {
+  padding: 11px 14px;
+}
+
+/* Ajuste para móviles */
+@media (max-width: 480px) {
+  .btn-swap {
+    width: 48px;
+    height: 48px;
+    font-size: 1.4rem;
+  }
+}
+  
 </style>
 </head>
 <body>
