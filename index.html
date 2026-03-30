@@ -1992,7 +1992,17 @@ body {
   border-radius: 12px;
   border: 1px solid #ddd;
 }
+.location-card {
+  pointer-events: none;
+}
 
+.location-input {
+  pointer-events: auto;
+}
+
+.sugerencias {
+  z-index: 9999999;
+}
 
 
 </style>
@@ -2900,13 +2910,16 @@ window.addEventListener("load", () => {
     });
   });
 
-  document.addEventListener("click", (e) => {
-    if (!e.target.classList.contains("location-input")) {
-      ocultarSugerencias();
-    }
-  });
+document.addEventListener("touchstart", (e) => {
+  if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
+    ocultarSugerencias();
+  }
 });
-
+  document.addEventListener("click", (e) => {
+  if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
+    ocultarSugerencias();
+  }
+});
     
   // ==========================================
 // FECHA Y HORA
