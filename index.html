@@ -2767,9 +2767,9 @@ let markerOrigen = null;
 let markerDestino = null;
 
 async function buscarDireccion(query) {
-  if (!query || query.length < 4) return [];
+  if (!query || query.length < 3) return [];
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=ar&q=${encodeURIComponent(query)}`;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(query)}`;
 
   try {
     const res = await fetch(url, {
@@ -2780,12 +2780,12 @@ async function buscarDireccion(query) {
     });
 
     if (!res.ok) {
-      console.warn("⚠️ Nominatim bloqueó:", res.status);
+      console.warn("⚠️ Nominatim respondió:", res.status);
       return [];
     }
 
     const data = await res.json();
-    return data;
+    return Array.isArray(data) ? data : [];
 
   } catch (err) {
     console.error("❌ Error fetch Nominatim:", err);
@@ -2794,6 +2794,8 @@ async function buscarDireccion(query) {
 }
 
 function formatearDireccionCorta(r) {
+  if (!r) return "";
+
   const a = r.address || {};
 
   const calle = a.road || a.pedestrian || a.footway || "";
@@ -2803,7 +2805,7 @@ function formatearDireccionCorta(r) {
   const provincia = a.state || "";
 
   let linea1 = `${calle} ${numero}`.trim();
-  if (!linea1) linea1 = r.name || "Dirección";
+  if (!linea1) linea1 = r.name || r.display_name || "Dirección";
 
   let linea2 = [barrio, ciudad, provincia].filter(Boolean).join(", ");
 
@@ -2911,6 +2913,9 @@ function setDestino(displayName, lat, lng) {
 // ==========================
 // AUTOCOMPLETE INPUTS (FIX CELULAR - FULL)
 // ==========================
+// ==========================
+// AUTOCOMPLETE INPUTS (FIX CELULAR - FINAL)
+// ==========================
 window.addEventListener("load", () => {
   cargarEstadoLocal();
   ocultarBotonesPostCotizacion();
@@ -2937,14 +2942,19 @@ window.addEventListener("load", () => {
         const resultados = await buscarDireccion(inputOrigen.value);
 
         mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
-          inputOrigen.value = r.display_name;
+          const textoCorto = formatearDireccionCorta(r);
+
+          // Mostrar texto corto tipo Google
+          inputOrigen.value = textoCorto;
+
+          // Guardar dirección completa real
           setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
         });
 
       } catch (err) {
         console.error("❌ Error autocomplete origen:", err);
       }
-    }, 400);
+    }, 350);
   });
 
   // ==========================
@@ -2958,14 +2968,19 @@ window.addEventListener("load", () => {
         const resultados = await buscarDireccion(inputDestino.value);
 
         mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
-          inputDestino.value = r.display_name;
+          const textoCorto = formatearDireccionCorta(r);
+
+          // Mostrar texto corto tipo Google
+          inputDestino.value = textoCorto;
+
+          // Guardar dirección completa real
           setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
         });
 
       } catch (err) {
         console.error("❌ Error autocomplete destino:", err);
       }
-    }, 400);
+    }, 350);
   });
 
   // ==========================
@@ -2983,7 +2998,7 @@ window.addEventListener("load", () => {
     }
   });
 });
-    
+
   // ==========================================
 // FECHA Y HORA
 // ==========================================
