@@ -2866,8 +2866,24 @@ function setDestino(displayName, lat, lng) {
 }
 
 // ==========================
-// AUTOCOMPLETE INPUTS
+// AUTOCOMPLETE INPUTS (FIX CELULAR)
 // ==========================
+window.addEventListener("load", () => {
+  const inputOrigen = document.getElementById("origen");
+  const inputDestino = document.getElementById("destino");
+
+  if (!inputOrigen || !inputDestino) {
+    console.error("❌ No se encontraron inputs origen/destino");
+    return;
+  }
+
+  inputOrigen.addEventListener("input", async () => {
+    const resultados = await buscarDireccion(inputOrigen.value);
+    mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
+      inputOrigen.value = r.display_name;
+      setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+    });
+  });
 
   inputDestino.addEventListener("input", async () => {
     const resultados = await buscarDireccion(inputDestino.value);
@@ -3504,9 +3520,6 @@ function mostrarError(mensaje) {
 function ocultarError() {  
   document.getElementById('errorMsg').classList.remove('visible');  
 }  
-window.addEventListener('load', () => {
-  cargarEstadoLocal();
-  ocultarBotonesPostCotizacion();
 
   const intentarInitAutocomplete = () => {
     if (typeof google !== 'undefined' && google.maps && google.maps.places) {
