@@ -2030,52 +2030,64 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
   margin-top: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
 }
-/* ====================== ORIGEN + BOTÓN SWAP + DESTINO (VERSIÓN QUE FUNCIONA) ====================== */
+/* ====================== ORIGEN + SWAP + DESTINO - VERSIÓN CENTRADA PERFECTA ====================== */
 .location-swap-group {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  position: relative;
-  margin-bottom: 12px;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.swap-container {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
 }
 
 .btn-swap {
-  align-self: center;
   background: linear-gradient(135deg, #1565c0, #42a5f5);
   border: 5px solid white;
   border-radius: 50%;
-  width: 52px;
-  height: 52px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 8px 25px rgba(21, 101, 192, 0.55),
-              0 0 0 6px rgba(255,255,255, 0.95);
-  transition: all 0.35s ease;
-  font-size: 1.55rem;
-  z-index: 50;
-  margin: -6px 0;   /* superposición suave */
+  box-shadow: 0 8px 25px rgba(21, 101, 192, 0.6),
+              0 0 0 6px rgba(255,255,255,0.95);
+  transition: all 0.3s ease;
+  font-size: 1.5rem;
 }
 
 .btn-swap span {
   color: white;
-  transition: transform 0.4s ease;
 }
 
 .btn-swap:hover {
-  transform: rotate(180deg) scale(1.18);
+  transform: translate(-50%, -50%) rotate(180deg) scale(1.15);
 }
 
 .btn-swap:active {
-  transform: rotate(180deg) scale(0.9);
+  transform: translate(-50%, -50%) rotate(180deg) scale(0.9);
 }
 
-/* Achicamos un poco los campos para que quede más equilibrado */
+/* Achicamos ligeramente los campos para que el botón quede perfecto en el medio */
 .location-card {
   padding: 11px 14px;
 }
 
+/* Ajuste móvil */
+@media (max-width: 480px) {
+  .btn-swap {
+    width: 48px;
+    height: 48px;
+    font-size: 1.45rem;
+  }
+}
 /* Ajuste para móviles */
 @media (max-width: 480px) {
   .btn-swap {
@@ -2131,13 +2143,15 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
       </div>
     </div>
 
-    <!-- BOTÓN SWAP -->
-    <button onclick="intercambiarOrigenDestino()" 
-            class="btn-swap" 
-            title="Intercambiar origen y destino"
-            aria-label="Intercambiar origen y destino">
-      <span>⇄</span>
-    </button>
+    <!-- BOTÓN SWAP CENTRADO -->
+    <div class="swap-container">
+      <button onclick="intercambiarOrigenDestino()" 
+              class="btn-swap"
+              title="Intercambiar origen y destino"
+              aria-label="Intercambiar origen y destino">
+        <span>⇄</span>
+      </button>
+    </div>
 
     <!-- DESTINO -->
     <div class="location-input-group">
@@ -2153,8 +2167,7 @@ button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
 
   </div>
 
-</div>
-  
+</div>  
   <div class="error-message" id="errorMsg">
       <span>⚠️</span>
       <span id="errorText"></span>
