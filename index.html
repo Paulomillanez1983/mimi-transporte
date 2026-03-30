@@ -3502,7 +3502,7 @@ async function geocodificarDireccion(direccion) {
 }
 
 // ==========================================
-// CÁLCULO DE TARIFA - CON JSONP (CORREGIDO)
+// CÁLCULO DE TARIFA - SUPABASE EDGE FUNCTION (FINAL)
 // ==========================================
 async function calcularTarifa() {
   if (isCalculating) return;
@@ -3514,104 +3514,107 @@ async function calcularTarifa() {
 
   try {
     if (!navigator.onLine) {
-      mostrarError('Sin conexión a internet');
+      mostrarError("Sin conexión a internet");
       resetCotizacionUI();
       return;
     }
 
     if (!servicioSeleccionado) {
-      mostrarError('Seleccioná un tipo de servicio');
+      mostrarError("Seleccioná un tipo de servicio");
       resetCotizacionUI();
       return;
     }
 
     // Geocodificar si no hay lugares seleccionados
     if (!lugarOrigen) {
-      const origenInput = document.getElementById('origen');
+      const origenInput = document.getElementById("origen");
       if (origenInput && origenInput.value) {
         lugarOrigen = await geocodificarDireccion(origenInput.value);
       }
     }
 
     if (!lugarDestino) {
-      const destinoInput = document.getElementById('destino');
+      const destinoInput = document.getElementById("destino");
       if (destinoInput && destinoInput.value) {
         lugarDestino = await geocodificarDireccion(destinoInput.value);
       }
     }
 
     if (!lugarOrigen || !lugarDestino) {
-      mostrarError('Seleccioná direcciones válidas de la lista o escribí direcciones completas');
+      mostrarError("Seleccioná direcciones válidas de la lista o escribí direcciones completas");
       resetCotizacionUI();
       return;
     }
 
-    const origen = lugarOrigen?.direccion || '';
-    const destino = lugarDestino?.direccion || '';
+    const origen = lugarOrigen?.direccion || "";
+    const destino = lugarDestino?.direccion || "";
 
     if (!origen) {
-      mostrarError('Ingresá la dirección de origen');
-      document.getElementById('origen')?.focus();
+      mostrarError("Ingresá la dirección de origen");
+      document.getElementById("origen")?.focus();
       resetCotizacionUI();
       return;
     }
 
     if (!destino) {
-      mostrarError('Ingresá la dirección de destino');
-      document.getElementById('destino')?.focus();
+      mostrarError("Ingresá la dirección de destino");
+      document.getElementById("destino")?.focus();
       resetCotizacionUI();
       return;
     }
 
-    // ✅ CORREGIDO: Determinar fecha/hora según el tipo de servicio
+    // ==================================================
+    // FECHA/HORA según servicio
+    // ==================================================
     let fechaHoraParaEnviar;
-    let fechaHoraVuelta = '';
-    let esperaMin = '';
+    let fechaHoraVuelta = "";
+    let esperaMin = 0;
 
-    // Servicios INMEDIATOS (ahora): IDA_ESCOLAR, IDA_Y_VUELTA_INMEDIATA
-    const esServicioInmediato = ['IDA_ESCOLAR', 'IDA_Y_VUELTA_INMEDIATA'].includes(servicioSeleccionado);
-    
-    // Servicios PROGRAMADOS: IDA_MAS_VUELTA_PROGRAMADA
-    const esServicioProgramado = servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA';
+    const esServicioInmediato = ["IDA_ESCOLAR", "IDA_Y_VUELTA_INMEDIATA"].includes(servicioSeleccionado);
+    const esServicioProgramado = servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA";
 
     if (esServicioInmediato) {
-      // ✅ Usar hora actual para servicios inmediatos
+      // Hora actual
       fechaHoraParaEnviar = new Date().toISOString();
-      
-      // Para IDA_Y_VUELTA_INMEDIATA, capturar tiempo de espera
-      if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
-        esperaMin = document.getElementById('tiempoEsperaMin')?.value || '30';
+
+      if (servicioSeleccionado === "IDA_Y_VUELTA_INMEDIATA") {
+        esperaMin = parseInt(document.getElementById("tiempoEsperaMin")?.value || "30", 10);
+        if (isNaN(esperaMin) || esperaMin < 0) esperaMin = 30;
       }
-      
+
     } else if (esServicioProgramado) {
-      // ✅ Validar fecha/hora de IDA
-      const fechaHoraInput = document.getElementById('fechaHora')?.value;
+      const fechaHoraInput = document.getElementById("fechaHora")?.value;
+
       if (!fechaHoraInput) {
-        mostrarError('Seleccioná fecha y hora de ida');
+        mostrarError("Seleccioná fecha y hora de ida");
         abrirSelectorFecha();
         resetCotizacionUI();
         return;
       }
-      
+
       if (new Date(fechaHoraInput) < new Date()) {
-        mostrarError('La fecha no puede ser pasada');
+        mostrarError("La fecha no puede ser pasada");
         resetCotizacionUI();
         return;
       }
-      
+
       fechaHoraParaEnviar = fechaHoraInput;
-      
-      // ✅ Validar fecha/hora de VUELTA
-      fechaHoraVuelta = document.getElementById('fechaHoraVuelta')?.value || '';
+
+      fechaHoraVuelta = document.getElementById("fechaHoraVuelta")?.value || "";
       if (!fechaHoraVuelta) {
-        mostrarError('Seleccioná fecha y hora de VUELTA');
+        mostrarError("Seleccioná fecha y hora de VUELTA");
         abrirSelectorFechaVuelta();
         resetCotizacionUI();
         return;
       }
-      
+
+      if (new Date(fechaHoraVuelta) < new Date(fechaHoraParaEnviar)) {
+        mostrarError("La vuelta no puede ser antes que la ida");
+        resetCotizacionUI();
+        return;
+      }
+
     } else {
-      // Otros servicios - usar ahora por defecto
       fechaHoraParaEnviar = new Date().toISOString();
     }
 
@@ -3620,95 +3623,97 @@ async function calcularTarifa() {
     isCalculating = true;
 
     const mensajeCarga = esServicioProgramado
-      ? 'Cotizando ida y vuelta...'
-      : 'Consultando precio...';
+      ? "Cotizando ida y vuelta..."
+      : "Consultando precio...";
 
-    const calcToast = notifSystem.show('Calculando ruta', mensajeCarga, 'info', 15000);
+    const calcToast = notifSystem.show("Calculando ruta", mensajeCarga, "info", 15000);
 
-    // ========== JSONP ==========
-    const callbackName = 'mimi_cb_' + Date.now();
+    // ==================================================
+    // LLAMADA SUPABASE EDGE FUNCTION
+    // ==================================================
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    const params = new URLSearchParams({
-      action: 'cotizar',
-      desde: lugarOrigen.direccion,
-      hasta: lugarDestino.direccion,
+    const payload = {
       servicio: servicioSeleccionado,
+
+      origen_lat: Number(lugarOrigen.lat),
+      origen_lng: Number(lugarOrigen.lng),
+
+      destino_lat: Number(lugarDestino.lat),
+      destino_lng: Number(lugarDestino.lng),
+
       fechaHora: fechaHoraParaEnviar,
-      esperaMin: esperaMin,
-      fechaHoraVuelta: fechaHoraVuelta,
-      callback: callbackName
+      tiempoEsperaMin: esperaMin
+    };
+
+    const response = await fetch(CONFIG.COTIZAR_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_KEY,
+        "Authorization": "Bearer " + SUPABASE_KEY
+      },
+      body: JSON.stringify(payload)
     });
 
-    const script = document.createElement('script');
-    script.src = CONFIG.SCRIPT_URL + '?' + params.toString();
+    clearTimeout(timeout);
 
-    let finalizado = false;
+    let res = null;
+    try {
+      res = await response.json();
+    } catch (e) {
+      res = null;
+    }
 
-    const cleanup = () => {
-      if (finalizado) return;
-      finalizado = true;
+    calcToast.remove();
+    isCalculating = false;
+    clearButtonLoading("btnCalcular", "btnCalcularText");
 
-      if (script.parentNode) script.parentNode.removeChild(script);
-      delete window[callbackName];
-      clearTimeout(timeout);
-      isCalculating = false;
-      calcToast.remove();
-      clearButtonLoading("btnCalcular", "btnCalcularText");
+    if (!response.ok) {
+      const mensaje = res?.error || res?.message || "Error en la cotización";
+      notifSystem.show("Error", mensaje, "error", 6000);
+      mostrarError(mensaje);
+      return;
+    }
+
+    if (!res) {
+      notifSystem.show("Error", "Respuesta inválida del servidor", "error", 6000);
+      mostrarError("Respuesta inválida del servidor");
+      return;
+    }
+
+    // ==================================================
+    // Mostrar resultado
+    // ==================================================
+    mostrarResultado(res);
+    mostrarBotonesPostCotizacion();
+
+    const notifServicio = {
+      IDA_ESCOLAR: { titulo: "Ida cotizada", desc: `Precio: $${res.precio?.toLocaleString("es-AR")}` },
+      IDA_Y_VUELTA_INMEDIATA: { titulo: "Viaje redondo listo", desc: `Total: $${res.precio?.toLocaleString("es-AR")}` },
+      IDA_MAS_VUELTA_PROGRAMADA: { titulo: "Combo ida+vuelta", desc: `Total: $${res.precio?.toLocaleString("es-AR")}` }
     };
 
-    // Timeout 15 segundos
-    const timeout = setTimeout(() => {
-      cleanup();
-      notifSystem.show('Error', 'El servidor no respondió', 'error', 6000);
-      mostrarError('Timeout: intentá de nuevo');
-    }, 15000);
-
-    // Callback exitoso
-    window[callbackName] = (res) => {
-      cleanup();
-
-      if (!res || res.error) {
-        const mensaje = res?.error || 'Error desconocido del servidor';
-        notifSystem.show('Error', mensaje, 'error', 6000);
-        mostrarError(mensaje);
-        return;
-      }
-
-      if (res.exito !== true) {
-        notifSystem.show('Error', 'La cotización no pudo completarse', 'error', 6000);
-        mostrarError('Error en la cotización');
-        return;
-      }
-
-      mostrarResultado(res);
-      mostrarBotonesPostCotizacion();
-
-      const notifServicio = {
-        'IDA_ESCOLAR': { titulo: 'Ida cotizada', desc: `Precio: $${res.precio?.toLocaleString('es-AR')}` },
-        'IDA_Y_VUELTA_INMEDIATA': { titulo: 'Viaje redondo listo', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` },
-        'IDA_MAS_VUELTA_PROGRAMADA': { titulo: 'Combo ida+vuelta', desc: `Total: $${res.precio?.toLocaleString('es-AR')}` }
-      };
-
-      const n = notifServicio[servicioSeleccionado];
-      if (n) {
-        notifSystem.show(n.titulo, n.desc, 'success', 4000);
-      }
-    };
-
-    // Error de carga
-    script.onerror = () => {
-      cleanup();
-      notifSystem.show('Error de conexión', 'No se pudo conectar con el servidor.', 'error', 8000);
-      mostrarError('Error de conexión. Verificá tu internet.');
-    };
-
-    document.head.appendChild(script);
+    const n = notifServicio[servicioSeleccionado];
+    if (n) {
+      notifSystem.show(n.titulo, n.desc, "success", 4000);
+    }
 
   } catch (error) {
-    console.error('❌ Error general en calcularTarifa:', error);
-    mostrarError('Ocurrió un error inesperado al cotizar');
-    notifSystem.show('Error', 'No se pudo completar la cotización', 'error', 5000);
+    console.error("❌ Error general en calcularTarifa:", error);
+
+    if (String(error?.name || "").includes("AbortError")) {
+      mostrarError("Timeout: el servidor tardó demasiado");
+      notifSystem.show("Error", "El servidor no respondió (timeout)", "error", 6000);
+    } else {
+      mostrarError("Ocurrió un error inesperado al cotizar");
+      notifSystem.show("Error", "No se pudo completar la cotización", "error", 5000);
+    }
+
     resetCotizacionUI();
+    isCalculating = false;
   }
 }
   // ==========================================
