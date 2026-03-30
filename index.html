@@ -1948,9 +1948,11 @@ body {
   overflow: hidden;
   touch-action: pan-x pan-y;
 }
-  button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
+
+button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card {
   touch-action: manipulation;
 }
+
 .maplibregl-canvas {
   outline: none !important;
 }
@@ -1961,9 +1963,12 @@ body {
 .maplibregl-ctrl-bottom-left {
   z-index: 10 !important;
 }
-  /* ==========================================
+
+/* ==========================================
    FIX DEFINITIVO AUTOCOMPLETE EN SMARTPHONE
 ========================================== */
+
+/* (Solo sirve si algún día usás Google Places) */
 .pac-container {
   z-index: 999999999 !important;
   position: fixed !important;
@@ -1971,47 +1976,52 @@ body {
   left: auto !important;
 }
 
-
 .pac-item {
-  font-size: 16px !important; /* importante para que no haga zoom iPhone */
+  font-size: 16px !important; /* evita zoom iPhone */
   padding: 14px 14px !important;
 }
+
 .location-text {
   position: relative;
 }
 
-.sugerencias {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  z-index: 999999;
-  max-height: 250px;
-  overflow-y: auto;
-  border-radius: 12px;
-  border: 1px solid #ddd;
+/* CONTENEDOR INPUTS (clave para z-index) */
+.location-input-group {
+  position: relative;
+  overflow: visible !important;
+  z-index: 99999999 !important;
 }
+
 .location-card {
   pointer-events: auto !important;
+  overflow: visible !important;
 }
 
 .location-input {
   pointer-events: auto;
-}  
-
-
-.sugerencias {
-  z-index: 9999999;
 }
+
+/* LISTA SUGERENCIAS NOMINATIM */
+.sugerencias {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: white;
+  z-index: 999999999 !important;
+  max-height: 250px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+}
+
+/* CARD PRINCIPAL */
 .main-card {
   overflow: visible !important;
 }
 
-.location-input-group {
-  overflow: visible !important;
-  position: relative;
-}
+/* MAPA */
 #mapaRuta {
   width: 100%;
   height: 280px;
