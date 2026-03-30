@@ -109,38 +109,66 @@ class TripManager {
         this.isLoadingInitial = false;
         return;
       }
-      async acceptOffer(offerId) {
-  const driverId = this.driverId;
-  if (!driverId) return { success: false, error: 'No driverId' };
+  // =========================================================
+  // OFFERS
+  // =========================================================
+  async acceptOffer(offerId) {
+    const driverId = this.driverId;
+    if (!driverId) return { success: false, error: 'No driverId' };
 
-  console.log('[TripManager] Accepting offer:', offerId);
+    console.log('[TripManager] Accepting offer:', offerId);
 
-  // Buscar oferta
-  const { data: offer, error: offerError } = await supabaseService.client
-    .from('viaje_ofertas')
-    .select('*')
-    .eq('id', offerId)
-    .eq('chofer_id', driverId)
-    .single();
+    const { data: offer, error: offerError } = await supabaseService.client
+      .from('viaje_ofertas')
+      .select('*')
+      .eq('id', offerId)
+      .eq('chofer_id', driverId)
+      .single();
 
-  if (offerError || !offer) {
-    console.error('[TripManager] Offer not found:', offerError);
-    return { success: false, error: 'Oferta no encontrada' };
+    if (offerError || !offer) {
+      console.error('[TripManager] Offer not found:', offerError);
+      return { success: false, error: 'Oferta no encontrada' };
+    }
+
+    if (offer.viaje_id) {
+      return await this.acceptTrip(offer.viaje_id);
+    }
+
+    if (offer.cotizacion_id) {
+      return { success: false, error: 'COTIZACION_NO_IMPLEMENTADA' };
+    }
+
+    return { success: false, error: 'Oferta inválida (sin viaje_id/cotizacion_id)' };
   }
 
-  // Si tiene viaje_id usar tu RPC existente
-  if (offer.viaje_id) {
-    return await this.acceptTrip(offer.viaje_id);
-  }
+  async rejectOffer(offerId) {
+    const driverId = this.driverId;
+    if (!driverId) return { success: false, error: 'No driverId' };
 
-  // Si es cotizacion_id: acá debería existir otra RPC (aceptar_oferta_cotizacion)
-  if (offer.cotizacion_id) {
-    console.warn('[TripManager] Offer is cotizacion, no RPC implemented yet');
-    return { success: false, error: 'COTIZACION_NO_IMPLEMENTADA' };
-  }
+    console.log('[TripManager] Rejecting offer:', offerId);
 
-  return { success: false, error: 'Oferta inválida (sin viaje_id/cotizacion_id)' };
-}
+    const { error } = await supabaseService.client
+      .from('viaje_ofertas')
+      .update({
+        estado: 'rechazada',
+        respondida_en: new Date().toISOString()
+      })
+      .eq('id', offerId)
+      .eq('chofer_id', driverId)
+      .eq('estado', 'pendiente');
+
+    if (error) {
+      console.error('[TripManager] RejectOffer error:', error);
+      return { success: false, error: error.message };
+    }
+
+    this.pendingOffer = null;
+    this.lastOfferIdShown = null;
+
+    await this._loadInitialState(driverId);
+
+    return { success: true };
+  }
 
       async rejectOffer(offerId) {
   const driverId = this.driverId;
