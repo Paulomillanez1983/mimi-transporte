@@ -3265,7 +3265,7 @@ if (!mapaDiv) {
 }
 
 mapaDiv.style.display = "block";
-mapaDiv.innerHTML = ""; 
+mapaDiv.innerHTML = "";
 
 if (!lugarOrigen || !lugarDestino || !lugarOrigen.lng || !lugarDestino.lng) {
   console.warn("❌ No hay coordenadas válidas para mostrar el mapa");
@@ -3303,24 +3303,16 @@ setTimeout(() => { try { map.resize(); } catch(e) {} }, 600);
 map.on("load", async () => {
   try { map.resize(); } catch(e) {}
 
-  // ==================== MARCADORES MEJORADOS ====================
-  // Marcador Origen (Verde con borde blanco)
-  new maplibregl.Marker({
-    color: "#22c55e",
-    scale: 0.9
-  })
+  // Marcadores mejorados
+  new maplibregl.Marker({ color: "#22c55e", scale: 0.9 })
     .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
     .addTo(map);
 
-  // Marcador Destino (Rojo con borde blanco)
-  new maplibregl.Marker({
-    color: "#ef4444",
-    scale: 0.9
-  })
+  new maplibregl.Marker({ color: "#ef4444", scale: 0.9 })
     .setLngLat([lugarDestino.lng, lugarDestino.lat])
     .addTo(map);
 
-  // ==================== RUTA CON EFECTO UBER + ANIMACIÓN ====================
+  // Ruta con efecto Uber
   const url = `https://router.project-osrm.org/route/v1/driving/` +
     `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
     `?overview=full&geometries=geojson`;
@@ -3346,7 +3338,7 @@ map.on("load", async () => {
     data: { type: "Feature", geometry: route }
   });
 
-  // 1. Glow suave (iluminación)
+  // Glow suave
   map.addLayer({
     id: "route-glow",
     type: "line",
@@ -3359,7 +3351,7 @@ map.on("load", async () => {
     }
   });
 
-  // 2. Línea principal con animación sutil
+  // Línea principal
   map.addLayer({
     id: "route-line",
     type: "line",
@@ -3372,7 +3364,7 @@ map.on("load", async () => {
     }
   });
 
-  // 3. Animación sutil de "dash" (efecto de movimiento ligero)
+  // Dash animado sutil
   map.addLayer({
     id: "route-dash",
     type: "line",
@@ -3382,13 +3374,13 @@ map.on("load", async () => {
       "line-color": "#ffffff",
       "line-width": 2.5,
       "line-opacity": 0.6,
-      "line-dasharray": [0.5, 3]   // efecto punteado sutil
+      "line-dasharray": [0.5, 3]
     }
   });
 
   // Ajustar vista
   const coords = route.coordinates;
-  const bounds = coords.reduce((b, c) => b.extend(c), 
+  const bounds = coords.reduce((b, c) => b.extend(c),
     new maplibregl.LngLatBounds(coords[0], coords[0]));
 
   map.fitBounds(bounds, { padding: 60 });
@@ -3397,16 +3389,21 @@ map.on("load", async () => {
   setTimeout(() => { try { map.resize(); } catch(e) {} }, 400);
 });
 
-// Scroll suave al resultado//
+// Scroll suave al resultado
 setTimeout(() => {
   resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }, 300);
-  
-  function animarContador(id, inicio, fin, duracion) {
+
+}   // ←←← ESTE CIERRE ES OBLIGATORIO (cierra la función mostrarResultado)
+
+// ==========================================
+// ANIMAR CONTADOR
+// ==========================================
+function animarContador(id, inicio, fin, duracion) {
   const elemento = document.getElementById(id);
   const incremento = (fin - inicio) / (duracion / 16);
   let actual = inicio;
-  
+
   const timer = setInterval(() => {
     actual += incremento;
     if (actual >= fin) {
@@ -3416,7 +3413,6 @@ setTimeout(() => {
     elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
   }, 16);
 }
-
 function resetCotizacionUI() {
   isCalculating = false;
   clearButtonLoading("btnCalcular", "btnCalcularText");
