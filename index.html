@@ -2911,7 +2911,7 @@ function setDestino(displayName, lat, lng) {
 }
 
 // ==========================
-// AUTOCOMPLETE INPUTS (FIX CELULAR)
+// AUTOCOMPLETE INPUTS (FIX CELULAR - FULL)
 // ==========================
 window.addEventListener("load", () => {
   cargarEstadoLocal();
@@ -2925,27 +2925,59 @@ window.addEventListener("load", () => {
     return;
   }
 
-  inputOrigen.addEventListener("input", async () => {
-    const resultados = await buscarDireccion(inputOrigen.value);
-    mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
-      inputOrigen.value = r.display_name;
-      setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-    });
+  let timerOrigen = null;
+  let timerDestino = null;
+
+  // ==========================
+  // ORIGEN (DEBOUNCE + MOBILE SAFE)
+  // ==========================
+  inputOrigen.addEventListener("input", () => {
+    clearTimeout(timerOrigen);
+
+    timerOrigen = setTimeout(async () => {
+      try {
+        const resultados = await buscarDireccion(inputOrigen.value);
+
+        mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
+          inputOrigen.value = r.display_name;
+          setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+        });
+
+      } catch (err) {
+        console.error("❌ Error autocomplete origen:", err);
+      }
+    }, 400);
   });
 
-  inputDestino.addEventListener("input", async () => {
-    const resultados = await buscarDireccion(inputDestino.value);
-    mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
-      inputDestino.value = r.display_name;
-      setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-    });
+  // ==========================
+  // DESTINO (DEBOUNCE + MOBILE SAFE)
+  // ==========================
+  inputDestino.addEventListener("input", () => {
+    clearTimeout(timerDestino);
+
+    timerDestino = setTimeout(async () => {
+      try {
+        const resultados = await buscarDireccion(inputDestino.value);
+
+        mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
+          inputDestino.value = r.display_name;
+          setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
+        });
+
+      } catch (err) {
+        console.error("❌ Error autocomplete destino:", err);
+      }
+    }, 400);
   });
 
+  // ==========================
+  // CERRAR SUGERENCIAS (MOBILE + DESKTOP)
+  // ==========================
   document.addEventListener("touchstart", (e) => {
     if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
       ocultarSugerencias();
     }
-  });
+  }, { passive: true });
 
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".location-input") && !e.target.closest(".sugerencias")) {
