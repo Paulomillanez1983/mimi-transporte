@@ -1971,6 +1971,7 @@ body {
   left: auto !important;
 }
 
+
 .pac-item {
   font-size: 16px !important; /* importante para que no haga zoom iPhone */
   padding: 14px 14px !important;
@@ -1984,9 +1985,12 @@ body {
   top: 100%;
   left: 0;
   right: 0;
-  max-height: 240px;
-  overflow-y: auto;
+  background: white;
   z-index: 999999;
+  max-height: 250px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid #ddd;
 }
 
 
@@ -2869,6 +2873,9 @@ function setDestino(displayName, lat, lng) {
 // AUTOCOMPLETE INPUTS (FIX CELULAR)
 // ==========================
 window.addEventListener("load", () => {
+  cargarEstadoLocal();
+  ocultarBotonesPostCotizacion();
+
   const inputOrigen = document.getElementById("origen");
   const inputDestino = document.getElementById("destino");
 
@@ -3521,17 +3528,6 @@ function ocultarError() {
   document.getElementById('errorMsg').classList.remove('visible');  
 }  
 
-  const intentarInitAutocomplete = () => {
-    if (typeof google !== 'undefined' && google.maps && google.maps.places) {
-      console.log("✅ Google Maps Places listo, inicializando autocomplete...");
-      initMap();
-    } else {
-      setTimeout(intentarInitAutocomplete, 500);
-    }
-  };
-
-  intentarInitAutocomplete();
-});
 
   function formatearFechaInput(fecha) {
   const pad = n => n.toString().padStart(2, '0');
