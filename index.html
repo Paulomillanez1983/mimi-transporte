@@ -3013,7 +3013,37 @@ window.addEventListener("load", () => {
     }
   });
 });
+function mostrarSugerencias(contenedorId, resultados, callbackSeleccion) {
+  const contenedor = document.getElementById(contenedorId);
+  if (!contenedor) return;
 
+  contenedor.innerHTML = ''; // limpiar
+
+  if (!resultados || resultados.length === 0) {
+    contenedor.style.display = 'none';
+    return;
+  }
+
+  resultados.forEach(resultado => {
+    const item = document.createElement('div');
+    item.className = 'sugerencia-item';
+    item.textContent = formatearDireccionCorta(resultado);
+    
+    item.addEventListener('click', () => {
+      callbackSeleccion(resultado);
+    });
+    
+    // Soporte táctil adicional
+    item.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      callbackSeleccion(resultado);
+    }, { passive: false });
+
+    contenedor.appendChild(item);
+  });
+
+  contenedor.style.display = 'block';
+}
   // ==========================================
 // FECHA Y HORA
 // ==========================================
