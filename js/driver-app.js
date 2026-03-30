@@ -440,8 +440,8 @@ async _acceptTrip(tripId) {
     console.log('[DriverApp] Acción:', action, tripId);
 
     switch (action) {
-      case 'accept': return this._acceptTrip(tripId);
-      case 'reject': return this._rejectTrip(tripId);
+      case 'accept': return this._acceptOffer(tripId);
+      case 'reject': return this._rejectOffer(tripId);
       case 'start': return tripManager.startTrip(tripId);
       case 'finish': return tripManager.finishTrip(tripId);
       case 'cancel': return tripManager.cancelTrip(tripId);
