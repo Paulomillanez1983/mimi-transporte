@@ -2770,24 +2770,33 @@ function mostrarSugerencias(containerId, resultados, callbackSeleccion) {
     div.className = "sugerencia-item";
     div.textContent = r.display_name;
 
-    div.onclick = () => {
+    // 🔥 MOBILE (clave)
+    div.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       cont.style.display = "none";
       callbackSeleccion(r);
-    };
+    });
+
+    // 💻 DESKTOP
+    div.addEventListener("click", (e) => {
+      e.stopPropagation();
+      cont.style.display = "none";
+      callbackSeleccion(r);
+    });
 
     cont.appendChild(div);
   });
 
   cont.style.display = "block";
 }
-
 function ocultarSugerencias() {
   const o = document.getElementById("sugerenciasOrigen");
   const d = document.getElementById("sugerenciasDestino");
+
   if (o) o.style.display = "none";
   if (d) d.style.display = "none";
 }
-
 function initMapaCliente() {
   if (mapaCliente) return;
 
