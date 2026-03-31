@@ -646,23 +646,40 @@ body {
   overflow: hidden !important;
 }
 
-/* Patrón de líneas/mapas de fondo */
+/* Patrón de calles/mapas de fondo tipo OSM */
 .servicio-card.urgente::before {
   content: '' !important;
   position: absolute !important;
   inset: 0 !important;
   background-image: 
-    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px),
-    linear-gradient(45deg, transparent 49%, rgba(0,0,0,0.02) 50%, transparent 51%),
-    linear-gradient(-45deg, transparent 49%, rgba(0,0,0,0.02) 50%, transparent 51%) !important;
-  background-size: 20px 20px, 20px 20px, 30px 30px, 30px 30px !important;
-  opacity: 0.6 !important;
+    linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(45deg, transparent 48%, rgba(0,0,0,0.03) 49%, rgba(0,0,0,0.03) 51%, transparent 52%),
+    linear-gradient(-45deg, transparent 48%, rgba(0,0,0,0.03) 49%, rgba(0,0,0,0.03) 51%, transparent 52%) !important;
+  background-size: 16px 16px, 16px 16px, 24px 24px, 24px 24px !important;
+  opacity: 0.7 !important;
   pointer-events: none !important;
+  z-index: 0 !important;
 }
 
+/* Capa adicional para efecto de "mapa" */
 .servicio-card.urgente::after {
-  color: rgba(0,0,0,0.35);
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: 
+    radial-gradient(circle at 20% 30%, rgba(0,0,0,0.02) 0%, transparent 20%),
+    radial-gradient(circle at 80% 70%, rgba(0,0,0,0.02) 0%, transparent 20%) !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+.servicio-card.urgente .servicio-info,
+.servicio-card.urgente .servicio-icon,
+.servicio-card.urgente .servicio-hora,
+.servicio-card.urgente .servicio-check {
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 .servicio-card.urgente .servicio-info strong,
@@ -674,24 +691,24 @@ body {
   color: #666 !important;
 }
 
-/* Activo - NEGRO translúcido con patrón sutil */
+/* Activo - NEGRO translúcido con patrón de mapa visible */
 .servicio-card.urgente.activo {
-  background: linear-gradient(135deg, rgba(20,20,25,0.95), rgba(35,35,45,0.98)) !important;
+  background: linear-gradient(135deg, rgba(25,25,35,0.92), rgba(15,15,25,0.95)) !important;
   border: 2px solid #ff9800 !important;
-  box-shadow: 0 0 0 3px rgba(255,152,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+  box-shadow: 
+    0 0 0 3px rgba(255,152,0,0.15), 
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 8px 20px rgba(0,0,0,0.3) !important;
 }
 
+/* Patrón más visible en fondo oscuro */
 .servicio-card.urgente.activo::before {
   background-image: 
-    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px),
-    linear-gradient(45deg, transparent 49%, rgba(255,255,255,0.03) 50%, transparent 51%),
-    linear-gradient(-45deg, transparent 49%, rgba(255,255,255,0.03) 50%, transparent 51%) !important;
-  opacity: 0.4 !important;
-}
-
-.servicio-card.urgente.activo::after {
-  color: rgba(255,255,255,0.6);
+    linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(45deg, transparent 48%, rgba(255,255,255,0.05) 49%, rgba(255,255,255,0.05) 51%, transparent 52%),
+    linear-gradient(-45deg, transparent 48%, rgba(255,255,255,0.05) 49%, rgba(255,255,255,0.05) 51%, transparent 52%) !important;
+  opacity: 0.5 !important;
 }
 
 .servicio-card.urgente.activo .servicio-info strong,
@@ -702,9 +719,10 @@ body {
 
 .servicio-card.urgente.activo .servicio-check {
   background: #ff9800 !important;
-  box-shadow: 0 0 0 2px rgba(255,152,0,0.3) !important;
+  box-shadow: 0 0 0 2px rgba(255,152,0,0.4) !important;
+  border: 2px solid rgba(255,255,255,0.3) !important;
 }
-.servicio-badge.popular {
+  .servicio-badge.popular {
   position: absolute !important;
   top: 12px !important;
   left: 12px !important;
@@ -2286,28 +2304,74 @@ function initMapaCliente() {
 function actualizarMarcadoresMapa() {
   if (!mapaCliente) return;
   
+  // Remover marcadores anteriores
   if (markerOrigen) markerOrigen.remove();
   if (markerDestino) markerDestino.remove();
   
+  // Crear marcador origen (VERDE con punto blanco centro)
   if (lugarOrigen) {
-    const el = document.createElement('div');
-    el.className = 'custom-marker';
-    el.innerHTML = '<div style="background:#22c55e;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>';
-    markerOrigen = new maplibregl.Marker({ element: el, anchor: 'center' })
+    const elOrigen = document.createElement('div');
+    elOrigen.innerHTML = `
+      <div style="
+        width: 24px; 
+        height: 24px; 
+        background: #22c55e; 
+        border-radius: 50%; 
+        border: 3px solid white; 
+        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <div style="
+          width: 8px;
+          height: 8px;
+          background: white;
+          border-radius: 50%;
+        "></div>
+      </div>
+    `;
+    
+    markerOrigen = new maplibregl.Marker({ 
+      element: elOrigen, 
+      anchor: 'center'
+    })
       .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
       .addTo(mapaCliente);
   }
   
+  // Crear marcador destino (ROJO con punto blanco centro)
   if (lugarDestino) {
-    const el = document.createElement('div');
-    el.className = 'custom-marker';
-    el.innerHTML = '<div style="background:#ef4444;width:24px;height:24px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>';
-    markerDestino = new maplibregl.Marker({ element: el, anchor: 'center' })
+    const elDestino = document.createElement('div');
+    elDestino.innerHTML = `
+      <div style="
+        width: 24px; 
+        height: 24px; 
+        background: #ef4444; 
+        border-radius: 50%; 
+        border: 3px solid white; 
+        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <div style="
+          width: 8px;
+          height: 8px;
+          background: white;
+          border-radius: 50%;
+        "></div>
+      </div>
+    `;
+    
+    markerDestino = new maplibregl.Marker({ 
+      element: elDestino, 
+      anchor: 'center'
+    })
       .setLngLat([lugarDestino.lng, lugarDestino.lat])
       .addTo(mapaCliente);
   }
 }
-
 async function dibujarRutaOSRM() {
   if (!mapaCliente || !lugarOrigen || !lugarDestino) return;
 
@@ -2398,7 +2462,7 @@ async function dibujarRutaOSRM() {
       }
     });
 
-    // CENTRAR MAPA automáticamente con padding
+    // CENTRAR MAPA automáticamente con padding generoso
     const bounds = coordenadasRuta.reduce(
       (b, c) => b.extend(c),
       new maplibregl.LngLatBounds(coordenadasRuta[0], coordenadasRuta[0])
@@ -2406,16 +2470,16 @@ async function dibujarRutaOSRM() {
 
     // Ajuste para que ambos puntos queden bien visibles centrados
     mapaCliente.fitBounds(bounds, { 
-      padding: { top: 80, bottom: 80, left: 40, right: 40 },
+      padding: { top: 100, bottom: 100, left: 50, right: 50 },
       duration: 1000,
-      maxZoom: 16,
+      maxZoom: 15,
       bearing: 0,
       pitch: 0
     });
 
-    // Actualizar marcadores personalizados (punto verde origen, rojo destino)
+    // IMPORTANTE: Actualizar marcadores DESPUÉS de calcular bounds pero ANTES de animar
     actualizarMarcadoresMapa();
-
+    
     // Iniciar animación después de un breve delay
     setTimeout(() => {
       iniciarAnimacionRuta();
