@@ -638,30 +638,72 @@ body {
   opacity: 1 !important;
 }
 
-/* Urgente - Negro */
+/* Urgente - CLARO por defecto, NEGRO translúcido cuando está activo */
 .servicio-card.urgente {
-  background: linear-gradient(135deg, #0b0b0b, #2b2b2b) !important;
-  border: 1px solid rgba(255,255,255,0.10) !important;
+  background: linear-gradient(135deg, #f5f5f7, #e8e8ec) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Patrón de líneas/mapas de fondo */
+.servicio-card.urgente::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background-image: 
+    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px),
+    linear-gradient(45deg, transparent 49%, rgba(0,0,0,0.02) 50%, transparent 51%),
+    linear-gradient(-45deg, transparent 49%, rgba(0,0,0,0.02) 50%, transparent 51%) !important;
+  background-size: 20px 20px, 20px 20px, 30px 30px, 30px 30px !important;
+  opacity: 0.6 !important;
+  pointer-events: none !important;
 }
 
 .servicio-card.urgente::after {
-  color: rgba(255,255,255,0.55);
+  color: rgba(0,0,0,0.35);
 }
 
 .servicio-card.urgente .servicio-info strong,
-.servicio-card.urgente .servicio-info small,
 .servicio-card.urgente .servicio-hora {
-  color: white !important;
+  color: #111 !important;
 }
 
+.servicio-card.urgente .servicio-info small {
+  color: #666 !important;
+}
+
+/* Activo - NEGRO translúcido con patrón sutil */
 .servicio-card.urgente.activo {
+  background: linear-gradient(135deg, rgba(20,20,25,0.95), rgba(35,35,45,0.98)) !important;
   border: 2px solid #ff9800 !important;
+  box-shadow: 0 0 0 3px rgba(255,152,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+}
+
+.servicio-card.urgente.activo::before {
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(45deg, transparent 49%, rgba(255,255,255,0.03) 50%, transparent 51%),
+    linear-gradient(-45deg, transparent 49%, rgba(255,255,255,0.03) 50%, transparent 51%) !important;
+  opacity: 0.4 !important;
+}
+
+.servicio-card.urgente.activo::after {
+  color: rgba(255,255,255,0.6);
+}
+
+.servicio-card.urgente.activo .servicio-info strong,
+.servicio-card.urgente.activo .servicio-info small,
+.servicio-card.urgente.activo .servicio-hora {
+  color: white !important;
 }
 
 .servicio-card.urgente.activo .servicio-check {
   background: #ff9800 !important;
+  box-shadow: 0 0 0 2px rgba(255,152,0,0.3) !important;
 }
-
 /* Badge "más elegido" */
 .servicio-badge.popular {
   position: absolute !important;
@@ -948,8 +990,8 @@ body {
 ========================================== */
 #mapaRuta {
   width: 100%;
-  height: clamp(250px, 50vw, 310px);
-  min-height: 250px;
+  height: clamp(280px, 55vw, 350px); /* Más alto para ver bien la ruta */
+  min-height: 280px;
   border-radius: clamp(14px, 4vw, 18px);
   overflow: hidden;
   margin-top: 20px;
@@ -962,11 +1004,8 @@ body {
 #map {
   width: 100%;
   height: 100%;
-  border-radius: clamp(14px, 4vw, 18px);
-  overflow: hidden;
-  touch-action: pan-x pan-y;
+  border-radius: inherit;
 }
-
 .maplibregl-canvas {
   outline: none !important;
 }
@@ -2267,12 +2306,14 @@ async function dibujarRutaOSRM() {
   if (mapaCliente.getLayer("route-line")) mapaCliente.removeLayer("route-line");
   if (mapaCliente.getLayer("route-dash")) mapaCliente.removeLayer("route-dash");
   if (mapaCliente.getLayer("point-animado")) mapaCliente.removeLayer("point-animado");
+  if (mapaCliente.getLayer("point-circle")) mapaCliente.removeLayer("point-circle");
   if (mapaCliente.getSource("route")) mapaCliente.removeSource("route");
   if (mapaCliente.getSource("point")) mapaCliente.removeSource("point");
 
+  // URL de OSRM para ruta REAL por calles (no línea recta)
   const url = `https://router.project-osrm.org/route/v1/driving/` +
     `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
-    `?overview=full&geometries=geojson`;
+    `?overview=full&geometries=geojson&alternatives=false&steps=true`;
 
   try {
     const res = await fetch(url);
@@ -2280,15 +2321,15 @@ async function dibujarRutaOSRM() {
 
     if (!data.routes || !data.routes.length) {
       console.warn("⚠️ OSRM no devolvió rutas");
+      fallbackLineaRecta(); // Por si falla, línea recta de respaldo
       return;
     }
 
     const route = data.routes[0].geometry;
     coordenadasRuta = route.coordinates;
-    
-    // Guardar para animación
     rutaAnimacion = route;
 
+    // Agregar fuente de la ruta
     mapaCliente.addSource("route", {
       type: "geojson",
       data: {
@@ -2297,7 +2338,7 @@ async function dibujarRutaOSRM() {
       }
     });
 
-    // Glow suave
+    // Glow exterior suave
     mapaCliente.addLayer({
       id: "route-glow",
       type: "line",
@@ -2308,12 +2349,13 @@ async function dibujarRutaOSRM() {
       },
       paint: {
         "line-color": "#60a5fa",
-        "line-width": 14,
-        "line-opacity": 0.25
+        "line-width": 12,
+        "line-opacity": 0.3,
+        "line-blur": 4
       }
     });
 
-    // Línea principal
+    // Línea principal AZUL (como en tu captura)
     mapaCliente.addLayer({
       id: "route-line",
       type: "line",
@@ -2324,12 +2366,12 @@ async function dibujarRutaOSRM() {
       },
       paint: {
         "line-color": "#2563eb",
-        "line-width": 6.5,
-        "line-opacity": 0.95
+        "line-width": 5,
+        "line-opacity": 1
       }
     });
 
-    // Dash animado sutil
+    // Línea interior blanca punteada
     mapaCliente.addLayer({
       id: "route-dash",
       type: "line",
@@ -2340,34 +2382,80 @@ async function dibujarRutaOSRM() {
       },
       paint: {
         "line-color": "#ffffff",
-        "line-width": 2.5,
-        "line-opacity": 0.6,
-        "line-dasharray": [0.5, 3]
+        "line-width": 2,
+        "line-opacity": 0.8,
+        "line-dasharray": [0.5, 2]
       }
     });
 
-    // Ajustar vista
+    // CENTRAR MAPA automáticamente con padding
     const bounds = coordenadasRuta.reduce(
       (b, c) => b.extend(c),
       new maplibregl.LngLatBounds(coordenadasRuta[0], coordenadasRuta[0])
     );
 
+    // Ajuste para que ambos puntos queden bien visibles centrados
     mapaCliente.fitBounds(bounds, { 
-      padding: { top: 50, bottom: 50, left: 30, right: 30 },
+      padding: { top: 80, bottom: 80, left: 40, right: 40 },
       duration: 1000,
-      maxZoom: 16
+      maxZoom: 16,
+      bearing: 0,
+      pitch: 0
     });
 
-    // Iniciar animación de punto
+    // Actualizar marcadores personalizados (punto verde origen, rojo destino)
+    actualizarMarcadoresMapa();
+
+    // Iniciar animación después de un breve delay
     setTimeout(() => {
       iniciarAnimacionRuta();
-    }, 1000);
+    }, 1200);
 
   } catch (err) {
-    console.error("❌ Error dibujando ruta:", err);
+    console.error("❌ Error dibujando ruta OSRM:", err);
+    fallbackLineaRecta();
   }
 }
 
+// Función de respaldo por si falla OSRM
+function fallbackLineaRecta() {
+  if (!mapaCliente || !lugarOrigen || !lugarDestino) return;
+  
+  const coordinates = [
+    [lugarOrigen.lng, lugarOrigen.lat],
+    [lugarDestino.lng, lugarDestino.lat]
+  ];
+  
+  const line = {
+    type: "Feature",
+    geometry: {
+      type: "LineString",
+      coordinates: coordinates
+    }
+  };
+  
+  if (mapaCliente.getSource("route")) {
+    mapaCliente.getSource("route").setData(line);
+  } else {
+    mapaCliente.addSource("route", { type: "geojson", data: line });
+    mapaCliente.addLayer({
+      id: "route-line",
+      type: "line",
+      source: "route",
+      paint: { "line-color": "#2563eb", "line-width": 4 }
+    });
+  }
+  
+  const bounds = coordinates.reduce(
+    (b, c) => b.extend(c),
+    new maplibregl.LngLatBounds(coordinates[0], coordinates[0])
+  );
+  
+  mapaCliente.fitBounds(bounds, { 
+    padding: { top: 80, bottom: 80, left: 40, right: 40 },
+    duration: 800
+  });
+}
 // ==========================================
 // ANIMACIÓN DEL PUNTO SOBRE LA RUTA
 // ==========================================
