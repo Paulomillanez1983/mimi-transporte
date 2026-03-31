@@ -23,146 +23,138 @@ class DriverApp {
     this._locationUpdateInterval = 8000; // cada 8 segundos
   }
 
-  async init() {
-    console.log('[DriverApp] Iniciando aplicación...');
+async init() {
+  console.log('[DriverApp] Iniciando aplicación...');
+
+  try {
+    // 1) Inicializar Supabase
+    console.log('[DriverApp] Inicializando Supabase...');
+    const dbReady = await supabaseService.init();
+    if (!dbReady) throw new Error('No se pudo conectar a Supabase');
+
+    // 2) Verificar usuario logueado (RLS)
+    const { data: { user } } = await supabaseService.client.auth.getUser();
+    if (!user) {
+      console.log('[DriverApp] No autenticado, redirigiendo a login');
+      window.location.href = CONFIG.REDIRECTS.LOGIN;
+      return;
+    }
+
+    // 3) Inicializar UI
+    uiController.init();
+
+    // 🔓 desbloqueo audio/haptics en primer toque real
+    window.addEventListener('click', () => {
+      soundManager.enableOnUserInteraction();
+    }, { once: true });
+
+    window.addEventListener('touchstart', () => {
+      soundManager.enableOnUserInteraction();
+    }, { once: true });
+
+    // 4) Inicializar mapa + GPS
+    console.log('[DriverApp] Inicializando servicios...');
+    const results = await Promise.allSettled([
+      mapService.init('map-container'),
+      locationTracker.start(pos => this._onPositionUpdate(pos))
+    ]);
+
+    console.log('[DriverApp] Resultados inicialización:', {
+      mapa: results[0].status,
+      ubicacion: results[1].status
+    });
+
+    if (results[0].status === 'rejected') {
+      console.error('[DriverApp] Error mapa:', results[0].reason);
+    }
+
+    if (results[1].status === 'rejected') {
+      console.error('[DriverApp] Error GPS:', results[1].reason);
+    }
+
+    // 5) Resolver driverId real antes de TripManager
+    console.log('[DriverApp] Resolviendo driverId...');
+
+    let driverId = null;
 
     try {
-      // 1) Inicializar Supabase
-      console.log('[DriverApp] Inicializando Supabase...');
-      const dbReady = await supabaseService.init();
-      if (!dbReady) throw new Error('No se pudo conectar a Supabase');
-
-      // 2) Verificar usuario logueado (RLS)
       const { data: { user } } = await supabaseService.client.auth.getUser();
-      if (!user) {
-        console.log('[DriverApp] No autenticado, redirigiendo a login');
-        window.location.href = CONFIG.REDIRECTS.LOGIN;
-        return;
+
+      if (user?.id) {
+        const { data: chofer, error } = await supabaseService.client
+          .from('choferes')
+          .select('chofer_id_uuid')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('[DriverApp] Error resolviendo chofer:', error);
+        }
+
+        if (chofer?.chofer_id_uuid) {
+          driverId = chofer.chofer_id_uuid;
+          localStorage.setItem('driverId', driverId);
+          sessionStorage.setItem('driverId', driverId);
+        }
       }
-
-      // 3) Inicializar UI
-      uiController.init();
-      // 🔓 desbloqueo audio/haptics en primer toque real
-window.addEventListener('click', () => {
-  soundManager.enableOnUserInteraction();
-}, { once: true });
-
-window.addEventListener('touchstart', () => {
-  soundManager.enableOnUserInteraction();
-}, { once: true });
-
-
-      // 4) Inicializar mapa + GPS
-      console.log('[DriverApp] Inicializando servicios...');
-      const results = await Promise.allSettled([
-        mapService.init('map-container'),
-        locationTracker.start(pos => this._onPositionUpdate(pos))
-      ]);
-
-      console.log('[DriverApp] Resultados inicialización:', {
-        mapa: results[0].status,
-        ubicacion: results[1].status
-      });
-
-      if (results[0].status === 'rejected') {
-        console.error('[DriverApp] Error mapa:', results[0].reason);
-      }
-
-      if (results[1].status === 'rejected') {
-        console.error('[DriverApp] Error GPS:', results[1].reason);
-      }
-
-// 5) Resolver driverId real antes de TripManager
-console.log('[DriverApp] Resolviendo driverId...');
-
-let driverId = null;
-
-try {
-  const { data: { user } } = await supabaseService.client.auth.getUser();
-
-  if (user?.id) {
-    const { data: chofer, error } = await supabaseService.client
-      .from('choferes')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error('[DriverApp] Error resolviendo chofer:', error);
+    } catch (err) {
+      console.error('[DriverApp] Error buscando driverId:', err);
     }
 
-    if (chofer?.id) {
-      driverId = chofer.id;
-      localStorage.setItem('driverId', driverId);
-      sessionStorage.setItem('driverId', driverId);
+    console.log('[DriverApp] driverId detectado:', driverId);
+
+    // 6) Inicializar TripManager
+    console.log('[DriverApp] Inicializando TripManager...');
+    const tripManagerReady = await tripManager.init(driverId);
+
+    if (!tripManagerReady) {
+      console.warn('[DriverApp] ⚠️ TripManager no pudo inicializarse (sin driverId)');
+      uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
     }
+
+    // 7) Suscribirse a eventos
+    this._subscribeToEvents();
+
+    // 8) Configurar UI
+    this._setupUI();
+
+    this.initialized = true;
+    console.log('[DriverApp] ✅ Aplicación inicializada correctamente');
+
+    // Estado inicial
+    uiController.updateDriverState('ONLINE', false);
+
+    if (!tripManagerReady) {
+      console.warn('[DriverApp] App iniciada sin TripManager operativo');
+      uiController.showWaitingState();
+      return;
+    }
+
+    // Estado inicial de viajes
+    const currentTrip = tripManager.getCurrentTrip();
+    const pendingTrip = tripManager.getPendingTrip();
+
+    if (currentTrip) {
+      console.log('[DriverApp] Estado inicial: viaje activo');
+      await this._showRouteOnMap(currentTrip);
+      uiController.showNavigationState(currentTrip);
+    } else if (pendingTrip) {
+      console.log('[DriverApp] Estado inicial: oferta pendiente');
+      uiController.showIncomingTrip(
+        pendingTrip,
+        () => this._acceptOffer(pendingTrip.offerId),
+        () => this._rejectOffer(pendingTrip.offerId)
+      );
+    } else {
+      console.log('[DriverApp] Estado inicial: esperando');
+      uiController.showWaitingState();
+    }
+
+  } catch (error) {
+    console.error('[DriverApp] ❌ Error fatal:', error);
+    uiController.showToast('Error: ' + error.message, 'error', 5000);
   }
-} catch (err) {
-  console.error('[DriverApp] Error buscando driverId:', err);
 }
-
-console.log('[DriverApp] driverId detectado:', driverId);
-
-// 6) Inicializar TripManager
-console.log('[DriverApp] Inicializando TripManager...');
-const tripManagerReady = await tripManager.init(driverId);
-
-if (!tripManagerReady) {
-  console.warn('[DriverApp] ⚠️ TripManager no pudo inicializarse (sin driverId)');
-  uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
-}
-      // 6) Suscribirse a eventos
-      this._subscribeToEvents();
-
-      // 7) Configurar UI
-      this._setupUI();
-
-      this.initialized = true;
-      console.log('[DriverApp] ✅ Aplicación inicializada correctamente');
-
-      // Estado inicial
-      uiController.updateDriverState('ONLINE', false);
-
-      // Estado inicial de viajes
-this.initialized = true;
-console.log('[DriverApp] ✅ Aplicación inicializada correctamente');
-
-// Estado inicial
-uiController.updateDriverState('ONLINE', false);
-
-if (!tripManagerReady) {
-  console.warn('[DriverApp] App iniciada sin TripManager operativo');
-  uiController.showWaitingState();
-  return;
-}
-
-// Estado inicial de viajes
-const currentTrip = tripManager.getCurrentTrip();
-const pendingTrip = tripManager.getPendingTrip();
-      
-      if (currentTrip) {
-        console.log('[DriverApp] Estado inicial: viaje activo');
-        await this._showRouteOnMap(currentTrip);
-        uiController.showNavigationState(currentTrip);
-} else if (pendingTrip) {
-  console.log('[DriverApp] Estado inicial: oferta pendiente');
-  uiController.showIncomingTrip(
-    pendingTrip,
-      () => this._acceptOffer(pendingTrip.offerId),
-      () => this._rejectOffer(pendingTrip.offerId)
-  );
-}
-   else {
-        console.log('[DriverApp] Estado inicial: esperando');
-        uiController.showWaitingState();
-      }
-
-    } catch (error) {
-      console.error('[DriverApp] ❌ Error fatal:', error);
-      uiController.showToast('Error: ' + error.message, 'error', 5000);
-    }
-  }
-
   _subscribeToEvents() {
     console.log('[DriverApp] Suscribiendo a eventos de TripManager...');
 
