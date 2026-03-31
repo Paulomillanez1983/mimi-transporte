@@ -118,18 +118,41 @@ window.supabaseInsert = async function(table, data) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
+    
+    // FIX: data ya es objeto, no envolver en array de nuevo
+    const body = Array.isArray(data) ? data : [data];
+    
     const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: 'POST', signal: controller.signal,
-      headers: { 'apikey': SUPABASE_KEY, 'Authorization': "Bearer " + SUPABASE_KEY, 'Content-Type': 'application/json', 'Accept': 'application/json', 'Prefer': 'return=representation' },
-      body: JSON.stringify([data])
+      method: 'POST', 
+      signal: controller.signal,
+      headers: { 
+        'apikey': SUPABASE_KEY, 
+        'Authorization': "Bearer " + SUPABASE_KEY, 
+        'Content-Type': 'application/json', 
+        'Accept': 'application/json', 
+        'Prefer': 'return=representation' 
+      },
+      body: JSON.stringify(body) // FIX: siempre enviar como array
     });
+    
     clearTimeout(timeout);
+    
     let result = null;
     try { result = await response.json(); } catch(e) { result = null; }
-    if (!response.ok) { console.error("❌ RESPUESTA RAW:", result); return { data: null, error: result }; }
-    return { data: result, error: null };
-  } catch (err) { return { data: null, error: { message: err.message } }; }
+    
+    if (!response.ok) { 
+      console.error("❌ RESPUESTA RAW:", result); 
+      return { data: null, error: result }; 
+    }
+    
+    // FIX: Supabase devuelve array, tomar primer elemento
+    return { data: Array.isArray(result) ? result[0] : result, error: null };
+    
+  } catch (err) { 
+    return { data: null, error: { message: err.message } }; 
+  }
 };
+
 </script>
 
 <style>
@@ -2134,24 +2157,26 @@ async function enviarViaje() {
       }
     }
 
-    const payload = {
-      cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
-      telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
-      origen,
-      destino,
-      origen_lat: Number(lugarOrigen?.lat) || null,
-      origen_lng: Number(lugarOrigen?.lng) || null,
-      destino_lat: Number(lugarDestino?.lat) || null,
-      destino_lng: Number(lugarDestino?.lng) || null,
-      precio: Number(precio) || 0,
-      servicio: servicioSeleccionado || 'IDA_ESCOLAR',
-      fecha_hora: fechaHoraIda,
-      fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA' ? fechaHoraVuelta : null,
-      tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? Number(tiempoEspera) || 0 : null,
-      estado: "DISPONIBLE",
-      notas: null
-    };
-
+const payload = {
+  cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
+  telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
+  origen: origen.substring(0, 255), // FIX: limitar longitud
+  destino: destino.substring(0, 255),
+  origen_lat: Number(lugarOrigen?.lat) || null,
+  origen_lng: Number(lugarOrigen?.lng) || null,
+  destino_lat: Number(lugarDestino?.lat) || null,
+  destino_lng: Number(lugarDestino?.lng) || null,
+  precio: Math.round(Number(precio)) || 0, // FIX: redondear
+  servicio: servicioSeleccionado || 'IDA_ESCOLAR',
+  fecha_hora: fechaHoraIda,
+  fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA' ? fechaHoraVuelta : null,
+  tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? Number(tiempoEspera) || 0 : null,
+  estado: "DISPONIBLE",
+  notas: null,
+  // FIX: agregar campos que espera el edge function
+  distancia_km: datosCotizacion?.km || null,
+  duracion_min: datosCotizacion?.duracionEstimadaMin || null
+};
     console.log("📦 Payload viaje limpio:", payload);
     console.log("🔥 JSON FINAL:", JSON.stringify(payload));
     
@@ -2222,15 +2247,30 @@ async function buscarDireccion(query) {
 }
 
 function formatearDireccionCorta(r) {
-  if (!r) return "";
-  const texto = (r.display_name || "").trim();
-  if (!texto) return "Dirección";
-  const partes = texto.split(",").map(p => p.trim()).filter(Boolean);
-  const linea1 = partes[0] || "Dirección";
-  const linea2 = partes.length >= 3 ? partes[2] : (partes[1] || "");
-  return linea2 ? `${linea1} · ${linea2}` : linea1;
+  if (!r || !r.display_name) return "Dirección";
+  
+  const partes = r.display_name.split(",").map(p => p.trim()).filter(Boolean);
+  
+  // Priorizar: calle + número, luego barrio/localidad
+  const calle = partes[0] || "";
+  const numero = partes.find(p => /^\d+$/.test(p)) || "";
+  const localidad = partes.find(p => 
+    /villa|barrio|ciudad|cordoba|córdoba|argentina/i.test(p)
+  ) || partes[2] || partes[1] || "";
+  
+  // Limpiar "Argentina" y "Córdoba" redundante
+  const locLimpia = localidad
+    .replace(/,\s*Argentina$/i, '')
+    .replace(/,\s*Córdoba$/i, '')
+    .replace(/,\s*Córdoba Province/i, '')
+    .trim();
+  
+  const direccion = numero ? `${calle} ${numero}` : calle;
+  
+  return locLimpia && locLimpia !== direccion 
+    ? `${direccion}, ${locLimpia}`
+    : direccion;
 }
-
 function formatearDireccionCompleta(r) {
   if (!r || !r.display_name) return "Dirección no válida";
   let direccion = r.display_name.trim();
