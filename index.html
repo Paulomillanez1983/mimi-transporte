@@ -3730,29 +3730,29 @@ class ClientNotificationService {
   }
 
   // Notificación de viaje iniciado
-  showTripStartedNotification(trip) {
-    this.showToast('🚀 El viaje ha comenzado', 'success');
-    localStorage.setItem('mimi_trip_status', 'EN_CURSO');
-  }
+showTripStartedNotification(trip) {
+  notifSystem.show("🚀 Viaje iniciado", "El viaje ha comenzado", "success", 5000);
+  localStorage.setItem('mimi_trip_status', 'EN_CURSO');
+}
 
   // Notificación de viaje completado
-  showTripCompletedNotification(trip) {
-    this.showToast('✅ Viaje completado. ¡Gracias por elegir MIMI!', 'success');
-    localStorage.removeItem('mimi_last_trip_id');
-    localStorage.removeItem('mimi_trip_status');
-    this.unsubscribe();
-  }
+showTripCompletedNotification(trip) {
+  notifSystem.show("✅ Viaje finalizado", "Viaje completado. ¡Gracias por elegir MIMI!", "success", 6000);
+  localStorage.removeItem('mimi_last_trip_id');
+  localStorage.removeItem('mimi_trip_status');
+  this.unsubscribe();
+}
 
   // Notificación de viaje cancelado
-  showTripCancelledNotification(trip) {
-    this.showToast('❌ El viaje fue cancelado', 'error');
-    localStorage.removeItem('mimi_last_trip_id');
-    localStorage.removeItem('mimi_trip_status');
-    this.unsubscribe();
-  }
+showTripCompletedNotification(trip) {
+  notifSystem.show("✅ Viaje finalizado", "Viaje completado. ¡Gracias por elegir MIMI!", "success", 6000);
+  localStorage.removeItem('mimi_last_trip_id');
+  localStorage.removeItem('mimi_trip_status');
+  this.unsubscribe();
+}
 
   // Toast genérico
-  showToast(message, type = 'info') {
+  notifSystem.show("Notificación", message, type, 4000);
     const toast = document.createElement('div');
     const colors = {
       success: '#06C167',
