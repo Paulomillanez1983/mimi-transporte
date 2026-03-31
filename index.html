@@ -704,22 +704,32 @@ body {
   background: #ff9800 !important;
   box-shadow: 0 0 0 2px rgba(255,152,0,0.3) !important;
 }
-/* Badge "más elegido" */
 .servicio-badge.popular {
   position: absolute !important;
-  top: 10px !important;
-  left: 10px !important;
-  background: #ffd54f !important;
-  color: #111 !important;
-  font-size: clamp(9px, 2.5vw, 11px) !important;
-  font-weight: 900 !important;
-  padding: 3px 8px !important;
-  border-radius: 999px !important;
+  top: 12px !important;
+  left: 12px !important;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
+  color: #ffffff !important;
+  font-size: clamp(8px, 2.2vw, 10px) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.8px !important;
+  padding: 5px 10px !important;
+  border-radius: 6px !important;
   text-transform: uppercase !important;
   white-space: nowrap;
   z-index: 2;
+  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.25) !important;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
+/* Agregar ícono de estrella antes */
+.servicio-badge.popular::before {
+  content: "★";
+  font-size: 0.9em;
+  color: #fbbf24;
+}
 /* ==========================================
    FECHA/HORA
 ========================================== */
