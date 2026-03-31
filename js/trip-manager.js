@@ -55,48 +55,54 @@ async init(driverIdParam = null) {
   try {
     await supabaseService.ensureDriverProfile();
 
-    let driverId =
-      driverIdParam ||
-      supabaseService.getDriverId?.() ||
-      localStorage.getItem('driverId') ||
-      sessionStorage.getItem('driverId') ||
-      null;
+    // =====================================================
+    // 1) Obtener usuario autenticado
+    // =====================================================
+    const { data: { user }, error: userError } = await supabaseService.client.auth.getUser();
 
-    // 🔥 Fallback real: buscar chofer desde auth si el cache falló
-    if (!driverId && supabaseService.client?.auth) {
-      const { data: { user } } = await supabaseService.client.auth.getUser();
-
-      if (user?.id) {
-        const { data: chofer, error } = await supabaseService.client
-          .from('choferes')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('[TripManager] Error buscando chofer por user_id:', error);
-        }
-
-        if (chofer?.id) {
-          driverId = chofer.id;
-          localStorage.setItem('driverId', driverId);
-          sessionStorage.setItem('driverId', driverId);
-        }
-      }
+    if (userError || !user?.id) {
+      console.error('[TripManager] ❌ No authenticated user found:', userError);
+      return false;
     }
 
-    if (!driverId) {
-      console.error('[TripManager] ❌ No driverId available after fallback');
-      return false; // ❗ NO tirar fatal error
+    // UUID real de auth.users
+    this.driverUserId = user.id;
+
+    // =====================================================
+    // 2) Buscar perfil chofer en tabla choferes
+    // =====================================================
+    const { data: chofer, error: choferError } = await supabaseService.client
+      .from('choferes')
+      .select('id, user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (choferError) {
+      console.error('[TripManager] ❌ Error buscando perfil de chofer:', choferError);
+      return false;
     }
 
-    this.driverId = driverId;
+    if (!chofer?.id) {
+      console.error('[TripManager] ❌ No existe perfil de chofer para este usuario');
+      return false;
+    }
 
-    console.log('[TripManager] ✅ Initializing for driver UUID:', driverId);
+    // ID real de tabla choferes
+    this.driverProfileId = chofer.id;
 
-    await this._loadInitialState(driverId);
-    this._subscribeToRealtime(driverId);
-    this._startRefreshInterval(driverId);
+    // Compatibilidad con tu código actual
+    this.driverId = this.driverProfileId;
+
+    localStorage.setItem('driverId', this.driverProfileId);
+    sessionStorage.setItem('driverId', this.driverProfileId);
+
+    console.log('[TripManager] ✅ Initialized');
+    console.log('[TripManager] auth.user.id:', this.driverUserId);
+    console.log('[TripManager] choferes.id:', this.driverProfileId);
+
+    await this._loadInitialState();
+    this._subscribeToRealtime();
+    this._startRefreshInterval();
 
     return true;
 
@@ -503,6 +509,30 @@ async init(driverIdParam = null) {
 
     return { success: true };
   }
+  async startTrip(tripId) {
+  const driverId = this.driverId;
+  if (!driverId) return { success: false, error: 'No driverId' };
+
+  const { error } = await supabaseService.client
+    .from('viajes')
+    .update({
+      estado: 'EN_CURSO',
+      iniciado_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', tripId)
+    .eq('chofer_id_uuid', driverId);
+
+  if (error) {
+    console.error('[TripManager] Start trip error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+
+  
 
   async finishTrip(tripId) {
     const driverId = this.driverId;
