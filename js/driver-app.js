@@ -187,14 +187,14 @@ class DriverApp {
       console.log('[DriverApp] Registro chofer encontrado:', chofer);
 
       // 4) detectar automáticamente el UUID real del chofer
-      const possibleDriverId =
-        chofer.chofer_id_uuid ||
-        chofer.id ||
-        chofer.uuid ||
-        chofer.driver_id ||
-        chofer.chofer_uuid ||
-        null;
-
+const possibleDriverId =
+  chofer.id_uuid ||
+  chofer.chofer_id_uuid ||
+  chofer.id ||
+  chofer.uuid ||
+  chofer.driver_id ||
+  chofer.chofer_uuid ||
+  null;
       if (!possibleDriverId) {
         console.warn('[DriverApp] No se encontró un campo UUID usable en choferes:', chofer);
         return null;
