@@ -585,6 +585,47 @@ _createRecenterButton() {
     }
   }
 
+  // =========================================================
+  // CLEAR ROUTE (CORREGIDO - FALTABA ESTE MÉTODO)
+  // =========================================================
+  clearRoute() {
+    if (!this.map || !this.isLoaded) return;
+
+    try {
+      // Limpiar datos de la ruta en el mapa
+      const source = this.map.getSource('route');
+      if (source) {
+        source.setData({
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: []
+          }
+        });
+      }
+
+      // Resetear datos de ruta almacenados
+      this.routeGeometry = [];
+      this.currentDestination = null;
+
+      // Remover marcadores de pickup y dropoff
+      if (this.markers.pickup) {
+        this.markers.pickup.remove();
+        delete this.markers.pickup;
+      }
+      if (this.markers.dropoff) {
+        this.markers.dropoff.remove();
+        delete this.markers.dropoff;
+      }
+
+      console.log('[Map] Route cleared');
+
+    } catch (error) {
+      console.warn('[Map] Error clearing route:', error);
+    }
+  }
+
   _distanceToRoute(lat, lng) {
     if (!this.routeGeometry || this.routeGeometry.length < 2) return 0;
 
@@ -642,116 +683,130 @@ _createRecenterButton() {
     }
   }
 
-async _getOSRMRoute(from, to) {
-
-  // ===========================
-  // VALHALLA (RECOMENDADO)
-  // ===========================
-  if (CONFIG.ROUTING_PROVIDER === "valhalla") {
-    const body = {
-      locations: [
-        { lat: from.lat, lon: from.lng },
-        { lat: to.lat, lon: to.lng }
+  _getStraightLineRoute(from, to) {
+    // Fallback: línea recta cuando OSRM falla
+    return {
+      geometry: [
+        [from.lng, from.lat],
+        [to.lng, to.lat]
       ],
-      costing: "auto",
-      directions_options: {
-        units: "kilometers"
-      }
+      distance: this._haversine(from.lat, from.lng, to.lat, to.lng),
+      duration: 0,
+      isFallback: true
     };
+  }
 
-    const res = await fetch(CONFIG.VALHALLA_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
+  async _getOSRMRoute(from, to) {
+
+    // ===========================
+    // VALHALLA (RECOMENDADO)
+    // ===========================
+    if (CONFIG.ROUTING_PROVIDER === "valhalla") {
+      const body = {
+        locations: [
+          { lat: from.lat, lon: from.lng },
+          { lat: to.lat, lon: to.lng }
+        ],
+        costing: "auto",
+        directions_options: {
+          units: "kilometers"
+        }
+      };
+
+      const res = await fetch(CONFIG.VALHALLA_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        throw new Error("Valhalla error HTTP " + res.status);
+      }
+
+      const data = await res.json();
+
+      if (!data.trip || !data.trip.legs || !data.trip.legs[0]) {
+        throw new Error("Valhalla no devolvió ruta");
+      }
+
+      const leg = data.trip.legs[0];
+
+      // decode polyline -> devuelve [lat,lng]
+      const decoded = this._decodePolyline(leg.shape);
+
+      return {
+        geometry: decoded.map(p => [p[1], p[0]]), // a formato MapLibre: [lng, lat]
+        distance: (data.trip.summary.length || 0) * 1000,
+        duration: data.trip.summary.time || 0,
+        isFallback: false
+      };
+    }
+
+    // ===========================
+    // OSRM (FALLBACK)
+    // ===========================
+    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+
+    const res = await fetch(url);
 
     if (!res.ok) {
-      throw new Error("Valhalla error HTTP " + res.status);
+      throw new Error("OSRM error HTTP " + res.status);
     }
 
     const data = await res.json();
 
-    if (!data.trip || !data.trip.legs || !data.trip.legs[0]) {
-      throw new Error("Valhalla no devolvió ruta");
+    if (!data.routes || !data.routes[0]) {
+      throw new Error("OSRM no devolvió rutas");
     }
 
-    const leg = data.trip.legs[0];
-
-    // decode polyline -> devuelve [lat,lng]
-    const decoded = this._decodePolyline(leg.shape);
+    const route = data.routes[0];
 
     return {
-      geometry: decoded.map(p => [p[1], p[0]]), // a formato MapLibre: [lng, lat]
-      distance: (data.trip.summary.length || 0) * 1000,
-      duration: data.trip.summary.time || 0,
+      geometry: route.geometry.coordinates,
+      distance: route.distance,
+      duration: route.duration,
       isFallback: false
     };
   }
 
-  // ===========================
-  // OSRM (FALLBACK)
-  // ===========================
-  const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+  _decodePolyline(str, precision = 6) {
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+    const coordinates = [];
+    const factor = Math.pow(10, precision);
 
-  const res = await fetch(url);
+    while (index < str.length) {
+      let b, shift = 0, result = 0;
 
-  if (!res.ok) {
-    throw new Error("OSRM error HTTP " + res.status);
+      do {
+        b = str.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+
+      do {
+        b = str.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+
+      const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+      lng += dlng;
+
+      coordinates.push([lat / factor, lng / factor]);
+    }
+
+    return coordinates;
   }
-
-  const data = await res.json();
-
-  if (!data.routes || !data.routes[0]) {
-    throw new Error("OSRM no devolvió rutas");
-  }
-
-  const route = data.routes[0];
-
-  return {
-    geometry: route.geometry.coordinates,
-    distance: route.distance,
-    duration: route.duration,
-    isFallback: false
-  };
-}
-_decodePolyline(str, precision = 6) {
-  let index = 0;
-  let lat = 0;
-  let lng = 0;
-  const coordinates = [];
-  const factor = Math.pow(10, precision);
-
-  while (index < str.length) {
-    let b, shift = 0, result = 0;
-
-    do {
-      b = str.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-
-    const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
-    lat += dlat;
-
-    shift = 0;
-    result = 0;
-
-    do {
-      b = str.charCodeAt(index++) - 63;
-      result |= (b & 0x1f) << shift;
-      shift += 5;
-    } while (b >= 0x20);
-
-    const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
-    lng += dlng;
-
-    coordinates.push([lat / factor, lng / factor]);
-  }
-
-  return coordinates;
-}
 
   // =========================================================
   // DESTROY
