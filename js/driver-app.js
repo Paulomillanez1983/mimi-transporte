@@ -20,6 +20,9 @@ class DriverApp {
     // ✅ CONTROL PARA NO SPAMEAR SUPABASE
     this._lastLocationUpdate = 0;
     this._locationUpdateInterval = 8000; // cada 8 segundos
+
+    // ✅ cache auth para no llamar getUser() todo el tiempo
+    this._authUserId = null;
   }
 
   // =========================================================
@@ -44,6 +47,9 @@ class DriverApp {
         window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
+
+      this._authUserId = user.id;
+      console.log('[DriverApp] Auth user detectado:', this._authUserId);
 
       // 3) Inicializar UI
       uiController.init();
@@ -157,12 +163,10 @@ class DriverApp {
         return cachedDriverId;
       }
 
-      // 2) auth user
-      const {
-        data: { user }
-      } = await supabaseService.client.auth.getUser();
+      // 2) auth user ya resuelto en init
+      const userId = this._authUserId;
 
-      if (!user?.id) {
+      if (!userId) {
         console.warn('[DriverApp] No user.id disponible para resolver chofer');
         return null;
       }
@@ -171,7 +175,7 @@ class DriverApp {
       const { data: chofer, error } = await supabaseService.client
         .from('choferes')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (error) {
@@ -180,21 +184,22 @@ class DriverApp {
       }
 
       if (!chofer) {
-        console.warn('[DriverApp] No existe fila en choferes para user_id:', user.id);
+        console.warn('[DriverApp] No existe fila en choferes para user_id:', userId);
         return null;
       }
 
       console.log('[DriverApp] Registro chofer encontrado:', chofer);
 
       // 4) detectar automáticamente el UUID real del chofer
-const possibleDriverId =
-  chofer.id_uuid ||
-  chofer.chofer_id_uuid ||
-  chofer.id ||
-  chofer.uuid ||
-  chofer.driver_id ||
-  chofer.chofer_uuid ||
-  null;
+      const possibleDriverId =
+        chofer.id_uuid ||
+        chofer.chofer_id_uuid ||
+        chofer.id ||
+        chofer.uuid ||
+        chofer.driver_id ||
+        chofer.chofer_uuid ||
+        null;
+
       if (!possibleDriverId) {
         console.warn('[DriverApp] No se encontró un campo UUID usable en choferes:', chofer);
         return null;
@@ -236,7 +241,7 @@ const possibleDriverId =
       console.log('[DriverApp] ✅ tripAccepted', trip.id);
 
       this._currentTripId = trip.id;
-      uiController.hideIncomingModal();
+      uiController.hideIncomingModal?.();
       uiController.showToast('¡Viaje aceptado!', 'success');
 
       await this._showRouteOnMap(trip);
@@ -389,8 +394,6 @@ const possibleDriverId =
       console.log('[DriverApp] acceptTrip result:', result);
 
       if (!result.success) {
-        uiController.setGlobalLoading?.(false);
-
         uiController.showToast(
           result.error === 'VIAJE_YA_TOMADO'
             ? '❌ Otro chofer tomó el viaje'
@@ -407,8 +410,6 @@ const possibleDriverId =
       return result;
     } catch (err) {
       console.error('[DriverApp] Error aceptando viaje:', err);
-
-      uiController.setGlobalLoading?.(false);
       uiController.showToast('Error aceptando viaje', 'error');
       uiController.showWaitingState();
 
@@ -438,11 +439,7 @@ const possibleDriverId =
       this._lastLocationUpdate = now;
 
       try {
-        const {
-          data: { user }
-        } = await supabaseService.client.auth.getUser();
-
-        if (!user) return;
+        if (!this._authUserId) return;
 
         const { error } = await supabaseService.client
           .from('choferes')
@@ -454,7 +451,7 @@ const possibleDriverId =
             accuracy: position.accuracy || null,
             last_seen_at: new Date().toISOString()
           })
-          .eq('user_id', user.id);
+          .eq('user_id', this._authUserId);
 
         if (error) {
           console.error('[DriverApp] ❌ Error guardando ubicación:', error);
@@ -510,11 +507,7 @@ const possibleDriverId =
         try {
           this._onlineStatus = !this._onlineStatus;
 
-          const {
-            data: { user }
-          } = await supabaseService.client.auth.getUser();
-
-          if (!user) {
+          if (!this._authUserId) {
             uiController.showToast('No autenticado', 'error');
             return;
           }
@@ -526,7 +519,7 @@ const possibleDriverId =
               online: this._onlineStatus,
               last_seen_at: new Date().toISOString()
             })
-            .eq('user_id', user.id);
+            .eq('user_id', this._authUserId);
 
           if (error) {
             console.error('[DriverApp] Error update chofer:', error);
