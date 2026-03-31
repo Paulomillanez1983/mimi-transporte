@@ -157,7 +157,7 @@ window.supabaseInsert = async function(table, data) {
 }
 
 /* ==========================================
-   RESET Y BASE MOBILE-FIRST
+   RESET Y BASE - LAYOUT SIN SCROLL (UBER STYLE)
 ========================================== */
 * {
   margin: 0;
@@ -172,913 +172,747 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
   background: var(--gris-fondo);
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-  padding-bottom: calc(30px + var(--safe-bottom));
-  -webkit-overflow-scrolling: touch;
-  overflow-x: hidden;
-  position: relative;
+  height: 100dvh; /* Dynamic viewport height - se ajusta a chrome visible */
+  height: 100svh; /* Fallback para navegadores que no soportan dvh */
+  overflow: hidden; /* Prevenir scroll global */
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ==========================================
-   HEADER OPTIMIZADO MOBILE
+   APP CONTAINER - ESTRUCTURA TIPO UBER
+========================================== */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  max-width: 480px; /* Máximo ancho tipo app móvil */
+  margin: 0 auto;
+  position: relative;
+  background: var(--gris-fondo);
+}
+
+/* ==========================================
+   HEADER COMPACTO
 ========================================== */
 .header {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  padding: calc(20px + var(--safe-top)) 20px 40px 20px;
+  padding: calc(12px + var(--safe-top)) 16px 16px 16px;
+  flex-shrink: 0;
   position: relative;
-  overflow: visible;
-  border-bottom-left-radius: 25px;
-  border-bottom-right-radius: 25px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  margin-bottom: 40px;
-  isolation: isolate;
+  z-index: 100;
 }
 
 .header-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 600px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 2;
-  padding: 0 10px;
-  gap: 10px;
+  gap: 12px;
 }
 
 .vehicle-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
   position: relative;
-  flex-shrink: 0;
+  width: 60px;
+  height: 40px;
 }
 
 .vehicle-img {
-  width: clamp(120px, 35vw, 160px);
+  width: 80px;
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
   position: absolute;
-  left: -5px;
-  bottom: clamp(-140px, -35vw, -185px);
-  z-index: 10;
+  left: -10px;
+  top: -5px;
   pointer-events: none;
-  will-change: transform;
 }
 
 .logo-section {
   color: white;
   text-align: center;
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
 }
 
 .logo-title {
-  font-size: clamp(1.4rem, 5vw, 1.8rem);
+  font-size: 1.5rem;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   line-height: 1;
   text-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .logo-subtitle {
-  font-size: clamp(0.65rem, 2vw, 0.75rem);
+  font-size: 0.65rem;
   opacity: 0.9;
-  font-weight: 500;
-  letter-spacing: 1.5px;
+  font-weight: 600;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.header-icons {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 2;
-  flex-shrink: 0;
 }
 
 .shield-icon {
-  width: clamp(36px, 10vw, 40px);
-  height: clamp(36px, 10vw, 40px);
+  width: 36px;
+  height: 36px;
   background: rgba(255,255,255,0.15);
   border: 2px solid rgba(255,255,255,0.4);
-  border-radius: 10px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(1.1rem, 3vw, 1.3rem);
+  font-size: 1.1rem;
   color: #4caf50;
   font-weight: bold;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
 /* ==========================================
-   CONTENEDOR PRINCIPAL RESPONSIVE
+   MAIN CONTENT - ÁREA SCROLLEABLE SI ES NECESARIO
 ========================================== */
-.container {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 0 clamp(12px, 4vw, 20px);
-  width: 100%;
-}
-
-.hero-text {
-  text-align: center;
-  padding: clamp(15px, 4vw, 25px) clamp(12px, 3vw, 20px) clamp(15px, 3vw, 20px);
-}
-
-.hero-title {
-  font-size: clamp(1.25rem, 4.5vw, 1.6rem);
-  color: #1a1a1a;
-  font-weight: 800;
-  margin-bottom: 6px;
-  line-height: 1.2;
-}
-
-.hero-subtitle {
-  color: #666;
-  font-size: clamp(0.875rem, 3vw, 1rem);
-  line-height: 1.4;
-}
-
-.main-card {
-  background: white;
-  border-radius: clamp(16px, 5vw, 20px);
-  padding: clamp(16px, 4vw, 20px);
-  box-shadow: var(--sombra);
-  margin-bottom: 20px;
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   position: relative;
-  overflow: visible !important;
-  width: 100%;
+}
+
+/* Panel inferior tipo Uber - siempre visible */
+.bottom-panel {
+  background: white;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  padding: 20px 16px calc(20px + var(--safe-bottom)) 16px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 200;
+  max-height: 65vh; /* Máximo 65% de la pantalla */
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+}
+
+.bottom-panel.expanded {
+  transform: translateY(-20vh);
+}
+
+/* Handle para expandir */
+.panel-handle {
+  width: 40px;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  margin: 0 auto 16px auto;
+  flex-shrink: 0;
 }
 
 /* ==========================================
-   ORIGEN / DESTINO (UI iOS OPTIMIZADA)
+   ORIGEN / DESTINO - UI TIPO UBER
 ========================================== */
-.location-swap-group {
+.location-inputs {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  position: relative;
+  gap: 12px;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
-.location-input-group {
-  position: relative;
-  overflow: visible !important;
-  z-index: 50 !important;
-}
-
-.location-card {
+.location-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #f4f4f7;
-  border-radius: clamp(16px, 4vw, 20px);
-  padding: clamp(12px, 3.5vw, 14px) clamp(12px, 3vw, 16px);
-  border: 1px solid rgba(0,0,0,0.06);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  cursor: pointer;
-  min-height: 64px;
-  touch-action: manipulation;
+  position: relative;
 }
 
-.location-card:active {
-  transform: scale(0.985);
-}
-
-.location-icon {
-  width: clamp(40px, 10vw, 46px);
-  height: clamp(40px, 10vw, 46px);
-  border-radius: 16px;
-  background: #e6e6ef;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: clamp(18px, 4vw, 20px);
+.location-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
   flex-shrink: 0;
-  box-shadow: none;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.location-icon.origin {
-  background: #dff3e3;
-  color: #1b7f2a;
+.location-dot.origin {
+  background: #22c55e;
 }
 
-.location-icon.destiny {
-  background: #ffe2e2;
-  color: #b71c1c;
+.location-dot.destiny {
+  background: #ef4444;
 }
 
-.location-text {
+.location-line {
+  position: absolute;
+  left: 5px;
+  top: 24px;
+  bottom: -8px;
+  width: 2px;
+  background: #e0e0e0;
+  z-index: 0;
+}
+
+.location-input-wrapper {
   flex: 1;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.location-label {
-  font-size: clamp(11px, 3vw, 12px);
-  font-weight: 900;
-  color: #666;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-  white-space: nowrap;
+  position: relative;
 }
 
 .location-input {
   width: 100%;
-  border: none;
-  background: transparent;
+  padding: 14px 40px 14px 16px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 16px; /* Previene zoom en iOS */
+  font-weight: 600;
+  background: #f8f9fa;
+  color: #1a1a1a;
+  transition: all 0.2s ease;
   outline: none;
-  font-size: clamp(14px, 4vw, 16px);
-  font-weight: 800;
-  color: #111;
-  cursor: text;
-  min-height: 24px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
+}
+
+.location-input:focus {
+  border-color: var(--azul-primario);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
 }
 
 .location-input::placeholder {
   color: #999;
-  font-weight: 600;
+  font-weight: 500;
 }
 
-/* flecha ">" como iOS */
-.location-card::after {
-  content: "›";
-  font-size: 26px;
-  font-weight: 900;
-  color: rgba(0,0,0,0.35);
-  margin-left: 6px;
-  flex-shrink: 0;
-}
-
-/* Botón Swap optimizado para touch */
+/* Botón swap */
 .btn-swap {
-  align-self: center;
-  width: clamp(48px, 12vw, 52px);
-  height: clamp(48px, 12vw, 52px);
-  border-radius: 999px;
-  border: 5px solid white;
-  background: linear-gradient(180deg, #3d8bff, #1b55cc);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.18);
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 200;
-  margin: -8px 0;
+  z-index: 10;
+  font-size: 14px;
+  color: #666;
   transition: transform 0.2s ease;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
-}
-
-.btn-swap span {
-  font-size: clamp(18px, 4vw, 20px);
-  color: white;
-  font-weight: 900;
-  transition: transform 0.4s ease;
-  pointer-events: none;
-}
-
-.btn-swap:hover {
-  transform: rotate(180deg) scale(1.18);
 }
 
 .btn-swap:active {
-  transform: scale(0.92);
+  transform: translateY(-50%) scale(0.9);
 }
 
 /* ==========================================
-   SUGERENCIAS AUTOCOMPLETE
+   AUTOCOMPLETE - SUGERENCIAS TIPO UBER
 ========================================== */
-.sugerencias {
+.autocomplete-container {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   left: 0;
-  width: 100%;
+  right: 0;
   background: white;
-  z-index: 999999999 !important;
-  max-height: min(250px, 50vh);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  z-index: 1000;
+  max-height: 300px;
   overflow-y: auto;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.08);
-  box-shadow: 0 14px 35px rgba(0,0,0,0.18);
   display: none;
-  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
-.sugerencia-item {
-  padding: clamp(12px, 3vw, 14px);
-  cursor: pointer;
-  font-size: clamp(14px, 3.5vw, 15px);
-  font-weight: 600;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  min-height: 44px;
+.autocomplete-container.visible {
+  display: block;
+  animation: slideDown 0.2s ease;
+}
+
+.suggestion-item {
+  padding: 16px;
   display: flex;
-  align-items: center;
-  touch-action: manipulation;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s ease;
 }
 
-.sugerencia-item:hover, .sugerencia-item:active {
-  background: #f4f4f7;
-}
-
-.sugerencia-item:last-child {
+.suggestion-item:last-child {
   border-bottom: none;
 }
 
-/* Fix Google Places */
-.pac-container {
-  z-index: 999999999 !important;
-  border-radius: 14px !important;
-  box-shadow: 0 14px 35px rgba(0,0,0,0.18) !important;
-  border: 1px solid rgba(0,0,0,0.08) !important;
-  font-family: inherit !important;
+.suggestion-item:active {
+  background: #f5f5f5;
 }
 
-.pac-item {
-  padding: 14px !important;
-  font-size: 16px !important;
-  min-height: 44px;
-}
-
-/* ==========================================
-   SERVICIOS GRID 2x2 (UI iOS)
-========================================== */
-.servicio-selector {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: clamp(8px, 2vw, 12px) !important;
-  margin-top: 14px !important;
-  width: 100%;
-}
-
-.servicio-card {
-  position: relative !important;
-  background: #f4f4f7 !important;
-  border-radius: clamp(16px, 4vw, 18px) !important;
-  padding: clamp(12px, 3vw, 14px) !important;
-  min-height: clamp(100px, 25vw, 108px) !important;
-  border: 1px solid rgba(0,0,0,0.06) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  justify-content: flex-start !important;
-  cursor: pointer !important;
-  transition: transform 0.18s ease, box-shadow 0.2s ease;
-  overflow: hidden !important;
-  touch-action: manipulation;
-}
-
-.servicio-card:active {
-  transform: scale(0.98) !important;
-}
-
-/* flecha iOS */
-.servicio-card::after {
-  content: "›";
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 24px;
-  font-weight: 900;
-  color: rgba(0,0,0,0.35);
-}
-
-.servicio-icon {
-  font-size: clamp(20px, 5vw, 22px) !important;
-  margin-bottom: 6px !important;
-  flex-shrink: 0;
-}
-
-.servicio-info {
-  width: 100%;
-  overflow: hidden;
-}
-
-.servicio-info strong {
-  font-size: clamp(14px, 3.8vw, 16px) !important;
-  font-weight: 900 !important;
-  color: #111 !important;
-  display: block;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.servicio-info small {
-  font-size: clamp(11px, 3vw, 13px) !important;
-  font-weight: 700 !important;
-  color: #666 !important;
-  margin-top: 2px;
-  display: block;
-  line-height: 1.2;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.servicio-hora {
-  margin-top: 8px !important;
-  font-size: clamp(12px, 3.2vw, 14px) !important;
-  font-weight: 900 !important;
-  color: #111 !important;
-  display: block;
-}
-
-/* Check arriba derecha */
-.servicio-check {
-  position: absolute !important;
-  top: 10px !important;
-  right: 10px !important;
-  width: 22px !important;
-  height: 22px !important;
-  border-radius: 50% !important;
-  background: rgba(0,0,0,0.12) !important;
-  color: white !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-weight: 900 !important;
-  opacity: 0.7 !important;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-/* ==========================================
-   SERVICIOS GRID 2x2 - ESTILOS BASE
-========================================== */
-.servicio-selector {
-  display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: clamp(8px, 2vw, 12px) !important;
-  margin-top: 14px !important;
-  width: 100%;
-}
-
-.servicio-card {
-  position: relative !important;
-  background: #f4f4f7 !important;
-  border-radius: clamp(16px, 4vw, 18px) !important;
-  padding: clamp(12px, 3vw, 14px) !important;
-  min-height: clamp(100px, 25vw, 108px) !important;
-  border: 1px solid rgba(0,0,0,0.06) !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  justify-content: flex-start !important;
-  cursor: pointer !important;
-  transition: transform 0.18s ease, box-shadow 0.2s ease;
-  overflow: hidden !important;
-  touch-action: manipulation;
-}
-
-.servicio-card:active {
-  transform: scale(0.98) !important;
-}
-
-/* flecha iOS */
-.servicio-card::after {
-  content: "›";
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 24px;
-  font-weight: 900;
-  color: rgba(0,0,0,0.35);
-}
-
-.servicio-icon {
-  font-size: clamp(20px, 5vw, 22px) !important;
-  margin-bottom: 6px !important;
-  flex-shrink: 0;
-}
-
-.servicio-info {
-  width: 100%;
-  overflow: hidden;
-}
-
-.servicio-info strong {
-  font-size: clamp(14px, 3.8vw, 16px) !important;
-  font-weight: 900 !important;
-  color: #111 !important;
-  display: block;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.servicio-info small {
-  font-size: clamp(11px, 3vw, 13px) !important;
-  font-weight: 700 !important;
-  color: #666 !important;
-  margin-top: 2px;
-  display: block;
-  line-height: 1.2;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.servicio-hora {
-  margin-top: 8px !important;
-  font-size: clamp(12px, 3.2vw, 14px) !important;
-  font-weight: 900 !important;
-  color: #111 !important;
-  display: block;
-}
-
-/* Check arriba derecha */
-.servicio-check {
-  position: absolute !important;
-  top: 10px !important;
-  right: 10px !important;
-  width: 22px !important;
-  height: 22px !important;
-  border-radius: 50% !important;
-  background: rgba(0,0,0,0.12) !important;
-  color: white !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-weight: 900 !important;
-  opacity: 0.7 !important;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-
-/* ==========================================
-   ESTADO ACTIVO - NEGRO TRANSLÚCIDO CON PATRÓN DE MAPA
-   (Aplica a TODOS los servicios cuando están seleccionados)
-========================================== */
-.servicio-card.activo {
-  background: linear-gradient(135deg, rgba(25,25,35,0.95), rgba(15,15,25,0.98)) !important;
-  border: 2px solid #1a1a2e !important;
-  box-shadow: 
-    0 0 0 3px rgba(0,0,0,0.1), 
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    0 8px 25px rgba(0,0,0,0.35) !important;
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-/* Patrón de calles/mapas de fondo tipo OSM para TODOS los activos */
-.servicio-card.activo::before {
-  content: '' !important;
-  position: absolute !important;
-  inset: 0 !important;
-  background-image: 
-    linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px),
-    linear-gradient(45deg, transparent 48%, rgba(255,255,255,0.06) 49%, rgba(255,255,255,0.06) 51%, transparent 52%),
-    linear-gradient(-45deg, transparent 48%, rgba(255,255,255,0.06) 49%, rgba(255,255,255,0.06) 51%, transparent 52%) !important;
-  background-size: 20px 20px, 20px 20px, 28px 28px, 28px 28px !important;
-  opacity: 0.6 !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-}
-
-/* Capa adicional para efecto de "mapa" con calles curvas */
-.servicio-card.activo::after {
-  content: '' !important;
-  position: absolute !important;
-  inset: 0 !important;
-  background: 
-    radial-gradient(circle at 25% 25%, rgba(255,255,255,0.04) 0%, transparent 25%),
-    radial-gradient(circle at 75% 75%, rgba(255,255,255,0.04) 0%, transparent 25%),
-    radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 0%, transparent 40%) !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-}
-
-/* Asegurar que el contenido esté por encima del patrón */
-.servicio-card.activo .servicio-info,
-.servicio-card.activo .servicio-icon,
-.servicio-card.activo .servicio-hora,
-.servicio-card.activo .servicio-check,
-.servicio-card.activo .servicio-badge {
-  position: relative !important;
-  z-index: 1 !important;
-}
-
-/* Colores de texto en estado activo (blanco) */
-.servicio-card.activo .servicio-info strong,
-.servicio-card.activo .servicio-hora {
-  color: white !important;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-
-.servicio-card.activo .servicio-info small {
-  color: rgba(255,255,255,0.85) !important;
-}
-
-/* Iconos en estado activo - más brillantes */
-.servicio-card.activo .servicio-icon {
-  filter: drop-shadow(0 0 6px rgba(255,255,255,0.4));
-}
-
-/* Check en estado activo - blanco con centro negro */
-.servicio-card.activo .servicio-check {
-  background: white !important;
-  color: #1a1a2e !important;
-  opacity: 1 !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
-}
-
-/* Flecha en estado activo - blanca */
-.servicio-card.activo::after {
-  color: rgba(255,255,255,0.6) !important;
-}
-
-/* ==========================================
-   SERVICIO URGENTE "LO QUIERO YA" - Variante especial
-========================================== */
-.servicio-card.urgente:not(.activo) {
-  background: linear-gradient(135deg, #f5f5f7, #e8e8ec) !important;
-  border: 1px solid rgba(0,0,0,0.08) !important;
-}
-
-/* Patrón sutil en estado no-activo para urgente */
-.servicio-card.urgente:not(.activo)::before {
-  content: '' !important;
-  position: absolute !important;
-  inset: 0 !important;
-  background-image: 
-    linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px),
-    linear-gradient(45deg, transparent 48%, rgba(0,0,0,0.02) 49%, rgba(0,0,0,0.02) 51%, transparent 52%),
-    linear-gradient(-45deg, transparent 48%, rgba(0,0,0,0.02) 49%, rgba(0,0,0,0.02) 51%, transparent 52%) !important;
-  background-size: 16px 16px, 16px 16px, 24px 24px, 24px 24px !important;
-  opacity: 0.5 !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-}
-
-.servicio-card.urgente:not(.activo) .servicio-info,
-.servicio-card.urgente:not(.activo) .servicio-icon,
-.servicio-card.urgente:not(.activo) .servicio-hora,
-.servicio-card.urgente:not(.activo) .servicio-check {
-  position: relative !important;
-  z-index: 1 !important;
-}
-
-/* Urgente activo - borde naranja para destacar */
-.servicio-card.urgente.activo {
-  background: linear-gradient(135deg, rgba(30,30,40,0.95), rgba(20,20,30,0.98)) !important;
-  border: 2px solid #ff9800 !important;
-  box-shadow: 
-    0 0 0 3px rgba(255,152,0,0.2), 
-    inset 0 1px 0 rgba(255,255,255,0.05),
-    0 8px 25px rgba(0,0,0,0.35) !important;
-}
-
-/* Check naranja para urgente activo */
-.servicio-card.urgente.activo .servicio-check {
-  background: #ff9800 !important;
-  color: white !important;
-  box-shadow: 0 0 0 2px rgba(255,152,0,0.5) !important;
-}
-
-/* ==========================================
-   BADGE "MÁS ELEGIDO"
-========================================== */
-.servicio-badge.popular {
-  position: absolute !important;
-  top: 12px !important;
-  left: 12px !important;
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%) !important;
-  color: #ffffff !important;
-  font-size: clamp(8px, 2.2vw, 10px) !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.8px !important;
-  padding: 5px 10px !important;
-  border-radius: 6px !important;
-  text-transform: uppercase !important;
-  white-space: nowrap;
-  z-index: 2;
-  box-shadow: 0 2px 8px rgba(30, 58, 138, 0.25) !important;
+.suggestion-icon {
+  width: 36px;
+  height: 36px;
+  background: #f0f0f0;
+  border-radius: 50%;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
 }
 
-.servicio-badge.popular::before {
-  content: "★";
-  font-size: 0.9em;
-  color: #fbbf24;
-}
-
-/* Badge en estado activo */
-.servicio-card.activo .servicio-badge.popular {
-  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%) !important;
-  color: white !important;
-  box-shadow: 0 2px 8px rgba(255,152,0,0.4) !important;
-}/* ==========================================
-   FECHA/HORA
-========================================== */
-.datetime-section {
-  margin-top: 15px;
-  width: 100%;
-}
-
-.datetime-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-  color: #555;
-  font-weight: 600;
-  font-size: clamp(0.8rem, 3vw, 0.85rem);
-}
-
-.datetime-card {
-  background: #f8f9fa;
-  border: 2px solid #e8e8e8;
-  border-radius: 14px;
-  padding: clamp(12px, 3vw, 14px);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.3s;
-  touch-action: manipulation;
-  min-height: 56px;
-}
-
-.datetime-card:active {
-  transform: scale(0.98);
-}
-
-.datetime-text {
+.suggestion-text {
   flex: 1;
   min-width: 0;
 }
 
-.datetime-label {
-  font-size: clamp(0.7rem, 2.5vw, 0.75rem);
-  color: #888;
-  font-weight: 700;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-  white-space: nowrap;
-}
-
-.datetime-value {
-  font-size: clamp(0.875rem, 3.5vw, 0.95rem);
-  color: #1a1a1a;
+.suggestion-main {
   font-weight: 600;
+  color: #1a1a1a;
+  font-size: 15px;
+  line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.datetime-input-hidden {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-  width: 0;
-  height: 0;
+.suggestion-secondary {
+  color: #888;
+  font-size: 13px;
+  margin-top: 2px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-/* Campos fecha ida/vuelta */
-#campo-fecha-ida,
-#campo-fecha-vuelta {
-  animation: fadeInUp 0.25s ease;
-  width: 100%;
-}
-
-#campo-fecha-vuelta .datetime-card {
-  border-color: #d6e4ff;
-  background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
-}
-
-#campo-fecha-vuelta .datetime-header span {
-  color: #1565c0;
-  font-weight: 700;
+.loading-suggestions {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+  font-size: 14px;
 }
 
 /* ==========================================
-   BOTONES TIEMPO ESPERA
+   SERVICIOS - GRID 2x2 COMPACTO
 ========================================== */
+.servicios-section {
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.servicios-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.servicios-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.servicio-card {
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 14px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  text-align: left;
+}
+
+.servicio-card:active {
+  transform: scale(0.98);
+}
+
+.servicio-card.activo {
+  background: #1a1a2e;
+  border-color: #1a1a2e;
+  color: white;
+}
+
+.servicio-card.urgente.activo {
+  border-color: var(--naranja);
+}
+
+.servicio-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.servicio-name {
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.servicio-desc {
+  font-size: 12px;
+  opacity: 0.7;
+  line-height: 1.2;
+}
+
+.servicio-card.activo .servicio-name,
+.servicio-card.activo .servicio-desc {
+  color: white;
+}
+
+.servicio-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.servicio-card.activo .servicio-check {
+  opacity: 1;
+  background: var(--verde-wa);
+}
+
+.badge-popular {
+  position: absolute;
+  top: -6px;
+  left: 12px;
+  background: var(--azul-primario);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================
+   OPCIONES ADICIONALES - COLLAPSABLE
+========================================== */
+.opciones-adicionales {
+  display: none;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+  animation: fadeIn 0.3s ease;
+}
+
+.opciones-adicionales.visible {
+  display: block;
+}
+
+.opcion-row {
+  margin-bottom: 12px;
+}
+
+.opcion-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+  margin-bottom: 8px;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .tiempo-selector {
   display: flex;
-  gap: clamp(6px, 2vw, 10px);
-  margin-top: 12px;
-  width: 100%;
+  gap: 8px;
 }
 
 .tiempo-btn {
   flex: 1;
-  padding: clamp(12px, 3vw, 14px) clamp(6px, 2vw, 10px);
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.08);
-  background: #f4f4f7;
+  padding: 12px 8px;
+  border: 1.5px solid #e0e0e0;
+  background: white;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
   color: #333;
-  font-weight: 900;
-  font-size: clamp(13px, 3.5vw, 15px);
   cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s, color 0.2s;
-  touch-action: manipulation;
-  min-height: 48px;
-  white-space: nowrap;
-}
-
-.tiempo-btn:active {
-  transform: scale(0.97);
+  transition: all 0.2s ease;
 }
 
 .tiempo-btn.activo {
-  background: #111;
+  background: #1a1a2e;
   color: white;
-  border: 1px solid #111;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.20);
+  border-color: #1a1a2e;
+}
+
+.datetime-card {
+  background: #f8f9fa;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.datetime-card:active {
+  background: #f0f0f0;
+}
+
+.datetime-icon {
+  font-size: 20px;
+}
+
+.datetime-text {
+  flex: 1;
+}
+
+.datetime-label {
+  font-size: 11px;
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.datetime-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-top: 2px;
+}
+
+.datetime-arrow {
+  color: #999;
+  font-size: 18px;
 }
 
 /* ==========================================
-   BOTÓN COTIZAR
+   BOTÓN COTIZAR - SIEMPRE ABAJO
 ========================================== */
-.btn-calcular {
+.action-section {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.btn-cotizar {
   width: 100%;
-  padding: clamp(14px, 4vw, 16px);
-  margin-top: 18px;
+  padding: 18px 24px;
   border: none;
-  border-radius: 22px;
-  background: linear-gradient(180deg, #3d8bff, #1b55cc);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #3d8bff 0%, #1b55cc 100%);
   color: white;
-  font-size: clamp(15px, 4vw, 16px);
-  font-weight: 900;
+  font-size: 17px;
+  font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.20);
-  transition: transform 0.15s ease, opacity 0.2s;
-  text-transform: uppercase;
+  box-shadow: 0 4px 15px rgba(29, 111, 223, 0.3);
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   position: relative;
   overflow: hidden;
-  touch-action: manipulation;
   min-height: 56px;
-  -webkit-tap-highlight-color: rgba(255,255,255,0.2);
 }
 
-.btn-calcular:active {
+.btn-cotizar:active {
   transform: scale(0.98);
+  box-shadow: 0 2px 10px rgba(29, 111, 223, 0.2);
 }
 
-.btn-calcular::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -75%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(120deg, rgba(255,255,255,0.1), rgba(255,255,255,0.5), rgba(255,255,255,0.1));
-  transform: skewX(-20deg);
-}
-
-.btn-calcular:hover::after {
-  animation: brilloBtn 0.8s ease;
-}
-
-@keyframes brilloBtn {
-  100% { left: 130%; }
-}
-
-.btn-calcular:disabled {
+.btn-cotizar:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
-/* Spinner */
+.btn-cotizar.precio-mostrar {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.precio-display {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+/* ==========================================
+   MAPA - BACKGROUND TIPO UBER
+========================================== */
+.map-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  background: #e5e5e5;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+.map-overlay {
+  position: absolute;
+  top: 80px;
+  left: 16px;
+  right: 16px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ==========================================
+   RESULTADO Y WHATSAPP
+========================================== */
+.resultado-overlay {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 24px 24px 0 0;
+  padding: 20px;
+  box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  z-index: 300;
+}
+
+.resultado-overlay.visible {
+  transform: translateY(0);
+}
+
+.resultado-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.resultado-precio {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--azul-oscuro);
+  line-height: 1;
+}
+
+.resultado-label {
+  color: #666;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.resultado-detalles {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.detalle-item {
+  text-align: center;
+}
+
+.detalle-valor {
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: 16px;
+}
+
+.detalle-label {
+  font-size: 12px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.btn-whatsapp {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+  margin-top: 12px;
+}
+
+/* ==========================================
+   ANIMACIONES
+========================================== */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ==========================================
+   UTILIDADES
+========================================== */
+.hidden {
+  display: none !important;
+}
+
+.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+}
+
 .spinner {
   width: 20px;
   height: 20px;
@@ -1087,2487 +921,858 @@ body {
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   display: inline-block;
-  flex-shrink: 0;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* ==========================================
-   RESULTADO Y WHATSAPP
-========================================== */
-.resultado-section {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 2px dashed #e0e0e0;
-  display: none;
-  text-align: center;
-  width: 100%;
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
 }
 
-.resultado-section.visible {
-  display: block;
-  animation: fadeInUp 0.5s ease;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.precio-monto {
-  font-size: clamp(2rem, 6vw, 2.5rem);
-  font-weight: 800;
-  color: var(--azul-oscuro);
-  margin-bottom: 6px;
-  line-height: 1.2;
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.2);
+  border-radius: 2px;
 }
 
-.precio-descripcion {
-  color: #666;
-  font-size: clamp(0.85rem, 3vw, 0.9rem);
-  margin-bottom: 15px;
-}
-
-.btn-whatsapp {
-  width: 100%;
-  padding: clamp(14px, 4vw, 16px);
-  margin-top: 12px;
-  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
-  color: white;
-  border: none;
-  border-radius: 14px;
-  font-size: clamp(0.95rem, 3.5vw, 1rem);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  touch-action: manipulation;
-  min-height: 56px;
-  text-decoration: none;
-  -webkit-tap-highlight-color: rgba(255,255,255,0.2);
-}
-
-.btn-whatsapp svg {
-  width: 20px;
-  height: 20px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
-  flex-shrink: 0;
-}
-
-.btn-whatsapp:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);
-}
-
-.btn-whatsapp:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.25);
-}
-
-/* ==========================================
-   MAPA RESPONSIVE CON ANIMACIÓN
-========================================== */
-#mapaRuta {
-  width: 100%;
-  height: clamp(280px, 55vw, 350px); /* Más alto para ver bien la ruta */
-  min-height: 280px;
-  border-radius: clamp(14px, 4vw, 18px);
-  overflow: hidden;
-  margin-top: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  position: relative;
-  background: #e5e5e5;
-  isolation: isolate;
-}
-
-#map {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-}
-.maplibregl-canvas {
-  outline: none !important;
-}
-
-.maplibregl-ctrl-top-right,
-.maplibregl-ctrl-top-left,
-.maplibregl-ctrl-bottom-right,
-.maplibregl-ctrl-bottom-left {
-  z-index: 10 !important;
-}
-
-/* Control de replay de animación */
-.map-replay-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(255,255,255,0.95);
-  border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #1565c0;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  z-index: 100;
-  display: none;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  touch-action: manipulation;
-}
-
-.map-replay-btn.visible {
-  display: block;
-}
-
-/* ==========================================
-   TOAST NOTIFICATIONS
-========================================== */
-.toast-container {
-  position: fixed;
-  top: calc(20px + var(--safe-top));
-  right: 20px;
-  left: 20px;
-  z-index: 100000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 400px;
-  margin: 0 auto;
-  pointer-events: none;
-  padding: 0 var(--safe-right) 0 var(--safe-left);
-}
-
-.toast {
-  background: white;
-  border-radius: 16px;
-  padding: 16px 20px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  border-left: 4px solid var(--azul-primario);
-  pointer-events: all;
-  position: relative;
-  min-height: 60px;
-}
-
-.toast.success { border-left-color: var(--exito); }
-.toast.info { border-left-color: var(--info); }
-.toast.warning { border-left-color: var(--naranja); }
-.toast.error { border-left-color: #f44336; }
-
-.toast-icon {
-  font-size: 1.4rem;
-  flex-shrink: 0;
-}
-
-.toast-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.toast-title {
-  font-weight: 700;
-  color: #1a1a1a;
-  font-size: clamp(0.85rem, 3vw, 0.9rem);
-  margin-bottom: 2px;
-  line-height: 1.2;
-}
-
-.toast-message {
-  color: #666;
-  font-size: clamp(0.8rem, 2.8vw, 0.85rem);
-  line-height: 1.3;
-}
-
-.toast-close {
-  background: none;
-  border: none;
-  color: #999;
-  cursor: pointer;
-  font-size: 1.2rem;
-  padding: 4px;
-  line-height: 1;
-  transition: color 0.2s;
-  flex-shrink: 0;
-  min-width: 32px;
-  min-height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toast-close:hover {
-  color: #333;
-}
-
-.toast-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  background: var(--azul-claro);
-  border-radius: 0 0 0 16px;
-  animation: progress 4s linear forwards;
-}
-
-.toast.success .toast-progress { background: var(--exito); }
-.toast.info .toast-progress { background: var(--info); }
-.toast.warning .toast-progress { background: var(--naranja); }
-.toast.error .toast-progress { background: #f44336; }
-
-/* ==========================================
-   TRUST SECTION (CONDUCTOR)
-========================================== */
-.trust-section {
-  margin: 20px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  width: 100%;
-}
-
-.trust-badge {
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-  color: #2e7d32;
-  font-weight: 700;
-  text-align: center;
-  padding: 10px;
-  border-radius: 12px;
-  font-size: clamp(0.85rem, 3vw, 0.9rem);
-  word-break: break-word;
-}
-
-.driver-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: white;
-  padding: 12px;
-  border-radius: 14px;
-  box-shadow: var(--sombra);
-}
-
-.driver-img {
-  width: clamp(44px, 10vw, 50px);
-  height: clamp(44px, 10vw, 50px);
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.driver-name {
-  font-weight: 700;
-  font-size: clamp(0.85rem, 3vw, 0.9rem);
-  line-height: 1.2;
-}
-
-.driver-info {
-  font-size: clamp(0.75rem, 2.5vw, 0.8rem);
-  color: #666;
-  line-height: 1.3;
-}
-
-.reviews {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-}
-
-.review {
-  background: white;
-  padding: 12px;
-  border-radius: 14px;
-  box-shadow: var(--sombra);
-}
-
-.stars {
-  color: #ffc107;
-  font-size: clamp(0.8rem, 3vw, 0.9rem);
-  margin-bottom: 4px;
-}
-
-.review-text {
-  font-size: clamp(0.8rem, 3vw, 0.85rem);
-  color: #444;
-  line-height: 1.4;
-}
-
-.review-author {
-  font-size: clamp(0.7rem, 2.5vw, 0.75rem);
-  color: #888;
-  margin-top: 4px;
-}
-
-/* ==========================================
-   FEATURES SECTION
-========================================== */
-.features-section {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: clamp(8px, 2vw, 12px);
-  margin-top: 15px;
-  width: 100%;
-}
-
-.feature-card {
-  background: white;
-  border-radius: clamp(14px, 3.5vw, 16px);
-  padding: clamp(16px, 4vw, 20px) clamp(10px, 2.5vw, 12px);
-  text-align: center;
-  box-shadow: var(--sombra);
-  transition: all 0.3s;
-  touch-action: manipulation;
-}
-
-.feature-card:hover, .feature-card:active {
-  transform: translateY(-4px);
-  box-shadow: var(--sombra-hover);
-}
-
-.feature-icon {
-  width: clamp(40px, 10vw, 45px);
-  height: clamp(40px, 10vw, 45px);
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(1.1rem, 3.5vw, 1.3rem);
-  margin: 0 auto 10px;
-  flex-shrink: 0;
-}
-
-.feature-icon.shield {
-  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-}
-
-.feature-title {
-  font-weight: 700;
-  font-size: clamp(0.8rem, 3vw, 0.85rem);
-  margin-bottom: 3px;
-  line-height: 1.2;
-}
-
-.feature-desc {
-  color: #888;
-  font-size: clamp(0.7rem, 2.5vw, 0.75rem);
-  line-height: 1.3;
-}
-
-/* ==========================================
-   FOOTER
-========================================== */
-.footer {
-  text-align: center;
-  padding: clamp(20px, 5vw, 25px) clamp(15px, 4vw, 20px) calc(20px + var(--safe-bottom));
-  color: #666;
-  font-size: clamp(0.8rem, 3vw, 0.85rem);
-  width: 100%;
-}
-
-.footer-phone {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: white;
-  padding: 10px 20px;
-  border-radius: 50px;
-  font-weight: 700;
-  color: var(--azul-primario);
-  margin: 12px 0;
-  box-shadow: var(--sombra);
-  text-decoration: none;
-  touch-action: manipulation;
-  min-height: 44px;
-}
-
-/* ==========================================
-   UTILIDADES
-========================================== */
-.error-message {
-  background: #ffebee;
-  color: #c62828;
-  padding: 12px;
-  border-radius: 10px;
-  margin-top: 12px;
-  font-size: clamp(0.8rem, 3vw, 0.85rem);
-  font-weight: 600;
-  display: none;
-  align-items: center;
-  gap: 8px;
-  border-left: 4px solid #f44336;
-  width: 100%;
-  word-break: break-word;
-}
-
-.error-message.visible {
-  display: flex;
-  animation: shake 0.5s;
-}
-
-.btn-loading {
-  opacity: 0.75;
-  pointer-events: none;
-  filter: saturate(0.9);
-}
-
-.btn-hidden-after-reset {
-  display: none !important;
-}
-
-/* ==========================================
-   ANIMACIONES
-========================================== */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideInDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideOutUp {
-  to { opacity: 0; transform: translateY(-10px); }
-}
-
-@keyframes progress {
-  from { width: 100%; }
-  to { width: 0%; }
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
-}
-
-/* ==========================================
-   RESPONSIVE BREAKPOINTS ESPECÍFICOS
-========================================== */
-
-/* iPhone SE, 5, 5S (320px) */
-@media (max-width: 320px) {
-  html { font-size: 14px; }
-  .servicio-selector { grid-template-columns: 1fr !important; }
-  .features-section { grid-template-columns: 1fr; }
-  .vehicle-img { width: 100px; bottom: -100px; }
-}
-
-/* iPhone 6/7/8, SE 2020/2022 (375px) */
-@media (min-width: 321px) and (max-width: 375px) {
-  .vehicle-img { width: 130px; bottom: -130px; }
-  .logo-section { margin-left: 90px; }
-}
-
-/* iPhone 6/7/8 Plus, X, XS, 11 Pro, 12 Mini, 13 Mini (414px) */
-@media (min-width: 376px) and (max-width: 414px) {
-  .vehicle-img { width: 140px; bottom: -140px; }
-  .logo-section { margin-left: 100px; }
-}
-
-/* iPhone 12, 13, 14, 15, 15 Pro (390px) */
-@media (min-width: 385px) and (max-width: 395px) {
-  .vehicle-img { width: 145px; bottom: -145px; }
-}
-
-/* iPhone 12/13/14/15 Pro Max, Plus (428px+) */
-@media (min-width: 415px) and (max-width: 428px) {
-  .vehicle-img { width: 150px; bottom: -150px; }
-}
-
-/* Tablets pequeñas y grandes */
-@media (min-width: 768px) {
-  .container { max-width: 600px; padding: 0 24px; }
-  .vehicle-img { width: 180px; bottom: -180px; left: -10px; }
-}
-
-/* Pantallas grandes */
-@media (min-width: 1024px) {
-  .container { max-width: 640px; }
-  .vehicle-img { width: 200px; bottom: -200px; }
-}
-
-/* Altura reducida (landscape en móvil) */
-@media (max-height: 500px) and (orientation: landscape) {
-  .header { padding-top: calc(10px + var(--safe-top)); padding-bottom: 30px; margin-bottom: 20px; }
-  .vehicle-img { width: 100px; bottom: -80px; }
-  .hero-text { padding-top: 10px; padding-bottom: 10px; }
-  #mapaRuta { height: 200px; min-height: 200px; }
-}
-
-/* Dark mode support básico */
-@media (prefers-color-scheme: dark) {
-  :root { --gris-fondo: #0f0f0f; }
-  body { background: var(--gris-fondo); }
-  .main-card, .feature-card, .review, .driver-card { background: #1c1c1e; }
-  .hero-title, .feature-title, .driver-name { color: #fff; }
-  .hero-subtitle, .feature-desc, .review-text, .driver-info { color: #aaa; }
-  .location-card, .servicio-card:not(.urgente), .datetime-card, .tiempo-btn:not(.activo) { background: #2c2c2e; }
-  .location-input, .servicio-info strong, .datetime-value { color: #fff; }
-  .location-label, .servicio-info small, .datetime-label { color: #aaa; }
-}
-
-/* Reducir motion para accesibilidad */
-@media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
-}
-
-/* Touch optimization global */
-button, .btn-mapa, .btn-calcular, .btn-whatsapp, .servicio-card, .location-card, .tiempo-btn, .sugerencia-item {
+/* Touch optimization */
+button, .servicio-card, .suggestion-item, .location-input, .tiempo-btn, .datetime-card {
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(0,0,0,0.05);
 }
 
-/* Mejoras para inputs en iOS */
-input, textarea, select {
-  font-size: 16px !important; /* Previene zoom en iOS */
-  -webkit-appearance: none;
-  border-radius: 0;
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root { --gris-fondo: #0f0f0f; }
+  body { background: var(--gris-fondo); }
+  .bottom-panel, .servicio-card, .datetime-card { background: #1c1c1e; }
+  .location-input { background: #2c2c2e; color: white; border-color: #3a3a3c; }
+  .location-input::placeholder { color: #888; }
+  .servicio-name, .datetime-value { color: white; }
+  .servicio-desc, .datetime-label { color: #aaa; }
+  .suggestion-main { color: white; }
+  .tiempo-btn { background: #2c2c2e; color: white; border-color: #3a3a3c; }
+  .tiempo-btn.activo { background: white; color: #1a1a2e; }
 }
 
-/* Scrollbar styling suave */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
-
-/* Fix para Safari 100vh issue */
-@supports (-webkit-touch-callout: none) {
-  .min-h-screen { min-height: -webkit-fill-available; }
+/* Landscape mode */
+@media (max-height: 500px) and (orientation: landscape) {
+  .header { padding-top: 8px; padding-bottom: 12px; }
+  .vehicle-img { width: 60px; }
+  .bottom-panel { max-height: 50vh; }
+  .servicios-grid { grid-template-columns: repeat(4, 1fr); }
+  .servicio-card { padding: 10px 8px; }
+  .servicio-icon { font-size: 20px; margin-bottom: 4px; }
+  .servicio-name { font-size: 12px; }
+  .servicio-desc { display: none; }
 }
 </style>
 </head>
 <body>
-<div id="loadingGlobal" style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 99999;">
-  <div style="background: white; padding: 20px 30px; border-radius: 12px; font-weight: bold;">Calculando...</div>
-</div>
 
-<div class="toast-container" id="toastContainer"></div>
+<div class="app-container">
+  <!-- MAPA DE FONDO -->
+  <div class="map-container">
+    <div id="map"></div>
+  </div>
 
-<header class="header">
-  <div class="header-content">
-    <div class="vehicle-section">
-      <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png" alt="Jeep MIMI" class="vehicle-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
-    </div>
-    <div class="logo-section">
-      <div class="logo-title">MIMI</div>
-      <div class="logo-subtitle">Transporte Escolar</div>
-    </div>
-    <div class="header-icons">
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-content">
+      <div class="vehicle-section">
+        <img src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png" alt="Jeep MIMI" class="vehicle-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'">
+      </div>
+      <div class="logo-section">
+        <div class="logo-title">MIMI</div>
+        <div class="logo-subtitle">Transporte Escolar</div>
+      </div>
       <div class="shield-icon">✓</div>
     </div>
-  </div>
-</header>
+  </header>
 
-<div class="container">
-  <div class="hero-text">
-    <h1 class="hero-title">¡Viaje Seguro para tus Niños!</h1>
-    <p class="hero-subtitle">Pagá solo por los viajes que uses</p>
-  </div>
-
-<div class="main-card">
-
-  <div class="location-swap-group">
-
-    <!-- ORIGEN -->
-    <div class="location-input-group">
-      <div class="location-card">
-        <div class="location-icon origin">📍</div>
-        <div class="location-text">
-          <div class="location-label">Origen</div>
-          <input type="text" id="origen" class="location-input" placeholder="Origen" autocomplete="off" enterkeyhint="search">
-          <div id="sugerenciasOrigen" class="sugerencias"></div>
+  <!-- PANEL INFERIOR -->
+  <div class="bottom-panel" id="bottomPanel">
+    <div class="panel-handle"></div>
+    
+    <!-- INPUTS DE UBICACIÓN -->
+    <div class="location-inputs">
+      <div class="location-row" style="position: relative;">
+        <div class="location-dot origin"></div>
+        <div class="location-line"></div>
+        <div class="location-input-wrapper">
+          <input type="text" id="origen" class="location-input" placeholder="¿Dónde te buscamos?" autocomplete="off" enterkeyhint="search">
+          <div class="autocomplete-container" id="sugerenciasOrigen"></div>
+        </div>
+      </div>
+      
+      <div class="location-row">
+        <div class="location-dot destiny"></div>
+        <div class="location-input-wrapper">
+          <input type="text" id="destino" class="location-input" placeholder="¿A dónde vamos?" autocomplete="off" enterkeyhint="search">
+          <button class="btn-swap" onclick="intercambiarOrigenDestino()" title="Intercambiar">⇄</button>
+          <div class="autocomplete-container" id="sugerenciasDestino"></div>
         </div>
       </div>
     </div>
 
-    <!-- BOTÓN SWAP -->
-    <button onclick="intercambiarOrigenDestino()" 
-            class="btn-swap" 
-            title="Intercambiar origen y destino"
-            aria-label="Intercambiar origen y destino">
-      <span>⇄</span>
+    <!-- SERVICIOS -->
+    <div class="servicios-section">
+      <div class="servicios-title">Tipo de servicio</div>
+      <div class="servicios-grid">
+        <div class="servicio-card urgente activo" onclick="seleccionarServicio('IDA_ESCOLAR')" id="card-IDA_ESCOLAR">
+          <span class="servicio-icon">🚀</span>
+          <span class="servicio-name">Lo quiero YA</span>
+          <span class="servicio-desc">Salida inmediata</span>
+          <div class="servicio-check">✓</div>
+        </div>
+
+        <div class="servicio-card" onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')" id="card-IDA_Y_VUELTA_INMEDIATA">
+          <span class="badge-popular">Más elegido</span>
+          <span class="servicio-icon">🔄</span>
+          <span class="servicio-name">Ida y vuelta</span>
+          <span class="servicio-desc">Te esperamos</span>
+          <div class="servicio-check">✓</div>
+        </div>
+
+        <div class="servicio-card" onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')" id="card-IDA_MAS_VUELTA_PROGRAMADA">
+          <span class="servicio-icon">📆</span>
+          <span class="servicio-name">Ida + Vuelta</span>
+          <span class="servicio-desc">Programado</span>
+          <div class="servicio-check">✓</div>
+        </div>
+
+        <div class="servicio-card" onclick="seleccionarServicio('OTROS_SERVICIOS')" id="card-OTROS_SERVICIOS">
+          <span class="servicio-icon">✨</span>
+          <span class="servicio-name">Otros</span>
+          <span class="servicio-desc">Más opciones</span>
+          <div class="servicio-check">✓</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPCIONES ADICIONALES (CONDICIONALES) -->
+    <div class="opciones-adicionales" id="opcionesEspera">
+      <div class="opcion-row">
+        <span class="opcion-label">Tiempo de espera</span>
+        <div class="tiempo-selector">
+          <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min</button>
+          <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min</button>
+          <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">60 min</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="opciones-adicionales" id="opcionesFecha">
+      <div class="opcion-row">
+        <span class="opcion-label">Horario de ida</span>
+        <div class="datetime-card" onclick="abrirSelectorFecha()">
+          <span class="datetime-icon">📅</span>
+          <div class="datetime-text">
+            <div class="datetime-label">Fecha y hora</div>
+            <div class="datetime-value" id="textoFechaIda">Seleccionar...</div>
+          </div>
+          <span class="datetime-arrow">›</span>
+        </div>
+        <input type="datetime-local" id="fechaHora" style="display: none;" onchange="actualizarTextoFecha()">
+      </div>
+      
+      <div class="opcion-row" style="margin-top: 12px;">
+        <span class="opcion-label">Horario de vuelta</span>
+        <div class="datetime-card" onclick="abrirSelectorFechaVuelta()">
+          <span class="datetime-icon">🕐</span>
+          <div class="datetime-text">
+            <div class="datetime-label">Fecha y hora</div>
+            <div class="datetime-value" id="textoFechaVuelta">Seleccionar...</div>
+          </div>
+          <span class="datetime-arrow">›</span>
+        </div>
+        <input type="datetime-local" id="fechaHoraVuelta" style="display: none;" onchange="actualizarTextoFechaVuelta()">
+      </div>
+    </div>
+
+    <!-- BOTÓN DE ACCIÓN -->
+    <div class="action-section">
+      <button class="btn-cotizar" id="btnCotizar" onclick="calcularTarifa()">
+        <span id="btnCotizarText">🚐 Cotizar viaje</span>
+      </button>
+      
+      <button class="btn-cotizar precio-mostrar hidden" id="btnConfirmar" onclick="enviarViaje()">
+        <span>Confirmar viaje por</span>
+        <span class="precio-display" id="precioDisplay">$0</span>
+      </button>
+      
+      <a href="#" class="btn-whatsapp hidden" id="btnWhatsapp" onclick="reservarWhatsApp(event)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.175L2.546 20.2l3.025-.892A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.615 13.635c-.2.563-1.154 1.035-1.615 1.103-.431.063-.892.09-1.358-.009-.313-.066-.715-.173-1.226-.346-2.17-.715-3.58-2.638-3.688-2.77-.108-.13-.88-1.166-.88-2.225 0-1.06.555-1.58.752-1.796.197-.216.431-.27.575-.27.144 0 .288.002.414.008.13.007.303-.05.475.36.172.412.588 1.424.64 1.528.052.103.086.223.017.36-.069.137-.103.223-.206.341-.103.12-.216.251-.31.337-.103.094-.21.197-.144.388.066.19.288.627.62.997.426.475.784.622 1.06.691.172.043.302-.017.388-.103.086-.086.36-.417.453-.56.094-.144.188-.12.32-.072.13.05.838.395.98.466.145.072.24.103.275.16.035.06.025.345-.175.908z"/>
+        </svg>
+        <span>Reservar por WhatsApp</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- OVERLAY DE RESULTADO -->
+  <div class="resultado-overlay" id="resultadoOverlay">
+    <div class="resultado-header">
+      <div class="resultado-precio" id="resultadoPrecio">$0</div>
+      <div class="resultado-label">Precio estimado</div>
+    </div>
+    <div class="resultado-detalles">
+      <div class="detalle-item">
+        <div class="detalle-valor" id="detalleKm">0 km</div>
+        <div class="detalle-label">Distancia</div>
+      </div>
+      <div class="detalle-item">
+        <div class="detalle-valor" id="detalleTiempo">0 min</div>
+        <div class="detalle-label">Duración</div>
+      </div>
+    </div>
+    <button class="btn-cotizar" onclick="aceptarCotizacion()">
+      Aceptar y continuar
     </button>
-
-    <!-- DESTINO -->
-    <div class="location-input-group">
-      <div class="location-card">
-        <div class="location-icon destiny">📍</div>
-        <div class="location-text">
-          <div class="location-label">Destino</div>
-          <input type="text" id="destino" class="location-input" placeholder="Destino" autocomplete="off" enterkeyhint="search">
-          <div id="sugerenciasDestino" class="sugerencias"></div>
-        </div>
-      </div>
-    </div>
-
   </div>
-
-</div>
-  
-  <div class="error-message" id="errorMsg">
-      <span>⚠️</span>
-      <span id="errorText"></span>
-    </div>
-<!-- SELECTOR DE SERVICIOS -->
-<div class="servicio-selector" id="selectorServicios">
-
-  <!-- LO QUIERO YA -->
-  <div class="servicio-card urgente activo"
-       onclick="seleccionarServicio('IDA_ESCOLAR')"
-       id="card-IDA_ESCOLAR">
-
-    <div class="servicio-icon">🚀</div>
-
-    <div class="servicio-info">
-      <strong>Lo quiero YA</strong>
-      <small>Salida inmediata</small>
-    </div>
-
-    <div class="servicio-hora" id="hora-IDA_ESCOLAR">--:--</div>
-    <div class="servicio-check">✓</div>
-  </div>
-
-
-  <!-- IDA Y VUELTA -->
-  <div class="servicio-card dinamico destacado"
-       onclick="seleccionarServicio('IDA_Y_VUELTA_INMEDIATA')"
-       id="card-IDA_Y_VUELTA_INMEDIATA">
-
-    <div class="servicio-badge popular">Más elegido</div>
-
-    <div class="servicio-icon">🔄</div>
-
-    <div class="servicio-info">
-      <strong>Ida y vuelta</strong>
-      <small>Te esperamos y volvemos</small>
-    </div>
-
-    <div class="servicio-hora" id="hora-IDA_Y_VUELTA_INMEDIATA">--:--</div>
-    <div class="servicio-check">✓</div>
-  </div>
-
-
-  <!-- IDA + VUELTA PROGRAMADA -->
-  <div class="servicio-card programado"
-       onclick="seleccionarServicio('IDA_MAS_VUELTA_PROGRAMADA')"
-       id="card-IDA_MAS_VUELTA_PROGRAMADA">
-
-    <div class="servicio-icon">📆</div>
-
-    <div class="servicio-info">
-      <strong>Ida + Vuelta</strong>
-      <small>Programá ambos horarios</small>
-    </div>
-
-    <div class="servicio-hora" id="hora-IDA_MAS_VUELTA_PROGRAMADA">--:--</div>
-    <div class="servicio-check">✓</div>
-  </div>
-
-
-  <!-- OTROS SERVICIOS -->
-  <div class="servicio-card otros"
-       onclick="seleccionarServicio('OTROS_SERVICIOS')"
-       id="card-OTROS_SERVICIOS">
-
-    <div class="servicio-icon">✨</div>
-
-    <div class="servicio-info">
-      <strong>Otros</strong>
-      <small>Próximamente más opciones</small>
-    </div>
-
-    <div class="servicio-check">✓</div>
-  </div>
-
-</div>
-    
-    <!-- CAMPOS CONDICIONALES -->
-    <div id="campo-fecha-vuelta" style="display:none; margin-top:15px;">
-      <div class="datetime-header">
-        <span>🕐 Horario de VUELTA (regreso)</span>
-      </div>
-      <div class="datetime-card" onclick="abrirSelectorFechaVuelta()">
-        <div class="datetime-text">
-          <div class="datetime-label">Fecha y hora de regreso</div>
-          <div class="datetime-value" id="textoFechaVuelta">Seleccionar...</div>
-        </div>
-        <div class="location-arrow">›</div>
-      </div>
-      <input type="datetime-local" id="fechaHoraVuelta" class="datetime-input-hidden" onchange="actualizarTextoFechaVuelta()">
-    </div>
-
-    <div id="campo-espera" style="display:none; margin-top:15px;">
-      <div class="datetime-header">
-        <span>⏱️ Tiempo de espera</span>
-      </div>
-      <div class="tiempo-selector">
-        <button class="tiempo-btn activo" onclick="setTiempoEspera(30)" id="espera-30">30 min</button>
-        <button class="tiempo-btn" onclick="setTiempoEspera(45)" id="espera-45">45 min</button>
-        <button class="tiempo-btn" onclick="setTiempoEspera(60)" id="espera-60">60 min</button>
-      </div>
-      <input type="hidden" id="tiempoEsperaMin" value="30">
-    </div>
-<!-- HORARIO DE IDA -->
-<div id="campo-fecha-ida" style="display:none; margin-top:15px;">
-  <div class="datetime-header">
-    <span id="tituloHorarioIda">📅 Horario de IDA</span>
-  </div>
-
-  <div class="datetime-card" onclick="abrirSelectorFecha()">
-    <div class="datetime-text">
-      <div class="datetime-label" id="labelHorarioIda">Fecha y hora de ida</div>
-      <div class="datetime-value" id="textoFechaSeleccionada">Elegí fecha y hora...</div>
-    </div>
-    <div class="location-arrow">›</div>
-  </div>
-
-  <input type="datetime-local" id="fechaHora" class="datetime-input-hidden" onchange="actualizarTextoFecha()">
-</div>
-    
-
-
-<button class="btn-calcular btn-push" id="btnCalcular" onclick="calcularTarifa()">
-  <span id="btnCalcularText">🚐 Cotizar viaje</span>
-</button>
-
-<button class="btn-calcular btn-push" id="btnConfirmarViaje" onclick="enviarViaje()" style="display:none;">
-  <span id="btnConfirmarViajeText">🚐 Confirmar viaje</span>
-</button>
-    <div id="resultado" class="resultado-section">
-      <div class="precio-monto">$<span id="precioValor">0</span></div>
-      <div class="precio-descripcion">Precio estimado</div>
-    </div>
-
-<button class="btn-whatsapp" id="btnWhatsappReserva" onclick="reservarWhatsApp()" style="display:none;">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink: 0;">
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.66 1.438 5.175L2.546 20.2l3.025-.892A9.957 9.957 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm4.615 13.635c-.2.563-1.154 1.035-1.615 1.103-.431.063-.892.09-1.358-.009-.313-.066-.715-.173-1.226-.346-2.17-.715-3.58-2.638-3.688-2.77-.108-.13-.88-1.166-.88-2.225 0-1.06.555-1.58.752-1.796.197-.216.431-.27.575-.27.144 0 .288.002.414.008.13.007.303-.05.475.36.172.412.588 1.424.64 1.528.052.103.086.223.017.36-.069.137-.103.223-.206.341-.103.12-.216.251-.31.337-.103.094-.21.197-.144.388.066.19.288.627.62.997.426.475.784.622 1.06.691.172.043.302-.017.388-.103.086-.086.36-.417.453-.56.094-.144.188-.12.32-.072.13.05.838.395.98.466.145.072.24.103.275.16.035.06.025.345-.175.908z" fill="white"/>
-  </svg>
-  <span id="btnWhatsappReservaText">Reservar por WhatsApp</span>
-</button>
-    
-<div id="mapaRuta" style="margin-top:25px; display:none; position: relative;">
-  <div id="map"></div>
-  <button id="replayAnimacion" class="map-replay-btn" onclick="reproducirAnimacionRuta()">▶️ Ver recorrido</button>
-</div>
-  </div>
-</div>
-
-<!-- FOOTER SIMPLE -->
-<div class="footer">
-  <div style="margin-bottom:10px;">📍 Villa Allende y zona norte de Córdoba</div>
-  <a href="tel:+543517014863" class="footer-phone">📞 351 701 4863</a>
-  <div style="opacity:0.6; font-size:0.75rem; margin-top:10px;">© 2026 MIMI Transporte Infantil</div>
-</div>
-
-<!-- PRUEBA SOCIAL -->
-<div style="text-align:center; margin-top:10px; font-size:0.85rem; color:#666; padding: 0 20px 20px;">
-  Más de 20 familias ya confían en nosotros
-  <div style="font-size:0.8rem; opacity:0.6;">Atención personalizada · Cupos limitados</div>
 </div>
 
 <script>
 // ==========================================
-// CONFIGURACIÓN GLOBAL
+// CONFIGURACIÓN Y VARIABLES GLOBALES
 // ==========================================
 const CONFIG = {
   COTIZAR_URL: 'https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/cotizar',
-  WHATSAPP_NUMBER: '5493517014863'
+  WHATSAPP_NUMBER: '5493517014863',
+  GEOCODING_URL: 'https://nominatim.openstreetmap.org/search',
+  DEBOUNCE_MS: 200, // Tiempo de espera para búsqueda tipo Uber
+  MIN_CHARS: 3
 };
 
-// ==========================================
-// VARIABLES GLOBALES
-// ==========================================
 let servicioSeleccionado = 'IDA_ESCOLAR';
 let tiempoEsperaSeleccionado = 30;
-let modoTiempo = 'ahora';
 let lugarOrigen = null;
 let lugarDestino = null;
 let datosCotizacion = null;
 let isCalculating = false;
-let lastCotizacionAt = 0;
-let autocompleteOrigen = null;
-let autocompleteDestino = null;
 let mapaCliente = null;
 let markerOrigen = null;
 let markerDestino = null;
-let rutaAnimacion = null;
-let puntoAnimado = null;
-let counterAnimacion = 0;
-let animationId = null;
-let coordenadasRuta = [];
+let abortController = null; // Para cancelar búsquedas pendientes
+
+// Timers para debounce
+let timerOrigen = null;
+let timerDestino = null;
 
 // ==========================================
-// SISTEMA DE NOTIFICACIONES
+// INICIALIZACIÓN
 // ==========================================
-class NotificationSystem {
-  constructor() {
-    this.container = document.getElementById('toastContainer');
-    this.activeToasts = [];
-  }
+document.addEventListener('DOMContentLoaded', () => {
+  initMapa();
+  setupAutocomplete();
+  setFechasMinimas();
+  
+  // Focus en origen al cargar
+  setTimeout(() => {
+    document.getElementById('origen').focus();
+  }, 500);
+});
 
-  show(title, message, type = 'info', duration = 4000) {
-    this.activeToasts = this.activeToasts.filter(t => {
-      if (t.type === type && t.title === title) {
-        t.element.remove();
-        return false;
-      }
-      return true;
-    });
-
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    const icons = { success: '✅', info: '⏳', warning: '⚠️', error: '❌' };
-    
-    toast.innerHTML = `
-      <div class="toast-icon">${icons[type]}</div>
-      <div class="toast-content">
-        <div class="toast-title">${title}</div>
-        <div class="toast-message">${message}</div>
-      </div>
-      <button class="toast-close" onclick="this.parentElement.remove()">×</button>
-      <div class="toast-progress"></div>
-    `;
-    
-    this.container.appendChild(toast);
-    
-    const toastObj = { element: toast, type, title };
-    this.activeToasts.push(toastObj);
-    
-    setTimeout(() => {
-      if (toast.parentElement) {
-        toast.style.animation = 'slideOutUp 0.3s ease forwards';
-        setTimeout(() => {
-          toast.remove();
-          this.activeToasts = this.activeToasts.filter(t => t.element !== toast);
-        }, 300);
-      }
-    }, duration);
-    
-    return toast;
+// ==========================================
+// MAPA
+// ==========================================
+function initMapa() {
+  mapaCliente = new maplibregl.Map({
+    container: 'map',
+    style: {
+      version: 8,
+      sources: {
+        osm: {
+          type: 'raster',
+          tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256
+        }
+      },
+      layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+    },
+    center: [-64.19, -31.42], // Córdoba
+    zoom: 13,
+    attributionControl: false
+  });
+  
+  // Geolocalización del usuario
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { longitude, latitude } = pos.coords;
+        mapaCliente.setCenter([longitude, latitude]);
+        mapaCliente.setZoom(15);
+        
+        // Sugerir dirección cercana (reverse geocoding opcional)
+      },
+      (err) => console.log('Geolocalización no disponible')
+    );
   }
 }
 
-const notifSystem = new NotificationSystem();
+function actualizarMapa() {
+  if (!mapaCliente) return;
+  
+  // Limpiar marcadores anteriores
+  if (markerOrigen) markerOrigen.remove();
+  if (markerDestino) markerDestino.remove();
+  
+  const bounds = new maplibregl.LngLatBounds();
+  
+  if (lugarOrigen) {
+    const el = document.createElement('div');
+    el.innerHTML = '<div style="width: 24px; height: 24px; background: #22c55e; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>';
+    markerOrigen = new maplibregl.Marker({ element: el })
+      .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
+      .addTo(mapaCliente);
+    bounds.extend([lugarOrigen.lng, lugarOrigen.lat]);
+  }
+  
+  if (lugarDestino) {
+    const el = document.createElement('div');
+    el.innerHTML = '<div style="width: 24px; height: 24px; background: #ef4444; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>';
+    markerDestino = new maplibregl.Marker({ element: el })
+      .setLngLat([lugarDestino.lng, lugarDestino.lat])
+      .addTo(mapaCliente);
+    bounds.extend([lugarDestino.lng, lugarDestino.lat]);
+  }
+  
+  if (lugarOrigen && lugarDestino) {
+    mapaCliente.fitBounds(bounds, { padding: 100, duration: 1000 });
+    dibujarRuta();
+  }
+}
+
+async function dibujarRuta() {
+  if (!lugarOrigen || !lugarDestino) return;
+  
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if (data.routes && data.routes[0]) {
+      const route = data.routes[0].geometry;
+      
+      if (mapaCliente.getSource('route')) {
+        mapaCliente.getSource('route').setData({
+          type: 'Feature',
+          geometry: route
+        });
+      } else {
+        mapaCliente.addSource('route', {
+          type: 'geojson',
+          data: { type: 'Feature', geometry: route }
+        });
+        
+        mapaCliente.addLayer({
+          id: 'route-line',
+          type: 'line',
+          source: 'route',
+          paint: {
+            'line-color': '#2563eb',
+            'line-width': 4,
+            'line-opacity': 0.8
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error('Error dibujando ruta:', err);
+  }
+}
 
 // ==========================================
-// INTERCAMBIAR ORIGEN Y DESTINO
+// AUTOCOMPLETE MEJORADO - TIPO UBER
 // ==========================================
+function setupAutocomplete() {
+  const inputOrigen = document.getElementById('origen');
+  const inputDestino = document.getElementById('destino');
+  
+  // Origen
+  inputOrigen.addEventListener('input', (e) => {
+    clearTimeout(timerOrigen);
+    const query = e.target.value.trim();
+    
+    // Cancelar búsqueda anterior si existe
+    if (abortController) abortController.abort();
+    
+    if (query.length < CONFIG.MIN_CHARS) {
+      ocultarSugerencias('sugerenciasOrigen');
+      return;
+    }
+    
+    // Debounce: esperar a que el usuario deje de escribir
+    timerOrigen = setTimeout(() => {
+      buscarDirecciones(query, 'sugerenciasOrigen', (resultado) => {
+        inputOrigen.value = formatearDireccionCorta(resultado);
+        setOrigen(resultado);
+      });
+    }, CONFIG.DEBOUNCE_MS);
+  });
+  
+  // Destino
+  inputDestino.addEventListener('input', (e) => {
+    clearTimeout(timerDestino);
+    const query = e.target.value.trim();
+    
+    if (abortController) abortController.abort();
+    
+    if (query.length < CONFIG.MIN_CHARS) {
+      ocultarSugerencias('sugerenciasDestino');
+      return;
+    }
+    
+    timerDestino = setTimeout(() => {
+      buscarDirecciones(query, 'sugerenciasDestino', (resultado) => {
+        inputDestino.value = formatearDireccionCorta(resultado);
+        setDestino(resultado);
+      });
+    }, CONFIG.DEBOUNCE_MS);
+  });
+  
+  // Cerrar sugerencias al hacer click fuera
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.location-input-wrapper')) {
+      ocultarSugerencias('sugerenciasOrigen');
+      ocultarSugerencias('sugerenciasDestino');
+    }
+  });
+}
+
+async function buscarDirecciones(query, containerId, callback) {
+  const container = document.getElementById(containerId);
+  
+  // Mostrar loading
+  container.innerHTML = '<div class="loading-suggestions">Buscando...</div>';
+  container.classList.add('visible');
+  
+  abortController = new AbortController();
+  
+  try {
+    // Usar focus.point para resultados más relevantes (tipo Uber)
+    // Si tenemos geolocalización, usarla; si no, usar centro de Córdoba
+    const center = mapaCliente ? mapaCliente.getCenter() : { lng: -64.19, lat: -31.42 };
+    
+    const url = `${CONFIG.GEOCODING_URL}?format=json&limit=5&countrycodes=ar&addressdetails=1&accept-language=es&bounded=1&viewbox=${center.lng - 0.5},${center.lat - 0.5},${center.lng + 0.5},${center.lat + 0.5}&q=${encodeURIComponent(query)}`;
+    
+    const res = await fetch(url, { 
+      signal: abortController.signal,
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    if (!res.ok) throw new Error('Error en búsqueda');
+    
+    const data = await res.json();
+    
+    if (!data || data.length === 0) {
+      container.innerHTML = '<div class="loading-suggestions">No se encontraron resultados</div>';
+      return;
+    }
+    
+    // Renderizar sugerencias
+    container.innerHTML = '';
+    data.forEach((item, index) => {
+      const div = document.createElement('div');
+      div.className = 'suggestion-item';
+      div.innerHTML = `
+        <div class="suggestion-icon">📍</div>
+        <div class="suggestion-text">
+          <div class="suggestion-main">${formatearDireccionCorta(item)}</div>
+          <div class="suggestion-secondary">${formatearDireccionCompleta(item)}</div>
+        </div>
+      `;
+      
+      div.addEventListener('click', () => {
+        callback(item);
+        container.classList.remove('visible');
+      });
+      
+      container.appendChild(div);
+    });
+    
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('Error buscando direcciones:', err);
+      container.innerHTML = '<div class="loading-suggestions">Error al buscar</div>';
+    }
+  }
+}
+
+function formatearDireccionCorta(item) {
+  if (!item || !item.display_name) return '';
+  const parts = item.display_name.split(',').map(p => p.trim());
+  return parts[0] || 'Dirección';
+}
+
+function formatearDireccionCompleta(item) {
+  if (!item || !item.display_name) return '';
+  let addr = item.display_name;
+  // Remover país y provincia para hacerlo más corto
+  addr = addr.replace(/, Argentina$/, '').replace(/, Córdoba$/, '');
+  const parts = addr.split(',').map(p => p.trim());
+  // Devolver todo excepto la primera línea (que va en suggestion-main)
+  return parts.slice(1, 3).join(', ') || parts[1] || '';
+}
+
+function ocultarSugerencias(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('visible');
+}
+
+function setOrigen(item) {
+  lugarOrigen = {
+    direccion: item.display_name,
+    lat: parseFloat(item.lat),
+    lng: parseFloat(item.lon)
+  };
+  actualizarMapa();
+  
+  // Auto-focus a destino
+  document.getElementById('destino').focus();
+}
+
+function setDestino(item) {
+  lugarDestino = {
+    direccion: item.display_name,
+    lat: parseFloat(item.lat),
+    lng: parseFloat(item.lon)
+  };
+  actualizarMapa();
+}
+
 function intercambiarOrigenDestino() {
   const inputOrigen = document.getElementById('origen');
   const inputDestino = document.getElementById('destino');
   
-  const tempValor = inputOrigen.value;
+  // Intercambiar valores
+  const tempVal = inputOrigen.value;
   inputOrigen.value = inputDestino.value;
-  inputDestino.value = tempValor;
+  inputDestino.value = tempVal;
   
+  // Intercambiar datos
   const tempLugar = lugarOrigen;
   lugarOrigen = lugarDestino;
   lugarDestino = tempLugar;
   
-  inputOrigen.style.backgroundColor = '#e3f2fd';
-  inputDestino.style.backgroundColor = '#e3f2fd';
-  
+  // Feedback visual
+  inputOrigen.style.background = '#e3f2fd';
+  inputDestino.style.background = '#e3f2fd';
   setTimeout(() => {
-    inputOrigen.style.backgroundColor = '';
-    inputDestino.style.backgroundColor = '';
-  }, 400);
+    inputOrigen.style.background = '';
+    inputDestino.style.background = '';
+  }, 300);
   
+  actualizarMapa();
   if (navigator.vibrate) navigator.vibrate(20);
-  
-  notifSystem.show('↔️ Intercambiado', 'Origen y destino invertidos', 'success', 2000);
-  
-  guardarEstadoLocal();
-  
-  // Actualizar mapa si existe
-  if (mapaCliente && lugarOrigen && lugarDestino) {
-    actualizarMarcadoresMapa();
-    dibujarRutaOSRM();
-  }
 }
 
 // ==========================================
-// UI DE BOTONES POST-COTIZACIÓN
-// ==========================================
-function mostrarBotonesPostCotizacion() {
-  const btnConfirmar = document.getElementById("btnConfirmarViaje");
-  const btnWhatsapp = document.getElementById("btnWhatsappReserva");
-
-  if (btnConfirmar) btnConfirmar.style.display = "flex";
-  if (btnWhatsapp) btnWhatsapp.style.display = "flex";
-}
-
-function ocultarBotonesPostCotizacion() {
-  const btnConfirmar = document.getElementById("btnConfirmarViaje");
-  const btnWhatsapp = document.getElementById("btnWhatsappReserva");
-
-  if (btnConfirmar) btnConfirmar.style.display = "none";
-  if (btnWhatsapp) btnWhatsapp.style.display = "none";
-}
-
-function setButtonLoading(buttonId, textId, loadingText) {
-  const btn = document.getElementById(buttonId);
-  const text = document.getElementById(textId);
-
-  if (!btn || !text) return;
-
-  btn.disabled = true;
-  btn.classList.add("btn-loading");
-  btn.dataset.originalText = text.innerHTML;
-  text.innerHTML = `<span class="spinner"></span> ${loadingText}`;
-}
-
-function clearButtonLoading(buttonId, textId) {
-  const btn = document.getElementById(buttonId);
-  const text = document.getElementById(textId);
-
-  if (!btn || !text) return;
-
-  btn.disabled = false;
-  btn.classList.remove("btn-loading");
-
-  if (btn.dataset.originalText) {
-    text.innerHTML = btn.dataset.originalText;
-  }
-}
-
-// ==========================================
-// SELECTOR DE SERVICIOS
+// SERVICIOS
 // ==========================================
 function seleccionarServicio(servicio) {
   servicioSeleccionado = servicio;
-
-  document.querySelectorAll('.servicio-card').forEach(c => {
-    c.classList.remove('activo');
-  });
-
-  const cardSeleccionada = document.getElementById(`card-${servicio}`);
-  if (cardSeleccionada) {
-    cardSeleccionada.classList.add('activo');
-  }
   
-  const ahora = new Date();
-
-  if (servicio === "IDA_ESCOLAR" || servicio === "IDA_Y_VUELTA_INMEDIATA") {
-    actualizarHoraServicio(servicio, formatearTextoBoton(ahora));
-  }
-
-  const campoIda = document.getElementById('campo-fecha-ida');
-  const campoVuelta = document.getElementById('campo-fecha-vuelta');
-  const campoEspera = document.getElementById('campo-espera');
-
-  const tituloHorarioIda = document.getElementById('tituloHorarioIda');
-  const labelHorarioIda = document.getElementById('labelHorarioIda');
-
-  if (campoIda) campoIda.style.display = 'none';
-  if (campoVuelta) campoVuelta.style.display = 'none';
-  if (campoEspera) campoEspera.style.display = 'none';
-
+  // Actualizar UI
+  document.querySelectorAll('.servicio-card').forEach(c => c.classList.remove('activo'));
+  document.getElementById(`card-${servicio}`)?.classList.add('activo');
+  
+  // Mostrar/ocultar opciones adicionales
+  const opcionesEspera = document.getElementById('opcionesEspera');
+  const opcionesFecha = document.getElementById('opcionesFecha');
+  
+  opcionesEspera.classList.remove('visible');
+  opcionesFecha.classList.remove('visible');
+  
   if (servicio === 'IDA_Y_VUELTA_INMEDIATA') {
-    if (campoEspera) campoEspera.style.display = 'block';
-  }
-
-  if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
-    if (campoIda) campoIda.style.display = 'block';
-    if (campoVuelta) campoVuelta.style.display = 'block';
-
-    if (tituloHorarioIda) tituloHorarioIda.textContent = '📅 Horario de IDA';
-    if (labelHorarioIda) labelHorarioIda.textContent = 'Fecha y hora de ida';
-
+    opcionesEspera.classList.add('visible');
+  } else if (servicio === 'IDA_MAS_VUELTA_PROGRAMADA') {
+    opcionesFecha.classList.add('visible');
     sugerirHorariosEscolares();
   }
-
-  if (servicio === "OTROS_SERVICIOS") {
-    notifSystem.show("Otros servicios", "Próximamente vas a poder elegir más opciones.", "info", 2500);
-  }
-
-  const descripciones = {
-    'IDA_ESCOLAR': {
-      titulo: 'Ida al destino',
-      desc: 'El chofer va de su base a tu domicilio y te lleva al destino. Solo pagás el recorrido efectivo.'
-    },
-    'VUELTA_ESCOLAR': {
-      titulo: 'Vuelta a domicilio',
-      desc: 'El chofer va de su base al destino, te recoge y te trae a tu domicilio.'
-    },
-    'IDA_Y_VUELTA_INMEDIATA': {
-      titulo: 'Viaje redondo inmediato',
-      desc: 'Incluye 30 min de espera. El chofer te espera en el destino y vuelven juntos.'
-    },
-    'IDA_MAS_VUELTA_PROGRAMADA': {
-      titulo: 'Dos viajes programados',
-      desc: 'Primero elegí el horario de ida y luego el de regreso.'
-    }
-  };
-
-  const info = descripciones[servicio];
-  if (info) {
-    notifSystem.show(info.titulo, info.desc, 'info', 3500);
-  }
-
-  guardarEstadoLocal();
-}  
-
-function actualizarHoraServicio(servicio, textoHora) {
-  const horaDiv = document.getElementById(`hora-${servicio}`);
-  if (!horaDiv) return;
-
-  horaDiv.style.display = "block";
-  horaDiv.textContent = `🕒 ${textoHora}`;
+  
+  // Resetear cotización al cambiar servicio
+  resetearCotizacion();
 }
 
 function setTiempoEspera(minutos) {
   tiempoEsperaSeleccionado = minutos;
-  const inputEspera = document.getElementById('tiempoEsperaMin');
-  if (inputEspera) {
-    inputEspera.value = minutos;
-  }
-  
   document.querySelectorAll('.tiempo-btn').forEach(b => b.classList.remove('activo'));
-  const btnSeleccionado = document.getElementById(`espera-${minutos}`);
-  if (btnSeleccionado) {
-    btnSeleccionado.classList.add('activo');
-  }
-  
-  const minutosBase = 30;
-  const costoExtraPorMin = 300;
-  const extra = Math.max(0, minutos - minutosBase) * costoExtraPorMin;
-  
-  if (extra > 0) {
-    notifSystem.show(
-      'Tiempo de espera extendido',
-      `+$${extra.toLocaleString('es-AR')} por ${minutos - minutosBase} minutos adicionales`,
-      'info',
-      2500
-    );
-  }
+  document.getElementById(`espera-${minutos}`)?.classList.add('activo');
+}
+
+function setFechasMinimas() {
+  const ahora = new Date();
+  const minDate = ahora.toISOString().slice(0, 16);
+  document.getElementById('fechaHora').min = minDate;
+  document.getElementById('fechaHoraVuelta').min = minDate;
 }
 
 function sugerirHorariosEscolares() {
-  const ahora = new Date();
-
-  const ida = new Date(ahora);
-  ida.setDate(ida.getDate() + 1);
-  ida.setHours(7, 30, 0, 0);
-
-  const vuelta = new Date(ahora);
-  vuelta.setDate(vuelta.getDate() + 1);
+  const manana = new Date();
+  manana.setDate(manana.getDate() + 1);
+  manana.setHours(7, 30, 0, 0);
+  
+  const vuelta = new Date(manana);
   vuelta.setHours(16, 0, 0, 0);
-
-  const horaIda = formatearFechaInput(ida);
-  const horaVuelta = formatearFechaInput(vuelta);
-
-  const inputFechaHora = document.getElementById('fechaHora');
-  const inputFechaHoraVuelta = document.getElementById('fechaHoraVuelta');
-
-  if (inputFechaHora && !inputFechaHora.value) {
-    inputFechaHora.value = horaIda;
-    actualizarTextoFecha();
-  }
-
-  if (inputFechaHoraVuelta && !inputFechaHoraVuelta.value) {
-    inputFechaHoraVuelta.value = horaVuelta;
-    actualizarTextoFechaVuelta();
-  }
-
-  notifSystem.show(
-    'Horarios sugeridos',
-    'Primero elegí la ida y después el regreso. Ya te dejamos una base sugerida.',
-    'info',
-    5000
-  );
-}
-
-function abrirSelectorFechaVuelta() {
-  const input = document.getElementById('fechaHoraVuelta');
-  if (!input) return;
   
-  input.min = new Date().toISOString().slice(0, 16);
+  document.getElementById('fechaHora').value = formatearFechaInput(manana);
+  document.getElementById('fechaHoraVuelta').value = formatearFechaInput(vuelta);
   
-  try {
-    if (input.showPicker && typeof input.showPicker === 'function') {
-      input.showPicker();
-    } else {
-      input.focus();
-      input.click();
-    }
-  } catch (err) {
-    notifSystem.show('Selector', 'Tocá el campo para elegir fecha y hora', 'info', 3000);
-    input.focus();
-  }
-}
-
-function actualizarTextoFechaVuelta() {
-  const input = document.getElementById('fechaHoraVuelta');
-  const textoFecha = document.getElementById('textoFechaVuelta');
-  if (!input || !textoFecha) return;
-  
-  const fecha = new Date(input.value);
-  if (isNaN(fecha.getTime())) return;
-  
-  const texto = formatearTextoBoton(fecha);
-  textoFecha.textContent = texto;
-  
-  const inputIda = document.getElementById('fechaHora');
-  if (inputIda && inputIda.value) {
-    const fechaIda = new Date(inputIda.value);
-    actualizarHoraServicio("IDA_MAS_VUELTA_PROGRAMADA", textoFecha.textContent);
-
-    if (fecha <= fechaIda) {
-      notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3000);
-      input.value = '';
-      textoFecha.textContent = 'Seleccionar...';
-    }
-  }
-}
-
-async function enviarViaje() {
-  const origen = document.getElementById('origen')?.value?.trim() || '';
-  const destino = document.getElementById('destino')?.value?.trim() || '';
-  const precioTexto = document.getElementById('precioValor')?.textContent || '0';
-  const precio = Number(precioTexto.replace(/\./g, '').replace(',', '.'));
-
-  console.log("🚀 Enviando viaje a Supabase...");
-  setButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText", "Confirmando...");
-
-  try {
-    if (!lugarOrigen || !lugarDestino) {
-      notifSystem.show('Error', 'Seleccioná origen y destino válidos desde la lista', 'error', 3500);
-      mostrarError('Seleccioná direcciones válidas');
-      return;
-    }
-
-    if (!datosCotizacion) {
-      notifSystem.show('Error', 'Primero cotizá el viaje', 'error', 3000);
-      mostrarError('Primero calculá la tarifa');
-      return;
-    }
-
-    if (!origen || !destino || !precio || precio <= 0 || Number.isNaN(precio)) {
-      notifSystem.show('Error', 'Faltan datos para confirmar el viaje', 'error', 3500);
-      mostrarError('Datos incompletos para confirmar');
-      return;
-    }
-
-    const fechaHoraInput = document.getElementById('fechaHora')?.value || '';
-    const fechaHoraVueltaInput = document.getElementById('fechaHoraVuelta')?.value || '';
-    const tiempoEsperaInput = document.getElementById('tiempoEsperaMin')?.value || '';
-
-    const fechaHoraIda = fechaHoraInput ? new Date(fechaHoraInput).toISOString() : new Date().toISOString();
-    const fechaHoraVuelta = fechaHoraVueltaInput ? new Date(fechaHoraVueltaInput).toISOString() : null;
-    const tiempoEspera = tiempoEsperaInput ? Number(tiempoEsperaInput) : 30;
-
-    if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
-      if (!fechaHoraInput || !fechaHoraVueltaInput) {
-        notifSystem.show('Error', 'Debés seleccionar horario de ida y de vuelta', 'error', 3500);
-        mostrarError('Completá ida y vuelta programada');
-        return;
-      }
-
-      if (new Date(fechaHoraVuelta) <= new Date(fechaHoraIda)) {
-        notifSystem.show('Error', 'La vuelta debe ser posterior a la ida', 'error', 3500);
-        mostrarError('Horario de vuelta inválido');
-        return;
-      }
-    }
-
-    if (servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA') {
-      if (Number.isNaN(tiempoEspera) || tiempoEspera < 1) {
-        notifSystem.show('Error', 'Ingresá un tiempo de espera válido', 'error', 3500);
-        mostrarError('Tiempo de espera inválido');
-        return;
-      }
-    }
-
-    const payload = {
-      cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
-      telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
-      origen,
-      destino,
-      origen_lat: Number(lugarOrigen?.lat) || null,
-      origen_lng: Number(lugarOrigen?.lng) || null,
-      destino_lat: Number(lugarDestino?.lat) || null,
-      destino_lng: Number(lugarDestino?.lng) || null,
-      precio: Number(precio) || 0,
-      servicio: servicioSeleccionado || 'IDA_ESCOLAR',
-      fecha_hora: fechaHoraIda,
-      fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA' ? fechaHoraVuelta : null,
-      tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? Number(tiempoEspera) || 0 : null,
-      estado: "DISPONIBLE",
-      notas: null
-    };
-
-    console.log("📦 Payload viaje limpio:", payload);
-    console.log("🔥 JSON FINAL:", JSON.stringify(payload));
-    
-    const { data, error } = await window.supabaseInsert('viajes', payload);
-
-    if (error) {
-      console.error("❌ Error Supabase:", error);
-      notifSystem.show('Error', error.message || 'No se pudo guardar el viaje', 'error', 4000);
-      mostrarError(error.message || 'No se pudo guardar el viaje');
-      return;
-    }
-
-    console.log("✅ Viaje guardado:", data);
-
-    notifSystem.show('¡Listo!', 'Viaje solicitado correctamente 🚐', 'success', 3500);
-    ocultarError();
-
-    const btnConfirmar = document.getElementById("btnConfirmarViaje");
-    if (btnConfirmar) {
-      btnConfirmar.disabled = true;
-      btnConfirmar.style.opacity = "0.7";
-    }
-
-  } catch (error) {
-    console.error('❌ Error en enviarViaje:', error);
-    notifSystem.show('Error', 'No se pudo confirmar el viaje', 'error', 5000);
-    mostrarError('No se pudo confirmar el viaje');
-  } finally {
-    clearButtonLoading("btnConfirmarViaje", "btnConfirmarViajeText");
-  }
-}
-
-// ==========================================
-// MAPA Y RUTA CON ANIMACIÓN
-// ==========================================
-async function buscarDireccion(query) {
-  if (!query || query.trim().length < 3) return [];
-
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(query)}`;
-
-  console.log("🔎 Buscando dirección:", query);
-
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "Accept": "application/json",
-        "Accept-Language": "es-AR"
-      }
-    });
-
-    console.log("📡 Status Nominatim:", res.status);
-
-    if (!res.ok) {
-      console.warn("⚠️ Nominatim bloqueó:", res.status);
-      return [];
-    }
-
-    const data = await res.json();
-
-    console.log("✅ Resultados Nominatim:", data);
-
-    return Array.isArray(data) ? data : [];
-
-  } catch (err) {
-    console.error("❌ Error fetch Nominatim:", err);
-    return [];
-  }
-}
-
-function formatearDireccionCorta(r) {
-  if (!r) return "";
-  const texto = (r.display_name || "").trim();
-  if (!texto) return "Dirección";
-  const partes = texto.split(",").map(p => p.trim()).filter(Boolean);
-  const linea1 = partes[0] || "Dirección";
-  const linea2 = partes.length >= 3 ? partes[2] : (partes[1] || "");
-  return linea2 ? `${linea1} · ${linea2}` : linea1;
-}
-
-function formatearDireccionCompleta(r) {
-  if (!r || !r.display_name) return "Dirección no válida";
-  let direccion = r.display_name.trim();
-  direccion = direccion.replace(/,\s*Córdoba,\s*Argentina$/i, '');
-  direccion = direccion.replace(/,\s*Argentina$/i, '');
-  direccion = direccion.replace(/,\s*Córdoba$/i, '');
-  direccion = direccion.charAt(0).toUpperCase() + direccion.slice(1);
-  return direccion;
-}
-
-function ocultarSugerencias() {
-  const o = document.getElementById("sugerenciasOrigen");
-  const d = document.getElementById("sugerenciasDestino");
-  if (o) o.style.display = "none";
-  if (d) d.style.display = "none";
-}
-
-function initMapaCliente() {
-  if (mapaCliente) return;
-
-  const mapaDiv = document.getElementById("mapaRuta");
-  if (!mapaDiv) return;
-
-  mapaDiv.style.display = "block";
-
-  mapaCliente = new maplibregl.Map({
-    container: "map",
-    style: {
-      "version": 8,
-      "sources": {
-        "osm": {
-          "type": "raster",
-          "tiles": [
-            "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          ],
-          "tileSize": 256,
-          "attribution": "© OpenStreetMap contributors"
-        }
-      },
-      "layers": [
-        { "id": "osm", "type": "raster", "source": "osm" }
-      ]
-    },
-    center: [-64.19, -31.42],
-    zoom: 12,
-    attributionControl: false
-  });
-  
-  mapaCliente.addControl(new maplibregl.AttributionControl({
-    compact: true
-  }), 'bottom-right');
-
-  // Resize handler para responsive
-  window.addEventListener('resize', () => {
-    if (mapaCliente) {
-      setTimeout(() => mapaCliente.resize(), 100);
-    }
-  });
-}
-
-function actualizarMarcadoresMapa() {
-  if (!mapaCliente) return;
-  
-  // Remover marcadores anteriores
-  if (markerOrigen) markerOrigen.remove();
-  if (markerDestino) markerDestino.remove();
-  
-  // Crear marcador origen (VERDE con punto blanco centro)
-  if (lugarOrigen) {
-    const elOrigen = document.createElement('div');
-    elOrigen.innerHTML = `
-      <div style="
-        width: 24px; 
-        height: 24px; 
-        background: #22c55e; 
-        border-radius: 50%; 
-        border: 3px solid white; 
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <div style="
-          width: 8px;
-          height: 8px;
-          background: white;
-          border-radius: 50%;
-        "></div>
-      </div>
-    `;
-    
-    markerOrigen = new maplibregl.Marker({ 
-      element: elOrigen, 
-      anchor: 'center'
-    })
-      .setLngLat([lugarOrigen.lng, lugarOrigen.lat])
-      .addTo(mapaCliente);
-  }
-  
-  // Crear marcador destino (ROJO con punto blanco centro)
-  if (lugarDestino) {
-    const elDestino = document.createElement('div');
-    elDestino.innerHTML = `
-      <div style="
-        width: 24px; 
-        height: 24px; 
-        background: #ef4444; 
-        border-radius: 50%; 
-        border: 3px solid white; 
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <div style="
-          width: 8px;
-          height: 8px;
-          background: white;
-          border-radius: 50%;
-        "></div>
-      </div>
-    `;
-    
-    markerDestino = new maplibregl.Marker({ 
-      element: elDestino, 
-      anchor: 'center'
-    })
-      .setLngLat([lugarDestino.lng, lugarDestino.lat])
-      .addTo(mapaCliente);
-  }
-}
-async function dibujarRutaOSRM() {
-  if (!mapaCliente || !lugarOrigen || !lugarDestino) return;
-
-  // Limpiar capas anteriores
-  if (mapaCliente.getLayer("route-glow")) mapaCliente.removeLayer("route-glow");
-  if (mapaCliente.getLayer("route-line")) mapaCliente.removeLayer("route-line");
-  if (mapaCliente.getLayer("route-dash")) mapaCliente.removeLayer("route-dash");
-  if (mapaCliente.getLayer("point-animado")) mapaCliente.removeLayer("point-animado");
-  if (mapaCliente.getLayer("point-circle")) mapaCliente.removeLayer("point-circle");
-  if (mapaCliente.getSource("route")) mapaCliente.removeSource("route");
-  if (mapaCliente.getSource("point")) mapaCliente.removeSource("point");
-
-  // URL de OSRM para ruta REAL por calles (no línea recta)
-  const url = `https://router.project-osrm.org/route/v1/driving/` +
-    `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
-    `?overview=full&geometries=geojson&alternatives=false&steps=true`;
-
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-
-    if (!data.routes || !data.routes.length) {
-      console.warn("⚠️ OSRM no devolvió rutas");
-      fallbackLineaRecta(); // Por si falla, línea recta de respaldo
-      return;
-    }
-
-    const route = data.routes[0].geometry;
-    coordenadasRuta = route.coordinates;
-    rutaAnimacion = route;
-
-    // Agregar fuente de la ruta
-    mapaCliente.addSource("route", {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        geometry: route
-      }
-    });
-
-    // Glow exterior suave
-    mapaCliente.addLayer({
-      id: "route-glow",
-      type: "line",
-      source: "route",
-      layout: {
-        "line-join": "round",
-        "line-cap": "round"
-      },
-      paint: {
-        "line-color": "#60a5fa",
-        "line-width": 12,
-        "line-opacity": 0.3,
-        "line-blur": 4
-      }
-    });
-
-    // Línea principal AZUL (como en tu captura)
-    mapaCliente.addLayer({
-      id: "route-line",
-      type: "line",
-      source: "route",
-      layout: {
-        "line-join": "round",
-        "line-cap": "round"
-      },
-      paint: {
-        "line-color": "#2563eb",
-        "line-width": 5,
-        "line-opacity": 1
-      }
-    });
-
-    // Línea interior blanca punteada
-    mapaCliente.addLayer({
-      id: "route-dash",
-      type: "line",
-      source: "route",
-      layout: {
-        "line-join": "round",
-        "line-cap": "round"
-      },
-      paint: {
-        "line-color": "#ffffff",
-        "line-width": 2,
-        "line-opacity": 0.8,
-        "line-dasharray": [0.5, 2]
-      }
-    });
-
-    // CENTRAR MAPA automáticamente con padding generoso
-    const bounds = coordenadasRuta.reduce(
-      (b, c) => b.extend(c),
-      new maplibregl.LngLatBounds(coordenadasRuta[0], coordenadasRuta[0])
-    );
-
-    // Ajuste para que ambos puntos queden bien visibles centrados
-    mapaCliente.fitBounds(bounds, { 
-      padding: { top: 100, bottom: 100, left: 50, right: 50 },
-      duration: 1000,
-      maxZoom: 15,
-      bearing: 0,
-      pitch: 0
-    });
-
-    // IMPORTANTE: Actualizar marcadores DESPUÉS de calcular bounds pero ANTES de animar
-    actualizarMarcadoresMapa();
-    
-    // Iniciar animación después de un breve delay
-    setTimeout(() => {
-      iniciarAnimacionRuta();
-    }, 1200);
-
-  } catch (err) {
-    console.error("❌ Error dibujando ruta OSRM:", err);
-    fallbackLineaRecta();
-  }
-}
-
-// Función de respaldo por si falla OSRM
-function fallbackLineaRecta() {
-  if (!mapaCliente || !lugarOrigen || !lugarDestino) return;
-  
-  const coordinates = [
-    [lugarOrigen.lng, lugarOrigen.lat],
-    [lugarDestino.lng, lugarDestino.lat]
-  ];
-  
-  const line = {
-    type: "Feature",
-    geometry: {
-      type: "LineString",
-      coordinates: coordinates
-    }
-  };
-  
-  if (mapaCliente.getSource("route")) {
-    mapaCliente.getSource("route").setData(line);
-  } else {
-    mapaCliente.addSource("route", { type: "geojson", data: line });
-    mapaCliente.addLayer({
-      id: "route-line",
-      type: "line",
-      source: "route",
-      paint: { "line-color": "#2563eb", "line-width": 4 }
-    });
-  }
-  
-  const bounds = coordinates.reduce(
-    (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coordinates[0], coordinates[0])
-  );
-  
-  mapaCliente.fitBounds(bounds, { 
-    padding: { top: 80, bottom: 80, left: 40, right: 40 },
-    duration: 800
-  });
-}
-// ==========================================
-// ANIMACIÓN DEL PUNTO SOBRE LA RUTA
-// ==========================================
-function iniciarAnimacionRuta() {
-  if (!mapaCliente || !rutaAnimacion || !coordenadasRuta.length) return;
-  
-  // Crear fuente para el punto animado
-  const puntoInicial = coordenadasRuta[0];
-  
-  const pointGeoJSON = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: { bearing: 0 },
-        geometry: {
-          type: "Point",
-          coordinates: puntoInicial
-        }
-      }
-    ]
-  };
-  
-  mapaCliente.addSource("point", {
-    type: "geojson",
-    data: pointGeoJSON
-  });
-  
-  // Agregar capa del punto con icono de auto/bus
-  mapaCliente.addLayer({
-    id: "point-animado",
-    source: "point",
-    type: "symbol",
-    layout: {
-      "icon-image": "bus", // Usaremos un círculo con estilo si no hay icono
-      "icon-size": 1.5,
-      "icon-rotate": ["get", "bearing"],
-      "icon-rotation-alignment": "map",
-      "icon-allow-overlap": true,
-      "icon-ignore-placement": true
-    }
-  });
-  
-  // Si no hay icono de bus, usar un círculo
-  try {
-    mapaCliente.addLayer({
-      id: "point-circle",
-      source: "point",
-      type: "circle",
-      paint: {
-        "circle-radius": 8,
-        "circle-color": "#ff9800",
-        "circle-stroke-width": 3,
-        "circle-stroke-color": "#ffffff",
-        "circle-pitch-alignment": "map"
-      }
-    });
-  } catch(e) {
-    // Ya existe o error menor
-  }
-  
-  // Preparar datos para animación
-  const line = turf.lineString(coordenadasRuta);
-  const lineDistance = turf.length(line, { units: 'kilometers' });
-  const steps = Math.min(Math.floor(lineDistance * 20), 200); // 20 puntos por km, max 200
-  const arc = [];
-  
-  for (let i = 0; i <= steps; i++) {
-    const segment = turf.along(line, (lineDistance * i) / steps, { units: 'kilometers' });
-    arc.push(segment.geometry.coordinates);
-  }
-  
-  counterAnimacion = 0;
-  
-  // Mostrar botón de replay
-  const replayBtn = document.getElementById('replayAnimacion');
-  if (replayBtn) replayBtn.classList.add('visible');
-  
-  function animate() {
-    if (counterAnimacion >= arc.length - 1) {
-      // Animación completada
-      return;
-    }
-    
-    const start = arc[counterAnimacion];
-    const end = arc[counterAnimacion + 1];
-    
-    if (!start || !end) return;
-    
-    // Calcular bearing
-    const bearing = turf.bearing(turf.point(start), turf.point(end));
-    
-    pointGeoJSON.features[0].geometry.coordinates = start;
-    pointGeoJSON.features[0].properties.bearing = bearing;
-    
-    mapaCliente.getSource("point").setData(pointGeoJSON);
-    
-    counterAnimacion++;
-    animationId = requestAnimationFrame(animate);
-  }
-  
-  // Iniciar animación
-  animate();
-}
-
-function reproducirAnimacionRuta() {
-  if (animationId) cancelAnimationFrame(animationId);
-  counterAnimacion = 0;
-  iniciarAnimacionRuta();
-}
-
-function setOrigen(displayName, lat, lng) {
-  const latNum = Number(lat);
-  const lngNum = Number(lng);
-
-  if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
-    console.error("❌ setOrigen recibió coords inválidas", { displayName, lat, lng });
-    return;
-  }
-
-  lugarOrigen = {
-    direccion: displayName,
-    direccionCorta: formatearDireccionCorta({ display_name: displayName }),
-    lat: latNum,
-    lng: lngNum,
-    actualizadoEn: Date.now()
-  };
-
-  console.log("📍 ORIGEN SET", lugarOrigen);
-
-  if (!mapaCliente) initMapaCliente();
-  actualizarMarcadoresMapa();
-  dibujarRutaOSRM();
-}
-
-function setDestino(displayName, lat, lng) {
-  const latNum = Number(lat);
-  const lngNum = Number(lng);
-
-  if (!Number.isFinite(latNum) || !Number.isFinite(lngNum)) {
-    console.error("❌ setDestino recibió coords inválidas", { displayName, lat, lng });
-    return;
-  }
-
-  lugarDestino = {
-    direccion: displayName,
-    direccionCorta: formatearDireccionCorta({ display_name: displayName }),
-    lat: latNum,
-    lng: lngNum,
-    actualizadoEn: Date.now()
-  };
-
-  console.log("🎯 DESTINO SET", lugarDestino);
-
-  if (!mapaCliente) initMapaCliente();
-  actualizarMarcadoresMapa();
-  dibujarRutaOSRM();
-}
-
-// ==========================
-// AUTOCOMPLETE INPUTS
-// ==========================
-window.addEventListener("load", () => {
-  cargarEstadoLocal();
-  ocultarBotonesPostCotizacion();
-
-  const inputOrigen = document.getElementById("origen");
-  const inputDestino = document.getElementById("destino");
-
-  if (!inputOrigen || !inputDestino) {
-    console.error("❌ No se encontraron inputs origen/destino");
-    return;
-  }
-
-  let timerOrigen = null;
-  let timerDestino = null;
-
-  // ORIGEN
-  inputOrigen.addEventListener("input", () => {
-    clearTimeout(timerOrigen);
-    const texto = inputOrigen.value.trim();
-    lugarOrigen = null;
-
-    if (texto.length < 3) {
-      ocultarSugerencias();
-      return;
-    }
-    
-    timerOrigen = setTimeout(async () => {
-      const resultados = await buscarDireccion(texto);
-      mostrarSugerencias("sugerenciasOrigen", resultados, (r) => {
-        inputOrigen.value = formatearDireccionCompleta(r);
-        setOrigen(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-        ocultarSugerencias();
-      });
-    }, 380);
-  });
-
-  // DESTINO
-  inputDestino.addEventListener("input", () => {
-    clearTimeout(timerDestino);
-    const texto = inputDestino.value.trim();
-    lugarDestino = null;
-
-    if (texto.length < 3) {
-      ocultarSugerencias();
-      return;
-    }
-    
-    timerDestino = setTimeout(async () => {
-      const resultados = await buscarDireccion(texto);
-      mostrarSugerencias("sugerenciasDestino", resultados, (r) => {
-        inputDestino.value = formatearDireccionCompleta(r);
-        setDestino(r.display_name, parseFloat(r.lat), parseFloat(r.lon));
-        ocultarSugerencias();
-      });
-    }, 380);
-  });
-
-  // Cerrar sugerencias al tocar fuera
-  document.addEventListener("touchstart", (e) => {
-    if (!e.target.closest(".location-input-group") && !e.target.closest(".sugerencias")) {
-      ocultarSugerencias();
-    }
-  }, { passive: true });
-
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".location-input-group") && !e.target.closest(".sugerencias")) {
-      ocultarSugerencias();
-    }
-  });
-});
-  
-function mostrarSugerencias(contenedorId, resultados, callbackSeleccion) {
-  const contenedor = document.getElementById(contenedorId);
-  if (!contenedor) return;
-
-  contenedor.innerHTML = '';
-
-  if (!resultados || resultados.length === 0) {
-    contenedor.style.display = 'none';
-    return;
-  }
-
-  resultados.forEach(resultado => {
-    const item = document.createElement('div');
-    item.className = 'sugerencia-item';
-    item.textContent = formatearDireccionCorta(resultado);
-
-    let yaSeleccionado = false;
-
-    const seleccionar = () => {
-      if (yaSeleccionado) return;
-      yaSeleccionado = true;
-      callbackSeleccion(resultado);
-    };
-
-    item.addEventListener('click', seleccionar);
-
-    item.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      seleccionar();
-    }, { passive: false });
-
-    contenedor.appendChild(item);
-  });
-
-  contenedor.style.display = 'block';
-}
-  
-// ==========================================
-// FECHA Y HORA
-// ==========================================
-function seleccionarHoy() {
-  modoTiempo = 'ahora';
-  
-  const ahora = new Date();
-  const btn = document.getElementById('btnHoy');
-  
-  document.getElementById('fechaHora').value = formatearFechaInput(ahora);
-  
-  const hora = ahora.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  
-  btn.textContent = `🕒 Ahora ${hora}`;
-  
-  activarBoton('btnHoy');
-  desactivarBoton('btnProgramado');
-  
-  btn.classList.add('uber-activo');
-  document.getElementById('btnProgramado').classList.remove('uber-activo');
-  
-  notifSystem.show('Modo inmediato', 'Se usará la hora actual', 'success', 2000);
-}
-
-function setModo(modo) {
-  modoTiempo = modo;
-  
-  const botones = document.querySelectorAll('.modo-btn');
-  botones.forEach(btn => btn.classList.remove('activo'));
-  
-  if (modo === 'ahora') {
-    document.getElementById('btnHoy').classList.add('uber-activo');
-  } else {
-    document.getElementById('btnHoy').classList.remove('uber-activo');
-  }
-  
-  if (modo === 'ahora') {
-    botones[0].classList.add('activo');
-    const ahora = new Date();
-    document.getElementById('fechaHora').value = formatearFechaInput(ahora);
-    notifSystem.show('Modo inmediato', 'Se usará la hora actual', 'success', 2000);
-  } else {
-    botones[1].classList.add('activo');
-    document.getElementById('btnProgramado').textContent = 'Elegir fecha';
-    abrirSelectorFecha();
-  }
+  actualizarTextoFecha();
+  actualizarTextoFechaVuelta();
 }
 
 function abrirSelectorFecha() {
-  const input = document.getElementById('fechaHora');
-  if (!input) return;
-  
-  const ahora = new Date();
-  input.min = ahora.toISOString().slice(0, 16);
-  
-  if (!input.value) {
-    const manana = new Date(ahora);
-    manana.setDate(manana.getDate() + 1);
-    manana.setHours(7, 30, 0, 0);
-    input.value = formatearFechaInput(manana);
-    actualizarTextoFecha();
-  }
-  
-  try {
-    if (input.showPicker && typeof input.showPicker === 'function') {
-      input.showPicker();
-    } else {
-      input.focus();
-      input.click();
-    }
-  } catch (err) {
-    input.focus();
-  }
+  document.getElementById('fechaHora').showPicker?.() || document.getElementById('fechaHora').click();
+}
+
+function abrirSelectorFechaVuelta() {
+  document.getElementById('fechaHoraVuelta').showPicker?.() || document.getElementById('fechaHoraVuelta').click();
 }
 
 function actualizarTextoFecha() {
-  const input = document.getElementById('fechaHora');
-  const textoFecha = document.getElementById('textoFechaSeleccionada');
-  if (!input || !textoFecha) return;
-
-  const fecha = new Date(input.value);
-
-  if (isNaN(fecha.getTime())) {
-    textoFecha.textContent = 'Elegí fecha y hora...';
-    textoFecha.style.color = '#888';
-    return;
-  }
-
-  const opciones = { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
+  const val = document.getElementById('fechaHora').value;
+  if (!val) return;
+  
+  const fecha = new Date(val);
+  const texto = fecha.toLocaleString('es-AR', {
+    weekday: 'short',
     day: 'numeric',
+    month: 'short',
     hour: '2-digit',
     minute: '2-digit'
-  };
-
-  const texto = fecha.toLocaleDateString('es-AR', opciones);
-  textoFecha.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
-  textoFecha.style.color = '#1a1a1a';
-
-  if (servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA") {
-    actualizarHoraServicio("IDA_MAS_VUELTA_PROGRAMADA", formatearTextoBoton(fecha));
-  }
-
-  guardarEstadoLocal();
-}
-
-function activarBoton(id, texto) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  btn.classList.add('activo');
-  btn.classList.remove('inactivo');
-  if (texto) {
-    btn.textContent = texto;
-  }
-}
-
-function desactivarBoton(id) {
-  const btn = document.getElementById(id);
-  if (!btn) return;
-  btn.classList.remove('activo');
-  btn.classList.add('inactivo');
-}
-
-// ==========================================
-// MOSTRAR RESULTADO
-// ==========================================
-function mostrarResultado(res) {
-  datosCotizacion = res;
-
-  animarContador('precioValor', 0, res.precio, 800);
-
-  const kmCliente = parseFloat(res.kmDetalle?.kmFinalAplicado) || parseFloat(res.km) || 0;
-  const duracion = parseInt(res.duracionEstimadaMin) || 0;
-
-  const resultadoDiv = document.getElementById('resultado');
-  resultadoDiv.classList.add('visible');
-
-  let infoViaje = document.getElementById('infoViaje');
-  if (!infoViaje) {
-    infoViaje = document.createElement('div');
-    infoViaje.id = 'infoViaje';
-    infoViaje.style.marginTop = '8px';
-    infoViaje.style.fontSize = '0.85rem';
-    infoViaje.style.color = '#666';
-    infoViaje.style.textAlign = 'center';
-    resultadoDiv.insertBefore(infoViaje, resultadoDiv.children[1]);
-  }
-
-  const tiempoTexto = duracion > 60
-    ? `${Math.floor(duracion / 60)}h ${duracion % 60}min`
-    : `${duracion} min`;
-
-  infoViaje.innerHTML = `📏 ${kmCliente.toFixed(1)} km · ⏱️ ${tiempoTexto}`;
-
-  let recargosDiv = document.getElementById('recargosInfo');
-  if (!recargosDiv) {
-    recargosDiv = document.createElement('div');
-    recargosDiv.id = 'recargosInfo';
-    resultadoDiv.insertBefore(recargosDiv, resultadoDiv.firstChild);
-  }
-
-  let recargosHtml = '';
-
-  if (res.clima && res.clima.tipo === 'tormenta') {
-    recargosHtml += `
-      <div style="display:flex;align-items:center;justify-content:center;gap:6px;color:#666;font-size:0.8rem;margin-bottom:6px;">
-        <span>⛈️</span>
-        <span>Condiciones climáticas adversas</span>
-      </div>`;
-  }
-
-  if (res.esNocturno) {
-    recargosHtml += `
-      <div style="display:inline-flex;align-items:center;gap:4px;background:#1a237e;color:white;padding:4px 10px;border-radius:12px;font-size:0.75rem;">
-        🌙 Nocturno
-      </div>`;
-  }
-
-  if (recargosHtml) {
-    recargosDiv.style.cssText = 'margin:8px 0;padding:8px;background:#f5f5f5;border-radius:8px;text-align:center;';
-    recargosDiv.innerHTML = recargosHtml;
-    recargosDiv.style.display = "block";
-  } else {
-    recargosDiv.innerHTML = '';
-    recargosDiv.style.display = 'none';
-  }
-
-  // Mostrar mapa con ruta
-  const mapaDiv = document.getElementById("mapaRuta");
-  if (!mapaDiv) return;
-
-  mapaDiv.style.display = "block";
+  });
   
-  if (!mapaCliente) {
-    initMapaCliente();
-  }
+  document.getElementById('textoFechaIda').textContent = texto;
+}
+
+function actualizarTextoFechaVuelta() {
+  const val = document.getElementById('fechaHoraVuelta').value;
+  if (!val) return;
   
-  // Asegurar que los marcadores y ruta se actualicen
-  if (lugarOrigen && lugarDestino) {
-    actualizarMarcadoresMapa();
-    dibujarRutaOSRM();
-  }
-
-  setTimeout(() => {
-    resultadoDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 300);
-}
-
-// ==========================================
-// ANIMAR CONTADOR
-// ==========================================
-function animarContador(id, inicio, fin, duracion) {
-  const elemento = document.getElementById(id);
-  const incremento = (fin - inicio) / (duracion / 16);
-  let actual = inicio;
-
-  const timer = setInterval(() => {
-    actual += incremento;
-    if (actual >= fin) {
-      actual = fin;
-      clearInterval(timer);
-    }
-    elemento.textContent = Math.floor(actual).toLocaleString('es-AR');
-  }, 16);
-}
+  const fecha = new Date(val);
+  const texto = fecha.toLocaleString('es-AR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
   
-function resetCotizacionUI() {
-  isCalculating = false;
-  clearButtonLoading("btnCalcular", "btnCalcularText");
-}
-
-async function geocodificarDireccion(direccion) {
-  try {
-    if (!direccion || direccion.length < 4) return null;
-
-    const url = `https://nominatim.openstreetmap.org/search?` +
-      `format=json&limit=1&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(direccion)}`;
-
-    const res = await fetch(url, {
-      headers: {
-        "Accept": "application/json",
-        "Accept-Language": "es-AR"
-      }
-    });
-
-    if (!res.ok) return null;
-
-    const data = await res.json();
-
-    if (!data || !data.length) return null;
-
-    return {
-      direccion: data[0].display_name,
-      lat: parseFloat(data[0].lat),
-      lng: parseFloat(data[0].lon)
-    };
-
-  } catch (err) {
-    console.error("❌ Error geocodificando:", err);
-    return null;
+  document.getElementById('textoFechaVuelta').textContent = texto;
+  
+  // Validar que vuelta sea posterior a ida
+  const ida = new Date(document.getElementById('fechaHora').value);
+  if (fecha <= ida) {
+    alert('La vuelta debe ser posterior a la ida');
+    document.getElementById('fechaHoraVuelta').value = '';
+    document.getElementById('textoFechaVuelta').textContent = 'Seleccionar...';
   }
 }
 
 // ==========================================
-// CÁLCULO DE TARIFA
+// COTIZACIÓN - INTEGRACIÓN CORREGIDA CON SUPABASE
 // ==========================================
 async function calcularTarifa() {
   if (isCalculating) return;
-
-  const now = Date.now();
-  if (now - lastCotizacionAt < 2500) {
-    console.warn("⛔ Cotización bloqueada por anti-doble-disparo");
+  
+  // Validaciones
+  if (!lugarOrigen || !lugarDestino) {
+    if (!lugarOrigen) document.getElementById('origen').focus();
+    else document.getElementById('destino').focus();
+    
+    // Shake animation en el input vacío
     return;
   }
-  lastCotizacionAt = now;
   
-  if (navigator.vibrate) navigator.vibrate(30);
-
-  setButtonLoading("btnCalcular", "btnCalcularText", "Cotizando...");
-  ocultarBotonesPostCotizacion();
-
+  isCalculating = true;
+  const btn = document.getElementById('btnCotizar');
+  const btnText = document.getElementById('btnCotizarText');
+  
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span> Calculando...';
+  
   try {
-    if (!navigator.onLine) {
-      mostrarError("Sin conexión a internet");
-      resetCotizacionUI();
-      return;
-    }
-
-    if (!servicioSeleccionado) {
-      mostrarError("Seleccioná un tipo de servicio");
-      resetCotizacionUI();
-      return;
-    }
-
-    if (!lugarOrigen) {
-      const origenInput = document.getElementById("origen");
-      if (origenInput && origenInput.value) {
-        lugarOrigen = await geocodificarDireccion(origenInput.value);
-      }
-    }
-
-    if (!lugarDestino) {
-      const destinoInput = document.getElementById("destino");
-      if (destinoInput && destinoInput.value) {
-        lugarDestino = await geocodificarDireccion(destinoInput.value);
-      }
-    }
-
-    if (!lugarOrigen || !lugarDestino) {
-      mostrarError("Seleccioná direcciones válidas de la lista o escribí direcciones completas");
-      resetCotizacionUI();
-      return;
-    }
-
-    const origen = lugarOrigen?.direccion || "";
-    const destino = lugarDestino?.direccion || "";
-
-    if (!origen) {
-      mostrarError("Ingresá la dirección de origen");
-      document.getElementById("origen")?.focus();
-      resetCotizacionUI();
-      return;
-    }
-
-    if (!destino) {
-      mostrarError("Ingresá la dirección de destino");
-      document.getElementById("destino")?.focus();
-      resetCotizacionUI();
-      return;
-    }
-
-    let fechaHoraParaEnviar;
-    let fechaHoraVuelta = "";
-    let esperaMin = 0;
-
-    const esServicioInmediato = ["IDA_ESCOLAR", "IDA_Y_VUELTA_INMEDIATA"].includes(servicioSeleccionado);
-    const esServicioProgramado = servicioSeleccionado === "IDA_MAS_VUELTA_PROGRAMADA";
-
-    if (esServicioInmediato) {
-      fechaHoraParaEnviar = new Date().toISOString();
-
-      if (servicioSeleccionado === "IDA_Y_VUELTA_INMEDIATA") {
-        esperaMin = parseInt(document.getElementById("tiempoEsperaMin")?.value || "30", 10);
-        if (isNaN(esperaMin) || esperaMin < 0) esperaMin = 30;
-      }
-
-    } else if (esServicioProgramado) {
-      const fechaHoraInput = document.getElementById("fechaHora")?.value;
-
-      if (!fechaHoraInput) {
-        mostrarError("Seleccioná fecha y hora de ida");
-        abrirSelectorFecha();
-        resetCotizacionUI();
-        return;
-      }
-
-      if (new Date(fechaHoraInput) < new Date()) {
-        mostrarError("La fecha no puede ser pasada");
-        resetCotizacionUI();
-        return;
-      }
-
-      fechaHoraParaEnviar = fechaHoraInput;
-
-      fechaHoraVuelta = document.getElementById("fechaHoraVuelta")?.value || "";
-      if (!fechaHoraVuelta) {
-        mostrarError("Seleccioná fecha y hora de VUELTA");
-        abrirSelectorFechaVuelta();
-        resetCotizacionUI();
-        return;
-      }
-
-      if (new Date(fechaHoraVuelta) < new Date(fechaHoraParaEnviar)) {
-        mostrarError("La vuelta no puede ser antes que la ida");
-        resetCotizacionUI();
-        return;
-      }
-
-    } else {
-      fechaHoraParaEnviar = new Date().toISOString();
-    }
-
-    guardarEstadoLocal();
-    ocultarError();
-    isCalculating = true;
-
-    const mensajeCarga = esServicioProgramado
-      ? "Cotizando ida y vuelta..."
-      : "Consultando precio...";
-
-    const calcToast = notifSystem.show("Calculando ruta", mensajeCarga, "info", 15000);
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
-    const origenLat = Number(lugarOrigen?.lat);
-    const origenLng = Number(lugarOrigen?.lng);
-    const destinoLat = Number(lugarDestino?.lat);
-    const destinoLng = Number(lugarDestino?.lng);
-
-    if (!Number.isFinite(origenLat) || !Number.isFinite(origenLng) || !Number.isFinite(destinoLat) || !Number.isFinite(destinoLng)) {
-      mostrarError("Las coordenadas del origen o destino no son válidas");
-      resetCotizacionUI();
-      return;
-    }
-
+    // Preparar payload según el servicio
     const payload = {
       servicio: servicioSeleccionado,
-      origen,
-      destino,
-      origen_lat: origenLat,
-      origen_lng: origenLng,
-      destino_lat: destinoLat,
-      destino_lng: destinoLng,
-      fechaHora: fechaHoraParaEnviar,
-      tiempoEsperaMin: esperaMin
+      origen: lugarOrigen.direccion,
+      destino: lugarDestino.direccion,
+      origen_lat: lugarOrigen.lat,
+      origen_lng: lugarOrigen.lng,
+      destino_lat: lugarDestino.lat,
+      destino_lng: lugarDestino.lng,
+      fechaHora: new Date().toISOString(),
+      tiempoEsperaMin: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? tiempoEsperaSeleccionado : 0
     };
-
-    console.log("📦 PAYLOAD COTIZAR", payload);
-
+    
+    // Si es programado, usar la fecha seleccionada
+    if (servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA') {
+      const fechaIda = document.getElementById('fechaHora').value;
+      if (fechaIda) payload.fechaHora = new Date(fechaIda).toISOString();
+      
+      const fechaVuelta = document.getElementById('fechaHoraVuelta').value;
+      if (fechaVuelta) payload.fechaHoraVuelta = new Date(fechaVuelta).toISOString();
+    }
+    
+    console.log('📤 Enviando a cotizar:', payload);
+    
     const response = await fetch(CONFIG.COTIZAR_URL, {
-      method: "POST",
-      signal: controller.signal,
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "apikey": SUPABASE_KEY,
-        "Authorization": "Bearer " + SUPABASE_KEY
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
       },
       body: JSON.stringify(payload)
     });
-
-    clearTimeout(timeout);
-
-    let res = null;
-    try {
-      res = await response.json();
-    } catch (e) {
-      res = null;
-    }
-
-    calcToast.remove();
-    isCalculating = false;
-    clearButtonLoading("btnCalcular", "btnCalcularText");
-
+    
     if (!response.ok) {
-      const mensaje = res?.error || res?.message || "Error en la cotización";
-      notifSystem.show("Error", mensaje, "error", 6000);
-      mostrarError(mensaje);
-      return;
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Error HTTP ${response.status}`);
     }
-
-    if (!res) {
-      notifSystem.show("Error", "Respuesta inválida del servidor", "error", 6000);
-      mostrarError("Respuesta inválida del servidor");
-      return;
-    }
-
-    mostrarResultado(res);
-    mostrarBotonesPostCotizacion();
-
-    const notifServicio = {
-      IDA_ESCOLAR: { titulo: "Ida cotizada", desc: `Precio: $${res.precio?.toLocaleString("es-AR")}` },
-      IDA_Y_VUELTA_INMEDIATA: { titulo: "Viaje redondo listo", desc: `Total: $${res.precio?.toLocaleString("es-AR")}` },
-      IDA_MAS_VUELTA_PROGRAMADA: { titulo: "Combo ida+vuelta", desc: `Total: $${res.precio?.toLocaleString("es-AR")}` }
-    };
-
-    const n = notifServicio[servicioSeleccionado];
-    if (n) {
-      notifSystem.show(n.titulo, n.desc, "success", 4000);
-    }
-
-  } catch (error) {
-    console.error("❌ Error general en calcularTarifa:", error);
-
-    if (String(error?.name || "").includes("AbortError")) {
-      mostrarError("Timeout: el servidor tardó demasiado");
-      notifSystem.show("Error", "El servidor no respondió (timeout)", "error", 6000);
-    } else {
-      mostrarError("Ocurrió un error inesperado al cotizar");
-      notifSystem.show("Error", "No se pudo completar la cotización", "error", 5000);
-    }
-
-    resetCotizacionUI();
+    
+    const resultado = await response.json();
+    console.log('📥 Respuesta cotización:', resultado);
+    
+    // Guardar datos y mostrar
+    datosCotizacion = resultado;
+    mostrarResultado(resultado);
+    
+  } catch (err) {
+    console.error('❌ Error cotizando:', err);
+    alert('Error al calcular la tarifa: ' + err.message);
+    
+    // Restaurar botón
+    btn.disabled = false;
+    btnText.textContent = '🚐 Cotizar viaje';
+  } finally {
     isCalculating = false;
   }
 }
 
-// ==========================================
-// WHATSAPP
-// ==========================================
-function reservarWhatsApp() {
-  setButtonLoading("btnWhatsappReserva", "btnWhatsappReservaText", "Abriendo WhatsApp...");
-
-  try {
-    if (!lugarOrigen || !lugarDestino) {
-      mostrarError('Seleccioná direcciones de la lista');
-      return;
-    }
-
-    const origen = lugarOrigen?.direccion || '';
-    const destino = lugarDestino?.direccion || '';
-    const fechaTexto = modoTiempo === 'ahora'
-      ? 'Ahora'
-      : document.getElementById('textoFechaSeleccionada')?.textContent || '';
-    const precio = document.getElementById('precioValor')?.textContent?.trim() || '0';
-
-    if (!datosCotizacion) {
-      notifSystem.show('Error', 'Primero calculá la tarifa', 'error', 3000);
-      return;
-    }
-
-    if (!origen || !destino || !fechaTexto || precio === '0') {
-      notifSystem.show('Datos incompletos', 'Revisá origen, destino, fecha o precio', 'warning', 3000);
-      return;
-    }
-
-    const kmCliente = parseFloat(datosCotizacion.kmDetalle?.kmFinalAplicado) || parseFloat(datosCotizacion.km) || 0;
-    const mapsRutaCompleta = datosCotizacion.enlaceMapsChofer || `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origen)}&destination=${encodeURIComponent(destino)}`;
-
-    notifSystem.show('Preparando reserva', 'Abriendo WhatsApp...', 'info', 2000);
-
-    const mensaje =
-      "*MIMI Transporte Escolar* 🚐\n\n" +
-      "📍 *Desde:* " + origen + "\n" +
-      "🎯 *Hasta:* " + destino + "\n\n" +
-      "🗺️ *Mapa:* " + mapsRutaCompleta + "\n\n" +
-      "⏰ *Cuándo:* " + fechaTexto + "\n" +
-      "💰 *Precio:* $" + precio + "\n" +
-      "📏 *Distancia:* " + kmCliente.toFixed(1) + "km · " + (datosCotizacion.duracionEstimadaMin || datosCotizacion.duracion || '—') + "min\n" +
-      "✅ ¿Confirmamos el viaje?";
-
-    window.open(`https://wa.me/5493517014863?text=${encodeURIComponent(mensaje)}`, '_blank');
-
-  } catch (error) {
-    console.error('❌ Error en reservarWhatsApp:', error);
-    notifSystem.show('Error', 'No se pudo abrir WhatsApp', 'error', 4000);
-  } finally {
-    clearButtonLoading("btnWhatsappReserva", "btnWhatsappReservaText");
-  }
-}
-
-// ==========================================  
-// UTILIDADES  
-// ==========================================  
-function guardarEstadoLocal() {
-  try {
-    const estado = {
-      origen: document.getElementById('origen')?.value || '',
-      destino: document.getElementById('destino')?.value || '',
-      fechaHora: document.getElementById('fechaHora')?.value || '',
-      fechaHoraVuelta: document.getElementById('fechaHoraVuelta')?.value || '',
-      servicio: servicioSeleccionado,
-      esperaMin: tiempoEsperaSeleccionado
-    };
-
-    localStorage.setItem('mimi_estado', JSON.stringify(estado));
-  } catch (e) {
-    console.warn('Error guardando estado', e);
-  }
-}
-
-function mostrarError(mensaje) {  
-  const el = document.getElementById('errorMsg');  
-  document.getElementById('errorText').textContent = mensaje;  
-  el.classList.add('visible');  
-  setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);  
-}  
+function mostrarResultado(data) {
+  // Actualizar overlay de resultado
+  document.getElementById('resultadoPrecio').textContent = `$${data.precio?.toLocaleString('es-AR') || 0}`;
+  document.getElementById('detalleKm').textContent = `${(data.km || 0).toFixed(1)} km`;
+  document.getElementById('detalleTiempo').textContent = `${data.duracionEstimadaMin || data.duracion || 0} min`;
   
-function ocultarError() {  
-  document.getElementById('errorMsg').classList.remove('visible');  
-}  
+  // Mostrar overlay
+  const overlay = document.getElementById('resultadoOverlay');
+  overlay.classList.add('visible');
+  
+  // Ocultar botón cotizar, mostrar confirmar
+  document.getElementById('btnCotizar').classList.add('hidden');
+  const btnConfirmar = document.getElementById('btnConfirmar');
+  btnConfirmar.classList.remove('hidden');
+  document.getElementById('precioDisplay').textContent = `$${data.precio?.toLocaleString('es-AR') || 0}`;
+}
 
+function aceptarCotizacion() {
+  document.getElementById('resultadoOverlay').classList.remove('visible');
+  document.getElementById('btnConfirmar').classList.remove('hidden');
+  document.getElementById('btnWhatsapp').classList.remove('hidden');
+}
+
+function resetearCotizacion() {
+  document.getElementById('btnCotizar').classList.remove('hidden');
+  document.getElementById('btnConfirmar').classList.add('hidden');
+  document.getElementById('btnWhatsapp').classList.add('hidden');
+  document.getElementById('resultadoOverlay').classList.remove('visible');
+  datosCotizacion = null;
+}
+
+// ==========================================
+// ENVÍO DE VIAJE
+// ==========================================
+async function enviarViaje() {
+  if (!datosCotizacion) return;
+  
+  const btn = document.getElementById('btnConfirmar');
+  btn.disabled = true;
+  
+  try {
+    const payload = {
+      cliente: null, // Se puede agregar formulario de contacto
+      telefono: null,
+      origen: lugarOrigen.direccion,
+      destino: lugarDestino.direccion,
+      origen_lat: lugarOrigen.lat,
+      origen_lng: lugarOrigen.lng,
+      destino_lat: lugarDestino.lat,
+      destino_lng: lugarDestino.lng,
+      precio: datosCotizacion.precio,
+      servicio: servicioSeleccionado,
+      fecha_hora: new Date().toISOString(),
+      fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA' 
+        ? new Date(document.getElementById('fechaHoraVuelta').value).toISOString() 
+        : null,
+      tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? tiempoEsperaSeleccionado : null,
+      estado: 'DISPONIBLE',
+      notas: null
+    };
+    
+    const { data, error } = await window.supabaseInsert('viajes', payload);
+    
+    if (error) throw error;
+    
+    alert('¡Viaje confirmado correctamente! Te contactaremos pronto.');
+    
+    // Resetear formulario
+    resetearFormulario();
+    
+  } catch (err) {
+    console.error('Error guardando viaje:', err);
+    alert('Error al confirmar: ' + (err.message || 'Error desconocido'));
+    btn.disabled = false;
+  }
+}
+
+function resetearFormulario() {
+  document.getElementById('origen').value = '';
+  document.getElementById('destino').value = '';
+  lugarOrigen = null;
+  lugarDestino = null;
+  
+  if (markerOrigen) markerOrigen.remove();
+  if (markerDestino) markerDestino.remove();
+  
+  resetearCotizacion();
+  
+  // Volver a seleccionar el primer servicio
+  seleccionarServicio('IDA_ESCOLAR');
+}
+
+function reservarWhatsApp(e) {
+  e.preventDefault();
+  
+  if (!datosCotizacion) return;
+  
+  const mensaje = `*MIMI Transporte Escolar* 🚐\n\n` +
+    `📍 *Desde:* ${lugarOrigen.direccion}\n` +
+    `🎯 *Hasta:* ${lugarDestino.direccion}\n\n` +
+    `💰 *Precio:* $${datosCotizacion.precio?.toLocaleString('es-AR')}\n` +
+    `📏 *Distancia:* ${datosCotizacion.km?.toFixed(1)}km\n` +
+    `⏱️ *Duración:* ${datosCotizacion.duracionEstimadaMin}min\n\n` +
+    `✅ ¿Confirmamos el viaje?`;
+  
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
+}
+
+// ==========================================
+// UTILIDADES
+// ==========================================
 function formatearFechaInput(fecha) {
   const pad = n => n.toString().padStart(2, '0');
   return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
 }
-
-function cargarEstadoLocal() {
-  try {
-    const estado = JSON.parse(localStorage.getItem('mimi_estado'));
-    if (!estado) return;
-
-    document.getElementById('origen').value = estado.origen || '';
-    document.getElementById('destino').value = estado.destino || '';
-    document.getElementById('fechaHora').value = estado.fechaHora || '';
-    document.getElementById('fechaHoraVuelta').value = estado.fechaHoraVuelta || '';
-
-    if (estado.servicio) {
-      seleccionarServicio(estado.servicio);
-    }
-
-    if (estado.esperaMin) {
-      setTiempoEspera(estado.esperaMin);
-    }
-
-    actualizarTextoFecha();
-    actualizarTextoFechaVuelta();
-
-  } catch (e) {
-    console.warn('Error cargando estado', e);
-  }
-}
-
-function formatearTextoBoton(fecha) {
-  return fecha.toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-}
-
 </script>
 </body>
 </html>
