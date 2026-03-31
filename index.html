@@ -2434,272 +2434,379 @@ function actualizarMarcadoresMapa() {
 async function dibujarRutaOSRM() {
   if (!mapaCliente || !lugarOrigen || !lugarDestino) return;
 
-  // Limpiar capas anteriores
-  if (mapaCliente.getLayer("route-glow")) mapaCliente.removeLayer("route-glow");
-  if (mapaCliente.getLayer("route-line")) mapaCliente.removeLayer("route-line");
-  if (mapaCliente.getLayer("route-dash")) mapaCliente.removeLayer("route-dash");
-  if (mapaCliente.getLayer("point-animado")) mapaCliente.removeLayer("point-animado");
-  if (mapaCliente.getLayer("point-circle")) mapaCliente.removeLayer("point-circle");
-  if (mapaCliente.getSource("route")) mapaCliente.removeSource("route");
-  if (mapaCliente.getSource("point")) mapaCliente.removeSource("point");
-
-  // URL de OSRM para ruta REAL por calles (no línea recta)
-  const url = `https://router.project-osrm.org/route/v1/driving/` +
-    `${lugarOrigen.lng},${lugarOrigen.lat};${lugarDestino.lng},${lugarDestino.lat}` +
-    `?overview=full&geometries=geojson&alternatives=false&steps=true`;
+  limpiarCapasRuta();
 
   try {
-    const res = await fetch(url);
-    const data = await res.json();
+    // Intento principal: generar una ruta visual "inteligente"
+    const route = construirRutaVisualCurva(
+      lugarOrigen.lng,
+      lugarOrigen.lat,
+      lugarDestino.lng,
+      lugarDestino.lat
+    );
 
-    if (!data.routes || !data.routes.length) {
-      console.warn("⚠️ OSRM no devolvió rutas");
-      fallbackLineaRecta(); // Por si falla, línea recta de respaldo
+    if (!route?.coordinates?.length || route.coordinates.length < 2) {
+      console.warn("⚠️ No se pudo construir ruta visual. Usando fallback.");
+      fallbackLineaRecta();
       return;
     }
 
-    const route = data.routes[0].geometry;
     coordenadasRuta = route.coordinates;
     rutaAnimacion = route;
 
-    // Agregar fuente de la ruta
-    mapaCliente.addSource("route", {
-      type: "geojson",
-      data: {
-        type: "Feature",
-        geometry: route
-      }
-    });
-
-    // Glow exterior suave
-    mapaCliente.addLayer({
-      id: "route-glow",
-      type: "line",
-      source: "route",
-      layout: {
-        "line-join": "round",
-        "line-cap": "round"
-      },
-      paint: {
-        "line-color": "#60a5fa",
-        "line-width": 12,
-        "line-opacity": 0.3,
-        "line-blur": 4
-      }
-    });
-
-    // Línea principal AZUL (como en tu captura)
-    mapaCliente.addLayer({
-      id: "route-line",
-      type: "line",
-      source: "route",
-      layout: {
-        "line-join": "round",
-        "line-cap": "round"
-      },
-      paint: {
-        "line-color": "#2563eb",
-        "line-width": 5,
-        "line-opacity": 1
-      }
-    });
-
-    // Línea interior blanca punteada
-    mapaCliente.addLayer({
-      id: "route-dash",
-      type: "line",
-      source: "route",
-      layout: {
-        "line-join": "round",
-        "line-cap": "round"
-      },
-      paint: {
-        "line-color": "#ffffff",
-        "line-width": 2,
-        "line-opacity": 0.8,
-        "line-dasharray": [0.5, 2]
-      }
-    });
-
-    // CENTRAR MAPA automáticamente con padding generoso
-    const bounds = coordenadasRuta.reduce(
-      (b, c) => b.extend(c),
-      new maplibregl.LngLatBounds(coordenadasRuta[0], coordenadasRuta[0])
-    );
-
-    // Ajuste para que ambos puntos queden bien visibles centrados
-    mapaCliente.fitBounds(bounds, { 
-      padding: { top: 100, bottom: 100, left: 50, right: 50 },
-      duration: 1000,
-      maxZoom: 15,
-      bearing: 0,
-      pitch: 0
-    });
-
-    // IMPORTANTE: Actualizar marcadores DESPUÉS de calcular bounds pero ANTES de animar
+    renderizarRutaEnMapa(route);
+    centrarMapaEnRuta(coordenadasRuta);
     actualizarMarcadoresMapa();
-    
-    // Iniciar animación después de un breve delay
+
     setTimeout(() => {
       iniciarAnimacionRuta();
-    }, 1200);
+    }, 900);
 
   } catch (err) {
-    console.error("❌ Error dibujando ruta OSRM:", err);
+    console.error("❌ Error dibujando ruta visual:", err);
     fallbackLineaRecta();
   }
 }
+  function limpiarCapasRuta() {
+  try {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
 
+    if (mapaCliente.getLayer("route-glow")) mapaCliente.removeLayer("route-glow");
+    if (mapaCliente.getLayer("route-line")) mapaCliente.removeLayer("route-line");
+    if (mapaCliente.getLayer("route-dash")) mapaCliente.removeLayer("route-dash");
+    if (mapaCliente.getLayer("point-animado")) mapaCliente.removeLayer("point-animado");
+    if (mapaCliente.getLayer("point-circle")) mapaCliente.removeLayer("point-circle");
+
+    if (mapaCliente.getSource("route")) mapaCliente.removeSource("route");
+    if (mapaCliente.getSource("point")) mapaCliente.removeSource("point");
+  } catch (e) {
+    console.warn("⚠️ limpiarCapasRuta:", e);
+  }
+}
+
+function renderizarRutaEnMapa(route) {
+  mapaCliente.addSource("route", {
+    type: "geojson",
+    data: {
+      type: "Feature",
+      geometry: route
+    }
+  });
+
+  mapaCliente.addLayer({
+    id: "route-glow",
+    type: "line",
+    source: "route",
+    layout: {
+      "line-join": "round",
+      "line-cap": "round"
+    },
+    paint: {
+      "line-color": "#60a5fa",
+      "line-width": 12,
+      "line-opacity": 0.3,
+      "line-blur": 4
+    }
+  });
+
+  mapaCliente.addLayer({
+    id: "route-line",
+    type: "line",
+    source: "route",
+    layout: {
+      "line-join": "round",
+      "line-cap": "round"
+    },
+    paint: {
+      "line-color": "#2563eb",
+      "line-width": 5,
+      "line-opacity": 1
+    }
+  });
+
+  mapaCliente.addLayer({
+    id: "route-dash",
+    type: "line",
+    source: "route",
+    layout: {
+      "line-join": "round",
+      "line-cap": "round"
+    },
+    paint: {
+      "line-color": "#ffffff",
+      "line-width": 2,
+      "line-opacity": 0.8,
+      "line-dasharray": [0.5, 2]
+    }
+  });
+}
+
+function centrarMapaEnRuta(coordenadas) {
+  if (!coordenadas?.length) return;
+
+  const bounds = coordenadas.reduce(
+    (b, c) => b.extend(c),
+    new maplibregl.LngLatBounds(coordenadas[0], coordenadas[0])
+  );
+
+  mapaCliente.fitBounds(bounds, {
+    padding: { top: 100, bottom: 100, left: 50, right: 50 },
+    duration: 1000,
+    maxZoom: 15,
+    bearing: 0,
+    pitch: 0
+  });
+}
+
+function construirRutaVisualCurva(lng1, lat1, lng2, lat2) {
+  const puntoA = [lng1, lat1];
+  const puntoB = [lng2, lat2];
+
+  const dx = lng2 - lng1;
+  const dy = lat2 - lat1;
+  const distancia = Math.sqrt(dx * dx + dy * dy);
+
+  // Si es muy corto, no compliques: línea simple con micro curvatura
+  const intensidadCurva = Math.min(distancia * 0.18, 0.03);
+
+  // Punto medio desplazado para dar efecto "ruta real"
+  const midLng = (lng1 + lng2) / 2;
+  const midLat = (lat1 + lat2) / 2;
+
+  const perpX = -dy;
+  const perpY = dx;
+
+  const norm = Math.sqrt(perpX * perpX + perpY * perpY) || 1;
+
+  const controlLng = midLng + (perpX / norm) * intensidadCurva;
+  const controlLat = midLat + (perpY / norm) * intensidadCurva;
+
+  const coordinates = [];
+
+  const pasos = 40;
+  for (let t = 0; t <= 1; t += 1 / pasos) {
+    const lng =
+      (1 - t) * (1 - t) * lng1 +
+      2 * (1 - t) * t * controlLng +
+      t * t * lng2;
+
+    const lat =
+      (1 - t) * (1 - t) * lat1 +
+      2 * (1 - t) * t * controlLat +
+      t * t * lat2;
+
+    coordinates.push([lng, lat]);
+  }
+
+  return {
+    type: "LineString",
+    coordinates
+  };
+}
 // Función de respaldo por si falla OSRM
 function fallbackLineaRecta() {
   if (!mapaCliente || !lugarOrigen || !lugarDestino) return;
-  
+
+  limpiarCapasRuta();
+
   const coordinates = [
     [lugarOrigen.lng, lugarOrigen.lat],
     [lugarDestino.lng, lugarDestino.lat]
   ];
-  
-  const line = {
-    type: "Feature",
-    geometry: {
-      type: "LineString",
-      coordinates: coordinates
-    }
+
+  const route = {
+    type: "LineString",
+    coordinates
   };
-  
-  if (mapaCliente.getSource("route")) {
-    mapaCliente.getSource("route").setData(line);
-  } else {
-    mapaCliente.addSource("route", { type: "geojson", data: line });
-    mapaCliente.addLayer({
-      id: "route-line",
-      type: "line",
-      source: "route",
-      paint: { "line-color": "#2563eb", "line-width": 4 }
-    });
-  }
-  
-  const bounds = coordinates.reduce(
-    (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coordinates[0], coordinates[0])
-  );
-  
-  mapaCliente.fitBounds(bounds, { 
-    padding: { top: 80, bottom: 80, left: 40, right: 40 },
-    duration: 800
-  });
+
+  coordenadasRuta = coordinates;
+  rutaAnimacion = route;
+
+  renderizarRutaEnMapa(route);
+  centrarMapaEnRuta(coordinates);
+  actualizarMarcadoresMapa();
+
+  setTimeout(() => {
+    iniciarAnimacionRuta();
+  }, 600);
 }
-// ==========================================
-// ANIMACIÓN DEL PUNTO SOBRE LA RUTA
-// ==========================================
+  
 function iniciarAnimacionRuta() {
-  if (!mapaCliente || !rutaAnimacion || !coordenadasRuta.length) return;
-  
-  // Crear fuente para el punto animado
-  const puntoInicial = coordenadasRuta[0];
-  
-  const pointGeoJSON = {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: { bearing: 0 },
-        geometry: {
-          type: "Point",
-          coordinates: puntoInicial
-        }
-      }
-    ]
-  };
-  
-  mapaCliente.addSource("point", {
-    type: "geojson",
-    data: pointGeoJSON
-  });
-  
-  // Agregar capa del punto con icono de auto/bus
-  mapaCliente.addLayer({
-    id: "point-animado",
-    source: "point",
-    type: "symbol",
-    layout: {
-      "icon-image": "bus", // Usaremos un círculo con estilo si no hay icono
-      "icon-size": 1.5,
-      "icon-rotate": ["get", "bearing"],
-      "icon-rotation-alignment": "map",
-      "icon-allow-overlap": true,
-      "icon-ignore-placement": true
-    }
-  });
-  
-  // Si no hay icono de bus, usar un círculo
+  if (!mapaCliente || !rutaAnimacion || !Array.isArray(coordenadasRuta) || coordenadasRuta.length < 2) {
+    console.warn("⚠️ No hay ruta válida para animar");
+    return;
+  }
+
   try {
-    mapaCliente.addLayer({
-      id: "point-circle",
-      source: "point",
-      type: "circle",
-      paint: {
-        "circle-radius": 8,
-        "circle-color": "#ff9800",
-        "circle-stroke-width": 3,
-        "circle-stroke-color": "#ffffff",
-        "circle-pitch-alignment": "map"
-      }
+    // Frenar animación anterior si existía
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+
+    // Limpiar capas/source anteriores del punto si quedaron vivos
+    if (mapaCliente.getLayer("point-animado")) mapaCliente.removeLayer("point-animado");
+    if (mapaCliente.getLayer("point-circle")) mapaCliente.removeLayer("point-circle");
+    if (mapaCliente.getSource("point")) mapaCliente.removeSource("point");
+
+    // Punto inicial
+    const puntoInicial = coordenadasRuta[0];
+
+    const pointGeoJSON = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: { bearing: 0 },
+          geometry: {
+            type: "Point",
+            coordinates: puntoInicial
+          }
+        }
+      ]
+    };
+
+    // Crear source del punto
+    mapaCliente.addSource("point", {
+      type: "geojson",
+      data: pointGeoJSON
     });
-  } catch(e) {
-    // Ya existe o error menor
-  }
-  
-  // Preparar datos para animación
-  const line = turf.lineString(coordenadasRuta);
-  const lineDistance = turf.length(line, { units: 'kilometers' });
-  const steps = Math.min(Math.floor(lineDistance * 20), 200); // 20 puntos por km, max 200
-  const arc = [];
-  
-  for (let i = 0; i <= steps; i++) {
-    const segment = turf.along(line, (lineDistance * i) / steps, { units: 'kilometers' });
-    arc.push(segment.geometry.coordinates);
-  }
-  
-  counterAnimacion = 0;
-  
-  // Mostrar botón de replay
-  const replayBtn = document.getElementById('replayAnimacion');
-  if (replayBtn) replayBtn.classList.add('visible');
-  
-  function animate() {
-    if (counterAnimacion >= arc.length - 1) {
-      // Animación completada
+
+    // Si existe icono "bus", usarlo. Si no, seguimos solo con círculo.
+    try {
+      if (typeof mapaCliente.hasImage === "function" && mapaCliente.hasImage("bus")) {
+        mapaCliente.addLayer({
+          id: "point-animado",
+          source: "point",
+          type: "symbol",
+          layout: {
+            "icon-image": "bus",
+            "icon-size": 1.2,
+            "icon-rotate": ["get", "bearing"],
+            "icon-rotation-alignment": "map",
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true
+          }
+        });
+      }
+    } catch (e) {
+      console.warn("⚠️ No se pudo agregar icon-image 'bus':", e);
+    }
+
+    // Círculo visible SIEMPRE como fallback / refuerzo visual
+    try {
+      mapaCliente.addLayer({
+        id: "point-circle",
+        source: "point",
+        type: "circle",
+        paint: {
+          "circle-radius": 8,
+          "circle-color": "#ff9800",
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#ffffff"
+        }
+      });
+    } catch (e) {
+      console.warn("⚠️ No se pudo agregar point-circle:", e);
+    }
+
+    // Seguridad: Turf necesita al menos 2 coords válidas
+    if (!Array.isArray(coordenadasRuta) || coordenadasRuta.length < 2) {
+      console.warn("⚠️ coordenadasRuta insuficientes para animar");
       return;
     }
-    
-    const start = arc[counterAnimacion];
-    const end = arc[counterAnimacion + 1];
-    
-    if (!start || !end) return;
-    
-    // Calcular bearing
-    const bearing = turf.bearing(turf.point(start), turf.point(end));
-    
-    pointGeoJSON.features[0].geometry.coordinates = start;
-    pointGeoJSON.features[0].properties.bearing = bearing;
-    
-    mapaCliente.getSource("point").setData(pointGeoJSON);
-    
-    counterAnimacion++;
-    animationId = requestAnimationFrame(animate);
+
+    const line = turf.lineString(coordenadasRuta);
+    const lineDistance = turf.length(line, { units: "kilometers" });
+
+    // Evitar división por cero / rutas demasiado cortas
+    const steps = Math.max(12, Math.min(Math.floor(lineDistance * 20), 200));
+    const arc = [];
+
+    for (let i = 0; i <= steps; i++) {
+      const segment = turf.along(
+        line,
+        (lineDistance * i) / steps,
+        { units: "kilometers" }
+      );
+      arc.push(segment.geometry.coordinates);
+    }
+
+    if (!arc.length || arc.length < 2) {
+      console.warn("⚠️ No se pudo generar arco de animación");
+      return;
+    }
+
+    counterAnimacion = 0;
+
+    // Mostrar botón replay si existe
+    const replayBtn = document.getElementById("replayAnimacion");
+    if (replayBtn) replayBtn.classList.add("visible");
+
+    function animate() {
+      if (!mapaCliente) return;
+
+      const source = mapaCliente.getSource("point");
+      if (!source) return;
+
+      if (counterAnimacion >= arc.length - 1) {
+        animationId = null;
+        return;
+      }
+
+      const start = arc[counterAnimacion];
+      const end = arc[counterAnimacion + 1];
+
+      if (!start || !end) {
+        animationId = null;
+        return;
+      }
+
+      let bearing = 0;
+      try {
+        bearing = turf.bearing(turf.point(start), turf.point(end));
+        if (!Number.isFinite(bearing)) bearing = 0;
+      } catch (e) {
+        bearing = 0;
+      }
+
+      pointGeoJSON.features[0].geometry.coordinates = start;
+      pointGeoJSON.features[0].properties.bearing = bearing;
+
+      try {
+        source.setData(pointGeoJSON);
+      } catch (e) {
+        console.warn("⚠️ No se pudo actualizar source point:", e);
+        animationId = null;
+        return;
+      }
+
+      counterAnimacion++;
+      animationId = requestAnimationFrame(animate);
+    }
+
+    animate();
+
+  } catch (err) {
+    console.error("❌ Error en iniciarAnimacionRuta:", err);
   }
-  
-  // Iniciar animación
-  animate();
 }
-
 function reproducirAnimacionRuta() {
-  if (animationId) cancelAnimationFrame(animationId);
-  counterAnimacion = 0;
-  iniciarAnimacionRuta();
-}
+  try {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
 
+    counterAnimacion = 0;
+    iniciarAnimacionRuta();
+  } catch (err) {
+    console.error("❌ Error al reproducir animación:", err);
+  }
+}
 function setOrigen(displayName, lat, lng) {
   const latNum = Number(lat);
   const lngNum = Number(lng);
