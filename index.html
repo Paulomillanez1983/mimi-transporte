@@ -3583,5 +3583,214 @@ function formatearTextoBoton(fecha) {
 }
 
 </script>
+// =========================================================
+// NOTIFICACIONES DE CHOFER EN TIEMPO REAL
+// =========================================================
+
+class ClientNotificationService {
+  constructor() {
+    this.supabase = null;
+    this.currentTripId = null;
+    this.channel = null;
+  }
+
+  async init() {
+    // Usar la misma instancia de supabase que ya tienes
+    this.supabase = window.supabase;
+    
+    // Verificar si hay un viaje activo en localStorage
+    const lastTrip = localStorage.getItem('mimi_last_trip_id');
+    if (lastTrip) {
+      this.currentTripId = lastTrip;
+      this.subscribeToTrip(lastTrip);
+    }
+  }
+
+  // Suscribirse a actualizaciones del viaje
+  subscribeToTrip(tripId) {
+    if (!tripId || !this.supabase) return;
+
+    console.log('[Cliente] Suscribiéndose a viaje:', tripId);
+
+    // Crear canal de realtime
+    this.channel = this.supabase
+      .channel(`client-trip-${tripId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'viajes',
+          filter: `id=eq.${tripId}`
+        },
+        (payload) => {
+          this.handleTripUpdate(payload.new);
+        }
+      )
+      .subscribe();
+
+    this.currentTripId = tripId;
+  }
+
+  // Manejar actualización del viaje
+  handleTripUpdate(trip) {
+    console.log('[Cliente] Actualización de viaje:', trip);
+
+    switch(trip.estado) {
+      case 'ACEPTADO':
+        this.showDriverAcceptedNotification(trip);
+        break;
+      case 'EN_CURSO':
+        this.showTripStartedNotification(trip);
+        break;
+      case 'COMPLETADO':
+        this.showTripCompletedNotification(trip);
+        break;
+      case 'CANCELADO':
+        this.showTripCancelledNotification(trip);
+        break;
+    }
+  }
+
+  // Mostrar notificación de chofer asignado
+  showDriverAcceptedNotification(trip) {
+    // Crear notificación visual
+    const notif = document.createElement('div');
+    notif.id = 'driver-assigned-notification';
+    notif.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #05944F 0%, #06C167 100%);
+      color: white;
+      padding: 20px 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(5, 148, 79, 0.4);
+      z-index: 10000;
+      max-width: 90%;
+      width: 400px;
+      animation: slideDown 0.5s ease;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+
+    notif.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="font-size: 40px;">🚐</div>
+        <div style="flex: 1;">
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">
+            ¡Chofer asignado!
+          </div>
+          <div style="font-size: 14px; opacity: 0.9;">
+            ${trip.chofer_nombre || 'Tu conductor'} está en camino
+          </div>
+          <div style="font-size: 13px; margin-top: 8px; opacity: 0.8;">
+            ⏱️ Llegada estimada: ${trip.tiempo_estimado_llegada || '5-10 min'}
+          </div>
+        </div>
+      </div>
+      <button onclick="this.parentElement.remove()" style="
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 16px;
+      ">×</button>
+    `;
+
+    document.body.appendChild(notif);
+
+    // Vibración
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 50, 100, 50, 200]);
+    }
+
+    // Sonido (opcional)
+    this.playNotificationSound();
+
+    // Auto-remover después de 10 segundos
+    setTimeout(() => {
+      notif.style.animation = 'slideUp 0.3s ease forwards';
+      setTimeout(() => notif.remove(), 300);
+    }, 10000);
+
+    // Guardar estado
+    localStorage.setItem('mimi_trip_status', 'ACEPTADO');
+    localStorage.setItem('mimi_chofer_info', JSON.stringify({
+      nombre: trip.chofer_nombre,
+      telefono: trip.chofer_telefono,
+      patente: trip.chofer_patente,
+      foto: trip.chofer_foto
+    }));
+  }
+
+  // Notificación de viaje iniciado
+  showTripStartedNotification(trip) {
+    this.showToast('🚀 El viaje ha comenzado', 'success');
+    localStorage.setItem('mimi_trip_status', 'EN_CURSO');
+  }
+
+  // Notificación de viaje completado
+  showTripCompletedNotification(trip) {
+    this.showToast('✅ Viaje completado. ¡Gracias por elegir MIMI!', 'success');
+    localStorage.removeItem('mimi_last_trip_id');
+    localStorage.removeItem('mimi_trip_status');
+    this.unsubscribe();
+  }
+
+  // Notificación de viaje cancelado
+  showTripCancelledNotification(trip) {
+    this.showToast('❌ El viaje fue cancelado', 'error');
+    localStorage.removeItem('mimi_last_trip_id');
+    localStorage.removeItem('mimi_trip_status');
+    this.unsubscribe();
+  }
+
+  // Toast genérico
+  showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    const colors = {
+      success: '#06C167',
+      error: '#E11900',
+      info: '#276EF1'
+    };
+
+    toast.style.cssText = `
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: ${colors[type]};
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      z-index: 10000;
+      animation: slideUp 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    `;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.animation = 'slideDown 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  // Sonido de notificación
+  playNotificationSound() {
+    try {
+      const audio = new Audio();
+      audio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVanu8LdnGwU1kNbxz4AzBhxqv+zplkcODVGm5O+4ZSAEMYrU89GFNwYdcfDr4ZdJDQtPp+XysWUeBjiS1/LNfi0GI33R8tOENAcdcO/r4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSFNwYdcfDr4phJDQxPqOXyxGUhBjqT1/LNfi0GI3/R8tSF
+  
 </body>
 </html>
