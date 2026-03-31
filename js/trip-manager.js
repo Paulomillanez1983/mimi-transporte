@@ -51,24 +51,60 @@ class TripManager {
   // =========================================================
   // INIT
   // =========================================================
-  async init() {
+async init(driverIdParam = null) {
+  try {
     await supabaseService.ensureDriverProfile();
 
-    const driverId = supabaseService.getDriverId();
-    if (!driverId) throw new Error('No driverId available');
+    let driverId =
+      driverIdParam ||
+      supabaseService.getDriverId?.() ||
+      localStorage.getItem('driverId') ||
+      sessionStorage.getItem('driverId') ||
+      null;
+
+    // 🔥 Fallback real: buscar chofer desde auth si el cache falló
+    if (!driverId && supabaseService.client?.auth) {
+      const { data: { user } } = await supabaseService.client.auth.getUser();
+
+      if (user?.id) {
+        const { data: chofer, error } = await supabaseService.client
+          .from('choferes')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('[TripManager] Error buscando chofer por user_id:', error);
+        }
+
+        if (chofer?.id) {
+          driverId = chofer.id;
+          localStorage.setItem('driverId', driverId);
+          sessionStorage.setItem('driverId', driverId);
+        }
+      }
+    }
+
+    if (!driverId) {
+      console.error('[TripManager] ❌ No driverId available after fallback');
+      return false; // ❗ NO tirar fatal error
+    }
 
     this.driverId = driverId;
 
-    console.log('[TripManager] Initializing for driver UUID:', driverId);
+    console.log('[TripManager] ✅ Initializing for driver UUID:', driverId);
 
     await this._loadInitialState(driverId);
-
     this._subscribeToRealtime(driverId);
     this._startRefreshInterval(driverId);
 
-    return this;
-  }
+    return true;
 
+  } catch (error) {
+    console.error('[TripManager] ❌ Init error:', error);
+    return false;
+  }
+}
   // =========================================================
   // LOAD INITIAL STATE
   // =========================================================
