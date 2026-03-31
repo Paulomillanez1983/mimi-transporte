@@ -475,7 +475,7 @@ body {
   left: 0;
   width: 100%;
   background: white;
-  z-index: 999999999 !important;
+  z-index: 9999 !important; /* Reducido de 999999999 */
   max-height: min(250px, 50vh);
   overflow-y: auto;
   border-radius: 14px;
@@ -483,19 +483,11 @@ body {
   box-shadow: 0 14px 35px rgba(0,0,0,0.18);
   display: none;
   -webkit-overflow-scrolling: touch;
+  /* Agregar: */
+  isolation: isolate;
 }
 
 .sugerencia-item {
-  padding: clamp(12px, 3vw, 14px);
-  cursor: pointer;
-  font-size: clamp(14px, 3.5vw, 15px);
-  font-weight: 600;
-  border-bottom: 1px solid rgba(0,0,0,0.06);
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  touch-action: manipulation;
-}
 
 .sugerencia-item:hover, .sugerencia-item:active {
   background: #f4f4f7;
