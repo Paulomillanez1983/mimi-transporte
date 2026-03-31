@@ -511,7 +511,21 @@ body {
 }
 
 .sugerencia-item {
-
+  padding: clamp(12px, 3vw, 14px);
+  cursor: pointer;
+  font-size: clamp(13px, 3.5vw, 15px); /* Más grande */
+  font-weight: 600;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  touch-action: manipulation;
+  /* Agregar: */
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .sugerencia-item:hover, .sugerencia-item:active {
   background: #f4f4f7;
 }
@@ -2212,28 +2226,40 @@ const payload = {
 // ==========================================
 // MAPA Y RUTA CON ANIMACIÓN
 // ==========================================
-const payload = {
-  cliente: document.getElementById('nombreCliente')?.value?.trim() || null,
-  telefono: document.getElementById('telefonoCliente')?.value?.trim() || null,
-  origen: origen.substring(0, 255), // FIX: limitar longitud
-  destino: destino.substring(0, 255),
-  origen_lat: Number(lugarOrigen?.lat) || null,
-  origen_lng: Number(lugarOrigen?.lng) || null,
-  destino_lat: Number(lugarDestino?.lat) || null,
-  destino_lng: Number(lugarDestino?.lng) || null,
-  precio: Math.round(Number(precio)) || 0, // FIX: redondear
-  servicio: servicioSeleccionado || 'IDA_ESCOLAR',
-  fecha_hora: fechaHoraIda,
-  fecha_hora_vuelta: servicioSeleccionado === 'IDA_MAS_VUELTA_PROGRAMADA' ? fechaHoraVuelta : null,
-  tiempo_espera: servicioSeleccionado === 'IDA_Y_VUELTA_INMEDIATA' ? Number(tiempoEspera) || 0 : null,
-  estado: "DISPONIBLE",
-  notas: null,
-  // FIX: agregar campos que espera el edge function
-  distancia_km: datosCotizacion?.km || null,
-  duracion_min: datosCotizacion?.duracionEstimadaMin || null
-};
+async function buscarDireccion(query) {
+  if (!query || query.trim().length < 3) return [];
 
-  
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(query)}`;
+
+  console.log("🔎 Buscando dirección:", query);
+
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "Accept": "application/json",
+        "Accept-Language": "es-AR"
+      }
+    });
+
+    console.log("📡 Status Nominatim:", res.status);
+
+    if (!res.ok) {
+      console.warn("⚠️ Nominatim bloqueó:", res.status);
+      return [];
+    }
+
+    const data = await res.json();
+
+    console.log("✅ Resultados Nominatim:", data);
+
+    return Array.isArray(data) ? data : [];
+
+  } catch (err) {
+    console.error("❌ Error fetch Nominatim:", err);
+    return [];
+  }
+}
+
 function formatearDireccionCorta(r) {
   if (!r || !r.display_name) return "Dirección";
   
