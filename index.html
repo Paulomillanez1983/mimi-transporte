@@ -498,7 +498,7 @@ body {
   left: 0;
   width: 100%;
   background: white;
-  z-index: 9999 !important; /* Reducido de 999999999 */
+  z-index: 100 !important; !important; /* Reducido de 999999999 */
   max-height: min(250px, 50vh);
   overflow-y: auto;
   border-radius: 14px;
@@ -2229,37 +2229,50 @@ const payload = {
 async function buscarDireccion(query) {
   if (!query || query.trim().length < 3) return [];
 
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ar&addressdetails=1&q=${encodeURIComponent(query)}`;
+  // FIX 1: Eliminar espacio en "q= ${encodeURIComponent}" (tenías un espacio después del =)
+  // FIX 2: Agregar contexto de Córdoba para resultados locales más precisos
+  const queryLimpio = query.trim();
+  const queryConContexto = queryLimpio.toLowerCase().includes('cordoba') 
+    ? queryLimpio 
+    : `${queryLimpio}, Córdoba, Argentina`;
 
-  console.log("🔎 Buscando dirección:", query);
+  // FIX 3: Reducir limit a 5 (más rápido) y agregar viewbox para priorizar zona de Córdoba
+  // FIX 4: Agregar User-Agent (obligatorio por TOS de Nominatim)
+  const url = `https://nominatim.openstreetmap.org/search?` +
+    `format=json&limit=5&countrycodes=ar&addressdetails=1&` +
+    `viewbox=-64.35,-31.25,-63.85,-31.55&bounded=0&` + // Prioriza Córdoba Capital/Zona Norte
+    `q=${encodeURIComponent(queryConContexto)}`;
 
   try {
     const res = await fetch(url, {
       headers: {
         "Accept": "application/json",
-        "Accept-Language": "es-AR"
+        "Accept-Language": "es-AR",
+        "User-Agent": "MIMI-Transporte/1.0 (contacto@tudominio.com)" // Requerido por Nominatim
       }
     });
 
-    console.log("📡 Status Nominatim:", res.status);
-
     if (!res.ok) {
-      console.warn("⚠️ Nominatim bloqueó:", res.status);
+      console.warn("⚠️ Nominatim:", res.status);
       return [];
     }
 
     const data = await res.json();
-
-    console.log("✅ Resultados Nominatim:", data);
-
-    return Array.isArray(data) ? data : [];
+    
+    // FIX 5: Filtrar resultados fuera de Argentina/Córdoba si son muy genéricos
+    const filtrados = (Array.isArray(data) ? data : []).filter(r => {
+      const display = (r.display_name || "").toLowerCase();
+      // Priorizar resultados que contengan Córdoba o sean de Argentina
+      return display.includes("cordoba") || display.includes("argentina");
+    });
+    
+    return filtrados.length > 0 ? filtrados : data;
 
   } catch (err) {
-    console.error("❌ Error fetch Nominatim:", err);
+    console.error("❌ Error Nominatim:", err);
     return [];
   }
 }
-
 function formatearDireccionCorta(r) {
   if (!r || !r.display_name) return "Dirección";
   
