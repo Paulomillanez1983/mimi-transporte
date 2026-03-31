@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - Trip Manager (PRODUCTION FINAL)
+ * MIMI Driver - Trip Manager (PRODUCTION FINAL FIXED)
  * Business logic for trip lifecycle
  */
 
@@ -16,6 +16,7 @@ class TripManager {
 
     this.refreshInterval = null;
     this.isLoadingInitial = false;
+    this.isRefreshingOffers = false;
 
     this.listeners = new Map();
 
@@ -110,8 +111,10 @@ class TripManager {
   // LOAD INITIAL STATE
   // =========================================================
   async _loadInitialState(driverId) {
-    if (this.isLoadingInitial) return;
+    if (this.isLoadingInitial || this.isRefreshingOffers) return;
+
     this.isLoadingInitial = true;
+    this.isRefreshingOffers = true;
 
     try {
       // =====================================================
@@ -150,15 +153,18 @@ class TripManager {
       this.currentTrip = null;
 
       // =====================================================
-      // 2) PENDING OFFERS
+      // 2) PENDING OFFERS (SOLO VIGENTES)
       // =====================================================
       console.log('[TripManager] Checking offers for driver:', driverId);
 
+      const nowIso = new Date().toISOString();
+
       const { data: offers, error: offerError } = await supabaseService.client
         .from('viaje_ofertas')
-        .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en')
+        .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en, expires_at')
         .eq('chofer_id', driverId)
         .eq('estado', 'pendiente')
+        .gt('expires_at', nowIso)
         .order('enviada_en', { ascending: false })
         .limit(5);
 
@@ -180,9 +186,31 @@ class TripManager {
       }
 
       // =====================================================
-      // 3) SELECT FIRST VALID OFFER
+      // 3) SELECT FIRST REALLY VALID OFFER
       // =====================================================
-      const validOffer = offers[0];
+      const validOffer = offers.find((offer) => {
+        if (!offer) return false;
+        if (offer.estado !== 'pendiente') return false;
+        if (!offer.expires_at) return false;
+
+        const expiresAt = new Date(offer.expires_at).getTime();
+        if (Number.isNaN(expiresAt)) return false;
+
+        return expiresAt > Date.now();
+      });
+
+      if (!validOffer) {
+        console.warn('[TripManager] No valid non-expired offer found');
+
+        if (this.pendingOffer) {
+          this.emit('pendingTripCleared', { reason: 'all_offers_expired' });
+        }
+
+        this.pendingOffer = null;
+        this.lastOfferIdShown = null;
+        this.emit('noPendingTrips');
+        return;
+      }
 
       if (!validOffer?.viaje_id && !validOffer?.cotizacion_id) {
         console.warn('[TripManager] Offer has no viaje_id and no cotizacion_id:', validOffer);
@@ -211,10 +239,24 @@ class TripManager {
 
         if (error) {
           console.error('[TripManager] Error fetching trip for offer:', error);
+
+          this.pendingOffer = null;
+          this.lastOfferIdShown = null;
+          this.emit('noPendingTrips');
           return;
         }
 
         trip = data;
+
+        // Validación extra: si el viaje ya no está ofertable, no mostrarlo
+        if (trip && !['OFERTADO', 'ASIGNADO', 'DISPONIBLE'].includes(trip.estado)) {
+          console.warn('[TripManager] Offer ignored because trip is no longer offerable:', trip.id, trip.estado);
+
+          this.pendingOffer = null;
+          this.lastOfferIdShown = null;
+          this.emit('noPendingTrips');
+          return;
+        }
       } else {
         const { data, error } = await supabaseService.client
           .from('cotizaciones')
@@ -224,6 +266,10 @@ class TripManager {
 
         if (error) {
           console.error('[TripManager] Error fetching cotizacion for offer:', error);
+
+          this.pendingOffer = null;
+          this.lastOfferIdShown = null;
+          this.emit('noPendingTrips');
           return;
         }
 
@@ -232,6 +278,10 @@ class TripManager {
 
       if (!trip) {
         console.warn('[TripManager] Trip/Cotizacion not found for offer:', validOffer.id);
+
+        this.pendingOffer = null;
+        this.lastOfferIdShown = null;
+        this.emit('noPendingTrips');
         return;
       }
 
@@ -244,6 +294,7 @@ class TripManager {
         viajeId: validOffer.viaje_id || null,
         cotizacionId: validOffer.cotizacion_id || null,
         enviadaEn: validOffer.enviada_en,
+        expiresAt: validOffer.expires_at,
         tipo: validOffer.viaje_id ? 'VIAJE' : 'COTIZACION'
       };
 
@@ -263,6 +314,7 @@ class TripManager {
       console.error('[TripManager] Load error:', error);
     } finally {
       this.isLoadingInitial = false;
+      this.isRefreshingOffers = false;
     }
   }
 
@@ -285,6 +337,22 @@ class TripManager {
     if (offerError || !offer) {
       console.error('[TripManager] Offer not found:', offerError);
       return { success: false, error: 'Oferta no encontrada' };
+    }
+
+    // Blindaje local contra ofertas vencidas
+    if (offer?.expires_at) {
+      const expiresAt = new Date(offer.expires_at).getTime();
+      if (!Number.isNaN(expiresAt) && expiresAt <= Date.now()) {
+        console.warn('[TripManager] Offer expired before accept:', offer.id);
+
+        this.pendingOffer = null;
+        this.lastOfferIdShown = null;
+        this.emit('pendingTripCleared', { reason: 'offer_expired_before_accept' });
+
+        await this._loadInitialState(driverId);
+
+        return { success: false, error: 'OFERTA_EXPIRADA' };
+      }
     }
 
     if (offer.viaje_id) {
@@ -409,8 +477,9 @@ class TripManager {
 
     this.refreshInterval = setInterval(() => {
       if (this.currentTrip) return;
+      if (this.isLoadingInitial || this.isRefreshingOffers) return;
       this._loadInitialState(driverId);
-    }, 2000);
+    }, 4000);
   }
 
   // =========================================================
@@ -459,8 +528,16 @@ class TripManager {
       if (!result.ok) {
         console.warn('[TripManager] Offer rejected:', result.reason);
 
-        if (result.reason === 'OFERTA_NO_DISPONIBLE') {
-          console.log('[TripManager] Refreshing offers (offer not available)...');
+        if (['OFERTA_NO_DISPONIBLE', 'VIAJE_YA_TOMADO', 'VIAJE_BLOQUEADO'].includes(result.reason)) {
+          this.pendingOffer = null;
+          this.lastOfferIdShown = null;
+
+          this.emit('pendingTripCleared', {
+            reason: result.reason,
+            tripId
+          });
+
+          console.log('[TripManager] Refreshing offers after rejection...');
           await this._loadInitialState(driverId);
         }
 
@@ -623,6 +700,8 @@ class TripManager {
     this.pendingOffer = null;
     this.lastOfferIdShown = null;
     this.driverId = null;
+    this.isLoadingInitial = false;
+    this.isRefreshingOffers = false;
 
     console.log('[TripManager] Destroyed');
   }
