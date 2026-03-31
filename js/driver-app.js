@@ -498,7 +498,7 @@ async _handleAction(action, tripId) {
       return this._rejectOffer(pending?.offerId || tripId);
 
     case 'start':
-      return tripManager.startTrip?.(current?.id || tripId);
+      return tripManager.startTrip(current?.id || tripId);
 
     case 'finish':
       return tripManager.finishTrip(current?.id || tripId);
@@ -514,11 +514,9 @@ async _handleAction(action, tripId) {
 
     default:
       console.warn('[DriverApp] Acción desconocida:', action);
+      return null;
   }
-}        console.warn('[DriverApp] Acción desconocida:', action);
-    }
-  }
-
+}
   _openExternalNav() {
     const trip = tripManager.getCurrentTrip();
     if (!trip) return;
