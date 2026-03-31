@@ -72,10 +72,45 @@ window.addEventListener('touchstart', () => {
         console.error('[DriverApp] Error GPS:', results[1].reason);
       }
 
-      // 5) Inicializar TripManager
-      console.log('[DriverApp] Inicializando TripManager...');
-      await tripManager.init();
+// 5) Resolver driverId real antes de TripManager
+console.log('[DriverApp] Resolviendo driverId...');
 
+let driverId = null;
+
+try {
+  const { data: { user } } = await supabaseService.client.auth.getUser();
+
+  if (user?.id) {
+    const { data: chofer, error } = await supabaseService.client
+      .from('choferes')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[DriverApp] Error resolviendo chofer:', error);
+    }
+
+    if (chofer?.id) {
+      driverId = chofer.id;
+      localStorage.setItem('driverId', driverId);
+      sessionStorage.setItem('driverId', driverId);
+    }
+  }
+} catch (err) {
+  console.error('[DriverApp] Error buscando driverId:', err);
+}
+
+console.log('[DriverApp] driverId detectado:', driverId);
+
+// 6) Inicializar TripManager
+console.log('[DriverApp] Inicializando TripManager...');
+const tripManagerReady = await tripManager.init(driverId);
+
+if (!tripManagerReady) {
+  console.warn('[DriverApp] ⚠️ TripManager no pudo inicializarse (sin driverId)');
+  uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
+}
       // 6) Suscribirse a eventos
       this._subscribeToEvents();
 
@@ -89,9 +124,22 @@ window.addEventListener('touchstart', () => {
       uiController.updateDriverState('ONLINE', false);
 
       // Estado inicial de viajes
-      const currentTrip = tripManager.getCurrentTrip();
-      const pendingTrip = tripManager.getPendingTrip();
+this.initialized = true;
+console.log('[DriverApp] ✅ Aplicación inicializada correctamente');
 
+// Estado inicial
+uiController.updateDriverState('ONLINE', false);
+
+if (!tripManagerReady) {
+  console.warn('[DriverApp] App iniciada sin TripManager operativo');
+  uiController.showWaitingState();
+  return;
+}
+
+// Estado inicial de viajes
+const currentTrip = tripManager.getCurrentTrip();
+const pendingTrip = tripManager.getPendingTrip();
+      
       if (currentTrip) {
         console.log('[DriverApp] Estado inicial: viaje activo');
         await this._showRouteOnMap(currentTrip);
@@ -436,19 +484,38 @@ async _acceptTrip(tripId) {
    });
   }
 
-  async _handleAction(action, tripId) {
-    console.log('[DriverApp] Acción:', action, tripId);
+async _handleAction(action, tripId) {
+  console.log('[DriverApp] Acción:', action, tripId);
 
-    switch (action) {
-      case 'accept': return this._acceptOffer(tripId);
-      case 'reject': return this._rejectOffer(tripId);
-      case 'start': return tripManager.startTrip(tripId);
-      case 'finish': return tripManager.finishTrip(tripId);
-      case 'cancel': return tripManager.cancelTrip(tripId);
-      case 'navigate': return this._openExternalNav();
-      case 'whatsapp': return this._openWhatsApp();
-      default:
-        console.warn('[DriverApp] Acción desconocida:', action);
+  const pending = tripManager.getPendingTrip();
+  const current = tripManager.getCurrentTrip();
+
+  switch (action) {
+    case 'accept':
+      return this._acceptOffer(pending?.offerId || tripId);
+
+    case 'reject':
+      return this._rejectOffer(pending?.offerId || tripId);
+
+    case 'start':
+      return tripManager.startTrip?.(current?.id || tripId);
+
+    case 'finish':
+      return tripManager.finishTrip(current?.id || tripId);
+
+    case 'cancel':
+      return tripManager.cancelTrip(current?.id || tripId);
+
+    case 'navigate':
+      return this._openExternalNav();
+
+    case 'whatsapp':
+      return this._openWhatsApp();
+
+    default:
+      console.warn('[DriverApp] Acción desconocida:', action);
+  }
+}        console.warn('[DriverApp] Acción desconocida:', action);
     }
   }
 
