@@ -1685,12 +1685,12 @@ await dibujarRutaEnMapa(route.geometry.coordinates);
 // Calcular precio
 await cotizarViaje(distanceKm, durationMin);
 
-  } catch (err) {
+    } catch (err) {
     console.error(err);
     notif.show('Error', 'No se pudo calcular la ruta. Intentá de nuevo.', 'error');
     
     // Fallback: dibujar línea recta
-    await dibujarRutaFallback(););
+    await dibujarRutaFallback();
   } finally {
     btn.disabled = false;
     btn.innerHTML = btnText;
