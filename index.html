@@ -1512,13 +1512,6 @@ function centrarEnRuta() {
 }
 
 function reiniciarRuta() {
-  // Limpiar inputs
-  document.getElementById('inputOrigen').value = '';
-  document.getElementById('inputDestino').value = '';
-  document.getElementById('waypointsContainer').innerHTML = '';
-  
-  // Limpiar estado
-function reiniciarRuta() {
   document.getElementById('inputOrigen').value = '';
   document.getElementById('inputDestino').value = '';
   document.getElementById('waypointsContainer').innerHTML = '';
@@ -1554,7 +1547,8 @@ function reiniciarRuta() {
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
-// ==========================================
+  
+  // ==========================================
 // CÁLCULO DE RUTA Y COTIZACIÓN
 // ==========================================
 async function calcularRuta() {
