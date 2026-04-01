@@ -836,6 +836,59 @@ body.dark #mapSection,
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
+  /* Loading state para botón calcular */
+.btn-calcular {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-calcular.loading {
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.btn-calcular .btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: opacity 0.2s;
+}
+
+.btn-calcular.loading .btn-content {
+  opacity: 0;
+}
+
+.btn-calcular .btn-loader {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-calcular.loading .btn-loader {
+  display: flex;
+}
+
+.btn-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Estado disabled visual */
+.btn-calcular:disabled {
+  cursor: not-allowed;
+}
 
 .btn-calcular:active {
   transform: translateY(0);
