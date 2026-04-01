@@ -43,9 +43,9 @@ export async function initPushFCM(rol) {
       return null;
     }
 
-const reg = await navigator.serviceWorker.register(
-  "/mimi-transporte/firebase-messaging-sw.js"
-);
+    const reg = await navigator.serviceWorker.register(
+      "/mimi-transporte/firebase-messaging-sw.js"
+    );
 
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
@@ -65,20 +65,27 @@ const reg = await navigator.serviceWorker.register(
       return null;
     }
 
-    const { error } = await supabase.from("push_tokens").upsert({
-      user_id: userId,
-      rol,
-      token,
-      updated_at: new Date().toISOString(),
-      platform: navigator.userAgent,
-    });
+    const { data, error } = await supabase
+      .from("push_tokens")
+      .upsert(
+        {
+          user_id: userId,
+          rol,
+          token,
+          updated_at: new Date().toISOString(),
+          platform: navigator.userAgent,
+        },
+        { onConflict: "token" }
+      )
+      .select()
+      .single();
 
     if (error) {
       console.error("Error guardando token en Supabase:", error);
       return null;
     }
 
-    console.log("✅ Token FCM guardado:", token);
+    console.log("✅ Token FCM guardado en Supabase:", data);
 
     onMessage(messaging, (payload) => {
       console.log("📩 Push en foreground:", payload);
