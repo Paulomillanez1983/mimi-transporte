@@ -4372,10 +4372,11 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     // GEOMETRÍA BACKEND → NORMALIZAR Y GUARDAR
     // =========================================================
     const coordsBackend =
-      Array.isArray(data?.route_geometry) ? data.route_geometry :
-      Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
-      Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
-      null;
+  Array.isArray(data?.route_geometry) ? data.route_geometry :
+  Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
+  Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
+  Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
+  null;
 
     console.log("🧭 Coordenadas backend normalizadas:", coordsBackend);
 
@@ -4510,7 +4511,16 @@ function mostrarCotizacion(precio, km, minutos) {
 
   const resumenParadas = document.getElementById('resumenParadas');
   if (resumenParadas) resumenParadas.textContent = textoResumen;
+  const mapSection = document.getElementById('mapSection');
+if (mapSection && state.routeData?.geometry?.coordinates?.length >= 2) {
+  mapSection.style.display = 'block';
 
+  setTimeout(() => {
+    try {
+      mapaCliente?.resize?.();
+    } catch (_) {}
+  }, 200);
+}
   card.classList.add('visible');
 
   setTimeout(() => {
