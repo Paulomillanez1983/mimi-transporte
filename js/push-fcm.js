@@ -11,7 +11,8 @@ const firebaseConfig = {
   appId: "1:1066211116754:web:8cfb14cfb15ecd0cb28f0b",
 };
 
-const VAPID_KEY = "BPcP-yGxjeXhO4PoDzy_4qfrlsy52DFRMWJJj5AjF935xmxQX8rg2S7vA5qtDKqWnLLzglEnrTi36JTsNOtmcQ4";
+const VAPID_KEY =
+  "BPcP-yGxjeXhO4PoDzy_4qfrlsy52DFRMWJJj5AjF935xmxQX8rg2S7vA5qtDKqWnLLzglEnrTi36JTsNOtmcQ4";
 
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
@@ -20,6 +21,19 @@ export async function initPushFCM(rol) {
   try {
     if (!("serviceWorker" in navigator)) {
       console.warn("No hay service worker disponible");
+      return null;
+    }
+
+    // Asegurar supabase init
+    if (!supabaseService.client) {
+      console.warn("Supabase no inicializado. Inicializando...");
+      await supabaseService.init();
+    }
+
+    const supabase = supabaseService.client;
+
+    if (!supabase) {
+      console.error("Supabase client sigue siendo null");
       return null;
     }
 
@@ -44,13 +58,23 @@ export async function initPushFCM(rol) {
     const { data: auth } = await supabase.auth.getUser();
     const userId = auth?.user?.id || null;
 
-    await supabase.from("push_tokens").upsert({
+    if (!userId) {
+      console.warn("No hay usuario autenticado para guardar token push");
+      return null;
+    }
+
+    const { error } = await supabase.from("push_tokens").upsert({
       user_id: userId,
       rol,
       token,
       updated_at: new Date().toISOString(),
       platform: navigator.userAgent,
     });
+
+    if (error) {
+      console.error("Error guardando token en Supabase:", error);
+      return null;
+    }
 
     console.log("✅ Token FCM guardado:", token);
 
