@@ -4102,19 +4102,23 @@ async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
   const mapSection = document.getElementById('mapSection');
-  if (mapSection) mapSection.style.display = 'block';
+  if (mapSection) {
+    mapSection.style.display = 'block';
+  }
 
+  // Inicializar el mapa si aún no está creado
   await initMapa();
 
   if (!mapaCliente) return;
 
-  // Esperar a que el style del mapa esté listo
+  // Esperar a que el estilo del mapa esté completamente cargado
   if (!mapaCliente.isStyleLoaded()) {
     await new Promise((resolve) => {
       mapaCliente.once('load', resolve);
     });
   }
 
+  // Limpiar y normalizar coordenadas
   const coordsLimpias = coords
     .map(c => [Number(c?.[0]), Number(c?.[1])])
     .filter(c =>
@@ -4134,7 +4138,7 @@ async function dibujarRutaReal(coords) {
     }
   };
 
-  // Si ya existe la ruta, solo actualizamos
+  // Si ya existe la fuente, solo actualizamos los datos (más eficiente)
   if (mapaCliente.getSource('route')) {
     const source = mapaCliente.getSource('route');
     source.setData(geojson);
@@ -4145,7 +4149,7 @@ async function dibujarRutaReal(coords) {
       mapaCliente.setPaintProperty('route-line', 'line-width', 5);
     }
   } else {
-    // Limpieza defensiva
+    // Limpieza defensiva antes de crear nueva capa
     if (mapaCliente.getLayer('route-line')) {
       mapaCliente.removeLayer('route-line');
     }
@@ -4153,6 +4157,7 @@ async function dibujarRutaReal(coords) {
       mapaCliente.removeSource('route');
     }
 
+    // Crear fuente y capa
     mapaCliente.addSource('route', {
       type: 'geojson',
       data: geojson
@@ -4174,7 +4179,7 @@ async function dibujarRutaReal(coords) {
     });
   }
 
-  // Guardar geometría real en state
+  // Guardar geometría en el estado global
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
@@ -4182,7 +4187,7 @@ async function dibujarRutaReal(coords) {
   };
   state.routeData.fallback = false;
 
-  // Ajustar cámara a la ruta
+  // Ajustar la vista a la ruta
   const bounds = new maplibregl.LngLatBounds();
   coordsLimpias.forEach(coord => bounds.extend(coord));
 
@@ -4194,16 +4199,22 @@ async function dibujarRutaReal(coords) {
     });
   }
 
-  // Muy importante cuando el mapa estuvo oculto antes
+  // === FIX PRINCIPAL: Forzar resize múltiple cuando el mapa estaba oculto ===
   setTimeout(() => {
     try {
       mapaCliente.resize();
     } catch (_) {}
-  }, 250);
+  }, 180);
+
+  // Segundo resize (más seguro) después de que el navegador termine de repintar
+  setTimeout(() => {
+    try {
+      mapaCliente.resize();
+    } catch (_) {}
+  }, 450);
 
   console.log('✅ Ruta real dibujada en mapa');
-}
-  
+}  
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
