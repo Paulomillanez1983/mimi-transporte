@@ -841,12 +841,55 @@ body.dark #mapSection,
   transform: translateY(0);
 }
 
-.btn-calcular:disabled {
-  opacity: 0.6;
+..btn-calcular:disabled {
+  opacity: 0.88;
   cursor: not-allowed;
   transform: none;
+  filter: saturate(0.95);
 }
 
+.btn-calcular.loading {
+  position: relative;
+  pointer-events: none;
+  background: linear-gradient(135deg, #1b5eb8, #163b73);
+  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.28);
+}
+
+.btn-calcular.loading .btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spinBtn 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.btn-calcular.loading .btn-loading-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quote-card.loading {
+  opacity: 0.65;
+  pointer-events: none;
+  filter: blur(0.2px);
+}
+
+.map-section.loading {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.route-input-wrapper.loading {
+  border-color: rgba(21, 101, 192, 0.28);
+  background: rgba(21, 101, 192, 0.04);
+}
+
+@keyframes spinBtn {
+  to { transform: rotate(360deg); }
+}
 /* ==========================================
    TOAST NOTIFICATIONS
 ========================================== */
@@ -1342,6 +1385,7 @@ let mapaCliente = null;
 let rutaLayer = null;
 let waypointCounter = 0;
 let mapReady = false;
+let isCalculatingQuote = false;
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -1377,6 +1421,86 @@ class NotificationSystem {
 }
 
 const notif = new NotificationSystem();
+function setLoadingCotizacion(loading, message = 'Cotizando recorrido completo...') {
+  const btn = document.getElementById('btnCalcular');
+  const quoteCard = document.getElementById('quoteCard');
+  const mapSection = document.getElementById('mapSection');
+  const wrappers = document.querySelectorAll('.route-input-wrapper');
+
+  if (!btn) return;
+
+  if (loading) {
+    isCalculatingQuote = true;
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.innerHTML = `
+      <span class="btn-loading-text">
+        <span class="btn-spinner"></span>
+        <span>${message}</span>
+      </span>
+    `;
+
+    wrappers.forEach(w => w.classList.add('loading'));
+    if (quoteCard?.classList.contains('visible')) quoteCard.classList.add('loading');
+    if (mapSection?.style.display !== 'none') mapSection.classList.add('loading');
+  } else {
+    isCalculatingQuote = false;
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    btn.innerHTML = `
+      <span>🚐</span>
+      <span>Ver recorrido y cotizar</span>
+    `;
+
+    wrappers.forEach(w => w.classList.remove('loading'));
+    quoteCard?.classList.remove('loading');
+    mapSection?.classList.remove('loading');
+  }
+}
+
+async function resolverPuntoDesdeTexto(texto) {
+  if (!texto || texto.trim().length < 3) return null;
+
+  const geo = await buscarDireccion(texto);
+  if (!geo.length) return null;
+
+  return {
+    direccion: geo[0].display_name,
+    direccionCorta: formatearDireccionCorta(geo[0]),
+    direccionSecundaria: formatearDireccionSecundaria(geo[0]),
+    lat: parseFloat(geo[0].lat),
+    lng: parseFloat(geo[0].lon),
+    raw: geo[0]
+  };
+}
+
+async function resolverWaypointsPendientes() {
+  const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
+  const errores = [];
+
+  for (const input of waypointInputs) {
+    const texto = input.value.trim();
+    const wp = state.waypoints.find(w => w.id === input.id);
+
+    if (!texto) continue;
+    if (wp?.data) continue;
+
+    const resuelto = await resolverPuntoDesdeTexto(texto);
+
+    if (resuelto) {
+      if (wp) wp.data = resuelto;
+      input.value = resuelto.direccionCorta;
+      input.setAttribute(
+        'title',
+        `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`
+      );
+    } else {
+      errores.push(texto);
+    }
+  }
+
+  return errores;
+}
 
 // ==========================================
 // GEOCODIFICACIÓN
@@ -2022,65 +2146,52 @@ function construirResumenRuta() {
 // CÁLCULO DE RUTA Y COTIZACIÓN
 // ==========================================
 async function calcularRuta() {
-  const btn = document.getElementById('btnCalcular');
-  const btnText = btn.innerHTML;
+  if (isCalculatingQuote) return;
 
   const origenInput = document.getElementById('inputOrigen');
   const destinoInput = document.getElementById('inputDestino');
 
-  // Resolver origen si escribieron pero no seleccionaron sugerencia
-  if (!state.origen && origenInput.value) {
-    const geo = await buscarDireccion(origenInput.value);
-    if (geo.length) {
-      state.origen = {
-        direccion: geo[0].display_name,
-        direccionCorta: formatearDireccionCorta(geo[0]),
-        direccionSecundaria: formatearDireccionSecundaria(geo[0]),
-        lat: parseFloat(geo[0].lat),
-        lng: parseFloat(geo[0].lon),
-        raw: geo[0]
-      };
-      origenInput.value = state.origen.direccionCorta;
-    }
-  }
-
-  // Resolver destino si escribieron pero no seleccionaron sugerencia
-  if (!state.destino && destinoInput.value) {
-    const geo = await buscarDireccion(destinoInput.value);
-    if (geo.length) {
-      state.destino = {
-        direccion: geo[0].display_name,
-        direccionCorta: formatearDireccionCorta(geo[0]),
-        direccionSecundaria: formatearDireccionSecundaria(geo[0]),
-        lat: parseFloat(geo[0].lat),
-        lng: parseFloat(geo[0].lon),
-        raw: geo[0]
-      };
-      destinoInput.value = state.destino.direccionCorta;
-    }
-  }
-
-  if (!state.origen || !state.destino) {
-    notif.show('Faltan datos', 'Ingresá origen y destino', 'error');
-    return;
-  }
-
-  // Validar paradas incompletas
-  const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
-  const waypointsConTextoSinResolver = waypointInputs.filter(input => {
-    const wp = state.waypoints.find(w => w.id === input.id);
-    return input.value.trim().length > 0 && !wp?.data;
-  });
-
-  if (waypointsConTextoSinResolver.length > 0) {
-    notif.show('Paradas incompletas', 'Seleccioná una sugerencia válida para cada parada', 'warning');
-    return;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = '<span>⏳</span><span>Calculando...</span>';
+  setLoadingCotizacion(true, 'Buscando direcciones...');
 
   try {
+    // Resolver origen si escribieron pero no seleccionaron sugerencia
+    if (!state.origen && origenInput.value) {
+      const origenResuelto = await resolverPuntoDesdeTexto(origenInput.value);
+      if (origenResuelto) {
+        state.origen = origenResuelto;
+        origenInput.value = origenResuelto.direccionCorta;
+      }
+    }
+
+    // Resolver destino si escribieron pero no seleccionaron sugerencia
+    if (!state.destino && destinoInput.value) {
+      const destinoResuelto = await resolverPuntoDesdeTexto(destinoInput.value);
+      if (destinoResuelto) {
+        state.destino = destinoResuelto;
+        destinoInput.value = destinoResuelto.direccionCorta;
+      }
+    }
+
+    // Resolver paradas escritas aunque no hayan tocado la sugerencia
+    setLoadingCotizacion(true, 'Resolviendo paradas...');
+    const erroresWaypoints = await resolverWaypointsPendientes();
+
+    if (!state.origen || !state.destino) {
+      notif.show('Faltan datos', 'Ingresá origen y destino', 'error');
+      return;
+    }
+
+    if (erroresWaypoints.length > 0) {
+      notif.show(
+        'Paradas incompletas',
+        'Hay una o más paradas que no pudimos ubicar. Revisalas.',
+        'warning'
+      );
+      return;
+    }
+
+    setLoadingCotizacion(true, 'Calculando recorrido completo...');
+
     const puntos = obtenerPuntosOrdenados();
 
     if (puntos.length < 2) {
@@ -2125,18 +2236,20 @@ async function calcularRuta() {
     document.getElementById('mapSection').style.display = 'block';
     await dibujarRutaEnMapa(route.geometry.coordinates);
 
+    setLoadingCotizacion(true, 'Cotizando recorrido completo...');
     await cotizarViaje(distanceKm, durationMin);
 
   } catch (err) {
     console.error('❌ Error calcularRuta:', err);
     notif.show('Error', 'No se pudo calcular la ruta real. Usamos una estimación.', 'warning');
 
+    setLoadingCotizacion(true, 'Estimando recorrido...');
     await dibujarRutaFallback();
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = btnText;
+    setLoadingCotizacion(false);
   }
 }
+  
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
@@ -2187,40 +2300,51 @@ async function cotizarViaje(km, minutos) {
     const segmentosTotales = Math.max(1, puntos.length - 1);
     const resumenRuta = construirResumenRuta();
 
-    const payload = {
-      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+const payload = {
+  servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-      origen: origenReal.direccion,
-      origen_corto: origenReal.direccionCorta || origenReal.direccion,
+  origen: origenReal.direccion,
+  origen_corto: origenReal.direccionCorta || origenReal.direccion,
 
-      destino: destinoReal.direccion,
-      destino_corto: destinoReal.direccionCorta || destinoReal.direccion,
+  destino: destinoReal.direccion,
+  destino_corto: destinoReal.direccionCorta || destinoReal.direccion,
 
-      origen_lat: Number(origenReal.lat),
-      origen_lng: Number(origenReal.lng),
+  origen_lat: Number(origenReal.lat),
+  origen_lng: Number(origenReal.lng),
 
-      destino_lat: Number(destinoReal.lat),
-      destino_lng: Number(destinoReal.lng),
+  destino_lat: Number(destinoReal.lat),
+  destino_lng: Number(destinoReal.lng),
 
-      // Compatibilidad
-      distancia_km: Number(km),
-      duracion_min: Number(minutos),
+  // Compatibilidad legacy
+  distancia_km: Number(km),
+  duracion_min: Number(minutos),
 
-      // ✅ TOTAL REAL de toda la ruta calculada por OSRM
-      distancia_km_total: Number(km),
-      duracion_min_total: Number(minutos),
+  // TOTAL REAL de TODA la ruta
+  distancia_km_total: Number(km),
+  duracion_min_total: Number(minutos),
 
-      fechaHora: new Date().toISOString(),
+  fechaHora: new Date().toISOString(),
 
-      waypoints: waypointsIntermedios,
+  waypoints: waypointsIntermedios,
 
-      // Extras de trazabilidad
-      segmentos_totales_front: segmentosTotales,
-      retorno_al_origen_front: retornoAlOrigen,
-      resumen_ruta_front: resumenRuta,
-      ruta_calculada_completa: true
-    };
+  // Lista completa explícita (más fácil para backend)
+  puntos_ruta: puntos.map((p, index) => ({
+    orden: index,
+    tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+    direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
+    direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  })),
 
+  // Extras de trazabilidad
+  segmentos_totales_front: segmentosTotales,
+  cantidad_paradas_front: waypointsIntermedios.length,
+  retorno_al_origen_front: retornoAlOrigen,
+  resumen_ruta_front: resumenRuta,
+  ruta_calculada_completa: true,
+  cotizacion_multitramo: puntos.length > 2
+};
     console.log("📤 Payload cotización limpio:", payload);
 
     const response = await fetch(CONFIG.COTIZAR_URL, {
@@ -2298,16 +2422,15 @@ function mostrarCotizacion(precio, km, minutos) {
 
   let textoResumen = '';
 
-  if (retornoAlOrigen && paradasIntermedias === 0) {
-    textoResumen = 'Ida y vuelta directa';
-  } else if (retornoAlOrigen && paradasIntermedias > 0) {
-    textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · regreso al origen`;
-  } else if (paradasIntermedias === 0) {
-    textoResumen = 'Viaje directo';
-  } else {
-    textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · ${segmentos} tramo${segmentos > 1 ? 's' : ''}`;
-  }
-
+if (retornoAlOrigen && paradasIntermedias === 0) {
+  textoResumen = 'Ida y vuelta completa';
+} else if (retornoAlOrigen && paradasIntermedias > 0) {
+  textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · recorrido completo con regreso`;
+} else if (paradasIntermedias === 0) {
+  textoResumen = 'Recorrido directo completo';
+} else {
+  textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · ${segmentos} tramo${segmentos > 1 ? 's' : ''} cotizados`;
+}
   document.getElementById('resumenParadas').textContent = textoResumen;
   card.classList.add('visible');
 
