@@ -1492,13 +1492,6 @@ async function resolverWaypointsPendientes() {
 
   return errores;
 }
-function obtenerPuntosOrdenados() {
-  return [
-    state.origen,
-    ...state.waypoints.filter(w => w.data).map(w => w.data),
-    state.destino
-  ].filter(Boolean);
-}
 
 function construirPayloadWaypointsIntermedios() {
   const puntos = obtenerPuntosOrdenados();
@@ -1663,6 +1656,9 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     clearTimeout(timer);
     const texto = input.value.trim();
 
+    // ⚠️ importante: si el usuario escribe manualmente, invalidamos selección previa
+    onSelect(null);
+
     if (texto.length < 3) {
       contenedor.style.display = 'none';
       contenedor.innerHTML = '';
@@ -1676,24 +1672,28 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
 
       if (currentRequest !== requestId) return;
 
-mostrarSugerencias(contenedor, resultados, (r) => {
-  const direccionCorta = formatearDireccionCorta(r);
-  const direccionSecundaria = formatearDireccionSecundaria(r);
+      mostrarSugerencias(contenedor, resultados, (r) => {
+        const direccionCorta = formatearDireccionCorta(r);
+        const direccionSecundaria = formatearDireccionSecundaria(r);
 
-  input.value = direccionCorta;
+        input.value = direccionCorta;
 
-  onSelect({
-    direccion: r.display_name,
-    direccionCorta,
-    direccionSecundaria,
-    lat: parseFloat(r.lat),
-    lng: parseFloat(r.lon),
-    raw: r
-  });
+        onSelect({
+          direccion: r.display_name,
+          direccionCorta,
+          direccionSecundaria,
+          lat: parseFloat(r.lat),
+          lng: parseFloat(r.lon),
+          raw: r
+        });
 
-  input.setAttribute('title', `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`);
-  contenedor.style.display = 'none';
-});      
+        input.setAttribute(
+          'title',
+          `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
+        );
+
+        contenedor.style.display = 'none';
+      });
     }, 300);
   });
 
@@ -1702,7 +1702,14 @@ mostrarSugerencias(contenedor, resultados, (r) => {
       input.dispatchEvent(new Event('input'));
     }
   });
+  
+  input.addEventListener('blur', () => {
+    setTimeout(() => {
+      contenedor.style.display = 'none';
+    }, 180);
+  });
 }
+  
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
 
@@ -2089,6 +2096,16 @@ function reiniciarRuta() {
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
+function obtenerPuntosOrdenados() {
+  return [
+    state.origen,
+    ...((state.waypoints || [])
+      .filter(w => w && w.data)
+      .map(w => w.data)),
+    state.destino
+  ].filter(Boolean);
+}
+  
   // ==========================================
 // UTILIDADES DE RUTA MULTITRAYECTO
 // ==========================================
