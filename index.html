@@ -2084,24 +2084,30 @@ async function cotizarViaje(km, minutos) {
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   const paradasIntermedias = state.waypoints.filter(w => w.data).length;
-  const puntosTotales = paradasIntermedias + 2; // origen + destino + intermedias
 
-document.getElementById('quotePrice').textContent =
-  '$' + Number(precio).toLocaleString('es-AR');
+  const precioTexto =
+    state.cotizacion?.precio_formateado ||
+    '$' + Number(precio).toLocaleString('es-AR');
+
+  document.getElementById('quotePrice').textContent = precioTexto;
+
   let label = 'Precio estimado';
 
-if (state.cotizacion?.modo === 'fallback_local') {
-  label = 'Estimación provisoria';
-}
+  if (state.cotizacion?.modo === 'fallback_local') {
+    label = 'Estimación provisoria';
+  }
 
-document.querySelector('.quote-price-label').textContent = label;
+  document.querySelector('.quote-price-label').textContent = label;
   document.getElementById('detailDistance').textContent = Number(km).toFixed(1) + ' km';
   document.getElementById('detailDuration').textContent = Math.round(Number(minutos)) + ' min';
   document.getElementById('detailStops').textContent = paradasIntermedias;
-document.getElementById('resumenParadas').textContent =
-  paradasIntermedias === 0
-    ? 'Viaje directo'
-    : `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} intermedia${paradasIntermedias > 1 ? 's' : ''}`;
+
+  document.getElementById('resumenParadas').textContent =
+    state.cotizacion?.resumen_ruta ||
+    (paradasIntermedias === 0
+      ? 'Viaje directo'
+      : `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} intermedia${paradasIntermedias > 1 ? 's' : ''}`);
+
   card.classList.add('visible');
 
   setTimeout(() => {
@@ -2118,47 +2124,31 @@ function confirmarViaje() {
   }
 
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
+  const precioTexto =
+    state.cotizacion?.precio_formateado ||
+    document.getElementById('quotePrice').textContent;
 
-  const mensaje = `🚐 *MIMI Transporte Escolar*\n\n` +
-    `🧾 *Cotización:* ${cotizacionId}\n\n` +
-`📍 *Origen:* ${state.origen.direccionCorta || state.origen.direccion}\n` +
-`${state.waypoints.filter(w => w.data).map((w, i) => 
+  const resumenRuta =
+    state.cotizacion?.resumen_ruta ||
+    document.getElementById('resumenParadas').textContent;
+
+  const mensaje = `🚐 *MIMI Transporte Escolar*
+
+🧾 *Cotización:* ${cotizacionId}
+
+📍 *Origen:* ${state.origen.direccionCorta || state.origen.direccion}
+${state.waypoints.filter(w => w.data).map((w, i) =>
   `📍 *Parada ${i + 1}:* ${w.data.direccionCorta || w.data.direccion}\n`
-).join('')}` +
-`🏁 *Destino:* ${state.destino.direccionCorta || state.destino.direccion}\n\n` +
-`📏 *Distancia:* ${state.routeData.distance} km\n` +
-`⏱️ *Duración:* ${state.routeData.duration} min\n` +
-`💰 *Precio:* ${document.getElementById('quotePrice').textContent}\n\n` +
-`✅ ¿Confirmamos el viaje?`;
+).join('')}🏁 *Destino:* ${state.destino.direccionCorta || state.destino.direccion}
+
+🛣️ *Ruta:* ${resumenRuta}
+📏 *Distancia:* ${state.routeData.distance} km
+⏱️ *Duración:* ${state.routeData.duration} min
+💰 *Precio:* ${precioTexto}
+
+✅ ¿Confirmamos el viaje?`;
 
   window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
-}
-async function compartirRuta() {
-  if (!state.routeData) {
-    notif.show('Sin ruta', 'Primero calculá el viaje', 'warning');
-    return;
-  }
-
-  const precio = state.cotizacion?.precio || 0;
-
-  const texto = `Mirá la ruta de mi viaje con MIMI Transporte 🚐
-📍 ${state.origen?.direccionCorta || 'Origen'} → ${state.destino?.direccionCorta || 'Destino'}
-🛣️ ${state.routeData.distance} km en ${state.routeData.duration} min
-💰 $${Number(precio).toLocaleString('es-AR')}`;
-
-  try {
-    if (navigator.share) {
-      await navigator.share({
-        title: 'Mi viaje con MIMI',
-        text: texto
-      });
-    } else if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(texto);
-      notif.show('Copiado', 'El resumen se copió al portapapeles', 'success');
-    } else {
-      notif.show('No disponible', 'Tu navegador no permite compartir en este momento', 'warning');
-    }
-  } catch (_) {}
 }
   // ==========================================
 // INICIALIZACIÓN
