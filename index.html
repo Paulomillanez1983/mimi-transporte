@@ -2314,39 +2314,59 @@ async function calcularRuta() {
     const resumenRuta = construirResumenRuta();
     const waypointsIntermedios = construirPayloadWaypointsIntermedios();
 
-    const payload = {
-      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+let distanciaEstimada = 0;
 
-      origen: puntos[0].direccion,
-      origen_corto: puntos[0].direccionCorta || puntos[0].direccion,
+for (let i = 0; i < coordsLineal.length - 1; i++) {
+  const from = turf.point(coordsLineal[i]);
+  const to = turf.point(coordsLineal[i + 1]);
+  distanciaEstimada += turf.distance(from, to, { units: 'kilometers' });
+}
 
-      destino: puntos[puntos.length - 1].direccion,
-      destino_corto: puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion,
+distanciaEstimada = Number((distanciaEstimada * 1.18).toFixed(1));
+const duracionEstimada = Math.max(1, Math.round((distanciaEstimada / 28) * 60));
 
-      origen_lat: Number(puntos[0].lat),
-      origen_lng: Number(puntos[0].lng),
+const payload = {
+  servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-      destino_lat: Number(puntos[puntos.length - 1].lat),
-      destino_lng: Number(puntos[puntos.length - 1].lng),
+  origen: puntos[0].direccion,
+  origen_corto: puntos[0].direccionCorta || puntos[0].direccion,
 
-      distancia_km: 0,
-      duracion_min: 0,
-      distancia_km_total: 0,
-      duracion_min_total: 0,
+  destino: puntos[puntos.length - 1].direccion,
+  destino_corto: puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion,
 
-      fechaHora: new Date().toISOString(),
+  origen_lat: Number(puntos[0].lat),
+  origen_lng: Number(puntos[0].lng),
 
-      waypoints: waypointsIntermedios,
+  destino_lat: Number(puntos[puntos.length - 1].lat),
+  destino_lng: Number(puntos[puntos.length - 1].lng),
 
-      puntos_ruta: puntos.map((p, index) => ({
-        orden: index,
-        tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
-        direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-        direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-        lat: Number(p.lat),
-        lng: Number(p.lng)
-      })),
+  distancia_km: distanciaEstimada,
+  duracion_min: duracionEstimada,
+  distancia_km_total: distanciaEstimada,
+  duracion_min_total: duracionEstimada,
 
+  fechaHora: new Date().toISOString(),
+
+  waypoints: waypointsIntermedios,
+
+  puntos_ruta: puntos.map((p, index) => ({
+    orden: index,
+    tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+    direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
+    direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  })),
+
+  segmentos_totales_front: Math.max(1, puntos.length - 1),
+  cantidad_paradas_front: waypointsIntermedios.length,
+  retorno_al_origen_front: retornoAlOrigen,
+  resumen_ruta_front: resumenRuta,
+  ruta_calculada_completa: true,
+  cotizacion_multitramo: puntos.length > 2,
+  cliente_origen_input: origenInput?.value || '',
+  cliente_destino_input: destinoInput?.value || ''
+};
       segmentos_totales_front: Math.max(1, puntos.length - 1),
       cantidad_paradas_front: waypointsIntermedios.length,
       retorno_al_origen_front: retornoAlOrigen,
@@ -2361,11 +2381,23 @@ async function calcularRuta() {
 
   } catch (err) {
     console.error('❌ Error:', err);
-    notif.show('Error', err.message || 'No se pudo completar la cotización', 'error');
+
+    try {
+      await dibujarRutaFallback();
+      notif.show(
+        'Modo estimado',
+        'Mostramos una estimación provisoria mientras se recupera el servicio.',
+        'warning'
+      );
+    } catch (fallbackErr) {
+      console.error('❌ Error en fallback:', fallbackErr);
+      notif.show('Error', err.message || 'No se pudo completar la cotización', 'error');
+    }
   } finally {
     setLoadingCotizacion(false);
   }
 }
+  
 // ==========================================
 // NUEVAS FUNCIONES AUXILIARES RÁPIDAS
 // ==========================================
@@ -2524,71 +2556,30 @@ async function dibujarRutaFallback() {
     cotizacion_multitramo: puntos.length > 2
   };
 
-  await cotizarViaje(payload);
-}
-async function cotizarViaje(km, minutos) {
   try {
-    const puntos = obtenerPuntosOrdenados();
+    await cotizarViaje(payload);
+  } catch (_) {
+    // Si backend no responde, al menos mostramos estimación local visible
+    state.cotizacion = {
+      precio_formateado: 'Consultar',
+      resumen_ruta: resumenRuta,
+      waypoints_count: waypointsIntermedios.length,
+      segmentos_totales: Math.max(1, puntos.length - 1),
+      retorno_al_origen: retornoAlOrigen,
+      modo: 'fallback_local'
+    };
 
-    if (puntos.length < 2) {
-      throw new Error('No hay suficientes puntos para cotizar');
+    mostrarCotizacion(0, distanceKm, durationMin);
+  }
+}
+
+async function cotizarViaje(payload) {
+  try {
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Payload inválido para cotización');
     }
 
-    const origenReal = puntos[0];
-    const destinoReal = puntos[puntos.length - 1];
-    const waypointsIntermedios = construirPayloadWaypointsIntermedios();
-
-    const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
-    const segmentosTotales = Math.max(1, puntos.length - 1);
-    const resumenRuta = construirResumenRuta();
-
-    const payload = {
-      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
-
-      origen: origenReal.direccion,
-      origen_corto: origenReal.direccionCorta || origenReal.direccion,
-
-      destino: destinoReal.direccion,
-      destino_corto: destinoReal.direccionCorta || destinoReal.direccion,
-
-      origen_lat: Number(origenReal.lat),
-      origen_lng: Number(origenReal.lng),
-
-      destino_lat: Number(destinoReal.lat),
-      destino_lng: Number(destinoReal.lng),
-
-      // Compatibilidad legacy
-      distancia_km: Number(km),
-      duracion_min: Number(minutos),
-
-      // TOTAL REAL de TODA la ruta
-      distancia_km_total: Number(km),
-      duracion_min_total: Number(minutos),
-
-      fechaHora: new Date().toISOString(),
-
-      waypoints: waypointsIntermedios,
-
-      // Ruta completa explícita
-      puntos_ruta: puntos.map((p, index) => ({
-        orden: index,
-        tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
-        direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-        direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-        lat: Number(p.lat),
-        lng: Number(p.lng)
-      })),
-
-      // Trazabilidad
-      segmentos_totales_front: segmentosTotales,
-      cantidad_paradas_front: waypointsIntermedios.length,
-      retorno_al_origen_front: retornoAlOrigen,
-      resumen_ruta_front: resumenRuta,
-      ruta_calculada_completa: true,
-      cotizacion_multitramo: puntos.length > 2,
-      cliente_origen_input: document.getElementById('inputOrigen')?.value || '',
-      cliente_destino_input: document.getElementById('inputDestino')?.value || ''
-    };
+    const resumenRuta = payload.resumen_ruta_front || construirResumenRuta();
 
     console.log("📤 Payload cotización limpio:", payload);
 
@@ -2617,13 +2608,43 @@ async function cotizarViaje(km, minutos) {
     }
 
     const precio = Number(data.precio || 0);
-    const distancia = Number(data.distancia_km || km);
-    const duracion = Number(data.duracionEstimadaMin || minutos);
+    const distancia = Number(
+      data.distancia_km_total ??
+      data.distancia_km ??
+      payload.distancia_km_total ??
+      payload.distancia_km ??
+      0
+    );
+
+    const duracion = Number(
+      data.duracionEstimadaMin ??
+      data.duracion_min_total ??
+      data.duracion_min ??
+      payload.duracion_min_total ??
+      payload.duracion_min ??
+      0
+    );
 
     state.cotizacion = {
       ...data,
       resumen_ruta: data.resumen_ruta || resumenRuta
     };
+
+    // Mantener routeData coherente aunque backend no devuelva geometría
+    if (!state.routeData) state.routeData = {};
+
+    state.routeData.distance = distancia;
+    state.routeData.duration = duracion;
+    state.routeData.segmentos = data.segmentos_totales ?? payload.segmentos_totales_front ?? 1;
+    state.routeData.retornoAlOrigen = data.retorno_al_origen ?? payload.retorno_al_origen_front ?? false;
+    state.routeData.resumenRuta = data.resumen_ruta || resumenRuta;
+
+    // Si backend devuelve geometría real, actualizar mapa
+    if (Array.isArray(data?.route_geometry) && data.route_geometry.length >= 2) {
+      dibujarRutaReal(data.route_geometry);
+    } else if (Array.isArray(data?.geometry?.coordinates) && data.geometry.coordinates.length >= 2) {
+      dibujarRutaReal(data.geometry.coordinates);
+    }
 
     mostrarCotizacion(precio, distancia, duracion);
 
@@ -2646,6 +2667,7 @@ async function cotizarViaje(km, minutos) {
     document.getElementById('quoteCard')?.classList.remove('visible');
   }
 }
+  
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   if (!card) return;
