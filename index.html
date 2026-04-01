@@ -4286,6 +4286,9 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     }
 
     console.log("📥 Respuesta cotización:", data);
+    console.log("🗺️ Geometría recibida:", data.geometria);
+    console.log("🧠 Usa backend real:", data.calculo_backend_real);
+    console.log("📍 Puntos ruta:", data.puntos_ruta);
 
     if (!response.ok || !data?.exito) {
       throw new Error(data?.error || `No se pudo cotizar (${response.status})`);
