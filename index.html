@@ -2288,80 +2288,80 @@ async function cotizarViaje(km, minutos) {
     const origenReal = puntos[0];
     const destinoReal = puntos[puntos.length - 1];
     const waypointsIntermedios = construirPayloadWaypointsIntermedios();
-const puntos = obtenerPuntosOrdenados();
 
-const retornoFinalAlOrigen =
-  puntos.length >= 2 &&
-  Math.abs(Number(puntos[0].lat) - Number(puntos[puntos.length - 1].lat)) <= 0.0008 &&
-  Math.abs(Number(puntos[0].lng) - Number(puntos[puntos.length - 1].lng)) <= 0.0008;
+    const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
 
-const retornoAlOrigen = detectarRetornoAlOrigenFrontend();    const segmentosTotales = Math.max(1, puntos.length - 1);
+    
+    const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
+    const segmentosTotales = Math.max(1, puntos.length - 1);
     const resumenRuta = construirResumenRuta();
 
-const payload = {
-  servicio: retornoFinalAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+    const payload = {
+      servicio: retornoFinalAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-  origen: origenReal.direccion,
-  origen_corto: origenReal.direccionCorta || origenReal.direccion,
+      origen: origenReal.direccion,
+      origen_corto: origenReal.direccionCorta || origenReal.direccion,
 
-  destino: destinoReal.direccion,
-  destino_corto: destinoReal.direccionCorta || destinoReal.direccion,
+      destino: destinoReal.direccion,
+      destino_corto: destinoReal.direccionCorta || destinoReal.direccion,
 
-  origen_lat: Number(origenReal.lat),
-  origen_lng: Number(origenReal.lng),
+      origen_lat: Number(origenReal.lat),
+      origen_lng: Number(origenReal.lng),
 
-  destino_lat: Number(destinoReal.lat),
-  destino_lng: Number(destinoReal.lng),
+      destino_lat: Number(destinoReal.lat),
+      destino_lng: Number(destinoReal.lng),
 
-  // Compatibilidad legacy
-  distancia_km: Number(km),
-  duracion_min: Number(minutos),
+      // Compatibilidad legacy
+      distancia_km: Number(km),
+      duracion_min: Number(minutos),
 
-  // TOTAL REAL de TODA la ruta
-  distancia_km_total: Number(km),
-  duracion_min_total: Number(minutos),
+      // TOTAL REAL de TODA la ruta
+      distancia_km_total: Number(km),
+      duracion_min_total: Number(minutos),
 
-  fechaHora: new Date().toISOString(),
+      fechaHora: new Date().toISOString(),
 
-  waypoints: waypointsIntermedios,
+      waypoints: waypointsIntermedios,
 
-  // Lista completa explícita (más fácil para backend)
-  puntos_ruta: puntos.map((p, index) => ({
-    orden: index,
-    tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
-    direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-    direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-    lat: Number(p.lat),
-    lng: Number(p.lng)
-  })),
+      // Lista completa explícita
+      puntos_ruta: puntos.map((p, index) => ({
+        orden: index,
+        tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+        direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
+        direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
+        lat: Number(p.lat),
+        lng: Number(p.lng)
+      })),
 
-  // Extras de trazabilidad
-  segmentos_totales_front: segmentosTotales,
-  cantidad_paradas_front: waypointsIntermedios.length,
-  retorno_al_origen_front: retornoAlOrigen,
-  resumen_ruta_front: resumenRuta,
-  ruta_calculada_completa: true,
-  cotizacion_multitramo: puntos.length > 2,
-cliente_origen_input: document.getElementById('inputOrigen')?.value || '',
-cliente_destino_input: document.getElementById('inputDestino')?.value || ''
-};
+      // Extras de trazabilidad
+      segmentos_totales_front: segmentosTotales,
+      cantidad_paradas_front: waypointsIntermedios.length,
+      retorno_al_origen_front: retornoAlOrigen,
+      resumen_ruta_front: resumenRuta,
+      ruta_calculada_completa: true,
+      cotizacion_multitramo: puntos.length > 2,
+      cliente_origen_input: document.getElementById('inputOrigen')?.value || '',
+      cliente_destino_input: document.getElementById('inputDestino')?.value || ''
+    };
+
     console.log("📤 Payload cotización limpio:", payload);
 
-const controller = new AbortController();
-const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-const response = await fetch(CONFIG.COTIZAR_URL, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'apikey': SUPABASE_KEY,
-    'Authorization': 'Bearer ' + SUPABASE_KEY
-  },
-  body: JSON.stringify(payload),
-  signal: controller.signal
-});
+    const response = await fetch(CONFIG.COTIZAR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
 
-clearTimeout(timeoutId);
+    clearTimeout(timeoutId);
+
     const data = await response.json().catch(() => null);
 
     console.log("📥 Respuesta cotización:", data);
@@ -2382,23 +2382,25 @@ clearTimeout(timeoutId);
     mostrarCotizacion(precio, distancia, duracion);
 
   } catch (err) {
-console.error('❌ Error cotizando:', err);
+    console.error('❌ Error cotizando:', err);
 
-state.cotizacion = null;
+    state.cotizacion = null;
 
-const mensaje =
-  err?.name === 'AbortError'
-    ? 'La cotización tardó demasiado. Intentá nuevamente.'
-    : 'No pudimos obtener el precio en este momento. Intentá nuevamente.';
+    const mensaje =
+      err?.name === 'AbortError'
+        ? 'La cotización tardó demasiado. Intentá nuevamente.'
+        : 'No pudimos obtener el precio en este momento. Intentá nuevamente.';
 
-notif.show(
-  'No disponible',
-  mensaje,
-  'error'
-);
-    document.getElementById('quoteCard').classList.remove('visible');
+    notif.show(
+      'No disponible',
+      mensaje,
+      'error'
+    );
+
+    document.getElementById('quoteCard')?.classList.remove('visible');
   }
-}  
+}
+
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   const paradasIntermedias = state.waypoints.filter(w => w.data).length;
