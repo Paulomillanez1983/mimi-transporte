@@ -4472,17 +4472,19 @@ function mostrarCotizacion(precio, km, minutos) {
     state.cotizacion?.precio_formateado ||
     '$' + Number(precio).toLocaleString('es-AR');
 
+  // Actualizar precio
   const quotePrice = document.getElementById('quotePrice');
   if (quotePrice) quotePrice.textContent = precioTexto;
 
+  // Actualizar label (estimado o provisoria)
   let label = 'Precio estimado';
   if (state.routeData?.fallback || state.cotizacion?.modo === 'fallback_local') {
     label = 'Estimación provisoria';
   }
-
   const labelEl = document.querySelector('.quote-price-label');
   if (labelEl) labelEl.textContent = label;
 
+  // Actualizar detalles
   const detailDistance = document.getElementById('detailDistance');
   if (detailDistance) detailDistance.textContent = Number(km).toFixed(1) + ' km';
 
@@ -4492,13 +4494,13 @@ function mostrarCotizacion(precio, km, minutos) {
   const detailStops = document.getElementById('detailStops');
   if (detailStops) detailStops.textContent = paradasIntermedias;
 
+  // Resumen de ruta
   const resumenRuta =
     state.cotizacion?.resumen_ruta ||
     state.routeData?.resumenRuta ||
     construirResumenRuta();
 
   let textoResumen = '';
-
   if (retornoAlOrigen && paradasIntermedias === 0) {
     textoResumen = 'Ida y vuelta completa';
   } else if (retornoAlOrigen && paradasIntermedias > 0) {
@@ -4511,24 +4513,39 @@ function mostrarCotizacion(precio, km, minutos) {
 
   const resumenParadas = document.getElementById('resumenParadas');
   if (resumenParadas) resumenParadas.textContent = textoResumen;
-  const mapSection = document.getElementById('mapSection');
-if (mapSection && state.routeData?.geometry?.coordinates?.length >= 2) {
-  mapSection.style.display = 'block';
 
-  setTimeout(() => {
-    try {
-      mapaCliente?.resize?.();
-    } catch (_) {}
-  }, 200);
-}
+  // ==================== MAPA ====================
+  const mapSection = document.getElementById('mapSection');
+  
+  if (mapSection) {
+    mapSection.style.display = 'block';   // Mostrar la sección del mapa
+
+    // Forzar resize del mapa con un pequeño delay (esto es clave)
+    setTimeout(() => {
+      try {
+        if (mapaCliente) {
+          mapaCliente.resize();                    // ← Muy importante
+        }
+      } catch (e) {
+        console.warn('Error al hacer resize del mapa:', e);
+      }
+    }, 180);
+  }
+
+  // Mostrar la card de cotización
   card.classList.add('visible');
 
+  // Scroll suave hacia la card
   setTimeout(() => {
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 300);
+    card.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'nearest' 
+    });
+  }, 350);
 
   console.log("🧠 Resumen ruta:", resumenRuta);
-}  
+}
+  
 // ==========================================
 // ACCIONES
 // ==========================================
