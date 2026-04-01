@@ -2072,14 +2072,21 @@ function reiniciarRuta() {
   // ==========================================
 // UTILIDADES DE RUTA MULTITRAYECTO
 // ==========================================
-function obtenerPuntosOrdenados() {
-  return [
-    state.origen,
-    ...state.waypoints.filter(w => w.data).map(w => w.data),
-    state.destino
-  ].filter(Boolean);
-}
+function construirPayloadWaypointsIntermedios() {
+  const puntos = obtenerPuntosOrdenados();
 
+  // Si no hay origen + destino, no hay waypoints válidos
+  if (puntos.length <= 2) return [];
+
+  // Solo puntos intermedios (sin origen ni destino)
+  return puntos.slice(1, -1).map((p, index) => ({
+    orden: index + 1,
+    direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
+    direccion_completa: p.direccion || p.direccionCorta || `Parada ${index + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  }));
+}
 function detectarRetornoAlOrigenFrontend() {
   const puntos = obtenerPuntosOrdenados();
   if (puntos.length < 2) return false;
