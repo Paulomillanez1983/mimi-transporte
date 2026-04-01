@@ -417,7 +417,7 @@ body {
   margin-bottom: 0;
 }
 
-..route-input-wrapper {
+.route-input-wrapper {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1729,37 +1729,41 @@ async function dibujarRutaEnMapa(coords) {
     state.destino
   ].filter(Boolean);
 
-  puntos.forEach((punto, index) => {
-    const el = document.createElement('div');
-    const isOrigin = index === 0;
-    const isDest = index === puntos.length - 1;
+puntos.forEach((punto, index) => {
+  const el = document.createElement('div');
+  const isOrigin = index === 0;
+  const isDest = index === puntos.length - 1;
 
-    el.innerHTML = `
-      <div style="
-        width: 28px; 
-        height: 28px; 
-        background: ${isOrigin ? '#4caf50' : isDest ? '#f44336' : '#ff9800'}; 
-        border-radius: 50%; 
-        border: 3px solid white; 
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 12px;
-      ">
-        ${isOrigin ? 'A' : isDest ? 'B' : index}
-      </div>
-    `;
+  let label = '';
+  if (isOrigin) label = 'A';
+  else if (isDest) label = 'B';
+  else label = String(index);
 
-    const marker = new maplibregl.Marker({ element: el })
-      .setLngLat([punto.lng, punto.lat])
-      .addTo(mapaCliente);
+  el.innerHTML = `
+    <div style="
+      width: 28px; 
+      height: 28px; 
+      background: ${isOrigin ? '#4caf50' : isDest ? '#f44336' : '#ff9800'}; 
+      border-radius: 50%; 
+      border: 3px solid white; 
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+    ">
+      ${label}
+    </div>
+  `;
 
-    state.markers.push(marker);
-  });
+  const marker = new maplibregl.Marker({ element: el })
+    .setLngLat([punto.lng, punto.lat])
+    .addTo(mapaCliente);
 
+  state.markers.push(marker);
+});
   const coordinates = coords || puntos.map(p => [p.lng, p.lat]);
 
   if (!coordinates || coordinates.length < 2) return;
@@ -1851,6 +1855,54 @@ function reiniciarRuta() {
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
+  // ==========================================
+// UTILIDADES DE RUTA MULTITRAYECTO
+// ==========================================
+function obtenerPuntosOrdenados() {
+  return [
+    state.origen,
+    ...state.waypoints.filter(w => w.data).map(w => w.data),
+    state.destino
+  ].filter(Boolean);
+}
+
+function construirPayloadWaypointsIntermedios() {
+  const puntos = obtenerPuntosOrdenados();
+
+  if (puntos.length < 2) return [];
+
+  // Solo puntos intermedios: sin origen ni destino
+  return puntos.slice(1, -1).map((p) => ({
+    direccion: p.direccion,
+    direccionCorta: p.direccionCorta || p.direccion,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  }));
+}
+
+function detectarRetornoAlOrigenFrontend() {
+  if (!state.origen || !state.destino) return false;
+
+  const tolerancia = 0.0008; // ~80m
+
+  return (
+    Math.abs(Number(state.origen.lat) - Number(state.destino.lat)) <= tolerancia &&
+    Math.abs(Number(state.origen.lng) - Number(state.destino.lng)) <= tolerancia
+  );
+}
+
+function construirResumenRuta() {
+  const puntos = obtenerPuntosOrdenados();
+  if (puntos.length < 2) return "Ruta incompleta";
+
+  const nombres = puntos.map((p, index) => {
+    if (index === 0) return p.direccionCorta || "Origen";
+    if (index === puntos.length - 1) return p.direccionCorta || "Destino";
+    return p.direccionCorta || `Parada ${index}`;
+  });
+
+  return nombres.join(" → ");
+}
   
   // ==========================================
 // CÁLCULO DE RUTA Y COTIZACIÓN
@@ -1858,188 +1910,194 @@ function reiniciarRuta() {
 async function calcularRuta() {
   const btn = document.getElementById('btnCalcular');
   const btnText = btn.innerHTML;
-  
-  // Validar datos
+
   const origenInput = document.getElementById('inputOrigen');
   const destinoInput = document.getElementById('inputDestino');
-  
-if (!state.origen && origenInput.value) {
-  const geo = await buscarDireccion(origenInput.value);
-  if (geo.length) {
-    state.origen = {
-      direccion: geo[0].display_name,
-      direccionCorta: formatearDireccionCorta(geo[0]),
-      direccionSecundaria: formatearDireccionSecundaria(geo[0]),
-      lat: parseFloat(geo[0].lat),
-      lng: parseFloat(geo[0].lon),
-      raw: geo[0]
-    };
-    origenInput.value = state.origen.direccionCorta;
-  }
-}
 
-if (!state.destino && destinoInput.value) {
-  const geo = await buscarDireccion(destinoInput.value);
-  if (geo.length) {
-    state.destino = {
-      direccion: geo[0].display_name,
-      direccionCorta: formatearDireccionCorta(geo[0]),
-      direccionSecundaria: formatearDireccionSecundaria(geo[0]),
-      lat: parseFloat(geo[0].lat),
-      lng: parseFloat(geo[0].lon),
-      raw: geo[0]
-    };
-    destinoInput.value = state.destino.direccionCorta;
+  // Resolver origen si escribieron pero no seleccionaron sugerencia
+  if (!state.origen && origenInput.value) {
+    const geo = await buscarDireccion(origenInput.value);
+    if (geo.length) {
+      state.origen = {
+        direccion: geo[0].display_name,
+        direccionCorta: formatearDireccionCorta(geo[0]),
+        direccionSecundaria: formatearDireccionSecundaria(geo[0]),
+        lat: parseFloat(geo[0].lat),
+        lng: parseFloat(geo[0].lon),
+        raw: geo[0]
+      };
+      origenInput.value = state.origen.direccionCorta;
+    }
   }
-}
+
+  // Resolver destino si escribieron pero no seleccionaron sugerencia
+  if (!state.destino && destinoInput.value) {
+    const geo = await buscarDireccion(destinoInput.value);
+    if (geo.length) {
+      state.destino = {
+        direccion: geo[0].display_name,
+        direccionCorta: formatearDireccionCorta(geo[0]),
+        direccionSecundaria: formatearDireccionSecundaria(geo[0]),
+        lat: parseFloat(geo[0].lat),
+        lng: parseFloat(geo[0].lon),
+        raw: geo[0]
+      };
+      destinoInput.value = state.destino.direccionCorta;
+    }
+  }
+
   if (!state.origen || !state.destino) {
     notif.show('Faltan datos', 'Ingresá origen y destino', 'error');
     return;
   }
+
+  // Validar paradas incompletas
   const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
-const waypointsConTextoSinResolver = waypointInputs.filter(input => {
-  const wp = state.waypoints.find(w => w.id === input.id);
-  return input.value.trim().length > 0 && !wp?.data;
-});
+  const waypointsConTextoSinResolver = waypointInputs.filter(input => {
+    const wp = state.waypoints.find(w => w.id === input.id);
+    return input.value.trim().length > 0 && !wp?.data;
+  });
 
-if (waypointsConTextoSinResolver.length > 0) {
-  notif.show('Paradas incompletas', 'Seleccioná una sugerencia válida para cada parada', 'warning');
-  return;
-}
+  if (waypointsConTextoSinResolver.length > 0) {
+    notif.show('Paradas incompletas', 'Seleccioná una sugerencia válida para cada parada', 'warning');
+    return;
+  }
 
-  // Loading
   btn.disabled = true;
   btn.innerHTML = '<span>⏳</span><span>Calculando...</span>';
 
   try {
-    // Calcular ruta con OSRM (ruta real por calles)
-    const waypointsCoords = state.waypoints
-      .filter(w => w.data)
-      .map(w => [w.data.lng, w.data.lat]);
-    
-    const allCoords = [
-      [state.origen.lng, state.origen.lat],
-      ...waypointsCoords,
-      [state.destino.lng, state.destino.lat]
-    ];
+    const puntos = obtenerPuntosOrdenados();
 
-    // Usar OSRM para ruta real
+    if (puntos.length < 2) {
+      throw new Error('No hay suficientes puntos para calcular la ruta');
+    }
+
+    const allCoords = puntos.map(p => [Number(p.lng), Number(p.lat)]);
+
     const osrmUrl = `https://router.project-osrm.org/route/v1/driving/` +
       allCoords.map(c => c.join(',')).join(';') +
-      '?overview=full&geometries=geojson';
+      '?overview=full&geometries=geojson&steps=false';
 
-const osrmRes = await fetch(osrmUrl, {
-  headers: {
-    'Accept': 'application/json'
-  }
-});
+    const osrmRes = await fetch(osrmUrl, {
+      headers: { 'Accept': 'application/json' }
+    });
 
-if (!osrmRes.ok) {
-  throw new Error(`OSRM respondió ${osrmRes.status}`);
-}
+    if (!osrmRes.ok) {
+      throw new Error(`OSRM respondió ${osrmRes.status}`);
+    }
 
-const osrmData = await osrmRes.json();
+    const osrmData = await osrmRes.json();
 
-if (!osrmData || osrmData.code !== 'Ok' || !osrmData.routes?.length) {
-  throw new Error('No se pudo calcular la ruta real');
-}
+    if (!osrmData || osrmData.code !== 'Ok' || !osrmData.routes?.length) {
+      throw new Error('No se pudo calcular la ruta real');
+    }
+
     const route = osrmData.routes[0];
-    const distanceKm = (route.distance / 1000).toFixed(1);
+    const distanceKm = Number((route.distance / 1000).toFixed(1));
     const durationMin = Math.round(route.duration / 60);
 
-    // Guardar datos
     state.routeData = {
       geometry: route.geometry,
       distance: distanceKm,
       duration: durationMin,
-      waypoints: allCoords.length - 2
+      waypoints: Math.max(0, puntos.length - 2),
+      segmentos: Math.max(1, puntos.length - 1),
+      retornoAlOrigen: detectarRetornoAlOrigenFrontend(),
+      resumenRuta: construirResumenRuta(),
+      puntosOrdenados: puntos
     };
 
-    // Mostrar mapa
     document.getElementById('mapSection').style.display = 'block';
-await dibujarRutaEnMapa(route.geometry.coordinates);
+    await dibujarRutaEnMapa(route.geometry.coordinates);
 
-// Calcular precio
-await cotizarViaje(distanceKm, durationMin);
+    await cotizarViaje(distanceKm, durationMin);
 
-    } catch (err) {
-    console.error(err);
-    notif.show('Error', 'No se pudo calcular la ruta. Intentá de nuevo.', 'error');
-    
-    // Fallback: dibujar línea recta
+  } catch (err) {
+    console.error('❌ Error calcularRuta:', err);
+    notif.show('Error', 'No se pudo calcular la ruta real. Usamos una estimación.', 'warning');
+
     await dibujarRutaFallback();
   } finally {
     btn.disabled = false;
     btn.innerHTML = btnText;
   }
 }
-
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
 
-  const puntos = [
-    state.origen,
-    ...state.waypoints.filter(w => w.data).map(w => w.data),
-    state.destino
-  ].filter(Boolean);
-
-  const coords = puntos.map(p => [p.lng, p.lat]);
+  const puntos = obtenerPuntosOrdenados();
+  const coords = puntos.map(p => [Number(p.lng), Number(p.lat)]);
 
   let totalDistance = 0;
+
   for (let i = 0; i < coords.length - 1; i++) {
     const from = turf.point(coords[i]);
     const to = turf.point(coords[i + 1]);
     totalDistance += turf.distance(from, to, { units: 'kilometers' });
   }
 
-  const distanceKm = (totalDistance * 1.4).toFixed(1);
-  const durationMin = Math.round((totalDistance * 1.4 / 30) * 60);
+  // Ajuste conservador por calles reales
+  const distanceKm = Number((totalDistance * 1.28).toFixed(1));
+  const durationMin = Math.max(1, Math.round((distanceKm / 28) * 60));
 
   state.routeData = {
     geometry: { type: 'LineString', coordinates: coords },
     distance: distanceKm,
     duration: durationMin,
-    waypoints: coords.length - 2
+    waypoints: Math.max(0, coords.length - 2),
+    segmentos: Math.max(1, coords.length - 1),
+    retornoAlOrigen: detectarRetornoAlOrigenFrontend(),
+    resumenRuta: construirResumenRuta(),
+    puntosOrdenados: puntos,
+    fallback: true
   };
 
   await dibujarRutaEnMapa(coords);
   await cotizarViaje(distanceKm, durationMin);
 }
+
 async function cotizarViaje(km, minutos) {
   try {
-    const waypointsValidos = state.waypoints
-      .filter(w => w.data)
-      .map(w => ({
-        direccion: w.data.direccion,
-        direccionCorta: w.data.direccionCorta || w.data.direccion,
-        lat: Number(w.data.lat),
-        lng: Number(w.data.lng)
-      }));
+    const puntos = obtenerPuntosOrdenados();
+
+    if (puntos.length < 2) {
+      throw new Error('No hay suficientes puntos para cotizar');
+    }
+
+    const origenReal = puntos[0];
+    const destinoReal = puntos[puntos.length - 1];
+    const waypointsIntermedios = construirPayloadWaypointsIntermedios();
 
     const payload = {
-      servicio: 'IDA_ESCOLAR',
+      servicio: detectarRetornoAlOrigenFrontend() ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-      origen: state.origen.direccion,
-      origen_corto: state.origen.direccionCorta || state.origen.direccion,
+      origen: origenReal.direccion,
+      origen_corto: origenReal.direccionCorta || origenReal.direccion,
 
-      destino: state.destino.direccion,
-      destino_corto: state.destino.direccionCorta || state.destino.direccion,
+      destino: destinoReal.direccion,
+      destino_corto: destinoReal.direccionCorta || destinoReal.direccion,
 
-      origen_lat: Number(state.origen.lat),
-      origen_lng: Number(state.origen.lng),
+      origen_lat: Number(origenReal.lat),
+      origen_lng: Number(origenReal.lng),
 
-      destino_lat: Number(state.destino.lat),
-      destino_lng: Number(state.destino.lng),
+      destino_lat: Number(destinoReal.lat),
+      destino_lng: Number(destinoReal.lng),
 
       distancia_km: Number(km),
       duracion_min: Number(minutos),
       fechaHora: new Date().toISOString(),
 
-      waypoints: waypointsValidos
+      waypoints: waypointsIntermedios,
+
+      // extras útiles para debug / futura lógica
+      segmentos_totales_front: Math.max(1, puntos.length - 1),
+      retorno_al_origen_front: detectarRetornoAlOrigenFrontend(),
+      resumen_ruta_front: construirResumenRuta()
     };
 
-    console.log("📤 Payload cotización:", payload);
+    console.log("📤 Payload cotización limpio:", payload);
 
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
@@ -2063,7 +2121,10 @@ async function cotizarViaje(km, minutos) {
     const distancia = Number(data.distancia_km || km);
     const duracion = Number(data.duracionEstimadaMin || minutos);
 
-    state.cotizacion = data;
+    state.cotizacion = {
+      ...data,
+      resumen_ruta: data.resumen_ruta || state.routeData?.resumenRuta || construirResumenRuta()
+    };
 
     mostrarCotizacion(precio, distancia, duracion);
 
@@ -2081,9 +2142,11 @@ async function cotizarViaje(km, minutos) {
     document.getElementById('quoteCard').classList.remove('visible');
   }
 }
+
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   const paradasIntermedias = state.waypoints.filter(w => w.data).length;
+  const segmentos = state.routeData?.segmentos || 1;
 
   const precioTexto =
     state.cotizacion?.precio_formateado ||
@@ -2092,8 +2155,7 @@ function mostrarCotizacion(precio, km, minutos) {
   document.getElementById('quotePrice').textContent = precioTexto;
 
   let label = 'Precio estimado';
-
-  if (state.cotizacion?.modo === 'fallback_local') {
+  if (state.routeData?.fallback || state.cotizacion?.modo === 'fallback_local') {
     label = 'Estimación provisoria';
   }
 
@@ -2102,18 +2164,28 @@ function mostrarCotizacion(precio, km, minutos) {
   document.getElementById('detailDuration').textContent = Math.round(Number(minutos)) + ' min';
   document.getElementById('detailStops').textContent = paradasIntermedias;
 
-  document.getElementById('resumenParadas').textContent =
+  const resumenRuta =
     state.cotizacion?.resumen_ruta ||
-    (paradasIntermedias === 0
-      ? 'Viaje directo'
-      : `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} intermedia${paradasIntermedias > 1 ? 's' : ''}`);
+    state.routeData?.resumenRuta ||
+    construirResumenRuta();
 
+  let textoResumen = '';
+  if (paradasIntermedias === 0) {
+    textoResumen = state.routeData?.retornoAlOrigen ? 'Ida y vuelta directa' : 'Viaje directo';
+  } else {
+    textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · ${segmentos} tramo${segmentos > 1 ? 's' : ''}`;
+  }
+
+  document.getElementById('resumenParadas').textContent = textoResumen;
   card.classList.add('visible');
 
   setTimeout(() => {
     card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 300);
+
+  console.log("🧠 Resumen ruta:", resumenRuta);
 }
+  
 // ==========================================
 // ACCIONES
 // ==========================================
@@ -2130,27 +2202,63 @@ function confirmarViaje() {
 
   const resumenRuta =
     state.cotizacion?.resumen_ruta ||
-    document.getElementById('resumenParadas').textContent;
+    state.routeData?.resumenRuta ||
+    construirResumenRuta();
+
+  const puntos = obtenerPuntosOrdenados();
+
+  const paradasTexto = puntos.slice(1, -1).map((p, i) =>
+    `📍 *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
+  ).join('\n');
 
   const mensaje = `🚐 *MIMI Transporte Escolar*
 
 🧾 *Cotización:* ${cotizacionId}
 
-📍 *Origen:* ${state.origen.direccionCorta || state.origen.direccion}
-${state.waypoints.filter(w => w.data).map((w, i) =>
-  `📍 *Parada ${i + 1}:* ${w.data.direccionCorta || w.data.direccion}\n`
-).join('')}🏁 *Destino:* ${state.destino.direccionCorta || state.destino.direccion}
+📍 *Origen:* ${puntos[0].direccionCorta || puntos[0].direccion}
+${paradasTexto ? paradasTexto + '\n' : ''}🏁 *Destino:* ${puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion}
 
 🛣️ *Ruta:* ${resumenRuta}
 📏 *Distancia:* ${state.routeData.distance} km
 ⏱️ *Duración:* ${state.routeData.duration} min
+🧩 *Tramos:* ${state.routeData.segmentos || 1}
 💰 *Precio:* ${precioTexto}
 
 ✅ ¿Confirmamos el viaje?`;
 
   window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
-  // ==========================================
+function compartirRuta() {
+  if (!state.routeData) {
+    notif.show('Sin ruta', 'Primero calculá el recorrido', 'warning');
+    return;
+  }
+
+  const resumenRuta =
+    state.cotizacion?.resumen_ruta ||
+    state.routeData?.resumenRuta ||
+    construirResumenRuta();
+
+  const texto = `🚐 MIMI Transporte Escolar
+
+📍 Ruta: ${resumenRuta}
+📏 Distancia: ${state.routeData.distance} km
+⏱️ Duración: ${state.routeData.duration} min
+💰 Precio: ${state.cotizacion?.precio_formateado || document.getElementById('quotePrice').textContent}`;
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'MIMI Transporte Escolar',
+      text: texto
+    }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(texto)
+      .then(() => notif.show('Copiado', 'Resumen copiado al portapapeles', 'success'))
+      .catch(() => notif.show('No disponible', 'No se pudo compartir', 'warning'));
+  }
+}
+  
+// ==========================================
 // INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
