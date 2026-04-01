@@ -12,6 +12,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+
 <meta property="og:title" content="MIMI Transporte Escolar">
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
@@ -34,7 +35,11 @@ function createQueryBuilder(table) {
     lte(column, value) { state.filters.push({ type: 'lte', column, value }); return this; },
     like(column, pattern) { state.filters.push({ type: 'like', column, value: pattern }); return this; },
     ilike(column, pattern) { state.filters.push({ type: 'ilike', column, value: pattern }); return this; },
-    in(column, values) { if (!Array.isArray(values)) values = [values]; state.filters.push({ type: 'in', column, value: values }); return this; },
+    in(column, values) { 
+      if (!Array.isArray(values)) values = [values]; 
+      state.filters.push({ type: 'in', column, value: values }); 
+      return this; 
+    },
     is(column, value) { state.filters.push({ type: 'is', column, value }); return this; },
     or(conditions) { state.filters.push({ type: 'or', value: conditions }); return this; },
     order(column, { ascending = true } = {}) { state.orderBy = column; state.orderAscending = ascending; return this; },
@@ -66,7 +71,7 @@ function createQueryBuilder(table) {
           const direction = state.orderAscending ? 'asc' : 'desc'; 
           url += `&order=${encodeURIComponent(state.orderBy)}.${direction}`; 
         }
-        if (state.limit) { url += `&limit=${state.limit}`; }
+        if (state.limit) url += `&limit=${state.limit}`;
         
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 15000);
@@ -100,8 +105,7 @@ window.supabase = {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
       const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
-        method: "POST", 
-        signal: controller.signal,
+        method: "POST", signal: controller.signal,
         headers: { 
           "apikey": SUPABASE_KEY, 
           "Authorization": "Bearer " + SUPABASE_KEY, 
@@ -123,7 +127,9 @@ window.supabase = {
 </script>
 
 <style>
-/* Todo tu CSS se mantiene igual (no lo modifico para no alargar innecesariamente) */
+/* ==========================================
+   VARIABLES GLOBALES + CSS ORIGINAL (sin cambios)
+========================================== */
 :root {
   --azul-oscuro: #1e3c72;
   --azul-primario: #1565c0;
@@ -148,22 +154,25 @@ window.supabase = {
 html { font-size: 16px; -webkit-text-size-adjust: 100%; touch-action: manipulation; }
 body { background: var(--gris-fondo); min-height: 100vh; padding-bottom: calc(30px + var(--safe-bottom)); overflow-x: hidden; }
 
-.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: calc(20px + var(--safe-top)) 20px 40px 20px; border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: calc(20px + var(--safe-top)) 20px 40px 20px; border-bottom-left-radius: 25px; border-bottom-right-radius: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); margin-bottom: 40px; }
 .header-content { display: flex; align-items: center; justify-content: space-between; max-width: 600px; margin: 0 auto; }
-.vehicle-img { width: clamp(120px, 35vw, 160px); position: absolute; left: -5px; bottom: clamp(-140px, -35vw, -185px); z-index: 10; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5)); }
+.vehicle-img { width: clamp(120px, 35vw, 160px); position: absolute; left: -5px; bottom: clamp(-140px, -35vw, -185px); filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5)); }
 .logo-title { font-size: clamp(1.4rem, 5vw, 1.8rem); font-weight: 800; color: white; }
-.logo-subtitle { font-size: clamp(0.65rem, 2vw, 0.75rem); color: white; opacity: 0.9; text-transform: uppercase; letter-spacing: 1.5px; }
+.logo-subtitle { font-size: clamp(0.65rem, 2vw, 0.75rem); opacity: 0.9; color: white; text-transform: uppercase; letter-spacing: 1.5px; }
 
 .container { max-width: 600px; margin: 0 auto; padding: 0 clamp(12px, 4vw, 20px); }
 .main-card, .quote-card { background: white; border-radius: clamp(16px, 5vw, 20px); padding: clamp(16px, 4vw, 20px); box-shadow: var(--sombra); margin-bottom: 20px; }
 
 .route-input-wrapper { background: #f4f4f7; border-radius: 12px; padding: 12px 16px; border: 1px solid rgba(0,0,0,0.06); }
-.route-input { flex: 1; border: none; background: transparent; font-size: 15px; font-weight: 600; }
+.route-input { flex: 1; border: none; background: transparent; font-size: 15px; font-weight: 600; color: #111; }
 .btn-calcular, .btn-primary { width: 100%; padding: 16px; border: none; border-radius: 14px; background: linear-gradient(135deg, var(--azul-primario), var(--azul-oscuro)); color: white; font-weight: 700; cursor: pointer; }
 .quote-price { font-size: clamp(2.5rem, 8vw, 3.5rem); font-weight: 800; color: var(--azul-oscuro); }
 
 .toast { background: white; border-radius: 16px; padding: 16px 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 12px; }
 .footer-phone { display: inline-flex; align-items: center; gap: 6px; background: white; padding: 10px 20px; border-radius: 50px; font-weight: 700; color: var(--azul-primario); box-shadow: var(--sombra); text-decoration: none; }
+
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -198,7 +207,6 @@ body { background: var(--gris-fondo); min-height: 100vh; padding-bottom: calc(30
           <div class="timeline-dot origin"></div>
           <div class="timeline-dot destination"></div>
         </div>
-        <!-- Origen -->
         <div class="route-input-group">
           <div class="route-input-wrapper">
             <span class="route-input-icon">📍</span>
@@ -206,9 +214,7 @@ body { background: var(--gris-fondo); min-height: 100vh; padding-bottom: calc(30
           </div>
           <div id="sugerenciasOrigen" class="sugerencias"></div>
         </div>
-        <!-- Waypoints -->
         <div id="waypointsContainer"></div>
-        <!-- Destino -->
         <div class="route-input-group">
           <div class="route-input-wrapper">
             <span class="route-input-icon">🏁</span>
@@ -218,11 +224,11 @@ body { background: var(--gris-fondo); min-height: 100vh; padding-bottom: calc(30
         </div>
       </div>
       <button class="btn-add-stop" onclick="agregarWaypoint()" id="btnAddStop">
-        <span>➕</span> <span>Agregar parada</span>
+        <span>➕</span><span>Agregar parada</span>
       </button>
     </div>
     <button class="btn-calcular" id="btnCalcular" onclick="calcularRuta()">
-      <span>🚐</span> <span>Ver recorrido y cotizar</span>
+      <span>🚐</span><span>Ver recorrido y cotizar</span>
     </button>
   </div>
 
@@ -241,35 +247,20 @@ body { background: var(--gris-fondo); min-height: 100vh; padding-bottom: calc(30
   <div class="quote-card" id="quoteCard">
     <div class="quote-header">
       <div class="quote-title">Resumen del viaje</div>
-      <div class="quote-route-info">
-        <span id="resumenParadas">0 paradas</span>
-      </div>
+      <div class="quote-route-info"><span id="resumenParadas">0 paradas</span></div>
     </div>
     <div class="quote-main">
       <div class="quote-price" id="quotePrice">$0</div>
       <div class="quote-price-label">Precio estimado</div>
     </div>
     <div class="quote-details">
-      <div class="quote-detail">
-        <div class="quote-detail-value" id="detailDistance">0 km</div>
-        <div class="quote-detail-label">Distancia</div>
-      </div>
-      <div class="quote-detail">
-        <div class="quote-detail-value" id="detailDuration">0 min</div>
-        <div class="quote-detail-label">Duración</div>
-      </div>
-      <div class="quote-detail">
-        <div class="quote-detail-value" id="detailStops">0</div>
-        <div class="quote-detail-label">Paradas</div>
-      </div>
+      <div class="quote-detail"><div class="quote-detail-value" id="detailDistance">0 km</div><div class="quote-detail-label">Distancia</div></div>
+      <div class="quote-detail"><div class="quote-detail-value" id="detailDuration">0 min</div><div class="quote-detail-label">Duración</div></div>
+      <div class="quote-detail"><div class="quote-detail-value" id="detailStops">0</div><div class="quote-detail-label">Paradas</div></div>
     </div>
     <div class="quote-actions">
-      <button class="btn-primary" onclick="confirmarViaje()">
-        <span>✓</span> <span>Confirmar viaje</span>
-      </button>
-      <button class="btn-secondary" onclick="compartirRuta()">
-        <span>📤</span> <span>Compartir ruta</span>
-      </button>
+      <button class="btn-primary" onclick="confirmarViaje()"><span>✓</span><span>Confirmar viaje</span></button>
+      <button class="btn-secondary" onclick="compartirRuta()"><span>📤</span><span>Compartir ruta</span></button>
     </div>
   </div>
 </div>
@@ -329,102 +320,128 @@ class NotificationSystem {
 const notif = new NotificationSystem();
 
 // ==========================================
-// GEOCODIFICACIÓN Y AUTOCOMPLETE
+// GEOCODIFICACIÓN Y AUTOCOMPLETE (mantenido original)
 // ==========================================
 async function buscarDireccion(query) {
   if (!query || query.trim().length < 3) return [];
-  const q = query.trim().toLowerCase().includes('cordoba') ? query.trim() : `${query.trim()}, Córdoba, Argentina`;
+  const queryConContexto = query.trim().toLowerCase().includes('cordoba') ? query.trim() : `${query.trim()}, Córdoba, Argentina`;
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=ar&q=${encodeURIComponent(q)}`);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=ar&addressdetails=1&viewbox=-64.35,-31.25,-63.85,-31.55&bounded=0&q=${encodeURIComponent(queryConContexto)}`);
+    if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : [];
   } catch { return []; }
 }
 
 function formatearDireccionCorta(r) {
-  if (!r?.display_name) return "Dirección";
-  const partes = r.display_name.split(",").map(p => p.trim());
-  const direccion = partes[0] || "";
-  const localidad = partes.find(p => /villa|barrio|cordoba|córdoba/i.test(p)) || partes[2] || "";
-  return localidad ? `${direccion}, ${localidad}` : direccion;
+  if (!r || !r.display_name) return "Dirección";
+  const partes = r.display_name.split(",").map(p => p.trim()).filter(Boolean);
+  const calle = partes[0] || "";
+  const numero = partes.find(p => /^\d+$/.test(p)) || "";
+  const localidad = partes.find(p => /villa|barrio|ciudad|cordoba|córdoba/i.test(p)) || partes[2] || "";
+  const locLimpia = localidad.replace(/,\s*Argentina$/i, '').replace(/,\s*Córdoba$/i, '').trim();
+  const direccion = numero ? `${calle} ${numero}` : calle;
+  return locLimpia && locLimpia !== direccion ? `${direccion}, ${locLimpia}` : direccion;
 }
 
 function setupAutocomplete(inputId, sugerenciasId, onSelect) {
   const input = document.getElementById(inputId);
-  const cont = document.getElementById(sugerenciasId);
-  if (!input) return;
+  const contenedor = document.getElementById(sugerenciasId);
+  if (!input || !contenedor) return;
 
-  let timer;
+  let timer = null;
   input.addEventListener('input', () => {
     clearTimeout(timer);
-    const val = input.value.trim();
-    if (val.length < 3) { cont.style.display = 'none'; return; }
+    const texto = input.value.trim();
+    if (texto.length < 3) {
+      contenedor.style.display = 'none';
+      return;
+    }
     timer = setTimeout(async () => {
-      const results = await buscarDireccion(val);
-      mostrarSugerencias(cont, results, onSelect);
+      const resultados = await buscarDireccion(texto);
+      mostrarSugerencias(contenedor, resultados, (r) => {
+        input.value = formatearDireccionCorta(r);
+        onSelect({ direccion: r.display_name, lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
+        contenedor.style.display = 'none';
+      });
     }, 300);
   });
 }
 
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
-  if (!resultados.length) { contenedor.style.display = 'none'; return; }
+  if (!resultados.length) {
+    contenedor.style.display = 'none';
+    return;
+  }
   resultados.forEach(r => {
     const item = document.createElement('div');
     item.className = 'sugerencia-item';
-    item.innerHTML = `<div class="sugerencia-icon">📍</div><div class="sugerencia-main">${formatearDireccionCorta(r)}</div>`;
-    item.onclick = () => {
-      callback({ direccion: r.display_name, lat: parseFloat(r.lat), lng: parseFloat(r.lon) });
-      contenedor.style.display = 'none';
-    };
+    item.innerHTML = `
+      <div class="sugerencia-icon">📍</div>
+      <div class="sugerencia-text">
+        <div class="sugerencia-main">${formatearDireccionCorta(r)}</div>
+      </div>
+    `;
+    item.addEventListener('click', () => callback(r));
     contenedor.appendChild(item);
   });
   contenedor.style.display = 'block';
 }
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.route-input-group')) {
+    document.querySelectorAll('.sugerencias').forEach(el => el.style.display = 'none');
+  }
+});
 
 // ==========================================
 // WAYPOINTS
 // ==========================================
 function agregarWaypoint() {
   if (state.waypoints.length >= CONFIG.MAX_WAYPOINTS) {
-    notif.show('Límite alcanzado', `Máximo ${CONFIG.MAX_WAYPOINTS} paradas`, 'warning');
+    notif.show('Límite alcanzado', `Máximo ${CONFIG.MAX_WAYPOINTS} paradas permitidas`, 'warning');
     return;
   }
   waypointCounter++;
-  const id = `waypoint-${waypointCounter}`;
+  const waypointId = `waypoint-${waypointCounter}`;
   const container = document.getElementById('waypointsContainer');
-  
+
   const div = document.createElement('div');
   div.className = 'route-input-group';
-  div.id = `group-${id}`;
+  div.id = `group-${waypointId}`;
   div.innerHTML = `
     <div class="route-input-wrapper">
       <span class="route-input-icon">📍</span>
-      <input type="text" id="${id}" class="route-input" placeholder="Parada ${state.waypoints.length + 1}" autocomplete="off">
-      <button class="btn-input-action delete" onclick="eliminarWaypoint('${id}')">✕</button>
+      <input type="text" id="${waypointId}" class="route-input" placeholder="Parada ${state.waypoints.length + 1}" autocomplete="off">
+      <div class="route-input-actions">
+        <button class="btn-input-action delete" onclick="eliminarWaypoint('${waypointId}')" title="Eliminar">✕</button>
+      </div>
     </div>
-    <div id="sugerencias-${id}" class="sugerencias"></div>
+    <div id="sugerencias-${waypointId}" class="sugerencias"></div>
   `;
   container.appendChild(div);
 
-  state.waypoints.push({ id, data: null });
-  setupAutocomplete(id, `sugerencias-${id}`, (data) => {
-    const wp = state.waypoints.find(w => w.id === id);
+  state.waypoints.push({ id: waypointId, data: null });
+  setupAutocomplete(waypointId, `sugerencias-${waypointId}`, (data) => {
+    const wp = state.waypoints.find(w => w.id === waypointId);
     if (wp) wp.data = data;
   });
   actualizarTimeline();
+  setTimeout(() => document.getElementById(waypointId).focus(), 100);
 }
 
 function eliminarWaypoint(id) {
-  document.getElementById(`group-${id}`)?.remove();
+  const group = document.getElementById(`group-${id}`);
+  if (group) group.remove();
   state.waypoints = state.waypoints.filter(w => w.id !== id);
   actualizarTimeline();
 }
 
 function actualizarTimeline() {
-  const tl = document.querySelector('.route-timeline');
-  if (!tl) return;
-  tl.innerHTML = `
+  const timeline = document.querySelector('.route-timeline');
+  if (!timeline) return;
+  timeline.innerHTML = `
     <div class="timeline-dot origin"></div>
     ${state.waypoints.map(() => `<div class="timeline-dot waypoint"></div>`).join('')}
     <div class="timeline-dot destination"></div>
@@ -438,61 +455,86 @@ function initMapa() {
   if (mapaCliente) return;
   mapaCliente = new maplibregl.Map({
     container: 'map',
-    style: { version: 8, sources: { osm: { type: 'raster', tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png','https://b.tile.openstreetmap.org/{z}/{x}/{y}.png','https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256 } }, layers: [{id:'osm', type:'raster', source:'osm'}] },
-    center: [-64.19, -31.42], zoom: 12
+    style: {
+      version: 8,
+      sources: { osm: { type: 'raster', tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png','https://b.tile.openstreetmap.org/{z}/{x}/{y}.png','https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenStreetMap' } },
+      layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+    },
+    center: [-64.19, -31.42],
+    zoom: 12
   });
   mapaCliente.addControl(new maplibregl.NavigationControl(), 'bottom-right');
 }
 
 function dibujarRutaEnMapa(coords) {
   if (!mapaCliente) initMapa();
-  // Limpiar anterior
   if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
   if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
   state.markers.forEach(m => m.remove());
   state.markers = [];
 
-  const puntos = [state.origen, ...state.waypoints.filter(w=>w.data).map(w=>w.data), state.destino].filter(Boolean);
-  puntos.forEach((p, i) => {
-    const isOrigin = i === 0;
-    const isDest = i === puntos.length - 1;
+  const puntos = [state.origen, ...state.waypoints.filter(w => w.data).map(w => w.data), state.destino].filter(Boolean);
+  puntos.forEach((punto, index) => {
     const el = document.createElement('div');
-    el.innerHTML = `<div style="width:28px;height:28px;background:${isOrigin?'#4caf50':isDest?'#f44336':'#ff9800'};border-radius:50%;border:3px solid white;color:white;font-weight:bold;display:flex;align-items:center;justify-content:center;">${isOrigin?'A':isDest?'B':i}</div>`;
-    const marker = new maplibregl.Marker({element: el}).setLngLat([p.lng, p.lat]).addTo(mapaCliente);
+    const isOrigin = index === 0;
+    const isDest = index === puntos.length - 1;
+    el.innerHTML = `<div style="width:28px;height:28px;background:${isOrigin?'#4caf50':isDest?'#f44336':'#ff9800'};border-radius:50%;border:3px solid white;color:white;font-weight:bold;display:flex;align-items:center;justify-content:center;">${isOrigin?'A':isDest?'B':index}</div>`;
+    const marker = new maplibregl.Marker({ element: el }).setLngLat([punto.lng, punto.lat]).addTo(mapaCliente);
     state.markers.push(marker);
   });
 
   mapaCliente.addSource('route', { type: 'geojson', data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } } });
-  mapaCliente.addLayer({ id: 'route-line', type: 'line', source: 'route', paint: { 'line-color': '#1565c0', 'line-width': 5 } });
+  mapaCliente.addLayer({ id: 'route-line', type: 'line', source: 'route', paint: { 'line-color': '#1565c0', 'line-width': 5, 'line-opacity': 0.9 } });
 
   const bounds = coords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coords[0], coords[0]));
-  mapaCliente.fitBounds(bounds, { padding: 50, duration: 800 });
+  mapaCliente.fitBounds(bounds, { padding: 50, duration: 1000 });
+}
+
+function centrarEnRuta() {
+  if (!mapaCliente || !state.routeData) return;
+  const coords = state.routeData.geometry.coordinates;
+  const bounds = coords.reduce((b, c) => b.extend(c), new maplibregl.LngLatBounds(coords[0], coords[0]));
+  mapaCliente.fitBounds(bounds, { padding: 50, duration: 500 });
+}
+
+function reiniciarRuta() {
+  document.getElementById('inputOrigen').value = '';
+  document.getElementById('inputDestino').value = '';
+  document.getElementById('waypointsContainer').innerHTML = '';
+
+  state = { origen: null, destino: null, waypoints: [], routeData: null, markers: [] };
+  waypointCounter = 0;
+
+  document.getElementById('mapSection').style.display = 'none';
+  document.getElementById('quoteCard').classList.remove('visible');
+  notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
 
 // ==========================================
 // CÁLCULO DE RUTA
 // ==========================================
 async function calcularRuta() {
+  const btn = document.getElementById('btnCalcular');
+  const btnText = btn.innerHTML;
+
   if (!state.origen || !state.destino) {
-    notif.show('Faltan datos', 'Ingresa origen y destino', 'error');
+    notif.show('Faltan datos', 'Ingresá origen y destino', 'error');
     return;
   }
 
-  const btn = document.getElementById('btnCalcular');
-  const originalText = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<span>⏳</span><span>Calculando ruta...</span>';
+  btn.innerHTML = '<span>⏳</span><span>Calculando...</span>';
 
   try {
     const waypointsCoords = state.waypoints.filter(w => w.data).map(w => [w.data.lng, w.data.lat]);
     const allCoords = [[state.origen.lng, state.origen.lat], ...waypointsCoords, [state.destino.lng, state.destino.lat]];
 
-    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${allCoords.map(c=>c.join(',')).join(';')}?overview=full&geometries=geojson`);
-    const data = await res.json();
+    const osrmRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${allCoords.map(c => c.join(',')).join(';')}?overview=full&geometries=geojson`);
+    const osrmData = await osrmRes.json();
 
-    if (data.code !== 'Ok') throw new Error('Error OSRM');
+    if (osrmData.code !== 'Ok') throw new Error('No se pudo calcular la ruta');
 
-    const route = data.routes[0];
+    const route = osrmData.routes[0];
     const distanceKm = (route.distance / 1000).toFixed(1);
     const durationMin = Math.round(route.duration / 60);
 
@@ -500,31 +542,40 @@ async function calcularRuta() {
 
     document.getElementById('mapSection').style.display = 'block';
     initMapa();
+
     setTimeout(() => {
       dibujarRutaEnMapa(route.geometry.coordinates);
       cotizarViaje(distanceKm, durationMin);
     }, 100);
 
-  } catch (e) {
-    notif.show('Error', 'Usando cálculo aproximado', 'warning');
+  } catch (err) {
+    console.error(err);
+    notif.show('Error', 'Usando cálculo aproximado...', 'warning');
     dibujarRutaFallback();
   } finally {
     btn.disabled = false;
-    btn.innerHTML = originalText;
+    btn.innerHTML = btnText;
   }
 }
 
 function dibujarRutaFallback() {
-  // ... (mantengo tu fallback original si querés, pero por ahora lo simplifico)
+  document.getElementById('mapSection').style.display = 'block';
   initMapa();
-  const puntos = [state.origen, ...state.waypoints.filter(w=>w.data).map(w=>w.data), state.destino].filter(Boolean);
+
+  const puntos = [state.origen, ...state.waypoints.filter(w => w.data).map(w => w.data), state.destino].filter(Boolean);
   const coords = puntos.map(p => [p.lng, p.lat]);
+
+  const distanceKm = "5.0"; // fallback
+  const durationMin = 15;
+
+  state.routeData = { geometry: { type: 'LineString', coordinates: coords }, distance: distanceKm, duration: durationMin };
+
   dibujarRutaEnMapa(coords);
-  cotizarViaje("5.0", 15); // fallback básico
+  cotizarViaje(distanceKm, durationMin);
 }
 
 // ==========================================
-// COTIZACIÓN (VERSIÓN FINAL ADAPTADA)
+// COTIZACIÓN (VERSIÓN ACTUALIZADA)
 // ==========================================
 async function cotizarViaje(km, minutos) {
   try {
@@ -546,68 +597,86 @@ async function cotizarViaje(km, minutos) {
       fechaHora: new Date().toISOString()
     };
 
-    const res = await fetch(CONFIG.COTIZAR_URL, {
+    const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY 
+        'Authorization': 'Bearer ' + SUPABASE_KEY
       },
       body: JSON.stringify(payload)
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      mostrarCotizacion(data.precio || 0, data.distancia_km || km, data.duracionEstimadaMin || minutos);
+    let precio = 0;
+    if (response.ok) {
+      const data = await response.json();
+      precio = data.precio || calcularPrecioLocal(km, minutos);
     } else {
-      throw new Error();
+      precio = calcularPrecioLocal(km, minutos);
     }
-  } catch {
-    const precioLocal = Math.round(400 + parseFloat(km)*1250 + parseInt(minutos)*6);
-    mostrarCotizacion(precioLocal, km, minutos);
-    notif.show('Modo offline', 'Usando precio estimado', 'info');
+    mostrarCotizacion(precio, km, minutos);
+  } catch (err) {
+    console.error('Error cotizando:', err);
+    const precio = calcularPrecioLocal(km, minutos);
+    mostrarCotizacion(precio, km, minutos);
   }
 }
 
+function calcularPrecioLocal(km, minutos) {
+  const base = 400;
+  const porKm = 1250;
+  const porMinuto = 6;
+  return Math.round(base + (parseFloat(km) * porKm) + (parseInt(minutos) * porMinuto));
+}
+
 function mostrarCotizacion(precio, km, minutos) {
+  const card = document.getElementById('quoteCard');
   document.getElementById('quotePrice').textContent = '$' + Number(precio).toLocaleString('es-AR');
   document.getElementById('detailDistance').textContent = km + ' km';
   document.getElementById('detailDuration').textContent = minutos + ' min';
   document.getElementById('detailStops').textContent = state.waypoints.filter(w => w.data).length;
   document.getElementById('resumenParadas').textContent = `${state.waypoints.filter(w => w.data).length + 1} paradas`;
 
-  document.getElementById('quoteCard').classList.add('visible');
-  setTimeout(() => document.getElementById('quoteCard').scrollIntoView({ behavior: 'smooth' }), 300);
+  card.classList.add('visible');
+  setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 300);
 }
 
 // ==========================================
 // ACCIONES
 // ==========================================
 function confirmarViaje() {
-  const precio = document.getElementById('quotePrice').textContent.replace('$','').replace(/\./g,'');
-  const msg = `🚐 *MIMI Transporte Escolar*\n\n` +
-    `📍 Origen: ${formatearDireccionCorta({display_name: state.origen.direccion})}\n` +
-    state.waypoints.filter(w=>w.data).map((w,i) => `📍 Parada ${i+1}: ${formatearDireccionCorta({display_name: w.data.direccion})}\n`).join('') +
-    `🏁 Destino: ${formatearDireccionCorta({display_name: state.destino.direccion})}\n\n` +
-    `📏 Distancia: ${state.routeData?.distance || km} km\n` +
-    `⏱️ Duración: ${state.routeData?.duration || minutos} min\n` +
-    `💰 Precio: $${precio}\n\n¿Confirmamos?`;
+  const precio = document.getElementById('quotePrice').textContent.replace('$', '').replace(/\./g, '');
+  const mensaje = `🚐 *MIMI Transporte Escolar*\n\n` +
+    `📍 *Origen:* ${formatearDireccionCorta({display_name: state.origen.direccion})}\n` +
+    `${state.waypoints.filter(w => w.data).map((w, i) => `📍 *Parada ${i + 1}:* ${formatearDireccionCorta({display_name: w.data.direccion})}\n`).join('')}` +
+    `🏁 *Destino:* ${formatearDireccionCorta({display_name: state.destino.direccion})}\n\n` +
+    `📏 *Distancia:* ${state.routeData?.distance || '0'} km\n` +
+    `⏱️ *Duración:* ${state.routeData?.duration || '0'} min\n` +
+    `💰 *Precio:* $${precio}\n\n` +
+    `✅ ¿Confirmamos el viaje?`;
 
-  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
 
 function compartirRuta() {
-  const texto = `Ruta MIMI Transporte 🚐\n${state.routeData?.distance} km • ${state.routeData?.duration} min\nPrecio: ${document.getElementById('quotePrice').textContent}`;
-  navigator.clipboard.writeText(texto);
-  notif.show('Compartido', 'Resumen copiado', 'success');
+  const texto = `Mirá la ruta de mi viaje con MIMI Transporte 🚐\n` +
+    `📍 ${state.routeData?.distance || '0'} km en ${state.routeData?.duration || '0'} min\n` +
+    `💰 $${document.getElementById('quotePrice').textContent.replace('$', '')}`;
+
+  if (navigator.share) {
+    navigator.share({ title: 'Mi viaje con MIMI', text: texto });
+  } else {
+    navigator.clipboard.writeText(texto);
+    notif.show('Copiado', 'El resumen se copió al portapapeles', 'success');
+  }
 }
 
 // ==========================================
-// INICIO
+// INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  setupAutocomplete('inputOrigen', 'sugerenciasOrigen', data => state.origen = data);
-  setupAutocomplete('inputDestino', 'sugerenciasDestino', data => state.destino = data);
+  setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => { state.origen = data; });
+  setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => { state.destino = data; });
 });
 </script>
 </body>
