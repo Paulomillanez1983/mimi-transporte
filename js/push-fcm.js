@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
-import { supabase } from "./supabase-client.js";
+import supabaseService from "./supabase-client.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjY",
