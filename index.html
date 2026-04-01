@@ -997,7 +997,7 @@ body {
   <div class="main-card">
     <div class="route-planner" id="routePlanner">
       <div class="route-inputs-container">
-        <div class="route-timeline">
+        <div class="route-timeline" id="routeTimeline">
           <div class="timeline-dot origin"></div>
           <div class="timeline-dot destination"></div>
         </div>
@@ -1015,21 +1015,22 @@ body {
           <div id="sugerenciasOrigen" class="sugerencias"></div>
         </div>
 
-        <!-- Waypoints dinámicos -->
-        <div id="waypointsContainer"></div>
+<!-- Destino -->
+<div class="route-input-group">
+  <div class="route-input-wrapper">
+    <span class="route-input-icon">🏁</span>
+    <input type="text" 
+           id="inputDestino" 
+           class="route-input" 
+           placeholder="¿A dónde vamos?" 
+           autocomplete="off">
+  </div>
+  <div id="sugerenciasDestino" class="sugerencias"></div>
+</div>
 
-        <!-- Destino -->
-        <div class="route-input-group">
-          <div class="route-input-wrapper">
-            <span class="route-input-icon">🏁</span>
-            <input type="text" 
-                   id="inputDestino" 
-                   class="route-input" 
-                   placeholder="¿A dónde vamos?" 
-                   autocomplete="off">
-          </div>
-          <div id="sugerenciasDestino" class="sugerencias"></div>
-        </div>
+<!-- Waypoints dinámicos (ahora van DESPUÉS del destino) -->
+<div id="waypointsContainer"></div>
+      </div>
       </div>
 
       <!-- Botón agregar parada -->
@@ -1317,7 +1318,8 @@ function agregarWaypoint() {
 
   waypointCounter++;
   const waypointId = `waypoint-${waypointCounter}`;
-  
+  const numeroParada = state.waypoints.length + 1;
+
   const container = document.getElementById('waypointsContainer');
   const div = document.createElement('div');
   div.className = 'route-input-group';
@@ -1327,8 +1329,8 @@ function agregarWaypoint() {
       <span class="route-input-icon">📍</span>
       <input type="text" 
              id="${waypointId}" 
-             class="route-input" 
-             placeholder="Parada ${state.waypoints.length + 1}" 
+             class="route-input waypoint-input" 
+             placeholder="Parada ${numeroParada}" 
              autocomplete="off">
       <div class="route-input-actions">
         <button class="btn-input-action delete" onclick="eliminarWaypoint('${waypointId}')" title="Eliminar">✕</button>
@@ -1336,43 +1338,52 @@ function agregarWaypoint() {
     </div>
     <div id="sugerencias-${waypointId}" class="sugerencias"></div>
   `;
-  
+
   container.appendChild(div);
 
-  // Agregar al estado
-  state.waypoints.push({ id: waypointId, data: null });
+  state.waypoints.push({
+    id: waypointId,
+    data: null
+  });
 
-  // Setup autocomplete
   setupAutocomplete(waypointId, `sugerencias-${waypointId}`, (data) => {
     const wp = state.waypoints.find(w => w.id === waypointId);
     if (wp) wp.data = data;
   });
 
-  // Actualizar timeline
   actualizarTimeline();
+  renumerarWaypoints();
 
-  // Focus en el nuevo input
-  setTimeout(() => document.getElementById(waypointId).focus(), 100);
+  setTimeout(() => {
+    document.getElementById(waypointId)?.focus();
+  }, 100);
 }
-
 function eliminarWaypoint(id) {
   const group = document.getElementById(`group-${id}`);
   if (group) group.remove();
-  
-  state.waypoints = state.waypoints.filter(w => w.id !== id);
-  actualizarTimeline();
-}
 
+  state.waypoints = state.waypoints.filter(w => w.id !== id);
+
+  actualizarTimeline();
+  renumerarWaypoints();
+}
+  function renumerarWaypoints() {
+  const inputs = document.querySelectorAll('#waypointsContainer .waypoint-input');
+  inputs.forEach((input, index) => {
+    input.placeholder = `Parada ${index + 1}`;
+  });
+}
 function actualizarTimeline() {
-  const timeline = document.querySelector('.route-timeline');
+  const timeline = document.getElementById('routeTimeline');
+  if (!timeline) return;
+
   timeline.innerHTML = `
     <div class="timeline-dot origin"></div>
-    ${state.waypoints.map(() => `<div class="timeline-dot waypoint" style="position: absolute; top: ${50 + (state.waypoints.indexOf(state.waypoints[0]) * 10)}%"></div>`).join('')}
     <div class="timeline-dot destination"></div>
   `;
 }
-
-// ==========================================
+  
+  // ==========================================
 // MAPA
 // ==========================================
 function initMapa() {
@@ -1747,20 +1758,23 @@ async function cotizarViaje(km, minutos) {
 
     mostrarCotizacion(precio, distancia, duracion);
 
-  } catch (err) {
-    console.error('❌ Error cotizando:', err);
+} catch (err) {
+  console.error('❌ Error cotizando:', err);
 
-    const precio = calcularPrecioLocal(Number(km), Number(minutos));
-    mostrarCotizacion(precio, Number(km), Number(minutos));
+} catch (err) {
+  console.error('❌ Error cotizando:', err);
 
-    notif.show(
-      'Cotización local',
-      'No pudimos conectar con el servidor. Mostramos una estimación local.',
-      'warning'
-    );
-  }
-}
-function calcularPrecioLocal(km, minutos) {
+  state.cotizacion = null;
+
+  notif.show(
+    'No disponible',
+    'No pudimos obtener el precio en este momento. Intentá nuevamente.',
+    'error'
+  );
+
+  document.getElementById('quoteCard').classList.remove('visible');
+}  
+  function calcularPrecioLocal(km, minutos) {
   // Tarifa base simple
   const base = 400;
   const porKm = 1250;
@@ -1774,12 +1788,22 @@ function mostrarCotizacion(precio, km, minutos) {
   const paradasIntermedias = state.waypoints.filter(w => w.data).length;
   const puntosTotales = paradasIntermedias + 2; // origen + destino + intermedias
 
-  document.getElementById('quotePrice').textContent = '$' + Number(precio).toLocaleString('es-AR');
+document.getElementById('quotePrice').textContent =
+  '$' + Number(precio).toLocaleString('es-AR');
+  let label = 'Precio estimado';
+
+if (state.cotizacion?.modo === 'fallback_local') {
+  label = 'Estimación provisoria';
+}
+
+document.querySelector('.quote-price-label').textContent = label;
   document.getElementById('detailDistance').textContent = Number(km).toFixed(1) + ' km';
   document.getElementById('detailDuration').textContent = Math.round(Number(minutos)) + ' min';
   document.getElementById('detailStops').textContent = paradasIntermedias;
-  document.getElementById('resumenParadas').textContent = `${puntosTotales} puntos`;
-
+document.getElementById('resumenParadas').textContent =
+  paradasIntermedias === 0
+    ? 'Viaje directo'
+    : `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} intermedia${paradasIntermedias > 1 ? 's' : ''}`;
   card.classList.add('visible');
 
   setTimeout(() => {
