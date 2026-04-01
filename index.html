@@ -1403,7 +1403,6 @@ let rutaLayer = null;
 let waypointCounter = 0;
 let mapReady = false;
 let isCalculatingQuote = false;
-
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -1439,11 +1438,11 @@ class NotificationSystem {
 }
 
 const notif = new NotificationSystem();
-
 function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
   const btn = document.getElementById('btnCalcular');
+  const btnContent = btn?.querySelector('.btn-content');  // ✅ .btn-content (no .btn-text)
   const btnLoader = btn?.querySelector('.btn-loader');
-  const loaderText = btn?.querySelector('.btn-loader span:last-child');
+  const loaderText = btn?.querySelector('.btn-loader span:last-child'); // texto del spinner
 
   isCalculatingQuote = isLoading;
 
@@ -1453,10 +1452,15 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
     btn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
   }
 
+  // El contenido normal se oculta con CSS (.loading .btn-content { opacity: 0 })
+  // No necesitamos cambiar el texto, solo togglear la clase loading
+
+  // Actualizar texto del spinner si se proporciona
   if (loaderText && texto) {
     loaderText.textContent = texto;
   }
 
+  // Deshabilitar otros inputs durante carga
   const inputs = document.querySelectorAll('.route-input, .btn-input-action, .btn-add-stop');
   inputs.forEach(input => {
     input.disabled = isLoading;
@@ -1466,7 +1470,6 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
     }
   });
 }
-
 async function resolverPuntoDesdeTexto(texto) {
   if (!texto || texto.trim().length < 3) return null;
 
@@ -1491,7 +1494,65 @@ async function resolverPuntoDesdeTexto(texto) {
     return null;
   }
 }
+async function resolverWaypointsPendientes() {
+  const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
+  const errores = [];
 
+  for (const input of waypointInputs) {
+    const texto = input.value.trim();
+    const wp = state.waypoints.find(w => w.id === input.id);
+
+    if (!texto) {
+      if (wp) wp.data = null;
+      input.removeAttribute('title');
+      continue;
+    }
+
+    // Si ya había data pero el texto visible cambió, invalidamos
+    const textoActualNormalizado = texto.toLowerCase().trim();
+    const textoGuardadoNormalizado = (
+      wp?.data?.direccionCorta ||
+      wp?.data?.direccion ||
+      ''
+    ).toLowerCase().trim();
+
+    const necesitaResolver =
+      !wp?.data || textoActualNormalizado !== textoGuardadoNormalizado;
+
+    if (!necesitaResolver) continue;
+
+    const resuelto = await resolverPuntoDesdeTexto(texto);
+
+    if (resuelto) {
+      if (wp) wp.data = resuelto;
+
+      input.value = resuelto.direccionCorta;
+      input.setAttribute(
+        'title',
+        `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`
+      );
+    } else {
+      if (wp) wp.data = null;
+      errores.push(texto);
+    }
+  }
+
+  return errores;
+}
+  
+function construirPayloadWaypointsIntermedios() {
+  const puntos = obtenerPuntosOrdenados();
+
+  if (puntos.length <= 2) return [];
+
+  return puntos.slice(1, -1).map((p, index) => ({
+    orden: index + 1,
+    direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
+    direccion_completa: p.direccion || p.direccionCorta || `Parada ${index + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  }));
+}
 // ==========================================
 // GEOCODIFICACIÓN
 // ==========================================
@@ -1556,7 +1617,7 @@ async function buscarDireccion(query) {
     return [];
   }
 }
-
+  
 function formatearDireccionCorta(r) {
   if (!r || !r.display_name) return "Dirección";
 
@@ -1601,8 +1662,7 @@ function formatearDireccionCorta(r) {
   const partes = r.display_name.split(",").map(p => p.trim()).filter(Boolean);
   return partes.slice(0, 2).join(", ");
 }
-
-function formatearDireccionSecundaria(r) {
+  function formatearDireccionSecundaria(r) {
   if (!r) return "";
 
   const addr = r.address || {};
@@ -1627,7 +1687,6 @@ function formatearDireccionSecundaria(r) {
     .filter((v, i, arr) => arr.indexOf(v) === i)
     .join(" · ");
 }
-
 // ==========================================
 // AUTOCOMPLETE
 // ==========================================
@@ -1697,7 +1756,7 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     }, 180);
   });
 }
-
+  
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
 
@@ -1729,7 +1788,6 @@ function mostrarSugerencias(contenedor, resultados, callback) {
 
   contenedor.style.display = 'block';
 }
-
 // ==========================================
 // WAYPOINTS
 // ==========================================
@@ -1756,6 +1814,7 @@ function agregarWaypoint() {
        placeholder="Parada ${numeroParada}" 
        autocomplete="street-address"
        autocapitalize="words"
+      
        spellcheck="false"
        enterkeyhint="search">
       <div class="route-input-actions">
@@ -1784,7 +1843,6 @@ function agregarWaypoint() {
     document.getElementById(waypointId)?.focus();
   }, 100);
 }
-
 function eliminarWaypoint(id) {
   const group = document.getElementById(`group-${id}`);
   if (group) group.remove();
@@ -1794,14 +1852,12 @@ function eliminarWaypoint(id) {
   actualizarTimeline();
   renumerarWaypoints();
 }
-
-function renumerarWaypoints() {
+  function renumerarWaypoints() {
   const inputs = document.querySelectorAll('#waypointsContainer .waypoint-input');
   inputs.forEach((input, index) => {
     input.placeholder = `Parada ${index + 1}`;
   });
 }
-
 function actualizarTimeline() {
   const timeline = document.getElementById('routeTimeline');
   if (!timeline) return;
@@ -1818,9 +1874,8 @@ function actualizarTimeline() {
   dots += `<div class="timeline-dot destination"></div>`;
 
   timeline.innerHTML = dots;
-}
-
-// ==========================================
+}  
+  // ==========================================
 // MAPA
 // ==========================================
 function initMapa() {
@@ -1941,24 +1996,74 @@ function initMapa() {
     });
   });
 }
-
-function dibujarRutaProvisional(coords) {
-  if (!mapaCliente || coords.length < 2) return;
   
-  // Limpiar anterior
-  if (mapaCliente.getLayer('route-line')) {
-    mapaCliente.removeLayer('route-line');
-    mapaCliente.removeSource('route');
-  }
+async function dibujarRutaEnMapa(coords) {
+  await initMapa();
+
+  if (!mapaCliente || !mapReady) return;
+
+  // Limpiar capas anteriores
+  if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+  if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+
+  // Limpiar marcadores
   state.markers.forEach(m => m.remove());
   state.markers = [];
 
-  // Línea punteada provisional (rápido, no espera OSRM)
+  // Agregar marcadores
+  const puntos = [
+    state.origen,
+    ...state.waypoints.filter(w => w.data).map(w => w.data),
+    state.destino
+  ].filter(Boolean);
+
+puntos.forEach((punto, index) => {
+  const el = document.createElement('div');
+  const isOrigin = index === 0;
+  const isDest = index === puntos.length - 1;
+
+  let label = '';
+  if (isOrigin) label = 'A';
+  else if (isDest) label = 'B';
+  else label = String(index);
+
+  el.innerHTML = `
+    <div style="
+      width: 28px; 
+      height: 28px; 
+      background: ${isOrigin ? '#4caf50' : isDest ? '#f44336' : '#ff9800'}; 
+      border-radius: 50%; 
+      border: 3px solid white; 
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+    ">
+      ${label}
+    </div>
+  `;
+
+  const marker = new maplibregl.Marker({ element: el })
+    .setLngLat([punto.lng, punto.lat])
+    .addTo(mapaCliente);
+
+  state.markers.push(marker);
+});
+  const coordinates = coords || puntos.map(p => [p.lng, p.lat]);
+
+  if (!coordinates || coordinates.length < 2) return;
+
   mapaCliente.addSource('route', {
     type: 'geojson',
     data: {
       type: 'Feature',
-      geometry: { type: 'LineString', coordinates: coords }
+      geometry: {
+        type: 'LineString',
+        coordinates
+      }
     }
   });
 
@@ -1966,78 +2071,40 @@ function dibujarRutaProvisional(coords) {
     id: 'route-line',
     type: 'line',
     source: 'route',
-    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round'
+    },
     paint: {
       'line-color': '#1565c0',
-      'line-width': 4,
-      'line-opacity': 0.6,
-      'line-dasharray': [3, 2] // Punteado = calculando
+      'line-width': 5,
+      'line-opacity': 0.9
     }
   });
 
-  // Marcadores
-  coords.forEach((c, i) => {
-    const el = document.createElement('div');
-    const isO = i === 0;
-    const isD = i === coords.length - 1;
-    el.innerHTML = `<div style="
-      width: 26px; height: 26px; 
-      background: ${isO ? '#4caf50' : isD ? '#f44336' : '#ff9800'}; 
-      border-radius: 50%; border: 3px solid white; 
-      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-      display: flex; align-items: center; justify-content: center;
-      color: white; font-weight: bold; font-size: 12px;
-    ">${isO ? 'A' : isD ? 'B' : i}</div>`;
-    
-    state.markers.push(
-      new maplibregl.Marker({ element: el }).setLngLat(c).addTo(mapaCliente)
-    );
-  });
-
-  // Ajustar vista
-  const bounds = coords.reduce(
+  const bounds = coordinates.reduce(
     (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coords[0], coords[0])
+    new maplibregl.LngLatBounds(coordinates[0], coordinates[0])
   );
-  mapaCliente.fitBounds(bounds, { padding: 60, duration: 400 });
-}
 
-function actualizarRutaReal(coords) {
-  if (!mapaCliente || !coords) return;
-  
-  // Cambiar a línea sólida
-  if (mapaCliente.getLayer('route-line')) {
-    mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
-    mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
-    mapaCliente.setPaintProperty('route-line', 'line-width', 5);
-  }
-  
-  // Actualizar geometría
-  const source = mapaCliente.getSource('route');
-  if (source) {
-    source.setData({
-      type: 'Feature',
-      geometry: { type: 'LineString', coordinates: coords }
-    });
-  }
+  mapaCliente.fitBounds(bounds, {
+    padding: { top: 50, bottom: 50, left: 50, right: 50 },
+    duration: 1000
+  });
 }
-
 function centrarEnRuta() {
   if (!mapaCliente || !state.routeData) return;
   
-  const source = mapaCliente.getSource('route');
-  if (!source) return;
-  
-  const data = source._data;
-  if (!data?.geometry?.coordinates) return;
-  
-  const coords = data.geometry.coordinates;
+  const coords = state.routeData.geometry.coordinates;
   const bounds = coords.reduce(
     (b, c) => b.extend(c),
     new maplibregl.LngLatBounds(coords[0], coords[0])
   );
   
-  mapaCliente.fitBounds(bounds, { padding: 50, duration: 500 });
+  mapaCliente.fitBounds(bounds, {
+    padding: 50,
+    duration: 500
+  });
 }
 
 function reiniciarRuta() {
@@ -2051,9 +2118,9 @@ function reiniciarRuta() {
   });
 
   if (mapaCliente && mapReady) {
-    if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-    if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-  }
+  if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+  if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+}
 
   if (state.markers?.length) {
     state.markers.forEach(m => m.remove());
@@ -2076,7 +2143,6 @@ function reiniciarRuta() {
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
-
 function obtenerPuntosOrdenados() {
   return [
     state.origen,
@@ -2086,11 +2152,17 @@ function obtenerPuntosOrdenados() {
     state.destino
   ].filter(Boolean);
 }
-
+  
+  // ==========================================
+// UTILIDADES DE RUTA MULTITRAYECTO
+// ==========================================
 function construirPayloadWaypointsIntermedios() {
   const puntos = obtenerPuntosOrdenados();
+
+  // Si no hay origen + destino, no hay waypoints válidos
   if (puntos.length <= 2) return [];
-  
+
+  // Solo puntos intermedios (sin origen ni destino)
   return puntos.slice(1, -1).map((p, index) => ({
     orden: index + 1,
     direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
@@ -2099,7 +2171,6 @@ function construirPayloadWaypointsIntermedios() {
     lng: Number(p.lng)
   }));
 }
-
 function detectarRetornoAlOrigenFrontend() {
   const puntos = obtenerPuntosOrdenados();
   if (puntos.length < 2) return false;
@@ -2110,18 +2181,20 @@ function detectarRetornoAlOrigenFrontend() {
 
   const mismoPunto = (a, b) => {
     if (!a || !b) return false;
+
     return (
       Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
       Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
     );
   };
 
+  // Caso 1: el destino final vuelve al origen
   if (mismoPunto(origen, ultimo)) return true;
-  
+
+  // Caso 2: alguna parada intermedia vuelve al origen
   const intermedios = puntos.slice(1, -1);
   return intermedios.some((p) => mismoPunto(origen, p));
 }
-
 function construirResumenRuta() {
   const puntos = obtenerPuntosOrdenados();
   if (puntos.length < 2) return "Ruta incompleta";
@@ -2133,11 +2206,15 @@ function construirResumenRuta() {
   });
 
   const resumen = nombres.join(" → ");
-  return detectarRetornoAlOrigenFrontend() ? `${resumen} ↺` : resumen;
-}
 
-// ==========================================
-// CÁLCULO DE RUTA Y COTIZACIÓN - OPTIMIZADO
+  if (detectarRetornoAlOrigenFrontend()) {
+    return `${resumen} ↺`;
+  }
+
+  return resumen;
+}  
+  // ==========================================
+// CÁLCULO DE RUTA Y COTIZACIÓN
 // ==========================================
 async function calcularRuta() {
   if (isCalculatingQuote) return;
@@ -2156,9 +2233,12 @@ async function calcularRuta() {
     // ==========================================
     // PASO 1: Resolver puntos (solo Nominatim, rápido)
     // ==========================================
+    const textoOrigen = origenInput.value.trim();
+    const textoDestino = destinoInput.value.trim();
+    
     const [origenRes, destinoRes] = await Promise.all([
-      resolverPuntoDesdeTexto(origenInput.value.trim()),
-      resolverPuntoDesdeTexto(destinoInput.value.trim())
+      textoOrigen ? resolverPuntoDesdeTexto(textoOrigen) : Promise.resolve(null),
+      textoDestino ? resolverPuntoDesdeTexto(textoDestino) : Promise.resolve(null)
     ]);
     
     if (origenRes) {
@@ -2170,12 +2250,12 @@ async function calcularRuta() {
       destinoInput.value = destinoRes.direccionCorta;
     }
 
-    // Waypoints en paralelo
+    // Waypoints en paralelo (sin bloquear)
     const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
     await Promise.all(waypointInputs.map(async input => {
       const texto = input.value.trim();
       const wp = state.waypoints.find(w => w.id === input.id);
-      if (!texto) return;
+      if (!texto || (wp?.data && texto.toLowerCase() === (wp.data.direccionCorta || '').toLowerCase())) return;
       
       const res = await resolverPuntoDesdeTexto(texto);
       if (res && wp) {
@@ -2193,18 +2273,18 @@ async function calcularRuta() {
     if (puntos.length < 2) throw new Error('Ruta incompleta');
 
     // ==========================================
-    // PASO 2: Mostrar mapa INMEDIATAMENTE (línea recta)
+    // PASO 2: Mostrar mapa INMEDIATAMENTE con línea recta
     // ==========================================
     document.getElementById('mapSection').style.display = 'block';
     await initMapa();
     
     const coordsLineal = puntos.map(p => [Number(p.lng), Number(p.lat)]);
-    dibujarRutaProvisional(coordsLineal); // Rápido, no espera OSRM
+    dibujarRutaLineal(coordsLineal); // Rápido, no espera OSRM
     
-    setLoadingCotizacion(true, 'Calculando mejor ruta...');
+    setLoadingCotizacion(true, 'Cotizando...');
 
     // ==========================================
-    // PASO 3: Cotizar (backend hace OSRM una sola vez)
+    // PASO 3: Cotizar (EL BACKEND hace OSRM una sola vez)
     // ==========================================
     const payload = {
       servicio: detectarRetornoAlOrigenFrontend() ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
@@ -2225,8 +2305,10 @@ async function calcularRuta() {
         direccion_completa: p.direccion,
         lat: Number(p.lat),
         lng: Number(p.lng)
-      }))
-      // NO enviamos distancia - el backend la calcula con OSRM
+      })),
+      // NO enviamos distancia - el backend la calcula
+      distancia_km: 0,
+      duracion_min: 0
     };
 
     const cotizacion = await fetch(CONFIG.COTIZAR_URL, {
@@ -2237,7 +2319,7 @@ async function calcularRuta() {
         'Authorization': 'Bearer ' + SUPABASE_KEY
       },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(12000)
     }).then(r => r.json());
 
     if (!cotizacion?.exito) {
@@ -2258,9 +2340,9 @@ async function calcularRuta() {
       fallback: !cotizacion.calculo_backend_real
     };
 
-    // Actualizar mapa con ruta real si existe
+    // Si el backend devuelve geometría, actualizar mapa
     if (cotizacion.geometria?.coordinates) {
-      actualizarRutaReal(cotizacion.geometria.coordinates);
+      dibujarRutaReal(cotizacion.geometria.coordinates);
     }
 
     mostrarCotizacion(cotizacion.precio, cotizacion.distancia_km, cotizacion.duracionEstimadaMin);
@@ -2274,6 +2356,293 @@ async function calcularRuta() {
   }
 }
 
+// ==========================================
+// NUEVAS FUNCIONES AUXILIARES RÁPIDAS
+// ==========================================
+
+// Dibuja línea recta inmediatamente (sin esperar OSRM)
+function dibujarRutaLineal(coords) {
+  if (!mapaCliente || coords.length < 2) return;
+  
+  // Limpiar anterior
+  if (mapaCliente.getLayer('route-line')) {
+    mapaCliente.removeLayer('route-line');
+    mapaCliente.removeSource('route');
+  }
+  state.markers.forEach(m => m.remove());
+  state.markers = [];
+
+  // Línea provisional punteada
+  mapaCliente.addSource('route', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: coords }
+    }
+  });
+
+  mapaCliente.addLayer({
+    id: 'route-line',
+    type: 'line',
+    source: 'route',
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: {
+      'line-color': '#1565c0',
+      'line-width': 4,
+      'line-opacity': 0.6,
+      'line-dasharray': [2, 2] // Punteado = provisional
+    }
+  });
+
+  // Marcadores simples
+  coords.forEach((c, i) => {
+    const el = document.createElement('div');
+    const isO = i === 0;
+    const isD = i === coords.length - 1;
+    el.innerHTML = `<div style="
+      width: 24px; height: 24px; 
+      background: ${isO ? '#4caf50' : isD ? '#f44336' : '#ff9800'}; 
+      border-radius: 50%; border: 2px solid white; 
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: bold; font-size: 11px;
+    ">${isO ? 'A' : isD ? 'B' : i}</div>`;
+    
+    state.markers.push(
+      new maplibregl.Marker({ element: el }).setLngLat(c).addTo(mapaCliente)
+    );
+  });
+
+  // Ajustar vista
+  const bounds = coords.reduce(
+    (b, c) => b.extend(c),
+    new maplibregl.LngLatBounds(coords[0], coords[0])
+  );
+  mapaCliente.fitBounds(bounds, { padding: 50, duration: 500 });
+}
+
+// Actualiza a ruta real cuando llega del backend
+function dibujarRutaReal(coords) {
+  if (!mapaCliente || !coords) return;
+  
+  // Actualizar a línea sólida
+  if (mapaCliente.getLayer('route-line')) {
+    mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
+    mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
+    mapaCliente.setPaintProperty('route-line', 'line-width', 5);
+  }
+  
+  // Actualizar geometría si es diferente
+  const source = mapaCliente.getSource('route');
+  if (source) {
+    source.setData({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: coords }
+    });
+  }
+}
+async function cotizarViaje(payloadPreparado) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s max
+
+    const response = await fetch(CONFIG.COTIZAR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      body: JSON.stringify(payloadPreparado),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok || !data?.exito) {
+      throw new Error(data?.error || 'Error en cotización');
+    }
+
+    mostrarCotizacion(
+      Number(data.precio || 0),
+      Number(data.distancia_km || payloadPreparado.distancia_km),
+      Number(data.duracionEstimadaMin || payloadPreparado.duracion_min)
+    );
+
+    state.cotizacion = data;
+
+  } catch (err) {
+    console.error('❌ Error cotizando:', err);
+    
+    // Fallback: mostrar precio estimado localmente
+    const km = payloadPreparado.distancia_km;
+    const precioEstimado = Math.round((1700 + km * 650) / 50) * 50;
+    
+    mostrarCotizacion(precioEstimado, km, payloadPreparado.duracion_min);
+    
+    notif.show(
+      'Cotización estimada',
+      'Usamos precio estimado por lentitud del servidor',
+      'warning'
+    );
+  }
+}
+async function dibujarRutaFallback() {
+  document.getElementById('mapSection').style.display = 'block';
+  await initMapa();
+
+  const puntos = obtenerPuntosOrdenados();
+  const coords = puntos.map(p => [Number(p.lng), Number(p.lat)]);
+
+  let totalDistance = 0;
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const from = turf.point(coords[i]);
+    const to = turf.point(coords[i + 1]);
+    totalDistance += turf.distance(from, to, { units: 'kilometers' });
+  }
+
+  // Ajuste conservador por calles reales
+  const distanceKm = Number((totalDistance * 1.28).toFixed(1));
+  const durationMin = Math.max(1, Math.round((distanceKm / 28) * 60));
+
+  state.routeData = {
+    geometry: { type: 'LineString', coordinates: coords },
+    distance: distanceKm,
+    duration: durationMin,
+    waypoints: Math.max(0, coords.length - 2),
+    segmentos: Math.max(1, coords.length - 1),
+    retornoAlOrigen: detectarRetornoAlOrigenFrontend(),
+    resumenRuta: construirResumenRuta(),
+    puntosOrdenados: puntos,
+    fallback: true
+  };
+
+  await dibujarRutaEnMapa(coords);
+  await cotizarViaje(distanceKm, durationMin);
+}
+
+async function cotizarViaje(km, minutos) {
+  try {
+    const puntos = obtenerPuntosOrdenados();
+
+    if (puntos.length < 2) {
+      throw new Error('No hay suficientes puntos para cotizar');
+    }
+
+    const origenReal = puntos[0];
+    const destinoReal = puntos[puntos.length - 1];
+    const waypointsIntermedios = construirPayloadWaypointsIntermedios();
+
+    const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
+    const segmentosTotales = Math.max(1, puntos.length - 1);
+    const resumenRuta = construirResumenRuta();
+
+    const payload = {
+      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+
+      origen: origenReal.direccion,
+      origen_corto: origenReal.direccionCorta || origenReal.direccion,
+
+      destino: destinoReal.direccion,
+      destino_corto: destinoReal.direccionCorta || destinoReal.direccion,
+
+      origen_lat: Number(origenReal.lat),
+      origen_lng: Number(origenReal.lng),
+
+      destino_lat: Number(destinoReal.lat),
+      destino_lng: Number(destinoReal.lng),
+
+      // Compatibilidad legacy
+      distancia_km: Number(km),
+      duracion_min: Number(minutos),
+
+      // TOTAL REAL de TODA la ruta
+      distancia_km_total: Number(km),
+      duracion_min_total: Number(minutos),
+
+      fechaHora: new Date().toISOString(),
+
+      waypoints: waypointsIntermedios,
+
+      // Ruta completa explícita
+      puntos_ruta: puntos.map((p, index) => ({
+        orden: index,
+        tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+        direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
+        direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
+        lat: Number(p.lat),
+        lng: Number(p.lng)
+      })),
+
+      // Trazabilidad
+      segmentos_totales_front: segmentosTotales,
+      cantidad_paradas_front: waypointsIntermedios.length,
+      retorno_al_origen_front: retornoAlOrigen,
+      resumen_ruta_front: resumenRuta,
+      ruta_calculada_completa: true,
+      cotizacion_multitramo: puntos.length > 2,
+      cliente_origen_input: document.getElementById('inputOrigen')?.value || '',
+      cliente_destino_input: document.getElementById('inputDestino')?.value || ''
+    };
+
+    console.log("📤 Payload cotización limpio:", payload);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(CONFIG.COTIZAR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    const data = await response.json().catch(() => null);
+
+    console.log("📥 Respuesta cotización:", data);
+
+    if (!response.ok || !data?.exito) {
+      throw new Error(data?.error || 'No se pudo cotizar');
+    }
+
+    const precio = Number(data.precio || 0);
+    const distancia = Number(data.distancia_km || km);
+    const duracion = Number(data.duracionEstimadaMin || minutos);
+
+    state.cotizacion = {
+      ...data,
+      resumen_ruta: data.resumen_ruta || resumenRuta
+    };
+
+    mostrarCotizacion(precio, distancia, duracion);
+
+  } catch (err) {
+    console.error('❌ Error cotizando:', err);
+
+    state.cotizacion = null;
+
+    const mensaje =
+      err?.name === 'AbortError'
+        ? 'La cotización tardó demasiado. Intentá nuevamente.'
+        : 'No pudimos obtener el precio en este momento. Intentá nuevamente.';
+
+    notif.show(
+      'No disponible',
+      mensaje,
+      'error'
+    );
+
+    document.getElementById('quoteCard')?.classList.remove('visible');
+  }
+}
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   if (!card) return;
@@ -2343,8 +2712,7 @@ function mostrarCotizacion(precio, km, minutos) {
   }, 300);
 
   console.log("🧠 Resumen ruta:", resumenRuta);
-}
-
+}  
 // ==========================================
 // ACCIONES
 // ==========================================
@@ -2387,7 +2755,6 @@ ${paradasTexto ? paradasTexto + '\n' : ''}🏁 *Destino:* ${puntos[puntos.length
 
   window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
-
 function compartirRuta() {
   if (!state.routeData) {
     notif.show('Sin ruta', 'Primero calculá el recorrido', 'warning');
@@ -2417,7 +2784,7 @@ function compartirRuta() {
       .catch(() => notif.show('No disponible', 'No se pudo compartir', 'warning'));
   }
 }
-
+  
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
@@ -2430,15 +2797,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
     state.destino = data;
   });
-  
-  // Precargar mapa en background para que esté listo
-  setTimeout(() => {
-    initMapa().then(() => {
-      console.log('✅ Mapa precargado');
-    }).catch(() => {
-      // Silencioso, se reintentará cuando se necesite
-    });
-  }, 1500);
 });
 </script>
 
