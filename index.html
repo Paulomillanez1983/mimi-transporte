@@ -4098,8 +4098,22 @@ function dibujarRutaLineal(coords) {
   }
 }
 // Actualiza a ruta real cuando llega del backend
-function dibujarRutaReal(coords) {
-  if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
+async function dibujarRutaReal(coords) {
+  if (!Array.isArray(coords) || coords.length < 2) return;
+
+  const mapSection = document.getElementById('mapSection');
+  if (mapSection) mapSection.style.display = 'block';
+
+  await initMapa();
+
+  if (!mapaCliente) return;
+
+  // Esperar a que el style del mapa esté listo
+  if (!mapaCliente.isStyleLoaded()) {
+    await new Promise((resolve) => {
+      mapaCliente.once('load', resolve);
+    });
+  }
 
   const coordsLimpias = coords
     .map(c => [Number(c?.[0]), Number(c?.[1])])
@@ -4120,14 +4134,18 @@ function dibujarRutaReal(coords) {
     }
   };
 
-  if (mapaCliente.getLayer('route-line') && mapaCliente.getSource('route')) {
+  // Si ya existe la ruta, solo actualizamos
+  if (mapaCliente.getSource('route')) {
     const source = mapaCliente.getSource('route');
     source.setData(geojson);
 
-    mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
-    mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
-    mapaCliente.setPaintProperty('route-line', 'line-width', 5);
+    if (mapaCliente.getLayer('route-line')) {
+      mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
+      mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
+      mapaCliente.setPaintProperty('route-line', 'line-width', 5);
+    }
   } else {
+    // Limpieza defensiva
     if (mapaCliente.getLayer('route-line')) {
       mapaCliente.removeLayer('route-line');
     }
@@ -4156,12 +4174,36 @@ function dibujarRutaReal(coords) {
     });
   }
 
+  // Guardar geometría real en state
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
     coordinates: coordsLimpias
   };
-}  
+  state.routeData.fallback = false;
+
+  // Ajustar cámara a la ruta
+  const bounds = new maplibregl.LngLatBounds();
+  coordsLimpias.forEach(coord => bounds.extend(coord));
+
+  if (!bounds.isEmpty()) {
+    mapaCliente.fitBounds(bounds, {
+      padding: 60,
+      duration: 1000,
+      maxZoom: 15
+    });
+  }
+
+  // Muy importante cuando el mapa estuvo oculto antes
+  setTimeout(() => {
+    try {
+      mapaCliente.resize();
+    } catch (_) {}
+  }, 250);
+
+  console.log('✅ Ruta real dibujada en mapa');
+}
+  
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
