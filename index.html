@@ -1440,31 +1440,35 @@ class NotificationSystem {
 const notif = new NotificationSystem();
 function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
   const btn = document.getElementById('btnCalcular');
-  const btnText = btn?.querySelector('.btn-text');
+  const btnContent = btn?.querySelector('.btn-content');  // ✅ .btn-content (no .btn-text)
   const btnLoader = btn?.querySelector('.btn-loader');
-  const status = document.getElementById('quoteStatus');
+  const loaderText = btn?.querySelector('.btn-loader span:last-child'); // texto del spinner
 
   isCalculatingQuote = isLoading;
 
   if (btn) {
     btn.disabled = isLoading;
     btn.classList.toggle('loading', isLoading);
-    btn.classList.toggle('disabled', isLoading);
     btn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
   }
 
-  if (btnText) {
-    btnText.textContent = isLoading ? texto : 'Calcular viaje';
+  // El contenido normal se oculta con CSS (.loading .btn-content { opacity: 0 })
+  // No necesitamos cambiar el texto, solo togglear la clase loading
+
+  // Actualizar texto del spinner si se proporciona
+  if (loaderText && texto) {
+    loaderText.textContent = texto;
   }
 
-  if (btnLoader) {
-    btnLoader.style.display = isLoading ? 'inline-flex' : 'none';
-  }
-
-  if (status) {
-    status.textContent = isLoading ? texto : '';
-    status.style.display = isLoading ? 'block' : 'none';
-  }
+  // Deshabilitar otros inputs durante carga
+  const inputs = document.querySelectorAll('.route-input, .btn-input-action, .btn-add-stop');
+  inputs.forEach(input => {
+    input.disabled = isLoading;
+    if (input.classList.contains('btn-add-stop')) {
+      input.style.opacity = isLoading ? '0.6' : '1';
+      input.style.pointerEvents = isLoading ? 'none' : 'auto';
+    }
+  });
 }
 async function resolverPuntoDesdeTexto(texto) {
   if (!texto || texto.trim().length < 3) return null;
