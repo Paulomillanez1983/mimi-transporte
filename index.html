@@ -4,13 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="description" content="Transporte escolar seguro en Villa Allende y Córdoba. Cotizá tu viaje online.">
-<meta name="theme-color" content="#1e3c72" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#1e3c72">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="MIMI Transporte">
-<meta name="format-detection" content="telephone=no">
 <title>MIMI Transporte Escolar</title>
 <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/854/854878.png">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
@@ -158,7 +155,7 @@ window.supabaseInsert = async function(table, data) {
 
 <style>
 /* ==========================================
-   VARIABLES GLOBALES - MODO CLARO (default)
+   VARIABLES GLOBALES
 ========================================== */
 :root {
   --azul-oscuro: #1e3c72;
@@ -170,42 +167,14 @@ window.supabaseInsert = async function(table, data) {
   --naranja: #ff9800;
   --gris-fondo: #f5f7fa;
   --blanco: #ffffff;
-  --texto-principal: #1a1a1a;
-  --texto-secundario: #666666;
-  --borde: rgba(0,0,0,0.08);
   --sombra: 0 4px 20px rgba(0,0,0,0.08);
   --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);
   --exito: #4caf50;
   --info: #2196f3;
-  --input-bg: #f4f4f7;
-  --input-border: rgba(0,0,0,0.06);
-  --card-bg: #ffffff;
-  --timeline-bg: #e0e0e0;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
-}
-
-/* ==========================================
-   VARIABLES MODO OSCURO
-========================================== */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --azul-oscuro: #1e40af;
-    --azul-primario: #3b82f6;
-    --azul-claro: #60a5fa;
-    --gris-fondo: #0f0f0f;
-    --texto-principal: #ffffff;
-    --texto-secundario: #a0a0a0;
-    --borde: rgba(255,255,255,0.1);
-    --sombra: 0 4px 20px rgba(0,0,0,0.3);
-    --sombra-hover: 0 8px 30px rgba(0,0,0,0.4);
-    --input-bg: #2c2c2e;
-    --input-border: rgba(255,255,255,0.1);
-    --card-bg: #1c1c1e;
-    --timeline-bg: #3a3a3c;
-  }
 }
 
 /* ==========================================
@@ -224,7 +193,6 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
-  height: -webkit-fill-available;
 }
 
 body {
@@ -235,7 +203,6 @@ body {
   -webkit-overflow-scrolling: touch;
   overflow-x: hidden;
   position: relative;
-  color: var(--texto-principal);
 }
 
 /* ==========================================
@@ -356,20 +323,20 @@ body {
 
 .hero-title {
   font-size: clamp(1.25rem, 4.5vw, 1.6rem);
-  color: var(--texto-principal);
+  color: #1a1a1a;
   font-weight: 800;
   margin-bottom: 6px;
   line-height: 1.2;
 }
 
 .hero-subtitle {
-  color: var(--texto-secundario);
+  color: #666;
   font-size: clamp(0.875rem, 3vw, 1rem);
   line-height: 1.4;
 }
 
 .main-card {
-  background: var(--card-bg);
+  background: white;
   border-radius: clamp(16px, 5vw, 20px);
   padding: clamp(16px, 4vw, 20px);
   box-shadow: var(--sombra);
@@ -400,7 +367,7 @@ body {
   top: 24px;
   bottom: 24px;
   width: 2px;
-  background: var(--timeline-bg);
+  background: #e0e0e0;
   z-index: 1;
 }
 
@@ -410,7 +377,7 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid var(--card-bg);
+  border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   z-index: 2;
 }
@@ -445,15 +412,15 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--input-bg);
+  background: #f4f4f7;
   border-radius: 12px;
   padding: 12px 16px;
-  border: 1px solid var(--input-border);
+  border: 1px solid rgba(0,0,0,0.06);
   transition: all 0.2s ease;
 }
 
 .route-input-wrapper:focus-within {
-  background: var(--card-bg);
+  background: white;
   border-color: var(--azul-primario);
   box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
 }
@@ -468,17 +435,15 @@ body {
   border: none;
   background: transparent;
   outline: none;
-  font-size: 16px; /* Previene zoom en iOS */
+  font-size: 15px;
   font-weight: 600;
-  color: var(--texto-principal);
+  color: #111;
   min-height: 24px;
-  -webkit-appearance: none;
 }
 
 .route-input::placeholder {
-  color: var(--texto-secundario);
+  color: #999;
   font-weight: 500;
-  opacity: 0.7;
 }
 
 .route-input-actions {
@@ -498,25 +463,18 @@ body {
   justify-content: center;
   cursor: pointer;
   font-size: 16px;
-  color: var(--texto-secundario);
+  color: #666;
   transition: all 0.2s;
-  touch-action: manipulation;
 }
 
 .btn-input-action:hover {
   background: rgba(0,0,0,0.05);
-  color: var(--texto-principal);
+  color: #333;
 }
 
 .btn-input-action.delete:hover {
   background: #ffebee;
   color: #c62828;
-}
-
-@media (prefers-color-scheme: dark) {
-  .btn-input-action.delete:hover {
-    background: rgba(198, 40, 40, 0.2);
-  }
 }
 
 /* Botón agregar parada */
@@ -527,7 +485,7 @@ body {
   padding: 12px 16px;
   margin-top: 8px;
   background: transparent;
-  border: 2px dashed var(--texto-secundario);
+  border: 2px dashed #c5c5c7;
   border-radius: 12px;
   color: var(--azul-primario);
   font-size: 14px;
@@ -535,14 +493,11 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   width: 100%;
-  touch-action: manipulation;
-  opacity: 0.8;
 }
 
 .btn-add-stop:hover {
   border-color: var(--azul-primario);
   background: rgba(21, 101, 192, 0.05);
-  opacity: 1;
 }
 
 .btn-add-stop:active {
@@ -555,12 +510,12 @@ body {
   top: calc(100% + 4px);
   left: 0;
   width: 100%;
-  background: var(--card-bg);
+  background: white;
   z-index: 9999 !important;
   max-height: min(280px, 50vh);
   overflow-y: auto;
   border-radius: 12px;
-  border: 1px solid var(--borde);
+  border: 1px solid rgba(0,0,0,0.08);
   box-shadow: 0 14px 35px rgba(0,0,0,0.18);
   display: none;
   -webkit-overflow-scrolling: touch;
@@ -571,18 +526,17 @@ body {
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
   min-height: 48px;
   display: flex;
   align-items: center;
   gap: 12px;
   touch-action: manipulation;
   line-height: 1.3;
-  color: var(--texto-principal);
 }
 
 .sugerencia-item:hover, .sugerencia-item:active {
-  background: var(--input-bg);
+  background: #f4f4f7;
 }
 
 .sugerencia-item:last-child {
@@ -592,7 +546,7 @@ body {
 .sugerencia-icon {
   width: 32px;
   height: 32px;
-  background: var(--input-bg);
+  background: #e3f2fd;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -607,7 +561,7 @@ body {
 }
 
 .sugerencia-main {
-  color: var(--texto-principal);
+  color: #111;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -615,7 +569,7 @@ body {
 }
 
 .sugerencia-secondary {
-  color: var(--texto-secundario);
+  color: #888;
   font-size: 12px;
   margin-top: 2px;
   white-space: nowrap;
@@ -631,7 +585,7 @@ body {
   border-radius: clamp(16px, 5vw, 20px);
   overflow: hidden;
   box-shadow: var(--sombra);
-  background: var(--card-bg);
+  background: white;
 }
 
 .map-container {
@@ -643,13 +597,6 @@ body {
 #map {
   width: 100%;
   height: 100%;
-}
-
-/* Filtro oscuro para el mapa en modo oscuro */
-@media (prefers-color-scheme: dark) {
-  #map {
-    filter: brightness(0.8) contrast(1.1);
-  }
 }
 
 .map-overlay {
@@ -665,30 +612,28 @@ body {
 .map-btn {
   width: 40px;
   height: 40px;
-  background: var(--card-bg);
-  border: 1px solid var(--borde);
+  background: white;
+  border: none;
   border-radius: 10px;
-  box-shadow: var(--sombra);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-size: 18px;
   transition: all 0.2s;
-  color: var(--texto-principal);
-  touch-action: manipulation;
 }
 
 .map-btn:hover {
   transform: scale(1.05);
-  box-shadow: var(--sombra-hover);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 /* ==========================================
    CARD DE COTIZACIÓN
 ========================================== */
 .quote-card {
-  background: var(--card-bg);
+  background: white;
   border-radius: clamp(16px, 5vw, 20px);
   padding: clamp(20px, 5vw, 24px);
   box-shadow: var(--sombra);
@@ -707,20 +652,20 @@ body {
   justify-content: space-between;
   margin-bottom: 20px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--borde);
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .quote-title {
   font-size: 18px;
   font-weight: 700;
-  color: var(--texto-principal);
+  color: #111;
 }
 
 .quote-route-info {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--texto-secundario);
+  color: #666;
   font-size: 14px;
   font-weight: 600;
 }
@@ -738,14 +683,8 @@ body {
   margin-bottom: 8px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .quote-price {
-    color: var(--azul-claro);
-  }
-}
-
 .quote-price-label {
-  color: var(--texto-secundario);
+  color: #666;
   font-size: 14px;
   font-weight: 600;
 }
@@ -756,7 +695,7 @@ body {
   gap: 12px;
   margin: 20px 0;
   padding: 16px;
-  background: var(--input-bg);
+  background: #f8f9fa;
   border-radius: 12px;
 }
 
@@ -767,13 +706,13 @@ body {
 .quote-detail-value {
   font-size: 18px;
   font-weight: 700;
-  color: var(--texto-principal);
+  color: #111;
   margin-bottom: 4px;
 }
 
 .quote-detail-label {
   font-size: 12px;
-  color: var(--texto-secundario);
+  color: #888;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -803,7 +742,6 @@ body {
   justify-content: center;
   gap: 8px;
   touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .btn-primary:hover {
@@ -818,10 +756,10 @@ body {
 .btn-secondary {
   width: 100%;
   padding: 14px;
-  border: 2px solid var(--borde);
+  border: 2px solid #e0e0e0;
   border-radius: 14px;
-  background: var(--card-bg);
-  color: var(--texto-principal);
+  background: white;
+  color: #333;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -830,7 +768,6 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  touch-action: manipulation;
 }
 
 .btn-secondary:hover {
@@ -861,7 +798,6 @@ body {
   gap: 10px;
   touch-action: manipulation;
   min-height: 56px;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .btn-calcular:hover {
@@ -898,7 +834,7 @@ body {
 }
 
 .toast {
-  background: var(--card-bg);
+  background: white;
   border-radius: 16px;
   padding: 16px 20px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.15);
@@ -929,14 +865,14 @@ body {
 
 .toast-title {
   font-weight: 700;
-  color: var(--texto-principal);
+  color: #1a1a1a;
   font-size: clamp(0.85rem, 3vw, 0.9rem);
   margin-bottom: 2px;
   line-height: 1.2;
 }
 
 .toast-message {
-  color: var(--texto-secundario);
+  color: #666;
   font-size: clamp(0.8rem, 2.8vw, 0.85rem);
   line-height: 1.3;
 }
@@ -944,7 +880,7 @@ body {
 .toast-close {
   background: none;
   border: none;
-  color: var(--texto-secundario);
+  color: #999;
   cursor: pointer;
   font-size: 1.2rem;
   padding: 4px;
@@ -956,7 +892,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: manipulation;
 }
 
 /* ==========================================
@@ -965,7 +900,7 @@ body {
 .footer {
   text-align: center;
   padding: clamp(20px, 5vw, 25px) clamp(15px, 4vw, 20px) calc(20px + var(--safe-bottom));
-  color: var(--texto-secundario);
+  color: #666;
   font-size: clamp(0.8rem, 3vw, 0.85rem);
   width: 100%;
 }
@@ -974,7 +909,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--card-bg);
+  background: white;
   padding: 10px 20px;
   border-radius: 50px;
   font-weight: 700;
@@ -984,7 +919,6 @@ body {
   text-decoration: none;
   touch-action: manipulation;
   min-height: 44px;
-  border: 1px solid var(--borde);
 }
 
 /* ==========================================
@@ -1024,60 +958,14 @@ body {
   .vehicle-img { width: 200px; bottom: -200px; }
 }
 
-/* iPhone notch y safe areas específicas */
-@supports (padding-top: env(safe-area-inset-top)) {
-  .header {
-    padding-top: max(20px, env(safe-area-inset-top));
-  }
-  
-  .toast-container {
-    top: max(20px, env(safe-area-inset-top));
-  }
-}
-
-/* Prevenir zoom en inputs en iOS */
-@supports (-webkit-touch-callout: none) {
-  .route-input,
-  .btn-calcular,
-  .btn-primary,
-  .btn-secondary,
-  .btn-add-stop {
-    font-size: 16px;
-  }
-}
-
-/* Orientación landscape en móviles */
-@media (max-height: 500px) and (orientation: landscape) {
-  .header {
-    padding-bottom: 20px;
-    margin-bottom: 20px;
-  }
-  
-  .vehicle-img {
-    display: none;
-  }
-  
-  .map-container {
-    height: 250px;
-  }
-}
-
-/* Reducir motion si el usuario lo prefiere */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* Mejoras para dispositivos con pantallas plegables */
-@media (screen and (max-width: 600px)) {
-  .container {
-    padding: 0 clamp(8px, 3vw, 16px);
-  }
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root { --gris-fondo: #0f0f0f; }
+  body { background: var(--gris-fondo); }
+  .main-card, .quote-card { background: #1c1c1e; }
+  .hero-title { color: #fff; }
+  .route-input-wrapper { background: #2c2c2e; }
+  .route-input { color: #fff; }
 }
 </style>
 </head>
@@ -1123,9 +1011,7 @@ body {
                id="inputOrigen" 
                class="route-input" 
                placeholder="¿Dónde te buscamos?" 
-               autocomplete="off"
-               enterkeyhint="next"
-               inputmode="text">
+               autocomplete="off">
       </div>
       <div id="sugerenciasOrigen" class="sugerencias"></div>
     </div>
@@ -1138,9 +1024,7 @@ body {
                id="inputDestino" 
                class="route-input" 
                placeholder="¿A dónde vamos?" 
-               autocomplete="off"
-               enterkeyhint="done"
-               inputmode="text">
+               autocomplete="off">
       </div>
       <div id="sugerenciasDestino" class="sugerencias"></div>
     </div>
@@ -1150,13 +1034,13 @@ body {
   </div>
 
   <!-- Botón agregar parada -->
-  <button class="btn-add-stop" onclick="agregarWaypoint()" id="btnAddStop" type="button">
+  <button class="btn-add-stop" onclick="agregarWaypoint()" id="btnAddStop">
     <span>➕</span>
     <span>Agregar parada</span>
   </button>
 </div>
     
-    <button class="btn-calcular" id="btnCalcular" onclick="calcularRuta()" type="button">
+    <button class="btn-calcular" id="btnCalcular" onclick="calcularRuta()">
       <span>🚐</span>
       <span>Ver recorrido y cotizar</span>
     </button>
@@ -1167,8 +1051,8 @@ body {
     <div class="map-container">
       <div id="map"></div>
       <div class="map-overlay">
-        <button class="map-btn" onclick="centrarEnRuta()" title="Centrar ruta" type="button">📍</button>
-        <button class="map-btn" onclick="reiniciarRuta()" title="Nueva ruta" type="button">🔄</button>
+        <button class="map-btn" onclick="centrarEnRuta()" title="Centrar ruta">📍</button>
+        <button class="map-btn" onclick="reiniciarRuta()" title="Nueva ruta">🔄</button>
       </div>
     </div>
   </div>
@@ -1203,11 +1087,11 @@ body {
     </div>
 
     <div class="quote-actions">
-      <button class="btn-primary" onclick="confirmarViaje()" type="button">
+      <button class="btn-primary" onclick="confirmarViaje()">
         <span>✓</span>
         <span>Confirmar viaje</span>
       </button>
-      <button class="btn-secondary" onclick="compartirRuta()" type="button">
+      <button class="btn-secondary" onclick="compartirRuta()">
         <span>📤</span>
         <span>Compartir ruta</span>
       </button>
@@ -1248,10 +1132,6 @@ let mapaCliente = null;
 let rutaLayer = null;
 let waypointCounter = 0;
 let mapReady = false;
-
-// Detectar preferencia de color
-const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -1272,7 +1152,7 @@ class NotificationSystem {
         <div class="toast-title">${title}</div>
         <div class="toast-message">${message}</div>
       </div>
-      <button class="toast-close" onclick="this.parentElement.remove()" aria-label="Cerrar notificación">×</button>
+      <button class="toast-close" onclick="this.parentElement.remove()">×</button>
     `;
     
     this.container.appendChild(toast);
@@ -1394,16 +1274,7 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
       input.dispatchEvent(new Event('input'));
     }
   });
-
-  // Manejar tecla Enter
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      contenedor.style.display = 'none';
-      input.blur();
-    }
-  });
 }
-
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
 
@@ -1466,11 +1337,9 @@ function agregarWaypoint() {
              id="${waypointId}" 
              class="route-input waypoint-input" 
              placeholder="Parada ${numeroParada}" 
-             autocomplete="off"
-             enterkeyhint="next"
-             inputmode="text">
+             autocomplete="off">
       <div class="route-input-actions">
-        <button class="btn-input-action delete" onclick="eliminarWaypoint('${waypointId}')" title="Eliminar" type="button" aria-label="Eliminar parada">✕</button>
+        <button class="btn-input-action delete" onclick="eliminarWaypoint('${waypointId}')" title="Eliminar">✕</button>
       </div>
     </div>
     <div id="sugerencias-${waypointId}" class="sugerencias"></div>
@@ -1495,7 +1364,6 @@ function agregarWaypoint() {
     document.getElementById(waypointId)?.focus();
   }, 100);
 }
-
 function eliminarWaypoint(id) {
   const group = document.getElementById(`group-${id}`);
   if (group) group.remove();
@@ -1505,14 +1373,12 @@ function eliminarWaypoint(id) {
   actualizarTimeline();
   renumerarWaypoints();
 }
-
-function renumerarWaypoints() {
+  function renumerarWaypoints() {
   const inputs = document.querySelectorAll('#waypointsContainer .waypoint-input');
   inputs.forEach((input, index) => {
     input.placeholder = `Parada ${index + 1}`;
   });
 }
-
 function actualizarTimeline() {
   const timeline = document.getElementById('routeTimeline');
   if (!timeline) return;
@@ -1529,9 +1395,8 @@ function actualizarTimeline() {
   dots += `<div class="timeline-dot destination"></div>`;
 
   timeline.innerHTML = dots;
-}
-
-// ==========================================
+}  
+  // ==========================================
 // MAPA
 // ==========================================
 function initMapa() {
@@ -1575,7 +1440,6 @@ function initMapa() {
     });
   });
 }
-
 async function dibujarRutaEnMapa(coords) {
   await initMapa();
 
@@ -1607,7 +1471,7 @@ async function dibujarRutaEnMapa(coords) {
         height: 28px; 
         background: ${isOrigin ? '#4caf50' : isDest ? '#f44336' : '#ff9800'}; 
         border-radius: 50%; 
-        border: 3px solid ${prefersDarkMode ? '#1c1c1e' : 'white'}; 
+        border: 3px solid white; 
         box-shadow: 0 3px 8px rgba(0,0,0,0.4);
         display: flex;
         align-items: center;
@@ -1651,7 +1515,7 @@ async function dibujarRutaEnMapa(coords) {
       'line-cap': 'round'
     },
     paint: {
-      'line-color': prefersDarkMode ? '#60a5fa' : '#1565c0',
+      'line-color': '#1565c0',
       'line-width': 5,
       'line-opacity': 0.9
     }
@@ -1667,7 +1531,6 @@ async function dibujarRutaEnMapa(coords) {
     duration: 1000
   });
 }
-
 function centrarEnRuta() {
   if (!mapaCliente || !state.routeData) return;
   
@@ -1694,9 +1557,9 @@ function reiniciarRuta() {
   });
 
   if (mapaCliente && mapReady) {
-    if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-    if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-  }
+  if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+  if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+}
 
   if (state.markers?.length) {
     state.markers.forEach(m => m.remove());
@@ -1719,8 +1582,8 @@ function reiniciarRuta() {
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
-
-// ==========================================
+  
+  // ==========================================
 // CÁLCULO DE RUTA Y COTIZACIÓN
 // ==========================================
 async function calcularRuta() {
@@ -1757,17 +1620,16 @@ async function calcularRuta() {
     notif.show('Faltan datos', 'Ingresá origen y destino', 'error');
     return;
   }
-
   const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
-  const waypointsConTextoSinResolver = waypointInputs.filter(input => {
-    const wp = state.waypoints.find(w => w.id === input.id);
-    return input.value.trim().length > 0 && !wp?.data;
-  });
+const waypointsConTextoSinResolver = waypointInputs.filter(input => {
+  const wp = state.waypoints.find(w => w.id === input.id);
+  return input.value.trim().length > 0 && !wp?.data;
+});
 
-  if (waypointsConTextoSinResolver.length > 0) {
-    notif.show('Paradas incompletas', 'Seleccioná una sugerencia válida para cada parada', 'warning');
-    return;
-  }
+if (waypointsConTextoSinResolver.length > 0) {
+  notif.show('Paradas incompletas', 'Seleccioná una sugerencia válida para cada parada', 'warning');
+  return;
+}
 
   // Loading
   btn.disabled = true;
@@ -1790,22 +1652,21 @@ async function calcularRuta() {
       allCoords.map(c => c.join(',')).join(';') +
       '?overview=full&geometries=geojson';
 
-    const osrmRes = await fetch(osrmUrl, {
-      headers: {
-        'Accept': 'application/json'
-      }
-    });
+const osrmRes = await fetch(osrmUrl, {
+  headers: {
+    'Accept': 'application/json'
+  }
+});
 
-    if (!osrmRes.ok) {
-      throw new Error(`OSRM respondió ${osrmRes.status}`);
-    }
+if (!osrmRes.ok) {
+  throw new Error(`OSRM respondió ${osrmRes.status}`);
+}
 
-    const osrmData = await osrmRes.json();
+const osrmData = await osrmRes.json();
 
-    if (!osrmData || osrmData.code !== 'Ok' || !osrmData.routes?.length) {
-      throw new Error('No se pudo calcular la ruta real');
-    }
-
+if (!osrmData || osrmData.code !== 'Ok' || !osrmData.routes?.length) {
+  throw new Error('No se pudo calcular la ruta real');
+}
     const route = osrmData.routes[0];
     const distanceKm = (route.distance / 1000).toFixed(1);
     const durationMin = Math.round(route.duration / 60);
@@ -1820,12 +1681,12 @@ async function calcularRuta() {
 
     // Mostrar mapa
     document.getElementById('mapSection').style.display = 'block';
-    await dibujarRutaEnMapa(route.geometry.coordinates);
+await dibujarRutaEnMapa(route.geometry.coordinates);
 
-    // Calcular precio
-    await cotizarViaje(distanceKm, durationMin);
+// Calcular precio
+await cotizarViaje(distanceKm, durationMin);
 
-  } catch (err) {
+    } catch (err) {
     console.error(err);
     notif.show('Error', 'No se pudo calcular la ruta. Intentá de nuevo.', 'error');
     
@@ -1869,8 +1730,7 @@ async function dibujarRutaFallback() {
   await dibujarRutaEnMapa(coords);
   await cotizarViaje(distanceKm, durationMin);
 }
-
-async function cotizarViaje(km, minutos) {
+  async function cotizarViaje(km, minutos) {
   try {
     const waypointsValidos = state.waypoints
       .filter(w => w.data)
@@ -1936,31 +1796,94 @@ async function cotizarViaje(km, minutos) {
     document.getElementById('quoteCard').classList.remove('visible');
   }
 }
-
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   const paradasIntermedias = state.waypoints.filter(w => w.data).length;
   const puntosTotales = paradasIntermedias + 2; // origen + destino + intermedias
 
-  document.getElementById('quotePrice').textContent =
-    '$' + Number(precio).toLocaleString('es-AR');
-  
+document.getElementById('quotePrice').textContent =
+  '$' + Number(precio).toLocaleString('es-AR');
   let label = 'Precio estimado';
 
-  if (state.cotizacion?.modo === 'fallback_local') {
-    label = 'Estimación provisoria';
-  }
+if (state.cotizacion?.modo === 'fallback_local') {
+  label = 'Estimación provisoria';
+}
 
-  document.querySelector('.quote-price-label').textContent = label;
+document.querySelector('.quote-price-label').textContent = label;
   document.getElementById('detailDistance').textContent = Number(km).toFixed(1) + ' km';
   document.getElementById('detailDuration').textContent = Math.round(Number(minutos)) + ' min';
   document.getElementById('detailStops').textContent = paradasIntermedias;
-  document.getElementById('resumenParadas').textContent =
-    paradasIntermedias === 0
-      ? 'Viaje directo'
-      : `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} intermedia${paradasIntermedias > 1 ? 's' : ''}`;
-  
+document.getElementById('resumenParadas').textContent =
+  paradasIntermedias === 0
+    ? 'Viaje directo'
+    : `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} intermedia${paradasIntermedias > 1 ? 's' : ''}`;
   card.classList.add('visible');
 
   setTimeout(() => {
-    card.scrollIntoView({ behavior: 'smooth
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 300);
+}
+// ==========================================
+// ACCIONES
+// ==========================================
+function confirmarViaje() {
+  if (!state.origen || !state.destino || !state.routeData) {
+    notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
+    return;
+  }
+
+  const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
+
+  const mensaje = `🚐 *MIMI Transporte Escolar*\n\n` +
+    `🧾 *Cotización:* ${cotizacionId}\n\n` +
+    `📍 *Origen:* ${formatearDireccionCorta({display_name: state.origen.direccion})}\n` +
+    `${state.waypoints.filter(w => w.data).map((w, i) => 
+      `📍 *Parada ${i + 1}:* ${formatearDireccionCorta({display_name: w.data.direccion})}\n`
+    ).join('')}` +
+    `🏁 *Destino:* ${formatearDireccionCorta({display_name: state.destino.direccion})}\n\n` +
+    `📏 *Distancia:* ${state.routeData.distance} km\n` +
+    `⏱️ *Duración:* ${state.routeData.duration} min\n` +
+    `💰 *Precio:* ${document.getElementById('quotePrice').textContent}\n\n` +
+    `✅ ¿Confirmamos el viaje?`;
+
+  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
+}
+function compartirRuta() {
+  if (!state.routeData) {
+    notif.show('Sin ruta', 'Primero calculá el viaje', 'warning');
+    return;
+  }
+
+  const precio = state.cotizacion?.precio || 0;
+
+  const texto = `Mirá la ruta de mi viaje con MIMI Transporte 🚐\n` +
+    `📍 ${state.routeData.distance} km en ${state.routeData.duration} min\n` +
+    `💰 $${Number(precio).toLocaleString('es-AR')}`;
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'Mi viaje con MIMI',
+      text: texto
+    }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(texto);
+    notif.show('Copiado', 'El resumen se copió al portapapeles', 'success');
+  }
+}
+// ==========================================
+// INICIALIZACIÓN
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Setup autocomplete para origen y destino
+  setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
+    state.origen = data;
+  });
+  
+  setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
+    state.destino = data;
+  });
+});
+</script>
+
+</body>
+</html>
