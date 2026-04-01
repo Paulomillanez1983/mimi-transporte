@@ -2933,6 +2933,7 @@ let rutaLayer = null;
 let waypointCounter = 0;
 let mapReady = false;
 let isCalculatingQuote = false;
+let currentQuoteRequestId = 0;
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -3682,6 +3683,7 @@ function reiniciarRuta() {
 
   waypointCounter = 0;
   isCalculatingQuote = false;
+  currentQuoteRequestId++;
 
   document.getElementById('mapSection').style.display = 'none';
   document.getElementById('quoteCard')?.classList.remove('visible');
@@ -3752,6 +3754,8 @@ function construirResumenRuta() {
 async function calcularRuta() {
   if (isCalculatingQuote) return;
 
+  const requestId = ++currentQuoteRequestId;
+
   document.getElementById('quoteCard')?.classList.remove('visible');
   state.cotizacion = null;
   state.routeData = null;
@@ -3762,16 +3766,42 @@ async function calcularRuta() {
   setLoadingCotizacion(true, 'Buscando direcciones...');
 
   try {
+    const textoOrigen = origenInput?.value?.trim() || '';
+    const textoDestino = destinoInput?.value?.trim() || '';
+
     // ==========================================
-    // PASO 1: Resolver origen y destino
+    // PASO 1: Resolver origen SOLO si hace falta
     // ==========================================
-    const textoOrigen = origenInput.value.trim();
-    const textoDestino = destinoInput.value.trim();
+    const origenGuardado = normalizarTextoDireccion(
+      state.origen?.direccionCorta || state.origen?.direccion || ''
+    );
+    const destinoGuardado = normalizarTextoDireccion(
+      state.destino?.direccionCorta || state.destino?.direccion || ''
+    );
+
+    const origenActual = normalizarTextoDireccion(textoOrigen);
+    const destinoActual = normalizarTextoDireccion(textoDestino);
+
+    const necesitaResolverOrigen =
+      !!textoOrigen && (
+        !state.origen ||
+        !coordenadasValidas(state.origen?.lat, state.origen?.lng) ||
+        origenActual !== origenGuardado
+      );
+
+    const necesitaResolverDestino =
+      !!textoDestino && (
+        !state.destino ||
+        !coordenadasValidas(state.destino?.lat, state.destino?.lng) ||
+        destinoActual !== destinoGuardado
+      );
 
     const [origenRes, destinoRes] = await Promise.all([
-      textoOrigen ? resolverPuntoDesdeTexto(textoOrigen) : Promise.resolve(null),
-      textoDestino ? resolverPuntoDesdeTexto(textoDestino) : Promise.resolve(null)
+      necesitaResolverOrigen ? resolverPuntoDesdeTexto(textoOrigen) : Promise.resolve(state.origen),
+      necesitaResolverDestino ? resolverPuntoDesdeTexto(textoDestino) : Promise.resolve(state.destino)
     ]);
+
+    if (requestId !== currentQuoteRequestId) return;
 
     if (origenRes) {
       state.origen = origenRes;
@@ -3803,13 +3833,21 @@ async function calcularRuta() {
 
         if (!texto) {
           if (wp) wp.data = null;
+          input.removeAttribute('title');
           return;
         }
 
-        const textoGuardado = (wp?.data?.direccionCorta || wp?.data?.direccion || '').toLowerCase().trim();
-        const textoActual = texto.toLowerCase().trim();
+        const textoGuardado = normalizarTextoDireccion(
+          wp?.data?.direccionCorta || wp?.data?.direccion || ''
+        );
+        const textoActual = normalizarTextoDireccion(texto);
 
-        if (wp?.data && textoActual === textoGuardado) return;
+        const necesitaResolver =
+          !wp?.data ||
+          !coordenadasValidas(wp?.data?.lat, wp?.data?.lng) ||
+          textoActual !== textoGuardado;
+
+        if (!necesitaResolver) return;
 
         const res = await resolverPuntoDesdeTexto(texto);
 
@@ -3826,6 +3864,8 @@ async function calcularRuta() {
       })
     );
 
+    if (requestId !== currentQuoteRequestId) return;
+
     if (!state.origen || !state.destino) {
       notif.show('Faltan datos', 'Ingresá origen y destino válidos', 'error');
       return;
@@ -3837,13 +3877,21 @@ async function calcularRuta() {
       throw new Error('Ruta incompleta');
     }
 
+    // Validar coordenadas
+    const puntosInvalidos = puntos.filter(p => !coordenadasValidas(p?.lat, p?.lng));
+    if (puntosInvalidos.length > 0) {
+      throw new Error('Hay direcciones con coordenadas inválidas');
+    }
+
     // ==========================================
     // PASO 3: Mostrar mapa inmediatamente
     // ==========================================
     document.getElementById('mapSection').style.display = 'block';
     await initMapa();
 
-    const coordsLineal = puntos.map(p => [Number(p.lng), Number(p.lat)]);
+    if (requestId !== currentQuoteRequestId) return;
+
+    const coordsLineal = puntos.map(p => [numeroSeguro(p.lng), numeroSeguro(p.lat)]);
     dibujarRutaLineal(coordsLineal);
 
     setLoadingCotizacion(true, 'Cotizando...');
@@ -3855,64 +3903,66 @@ async function calcularRuta() {
     const resumenRuta = construirResumenRuta();
     const waypointsIntermedios = construirPayloadWaypointsIntermedios();
 
-let distanciaEstimada = 0;
+    let distanciaEstimada = 0;
 
-for (let i = 0; i < coordsLineal.length - 1; i++) {
-  const from = turf.point(coordsLineal[i]);
-  const to = turf.point(coordsLineal[i + 1]);
-  distanciaEstimada += turf.distance(from, to, { units: 'kilometers' });
-}
+    for (let i = 0; i < coordsLineal.length - 1; i++) {
+      const from = turf.point(coordsLineal[i]);
+      const to = turf.point(coordsLineal[i + 1]);
+      distanciaEstimada += turf.distance(from, to, { units: 'kilometers' });
+    }
 
-distanciaEstimada = Number((distanciaEstimada * 1.18).toFixed(1));
-const duracionEstimada = Math.max(1, Math.round((distanciaEstimada / 28) * 60));
+    distanciaEstimada = numeroSeguro((distanciaEstimada * 1.18).toFixed(1), 0);
+    const duracionEstimada = Math.max(1, Math.round((distanciaEstimada / 28) * 60));
 
-const payload = {
-  servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+    const payload = {
+      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-  origen: puntos[0].direccion,
-  origen_corto: puntos[0].direccionCorta || puntos[0].direccion,
+      origen: puntos[0].direccion,
+      origen_corto: puntos[0].direccionCorta || puntos[0].direccion,
 
-  destino: puntos[puntos.length - 1].direccion,
-  destino_corto: puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion,
+      destino: puntos[puntos.length - 1].direccion,
+      destino_corto: puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion,
 
-  origen_lat: Number(puntos[0].lat),
-  origen_lng: Number(puntos[0].lng),
+      origen_lat: numeroSeguro(puntos[0].lat),
+      origen_lng: numeroSeguro(puntos[0].lng),
 
-  destino_lat: Number(puntos[puntos.length - 1].lat),
-  destino_lng: Number(puntos[puntos.length - 1].lng),
+      destino_lat: numeroSeguro(puntos[puntos.length - 1].lat),
+      destino_lng: numeroSeguro(puntos[puntos.length - 1].lng),
 
-  distancia_km: distanciaEstimada,
-  duracion_min: duracionEstimada,
-  distancia_km_total: distanciaEstimada,
-  duracion_min_total: duracionEstimada,
+      distancia_km: numeroSeguro(distanciaEstimada),
+      duracion_min: numeroSeguro(duracionEstimada),
+      distancia_km_total: numeroSeguro(distanciaEstimada),
+      duracion_min_total: numeroSeguro(duracionEstimada),
 
-  fechaHora: new Date().toISOString(),
+      fechaHora: new Date().toISOString(),
 
-  waypoints: waypointsIntermedios,
+      waypoints: waypointsIntermedios,
 
-  puntos_ruta: puntos.map((p, index) => ({
-    orden: index,
-    tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
-    direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-    direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-    lat: Number(p.lat),
-    lng: Number(p.lng)
-  })),
+      puntos_ruta: puntos.map((p, index) => ({
+        orden: index,
+        tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+        direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
+        direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
+        lat: numeroSeguro(p.lat),
+        lng: numeroSeguro(p.lng)
+      })),
 
-  segmentos_totales_front: Math.max(1, puntos.length - 1),
-  cantidad_paradas_front: waypointsIntermedios.length,
-  retorno_al_origen_front: retornoAlOrigen,
-  resumen_ruta_front: resumenRuta,
-  ruta_calculada_completa: true,
-  cotizacion_multitramo: puntos.length > 2,
-  cliente_origen_input: origenInput?.value || '',
-  cliente_destino_input: destinoInput?.value || ''
-};
+      segmentos_totales_front: Math.max(1, puntos.length - 1),
+      cantidad_paradas_front: waypointsIntermedios.length,
+      retorno_al_origen_front: retornoAlOrigen,
+      resumen_ruta_front: resumenRuta,
+      ruta_calculada_completa: true,
+      cotizacion_multitramo: puntos.length > 2,
+      cliente_origen_input: textoOrigen,
+      cliente_destino_input: textoDestino
+    };
 
-    await cotizarViaje(payload);
+    await cotizarViaje(payload, requestId);
 
   } catch (err) {
     console.error('❌ Error:', err);
+
+    if (requestId !== currentQuoteRequestId) return;
 
     try {
       await dibujarRutaFallback();
@@ -3926,10 +3976,11 @@ const payload = {
       notif.show('Error', err.message || 'No se pudo completar la cotización', 'error');
     }
   } finally {
-    setLoadingCotizacion(false);
+    if (requestId === currentQuoteRequestId) {
+      setLoadingCotizacion(false);
+    }
   }
-}
-  
+}  
 // ==========================================
 // NUEVAS FUNCIONES AUXILIARES RÁPIDAS
 // ==========================================
@@ -4048,17 +4099,27 @@ function dibujarRutaLineal(coords) {
 }
 // Actualiza a ruta real cuando llega del backend
 function dibujarRutaReal(coords) {
-  if (!mapaCliente || !coords || coords.length < 2) return;
+  if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
+
+  const coordsLimpias = coords
+    .map(c => [Number(c?.[0]), Number(c?.[1])])
+    .filter(c =>
+      Number.isFinite(c[0]) &&
+      Number.isFinite(c[1]) &&
+      Math.abs(c[0]) <= 180 &&
+      Math.abs(c[1]) <= 90
+    );
+
+  if (coordsLimpias.length < 2) return;
 
   const geojson = {
     type: 'Feature',
     geometry: {
       type: 'LineString',
-      coordinates: coords
+      coordinates: coordsLimpias
     }
   };
 
-  // Si ya existe la capa provisional, solo la convertimos en real
   if (mapaCliente.getLayer('route-line') && mapaCliente.getSource('route')) {
     const source = mapaCliente.getSource('route');
     source.setData(geojson);
@@ -4067,7 +4128,6 @@ function dibujarRutaReal(coords) {
     mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
     mapaCliente.setPaintProperty('route-line', 'line-width', 5);
   } else {
-    // Si no existe nada, la creamos directamente
     if (mapaCliente.getLayer('route-line')) {
       mapaCliente.removeLayer('route-line');
     }
@@ -4099,10 +4159,9 @@ function dibujarRutaReal(coords) {
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
-    coordinates: coords
+    coordinates: coordsLimpias
   };
-}
-  
+}  
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
@@ -4188,7 +4247,7 @@ async function dibujarRutaFallback() {
   }
 }
 
-async function cotizarViaje(payload) {
+async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
   let timeoutId = null;
 
   try {
@@ -4214,6 +4273,8 @@ async function cotizarViaje(payload) {
       signal: controller.signal
     });
 
+    if (requestId !== currentQuoteRequestId) return;
+
     const rawText = await response.text();
     let data = null;
 
@@ -4230,54 +4291,50 @@ async function cotizarViaje(payload) {
       throw new Error(data?.error || `No se pudo cotizar (${response.status})`);
     }
 
-    const precio = Number(data?.precio);
-    const distancia = Number(
+    const precio = numeroSeguro(data?.precio, 0);
+    const distancia = numeroSeguro(
       data?.distancia_km_total ??
       data?.distancia_km ??
       payload?.distancia_km_total ??
-      payload?.distancia_km ??
+      payload?.distancia_km,
       0
     );
 
-    const duracion = Number(
+    const duracion = numeroSeguro(
       data?.duracionEstimadaMin ??
       data?.duracion_min_total ??
       data?.duracion_min ??
       payload?.duracion_min_total ??
-      payload?.duracion_min ??
+      payload?.duracion_min,
       0
     );
-
-    const precioSeguro = Number.isFinite(precio) ? precio : 0;
-    const distanciaSegura = Number.isFinite(distancia) ? distancia : 0;
-    const duracionSegura = Number.isFinite(duracion) ? duracion : 0;
 
     state.cotizacion = {
       ...data,
       resumen_ruta: data?.resumen_ruta || resumenRuta
     };
 
-    // Mantener routeData coherente aunque backend no devuelva geometría
     if (!state.routeData) state.routeData = {};
 
-    state.routeData.distance = distanciaSegura;
-    state.routeData.duration = duracionSegura;
+    state.routeData.distance = distancia;
+    state.routeData.duration = duracion;
     state.routeData.segmentos = data?.segmentos_totales ?? payload?.segmentos_totales_front ?? 1;
     state.routeData.retornoAlOrigen = data?.retorno_al_origen ?? payload?.retorno_al_origen_front ?? false;
     state.routeData.resumenRuta = data?.resumen_ruta || resumenRuta;
     state.routeData.fallback = false;
 
-    // Si backend devuelve geometría real, actualizar mapa
     if (Array.isArray(data?.route_geometry) && data.route_geometry.length >= 2) {
       dibujarRutaReal(data.route_geometry);
     } else if (Array.isArray(data?.geometry?.coordinates) && data.geometry.coordinates.length >= 2) {
       dibujarRutaReal(data.geometry.coordinates);
     }
 
-    mostrarCotizacion(precioSeguro, distanciaSegura, duracionSegura);
+    mostrarCotizacion(precio, distancia, duracion);
 
   } catch (err) {
     console.error('❌ Error cotizando:', err);
+
+    if (requestId !== currentQuoteRequestId) return;
 
     const mensaje =
       err?.name === 'AbortError'
@@ -4286,23 +4343,19 @@ async function cotizarViaje(payload) {
 
     notif.show('Modo estimado', mensaje, 'warning');
 
-    // Mantener experiencia usable aunque backend falle
-    const distanciaFallback = Number(
+    const distanciaFallback = numeroSeguro(
       payload?.distancia_km_total ??
       payload?.distancia_km ??
-      state?.routeData?.distance ??
+      state?.routeData?.distance,
       0
     );
 
-    const duracionFallback = Number(
+    const duracionFallback = numeroSeguro(
       payload?.duracion_min_total ??
       payload?.duracion_min ??
-      state?.routeData?.duration ??
+      state?.routeData?.duration,
       0
     );
-
-    const distanciaSegura = Number.isFinite(distanciaFallback) ? distanciaFallback : 0;
-    const duracionSegura = Number.isFinite(duracionFallback) ? duracionFallback : 0;
 
     state.cotizacion = {
       precio_formateado: 'Consultar',
@@ -4314,19 +4367,18 @@ async function cotizarViaje(payload) {
     };
 
     if (!state.routeData) state.routeData = {};
-    state.routeData.distance = distanciaSegura;
-    state.routeData.duration = duracionSegura;
+    state.routeData.distance = distanciaFallback;
+    state.routeData.duration = duracionFallback;
     state.routeData.segmentos = payload?.segmentos_totales_front ?? 1;
     state.routeData.retornoAlOrigen = payload?.retorno_al_origen_front ?? false;
     state.routeData.resumenRuta = payload?.resumen_ruta_front || construirResumenRuta();
     state.routeData.fallback = true;
 
-    mostrarCotizacion(0, distanciaSegura, duracionSegura);
+    mostrarCotizacion(0, distanciaFallback, duracionFallback);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
 }
-
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   if (!card) return;
