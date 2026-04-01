@@ -1452,19 +1452,27 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
 async function resolverPuntoDesdeTexto(texto) {
   if (!texto || texto.trim().length < 3) return null;
 
-  const geo = await buscarDireccion(texto);
-  if (!geo.length) return null;
+  try {
+    const geo = await buscarDireccion(texto.trim());
 
-  return {
-    direccion: geo[0].display_name,
-    direccionCorta: formatearDireccionCorta(geo[0]),
-    direccionSecundaria: formatearDireccionSecundaria(geo[0]),
-    lat: parseFloat(geo[0].lat),
-    lng: parseFloat(geo[0].lon),
-    raw: geo[0]
-  };
+    if (!Array.isArray(geo) || geo.length === 0) return null;
+
+    const mejor = geo[0];
+    if (!mejor?.lat || !mejor?.lon) return null;
+
+    return {
+      direccion: mejor.display_name,
+      direccionCorta: formatearDireccionCorta(mejor),
+      direccionSecundaria: formatearDireccionSecundaria(mejor),
+      lat: parseFloat(mejor.lat),
+      lng: parseFloat(mejor.lon),
+      raw: mejor
+    };
+  } catch (error) {
+    console.error('❌ Error resolviendo punto desde texto:', texto, error);
+    return null;
+  }
 }
-
 async function resolverWaypointsPendientes() {
   const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
   const errores = [];
@@ -1473,26 +1481,44 @@ async function resolverWaypointsPendientes() {
     const texto = input.value.trim();
     const wp = state.waypoints.find(w => w.id === input.id);
 
-    if (!texto) continue;
-    if (wp?.data) continue;
+    if (!texto) {
+      if (wp) wp.data = null;
+      input.removeAttribute('title');
+      continue;
+    }
+
+    // Si ya había data pero el texto visible cambió, invalidamos
+    const textoActualNormalizado = texto.toLowerCase().trim();
+    const textoGuardadoNormalizado = (
+      wp?.data?.direccionCorta ||
+      wp?.data?.direccion ||
+      ''
+    ).toLowerCase().trim();
+
+    const necesitaResolver =
+      !wp?.data || textoActualNormalizado !== textoGuardadoNormalizado;
+
+    if (!necesitaResolver) continue;
 
     const resuelto = await resolverPuntoDesdeTexto(texto);
 
     if (resuelto) {
       if (wp) wp.data = resuelto;
+
       input.value = resuelto.direccionCorta;
       input.setAttribute(
         'title',
         `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`
       );
     } else {
+      if (wp) wp.data = null;
       errores.push(texto);
     }
   }
 
   return errores;
 }
-
+  
 function construirPayloadWaypointsIntermedios() {
   const puntos = obtenerPuntosOrdenados();
 
