@@ -175,6 +175,16 @@ window.supabaseInsert = async function(table, data) {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+  --card-bg: #ffffff;
+  --text-primary: #111111;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --border-soft: rgba(0,0,0,0.08);
+  --input-bg: #f4f4f7;
+  --input-border: rgba(0,0,0,0.06);
+  --suggestion-bg: #ffffff;
+  --suggestion-hover: #f4f4f7;
+  --footer-bg: transparent;
 }
 
 /* ==========================================
@@ -323,20 +333,19 @@ body {
 
 .hero-title {
   font-size: clamp(1.25rem, 4.5vw, 1.6rem);
-  color: #1a1a1a;
-  font-weight: 800;
+  color: var(--text-primary);  font-weight: 800;
   margin-bottom: 6px;
   line-height: 1.2;
 }
 
 .hero-subtitle {
-  color: #666;
+  color: var(--text-secondary);
   font-size: clamp(0.875rem, 3vw, 1rem);
   line-height: 1.4;
 }
 
 .main-card {
-  background: white;
+  background: var(--card-bg);
   border-radius: clamp(16px, 5vw, 20px);
   padding: clamp(16px, 4vw, 20px);
   box-shadow: var(--sombra);
@@ -408,15 +417,17 @@ body {
   margin-bottom: 0;
 }
 
-.route-input-wrapper {
+..route-input-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #f4f4f7;
-  border-radius: 12px;
-  padding: 12px 16px;
-  border: 1px solid rgba(0,0,0,0.06);
+  gap: 10px;
+  background: var(--input-bg);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--input-border);
   transition: all 0.2s ease;
+  min-height: 58px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
 .route-input-wrapper:focus-within {
@@ -436,16 +447,16 @@ body {
   background: transparent;
   outline: none;
   font-size: 15px;
-  font-weight: 600;
-  color: #111;
+  font-weight: 700;
+  color: var(--text-primary);
   min-height: 24px;
+  width: 100%;
+  text-overflow: ellipsis;
 }
-
 .route-input::placeholder {
-  color: #999;
+  color: var(--text-muted);
   font-weight: 500;
 }
-
 .route-input-actions {
   display: flex;
   gap: 4px;
@@ -510,7 +521,7 @@ body {
   top: calc(100% + 4px);
   left: 0;
   width: 100%;
-  background: white;
+  background: var(--suggestion-bg);
   z-index: 9999 !important;
   max-height: min(280px, 50vh);
   overflow-y: auto;
@@ -633,7 +644,7 @@ body {
    CARD DE COTIZACIÓN
 ========================================== */
 .quote-card {
-  background: white;
+  background: var(--card-bg);
   border-radius: clamp(16px, 5vw, 20px);
   padding: clamp(20px, 5vw, 24px);
   box-shadow: var(--sombra);
@@ -960,12 +971,183 @@ body {
 
 /* Dark mode */
 @media (prefers-color-scheme: dark) {
-  :root { --gris-fondo: #0f0f0f; }
-  body { background: var(--gris-fondo); }
-  .main-card, .quote-card { background: #1c1c1e; }
-  .hero-title { color: #fff; }
-  .route-input-wrapper { background: #2c2c2e; }
-  .route-input { color: #fff; }
+  :root {
+    --gris-fondo: #0f1115;
+    --card-bg: #181b22;
+    --text-primary: #f5f7fb;
+    --text-secondary: #b8c0cc;
+    --text-muted: #8d96a3;
+    --border-soft: rgba(255,255,255,0.08);
+    --input-bg: #222733;
+    --input-border: rgba(255,255,255,0.08);
+    --suggestion-bg: #1d2330;
+    --suggestion-hover: #2a3140;
+    --footer-bg: transparent;
+    --sombra: 0 4px 20px rgba(0,0,0,0.28);
+    --sombra-hover: 0 8px 30px rgba(0,0,0,0.38);
+  }
+
+  body {
+    background: var(--gris-fondo);
+    color: var(--text-primary);
+  }
+
+  .main-card,
+  .quote-card,
+  .map-section,
+  .footer-phone,
+  .toast {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .hero-title,
+  .quote-title,
+  .quote-detail-value,
+  .quote-price,
+  .sugerencia-main,
+  .toast-title {
+    color: var(--text-primary);
+  }
+
+  .hero-subtitle,
+  .quote-price-label,
+  .quote-detail-label,
+  .toast-message,
+  .footer,
+  .sugerencia-secondary {
+    color: var(--text-secondary);
+  }
+
+  .route-input-wrapper {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+  }
+
+  .route-input-wrapper:focus-within {
+    background: #262d3b;
+    border-color: var(--azul-claro);
+    box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.15);
+  }
+
+  .route-input {
+    color: var(--text-primary);
+  }
+
+  .route-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .btn-secondary {
+    background: #1f2430;
+    color: var(--text-primary);
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .btn-secondary:hover {
+    background: #262d3b;
+  }
+
+  .quote-details {
+    background: #202632;
+  }
+
+  .sugerencias {
+    background: var(--suggestion-bg);
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .sugerencia-item {
+    border-bottom-color: rgba(255,255,255,0.06);
+  }
+
+  .sugerencia-item:hover,
+  .sugerencia-item:active {
+    background: var(--suggestion-hover);
+  }
+
+  .sugerencia-icon {
+    background: rgba(66, 165, 245, 0.15);
+  }
+
+  .btn-add-stop {
+    border-color: rgba(255,255,255,0.16);
+    color: var(--azul-claro);
+  }
+
+  .btn-add-stop:hover {
+    background: rgba(66, 165, 245, 0.08);
+    border-color: var(--azul-claro);
+  }
+
+  .map-btn {
+    background: #1f2430;
+    color: white;
+  }
+
+  .route-timeline {
+    background: rgba(255,255,255,0.14);
+  }
+
+  .footer-phone {
+    color: var(--azul-claro);
+  }
+}
+  @media (max-width: 480px) {
+  .header {
+    padding: calc(16px + var(--safe-top)) 14px 34px 14px;
+    margin-bottom: 28px;
+  }
+
+  .header-content {
+    gap: 8px;
+    padding: 0 4px;
+  }
+
+  .vehicle-img {
+    width: clamp(100px, 30vw, 130px);
+    left: -8px;
+    bottom: clamp(-105px, -28vw, -130px);
+  }
+
+  .logo-title {
+    font-size: clamp(1.2rem, 5vw, 1.5rem);
+  }
+
+  .logo-subtitle {
+    font-size: 0.65rem;
+    letter-spacing: 1.2px;
+  }
+
+  .main-card,
+  .quote-card {
+    border-radius: 18px;
+    padding: 16px;
+  }
+
+  .route-inputs-container {
+    padding-left: 28px;
+  }
+
+  .route-timeline {
+    left: 10px;
+  }
+
+  .quote-details {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .quote-detail {
+    padding: 10px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 12px;
+  }
+
+  .footer-phone {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
 </head>
@@ -1007,11 +1189,14 @@ body {
     <div class="route-input-group">
       <div class="route-input-wrapper">
         <span class="route-input-icon">📍</span>
-        <input type="text" 
-               id="inputOrigen" 
-               class="route-input" 
-               placeholder="¿Dónde te buscamos?" 
-               autocomplete="off">
+<input type="text" 
+       id="inputOrigen" 
+       class="route-input" 
+       placeholder="¿Dónde te buscamos?" 
+       autocomplete="street-address"
+       autocapitalize="words"
+       spellcheck="false"
+       enterkeyhint="search">
       </div>
       <div id="sugerenciasOrigen" class="sugerencias"></div>
     </div>
@@ -1021,10 +1206,14 @@ body {
       <div class="route-input-wrapper">
         <span class="route-input-icon">🏁</span>
         <input type="text" 
-               id="inputDestino" 
-               class="route-input" 
-               placeholder="¿A dónde vamos?" 
-               autocomplete="off">
+       id="inputDestino" 
+       class="route-input" 
+       placeholder="¿A dónde vamos?" 
+       autocomplete="street-address"
+       autocapitalize="words"
+       spellcheck="false"
+       enterkeyhint="search">
+        
       </div>
       <div id="sugerenciasDestino" class="sugerencias"></div>
     </div>
@@ -1174,60 +1363,134 @@ const notif = new NotificationSystem();
 async function buscarDireccion(query) {
   if (!query || query.trim().length < 3) return [];
 
-  const queryConContexto = query.trim().toLowerCase().includes('cordoba') 
-    ? query.trim() 
-    : `${query.trim()}, Córdoba, Argentina`;
+  const limpio = query.trim();
+
+  // Mejor contexto local para Córdoba / Villa Allende / zona norte
+  const queryConContexto = /cordoba|córdoba|villa allende|argentina/i.test(limpio)
+    ? limpio
+    : `${limpio}, Córdoba, Argentina`;
 
   const url = `https://nominatim.openstreetmap.org/search?` +
-    `format=json&limit=5&countrycodes=ar&addressdetails=1&` +
-    `viewbox=-64.35,-31.25,-63.85,-31.55&bounded=0&` +
+    `format=jsonv2&limit=8&countrycodes=ar&addressdetails=1&namedetails=1&` +
+    `accept-language=es-AR&dedupe=1&` +
+    `viewbox=-64.45,-31.28,-63.95,-31.55&bounded=0&` +
     `q=${encodeURIComponent(queryConContexto)}`;
 
   try {
     const res = await fetch(url, {
       headers: {
         "Accept": "application/json",
-        "Accept-Language": "es-AR",
+        "Accept-Language": "es-AR,es;q=0.9",
         "User-Agent": "MIMI-Transporte/1.0"
       }
     });
 
     if (!res.ok) return [];
     const data = await res.json();
-    
-    return (Array.isArray(data) ? data : []).filter(r => {
+
+    const resultados = (Array.isArray(data) ? data : []).filter(r => {
       const display = (r.display_name || "").toLowerCase();
-      return display.includes("cordoba") || display.includes("argentina");
+      return (
+        display.includes("córdoba") ||
+        display.includes("cordoba") ||
+        display.includes("villa allende") ||
+        display.includes("argentina")
+      );
     });
 
+    // Ordenar resultados más útiles arriba
+    const score = (r) => {
+      const d = (r.display_name || "").toLowerCase();
+      let s = 0;
+
+      if (d.includes("villa allende")) s += 40;
+      if (d.includes("córdoba")) s += 25;
+      if (d.includes("cordoba")) s += 25;
+      if (r.type === "house") s += 20;
+      if (r.type === "residential") s += 15;
+      if (r.type === "road") s += 12;
+      if (r.class === "amenity") s += 10;
+      if (r.class === "building") s += 8;
+
+      return s;
+    };
+
+    return resultados.sort((a, b) => score(b) - score(a));
   } catch (err) {
     console.error("Error geocodificando:", err);
     return [];
   }
 }
-
+  
 function formatearDireccionCorta(r) {
   if (!r || !r.display_name) return "Dirección";
-  
-  const partes = r.display_name.split(",").map(p => p.trim()).filter(Boolean);
-  const calle = partes[0] || "";
-  const numero = partes.find(p => /^\d+$/.test(p)) || "";
-  const localidad = partes.find(p => 
-    /villa|barrio|ciudad|cordoba|córdoba/i.test(p)
-  ) || partes[2] || partes[1] || "";
-  
-  const locLimpia = localidad
-    .replace(/,\s*Argentina$/i, '')
-    .replace(/,\s*Córdoba$/i, '')
-    .trim();
-  
-  const direccion = numero ? `${calle} ${numero}` : calle;
-  
-  return locLimpia && locLimpia !== direccion 
-    ? `${direccion}, ${locLimpia}`
-    : direccion;
-}
 
+  const addr = r.address || {};
+  const named = r.namedetails || {};
+
+  const nombreLugar =
+    named.name ||
+    addr.amenity ||
+    addr.shop ||
+    addr.tourism ||
+    addr.building ||
+    addr.school ||
+    "";
+
+  const calle = addr.road || addr.pedestrian || addr.footway || "";
+  const numero = addr.house_number || "";
+  const barrio =
+    addr.suburb ||
+    addr.neighbourhood ||
+    addr.city_district ||
+    addr.quarter ||
+    "";
+  const ciudad =
+    addr.city ||
+    addr.town ||
+    addr.village ||
+    addr.municipality ||
+    "";
+  const provincia = addr.state || "Córdoba";
+
+  // Si es un lugar reconocido (colegio, negocio, punto)
+  if (nombreLugar && calle) {
+    return `${nombreLugar} · ${calle}${numero ? " " + numero : ""}`;
+  }
+
+  if (calle) {
+    return `${calle}${numero ? " " + numero : ""}${barrio ? ", " + barrio : ""}`;
+  }
+
+  // fallback inteligente
+  const partes = r.display_name.split(",").map(p => p.trim()).filter(Boolean);
+  return partes.slice(0, 2).join(", ");
+}
+  function formatearDireccionSecundaria(r) {
+  if (!r) return "";
+
+  const addr = r.address || {};
+  const barrio =
+    addr.suburb ||
+    addr.neighbourhood ||
+    addr.city_district ||
+    addr.quarter ||
+    "";
+
+  const ciudad =
+    addr.city ||
+    addr.town ||
+    addr.village ||
+    addr.municipality ||
+    "Córdoba";
+
+  const provincia = addr.state || "Córdoba";
+
+  return [barrio, ciudad, provincia]
+    .filter(Boolean)
+    .filter((v, i, arr) => arr.indexOf(v) === i)
+    .join(" · ");
+}
 // ==========================================
 // AUTOCOMPLETE
 // ==========================================
@@ -1257,15 +1520,24 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
 
       if (currentRequest !== requestId) return;
 
-      mostrarSugerencias(contenedor, resultados, (r) => {
-        input.value = formatearDireccionCorta(r);
-        onSelect({
-          direccion: r.display_name,
-          lat: parseFloat(r.lat),
-          lng: parseFloat(r.lon)
-        });
-        contenedor.style.display = 'none';
-      });
+mostrarSugerencias(contenedor, resultados, (r) => {
+  const direccionCorta = formatearDireccionCorta(r);
+  const direccionSecundaria = formatearDireccionSecundaria(r);
+
+  input.value = direccionCorta;
+
+  onSelect({
+    direccion: r.display_name,
+    direccionCorta,
+    direccionSecundaria,
+    lat: parseFloat(r.lat),
+    lng: parseFloat(r.lon),
+    raw: r
+  });
+
+  input.setAttribute('title', `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`);
+  contenedor.style.display = 'none';
+});      
     }, 300);
   });
 
@@ -1286,33 +1558,26 @@ function mostrarSugerencias(contenedor, resultados, callback) {
   resultados.forEach(r => {
     const item = document.createElement('div');
     item.className = 'sugerencia-item';
-    
-    const direccion = formatearDireccionCorta(r);
-    const partes = r.display_name.split(',').map(p => p.trim());
-    const provincia = partes.find(p => /Córdoba|Argentina/i.test(p)) || '';
-    
+
+    const direccionPrincipal = formatearDireccionCorta(r);
+    const direccionSecundaria = formatearDireccionSecundaria(r);
+
     item.innerHTML = `
       <div class="sugerencia-icon">📍</div>
       <div class="sugerencia-text">
-        <div class="sugerencia-main">${direccion}</div>
-        ${provincia ? `<div class="sugerencia-secondary">${provincia}</div>` : ''}
+        <div class="sugerencia-main">${direccionPrincipal}</div>
+        ${direccionSecundaria ? `<div class="sugerencia-secondary">${direccionSecundaria}</div>` : ''}
       </div>
     `;
 
     item.addEventListener('click', () => callback(r));
+    item.addEventListener('touchstart', () => {}, { passive: true });
+
     contenedor.appendChild(item);
   });
 
   contenedor.style.display = 'block';
 }
-
-// Cerrar sugerencias al clickear fuera
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.route-input-group')) {
-    document.querySelectorAll('.sugerencias').forEach(el => el.style.display = 'none');
-  }
-});
-
 // ==========================================
 // WAYPOINTS
 // ==========================================
@@ -1334,10 +1599,14 @@ function agregarWaypoint() {
     <div class="route-input-wrapper">
       <span class="route-input-icon">📍</span>
       <input type="text" 
-             id="${waypointId}" 
-             class="route-input waypoint-input" 
-             placeholder="Parada ${numeroParada}" 
-             autocomplete="off">
+       id="${waypointId}" 
+       class="route-input waypoint-input" 
+       placeholder="Parada ${numeroParada}" 
+       autocomplete="street-address"
+       autocapitalize="words"
+      
+       spellcheck="false"
+       enterkeyhint="search">
       <div class="route-input-actions">
         <button class="btn-input-action delete" onclick="eliminarWaypoint('${waypointId}')" title="Eliminar">✕</button>
       </div>
@@ -1594,28 +1863,35 @@ async function calcularRuta() {
   const origenInput = document.getElementById('inputOrigen');
   const destinoInput = document.getElementById('inputDestino');
   
-  if (!state.origen && origenInput.value) {
-    const geo = await buscarDireccion(origenInput.value);
-    if (geo.length) {
-      state.origen = {
-        direccion: geo[0].display_name,
-        lat: parseFloat(geo[0].lat),
-        lng: parseFloat(geo[0].lon)
-      };
-    }
+if (!state.origen && origenInput.value) {
+  const geo = await buscarDireccion(origenInput.value);
+  if (geo.length) {
+    state.origen = {
+      direccion: geo[0].display_name,
+      direccionCorta: formatearDireccionCorta(geo[0]),
+      direccionSecundaria: formatearDireccionSecundaria(geo[0]),
+      lat: parseFloat(geo[0].lat),
+      lng: parseFloat(geo[0].lon),
+      raw: geo[0]
+    };
+    origenInput.value = state.origen.direccionCorta;
   }
-  
-  if (!state.destino && destinoInput.value) {
-    const geo = await buscarDireccion(destinoInput.value);
-    if (geo.length) {
-      state.destino = {
-        direccion: geo[0].display_name,
-        lat: parseFloat(geo[0].lat),
-        lng: parseFloat(geo[0].lon)
-      };
-    }
-  }
+}
 
+if (!state.destino && destinoInput.value) {
+  const geo = await buscarDireccion(destinoInput.value);
+  if (geo.length) {
+    state.destino = {
+      direccion: geo[0].display_name,
+      direccionCorta: formatearDireccionCorta(geo[0]),
+      direccionSecundaria: formatearDireccionSecundaria(geo[0]),
+      lat: parseFloat(geo[0].lat),
+      lng: parseFloat(geo[0].lon),
+      raw: geo[0]
+    };
+    destinoInput.value = state.destino.direccionCorta;
+  }
+}
   if (!state.origen || !state.destino) {
     notif.show('Faltan datos', 'Ingresá origen y destino', 'error');
     return;
@@ -1836,19 +2112,19 @@ function confirmarViaje() {
 
   const mensaje = `🚐 *MIMI Transporte Escolar*\n\n` +
     `🧾 *Cotización:* ${cotizacionId}\n\n` +
-    `📍 *Origen:* ${formatearDireccionCorta({display_name: state.origen.direccion})}\n` +
-    `${state.waypoints.filter(w => w.data).map((w, i) => 
-      `📍 *Parada ${i + 1}:* ${formatearDireccionCorta({display_name: w.data.direccion})}\n`
-    ).join('')}` +
-    `🏁 *Destino:* ${formatearDireccionCorta({display_name: state.destino.direccion})}\n\n` +
-    `📏 *Distancia:* ${state.routeData.distance} km\n` +
-    `⏱️ *Duración:* ${state.routeData.duration} min\n` +
-    `💰 *Precio:* ${document.getElementById('quotePrice').textContent}\n\n` +
-    `✅ ¿Confirmamos el viaje?`;
+`📍 *Origen:* ${state.origen.direccionCorta || state.origen.direccion}\n` +
+`${state.waypoints.filter(w => w.data).map((w, i) => 
+  `📍 *Parada ${i + 1}:* ${w.data.direccionCorta || w.data.direccion}\n`
+).join('')}` +
+`🏁 *Destino:* ${state.destino.direccionCorta || state.destino.direccion}\n\n` +
+`📏 *Distancia:* ${state.routeData.distance} km\n` +
+`⏱️ *Duración:* ${state.routeData.duration} min\n` +
+`💰 *Precio:* ${document.getElementById('quotePrice').textContent}\n\n` +
+`✅ ¿Confirmamos el viaje?`;
 
   window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
-function compartirRuta() {
+async function compartirRuta() {
   if (!state.routeData) {
     notif.show('Sin ruta', 'Primero calculá el viaje', 'warning');
     return;
@@ -1856,21 +2132,26 @@ function compartirRuta() {
 
   const precio = state.cotizacion?.precio || 0;
 
-  const texto = `Mirá la ruta de mi viaje con MIMI Transporte 🚐\n` +
-    `📍 ${state.routeData.distance} km en ${state.routeData.duration} min\n` +
-    `💰 $${Number(precio).toLocaleString('es-AR')}`;
+  const texto = `Mirá la ruta de mi viaje con MIMI Transporte 🚐
+📍 ${state.origen?.direccionCorta || 'Origen'} → ${state.destino?.direccionCorta || 'Destino'}
+🛣️ ${state.routeData.distance} km en ${state.routeData.duration} min
+💰 $${Number(precio).toLocaleString('es-AR')}`;
 
-  if (navigator.share) {
-    navigator.share({
-      title: 'Mi viaje con MIMI',
-      text: texto
-    }).catch(() => {});
-  } else {
-    navigator.clipboard.writeText(texto);
-    notif.show('Copiado', 'El resumen se copió al portapapeles', 'success');
-  }
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Mi viaje con MIMI',
+        text: texto
+      });
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(texto);
+      notif.show('Copiado', 'El resumen se copió al portapapeles', 'success');
+    } else {
+      notif.show('No disponible', 'Tu navegador no permite compartir en este momento', 'warning');
+    }
+  } catch (_) {}
 }
-// ==========================================
+  // ==========================================
 // INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
