@@ -2125,13 +2125,20 @@ function reiniciarRuta() {
   });
 
   if (mapaCliente && mapReady) {
-  if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-  if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-}
+    if (mapaCliente.getLayer('route-line')) {
+      mapaCliente.removeLayer('route-line');
+    }
+    if (mapaCliente.getSource('route')) {
+      mapaCliente.removeSource('route');
+    }
+  }
 
   if (state.markers?.length) {
     state.markers.forEach(m => m.remove());
   }
+
+  document.getElementById('inputOrigen')?.removeAttribute('title');
+  document.getElementById('inputDestino')?.removeAttribute('title');
 
   state = {
     origen: null,
@@ -2144,12 +2151,16 @@ function reiniciarRuta() {
   };
 
   waypointCounter = 0;
+  isCalculatingQuote = false;
 
   document.getElementById('mapSection').style.display = 'none';
-  document.getElementById('quoteCard').classList.remove('visible');
+  document.getElementById('quoteCard')?.classList.remove('visible');
+
+  setLoadingCotizacion(false);
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
+  
 function obtenerPuntosOrdenados() {
   return [
     state.origen,
@@ -2458,12 +2469,12 @@ function dibujarRutaLineal(coords) {
 function dibujarRutaReal(coords) {
   if (!mapaCliente || !coords || coords.length < 2) return;
 
-  if (mapaCliente.getLayer('route-line')) {
-    mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
-    mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
-    mapaCliente.setPaintProperty('route-line', 'line-width', 5);
-  }
-
+if (mapaCliente.getLayer('route-line')) {
+  mapaCliente.removeLayer('route-line');
+}
+if (mapaCliente.getSource('route')) {
+  mapaCliente.removeSource('route');
+}
   const source = mapaCliente.getSource('route');
   if (source) {
     source.setData({
