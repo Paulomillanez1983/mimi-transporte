@@ -233,22 +233,24 @@ class DriverApp {
       );
     });
 
-    const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
-      window.dispatchEvent(
-        new CustomEvent('tripStateChanged', {
-          detail: { estado: trip.estado }
-        })
-      );
+const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
+  if (this._currentTripId === trip.id) return;
+  this._currentTripId = trip.id;
 
-      console.log('[DriverApp] ✅ tripAccepted', trip.id);
+  window.dispatchEvent(
+    new CustomEvent('tripStateChanged', {
+      detail: { estado: trip.estado }
+    })
+  );
 
-      this._currentTripId = trip.id;
-      uiController.hideIncomingModal?.();
-      uiController.showToast('¡Viaje aceptado!', 'success');
+  console.log('[DriverApp] ✅ tripAccepted', trip.id);
 
-      await this._showRouteOnMap(trip);
-      uiController.showNavigationState(trip);
-    });
+  uiController.hideIncomingModal?.();
+  uiController.showToast('¡Viaje aceptado!', 'success');
+
+  await this._showRouteOnMap(trip);
+  uiController.showNavigationState(trip);
+});
 
     const unsubStarted = tripManager.on('tripStarted', (trip) => {
       console.log('[DriverApp] 🚀 tripStarted', trip.id);
