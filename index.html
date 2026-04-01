@@ -4326,12 +4326,15 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     state.routeData.resumenRuta = data?.resumen_ruta || resumenRuta;
     state.routeData.fallback = false;
 
-    if (Array.isArray(data?.route_geometry) && data.route_geometry.length >= 2) {
-      dibujarRutaReal(data.route_geometry);
-    } else if (Array.isArray(data?.geometry?.coordinates) && data.geometry.coordinates.length >= 2) {
-      dibujarRutaReal(data.geometry.coordinates);
-    }
+const coordsBackend =
+  Array.isArray(data?.route_geometry) ? data.route_geometry :
+  Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
+  Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
+  null;
 
+if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
+  dibujarRutaReal(coordsBackend);
+}
     mostrarCotizacion(precio, distancia, duracion);
 
   } catch (err) {
