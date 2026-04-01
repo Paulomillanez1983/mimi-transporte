@@ -4388,8 +4388,8 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
 
     // Si backend devuelve geometría real, dibujar ruta
     if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
-      dibujarRutaReal(coordsBackend);
-    } else {
+  await dibujarRutaReal(coordsBackend);
+} else {
       console.warn("⚠️ No vino geometría válida desde backend");
     }
 
