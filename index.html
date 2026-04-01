@@ -2288,12 +2288,18 @@ async function cotizarViaje(km, minutos) {
     const origenReal = puntos[0];
     const destinoReal = puntos[puntos.length - 1];
     const waypointsIntermedios = construirPayloadWaypointsIntermedios();
-    const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
-    const segmentosTotales = Math.max(1, puntos.length - 1);
+const puntos = obtenerPuntosOrdenados();
+
+const retornoFinalAlOrigen =
+  puntos.length >= 2 &&
+  Math.abs(Number(puntos[0].lat) - Number(puntos[puntos.length - 1].lat)) <= 0.0008 &&
+  Math.abs(Number(puntos[0].lng) - Number(puntos[puntos.length - 1].lng)) <= 0.0008;
+
+const retornoAlOrigen = detectarRetornoAlOrigenFrontend();    const segmentosTotales = Math.max(1, puntos.length - 1);
     const resumenRuta = construirResumenRuta();
 
 const payload = {
-  servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+  servicio: retornoFinalAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
   origen: origenReal.direccion,
   origen_corto: origenReal.direccionCorta || origenReal.direccion,
