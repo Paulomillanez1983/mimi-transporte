@@ -995,51 +995,50 @@ body {
 
   <!-- PLANIFICADOR DE RUTA -->
   <div class="main-card">
-    <div class="route-planner" id="routePlanner">
-      <div class="route-inputs-container">
-        <div class="route-timeline" id="routeTimeline">
-          <div class="timeline-dot origin"></div>
-          <div class="timeline-dot destination"></div>
-        </div>
-
-        <!-- Origen -->
-        <div class="route-input-group">
-          <div class="route-input-wrapper">
-            <span class="route-input-icon">📍</span>
-            <input type="text" 
-                   id="inputOrigen" 
-                   class="route-input" 
-                   placeholder="¿Dónde te buscamos?" 
-                   autocomplete="off">
-          </div>
-          <div id="sugerenciasOrigen" class="sugerencias"></div>
-        </div>
-
-<!-- Destino -->
-<div class="route-input-group">
-  <div class="route-input-wrapper">
-    <span class="route-input-icon">🏁</span>
-    <input type="text" 
-           id="inputDestino" 
-           class="route-input" 
-           placeholder="¿A dónde vamos?" 
-           autocomplete="off">
-  </div>
-  <div id="sugerenciasDestino" class="sugerencias"></div>
-</div>
-
-<!-- Waypoints dinámicos (ahora van DESPUÉS del destino) -->
-<div id="waypointsContainer"></div>
-      </div>
-      </div>
-
-      <!-- Botón agregar parada -->
-      <button class="btn-add-stop" onclick="agregarWaypoint()" id="btnAddStop">
-        <span>➕</span>
-        <span>Agregar parada</span>
-      </button>
+<div class="route-planner" id="routePlanner">
+  <div class="route-inputs-container">
+    <div class="route-timeline" id="routeTimeline">
+      <div class="timeline-dot origin"></div>
+      <div class="timeline-dot destination"></div>
     </div>
 
+    <!-- Origen -->
+    <div class="route-input-group">
+      <div class="route-input-wrapper">
+        <span class="route-input-icon">📍</span>
+        <input type="text" 
+               id="inputOrigen" 
+               class="route-input" 
+               placeholder="¿Dónde te buscamos?" 
+               autocomplete="off">
+      </div>
+      <div id="sugerenciasOrigen" class="sugerencias"></div>
+    </div>
+
+    <!-- Destino -->
+    <div class="route-input-group">
+      <div class="route-input-wrapper">
+        <span class="route-input-icon">🏁</span>
+        <input type="text" 
+               id="inputDestino" 
+               class="route-input" 
+               placeholder="¿A dónde vamos?" 
+               autocomplete="off">
+      </div>
+      <div id="sugerenciasDestino" class="sugerencias"></div>
+    </div>
+
+    <!-- Waypoints dinámicos -->
+    <div id="waypointsContainer"></div>
+  </div>
+
+  <!-- Botón agregar parada -->
+  <button class="btn-add-stop" onclick="agregarWaypoint()" id="btnAddStop">
+    <span>➕</span>
+    <span>Agregar parada</span>
+  </button>
+</div>
+    
     <button class="btn-calcular" id="btnCalcular" onclick="calcularRuta()">
       <span>🚐</span>
       <span>Ver recorrido y cotizar</span>
@@ -1131,7 +1130,7 @@ let state = {
 let mapaCliente = null;
 let rutaLayer = null;
 let waypointCounter = 0;
-
+let mapReady = false;
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -1234,10 +1233,11 @@ function formatearDireccionCorta(r) {
 function setupAutocomplete(inputId, sugerenciasId, onSelect) {
   const input = document.getElementById(inputId);
   const contenedor = document.getElementById(sugerenciasId);
-  
+
   if (!input || !contenedor) return;
 
   let timer = null;
+  let requestId = 0;
 
   input.addEventListener('input', () => {
     clearTimeout(timer);
@@ -1245,11 +1245,17 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
 
     if (texto.length < 3) {
       contenedor.style.display = 'none';
+      contenedor.innerHTML = '';
       return;
     }
 
+    const currentRequest = ++requestId;
+
     timer = setTimeout(async () => {
       const resultados = await buscarDireccion(texto);
+
+      if (currentRequest !== requestId) return;
+
       mostrarSugerencias(contenedor, resultados, (r) => {
         input.value = formatearDireccionCorta(r);
         onSelect({
@@ -1268,7 +1274,6 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     }
   });
 }
-
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
 
@@ -1377,53 +1382,72 @@ function actualizarTimeline() {
   const timeline = document.getElementById('routeTimeline');
   if (!timeline) return;
 
-  timeline.innerHTML = `
-    <div class="timeline-dot origin"></div>
-    <div class="timeline-dot destination"></div>
-  `;
-}
-  
+  const cantidadParadas = state.waypoints.length;
+
+  let dots = `<div class="timeline-dot origin"></div>`;
+
+  for (let i = 0; i < cantidadParadas; i++) {
+    const topPercent = ((i + 1) / (cantidadParadas + 1)) * 100;
+    dots += `<div class="timeline-dot waypoint" style="top:${topPercent}%; transform: translateY(-50%);"></div>`;
+  }
+
+  dots += `<div class="timeline-dot destination"></div>`;
+
+  timeline.innerHTML = dots;
+}  
   // ==========================================
 // MAPA
 // ==========================================
 function initMapa() {
-  if (mapaCliente) return;
+  if (mapaCliente) return Promise.resolve();
 
   const mapDiv = document.getElementById('map');
-  if (!mapDiv) return;
+  if (!mapDiv) return Promise.resolve();
 
-  mapaCliente = new maplibregl.Map({
-    container: 'map',
-    style: {
-      version: 8,
-      sources: {
-        osm: {
-          type: 'raster',
-          tiles: [
-            'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-            'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
-          ],
-          tileSize: 256,
-          attribution: '© OpenStreetMap'
-        }
+  return new Promise((resolve) => {
+    mapaCliente = new maplibregl.Map({
+      container: 'map',
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: 'raster',
+            tiles: [
+              'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+            ],
+            tileSize: 256,
+            attribution: '© OpenStreetMap'
+          }
+        },
+        layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
       },
-      layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
-    },
-    center: [-64.19, -31.42],
-    zoom: 12
+      center: [-64.19, -31.42],
+      zoom: 12
+    });
+
+    mapaCliente.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+
+    mapaCliente.on('load', () => {
+      mapReady = true;
+      resolve();
+    });
+
+    mapaCliente.on('error', (e) => {
+      console.error('❌ Error mapa:', e);
+    });
   });
-
-  mapaCliente.addControl(new maplibregl.NavigationControl(), 'bottom-right');
 }
+async function dibujarRutaEnMapa(coords) {
+  await initMapa();
 
-function dibujarRutaEnMapa(coords) {
-  if (!mapaCliente) initMapa();
+  if (!mapaCliente || !mapReady) return;
 
   // Limpiar capas anteriores
   if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
   if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-  
+
   // Limpiar marcadores
   state.markers.forEach(m => m.remove());
   state.markers = [];
@@ -1439,7 +1463,7 @@ function dibujarRutaEnMapa(coords) {
     const el = document.createElement('div');
     const isOrigin = index === 0;
     const isDest = index === puntos.length - 1;
-    
+
     el.innerHTML = `
       <div style="
         width: 28px; 
@@ -1462,13 +1486,14 @@ function dibujarRutaEnMapa(coords) {
     const marker = new maplibregl.Marker({ element: el })
       .setLngLat([punto.lng, punto.lat])
       .addTo(mapaCliente);
-    
+
     state.markers.push(marker);
   });
 
-  // Dibujar línea de ruta
   const coordinates = coords || puntos.map(p => [p.lng, p.lat]);
-  
+
+  if (!coordinates || coordinates.length < 2) return;
+
   mapaCliente.addSource('route', {
     type: 'geojson',
     data: {
@@ -1495,18 +1520,16 @@ function dibujarRutaEnMapa(coords) {
     }
   });
 
-  // Ajustar vista
   const bounds = coordinates.reduce(
     (b, c) => b.extend(c),
     new maplibregl.LngLatBounds(coordinates[0], coordinates[0])
   );
-  
+
   mapaCliente.fitBounds(bounds, {
     padding: { top: 50, bottom: 50, left: 50, right: 50 },
     duration: 1000
   });
 }
-
 function centrarEnRuta() {
   if (!mapaCliente || !state.routeData) return;
   
@@ -1532,10 +1555,10 @@ function reiniciarRuta() {
     el.style.display = 'none';
   });
 
-  if (mapaCliente) {
-    if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-    if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-  }
+  if (mapaCliente && mapReady) {
+  if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+  if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+}
 
   if (state.markers?.length) {
     state.markers.forEach(m => m.remove());
@@ -1596,6 +1619,16 @@ async function calcularRuta() {
     notif.show('Faltan datos', 'Ingresá origen y destino', 'error');
     return;
   }
+  const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
+const waypointsConTextoSinResolver = waypointInputs.filter(input => {
+  const wp = state.waypoints.find(w => w.id === input.id);
+  return input.value.trim().length > 0 && !wp?.data;
+});
+
+if (waypointsConTextoSinResolver.length > 0) {
+  notif.show('Paradas incompletas', 'Seleccioná una sugerencia válida para cada parada', 'warning');
+  return;
+}
 
   // Loading
   btn.disabled = true;
@@ -1647,63 +1680,56 @@ if (!osrmData || osrmData.code !== 'Ok' || !osrmData.routes?.length) {
 
     // Mostrar mapa
     document.getElementById('mapSection').style.display = 'block';
-    initMapa();
-    
-    setTimeout(() => {
-      dibujarRutaEnMapa(route.geometry.coordinates);
-      
-      // Calcular precio (usar tu función edge existente)
-      cotizarViaje(distanceKm, durationMin);
-    }, 100);
+await dibujarRutaEnMapa(route.geometry.coordinates);
+
+// Calcular precio
+await cotizarViaje(distanceKm, durationMin);
 
   } catch (err) {
     console.error(err);
     notif.show('Error', 'No se pudo calcular la ruta. Intentá de nuevo.', 'error');
     
     // Fallback: dibujar línea recta
-    dibujarRutaFallback();
+    await dibujarRutaFallback(););
   } finally {
     btn.disabled = false;
     btn.innerHTML = btnText;
   }
 }
 
-function dibujarRutaFallback() {
+async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
-  initMapa();
-  
+  await initMapa();
+
   const puntos = [
     state.origen,
     ...state.waypoints.filter(w => w.data).map(w => w.data),
     state.destino
   ].filter(Boolean);
-  
+
   const coords = puntos.map(p => [p.lng, p.lat]);
-  
-  // Calcular distancia aproximada (línea recta)
+
   let totalDistance = 0;
   for (let i = 0; i < coords.length - 1; i++) {
     const from = turf.point(coords[i]);
     const to = turf.point(coords[i + 1]);
     totalDistance += turf.distance(from, to, { units: 'kilometers' });
   }
-  
-  // Factor 1.4 para simular ruta por calles
+
   const distanceKm = (totalDistance * 1.4).toFixed(1);
-  const durationMin = Math.round((totalDistance * 1.4 / 30) * 60); // 30km/h promedio
-  
+  const durationMin = Math.round((totalDistance * 1.4 / 30) * 60);
+
   state.routeData = {
     geometry: { type: 'LineString', coordinates: coords },
     distance: distanceKm,
     duration: durationMin,
     waypoints: coords.length - 2
   };
-  
-  dibujarRutaEnMapa(coords);
-  cotizarViaje(distanceKm, durationMin);
-}
 
-async function cotizarViaje(km, minutos) {
+  await dibujarRutaEnMapa(coords);
+  await cotizarViaje(distanceKm, durationMin);
+}
+  async function cotizarViaje(km, minutos) {
   try {
     const waypointsValidos = state.waypoints
       .filter(w => w.data)
@@ -1822,21 +1848,27 @@ function confirmarViaje() {
   window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
 function compartirRuta() {
+  if (!state.routeData) {
+    notif.show('Sin ruta', 'Primero calculá el viaje', 'warning');
+    return;
+  }
+
+  const precio = state.cotizacion?.precio || 0;
+
   const texto = `Mirá la ruta de mi viaje con MIMI Transporte 🚐\n` +
     `📍 ${state.routeData.distance} km en ${state.routeData.duration} min\n` +
-    `💰 $${document.getElementById('quotePrice').textContent.replace('$', '')}`;
-  
+    `💰 $${Number(precio).toLocaleString('es-AR')}`;
+
   if (navigator.share) {
     navigator.share({
       title: 'Mi viaje con MIMI',
       text: texto
-    });
+    }).catch(() => {});
   } else {
     navigator.clipboard.writeText(texto);
     notif.show('Copiado', 'El resumen se copió al portapapeles', 'success');
   }
 }
-
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
