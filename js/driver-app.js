@@ -9,6 +9,7 @@ import locationTracker from './location-tracker.js';
 import tripManager from './trip-manager.js';
 import uiController from './ui-controller.js';
 import soundManager from './sound-manager.js';
+import { initPushFCM } from './push-fcm.js';
 
 class DriverApp {
   constructor() {
@@ -19,7 +20,7 @@ class DriverApp {
 
     // ✅ CONTROL PARA NO SPAMEAR SUPABASE
     this._lastLocationUpdate = 0;
-    this._locationUpdateInterval = 8000; // cada 8 segundos
+    this._locationUpdateInterval = 15000; // cada 8 segundos
 
     // ✅ cache auth para no llamar getUser() todo el tiempo
     this._authUserId = null;
@@ -48,7 +49,7 @@ class DriverApp {
         return;
       }
 
-      this._authUserId = user.id;
+      this._authUserId = user.id;  await initPushFCM("chofer");
       console.log('[DriverApp] Auth user detectado:', this._authUserId);
 
       // 3) Inicializar UI
@@ -425,77 +426,70 @@ class DriverApp {
     uiController.showWaitingState();
   }
 
-  // =========================================================
-  // LOCATION UPDATE
-  // =========================================================
-  async _onPositionUpdate(position) {
-    mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
+// =========================================================
+// LOCATION UPDATE
+// =========================================================
+async _onPositionUpdate(position) {
+  mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
 
-    // ------------------------------------------------------
-    // Guardar ubicación en Supabase (cada X segundos)
-    // ------------------------------------------------------
-    const now = Date.now();
-    if (now - this._lastLocationUpdate >= this._locationUpdateInterval) {
-      this._lastLocationUpdate = now;
+  // Estado actual del viaje
+  const currentTrip = tripManager.getCurrentTrip();
 
-      try {
-        if (!this._authUserId) return;
+  // Ajustar intervalo dinámico según estado
+  if (currentTrip?.estado === 'EN_CURSO') {
+    this._locationUpdateInterval = 5000;
+  } else if (this._onlineStatus) {
+    this._locationUpdateInterval = 15000;
+  } else {
+    this._locationUpdateInterval = 30000;
+  }
 
-        const { error } = await supabaseService.client
-          .from('choferes')
-          .update({
-            lat: position.lat,
-            lng: position.lng,
-            heading: position.heading || 0,
-            speed: position.speed || 0,
-            accuracy: position.accuracy || null,
-            last_seen_at: new Date().toISOString()
-          })
-          .eq('user_id', this._authUserId);
+  // ------------------------------------------------------
+  // Guardar ubicación en Supabase (cada X segundos)
+  // ------------------------------------------------------
+  const now = Date.now();
+  if (now - this._lastLocationUpdate >= this._locationUpdateInterval) {
+    this._lastLocationUpdate = now;
 
-        if (error) {
-          console.error('[DriverApp] ❌ Error guardando ubicación:', error);
-        } else {
-          console.log('[DriverApp] ✅ Ubicación guardada en Supabase');
-        }
-      } catch (err) {
-        console.error('[DriverApp] ❌ Falló update ubicación:', err);
+    try {
+      if (!this._authUserId) return;
+
+      const { error } = await supabaseService.client
+        .from('choferes')
+        .update({
+          lat: position.lat,
+          lng: position.lng,
+          heading: position.heading || 0,
+          speed: position.speed || 0,
+          accuracy: position.accuracy || null,
+          last_seen_at: new Date().toISOString()
+        })
+        .eq('user_id', this._authUserId);
+
+      if (error) {
+        console.error('[DriverApp] ❌ Error guardando ubicación:', error);
       }
-    }
-
-    // ------------------------------------------------------
-    // Detectar llegada si hay viaje en curso
-    // ------------------------------------------------------
-    const currentTrip = tripManager.getCurrentTrip();
-    if (currentTrip?.estado === 'EN_CURSO') {
-      const dist = this._calculateDistance(
-        position.lat,
-        position.lng,
-        currentTrip.destino_lat,
-        currentTrip.destino_lng
-      );
-
-      if (dist < 100) {
-        uiController.showArrival?.();
-      }
+    } catch (err) {
+      console.error('[DriverApp] ❌ Falló update ubicación:', err);
     }
   }
 
-  _calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3;
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  // ------------------------------------------------------
+  // Detectar llegada si hay viaje en curso
+  // ------------------------------------------------------
+  if (currentTrip?.estado === 'EN_CURSO') {
+    const dist = this._calculateDistance(
+      position.lat,
+      position.lng,
+      currentTrip.destino_lat,
+      currentTrip.destino_lng
+    );
 
-    const a =
-      Math.sin(Δφ / 2) ** 2 +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+    if (dist < 100) {
+      uiController.showArrival?.();
+    }
   }
-
+}
   // =========================================================
   // UI SETUP
   // =========================================================
