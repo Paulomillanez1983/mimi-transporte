@@ -4286,9 +4286,9 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     }
 
     console.log("📥 Respuesta cotización:", data);
-    console.log("🗺️ Geometría recibida:", data.geometria);
-    console.log("🧠 Usa backend real:", data.calculo_backend_real);
-    console.log("📍 Puntos ruta:", data.puntos_ruta);
+    console.log("🗺️ Geometría recibida:", data?.geometria || data?.geometry || data?.route_geometry);
+    console.log("🧠 Usa backend real:", data?.calculo_backend_real);
+    console.log("📍 Puntos ruta:", data?.puntos_ruta);
 
     if (!response.ok || !data?.exito) {
       throw new Error(data?.error || `No se pudo cotizar (${response.status})`);
@@ -4326,15 +4326,31 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     state.routeData.resumenRuta = data?.resumen_ruta || resumenRuta;
     state.routeData.fallback = false;
 
-const coordsBackend =
-  Array.isArray(data?.route_geometry) ? data.route_geometry :
-  Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
-  Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
-  null;
+    // =========================================================
+    // GEOMETRÍA BACKEND → NORMALIZAR Y GUARDAR
+    // =========================================================
+    const coordsBackend =
+      Array.isArray(data?.route_geometry) ? data.route_geometry :
+      Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
+      Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
+      null;
 
-if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
-  dibujarRutaReal(coordsBackend);
-}
+    console.log("🧭 Coordenadas backend normalizadas:", coordsBackend);
+
+    state.routeData.geometry = Array.isArray(coordsBackend) && coordsBackend.length >= 2
+      ? {
+          type: 'LineString',
+          coordinates: coordsBackend
+        }
+      : null;
+
+    // Si backend devuelve geometría real, dibujar ruta
+    if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
+      dibujarRutaReal(coordsBackend);
+    } else {
+      console.warn("⚠️ No vino geometría válida desde backend");
+    }
+
     mostrarCotizacion(precio, distancia, duracion);
 
   } catch (err) {
@@ -4380,11 +4396,17 @@ if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
     state.routeData.resumenRuta = payload?.resumen_ruta_front || construirResumenRuta();
     state.routeData.fallback = true;
 
+    // En fallback no pisamos geometry si ya existía una válida
+    if (!state.routeData.geometry) {
+      state.routeData.geometry = null;
+    }
+
     mostrarCotizacion(0, distanciaFallback, duracionFallback);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
 }
+  
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   if (!card) return;
