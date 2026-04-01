@@ -2518,48 +2518,38 @@ function dibujarRutaLineal(coords) {
 }
 // Actualiza a ruta real cuando llega del backend
 function dibujarRutaReal(coords) {
-  if (!mapaCliente || !mapReady) return;
-  if (!Array.isArray(coords) || coords.length < 2) return;
+  if (!mapaCliente || !coords || coords.length < 2) return;
 
-  // Normalizar coordenadas
-  const coordsLimpias = coords
-    .map(c => [Number(c?.[0]), Number(c?.[1])])
-    .filter(c =>
-      Number.isFinite(c[0]) &&
-      Number.isFinite(c[1]) &&
-      Math.abs(c[0]) <= 180 &&
-      Math.abs(c[1]) <= 90
-    );
+  const geojson = {
+    type: 'Feature',
+    geometry: {
+      type: 'LineString',
+      coordinates: coords
+    }
+  };
 
-  if (coordsLimpias.length < 2) return;
+  // Si ya existe la capa provisional, solo la convertimos en real
+  if (mapaCliente.getLayer('route-line') && mapaCliente.getSource('route')) {
+    const source = mapaCliente.getSource('route');
+    source.setData(geojson);
 
-  const source = mapaCliente.getSource('route');
-
-  // Si ya existe la ruta provisional, solo actualizamos geometría
-  if (source) {
-    source.setData({
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: coordsLimpias
-      }
-    });
+    mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
+    mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
+    mapaCliente.setPaintProperty('route-line', 'line-width', 5);
   } else {
-    // Si por alguna razón no existe, la creamos
+    // Si no existe nada, la creamos directamente
+    if (mapaCliente.getLayer('route-line')) {
+      mapaCliente.removeLayer('route-line');
+    }
+    if (mapaCliente.getSource('route')) {
+      mapaCliente.removeSource('route');
+    }
+
     mapaCliente.addSource('route', {
       type: 'geojson',
-      data: {
-        type: 'Feature',
-        geometry: {
-          type: 'LineString',
-          coordinates: coordsLimpias
-        }
-      }
+      data: geojson
     });
-  }
 
-  // Si no existe la capa, la creamos
-  if (!mapaCliente.getLayer('route-line')) {
     mapaCliente.addLayer({
       id: 'route-line',
       type: 'line',
@@ -2571,27 +2561,18 @@ function dibujarRutaReal(coords) {
       paint: {
         'line-color': '#1565c0',
         'line-width': 5,
-        'line-opacity': 0.9,
-        'line-dasharray': [1, 0]
+        'line-opacity': 0.9
       }
     });
-  } else {
-    // Si ya existe, la transformamos de provisional → real
-    try {
-      mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
-      mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
-      mapaCliente.setPaintProperty('route-line', 'line-width', 5);
-    } catch (err) {
-      console.warn('⚠️ No se pudieron actualizar estilos de la ruta real:', err);
-    }
   }
 
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
-    coordinates: coordsLimpias
+    coordinates: coords
   };
-}  
+}
+  
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
@@ -2815,7 +2796,7 @@ async function cotizarViaje(payload) {
     if (timeoutId) clearTimeout(timeoutId);
   }
 }
-  
+
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   if (!card) return;
