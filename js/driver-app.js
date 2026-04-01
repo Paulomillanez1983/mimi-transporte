@@ -20,7 +20,7 @@ class DriverApp {
 
     // ✅ CONTROL PARA NO SPAMEAR SUPABASE
     this._lastLocationUpdate = 0;
-    this._locationUpdateInterval = 15000; // cada 8 segundos
+    this._locationUpdateInterval = 15000; // cada 15 segundos
 
     // ✅ cache auth para no llamar getUser() todo el tiempo
     this._authUserId = null;
@@ -49,7 +49,8 @@ class DriverApp {
         return;
       }
 
-      this._authUserId = user.id;  await initPushFCM("chofer");
+      this._authUserId = user.id;
+      await initPushFCM("chofer");
       console.log('[DriverApp] Auth user detectado:', this._authUserId);
 
       // 3) Inicializar UI
