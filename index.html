@@ -2367,15 +2367,6 @@ const payload = {
   cliente_origen_input: origenInput?.value || '',
   cliente_destino_input: destinoInput?.value || ''
 };
-      segmentos_totales_front: Math.max(1, puntos.length - 1),
-      cantidad_paradas_front: waypointsIntermedios.length,
-      retorno_al_origen_front: retornoAlOrigen,
-      resumen_ruta_front: resumenRuta,
-      ruta_calculada_completa: true,
-      cotizacion_multitramo: puntos.length > 2,
-      cliente_origen_input: origenInput?.value || '',
-      cliente_destino_input: destinoInput?.value || ''
-    };
 
     await cotizarViaje(payload);
 
