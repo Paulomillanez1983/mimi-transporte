@@ -2205,30 +2205,80 @@ async function calcularRuta() {
   setLoadingCotizacion(true, 'Buscando direcciones...');
 
   try {
-    // Resolver origen si escribieron pero no seleccionaron sugerencia
-    if (!state.origen && origenInput.value) {
-      const origenResuelto = await resolverPuntoDesdeTexto(origenInput.value);
-      if (origenResuelto) {
-        state.origen = origenResuelto;
-        origenInput.value = origenResuelto.direccionCorta;
+    // ==========================================
+    // Resolver origen aunque hayan escrito encima
+    // ==========================================
+    const textoOrigen = origenInput.value.trim();
+    const origenGuardado = (
+      state.origen?.direccionCorta ||
+      state.origen?.direccion ||
+      ''
+    ).trim();
+
+    if (textoOrigen) {
+      const origenCambio =
+        !state.origen ||
+        textoOrigen.toLowerCase() !== origenGuardado.toLowerCase();
+
+      if (origenCambio) {
+        const origenResuelto = await resolverPuntoDesdeTexto(textoOrigen);
+
+        if (origenResuelto) {
+          state.origen = origenResuelto;
+          origenInput.value = origenResuelto.direccionCorta;
+          origenInput.setAttribute(
+            'title',
+            `${origenResuelto.direccionCorta}${origenResuelto.direccionSecundaria ? ' - ' + origenResuelto.direccionSecundaria : ''}`
+          );
+        } else {
+          state.origen = null;
+        }
       }
+    } else {
+      state.origen = null;
     }
 
-    // Resolver destino si escribieron pero no seleccionaron sugerencia
-    if (!state.destino && destinoInput.value) {
-      const destinoResuelto = await resolverPuntoDesdeTexto(destinoInput.value);
-      if (destinoResuelto) {
-        state.destino = destinoResuelto;
-        destinoInput.value = destinoResuelto.direccionCorta;
+    // ==========================================
+    // Resolver destino aunque hayan escrito encima
+    // ==========================================
+    const textoDestino = destinoInput.value.trim();
+    const destinoGuardado = (
+      state.destino?.direccionCorta ||
+      state.destino?.direccion ||
+      ''
+    ).trim();
+
+    if (textoDestino) {
+      const destinoCambio =
+        !state.destino ||
+        textoDestino.toLowerCase() !== destinoGuardado.toLowerCase();
+
+      if (destinoCambio) {
+        const destinoResuelto = await resolverPuntoDesdeTexto(textoDestino);
+
+        if (destinoResuelto) {
+          state.destino = destinoResuelto;
+          destinoInput.value = destinoResuelto.direccionCorta;
+          destinoInput.setAttribute(
+            'title',
+            `${destinoResuelto.direccionCorta}${destinoResuelto.direccionSecundaria ? ' - ' + destinoResuelto.direccionSecundaria : ''}`
+          );
+        } else {
+          state.destino = null;
+        }
       }
+    } else {
+      state.destino = null;
     }
 
-    // Resolver paradas escritas aunque no hayan tocado la sugerencia
+    // ==========================================
+    // Resolver paradas escritas manualmente
+    // ==========================================
     setLoadingCotizacion(true, 'Resolviendo paradas...');
     const erroresWaypoints = await resolverWaypointsPendientes();
 
     if (!state.origen || !state.destino) {
-      notif.show('Faltan datos', 'Ingresá origen y destino', 'error');
+      notif.show('Faltan datos', 'Ingresá origen y destino válidos', 'error');
       return;
     }
 
@@ -2245,15 +2295,16 @@ async function calcularRuta() {
 
     const puntos = obtenerPuntosOrdenados();
 
-    if (puntos.length < 2) {
+    if (!puntos || puntos.length < 2) {
       throw new Error('No hay suficientes puntos para calcular la ruta');
     }
 
     const allCoords = puntos.map(p => [Number(p.lng), Number(p.lat)]);
 
-    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/` +
+    const osrmUrl =
+      `https://router.project-osrm.org/route/v1/driving/` +
       allCoords.map(c => c.join(',')).join(';') +
-      '?overview=full&geometries=geojson&steps=false';
+      `?overview=full&geometries=geojson&steps=false`;
 
     const osrmRes = await fetch(osrmUrl, {
       headers: { 'Accept': 'application/json' }
@@ -2292,15 +2343,18 @@ async function calcularRuta() {
 
   } catch (err) {
     console.error('❌ Error calcularRuta:', err);
-    notif.show('Error', 'No se pudo calcular la ruta real. Usamos una estimación.', 'warning');
+    notif.show(
+      'Error',
+      'No se pudo calcular la ruta real. Usamos una estimación.',
+      'warning'
+    );
 
     setLoadingCotizacion(true, 'Estimando recorrido...');
     await dibujarRutaFallback();
   } finally {
     setLoadingCotizacion(false);
   }
-}
-  
+}  
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
