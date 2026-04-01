@@ -1492,7 +1492,27 @@ async function resolverWaypointsPendientes() {
 
   return errores;
 }
+function obtenerPuntosOrdenados() {
+  return [
+    state.origen,
+    ...state.waypoints.filter(w => w.data).map(w => w.data),
+    state.destino
+  ].filter(Boolean);
+}
 
+function construirPayloadWaypointsIntermedios() {
+  const puntos = obtenerPuntosOrdenados();
+
+  if (puntos.length <= 2) return [];
+
+  return puntos.slice(1, -1).map((p, index) => ({
+    orden: index + 1,
+    direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
+    direccion_completa: p.direccion || p.direccionCorta || `Parada ${index + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  }));
+}
 // ==========================================
 // GEOCODIFICACIÓN
 // ==========================================
