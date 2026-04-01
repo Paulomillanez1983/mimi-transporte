@@ -1869,18 +1869,13 @@ function obtenerPuntosOrdenados() {
 function construirPayloadWaypointsIntermedios() {
   const puntos = obtenerPuntosOrdenados();
 
-  if (puntos.length < 3) return [];
+  if (puntos.length < 2) return [];
 
-  // Solo intermedios (sin origen ni destino)
   return puntos.slice(1, -1).map((p) => ({
-    direccion: p.direccion || p.direccionCorta || "Parada",
-    direccionCorta: p.direccionCorta || p.direccion || "Parada",
+    direccion: p.direccionCorta || p.direccion || "Parada",
     lat: Number(p.lat),
     lng: Number(p.lng)
-  })).filter(p =>
-    Number.isFinite(p.lat) &&
-    Number.isFinite(p.lng)
-  );
+  }));
 }
 function detectarRetornoAlOrigenFrontend() {
   const puntos = obtenerPuntosOrdenados();
