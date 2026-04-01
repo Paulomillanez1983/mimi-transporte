@@ -24,135 +24,429 @@
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
+// =========================
+// CONFIG RED / TIMEOUTS
+// =========================
+const NETWORK_TIMEOUT_MS = 20000;
+
+// =========================
+// FETCH SEGURO CENTRALIZADO
+// =========================
+async function safeFetch(url, options = {}, timeoutMs = NETWORK_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort("CLIENT_TIMEOUT"), timeoutMs);
+  const startedAt = Date.now();
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+
+    return {
+      ok: response.ok,
+      response,
+      elapsedMs: Date.now() - startedAt,
+      aborted: false,
+      timeout: false,
+      error: null
+    };
+  } catch (err) {
+    const isAbort =
+      err?.name === "AbortError" ||
+      String(err?.message || "").toLowerCase().includes("aborted");
+
+    return {
+      ok: false,
+      response: null,
+      elapsedMs: Date.now() - startedAt,
+      aborted: isAbort,
+      timeout: isAbort,
+      error: err
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// =========================
+// NORMALIZADOR DE ERROR
+// =========================
+function buildNetworkError(result, fallbackMessage = "Error de red") {
+  return {
+    message: result?.timeout
+      ? "La solicitud tardó demasiado"
+      : (result?.error?.message || fallbackMessage),
+    code: result?.timeout ? "CLIENT_TIMEOUT" : "NETWORK_ERROR",
+    aborted: !!result?.aborted,
+    timeout: !!result?.timeout,
+    elapsedMs: result?.elapsedMs ?? null
+  };
+}
+
+function buildHttpError(status, payload = null, fallbackMessage = "Error HTTP") {
+  return {
+    ...(payload && typeof payload === "object" ? payload : {}),
+    message:
+      payload?.message ||
+      payload?.error ||
+      payload?.msg ||
+      fallbackMessage,
+    code: "HTTP_ERROR",
+    status: status ?? null
+  };
+}
+
+// =========================
+// QUERY BUILDER
+// =========================
 function createQueryBuilder(table) {
-  let state = { table, columns: '*', filters: [], orderBy: null, orderAscending: true, single: false, limit: null };
+  let state = {
+    table,
+    columns: "*",
+    filters: [],
+    orderBy: null,
+    orderAscending: true,
+    single: false,
+    limit: null
+  };
+
   const builder = {
-    select(columns = '*') { state.columns = columns; return this; },
-    eq(column, value) { state.filters.push({ type: 'eq', column, value }); return this; },
-    neq(column, value) { state.filters.push({ type: 'neq', column, value }); return this; },
-    gt(column, value) { state.filters.push({ type: 'gt', column, value }); return this; },
-    lt(column, value) { state.filters.push({ type: 'lt', column, value }); return this; },
-    gte(column, value) { state.filters.push({ type: 'gte', column, value }); return this; },
-    lte(column, value) { state.filters.push({ type: 'lte', column, value }); return this; },
-    like(column, pattern) { state.filters.push({ type: 'like', column, value: pattern }); return this; },
-    ilike(column, pattern) { state.filters.push({ type: 'ilike', column, value: pattern }); return this; },
-    in(column, values) { if (!Array.isArray(values)) values = [values]; state.filters.push({ type: 'in', column, value: values }); return this; },
-    is(column, value) { state.filters.push({ type: 'is', column, value }); return this; },
-    or(conditions) { state.filters.push({ type: 'or', value: conditions }); return this; },
-    order(column, { ascending = true } = {}) { state.orderBy = column; state.orderAscending = ascending; return this; },
-    limit(n) { state.limit = n; return this; },
-    single() { state.single = true; return this; },
-    then(onResolve, onReject) { return this.execute().then(onResolve, onReject); },
+    select(columns = "*") {
+      state.columns = columns;
+      return this;
+    },
+    eq(column, value) {
+      state.filters.push({ type: "eq", column, value });
+      return this;
+    },
+    neq(column, value) {
+      state.filters.push({ type: "neq", column, value });
+      return this;
+    },
+    gt(column, value) {
+      state.filters.push({ type: "gt", column, value });
+      return this;
+    },
+    lt(column, value) {
+      state.filters.push({ type: "lt", column, value });
+      return this;
+    },
+    gte(column, value) {
+      state.filters.push({ type: "gte", column, value });
+      return this;
+    },
+    lte(column, value) {
+      state.filters.push({ type: "lte", column, value });
+      return this;
+    },
+    like(column, pattern) {
+      state.filters.push({ type: "like", column, value: pattern });
+      return this;
+    },
+    ilike(column, pattern) {
+      state.filters.push({ type: "ilike", column, value: pattern });
+      return this;
+    },
+    in(column, values) {
+      if (!Array.isArray(values)) values = [values];
+      state.filters.push({ type: "in", column, value: values });
+      return this;
+    },
+    is(column, value) {
+      state.filters.push({ type: "is", column, value });
+      return this;
+    },
+    or(conditions) {
+      state.filters.push({ type: "or", value: conditions });
+      return this;
+    },
+    order(column, { ascending = true } = {}) {
+      state.orderBy = column;
+      state.orderAscending = ascending;
+      return this;
+    },
+    limit(n) {
+      state.limit = n;
+      return this;
+    },
+    single() {
+      state.single = true;
+      return this;
+    },
+    then(onResolve, onReject) {
+      return this.execute().then(onResolve, onReject);
+    },
+
     async execute() {
       try {
         let url = `${SUPABASE_URL}/rest/v1/${state.table}?select=${encodeURIComponent(state.columns)}`;
+
         state.filters.forEach(filter => {
           switch (filter.type) {
-            case 'eq': url += `&${encodeURIComponent(filter.column)}=eq.${encodeURIComponent(filter.value)}`; break;
-            case 'neq': url += `&${encodeURIComponent(filter.column)}=neq.${encodeURIComponent(filter.value)}`; break;
-            case 'gt': url += `&${encodeURIComponent(filter.column)}=gt.${encodeURIComponent(filter.value)}`; break;
-            case 'lt': url += `&${encodeURIComponent(filter.column)}=lt.${encodeURIComponent(filter.value)}`; break;
-            case 'gte': url += `&${encodeURIComponent(filter.column)}=gte.${encodeURIComponent(filter.value)}`; break;
-            case 'lte': url += `&${encodeURIComponent(filter.column)}=lte.${encodeURIComponent(filter.value)}`; break;
-            case 'like': url += `&${encodeURIComponent(filter.column)}=like.${encodeURIComponent(filter.value)}`; break;
-            case 'ilike': url += `&${encodeURIComponent(filter.column)}=ilike.${encodeURIComponent(filter.value)}`; break;
-            case 'in': { const vals = filter.value.map(v => `"${String(v).replace(/"/g, '\\"')}"`).join(","); url += `&${encodeURIComponent(filter.column)}=in.(${encodeURIComponent(vals)})`; break; }
-            case 'is': url += `&${encodeURIComponent(filter.column)}=is.${encodeURIComponent(filter.value)}`; break;
-            case 'or': url += `&or=(${filter.value})`; break;
+            case "eq":
+              url += `&${encodeURIComponent(filter.column)}=eq.${encodeURIComponent(filter.value)}`;
+              break;
+            case "neq":
+              url += `&${encodeURIComponent(filter.column)}=neq.${encodeURIComponent(filter.value)}`;
+              break;
+            case "gt":
+              url += `&${encodeURIComponent(filter.column)}=gt.${encodeURIComponent(filter.value)}`;
+              break;
+            case "lt":
+              url += `&${encodeURIComponent(filter.column)}=lt.${encodeURIComponent(filter.value)}`;
+              break;
+            case "gte":
+              url += `&${encodeURIComponent(filter.column)}=gte.${encodeURIComponent(filter.value)}`;
+              break;
+            case "lte":
+              url += `&${encodeURIComponent(filter.column)}=lte.${encodeURIComponent(filter.value)}`;
+              break;
+            case "like":
+              url += `&${encodeURIComponent(filter.column)}=like.${encodeURIComponent(filter.value)}`;
+              break;
+            case "ilike":
+              url += `&${encodeURIComponent(filter.column)}=ilike.${encodeURIComponent(filter.value)}`;
+              break;
+            case "in": {
+              const vals = filter.value
+                .map(v => `"${String(v).replace(/"/g, '\\"')}"`)
+                .join(",");
+              url += `&${encodeURIComponent(filter.column)}=in.(${encodeURIComponent(vals)})`;
+              break;
+            }
+            case "is":
+              url += `&${encodeURIComponent(filter.column)}=is.${encodeURIComponent(filter.value)}`;
+              break;
+            case "or":
+              url += `&or=(${filter.value})`;
+              break;
           }
         });
-        if (state.orderBy) { const direction = state.orderAscending ? 'asc' : 'desc'; url += `&order=${encodeURIComponent(state.orderBy)}.${direction}`; }
-        if (state.limit) { url += `&limit=${state.limit}`; }
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
-        const response = await fetch(url, { method: "GET", signal: controller.signal, headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Accept": "application/json" } });
-        clearTimeout(timeout);
+
+        if (state.orderBy) {
+          const direction = state.orderAscending ? "asc" : "desc";
+          url += `&order=${encodeURIComponent(state.orderBy)}.${direction}`;
+        }
+
+        if (state.limit) {
+          url += `&limit=${state.limit}`;
+        }
+
+        const result = await safeFetch(url, {
+          method: "GET",
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: "Bearer " + SUPABASE_KEY,
+            Accept: "application/json"
+          }
+        });
+
+        if (!result.response) {
+          return {
+            data: null,
+            error: buildNetworkError(result, "No se pudo consultar Supabase")
+          };
+        }
+
         let data = null;
-        try { data = await response.json(); } catch(e) { data = null; }
-        if (!response.ok) return { data: null, error: data };
-        if (state.single && Array.isArray(data)) return { data: data[0] || null, error: null };
+        try {
+          data = await result.response.json();
+        } catch (_) {
+          data = null;
+        }
+
+        if (!result.response.ok) {
+          return {
+            data: null,
+            error: buildHttpError(result.response.status, data, "Error al consultar Supabase")
+          };
+        }
+
+        if (state.single && Array.isArray(data)) {
+          return { data: data[0] || null, error: null };
+        }
+
         return { data, error: null };
-      } catch (err) { return { data: null, error: { message: err.message } }; }
+      } catch (err) {
+        return {
+          data: null,
+          error: {
+            message: err?.message || "Error inesperado en consulta",
+            code: "UNEXPECTED_QUERY_ERROR"
+          }
+        };
+      }
     }
   };
+
   return builder;
 }
 
+// =========================
+// API SUPABASE GLOBAL
+// =========================
 window.supabase = {
-  from(table) { return createQueryBuilder(table); },
+  from(table) {
+    return createQueryBuilder(table);
+  },
+
   async rpc(functionName, params = {}) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
-        method: "POST", signal: controller.signal,
-        headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Accept": "application/json" },
+      const result = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: "Bearer " + SUPABASE_KEY,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
         body: JSON.stringify(params)
       });
-      clearTimeout(timeout);
+
+      if (!result.response) {
+        return {
+          data: null,
+          error: buildNetworkError(result, "No se pudo ejecutar la función RPC")
+        };
+      }
+
       let data = null;
-      try { data = await response.json(); } catch(e) { data = null; }
-      if (!response.ok) return { data: null, error: data };
+      try {
+        data = await result.response.json();
+      } catch (_) {
+        data = null;
+      }
+
+      if (!result.response.ok) {
+        return {
+          data: null,
+          error: buildHttpError(result.response.status, data, "Error ejecutando RPC")
+        };
+      }
+
       return { data, error: null };
-    } catch (err) { return { data: null, error: { message: err.message } }; }
+    } catch (err) {
+      return {
+        data: null,
+        error: {
+          message: err?.message || "Error inesperado en RPC",
+          code: "UNEXPECTED_RPC_ERROR"
+        }
+      };
+    }
   }
 };
 
+// =========================
+// UPDATE HELPER
+// =========================
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`, {
-      method: "PATCH", signal: controller.signal,
-      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY, "Content-Type": "application/json", "Accept": "application/json", "Prefer": "return=representation" },
-      body: JSON.stringify(data)
-    });
-    clearTimeout(timeout);
-    let result = null;
-    try { result = await response.json(); } catch(e) { result = null; }
-    if (!response.ok) return { data: null, error: result };
-    return { data: result, error: null };
-  } catch (err) { return { data: null, error: { message: err.message } }; }
+    const result = await safeFetch(
+      `${SUPABASE_URL}/rest/v1/${table}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`,
+      {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: "Bearer " + SUPABASE_KEY,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify(data)
+      }
+    );
+
+    if (!result.response) {
+      return {
+        data: null,
+        error: buildNetworkError(result, "No se pudo actualizar el registro")
+      };
+    }
+
+    let responseData = null;
+    try {
+      responseData = await result.response.json();
+    } catch (_) {
+      responseData = null;
+    }
+
+    if (!result.response.ok) {
+      return {
+        data: null,
+        error: buildHttpError(result.response.status, responseData, "Error actualizando datos")
+      };
+    }
+
+    return { data: responseData, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: {
+        message: err?.message || "Error inesperado al actualizar",
+        code: "UNEXPECTED_UPDATE_ERROR"
+      }
+    };
+  }
 };
 
+// =========================
+// INSERT HELPER
+// =========================
 window.supabaseInsert = async function(table, data) {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    
     const body = Array.isArray(data) ? data : [data];
-    
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: 'POST', 
-      signal: controller.signal,
-      headers: { 
-        'apikey': SUPABASE_KEY, 
-        'Authorization': "Bearer " + SUPABASE_KEY, 
-        'Content-Type': 'application/json', 
-        'Accept': 'application/json', 
-        'Prefer': 'return=representation' 
+
+    const result = await safeFetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: "Bearer " + SUPABASE_KEY,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Prefer: "return=representation"
       },
       body: JSON.stringify(body)
     });
-    
-    clearTimeout(timeout);
-    
-    let result = null;
-    try { result = await response.json(); } catch(e) { result = null; }
-    
-    if (!response.ok) { 
-      console.error("❌ RESPUESTA RAW:", result); 
-      return { data: null, error: result }; 
+
+    if (!result.response) {
+      return {
+        data: null,
+        error: buildNetworkError(result, "No se pudo insertar el registro")
+      };
     }
-    
-    return { data: Array.isArray(result) ? result[0] : result, error: null };
-    
-  } catch (err) { 
-    return { data: null, error: { message: err.message } }; 
+
+    let responseData = null;
+    try {
+      responseData = await result.response.json();
+    } catch (_) {
+      responseData = null;
+    }
+
+    if (!result.response.ok) {
+      console.error("❌ RESPUESTA RAW:", responseData);
+      return {
+        data: null,
+        error: buildHttpError(result.response.status, responseData, "Error insertando datos")
+      };
+    }
+
+    return {
+      data: Array.isArray(responseData) ? responseData[0] : responseData,
+      error: null
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: {
+        message: err?.message || "Error inesperado al insertar",
+        code: "UNEXPECTED_INSERT_ERROR"
+      }
+    };
   }
 };
 </script>
-
 <style>
 /* ==========================================
    VARIABLES GLOBALES
