@@ -2335,7 +2335,9 @@ const payload = {
   retorno_al_origen_front: retornoAlOrigen,
   resumen_ruta_front: resumenRuta,
   ruta_calculada_completa: true,
-  cotizacion_multitramo: puntos.length > 2
+  cotizacion_multitramo: puntos.length > 2,
+cliente_origen_input: document.getElementById('inputOrigen')?.value || '',
+cliente_destino_input: document.getElementById('inputDestino')?.value || ''
 };
     console.log("📤 Payload cotización limpio:", payload);
 
