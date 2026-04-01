@@ -599,31 +599,39 @@ body {
   background: white;
 }
 
+/* Mapa más grande */
 .map-container {
   width: 100%;
-  height: clamp(300px, 50vh, 400px);
+  height: clamp(380px, 55vh, 480px); /* antes: clamp(300px, 50vh, 400px) */
   position: relative;
 }
 
 #map {
   width: 100%;
-  height: 320px;
+  height: 380px; /* antes: 320px */
   border-radius: 18px;
   overflow: hidden;
 }
 
 @media (max-width: 768px) {
   #map {
-    height: 280px;
+    height: 340px; /* antes: 280px */
     border-radius: 16px;
   }
+    }
+  .map-container {
+    height: clamp(340px, 50vh, 420px);
+  }
 }
-  #mapSection {
+
+/* La card de mapa debe tener padding consistente */
+#mapSection {
   background: var(--card-bg, #fff);
   border-radius: 24px;
-  padding: 12px;
+  padding: 16px; /* más padding */
   box-shadow: 0 10px 30px rgba(0,0,0,0.08);
   overflow: hidden;
+  margin-top: 20px;
 }
 
 body.dark #mapSection,
@@ -811,6 +819,7 @@ body.dark #mapSection,
 /* ==========================================
    BOTÓN COTIZAR
 ========================================== */
+/* Reemplaza TODO el bloque de .btn-calcular por este: */
 .btn-calcular {
   width: 100%;
   padding: clamp(16px, 4vw, 18px);
@@ -830,23 +839,32 @@ body.dark #mapSection,
   gap: 10px;
   touch-action: manipulation;
   min-height: 56px;
+  position: relative;
+  overflow: hidden;
 }
 
 .btn-calcular:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0,0,0,0.2);
 }
-  /* Loading state para botón calcular */
-.btn-calcular {
-  position: relative;
-  overflow: hidden;
+
+.btn-calcular:active {
+  transform: translateY(0);
+}
+
+.btn-calcular:disabled,
+.btn-calcular.loading {
+  opacity: 0.9;
+  cursor: not-allowed;
+  transform: none;
+  pointer-events: none;
 }
 
 .btn-calcular.loading {
-  pointer-events: none;
-  opacity: 0.9;
+  background: linear-gradient(135deg, #1b5eb8, #163b73);
 }
 
+/* Contenido normal del botón */
 .btn-calcular .btn-content {
   display: flex;
   align-items: center;
@@ -859,6 +877,7 @@ body.dark #mapSection,
   opacity: 0;
 }
 
+/* Loader (spinner) */
 .btn-calcular .btn-loader {
   position: absolute;
   inset: 0;
@@ -885,64 +904,6 @@ body.dark #mapSection,
   to { transform: rotate(360deg); }
 }
 
-/* Estado disabled visual */
-.btn-calcular:disabled {
-  cursor: not-allowed;
-}
-
-.btn-calcular:active {
-  transform: translateY(0);
-}
-
-..btn-calcular:disabled {
-  opacity: 0.88;
-  cursor: not-allowed;
-  transform: none;
-  filter: saturate(0.95);
-}
-
-.btn-calcular.loading {
-  position: relative;
-  pointer-events: none;
-  background: linear-gradient(135deg, #1b5eb8, #163b73);
-  box-shadow: 0 6px 20px rgba(21, 101, 192, 0.28);
-}
-
-.btn-calcular.loading .btn-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2.5px solid rgba(255,255,255,0.35);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spinBtn 0.8s linear infinite;
-  flex-shrink: 0;
-}
-
-.btn-calcular.loading .btn-loading-text {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.quote-card.loading {
-  opacity: 0.65;
-  pointer-events: none;
-  filter: blur(0.2px);
-}
-
-.map-section.loading {
-  opacity: 0.8;
-  transition: opacity 0.2s ease;
-}
-
-.route-input-wrapper.loading {
-  border-color: rgba(21, 101, 192, 0.28);
-  background: rgba(21, 101, 192, 0.04);
-}
-
-@keyframes spinBtn {
-  to { transform: rotate(360deg); }
-}
 /* ==========================================
    TOAST NOTIFICATIONS
 ========================================== */
@@ -1346,12 +1307,17 @@ body.dark #mapSection,
   </button>
 </div>
     
-    <button class="btn-calcular" id="btnCalcular" onclick="calcularRuta()">
-      <span>🚐</span>
-      <span>Ver recorrido y cotizar</span>
-    </button>
-  </div>
-
+<button class="btn-calcular" id="btnCalcular" onclick="calcularRuta()">
+  <span class="btn-content">
+    <span>🚐</span>
+    <span>Ver recorrido y cotizar</span>
+  </span>
+  <span class="btn-loader">
+    <span class="btn-spinner"></span>
+    <span>Cotizando...</span>
+  </span>
+</button>
+    
   <!-- MAPA (inicialmente oculto) -->
   <div class="map-section" id="mapSection" style="display: none;">
     <div class="map-container">
