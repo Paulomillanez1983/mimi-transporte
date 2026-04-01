@@ -2678,6 +2678,8 @@ async function dibujarRutaFallback() {
 }
 
 async function cotizarViaje(payload) {
+  let timeoutId = null;
+
   try {
     if (!payload || typeof payload !== 'object') {
       throw new Error('Payload inválido para cotización');
@@ -2688,7 +2690,7 @@ async function cotizarViaje(payload) {
     console.log("📤 Payload cotización limpio:", payload);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    timeoutId = setTimeout(() => controller.abort(), 15000);
 
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
@@ -2701,47 +2703,58 @@ async function cotizarViaje(payload) {
       signal: controller.signal
     });
 
-    clearTimeout(timeoutId);
+    const rawText = await response.text();
+    let data = null;
 
-    const data = await response.json().catch(() => null);
+    try {
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch (parseErr) {
+      console.warn('⚠️ Respuesta no JSON del backend:', rawText);
+      data = null;
+    }
 
     console.log("📥 Respuesta cotización:", data);
 
     if (!response.ok || !data?.exito) {
-      throw new Error(data?.error || 'No se pudo cotizar');
+      throw new Error(data?.error || `No se pudo cotizar (${response.status})`);
     }
 
-    const precio = Number(data.precio || 0);
+    const precio = Number(data?.precio);
     const distancia = Number(
-      data.distancia_km_total ??
-      data.distancia_km ??
-      payload.distancia_km_total ??
-      payload.distancia_km ??
+      data?.distancia_km_total ??
+      data?.distancia_km ??
+      payload?.distancia_km_total ??
+      payload?.distancia_km ??
       0
     );
 
     const duracion = Number(
-      data.duracionEstimadaMin ??
-      data.duracion_min_total ??
-      data.duracion_min ??
-      payload.duracion_min_total ??
-      payload.duracion_min ??
+      data?.duracionEstimadaMin ??
+      data?.duracion_min_total ??
+      data?.duracion_min ??
+      payload?.duracion_min_total ??
+      payload?.duracion_min ??
       0
     );
 
+    const precioSeguro = Number.isFinite(precio) ? precio : 0;
+    const distanciaSegura = Number.isFinite(distancia) ? distancia : 0;
+    const duracionSegura = Number.isFinite(duracion) ? duracion : 0;
+
     state.cotizacion = {
       ...data,
-      resumen_ruta: data.resumen_ruta || resumenRuta
+      resumen_ruta: data?.resumen_ruta || resumenRuta
     };
 
     // Mantener routeData coherente aunque backend no devuelva geometría
     if (!state.routeData) state.routeData = {};
 
-    state.routeData.distance = distancia;
-    state.routeData.duration = duracion;
-    state.routeData.segmentos = data.segmentos_totales ?? payload.segmentos_totales_front ?? 1;
-    state.routeData.retornoAlOrigen = data.retorno_al_origen ?? payload.retorno_al_origen_front ?? false;
-    state.routeData.resumenRuta = data.resumen_ruta || resumenRuta;
+    state.routeData.distance = distanciaSegura;
+    state.routeData.duration = duracionSegura;
+    state.routeData.segmentos = data?.segmentos_totales ?? payload?.segmentos_totales_front ?? 1;
+    state.routeData.retornoAlOrigen = data?.retorno_al_origen ?? payload?.retorno_al_origen_front ?? false;
+    state.routeData.resumenRuta = data?.resumen_ruta || resumenRuta;
+    state.routeData.fallback = false;
 
     // Si backend devuelve geometría real, actualizar mapa
     if (Array.isArray(data?.route_geometry) && data.route_geometry.length >= 2) {
@@ -2750,25 +2763,56 @@ async function cotizarViaje(payload) {
       dibujarRutaReal(data.geometry.coordinates);
     }
 
-    mostrarCotizacion(precio, distancia, duracion);
+    mostrarCotizacion(precioSeguro, distanciaSegura, duracionSegura);
 
   } catch (err) {
     console.error('❌ Error cotizando:', err);
 
-    state.cotizacion = null;
-
     const mensaje =
       err?.name === 'AbortError'
-        ? 'La cotización tardó demasiado. Intentá nuevamente.'
-        : 'No pudimos obtener el precio en este momento. Intentá nuevamente.';
+        ? 'La cotización tardó demasiado. Mostramos una estimación provisoria.'
+        : 'No pudimos obtener el precio exacto. Mostramos una estimación provisoria.';
 
-    notif.show(
-      'No disponible',
-      mensaje,
-      'error'
+    notif.show('Modo estimado', mensaje, 'warning');
+
+    // Mantener experiencia usable aunque backend falle
+    const distanciaFallback = Number(
+      payload?.distancia_km_total ??
+      payload?.distancia_km ??
+      state?.routeData?.distance ??
+      0
     );
 
-    document.getElementById('quoteCard')?.classList.remove('visible');
+    const duracionFallback = Number(
+      payload?.duracion_min_total ??
+      payload?.duracion_min ??
+      state?.routeData?.duration ??
+      0
+    );
+
+    const distanciaSegura = Number.isFinite(distanciaFallback) ? distanciaFallback : 0;
+    const duracionSegura = Number.isFinite(duracionFallback) ? duracionFallback : 0;
+
+    state.cotizacion = {
+      precio_formateado: 'Consultar',
+      resumen_ruta: payload?.resumen_ruta_front || construirResumenRuta(),
+      waypoints_count: payload?.cantidad_paradas_front ?? 0,
+      segmentos_totales: payload?.segmentos_totales_front ?? 1,
+      retorno_al_origen: payload?.retorno_al_origen_front ?? false,
+      modo: 'fallback_local'
+    };
+
+    if (!state.routeData) state.routeData = {};
+    state.routeData.distance = distanciaSegura;
+    state.routeData.duration = duracionSegura;
+    state.routeData.segmentos = payload?.segmentos_totales_front ?? 1;
+    state.routeData.retornoAlOrigen = payload?.retorno_al_origen_front ?? false;
+    state.routeData.resumenRuta = payload?.resumen_ruta_front || construirResumenRuta();
+    state.routeData.fallback = true;
+
+    mostrarCotizacion(0, distanciaSegura, duracionSegura);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
   
