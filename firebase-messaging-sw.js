@@ -16,9 +16,11 @@ messaging.onBackgroundMessage((payload) => {
   console.log("[firebase-messaging-sw.js] Background:", payload);
 
   const title = payload.notification?.title || "Nuevo mensaje";
+
   const options = {
     body: payload.notification?.body || "",
-    icon: "/icons/icon-192.png",
+    icon: "/mimi-transporte/assets/icons/icon-192x192.png",
+    badge: "/mimi-transporte/assets/icons/icon-192x192.png",
     data: payload.data || {},
   };
 
@@ -28,12 +30,12 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener("notificationclick", function (event) {
   event.notification.close();
 
-  const url = event.notification.data?.url || "/";
+  const url = event.notification.data?.url || "/mimi-transporte/";
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url.includes(url) && "focus" in client) {
+        if (client.url.includes("/mimi-transporte/") && "focus" in client) {
           return client.focus();
         }
       }
