@@ -2339,16 +2339,21 @@ const payload = {
 };
     console.log("📤 Payload cotización limpio:", payload);
 
-    const response = await fetch(CONFIG.COTIZAR_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_KEY
-      },
-      body: JSON.stringify(payload)
-    });
+const controller = new AbortController();
+const timeoutId = setTimeout(() => controller.abort(), 15000);
 
+const response = await fetch(CONFIG.COTIZAR_URL, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY
+  },
+  body: JSON.stringify(payload),
+  signal: controller.signal
+});
+
+clearTimeout(timeoutId);
     const data = await response.json().catch(() => null);
 
     console.log("📥 Respuesta cotización:", data);
@@ -2369,16 +2374,20 @@ const payload = {
     mostrarCotizacion(precio, distancia, duracion);
 
   } catch (err) {
-    console.error('❌ Error cotizando:', err);
+console.error('❌ Error cotizando:', err);
 
-    state.cotizacion = null;
+state.cotizacion = null;
 
-    notif.show(
-      'No disponible',
-      'No pudimos obtener el precio en este momento. Intentá nuevamente.',
-      'error'
-    );
+const mensaje =
+  err?.name === 'AbortError'
+    ? 'La cotización tardó demasiado. Intentá nuevamente.'
+    : 'No pudimos obtener el precio en este momento. Intentá nuevamente.';
 
+notif.show(
+  'No disponible',
+  mensaje,
+  'error'
+);
     document.getElementById('quoteCard').classList.remove('visible');
   }
 }  
