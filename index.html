@@ -2093,9 +2093,6 @@ async function cotizarViaje(km, minutos) {
     const segmentosTotales = Math.max(1, puntos.length - 1);
     const resumenRuta = construirResumenRuta();
 
-    const distanciaTotalReal = Number(km);
-    const duracionTotalReal = Number(minutos);
-
     const payload = {
       servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
@@ -2111,18 +2108,19 @@ async function cotizarViaje(km, minutos) {
       destino_lat: Number(destinoReal.lat),
       destino_lng: Number(destinoReal.lng),
 
-      // Compatibilidad con versiones anteriores
-      distancia_km: distanciaTotalReal,
-      duracion_min: duracionTotalReal,
+      // Compatibilidad
+      distancia_km: Number(km),
+      duracion_min: Number(minutos),
 
-      // ✅ NUEVO: total real de TODA la ruta
-      distancia_km_total: distanciaTotalReal,
-      duracion_min_total: duracionTotalReal,
+      // ✅ TOTAL REAL de toda la ruta calculada por OSRM
+      distancia_km_total: Number(km),
+      duracion_min_total: Number(minutos),
 
       fechaHora: new Date().toISOString(),
+
       waypoints: waypointsIntermedios,
 
-      // extras de trazabilidad
+      // Extras de trazabilidad
       segmentos_totales_front: segmentosTotales,
       retorno_al_origen_front: retornoAlOrigen,
       resumen_ruta_front: resumenRuta,
@@ -2150,8 +2148,8 @@ async function cotizarViaje(km, minutos) {
     }
 
     const precio = Number(data.precio || 0);
-    const distancia = Number(data.distancia_km || distanciaTotalReal);
-    const duracion = Number(data.duracionEstimadaMin || duracionTotalReal);
+    const distancia = Number(data.distancia_km || km);
+    const duracion = Number(data.duracionEstimadaMin || minutos);
 
     state.cotizacion = {
       ...data,
@@ -2173,8 +2171,7 @@ async function cotizarViaje(km, minutos) {
 
     document.getElementById('quoteCard').classList.remove('visible');
   }
-}
-  
+}  
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   const paradasIntermedias = state.waypoints.filter(w => w.data).length;
