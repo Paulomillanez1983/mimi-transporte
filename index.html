@@ -2197,8 +2197,11 @@ function construirResumenRuta() {
 // ==========================================
 async function calcularRuta() {
   if (isCalculatingQuote) return;
-
+  isCalculatingQuote = true;
+  
   document.getElementById('quoteCard')?.classList.remove('visible');
+  state.cotizacion = null;
+  state.routeData = null;
   const origenInput = document.getElementById('inputOrigen');
   const destinoInput = document.getElementById('inputDestino');
 
@@ -2351,9 +2354,10 @@ async function calcularRuta() {
 
     setLoadingCotizacion(true, 'Estimando recorrido...');
     await dibujarRutaFallback();
-  } finally {
-    setLoadingCotizacion(false);
-  }
+     } finally {
+     isCalculatingQuote = false;
+     setLoadingCotizacion(false);
+   }
 }  
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
