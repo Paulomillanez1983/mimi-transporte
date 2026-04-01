@@ -1721,11 +1721,8 @@ async function cotizarViaje(km, minutos) {
       origen_lng: Number(state.origen.lng),
       destino_lat: Number(state.destino.lat),
       destino_lng: Number(state.destino.lng),
-
-      // 🔥 ESTO TE FALTABA
       distancia_km: Number(km),
       duracion_min: Number(minutos),
-
       fechaHora: new Date().toISOString(),
       waypoints: waypointsValidos
     };
@@ -1758,31 +1755,20 @@ async function cotizarViaje(km, minutos) {
 
     mostrarCotizacion(precio, distancia, duracion);
 
-} catch (err) {
-  console.error('❌ Error cotizando:', err);
+  } catch (err) {
+    console.error('❌ Error cotizando:', err);
 
-} catch (err) {
-  console.error('❌ Error cotizando:', err);
+    state.cotizacion = null;
 
-  state.cotizacion = null;
+    notif.show(
+      'No disponible',
+      'No pudimos obtener el precio en este momento. Intentá nuevamente.',
+      'error'
+    );
 
-  notif.show(
-    'No disponible',
-    'No pudimos obtener el precio en este momento. Intentá nuevamente.',
-    'error'
-  );
-
-  document.getElementById('quoteCard').classList.remove('visible');
-}  
-  function calcularPrecioLocal(km, minutos) {
-  // Tarifa base simple
-  const base = 400;
-  const porKm = 1250;
-  const porMinuto = 6;
-  
-  return Math.round(base + (km * porKm) + (minutos * porMinuto));
+    document.getElementById('quoteCard').classList.remove('visible');
+  }
 }
-
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   const paradasIntermedias = state.waypoints.filter(w => w.data).length;
