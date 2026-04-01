@@ -1869,28 +1869,43 @@ function obtenerPuntosOrdenados() {
 function construirPayloadWaypointsIntermedios() {
   const puntos = obtenerPuntosOrdenados();
 
-  if (puntos.length < 2) return [];
+  if (puntos.length < 3) return [];
 
-  // Solo puntos intermedios: sin origen ni destino
+  // Solo intermedios (sin origen ni destino)
   return puntos.slice(1, -1).map((p) => ({
-    direccion: p.direccion,
-    direccionCorta: p.direccionCorta || p.direccion,
+    direccion: p.direccion || p.direccionCorta || "Parada",
+    direccionCorta: p.direccionCorta || p.direccion || "Parada",
     lat: Number(p.lat),
     lng: Number(p.lng)
-  }));
-}
-
-function detectarRetornoAlOrigenFrontend() {
-  if (!state.origen || !state.destino) return false;
-
-  const tolerancia = 0.0008; // ~80m
-
-  return (
-    Math.abs(Number(state.origen.lat) - Number(state.destino.lat)) <= tolerancia &&
-    Math.abs(Number(state.origen.lng) - Number(state.destino.lng)) <= tolerancia
+  })).filter(p =>
+    Number.isFinite(p.lat) &&
+    Number.isFinite(p.lng)
   );
 }
+function detectarRetornoAlOrigenFrontend() {
+  const puntos = obtenerPuntosOrdenados();
+  if (puntos.length < 2) return false;
 
+  const origen = puntos[0];
+  const ultimo = puntos[puntos.length - 1];
+  const tolerancia = 0.0008; // ~80m
+
+  const mismoPunto = (a, b) => {
+    if (!a || !b) return false;
+
+    return (
+      Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
+      Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
+    );
+  };
+
+  // Caso 1: el destino final vuelve al origen
+  if (mismoPunto(origen, ultimo)) return true;
+
+  // Caso 2: alguna parada intermedia vuelve al origen
+  const intermedios = puntos.slice(1, -1);
+  return intermedios.some((p) => mismoPunto(origen, p));
+}
 function construirResumenRuta() {
   const puntos = obtenerPuntosOrdenados();
   if (puntos.length < 2) return "Ruta incompleta";
@@ -1901,9 +1916,14 @@ function construirResumenRuta() {
     return p.direccionCorta || `Parada ${index}`;
   });
 
-  return nombres.join(" → ");
-}
-  
+  const resumen = nombres.join(" → ");
+
+  if (detectarRetornoAlOrigenFrontend()) {
+    return `${resumen} ↺`;
+  }
+
+  return resumen;
+}  
   // ==========================================
 // CÁLCULO DE RUTA Y COTIZACIÓN
 // ==========================================
@@ -2069,9 +2089,12 @@ async function cotizarViaje(km, minutos) {
     const origenReal = puntos[0];
     const destinoReal = puntos[puntos.length - 1];
     const waypointsIntermedios = construirPayloadWaypointsIntermedios();
+    const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
+    const segmentosTotales = Math.max(1, puntos.length - 1);
+    const resumenRuta = construirResumenRuta();
 
     const payload = {
-      servicio: detectarRetornoAlOrigenFrontend() ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
       origen: origenReal.direccion,
       origen_corto: origenReal.direccionCorta || origenReal.direccion,
@@ -2085,16 +2108,18 @@ async function cotizarViaje(km, minutos) {
       destino_lat: Number(destinoReal.lat),
       destino_lng: Number(destinoReal.lng),
 
+      // ⚠️ ESTOS YA SON TOTALES REALES DE TODA LA RUTA
       distancia_km: Number(km),
       duracion_min: Number(minutos),
       fechaHora: new Date().toISOString(),
 
       waypoints: waypointsIntermedios,
 
-      // extras útiles para debug / futura lógica
-      segmentos_totales_front: Math.max(1, puntos.length - 1),
-      retorno_al_origen_front: detectarRetornoAlOrigenFrontend(),
-      resumen_ruta_front: construirResumenRuta()
+      // extras de trazabilidad
+      segmentos_totales_front: segmentosTotales,
+      retorno_al_origen_front: retornoAlOrigen,
+      resumen_ruta_front: resumenRuta,
+      ruta_calculada_completa: true
     };
 
     console.log("📤 Payload cotización limpio:", payload);
@@ -2123,7 +2148,7 @@ async function cotizarViaje(km, minutos) {
 
     state.cotizacion = {
       ...data,
-      resumen_ruta: data.resumen_ruta || state.routeData?.resumenRuta || construirResumenRuta()
+      resumen_ruta: data.resumen_ruta || resumenRuta
     };
 
     mostrarCotizacion(precio, distancia, duracion);
@@ -2142,11 +2167,15 @@ async function cotizarViaje(km, minutos) {
     document.getElementById('quoteCard').classList.remove('visible');
   }
 }
-
+  
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   const paradasIntermedias = state.waypoints.filter(w => w.data).length;
   const segmentos = state.routeData?.segmentos || 1;
+  const retornoAlOrigen =
+    state.cotizacion?.retorno_al_origen ??
+    state.routeData?.retornoAlOrigen ??
+    detectarRetornoAlOrigenFrontend();
 
   const precioTexto =
     state.cotizacion?.precio_formateado ||
@@ -2170,8 +2199,13 @@ function mostrarCotizacion(precio, km, minutos) {
     construirResumenRuta();
 
   let textoResumen = '';
-  if (paradasIntermedias === 0) {
-    textoResumen = state.routeData?.retornoAlOrigen ? 'Ida y vuelta directa' : 'Viaje directo';
+
+  if (retornoAlOrigen && paradasIntermedias === 0) {
+    textoResumen = 'Ida y vuelta directa';
+  } else if (retornoAlOrigen && paradasIntermedias > 0) {
+    textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · regreso al origen`;
+  } else if (paradasIntermedias === 0) {
+    textoResumen = 'Viaje directo';
   } else {
     textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · ${segmentos} tramo${segmentos > 1 ? 's' : ''}`;
   }
