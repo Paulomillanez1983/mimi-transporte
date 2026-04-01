@@ -2093,6 +2093,9 @@ async function cotizarViaje(km, minutos) {
     const segmentosTotales = Math.max(1, puntos.length - 1);
     const resumenRuta = construirResumenRuta();
 
+    const distanciaTotalReal = Number(km);
+    const duracionTotalReal = Number(minutos);
+
     const payload = {
       servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
@@ -2108,11 +2111,15 @@ async function cotizarViaje(km, minutos) {
       destino_lat: Number(destinoReal.lat),
       destino_lng: Number(destinoReal.lng),
 
-      // ⚠️ ESTOS YA SON TOTALES REALES DE TODA LA RUTA
-      distancia_km: Number(km),
-      duracion_min: Number(minutos),
-      fechaHora: new Date().toISOString(),
+      // Compatibilidad con versiones anteriores
+      distancia_km: distanciaTotalReal,
+      duracion_min: duracionTotalReal,
 
+      // ✅ NUEVO: total real de TODA la ruta
+      distancia_km_total: distanciaTotalReal,
+      duracion_min_total: duracionTotalReal,
+
+      fechaHora: new Date().toISOString(),
       waypoints: waypointsIntermedios,
 
       // extras de trazabilidad
@@ -2143,8 +2150,8 @@ async function cotizarViaje(km, minutos) {
     }
 
     const precio = Number(data.precio || 0);
-    const distancia = Number(data.distancia_km || km);
-    const duracion = Number(data.duracionEstimadaMin || minutos);
+    const distancia = Number(data.distancia_km || distanciaTotalReal);
+    const duracion = Number(data.duracionEstimadaMin || duracionTotalReal);
 
     state.cotizacion = {
       ...data,
