@@ -2080,17 +2080,6 @@ function obtenerPuntosOrdenados() {
   ].filter(Boolean);
 }
 
-function construirPayloadWaypointsIntermedios() {
-  const puntos = obtenerPuntosOrdenados();
-
-  if (puntos.length < 2) return [];
-
-  return puntos.slice(1, -1).map((p) => ({
-    direccion: p.direccionCorta || p.direccion || "Parada",
-    lat: Number(p.lat),
-    lng: Number(p.lng)
-  }));
-}
 function detectarRetornoAlOrigenFrontend() {
   const puntos = obtenerPuntosOrdenados();
   if (puntos.length < 2) return false;
@@ -2290,14 +2279,11 @@ async function cotizarViaje(km, minutos) {
     const waypointsIntermedios = construirPayloadWaypointsIntermedios();
 
     const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
-
-    
-    const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
     const segmentosTotales = Math.max(1, puntos.length - 1);
     const resumenRuta = construirResumenRuta();
 
     const payload = {
-      servicio: retornoFinalAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
       origen: origenReal.direccion,
       origen_corto: origenReal.direccionCorta || origenReal.direccion,
@@ -2323,7 +2309,7 @@ async function cotizarViaje(km, minutos) {
 
       waypoints: waypointsIntermedios,
 
-      // Lista completa explícita
+      // Ruta completa explícita
       puntos_ruta: puntos.map((p, index) => ({
         orden: index,
         tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
@@ -2333,7 +2319,7 @@ async function cotizarViaje(km, minutos) {
         lng: Number(p.lng)
       })),
 
-      // Extras de trazabilidad
+      // Trazabilidad
       segmentos_totales_front: segmentosTotales,
       cantidad_paradas_front: waypointsIntermedios.length,
       retorno_al_origen_front: retornoAlOrigen,
@@ -2400,11 +2386,19 @@ async function cotizarViaje(km, minutos) {
     document.getElementById('quoteCard')?.classList.remove('visible');
   }
 }
-
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
-  const paradasIntermedias = state.waypoints.filter(w => w.data).length;
-  const segmentos = state.routeData?.segmentos || 1;
+  if (!card) return;
+
+  const paradasIntermedias =
+    state.cotizacion?.waypoints_count ??
+    (Array.isArray(state.waypoints) ? state.waypoints.filter(w => w?.data).length : 0);
+
+  const segmentos =
+    state.cotizacion?.segmentos_totales ??
+    state.routeData?.segmentos ??
+    1;
+
   const retornoAlOrigen =
     state.cotizacion?.retorno_al_origen ??
     state.routeData?.retornoAlOrigen ??
@@ -2414,17 +2408,25 @@ function mostrarCotizacion(precio, km, minutos) {
     state.cotizacion?.precio_formateado ||
     '$' + Number(precio).toLocaleString('es-AR');
 
-  document.getElementById('quotePrice').textContent = precioTexto;
+  const quotePrice = document.getElementById('quotePrice');
+  if (quotePrice) quotePrice.textContent = precioTexto;
 
   let label = 'Precio estimado';
   if (state.routeData?.fallback || state.cotizacion?.modo === 'fallback_local') {
     label = 'Estimación provisoria';
   }
 
-  document.querySelector('.quote-price-label').textContent = label;
-  document.getElementById('detailDistance').textContent = Number(km).toFixed(1) + ' km';
-  document.getElementById('detailDuration').textContent = Math.round(Number(minutos)) + ' min';
-  document.getElementById('detailStops').textContent = paradasIntermedias;
+  const labelEl = document.querySelector('.quote-price-label');
+  if (labelEl) labelEl.textContent = label;
+
+  const detailDistance = document.getElementById('detailDistance');
+  if (detailDistance) detailDistance.textContent = Number(km).toFixed(1) + ' km';
+
+  const detailDuration = document.getElementById('detailDuration');
+  if (detailDuration) detailDuration.textContent = Math.round(Number(minutos)) + ' min';
+
+  const detailStops = document.getElementById('detailStops');
+  if (detailStops) detailStops.textContent = paradasIntermedias;
 
   const resumenRuta =
     state.cotizacion?.resumen_ruta ||
@@ -2433,16 +2435,19 @@ function mostrarCotizacion(precio, km, minutos) {
 
   let textoResumen = '';
 
-if (retornoAlOrigen && paradasIntermedias === 0) {
-  textoResumen = 'Ida y vuelta completa';
-} else if (retornoAlOrigen && paradasIntermedias > 0) {
-  textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · recorrido completo con regreso`;
-} else if (paradasIntermedias === 0) {
-  textoResumen = 'Recorrido directo completo';
-} else {
-  textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · ${segmentos} tramo${segmentos > 1 ? 's' : ''} cotizados`;
-}
-  document.getElementById('resumenParadas').textContent = textoResumen;
+  if (retornoAlOrigen && paradasIntermedias === 0) {
+    textoResumen = 'Ida y vuelta completa';
+  } else if (retornoAlOrigen && paradasIntermedias > 0) {
+    textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · recorrido completo con regreso`;
+  } else if (paradasIntermedias === 0) {
+    textoResumen = 'Recorrido directo completo';
+  } else {
+    textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · ${segmentos} tramo${segmentos > 1 ? 's' : ''} cotizados`;
+  }
+
+  const resumenParadas = document.getElementById('resumenParadas');
+  if (resumenParadas) resumenParadas.textContent = textoResumen;
+
   card.classList.add('visible');
 
   setTimeout(() => {
@@ -2450,8 +2455,7 @@ if (retornoAlOrigen && paradasIntermedias === 0) {
   }, 300);
 
   console.log("🧠 Resumen ruta:", resumenRuta);
-}
-  
+}  
 // ==========================================
 // ACCIONES
 // ==========================================
