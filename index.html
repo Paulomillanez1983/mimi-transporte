@@ -1124,9 +1124,9 @@ let state = {
   waypoints: [],
   routeData: null,
   map: null,
-  markers: []
+  markers: [],
+  cotizacion: null
 };
-
 let mapaCliente = null;
 let rutaLayer = null;
 let waypointCounter = 0;
@@ -1518,24 +1518,42 @@ function reiniciarRuta() {
   document.getElementById('waypointsContainer').innerHTML = '';
   
   // Limpiar estado
+function reiniciarRuta() {
+  document.getElementById('inputOrigen').value = '';
+  document.getElementById('inputDestino').value = '';
+  document.getElementById('waypointsContainer').innerHTML = '';
+
+  document.querySelectorAll('.sugerencias').forEach(el => {
+    el.innerHTML = '';
+    el.style.display = 'none';
+  });
+
+  if (mapaCliente) {
+    if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+    if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+  }
+
+  if (state.markers?.length) {
+    state.markers.forEach(m => m.remove());
+  }
+
   state = {
     origen: null,
     destino: null,
     waypoints: [],
     routeData: null,
     map: null,
-    markers: []
+    markers: [],
+    cotizacion: null
   };
+
   waypointCounter = 0;
 
-  // Ocultar secciones
   document.getElementById('mapSection').style.display = 'none';
   document.getElementById('quoteCard').classList.remove('visible');
-  
-  // Mostrar notificación
+
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
-
 // ==========================================
 // CÁLCULO DE RUTA Y COTIZACIÓN
 // ==========================================
@@ -1595,13 +1613,21 @@ async function calcularRuta() {
       allCoords.map(c => c.join(',')).join(';') +
       '?overview=full&geometries=geojson';
 
-    const osrmRes = await fetch(osrmUrl);
-    const osrmData = await osrmRes.json();
+const osrmRes = await fetch(osrmUrl, {
+  headers: {
+    'Accept': 'application/json'
+  }
+});
 
-    if (osrmData.code !== 'Ok') {
-      throw new Error('No se pudo calcular la ruta');
-    }
+if (!osrmRes.ok) {
+  throw new Error(`OSRM respondió ${osrmRes.status}`);
+}
 
+const osrmData = await osrmRes.json();
+
+if (!osrmData || osrmData.code !== 'Ok' || !osrmData.routes?.length) {
+  throw new Error('No se pudo calcular la ruta real');
+}
     const route = osrmData.routes[0];
     const distanceKm = (route.distance / 1000).toFixed(1);
     const durationMin = Math.round(route.duration / 60);
@@ -1674,23 +1700,32 @@ function dibujarRutaFallback() {
 
 async function cotizarViaje(km, minutos) {
   try {
-    // Llamar a tu edge function de cotización
+    const waypointsValidos = state.waypoints
+      .filter(w => w.data)
+      .map(w => ({
+        direccion: w.data.direccion,
+        lat: Number(w.data.lat),
+        lng: Number(w.data.lng)
+      }));
+
     const payload = {
-      servicio: 'IDA_ESCOLAR', // Siempre ida simple ahora
+      servicio: 'IDA_ESCOLAR',
       origen: state.origen.direccion,
       destino: state.destino.direccion,
-      origen_lat: state.origen.lat,
-      origen_lng: state.origen.lng,
-      destino_lat: state.destino.lat,
-      destino_lng: state.destino.lng,
+      origen_lat: Number(state.origen.lat),
+      origen_lng: Number(state.origen.lng),
+      destino_lat: Number(state.destino.lat),
+      destino_lng: Number(state.destino.lng),
+
+      // 🔥 ESTO TE FALTABA
+      distancia_km: Number(km),
+      duracion_min: Number(minutos),
+
       fechaHora: new Date().toISOString(),
-      // Agregar waypoints si existen
-      waypoints: state.waypoints.filter(w => w.data).map(w => ({
-        direccion: w.data.direccion,
-        lat: w.data.lat,
-        lng: w.data.lng
-      }))
+      waypoints: waypointsValidos
     };
+
+    console.log("📤 Payload cotización:", payload);
 
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
@@ -1702,25 +1737,35 @@ async function cotizarViaje(km, minutos) {
       body: JSON.stringify(payload)
     });
 
-    let precio = 0;
-    
-    if (response.ok) {
-      const data = await response.json();
-      precio = data.precio || calcularPrecioLocal(km, minutos);
-    } else {
-      // Fallback a cálculo local
-      precio = calcularPrecioLocal(km, minutos);
+    const data = await response.json().catch(() => null);
+
+    console.log("📥 Respuesta cotización:", data);
+
+    if (!response.ok || !data?.exito) {
+      throw new Error(data?.error || 'No se pudo cotizar');
     }
 
-    mostrarCotizacion(precio, km, minutos);
+    const precio = Number(data.precio || 0);
+    const distancia = Number(data.distancia_km || km);
+    const duracion = Number(data.duracionEstimadaMin || minutos);
+
+    state.cotizacion = data;
+
+    mostrarCotizacion(precio, distancia, duracion);
 
   } catch (err) {
-    console.error('Error cotizando:', err);
-    const precio = calcularPrecioLocal(km, minutos);
-    mostrarCotizacion(precio, km, minutos);
+    console.error('❌ Error cotizando:', err);
+
+    const precio = calcularPrecioLocal(Number(km), Number(minutos));
+    mostrarCotizacion(precio, Number(km), Number(minutos));
+
+    notif.show(
+      'Cotización local',
+      'No pudimos conectar con el servidor. Mostramos una estimación local.',
+      'warning'
+    );
   }
 }
-
 function calcularPrecioLocal(km, minutos) {
   // Tarifa base simple
   const base = 400;
@@ -1732,27 +1777,34 @@ function calcularPrecioLocal(km, minutos) {
 
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
-  
-  document.getElementById('quotePrice').textContent = '$' + precio.toLocaleString('es-AR');
-  document.getElementById('detailDistance').textContent = km + ' km';
-  document.getElementById('detailDuration').textContent = minutos + ' min';
-  document.getElementById('detailStops').textContent = state.waypoints.filter(w => w.data).length;
-  document.getElementById('resumenParadas').textContent = 
-    `${state.waypoints.filter(w => w.data).length + 1} paradas`;
-  
+  const paradasIntermedias = state.waypoints.filter(w => w.data).length;
+  const puntosTotales = paradasIntermedias + 2; // origen + destino + intermedias
+
+  document.getElementById('quotePrice').textContent = '$' + Number(precio).toLocaleString('es-AR');
+  document.getElementById('detailDistance').textContent = Number(km).toFixed(1) + ' km';
+  document.getElementById('detailDuration').textContent = Math.round(Number(minutos)) + ' min';
+  document.getElementById('detailStops').textContent = paradasIntermedias;
+  document.getElementById('resumenParadas').textContent = `${puntosTotales} puntos`;
+
   card.classList.add('visible');
-  
-  // Scroll a la cotización
+
   setTimeout(() => {
     card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 300);
 }
-
 // ==========================================
 // ACCIONES
 // ==========================================
 function confirmarViaje() {
+  if (!state.origen || !state.destino || !state.routeData) {
+    notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
+    return;
+  }
+
+  const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
+
   const mensaje = `🚐 *MIMI Transporte Escolar*\n\n` +
+    `🧾 *Cotización:* ${cotizacionId}\n\n` +
     `📍 *Origen:* ${formatearDireccionCorta({display_name: state.origen.direccion})}\n` +
     `${state.waypoints.filter(w => w.data).map((w, i) => 
       `📍 *Parada ${i + 1}:* ${formatearDireccionCorta({display_name: w.data.direccion})}\n`
@@ -1760,12 +1812,11 @@ function confirmarViaje() {
     `🏁 *Destino:* ${formatearDireccionCorta({display_name: state.destino.direccion})}\n\n` +
     `📏 *Distancia:* ${state.routeData.distance} km\n` +
     `⏱️ *Duración:* ${state.routeData.duration} min\n` +
-    `💰 *Precio:* $${document.getElementById('quotePrice').textContent.replace('$', '')}\n\n` +
+    `💰 *Precio:* ${document.getElementById('quotePrice').textContent}\n\n` +
     `✅ ¿Confirmamos el viaje?`;
 
   window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
-
 function compartirRuta() {
   const texto = `Mirá la ruta de mi viaje con MIMI Transporte 🚐\n` +
     `📍 ${state.routeData.distance} km en ${state.routeData.duration} min\n` +
