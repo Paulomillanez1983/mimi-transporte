@@ -1675,6 +1675,16 @@ function initMapa() {
   if (!mapDiv) return Promise.resolve();
 
   return new Promise((resolve) => {
+    const esMobile = window.innerWidth <= 768;
+    const temaOscuro = document.documentElement.classList.contains('dark')
+      || document.body.classList.contains('dark')
+      || window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // Estilo raster simple compatible con claro/oscuro
+    const rasterTiles = temaOscuro
+      ? ['https://tile.openstreetmap.org/{z}/{x}/{y}.png']
+      : ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'];
+
     mapaCliente = new maplibregl.Map({
       container: 'map',
       style: {
@@ -1682,22 +1692,61 @@ function initMapa() {
         sources: {
           osm: {
             type: 'raster',
-            tiles: [
-              'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ],
+            tiles: rasterTiles,
             tileSize: 256,
             attribution: '© OpenStreetMap'
           }
         },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }]
+        layers: [
+          {
+            id: 'osm',
+            type: 'raster',
+            source: 'osm',
+            paint: temaOscuro
+              ? {
+                  'raster-opacity': 0.9,
+                  'raster-brightness-min': 0.05,
+                  'raster-brightness-max': 0.75,
+                  'raster-contrast': 0.15,
+                  'raster-saturation': -0.35
+                }
+              : {
+                  'raster-opacity': 1,
+                  'raster-brightness-min': 0,
+                  'raster-brightness-max': 1,
+                  'raster-contrast': 0.05,
+                  'raster-saturation': 0
+                }
+          }
+        ]
       },
       center: [-64.19, -31.42],
-      zoom: 12
+      zoom: esMobile ? 11.5 : 12,
+      minZoom: 8,
+      maxZoom: 18,
+      attributionControl: false,
+      dragRotate: false,
+      touchZoomRotate: true,
+      pitchWithRotate: false,
+      doubleClickZoom: true,
+      cooperativeGestures: false,
+      antialias: !esMobile,
+      renderWorldCopies: false
     });
 
-    mapaCliente.addControl(new maplibregl.NavigationControl(), 'bottom-right');
+    mapaCliente.addControl(
+      new maplibregl.NavigationControl({
+        showCompass: false,
+        visualizePitch: false
+      }),
+      'bottom-right'
+    );
+
+    mapaCliente.addControl(
+      new maplibregl.AttributionControl({
+        compact: true
+      })
+    );
 
     mapaCliente.on('load', () => {
       mapReady = true;
@@ -1705,10 +1754,39 @@ function initMapa() {
     });
 
     mapaCliente.on('error', (e) => {
+      const err = e?.error || e;
+      const msg = err?.message || '';
+
+      // Silenciar errores comunes de tiles para no ensuciar consola
+      if (
+        msg.includes('tile.openstreetmap.org') ||
+        msg.includes('Failed to fetch') ||
+        msg.includes('403') ||
+        msg.includes('404') ||
+        msg.includes('429')
+      ) {
+        console.warn('⚠️ Tile temporalmente no disponible');
+        return;
+      }
+
       console.error('❌ Error mapa:', e);
+    });
+
+    // Reajustar tamaño por si el contenedor aparece luego
+    setTimeout(() => {
+      try {
+        mapaCliente?.resize();
+      } catch (_) {}
+    }, 250);
+
+    window.addEventListener('resize', () => {
+      try {
+        mapaCliente?.resize();
+      } catch (_) {}
     });
   });
 }
+  
 async function dibujarRutaEnMapa(coords) {
   await initMapa();
 
