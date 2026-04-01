@@ -2891,6 +2891,30 @@ const CONFIG = {
   WHATSAPP_NUMBER: '5493517014863',
   MAX_WAYPOINTS: 5
 };
+ function normalizarTextoDireccion(txt) {
+  return String(txt || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function esNumeroValido(n) {
+  return Number.isFinite(Number(n));
+}
+
+function numeroSeguro(n, fallback = 0) {
+  const v = Number(n);
+  return Number.isFinite(v) ? v : fallback;
+}
+
+function coordenadasValidas(lat, lng) {
+  return (
+    Number.isFinite(Number(lat)) &&
+    Number.isFinite(Number(lng)) &&
+    Math.abs(Number(lat)) <= 90 &&
+    Math.abs(Number(lng)) <= 180
+  );
+} 
 
 // ==========================================
 // ESTADO GLOBAL
