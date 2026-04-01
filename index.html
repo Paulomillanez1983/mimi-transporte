@@ -2006,27 +2006,36 @@ async function dibujarRutaFallback() {
   await dibujarRutaEnMapa(coords);
   await cotizarViaje(distanceKm, durationMin);
 }
-  async function cotizarViaje(km, minutos) {
+async function cotizarViaje(km, minutos) {
   try {
     const waypointsValidos = state.waypoints
       .filter(w => w.data)
       .map(w => ({
         direccion: w.data.direccion,
+        direccionCorta: w.data.direccionCorta || w.data.direccion,
         lat: Number(w.data.lat),
         lng: Number(w.data.lng)
       }));
 
     const payload = {
       servicio: 'IDA_ESCOLAR',
+
       origen: state.origen.direccion,
+      origen_corto: state.origen.direccionCorta || state.origen.direccion,
+
       destino: state.destino.direccion,
+      destino_corto: state.destino.direccionCorta || state.destino.direccion,
+
       origen_lat: Number(state.origen.lat),
       origen_lng: Number(state.origen.lng),
+
       destino_lat: Number(state.destino.lat),
       destino_lng: Number(state.destino.lng),
+
       distancia_km: Number(km),
       duracion_min: Number(minutos),
       fechaHora: new Date().toISOString(),
+
       waypoints: waypointsValidos
     };
 
