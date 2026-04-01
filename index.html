@@ -1421,43 +1421,34 @@ class NotificationSystem {
 }
 
 const notif = new NotificationSystem();
-function setLoadingCotizacion(loading, message = 'Cotizando recorrido completo...') {
+function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
   const btn = document.getElementById('btnCalcular');
-  const quoteCard = document.getElementById('quoteCard');
-  const mapSection = document.getElementById('mapSection');
-  const wrappers = document.querySelectorAll('.route-input-wrapper');
+  const btnText = btn?.querySelector('.btn-text');
+  const btnLoader = btn?.querySelector('.btn-loader');
+  const status = document.getElementById('quoteStatus');
 
-  if (!btn) return;
+  isCalculatingQuote = isLoading;
 
-  if (loading) {
-    isCalculatingQuote = true;
-    btn.disabled = true;
-    btn.classList.add('loading');
-    btn.innerHTML = `
-      <span class="btn-loading-text">
-        <span class="btn-spinner"></span>
-        <span>${message}</span>
-      </span>
-    `;
+  if (btn) {
+    btn.disabled = isLoading;
+    btn.classList.toggle('loading', isLoading);
+    btn.classList.toggle('disabled', isLoading);
+    btn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+  }
 
-    wrappers.forEach(w => w.classList.add('loading'));
-    if (quoteCard?.classList.contains('visible')) quoteCard.classList.add('loading');
-    if (mapSection?.style.display !== 'none') mapSection.classList.add('loading');
-  } else {
-    isCalculatingQuote = false;
-    btn.disabled = false;
-    btn.classList.remove('loading');
-    btn.innerHTML = `
-      <span>🚐</span>
-      <span>Ver recorrido y cotizar</span>
-    `;
+  if (btnText) {
+    btnText.textContent = isLoading ? texto : 'Calcular viaje';
+  }
 
-    wrappers.forEach(w => w.classList.remove('loading'));
-    quoteCard?.classList.remove('loading');
-    mapSection?.classList.remove('loading');
+  if (btnLoader) {
+    btnLoader.style.display = isLoading ? 'inline-flex' : 'none';
+  }
+
+  if (status) {
+    status.textContent = isLoading ? texto : '';
+    status.style.display = isLoading ? 'block' : 'none';
   }
 }
-
 async function resolverPuntoDesdeTexto(texto) {
   if (!texto || texto.trim().length < 3) return null;
 
@@ -2145,9 +2136,10 @@ function construirResumenRuta() {
   // ==========================================
 // CÁLCULO DE RUTA Y COTIZACIÓN
 // ==========================================
-async function calcularRuta() {
+async function async function calcularRuta() {
   if (isCalculatingQuote) return;
 
+  document.getElementById('quoteCard')?.classList.remove('visible');
   const origenInput = document.getElementById('inputOrigen');
   const destinoInput = document.getElementById('inputDestino');
 
