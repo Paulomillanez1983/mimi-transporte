@@ -2223,6 +2223,7 @@ async function calcularRuta() {
   document.getElementById('quoteCard')?.classList.remove('visible');
   state.cotizacion = null;
   state.routeData = null;
+
   const origenInput = document.getElementById('inputOrigen');
   const destinoInput = document.getElementById('inputDestino');
 
@@ -2230,156 +2231,253 @@ async function calcularRuta() {
 
   try {
     // ==========================================
-    // Resolver origen aunque hayan escrito encima
+    // PASO 1: Resolver TODOS los puntos en PARALELO
     // ==========================================
     const textoOrigen = origenInput.value.trim();
-    const origenGuardado = (
-      state.origen?.direccionCorta ||
-      state.origen?.direccion ||
-      ''
-    ).trim();
-
-    if (textoOrigen) {
-      const origenCambio =
-        !state.origen ||
-        textoOrigen.toLowerCase() !== origenGuardado.toLowerCase();
-
-      if (origenCambio) {
-        const origenResuelto = await resolverPuntoDesdeTexto(textoOrigen);
-
-        if (origenResuelto) {
-          state.origen = origenResuelto;
-          origenInput.value = origenResuelto.direccionCorta;
-          origenInput.setAttribute(
-            'title',
-            `${origenResuelto.direccionCorta}${origenResuelto.direccionSecundaria ? ' - ' + origenResuelto.direccionSecundaria : ''}`
-          );
-        } else {
-          state.origen = null;
-        }
-      }
-    } else {
-      state.origen = null;
-    }
-
-    // ==========================================
-    // Resolver destino aunque hayan escrito encima
-    // ==========================================
     const textoDestino = destinoInput.value.trim();
-    const destinoGuardado = (
-      state.destino?.direccionCorta ||
-      state.destino?.direccion ||
-      ''
-    ).trim();
-
-    if (textoDestino) {
-      const destinoCambio =
-        !state.destino ||
-        textoDestino.toLowerCase() !== destinoGuardado.toLowerCase();
-
-      if (destinoCambio) {
-        const destinoResuelto = await resolverPuntoDesdeTexto(textoDestino);
-
-        if (destinoResuelto) {
-          state.destino = destinoResuelto;
-          destinoInput.value = destinoResuelto.direccionCorta;
-          destinoInput.setAttribute(
-            'title',
-            `${destinoResuelto.direccionCorta}${destinoResuelto.direccionSecundaria ? ' - ' + destinoResuelto.direccionSecundaria : ''}`
-          );
-        } else {
-          state.destino = null;
-        }
-      }
-    } else {
-      state.destino = null;
+    
+    // Verificar si necesitamos resolver cada punto
+    const origenGuardado = (state.origen?.direccionCorta || '').toLowerCase();
+    const destinoGuardado = (state.destino?.direccionCorta || '').toLowerCase();
+    
+    const promesas = [];
+    
+    // Origen
+    if (textoOrigen && (!state.origen || textoOrigen.toLowerCase() !== origenGuardado)) {
+      promesas.push(
+        resolverPuntoDesdeTexto(textoOrigen).then(res => {
+          if (res) {
+            state.origen = res;
+            origenInput.value = res.direccionCorta;
+            origenInput.setAttribute('title', `${res.direccionCorta}${res.direccionSecundaria ? ' - ' + res.direccionSecundaria : ''}`);
+          } else {
+            state.origen = null;
+          }
+        })
+      );
     }
-
-    // ==========================================
-    // Resolver paradas escritas manualmente
-    // ==========================================
-    setLoadingCotizacion(true, 'Resolviendo paradas...');
-    const erroresWaypoints = await resolverWaypointsPendientes();
+    
+    // Destino
+    if (textoDestino && (!state.destino || textoDestino.toLowerCase() !== destinoGuardado)) {
+      promesas.push(
+        resolverPuntoDesdeTexto(textoDestino).then(res => {
+          if (res) {
+            state.destino = res;
+            destinoInput.value = res.direccionCorta;
+            destinoInput.setAttribute('title', `${res.direccionCorta}${res.direccionSecundaria ? ' - ' + res.direccionSecundaria : ''}`);
+          } else {
+            state.destino = null;
+          }
+        })
+      );
+    }
+    
+    // Waypoints en paralelo
+    const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
+    const waypointPromesas = waypointInputs.map(input => {
+      const texto = input.value.trim();
+      const wp = state.waypoints.find(w => w.id === input.id);
+      const textoGuardado = (wp?.data?.direccionCorta || '').toLowerCase();
+      
+      if (!texto) {
+        if (wp) wp.data = null;
+        return Promise.resolve();
+      }
+      
+      if (wp?.data && texto.toLowerCase() === textoGuardado) {
+        return Promise.resolve(); // Ya está resuelto
+      }
+      
+      return resolverPuntoDesdeTexto(texto).then(res => {
+        if (res) {
+          if (wp) wp.data = res;
+          input.value = res.direccionCorta;
+          input.setAttribute('title', `${res.direccionCorta}${res.direccionSecundaria ? ' - ' + res.direccionSecundaria : ''}`);
+        } else if (wp) {
+          wp.data = null;
+        }
+      });
+    });
+    
+    // Ejecutar TODO en paralelo
+    await Promise.all([...promesas, ...waypointPromesas]);
 
     if (!state.origen || !state.destino) {
       notif.show('Faltan datos', 'Ingresá origen y destino válidos', 'error');
       return;
     }
 
-    if (erroresWaypoints.length > 0) {
-      notif.show(
-        'Paradas incompletas',
-        'Hay una o más paradas que no pudimos ubicar. Revisalas.',
-        'warning'
-      );
-      return;
-    }
-
-    setLoadingCotizacion(true, 'Calculando recorrido completo...');
+    // ==========================================
+    // PASO 2: Calcular ruta y cotizar (una sola llamada al backend)
+    // ==========================================
+    setLoadingCotizacion(true, 'Calculando ruta...');
 
     const puntos = obtenerPuntosOrdenados();
-
+    
     if (!puntos || puntos.length < 2) {
-      throw new Error('No hay suficientes puntos para calcular la ruta');
+      throw new Error('No hay suficientes puntos');
     }
 
+    // Calcular ruta en paralelo con preparar payload
     const allCoords = puntos.map(p => [Number(p.lng), Number(p.lat)]);
-
-    const osrmUrl =
+    
+    // Llamada única a OSRM (frontend) + preparar datos para backend
+    const osrmPromise = fetch(
       `https://router.project-osrm.org/route/v1/driving/` +
       allCoords.map(c => c.join(',')).join(';') +
-      `?overview=full&geometries=geojson&steps=false`;
+      `?overview=full&geometries=geojson&steps=false`,
+      { headers: { 'Accept': 'application/json' } }
+    );
 
-    const osrmRes = await fetch(osrmUrl, {
-      headers: { 'Accept': 'application/json' }
-    });
+    const payload = {
+      servicio: detectarRetornoAlOrigenFrontend() ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+      origen: puntos[0].direccion,
+      origen_corto: puntos[0].direccionCorta,
+      destino: puntos[puntos.length - 1].direccion,
+      destino_corto: puntos[puntos.length - 1].direccionCorta,
+      origen_lat: Number(puntos[0].lat),
+      origen_lng: Number(puntos[0].lng),
+      destino_lat: Number(puntos[puntos.length - 1].lat),
+      destino_lng: Number(puntos[puntos.length - 1].lng),
+      fechaHora: new Date().toISOString(),
+      waypoints: construirPayloadWaypointsIntermedios(),
+      puntos_ruta: puntos.map((p, index) => ({
+        orden: index,
+        tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+        direccion: p.direccionCorta || p.direccion,
+        direccion_completa: p.direccion,
+        lat: Number(p.lat),
+        lng: Number(p.lng)
+      })),
+      segmentos_totales_front: puntos.length - 1,
+      cantidad_paradas_front: Math.max(0, puntos.length - 2),
+      retorno_al_origen_front: detectarRetornoAlOrigenFrontend(),
+      resumen_ruta_front: construirResumenRuta()
+    };
 
-    if (!osrmRes.ok) {
-      throw new Error(`OSRM respondió ${osrmRes.status}`);
+    // Esperar OSRM
+    const osrmRes = await osrmPromise;
+    
+    let distanceKm, durationMin, geometry;
+    let fallback = false;
+
+    if (osrmRes.ok) {
+      const osrmData = await osrmRes.json();
+      if (osrmData?.code === 'Ok' && osrmData.routes?.[0]) {
+        const route = osrmData.routes[0];
+        distanceKm = Number((route.distance / 1000).toFixed(1));
+        durationMin = Math.round(route.duration / 60);
+        geometry = route.geometry;
+        
+        // Agregar distancia al payload
+        payload.distancia_km = distanceKm;
+        payload.duracion_min = durationMin;
+        payload.distancia_km_total = distanceKm;
+        payload.duracion_min_total = durationMin;
+      } else {
+        fallback = true;
+      }
+    } else {
+      fallback = true;
     }
 
-    const osrmData = await osrmRes.json();
-
-    if (!osrmData || osrmData.code !== 'Ok' || !osrmData.routes?.length) {
-      throw new Error('No se pudo calcular la ruta real');
+    // Si OSRM falló, calcular distancia lineal rápido
+    if (fallback) {
+      let totalDistance = 0;
+      for (let i = 0; i < allCoords.length - 1; i++) {
+        const from = turf.point(allCoords[i]);
+        const to = turf.point(allCoords[i + 1]);
+        totalDistance += turf.distance(from, to, { units: 'kilometers' });
+      }
+      distanceKm = Number((totalDistance * 1.28).toFixed(1));
+      durationMin = Math.max(1, Math.round((distanceKm / 28) * 60));
+      
+      payload.distancia_km = distanceKm;
+      payload.duracion_min = durationMin;
+      payload.distancia_km_total = distanceKm;
+      payload.duracion_min_total = durationMin;
     }
 
-    const route = osrmData.routes[0];
-    const distanceKm = Number((route.distance / 1000).toFixed(1));
-    const durationMin = Math.round(route.duration / 60);
-
+    // ==========================================
+    // PASO 3: Mostrar mapa inmediatamente
+    // ==========================================
     state.routeData = {
-      geometry: route.geometry,
+      geometry: geometry || { type: 'LineString', coordinates: allCoords },
       distance: distanceKm,
       duration: durationMin,
       waypoints: Math.max(0, puntos.length - 2),
       segmentos: Math.max(1, puntos.length - 1),
       retornoAlOrigen: detectarRetornoAlOrigenFrontend(),
       resumenRuta: construirResumenRuta(),
-      puntosOrdenados: puntos
+      puntosOrdenados: puntos,
+      fallback
     };
 
     document.getElementById('mapSection').style.display = 'block';
-    await dibujarRutaEnMapa(route.geometry.coordinates);
-
-    setLoadingCotizacion(true, 'Cotizando recorrido completo...');
-    await cotizarViaje(distanceKm, durationMin);
+    
+    // Dibujar mapa y cotizar en paralelo
+    setLoadingCotizacion(true, 'Cotizando...');
+    
+    await Promise.all([
+      dibujarRutaEnMapa(geometry?.coordinates || allCoords),
+      cotizarViaje(payload) // Pasar payload ya preparado
+    ]);
 
   } catch (err) {
-    console.error('❌ Error calcularRuta:', err);
-    notif.show(
-      'Error',
-      'No se pudo calcular la ruta real. Usamos una estimación.',
-      'warning'
+    console.error('❌ Error:', err);
+    notif.show('Error', 'No se pudo completar la cotización', 'error');
+  } finally {
+    isCalculatingQuote = false;
+    setLoadingCotizacion(false);
+  }
+}
+async function cotizarViaje(payloadPreparado) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s max
+
+    const response = await fetch(CONFIG.COTIZAR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      body: JSON.stringify(payloadPreparado),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok || !data?.exito) {
+      throw new Error(data?.error || 'Error en cotización');
+    }
+
+    mostrarCotizacion(
+      Number(data.precio || 0),
+      Number(data.distancia_km || payloadPreparado.distancia_km),
+      Number(data.duracionEstimadaMin || payloadPreparado.duracion_min)
     );
 
-    setLoadingCotizacion(true, 'Estimando recorrido...');
-    await dibujarRutaFallback();
-     } finally {
-     isCalculatingQuote = false;
-     setLoadingCotizacion(false);
-   }
-}  
+    state.cotizacion = data;
+
+  } catch (err) {
+    console.error('❌ Error cotizando:', err);
+    
+    // Fallback: mostrar precio estimado localmente
+    const km = payloadPreparado.distancia_km;
+    const precioEstimado = Math.round((1700 + km * 650) / 50) * 50;
+    
+    mostrarCotizacion(precioEstimado, km, payloadPreparado.duracion_min);
+    
+    notif.show(
+      'Cotización estimada',
+      'Usamos precio estimado por lentitud del servidor',
+      'warning'
+    );
+  }
+}
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
