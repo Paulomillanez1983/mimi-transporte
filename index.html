@@ -3940,8 +3940,12 @@ async function calcularRuta() {
     
     setLoadingCotizacion(true, 'Dibujando ruta...');
     mostrarMapaInmediato(puntosLimpios, estimacionLocal.coords);
+    console.log("📌 PUNTOS LIMPIOS:", puntosLimpios.map(p => p.direccionCorta || p.direccion));
+
 
     const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
+    console.log("📤 PAYLOAD:", payload);
+
     
     setLoadingCotizacion(true, 'Cotizando...');
     await cotizarViajeOptimizado(payload, requestId);
