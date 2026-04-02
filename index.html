@@ -3371,12 +3371,16 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     }
   });
   
-  input.addEventListener('blur', () => {
-    setTimeout(() => {
+input.addEventListener('blur', (e) => {
+  // No cerrar si el foco se fue al contenedor de sugerencias o a un elemento dentro
+  setTimeout(() => {
+    const active = document.activeElement;
+    const sugerencias = document.getElementById(sugerenciasId);
+    if (!sugerencias?.contains(active) && active !== input) {
       contenedor.style.display = 'none';
-    }, 180);
-  });
-}
+    }
+  }, 200);
+});
   
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
@@ -3861,173 +3865,83 @@ function construirResumenRuta() {
 // ==========================================
 
 async function calcularRuta() {
-  // Cancelar operación anterior si existe
-  if (abortController) {
-    abortController.abort();
-  }
-  abortController = new AbortController();
-  
   if (isCalculatingQuote) return;
-  if (!coordenadasValidas(state.origen?.lat, state.origen?.lng)) {
-  throw new Error('Origen inválido');
-}
-
-if (!coordenadasValidas(state.destino?.lat, state.destino?.lng)) {
-  throw new Error('Destino inválido');
-}
+  
   const requestId = ++currentQuoteRequestId;
   const startTime = performance.now();
 
-  // UI Feedback inmediato
+  // UI Feedback
   setLoadingCotizacion(true, 'Analizando direcciones...');
-  
-  // Ocultar resultados anteriores inmediatamente
   document.getElementById('quoteCard')?.classList.remove('visible');
-  const mapSection = document.getElementById('mapSection');
-  mapSection?.classList.remove('visible');
-
-  state.cotizacion = null;
-  state.routeData = null;
+  document.getElementById('mapSection')?.classList.remove('visible');
 
   try {
+    // 1. OBTENER TEXTOS ACTUALES
     const origenInput = document.getElementById('inputOrigen');
     const destinoInput = document.getElementById('inputDestino');
     const textoOrigen = origenInput?.value?.trim() || '';
     const textoDestino = destinoInput?.value?.trim() || '';
 
-    // ⭐ OPTIMIZADO: Preparar todo para resolución paralela
-    const puntosParaResolver = [];
-    
-    // Verificar si necesitamos resolver origen
+    if (!textoOrigen || !textoDestino) {
+      throw new Error('Completá origen y destino');
+    }
+
+    // 2. RESOLVER ORIGEN SI ES NECESARIO (si cambió el texto o no hay coordenadas)
     const origenActual = normalizarTextoDireccion(textoOrigen);
-    const origenGuardado = normalizarTextoDireccion(
-      state.origen?.direccionCorta || state.origen?.direccion || ''
-    );
+    const origenGuardado = normalizarTextoDireccion(state.origen?.direccionCorta || '');
     
-    if (textoOrigen && (
-      !state.origen ||
-      !coordenadasValidas(state.origen?.lat, state.origen?.lng) ||
-      origenActual !== origenGuardado
-    )) {
-      puntosParaResolver.push({ id: 'origen', texto: textoOrigen, tipo: 'origen' });
+    if (!state.origen || origenActual !== origenGuardado) {
+      console.log('🔍 Resolviendo origen:', textoOrigen);
+      const resuelto = await resolverPuntoDesdeTexto(textoOrigen);
+      if (!resuelto) throw new Error(`No encontramos la dirección de origen: "${textoOrigen}"`);
+      state.origen = resuelto;
+      origenInput.value = resuelto.direccionCorta;
+      origenInput.setAttribute('title', `${resuelto.direccionCorta} - ${resuelto.direccionSecundaria}`);
     }
 
-    // Verificar destino
+    // 3. RESOLVER DESTINO SI ES NECESARIO
     const destinoActual = normalizarTextoDireccion(textoDestino);
-    const destinoGuardado = normalizarTextoDireccion(
-      state.destino?.direccionCorta || state.destino?.direccion || ''
-    );
+    const destinoGuardado = normalizarTextoDireccion(state.destino?.direccionCorta || '');
     
-    if (textoDestino && (
-      !state.destino ||
-      !coordenadasValidas(state.destino?.lat, state.destino?.lng) ||
-      destinoActual !== destinoGuardado
-    )) {
-      puntosParaResolver.push({ id: 'destino', texto: textoDestino, tipo: 'destino' });
+    if (!state.destino || destinoActual !== destinoGuardado) {
+      console.log('🔍 Resolviendo destino:', textoDestino);
+      const resuelto = await resolverPuntoDesdeTexto(textoDestino);
+      if (!resuelto) throw new Error(`No encontramos la dirección de destino: "${textoDestino}"`);
+      state.destino = resuelto;
+      destinoInput.value = resuelto.direccionCorta;
+      destinoInput.setAttribute('title', `${resuelto.direccionCorta} - ${resuelto.direccionSecundaria}`);
     }
 
-    // Waypoints
-    const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
-    const waypointsParaResolver = [];
-    
-    for (const input of waypointInputs) {
-      const texto = input.value.trim();
-      const wp = state.waypoints.find(w => w.id === input.id);
-      
-      if (!texto) {
-        if (wp) wp.data = null;
-        continue;
-      }
+    // 4. RESOLVER WAYPOINTS PENDIENTES
+    await resolverWaypointsPendientes();
 
-      const textoGuardado = normalizarTextoDireccion(
-        wp?.data?.direccionCorta || wp?.data?.direccion || ''
-      );
-      const textoActual = normalizarTextoDireccion(texto);
-      
-      const necesitaResolver = !wp?.data ||
-        !coordenadasValidas(wp?.data?.lat, wp?.data?.lng) ||
-        textoActual !== textoGuardado;
-
-      if (necesitaResolver) {
-        waypointsParaResolver.push({ 
-          id: input.id, 
-          texto, 
-          tipo: 'waypoint',
-          input 
-        });
-      }
+    // 5. AHORA SÍ VALIDAR COORDENADAS
+    if (!coordenadasValidas(state.origen?.lat, state.origen?.lng) || 
+        !coordenadasValidas(state.destino?.lat, state.destino?.lng)) {
+      throw new Error('Coordenadas inválidas después de resolver');
     }
 
-    // ⭐ PARALELIZACIÓN TOTAL: Resolver todos los puntos juntos
-    if (puntosParaResolver.length > 0 || waypointsParaResolver.length > 0) {
-      setLoadingCotizacion(true, 'Geocodificando direcciones...');
-      
-      const todosLosPuntos = [...puntosParaResolver, ...waypointsParaResolver];
-      const resultados = await resolverPuntosParalelos(todosLosPuntos);
-      
-      // Aplicar resultados
-      for (const { id, tipo, resuelto } of resultados) {
-        if (!resuelto) continue;
-        
-        if (tipo === 'origen') {
-          state.origen = resuelto;
-          origenInput.value = resuelto.direccionCorta;
-          origenInput.setAttribute('title', construirTooltip(resuelto));
-        } else if (tipo === 'destino') {
-          state.destino = resuelto;
-          destinoInput.value = resuelto.direccionCorta;
-          destinoInput.setAttribute('title', construirTooltip(resuelto));
-        } else if (tipo === 'waypoint') {
-          const wp = state.waypoints.find(w => w.id === id);
-          const input = waypointsParaResolver.find(w => w.id === id)?.input;
-          if (wp && input) {
-            wp.data = resuelto;
-            input.value = resuelto.direccionCorta;
-            input.setAttribute('title', construirTooltip(resuelto));
-          }
-        }
-      }
-    }
-
-    // Validación rápida
-    if (!state.origen || !state.destino) {
-      notif.show('Faltan datos', 'Ingresá origen y destino válidos', 'error');
-      return;
-    }
-
-    // ⭐ OPTIMIZADO: Construir puntos y limpiar en una pasada
+    // 6. CONTINUAR CON EL CÁLCULO NORMAL...
     const puntos = obtenerPuntosOrdenados();
     if (puntos.length < 2) throw new Error('Ruta incompleta');
 
-    // Limpiar duplicados eficientemente
     const puntosLimpios = limpiarDuplicados(puntos);
-    if (puntosLimpios.length < 2) throw new Error('Ruta inválida después de limpiar duplicados');
-
-    // Calcular estimación local inmediata (no bloqueante)
     const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
     
-    // Mostrar mapa inmediatamente con línea provisional
     setLoadingCotizacion(true, 'Dibujando ruta...');
     mostrarMapaInmediato(puntosLimpios, estimacionLocal.coords);
 
-    // ⭐ OPTIMIZADO: Preparar payload mientras se dibuja el mapa
     const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
     
-    // Cotizar con timeout estricto
     setLoadingCotizacion(true, 'Cotizando...');
     await cotizarViajeOptimizado(payload, requestId);
 
-    console.log(`✅ Cotización completada en ${(performance.now() - startTime).toFixed(0)}ms`);
-
   } catch (err) {
     console.error('❌ Error:', err);
-    if (requestId === currentQuoteRequestId) {
-      notif.show('Error', err.message || 'No se pudo completar la cotización', 'error');
-    }
+    notif.show('Error', err.message, 'error');
   } finally {
     if (requestId === currentQuoteRequestId) {
       setLoadingCotizacion(false);
-      abortController = null;
     }
   }
 }
