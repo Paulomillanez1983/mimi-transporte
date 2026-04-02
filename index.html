@@ -337,6 +337,9 @@ window.supabase = {
     }
   }
 };
+  // ⭐ CACHE para geocodificación (faltaba esto!)
+const geocodingCache = new Map();
+const CACHE_MAX_SIZE = 50;
 // ⭐ NUEVO: Geocodificación via backend (sin CORS)
 async function buscarDireccion(query) {
   if (!query || query.trim().length < 3) return [];
