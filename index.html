@@ -3970,16 +3970,23 @@ function construirTooltip(resuelto) {
 }
 
 function limpiarDuplicados(puntos) {
+  const tolerancia = 0.0008; // ~80 metros
   const resultado = [];
+
+  const mismoPunto = (a, b) => {
+    if (!a || !b) return false;
+    return (
+      Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
+      Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
+    );
+  };
+
   for (const p of puntos) {
     const last = resultado[resultado.length - 1];
-    if (last && 
-        Math.abs(Number(last.lat) - Number(p.lat)) < 0.00001 &&
-        Math.abs(Number(last.lng) - Number(p.lng)) < 0.00001) {
-      continue;
-    }
+    if (last && mismoPunto(last, p)) continue;
     resultado.push(p);
   }
+
   return resultado;
 }
 
