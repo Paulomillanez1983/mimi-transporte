@@ -3009,7 +3009,8 @@ function coordenadasValidas(lat, lng) {
     Math.abs(Number(lat)) <= 90 &&
     Math.abs(Number(lng)) <= 180
   );
-} 
+}
+  
 
 // ==========================================
 // ESTADO GLOBAL
@@ -3800,46 +3801,61 @@ async function withRetry(operation, maxAttempts = CONFIG.RETRY.MAX_ATTEMPTS) {
 
 function detectarRetornoAlOrigenFrontend() {
   const puntos = obtenerPuntosOrdenados();
-  if (puntos.length < 2) return false;
 
-  const origen = puntos[0];
-  const ultimo = puntos[puntos.length - 1];
-  const tolerancia = 0.0008; // ~80m
+  if (!Array.isArray(puntos) || puntos.length < 2) return false;
 
-  const mismoPunto = (a, b) => {
-    if (!a || !b) return false;
+  const puntosValidos = puntos.filter(p =>
+    p &&
+    Number.isFinite(Number(p.lat)) &&
+    Number.isFinite(Number(p.lng))
+  );
 
-    return (
-      Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
-      Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
+  if (puntosValidos.length < 2) return false;
+
+  const origen = puntosValidos[0];
+  const ultimo = puntosValidos[puntosValidos.length - 1];
+
+  const toleranciaKm = 0.08; // 80 metros
+
+  const distancia = (a, b) =>
+    turf.distance(
+      [Number(a.lng), Number(a.lat)],
+      [Number(b.lng), Number(b.lat)],
+      { units: 'kilometers' }
     );
-  };
 
-  // Caso 1: el destino final vuelve al origen
-  if (mismoPunto(origen, ultimo)) return true;
+  // Caso 1: vuelve al origen al final
+  if (distancia(origen, ultimo) <= toleranciaKm) return true;
 
   // Caso 2: alguna parada intermedia vuelve al origen
-  const intermedios = puntos.slice(1, -1);
-  return intermedios.some((p) => mismoPunto(origen, p));
+  const intermedios = puntosValidos.slice(1, -1);
+
+  return intermedios.some(p => distancia(origen, p) <= toleranciaKm);
 }
+  
 function construirResumenRuta() {
   const puntos = obtenerPuntosOrdenados();
-  if (puntos.length < 2) return "Ruta incompleta";
+
+  if (!Array.isArray(puntos) || puntos.length < 2) {
+    return "Ruta incompleta";
+  }
 
   const nombres = puntos.map((p, index) => {
-    if (index === 0) return p.direccionCorta || "Origen";
-    if (index === puntos.length - 1) return p.direccionCorta || "Destino";
-    return p.direccionCorta || `Parada ${index}`;
+    const nombre = p?.direccionCorta || p?.direccion;
+
+    if (index === 0) return nombre || "Origen";
+    if (index === puntos.length - 1) return nombre || "Destino";
+
+    return nombre || `Parada ${index}`;
   });
 
   const resumen = nombres.join(" → ");
 
-  if (detectarRetornoAlOrigenFrontend()) {
-    return `${resumen} ↺`;
-  }
+  const hayRetorno = detectarRetornoAlOrigenFrontend();
 
-  return resumen;
-}  
+  return hayRetorno ? `${resumen} ↺` : resumen;
+}
+  
 // ==========================================
 // CÁLCULO DE RUTA ULTRA-OPTIMIZADO
 // ==========================================
@@ -3852,7 +3868,13 @@ async function calcularRuta() {
   abortController = new AbortController();
   
   if (isCalculatingQuote) return;
-  
+  if (!coordenadasValidas(state.origen?.lat, state.origen?.lng)) {
+  throw new Error('Origen inválido');
+}
+
+if (!coordenadasValidas(state.destino?.lat, state.destino?.lng)) {
+  throw new Error('Destino inválido');
+}
   const requestId = ++currentQuoteRequestId;
   const startTime = performance.now();
 
@@ -4027,32 +4049,45 @@ function limpiarDuplicados(puntos) {
   }
   return resultado;
 }
-  function coordenadasValidas(punto) {
-  return (
-    punto &&
-    typeof punto.lat === "number" &&
-    typeof punto.lng === "number" &&
-    !isNaN(punto.lat) &&
-    !isNaN(punto.lng)
-  );
-}
 
   
 function calcularEstimacionLocal(puntos) {
+  const puntosValidos = puntos.filter(p =>
+    p &&
+    Number.isFinite(Number(p.lat)) &&
+    Number.isFinite(Number(p.lng))
+  );
+
+  if (puntosValidos.length < 2) {
+    throw new Error('No hay suficientes coordenadas válidas');
+  }
+
   let distancia = 0;
-  for (let i = 0; i < puntos.length - 1; i++) {
-    const from = turf.point([Number(puntos[i].lng), Number(puntos[i].lat)]);
-    const to = turf.point([Number(puntos[i + 1].lng), Number(puntos[i + 1].lat)]);
+
+  for (let i = 0; i < puntosValidos.length - 1; i++) {
+    const from = [
+      Number(puntosValidos[i].lng),
+      Number(puntosValidos[i].lat)
+    ];
+
+    const to = [
+      Number(puntosValidos[i + 1].lng),
+      Number(puntosValidos[i + 1].lat)
+    ];
+
     distancia += turf.distance(from, to, { units: 'kilometers' });
   }
-  
+
   const distanciaKm = numeroSeguro((distancia * 1.18).toFixed(1), 0);
   const duracionMin = Math.max(1, Math.round((distanciaKm / 28) * 60));
-  
+
   return {
     distanciaKm,
     duracionMin,
-    coords: puntos.map(p => [numeroSeguro(p.lng), numeroSeguro(p.lat)])
+    coords: puntosValidos.map(p => [
+      numeroSeguro(p.lng),
+      numeroSeguro(p.lat)
+    ])
   };
 }
 function mostrarMapaInmediato(puntos, coords) {
@@ -4510,16 +4545,29 @@ async function dibujarRutaFallback() {
   await initMapa();
 
   const puntos = obtenerPuntosOrdenados();
-  const coords = puntos.map(p => [Number(p.lng), Number(p.lat)]);
+const coords = puntos
+  .map(p => [Number(p.lng), Number(p.lat)])
+  .filter(c =>
+    Number.isFinite(c[0]) &&
+    Number.isFinite(c[1])
+  );
+let totalDistance = 0;
 
-  let totalDistance = 0;
+for (let i = 0; i < coords.length - 1; i++) {
+  const from = coords[i];
+  const to = coords[i + 1];
 
-  for (let i = 0; i < coords.length - 1; i++) {
-    const from = turf.point(coords[i]);
-    const to = turf.point(coords[i + 1]);
-    totalDistance += turf.distance(from, to, { units: 'kilometers' });
+  if (
+    !Array.isArray(from) || !Array.isArray(to) ||
+    !Number.isFinite(from[0]) || !Number.isFinite(from[1]) ||
+    !Number.isFinite(to[0]) || !Number.isFinite(to[1])
+  ) {
+    console.warn('⚠️ Coordenadas inválidas en fallback:', from, to);
+    continue;
   }
 
+  totalDistance += turf.distance(from, to, { units: 'kilometers' });
+}
   const distanceKm = Number((totalDistance * 1.28).toFixed(1));
   const durationMin = Math.max(1, Math.round((distanceKm / 28) * 60));
 
