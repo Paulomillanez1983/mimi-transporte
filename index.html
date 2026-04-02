@@ -2933,6 +2933,9 @@ function coordenadasValidas(lat, lng) {
 // ==========================================
 // ESTADO GLOBAL
 // ==========================================
+// ==========================================
+// ESTADO GLOBAL
+// ==========================================
 let state = {
   origen: null,
   destino: null,
@@ -2946,7 +2949,10 @@ let mapaCliente = null;
 let mapReady = false;
 let isCalculatingQuote = false;
 let currentQuoteRequestId = 0;
-let abortController = null; // ⭐ NUEVO: Para cancelar requests pendientes
+let abortController = null;
+
+// ⭐ AGREGAR ESTA LÍNEA:
+let waypointCounter = 0;
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
