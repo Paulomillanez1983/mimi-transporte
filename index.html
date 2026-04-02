@@ -4059,7 +4059,7 @@ function construirPayloadOptimizado(puntos, estimacion) {
     ruta_calculada_completa: true,
     cotizacion_multitramo: puntos.length > 2
   };
-}
+
 // ⭐ OPTIMIZADO: Cotización con abort controller y timeout estricto
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
