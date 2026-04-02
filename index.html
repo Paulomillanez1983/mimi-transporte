@@ -4035,6 +4035,7 @@ function mostrarMapaInmediato(puntos, coords) {
 
 function construirPayloadOptimizado(puntos, estimacion) {
   const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
+
   const waypointsIntermedios = puntos.length > 2 
     ? puntos.slice(1, -1).map((p, i) => ({
         orden: i + 1,
@@ -4047,19 +4048,31 @@ function construirPayloadOptimizado(puntos, estimacion) {
 
   return {
     servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+
     origen: puntos[0].direccion,
     origen_corto: puntos[0].direccionCorta,
     destino: puntos[puntos.length - 1].direccion,
     destino_corto: puntos[puntos.length - 1].direccionCorta,
+
     origen_lat: Number(puntos[0].lat),
     origen_lng: Number(puntos[0].lng),
     destino_lat: Number(puntos[puntos.length - 1].lat),
     destino_lng: Number(puntos[puntos.length - 1].lng),
+
+    // 🔥 ESTO ES LO QUE TU EDGE FUNCTION NECESITA
+    paradas: waypointsIntermedios.map(w => ({
+      lat: w.lat,
+      lng: w.lng,
+      direccion: w.direccion
+    })),
+
+    // estimación local (opcional)
     distancia_km: estimacion.distanciaKm,
     duracion_min: estimacion.duracionMin,
-    distancia_km_total: estimacion.distanciaKm,
-    duracion_min_total: estimacion.duracionMin,
+
     fechaHora: new Date().toISOString(),
+
+    // info extra para debug / UI
     waypoints: waypointsIntermedios,
     puntos_ruta: puntos.map((p, i) => ({
       orden: i,
@@ -4069,6 +4082,7 @@ function construirPayloadOptimizado(puntos, estimacion) {
       lat: Number(p.lat),
       lng: Number(p.lng)
     })),
+
     segmentos_totales_front: Math.max(1, puntos.length - 1),
     cantidad_paradas_front: Math.max(0, puntos.length - 2),
     retorno_al_origen_front: retornoAlOrigen,
