@@ -511,6 +511,16 @@ body {
   color: var(--text-primary);
 }
 
+/* Evita que overlays internos queden recortados */
+body,
+.container,
+.main-card,
+.route-planner,
+.route-inputs-container,
+.route-input-group {
+  overflow: visible;
+}
+
 /* ==========================================
    HEADER OPTIMIZADO MOBILE
 ========================================== */
@@ -523,8 +533,1178 @@ body {
   border-bottom-right-radius: 25px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   margin-bottom: 40px;
-  /* ⭐ ELIMINADO: isolation: isolate; - Esto creaba un nuevo stacking context */
+  isolation: isolate;
   z-index: 1;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  padding: 0 10px;
+  gap: 10px;
+}
+
+.vehicle-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.vehicle-img {
+  width: clamp(120px, 35vw, 160px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.5));
+  position: absolute;
+  left: -5px;
+  bottom: clamp(-140px, -35vw, -185px);
+  z-index: 10;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.logo-section {
+  color: white;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.logo-title {
+  font-size: clamp(1.4rem, 5vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: 1px;
+  line-height: 1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.logo-subtitle {
+  font-size: clamp(0.65rem, 2vw, 0.75rem);
+  opacity: 0.9;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.header-icons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.shield-icon {
+  width: clamp(36px, 10vw, 40px);
+  height: clamp(36px, 10vw, 40px);
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(1.1rem, 3vw, 1.3rem);
+  color: #4caf50;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ==========================================
+   CONTENEDOR PRINCIPAL RESPONSIVE
+========================================== */
+.container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0 clamp(12px, 4vw, 20px);
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-text {
+  text-align: center;
+  padding: clamp(15px, 4vw, 25px) clamp(12px, 3vw, 20px) clamp(15px, 3vw, 20px);
+}
+
+.hero-title {
+  font-size: clamp(1.25rem, 4.5vw, 1.6rem);
+  color: var(--text-primary);
+  font-weight: 800;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  color: var(--text-secondary);
+  font-size: clamp(0.875rem, 3vw, 1rem);
+  line-height: 1.4;
+}
+
+.main-card {
+  background: var(--card-bg);
+  border-radius: clamp(16px, 5vw, 20px);
+  padding: clamp(16px, 4vw, 20px);
+  box-shadow: var(--sombra);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: visible !important;  /* ⭐ CAMBIO: forzar visible */
+  width: 100%;
+  z-index: auto;  /* ⭐ CAMBIO: era 20, ahora auto */
+}
+
+/* ==========================================
+   PLANIFICADOR DE RUTA ESTILO GOOGLE MAPS
+========================================== */
+.route-planner {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  z-index: auto;  /* ⭐ CAMBIO: era 30, ahora auto */
+}
+
+.route-inputs-container {
+  position: relative;
+  padding-left: 32px;
+  z-index: 30;
+}
+
+.route-timeline {
+  position: absolute;
+  left: 12px;
+  top: 24px;
+  bottom: 24px;
+  width: 2px;
+  background: #e0e0e0;
+  z-index: 1;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 2;
+}
+
+.timeline-dot.origin {
+  background: #4caf50;
+  top: 20px;
+}
+
+.timeline-dot.waypoint {
+  background: #ff9800;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.timeline-dot.destination {
+  background: #f44336;
+  bottom: 20px;
+  top: auto;
+}
+
+/* REEMPLAZA el CSS de route-input-group - asegurar contexto de apilamiento */
+
+.route-input-group {
+  position: relative;
+  margin-bottom: 8px;
+  z-index: auto;  /* ⭐ CAMBIO: era 50, ahora auto para no crear stacking context */
+  /* ⭐ NUEVO: Asegurar que las sugerencias pueden salir */
+  contain: none;
+}
+
+/* ⭐ NUEVO: Cuando el input tiene foco, elevar el grupo */
+.route-input-group:has(.route-input:focus),
+.route-input-group:has(.sugerencias[style*="block"]) {
+  z-index: 2147483646;  /* Justo debajo de las sugerencias */
+}
+.route-input-group:last-child {
+  margin-bottom: 0;
+}
+
+.route-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--input-bg);
+  border-radius: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--input-border);
+  transition: all 0.2s ease;
+  min-height: 58px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  position: relative;
+  z-index: 2;
+}
+
+.route-input-wrapper:focus-within {
+  background: white;
+  border-color: var(--azul-primario);
+  box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.1);
+}
+
+.route-input-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.route-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  min-height: 24px;
+  width: 100%;
+  text-overflow: ellipsis;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.route-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.route-input-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.btn-input-action {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.btn-input-action:hover {
+  background: rgba(0,0,0,0.05);
+  color: #333;
+}
+
+.btn-input-action.delete:hover {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Botón agregar parada */
+.btn-add-stop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-top: 8px;
+  background: transparent;
+  border: 2px dashed #c5c5c7;
+  border-radius: 12px;
+  color: var(--azul-primario);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-add-stop:hover {
+  border-color: var(--azul-primario);
+  background: rgba(21, 101, 192, 0.05);
+}
+
+.btn-add-stop:active {
+  transform: scale(0.98);
+}
+
+/* ==========================================
+   SUGERENCIAS / AUTOCOMPLETE
+========================================== */
+/* REEMPLAZA el CSS de sugerencias - mejorar z-index y posicionamiento */
+
+/* ==========================================
+   SUGERENCIAS / AUTOCOMPLETE
+========================================== */
+.sugerencias {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: var(--suggestion-bg);
+  z-index: 2147483647 !important;  /* ⭐ CAMBIO: máximo z-index posible */
+  max-height: min(280px, 50vh);
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 14px 35px rgba(0,0,0,0.18);
+  display: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+  /* ⭐ NUEVO: Asegurar que no está limitado por padre */
+  transform: translateZ(0);  /* Force new compositing layer */
+}
+
+/* ⭐ NUEVO: Cuando está visible, asegurar máxima prioridad */
+.sugerencias.visible {
+  display: block;
+  z-index: 2147483647 !important;
+}
+.sugerencia-item {
+  padding: 14px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  touch-action: manipulation;
+  line-height: 1.3;
+  user-select: none;
+}
+
+.sugerencia-item:hover,
+.sugerencia-item:active {
+  background: #f4f4f7;
+}
+
+.sugerencia-item:last-child {
+  border-bottom: none;
+}
+
+.sugerencia-icon {
+  width: 32px;
+  height: 32px;
+  background: #e3f2fd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.sugerencia-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.sugerencia-main {
+  color: #111;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sugerencia-secondary {
+  color: #888;
+  font-size: 12px;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================
+   MAPA Y RUTA
+========================================== */
+.map-section {
+  margin-top: 20px;
+  border-radius: clamp(16px, 5vw, 20px);
+  overflow: hidden;
+  box-shadow: var(--sombra);
+  background: white;
+  position: relative;
+  z-index: 1;
+}
+
+/* Card del mapa */
+#mapSection {
+  background: var(--card-bg, #fff);
+  border-radius: 24px;
+  padding: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  overflow: hidden;
+  margin-top: 20px;
+  position: relative;
+}
+
+/* Mapa más grande */
+.map-container {
+  width: 100%;
+  height: clamp(380px, 55vh, 480px);
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #e9eef5;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  min-height: 340px;
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* Previene glitches de render al iniciar */
+.maplibregl-map,
+.maplibregl-canvas,
+.maplibregl-canvas-container {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 18px;
+}
+
+.maplibregl-canvas {
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  #map {
+    min-height: 340px;
+    border-radius: 16px;
+  }
+
+  .map-container {
+    height: clamp(340px, 50vh, 420px);
+    border-radius: 16px;
+  }
+
+  .maplibregl-map,
+  .maplibregl-canvas,
+  .maplibregl-canvas-container {
+    border-radius: 16px;
+  }
+}
+
+body.dark #mapSection,
+.dark #mapSection {
+  background: rgba(20, 20, 28, 0.95);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+}
+
+.map-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.map-btn {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.map-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* ==========================================
+   CARD DE COTIZACIÓN
+========================================== */
+.quote-card {
+  background: var(--card-bg);
+  border-radius: clamp(16px, 5vw, 20px);
+  padding: clamp(20px, 5vw, 24px);
+  box-shadow: var(--sombra);
+  margin-top: 20px;
+  display: none;
+  position: relative;
+  z-index: 5;
+}
+
+.quote-card.visible {
+  display: block;
+  animation: fadeInUp 0.4s ease;
+}
+
+.quote-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+}
+
+.quote-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+}
+
+.quote-route-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.quote-main {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.quote-price {
+  font-size: clamp(2.5rem, 8vw, 3.5rem);
+  font-weight: 800;
+  color: var(--azul-oscuro);
+  line-height: 1;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.quote-price-label {
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.quote-details {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 20px 0;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.quote-detail {
+  text-align: center;
+}
+
+.quote-detail-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 4px;
+}
+
+.quote-detail-label {
+  font-size: 12px;
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quote-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--azul-primario), var(--azul-oscuro));
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(21, 101, 192, 0.3);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  touch-action: manipulation;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(21, 101, 192, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 14px;
+  background: white;
+  color: #333;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-secondary:hover {
+  border-color: var(--azul-primario);
+  color: var(--azul-primario);
+  background: rgba(21, 101, 192, 0.05);
+}
+
+/* ==========================================
+   BOTÓN COTIZAR
+========================================== */
+.btn-calcular {
+  width: 100%;
+  padding: clamp(16px, 4vw, 18px);
+  margin-top: 20px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--azul-primario), var(--azul-oscuro));
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  touch-action: manipulation;
+  min-height: 56px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-calcular:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+.btn-calcular:active {
+  transform: translateY(0);
+}
+
+.btn-calcular:disabled,
+.btn-calcular.loading {
+  opacity: 0.9;
+  cursor: not-allowed;
+  transform: none;
+  pointer-events: none;
+}
+
+.btn-calcular.loading {
+  background: linear-gradient(135deg, #1b5eb8, #163b73);
+}
+
+/* Contenido normal del botón */
+.btn-calcular .btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: opacity 0.2s;
+}
+
+.btn-calcular.loading .btn-content {
+  opacity: 0;
+}
+
+/* Loader (spinner) */
+.btn-calcular .btn-loader {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-calcular.loading .btn-loader {
+  display: flex;
+}
+
+.btn-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================
+   TOAST NOTIFICATIONS
+========================================== */
+.toast-container {
+  position: fixed;
+  top: calc(20px + var(--safe-top));
+  right: 20px;
+  left: 20px;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+  pointer-events: none;
+  padding: 0 var(--safe-right) 0 var(--safe-left);
+}
+
+.toast {
+  background: white;
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideInDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 4px solid var(--azul-primario);
+  pointer-events: all;
+  position: relative;
+  min-height: 60px;
+}
+
+.toast.success { border-left-color: var(--exito); }
+.toast.info { border-left-color: var(--info); }
+.toast.warning { border-left-color: var(--naranja); }
+.toast.error { border-left-color: #f44336; }
+
+.toast-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.toast-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-weight: 700;
+  color: #1a1a1a;
+  font-size: clamp(0.85rem, 3vw, 0.9rem);
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.toast-message {
+  color: #666;
+  font-size: clamp(0.8rem, 2.8vw, 0.85rem);
+  line-height: 1.3;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.2s;
+  flex-shrink: 0;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==========================================
+   FOOTER
+========================================== */
+.footer {
+  text-align: center;
+  padding: clamp(20px, 5vw, 25px) clamp(15px, 4vw, 20px) calc(20px + var(--safe-bottom));
+  color: #666;
+  font-size: clamp(0.8rem, 3vw, 0.85rem);
+  width: 100%;
+}
+
+.footer-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  padding: 10px 20px;
+  border-radius: 50px;
+  font-weight: 700;
+  color: var(--azul-primario);
+  margin: 12px 0;
+  box-shadow: var(--sombra);
+  text-decoration: none;
+  touch-action: manipulation;
+  min-height: 44px;
+}
+
+/* ==========================================
+   ANIMACIONES
+========================================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+@media (max-width: 320px) {
+  html { font-size: 14px; }
+  .vehicle-img { width: 100px; bottom: -100px; }
+}
+
+@media (min-width: 768px) {
+  .container { max-width: 600px; }
+  .vehicle-img { width: 180px; bottom: -180px; left: -10px; }
+}
+
+@media (min-width: 1024px) {
+  .container { max-width: 640px; }
+  .vehicle-img { width: 200px; bottom: -200px; }
+}
+
+/* ==========================================
+   DARK MODE
+========================================== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gris-fondo: #0f1115;
+    --card-bg: #181b22;
+    --text-primary: #f5f7fb;
+    --text-secondary: #b8c0cc;
+    --text-muted: #8d96a3;
+    --border-soft: rgba(255,255,255,0.08);
+    --input-bg: #222733;
+    --input-border: rgba(255,255,255,0.08);
+    --suggestion-bg: #1d2330;
+    --suggestion-hover: #2a3140;
+    --footer-bg: transparent;
+    --sombra: 0 4px 20px rgba(0,0,0,0.28);
+    --sombra-hover: 0 8px 30px rgba(0,0,0,0.38);
+  }
+
+  body {
+    background: var(--gris-fondo);
+    color: var(--text-primary);
+  }
+
+  .main-card,
+  .quote-card,
+  .map-section,
+  .footer-phone,
+  .toast {
+    background: var(--card-bg);
+    color: var(--text-primary);
+  }
+
+  .hero-title,
+  .quote-title,
+  .quote-detail-value,
+  .quote-price,
+  .sugerencia-main,
+  .toast-title {
+    color: var(--text-primary);
+  }
+
+  .hero-subtitle,
+  .quote-price-label,
+  .quote-detail-label,
+  .toast-message,
+  .footer,
+  .sugerencia-secondary {
+    color: var(--text-secondary);
+  }
+
+  .route-input-wrapper {
+    background: var(--input-bg);
+    border-color: var(--input-border);
+  }
+
+  .route-input-wrapper:focus-within {
+    background: #262d3b;
+    border-color: var(--azul-claro);
+    box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.15);
+  }
+
+  .route-input {
+    color: var(--text-primary);
+  }
+
+  .route-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .btn-secondary {
+    background: #1f2430;
+    color: var(--text-primary);
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .btn-secondary:hover {
+    background: #262d3b;
+  }
+
+  .quote-details {
+    background: #202632;
+  }
+
+  .sugerencias {
+    background: var(--suggestion-bg);
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .sugerencia-item {
+    border-bottom-color: rgba(255,255,255,0.06);
+  }
+
+  .sugerencia-item:hover,
+  .sugerencia-item:active {
+    background: var(--suggestion-hover);
+  }
+
+  .sugerencia-icon {
+    background: rgba(66, 165, 245, 0.15);
+  }
+
+  .btn-add-stop {
+    border-color: rgba(255,255,255,0.16);
+    color: var(--azul-claro);
+  }
+
+  .btn-add-stop:hover {
+    background: rgba(66, 165, 245, 0.08);
+    border-color: var(--azul-claro);
+  }
+
+  .map-btn {
+    background: #1f2430;
+    color: white;
+  }
+
+  .route-timeline {
+    background: rgba(255,255,255,0.14);
+  }
+
+  .footer-phone {
+    color: var(--azul-claro);
+  }
+}
+
+/* ==========================================
+   EXTRA MOBILE FINO
+========================================== */
+@media (max-width: 480px) {
+  .header {
+    padding: calc(16px + var(--safe-top)) 14px 34px 14px;
+    margin-bottom: 28px;
+  }
+
+  .header-content {
+    gap: 8px;
+    padding: 0 4px;
+  }
+
+  .vehicle-img {
+    width: clamp(100px, 30vw, 130px);
+    left: -8px;
+    bottom: clamp(-105px, -28vw, -130px);
+  }
+
+  .logo-title {
+    font-size: clamp(1.2rem, 5vw, 1.5rem);
+  }
+
+  .logo-subtitle {
+    font-size: 0.65rem;
+    letter-spacing: 1.2px;
+  }
+
+  .main-card,
+  .quote-card {
+    border-radius: 18px;
+    padding: 16px;
+  }
+
+  .route-inputs-container {
+    padding-left: 28px;
+  }
+
+  .route-timeline {
+    left: 10px;
+  }
+
+  .quote-details {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .quote-detail {
+    padding: 10px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 12px;
+  }
+
+  .footer-phone {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .quote-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .quote-route-info {
+    justify-content: flex-start;
+  }
+}
+</style>
+<style>
+/* ==========================================
+   VARIABLES GLOBALES
+========================================== */
+:root {
+  --azul-oscuro: #1e3c72;
+  --azul-primario: #1565c0;
+  --azul-claro: #42a5f5;
+  --verde-wa: #25D366;
+  --verde-oscuro: #128c7e;
+  --rosa: #e91e63;
+  --naranja: #ff9800;
+  --gris-fondo: #f5f7fa;
+  --blanco: #ffffff;
+  --sombra: 0 4px 20px rgba(0,0,0,0.08);
+  --sombra-hover: 0 8px 30px rgba(0,0,0,0.12);
+  --exito: #4caf50;
+  --info: #2196f3;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --card-bg: #ffffff;
+  --text-primary: #111111;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --border-soft: rgba(0,0,0,0.08);
+  --input-bg: #f4f4f7;
+  --input-border: rgba(0,0,0,0.06);
+  --suggestion-bg: #ffffff;
+  --suggestion-hover: #f4f4f7;
+  --footer-bg: transparent;
+}
+
+/* ==========================================
+   RESET Y BASE MOBILE-FIRST
+========================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--gris-fondo);
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  padding-bottom: calc(30px + var(--safe-bottom));
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  position: relative;
+  color: var(--text-primary);
+}
+
+/* ==========================================
+   HEADER OPTIMIZADO MOBILE
+========================================== */
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: calc(20px + var(--safe-top)) 20px 40px 20px;
+  position: relative;
+  overflow: visible;  /* ⭐ CAMBIO: era 'overflow: visible' pero ahora explícito */
+  border-bottom-left-radius: 25px;
+  border-bottom-right-radius: 25px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  margin-bottom: 40px;
+  /* ⭐ ELIMINADO: isolation: isolate; - Esto creaba un nuevo stacking context */
+  z-index: 1;  /* ⭐ NUEVO: z-index bajo para que las sugerencias pasen por encima */
 }
 
 .header-content {
@@ -650,9 +1830,9 @@ body {
   box-shadow: var(--sombra);
   margin-bottom: 20px;
   position: relative;
-  overflow: visible !important;
+  overflow: visible !important;  /* ⭐ CAMBIO: forzar visible */
   width: 100%;
-  z-index: auto;
+  z-index: auto;  /* ⭐ CAMBIO: era 20, ahora auto */
 }
 
 /* ==========================================
@@ -663,7 +1843,7 @@ body {
   flex-direction: column;
   gap: 0;
   position: relative;
-  z-index: auto;
+  z-index: auto;  /* ⭐ CAMBIO: era 30, ahora auto */
 }
 
 .route-inputs-container {
@@ -712,14 +1892,7 @@ body {
 .route-input-group {
   position: relative;
   margin-bottom: 8px;
-  z-index: auto;
-  contain: none;
-}
-
-/* ⭐ NUEVO: Cuando el input tiene foco, elevar el grupo */
-.route-input-group:has(.route-input:focus),
-.route-input-group:has(.sugerencias.visible) {
-  z-index: 2147483646;
+  z-index: 2;
 }
 
 .route-input-group:last-child {
@@ -828,32 +2001,25 @@ body {
   transform: scale(0.98);
 }
 
-/* ==========================================
-   SUGERENCIAS / AUTOCOMPLETE
-========================================== */
+/* Sugerencias */
 .sugerencias {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   width: 100%;
   background: var(--suggestion-bg);
-  z-index: 2147483647 !important;
+  z-index: 99999 !important;
   max-height: min(280px, 50vh);
   overflow-y: auto;
-  overflow-x: hidden;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,0.08);
   box-shadow: 0 14px 35px rgba(0,0,0,0.18);
   display: none;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  pointer-events: auto;
-  transform: translateZ(0);
 }
 
 .sugerencias.visible {
   display: block;
-  z-index: 2147483647 !important;
 }
 
 .sugerencia-item {
@@ -1762,8 +2928,7 @@ const CONFIG = {
     DELAY_MS: 500
   }
 };
-
-function normalizarTextoDireccion(txt) {
+ function normalizarTextoDireccion(txt) {
   return String(txt || '')
     .trim()
     .toLowerCase()
@@ -1791,6 +2956,9 @@ function coordenadasValidas(lat, lng) {
 // ==========================================
 // ESTADO GLOBAL
 // ==========================================
+// ==========================================
+// ESTADO GLOBAL
+// ==========================================
 let state = {
   origen: null,
   destino: null,
@@ -1808,7 +2976,6 @@ let abortController = null;
 
 // ⭐ AGREGAR ESTA LÍNEA:
 let waypointCounter = 0;
-
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -1844,11 +3011,11 @@ class NotificationSystem {
 }
 
 const notif = new NotificationSystem();
-
 function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
   const btn = document.getElementById('btnCalcular');
+  const btnContent = btn?.querySelector('.btn-content');  // ✅ .btn-content (no .btn-text)
   const btnLoader = btn?.querySelector('.btn-loader');
-  const loaderText = btn?.querySelector('.btn-loader span:last-child');
+  const loaderText = btn?.querySelector('.btn-loader span:last-child'); // texto del spinner
 
   isCalculatingQuote = isLoading;
 
@@ -1858,10 +3025,15 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
     btn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
   }
 
+  // El contenido normal se oculta con CSS (.loading .btn-content { opacity: 0 })
+  // No necesitamos cambiar el texto, solo togglear la clase loading
+
+  // Actualizar texto del spinner si se proporciona
   if (loaderText && texto) {
     loaderText.textContent = texto;
   }
 
+  // Deshabilitar otros inputs durante carga
   const inputs = document.querySelectorAll('.route-input, .btn-input-action, .btn-add-stop');
   inputs.forEach(input => {
     input.disabled = isLoading;
@@ -1871,7 +3043,6 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
     }
   });
 }
-
 async function resolverPuntoDesdeTexto(texto) {
   if (!texto || texto.trim().length < 3) return null;
 
@@ -1896,7 +3067,6 @@ async function resolverPuntoDesdeTexto(texto) {
     return null;
   }
 }
-
 async function resolverWaypointsPendientes() {
   const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
   const errores = [];
@@ -1911,6 +3081,7 @@ async function resolverWaypointsPendientes() {
       continue;
     }
 
+    // Si ya había data pero el texto visible cambió, invalidamos
     const textoActualNormalizado = texto.toLowerCase().trim();
     const textoGuardadoNormalizado = (
       wp?.data?.direccionCorta ||
@@ -1955,16 +3126,14 @@ function construirPayloadWaypointsIntermedios() {
     lng: Number(p.lng)
   }));
 }
-
 // ==========================================
-// GEOCODIFICACIÓN MEJORADA
+// GEOCODIFICACIÓN
 // ==========================================
-
 // ⭐ NUEVO: Detectar si el query tiene número de casa
 function tieneNumeroCasa(query) {
+  // Patrones comunes: "calle 123", "av. siempre viva 742", "pozo de la loma 6028"
   return /\d+/.test(query) && /[a-záéíóúñ\s]{3,}/i.test(query);
 }
-
 // ⭐ NUEVO: Extraer número y calle del query
 function extraerComponentesDireccion(query) {
   const match = query.match(/^(.+?)\s+(\d+)$/);
@@ -1978,7 +3147,8 @@ function extraerComponentesDireccion(query) {
   return null;
 }
 
-// ⭐ OPTIMIZADO: Geocodificación con búsqueda de POIs y direcciones exactas
+  
+// ⭐ OPTIMIZADO: Geocodificación con cache simple y timeout
 const geocodingCache = new Map();
 const CACHE_MAX_SIZE = 50;
 
@@ -1987,86 +3157,26 @@ async function buscarDireccion(query) {
   
   const cacheKey = query.trim().toLowerCase();
   
+  // Cache hit
   if (geocodingCache.has(cacheKey)) {
     console.log('🎯 Cache hit:', query);
     return geocodingCache.get(cacheKey);
   }
   
+  // Limpiar cache si está muy grande (LRU simple)
   if (geocodingCache.size >= CACHE_MAX_SIZE) {
     const firstKey = geocodingCache.keys().next().value;
     geocodingCache.delete(firstKey);
   }
 
   const limpio = query.trim();
-  
-  const esBusquedaLugar = /colegio|club|escuela|instituto|gimnasio|banco|farmacia|supermercado|shopping|hospital|clínica|iglesia|parque|plaza/i.test(limpio);
-  
-  const componentes = extraerComponentesDireccion(limpio);
-  const tieneNumero = !!componentes;
-
-  try {
-    let resultados = [];
-    
-    if (esBusquedaLugar) {
-      console.log('🔍 Buscando lugar/POI:', limpio);
-      const pois = await buscarEnCapa(limpio, 'poi');
-      resultados = [...resultados, ...pois];
-    }
-    
-    if (tieneNumero && componentes) {
-      console.log('🔍 Buscando dirección exacta:', componentes.calle, componentes.numero);
-      const direccionExacta = await buscarDireccionEstructurada(componentes);
-      if (direccionExacta.length > 0) {
-        resultados = [...direccionExacta, ...resultados];
-      }
-    }
-    
-    console.log('🔍 Buscando en capa address:', limpio);
-    const direcciones = await buscarEnCapa(limpio, 'address');
-    resultados = [...resultados, ...direcciones];
-    
-    if (tieneNumero && componentes) {
-      const numeroBuscado = componentes.numero;
-      resultados.sort((a, b) => {
-        const aTieneNumero = a.address?.house_number === numeroBuscado;
-        const bTieneNumero = b.address?.house_number === numeroBuscado;
-        if (aTieneNumero && !bTieneNumero) return -1;
-        if (!aTieneNumero && bTieneNumero) return 1;
-        return 0;
-      });
-    }
-    
-    const resultadosFiltrados = resultados
-      .filter(r => {
-        const display = (r.display_name || "").toLowerCase();
-        return (
-          display.includes("córdoba") ||
-          display.includes("cordoba") ||
-          display.includes("villa allende") ||
-          display.includes("argentina")
-        );
-      })
-      .slice(0, 5);
-
-    geocodingCache.set(cacheKey, resultadosFiltrados);
-    
-    return resultadosFiltrados;
-    
-  } catch (err) {
-    console.warn('⚠️ Geocoding error:', err.message);
-    return [];
-  }
-}
-
-async function buscarEnCapa(query, layer) {
-  const queryConContexto = /cordoba|córdoba|villa allende|argentina/i.test(query)
-    ? query
-    : `${query}, Córdoba, Argentina`;
+  const queryConContexto = /cordoba|córdoba|villa allende|argentina/i.test(limpio)
+    ? limpio
+    : `${limpio}, Córdoba, Argentina`;
 
   const url = `https://nominatim.openstreetmap.org/search?` +
-    `format=jsonv2&limit=5&countrycodes=ar&addressdetails=1&` +
-    `accept-language=es-AR&dedupe=1&namedetails=1&` +
-    `layer=${layer}&` +
+    `format=jsonv2&limit=5&countrycodes=ar&addressdetails=1&` + // ⭐ Reducido a 5 resultados
+    `accept-language=es-AR&dedupe=1&` +
     `viewbox=-64.45,-31.28,-63.95,-31.55&bounded=0&` +
     `q=${encodeURIComponent(queryConContexto)}`;
 
@@ -2082,44 +3192,31 @@ async function buscarEnCapa(query, layer) {
     if (!res.ok) return [];
     
     const data = await res.json();
-    return Array.isArray(data) ? data : [];
-  } catch (err) {
-    console.warn(`⚠️ Error capa ${layer}:`, err.message);
-    return [];
-  }
-}
+    const resultados = (Array.isArray(data) ? data : [])
+      .filter(r => {
+        const display = (r.display_name || "").toLowerCase();
+        return (
+          display.includes("córdoba") ||
+          display.includes("cordoba") ||
+          display.includes("villa allende") ||
+          display.includes("argentina")
+        );
+      })
+      .slice(0, 3); // ⭐ Solo top 3
 
-async function buscarDireccionEstructurada(componentes) {
-  const { calle, numero } = componentes;
-  
-  const url = `https://nominatim.openstreetmap.org/search?` +
-    `format=jsonv2&limit=3&countrycodes=ar&addressdetails=1&` +
-    `accept-language=es-AR&dedupe=1&` +
-    `street=${encodeURIComponent(numero + ' ' + calle)}&` +
-    `city=Córdoba&` +
-    `state=Córdoba&` +
-    `country=Argentina`;
-
-  try {
-    const res = await fetchWithTimeout(url, {
-      headers: {
-        "Accept": "application/json",
-        "Accept-Language": "es-AR,es;q=0.9",
-        "User-Agent": "MIMI-Transporte/1.0"
-      }
-    }, CONFIG.TIMEOUTS.GEOCODING);
-
-    if (!res.ok) return [];
+    // Guardar en cache
+    geocodingCache.set(cacheKey, resultados);
     
-    const data = await res.json();
-    return Array.isArray(data) ? data : [];
+    return resultados;
   } catch (err) {
-    console.warn('⚠️ Error búsqueda estructurada:', err.message);
+    console.warn('⚠️ Geocoding timeout/error:', err.message);
     return [];
   }
 }
 
+// ⭐ OPTIMIZADO: Resolver múltiples puntos en paralelo con límite de concurrencia
 async function resolverPuntosParalelos(puntosParaResolver) {
+  // Procesar en chunks de 3 para no saturar Nominatim
   const CHUNK_SIZE = 3;
   const resultados = [];
   
@@ -2175,6 +3272,7 @@ function formatearDireccionCorta(r) {
     "";
   const provincia = addr.state || "Córdoba";
 
+  // Si es un lugar reconocido (colegio, negocio, punto)
   if (nombreLugar && calle) {
     return `${nombreLugar} · ${calle}${numero ? " " + numero : ""}`;
   }
@@ -2183,11 +3281,11 @@ function formatearDireccionCorta(r) {
     return `${calle}${numero ? " " + numero : ""}${barrio ? ", " + barrio : ""}`;
   }
 
+  // fallback inteligente
   const partes = r.display_name.split(",").map(p => p.trim()).filter(Boolean);
   return partes.slice(0, 2).join(", ");
 }
-
-function formatearDireccionSecundaria(r) {
+  function formatearDireccionSecundaria(r) {
   if (!r) return "";
 
   const addr = r.address || {};
@@ -2212,7 +3310,6 @@ function formatearDireccionSecundaria(r) {
     .filter((v, i, arr) => arr.indexOf(v) === i)
     .join(" · ");
 }
-
 // ==========================================
 // AUTOCOMPLETE
 // ==========================================
@@ -2229,10 +3326,11 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     clearTimeout(timer);
     const texto = input.value.trim();
 
+    // ⚠️ importante: si el usuario escribe manualmente, invalidamos selección previa
     onSelect(null);
 
     if (texto.length < 3) {
-      contenedor.classList.remove('visible');
+      contenedor.style.display = 'none';
       contenedor.innerHTML = '';
       return;
     }
@@ -2264,7 +3362,7 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
           `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
         );
 
-        contenedor.classList.remove('visible');
+        contenedor.style.display = 'none';
       });
     }, 300);
   });
@@ -2277,7 +3375,7 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
   
   input.addEventListener('blur', () => {
     setTimeout(() => {
-      contenedor.classList.remove('visible');
+      contenedor.style.display = 'none';
     }, 180);
   });
 }
@@ -2286,7 +3384,7 @@ function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
 
   if (!resultados || resultados.length === 0) {
-    contenedor.classList.remove('visible');
+    contenedor.style.display = 'none';
     return;
   }
 
@@ -2311,9 +3409,8 @@ function mostrarSugerencias(contenedor, resultados, callback) {
     contenedor.appendChild(item);
   });
 
-  contenedor.classList.add('visible');
+  contenedor.style.display = 'block';
 }
-
 // ==========================================
 // WAYPOINTS
 // ==========================================
@@ -2340,6 +3437,7 @@ function agregarWaypoint() {
        placeholder="Parada ${numeroParada}" 
        autocomplete="street-address"
        autocapitalize="words"
+      
        spellcheck="false"
        enterkeyhint="search">
       <div class="route-input-actions">
@@ -2368,7 +3466,6 @@ function agregarWaypoint() {
     document.getElementById(waypointId)?.focus();
   }, 100);
 }
-
 function eliminarWaypoint(id) {
   const group = document.getElementById(`group-${id}`);
   if (group) group.remove();
@@ -2378,14 +3475,12 @@ function eliminarWaypoint(id) {
   actualizarTimeline();
   renumerarWaypoints();
 }
-  
-function renumerarWaypoints() {
+  function renumerarWaypoints() {
   const inputs = document.querySelectorAll('#waypointsContainer .waypoint-input');
   inputs.forEach((input, index) => {
     input.placeholder = `Parada ${index + 1}`;
   });
 }
-
 function actualizarTimeline() {
   const timeline = document.getElementById('routeTimeline');
   if (!timeline) return;
@@ -2403,9 +3498,11 @@ function actualizarTimeline() {
 
   timeline.innerHTML = dots;
 }  
-
+  // ==========================================
+// MAPA
 // ==========================================
-// MAPA OPTIMIZADO
+// ==========================================
+// MAPA OPTIMIZADO (sin cambios mayores)
 // ==========================================
 
 async function initMapa() {
@@ -2485,54 +3582,56 @@ async function dibujarRutaEnMapa(coords) {
 
   if (!mapaCliente || !mapReady) return;
 
+  // Limpiar capas anteriores
   if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
   if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
 
+  // Limpiar marcadores
   state.markers.forEach(m => m.remove());
   state.markers = [];
 
+  // Agregar marcadores
   const puntos = [
     state.origen,
     ...state.waypoints.filter(w => w.data).map(w => w.data),
     state.destino
   ].filter(Boolean);
 
-  puntos.forEach((punto, index) => {
-    const el = document.createElement('div');
-    const isOrigin = index === 0;
-    const isDest = index === puntos.length - 1;
+puntos.forEach((punto, index) => {
+  const el = document.createElement('div');
+  const isOrigin = index === 0;
+  const isDest = index === puntos.length - 1;
 
-    let label = '';
-    if (isOrigin) label = 'A';
-    else if (isDest) label = 'B';
-    else label = String(index);
+  let label = '';
+  if (isOrigin) label = 'A';
+  else if (isDest) label = 'B';
+  else label = String(index);
 
-    el.innerHTML = `
-      <div style="
-        width: 28px; 
-        height: 28px; 
-        background: ${isOrigin ? '#4caf50' : isDest ? '#f44336' : '#ff9800'}; 
-        border-radius: 50%; 
-        border: 3px solid white; 
-        box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 12px;
-      ">
-        ${label}
-      </div>
-    `;
+  el.innerHTML = `
+    <div style="
+      width: 28px; 
+      height: 28px; 
+      background: ${isOrigin ? '#4caf50' : isDest ? '#f44336' : '#ff9800'}; 
+      border-radius: 50%; 
+      border: 3px solid white; 
+      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+    ">
+      ${label}
+    </div>
+  `;
 
-    const marker = new maplibregl.Marker({ element: el })
-      .setLngLat([punto.lng, punto.lat])
-      .addTo(mapaCliente);
+  const marker = new maplibregl.Marker({ element: el })
+    .setLngLat([punto.lng, punto.lat])
+    .addTo(mapaCliente);
 
-    state.markers.push(marker);
-  });
-
+  state.markers.push(marker);
+});
   const coordinates = coords || puntos.map(p => [p.lng, p.lat]);
 
   if (!coordinates || coordinates.length < 2) return;
@@ -2573,7 +3672,6 @@ async function dibujarRutaEnMapa(coords) {
     duration: 1000
   });
 }
-
 function centrarEnRuta() {
   if (!mapaCliente) return;
 
@@ -2596,7 +3694,6 @@ function centrarEnRuta() {
     duration: 600
   });
 }
-
 function reiniciarRuta() {
   document.getElementById('inputOrigen').value = '';
   document.getElementById('inputDestino').value = '';
@@ -2604,7 +3701,7 @@ function reiniciarRuta() {
 
   document.querySelectorAll('.sugerencias').forEach(el => {
     el.innerHTML = '';
-    el.classList.remove('visible');
+    el.style.display = 'none';
   });
 
   if (mapaCliente && mapReady) {
@@ -2655,10 +3752,11 @@ function obtenerPuntosOrdenados() {
   ].filter(Boolean);
 }
   
-// ==========================================
+  // ==========================================
 // UTILIDADES DE RUTA MULTITRAYECTO
 // ==========================================
 
+  // ⭐ NUEVO: Fetch con timeout y abort controller
 async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
@@ -2679,6 +3777,7 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
   }
 }
 
+// ⭐ NUEVO: Retry wrapper para operaciones críticas
 async function withRetry(operation, maxAttempts = CONFIG.RETRY.MAX_ATTEMPTS) {
   let lastError;
   
@@ -2688,6 +3787,7 @@ async function withRetry(operation, maxAttempts = CONFIG.RETRY.MAX_ATTEMPTS) {
     } catch (error) {
       lastError = error;
       
+      // No retry on 4xx errors (client errors)
       if (error.status >= 400 && error.status < 500) {
         throw error;
       }
@@ -2707,7 +3807,7 @@ function detectarRetornoAlOrigenFrontend() {
 
   const origen = puntos[0];
   const ultimo = puntos[puntos.length - 1];
-  const tolerancia = 0.0008;
+  const tolerancia = 0.0008; // ~80m
 
   const mismoPunto = (a, b) => {
     if (!a || !b) return false;
@@ -2718,12 +3818,13 @@ function detectarRetornoAlOrigenFrontend() {
     );
   };
 
+  // Caso 1: el destino final vuelve al origen
   if (mismoPunto(origen, ultimo)) return true;
 
+  // Caso 2: alguna parada intermedia vuelve al origen
   const intermedios = puntos.slice(1, -1);
   return intermedios.some((p) => mismoPunto(origen, p));
 }
-
 function construirResumenRuta() {
   const puntos = obtenerPuntosOrdenados();
   if (puntos.length < 2) return "Ruta incompleta";
@@ -2742,12 +3843,12 @@ function construirResumenRuta() {
 
   return resumen;
 }  
-
 // ==========================================
 // CÁLCULO DE RUTA ULTRA-OPTIMIZADO
 // ==========================================
 
 async function calcularRuta() {
+  // Cancelar operación anterior si existe
   if (abortController) {
     abortController.abort();
   }
@@ -2758,8 +3859,10 @@ async function calcularRuta() {
   const requestId = ++currentQuoteRequestId;
   const startTime = performance.now();
 
+  // UI Feedback inmediato
   setLoadingCotizacion(true, 'Analizando direcciones...');
   
+  // Ocultar resultados anteriores inmediatamente
   document.getElementById('quoteCard')?.classList.remove('visible');
   const mapSection = document.getElementById('mapSection');
   mapSection?.classList.remove('visible');
@@ -2773,8 +3876,10 @@ async function calcularRuta() {
     const textoOrigen = origenInput?.value?.trim() || '';
     const textoDestino = destinoInput?.value?.trim() || '';
 
+    // ⭐ OPTIMIZADO: Preparar todo para resolución paralela
     const puntosParaResolver = [];
     
+    // Verificar si necesitamos resolver origen
     const origenActual = normalizarTextoDireccion(textoOrigen);
     const origenGuardado = normalizarTextoDireccion(
       state.origen?.direccionCorta || state.origen?.direccion || ''
@@ -2788,6 +3893,7 @@ async function calcularRuta() {
       puntosParaResolver.push({ id: 'origen', texto: textoOrigen, tipo: 'origen' });
     }
 
+    // Verificar destino
     const destinoActual = normalizarTextoDireccion(textoDestino);
     const destinoGuardado = normalizarTextoDireccion(
       state.destino?.direccionCorta || state.destino?.direccion || ''
@@ -2801,6 +3907,7 @@ async function calcularRuta() {
       puntosParaResolver.push({ id: 'destino', texto: textoDestino, tipo: 'destino' });
     }
 
+    // Waypoints
     const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
     const waypointsParaResolver = [];
     
@@ -2832,12 +3939,14 @@ async function calcularRuta() {
       }
     }
 
+    // ⭐ PARALELIZACIÓN TOTAL: Resolver todos los puntos juntos
     if (puntosParaResolver.length > 0 || waypointsParaResolver.length > 0) {
       setLoadingCotizacion(true, 'Geocodificando direcciones...');
       
       const todosLosPuntos = [...puntosParaResolver, ...waypointsParaResolver];
       const resultados = await resolverPuntosParalelos(todosLosPuntos);
       
+      // Aplicar resultados
       for (const { id, tipo, resuelto } of resultados) {
         if (!resuelto) continue;
         
@@ -2861,24 +3970,31 @@ async function calcularRuta() {
       }
     }
 
+    // Validación rápida
     if (!state.origen || !state.destino) {
       notif.show('Faltan datos', 'Ingresá origen y destino válidos', 'error');
       return;
     }
 
+    // ⭐ OPTIMIZADO: Construir puntos y limpiar en una pasada
     const puntos = obtenerPuntosOrdenados();
     if (puntos.length < 2) throw new Error('Ruta incompleta');
 
+    // Limpiar duplicados eficientemente
     const puntosLimpios = limpiarDuplicados(puntos);
     if (puntosLimpios.length < 2) throw new Error('Ruta inválida después de limpiar duplicados');
 
+    // Calcular estimación local inmediata (no bloqueante)
     const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
     
+    // Mostrar mapa inmediatamente con línea provisional
     setLoadingCotizacion(true, 'Dibujando ruta...');
     mostrarMapaInmediato(puntosLimpios, estimacionLocal.coords);
 
+    // ⭐ OPTIMIZADO: Preparar payload mientras se dibuja el mapa
     const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
     
+    // Cotizar con timeout estricto
     setLoadingCotizacion(true, 'Cotizando...');
     await cotizarViajeOptimizado(payload, requestId);
 
@@ -2896,7 +4012,7 @@ async function calcularRuta() {
     }
   }
 }
-
+  // ⭐ NUEVO: Funciones auxiliares optimizadas
 function construirTooltip(resuelto) {
   return `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`;
 }
@@ -2914,7 +4030,6 @@ function limpiarDuplicados(puntos) {
   }
   return resultado;
 }
-
 function calcularEstimacionLocal(puntos) {
   let distancia = 0;
   for (let i = 0; i < puntos.length - 1; i++) {
@@ -2932,15 +4047,16 @@ function calcularEstimacionLocal(puntos) {
     coords: puntos.map(p => [numeroSeguro(p.lng), numeroSeguro(p.lat)])
   };
 }
-
 function mostrarMapaInmediato(puntos, coords) {
   const mapSection = document.getElementById('mapSection');
   if (mapSection) {
     mapSection.style.display = 'block';
+    // Forzar reflow para transición suave
     void mapSection.offsetHeight;
     mapSection.classList.add('visible');
   }
   
+  // Dibujar sin await para no bloquear
   requestAnimationFrame(() => {
     initMapa().then(() => dibujarRutaLineal(coords));
   });
@@ -2991,6 +4107,7 @@ function construirPayloadOptimizado(puntos, estimacion) {
   };
 }
 
+// ⭐ OPTIMIZADO: Cotización con abort controller y timeout estricto
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
@@ -3025,6 +4142,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
       throw new Error(data?.error || `Error ${response.status}`);
     }
 
+    // Procesar respuesta exitosa
     procesarRespuestaCotizacion(data, payload, requestId);
 
   } catch (err) {
@@ -3048,6 +4166,7 @@ function usarFallbackLocal(payload, requestId) {
   const distancia = payload.distancia_km_total || 0;
   const duracion = payload.duracion_min_total || 0;
   
+  // Precio estimado simple (puedes ajustar esta fórmula)
   const precioEstimado = Math.max(1500, Math.round((800 + distancia * 400 + duracion * 30) / 50) * 50);
   
   state.cotizacion = {
@@ -3065,7 +4184,6 @@ function usarFallbackLocal(payload, requestId) {
   
   mostrarCotizacion(precioEstimado, distancia, duracion);
 }
-
 function procesarRespuestaCotizacion(data, payload, requestId) {
   const precio = numeroSeguro(data?.precio, 0);
   const distancia = numeroSeguro(data?.distancia_km_total || data?.distancia_km, 0);
@@ -3093,17 +4211,18 @@ function procesarRespuestaCotizacion(data, payload, requestId) {
     } : null
   };
 
+  // Actualizar mapa si hay geometría real
   if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
     dibujarRutaReal(coordsBackend);
   }
 
   mostrarCotizacion(precio, distancia, duracion);
 }
-
 function actualizarUILoading(btn, isLoading, texto) {
   if (!btn) return;
   
-  const btnLoader = btn?.querySelector('.btn-loader');
+  const btnContent = btn.querySelector('.btn-content');
+  const btnLoader = btn.querySelector('.btn-loader');
   const loaderText = btn?.querySelector('.btn-loader span:last-child');
 
   isCalculatingQuote = isLoading;
@@ -3115,6 +4234,7 @@ function actualizarUILoading(btn, isLoading, texto) {
     loaderText.textContent = texto;
   }
 
+  // Deshabilitar inputs durante carga
   document.querySelectorAll('.route-input, .btn-input-action, .btn-add-stop')
     .forEach(input => {
       input.disabled = isLoading;
@@ -3125,10 +4245,18 @@ function actualizarUILoading(btn, isLoading, texto) {
     });
 }
 
+
+  
+// ==========================================
+// UI OPTIMIZADA
+// ==========================================
+
 function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
   const btn = document.getElementById('btnCalcular');
   
+  // Debounce visual para evitar flickering en cargas rápidas
   if (!isLoading && btn?.classList.contains('loading')) {
+    // Delay mínimo de 300ms para feedback visual
     setTimeout(() => actualizarUILoading(btn, false, texto), CONFIG.TIMEOUTS.UI_FEEDBACK);
     return;
   }
@@ -3136,12 +4264,16 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
   actualizarUILoading(btn, isLoading, texto);
 }
 
+  
+// ==========================================
+// DETECTAR RETORNO USANDO PUNTOS ESPECÍFICOS
+// ==========================================
 function detectarRetornoAlOrigenConPuntos(puntos) {
   if (puntos.length < 2) return false;
 
   const origen = puntos[0];
   const ultimo = puntos[puntos.length - 1];
-  const tolerancia = 0.0008;
+  const tolerancia = 0.0008; // ~80m
 
   const mismoPunto = (a, b) => {
     if (!a || !b) return false;
@@ -3151,12 +4283,17 @@ function detectarRetornoAlOrigenConPuntos(puntos) {
     );
   };
 
+  // Caso 1: destino final vuelve al origen
   if (mismoPunto(origen, ultimo)) return true;
 
+  // Caso 2: alguna parada intermedia vuelve al origen
   const intermedios = puntos.slice(1, -1);
   return intermedios.some((p) => mismoPunto(origen, p));
 }
 
+// ==========================================
+// CONSTRUIR RESUMEN USANDO PUNTOS ESPECÍFICOS
+// ==========================================
 function construirResumenRutaConPuntos(puntos) {
   if (puntos.length < 2) return "Ruta incompleta";
 
@@ -3174,21 +4311,30 @@ function construirResumenRutaConPuntos(puntos) {
 
   return resumen;
 }  
+// ==========================================
+// NUEVAS FUNCIONES AUXILIARES RÁPIDAS
+// ==========================================
 
+// ⭐ OPTIMIZADO: Dibujo de ruta lineal más rápido
 function dibujarRutaLineal(coords) {
   if (!mapaCliente || !mapReady || !Array.isArray(coords) || coords.length < 2) return;
 
   requestAnimationFrame(() => {
+    // Limpiar capas anteriores de forma segura
     try {
       if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
       if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-    } catch (e) {}
+    } catch (e) {
+      // Ignorar errores de capas inexistentes
+    }
 
+    // Limpiar marcadores
     if (Array.isArray(state.markers)) {
       state.markers.forEach(m => { try { m.remove(); } catch (_) {} });
     }
     state.markers = [];
 
+    // Añadir fuente y capa
     mapaCliente.addSource('route', {
       type: 'geojson',
       data: {
@@ -3210,6 +4356,7 @@ function dibujarRutaLineal(coords) {
       }
     });
 
+    // Añadir marcadores simplificados
     coords.forEach((c, i) => {
       const el = document.createElement('div');
       const color = i === 0 ? '#4caf50' : i === coords.length - 1 ? '#f44336' : '#ff9800';
@@ -3221,6 +4368,7 @@ function dibujarRutaLineal(coords) {
       } catch (_) {}
     });
 
+    // Ajustar bounds
     try {
       const bounds = coords.reduce(
         (b, c) => b.extend(c),
@@ -3231,6 +4379,7 @@ function dibujarRutaLineal(coords) {
   });
 }
 
+  // Actualiza a ruta real cuando llega del backend
 async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
@@ -3239,16 +4388,19 @@ async function dibujarRutaReal(coords) {
     mapSection.style.display = 'block';
   }
 
+  // Inicializar el mapa si aún no está creado
   await initMapa();
 
   if (!mapaCliente) return;
 
+  // Esperar a que el estilo del mapa esté completamente cargado
   if (!mapaCliente.isStyleLoaded()) {
     await new Promise((resolve) => {
       mapaCliente.once('load', resolve);
     });
   }
 
+  // Limpiar y normalizar coordenadas
   const coordsLimpias = coords
     .map(c => [Number(c?.[0]), Number(c?.[1])])
     .filter(c =>
@@ -3268,6 +4420,7 @@ async function dibujarRutaReal(coords) {
     }
   };
 
+  // Si ya existe la fuente, solo actualizamos los datos (más eficiente)
   if (mapaCliente.getSource('route')) {
     const source = mapaCliente.getSource('route');
     source.setData(geojson);
@@ -3278,6 +4431,7 @@ async function dibujarRutaReal(coords) {
       mapaCliente.setPaintProperty('route-line', 'line-width', 5);
     }
   } else {
+    // Limpieza defensiva antes de crear nueva capa
     if (mapaCliente.getLayer('route-line')) {
       mapaCliente.removeLayer('route-line');
     }
@@ -3285,6 +4439,7 @@ async function dibujarRutaReal(coords) {
       mapaCliente.removeSource('route');
     }
 
+    // Crear fuente y capa
     mapaCliente.addSource('route', {
       type: 'geojson',
       data: geojson
@@ -3306,6 +4461,7 @@ async function dibujarRutaReal(coords) {
     });
   }
 
+  // Guardar geometría en el estado global
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
@@ -3313,6 +4469,7 @@ async function dibujarRutaReal(coords) {
   };
   state.routeData.fallback = false;
 
+  // Ajustar la vista a la ruta
   const bounds = new maplibregl.LngLatBounds();
   coordsLimpias.forEach(coord => bounds.extend(coord));
 
@@ -3324,12 +4481,14 @@ async function dibujarRutaReal(coords) {
     });
   }
 
+  // === FIX PRINCIPAL: Forzar resize múltiple cuando el mapa estaba oculto ===
   setTimeout(() => {
     try {
       mapaCliente.resize();
     } catch (_) {}
   }, 180);
 
+  // Segundo resize (más seguro) después de que el navegador termine de repintar
   setTimeout(() => {
     try {
       mapaCliente.resize();
@@ -3338,7 +4497,6 @@ async function dibujarRutaReal(coords) {
 
   console.log('✅ Ruta real dibujada en mapa');
 }  
-
 async function dibujarRutaFallback() {
   document.getElementById('mapSection').style.display = 'block';
   await initMapa();
@@ -3410,6 +4568,7 @@ async function dibujarRutaFallback() {
   try {
     await cotizarViaje(payload);
   } catch (_) {
+    // Si backend no responde, al menos mostramos estimación local visible
     state.cotizacion = {
       precio_formateado: 'Consultar',
       resumen_ruta: resumenRuta,
@@ -3502,12 +4661,15 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     state.routeData.resumenRuta = data?.resumen_ruta || resumenRuta;
     state.routeData.fallback = false;
 
+    // =========================================================
+    // GEOMETRÍA BACKEND → NORMALIZAR Y GUARDAR
+    // =========================================================
     const coordsBackend =
-      Array.isArray(data?.route_geometry) ? data.route_geometry :
-      Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
-      Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
-      Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
-      null;
+  Array.isArray(data?.route_geometry) ? data.route_geometry :
+  Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
+  Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
+  Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
+  null;
 
     console.log("🧭 Coordenadas backend normalizadas:", coordsBackend);
 
@@ -3518,9 +4680,10 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
         }
       : null;
 
+    // Si backend devuelve geometría real, dibujar ruta
     if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
-      await dibujarRutaReal(coordsBackend);
-    } else {
+  await dibujarRutaReal(coordsBackend);
+} else {
       console.warn("⚠️ No vino geometría válida desde backend");
     }
 
@@ -3569,6 +4732,7 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     state.routeData.resumenRuta = payload?.resumen_ruta_front || construirResumenRuta();
     state.routeData.fallback = true;
 
+    // En fallback no pisamos geometry si ya existía una válida
     if (!state.routeData.geometry) {
       state.routeData.geometry = null;
     }
@@ -3601,9 +4765,11 @@ function mostrarCotizacion(precio, km, minutos) {
     state.cotizacion?.precio_formateado ||
     '$' + Number(precio).toLocaleString('es-AR');
 
+  // Actualizar precio
   const quotePrice = document.getElementById('quotePrice');
   if (quotePrice) quotePrice.textContent = precioTexto;
 
+  // Actualizar label (estimado o provisoria)
   let label = 'Precio estimado';
   if (state.routeData?.fallback || state.cotizacion?.modo === 'fallback_local') {
     label = 'Estimación provisoria';
@@ -3611,6 +4777,7 @@ function mostrarCotizacion(precio, km, minutos) {
   const labelEl = document.querySelector('.quote-price-label');
   if (labelEl) labelEl.textContent = label;
 
+  // Actualizar detalles
   const detailDistance = document.getElementById('detailDistance');
   if (detailDistance) detailDistance.textContent = Number(km).toFixed(1) + ' km';
 
@@ -3620,6 +4787,7 @@ function mostrarCotizacion(precio, km, minutos) {
   const detailStops = document.getElementById('detailStops');
   if (detailStops) detailStops.textContent = paradasIntermedias;
 
+  // Resumen de ruta
   const resumenRuta =
     state.cotizacion?.resumen_ruta ||
     state.routeData?.resumenRuta ||
@@ -3639,23 +4807,26 @@ function mostrarCotizacion(precio, km, minutos) {
   const resumenParadas = document.getElementById('resumenParadas');
   if (resumenParadas) resumenParadas.textContent = textoResumen;
 
+  // ==================== MOSTRAR MAPA + CARD (CORRECCIÓN) ====================
   const mapSection = document.getElementById('mapSection');
   const quoteCard = document.getElementById('quoteCard');
 
   if (mapSection) {
     mapSection.style.display = 'block';
-    mapSection.classList.add('visible');
+    mapSection.classList.add('visible');   // ✅ IMPORTANTE
   }
 
   if (quoteCard) {
     quoteCard.classList.add('visible');
   }
 
+  // ⚠️ CRÍTICO: Resize del mapa después de mostrar todo
   setTimeout(() => {
     try {
       if (mapaCliente && mapReady) {
         mapaCliente.resize();
 
+        // Si hay ruta, centrar después del resize
         if (state.routeData?.geometry?.coordinates?.length) {
           centrarEnRuta();
         }
@@ -3665,6 +4836,7 @@ function mostrarCotizacion(precio, km, minutos) {
     }
   }, 250);
 
+  // Scroll suave hacia la card
   setTimeout(() => {
     quoteCard?.scrollIntoView({
       behavior: 'smooth',
@@ -3717,7 +4889,6 @@ ${paradasTexto ? paradasTexto + '\n' : ''}🏁 *Destino:* ${puntos[puntos.length
 
   window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
 }
-
 function compartirRuta() {
   if (!state.routeData) {
     notif.show('Sin ruta', 'Primero calculá el recorrido', 'warning');
@@ -3752,6 +4923,7 @@ function compartirRuta() {
 // INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+  // Setup autocomplete para origen y destino
   setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
     state.origen = data;
   });
