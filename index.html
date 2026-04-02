@@ -3744,6 +3744,10 @@ function reiniciarRuta() {
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
+console.log("WAYPOINTS:", state.waypoints.map(w => w.data?.direccionCorta));
+console.log("ORIGEN:", state.origen?.direccionCorta);
+console.log("DESTINO:", state.destino?.direccionCorta);
+
   
 function obtenerPuntosOrdenados() {
   return [
