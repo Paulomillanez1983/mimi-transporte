@@ -3860,7 +3860,16 @@ function construirResumenRuta() {
 
   return hayRetorno ? `${resumen} ↺` : resumen;
 }
-  
+function limpiarPuntosInvalidos(puntos) {
+  return (puntos || []).filter(p =>
+    p &&
+    typeof p.lat !== "undefined" &&
+    typeof p.lng !== "undefined" &&
+    !isNaN(Number(p.lat)) &&
+    !isNaN(Number(p.lng))
+  );
+}
+
 // ==========================================
 // CÁLCULO DE RUTA ULTRA-OPTIMIZADO
 // ==========================================
