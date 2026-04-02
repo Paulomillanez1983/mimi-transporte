@@ -3015,9 +3015,6 @@ function coordenadasValidas(lat, lng) {
 // ==========================================
 // ESTADO GLOBAL
 // ==========================================
-// ==========================================
-// ESTADO GLOBAL
-// ==========================================
 let state = {
   origen: null,
   destino: null,
@@ -4262,22 +4259,14 @@ function detectarRetornoAlOrigenConPuntos(puntos) {
 
   const origen = puntos[0];
   const ultimo = puntos[puntos.length - 1];
-  const tolerancia = 0.0008; // ~80m
+  const tolerancia = 0.0008;
 
-  const mismoPunto = (a, b) => {
-    if (!a || !b) return false;
-    return (
-      Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
-      Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
-    );
-  };
+  if (!origen || !ultimo) return false;
 
-  // Caso 1: destino final vuelve al origen
-  if (mismoPunto(origen, ultimo)) return true;
-
-  // Caso 2: alguna parada intermedia vuelve al origen
-  const intermedios = puntos.slice(1, -1);
-  return intermedios.some((p) => mismoPunto(origen, p));
+  return (
+    Math.abs(Number(origen.lat) - Number(ultimo.lat)) <= tolerancia &&
+    Math.abs(Number(origen.lng) - Number(ultimo.lng)) <= tolerancia
+  );
 }
 
 // ==========================================
