@@ -3137,7 +3137,6 @@ async function resolverWaypointsPendientes() {
       continue;
     }
 
-    // Si ya había data pero el texto visible cambió, invalidamos
     const textoActualNormalizado = texto.toLowerCase().trim();
     const textoGuardadoNormalizado = (
       wp?.data?.direccionCorta ||
@@ -3152,18 +3151,34 @@ async function resolverWaypointsPendientes() {
 
     const resuelto = await resolverPuntoDesdeTexto(texto);
 
-    if (resuelto) {
-      if (wp) wp.data = resuelto;
-
-      input.value = resuelto.direccionCorta;
-      input.setAttribute(
-        'title',
-        `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`
-      );
-    } else {
+    if (!resuelto) {
       if (wp) wp.data = null;
       errores.push(texto);
+      continue;
     }
+
+    const claveResuelta = `${Number(resuelto.lat).toFixed(6)},${Number(resuelto.lng).toFixed(6)}`;
+    const claveOrigen = state.origen
+      ? `${Number(state.origen.lat).toFixed(6)},${Number(state.origen.lng).toFixed(6)}`
+      : null;
+    const claveDestino = state.destino
+      ? `${Number(state.destino.lat).toFixed(6)},${Number(state.destino.lng).toFixed(6)}`
+      : null;
+
+    if (claveResuelta === claveOrigen || claveResuelta === claveDestino) {
+      if (wp) wp.data = null;
+      input.value = '';
+      input.removeAttribute('title');
+      continue;
+    }
+
+    if (wp) wp.data = resuelto;
+
+    input.value = resuelto.direccionCorta;
+    input.setAttribute(
+      'title',
+      `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`
+    );
   }
 
   return errores;
@@ -3747,16 +3762,32 @@ console.log("DESTINO:", state.destino?.direccionCorta);
 
   
 function obtenerPuntosOrdenados() {
-  return [
+  const puntosBase = [
     state.origen,
     ...((state.waypoints || [])
       .filter(w => w && w.data)
       .map(w => w.data)),
     state.destino
   ].filter(Boolean);
+
+  const unicos = [];
+  const usados = new Set();
+
+  for (const p of puntosBase) {
+    if (!coordenadasValidas(p?.lat, p?.lng)) continue;
+
+    const clave = `${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`;
+
+    if (!usados.has(clave)) {
+      usados.add(clave);
+      unicos.push(p);
+    }
+  }
+
+  return unicos;
 }
   
-  // ==========================================
+// ==========================================
 // UTILIDADES DE RUTA MULTITRAYECTO
 // ==========================================
 
