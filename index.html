@@ -337,18 +337,19 @@ window.supabase = {
     }
   }
 };
-  // ⭐ CACHE para geocodificación (faltaba esto!)
+// ⭐ CACHE para geocodificación
+const geocodingCache = new Map();
+const CACHE_MAX_SIZE = 100;
+
 // ⭐ NUEVO: Geocodificación via backend (sin CORS)
 async function buscarDireccion(query) {
   if (!query || query.trim().length < 3) return [];
   
   const cacheKey = query.trim().toLowerCase();
   
-  // Cache local en frontend también (opcional pero recomendado)
   if (geocodingCache.has(cacheKey)) {
     return geocodingCache.get(cacheKey);
   }
-
   try {
     // Llamar a tu Edge Function en lugar de Nominatim directo
     const result = await safeFetch(
