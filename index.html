@@ -3770,15 +3770,21 @@ function construirResumenRuta() {
 
   return resumen;
 }  
-  // ==========================================
-// CÁLCULO DE RUTA Y COTIZACIÓN
+// ==========================================
+// CÁLCULO DE RUTA Y COTIZACIÓN - CORREGIDO
 // ==========================================
 async function calcularRuta() {
   if (isCalculatingQuote) return;
 
   const requestId = ++currentQuoteRequestId;
 
+  // Ocultar resultados anteriores
   document.getElementById('quoteCard')?.classList.remove('visible');
+  const mapSection = document.getElementById('mapSection');
+  if (mapSection) {
+    mapSection.classList.remove('visible');
+  }
+
   state.cotizacion = null;
   state.routeData = null;
 
@@ -3792,7 +3798,7 @@ async function calcularRuta() {
     const textoDestino = destinoInput?.value?.trim() || '';
 
     // ==========================================
-    // PASO 1: Resolver origen SOLO si hace falta
+    // PASO 1: Resolver origen y destino
     // ==========================================
     const origenGuardado = normalizarTextoDireccion(
       state.origen?.direccionCorta || state.origen?.direccion || ''
@@ -3844,7 +3850,7 @@ async function calcularRuta() {
     }
 
     // ==========================================
-    // PASO 2: Resolver waypoints escritos manualmente
+    // PASO 2: Resolver waypoints
     // ==========================================
     const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
 
@@ -3890,66 +3896,112 @@ async function calcularRuta() {
 
     if (!state.origen || !state.destino) {
       notif.show('Faltan datos', 'Ingresá origen y destino válidos', 'error');
+      setLoadingCotizacion(false);
       return;
     }
 
+    // ==========================================
+    // ✅ PASO 3: OBTENER Y LIMPIAR PUNTOS (NUEVO)
+    // ==========================================
     const puntos = obtenerPuntosOrdenados();
 
     if (puntos.length < 2) {
       throw new Error('Ruta incompleta');
     }
 
-    // Validar coordenadas
-    const puntosInvalidos = puntos.filter(p => !coordenadasValidas(p?.lat, p?.lng));
+    // 🔥 NUEVO: Limpiar puntos duplicados por coordenadas
+    const puntosLimpios = [];
+    for (const p of puntos) {
+      const last = puntosLimpios[puntosLimpios.length - 1];
+
+      if (
+        last &&
+        Math.abs(Number(last.lat) - Number(p.lat)) < 0.00001 &&
+        Math.abs(Number(last.lng) - Number(p.lng)) < 0.00001
+      ) {
+        console.log('🧹 Punto duplicado eliminado:', p.direccionCorta || p.direccion);
+        continue; // Skip punto duplicado
+      }
+
+      puntosLimpios.push(p);
+    }
+
+    // Validar que queden al menos 2 puntos después de limpiar
+    if (puntosLimpios.length < 2) {
+      throw new Error('La ruta resultante tiene menos de 2 puntos válidos después de limpiar duplicados');
+    }
+
+    // Validar coordenadas de puntos limpios
+    const puntosInvalidos = puntosLimpios.filter(p => !coordenadasValidas(p?.lat, p?.lng));
     if (puntosInvalidos.length > 0) {
       throw new Error('Hay direcciones con coordenadas inválidas');
     }
 
     // ==========================================
-    // PASO 3: Mostrar mapa inmediatamente
+    // PASO 4: Detectar tipo de ruta (usando puntos limpios)
     // ==========================================
-    document.getElementById('mapSection').style.display = 'block';
-    await initMapa();
+    const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntosLimpios);
+    const resumenRuta = construirResumenRutaConPuntos(puntosLimpios);
 
-    if (requestId !== currentQuoteRequestId) return;
-
-    const coordsLineal = puntos.map(p => [numeroSeguro(p.lng), numeroSeguro(p.lat)]);
-    dibujarRutaLineal(coordsLineal);
-
-    setLoadingCotizacion(true, 'Cotizando...');
+    // Calcular waypoints intermedios (excluyendo origen y destino)
+    const waypointsIntermedios = puntosLimpios.length > 2 
+      ? puntosLimpios.slice(1, -1).map((p, index) => ({
+          orden: index + 1,
+          direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
+          direccion_completa: p.direccion || p.direccionCorta || `Parada ${index + 1}`,
+          lat: Number(p.lat),
+          lng: Number(p.lng)
+        }))
+      : [];
 
     // ==========================================
-    // PASO 4: Preparar payload único
+    // PASO 5: Calcular distancia estimada
     // ==========================================
-    const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
-    const resumenRuta = construirResumenRuta();
-    const waypointsIntermedios = construirPayloadWaypointsIntermedios();
-
     let distanciaEstimada = 0;
 
-    for (let i = 0; i < coordsLineal.length - 1; i++) {
-      const from = turf.point(coordsLineal[i]);
-      const to = turf.point(coordsLineal[i + 1]);
+    for (let i = 0; i < puntosLimpios.length - 1; i++) {
+      const from = turf.point([Number(puntosLimpios[i].lng), Number(puntosLimpios[i].lat)]);
+      const to = turf.point([Number(puntosLimpios[i + 1].lng), Number(puntosLimpios[i + 1].lat)]);
       distanciaEstimada += turf.distance(from, to, { units: 'kilometers' });
     }
 
     distanciaEstimada = numeroSeguro((distanciaEstimada * 1.18).toFixed(1), 0);
     const duracionEstimada = Math.max(1, Math.round((distanciaEstimada / 28) * 60));
 
+    // ==========================================
+    // PASO 6: Mostrar mapa inmediatamente con línea provisional
+    // ==========================================
+    const coordsLineal = puntosLimpios.map(p => [numeroSeguro(p.lng), numeroSeguro(p.lat)]);
+    
+    if (mapSection) {
+      mapSection.style.display = 'block';
+    }
+    
+    await initMapa();
+    dibujarRutaLineal(coordsLineal);
+
+    if (requestId !== currentQuoteRequestId) return;
+
+    setLoadingCotizacion(true, 'Cotizando...');
+
+    // ==========================================
+    // ✅ PASO 7: CONSTRUIR PAYLOAD CON PUNTOS LIMPIOS
+    // ==========================================
     const payload = {
       servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-      origen: puntos[0].direccion,
-      origen_corto: puntos[0].direccionCorta || puntos[0].direccion,
+      // Usar puntosLimpios en lugar de puntos
+      origen: puntosLimpios[0].direccion,
+      origen_corto: puntosLimpios[0].direccionCorta || puntosLimpios[0].direccion,
 
-      destino: puntos[puntos.length - 1].direccion,
-      destino_corto: puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion,
+      destino: puntosLimpios[puntosLimpios.length - 1].direccion,
+      destino_corto: puntosLimpios[puntosLimpios.length - 1].direccionCorta || puntosLimpios[puntosLimpios.length - 1].direccion,
 
-      origen_lat: numeroSeguro(puntos[0].lat),
-      origen_lng: numeroSeguro(puntos[0].lng),
+      origen_lat: Number(puntosLimpios[0].lat),
+      origen_lng: Number(puntosLimpios[0].lng),
 
-      destino_lat: numeroSeguro(puntos[puntos.length - 1].lat),
-      destino_lng: numeroSeguro(puntos[puntos.length - 1].lng),
+      destino_lat: Number(puntosLimpios[puntosLimpios.length - 1].lat),
+      destino_lng: Number(puntosLimpios[puntosLimpios.length - 1].lng),
 
       distancia_km: numeroSeguro(distanciaEstimada),
       duracion_min: numeroSeguro(duracionEstimada),
@@ -3960,24 +4012,42 @@ async function calcularRuta() {
 
       waypoints: waypointsIntermedios,
 
-      puntos_ruta: puntos.map((p, index) => ({
+      // Usar puntosLimpios para puntos_ruta
+      puntos_ruta: puntosLimpios.map((p, index) => ({
         orden: index,
-        tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+        tipo: index === 0 
+          ? 'origen' 
+          : index === puntosLimpios.length - 1 
+            ? 'destino' 
+            : 'parada',
         direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
         direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-        lat: numeroSeguro(p.lat),
-        lng: numeroSeguro(p.lng)
+        lat: Number(p.lat),
+        lng: Number(p.lng)
       })),
 
-      segmentos_totales_front: Math.max(1, puntos.length - 1),
-      cantidad_paradas_front: waypointsIntermedios.length,
+      // Contar usando puntosLimpios
+      segmentos_totales_front: Math.max(1, puntosLimpios.length - 1),
+      cantidad_paradas_front: Math.max(0, puntosLimpios.length - 2),
+
       retorno_al_origen_front: retornoAlOrigen,
       resumen_ruta_front: resumenRuta,
+
       ruta_calculada_completa: true,
-      cotizacion_multitramo: puntos.length > 2,
+      cotizacion_multitramo: puntosLimpios.length > 2,
+
+      // Metadata adicional
       cliente_origen_input: textoOrigen,
-      cliente_destino_input: textoDestino
+      cliente_destino_input: textoDestino,
+      puntos_antes_de_limpiar: puntos.length,
+      puntos_despues_de_limpiar: puntosLimpios.length
     };
+
+    console.log('📤 Payload con puntos limpios:', {
+      antes: puntos.length,
+      despues: puntosLimpios.length,
+      eliminados: puntos.length - puntosLimpios.length
+    });
 
     await cotizarViaje(payload, requestId);
 
@@ -3986,22 +4056,58 @@ async function calcularRuta() {
 
     if (requestId !== currentQuoteRequestId) return;
 
-    try {
-      await dibujarRutaFallback();
-      notif.show(
-        'Modo estimado',
-        'Mostramos una estimación provisoria mientras se recupera el servicio.',
-        'warning'
-      );
-    } catch (fallbackErr) {
-      console.error('❌ Error en fallback:', fallbackErr);
-      notif.show('Error', err.message || 'No se pudo completar la cotización', 'error');
-    }
+    notif.show('Error', err.message || 'No se pudo completar la cotización', 'error');
   } finally {
     if (requestId === currentQuoteRequestId) {
       setLoadingCotizacion(false);
     }
   }
+}
+// ==========================================
+// DETECTAR RETORNO USANDO PUNTOS ESPECÍFICOS
+// ==========================================
+function detectarRetornoAlOrigenConPuntos(puntos) {
+  if (puntos.length < 2) return false;
+
+  const origen = puntos[0];
+  const ultimo = puntos[puntos.length - 1];
+  const tolerancia = 0.0008; // ~80m
+
+  const mismoPunto = (a, b) => {
+    if (!a || !b) return false;
+    return (
+      Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
+      Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
+    );
+  };
+
+  // Caso 1: destino final vuelve al origen
+  if (mismoPunto(origen, ultimo)) return true;
+
+  // Caso 2: alguna parada intermedia vuelve al origen
+  const intermedios = puntos.slice(1, -1);
+  return intermedios.some((p) => mismoPunto(origen, p));
+}
+
+// ==========================================
+// CONSTRUIR RESUMEN USANDO PUNTOS ESPECÍFICOS
+// ==========================================
+function construirResumenRutaConPuntos(puntos) {
+  if (puntos.length < 2) return "Ruta incompleta";
+
+  const nombres = puntos.map((p, index) => {
+    if (index === 0) return p.direccionCorta || "Origen";
+    if (index === puntos.length - 1) return p.direccionCorta || "Destino";
+    return p.direccionCorta || `Parada ${index}`;
+  });
+
+  const resumen = nombres.join(" → ");
+
+  if (detectarRetornoAlOrigenConPuntos(puntos)) {
+    return `${resumen} ↺`;
+  }
+
+  return resumen;
 }  
 // ==========================================
 // NUEVAS FUNCIONES AUXILIARES RÁPIDAS
