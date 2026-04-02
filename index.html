@@ -337,7 +337,64 @@ window.supabase = {
     }
   }
 };
+// ⭐ NUEVO: Geocodificación via backend (sin CORS)
+async function buscarDireccion(query) {
+  if (!query || query.trim().length < 3) return [];
+  
+  const cacheKey = query.trim().toLowerCase();
+  
+  // Cache local en frontend también (opcional pero recomendado)
+  if (geocodingCache.has(cacheKey)) {
+    return geocodingCache.get(cacheKey);
+  }
 
+  try {
+    // Llamar a tu Edge Function en lugar de Nominatim directo
+    const result = await safeFetch(
+      `${SUPABASE_URL}/functions/v1/geocodificar`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_KEY,
+          "Authorization": "Bearer " + SUPABASE_KEY
+        },
+        body: JSON.stringify({ query: query.trim(), limit: 5 })
+      },
+      10000 // 10s timeout
+    );
+
+    if (!result.response) {
+      console.warn("⚠️ Error de red en geocodificación");
+      return [];
+    }
+
+    const json = await result.response.json();
+    
+    if (!json.exito) {
+      console.warn("⚠️ Error geocodificación:", json.error);
+      if (json.code === "RATE_LIMIT") {
+        notif.show("Servicio ocupado", "Demasiadas búsquedas. Esperá un momento.", "warning");
+      }
+      return [];
+    }
+
+    const resultados = json.data || [];
+    
+    // Guardar en cache local
+    if (geocodingCache.size >= CACHE_MAX_SIZE) {
+      const firstKey = geocodingCache.keys().next().value;
+      geocodingCache.delete(firstKey);
+    }
+    geocodingCache.set(cacheKey, resultados);
+    
+    return resultados;
+
+  } catch (err) {
+    console.error("❌ Error buscando dirección:", err);
+    return [];
+  }
+}
 // =========================
 // UPDATE HELPER
 // =========================
