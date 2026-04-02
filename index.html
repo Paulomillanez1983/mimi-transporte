@@ -3371,16 +3371,17 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     }
   });
   
-input.addEventListener('blur', (e) => {
-  // No cerrar si el foco se fue al contenedor de sugerencias o a un elemento dentro
-  setTimeout(() => {
-    const active = document.activeElement;
-    const sugerencias = document.getElementById(sugerenciasId);
-    if (!sugerencias?.contains(active) && active !== input) {
-      contenedor.style.display = 'none';
-    }
-  }, 200);
-});
+  input.addEventListener('blur', (e) => {
+    // No cerrar si el foco se fue al contenedor de sugerencias o a un elemento dentro
+    setTimeout(() => {
+      const active = document.activeElement;
+      const sugerencias = document.getElementById(sugerenciasId);
+      if (!sugerencias?.contains(active) && active !== input) {
+        contenedor.style.display = 'none';
+      }
+    }, 200);
+  });
+}  // ← FALTABA ESTA LLAVE DE CIERRE
   
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
