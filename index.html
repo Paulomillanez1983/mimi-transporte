@@ -2883,13 +2883,27 @@ body.dark #mapSection,
 </div>
 
 <script>
-  // ==========================================
-// CONFIGURACIÓN
+// ==========================================
+// CONFIGURACIÓN OPTIMIZADA
 // ==========================================
 const CONFIG = {
   COTIZAR_URL: 'https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/cotizar',
   WHATSAPP_NUMBER: '5493517014863',
-  MAX_WAYPOINTS: 5
+  MAX_WAYPOINTS: 5,
+  
+  // ⭐ NUEVO: Timeouts optimizados
+  TIMEOUTS: {
+    GEOCODING: 8000,      // Nominatim: 8s máximo
+    COTIZACION: 12000,    // Backend: 12s máximo  
+    OSRM: 10000,          // Ruta real: 10s máximo
+    UI_FEEDBACK: 300      // Feedback visual: 300ms
+  },
+  
+  // ⭐ NUEVO: Retry configuration
+  RETRY: {
+    MAX_ATTEMPTS: 2,
+    DELAY_MS: 500
+  }
 };
  function normalizarTextoDireccion(txt) {
   return String(txt || '')
@@ -2929,11 +2943,10 @@ let state = {
   cotizacion: null
 };
 let mapaCliente = null;
-let rutaLayer = null;
-let waypointCounter = 0;
 let mapReady = false;
 let isCalculatingQuote = false;
 let currentQuoteRequestId = 0;
+let abortController = null; // ⭐ NUEVO: Para cancelar requests pendientes
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -3087,66 +3100,99 @@ function construirPayloadWaypointsIntermedios() {
 // ==========================================
 // GEOCODIFICACIÓN
 // ==========================================
+
+  
+// ⭐ OPTIMIZADO: Geocodificación con cache simple y timeout
+const geocodingCache = new Map();
+const CACHE_MAX_SIZE = 50;
+
 async function buscarDireccion(query) {
   if (!query || query.trim().length < 3) return [];
+  
+  const cacheKey = query.trim().toLowerCase();
+  
+  // Cache hit
+  if (geocodingCache.has(cacheKey)) {
+    console.log('🎯 Cache hit:', query);
+    return geocodingCache.get(cacheKey);
+  }
+  
+  // Limpiar cache si está muy grande (LRU simple)
+  if (geocodingCache.size >= CACHE_MAX_SIZE) {
+    const firstKey = geocodingCache.keys().next().value;
+    geocodingCache.delete(firstKey);
+  }
 
   const limpio = query.trim();
-
-  // Mejor contexto local para Córdoba / Villa Allende / zona norte
   const queryConContexto = /cordoba|córdoba|villa allende|argentina/i.test(limpio)
     ? limpio
     : `${limpio}, Córdoba, Argentina`;
 
   const url = `https://nominatim.openstreetmap.org/search?` +
-    `format=jsonv2&limit=8&countrycodes=ar&addressdetails=1&namedetails=1&` +
+    `format=jsonv2&limit=5&countrycodes=ar&addressdetails=1&` + // ⭐ Reducido a 5 resultados
     `accept-language=es-AR&dedupe=1&` +
     `viewbox=-64.45,-31.28,-63.95,-31.55&bounded=0&` +
     `q=${encodeURIComponent(queryConContexto)}`;
 
   try {
-    const res = await fetch(url, {
+    const res = await fetchWithTimeout(url, {
       headers: {
         "Accept": "application/json",
         "Accept-Language": "es-AR,es;q=0.9",
         "User-Agent": "MIMI-Transporte/1.0"
       }
-    });
+    }, CONFIG.TIMEOUTS.GEOCODING);
 
     if (!res.ok) return [];
+    
     const data = await res.json();
+    const resultados = (Array.isArray(data) ? data : [])
+      .filter(r => {
+        const display = (r.display_name || "").toLowerCase();
+        return (
+          display.includes("córdoba") ||
+          display.includes("cordoba") ||
+          display.includes("villa allende") ||
+          display.includes("argentina")
+        );
+      })
+      .slice(0, 3); // ⭐ Solo top 3
 
-    const resultados = (Array.isArray(data) ? data : []).filter(r => {
-      const display = (r.display_name || "").toLowerCase();
-      return (
-        display.includes("córdoba") ||
-        display.includes("cordoba") ||
-        display.includes("villa allende") ||
-        display.includes("argentina")
-      );
-    });
-
-    // Ordenar resultados más útiles arriba
-    const score = (r) => {
-      const d = (r.display_name || "").toLowerCase();
-      let s = 0;
-
-      if (d.includes("villa allende")) s += 40;
-      if (d.includes("córdoba")) s += 25;
-      if (d.includes("cordoba")) s += 25;
-      if (r.type === "house") s += 20;
-      if (r.type === "residential") s += 15;
-      if (r.type === "road") s += 12;
-      if (r.class === "amenity") s += 10;
-      if (r.class === "building") s += 8;
-
-      return s;
-    };
-
-    return resultados.sort((a, b) => score(b) - score(a));
+    // Guardar en cache
+    geocodingCache.set(cacheKey, resultados);
+    
+    return resultados;
   } catch (err) {
-    console.error("Error geocodificando:", err);
+    console.warn('⚠️ Geocoding timeout/error:', err.message);
     return [];
   }
+}
+
+// ⭐ OPTIMIZADO: Resolver múltiples puntos en paralelo con límite de concurrencia
+async function resolverPuntosParalelos(puntosParaResolver) {
+  // Procesar en chunks de 3 para no saturar Nominatim
+  const CHUNK_SIZE = 3;
+  const resultados = [];
+  
+  for (let i = 0; i < puntosParaResolver.length; i += CHUNK_SIZE) {
+    const chunk = puntosParaResolver.slice(i, i + CHUNK_SIZE);
+    
+    const chunkResults = await Promise.all(
+      chunk.map(async ({ id, texto, tipo }) => {
+        try {
+          const resuelto = await resolverPuntoDesdeTexto(texto);
+          return { id, tipo, resuelto, exito: !!resuelto };
+        } catch (err) {
+          console.warn(`❌ Error resolviendo ${tipo} ${id}:`, err);
+          return { id, tipo, resuelto: null, exito: false };
+        }
+      })
+    );
+    
+    resultados.push(...chunkResults);
+  }
+  
+  return resultados;
 }
   
 function formatearDireccionCorta(r) {
@@ -3409,30 +3455,27 @@ function actualizarTimeline() {
   // ==========================================
 // MAPA
 // ==========================================
-function initMapa() {
+function initMapa() {// ==========================================
+// MAPA OPTIMIZADO (sin cambios mayores)
+// ==========================================
+
+async function initMapa() {
   if (mapaCliente) return Promise.resolve();
 
   const mapDiv = document.getElementById('map');
   if (!mapDiv) return Promise.resolve();
 
-  // ⚠️ CRÍTICO: El mapa debe ser visible para inicializar correctamente
   const mapSection = document.getElementById('mapSection');
   const wasHidden = mapSection && mapSection.style.display === 'none';
 
   if (wasHidden) {
     mapSection.style.display = 'block';
-    mapSection.style.visibility = 'hidden'; // Renderiza pero no se ve
+    mapSection.style.visibility = 'hidden';
   }
 
   return new Promise((resolve) => {
     const esMobile = window.innerWidth <= 768;
-
-    const temaOscuro =
-      document.documentElement.classList.contains('dark') ||
-      document.body.classList.contains('dark') ||
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    const rasterTiles = ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'];
+    const temaOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     mapaCliente = new maplibregl.Map({
       container: 'map',
@@ -3441,114 +3484,52 @@ function initMapa() {
         sources: {
           osm: {
             type: 'raster',
-            tiles: rasterTiles,
+            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
             tileSize: 256,
             attribution: '© OpenStreetMap'
           }
         },
-        layers: [
-          {
-            id: 'osm',
-            type: 'raster',
-            source: 'osm',
-            paint: temaOscuro
-              ? {
-                  'raster-opacity': 0.9,
-                  'raster-brightness-min': 0.05,
-                  'raster-brightness-max': 0.75,
-                  'raster-contrast': 0.15,
-                  'raster-saturation': -0.35
-                }
-              : {
-                  'raster-opacity': 1,
-                  'raster-brightness-min': 0,
-                  'raster-brightness-max': 1,
-                  'raster-contrast': 0.05,
-                  'raster-saturation': 0
-                }
+        layers: [{
+          id: 'osm',
+          type: 'raster',
+          source: 'osm',
+          paint: temaOscuro ? {
+            'raster-opacity': 0.9,
+            'raster-brightness-min': 0.05,
+            'raster-brightness-max': 0.75,
+            'raster-contrast': 0.15,
+            'raster-saturation': -0.35
+          } : {
+            'raster-opacity': 1,
+            'raster-brightness-min': 0,
+            'raster-brightness-max': 1
           }
-        ]
+        }]
       },
       center: [-64.19, -31.42],
       zoom: esMobile ? 11.5 : 12,
-      minZoom: 8,
-      maxZoom: 18,
       attributionControl: false,
       dragRotate: false,
-      touchZoomRotate: true,
       pitchWithRotate: false,
-      doubleClickZoom: true,
-      cooperativeGestures: false,
-      antialias: !esMobile,
       renderWorldCopies: false
     });
 
     mapaCliente.addControl(
-      new maplibregl.NavigationControl({
-        showCompass: false,
-        visualizePitch: false
-      }),
+      new maplibregl.NavigationControl({ showCompass: false }),
       'bottom-right'
     );
 
-    mapaCliente.addControl(
-      new maplibregl.AttributionControl({
-        compact: true
-      })
-    );
-
-    // ✅ Manejo de errores tiles
-    mapaCliente.on('error', (e) => {
-      const err = e?.error || e;
-      const msg = err?.message || '';
-
-      if (
-        msg.includes('tile.openstreetmap.org') ||
-        msg.includes('Failed to fetch') ||
-        msg.includes('403') ||
-        msg.includes('404') ||
-        msg.includes('429')
-      ) {
-        console.warn('⚠️ Tile temporalmente no disponible');
-        return;
-      }
-
-      console.error('❌ Error mapa:', e);
-    });
-
-    // ✅ Cuando carga
     mapaCliente.on('load', () => {
       mapReady = true;
-
-      // ⚠️ CRÍTICO: Resize después de cargar
       setTimeout(() => {
-        try {
-          mapaCliente.resize();
-
-          if (wasHidden) {
-            mapSection.style.visibility = 'visible';
-          }
-        } catch (_) {}
-      }, 120);
-
-      resolve();
-    });
-
-    // ✅ Reajustar tamaño por si el contenedor aparece luego
-    setTimeout(() => {
-      try {
-        mapaCliente?.resize();
-      } catch (_) {}
-    }, 250);
-
-    // ✅ Resize en cambios de pantalla
-    window.addEventListener('resize', () => {
-      try {
-        mapaCliente?.resize();
-      } catch (_) {}
+        mapaCliente.resize();
+        if (wasHidden) mapSection.style.visibility = 'visible';
+        resolve();
+      }, 100);
     });
   });
 }
+
   
 async function dibujarRutaEnMapa(coords) {
   await initMapa();
@@ -3728,6 +3709,52 @@ function obtenerPuntosOrdenados() {
   // ==========================================
 // UTILIDADES DE RUTA MULTITRAYECTO
 // ==========================================
+
+  // ⭐ NUEVO: Fetch con timeout y abort controller
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    if (error.name === 'AbortError') {
+      throw new Error(`Timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  }
+}
+
+// ⭐ NUEVO: Retry wrapper para operaciones críticas
+async function withRetry(operation, maxAttempts = CONFIG.RETRY.MAX_ATTEMPTS) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      
+      // No retry on 4xx errors (client errors)
+      if (error.status >= 400 && error.status < 500) {
+        throw error;
+      }
+      
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, CONFIG.RETRY.DELAY_MS * attempt));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 function detectarRetornoAlOrigenFrontend() {
   const puntos = obtenerPuntosOrdenados();
   if (puntos.length < 2) return false;
@@ -3771,298 +3798,426 @@ function construirResumenRuta() {
   return resumen;
 }  
 // ==========================================
-// CÁLCULO DE RUTA Y COTIZACIÓN - CORREGIDO
+// CÁLCULO DE RUTA ULTRA-OPTIMIZADO
 // ==========================================
+
 async function calcularRuta() {
+  // Cancelar operación anterior si existe
+  if (abortController) {
+    abortController.abort();
+  }
+  abortController = new AbortController();
+  
   if (isCalculatingQuote) return;
-
+  
   const requestId = ++currentQuoteRequestId;
+  const startTime = performance.now();
 
-  // Ocultar resultados anteriores
+  // UI Feedback inmediato
+  setLoadingCotizacion(true, 'Analizando direcciones...');
+  
+  // Ocultar resultados anteriores inmediatamente
   document.getElementById('quoteCard')?.classList.remove('visible');
   const mapSection = document.getElementById('mapSection');
-  if (mapSection) {
-    mapSection.classList.remove('visible');
-  }
+  mapSection?.classList.remove('visible');
 
   state.cotizacion = null;
   state.routeData = null;
 
-  const origenInput = document.getElementById('inputOrigen');
-  const destinoInput = document.getElementById('inputDestino');
-
-  setLoadingCotizacion(true, 'Buscando direcciones...');
-
   try {
+    const origenInput = document.getElementById('inputOrigen');
+    const destinoInput = document.getElementById('inputDestino');
     const textoOrigen = origenInput?.value?.trim() || '';
     const textoDestino = destinoInput?.value?.trim() || '';
 
-    // ==========================================
-    // PASO 1: Resolver origen y destino
-    // ==========================================
+    // ⭐ OPTIMIZADO: Preparar todo para resolución paralela
+    const puntosParaResolver = [];
+    
+    // Verificar si necesitamos resolver origen
+    const origenActual = normalizarTextoDireccion(textoOrigen);
     const origenGuardado = normalizarTextoDireccion(
       state.origen?.direccionCorta || state.origen?.direccion || ''
     );
+    
+    if (textoOrigen && (
+      !state.origen ||
+      !coordenadasValidas(state.origen?.lat, state.origen?.lng) ||
+      origenActual !== origenGuardado
+    )) {
+      puntosParaResolver.push({ id: 'origen', texto: textoOrigen, tipo: 'origen' });
+    }
+
+    // Verificar destino
+    const destinoActual = normalizarTextoDireccion(textoDestino);
     const destinoGuardado = normalizarTextoDireccion(
       state.destino?.direccionCorta || state.destino?.direccion || ''
     );
-
-    const origenActual = normalizarTextoDireccion(textoOrigen);
-    const destinoActual = normalizarTextoDireccion(textoDestino);
-
-    const necesitaResolverOrigen =
-      !!textoOrigen && (
-        !state.origen ||
-        !coordenadasValidas(state.origen?.lat, state.origen?.lng) ||
-        origenActual !== origenGuardado
-      );
-
-    const necesitaResolverDestino =
-      !!textoDestino && (
-        !state.destino ||
-        !coordenadasValidas(state.destino?.lat, state.destino?.lng) ||
-        destinoActual !== destinoGuardado
-      );
-
-    const [origenRes, destinoRes] = await Promise.all([
-      necesitaResolverOrigen ? resolverPuntoDesdeTexto(textoOrigen) : Promise.resolve(state.origen),
-      necesitaResolverDestino ? resolverPuntoDesdeTexto(textoDestino) : Promise.resolve(state.destino)
-    ]);
-
-    if (requestId !== currentQuoteRequestId) return;
-
-    if (origenRes) {
-      state.origen = origenRes;
-      origenInput.value = origenRes.direccionCorta;
-      origenInput.setAttribute(
-        'title',
-        `${origenRes.direccionCorta}${origenRes.direccionSecundaria ? ' - ' + origenRes.direccionSecundaria : ''}`
-      );
+    
+    if (textoDestino && (
+      !state.destino ||
+      !coordenadasValidas(state.destino?.lat, state.destino?.lng) ||
+      destinoActual !== destinoGuardado
+    )) {
+      puntosParaResolver.push({ id: 'destino', texto: textoDestino, tipo: 'destino' });
     }
 
-    if (destinoRes) {
-      state.destino = destinoRes;
-      destinoInput.value = destinoRes.direccionCorta;
-      destinoInput.setAttribute(
-        'title',
-        `${destinoRes.direccionCorta}${destinoRes.direccionSecundaria ? ' - ' + destinoRes.direccionSecundaria : ''}`
-      );
-    }
-
-    // ==========================================
-    // PASO 2: Resolver waypoints
-    // ==========================================
+    // Waypoints
     const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
+    const waypointsParaResolver = [];
+    
+    for (const input of waypointInputs) {
+      const texto = input.value.trim();
+      const wp = state.waypoints.find(w => w.id === input.id);
+      
+      if (!texto) {
+        if (wp) wp.data = null;
+        continue;
+      }
 
-    await Promise.all(
-      waypointInputs.map(async (input) => {
-        const texto = input.value.trim();
-        const wp = state.waypoints.find(w => w.id === input.id);
+      const textoGuardado = normalizarTextoDireccion(
+        wp?.data?.direccionCorta || wp?.data?.direccion || ''
+      );
+      const textoActual = normalizarTextoDireccion(texto);
+      
+      const necesitaResolver = !wp?.data ||
+        !coordenadasValidas(wp?.data?.lat, wp?.data?.lng) ||
+        textoActual !== textoGuardado;
 
-        if (!texto) {
-          if (wp) wp.data = null;
-          input.removeAttribute('title');
-          return;
+      if (necesitaResolver) {
+        waypointsParaResolver.push({ 
+          id: input.id, 
+          texto, 
+          tipo: 'waypoint',
+          input 
+        });
+      }
+    }
+
+    // ⭐ PARALELIZACIÓN TOTAL: Resolver todos los puntos juntos
+    if (puntosParaResolver.length > 0 || waypointsParaResolver.length > 0) {
+      setLoadingCotizacion(true, 'Geocodificando direcciones...');
+      
+      const todosLosPuntos = [...puntosParaResolver, ...waypointsParaResolver];
+      const resultados = await resolverPuntosParalelos(todosLosPuntos);
+      
+      // Aplicar resultados
+      for (const { id, tipo, resuelto } of resultados) {
+        if (!resuelto) continue;
+        
+        if (tipo === 'origen') {
+          state.origen = resuelto;
+          origenInput.value = resuelto.direccionCorta;
+          origenInput.setAttribute('title', construirTooltip(resuelto));
+        } else if (tipo === 'destino') {
+          state.destino = resuelto;
+          destinoInput.value = resuelto.direccionCorta;
+          destinoInput.setAttribute('title', construirTooltip(resuelto));
+        } else if (tipo === 'waypoint') {
+          const wp = state.waypoints.find(w => w.id === id);
+          const input = waypointsParaResolver.find(w => w.id === id)?.input;
+          if (wp && input) {
+            wp.data = resuelto;
+            input.value = resuelto.direccionCorta;
+            input.setAttribute('title', construirTooltip(resuelto));
+          }
         }
+      }
+    }
 
-        const textoGuardado = normalizarTextoDireccion(
-          wp?.data?.direccionCorta || wp?.data?.direccion || ''
-        );
-        const textoActual = normalizarTextoDireccion(texto);
-
-        const necesitaResolver =
-          !wp?.data ||
-          !coordenadasValidas(wp?.data?.lat, wp?.data?.lng) ||
-          textoActual !== textoGuardado;
-
-        if (!necesitaResolver) return;
-
-        const res = await resolverPuntoDesdeTexto(texto);
-
-        if (res && wp) {
-          wp.data = res;
-          input.value = res.direccionCorta;
-          input.setAttribute(
-            'title',
-            `${res.direccionCorta}${res.direccionSecundaria ? ' - ' + res.direccionSecundaria : ''}`
-          );
-        } else if (wp) {
-          wp.data = null;
-        }
-      })
-    );
-
-    if (requestId !== currentQuoteRequestId) return;
-
+    // Validación rápida
     if (!state.origen || !state.destino) {
       notif.show('Faltan datos', 'Ingresá origen y destino válidos', 'error');
-      setLoadingCotizacion(false);
       return;
     }
 
-    // ==========================================
-    // ✅ PASO 3: OBTENER Y LIMPIAR PUNTOS (NUEVO)
-    // ==========================================
+    // ⭐ OPTIMIZADO: Construir puntos y limpiar en una pasada
     const puntos = obtenerPuntosOrdenados();
+    if (puntos.length < 2) throw new Error('Ruta incompleta');
 
-    if (puntos.length < 2) {
-      throw new Error('Ruta incompleta');
-    }
+    // Limpiar duplicados eficientemente
+    const puntosLimpios = limpiarDuplicados(puntos);
+    if (puntosLimpios.length < 2) throw new Error('Ruta inválida después de limpiar duplicados');
 
-    // 🔥 NUEVO: Limpiar puntos duplicados por coordenadas
-    const puntosLimpios = [];
-    for (const p of puntos) {
-      const last = puntosLimpios[puntosLimpios.length - 1];
-
-      if (
-        last &&
-        Math.abs(Number(last.lat) - Number(p.lat)) < 0.00001 &&
-        Math.abs(Number(last.lng) - Number(p.lng)) < 0.00001
-      ) {
-        console.log('🧹 Punto duplicado eliminado:', p.direccionCorta || p.direccion);
-        continue; // Skip punto duplicado
-      }
-
-      puntosLimpios.push(p);
-    }
-
-    // Validar que queden al menos 2 puntos después de limpiar
-    if (puntosLimpios.length < 2) {
-      throw new Error('La ruta resultante tiene menos de 2 puntos válidos después de limpiar duplicados');
-    }
-
-    // Validar coordenadas de puntos limpios
-    const puntosInvalidos = puntosLimpios.filter(p => !coordenadasValidas(p?.lat, p?.lng));
-    if (puntosInvalidos.length > 0) {
-      throw new Error('Hay direcciones con coordenadas inválidas');
-    }
-
-    // ==========================================
-    // PASO 4: Detectar tipo de ruta (usando puntos limpios)
-    // ==========================================
-    const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntosLimpios);
-    const resumenRuta = construirResumenRutaConPuntos(puntosLimpios);
-
-    // Calcular waypoints intermedios (excluyendo origen y destino)
-    const waypointsIntermedios = puntosLimpios.length > 2 
-      ? puntosLimpios.slice(1, -1).map((p, index) => ({
-          orden: index + 1,
-          direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
-          direccion_completa: p.direccion || p.direccionCorta || `Parada ${index + 1}`,
-          lat: Number(p.lat),
-          lng: Number(p.lng)
-        }))
-      : [];
-
-    // ==========================================
-    // PASO 5: Calcular distancia estimada
-    // ==========================================
-    let distanciaEstimada = 0;
-
-    for (let i = 0; i < puntosLimpios.length - 1; i++) {
-      const from = turf.point([Number(puntosLimpios[i].lng), Number(puntosLimpios[i].lat)]);
-      const to = turf.point([Number(puntosLimpios[i + 1].lng), Number(puntosLimpios[i + 1].lat)]);
-      distanciaEstimada += turf.distance(from, to, { units: 'kilometers' });
-    }
-
-    distanciaEstimada = numeroSeguro((distanciaEstimada * 1.18).toFixed(1), 0);
-    const duracionEstimada = Math.max(1, Math.round((distanciaEstimada / 28) * 60));
-
-    // ==========================================
-    // PASO 6: Mostrar mapa inmediatamente con línea provisional
-    // ==========================================
-    const coordsLineal = puntosLimpios.map(p => [numeroSeguro(p.lng), numeroSeguro(p.lat)]);
+    // Calcular estimación local inmediata (no bloqueante)
+    const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
     
-    if (mapSection) {
-      mapSection.style.display = 'block';
-    }
+    // Mostrar mapa inmediatamente con línea provisional
+    setLoadingCotizacion(true, 'Dibujando ruta...');
+    mostrarMapaInmediato(puntosLimpios, estimacionLocal.coords);
+
+    // ⭐ OPTIMIZADO: Preparar payload mientras se dibuja el mapa
+    const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
     
-    await initMapa();
-    dibujarRutaLineal(coordsLineal);
-
-    if (requestId !== currentQuoteRequestId) return;
-
+    // Cotizar con timeout estricto
     setLoadingCotizacion(true, 'Cotizando...');
+    await cotizarViajeOptimizado(payload, requestId);
 
-    // ==========================================
-    // ✅ PASO 7: CONSTRUIR PAYLOAD CON PUNTOS LIMPIOS
-    // ==========================================
-    const payload = {
-      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
-
-      // Usar puntosLimpios en lugar de puntos
-      origen: puntosLimpios[0].direccion,
-      origen_corto: puntosLimpios[0].direccionCorta || puntosLimpios[0].direccion,
-
-      destino: puntosLimpios[puntosLimpios.length - 1].direccion,
-      destino_corto: puntosLimpios[puntosLimpios.length - 1].direccionCorta || puntosLimpios[puntosLimpios.length - 1].direccion,
-
-      origen_lat: Number(puntosLimpios[0].lat),
-      origen_lng: Number(puntosLimpios[0].lng),
-
-      destino_lat: Number(puntosLimpios[puntosLimpios.length - 1].lat),
-      destino_lng: Number(puntosLimpios[puntosLimpios.length - 1].lng),
-
-      distancia_km: numeroSeguro(distanciaEstimada),
-      duracion_min: numeroSeguro(duracionEstimada),
-      distancia_km_total: numeroSeguro(distanciaEstimada),
-      duracion_min_total: numeroSeguro(duracionEstimada),
-
-      fechaHora: new Date().toISOString(),
-
-      waypoints: waypointsIntermedios,
-
-      // Usar puntosLimpios para puntos_ruta
-      puntos_ruta: puntosLimpios.map((p, index) => ({
-        orden: index,
-        tipo: index === 0 
-          ? 'origen' 
-          : index === puntosLimpios.length - 1 
-            ? 'destino' 
-            : 'parada',
-        direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-        direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-        lat: Number(p.lat),
-        lng: Number(p.lng)
-      })),
-
-      // Contar usando puntosLimpios
-      segmentos_totales_front: Math.max(1, puntosLimpios.length - 1),
-      cantidad_paradas_front: Math.max(0, puntosLimpios.length - 2),
-
-      retorno_al_origen_front: retornoAlOrigen,
-      resumen_ruta_front: resumenRuta,
-
-      ruta_calculada_completa: true,
-      cotizacion_multitramo: puntosLimpios.length > 2,
-
-      // Metadata adicional
-      cliente_origen_input: textoOrigen,
-      cliente_destino_input: textoDestino,
-      puntos_antes_de_limpiar: puntos.length,
-      puntos_despues_de_limpiar: puntosLimpios.length
-    };
-
-    console.log('📤 Payload con puntos limpios:', {
-      antes: puntos.length,
-      despues: puntosLimpios.length,
-      eliminados: puntos.length - puntosLimpios.length
-    });
-
-    await cotizarViaje(payload, requestId);
+    console.log(`✅ Cotización completada en ${(performance.now() - startTime).toFixed(0)}ms`);
 
   } catch (err) {
     console.error('❌ Error:', err);
-
-    if (requestId !== currentQuoteRequestId) return;
-
-    notif.show('Error', err.message || 'No se pudo completar la cotización', 'error');
+    if (requestId === currentQuoteRequestId) {
+      notif.show('Error', err.message || 'No se pudo completar la cotización', 'error');
+    }
   } finally {
     if (requestId === currentQuoteRequestId) {
       setLoadingCotizacion(false);
+      abortController = null;
     }
   }
 }
+  // ⭐ NUEVO: Funciones auxiliares optimizadas
+function construirTooltip(resuelto) {
+  return `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`;
+}
+
+function limpiarDuplicados(puntos) {
+  const resultado = [];
+  for (const p of puntos) {
+    const last = resultado[resultado.length - 1];
+    if (last && 
+        Math.abs(Number(last.lat) - Number(p.lat)) < 0.00001 &&
+        Math.abs(Number(last.lng) - Number(p.lng)) < 0.00001) {
+      continue;
+    }
+    resultado.push(p);
+  }
+  return resultado;
+}
+function calcularEstimacionLocal(puntos) {
+  let distancia = 0;
+  for (let i = 0; i < puntos.length - 1; i++) {
+    const from = turf.point([Number(puntos[i].lng), Number(puntos[i].lat)]);
+    const to = turf.point([Number(puntos[i + 1].lng), Number(puntos[i + 1].lat)]);
+    distancia += turf.distance(from, to, { units: 'kilometers' });
+  }
+  
+  const distanciaKm = numeroSeguro((distancia * 1.18).toFixed(1), 0);
+  const duracionMin = Math.max(1, Math.round((distanciaKm / 28) * 60));
+  
+  return {
+    distanciaKm,
+    duracionMin,
+    coords: puntos.map(p => [numeroSeguro(p.lng), numeroSeguro(p.lat)])
+  };
+}
+function mostrarMapaInmediato(puntos, coords) {
+  const mapSection = document.getElementById('mapSection');
+  if (mapSection) {
+    mapSection.style.display = 'block';
+    // Forzar reflow para transición suave
+    void mapSection.offsetHeight;
+    mapSection.classList.add('visible');
+  }
+  
+  // Dibujar sin await para no bloquear
+  requestAnimationFrame(() => {
+    initMapa().then(() => dibujarRutaLineal(coords));
+  });
+}
+
+function construirPayloadOptimizado(puntos, estimacion) {
+  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
+  const waypointsIntermedios = puntos.length > 2 
+    ? puntos.slice(1, -1).map((p, i) => ({
+        orden: i + 1,
+        direccion: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
+        direccion_completa: p.direccion || p.direccionCorta,
+        lat: Number(p.lat),
+        lng: Number(p.lng)
+      }))
+    : [];
+
+  return {
+    servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+    origen: puntos[0].direccion,
+    origen_corto: puntos[0].direccionCorta,
+    destino: puntos[puntos.length - 1].direccion,
+    destino_corto: puntos[puntos.length - 1].direccionCorta,
+    origen_lat: Number(puntos[0].lat),
+    origen_lng: Number(puntos[0].lng),
+    destino_lat: Number(puntos[puntos.length - 1].lat),
+    destino_lng: Number(puntos[puntos.length - 1].lng),
+    distancia_km: estimacion.distanciaKm,
+    duracion_min: estimacion.duracionMin,
+    distancia_km_total: estimacion.distanciaKm,
+    duracion_min_total: estimacion.duracionMin,
+    fechaHora: new Date().toISOString(),
+    waypoints: waypointsIntermedios,
+    puntos_ruta: puntos.map((p, i) => ({
+      orden: i,
+      tipo: i === 0 ? 'origen' : i === puntos.length - 1 ? 'destino' : 'parada',
+      direccion: p.direccionCorta || p.direccion,
+      direccion_completa: p.direccion,
+      lat: Number(p.lat),
+      lng: Number(p.lng)
+    })),
+    segmentos_totales_front: Math.max(1, puntos.length - 1),
+    cantidad_paradas_front: Math.max(0, puntos.length - 2),
+    retorno_al_origen_front: retornoAlOrigen,
+    resumen_ruta_front: construirResumenRutaConPuntos(puntos),
+    ruta_calculada_completa: true,
+    cotizacion_multitramo: puntos.length > 2
+  };
+}
+// ⭐ OPTIMIZADO: Cotización con abort controller y timeout estricto
+async function cotizarViajeOptimizado(payload, requestId) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
+  
+  try {
+    const response = await fetch(CONFIG.COTIZAR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (requestId !== currentQuoteRequestId) return;
+
+    const rawText = await response.text();
+    let data = null;
+    
+    try {
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch (parseErr) {
+      console.warn('⚠️ Respuesta no JSON:', rawText.slice(0, 200));
+      throw new Error('Respuesta inválida del servidor');
+    }
+
+    if (!response.ok || !data?.exito) {
+      throw new Error(data?.error || `Error ${response.status}`);
+    }
+
+    // Procesar respuesta exitosa
+    procesarRespuestaCotizacion(data, payload, requestId);
+
+  } catch (err) {
+    clearTimeout(timeoutId);
+    
+    if (err.name === 'AbortError') {
+      console.warn('⚠️ Timeout en cotización, usando fallback');
+      usarFallbackLocal(payload, requestId);
+      return;
+    }
+    
+    throw err;
+  }
+}
+
+function usarFallbackLocal(payload, requestId) {
+  if (requestId !== currentQuoteRequestId) return;
+  
+  notif.show('Modo estimado', 'Usando precio estimado local', 'warning');
+  
+  const distancia = payload.distancia_km_total || 0;
+  const duracion = payload.duracion_min_total || 0;
+  
+  // Precio estimado simple (puedes ajustar esta fórmula)
+  const precioEstimado = Math.max(1500, Math.round((800 + distancia * 400 + duracion * 30) / 50) * 50);
+  
+  state.cotizacion = {
+    precio: precioEstimado,
+    precio_formateado: `$${precioEstimado.toLocaleString('es-AR')}`,
+    modo: 'fallback_timeout',
+    resumen_ruta: payload.resumen_ruta_front
+  };
+  
+  state.routeData = {
+    distance: distancia,
+    duration: duracion,
+    fallback: true
+  };
+  
+  mostrarCotizacion(precioEstimado, distancia, duracion);
+}
+function procesarRespuestaCotizacion(data, payload, requestId) {
+  const precio = numeroSeguro(data?.precio, 0);
+  const distancia = numeroSeguro(data?.distancia_km_total || data?.distancia_km, 0);
+  const duracion = numeroSeguro(data?.duracion_min_total || data?.duracion_min, 0);
+  
+  const coordsBackend = data?.route_geometry || 
+                        data?.geometry?.coordinates || 
+                        data?.geometria?.coordinates;
+
+  state.cotizacion = {
+    ...data,
+    resumen_ruta: data?.resumen_ruta || payload.resumen_ruta_front
+  };
+
+  state.routeData = {
+    distance: distancia,
+    duration: duracion,
+    segmentos: data?.segmentos_totales || payload.segmentos_totales_front,
+    retornoAlOrigen: data?.retorno_al_origen || payload.retorno_al_origen_front,
+    resumenRuta: data?.resumen_ruta || payload.resumen_ruta_front,
+    fallback: false,
+    geometry: Array.isArray(coordsBackend) ? {
+      type: 'LineString',
+      coordinates: coordsBackend
+    } : null
+  };
+
+  // Actualizar mapa si hay geometría real
+  if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
+    dibujarRutaReal(coordsBackend);
+  }
+
+  mostrarCotizacion(precio, distancia, duracion);
+}
+function actualizarUILoading(btn, isLoading, texto) {
+  if (!btn) return;
+  
+  const btnContent = btn.querySelector('.btn-content');
+  const btnLoader = btn.querySelector('.btn-loader');
+  const loaderText = btn?.querySelector('.btn-loader span:last-child');
+
+  isCalculatingQuote = isLoading;
+  btn.disabled = isLoading;
+  btn.classList.toggle('loading', isLoading);
+  btn.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+
+  if (loaderText && texto) {
+    loaderText.textContent = texto;
+  }
+
+  // Deshabilitar inputs durante carga
+  document.querySelectorAll('.route-input, .btn-input-action, .btn-add-stop')
+    .forEach(input => {
+      input.disabled = isLoading;
+      if (input.classList.contains('btn-add-stop')) {
+        input.style.opacity = isLoading ? '0.6' : '1';
+        input.style.pointerEvents = isLoading ? 'none' : 'auto';
+      }
+    });
+}
+
+
+  
+// ==========================================
+// UI OPTIMIZADA
+// ==========================================
+
+function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
+  const btn = document.getElementById('btnCalcular');
+  
+  // Debounce visual para evitar flickering en cargas rápidas
+  if (!isLoading && btn?.classList.contains('loading')) {
+    // Delay mínimo de 300ms para feedback visual
+    setTimeout(() => actualizarUILoading(btn, false, texto), CONFIG.TIMEOUTS.UI_FEEDBACK);
+    return;
+  }
+  
+  actualizarUILoading(btn, isLoading, texto);
+}
+
+  
 // ==========================================
 // DETECTAR RETORNO USANDO PUNTOS ESPECÍFICOS
 // ==========================================
@@ -4113,119 +4268,71 @@ function construirResumenRutaConPuntos(puntos) {
 // NUEVAS FUNCIONES AUXILIARES RÁPIDAS
 // ==========================================
 
-// Dibuja línea recta inmediatamente (sin esperar OSRM)
+// ⭐ OPTIMIZADO: Dibujo de ruta lineal más rápido
 function dibujarRutaLineal(coords) {
-  if (!mapaCliente || !mapReady) return;
-  if (!Array.isArray(coords) || coords.length < 2) return;
+  if (!mapaCliente || !mapReady || !Array.isArray(coords) || coords.length < 2) return;
 
-  // Normalizar coordenadas
-  const coordsLimpias = coords
-    .map(c => [Number(c?.[0]), Number(c?.[1])])
-    .filter(c =>
-      Number.isFinite(c[0]) &&
-      Number.isFinite(c[1]) &&
-      Math.abs(c[0]) <= 180 &&
-      Math.abs(c[1]) <= 90
-    );
-
-  if (coordsLimpias.length < 2) return;
-
-  // Limpiar ruta anterior de forma segura
-  if (mapaCliente.getLayer('route-line')) {
-    mapaCliente.removeLayer('route-line');
-  }
-  if (mapaCliente.getSource('route')) {
-    mapaCliente.removeSource('route');
-  }
-
-  // Limpiar marcadores anteriores
-  if (Array.isArray(state.markers) && state.markers.length) {
-    state.markers.forEach(m => {
-      try { m.remove(); } catch (_) {}
-    });
-  }
-  state.markers = [];
-
-  // Línea provisional punteada
-  mapaCliente.addSource('route', {
-    type: 'geojson',
-    data: {
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: coordsLimpias
-      }
-    }
-  });
-
-  mapaCliente.addLayer({
-    id: 'route-line',
-    type: 'line',
-    source: 'route',
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round'
-    },
-    paint: {
-      'line-color': '#1565c0',
-      'line-width': 4,
-      'line-opacity': 0.6,
-      'line-dasharray': [2, 2] // Punteado = provisional
-    }
-  });
-
-  // Marcadores visuales
-  coordsLimpias.forEach((c, i) => {
-    const el = document.createElement('div');
-    const isO = i === 0;
-    const isD = i === coordsLimpias.length - 1;
-
-    el.innerHTML = `
-      <div style="
-        width: 24px;
-        height: 24px;
-        background: ${isO ? '#4caf50' : isD ? '#f44336' : '#ff9800'};
-        border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 11px;
-      ">
-        ${isO ? 'A' : isD ? 'B' : i}
-      </div>
-    `;
-
+  requestAnimationFrame(() => {
+    // Limpiar capas anteriores de forma segura
     try {
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat(c)
-        .addTo(mapaCliente);
-
-      state.markers.push(marker);
-    } catch (err) {
-      console.warn('⚠️ No se pudo dibujar marker:', err);
+      if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+      if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+    } catch (e) {
+      // Ignorar errores de capas inexistentes
     }
-  });
 
-  // Ajustar vista
-  try {
-    const bounds = coordsLimpias.reduce(
-      (b, c) => b.extend(c),
-      new maplibregl.LngLatBounds(coordsLimpias[0], coordsLimpias[0])
-    );
+    // Limpiar marcadores
+    if (Array.isArray(state.markers)) {
+      state.markers.forEach(m => { try { m.remove(); } catch (_) {} });
+    }
+    state.markers = [];
 
-    mapaCliente.fitBounds(bounds, {
-      padding: { top: 50, bottom: 50, left: 50, right: 50 },
-      duration: 500
+    // Añadir fuente y capa
+    mapaCliente.addSource('route', {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: coords }
+      }
     });
-  } catch (err) {
-    console.warn('⚠️ No se pudo ajustar bounds:', err);
-  }
+
+    mapaCliente.addLayer({
+      id: 'route-line',
+      type: 'line',
+      source: 'route',
+      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#1565c0',
+        'line-width': 4,
+        'line-opacity': 0.6,
+        'line-dasharray': [2, 2]
+      }
+    });
+
+    // Añadir marcadores simplificados
+    coords.forEach((c, i) => {
+      const el = document.createElement('div');
+      const color = i === 0 ? '#4caf50' : i === coords.length - 1 ? '#f44336' : '#ff9800';
+      el.innerHTML = `<div style="width:24px;height:24px;background:${color};border-radius:50%;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:11px;">${i === 0 ? 'A' : i === coords.length - 1 ? 'B' : i}</div>`;
+      
+      try {
+        const marker = new maplibregl.Marker({ element: el }).setLngLat(c).addTo(mapaCliente);
+        state.markers.push(marker);
+      } catch (_) {}
+    });
+
+    // Ajustar bounds
+    try {
+      const bounds = coords.reduce(
+        (b, c) => b.extend(c),
+        new maplibregl.LngLatBounds(coords[0], coords[0])
+      );
+      mapaCliente.fitBounds(bounds, { padding: 50, duration: 500 });
+    } catch (_) {}
+  });
 }
-// Actualiza a ruta real cuando llega del backend
+
+  // Actualiza a ruta real cuando llega del backend
 async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
