@@ -4027,6 +4027,17 @@ function limpiarDuplicados(puntos) {
   }
   return resultado;
 }
+  function coordenadasValidas(punto) {
+  return (
+    punto &&
+    typeof punto.lat === "number" &&
+    typeof punto.lng === "number" &&
+    !isNaN(punto.lat) &&
+    !isNaN(punto.lng)
+  );
+}
+
+  
 function calcularEstimacionLocal(puntos) {
   let distancia = 0;
   for (let i = 0; i < puntos.length - 1; i++) {
