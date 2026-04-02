@@ -3922,6 +3922,10 @@ async function calcularRuta() {
       destinoInput.value = resuelto.direccionCorta;
       destinoInput.setAttribute('title', `${resuelto.direccionCorta} - ${resuelto.direccionSecundaria}`);
     }
+    console.log("STATE.ORIGEN:", state.origen?.direccionCorta);
+    console.log("STATE.DESTINO:", state.destino?.direccionCorta);
+    console.log("STATE.WAYPOINTS:", state.waypoints.map(w => w.data?.direccionCorta));
+
 
     // 4. RESOLVER WAYPOINTS PENDIENTES
     await resolverWaypointsPendientes();
