@@ -4255,7 +4255,7 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
 // DETECTAR RETORNO USANDO PUNTOS ESPECÍFICOS
 // ==========================================
 function detectarRetornoAlOrigenConPuntos(puntos) {
-  if (puntos.length < 2) return false;
+  if (!Array.isArray(puntos) || puntos.length < 2) return false;
 
   const origen = puntos[0];
   const ultimo = puntos[puntos.length - 1];
