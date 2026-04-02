@@ -3926,7 +3926,7 @@ async function calcularRuta() {
     const puntos = obtenerPuntosOrdenados();
     if (puntos.length < 2) throw new Error('Ruta incompleta');
 
-    const puntosLimpios = limpiarDuplicados(puntos);
+    const puntosLimpios = limpiarPuntosInvalidos(puntos);
     const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
     
     setLoadingCotizacion(true, 'Dibujando ruta...');
