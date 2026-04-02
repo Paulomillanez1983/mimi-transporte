@@ -3415,16 +3415,24 @@ function initMapa() {
   const mapDiv = document.getElementById('map');
   if (!mapDiv) return Promise.resolve();
 
+  // ⚠️ CRÍTICO: El mapa debe ser visible para inicializar correctamente
+  const mapSection = document.getElementById('mapSection');
+  const wasHidden = mapSection && mapSection.style.display === 'none';
+
+  if (wasHidden) {
+    mapSection.style.display = 'block';
+    mapSection.style.visibility = 'hidden'; // Renderiza pero no se ve
+  }
+
   return new Promise((resolve) => {
     const esMobile = window.innerWidth <= 768;
-    const temaOscuro = document.documentElement.classList.contains('dark')
-      || document.body.classList.contains('dark')
-      || window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    // Estilo raster simple compatible con claro/oscuro
-    const rasterTiles = temaOscuro
-      ? ['https://tile.openstreetmap.org/{z}/{x}/{y}.png']
-      : ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'];
+    const temaOscuro =
+      document.documentElement.classList.contains('dark') ||
+      document.body.classList.contains('dark') ||
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const rasterTiles = ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'];
 
     mapaCliente = new maplibregl.Map({
       container: 'map',
@@ -3489,16 +3497,11 @@ function initMapa() {
       })
     );
 
-    mapaCliente.on('load', () => {
-      mapReady = true;
-      resolve();
-    });
-
+    // ✅ Manejo de errores tiles
     mapaCliente.on('error', (e) => {
       const err = e?.error || e;
       const msg = err?.message || '';
 
-      // Silenciar errores comunes de tiles para no ensuciar consola
       if (
         msg.includes('tile.openstreetmap.org') ||
         msg.includes('Failed to fetch') ||
@@ -3513,13 +3516,32 @@ function initMapa() {
       console.error('❌ Error mapa:', e);
     });
 
-    // Reajustar tamaño por si el contenedor aparece luego
+    // ✅ Cuando carga
+    mapaCliente.on('load', () => {
+      mapReady = true;
+
+      // ⚠️ CRÍTICO: Resize después de cargar
+      setTimeout(() => {
+        try {
+          mapaCliente.resize();
+
+          if (wasHidden) {
+            mapSection.style.visibility = 'visible';
+          }
+        } catch (_) {}
+      }, 120);
+
+      resolve();
+    });
+
+    // ✅ Reajustar tamaño por si el contenedor aparece luego
     setTimeout(() => {
       try {
         mapaCliente?.resize();
       } catch (_) {}
     }, 250);
 
+    // ✅ Resize en cambios de pantalla
     window.addEventListener('resize', () => {
       try {
         mapaCliente?.resize();
@@ -4525,32 +4547,40 @@ function mostrarCotizacion(precio, km, minutos) {
   const resumenParadas = document.getElementById('resumenParadas');
   if (resumenParadas) resumenParadas.textContent = textoResumen;
 
-  // ==================== MAPA ====================
+  // ==================== MOSTRAR MAPA + CARD (CORRECCIÓN) ====================
   const mapSection = document.getElementById('mapSection');
-  
-  if (mapSection) {
-    mapSection.style.display = 'block';   // Mostrar la sección del mapa
+  const quoteCard = document.getElementById('quoteCard');
 
-    // Forzar resize del mapa con un pequeño delay (esto es clave)
-    setTimeout(() => {
-      try {
-        if (mapaCliente) {
-          mapaCliente.resize();                    // ← Muy importante
-        }
-      } catch (e) {
-        console.warn('Error al hacer resize del mapa:', e);
-      }
-    }, 180);
+  if (mapSection) {
+    mapSection.style.display = 'block';
+    mapSection.classList.add('visible');   // ✅ IMPORTANTE
   }
 
-  // Mostrar la card de cotización
-  card.classList.add('visible');
+  if (quoteCard) {
+    quoteCard.classList.add('visible');
+  }
+
+  // ⚠️ CRÍTICO: Resize del mapa después de mostrar todo
+  setTimeout(() => {
+    try {
+      if (mapaCliente && mapReady) {
+        mapaCliente.resize();
+
+        // Si hay ruta, centrar después del resize
+        if (state.routeData?.geometry?.coordinates?.length) {
+          centrarEnRuta();
+        }
+      }
+    } catch (e) {
+      console.warn('Error al hacer resize/centrar mapa:', e);
+    }
+  }, 250);
 
   // Scroll suave hacia la card
   setTimeout(() => {
-    card.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'nearest' 
+    quoteCard?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest'
     });
   }, 350);
 
