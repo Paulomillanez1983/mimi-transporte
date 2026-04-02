@@ -3152,67 +3152,6 @@ function extraerComponentesDireccion(query) {
 const geocodingCache = new Map();
 const CACHE_MAX_SIZE = 50;
 
-async function buscarDireccion(query) {
-  if (!query || query.trim().length < 3) return [];
-  
-  const cacheKey = query.trim().toLowerCase();
-  
-  // Cache hit
-  if (geocodingCache.has(cacheKey)) {
-    console.log('🎯 Cache hit:', query);
-    return geocodingCache.get(cacheKey);
-  }
-  
-  // Limpiar cache si está muy grande (LRU simple)
-  if (geocodingCache.size >= CACHE_MAX_SIZE) {
-    const firstKey = geocodingCache.keys().next().value;
-    geocodingCache.delete(firstKey);
-  }
-
-  const limpio = query.trim();
-  const queryConContexto = /cordoba|córdoba|villa allende|argentina/i.test(limpio)
-    ? limpio
-    : `${limpio}, Córdoba, Argentina`;
-
-  const url = `https://nominatim.openstreetmap.org/search?` +
-    `format=jsonv2&limit=5&countrycodes=ar&addressdetails=1&` + // ⭐ Reducido a 5 resultados
-    `accept-language=es-AR&dedupe=1&` +
-    `viewbox=-64.45,-31.28,-63.95,-31.55&bounded=0&` +
-    `q=${encodeURIComponent(queryConContexto)}`;
-
-  try {
-    const res = await fetchWithTimeout(url, {
-      headers: {
-        "Accept": "application/json",
-        "Accept-Language": "es-AR,es;q=0.9",
-        "User-Agent": "MIMI-Transporte/1.0"
-      }
-    }, CONFIG.TIMEOUTS.GEOCODING);
-
-    if (!res.ok) return [];
-    
-    const data = await res.json();
-    const resultados = (Array.isArray(data) ? data : [])
-      .filter(r => {
-        const display = (r.display_name || "").toLowerCase();
-        return (
-          display.includes("córdoba") ||
-          display.includes("cordoba") ||
-          display.includes("villa allende") ||
-          display.includes("argentina")
-        );
-      })
-      .slice(0, 3); // ⭐ Solo top 3
-
-    // Guardar en cache
-    geocodingCache.set(cacheKey, resultados);
-    
-    return resultados;
-  } catch (err) {
-    console.warn('⚠️ Geocoding timeout/error:', err.message);
-    return [];
-  }
-}
 
 // ⭐ OPTIMIZADO: Resolver múltiples puntos en paralelo con límite de concurrencia
 async function resolverPuntosParalelos(puntosParaResolver) {
