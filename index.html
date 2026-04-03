@@ -2991,67 +2991,64 @@ function limpiarDuplicados(puntos) {
 
   return resultado;
 }
- function construirPayloadOptimizado(puntos) {
-if (!Array.isArray(puntos) || puntos.length < 2) return null;
+function construirPayloadOptimizado(puntos) {
+  if (!Array.isArray(puntos) || puntos.length < 2) return null;
 
-const origen = puntos[0];
-const destino = puntos[puntos.length - 1];
-const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
+  const origen = puntos[0];
+  const destino = puntos[puntos.length - 1];
+  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
 
-const puntosRuta = puntos.map((p, index) => ({
-id: p.id || `stop_${index + 1}`,
-orden: index + 1,
-rol: index === 0 ? 'pickup' : index === puntos.length - 1 ? 'dropoff' : 'stop',
-tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
-direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-lat: Number(p.lat),
-lng: Number(p.lng)
-}));
+  const puntosRuta = puntos.map((p, index) => ({
+    id: p.id || `stop_${index + 1}`,
+    orden: index + 1,
+    rol: index === 0 ? 'pickup' : index === puntos.length - 1 ? 'dropoff' : 'stop',
+    tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+    direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
+    direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  }));
 
-const paradas = puntosRuta
-.filter((p) => p.rol === 'stop')
-.map((p) => ({
-id: p.id,
-orden: p.orden,
-rol: p.rol,
-direccion: p.direccion,
-direccion_completa: p.direccion_completa,
-lat: p.lat,
-lng: p.lng
-}));
+  const paradas = puntosRuta
+    .filter((p) => p.rol === 'stop')
+    .map((p) => ({
+      id: p.id,
+      orden: p.orden,
+      rol: p.rol,
+      direccion: p.direccion,
+      direccion_completa: p.direccion_completa,
+      lat: p.lat,
+      lng: p.lng
+    }));
 
-return {
-servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+  return {
+    servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-```
-origen: origen.direccion,
-origen_corto: origen.direccionCorta || origen.direccion,
-origen_lat: Number(origen.lat),
-origen_lng: Number(origen.lng),
+    origen: origen.direccion,
+    origen_corto: origen.direccionCorta || origen.direccion,
+    origen_lat: Number(origen.lat),
+    origen_lng: Number(origen.lng),
 
-destino: destino.direccion,
-destino_corto: destino.direccionCorta || destino.direccion,
-destino_lat: Number(destino.lat),
-destino_lng: Number(destino.lng),
+    destino: destino.direccion,
+    destino_corto: destino.direccionCorta || destino.direccion,
+    destino_lat: Number(destino.lat),
+    destino_lng: Number(destino.lng),
 
-paradas,
-waypoints: paradas,
-stops: puntosRuta,
-puntos_ruta: puntosRuta,
+    paradas,
+    waypoints: paradas,
+    stops: puntosRuta,
+    puntos_ruta: puntosRuta,
 
-resumen_ruta_front: construirResumenRutaConPuntos(puntos),
-segmentos_totales_front: Math.max(1, puntos.length - 1),
-retorno_al_origen_front: retornoAlOrigen,
-cantidad_paradas_front: paradas.length,
-ruta_calculada_completa: true,
-cotizacion_multitramo: puntos.length > 2,
-fechaHora: new Date().toISOString(),
-espera_min: 0,
-factor_zona: 1
-```
-
-};
+    resumen_ruta_front: construirResumenRutaConPuntos(puntos),
+    segmentos_totales_front: Math.max(1, puntos.length - 1),
+    retorno_al_origen_front: retornoAlOrigen,
+    cantidad_paradas_front: paradas.length,
+    ruta_calculada_completa: true,
+    cotizacion_multitramo: puntos.length > 2,
+    fechaHora: new Date().toISOString(),
+    espera_min: 0,
+    factor_zona: 1
+  };
 }
 
 
