@@ -2070,13 +2070,8 @@ async function obtenerSesionCliente() {
     throw new Error(error.message || 'No se pudo obtener la sesión');
   }
 
-  if (!data?.session?.access_token) {
-    throw new Error('No hay sesión activa');
-  }
-
-  return data.session;
-}
-  
+  return data?.session || null;
+}  
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
@@ -2103,7 +2098,25 @@ function setSectionVisible(elementId, visible) {
     el.setAttribute('aria-hidden', 'true');
   }
 }
+async function loginConGoogleParaViaje() {
+  if (!window.sbRealtime?.auth) {
+    throw new Error('Cliente Auth no inicializado');
+  }
 
+  localStorage.setItem('mimi_pending_trip_request', '1');
+
+  const { error } = await window.sbRealtime.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + window.location.pathname
+    }
+  });
+
+  if (error) {
+    localStorage.removeItem('mimi_pending_trip_request');
+    throw error;
+  }
+}
 function construirTooltip(resuelto) {
   return `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`;
 }
@@ -3721,6 +3734,17 @@ async function confirmarViaje() {
       email: session?.user?.email || null
     });
 
+    if (!session?.access_token) {
+      notif.show(
+        'Ingresá para continuar',
+        'Te llevamos a Google para solicitar el viaje',
+        'info'
+      );
+
+      await loginConGoogleParaViaje();
+      return;
+    }
+
     const puntos = obtenerPuntosOrdenados();
     console.log('[confirmarViaje] puntos ordenados:', puntos);
 
@@ -3824,6 +3848,7 @@ async function confirmarViaje() {
     window.isConfirmingTrip = false;
   }
 }
+  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
@@ -4027,6 +4052,29 @@ function togglePriceBreakdown(forceOpen = null) {
   btn.setAttribute('aria-expanded', String(nextOpen));
   box.hidden = !nextOpen;
 }
+  async function reanudarSolicitudPendientePostLogin() {
+  try {
+    const pending = localStorage.getItem('mimi_pending_trip_request');
+    if (pending !== '1') return;
+
+    const session = await obtenerSesionCliente();
+    if (!session) return;
+
+    localStorage.removeItem('mimi_pending_trip_request');
+
+    notif.show(
+      'Sesión iniciada',
+      'Continuamos con tu solicitud de viaje',
+      'success'
+    );
+
+    setTimeout(() => {
+      confirmarViaje();
+    }, 300);
+  } catch (err) {
+    console.error('[reanudarSolicitudPendientePostLogin] ERROR:', err);
+  }
+}
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
@@ -4053,7 +4101,10 @@ document.addEventListener('DOMContentLoaded', () => {
   setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
     state.destino = data;
   });
+
+  reanudarSolicitudPendientePostLogin();
 });
+  
 </script>
 </body>
 </html>
