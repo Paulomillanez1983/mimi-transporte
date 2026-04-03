@@ -3300,18 +3300,32 @@ function procesarRespuestaCotizacion(data, payload) {
     Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
     null;
 
+  const legs = Array.isArray(data?.legs) ? data.legs : [];
+  const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
+  const detallePrecio = data?.detalle_precio || null;
+
   state.cotizacion = {
     ...data,
-    resumen_ruta: data?.resumen_ruta || payload.resumen_ruta_front,
-    detalle_precio: data?.detalle_precio || null
+    legs,
+    puntos_ruta: puntosRuta,
+    resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
+    detalle_precio: detallePrecio
   };
 
   state.routeData = {
     distance: distancia,
     duration: duracion,
-    segmentos: data?.segmentos_totales || payload.segmentos_totales_front,
-    retornoAlOrigen: data?.retorno_al_origen || payload.retorno_al_origen_front,
-    resumenRuta: data?.resumen_ruta || payload.resumen_ruta_front,
+    segmentos:
+      numeroSeguro(data?.segmentos_totales, 0) ||
+      legs.length ||
+      payload?.segmentos_totales_front ||
+      Math.max(1, puntosRuta.length - 1),
+    retornoAlOrigen:
+      detallePrecio?.vuelve_al_origen ??
+      data?.retorno_al_origen ??
+      payload?.retorno_al_origen_front ??
+      false,
+    resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
     fallback: false,
     geometry: Array.isArray(coordsBackend)
       ? { type: 'LineString', coordinates: coordsBackend }
@@ -3324,6 +3338,8 @@ function procesarRespuestaCotizacion(data, payload) {
 
   mostrarCotizacion(precio, distancia, duracion);
 }
+
+
 // ==========================================
 // RUTA / GEOMETRÍA
 // ==========================================
@@ -3740,25 +3756,32 @@ function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   if (!card) return;
 
+  const dp = state.cotizacion?.detalle_precio || null;
+  const legs = Array.isArray(state.cotizacion?.legs) ? state.cotizacion.legs : [];
+  const puntosRuta = Array.isArray(state.cotizacion?.puntos_ruta) ? state.cotizacion.puntos_ruta : [];
+
   const paradasIntermedias =
-    state.cotizacion?.waypoints_count ??
-    state.cotizacion?.detalle_precio?.cantidad_paradas_intermedias ??
-    (Array.isArray(state.waypoints) ? state.waypoints.filter((w) => w?.data).length : 0);
+    numeroSeguro(state.cotizacion?.waypoints_count, -1) >= 0
+      ? numeroSeguro(state.cotizacion?.waypoints_count, 0)
+      : numeroSeguro(dp?.cantidad_paradas_intermedias, -1) >= 0
+        ? numeroSeguro(dp?.cantidad_paradas_intermedias, 0)
+        : Math.max(0, puntosRuta.length - 2);
 
   const segmentos =
-    state.cotizacion?.segmentos_totales ??
-    state.routeData?.segmentos ??
-    1;
+    numeroSeguro(state.cotizacion?.segmentos_totales, 0) ||
+    numeroSeguro(state.routeData?.segmentos, 0) ||
+    legs.length ||
+    Math.max(1, puntosRuta.length - 1);
 
   const retornoAlOrigen =
+    dp?.vuelve_al_origen ??
     state.cotizacion?.retorno_al_origen ??
-    state.cotizacion?.detalle_precio?.vuelve_al_origen ??
     state.routeData?.retornoAlOrigen ??
     detectarRetornoAlOrigenFrontend();
 
   const precioTexto =
     state.cotizacion?.precio_formateado ||
-    '$' + Number(precio).toLocaleString('es-AR');
+    '$' + Number(precio || 0).toLocaleString('es-AR');
 
   const quotePrice = document.getElementById('quotePrice');
   if (quotePrice) quotePrice.textContent = precioTexto;
@@ -3766,7 +3789,7 @@ function mostrarCotizacion(precio, km, minutos) {
   let label = 'Precio estimado';
   if (state.routeData?.fallback || state.cotizacion?.modo === 'fallback_local') {
     label = 'Estimación provisoria';
-  } else if (state.cotizacion?.detalle_precio) {
+  } else if (dp) {
     label = 'Precio calculado';
   }
 
@@ -3774,10 +3797,10 @@ function mostrarCotizacion(precio, km, minutos) {
   if (labelEl) labelEl.textContent = label;
 
   const detailDistance = document.getElementById('detailDistance');
-  if (detailDistance) detailDistance.textContent = Number(km).toFixed(1) + ' km';
+  if (detailDistance) detailDistance.textContent = Number(km || 0).toFixed(1) + ' km';
 
   const detailDuration = document.getElementById('detailDuration');
-  if (detailDuration) detailDuration.textContent = Math.round(Number(minutos)) + ' min';
+  if (detailDuration) detailDuration.textContent = Math.round(Number(minutos || 0)) + ' min';
 
   const detailStops = document.getElementById('detailStops');
   if (detailStops) detailStops.textContent = paradasIntermedias;
@@ -3797,9 +3820,8 @@ function mostrarCotizacion(precio, km, minutos) {
 
   const breakdown = document.getElementById('priceBreakdown');
   const breakdownContent = document.getElementById('priceBreakdownContent');
-  const dp = state.cotizacion?.detalle_precio;
 
-  if (breakdown && breakdownContent && dp && !state.routeData?.fallback) {
+  if (breakdown && breakdownContent && dp) {
     const filas = [
       ['Tarifa base', dp.tarifa_base],
       ['Subtotal tramos', dp.subtotal_tramos],
@@ -3822,10 +3844,11 @@ function mostrarCotizacion(precio, km, minutos) {
         <div>Hora pico: <strong>${dp.nombre_hora_pico || 'normal'}</strong></div>
         <div>Factor zona: <strong>${dp.factor_zona || 1}</strong></div>
         <div>Segmentos: <strong>${segmentos}</strong></div>
+        <div>Retorno: <strong>${retornoAlOrigen ? 'Sí' : 'No'}</strong></div>
       </div>
     `;
 
-    breakdownContent.innerHTML = filas + meta;
+    breakdownContent.innerHTML = (filas || '<div>Sin recargos adicionales</div>') + meta;
     breakdown.style.display = 'block';
   } else if (breakdown) {
     breakdown.style.display = 'none';
@@ -3833,6 +3856,8 @@ function mostrarCotizacion(precio, km, minutos) {
 
   setSectionVisible('quoteCard', true);
 }
+  
+  
 // ==========================================
 // ACCIONES
 // ==========================================
