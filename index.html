@@ -1770,14 +1770,14 @@ body.dark #mapSection,
 
   <section class="main-card" aria-label="Planificador de viaje">
     <div class="route-planner" id="routePlanner">
-      <div class="route-inputs-container">
+      <div class="route-inputs-container" aria-label="Campos de ruta">
         <div class="route-timeline" id="routeTimeline" aria-hidden="true">
           <div class="timeline-dot origin"></div>
           <div class="timeline-dot destination"></div>
         </div>
 
         <!-- Origen -->
-        <div class="route-input-group">
+        <div class="route-input-group route-input-group-origin">
           <div class="route-input-wrapper">
             <span class="route-input-icon" aria-hidden="true">📍</span>
             <input
@@ -1794,6 +1794,7 @@ body.dark #mapSection,
               aria-label="Origen"
               aria-autocomplete="list"
               aria-controls="sugerenciasOrigen"
+              aria-expanded="false"
             >
           </div>
           <div
@@ -1805,7 +1806,7 @@ body.dark #mapSection,
         </div>
 
         <!-- Botón intercambiar -->
-        <div style="display:flex; justify-content:center; margin:8px 0;">
+        <div class="route-swap-row" style="display:flex; justify-content:center; margin:8px 0; position:relative; z-index:5;">
           <button
             class="map-btn"
             id="btnSwapRoute"
@@ -1818,7 +1819,7 @@ body.dark #mapSection,
         </div>
 
         <!-- Destino -->
-        <div class="route-input-group">
+        <div class="route-input-group route-input-group-destination">
           <div class="route-input-wrapper">
             <span class="route-input-icon" aria-hidden="true">🏁</span>
             <input
@@ -1835,6 +1836,7 @@ body.dark #mapSection,
               aria-label="Destino"
               aria-autocomplete="list"
               aria-controls="sugerenciasDestino"
+              aria-expanded="false"
             >
           </div>
           <div
@@ -1930,39 +1932,39 @@ body.dark #mapSection,
         <div class="quote-price-label">Precio estimado</div>
       </div>
 
-<div class="quote-details">
-  <div class="quote-detail">
-    <div class="quote-detail-value" id="detailDistance">0 km</div>
-    <div class="quote-detail-label">Distancia</div>
-  </div>
-  <div class="quote-detail">
-    <div class="quote-detail-value" id="detailDuration">0 min</div>
-    <div class="quote-detail-label">Duración</div>
-  </div>
-  <div class="quote-detail">
-    <div class="quote-detail-value" id="detailStops">0</div>
-    <div class="quote-detail-label">Paradas</div>
-  </div>
-</div>
+      <div class="quote-details">
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailDistance">0 km</div>
+          <div class="quote-detail-label">Distancia</div>
+        </div>
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailDuration">0 min</div>
+          <div class="quote-detail-label">Duración</div>
+        </div>
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailStops">0</div>
+          <div class="quote-detail-label">Paradas</div>
+        </div>
+      </div>
 
-<button
-  id="btnToggleBreakdown"
-  class="breakdown-toggle"
-  type="button"
-  aria-expanded="false"
-  aria-controls="priceBreakdown"
->
-  <span>Ver desglose del precio</span>
-  <span id="breakdownChevron" aria-hidden="true">▾</span>
-</button>
+      <button
+        id="btnToggleBreakdown"
+        class="breakdown-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="priceBreakdown"
+      >
+        <span>Ver desglose del precio</span>
+        <span id="breakdownChevron" aria-hidden="true">▾</span>
+      </button>
 
-<div id="priceBreakdown" class="price-breakdown" hidden>
-  <div class="price-breakdown-title">Desglose del precio</div>
-  <div id="priceBreakdownContent"></div>
-</div>
-<div class="quote-actions">
-  
-  <button
+      <div id="priceBreakdown" class="price-breakdown" hidden>
+        <div class="price-breakdown-title">Desglose del precio</div>
+        <div id="priceBreakdownContent"></div>
+      </div>
+
+      <div class="quote-actions">
+        <button
           class="btn-primary"
           id="btnConfirmarViaje"
           type="button"
@@ -1971,6 +1973,7 @@ body.dark #mapSection,
           <span aria-hidden="true">✓</span>
           <span>Confirmar viaje</span>
         </button>
+
         <button
           class="btn-secondary"
           id="btnCompartirRuta"
@@ -1994,7 +1997,6 @@ body.dark #mapSection,
     © 2026 MIMI Transporte Infantil
   </div>
 </footer>
-
   
 <script>
 // ==========================================
