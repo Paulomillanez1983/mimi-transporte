@@ -2968,75 +2968,43 @@ async function calcularRuta() {
     }
   }
 }
-function construirPayloadOptimizado(puntos, estimacion) {
-  const puntosUnicos = [];
+function construirPayloadOptimizado(puntos) {
+  if (!puntos || puntos.length < 2) return null;
 
-  for (const p of puntos) {
-    const existe = puntosUnicos.some(x =>
-      Math.abs(Number(x.lat) - Number(p.lat)) < 0.00001 &&
-      Math.abs(Number(x.lng) - Number(p.lng)) < 0.00001
-    );
+  const origen = puntos[0];
+  const destino = puntos[puntos.length - 1];
 
-    if (!existe) puntosUnicos.push(p);
+  const paradas = [];
+
+  if (puntos.length > 2) {
+    for (let i = 1; i < puntos.length - 1; i++) {
+      paradas.push({
+        direccion: puntos[i].direccion,
+        lat: Number(puntos[i].lat),
+        lng: Number(puntos[i].lng)
+      });
+    }
   }
 
-  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntosUnicos);
-
-  const puntosRuta = puntosUnicos.map((p, i) => ({
-    id: p.id || `stop_${i + 1}`,
-    orden: i + 1,
-    rol: i === 0 ? 'pickup' : i === puntosUnicos.length - 1 ? 'dropoff' : 'stop',
-    tipo: i === 0 ? 'origen' : i === puntosUnicos.length - 1 ? 'destino' : 'parada',
-    direccion: p.direccionCorta || p.direccion,
-    direccion_completa: p.direccion,
-    lat: Number(p.lat),
-    lng: Number(p.lng)
-  }));
-
-  const waypointsIntermedios = puntosRuta.filter((p) => p.rol === 'stop');
+  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
 
   return {
     servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-    origen: puntosUnicos[0].direccion,
-    origen_corto: puntosUnicos[0].direccionCorta || puntosUnicos[0].direccion,
-    destino: puntosUnicos[puntosUnicos.length - 1].direccion,
-    destino_corto: puntosUnicos[puntosUnicos.length - 1].direccionCorta || puntosUnicos[puntosUnicos.length - 1].direccion,
+    origen: origen.direccion,
+    origen_lat: Number(origen.lat),
+    origen_lng: Number(origen.lng),
 
-    origen_lat: Number(puntosUnicos[0].lat),
-    origen_lng: Number(puntosUnicos[0].lng),
-    destino_lat: Number(puntosUnicos[puntosUnicos.length - 1].lat),
-    destino_lng: Number(puntosUnicos[puntosUnicos.length - 1].lng),
+    destino: destino.direccion,
+    destino_lat: Number(destino.lat),
+    destino_lng: Number(destino.lng),
 
-    distancia_km: estimacion.distanciaKm,
-    duracion_min: estimacion.duracionMin,
-    distancia_km_total: estimacion.distanciaKm,
-    duracion_min_total: estimacion.duracionMin,
+    paradas,
 
-    fechaHora: new Date().toISOString(),
-    espera_min: 0,
-    factor_zona: 1,
-
-    paradas: waypointsIntermedios.map((w) => ({
-      id: w.id,
-      orden: w.orden,
-      rol: w.rol,
-      lat: w.lat,
-      lng: w.lng,
-      direccion: w.direccion,
-      direccion_completa: w.direccion_completa
-    })),
-
-    waypoints: waypointsIntermedios,
-    puntos_ruta: puntosRuta,
-    stops: puntosRuta,
-
-    segmentos_totales_front: Math.max(1, puntosRuta.length - 1),
-    cantidad_paradas_front: Math.max(0, puntosRuta.length - 2),
+    resumen_ruta_front: construirResumenRutaConPuntos(puntos),
+    segmentos_totales_front: Math.max(1, puntos.length - 1),
     retorno_al_origen_front: retornoAlOrigen,
-    resumen_ruta_front: construirResumenRutaConPuntos(puntosRuta),
-    ruta_calculada_completa: true,
-    cotizacion_multitramo: puntosRuta.length > 2
+    cantidad_paradas_front: paradas.length
   };
 }
   
@@ -3238,7 +3206,7 @@ function usarFallbackLocal(payload, requestId) {
   mostrarCotizacion(precioEstimado, distancia, duracion);
 }
   
-  function procesarRespuestaCotizacion(data, payload) {
+  procesarRespuestaCotizacion(data, payload);
   const precio = numeroSeguro(data?.precio, 0);
 const distancia = numeroSeguro(
   data?.distancia_km_total ?? data?.distancia_km,
