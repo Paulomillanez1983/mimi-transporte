@@ -491,25 +491,6 @@ async function buscarDireccion(query) {
     return [];
   }
 }
-// =========================
-// UPDATE HELPER
-// =========================
-window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
-  try {
-    const result = await safeFetch(
-      `${SUPABASE_URL}/rest/v1/${table}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: "Bearer " + SUPABASE_KEY,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Prefer: "return=representation"
-        },
-        body: JSON.stringify(data)
-      }
-    );
 
     if (!result.response) {
       return {
@@ -1207,9 +1188,6 @@ body.dark #mapSection,
   background: #f8f9fa;
   border-radius: 12px;
 }
-<div id="priceBreakdown" style="display:none; margin-top:16px; padding:14px; background:#f8f9fa; border-radius:12px;">
-  <div style="font-weight:700; margin-bottom:10px;">Desglose del precio</div>
-  <div id="priceBreakdownContent" style="font-size:14px; line-height:1.5; color:#555;"></div>
 </div>
   
   .quote-detail {
@@ -1743,6 +1721,9 @@ body.dark #mapSection,
         onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'"
       >
     </div>
+<div id="priceBreakdown" style="display:none; margin-top:16px; padding:14px; background:#f8f9fa; border-radius:12px;">
+  <div style="font-weight:700; margin-bottom:10px;">Desglose del precio</div>
+  <div id="priceBreakdownContent" style="font-size:14px; line-height:1.5; color:#555;"></div>
 
     <div class="logo-section">
       <div class="logo-title">MIMI</div>
@@ -1997,13 +1978,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Helper opcional recomendado
-function setSectionVisible(elementId, visible) {
-  const el = document.getElementById(elementId);
-  if (!el) return;
-
-  el.classList.toggle("visible", visible);
-  el.setAttribute("aria-hidden", visible ? "false" : "true");
-}
 </script>
   
 <script>
