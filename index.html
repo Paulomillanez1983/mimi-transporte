@@ -2936,11 +2936,16 @@ async function calcularRuta() {
       throw new Error('Ruta incompleta');
     }
 
-    const puntosLimpios = limpiarPuntosInvalidos(puntos);
-    if (!validarPuntosRuta(puntosLimpios)) {
-  throw new Error('Hay una parada repetida o igual al origen/destino. Eliminá la duplicada.');
+const puntosLimpios = limpiarDuplicados(limpiarPuntosInvalidos(puntos));
+
+if (puntosLimpios.length < 2) {
+  throw new Error('No hay suficientes puntos válidos para calcular la ruta');
 }
 
+const errorRuta = validarPuntosRuta(puntosLimpios);
+if (errorRuta) {
+  throw new Error(errorRuta);
+}
     if (puntosLimpios.length < 2) {
       throw new Error('No hay suficientes puntos válidos para calcular la ruta');
     }
@@ -3008,7 +3013,7 @@ function construirPayloadOptimizado(puntos) {
   };
 }
   
-  function limpiarDuplicados(puntos) {
+function limpiarDuplicados(puntos) {
   const tolerancia = 0.0008;
   const resultado = [];
 
@@ -3028,7 +3033,6 @@ function construirPayloadOptimizado(puntos) {
 
   return resultado;
 }
-
 function calcularEstimacionLocal(puntos) {
   const puntosValidos = puntos.filter((p) =>
     p &&
@@ -3067,20 +3071,45 @@ function mostrarMapaInmediato(_puntos, coords) {
   });
 }
 function validarPuntosRuta(puntos) {
-  for (let i = 0; i < puntos.length - 1; i++) {
-    const a = puntos[i];
-    const b = puntos[i + 1];
+  if (!Array.isArray(puntos) || puntos.length < 2) {
+    return 'Ruta incompleta';
+  }
 
-    const dist =
-      Math.abs(a.lat - b.lat) +
-      Math.abs(a.lng - b.lng);
+  const tolerancia = 0.0008;
 
-    if (dist < 0.0001) {
-      console.warn('⚠️ Puntos duplicados detectados:', a, b);
-      return false;
+  const mismoPunto = (a, b) => {
+    if (!a || !b) return false;
+    return (
+      Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
+      Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
+    );
+  };
+
+  const origen = puntos[0];
+  const destino = puntos[puntos.length - 1];
+  const intermedios = puntos.slice(1, -1);
+
+  for (let i = 0; i < intermedios.length; i++) {
+    const p = intermedios[i];
+
+    if (mismoPunto(p, origen)) {
+      return `La parada ${i + 1} es igual al origen`;
+    }
+
+    if (mismoPunto(p, destino)) {
+      return `La parada ${i + 1} es igual al destino`;
     }
   }
-  return true;
+
+  for (let i = 0; i < intermedios.length; i++) {
+    for (let j = i + 1; j < intermedios.length; j++) {
+      if (mismoPunto(intermedios[i], intermedios[j])) {
+        return `La parada ${i + 1} y la parada ${j + 1} son la misma ubicación`;
+      }
+    }
+  }
+
+  return null;
 }
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
