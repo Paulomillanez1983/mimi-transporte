@@ -737,25 +737,26 @@ body {
   flex-direction: column;
   gap: 0;
   position: relative;
-  z-index: auto;
+  z-index: 50;
+  overflow: visible;
 }
 
 .route-inputs-container {
   position: relative;
   padding-left: 32px;
   overflow: visible;
+  z-index: 60;
 }
 
-.route-timeline {
-  position: absolute;
-  left: 12px;
-  top: 24px;
-  bottom: 24px;
-  width: 2px;
-  background: #e0e0e0;
-  z-index: 1;
+.route-input-group {
+  position: relative;
+  margin-bottom: 8px;
+  z-index: 70;
 }
 
+.route-input-group:focus-within {
+  z-index: 80;
+}
 .timeline-dot {
   position: absolute;
   left: -5px;
@@ -912,11 +913,20 @@ body {
   max-height: min(320px, 45vh);
   overflow-y: auto;
   overscroll-behavior: contain;
-  z-index: 9999;
+  z-index: 99999;
 }
 
 .sugerencias.visible {
   display: block;
+}
+.sugerencias.visible {
+  display: block;
+}
+  .quote-card,
+.map-section,
+#mapSection {
+  position: relative;
+  z-index: 1;
 }
 
 .sugerencia-item {
