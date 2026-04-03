@@ -3608,15 +3608,15 @@ if (breakdown && breakdownContent && dp) {
 
   breakdownContent.innerHTML = (filas || '<div>Sin recargos adicionales</div>') + meta;
 
-  if (toggleBtn) toggleBtn.style.display = 'flex';
-  togglePriceBreakdown(false);
-} else {
-  if (breakdown) breakdown.hidden = true;
-  if (toggleBtn) {
+    if (toggleBtn) {
     toggleBtn.style.display = 'none';
     toggleBtn.setAttribute('aria-expanded', 'false');
   }
 }
+
+setSectionVisible('quoteCard', true);
+}
+
 // ==========================================
 // ACCIONES
 // ==========================================
