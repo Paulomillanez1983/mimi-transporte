@@ -1873,20 +1873,6 @@ body.dark #mapSection,
   </div>
 </footer>
 
-<script>
-// Enlazar eventos desde JS para evitar onclick inline
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnAddStop")?.addEventListener("click", agregarWaypoint);
-  document.getElementById("btnCalcular")?.addEventListener("click", calcularRuta);
-  document.getElementById("btnCentrarRuta")?.addEventListener("click", centrarEnRuta);
-  document.getElementById("btnReiniciarRuta")?.addEventListener("click", reiniciarRuta);
-  document.getElementById("btnConfirmarViaje")?.addEventListener("click", confirmarViaje);
-  document.getElementById("btnCompartirRuta")?.addEventListener("click", compartirRuta);
-  document.getElementById("btnSwapRoute")?.addEventListener("click", intercambiarOrigenDestino);
-});
-
-// Helper opcional recomendado
-</script>
   
 <script>
 // ==========================================
@@ -2507,50 +2493,29 @@ function obtenerPuntosOrdenados() {
   );
 }
 function limpiarPuntos(puntos) {
-  const limpios = [];
-
-  for (const p of puntos || []) {
-    if (!p) continue;
-    if (!coordenadasValidas(p.lat, p.lng)) continue;
-
-    const existe = limpios.some(lp => sonMismoPunto(lp, p));
-    if (!existe) limpios.push(p);
-  }
-
-  return limpios;
-}
-
-function limpiarPuntosRuta(puntos) {
   if (!Array.isArray(puntos)) return [];
 
   const validos = puntos.filter((p) =>
     p &&
-    Number.isFinite(Number(p.lat)) &&
-    Number.isFinite(Number(p.lng))
+    coordenadasValidas(p.lat, p.lng)
   );
 
-  if (validos.length < 2) return validos;
+  if (validos.length <= 1) return validos;
 
-  const origen = validos[0];
-  const destino = validos[validos.length - 1];
-  const intermedios = validos.slice(1, -1);
+  const resultado = [];
 
-  const intermediosFiltrados = [];
+  for (const p of validos) {
+    const anterior = resultado[resultado.length - 1];
 
-  for (const p of intermedios) {
-    // no borrar si coincide con origen: permite A -> B -> A
-    // sí borrar duplicados entre intermedios
-    if (intermediosFiltrados.some((x) => sonMismoPunto(x, p))) continue;
+    // solo elimina duplicados consecutivos
+    // NO elimina A -> B -> A
+    if (anterior && sonMismoPunto(anterior, p)) continue;
 
-    // si un intermedio coincide con destino final, es redundante
-    if (sonMismoPunto(p, destino)) continue;
-
-    intermediosFiltrados.push(p);
+    resultado.push(p);
   }
 
-  return [origen, ...intermediosFiltrados, destino];
-}
-  
+  return resultado;
+}  
   function validarPuntosRuta(puntos) {
   if (!Array.isArray(puntos) || puntos.length < 2) {
     return 'Ruta incompleta';
