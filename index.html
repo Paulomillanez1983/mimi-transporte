@@ -3841,12 +3841,86 @@ async function confirmarViaje() {
       estado: state.viajeEstado
     });
 
-    escucharEstadoViajeCliente(json.viaje_id);
+    // =====================================================
+    // DISPATCH AUTOMÁTICO
+    // =====================================================
+    try {
+      console.log('[confirmarViaje] lanzando dispatch-viaje...', {
+        viaje_id: state.viajeId
+      });
 
-    actualizarEstadoSolicitudUI({
-      estado: state.viajeEstado,
-      texto: 'Estamos notificando choferes cercanos...'
-    });
+      actualizarEstadoSolicitudUI({
+        estado: state.viajeEstado,
+        texto: 'Buscando choferes cercanos...'
+      });
+
+      const dispatchRes = await fetch(`${SUPABASE_URL}/functions/v1/dispatch-viaje`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          viaje_id: state.viajeId,
+          timeout_seconds: 20
+        })
+      });
+
+      const dispatchRawText = await dispatchRes.text();
+      console.log('[confirmarViaje] dispatch response status:', dispatchRes.status);
+      console.log('[confirmarViaje] dispatch raw response:', dispatchRawText);
+
+      let dispatchJson = null;
+      try {
+        dispatchJson = dispatchRawText ? JSON.parse(dispatchRawText) : null;
+      } catch (dispatchParseErr) {
+        console.warn('[confirmarViaje] dispatch JSON inválido:', dispatchParseErr);
+      }
+
+      console.log('[confirmarViaje] dispatch json:', dispatchJson);
+
+      // OJO:
+      // si falla dispatch, NO rompemos el viaje ya creado.
+      // El viaje existe igual; solo avisamos que hubo problema al buscar chofer.
+      if (!dispatchRes.ok || dispatchJson?.exito === false) {
+        console.warn('[confirmarViaje] dispatch no exitoso:', {
+          status: dispatchRes.status,
+          body: dispatchJson
+        });
+
+        actualizarEstadoSolicitudUI({
+          estado: state.viajeEstado,
+          texto: 'Viaje creado. Reintentando búsqueda de chofer...'
+        });
+
+        notif.show(
+          'Viaje creado',
+          'La solicitud se guardó, pero hubo un problema al iniciar la búsqueda automática de chofer.',
+          'warning'
+        );
+      } else {
+        actualizarEstadoSolicitudUI({
+          estado: state.viajeEstado,
+          texto: 'Estamos notificando choferes cercanos...'
+        });
+      }
+    } catch (dispatchErr) {
+      console.error('[confirmarViaje] ERROR dispatch-viaje:', dispatchErr);
+
+      actualizarEstadoSolicitudUI({
+        estado: state.viajeEstado,
+        texto: 'Viaje creado. Hubo un problema al iniciar la búsqueda de chofer.'
+      });
+
+      notif.show(
+        'Viaje creado',
+        'La solicitud se guardó, pero no pudimos iniciar la búsqueda automática de chofer.',
+        'warning'
+      );
+    }
+
+    escucharEstadoViajeCliente(state.viajeId);
 
     notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
 
@@ -3860,8 +3934,7 @@ async function confirmarViaje() {
   } finally {
     window.isConfirmingTrip = false;
   }
-}
-  
+}  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
