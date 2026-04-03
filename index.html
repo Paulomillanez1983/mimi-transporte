@@ -2224,21 +2224,10 @@ async function resolverWaypointsPendientes() {
       continue;
     }
 
-    const claveResuelta = `${Number(resuelto.lat).toFixed(6)},${Number(resuelto.lng).toFixed(6)}`;
-    const claveOrigen = state.origen
-      ? `${Number(state.origen.lat).toFixed(6)},${Number(state.origen.lng).toFixed(6)}`
-      : null;
-    const claveDestino = state.destino
-      ? `${Number(state.destino.lat).toFixed(6)},${Number(state.destino.lng).toFixed(6)}`
-      : null;
+if (wp) wp.data = resuelto;
 
-    if (claveResuelta === claveOrigen || claveResuelta === claveDestino) {
-      if (wp) wp.data = null;
-      input.value = '';
-      input.removeAttribute('title');
-      continue;
-    }
-
+input.value = resuelto.direccionCorta;
+input.setAttribute('title', construirTooltip(resuelto));
     if (wp) wp.data = resuelto;
 
     input.value = resuelto.direccionCorta;
@@ -2819,30 +2808,15 @@ function reiniciarRuta() {
 }
 
 function obtenerPuntosOrdenados() {
-  const puntosBase = [
+  return [
     state.origen,
     ...((state.waypoints || [])
       .filter((w) => w && w.data)
       .map((w) => w.data)),
     state.destino
-  ].filter(Boolean);
-
-  const unicos = [];
-  const usados = new Set();
-
-  for (const p of puntosBase) {
-    if (!coordenadasValidas(p?.lat, p?.lng)) continue;
-
-    const clave = `${Number(p.lat).toFixed(6)},${Number(p.lng).toFixed(6)}`;
-    if (!usados.has(clave)) {
-      usados.add(clave);
-      unicos.push(p);
-    }
-  }
-
-  return unicos;
+  ].filter((p) => coordenadasValidas(p?.lat, p?.lng));
 }
-
+  
 // ==========================================
 // UTILIDADES DE RUTA MULTITRAYECTO
 // ==========================================
