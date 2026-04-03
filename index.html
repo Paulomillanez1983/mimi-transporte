@@ -2538,13 +2538,11 @@ function limpiarPuntosRuta(puntos) {
   const intermediosFiltrados = [];
 
   for (const p of intermedios) {
-    // permitir retorno al origen
-    // NO borrar si coincide con origen
-
-    // borrar solo duplicados entre intermedios
+    // no borrar si coincide con origen: permite A -> B -> A
+    // sí borrar duplicados entre intermedios
     if (intermediosFiltrados.some((x) => sonMismoPunto(x, p))) continue;
 
-    // si coincide con destino final, sí es redundante
+    // si un intermedio coincide con destino final, es redundante
     if (sonMismoPunto(p, destino)) continue;
 
     intermediosFiltrados.push(p);
@@ -2552,7 +2550,8 @@ function limpiarPuntosRuta(puntos) {
 
   return [origen, ...intermediosFiltrados, destino];
 }
-function validarPuntosRuta(puntos) {
+  
+  function validarPuntosRuta(puntos) {
   if (!Array.isArray(puntos) || puntos.length < 2) {
     return 'Ruta incompleta';
   }
