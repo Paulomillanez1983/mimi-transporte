@@ -3069,8 +3069,36 @@ function limpiarPuntosRuta(puntos) {
   return [origen, ...intermediosFiltrados, destino];
 }
 
-payload?.distancia_km_total ?? payload?.distancia_km
-payload?.duracion_min_total ?? payload?.duracion_min
+function calcularEstimacionLocal(puntos) {
+  const puntosValidos = puntos.filter((p) =>
+    p &&
+    Number.isFinite(Number(p.lat)) &&
+    Number.isFinite(Number(p.lng))
+  );
+
+  if (puntosValidos.length < 2) {
+    throw new Error('No hay suficientes coordenadas válidas');
+  }
+
+  let distancia = 0;
+
+  for (let i = 0; i < puntosValidos.length - 1; i++) {
+    const from = [Number(puntosValidos[i].lng), Number(puntosValidos[i].lat)];
+    const to = [Number(puntosValidos[i + 1].lng), Number(puntosValidos[i + 1].lat)];
+
+    distancia += turf.distance(from, to, { units: 'kilometers' });
+  }
+
+  const distanciaKm = numeroSeguro(distancia.toFixed(1), 0);
+  const duracionMin = Math.max(1, Math.round((distanciaKm / 28) * 60));
+
+  return {
+    distanciaKm,
+    duracionMin,
+    coords: puntosValidos.map((p) => [numeroSeguro(p.lng), numeroSeguro(p.lat)])
+  };
+}
+  
 function calcularEstimacionLocal(puntos) {
   const puntosValidos = puntos.filter((p) =>
     p &&
