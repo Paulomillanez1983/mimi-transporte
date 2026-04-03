@@ -2463,7 +2463,9 @@ function obtenerPuntosOrdenados() {
   const origen = state.origen;
   const destino = state.destino;
 
-  const waypoints = (state.waypoints || [])
+  if (!origen || !destino) return [];
+
+  const waypointsValidos = (state.waypoints || [])
     .filter((w) =>
       w &&
       w.data &&
@@ -2472,26 +2474,37 @@ function obtenerPuntosOrdenados() {
     )
     .map((w) => w.data);
 
-  const waypointsFiltrados = [];
+  const intermedios = [];
+  let retornoFinal = null;
 
-  for (const wp of waypoints) {
-    // eliminar duplicados entre paradas
-    if (waypointsFiltrados.some((x) => sonMismoPunto(x, wp))) continue;
+  for (const wp of waypointsValidos) {
+    // Si una parada coincide con el origen, la tratamos como retorno final
+    if (sonMismoPunto(wp, origen)) {
+      retornoFinal = wp;
+      continue;
+    }
 
-    // NO eliminar si coincide con origen:
-    // eso permite A -> B -> A
-    // solo eliminamos si coincide con destino y sería redundante
+    // Si coincide con el destino ya cargado, no sumar duplicado
     if (sonMismoPunto(wp, destino)) continue;
 
-    waypointsFiltrados.push(wp);
+    // Evitar duplicados entre intermedios
+    if (intermedios.some((x) => sonMismoPunto(x, wp))) continue;
+
+    intermedios.push(wp);
   }
 
-  return [origen, ...waypointsFiltrados, destino].filter((p) =>
-    p &&
-    Number.isFinite(Number(p.lat)) &&
-    Number.isFinite(Number(p.lng))
-  );
+  const puntos = [origen, ...intermedios, destino];
+
+  if (retornoFinal) {
+    puntos.push({
+      ...retornoFinal,
+      id: retornoFinal.id || `stop_tmp_return_${Date.now()}`
+    });
+  }
+
+  return puntos.filter((p) => p && coordenadasValidas(p.lat, p.lng));
 }
+  
 function limpiarPuntos(puntos) {
   if (!Array.isArray(puntos)) return [];
 
