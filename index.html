@@ -3704,8 +3704,25 @@ async function confirmarViaje() {
     if (window.isConfirmingTrip) return;
     window.isConfirmingTrip = true;
 
+    console.log('[confirmarViaje] iniciando...');
+    console.log('[confirmarViaje] state:', JSON.parse(JSON.stringify({
+      origen: state.origen,
+      destino: state.destino,
+      routeData: state.routeData,
+      cotizacion: state.cotizacion,
+      waypoints: state.waypoints
+    })));
+
     const session = await obtenerSesionCliente();
+    console.log('[confirmarViaje] session:', {
+      hasSession: !!session,
+      hasAccessToken: !!session?.access_token,
+      userId: session?.user?.id || null,
+      email: session?.user?.email || null
+    });
+
     const puntos = obtenerPuntosOrdenados();
+    console.log('[confirmarViaje] puntos ordenados:', puntos);
 
     if (!Array.isArray(puntos) || puntos.length < 2) {
       throw new Error('Ruta incompleta');
@@ -3741,6 +3758,9 @@ async function confirmarViaje() {
       cantidad_paradas: Math.max(0, puntos.length - 2)
     };
 
+    console.log('[confirmarViaje] payload:', payload);
+    console.log('[confirmarViaje] url:', `${SUPABASE_URL}/functions/v1/solicitar-viaje`);
+
     actualizarEstadoSolicitudUI({
       estado: 'OFERTADO',
       texto: 'Enviando solicitud...'
@@ -3756,14 +3776,33 @@ async function confirmarViaje() {
       body: JSON.stringify(payload)
     });
 
-    const json = await res.json();
+    console.log('[confirmarViaje] response status:', res.status);
+    console.log('[confirmarViaje] response ok:', res.ok);
+
+    const rawText = await res.text();
+    console.log('[confirmarViaje] raw response text:', rawText);
+
+    let json = null;
+    try {
+      json = rawText ? JSON.parse(rawText) : null;
+    } catch (parseErr) {
+      console.error('[confirmarViaje] JSON parse error:', parseErr);
+      throw new Error('La función solicitar-viaje devolvió una respuesta inválida');
+    }
+
+    console.log('[confirmarViaje] response json:', json);
 
     if (!res.ok || !json?.ok) {
-      throw new Error(json?.error || 'No se pudo solicitar el viaje');
+      throw new Error(json?.error || `No se pudo solicitar el viaje (HTTP ${res.status})`);
     }
 
     state.viajeId = json.viaje_id;
     state.viajeEstado = json.estado || 'OFERTADO';
+
+    console.log('[confirmarViaje] viaje creado OK:', {
+      viajeId: state.viajeId,
+      estado: state.viajeEstado
+    });
 
     escucharEstadoViajeCliente(json.viaje_id);
 
@@ -3775,14 +3814,16 @@ async function confirmarViaje() {
     notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
 
   } catch (err) {
-    console.error('[confirmarViaje] ERROR:', err);
+    console.error('[confirmarViaje] ERROR completo:', err);
+    console.error('[confirmarViaje] ERROR message:', err?.message);
+    console.error('[confirmarViaje] ERROR stack:', err?.stack);
+
     notif.show('Error', err?.message || 'No se pudo solicitar el viaje', 'error');
     confirmarViajePorWhatsAppFallback();
   } finally {
     window.isConfirmingTrip = false;
   }
 }
-
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
