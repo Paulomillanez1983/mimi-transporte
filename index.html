@@ -3054,17 +3054,18 @@ async function calcularRuta() {
 function construirPayloadOptimizado(puntos, estimacion) {
   const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
 
-  const waypointsIntermedios = puntos.length > 2
-    ? puntos.slice(1, -1).map((p, i) => ({
-        id: p.id || `stop_${i + 2}`,
-        orden: i + 2,
-        rol: 'stop',
-        direccion: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
-        direccion_completa: p.direccion || p.direccionCorta,
-        lat: Number(p.lat),
-        lng: Number(p.lng)
-      }))
-    : [];
+  const puntosRuta = puntos.map((p, i) => ({
+    id: p.id || `stop_${i + 1}`,
+    orden: i + 1,
+    rol: i === 0 ? 'pickup' : i === puntos.length - 1 ? 'dropoff' : 'stop',
+    tipo: i === 0 ? 'origen' : i === puntos.length - 1 ? 'destino' : 'parada',
+    direccion: p.direccionCorta || p.direccion,
+    direccion_completa: p.direccion,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  }));
+
+  const waypointsIntermedios = puntosRuta.filter((p) => p.rol === 'stop');
 
   return {
     servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
@@ -3095,16 +3096,8 @@ function construirPayloadOptimizado(puntos, estimacion) {
 
     waypoints: waypointsIntermedios,
 
-    puntos_ruta: puntos.map((p, i) => ({
-      id: p.id || `stop_${i + 1}`,
-      orden: i + 1,
-      rol: i === 0 ? 'pickup' : i === puntos.length - 1 ? 'dropoff' : 'stop',
-      tipo: i === 0 ? 'origen' : i === puntos.length - 1 ? 'destino' : 'parada',
-      direccion: p.direccionCorta || p.direccion,
-      direccion_completa: p.direccion,
-      lat: Number(p.lat),
-      lng: Number(p.lng)
-    })),
+    puntos_ruta: puntosRuta,
+    stops: puntosRuta,
 
     segmentos_totales_front: Math.max(1, puntos.length - 1),
     cantidad_paradas_front: Math.max(0, puntos.length - 2),
@@ -3113,8 +3106,7 @@ function construirPayloadOptimizado(puntos, estimacion) {
     ruta_calculada_completa: true,
     cotizacion_multitramo: puntos.length > 2
   };
-}
-  
+}  
 function limpiarDuplicados(puntos) {
   const tolerancia = 0.0008;
   const resultado = [];
