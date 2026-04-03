@@ -2166,13 +2166,23 @@ async function resolverWaypointsPendientes() {
 
   return errores;
 }
+  console.log('STATE.ORIGEN:', state.origen);
+console.log('STATE.WAYPOINTS:', state.waypoints);
+console.log('STATE.DESTINO:', state.destino);
+console.log('PUNTOS ORDENADOS FINAL:', obtenerPuntosOrdenados());
   
 function construirPayloadWaypointsIntermedios() {
   const puntos = obtenerPuntosOrdenados();
 
   if (puntos.length <= 2) return [];
 
-  return puntos.slice(1, -1).map((p, index) => ({
+  return puntos.slice(1, -1).filter((p, index, arr) => {
+    return !arr.find((x, i) =>
+      i < index &&
+      Math.abs(Number(x.lat) - Number(p.lat)) < 0.00005 &&
+      Math.abs(Number(x.lng) - Number(p.lng)) < 0.00005
+    );
+  }).map((p, index) => ({
     orden: index + 1,
     direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
     direccion_completa: p.direccion || p.direccionCorta || `Parada ${index + 1}`,
@@ -2180,7 +2190,6 @@ function construirPayloadWaypointsIntermedios() {
     lng: Number(p.lng)
   }));
 }
-
 // ==========================================
 // GEOCODIFICACIÓN / FORMATEO
 // ==========================================
@@ -2747,20 +2756,57 @@ function reiniciarRuta() {
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
 
+function sonMismoPunto(a, b) {
+  if (!a || !b) return false;
+
+  const latA = Number(a.lat);
+  const lngA = Number(a.lng);
+  const latB = Number(b.lat);
+  const lngB = Number(b.lng);
+
+  if (
+    Number.isFinite(latA) &&
+    Number.isFinite(lngA) &&
+    Number.isFinite(latB) &&
+    Number.isFinite(lngB)
+  ) {
+    return Math.abs(latA - latB) < 0.00005 &&
+           Math.abs(lngA - lngB) < 0.00005;
+  }
+
+  const dirA = normalizarTextoDireccion(a.direccionCorta || a.direccion || '');
+  const dirB = normalizarTextoDireccion(b.direccionCorta || b.direccion || '');
+  return !!dirA && !!dirB && dirA === dirB;
+}
+
 function obtenerPuntosOrdenados() {
-  return [
-    state.origen,
-    ...((state.waypoints || [])
-      .filter((w) => w && w.data)
-      .map((w) => w.data)),
-    state.destino
-  ].filter((p) =>
+  const origen = state.origen;
+  const destino = state.destino;
+  const waypoints = (state.waypoints || [])
+    .filter((w) =>
+      w &&
+      w.data &&
+      Number.isFinite(Number(w.data.lat)) &&
+      Number.isFinite(Number(w.data.lng))
+    )
+    .map((w) => w.data);
+
+  const waypointsFiltrados = [];
+  for (const wp of waypoints) {
+    if (sonMismoPunto(wp, origen)) continue;
+    if (sonMismoPunto(wp, destino)) continue;
+    if (waypointsFiltrados.some((x) => sonMismoPunto(x, wp))) continue;
+    waypointsFiltrados.push(wp);
+  }
+
+  return [origen, ...waypointsFiltrados, destino].filter((p) =>
     p &&
     Number.isFinite(Number(p.lat)) &&
     Number.isFinite(Number(p.lng))
   );
-}  
-// ==========================================
+}
+  
+  // ==========================================
 // UTILIDADES DE RUTA MULTITRAYECTO
 // ==========================================
 async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
