@@ -2164,10 +2164,6 @@ async function resolverWaypointsPendientes() {
 
   return errores;
 }
-  console.log('STATE.ORIGEN:', state.origen);
-console.log('STATE.WAYPOINTS:', state.waypoints);
-console.log('STATE.DESTINO:', state.destino);
-console.log('PUNTOS ORDENADOS FINAL:', obtenerPuntosOrdenados());
   
 function construirPayloadWaypointsIntermedios() {
   const puntos = obtenerPuntosOrdenados();
@@ -2754,28 +2750,6 @@ function reiniciarRuta() {
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
 
-function sonMismoPunto(a, b) {
-  if (!a || !b) return false;
-
-  const latA = Number(a.lat);
-  const lngA = Number(a.lng);
-  const latB = Number(b.lat);
-  const lngB = Number(b.lng);
-
-  if (
-    Number.isFinite(latA) &&
-    Number.isFinite(lngA) &&
-    Number.isFinite(latB) &&
-    Number.isFinite(lngB)
-  ) {
-    return Math.abs(latA - latB) < 0.00005 &&
-           Math.abs(lngA - lngB) < 0.00005;
-  }
-
-  const dirA = normalizarTextoDireccion(a.direccionCorta || a.direccion || '');
-  const dirB = normalizarTextoDireccion(b.direccionCorta || b.direccion || '');
-  return !!dirA && !!dirB && dirA === dirB;
-}
 
 function obtenerPuntosOrdenados() {
   const origen = state.origen;
@@ -2985,7 +2959,7 @@ async function calcularRuta() {
       throw new Error('Coordenadas inválidas después de resolver');
     }
 
-    const puntos = obtenerPuntosOrdenados();
+    const puntos = obtenerPuntosOrdenados();  console.log('STATE.ORIGEN:', state.origen); console.log('STATE.WAYPOINTS:', state.waypoints); console.log('STATE.DESTINO:', state.destino); console.log('PUNTOS ORDENADOS FINAL:', puntos);
 
     if (puntos.length < 2) {
       throw new Error('Ruta incompleta');
@@ -3095,69 +3069,8 @@ function limpiarPuntosRuta(puntos) {
   return [origen, ...intermediosFiltrados, destino];
 }
 
-function construirPayloadOptimizado(puntos) {
-  if (!Array.isArray(puntos) || puntos.length < 2) return null;
-
-  const puntosLimpios = limpiarPuntosRuta(puntos);
-  if (puntosLimpios.length < 2) return null;
-
-  const origen = puntosLimpios[0];
-  const destino = puntosLimpios[puntosLimpios.length - 1];
-  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntosLimpios);
-
-  const puntosRuta = puntosLimpios.map((p, index) => ({
-    id: p.id || `stop_${index + 1}`,
-    orden: index + 1,
-    rol: index === 0 ? 'pickup' : index === puntosLimpios.length - 1 ? 'dropoff' : 'stop',
-    tipo: index === 0 ? 'origen' : index === puntosLimpios.length - 1 ? 'destino' : 'parada',
-    direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-    direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-    lat: Number(p.lat),
-    lng: Number(p.lng)
-  }));
-
-  const paradas = puntosRuta
-    .filter((p) => p.rol === 'stop')
-    .map((p) => ({
-      id: p.id,
-      orden: p.orden,
-      rol: p.rol,
-      direccion: p.direccion,
-      direccion_completa: p.direccion_completa,
-      lat: p.lat,
-      lng: p.lng
-    }));
-
-  return {
-    servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
-
-    origen: origen.direccion,
-    origen_corto: origen.direccionCorta || origen.direccion,
-    origen_lat: Number(origen.lat),
-    origen_lng: Number(origen.lng),
-
-    destino: destino.direccion,
-    destino_corto: destino.direccionCorta || destino.direccion,
-    destino_lat: Number(destino.lat),
-    destino_lng: Number(destino.lng),
-
-    paradas,
-    waypoints: paradas,
-    stops: puntosRuta,
-    puntos_ruta: puntosRuta,
-
-    resumen_ruta_front: construirResumenRutaConPuntos(puntosLimpios),
-    segmentos_totales_front: Math.max(1, puntosLimpios.length - 1),
-    retorno_al_origen_front: retornoAlOrigen,
-    cantidad_paradas_front: paradas.length,
-    ruta_calculada_completa: true,
-    cotizacion_multitramo: puntosLimpios.length > 2,
-    fechaHora: new Date().toISOString(),
-    espera_min: 0,
-    factor_zona: 1
-  };
-}
-
+payload?.distancia_km_total ?? payload?.distancia_km
+payload?.duracion_min_total ?? payload?.duracion_min
 function calcularEstimacionLocal(puntos) {
   const puntosValidos = puntos.filter((p) =>
     p &&
@@ -3584,7 +3497,7 @@ async function dibujarRutaFallback() {
   setSectionVisible('mapSection', true);
   await initMapa();
 
-  const puntos = obtenerPuntosOrdenados();
+  const puntos = obtenerPuntosOrdenados();  console.log('STATE.ORIGEN:', state.origen); console.log('STATE.WAYPOINTS:', state.waypoints); console.log('STATE.DESTINO:', state.destino); console.log('PUNTOS ORDENADOS FINAL:', puntos);
   const coords = puntos
     .map((p) => [Number(p.lng), Number(p.lat)])
     .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
@@ -3974,7 +3887,7 @@ function confirmarViaje() {
     state.routeData?.resumenRuta ||
     construirResumenRuta();
 
-  const puntos = obtenerPuntosOrdenados();
+  const puntos = obtenerPuntosOrdenados();  console.log('STATE.ORIGEN:', state.origen); console.log('STATE.WAYPOINTS:', state.waypoints); console.log('STATE.DESTINO:', state.destino); console.log('PUNTOS ORDENADOS FINAL:', puntos);
 
   const paradasTexto = puntos.slice(1, -1).map((p, i) =>
     `📍 *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
