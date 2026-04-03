@@ -2814,9 +2814,12 @@ function obtenerPuntosOrdenados() {
       .filter((w) => w && w.data)
       .map((w) => w.data)),
     state.destino
-  ].filter((p) => coordenadasValidas(p?.lat, p?.lng));
-}
-  
+  ].filter((p) =>
+    p &&
+    Number.isFinite(Number(p.lat)) &&
+    Number.isFinite(Number(p.lng))
+  );
+}  
 // ==========================================
 // UTILIDADES DE RUTA MULTITRAYECTO
 // ==========================================
@@ -2979,6 +2982,9 @@ async function calcularRuta() {
     if (puntos.length < 2) throw new Error('Ruta incompleta');
 
     const puntosLimpios = limpiarPuntosInvalidos(puntos);
+    if (puntosLimpios.some((p) => !coordenadasValidas(p.lat, p.lng))) {
+  throw new Error('Hay paradas con coordenadas inválidas');
+}
     const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
 
     setLoadingCotizacion(true, 'Dibujando ruta...');
@@ -3062,7 +3068,9 @@ function construirPayloadOptimizado(puntos, estimacion) {
 
   const waypointsIntermedios = puntos.length > 2
     ? puntos.slice(1, -1).map((p, i) => ({
-        orden: i + 1,
+        id: p.id || `stop_${i + 2}`,
+        orden: i + 2,
+        rol: 'stop',
         direccion: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
         direccion_completa: p.direccion || p.direccionCorta,
         lat: Number(p.lat),
@@ -3084,9 +3092,13 @@ function construirPayloadOptimizado(puntos, estimacion) {
     destino_lng: Number(puntos[puntos.length - 1].lng),
 
     paradas: waypointsIntermedios.map((w) => ({
+      id: w.id,
+      orden: w.orden,
+      rol: w.rol,
       lat: w.lat,
       lng: w.lng,
-      direccion: w.direccion
+      direccion: w.direccion,
+      direccion_completa: w.direccion_completa
     })),
 
     distancia_km: estimacion.distanciaKm,
@@ -3094,8 +3106,11 @@ function construirPayloadOptimizado(puntos, estimacion) {
     fechaHora: new Date().toISOString(),
 
     waypoints: waypointsIntermedios,
+
     puntos_ruta: puntos.map((p, i) => ({
-      orden: i,
+      id: p.id || `stop_${i + 1}`,
+      orden: i + 1,
+      rol: i === 0 ? 'pickup' : i === puntos.length - 1 ? 'dropoff' : 'stop',
       tipo: i === 0 ? 'origen' : i === puntos.length - 1 ? 'destino' : 'parada',
       direccion: p.direccionCorta || p.direccion,
       direccion_completa: p.direccion,
@@ -3111,7 +3126,6 @@ function construirPayloadOptimizado(puntos, estimacion) {
     cotizacion_multitramo: puntos.length > 2
   };
 }
-
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
