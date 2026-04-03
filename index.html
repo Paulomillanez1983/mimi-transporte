@@ -1612,6 +1612,78 @@ body.dark #mapSection,
     color: #c8d0db;
   }
 }
+  .breakdown-toggle {
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.breakdown-toggle:hover {
+  background: #f8f9fa;
+}
+
+.breakdown-toggle:active {
+  transform: scale(0.99);
+}
+
+#breakdownChevron {
+  transition: transform 0.2s ease;
+  font-size: 16px;
+}
+
+.breakdown-toggle[aria-expanded="true"] #breakdownChevron {
+  transform: rotate(180deg);
+}
+
+.price-breakdown {
+  margin-top: 12px;
+  padding: 14px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.price-breakdown-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+#priceBreakdownContent {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #555;
+}
+
+@media (prefers-color-scheme: dark) {
+  .breakdown-toggle {
+    background: #1f2430;
+    color: #f5f7fb;
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .breakdown-toggle:hover {
+    background: #262d3b;
+  }
+
+  .price-breakdown {
+    background: #202632;
+  }
+
+  #priceBreakdownContent {
+    color: #c8d0db;
+  }
+}
 </style>
 
 </head>
@@ -3111,9 +3183,11 @@ function reiniciarRuta() {
   setSectionVisible('quoteCard', false);
   setLoadingCotizacion(false);
 
+  // 👉 CERRAR DESGLOSE DE PRECIO
+  togglePriceBreakdown(false);
+
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
-
 // ==========================================
 // COTIZACIÓN
 // ==========================================
@@ -3501,45 +3575,48 @@ function mostrarCotizacion(precio, km, minutos) {
     resumenParadas.title = resumenRuta;
   }
 
-  const breakdown = document.getElementById('priceBreakdown');
-  const breakdownContent = document.getElementById('priceBreakdownContent');
+const breakdown = document.getElementById('priceBreakdown');
+const breakdownContent = document.getElementById('priceBreakdownContent');
+const toggleBtn = document.getElementById('btnToggleBreakdown');
 
-  if (breakdown && breakdownContent && dp) {
-    const filas = [
-      ['Tarifa base', dp.tarifa_base],
-      ['Subtotal tramos', dp.subtotal_tramos],
-      ['Recargo paradas', dp.recargo_paradas],
-      ['Recargo retorno', dp.recargo_retorno_origen],
-      ['Recargo servicio', dp.recargo_servicio],
-      ['Recargo espera', dp.recargo_espera]
-    ]
-      .filter(([, valor]) => Number(valor || 0) > 0)
-      .map(([labelFila, valor]) => `
-        <div style="display:flex; justify-content:space-between; gap:12px;">
-          <span>${labelFila}</span>
-          <strong>$${Number(valor).toLocaleString('es-AR')}</strong>
-        </div>
-      `)
-      .join('');
-
-    const meta = `
-      <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.08); font-size:13px; color:#666;">
-        <div>Hora pico: <strong>${dp.nombre_hora_pico || 'normal'}</strong></div>
-        <div>Factor zona: <strong>${dp.factor_zona || 1}</strong></div>
-        <div>Segmentos: <strong>${segmentos}</strong></div>
-        <div>Retorno: <strong>${retornoAlOrigen ? 'Sí' : 'No'}</strong></div>
+if (breakdown && breakdownContent && dp) {
+  const filas = [
+    ['Tarifa base', dp.tarifa_base],
+    ['Subtotal tramos', dp.subtotal_tramos],
+    ['Recargo paradas', dp.recargo_paradas],
+    ['Recargo retorno', dp.recargo_retorno_origen],
+    ['Recargo servicio', dp.recargo_servicio],
+    ['Recargo espera', dp.recargo_espera]
+  ]
+    .filter(([, valor]) => Number(valor || 0) > 0)
+    .map(([labelFila, valor]) => `
+      <div style="display:flex; justify-content:space-between; gap:12px;">
+        <span>${labelFila}</span>
+        <strong>$${Number(valor).toLocaleString('es-AR')}</strong>
       </div>
-    `;
+    `)
+    .join('');
 
-    breakdownContent.innerHTML = (filas || '<div>Sin recargos adicionales</div>') + meta;
-    breakdown.style.display = 'block';
-  } else if (breakdown) {
-    breakdown.style.display = 'none';
+  const meta = `
+    <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.08); font-size:13px; color:#666;">
+      <div>Hora pico: <strong>${dp.nombre_hora_pico || 'normal'}</strong></div>
+      <div>Factor zona: <strong>${dp.factor_zona || 1}</strong></div>
+      <div>Segmentos: <strong>${segmentos}</strong></div>
+      <div>Retorno: <strong>${retornoAlOrigen ? 'Sí' : 'No'}</strong></div>
+    </div>
+  `;
+
+  breakdownContent.innerHTML = (filas || '<div>Sin recargos adicionales</div>') + meta;
+
+  if (toggleBtn) toggleBtn.style.display = 'flex';
+  togglePriceBreakdown(false);
+} else {
+  if (breakdown) breakdown.hidden = true;
+  if (toggleBtn) {
+    toggleBtn.style.display = 'none';
+    toggleBtn.setAttribute('aria-expanded', 'false');
   }
-
-  setSectionVisible('quoteCard', true);
 }
-
 // ==========================================
 // ACCIONES
 // ==========================================
@@ -3637,7 +3714,18 @@ function intercambiarOrigenDestino() {
     else inputDestino.removeAttribute('title');
   }
 }
+function togglePriceBreakdown(forceOpen = null) {
+  const btn = document.getElementById('btnToggleBreakdown');
+  const box = document.getElementById('priceBreakdown');
 
+  if (!btn || !box) return;
+
+  const isOpen = btn.getAttribute('aria-expanded') === 'true';
+  const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !isOpen;
+
+  btn.setAttribute('aria-expanded', String(nextOpen));
+  box.hidden = !nextOpen;
+}
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
@@ -3649,6 +3737,9 @@ function bindUIActions() {
   document.getElementById('btnConfirmarViaje')?.addEventListener('click', confirmarViaje);
   document.getElementById('btnCompartirRuta')?.addEventListener('click', compartirRuta);
   document.getElementById('btnSwapRoute')?.addEventListener('click', intercambiarOrigenDestino);
+  document.getElementById('btnToggleBreakdown')?.addEventListener('click', () => {
+  togglePriceBreakdown();
+});
 }
 
 document.addEventListener('DOMContentLoaded', () => {
