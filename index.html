@@ -1890,28 +1890,24 @@ document.addEventListener("DOMContentLoaded", () => {
   
 <script>
 // ==========================================
-// CONFIGURACIÓN OPTIMIZADA
+// CONFIGURACIÓN
 // ==========================================
 const CONFIG = {
   COTIZAR_URL: 'https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/cotizar',
   WHATSAPP_NUMBER: '5493517014863',
   MAX_WAYPOINTS: 5,
   DEBUG: false,
-
   TIMEOUTS: {
     GEOCODING: 8000,
     COTIZACION: 12000,
-    OSRM: 10000,
     UI_FEEDBACK: 300
   },
-
   RETRY: {
     MAX_ATTEMPTS: 2,
     DELAY_MS: 500
   }
 };
 
-// Compatibilidad con la parte anterior del archivo
 const SUPABASE_PUBLIC_KEY =
   typeof SUPABASE_ANON_KEY !== 'undefined'
     ? SUPABASE_ANON_KEY
@@ -1929,10 +1925,6 @@ function normalizarTextoDireccion(txt) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ');
-}
-
-function esNumeroValido(n) {
-  return Number.isFinite(Number(n));
 }
 
 function numeroSeguro(n, fallback = 0) {
@@ -2084,7 +2076,7 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
 }
 
 // ==========================================
-// RESOLUCIÓN DE PUNTOS
+// GEOCODIFICACIÓN / FORMATEO
 // ==========================================
 async function resolverPuntoDesdeTexto(texto) {
   if (!texto || texto.trim().length < 3) return null;
@@ -2109,123 +2101,6 @@ async function resolverPuntoDesdeTexto(texto) {
     console.error('❌ Error resolviendo punto desde texto:', texto, error);
     return null;
   }
-}
-
-async function resolverWaypointsPendientes() {
-  const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
-  const errores = [];
-
-  for (const input of waypointInputs) {
-    const texto = input.value.trim();
-    const wp = state.waypoints.find((w) => w.id === input.id);
-
-    if (!texto) {
-      if (wp) wp.data = null;
-      input.removeAttribute('title');
-      continue;
-    }
-
-    const textoActualNormalizado = normalizarTextoDireccion(texto);
-    const textoGuardadoNormalizado = normalizarTextoDireccion(
-      wp?.data?.direccionCorta || wp?.data?.direccion || ''
-    );
-
-    const necesitaResolver =
-      !wp?.data || textoActualNormalizado !== textoGuardadoNormalizado;
-
-    if (!necesitaResolver) continue;
-
-    const resuelto = await resolverPuntoDesdeTexto(texto);
-
-    if (!resuelto) {
-      if (wp) wp.data = null;
-      input.removeAttribute('title');
-      errores.push(texto);
-      continue;
-    }
-
-    const dataNormalizada = {
-      id: wp?.data?.id || `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      direccion: resuelto.direccion,
-      direccionCorta: resuelto.direccionCorta,
-      direccionSecundaria: resuelto.direccionSecundaria,
-      lat: Number(resuelto.lat),
-      lng: Number(resuelto.lng),
-      raw: resuelto.raw || null
-    };
-
-    if (wp) {
-      wp.data = dataNormalizada;
-    }
-
-    input.value = dataNormalizada.direccionCorta;
-    input.setAttribute('title', construirTooltip(dataNormalizada));
-  }
-
-  return errores;
-}
-  
-function construirPayloadWaypointsIntermedios() {
-  const puntos = obtenerPuntosOrdenados();
-
-  if (puntos.length <= 2) return [];
-
-  return puntos.slice(1, -1).filter((p, index, arr) => {
-    return !arr.find((x, i) =>
-      i < index &&
-      Math.abs(Number(x.lat) - Number(p.lat)) < 0.00005 &&
-      Math.abs(Number(x.lng) - Number(p.lng)) < 0.00005
-    );
-  }).map((p, index) => ({
-    orden: index + 1,
-    direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
-    direccion_completa: p.direccion || p.direccionCorta || `Parada ${index + 1}`,
-    lat: Number(p.lat),
-    lng: Number(p.lng)
-  }));
-}
-// ==========================================
-// GEOCODIFICACIÓN / FORMATEO
-// ==========================================
-function tieneNumeroCasa(query) {
-  return /\d+/.test(query) && /[a-záéíóúñ\s]{3,}/i.test(query);
-}
-
-function extraerComponentesDireccion(query) {
-  const match = query.match(/^(.+?)\s+(\d+)$/);
-  if (match) {
-    return {
-      calle: match[1].trim(),
-      numero: match[2],
-      queryCompleto: query
-    };
-  }
-  return null;
-}
-
-async function resolverPuntosParalelos(puntosParaResolver) {
-  const CHUNK_SIZE = 3;
-  const resultados = [];
-
-  for (let i = 0; i < puntosParaResolver.length; i += CHUNK_SIZE) {
-    const chunk = puntosParaResolver.slice(i, i + CHUNK_SIZE);
-
-    const chunkResults = await Promise.all(
-      chunk.map(async ({ id, texto, tipo }) => {
-        try {
-          const resuelto = await resolverPuntoDesdeTexto(texto);
-          return { id, tipo, resuelto, exito: !!resuelto };
-        } catch (err) {
-          console.warn(`❌ Error resolviendo ${tipo} ${id}:`, err);
-          return { id, tipo, resuelto: null, exito: false };
-        }
-      })
-    );
-
-    resultados.push(...chunkResults);
-  }
-
-  return resultados;
 }
 
 function formatearDireccionCorta(r) {
@@ -2357,7 +2232,6 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
 
   input.addEventListener('focus', () => {
     const texto = input.value.trim();
-
     if (texto.length >= 3 && !contenedor.innerHTML.trim()) {
       input.dispatchEvent(new Event('input'));
     }
@@ -2372,6 +2246,7 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     }, 200);
   });
 }
+
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
 
@@ -2516,6 +2391,324 @@ function actualizarTimeline() {
 
   dots += `<div class="timeline-dot destination"></div>`;
   timeline.innerHTML = dots;
+}
+
+async function resolverWaypointsPendientes() {
+  const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
+  const errores = [];
+
+  for (const input of waypointInputs) {
+    const texto = input.value.trim();
+    const wp = state.waypoints.find((w) => w.id === input.id);
+
+    if (!texto) {
+      if (wp) wp.data = null;
+      input.removeAttribute('title');
+      continue;
+    }
+
+    const textoActualNormalizado = normalizarTextoDireccion(texto);
+    const textoGuardadoNormalizado = normalizarTextoDireccion(
+      wp?.data?.direccionCorta || wp?.data?.direccion || ''
+    );
+
+    const necesitaResolver =
+      !wp?.data || textoActualNormalizado !== textoGuardadoNormalizado;
+
+    if (!necesitaResolver) continue;
+
+    const resuelto = await resolverPuntoDesdeTexto(texto);
+
+    if (!resuelto) {
+      if (wp) wp.data = null;
+      input.removeAttribute('title');
+      errores.push(texto);
+      continue;
+    }
+
+    const dataNormalizada = {
+      id: wp?.data?.id || `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      direccion: resuelto.direccion,
+      direccionCorta: resuelto.direccionCorta,
+      direccionSecundaria: resuelto.direccionSecundaria,
+      lat: Number(resuelto.lat),
+      lng: Number(resuelto.lng),
+      raw: resuelto.raw || null
+    };
+
+    if (wp) {
+      wp.data = dataNormalizada;
+    }
+
+    input.value = dataNormalizada.direccionCorta;
+    input.setAttribute('title', construirTooltip(dataNormalizada));
+  }
+
+  return errores;
+}
+
+// ==========================================
+// RUTA / PUNTOS
+// ==========================================
+function sonMismoPunto(a, b) {
+  if (!a || !b) return false;
+
+  const latA = Number(a.lat);
+  const lngA = Number(a.lng);
+  const latB = Number(b.lat);
+  const lngB = Number(b.lng);
+
+  if (
+    Number.isFinite(latA) &&
+    Number.isFinite(lngA) &&
+    Number.isFinite(latB) &&
+    Number.isFinite(lngB)
+  ) {
+    return Math.abs(latA - latB) < 0.00005 &&
+           Math.abs(lngA - lngB) < 0.00005;
+  }
+
+  const dirA = normalizarTextoDireccion(a.direccionCorta || a.direccion || '');
+  const dirB = normalizarTextoDireccion(b.direccionCorta || b.direccion || '');
+  return !!dirA && !!dirB && dirA === dirB;
+}
+
+function obtenerPuntosOrdenados() {
+  const origen = state.origen;
+  const destino = state.destino;
+  const waypoints = (state.waypoints || [])
+    .filter((w) =>
+      w &&
+      w.data &&
+      Number.isFinite(Number(w.data.lat)) &&
+      Number.isFinite(Number(w.data.lng))
+    )
+    .map((w) => w.data);
+
+  const waypointsFiltrados = [];
+  for (const wp of waypoints) {
+    if (sonMismoPunto(wp, origen)) continue;
+    if (sonMismoPunto(wp, destino)) continue;
+    if (waypointsFiltrados.some((x) => sonMismoPunto(x, wp))) continue;
+    waypointsFiltrados.push(wp);
+  }
+
+  return [origen, ...waypointsFiltrados, destino].filter((p) =>
+    p &&
+    Number.isFinite(Number(p.lat)) &&
+    Number.isFinite(Number(p.lng))
+  );
+}
+
+function limpiarPuntos(puntos) {
+  const limpios = [];
+
+  for (const p of puntos || []) {
+    if (!p) continue;
+    if (!coordenadasValidas(p.lat, p.lng)) continue;
+
+    const existe = limpios.some(lp => sonMismoPunto(lp, p));
+    if (!existe) limpios.push(p);
+  }
+
+  return limpios;
+}
+
+function limpiarPuntosRuta(puntos) {
+  if (!Array.isArray(puntos)) return [];
+
+  const validos = puntos.filter((p) => p && coordenadasValidas(p.lat, p.lng));
+  if (validos.length < 2) return validos;
+
+  const origen = validos[0];
+  const destino = validos[validos.length - 1];
+  const intermedios = validos.slice(1, -1);
+
+  const intermediosFiltrados = [];
+  for (const p of intermedios) {
+    if (sonMismoPunto(p, origen)) continue;
+    if (sonMismoPunto(p, destino)) continue;
+    if (intermediosFiltrados.some((x) => sonMismoPunto(x, p))) continue;
+    intermediosFiltrados.push(p);
+  }
+
+  return [origen, ...intermediosFiltrados, destino];
+}
+
+function validarPuntosRuta(puntos) {
+  if (!Array.isArray(puntos) || puntos.length < 2) {
+    return 'Ruta incompleta';
+  }
+
+  const intermedios = puntos.slice(1, -1);
+
+  for (let i = 0; i < intermedios.length; i++) {
+    for (let j = i + 1; j < intermedios.length; j++) {
+      if (sonMismoPunto(intermedios[i], intermedios[j])) {
+        return `La parada ${i + 1} y la parada ${j + 1} son la misma ubicación`;
+      }
+    }
+  }
+
+  return null;
+}
+
+function detectarRetornoAlOrigenConPuntos(puntos) {
+  if (!Array.isArray(puntos) || puntos.length < 2) return false;
+  return sonMismoPunto(puntos[0], puntos[puntos.length - 1]);
+}
+
+function detectarRetornoAlOrigenFrontend() {
+  const puntos = obtenerPuntosOrdenados();
+  if (!Array.isArray(puntos) || puntos.length < 2) return false;
+
+  const origen = puntos[0];
+  const ultimo = puntos[puntos.length - 1];
+
+  const distancia = turf.distance(
+    [Number(origen.lng), Number(origen.lat)],
+    [Number(ultimo.lng), Number(ultimo.lat)],
+    { units: 'kilometers' }
+  );
+
+  if (distancia <= 0.08) return true;
+
+  const intermedios = puntos.slice(1, -1);
+  return intermedios.some((p) => {
+    const d = turf.distance(
+      [Number(origen.lng), Number(origen.lat)],
+      [Number(p.lng), Number(p.lat)],
+      { units: 'kilometers' }
+    );
+    return d <= 0.08;
+  });
+}
+
+function construirResumenRuta() {
+  return construirResumenRutaConPuntos(obtenerPuntosOrdenados());
+}
+
+function construirResumenRutaConPuntos(puntos) {
+  if (!Array.isArray(puntos) || puntos.length < 2) return 'Ruta incompleta';
+
+  const nombres = puntos.map((p, index) => {
+    if (index === 0) return p.direccionCorta || 'Origen';
+    if (index === puntos.length - 1) return p.direccionCorta || 'Destino';
+    return p.direccionCorta || `Parada ${index}`;
+  });
+
+  const resumen = nombres.join(' → ');
+  return detectarRetornoAlOrigenConPuntos(puntos) ? `${resumen} ↺` : resumen;
+}
+
+function construirPayloadWaypointsIntermedios() {
+  const puntos = obtenerPuntosOrdenados();
+  if (puntos.length <= 2) return [];
+
+  return puntos.slice(1, -1).map((p, index) => ({
+    orden: index + 1,
+    direccion: p.direccionCorta || p.direccion || `Parada ${index + 1}`,
+    direccion_completa: p.direccion || p.direccionCorta || `Parada ${index + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  }));
+}
+
+function calcularEstimacionLocal(puntos) {
+  const puntosValidos = puntos.filter((p) => p && coordenadasValidas(p.lat, p.lng));
+  if (puntosValidos.length < 2) {
+    throw new Error('No hay suficientes coordenadas válidas');
+  }
+
+  let distancia = 0;
+  let duracion = 0;
+  const coords = puntosValidos.map((p) => [Number(p.lng), Number(p.lat)]);
+
+  for (let i = 0; i < puntosValidos.length - 1; i++) {
+    const from = [Number(puntosValidos[i].lng), Number(puntosValidos[i].lat)];
+    const to = [Number(puntosValidos[i + 1].lng), Number(puntosValidos[i + 1].lat)];
+    const kmTramo = turf.distance(from, to, { units: 'kilometers' });
+
+    distancia += kmTramo;
+    duracion += (kmTramo / 28) * 60;
+  }
+
+  return {
+    distanciaKm: numeroSeguro(distancia.toFixed(1), 0),
+    duracionMin: Math.max(1, Math.round(duracion)),
+    coords
+  };
+}
+
+function construirPayloadOptimizado(puntos, estimacionLocal = null) {
+  if (!Array.isArray(puntos) || puntos.length < 2) return null;
+
+  const puntosLimpios = limpiarPuntosRuta(puntos);
+  if (puntosLimpios.length < 2) return null;
+
+  const origen = puntosLimpios[0];
+  const destino = puntosLimpios[puntosLimpios.length - 1];
+  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntosLimpios);
+
+  const distanciaKm = Number(estimacionLocal?.distanciaKm || 0);
+  const duracionMin = Number(estimacionLocal?.duracionMin || 0);
+
+  const puntosRuta = puntosLimpios.map((p, index) => ({
+    id: p.id || `stop_${index + 1}`,
+    orden: index + 1,
+    rol: index === 0 ? 'pickup' : index === puntosLimpios.length - 1 ? 'dropoff' : 'stop',
+    tipo: index === 0 ? 'origen' : index === puntosLimpios.length - 1 ? 'destino' : 'parada',
+    direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
+    direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  }));
+
+  const paradas = puntosRuta
+    .filter((p) => p.rol === 'stop')
+    .map((p) => ({
+      id: p.id,
+      orden: p.orden,
+      rol: p.rol,
+      direccion: p.direccion,
+      direccion_completa: p.direccion_completa,
+      lat: p.lat,
+      lng: p.lng
+    }));
+
+  return {
+    servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+
+    origen: origen.direccion,
+    origen_corto: origen.direccionCorta || origen.direccion,
+    origen_lat: Number(origen.lat),
+    origen_lng: Number(origen.lng),
+
+    destino: destino.direccion,
+    destino_corto: destino.direccionCorta || destino.direccion,
+    destino_lat: Number(destino.lat),
+    destino_lng: Number(destino.lng),
+
+    distancia_km: distanciaKm,
+    duracion_min: duracionMin,
+    distancia_km_total: distanciaKm,
+    duracion_min_total: duracionMin,
+
+    paradas,
+    waypoints: paradas,
+    stops: puntosRuta,
+    puntos_ruta: puntosRuta,
+
+    resumen_ruta_front: construirResumenRutaConPuntos(puntosLimpios),
+    segmentos_totales_front: Math.max(1, puntosLimpios.length - 1),
+    retorno_al_origen_front: retornoAlOrigen,
+    cantidad_paradas_front: paradas.length,
+    ruta_calculada_completa: true,
+    cotizacion_multitramo: puntosLimpios.length > 2,
+    fechaHora: new Date().toISOString(),
+    espera_min: 0,
+    factor_zona: 1
+  };
 }
 
 // ==========================================
@@ -2682,723 +2875,6 @@ async function dibujarRutaEnMapa(coords) {
   });
 }
 
-function centrarEnRuta() {
-  if (!mapaCliente) return;
-
-  let coords = state.routeData?.geometry?.coordinates;
-
-  if (!coords || coords.length < 2) {
-    const puntos = obtenerPuntosOrdenados();
-    coords = puntos.map((p) => [Number(p.lng), Number(p.lat)]);
-  }
-
-  if (!coords || coords.length < 2) return;
-
-  const bounds = coords.reduce(
-    (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coords[0], coords[0])
-  );
-
-  mapaCliente.fitBounds(bounds, {
-    padding: { top: 50, bottom: 50, left: 50, right: 50 },
-    duration: 600
-  });
-}
-
-function reiniciarRuta() {
-  document.getElementById('inputOrigen').value = '';
-  document.getElementById('inputDestino').value = '';
-  document.getElementById('waypointsContainer').innerHTML = '';
-
-  document.querySelectorAll('.sugerencias').forEach((el) => {
-    el.innerHTML = '';
-    hideSuggestions(el);
-  });
-
-  if (mapaCliente && mapReady) {
-    try {
-      if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-      if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-    } catch (_) {}
-  }
-
-  if (state.markers?.length) {
-    state.markers.forEach((m) => { try { m.remove(); } catch (_) {} });
-  }
-
-  document.getElementById('inputOrigen')?.removeAttribute('title');
-  document.getElementById('inputDestino')?.removeAttribute('title');
-
-  state = {
-    origen: null,
-    destino: null,
-    waypoints: [],
-    routeData: null,
-    map: null,
-    markers: [],
-    cotizacion: null
-  };
-
-  waypointCounter = 0;
-  isCalculatingQuote = false;
-  currentQuoteRequestId++;
-
-  setSectionVisible('mapSection', false);
-  setSectionVisible('quoteCard', false);
-  setLoadingCotizacion(false);
-
-  notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
-}
-
-
-function obtenerPuntosOrdenados() {
-  const origen = state.origen;
-  const destino = state.destino;
-  const waypoints = (state.waypoints || [])
-    .filter((w) =>
-      w &&
-      w.data &&
-      Number.isFinite(Number(w.data.lat)) &&
-      Number.isFinite(Number(w.data.lng))
-    )
-    .map((w) => w.data);
-
-  const waypointsFiltrados = [];
-  for (const wp of waypoints) {
-    if (sonMismoPunto(wp, origen)) continue;
-    if (sonMismoPunto(wp, destino)) continue;
-    if (waypointsFiltrados.some((x) => sonMismoPunto(x, wp))) continue;
-    waypointsFiltrados.push(wp);
-  }
-
-  return [origen, ...waypointsFiltrados, destino].filter((p) =>
-    p &&
-    Number.isFinite(Number(p.lat)) &&
-    Number.isFinite(Number(p.lng))
-  );
-}
-  
-  // ==========================================
-// UTILIDADES DE RUTA MULTITRAYECTO
-// ==========================================
-async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    if (error.name === 'AbortError') {
-      throw new Error(`Timeout after ${timeoutMs}ms`);
-    }
-    throw error;
-  }
-}
-
-async function withRetry(operation, maxAttempts = CONFIG.RETRY.MAX_ATTEMPTS) {
-  let lastError;
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      lastError = error;
-
-      if (error.status >= 400 && error.status < 500) {
-        throw error;
-      }
-
-      if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, CONFIG.RETRY.DELAY_MS * attempt));
-      }
-    }
-  }
-
-  throw lastError;
-}
-
-function detectarRetornoAlOrigenFrontend() {
-  const puntos = obtenerPuntosOrdenados();
-
-  if (!Array.isArray(puntos) || puntos.length < 2) return false;
-
-  const puntosValidos = puntos.filter((p) =>
-    p &&
-    Number.isFinite(Number(p.lat)) &&
-    Number.isFinite(Number(p.lng))
-  );
-
-  if (puntosValidos.length < 2) return false;
-
-  const origen = puntosValidos[0];
-  const ultimo = puntosValidos[puntosValidos.length - 1];
-  const toleranciaKm = 0.08;
-
-  const distancia = (a, b) =>
-    turf.distance(
-      [Number(a.lng), Number(a.lat)],
-      [Number(b.lng), Number(b.lat)],
-      { units: 'kilometers' }
-    );
-
-  if (distancia(origen, ultimo) <= toleranciaKm) return true;
-
-  const intermedios = puntosValidos.slice(1, -1);
-  return intermedios.some((p) => distancia(origen, p) <= toleranciaKm);
-}
-
-function construirResumenRuta() {
-  const puntos = obtenerPuntosOrdenados();
-
-  if (!Array.isArray(puntos) || puntos.length < 2) {
-    return 'Ruta incompleta';
-  }
-
-  const nombres = puntos.map((p, index) => {
-    const nombre = p?.direccionCorta || p?.direccion;
-    if (index === 0) return nombre || 'Origen';
-    if (index === puntos.length - 1) return nombre || 'Destino';
-    return nombre || `Parada ${index}`;
-  });
-
-  const resumen = nombres.join(' → ');
-  return detectarRetornoAlOrigenFrontend() ? `${resumen} ↺` : resumen;
-}
-
-function limpiarPuntos(puntos) {
-  const limpios = [];
-
-  for (const p of puntos || []) {
-    if (!p) continue;
-    if (isNaN(Number(p.lat)) || isNaN(Number(p.lng))) continue;
-
-    const existe = limpios.some(lp =>
-      Math.abs(lp.lat - p.lat) < 0.00005 &&
-      Math.abs(lp.lng - p.lng) < 0.00005
-    );
-
-    if (!existe) {
-      limpios.push(p);
-    }
-  }
-
-  return limpios;
-}
-// ==========================================
-// CÁLCULO DE RUTA
-// ==========================================
-async function calcularRuta() {
-  if (isCalculatingQuote) return;
-
-  const requestId = ++currentQuoteRequestId;
-
-  setLoadingCotizacion(true, 'Analizando direcciones...');
-  setSectionVisible('quoteCard', false);
-  setSectionVisible('mapSection', false);
-
-  try {
-    const origenInput = document.getElementById('inputOrigen');
-    const destinoInput = document.getElementById('inputDestino');
-    const textoOrigen = origenInput?.value?.trim() || '';
-    const textoDestino = destinoInput?.value?.trim() || '';
-
-    if (!textoOrigen || !textoDestino) {
-      throw new Error('Completá origen y destino');
-    }
-
-    const origenActual = normalizarTextoDireccion(textoOrigen);
-    const origenGuardado = normalizarTextoDireccion(state.origen?.direccionCorta || '');
-
-    if (!state.origen || origenActual !== origenGuardado) {
-      log('🔍 Resolviendo origen:', textoOrigen);
-      const resuelto = await resolverPuntoDesdeTexto(textoOrigen);
-
-      if (!resuelto) {
-        throw new Error(`No encontramos la dirección de origen: "${textoOrigen}"`);
-      }
-
-     state.origen = resuelto;
-      
-      origenInput.value = state.origen.direccionCorta;
-      origenInput.setAttribute('title', construirTooltip(state.origen));
-    }
-
-    const destinoActual = normalizarTextoDireccion(textoDestino);
-    const destinoGuardado = normalizarTextoDireccion(state.destino?.direccionCorta || '');
-
-    if (!state.destino || destinoActual !== destinoGuardado) {
-      log('🔍 Resolviendo destino:', textoDestino);
-      const resuelto = await resolverPuntoDesdeTexto(textoDestino);
-
-      if (!resuelto) {
-        throw new Error(`No encontramos la dirección de destino: "${textoDestino}"`);
-      }
-
-      state.destino = resuelto;
-      
-      destinoInput.value = state.destino.direccionCorta;
-      destinoInput.setAttribute('title', construirTooltip(state.destino));
-    }
-
-    const erroresWaypoints = await resolverWaypointsPendientes();
-
-    if (erroresWaypoints.length > 0) {
-      throw new Error(`No pudimos resolver estas paradas: ${erroresWaypoints.join(', ')}`);
-    }
-
-    if (
-      !coordenadasValidas(state.origen?.lat, state.origen?.lng) ||
-      !coordenadasValidas(state.destino?.lat, state.destino?.lng)
-    ) {
-      throw new Error('Coordenadas inválidas después de resolver');
-    }
-
-    const puntos = obtenerPuntosOrdenados();  
-    console.log('STATE.ORIGEN:', state.origen); 
-    console.log('STATE.WAYPOINTS:', state.waypoints); 
-    console.log('STATE.DESTINO:', state.destino); 
-    console.log('PUNTOS ORDENADOS FINAL:', puntos);
-
-    if (puntos.length < 2) {
-      throw new Error('Ruta incompleta');
-    }
-
-const puntosLimpios = limpiarPuntos(puntos);
-
-if (puntosLimpios.length < 2) {
-  throw new Error('No hay suficientes puntos válidos para calcular la ruta');
-}
-
-const errorRuta = validarPuntosRuta(puntosLimpios);
-if (errorRuta) {
-  throw new Error(errorRuta);
-}
-    if (puntosLimpios.some((p) => !coordenadasValidas(p.lat, p.lng))) {
-      throw new Error('Hay paradas con coordenadas inválidas');
-    }
-
-    const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
-
-    setLoadingCotizacion(true, 'Dibujando ruta...');
-    mostrarMapaInmediato(puntosLimpios, estimacionLocal.coords);
-
-    const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
-
-
-    setLoadingCotizacion(true, 'Cotizando...');
-    await cotizarViajeOptimizado(payload, requestId);
-  } catch (err) {
-    console.error('❌ Error en calcularRuta:', err);
-    notif.show('Error', err?.message || 'No se pudo calcular la ruta', 'error');
-  } finally {
-    if (requestId === currentQuoteRequestId) {
-      setLoadingCotizacion(false);
-    }
-  }
-}function sonMismoPunto(a, b) {
-  if (!a || !b) return false;
-
-  const latA = Number(a.lat);
-  const lngA = Number(a.lng);
-  const latB = Number(b.lat);
-  const lngB = Number(b.lng);
-
-  if (
-    Number.isFinite(latA) &&
-    Number.isFinite(lngA) &&
-    Number.isFinite(latB) &&
-    Number.isFinite(lngB)
-  ) {
-    return Math.abs(latA - latB) < 0.00005 &&
-           Math.abs(lngA - lngB) < 0.00005;
-  }
-
-  const dirA = normalizarTextoDireccion(a.direccionCorta || a.direccion || '');
-  const dirB = normalizarTextoDireccion(b.direccionCorta || b.direccion || '');
-  return !!dirA && !!dirB && dirA === dirB;
-}
-
-function limpiarPuntosRuta(puntos) {
-  if (!Array.isArray(puntos)) return [];
-
-  const validos = puntos.filter((p) =>
-    p &&
-    Number.isFinite(Number(p.lat)) &&
-    Number.isFinite(Number(p.lng))
-  );
-
-  if (validos.length < 2) return validos;
-
-  const origen = validos[0];
-  const destino = validos[validos.length - 1];
-  const intermedios = validos.slice(1, -1);
-
-  const intermediosFiltrados = [];
-
-  for (const p of intermedios) {
-    if (sonMismoPunto(p, origen)) continue;
-    if (sonMismoPunto(p, destino)) continue;
-    if (intermediosFiltrados.some((x) => sonMismoPunto(x, p))) continue;
-    intermediosFiltrados.push(p);
-  }
-
-  return [origen, ...intermediosFiltrados, destino];
-}
-
-function construirPayloadOptimizado(puntos, estimacionLocal = null) {
-  if (!Array.isArray(puntos) || puntos.length < 2) return null;
-
-  const puntosLimpios = limpiarPuntosRuta(puntos);
-  if (puntosLimpios.length < 2) return null;
-
-  const origen = puntosLimpios[0];
-  const destino = puntosLimpios[puntosLimpios.length - 1];
-  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntosLimpios);
-
-  const distanciaKm = Number(estimacionLocal?.distanciaKm || 0);
-  const duracionMin = Number(estimacionLocal?.duracionMin || 0);
-
-  const puntosRuta = puntosLimpios.map((p, index) => ({
-    id: p.id || `stop_${index + 1}`,
-    orden: index + 1,
-    rol: index === 0 ? 'pickup' : index === puntosLimpios.length - 1 ? 'dropoff' : 'stop',
-    tipo: index === 0 ? 'origen' : index === puntosLimpios.length - 1 ? 'destino' : 'parada',
-    direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-    direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-    lat: Number(p.lat),
-    lng: Number(p.lng)
-  }));
-
-  const paradas = puntosRuta
-    .filter((p) => p.rol === 'stop')
-    .map((p) => ({
-      id: p.id,
-      orden: p.orden,
-      rol: p.rol,
-      direccion: p.direccion,
-      direccion_completa: p.direccion_completa,
-      lat: p.lat,
-      lng: p.lng
-    }));
-
-  return {
-    servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
-
-    origen: origen.direccion,
-    origen_corto: origen.direccionCorta || origen.direccion,
-    origen_lat: Number(origen.lat),
-    origen_lng: Number(origen.lng),
-
-    destino: destino.direccion,
-    destino_corto: destino.direccionCorta || destino.direccion,
-    destino_lat: Number(destino.lat),
-    destino_lng: Number(destino.lng),
-
-    distancia_km: distanciaKm,
-    duracion_min: duracionMin,
-    distancia_km_total: distanciaKm,
-    duracion_min_total: duracionMin,
-
-    paradas,
-    waypoints: paradas,
-    stops: puntosRuta,
-    puntos_ruta: puntosRuta,
-
-    resumen_ruta_front: construirResumenRutaConPuntos(puntosLimpios),
-    segmentos_totales_front: Math.max(1, puntosLimpios.length - 1),
-    retorno_al_origen_front: retornoAlOrigen,
-    cantidad_paradas_front: paradas.length,
-    ruta_calculada_completa: true,
-    cotizacion_multitramo: puntosLimpios.length > 2,
-    fechaHora: new Date().toISOString(),
-    espera_min: 0,
-    factor_zona: 1
-  };
-}
-
-function calcularEstimacionLocal(puntos) {
-  const puntosValidos = puntos.filter((p) =>
-    p &&
-    Number.isFinite(Number(p.lat)) &&
-    Number.isFinite(Number(p.lng))
-  );
-
-  if (puntosValidos.length < 2) {
-    throw new Error('No hay suficientes coordenadas válidas');
-  }
-
-  let distancia = 0;
-
-  for (let i = 0; i < puntosValidos.length - 1; i++) {
-    const from = [Number(puntosValidos[i].lng), Number(puntosValidos[i].lat)];
-    const to = [Number(puntosValidos[i + 1].lng), Number(puntosValidos[i + 1].lat)];
-
-    distancia += turf.distance(from, to, { units: 'kilometers' });
-  }
-
-  const distanciaKm = numeroSeguro(distancia.toFixed(1), 0);
-  const duracionMin = Math.max(1, Math.round((distanciaKm / 28) * 60));
-
-  return {
-    distanciaKm,
-    duracionMin,
-    coords: puntosValidos.map((p) => [numeroSeguro(p.lng), numeroSeguro(p.lat)])
-  };
-}
-function mostrarMapaInmediato(_puntos, coords) {
-  setSectionVisible('mapSection', true);
-
-  requestAnimationFrame(() => {
-    initMapa().then(() => dibujarRutaLineal(coords));
-  });
-}
-function validarPuntosRuta(puntos) {
-if (!Array.isArray(puntos) || puntos.length < 2) {
-return 'Ruta incompleta';
-}
-
-const tolerancia = 0.0008;
-
-const mismoPunto = (a, b) => {
-if (!a || !b) return false;
-return (
-Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
-Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
-);
-};
-
-const intermedios = puntos.slice(1, -1);
-
-for (let i = 0; i < intermedios.length; i++) {
-for (let j = i + 1; j < intermedios.length; j++) {
-if (mismoPunto(intermedios[i], intermedios[j])) {
-return `La parada ${i + 1} y la parada ${j + 1} son la misma ubicación`;
-}
-}
-}
-
-return null;
-}
-
-  async function cotizarViajeOptimizado(payload, requestId) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
-
-  try {
-    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
-
-    const response = await fetch(CONFIG.COTIZAR_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_PUBLIC_KEY,
-        Authorization: 'Bearer ' + SUPABASE_PUBLIC_KEY
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    if (requestId !== currentQuoteRequestId) return;
-
-    const rawText = await response.text();
-    let data = null;
-
-    try {
-      data = rawText ? JSON.parse(rawText) : null;
-    } catch (_) {
-      throw new Error('Respuesta inválida del servidor');
-    }
-
-    if (!response.ok || !data?.exito) {
-      throw new Error(data?.error || `Error ${response.status}`);
-    }
-
-    console.log('📥 RESPUESTA COTIZAR:', data);
-
-    procesarRespuestaCotizacion(data, payload, requestId);
-  } catch (err) {
-    clearTimeout(timeoutId);
-
-    if (err.name === 'AbortError') {
-      usarFallbackLocal(payload, requestId);
-      return;
-    }
-
-    throw err;
-  }
-}
-function usarFallbackLocal(payload, requestId) {
-  if (requestId !== currentQuoteRequestId) return;
-
-  notif.show('Modo estimado', 'Usando precio estimado local', 'warning');
-
-  const distancia = numeroSeguro(
-    payload?.distancia_km_total ?? payload?.distancia_km,
-    0
-  );
-
-  const duracion = numeroSeguro(
-    payload?.duracion_min_total ?? payload?.duracion_min,
-    0
-  );
-
-  const esperaMin = numeroSeguro(payload?.espera_min, 0);
-  const paradas = numeroSeguro(payload?.cantidad_paradas_front, 0);
-  const retorno = payload?.retorno_al_origen_front ? 900 : 0;
-  const servicio = payload?.servicio === 'IDA_Y_VUELTA_ESCOLAR' ? 700 : 0;
-  const recargoParadas = paradas * 650;
-  const recargoEspera = esperaMin * 90;
-  const factorZona = numeroSeguro(payload?.factor_zona, 1) || 1;
-
-  const subtotalTramos = Math.round(distancia * 550 + duracion * 45);
-
-  const precioEstimado = Math.max(
-    2200,
-    Math.round(
-      (
-        (1200 +
-          subtotalTramos +
-          recargoParadas +
-          retorno +
-          servicio +
-          recargoEspera) * factorZona
-      ) / 50
-    ) * 50
-  );
-
-  state.cotizacion = {
-    precio: precioEstimado,
-    precio_formateado: `$${precioEstimado.toLocaleString('es-AR')}`,
-    resumen_ruta: payload?.resumen_ruta_front || construirResumenRuta(),
-    waypoints_count: paradas,
-    segmentos_totales: payload?.segmentos_totales_front ?? 1,
-    retorno_al_origen: payload?.retorno_al_origen_front ?? false,
-    modo: 'fallback_local',
-    detalle_precio: {
-      tarifa_base: 1200,
-      subtotal_tramos: subtotalTramos,
-      recargo_paradas: recargoParadas,
-      recargo_retorno_origen: retorno,
-      recargo_servicio: servicio,
-      recargo_espera: recargoEspera,
-      nombre_hora_pico: 'estimado_local',
-      factor_zona: factorZona,
-      cantidad_paradas_intermedias: paradas,
-      vuelve_al_origen: !!payload?.retorno_al_origen_front
-    }
-  };
-
-  state.routeData = {
-    ...(state.routeData || {}),
-    distance: distancia,
-    duration: duracion,
-    segmentos: payload?.segmentos_totales_front ?? 1,
-    retornoAlOrigen: payload?.retorno_al_origen_front ?? false,
-    resumenRuta: payload?.resumen_ruta_front || construirResumenRuta(),
-    fallback: true,
-    geometry: state.routeData?.geometry || null
-  };
-
-  mostrarCotizacion(precioEstimado, distancia, duracion);
-}
-  
-function procesarRespuestaCotizacion(data, payload) {
-  const precio = numeroSeguro(data?.precio, 0);
-  const distancia = numeroSeguro(
-    data?.distancia_km_total ?? data?.distancia_km,
-    numeroSeguro(payload?.distancia_km_total ?? payload?.distancia_km, 0)
-  );
-
-  const duracion = numeroSeguro(
-    data?.duracion_min_total ?? data?.duracion_min,
-    numeroSeguro(payload?.duracion_min_total ?? payload?.duracion_min, 0)
-  );
-
-  const coordsBackend =
-    Array.isArray(data?.route_geometry) ? data.route_geometry :
-    Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
-    Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
-    Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
-    null;
-
-  const legs = Array.isArray(data?.legs) ? data.legs : [];
-  const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
-  const detallePrecio = data?.detalle_precio || null;
-
-  state.cotizacion = {
-    ...data,
-    legs,
-    puntos_ruta: puntosRuta,
-    resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
-    detalle_precio: detallePrecio
-  };
-
-  state.routeData = {
-    distance: distancia,
-    duration: duracion,
-    segmentos:
-      numeroSeguro(data?.segmentos_totales, 0) ||
-      legs.length ||
-      payload?.segmentos_totales_front ||
-      Math.max(1, puntosRuta.length - 1),
-    retornoAlOrigen:
-      detallePrecio?.vuelve_al_origen ??
-      data?.retorno_al_origen ??
-      payload?.retorno_al_origen_front ??
-      false,
-    resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
-    fallback: false,
-    geometry: Array.isArray(coordsBackend)
-      ? { type: 'LineString', coordinates: coordsBackend }
-      : null
-  };
-
-  if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
-    dibujarRutaReal(coordsBackend);
-  }
-
-  mostrarCotizacion(precio, distancia, duracion);
-}
-
-// ==========================================
-// RUTA / GEOMETRÍA
-// ==========================================
-function detectarRetornoAlOrigenConPuntos(puntos) {
-  if (!Array.isArray(puntos) || puntos.length < 2) return false;
-
-  const origen = puntos[0];
-  const ultimo = puntos[puntos.length - 1];
-  const tolerancia = 0.0008;
-
-  if (!origen || !ultimo) return false;
-
-  return (
-    Math.abs(Number(origen.lat) - Number(ultimo.lat)) <= tolerancia &&
-    Math.abs(Number(origen.lng) - Number(ultimo.lng)) <= tolerancia
-  );
-}
-
-function construirResumenRutaConPuntos(puntos) {
-  if (puntos.length < 2) return 'Ruta incompleta';
-
-  const nombres = puntos.map((p, index) => {
-    if (index === 0) return p.direccionCorta || 'Origen';
-    if (index === puntos.length - 1) return p.direccionCorta || 'Destino';
-    return p.direccionCorta || `Parada ${index}`;
-  });
-
-  const resumen = nombres.join(' → ');
-  return detectarRetornoAlOrigenConPuntos(puntos) ? `${resumen} ↺` : resumen;
-}
-
 function dibujarRutaLineal(coords) {
   if (!mapaCliente || !mapReady || !Array.isArray(coords) || coords.length < 2) return;
 
@@ -3486,8 +2962,7 @@ async function dibujarRutaReal(coords) {
   };
 
   if (mapaCliente.getSource('route')) {
-    const source = mapaCliente.getSource('route');
-    source.setData(geojson);
+    mapaCliente.getSource('route').setData(geojson);
 
     if (mapaCliente.getLayer('route-line')) {
       mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
@@ -3543,134 +3018,197 @@ async function dibujarRutaReal(coords) {
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 450);
 }
 
-async function dibujarRutaFallback() {
+function mostrarMapaInmediato(_puntos, coords) {
   setSectionVisible('mapSection', true);
-  await initMapa();
+  requestAnimationFrame(() => {
+    initMapa().then(() => dibujarRutaLineal(coords));
+  });
+}
 
-  const puntos = obtenerPuntosOrdenados(); console.log('STATE.ORIGEN:', state.origen); console.log('STATE.WAYPOINTS:', state.waypoints); console.log('STATE.DESTINO:', state.destino); console.log('PUNTOS ORDENADOS FINAL:', puntos);
-  const coords = puntos
-    .map((p) => [Number(p.lng), Number(p.lat)])
-    .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+function centrarEnRuta() {
+  if (!mapaCliente) return;
 
-  let totalDistance = 0;
-
-  for (let i = 0; i < coords.length - 1; i++) {
-    const from = coords[i];
-    const to = coords[i + 1];
-
-    if (
-      !Array.isArray(from) || !Array.isArray(to) ||
-      !Number.isFinite(from[0]) || !Number.isFinite(from[1]) ||
-      !Number.isFinite(to[0]) || !Number.isFinite(to[1])
-    ) {
-      continue;
-    }
-
-    totalDistance += turf.distance(from, to, { units: 'kilometers' });
+  let coords = state.routeData?.geometry?.coordinates;
+  if (!coords || coords.length < 2) {
+    const puntos = obtenerPuntosOrdenados();
+    coords = puntos.map((p) => [Number(p.lng), Number(p.lat)]);
   }
 
-  const distanceKm = Number(totalDistance.toFixed(1));
-  const durationMin = Math.max(1, Math.round((distanceKm / 28) * 60));
+  if (!coords || coords.length < 2) return;
 
-  state.routeData = {
-    geometry: { type: 'LineString', coordinates: coords },
-    distance: distanceKm,
-    duration: durationMin,
-    waypoints: Math.max(0, coords.length - 2),
-    segmentos: Math.max(1, coords.length - 1),
-    retornoAlOrigen: detectarRetornoAlOrigenFrontend(),
-    resumenRuta: construirResumenRuta(),
-    puntosOrdenados: puntos,
-    fallback: true
+  const bounds = coords.reduce(
+    (b, c) => b.extend(c),
+    new maplibregl.LngLatBounds(coords[0], coords[0])
+  );
+
+  mapaCliente.fitBounds(bounds, {
+    padding: { top: 50, bottom: 50, left: 50, right: 50 },
+    duration: 600
+  });
+}
+
+function reiniciarRuta() {
+  document.getElementById('inputOrigen').value = '';
+  document.getElementById('inputDestino').value = '';
+  document.getElementById('waypointsContainer').innerHTML = '';
+
+  document.querySelectorAll('.sugerencias').forEach((el) => {
+    el.innerHTML = '';
+    hideSuggestions(el);
+  });
+
+  if (mapaCliente && mapReady) {
+    try {
+      if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+      if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+    } catch (_) {}
+  }
+
+  if (state.markers?.length) {
+    state.markers.forEach((m) => { try { m.remove(); } catch (_) {} });
+  }
+
+  document.getElementById('inputOrigen')?.removeAttribute('title');
+  document.getElementById('inputDestino')?.removeAttribute('title');
+
+  state = {
+    origen: null,
+    destino: null,
+    waypoints: [],
+    routeData: null,
+    map: null,
+    markers: [],
+    cotizacion: null
   };
 
-  await dibujarRutaEnMapa(coords);
+  waypointCounter = 0;
+  isCalculatingQuote = false;
+  currentQuoteRequestId++;
 
-  const waypointsIntermedios = construirPayloadWaypointsIntermedios();
-  const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
-  const resumenRuta = construirResumenRuta();
+  setSectionVisible('mapSection', false);
+  setSectionVisible('quoteCard', false);
+  setLoadingCotizacion(false);
 
-const payload = {
-  servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
+  notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
+}
 
-  origen: puntos[0].direccion,
-  destino: puntos[puntos.length - 1].direccion,
+// ==========================================
+// COTIZACIÓN
+// ==========================================
+async function calcularRuta() {
+  if (isCalculatingQuote) return;
 
-  origen_lat: Number(puntos[0].lat),
-  origen_lng: Number(puntos[0].lng),
-  destino_lat: Number(puntos[puntos.length - 1].lat),
-  destino_lng: Number(puntos[puntos.length - 1].lng),
+  const requestId = ++currentQuoteRequestId;
 
-  distancia_km: distanceKm,
-  duracion_min: durationMin,
+  setLoadingCotizacion(true, 'Analizando direcciones...');
+  setSectionVisible('quoteCard', false);
+  setSectionVisible('mapSection', false);
 
-  fechaHora: new Date().toISOString(),
-
-  // 🔴 IMPORTANTE
-  stops: puntos.map((p, index) => ({
-    id: `stop_${index + 1}`,
-    orden: index + 1,
-    rol: index === 0 ? 'pickup' : index === puntos.length - 1 ? 'dropoff' : 'stop',
-    lat: Number(p.lat),
-    lng: Number(p.lng),
-    direccion: p.direccionCorta || p.direccion
-  })),
-
-  puntos_ruta: puntos.map((p, index) => ({
-    orden: index + 1,
-    tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
-    direccion: p.direccionCorta || p.direccion,
-    direccion_completa: p.direccion,
-    lat: Number(p.lat),
-    lng: Number(p.lng)
-  })),
-
-  segmentos_totales_front: Math.max(1, puntos.length - 1),
-  cantidad_paradas_front: waypointsIntermedios.length,
-  retorno_al_origen_front: retornoAlOrigen,
-  resumen_ruta_front: resumenRuta,
-  ruta_calculada_completa: true,
-  cotizacion_multitramo: puntos.length > 2
-};
   try {
-    await cotizarViaje(payload);
-  } catch (_) {
-    state.cotizacion = {
-      precio_formateado: 'Consultar',
-      resumen_ruta: resumenRuta,
-      waypoints_count: waypointsIntermedios.length,
-      segmentos_totales: Math.max(1, puntos.length - 1),
-      retorno_al_origen: retornoAlOrigen,
-      modo: 'fallback_local'
-    };
+    const origenInput = document.getElementById('inputOrigen');
+    const destinoInput = document.getElementById('inputDestino');
+    const textoOrigen = origenInput?.value?.trim() || '';
+    const textoDestino = destinoInput?.value?.trim() || '';
 
-    mostrarCotizacion(0, distanceKm, durationMin);
+    if (!textoOrigen || !textoDestino) {
+      throw new Error('Completá origen y destino');
+    }
+
+    const origenActual = normalizarTextoDireccion(textoOrigen);
+    const origenGuardado = normalizarTextoDireccion(state.origen?.direccionCorta || '');
+
+    if (!state.origen || origenActual !== origenGuardado) {
+      log('🔍 Resolviendo origen:', textoOrigen);
+      const resuelto = await resolverPuntoDesdeTexto(textoOrigen);
+      if (!resuelto) {
+        throw new Error(`No encontramos la dirección de origen: "${textoOrigen}"`);
+      }
+
+      state.origen = resuelto;
+      origenInput.value = state.origen.direccionCorta;
+      origenInput.setAttribute('title', construirTooltip(state.origen));
+    }
+
+    const destinoActual = normalizarTextoDireccion(textoDestino);
+    const destinoGuardado = normalizarTextoDireccion(state.destino?.direccionCorta || '');
+
+    if (!state.destino || destinoActual !== destinoGuardado) {
+      log('🔍 Resolviendo destino:', textoDestino);
+      const resuelto = await resolverPuntoDesdeTexto(textoDestino);
+      if (!resuelto) {
+        throw new Error(`No encontramos la dirección de destino: "${textoDestino}"`);
+      }
+
+      state.destino = resuelto;
+      destinoInput.value = state.destino.direccionCorta;
+      destinoInput.setAttribute('title', construirTooltip(state.destino));
+    }
+
+    const erroresWaypoints = await resolverWaypointsPendientes();
+    if (erroresWaypoints.length > 0) {
+      throw new Error(`No pudimos resolver estas paradas: ${erroresWaypoints.join(', ')}`);
+    }
+
+    if (
+      !coordenadasValidas(state.origen?.lat, state.origen?.lng) ||
+      !coordenadasValidas(state.destino?.lat, state.destino?.lng)
+    ) {
+      throw new Error('Coordenadas inválidas después de resolver');
+    }
+
+    const puntos = obtenerPuntosOrdenados();
+
+    console.log('STATE.ORIGEN:', state.origen);
+    console.log('STATE.WAYPOINTS:', state.waypoints);
+    console.log('STATE.DESTINO:', state.destino);
+    console.log('PUNTOS ORDENADOS FINAL:', puntos);
+
+    if (puntos.length < 2) {
+      throw new Error('Ruta incompleta');
+    }
+
+    const puntosLimpios = limpiarPuntos(puntos);
+    if (puntosLimpios.length < 2) {
+      throw new Error('No hay suficientes puntos válidos para calcular la ruta');
+    }
+
+    const errorRuta = validarPuntosRuta(puntosLimpios);
+    if (errorRuta) {
+      throw new Error(errorRuta);
+    }
+
+    if (puntosLimpios.some((p) => !coordenadasValidas(p.lat, p.lng))) {
+      throw new Error('Hay paradas con coordenadas inválidas');
+    }
+
+    const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
+
+    setLoadingCotizacion(true, 'Dibujando ruta...');
+    mostrarMapaInmediato(puntosLimpios, estimacionLocal.coords);
+
+    const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
+    if (!payload) {
+      throw new Error('No se pudo construir el payload de cotización');
+    }
+
+    setLoadingCotizacion(true, 'Cotizando...');
+    await cotizarViajeOptimizado(payload, requestId);
+  } catch (err) {
+    console.error('❌ Error en calcularRuta:', err);
+    notif.show('Error', err?.message || 'No se pudo calcular la ruta', 'error');
+  } finally {
+    if (requestId === currentQuoteRequestId) {
+      setLoadingCotizacion(false);
+    }
   }
 }
 
-async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
-  let timeoutId = null;
+async function cotizarViajeOptimizado(payload, requestId) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
 
   try {
-    if (!payload || typeof payload !== 'object') {
-      throw new Error('Payload inválido para cotización');
-    }
-
-    console.log('==============================');
-    console.log('📦 PAYLOAD FINAL');
-    console.log(payload);
-    console.log('PUNTOS RUTA:', payload.puntos_ruta);
-    console.log('WAYPOINTS:', payload.waypoints);
-    console.log('SEGMENTOS FRONT:', payload.segmentos_totales_front);
-    console.log('DISTANCIA FRONT:', payload.distancia_km_total);
-    console.log('DURACION FRONT:', payload.duracion_min_total);
-    console.log('==============================');
-
-    const resumenRuta = payload.resumen_ruta_front || construirResumenRuta();
-    const controller = new AbortController();
-    timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    const startTime = performance.now();
+    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
 
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
@@ -3683,8 +3221,7 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
       signal: controller.signal
     });
 
-    const endTime = performance.now();
-    console.log(`⏱️ Tiempo cotización: ${(endTime - startTime).toFixed(0)} ms`);
+    clearTimeout(timeoutId);
 
     if (requestId !== currentQuoteRequestId) return;
 
@@ -3694,105 +3231,17 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     try {
       data = rawText ? JSON.parse(rawText) : null;
     } catch (_) {
-      console.error('❌ Respuesta no JSON:', rawText);
       throw new Error('Respuesta inválida del servidor');
     }
 
-    console.log('==============================');
-    console.log('📥 RESPUESTA BACKEND');
-    console.log(data);
-    console.log('KM BACK:', data?.distancia_km);
-    console.log('MIN BACK:', data?.duracion_min);
-    console.log('PRECIO:', data?.precio);
-    console.log('LEGS:', data?.legs);
-    console.log('DETALLE PRECIO:', data?.detalle_precio);
-    console.log('==============================');
-
     if (!response.ok || !data?.exito) {
-      throw new Error(data?.error || `No se pudo cotizar (${response.status})`);
+      throw new Error(data?.error || `Error ${response.status}`);
     }
 
-    const precio = numeroSeguro(data?.precio, 0);
-
-    const distancia = numeroSeguro(
-      data?.distancia_km_total ??
-      data?.distancia_km,
-      numeroSeguro(
-        payload?.distancia_km_total ??
-        payload?.distancia_km,
-        0
-      )
-    );
-
-    const duracion = numeroSeguro(
-      data?.duracionEstimadaMin ??
-      data?.duracion_min_total ??
-      data?.duracion_min,
-      numeroSeguro(
-        payload?.duracion_min_total ??
-        payload?.duracion_min,
-        0
-      )
-    );
-
-    console.log('==============================');
-    console.log('📊 VALORES FINALES');
-    console.log('DISTANCIA FINAL:', distancia);
-    console.log('DURACION FINAL:', duracion);
-    console.log('PRECIO FINAL:', precio);
-    console.log('==============================');
-
-    const legs = Array.isArray(data?.legs) ? data.legs : [];
-    const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
-    const detallePrecio = data?.detalle_precio || null;
-
-    state.cotizacion = {
-      ...data,
-      legs,
-      puntos_ruta: puntosRuta,
-      detalle_precio: detallePrecio,
-      resumen_ruta: data?.resumen_ruta || resumenRuta
-    };
-
-    if (!state.routeData) state.routeData = {};
-
-    state.routeData.distance = distancia;
-    state.routeData.duration = duracion;
-    state.routeData.segmentos =
-      numeroSeguro(data?.segmentos_totales, 0) ||
-      legs.length ||
-      payload?.segmentos_totales_front ||
-      Math.max(1, puntosRuta.length - 1);
-
-    state.routeData.retornoAlOrigen =
-      detallePrecio?.vuelve_al_origen ??
-      data?.retorno_al_origen ??
-      payload?.retorno_al_origen_front ??
-      false;
-
-    state.routeData.resumenRuta = data?.resumen_ruta || resumenRuta;
-    state.routeData.fallback = false;
-
-    const coordsBackend =
-      Array.isArray(data?.route_geometry) ? data.route_geometry :
-      Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
-      Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
-      Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
-      null;
-
-    state.routeData.geometry =
-      Array.isArray(coordsBackend) && coordsBackend.length >= 2
-        ? { type: 'LineString', coordinates: coordsBackend }
-        : null;
-
-    if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
-      await dibujarRutaReal(coordsBackend);
-    }
-
-    mostrarCotizacion(precio, distancia, duracion);
-
+    console.log('📥 RESPUESTA COTIZAR:', data);
+    procesarRespuestaCotizacion(data, payload);
   } catch (err) {
-    console.error('❌ Error cotizando:', err);
+    clearTimeout(timeoutId);
 
     if (requestId !== currentQuoteRequestId) return;
 
@@ -3801,14 +3250,145 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
         ? 'La cotización tardó demasiado. Mostramos una estimación provisoria.'
         : 'No pudimos obtener el precio exacto. Mostramos una estimación provisoria.';
 
+    console.error('❌ Error cotizando:', err);
     notif.show('Modo estimado', mensaje, 'warning');
     usarFallbackLocal(payload, requestId);
-  } finally {
-    if (timeoutId) clearTimeout(timeoutId);
   }
 }
-  // ==========================================
-// COTIZACIÓN UI
+
+function usarFallbackLocal(payload, requestId) {
+  if (requestId !== currentQuoteRequestId) return;
+
+  const distancia = numeroSeguro(
+    payload?.distancia_km_total ?? payload?.distancia_km,
+    0
+  );
+
+  const duracion = numeroSeguro(
+    payload?.duracion_min_total ?? payload?.duracion_min,
+    0
+  );
+
+  const esperaMin = numeroSeguro(payload?.espera_min, 0);
+  const paradas = numeroSeguro(payload?.cantidad_paradas_front, 0);
+  const retorno = payload?.retorno_al_origen_front ? 900 : 0;
+  const servicio = payload?.servicio === 'IDA_Y_VUELTA_ESCOLAR' ? 700 : 0;
+  const recargoParadas = paradas * 650;
+  const recargoEspera = esperaMin * 90;
+  const factorZona = numeroSeguro(payload?.factor_zona, 1) || 1;
+
+  const subtotalTramos = Math.round(distancia * 550 + duracion * 45);
+
+  const precioEstimado = Math.max(
+    2200,
+    Math.round(
+      (
+        (1200 +
+          subtotalTramos +
+          recargoParadas +
+          retorno +
+          servicio +
+          recargoEspera) * factorZona
+      ) / 50
+    ) * 50
+  );
+
+  state.cotizacion = {
+    precio: precioEstimado,
+    precio_formateado: `$${precioEstimado.toLocaleString('es-AR')}`,
+    resumen_ruta: payload?.resumen_ruta_front || construirResumenRuta(),
+    waypoints_count: paradas,
+    segmentos_totales: payload?.segmentos_totales_front ?? 1,
+    retorno_al_origen: payload?.retorno_al_origen_front ?? false,
+    modo: 'fallback_local',
+    detalle_precio: {
+      tarifa_base: 1200,
+      subtotal_tramos: subtotalTramos,
+      recargo_paradas: recargoParadas,
+      recargo_retorno_origen: retorno,
+      recargo_servicio: servicio,
+      recargo_espera: recargoEspera,
+      nombre_hora_pico: 'estimado_local',
+      factor_zona: factorZona,
+      cantidad_paradas_intermedias: paradas,
+      vuelve_al_origen: !!payload?.retorno_al_origen_front
+    }
+  };
+
+  state.routeData = {
+    ...(state.routeData || {}),
+    distance: distancia,
+    duration: duracion,
+    segmentos: payload?.segmentos_totales_front ?? 1,
+    retornoAlOrigen: payload?.retorno_al_origen_front ?? false,
+    resumenRuta: payload?.resumen_ruta_front || construirResumenRuta(),
+    fallback: true,
+    geometry: state.routeData?.geometry || null
+  };
+
+  mostrarCotizacion(precioEstimado, distancia, duracion);
+}
+
+function procesarRespuestaCotizacion(data, payload) {
+  const precio = numeroSeguro(data?.precio, 0);
+  const distancia = numeroSeguro(
+    data?.distancia_km_total ?? data?.distancia_km,
+    numeroSeguro(payload?.distancia_km_total ?? payload?.distancia_km, 0)
+  );
+
+  const duracion = numeroSeguro(
+    data?.duracion_min_total ?? data?.duracion_min,
+    numeroSeguro(payload?.duracion_min_total ?? payload?.duracion_min, 0)
+  );
+
+  const coordsBackend =
+    Array.isArray(data?.route_geometry) ? data.route_geometry :
+    Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
+    Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
+    Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
+    null;
+
+  const legs = Array.isArray(data?.legs) ? data.legs : [];
+  const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
+  const detallePrecio = data?.detalle_precio || null;
+
+  state.cotizacion = {
+    ...data,
+    legs,
+    puntos_ruta: puntosRuta,
+    resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
+    detalle_precio: detallePrecio
+  };
+
+  state.routeData = {
+    distance: distancia,
+    duration: duracion,
+    segmentos:
+      numeroSeguro(data?.segmentos_totales, 0) ||
+      legs.length ||
+      payload?.segmentos_totales_front ||
+      Math.max(1, puntosRuta.length - 1),
+    retornoAlOrigen:
+      detallePrecio?.vuelve_al_origen ??
+      data?.retorno_al_origen ??
+      payload?.retorno_al_origen_front ??
+      false,
+    resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
+    fallback: false,
+    geometry: Array.isArray(coordsBackend)
+      ? { type: 'LineString', coordinates: coordsBackend }
+      : null
+  };
+
+  if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
+    dibujarRutaReal(coordsBackend);
+  }
+
+  mostrarCotizacion(precio, distancia, duracion);
+}
+
+// ==========================================
+// UI COTIZACIÓN
 // ==========================================
 function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
@@ -3916,8 +3496,8 @@ function mostrarCotizacion(precio, km, minutos) {
   }
 
   setSectionVisible('quoteCard', true);
-}  
-  
+}
+
 // ==========================================
 // ACCIONES
 // ==========================================
@@ -3937,7 +3517,7 @@ function confirmarViaje() {
     state.routeData?.resumenRuta ||
     construirResumenRuta();
 
-  const puntos = obtenerPuntosOrdenados(); console.log('STATE.ORIGEN:', state.origen); console.log('STATE.WAYPOINTS:', state.waypoints); console.log('STATE.DESTINO:', state.destino); console.log('PUNTOS ORDENADOS FINAL:', puntos);
+  const puntos = obtenerPuntosOrdenados();
 
   const paradasTexto = puntos.slice(1, -1).map((p, i) =>
     `📍 *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
@@ -4005,12 +3585,14 @@ function intercambiarOrigenDestino() {
 
   if (inputOrigen) {
     inputOrigen.value = state.origen?.direccionCorta || '';
-    inputOrigen.setAttribute('title', state.origen?.direccion || '');
+    if (state.origen?.direccion) inputOrigen.setAttribute('title', state.origen.direccion);
+    else inputOrigen.removeAttribute('title');
   }
 
   if (inputDestino) {
     inputDestino.value = state.destino?.direccionCorta || '';
-    inputDestino.setAttribute('title', state.destino?.direccion || '');
+    if (state.destino?.direccion) inputDestino.setAttribute('title', state.destino.direccion);
+    else inputDestino.removeAttribute('title');
   }
 }
 
@@ -4039,6 +3621,5 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
-
 </body>
 </html>
