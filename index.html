@@ -3550,7 +3550,7 @@ async function dibujarRutaFallback() {
     totalDistance += turf.distance(from, to, { units: 'kilometers' });
   }
 
-  const distanceKm = Number((totalDistance * 1.28).toFixed(1));
+  const distanceKm = Number(totalDistance.toFixed(1));
   const durationMin = Math.max(1, Math.round((distanceKm / 28) * 60));
 
   state.routeData = {
@@ -3571,38 +3571,48 @@ async function dibujarRutaFallback() {
   const retornoAlOrigen = detectarRetornoAlOrigenFrontend();
   const resumenRuta = construirResumenRuta();
 
-  const payload = {
-    servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
-    origen: puntos[0].direccion,
-    origen_corto: puntos[0].direccionCorta || puntos[0].direccion,
-    destino: puntos[puntos.length - 1].direccion,
-    destino_corto: puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion,
-    origen_lat: Number(puntos[0].lat),
-    origen_lng: Number(puntos[0].lng),
-    destino_lat: Number(puntos[puntos.length - 1].lat),
-    destino_lng: Number(puntos[puntos.length - 1].lng),
-    distancia_km: distanceKm,
-    duracion_min: durationMin,
-    distancia_km_total: distanceKm,
-    duracion_min_total: durationMin,
-    fechaHora: new Date().toISOString(),
-    waypoints: waypointsIntermedios,
-    puntos_ruta: puntos.map((p, index) => ({
-      orden: index,
-      tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
-      direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
-      direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
-      lat: Number(p.lat),
-      lng: Number(p.lng)
-    })),
-    segmentos_totales_front: Math.max(1, puntos.length - 1),
-    cantidad_paradas_front: waypointsIntermedios.length,
-    retorno_al_origen_front: retornoAlOrigen,
-    resumen_ruta_front: resumenRuta,
-    ruta_calculada_completa: true,
-    cotizacion_multitramo: puntos.length > 2
-  };
+const payload = {
+  servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
+  origen: puntos[0].direccion,
+  destino: puntos[puntos.length - 1].direccion,
+
+  origen_lat: Number(puntos[0].lat),
+  origen_lng: Number(puntos[0].lng),
+  destino_lat: Number(puntos[puntos.length - 1].lat),
+  destino_lng: Number(puntos[puntos.length - 1].lng),
+
+  distancia_km: distanceKm,
+  duracion_min: durationMin,
+
+  fechaHora: new Date().toISOString(),
+
+  // 🔴 IMPORTANTE
+  stops: puntos.map((p, index) => ({
+    id: `stop_${index + 1}`,
+    orden: index + 1,
+    rol: index === 0 ? 'pickup' : index === puntos.length - 1 ? 'dropoff' : 'stop',
+    lat: Number(p.lat),
+    lng: Number(p.lng),
+    direccion: p.direccionCorta || p.direccion
+  })),
+
+  puntos_ruta: puntos.map((p, index) => ({
+    orden: index + 1,
+    tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+    direccion: p.direccionCorta || p.direccion,
+    direccion_completa: p.direccion,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  })),
+
+  segmentos_totales_front: Math.max(1, puntos.length - 1),
+  cantidad_paradas_front: waypointsIntermedios.length,
+  retorno_al_origen_front: retornoAlOrigen,
+  resumen_ruta_front: resumenRuta,
+  ruta_calculada_completa: true,
+  cotizacion_multitramo: puntos.length > 2
+};
   try {
     await cotizarViaje(payload);
   } catch (_) {
