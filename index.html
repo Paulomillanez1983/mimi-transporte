@@ -492,38 +492,6 @@ async function buscarDireccion(query) {
   }
 }
 
-    if (!result.response) {
-      return {
-        data: null,
-        error: buildNetworkError(result, "No se pudo actualizar el registro")
-      };
-    }
-
-    let responseData = null;
-    try {
-      responseData = await result.response.json();
-    } catch (_) {
-      responseData = null;
-    }
-
-    if (!result.response.ok) {
-      return {
-        data: null,
-        error: buildHttpError(result.response.status, responseData, "Error actualizando datos")
-      };
-    }
-
-    return { data: responseData, error: null };
-  } catch (err) {
-    return {
-      data: null,
-      error: {
-        message: err?.message || "Error inesperado al actualizar",
-        code: "UNEXPECTED_UPDATE_ERROR"
-      }
-    };
-  }
-};
 
 // =========================
 // INSERT HELPER
@@ -1188,12 +1156,10 @@ body.dark #mapSection,
   background: #f8f9fa;
   border-radius: 12px;
 }
-</div>
-  
-  .quote-detail {
+
+.quote-detail {
   text-align: center;
 }
-
 .quote-detail-value {
   font-size: 18px;
   font-weight: 700;
