@@ -3206,17 +3206,18 @@ function usarFallbackLocal(payload, requestId) {
   mostrarCotizacion(precioEstimado, distancia, duracion);
 }
   
-  procesarRespuestaCotizacion(data, payload);
+function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
-const distancia = numeroSeguro(
-  data?.distancia_km_total ?? data?.distancia_km,
-  numeroSeguro(payload?.distancia_km_total ?? payload?.distancia_km, 0)
-);
+  const distancia = numeroSeguro(
+    data?.distancia_km_total ?? data?.distancia_km,
+    numeroSeguro(payload?.distancia_km_total ?? payload?.distancia_km, 0)
+  );
 
-const duracion = numeroSeguro(
-  data?.duracion_min_total ?? data?.duracion_min,
-  numeroSeguro(payload?.duracion_min_total ?? payload?.duracion_min, 0)
-);
+  const duracion = numeroSeguro(
+    data?.duracion_min_total ?? data?.duracion_min,
+    numeroSeguro(payload?.duracion_min_total ?? payload?.duracion_min, 0)
+  );
+
   const coordsBackend =
     Array.isArray(data?.route_geometry) ? data.route_geometry :
     Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
@@ -3262,7 +3263,6 @@ const duracion = numeroSeguro(
 
   mostrarCotizacion(precio, distancia, duracion);
 }
-
 
 // ==========================================
 // RUTA / GEOMETRÍA
