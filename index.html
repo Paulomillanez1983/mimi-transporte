@@ -2853,16 +2853,25 @@ function construirResumenRuta() {
   return detectarRetornoAlOrigenFrontend() ? `${resumen} ↺` : resumen;
 }
 
-function limpiarPuntosInvalidos(puntos) {
-  return (puntos || []).filter((p) =>
-    p &&
-    typeof p.lat !== 'undefined' &&
-    typeof p.lng !== 'undefined' &&
-    !isNaN(Number(p.lat)) &&
-    !isNaN(Number(p.lng))
-  );
-}
+function limpiarPuntos(puntos) {
+  const limpios = [];
 
+  for (const p of puntos || []) {
+    if (!p) continue;
+    if (isNaN(Number(p.lat)) || isNaN(Number(p.lng))) continue;
+
+    const existe = limpios.some(lp =>
+      Math.abs(lp.lat - p.lat) < 0.00005 &&
+      Math.abs(lp.lng - p.lng) < 0.00005
+    );
+
+    if (!existe) {
+      limpios.push(p);
+    }
+  }
+
+  return limpios;
+}
 // ==========================================
 // CÁLCULO DE RUTA
 // ==========================================
@@ -2938,7 +2947,7 @@ async function calcularRuta() {
       throw new Error('Ruta incompleta');
     }
 
-const puntosLimpios = limpiarPuntosInvalidos(puntos);
+const puntosLimpios = limpiarPuntos(puntos);
 
 if (puntosLimpios.length < 2) {
   throw new Error('No hay suficientes puntos válidos para calcular la ruta');
