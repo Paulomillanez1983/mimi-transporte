@@ -2059,7 +2059,24 @@ function coordenadasValidas(lat, lng) {
     Math.abs(Number(lng)) <= 180
   );
 }
+async function obtenerSesionCliente() {
+  if (!window.sbRealtime?.auth) {
+    throw new Error('Cliente de sesión no inicializado');
+  }
 
+  const { data, error } = await window.sbRealtime.auth.getSession();
+
+  if (error) {
+    throw new Error(error.message || 'No se pudo obtener la sesión');
+  }
+
+  if (!data?.session?.access_token) {
+    throw new Error('No hay sesión activa');
+  }
+
+  return data.session;
+}
+  
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
@@ -3684,12 +3701,20 @@ async function confirmarViaje() {
   }
 
   try {
+    if (window.isConfirmingTrip) return;
+    window.isConfirmingTrip = true;
+
     const session = await obtenerSesionCliente();
     const puntos = obtenerPuntosOrdenados();
 
     if (!Array.isArray(puntos) || puntos.length < 2) {
       throw new Error('Ruta incompleta');
     }
+
+    const resumenRuta =
+      state.cotizacion?.resumen_ruta ||
+      state.routeData?.resumenRuta ||
+      construirResumenRuta();
 
     const payload = {
       origen: puntos[0].direccion,
@@ -3703,7 +3728,7 @@ async function confirmarViaje() {
       precio: Number(state.cotizacion?.precio || 0),
       km: Number(state.routeData?.distance || 0),
       duracion_min: Number(state.routeData?.duration || 0),
-      resumen_ruta: state.cotizacion?.resumen_ruta || construirResumenRuta(),
+      resumen_ruta: resumenRuta,
 
       waypoints: puntos.slice(1, -1).map((p, i) => ({
         orden: i + 1,
@@ -3715,6 +3740,11 @@ async function confirmarViaje() {
 
       cantidad_paradas: Math.max(0, puntos.length - 2)
     };
+
+    actualizarEstadoSolicitudUI({
+      estado: 'OFERTADO',
+      texto: 'Enviando solicitud...'
+    });
 
     const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje`, {
       method: 'POST',
@@ -3737,15 +3767,19 @@ async function confirmarViaje() {
 
     escucharEstadoViajeCliente(json.viaje_id);
 
-    notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
     actualizarEstadoSolicitudUI({
       estado: state.viajeEstado,
       texto: 'Estamos notificando choferes cercanos...'
     });
 
+    notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
+
   } catch (err) {
-    console.error('[confirmarViaje]', err);
+    console.error('[confirmarViaje] ERROR:', err);
+    notif.show('Error', err?.message || 'No se pudo solicitar el viaje', 'error');
     confirmarViajePorWhatsAppFallback();
+  } finally {
+    window.isConfirmingTrip = false;
   }
 }
 
@@ -3788,56 +3822,6 @@ ${paradasTexto ? paradasTexto + '\n' : ''}🏁 *Destino:* ${puntos[puntos.length
   );
 }
 
-function escucharEstadoViajeCliente(viajeId) {
-  if (!window.sbRealtime || !viajeId) return;
-
-  if (window.currentTripChannel) {
-    try {
-      window.sbRealtime.removeChannel(window.currentTripChannel);
-    } catch (_) {}
-  }
-
-  window.currentTripChannel = window.sbRealtime
-    .channel(`cliente-viaje-${viajeId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'viajes',
-        filter: `id=eq.${viajeId}`
-      },
-      (payload) => {
-        const viaje = payload?.new;
-        if (!viaje) return;
-
-        state.viajeEstado = viaje.estado || '';
-
-        actualizarEstadoSolicitudUI({
-          estado: viaje.estado,
-          viaje
-        });
-
-        if (viaje.estado === 'ACEPTADO') {
-          notif.show('Chofer asignado', 'Tu viaje fue aceptado', 'success');
-        }
-
-        if (viaje.estado === 'EN_CAMINO') {
-          notif.show('Chofer en camino', 'Tu chofer va rumbo al origen', 'info');
-        }
-
-        if (viaje.estado === 'EN_CURSO') {
-          notif.show('Viaje iniciado', 'Tu viaje comenzó', 'info');
-        }
-
-        if (viaje.estado === 'COMPLETADO') {
-          notif.show('Viaje finalizado', 'Gracias por viajar con MIMI', 'success');
-        }
-      }
-    )
-    .subscribe();
-}
-
 function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
   const quoteCard = document.getElementById('quoteCard');
   const quoteActions = document.querySelector('.quote-actions');
@@ -3870,26 +3854,26 @@ function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
     CANCELADO: 'Viaje cancelado.'
   };
 
+  const estadoFinal = String(estado || '').toUpperCase();
+
   box.innerHTML = `
-    <div><strong>Estado:</strong> ${estado || 'PENDIENTE'}</div>
-    <div>${texto || textos[estado] || 'Procesando solicitud...'}</div>
+    <div><strong>Estado:</strong> ${estadoFinal || 'PENDIENTE'}</div>
+    <div>${texto || textos[estadoFinal] || 'Procesando solicitud...'}</div>
     ${viaje?.chofer_nombre ? `<div><strong>Chofer:</strong> ${viaje.chofer_nombre}</div>` : ''}
     ${viaje?.chofer_telefono ? `<div><strong>Tel:</strong> ${viaje.chofer_telefono}</div>` : ''}
   `;
 }
+  
 function escucharEstadoViajeCliente(viajeId) {
-  if (!viajeId || !supabase) return;
+  if (!window.sbRealtime || !viajeId) return;
 
   if (window.currentTripChannel) {
     try {
-      supabase.removeChannel(window.currentTripChannel);
-    } catch (e) {
-      console.warn('No se pudo remover canal anterior', e);
-    }
-    window.currentTripChannel = null;
+      window.sbRealtime.removeChannel(window.currentTripChannel);
+    } catch (_) {}
   }
 
-  const channel = supabase
+  window.currentTripChannel = window.sbRealtime
     .channel(`cliente-viaje-${viajeId}`)
     .on(
       'postgres_changes',
@@ -3899,118 +3883,42 @@ function escucharEstadoViajeCliente(viajeId) {
         table: 'viajes',
         filter: `id=eq.${viajeId}`
       },
-      async (payload) => {
-        console.log('[cliente viaje realtime]', payload);
-
-        const viaje = payload?.new || payload?.record || null;
+      (payload) => {
+        const viaje = payload?.new;
         if (!viaje) return;
 
         state.viajeId = viaje.id;
         state.viajeEstado = viaje.estado || '';
 
-        actualizarEstadoSolicitudUI({ estado: viaje.estado, viaje });
+        actualizarEstadoSolicitudUI({
+          estado: viaje.estado,
+          viaje
+        });
 
         if (viaje.estado === 'ACEPTADO') {
-          notif.show(
-            'Chofer asignado',
-            'Tu viaje fue aceptado por un chofer',
-            'success'
-          );
+          notif.show('Chofer asignado', 'Tu viaje fue aceptado', 'success');
         }
 
         if (viaje.estado === 'EN_CAMINO') {
-          notif.show(
-            'Chofer en camino',
-            'Tu chofer va rumbo al punto de origen',
-            'info'
-          );
+          notif.show('Chofer en camino', 'Tu chofer va rumbo al origen', 'info');
         }
 
         if (viaje.estado === 'EN_CURSO') {
-          notif.show(
-            'Viaje iniciado',
-            'Tu viaje ya comenzó',
-            'info'
-          );
+          notif.show('Viaje iniciado', 'Tu viaje comenzó', 'info');
         }
 
         if (viaje.estado === 'COMPLETADO') {
-          notif.show(
-            'Viaje finalizado',
-            'Gracias por viajar con MIMI',
-            'success'
-          );
+          notif.show('Viaje finalizado', 'Gracias por viajar con MIMI', 'success');
         }
 
         if (viaje.estado === 'CANCELADO') {
-          notif.show(
-            'Viaje cancelado',
-            'La solicitud fue cancelada',
-            'warning'
-          );
+          notif.show('Viaje cancelado', 'La solicitud fue cancelada', 'warning');
         }
       }
     )
     .subscribe((status) => {
       console.log('[cliente-viaje subscribe]', status);
     });
-
-  window.currentTripChannel = channel;
-}
-
-  function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
-  const quoteCard = document.getElementById('quoteCard');
-  const quoteActions = document.querySelector('.quote-actions');
-  let box = document.getElementById('tripRequestStatus');
-
-  if (!box) {
-    box = document.createElement('div');
-    box.id = 'tripRequestStatus';
-    box.style.marginTop = '12px';
-    box.style.padding = '12px';
-    box.style.borderRadius = '14px';
-    box.style.fontSize = '14px';
-    box.style.lineHeight = '1.4';
-    box.style.background = 'rgba(255,255,255,0.08)';
-    box.style.border = '1px solid rgba(255,255,255,0.12)';
-
-    if (quoteActions && quoteActions.parentNode) {
-      quoteActions.parentNode.insertBefore(box, quoteActions);
-    } else if (quoteCard) {
-      quoteCard.appendChild(box);
-    }
-  }
-
-  const textos = {
-    OFERTADO: 'Buscando chofer disponible...',
-    PENDIENTE: 'Solicitud creada.',
-    ACEPTADO: 'Chofer asignado.',
-    EN_CAMINO: 'El chofer va en camino.',
-    EN_CURSO: 'Tu viaje está en curso.',
-    COMPLETADO: 'Viaje completado.',
-    CANCELADO: 'Viaje cancelado.'
-  };
-
-  const estadoNormalizado = String(estado || '').toUpperCase();
-  const mensajeBase = texto || textos[estadoNormalizado] || `Estado: ${estadoNormalizado || 'SIN_ESTADO'}`;
-
-  let extra = '';
-  if (viaje?.chofer_nombre) {
-    extra += `<div><strong>Chofer:</strong> ${viaje.chofer_nombre}</div>`;
-  }
-  if (viaje?.chofer_telefono) {
-    extra += `<div><strong>Tel:</strong> ${viaje.chofer_telefono}</div>`;
-  }
-
-  box.innerHTML = `
-    <div><strong>Estado del viaje:</strong> ${estadoNormalizado || 'PENDIENTE'}</div>
-    <div>${mensajeBase}</div>
-    ${extra}
-  `;
-
-  if (quoteCard) {
-    quoteCard.dataset.estadoViaje = estadoNormalizado;
-  }
 }
 function compartirRuta() {
   if (!state.routeData) {
