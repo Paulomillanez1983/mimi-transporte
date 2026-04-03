@@ -3672,29 +3672,167 @@ setSectionVisible('quoteCard', true);
 // ==========================================
 // ACCIONES
 // ==========================================
-function confirmarViaje() {
+async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
     notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
     return;
   }
 
-  const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
-  const precioTexto =
-    state.cotizacion?.precio_formateado ||
-    document.getElementById('quotePrice').textContent;
+  try {
+    if (window.isConfirmingTrip) return;
+    window.isConfirmingTrip = true;
 
-  const resumenRuta =
-    state.cotizacion?.resumen_ruta ||
-    state.routeData?.resumenRuta ||
-    construirResumenRuta();
+    setLoadingCotizacion(true, 'Solicitando chofer...');
 
-  const puntos = obtenerPuntosOrdenados();
+    const puntos = obtenerPuntosOrdenados();
+    if (!Array.isArray(puntos) || puntos.length < 2) {
+      throw new Error('No se pudo construir la ruta del viaje');
+    }
 
-  const paradasTexto = puntos.slice(1, -1).map((p, i) =>
-    `📍 *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
-  ).join('\n');
+    const resumenRuta =
+      state.cotizacion?.resumen_ruta ||
+      state.routeData?.resumenRuta ||
+      construirResumenRuta();
 
-  const mensaje = `🚐 *MIMI Transporte Escolar*
+    const precioNumero =
+      Number(state.cotizacion?.precio) ||
+      Number(state.cotizacion?.precio_total) ||
+      Number(state.routeData?.precio) ||
+      0;
+
+    const precioTexto =
+      state.cotizacion?.precio_formateado ||
+      document.getElementById('quotePrice')?.textContent ||
+      `$${precioNumero}`;
+
+    const km = Number(state.routeData?.distance || 0);
+    const duracionMin = Number(state.routeData?.duration || 0);
+    const segmentos = Number(state.routeData?.segmentos || Math.max(1, puntos.length - 1));
+    const waypoints = puntos.slice(1, -1).map((p, index) => ({
+      id: p.id || `stop_${index + 1}`,
+      orden: index + 2,
+      direccion: p.direccion || '',
+      direccionCorta: p.direccionCorta || p.direccion || '',
+      lat: Number(p.lat),
+      lng: Number(p.lng)
+    }));
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      throw new Error(sessionError.message || 'No se pudo obtener la sesión');
+    }
+
+    const accessToken = sessionData?.session?.access_token;
+    const user = sessionData?.session?.user;
+
+    if (!accessToken || !user) {
+      throw new Error('Debes iniciar sesión para solicitar el viaje');
+    }
+
+    const payload = {
+      cotizacion_id: state.cotizacion?.cotizacion_id || null,
+
+      origen: puntos[0].direccion,
+      origen_direccion: puntos[0].direccion,
+      origen_lat: Number(puntos[0].lat),
+      origen_lng: Number(puntos[0].lng),
+
+      destino: puntos[puntos.length - 1].direccion,
+      destino_direccion: puntos[puntos.length - 1].direccion,
+      destino_lat: Number(puntos[puntos.length - 1].lat),
+      destino_lng: Number(puntos[puntos.length - 1].lng),
+
+      precio: precioNumero,
+      precio_formateado: precioTexto,
+      km,
+      duracion_min: duracionMin,
+      segmentos,
+
+      pasajero_nombre:
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email ||
+        'Cliente',
+
+      pasajero_telefono:
+        user.user_metadata?.phone ||
+        user.phone ||
+        '',
+
+      resumen_ruta: resumenRuta,
+      waypoints,
+      cantidad_paradas: waypoints.length,
+      observaciones: ''
+    };
+
+    const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/solicitar-viaje`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': CONFIG.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.ok) {
+      throw new Error(json?.error || 'No se pudo solicitar el viaje');
+    }
+
+    state.viajeId = json.viaje_id;
+    state.viajeEstado = json.estado || 'OFERTADO';
+    state.ultimoViaje = json;
+
+    escucharEstadoViajeCliente(json.viaje_id);
+
+    notif.show(
+      'Solicitud enviada',
+      `Buscando chofer disponible${json?.choferes_notificados ? ` (${json.choferes_notificados} notificados)` : '...'}`,
+      'success'
+    );
+
+    const quoteCard = document.getElementById('quoteCard');
+    if (quoteCard) {
+      quoteCard.dataset.viajeId = json.viaje_id;
+      quoteCard.dataset.estado = state.viajeEstado;
+    }
+
+    actualizarEstadoSolicitudUI({
+      estado: state.viajeEstado,
+      texto: 'Estamos notificando choferes cercanos...'
+    });
+
+  } catch (err) {
+    console.error('[confirmarViaje] ERROR:', err);
+
+    notif.show(
+      'Error',
+      err?.message || 'No se pudo solicitar el viaje',
+      'error'
+    );
+
+    // Fallback opcional a WhatsApp
+    try {
+      const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
+      const precioTexto =
+        state.cotizacion?.precio_formateado ||
+        document.getElementById('quotePrice')?.textContent ||
+        '';
+
+      const resumenRuta =
+        state.cotizacion?.resumen_ruta ||
+        state.routeData?.resumenRuta ||
+        construirResumenRuta();
+
+      const puntos = obtenerPuntosOrdenados();
+
+      const paradasTexto = puntos.slice(1, -1).map((p, i) =>
+        `📍 *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
+      ).join('\n');
+
+      const mensaje = `🚐 *MIMI Transporte Escolar*
 
 🧾 *Cotización:* ${cotizacionId}
 
@@ -3707,11 +3845,156 @@ ${paradasTexto ? paradasTexto + '\n' : ''}🏁 *Destino:* ${puntos[puntos.length
 🧩 *Tramos:* ${state.routeData.segmentos || 1}
 💰 *Precio:* ${precioTexto}
 
-✅ ¿Confirmamos el viaje?`;
+⚠️ No pudimos enviar la solicitud automática.
+¿Confirmamos el viaje por WhatsApp?`;
 
-  window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`, '_blank');
+      window.open(
+        `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`,
+        '_blank'
+      );
+    } catch (fallbackErr) {
+      console.error('[confirmarViaje] fallback whatsapp error:', fallbackErr);
+    }
+  } finally {
+    window.isConfirmingTrip = false;
+    setLoadingCotizacion(false);
+  }
+}
+  function escucharEstadoViajeCliente(viajeId) {
+  if (!viajeId || !supabase) return;
+
+  if (window.currentTripChannel) {
+    try {
+      supabase.removeChannel(window.currentTripChannel);
+    } catch (e) {
+      console.warn('No se pudo remover canal anterior', e);
+    }
+    window.currentTripChannel = null;
+  }
+
+  const channel = supabase
+    .channel(`cliente-viaje-${viajeId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'viajes',
+        filter: `id=eq.${viajeId}`
+      },
+      async (payload) => {
+        console.log('[cliente viaje realtime]', payload);
+
+        const viaje = payload?.new || payload?.record || null;
+        if (!viaje) return;
+
+        state.viajeId = viaje.id;
+        state.viajeEstado = viaje.estado || '';
+
+        actualizarEstadoSolicitudUI({ estado: viaje.estado, viaje });
+
+        if (viaje.estado === 'ACEPTADO') {
+          notif.show(
+            'Chofer asignado',
+            'Tu viaje fue aceptado por un chofer',
+            'success'
+          );
+        }
+
+        if (viaje.estado === 'EN_CAMINO') {
+          notif.show(
+            'Chofer en camino',
+            'Tu chofer va rumbo al punto de origen',
+            'info'
+          );
+        }
+
+        if (viaje.estado === 'EN_CURSO') {
+          notif.show(
+            'Viaje iniciado',
+            'Tu viaje ya comenzó',
+            'info'
+          );
+        }
+
+        if (viaje.estado === 'COMPLETADO') {
+          notif.show(
+            'Viaje finalizado',
+            'Gracias por viajar con MIMI',
+            'success'
+          );
+        }
+
+        if (viaje.estado === 'CANCELADO') {
+          notif.show(
+            'Viaje cancelado',
+            'La solicitud fue cancelada',
+            'warning'
+          );
+        }
+      }
+    )
+    .subscribe((status) => {
+      console.log('[cliente-viaje subscribe]', status);
+    });
+
+  window.currentTripChannel = channel;
 }
 
+  function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
+  const quoteCard = document.getElementById('quoteCard');
+  const quoteActions = document.querySelector('.quote-actions');
+  let box = document.getElementById('tripRequestStatus');
+
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'tripRequestStatus';
+    box.style.marginTop = '12px';
+    box.style.padding = '12px';
+    box.style.borderRadius = '14px';
+    box.style.fontSize = '14px';
+    box.style.lineHeight = '1.4';
+    box.style.background = 'rgba(255,255,255,0.08)';
+    box.style.border = '1px solid rgba(255,255,255,0.12)';
+
+    if (quoteActions && quoteActions.parentNode) {
+      quoteActions.parentNode.insertBefore(box, quoteActions);
+    } else if (quoteCard) {
+      quoteCard.appendChild(box);
+    }
+  }
+
+  const textos = {
+    OFERTADO: 'Buscando chofer disponible...',
+    PENDIENTE: 'Solicitud creada.',
+    ACEPTADO: 'Chofer asignado.',
+    EN_CAMINO: 'El chofer va en camino.',
+    EN_CURSO: 'Tu viaje está en curso.',
+    COMPLETADO: 'Viaje completado.',
+    CANCELADO: 'Viaje cancelado.'
+  };
+
+  const estadoNormalizado = String(estado || '').toUpperCase();
+  const mensajeBase = texto || textos[estadoNormalizado] || `Estado: ${estadoNormalizado || 'SIN_ESTADO'}`;
+
+  let extra = '';
+  if (viaje?.chofer_nombre) {
+    extra += `<div><strong>Chofer:</strong> ${viaje.chofer_nombre}</div>`;
+  }
+  if (viaje?.chofer_telefono) {
+    extra += `<div><strong>Tel:</strong> ${viaje.chofer_telefono}</div>`;
+  }
+
+  box.innerHTML = `
+    <div><strong>Estado del viaje:</strong> ${estadoNormalizado || 'PENDIENTE'}</div>
+    <div>${mensajeBase}</div>
+    ${extra}
+  `;
+
+  if (quoteCard) {
+    quoteCard.dataset.estadoViaje = estadoNormalizado;
+  }
+}
 function compartirRuta() {
   if (!state.routeData) {
     notif.show('Sin ruta', 'Primero calculá el recorrido', 'warning');
