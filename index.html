@@ -23,16 +23,45 @@
 <script>
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
-
 const NETWORK_TIMEOUT_MS = 20000;
+const CACHE_MAX_SIZE = 100;
 
 function normalizarBusqueda(texto) {
-  return String(texto || "")
+  return String(texto ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function getSupabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    Accept: "application/json",
+    ...extra
+  };
+}
+
+async function safeReadJson(response) {
+  if (!response) return null;
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    try {
+      const text = await response.text();
+      return text ? { raw: text } : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  try {
+    return await response.json();
+  } catch (_) {
+    return null;
+  }
 }
 
 async function safeFetch(url, options = {}, timeoutMs = NETWORK_TIMEOUT_MS) {
@@ -91,10 +120,18 @@ function buildHttpError(status, payload = null, fallbackMessage = "Error HTTP") 
       payload?.message ||
       payload?.error ||
       payload?.msg ||
+      payload?.raw ||
       fallbackMessage,
     code: "HTTP_ERROR",
     status: status ?? null
   };
+}
+
+function appendFilter(url, column, operator, value) {
+  if (!column || typeof operator !== "string") return url;
+  if (value === undefined) return url;
+
+  return `${url}&${encodeURIComponent(column)}=${operator}.${encodeURIComponent(value)}`;
 }
 
 function createQueryBuilder(table) {
@@ -105,12 +142,12 @@ function createQueryBuilder(table) {
     orderBy: null,
     orderAscending: true,
     single: false,
-    limit: null
+    limitValue: null
   };
 
   const builder = {
     select(columns = "*") {
-      state.columns = columns;
+      state.columns = columns || "*";
       return this;
     },
     eq(column, value) {
@@ -167,7 +204,7 @@ function createQueryBuilder(table) {
       return this;
     },
     limit(n) {
-      state.limit = n;
+      state.limitValue = Number.isFinite(Number(n)) ? Number(n) : null;
       return this;
     },
     single() {
@@ -180,46 +217,48 @@ function createQueryBuilder(table) {
 
     async execute() {
       try {
-        let url = `${SUPABASE_URL}/rest/v1/${state.table}?select=${encodeURIComponent(state.columns)}`;
+        if (!state.table) {
+          return {
+            data: null,
+            error: {
+              message: "Tabla inválida",
+              code: "INVALID_TABLE"
+            }
+          };
+        }
+
+        let url = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(state.table)}?select=${encodeURIComponent(state.columns)}`;
 
         state.filters.forEach(filter => {
           switch (filter.type) {
             case "eq":
-              url += `&${encodeURIComponent(filter.column)}=eq.${encodeURIComponent(filter.value)}`;
-              break;
             case "neq":
-              url += `&${encodeURIComponent(filter.column)}=neq.${encodeURIComponent(filter.value)}`;
-              break;
             case "gt":
-              url += `&${encodeURIComponent(filter.column)}=gt.${encodeURIComponent(filter.value)}`;
-              break;
             case "lt":
-              url += `&${encodeURIComponent(filter.column)}=lt.${encodeURIComponent(filter.value)}`;
-              break;
             case "gte":
-              url += `&${encodeURIComponent(filter.column)}=gte.${encodeURIComponent(filter.value)}`;
-              break;
             case "lte":
-              url += `&${encodeURIComponent(filter.column)}=lte.${encodeURIComponent(filter.value)}`;
-              break;
             case "like":
-              url += `&${encodeURIComponent(filter.column)}=like.${encodeURIComponent(filter.value)}`;
-              break;
             case "ilike":
-              url += `&${encodeURIComponent(filter.column)}=ilike.${encodeURIComponent(filter.value)}`;
+              url = appendFilter(url, filter.column, filter.type, filter.value);
               break;
+
             case "in": {
-              const vals = filter.value
+              const vals = (Array.isArray(filter.value) ? filter.value : [])
+                .filter(v => v !== undefined)
                 .map(v => `"${String(v).replace(/"/g, '\\"')}"`)
                 .join(",");
               url += `&${encodeURIComponent(filter.column)}=in.(${encodeURIComponent(vals)})`;
               break;
             }
+
             case "is":
-              url += `&${encodeURIComponent(filter.column)}=is.${encodeURIComponent(filter.value)}`;
+              url = appendFilter(url, filter.column, "is", filter.value);
               break;
+
             case "or":
-              url += `&or=${encodeURIComponent(`(${filter.value})`)}`;
+              if (filter.value) {
+                url += `&or=${encodeURIComponent(`(${filter.value})`)}`;
+              }
               break;
           }
         });
@@ -229,17 +268,13 @@ function createQueryBuilder(table) {
           url += `&order=${encodeURIComponent(state.orderBy)}.${direction}`;
         }
 
-        if (state.limit) {
-          url += `&limit=${state.limit}`;
+        if (state.limitValue !== null) {
+          url += `&limit=${state.limitValue}`;
         }
 
         const result = await safeFetch(url, {
           method: "GET",
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: "Bearer " + SUPABASE_ANON_KEY,
-            Accept: "application/json"
-          }
+          headers: getSupabaseHeaders()
         });
 
         if (!result.response) {
@@ -249,12 +284,7 @@ function createQueryBuilder(table) {
           };
         }
 
-        let data = null;
-        try {
-          data = await result.response.json();
-        } catch (_) {
-          data = null;
-        }
+        const data = await safeReadJson(result.response);
 
         if (!result.response.ok) {
           return {
@@ -290,15 +320,12 @@ window.supabase = {
 
   async rpc(functionName, params = {}) {
     try {
-      const result = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${functionName}`, {
+      const result = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${encodeURIComponent(functionName)}`, {
         method: "POST",
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: "Bearer " + SUPABASE_ANON_KEY,
-          "Content-Type": "application/json",
-          Accept: "application/json"
-        },
-        body: JSON.stringify(params)
+        headers: getSupabaseHeaders({
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify(params ?? {})
       });
 
       if (!result.response) {
@@ -308,12 +335,7 @@ window.supabase = {
         };
       }
 
-      let data = null;
-      try {
-        data = await result.response.json();
-      } catch (_) {
-        data = null;
-      }
+      const data = await safeReadJson(result.response);
 
       if (!result.response.ok) {
         return {
@@ -337,20 +359,16 @@ window.supabase = {
 
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
-    const result = await safeFetch(
-      `${SUPABASE_URL}/rest/v1/${table}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`,
-      {
-        method: "PATCH",
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: "Bearer " + SUPABASE_ANON_KEY,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Prefer: "return=representation"
-        },
-        body: JSON.stringify(data)
-      }
-    );
+    const url = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`;
+
+    const result = await safeFetch(url, {
+      method: "PATCH",
+      headers: getSupabaseHeaders({
+        "Content-Type": "application/json",
+        Prefer: "return=representation"
+      }),
+      body: JSON.stringify(data ?? {})
+    });
 
     if (!result.response) {
       return {
@@ -359,12 +377,7 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
       };
     }
 
-    let responseData = null;
-    try {
-      responseData = await result.response.json();
-    } catch (_) {
-      responseData = null;
-    }
+    const responseData = await safeReadJson(result.response);
 
     if (!result.response.ok) {
       return {
@@ -389,15 +402,12 @@ window.supabaseInsert = async function(table, data) {
   try {
     const body = Array.isArray(data) ? data : [data];
 
-    const result = await safeFetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    const result = await safeFetch(`${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}`, {
       method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: "Bearer " + SUPABASE_ANON_KEY,
+      headers: getSupabaseHeaders({
         "Content-Type": "application/json",
-        Accept: "application/json",
         Prefer: "return=representation"
-      },
+      }),
       body: JSON.stringify(body)
     });
 
@@ -408,12 +418,7 @@ window.supabaseInsert = async function(table, data) {
       };
     }
 
-    let responseData = null;
-    try {
-      responseData = await result.response.json();
-    } catch (_) {
-      responseData = null;
-    }
+    const responseData = await safeReadJson(result.response);
 
     if (!result.response.ok) {
       return {
@@ -438,7 +443,21 @@ window.supabaseInsert = async function(table, data) {
 };
 
 const geocodingCache = new Map();
-const CACHE_MAX_SIZE = 100;
+
+function setGeocodingCache(key, value) {
+  if (!key) return;
+  if (geocodingCache.has(key)) {
+    geocodingCache.delete(key);
+  }
+  geocodingCache.set(key, value);
+
+  if (geocodingCache.size > CACHE_MAX_SIZE) {
+    const firstKey = geocodingCache.keys().next().value;
+    if (firstKey !== undefined) {
+      geocodingCache.delete(firstKey);
+    }
+  }
+}
 
 async function buscarDireccion(query) {
   if (!query || query.trim().length < 3) return [];
@@ -454,12 +473,13 @@ async function buscarDireccion(query) {
       `${SUPABASE_URL}/functions/v1/geocodificar`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: "Bearer " + SUPABASE_ANON_KEY
-        },
-        body: JSON.stringify({ query: query.trim(), limit: 5 })
+        headers: getSupabaseHeaders({
+          "Content-Type": "application/json"
+        }),
+        body: JSON.stringify({
+          query: query.trim(),
+          limit: 5
+        })
       },
       NETWORK_TIMEOUT_MS
     );
@@ -469,7 +489,12 @@ async function buscarDireccion(query) {
       return [];
     }
 
-    const json = await result.response.json().catch(() => null);
+    const json = await safeReadJson(result.response);
+
+    if (!result.response.ok) {
+      console.warn("⚠️ HTTP geocodificación:", json?.message || json?.raw || result.response.status);
+      return [];
+    }
 
     if (!json || !json.exito) {
       console.warn("⚠️ Error geocodificación:", json?.error || "Respuesta inválida");
@@ -477,24 +502,15 @@ async function buscarDireccion(query) {
     }
 
     const resultados = Array.isArray(json.data) ? json.data : [];
-
-    geocodingCache.set(cacheKey, resultados);
-
-    if (geocodingCache.size > CACHE_MAX_SIZE) {
-      const firstKey = geocodingCache.keys().next().value;
-      if (firstKey) geocodingCache.delete(firstKey);
-    }
-
+    setGeocodingCache(cacheKey, resultados);
     return resultados;
   } catch (err) {
     console.error("❌ Error buscando dirección:", err);
     return [];
   }
 }
-
-
 </script>
-<style>
+  <style>
 
 /* ==========================================
    VARIABLES GLOBALES
