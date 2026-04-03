@@ -18,9 +18,10 @@
 <meta property="og:description" content="Tu hijo viaja seguro, vos tranquilo. Transporte escolar en Villa Allende y Córdoba.">
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- SUPABASE REST CLIENT -->
 <script>
+const SupabaseSDK = window.supabase;
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
@@ -362,7 +363,11 @@ window.supabase = {
     }
   }
 };
-
+if (SupabaseSDK?.createClient) {
+  window.sbRealtime = SupabaseSDK.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+  console.error('No se pudo inicializar Supabase Realtime/Auth');
+}
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
     const url = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`;
@@ -3679,103 +3684,49 @@ async function confirmarViaje() {
   }
 
   try {
-    if (window.isConfirmingTrip) return;
-    window.isConfirmingTrip = true;
-
-    setLoadingCotizacion(true, 'Solicitando chofer...');
-
+    const session = await obtenerSesionCliente();
     const puntos = obtenerPuntosOrdenados();
+
     if (!Array.isArray(puntos) || puntos.length < 2) {
-      throw new Error('No se pudo construir la ruta del viaje');
-    }
-
-    const resumenRuta =
-      state.cotizacion?.resumen_ruta ||
-      state.routeData?.resumenRuta ||
-      construirResumenRuta();
-
-    const precioNumero =
-      Number(state.cotizacion?.precio) ||
-      Number(state.cotizacion?.precio_total) ||
-      Number(state.routeData?.precio) ||
-      0;
-
-    const precioTexto =
-      state.cotizacion?.precio_formateado ||
-      document.getElementById('quotePrice')?.textContent ||
-      `$${precioNumero}`;
-
-    const km = Number(state.routeData?.distance || 0);
-    const duracionMin = Number(state.routeData?.duration || 0);
-    const segmentos = Number(state.routeData?.segmentos || Math.max(1, puntos.length - 1));
-    const waypoints = puntos.slice(1, -1).map((p, index) => ({
-      id: p.id || `stop_${index + 1}`,
-      orden: index + 2,
-      direccion: p.direccion || '',
-      direccionCorta: p.direccionCorta || p.direccion || '',
-      lat: Number(p.lat),
-      lng: Number(p.lng)
-    }));
-
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) {
-      throw new Error(sessionError.message || 'No se pudo obtener la sesión');
-    }
-
-    const accessToken = sessionData?.session?.access_token;
-    const user = sessionData?.session?.user;
-
-    if (!accessToken || !user) {
-      throw new Error('Debes iniciar sesión para solicitar el viaje');
+      throw new Error('Ruta incompleta');
     }
 
     const payload = {
-      cotizacion_id: state.cotizacion?.cotizacion_id || null,
-
       origen: puntos[0].direccion,
-      origen_direccion: puntos[0].direccion,
       origen_lat: Number(puntos[0].lat),
       origen_lng: Number(puntos[0].lng),
 
       destino: puntos[puntos.length - 1].direccion,
-      destino_direccion: puntos[puntos.length - 1].direccion,
       destino_lat: Number(puntos[puntos.length - 1].lat),
       destino_lng: Number(puntos[puntos.length - 1].lng),
 
-      precio: precioNumero,
-      precio_formateado: precioTexto,
-      km,
-      duracion_min: duracionMin,
-      segmentos,
+      precio: Number(state.cotizacion?.precio || 0),
+      km: Number(state.routeData?.distance || 0),
+      duracion_min: Number(state.routeData?.duration || 0),
+      resumen_ruta: state.cotizacion?.resumen_ruta || construirResumenRuta(),
 
-      pasajero_nombre:
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email ||
-        'Cliente',
+      waypoints: puntos.slice(1, -1).map((p, i) => ({
+        orden: i + 1,
+        direccion: p.direccion,
+        direccionCorta: p.direccionCorta || p.direccion,
+        lat: Number(p.lat),
+        lng: Number(p.lng)
+      })),
 
-      pasajero_telefono:
-        user.user_metadata?.phone ||
-        user.phone ||
-        '',
-
-      resumen_ruta: resumenRuta,
-      waypoints,
-      cantidad_paradas: waypoints.length,
-      observaciones: ''
+      cantidad_paradas: Math.max(0, puntos.length - 2)
     };
 
-    const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/solicitar-viaje`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': CONFIG.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${accessToken}`
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${session.access_token}`
       },
       body: JSON.stringify(payload)
     });
 
-    const json = await res.json().catch(() => null);
+    const json = await res.json();
 
     if (!res.ok || !json?.ok) {
       throw new Error(json?.error || 'No se pudo solicitar el viaje');
@@ -3783,56 +3734,40 @@ async function confirmarViaje() {
 
     state.viajeId = json.viaje_id;
     state.viajeEstado = json.estado || 'OFERTADO';
-    state.ultimoViaje = json;
 
     escucharEstadoViajeCliente(json.viaje_id);
 
-    notif.show(
-      'Solicitud enviada',
-      `Buscando chofer disponible${json?.choferes_notificados ? ` (${json.choferes_notificados} notificados)` : '...'}`,
-      'success'
-    );
-
-    const quoteCard = document.getElementById('quoteCard');
-    if (quoteCard) {
-      quoteCard.dataset.viajeId = json.viaje_id;
-      quoteCard.dataset.estado = state.viajeEstado;
-    }
-
+    notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
     actualizarEstadoSolicitudUI({
       estado: state.viajeEstado,
       texto: 'Estamos notificando choferes cercanos...'
     });
 
   } catch (err) {
-    console.error('[confirmarViaje] ERROR:', err);
+    console.error('[confirmarViaje]', err);
+    confirmarViajePorWhatsAppFallback();
+  }
+}
 
-    notif.show(
-      'Error',
-      err?.message || 'No se pudo solicitar el viaje',
-      'error'
-    );
+function confirmarViajePorWhatsAppFallback() {
+  const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
+  const precioTexto =
+    state.cotizacion?.precio_formateado ||
+    document.getElementById('quotePrice')?.textContent ||
+    '$0';
 
-    // Fallback opcional a WhatsApp
-    try {
-      const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
-      const precioTexto =
-        state.cotizacion?.precio_formateado ||
-        document.getElementById('quotePrice')?.textContent ||
-        '';
+  const resumenRuta =
+    state.cotizacion?.resumen_ruta ||
+    state.routeData?.resumenRuta ||
+    construirResumenRuta();
 
-      const resumenRuta =
-        state.cotizacion?.resumen_ruta ||
-        state.routeData?.resumenRuta ||
-        construirResumenRuta();
+  const puntos = obtenerPuntosOrdenados();
 
-      const puntos = obtenerPuntosOrdenados();
+  const paradasTexto = puntos.slice(1, -1).map((p, i) =>
+    `📍 *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
+  ).join('\n');
 
-      const paradasTexto = puntos.slice(1, -1).map((p, i) =>
-        `📍 *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
-      ).join('\n');
-
-      const mensaje = `🚐 *MIMI Transporte Escolar*
+  const mensaje = `🚐 *MIMI Transporte Escolar*
 
 🧾 *Cotización:* ${cotizacionId}
 
@@ -3840,27 +3775,109 @@ async function confirmarViaje() {
 ${paradasTexto ? paradasTexto + '\n' : ''}🏁 *Destino:* ${puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion}
 
 🛣️ *Ruta:* ${resumenRuta}
-📏 *Distancia:* ${state.routeData.distance} km
-⏱️ *Duración:* ${state.routeData.duration} min
-🧩 *Tramos:* ${state.routeData.segmentos || 1}
+📏 *Distancia:* ${state.routeData?.distance || 0} km
+⏱️ *Duración:* ${state.routeData?.duration || 0} min
 💰 *Precio:* ${precioTexto}
 
 ⚠️ No pudimos enviar la solicitud automática.
 ¿Confirmamos el viaje por WhatsApp?`;
 
-      window.open(
-        `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`,
-        '_blank'
-      );
-    } catch (fallbackErr) {
-      console.error('[confirmarViaje] fallback whatsapp error:', fallbackErr);
-    }
-  } finally {
-    window.isConfirmingTrip = false;
-    setLoadingCotizacion(false);
-  }
+  window.open(
+    `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`,
+    '_blank'
+  );
 }
-  function escucharEstadoViajeCliente(viajeId) {
+
+function escucharEstadoViajeCliente(viajeId) {
+  if (!window.sbRealtime || !viajeId) return;
+
+  if (window.currentTripChannel) {
+    try {
+      window.sbRealtime.removeChannel(window.currentTripChannel);
+    } catch (_) {}
+  }
+
+  window.currentTripChannel = window.sbRealtime
+    .channel(`cliente-viaje-${viajeId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'viajes',
+        filter: `id=eq.${viajeId}`
+      },
+      (payload) => {
+        const viaje = payload?.new;
+        if (!viaje) return;
+
+        state.viajeEstado = viaje.estado || '';
+
+        actualizarEstadoSolicitudUI({
+          estado: viaje.estado,
+          viaje
+        });
+
+        if (viaje.estado === 'ACEPTADO') {
+          notif.show('Chofer asignado', 'Tu viaje fue aceptado', 'success');
+        }
+
+        if (viaje.estado === 'EN_CAMINO') {
+          notif.show('Chofer en camino', 'Tu chofer va rumbo al origen', 'info');
+        }
+
+        if (viaje.estado === 'EN_CURSO') {
+          notif.show('Viaje iniciado', 'Tu viaje comenzó', 'info');
+        }
+
+        if (viaje.estado === 'COMPLETADO') {
+          notif.show('Viaje finalizado', 'Gracias por viajar con MIMI', 'success');
+        }
+      }
+    )
+    .subscribe();
+}
+
+function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
+  const quoteCard = document.getElementById('quoteCard');
+  const quoteActions = document.querySelector('.quote-actions');
+  let box = document.getElementById('tripRequestStatus');
+
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'tripRequestStatus';
+    box.style.marginBottom = '12px';
+    box.style.padding = '12px';
+    box.style.borderRadius = '12px';
+    box.style.background = 'rgba(21,101,192,0.08)';
+    box.style.border = '1px solid rgba(21,101,192,0.15)';
+    box.style.fontSize = '14px';
+    box.style.lineHeight = '1.4';
+
+    if (quoteActions && quoteActions.parentNode) {
+      quoteActions.parentNode.insertBefore(box, quoteActions);
+    } else if (quoteCard) {
+      quoteCard.appendChild(box);
+    }
+  }
+
+  const textos = {
+    OFERTADO: 'Buscando chofer disponible...',
+    ACEPTADO: 'Chofer asignado.',
+    EN_CAMINO: 'El chofer está en camino.',
+    EN_CURSO: 'Tu viaje está en curso.',
+    COMPLETADO: 'Viaje completado.',
+    CANCELADO: 'Viaje cancelado.'
+  };
+
+  box.innerHTML = `
+    <div><strong>Estado:</strong> ${estado || 'PENDIENTE'}</div>
+    <div>${texto || textos[estado] || 'Procesando solicitud...'}</div>
+    ${viaje?.chofer_nombre ? `<div><strong>Chofer:</strong> ${viaje.chofer_nombre}</div>` : ''}
+    ${viaje?.chofer_telefono ? `<div><strong>Tel:</strong> ${viaje.chofer_telefono}</div>` : ''}
+  `;
+}
+function escucharEstadoViajeCliente(viajeId) {
   if (!viajeId || !supabase) return;
 
   if (window.currentTripChannel) {
