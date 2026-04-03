@@ -2059,9 +2059,18 @@ function coordenadasValidas(lat, lng) {
     Math.abs(Number(lng)) <= 180
   );
 }
+let cachedSession = null;
+let lastSessionCheck = 0;
+
 async function obtenerSesionCliente() {
   if (!window.sbRealtime?.auth) {
     throw new Error('Cliente de sesión no inicializado');
+  }
+
+  // Cache 30 segundos
+  const now = Date.now();
+  if (cachedSession && now - lastSessionCheck < 30000) {
+    return cachedSession;
   }
 
   const { data, error } = await window.sbRealtime.auth.getSession();
@@ -2070,8 +2079,12 @@ async function obtenerSesionCliente() {
     throw new Error(error.message || 'No se pudo obtener la sesión');
   }
 
-  return data?.session || null;
-}  
+  cachedSession = data?.session || null;
+  lastSessionCheck = now;
+
+  return cachedSession;
+}
+  
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
