@@ -748,6 +748,16 @@ body {
   z-index: 60;
 }
 
+.route-timeline {
+  position: absolute;
+  left: 12px;
+  top: 24px;
+  bottom: 24px;
+  width: 2px;
+  background: #e0e0e0;
+  z-index: 1;
+}
+
 .route-input-group {
   position: relative;
   margin-bottom: 8px;
@@ -757,6 +767,11 @@ body {
 .route-input-group:focus-within {
   z-index: 80;
 }
+
+.route-input-group:last-child {
+  margin-bottom: 0;
+}
+
 .timeline-dot {
   position: absolute;
   left: -5px;
@@ -784,17 +799,6 @@ body {
   bottom: 20px;
   top: auto;
 }
-
-.route-input-group {
-  position: relative;
-  margin-bottom: 8px;
-  z-index: 2;
-}
-
-.route-input-group:last-child {
-  margin-bottom: 0;
-}
-
 .route-input-wrapper {
   display: flex;
   align-items: center;
