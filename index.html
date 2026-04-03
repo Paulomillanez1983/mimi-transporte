@@ -23,6 +23,7 @@
 <script>
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
+
 const NETWORK_TIMEOUT_MS = 20000;
 const CACHE_MAX_SIZE = 100;
 
@@ -48,17 +49,14 @@ async function safeReadJson(response) {
   if (!response) return null;
 
   const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    try {
-      const text = await response.text();
-      return text ? { raw: text } : null;
-    } catch (_) {
-      return null;
-    }
-  }
 
   try {
-    return await response.json();
+    if (contentType.includes("application/json")) {
+      return await response.json();
+    }
+
+    const text = await response.text();
+    return text ? { raw: text } : null;
   } catch (_) {
     return null;
   }
@@ -86,7 +84,8 @@ async function safeFetch(url, options = {}, timeoutMs = NETWORK_TIMEOUT_MS) {
   } catch (err) {
     const isAbort =
       err?.name === "AbortError" ||
-      String(err?.message || "").toLowerCase().includes("aborted");
+      String(err?.message || "").toLowerCase().includes("aborted") ||
+      String(err?.message || "").toLowerCase().includes("timeout");
 
     return {
       ok: false,
@@ -114,8 +113,10 @@ function buildNetworkError(result, fallbackMessage = "Error de red") {
 }
 
 function buildHttpError(status, payload = null, fallbackMessage = "Error HTTP") {
+  const payloadIsObject = payload && typeof payload === "object" && !Array.isArray(payload);
+
   return {
-    ...(payload && typeof payload === "object" ? payload : {}),
+    ...(payloadIsObject ? payload : {}),
     message:
       payload?.message ||
       payload?.error ||
@@ -204,7 +205,8 @@ function createQueryBuilder(table) {
       return this;
     },
     limit(n) {
-      state.limitValue = Number.isFinite(Number(n)) ? Number(n) : null;
+      const parsed = Number(n);
+      state.limitValue = Number.isFinite(parsed) ? parsed : null;
       return this;
     },
     single() {
@@ -247,6 +249,7 @@ function createQueryBuilder(table) {
                 .filter(v => v !== undefined)
                 .map(v => `"${String(v).replace(/"/g, '\\"')}"`)
                 .join(",");
+
               url += `&${encodeURIComponent(filter.column)}=in.(${encodeURIComponent(vals)})`;
               break;
             }
@@ -320,13 +323,16 @@ window.supabase = {
 
   async rpc(functionName, params = {}) {
     try {
-      const result = await safeFetch(`${SUPABASE_URL}/rest/v1/rpc/${encodeURIComponent(functionName)}`, {
-        method: "POST",
-        headers: getSupabaseHeaders({
-          "Content-Type": "application/json"
-        }),
-        body: JSON.stringify(params ?? {})
-      });
+      const result = await safeFetch(
+        `${SUPABASE_URL}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
+        {
+          method: "POST",
+          headers: getSupabaseHeaders({
+            "Content-Type": "application/json"
+          }),
+          body: JSON.stringify(params ?? {})
+        }
+      );
 
       if (!result.response) {
         return {
@@ -446,9 +452,11 @@ const geocodingCache = new Map();
 
 function setGeocodingCache(key, value) {
   if (!key) return;
+
   if (geocodingCache.has(key)) {
     geocodingCache.delete(key);
   }
+
   geocodingCache.set(key, value);
 
   if (geocodingCache.size > CACHE_MAX_SIZE) {
@@ -492,7 +500,10 @@ async function buscarDireccion(query) {
     const json = await safeReadJson(result.response);
 
     if (!result.response.ok) {
-      console.warn("⚠️ HTTP geocodificación:", json?.message || json?.raw || result.response.status);
+      console.warn(
+        "⚠️ HTTP geocodificación:",
+        json?.message || json?.error || json?.raw || result.response.status
+      );
       return [];
     }
 
