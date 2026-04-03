@@ -2982,9 +2982,15 @@ async function calcularRuta() {
     if (puntos.length < 2) throw new Error('Ruta incompleta');
 
     const puntosLimpios = limpiarPuntosInvalidos(puntos);
+
+    if (puntosLimpios.length < 2) {
+      throw new Error('No hay suficientes puntos válidos para calcular la ruta');
+    }
+
     if (puntosLimpios.some((p) => !coordenadasValidas(p.lat, p.lng))) {
-  throw new Error('Hay paradas con coordenadas inválidas');
-}
+      throw new Error('Hay paradas con coordenadas inválidas');
+    }
+
     const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
 
     setLoadingCotizacion(true, 'Dibujando ruta...');
@@ -3002,65 +3008,6 @@ async function calcularRuta() {
       setLoadingCotizacion(false);
     }
   }
-}
-
-function limpiarDuplicados(puntos) {
-  const tolerancia = 0.0008;
-  const resultado = [];
-
-  const mismoPunto = (a, b) => {
-    if (!a || !b) return false;
-    return (
-      Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
-      Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
-    );
-  };
-
-  for (const p of puntos) {
-    const last = resultado[resultado.length - 1];
-    if (last && mismoPunto(last, p)) continue;
-    resultado.push(p);
-  }
-
-  return resultado;
-}
-
-function calcularEstimacionLocal(puntos) {
-  const puntosValidos = puntos.filter((p) =>
-    p &&
-    Number.isFinite(Number(p.lat)) &&
-    Number.isFinite(Number(p.lng))
-  );
-
-  if (puntosValidos.length < 2) {
-    throw new Error('No hay suficientes coordenadas válidas');
-  }
-
-  let distancia = 0;
-
-  for (let i = 0; i < puntosValidos.length - 1; i++) {
-    const from = [Number(puntosValidos[i].lng), Number(puntosValidos[i].lat)];
-    const to = [Number(puntosValidos[i + 1].lng), Number(puntosValidos[i + 1].lat)];
-
-    distancia += turf.distance(from, to, { units: 'kilometers' });
-  }
-
-  const distanciaKm = numeroSeguro((distancia * 1.18).toFixed(1), 0);
-  const duracionMin = Math.max(1, Math.round((distanciaKm / 28) * 60));
-
-  return {
-    distanciaKm,
-    duracionMin,
-    coords: puntosValidos.map((p) => [numeroSeguro(p.lng), numeroSeguro(p.lat)])
-  };
-}
-
-function mostrarMapaInmediato(_puntos, coords) {
-  setSectionVisible('mapSection', true);
-
-  requestAnimationFrame(() => {
-    initMapa().then(() => dibujarRutaLineal(coords));
-  });
 }
 
 function construirPayloadOptimizado(puntos, estimacion) {
@@ -3126,6 +3073,66 @@ function construirPayloadOptimizado(puntos, estimacion) {
     cotizacion_multitramo: puntos.length > 2
   };
 }
+  
+function limpiarDuplicados(puntos) {
+  const tolerancia = 0.0008;
+  const resultado = [];
+
+  const mismoPunto = (a, b) => {
+    if (!a || !b) return false;
+    return (
+      Math.abs(Number(a.lat) - Number(b.lat)) <= tolerancia &&
+      Math.abs(Number(a.lng) - Number(b.lng)) <= tolerancia
+    );
+  };
+
+  for (const p of puntos) {
+    const last = resultado[resultado.length - 1];
+    if (last && mismoPunto(last, p)) continue;
+    resultado.push(p);
+  }
+
+  return resultado;
+}
+
+function calcularEstimacionLocal(puntos) {
+  const puntosValidos = puntos.filter((p) =>
+    p &&
+    Number.isFinite(Number(p.lat)) &&
+    Number.isFinite(Number(p.lng))
+  );
+
+  if (puntosValidos.length < 2) {
+    throw new Error('No hay suficientes coordenadas válidas');
+  }
+
+  let distancia = 0;
+
+  for (let i = 0; i < puntosValidos.length - 1; i++) {
+    const from = [Number(puntosValidos[i].lng), Number(puntosValidos[i].lat)];
+    const to = [Number(puntosValidos[i + 1].lng), Number(puntosValidos[i + 1].lat)];
+
+    distancia += turf.distance(from, to, { units: 'kilometers' });
+  }
+
+  const distanciaKm = numeroSeguro((distancia * 1.18).toFixed(1), 0);
+  const duracionMin = Math.max(1, Math.round((distanciaKm / 28) * 60));
+
+  return {
+    distanciaKm,
+    duracionMin,
+    coords: puntosValidos.map((p) => [numeroSeguro(p.lng), numeroSeguro(p.lat)])
+  };
+}
+
+function mostrarMapaInmediato(_puntos, coords) {
+  setSectionVisible('mapSection', true);
+
+  requestAnimationFrame(() => {
+    initMapa().then(() => dibujarRutaLineal(coords));
+  });
+}
+
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
