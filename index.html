@@ -493,61 +493,6 @@ async function buscarDireccion(query) {
 }
 
 
-// =========================
-// INSERT HELPER
-// =========================
-window.supabaseInsert = async function(table, data) {
-  try {
-    const body = Array.isArray(data) ? data : [data];
-
-    const result = await safeFetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: "Bearer " + SUPABASE_KEY,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!result.response) {
-      return {
-        data: null,
-        error: buildNetworkError(result, "No se pudo insertar el registro")
-      };
-    }
-
-    let responseData = null;
-    try {
-      responseData = await result.response.json();
-    } catch (_) {
-      responseData = null;
-    }
-
-    if (!result.response.ok) {
-      console.error("❌ RESPUESTA RAW:", responseData);
-      return {
-        data: null,
-        error: buildHttpError(result.response.status, responseData, "Error insertando datos")
-      };
-    }
-
-    return {
-      data: Array.isArray(responseData) ? responseData[0] : responseData,
-      error: null
-    };
-  } catch (err) {
-    return {
-      data: null,
-      error: {
-        message: err?.message || "Error inesperado al insertar",
-        code: "UNEXPECTED_INSERT_ERROR"
-      }
-    };
-  }
-};
 </script>
 <style>
 
@@ -3037,9 +2982,6 @@ function construirPayloadOptimizado(puntos, estimacion) {
 
   const waypointsIntermedios = puntosRuta.filter((p) => p.rol === 'stop');
 
-  const esperaMin = 0; // después lo podés tomar de un input real
-  const factorZona = 1; // después lo podés calcular por zona
-
   return {
     servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
@@ -3059,8 +3001,8 @@ function construirPayloadOptimizado(puntos, estimacion) {
     duracion_min_total: estimacion.duracionMin,
 
     fechaHora: new Date().toISOString(),
-    espera_min: esperaMin,
-    factor_zona: factorZona,
+    espera_min: 0,
+    factor_zona: 1,
 
     paradas: waypointsIntermedios.map((w) => ({
       id: w.id,
@@ -3083,8 +3025,7 @@ function construirPayloadOptimizado(puntos, estimacion) {
     ruta_calculada_completa: true,
     cotizacion_multitramo: puntos.length > 2
   };
-}
-  
+}  
 function limpiarDuplicados(puntos) {
   const tolerancia = 0.0008;
   const resultado = [];
@@ -3126,7 +3067,7 @@ function calcularEstimacionLocal(puntos) {
     distancia += turf.distance(from, to, { units: 'kilometers' });
   }
 
-  const distanciaKm = numeroSeguro((distancia * 1.18).toFixed(1), 0);
+  const distanciaKm = numeroSeguro(distancia.toFixed(1), 0);
   const duracionMin = Math.max(1, Math.round((distanciaKm / 28) * 60));
 
   return {
@@ -3176,6 +3117,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
     if (!response.ok || !data?.exito) {
       throw new Error(data?.error || `Error ${response.status}`);
     }
+    console.log('📥 RESPUESTA COTIZAR:', data);
 
     procesarRespuestaCotizacion(data, payload, requestId);
   } catch (err) {
@@ -3262,9 +3204,15 @@ function usarFallbackLocal(payload, requestId) {
 }
 function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
-  const distancia = numeroSeguro(data?.distancia_km_total || data?.distancia_km, 0);
-  const duracion = numeroSeguro(data?.duracion_min_total || data?.duracion_min, 0);
+const distancia = numeroSeguro(
+  data?.distancia_km_total ?? data?.distancia_km,
+  numeroSeguro(payload?.distancia_km_total ?? payload?.distancia_km, 0)
+);
 
+const duracion = numeroSeguro(
+  data?.duracion_min_total ?? data?.duracion_min,
+  numeroSeguro(payload?.duracion_min_total ?? payload?.duracion_min, 0)
+);
   const coordsBackend =
     Array.isArray(data?.route_geometry) ? data.route_geometry :
     Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
@@ -3600,6 +3548,8 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
       throw new Error('Payload inválido para cotización');
     }
 
+    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
+
     const resumenRuta = payload.resumen_ruta_front || construirResumenRuta();
     const controller = new AbortController();
     timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -3623,33 +3573,48 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
     try {
       data = rawText ? JSON.parse(rawText) : null;
     } catch (_) {
-      data = null;
+      console.error('❌ Respuesta no JSON:', rawText);
+      throw new Error('Respuesta inválida del servidor');
     }
+
+    console.log('📥 RESPUESTA COTIZAR:', data);
 
     if (!response.ok || !data?.exito) {
       throw new Error(data?.error || `No se pudo cotizar (${response.status})`);
     }
 
     const precio = numeroSeguro(data?.precio, 0);
+
     const distancia = numeroSeguro(
       data?.distancia_km_total ??
-      data?.distancia_km ??
-      payload?.distancia_km_total ??
-      payload?.distancia_km,
-      0
+      data?.distancia_km,
+      numeroSeguro(
+        payload?.distancia_km_total ??
+        payload?.distancia_km,
+        0
+      )
     );
 
     const duracion = numeroSeguro(
       data?.duracionEstimadaMin ??
       data?.duracion_min_total ??
-      data?.duracion_min ??
-      payload?.duracion_min_total ??
-      payload?.duracion_min,
-      0
+      data?.duracion_min,
+      numeroSeguro(
+        payload?.duracion_min_total ??
+        payload?.duracion_min,
+        0
+      )
     );
+
+    const legs = Array.isArray(data?.legs) ? data.legs : [];
+    const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
+    const detallePrecio = data?.detalle_precio || null;
 
     state.cotizacion = {
       ...data,
+      legs,
+      puntos_ruta: puntosRuta,
+      detalle_precio: detallePrecio,
       resumen_ruta: data?.resumen_ruta || resumenRuta
     };
 
@@ -3657,8 +3622,18 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
 
     state.routeData.distance = distancia;
     state.routeData.duration = duracion;
-    state.routeData.segmentos = data?.segmentos_totales ?? payload?.segmentos_totales_front ?? 1;
-    state.routeData.retornoAlOrigen = data?.retorno_al_origen ?? payload?.retorno_al_origen_front ?? false;
+    state.routeData.segmentos =
+      numeroSeguro(data?.segmentos_totales, 0) ||
+      legs.length ||
+      payload?.segmentos_totales_front ||
+      Math.max(1, puntosRuta.length - 1);
+
+    state.routeData.retornoAlOrigen =
+      detallePrecio?.vuelve_al_origen ??
+      data?.retorno_al_origen ??
+      payload?.retorno_al_origen_front ??
+      false;
+
     state.routeData.resumenRuta = data?.resumen_ruta || resumenRuta;
     state.routeData.fallback = false;
 
@@ -3669,9 +3644,10 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
       Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
       null;
 
-    state.routeData.geometry = Array.isArray(coordsBackend) && coordsBackend.length >= 2
-      ? { type: 'LineString', coordinates: coordsBackend }
-      : null;
+    state.routeData.geometry =
+      Array.isArray(coordsBackend) && coordsBackend.length >= 2
+        ? { type: 'LineString', coordinates: coordsBackend }
+        : null;
 
     if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
       await dibujarRutaReal(coordsBackend);
@@ -3689,48 +3665,11 @@ async function cotizarViaje(payload, requestId = currentQuoteRequestId) {
         : 'No pudimos obtener el precio exacto. Mostramos una estimación provisoria.';
 
     notif.show('Modo estimado', mensaje, 'warning');
-
-    const distanciaFallback = numeroSeguro(
-      payload?.distancia_km_total ??
-      payload?.distancia_km ??
-      state?.routeData?.distance,
-      0
-    );
-
-    const duracionFallback = numeroSeguro(
-      payload?.duracion_min_total ??
-      payload?.duracion_min ??
-      state?.routeData?.duration,
-      0
-    );
-
-    state.cotizacion = {
-      precio_formateado: 'Consultar',
-      resumen_ruta: payload?.resumen_ruta_front || construirResumenRuta(),
-      waypoints_count: payload?.cantidad_paradas_front ?? 0,
-      segmentos_totales: payload?.segmentos_totales_front ?? 1,
-      retorno_al_origen: payload?.retorno_al_origen_front ?? false,
-      modo: 'fallback_local'
-    };
-
-    if (!state.routeData) state.routeData = {};
-    state.routeData.distance = distanciaFallback;
-    state.routeData.duration = duracionFallback;
-    state.routeData.segmentos = payload?.segmentos_totales_front ?? 1;
-    state.routeData.retornoAlOrigen = payload?.retorno_al_origen_front ?? false;
-    state.routeData.resumenRuta = payload?.resumen_ruta_front || construirResumenRuta();
-    state.routeData.fallback = true;
-
-    if (!state.routeData.geometry) {
-      state.routeData.geometry = null;
-    }
-
-    mostrarCotizacion(0, distanciaFallback, duracionFallback);
+    usarFallbackLocal(payload, requestId);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
   }
 }
-
 // ==========================================
 // COTIZACIÓN UI
 // ==========================================
@@ -3741,6 +3680,9 @@ function mostrarCotizacion(precio, km, minutos) {
   const dp = state.cotizacion?.detalle_precio || null;
   const legs = Array.isArray(state.cotizacion?.legs) ? state.cotizacion.legs : [];
   const puntosRuta = Array.isArray(state.cotizacion?.puntos_ruta) ? state.cotizacion.puntos_ruta : [];
+
+  const kmSeguro = numeroSeguro(km, numeroSeguro(state.routeData?.distance, 0));
+  const minSeguro = numeroSeguro(minutos, numeroSeguro(state.routeData?.duration, 0));
 
   const paradasIntermedias =
     numeroSeguro(state.cotizacion?.waypoints_count, -1) >= 0
@@ -3779,13 +3721,13 @@ function mostrarCotizacion(precio, km, minutos) {
   if (labelEl) labelEl.textContent = label;
 
   const detailDistance = document.getElementById('detailDistance');
-  if (detailDistance) detailDistance.textContent = Number(km || 0).toFixed(1) + ' km';
+  if (detailDistance) detailDistance.textContent = `${kmSeguro.toFixed(1)} km`;
 
   const detailDuration = document.getElementById('detailDuration');
-  if (detailDuration) detailDuration.textContent = Math.round(Number(minutos || 0)) + ' min';
+  if (detailDuration) detailDuration.textContent = `${Math.round(minSeguro)} min`;
 
   const detailStops = document.getElementById('detailStops');
-  if (detailStops) detailStops.textContent = paradasIntermedias;
+  if (detailStops) detailStops.textContent = String(paradasIntermedias);
 
   const resumenRuta =
     state.cotizacion?.resumen_ruta ||
@@ -3813,9 +3755,9 @@ function mostrarCotizacion(precio, km, minutos) {
       ['Recargo espera', dp.recargo_espera]
     ]
       .filter(([, valor]) => Number(valor || 0) > 0)
-      .map(([label, valor]) => `
+      .map(([labelFila, valor]) => `
         <div style="display:flex; justify-content:space-between; gap:12px;">
-          <span>${label}</span>
+          <span>${labelFila}</span>
           <strong>$${Number(valor).toLocaleString('es-AR')}</strong>
         </div>
       `)
@@ -3837,8 +3779,7 @@ function mostrarCotizacion(precio, km, minutos) {
   }
 
   setSectionVisible('quoteCard', true);
-}
-  
+}  
   
 // ==========================================
 // ACCIONES
