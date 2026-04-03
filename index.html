@@ -2642,30 +2642,23 @@ function limpiarPuntosRuta(puntos) {
     Number.isFinite(Number(p.lng))
   );
 
-  if (validos.length < 2) return validos;
+  if (validos.length <= 1) return validos;
 
-  const origen = validos[0];
-  const destino = validos[validos.length - 1];
-  const intermedios = validos.slice(1, -1);
+  const resultado = [];
 
-  const intermediosFiltrados = [];
+  for (const p of validos) {
+    const anterior = resultado[resultado.length - 1];
 
-  for (const p of intermedios) {
-    // permitir A -> B -> A
-    // no borrar si coincide con origen
+    // Solo elimina duplicados consecutivos exactos
+    if (anterior && sonMismoPunto(anterior, p)) continue;
 
-    // borrar duplicados entre intermedios
-    if (intermediosFiltrados.some((x) => sonMismoPunto(x, p))) continue;
-
-    // si coincide con el destino final, sí es redundante
-    if (sonMismoPunto(p, destino)) continue;
-
-    intermediosFiltrados.push(p);
+    resultado.push(p);
   }
 
-  return [origen, ...intermediosFiltrados, destino];
+  return resultado;
 }
-function construirPayloadOptimizado(puntos, estimacionLocal = null) {
+  
+  function construirPayloadOptimizado(puntos, estimacionLocal = null) {
   if (!Array.isArray(puntos) || puntos.length < 2) return null;
 
   const puntosLimpios = limpiarPuntosRuta(puntos);
