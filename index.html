@@ -2953,7 +2953,7 @@ async function calcularRuta() {
 
     const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
 
-    log('📦 PAYLOAD COTIZACIÓN:', payload);
+    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
 
     setLoadingCotizacion(true, 'Cotizando...');
     await cotizarViajeOptimizado(payload, requestId);
@@ -3090,6 +3090,8 @@ async function cotizarViajeOptimizado(payload, requestId) {
   const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
 
   try {
+    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
+
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
       headers: {
@@ -3117,6 +3119,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
     if (!response.ok || !data?.exito) {
       throw new Error(data?.error || `Error ${response.status}`);
     }
+
     console.log('📥 RESPUESTA COTIZAR:', data);
 
     procesarRespuestaCotizacion(data, payload, requestId);
@@ -3131,19 +3134,18 @@ async function cotizarViajeOptimizado(payload, requestId) {
     throw err;
   }
 }
-
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
   notif.show('Modo estimado', 'Usando precio estimado local', 'warning');
 
   const distancia = numeroSeguro(
-    payload?.distancia_km_total || payload?.distancia_km,
+    payload?.distancia_km_total ?? payload?.distancia_km,
     0
   );
 
   const duracion = numeroSeguro(
-    payload?.duracion_min_total || payload?.duracion_min,
+    payload?.duracion_min_total ?? payload?.duracion_min,
     0
   );
 
@@ -3197,12 +3199,17 @@ function usarFallbackLocal(payload, requestId) {
     ...(state.routeData || {}),
     distance: distancia,
     duration: duracion,
-    fallback: true
+    segmentos: payload?.segmentos_totales_front ?? 1,
+    retornoAlOrigen: payload?.retorno_al_origen_front ?? false,
+    resumenRuta: payload?.resumen_ruta_front || construirResumenRuta(),
+    fallback: true,
+    geometry: state.routeData?.geometry || null
   };
 
   mostrarCotizacion(precioEstimado, distancia, duracion);
 }
-function procesarRespuestaCotizacion(data, payload) {
+  
+  function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
 const distancia = numeroSeguro(
   data?.distancia_km_total ?? data?.distancia_km,
