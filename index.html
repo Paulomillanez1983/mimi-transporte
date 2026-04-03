@@ -521,7 +521,7 @@ async function buscarDireccion(query) {
   }
 }
 </script>
-  <style>
+<style>
 
 /* ==========================================
    VARIABLES GLOBALES
@@ -593,13 +593,12 @@ body {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   padding: calc(20px + var(--safe-top)) 20px 40px 20px;
   position: relative;
-  overflow: visible;  /* ⭐ CAMBIO: era 'overflow: visible' pero ahora explícito */
+  overflow: visible;
   border-bottom-left-radius: 25px;
   border-bottom-right-radius: 25px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
   margin-bottom: 40px;
-  /* ⭐ ELIMINADO: isolation: isolate; - Esto creaba un nuevo stacking context */
-  z-index: 1;  /* ⭐ NUEVO: z-index bajo para que las sugerencias pasen por encima */
+  z-index: 1;
 }
 
 .header-content {
@@ -725,9 +724,9 @@ body {
   box-shadow: var(--sombra);
   margin-bottom: 20px;
   position: relative;
-  overflow: visible !important;  /* ⭐ CAMBIO: forzar visible */
+  overflow: visible;
   width: 100%;
-  z-index: auto;  /* ⭐ CAMBIO: era 20, ahora auto */
+  z-index: auto;
 }
 
 /* ==========================================
@@ -738,12 +737,13 @@ body {
   flex-direction: column;
   gap: 0;
   position: relative;
-  z-index: auto;  /* ⭐ CAMBIO: era 30, ahora auto */
+  z-index: auto;
 }
 
 .route-inputs-container {
   position: relative;
   padding-left: 32px;
+  overflow: visible;
 }
 
 .route-timeline {
@@ -896,6 +896,24 @@ body {
   transform: scale(0.98);
 }
 
+/* ==========================================
+   SUGERENCIAS / AUTOCOMPLETE
+========================================== */
+.sugerencias {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: none;
+  background: var(--suggestion-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  max-height: min(320px, 45vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 9999;
+}
 
 .sugerencias.visible {
   display: block;
@@ -979,7 +997,6 @@ body {
   transform: translateY(0);
 }
 
-/* Card de mapa */
 #mapSection {
   background: var(--card-bg, #fff);
   border-radius: 24px;
@@ -1132,6 +1149,7 @@ body.dark #mapSection,
 .quote-detail {
   text-align: center;
 }
+
 .quote-detail-value {
   font-size: 18px;
   font-weight: 700;
@@ -1399,6 +1417,70 @@ body.dark #mapSection,
 }
 
 /* ==========================================
+   BREAKDOWN DE PRECIO
+========================================== */
+#priceBreakdown {
+  display: none;
+  margin-top: 12px;
+  padding: 14px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+#priceBreakdownContent {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #555;
+}
+
+.breakdown-toggle {
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.breakdown-toggle:hover {
+  background: #f8f9fa;
+}
+
+.breakdown-toggle:active {
+  transform: scale(0.99);
+}
+
+#breakdownChevron {
+  transition: transform 0.2s ease;
+  font-size: 16px;
+}
+
+.breakdown-toggle[aria-expanded="true"] #breakdownChevron {
+  transform: rotate(180deg);
+}
+
+.price-breakdown {
+  margin-top: 12px;
+  padding: 14px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.price-breakdown-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+/* ==========================================
    ANIMACIONES
 ========================================== */
 @keyframes fadeInUp {
@@ -1558,6 +1640,25 @@ body.dark #mapSection,
   .footer-phone {
     color: var(--azul-claro);
   }
+
+  #priceBreakdown,
+  .price-breakdown {
+    background: #202632;
+  }
+
+  #priceBreakdownContent {
+    color: #c8d0db;
+  }
+
+  .breakdown-toggle {
+    background: #1f2430;
+    color: #f5f7fb;
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .breakdown-toggle:hover {
+    background: #262d3b;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1615,104 +1716,12 @@ body.dark #mapSection,
     width: 100%;
     justify-content: center;
   }
-}
-  #priceBreakdown {
-  display: none;
-  margin-top: 16px;
-  padding: 14px;
-  background: #f8f9fa;
-  border-radius: 12px;
-}
 
-#priceBreakdownContent {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #555;
-}
-
-@media (prefers-color-scheme: dark) {
-  #priceBreakdown {
-    background: #202632;
-  }
-
-  #priceBreakdownContent {
-    color: #c8d0db;
-  }
-}
-  .breakdown-toggle {
-  width: 100%;
-  margin-top: 14px;
-  padding: 14px 16px;
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 12px;
-  background: #fff;
-  color: #1a1a1a;
-  font-size: 14px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.breakdown-toggle:hover {
-  background: #f8f9fa;
-}
-
-.breakdown-toggle:active {
-  transform: scale(0.99);
-}
-
-#breakdownChevron {
-  transition: transform 0.2s ease;
-  font-size: 16px;
-}
-
-.breakdown-toggle[aria-expanded="true"] #breakdownChevron {
-  transform: rotate(180deg);
-}
-
-.price-breakdown {
-  margin-top: 12px;
-  padding: 14px;
-  background: #f8f9fa;
-  border-radius: 12px;
-}
-
-.price-breakdown-title {
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-#priceBreakdownContent {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #555;
-}
-
-@media (prefers-color-scheme: dark) {
-  .breakdown-toggle {
-    background: #1f2430;
-    color: #f5f7fb;
-    border-color: rgba(255,255,255,0.08);
-  }
-
-  .breakdown-toggle:hover {
-    background: #262d3b;
-  }
-
-  .price-breakdown {
-    background: #202632;
-  }
-
-  #priceBreakdownContent {
-    color: #c8d0db;
+  .sugerencias {
+    max-height: min(280px, 40vh);
   }
 }
 </style>
-
 </head>
 <body>
 
