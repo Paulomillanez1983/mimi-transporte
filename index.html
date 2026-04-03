@@ -3351,9 +3351,9 @@ function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
 
   const distanciaBackend = numeroSeguro(
-    data?.distancia_km_total ?? data?.distancia_km,
-    NaN
-  );
+  data?.distancia_km ?? data?.distancia_km_total ?? data?.distancia_km_osrm,
+  NaN
+);
 
   const duracionBackend = numeroSeguro(
     data?.duracion_min_total ?? data?.duracion_min,
