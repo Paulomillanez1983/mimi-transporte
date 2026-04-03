@@ -2476,6 +2476,7 @@ function sonMismoPunto(a, b) {
 function obtenerPuntosOrdenados() {
   const origen = state.origen;
   const destino = state.destino;
+
   const waypoints = (state.waypoints || [])
     .filter((w) =>
       w &&
@@ -2486,10 +2487,16 @@ function obtenerPuntosOrdenados() {
     .map((w) => w.data);
 
   const waypointsFiltrados = [];
+
   for (const wp of waypoints) {
-    if (sonMismoPunto(wp, origen)) continue;
-    if (sonMismoPunto(wp, destino)) continue;
+    // eliminar duplicados entre paradas
     if (waypointsFiltrados.some((x) => sonMismoPunto(x, wp))) continue;
+
+    // NO eliminar si coincide con origen:
+    // eso permite A -> B -> A
+    // solo eliminamos si coincide con destino y sería redundante
+    if (sonMismoPunto(wp, destino)) continue;
+
     waypointsFiltrados.push(wp);
   }
 
@@ -2499,7 +2506,6 @@ function obtenerPuntosOrdenados() {
     Number.isFinite(Number(p.lng))
   );
 }
-
 function limpiarPuntos(puntos) {
   const limpios = [];
 
@@ -2517,7 +2523,12 @@ function limpiarPuntos(puntos) {
 function limpiarPuntosRuta(puntos) {
   if (!Array.isArray(puntos)) return [];
 
-  const validos = puntos.filter((p) => p && coordenadasValidas(p.lat, p.lng));
+  const validos = puntos.filter((p) =>
+    p &&
+    Number.isFinite(Number(p.lat)) &&
+    Number.isFinite(Number(p.lng))
+  );
+
   if (validos.length < 2) return validos;
 
   const origen = validos[0];
@@ -2525,16 +2536,20 @@ function limpiarPuntosRuta(puntos) {
   const intermedios = validos.slice(1, -1);
 
   const intermediosFiltrados = [];
+
   for (const p of intermedios) {
-    if (sonMismoPunto(p, origen)) continue;
-    if (sonMismoPunto(p, destino)) continue;
+    // mantener retorno al origen permitido
+    // solo evitamos duplicados exactos entre intermedios
     if (intermediosFiltrados.some((x) => sonMismoPunto(x, p))) continue;
+
+    // si una parada coincide con destino final, sí es redundante
+    if (sonMismoPunto(p, destino)) continue;
+
     intermediosFiltrados.push(p);
   }
 
   return [origen, ...intermediosFiltrados, destino];
 }
-
 function validarPuntosRuta(puntos) {
   if (!Array.isArray(puntos) || puntos.length < 2) {
     return 'Ruta incompleta';
