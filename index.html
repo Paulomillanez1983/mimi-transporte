@@ -2204,12 +2204,10 @@ async function resolverWaypointsPendientes() {
       continue;
     }
 
-    const textoActualNormalizado = texto.toLowerCase().trim();
-    const textoGuardadoNormalizado = (
-      wp?.data?.direccionCorta ||
-      wp?.data?.direccion ||
-      ''
-    ).toLowerCase().trim();
+    const textoActualNormalizado = normalizarTextoDireccion(texto);
+    const textoGuardadoNormalizado = normalizarTextoDireccion(
+      wp?.data?.direccionCorta || wp?.data?.direccion || ''
+    );
 
     const necesitaResolver =
       !wp?.data || textoActualNormalizado !== textoGuardadoNormalizado;
@@ -2220,23 +2218,32 @@ async function resolverWaypointsPendientes() {
 
     if (!resuelto) {
       if (wp) wp.data = null;
+      input.removeAttribute('title');
       errores.push(texto);
       continue;
     }
 
-if (wp) wp.data = resuelto;
+    const dataNormalizada = {
+      id: wp?.data?.id || `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      direccion: resuelto.direccion,
+      direccionCorta: resuelto.direccionCorta,
+      direccionSecundaria: resuelto.direccionSecundaria,
+      lat: Number(resuelto.lat),
+      lng: Number(resuelto.lng),
+      raw: resuelto.raw || null
+    };
 
-input.value = resuelto.direccionCorta;
-input.setAttribute('title', construirTooltip(resuelto));
-    if (wp) wp.data = resuelto;
+    if (wp) {
+      wp.data = dataNormalizada;
+    }
 
-    input.value = resuelto.direccionCorta;
-    input.setAttribute('title', construirTooltip(resuelto));
+    input.value = dataNormalizada.direccionCorta;
+    input.setAttribute('title', construirTooltip(dataNormalizada));
   }
 
   return errores;
 }
-
+  
 function construirPayloadWaypointsIntermedios() {
   const puntos = obtenerPuntosOrdenados();
 
@@ -2961,10 +2968,18 @@ async function calcularRuta() {
     if (!state.origen || origenActual !== origenGuardado) {
       log('🔍 Resolviendo origen:', textoOrigen);
       const resuelto = await resolverPuntoDesdeTexto(textoOrigen);
-      if (!resuelto) throw new Error(`No encontramos la dirección de origen: "${textoOrigen}"`);
-      state.origen = resuelto;
-      origenInput.value = resuelto.direccionCorta;
-      origenInput.setAttribute('title', construirTooltip(resuelto));
+
+      if (!resuelto) {
+        throw new Error(`No encontramos la dirección de origen: "${textoOrigen}"`);
+      }
+
+      state.origen = {
+        id: state.origen?.id || 'stop_1',
+        ...resuelto
+      };
+
+      origenInput.value = state.origen.direccionCorta;
+      origenInput.setAttribute('title', construirTooltip(state.origen));
     }
 
     const destinoActual = normalizarTextoDireccion(textoDestino);
@@ -2973,13 +2988,25 @@ async function calcularRuta() {
     if (!state.destino || destinoActual !== destinoGuardado) {
       log('🔍 Resolviendo destino:', textoDestino);
       const resuelto = await resolverPuntoDesdeTexto(textoDestino);
-      if (!resuelto) throw new Error(`No encontramos la dirección de destino: "${textoDestino}"`);
-      state.destino = resuelto;
-      destinoInput.value = resuelto.direccionCorta;
-      destinoInput.setAttribute('title', construirTooltip(resuelto));
+
+      if (!resuelto) {
+        throw new Error(`No encontramos la dirección de destino: "${textoDestino}"`);
+      }
+
+      state.destino = {
+        id: state.destino?.id || 'stop_destino',
+        ...resuelto
+      };
+
+      destinoInput.value = state.destino.direccionCorta;
+      destinoInput.setAttribute('title', construirTooltip(state.destino));
     }
 
-    await resolverWaypointsPendientes();
+    const erroresWaypoints = await resolverWaypointsPendientes();
+
+    if (erroresWaypoints.length > 0) {
+      throw new Error(`No pudimos resolver estas paradas: ${erroresWaypoints.join(', ')}`);
+    }
 
     if (
       !coordenadasValidas(state.origen?.lat, state.origen?.lng) ||
@@ -2989,7 +3016,10 @@ async function calcularRuta() {
     }
 
     const puntos = obtenerPuntosOrdenados();
-    if (puntos.length < 2) throw new Error('Ruta incompleta');
+
+    if (puntos.length < 2) {
+      throw new Error('Ruta incompleta');
+    }
 
     const puntosLimpios = limpiarPuntosInvalidos(puntos);
 
@@ -3008,10 +3038,12 @@ async function calcularRuta() {
 
     const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
 
+    log('📦 PAYLOAD COTIZACIÓN:', payload);
+
     setLoadingCotizacion(true, 'Cotizando...');
     await cotizarViajeOptimizado(payload, requestId);
   } catch (err) {
-    console.error('❌ Error:', err);
+    console.error('❌ Error en calcularRuta:', err);
     notif.show('Error', err?.message || 'No se pudo calcular la ruta', 'error');
   } finally {
     if (requestId === currentQuoteRequestId) {
@@ -3019,7 +3051,6 @@ async function calcularRuta() {
     }
   }
 }
-
 function construirPayloadOptimizado(puntos, estimacion) {
   const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
 
