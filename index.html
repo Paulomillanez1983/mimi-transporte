@@ -1207,8 +1207,12 @@ body.dark #mapSection,
   background: #f8f9fa;
   border-radius: 12px;
 }
-
-.quote-detail {
+<div id="priceBreakdown" style="display:none; margin-top:16px; padding:14px; background:#f8f9fa; border-radius:12px;">
+  <div style="font-weight:700; margin-bottom:10px;">Desglose del precio</div>
+  <div id="priceBreakdownContent" style="font-size:14px; line-height:1.5; color:#555;"></div>
+</div>
+  
+  .quote-detail {
   text-align: center;
 }
 
@@ -2973,11 +2977,8 @@ async function calcularRuta() {
         throw new Error(`No encontramos la dirección de origen: "${textoOrigen}"`);
       }
 
-      state.origen = {
-        id: state.origen?.id || 'stop_1',
-        ...resuelto
-      };
-
+     state.origen = resuelto;
+      
       origenInput.value = state.origen.direccionCorta;
       origenInput.setAttribute('title', construirTooltip(state.origen));
     }
@@ -2993,11 +2994,8 @@ async function calcularRuta() {
         throw new Error(`No encontramos la dirección de destino: "${textoDestino}"`);
       }
 
-      state.destino = {
-        id: state.destino?.id || 'stop_destino',
-        ...resuelto
-      };
-
+      state.destino = resuelto;
+      
       destinoInput.value = state.destino.direccionCorta;
       destinoInput.setAttribute('title', construirTooltip(state.destino));
     }
@@ -3067,18 +3065,30 @@ function construirPayloadOptimizado(puntos, estimacion) {
 
   const waypointsIntermedios = puntosRuta.filter((p) => p.rol === 'stop');
 
+  const esperaMin = 0; // después lo podés tomar de un input real
+  const factorZona = 1; // después lo podés calcular por zona
+
   return {
     servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
     origen: puntos[0].direccion,
-    origen_corto: puntos[0].direccionCorta,
+    origen_corto: puntos[0].direccionCorta || puntos[0].direccion,
     destino: puntos[puntos.length - 1].direccion,
-    destino_corto: puntos[puntos.length - 1].direccionCorta,
+    destino_corto: puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion,
 
     origen_lat: Number(puntos[0].lat),
     origen_lng: Number(puntos[0].lng),
     destino_lat: Number(puntos[puntos.length - 1].lat),
     destino_lng: Number(puntos[puntos.length - 1].lng),
+
+    distancia_km: estimacion.distanciaKm,
+    duracion_min: estimacion.duracionMin,
+    distancia_km_total: estimacion.distanciaKm,
+    duracion_min_total: estimacion.duracionMin,
+
+    fechaHora: new Date().toISOString(),
+    espera_min: esperaMin,
+    factor_zona: factorZona,
 
     paradas: waypointsIntermedios.map((w) => ({
       id: w.id,
@@ -3090,12 +3100,7 @@ function construirPayloadOptimizado(puntos, estimacion) {
       direccion_completa: w.direccion_completa
     })),
 
-    distancia_km: estimacion.distanciaKm,
-    duracion_min: estimacion.duracionMin,
-    fechaHora: new Date().toISOString(),
-
     waypoints: waypointsIntermedios,
-
     puntos_ruta: puntosRuta,
     stops: puntosRuta,
 
@@ -3106,7 +3111,8 @@ function construirPayloadOptimizado(puntos, estimacion) {
     ruta_calculada_completa: true,
     cotizacion_multitramo: puntos.length > 2
   };
-}  
+}
+  
 function limpiarDuplicados(puntos) {
   const tolerancia = 0.0008;
   const resultado = [];
@@ -3217,19 +3223,60 @@ function usarFallbackLocal(payload, requestId) {
 
   notif.show('Modo estimado', 'Usando precio estimado local', 'warning');
 
-  const distancia = payload.distancia_km_total || payload.distancia_km || 0;
-  const duracion = payload.duracion_min_total || payload.duracion_min || 0;
+  const distancia = numeroSeguro(
+    payload?.distancia_km_total || payload?.distancia_km,
+    0
+  );
+
+  const duracion = numeroSeguro(
+    payload?.duracion_min_total || payload?.duracion_min,
+    0
+  );
+
+  const esperaMin = numeroSeguro(payload?.espera_min, 0);
+  const paradas = numeroSeguro(payload?.cantidad_paradas_front, 0);
+  const retorno = payload?.retorno_al_origen_front ? 900 : 0;
+  const servicio = payload?.servicio === 'IDA_Y_VUELTA_ESCOLAR' ? 700 : 0;
+  const recargoParadas = paradas * 650;
+  const recargoEspera = esperaMin * 90;
+  const factorZona = numeroSeguro(payload?.factor_zona, 1) || 1;
+
+  const subtotalTramos = Math.round(distancia * 550 + duracion * 45);
 
   const precioEstimado = Math.max(
-    1500,
-    Math.round((800 + distancia * 400 + duracion * 30) / 50) * 50
+    2200,
+    Math.round(
+      (
+        (1200 +
+          subtotalTramos +
+          recargoParadas +
+          retorno +
+          servicio +
+          recargoEspera) * factorZona
+      ) / 50
+    ) * 50
   );
 
   state.cotizacion = {
     precio: precioEstimado,
     precio_formateado: `$${precioEstimado.toLocaleString('es-AR')}`,
-    modo: 'fallback_timeout',
-    resumen_ruta: payload.resumen_ruta_front
+    resumen_ruta: payload?.resumen_ruta_front || construirResumenRuta(),
+    waypoints_count: paradas,
+    segmentos_totales: payload?.segmentos_totales_front ?? 1,
+    retorno_al_origen: payload?.retorno_al_origen_front ?? false,
+    modo: 'fallback_local',
+    detalle_precio: {
+      tarifa_base: 1200,
+      subtotal_tramos: subtotalTramos,
+      recargo_paradas: recargoParadas,
+      recargo_retorno_origen: retorno,
+      recargo_servicio: servicio,
+      recargo_espera: recargoEspera,
+      nombre_hora_pico: 'estimado_local',
+      factor_zona: factorZona,
+      cantidad_paradas_intermedias: paradas,
+      vuelve_al_origen: !!payload?.retorno_al_origen_front
+    }
   };
 
   state.routeData = {
@@ -3241,7 +3288,6 @@ function usarFallbackLocal(payload, requestId) {
 
   mostrarCotizacion(precioEstimado, distancia, duracion);
 }
-
 function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
   const distancia = numeroSeguro(data?.distancia_km_total || data?.distancia_km, 0);
@@ -3251,11 +3297,13 @@ function procesarRespuestaCotizacion(data, payload) {
     Array.isArray(data?.route_geometry) ? data.route_geometry :
     Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
     Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
+    Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
     null;
 
   state.cotizacion = {
     ...data,
-    resumen_ruta: data?.resumen_ruta || payload.resumen_ruta_front
+    resumen_ruta: data?.resumen_ruta || payload.resumen_ruta_front,
+    detalle_precio: data?.detalle_precio || null
   };
 
   state.routeData = {
@@ -3276,7 +3324,6 @@ function procesarRespuestaCotizacion(data, payload) {
 
   mostrarCotizacion(precio, distancia, duracion);
 }
-
 // ==========================================
 // RUTA / GEOMETRÍA
 // ==========================================
@@ -3695,6 +3742,7 @@ function mostrarCotizacion(precio, km, minutos) {
 
   const paradasIntermedias =
     state.cotizacion?.waypoints_count ??
+    state.cotizacion?.detalle_precio?.cantidad_paradas_intermedias ??
     (Array.isArray(state.waypoints) ? state.waypoints.filter((w) => w?.data).length : 0);
 
   const segmentos =
@@ -3704,6 +3752,7 @@ function mostrarCotizacion(precio, km, minutos) {
 
   const retornoAlOrigen =
     state.cotizacion?.retorno_al_origen ??
+    state.cotizacion?.detalle_precio?.vuelve_al_origen ??
     state.routeData?.retornoAlOrigen ??
     detectarRetornoAlOrigenFrontend();
 
@@ -3717,7 +3766,10 @@ function mostrarCotizacion(precio, km, minutos) {
   let label = 'Precio estimado';
   if (state.routeData?.fallback || state.cotizacion?.modo === 'fallback_local') {
     label = 'Estimación provisoria';
+  } else if (state.cotizacion?.detalle_precio) {
+    label = 'Precio calculado';
   }
+
   const labelEl = document.querySelector('.quote-price-label');
   if (labelEl) labelEl.textContent = label;
 
@@ -3735,46 +3787,52 @@ function mostrarCotizacion(precio, km, minutos) {
     state.routeData?.resumenRuta ||
     construirResumenRuta();
 
-  let textoResumen = '';
-  if (retornoAlOrigen && paradasIntermedias === 0) {
-    textoResumen = 'Ida y vuelta completa';
-  } else if (retornoAlOrigen && paradasIntermedias > 0) {
-    textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · recorrido completo con regreso`;
-  } else if (paradasIntermedias === 0) {
-    textoResumen = 'Recorrido directo completo';
-  } else {
-    textoResumen = `${paradasIntermedias} parada${paradasIntermedias > 1 ? 's' : ''} · ${segmentos} tramo${segmentos > 1 ? 's' : ''} cotizados`;
+  const resumenParadas = document.getElementById('resumenParadas');
+  if (resumenParadas) {
+    resumenParadas.textContent = retornoAlOrigen
+      ? `${paradasIntermedias} paradas · retorno`
+      : `${paradasIntermedias} paradas`;
+    resumenParadas.title = resumenRuta;
   }
 
-  const resumenParadas = document.getElementById('resumenParadas');
-  if (resumenParadas) resumenParadas.textContent = textoResumen;
+  const breakdown = document.getElementById('priceBreakdown');
+  const breakdownContent = document.getElementById('priceBreakdownContent');
+  const dp = state.cotizacion?.detalle_precio;
 
-  setSectionVisible('mapSection', true);
+  if (breakdown && breakdownContent && dp && !state.routeData?.fallback) {
+    const filas = [
+      ['Tarifa base', dp.tarifa_base],
+      ['Subtotal tramos', dp.subtotal_tramos],
+      ['Recargo paradas', dp.recargo_paradas],
+      ['Recargo retorno', dp.recargo_retorno_origen],
+      ['Recargo servicio', dp.recargo_servicio],
+      ['Recargo espera', dp.recargo_espera]
+    ]
+      .filter(([, valor]) => Number(valor || 0) > 0)
+      .map(([label, valor]) => `
+        <div style="display:flex; justify-content:space-between; gap:12px;">
+          <span>${label}</span>
+          <strong>$${Number(valor).toLocaleString('es-AR')}</strong>
+        </div>
+      `)
+      .join('');
+
+    const meta = `
+      <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.08); font-size:13px; color:#666;">
+        <div>Hora pico: <strong>${dp.nombre_hora_pico || 'normal'}</strong></div>
+        <div>Factor zona: <strong>${dp.factor_zona || 1}</strong></div>
+        <div>Segmentos: <strong>${segmentos}</strong></div>
+      </div>
+    `;
+
+    breakdownContent.innerHTML = filas + meta;
+    breakdown.style.display = 'block';
+  } else if (breakdown) {
+    breakdown.style.display = 'none';
+  }
+
   setSectionVisible('quoteCard', true);
-
-  setTimeout(() => {
-    try {
-      if (mapaCliente && mapReady) {
-        mapaCliente.resize();
-        if (state.routeData?.geometry?.coordinates?.length) {
-          centrarEnRuta();
-        }
-      }
-    } catch (e) {
-      console.warn('Error al hacer resize/centrar mapa:', e);
-    }
-  }, 250);
-
-  setTimeout(() => {
-    card.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest'
-    });
-  }, 350);
-
-  log('🧠 Resumen ruta:', resumenRuta);
 }
-
 // ==========================================
 // ACCIONES
 // ==========================================
