@@ -2368,8 +2368,14 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
 
   let timer = null;
   let requestId = 0;
+  let suppressNextInputSearch = false;
 
   input.addEventListener('input', () => {
+    if (suppressNextInputSearch) {
+      suppressNextInputSearch = false;
+      return;
+    }
+
     clearTimeout(timer);
     const texto = input.value.trim();
 
@@ -2387,14 +2393,17 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
       const resultados = await buscarDireccion(texto);
 
       if (currentRequest !== requestId) return;
+      if (document.activeElement !== input) return;
 
       mostrarSugerencias(contenedor, resultados, (r) => {
         const direccionCorta = formatearDireccionCorta(r);
         const direccionSecundaria = formatearDireccionSecundaria(r);
 
+        suppressNextInputSearch = true;
         input.value = direccionCorta;
 
         onSelect({
+          id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           direccion: r.display_name,
           direccionCorta,
           direccionSecundaria,
@@ -2410,11 +2419,13 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
 
         hideSuggestions(contenedor);
       });
-    }, 250);
+    }, 350);
   });
 
   input.addEventListener('focus', () => {
-    if (input.value.trim().length >= 3) {
+    const texto = input.value.trim();
+
+    if (texto.length >= 3 && !contenedor.innerHTML.trim()) {
       input.dispatchEvent(new Event('input'));
     }
   });
@@ -2428,7 +2439,6 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     }, 200);
   });
 }
-
 function mostrarSugerencias(contenedor, resultados, callback) {
   contenedor.innerHTML = '';
 
