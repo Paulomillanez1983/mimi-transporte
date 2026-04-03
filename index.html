@@ -2937,6 +2937,9 @@ async function calcularRuta() {
     }
 
     const puntosLimpios = limpiarPuntosInvalidos(puntos);
+    if (!validarPuntosRuta(puntosLimpios)) {
+  throw new Error('Hay una parada repetida o igual al origen/destino. Eliminá la duplicada.');
+}
 
     if (puntosLimpios.length < 2) {
       throw new Error('No hay suficientes puntos válidos para calcular la ruta');
@@ -2953,7 +2956,6 @@ async function calcularRuta() {
 
     const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
 
-    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
 
     setLoadingCotizacion(true, 'Cotizando...');
     await cotizarViajeOptimizado(payload, requestId);
@@ -2967,13 +2969,24 @@ async function calcularRuta() {
   }
 }
 function construirPayloadOptimizado(puntos, estimacion) {
-  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
+  const puntosUnicos = [];
 
-  const puntosRuta = puntos.map((p, i) => ({
+  for (const p of puntos) {
+    const existe = puntosUnicos.some(x =>
+      Math.abs(Number(x.lat) - Number(p.lat)) < 0.00001 &&
+      Math.abs(Number(x.lng) - Number(p.lng)) < 0.00001
+    );
+
+    if (!existe) puntosUnicos.push(p);
+  }
+
+  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntosUnicos);
+
+  const puntosRuta = puntosUnicos.map((p, i) => ({
     id: p.id || `stop_${i + 1}`,
     orden: i + 1,
-    rol: i === 0 ? 'pickup' : i === puntos.length - 1 ? 'dropoff' : 'stop',
-    tipo: i === 0 ? 'origen' : i === puntos.length - 1 ? 'destino' : 'parada',
+    rol: i === 0 ? 'pickup' : i === puntosUnicos.length - 1 ? 'dropoff' : 'stop',
+    tipo: i === 0 ? 'origen' : i === puntosUnicos.length - 1 ? 'destino' : 'parada',
     direccion: p.direccionCorta || p.direccion,
     direccion_completa: p.direccion,
     lat: Number(p.lat),
@@ -2985,15 +2998,15 @@ function construirPayloadOptimizado(puntos, estimacion) {
   return {
     servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
 
-    origen: puntos[0].direccion,
-    origen_corto: puntos[0].direccionCorta || puntos[0].direccion,
-    destino: puntos[puntos.length - 1].direccion,
-    destino_corto: puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion,
+    origen: puntosUnicos[0].direccion,
+    origen_corto: puntosUnicos[0].direccionCorta || puntosUnicos[0].direccion,
+    destino: puntosUnicos[puntosUnicos.length - 1].direccion,
+    destino_corto: puntosUnicos[puntosUnicos.length - 1].direccionCorta || puntosUnicos[puntosUnicos.length - 1].direccion,
 
-    origen_lat: Number(puntos[0].lat),
-    origen_lng: Number(puntos[0].lng),
-    destino_lat: Number(puntos[puntos.length - 1].lat),
-    destino_lng: Number(puntos[puntos.length - 1].lng),
+    origen_lat: Number(puntosUnicos[0].lat),
+    origen_lng: Number(puntosUnicos[0].lng),
+    destino_lat: Number(puntosUnicos[puntosUnicos.length - 1].lat),
+    destino_lng: Number(puntosUnicos[puntosUnicos.length - 1].lng),
 
     distancia_km: estimacion.distanciaKm,
     duracion_min: estimacion.duracionMin,
@@ -3018,15 +3031,16 @@ function construirPayloadOptimizado(puntos, estimacion) {
     puntos_ruta: puntosRuta,
     stops: puntosRuta,
 
-    segmentos_totales_front: Math.max(1, puntos.length - 1),
-    cantidad_paradas_front: Math.max(0, puntos.length - 2),
+    segmentos_totales_front: Math.max(1, puntosRuta.length - 1),
+    cantidad_paradas_front: Math.max(0, puntosRuta.length - 2),
     retorno_al_origen_front: retornoAlOrigen,
-    resumen_ruta_front: construirResumenRutaConPuntos(puntos),
+    resumen_ruta_front: construirResumenRutaConPuntos(puntosRuta),
     ruta_calculada_completa: true,
-    cotizacion_multitramo: puntos.length > 2
+    cotizacion_multitramo: puntosRuta.length > 2
   };
-}  
-function limpiarDuplicados(puntos) {
+}
+  
+  function limpiarDuplicados(puntos) {
   const tolerancia = 0.0008;
   const resultado = [];
 
@@ -3084,7 +3098,22 @@ function mostrarMapaInmediato(_puntos, coords) {
     initMapa().then(() => dibujarRutaLineal(coords));
   });
 }
+function validarPuntosRuta(puntos) {
+  for (let i = 0; i < puntos.length - 1; i++) {
+    const a = puntos[i];
+    const b = puntos[i + 1];
 
+    const dist =
+      Math.abs(a.lat - b.lat) +
+      Math.abs(a.lng - b.lng);
+
+    if (dist < 0.0001) {
+      console.warn('⚠️ Puntos duplicados detectados:', a, b);
+      return false;
+    }
+  }
+  return true;
+}
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
