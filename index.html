@@ -3331,15 +3331,29 @@ function usarFallbackLocal(payload, requestId) {
 
 function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
-  const distancia = numeroSeguro(
+
+  const distanciaBackend = numeroSeguro(
     data?.distancia_km_total ?? data?.distancia_km,
-    numeroSeguro(payload?.distancia_km_total ?? payload?.distancia_km, 0)
+    NaN
   );
 
-  const duracion = numeroSeguro(
+  const duracionBackend = numeroSeguro(
     data?.duracion_min_total ?? data?.duracion_min,
-    numeroSeguro(payload?.duracion_min_total ?? payload?.duracion_min, 0)
+    NaN
   );
+
+  const distanciaFallback = numeroSeguro(
+    payload?.distancia_km_total ?? payload?.distancia_km,
+    0
+  );
+
+  const duracionFallback = numeroSeguro(
+    payload?.duracion_min_total ?? payload?.duracion_min,
+    0
+  );
+
+  const distancia = Number.isFinite(distanciaBackend) ? distanciaBackend : distanciaFallback;
+  const duracion = Number.isFinite(duracionBackend) ? duracionBackend : duracionFallback;
 
   const coordsBackend =
     Array.isArray(data?.route_geometry) ? data.route_geometry :
@@ -3354,6 +3368,9 @@ function procesarRespuestaCotizacion(data, payload) {
 
   state.cotizacion = {
     ...data,
+    precio,
+    distancia_km: distancia,
+    duracion_min: duracion,
     legs,
     puntos_ruta: puntosRuta,
     resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
@@ -3384,9 +3401,12 @@ function procesarRespuestaCotizacion(data, payload) {
     dibujarRutaReal(coordsBackend);
   }
 
+  console.log('✅ DISTANCIA FINAL USADA:', distancia);
+  console.log('✅ DURACION FINAL USADA:', duracion);
+  console.log('✅ PRECIO FINAL USADO:', precio);
+
   mostrarCotizacion(precio, distancia, duracion);
 }
-
 // ==========================================
 // UI COTIZACIÓN
 // ==========================================
