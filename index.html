@@ -3046,18 +3046,72 @@ function limpiarDuplicados(puntos) {
 
   return resultado;
 }
+function sonMismoPunto(a, b) {
+  if (!a || !b) return false;
+
+  const latA = Number(a.lat);
+  const lngA = Number(a.lng);
+  const latB = Number(b.lat);
+  const lngB = Number(b.lng);
+
+  if (
+    Number.isFinite(latA) &&
+    Number.isFinite(lngA) &&
+    Number.isFinite(latB) &&
+    Number.isFinite(lngB)
+  ) {
+    return Math.abs(latA - latB) < 0.00005 &&
+           Math.abs(lngA - lngB) < 0.00005;
+  }
+
+  const dirA = normalizarTextoDireccion(a.direccionCorta || a.direccion || '');
+  const dirB = normalizarTextoDireccion(b.direccionCorta || b.direccion || '');
+  return !!dirA && !!dirB && dirA === dirB;
+}
+
+function limpiarPuntosRuta(puntos) {
+  if (!Array.isArray(puntos)) return [];
+
+  const validos = puntos.filter((p) =>
+    p &&
+    Number.isFinite(Number(p.lat)) &&
+    Number.isFinite(Number(p.lng))
+  );
+
+  if (validos.length < 2) return validos;
+
+  const origen = validos[0];
+  const destino = validos[validos.length - 1];
+  const intermedios = validos.slice(1, -1);
+
+  const intermediosFiltrados = [];
+
+  for (const p of intermedios) {
+    if (sonMismoPunto(p, origen)) continue;
+    if (sonMismoPunto(p, destino)) continue;
+    if (intermediosFiltrados.some((x) => sonMismoPunto(x, p))) continue;
+
+    intermediosFiltrados.push(p);
+  }
+
+  return [origen, ...intermediosFiltrados, destino];
+}
+
 function construirPayloadOptimizado(puntos) {
   if (!Array.isArray(puntos) || puntos.length < 2) return null;
 
-  const origen = puntos[0];
-  const destino = puntos[puntos.length - 1];
-  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntos);
+  const puntosLimpios = limpiarPuntosRuta(puntos);
+  if (puntosLimpios.length < 2) return null;
 
-  const puntosRuta = puntos.map((p, index) => ({
+  const origen = puntosLimpios[0];
+  const destino = puntosLimpios[puntosLimpios.length - 1];
+  const retornoAlOrigen = detectarRetornoAlOrigenConPuntos(puntosLimpios);
+
+  const puntosRuta = puntosLimpios.map((p, index) => ({
     id: p.id || `stop_${index + 1}`,
     orden: index + 1,
-    rol: index === 0 ? 'pickup' : index === puntos.length - 1 ? 'dropoff' : 'stop',
-    tipo: index === 0 ? 'origen' : index === puntos.length - 1 ? 'destino' : 'parada',
+    rol: index === 0 ? 'pickup' : index === puntosLimpios.length - 1 ? 'dropoff' : 'stop',
+    tipo: index === 0 ? 'origen' : index === puntosLimpios.length - 1 ? 'destino' : 'parada',
     direccion: p.direccionCorta || p.direccion || `Punto ${index + 1}`,
     direccion_completa: p.direccion || p.direccionCorta || `Punto ${index + 1}`,
     lat: Number(p.lat),
@@ -3094,18 +3148,17 @@ function construirPayloadOptimizado(puntos) {
     stops: puntosRuta,
     puntos_ruta: puntosRuta,
 
-    resumen_ruta_front: construirResumenRutaConPuntos(puntos),
-    segmentos_totales_front: Math.max(1, puntos.length - 1),
+    resumen_ruta_front: construirResumenRutaConPuntos(puntosLimpios),
+    segmentos_totales_front: Math.max(1, puntosLimpios.length - 1),
     retorno_al_origen_front: retornoAlOrigen,
     cantidad_paradas_front: paradas.length,
     ruta_calculada_completa: true,
-    cotizacion_multitramo: puntos.length > 2,
+    cotizacion_multitramo: puntosLimpios.length > 2,
     fechaHora: new Date().toISOString(),
     espera_min: 0,
     factor_zona: 1
   };
 }
-
 
 function calcularEstimacionLocal(puntos) {
   const puntosValidos = puntos.filter((p) =>
