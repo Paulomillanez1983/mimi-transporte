@@ -3521,11 +3521,29 @@ async function calcularRuta() {
     }
 
     // =========================
-    // 7) Mostrar mapa solo como contenedor
+    // 7) Mostrar mapa con línea estimada mientras espera backend
     // =========================
     setLoadingCotizacion(true, 'Calculando recorrido real...');
     setSectionVisible('mapSection', true);
     await initMapa();
+
+    if (requestId !== currentQuoteRequestId) return;
+
+    dibujarRutaLineal(estimacionLocal.coords);
+
+    state.routeData = {
+      ...(state.routeData || {}),
+      distance: estimacionLocal.distanciaKm,
+      duration: estimacionLocal.duracionMin,
+      segmentos: Math.max(1, puntosLimpios.length - 1),
+      retornoAlOrigen: detectarRetornoAlOrigenConPuntos(puntosLimpios),
+      resumenRuta: construirResumenRutaConPuntos(puntosLimpios),
+      fallback: true,
+      geometry: {
+        type: 'LineString',
+        coordinates: estimacionLocal.coords
+      }
+    };
 
     // =========================
     // 8) Construir payload
@@ -3535,14 +3553,19 @@ async function calcularRuta() {
       throw new Error('No se pudo construir el payload de cotización');
     }
 
+    console.log('📦 payload cotización:', payload);
+
     // =========================
     // 9) Cotizar backend
     // =========================
     if (requestId !== currentQuoteRequestId) return;
 
     setLoadingCotizacion(true, 'Cotizando...');
-    await cotizarViajeOptimizado(payload, requestId);
+    const resultado = await cotizarViajeOptimizado(payload, requestId);
 
+    if (requestId !== currentQuoteRequestId) return;
+
+    console.log('✅ resultado cotización:', resultado);
   } catch (err) {
     if (requestId !== currentQuoteRequestId) return;
 
@@ -3575,6 +3598,7 @@ async function calcularRuta() {
     }
   }
 }
+
 
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
