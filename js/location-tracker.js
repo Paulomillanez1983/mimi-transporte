@@ -1,6 +1,8 @@
 /**
- * Location Tracker Producción (FIX TIMEOUT + RLS + auth.uid)
- * + tracking histórico en viaje_tracking
+ * Location Tracker Producción (OPTIMIZADO)
+ * - update en choferes
+ * - insert en viaje_tracking
+ * - evita inserts innecesarios si casi no hubo movimiento
  */
 
 import CONFIG from './config.js';
@@ -17,7 +19,12 @@ class LocationTracker {
     this._updateTimeout = null;
 
     this._lastDbUpdate = 0;
-    this._dbInterval = 8000; // guardar en DB cada 8 seg
+    this._dbInterval = 8000; // cada 8 seg
+
+    // anti-ruido para viaje_tracking
+    this._lastTrackingInsert = null;
+    this._minTrackingDistanceMeters = 20; // insertar solo si movió 20m+
+    this._maxTrackingSilenceMs = 30000;   // o cada 30s aunque no se mueva
   }
 
   async start(callback) {
@@ -126,7 +133,7 @@ class LocationTracker {
         const nowIso = new Date().toISOString();
 
         // =====================================================
-        // 1) UPDATE RÁPIDO EN choferes
+        // 1) update rápido en choferes
         // =====================================================
         const { error: choferUpdateError } = await supabaseService.client
           .from('choferes')
@@ -148,7 +155,7 @@ class LocationTracker {
         }
 
         // =====================================================
-        // 2) OBTENER chofer.id_uuid
+        // 2) obtener chofer.id_uuid
         // =====================================================
         const { data: chofer, error: choferError } = await supabaseService.client
           .from('choferes')
@@ -169,7 +176,7 @@ class LocationTracker {
         }
 
         // =====================================================
-        // 3) BUSCAR VIAJE ACTIVO OPCIONAL
+        // 3) buscar viaje activo opcional
         // =====================================================
         let viajeId = null;
 
@@ -189,8 +196,15 @@ class LocationTracker {
         }
 
         // =====================================================
-        // 4) INSERT HISTÓRICO EN viaje_tracking
+        // 4) decidir si insertar en viaje_tracking
         // =====================================================
+        const shouldInsertTracking = this._shouldInsertTracking(position, now);
+
+        if (!shouldInsertTracking) {
+          console.log('[LocationTracker] ⏭️ Tracking omitido (sin movimiento relevante)');
+          return;
+        }
+
         const trackingPayload = {
           viaje_id: viajeId,
           chofer_id_uuid: choferId,
@@ -209,6 +223,11 @@ class LocationTracker {
         if (trackingError) {
           console.error('[LocationTracker] ❌ Error insert viaje_tracking:', trackingError);
         } else {
+          this._lastTrackingInsert = {
+            lat: position.lat,
+            lng: position.lng,
+            timestampMs: now
+          };
           console.log('[LocationTracker] ✅ Tracking insertado en viaje_tracking');
         }
 
@@ -216,6 +235,41 @@ class LocationTracker {
         console.error('[LocationTracker] ❌ Error update ubicación/tracking:', err);
       }
     }, 1500);
+  }
+
+  _shouldInsertTracking(position, nowMs) {
+    if (!this._lastTrackingInsert) return true;
+
+    const elapsed = nowMs - this._lastTrackingInsert.timestampMs;
+    const distance = this._haversineMeters(
+      this._lastTrackingInsert.lat,
+      this._lastTrackingInsert.lng,
+      position.lat,
+      position.lng
+    );
+
+    if (distance >= this._minTrackingDistanceMeters) return true;
+    if (elapsed >= this._maxTrackingSilenceMs) return true;
+
+    return false;
+  }
+
+  _haversineMeters(lat1, lng1, lat2, lng2) {
+    const R = 6371000;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) *
+        Math.cos(toRad(lat2)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 
   _refreshPosition() {
@@ -269,6 +323,7 @@ class LocationTracker {
     this.isTracking = false;
     this.callbacks = [];
     this.lastPosition = null;
+    this._lastTrackingInsert = null;
   }
 
   getLastPosition() {
