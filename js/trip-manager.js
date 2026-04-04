@@ -144,19 +144,22 @@ class TripManager {
       if (activeTrip) {
         console.log('[TripManager] Active trip found:', activeTrip.id, activeTrip.estado);
 
+      if (activeTrip) {
+        console.log('[TripManager] Active trip found:', activeTrip.id, activeTrip.estado);
+
         this.currentTrip = activeTrip;
         this.pendingOffer = null;
         this.lastOfferIdShown = null;
 
-        if (activeTrip.estado === 'ASIGNADO') {
-          this.emit('newPendingTrip', activeTrip);
+        // ASIGNADO / ACEPTADO / EN_CURSO son viaje activo, no oferta pendiente
+        if (activeTrip.estado === 'EN_CURSO') {
+          this.emit('tripStarted', activeTrip);
         } else {
           this.emit('tripAccepted', activeTrip);
         }
 
         return;
       }
-
       // Si NO hay viaje activo, limpiar estado viejo
       this.currentTrip = null;
 
@@ -489,13 +492,27 @@ async rejectOffer(offerId) {
 
           console.log('[TripManager] Trip update:', trip.id, trip.estado);
 
-          if (trip.estado === 'ACEPTADO') this.emit('tripAccepted', trip);
-          if (trip.estado === 'EN_CURSO') this.emit('tripStarted', trip);
-          if (trip.estado === 'COMPLETADO') this.emit('tripCompleted', trip);
-          if (trip.estado === 'CANCELADO') this.emit('tripCancelled', trip);
+          if (trip.estado === 'ASIGNADO' || trip.estado === 'ACEPTADO') {
+            this.emit('tripAccepted', trip);
+          }
 
-          this.currentTrip = trip;
-        }
+          if (trip.estado === 'EN_CURSO') {
+            this.emit('tripStarted', trip);
+          }
+
+          if (trip.estado === 'COMPLETADO') {
+            this.emit('tripCompleted', trip);
+          }
+
+          if (trip.estado === 'CANCELADO') {
+            this.emit('tripCancelled', trip);
+          }
+
+          if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
+            this.currentTrip = trip;
+          } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
+            this.currentTrip = null;
+          }        
       )
       .subscribe((status) => {
         console.log('[TripManager] Trip channel status:', status);
