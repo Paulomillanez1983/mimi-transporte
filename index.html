@@ -3511,7 +3511,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
     clearTimeout(timeoutId);
   }
 }
-function usarFallbackLocal(payload, requestId) {
+  function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
   const distancia = numeroSeguro(
