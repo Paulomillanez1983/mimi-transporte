@@ -516,9 +516,7 @@ async rejectOffer(offerId) {
       .subscribe((status) => {
         console.log('[TripManager] Trip channel status:', status);
       });
-    }
   }
-
     
     
     // =========================================================
