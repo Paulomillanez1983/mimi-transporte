@@ -92,6 +92,14 @@ class TripManager {
       }
 
       this.driverId = driverId;
+      await supabaseService.client
+  .from('choferes')
+  .update({
+    online: true,
+    disponible: true,
+    last_seen_at: new Date().toISOString()
+  })
+  .eq('id_uuid', driverId);
 
       console.log('[TripManager] ✅ Initializing for driver UUID:', driverId);
 
@@ -501,10 +509,11 @@ async rejectOffer(offerId) {
     if (this.refreshInterval) clearInterval(this.refreshInterval);
 
     this.refreshInterval = setInterval(() => {
-      if (this.currentTrip) return;
-      if (this.isLoadingInitial || this.isRefreshingOffers) return;
+    if (this.currentTrip) return;
+    if (this.pendingOffer) return;
+    if (this.isLoadingInitial || this.isRefreshingOffers) return;
       this._loadInitialState(driverId);
-    }, 4000);
+    }, 6000);
   }
 
   // =========================================================
@@ -563,6 +572,7 @@ async rejectOffer(offerId) {
           });
 
           console.log('[TripManager] Refreshing offers after rejection...');
+          this.currentTrip = { id: tripId };
           await this._loadInitialState(driverId);
         }
 
@@ -572,10 +582,11 @@ async rejectOffer(offerId) {
       this.pendingOffer = null;
       this.lastOfferIdShown = null;
 
+      this.currentTrip = { id: tripId };
+
       this.emit('pendingTripCleared', { reason: 'offer_accepted' });
 
       await this._loadInitialState(driverId);
-
       return { success: true };
 
     } catch (err) {
@@ -617,50 +628,70 @@ async rejectOffer(offerId) {
     return { success: true };
   }
 
-  async startTrip(tripId) {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
+async startTrip(tripId) {
+  const driverId = this.driverId;
+  if (!driverId) return { success: false, error: 'No driverId' };
 
-    const { error } = await supabaseService.client
-      .from('viajes')
-      .update({
-        estado: 'EN_CURSO',
-        iniciado_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', tripId)
-      .eq('chofer_id_uuid', driverId);
+  const now = new Date().toISOString();
 
-    if (error) {
-      console.error('[TripManager] Start trip error:', error);
-      return { success: false, error: error.message };
-    }
+  const { error } = await supabaseService.client
+    .from('viajes')
+    .update({
+      estado: 'EN_CURSO',
+      iniciado_at: now,
+      updated_at: now
+    })
+    .eq('id', tripId)
+    .eq('chofer_id_uuid', driverId);
 
-    return { success: true };
+  if (error) {
+    console.error('[TripManager] Start trip error:', error);
+    return { success: false, error: error.message };
   }
 
-  async finishTrip(tripId) {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
+  // 🚕 Chofer ocupado
+  await supabaseService.client
+    .from('choferes')
+    .update({
+      disponible: false,
+      last_seen_at: now
+    })
+    .eq('id_uuid', driverId);
 
-    const { error } = await supabaseService.client
-      .from('viajes')
-      .update({
-        estado: 'COMPLETADO',
-        completado_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', tripId)
-      .eq('chofer_id_uuid', driverId);
+  return { success: true };
+}
+async finishTrip(tripId) {
+  const driverId = this.driverId;
+  if (!driverId) return { success: false, error: 'No driverId' };
 
-    if (error) {
-      console.error('[TripManager] Finish trip error:', error);
-      return { success: false, error: error.message };
-    }
+  const now = new Date().toISOString();
 
-    return { success: true };
+  const { error } = await supabaseService.client
+    .from('viajes')
+    .update({
+      estado: 'COMPLETADO',
+      completado_at: now,
+      updated_at: now
+    })
+    .eq('id', tripId)
+    .eq('chofer_id_uuid', driverId);
+
+  if (error) {
+    console.error('[TripManager] Finish trip error:', error);
+    return { success: false, error: error.message };
   }
 
+  // 🚕 Chofer vuelve a disponible
+  await supabaseService.client
+    .from('choferes')
+    .update({
+      disponible: true,
+      last_seen_at: now
+    })
+    .eq('id_uuid', driverId);
+
+  return { success: true };
+}
   async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
     const driverId = this.driverId;
     if (!driverId) return { success: false, error: 'No driverId' };
