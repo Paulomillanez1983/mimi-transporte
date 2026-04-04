@@ -142,22 +142,45 @@ class DriverApp {
       this.initialized = true;
       console.log('[DriverApp] ✅ Aplicación inicializada correctamente');
 
-      // Estado inicial UI
-      await supabaseService.setDriverOnline(false);
-      this._onlineStatus = false;
-      uiController.updateDriverState('OFFLINE', false);
-      this._setFlowState('OFFLINE');
-
       if (!tripManagerReady) {
         console.warn('[DriverApp] App iniciada sin TripManager operativo');
+        this._onlineStatus = false;
+        uiController.updateDriverState('OFFLINE', false);
+        this._setFlowState('OFFLINE');
         uiController.showWaitingState();
         return;
+      }
+
+      // Estado inicial real del chofer desde BD
+      try {
+        const { data: choferRow, error: choferError } = await supabaseService.client
+          .from('choferes')
+          .select('online, disponible')
+          .eq('user_id', this._authUserId)
+          .maybeSingle();
+
+        if (choferError) {
+          console.warn('[DriverApp] No se pudo leer estado inicial del chofer:', choferError);
+        }
+
+        this._onlineStatus = !!choferRow?.online;
+      } catch (e) {
+        console.warn('[DriverApp] Error leyendo estado inicial online:', e);
+        this._onlineStatus = false;
+      }
+
+      uiController.updateDriverState(
+        this._onlineStatus ? 'ONLINE' : 'OFFLINE',
+        this._onlineStatus
+      );
+
+      if (!this._onlineStatus) {
+        this._setFlowState('OFFLINE');
       }
 
       // Estado inicial de viajes
       const currentTrip = tripManager.getCurrentTrip();
       const pendingTrip = tripManager.getPendingTrip();
-
       if (currentTrip) {
         console.log('[DriverApp] Estado inicial: viaje activo');
         this._currentTripId = currentTrip.id;
