@@ -3740,12 +3740,40 @@ async function confirmarViaje() {
     })));
 
     const session = await obtenerSesionCliente();
-    console.log('[confirmarViaje] session:', {
+
+    console.log('[confirmarViaje] session resumen:', {
       hasSession: !!session,
       hasAccessToken: !!session?.access_token,
       userId: session?.user?.id || null,
-      email: session?.user?.email || null
+      email: session?.user?.email || null,
+      expiresAt: session?.expires_at || null,
+      tokenType: session?.token_type || null
     });
+
+    console.log('[confirmarViaje] session completa:', session);
+    console.log('[confirmarViaje] access_token raw:', session?.access_token || null);
+
+    let tokenPayload = null;
+    try {
+      const tokenPart = session?.access_token?.split?.('.')[1];
+      if (tokenPart) {
+        const normalized = tokenPart
+          .replace(/-/g, '+')
+          .replace(/_/g, '/');
+        tokenPayload = JSON.parse(atob(normalized));
+      }
+    } catch (tokenErr) {
+      console.warn('[confirmarViaje] no se pudo decodificar access token:', tokenErr);
+    }
+
+    console.log('[confirmarViaje] access_token payload:', tokenPayload);
+
+    try {
+      const authCheck = await window.sbRealtime.auth.getUser();
+      console.log('[confirmarViaje] auth.getUser() check:', authCheck);
+    } catch (authCheckErr) {
+      console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
+    }
 
     if (!session?.access_token) {
       notif.show(
@@ -3888,7 +3916,11 @@ async function confirmarViaje() {
     console.log('[confirmarViaje] response json:', json);
 
     if (!res.ok || !json?.ok) {
-      throw new Error(json?.error || `No se pudo solicitar el viaje (HTTP ${res.status})`);
+      throw new Error(
+        json?.detail ||
+        json?.error ||
+        `No se pudo solicitar el viaje (HTTP ${res.status})`
+      );
     }
 
     state.viajeId = json.viaje_id;
@@ -3990,7 +4022,8 @@ async function confirmarViaje() {
   } finally {
     window.isConfirmingTrip = false;
   }
-}  
+}
+  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
