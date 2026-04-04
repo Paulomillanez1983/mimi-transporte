@@ -26,7 +26,9 @@ class SoundManager {
         return;
       }
 
-      this.ctx = new AudioContext();
+      if (!this.ctx) {   
+        this.ctx = new AudioContext(); 
+      }
       
       // Master gain para control de volumen
       this.masterGain = this.ctx.createGain();
@@ -87,7 +89,8 @@ _generateSounds() {
 }
 
   _playTone({ frequencies, durations, type, gain }) {
-    if (!this.enabled || !this.ctx || !this._audioUnlocked) return;
+  if (!this.enabled || !this.ctx || !this._audioUnlocked) return;
+  if (document.hidden) return;
 
     try {
       const now = this.ctx.currentTime;
@@ -202,6 +205,11 @@ async enableOnUserInteraction() {
   await this.init();
   await this._unlockAudio();
   this._unlockHaptics();
+
+  // vibración corta para desbloquear haptics en Android
+  if (navigator.vibrate) {
+    navigator.vibrate(10);
+  }
 }
   
 
