@@ -14,7 +14,7 @@ const CONFIG = {
   // MAP (MAPLIBRE)
   // =========================================================
   MAP_STYLE: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  DEFAULT_CENTER: [-64.1888, -31.4201], // Córdoba, Argentina
+  DEFAULT_CENTER: [-64.1888, -31.4201],
   DEFAULT_ZOOM: 14,
 
   // =========================================================
@@ -33,8 +33,8 @@ const CONFIG = {
   // =========================================================
   // TIMEOUTS
   // =========================================================
-  INCOMING_OFFER_TIMEOUT: 15, // seconds
-  COUNTDOWN_WARNING: 5, // seconds
+  INCOMING_OFFER_TIMEOUT: 15,
+  COUNTDOWN_WARNING: 5,
 
   // =========================================================
   // STATES
@@ -81,43 +81,51 @@ const CONFIG = {
   REDIRECTS: {
     LOGIN: '/mimi-transporte/login-chofer.html',
     PANEL: '/mimi-transporte/chofer-panel.html'
+  },
+
+  // =========================================================
+  // SOUNDS
+  // =========================================================
+  SOUNDS: {
+    newTrip: {
+      freq: [880, 1100, 880, 1100, 880],
+      duration: [0.1, 0.1, 0.1, 0.1, 0.3],
+      type: 'sine'
+    },
+    accept: {
+      freq: [523.25, 659.25, 783.99, 1046.5],
+      duration: [0.08, 0.08, 0.08, 0.4],
+      type: 'sine'
+    },
+    reject: {
+      freq: [400, 300],
+      duration: [0.15, 0.3],
+      type: 'sine'
+    },
+    arrival: {
+      freq: [523.25, 659.25, 783.99, 1046.5],
+      duration: [0.1, 0.1, 0.1, 0.6],
+      type: 'sine'
+    },
+    tick: {
+      freq: [800],
+      duration: [0.05],
+      type: 'sine'
+    }
+  },
+
+  // =========================================================
+  // HAPTICS
+  // =========================================================
+  HAPTICS: {
+    notification: [80],
+    light: [30],
+    medium: [60],
+    heavy: [100, 40, 100],
+    arrival: [120, 60, 120]
   }
 };
-SOUNDS: {
-  newTrip: {
-    freq: [880, 1100, 880, 1100, 880],
-    duration: [0.1, 0.1, 0.1, 0.1, 0.3],
-    type: 'sine'
-  },
-  accept: {
-    freq: [523.25, 659.25, 783.99, 1046.5],
-    duration: [0.08, 0.08, 0.08, 0.4],
-    type: 'sine'
-  },
-  reject: {
-    freq: [400, 300],
-    duration: [0.15, 0.3],
-    type: 'sine'
-  },
-  arrival: {
-    freq: [523.25, 659.25, 783.99, 1046.5],
-    duration: [0.1, 0.1, 0.1, 0.6],
-    type: 'sine'
-  },
-  tick: {
-    freq: [800],
-    duration: [0.05],
-    type: 'sine'
-  }
-},
 
-HAPTICS: {
-  notification: [80],
-  light: [30],
-  medium: [60],
-  heavy: [100, 40, 100],
-  arrival: [120, 60, 120]
-},
 // Prevent modifications
 Object.freeze(CONFIG);
 Object.freeze(CONFIG.DRIVER_STATES);
@@ -126,4 +134,5 @@ Object.freeze(CONFIG.FEATURES);
 Object.freeze(CONFIG.REDIRECTS);
 Object.freeze(CONFIG.SOUNDS);
 Object.freeze(CONFIG.HAPTICS);
+
 export default CONFIG;
