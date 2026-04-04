@@ -615,45 +615,54 @@ class DriverApp {
       }
     }
 
-    // ------------------------------------------------------
-    // Detectar llegada origen / destino
-    // ------------------------------------------------------
-    if (currentTrip) {
-      const estado = String(currentTrip.estado || '').toUpperCase();
+// ------------------------------------------------------
+// Detectar llegada origen / destino
+// ------------------------------------------------------
+if (currentTrip) {
+  const estado = String(currentTrip.estado || '').toUpperCase();
 
-      // yendo al origen
-      if (
-        (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
-        this._driverFlowState === 'GOING_TO_PICKUP'
-      ) {
-        const distPickup = this._calculateDistance(
-          position.lat,
-          position.lng,
-          currentTrip.origen_lat,
-          currentTrip.origen_lng
-        );
+  // ================================
+  // Llegada al ORIGEN
+  // ================================
+  if (
+    (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
+    this._driverFlowState === 'GOING_TO_PICKUP'
+  ) {
+    const distPickup = this._calculateDistance(
+      position.lat,
+      position.lng,
+      currentTrip.origen_lat,
+      currentTrip.origen_lng
+    );
 
-        if (distPickup < 100) {
-          this._setFlowState('ARRIVED_PICKUP');
-          uiController.showArrival?.();
-        }
-      }
+    if (distPickup < 100) {
+      this._setFlowState('ARRIVED_PICKUP');
+      uiController.showArrival?.();
+    }
+  }
 
-      // yendo al destino
-      if (estado === 'EN_CURSO' && this._driverFlowState === 'TRIP_STARTED') {
-        const distDestination = this._calculateDistance(
-          position.lat,
-          position.lng,
-          currentTrip.destino_lat,
-          currentTrip.destino_lng
-        );
+  // ================================
+  // Llegada al DESTINO
+  // ================================
+  if (
+    estado === 'EN_CURSO' &&
+    this._driverFlowState === 'TRIP_STARTED'
+  ) {
+    const distDestination = this._calculateDistance(
+      position.lat,
+      position.lng,
+      currentTrip.destino_lat,
+      currentTrip.destino_lng
+    );
 
-        if (distDestination < 100) {
-          this._setFlowState('ARRIVED_DESTINATION');
-          uiController.showArrival?.();
-        }
-      }
-      if (distDestination < 100) {
+    if (distDestination < 100) {
+      this._setFlowState('ARRIVED_DESTINATION');
+      uiController.showArrival?.();
+    }
+  }
+}
+    
+if (distDestination < 100) {
           this._setFlowState('ARRIVED_DESTINATION');
           uiController.showArrival?.();
         }
