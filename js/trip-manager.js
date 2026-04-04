@@ -70,7 +70,7 @@ class TripManager {
         if (user?.id) {
           const { data: chofer, error } = await supabaseService.client
             .from('choferes')
-            .select('id')
+            .select('id_uuid')
             .eq('user_id', user.id)
             .maybeSingle();
 
@@ -79,7 +79,7 @@ class TripManager {
           }
 
           if (chofer?.id) {
-            driverId = chofer.id;
+            driverId = chofer.id_uuid;
             localStorage.setItem('driverId', driverId);
             sessionStorage.setItem('driverId', driverId);
           }
