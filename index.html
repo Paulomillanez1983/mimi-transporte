@@ -4096,9 +4096,6 @@ async function confirmarViaje() {
       tokenType: session?.token_type || null
     });
 
-    console.log('[confirmarViaje] session completa:', session);
-    console.log('[confirmarViaje] access_token raw:', session?.access_token || null);
-
     let tokenPayload = null;
     try {
       const tokenPart = session?.access_token?.split?.('.')[1];
@@ -4114,27 +4111,31 @@ async function confirmarViaje() {
 
     console.log('[confirmarViaje] access_token payload:', tokenPayload);
 
+    let authCheck = null;
     try {
-      const authCheck = await window.sbRealtime.auth.getUser();
+      authCheck = await window.sbRealtime.auth.getUser();
       console.log('[confirmarViaje] auth.getUser() check:', authCheck);
     } catch (authCheckErr) {
       console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
     }
 
-const authCheck = await window.sbRealtime.auth.getUser();
-console.log('[confirmarViaje] auth.getUser() check:', authCheck);
+    // VALIDAR AUTH ANTES DE PEGARLE A LAS FUNCTIONS
+    if (
+      !session?.access_token ||
+      !authCheck?.data?.user ||
+      tokenPayload?.role === 'anon'
+    ) {
+      notif.show(
+        'Ingresá para continuar',
+        'Te llevamos a Google para solicitar el viaje',
+        'info'
+      );
 
-if (!session?.access_token || !authCheck?.data?.user) {
-  notif.show(
-    'Ingresá para continuar',
-    'Te llevamos a Google para solicitar el viaje',
-    'info'
-  );
+      localStorage.removeItem('mimi_pending_trip_request');
+      await loginConGoogleParaViaje();
+      return;
+    }
 
-  localStorage.removeItem('mimi_pending_trip_request');
-  await loginConGoogleParaViaje();
-  return;
-}
     const puntos = obtenerPuntosOrdenados();
     console.log('[confirmarViaje] puntos ordenados:', puntos);
 
@@ -4233,6 +4234,20 @@ if (!session?.access_token || !authCheck?.data?.user) {
       throw new Error('Coordenadas inválidas en origen o destino');
     }
 
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${session.access_token}`
+    };
+
+    console.log('[confirmarViaje] headers auth resumen:', {
+      hasApiKey: !!authHeaders.apikey,
+      hasAuthorization: !!authHeaders.Authorization,
+      authPreview: authHeaders.Authorization
+        ? authHeaders.Authorization.slice(0, 30) + '...'
+        : null
+    });
+
     actualizarEstadoSolicitudUI({
       estado: 'buscando_chofer',
       texto: 'Enviando solicitud...'
@@ -4240,11 +4255,7 @@ if (!session?.access_token || !authCheck?.data?.user) {
 
     const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${session.access_token}`
-      },
+      headers: authHeaders,
       body: JSON.stringify(payload)
     });
 
@@ -4264,18 +4275,13 @@ if (!session?.access_token || !authCheck?.data?.user) {
 
     console.log('[confirmarViaje] response json:', json);
 
-    if (tokenPayload?.role === 'anon') {
-  notif.show(
-    'Ingresá para continuar',
-    'Tu sesión no es válida todavía. Te llevamos a Google.',
-    'warning'
-  );
-
-  localStorage.removeItem('mimi_pending_trip_request');
-  await loginConGoogleParaViaje();
-  return;
-}
-    
+    if (!res.ok || json?.exito === false || !json?.viaje_id) {
+      throw new Error(
+        json?.error ||
+        json?.message ||
+        `No se pudo solicitar el viaje (HTTP ${res.status})`
+      );
+    }
 
     state.viajeId = json.viaje_id;
     state.viajeEstado = json.estado || 'buscando_chofer';
@@ -4297,11 +4303,7 @@ if (!session?.access_token || !authCheck?.data?.user) {
 
       const dispatchRes = await fetch(`${SUPABASE_URL}/functions/v1/dispatch-viaje`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${session.access_token}`
-        },
+        headers: authHeaders,
         body: JSON.stringify({
           viaje_id: state.viajeId,
           timeout_seconds: 20
@@ -4363,7 +4365,6 @@ if (!session?.access_token || !authCheck?.data?.user) {
     }
 
     escucharEstadoViajeCliente(state.viajeId);
-
     notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
 
   } catch (err) {
@@ -4376,8 +4377,7 @@ if (!session?.access_token || !authCheck?.data?.user) {
   } finally {
     window.isConfirmingTrip = false;
   }
-}
-  
+}  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
