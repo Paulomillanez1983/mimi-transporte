@@ -2064,33 +2064,30 @@ let lastSessionCheck = 0;
 
 async function obtenerSesionCliente() {
   if (!window.sbRealtime?.auth) {
-    throw new Error('Cliente Auth no inicializado');
+    throw new Error('Cliente de sesión no inicializado');
   }
 
-  // Si la caché es reciente (menos de 5 min), la usamos
   const now = Date.now();
-  if (cachedSession && now - lastSessionCheck < 300000) {
+
+  if (
+    cachedSession &&
+    cachedSession.access_token &&
+    now - lastSessionCheck < 30000
+  ) {
     return cachedSession;
   }
 
-  // Obtener sesión fresca (puede incluir refresh automático del token)
   const { data, error } = await window.sbRealtime.auth.getSession();
 
   if (error) {
-    console.error('[obtenerSesionCliente] Error getSession:', error);
     throw new Error(error.message || 'No se pudo obtener la sesión');
   }
 
-  if (!data?.session) {
-    return null;
-  }
-
-  cachedSession = data.session;
+  cachedSession = data?.session || null;
   lastSessionCheck = now;
 
   return cachedSession;
 }
-
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
@@ -2141,11 +2138,10 @@ async function reanudarViajePendientePostLogin() {
     const pending = localStorage.getItem('mimi_pending_trip_request');
     if (pending !== '1') return;
 
-    if (!window.sbRealtime?.auth) return;
-
-    // INVALIDAR CACHÉ AQUÍ TAMBIÉN
-    cachedSession = null;
-    lastSessionCheck = 0;
+    if (!window.sbRealtime?.auth) {
+      console.warn('[reanudarViajePendientePostLogin] Auth no inicializado');
+      return;
+    }
 
     const { data, error } = await window.sbRealtime.auth.getSession();
 
@@ -3773,196 +3769,313 @@ async function confirmarViaje() {
     return;
   }
 
-  if (window.isConfirmingTrip) return;
-  window.isConfirmingTrip = true;
-
   try {
-    // 1. Limpiar caché
-    cachedSession = null;
-    lastSessionCheck = 0;
-    
-    // 2. Obtener sesión fresca
-    const { data: sessionData, error: sessionError } = await window.sbRealtime.auth.getSession();
-    
-    if (sessionError || !sessionData?.session) {
-      console.warn('[confirmarViaje] Sin sesión:', sessionError);
-      throw new Error('NO_AUTH');
-    }
+    if (window.isConfirmingTrip) return;
+    window.isConfirmingTrip = true;
 
-    let session = sessionData.session;
-    
-    // 3. Verificar si el token expiró o es anónimo
-    const ahora = Math.floor(Date.now() / 1000);
-    let necesitaRefresh = false;
-    
+    console.log('[confirmarViaje] iniciando...');
+    console.log('[confirmarViaje] state:', JSON.parse(JSON.stringify({
+      origen: state.origen,
+      destino: state.destino,
+      routeData: state.routeData,
+      cotizacion: state.cotizacion,
+      waypoints: state.waypoints
+    })));
+
+    const session = await obtenerSesionCliente();
+
+    console.log('[confirmarViaje] session resumen:', {
+      hasSession: !!session,
+      hasAccessToken: !!session?.access_token,
+      userId: session?.user?.id || null,
+      email: session?.user?.email || null,
+      expiresAt: session?.expires_at || null,
+      tokenType: session?.token_type || null
+    });
+
+    console.log('[confirmarViaje] session completa:', session);
+    console.log('[confirmarViaje] access_token raw:', session?.access_token || null);
+
+    let tokenPayload = null;
     try {
-      const tokenPart = session.access_token.split('.')[1];
-      const normalized = tokenPart.replace(/-/g, '+').replace(/_/g, '/');
-      const payload = JSON.parse(atob(normalized));
-      
-      // Si expira en menos de 5 minutos o ya expiró
-      if (payload.exp && payload.exp < ahora + 300) {
-        necesitaRefresh = true;
+      const tokenPart = session?.access_token?.split?.('.')[1];
+      if (tokenPart) {
+        const normalized = tokenPart
+          .replace(/-/g, '+')
+          .replace(/_/g, '/');
+        tokenPayload = JSON.parse(atob(normalized));
       }
-      
-      // Si es anónimo
-      if (payload.role === 'anon' || !session.user?.email) {
-        throw new Error('ANON_SESSION');
-      }
-    } catch (e) {
-      if (e.message === 'ANON_SESSION') throw e;
-      console.warn('[confirmarViaje] Error decodificando, intentando refresh:', e);
-      necesitaRefresh = true;
-    }
-    
-    // 4. Refrescar token si es necesario
-    if (necesitaRefresh) {
-      console.log('[confirmarViaje] Refrescando token...');
-      const { data: refreshData, error: refreshError } = await window.sbRealtime.auth.refreshSession();
-      
-      if (refreshError || !refreshData?.session) {
-        console.error('[confirmarViaje] Refresh falló:', refreshError);
-        throw new Error('SESSION_EXPIRED');
-      }
-      
-      session = refreshData.session;
-      cachedSession = session;
-      lastSessionCheck = Date.now();
+    } catch (tokenErr) {
+      console.warn('[confirmarViaje] no se pudo decodificar access token:', tokenErr);
     }
 
-    // 5. Validar contra el servidor (con try-catch específico)
+    console.log('[confirmarViaje] access_token payload:', tokenPayload);
+
     try {
-      const { data: userData, error: userError } = await window.sbRealtime.auth.getUser();
-      if (userError || !userData?.user) {
-        throw new Error('INVALID_SESSION');
-      }
-    } catch (userErr) {
-      console.error('[confirmarViaje] getUser() falló:', userErr);
-      throw new Error('INVALID_SESSION');
+      const authCheck = await window.sbRealtime.auth.getUser();
+      console.log('[confirmarViaje] auth.getUser() check:', authCheck);
+    } catch (authCheckErr) {
+      console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
     }
 
-    // Preparar payload...
+const authCheck = await window.sbRealtime.auth.getUser();
+console.log('[confirmarViaje] auth.getUser() check:', authCheck);
+
+if (!session?.access_token || !authCheck?.data?.user) {
+  notif.show(
+    'Ingresá para continuar',
+    'Te llevamos a Google para solicitar el viaje',
+    'info'
+  );
+
+  localStorage.removeItem('mimi_pending_trip_request');
+  await loginConGoogleParaViaje();
+  return;
+}
     const puntos = obtenerPuntosOrdenados();
-    if (puntos.length < 2) throw new Error('Ruta incompleta');
+    console.log('[confirmarViaje] puntos ordenados:', puntos);
+
+    if (!Array.isArray(puntos) || puntos.length < 2) {
+      throw new Error('Ruta incompleta');
+    }
+
+    const origen = puntos[0];
+    const destino = puntos[puntos.length - 1];
+    const waypointsIntermedios = puntos.slice(1, -1);
+
+    const resumenRuta =
+      state.cotizacion?.resumen_ruta ||
+      state.cotizacion?.resumen_ruta_front ||
+      state.routeData?.resumen_ruta ||
+      state.routeData?.resumenRuta ||
+      state.routeData?.resumen_ruta_front ||
+      construirResumenRuta();
+
+    const precioFinal = Number(
+      state.cotizacion?.precio ??
+      state.routeData?.precio ??
+      0
+    );
+
+    const kmFinal = Number(
+      state.cotizacion?.distancia_km_total ??
+      state.cotizacion?.distancia_km ??
+      state.routeData?.distancia_km_total ??
+      state.routeData?.distance ??
+      0
+    );
+
+    const duracionFinal = Number(
+      state.cotizacion?.duracion_min_total ??
+      state.cotizacion?.duracion_min ??
+      state.routeData?.duracion_min_total ??
+      state.routeData?.duration ??
+      0
+    );
 
     const payload = {
-      origen: puntos[0].direccion || puntos[0].direccionCorta,
-      origen_lat: Number(puntos[0].lat),
-      origen_lng: Number(puntos[0].lng),
-      destino: puntos[puntos.length - 1].direccion || puntos[puntos.length - 1].direccionCorta,
-      destino_lat: Number(puntos[puntos.length - 1].lat),
-      destino_lng: Number(puntos[puntos.length - 1].lng),
-      precio: Number(state.cotizacion?.precio || 0),
-      km: Number(state.routeData?.distance || 0),
-      duracion_min: Number(state.routeData?.duration || 0),
-      resumen_ruta: state.cotizacion?.resumen_ruta || construirResumenRuta(),
-      waypoints: puntos.slice(1, -1).map((p, i) => ({
+      origen: origen.direccion || origen.direccionCompleta || origen.direccionCorta || '',
+      origen_lat: Number(origen.lat),
+      origen_lng: Number(origen.lng),
+
+      destino: destino.direccion || destino.direccionCompleta || destino.direccionCorta || '',
+      destino_lat: Number(destino.lat),
+      destino_lng: Number(destino.lng),
+
+      precio: Number.isFinite(precioFinal) ? precioFinal : 0,
+      km: Number.isFinite(kmFinal) ? kmFinal : 0,
+      duracion_min: Number.isFinite(duracionFinal) ? duracionFinal : 0,
+
+      resumen_ruta: resumenRuta || '',
+
+      waypoints: waypointsIntermedios.map((p, i) => ({
         orden: i + 1,
-        direccion: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
+        direccion: p.direccion || p.direccionCompleta || p.direccionCorta || `Parada ${i + 1}`,
+        direccionCorta: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
         lat: Number(p.lat),
         lng: Number(p.lng)
       })),
-      cantidad_paradas: puntos.length - 2,
-      pasajero_nombre: session.user?.user_metadata?.full_name || session.user?.email || '',
-      pasajero_telefono: session.user?.user_metadata?.phone || ''
+
+      cantidad_paradas: waypointsIntermedios.length,
+
+      observaciones: state.observaciones || state.comentarios || '',
+
+      pasajero_nombre:
+        state.pasajeroNombre ||
+        state.nombrePasajero ||
+        session?.user?.user_metadata?.full_name ||
+        session?.user?.user_metadata?.name ||
+        '',
+
+      pasajero_telefono:
+        state.pasajeroTelefono ||
+        state.telefonoPasajero ||
+        session?.user?.user_metadata?.phone ||
+        ''
     };
 
-    actualizarEstadoSolicitudUI({ estado: 'buscando_chofer', texto: 'Enviando solicitud...' });
+    console.log('[confirmarViaje] payload:', payload);
+    console.log('[confirmarViaje] url:', `${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`);
 
-    // Enviar solicitud
+    if (!payload.origen || !payload.destino) {
+      throw new Error('Faltan origen o destino');
+    }
+
+    if (
+      !Number.isFinite(payload.origen_lat) ||
+      !Number.isFinite(payload.origen_lng) ||
+      !Number.isFinite(payload.destino_lat) ||
+      !Number.isFinite(payload.destino_lng)
+    ) {
+      throw new Error('Coordenadas inválidas en origen o destino');
+    }
+
+    actualizarEstadoSolicitudUI({
+      estado: 'buscando_chofer',
+      texto: 'Enviando solicitud...'
+    });
+
     const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${session.access_token}`
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${session.access_token}`
       },
       body: JSON.stringify(payload)
     });
 
-    // Manejo específico de 401
-    if (res.status === 401) {
-      console.error('[confirmarViaje] 401 recibido');
-      await window.sbRealtime.auth.signOut({ scope: 'local' });
-      cachedSession = null;
-      throw new Error('SESSION_EXPIRED');
+    console.log('[confirmarViaje] response status:', res.status);
+    console.log('[confirmarViaje] response ok:', res.ok);
+
+    const rawText = await res.text();
+    console.log('[confirmarViaje] raw response text:', rawText);
+
+    let json = null;
+    try {
+      json = rawText ? JSON.parse(rawText) : null;
+    } catch (parseErr) {
+      console.error('[confirmarViaje] JSON parse error:', parseErr);
+      throw new Error('La función solicitar-viaje devolvió una respuesta inválida');
     }
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Error ${res.status}: ${errorText}`);
-    }
+    console.log('[confirmarViaje] response json:', json);
 
-    const json = await res.json();
+    if (tokenPayload?.role === 'anon') {
+  notif.show(
+    'Ingresá para continuar',
+    'Tu sesión no es válida todavía. Te llevamos a Google.',
+    'warning'
+  );
+
+  localStorage.removeItem('mimi_pending_trip_request');
+  await loginConGoogleParaViaje();
+  return;
+}
+    
+
     state.viajeId = json.viaje_id;
     state.viajeEstado = json.estado || 'buscando_chofer';
 
-    // Dispatch...
-    const dispatchRes = await fetch(`${SUPABASE_URL}/functions/v1/dispatch-viaje`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        viaje_id: state.viajeId,
-        timeout_seconds: 20
-      })
+    console.log('[confirmarViaje] viaje creado OK:', {
+      viajeId: state.viajeId,
+      estado: state.viajeEstado
     });
 
-    if (dispatchRes.status === 401) {
-      throw new Error('SESSION_EXPIRED');
+    try {
+      console.log('[confirmarViaje] lanzando dispatch-viaje...', {
+        viaje_id: state.viajeId
+      });
+
+      actualizarEstadoSolicitudUI({
+        estado: state.viajeEstado,
+        texto: 'Buscando choferes cercanos...'
+      });
+
+      const dispatchRes = await fetch(`${SUPABASE_URL}/functions/v1/dispatch-viaje`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          viaje_id: state.viajeId,
+          timeout_seconds: 20
+        })
+      });
+
+      const dispatchRawText = await dispatchRes.text();
+      console.log('[confirmarViaje] dispatch response status:', dispatchRes.status);
+      console.log('[confirmarViaje] dispatch raw response:', dispatchRawText);
+
+      let dispatchJson = null;
+      try {
+        dispatchJson = dispatchRawText ? JSON.parse(dispatchRawText) : null;
+      } catch (dispatchParseErr) {
+        console.warn('[confirmarViaje] dispatch JSON inválido:', dispatchParseErr);
+      }
+
+      console.log('[confirmarViaje] dispatch json:', dispatchJson);
+
+      if (!dispatchRes.ok || dispatchJson?.exito === false) {
+        console.warn('[confirmarViaje] dispatch no exitoso:', {
+          status: dispatchRes.status,
+          body: dispatchJson
+        });
+
+        actualizarEstadoSolicitudUI({
+          estado: state.viajeEstado,
+          texto: 'Viaje creado. Reintentando búsqueda de chofer...'
+        });
+
+        notif.show(
+          'Viaje creado',
+          'La solicitud se guardó, pero hubo un problema al iniciar la búsqueda automática de chofer.',
+          'warning'
+        );
+      } else {
+        if (dispatchJson?.rpc_resultado?.chofer_id || dispatchJson?.chofer_id) {
+          state.viajeEstado = 'ofertando';
+        }
+
+        actualizarEstadoSolicitudUI({
+          estado: state.viajeEstado,
+          texto: 'Estamos notificando choferes cercanos...'
+        });
+      }
+    } catch (dispatchErr) {
+      console.error('[confirmarViaje] ERROR dispatch-viaje:', dispatchErr);
+
+      actualizarEstadoSolicitudUI({
+        estado: state.viajeEstado,
+        texto: 'Viaje creado. Hubo un problema al iniciar la búsqueda de chofer.'
+      });
+
+      notif.show(
+        'Viaje creado',
+        'La solicitud se guardó, pero no pudimos iniciar la búsqueda automática de chofer.',
+        'warning'
+      );
     }
 
     escucharEstadoViajeCliente(state.viajeId);
+
     notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
 
   } catch (err) {
-    console.error('[confirmarViaje] ERROR:', err);
-    
-    // Manejo de errores de autenticación
-    if (['NO_AUTH', 'ANON_SESSION', 'INVALID_SESSION', 'SESSION_EXPIRED'].includes(err.message)) {
-      notif.show('Sesión requerida', 'Necesitás iniciar sesión con Google', 'warning');
-      localStorage.setItem('mimi_pending_trip_request', '1');
-      setTimeout(() => loginConGoogleParaViaje(), 1500);
-    } else {
-      notif.show('Error', err?.message || 'No se pudo solicitar el viaje', 'error');
-      confirmarViajePorWhatsAppFallback();
-    }
+    console.error('[confirmarViaje] ERROR completo:', err);
+    console.error('[confirmarViaje] ERROR message:', err?.message);
+    console.error('[confirmarViaje] ERROR stack:', err?.stack);
+
+    notif.show('Error', err?.message || 'No se pudo solicitar el viaje', 'error');
+    confirmarViajePorWhatsAppFallback();
   } finally {
     window.isConfirmingTrip = false;
   }
 }
-// También modificar obtenerSesionCliente para validar el token antes de usarlo
-async function obtenerSesionClienteValidada() {
-  if (!window.sbRealtime?.auth) {
-    throw new Error('Cliente Auth no inicializado');
-  }
-
-  // Siempre obtener fresh para operaciones críticas
-  const { data, error } = await window.sbRealtime.auth.getSession();
   
-  if (error || !data?.session?.access_token) {
-    return null;
-  }
-
-  // Validar que no sea anónimo
-  try {
-    const tokenPart = data.session.access_token.split('.')[1];
-    const normalized = tokenPart.replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(atob(normalized));
-    
-    if (payload.role === 'anon') {
-      return null;
-    }
-  } catch (e) {
-    return null;
-  }
-
-  return data.session;
-}
-  function confirmarViajePorWhatsAppFallback() {
+function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
     state.cotizacion?.precio_formateado ||
