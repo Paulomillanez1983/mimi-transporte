@@ -3338,17 +3338,6 @@ function reiniciarRuta() {
 // ==========================================
 // COTIZACIÓN
 // ==========================================
-function mostrarMapaInmediato(_puntos, _coords) {
-  setSectionVisible('mapSection', true);
-
-  requestAnimationFrame(() => {
-    initMapa().then(() => {
-      try {
-        mapaCliente?.resize?.();
-      } catch (_) {}
-    });
-  });
-}
 
 async function calcularRuta() {
   if (isCalculatingQuote) return;
