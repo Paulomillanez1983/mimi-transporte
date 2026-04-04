@@ -17,6 +17,8 @@ const VAPID_KEY =
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
+let foregroundListenerBound = false;
+
 export async function initPushFCM(rol) {
   try {
     if (!("serviceWorker" in navigator)) {
@@ -24,7 +26,6 @@ export async function initPushFCM(rol) {
       return null;
     }
 
-    // Asegurar supabase init
     if (!supabaseService.client) {
       console.warn("Supabase no inicializado. Inicializando...");
       await supabaseService.init();
@@ -43,9 +44,15 @@ export async function initPushFCM(rol) {
       return null;
     }
 
-    const reg = await navigator.serviceWorker.register(
+    const existingReg = await navigator.serviceWorker.getRegistration(
       "/mimi-transporte/firebase-messaging-sw.js"
     );
+
+    const reg =
+      existingReg ||
+      (await navigator.serviceWorker.register(
+        "/mimi-transporte/firebase-messaging-sw.js"
+      ));
 
     const token = await getToken(messaging, {
       vapidKey: VAPID_KEY,
@@ -65,6 +72,8 @@ export async function initPushFCM(rol) {
       return null;
     }
 
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
     const { data, error } = await supabase
       .from("push_tokens")
       .upsert(
@@ -72,6 +81,7 @@ export async function initPushFCM(rol) {
           user_id: userId,
           rol,
           token,
+          device: isMobile ? "mobile" : "desktop",
           updated_at: new Date().toISOString(),
           platform: navigator.userAgent,
         },
@@ -87,9 +97,12 @@ export async function initPushFCM(rol) {
 
     console.log("✅ Token FCM guardado en Supabase:", data);
 
-    onMessage(messaging, (payload) => {
-      console.log("📩 Push en foreground:", payload);
-    });
+    if (!foregroundListenerBound) {
+      onMessage(messaging, (payload) => {
+        console.log("📩 Push en foreground:", payload);
+      });
+      foregroundListenerBound = true;
+    }
 
     return token;
   } catch (err) {
