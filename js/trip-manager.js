@@ -141,25 +141,23 @@ class TripManager {
         console.error('[TripManager] Error loading active trip:', tripError);
       }
 
-      if (activeTrip) {
-        console.log('[TripManager] Active trip found:', activeTrip.id, activeTrip.estado);
+if (activeTrip) {
+  console.log('[TripManager] Active trip found:', activeTrip.id, activeTrip.estado);
 
-      if (activeTrip) {
-        console.log('[TripManager] Active trip found:', activeTrip.id, activeTrip.estado);
+  this.currentTrip = activeTrip;
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
 
-        this.currentTrip = activeTrip;
-        this.pendingOffer = null;
-        this.lastOfferIdShown = null;
+  // ASIGNADO / ACEPTADO / EN_CURSO son viaje activo
+  if (activeTrip.estado === 'EN_CURSO') {
+    this.emit('tripStarted', activeTrip);
+  } else {
+    this.emit('tripAccepted', activeTrip);
+  }
 
-        // ASIGNADO / ACEPTADO / EN_CURSO son viaje activo, no oferta pendiente
-        if (activeTrip.estado === 'EN_CURSO') {
-          this.emit('tripStarted', activeTrip);
-        } else {
-          this.emit('tripAccepted', activeTrip);
-        }
-
-        return;
-      }
+  return;
+}
+      
       // Si NO hay viaje activo, limpiar estado viejo
       this.currentTrip = null;
 
