@@ -36,7 +36,8 @@ class DriverApp {
     if (this._driverFlowState === nextState) return;
 
     const prevState = this._driverFlowState;
-    this._driverFlowState = nextState;
+    this._driverFlowState = nextState; 
+    window.driverFlowState = nextState;
 
     console.log('[DriverApp] FLOW:', prevState, '->', nextState);
 
