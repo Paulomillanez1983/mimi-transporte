@@ -3549,24 +3549,34 @@ async function cotizarViajeOptimizado(payload, requestId) {
     console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
     console.log('⏱️ inicio cotización');
 
-    const tSession = performance.now();
-    const session = await obtenerSesionCliente();
-    console.log('⏱️ sesión obtenida en ms:', Math.round(performance.now() - tSession));
+    // Intentar obtener sesión, pero NO romper si no existe
+    let accessToken = null;
+
+    try {
+      const tSession = performance.now();
+      const session = await obtenerSesionCliente();
+      console.log('⏱️ sesión obtenida en ms:', Math.round(performance.now() - tSession));
+      accessToken = session?.access_token || null;
+    } catch (sessionErr) {
+      console.warn('⚠️ No se pudo obtener sesión para cotizar. Seguimos anónimo.', sessionErr);
+      accessToken = null;
+    }
 
     if (requestId !== currentQuoteRequestId) return null;
 
-    if (!session?.access_token) {
-      throw new Error('No hay sesión activa');
+    const headers = {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_PUBLIC_KEY
+    };
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
     }
 
     const tFetch = performance.now();
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_PUBLIC_KEY,
-        Authorization: `Bearer ${session.access_token}`
-      },
+      headers,
       body: JSON.stringify(payload),
       signal: controller.signal
     });
@@ -3627,7 +3637,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
     clearTimeout(timeoutId);
   }
 }
-
+  
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
@@ -3673,6 +3683,8 @@ function usarFallbackLocal(payload, requestId) {
     segmentos_totales: payload?.segmentos_totales_front ?? 1,
     retorno_al_origen: payload?.retorno_al_origen_front ?? false,
     modo: 'fallback_local',
+    fallback_usado: true,
+    metodo_calculo: 'fallback_local_frontend',
     detalle_precio: {
       tarifa_base: 1200,
       subtotal_tramos: subtotalTramos,
@@ -3683,7 +3695,10 @@ function usarFallbackLocal(payload, requestId) {
       nombre_hora_pico: 'estimado_local',
       factor_zona: factorZona,
       cantidad_paradas_intermedias: paradas,
-      vuelve_al_origen: !!payload?.retorno_al_origen_front
+      vuelve_al_origen: !!payload?.retorno_al_origen_front,
+      metodo_calculo: 'fallback_local_frontend',
+      proveedor_ruta: 'fallback_local_frontend',
+      fallback_usado: true
     }
   };
 
@@ -3695,23 +3710,37 @@ function usarFallbackLocal(payload, requestId) {
     retornoAlOrigen: payload?.retorno_al_origen_front ?? false,
     resumenRuta: payload?.resumen_ruta_front || construirResumenRuta(),
     fallback: true,
-    geometry: state.routeData?.geometry || null
+    geometry: null
   };
+
+  const coords = Array.isArray(payload?.puntos_ruta)
+    ? payload.puntos_ruta
+        .map((p) => [Number(p?.lng), Number(p?.lat)])
+        .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]))
+    : [];
+
+  if (coords.length >= 2) {
+    setSectionVisible('mapSection', true);
+    initMapa().then(() => dibujarRutaLineal(coords)).catch(() => {});
+  }
 
   mostrarCotizacion(precioEstimado, distancia, duracion);
 }
-
 
 function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
 
   const distanciaBackend = numeroSeguro(
-    data?.distancia_km ?? data?.distancia_km_total ?? data?.distancia_km_osrm,
+    data?.distancia_km ??
+    data?.distancia_km_total ??
+    data?.distancia_km_proveedor ??
+    data?.distancia_km_osrm,
     NaN
   );
 
   const duracionBackend = numeroSeguro(
-    data?.duracion_min_total ?? data?.duracion_min,
+    data?.duracion_min_total ??
+    data?.duracion_min,
     NaN
   );
 
@@ -3738,10 +3767,13 @@ function procesarRespuestaCotizacion(data, payload) {
   const legs = Array.isArray(data?.legs) ? data.legs : [];
   const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
   const detallePrecio = data?.detalle_precio || null;
+  const fallbackUsado = !!(data?.fallback_usado || detallePrecio?.fallback_usado);
+  const metodoCalculo = data?.metodo_calculo || detallePrecio?.proveedor_ruta || 'desconocido';
 
-  if (!Array.isArray(coordsBackend) || coordsBackend.length < 2) {
-    throw new Error('La cotización no devolvió geometría real de ruta');
-  }
+  const resumenRuta =
+    data?.resumen_ruta ||
+    payload?.resumen_ruta_front ||
+    construirResumenRuta();
 
   state.cotizacion = {
     ...data,
@@ -3750,8 +3782,10 @@ function procesarRespuestaCotizacion(data, payload) {
     duracion_min: duracion,
     legs,
     puntos_ruta: puntosRuta,
-    resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
-    detalle_precio: detallePrecio
+    resumen_ruta: resumenRuta,
+    detalle_precio: detallePrecio,
+    fallback_usado: fallbackUsado,
+    metodo_calculo: metodoCalculo
   };
 
   state.routeData = {
@@ -3767,22 +3801,55 @@ function procesarRespuestaCotizacion(data, payload) {
       data?.retorno_al_origen ??
       payload?.retorno_al_origen_front ??
       false,
-    resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
-    fallback: false,
-    geometry: {
-      type: 'LineString',
-      coordinates: coordsBackend
-    }
+    resumenRuta: resumenRuta,
+    fallback: fallbackUsado,
+    geometry:
+      Array.isArray(coordsBackend) && coordsBackend.length >= 2
+        ? {
+            type: 'LineString',
+            coordinates: coordsBackend
+          }
+        : null
   };
 
-  dibujarRutaReal(coordsBackend);
+  // Si vino geometría real => dibujar real
+  if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
+    dibujarRutaReal(coordsBackend);
+  } else {
+    // Si no vino geometría, dibujar línea simple con los puntos
+    const coordsFallback = (Array.isArray(puntosRuta) && puntosRuta.length >= 2)
+      ? puntosRuta
+          .map((p) => [Number(p?.lng), Number(p?.lat)])
+          .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]))
+      : (Array.isArray(payload?.puntos_ruta) ? payload.puntos_ruta
+          .map((p) => [Number(p?.lng), Number(p?.lat)])
+          .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]))
+        : []);
+
+    if (coordsFallback.length >= 2) {
+      setSectionVisible('mapSection', true);
+      initMapa().then(() => dibujarRutaLineal(coordsFallback)).catch(() => {});
+    }
+  }
+
+  if (fallbackUsado) {
+    notif.show(
+      'Ruta estimada',
+      'Se cotizó con ruta aproximada. El precio puede ajustarse levemente.',
+      'warning'
+    );
+  }
 
   console.log('✅ DISTANCIA FINAL USADA:', distancia);
   console.log('✅ DURACION FINAL USADA:', duracion);
   console.log('✅ PRECIO FINAL USADO:', precio);
+  console.log('✅ FALLBACK USADO:', fallbackUsado);
+  console.log('✅ METODO CALCULO:', metodoCalculo);
 
   mostrarCotizacion(precio, distancia, duracion);
 }
+  
+  
 // ==========================================
 // UI COTIZACIÓN
 // ==========================================
