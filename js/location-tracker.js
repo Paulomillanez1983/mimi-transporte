@@ -121,15 +121,36 @@ class LocationTracker {
           return;
         }
 
-        const {
-          data: { user }
-        } = await supabaseService.client.auth.getUser();
+let choferId = supabaseService.getDriverId?.() || null;
 
-        if (!user) {
-          console.warn('[LocationTracker] No hay usuario autenticado');
-          return;
-        }
+if (!choferId) {
+  const {
+    data: { user }
+  } = await supabaseService.client.auth.getUser();
 
+  if (!user) {
+    console.warn('[LocationTracker] No hay usuario autenticado');
+    return;
+  }
+
+  const { data: chofer, error: choferError } = await supabaseService.client
+    .from('choferes')
+    .select('id_uuid')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (choferError) {
+    console.error('[LocationTracker] Error obteniendo chofer.id_uuid:', choferError);
+    return;
+  }
+
+  choferId = chofer?.id_uuid || null;
+}
+
+if (!choferId) {
+  console.warn('[LocationTracker] No se encontró choferId');
+  return;
+}
         const nowIso = new Date().toISOString();
 
         // =====================================================
