@@ -4039,12 +4039,12 @@ function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
     box = document.createElement('div');
     box.id = 'tripRequestStatus';
     box.style.marginBottom = '12px';
-    box.style.padding = '12px';
-    box.style.borderRadius = '12px';
-    box.style.background = 'rgba(21,101,192,0.08)';
-    box.style.border = '1px solid rgba(21,101,192,0.15)';
+    box.style.padding = '14px';
+    box.style.borderRadius = '14px';
     box.style.fontSize = '14px';
-    box.style.lineHeight = '1.4';
+    box.style.lineHeight = '1.45';
+    box.style.transition = 'all 0.25s ease';
+    box.style.backdropFilter = 'blur(6px)';
 
     if (quoteActions && quoteActions.parentNode) {
       quoteActions.parentNode.insertBefore(box, quoteActions);
@@ -4053,25 +4053,203 @@ function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
     }
   }
 
-  const textos = {
-    OFERTADO: 'Buscando chofer disponible...',
-    ACEPTADO: 'Chofer asignado.',
-    EN_CAMINO: 'El chofer está en camino.',
-    EN_CURSO: 'Tu viaje está en curso.',
-    COMPLETADO: 'Viaje completado.',
-    CANCELADO: 'Viaje cancelado.'
+  const estadoRaw = String(estado || '').trim();
+  const estadoKey = estadoRaw.toLowerCase();
+
+  const estadosUI = {
+    pendiente: {
+      label: 'Pendiente',
+      texto: 'Estamos preparando tu solicitud...',
+      bg: 'rgba(120,120,120,0.10)',
+      border: '1px solid rgba(120,120,120,0.20)',
+      color: '#374151',
+      badgeBg: 'rgba(120,120,120,0.16)',
+      badgeColor: '#374151',
+      icon: '⏳'
+    },
+    buscando_chofer: {
+      label: 'Buscando chofer',
+      texto: 'Buscando chofer disponible...',
+      bg: 'rgba(21,101,192,0.08)',
+      border: '1px solid rgba(21,101,192,0.18)',
+      color: '#0f3d91',
+      badgeBg: 'rgba(21,101,192,0.14)',
+      badgeColor: '#0f3d91',
+      icon: '🔎'
+    },
+    ofertando: {
+      label: 'Ofertando',
+      texto: 'Estamos notificando choferes cercanos...',
+      bg: 'rgba(255,152,0,0.10)',
+      border: '1px solid rgba(255,152,0,0.22)',
+      color: '#a15c00',
+      badgeBg: 'rgba(255,152,0,0.16)',
+      badgeColor: '#a15c00',
+      icon: '📣'
+    },
+    sin_chofer: {
+      label: 'Sin chofer',
+      texto: 'No encontramos chofer por el momento. Vamos a reintentar.',
+      bg: 'rgba(244,67,54,0.08)',
+      border: '1px solid rgba(244,67,54,0.18)',
+      color: '#b3261e',
+      badgeBg: 'rgba(244,67,54,0.14)',
+      badgeColor: '#b3261e',
+      icon: '⚠️'
+    },
+    asignado: {
+      label: 'Chofer asignado',
+      texto: 'Tu chofer fue asignado correctamente.',
+      bg: 'rgba(76,175,80,0.10)',
+      border: '1px solid rgba(76,175,80,0.22)',
+      color: '#1f6f37',
+      badgeBg: 'rgba(76,175,80,0.16)',
+      badgeColor: '#1f6f37',
+      icon: '✅'
+    },
+    aceptado: {
+      label: 'Chofer asignado',
+      texto: 'Tu chofer aceptó el viaje.',
+      bg: 'rgba(76,175,80,0.10)',
+      border: '1px solid rgba(76,175,80,0.22)',
+      color: '#1f6f37',
+      badgeBg: 'rgba(76,175,80,0.16)',
+      badgeColor: '#1f6f37',
+      icon: '✅'
+    },
+    en_camino: {
+      label: 'En camino',
+      texto: 'El chofer está en camino.',
+      bg: 'rgba(33,150,243,0.10)',
+      border: '1px solid rgba(33,150,243,0.20)',
+      color: '#0b63b6',
+      badgeBg: 'rgba(33,150,243,0.16)',
+      badgeColor: '#0b63b6',
+      icon: '🚗'
+    },
+    en_viaje: {
+      label: 'En viaje',
+      texto: 'Tu viaje está en curso.',
+      bg: 'rgba(103,58,183,0.10)',
+      border: '1px solid rgba(103,58,183,0.20)',
+      color: '#5b32a3',
+      badgeBg: 'rgba(103,58,183,0.16)',
+      badgeColor: '#5b32a3',
+      icon: '🛣️'
+    },
+    en_curso: {
+      label: 'En viaje',
+      texto: 'Tu viaje está en curso.',
+      bg: 'rgba(103,58,183,0.10)',
+      border: '1px solid rgba(103,58,183,0.20)',
+      color: '#5b32a3',
+      badgeBg: 'rgba(103,58,183,0.16)',
+      badgeColor: '#5b32a3',
+      icon: '🛣️'
+    },
+    finalizado: {
+      label: 'Finalizado',
+      texto: 'Viaje completado.',
+      bg: 'rgba(0,150,136,0.10)',
+      border: '1px solid rgba(0,150,136,0.20)',
+      color: '#0d7a70',
+      badgeBg: 'rgba(0,150,136,0.16)',
+      badgeColor: '#0d7a70',
+      icon: '🏁'
+    },
+    completado: {
+      label: 'Finalizado',
+      texto: 'Viaje completado.',
+      bg: 'rgba(0,150,136,0.10)',
+      border: '1px solid rgba(0,150,136,0.20)',
+      color: '#0d7a70',
+      badgeBg: 'rgba(0,150,136,0.16)',
+      badgeColor: '#0d7a70',
+      icon: '🏁'
+    },
+    cancelado: {
+      label: 'Cancelado',
+      texto: 'Viaje cancelado.',
+      bg: 'rgba(96,96,96,0.10)',
+      border: '1px solid rgba(96,96,96,0.22)',
+      color: '#4b5563',
+      badgeBg: 'rgba(96,96,96,0.16)',
+      badgeColor: '#4b5563',
+      icon: '❌'
+    },
+
+    // compatibilidad con estados viejos
+    ofertado: {
+      label: 'Buscando chofer',
+      texto: 'Buscando chofer disponible...',
+      bg: 'rgba(21,101,192,0.08)',
+      border: '1px solid rgba(21,101,192,0.18)',
+      color: '#0f3d91',
+      badgeBg: 'rgba(21,101,192,0.14)',
+      badgeColor: '#0f3d91',
+      icon: '🔎'
+    }
   };
 
-  const estadoFinal = String(estado || '').toUpperCase();
+  const estadoInfo = estadosUI[estadoKey] || {
+    label: estadoRaw || 'Pendiente',
+    texto: 'Procesando solicitud...',
+    bg: 'rgba(120,120,120,0.10)',
+    border: '1px solid rgba(120,120,120,0.20)',
+    color: '#374151',
+    badgeBg: 'rgba(120,120,120,0.16)',
+    badgeColor: '#374151',
+    icon: 'ℹ️'
+  };
+
+  box.style.background = estadoInfo.bg;
+  box.style.border = estadoInfo.border;
+  box.style.color = estadoInfo.color;
+  box.style.boxShadow = '0 6px 18px rgba(0,0,0,0.06)';
+
+  const mensaje = texto || estadoInfo.texto;
+  const choferNombre = viaje?.chofer_nombre || viaje?.choferNombre || '';
+  const choferTelefono = viaje?.chofer_telefono || viaje?.choferTelefono || '';
 
   box.innerHTML = `
-    <div><strong>Estado:</strong> ${estadoFinal || 'PENDIENTE'}</div>
-    <div>${texto || textos[estadoFinal] || 'Procesando solicitud...'}</div>
-    ${viaje?.chofer_nombre ? `<div><strong>Chofer:</strong> ${viaje.chofer_nombre}</div>` : ''}
-    ${viaje?.chofer_telefono ? `<div><strong>Tel:</strong> ${viaje.chofer_telefono}</div>` : ''}
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <span style="font-size:18px;line-height:1;">${estadoInfo.icon}</span>
+        <strong style="font-size:14px;">Estado del viaje</strong>
+      </div>
+      <span style="
+        display:inline-flex;
+        align-items:center;
+        padding:6px 10px;
+        border-radius:999px;
+        background:${estadoInfo.badgeBg};
+        color:${estadoInfo.badgeColor};
+        font-size:12px;
+        font-weight:700;
+        letter-spacing:.2px;
+        white-space:nowrap;
+      ">
+        ${estadoInfo.label}
+      </span>
+    </div>
+
+    <div style="font-size:14px;opacity:0.95;margin-bottom:${(choferNombre || choferTelefono) ? '10px' : '0'};">
+      ${mensaje}
+    </div>
+
+    ${(choferNombre || choferTelefono) ? `
+      <div style="
+        padding:10px 12px;
+        border-radius:10px;
+        background:rgba(255,255,255,0.45);
+        border:1px solid rgba(255,255,255,0.35);
+      ">
+        ${choferNombre ? `<div style="margin-bottom:${choferTelefono ? '4px' : '0'};"><strong>Chofer:</strong> ${choferNombre}</div>` : ''}
+        ${choferTelefono ? `<div><strong>Tel:</strong> <a href="tel:${choferTelefono.replace(/\s+/g, '')}" style="color:inherit;text-decoration:none;">${choferTelefono}</a></div>` : ''}
+      </div>
+    ` : ''}
   `;
 }
-  
 function escucharEstadoViajeCliente(viajeId) {
   if (!window.sbRealtime || !viajeId) return;
 
