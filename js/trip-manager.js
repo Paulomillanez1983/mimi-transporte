@@ -366,37 +366,62 @@ class TripManager {
     return { success: false, error: 'Oferta inválida (sin viaje_id/cotizacion_id)' };
   }
 
-  async rejectOffer(offerId) {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
+async rejectOffer(offerId) {
+  const driverId = this.driverId;
+  if (!driverId) return { success: false, error: 'No driverId' };
 
-    console.log('[TripManager] Rejecting offer:', offerId);
+  console.log('[TripManager] Rejecting offer:', offerId);
 
-    const { error } = await supabaseService.client
-      .from('viaje_ofertas')
-      .update({
-        estado: 'rechazada',
-        respondida_en: new Date().toISOString()
-      })
-      .eq('id', offerId)
-      .eq('chofer_id', driverId)
-      .eq('estado', 'pendiente');
+  // Buscar viaje_id antes de rechazar
+  const { data: ofertaActual, error: ofertaError } = await supabaseService.client
+    .from('viaje_ofertas')
+    .select('id, viaje_id, chofer_id, estado')
+    .eq('id', offerId)
+    .eq('chofer_id', driverId)
+    .maybeSingle();
 
-    if (error) {
-      console.error('[TripManager] RejectOffer error:', error);
-      return { success: false, error: error.message };
-    }
-
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
-
-    this.emit('pendingTripCleared', { reason: 'offer_rejected' });
-
-    await this._loadInitialState(driverId);
-
-    return { success: true };
+  if (ofertaError) {
+    console.error('[TripManager] Error reading offer before reject:', ofertaError);
+    return { success: false, error: ofertaError.message };
   }
 
+  if (!ofertaActual) {
+    return { success: false, error: 'Oferta no encontrada' };
+  }
+
+  const viajeId = ofertaActual.viaje_id || null;
+
+  const { error } = await supabaseService.client
+    .from('viaje_ofertas')
+    .update({
+      estado: 'rechazada',
+      respondida_en: new Date().toISOString()
+    })
+    .eq('id', offerId)
+    .eq('chofer_id', driverId)
+    .eq('estado', 'pendiente');
+
+  if (error) {
+    console.error('[TripManager] RejectOffer error:', error);
+    return { success: false, error: error.message };
+  }
+
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+  this.emit('pendingTripCleared', { reason: 'offer_rejected' });
+
+  // Redispatch al siguiente chofer
+  if (viajeId) {
+    const redispatch = await this._redispatchViaje(viajeId);
+    if (!redispatch.success) {
+      console.warn('[TripManager] Reject ok, pero redispatch falló:', redispatch.error);
+    }
+  }
+
+  await this._loadInitialState(driverId);
+
+  return { success: true };
+}
   // =========================================================
   // REALTIME
   // =========================================================
@@ -668,7 +693,55 @@ class TripManager {
 
     return { success: true };
   }
+async _redispatchViaje(viajeId) {
+  if (!viajeId) return { success: false, error: 'No viajeId' };
 
+  try {
+    const sessionData = await supabaseService.client.auth.getSession();
+    const accessToken = sessionData?.data?.session?.access_token;
+
+    if (!accessToken) {
+      return { success: false, error: 'No access token' };
+    }
+
+    const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/dispatch-viaje`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: CONFIG.SUPABASE_KEY,
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        viaje_id: viajeId,
+        timeout_seconds: CONFIG.INCOMING_OFFER_TIMEOUT || 15
+      })
+    });
+
+    const raw = await res.text();
+    let json = null;
+
+    try {
+      json = raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      json = { raw };
+    }
+
+    if (!res.ok) {
+      console.warn('[TripManager] redispatch HTTP error:', res.status, json);
+      return {
+        success: false,
+        error: json?.error || `HTTP ${res.status}`,
+        body: json
+      };
+    }
+
+    console.log('[TripManager] redispatch OK:', json);
+    return { success: true, data: json };
+  } catch (err) {
+    console.error('[TripManager] redispatch error:', err);
+    return { success: false, error: err.message };
+  }
+}
   // =========================================================
   // MANUAL REFRESH
   // =========================================================
