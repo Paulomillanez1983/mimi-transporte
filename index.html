@@ -3961,13 +3961,18 @@ if (!session?.access_token || !authCheck?.data?.user) {
 
     console.log('[confirmarViaje] response json:', json);
 
-    if (!res.ok || !json?.ok) {
-      throw new Error(
-        json?.detail ||
-        json?.error ||
-        `No se pudo solicitar el viaje (HTTP ${res.status})`
-      );
-    }
+    if (tokenPayload?.role === 'anon') {
+  notif.show(
+    'Ingresá para continuar',
+    'Tu sesión no es válida todavía. Te llevamos a Google.',
+    'warning'
+  );
+
+  localStorage.removeItem('mimi_pending_trip_request');
+  await loginConGoogleParaViaje();
+  return;
+}
+    
 
     state.viajeId = json.viaje_id;
     state.viajeEstado = json.estado || 'buscando_chofer';
