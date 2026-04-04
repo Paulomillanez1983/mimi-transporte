@@ -189,7 +189,6 @@ window.addEventListener("driverFlowStateChanged", (e) => {
     this._updateNavigateButton(this.state.currentTrip);
     this._updateNavigationInfo(this.state.currentTrip);
   }
-});
 
     if (acceptBtn) {
       acceptBtn.addEventListener('click', this._handleAccept);
