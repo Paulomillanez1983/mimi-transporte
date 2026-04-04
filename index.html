@@ -2141,10 +2141,11 @@ async function reanudarViajePendientePostLogin() {
     const pending = localStorage.getItem('mimi_pending_trip_request');
     if (pending !== '1') return;
 
-    if (!window.sbRealtime?.auth) {
-      console.warn('[reanudarViajePendientePostLogin] Auth no inicializado');
-      return;
-    }
+    if (!window.sbRealtime?.auth) return;
+
+    // INVALIDAR CACHÉ AQUÍ TAMBIÉN
+    cachedSession = null;
+    lastSessionCheck = 0;
 
     const { data, error } = await window.sbRealtime.auth.getSession();
 
@@ -3766,10 +3767,6 @@ setSectionVisible('quoteCard', true);
 // ==========================================
 // ACCIONES
 // ==========================================
-// ==========================================
-// SOLUCIÓN: Manejo robusto de sesión y 401
-// ==========================================
-
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
     notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
@@ -3780,41 +3777,67 @@ async function confirmarViaje() {
   window.isConfirmingTrip = true;
 
   try {
-    // 1. INVALIDAR CACHE - Forzar obtener sesión fresca del servidor
+    // 1. Limpiar caché
     cachedSession = null;
     lastSessionCheck = 0;
     
+    // 2. Obtener sesión fresca
     const { data: sessionData, error: sessionError } = await window.sbRealtime.auth.getSession();
     
     if (sessionError || !sessionData?.session) {
-      console.warn('[confirmarViaje] Sin sesión válida:', sessionError);
+      console.warn('[confirmarViaje] Sin sesión:', sessionError);
       throw new Error('NO_AUTH');
     }
 
-    const session = sessionData.session;
+    let session = sessionData.session;
     
-    // 2. VALIDAR que no sea anónimo decodificando el token
-    let isAnonymous = false;
+    // 3. Verificar si el token expiró o es anónimo
+    const ahora = Math.floor(Date.now() / 1000);
+    let necesitaRefresh = false;
+    
     try {
       const tokenPart = session.access_token.split('.')[1];
       const normalized = tokenPart.replace(/-/g, '+').replace(/_/g, '/');
       const payload = JSON.parse(atob(normalized));
-      isAnonymous = payload.role === 'anon' || !payload.sub?.startsWith('google-oauth2');
-      console.log('[confirmarViaje] Token role:', payload.role, 'isAnonymous:', isAnonymous);
+      
+      // Si expira en menos de 5 minutos o ya expiró
+      if (payload.exp && payload.exp < ahora + 300) {
+        necesitaRefresh = true;
+      }
+      
+      // Si es anónimo
+      if (payload.role === 'anon' || !session.user?.email) {
+        throw new Error('ANON_SESSION');
+      }
     } catch (e) {
-      console.error('[confirmarViaje] Error decodificando token:', e);
+      if (e.message === 'ANON_SESSION') throw e;
+      console.warn('[confirmarViaje] Error decodificando, intentando refresh:', e);
+      necesitaRefresh = true;
     }
-
-    if (isAnonymous || !session.user?.email) {
-      console.warn('[confirmarViaje] Sesión anónima detectada, requiere login');
-      throw new Error('ANON_SESSION');
-    }
-
-    // 3. VALIDAR contra el servidor que el usuario existe realmente
-    const { data: userData, error: userError } = await window.sbRealtime.auth.getUser();
     
-    if (userError || !userData?.user) {
-      console.error('[confirmarViaje] getUser() falló:', userError);
+    // 4. Refrescar token si es necesario
+    if (necesitaRefresh) {
+      console.log('[confirmarViaje] Refrescando token...');
+      const { data: refreshData, error: refreshError } = await window.sbRealtime.auth.refreshSession();
+      
+      if (refreshError || !refreshData?.session) {
+        console.error('[confirmarViaje] Refresh falló:', refreshError);
+        throw new Error('SESSION_EXPIRED');
+      }
+      
+      session = refreshData.session;
+      cachedSession = session;
+      lastSessionCheck = Date.now();
+    }
+
+    // 5. Validar contra el servidor (con try-catch específico)
+    try {
+      const { data: userData, error: userError } = await window.sbRealtime.auth.getUser();
+      if (userError || !userData?.user) {
+        throw new Error('INVALID_SESSION');
+      }
+    } catch (userErr) {
+      console.error('[confirmarViaje] getUser() falló:', userErr);
       throw new Error('INVALID_SESSION');
     }
 
@@ -3839,12 +3862,14 @@ async function confirmarViaje() {
         lat: Number(p.lat),
         lng: Number(p.lng)
       })),
-      cantidad_paradas: puntos.length - 2
+      cantidad_paradas: puntos.length - 2,
+      pasajero_nombre: session.user?.user_metadata?.full_name || session.user?.email || '',
+      pasajero_telefono: session.user?.user_metadata?.phone || ''
     };
 
     actualizarEstadoSolicitudUI({ estado: 'buscando_chofer', texto: 'Enviando solicitud...' });
 
-    // 4. HACER LA PETICIÓN con manejo específico de 401
+    // Enviar solicitud
     const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`, {
       method: 'POST',
       headers: {
@@ -3857,13 +3882,9 @@ async function confirmarViaje() {
 
     // Manejo específico de 401
     if (res.status === 401) {
-      console.error('[confirmarViaje] 401 en solicitar-viaje - Token inválido o expirado');
-      
-      // Limpiar completamente la sesión
+      console.error('[confirmarViaje] 401 recibido');
       await window.sbRealtime.auth.signOut({ scope: 'local' });
       cachedSession = null;
-      lastSessionCheck = 0;
-      
       throw new Error('SESSION_EXPIRED');
     }
 
@@ -3900,15 +3921,9 @@ async function confirmarViaje() {
   } catch (err) {
     console.error('[confirmarViaje] ERROR:', err);
     
-    // Manejo específico de errores de autenticación
-    if (err.message === 'NO_AUTH' || err.message === 'ANON_SESSION' || err.message === 'INVALID_SESSION' || err.message === 'SESSION_EXPIRED') {
-      notif.show(
-        'Sesión requerida',
-        'Necesitás iniciar sesión con Google para solicitar un viaje',
-        'warning'
-      );
-      
-      // Guardar estado para reintentar después del login
+    // Manejo de errores de autenticación
+    if (['NO_AUTH', 'ANON_SESSION', 'INVALID_SESSION', 'SESSION_EXPIRED'].includes(err.message)) {
+      notif.show('Sesión requerida', 'Necesitás iniciar sesión con Google', 'warning');
       localStorage.setItem('mimi_pending_trip_request', '1');
       setTimeout(() => loginConGoogleParaViaje(), 1500);
     } else {
@@ -3919,7 +3934,6 @@ async function confirmarViaje() {
     window.isConfirmingTrip = false;
   }
 }
-
 // También modificar obtenerSesionCliente para validar el token antes de usarlo
 async function obtenerSesionClienteValidada() {
   if (!window.sbRealtime?.auth) {
