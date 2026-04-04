@@ -198,14 +198,12 @@ _generateSounds() {
   // =========================
   // UNLOCK (llamar tras interacción)
   // =========================
-  async enableOnUserInteraction() {
-    await this._unlockAudio();
-    this._unlockHaptics();
-    
-    if (!this.initialized) {
-      await this.init();
-    }
-  }
+async enableOnUserInteraction() {
+  await this.init();
+  await this._unlockAudio();
+  this._unlockHaptics();
+}
+  
 
   setVolume(level) {
     if (this.masterGain) {
