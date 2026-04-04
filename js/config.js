@@ -83,12 +83,47 @@ const CONFIG = {
     PANEL: '/mimi-transporte/chofer-panel.html'
   }
 };
+SOUNDS: {
+  newTrip: {
+    freq: [880, 1100, 880, 1100, 880],
+    duration: [0.1, 0.1, 0.1, 0.1, 0.3],
+    type: 'sine'
+  },
+  accept: {
+    freq: [523.25, 659.25, 783.99, 1046.5],
+    duration: [0.08, 0.08, 0.08, 0.4],
+    type: 'sine'
+  },
+  reject: {
+    freq: [400, 300],
+    duration: [0.15, 0.3],
+    type: 'sine'
+  },
+  arrival: {
+    freq: [523.25, 659.25, 783.99, 1046.5],
+    duration: [0.1, 0.1, 0.1, 0.6],
+    type: 'sine'
+  },
+  tick: {
+    freq: [800],
+    duration: [0.05],
+    type: 'sine'
+  }
+},
 
+HAPTICS: {
+  notification: [80],
+  light: [30],
+  medium: [60],
+  heavy: [100, 40, 100],
+  arrival: [120, 60, 120]
+},
 // Prevent modifications
 Object.freeze(CONFIG);
 Object.freeze(CONFIG.DRIVER_STATES);
 Object.freeze(CONFIG.TRIP_STATES);
 Object.freeze(CONFIG.FEATURES);
 Object.freeze(CONFIG.REDIRECTS);
-
+Object.freeze(CONFIG.SOUNDS);
+Object.freeze(CONFIG.HAPTICS);
 export default CONFIG;
