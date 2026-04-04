@@ -37,15 +37,14 @@ function normalizarBusqueda(texto) {
     .trim();
 }
 
-function getSupabaseHeaders(extra = {}) {
+function getSupabaseHeaders(accessToken, extra = {}) {
   return {
     apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    Authorization: `Bearer ${accessToken}`,
     Accept: "application/json",
     ...extra
   };
 }
-
 async function safeReadJson(response) {
   if (!response) return null;
 
@@ -2077,17 +2076,33 @@ async function obtenerSesionCliente() {
     return cachedSession;
   }
 
-  const { data, error } = await window.sbRealtime.auth.getSession();
+  let { data, error } = await window.sbRealtime.auth.getSession();
 
   if (error) {
     throw new Error(error.message || 'No se pudo obtener la sesión');
   }
 
-  cachedSession = data?.session || null;
+  let session = data?.session || null;
+
+  // Si no hay sesión válida, intentar refrescar una vez
+  if (!session?.access_token) {
+    const refreshResult = await window.sbRealtime.auth.refreshSession();
+    if (refreshResult?.error) {
+      throw new Error(refreshResult.error.message || 'No se pudo refrescar la sesión');
+    }
+    session = refreshResult?.data?.session || null;
+  }
+
+  if (!session?.access_token) {
+    throw new Error('No hay sesión válida del cliente');
+  }
+
+  cachedSession = session;
   lastSessionCheck = now;
 
   return cachedSession;
 }
+  
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
