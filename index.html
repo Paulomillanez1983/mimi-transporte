@@ -3257,10 +3257,9 @@ async function dibujarRutaReal(coords) {
 
 function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
+
   requestAnimationFrame(() => {
     initMapa().then(() => {
-      // No dibujar línea recta acá.
-      // Este método ahora solo asegura que el mapa esté visible e inicializado.
       try {
         mapaCliente?.resize?.();
       } catch (_) {}
@@ -3339,6 +3338,18 @@ function reiniciarRuta() {
 // ==========================================
 // COTIZACIÓN
 // ==========================================
+function mostrarMapaInmediato(_puntos, _coords) {
+  setSectionVisible('mapSection', true);
+
+  requestAnimationFrame(() => {
+    initMapa().then(() => {
+      try {
+        mapaCliente?.resize?.();
+      } catch (_) {}
+    });
+  });
+}
+
 async function calcularRuta() {
   if (isCalculatingQuote) return;
 
@@ -3467,25 +3478,38 @@ async function calcularRuta() {
       throw new Error('Hay paradas con coordenadas inválidas');
     }
 
-// =========================
-// 6) Estimación local rápida
-// =========================
+    // =========================
+    // 6) Estimación local rápida
+    // =========================
     const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
     if (requestId !== currentQuoteRequestId) return;
 
-    if (!estimacionLocal || !Array.isArray(estimacionLocal.coords) || estimacionLocal.coords.length < 2) {
+    if (
+      !estimacionLocal ||
+      !Array.isArray(estimacionLocal.coords) ||
+      estimacionLocal.coords.length < 2
+    ) {
       throw new Error('No se pudo generar la estimación local');
     }
 
+    // =========================
+    // 7) Mostrar mapa solo como contenedor
+    // =========================
     setLoadingCotizacion(true, 'Calculando recorrido real...');
     setSectionVisible('mapSection', true);
     await initMapa();
 
+    // =========================
+    // 8) Construir payload
+    // =========================
     payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
     if (!payload) {
       throw new Error('No se pudo construir el payload de cotización');
     }
 
+    // =========================
+    // 9) Cotizar backend
+    // =========================
     if (requestId !== currentQuoteRequestId) return;
 
     setLoadingCotizacion(true, 'Cotizando...');
@@ -3497,12 +3521,19 @@ async function calcularRuta() {
     console.error('❌ Error en calcularRuta:', err);
 
     if (payload) {
+      state.routeData = {
+        ...(state.routeData || {}),
+        fallback: true
+      };
+
       notif.show(
         'Cotización estimada',
         'No pudimos obtener la ruta real. Se muestra una estimación provisoria.',
         'warning'
       );
-      return usarFallbackLocal(payload, requestId);
+
+      usarFallbackLocal(payload, requestId);
+      return;
     }
 
     notif.show(
@@ -3516,52 +3547,168 @@ async function calcularRuta() {
     }
   }
 }
-// =========================
-// 7) Mostrar mapa solo como contenedor, SIN ruta recta final
-// =========================
-setLoadingCotizacion(true, 'Calculando recorrido real...');
-setSectionVisible('mapSection', true);
-await initMapa();
 
-// Si querés mostrar marcadores/puntos, hacelo acá.
-// Pero NO dibujes la línea preliminar todavía.
+async function cotizarViajeOptimizado(payload, requestId) {
+  const controller = new AbortController();
+  const startedAt = performance.now();
 
-// =========================
-// 8) Construir payload
-// =========================
-const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
-if (!payload) {
-  throw new Error('No se pudo construir el payload de cotización');
-}
-    // =========================
-    // 9) Cotizar backend
-    // =========================
-    if (requestId !== currentQuoteRequestId) return;
+  const timeoutId = setTimeout(() => {
+    controller.abort('timeout_cotizacion');
+  }, CONFIG.TIMEOUTS.COTIZACION);
 
-    setLoadingCotizacion(true, 'Cotizando...');
-    await cotizarViajeOptimizado(payload, requestId);
+  try {
+    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
+
+    const session = await obtenerSesionCliente();
+    if (requestId !== currentQuoteRequestId) return null;
+
+    if (!session?.access_token) {
+      throw new Error('No hay sesión activa');
+    }
+
+    const response = await fetch(CONFIG.COTIZAR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_PUBLIC_KEY,
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    if (requestId !== currentQuoteRequestId) return null;
+
+    const rawText = await response.text();
+    if (requestId !== currentQuoteRequestId) return null;
+
+    let dataRes = null;
+
+    try {
+      dataRes = rawText ? JSON.parse(rawText) : null;
+    } catch {
+      throw new Error(`Respuesta inválida del servidor (${response.status})`);
+    }
+
+    if (!response.ok || !dataRes?.exito) {
+      throw new Error(dataRes?.error || `Error ${response.status}`);
+    }
+
+    console.log('📥 RESPUESTA COTIZAR:', dataRes);
+    console.log('⏱️ cotización exitosa en ms:', Math.round(performance.now() - startedAt));
+
+    procesarRespuestaCotizacion(dataRes, payload);
+    return dataRes;
   } catch (err) {
-  if (requestId !== currentQuoteRequestId) return null;
+    if (requestId !== currentQuoteRequestId) return null;
 
-  console.error('❌ Error cotizando:', err);
+    const rawMsg = String(err?.message || err || '').toLowerCase();
+    const abortReason = controller.signal?.reason;
 
-  state.routeData = {
-    ...(state.routeData || {}),
-    fallback: true
-  };
+    const isTimeout =
+      err?.name === 'AbortError' ||
+      rawMsg.includes('timeout_cotizacion') ||
+      rawMsg.includes('aborted') ||
+      abortReason === 'timeout_cotizacion';
 
-  notif.show(
-    'Cotización estimada',
-    'No pudimos obtener la ruta real. Se muestra solo una estimación provisoria.',
-    'warning'
+    console.error('❌ Error cotizando:', err);
+    console.log('⏱️ cotización falló/abortó en ms:', Math.round(performance.now() - startedAt));
+
+    notif.show(
+      'Modo estimado',
+      isTimeout
+        ? 'La cotización tardó demasiado. Mostramos una estimación provisoria.'
+        : 'No pudimos obtener el precio exacto. Mostramos una estimación provisoria.',
+      'warning'
+    );
+
+    usarFallbackLocal(payload, requestId);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function procesarRespuestaCotizacion(data, payload) {
+  const precio = numeroSeguro(data?.precio, 0);
+
+  const distanciaBackend = numeroSeguro(
+    data?.distancia_km ?? data?.distancia_km_total ?? data?.distancia_km_osrm,
+    NaN
   );
 
-  return usarFallbackLocal(payload, requestId);
-} finally {
-    if (requestId === currentQuoteRequestId) {
-      setLoadingCotizacion(false);
-    }
+  const duracionBackend = numeroSeguro(
+    data?.duracion_min_total ?? data?.duracion_min,
+    NaN
+  );
+
+  const distanciaFallback = numeroSeguro(
+    payload?.distancia_km_total ?? payload?.distancia_km,
+    0
+  );
+
+  const duracionFallback = numeroSeguro(
+    payload?.duracion_min_total ?? payload?.duracion_min,
+    0
+  );
+
+  const distancia = Number.isFinite(distanciaBackend) ? distanciaBackend : distanciaFallback;
+  const duracion = Number.isFinite(duracionBackend) ? duracionBackend : duracionFallback;
+
+  const coordsBackend =
+    Array.isArray(data?.route_geometry) ? data.route_geometry :
+    Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
+    Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
+    Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
+    null;
+
+  if (!Array.isArray(coordsBackend) || coordsBackend.length < 2) {
+    throw new Error('La cotización no devolvió geometría real de ruta');
   }
+
+  const legs = Array.isArray(data?.legs) ? data.legs : [];
+  const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
+  const detallePrecio = data?.detalle_precio || null;
+
+  state.cotizacion = {
+    ...data,
+    precio,
+    distancia_km: distancia,
+    duracion_min: duracion,
+    legs,
+    puntos_ruta: puntosRuta,
+    resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
+    detalle_precio: detallePrecio
+  };
+
+  state.routeData = {
+    distance: distancia,
+    duration: duracion,
+    segmentos:
+      numeroSeguro(data?.segmentos_totales, 0) ||
+      legs.length ||
+      payload?.segmentos_totales_front ||
+      Math.max(1, puntosRuta.length - 1),
+    retornoAlOrigen:
+      detallePrecio?.vuelve_al_origen ??
+      data?.retorno_al_origen ??
+      payload?.retorno_al_origen_front ??
+      false,
+    resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
+    fallback: false,
+    geometry: {
+      type: 'LineString',
+      coordinates: coordsBackend
+    }
+  };
+
+  dibujarRutaReal(coordsBackend);
+
+  console.log('✅ DISTANCIA FINAL USADA:', distancia);
+  console.log('✅ DURACION FINAL USADA:', duracion);
+  console.log('✅ PRECIO FINAL USADO:', precio);
+
+  mostrarCotizacion(precio, distancia, duracion);
 }
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
