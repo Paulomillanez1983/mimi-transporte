@@ -3708,87 +3708,86 @@ function procesarRespuestaCotizacion(data, payload) {
   console.log('✅ DURACION FINAL USADA:', duracion);
   console.log('✅ PRECIO FINAL USADO:', precio);
 
-  mostrarCotizacion(precio, distancia, duracion);
-}
-async function cotizarViajeOptimizado(payload, requestId) {
-  const controller = new AbortController();
-  const startedAt = performance.now();
+function procesarRespuestaCotizacion(data, payload) {
+  const precio = numeroSeguro(data?.precio, 0);
 
-  const timeoutId = setTimeout(() => {
-    controller.abort('timeout_cotizacion');
-  }, CONFIG.TIMEOUTS.COTIZACION);
+  const distanciaBackend = numeroSeguro(
+    data?.distancia_km ?? data?.distancia_km_total ?? data?.distancia_km_osrm,
+    NaN
+  );
 
-  try {
-    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
+  const duracionBackend = numeroSeguro(
+    data?.duracion_min_total ?? data?.duracion_min,
+    NaN
+  );
 
-    const session = await obtenerSesionCliente();
-    if (requestId !== currentQuoteRequestId) return null;
+  const distanciaFallback = numeroSeguro(
+    payload?.distancia_km_total ?? payload?.distancia_km,
+    0
+  );
 
-    if (!session?.access_token) {
-      throw new Error('No hay sesión activa');
-    }
+  const duracionFallback = numeroSeguro(
+    payload?.duracion_min_total ?? payload?.duracion_min,
+    0
+  );
 
-    const response = await fetch(CONFIG.COTIZAR_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_PUBLIC_KEY,
-        Authorization: `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
+  const distancia = Number.isFinite(distanciaBackend) ? distanciaBackend : distanciaFallback;
+  const duracion = Number.isFinite(duracionBackend) ? duracionBackend : duracionFallback;
 
-    if (requestId !== currentQuoteRequestId) return null;
+  const coordsBackend =
+    Array.isArray(data?.route_geometry) ? data.route_geometry :
+    Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
+    Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
+    Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
+    null;
 
-    const rawText = await response.text();
-    if (requestId !== currentQuoteRequestId) return null;
-
-    let dataRes = null;
-
-    try {
-      dataRes = rawText ? JSON.parse(rawText) : null;
-    } catch {
-      throw new Error(`Respuesta inválida del servidor (${response.status})`);
-    }
-
-    if (!response.ok || !dataRes?.exito) {
-      throw new Error(dataRes?.error || `Error ${response.status}`);
-    }
-
-    console.log('📥 RESPUESTA COTIZAR:', dataRes);
-    console.log('⏱️ cotización exitosa en ms:', Math.round(performance.now() - startedAt));
-
-    procesarRespuestaCotizacion(dataRes, payload);
-    return dataRes;
-  } catch (err) {
-    if (requestId !== currentQuoteRequestId) return null;
-
-    const rawMsg = String(err?.message || err || '').toLowerCase();
-    const abortReason = controller.signal?.reason;
-
-    const isTimeout =
-      err?.name === 'AbortError' ||
-      rawMsg.includes('timeout_cotizacion') ||
-      rawMsg.includes('aborted') ||
-      abortReason === 'timeout_cotizacion';
-
-    console.error('❌ Error cotizando:', err);
-    console.log('⏱️ cotización falló/abortó en ms:', Math.round(performance.now() - startedAt));
-
-    notif.show(
-      'Modo estimado',
-      isTimeout
-        ? 'La cotización tardó demasiado. Mostramos una estimación provisoria.'
-        : 'No pudimos obtener el precio exacto. Mostramos una estimación provisoria.',
-      'warning'
-    );
-
-    usarFallbackLocal(payload, requestId);
-    return null;
-  } finally {
-    clearTimeout(timeoutId);
+  if (!Array.isArray(coordsBackend) || coordsBackend.length < 2) {
+    throw new Error('La cotización no devolvió geometría real de ruta');
   }
+
+  const legs = Array.isArray(data?.legs) ? data.legs : [];
+  const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
+  const detallePrecio = data?.detalle_precio || null;
+
+  state.cotizacion = {
+    ...data,
+    precio,
+    distancia_km: distancia,
+    duracion_min: duracion,
+    legs,
+    puntos_ruta: puntosRuta,
+    resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
+    detalle_precio: detallePrecio
+  };
+
+  state.routeData = {
+    distance: distancia,
+    duration: duracion,
+    segmentos:
+      numeroSeguro(data?.segmentos_totales, 0) ||
+      legs.length ||
+      payload?.segmentos_totales_front ||
+      Math.max(1, puntosRuta.length - 1),
+    retornoAlOrigen:
+      detallePrecio?.vuelve_al_origen ??
+      data?.retorno_al_origen ??
+      payload?.retorno_al_origen_front ??
+      false,
+    resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
+    fallback: false,
+    geometry: {
+      type: 'LineString',
+      coordinates: coordsBackend
+    }
+  };
+
+  dibujarRutaReal(coordsBackend);
+
+  console.log('✅ DISTANCIA FINAL USADA:', distancia);
+  console.log('✅ DURACION FINAL USADA:', duracion);
+  console.log('✅ PRECIO FINAL USADO:', precio);
+
+  mostrarCotizacion(precio, distancia, duracion);
 }
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
