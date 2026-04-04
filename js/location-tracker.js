@@ -1,5 +1,6 @@
 /**
  * Location Tracker Producción (FIX TIMEOUT + RLS + auth.uid)
+ * + tracking histórico en viaje_tracking
  */
 
 import CONFIG from './config.js';
@@ -33,12 +34,11 @@ class LocationTracker {
 
     const options = {
       enableHighAccuracy: true,
-      timeout: 20000,      // ✅ más tiempo
+      timeout: 20000,
       maximumAge: 5000
     };
 
     return new Promise((resolve) => {
-      // Posición inicial
       navigator.geolocation.getCurrentPosition(
         (position) => {
           this._handlePosition(position, true);
@@ -46,20 +46,17 @@ class LocationTracker {
         },
         (error) => {
           console.warn('[LocationTracker] Error posición inicial:', error);
-          // aunque falle inicial, seguimos con watchPosition
           resolve(true);
         },
         options
       );
 
-      // Watch continuo (principal)
       this.watchId = navigator.geolocation.watchPosition(
         (position) => this._handlePosition(position),
         (error) => this._handleError(error),
         options
       );
 
-      // Refresco extra (solo por seguridad, no tan seguido)
       this.updateInterval = setInterval(() => {
         this._refreshPosition();
       }, CONFIG.LOCATION_UPDATE_INTERVAL || 15000);
@@ -73,7 +70,6 @@ class LocationTracker {
   _handlePosition(position, isInitial = false) {
     const coords = position.coords;
 
-    // Si la precisión es muy mala, ignoramos (pero dejamos pasar la inicial)
     if (!isInitial && coords.accuracy && coords.accuracy > 300) return;
 
     const newPosition = {
@@ -85,21 +81,22 @@ class LocationTracker {
       timestamp: position.timestamp
     };
 
-    // Evitar repetidos exactos
     if (
       this.lastPosition &&
       this.lastPosition.lat === newPosition.lat &&
       this.lastPosition.lng === newPosition.lng
-    ) return;
+    ) {
+      return;
+    }
 
     this.lastPosition = newPosition;
 
-    // callbacks para el mapa / UI
     this.callbacks.forEach((cb) => {
-      try { cb(newPosition); } catch (e) {}
+      try {
+        cb(newPosition);
+      } catch (_) {}
     });
 
-    // guardar en supabase con throttle real
     this._throttledUpdate(newPosition);
   }
 
@@ -112,10 +109,26 @@ class LocationTracker {
       this._lastDbUpdate = now;
 
       try {
-        const { data: { user } } = await supabaseService.client.auth.getUser();
-        if (!user) return;
+        if (!supabaseService?.client) {
+          console.warn('[LocationTracker] Supabase client no disponible');
+          return;
+        }
 
-        const { error } = await supabaseService.client
+        const {
+          data: { user }
+        } = await supabaseService.client.auth.getUser();
+
+        if (!user) {
+          console.warn('[LocationTracker] No hay usuario autenticado');
+          return;
+        }
+
+        const nowIso = new Date().toISOString();
+
+        // =====================================================
+        // 1) UPDATE RÁPIDO EN choferes
+        // =====================================================
+        const { error: choferUpdateError } = await supabaseService.client
           .from('choferes')
           .update({
             lat: position.lat,
@@ -123,19 +136,84 @@ class LocationTracker {
             accuracy: position.accuracy,
             heading: position.heading,
             speed: position.speed,
-            last_location_at: new Date().toISOString(),
-            last_seen_at: new Date().toISOString()
+            last_location_at: nowIso,
+            last_seen_at: nowIso
           })
           .eq('user_id', user.id);
 
-        if (error) {
-          console.error('[LocationTracker] ❌ Error update ubicación:', error);
+        if (choferUpdateError) {
+          console.error('[LocationTracker] ❌ Error update choferes:', choferUpdateError);
         } else {
-          console.log('[LocationTracker] ✅ Ubicación guardada en Supabase');
+          console.log('[LocationTracker] ✅ Ubicación guardada en choferes');
+        }
+
+        // =====================================================
+        // 2) OBTENER chofer.id_uuid
+        // =====================================================
+        const { data: chofer, error: choferError } = await supabaseService.client
+          .from('choferes')
+          .select('id_uuid')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (choferError) {
+          console.error('[LocationTracker] ❌ Error obteniendo chofer.id_uuid:', choferError);
+          return;
+        }
+
+        const choferId = chofer?.id_uuid || null;
+
+        if (!choferId) {
+          console.warn('[LocationTracker] No se encontró chofer.id_uuid para user_id:', user.id);
+          return;
+        }
+
+        // =====================================================
+        // 3) BUSCAR VIAJE ACTIVO OPCIONAL
+        // =====================================================
+        let viajeId = null;
+
+        const { data: viajeActivo, error: viajeError } = await supabaseService.client
+          .from('viajes')
+          .select('id')
+          .eq('chofer_id_uuid', choferId)
+          .in('estado', ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'])
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (viajeError) {
+          console.warn('[LocationTracker] Error buscando viaje activo:', viajeError);
+        } else {
+          viajeId = viajeActivo?.id || null;
+        }
+
+        // =====================================================
+        // 4) INSERT HISTÓRICO EN viaje_tracking
+        // =====================================================
+        const trackingPayload = {
+          viaje_id: viajeId,
+          chofer_id_uuid: choferId,
+          lat: position.lat,
+          lng: position.lng,
+          heading: position.heading,
+          speed: position.speed,
+          accuracy: position.accuracy,
+          timestamp: nowIso
+        };
+
+        const { error: trackingError } = await supabaseService.client
+          .from('viaje_tracking')
+          .insert(trackingPayload);
+
+        if (trackingError) {
+          console.error('[LocationTracker] ❌ Error insert viaje_tracking:', trackingError);
+        } else {
+          console.log('[LocationTracker] ✅ Tracking insertado en viaje_tracking');
         }
 
       } catch (err) {
-        console.error('[LocationTracker] ❌ Error update ubicación:', err);
+        console.error('[LocationTracker] ❌ Error update ubicación/tracking:', err);
       }
     }, 1500);
   }
@@ -148,14 +226,13 @@ class LocationTracker {
       (err) => console.warn('[LocationTracker] Refresh error:', err),
       {
         enableHighAccuracy: true,
-        timeout: 20000,      // ✅ FIX
+        timeout: 20000,
         maximumAge: 15000
       }
     );
   }
 
   _handleError(error) {
-    // Timeout es normal en PC, no lo tratamos como fatal
     if (error.code === 3) {
       console.warn('[LocationTracker] ⚠️ Timeout GPS (normal en PC/WiFi)');
       return;
@@ -169,7 +246,6 @@ class LocationTracker {
 
     if (this.updateInterval) clearInterval(this.updateInterval);
 
-    // cuando está en background refresca más lento
     this.updateInterval = setInterval(() => {
       this._refreshPosition();
     }, isHidden ? 60000 : (CONFIG.LOCATION_UPDATE_INTERVAL || 15000));
