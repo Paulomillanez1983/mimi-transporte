@@ -373,11 +373,26 @@ window.supabase = {
 };
 
 if (SupabaseSDK?.createClient) {
-  window.sbRealtime = SupabaseSDK.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.sbRealtime = SupabaseSDK.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: 'pkce',
+      storageKey: 'mimi-cliente-auth'
+    },
+    global: {
+      headers: {
+        apikey: SUPABASE_ANON_KEY
+      }
+    },
+    realtime: {
+      params: { eventsPerSecond: 10 }
+    }
+  });
 } else {
   console.error('No se pudo inicializar Supabase Realtime/Auth');
 }
-
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
     const url = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`;
@@ -2073,7 +2088,24 @@ function coordenadasValidas(lat, lng) {
 let cachedSession = null;
 let lastSessionCheck = 0;
 
-async function obtenerSesionCliente() {
+function decodificarJwtPayload(token) {
+  try {
+    const part = token?.split?.('.')[1];
+    if (!part) return null;
+
+    const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(normalized));
+  } catch (_) {
+    return null;
+  }
+}
+
+function limpiarSesionCache() {
+  cachedSession = null;
+  lastSessionCheck = 0;
+}
+
+async function obtenerSesionCliente(forceRefresh = false) {
   if (!window.sbRealtime?.auth) {
     throw new Error('Cliente de sesión no inicializado');
   }
@@ -2081,9 +2113,9 @@ async function obtenerSesionCliente() {
   const now = Date.now();
 
   if (
-    cachedSession &&
-    cachedSession.access_token &&
-    now - lastSessionCheck < 30000
+    !forceRefresh &&
+    cachedSession?.access_token &&
+    now - lastSessionCheck < 10000
   ) {
     return cachedSession;
   }
@@ -2091,6 +2123,7 @@ async function obtenerSesionCliente() {
   let { data, error } = await window.sbRealtime.auth.getSession();
 
   if (error) {
+    limpiarSesionCache();
     throw new Error(error.message || 'No se pudo obtener la sesión');
   }
 
@@ -2098,22 +2131,68 @@ async function obtenerSesionCliente() {
 
   if (!session?.access_token) {
     const refreshResult = await window.sbRealtime.auth.refreshSession();
+
     if (refreshResult?.error) {
-      throw new Error(refreshResult.error.message);
+      limpiarSesionCache();
+      throw new Error(refreshResult.error.message || 'No se pudo refrescar la sesión');
     }
+
     session = refreshResult?.data?.session || null;
   }
 
   if (!session?.access_token) {
+    limpiarSesionCache();
     throw new Error('No hay sesión válida');
   }
 
-  cachedSession = session;
-  lastSessionCheck = now;
+  const payload = decodificarJwtPayload(session.access_token);
+  const expMs = Number(payload?.exp || 0) * 1000;
+  const expiraPronto = !expMs || (expMs - Date.now() < 60_000);
 
-  return cachedSession;
-}
-  
+  if (expiraPronto) {
+    const refreshResult = await window.sbRealtime.auth.refreshSession();
+
+    if (refreshResult?.error) {
+      limpiarSesionCache();
+      throw new Error(refreshResult.error.message || 'La sesión expiró');
+    }
+
+    session = refreshResult?.data?.session || session;
+  }
+
+  let userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+
+  if (userCheck?.error || !userCheck?.data?.user) {
+    const refreshResult = await window.sbRealtime.auth.refreshSession();
+
+    if (refreshResult?.error) {
+      try { await window.sbRealtime.auth.signOut(); } catch (_) {}
+      limpiarSesionCache();
+      throw new Error(refreshResult.error.message || 'Sesión inválida, iniciá sesión de nuevo');
+    }
+
+    session = refreshResult?.data?.session || null;
+
+    if (!session?.access_token) {
+      try { await window.sbRealtime.auth.signOut(); } catch (_) {}
+      limpiarSesionCache();
+      throw new Error('Sesión inválida, iniciá sesión de nuevo');
+    }
+
+    userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+
+    if (userCheck?.error || !userCheck?.data?.user) {
+      try { await window.sbRealtime.auth.signOut(); } catch (_) {}
+      limpiarSesionCache();
+      throw new Error('Sesión inválida, iniciá sesión de nuevo');
+    }
+  }
+
+  cachedSession = session;
+  lastSessionCheck = Date.now();
+
+  return session;
+}  
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
@@ -4092,6 +4171,47 @@ function procesarRespuestaCotizacion(data, payload) {
 // ==========================================
 // ACCIONES
 // ==========================================
+  async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
+  let session = await obtenerSesionCliente(false);
+
+  let headers = {
+    ...(options.headers || {}),
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${session.access_token}`
+  };
+
+  let response = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  let rawText = await response.text();
+
+  const pareceJwtInvalido =
+    response.status === 401 &&
+    /invalid jwt/i.test(rawText || '');
+
+  if (!pareceJwtInvalido) {
+    return { response, rawText, session };
+  }
+
+  session = await obtenerSesionCliente(true);
+
+  headers = {
+    ...(options.headers || {}),
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${session.access_token}`
+  };
+
+  response = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  rawText = await response.text();
+
+  return { response, rawText, session };
+}
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
     notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
@@ -4137,14 +4257,13 @@ async function confirmarViaje() {
 
     console.log('[confirmarViaje] access_token payload:', tokenPayload);
 
-    let authCheck = null;
-    try {
-      authCheck = await window.sbRealtime.auth.getUser();
-      console.log('[confirmarViaje] auth.getUser() check:', authCheck);
-    } catch (authCheckErr) {
-      console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
-    }
-
+let authCheck = null;
+try {
+  authCheck = await window.sbRealtime.auth.getUser(session.access_token);
+  console.log('[confirmarViaje] auth.getUser() check:', authCheck);
+} catch (authCheckErr) {
+  console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
+}
     // VALIDAR AUTH ANTES DE PEGARLE A LAS FUNCTIONS
     if (
       !session?.access_token ||
@@ -4279,17 +4398,20 @@ async function confirmarViaje() {
       texto: 'Enviando solicitud...'
     });
 
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`, {
-      method: 'POST',
-      headers: authHeaders,
-      body: JSON.stringify(payload)
-    });
+    const { response: res, rawText } = await fetchEdgeFunctionWithAuthRetry(
+  `${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  }
+);
 
-    console.log('[confirmarViaje] response status:', res.status);
-    console.log('[confirmarViaje] response ok:', res.ok);
-
-    const rawText = await res.text();
-    console.log('[confirmarViaje] raw response text:', rawText);
+console.log('[confirmarViaje] response status:', res.status);
+console.log('[confirmarViaje] response ok:', res.ok);
+console.log('[confirmarViaje] raw response text:', rawText);
 
     let json = null;
     try {
@@ -4327,16 +4449,21 @@ async function confirmarViaje() {
         texto: 'Buscando choferes cercanos...'
       });
 
-      const dispatchRes = await fetch(`${SUPABASE_URL}/functions/v1/dispatch-viaje`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({
-          viaje_id: state.viajeId,
-          timeout_seconds: 20
-        })
-      });
-
-      const dispatchRawText = await dispatchRes.text();
+const { response: dispatchRes, rawText: dispatchRawText } =
+  await fetchEdgeFunctionWithAuthRetry(
+    `${SUPABASE_URL}/functions/v1/dispatch-viaje`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        viaje_id: state.viajeId,
+        timeout_seconds: 20
+      })
+    }
+  );
+      
       console.log('[confirmarViaje] dispatch response status:', dispatchRes.status);
       console.log('[confirmarViaje] dispatch raw response:', dispatchRawText);
 
