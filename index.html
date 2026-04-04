@@ -3763,316 +3763,189 @@ setSectionVisible('quoteCard', true);
 // ==========================================
 // ACCIONES
 // ==========================================
+// ==========================================
+// SOLUCIÓN: Manejo robusto de sesión y 401
+// ==========================================
+
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
     notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
     return;
   }
 
+  if (window.isConfirmingTrip) return;
+  window.isConfirmingTrip = true;
+
   try {
-    if (window.isConfirmingTrip) return;
-    window.isConfirmingTrip = true;
+    // 1. INVALIDAR CACHE - Forzar obtener sesión fresca del servidor
+    cachedSession = null;
+    lastSessionCheck = 0;
+    
+    const { data: sessionData, error: sessionError } = await window.sbRealtime.auth.getSession();
+    
+    if (sessionError || !sessionData?.session) {
+      console.warn('[confirmarViaje] Sin sesión válida:', sessionError);
+      throw new Error('NO_AUTH');
+    }
 
-    console.log('[confirmarViaje] iniciando...');
-    console.log('[confirmarViaje] state:', JSON.parse(JSON.stringify({
-      origen: state.origen,
-      destino: state.destino,
-      routeData: state.routeData,
-      cotizacion: state.cotizacion,
-      waypoints: state.waypoints
-    })));
-
-    const session = await obtenerSesionCliente();
-
-    console.log('[confirmarViaje] session resumen:', {
-      hasSession: !!session,
-      hasAccessToken: !!session?.access_token,
-      userId: session?.user?.id || null,
-      email: session?.user?.email || null,
-      expiresAt: session?.expires_at || null,
-      tokenType: session?.token_type || null
-    });
-
-    console.log('[confirmarViaje] session completa:', session);
-    console.log('[confirmarViaje] access_token raw:', session?.access_token || null);
-
-    let tokenPayload = null;
+    const session = sessionData.session;
+    
+    // 2. VALIDAR que no sea anónimo decodificando el token
+    let isAnonymous = false;
     try {
-      const tokenPart = session?.access_token?.split?.('.')[1];
-      if (tokenPart) {
-        const normalized = tokenPart
-          .replace(/-/g, '+')
-          .replace(/_/g, '/');
-        tokenPayload = JSON.parse(atob(normalized));
-      }
-    } catch (tokenErr) {
-      console.warn('[confirmarViaje] no se pudo decodificar access token:', tokenErr);
+      const tokenPart = session.access_token.split('.')[1];
+      const normalized = tokenPart.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(atob(normalized));
+      isAnonymous = payload.role === 'anon' || !payload.sub?.startsWith('google-oauth2');
+      console.log('[confirmarViaje] Token role:', payload.role, 'isAnonymous:', isAnonymous);
+    } catch (e) {
+      console.error('[confirmarViaje] Error decodificando token:', e);
     }
 
-    console.log('[confirmarViaje] access_token payload:', tokenPayload);
-
-    let authCheck = null;
-    try {
-      authCheck = await window.sbRealtime.auth.getUser();
-      console.log('[confirmarViaje] auth.getUser() check:', authCheck);
-    } catch (authCheckErr) {
-      console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
+    if (isAnonymous || !session.user?.email) {
+      console.warn('[confirmarViaje] Sesión anónima detectada, requiere login');
+      throw new Error('ANON_SESSION');
     }
 
-    if (
-      !session?.access_token ||
-      tokenPayload?.role === 'anon' ||
-      !authCheck?.data?.user
-    ) {
-      notif.show(
-        'Ingresá para continuar',
-        'Te llevamos a Google para solicitar el viaje',
-        'info'
-      );
-
-      localStorage.removeItem('mimi_pending_trip_request');
-      await loginConGoogleParaViaje();
-      return;
+    // 3. VALIDAR contra el servidor que el usuario existe realmente
+    const { data: userData, error: userError } = await window.sbRealtime.auth.getUser();
+    
+    if (userError || !userData?.user) {
+      console.error('[confirmarViaje] getUser() falló:', userError);
+      throw new Error('INVALID_SESSION');
     }
 
+    // Preparar payload...
     const puntos = obtenerPuntosOrdenados();
-    console.log('[confirmarViaje] puntos ordenados:', puntos);
-
-    if (!Array.isArray(puntos) || puntos.length < 2) {
-      throw new Error('Ruta incompleta');
-    }
-
-    const origen = puntos[0];
-    const destino = puntos[puntos.length - 1];
-    const waypointsIntermedios = puntos.slice(1, -1);
-
-    const resumenRuta =
-      state.cotizacion?.resumen_ruta ||
-      state.cotizacion?.resumen_ruta_front ||
-      state.routeData?.resumen_ruta ||
-      state.routeData?.resumenRuta ||
-      state.routeData?.resumen_ruta_front ||
-      construirResumenRuta();
-
-    const precioFinal = Number(
-      state.cotizacion?.precio ??
-      state.routeData?.precio ??
-      0
-    );
-
-    const kmFinal = Number(
-      state.cotizacion?.distancia_km_total ??
-      state.cotizacion?.distancia_km ??
-      state.routeData?.distancia_km_total ??
-      state.routeData?.distance ??
-      0
-    );
-
-    const duracionFinal = Number(
-      state.cotizacion?.duracion_min_total ??
-      state.cotizacion?.duracion_min ??
-      state.routeData?.duracion_min_total ??
-      state.routeData?.duration ??
-      0
-    );
+    if (puntos.length < 2) throw new Error('Ruta incompleta');
 
     const payload = {
-      origen: origen.direccion || origen.direccionCompleta || origen.direccionCorta || '',
-      origen_lat: Number(origen.lat),
-      origen_lng: Number(origen.lng),
-
-      destino: destino.direccion || destino.direccionCompleta || destino.direccionCorta || '',
-      destino_lat: Number(destino.lat),
-      destino_lng: Number(destino.lng),
-
-      precio: Number.isFinite(precioFinal) ? precioFinal : 0,
-      km: Number.isFinite(kmFinal) ? kmFinal : 0,
-      duracion_min: Number.isFinite(duracionFinal) ? duracionFinal : 0,
-
-      resumen_ruta: resumenRuta || '',
-
-      waypoints: waypointsIntermedios.map((p, i) => ({
+      origen: puntos[0].direccion || puntos[0].direccionCorta,
+      origen_lat: Number(puntos[0].lat),
+      origen_lng: Number(puntos[0].lng),
+      destino: puntos[puntos.length - 1].direccion || puntos[puntos.length - 1].direccionCorta,
+      destino_lat: Number(puntos[puntos.length - 1].lat),
+      destino_lng: Number(puntos[puntos.length - 1].lng),
+      precio: Number(state.cotizacion?.precio || 0),
+      km: Number(state.routeData?.distance || 0),
+      duracion_min: Number(state.routeData?.duration || 0),
+      resumen_ruta: state.cotizacion?.resumen_ruta || construirResumenRuta(),
+      waypoints: puntos.slice(1, -1).map((p, i) => ({
         orden: i + 1,
-        direccion: p.direccion || p.direccionCompleta || p.direccionCorta || `Parada ${i + 1}`,
-        direccionCorta: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
+        direccion: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
         lat: Number(p.lat),
         lng: Number(p.lng)
       })),
-
-      cantidad_paradas: waypointsIntermedios.length,
-
-      observaciones: state.observaciones || state.comentarios || '',
-
-      pasajero_nombre:
-        state.pasajeroNombre ||
-        state.nombrePasajero ||
-        session?.user?.user_metadata?.full_name ||
-        session?.user?.user_metadata?.name ||
-        '',
-
-      pasajero_telefono:
-        state.pasajeroTelefono ||
-        state.telefonoPasajero ||
-        session?.user?.user_metadata?.phone ||
-        ''
+      cantidad_paradas: puntos.length - 2
     };
 
-    console.log('[confirmarViaje] payload:', payload);
-    console.log('[confirmarViaje] url:', `${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`);
+    actualizarEstadoSolicitudUI({ estado: 'buscando_chofer', texto: 'Enviando solicitud...' });
 
-    if (!payload.origen || !payload.destino) {
-      throw new Error('Faltan origen o destino');
-    }
-
-    if (
-      !Number.isFinite(payload.origen_lat) ||
-      !Number.isFinite(payload.origen_lng) ||
-      !Number.isFinite(payload.destino_lat) ||
-      !Number.isFinite(payload.destino_lng)
-    ) {
-      throw new Error('Coordenadas inválidas en origen o destino');
-    }
-
-    actualizarEstadoSolicitudUI({
-      estado: 'buscando_chofer',
-      texto: 'Enviando solicitud...'
-    });
-
+    // 4. HACER LA PETICIÓN con manejo específico de 401
     const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${session.access_token}`
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${session.access_token}`
       },
       body: JSON.stringify(payload)
     });
 
-    console.log('[confirmarViaje] response status:', res.status);
-    console.log('[confirmarViaje] response ok:', res.ok);
-
-    const rawText = await res.text();
-    console.log('[confirmarViaje] raw response text:', rawText);
-
-    let json = null;
-    try {
-      json = rawText ? JSON.parse(rawText) : null;
-    } catch (parseErr) {
-      console.error('[confirmarViaje] JSON parse error:', parseErr);
-      throw new Error('La función solicitar-viaje devolvió una respuesta inválida');
+    // Manejo específico de 401
+    if (res.status === 401) {
+      console.error('[confirmarViaje] 401 en solicitar-viaje - Token inválido o expirado');
+      
+      // Limpiar completamente la sesión
+      await window.sbRealtime.auth.signOut({ scope: 'local' });
+      cachedSession = null;
+      lastSessionCheck = 0;
+      
+      throw new Error('SESSION_EXPIRED');
     }
 
-    console.log('[confirmarViaje] response json:', json);
-
-    if (!res.ok || !json?.ok) {
-      throw new Error(
-        json?.detail ||
-        json?.error ||
-        `No se pudo solicitar el viaje (HTTP ${res.status})`
-      );
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Error ${res.status}: ${errorText}`);
     }
 
+    const json = await res.json();
     state.viajeId = json.viaje_id;
     state.viajeEstado = json.estado || 'buscando_chofer';
 
-    console.log('[confirmarViaje] viaje creado OK:', {
-      viajeId: state.viajeId,
-      estado: state.viajeEstado
+    // Dispatch...
+    const dispatchRes = await fetch(`${SUPABASE_URL}/functions/v1/dispatch-viaje`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        viaje_id: state.viajeId,
+        timeout_seconds: 20
+      })
     });
 
-    try {
-      console.log('[confirmarViaje] lanzando dispatch-viaje...', {
-        viaje_id: state.viajeId
-      });
-
-      actualizarEstadoSolicitudUI({
-        estado: state.viajeEstado,
-        texto: 'Buscando choferes cercanos...'
-      });
-
-      const dispatchRes = await fetch(`${SUPABASE_URL}/functions/v1/dispatch-viaje`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          viaje_id: state.viajeId,
-          timeout_seconds: 20
-        })
-      });
-
-      const dispatchRawText = await dispatchRes.text();
-      console.log('[confirmarViaje] dispatch response status:', dispatchRes.status);
-      console.log('[confirmarViaje] dispatch raw response:', dispatchRawText);
-
-      let dispatchJson = null;
-      try {
-        dispatchJson = dispatchRawText ? JSON.parse(dispatchRawText) : null;
-      } catch (dispatchParseErr) {
-        console.warn('[confirmarViaje] dispatch JSON inválido:', dispatchParseErr);
-      }
-
-      console.log('[confirmarViaje] dispatch json:', dispatchJson);
-
-      if (!dispatchRes.ok || dispatchJson?.exito === false) {
-        console.warn('[confirmarViaje] dispatch no exitoso:', {
-          status: dispatchRes.status,
-          body: dispatchJson
-        });
-
-        actualizarEstadoSolicitudUI({
-          estado: state.viajeEstado,
-          texto: 'Viaje creado. Reintentando búsqueda de chofer...'
-        });
-
-        notif.show(
-          'Viaje creado',
-          'La solicitud se guardó, pero hubo un problema al iniciar la búsqueda automática de chofer.',
-          'warning'
-        );
-      } else {
-        if (dispatchJson?.rpc_resultado?.chofer_id || dispatchJson?.chofer_id) {
-          state.viajeEstado = 'ofertando';
-        }
-
-        actualizarEstadoSolicitudUI({
-          estado: state.viajeEstado,
-          texto: 'Estamos notificando choferes cercanos...'
-        });
-      }
-    } catch (dispatchErr) {
-      console.error('[confirmarViaje] ERROR dispatch-viaje:', dispatchErr);
-
-      actualizarEstadoSolicitudUI({
-        estado: state.viajeEstado,
-        texto: 'Viaje creado. Hubo un problema al iniciar la búsqueda de chofer.'
-      });
-
-      notif.show(
-        'Viaje creado',
-        'La solicitud se guardó, pero no pudimos iniciar la búsqueda automática de chofer.',
-        'warning'
-      );
+    if (dispatchRes.status === 401) {
+      throw new Error('SESSION_EXPIRED');
     }
 
     escucharEstadoViajeCliente(state.viajeId);
-
     notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
 
   } catch (err) {
-    console.error('[confirmarViaje] ERROR completo:', err);
-    console.error('[confirmarViaje] ERROR message:', err?.message);
-    console.error('[confirmarViaje] ERROR stack:', err?.stack);
-
-    notif.show('Error', err?.message || 'No se pudo solicitar el viaje', 'error');
-    confirmarViajePorWhatsAppFallback();
+    console.error('[confirmarViaje] ERROR:', err);
+    
+    // Manejo específico de errores de autenticación
+    if (err.message === 'NO_AUTH' || err.message === 'ANON_SESSION' || err.message === 'INVALID_SESSION' || err.message === 'SESSION_EXPIRED') {
+      notif.show(
+        'Sesión requerida',
+        'Necesitás iniciar sesión con Google para solicitar un viaje',
+        'warning'
+      );
+      
+      // Guardar estado para reintentar después del login
+      localStorage.setItem('mimi_pending_trip_request', '1');
+      setTimeout(() => loginConGoogleParaViaje(), 1500);
+    } else {
+      notif.show('Error', err?.message || 'No se pudo solicitar el viaje', 'error');
+      confirmarViajePorWhatsAppFallback();
+    }
   } finally {
     window.isConfirmingTrip = false;
   }
-}  
-function confirmarViajePorWhatsAppFallback() {
+}
+
+// También modificar obtenerSesionCliente para validar el token antes de usarlo
+async function obtenerSesionClienteValidada() {
+  if (!window.sbRealtime?.auth) {
+    throw new Error('Cliente Auth no inicializado');
+  }
+
+  // Siempre obtener fresh para operaciones críticas
+  const { data, error } = await window.sbRealtime.auth.getSession();
+  
+  if (error || !data?.session?.access_token) {
+    return null;
+  }
+
+  // Validar que no sea anónimo
+  try {
+    const tokenPart = data.session.access_token.split('.')[1];
+    const normalized = tokenPart.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(normalized));
+    
+    if (payload.role === 'anon') {
+      return null;
+    }
+  } catch (e) {
+    return null;
+  }
+
+  return data.session;
+}
+  function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
     state.cotizacion?.precio_formateado ||
