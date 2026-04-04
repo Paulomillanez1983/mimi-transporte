@@ -21,7 +21,7 @@ class MapService {
     // Routing + reroute
     this.currentDestination = null;
     this.lastRouteUpdate = 0;
-    this.routeUpdateCooldown = 15000; // 15s
+    this.routeUpdateCooldown = 20000; // 20s
     this.rerouteDistanceThreshold = 60; // metros
 
     // Ruta completa guardada (OSRM)
@@ -34,9 +34,12 @@ class MapService {
     // OSRM abort controller (FIX AbortError)
     this._osrmController = null;
     this._osrmTimeoutId = null;
-
     // Reroute throttle
     this._lastRerouteCheck = 0;
+
+    // Camera throttle (mejor performance en smartphones)
+    this._lastCameraUpdate = 0;
+    this._cameraThrottle = 400;
   }
 
   // =========================================================
@@ -398,7 +401,7 @@ class MapService {
     if (enabled) {
       this.map.easeTo({
         pitch: isMobile ? 50 : 45,
-        zoom: isMobile ? 17 : 16,
+        zoom: isMobile ? 17.5 : 16.5,
         duration: 600,
       });
     } else {
@@ -545,15 +548,20 @@ class MapService {
     }
   }
 
-  updateDriverPosition(lng, lat, heading = 0) {
-    this.updateDriverMarker(lng, lat, heading);
+updateDriverPosition(lng, lat, heading = 0) {
+  this.updateDriverMarker(lng, lat, heading);
 
-    if (!this.map || !this.isLoaded) return;
+  if (!this.map || !this.isLoaded) return;
 
-    const safeHeading = this._sanitizeNumber(heading, 0);
-    const isMobile = window.innerWidth <= 768;
+  const safeHeading = this._sanitizeNumber(heading, 0);
+  const isMobile = window.innerWidth <= 768;
 
-    if (this.followDriver) {
+  const now = Date.now();
+
+  if (this.followDriver) {
+    if (now - this._lastCameraUpdate >= this._cameraThrottle) {
+      this._lastCameraUpdate = now;
+
       if (this.navigationMode) {
         const duration = isMobile ? 600 : 700;
 
@@ -572,11 +580,11 @@ class MapService {
         });
       }
     }
-
-    this._updateRemainingRoute(lat, lng);
-    this._throttledReroute(lat, lng);
   }
 
+  this._updateRemainingRoute(lat, lng);
+  this._throttledReroute(lat, lng);
+}
   // =========================================================
   // Throttle reroute
   // =========================================================
@@ -732,7 +740,8 @@ class MapService {
       this.currentDestination = null;
       this._routeCache.clear();
 
-      ["pickup", "dropoff"].forEach((key) => {
+      this.setNavigationMode(false);
+      this.followDriver = true;      ["pickup", "dropoff"].forEach((key) => {
         if (this.markers[key]) {
           this.markers[key].remove();
           delete this.markers[key];
@@ -829,10 +838,13 @@ class MapService {
   // OSRM ROUTING - FIX AbortError DEFINITIVO
   // =========================================================
   async _getOSRMRoute(from, to) {
-    const cacheKey = `${from.lat.toFixed(4)},${from.lng.toFixed(
-      4
-    )}-${to.lat.toFixed(4)},${to.lng.toFixed(4)}`;
+    const dist = this._haversine(from.lat, from.lng, to.lat, to.lng);  if (dist < 20) {
+    return this._getStraightLineRoute(from, to);
+  }
 
+  const cacheKey = `${from.lat.toFixed(4)},${from.lng.toFixed(
+    4
+  )}-${to.lat.toFixed(4)},${to.lng.toFixed(4)}`;
     if (this._routeCache.has(cacheKey)) {
       console.log("[Map] Usando ruta en caché");
       return this._routeCache.get(cacheKey);
