@@ -3818,17 +3818,20 @@ async function confirmarViaje() {
       console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
     }
 
-    if (!session?.access_token) {
-      notif.show(
-        'Ingresá para continuar',
-        'Te llevamos a Google para solicitar el viaje',
-        'info'
-      );
+const authCheck = await window.sbRealtime.auth.getUser();
+console.log('[confirmarViaje] auth.getUser() check:', authCheck);
 
-      await loginConGoogleParaViaje();
-      return;
-    }
+if (!session?.access_token || !authCheck?.data?.user) {
+  notif.show(
+    'Ingresá para continuar',
+    'Te llevamos a Google para solicitar el viaje',
+    'info'
+  );
 
+  localStorage.removeItem('mimi_pending_trip_request');
+  await loginConGoogleParaViaje();
+  return;
+}
     const puntos = obtenerPuntosOrdenados();
     console.log('[confirmarViaje] puntos ordenados:', puntos);
 
