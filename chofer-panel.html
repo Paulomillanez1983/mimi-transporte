@@ -9,7 +9,8 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
+  <meta name="color-scheme" content="dark light">
+  <meta name="format-detection" content="telephone=no">
   <title>MIMI Driver</title>
 
   <meta name="description" content="Panel de conductor MIMI - Transporte seguro" />
@@ -1483,31 +1484,35 @@
   </div>
 
   <!-- LOGOUT SCRIPT -->
-  <script type="module">
-    import supabaseService from "./js/supabase-client.js";
-    import CONFIG from "./js/config.js";
+<script type="module">
+  import supabaseService from "./js/supabase-client.js";
+  import CONFIG from "./js/config.js";
 
-    const logoutBtn = document.getElementById("logoutBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
 
-    async function initLogout() {
-      await supabaseService.init();
-      const { data } = await supabaseService.client.auth.getSession();
+  async function initLogout() {
+    await supabaseService.init();
+    const { data } = await supabaseService.client.auth.getSession();
 
-      if (data?.session) {
-        logoutBtn.classList.add("visible");
-      }
-
-      logoutBtn.addEventListener("click", async () => {
-        await supabaseService.client.auth.signOut();
-        window.location.href = CONFIG.REDIRECTS.LOGIN;
-      });
+    if (data?.session) {
+      logoutBtn.classList.add("visible");
     }
 
-    initLogout();
-  </script>
+    logoutBtn.addEventListener("click", async () => {
+      await supabaseService.client.auth.signOut();
+      window.location.href = CONFIG.REDIRECTS.LOGIN;
+    });
+  }
 
-  <!-- APP PRINCIPAL -->
-  <script type="module" src="js/driver-app.js"></script>
+  initLogout();
+</script>
 
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/mimi-transporte/firebase-messaging-sw.js');
+  }
+</script>
+
+<script type="module" src="js/driver-app.js"></script>
 </body>
 </html>
