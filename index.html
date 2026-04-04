@@ -3346,6 +3346,7 @@ async function calcularRuta() {
   try {
     const origenInput = document.getElementById('inputOrigen');
     const destinoInput = document.getElementById('inputDestino');
+
     const textoOrigen = origenInput?.value?.trim() || '';
     const textoDestino = destinoInput?.value?.trim() || '';
 
@@ -3353,41 +3354,77 @@ async function calcularRuta() {
       throw new Error('Completá origen y destino');
     }
 
+    // =========================
+    // 1) Resolver ORIGEN
+    // =========================
     const origenActual = normalizarTextoDireccion(textoOrigen);
-    const origenGuardado = normalizarTextoDireccion(state.origen?.direccionCorta || '');
+    const origenGuardado = normalizarTextoDireccion(
+      state.origen?.direccionCorta || state.origen?.direccion || ''
+    );
 
     if (!state.origen || origenActual !== origenGuardado) {
       log('🔍 Resolviendo origen:', textoOrigen);
-      const resuelto = await resolverPuntoDesdeTexto(textoOrigen);
-      if (!resuelto) {
+
+      const resueltoOrigen = await resolverPuntoDesdeTexto(textoOrigen);
+      if (requestId !== currentQuoteRequestId) return;
+
+      if (!resueltoOrigen) {
         throw new Error(`No encontramos la dirección de origen: "${textoOrigen}"`);
       }
 
-      state.origen = resuelto;
-      origenInput.value = state.origen.direccionCorta;
-      origenInput.setAttribute('title', construirTooltip(state.origen));
+      state.origen = {
+        ...resueltoOrigen,
+        id: state.origen?.id || `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      };
+
+      if (origenInput) {
+        origenInput.value = state.origen.direccionCorta || state.origen.direccion || textoOrigen;
+        origenInput.setAttribute('title', construirTooltip(state.origen));
+      }
     }
 
+    // =========================
+    // 2) Resolver DESTINO
+    // =========================
     const destinoActual = normalizarTextoDireccion(textoDestino);
-    const destinoGuardado = normalizarTextoDireccion(state.destino?.direccionCorta || '');
+    const destinoGuardado = normalizarTextoDireccion(
+      state.destino?.direccionCorta || state.destino?.direccion || ''
+    );
 
     if (!state.destino || destinoActual !== destinoGuardado) {
       log('🔍 Resolviendo destino:', textoDestino);
-      const resuelto = await resolverPuntoDesdeTexto(textoDestino);
-      if (!resuelto) {
+
+      const resueltoDestino = await resolverPuntoDesdeTexto(textoDestino);
+      if (requestId !== currentQuoteRequestId) return;
+
+      if (!resueltoDestino) {
         throw new Error(`No encontramos la dirección de destino: "${textoDestino}"`);
       }
 
-      state.destino = resuelto;
-      destinoInput.value = state.destino.direccionCorta;
-      destinoInput.setAttribute('title', construirTooltip(state.destino));
+      state.destino = {
+        ...resueltoDestino,
+        id: state.destino?.id || `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+      };
+
+      if (destinoInput) {
+        destinoInput.value = state.destino.direccionCorta || state.destino.direccion || textoDestino;
+        destinoInput.setAttribute('title', construirTooltip(state.destino));
+      }
     }
 
+    // =========================
+    // 3) Resolver WAYPOINTS
+    // =========================
     const erroresWaypoints = await resolverWaypointsPendientes();
+    if (requestId !== currentQuoteRequestId) return;
+
     if (erroresWaypoints.length > 0) {
       throw new Error(`No pudimos resolver estas paradas: ${erroresWaypoints.join(', ')}`);
     }
 
+    // =========================
+    // 4) Validar coordenadas base
+    // =========================
     if (
       !coordenadasValidas(state.origen?.lat, state.origen?.lng) ||
       !coordenadasValidas(state.destino?.lat, state.destino?.lng)
@@ -3395,6 +3432,9 @@ async function calcularRuta() {
       throw new Error('Coordenadas inválidas después de resolver');
     }
 
+    // =========================
+    // 5) Armar puntos
+    // =========================
     const puntos = obtenerPuntosOrdenados();
 
     console.log('STATE.ORIGEN:', state.origen);
@@ -3402,12 +3442,13 @@ async function calcularRuta() {
     console.log('STATE.DESTINO:', state.destino);
     console.log('PUNTOS ORDENADOS FINAL:', puntos);
 
-    if (puntos.length < 2) {
+    if (!Array.isArray(puntos) || puntos.length < 2) {
       throw new Error('Ruta incompleta');
     }
 
     const puntosLimpios = limpiarPuntos(puntos);
-    if (puntosLimpios.length < 2) {
+
+    if (!Array.isArray(puntosLimpios) || puntosLimpios.length < 2) {
       throw new Error('No hay suficientes puntos válidos para calcular la ruta');
     }
 
@@ -3416,32 +3457,60 @@ async function calcularRuta() {
       throw new Error(errorRuta);
     }
 
-    if (puntosLimpios.some((p) => !coordenadasValidas(p.lat, p.lng))) {
+    if (puntosLimpios.some((p) => !coordenadasValidas(p?.lat, p?.lng))) {
       throw new Error('Hay paradas con coordenadas inválidas');
     }
 
+    // =========================
+    // 6) Estimación local rápida
+    // =========================
     const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
+    if (requestId !== currentQuoteRequestId) return;
 
+    if (
+      !estimacionLocal ||
+      !Array.isArray(estimacionLocal.coords) ||
+      estimacionLocal.coords.length < 2
+    ) {
+      throw new Error('No se pudo generar la estimación local');
+    }
+
+    // =========================
+    // 7) Mostrar mapa preliminar
+    // =========================
     setLoadingCotizacion(true, 'Dibujando ruta...');
     mostrarMapaInmediato(puntosLimpios, estimacionLocal.coords);
 
+    // =========================
+    // 8) Construir payload
+    // =========================
     const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
     if (!payload) {
       throw new Error('No se pudo construir el payload de cotización');
     }
 
+    // =========================
+    // 9) Cotizar backend
+    // =========================
+    if (requestId !== currentQuoteRequestId) return;
+
     setLoadingCotizacion(true, 'Cotizando...');
     await cotizarViajeOptimizado(payload, requestId);
   } catch (err) {
+    if (requestId !== currentQuoteRequestId) return;
+
     console.error('❌ Error en calcularRuta:', err);
-    notif.show('Error', err?.message || 'No se pudo calcular la ruta', 'error');
+    notif.show(
+      'Error',
+      err?.message || 'No se pudo calcular la ruta',
+      'error'
+    );
   } finally {
     if (requestId === currentQuoteRequestId) {
       setLoadingCotizacion(false);
     }
   }
 }
-
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
 const timeoutId = setTimeout(
