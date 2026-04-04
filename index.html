@@ -2100,14 +2100,51 @@ function decodificarJwtPayload(token) {
   }
 }
 
+let cachedSession = null;
+let lastSessionCheck = 0;
+
+function decodificarJwtPayload(token) {
+  try {
+    const part = token?.split?.('.')[1];
+    if (!part) return null;
+
+    const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(normalized));
+  } catch (_) {
+    return null;
+  }
+}
+
 function limpiarSesionCache() {
   cachedSession = null;
   lastSessionCheck = 0;
 }
 
+async function esperarSesionInicial(timeoutMs = 2500) {
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    const { data, error } = await window.sbRealtime.auth.getSession();
+
+    if (error) {
+      console.warn('[auth] getSession error durante espera inicial:', error);
+      return null;
+    }
+
+    if (data?.session?.access_token) {
+      return data.session;
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }
+
+  return null;
+}
+
 async function obtenerSesionCliente(forceRefresh = false) {
   if (!window.sbRealtime?.auth) {
-    throw new Error('Cliente de sesión no inicializado');
+    console.warn('[auth] Cliente de sesión no inicializado');
+    return null;
   }
 
   const now = Date.now();
@@ -2123,76 +2160,84 @@ async function obtenerSesionCliente(forceRefresh = false) {
   let { data, error } = await window.sbRealtime.auth.getSession();
 
   if (error) {
+    console.warn('[auth] getSession error:', error);
     limpiarSesionCache();
-    throw new Error(error.message || 'No se pudo obtener la sesión');
+    return null;
   }
 
   let session = data?.session || null;
 
   if (!session?.access_token) {
-    const refreshResult = await window.sbRealtime.auth.refreshSession();
+    session = await esperarSesionInicial(2500);
+  }
 
-    if (refreshResult?.error) {
-      limpiarSesionCache();
-      throw new Error(refreshResult.error.message || 'No se pudo refrescar la sesión');
+  if (!session?.access_token && forceRefresh) {
+    try {
+      const refreshResult = await window.sbRealtime.auth.refreshSession();
+
+      if (!refreshResult?.error && refreshResult?.data?.session?.access_token) {
+        session = refreshResult.data.session;
+      }
+    } catch (err) {
+      console.warn('[auth] refreshSession error:', err);
     }
-
-    session = refreshResult?.data?.session || null;
   }
 
   if (!session?.access_token) {
     limpiarSesionCache();
-    throw new Error('No hay sesión válida');
+    return null;
   }
 
   const payload = decodificarJwtPayload(session.access_token);
   const expMs = Number(payload?.exp || 0) * 1000;
-  const expiraPronto = !expMs || (expMs - Date.now() < 60_000);
 
-  if (expiraPronto) {
-    const refreshResult = await window.sbRealtime.auth.refreshSession();
+  if (expMs && expMs - Date.now() < 60_000) {
+    try {
+      const refreshResult = await window.sbRealtime.auth.refreshSession();
 
-    if (refreshResult?.error) {
-      limpiarSesionCache();
-      throw new Error(refreshResult.error.message || 'La sesión expiró');
+      if (!refreshResult?.error && refreshResult?.data?.session?.access_token) {
+        session = refreshResult.data.session;
+      }
+    } catch (err) {
+      console.warn('[auth] refresh por expiración cercana falló:', err);
     }
-
-    session = refreshResult?.data?.session || session;
   }
 
-  let userCheck = await window.sbRealtime.auth.getUser(session.access_token);
-
-  if (userCheck?.error || !userCheck?.data?.user) {
-    const refreshResult = await window.sbRealtime.auth.refreshSession();
-
-    if (refreshResult?.error) {
-      try { await window.sbRealtime.auth.signOut(); } catch (_) {}
-      limpiarSesionCache();
-      throw new Error(refreshResult.error.message || 'Sesión inválida, iniciá sesión de nuevo');
-    }
-
-    session = refreshResult?.data?.session || null;
-
-    if (!session?.access_token) {
-      try { await window.sbRealtime.auth.signOut(); } catch (_) {}
-      limpiarSesionCache();
-      throw new Error('Sesión inválida, iniciá sesión de nuevo');
-    }
-
-    userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+  try {
+    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
 
     if (userCheck?.error || !userCheck?.data?.user) {
-      try { await window.sbRealtime.auth.signOut(); } catch (_) {}
+      console.warn('[auth] getUser inválido:', userCheck?.error || 'sin user');
       limpiarSesionCache();
-      throw new Error('Sesión inválida, iniciá sesión de nuevo');
+      return null;
     }
+  } catch (err) {
+    console.warn('[auth] getUser explotó:', err);
+    limpiarSesionCache();
+    return null;
   }
 
   cachedSession = session;
   lastSessionCheck = Date.now();
-
   return session;
-}  
+}
+async function asegurarSesionCliente() {
+  let session = await obtenerSesionCliente(false);
+
+  if (session?.access_token) {
+    return session;
+  }
+
+  notif.show(
+    'Iniciando sesión',
+    'Para confirmar el viaje te pedimos ingresar con Google.',
+    'info',
+    3500
+  );
+
+  await loginConGoogleParaViaje();
+  return null;
+}
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
@@ -4231,31 +4276,36 @@ async function confirmarViaje() {
       waypoints: state.waypoints
     })));
 
-    const session = await obtenerSesionCliente();
+const session = await asegurarSesionCliente();
 
-    console.log('[confirmarViaje] session resumen:', {
-      hasSession: !!session,
-      hasAccessToken: !!session?.access_token,
-      userId: session?.user?.id || null,
-      email: session?.user?.email || null,
-      expiresAt: session?.expires_at || null,
-      tokenType: session?.token_type || null
-    });
+if (!session?.access_token) {
+  // Ya se disparó loginConGoogleParaViaje() y va a reanudar al volver
+  return;
+}
 
-    let tokenPayload = null;
-    try {
-      const tokenPart = session?.access_token?.split?.('.')[1];
-      if (tokenPart) {
-        const normalized = tokenPart
-          .replace(/-/g, '+')
-          .replace(/_/g, '/');
-        tokenPayload = JSON.parse(atob(normalized));
-      }
-    } catch (tokenErr) {
-      console.warn('[confirmarViaje] no se pudo decodificar access token:', tokenErr);
-    }
+console.log('[confirmarViaje] session resumen:', {
+  hasSession: !!session,
+  hasAccessToken: !!session?.access_token,
+  userId: session?.user?.id || null,
+  email: session?.user?.email || null,
+  expiresAt: session?.expires_at || null,
+  tokenType: session?.token_type || null
+});
 
-    console.log('[confirmarViaje] access_token payload:', tokenPayload);
+let tokenPayload = null;
+try {
+  const tokenPart = session.access_token.split('.')[1];
+  if (tokenPart) {
+    const normalized = tokenPart
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    tokenPayload = JSON.parse(atob(normalized));
+  }
+} catch (tokenErr) {
+  console.warn('[confirmarViaje] no se pudo decodificar access token:', tokenErr);
+}
+
+console.log('[confirmarViaje] access_token payload:', tokenPayload);
 
 let authCheck = null;
 try {
@@ -4264,23 +4314,18 @@ try {
 } catch (authCheckErr) {
   console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
 }
-    // VALIDAR AUTH ANTES DE PEGARLE A LAS FUNCTIONS
-    if (
-      !session?.access_token ||
-      !authCheck?.data?.user ||
-      tokenPayload?.role === 'anon'
-    ) {
-      notif.show(
-        'Ingresá para continuar',
-        'Te llevamos a Google para solicitar el viaje',
-        'info'
-      );
 
-      localStorage.removeItem('mimi_pending_trip_request');
-      await loginConGoogleParaViaje();
-      return;
-    }
+if (!authCheck?.data?.user || tokenPayload?.role === 'anon') {
+  notif.show(
+    'Ingresá para continuar',
+    'Te llevamos a Google para solicitar el viaje',
+    'info'
+  );
 
+  localStorage.removeItem('mimi_pending_trip_request');
+  await loginConGoogleParaViaje();
+  return;
+}
     const puntos = obtenerPuntosOrdenados();
     console.log('[confirmarViaje] puntos ordenados:', puntos);
 
