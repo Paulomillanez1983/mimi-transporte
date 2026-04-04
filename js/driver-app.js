@@ -60,7 +60,7 @@ class DriverApp {
       window.addEventListener(
         'click',
         () => {
-          soundManager.enable();
+          soundManager.enableOnUserInteraction();
         },
         { once: true }
       );
@@ -68,7 +68,7 @@ class DriverApp {
       window.addEventListener(
         'touchstart',
         () => {
-          soundManager.enable();
+          soundManager.enableOnUserInteraction();
         },
         { once: true }
       );
@@ -440,9 +440,10 @@ const unsubCompleted = tripManager.on('tripCompleted', async (trip) => {
 async _onPositionUpdate(position) {
   if (!this._onlineStatus && !tripManager.getCurrentTrip()) return;
 
-  mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);  // Estado actual del viaje
-  const currentTrip = tripManager.getCurrentTrip();
+mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
 
+// Estado actual del viaje
+const currentTrip = tripManager.getCurrentTrip();
   // Ajustar intervalo dinámico según estado
   if (currentTrip?.estado === 'EN_CURSO') {
     this._locationUpdateInterval = 5000;
