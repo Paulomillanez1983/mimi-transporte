@@ -180,7 +180,7 @@ window.addEventListener("driverFlowStateChanged", (e) => {
     this._updateNavigationInfo(trip);
     this._updateNavigateButton(trip);
   }
-});    
+});
     const estado = e.detail?.estado;
   if (!estado) return;
 
