@@ -152,8 +152,22 @@ _updateNavigateButton(trip) {
     const acceptBtn = this.elements['btn-accept'];
     const rejectBtn = this.elements['btn-reject'];
     const backdrop = this.elements['modal-backdrop'];
-window.addEventListener("tripStateChanged", (e) => {
-  const estado = e.detail?.estado;
+window.addEventListener("driverFlowStateChanged", (e) => {
+  const state = e.detail?.state;
+  if (!state || !this.state.currentTrip) return;
+
+  const trip = this.state.currentTrip;
+
+  if (state === "GOING_TO_PICKUP" || state === "ARRIVED_PICKUP") {
+    this._updateNavigationInfo(trip);
+    this._updateNavigateButton(trip);
+  }
+
+  if (state === "TRIP_STARTED" || state === "ARRIVED_DESTINATION") {
+    this._updateNavigationInfo(trip);
+    this._updateNavigateButton(trip);
+  }
+});  const estado = e.detail?.estado;
   if (!estado) return;
 
   if (this.state.currentTrip) {
@@ -809,9 +823,13 @@ _showTripActions(trip) {
   const sheetContent = this.elements['sheet-content'];
   if (!sheetContent) return;
 
-  const estado = (trip.estado || '').toLowerCase();
-  const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
+const flowState = window?.driverFlowState || null;
 
+let irADestino = false;
+
+if (flowState === 'TRIP_STARTED' || flowState === 'ARRIVED_DESTINATION') {
+  irADestino = true;
+}
   const lat = irADestino ? trip.destino_lat : trip.origen_lat;
   const lng = irADestino ? trip.destino_lng : trip.origen_lng;
 
