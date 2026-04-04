@@ -12,15 +12,16 @@ constructor() {
   this.elements = {};
 
   this.state = {
-    countdown: null,
-    currentCount: 15,
-    isModalOpen: false,
-    isProcessing: false,
-    callbacks: {},
-    currentTrip: null,
-    isOnline: false,
-    bottomSheetExpanded: false
-  };
+  countdown: null,
+  countdownTimeout: null,
+  currentCount: 15,
+  isModalOpen: false,
+  isProcessing: false,
+  callbacks: {},
+  currentTrip: null,
+  isOnline: false,
+  bottomSheetExpanded: false
+};
 
   // ✅ FIX anti-parpadeo modal
   this.lastTripModalId = null;
@@ -322,10 +323,12 @@ showIncomingTrip(tripData, onAccept, onReject) {
   this.lastTripModalId = tripData.id;
 
   // Play sound and haptic SOLO si es nuevo
-  soundManager.play('newTrip');
-  this._haptic('heavy');
-  this._playCountdownSound();
+const offerTimeout = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15);
 
+soundManager.play('newTrip');
+this._haptic('heavy');
+this._playCountdownSound(offerTimeout);
+  
   // Store callbacks
   this.state.callbacks = { onAccept, onReject };
   this.state.currentTrip = tripData;
@@ -342,18 +345,19 @@ showIncomingTrip(tripData, onAccept, onReject) {
   // Show modal with animation
   modal.classList.add('active');
   this.state.isModalOpen = true;
-  this.state.currentCount = 15;
+const offerTimeout = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15);
 
-  // Start countdown
-  this._startCountdown();
+this.state.currentCount = offerTimeout;
 
-  // Auto-reject after timeout
-  this.state.countdownTimeout = setTimeout(() => {
-    if (this.state.isModalOpen) {
-      this._handleReject();
-    }
-  }, 15000);
-}
+// Start countdown
+this._startCountdown(offerTimeout);
+
+// Auto-reject after timeout
+this.state.countdownTimeout = setTimeout(() => {
+  if (this.state.isModalOpen) {
+    this._handleReject();
+  }
+}, offerTimeout * 1000);}
 
 _populateTripData(trip) {
   const data = {
@@ -396,68 +400,53 @@ _populateTripData(trip) {
 }
 
 
-  _startCountdown() {
-    const circle = this.elements['countdown-circle'];
-    const number = this.elements['countdown-number'];
-    const ring = this.elements['countdown-ring'];
+  _startCountdown(totalSeconds = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15)) {
+  const circle = this.elements['countdown-circle'];
+  const number = this.elements['countdown-number'];
+  const ring = this.elements['countdown-ring'];
+
+  if (number) {
+    number.textContent = String(totalSeconds);
+    number.classList.remove('urgent');
+  }
+
+  if (circle) {
+    circle.style.strokeDasharray = '283';
+    circle.style.strokeDashoffset = '0';
+    circle.style.transition = 'stroke-dashoffset 1s linear';
+  }
+
+  if (ring) {
+    ring.classList.remove('urgent');
+  }
+
+  let count = totalSeconds;
+
+  this.state.countdown = setInterval(() => {
+    count--;
 
     if (number) {
-      number.textContent = '15';
-      number.classList.remove('urgent');
+      number.textContent = String(Math.max(count, 0));
+
+      if (count <= 5) {
+        number.classList.add('urgent');
+        if (ring) ring.classList.add('urgent');
+        this._haptic('error');
+      } else if (count <= 10) {
+        this._haptic('light');
+      }
     }
-    
+
     if (circle) {
-      circle.style.strokeDasharray = '283';
-      circle.style.strokeDashoffset = '0';
-      circle.style.transition = 'stroke-dashoffset 1s linear';
+      const offset = 283 - ((Math.max(count, 0) / totalSeconds) * 283);
+      circle.style.strokeDashoffset = offset;
     }
 
-    if (ring) {
-      ring.classList.remove('urgent');
+    if (count <= 0) {
+      this._handleReject();
     }
-
-    let count = 15;
-    
-    this.state.countdown = setInterval(() => {
-      count--;
-      
-      if (number) {
-        number.textContent = count;
-        
-        // Add urgency styling
-        if (count <= 5) {
-          number.classList.add('urgent');
-          if (ring) ring.classList.add('urgent');
-          this._haptic('error');
-        } else if (count <= 10) {
-          this._haptic('light');
-        }
-      }
-
-      if (circle) {
-        const offset = 283 - ((count / 15) * 283);
-        circle.style.strokeDashoffset = offset;
-      }
-
-      if (count <= 0) {
-        this._handleReject();
-      }
-    }, 1000);
-  }
-
-  _playCountdownSound() {
-    // Play ticking sound every second for last 5 seconds
-    let ticks = 0;
-    const tickInterval = setInterval(() => {
-      ticks++;
-      if (ticks >= 10) { // Start at 5 seconds remaining
-        soundManager.play('tick');
-      }
-      if (ticks >= 15 || !this.state.isModalOpen) {
-        clearInterval(tickInterval);
-      }
-    }, 1000);
-  }
+  }, 1000);
+}
 
 async _handleAccept(e) {
   if (e) {
@@ -501,17 +490,18 @@ async _handleAccept(e) {
         }
 
         // reset UI y reiniciar countdown
-        this._resetCountdownUI();
-        this.state.currentCount = 15;
-        this._startCountdown();
+const offerTimeout = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15);
 
-        // volver a programar auto-reject
-        this.state.countdownTimeout = setTimeout(() => {
-          if (this.state.isModalOpen) {
-            this._handleReject();
-          }
-        }, 15000);
+this._resetCountdownUI();
+this.state.currentCount = offerTimeout;
+this._startCountdown(offerTimeout);
 
+// volver a programar auto-reject
+this.state.countdownTimeout = setTimeout(() => {
+  if (this.state.isModalOpen) {
+    this._handleReject();
+  }
+}, offerTimeout * 1000);
         this.state.isProcessing = false;
         return;
       }
@@ -612,10 +602,10 @@ this.lastTripModalId = null; // ✅ reset
       circle.style.strokeDashoffset = '283';
       circle.style.transition = 'none';
     }
-    if (number) {
-      number.textContent = '15';
-      number.classList.remove('urgent');
-    }
+if (number) {
+  number.textContent = String(Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15));
+  number.classList.remove('urgent');
+}
     if (btn) {
       btn.classList.remove('accepting');
       btn.innerHTML = '<span>✓</span><small>Aceptar</small>';
@@ -788,14 +778,17 @@ _updateNavigationInfo(trip) {
       : (trip.origen_direccion || trip.origen || "Recoger pasajero");
   }
 
-  if (distanceEl) {
-    const dist = trip.distancia_al_origen
-      ? (trip.distancia_al_origen / 1000).toFixed(1) + " km"
-      : "--";
-    distanceEl.textContent = dist;
-  }
-}
+if (distanceEl) {
+  let dist = "--";
 
+  if (!irADestino && trip.distancia_al_origen) {
+    dist = (trip.distancia_al_origen / 1000).toFixed(1) + " km";
+  } else if (irADestino && trip.km) {
+    dist = Number(trip.km).toFixed(1) + " km";
+  }
+
+  distanceEl.textContent = dist;
+}
 _showTripActions(trip) {
   const sheetContent = this.elements['sheet-content'];
   if (!sheetContent) return;
@@ -867,11 +860,10 @@ _showTripActions(trip) {
         </div>
       </div>
 
-      <button class="btn-arrived" id="btn-arrived">
-        <span>✓</span>
-        <span>He llegado · Iniciar viaje</span>
-      </button>
-
+<button class="btn-arrived" id="btn-arrived">
+  <span>✓</span>
+  <span>${irADestino ? 'Finalizar viaje' : 'He llegado · Iniciar viaje'}</span>
+</button>
     </div>
   `;
 
@@ -905,12 +897,12 @@ _showTripActions(trip) {
     }
 
     if (btnArrived) {
-      btnArrived.onclick = () => {
-        window.dispatchEvent(new CustomEvent("driverAction", {
-          detail: { action: "start", tripId: trip.id }
-        }));
-      };
-    }
+  btnArrived.onclick = () => {
+    window.dispatchEvent(new CustomEvent("driverAction", {
+      detail: { action: irADestino ? "finish" : "start", tripId: trip.id }
+    }));
+  };
+}
 
   }, 50);
 }
