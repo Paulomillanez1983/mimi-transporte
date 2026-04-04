@@ -18,11 +18,13 @@ messaging.onBackgroundMessage((payload) => {
   const title = payload.notification?.title || "Nuevo mensaje";
 
   const options = {
-    body: payload.notification?.body || "",
-    icon: "/mimi-transporte/assets/icons/icon-192x192.png",
-    badge: "/mimi-transporte/assets/icons/icon-192x192.png",
-    data: payload.data || {},
-  };
+  body: payload.notification?.body || "",
+  icon: "/mimi-transporte/assets/icons/icon-192x192.png",
+  badge: "/mimi-transporte/assets/icons/icon-192x192.png",
+  data: payload.data || {},
+  tag: payload.data?.viaje_id || "mimi-driver-notification",
+  requireInteraction: true
+};
 
   self.registration.showNotification(title, options);
 });
