@@ -152,6 +152,19 @@ _updateNavigateButton(trip) {
     const acceptBtn = this.elements['btn-accept'];
     const rejectBtn = this.elements['btn-reject'];
     const backdrop = this.elements['modal-backdrop'];
+// Cambios de estado del viaje (DB)
+window.addEventListener("tripStateChanged", (e) => {
+  const estado = e.detail?.estado;
+  if (!estado) return;
+
+  if (this.state.currentTrip) {
+    this.state.currentTrip.estado = estado;
+    this._updateNavigateButton(this.state.currentTrip);
+    this._updateNavigationInfo(this.state.currentTrip);
+  }
+});
+
+// Cambios de flow del driver (app)
 window.addEventListener("driverFlowStateChanged", (e) => {
   const state = e.detail?.state;
   if (!state || !this.state.currentTrip) return;
@@ -167,7 +180,8 @@ window.addEventListener("driverFlowStateChanged", (e) => {
     this._updateNavigationInfo(trip);
     this._updateNavigateButton(trip);
   }
-});  const estado = e.detail?.estado;
+});    
+    const estado = e.detail?.estado;
   if (!estado) return;
 
   if (this.state.currentTrip) {
