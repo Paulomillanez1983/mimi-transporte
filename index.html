@@ -2067,9 +2067,13 @@ async function obtenerSesionCliente() {
     throw new Error('Cliente de sesión no inicializado');
   }
 
-  // Cache 30 segundos
   const now = Date.now();
-  if (cachedSession && now - lastSessionCheck < 30000) {
+
+  if (
+    cachedSession &&
+    cachedSession.access_token &&
+    now - lastSessionCheck < 30000
+  ) {
     return cachedSession;
   }
 
@@ -2084,7 +2088,6 @@ async function obtenerSesionCliente() {
 
   return cachedSession;
 }
-  
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
@@ -2121,13 +2124,53 @@ async function loginConGoogleParaViaje() {
   const { error } = await window.sbRealtime.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + window.location.pathname
+      redirectTo: window.location.origin + window.location.pathname + window.location.search
     }
   });
 
   if (error) {
     localStorage.removeItem('mimi_pending_trip_request');
     throw error;
+  }
+}
+async function reanudarViajePendientePostLogin() {
+  try {
+    const pending = localStorage.getItem('mimi_pending_trip_request');
+    if (pending !== '1') return;
+
+    if (!window.sbRealtime?.auth) {
+      console.warn('[reanudarViajePendientePostLogin] Auth no inicializado');
+      return;
+    }
+
+    const { data, error } = await window.sbRealtime.auth.getSession();
+
+    console.log('[reanudarViajePendientePostLogin] getSession:', { data, error });
+
+    if (error) {
+      console.warn('[reanudarViajePendientePostLogin] error session:', error);
+      return;
+    }
+
+    const session = data?.session;
+    if (!session?.access_token || !session?.user) {
+      console.warn('[reanudarViajePendientePostLogin] todavía no hay sesión válida');
+      return;
+    }
+
+    localStorage.removeItem('mimi_pending_trip_request');
+
+    notif.show(
+      'Sesión iniciada',
+      'Continuamos con tu solicitud de viaje...',
+      'success'
+    );
+
+    setTimeout(() => {
+      confirmarViaje();
+    }, 700);
+  } catch (err) {
+    console.error('[reanudarViajePendientePostLogin] ERROR:', err);
   }
 }
 function construirTooltip(resuelto) {
@@ -4405,29 +4448,6 @@ function togglePriceBreakdown(forceOpen = null) {
   btn.setAttribute('aria-expanded', String(nextOpen));
   box.hidden = !nextOpen;
 }
-  async function reanudarSolicitudPendientePostLogin() {
-  try {
-    const pending = localStorage.getItem('mimi_pending_trip_request');
-    if (pending !== '1') return;
-
-    const session = await obtenerSesionCliente();
-    if (!session) return;
-
-    localStorage.removeItem('mimi_pending_trip_request');
-
-    notif.show(
-      'Sesión iniciada',
-      'Continuamos con tu solicitud de viaje',
-      'success'
-    );
-
-    setTimeout(() => {
-      confirmarViaje();
-    }, 300);
-  } catch (err) {
-    console.error('[reanudarSolicitudPendientePostLogin] ERROR:', err);
-  }
-}
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
@@ -4443,8 +4463,7 @@ function bindUIActions() {
     togglePriceBreakdown();
   });
 }
-
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   bindUIActions();
 
   setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
@@ -4455,9 +4474,16 @@ document.addEventListener('DOMContentLoaded', () => {
     state.destino = data;
   });
 
-  reanudarSolicitudPendientePostLogin();
-});
-  
+  if (window.sbRealtime?.auth) {
+    window.sbRealtime.auth.onAuthStateChange((event, session) => {
+      console.log('[auth] onAuthStateChange:', event, session);
+      cachedSession = session || null;
+      lastSessionCheck = Date.now();
+    });
+  }
+
+  await reanudarViajePendientePostLogin();
+});  
 </script>
 </body>
 </html>
