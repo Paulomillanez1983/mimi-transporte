@@ -3452,17 +3452,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
   try {
     console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
 
-    if (!window.supabase) {
-      throw new Error('Supabase no inicializado');
-    }
-
-    const { data, error } = await window.supabase.auth.getSession();
-
-    if (error) {
-      throw new Error('Error obteniendo sesión: ' + error.message);
-    }
-
-    const session = data?.session;
+    const session = await obtenerSesionCliente();
 
     if (!session?.access_token) {
       throw new Error('No hay sesión activa');
@@ -3496,7 +3486,6 @@ async function cotizarViajeOptimizado(payload, requestId) {
 
     console.log('📥 RESPUESTA COTIZAR:', dataRes);
     procesarRespuestaCotizacion(dataRes, payload);
-
   } catch (err) {
     if (requestId !== currentQuoteRequestId) return;
 
@@ -3508,12 +3497,10 @@ async function cotizarViajeOptimizado(payload, requestId) {
     console.error('❌ Error cotizando:', err);
     notif.show('Modo estimado', mensaje, 'warning');
     usarFallbackLocal(payload, requestId);
-
   } finally {
     clearTimeout(timeoutId);
   }
-}
-  
+}  
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
