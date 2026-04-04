@@ -2085,20 +2085,6 @@ function coordenadasValidas(lat, lng) {
     Math.abs(Number(lng)) <= 180
   );
 }
-let cachedSession = null;
-let lastSessionCheck = 0;
-
-function decodificarJwtPayload(token) {
-  try {
-    const part = token?.split?.('.')[1];
-    if (!part) return null;
-
-    const normalized = part.replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(normalized));
-  } catch (_) {
-    return null;
-  }
-}
 
 let cachedSession = null;
 let lastSessionCheck = 0;
