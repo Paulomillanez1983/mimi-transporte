@@ -2018,7 +2018,7 @@ const CONFIG = {
   DEBUG: false,
   TIMEOUTS: {
     GEOCODING: 8000,
-    COTIZACION: 12000,
+    COTIZACION: 20000,
     UI_FEEDBACK: 300
   },
   RETRY: {
@@ -3444,10 +3444,10 @@ async function calcularRuta() {
 
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(
-    () => controller.abort(),
-    CONFIG.TIMEOUTS.COTIZACION
-  );
+const timeoutId = setTimeout(
+  () => controller.abort('timeout_cotizacion'),
+  CONFIG.TIMEOUTS.COTIZACION
+);
 
   try {
     console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
