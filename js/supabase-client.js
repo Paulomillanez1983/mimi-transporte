@@ -6,7 +6,7 @@
  *  - choferes.id_uuid (uuid)  <-- ID operativo del chofer
  *  - choferes.user_id (uuid)  <-- auth.users.id
  *  - viajes.chofer_id_uuid (uuid)  <-- referencia a choferes.id_uuid
- *  - viaje_ofertas.chofer_id_uuid (uuid) <-- referencia a choferes.id_uuid
+ *  - viaje_ofertas.chofer_id (uuid) <-- referencia a choferes.id_uuid
  */
 
 import CONFIG from "./config.js";
