@@ -284,7 +284,7 @@ class SupabaseClient {
           event: "*",
           schema: "public",
           table: "viaje_ofertas",
-          filter: `chofer_id_uuid=eq.${this.driverId}`,
+          filter: `chofer_id=eq.${this.driverId}`,
         },
         (payload) => {
           try {
@@ -327,7 +327,7 @@ class SupabaseClient {
           event: "*",
           schema: "public",
           table: "viajes",
-          filter: `chofer_id_uuid=eq.${this.driverId}`,
+          filter: `chofer_id=eq.${this.driverId}`,
         },
         (payload) => {
           try {
@@ -422,14 +422,15 @@ class SupabaseClient {
     const { data, error } = await this.client
       .from("viaje_ofertas")
       .select(
-        `
-        id,
-        viaje_id,
-        chofer_id_uuid,
-        estado,
-        enviada_en,
-        respondida_en,
-        viajes (
+  `
+  id,
+  viaje_id,
+  chofer_id,
+  estado,
+  enviada_en,
+  respondida_en,
+  expires_at,
+  viajes (
           id,
           estado,
           origen,
@@ -447,8 +448,8 @@ class SupabaseClient {
         )
       `
       )
-      .eq("chofer_id_uuid", this.driverId)
-      .eq("estado", "PENDIENTE")
+      .eq("chofer_id", this.driverId)
+      .in("estado", ["pendiente", "enviada"])
       .order("enviada_en", { ascending: false });
 
     if (error) {
@@ -459,10 +460,10 @@ class SupabaseClient {
     const now = new Date();
 
     const filtered = (data || []).filter((offer) => {
-      const exp = offer?.viajes?.current_offer_expires_at;
-      if (!exp) return true;
-      return new Date(exp) > now;
-    });
+  const exp = offer?.expires_at || offer?.viajes?.current_offer_expires_at;
+  if (!exp) return true;
+  return new Date(exp) > now;
+});
 
     return { data: filtered, error: null };
   }
@@ -495,11 +496,10 @@ class SupabaseClient {
     if (!this.client) return { data: null, error: "No client" };
     if (!this.driverId) return { data: null, error: "No driverId" };
 
-    const { data, error } = await this.client.rpc("aceptar_oferta_viaje", {
-      p_viaje_id: tripId,
-      p_chofer_id_uuid: this.driverId,
-    });
-
+const { data, error } = await this.client.rpc("aceptar_oferta_viaje", {
+  p_viaje_id: tripId,
+  p_chofer_id: this.driverId,
+});
     if (error) console.error("[Supabase] acceptOffer error:", error);
 
     return { data, error };
