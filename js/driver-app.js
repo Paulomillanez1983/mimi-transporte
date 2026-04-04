@@ -118,7 +118,7 @@ class DriverApp {
       console.log('[DriverApp] ✅ Aplicación inicializada correctamente');
 
       // Estado inicial UI
-      uiController.updateDriverState('ONLINE', false);
+      await supabaseService.setDriverOnline(true); uiController.updateDriverState('ONLINE', true);
 
       if (!tripManagerReady) {
         console.warn('[DriverApp] App iniciada sin TripManager operativo');
