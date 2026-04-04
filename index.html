@@ -3765,38 +3765,96 @@ async function confirmarViaje() {
       throw new Error('Ruta incompleta');
     }
 
+    const origen = puntos[0];
+    const destino = puntos[puntos.length - 1];
+    const waypointsIntermedios = puntos.slice(1, -1);
+
     const resumenRuta =
       state.cotizacion?.resumen_ruta ||
+      state.cotizacion?.resumen_ruta_front ||
+      state.routeData?.resumen_ruta ||
       state.routeData?.resumenRuta ||
+      state.routeData?.resumen_ruta_front ||
       construirResumenRuta();
 
+    const precioFinal = Number(
+      state.cotizacion?.precio ??
+      state.routeData?.precio ??
+      0
+    );
+
+    const kmFinal = Number(
+      state.cotizacion?.distancia_km_total ??
+      state.cotizacion?.distancia_km ??
+      state.routeData?.distancia_km_total ??
+      state.routeData?.distance ??
+      0
+    );
+
+    const duracionFinal = Number(
+      state.cotizacion?.duracion_min_total ??
+      state.cotizacion?.duracion_min ??
+      state.routeData?.duracion_min_total ??
+      state.routeData?.duration ??
+      0
+    );
+
     const payload = {
-      origen: puntos[0].direccion,
-      origen_lat: Number(puntos[0].lat),
-      origen_lng: Number(puntos[0].lng),
+      origen: origen.direccion || origen.direccionCompleta || origen.direccionCorta || '',
+      origen_lat: Number(origen.lat),
+      origen_lng: Number(origen.lng),
 
-      destino: puntos[puntos.length - 1].direccion,
-      destino_lat: Number(puntos[puntos.length - 1].lat),
-      destino_lng: Number(puntos[puntos.length - 1].lng),
+      destino: destino.direccion || destino.direccionCompleta || destino.direccionCorta || '',
+      destino_lat: Number(destino.lat),
+      destino_lng: Number(destino.lng),
 
-      precio: Number(state.cotizacion?.precio || 0),
-      km: Number(state.routeData?.distance || 0),
-      duracion_min: Number(state.routeData?.duration || 0),
-      resumen_ruta: resumenRuta,
+      precio: Number.isFinite(precioFinal) ? precioFinal : 0,
+      km: Number.isFinite(kmFinal) ? kmFinal : 0,
+      duracion_min: Number.isFinite(duracionFinal) ? duracionFinal : 0,
 
-      waypoints: puntos.slice(1, -1).map((p, i) => ({
+      resumen_ruta: resumenRuta || '',
+
+      waypoints: waypointsIntermedios.map((p, i) => ({
         orden: i + 1,
-        direccion: p.direccion,
-        direccionCorta: p.direccionCorta || p.direccion,
+        direccion: p.direccion || p.direccionCompleta || p.direccionCorta || `Parada ${i + 1}`,
+        direccionCorta: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
         lat: Number(p.lat),
         lng: Number(p.lng)
       })),
 
-      cantidad_paradas: Math.max(0, puntos.length - 2)
+      cantidad_paradas: waypointsIntermedios.length,
+
+      observaciones: state.observaciones || state.comentarios || '',
+
+      pasajero_nombre:
+        state.pasajeroNombre ||
+        state.nombrePasajero ||
+        session?.user?.user_metadata?.full_name ||
+        session?.user?.user_metadata?.name ||
+        '',
+
+      pasajero_telefono:
+        state.pasajeroTelefono ||
+        state.telefonoPasajero ||
+        session?.user?.user_metadata?.phone ||
+        ''
     };
 
     console.log('[confirmarViaje] payload:', payload);
     console.log('[confirmarViaje] url:', `${SUPABASE_URL}/functions/v1/solicitar-viaje`);
+
+    if (!payload.origen || !payload.destino) {
+      throw new Error('Faltan origen o destino');
+    }
+
+    if (
+      !Number.isFinite(payload.origen_lat) ||
+      !Number.isFinite(payload.origen_lng) ||
+      !Number.isFinite(payload.destino_lat) ||
+      !Number.isFinite(payload.destino_lng)
+    ) {
+      throw new Error('Coordenadas inválidas en origen o destino');
+    }
 
     actualizarEstadoSolicitudUI({
       estado: 'OFERTADO',
@@ -3841,9 +3899,6 @@ async function confirmarViaje() {
       estado: state.viajeEstado
     });
 
-    // =====================================================
-    // DISPATCH AUTOMÁTICO
-    // =====================================================
     try {
       console.log('[confirmarViaje] lanzando dispatch-viaje...', {
         viaje_id: state.viajeId
@@ -3880,9 +3935,6 @@ async function confirmarViaje() {
 
       console.log('[confirmarViaje] dispatch json:', dispatchJson);
 
-      // OJO:
-      // si falla dispatch, NO rompemos el viaje ya creado.
-      // El viaje existe igual; solo avisamos que hubo problema al buscar chofer.
       if (!dispatchRes.ok || dispatchJson?.exito === false) {
         console.warn('[confirmarViaje] dispatch no exitoso:', {
           status: dispatchRes.status,
@@ -3934,7 +3986,8 @@ async function confirmarViaje() {
   } finally {
     window.isConfirmingTrip = false;
   }
-}  
+}
+  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
