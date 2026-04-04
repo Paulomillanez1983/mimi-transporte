@@ -3255,13 +3255,18 @@ async function dibujarRutaReal(coords) {
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 450);
 }
 
-function mostrarMapaInmediato(_puntos, coords) {
+function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
   requestAnimationFrame(() => {
-    initMapa().then(() => dibujarRutaLineal(coords));
+    initMapa().then(() => {
+      // No dibujar línea recta acá.
+      // Este método ahora solo asegura que el mapa esté visible e inicializado.
+      try {
+        mapaCliente?.resize?.();
+      } catch (_) {}
+    });
   });
 }
-
 function centrarEnRuta() {
   if (!mapaCliente) return;
 
@@ -3338,6 +3343,7 @@ async function calcularRuta() {
   if (isCalculatingQuote) return;
 
   const requestId = ++currentQuoteRequestId;
+  let payload = null;
 
   setLoadingCotizacion(true, 'Analizando direcciones...');
   setSectionVisible('quoteCard', false);
@@ -3461,34 +3467,72 @@ async function calcularRuta() {
       throw new Error('Hay paradas con coordenadas inválidas');
     }
 
-    // =========================
-    // 6) Estimación local rápida
-    // =========================
+// =========================
+// 6) Estimación local rápida
+// =========================
     const estimacionLocal = calcularEstimacionLocal(puntosLimpios);
     if (requestId !== currentQuoteRequestId) return;
 
-    if (
-      !estimacionLocal ||
-      !Array.isArray(estimacionLocal.coords) ||
-      estimacionLocal.coords.length < 2
-    ) {
+    if (!estimacionLocal || !Array.isArray(estimacionLocal.coords) || estimacionLocal.coords.length < 2) {
       throw new Error('No se pudo generar la estimación local');
     }
 
-    // =========================
-    // 7) Mostrar mapa preliminar
-    // =========================
-    setLoadingCotizacion(true, 'Dibujando ruta...');
-    mostrarMapaInmediato(puntosLimpios, estimacionLocal.coords);
+    setLoadingCotizacion(true, 'Calculando recorrido real...');
+    setSectionVisible('mapSection', true);
+    await initMapa();
 
-    // =========================
-    // 8) Construir payload
-    // =========================
-    const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
+    payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
     if (!payload) {
       throw new Error('No se pudo construir el payload de cotización');
     }
 
+    if (requestId !== currentQuoteRequestId) return;
+
+    setLoadingCotizacion(true, 'Cotizando...');
+    await cotizarViajeOptimizado(payload, requestId);
+
+  } catch (err) {
+    if (requestId !== currentQuoteRequestId) return;
+
+    console.error('❌ Error en calcularRuta:', err);
+
+    if (payload) {
+      notif.show(
+        'Cotización estimada',
+        'No pudimos obtener la ruta real. Se muestra una estimación provisoria.',
+        'warning'
+      );
+      return usarFallbackLocal(payload, requestId);
+    }
+
+    notif.show(
+      'Error',
+      err?.message || 'No se pudo calcular la ruta',
+      'error'
+    );
+  } finally {
+    if (requestId === currentQuoteRequestId) {
+      setLoadingCotizacion(false);
+    }
+  }
+}
+// =========================
+// 7) Mostrar mapa solo como contenedor, SIN ruta recta final
+// =========================
+setLoadingCotizacion(true, 'Calculando recorrido real...');
+setSectionVisible('mapSection', true);
+await initMapa();
+
+// Si querés mostrar marcadores/puntos, hacelo acá.
+// Pero NO dibujes la línea preliminar todavía.
+
+// =========================
+// 8) Construir payload
+// =========================
+const payload = construirPayloadOptimizado(puntosLimpios, estimacionLocal);
+if (!payload) {
+  throw new Error('No se pudo construir el payload de cotización');
+}
     // =========================
     // 9) Cotizar backend
     // =========================
@@ -3497,15 +3541,23 @@ async function calcularRuta() {
     setLoadingCotizacion(true, 'Cotizando...');
     await cotizarViajeOptimizado(payload, requestId);
   } catch (err) {
-    if (requestId !== currentQuoteRequestId) return;
+  if (requestId !== currentQuoteRequestId) return null;
 
-    console.error('❌ Error en calcularRuta:', err);
-    notif.show(
-      'Error',
-      err?.message || 'No se pudo calcular la ruta',
-      'error'
-    );
-  } finally {
+  console.error('❌ Error cotizando:', err);
+
+  state.routeData = {
+    ...(state.routeData || {}),
+    fallback: true
+  };
+
+  notif.show(
+    'Cotización estimada',
+    'No pudimos obtener la ruta real. Se muestra solo una estimación provisoria.',
+    'warning'
+  );
+
+  return usarFallbackLocal(payload, requestId);
+} finally {
     if (requestId === currentQuoteRequestId) {
       setLoadingCotizacion(false);
     }
@@ -3727,6 +3779,11 @@ function procesarRespuestaCotizacion(data, payload) {
       false,
     resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
     fallback: false,
+    if (!Array.isArray(coordsBackend) || coordsBackend.length < 2) {
+  throw new Error('La cotización no devolvió geometría real de ruta');
+}
+
+dibujarRutaReal(coordsBackend);
     geometry: Array.isArray(coordsBackend)
       ? { type: 'LineString', coordinates: coordsBackend }
       : null
