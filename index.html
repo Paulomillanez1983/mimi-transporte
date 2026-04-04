@@ -4202,8 +4202,12 @@ function procesarRespuestaCotizacion(data, payload) {
 // ==========================================
 // ACCIONES
 // ==========================================
-  async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
+async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
   let session = await obtenerSesionCliente(false);
+
+  if (!session?.access_token) {
+    throw new Error('No hay sesión válida para llamar la función protegida');
+  }
 
   let headers = {
     ...(options.headers || {}),
@@ -4228,6 +4232,10 @@ function procesarRespuestaCotizacion(data, payload) {
 
   session = await obtenerSesionCliente(true);
 
+  if (!session?.access_token) {
+    throw new Error('No se pudo refrescar la sesión');
+  }
+
   headers = {
     ...(options.headers || {}),
     apikey: SUPABASE_ANON_KEY,
@@ -4243,6 +4251,7 @@ function procesarRespuestaCotizacion(data, payload) {
 
   return { response, rawText, session };
 }
+  
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
     notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
@@ -5050,7 +5059,6 @@ function bindUIActions() {
     btnToggleBreakdown.dataset.bound = '1';
   }
 }
-
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     bindUIActions();
@@ -5064,18 +5072,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     if (window.sbRealtime?.auth) {
-      window.sbRealtime.auth.onAuthStateChange((event, session) => {
-        console.log('[auth] onAuthStateChange:', event, session);
+      const { data, error } = await window.sbRealtime.auth.getSession();
 
-        cachedSession = session || null;
+      console.log('[auth] sesión inicial:', {
+        hasSession: !!data?.session,
+        userId: data?.session?.user?.id || null,
+        expiresAt: data?.session?.expires_at || null,
+        error: error?.message || null
+      });
+
+      if (data?.session?.access_token) {
+        cachedSession = data.session;
         lastSessionCheck = Date.now();
+      } else {
+        limpiarSesionCache();
+      }
 
-        if (!session) return;
+      window.sbRealtime.auth.onAuthStateChange((event, session) => {
+        console.log('[auth] onAuthStateChange:', event, {
+          hasSession: !!session,
+          userId: session?.user?.id || null,
+          expiresAt: session?.expires_at || null
+        });
 
-        // opcional: si querés reflejar rápido en memoria local
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.access_token) {
           cachedSession = session;
           lastSessionCheck = Date.now();
+        } else {
+          limpiarSesionCache();
         }
       });
     }
