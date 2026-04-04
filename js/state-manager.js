@@ -2,7 +2,7 @@
  * MIMI Driver - State Manager (PRODUCTION FINAL)
  * Finite State Machine for driver and trip states
  */
-
+import CONFIG from './config.js';
 class StateManager {
   constructor() {
     this.state = {
