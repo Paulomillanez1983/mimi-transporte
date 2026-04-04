@@ -412,14 +412,18 @@ class DriverApp {
       const estado = String(trip.estado || '').toUpperCase();
       const goingToDestination = estado === 'EN_CURSO';
 
+      const driverPosition = locationTracker.getCurrentPosition?.() || null;
+
       const origin = goingToDestination
         ? { lat: trip.origen_lat, lng: trip.origen_lng }
-        : { lat: trip.origen_lat, lng: trip.origen_lng };
+        : driverPosition
+          ? { lat: driverPosition.lat, lng: driverPosition.lng }
+          : { lat: trip.origen_lat, lng: trip.origen_lng };
 
       const destination = goingToDestination
         ? { lat: trip.destino_lat, lng: trip.destino_lng }
         : { lat: trip.origen_lat, lng: trip.origen_lng };
-
+      
       if (typeof mapService.showRoute === 'function') {
         await mapService.showRoute(origin, destination);
         return;
@@ -651,6 +655,10 @@ class DriverApp {
     if (btnFab) {
       btnFab.addEventListener('click', async () => {
         try {
+          const hasActiveTrip = !!tripManager.getCurrentTrip();            
+          if (hasActiveTrip && this._onlineStatus) {             
+            uiController.showToast('No podés ponerte offline durante un viaje', 'warning');             
+            return;           }            
           this._onlineStatus = !this._onlineStatus;
 
           if (!this._authUserId) {
@@ -673,7 +681,10 @@ class DriverApp {
             return;
           }
 
-          uiController.updateDriverState('ONLINE', this._onlineStatus);
+          uiController.updateDriverState(            
+          this._onlineStatus ? 'ONLINE' : 'OFFLINE',            
+          this._onlineStatus           
+          );
           uiController.showToast(
             this._onlineStatus ? '🟢 Online' : '🔴 Offline',
             'success'
@@ -719,6 +730,8 @@ class DriverApp {
         const result = await tripManager.startTrip(current?.id || tripId);
         if (result?.success) {
           this._setFlowState('TRIP_STARTED');
+          uiController.showToast('Viaje iniciado', 'success');
+          await tripManager.refresh();
         }
         return result;
       }
@@ -727,6 +740,8 @@ class DriverApp {
         const result = await tripManager.finishTrip(current?.id || tripId);
         if (result?.success) {
           this._setFlowState('TRIP_COMPLETED');
+          uiController.showToast('Finalizando viaje...', 'success');
+          await tripManager.refresh();
         }
         return result;
       }
@@ -745,7 +760,6 @@ class DriverApp {
         return null;
     }
   }
-
   // =========================================================
   // EXTERNAL ACTIONS
   // =========================================================
