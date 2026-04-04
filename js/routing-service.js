@@ -13,7 +13,20 @@ class RoutingService {
 
   async getRoute(start, end) {
     console.log('[Routing] Solicitando ruta:', { start, end });
-    
+
+    if (!start || !end) {
+      throw new Error('Faltan puntos de ruta');
+    }
+
+    if (
+      !Number.isFinite(Number(start.lat)) ||
+      !Number.isFinite(Number(start.lng)) ||
+      !Number.isFinite(Number(end.lat)) ||
+      !Number.isFinite(Number(end.lng))
+    ) {
+      throw new Error('Coordenadas inválidas');
+    }
+
     if (this.abortController) {
       this.abortController.abort();
     }
@@ -22,13 +35,18 @@ class RoutingService {
     try {
       let route = null;
 
-      if (CONFIG.ROUTING_PROVIDER === 'valhalla') {
+      const directDistance = this._haversineDistance(start.lat, start.lng, end.lat, end.lng);
+
+      if (directDistance < 20) {
+        route = this._getStraightLineRoute(start, end);
+      } else if (CONFIG.ROUTING_PROVIDER === 'valhalla') {
         route = await this._getValhallaRoute(start, end);
       }
 
       if (route) {
         console.log('[Routing] Ruta obtenida:', route.distance, 'm');
         this.currentRoute = route;
+        this.instructions = Array.isArray(route.instructions) ? route.instructions : [];
         return route;
       }
 
@@ -36,7 +54,10 @@ class RoutingService {
 
     } catch (error) {
       console.warn('[Routing] Error, usando línea recta:', error.message);
-      return this._getStraightLineRoute(start, end);
+      const fallbackRoute = this._getStraightLineRoute(start, end);
+      this.currentRoute = fallbackRoute;
+      this.instructions = fallbackRoute.instructions || [];
+      return fallbackRoute;
     }
   }
 
@@ -53,7 +74,7 @@ class RoutingService {
 
     const response = await fetch(CONFIG.VALHALLA_URL, {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
@@ -66,13 +87,14 @@ class RoutingService {
     }
 
     const data = await response.json();
+    this.abortController = null;
 
     if (!data.trip || data.trip.status !== 0) {
       throw new Error('Valhalla no encontró ruta');
     }
 
     const leg = data.trip.legs[0];
-    
+
     return {
       geometry: {
         type: 'LineString',
@@ -87,7 +109,7 @@ class RoutingService {
 
   _getStraightLineRoute(start, end) {
     console.log('[Routing] Usando línea recta');
-    
+
     const coordinates = [
       [start.lng, start.lat],
       [end.lng, end.lat]
@@ -111,7 +133,7 @@ class RoutingService {
 
   _processValhallaManeuvers(maneuvers) {
     if (!maneuvers) return [];
-    
+
     const typeMap = {
       1: 'straight', 2: 'slight_right', 3: 'right', 4: 'sharp_right',
       5: 'uturn', 6: 'sharp_left', 7: 'left', 8: 'slight_left',
@@ -132,10 +154,10 @@ class RoutingService {
     const Δφ = (lat2 - lat1) * Math.PI / 180;
     const Δλ = (lon2 - lon1) * Math.PI / 180;
 
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
               Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c;
   }
