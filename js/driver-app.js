@@ -203,9 +203,16 @@ class DriverApp {
           () => this._rejectOffer(pendingTrip.offerId)
         );
       } else {
-        console.log('[DriverApp] Estado inicial: esperando');
-        uiController.showWaitingState();
-      }
+  console.log('[DriverApp] Estado inicial: esperando');
+
+  if (this._onlineStatus) {
+    this._setFlowState('ONLINE_IDLE');
+  } else {
+    this._setFlowState('OFFLINE');
+  }
+
+  uiController.showWaitingState();
+}
     } catch (error) {
       console.error('[DriverApp] ❌ Error fatal:', error);
       uiController.showToast('Error: ' + error.message, 'error', 5000);
@@ -623,11 +630,10 @@ class DriverApp {
           currentTrip.origen_lng
         );
 
-        if (distPickup < 100) {
-          this._setFlowState('ARRIVED_PICKUP');
-          uiController.showArrival?.();
-        }
-      }
+if (distDestination < 100) {
+  this._setFlowState('ARRIVED_DESTINATION');
+  uiController.showArrival?.();
+}      
 
       // yendo al destino
       if (estado === 'EN_CURSO' && this._driverFlowState === 'TRIP_STARTED') {
@@ -736,16 +742,28 @@ class DriverApp {
         return result;
       }
 
-      case 'finish': {
-        const result = await tripManager.finishTrip(current?.id || tripId);
-        if (result?.success) {
-          this._setFlowState('TRIP_COMPLETED');
-          uiController.showToast('Finalizando viaje...', 'success');
-          await tripManager.refresh();
-        }
-        return result;
-      }
+case 'finish': {
+  const result = await tripManager.finishTrip(current?.id || tripId);
+  if (result?.success) {
+    this._setFlowState('TRIP_COMPLETED');
 
+    this._currentTripId = null;
+    mapService.clearRoute?.();
+    uiController.hideNavigation?.();
+
+    uiController.showToast('Viaje finalizado', 'success');
+
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+      uiController.showWaitingState();
+    } else {
+      this._setFlowState('OFFLINE');
+    }
+
+    await tripManager.refresh();
+  }
+  return result;
+}
       case 'cancel':
         return tripManager.cancelTrip(current?.id || tripId);
 
