@@ -3857,7 +3857,7 @@ async function confirmarViaje() {
     }
 
     actualizarEstadoSolicitudUI({
-      estado: 'OFERTADO',
+      estado: 'buscando_chofer',
       texto: 'Enviando solicitud...'
     });
 
@@ -3892,7 +3892,7 @@ async function confirmarViaje() {
     }
 
     state.viajeId = json.viaje_id;
-    state.viajeEstado = json.estado || 'OFERTADO';
+    state.viajeEstado = json.estado || 'buscando_chofer';
 
     console.log('[confirmarViaje] viaje creado OK:', {
       viajeId: state.viajeId,
@@ -3952,6 +3952,10 @@ async function confirmarViaje() {
           'warning'
         );
       } else {
+        if (dispatchJson?.rpc_resultado?.chofer_id || dispatchJson?.chofer_id) {
+          state.viajeEstado = 'ofertando';
+        }
+
         actualizarEstadoSolicitudUI({
           estado: state.viajeEstado,
           texto: 'Estamos notificando choferes cercanos...'
@@ -3986,8 +3990,7 @@ async function confirmarViaje() {
   } finally {
     window.isConfirmingTrip = false;
   }
-}
-  
+}  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
