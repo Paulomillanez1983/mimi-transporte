@@ -512,14 +512,18 @@ async rejectOffer(offerId) {
             this.currentTrip = trip;
           } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
             this.currentTrip = null;
-          }        
+          }
+        }
       )
       .subscribe((status) => {
         console.log('[TripManager] Trip channel status:', status);
       });
+    }
   }
 
-  // =========================================================
+    
+    
+    // =========================================================
   // REFRESH
   // =========================================================
   _startRefreshInterval(driverId) {
