@@ -3618,166 +3618,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
   }
 }
 
-function procesarRespuestaCotizacion(data, payload) {
-  const precio = numeroSeguro(data?.precio, 0);
 
-  const distanciaBackend = numeroSeguro(
-    data?.distancia_km ?? data?.distancia_km_total ?? data?.distancia_km_osrm,
-    NaN
-  );
-
-  const duracionBackend = numeroSeguro(
-    data?.duracion_min_total ?? data?.duracion_min,
-    NaN
-  );
-
-  const distanciaFallback = numeroSeguro(
-    payload?.distancia_km_total ?? payload?.distancia_km,
-    0
-  );
-
-  const duracionFallback = numeroSeguro(
-    payload?.duracion_min_total ?? payload?.duracion_min,
-    0
-  );
-
-  const distancia = Number.isFinite(distanciaBackend) ? distanciaBackend : distanciaFallback;
-  const duracion = Number.isFinite(duracionBackend) ? duracionBackend : duracionFallback;
-
-  const coordsBackend =
-    Array.isArray(data?.route_geometry) ? data.route_geometry :
-    Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
-    Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
-    Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
-    null;
-
-  if (!Array.isArray(coordsBackend) || coordsBackend.length < 2) {
-    throw new Error('La cotización no devolvió geometría real de ruta');
-  }
-
-  const legs = Array.isArray(data?.legs) ? data.legs : [];
-  const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
-  const detallePrecio = data?.detalle_precio || null;
-
-  state.cotizacion = {
-    ...data,
-    precio,
-    distancia_km: distancia,
-    duracion_min: duracion,
-    legs,
-    puntos_ruta: puntosRuta,
-    resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
-    detalle_precio: detallePrecio
-  };
-
-  state.routeData = {
-    distance: distancia,
-    duration: duracion,
-    segmentos:
-      numeroSeguro(data?.segmentos_totales, 0) ||
-      legs.length ||
-      payload?.segmentos_totales_front ||
-      Math.max(1, puntosRuta.length - 1),
-    retornoAlOrigen:
-      detallePrecio?.vuelve_al_origen ??
-      data?.retorno_al_origen ??
-      payload?.retorno_al_origen_front ??
-      false,
-    resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
-    fallback: false,
-    geometry: {
-      type: 'LineString',
-      coordinates: coordsBackend
-    }
-  };
-
-  dibujarRutaReal(coordsBackend);
-
-  console.log('✅ DISTANCIA FINAL USADA:', distancia);
-  console.log('✅ DURACION FINAL USADA:', duracion);
-  console.log('✅ PRECIO FINAL USADO:', precio);
-
-function procesarRespuestaCotizacion(data, payload) {
-  const precio = numeroSeguro(data?.precio, 0);
-
-  const distanciaBackend = numeroSeguro(
-    data?.distancia_km ?? data?.distancia_km_total ?? data?.distancia_km_osrm,
-    NaN
-  );
-
-  const duracionBackend = numeroSeguro(
-    data?.duracion_min_total ?? data?.duracion_min,
-    NaN
-  );
-
-  const distanciaFallback = numeroSeguro(
-    payload?.distancia_km_total ?? payload?.distancia_km,
-    0
-  );
-
-  const duracionFallback = numeroSeguro(
-    payload?.duracion_min_total ?? payload?.duracion_min,
-    0
-  );
-
-  const distancia = Number.isFinite(distanciaBackend) ? distanciaBackend : distanciaFallback;
-  const duracion = Number.isFinite(duracionBackend) ? duracionBackend : duracionFallback;
-
-  const coordsBackend =
-    Array.isArray(data?.route_geometry) ? data.route_geometry :
-    Array.isArray(data?.geometry?.coordinates) ? data.geometry.coordinates :
-    Array.isArray(data?.geometria?.coordinates) ? data.geometria.coordinates :
-    Array.isArray(data?.route?.geometry?.coordinates) ? data.route.geometry.coordinates :
-    null;
-
-  if (!Array.isArray(coordsBackend) || coordsBackend.length < 2) {
-    throw new Error('La cotización no devolvió geometría real de ruta');
-  }
-
-  const legs = Array.isArray(data?.legs) ? data.legs : [];
-  const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
-  const detallePrecio = data?.detalle_precio || null;
-
-  state.cotizacion = {
-    ...data,
-    precio,
-    distancia_km: distancia,
-    duracion_min: duracion,
-    legs,
-    puntos_ruta: puntosRuta,
-    resumen_ruta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
-    detalle_precio: detallePrecio
-  };
-
-  state.routeData = {
-    distance: distancia,
-    duration: duracion,
-    segmentos:
-      numeroSeguro(data?.segmentos_totales, 0) ||
-      legs.length ||
-      payload?.segmentos_totales_front ||
-      Math.max(1, puntosRuta.length - 1),
-    retornoAlOrigen:
-      detallePrecio?.vuelve_al_origen ??
-      data?.retorno_al_origen ??
-      payload?.retorno_al_origen_front ??
-      false,
-    resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
-    fallback: false,
-    geometry: {
-      type: 'LineString',
-      coordinates: coordsBackend
-    }
-  };
-
-  dibujarRutaReal(coordsBackend);
-
-  console.log('✅ DISTANCIA FINAL USADA:', distancia);
-  console.log('✅ DURACION FINAL USADA:', duracion);
-  console.log('✅ PRECIO FINAL USADO:', precio);
-
-  mostrarCotizacion(precio, distancia, duracion);
-}
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
@@ -3851,13 +3692,14 @@ function usarFallbackLocal(payload, requestId) {
   mostrarCotizacion(precioEstimado, distancia, duracion);
 }
 
+
 function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
 
   const distanciaBackend = numeroSeguro(
-  data?.distancia_km ?? data?.distancia_km_total ?? data?.distancia_km_osrm,
-  NaN
-);
+    data?.distancia_km ?? data?.distancia_km_total ?? data?.distancia_km_osrm,
+    NaN
+  );
 
   const duracionBackend = numeroSeguro(
     data?.duracion_min_total ?? data?.duracion_min,
@@ -3888,6 +3730,10 @@ function procesarRespuestaCotizacion(data, payload) {
   const puntosRuta = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
   const detallePrecio = data?.detalle_precio || null;
 
+  if (!Array.isArray(coordsBackend) || coordsBackend.length < 2) {
+    throw new Error('La cotización no devolvió geometría real de ruta');
+  }
+
   state.cotizacion = {
     ...data,
     precio,
@@ -3914,19 +3760,13 @@ function procesarRespuestaCotizacion(data, payload) {
       false,
     resumenRuta: data?.resumen_ruta || payload?.resumen_ruta_front || construirResumenRuta(),
     fallback: false,
-    if (!Array.isArray(coordsBackend) || coordsBackend.length < 2) {
-  throw new Error('La cotización no devolvió geometría real de ruta');
-}
-
-dibujarRutaReal(coordsBackend);
-    geometry: Array.isArray(coordsBackend)
-      ? { type: 'LineString', coordinates: coordsBackend }
-      : null
+    geometry: {
+      type: 'LineString',
+      coordinates: coordsBackend
+    }
   };
 
-  if (Array.isArray(coordsBackend) && coordsBackend.length >= 2) {
-    dibujarRutaReal(coordsBackend);
-  }
+  dibujarRutaReal(coordsBackend);
 
   console.log('✅ DISTANCIA FINAL USADA:', distancia);
   console.log('✅ DURACION FINAL USADA:', duracion);
