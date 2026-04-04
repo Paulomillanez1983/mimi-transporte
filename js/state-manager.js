@@ -2,7 +2,9 @@
  * MIMI Driver - State Manager (PRODUCTION FINAL)
  * Finite State Machine for driver and trip states
  */
+
 import CONFIG from './config.js';
+
 class StateManager {
   constructor() {
     this.state = {
@@ -40,7 +42,7 @@ class StateManager {
   // =========================================================
 
   getState() {
-    return JSON.parse(JSON.stringify(this.state));
+    return structuredClone(this.state);
   }
 
   get(path) {
@@ -52,7 +54,7 @@ class StateManager {
   // =========================================================
 
   set(path, value) {
-    this.previousState = JSON.parse(JSON.stringify(this.state));
+    this.previousState = structuredClone(this.state);
 
     const keys = path.split('.');
     const lastKey = keys.pop();
@@ -67,7 +69,7 @@ class StateManager {
   }
 
   merge(updates) {
-    this.previousState = JSON.parse(JSON.stringify(this.state));
+    this.previousState = structuredClone(this.state);
     this._deepMerge(this.state, updates);
     this._notify('state', this.state, this.previousState);
   }
@@ -138,9 +140,14 @@ class StateManager {
     };
 
     const currentState = this.state.driver.status;
+
+    if (currentState === newState) {
+      return true;
+    }
+
     const allowed = validTransitions[currentState] || [];
 
-    if (currentState !== newState && !allowed.includes(newState)) {
+    if (!allowed.includes(newState)) {
       console.warn(`[StateManager] Invalid transition blocked: ${currentState} -> ${newState}`);
       return false;
     }
@@ -225,3 +232,4 @@ class StateManager {
 
 // Singleton
 const stateManager = new StateManager();
+export default stateManager;
