@@ -45,6 +45,14 @@ function getSupabaseHeaders(accessToken, extra = {}) {
     ...extra
   };
 }
+function getPublicSupabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    Accept: "application/json",
+    ...extra
+  };
+}
 async function safeReadJson(response) {
   if (!response) return null;
 
