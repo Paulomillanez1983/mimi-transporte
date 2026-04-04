@@ -3547,14 +3547,19 @@ async function cotizarViajeOptimizado(payload, requestId) {
 
   try {
     console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
+    console.log('⏱️ inicio cotización');
 
+    const tSession = performance.now();
     const session = await obtenerSesionCliente();
+    console.log('⏱️ sesión obtenida en ms:', Math.round(performance.now() - tSession));
+
     if (requestId !== currentQuoteRequestId) return null;
 
     if (!session?.access_token) {
       throw new Error('No hay sesión activa');
     }
 
+    const tFetch = performance.now();
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
       headers: {
@@ -3565,10 +3570,14 @@ async function cotizarViajeOptimizado(payload, requestId) {
       body: JSON.stringify(payload),
       signal: controller.signal
     });
+    console.log('⏱️ fetch respondió headers en ms:', Math.round(performance.now() - tFetch));
 
     if (requestId !== currentQuoteRequestId) return null;
 
+    const tBody = performance.now();
     const rawText = await response.text();
+    console.log('⏱️ body leído en ms:', Math.round(performance.now() - tBody));
+
     if (requestId !== currentQuoteRequestId) return null;
 
     let dataRes = null;
@@ -3584,7 +3593,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
     }
 
     console.log('📥 RESPUESTA COTIZAR:', dataRes);
-    console.log('⏱️ cotización exitosa en ms:', Math.round(performance.now() - startedAt));
+    console.log('⏱️ cotización exitosa total ms:', Math.round(performance.now() - startedAt));
 
     procesarRespuestaCotizacion(dataRes, payload);
     return dataRes;
@@ -3602,6 +3611,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
 
     console.error('❌ Error cotizando:', err);
     console.log('⏱️ cotización falló/abortó en ms:', Math.round(performance.now() - startedAt));
+    console.log('⏱️ abortReason:', abortReason);
 
     notif.show(
       'Modo estimado',
@@ -3617,7 +3627,6 @@ async function cotizarViajeOptimizado(payload, requestId) {
     clearTimeout(timeoutId);
   }
 }
-
 
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
