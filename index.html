@@ -2064,30 +2064,33 @@ let lastSessionCheck = 0;
 
 async function obtenerSesionCliente() {
   if (!window.sbRealtime?.auth) {
-    throw new Error('Cliente de sesión no inicializado');
+    throw new Error('Cliente Auth no inicializado');
   }
 
+  // Si la caché es reciente (menos de 5 min), la usamos
   const now = Date.now();
-
-  if (
-    cachedSession &&
-    cachedSession.access_token &&
-    now - lastSessionCheck < 30000
-  ) {
+  if (cachedSession && now - lastSessionCheck < 300000) {
     return cachedSession;
   }
 
+  // Obtener sesión fresca (puede incluir refresh automático del token)
   const { data, error } = await window.sbRealtime.auth.getSession();
 
   if (error) {
+    console.error('[obtenerSesionCliente] Error getSession:', error);
     throw new Error(error.message || 'No se pudo obtener la sesión');
   }
 
-  cachedSession = data?.session || null;
+  if (!data?.session) {
+    return null;
+  }
+
+  cachedSession = data.session;
   lastSessionCheck = now;
 
   return cachedSession;
 }
+
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
