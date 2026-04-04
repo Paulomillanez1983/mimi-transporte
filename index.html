@@ -2084,17 +2084,16 @@ async function obtenerSesionCliente() {
 
   let session = data?.session || null;
 
-  // Si no hay sesión válida, intentar refrescar una vez
   if (!session?.access_token) {
     const refreshResult = await window.sbRealtime.auth.refreshSession();
     if (refreshResult?.error) {
-      throw new Error(refreshResult.error.message || 'No se pudo refrescar la sesión');
+      throw new Error(refreshResult.error.message);
     }
     session = refreshResult?.data?.session || null;
   }
 
   if (!session?.access_token) {
-    throw new Error('No hay sesión válida del cliente');
+    throw new Error('No hay sesión válida');
   }
 
   cachedSession = session;
