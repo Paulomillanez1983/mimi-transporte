@@ -65,26 +65,26 @@ class TripManager {
 
       // Fallback real: buscar chofer desde auth si el cache falló
       if (!driverId && supabaseService.client?.auth) {
-        const { data: { user } } = await supabaseService.client.auth.getUser();
+  const { data: { user } } = await supabaseService.client.auth.getUser();
 
-        if (user?.id) {
-          const { data: chofer, error } = await supabaseService.client
-            .from('choferes')
-            .select('id_uuid')
-            .eq('user_id', user.id)
-            .maybeSingle();
+  if (user?.id) {
+    const { data: chofer, error } = await supabaseService.client
+      .from('choferes')
+      .select('id_uuid')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-          if (error) {
-            console.error('[TripManager] Error buscando chofer por user_id:', error);
-          }
+    if (error) {
+      console.error('[TripManager] Error buscando chofer por user_id:', error);
+    }
 
-          if (chofer?.id) {
-            driverId = chofer.id_uuid;
-            localStorage.setItem('driverId', driverId);
-            sessionStorage.setItem('driverId', driverId);
-          }
-        }
-      }
+    if (chofer?.id_uuid) {
+      driverId = chofer.id_uuid;
+      localStorage.setItem('driverId', driverId);
+      sessionStorage.setItem('driverId', driverId);
+    }
+  }
+}
 
       if (!driverId) {
         console.error('[TripManager] ❌ No driverId available after fallback');
@@ -392,14 +392,14 @@ async rejectOffer(offerId) {
   const viajeId = ofertaActual.viaje_id || null;
 
   const { error } = await supabaseService.client
-    .from('viaje_ofertas')
-    .update({
-      estado: 'rechazada',
-      respondida_en: new Date().toISOString()
-    })
-    .eq('id', offerId)
-    .eq('chofer_id', driverId)
-    .eq('estado', 'pendiente');
+  .from('viaje_ofertas')
+  .update({
+    estado: 'rechazada',
+    respondida_en: new Date().toISOString()
+  })
+  .eq('id', offerId)
+  .eq('chofer_id', driverId)
+  .in('estado', ['pendiente', 'enviada']);
 
   if (error) {
     console.error('[TripManager] RejectOffer error:', error);
