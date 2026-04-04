@@ -3841,7 +3841,7 @@ async function confirmarViaje() {
     };
 
     console.log('[confirmarViaje] payload:', payload);
-    console.log('[confirmarViaje] url:', `${SUPABASE_URL}/functions/v1/solicitar-viaje`);
+    console.log('[confirmarViaje] url:', `${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`);
 
     if (!payload.origen || !payload.destino) {
       throw new Error('Faltan origen o destino');
@@ -3861,7 +3861,7 @@ async function confirmarViaje() {
       texto: 'Enviando solicitud...'
     });
 
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
