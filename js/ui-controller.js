@@ -323,12 +323,12 @@ showIncomingTrip(tripData, onAccept, onReject) {
   this.lastTripModalId = tripData.id;
 
   // Play sound and haptic SOLO si es nuevo
-const offerTimeout = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15);
+  const offerTimeout = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15);
 
-soundManager.play('newTrip');
-this._haptic('heavy');
-this._playCountdownSound(offerTimeout);
-  
+  soundManager.play('newTrip');
+  this._haptic('heavy');
+  this._playCountdownSound(offerTimeout);
+
   // Store callbacks
   this.state.callbacks = { onAccept, onReject };
   this.state.currentTrip = tripData;
@@ -345,20 +345,19 @@ this._playCountdownSound(offerTimeout);
   // Show modal with animation
   modal.classList.add('active');
   this.state.isModalOpen = true;
-const offerTimeout = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15);
 
-this.state.currentCount = offerTimeout;
+  this.state.currentCount = offerTimeout;
 
-// Start countdown
-this._startCountdown(offerTimeout);
+  // Start countdown
+  this._startCountdown(offerTimeout);
 
-// Auto-reject after timeout
-this.state.countdownTimeout = setTimeout(() => {
-  if (this.state.isModalOpen) {
-    this._handleReject();
-  }
-}, offerTimeout * 1000);}
-
+  // Auto-reject after timeout
+  this.state.countdownTimeout = setTimeout(() => {
+    if (this.state.isModalOpen) {
+      this._handleReject();
+    }
+  }, offerTimeout * 1000);
+}
 _populateTripData(trip) {
   const data = {
     'trip-pickup': trip.origen_direccion || trip.origen || 'Origen no disponible',
@@ -447,7 +446,22 @@ _populateTripData(trip) {
     }
   }, 1000);
 }
+_playCountdownSound(totalSeconds = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15)) {
+  let ticks = 0;
+  const tickStart = Math.max(totalSeconds - 5, 0);
 
+  const tickInterval = setInterval(() => {
+    ticks++;
+
+    if (ticks >= tickStart) {
+      soundManager.play('tick');
+    }
+
+    if (ticks >= totalSeconds || !this.state.isModalOpen) {
+      clearInterval(tickInterval);
+    }
+  }, 1000);
+}
 async _handleAccept(e) {
   if (e) {
     e.preventDefault();
@@ -778,17 +792,19 @@ _updateNavigationInfo(trip) {
       : (trip.origen_direccion || trip.origen || "Recoger pasajero");
   }
 
-if (distanceEl) {
-  let dist = "--";
+  if (distanceEl) {
+    let dist = "--";
 
-  if (!irADestino && trip.distancia_al_origen) {
-    dist = (trip.distancia_al_origen / 1000).toFixed(1) + " km";
-  } else if (irADestino && trip.km) {
-    dist = Number(trip.km).toFixed(1) + " km";
+    if (!irADestino && trip.distancia_al_origen) {
+      dist = (trip.distancia_al_origen / 1000).toFixed(1) + " km";
+    } else if (irADestino && trip.km) {
+      dist = Number(trip.km).toFixed(1) + " km";
+    }
+
+    distanceEl.textContent = dist;
   }
-
-  distanceEl.textContent = dist;
 }
+
 _showTripActions(trip) {
   const sheetContent = this.elements['sheet-content'];
   if (!sheetContent) return;
