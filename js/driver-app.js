@@ -60,7 +60,7 @@ class DriverApp {
       window.addEventListener(
         'click',
         () => {
-          soundManager.enableOnUserInteraction();
+          soundManager.enable();
         },
         { once: true }
       );
@@ -68,7 +68,7 @@ class DriverApp {
       window.addEventListener(
         'touchstart',
         () => {
-          soundManager.enableOnUserInteraction();
+          soundManager.enable();
         },
         { once: true }
       );
@@ -434,7 +434,7 @@ const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
 // =========================================================
 async _onPositionUpdate(position) {
   mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
-
+if (!this._onlineStatus && !tripManager.getCurrentTrip()) return;
   // Estado actual del viaje
   const currentTrip = tripManager.getCurrentTrip();
 
@@ -591,7 +591,24 @@ async _onPositionUpdate(position) {
     const msg = encodeURIComponent('Hola, soy tu conductor de MIMI 🚐');
     window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
   }
+// =========================================================
+// DISTANCE UTILS
+// =========================================================
+_calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3;
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
 
+  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+  return R * c;
+}
   // =========================================================
   // DESTROY (opcional pero pro)
   // =========================================================
