@@ -127,12 +127,15 @@ const CONFIG = {
 };
 
 // Prevent modifications
-Object.freeze(CONFIG);
 Object.freeze(CONFIG.DRIVER_STATES);
 Object.freeze(CONFIG.TRIP_STATES);
 Object.freeze(CONFIG.FEATURES);
 Object.freeze(CONFIG.REDIRECTS);
+
+Object.values(CONFIG.SOUNDS).forEach(Object.freeze);
 Object.freeze(CONFIG.SOUNDS);
+
 Object.freeze(CONFIG.HAPTICS);
+Object.freeze(CONFIG);
 
 export default CONFIG;
