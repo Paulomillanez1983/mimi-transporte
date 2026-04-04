@@ -3444,23 +3444,37 @@ async function calcularRuta() {
 
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUTS.COTIZACION);
+  const timeoutId = setTimeout(
+    () => controller.abort(new Error('timeout_cotizacion')),
+    CONFIG.TIMEOUTS.COTIZACION
+  );
 
   try {
     console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
+
+    const {
+      data: { session },
+      error: sessionError
+    } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw new Error(`No se pudo obtener la sesión: ${sessionError.message}`);
+    }
+
+    if (!session?.access_token) {
+      throw new Error('No hay sesión activa para cotizar');
+    }
 
     const response = await fetch(CONFIG.COTIZAR_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         apikey: SUPABASE_PUBLIC_KEY,
-        Authorization: 'Bearer ' + SUPABASE_PUBLIC_KEY
+        Authorization: `Bearer ${session.access_token}`
       },
       body: JSON.stringify(payload),
       signal: controller.signal
     });
-
-    clearTimeout(timeoutId);
 
     if (requestId !== currentQuoteRequestId) return;
 
@@ -3469,8 +3483,8 @@ async function cotizarViajeOptimizado(payload, requestId) {
 
     try {
       data = rawText ? JSON.parse(rawText) : null;
-    } catch (_) {
-      throw new Error('Respuesta inválida del servidor');
+    } catch {
+      throw new Error(`Respuesta inválida del servidor (${response.status})`);
     }
 
     if (!response.ok || !data?.exito) {
@@ -3480,21 +3494,23 @@ async function cotizarViajeOptimizado(payload, requestId) {
     console.log('📥 RESPUESTA COTIZAR:', data);
     procesarRespuestaCotizacion(data, payload);
   } catch (err) {
-    clearTimeout(timeoutId);
-
     if (requestId !== currentQuoteRequestId) return;
 
-    const mensaje =
-      err?.name === 'AbortError'
-        ? 'La cotización tardó demasiado. Mostramos una estimación provisoria.'
-        : 'No pudimos obtener el precio exacto. Mostramos una estimación provisoria.';
+    const isAbort =
+      err?.name === 'AbortError' ||
+      String(err?.message || '').toLowerCase().includes('timeout');
+
+    const mensaje = isAbort
+      ? 'La cotización tardó demasiado. Mostramos una estimación provisoria.'
+      : 'No pudimos obtener el precio exacto. Mostramos una estimación provisoria.';
 
     console.error('❌ Error cotizando:', err);
     notif.show('Modo estimado', mensaje, 'warning');
     usarFallbackLocal(payload, requestId);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
-
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
