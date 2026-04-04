@@ -164,6 +164,18 @@ window.addEventListener("tripStateChanged", (e) => {
   }
 });
 
+// Cambios de estado del viaje (DB)
+window.addEventListener("tripStateChanged", (e) => {
+  const estado = e.detail?.estado;
+  if (!estado) return;
+
+  if (this.state.currentTrip) {
+    this.state.currentTrip.estado = estado;
+    this._updateNavigateButton(this.state.currentTrip);
+    this._updateNavigationInfo(this.state.currentTrip);
+  }
+});
+
 // Cambios de flow del driver (app)
 window.addEventListener("driverFlowStateChanged", (e) => {
   const state = e.detail?.state;
@@ -181,15 +193,6 @@ window.addEventListener("driverFlowStateChanged", (e) => {
     this._updateNavigateButton(trip);
   }
 });
-    const estado = e.detail?.estado;
-  if (!estado) return;
-
-  if (this.state.currentTrip) {
-    this.state.currentTrip.estado = estado;
-    this._updateNavigateButton(this.state.currentTrip);
-    this._updateNavigationInfo(this.state.currentTrip);
-  }
-
     if (acceptBtn) {
       acceptBtn.addEventListener('click', this._handleAccept);
       acceptBtn.addEventListener('touchstart', () => this._haptic('light'));
