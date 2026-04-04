@@ -622,8 +622,10 @@ class DriverApp {
       const estado = String(currentTrip.estado || '').toUpperCase();
 
       // yendo al origen
-      if ((estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
-          this._driverFlowState === 'GOING_TO_PICKUP') {
+      if (
+        (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
+        this._driverFlowState === 'GOING_TO_PICKUP'
+      ) {
         const distPickup = this._calculateDistance(
           position.lat,
           position.lng,
@@ -631,10 +633,11 @@ class DriverApp {
           currentTrip.origen_lng
         );
 
-if (distDestination < 100) {
-  this._setFlowState('ARRIVED_DESTINATION');
-  uiController.showArrival?.();
-}      
+        if (distPickup < 100) {
+          this._setFlowState('ARRIVED_PICKUP');
+          uiController.showArrival?.();
+        }
+      }
 
       // yendo al destino
       if (estado === 'EN_CURSO' && this._driverFlowState === 'TRIP_STARTED') {
@@ -650,7 +653,7 @@ if (distDestination < 100) {
           uiController.showArrival?.();
         }
       }
-        if (distDestination < 100) {
+      if (distDestination < 100) {
           this._setFlowState('ARRIVED_DESTINATION');
           uiController.showArrival?.();
         }
