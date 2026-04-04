@@ -3287,11 +3287,33 @@ function centrarEnRuta() {
     duration: 600
   });
 }
-
 function reiniciarRuta() {
-  document.getElementById('inputOrigen').value = '';
-  document.getElementById('inputDestino').value = '';
-  document.getElementById('waypointsContainer').innerHTML = '';
+  const inputOrigen = document.getElementById('inputOrigen');
+  const inputDestino = document.getElementById('inputDestino');
+  const waypointsContainer = document.getElementById('waypointsContainer');
+  const breakdown = document.getElementById('priceBreakdown');
+  const breakdownContent = document.getElementById('priceBreakdownContent');
+  const breakdownBtn = document.getElementById('btnToggleBreakdown');
+  const resumenParadas = document.getElementById('resumenParadas');
+  const quotePrice = document.getElementById('quotePrice');
+  const detailDistance = document.getElementById('detailDistance');
+  const detailDuration = document.getElementById('detailDuration');
+  const detailStops = document.getElementById('detailStops');
+  const labelEl = document.querySelector('.quote-price-label');
+
+  if (inputOrigen) {
+    inputOrigen.value = '';
+    inputOrigen.removeAttribute('title');
+  }
+
+  if (inputDestino) {
+    inputDestino.value = '';
+    inputDestino.removeAttribute('title');
+  }
+
+  if (waypointsContainer) {
+    waypointsContainer.innerHTML = '';
+  }
 
   document.querySelectorAll('.sugerencias').forEach((el) => {
     el.innerHTML = '';
@@ -3305,12 +3327,11 @@ function reiniciarRuta() {
     } catch (_) {}
   }
 
-  if (state.markers?.length) {
-    state.markers.forEach((m) => { try { m.remove(); } catch (_) {} });
+  if (Array.isArray(state.markers) && state.markers.length) {
+    state.markers.forEach((m) => {
+      try { m.remove(); } catch (_) {}
+    });
   }
-
-  document.getElementById('inputOrigen')?.removeAttribute('title');
-  document.getElementById('inputDestino')?.removeAttribute('title');
 
   state = {
     origen: null,
@@ -3326,15 +3347,33 @@ function reiniciarRuta() {
   isCalculatingQuote = false;
   currentQuoteRequestId++;
 
+  if (quotePrice) quotePrice.textContent = '$0';
+  if (detailDistance) detailDistance.textContent = '0 km';
+  if (detailDuration) detailDuration.textContent = '0 min';
+  if (detailStops) detailStops.textContent = '0';
+  if (resumenParadas) {
+    resumenParadas.textContent = '0 paradas';
+    resumenParadas.removeAttribute('title');
+  }
+  if (labelEl) labelEl.textContent = 'Precio estimado';
+
+  if (breakdownContent) breakdownContent.innerHTML = '';
+  if (breakdown) breakdown.hidden = true;
+
+  if (breakdownBtn) {
+    breakdownBtn.setAttribute('aria-expanded', 'false');
+    breakdownBtn.style.display = 'none';
+  }
+
+  actualizarTimeline();
   setSectionVisible('mapSection', false);
   setSectionVisible('quoteCard', false);
   setLoadingCotizacion(false);
-
-  // 👉 CERRAR DESGLOSE DE PRECIO
   togglePriceBreakdown(false);
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
+
 // ==========================================
 // COTIZACIÓN
 // ==========================================
@@ -3853,7 +3892,8 @@ function procesarRespuestaCotizacion(data, payload) {
 // ==========================================
 // UI COTIZACIÓN
 // ==========================================
-function mostrarCotizacion(precio, km, minutos) {
+
+ function mostrarCotizacion(precio, km, minutos) {
   const card = document.getElementById('quoteCard');
   if (!card) return;
 
@@ -3881,7 +3921,20 @@ function mostrarCotizacion(precio, km, minutos) {
     dp?.vuelve_al_origen ??
     state.cotizacion?.retorno_al_origen ??
     state.routeData?.retornoAlOrigen ??
-    detectarRetornoAlOrigenFrontend();
+    false;
+
+  const fallbackUsado = !!(
+    state.cotizacion?.fallback_usado ||
+    dp?.fallback_usado ||
+    state.routeData?.fallback ||
+    state.cotizacion?.modo === 'fallback_local'
+  );
+
+  const metodoCalculo =
+    state.cotizacion?.metodo_calculo ||
+    dp?.proveedor_ruta ||
+    dp?.metodo_calculo ||
+    (fallbackUsado ? 'fallback_local_frontend' : 'backend');
 
   const precioTexto =
     state.cotizacion?.precio_formateado ||
@@ -3891,7 +3944,7 @@ function mostrarCotizacion(precio, km, minutos) {
   if (quotePrice) quotePrice.textContent = precioTexto;
 
   let label = 'Precio estimado';
-  if (state.routeData?.fallback || state.cotizacion?.modo === 'fallback_local') {
+  if (fallbackUsado) {
     label = 'Estimación provisoria';
   } else if (dp) {
     label = 'Precio calculado';
@@ -3922,48 +3975,70 @@ function mostrarCotizacion(precio, km, minutos) {
     resumenParadas.title = resumenRuta;
   }
 
-const breakdown = document.getElementById('priceBreakdown');
-const breakdownContent = document.getElementById('priceBreakdownContent');
-const toggleBtn = document.getElementById('btnToggleBreakdown');
+  const breakdown = document.getElementById('priceBreakdown');
+  const breakdownContent = document.getElementById('priceBreakdownContent');
+  const toggleBtn = document.getElementById('btnToggleBreakdown');
 
-if (breakdown && breakdownContent && dp) {
-  const filas = [
-    ['Tarifa base', dp.tarifa_base],
-    ['Subtotal tramos', dp.subtotal_tramos],
-    ['Recargo paradas', dp.recargo_paradas],
-    ['Recargo retorno', dp.recargo_retorno_origen],
-    ['Recargo servicio', dp.recargo_servicio],
-    ['Recargo espera', dp.recargo_espera]
-  ]
-    .filter(([, valor]) => Number(valor || 0) > 0)
-    .map(([labelFila, valor]) => `
-      <div style="display:flex; justify-content:space-between; gap:12px;">
-        <span>${labelFila}</span>
-        <strong>$${Number(valor).toLocaleString('es-AR')}</strong>
-      </div>
-    `)
-    .join('');
+  if (breakdown && breakdownContent) {
+    if (dp) {
+      const filas = [
+        ['Tarifa base', dp.tarifa_base],
+        ['Subtotal tramos', dp.subtotal_tramos],
+        ['Recargo paradas', dp.recargo_paradas],
+        ['Recargo retorno', dp.recargo_retorno_origen],
+        ['Recargo servicio', dp.recargo_servicio],
+        ['Recargo espera', dp.recargo_espera]
+      ]
+        .filter(([, valor]) => Number(valor || 0) > 0)
+        .map(([labelFila, valor]) => `
+          <div style="display:flex; justify-content:space-between; gap:12px;">
+            <span>${labelFila}</span>
+            <strong>$${Number(valor).toLocaleString('es-AR')}</strong>
+          </div>
+        `)
+        .join('');
 
-  const meta = `
-    <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.08); font-size:13px; color:#666;">
-      <div>Hora pico: <strong>${dp.nombre_hora_pico || 'normal'}</strong></div>
-      <div>Factor zona: <strong>${dp.factor_zona || 1}</strong></div>
-      <div>Segmentos: <strong>${segmentos}</strong></div>
-      <div>Retorno: <strong>${retornoAlOrigen ? 'Sí' : 'No'}</strong></div>
-    </div>
-  `;
+      const metaRows = [
+        `<div>Método: <strong>${metodoCalculo}</strong></div>`,
+        `<div>Hora pico: <strong>${dp.nombre_hora_pico || 'normal'}</strong></div>`,
+        `<div>Factor zona: <strong>${dp.factor_zona || 1}</strong></div>`,
+        `<div>Segmentos: <strong>${segmentos}</strong></div>`,
+        `<div>Retorno: <strong>${retornoAlOrigen ? 'Sí' : 'No'}</strong></div>`,
+        `<div>Ruta aproximada: <strong>${fallbackUsado ? 'Sí' : 'No'}</strong></div>`
+      ].join('');
 
-  breakdownContent.innerHTML = (filas || '<div>Sin recargos adicionales</div>') + meta;
+      const meta = `
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.08); font-size:13px; color:#666;">
+          ${metaRows}
+        </div>
+      `;
 
-    if (toggleBtn) {
-    toggleBtn.style.display = 'none';
-    toggleBtn.setAttribute('aria-expanded', 'false');
+      breakdownContent.innerHTML =
+        (filas || '<div>Sin recargos adicionales</div>') + meta;
+
+      if (toggleBtn) {
+        toggleBtn.style.display = 'flex';
+      }
+
+      if (breakdown.hidden === false && toggleBtn) {
+        toggleBtn.setAttribute('aria-expanded', 'true');
+      } else if (toggleBtn) {
+        toggleBtn.setAttribute('aria-expanded', 'false');
+      }
+    } else {
+      breakdownContent.innerHTML = '<div>Sin desglose disponible</div>';
+      breakdown.hidden = true;
+
+      if (toggleBtn) {
+        toggleBtn.style.display = 'none';
+        toggleBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
   }
-}
 
-setSectionVisible('quoteCard', true);
-}
-
+  setSectionVisible('quoteCard', true);
+} 
+  
 // ==========================================
 // ACCIONES
 // ==========================================
@@ -4625,34 +4700,84 @@ function compartirRuta() {
     notif.show('No disponible', 'No se pudo compartir', 'warning');
   }
 }
-
 function intercambiarOrigenDestino() {
   const inputOrigen = document.getElementById('inputOrigen');
   const inputDestino = document.getElementById('inputDestino');
+  const breakdown = document.getElementById('priceBreakdown');
+  const breakdownBtn = document.getElementById('btnToggleBreakdown');
+  const breakdownContent = document.getElementById('priceBreakdownContent');
 
   const origenTmp = state.origen;
   const destinoTmp = state.destino;
 
-  state.origen = destinoTmp;
-  state.destino = origenTmp;
+  state.origen = destinoTmp || null;
+  state.destino = origenTmp || null;
 
   if (inputOrigen) {
     inputOrigen.value = state.origen?.direccionCorta || '';
-    if (state.origen?.direccion) inputOrigen.setAttribute('title', state.origen.direccion);
-    else inputOrigen.removeAttribute('title');
+    if (state.origen?.direccion) {
+      inputOrigen.setAttribute('title', construirTooltip(state.origen));
+    } else {
+      inputOrigen.removeAttribute('title');
+    }
   }
 
   if (inputDestino) {
     inputDestino.value = state.destino?.direccionCorta || '';
-    if (state.destino?.direccion) inputDestino.setAttribute('title', state.destino.direccion);
-    else inputDestino.removeAttribute('title');
+    if (state.destino?.direccion) {
+      inputDestino.setAttribute('title', construirTooltip(state.destino));
+    } else {
+      inputDestino.removeAttribute('title');
+    }
   }
+
+  // Limpiar resultado anterior para no mostrar ruta/cotización vieja
+  state.routeData = null;
+  state.cotizacion = null;
+
+  if (mapaCliente && mapReady) {
+    try {
+      if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+      if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+    } catch (_) {}
+  }
+
+  if (Array.isArray(state.markers) && state.markers.length) {
+    state.markers.forEach((m) => {
+      try { m.remove(); } catch (_) {}
+    });
+  }
+  state.markers = [];
+
+  if (breakdownContent) breakdownContent.innerHTML = '';
+  if (breakdown) breakdown.hidden = true;
+
+  if (breakdownBtn) {
+    breakdownBtn.setAttribute('aria-expanded', 'false');
+    breakdownBtn.style.display = 'none';
+  }
+
+  setSectionVisible('mapSection', false);
+  setSectionVisible('quoteCard', false);
+
+  notif.show('Ruta actualizada', 'Se intercambiaron origen y destino', 'info', 2500);
 }
-function togglePriceBreakdown(forceOpen = null) {
+
+  
+  function togglePriceBreakdown(forceOpen = null) {
   const btn = document.getElementById('btnToggleBreakdown');
   const box = document.getElementById('priceBreakdown');
 
   if (!btn || !box) return;
+
+  // Si está oculto y nos piden cerrar, cerramos igual silenciosamente
+  if (btn.style.display === 'none') {
+    if (forceOpen === false) {
+      btn.setAttribute('aria-expanded', 'false');
+      box.hidden = true;
+    }
+    return;
+  }
 
   const isOpen = btn.getAttribute('aria-expanded') === 'true';
   const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !isOpen;
@@ -4660,42 +4785,99 @@ function togglePriceBreakdown(forceOpen = null) {
   btn.setAttribute('aria-expanded', String(nextOpen));
   box.hidden = !nextOpen;
 }
+
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
 function bindUIActions() {
-  document.getElementById('btnAddStop')?.addEventListener('click', agregarWaypoint);
-  document.getElementById('btnCalcular')?.addEventListener('click', calcularRuta);
-  document.getElementById('btnCentrarRuta')?.addEventListener('click', centrarEnRuta);
-  document.getElementById('btnReiniciarRuta')?.addEventListener('click', reiniciarRuta);
-  document.getElementById('btnConfirmarViaje')?.addEventListener('click', confirmarViaje);
-  document.getElementById('btnCompartirRuta')?.addEventListener('click', compartirRuta);
-  document.getElementById('btnSwapRoute')?.addEventListener('click', intercambiarOrigenDestino);
-  document.getElementById('btnToggleBreakdown')?.addEventListener('click', () => {
-    togglePriceBreakdown();
-  });
-}
-document.addEventListener('DOMContentLoaded', async () => {
-  bindUIActions();
+  const btnAddStop = document.getElementById('btnAddStop');
+  const btnCalcular = document.getElementById('btnCalcular');
+  const btnCentrarRuta = document.getElementById('btnCentrarRuta');
+  const btnReiniciarRuta = document.getElementById('btnReiniciarRuta');
+  const btnConfirmarViaje = document.getElementById('btnConfirmarViaje');
+  const btnCompartirRuta = document.getElementById('btnCompartirRuta');
+  const btnSwapRoute = document.getElementById('btnSwapRoute');
+  const btnToggleBreakdown = document.getElementById('btnToggleBreakdown');
 
-  setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
-    state.origen = data;
-  });
-
-  setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
-    state.destino = data;
-  });
-
-  if (window.sbRealtime?.auth) {
-    window.sbRealtime.auth.onAuthStateChange((event, session) => {
-      console.log('[auth] onAuthStateChange:', event, session);
-      cachedSession = session || null;
-      lastSessionCheck = Date.now();
-    });
+  if (btnAddStop && !btnAddStop.dataset.bound) {
+    btnAddStop.addEventListener('click', agregarWaypoint);
+    btnAddStop.dataset.bound = '1';
   }
 
-  await reanudarViajePendientePostLogin();
-});  
+  if (btnCalcular && !btnCalcular.dataset.bound) {
+    btnCalcular.addEventListener('click', calcularRuta);
+    btnCalcular.dataset.bound = '1';
+  }
+
+  if (btnCentrarRuta && !btnCentrarRuta.dataset.bound) {
+    btnCentrarRuta.addEventListener('click', centrarEnRuta);
+    btnCentrarRuta.dataset.bound = '1';
+  }
+
+  if (btnReiniciarRuta && !btnReiniciarRuta.dataset.bound) {
+    btnReiniciarRuta.addEventListener('click', reiniciarRuta);
+    btnReiniciarRuta.dataset.bound = '1';
+  }
+
+  if (btnConfirmarViaje && !btnConfirmarViaje.dataset.bound) {
+    btnConfirmarViaje.addEventListener('click', confirmarViaje);
+    btnConfirmarViaje.dataset.bound = '1';
+  }
+
+  if (btnCompartirRuta && !btnCompartirRuta.dataset.bound) {
+    btnCompartirRuta.addEventListener('click', compartirRuta);
+    btnCompartirRuta.dataset.bound = '1';
+  }
+
+  if (btnSwapRoute && !btnSwapRoute.dataset.bound) {
+    btnSwapRoute.addEventListener('click', intercambiarOrigenDestino);
+    btnSwapRoute.dataset.bound = '1';
+  }
+
+  if (btnToggleBreakdown && !btnToggleBreakdown.dataset.bound) {
+    btnToggleBreakdown.addEventListener('click', () => {
+      if (btnToggleBreakdown.style.display === 'none') return;
+      togglePriceBreakdown();
+    });
+    btnToggleBreakdown.dataset.bound = '1';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    bindUIActions();
+
+    setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
+      state.origen = data;
+    });
+
+    setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
+      state.destino = data;
+    });
+
+    if (window.sbRealtime?.auth) {
+      window.sbRealtime.auth.onAuthStateChange((event, session) => {
+        console.log('[auth] onAuthStateChange:', event, session);
+
+        cachedSession = session || null;
+        lastSessionCheck = Date.now();
+
+        if (!session) return;
+
+        // opcional: si querés reflejar rápido en memoria local
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          cachedSession = session;
+          lastSessionCheck = Date.now();
+        }
+      });
+    }
+
+    await reanudarViajePendientePostLogin();
+  } catch (err) {
+    console.error('❌ Error en DOMContentLoaded:', err);
+  }
+});
+
 </script>
 </body>
 </html>
