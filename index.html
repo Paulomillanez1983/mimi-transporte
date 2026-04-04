@@ -37,14 +37,6 @@ function normalizarBusqueda(texto) {
     .trim();
 }
 
-function getSupabaseHeaders(accessToken, extra = {}) {
-  return {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${accessToken}`,
-    Accept: "application/json",
-    ...extra
-  };
-}
 function getPublicSupabaseHeaders(extra = {}) {
   return {
     apikey: SUPABASE_ANON_KEY,
@@ -53,6 +45,16 @@ function getPublicSupabaseHeaders(extra = {}) {
     ...extra
   };
 }
+
+function getAuthSupabaseHeaders(accessToken, extra = {}) {
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${accessToken}`,
+    Accept: "application/json",
+    ...extra
+  };
+}
+  
 async function safeReadJson(response) {
   if (!response) return null;
 
@@ -285,7 +287,7 @@ function createQueryBuilder(table) {
 
         const result = await safeFetch(url, {
           method: "GET",
-          headers: getSupabaseHeaders()
+          headers: getPublicSupabaseHeaders()
         });
 
         if (!result.response) {
@@ -323,7 +325,6 @@ function createQueryBuilder(table) {
 
   return builder;
 }
-
 window.supabase = {
   from(table) {
     return createQueryBuilder(table);
@@ -335,7 +336,7 @@ window.supabase = {
         `${SUPABASE_URL}/rest/v1/rpc/${encodeURIComponent(functionName)}`,
         {
           method: "POST",
-          headers: getSupabaseHeaders({
+          headers: getPublicSupabaseHeaders({
             "Content-Type": "application/json"
           }),
           body: JSON.stringify(params ?? {})
@@ -370,18 +371,20 @@ window.supabase = {
     }
   }
 };
+
 if (SupabaseSDK?.createClient) {
   window.sbRealtime = SupabaseSDK.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 } else {
   console.error('No se pudo inicializar Supabase Realtime/Auth');
 }
+
 window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   try {
     const url = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`;
 
     const result = await safeFetch(url, {
       method: "PATCH",
-      headers: getSupabaseHeaders({
+      headers: getPublicSupabaseHeaders({
         "Content-Type": "application/json",
         Prefer: "return=representation"
       }),
@@ -422,7 +425,7 @@ window.supabaseInsert = async function(table, data) {
 
     const result = await safeFetch(`${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}`, {
       method: "POST",
-      headers: getSupabaseHeaders({
+      headers: getPublicSupabaseHeaders({
         "Content-Type": "application/json",
         Prefer: "return=representation"
       }),
@@ -493,7 +496,7 @@ async function buscarDireccion(query) {
       `${SUPABASE_URL}/functions/v1/geocodificar`,
       {
         method: "POST",
-        headers: getSupabaseHeaders({
+        headers: getPublicSupabaseHeaders({
           "Content-Type": "application/json"
         }),
         body: JSON.stringify({
@@ -532,6 +535,7 @@ async function buscarDireccion(query) {
     return [];
   }
 }
+
 </script>
 <style>
 
