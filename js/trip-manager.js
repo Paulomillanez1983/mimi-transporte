@@ -249,7 +249,7 @@ class TripManager {
         trip = data;
 
         // Validación extra: si el viaje ya no está ofertable, no mostrarlo
-        if (trip && !['OFERTADO', 'ASIGNADO', 'DISPONIBLE'].includes(trip.estado)) {
+        if (trip && !['OFERTADO', 'ASIGNADO', 'DISPONIBLE', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
           console.warn('[TripManager] Offer ignored because trip is no longer offerable:', trip.id, trip.estado);
 
           this.pendingOffer = null;
