@@ -83,19 +83,6 @@ class UIController {
         break;
     }
   }
-  // Bindings
-  this._handleAccept = this._handleAccept.bind(this);
-  this._handleReject = this._handleReject.bind(this);
-  this._onBackdropClick = this._onBackdropClick.bind(this);
-  this._onTouchStart = this._onTouchStart.bind(this);
-  this._onTouchMove = this._onTouchMove.bind(this);
-  this._onTouchEnd = this._onTouchEnd.bind(this);
-
-  // Touch handling for bottom sheet
-  this.touchStartY = 0;
-  this.touchCurrentY = 0;
-  this.sheetHeight = 0;
-}
 
   init() {
     this._cacheElements();
