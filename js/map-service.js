@@ -868,8 +868,7 @@ updateDriverPosition(lng, lat, heading = 0) {
     }, 12000);
 
     try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
-
+const url = `${CONFIG.OSRM_URL}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
       const res = await fetch(url, {
         signal: this._osrmController.signal,
         headers: { Accept: "application/json" },
