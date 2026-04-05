@@ -516,3 +516,213 @@
     font-size: 14px;
   }
 }
+/* =========================================================
+   MIMI DRIVER - GLOBAL UI LAYOUT UBER STYLE
+   ========================================================= */
+
+/* HEADER FLOTANTE */
+.header {
+  position: fixed;
+  top: calc(10px + var(--safe-top));
+  left: 12px;
+  right: 12px;
+  z-index: 100;
+  background: rgba(18,18,18,0.75);
+  backdrop-filter: blur(20px);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  min-height: 60px;
+}
+
+/* PERFIL */
+.driver-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #276EF1, #448AFF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #fff;
+  position: relative;
+}
+
+.status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #6b7280;
+  border: 2px solid #000;
+}
+
+.status-dot.online {
+  background: #06C167;
+}
+
+.driver-info h1 {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.status-text {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+}
+
+/* STATS FLOTANTES */
+.stats-floating {
+  position: fixed;
+  top: calc(80px + var(--safe-top));
+  left: 12px;
+  right: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  z-index: 90;
+}
+
+.stat-card {
+  background: rgba(20,20,20,0.75);
+  backdrop-filter: blur(20px);
+  border-radius: 14px;
+  padding: 10px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+}
+
+/* FAB ONLINE */
+.fab-online {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(110px + var(--safe-bottom));
+  z-index: 120;
+  border-radius: 999px;
+  padding: 16px 26px;
+  background: rgba(0,0,0,0.85);
+  color: white;
+  font-weight: 800;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+
+.fab-online.online {
+  background: linear-gradient(135deg, #05944F, #06C167);
+}
+
+/* BOTONES MAPA */
+.map-btn {
+  position: fixed;
+  right: 14px;
+  bottom: calc(180px + var(--safe-bottom));
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(20,20,20,0.85);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: white;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+}
+
+/* NAV BAR */
+.nav-bar {
+  position: fixed;
+  top: calc(80px + var(--safe-top));
+  left: 12px;
+  right: 12px;
+  background: rgba(30,58,47,0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 14px;
+  padding: 14px;
+  transform: translateY(-200%);
+  transition: transform 0.3s;
+  z-index: 150;
+}
+
+.nav-bar.active {
+  transform: translateY(0);
+}
+
+/* BOTTOM SHEET */
+.bottom-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 88vh;
+  background: linear-gradient(180deg,#1C1C1E,#0A0A0A);
+  border-radius: 24px 24px 0 0;
+  transform: translateY(calc(100% - 120px));
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 -15px 50px rgba(0,0,0,0.6);
+  z-index: 110;
+}
+
+.bottom-sheet.expanded {
+  transform: translateY(0);
+}
+
+.sheet-handle {
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+.handle-bar {
+  width: 40px;
+  height: 5px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+}
+
+.sheet-content {
+  padding: 10px 16px calc(20px + var(--safe-bottom));
+}
+
+/* WAITING STATE */
+.waiting-state {
+  text-align: center;
+  padding: 30px 10px;
+}
+
+.waiting-state h3 {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.waiting-state p {
+  color: rgba(255,255,255,0.6);
+}
