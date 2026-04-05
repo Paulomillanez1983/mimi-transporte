@@ -25,7 +25,50 @@ constructor() {
 
   // ✅ FIX anti-parpadeo modal
   this.lastTripModalId = null;
+renderDriverFlowState(state, trip) {
+  console.log('[UI] Flow state:', state);
 
+  switch(state) {
+    case 'OFFLINE':
+      this.hideNavigation();
+      this.hideArrival();
+      this.showWaitingState();
+      break;
+
+    case 'ONLINE_IDLE':
+      this.hideNavigation();
+      this.hideArrival();
+      this.showWaitingState();
+      break;
+
+    case 'RECEIVING_OFFER':
+      // El modal se muestra desde driver-app
+      break;
+
+    case 'GOING_TO_PICKUP':
+      this.showNavigationState(trip);
+      break;
+
+    case 'ARRIVED_PICKUP':
+      this.showArrival();
+      break;
+
+    case 'TRIP_STARTED':
+      this.showNavigationState(trip);
+      break;
+
+    case 'ARRIVED_DESTINATION':
+      this.showArrival();
+      break;
+
+    case 'TRIP_COMPLETED':
+      this.hideNavigation();
+      this.hideArrival();
+      this.showWaitingState();
+      this.showToast('Viaje finalizado', 'success');
+      break;
+  }
+}
   // Bindings
   this._handleAccept = this._handleAccept.bind(this);
   this._handleReject = this._handleReject.bind(this);
@@ -163,7 +206,12 @@ window.addEventListener("tripStateChanged", (e) => {
     this._updateNavigationInfo(this.state.currentTrip);
   }
 });
+window.addEventListener("driverFlowStateChanged", (e) => {
+  const state = e.detail?.state;
+  const trip = this.state.currentTrip;
 
+  this.renderDriverFlowState(state, trip);
+});
 
 // Cambios de flow del driver (app)
 window.addEventListener("driverFlowStateChanged", (e) => {
