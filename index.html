@@ -3832,8 +3832,10 @@ function procesarRespuestaCotizacion(data, payload) {
   const duracion = numeroSeguro(data?.duracion_min, 0);
   
   // Guardar geometría si viene
-  const coordsBackend = Array.isArray(data?.route_geometry) ? data.route_geometry : null;
-  
+const coordsBackend =
+  Array.isArray(data?.route_geometry) && data.route_geometry.length >= 2
+    ? data.route_geometry
+    : null;  
   const detallePrecio = data?.detalle_precio || {};
   const fallbackUsado = !!(data?.fallback_usado || detallePrecio?.fallback_usado);
   const metodoCalculo = data?.metodo_calculo || detallePrecio?.proveedor_ruta || 'desconocido';
@@ -3854,29 +3856,33 @@ function procesarRespuestaCotizacion(data, payload) {
     metodo_calculo: metodoCalculo
   };
 
-  state.routeData = {
-    distance: distancia,
-    duration: duracion,
-    resumenRuta: resumenRuta,
-    fallback: fallbackUsado,
-    geometry: coordsBackend ? {
-      type: 'LineString',
-      coordinates: coordsBackend
-    } : null
-  };
+state.routeData = {
+  distance: distancia,
+  duration: duracion,
+  resumenRuta: resumenRuta,
+  fallback: fallbackUsado,
+  geometry: coordsBackend
+    ? {
+        type: 'LineString',
+        coordinates: coordsBackend
+      }
+    : null
+};
 
-  // Si no vino geometría del backend pero tenemos puntos, dibujar línea simple
-  if (!coordsBackend && Array.isArray(data?.puntos_ruta)) {
-    const coordsSimples = data.puntos_ruta
-      .map(p => [Number(p.lng), Number(p.lat)])
-      .filter(c => Number.isFinite(c[0]) && Number.isFinite(c[1]));
-    
-    if (coordsSimples.length >= 2) {
-      setSectionVisible('mapSection', true);
-      initMapa().then(() => dibujarRutaLineal(coordsSimples));
-    }
+// Mostrar mapa siempre que haya al menos 2 puntos válidos
+if (coordsBackend) {
+  setSectionVisible('mapSection', true);
+  initMapa().then(() => dibujarRutaReal(coordsBackend));
+} else if (Array.isArray(data?.puntos_ruta)) {
+  const coordsSimples = data.puntos_ruta
+    .map((p) => [Number(p.lng), Number(p.lat)])
+    .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+
+  if (coordsSimples.length >= 2) {
+    setSectionVisible('mapSection', true);
+    initMapa().then(() => dibujarRutaLineal(coordsSimples));
   }
-
+}
   if (fallbackUsado) {
     notif.show(
       'Ruta estimada',
