@@ -3530,7 +3530,6 @@ async function calcularRuta() {
       throw new Error('Completá origen y destino');
     }
 
-    // 1) Resolver origen/destino si todavía no están geocodificados en state
     let origenActual = state.origen;
     let destinoActual = state.destino;
 
@@ -3544,6 +3543,7 @@ async function calcularRuta() {
     ) {
       setLoadingCotizacion(true, 'Resolviendo origen...');
       origenActual = await resolverPuntoDesdeTexto(textoOrigen);
+
       if (!origenActual) {
         throw new Error('No pudimos ubicar el origen');
       }
@@ -3566,6 +3566,7 @@ async function calcularRuta() {
     ) {
       setLoadingCotizacion(true, 'Resolviendo destino...');
       destinoActual = await resolverPuntoDesdeTexto(textoDestino);
+
       if (!destinoActual) {
         throw new Error('No pudimos ubicar el destino');
       }
@@ -3581,7 +3582,6 @@ async function calcularRuta() {
       };
     }
 
-    // 2) Resolver waypoints pendientes del DOM
     setLoadingCotizacion(true, 'Resolviendo paradas...');
     const erroresWaypoints = await resolverWaypointsPendientes();
 
@@ -3589,8 +3589,8 @@ async function calcularRuta() {
       throw new Error(`No pudimos ubicar una o más paradas: ${erroresWaypoints.join(', ')}`);
     }
 
-    // 3) Armar puntos ordenados reales
     const puntos = obtenerPuntosOrdenados();
+
     console.log('STATE.ORIGEN:', state.origen);
     console.log('STATE.WAYPOINTS:', state.waypoints);
     console.log('STATE.DESTINO:', state.destino);
@@ -3605,8 +3605,8 @@ async function calcularRuta() {
       throw new Error(errorRuta);
     }
 
-    // 4) Estimación local y payload optimizado
     setLoadingCotizacion(true, 'Calculando ruta y precio...');
+
     const estimacionLocal = calcularEstimacionLocal(puntos);
     const payload = construirPayloadOptimizado(puntos, estimacionLocal);
 
@@ -3614,7 +3614,6 @@ async function calcularRuta() {
       throw new Error('No se pudo construir el payload de cotización');
     }
 
-    // Mantener compatibilidad con tu backend actual
     payload.fechaHora = new Date().toISOString();
     payload.factor_zona = 1;
     payload.espera_min = 0;
@@ -3629,11 +3628,9 @@ async function calcularRuta() {
       throw new Error(resultado?.error || 'Error en la cotización');
     }
 
-    // 5) Guardar resultado
     state.routeData = resultado;
     state.cotizacion = resultado;
 
-    // 6) Si el backend devolvió puntos resueltos, sincronizar state y UI
     if (Array.isArray(resultado.puntos_ruta) && resultado.puntos_ruta.length >= 2) {
       const puntosBackend = resultado.puntos_ruta;
 
@@ -3651,11 +3648,19 @@ async function calcularRuta() {
       const inputDestino = document.getElementById('inputDestino');
 
       if (inputOrigen && state.origen) {
-        inputOrigen.value = state.origen.direccion_corta || state.origen.direccionCorta || state.origen.direccion || '';
+        inputOrigen.value =
+          state.origen.direccion_corta ||
+          state.origen.direccionCorta ||
+          state.origen.direccion ||
+          '';
       }
 
       if (inputDestino && state.destino) {
-        inputDestino.value = state.destino.direccion_corta || state.destino.direccionCorta || state.destino.direccion || '';
+        inputDestino.value =
+          state.destino.direccion_corta ||
+          state.destino.direccionCorta ||
+          state.destino.direccion ||
+          '';
       }
 
       const wpInputs = document.querySelectorAll('.waypoint-input');
@@ -3663,7 +3668,11 @@ async function calcularRuta() {
         .filter((p) => p.rol === 'stop')
         .forEach((p, idx) => {
           if (wpInputs[idx]) {
-            wpInputs[idx].value = p.direccion_corta || p.direccionCorta || p.direccion || '';
+            wpInputs[idx].value =
+              p.direccion_corta ||
+              p.direccionCorta ||
+              p.direccion ||
+              '';
           }
         });
     }
@@ -3684,8 +3693,7 @@ async function calcularRuta() {
       setLoadingCotizacion(false);
     }
   }
-}
-  
+} 
   
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
