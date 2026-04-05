@@ -3517,7 +3517,7 @@ function reiniciarRuta() {
 async function calcularRuta() {
   if (isCalculatingQuote) return;
   const requestId = ++currentQuoteRequestId;
-  
+
   setLoadingCotizacion(true, 'Preparando ruta...');
   setSectionVisible('quoteCard', false);
   togglePriceBreakdown(false);
@@ -3525,91 +3525,156 @@ async function calcularRuta() {
   try {
     const textoOrigen = document.getElementById('inputOrigen')?.value?.trim();
     const textoDestino = document.getElementById('inputDestino')?.value?.trim();
-    
+
     if (!textoOrigen || !textoDestino) {
       throw new Error('Completá origen y destino');
     }
 
-    // Obtener textos de waypoints (sin geocodificar)
-    const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
-    const paradas = waypointInputs
-      .map((input, idx) => ({
-        orden: idx + 1,
-        direccion: input.value.trim()
-      }))
-      .filter(w => w.direccion.length > 2);
+    // 1) Resolver origen/destino si todavía no están geocodificados en state
+    let origenActual = state.origen;
+    let destinoActual = state.destino;
 
-    // Detectar si hay retorno al origen (opcional, para el servicio)
-    const retornoAlOrigen = paradas.some(p => 
-      normalizarTextoDireccion(p.direccion) === normalizarTextoDireccion(textoOrigen)
-    );
+    const origenNormalizado = normalizarTextoDireccion(textoOrigen);
+    const destinoNormalizado = normalizarTextoDireccion(textoDestino);
 
-    // Payload simple - solo textos, la Edge Function geocodea
-    const payload = {
-      servicio: retornoAlOrigen ? 'IDA_Y_VUELTA_ESCOLAR' : 'IDA_ESCOLAR',
-      origen: textoOrigen,
-      destino: textoDestino,
-      paradas: paradas,
-      fechaHora: new Date().toISOString(),
-      factor_zona: 1,
-      espera_min: 0
-    };
+    if (
+      !origenActual ||
+      !coordenadasValidas(origenActual.lat, origenActual.lng) ||
+      normalizarTextoDireccion(origenActual.direccionCorta || origenActual.direccion || '') !== origenNormalizado
+    ) {
+      setLoadingCotizacion(true, 'Resolviendo origen...');
+      origenActual = await resolverPuntoDesdeTexto(textoOrigen);
+      if (!origenActual) {
+        throw new Error('No pudimos ubicar el origen');
+      }
 
-    console.log('📦 Payload enviado (textos crudos):', payload);
+      state.origen = {
+        id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        direccion: origenActual.direccion,
+        direccionCorta: origenActual.direccionCorta,
+        direccionSecundaria: origenActual.direccionSecundaria,
+        lat: Number(origenActual.lat),
+        lng: Number(origenActual.lng),
+        raw: origenActual.raw || null
+      };
+    }
 
+    if (
+      !destinoActual ||
+      !coordenadasValidas(destinoActual.lat, destinoActual.lng) ||
+      normalizarTextoDireccion(destinoActual.direccionCorta || destinoActual.direccion || '') !== destinoNormalizado
+    ) {
+      setLoadingCotizacion(true, 'Resolviendo destino...');
+      destinoActual = await resolverPuntoDesdeTexto(textoDestino);
+      if (!destinoActual) {
+        throw new Error('No pudimos ubicar el destino');
+      }
+
+      state.destino = {
+        id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        direccion: destinoActual.direccion,
+        direccionCorta: destinoActual.direccionCorta,
+        direccionSecundaria: destinoActual.direccionSecundaria,
+        lat: Number(destinoActual.lat),
+        lng: Number(destinoActual.lng),
+        raw: destinoActual.raw || null
+      };
+    }
+
+    // 2) Resolver waypoints pendientes del DOM
+    setLoadingCotizacion(true, 'Resolviendo paradas...');
+    const erroresWaypoints = await resolverWaypointsPendientes();
+
+    if (erroresWaypoints.length > 0) {
+      throw new Error(`No pudimos ubicar una o más paradas: ${erroresWaypoints.join(', ')}`);
+    }
+
+    // 3) Armar puntos ordenados reales
+    const puntos = obtenerPuntosOrdenados();
+    console.log('STATE.ORIGEN:', state.origen);
+    console.log('STATE.WAYPOINTS:', state.waypoints);
+    console.log('STATE.DESTINO:', state.destino);
+    console.log('PUNTOS ORDENADOS FINAL:', puntos);
+
+    if (!Array.isArray(puntos) || puntos.length < 2) {
+      throw new Error('Ruta inválida: faltan puntos válidos');
+    }
+
+    const errorRuta = validarPuntosRuta(puntos);
+    if (errorRuta) {
+      throw new Error(errorRuta);
+    }
+
+    // 4) Estimación local y payload optimizado
     setLoadingCotizacion(true, 'Calculando ruta y precio...');
-    
-    // Llamar a Edge Function directamente
+    const estimacionLocal = calcularEstimacionLocal(puntos);
+    const payload = construirPayloadOptimizado(puntos, estimacionLocal);
+
+    if (!payload) {
+      throw new Error('No se pudo construir el payload de cotización');
+    }
+
+    // Mantener compatibilidad con tu backend actual
+    payload.fechaHora = new Date().toISOString();
+    payload.factor_zona = 1;
+    payload.espera_min = 0;
+
+    console.log('📦 Payload enviado (optimizado):', payload);
+
     const resultado = await cotizarViajeOptimizado(payload, requestId);
-    
+
     if (requestId !== currentQuoteRequestId) return;
-    
-    if (resultado && resultado.exito) {
-      // Guardar los puntos resueltos que vienen del backend
-      if (Array.isArray(resultado.puntos_ruta)) {
-        const puntos = resultado.puntos_ruta;
-        
-        // Actualizar state con los datos resueltos por el backend
-        state.origen = puntos.find(p => p.rol === 'pickup') || puntos[0];
-        state.destino = puntos.find(p => p.rol === 'dropoff') || puntos[puntos.length - 1];
-        
-        // Actualizar waypoints
-        state.waypoints = puntos
-          .filter(p => p.rol === 'stop')
-          .map((p, idx) => ({
-            id: `waypoint-${idx + 1}`,
-            data: p
-          }));
 
-        // Actualizar inputs con las direcciones cortas que vienen del backend
-        if (state.origen) {
-          document.getElementById('inputOrigen').value = state.origen.direccion_corta || state.origen.direccion;
-        }
-        if (state.destino) {
-          document.getElementById('inputDestino').value = state.destino.direccion_corta || state.destino.direccion;
-        }
-        
-        // Actualizar waypoints en DOM si hay diferencias
-        const wpInputs = document.querySelectorAll('.waypoint-input');
-        puntos.filter(p => p.rol === 'stop').forEach((p, idx) => {
-          if (wpInputs[idx]) {
-            wpInputs[idx].value = p.direccion_corta || p.direccion;
-          }
-        });
-      }
-
-      procesarRespuestaCotizacion(resultado, payload);
-      
-      // Mostrar mapa con la geometría real
-      if (resultado.route_geometry && resultado.route_geometry.length > 0) {
-        setSectionVisible('mapSection', true);
-        await initMapa();
-        dibujarRutaReal(resultado.route_geometry);
-      }
-    } else {
+    if (!resultado || !resultado.exito) {
       throw new Error(resultado?.error || 'Error en la cotización');
     }
 
+    // 5) Guardar resultado
+    state.routeData = resultado;
+    state.cotizacion = resultado;
+
+    // 6) Si el backend devolvió puntos resueltos, sincronizar state y UI
+    if (Array.isArray(resultado.puntos_ruta) && resultado.puntos_ruta.length >= 2) {
+      const puntosBackend = resultado.puntos_ruta;
+
+      state.origen = puntosBackend.find((p) => p.rol === 'pickup') || puntosBackend[0];
+      state.destino = puntosBackend.find((p) => p.rol === 'dropoff') || puntosBackend[puntosBackend.length - 1];
+
+      state.waypoints = puntosBackend
+        .filter((p) => p.rol === 'stop')
+        .map((p, idx) => ({
+          id: `waypoint-${idx + 1}`,
+          data: p
+        }));
+
+      const inputOrigen = document.getElementById('inputOrigen');
+      const inputDestino = document.getElementById('inputDestino');
+
+      if (inputOrigen && state.origen) {
+        inputOrigen.value = state.origen.direccion_corta || state.origen.direccionCorta || state.origen.direccion || '';
+      }
+
+      if (inputDestino && state.destino) {
+        inputDestino.value = state.destino.direccion_corta || state.destino.direccionCorta || state.destino.direccion || '';
+      }
+
+      const wpInputs = document.querySelectorAll('.waypoint-input');
+      puntosBackend
+        .filter((p) => p.rol === 'stop')
+        .forEach((p, idx) => {
+          if (wpInputs[idx]) {
+            wpInputs[idx].value = p.direccion_corta || p.direccionCorta || p.direccion || '';
+          }
+        });
+    }
+
+    procesarRespuestaCotizacion(resultado, payload);
+
+    if (resultado.route_geometry && resultado.route_geometry.length > 0) {
+      setSectionVisible('mapSection', true);
+      await initMapa();
+      dibujarRutaReal(resultado.route_geometry);
+    }
   } catch (err) {
     if (requestId !== currentQuoteRequestId) return;
     console.error('❌ Error:', err);
@@ -3620,6 +3685,8 @@ async function calcularRuta() {
     }
   }
 }
+  
+  
 async function cotizarViajeOptimizado(payload, requestId) {
   const controller = new AbortController();
   const startedAt = performance.now();
@@ -3632,25 +3699,23 @@ async function cotizarViajeOptimizado(payload, requestId) {
     console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
     console.log('⏱️ inicio cotización');
 
-    // Usar SUPABASE_ANON_KEY (que ya existe en tu código)
     const apiKey = SUPABASE_ANON_KEY;
-    
+
     if (!apiKey) {
       throw new Error('No se encontró la API Key de Supabase');
     }
 
     if (requestId !== currentQuoteRequestId) return null;
 
-    // Headers correctos para Edge Function pública
     const headers = {
       'Content-Type': 'application/json',
-      'apikey': apiKey,
-      'Authorization': `Bearer ${apiKey}`  // Necesario para Edge Functions
+      apikey: apiKey,
+      Authorization: `Bearer ${apiKey}`
     };
 
-    console.log('Headers enviados:', { 
+    console.log('Headers enviados:', {
       apikey: apiKey ? 'presente' : 'ausente',
-      auth: apiKey ? 'presente' : 'ausente' 
+      auth: apiKey ? 'presente' : 'ausente'
     });
 
     const tFetch = performance.now();
@@ -3660,7 +3725,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
       body: JSON.stringify(payload),
       signal: controller.signal
     });
-    
+
     console.log('⏱️ fetch respondió headers en ms:', Math.round(performance.now() - tFetch));
     console.log('Response status:', response.status);
 
@@ -3669,7 +3734,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
     const tBody = performance.now();
     const rawText = await response.text();
     console.log('⏱️ body leído en ms:', Math.round(performance.now() - tBody));
-    console.log('Raw response:', rawText.substring(0, 500));
+    console.log('Raw response:', rawText.substring(0, 1000));
 
     if (requestId !== currentQuoteRequestId) return null;
 
@@ -3695,14 +3760,15 @@ async function cotizarViajeOptimizado(payload, requestId) {
     console.log('⏱️ cotización exitosa total ms:', Math.round(performance.now() - startedAt));
 
     return dataRes;
-    
   } catch (err) {
     if (requestId !== currentQuoteRequestId) return null;
-    throw err;  // Re-lanzar para que calcularRuta lo maneje
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }
-}  
+}
+  
+  
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
