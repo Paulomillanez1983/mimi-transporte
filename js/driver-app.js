@@ -621,9 +621,7 @@ class DriverApp {
 if (currentTrip) {
   const estado = String(currentTrip.estado || '').toUpperCase();
 
-  // ================================
   // Llegada al ORIGEN
-  // ================================
   if (
     (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
     this._driverFlowState === 'GOING_TO_PICKUP'
@@ -641,9 +639,7 @@ if (currentTrip) {
     }
   }
 
-  // ================================
   // Llegada al DESTINO
-  // ================================
   if (
     estado === 'EN_CURSO' &&
     this._driverFlowState === 'TRIP_STARTED'
@@ -661,15 +657,6 @@ if (currentTrip) {
     }
   }
 }
-    
-if (distDestination < 100) {
-          this._setFlowState('ARRIVED_DESTINATION');
-          uiController.showArrival?.();
-        }
-      }
-    }
-  }
-
   // =========================================================
   // UI SETUP
   // =========================================================
