@@ -52,174 +52,177 @@ class DriverApp {
     );
   }
 
-  // =========================================================
-  // INIT
-  // =========================================================
-  async init() {
-    console.log('[DriverApp] Iniciando aplicación...');
+// =========================================================
+// INIT
+// =========================================================
+async init() {
+  console.log('[DriverApp] Iniciando aplicación...');
 
-    try {
-      // 1) Inicializar Supabase
-      console.log('[DriverApp] Inicializando Supabase...');
-      const dbReady = await supabaseService.init();
-      if (!dbReady) throw new Error('No se pudo conectar a Supabase');
+  // Inicializar UI primero para cachear elementos como global-loading
+  uiController.init();
+  uiController.setGlobalLoading(true, 'Cargando...');
 
-      // 2) Verificar usuario logueado (RLS)
-      const {
-        data: { user }
-      } = await supabaseService.client.auth.getUser();
+  try {
+    // 1) Inicializar Supabase
+    console.log('[DriverApp] Inicializando Supabase...');
+    const dbReady = await supabaseService.init();
+    if (!dbReady) throw new Error('No se pudo conectar a Supabase');
 
-      if (!user) {
-        console.log('[DriverApp] No autenticado, redirigiendo a login');
-        window.location.href = CONFIG.REDIRECTS.LOGIN;
-        return;
-      }
+    // 2) Verificar usuario logueado (RLS)
+    const {
+      data: { user }
+    } = await supabaseService.client.auth.getUser();
 
-      this._authUserId = user.id;
-      await initPushFCM('chofer');
-      console.log('[DriverApp] Auth user detectado:', this._authUserId);
-
-      // 3) Inicializar UI
-      uiController.init();
-
-      // 🔓 desbloqueo audio/haptics en primer toque real
-      window.addEventListener(
-        'click',
-        () => {
-          soundManager.enableOnUserInteraction?.();
-        },
-        { once: true }
-      );
-
-      window.addEventListener(
-        'touchstart',
-        () => {
-          soundManager.enableOnUserInteraction?.();
-        },
-        { once: true }
-      );
-
-      // 4) Inicializar mapa + GPS
-      console.log('[DriverApp] Inicializando servicios...');
-      const results = await Promise.allSettled([
-        mapService.init('map-container'),
-        locationTracker.start((pos) => this._onPositionUpdate(pos))
-      ]);
-
-      console.log('[DriverApp] Resultados inicialización:', {
-        mapa: results[0].status,
-        ubicacion: results[1].status
-      });
-
-      if (results[0].status === 'rejected') {
-        console.error('[DriverApp] Error mapa:', results[0].reason);
-      }
-
-      if (results[1].status === 'rejected') {
-        console.error('[DriverApp] Error GPS:', results[1].reason);
-      }
-
-      // 5) Resolver driverId real antes de TripManager
-      console.log('[DriverApp] Resolviendo driverId...');
-      const driverId = await this._resolveDriverId();
-
-      console.log('[DriverApp] driverId detectado:', driverId);
-
-      // 6) Inicializar TripManager
-      console.log('[DriverApp] Inicializando TripManager...');
-      const tripManagerReady = await tripManager.init(driverId);
-
-      if (!tripManagerReady) {
-        console.warn('[DriverApp] ⚠️ TripManager no pudo inicializarse (sin driverId)');
-        uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
-      }
-
-      // 7) Suscribirse a eventos
-      this._subscribeToEvents();
-
-      // 8) Configurar UI
-      this._setupUI();
-
-      this.initialized = true;
-      console.log('[DriverApp] ✅ Aplicación inicializada correctamente');
-
-      if (!tripManagerReady) {
-        console.warn('[DriverApp] App iniciada sin TripManager operativo');
-        this._onlineStatus = false;
-        uiController.updateDriverState('OFFLINE', false);
-        this._setFlowState('OFFLINE');
-        uiController.showWaitingState();
-        return;
-      }
-
-      // Estado inicial real del chofer desde BD
-      try {
-        const { data: choferRow, error: choferError } = await supabaseService.client
-          .from('choferes')
-          .select('online, disponible')
-          .eq('user_id', this._authUserId)
-          .maybeSingle();
-
-        if (choferError) {
-          console.warn('[DriverApp] No se pudo leer estado inicial del chofer:', choferError);
-        }
-
-        this._onlineStatus = !!choferRow?.online;
-      } catch (e) {
-        console.warn('[DriverApp] Error leyendo estado inicial online:', e);
-        this._onlineStatus = false;
-      }
-
-      uiController.updateDriverState(
-        this._onlineStatus ? 'ONLINE' : 'OFFLINE',
-        this._onlineStatus
-      );
-
-      if (!this._onlineStatus) {
-        this._setFlowState('OFFLINE');
-      }
-
-      // Estado inicial de viajes
-      const currentTrip = tripManager.getCurrentTrip();
-      const pendingTrip = tripManager.getPendingTrip();
-      if (currentTrip) {
-        console.log('[DriverApp] Estado inicial: viaje activo');
-        this._currentTripId = currentTrip.id;
-
-        if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
-          this._setFlowState('TRIP_STARTED');
-        } else {
-          this._setFlowState('GOING_TO_PICKUP');
-        }
-
-        await this._showRouteOnMap(currentTrip);
-        uiController.showNavigationState(currentTrip);
-      } else if (pendingTrip) {
-        console.log('[DriverApp] Estado inicial: oferta pendiente');
-        this._setFlowState('RECEIVING_OFFER');
-
-        uiController.showIncomingTrip(
-          pendingTrip,
-          () => this._acceptOffer(pendingTrip.offerId),
-          () => this._rejectOffer(pendingTrip.offerId)
-        );
-      } else {
-  console.log('[DriverApp] Estado inicial: esperando');
-
-  if (this._onlineStatus) {
-    this._setFlowState('ONLINE_IDLE');
-  } else {
-    this._setFlowState('OFFLINE');
-  }
-
-  uiController.showWaitingState();
-}
-    } catch (error) {
-      console.error('[DriverApp] ❌ Error fatal:', error);
-      uiController.showToast('Error: ' + error.message, 'error', 5000);
+    if (!user) {
+      console.log('[DriverApp] No autenticado, redirigiendo a login');
+      window.location.href = CONFIG.REDIRECTS.LOGIN;
+      return;
     }
-  }
 
+    this._authUserId = user.id;
+    await initPushFCM('chofer');
+    console.log('[DriverApp] Auth user detectado:', this._authUserId);
+
+    // 🔓 desbloqueo audio/haptics en primer toque real
+    window.addEventListener(
+      'click',
+      () => {
+        soundManager.enableOnUserInteraction?.();
+      },
+      { once: true }
+    );
+
+    window.addEventListener(
+      'touchstart',
+      () => {
+        soundManager.enableOnUserInteraction?.();
+      },
+      { once: true }
+    );
+
+    // 4) Inicializar mapa + GPS
+    console.log('[DriverApp] Inicializando servicios...');
+    const results = await Promise.allSettled([
+      mapService.init('map-container'),
+      locationTracker.start((pos) => this._onPositionUpdate(pos))
+    ]);
+
+    console.log('[DriverApp] Resultados inicialización:', {
+      mapa: results[0].status,
+      ubicacion: results[1].status
+    });
+
+    if (results[0].status === 'rejected') {
+      console.error('[DriverApp] Error mapa:', results[0].reason);
+    }
+
+    if (results[1].status === 'rejected') {
+      console.error('[DriverApp] Error GPS:', results[1].reason);
+    }
+
+    // 5) Resolver driverId real antes de TripManager
+    console.log('[DriverApp] Resolviendo driverId...');
+    const driverId = await this._resolveDriverId();
+
+    console.log('[DriverApp] driverId detectado:', driverId);
+
+    // 6) Inicializar TripManager
+    console.log('[DriverApp] Inicializando TripManager...');
+    const tripManagerReady = await tripManager.init(driverId);
+
+    if (!tripManagerReady) {
+      console.warn('[DriverApp] ⚠️ TripManager no pudo inicializarse (sin driverId)');
+      uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
+    }
+
+    // 7) Suscribirse a eventos
+    this._subscribeToEvents();
+
+    // 8) Configurar UI
+    this._setupUI();
+
+    this.initialized = true;
+    console.log('[DriverApp] ✅ Aplicación inicializada correctamente');
+
+    if (!tripManagerReady) {
+      console.warn('[DriverApp] App iniciada sin TripManager operativo');
+      this._onlineStatus = false;
+      uiController.updateDriverState('OFFLINE', false);
+      this._setFlowState('OFFLINE');
+      uiController.showWaitingState();
+      return;
+    }
+
+    // Estado inicial real del chofer desde BD
+    try {
+      const { data: choferRow, error: choferError } = await supabaseService.client
+        .from('choferes')
+        .select('online, disponible')
+        .eq('user_id', this._authUserId)
+        .maybeSingle();
+
+      if (choferError) {
+        console.warn('[DriverApp] No se pudo leer estado inicial del chofer:', choferError);
+      }
+
+      this._onlineStatus = !!choferRow?.online;
+    } catch (e) {
+      console.warn('[DriverApp] Error leyendo estado inicial online:', e);
+      this._onlineStatus = false;
+    }
+
+    uiController.updateDriverState(
+      this._onlineStatus ? 'ONLINE' : 'OFFLINE',
+      this._onlineStatus
+    );
+
+    if (!this._onlineStatus) {
+      this._setFlowState('OFFLINE');
+    }
+
+    // Estado inicial de viajes
+    const currentTrip = tripManager.getCurrentTrip();
+    const pendingTrip = tripManager.getPendingTrip();
+
+    if (currentTrip) {
+      console.log('[DriverApp] Estado inicial: viaje activo');
+      this._currentTripId = currentTrip.id;
+
+      if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
+        this._setFlowState('TRIP_STARTED');
+      } else {
+        this._setFlowState('GOING_TO_PICKUP');
+      }
+
+      await this._showRouteOnMap(currentTrip);
+      uiController.showNavigationState(currentTrip);
+    } else if (pendingTrip) {
+      console.log('[DriverApp] Estado inicial: oferta pendiente');
+      this._setFlowState('RECEIVING_OFFER');
+
+      uiController.showIncomingTrip(
+        pendingTrip,
+        () => this._acceptOffer(pendingTrip.offerId),
+        () => this._rejectOffer(pendingTrip.offerId)
+      );
+    } else {
+      console.log('[DriverApp] Estado inicial: esperando');
+
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      uiController.showWaitingState();
+    }
+  } catch (error) {
+    console.error('[DriverApp] ❌ Error fatal:', error);
+    uiController.showToast('Error: ' + error.message, 'error', 5000);
+  } finally {
+    uiController.setGlobalLoading(false);
+  }
+}
   // =========================================================
   // RESOLVER DRIVER ID (ROBUSTO)
   // =========================================================
