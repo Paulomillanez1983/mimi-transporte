@@ -22,7 +22,7 @@ class MapService {
     this.currentDestination = null;
     this.lastRouteUpdate = 0;
     this.routeUpdateCooldown = 20000; // 20s
-    this.rerouteDistanceThreshold = 60; // metros
+    this.rerouteDistanceThreshold = 80; // metros
 
     // Ruta completa guardada (OSRM)
     this.routeGeometry = [];
