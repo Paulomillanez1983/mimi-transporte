@@ -8,20 +8,20 @@ const CONFIG = {
   // SUPABASE
   // =========================================================
   SUPABASE_URL: 'https://xrphpqmutvadjrucqicn.supabase.co',
-  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM',
+  SUPABASE_KEY: 'TU_ANON_KEY',
 
   // =========================================================
   // MAP (MAPLIBRE)
   // =========================================================
-  MAP_STYLE: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  DEFAULT_CENTER: [-64.1888, -31.4201],
+  MAP_STYLE: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+  DEFAULT_CENTER: [-64.1888, -31.4201], // Córdoba
   DEFAULT_ZOOM: 14,
 
   // =========================================================
   // ROUTING
   // =========================================================
-  ROUTING_PROVIDER: 'valhalla',
-  VALHALLA_URL: 'https://valhalla.openstreetmap.de/route',
+  ROUTING_PROVIDER: 'osrm',
+  OSRM_URL: 'https://router.project-osrm.org',
 
   // =========================================================
   // INTERVALS (ms)
@@ -37,21 +37,26 @@ const CONFIG = {
   COUNTDOWN_WARNING: 5,
 
   // =========================================================
-  // STATES
+  // DRIVER FLOW STATES
   // =========================================================
   DRIVER_STATES: {
     OFFLINE: 'OFFLINE',
-    ONLINE: 'ONLINE',
+    ONLINE_IDLE: 'ONLINE_IDLE',
     RECEIVING_OFFER: 'RECEIVING_OFFER',
     GOING_TO_PICKUP: 'GOING_TO_PICKUP',
-    PASSENGER_ONBOARD: 'PASSENGER_ONBOARD',
-    IN_PROGRESS: 'IN_PROGRESS',
-    ARRIVED: 'ARRIVED'
+    ARRIVED_PICKUP: 'ARRIVED_PICKUP',
+    TRIP_STARTED: 'TRIP_STARTED',
+    ARRIVED_DESTINATION: 'ARRIVED_DESTINATION',
+    TRIP_COMPLETED: 'TRIP_COMPLETED'
   },
 
+  // =========================================================
+  // TRIP STATES
+  // =========================================================
   TRIP_STATES: {
     DISPONIBLE: 'DISPONIBLE',
     OFERTADO: 'OFERTADO',
+    ASIGNADO: 'ASIGNADO',
     ACEPTADO: 'ACEPTADO',
     EN_CURSO: 'EN_CURSO',
     COMPLETADO: 'COMPLETADO',
