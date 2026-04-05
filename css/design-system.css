@@ -1,47 +1,51 @@
 /* =========================================================
-   MIMI DRIVER - DESIGN SYSTEM
-   Tokens, variables y estilos base
+   MIMI DRIVER - DESIGN SYSTEM (PRODUCTION)
+   Tokens, variables, layout base y helpers
    ========================================================= */
 
 :root {
-  /* Colors - Dark Premium Theme */
+  /* =========================
+     COLORS - Dark Premium
+     ========================= */
   --color-bg-primary: #000000;
   --color-bg-secondary: #0A0A0A;
   --color-bg-tertiary: #141414;
   --color-bg-elevated: #1C1C1E;
   --color-bg-card: #242426;
-  
+
   /* Surfaces */
   --color-surface: rgba(28, 28, 30, 0.85);
   --color-surface-solid: #1C1C1E;
   --color-surface-hover: rgba(255, 255, 255, 0.05);
-  
+
   /* Accents */
   --color-accent: #276EF1;
   --color-accent-light: #448AFF;
   --color-accent-dark: #1E56C7;
-  
+
   /* Semantic */
   --color-success: #05944F;
   --color-success-light: #06C167;
   --color-warning: #FF9500;
   --color-danger: #E11900;
   --color-danger-light: #FF453A;
-  
+
   /* Text */
   --color-text-primary: #FFFFFF;
   --color-text-secondary: rgba(255, 255, 255, 0.7);
   --color-text-tertiary: rgba(255, 255, 255, 0.5);
   --color-text-inverse: #000000;
-  
+
   /* Borders */
   --color-border: rgba(255, 255, 255, 0.1);
   --color-border-strong: rgba(255, 255, 255, 0.2);
-  
-  /* Typography */
+
+  /* =========================
+     TYPOGRAPHY
+     ========================= */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
   --font-mono: 'SF Mono', Monaco, monospace;
-  
+
   --font-size-xs: 11px;
   --font-size-sm: 13px;
   --font-size-base: 15px;
@@ -49,14 +53,16 @@
   --font-size-lg: 20px;
   --font-size-xl: 24px;
   --font-size-2xl: 32px;
-  
+
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
-  
-  /* Spacing */
+
+  /* =========================
+     SPACING
+     ========================= */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
@@ -64,7 +70,7 @@
   --space-xl: 20px;
   --space-2xl: 24px;
   --space-3xl: 32px;
-  
+
   /* Radii */
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -72,36 +78,44 @@
   --radius-xl: 20px;
   --radius-2xl: 24px;
   --radius-full: 9999px;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
-  
+
   /* Transitions */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  
-  /* Safe areas */
+
+  /* Safe areas (iPhone) */
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
   --safe-left: env(safe-area-inset-left);
   --safe-right: env(safe-area-inset-right);
-  
-  /* Z-index scale */
+
+  /* =========================
+     Z INDEX SYSTEM (Uber style)
+     ========================= */
   --z-map: 0;
   --z-base: 10;
-  --z-floating: 100;
-  --z-overlay: 200;
-  --z-modal: 300;
-  --z-toast: 400;
-  --z-loading: 500;
+  --z-stats: 50;
+  --z-header: 100;
+  --z-nav: 150;
+  --z-sheet: 200;
+  --z-fab: 250;
+  --z-arrival: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-loading: 600;
 }
 
-/* Reset */
+/* =========================
+   RESET
+   ========================= */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -126,7 +140,9 @@ body {
   touch-action: manipulation;
 }
 
-/* Map container */
+/* =========================
+   MAP
+   ========================= */
 #map-container {
   position: fixed;
   top: 0;
@@ -136,13 +152,12 @@ body {
   z-index: var(--z-map);
 }
 
-/* UI Layer */
+/* =========================
+   UI LAYER
+   ========================= */
 #ui-layer {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   z-index: var(--z-base);
   pointer-events: none;
 }
@@ -151,7 +166,42 @@ body {
   pointer-events: auto;
 }
 
-/* Utility classes */
+/* =========================
+   FLOATING STATS (Uber style)
+   ========================= */
+.stats-floating {
+  position: fixed;
+  top: calc(80px + var(--safe-top));
+  left: 16px;
+  right: 16px;
+  display: flex;
+  gap: 10px;
+  z-index: var(--z-stats);
+}
+
+.stat-card {
+  flex: 1;
+  background: var(--color-surface);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  text-align: center;
+  border: 1px solid var(--color-border);
+}
+
+.stat-value {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+}
+
+.stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* =========================
+   UTILITY CLASSES
+   ========================= */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -159,7 +209,7 @@ body {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip: rect(0,0,0,0);
   white-space: nowrap;
   border: 0;
 }
@@ -181,7 +231,9 @@ body {
 .w-full { width: 100%; }
 .h-full { height: 100%; }
 
-/* Scrollbar */
+/* =========================
+   SCROLLBAR
+   ========================= */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -194,4 +246,15 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--color-border-strong);
   border-radius: var(--radius-full);
+}
+
+/* =========================
+   SAFE AREA HELPERS
+   ========================= */
+.safe-top {
+  padding-top: var(--safe-top);
+}
+
+.safe-bottom {
+  padding-bottom: var(--safe-bottom);
 }
