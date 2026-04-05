@@ -3632,29 +3632,26 @@ async function cotizarViajeOptimizado(payload, requestId) {
     console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
     console.log('⏱️ inicio cotización');
 
-    // Intentar obtener sesión, pero NO romper si no existe
-    let accessToken = null;
-
-    try {
-      const tSession = performance.now();
-      const session = await obtenerSesionCliente();
-      console.log('⏱️ sesión obtenida en ms:', Math.round(performance.now() - tSession));
-      accessToken = session?.access_token || null;
-    } catch (sessionErr) {
-      console.warn('⚠️ No se pudo obtener sesión para cotizar. Seguimos anónimo.', sessionErr);
-      accessToken = null;
+    // Usar SUPABASE_ANON_KEY (que ya existe en tu código)
+    const apiKey = SUPABASE_ANON_KEY;
+    
+    if (!apiKey) {
+      throw new Error('No se encontró la API Key de Supabase');
     }
 
     if (requestId !== currentQuoteRequestId) return null;
 
+    // Headers correctos para Edge Function pública
     const headers = {
       'Content-Type': 'application/json',
-      apikey: SUPABASE_PUBLIC_KEY
+      'apikey': apiKey,
+      'Authorization': `Bearer ${apiKey}`  // Necesario para Edge Functions
     };
 
-    if (accessToken) {
-      headers.Authorization = `Bearer ${accessToken}`;
-    }
+    console.log('Headers enviados:', { 
+      apikey: apiKey ? 'presente' : 'ausente',
+      auth: apiKey ? 'presente' : 'ausente' 
+    });
 
     const tFetch = performance.now();
     const response = await fetch(CONFIG.COTIZAR_URL, {
@@ -3663,13 +3660,16 @@ async function cotizarViajeOptimizado(payload, requestId) {
       body: JSON.stringify(payload),
       signal: controller.signal
     });
+    
     console.log('⏱️ fetch respondió headers en ms:', Math.round(performance.now() - tFetch));
+    console.log('Response status:', response.status);
 
     if (requestId !== currentQuoteRequestId) return null;
 
     const tBody = performance.now();
     const rawText = await response.text();
     console.log('⏱️ body leído en ms:', Math.round(performance.now() - tBody));
+    console.log('Raw response:', rawText.substring(0, 500));
 
     if (requestId !== currentQuoteRequestId) return null;
 
@@ -3677,50 +3677,32 @@ async function cotizarViajeOptimizado(payload, requestId) {
 
     try {
       dataRes = rawText ? JSON.parse(rawText) : null;
-    } catch {
+    } catch (parseErr) {
+      console.error('Error parseando JSON:', parseErr);
       throw new Error(`Respuesta inválida del servidor (${response.status})`);
     }
 
-    if (!response.ok || !dataRes?.exito) {
-      throw new Error(dataRes?.error || `Error ${response.status}`);
+    if (!response.ok) {
+      console.error('Error HTTP:', response.status, dataRes);
+      throw new Error(dataRes?.error || dataRes?.message || `Error ${response.status}`);
+    }
+
+    if (!dataRes?.exito) {
+      throw new Error(dataRes?.error || 'Error en la cotización');
     }
 
     console.log('📥 RESPUESTA COTIZAR:', dataRes);
     console.log('⏱️ cotización exitosa total ms:', Math.round(performance.now() - startedAt));
 
-    procesarRespuestaCotizacion(dataRes, payload);
     return dataRes;
+    
   } catch (err) {
     if (requestId !== currentQuoteRequestId) return null;
-
-    const rawMsg = String(err?.message || err || '').toLowerCase();
-    const abortReason = controller.signal?.reason;
-
-    const isTimeout =
-      err?.name === 'AbortError' ||
-      rawMsg.includes('timeout_cotizacion') ||
-      rawMsg.includes('aborted') ||
-      abortReason === 'timeout_cotizacion';
-
-    console.error('❌ Error cotizando:', err);
-    console.log('⏱️ cotización falló/abortó en ms:', Math.round(performance.now() - startedAt));
-    console.log('⏱️ abortReason:', abortReason);
-
-    notif.show(
-      'Modo estimado',
-      isTimeout
-        ? 'La cotización tardó demasiado. Mostramos una estimación provisoria.'
-        : 'No pudimos obtener el precio exacto. Mostramos una estimación provisoria.',
-      'warning'
-    );
-
-    usarFallbackLocal(payload, requestId);
-    return null;
+    throw err;  // Re-lanzar para que calcularRuta lo maneje
   } finally {
     clearTimeout(timeoutId);
   }
-}
-  
+}  
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
