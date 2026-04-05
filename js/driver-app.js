@@ -651,12 +651,14 @@ if (currentTrip) {
       currentTrip.destino_lng
     );
 
-    if (distDestination < 100) {
-      this._setFlowState('ARRIVED_DESTINATION');
-      uiController.showArrival?.();
+      if (distDestination < 100) {
+        this._setFlowState('ARRIVED_DESTINATION');
+        uiController.showArrival?.();
+      }
     }
-  }
+  }  
 }
+
   // =========================================================
   // UI SETUP
   // =========================================================
