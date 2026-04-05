@@ -9,12 +9,12 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="color-scheme" content="dark light">
-  <meta name="format-detection" content="telephone=no">
+  <meta name="color-scheme" content="dark light" />
+  <meta name="format-detection" content="telephone=no" />
+
   <title>MIMI Driver</title>
 
   <meta name="description" content="Panel de conductor MIMI - Transporte seguro" />
-
   <meta property="og:title" content="MIMI Driver" />
   <meta property="og:description" content="Panel de conductor MIMI" />
   <meta property="og:type" content="website" />
@@ -22,24 +22,27 @@
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚐</text></svg>">
 
+  <!-- PWA -->
   <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png" />
   <link rel="manifest" href="./manifest.json" />
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./libs/maplibre-gl.css" />
+  <!-- MapLibre CDN -->
+  <link href="https://unpkg.com/maplibre-gl@5.21.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@5.21.1/dist/maplibre-gl.js"></script>
 
-  <!-- LIBS (solo UNA vez) -->
+  <!-- Supabase local -->
   <script src="./libs/supabase-js.js"></script>
-  <script src="./libs/maplibre-gl.js" defer></script>
 
-<!-- CSS -->
-<link rel="stylesheet" href="css/design-system.css" />
-<link rel="stylesheet" href="css/components.css" />
-<link rel="stylesheet" href="css/animations.css" />
-<link rel="stylesheet" href="css/panel.css" />
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/design-system.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/animations.css" />
+  <link rel="stylesheet" href="css/panel.css" />
 </head>
 
 <body>
@@ -74,26 +77,26 @@
         </button>
       </div>
     </header>
-<!-- STATS FLOTANTES -->
-<div class="stats-floating">
-  <div class="stat-card">
-    <div class="stat-value" id="stat-earnings">$0</div>
-    <div class="stat-label">Hoy</div>
-  </div>
 
-  <div class="stat-card">
-    <div class="stat-value" id="stat-trips">0</div>
-    <div class="stat-label">Viajes</div>
-  </div>
+    <!-- STATS FLOTANTES -->
+    <div class="stats-floating">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-earnings">$0</div>
+        <div class="stat-label">Hoy</div>
+      </div>
 
-  <div class="stat-card">
-    <div class="stat-value" id="stat-rating">5.0</div>
-    <div class="stat-label">Rating</div>
-  </div>
-</div>
-    <!-- STATS -->
+      <div class="stat-card">
+        <div class="stat-value" id="stat-trips">0</div>
+        <div class="stat-label">Viajes</div>
+      </div>
 
-    <!-- NAV BAR (Aparece cuando hay viaje activo) -->
+      <div class="stat-card">
+        <div class="stat-value" id="stat-rating">5.0</div>
+        <div class="stat-label">Rating</div>
+      </div>
+    </div>
+
+    <!-- NAV BAR -->
     <div class="nav-bar" id="nav-bar">
       <div class="nav-content">
         <div class="nav-maneuver">
@@ -137,12 +140,11 @@
       </div>
     </div>
 
-    <!-- INCOMING MODAL (Uber Style) -->
+    <!-- INCOMING MODAL -->
     <div class="incoming-modal" id="incoming-modal">
       <div class="modal-backdrop"></div>
-      
+
       <div class="modal-content">
-        <!-- Countdown -->
         <div class="countdown-ring" id="countdown-ring">
           <svg class="countdown-svg" viewBox="0 0 100 100">
             <defs>
@@ -158,7 +160,6 @@
           <span class="countdown-number" id="countdown-number">15</span>
         </div>
 
-        <!-- Trip Preview -->
         <div class="trip-preview">
           <div class="route-visual-compact">
             <div class="route-dots">
@@ -178,7 +179,6 @@
             </div>
           </div>
 
-          <!-- Metrics -->
           <div class="trip-metrics-horizontal">
             <div class="metric-box">
               <span class="metric-value price" id="trip-price">$--</span>
@@ -195,7 +195,6 @@
           </div>
         </div>
 
-        <!-- Client Info -->
         <div class="client-row">
           <div class="client-avatar-large" id="client-avatar">👤</div>
           <div class="client-info-text">
@@ -204,17 +203,16 @@
           </div>
         </div>
 
-        <!-- Actions -->
         <div class="modal-actions-uber">
-<button class="btn-reject" id="btn-reject" type="button">
-  <span>✕</span>
-  <span>Rechazar</span>
-</button>
+          <button class="btn-reject" id="btn-reject" type="button">
+            <span>✕</span>
+            <span>Rechazar</span>
+          </button>
 
-<button class="btn-accept" id="btn-accept" type="button">
-  <span>✓</span>
-  <span>Aceptar viaje</span>
-</button>
+          <button class="btn-accept" id="btn-accept" type="button">
+            <span>✓</span>
+            <span>Aceptar viaje</span>
+          </button>
         </div>
       </div>
     </div>
@@ -232,7 +230,7 @@
       </div>
     </div>
 
-    <!-- TOAST CONTAINER -->
+    <!-- TOAST -->
     <div class="toast-container" id="toast-container"></div>
 
     <!-- GLOBAL LOADING -->
@@ -245,39 +243,38 @@
     <div class="offline-banner" id="offline-banner">
       <span>⚠ Sin conexión</span>
     </div>
-
   </div>
 
   <!-- LOGOUT SCRIPT -->
-<script type="module">
-  import supabaseService from "./js/supabase-client.js";
-  import CONFIG from "./js/config.js";
+  <script type="module">
+    import supabaseService from "./js/supabase-client.js";
+    import CONFIG from "./js/config.js";
 
-  const logoutBtn = document.getElementById("logoutBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
 
-  async function initLogout() {
-    await supabaseService.init();
-    const { data } = await supabaseService.client.auth.getSession();
+    async function initLogout() {
+      await supabaseService.init();
+      const { data } = await supabaseService.client.auth.getSession();
 
-    if (data?.session) {
-      logoutBtn.classList.add("visible");
+      if (data?.session) {
+        logoutBtn.classList.add("visible");
+      }
+
+      logoutBtn.addEventListener("click", async () => {
+        await supabaseService.client.auth.signOut();
+        window.location.href = CONFIG.REDIRECTS.LOGIN;
+      });
     }
 
-    logoutBtn.addEventListener("click", async () => {
-      await supabaseService.client.auth.signOut();
-      window.location.href = CONFIG.REDIRECTS.LOGIN;
-    });
-  }
+    initLogout();
+  </script>
 
-  initLogout();
-</script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/mimi-transporte/firebase-messaging-sw.js');
+    }
+  </script>
 
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/mimi-transporte/firebase-messaging-sw.js');
-  }
-</script>
-
-<script type="module" src="js/driver-app.js"></script>
+  <script type="module" src="js/driver-app.js"></script>
 </body>
 </html>
