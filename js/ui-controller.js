@@ -8,69 +8,81 @@ import CONFIG from './config.js';
 import soundManager from './sound-manager.js';
 
 class UIController {
-constructor() {
-  this.elements = {};
+  constructor() {
+    this.elements = {};
 
-  this.state = {
-  countdown: null,
-  countdownTimeout: null,
-  currentCount: 15,
-  isModalOpen: false,
-  isProcessing: false,
-  callbacks: {},
-  currentTrip: null,
-  isOnline: false,
-  bottomSheetExpanded: false
-};
+    this.state = {
+      countdown: null,
+      countdownTimeout: null,
+      currentCount: 15,
+      isModalOpen: false,
+      isProcessing: false,
+      callbacks: {},
+      currentTrip: null,
+      isOnline: false,
+      bottomSheetExpanded: false
+    };
 
-  // ✅ FIX anti-parpadeo modal
-this.lastTripModalId = null;
+    // ✅ FIX anti-parpadeo modal
+    this.lastTripModalId = null;
 
+    // Bindings
+    this._handleAccept = this._handleAccept.bind(this);
+    this._handleReject = this._handleReject.bind(this);
+    this._onBackdropClick = this._onBackdropClick.bind(this);
+    this._onTouchStart = this._onTouchStart.bind(this);
+    this._onTouchMove = this._onTouchMove.bind(this);
+    this._onTouchEnd = this._onTouchEnd.bind(this);
 
-renderDriverFlowState(state, trip) {
-  console.log('[UI] Flow state:', state);
-
-  switch(state) {
-    case 'OFFLINE':
-      this.hideNavigation();
-      this.hideArrival();
-      this.showWaitingState();
-      break;
-
-    case 'ONLINE_IDLE':
-      this.hideNavigation();
-      this.hideArrival();
-      this.showWaitingState();
-      break;
-
-    case 'RECEIVING_OFFER':
-      // El modal se muestra desde driver-app
-      break;
-
-    case 'GOING_TO_PICKUP':
-      this.showNavigationState(trip);
-      break;
-
-    case 'ARRIVED_PICKUP':
-      this.showArrival();
-      break;
-
-    case 'TRIP_STARTED':
-      this.showNavigationState(trip);
-      break;
-
-    case 'ARRIVED_DESTINATION':
-      this.showArrival();
-      break;
-
-    case 'TRIP_COMPLETED':
-      this.hideNavigation();
-      this.hideArrival();
-      this.showWaitingState();
-      this.showToast('Viaje finalizado', 'success');
-      break;
+    // Touch handling for bottom sheet
+    this.touchStartY = 0;
+    this.touchCurrentY = 0;
+    this.sheetHeight = 0;
   }
-}
+
+  renderDriverFlowState(state, trip) {
+    console.log('[UI] Flow state:', state);
+
+    switch (state) {
+      case 'OFFLINE':
+        this.hideNavigation();
+        this.hideArrival();
+        this.showWaitingState();
+        break;
+
+      case 'ONLINE_IDLE':
+        this.hideNavigation();
+        this.hideArrival();
+        this.showWaitingState();
+        break;
+
+      case 'RECEIVING_OFFER':
+        break;
+
+      case 'GOING_TO_PICKUP':
+        this.showNavigationState(trip);
+        break;
+
+      case 'ARRIVED_PICKUP':
+        this.showArrival();
+        break;
+
+      case 'TRIP_STARTED':
+        this.showNavigationState(trip);
+        break;
+
+      case 'ARRIVED_DESTINATION':
+        this.showArrival();
+        break;
+
+      case 'TRIP_COMPLETED':
+        this.hideNavigation();
+        this.hideArrival();
+        this.showWaitingState();
+        this.showToast('Viaje finalizado', 'success');
+        break;
+    }
+  }
   // Bindings
   this._handleAccept = this._handleAccept.bind(this);
   this._handleReject = this._handleReject.bind(this);
