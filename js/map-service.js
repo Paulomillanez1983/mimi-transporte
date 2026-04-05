@@ -401,7 +401,7 @@ class MapService {
     if (enabled) {
       this.map.easeTo({
         pitch: isMobile ? 50 : 45,
-        zoom: isMobile ? 17.5 : 16.5,
+        zoom: isMobile ? 17 : 16,
         duration: 600,
       });
     } else {
@@ -569,7 +569,7 @@ updateDriverPosition(lng, lat, heading = 0) {
           center: [lng, lat],
           bearing: isMobile ? safeHeading : 0,
           pitch: isMobile ? 50 : 45,
-          zoom: isMobile ? 17.5 : 16.5,
+          zoom: isMobile ? 17 : 16,
           duration: duration,
           essential: true,
         });
