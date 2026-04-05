@@ -517,7 +517,7 @@
   }
 }
 /* =========================================================
-   MIMI DRIVER - GLOBAL UI LAYOUT UBER STYLE
+   MIMI DRIVER - GLOBAL UI LAYOUT (UBER STYLE FINAL)
    ========================================================= */
 
 /* HEADER FLOTANTE */
@@ -526,7 +526,7 @@
   top: calc(10px + var(--safe-top));
   left: 12px;
   right: 12px;
-  z-index: 100;
+  z-index: var(--z-header);
   background: rgba(18,18,18,0.75);
   backdrop-filter: blur(20px);
   border-radius: 18px;
@@ -596,7 +596,7 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  z-index: 90;
+  z-index: var(--z-stats);
 }
 
 .stat-card {
@@ -624,7 +624,7 @@
   left: 50%;
   transform: translateX(-50%);
   bottom: calc(110px + var(--safe-bottom));
-  z-index: 120;
+  z-index: var(--z-fab);
   border-radius: 999px;
   padding: 16px 26px;
   background: rgba(0,0,0,0.85);
@@ -654,7 +654,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 120;
+  z-index: var(--z-fab);
 }
 
 /* NAV BAR */
@@ -669,7 +669,7 @@
   padding: 14px;
   transform: translateY(-200%);
   transition: transform 0.3s;
-  z-index: 150;
+  z-index: var(--z-nav);
 }
 
 .nav-bar.active {
@@ -688,7 +688,7 @@
   transform: translateY(calc(100% - 120px));
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 -15px 50px rgba(0,0,0,0.6);
-  z-index: 110;
+  z-index: var(--z-sheet);
 }
 
 .bottom-sheet.expanded {
@@ -725,4 +725,53 @@
 
 .waiting-state p {
   color: rgba(255,255,255,0.6);
+}
+
+/* ARRIVAL PANEL */
+.arrival-panel {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(120px + var(--safe-bottom));
+  background: rgba(20,20,20,0.95);
+  border-radius: 18px;
+  padding: 20px;
+  text-align: center;
+  transform: translateY(200%);
+  transition: transform 0.3s;
+  z-index: var(--z-arrival);
+}
+
+.arrival-panel.active {
+  transform: translateY(0);
+}
+
+/* TOAST */
+.toast-container {
+  position: fixed;
+  bottom: calc(20px + var(--safe-bottom));
+  left: 12px;
+  right: 12px;
+  z-index: var(--z-toast);
+}
+
+/* LOADING */
+.global-loading {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-loading);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top: 3px solid #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
