@@ -25,7 +25,7 @@ constructor() {
 
   // ✅ FIX anti-parpadeo modal
 this.lastTripModalId = null;
-}
+
 
 renderDriverFlowState(state, trip) {
   console.log('[UI] Flow state:', state);
