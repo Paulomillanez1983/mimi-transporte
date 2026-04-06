@@ -1931,17 +1931,13 @@ async function initMapa() {
           id: 'osm',
           type: 'raster',
           source: 'osm',
-          paint: temaOscuro ? {
-            'raster-opacity': 0.9,
-            'raster-brightness-min': 0.05,
-            'raster-brightness-max': 0.75,
-            'raster-contrast': 0.15,
-            'raster-saturation': -0.35
-          } : {
-            'raster-opacity': 1,
-            'raster-brightness-min': 0,
-            'raster-brightness-max': 1
-          }
+paint: {
+  'raster-opacity': 0.92,
+  'raster-brightness-min': 0.12,
+  'raster-brightness-max': 0.82,
+  'raster-contrast': 0.18,
+  'raster-saturation': -0.45
+}
         }]
       },
       center: [-64.19, -31.42],
@@ -2003,23 +1999,31 @@ function agregarMarkersRutaDesdeCoords(coords) {
 
   if (!Array.isArray(coords) || coords.length < 2) return;
 
-  coords.forEach((c, i) => {
-    const type = i === 0 ? 'origin' : i === coords.length - 1 ? 'dest' : 'waypoint';
-    const label = i === 0 ? 'A' : i === coords.length - 1 ? 'B' : String(i);
+  const inicio = coords[0];
+  const fin = coords[coords.length - 1];
 
-    try {
-      const marker = new maplibregl.Marker({
-        element: crearMarkerElement(label, type),
-        anchor: 'center'
-      })
-        .setLngLat(c)
-        .addTo(mapaCliente);
+  try {
+    const markerInicio = new maplibregl.Marker({
+      element: crearMarkerElement('A', 'origin'),
+      anchor: 'center'
+    })
+      .setLngLat(inicio)
+      .addTo(mapaCliente);
 
-      state.markers.push(marker);
-    } catch (_) {}
-  });
+    state.markers.push(markerInicio);
+  } catch (_) {}
+
+  try {
+    const markerFin = new maplibregl.Marker({
+      element: crearMarkerElement('B', 'dest'),
+      anchor: 'center'
+    })
+      .setLngLat(fin)
+      .addTo(mapaCliente);
+
+    state.markers.push(markerFin);
+  } catch (_) {}
 }
-
 function ajustarVistaRuta(coords, duration = 800) {
   if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
 
