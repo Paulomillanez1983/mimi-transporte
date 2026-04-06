@@ -1773,12 +1773,13 @@ select:focus-visible {
 #headerUser {
   grid-area: user;
   justify-self: end;
-  align-self: start;
+  align-self: end;
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: flex-end;
   min-width: 0;
-  margin-top: 10px;
+  margin-top: 0;
+  margin-bottom: 6px;
   position: relative;
   z-index: 5;
 }
@@ -1893,8 +1894,8 @@ select:focus-visible {
   display: flex;
   align-items: flex-end;
   justify-content: flex-start;
-  min-height: 68px;
-  margin-top: -2px;
+  min-height: 40px;
+  margin-top: -6px;
   margin-bottom: 0;
   overflow: visible;
 }
@@ -1975,9 +1976,11 @@ select:focus-visible {
     top: 6px;
   }
 
-  #headerUser {
-    margin-top: 8px;
-  }
+#headerUser {
+  margin-top: 0;
+  margin-bottom: 4px;
+  align-self: end;
+}
 
   .user-session-box {
     grid-template-columns: 42px 1fr auto;
@@ -2015,16 +2018,14 @@ select:focus-visible {
     font-size: 0.74rem;
   }
 
-  .vehicle-section {
-    min-height: 56px;
-  }
-
-  .vehicle-img {
-    width: clamp(96px, 28vw, 132px);
-    left: 4px;
-    bottom: -6px;
-  }
-
+.vehicle-section {
+  min-height: 34px;
+}
+.vehicle-img {
+  width: clamp(92px, 26vw, 124px);
+  left: 4px;
+  bottom: -2px;
+}
   .vehicle-section::after {
     left: 10px;
     width: 82px;
