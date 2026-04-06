@@ -2007,13 +2007,16 @@ select:focus-visible {
   }
 
 #headerUser {
+  grid-area: user;
   justify-self: end;
   align-self: end;
+  position: relative;
+  top: 18px;
   margin-top: 0;
-  margin-bottom: 8px;
-  transform: translateY(10px);
+  margin-bottom: 0;
+  z-index: 5;
 }
-  .header-login-btn {
+.header-login-btn {
     padding: 10px 18px;
     min-height: 42px;
     font-size: 0.82rem;
