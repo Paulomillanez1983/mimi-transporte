@@ -2074,15 +2074,17 @@ select:focus-visible {
     max-width: 100%;
   }
 
-  .vehicle-section {
-    justify-content: center;
-    min-height: 82px;
-  }
+.vehicle-section {
+  justify-content: center;
+  height:max 54px;
+  min-height: 0;
+}
 
-  .vehicle-img {
-    left: 0;
-    bottom: -10px;
-  }
+.vehicle-img {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -2px;
+  width: 96px;
 }
 
 /* DESKTOP */
@@ -2143,9 +2145,8 @@ select:focus-visible {
 }
 
 .vehicle-img {
-  bottom: -4px;
+  bottom: 0;
 }
-
 @media (max-width: 480px) {
   .header {
     padding: calc(6px + var(--safe-top)) 12px 0;
