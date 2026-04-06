@@ -715,7 +715,6 @@ select:focus-visible {
   transform: rotate(180deg);
 }
 
-
 /* ==========================================
    MAPA
 ========================================== */
@@ -735,7 +734,11 @@ select:focus-visible {
   display: none;
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    box-shadow var(--ease-standard);
+  will-change: opacity, transform;
 }
 
 .map-section.visible {
@@ -751,6 +754,7 @@ select:focus-visible {
   box-shadow: var(--shadow-md);
   overflow: hidden;
   margin-top: 20px;
+  position: relative;
 }
 
 .map-container {
@@ -759,6 +763,7 @@ select:focus-visible {
   position: relative;
   border-radius: 18px;
   overflow: hidden;
+  background: #eef3f8;
 }
 
 #map {
@@ -777,6 +782,11 @@ select:focus-visible {
   flex-direction: column;
   gap: 8px;
   z-index: 10;
+  pointer-events: none;
+}
+
+.map-overlay .map-btn {
+  pointer-events: auto;
 }
 
 .map-btn {
@@ -786,18 +796,26 @@ select:focus-visible {
   border: none;
   border-radius: 12px;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-size: 18px;
-  transition: transform var(--ease-standard), box-shadow var(--ease-standard), background var(--ease-standard);
+  transition:
+    transform var(--ease-standard),
+    box-shadow var(--ease-standard),
+    background var(--ease-standard),
+    opacity var(--ease-standard);
+  touch-action: manipulation;
 }
 
 .map-btn:hover,
 .map-btn:focus-visible {
   transform: scale(1.04);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  background: rgba(255, 255, 255, 0.99);
 }
 
 .map-btn:active {
@@ -847,6 +865,7 @@ select:focus-visible {
   border-radius: 50%;
   z-index: 1;
   animation: markerPulse 1.8s ease-out infinite;
+  pointer-events: none;
 }
 
 .route-marker.origin .route-marker-halo {
@@ -859,6 +878,21 @@ select:focus-visible {
 
 .route-marker.waypoint .route-marker-halo {
   background: rgba(245, 158, 11, 0.18);
+}
+
+@keyframes markerPulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
 }
 
 /* ==========================================
