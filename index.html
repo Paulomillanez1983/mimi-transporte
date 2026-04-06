@@ -947,7 +947,73 @@ async function esperarSesionInicial(timeoutMs = 2500) {
 
   return null;
 }
+function getUserDisplayData(session) {
+  const user = session?.user || null;
+  const meta = user?.user_metadata || {};
 
+  const nombre =
+    meta.full_name ||
+    meta.name ||
+    meta.user_name ||
+    (user?.email ? user.email.split('@')[0] : 'Usuario');
+
+  const email = user?.email || '';
+
+  const foto =
+    meta.avatar_url ||
+    meta.picture ||
+    meta.photo_url ||
+    '';
+
+  return { nombre, email, foto };
+}
+
+function renderSesionUI(session) {
+  const btnLogin = document.getElementById('btnLoginHeader');
+  const box = document.getElementById('userSessionBox');
+  const avatar = document.getElementById('userAvatar');
+  const nameEl = document.getElementById('userName');
+  const emailEl = document.getElementById('userEmail');
+
+  if (!btnLogin || !box || !avatar || !nameEl || !emailEl) return;
+
+  if (!session?.user) {
+    btnLogin.hidden = false;
+    box.hidden = true;
+    avatar.src = '';
+    nameEl.textContent = '';
+    emailEl.textContent = '';
+    return;
+  }
+
+  const { nombre, email, foto } = getUserDisplayData(session);
+
+  btnLogin.hidden = true;
+  box.hidden = false;
+  nameEl.textContent = nombre || 'Usuario';
+  emailEl.textContent = email || '';
+
+  avatar.src = foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || 'Usuario')}&background=1e3c72&color=fff`;
+  avatar.alt = nombre ? `Foto de ${nombre}` : 'Foto de perfil';
+}
+
+async function cerrarSesionCliente() {
+  try {
+    if (!window.sbRealtime?.auth) return;
+
+    const { error } = await window.sbRealtime.auth.signOut();
+    if (error) throw error;
+
+    limpiarSesionCache();
+    localStorage.removeItem('mimi_pending_trip_request');
+    renderSesionUI(null);
+
+    notif.show('Sesión cerrada', 'Saliste correctamente', 'info');
+  } catch (err) {
+    console.error('[auth] error cerrando sesión:', err);
+    notif.show('Error', 'No se pudo cerrar sesión', 'error');
+  }
+}
 async function obtenerSesionCliente(forceRefresh = false) {
   if (!window.sbRealtime?.auth) {
     console.warn('[auth] Cliente de sesión no inicializado');
@@ -1031,7 +1097,8 @@ async function obtenerSesionCliente(forceRefresh = false) {
 async function asegurarSesionCliente() {
   let session = await obtenerSesionCliente(false);
 
-  if (session?.access_token) {
+  if (session?.access_token && session?.user) {
+    renderSesionUI(session);
     return session;
   }
 
@@ -1045,6 +1112,7 @@ async function asegurarSesionCliente() {
   await loginConGoogleParaViaje();
   return null;
 }
+  
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
@@ -1100,27 +1168,21 @@ async function reanudarViajePendientePostLogin() {
       return;
     }
 
-    const { data, error } = await window.sbRealtime.auth.getSession();
+    const session = await obtenerSesionCliente(true);
 
-    console.log('[reanudarViajePendientePostLogin] getSession:', { data, error });
-
-    if (error) {
-      console.warn('[reanudarViajePendientePostLogin] error session:', error);
-      return;
-    }
-
-    const session = data?.session;
     if (!session?.access_token || !session?.user) {
       console.warn('[reanudarViajePendientePostLogin] todavía no hay sesión válida');
       return;
     }
 
+    renderSesionUI(session);
     localStorage.removeItem('mimi_pending_trip_request');
 
     notif.show(
       'Sesión iniciada',
-      'Continuamos con tu solicitud de viaje...',
-      'success'
+      `Ingresaste como ${session.user.email || 'usuario'}`,
+      'success',
+      3000
     );
 
     setTimeout(() => {
@@ -1130,6 +1192,7 @@ async function reanudarViajePendientePostLogin() {
     console.error('[reanudarViajePendientePostLogin] ERROR:', err);
   }
 }
+  
 function construirTooltip(resuelto) {
   return `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`;
 }
@@ -3132,8 +3195,18 @@ async function confirmarViaje() {
       console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
     }
 
-    if (!authCheck?.data?.user || tokenPayload?.role === 'anon') {
-      notif.show(
+if (!authCheck?.data?.user) {
+  notif.show(
+    'Ingresá para continuar',
+    'Te llevamos a Google para solicitar el viaje',
+    'info'
+  );
+
+  localStorage.removeItem('mimi_pending_trip_request');
+  await loginConGoogleParaViaje();
+  return;
+}
+    notif.show(
         'Ingresá para continuar',
         'Te llevamos a Google para solicitar el viaje',
         'info'
@@ -3825,17 +3898,52 @@ function bindUIActions() {
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    bindUIActions();
+  bindUIActions();
 
-    setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
-      state.origen = data;
+  setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
+    state.origen = data;
+  });
+
+  setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
+    state.destino = data;
+  });
+
+  document.getElementById('btnLoginHeader')?.addEventListener('click', async () => {
+    try {
+      await loginConGoogleParaViaje();
+    } catch (err) {
+      console.error('[auth] login header error:', err);
+      notif.show('Error', 'No se pudo iniciar sesión con Google', 'error');
+    }
+  });
+
+  document.getElementById('btnLogoutHeader')?.addEventListener('click', cerrarSesionCliente);
+
+  if (window.sbRealtime?.auth) {
+    const sessionInicial = await obtenerSesionCliente(false);
+    renderSesionUI(sessionInicial);
+
+    window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
+      console.log('[auth] onAuthStateChange:', event, session);
+
+      cachedSession = session || null;
+      lastSessionCheck = Date.now();
+
+      renderSesionUI(session || null);
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        await reanudarViajePendientePostLogin();
+      }
+
+      if (event === 'SIGNED_OUT') {
+        limpiarSesionCache();
+        renderSesionUI(null);
+      }
     });
+  }
 
-    setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
-      state.destino = data;
-    });
-
+  await reanudarViajePendientePostLogin();
+});
     if (window.sbRealtime?.auth) {
       const { data, error } = await window.sbRealtime.auth.getSession();
 
