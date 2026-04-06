@@ -4089,6 +4089,7 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
     state.estadoViaje = String(state.viajeEstado || '').toUpperCase();
 
     actualizarBotonCancelarViaje();
+    guardarViajeActivoEnStorage();
 
     console.log('[confirmarViaje] viaje creado OK:', {
       viajeId: state.viajeId,
