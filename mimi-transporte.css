@@ -2100,7 +2100,7 @@ select:focus-visible {
   justify-self: end;
   align-self: end;
   position: relative;
-  top: 3px;
+  top: 0px;
   margin-top: 0;
   margin-bottom: 0;
   z-index: 5;
