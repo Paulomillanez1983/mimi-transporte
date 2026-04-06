@@ -1199,7 +1199,7 @@ button {
   display: block;
   opacity: 1;
   transform: translateY(0);
-  animation: fadeInUp 0.4s ease;
+  animation: mimiNativeEnter 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .quote-header {
@@ -1285,7 +1285,14 @@ button {
   gap: 12px;
   margin-top: 18px;
 }
+.map-btn.route {
+  animation: pulseRoute 2s infinite;
+}
 
+@keyframes pulseRoute {
+  0%,100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
 /* ==========================================
    PRICE BREAKDOWN
 ========================================== */
@@ -2348,5 +2355,23 @@ body.page-transitioning .footer {
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+body {
+  overscroll-behavior: none;
+}
+
+.container {
+  animation: appFadeIn 0.5s ease;
+}
+
+@keyframes appFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
