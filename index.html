@@ -582,6 +582,40 @@ async function buscarDireccion(query) {
       <div class="shield-icon" aria-label="Servicio seguro">✓</div>
     </div>
   </div>
+  <div class="header-user" id="headerUser">
+  <button
+    id="btnLoginHeader"
+    class="header-login-btn"
+    type="button"
+    aria-label="Ingresar con Google"
+  >
+    <span aria-hidden="true">👤</span>
+    <span>Ingresar</span>
+  </button>
+
+  <div id="userSessionBox" class="user-session-box" hidden>
+    <img
+      id="userAvatar"
+      class="user-avatar"
+      src=""
+      alt="Foto de perfil"
+      referrerpolicy="no-referrer"
+    >
+    <div class="user-meta">
+      <div id="userName" class="user-name">Usuario</div>
+      <div id="userEmail" class="user-email">email@gmail.com</div>
+    </div>
+    <button
+      id="btnLogoutHeader"
+      class="header-logout-btn"
+      type="button"
+      aria-label="Cerrar sesión"
+      title="Cerrar sesión"
+    >
+      Salir
+    </button>
+  </div>
+</div>
 </header>
 
 <main class="container" role="main">
