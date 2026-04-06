@@ -2436,3 +2436,58 @@ select:focus-visible {
   70%  { box-shadow: 0 0 0 12px rgba(255, 59, 48, 0); }
   100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
 }
+/* ==========================================
+   FIX NOTIFICACIONES SOLO DESKTOP / TABLET
+   NO TOCA SMARTPHONES
+========================================== */
+@media (min-width: 481px) {
+  .header-content {
+    position: relative;
+    padding-right: 58px;
+  }
+
+  .header-notifications-wrapper {
+    position: absolute;
+    top: 8px;
+    right: 0;
+    z-index: 12;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 48px;
+    height: 48px;
+  }
+
+  .trip-notifications {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 42px;
+    height: 42px;
+    z-index: 13;
+  }
+
+  .trip-notifications-panel {
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(320px, 34vw);
+    max-height: min(420px, 70vh);
+    z-index: 120;
+  }
+}
+
+@media (min-width: 1024px) {
+  .header-notifications-wrapper {
+    top: 10px;
+    right: 2px;
+  }
+
+  .trip-notifications {
+    width: 44px;
+    height: 44px;
+  }
+
+  .trip-notifications-panel {
+    width: 320px;
+  }
+}
