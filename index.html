@@ -4105,27 +4105,28 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
       dispatchResultado?.rpc_resultado?.chofer_id ||
       dispatchResultado?.chofer_id ||
       null;
+if (dispatchOk) {
+  if (choferDetectado) {
+    state.viajeEstado = 'ofertando';
+    state.estadoViaje = 'OFERTANDO';
+  }
 
-    if (dispatchOk) {
-      if (choferDetectado) {
-        state.viajeEstado = 'ofertando';
-        state.estadoViaje = 'OFERTANDO';
-      }
+  actualizarBotonCancelarViaje();
+  guardarViajeActivoEnStorage();
 
-      actualizarBotonCancelarViaje();
-
-actualizarEstadoSolicitudUI({
-  estado: state.viajeEstado,
-  texto: 'Estamos notificando choferes cercanos...'
-});
-
-if (typeof actualizarCentroNotificacionesViaje === 'function') {
-  actualizarCentroNotificacionesViaje({
-    estado: 'OFERTANDO',
+  actualizarEstadoSolicitudUI({
+    estado: state.viajeEstado,
     texto: 'Estamos notificando choferes cercanos...'
   });
+
+  if (typeof actualizarCentroNotificacionesViaje === 'function') {
+    actualizarCentroNotificacionesViaje({
+      estado: 'OFERTANDO',
+      texto: 'Estamos notificando choferes cercanos...'
+    });
+  }
 }
-    } else {
+  } else {
 actualizarEstadoSolicitudUI({
   estado: state.viajeEstado,
   texto: 'Viaje creado. Buscando chofer...'
@@ -4148,10 +4149,7 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
 
 if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
   suscribirseEstadoViajeRealtime(state.viajeId);
-} else if (typeof escucharEstadoViajeCliente === 'function' && state?.viajeId) {
-  escucharEstadoViajeCliente(state.viajeId);
 }
-
 notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
   } catch (err) {
     console.error('[confirmarViaje] ERROR completo:', err);
