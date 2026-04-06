@@ -3831,11 +3831,9 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
 if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
   suscribirseEstadoViajeRealtime(state.viajeId);
 } else if (typeof escucharEstadoViajeCliente === 'function' && state?.viajeId) {
-if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
-  suscribirseEstadoViajeRealtime(state.viajeId);
-} else if (typeof escucharEstadoViajeCliente === 'function' && state?.viajeId) {
   escucharEstadoViajeCliente(state.viajeId);
 }
+
 notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
   } catch (err) {
     console.error('[confirmarViaje] ERROR completo:', err);
