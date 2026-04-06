@@ -3416,11 +3416,17 @@ const payload = {
       throw new Error('Coordenadas inválidas en origen o destino');
     }
 
-    actualizarEstadoSolicitudUI({
-      estado: 'buscando_chofer',
-      texto: 'Enviando solicitud...'
-    });
+actualizarEstadoSolicitudUI({
+  estado: 'buscando_chofer',
+  texto: 'Enviando solicitud...'
+});
 
+if (typeof actualizarCentroNotificacionesViaje === 'function') {
+  actualizarCentroNotificacionesViaje({
+    estado: 'BUSCANDO_CHOFER',
+    texto: 'Enviando solicitud...'
+  });
+}
     const { response: res, rawText } = await fetchEdgeFunctionWithAuthRetry(
       `${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`,
       {
@@ -3485,16 +3491,29 @@ const payload = {
 
       actualizarBotonCancelarViaje();
 
-      actualizarEstadoSolicitudUI({
-        estado: state.viajeEstado,
-        texto: 'Estamos notificando choferes cercanos...'
-      });
-    } else {
-      actualizarEstadoSolicitudUI({
-        estado: state.viajeEstado,
-        texto: 'Viaje creado. Buscando chofer...'
-      });
+actualizarEstadoSolicitudUI({
+  estado: state.viajeEstado,
+  texto: 'Estamos notificando choferes cercanos...'
+});
 
+if (typeof actualizarCentroNotificacionesViaje === 'function') {
+  actualizarCentroNotificacionesViaje({
+    estado: 'OFERTANDO',
+    texto: 'Estamos notificando choferes cercanos...'
+  });
+}
+    } else {
+actualizarEstadoSolicitudUI({
+  estado: state.viajeEstado,
+  texto: 'Viaje creado. Buscando chofer...'
+});
+
+if (typeof actualizarCentroNotificacionesViaje === 'function') {
+  actualizarCentroNotificacionesViaje({
+    estado: 'BUSCANDO_CHOFER',
+    texto: 'Viaje creado. Buscando chofer...'
+  });
+}
       console.warn('[confirmarViaje] dispatch interno no exitoso o pendiente:', dispatchInfo);
 
       notif.show(
@@ -3812,6 +3831,7 @@ function escucharEstadoViajeCliente(viajeId) {
 
         state.viajeId = viaje.id;
         state.viajeEstado = viaje.estado || '';
+        state.estadoViaje = String(viaje.estado || '').toUpperCase();
 
         actualizarEstadoSolicitudUI({
           estado: viaje.estado,
@@ -3820,22 +3840,52 @@ function escucharEstadoViajeCliente(viajeId) {
 
         if (viaje.estado === 'ACEPTADO') {
           notif.show('Chofer asignado', 'Tu viaje fue aceptado', 'success');
+          if (typeof actualizarCentroNotificacionesViaje === 'function') {
+            actualizarCentroNotificacionesViaje({
+              estado: 'ACEPTADO',
+              texto: 'Tu viaje fue aceptado'
+            });
+          }
         }
 
         if (viaje.estado === 'EN_CAMINO') {
           notif.show('Chofer en camino', 'Tu chofer va rumbo al origen', 'info');
+          if (typeof actualizarCentroNotificacionesViaje === 'function') {
+            actualizarCentroNotificacionesViaje({
+              estado: 'EN_CAMINO',
+              texto: 'Tu chofer va rumbo al origen'
+            });
+          }
         }
 
         if (viaje.estado === 'EN_CURSO') {
           notif.show('Viaje iniciado', 'Tu viaje comenzó', 'info');
+          if (typeof actualizarCentroNotificacionesViaje === 'function') {
+            actualizarCentroNotificacionesViaje({
+              estado: 'EN_CURSO',
+              texto: 'Tu viaje comenzó'
+            });
+          }
         }
 
         if (viaje.estado === 'COMPLETADO') {
           notif.show('Viaje finalizado', 'Gracias por viajar con MIMI', 'success');
+          if (typeof actualizarCentroNotificacionesViaje === 'function') {
+            actualizarCentroNotificacionesViaje({
+              estado: 'COMPLETADO',
+              texto: 'Gracias por viajar con MIMI'
+            });
+          }
         }
 
         if (viaje.estado === 'CANCELADO') {
           notif.show('Viaje cancelado', 'La solicitud fue cancelada', 'warning');
+          if (typeof actualizarCentroNotificacionesViaje === 'function') {
+            actualizarCentroNotificacionesViaje({
+              estado: 'CANCELADO',
+              texto: 'La solicitud fue cancelada'
+            });
+          }
         }
       }
     )
@@ -3843,6 +3893,7 @@ function escucharEstadoViajeCliente(viajeId) {
       console.log('[cliente-viaje subscribe]', status);
     });
 }
+  
 function compartirRuta() {
   if (!state.routeData) {
     notif.show('Sin ruta', 'Primero calculá el recorrido', 'warning');
@@ -4191,11 +4242,18 @@ async function cancelarViajeCliente() {
       btnConfirmar.style.pointerEvents = 'auto';
     }
 
-    notif.show(
-      'Viaje cancelado',
-      'Tu viaje fue cancelado correctamente',
-      'success'
-    );
+notif.show(
+  'Viaje cancelado',
+  'Tu viaje fue cancelado correctamente',
+  'success'
+);
+
+if (typeof actualizarCentroNotificacionesViaje === 'function') {
+  actualizarCentroNotificacionesViaje({
+    estado: 'CANCELADO',
+    texto: 'Tu viaje fue cancelado correctamente'
+  });
+}
   } catch (err) {
     console.error('[cancelarViajeCliente] ERROR:', err);
 
@@ -4601,7 +4659,17 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
     fecha
   });
 
-  // limitar a 10
+function actualizarCentroNotificacionesViaje({ estado, texto }) {
+  if (!notifList || !notifSummary || !notifDot) return;
+
+  const fecha = new Date().toLocaleTimeString();
+
+  historial.unshift({
+    estado,
+    texto,
+    fecha
+  });
+
   historial = historial.slice(0, 10);
 
   notifList.innerHTML = historial.map(item => `
@@ -4614,11 +4682,10 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
 
   notifSummary.textContent = texto;
 
-  // mostrar puntito si está cerrado
   if (!notifAbierto) {
     notifDot.style.display = "block";
   }
 }
-</script>
+  </script>
 </body>
 </html>
