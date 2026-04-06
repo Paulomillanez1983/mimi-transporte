@@ -575,31 +575,52 @@ async function buscarDireccion(query) {
     </div>
 
 <div class="header-icons">
-  <button
-    id="tripNotificationsBtn"
-    class="trip-notifications"
-    type="button"
-    aria-label="Estado del viaje"
-    aria-expanded="false"
-    aria-controls="tripNotificationsPanel"
-  >
-    <span class="trip-notifications-dot"></span>
-    <span class="trip-notifications-icon">🔔</span>
-    <span class="trip-notifications-badge" id="tripNotificationsBadge" hidden>0</span>
-  </button>
+  <div class="header-notifications-wrapper">
+    <button
+      id="tripNotificationsBtn"
+      class="trip-notifications"
+      type="button"
+      aria-label="Notificaciones del viaje"
+      aria-expanded="false"
+      aria-controls="tripNotificationsPanel"
+    >
+      🔔
+      <span class="trip-notifications-dot"></span>
+      <span
+        class="trip-notifications-badge"
+        id="tripNotificationsBadge"
+        hidden
+      >0</span>
+    </button>
 
-  <div
-    id="tripNotificationsPanel"
-    class="trip-notifications-panel"
-    hidden
-  >
-    <div class="trip-notifications-panel-header">Estado del viaje</div>
-    <div id="tripNotificationsSummary" class="trip-notifications-summary">
-      Sin novedades todavía
+    <div
+      id="tripNotificationsPanel"
+      class="trip-notifications-panel"
+      role="dialog"
+      aria-label="Panel de notificaciones"
+    >
+      <div class="trip-notifications-panel-header">
+        <span>Notificaciones</span>
+      </div>
+
+      <div
+        id="tripNotificationsSummary"
+        class="trip-notifications-summary"
+      >
+        Sin novedades por ahora.
+      </div>
+
+      <div
+        id="tripNotificationsList"
+        class="trip-notifications-list"
+      >
+        <div class="trip-notification-empty">
+          Todavía no hay notificaciones.
+        </div>
+      </div>
     </div>
-    <div id="tripNotificationsList" class="trip-notifications-list"></div>
   </div>
-</div>
+</div>    
     <div class="header-user" id="headerUser">
       <div class="header-auth-skeleton" aria-hidden="true">
         <div class="header-auth-skeleton-avatar"></div>
