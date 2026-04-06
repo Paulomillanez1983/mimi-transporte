@@ -1590,8 +1590,82 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
       return null;
   }
 }
-  let ultimoEstadoNotificado = null;
-  function suscribirseEstadoViajeRealtime(viajeId) {
+let ultimoEstadoNotificado = null;
+
+function animarCampanitaNotificaciones() {
+  if (!notifBtn) return;
+
+  notifBtn.classList.remove('ring', 'pulse');
+  void notifBtn.offsetWidth;
+
+  notifBtn.classList.add('ring', 'pulse');
+
+  setTimeout(() => notifBtn.classList.remove('ring'), 950);
+  setTimeout(() => notifBtn.classList.remove('pulse'), 1150);
+}
+
+let audioContextNotifs = null;
+
+function reproducirSonidoAceptado() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+
+    if (!audioContextNotifs) {
+      audioContextNotifs = new AudioCtx();
+    }
+
+    const ctx = audioContextNotifs;
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = 'sine';
+    osc2.type = 'sine';
+
+    osc1.frequency.setValueAtTime(880, now);
+    osc2.frequency.setValueAtTime(1320, now + 0.08);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now + 0.08);
+
+    osc1.stop(now + 0.18);
+    osc2.stop(now + 0.32);
+  } catch (err) {
+    console.warn('[notif] no se pudo reproducir sonido:', err);
+  }
+}
+
+function vibrarNotificacionAceptada() {
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate([120, 80, 160]);
+    }
+  } catch (err) {
+    console.warn('[notif] no se pudo vibrar:', err);
+  }
+}
+
+function ejecutarFeedbackAceptado() {
+  animarCampanitaNotificaciones();
+  reproducirSonidoAceptado();
+  vibrarNotificacionAceptada();
+}
+function suscribirseEstadoViajeRealtime(viajeId) {
   if (!viajeId || !window.sbRealtime) {
     console.warn('[realtime] No hay viajeId o cliente supabase');
     return;
@@ -1615,7 +1689,6 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
 
     console.log('[realtime] Cambio estado:', nuevoEstado);
 
-    // 🚫 evitar duplicados
     if (nuevoEstado === ultimoEstadoNotificado) return;
     ultimoEstadoNotificado = nuevoEstado;
 
@@ -1624,14 +1697,20 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
     if (notifData) {
       actualizarCentroNotificacionesViaje(notifData);
     }
-  } catch (err) {
-          console.error('[realtime] error procesando evento', err);
-        }
-      }
-    )
-    .subscribe();
 
-  return channel;
+    if (nuevoEstado === 'ACEPTADO') {
+      ejecutarFeedbackAceptado();
+
+      notif.show(
+        'Chofer asignado',
+        'Tu viaje fue aceptado por un chofer.',
+        'success',
+        3500
+      );
+    }
+  } catch (err) {
+    console.error('[realtime] error procesando evento', err);
+  }
 }
 // ==========================================
 // UI LOADING
@@ -3680,6 +3759,7 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
     }
 
     state.viajeId = json.viaje_id;
+    ultimoEstadoNotificado = null;
 
     // compatibilidad total: guardamos en ambos nombres
     state.viajeEstado = json.estado || 'buscando_chofer';
@@ -3745,9 +3825,11 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
 if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
   suscribirseEstadoViajeRealtime(state.viajeId);
 } else if (typeof escucharEstadoViajeCliente === 'function' && state?.viajeId) {
+if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
+  suscribirseEstadoViajeRealtime(state.viajeId);
+} else if (typeof escucharEstadoViajeCliente === 'function' && state?.viajeId) {
   escucharEstadoViajeCliente(state.viajeId);
 }
-
 notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
   } catch (err) {
     console.error('[confirmarViaje] ERROR completo:', err);
