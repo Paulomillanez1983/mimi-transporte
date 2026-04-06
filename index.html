@@ -48,24 +48,6 @@ function getPublicSupabaseHeaders(extra = {}) {
   };
 }
 // HEADER SCROLL EFFECT
-(function initHeaderScroll() {
-  const header = document.querySelector('.header');
-  if (!header) return;
-
-  let lastScroll = 0;
-
-  window.addEventListener('scroll', () => {
-    const current = window.scrollY;
-
-    if (current > 40) {
-      header.classList.add('header-scrolled');
-    } else {
-      header.classList.remove('header-scrolled');
-    }
-
-    lastScroll = current;
-  });
-})();
 function getAuthSupabaseHeaders(accessToken, extra = {}) {
   return {
     apikey: SUPABASE_ANON_KEY,
@@ -580,11 +562,18 @@ async function buscarDireccion(query) {
 <header class="header" role="banner">
   <div class="header-content">
     <div class="vehicle-section" aria-hidden="true">
-      ...
+      <img
+        class="vehicle-img"
+        src="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/jeep-renegade.png?raw=true"
+        alt=""
+        loading="eager"
+        decoding="async"
+      >
     </div>
 
     <div class="logo-section">
-      ...
+      <div class="logo-title">MIMICAR</div>
+      <div class="logo-subtitle">Transporte infantil seguro</div>
     </div>
 
     <div class="header-icons">
@@ -593,12 +582,13 @@ async function buscarDireccion(query) {
 
     <div class="header-user" id="headerUser">
       <div class="header-auth-skeleton" aria-hidden="true">
-  <div class="header-auth-skeleton-avatar"></div>
-  <div class="header-auth-skeleton-lines">
-    <div class="header-auth-skeleton-line"></div>
-    <div class="header-auth-skeleton-line"></div>
-  </div>
-</div>
+        <div class="header-auth-skeleton-avatar"></div>
+        <div class="header-auth-skeleton-lines">
+          <div class="header-auth-skeleton-line"></div>
+          <div class="header-auth-skeleton-line"></div>
+        </div>
+      </div>
+
       <button
         id="btnLoginHeader"
         class="header-login-btn"
@@ -634,7 +624,7 @@ async function buscarDireccion(query) {
     </div>
   </div>
 </header>
-<main class="container" role="main">
+  <main class="container" role="main">
   <section class="hero-text" aria-labelledby="heroTitle">
     <h1 class="hero-title" id="heroTitle">Planificá tu viaje</h1>
     <p class="hero-subtitle">Agregá paradas y calculá el precio exacto</p>
@@ -1044,6 +1034,13 @@ async function cerrarSesionCliente() {
     }
   }
 }
+  function setHeaderAuthLoading(isLoading) {
+  const headerUser = document.getElementById('headerUser');
+  if (!headerUser) return;
+  headerUser.classList.toggle('header-auth-loading', !!isLoading);
+}
+
+window.setHeaderAuthLoading = setHeaderAuthLoading;
   
 async function obtenerSesionCliente(forceRefresh = false) {
   const canToggleHeaderLoading =
@@ -4325,11 +4322,6 @@ function initPageTransitionsFX() {
   });
 }
 
-function setHeaderAuthLoading(isLoading) {
-  const headerUser = document.getElementById('headerUser');
-  if (!headerUser) return;
-  headerUser.classList.toggle('header-auth-loading', !!isLoading);
-}
 
 function initAuthLoadingFX() {
   const btnLogin = document.getElementById('btnLoginHeader');
@@ -4459,6 +4451,15 @@ function replayVehicleIntroIfNeeded() {
 })();
 
 document.addEventListener('DOMContentLoaded', initNextLevelUI);
+  document.addEventListener('DOMContentLoaded', () => {
+  const header = document.querySelector('.header');
+  if (!header) return;
+
+  window.addEventListener('scroll', () => {
+    const current = window.scrollY || 0;
+    header.classList.toggle('header-scrolled', current > 40);
+  }, { passive: true });
+});
 </script>
 </body>
 </html>
