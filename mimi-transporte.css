@@ -1435,21 +1435,30 @@ select:focus-visible {
 @media (prefers-color-scheme: dark) {
   :root {
     --gris-fondo: #0f1115;
+    --blanco: #181b22;
     --card-bg: #181b22;
     --surface-soft: #202632;
     --surface-muted: #1f2430;
+
     --text-primary: #f5f7fb;
     --text-secondary: #b8c0cc;
     --text-muted: #8d96a3;
+
     --border-soft: rgba(255, 255, 255, 0.08);
     --border-input: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+
     --input-bg: #222733;
     --input-border: rgba(255, 255, 255, 0.08);
+
     --suggestion-bg: #1d2330;
     --suggestion-hover: #2a3140;
+
     --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.22);
     --shadow-md: 0 10px 26px rgba(0, 0, 0, 0.28);
     --shadow-lg: 0 18px 42px rgba(0, 0, 0, 0.34);
+
+    --footer-bg: transparent;
   }
 
   body {
@@ -1561,6 +1570,7 @@ select:focus-visible {
   .map-btn {
     background: #1f2430;
     color: white;
+    border: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .route-timeline {
@@ -1574,6 +1584,7 @@ select:focus-visible {
   #priceBreakdown,
   .price-breakdown {
     background: #202632;
+    border-color: rgba(255, 255, 255, 0.06);
   }
 
   .breakdown-toggle {
@@ -1588,13 +1599,22 @@ select:focus-visible {
     border-color: rgba(66, 165, 245, 0.14);
   }
 
+  .toast-close {
+    color: #a8b0bc;
+  }
+
+  .toast-close:hover,
+  .toast-close:focus-visible {
+    color: #f5f7fb;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
   body.dark #mapSection,
   .dark #mapSection {
     background: rgba(20, 20, 28, 0.95);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
   }
 }
-
 /* ==========================================
    REDUCE MOTION
 ========================================== */
@@ -1604,14 +1624,25 @@ select:focus-visible {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 }
+
+/* ==========================================
+   CANCEL TRIP BUTTON
+========================================== */
 .btn-cancel-trip {
   border-color: rgba(244, 67, 54, 0.22);
   color: #c62828;
   background: rgba(244, 67, 54, 0.04);
+  transition:
+    border-color var(--ease-standard),
+    color var(--ease-standard),
+    background var(--ease-standard),
+    transform var(--ease-standard),
+    box-shadow var(--ease-standard);
 }
 
 .btn-cancel-trip:hover,
@@ -1619,6 +1650,10 @@ select:focus-visible {
   border-color: rgba(244, 67, 54, 0.4);
   color: #b71c1c;
   background: rgba(244, 67, 54, 0.08);
+}
+
+.btn-cancel-trip:active {
+  transform: scale(0.985);
 }
 /* ==========================================
    HEADER FINAL LIMPIO
