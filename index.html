@@ -3370,9 +3370,9 @@ const payload = {
 }
   
 function actualizarBotonCancelarViaje() {
-  const btnCancelar = document.getElementById('btnCancelarViaje');
-  if (!btnCancelar) return;
-
+const btnCancelar = document.getElementById('btnCancelarViaje');
+if (btnCancelar) btnCancelar.hidden = true;
+  
   const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
   const visible = !!state?.viajeId && !['CANCELADO', 'COMPLETADO'].includes(estado);
 
