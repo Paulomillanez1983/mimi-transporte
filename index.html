@@ -3094,11 +3094,30 @@ let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
 // ==========================================
 // ACCIONES
 // ==========================================
+
 async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
   let session = await obtenerSesionCliente(false);
 
   if (!session?.access_token) {
     throw new Error('No hay sesión válida para llamar la función protegida');
+  }
+
+  // validación real del token antes del primer intento
+  try {
+    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+    if (!userCheck?.data?.user) {
+      session = null;
+    }
+  } catch (_) {
+    session = null;
+  }
+
+  if (!session?.access_token) {
+    session = await obtenerSesionCliente(true);
+  }
+
+  if (!session?.access_token) {
+    throw new Error('No se pudo obtener una sesión válida');
   }
 
   let headers = {
@@ -3122,10 +3141,21 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
     return { response, rawText, session };
   }
 
+  limpiarSesionCache();
+
   session = await obtenerSesionCliente(true);
 
   if (!session?.access_token) {
     throw new Error('No se pudo refrescar la sesión');
+  }
+
+  try {
+    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+    if (!userCheck?.data?.user) {
+      throw new Error('JWT inválido luego del refresh');
+    }
+  } catch (err) {
+    throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
   }
 
   headers = {
@@ -3143,7 +3173,6 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
 
   return { response, rawText, session };
 }
-  
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
     notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
@@ -3855,7 +3884,7 @@ function intercambiarOrigenDestino() {
   box.hidden = !nextOpen;
 }
 
-async function cancelarViajeCliente() {
+  async function cancelarViajeCliente() {
   try {
     if (!state?.viajeId) {
       notif.show('Sin viaje activo', 'No hay un viaje confirmado para cancelar', 'warning');
@@ -3863,13 +3892,33 @@ async function cancelarViajeCliente() {
       return;
     }
 
-    const session = await obtenerSesionCliente(true);
+    let session = await obtenerSesionCliente(false);
 
     if (!session?.access_token || !session?.user) {
       notif.show(
         'Ingresá para continuar',
         'Necesitás iniciar sesión para cancelar el viaje',
         'info'
+      );
+      await loginConGoogleParaViaje();
+      return;
+    }
+
+    try {
+      const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+
+      if (!userCheck?.data?.user) {
+        session = await obtenerSesionCliente(true);
+      }
+    } catch (_) {
+      session = await obtenerSesionCliente(true);
+    }
+
+    if (!session?.access_token || !session?.user) {
+      notif.show(
+        'Sesión vencida',
+        'Volvé a iniciar sesión para cancelar el viaje',
+        'warning'
       );
       await loginConGoogleParaViaje();
       return;
@@ -3939,6 +3988,23 @@ async function cancelarViajeCliente() {
     notif.show('Viaje cancelado', 'Tu viaje fue cancelado correctamente', 'success');
   } catch (err) {
     console.error('[cancelarViajeCliente] ERROR:', err);
+
+    const msg = String(err?.message || '');
+
+    if (
+      /jwt/i.test(msg) ||
+      /sesi[oó]n/i.test(msg) ||
+      /unauthorized/i.test(msg) ||
+      /401/.test(msg)
+    ) {
+      notif.show(
+        'Sesión vencida',
+        'Volvé a iniciar sesión para cancelar el viaje',
+        'warning'
+      );
+      return;
+    }
+
     notif.show('Error', err?.message || 'No se pudo cancelar el viaje', 'error');
   } finally {
     const btnCancelar = document.getElementById('btnCancelarViaje');
@@ -3950,7 +4016,6 @@ async function cancelarViajeCliente() {
     }
   }
 }
-  
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
