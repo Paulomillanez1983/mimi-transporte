@@ -1195,6 +1195,7 @@ function setSectionVisible(elementId, visible) {
     el.setAttribute('aria-hidden', 'true');
   }
 }
+
 async function loginConGoogleParaViaje() {
   if (!window.sbRealtime?.auth) {
     throw new Error('Cliente Auth no inicializado');
@@ -1202,10 +1203,16 @@ async function loginConGoogleParaViaje() {
 
   localStorage.setItem('mimi_pending_trip_request', '1');
 
-  const { error } = await window.sbRealtime.auth.signInWithOAuth({
+  const redirectTo = `${window.location.origin}${window.location.pathname}`;
+
+  const { data, error } = await window.sbRealtime.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + window.location.pathname + window.location.search
+      redirectTo,
+      skipBrowserRedirect: false,
+      queryParams: {
+        prompt: 'select_account'
+      }
     }
   });
 
@@ -1213,7 +1220,9 @@ async function loginConGoogleParaViaje() {
     localStorage.removeItem('mimi_pending_trip_request');
     throw error;
   }
-}
+
+  return data;
+}  
 async function reanudarViajePendientePostLogin() {
   try {
     const pending = localStorage.getItem('mimi_pending_trip_request');
