@@ -47,7 +47,6 @@ function getPublicSupabaseHeaders(extra = {}) {
     ...extra
   };
 }
-// HEADER SCROLL EFFECT
 function getAuthSupabaseHeaders(accessToken, extra = {}) {
   return {
     apikey: SUPABASE_ANON_KEY,
@@ -55,8 +54,7 @@ function getAuthSupabaseHeaders(accessToken, extra = {}) {
     Accept: "application/json",
     ...extra
   };
-}
-  
+}  
 async function safeReadJson(response) {
   if (!response) return null;
 
