@@ -2464,16 +2464,20 @@ if (mapaCliente && mapReady) {
 }
 
 limpiarMarkersMapa();
-  state = {
-    origen: null,
-    destino: null,
-    waypoints: [],
-    routeData: null,
-    map: null,
-    markers: [],
-    cotizacion: null
-  };
+state = {
+  origen: null,
+  destino: null,
+  waypoints: [],
+  routeData: null,
+  map: null,
+  markers: [],
+  cotizacion: null,
+  viajeId: null,
+  viajeEstado: null,
+  estadoViaje: null
+};
 
+actualizarBotonCancelarViaje();
   waypointCounter = 0;
   isCalculatingQuote = false;
   currentQuoteRequestId++;
@@ -3189,25 +3193,25 @@ async function confirmarViaje() {
 
     console.log('[confirmarViaje] access_token payload:', tokenPayload);
 
-let authCheck = null;
-try {
-  authCheck = await window.sbRealtime.auth.getUser(session.access_token);
-  console.log('[confirmarViaje] auth.getUser() check:', authCheck);
-} catch (authCheckErr) {
-  console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
-}
+    let authCheck = null;
+    try {
+      authCheck = await window.sbRealtime.auth.getUser(session.access_token);
+      console.log('[confirmarViaje] auth.getUser() check:', authCheck);
+    } catch (authCheckErr) {
+      console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
+    }
 
-if (!authCheck?.data?.user) {
-  notif.show(
-    'Ingresá para continuar',
-    'Te llevamos a Google para solicitar el viaje',
-    'info'
-  );
+    if (!authCheck?.data?.user) {
+      notif.show(
+        'Ingresá para continuar',
+        'Te llevamos a Google para solicitar el viaje',
+        'info'
+      );
 
-  localStorage.removeItem('mimi_pending_trip_request');
-  await loginConGoogleParaViaje();
-  return;
-}    
+      localStorage.removeItem('mimi_pending_trip_request');
+      await loginConGoogleParaViaje();
+      return;
+    }
 
     const puntos = obtenerPuntosOrdenados();
     console.log('[confirmarViaje] puntos ordenados:', puntos);
@@ -3346,11 +3350,17 @@ if (!authCheck?.data?.user) {
     }
 
     state.viajeId = json.viaje_id;
+
+    // compatibilidad total: guardamos en ambos nombres
     state.viajeEstado = json.estado || 'buscando_chofer';
+    state.estadoViaje = String(state.viajeEstado || '').toUpperCase();
+
+    actualizarBotonCancelarViaje();
 
     console.log('[confirmarViaje] viaje creado OK:', {
       viajeId: state.viajeId,
       estado: state.viajeEstado,
+      estadoViaje: state.estadoViaje,
       dispatch: json?.dispatch || null
     });
 
@@ -3365,7 +3375,10 @@ if (!authCheck?.data?.user) {
     if (dispatchOk) {
       if (choferDetectado) {
         state.viajeEstado = 'ofertando';
+        state.estadoViaje = 'OFERTANDO';
       }
+
+      actualizarBotonCancelarViaje();
 
       actualizarEstadoSolicitudUI({
         estado: state.viajeEstado,
@@ -3401,6 +3414,21 @@ if (!authCheck?.data?.user) {
   }
 }
   
+function actualizarBotonCancelarViaje() {
+  const btnCancelar = document.getElementById('btnCancelarViaje');
+  if (!btnCancelar) return;
+
+  const estado = String(
+    state.estadoViaje || state.viajeEstado || ''
+  ).toUpperCase();
+
+  const visible =
+    !!state.viajeId &&
+    !['CANCELADO', 'COMPLETADO'].includes(estado);
+
+  btnCancelar.hidden = !visible;
+}
+
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
@@ -3843,6 +3871,7 @@ function bindUIActions() {
   const btnReiniciarRuta = document.getElementById('btnReiniciarRuta');
   const btnConfirmarViaje = document.getElementById('btnConfirmarViaje');
   const btnCompartirRuta = document.getElementById('btnCompartirRuta');
+  const btnCancelarViaje = document.getElementById('btnCancelarViaje');
   const btnSwapRoute = document.getElementById('btnSwapRoute');
   const btnToggleBreakdown = document.getElementById('btnToggleBreakdown');
 
@@ -3874,6 +3903,11 @@ function bindUIActions() {
   if (btnCompartirRuta && !btnCompartirRuta.dataset.bound) {
     btnCompartirRuta.addEventListener('click', compartirRuta);
     btnCompartirRuta.dataset.bound = '1';
+  }
+
+  if (btnCancelarViaje && !btnCancelarViaje.dataset.bound) {
+    btnCancelarViaje.addEventListener('click', cancelarViajeCliente);
+    btnCancelarViaje.dataset.bound = '1';
   }
 
   if (btnSwapRoute && !btnSwapRoute.dataset.bound) {
