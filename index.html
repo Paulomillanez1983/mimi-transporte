@@ -1062,28 +1062,36 @@ function initUserSessionDropdown() {
   });
 }
   
-async function cerrarSesionCliente() {
+ async function cerrarSesionCliente() {
   try {
-    if (!window.sbRealtime?.auth) return;
+    if (typeof setHeaderAuthLoading === 'function') {
+      setHeaderAuthLoading(true);
+    }
 
-    const { error } = await window.sbRealtime.auth.signOut();
-    if (error) throw error;
+    if (window.sbRealtime?.auth) {
+      const { error } = await window.sbRealtime.auth.signOut();
+      if (error) throw error;
+    }
 
     limpiarSesionCache();
     localStorage.removeItem('mimi_pending_trip_request');
     renderSesionUI(null);
 
-    notif.show('Sesión cerrada', 'Saliste correctamente', 'info');
+    const currentUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+    const continueUrl = encodeURIComponent(currentUrl);
+    const googleLogoutUrl =
+      `https://accounts.google.com/Logout?continue=https://appengine.google.com/_ah/logout?continue=${continueUrl}`;
+
+    window.location.href = googleLogoutUrl;
   } catch (err) {
     console.error('[auth] error cerrando sesión:', err);
     notif.show('Error', 'No se pudo cerrar sesión', 'error');
-  } finally {
+
     if (typeof setHeaderAuthLoading === 'function') {
       setHeaderAuthLoading(false);
     }
   }
-}
-  
+} 
 async function obtenerSesionCliente(forceRefresh = false) {
   const canToggleHeaderLoading =
     typeof window.setHeaderAuthLoading === 'function';
