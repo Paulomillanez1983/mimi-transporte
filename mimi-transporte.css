@@ -134,125 +134,119 @@ button {
 
 /* ==========================================
    HEADER
+   Patch premium seguro - sin romper JS/HTML
 ========================================== */
 .header {
   background:
     radial-gradient(circle at top left, rgba(66, 165, 245, 0.18), transparent 34%),
     linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  padding: calc(18px + var(--safe-top)) 16px 36px;
+  padding: calc(16px + var(--safe-top)) 14px 22px;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   border-bottom-left-radius: 26px;
   border-bottom-right-radius: 26px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
-  margin-bottom: 34px;
+  margin-bottom: 18px;
   z-index: 1;
 }
 
 .header-content {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "brand user"
+    "vehicle vehicle";
   align-items: center;
-  justify-content: space-between;
+  gap: 12px 10px;
   max-width: 600px;
   margin: 0 auto;
   position: relative;
   z-index: 2;
-  padding: 0 4px;
-  gap: 10px;
+  padding: 0 2px;
 }
 
-.vehicle-section {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  position: relative;
-  flex-shrink: 0;
-}
-
-.vehicle-img {
-  width: clamp(110px, 31vw, 160px);
-  height: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
-  position: absolute;
-  left: -8px;
-  bottom: clamp(-118px, -31vw, -175px);
-  z-index: 10;
-  pointer-events: none;
-  will-change: transform;
-  user-select: none;
-}
-
+/* BLOQUE MARCA */
 .logo-section {
+  grid-area: brand;
   color: white;
-  text-align: center;
-  flex: 1;
+  text-align: left;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   min-width: 0;
+  padding-top: 2px;
 }
 
 .logo-title {
-  font-size: clamp(1.25rem, 5vw, 1.8rem);
+  font-size: clamp(1.18rem, 4.8vw, 1.7rem);
   font-weight: 800;
-  letter-spacing: 0.6px;
-  line-height: 1;
+  letter-spacing: 0.3px;
+  line-height: 1.02;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.28);
 }
 
 .logo-subtitle {
-  font-size: clamp(0.64rem, 2.4vw, 0.76rem);
-  opacity: 0.9;
+  font-size: clamp(0.64rem, 2.3vw, 0.78rem);
+  opacity: 0.92;
   font-weight: 600;
-  letter-spacing: 1.2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
   white-space: nowrap;
   margin-top: 4px;
 }
 
-.header-icons {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  z-index: 2;
-  flex-shrink: 0;
+/* BLOQUE DERECHO: ESCUDO + USUARIO */
+.header-icons,
+.header-user {
+  display: contents;
 }
 
 .shield-icon {
-  width: clamp(36px, 10vw, 40px);
-  height: clamp(36px, 10vw, 40px);
+  grid-area: user;
+  justify-self: start;
+  align-self: start;
+  width: 38px;
+  height: 38px;
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 12px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(1.05rem, 3vw, 1.25rem);
+  font-size: 1.05rem;
   color: #54d17a;
   font-weight: 800;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+  margin-right: 126px;
 }
 
-.header-user {
+#headerUser {
+  grid-area: user;
+  justify-self: end;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 0;
 }
 
+/* LOGIN */
 .header-login-btn,
 .header-logout-btn {
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   padding: 10px 14px;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--ease-standard), background var(--ease-standard), box-shadow var(--ease-standard), opacity var(--ease-standard);
+  transition:
+    transform var(--ease-standard),
+    background var(--ease-standard),
+    box-shadow var(--ease-standard),
+    opacity var(--ease-standard);
 }
 
 .header-login-btn {
@@ -263,6 +257,8 @@ button {
   gap: 8px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  min-height: 42px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
 
 .header-login-btn:hover,
@@ -274,16 +270,20 @@ button {
   transform: scale(0.98);
 }
 
+/* SESIÓN INICIADA */
 .user-session-box {
-  display: flex;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+  max-width: min(100%, 290px);
   background: rgba(255, 255, 255, 0.11);
-  border-radius: var(--radius-pill);
+  border-radius: 18px;
   padding: 6px 8px 6px 6px;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 .user-avatar {
@@ -292,8 +292,8 @@ button {
   border-radius: 50%;
   object-fit: cover;
   background: rgba(255, 255, 255, 0.12);
-  flex: 0 0 38px;
   border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.14);
 }
 
 .user-meta {
@@ -310,22 +310,25 @@ button {
 }
 
 .user-name {
-  font-size: 0.87rem;
-  font-weight: 700;
+  font-size: 0.84rem;
+  font-weight: 800;
   color: #fff;
-  max-width: 180px;
+  max-width: 100%;
+  line-height: 1.15;
 }
 
 .user-email {
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.82);
-  max-width: 180px;
+  max-width: 100%;
+  line-height: 1.15;
 }
 
 .header-logout-btn {
   background: transparent;
   color: #fff;
   padding: 8px 10px;
+  min-height: 36px;
 }
 
 .header-logout-btn:hover,
@@ -337,6 +340,143 @@ button {
   transform: scale(0.98);
 }
 
+/* BLOQUE VEHÍCULO */
+.vehicle-section {
+  grid-area: vehicle;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  min-height: 82px;
+  padding-top: 6px;
+}
+
+.vehicle-img {
+  width: clamp(118px, 34vw, 168px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.38));
+  position: relative;
+  left: 0;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
+  will-change: transform;
+  user-select: none;
+}
+
+/* glow decorativo suave */
+.vehicle-section::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: 6px;
+  width: 120px;
+  height: 18px;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.22), transparent 72%);
+  filter: blur(6px);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* MOBILE ANGOSTO */
+@media (max-width: 480px) {
+  .header {
+    padding: calc(14px + var(--safe-top)) 12px 18px;
+    margin-bottom: 14px;
+  }
+
+  .header-content {
+    gap: 10px 8px;
+  }
+
+  .logo-title {
+    font-size: clamp(1.08rem, 4.6vw, 1.38rem);
+  }
+
+  .logo-subtitle {
+    font-size: 0.62rem;
+    letter-spacing: 0.9px;
+  }
+
+  .shield-icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 112px;
+  }
+
+  .user-session-box {
+    max-width: 220px;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 7px;
+    padding: 5px 7px 5px 5px;
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .user-name {
+    font-size: 0.8rem;
+  }
+
+  .user-email {
+    font-size: 0.69rem;
+  }
+
+  .header-login-btn {
+    min-height: 40px;
+    padding: 9px 12px;
+  }
+
+  .vehicle-section {
+    min-height: 72px;
+  }
+
+  .vehicle-img {
+    width: clamp(102px, 31vw, 132px);
+  }
+
+  .vehicle-section::after {
+    width: 96px;
+    left: 10px;
+  }
+}
+
+/* MUY CHICO */
+@media (max-width: 360px) {
+  .header-content {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "brand"
+      "user"
+      "vehicle";
+  }
+
+  .logo-section {
+    align-items: center;
+    text-align: center;
+  }
+
+  .shield-icon {
+    display: none;
+  }
+
+  #headerUser {
+    justify-self: center;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .user-session-box {
+    max-width: 100%;
+  }
+
+  .vehicle-section {
+    justify-content: center;
+  }
+}
 /* ==========================================
    LAYOUT
 ========================================== */
