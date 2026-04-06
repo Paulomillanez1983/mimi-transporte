@@ -2123,3 +2123,30 @@ select:focus-visible {
     transform: translateY(0) scale(1);
   }
 }
+/* ==========================================
+   HEADER MOBILE FIXES
+========================================== */
+.header {
+  z-index: 50;
+}
+
+.vehicle-img {
+  bottom: -4px;
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: calc(6px + var(--safe-top)) 12px 0;
+  }
+}
+
+.header,
+.header * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.user-session-box,
+.header-login-btn,
+.header-logout-btn {
+  touch-action: manipulation;
+}
