@@ -1265,17 +1265,15 @@ async function loginConGoogleParaViaje() {
   sessionStorage.removeItem('mimi-cliente-auth');
   localStorage.setItem('mimi_pending_trip_request', '1');
 
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
+  const redirectTo =
+    "https://paulomillanez1983.github.io/mimi-transporte/";
 
   const { data, error } = await window.sbRealtime.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo,
-      skipBrowserRedirect: false,
       queryParams: {
-        prompt: 'select_account',
-        access_type: 'offline',
-        include_granted_scopes: 'false'
+        prompt: 'select_account'
       }
     }
   });
@@ -1286,8 +1284,7 @@ async function loginConGoogleParaViaje() {
   }
 
   return data;
-}
-  
+}  
 async function reanudarViajePendientePostLogin() {
   try {
     const pending = localStorage.getItem('mimi_pending_trip_request');
