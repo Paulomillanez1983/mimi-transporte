@@ -1948,19 +1948,19 @@ select:focus-visible {
 
 /* MOBILE */
 @media (max-width: 480px) {
-.header {
-  padding: calc(0px + var(--safe-top)) 12px 0;
-  margin-bottom: 8px;
-  border-bottom-left-radius: 20px;
-  border-bottom-right-radius: 20px;
-}
-.header-content {
-  gap: 4px 8px;
-  grid-template-rows: auto 1fr;
-  min-height: 128px;
-  padding-bottom: 6px;
-}
+  .header {
+    padding: calc(0px + var(--safe-top)) 12px 0;
+    margin-bottom: 8px;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+  }
 
+  .header-content {
+    gap: 4px 8px;
+    grid-template-rows: auto 1fr;
+    min-height: 112px; /* antes 128px */
+    padding-bottom: 0;
+  }
   .logo-title {
     font-size: clamp(1rem, 4.8vw, 1.28rem);
   }
@@ -2025,19 +2025,23 @@ select:focus-visible {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: -10px; /* baja toda la zona del jeep */
   min-height: 0;
-  height: 58px;
+  height: 54px;
   pointer-events: none;
+  overflow: visible;
 }
+
 .vehicle-img {
   position: absolute;
-  left: 8px;
-  bottom: -2px;
-  width: 108px;
+  left: 10px;
+  bottom: -12px; /* hace que las ruedas sobresalgan */
+  width: 112px;
   height: auto;
+  z-index: 3;
 }
-   .vehicle-section::after {
+   
+.vehicle-section::after {
     left: 10px;
     width: 82px;
     bottom: 1px;
