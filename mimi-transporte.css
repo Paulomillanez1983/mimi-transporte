@@ -907,7 +907,13 @@ select:focus-visible {
   display: none;
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease,
+    box-shadow var(--ease-standard);
+  position: relative;
+  overflow: hidden;
+  will-change: opacity, transform;
 }
 
 .quote-card.visible {
@@ -932,6 +938,7 @@ select:focus-visible {
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .quote-route-info {
@@ -942,6 +949,7 @@ select:focus-visible {
   font-size: 14px;
   font-weight: 700;
   text-align: right;
+  flex-shrink: 0;
 }
 
 .quote-main {
@@ -956,6 +964,7 @@ select:focus-visible {
   line-height: 1;
   margin-bottom: 8px;
   letter-spacing: -0.04em;
+  text-wrap: balance;
 }
 
 .quote-price-label {
@@ -977,6 +986,17 @@ select:focus-visible {
   border: 1px solid rgba(0, 0, 0, 0.04);
   border-radius: 14px;
   padding: 12px 10px;
+  transition:
+    transform var(--ease-standard),
+    box-shadow var(--ease-standard),
+    background var(--ease-standard),
+    border-color var(--ease-standard);
+}
+
+.quote-detail:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+  border-color: rgba(21, 101, 192, 0.08);
 }
 
 .quote-detail-value {
@@ -984,6 +1004,7 @@ select:focus-visible {
   font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 4px;
+  line-height: 1.1;
 }
 
 .quote-detail-label {
@@ -992,6 +1013,7 @@ select:focus-visible {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  line-height: 1.2;
 }
 
 .quote-actions {
@@ -1000,14 +1022,26 @@ select:focus-visible {
   gap: 12px;
   margin-top: 18px;
 }
+
 .map-btn.route {
   animation: pulseRoute 2s infinite;
 }
 
-@keyframes pulseRoute {
-  0%,100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+.map-btn.route:hover,
+.map-btn.route:focus-visible,
+.map-btn.route:active {
+  animation-play-state: paused;
 }
+
+@keyframes pulseRoute {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
 /* ==========================================
    PRICE BREAKDOWN
 ========================================== */
