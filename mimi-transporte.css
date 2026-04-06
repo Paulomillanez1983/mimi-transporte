@@ -284,8 +284,9 @@ button {
   min-height: 24px;
   width: 100%;
   text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
 }
-
 .route-input::placeholder {
   color: var(--text-muted);
   font-weight: 500;
