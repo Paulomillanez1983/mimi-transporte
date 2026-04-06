@@ -1624,3 +1624,15 @@ input:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+.btn-cancel-trip {
+  border-color: rgba(244, 67, 54, 0.22);
+  color: #c62828;
+  background: rgba(244, 67, 54, 0.04);
+}
+
+.btn-cancel-trip:hover,
+.btn-cancel-trip:focus-visible {
+  border-color: rgba(244, 67, 54, 0.4);
+  color: #b71c1c;
+  background: rgba(244, 67, 54, 0.08);
+}
