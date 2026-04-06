@@ -1833,6 +1833,54 @@ body.dark #mapSection,
     max-height: min(280px, 40vh);
   }
 }
+  /* ==========================================
+   MAPA MARKERS PRO
+========================================== */
+.route-marker {
+  position: relative;
+  width: 34px;
+  height: 34px;
+}
+
+.route-marker-pin {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+}
+
+.route-marker.origin .route-marker-pin {
+  background: #22c55e;
+}
+
+.route-marker.dest .route-marker-pin {
+  background: #ef4444;
+}
+
+.route-marker::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: markerPulse 2s infinite;
+}
+
+.route-marker.origin::after {
+  background: rgba(34,197,94,0.25);
+}
+
+.route-marker.dest::after {
+  background: rgba(239,68,68,0.25);
+}
+
+@keyframes markerPulse {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
 </style>
 </head>
 <body>
@@ -3159,7 +3207,9 @@ function limpiarPuntosRuta(puntos) {
 function crearMarkerElement(label, type) {
   const el = document.createElement('div');
   el.className = `route-marker ${type}`;
-
+  el.innerHTML = `<div class="route-marker-pin"></div>`;
+  return el;
+}
   const icono =
     type === 'origin' ? '📍' :
     type === 'dest' ? '🏁' :
