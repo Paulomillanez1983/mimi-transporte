@@ -3096,35 +3096,68 @@ let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
 // ==========================================
 
 async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
-  let session = await obtenerSesionCliente(false);
-
-  if (!session?.access_token) {
-    throw new Error('No hay sesión válida para llamar la función protegida');
-  }
-
-  // validación real del token antes del primer intento
-  try {
-    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
-    if (!userCheck?.data?.user) {
-      session = null;
+  const normalizarHeaders = (headersLike) => {
+    try {
+      return headersLike instanceof Headers
+        ? Object.fromEntries(headersLike.entries())
+        : { ...(headersLike || {}) };
+    } catch (_) {
+      return { ...(headersLike || {}) };
     }
-  } catch (_) {
-    session = null;
-  }
+  };
+
+  const tokenExpiraPronto = (token) => {
+    try {
+      const payload = decodificarJwtPayload(token);
+      const expMs = Number(payload?.exp || 0) * 1000;
+      if (!expMs) return false;
+      return (expMs - Date.now()) < 60_000;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const construirHeaders = (session, extraHeaders = {}) => ({
+    ...normalizarHeaders(extraHeaders),
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${session.access_token}`
+  });
+
+  let session = await obtenerSesionCliente(false);
 
   if (!session?.access_token) {
     session = await obtenerSesionCliente(true);
   }
 
   if (!session?.access_token) {
-    throw new Error('No se pudo obtener una sesión válida');
+    throw new Error('No hay sesión válida para llamar la función protegida');
   }
 
-  let headers = {
-    ...(options.headers || {}),
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${session.access_token}`
-  };
+  if (tokenExpiraPronto(session.access_token)) {
+    limpiarSesionCache();
+    session = await obtenerSesionCliente(true);
+  }
+
+  if (!session?.access_token) {
+    throw new Error('No se pudo refrescar la sesión del usuario');
+  }
+
+  try {
+    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+    if (!userCheck?.data?.user) {
+      limpiarSesionCache();
+      session = await obtenerSesionCliente(true);
+    }
+  } catch (_) {
+    limpiarSesionCache();
+    session = await obtenerSesionCliente(true);
+  }
+
+  if (!session?.access_token) {
+    throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
+  }
+
+  let headers = construirHeaders(session, options.headers);
 
   let response = await fetch(url, {
     ...options,
@@ -3133,11 +3166,18 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
 
   let rawText = await response.text();
 
-  const pareceJwtInvalido =
-    response.status === 401 &&
-    /invalid jwt/i.test(rawText || '');
+  const es401 = response.status === 401;
+  const texto401 = String(rawText || '').toLowerCase();
+  const requiereRetryAuth =
+    es401 &&
+    (
+      texto401.includes('invalid jwt') ||
+      texto401.includes('jwt') ||
+      texto401.includes('unauthorized') ||
+      texto401.includes('auth')
+    );
 
-  if (!pareceJwtInvalido) {
+  if (!requiereRetryAuth) {
     return { response, rawText, session };
   }
 
@@ -3146,7 +3186,7 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
   session = await obtenerSesionCliente(true);
 
   if (!session?.access_token) {
-    throw new Error('No se pudo refrescar la sesión');
+    throw new Error('No se pudo refrescar la sesión. Volvé a iniciar sesión.');
   }
 
   try {
@@ -3154,15 +3194,11 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
     if (!userCheck?.data?.user) {
       throw new Error('JWT inválido luego del refresh');
     }
-  } catch (err) {
+  } catch (_) {
     throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
   }
 
-  headers = {
-    ...(options.headers || {}),
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${session.access_token}`
-  };
+  headers = construirHeaders(session, options.headers);
 
   response = await fetch(url, {
     ...options,
@@ -3171,8 +3207,13 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
 
   rawText = await response.text();
 
+  if (response.status === 401) {
+    throw new Error('La función protegida rechazó la sesión del usuario (401). Revisá la validación JWT en la Edge Function.');
+  }
+
   return { response, rawText, session };
 }
+  
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
     notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
