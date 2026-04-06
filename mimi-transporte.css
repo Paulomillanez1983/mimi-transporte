@@ -2491,3 +2491,8 @@ select:focus-visible {
     width: 320px;
   }
 }
+@media (min-width: 481px) {
+  #headerUser {
+    margin-right: 10px;
+  }
+}
