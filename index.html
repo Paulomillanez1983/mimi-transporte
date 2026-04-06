@@ -1020,8 +1020,13 @@ async function cerrarSesionCliente() {
   } catch (err) {
     console.error('[auth] error cerrando sesión:', err);
     notif.show('Error', 'No se pudo cerrar sesión', 'error');
+  } finally {
+    if (typeof setHeaderAuthLoading === 'function') {
+      setHeaderAuthLoading(false);
+    }
   }
 }
+  
 async function obtenerSesionCliente(forceRefresh = false) {
   if (!window.sbRealtime?.auth) {
     console.warn('[auth] Cliente de sesión no inicializado');
