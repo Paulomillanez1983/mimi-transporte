@@ -1113,7 +1113,74 @@ body.dark #mapSection,
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
+/* ==========================================
+   MAPA - MARKERS PREMIUM + RUTA ANIMADA
+========================================== */
+.route-marker {
+  position: relative;
+  width: 28px;
+  height: 28px;
+}
 
+.route-marker-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+}
+
+.route-marker.origin .route-marker-pin {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.route-marker.dest .route-marker-pin {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.route-marker.waypoint .route-marker-pin {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.route-marker-halo {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  z-index: 1;
+  animation: markerPulse 1.8s ease-out infinite;
+}
+
+.route-marker.origin .route-marker-halo {
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.route-marker.dest .route-marker-halo {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.route-marker.waypoint .route-marker-halo {
+  background: rgba(245, 158, 11, 0.18);
+}
+
+@keyframes markerPulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+  
 /* ==========================================
    CARD DE COTIZACIÓN
 ========================================== */
@@ -2331,7 +2398,9 @@ let mapReady = false;
 let isCalculatingQuote = false;
 let currentQuoteRequestId = 0;
 let waypointCounter = 0;
-
+let routeAnimationFrame = null;
+let routeDashPhase = 0;
+  
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -3089,26 +3158,20 @@ function limpiarPuntosRuta(puntos) {
 // ==========================================
 function crearMarkerElement(label, type) {
   const el = document.createElement('div');
-  const color = type === 'origin' ? '#4caf50' : type === 'dest' ? '#f44336' : '#ff9800';
+  el.className = `route-marker ${type}`;
+
+  const icono =
+    type === 'origin' ? '📍' :
+    type === 'dest' ? '🏁' :
+    label;
+
   el.innerHTML = `
-    <div style="
-      width: 28px;
-      height: 28px;
-      background: ${color};
-      border-radius: 50%;
-      border: 3px solid white;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-      font-size: 12px;
-    ">${label}</div>
+    <div class="route-marker-halo"></div>
+    <div class="route-marker-pin">${icono}</div>
   `;
+
   return el;
 }
-
 async function initMapa() {
   if (mapaCliente) return Promise.resolve();
 
@@ -3179,7 +3242,97 @@ async function initMapa() {
     });
   });
 }
+function detenerAnimacionRuta() {
+  if (routeAnimationFrame) {
+    cancelAnimationFrame(routeAnimationFrame);
+    routeAnimationFrame = null;
+  }
+}
 
+function limpiarCapasRutaMapa() {
+  if (!mapaCliente || !mapReady) return;
+
+  detenerAnimacionRuta();
+
+  try {
+    if (mapaCliente.getLayer('route-anim')) mapaCliente.removeLayer('route-anim');
+    if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
+    if (mapaCliente.getLayer('route-glow')) mapaCliente.removeLayer('route-glow');
+    if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+  } catch (_) {}
+}
+
+function limpiarMarkersMapa() {
+  if (Array.isArray(state.markers)) {
+    state.markers.forEach((m) => {
+      try { m.remove(); } catch (_) {}
+    });
+  }
+  state.markers = [];
+}
+
+function agregarMarkersRutaDesdeCoords(coords) {
+  limpiarMarkersMapa();
+
+  if (!Array.isArray(coords) || coords.length < 2) return;
+
+  coords.forEach((c, i) => {
+    const type = i === 0 ? 'origin' : i === coords.length - 1 ? 'dest' : 'waypoint';
+    const label = i === 0 ? 'A' : i === coords.length - 1 ? 'B' : String(i);
+
+    try {
+      const marker = new maplibregl.Marker({
+        element: crearMarkerElement(label, type),
+        anchor: 'center'
+      })
+        .setLngLat(c)
+        .addTo(mapaCliente);
+
+      state.markers.push(marker);
+    } catch (_) {}
+  });
+}
+
+function ajustarVistaRuta(coords, duration = 800) {
+  if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
+
+  try {
+    const bounds = coords.reduce(
+      (b, c) => b.extend(c),
+      new maplibregl.LngLatBounds(coords[0], coords[0])
+    );
+
+    mapaCliente.fitBounds(bounds, {
+      padding: { top: 55, bottom: 55, left: 55, right: 55 },
+      duration,
+      maxZoom: 15
+    });
+  } catch (_) {}
+}
+
+function iniciarAnimacionRuta() {
+  if (!mapaCliente || !mapReady || !mapaCliente.getLayer('route-anim')) return;
+
+  detenerAnimacionRuta();
+  routeDashPhase = 0;
+
+  const step = () => {
+    routeDashPhase += 0.015;
+
+    try {
+      mapaCliente.setPaintProperty('route-anim', 'line-dasharray', [
+        0,
+        routeDashPhase,
+        0.8,
+        1.4
+      ]);
+    } catch (_) {}
+
+    routeAnimationFrame = requestAnimationFrame(step);
+  };
+
+  routeAnimationFrame = requestAnimationFrame(step);
+}
 async function dibujarRutaEnMapa(coords) {
   await initMapa();
   if (!mapaCliente || !mapReady) return;
@@ -3252,21 +3405,44 @@ function dibujarRutaLineal(coords) {
   if (!mapaCliente || !mapReady || !Array.isArray(coords) || coords.length < 2) return;
 
   requestAnimationFrame(() => {
-    try {
-      if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-      if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-    } catch (_) {}
+    const coordsLimpias = coords
+      .map((c) => [Number(c?.[0]), Number(c?.[1])])
+      .filter((c) =>
+        Number.isFinite(c[0]) &&
+        Number.isFinite(c[1]) &&
+        Math.abs(c[0]) <= 180 &&
+        Math.abs(c[1]) <= 90
+      );
 
-    if (Array.isArray(state.markers)) {
-      state.markers.forEach((m) => { try { m.remove(); } catch (_) {} });
-    }
-    state.markers = [];
+    if (coordsLimpias.length < 2) return;
+
+    limpiarCapasRutaMapa();
+    limpiarMarkersMapa();
 
     mapaCliente.addSource('route', {
       type: 'geojson',
       data: {
         type: 'Feature',
-        geometry: { type: 'LineString', coordinates: coords }
+        geometry: {
+          type: 'LineString',
+          coordinates: coordsLimpias
+        }
+      }
+    });
+
+    mapaCliente.addLayer({
+      id: 'route-glow',
+      type: 'line',
+      source: 'route',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#60a5fa',
+        'line-width': 9,
+        'line-opacity': 0.20,
+        'line-blur': 1
       }
     });
 
@@ -3274,36 +3450,22 @@ function dibujarRutaLineal(coords) {
       id: 'route-line',
       type: 'line',
       source: 'route',
-      layout: { 'line-join': 'round', 'line-cap': 'round' },
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
       paint: {
         'line-color': '#1565c0',
         'line-width': 4,
-        'line-opacity': 0.6,
+        'line-opacity': 0.70,
         'line-dasharray': [2, 2]
       }
     });
 
-    coords.forEach((c, i) => {
-      const type = i === 0 ? 'origin' : i === coords.length - 1 ? 'dest' : 'waypoint';
-      const label = i === 0 ? 'A' : i === coords.length - 1 ? 'B' : i;
-      try {
-        const marker = new maplibregl.Marker({ element: crearMarkerElement(label, type) })
-          .setLngLat(c)
-          .addTo(mapaCliente);
-        state.markers.push(marker);
-      } catch (_) {}
-    });
-
-    try {
-      const bounds = coords.reduce(
-        (b, c) => b.extend(c),
-        new maplibregl.LngLatBounds(coords[0], coords[0])
-      );
-      mapaCliente.fitBounds(bounds, { padding: 50, duration: 500 });
-    } catch (_) {}
+    agregarMarkersRutaDesdeCoords(coordsLimpias);
+    ajustarVistaRuta(coordsLimpias, 500);
   });
 }
-
 async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
@@ -3326,48 +3488,67 @@ async function dibujarRutaReal(coords) {
 
   if (coordsLimpias.length < 2) return;
 
-  const geojson = {
-    type: 'Feature',
-    geometry: {
-      type: 'LineString',
-      coordinates: coordsLimpias
-    }
-  };
+  limpiarCapasRutaMapa();
+  limpiarMarkersMapa();
 
-  if (mapaCliente.getSource('route')) {
-    mapaCliente.getSource('route').setData(geojson);
-
-    if (mapaCliente.getLayer('route-line')) {
-      mapaCliente.setPaintProperty('route-line', 'line-dasharray', [1, 0]);
-      mapaCliente.setPaintProperty('route-line', 'line-opacity', 0.9);
-      mapaCliente.setPaintProperty('route-line', 'line-width', 5);
-    }
-  } else {
-    try {
-      if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-      if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-    } catch (_) {}
-
-    mapaCliente.addSource('route', {
-      type: 'geojson',
-      data: geojson
-    });
-
-    mapaCliente.addLayer({
-      id: 'route-line',
-      type: 'line',
-      source: 'route',
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round'
-      },
-      paint: {
-        'line-color': '#1565c0',
-        'line-width': 5,
-        'line-opacity': 0.9
+  mapaCliente.addSource('route', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: coordsLimpias
       }
-    });
-  }
+    }
+  });
+
+  mapaCliente.addLayer({
+    id: 'route-glow',
+    type: 'line',
+    source: 'route',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round'
+    },
+    paint: {
+      'line-color': '#60a5fa',
+      'line-width': 10,
+      'line-opacity': 0.22,
+      'line-blur': 1.2
+    }
+  });
+
+  mapaCliente.addLayer({
+    id: 'route-line',
+    type: 'line',
+    source: 'route',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round'
+    },
+    paint: {
+      'line-color': '#1565c0',
+      'line-width': 5,
+      'line-opacity': 0.95
+    }
+  });
+
+  mapaCliente.addLayer({
+    id: 'route-anim',
+    type: 'line',
+    source: 'route',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round'
+    },
+    paint: {
+      'line-color': '#93c5fd',
+      'line-width': 7,
+      'line-opacity': 0.85,
+      'line-blur': 0.4,
+      'line-dasharray': [0, 0, 0.8, 1.4]
+    }
+  });
 
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
@@ -3376,21 +3557,13 @@ async function dibujarRutaReal(coords) {
   };
   state.routeData.fallback = false;
 
-  const bounds = new maplibregl.LngLatBounds();
-  coordsLimpias.forEach((coord) => bounds.extend(coord));
-
-  if (!bounds.isEmpty()) {
-    mapaCliente.fitBounds(bounds, {
-      padding: 60,
-      duration: 1000,
-      maxZoom: 15
-    });
-  }
+  agregarMarkersRutaDesdeCoords(coordsLimpias);
+  ajustarVistaRuta(coordsLimpias, 900);
+  iniciarAnimacionRuta();
 
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 180);
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 450);
 }
-
 function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
 
@@ -3456,19 +3629,11 @@ function reiniciarRuta() {
     hideSuggestions(el);
   });
 
-  if (mapaCliente && mapReady) {
-    try {
-      if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-      if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-    } catch (_) {}
-  }
+if (mapaCliente && mapReady) {
+  limpiarCapasRutaMapa();
+}
 
-  if (Array.isArray(state.markers) && state.markers.length) {
-    state.markers.forEach((m) => {
-      try { m.remove(); } catch (_) {}
-    });
-  }
-
+limpiarMarkersMapa();
   state = {
     origen: null,
     destino: null,
