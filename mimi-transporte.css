@@ -2042,12 +2042,11 @@ select:focus-visible {
 }
    
 .vehicle-section::after {
-    left: 10px;
-    width: 82px;
-    bottom: 1px;
-  }
+  left: 14px;
+  width: 88px;
+  bottom: 8px;
 }
-/* MUY CHICO */
+   /* MUY CHICO */
 @media (max-width: 360px) {
   .header-content {
     grid-template-columns: 1fr;
