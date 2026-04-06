@@ -562,62 +562,53 @@ async function buscarDireccion(query) {
 <header class="header" role="banner">
   <div class="header-content">
     <div class="vehicle-section" aria-hidden="true">
-      <img
-        src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/jeep-renegade.png"
-        alt="Vehículo de MIMI Transporte Escolar"
-        class="vehicle-img"
-        draggable="false"
-        decoding="async"
-        fetchpriority="high"
-        onerror="this.src='https://cdn-icons-png.flaticon.com/512/3202/3202926.png'"
-      >
+      ...
     </div>
 
     <div class="logo-section">
-      <div class="logo-title">MIMI</div>
-      <div class="logo-subtitle">Transporte Escolar</div>
+      ...
     </div>
 
     <div class="header-icons">
       <div class="shield-icon" aria-label="Servicio seguro">✓</div>
     </div>
-  </div>
-  <div class="header-user" id="headerUser">
-  <button
-    id="btnLoginHeader"
-    class="header-login-btn"
-    type="button"
-    aria-label="Ingresar con Google"
-  >
-    <span aria-hidden="true">👤</span>
-    <span>Ingresar</span>
-  </button>
 
-  <div id="userSessionBox" class="user-session-box" hidden>
-    <img
-      id="userAvatar"
-      class="user-avatar"
-      src=""
-      alt="Foto de perfil"
-      referrerpolicy="no-referrer"
-    >
-    <div class="user-meta">
-      <div id="userName" class="user-name">Usuario</div>
-      <div id="userEmail" class="user-email">email@gmail.com</div>
+    <div class="header-user" id="headerUser">
+      <button
+        id="btnLoginHeader"
+        class="header-login-btn"
+        type="button"
+        aria-label="Ingresar con Google"
+      >
+        <span aria-hidden="true">👤</span>
+        <span>Ingresar</span>
+      </button>
+
+      <div id="userSessionBox" class="user-session-box" hidden>
+        <img
+          id="userAvatar"
+          class="user-avatar"
+          src=""
+          alt="Foto de perfil"
+          referrerpolicy="no-referrer"
+        >
+        <div class="user-meta">
+          <div id="userName" class="user-name">Usuario</div>
+          <div id="userEmail" class="user-email">email@gmail.com</div>
+        </div>
+        <button
+          id="btnLogoutHeader"
+          class="header-logout-btn"
+          type="button"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          Salir
+        </button>
+      </div>
     </div>
-    <button
-      id="btnLogoutHeader"
-      class="header-logout-btn"
-      type="button"
-      aria-label="Cerrar sesión"
-      title="Cerrar sesión"
-    >
-      Salir
-    </button>
   </div>
-</div>
 </header>
-
 <main class="container" role="main">
   <section class="hero-text" aria-labelledby="heroTitle">
     <h1 class="hero-title" id="heroTitle">Planificá tu viaje</h1>
@@ -3187,13 +3178,13 @@ async function confirmarViaje() {
 
     console.log('[confirmarViaje] access_token payload:', tokenPayload);
 
-    let authCheck = null;
-    try {
-      authCheck = await window.sbRealtime.auth.getUser(session.access_token);
-      console.log('[confirmarViaje] auth.getUser() check:', authCheck);
-    } catch (authCheckErr) {
-      console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
-    }
+let authCheck = null;
+try {
+  authCheck = await window.sbRealtime.auth.getUser(session.access_token);
+  console.log('[confirmarViaje] auth.getUser() check:', authCheck);
+} catch (authCheckErr) {
+  console.warn('[confirmarViaje] auth.getUser() check error:', authCheckErr);
+}
 
 if (!authCheck?.data?.user) {
   notif.show(
@@ -3205,17 +3196,7 @@ if (!authCheck?.data?.user) {
   localStorage.removeItem('mimi_pending_trip_request');
   await loginConGoogleParaViaje();
   return;
-}
-    notif.show(
-        'Ingresá para continuar',
-        'Te llevamos a Google para solicitar el viaje',
-        'info'
-      );
-
-      localStorage.removeItem('mimi_pending_trip_request');
-      await loginConGoogleParaViaje();
-      return;
-    }
+}    
 
     const puntos = obtenerPuntosOrdenados();
     console.log('[confirmarViaje] puntos ordenados:', puntos);
@@ -3898,81 +3879,47 @@ function bindUIActions() {
   }
 }
 document.addEventListener('DOMContentLoaded', async () => {
-  bindUIActions();
+  try {
+    bindUIActions();
 
-  setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
-    state.origen = data;
-  });
+    setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
+      state.origen = data;
+    });
 
-  setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
-    state.destino = data;
-  });
+    setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
+      state.destino = data;
+    });
 
-  document.getElementById('btnLoginHeader')?.addEventListener('click', async () => {
-    try {
-      await loginConGoogleParaViaje();
-    } catch (err) {
-      console.error('[auth] login header error:', err);
-      notif.show('Error', 'No se pudo iniciar sesión con Google', 'error');
-    }
-  });
-
-  document.getElementById('btnLogoutHeader')?.addEventListener('click', cerrarSesionCliente);
-
-  if (window.sbRealtime?.auth) {
-    const sessionInicial = await obtenerSesionCliente(false);
-    renderSesionUI(sessionInicial);
-
-    window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
-      console.log('[auth] onAuthStateChange:', event, session);
-
-      cachedSession = session || null;
-      lastSessionCheck = Date.now();
-
-      renderSesionUI(session || null);
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        await reanudarViajePendientePostLogin();
-      }
-
-      if (event === 'SIGNED_OUT') {
-        limpiarSesionCache();
-        renderSesionUI(null);
+    document.getElementById('btnLoginHeader')?.addEventListener('click', async () => {
+      try {
+        await loginConGoogleParaViaje();
+      } catch (err) {
+        console.error('[auth] login header error:', err);
+        notif.show('Error', 'No se pudo iniciar sesión con Google', 'error');
       }
     });
-  }
 
-  await reanudarViajePendientePostLogin();
-});
+    document.getElementById('btnLogoutHeader')?.addEventListener('click', cerrarSesionCliente);
+
     if (window.sbRealtime?.auth) {
-      const { data, error } = await window.sbRealtime.auth.getSession();
+      const sessionInicial = await obtenerSesionCliente(false);
+      renderSesionUI(sessionInicial);
 
-      console.log('[auth] sesión inicial:', {
-        hasSession: !!data?.session,
-        userId: data?.session?.user?.id || null,
-        expiresAt: data?.session?.expires_at || null,
-        error: error?.message || null
-      });
+      window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
+        console.log('[auth] onAuthStateChange:', event, session);
 
-      if (data?.session?.access_token) {
-        cachedSession = data.session;
+        cachedSession = session || null;
         lastSessionCheck = Date.now();
-      } else {
-        limpiarSesionCache();
-      }
 
-      window.sbRealtime.auth.onAuthStateChange((event, session) => {
-        console.log('[auth] onAuthStateChange:', event, {
-          hasSession: !!session,
-          userId: session?.user?.id || null,
-          expiresAt: session?.expires_at || null
-        });
+        renderSesionUI(session || null);
 
-        if (session?.access_token) {
-          cachedSession = session;
-          lastSessionCheck = Date.now();
-        } else {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          await reanudarViajePendientePostLogin();
+        }
+
+        if (event === 'SIGNED_OUT') {
           limpiarSesionCache();
+          renderSesionUI(null);
         }
       });
     }
@@ -3982,7 +3929,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('❌ Error en DOMContentLoaded:', err);
   }
 });
-
 </script>
 </body>
 </html>
