@@ -1455,8 +1455,10 @@ class NotificationSystem {
 
 const notif = new NotificationSystem();
 
-  // ==========================================
-// HEADER NOTIFICATIONS (UI)
+
+  
+// ==========================================
+// HEADER NOTIFICATIONS (PERSISTENTE)
 // ==========================================
 const notifBtn = document.getElementById('tripNotificationsBtn');
 const notifPanel = document.getElementById('tripNotificationsPanel');
@@ -1464,15 +1466,95 @@ const notifList = document.getElementById('tripNotificationsList');
 const notifSummary = document.getElementById('tripNotificationsSummary');
 const notifDot = document.querySelector('.trip-notifications-dot');
 const notifBadge = document.getElementById('tripNotificationsBadge');
+const notifMarkReadBtn = document.getElementById('tripNotificationsMarkReadBtn');
+const notifClearBtn = document.getElementById('tripNotificationsClearBtn');
+
+const NOTIF_STORAGE_KEY = 'mimi_trip_notifications_v2';
+const NOTIF_UNREAD_KEY = 'mimi_trip_notifications_unread_v2';
+const NOTIF_LAST_STATE_KEY = 'mimi_trip_last_state_v2';
+const ACTIVE_TRIP_STORAGE_KEY = 'mimi_trip_active_v2';
+
+const MAX_NOTIFICATIONS = 30;
 
 let historial = [];
+let unreadCount = 0;
+let ultimoEstadoNotificado = null;
+let currentTripChannel = null;
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function normalizarEstadoUpper(v) {
+  return String(v || '').trim().toUpperCase();
+}
+
+function guardarNotificacionesEnStorage() {
+  try {
+    localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(historial));
+    localStorage.setItem(NOTIF_UNREAD_KEY, String(unreadCount));
+    localStorage.setItem(NOTIF_LAST_STATE_KEY, ultimoEstadoNotificado || '');
+  } catch (err) {
+    console.warn('[notif] no se pudo persistir storage:', err);
+  }
+}
+
+function cargarNotificacionesDesdeStorage() {
+  try {
+    const hist = JSON.parse(localStorage.getItem(NOTIF_STORAGE_KEY) || '[]');
+    historial = Array.isArray(hist) ? hist : [];
+    unreadCount = Math.max(0, Number(localStorage.getItem(NOTIF_UNREAD_KEY) || '0'));
+    ultimoEstadoNotificado = localStorage.getItem(NOTIF_LAST_STATE_KEY) || null;
+  } catch (err) {
+    console.warn('[notif] no se pudo leer storage:', err);
+    historial = [];
+    unreadCount = 0;
+    ultimoEstadoNotificado = null;
+  }
+}
+
+function guardarViajeActivoEnStorage() {
+  try {
+    const payload = {
+      viajeId: state?.viajeId || null,
+      estadoViaje: state?.estadoViaje || state?.viajeEstado || null,
+      ts: Date.now()
+    };
+    localStorage.setItem(ACTIVE_TRIP_STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.warn('[trip] no se pudo guardar viaje activo:', err);
+  }
+}
+
+function limpiarViajeActivoEnStorage() {
+  try {
+    localStorage.removeItem(ACTIVE_TRIP_STORAGE_KEY);
+  } catch (_) {}
+}
+
+function leerViajeActivoEnStorage() {
+  try {
+    const raw = localStorage.getItem(ACTIVE_TRIP_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 function abrirPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
   notifPanel.classList.add('is-open');
   notifBtn.setAttribute('aria-expanded', 'true');
-
-  if (notifDot) notifDot.style.display = 'none';
+  unreadCount = 0;
+  actualizarBadgeNotificaciones();
+  guardarNotificacionesEnStorage();
 }
 
 function cerrarPanelNotificaciones() {
@@ -1485,143 +1567,149 @@ function panelNotificacionesAbierto() {
   return !!notifPanel?.classList.contains('is-open');
 }
 
-if (notifBtn && notifPanel) {
-  notifBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
+function actualizarBadgeNotificaciones() {
+  if (notifBadge) {
+    notifBadge.textContent = String(unreadCount);
+    notifBadge.hidden = unreadCount <= 0;
+  }
 
-    if (panelNotificacionesAbierto()) {
-      cerrarPanelNotificaciones();
-    } else {
-      abrirPanelNotificaciones();
-    }
-  });
+  if (notifDot) {
+    notifDot.style.display =
+      !panelNotificacionesAbierto() && unreadCount > 0 ? 'block' : 'none';
+  }
+}
 
-  notifPanel.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
+function renderizarCentroNotificaciones() {
+  if (!notifList || !notifSummary) return;
 
-  document.addEventListener('click', (e) => {
-    const clickedInsideBtn = notifBtn.contains(e.target);
-    const clickedInsidePanel = notifPanel.contains(e.target);
+  if (!historial.length) {
+    notifList.innerHTML = `
+      <div class="trip-notification-empty">
+        Todavía no hay notificaciones.
+      </div>
+    `;
+    notifSummary.textContent = 'Sin novedades por ahora.';
+    actualizarBadgeNotificaciones();
+    return;
+  }
 
-    if (!clickedInsideBtn && !clickedInsidePanel) {
-      cerrarPanelNotificaciones();
-    }
-  });
+  notifList.innerHTML = historial.map(item => `
+    <div class="trip-notification-item ${item.read ? 'is-read' : ''}" data-id="${escapeHtml(item.id)}">
+      <div class="trip-notification-main">
+        <strong>${escapeHtml(item.estado)}</strong>
+        <span>${escapeHtml(item.texto)}</span>
+        <span class="trip-notification-date">${escapeHtml(item.fecha || '')}</span>
+      </div>
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      cerrarPanelNotificaciones();
-    }
-  });
+      <button
+        class="trip-notification-delete"
+        type="button"
+        data-action="delete"
+        data-id="${escapeHtml(item.id)}"
+        aria-label="Eliminar notificación"
+        title="Eliminar"
+      >
+        ✕
+      </button>
+    </div>
+  `).join('');
+
+  notifSummary.textContent =
+    historial[0]?.texto || 'Tenés novedades del viaje.';
+
+  actualizarBadgeNotificaciones();
+}
+
+function agregarNotificacionViaje({ estado, texto, fecha = null, id = null, read = false, persist = true }) {
+  const item = {
+    id: id || `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    estado: String(estado || 'INFO').trim() || 'INFO',
+    texto: String(texto || 'Tenés novedades del viaje.').trim(),
+    fecha: fecha || new Date().toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }),
+    read: !!read
+  };
+
+  historial = [item, ...historial].slice(0, MAX_NOTIFICATIONS);
+
+  if (!panelNotificacionesAbierto()) {
+    unreadCount += 1;
+  }
+
+  renderizarCentroNotificaciones();
+
+  if (persist) {
+    guardarNotificacionesEnStorage();
+  }
+
+  return item;
 }
 
 function actualizarCentroNotificacionesViaje({ estado, texto }) {
-  if (!notifList || !notifSummary) {
-    return { ok: false, reason: 'missing_dom' };
-  }
-
-  const fecha = new Date().toLocaleTimeString('es-AR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-
-  historial.unshift({ estado, texto, fecha });
-  historial = historial.slice(0, 10);
-
-  notifList.innerHTML = historial.length
-    ? historial.map(item => `
-        <div class="trip-notification-item">
-          <strong>${item.estado}</strong>
-          <span>${item.texto}</span>
-          <span>${item.fecha}</span>
-        </div>
-      `).join('')
-    : `
-        <div class="trip-notification-empty">
-          Todavía no hay notificaciones.
-        </div>
-      `;
-
-  notifSummary.textContent = texto || 'Tenés novedades del viaje.';
-
-  const cantidad = historial.length;
-
-  if (notifBadge) {
-    notifBadge.textContent = String(cantidad);
-    notifBadge.hidden = cantidad <= 0;
-  }
-
-  if (!panelNotificacionesAbierto() && notifDot) {
-    notifDot.style.display = cantidad > 0 ? 'block' : 'none';
-  }
-
-  return {
-    ok: true,
-    total: cantidad,
-    ultimo: { estado, texto, fecha }
-  };
+  return agregarNotificacionViaje({ estado, texto });
 }
+
+function eliminarNotificacionPorId(id) {
+  const before = historial.length;
+  historial = historial.filter(item => item.id !== id);
+
+  if (historial.length !== before) {
+    renderizarCentroNotificaciones();
+    guardarNotificacionesEnStorage();
+  }
+}
+
+function vaciarNotificaciones() {
+  historial = [];
+  unreadCount = 0;
+  renderizarCentroNotificaciones();
+  guardarNotificacionesEnStorage();
+}
+
+function marcarNotificacionesComoLeidas() {
+  historial = historial.map(item => ({ ...item, read: true }));
+  unreadCount = 0;
+  renderizarCentroNotificaciones();
+  guardarNotificacionesEnStorage();
+}
+
 function mapearEstadoANotificacion(estado) {
-  switch (estado) {
+  const e = normalizarEstadoUpper(estado);
+
+  switch (e) {
     case 'BUSCANDO_CHOFER':
-      return {
-        estado: 'Buscando chofer',
-        texto: 'Estamos buscando un chofer cercano'
-      };
-
+      return { estado: 'BUSCANDO_CHOFER', texto: 'Estamos buscando un chofer disponible.' };
     case 'OFERTANDO':
-      return {
-        estado: 'Enviando solicitudes',
-        texto: 'Enviando solicitud a conductores cercanos'
-      };
-
+    case 'OFERTADO':
+      return { estado: 'OFERTANDO', texto: 'Estamos notificando choferes cercanos.' };
+    case 'ASIGNADO':
     case 'ACEPTADO':
-      return {
-        estado: 'Chofer asignado',
-        texto: 'Un chofer aceptó tu viaje'
-      };
-
+      return { estado: 'ACEPTADO', texto: 'Tu viaje fue aceptado por un chofer.' };
     case 'EN_CAMINO':
-      return {
-        estado: 'En camino',
-        texto: 'El chofer va hacia el punto de retiro'
-      };
-
+      return { estado: 'EN_CAMINO', texto: 'El chofer va en camino al punto de retiro.' };
     case 'EN_CURSO':
-      return {
-        estado: 'Viaje en curso',
-        texto: 'Tu viaje está en marcha'
-      };
-
+      return { estado: 'EN_CURSO', texto: 'Tu viaje está en curso.' };
     case 'COMPLETADO':
-      return {
-        estado: 'Viaje finalizado',
-        texto: 'El viaje se completó correctamente'
-      };
-
+      return { estado: 'COMPLETADO', texto: 'El viaje fue completado.' };
     case 'CANCELADO':
-      return {
-        estado: 'Viaje cancelado',
-        texto: 'El viaje fue cancelado'
-      };
-
+      return { estado: 'CANCELADO', texto: 'El viaje fue cancelado.' };
+    case 'SIN_CHOFER':
+      return { estado: 'SIN_CHOFER', texto: 'Todavía no encontramos chofer disponible.' };
     default:
-      return null;
+      return { estado: e || 'INFO', texto: 'Hubo una actualización en tu viaje.' };
   }
 }
-let ultimoEstadoNotificado = null;
 
 function animarCampanitaNotificaciones() {
   if (!notifBtn) return;
-
   notifBtn.classList.remove('ring', 'pulse');
   void notifBtn.offsetWidth;
-
   notifBtn.classList.add('ring', 'pulse');
 
-  setTimeout(() => notifBtn.classList.remove('ring'), 950);
-  setTimeout(() => notifBtn.classList.remove('pulse'), 1150);
+  setTimeout(() => notifBtn?.classList.remove('ring'), 950);
+  setTimeout(() => notifBtn?.classList.remove('pulse'), 1200);
 }
 
 let audioContextNotifs = null;
@@ -1685,16 +1773,55 @@ function ejecutarFeedbackAceptado() {
   reproducirSonidoAceptado();
   vibrarNotificacionAceptada();
 }
+
+function limpiarCanalViajeCliente() {
+  try {
+    if (currentTripChannel && window.sbRealtime) {
+      window.sbRealtime.removeChannel(currentTripChannel);
+    }
+  } catch (err) {
+    console.warn('[realtime] no se pudo remover canal previo:', err);
+  } finally {
+    currentTripChannel = null;
+  }
+}
+
+function actualizarEstadoLocalViaje(nuevoEstado) {
+  const upper = normalizarEstadoUpper(nuevoEstado);
+  state.viajeEstado = upper;
+  state.estadoViaje = upper;
+
+  if (['COMPLETADO', 'CANCELADO'].includes(upper)) {
+    limpiarViajeActivoEnStorage();
+  } else {
+    guardarViajeActivoEnStorage();
+  }
+
+  if (typeof actualizarBotonCancelarViaje === 'function') {
+    actualizarBotonCancelarViaje();
+  }
+
+  if (typeof actualizarEstadoSolicitudUI === 'function') {
+    const notifData = mapearEstadoANotificacion(upper);
+    actualizarEstadoSolicitudUI({
+      estado: upper,
+      texto: notifData.texto
+    });
+  }
+}
+
 function suscribirseEstadoViajeRealtime(viajeId) {
   if (!viajeId || !window.sbRealtime) {
     console.warn('[realtime] No hay viajeId o cliente supabase');
-    return;
+    return null;
   }
+
+  limpiarCanalViajeCliente();
 
   console.log('[realtime] Suscribiendo a viaje:', viajeId);
 
-  const channel = window.sbRealtime
-    .channel('viaje-estado-' + viajeId)
+  currentTripChannel = window.sbRealtime
+    .channel(`viaje-estado-${viajeId}`)
     .on(
       'postgres_changes',
       {
@@ -1705,20 +1832,19 @@ function suscribirseEstadoViajeRealtime(viajeId) {
       },
       (payload) => {
         try {
-          const nuevoEstado = payload?.new?.estado;
-
-          console.log('[realtime] Cambio estado:', nuevoEstado);
+          const nuevoEstado = normalizarEstadoUpper(payload?.new?.estado);
+          if (!nuevoEstado) return;
 
           if (nuevoEstado === ultimoEstadoNotificado) return;
           ultimoEstadoNotificado = nuevoEstado;
 
+          actualizarEstadoLocalViaje(nuevoEstado);
+
           const notifData = mapearEstadoANotificacion(nuevoEstado);
+          actualizarCentroNotificacionesViaje(notifData);
+          guardarNotificacionesEnStorage();
 
-          if (notifData) {
-            actualizarCentroNotificacionesViaje(notifData);
-          }
-
-          if (nuevoEstado === 'ACEPTADO') {
+          if (nuevoEstado === 'ACEPTADO' || nuevoEstado === 'ASIGNADO') {
             ejecutarFeedbackAceptado();
 
             notif.show(
@@ -1728,6 +1854,33 @@ function suscribirseEstadoViajeRealtime(viajeId) {
               3500
             );
           }
+
+          if (nuevoEstado === 'EN_CURSO') {
+            notif.show(
+              'Viaje en curso',
+              'Tu viaje ya comenzó.',
+              'info',
+              2800
+            );
+          }
+
+          if (nuevoEstado === 'COMPLETADO') {
+            notif.show(
+              'Viaje completado',
+              'El viaje finalizó correctamente.',
+              'success',
+              3000
+            );
+          }
+
+          if (nuevoEstado === 'CANCELADO') {
+            notif.show(
+              'Viaje cancelado',
+              'El viaje fue cancelado.',
+              'warning',
+              3000
+            );
+          }
         } catch (err) {
           console.error('[realtime] error procesando evento', err);
         }
@@ -1735,8 +1888,153 @@ function suscribirseEstadoViajeRealtime(viajeId) {
     )
     .subscribe();
 
-  return channel;
+  return currentTripChannel;
 }
+
+async function restaurarViajeActivoCliente() {
+  try {
+    const session = await obtenerSesionCliente(false);
+
+    if (!session?.user) {
+      renderizarCentroNotificaciones();
+      return;
+    }
+
+    const viajeLocal = leerViajeActivoEnStorage();
+    const clienteId = session.user.id;
+    const clienteEmail = String(session.user.email || '').toLowerCase();
+
+    let { data: viaje, error } = await window.supabase
+      .from('viajes')
+      .select(`
+        id,
+        estado,
+        cliente_auth_id,
+        cliente_email,
+        assigned_driver_id,
+        chofer_id_uuid,
+        created_at,
+        updated_at
+      `)
+      .or(`cliente_auth_id.eq.${clienteId},cliente_email.eq.${clienteEmail}`)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.warn('[restore-trip] error leyendo viaje:', error);
+    }
+
+    const estado = normalizarEstadoUpper(viaje?.estado);
+    const estadosActivos = [
+      'PENDIENTE',
+      'BUSCANDO_CHOFER',
+      'OFERTANDO',
+      'OFERTADO',
+      'ASIGNADO',
+      'ACEPTADO',
+      'EN_CAMINO',
+      'EN_CURSO',
+      'SIN_CHOFER'
+    ];
+
+    if (viaje?.id && estadosActivos.includes(estado)) {
+      state.viajeId = viaje.id;
+      state.viajeEstado = estado;
+      state.estadoViaje = estado;
+
+      guardarViajeActivoEnStorage();
+
+      const notifData = mapearEstadoANotificacion(estado);
+      if (!historial.length) {
+        agregarNotificacionViaje({
+          estado: notifData.estado,
+          texto: notifData.texto,
+          read: true
+        });
+      } else {
+        renderizarCentroNotificaciones();
+      }
+
+      if (typeof actualizarBotonCancelarViaje === 'function') {
+        actualizarBotonCancelarViaje();
+      }
+
+      suscribirseEstadoViajeRealtime(viaje.id);
+      return;
+    }
+
+    if (viajeLocal?.viajeId && viajeLocal?.estadoViaje && !viaje?.id) {
+      state.viajeId = viajeLocal.viajeId;
+      state.viajeEstado = viajeLocal.estadoViaje;
+      state.estadoViaje = viajeLocal.estadoViaje;
+      renderizarCentroNotificaciones();
+    } else {
+      limpiarViajeActivoEnStorage();
+      renderizarCentroNotificaciones();
+    }
+  } catch (err) {
+    console.warn('[restore-trip] no se pudo restaurar viaje activo:', err);
+    renderizarCentroNotificaciones();
+  }
+}
+
+if (notifBtn && notifPanel) {
+  notifBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    if (panelNotificacionesAbierto()) {
+      cerrarPanelNotificaciones();
+    } else {
+      abrirPanelNotificaciones();
+    }
+  });
+
+  notifPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  document.addEventListener('click', (e) => {
+    const clickedInsideBtn = notifBtn.contains(e.target);
+    const clickedInsidePanel = notifPanel.contains(e.target);
+
+    if (!clickedInsideBtn && !clickedInsidePanel) {
+      cerrarPanelNotificaciones();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      cerrarPanelNotificaciones();
+    }
+  });
+}
+
+notifList?.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-action="delete"]');
+  if (!btn) return;
+  const id = btn.getAttribute('data-id');
+  if (!id) return;
+  eliminarNotificacionPorId(id);
+});
+
+notifMarkReadBtn?.addEventListener('click', () => {
+  marcarNotificacionesComoLeidas();
+});
+
+notifClearBtn?.addEventListener('click', () => {
+  if (!historial.length) return;
+  const ok = window.confirm('¿Querés vaciar las notificaciones?');
+  if (!ok) return;
+  vaciarNotificaciones();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  cargarNotificacionesDesdeStorage();
+  renderizarCentroNotificaciones();
+  await restaurarViajeActivoCliente();
+});
+  
 // ==========================================
 // UI LOADING
 // ==========================================
