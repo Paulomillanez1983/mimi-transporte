@@ -1200,16 +1200,6 @@ select:focus-visible {
   }
 }
 
-@keyframes markerPulse {
-  0% {
-    transform: scale(0.7);
-    opacity: 0.82;
-  }
-  100% {
-    transform: scale(1.7);
-    opacity: 0;
-  }
-}
 
 /* ==========================================
    ACCESSIBILITY
