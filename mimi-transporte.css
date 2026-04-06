@@ -2031,14 +2031,14 @@ select:focus-visible {
     font-size: 0.74rem;
   }
 
-  .user-session-box {
-    grid-template-columns: 42px 1fr auto;
-    gap: 7px;
-    max-width: 232px;
-    padding: 4px 6px 4px 4px;
-    border-radius: 16px;
-  }
-
+.user-session-box {
+  grid-template-columns: 38px 1fr auto;
+  gap: 6px;
+  max-width: 210px;
+  min-height: 42px;
+  padding: 3px 5px 3px 3px;
+  border-radius: 15px;
+}
   .user-avatar {
     width: 42px;
     height: 42px;
@@ -2099,17 +2099,16 @@ select:focus-visible {
     display: none;
   }
 
-  #headerUser {
-    grid-area: user;
-    justify-self: end;
-    justify-content: flex-end;
-    width: auto;
-    margin-top: 0;
-    position: relative;
-    top: 16px;
-    z-index: 5;
-  }
-
+#headerUser {
+  grid-area: user;
+  justify-self: end;
+  align-self: end;
+  position: relative;
+  top: 6px;
+  margin-top: 0;
+  margin-bottom: 0;
+  z-index: 5;
+}
   .user-session-box {
     max-width: 100%;
   }
