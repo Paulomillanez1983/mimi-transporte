@@ -338,14 +338,17 @@ button {
   left: 0;
   right: 0;
   display: none;
-  background: var(--suggestion-bg);
-  border: 1px solid var(--border-soft);
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 16px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
   max-height: min(320px, 45vh);
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   z-index: 1000;
+  backdrop-filter: blur(10px);
 }
 
 .sugerencias.visible {
@@ -353,24 +356,34 @@ button {
 }
 
 .sugerencia-item {
-  padding: 14px 16px;
+  padding: 13px 14px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   min-height: 52px;
   display: flex;
   align-items: center;
   gap: 12px;
   touch-action: manipulation;
   line-height: 1.3;
-  transition: background var(--ease-standard);
+  transition:
+    background var(--ease-standard),
+    transform var(--ease-standard);
 }
 
 .sugerencia-item:hover,
 .sugerencia-item:active,
 .sugerencia-item:focus-visible {
-  background: #f4f4f7;
+  background: #f6f8fb;
+}
+
+.sugerencia-item:active {
+  transform: scale(0.995);
+}
+
+.sugerencia-item:focus-visible {
+  outline: none;
 }
 
 .sugerencia-item:last-child {
@@ -403,14 +416,13 @@ button {
 }
 
 .sugerencia-secondary {
-  color: #888;
+  color: #7b8794;
   font-size: 12px;
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 /* ==========================================
    BOTONES GENERALES
 ========================================== */
