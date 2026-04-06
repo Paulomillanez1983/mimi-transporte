@@ -3860,7 +3860,6 @@ function intercambiarOrigenDestino() {
   btn.setAttribute('aria-expanded', String(nextOpen));
   box.hidden = !nextOpen;
 }
-
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
@@ -3923,9 +3922,11 @@ function bindUIActions() {
     btnToggleBreakdown.dataset.bound = '1';
   }
 }
+
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     bindUIActions();
+    actualizarBotonCancelarViaje();
 
     setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
       state.origen = data;
@@ -3970,6 +3971,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     await reanudarViajePendientePostLogin();
+    actualizarBotonCancelarViaje();
   } catch (err) {
     console.error('❌ Error en DOMContentLoaded:', err);
   }
