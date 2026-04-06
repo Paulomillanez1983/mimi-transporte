@@ -2006,13 +2006,13 @@ select:focus-visible {
     top: 6px;
   }
 
-  #headerUser {
-    justify-self: end;
-    align-self: center;
-    margin-top: 4px;
-    margin-bottom: 0;
-  }
-
+#headerUser {
+  justify-self: end;
+  align-self: end;
+  margin-top: 0;
+  margin-bottom: 8px;
+  transform: translateY(10px);
+}
   .header-login-btn {
     padding: 10px 18px;
     min-height: 42px;
