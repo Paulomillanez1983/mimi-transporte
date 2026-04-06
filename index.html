@@ -1683,35 +1683,41 @@ function suscribirseEstadoViajeRealtime(viajeId) {
         table: 'viajes',
         filter: `id=eq.${viajeId}`
       },
-(payload) => {
-  try {
-    const nuevoEstado = payload?.new?.estado;
+      (payload) => {
+        try {
+          const nuevoEstado = payload?.new?.estado;
 
-    console.log('[realtime] Cambio estado:', nuevoEstado);
+          console.log('[realtime] Cambio estado:', nuevoEstado);
 
-    if (nuevoEstado === ultimoEstadoNotificado) return;
-    ultimoEstadoNotificado = nuevoEstado;
+          if (nuevoEstado === ultimoEstadoNotificado) return;
+          ultimoEstadoNotificado = nuevoEstado;
 
-    const notifData = mapearEstadoANotificacion(nuevoEstado);
+          const notifData = mapearEstadoANotificacion(nuevoEstado);
 
-    if (notifData) {
-      actualizarCentroNotificacionesViaje(notifData);
-    }
+          if (notifData) {
+            actualizarCentroNotificacionesViaje(notifData);
+          }
 
-    if (nuevoEstado === 'ACEPTADO') {
-      ejecutarFeedbackAceptado();
+          if (nuevoEstado === 'ACEPTADO') {
+            ejecutarFeedbackAceptado();
 
-      notif.show(
-        'Chofer asignado',
-        'Tu viaje fue aceptado por un chofer.',
-        'success',
-        3500
-      );
-    }
-  } catch (err) {
-    console.error('[realtime] error procesando evento', err);
-  }
+            notif.show(
+              'Chofer asignado',
+              'Tu viaje fue aceptado por un chofer.',
+              'success',
+              3500
+            );
+          }
+        } catch (err) {
+          console.error('[realtime] error procesando evento', err);
+        }
+      }
+    )
+    .subscribe();
+
+  return channel;
 }
+  
 // ==========================================
 // UI LOADING
 // ==========================================
