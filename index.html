@@ -940,7 +940,26 @@ function limpiarSesionCache() {
   cachedSession = null;
   lastSessionCheck = 0;
 }
+function setHeaderAuthLoading(isLoading) {
+  const headerUser = document.getElementById('headerUser');
+  if (!headerUser) return;
+  headerUser.classList.toggle('header-auth-loading', !!isLoading);
+}
 
+window.setHeaderAuthLoading = setHeaderAuthLoading;
+
+function initHeaderScrollEffect() {
+  const header = document.querySelector('.header');
+  if (!header) return;
+
+  const updateHeader = () => {
+    const current = window.scrollY || 0;
+    header.classList.toggle('header-scrolled', current > 40);
+  };
+
+  window.addEventListener('scroll', updateHeader, { passive: true });
+  updateHeader();
+}
 async function esperarSesionInicial(timeoutMs = 2500) {
   const start = Date.now();
 
@@ -1032,13 +1051,6 @@ async function cerrarSesionCliente() {
     }
   }
 }
-  function setHeaderAuthLoading(isLoading) {
-  const headerUser = document.getElementById('headerUser');
-  if (!headerUser) return;
-  headerUser.classList.toggle('header-auth-loading', !!isLoading);
-}
-
-window.setHeaderAuthLoading = setHeaderAuthLoading;
   
 async function obtenerSesionCliente(forceRefresh = false) {
   const canToggleHeaderLoading =
@@ -4449,15 +4461,13 @@ function replayVehicleIntroIfNeeded() {
 })();
 
 document.addEventListener('DOMContentLoaded', initNextLevelUI);
-  document.addEventListener('DOMContentLoaded', () => {
-  const header = document.querySelector('.header');
-  if (!header) return;
+document.addEventListener('DOMContentLoaded', () => {
+  initHeaderScrollEffect();
+  bindUIActions();
 
-  window.addEventListener('scroll', () => {
-    const current = window.scrollY || 0;
-    header.classList.toggle('header-scrolled', current > 40);
-  }, { passive: true });
-});
-</script>
+  setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
+    state.origen = data;
+  });
+  </script>
 </body>
 </html>
