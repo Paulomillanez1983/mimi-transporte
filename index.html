@@ -3869,12 +3869,22 @@ async function cancelarViajeCliente() {
       return;
     }
 
+    const session = await obtenerSesionCliente(true);
+
+    if (!session?.access_token || !session?.user) {
+      notif.show(
+        'Ingresá para continuar',
+        'Necesitás iniciar sesión para cancelar el viaje',
+        'info'
+      );
+      await loginConGoogleParaViaje();
+      return;
+    }
+
     const confirmar = window.confirm('¿Querés cancelar este viaje?');
     if (!confirmar) return;
 
     const btnCancelar = document.getElementById('btnCancelarViaje');
-    const textoOriginal = btnCancelar?.innerHTML || '';
-
     if (btnCancelar) {
       btnCancelar.disabled = true;
       btnCancelar.innerHTML = '<span aria-hidden="true">⏳</span><span>Cancelando...</span>';
@@ -3882,24 +3892,28 @@ async function cancelarViajeCliente() {
       btnCancelar.style.pointerEvents = 'none';
     }
 
-    const session = await obtenerSesionCliente(true);
-    const accessToken = session?.access_token || SUPABASE_ANON_KEY;
+    const { response: res, rawText } = await fetchEdgeFunctionWithAuthRetry(
+      `${SUPABASE_URL}/functions/v1/cancelar-viaje`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          viaje_id: state.viajeId,
+          cancelado_por: 'cliente',
+          motivo: 'cancelacion_cliente'
+        })
+      }
+    );
 
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/cancelar-viaje`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${accessToken}`
-      },
-      body: JSON.stringify({
-        viaje_id: state.viajeId,
-        cancelado_por: 'cliente',
-        motivo: 'cancelacion_cliente'
-      })
-    });
-
-    const data = await res.json().catch(() => null);
+    let data = null;
+    try {
+      data = rawText ? JSON.parse(rawText) : null;
+    } catch (parseErr) {
+      console.error('[cancelarViajeCliente] JSON parse error:', parseErr, rawText);
+      throw new Error('La función cancelar-viaje devolvió una respuesta inválida');
+    }
 
     if (!res.ok || !data?.exito) {
       throw new Error(
@@ -3914,10 +3928,12 @@ async function cancelarViajeCliente() {
 
     actualizarBotonCancelarViaje?.();
 
-    actualizarEstadoSolicitudUI?.({
-      estado: 'CANCELADO',
-      texto: 'Viaje cancelado'
-    });
+    if (typeof actualizarEstadoSolicitudUI === 'function') {
+      actualizarEstadoSolicitudUI({
+        estado: 'CANCELADO',
+        texto: 'Viaje cancelado'
+      });
+    }
 
     const btnConfirmar = document.getElementById('btnConfirmarViaje');
     if (btnConfirmar) {
@@ -3940,7 +3956,6 @@ async function cancelarViajeCliente() {
     }
   }
 }
-
   
 // ==========================================
 // INICIALIZACIÓN
