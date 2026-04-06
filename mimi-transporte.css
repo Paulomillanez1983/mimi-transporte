@@ -1849,14 +1849,188 @@ input:focus-visible {
 ========================================== */
 
 :root {
-  --header-height-expanded: 152px;
-  --header-height-collapsed: 84px;
-  --spring-soft: cubic-bezier(0.22, 1, 0.36, 1);
-  --glass-bg: rgba(255, 255, 255, 0.12);
-  --glass-border: rgba(255, 255, 255, 0.16);
-  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  --header-pad-x: clamp(12px, 3.5vw, 18px);
+  --header-pad-top: clamp(8px, 2.5vw, 16px);
+  --header-pad-bottom: clamp(8px, 2.8vw, 14px);
+  --header-radius: clamp(18px, 4vw, 26px);
+
+  --header-max-width: 600px;
+
+  --logo-title-size: clamp(1rem, 4.2vw, 1.5rem);
+  --logo-subtitle-size: clamp(0.56rem, 1.9vw, 0.76rem);
+
+  --shield-size: clamp(32px, 8vw, 38px);
+
+  --vehicle-width: clamp(86px, 26vw, 150px);
+  --vehicle-min-height: clamp(44px, 12vw, 76px);
+
+  --session-avatar-size: clamp(36px, 9vw, 46px);
+  --session-max-width: min(100%, clamp(180px, 48vw, 320px));
 }
 
+.header {
+  background:
+    radial-gradient(circle at top left, rgba(66, 165, 245, 0.18), transparent 34%),
+    linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding:
+    calc(var(--header-pad-top) + var(--safe-top))
+    var(--header-pad-x)
+    var(--header-pad-bottom);
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+  border-bottom-left-radius: var(--header-radius);
+  border-bottom-right-radius: var(--header-radius);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+  margin-bottom: clamp(10px, 2.5vw, 18px);
+  z-index: 1200;
+}
+
+.header-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "brand right"
+    "vehicle vehicle";
+  align-items: start;
+  gap: clamp(8px, 2vw, 12px);
+  max-width: var(--header-max-width);
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
+
+.logo-section {
+  grid-area: brand;
+  min-width: 0;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.logo-title {
+  font-size: var(--logo-title-size);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: 0.2px;
+}
+
+.logo-subtitle {
+  margin-top: 4px;
+  font-size: var(--logo-subtitle-size);
+  font-weight: 600;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+
+.header-icons,
+.header-user {
+  display: contents;
+}
+
+.shield-icon {
+  grid-area: right;
+  justify-self: end;
+  align-self: start;
+  width: var(--shield-size);
+  height: var(--shield-size);
+  border-radius: clamp(10px, 2.5vw, 12px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.28);
+  color: #54d17a;
+  font-weight: 800;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.14);
+  margin-right: 0;
+}
+
+#headerUser {
+  grid-area: right;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  margin-top: calc(var(--shield-size) + 6px);
+}
+
+.vehicle-section {
+  grid-area: vehicle;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: var(--vehicle-min-height);
+  margin-top: clamp(-6px, -1vw, -2px);
+}
+
+.vehicle-img {
+  width: var(--vehicle-width);
+  height: auto;
+  object-fit: contain;
+  transform: translateY(clamp(-4px, -1vw, -1px));
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.38));
+  pointer-events: none;
+  user-select: none;
+}
+
+.user-session-box {
+  display: grid;
+  grid-template-columns: var(--session-avatar-size) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  max-width: var(--session-max-width);
+  min-width: 0;
+  padding: 6px 8px 6px 6px;
+  border-radius: 18px;
+}
+
+.user-avatar {
+  width: var(--session-avatar-size);
+  height: var(--session-avatar-size);
+  border-radius: 50%;
+  object-fit: cover;
+}
+@media (max-width: 380px) {
+  .header-content {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "brand"
+      "right"
+      "vehicle";
+  }
+
+  .logo-section {
+    align-items: center;
+    text-align: center;
+  }
+
+  .shield-icon {
+    display: none;
+  }
+
+  #headerUser {
+    justify-self: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .vehicle-section {
+    justify-content: center;
+  }
+
+  .user-session-box {
+    max-width: 100%;
+  }
+}
 /* ---------- HEADER APP-LIKE ---------- */
 body {
   padding-top: 0;
