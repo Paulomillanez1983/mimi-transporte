@@ -1013,6 +1013,8 @@ function renderSesionUI(session) {
   if (!session?.user) {
     btnLogin.hidden = false;
     box.hidden = true;
+    box.classList.remove('open');
+    box.removeAttribute('title');
     avatar.src = '';
     nameEl.textContent = '';
     emailEl.textContent = '';
@@ -1026,10 +1028,40 @@ function renderSesionUI(session) {
   nameEl.textContent = nombre || 'Usuario';
   emailEl.textContent = email || '';
 
-  avatar.src = foto || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || 'Usuario')}&background=1e3c72&color=fff`;
+  avatar.src =
+    foto ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || 'Usuario')}&background=1e3c72&color=fff`;
   avatar.alt = nombre ? `Foto de ${nombre}` : 'Foto de perfil';
+
+  box.classList.remove('open');
+  box.title = email || nombre || 'Cuenta';
+
+  initUserSessionDropdown();
 }
 
+function initUserSessionDropdown() {
+  const box = document.getElementById('userSessionBox');
+  const logoutBtn = document.getElementById('btnLogoutHeader');
+
+  if (!box || box.dataset.dropdownBound === '1') return;
+  box.dataset.dropdownBound = '1';
+
+  box.addEventListener('click', (e) => {
+    if (e.target.closest('#btnLogoutHeader')) return;
+    box.classList.toggle('open');
+  });
+
+  logoutBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!box.contains(e.target)) {
+      box.classList.remove('open');
+    }
+  });
+}
+  
 async function cerrarSesionCliente() {
   try {
     if (!window.sbRealtime?.auth) return;
