@@ -1954,10 +1954,12 @@ select:focus-visible {
   border-bottom-left-radius: 20px;
   border-bottom-right-radius: 20px;
 }
-  .header-content {
-    gap: 4px 8px;
-    grid-template-rows: auto minmax(46px, auto);
-  }
+.header-content {
+  gap: 4px 8px;
+  grid-template-rows: auto 1fr;
+  min-height: 128px;
+  padding-bottom: 6px;
+}
 
   .logo-title {
     font-size: clamp(1rem, 4.8vw, 1.28rem);
@@ -1977,9 +1979,10 @@ select:focus-visible {
   }
 
 #headerUser {
-  margin-top: 0;
-  margin-bottom: 4px;
+  justify-self: end;
   align-self: end;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
   .user-session-box {
@@ -2019,14 +2022,22 @@ select:focus-visible {
   }
 
 .vehicle-section {
-  min-height: 34px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 0;
+  height: 58px;
+  pointer-events: none;
 }
 .vehicle-img {
-  width: clamp(92px, 26vw, 124px);
-  left: 4px;
+  position: absolute;
+  left: 8px;
   bottom: -2px;
+  width: 108px;
+  height: auto;
 }
-  .vehicle-section::after {
+   .vehicle-section::after {
     left: 10px;
     width: 82px;
     bottom: 1px;
