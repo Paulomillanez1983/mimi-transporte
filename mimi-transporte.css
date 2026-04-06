@@ -2106,7 +2106,7 @@ select:focus-visible {
     width: auto;
     margin-top: 0;
     position: relative;
-    top: 22px;
+    top: 20px;
     z-index: 5;
   }
 
