@@ -453,6 +453,14 @@ select:focus-visible {
 .header-logout-btn,
 .footer-phone {
   -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--ease-standard),
+    box-shadow var(--ease-standard),
+    background var(--ease-standard),
+    border-color var(--ease-standard),
+    color var(--ease-standard),
+    opacity var(--ease-standard),
+    filter var(--ease-standard);
 }
 
 .btn-add-stop {
@@ -469,9 +477,9 @@ select:focus-visible {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: border-color var(--ease-standard), background var(--ease-standard), color var(--ease-standard), transform var(--ease-standard);
   width: 100%;
   min-height: 50px;
+  touch-action: manipulation;
 }
 
 .btn-add-stop:hover,
@@ -496,7 +504,6 @@ select:focus-visible {
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 10px 24px rgba(21, 101, 192, 0.28);
-  transition: transform var(--ease-standard), box-shadow var(--ease-standard), opacity var(--ease-standard), filter var(--ease-standard);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -505,6 +512,7 @@ select:focus-visible {
   min-height: 58px;
   position: relative;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .btn-calcular:hover,
@@ -514,7 +522,7 @@ select:focus-visible {
 }
 
 .btn-calcular:active {
-  transform: translateY(0);
+  transform: scale(0.985);
 }
 
 .btn-calcular:disabled,
@@ -523,10 +531,31 @@ select:focus-visible {
   cursor: not-allowed;
   transform: none;
   pointer-events: none;
+  filter: saturate(0.96);
 }
 
 .btn-calcular.loading {
   background: linear-gradient(135deg, #1b5eb8, #163b73);
+}
+
+.btn-calcular::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.16) 42%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.btn-calcular:hover::after,
+.btn-calcular:focus-visible::after {
+  opacity: 1;
 }
 
 .btn-calcular .btn-content {
@@ -534,7 +563,9 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s ease;
+  position: relative;
+  z-index: 1;
 }
 
 .btn-calcular.loading .btn-content {
@@ -548,6 +579,7 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  z-index: 2;
 }
 
 .btn-calcular.loading .btn-loader {
@@ -574,13 +606,15 @@ select:focus-visible {
   font-weight: 800;
   cursor: pointer;
   box-shadow: 0 10px 22px rgba(21, 101, 192, 0.26);
-  transition: transform var(--ease-standard), box-shadow var(--ease-standard), opacity var(--ease-standard);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   touch-action: manipulation;
   min-height: 56px;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .btn-primary:hover,
@@ -590,25 +624,45 @@ select:focus-visible {
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: scale(0.985);
+}
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.16) 42%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.btn-primary:hover::after,
+.btn-primary:focus-visible::after {
+  opacity: 1;
 }
 
 .btn-secondary {
   width: 100%;
   padding: 14px;
-  border: 1.5px solid #e0e6ee;
+  border: 1.5px solid rgba(15, 23, 42, 0.08);
   border-radius: 16px;
   background: white;
   color: #333;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: border-color var(--ease-standard), color var(--ease-standard), background var(--ease-standard), transform var(--ease-standard), box-shadow var(--ease-standard);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: 54px;
+  touch-action: manipulation;
 }
 
 .btn-secondary:hover,
@@ -620,7 +674,7 @@ select:focus-visible {
 }
 
 .btn-secondary:active {
-  transform: scale(0.99);
+  transform: scale(0.985);
 }
 
 .breakdown-toggle {
@@ -638,7 +692,7 @@ select:focus-visible {
   justify-content: space-between;
   gap: 12px;
   cursor: pointer;
-  transition: background var(--ease-standard), border-color var(--ease-standard), transform var(--ease-standard);
+  touch-action: manipulation;
 }
 
 .breakdown-toggle:hover,
@@ -648,17 +702,19 @@ select:focus-visible {
 }
 
 .breakdown-toggle:active {
-  transform: scale(0.99);
+  transform: scale(0.985);
 }
 
 #breakdownChevron {
   transition: transform 0.2s ease;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 .breakdown-toggle[aria-expanded="true"] #breakdownChevron {
   transform: rotate(180deg);
 }
+
 
 /* ==========================================
    MAPA
