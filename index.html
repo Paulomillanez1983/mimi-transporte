@@ -4170,6 +4170,8 @@ function bindUIActions() {
   const btnCancelarViaje = document.getElementById('btnCancelarViaje');
   const btnSwapRoute = document.getElementById('btnSwapRoute');
   const btnToggleBreakdown = document.getElementById('btnToggleBreakdown');
+  const btnLoginHeader = document.getElementById('btnLoginHeader');
+  const btnLogoutHeader = document.getElementById('btnLogoutHeader');
 
   if (btnAddStop && !btnAddStop.dataset.bound) {
     btnAddStop.addEventListener('click', agregarWaypoint);
@@ -4218,23 +4220,9 @@ function bindUIActions() {
     });
     btnToggleBreakdown.dataset.bound = '1';
   }
-}
 
-document.addEventListener('DOMContentLoaded', async () => {
-  initHeaderScrollEffect();
-
-  // Intentar recuperar sesión si viene de login Google
-  const session = await obtenerSesionCliente(true);
-  renderSesionUI(session);
-
-  // Reanudar viaje si venía de login
-  await reanudarViajePendientePostLogin();
-});
-    setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
-      state.destino = data;
-    });
-
-    document.getElementById('btnLoginHeader')?.addEventListener('click', async () => {
+  if (btnLoginHeader && !btnLoginHeader.dataset.bound) {
+    btnLoginHeader.addEventListener('click', async () => {
       try {
         await loginConGoogleParaViaje();
       } catch (err) {
@@ -4242,50 +4230,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         notif.show('Error', 'No se pudo iniciar sesión con Google', 'error');
       }
     });
+    btnLoginHeader.dataset.bound = '1';
+  }
 
-    document.getElementById('btnLogoutHeader')?.addEventListener('click', cerrarSesionCliente);
+  if (btnLogoutHeader && !btnLogoutHeader.dataset.bound) {
+    btnLogoutHeader.addEventListener('click', cerrarSesionCliente);
+    btnLogoutHeader.dataset.bound = '1';
+  }
+}
 
-    if (window.sbRealtime?.auth) {
-      const sessionInicial = await obtenerSesionCliente(false);
-      renderSesionUI(sessionInicial);
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    initHeaderScrollEffect();
+    bindUIActions();
+
+    setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
+      state.origen = data;
+    });
+
+    setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
+      state.destino = data;
+    });
+
+    const session = await obtenerSesionCliente(true);
+    renderSesionUI(session);
+
+    if (window.sbRealtime?.auth && !window.__mimiAuthListenerBound) {
+      window.__mimiAuthListenerBound = true;
 
       window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
         console.log('[auth] onAuthStateChange:', event, session);
 
         cachedSession = session || null;
-async function bindUIActions() {
-  document.getElementById('btnLogoutHeader')?.addEventListener('click', cerrarSesionCliente);
+        lastSessionCheck = Date.now();
 
-  if (window.sbRealtime?.auth) {
-    const sessionInicial = await obtenerSesionCliente(false);
-    renderSesionUI(sessionInicial);
+        renderSesionUI(session || null);
 
-    window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
-      console.log('[auth] onAuthStateChange:', event, session);
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          await reanudarViajePendientePostLogin();
+        }
 
-      cachedSession = session || null;
-      lastSessionCheck = Date.now();
+        if (event === 'SIGNED_OUT') {
+          limpiarSesionCache();
+          renderSesionUI(null);
+        }
+      });
+    }
 
-      renderSesionUI(session || null);
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        await reanudarViajePendientePostLogin();
-      }
-
-      if (event === 'SIGNED_OUT') {
-        limpiarSesionCache();
-        renderSesionUI(null);
-      }
-    });
-  }
-}
     await reanudarViajePendientePostLogin();
     actualizarBotonCancelarViaje();
   } catch (err) {
     console.error('❌ Error en DOMContentLoaded:', err);
   }
 });
-  // ==========================================
+
+// ==========================================
 // MIMI NEXT LEVEL UI
 // Seguro: no rompe la lógica existente
 // ==========================================
@@ -4343,7 +4342,6 @@ function initPageTransitionsFX() {
     el?.addEventListener('click', triggerTransition);
   });
 }
-
 
 function initAuthLoadingFX() {
   const btnLogin = document.getElementById('btnLoginHeader');
