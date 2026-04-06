@@ -3283,47 +3283,50 @@ async function confirmarViaje() {
       0
     );
 
-    const payload = {
-      origen: origen.direccion || origen.direccionCompleta || origen.direccionCorta || '',
-      origen_lat: Number(origen.lat),
-      origen_lng: Number(origen.lng),
+const payload = {
+  origen: origen.direccion || origen.direccionCompleta || origen.direccionCorta || '',
+  origen_lat: Number(origen.lat),
+  origen_lng: Number(origen.lng),
 
-      destino: destino.direccion || destino.direccionCompleta || destino.direccionCorta || '',
-      destino_lat: Number(destino.lat),
-      destino_lng: Number(destino.lng),
+  destino: destino.direccion || destino.direccionCompleta || destino.direccionCorta || '',
+  destino_lat: Number(destino.lat),
+  destino_lng: Number(destino.lng),
 
-      precio: Number.isFinite(precioFinal) ? precioFinal : 0,
-      km: Number.isFinite(kmFinal) ? kmFinal : 0,
-      duracion_min: Number.isFinite(duracionFinal) ? duracionFinal : 0,
+  precio: Number.isFinite(precioFinal) ? precioFinal : 0,
+  km: Number.isFinite(kmFinal) ? kmFinal : 0,
+  duracion_min: Number.isFinite(duracionFinal) ? duracionFinal : 0,
 
-      resumen_ruta: resumenRuta || '',
+  resumen_ruta: resumenRuta || '',
 
-      waypoints: waypointsIntermedios.map((p, i) => ({
-        orden: i + 1,
-        direccion: p.direccion || p.direccionCompleta || p.direccionCorta || `Parada ${i + 1}`,
-        direccionCorta: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
-        lat: Number(p.lat),
-        lng: Number(p.lng)
-      })),
+  waypoints: waypointsIntermedios.map((p, i) => ({
+    orden: i + 1,
+    direccion: p.direccion || p.direccionCompleta || p.direccionCorta || `Parada ${i + 1}`,
+    direccionCorta: p.direccionCorta || p.direccion || `Parada ${i + 1}`,
+    lat: Number(p.lat),
+    lng: Number(p.lng)
+  })),
 
-      cantidad_paradas: waypointsIntermedios.length,
+  cantidad_paradas: waypointsIntermedios.length,
 
-      observaciones: state.observaciones || state.comentarios || '',
+  observaciones: state.observaciones || state.comentarios || '',
 
-      pasajero_nombre:
-        state.pasajeroNombre ||
-        state.nombrePasajero ||
-        session?.user?.user_metadata?.full_name ||
-        session?.user?.user_metadata?.name ||
-        '',
+  pasajero_nombre:
+    state.pasajeroNombre ||
+    state.nombrePasajero ||
+    session?.user?.user_metadata?.full_name ||
+    session?.user?.user_metadata?.name ||
+    '',
 
-      pasajero_telefono:
-        state.pasajeroTelefono ||
-        state.telefonoPasajero ||
-        session?.user?.user_metadata?.phone ||
-        ''
-    };
+  pasajero_telefono:
+    state.pasajeroTelefono ||
+    state.telefonoPasajero ||
+    session?.user?.user_metadata?.phone ||
+    '',
 
+  // 👇 AGREGAR ESTO
+  cliente_auth_id: session?.user?.id || null,
+  cliente_email: session?.user?.email || ''
+};
     console.log('[confirmarViaje] payload:', payload);
     console.log('[confirmarViaje] url:', `${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`);
 
