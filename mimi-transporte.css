@@ -2406,3 +2406,8 @@ select:focus-visible {
     background: rgba(255, 255, 255, 0.14);
   }
 }
+.header-notifications-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
