@@ -1983,14 +1983,14 @@ select:focus-visible {
     border-bottom-right-radius: 20px;
   }
 
-  .header-content {
-    gap: 4px 8px;
-    grid-template-rows: auto 1fr;
-    min-height: 96px;
-    padding-bottom: 0;
-  }
-
-  .logo-title {
+.header-content {
+  gap: 4px 8px;
+  grid-template-rows: auto 1fr;
+  min-height: 118px;
+  padding-bottom: 0;
+  position: relative;
+}
+   .logo-title {
     font-size: clamp(1rem, 4.8vw, 1.28rem);
   }
 
@@ -2097,16 +2097,17 @@ select:focus-visible {
   }
 
 #headerUser {
-  grid-area: user;
-  justify-self: end;
-  align-self: end;
-  position: relative;
-  top: 0px;
-  margin-top: -8px;   /* esto lo sube */
-  margin-bottom: 0;
-  z-index: 5;
+  position: absolute;
+  right: 0;
+  bottom: 6px;
+  top: auto;
+  margin: 0;
+  z-index: 6;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
-   .user-session-box {
+.user-session-box {
     max-width: 100%;
   }
 
