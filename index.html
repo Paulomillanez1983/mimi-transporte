@@ -4221,14 +4221,15 @@ function bindUIActions() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    bindUIActions();
-    actualizarBotonCancelarViaje();
+  initHeaderScrollEffect();
 
-    setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
-      state.origen = data;
-    });
+  // Intentar recuperar sesión si viene de login Google
+  const session = await obtenerSesionCliente(true);
+  renderSesionUI(session);
 
+  // Reanudar viaje si venía de login
+  await reanudarViajePendientePostLogin();
+});
     setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
       state.destino = data;
     });
