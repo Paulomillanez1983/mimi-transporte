@@ -3679,11 +3679,7 @@ async function calcularRuta() {
 
     procesarRespuestaCotizacion(resultado, payload);
 
-    if (resultado.route_geometry && resultado.route_geometry.length > 0) {
-      setSectionVisible('mapSection', true);
-      await initMapa();
-      dibujarRutaReal(resultado.route_geometry);
-    }
+// El dibujo del mapa ya lo resuelve procesarRespuestaCotizacion()
   } catch (err) {
     if (requestId !== currentQuoteRequestId) return;
     console.error('❌ Error:', err);
@@ -3830,21 +3826,70 @@ function procesarRespuestaCotizacion(data, payload) {
   const precio = numeroSeguro(data?.precio, 0);
   const distancia = numeroSeguro(data?.distancia_km, 0);
   const duracion = numeroSeguro(data?.duracion_min, 0);
-  
-  // Guardar geometría si viene
-const coordsBackend =
-  Array.isArray(data?.route_geometry) && data.route_geometry.length >= 2
-    ? data.route_geometry
-    : null;  
+
   const detallePrecio = data?.detalle_precio || {};
   const fallbackUsado = !!(data?.fallback_usado || detallePrecio?.fallback_usado);
   const metodoCalculo = data?.metodo_calculo || detallePrecio?.proveedor_ruta || 'desconocido';
 
-  // Construir resumen de ruta
-  const resumenRuta = data?.resumen_ruta || 
-    [payload.origen, ...payload.paradas.map(p => p.direccion), payload.destino]
+  const resumenRuta =
+    data?.resumen_ruta ||
+    [payload.origen, ...(payload.paradas || []).map(p => p.direccion), payload.destino]
       .filter(Boolean)
       .join(' → ');
+
+  const coordsRouteGeometry =
+    Array.isArray(data?.route_geometry) && data.route_geometry.length >= 2
+      ? data.route_geometry
+      : null;
+
+  let coordsLegs = null;
+  if (!coordsRouteGeometry && Array.isArray(data?.legs)) {
+    const merged = [];
+
+    data.legs.forEach((leg) => {
+      const g = Array.isArray(leg?.geometry) ? leg.geometry : [];
+      g.forEach((c) => {
+        const lng = Number(c?.[0]);
+        const lat = Number(c?.[1]);
+
+        if (
+          Number.isFinite(lng) &&
+          Number.isFinite(lat) &&
+          Math.abs(lng) <= 180 &&
+          Math.abs(lat) <= 90
+        ) {
+          const last = merged[merged.length - 1];
+          if (!last || last[0] !== lng || last[1] !== lat) {
+            merged.push([lng, lat]);
+          }
+        }
+      });
+    });
+
+    if (merged.length >= 2) {
+      coordsLegs = merged;
+    }
+  }
+
+  let coordsPuntos = null;
+  if (!coordsRouteGeometry && !coordsLegs && Array.isArray(data?.puntos_ruta)) {
+    const simples = data.puntos_ruta
+      .map((p) => [Number(p.lng), Number(p.lat)])
+      .filter((c) =>
+        Number.isFinite(c[0]) &&
+        Number.isFinite(c[1]) &&
+        Math.abs(c[0]) <= 180 &&
+        Math.abs(c[1]) <= 90
+      );
+
+    if (simples.length >= 2) {
+      coordsPuntos = simples;
+    }
+  }
+
+  const coordsFinales = coordsRouteGeometry || coordsLegs || coordsPuntos || null;
+  const esRutaReal = !!(coordsRouteGeometry || coordsLegs);
+  const esProvisoria = !esRutaReal && !!coordsPuntos;
 
   state.cotizacion = {
     ...data,
@@ -3856,33 +3901,31 @@ const coordsBackend =
     metodo_calculo: metodoCalculo
   };
 
-state.routeData = {
-  distance: distancia,
-  duration: duracion,
-  resumenRuta: resumenRuta,
-  fallback: fallbackUsado,
-  geometry: coordsBackend
-    ? {
-        type: 'LineString',
-        coordinates: coordsBackend
-      }
-    : null
-};
+  state.routeData = {
+    distance: distancia,
+    duration: duracion,
+    resumenRuta,
+    fallback: fallbackUsado,
+    geometry: coordsFinales
+      ? {
+          type: 'LineString',
+          coordinates: coordsFinales
+        }
+      : null,
+    provisional: esProvisoria
+  };
 
-// Mostrar mapa siempre que haya al menos 2 puntos válidos
-if (coordsBackend) {
-  setSectionVisible('mapSection', true);
-  initMapa().then(() => dibujarRutaReal(coordsBackend));
-} else if (Array.isArray(data?.puntos_ruta)) {
-  const coordsSimples = data.puntos_ruta
-    .map((p) => [Number(p.lng), Number(p.lat)])
-    .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
-
-  if (coordsSimples.length >= 2) {
+  if (coordsFinales) {
     setSectionVisible('mapSection', true);
-    initMapa().then(() => dibujarRutaLineal(coordsSimples));
+    initMapa().then(() => {
+      if (esRutaReal) {
+        dibujarRutaReal(coordsFinales);
+      } else {
+        dibujarRutaLineal(coordsFinales);
+      }
+    });
   }
-}
+
   if (fallbackUsado) {
     notif.show(
       'Ruta estimada',
@@ -3893,7 +3936,6 @@ if (coordsBackend) {
 
   mostrarCotizacion(precio, distancia, duracion);
 }  
-  
 // ==========================================
 // UI COTIZACIÓN
 // ==========================================
