@@ -1827,8 +1827,8 @@ select:focus-visible {
   background: linear-gradient(135deg, #6f84c9, #4f6bb3);
   color: #fff;
   border-radius: 999px;
-  padding: 10px 18px;
-  min-height: 42px;
+  padding: 11px 20px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
