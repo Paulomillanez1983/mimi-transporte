@@ -4564,6 +4564,61 @@ function replayVehicleIntroIfNeeded() {
 })();
 
 document.addEventListener('DOMContentLoaded', initNextLevelUI);
+  const notifBtn = document.getElementById("tripNotificationsBtn");
+const notifPanel = document.getElementById("tripNotificationsPanel");
+const notifList = document.getElementById("tripNotificationsList");
+const notifSummary = document.getElementById("tripNotificationsSummary");
+const notifDot = document.querySelector(".trip-notifications-dot");
+
+let notifAbierto = false;
+let historial = [];
+
+// abrir / cerrar panel
+notifBtn.addEventListener("click", () => {
+  notifAbierto = !notifAbierto;
+  notifPanel.hidden = !notifAbierto;
+
+  if (notifAbierto) {
+    notifDot.style.display = "none";
+  }
+});
+
+// cerrar si toca afuera
+document.addEventListener("click", (e) => {
+  if (!notifBtn.contains(e.target) && !notifPanel.contains(e.target)) {
+    notifPanel.hidden = true;
+    notifAbierto = false;
+  }
+});
+
+// función central (LA IMPORTANTE)
+function actualizarCentroNotificacionesViaje({ estado, texto }) {
+  const fecha = new Date().toLocaleTimeString();
+
+  historial.unshift({
+    estado,
+    texto,
+    fecha
+  });
+
+  // limitar a 10
+  historial = historial.slice(0, 10);
+
+  notifList.innerHTML = historial.map(item => `
+    <div style="margin-bottom:6px;">
+      <strong>${item.estado}</strong><br>
+      <span>${item.texto}</span><br>
+      <small>${item.fecha}</small>
+    </div>
+  `).join("");
+
+  notifSummary.textContent = texto;
+
+  // mostrar puntito si está cerrado
+  if (!notifAbierto) {
+    notifDot.style.display = "block";
+  }
+}
 </script>
 </body>
 </html>
