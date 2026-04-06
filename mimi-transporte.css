@@ -1897,3 +1897,20 @@ input:focus-visible {
     background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.08));
   }
 }
+@media (max-width: 480px) {
+  .sugerencias {
+    max-height: min(280px, 40vh);
+    border-radius: 14px;
+  }
+
+  .sugerencia-item {
+    padding: 12px 13px;
+    min-height: 50px;
+  }
+
+  .sugerencia-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+  }
+}
