@@ -1956,7 +1956,9 @@ async function initMapa() {
       new maplibregl.NavigationControl({ showCompass: false }),
       'bottom-right'
     );
-
+mapaCliente.on('error', (e) => {
+  console.warn('[mapa] error:', e?.error || e);
+});
     mapaCliente.on('load', () => {
       mapReady = true;
       setTimeout(() => {
@@ -2718,8 +2720,14 @@ function procesarRespuestaCotizacion(data, payload) {
   const duracion = numeroSeguro(data?.duracion_min, 0);
 
   const detallePrecio = data?.detalle_precio || {};
-  const fallbackUsado = !!(data?.fallback_usado || detallePrecio?.fallback_usado);
-  const metodoCalculo = data?.metodo_calculo || detallePrecio?.proveedor_ruta || 'desconocido';
+const fallbackUsado =
+  data?.fallback_usado === true ||
+  detallePrecio?.fallback_usado === true ||
+  data?.metodo_calculo === 'fallback_haversine' ||
+  detallePrecio?.proveedor_ruta === 'fallback_haversine';
+  const metodoCalculo = data?.metodo_calculo || 
+    detallePrecio?.proveedor_ruta || 
+    'desconocido';
 
   const resumenRuta =
     data?.resumen_ruta ||
@@ -2805,25 +2813,30 @@ function procesarRespuestaCotizacion(data, payload) {
     provisional: esProvisoria
   };
 
-  if (coordsFinales) {
-    setSectionVisible('mapSection', true);
-    initMapa().then(() => {
+if (coordsFinales) {
+  setSectionVisible('mapSection', true);
+  initMapa().then(async () => {
+    try {
       if (esRutaReal) {
-        dibujarRutaReal(coordsFinales);
+        await dibujarRutaReal(coordsFinales);
       } else {
         dibujarRutaLineal(coordsFinales);
       }
-    });
-  }
-
-  if (fallbackUsado) {
-    notif.show(
-      'Ruta estimada',
-      'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
-      'warning'
-    );
-  }
-
+    } catch (e) {
+      console.warn('[mapa] fallo dibujarRutaReal, uso lineal:', e);
+      try {
+        dibujarRutaLineal(coordsFinales);
+      } catch (_) {}
+    }
+  });
+}
+if (fallbackUsado && !coordsRouteGeometry && !coordsLegs) {
+  notif.show(
+    'Ruta estimada',
+    'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
+    'warning'
+  );
+}
   mostrarCotizacion(precio, distancia, duracion);
 }  
 // ==========================================
