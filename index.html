@@ -831,6 +831,16 @@ async function buscarDireccion(query) {
           <span>Compartir ruta</span>
         </button>
       </div>
+      <button
+  class="btn-secondary btn-cancel-trip"
+  id="btnCancelarViaje"
+  type="button"
+  aria-label="Cancelar viaje"
+  hidden
+>
+  <span aria-hidden="true">✕</span>
+  <span>Cancelar viaje</span>
+</button>
     </section>
   </section>
 </main>
@@ -1198,9 +1208,10 @@ let state = {
   routeData: null,
   map: null,
   markers: [],
-  cotizacion: null
+  cotizacion: null,
+  viajeId: null,
+  estadoViaje: null
 };
-
 let mapaCliente = null;
 let mapReady = false;
 let isCalculatingQuote = false;
