@@ -1998,9 +1998,10 @@ select:focus-visible {
   .header-content {
     gap: 4px 8px;
     grid-template-rows: auto 1fr;
-    min-height: 112px; /* antes 128px */
+    min-height: 112px;
     padding-bottom: 0;
   }
+
   .logo-title {
     font-size: clamp(1rem, 4.8vw, 1.28rem);
   }
@@ -2018,12 +2019,12 @@ select:focus-visible {
     top: 6px;
   }
 
-#headerUser {
-  justify-self: end;
-  align-self: end;
-  margin-top: 0;
-  margin-bottom: 0;
-}
+  #headerUser {
+    justify-self: end;
+    align-self: end;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
 
   .user-session-box {
     grid-template-columns: 42px 1fr auto;
@@ -2046,47 +2047,93 @@ select:focus-visible {
     font-size: 0.62rem;
   }
 
-.header-login-btn {
-  padding: 9px 14px;
-  min-height: 40px;
-  font-size: 0.82rem;
-  white-space: nowrap;
-}
-.header-login-btn span:last-child {
-  display: inline;
-}
+  .header-login-btn {
+    padding: 9px 14px;
+    min-height: 40px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+
+  .header-login-btn span:last-child {
+    display: inline;
+  }
+
   .header-logout-btn {
     padding: 6px 8px;
     min-height: 32px;
     font-size: 0.74rem;
   }
 
-.vehicle-section {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -18px; /* baja más toda la zona del jeep */
-  min-height: 0;
-  height: 58px;
-  pointer-events: none;
-  overflow: visible;
+  .vehicle-section {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -18px;
+    min-height: 0;
+    height: 58px;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  .vehicle-img {
+    position: absolute;
+    left: 12px;
+    bottom: -22px;
+    width: 118px;
+    height: auto;
+    z-index: 3;
+  }
+
+  .vehicle-section::after {
+    left: 18px;
+    width: 94px;
+    bottom: 12px;
+  }
 }
 
-.vehicle-img {
-  position: absolute;
-  left: 12px;
-  bottom: -22px; /* baja más el jeep */
-  width: 118px;
-  height: auto;
-  z-index: 3;
-}
+@media (max-width: 360px) {
+  .header-content {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "brand"
+      "user"
+      "vehicle";
+    grid-template-rows: auto auto auto;
+  }
 
-.vehicle-section::after {
-  left: 18px;
-  width: 94px;
-  bottom: 12px;
-}
-   
+  .logo-section {
+    align-items: center;
+    text-align: center;
+  }
+
+  .shield-icon {
+    display: none;
+  }
+
+  #headerUser {
+    justify-self: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 6px;
+  }
+
+  .user-session-box {
+    max-width: 100%;
+  }
+
+  .vehicle-section {
+    justify-content: center;
+    height: 54px;
+    min-height: 0;
+  }
+
+  .vehicle-img {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -8px;
+    width: 96px;
+  }
+}   
    /* MUY CHICO */
 @media (max-width: 360px) {
   .header-content {
@@ -2188,9 +2235,6 @@ select:focus-visible {
   z-index: 50;
 }
 
-.vehicle-img {
-  bottom: 0;
-}
 @media (max-width: 480px) {
   .header {
     padding: calc(6px + var(--safe-top)) 12px 0;
