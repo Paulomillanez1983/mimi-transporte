@@ -1364,7 +1364,7 @@ select:focus-visible {
 
   .header-logout-btn {
     border: none;
-    background: rgba(255,255,255,0.92);
+    background: rgba(255, 255, 255, 0.92);
     color: #222;
     border-radius: 12px;
     padding: 8px 10px;
@@ -1373,6 +1373,7 @@ select:focus-visible {
     min-height: 38px;
   }
 }
+
 @media (max-width: 360px) {
   html {
     font-size: 15px;
@@ -1380,7 +1381,7 @@ select:focus-visible {
 
   .vehicle-img {
     width: 92px;
-    bottom: -92px;
+    bottom: -18px;
   }
 
   .quote-price {
@@ -1395,7 +1396,7 @@ select:focus-visible {
 
   .vehicle-img {
     width: 86px;
-    bottom: -84px;
+    bottom: -14px;
   }
 }
 
@@ -1409,7 +1410,7 @@ select:focus-visible {
 
   .vehicle-img {
     width: 180px;
-    bottom: -180px;
+    bottom: -36px;
     left: -10px;
   }
 
@@ -1425,10 +1426,9 @@ select:focus-visible {
 
   .vehicle-img {
     width: 200px;
-    bottom: -200px;
+    bottom: -42px;
   }
 }
-
 /* ==========================================
    DARK MODE
 ========================================== */
