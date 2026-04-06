@@ -1735,7 +1735,7 @@ input:focus-visible {
 /* MOBILE */
 @media (max-width: 480px) {
   .header {
-    padding: calc(6px + var(--safe-top)) 12px 0;
+    padding: calc(3px + var(--safe-top)) 12px 0;
     margin-bottom: 12px;
     border-bottom-left-radius: 22px;
     border-bottom-right-radius: 22px;
