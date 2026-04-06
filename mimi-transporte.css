@@ -478,6 +478,57 @@ button {
   }
 }
 /* ==========================================
+   HEADER AJUSTE LAYOUT PRO
+========================================== */
+
+.header {
+  padding-bottom: 8px;
+}
+
+/* Ajustar grid para que el jeep suba */
+.header-content {
+  grid-template-rows: auto auto;
+  align-items: start;
+}
+
+/* Subir vehículo */
+.vehicle-section {
+  margin-top: -8px;
+  min-height: 70px;
+  align-items: center;
+}
+
+/* Centrar jeep mejor */
+.vehicle-img {
+  transform: translateY(-6px);
+}
+
+/* Ajustar bloque superior */
+.logo-section {
+  padding-top: 4px;
+}
+
+#headerUser {
+  margin-top: 2px;
+}
+
+/* Reducir espacio general del header */
+@media (max-width: 480px) {
+  .header {
+    padding-top: calc(10px + var(--safe-top));
+    padding-bottom: 10px;
+  }
+
+  .vehicle-section {
+    min-height: 64px;
+    margin-top: -6px;
+  }
+
+  .vehicle-img {
+    transform: translateY(-4px);
+  }
+}
+/* ==========================================
    LAYOUT
 ========================================== */
 .container {
