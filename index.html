@@ -1273,7 +1273,9 @@ async function loginConGoogleParaViaje() {
       redirectTo,
       skipBrowserRedirect: false,
       queryParams: {
-        prompt: 'select_account consent'
+        prompt: 'select_account',
+        access_type: 'offline',
+        include_granted_scopes: 'false'
       }
     }
   });
@@ -1284,8 +1286,7 @@ async function loginConGoogleParaViaje() {
   }
 
   return data;
-}
-  
+}  
 async function reanudarViajePendientePostLogin() {
   try {
     const pending = localStorage.getItem('mimi_pending_trip_request');
