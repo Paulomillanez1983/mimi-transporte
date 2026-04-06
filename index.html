@@ -593,32 +593,52 @@ async function buscarDireccion(query) {
       >0</span>
     </button>
 
-    <div
-      id="tripNotificationsPanel"
-      class="trip-notifications-panel"
-      role="dialog"
-      aria-label="Panel de notificaciones"
-    >
-      <div class="trip-notifications-panel-header">
-        <span>Notificaciones</span>
-      </div>
+<div
+  id="tripNotificationsPanel"
+  class="trip-notifications-panel"
+  role="dialog"
+  aria-label="Panel de notificaciones"
+>
+  <div class="trip-notifications-panel-header">
+    <span>Notificaciones</span>
 
-      <div
-        id="tripNotificationsSummary"
-        class="trip-notifications-summary"
+    <div class="trip-notifications-actions">
+      <button
+        id="tripNotificationsMarkReadBtn"
+        class="trip-notifications-action-btn"
+        type="button"
+        aria-label="Marcar como leídas"
       >
-        Sin novedades por ahora.
-      </div>
+        Leídas
+      </button>
 
-      <div
-        id="tripNotificationsList"
-        class="trip-notifications-list"
+      <button
+        id="tripNotificationsClearBtn"
+        class="trip-notifications-action-btn danger"
+        type="button"
+        aria-label="Vaciar notificaciones"
       >
-        <div class="trip-notification-empty">
-          Todavía no hay notificaciones.
-        </div>
-      </div>
+        Vaciar
+      </button>
     </div>
+  </div>
+
+  <div
+    id="tripNotificationsSummary"
+    class="trip-notifications-summary"
+  >
+    Sin novedades por ahora.
+  </div>
+
+  <div
+    id="tripNotificationsList"
+    class="trip-notifications-list"
+  >
+    <div class="trip-notification-empty">
+      Todavía no hay notificaciones.
+    </div>
+  </div>
+</div>
   </div>
 </div>    
     <div class="header-user" id="headerUser">
@@ -1435,7 +1455,7 @@ class NotificationSystem {
 
 const notif = new NotificationSystem();
 
-// ==========================================
+  // ==========================================
 // HEADER NOTIFICATIONS (UI)
 // ==========================================
 const notifBtn = document.getElementById('tripNotificationsBtn');
@@ -1542,7 +1562,7 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
     ultimo: { estado, texto, fecha }
   };
 }
-  function mapearEstadoANotificacion(estado) {
+function mapearEstadoANotificacion(estado) {
   switch (estado) {
     case 'BUSCANDO_CHOFER':
       return {
@@ -1717,7 +1737,6 @@ function suscribirseEstadoViajeRealtime(viajeId) {
 
   return channel;
 }
-  
 // ==========================================
 // UI LOADING
 // ==========================================
