@@ -4622,42 +4622,37 @@ function replayVehicleIntroIfNeeded() {
 })();
 
 document.addEventListener('DOMContentLoaded', initNextLevelUI);
-  const notifBtn = document.getElementById("tripNotificationsBtn");
-const notifPanel = document.getElementById("tripNotificationsPanel");
-const notifList = document.getElementById("tripNotificationsList");
-const notifSummary = document.getElementById("tripNotificationsSummary");
-const notifDot = document.querySelector(".trip-notifications-dot");
+
+const notifBtn = document.getElementById('tripNotificationsBtn');
+const notifPanel = document.getElementById('tripNotificationsPanel');
+const notifList = document.getElementById('tripNotificationsList');
+const notifSummary = document.getElementById('tripNotificationsSummary');
+const notifDot = document.querySelector('.trip-notifications-dot');
 
 let notifAbierto = false;
 let historial = [];
 
-// abrir / cerrar panel
-notifBtn.addEventListener("click", () => {
-  notifAbierto = !notifAbierto;
-  notifPanel.hidden = !notifAbierto;
+if (notifBtn && notifPanel) {
+  notifBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    notifAbierto = !notifAbierto;
+    notifPanel.hidden = !notifAbierto;
 
-  if (notifAbierto) {
-    notifDot.style.display = "none";
-  }
-});
-
-// cerrar si toca afuera
-document.addEventListener("click", (e) => {
-  if (!notifBtn.contains(e.target) && !notifPanel.contains(e.target)) {
-    notifPanel.hidden = true;
-    notifAbierto = false;
-  }
-});
-
-// función central (LA IMPORTANTE)
-function actualizarCentroNotificacionesViaje({ estado, texto }) {
-  const fecha = new Date().toLocaleTimeString();
-
-  historial.unshift({
-    estado,
-    texto,
-    fecha
+    if (notifAbierto && notifDot) {
+      notifDot.style.display = 'none';
+    }
   });
+
+  document.addEventListener('click', (e) => {
+    const clickedInsideBtn = notifBtn.contains(e.target);
+    const clickedInsidePanel = notifPanel.contains(e.target);
+
+    if (!clickedInsideBtn && !clickedInsidePanel) {
+      notifPanel.hidden = true;
+      notifAbierto = false;
+    }
+  });
+}
 
 function actualizarCentroNotificacionesViaje({ estado, texto }) {
   if (!notifList || !notifSummary || !notifDot) return;
@@ -4678,14 +4673,15 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
       <span>${item.texto}</span><br>
       <small>${item.fecha}</small>
     </div>
-  `).join("");
+  `).join('');
 
   notifSummary.textContent = texto;
 
   if (!notifAbierto) {
-    notifDot.style.display = "block";
+    notifDot.style.display = 'block';
   }
 }
-  </script>
+
+</script>
 </body>
 </html>
