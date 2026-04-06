@@ -1542,6 +1542,97 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
     ultimo: { estado, texto, fecha }
   };
 }
+  function mapearEstadoANotificacion(estado) {
+  switch (estado) {
+    case 'BUSCANDO_CHOFER':
+      return {
+        estado: 'Buscando chofer',
+        texto: 'Estamos buscando un chofer cercano'
+      };
+
+    case 'OFERTANDO':
+      return {
+        estado: 'Enviando solicitudes',
+        texto: 'Enviando solicitud a conductores cercanos'
+      };
+
+    case 'ACEPTADO':
+      return {
+        estado: 'Chofer asignado',
+        texto: 'Un chofer aceptó tu viaje'
+      };
+
+    case 'EN_CAMINO':
+      return {
+        estado: 'En camino',
+        texto: 'El chofer va hacia el punto de retiro'
+      };
+
+    case 'EN_CURSO':
+      return {
+        estado: 'Viaje en curso',
+        texto: 'Tu viaje está en marcha'
+      };
+
+    case 'COMPLETADO':
+      return {
+        estado: 'Viaje finalizado',
+        texto: 'El viaje se completó correctamente'
+      };
+
+    case 'CANCELADO':
+      return {
+        estado: 'Viaje cancelado',
+        texto: 'El viaje fue cancelado'
+      };
+
+    default:
+      return null;
+  }
+}
+  let ultimoEstadoNotificado = null;
+  function suscribirseEstadoViajeRealtime(viajeId) {
+  if (!viajeId || !window.sbRealtime) {
+    console.warn('[realtime] No hay viajeId o cliente supabase');
+    return;
+  }
+
+  console.log('[realtime] Suscribiendo a viaje:', viajeId);
+
+  const channel = window.sbRealtime
+    .channel('viaje-estado-' + viajeId)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'viajes',
+        filter: `id=eq.${viajeId}`
+      },
+(payload) => {
+  try {
+    const nuevoEstado = payload?.new?.estado;
+
+    console.log('[realtime] Cambio estado:', nuevoEstado);
+
+    // 🚫 evitar duplicados
+    if (nuevoEstado === ultimoEstadoNotificado) return;
+    ultimoEstadoNotificado = nuevoEstado;
+
+    const notifData = mapearEstadoANotificacion(nuevoEstado);
+
+    if (notifData) {
+      actualizarCentroNotificacionesViaje(notifData);
+    }
+  } catch (err) {
+          console.error('[realtime] error procesando evento', err);
+        }
+      }
+    )
+    .subscribe();
+
+  return channel;
+}
 // ==========================================
 // UI LOADING
 // ==========================================
@@ -3651,9 +3742,13 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
       );
     }
 
-    escucharEstadoViajeCliente(state.viajeId);
-    notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
+if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
+  suscribirseEstadoViajeRealtime(state.viajeId);
+} else if (typeof escucharEstadoViajeCliente === 'function' && state?.viajeId) {
+  escucharEstadoViajeCliente(state.viajeId);
+}
 
+notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
   } catch (err) {
     console.error('[confirmarViaje] ERROR completo:', err);
     console.error('[confirmarViaje] ERROR message:', err?.message);
