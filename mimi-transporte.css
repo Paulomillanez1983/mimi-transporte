@@ -1119,6 +1119,7 @@ input:focus-visible {
     left: 0;
     bottom: 0;
   }
+
   .logo-title {
     font-size: clamp(1.16rem, 5vw, 1.46rem);
   }
@@ -1184,17 +1185,17 @@ input:focus-visible {
     display: none;
   }
 
-.header-logout-btn {
-  border: none;
-  background: rgba(255,255,255,0.92);
-  color: #222;
-  border-radius: 12px;
-  padding: 8px 10px;
-  font-weight: 700;
-  cursor: pointer;
-  min-height: 38px;
+  .header-logout-btn {
+    border: none;
+    background: rgba(255,255,255,0.92);
+    color: #222;
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 38px;
+  }
 }
-
 @media (max-width: 360px) {
   html {
     font-size: 15px;
