@@ -477,6 +477,15 @@ button {
     justify-content: center;
   }
 }
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,0.08), transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(66,165,245,0.12), transparent 45%);
+  pointer-events: none;
+}
 /* ==========================================
    HEADER AJUSTE LAYOUT PRO
 ========================================== */
