@@ -4649,19 +4649,41 @@ const notifPanel = document.getElementById('tripNotificationsPanel');
 const notifList = document.getElementById('tripNotificationsList');
 const notifSummary = document.getElementById('tripNotificationsSummary');
 const notifDot = document.querySelector('.trip-notifications-dot');
+const notifBadge = document.getElementById('tripNotificationsBadge');
 
-let notifAbierto = false;
 let historial = [];
+
+function abrirPanelNotificaciones() {
+  if (!notifBtn || !notifPanel) return;
+  notifPanel.classList.add('is-open');
+  notifBtn.setAttribute('aria-expanded', 'true');
+
+  if (notifDot) notifDot.style.display = 'none';
+}
+
+function cerrarPanelNotificaciones() {
+  if (!notifBtn || !notifPanel) return;
+  notifPanel.classList.remove('is-open');
+  notifBtn.setAttribute('aria-expanded', 'false');
+}
+
+function panelNotificacionesAbierto() {
+  return !!notifPanel?.classList.contains('is-open');
+}
 
 if (notifBtn && notifPanel) {
   notifBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    notifAbierto = !notifAbierto;
-    notifPanel.hidden = !notifAbierto;
 
-    if (notifAbierto && notifDot) {
-      notifDot.style.display = 'none';
+    if (panelNotificacionesAbierto()) {
+      cerrarPanelNotificaciones();
+    } else {
+      abrirPanelNotificaciones();
     }
+  });
+
+  notifPanel.addEventListener('click', (e) => {
+    e.stopPropagation();
   });
 
   document.addEventListener('click', (e) => {
@@ -4669,40 +4691,55 @@ if (notifBtn && notifPanel) {
     const clickedInsidePanel = notifPanel.contains(e.target);
 
     if (!clickedInsideBtn && !clickedInsidePanel) {
-      notifPanel.hidden = true;
-      notifAbierto = false;
+      cerrarPanelNotificaciones();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      cerrarPanelNotificaciones();
     }
   });
 }
 
 function actualizarCentroNotificacionesViaje({ estado, texto }) {
-  if (!notifList || !notifSummary || !notifDot) return;
+  if (!notifList || !notifSummary) return;
 
-  const fecha = new Date().toLocaleTimeString();
-
-  historial.unshift({
-    estado,
-    texto,
-    fecha
+  const fecha = new Date().toLocaleTimeString('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit'
   });
 
+  historial.unshift({ estado, texto, fecha });
   historial = historial.slice(0, 10);
 
-  notifList.innerHTML = historial.map(item => `
-    <div style="margin-bottom:6px;">
-      <strong>${item.estado}</strong><br>
-      <span>${item.texto}</span><br>
-      <small>${item.fecha}</small>
-    </div>
-  `).join('');
+  notifList.innerHTML = historial.length
+    ? historial.map(item => `
+        <div class="trip-notification-item">
+          <strong>${item.estado}</strong>
+          <span>${item.texto}</span>
+          <span>${item.fecha}</span>
+        </div>
+      `).join('')
+    : `
+        <div class="trip-notification-empty">
+          Todavía no hay notificaciones.
+        </div>
+      `;
 
-  notifSummary.textContent = texto;
+  notifSummary.textContent = texto || 'Tenés novedades del viaje.';
 
-  if (!notifAbierto) {
-    notifDot.style.display = 'block';
+  const cantidad = historial.length;
+
+  if (notifBadge) {
+    notifBadge.textContent = String(cantidad);
+    notifBadge.hidden = cantidad <= 0;
+  }
+
+  if (!panelNotificacionesAbierto() && notifDot) {
+    notifDot.style.display = cantidad > 0 ? 'block' : 'none';
   }
 }
-
 </script>
 </body>
 </html>
