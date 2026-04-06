@@ -3418,17 +3418,11 @@ function actualizarBotonCancelarViaje() {
   const btnCancelar = document.getElementById('btnCancelarViaje');
   if (!btnCancelar) return;
 
-  const estado = String(
-    state.estadoViaje || state.viajeEstado || ''
-  ).toUpperCase();
-
-  const visible =
-    !!state.viajeId &&
-    !['CANCELADO', 'COMPLETADO'].includes(estado);
+  const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+  const visible = !!state?.viajeId && !['CANCELADO', 'COMPLETADO'].includes(estado);
 
   btnCancelar.hidden = !visible;
 }
-
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
