@@ -2101,11 +2101,11 @@ select:focus-visible {
   align-self: end;
   position: relative;
   top: 0px;
-  margin-top: -2;
+  margin-top: -8px;   /* esto lo sube */
   margin-bottom: 0;
   z-index: 5;
 }
-  .user-session-box {
+   .user-session-box {
     max-width: 100%;
   }
 
