@@ -1184,10 +1184,15 @@ input:focus-visible {
     display: none;
   }
 
-  .header-logout-btn {
-    font-size: 0.8rem;
-    padding: 8px;
-  }
+.header-logout-btn {
+  border: none;
+  background: rgba(255,255,255,0.92);
+  color: #222;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 38px;
 }
 
 @media (max-width: 360px) {
@@ -1443,27 +1448,27 @@ input:focus-visible {
 ========================================== */
 
 :root {
-  --header-pad-x: clamp(12px, 3.2vw, 18px);
-  --header-pad-top: clamp(6px, 1.8vw, 12px);
-  --header-pad-bottom: clamp(6px, 1.8vw, 10px);
+  --header-pad-x: clamp(12px, 3vw, 18px);
+  --header-pad-top: clamp(4px, 1.2vw, 8px);
+  --header-pad-bottom: clamp(2px, 1vw, 6px);
   --header-radius: clamp(18px, 4vw, 26px);
-  --header-height-expanded: 96px;
-  --header-height-collapsed: 64px;
+  --header-height-expanded: 72px;
+  --header-height-collapsed: 56px;
   --spring-soft: cubic-bezier(0.22, 1, 0.36, 1);
   --glass-border: rgba(255, 255, 255, 0.16);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   --header-max-width: 600px;
 
-  --logo-title-size: clamp(1rem, 4vw, 1.35rem);
-  --logo-subtitle-size: clamp(0.54rem, 1.8vw, 0.72rem);
+  --logo-title-size: clamp(0.96rem, 3.8vw, 1.28rem);
+  --logo-subtitle-size: clamp(0.5rem, 1.7vw, 0.68rem);
 
-  --shield-size: clamp(28px, 7vw, 34px);
+  --shield-size: clamp(26px, 6.5vw, 32px);
 
-  --vehicle-width: clamp(74px, 21vw, 112px);
-  --vehicle-min-height: clamp(26px, 7vw, 44px);
+  --vehicle-width: clamp(74px, 20vw, 108px);
+  --vehicle-min-height: clamp(10px, 3vw, 18px);
 
-  --session-avatar-size: clamp(34px, 8vw, 42px);
-  --session-max-width: min(100%, clamp(170px, 46vw, 280px));
+  --session-avatar-size: clamp(34px, 8vw, 40px);
+  --session-max-width: min(100%, clamp(170px, 44vw, 270px));
 }
 .header {
   background:
@@ -1475,11 +1480,11 @@ input:focus-visible {
     var(--header-pad-bottom);
   position: sticky;
   top: 0;
-  overflow: hidden;
+  overflow: visible;
   border-bottom-left-radius: var(--header-radius);
   border-bottom-right-radius: var(--header-radius);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
-  margin-bottom: clamp(10px, 2.5vw, 18px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  margin-bottom: 28px;
   z-index: 1200;
 }
 .header-content {
@@ -1489,13 +1494,12 @@ input:focus-visible {
     "brand right"
     "vehicle right";
   align-items: start;
-  gap: 6px 10px;
+  gap: 4px 10px;
   max-width: var(--header-max-width);
   margin: 0 auto;
   position: relative;
   z-index: 2;
 }
-
 .logo-section {
   grid-area: brand;
   min-width: 0;
@@ -1551,40 +1555,82 @@ input:focus-visible {
   grid-area: right;
   justify-self: end;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-end;
   min-width: 0;
-  margin-top: 4px;
+  margin-top: 0;
 }
+
 .vehicle-section {
   grid-area: vehicle;
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: flex-start;
   min-height: var(--vehicle-min-height);
-  margin-top: -2px;
+  margin-top: -6px;
+  margin-bottom: -22px;
+  z-index: 3;
+  overflow: visible;
 }
+
 .vehicle-img {
   width: var(--vehicle-width);
   height: auto;
   object-fit: contain;
-  transform: translateY(0);
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.34));
+  transform: translateY(12px);
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.34));
   pointer-events: none;
   user-select: none;
 }
+
 .user-session-box {
   display: grid;
-  grid-template-columns: var(--session-avatar-size) minmax(0, 1fr) auto;
+  grid-template-columns: var(--session-avatar-size);
   align-items: center;
+  gap: 0;
+  width: auto;
+  max-width: 48px;
+  min-width: 48px;
+  padding: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: max-width 0.26s ease, padding 0.26s ease, border-radius 0.26s ease;
+}
+.user-session-box .user-meta,
+.user-session-box .header-logout-btn {
+  display: none;
+}
+
+.user-session-box.open {
+  grid-template-columns: var(--session-avatar-size) minmax(0, 1fr) auto;
   gap: 8px;
-  max-width: var(--session-max-width);
+  max-width: min(92vw, 290px);
   min-width: 0;
   padding: 6px 8px 6px 6px;
   border-radius: 18px;
 }
 
+.user-session-box.open .user-meta {
+  display: block;
+  min-width: 0;
+}
+
+.user-session-box.open .header-logout-btn {
+  display: inline-flex;
+}
+
+.user-meta {
+  min-width: 0;
+}
+
+.user-name,
+.user-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .user-avatar {
   width: var(--session-avatar-size);
   height: var(--session-avatar-size);
@@ -1668,14 +1714,17 @@ body {
   -webkit-backdrop-filter: blur(14px);
 }
 .header.header-scrolled .vehicle-section {
-  min-height: 24px;
-  margin-top: -6px;
+  min-height: 12px;
+  margin-top: -4px;
+  margin-bottom: -14px;
 }
+
 .header.header-scrolled .vehicle-img {
-  width: clamp(68px, 18vw, 92px);
-  transform: translateY(-4px) scale(0.94);
+  width: clamp(68px, 18vw, 88px);
+  transform: translateY(6px) scale(0.94);
   opacity: 0.92;
 }
+
 .header.header-scrolled .logo-title {
   font-size: clamp(1rem, 3.8vw, 1.16rem);
 }
@@ -2006,18 +2055,25 @@ body.page-transitioning .footer {
 /* ---------- MOBILE ---------- */
 @media (max-width: 480px) {
   .header {
-    min-height: 88px;
-    padding-top: calc(6px + var(--safe-top));
-    padding-bottom: 8px;
-    margin-bottom: 10px;
+    min-height: 68px;
+    padding-top: calc(4px + var(--safe-top));
+    padding-bottom: 2px;
+    margin-bottom: 26px;
   }
 
   .header.header-scrolled {
-    min-height: 60px;
+    min-height: 52px;
   }
 
   .user-session-box {
-    max-width: 220px;
+    max-width: 44px;
+    min-width: 44px;
+    padding: 3px;
+  }
+
+  .user-session-box.open {
+    max-width: min(92vw, 270px);
+    min-width: 0;
     grid-template-columns: 38px minmax(0, 1fr) auto;
     padding: 5px 7px 5px 5px;
   }
@@ -2028,9 +2084,10 @@ body.page-transitioning .footer {
   }
 
   .header-auth-skeleton {
-    width: 140px;
+    width: 132px;
   }
 }
+   
 @media (max-width: 360px) {
   .header-auth-skeleton {
     width: 100%;
