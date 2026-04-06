@@ -2087,7 +2087,7 @@ select:focus-visible {
       "user"
       "vehicle";
     grid-template-rows: auto auto auto;
-    min-height: 110px;
+    min-height: 118px;
   }
 
   .logo-section {
@@ -2100,10 +2100,18 @@ select:focus-visible {
   }
 
   #headerUser {
-    justify-self: center;
-    justify-content: center;
-    width: 100%;
-    margin-top: 6px;
+    grid-area: user;
+    justify-self: end;
+    justify-content: flex-end;
+    width: auto;
+    margin-top: 0;
+    position: relative;
+    top: 22px;
+    z-index: 5;
+  }
+
+  .user-session-box {
+    max-width: 100%;
   }
 
   .vehicle-section {
@@ -2117,10 +2125,9 @@ select:focus-visible {
     left: 50%;
     transform: translateX(-50%);
     bottom: -18px;
-    width: 98px;
+    width: 96px;
   }
 }
-
 @media (prefers-color-scheme: dark) {
   .header {
     box-shadow: 0 14px 30px rgba(0,0,0,0.34);
