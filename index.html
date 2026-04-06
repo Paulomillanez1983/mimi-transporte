@@ -1918,7 +1918,11 @@ async function initMapa() {
         sources: {
           osm: {
             type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tiles: [
+              'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+              'https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+              'https://c.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
+               ],            
             tileSize: 256,
             attribution: '© OpenStreetMap'
           }
@@ -2876,13 +2880,8 @@ function procesarRespuestaCotizacion(data, payload) {
   const quotePrice = document.getElementById('quotePrice');
   if (quotePrice) quotePrice.textContent = precioTexto;
 
-  let label = 'Precio estimado';
-  if (fallbackUsado) {
-    label = 'Estimación provisoria';
-  } else if (dp) {
-    label = 'Precio calculado';
-  }
-
+let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
+   
   const labelEl = document.querySelector('.quote-price-label');
   if (labelEl) labelEl.textContent = label;
 
