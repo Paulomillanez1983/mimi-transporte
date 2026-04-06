@@ -3860,6 +3860,88 @@ function intercambiarOrigenDestino() {
   btn.setAttribute('aria-expanded', String(nextOpen));
   box.hidden = !nextOpen;
 }
+
+async function cancelarViajeCliente() {
+  try {
+    if (!state?.viajeId) {
+      notif.show('Sin viaje activo', 'No hay un viaje confirmado para cancelar', 'warning');
+      actualizarBotonCancelarViaje?.();
+      return;
+    }
+
+    const confirmar = window.confirm('¿Querés cancelar este viaje?');
+    if (!confirmar) return;
+
+    const btnCancelar = document.getElementById('btnCancelarViaje');
+    const textoOriginal = btnCancelar?.innerHTML || '';
+
+    if (btnCancelar) {
+      btnCancelar.disabled = true;
+      btnCancelar.innerHTML = '<span aria-hidden="true">⏳</span><span>Cancelando...</span>';
+      btnCancelar.style.opacity = '0.7';
+      btnCancelar.style.pointerEvents = 'none';
+    }
+
+    const session = await obtenerSesionCliente(true);
+    const accessToken = session?.access_token || SUPABASE_ANON_KEY;
+
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/cancelar-viaje`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        viaje_id: state.viajeId,
+        cancelado_por: 'cliente',
+        motivo: 'cancelacion_cliente'
+      })
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok || !data?.exito) {
+      throw new Error(
+        data?.error ||
+        data?.message ||
+        `No se pudo cancelar el viaje (HTTP ${res.status})`
+      );
+    }
+
+    state.viajeEstado = 'CANCELADO';
+    state.estadoViaje = 'CANCELADO';
+
+    actualizarBotonCancelarViaje?.();
+
+    actualizarEstadoSolicitudUI?.({
+      estado: 'CANCELADO',
+      texto: 'Viaje cancelado'
+    });
+
+    const btnConfirmar = document.getElementById('btnConfirmarViaje');
+    if (btnConfirmar) {
+      btnConfirmar.disabled = false;
+      btnConfirmar.style.opacity = '1';
+      btnConfirmar.style.pointerEvents = 'auto';
+    }
+
+    notif.show('Viaje cancelado', 'Tu viaje fue cancelado correctamente', 'success');
+  } catch (err) {
+    console.error('[cancelarViajeCliente] ERROR:', err);
+    notif.show('Error', err?.message || 'No se pudo cancelar el viaje', 'error');
+  } finally {
+    const btnCancelar = document.getElementById('btnCancelarViaje');
+    if (btnCancelar) {
+      btnCancelar.disabled = false;
+      btnCancelar.innerHTML = '<span aria-hidden="true">✕</span><span>Cancelar viaje</span>';
+      btnCancelar.style.opacity = '1';
+      btnCancelar.style.pointerEvents = 'auto';
+    }
+  }
+}
+
+  
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
