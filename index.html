@@ -1062,27 +1062,46 @@ function initUserSessionDropdown() {
   });
 }
   
- async function cerrarSesionCliente() {
+async function cerrarSesionCliente() {
   try {
     if (typeof setHeaderAuthLoading === 'function') {
       setHeaderAuthLoading(true);
     }
 
-    if (window.sbRealtime?.auth) {
-      const { error } = await window.sbRealtime.auth.signOut();
-      if (error) throw error;
+    try {
+      if (window.sbRealtime?.auth) {
+        await window.sbRealtime.auth.signOut({ scope: 'local' });
+      }
+    } catch (signOutErr) {
+      console.warn('[auth] signOut warning:', signOutErr);
     }
 
     limpiarSesionCache();
+
     localStorage.removeItem('mimi_pending_trip_request');
+    localStorage.removeItem('mimi-cliente-auth');
+    sessionStorage.removeItem('mimi-cliente-auth');
+
+    Object.keys(localStorage).forEach((key) => {
+      if (key.includes('supabase') || key.includes('sb-') || key.includes('mimi-cliente-auth')) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    Object.keys(sessionStorage).forEach((key) => {
+      if (key.includes('supabase') || key.includes('sb-') || key.includes('mimi-cliente-auth')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+
     renderSesionUI(null);
 
-    const currentUrl = `${window.location.origin}${window.location.pathname}${window.location.search}`;
-    const continueUrl = encodeURIComponent(currentUrl);
-    const googleLogoutUrl =
-      `https://accounts.google.com/Logout?continue=https://appengine.google.com/_ah/logout?continue=${continueUrl}`;
+    notif.show('Sesión cerrada', 'Ahora podés ingresar con otra cuenta', 'info', 1800);
 
-    window.location.href = googleLogoutUrl;
+    setTimeout(() => {
+      const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+      window.location.replace(cleanUrl);
+    }, 250);
   } catch (err) {
     console.error('[auth] error cerrando sesión:', err);
     notif.show('Error', 'No se pudo cerrar sesión', 'error');
@@ -1091,7 +1110,7 @@ function initUserSessionDropdown() {
       setHeaderAuthLoading(false);
     }
   }
-} 
+}  
 async function obtenerSesionCliente(forceRefresh = false) {
   const canToggleHeaderLoading =
     typeof window.setHeaderAuthLoading === 'function';
@@ -1241,6 +1260,9 @@ async function loginConGoogleParaViaje() {
     throw new Error('Cliente Auth no inicializado');
   }
 
+  limpiarSesionCache();
+  localStorage.removeItem('mimi-cliente-auth');
+  sessionStorage.removeItem('mimi-cliente-auth');
   localStorage.setItem('mimi_pending_trip_request', '1');
 
   const redirectTo = `${window.location.origin}${window.location.pathname}`;
@@ -1251,7 +1273,7 @@ async function loginConGoogleParaViaje() {
       redirectTo,
       skipBrowserRedirect: false,
       queryParams: {
-        prompt: 'select_account'
+        prompt: 'select_account consent'
       }
     }
   });
@@ -1262,7 +1284,8 @@ async function loginConGoogleParaViaje() {
   }
 
   return data;
-}  
+}
+  
 async function reanudarViajePendientePostLogin() {
   try {
     const pending = localStorage.getItem('mimi_pending_trip_request');
