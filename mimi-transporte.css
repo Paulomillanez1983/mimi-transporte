@@ -2147,83 +2147,262 @@ select:focus-visible {
   touch-action: manipulation;
 }
 /* ==========================================
-   HEADER NOTIFICATIONS (NUEVO)
+   HEADER NOTIFICATIONS (MEJORADO)
 ========================================== */
 
 .trip-notifications {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.12);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   cursor: pointer;
-  z-index: 10;
-  transition: transform .2s ease, background .2s ease;
+  z-index: 30;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+  box-sizing: border-box;
 }
 
 .trip-notifications:hover {
-  transform: scale(1.05);
-  background: rgba(255,255,255,0.2);
+  transform: scale(1.04);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
-/* punto rojo */
+.trip-notifications:active {
+  transform: scale(0.97);
+}
+
+.trip-notifications:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.65);
+  outline-offset: 2px;
+}
+
+/* punto rojo simple */
 .trip-notifications-dot {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 7px;
+  right: 7px;
   width: 8px;
   height: 8px;
   background: #ff3b30;
   border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(20, 28, 48, 0.9);
   display: none;
+  pointer-events: none;
 }
 
 /* badge número */
 .trip-notifications-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   background: #ff3b30;
-  color: white;
+  color: #fff;
   font-size: 10px;
   font-weight: 800;
+  line-height: 18px;
+  text-align: center;
   border-radius: 999px;
-  padding: 2px 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+  box-sizing: border-box;
 }
 
 /* panel */
 .trip-notifications-panel {
   position: absolute;
-  top: 50px;
+  top: calc(100% + 10px);
   right: 0;
-  width: 260px;
-  background: white;
-  border-radius: 14px;
-  box-shadow: 0 14px 30px rgba(0,0,0,0.2);
+  width: min(300px, calc(100vw - 24px));
+  max-height: min(420px, 70vh);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.96);
+  color: #182033;
+  border-radius: 16px;
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.22),
+    0 4px 12px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(20, 28, 48, 0.08);
   padding: 12px;
   z-index: 100;
+  box-sizing: border-box;
+
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0.18s ease;
+}
+
+/* estado abierto */
+.trip-notifications-panel.is-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .trip-notifications-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 800;
   margin-bottom: 8px;
 }
 
 .trip-notifications-summary {
   font-size: 13px;
-  margin-bottom: 8px;
+  line-height: 1.35;
+  color: #4c5773;
+  margin-bottom: 10px;
 }
 
 .trip-notifications-list {
-  max-height: 200px;
+  max-height: 260px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
   font-size: 12px;
+}
+
+/* item individual */
+.trip-notification-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: rgba(24, 32, 51, 0.05);
+  border: 1px solid rgba(24, 32, 51, 0.08);
+}
+
+.trip-notification-item strong {
+  font-size: 12px;
+  color: #182033;
+}
+
+.trip-notification-item span {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #5b6783;
+}
+
+.trip-notification-empty {
+  padding: 14px 10px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 12px;
+  color: #6b748b;
+  background: rgba(24, 32, 51, 0.04);
+}
+
+/* scrollbar prolijo */
+.trip-notifications-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.trip-notifications-list::-webkit-scrollbar-thumb {
+  background: rgba(24, 32, 51, 0.18);
+  border-radius: 999px;
+}
+
+.trip-notifications-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* mobile */
+@media (max-width: 480px) {
+  .trip-notifications {
+    top: 6px;
+    right: 6px;
+    width: 38px;
+    height: 38px;
+    font-size: 17px;
+  }
+
+  .trip-notifications-panel {
+    right: 0;
+    width: min(280px, calc(100vw - 16px));
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .trip-notifications-list {
+    max-height: 220px;
+  }
+}
+
+/* dark mode */
+@media (prefers-color-scheme: dark) {
+  .trip-notifications {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .trip-notifications:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .trip-notifications-dot {
+    box-shadow: 0 0 0 2px rgba(12, 15, 24, 0.92);
+  }
+
+  .trip-notifications-panel {
+    background: rgba(17, 21, 31, 0.96);
+    color: #eef2ff;
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 18px 38px rgba(0, 0, 0, 0.45),
+      0 4px 12px rgba(0, 0, 0, 0.22);
+  }
+
+  .trip-notifications-summary {
+    color: #a9b3cb;
+  }
+
+  .trip-notification-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.07);
+  }
+
+  .trip-notification-item strong {
+    color: #eef2ff;
+  }
+
+  .trip-notification-item span,
+  .trip-notification-empty {
+    color: #a9b3cb;
+  }
+
+  .trip-notification-empty {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .trip-notifications-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.14);
+  }
 }
