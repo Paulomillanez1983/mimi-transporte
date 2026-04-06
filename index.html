@@ -3095,124 +3095,6 @@ let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
 // ACCIONES
 // ==========================================
 
-async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
-  const normalizarHeaders = (headersLike) => {
-    try {
-      return headersLike instanceof Headers
-        ? Object.fromEntries(headersLike.entries())
-        : { ...(headersLike || {}) };
-    } catch (_) {
-      return { ...(headersLike || {}) };
-    }
-  };
-
-  const tokenExpiraPronto = (token) => {
-    try {
-      const payload = decodificarJwtPayload(token);
-      const expMs = Number(payload?.exp || 0) * 1000;
-      if (!expMs) return false;
-      return (expMs - Date.now()) < 60_000;
-    } catch (_) {
-      return false;
-    }
-  };
-
-  const construirHeaders = (session, extraHeaders = {}) => ({
-    ...normalizarHeaders(extraHeaders),
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${session.access_token}`
-  });
-
-  let session = await obtenerSesionCliente(false);
-
-  if (!session?.access_token) {
-    session = await obtenerSesionCliente(true);
-  }
-
-  if (!session?.access_token) {
-    throw new Error('No hay sesión válida para llamar la función protegida');
-  }
-
-  if (tokenExpiraPronto(session.access_token)) {
-    limpiarSesionCache();
-    session = await obtenerSesionCliente(true);
-  }
-
-  if (!session?.access_token) {
-    throw new Error('No se pudo refrescar la sesión del usuario');
-  }
-
-  try {
-    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
-    if (!userCheck?.data?.user) {
-      limpiarSesionCache();
-      session = await obtenerSesionCliente(true);
-    }
-  } catch (_) {
-    limpiarSesionCache();
-    session = await obtenerSesionCliente(true);
-  }
-
-  if (!session?.access_token) {
-    throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
-  }
-
-  let headers = construirHeaders(session, options.headers);
-
-  let response = await fetch(url, {
-    ...options,
-    headers
-  });
-
-  let rawText = await response.text();
-
-  const es401 = response.status === 401;
-  const texto401 = String(rawText || '').toLowerCase();
-  const requiereRetryAuth =
-    es401 &&
-    (
-      texto401.includes('invalid jwt') ||
-      texto401.includes('jwt') ||
-      texto401.includes('unauthorized') ||
-      texto401.includes('auth')
-    );
-
-  if (!requiereRetryAuth) {
-    return { response, rawText, session };
-  }
-
-  limpiarSesionCache();
-
-  session = await obtenerSesionCliente(true);
-
-  if (!session?.access_token) {
-    throw new Error('No se pudo refrescar la sesión. Volvé a iniciar sesión.');
-  }
-
-  try {
-    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
-    if (!userCheck?.data?.user) {
-      throw new Error('JWT inválido luego del refresh');
-    }
-  } catch (_) {
-    throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
-  }
-
-  headers = construirHeaders(session, options.headers);
-
-  response = await fetch(url, {
-    ...options,
-    headers
-  });
-
-  rawText = await response.text();
-
-  if (response.status === 401) {
-    throw new Error('La función protegida rechazó la sesión del usuario (401). Revisá la validación JWT en la Edge Function.');
-  }
-
-  return { response, rawText, session };
-}
   
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
@@ -3928,10 +3810,148 @@ function intercambiarOrigenDestino() {
   box.hidden = !nextOpen;
 }
 
-  async function cancelarViajeCliente() {
+async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
+  const normalizarHeaders = (headersLike) => {
+    try {
+      return headersLike instanceof Headers
+        ? Object.fromEntries(headersLike.entries())
+        : { ...(headersLike || {}) };
+    } catch (_) {
+      return { ...(headersLike || {}) };
+    }
+  };
+
+  const tokenExpiraPronto = (token) => {
+    try {
+      const payload = decodificarJwtPayload(token);
+      const expMs = Number(payload?.exp || 0) * 1000;
+      if (!expMs) return false;
+      return (expMs - Date.now()) < 60_000;
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const construirHeaders = (session, extraHeaders = {}) => ({
+    ...normalizarHeaders(extraHeaders),
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${session.access_token}`
+  });
+
+  let session = await obtenerSesionCliente(false);
+
+  if (!session?.access_token) {
+    session = await obtenerSesionCliente(true);
+  }
+
+  if (!session?.access_token) {
+    throw new Error('No hay sesión válida para llamar la función protegida');
+  }
+
+  if (tokenExpiraPronto(session.access_token)) {
+    limpiarSesionCache();
+    session = await obtenerSesionCliente(true);
+  }
+
+  if (!session?.access_token) {
+    throw new Error('No se pudo refrescar la sesión del usuario');
+  }
+
+  try {
+    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+    if (!userCheck?.data?.user) {
+      limpiarSesionCache();
+      session = await obtenerSesionCliente(true);
+    }
+  } catch (_) {
+    limpiarSesionCache();
+    session = await obtenerSesionCliente(true);
+  }
+
+  if (!session?.access_token) {
+    throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
+  }
+
+  let headers = construirHeaders(session, options.headers);
+
+  let response = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  let rawText = await response.text();
+
+  const es401 = response.status === 401;
+  const texto401 = String(rawText || '').toLowerCase();
+
+  const requiereRetryAuth =
+    es401 &&
+    (
+      texto401.includes('invalid jwt') ||
+      texto401.includes('jwt') ||
+      texto401.includes('unauthorized') ||
+      texto401.includes('auth') ||
+      texto401.includes('token')
+    );
+
+  if (!requiereRetryAuth) {
+    return { response, rawText, session };
+  }
+
+  limpiarSesionCache();
+  session = await obtenerSesionCliente(true);
+
+  if (!session?.access_token) {
+    throw new Error('No se pudo refrescar la sesión. Volvé a iniciar sesión.');
+  }
+
+  try {
+    const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+    if (!userCheck?.data?.user) {
+      throw new Error('JWT inválido luego del refresh');
+    }
+  } catch (_) {
+    throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
+  }
+
+  headers = construirHeaders(session, options.headers);
+
+  response = await fetch(url, {
+    ...options,
+    headers
+  });
+
+  rawText = await response.text();
+
+  if (response.status === 401) {
+    throw new Error('La función protegida rechazó la sesión del usuario (401). Revisá la validación JWT en la Edge Function.');
+  }
+
+  return { response, rawText, session };
+}
+
+async function cancelarViajeCliente() {
+  const btnCancelar = document.getElementById('btnCancelarViaje');
+  const btnConfirmar = document.getElementById('btnConfirmarViaje');
+
+  const setCancelBtnLoading = (loading) => {
+    if (!btnCancelar) return;
+
+    btnCancelar.disabled = loading;
+    btnCancelar.style.opacity = loading ? '0.7' : '1';
+    btnCancelar.style.pointerEvents = loading ? 'none' : 'auto';
+    btnCancelar.innerHTML = loading
+      ? '<span aria-hidden="true">⏳</span><span>Cancelando...</span>'
+      : '<span aria-hidden="true">✕</span><span>Cancelar viaje</span>';
+  };
+
   try {
     if (!state?.viajeId) {
-      notif.show('Sin viaje activo', 'No hay un viaje confirmado para cancelar', 'warning');
+      notif.show(
+        'Sin viaje activo',
+        'No hay un viaje confirmado para cancelar',
+        'warning'
+      );
       actualizarBotonCancelarViaje?.();
       return;
     }
@@ -3944,18 +3964,17 @@ function intercambiarOrigenDestino() {
         'Necesitás iniciar sesión para cancelar el viaje',
         'info'
       );
+
       await loginConGoogleParaViaje();
       return;
     }
 
-    try {
-      const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
-
-      if (!userCheck?.data?.user) {
+    if (decodificarJwtPayload(session.access_token)?.exp) {
+      const expMs = Number(decodificarJwtPayload(session.access_token)?.exp || 0) * 1000;
+      if (expMs && expMs - Date.now() < 60_000) {
+        limpiarSesionCache();
         session = await obtenerSesionCliente(true);
       }
-    } catch (_) {
-      session = await obtenerSesionCliente(true);
     }
 
     if (!session?.access_token || !session?.user) {
@@ -3971,13 +3990,7 @@ function intercambiarOrigenDestino() {
     const confirmar = window.confirm('¿Querés cancelar este viaje?');
     if (!confirmar) return;
 
-    const btnCancelar = document.getElementById('btnCancelarViaje');
-    if (btnCancelar) {
-      btnCancelar.disabled = true;
-      btnCancelar.innerHTML = '<span aria-hidden="true">⏳</span><span>Cancelando...</span>';
-      btnCancelar.style.opacity = '0.7';
-      btnCancelar.style.pointerEvents = 'none';
-    }
+    setCancelBtnLoading(true);
 
     const { response: res, rawText } = await fetchEdgeFunctionWithAuthRetry(
       `${SUPABASE_URL}/functions/v1/cancelar-viaje`,
@@ -4022,24 +4035,28 @@ function intercambiarOrigenDestino() {
       });
     }
 
-    const btnConfirmar = document.getElementById('btnConfirmarViaje');
     if (btnConfirmar) {
       btnConfirmar.disabled = false;
       btnConfirmar.style.opacity = '1';
       btnConfirmar.style.pointerEvents = 'auto';
     }
 
-    notif.show('Viaje cancelado', 'Tu viaje fue cancelado correctamente', 'success');
+    notif.show(
+      'Viaje cancelado',
+      'Tu viaje fue cancelado correctamente',
+      'success'
+    );
   } catch (err) {
     console.error('[cancelarViajeCliente] ERROR:', err);
 
-    const msg = String(err?.message || '');
+    const msg = String(err?.message || '').toLowerCase();
 
     if (
-      /jwt/i.test(msg) ||
-      /sesi[oó]n/i.test(msg) ||
-      /unauthorized/i.test(msg) ||
-      /401/.test(msg)
+      msg.includes('jwt') ||
+      msg.includes('sesión') ||
+      msg.includes('sesion') ||
+      msg.includes('unauthorized') ||
+      msg.includes('401')
     ) {
       notif.show(
         'Sesión vencida',
@@ -4049,17 +4066,40 @@ function intercambiarOrigenDestino() {
       return;
     }
 
-    notif.show('Error', err?.message || 'No se pudo cancelar el viaje', 'error');
-  } finally {
-    const btnCancelar = document.getElementById('btnCancelarViaje');
-    if (btnCancelar) {
-      btnCancelar.disabled = false;
-      btnCancelar.innerHTML = '<span aria-hidden="true">✕</span><span>Cancelar viaje</span>';
-      btnCancelar.style.opacity = '1';
-      btnCancelar.style.pointerEvents = 'auto';
+    if (msg.includes('no pertenece al usuario autenticado') || msg.includes('403')) {
+      notif.show(
+        'No autorizado',
+        'Este viaje no pertenece al usuario logueado',
+        'error'
+      );
+      return;
     }
+
+    if (
+      msg.includes('ya fue completado') ||
+      msg.includes('estado_final') ||
+      msg.includes('estado_invalido') ||
+      msg.includes('409')
+    ) {
+      notif.show(
+        'No se puede cancelar',
+        err?.message || 'El viaje ya no puede cancelarse',
+        'warning'
+      );
+      return;
+    }
+
+    notif.show(
+      'Error',
+      err?.message || 'No se pudo cancelar el viaje',
+      'error'
+    );
+  } finally {
+    setCancelBtnLoading(false);
   }
 }
+  
+  
 // ==========================================
 // INICIALIZACIÓN
 // ==========================================
