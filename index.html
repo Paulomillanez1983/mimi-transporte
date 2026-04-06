@@ -1497,7 +1497,9 @@ if (notifBtn && notifPanel) {
 }
 
 function actualizarCentroNotificacionesViaje({ estado, texto }) {
-  if (!notifList || !notifSummary) return;
+  if (!notifList || !notifSummary) {
+    return { ok: false, reason: 'missing_dom' };
+  }
 
   const fecha = new Date().toLocaleTimeString('es-AR', {
     hour: '2-digit',
@@ -1533,8 +1535,13 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
   if (!panelNotificacionesAbierto() && notifDot) {
     notifDot.style.display = cantidad > 0 ? 'block' : 'none';
   }
-}
 
+  return {
+    ok: true,
+    total: cantidad,
+    ultimo: { estado, texto, fecha }
+  };
+}
 // ==========================================
 // UI LOADING
 // ==========================================
