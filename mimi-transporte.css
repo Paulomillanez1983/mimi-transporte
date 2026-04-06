@@ -1410,9 +1410,9 @@ select:focus-visible {
   width: auto;
   margin-top: 0;
   position: relative;
-  top: 18px;
+  top: 22px;
 }
-  .user-session-box {
+   .user-session-box {
     max-width: 100%;
   }
 
