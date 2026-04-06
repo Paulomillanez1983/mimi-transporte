@@ -2436,61 +2436,84 @@ select:focus-visible {
   70%  { box-shadow: 0 0 0 12px rgba(255, 59, 48, 0); }
   100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
 }
-/* ==========================================
-   FIX NOTIFICACIONES SOLO DESKTOP / TABLET
-   NO TOCA SMARTPHONES
-========================================== */
-@media (min-width: 481px) {
-  .header-content {
-    position: relative;
-    padding-right: 58px;
-  }
+[
+  !!document.getElementById('tripNotificationsBtn'),
+  !!document.querySelector('.header-notifications-wrapper'),
+  !!document.getElementById('tripNotificationsPanel')
+]
+(3) [true, true, true]
+[
+  !!document.getElementById('tripNotificationsBtn'),
+  !!document.querySelector('.header-notifications-wrapper'),
+  !!document.getElementById('tripNotificationsPanel')
+]
+(3) [true, true, true]
+(() => {
+  const el = document.getElementById('tripNotificationsBtn');
+  if (!el) return 'NO_EXISTE';
 
-  .header-notifications-wrapper {
-    position: absolute;
-    top: 8px;
-    right: 0;
-    z-index: 12;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    width: 48px;
-    height: 48px;
-  }
+  const cs = getComputedStyle(el);
+  const rect = el.getBoundingClientRect();
 
-  .trip-notifications {
-    position: relative;
-    top: auto;
-    right: auto;
-    width: 42px;
-    height: 42px;
-    z-index: 13;
-  }
+  return {
+    display: cs.display,
+    visibility: cs.visibility,
+    opacity: cs.opacity,
+    position: cs.position,
+    top: cs.top,
+    right: cs.right,
+    zIndex: cs.zIndex,
+    width: cs.width,
+    height: cs.height,
+    rect: {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height
+    }
+  };
+})()
+{display: 'flex', visibility: 'visible', opacity: '1', position: 'relative', top: '0px', …}
+(() => {
+  const el = document.getElementById('tripNotificationsBtn');
+  if (!el) return 'NO_EXISTE';
 
-  .trip-notifications-panel {
-    top: calc(100% + 10px);
-    right: 0;
-    width: min(320px, 34vw);
-    max-height: min(420px, 70vh);
-    z-index: 120;
-  }
-}
+  el.style.background = 'red';
+  el.style.border = '3px solid yellow';
+  el.style.opacity = '1';
+  el.style.visibility = 'visible';
+  el.style.display = 'flex';
+  el.style.position = 'fixed';
+  el.style.top = '20px';
+  el.style.right = '20px';
+  el.style.zIndex = '99999';
+  el.style.width = '52px';
+  el.style.height = '52px';
 
-@media (min-width: 1024px) {
-  .header-notifications-wrapper {
-    top: 10px;
-    right: 2px;
-  }
+  return 'OK';
+})()
+'OK'
+(() => {
+  const el = document.querySelector('.header-notifications-wrapper');
+  if (!el) return 'NO_EXISTE';
 
-  .trip-notifications {
-    width: 44px;
-    height: 44px;
-  }
+  const cs = getComputedStyle(el);
+  const rect = el.getBoundingClientRect();
 
-  .trip-notifications-panel {
-    width: 320px;
-  }
-}
+  return {
+    display: cs.display,
+    position: cs.position,
+    width: cs.width,
+    height: cs.height,
+    rect: {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height
+    }
+  };
+})()
+{display: 'flex', position: 'absolute', width: '48px', height: '48px', rect: {…}}
 @media (min-width: 481px) {
   #headerUser {
     margin-right: 10px;
