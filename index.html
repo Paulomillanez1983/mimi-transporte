@@ -4253,21 +4253,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.log('[auth] onAuthStateChange:', event, session);
 
         cachedSession = session || null;
-        lastSessionCheck = Date.now();
+async function bindUIActions() {
+  document.getElementById('btnLogoutHeader')?.addEventListener('click', cerrarSesionCliente);
 
-        renderSesionUI(session || null);
+  if (window.sbRealtime?.auth) {
+    const sessionInicial = await obtenerSesionCliente(false);
+    renderSesionUI(sessionInicial);
 
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          await reanudarViajePendientePostLogin();
-        }
+    window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
+      console.log('[auth] onAuthStateChange:', event, session);
 
-        if (event === 'SIGNED_OUT') {
-          limpiarSesionCache();
-          renderSesionUI(null);
-        }
-      });
-    }
+      cachedSession = session || null;
+      lastSessionCheck = Date.now();
 
+      renderSesionUI(session || null);
+
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        await reanudarViajePendientePostLogin();
+      }
+
+      if (event === 'SIGNED_OUT') {
+        limpiarSesionCache();
+        renderSesionUI(null);
+      }
+    });
+  }
+}
     await reanudarViajePendientePostLogin();
     actualizarBotonCancelarViaje();
   } catch (err) {
