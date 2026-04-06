@@ -1873,14 +1873,12 @@ function limpiarPuntosRuta(puntos) {
 }
 
 // ==========================================
-// MAPA
+// MAPA - MARKERS
 // ==========================================
 function crearMarkerElement(label, type) {
   const el = document.createElement('div');
   el.className = `route-marker ${type}`;
-  el.innerHTML = `<div class="route-marker-pin"></div>`;
-  return el;
-}
+
   const icono =
     type === 'origin' ? '📍' :
     type === 'dest' ? '🏁' :
@@ -1893,6 +1891,7 @@ function crearMarkerElement(label, type) {
 
   return el;
 }
+  
 async function initMapa() {
   if (mapaCliente) return Promise.resolve();
 
