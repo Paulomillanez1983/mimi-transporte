@@ -2066,6 +2066,9 @@ async function restaurarViajeActivoCliente() {
     renderizarCentroNotificaciones();
   }
 }
+let notifTouchStartY = 0;
+let notifTouchDeltaY = 0;
+
 if (notifBtn && notifPanel) {
   notifBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2075,9 +2078,6 @@ if (notifBtn && notifPanel) {
       abrirPanelNotificaciones();
     }
   });
-let notifTouchStartY = 0;
-let notifTouchDeltaY = 0;
-
 notifPanel?.addEventListener('touchstart', (e) => {
   if (!window.matchMedia('(max-width: 480px)').matches) return;
   notifTouchStartY = e.touches[0]?.clientY || 0;
