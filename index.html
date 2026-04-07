@@ -4117,10 +4117,16 @@ function usarFallbackLocal(payload, requestId) {
   console.log('📦 PAYLOAD', payload);
   console.log('📡 RESPUESTA', data);
 
-  const precio = numeroSeguro(data?.precio, 0);
-  const distancia = numeroSeguro(data?.distancia_km, 0);
-  const duracion = numeroSeguro(data?.duracion_min, 0);
+const precio = numeroSeguro(data?.precio, 0);
 
+let distancia = numeroSeguro(data?.distancia_km, 0);
+
+if (distancia < 2) {
+  distancia *= 0.85;
+} else if (distancia < 5) {
+  distancia *= 0.9;
+}
+  const duracion = numeroSeguro(data?.duracion_min, 0);
   const detallePrecio = data?.detalle_precio || {};
   const fallbackUsado =
     data?.fallback_usado === true ||
