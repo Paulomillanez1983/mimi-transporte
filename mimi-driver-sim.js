@@ -14,18 +14,18 @@ window.DriverSim = (() => {
 
   function buildCarSvg() {
     return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+      <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
         <g>
-          <ellipse cx="32" cy="34" rx="20" ry="22" fill="rgba(0,0,0,0.18)"/>
-          <g transform="translate(32 32) rotate(90) translate(-32 -32)">
-            <rect x="18" y="12" width="28" height="40" rx="10" fill="#111111"/>
-            <rect x="22" y="18" width="20" height="14" rx="6" fill="#8ec5ff"/>
-            <rect x="22" y="34" width="20" height="10" rx="5" fill="#f4f7fb"/>
-            <circle cx="22" cy="20" r="3" fill="#ffffff"/>
-            <circle cx="42" cy="20" r="3" fill="#ffffff"/>
-            <circle cx="22" cy="44" r="4" fill="#1f2937"/>
-            <circle cx="42" cy="44" r="4" fill="#1f2937"/>
-            <rect x="19" y="12" width="26" height="40" rx="10" fill="none" stroke="#ffffff" stroke-width="2"/>
+          <ellipse cx="48" cy="54" rx="26" ry="28" fill="rgba(0,0,0,0.28)"/>
+          <g transform="translate(48 48) rotate(90) translate(-48 -48)">
+            <rect x="28" y="16" width="40" height="56" rx="14" fill="#f7f7f7"/>
+            <rect x="33" y="24" width="30" height="18" rx="7" fill="#9fd0ff"/>
+            <rect x="33" y="45" width="30" height="15" rx="7" fill="#ffffff"/>
+            <circle cx="33" cy="28" r="4" fill="#ffffff"/>
+            <circle cx="63" cy="28" r="4" fill="#ffffff"/>
+            <circle cx="34" cy="62" r="6" fill="#222222"/>
+            <circle cx="62" cy="62" r="6" fill="#222222"/>
+            <rect x="29.5" y="17.5" width="37" height="53" rx="13" fill="none" stroke="#2b2b2b" stroke-width="2.5"/>
           </g>
         </g>
       </svg>
@@ -105,7 +105,7 @@ window.DriverSim = (() => {
           source: SOURCE_ID,
           layout: {
             'icon-image': IMAGE_ID,
-            'icon-size': 0.52,
+            'icon-size': 0.82,
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
             'icon-rotate': ['get', 'bearing'],
@@ -154,7 +154,7 @@ window.DriverSim = (() => {
     tryEnsure();
   }
 
-  function buildDriversAroundRoute(routeCoords, count = 6) {
+  function buildDriversAroundRoute(routeCoords, count = 10) {
     if (!Array.isArray(routeCoords) || routeCoords.length < 2) return [];
 
     return Array.from({ length: count }).map((_, i) => {
@@ -163,10 +163,10 @@ window.DriverSim = (() => {
 
       return {
         id: `drv_${i}_${Date.now()}`,
-        lng: Number(base[0]) + randomBetween(-0.0012, 0.0012),
-        lat: Number(base[1]) + randomBetween(-0.0009, 0.0009),
+        lng: Number(base[0]) + randomBetween(-0.0022, 0.0022),
+        lat: Number(base[1]) + randomBetween(-0.0017, 0.0017),
         bearing: randomBetween(0, 360),
-        speed: randomBetween(0.00001, 0.00003)
+        speed: randomBetween(0.000004, 0.000012)
       };
     });
   }
@@ -179,8 +179,8 @@ window.DriverSim = (() => {
       d.lng += Math.cos(angle) * d.speed;
       d.lat += Math.sin(angle) * d.speed;
 
-      if (Math.random() < 0.02) {
-        d.bearing += randomBetween(-35, 35);
+      if (Math.random() < 0.01) {
+        d.bearing += randomBetween(-10, 10);
       }
     });
 
@@ -188,7 +188,7 @@ window.DriverSim = (() => {
     animFrame = requestAnimationFrame(() => animate(map));
   }
 
-  function start(map, routeCoords, count = 6) {
+  function start(map, routeCoords, count = 10) {
     if (!map || !Array.isArray(routeCoords) || routeCoords.length < 2) {
       console.warn('[DriverSim] start cancelado: map o routeCoords inválidos');
       return;
