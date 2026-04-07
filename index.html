@@ -594,12 +594,34 @@ async function buscarDireccion(query) {
     </button>
 
 <div
+  id="tripNotificationsOverlay"
+  class="trip-notifications-overlay"
+  hidden
+></div>
+
+<div
   id="tripNotificationsPanel"
   class="trip-notifications-panel"
   role="dialog"
   aria-label="Panel de notificaciones"
   aria-hidden="true"
 >
+  <div class="trip-notifications-sheet-handle" aria-hidden="true">
+    <span></span>
+  </div>
+
+  <div
+    id="tripNotificationsStatusCard"
+    class="trip-notifications-status-card"
+    hidden
+  >
+    <div class="trip-notifications-status-icon" aria-hidden="true">🚐</div>
+    <div class="trip-notifications-status-copy">
+      <strong id="tripNotificationsStatusTitle">Estado del viaje</strong>
+      <span id="tripNotificationsStatusText">Sin novedades por ahora.</span>
+    </div>
+  </div>
+
   <div class="trip-notifications-panel-header">
     <div class="trip-notifications-panel-title">
       <strong>Notificaciones</strong>
