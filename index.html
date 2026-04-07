@@ -3524,7 +3524,7 @@ async function dibujarRutaEnMapa(coords) {
 }
 
 
-  function dibujarRutaLineal(coords) {
+function dibujarRutaLineal(coords) {
   if (!mapaCliente || !mapReady || !Array.isArray(coords) || coords.length < 2) return;
 
   requestAnimationFrame(() => {
@@ -3580,8 +3580,7 @@ async function dibujarRutaEnMapa(coords) {
       paint: {
         'line-color': '#1565c0',
         'line-width': 4,
-        'line-opacity': 0.70,
-        'line-dasharray': [2, 2]
+        'line-opacity': 0.88
       }
     });
 
@@ -3593,6 +3592,8 @@ async function dibujarRutaEnMapa(coords) {
     }
   });
 }
+  
+
 async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
@@ -3659,23 +3660,6 @@ async function dibujarRutaReal(coords) {
       'line-opacity': 0.95
     }
   });
-
-  mapaCliente.addLayer({
-    id: 'route-anim',
-    type: 'line',
-    source: 'route',
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round'
-    },
-    paint: {
-      'line-color': '#bfe0ff',
-      'line-width': 8,
-      'line-opacity': 0.95,
-      'line-blur': 0.9,
-      'line-dasharray': [0, 0, 0.7, 2.2]
-    }
-  });
   
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
@@ -3686,7 +3670,6 @@ async function dibujarRutaReal(coords) {
 
   agregarMarkersRutaDesdeCoords(coordsLimpias);
   ajustarVistaRuta(coordsLimpias, 900);
-  iniciarAnimacionRuta();
 
   if (window.DriverSim) {
     window.DriverSim.start(mapaCliente, coordsLimpias, 6);
@@ -3695,7 +3678,7 @@ async function dibujarRutaReal(coords) {
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 180);
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 450);
 }
-  
+
 function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
 
