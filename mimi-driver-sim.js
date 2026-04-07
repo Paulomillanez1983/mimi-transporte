@@ -15,14 +15,12 @@ window.DriverSim = (() => {
   function randomBetween(min, max) {
     return Math.random() * (max - min) + min;
   }
-
-  function getResponsiveIconSize() {
-    if (window.innerWidth <= 480) return 0.075;
-    if (window.innerWidth <= 768) return 0.078;
-    if (window.innerWidth <= 1024) return 0.085;
-    return 0.06;
-  }
-
+function getResponsiveIconSize() {
+  if (window.innerWidth <= 480) return 0.105;
+  if (window.innerWidth <= 768) return 0.095;
+  if (window.innerWidth <= 1024) return 0.085;
+  return 0.06;
+}
   function loadCarImage(map) {
     return new Promise((resolve) => {
       if (!map) return resolve(false);
@@ -196,13 +194,15 @@ window.DriverSim = (() => {
     const baseIcon = getResponsiveIconSize();
 
     return Array.from({ length: count }).map((_, i) => {
-      const spread = (maxIndex / Math.max(count, 1)) * i;
-      const progress = clamp(
-        spread + randomBetween(-2.5, 2.5),
-        0,
-        Math.max(0.2, maxIndex - 1.2)
-      );
+const usableStart = Math.min(18, maxIndex * 0.12);
+const usableEnd = Math.max(usableStart + 8, maxIndex - 10);
+const spread = usableStart + ((usableEnd - usableStart) / Math.max(count - 1, 1)) * i;
 
+const progress = clamp(
+  spread + randomBetween(-1.2, 1.2),
+  usableStart,
+  usableEnd
+);
       const laneOffset = randomBetween(-0.00018, 0.00018);
 
       const point = getPointOnRoute(routeCoords, progress, laneOffset);
@@ -255,7 +255,7 @@ window.DriverSim = (() => {
     animFrame = requestAnimationFrame(() => animate(map, routeCoords));
   }
 
-  function start(map, routeCoords, count = 8) {
+  function start(map, routeCoords, count = window.innerWidth <= 768 ? 6 : 8) {
     if (!map || !Array.isArray(routeCoords) || routeCoords.length < 2) {
       console.warn('[DriverSim] start cancelado: map o routeCoords inválidos');
       return;
