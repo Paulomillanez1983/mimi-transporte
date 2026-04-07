@@ -3267,8 +3267,7 @@ function crearMarkerElement(label, type) {
 
   return el;
 }
-  
- async function initMapa() {
+  async function initMapa() {
   console.log('[initMapa] entrando', {
     mapaClienteActual: mapaCliente,
     mapReadyActual: mapReady
@@ -3296,6 +3295,19 @@ function crearMarkerElement(label, type) {
   return new Promise((resolve, reject) => {
     try {
       const esMobile = window.innerWidth <= 768;
+      const temaOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      const tiles = temaOscuro
+        ? [
+            'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+          ]
+        : [
+            'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+            'https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+            'https://c.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
+          ];
 
       mapaCliente = new maplibregl.Map({
         container: 'map',
@@ -3304,13 +3316,9 @@ function crearMarkerElement(label, type) {
           sources: {
             osm: {
               type: 'raster',
-              tiles: [
-                'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-                'https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-                'https://c.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
-              ],
+              tiles: tiles,
               tileSize: 256,
-              attribution: '© OpenStreetMap'
+              attribution: '© OpenStreetMap © CARTO'
             }
           },
           layers: [
@@ -3318,13 +3326,21 @@ function crearMarkerElement(label, type) {
               id: 'osm',
               type: 'raster',
               source: 'osm',
-              paint: {
-                'raster-opacity': 0.92,
-                'raster-brightness-min': 0.12,
-                'raster-brightness-max': 0.82,
-                'raster-contrast': 0.18,
-                'raster-saturation': -0.45
-              }
+              paint: temaOscuro
+                ? {
+                    'raster-opacity': 0.98,
+                    'raster-brightness-min': 0.05,
+                    'raster-brightness-max': 0.55,
+                    'raster-contrast': 0.25,
+                    'raster-saturation': -0.15
+                  }
+                : {
+                    'raster-opacity': 0.92,
+                    'raster-brightness-min': 0.12,
+                    'raster-brightness-max': 0.82,
+                    'raster-contrast': 0.18,
+                    'raster-saturation': -0.45
+                  }
             }
           ]
         },
@@ -3379,9 +3395,11 @@ function crearMarkerElement(label, type) {
           try {
             mapaCliente.resize();
           } catch (_) {}
+
           if (wasHidden) {
             mapSection.style.visibility = 'visible';
           }
+
           resolve();
         }
       }, 2500);
@@ -3391,7 +3409,8 @@ function crearMarkerElement(label, type) {
       reject(err);
     }
   });
-} 
+}
+  
 function detenerAnimacionRuta() {
   if (routeAnimationFrame) {
     cancelAnimationFrame(routeAnimationFrame);
