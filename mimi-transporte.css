@@ -2519,3 +2519,49 @@ select:focus-visible {
     margin-right: 10px;
   }
 }
+/* ==========================================
+   FIX REAL DESKTOP / TABLET (NO MOBILE)
+========================================== */
+@media (min-width: 481px) {
+
+  .header-content {
+    position: relative;
+  }
+
+  /* CLAVE: posicionar el contenedor correctamente */
+  .header-icons {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    display: flex;           /* NO contents */
+    align-items: center;
+    justify-content: flex-end;
+    z-index: 50;
+  }
+
+  /* el wrapper ahora sí tiene contexto real */
+  .header-notifications-wrapper {
+    position: relative;
+    display: flex;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* evitar doble absolute */
+  .trip-notifications {
+    position: relative;   /* <-- ESTE ES EL CAMBIO CLAVE */
+    top: auto;
+    right: auto;
+    width: 40px;
+    height: 40px;
+  }
+
+  /* panel correcto */
+  .trip-notifications-panel {
+    top: calc(100% + 10px);
+    right: 0;
+    width: 300px;
+    z-index: 100;
+  }
+
+}
