@@ -105,7 +105,7 @@ window.DriverSim = (() => {
           source: SOURCE_ID,
           layout: {
             'icon-image': IMAGE_ID,
-            'icon-size': 0.82,
+            'icon-size': 1.25,
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
             'icon-rotate': ['get', 'bearing'],
