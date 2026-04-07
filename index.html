@@ -496,63 +496,183 @@ function setGeocodingCache(key, value) {
     }
   }
 }
+function getGeocodingClientBias() {
+  const lat =
+    Number(state?.currentLocation?.lat) ||
+    Number(state?.miUbicacion?.lat) ||
+    Number(state?.clienteUbicacion?.lat) ||
+    null;
+
+  const lng =
+    Number(state?.currentLocation?.lng) ||
+    Number(state?.miUbicacion?.lng) ||
+    Number(state?.clienteUbicacion?.lng) ||
+    null;
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return null;
+  }
+
+  return { lat, lng };
+}
+
+function buildGeocodingCacheKey(query) {
+  const bias = getGeocodingClientBias();
+
+  return [
+    normalizarBusqueda(query),
+    bias ? `${bias.lat.toFixed(3)},${bias.lng.toFixed(3)}` : 'sin_bias'
+  ].join('|');
+}
+
+function leerRecentPlaces() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('mimi_recent_places_v1') || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+function guardarRecentPlaces(items) {
+  try {
+    localStorage.setItem(
+      'mimi_recent_places_v1',
+      JSON.stringify(Array.isArray(items) ? items.slice(0, 8) : [])
+    );
+  } catch (_) {}
+}
+
+function pushRecentPlace(item) {
+  if (!item?.display_name) return;
+
+  const recent = leerRecentPlaces();
+  const key = normalizarBusqueda(item.display_name);
+
+  const next = recent.filter((x) => normalizarBusqueda(x?.display_name) !== key);
+  next.unshift(item);
+  guardarRecentPlaces(next);
+}
+
+function buscarDireccionFallbackLocal(query) {
+  const q = normalizarBusqueda(query);
+  if (!q || q.length < 3) return [];
+
+  return leerRecentPlaces()
+    .filter((item) => {
+      const display = normalizarBusqueda(item?.display_name || '');
+      return display.includes(q);
+    })
+    .slice(0, 5);
+}
 
 async function buscarDireccion(query) {
-  if (!query || query.trim().length < 3) return [];
+  if (!query || query.trim().length < 3) {
+    return {
+      resultados: [],
+      exactMatch: false,
+      approximateMatch: false,
+      source: 'empty'
+    };
+  }
 
-  const cacheKey = normalizarBusqueda(query);
+  const bias = getGeocodingClientBias();
+  const cacheKey = buildGeocodingCacheKey(query);
 
   if (geocodingCache.has(cacheKey)) {
-    return geocodingCache.get(cacheKey);
+    const cached = geocodingCache.get(cacheKey) || {};
+    return {
+      resultados: Array.isArray(cached.resultados) ? cached.resultados : [],
+      exactMatch: !!cached.exactMatch,
+      approximateMatch: !!cached.approximateMatch,
+      source: cached.source || 'memory'
+    };
   }
 
   try {
     const result = await safeFetch(
       `${SUPABASE_URL}/functions/v1/geocodificar`,
       {
-        method: "POST",
+        method: 'POST',
         headers: getPublicSupabaseHeaders({
-          "Content-Type": "application/json"
+          'Content-Type': 'application/json'
         }),
         body: JSON.stringify({
-  query,
-  limit: 5,
-  client_lat: Number(state?.currentLocation?.lat || state?.miUbicacion?.lat || 0) || null,
-  client_lng: Number(state?.currentLocation?.lng || state?.miUbicacion?.lng || 0) || null
-})
+          query,
+          limit: 5,
+          client_lat: bias?.lat ?? null,
+          client_lng: bias?.lng ?? null
+        })
       },
-      NETWORK_TIMEOUT_MS
+      6500
     );
 
     if (!result.response) {
-      console.warn("⚠️ Error de red en geocodificación");
-      return [];
+      const fallback = buscarDireccionFallbackLocal(query);
+      return {
+        resultados: fallback,
+        exactMatch: false,
+        approximateMatch: fallback.length > 0,
+        source: 'fallback-local'
+      };
     }
 
     const json = await safeReadJson(result.response);
 
     if (!result.response.ok) {
       console.warn(
-        "⚠️ HTTP geocodificación:",
+        '⚠️ HTTP geocodificación:',
         json?.message || json?.error || json?.raw || result.response.status
       );
-      return [];
+
+      const fallback = buscarDireccionFallbackLocal(query);
+      return {
+        resultados: fallback,
+        exactMatch: false,
+        approximateMatch: fallback.length > 0,
+        source: 'fallback-local'
+      };
     }
 
     if (!json || !json.exito) {
-      console.warn("⚠️ Error geocodificación:", json?.error || "Respuesta inválida");
-      return [];
+      console.warn('⚠️ Error geocodificación:', json?.error || 'Respuesta inválida');
+
+      const fallback = buscarDireccionFallbackLocal(query);
+      return {
+        resultados: fallback,
+        exactMatch: false,
+        approximateMatch: fallback.length > 0,
+        source: 'fallback-local'
+      };
     }
 
     const resultados = Array.isArray(json.data) ? json.data : [];
-    setGeocodingCache(cacheKey, resultados);
-    return resultados;
+    const payload = {
+      resultados,
+      exactMatch: !!json.exact_match,
+      approximateMatch: !!json.approximate_match,
+      source: json.source || 'nominatim'
+    };
+
+    setGeocodingCache(cacheKey, payload);
+
+    if (resultados.length) {
+      resultados.forEach(pushRecentPlace);
+    }
+
+    return payload;
   } catch (err) {
-    console.error("❌ Error buscando dirección:", err);
-    return [];
+    console.error('❌ Error buscando dirección:', err);
+
+    const fallback = buscarDireccionFallbackLocal(query);
+    return {
+      resultados: fallback,
+      exactMatch: false,
+      approximateMatch: fallback.length > 0,
+      source: 'fallback-local'
+    };
   }
 }
-
 </script>
 </head>
 <body>
@@ -2511,42 +2631,83 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     if (texto.length < 3) {
       hideSuggestions(contenedor);
       contenedor.innerHTML = '';
+      input.setAttribute('aria-expanded', 'false');
       return;
     }
 
     const currentRequest = ++requestId;
 
     timer = setTimeout(async () => {
-      const resultados = await buscarDireccion(texto);
+      contenedor.innerHTML = `
+        <div class="sugerencia-item sugerencia-loading" aria-disabled="true">
+          <div class="sugerencia-icon" aria-hidden="true">⏳</div>
+          <div class="sugerencia-text">
+            <div class="sugerencia-main">Buscando direcciones...</div>
+          </div>
+        </div>
+      `;
+      showSuggestions(contenedor);
+      input.setAttribute('aria-expanded', 'true');
+
+      const respuesta = await buscarDireccion(texto);
 
       if (currentRequest !== requestId) return;
       if (document.activeElement !== input) return;
 
-      mostrarSugerencias(contenedor, resultados, (r) => {
-        const direccionCorta = formatearDireccionCorta(r);
-        const direccionSecundaria = formatearDireccionSecundaria(r);
+      const resultados = Array.isArray(respuesta?.resultados)
+        ? respuesta.resultados
+        : [];
 
-        suppressNextInputSearch = true;
-        input.value = direccionCorta;
+      mostrarSugerencias(
+        contenedor,
+        resultados,
+        (r) => {
+          const direccionCorta = formatearDireccionCorta(r);
+          const direccionSecundaria = formatearDireccionSecundaria(r);
 
-        onSelect({
-          id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          direccion: r.display_name,
-          direccionCorta,
-          direccionSecundaria,
-          lat: parseFloat(r.lat),
-          lng: parseFloat(r.lon),
-          raw: r
-        });
+          suppressNextInputSearch = true;
+          input.value = direccionCorta;
 
-        input.setAttribute(
-          'title',
-          `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
-        );
+          onSelect({
+            id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            direccion: r.display_name,
+            direccionCorta,
+            direccionSecundaria,
+            lat: parseFloat(r.lat),
+            lng: parseFloat(r.lon),
+            raw: r
+          });
 
-        hideSuggestions(contenedor);
-      });
-    }, 350);
+          input.setAttribute(
+            'title',
+            `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
+          );
+
+          hideSuggestions(contenedor);
+          input.setAttribute('aria-expanded', 'false');
+        },
+        {
+          exactMatch: !!respuesta?.exactMatch,
+          approximateMatch: !!respuesta?.approximateMatch,
+          source: respuesta?.source || 'unknown',
+          query: texto
+        }
+      );
+
+      if (!resultados.length) {
+        contenedor.innerHTML = `
+          <div class="sugerencia-item sugerencia-empty" aria-disabled="true">
+            <div class="sugerencia-icon" aria-hidden="true">⚠️</div>
+            <div class="sugerencia-text">
+              <div class="sugerencia-main">No encontramos coincidencias</div>
+              <div class="sugerencia-secondary">Probá con calle y altura</div>
+            </div>
+          </div>
+        `;
+        showSuggestions(contenedor);
+        input.setAttribute('aria-expanded', 'true');
+      }
+    }, 220);
   });
 
   input.addEventListener('focus', () => {
@@ -2561,12 +2722,12 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
       const active = document.activeElement;
       if (!contenedor.contains(active) && active !== input) {
         hideSuggestions(contenedor);
+        input.setAttribute('aria-expanded', 'false');
       }
     }, 200);
   });
 }
-
-function mostrarSugerencias(contenedor, resultados, callback) {
+function mostrarSugerencias(contenedor, resultados, callback, meta = {}) {
   contenedor.innerHTML = '';
 
   if (!Array.isArray(resultados) || resultados.length === 0) {
@@ -2574,7 +2735,7 @@ function mostrarSugerencias(contenedor, resultados, callback) {
     return;
   }
 
-  resultados.forEach((r) => {
+  resultados.forEach((r, index) => {
     const item = document.createElement('div');
     item.className = 'sugerencia-item';
     item.setAttribute('role', 'option');
@@ -2583,11 +2744,23 @@ function mostrarSugerencias(contenedor, resultados, callback) {
     const direccionPrincipal = formatearDireccionCorta(r);
     const direccionSecundaria = formatearDireccionSecundaria(r);
 
+    const badge =
+      meta.approximateMatch && index === 0
+        ? `<span class="sugerencia-badge">Aprox.</span>`
+        : '';
+
     item.innerHTML = `
       <div class="sugerencia-icon" aria-hidden="true">📍</div>
       <div class="sugerencia-text">
-        <div class="sugerencia-main">${direccionPrincipal}</div>
-        ${direccionSecundaria ? `<div class="sugerencia-secondary">${direccionSecundaria}</div>` : ''}
+        <div class="sugerencia-main">
+          ${direccionPrincipal}
+          ${badge}
+        </div>
+        ${
+          direccionSecundaria
+            ? `<div class="sugerencia-secondary">${direccionSecundaria}</div>`
+            : ''
+        }
       </div>
     `;
 
@@ -2604,9 +2777,22 @@ function mostrarSugerencias(contenedor, resultados, callback) {
     contenedor.appendChild(item);
   });
 
+  if (meta.approximateMatch && resultados.length > 0) {
+    const aviso = document.createElement('div');
+    aviso.className = 'sugerencia-help';
+    aviso.innerHTML = 'Dirección aproximada. Verificá calle y altura.';
+    contenedor.appendChild(aviso);
+  }
+
+  if (meta.source === 'fallback-local' && resultados.length > 0) {
+    const avisoFallback = document.createElement('div');
+    avisoFallback.className = 'sugerencia-help';
+    avisoFallback.innerHTML = 'Mostrando sugerencias guardadas localmente.';
+    contenedor.appendChild(avisoFallback);
+  }
+
   showSuggestions(contenedor);
 }
-
 // ==========================================
 // WAYPOINTS
 // ==========================================
