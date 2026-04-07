@@ -5,7 +5,6 @@ window.DriverSim = (() => {
 
   const SOURCE_ID = 'sim-drivers';
   const LAYER_ID = 'sim-drivers-layer';
-  const IMAGE_ID = 'driver-car';
 
   function randomBetween(min, max) {
     return Math.random() * (max - min) + min;
@@ -31,9 +30,8 @@ window.DriverSim = (() => {
     });
   }
 
-  function ensureSourceAndLayer(map) {
-    if (!map || !map.isStyleLoaded()) return false;
-    if (!map.hasImage(IMAGE_ID)) return false;
+  function ensureLayer(map) {
+    if (!map || !map.isStyleLoaded()) return;
 
     if (!map.getSource(SOURCE_ID)) {
       map.addSource(SOURCE_ID, {
@@ -48,54 +46,22 @@ window.DriverSim = (() => {
     if (!map.getLayer(LAYER_ID)) {
       map.addLayer({
         id: LAYER_ID,
-        type: 'symbol',
+        type: 'circle',
         source: SOURCE_ID,
-        layout: {
-          'icon-image': IMAGE_ID,
-          'icon-size': 0.22,
-          'icon-allow-overlap': true,
-          'icon-ignore-placement': true,
-          'icon-rotate': ['get', 'bearing'],
-          'icon-rotation-alignment': 'map'
+        paint: {
+          'circle-radius': 6,
+          'circle-color': '#111111',
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff',
+          'circle-opacity': 0.95
         }
       });
     }
 
-    return true;
+    updateSource(map);
   }
 
-  function ensureLayer(map) {
-    if (!map || !map.isStyleLoaded()) return;
-
-    if (map.hasImage(IMAGE_ID)) {
-      ensureSourceAndLayer(map);
-      updateSource(map);
-      return;
-    }
-
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
-    img.onload = () => {
-      try {
-        if (!map.hasImage(IMAGE_ID)) {
-          map.addImage(IMAGE_ID, img);
-        }
-        ensureSourceAndLayer(map);
-        updateSource(map);
-      } catch (err) {
-        console.warn('[DriverSim] no se pudo agregar imagen/layer:', err);
-      }
-    };
-
-    img.onerror = () => {
-      console.warn('[DriverSim] no se pudo cargar ./driver-car.png');
-    };
-
-    img.src = './driver-car.png';
-  }
-
-  function buildDriversAroundRoute(routeCoords, count = 5) {
+  function buildDriversAroundRoute(routeCoords, count = 6) {
     if (!Array.isArray(routeCoords) || routeCoords.length < 2) return [];
 
     return Array.from({ length: count }).map((_, i) => {
@@ -104,10 +70,10 @@ window.DriverSim = (() => {
 
       return {
         id: `drv_${i}_${Date.now()}`,
-        lng: Number(base[0]) + randomBetween(-0.0025, 0.0025),
-        lat: Number(base[1]) + randomBetween(-0.0020, 0.0020),
+        lng: Number(base[0]) + randomBetween(-0.0016, 0.0016),
+        lat: Number(base[1]) + randomBetween(-0.0012, 0.0012),
         bearing: randomBetween(0, 360),
-        speed: randomBetween(0.00003, 0.00009)
+        speed: randomBetween(0.000015, 0.000045)
       };
     });
   }
@@ -129,11 +95,10 @@ window.DriverSim = (() => {
     animFrame = requestAnimationFrame(() => animate(map));
   }
 
-  function start(map, routeCoords, count = 5) {
+  function start(map, routeCoords, count = 6) {
     if (!map || !Array.isArray(routeCoords) || routeCoords.length < 2) return;
 
     stop(map);
-    ensureLayer(map);
 
     setTimeout(() => {
       ensureLayer(map);
@@ -143,7 +108,13 @@ window.DriverSim = (() => {
 
       updateSource(map);
       animate(map);
-    }, 400);
+
+      console.log('[DriverSim] iniciado', {
+        hasSource: !!map.getSource(SOURCE_ID),
+        hasLayer: !!map.getLayer(LAYER_ID),
+        drivers: drivers.length
+      });
+    }, 250);
   }
 
   function stop(map) {
