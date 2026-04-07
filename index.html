@@ -2043,16 +2043,20 @@ async function restaurarViajeActivoCliente() {
     // ============================
     // CASO 2: VIAJE EN STORAGE
     // ============================
-    if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
-      state.viajeId = viajeLocal.viajeId;
-      state.viajeEstado = viajeLocal.estadoViaje;
-      state.estadoViaje = viajeLocal.estadoViaje;
+if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
+  state.viajeId = viajeLocal.viajeId;
+  state.viajeEstado = viajeLocal.estadoViaje;
+  state.estadoViaje = viajeLocal.estadoViaje;
 
-      actualizarStatusCardNotificaciones(viajeLocal.estadoViaje);
-      renderizarCentroNotificaciones();
-      return;
-    }
+  actualizarStatusCardNotificaciones(viajeLocal.estadoViaje);
+  renderizarCentroNotificaciones();
 
+  if (typeof actualizarBotonCancelarViaje === 'function') {
+    actualizarBotonCancelarViaje();
+  }
+
+  return;
+}
     // ============================
     // CASO 3: SIN VIAJE
     // ============================
