@@ -3360,6 +3360,10 @@ function limpiarCapasRutaMapa() {
 
   detenerAnimacionRuta();
 
+  if (window.DriverSim) {
+    window.DriverSim.stop(mapaCliente);
+  }
+
   try {
     if (mapaCliente.getLayer('route-anim')) mapaCliente.removeLayer('route-anim');
     if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
@@ -3367,7 +3371,6 @@ function limpiarCapasRutaMapa() {
     if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
   } catch (_) {}
 }
-
 function limpiarMarkersMapa() {
   if (Array.isArray(state.markers)) {
     state.markers.forEach((m) => {
@@ -3581,8 +3584,12 @@ function dibujarRutaLineal(coords) {
       }
     });
 
-    agregarMarkersRutaDesdeCoords(coordsLimpias);
-    ajustarVistaRuta(coordsLimpias, 500);
+agregarMarkersRutaDesdeCoords(coordsLimpias);
+ajustarVistaRuta(coordsLimpias, 500);
+
+if (window.DriverSim) {
+  window.DriverSim.start(mapaCliente, coordsLimpias, 6);
+}    
   });
 }
 async function dibujarRutaReal(coords) {
@@ -3609,7 +3616,9 @@ async function dibujarRutaReal(coords) {
 
   limpiarCapasRutaMapa();
   limpiarMarkersMapa();
-
+if (window.DriverSim) {
+  window.DriverSim.start(mapaCliente, coordsLimpias, 6);
+}
   mapaCliente.addSource('route', {
     type: 'geojson',
     data: {
