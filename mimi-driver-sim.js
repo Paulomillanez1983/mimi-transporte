@@ -17,7 +17,7 @@ window.DriverSim = (() => {
   }
 
   function getResponsiveIconSize() {
-    if (window.innerWidth <= 480) return 0.068;
+    if (window.innerWidth <= 480) return 0.075;
     if (window.innerWidth <= 768) return 0.078;
     if (window.innerWidth <= 1024) return 0.085;
     return 0.06;
