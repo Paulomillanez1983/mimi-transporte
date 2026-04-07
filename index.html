@@ -1488,8 +1488,12 @@ const notif = new NotificationSystem();
 // ==========================================
 const notifBtn = document.getElementById('tripNotificationsBtn');
 const notifPanel = document.getElementById('tripNotificationsPanel');
+const notifOverlay = document.getElementById('tripNotificationsOverlay');
 const notifList = document.getElementById('tripNotificationsList');
 const notifSummary = document.getElementById('tripNotificationsSummary');
+const notifStatusCard = document.getElementById('tripNotificationsStatusCard');
+const notifStatusTitle = document.getElementById('tripNotificationsStatusTitle');
+const notifStatusText = document.getElementById('tripNotificationsStatusText');
 const notifDot = document.querySelector('.trip-notifications-dot');
 const notifBadge = document.getElementById('tripNotificationsBadge');
 const notifMarkReadBtn = document.getElementById('tripNotificationsMarkReadBtn');
@@ -1506,7 +1510,6 @@ let historial = [];
 let unreadCount = 0;
 let ultimoEstadoNotificado = null;
 let currentTripChannel = null;
-
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -1577,6 +1580,8 @@ function leerViajeActivoEnStorage() {
 function abrirPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
   notifPanel.classList.add('is-open');
+  notifOverlay?.classList.add('is-open');
+  notifOverlay && (notifOverlay.hidden = false);
   notifPanel.setAttribute('aria-hidden', 'false');
   notifBtn.setAttribute('aria-expanded', 'true');
   unreadCount = 0;
@@ -1587,10 +1592,19 @@ function abrirPanelNotificaciones() {
 function cerrarPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
   notifPanel.classList.remove('is-open');
+  notifOverlay?.classList.remove('is-open');
   notifPanel.setAttribute('aria-hidden', 'true');
   notifBtn.setAttribute('aria-expanded', 'false');
+
+  if (notifOverlay) {
+    setTimeout(() => {
+      if (!notifOverlay.classList.contains('is-open')) {
+        notifOverlay.hidden = true;
+      }
+    }, 220);
+  }
 }
-function panelNotificacionesAbierto() {
+  function panelNotificacionesAbierto() {
   return !!notifPanel?.classList.contains('is-open');
 }
 
@@ -1728,7 +1742,34 @@ function mapearEstadoANotificacion(estado) {
       return { estado: e || 'INFO', texto: 'Hubo una actualización en tu viaje.' };
   }
 }
+function actualizarStatusCardNotificaciones(estado) {
+  if (!notifStatusCard || !notifStatusTitle || !notifStatusText) return;
 
+  const e = normalizarEstadoUpper(estado);
+  const notifData = mapearEstadoANotificacion(e);
+
+  const estadosVisibles = [
+    'BUSCANDO_CHOFER',
+    'OFERTANDO',
+    'OFERTADO',
+    'ASIGNADO',
+    'ACEPTADO',
+    'EN_CAMINO',
+    'EN_CURSO',
+    'SIN_CHOFER',
+    'CANCELADO',
+    'COMPLETADO'
+  ];
+
+  if (!e || !estadosVisibles.includes(e)) {
+    notifStatusCard.hidden = true;
+    return;
+  }
+
+  notifStatusTitle.textContent = notifData.estado || 'Estado del viaje';
+  notifStatusText.textContent = notifData.texto || 'Sin novedades por ahora.';
+  notifStatusCard.hidden = false;
+}
 function animarCampanitaNotificaciones() {
   if (!notifBtn) return;
   notifBtn.classList.remove('ring', 'pulse');
@@ -1870,7 +1911,8 @@ function suscribirseEstadoViajeRealtime(viajeId) {
           const notifData = mapearEstadoANotificacion(nuevoEstado);
           actualizarCentroNotificacionesViaje(notifData);
           guardarNotificacionesEnStorage();
-
+          actualizarStatusCardNotificaciones(nuevoEstado);
+          
           if (nuevoEstado === 'ACEPTADO' || nuevoEstado === 'ASIGNADO') {
             ejecutarFeedbackAceptado();
 
@@ -1970,27 +2012,27 @@ async function restaurarViajeActivoCliente() {
       state.viajeEstado = estado;
       state.estadoViaje = estado;
 
-      guardarViajeActivoEnStorage();
+guardarViajeActivoEnStorage();
+actualizarStatusCardNotificaciones(estado);
 
-      const notifData = mapearEstadoANotificacion(estado);
-      if (!historial.length) {
-        agregarNotificacionViaje({
-          estado: notifData.estado,
-          texto: notifData.texto,
-          read: true
-        });
-      } else {
-        renderizarCentroNotificaciones();
-      }
+const notifData = mapearEstadoANotificacion(estado);
+if (!historial.length) {
+  agregarNotificacionViaje({
+    estado: notifData.estado,
+    texto: notifData.texto,
+    read: true
+  });
+} else {
+  renderizarCentroNotificaciones();
+}
 
-      if (typeof actualizarBotonCancelarViaje === 'function') {
-        actualizarBotonCancelarViaje();
-      }
+if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
 
-      suscribirseEstadoViajeRealtime(viaje.id);
-      return;
-    }
-
+suscribirseEstadoViajeRealtime(viaje.id);
+return;
+      
     if (viajeLocal?.viajeId && viajeLocal?.estadoViaje && !viaje?.id) {
       state.viajeId = viajeLocal.viajeId;
       state.viajeEstado = viajeLocal.estadoViaje;
@@ -2009,18 +2051,51 @@ async function restaurarViajeActivoCliente() {
 if (notifBtn && notifPanel) {
   notifBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-
     if (panelNotificacionesAbierto()) {
       cerrarPanelNotificaciones();
     } else {
       abrirPanelNotificaciones();
     }
   });
+let notifTouchStartY = 0;
+let notifTouchDeltaY = 0;
 
+notifPanel?.addEventListener('touchstart', (e) => {
+  if (!window.matchMedia('(max-width: 480px)').matches) return;
+  notifTouchStartY = e.touches[0]?.clientY || 0;
+  notifTouchDeltaY = 0;
+}, { passive: true });
+
+notifPanel?.addEventListener('touchmove', (e) => {
+  if (!window.matchMedia('(max-width: 480px)').matches) return;
+  const currentY = e.touches[0]?.clientY || 0;
+  notifTouchDeltaY = currentY - notifTouchStartY;
+
+  if (notifTouchDeltaY > 0 && notifTouchDeltaY < 140) {
+    notifPanel.style.transform = `translateY(${notifTouchDeltaY}px)`;
+  }
+}, { passive: true });
+
+notifPanel?.addEventListener('touchend', () => {
+  if (!window.matchMedia('(max-width: 480px)').matches) return;
+
+  if (notifTouchDeltaY > 80) {
+    notifPanel.style.transform = '';
+    cerrarPanelNotificaciones();
+  } else {
+    notifPanel.style.transform = '';
+  }
+
+  notifTouchStartY = 0;
+  notifTouchDeltaY = 0;
+});
   notifPanel.addEventListener('click', (e) => {
     e.stopPropagation();
-  });
 
+  });
+notifOverlay?.addEventListener('click', () => {
+  cerrarPanelNotificaciones();
+});
   document.addEventListener('click', (e) => {
     const clickedInsideBtn = notifBtn.contains(e.target);
     const clickedInsidePanel = notifPanel.contains(e.target);
