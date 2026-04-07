@@ -3651,8 +3651,7 @@ function dibujarRutaLineal(coords) {
     ajustarVistaRuta(coordsLimpias, 500);
 
     if (window.DriverSim) {
-      window.DriverSim.start(mapaCliente, coordsLimpias, 10);
-    }
+window.DriverSim.start(mapaCliente, coordsLimpias, window.innerWidth <= 768 ? 6 : 8); }
   });
 }
   
