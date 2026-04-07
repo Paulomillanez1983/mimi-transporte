@@ -18,12 +18,13 @@
   <meta property="og:title" content="MIMI Driver" />
   <meta property="og:description" content="Panel de conductor MIMI" />
   <meta property="og:type" content="website" />
-
+ <meta name="application-name" content="MIMI Driver">
+ <meta name="apple-mobile-web-app-title" content="MIMI Driver">
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚐</text></svg>">
 
   <!-- PWA -->
-  <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png" />
+  <link rel="apple-touch-icon" href="/mimi-transporte/assets/icons/icon-192x192.png" />
   <link rel="manifest" href="./manifest.json" />
 
   <!-- Fonts -->
@@ -269,12 +270,12 @@
     initLogout();
   </script>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/mimi-transporte/firebase-messaging-sw.js');
-    }
-  </script>
-
+<script>
+  // ⚠️ Solo asegurar que el SW esté listo, no registrarlo dos veces
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.catch(() => {});
+  }
+</script>
   <script type="module" src="js/driver-app.js"></script>
 </body>
 </html>
