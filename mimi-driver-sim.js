@@ -188,39 +188,48 @@ function getResponsiveIconSize() {
     };
   }
 
-  function buildDriversOnRoute(routeCoords, count = 8) {
-    if (!Array.isArray(routeCoords) || routeCoords.length < 2) return [];
+function buildDrivers(routeCoords, count = 8) {
+  if (!Array.isArray(routeCoords) || routeCoords.length < 2) return [];
 
-    const maxIndex = Math.max(1, routeCoords.length - 1);
-    const baseIcon = getResponsiveIconSize();
+  const maxIndex = Math.max(1, routeCoords.length - 1);
+  const baseIcon = getResponsiveIconSize();
 
-    return Array.from({ length: count }).map((_, i) => {
-const usableStart = Math.min(18, maxIndex * 0.12);
-const usableEnd = Math.max(usableStart + 8, maxIndex - 10);
-const spread = usableStart + ((usableEnd - usableStart) / Math.max(count - 1, 1)) * i;
+  const mainProgress = clamp(maxIndex * 0.35, 0, maxIndex - 1);
 
-const progress = clamp(
-  spread + randomBetween(-1.2, 1.2),
-  usableStart,
-  usableEnd
-);
-      const laneOffset = randomBetween(-0.00018, 0.00018);
+  const mainPoint = getPointOnRoute(routeCoords, mainProgress, 0);
 
-      const point = getPointOnRoute(routeCoords, progress, laneOffset);
+  const mainDriver = {
+    id: `drv_main_${Date.now()}`,
+    mode: 'route',
+    progress: mainProgress,
+    speed: 0.0045,
+    laneOffset: 0,
+    lng: mainPoint.lng,
+    lat: mainPoint.lat,
+    bearing: mainPoint.bearing,
+    iconSize: baseIcon * 1.1,
+    pauseUntil: 0
+  };
 
-      return {
-        id: `drv_${i}_${Date.now()}`,
-        progress,
-        speed: randomBetween(0.006, 0.018),
-        laneOffset,
-        lng: point.lng,
-        lat: point.lat,
-        bearing: point.bearing,
-        iconSize: i === 0 ? baseIcon * 1.08 : baseIcon * randomBetween(0.92, 1.02)
-      };
-    });
-  }
+  const others = Array.from({ length: Math.max(0, count - 1) }).map((_, i) => {
+    const idx = Math.floor((maxIndex / Math.max(count, 1)) * (i + 1));
+    const base = routeCoords[Math.min(idx, routeCoords.length - 1)];
 
+    return {
+      id: `drv_side_${i}_${Date.now()}`,
+      mode: 'street',
+      lng: Number(base[0]) + randomBetween(-0.0035, 0.0035),
+      lat: Number(base[1]) + randomBetween(-0.0025, 0.0025),
+      bearing: randomBetween(0, 360),
+      speed: randomBetween(0.0000015, 0.000004),
+      iconSize: baseIcon * randomBetween(0.9, 1.0),
+      pauseUntil: 0,
+      driftUntil: 0
+    };
+  });
+
+  return [mainDriver, ...others];
+}
 function animate(map, routeCoords) {
   if (!running || !map || !Array.isArray(routeCoords) || routeCoords.length < 2) return;
 
