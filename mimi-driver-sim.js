@@ -8,8 +8,19 @@ window.DriverSim = (() => {
   const LAYER_ID = 'sim-drivers-layer';
   const IMAGE_ID = 'sim-driver-car';
 
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
   function randomBetween(min, max) {
     return Math.random() * (max - min) + min;
+  }
+
+  function getResponsiveIconSize() {
+    if (window.innerWidth <= 480) return 0.068;
+    if (window.innerWidth <= 768) return 0.078;
+    if (window.innerWidth <= 1024) return 0.085;
+    return 0.06;
   }
 
   function loadCarImage(map) {
@@ -51,7 +62,8 @@ window.DriverSim = (() => {
         type: 'Feature',
         properties: {
           id: d.id,
-          bearing: d.bearing
+          bearing: d.bearing,
+          iconSize: d.iconSize
         },
         geometry: {
           type: 'Point',
@@ -87,12 +99,7 @@ window.DriverSim = (() => {
           source: SOURCE_ID,
           layout: {
             'icon-image': IMAGE_ID,
-'icon-size': (() => {
-  if (window.innerWidth <= 480) return 0.065;  // 📱 celular chico
-  if (window.innerWidth <= 768) return 0.075;  // 📱 celular normal
-  if (window.innerWidth <= 1024) return 0.085; // tablet
-  return 0.065; // desktop (lo mantenemos elegante)
-})(),
+            'icon-size': ['get', 'iconSize'],
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
             'icon-rotate': ['get', 'bearing'],
@@ -114,22 +121,12 @@ window.DriverSim = (() => {
     if (!map) return;
 
     clearTimeout(ensureRetryTimer);
-
     let attempt = 0;
 
     const tryEnsure = async () => {
       attempt += 1;
 
       const ok = await ensureLayerNow(map);
-
-      console.log('[DriverSim] ensureLayer intento', {
-        attempt,
-        ok,
-        hasSource: !!map.getSource?.(SOURCE_ID),
-        hasLayer: !!map.getLayer?.(LAYER_ID),
-        hasImage: !!map.hasImage?.(IMAGE_ID),
-        styleLoaded: !!map.isStyleLoaded?.()
-      });
 
       if (ok) return;
 
@@ -141,41 +138,124 @@ window.DriverSim = (() => {
     tryEnsure();
   }
 
-  function buildDriversAroundRoute(routeCoords, count = 10) {
+  function interpolatePoint(a, b, t) {
+    return [
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t
+    ];
+  }
+
+  function computeBearing(a, b) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    return angle + 90;
+  }
+
+  function offsetPoint(a, b, point, offsetFactor = 0) {
+    if (!offsetFactor) return point;
+
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    return [
+      point[0] + nx * offsetFactor,
+      point[1] + ny * offsetFactor
+    ];
+  }
+
+  function getPointOnRoute(routeCoords, progress, laneOffset = 0) {
+    const maxIndex = routeCoords.length - 1;
+    const safeProgress = clamp(progress, 0, maxIndex - 0.0001);
+
+    const i = Math.floor(safeProgress);
+    const t = safeProgress - i;
+
+    const a = routeCoords[i];
+    const b = routeCoords[Math.min(i + 1, maxIndex)];
+
+    const point = interpolatePoint(a, b, t);
+    const offsetPointValue = offsetPoint(a, b, point, laneOffset);
+    const bearing = computeBearing(a, b);
+
+    return {
+      lng: offsetPointValue[0],
+      lat: offsetPointValue[1],
+      bearing
+    };
+  }
+
+  function buildDriversOnRoute(routeCoords, count = 8) {
     if (!Array.isArray(routeCoords) || routeCoords.length < 2) return [];
 
+    const maxIndex = Math.max(1, routeCoords.length - 1);
+    const baseIcon = getResponsiveIconSize();
+
     return Array.from({ length: count }).map((_, i) => {
-      const idx = Math.floor(randomBetween(0, routeCoords.length - 1));
-      const base = routeCoords[idx];
+      const spread = (maxIndex / Math.max(count, 1)) * i;
+      const progress = clamp(
+        spread + randomBetween(-2.5, 2.5),
+        0,
+        Math.max(0.2, maxIndex - 1.2)
+      );
+
+      const laneOffset = randomBetween(-0.00018, 0.00018);
+
+      const point = getPointOnRoute(routeCoords, progress, laneOffset);
 
       return {
         id: `drv_${i}_${Date.now()}`,
-        lng: Number(base[0]) + randomBetween(-0.0012, 0.0012),
-        lat: Number(base[1]) + randomBetween(-0.0009, 0.0009),
-        bearing: randomBetween(0, 360),
-        speed: randomBetween(0.000002, 0.000006)
+        progress,
+        speed: randomBetween(0.006, 0.018),
+        laneOffset,
+        lng: point.lng,
+        lat: point.lat,
+        bearing: point.bearing,
+        iconSize: i === 0 ? baseIcon * 1.08 : baseIcon * randomBetween(0.92, 1.02)
       };
     });
   }
 
-  function animate(map) {
-    if (!running || !map) return;
+  function animate(map, routeCoords) {
+    if (!running || !map || !Array.isArray(routeCoords) || routeCoords.length < 2) return;
 
-    drivers.forEach((d) => {
-      const angle = (d.bearing * Math.PI) / 180;
-      d.lng += Math.cos(angle) * d.speed;
-      d.lat += Math.sin(angle) * d.speed;
+    const maxIndex = routeCoords.length - 1;
 
-      if (Math.random() < 0.005) {
-        d.bearing += randomBetween(-4, 4);
+    drivers.forEach((d, idx) => {
+      d.progress += d.speed;
+
+      if (d.progress >= maxIndex - 0.2) {
+        d.progress = randomBetween(0, Math.min(8, maxIndex / 6));
+      }
+
+      const point = getPointOnRoute(routeCoords, d.progress, d.laneOffset);
+
+      d.lng = point.lng;
+      d.lat = point.lat;
+
+      const currentBearing = d.bearing || point.bearing;
+      let delta = point.bearing - currentBearing;
+
+      while (delta > 180) delta -= 360;
+      while (delta < -180) delta += 360;
+
+      d.bearing = currentBearing + delta * 0.14;
+
+      if (idx !== 0 && Math.random() < 0.003) {
+        d.laneOffset += randomBetween(-0.00003, 0.00003);
+        d.laneOffset = clamp(d.laneOffset, -0.00022, 0.00022);
       }
     });
 
     updateSource(map);
-    animFrame = requestAnimationFrame(() => animate(map));
+    animFrame = requestAnimationFrame(() => animate(map, routeCoords));
   }
 
-  function start(map, routeCoords, count = 10) {
+  function start(map, routeCoords, count = 8) {
     if (!map || !Array.isArray(routeCoords) || routeCoords.length < 2) {
       console.warn('[DriverSim] start cancelado: map o routeCoords inválidos');
       return;
@@ -183,22 +263,26 @@ window.DriverSim = (() => {
 
     stop(map);
 
-    drivers = buildDriversAroundRoute(routeCoords, count);
+    const coords = routeCoords
+      .map((c) => [Number(c?.[0]), Number(c?.[1])])
+      .filter((c) =>
+        Number.isFinite(c[0]) &&
+        Number.isFinite(c[1]) &&
+        Math.abs(c[0]) <= 180 &&
+        Math.abs(c[1]) <= 90
+      );
+
+    if (coords.length < 2) return;
+
+    drivers = buildDriversOnRoute(coords, count);
 
     ensureLayer(map);
 
     setTimeout(() => {
       ensureLayer(map);
-
       running = true;
       updateSource(map);
-      animate(map);
-
-      console.log('[DriverSim] iniciado', {
-        hasSource: !!map.getSource?.(SOURCE_ID),
-        hasLayer: !!map.getLayer?.(LAYER_ID),
-        drivers: drivers.length
-      });
+      animate(map, coords);
     }, 500);
   }
 
