@@ -1,6 +1,6 @@
 /**
- * MIMI Driver - State Manager (PRODUCTION FINAL)
- * Finite State Machine for driver and trip states
+ * MIMI Driver - State Manager (PRODUCTION FINAL FIXED)
+ * FSM alineada 100% con CONFIG
  */
 
 import CONFIG from './config.js';
@@ -40,7 +40,6 @@ class StateManager {
   // =========================================================
   // GETTERS
   // =========================================================
-
   getState() {
     return structuredClone(this.state);
   }
@@ -52,12 +51,12 @@ class StateManager {
   // =========================================================
   // SETTERS
   // =========================================================
-
   set(path, value) {
     this.previousState = structuredClone(this.state);
 
     const keys = path.split('.');
     const lastKey = keys.pop();
+
     const target = keys.reduce((obj, key) => {
       if (!obj[key]) obj[key] = {};
       return obj[key];
@@ -77,7 +76,6 @@ class StateManager {
   // =========================================================
   // SUBSCRIPTIONS
   // =========================================================
-
   subscribe(path, callback) {
     if (!this.listeners.has(path)) {
       this.listeners.set(path, new Set());
@@ -91,75 +89,76 @@ class StateManager {
   }
 
   // =========================================================
-  // FSM TRANSITION (PRODUCTION SAFE)
+  // FSM CORREGIDA
   // =========================================================
-
   transitionDriver(newState, data = {}) {
+    const S = CONFIG.DRIVER_STATES;
+
     const validTransitions = {
-      [CONFIG.DRIVER_STATES.OFFLINE]: [
-        CONFIG.DRIVER_STATES.ONLINE,
-        CONFIG.DRIVER_STATES.RECEIVING_OFFER
+      [S.OFFLINE]: [
+        S.ONLINE_IDLE
       ],
 
-      [CONFIG.DRIVER_STATES.ONLINE]: [
-        CONFIG.DRIVER_STATES.OFFLINE,
-        CONFIG.DRIVER_STATES.RECEIVING_OFFER,
-        CONFIG.DRIVER_STATES.GOING_TO_PICKUP
+      [S.ONLINE_IDLE]: [
+        S.OFFLINE,
+        S.RECEIVING_OFFER
       ],
 
-      [CONFIG.DRIVER_STATES.RECEIVING_OFFER]: [
-        CONFIG.DRIVER_STATES.ONLINE,
-        CONFIG.DRIVER_STATES.GOING_TO_PICKUP,
-        CONFIG.DRIVER_STATES.OFFLINE
+      [S.RECEIVING_OFFER]: [
+        S.ONLINE_IDLE,
+        S.GOING_TO_PICKUP,
+        S.OFFLINE
       ],
 
-      [CONFIG.DRIVER_STATES.GOING_TO_PICKUP]: [
-        CONFIG.DRIVER_STATES.ONLINE,
-        CONFIG.DRIVER_STATES.PASSENGER_ONBOARD,
-        CONFIG.DRIVER_STATES.IN_PROGRESS,
-        CONFIG.DRIVER_STATES.OFFLINE
+      [S.GOING_TO_PICKUP]: [
+        S.ARRIVED_PICKUP,
+        S.OFFLINE
       ],
 
-      [CONFIG.DRIVER_STATES.PASSENGER_ONBOARD]: [
-        CONFIG.DRIVER_STATES.IN_PROGRESS,
-        CONFIG.DRIVER_STATES.GOING_TO_PICKUP,
-        CONFIG.DRIVER_STATES.OFFLINE
+      [S.ARRIVED_PICKUP]: [
+        S.TRIP_STARTED,
+        S.GOING_TO_PICKUP,
+        S.OFFLINE
       ],
 
-      [CONFIG.DRIVER_STATES.IN_PROGRESS]: [
-        CONFIG.DRIVER_STATES.ARRIVED,
-        CONFIG.DRIVER_STATES.ONLINE,
-        CONFIG.DRIVER_STATES.OFFLINE
+      [S.TRIP_STARTED]: [
+        S.ARRIVED_DESTINATION,
+        S.OFFLINE
       ],
 
-      [CONFIG.DRIVER_STATES.ARRIVED]: [
-        CONFIG.DRIVER_STATES.ONLINE,
-        CONFIG.DRIVER_STATES.IN_PROGRESS,
-        CONFIG.DRIVER_STATES.OFFLINE
+      [S.ARRIVED_DESTINATION]: [
+        S.TRIP_COMPLETED,
+        S.TRIP_STARTED,
+        S.OFFLINE
+      ],
+
+      [S.TRIP_COMPLETED]: [
+        S.ONLINE_IDLE,
+        S.OFFLINE
       ]
     };
 
     const currentState = this.state.driver.status;
 
-    if (currentState === newState) {
-      return true;
-    }
+    if (currentState === newState) return true;
 
     const allowed = validTransitions[currentState] || [];
 
     if (!allowed.includes(newState)) {
-      console.warn(`[StateManager] Invalid transition blocked: ${currentState} -> ${newState}`);
+      console.warn(
+        `[StateManager] 🚫 Transición inválida: ${currentState} -> ${newState}`
+      );
       return false;
     }
 
-    const isOnline = newState !== CONFIG.DRIVER_STATES.OFFLINE;
+    const isOnline = newState !== S.OFFLINE;
 
     this.merge({
       driver: {
         ...this.state.driver,
         ...data,
         status: newState,
-        isOnline: isOnline,
+        isOnline,
         isAvailable: isOnline
       }
     });
@@ -171,7 +170,6 @@ class StateManager {
   // =========================================================
   // PRIVATE
   // =========================================================
-
   _deepMerge(target, source) {
     for (const key in source) {
       if (
@@ -188,40 +186,18 @@ class StateManager {
   }
 
   _notify(path, value, previous) {
-    this.listeners.get(path)?.forEach((cb) => {
-      try {
-        cb(value, previous);
-      } catch (e) {
-        console.error(e);
-      }
+    this.listeners.get(path)?.forEach(cb => {
+      try { cb(value, previous); } catch (e) { console.error(e); }
     });
 
-    const parts = path.split('.');
-    let currentPath = '';
-
-    for (const part of parts) {
-      currentPath = currentPath ? `${currentPath}.${part}` : part;
-      const wildcard = `${currentPath}.*`;
-
-      this.listeners.get(wildcard)?.forEach((cb) => {
-        try {
-          cb(value, previous);
-        } catch (e) {
-          console.error(e);
-        }
-      });
-    }
-
-    this.listeners.get('*')?.forEach((cb) => {
-      try {
-        cb(this.state, previous);
-      } catch (e) {
-        console.error(e);
-      }
+    this.listeners.get('*')?.forEach(cb => {
+      try { cb(this.state, previous); } catch (e) { console.error(e); }
     });
   }
 
   _onStateChange(from, to) {
+    console.log(`[StateManager] ${from} -> ${to}`);
+
     window.dispatchEvent(
       new CustomEvent('driverStateChange', {
         detail: { from, to, state: this.getState() }
