@@ -16,7 +16,7 @@ window.DriverSim = (() => {
     return `
       <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
         <g>
-          <ellipse cx="48" cy="54" rx="26" ry="28" fill="rgba(0,0,0,0.28)"/>
+          <ellipse cx="48" cy="54" rx="28" ry="30" fill="rgba(0,0,0,0.38)"/>
           <g transform="translate(48 48) rotate(90) translate(-48 -48)">
             <rect x="28" y="16" width="40" height="56" rx="14" fill="#f7f7f7"/>
             <rect x="33" y="24" width="30" height="18" rx="7" fill="#9fd0ff"/>
@@ -163,10 +163,10 @@ window.DriverSim = (() => {
 
       return {
         id: `drv_${i}_${Date.now()}`,
-        lng: Number(base[0]) + randomBetween(-0.0022, 0.0022),
-        lat: Number(base[1]) + randomBetween(-0.0017, 0.0017),
+        lng: Number(base[0]) + randomBetween(-0.0012, 0.0012),
+        lat: Number(base[1]) + randomBetween(-0.0009, 0.0009),
         bearing: randomBetween(0, 360),
-        speed: randomBetween(0.000004, 0.000012)
+        speed: randomBetween(0.000002, 0.000006)
       };
     });
   }
@@ -179,8 +179,8 @@ window.DriverSim = (() => {
       d.lng += Math.cos(angle) * d.speed;
       d.lat += Math.sin(angle) * d.speed;
 
-      if (Math.random() < 0.01) {
-        d.bearing += randomBetween(-10, 10);
+      if (Math.random() < 0.005) {
+        d.bearing += randomBetween(-4, 4);
       }
     });
 
