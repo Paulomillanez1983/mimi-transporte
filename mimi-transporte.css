@@ -2935,3 +2935,28 @@ select:focus-visible {
 .trip-notifications-status-card span {
   display: block;
 }
+.sugerencia-loading,
+.sugerencia-empty {
+  opacity: 0.92;
+  cursor: default;
+}
+
+.sugerencia-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 193, 7, 0.16);
+  color: #9a6700;
+  vertical-align: middle;
+}
+
+.sugerencia-help {
+  padding: 8px 12px 12px;
+  font-size: 0.78rem;
+  opacity: 0.78;
+}
