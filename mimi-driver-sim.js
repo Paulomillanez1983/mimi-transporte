@@ -5,22 +5,35 @@ window.DriverSim = (() => {
 
   const SOURCE_ID = 'sim-drivers';
   const LAYER_ID = 'sim-drivers-layer';
+  const IMAGE_ID = 'driver-car';
 
-  function ensureLayer(map) {
-    if (!map || !map.isStyleLoaded()) return;
+  function randomBetween(min, max) {
+    return Math.random() * (max - min) + min;
+  }
 
-    if (!map.hasImage('driver-car')) {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        if (!map.hasImage('driver-car')) {
-          map.addImage('driver-car', img);
-          ensureLayer(map);
+  function updateSource(map) {
+    const source = map?.getSource?.(SOURCE_ID);
+    if (!source) return;
+
+    source.setData({
+      type: 'FeatureCollection',
+      features: drivers.map((d) => ({
+        type: 'Feature',
+        properties: {
+          id: d.id,
+          bearing: d.bearing
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [d.lng, d.lat]
         }
-      };
-      img.src = './img/driver-car.png'; // icono auto chico
-      return;
-    }
+      }))
+    });
+  }
+
+  function ensureSourceAndLayer(map) {
+    if (!map || !map.isStyleLoaded()) return false;
+    if (!map.hasImage(IMAGE_ID)) return false;
 
     if (!map.getSource(SOURCE_ID)) {
       map.addSource(SOURCE_ID, {
@@ -38,7 +51,7 @@ window.DriverSim = (() => {
         type: 'symbol',
         source: SOURCE_ID,
         layout: {
-          'icon-image': 'driver-car',
+          'icon-image': IMAGE_ID,
           'icon-size': 0.22,
           'icon-allow-overlap': true,
           'icon-ignore-placement': true,
@@ -47,10 +60,38 @@ window.DriverSim = (() => {
         }
       });
     }
+
+    return true;
   }
 
-  function randomBetween(min, max) {
-    return Math.random() * (max - min) + min;
+  function ensureLayer(map) {
+    if (!map || !map.isStyleLoaded()) return;
+
+    if (map.hasImage(IMAGE_ID)) {
+      ensureSourceAndLayer(map);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      try {
+        if (!map.hasImage(IMAGE_ID)) {
+          map.addImage(IMAGE_ID, img);
+        }
+        ensureSourceAndLayer(map);
+        updateSource(map);
+      } catch (err) {
+        console.warn('[DriverSim] no se pudo agregar imagen/layer:', err);
+      }
+    };
+
+    img.onerror = () => {
+      console.warn('[DriverSim] no se pudo cargar ./driver-car.png');
+    };
+
+    img.src = './driver-car.png';
   }
 
   function buildDriversAroundRoute(routeCoords, count = 5) {
@@ -59,40 +100,21 @@ window.DriverSim = (() => {
     return Array.from({ length: count }).map((_, i) => {
       const idx = Math.floor(randomBetween(0, routeCoords.length - 1));
       const base = routeCoords[idx];
+
       return {
         id: `drv_${i}_${Date.now()}`,
-        lng: base[0] + randomBetween(-0.0025, 0.0025),
-        lat: base[1] + randomBetween(-0.0020, 0.0020),
+        lng: Number(base[0]) + randomBetween(-0.0025, 0.0025),
+        lat: Number(base[1]) + randomBetween(-0.0020, 0.0020),
         bearing: randomBetween(0, 360),
         speed: randomBetween(0.00003, 0.00009)
       };
     });
   }
 
-  function updateSource(map) {
-    const source = map.getSource(SOURCE_ID);
-    if (!source) return;
-
-    source.setData({
-      type: 'FeatureCollection',
-      features: drivers.map(d => ({
-        type: 'Feature',
-        properties: {
-          id: d.id,
-          bearing: d.bearing
-        },
-        geometry: {
-          type: 'Point',
-          coordinates: [d.lng, d.lat]
-        }
-      }))
-    });
-  }
-
   function animate(map) {
     if (!running || !map) return;
 
-    drivers.forEach(d => {
+    drivers.forEach((d) => {
       const angle = (d.bearing * Math.PI) / 180;
       d.lng += Math.cos(angle) * d.speed;
       d.lat += Math.sin(angle) * d.speed;
@@ -111,22 +133,27 @@ window.DriverSim = (() => {
 
     stop(map);
     ensureLayer(map);
+
     drivers = buildDriversAroundRoute(routeCoords, count);
     running = true;
+
     updateSource(map);
     animate(map);
   }
 
   function stop(map) {
     running = false;
+
     if (animFrame) {
       cancelAnimationFrame(animFrame);
       animFrame = null;
     }
+
     drivers = [];
 
-    if (map?.getSource?.(SOURCE_ID)) {
-      map.getSource(SOURCE_ID).setData({
+    const source = map?.getSource?.(SOURCE_ID);
+    if (source) {
+      source.setData({
         type: 'FeatureCollection',
         features: []
       });
