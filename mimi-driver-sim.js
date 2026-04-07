@@ -193,36 +193,54 @@ function buildDrivers(routeCoords, count = 8) {
 
   const maxIndex = Math.max(1, routeCoords.length - 1);
   const baseIcon = getResponsiveIconSize();
+  const isMobile = window.innerWidth <= 768;
 
-  const mainProgress = clamp(maxIndex * 0.35, 0, maxIndex - 1);
-
+  const mainProgress = clamp(maxIndex * 0.38, 0, maxIndex - 1);
   const mainPoint = getPointOnRoute(routeCoords, mainProgress, 0);
 
   const mainDriver = {
     id: `drv_main_${Date.now()}`,
     mode: 'route',
     progress: mainProgress,
-    speed: 0.0045,
+    speed: isMobile ? 0.0032 : 0.0045,
     laneOffset: 0,
     lng: mainPoint.lng,
     lat: mainPoint.lat,
     bearing: mainPoint.bearing,
-    iconSize: baseIcon * 1.1,
+    iconSize: baseIcon * 1.08,
     pauseUntil: 0
   };
 
-  const others = Array.from({ length: Math.max(0, count - 1) }).map((_, i) => {
-    const idx = Math.floor((maxIndex / Math.max(count, 1)) * (i + 1));
-    const base = routeCoords[Math.min(idx, routeCoords.length - 1)];
+  const othersCount = Math.max(0, count - 1);
+
+  const usableStart = Math.min(14, maxIndex * 0.18);
+  const usableEnd = Math.max(usableStart + 10, maxIndex * 0.82);
+
+  const lngRadius = isMobile ? 0.0014 : 0.0022;
+  const latRadius = isMobile ? 0.0010 : 0.0016;
+
+  const others = Array.from({ length: othersCount }).map((_, i) => {
+    const spread =
+      usableStart +
+      ((usableEnd - usableStart) / Math.max(othersCount - 1, 1)) * i;
+
+    const progress = clamp(
+      spread + randomBetween(-1.0, 1.0),
+      usableStart,
+      usableEnd
+    );
+
+    const base = getPointOnRoute(routeCoords, progress, 0);
 
     return {
       id: `drv_side_${i}_${Date.now()}`,
       mode: 'street',
-      lng: Number(base[0]) + randomBetween(-0.0035, 0.0035),
-      lat: Number(base[1]) + randomBetween(-0.0025, 0.0025),
+      anchorProgress: progress,
+      lng: Number(base.lng) + randomBetween(-lngRadius, lngRadius),
+      lat: Number(base.lat) + randomBetween(-latRadius, latRadius),
       bearing: randomBetween(0, 360),
-      speed: randomBetween(0.0000015, 0.000004),
-      iconSize: baseIcon * randomBetween(0.9, 1.0),
+      speed: isMobile ? randomBetween(0.0000012, 0.0000028) : randomBetween(0.0000015, 0.000004),
+      iconSize: baseIcon * randomBetween(0.88, 0.96),
       pauseUntil: 0,
       driftUntil: 0
     };
@@ -230,22 +248,22 @@ function buildDrivers(routeCoords, count = 8) {
 
   return [mainDriver, ...others];
 }
+  
 function animate(map, routeCoords) {
   if (!running || !map || !Array.isArray(routeCoords) || routeCoords.length < 2) return;
 
   const now = Date.now();
   const maxIndex = routeCoords.length - 1;
+  const isMobile = window.innerWidth <= 768;
 
   drivers.forEach((d, idx) => {
-    if (d.pauseUntil && now < d.pauseUntil) {
-      return;
-    }
+    if (d.pauseUntil && now < d.pauseUntil) return;
 
     if (d.mode === 'route') {
       d.progress += d.speed;
 
       if (d.progress >= maxIndex - 0.2) {
-        d.progress = randomBetween(maxIndex * 0.18, maxIndex * 0.32);
+        d.progress = randomBetween(maxIndex * 0.22, maxIndex * 0.34);
       }
 
       const point = getPointOnRoute(routeCoords, d.progress, d.laneOffset || 0);
@@ -261,8 +279,8 @@ function animate(map, routeCoords) {
 
       d.bearing = currentBearing + delta * 0.12;
 
-      if (Math.random() < 0.003) {
-        d.pauseUntil = now + randomBetween(1200, 2600);
+      if (Math.random() < (isMobile ? 0.004 : 0.003)) {
+        d.pauseUntil = now + randomBetween(1400, 2600);
       }
 
       return;
@@ -273,53 +291,24 @@ function animate(map, routeCoords) {
     d.lat += Math.sin(angle) * d.speed;
 
     if (!d.driftUntil || now > d.driftUntil) {
-      d.bearing += randomBetween(-18, 18);
-      d.driftUntil = now + randomBetween(2200, 4800);
+      d.bearing += randomBetween(isMobile ? -10 : -18, isMobile ? 10 : 18);
+      d.driftUntil = now + randomBetween(2600, 5200);
     }
 
-    if (Math.random() < 0.004) {
-      d.pauseUntil = now + randomBetween(1000, 3200);
+    if (Math.random() < (isMobile ? 0.006 : 0.004)) {
+      d.pauseUntil = now + randomBetween(1200, 3200);
     }
 
     if (idx !== 0 && Math.random() < 0.002) {
-      d.speed = randomBetween(0.0000015, 0.000004);
+      d.speed = isMobile
+        ? randomBetween(0.0000012, 0.0000028)
+        : randomBetween(0.0000015, 0.000004);
     }
   });
 
   updateSource(map);
   animFrame = requestAnimationFrame(() => animate(map, routeCoords));
 }
-  function start(map, routeCoords, count = window.innerWidth <= 768 ? 6 : 8) {
-    if (!map || !Array.isArray(routeCoords) || routeCoords.length < 2) {
-      console.warn('[DriverSim] start cancelado: map o routeCoords inválidos');
-      return;
-    }
-
-    stop(map);
-
-    const coords = routeCoords
-      .map((c) => [Number(c?.[0]), Number(c?.[1])])
-      .filter((c) =>
-        Number.isFinite(c[0]) &&
-        Number.isFinite(c[1]) &&
-        Math.abs(c[0]) <= 180 &&
-        Math.abs(c[1]) <= 90
-      );
-
-    if (coords.length < 2) return;
-
-    drivers = buildDrivers(coords, count);
-
-    ensureLayer(map);
-
-    setTimeout(() => {
-      ensureLayer(map);
-      running = true;
-      updateSource(map);
-      animate(map, coords);
-    }, 500);
-  }
-
   function stop(map) {
     running = false;
 
@@ -327,6 +316,8 @@ function animate(map, routeCoords) {
     ensureRetryTimer = null;
 
     if (animFrame) {
+
+      
       cancelAnimationFrame(animFrame);
       animFrame = null;
     }
