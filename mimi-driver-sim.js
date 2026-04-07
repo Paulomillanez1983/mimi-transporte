@@ -6,9 +6,57 @@ window.DriverSim = (() => {
 
   const SOURCE_ID = 'sim-drivers';
   const LAYER_ID = 'sim-drivers-layer';
+  const IMAGE_ID = 'sim-driver-car';
 
   function randomBetween(min, max) {
     return Math.random() * (max - min) + min;
+  }
+
+  function buildCarSvg() {
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+        <g>
+          <ellipse cx="32" cy="34" rx="20" ry="22" fill="rgba(0,0,0,0.18)"/>
+          <g transform="translate(32 32) rotate(90) translate(-32 -32)">
+            <rect x="18" y="12" width="28" height="40" rx="10" fill="#111111"/>
+            <rect x="22" y="18" width="20" height="14" rx="6" fill="#8ec5ff"/>
+            <rect x="22" y="34" width="20" height="10" rx="5" fill="#f4f7fb"/>
+            <circle cx="22" cy="20" r="3" fill="#ffffff"/>
+            <circle cx="42" cy="20" r="3" fill="#ffffff"/>
+            <circle cx="22" cy="44" r="4" fill="#1f2937"/>
+            <circle cx="42" cy="44" r="4" fill="#1f2937"/>
+            <rect x="19" y="12" width="26" height="40" rx="10" fill="none" stroke="#ffffff" stroke-width="2"/>
+          </g>
+        </g>
+      </svg>
+    `.trim();
+  }
+
+  function loadCarImage(map) {
+    return new Promise((resolve) => {
+      if (!map) return resolve(false);
+      if (map.hasImage(IMAGE_ID)) return resolve(true);
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          if (!map.hasImage(IMAGE_ID)) {
+            map.addImage(IMAGE_ID, img, { pixelRatio: 2 });
+          }
+          resolve(true);
+        } catch (err) {
+          console.warn('[DriverSim] addImage error:', err);
+          resolve(false);
+        }
+      };
+      img.onerror = () => {
+        console.warn('[DriverSim] no se pudo cargar SVG inline');
+        resolve(false);
+      };
+
+      const svg = buildCarSvg();
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    });
   }
 
   function updateSource(map) {
@@ -33,10 +81,13 @@ window.DriverSim = (() => {
     return true;
   }
 
-  function ensureLayerNow(map) {
+  async function ensureLayerNow(map) {
     if (!map) return false;
 
     try {
+      const imageOk = await loadCarImage(map);
+      if (!imageOk) return false;
+
       if (!map.getSource(SOURCE_ID)) {
         map.addSource(SOURCE_ID, {
           type: 'geojson',
@@ -50,14 +101,15 @@ window.DriverSim = (() => {
       if (!map.getLayer(LAYER_ID)) {
         map.addLayer({
           id: LAYER_ID,
-          type: 'circle',
+          type: 'symbol',
           source: SOURCE_ID,
-          paint: {
-            'circle-radius': 6,
-            'circle-color': '#111111',
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#ffffff',
-            'circle-opacity': 0.95
+          layout: {
+            'icon-image': IMAGE_ID,
+            'icon-size': 0.52,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            'icon-rotate': ['get', 'bearing'],
+            'icon-rotation-alignment': 'map'
           }
         });
       }
@@ -78,16 +130,17 @@ window.DriverSim = (() => {
 
     let attempt = 0;
 
-    const tryEnsure = () => {
+    const tryEnsure = async () => {
       attempt += 1;
 
-      const ok = ensureLayerNow(map);
+      const ok = await ensureLayerNow(map);
 
       console.log('[DriverSim] ensureLayer intento', {
         attempt,
         ok,
         hasSource: !!map.getSource?.(SOURCE_ID),
         hasLayer: !!map.getLayer?.(LAYER_ID),
+        hasImage: !!map.hasImage?.(IMAGE_ID),
         styleLoaded: !!map.isStyleLoaded?.()
       });
 
@@ -110,10 +163,10 @@ window.DriverSim = (() => {
 
       return {
         id: `drv_${i}_${Date.now()}`,
-        lng: Number(base[0]) + randomBetween(-0.0016, 0.0016),
-        lat: Number(base[1]) + randomBetween(-0.0012, 0.0012),
+        lng: Number(base[0]) + randomBetween(-0.0012, 0.0012),
+        lat: Number(base[1]) + randomBetween(-0.0009, 0.0009),
         bearing: randomBetween(0, 360),
-        speed: randomBetween(0.000015, 0.000045)
+        speed: randomBetween(0.00001, 0.00003)
       };
     });
   }
