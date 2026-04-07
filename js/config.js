@@ -1,6 +1,6 @@
 /**
  * MIMI Driver - Configuration (PRODUCTION FINAL)
- * Centralized config with environment detection
+ * Centralized config
  */
 
 const CONFIG = {
@@ -11,7 +11,7 @@ const CONFIG = {
   SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM',
 
   // =========================================================
-  // MAP (MAPLIBRE)
+  // MAP
   // =========================================================
   MAP_STYLE: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
   DEFAULT_CENTER: [-64.1888, -31.4201], // Córdoba
@@ -127,20 +127,21 @@ const CONFIG = {
     light: [30],
     medium: [60],
     heavy: [100, 40, 100],
-    arrival: [120, 60, 120]
+    arrival: [120, 60, 120],
+    error: [80, 40, 80]
   }
 };
 
-// Prevent modifications
+// Freeze shallow config blocks
 Object.freeze(CONFIG.DRIVER_STATES);
 Object.freeze(CONFIG.TRIP_STATES);
 Object.freeze(CONFIG.FEATURES);
 Object.freeze(CONFIG.REDIRECTS);
+Object.freeze(CONFIG.HAPTICS);
 
 Object.values(CONFIG.SOUNDS).forEach(Object.freeze);
 Object.freeze(CONFIG.SOUNDS);
 
-Object.freeze(CONFIG.HAPTICS);
 Object.freeze(CONFIG);
 
 export default CONFIG;
