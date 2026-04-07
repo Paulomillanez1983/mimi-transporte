@@ -2023,6 +2023,33 @@ notifMarkReadBtn?.addEventListener('click', () => {
 });
 
 notifClearBtn?.addEventListener('click', () => {
+  // ==========================================
+// UX MEJORADA PANEL NOTIFICACIONES
+// ==========================================
+
+// Cerrar al hacer scroll (UX tipo app nativa)
+window.addEventListener('scroll', () => {
+  if (panelNotificacionesAbierto()) {
+    cerrarPanelNotificaciones();
+  }
+}, { passive: true });
+
+// Evitar que se abra si ya está abierto + mejorar feedback
+notifBtn?.addEventListener('click', () => {
+  notifBtn.classList.remove('pulse');
+});
+
+// Click fuera más robusto (por si hay overlays)
+document.addEventListener('touchstart', (e) => {
+  if (!notifPanel || !notifBtn) return;
+
+  const insidePanel = notifPanel.contains(e.target);
+  const insideBtn = notifBtn.contains(e.target);
+
+  if (!insidePanel && !insideBtn) {
+    cerrarPanelNotificaciones();
+  }
+}, { passive: true });
   if (!historial.length) return;
   const ok = window.confirm('¿Querés vaciar las notificaciones?');
   if (!ok) return;
