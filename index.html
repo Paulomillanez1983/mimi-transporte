@@ -3587,6 +3587,7 @@ async function dibujarRutaEnMapa(coords) {
 }
 
 
+  
 function dibujarRutaLineal(coords) {
   if (!mapaCliente || !mapReady || !Array.isArray(coords) || coords.length < 2) return;
 
@@ -3651,8 +3652,10 @@ function dibujarRutaLineal(coords) {
     ajustarVistaRuta(coordsLimpias, 500);
 
     if (window.DriverSim) {
-window.DriverSim.start(mapaCliente, coordsLimpias, window.innerWidth <= 768 ? 5 : 8);}
-  
+      window.DriverSim.start(mapaCliente, coordsLimpias, window.innerWidth <= 768 ? 5 : 8);
+    }
+  });
+}
 
 async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
