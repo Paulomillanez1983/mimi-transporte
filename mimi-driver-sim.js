@@ -309,29 +309,59 @@ function animate(map, routeCoords) {
   updateSource(map);
   animFrame = requestAnimationFrame(() => animate(map, routeCoords));
 }
-  function stop(map) {
-    running = false;
 
-    clearTimeout(ensureRetryTimer);
-    ensureRetryTimer = null;
-
-    if (animFrame) {
-
-      
-      cancelAnimationFrame(animFrame);
-      animFrame = null;
-    }
-
-    drivers = [];
-
-    const source = map?.getSource?.(SOURCE_ID);
-    if (source) {
-      source.setData({
-        type: 'FeatureCollection',
-        features: []
-      });
-    }
+function start(map, routeCoords, count = window.innerWidth <= 768 ? 5 : 8) {
+  if (!map || !Array.isArray(routeCoords) || routeCoords.length < 2) {
+    console.warn('[DriverSim] start cancelado: map o routeCoords inválidos');
+    return;
   }
 
-  return { start, stop, ensureLayer };
+  stop(map);
+
+  const coords = routeCoords
+    .map((c) => [Number(c?.[0]), Number(c?.[1])])
+    .filter((c) =>
+      Number.isFinite(c[0]) &&
+      Number.isFinite(c[1]) &&
+      Math.abs(c[0]) <= 180 &&
+      Math.abs(c[1]) <= 90
+    );
+
+  if (coords.length < 2) return;
+
+  drivers = buildDrivers(coords, count);
+
+  ensureLayer(map);
+
+  setTimeout(() => {
+    ensureLayer(map);
+    running = true;
+    updateSource(map);
+    animate(map, coords);
+  }, 500);
+}
+
+function stop(map) {
+  running = false;
+
+  clearTimeout(ensureRetryTimer);
+  ensureRetryTimer = null;
+
+  if (animFrame) {
+    cancelAnimationFrame(animFrame);
+    animFrame = null;
+  }
+
+  drivers = [];
+
+  const source = map?.getSource?.(SOURCE_ID);
+  if (source) {
+    source.setData({
+      type: 'FeatureCollection',
+      features: []
+    });
+  }
+}
+
+return { start, stop, ensureLayer };
 })();
