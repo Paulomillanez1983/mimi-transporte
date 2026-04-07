@@ -1555,6 +1555,7 @@ function leerViajeActivoEnStorage() {
 function abrirPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
   notifPanel.classList.add('is-open');
+  notifPanel.setAttribute('aria-hidden', 'false');
   notifBtn.setAttribute('aria-expanded', 'true');
   unreadCount = 0;
   actualizarBadgeNotificaciones();
@@ -1564,9 +1565,9 @@ function abrirPanelNotificaciones() {
 function cerrarPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
   notifPanel.classList.remove('is-open');
+  notifPanel.setAttribute('aria-hidden', 'true');
   notifBtn.setAttribute('aria-expanded', 'false');
 }
-
 function panelNotificacionesAbierto() {
   return !!notifPanel?.classList.contains('is-open');
 }
