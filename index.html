@@ -598,9 +598,13 @@ async function buscarDireccion(query) {
   class="trip-notifications-panel"
   role="dialog"
   aria-label="Panel de notificaciones"
+  aria-hidden="true"
 >
   <div class="trip-notifications-panel-header">
-    <span>Notificaciones</span>
+    <div class="trip-notifications-panel-title">
+      <strong>Notificaciones</strong>
+      <span>Estado del viaje y novedades</span>
+    </div>
 
     <div class="trip-notifications-actions">
       <button
@@ -2023,7 +2027,13 @@ notifMarkReadBtn?.addEventListener('click', () => {
 });
 
 notifClearBtn?.addEventListener('click', () => {
-  // ==========================================
+  if (!historial.length) return;
+  const ok = window.confirm('¿Querés vaciar las notificaciones?');
+  if (!ok) return;
+  vaciarNotificaciones();
+});
+
+// ==========================================
 // UX MEJORADA PANEL NOTIFICACIONES
 // ==========================================
 
@@ -2034,12 +2044,12 @@ window.addEventListener('scroll', () => {
   }
 }, { passive: true });
 
-// Evitar que se abra si ya está abierto + mejorar feedback
+// Evitar que se acumule el efecto pulse al tocar
 notifBtn?.addEventListener('click', () => {
   notifBtn.classList.remove('pulse');
 });
 
-// Click fuera más robusto (por si hay overlays)
+// Click fuera más robusto en mobile
 document.addEventListener('touchstart', (e) => {
   if (!notifPanel || !notifBtn) return;
 
@@ -2050,18 +2060,12 @@ document.addEventListener('touchstart', (e) => {
     cerrarPanelNotificaciones();
   }
 }, { passive: true });
-  if (!historial.length) return;
-  const ok = window.confirm('¿Querés vaciar las notificaciones?');
-  if (!ok) return;
-  vaciarNotificaciones();
-});
 
 document.addEventListener('DOMContentLoaded', async () => {
   cargarNotificacionesDesdeStorage();
   renderizarCentroNotificaciones();
   await restaurarViajeActivoCliente();
-});
-  
+});  
 // ==========================================
 // UI LOADING
 // ==========================================
