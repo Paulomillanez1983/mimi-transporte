@@ -3099,40 +3099,35 @@ async function initMapa() {
     const temaOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     mapaCliente = new maplibregl.Map({
-          // Mapa fijo tipo Uber: el cliente no lo mueve manualmente
-    mapaCliente.dragPan.disable();
-    mapaCliente.scrollZoom.disable();
-    mapaCliente.boxZoom.disable();
-    mapaCliente.doubleClickZoom.disable();
-    mapaCliente.touchZoomRotate.disable();
-    mapaCliente.keyboard.disable();
       container: 'map',
       style: {
         version: 8,
         sources: {
           osm: {
             type: 'raster',
-              tiles: [
+            tiles: [
               'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
               'https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
               'https://c.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
-               ],            
+            ],
             tileSize: 256,
             attribution: '© OpenStreetMap'
           }
         },
-        layers: [{
-          id: 'osm',
-          type: 'raster',
-          source: 'osm',
-paint: {
-  'raster-opacity': 0.92,
-  'raster-brightness-min': 0.12,
-  'raster-brightness-max': 0.82,
-  'raster-contrast': 0.18,
-  'raster-saturation': -0.45
-}
-        }]
+        layers: [
+          {
+            id: 'osm',
+            type: 'raster',
+            source: 'osm',
+            paint: {
+              'raster-opacity': 0.92,
+              'raster-brightness-min': 0.12,
+              'raster-brightness-max': 0.82,
+              'raster-contrast': 0.18,
+              'raster-saturation': -0.45
+            }
+          }
+        ]
       },
       center: [-64.19, -31.42],
       zoom: esMobile ? 11.5 : 12,
@@ -3142,9 +3137,18 @@ paint: {
       renderWorldCopies: false
     });
 
-mapaCliente.on('error', (e) => {
-  console.warn('[mapa] error:', e?.error || e);
-});
+    // Mapa fijo tipo Uber: el cliente no lo mueve manualmente
+    mapaCliente.dragPan.disable();
+    mapaCliente.scrollZoom.disable();
+    mapaCliente.boxZoom.disable();
+    mapaCliente.doubleClickZoom.disable();
+    mapaCliente.touchZoomRotate.disable();
+    mapaCliente.keyboard.disable();
+
+    mapaCliente.on('error', (e) => {
+      console.warn('[mapa] error:', e?.error || e);
+    });
+
     mapaCliente.on('load', () => {
       mapReady = true;
       setTimeout(() => {
@@ -3155,6 +3159,7 @@ mapaCliente.on('error', (e) => {
     });
   });
 }
+  
 function detenerAnimacionRuta() {
   if (routeAnimationFrame) {
     cancelAnimationFrame(routeAnimationFrame);
