@@ -1654,6 +1654,28 @@ select:focus-visible {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
   }
 }
+@media (prefers-color-scheme: dark) {
+  .trip-notifications-sheet-handle span {
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  .trip-notifications-status-card {
+    background: linear-gradient(135deg, rgba(66, 165, 245, 0.12), rgba(30, 60, 114, 0.16));
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .trip-notifications-status-icon {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .trip-notifications-status-copy strong {
+    color: #eef2ff;
+  }
+
+  .trip-notifications-status-copy span {
+    color: #a9b3cb;
+  }
+}
 /* ==========================================
    REDUCE MOTION
 ========================================== */
@@ -2548,22 +2570,90 @@ select:focus-visible {
     font-size: 17px;
   }
 
+  .trip-notifications-overlay {
+    display: block;
+  }
+
   .trip-notifications-panel {
     position: fixed;
-    top: calc(var(--safe-top) + 74px);
-    right: 10px;
-    left: 10px;
-    width: auto;
-    max-height: min(60vh, 420px);
-    border-radius: 18px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    max-height: min(74vh, 560px);
+    border-radius: 22px 22px 0 0;
+    transform: translateY(calc(100% + 24px));
+    opacity: 1;
+    visibility: hidden;
+    pointer-events: none;
+    padding-bottom: calc(10px + var(--safe-bottom));
+    box-shadow:
+      0 -8px 32px rgba(0, 0, 0, 0.18),
+      0 -2px 10px rgba(0, 0, 0, 0.08);
+  }
+
+  .trip-notifications-panel.is-open {
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .trip-notifications-sheet-handle {
+    display: block;
+    padding: 10px 0 6px;
+    flex-shrink: 0;
+  }
+
+  .trip-notifications-status-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 14px 10px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(21, 101, 192, 0.10), rgba(30, 60, 114, 0.08));
+    border: 1px solid rgba(21, 101, 192, 0.10);
+    flex-shrink: 0;
+  }
+
+  .trip-notifications-status-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(21, 101, 192, 0.10);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .trip-notifications-status-copy {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .trip-notifications-status-copy strong {
+    font-size: 13px;
+    line-height: 1.2;
+    color: #182033;
+    font-weight: 800;
+  }
+
+  .trip-notifications-status-copy span {
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.35;
+    color: #60708d;
   }
 
   .trip-notifications-panel-header {
-    padding: 14px 14px 10px;
+    padding: 10px 14px 10px;
   }
 
   .trip-notifications-summary {
-    padding: 10px 14px 10px;
+    padding: 8px 14px 10px;
   }
 
   .trip-notifications-list {
@@ -2580,7 +2670,6 @@ select:focus-visible {
     font-size: 11.5px;
   }
 }
-
 @media (prefers-color-scheme: dark) {
   .trip-notifications {
     border-color: rgba(255, 255, 255, 0.14);
@@ -2800,4 +2889,49 @@ select:focus-visible {
     padding: 0 10px;
     font-size: 11.5px;
   }
+}
+.trip-notifications-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 14, 24, 0.38);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.22s ease,
+    visibility 0.22s ease;
+  z-index: 110;
+}
+
+.trip-notifications-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.trip-notifications-sheet-handle {
+  display: none;
+}
+
+.trip-notifications-sheet-handle span {
+  display: block;
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(24, 32, 51, 0.16);
+  margin: 0 auto;
+}
+
+.trip-notifications-status-card {
+  display: none;
+}
+
+.trip-notifications-status-card strong {
+  display: block;
+}
+
+.trip-notifications-status-card span {
+  display: block;
 }
