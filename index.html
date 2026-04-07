@@ -1546,20 +1546,51 @@ function cargarNotificacionesDesdeStorage() {
     ultimoEstadoNotificado = null;
   }
 }
+  function resolverEstadoViajeCliente(viajeLike = {}) {
+  const estadoBase = normalizarEstadoUpper(viajeLike?.estado);
+  const tieneChoferAsignado = !!(
+    viajeLike?.assigned_driver_id ||
+    viajeLike?.chofer_id_uuid
+  );
+
+  // Si ya hay chofer asignado pero el backend todavía no movió el estado,
+  // para el cliente lo tratamos como ASIGNADO.
+  if (
+    tieneChoferAsignado &&
+    ['PENDIENTE', 'BUSCANDO_CHOFER', 'OFERTANDO', 'OFERTADO', 'SIN_CHOFER'].includes(estadoBase)
+  ) {
+    return 'ASIGNADO';
+  }
+
+  return estadoBase;
+}
 
 function guardarViajeActivoEnStorage() {
   try {
     const payload = {
       viajeId: state?.viajeId || null,
       estadoViaje: state?.estadoViaje || state?.viajeEstado || null,
+      viajeEstado: state?.viajeEstado || state?.estadoViaje || null,
+
+      origen: state?.origen || null,
+      destino: state?.destino || null,
+      waypoints: Array.isArray(state?.waypoints) ? state.waypoints : [],
+      routeData: state?.routeData || null,
+      cotizacion: state?.cotizacion || null,
+
+      inputOrigen: document.getElementById('inputOrigen')?.value || '',
+      inputDestino: document.getElementById('inputDestino')?.value || '',
+      waypointTexts: [...document.querySelectorAll('.waypoint-input')].map((el) => el.value || ''),
+
       ts: Date.now()
     };
+
     localStorage.setItem(ACTIVE_TRIP_STORAGE_KEY, JSON.stringify(payload));
   } catch (err) {
     console.warn('[trip] no se pudo guardar viaje activo:', err);
   }
 }
-
+  
 function limpiarViajeActivoEnStorage() {
   try {
     localStorage.removeItem(ACTIVE_TRIP_STORAGE_KEY);
@@ -1574,6 +1605,107 @@ function leerViajeActivoEnStorage() {
     return parsed && typeof parsed === 'object' ? parsed : null;
   } catch {
     return null;
+  }
+}
+  function restaurarInputsViajeDesdeStorage(viajeLocal) {
+  const inputOrigen = document.getElementById('inputOrigen');
+  const inputDestino = document.getElementById('inputDestino');
+  const waypointsContainer = document.getElementById('waypointsContainer');
+
+  if (inputOrigen) {
+    inputOrigen.value =
+      viajeLocal?.inputOrigen ||
+      viajeLocal?.origen?.direccionCorta ||
+      viajeLocal?.origen?.direccion ||
+      '';
+  }
+
+  if (inputDestino) {
+    inputDestino.value =
+      viajeLocal?.inputDestino ||
+      viajeLocal?.destino?.direccionCorta ||
+      viajeLocal?.destino?.direccion ||
+      '';
+  }
+
+  if (waypointsContainer) {
+    waypointsContainer.innerHTML = '';
+  }
+
+  state.waypoints = [];
+  waypointCounter = 0;
+
+  const waypoints = Array.isArray(viajeLocal?.waypoints) ? viajeLocal.waypoints : [];
+  const waypointTexts = Array.isArray(viajeLocal?.waypointTexts) ? viajeLocal.waypointTexts : [];
+
+  waypoints.forEach((wp, index) => {
+    agregarWaypoint();
+
+    const ultimoWp = state.waypoints[state.waypoints.length - 1];
+    if (ultimoWp) {
+      ultimoWp.data = wp?.data || wp || null;
+
+      const input = document.getElementById(ultimoWp.id);
+      if (input) {
+        input.value =
+          waypointTexts[index] ||
+          ultimoWp?.data?.direccionCorta ||
+          ultimoWp?.data?.direccion ||
+          '';
+
+        if (ultimoWp?.data) {
+          input.setAttribute('title', construirTooltip(ultimoWp.data));
+        }
+      }
+    }
+  });
+
+  actualizarTimeline();
+}
+
+async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
+  try {
+    if (!viajeLocal) return;
+
+    state.origen = viajeLocal.origen || null;
+    state.destino = viajeLocal.destino || null;
+    state.waypoints = Array.isArray(viajeLocal.waypoints) ? viajeLocal.waypoints : [];
+    state.routeData = viajeLocal.routeData || null;
+    state.cotizacion = viajeLocal.cotizacion || null;
+
+    restaurarInputsViajeDesdeStorage(viajeLocal);
+
+    if (state.cotizacion) {
+      mostrarCotizacion(
+        Number(state.cotizacion?.precio || 0),
+        Number(state.cotizacion?.distancia_km || state.routeData?.distance || 0),
+        Number(state.cotizacion?.duracion_min || state.routeData?.duration || 0)
+      );
+    }
+
+    const coords =
+      state?.routeData?.geometry?.coordinates ||
+      state?.cotizacion?.route_geometry ||
+      null;
+
+    if (Array.isArray(coords) && coords.length >= 2) {
+      setSectionVisible('mapSection', true);
+      await dibujarRutaReal(coords);
+    } else {
+      const puntos = obtenerPuntosOrdenados();
+      const coordsFallback = puntos
+        .map((p) => [Number(p?.lng), Number(p?.lat)])
+        .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+
+      if (coordsFallback.length >= 2) {
+        setSectionVisible('mapSection', true);
+        dibujarRutaLineal(coordsFallback);
+      }
+    }
+
+    setSectionVisible('quoteCard', true);
+  } catch (err) {
+    console.warn('[restore-trip] no se pudo restaurar mapa/cotización:', err);
   }
 }
 
@@ -1876,8 +2008,10 @@ function actualizarEstadoLocalViaje(nuevoEstado) {
       texto: notifData.texto
     });
   }
-}
 
+  actualizarStatusCardNotificaciones(upper);
+}
+  
 function suscribirseEstadoViajeRealtime(viajeId) {
   if (!viajeId || !window.sbRealtime) {
     console.warn('[realtime] No hay viajeId o cliente supabase');
@@ -1900,10 +2034,23 @@ function suscribirseEstadoViajeRealtime(viajeId) {
       },
       (payload) => {
         try {
-          const nuevoEstado = normalizarEstadoUpper(payload?.new?.estado);
-          if (!nuevoEstado) return;
+          const oldRow = payload?.old || {};
+          const newRow = payload?.new || {};
 
-          if (nuevoEstado === ultimoEstadoNotificado) return;
+          const choferAntes = !!(oldRow?.assigned_driver_id || oldRow?.chofer_id_uuid);
+          const choferAhora = !!(newRow?.assigned_driver_id || newRow?.chofer_id_uuid);
+          const choferRecienAsignado = !choferAntes && choferAhora;
+
+          let nuevoEstado = resolverEstadoViajeCliente(newRow);
+
+          // Si todavía no vino el estado final pero apareció chofer, al cliente le mostramos ASIGNADO.
+          if (choferRecienAsignado && ['BUSCANDO_CHOFER', 'OFERTANDO', 'OFERTADO', 'PENDIENTE'].includes(nuevoEstado)) {
+            nuevoEstado = 'ASIGNADO';
+          }
+
+          if (!nuevoEstado) return;
+          if (nuevoEstado === ultimoEstadoNotificado && !choferRecienAsignado) return;
+
           ultimoEstadoNotificado = nuevoEstado;
 
           actualizarEstadoLocalViaje(nuevoEstado);
@@ -1911,9 +2058,9 @@ function suscribirseEstadoViajeRealtime(viajeId) {
           const notifData = mapearEstadoANotificacion(nuevoEstado);
           actualizarCentroNotificacionesViaje(notifData);
           guardarNotificacionesEnStorage();
-          actualizarStatusCardNotificaciones(nuevoEstado);
-          
-          if (nuevoEstado === 'ACEPTADO' || nuevoEstado === 'ASIGNADO') {
+          guardarViajeActivoEnStorage();
+
+          if (nuevoEstado === 'ACEPTADO' || nuevoEstado === 'ASIGNADO' || choferRecienAsignado) {
             ejecutarFeedbackAceptado();
 
             notif.show(
@@ -1959,7 +2106,6 @@ function suscribirseEstadoViajeRealtime(viajeId) {
 
   return currentTripChannel;
 }
-
 async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
@@ -1995,7 +2141,7 @@ async function restaurarViajeActivoCliente() {
       console.warn('[restore-trip] error leyendo viaje:', error);
     }
 
-    const estado = normalizarEstadoUpper(viaje?.estado);
+    const estado = resolverEstadoViajeCliente(viaje);
 
     const estadosActivos = [
       'PENDIENTE',
@@ -2012,34 +2158,44 @@ async function restaurarViajeActivoCliente() {
     // ============================
     // CASO 1: VIAJE ACTIVO REAL
     // ============================
-    if (viaje?.id && estadosActivos.includes(estado)) {
-      state.viajeId = viaje.id;
-      state.viajeEstado = estado;
-      state.estadoViaje = estado;
+if (viaje?.id && estadosActivos.includes(estado)) {
+  state.viajeId = viaje.id;
+  state.viajeEstado = estado;
+  state.estadoViaje = estado;
 
-      guardarViajeActivoEnStorage();
-      actualizarStatusCardNotificaciones(estado);
+  if (viajeLocal) {
+    await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
+  }
 
-      const notifData = mapearEstadoANotificacion(estado);
+  guardarViajeActivoEnStorage();
+  actualizarStatusCardNotificaciones(estado);
 
-      if (!historial.length) {
-        agregarNotificacionViaje({
-          estado: notifData.estado,
-          texto: notifData.texto,
-          read: true
-        });
-      } else {
-        renderizarCentroNotificaciones();
-      }
+  const notifData = mapearEstadoANotificacion(estado);
 
-      if (typeof actualizarBotonCancelarViaje === 'function') {
-        actualizarBotonCancelarViaje();
-      }
+  if (!historial.length) {
+    agregarNotificacionViaje({
+      estado: notifData.estado,
+      texto: notifData.texto,
+      read: true
+    });
+  } else {
+    renderizarCentroNotificaciones();
+  }
 
-      suscribirseEstadoViajeRealtime(viaje.id);
-      return;
-    }
+  if (typeof actualizarBotonCancelarViaje === 'function') {
+    actualizarBotonCancelarViaje();
+  }
 
+  if (typeof actualizarEstadoSolicitudUI === 'function') {
+    actualizarEstadoSolicitudUI({
+      estado,
+      texto: notifData.texto
+    });
+  }
+
+  suscribirseEstadoViajeRealtime(viaje.id);
+  return;
+}
     // ============================
     // CASO 2: VIAJE EN STORAGE
     // ============================
@@ -2048,6 +2204,8 @@ if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
   state.viajeEstado = viajeLocal.estadoViaje;
   state.estadoViaje = viajeLocal.estadoViaje;
 
+  await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
+
   actualizarStatusCardNotificaciones(viajeLocal.estadoViaje);
   renderizarCentroNotificaciones();
 
@@ -2055,9 +2213,19 @@ if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
     actualizarBotonCancelarViaje();
   }
 
+  if (typeof actualizarEstadoSolicitudUI === 'function') {
+    const notifData = mapearEstadoANotificacion(viajeLocal.estadoViaje);
+    actualizarEstadoSolicitudUI({
+      estado: viajeLocal.estadoViaje,
+      texto: notifData.texto
+    });
+  }
+
+  suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
   return;
 }
-    // ============================
+    
+  // ============================
     // CASO 3: SIN VIAJE
     // ============================
     limpiarViajeActivoEnStorage();
@@ -2931,6 +3099,13 @@ async function initMapa() {
     const temaOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
     mapaCliente = new maplibregl.Map({
+          // Mapa fijo tipo Uber: el cliente no lo mueve manualmente
+    mapaCliente.dragPan.disable();
+    mapaCliente.scrollZoom.disable();
+    mapaCliente.boxZoom.disable();
+    mapaCliente.doubleClickZoom.disable();
+    mapaCliente.touchZoomRotate.disable();
+    mapaCliente.keyboard.disable();
       container: 'map',
       style: {
         version: 8,
@@ -2967,10 +3142,6 @@ paint: {
       renderWorldCopies: false
     });
 
-    mapaCliente.addControl(
-      new maplibregl.NavigationControl({ showCompass: false }),
-      'bottom-right'
-    );
 mapaCliente.on('error', (e) => {
   console.warn('[mapa] error:', e?.error || e);
 });
@@ -3067,14 +3238,18 @@ function iniciarAnimacionRuta() {
   routeDashPhase = 0;
 
   const step = () => {
-    routeDashPhase += 0.015;
+    routeDashPhase += 0.045;
+
+    if (routeDashPhase > 6) {
+      routeDashPhase = 0;
+    }
 
     try {
       mapaCliente.setPaintProperty('route-anim', 'line-dasharray', [
         0,
         routeDashPhase,
-        0.8,
-        1.4
+        0.7,
+        2.2
       ]);
     } catch (_) {}
 
@@ -3083,6 +3258,7 @@ function iniciarAnimacionRuta() {
 
   routeAnimationFrame = requestAnimationFrame(step);
 }
+  
 async function dibujarRutaEnMapa(coords) {
   await initMapa();
   if (!mapaCliente || !mapReady) return;
@@ -3262,9 +3438,9 @@ async function dibujarRutaReal(coords) {
     },
     paint: {
       'line-color': '#60a5fa',
-      'line-width': 10,
-      'line-opacity': 0.22,
-      'line-blur': 1.2
+      'line-width': 12,
+      'line-opacity': 0.28,
+      'line-blur': 1.5
     }
   });
 
@@ -3292,14 +3468,14 @@ async function dibujarRutaReal(coords) {
       'line-cap': 'round'
     },
     paint: {
-      'line-color': '#93c5fd',
-      'line-width': 7,
-      'line-opacity': 0.85,
-      'line-blur': 0.4,
-      'line-dasharray': [0, 0, 0.8, 1.4]
+      'line-color': '#bfe0ff',
+      'line-width': 8,
+      'line-opacity': 0.95,
+      'line-blur': 0.9,
+      'line-dasharray': [0, 0, 0.7, 2.2]
     }
   });
-
+  
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
@@ -3867,6 +4043,7 @@ if (fallbackUsado && !coordsRouteGeometry && !coordsLegs) {
   );
 }
   mostrarCotizacion(precio, distancia, duracion);
+    guardarViajeActivoEnStorage();
 }  
 // ==========================================
 // UI COTIZACIÓN
