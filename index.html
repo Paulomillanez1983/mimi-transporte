@@ -3523,7 +3523,8 @@ async function dibujarRutaEnMapa(coords) {
   });
 }
 
-function dibujarRutaLineal(coords) {
+
+  function dibujarRutaLineal(coords) {
   if (!mapaCliente || !mapReady || !Array.isArray(coords) || coords.length < 2) return;
 
   requestAnimationFrame(() => {
@@ -3584,12 +3585,12 @@ function dibujarRutaLineal(coords) {
       }
     });
 
-agregarMarkersRutaDesdeCoords(coordsLimpias);
-ajustarVistaRuta(coordsLimpias, 500);
+    agregarMarkersRutaDesdeCoords(coordsLimpias);
+    ajustarVistaRuta(coordsLimpias, 500);
 
-if (window.DriverSim) {
-  window.DriverSim.start(mapaCliente, coordsLimpias, 6);
-}    
+    if (window.DriverSim) {
+      window.DriverSim.start(mapaCliente, coordsLimpias, 6);
+    }
   });
 }
 async function dibujarRutaReal(coords) {
@@ -3616,9 +3617,7 @@ async function dibujarRutaReal(coords) {
 
   limpiarCapasRutaMapa();
   limpiarMarkersMapa();
-if (window.DriverSim) {
-  window.DriverSim.start(mapaCliente, coordsLimpias, 6);
-}
+
   mapaCliente.addSource('route', {
     type: 'geojson',
     data: {
@@ -3689,9 +3688,14 @@ if (window.DriverSim) {
   ajustarVistaRuta(coordsLimpias, 900);
   iniciarAnimacionRuta();
 
+  if (window.DriverSim) {
+    window.DriverSim.start(mapaCliente, coordsLimpias, 6);
+  }
+
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 180);
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 450);
 }
+  
 function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
 
