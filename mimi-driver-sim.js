@@ -87,9 +87,12 @@ window.DriverSim = (() => {
           source: SOURCE_ID,
           layout: {
             'icon-image': IMAGE_ID,
-             'icon-size': (() => {   if (window.innerWidth <= 480) return 0.03;   // celular chico   
-              if (window.innerWidth <= 768) return 0.035;  // celular normal   
-              if (window.innerWidth <= 1024) return 0.045; // tablet   return 0.055; // desktop })(),
+'icon-size': (() => {
+  if (window.innerWidth <= 480) return 0.065;  // 📱 celular chico
+  if (window.innerWidth <= 768) return 0.075;  // 📱 celular normal
+  if (window.innerWidth <= 1024) return 0.085; // tablet
+  return 0.065; // desktop (lo mantenemos elegante)
+})(),
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
             'icon-rotate': ['get', 'bearing'],
