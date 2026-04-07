@@ -5,6 +5,7 @@ window.DriverSim = (() => {
   let ensureRetryTimer = null;
 
   const SOURCE_ID = 'sim-drivers';
+
   const LAYER_ID = 'sim-drivers-layer';
   const IMAGE_ID = 'sim-driver-car';
 
@@ -220,19 +221,25 @@ const progress = clamp(
     });
   }
 
-  function animate(map, routeCoords) {
-    if (!running || !map || !Array.isArray(routeCoords) || routeCoords.length < 2) return;
+function animate(map, routeCoords) {
+  if (!running || !map || !Array.isArray(routeCoords) || routeCoords.length < 2) return;
 
-    const maxIndex = routeCoords.length - 1;
+  const now = Date.now();
+  const maxIndex = routeCoords.length - 1;
 
-    drivers.forEach((d, idx) => {
+  drivers.forEach((d, idx) => {
+    if (d.pauseUntil && now < d.pauseUntil) {
+      return;
+    }
+
+    if (d.mode === 'route') {
       d.progress += d.speed;
 
       if (d.progress >= maxIndex - 0.2) {
-        d.progress = randomBetween(0, Math.min(8, maxIndex / 6));
+        d.progress = randomBetween(maxIndex * 0.18, maxIndex * 0.32);
       }
 
-      const point = getPointOnRoute(routeCoords, d.progress, d.laneOffset);
+      const point = getPointOnRoute(routeCoords, d.progress, d.laneOffset || 0);
 
       d.lng = point.lng;
       d.lat = point.lat;
@@ -243,18 +250,36 @@ const progress = clamp(
       while (delta > 180) delta -= 360;
       while (delta < -180) delta += 360;
 
-      d.bearing = currentBearing + delta * 0.14;
+      d.bearing = currentBearing + delta * 0.12;
 
-      if (idx !== 0 && Math.random() < 0.003) {
-        d.laneOffset += randomBetween(-0.00003, 0.00003);
-        d.laneOffset = clamp(d.laneOffset, -0.00022, 0.00022);
+      if (Math.random() < 0.003) {
+        d.pauseUntil = now + randomBetween(1200, 2600);
       }
-    });
 
-    updateSource(map);
-    animFrame = requestAnimationFrame(() => animate(map, routeCoords));
-  }
+      return;
+    }
 
+    const angle = (d.bearing * Math.PI) / 180;
+    d.lng += Math.cos(angle) * d.speed;
+    d.lat += Math.sin(angle) * d.speed;
+
+    if (!d.driftUntil || now > d.driftUntil) {
+      d.bearing += randomBetween(-18, 18);
+      d.driftUntil = now + randomBetween(2200, 4800);
+    }
+
+    if (Math.random() < 0.004) {
+      d.pauseUntil = now + randomBetween(1000, 3200);
+    }
+
+    if (idx !== 0 && Math.random() < 0.002) {
+      d.speed = randomBetween(0.0000015, 0.000004);
+    }
+  });
+
+  updateSource(map);
+  animFrame = requestAnimationFrame(() => animate(map, routeCoords));
+}
   function start(map, routeCoords, count = window.innerWidth <= 768 ? 6 : 8) {
     if (!map || !Array.isArray(routeCoords) || routeCoords.length < 2) {
       console.warn('[DriverSim] start cancelado: map o routeCoords inválidos');
@@ -274,7 +299,7 @@ const progress = clamp(
 
     if (coords.length < 2) return;
 
-    drivers = buildDriversOnRoute(coords, count);
+    drivers = buildDrivers(coords, count);
 
     ensureLayer(map);
 
