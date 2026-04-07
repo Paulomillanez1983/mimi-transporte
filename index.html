@@ -3651,7 +3651,7 @@ function dibujarRutaLineal(coords) {
     ajustarVistaRuta(coordsLimpias, 500);
 
     if (window.DriverSim) {
-      window.DriverSim.start(mapaCliente, coordsLimpias, 6);
+      window.DriverSim.start(mapaCliente, coordsLimpias, 10);
     }
   });
 }
@@ -3735,7 +3735,7 @@ async function dibujarRutaReal(coords) {
   ajustarVistaRuta(coordsLimpias, 900);
 
   if (window.DriverSim) {
-    window.DriverSim.start(mapaCliente, coordsLimpias, 6);
+    window.DriverSim.start(mapaCliente, coordsLimpias, 10);
   }
 
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 180);
