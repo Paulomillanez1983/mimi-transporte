@@ -515,9 +515,11 @@ async function buscarDireccion(query) {
           "Content-Type": "application/json"
         }),
         body: JSON.stringify({
-          query: query.trim(),
-          limit: 5
-        })
+  query,
+  limit: 5,
+  client_lat: Number(state?.currentLocation?.lat || state?.miUbicacion?.lat || 0) || null,
+  client_lng: Number(state?.currentLocation?.lng || state?.miUbicacion?.lng || 0) || null
+})
       },
       NETWORK_TIMEOUT_MS
     );
