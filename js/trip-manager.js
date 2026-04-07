@@ -59,50 +59,43 @@ class TripManager {
       let driverId =
         driverIdParam ||
         supabaseService.getDriverId?.() ||
-        localStorage.getItem('driverId') ||
-        sessionStorage.getItem('driverId') ||
         null;
-
-      // Fallback real: buscar chofer desde auth si el cache falló
+      
+      // Fallback real: buscar chofer desde auth si no vino por parámetro
       if (!driverId && supabaseService.client?.auth) {
-  const { data: { user } } = await supabaseService.client.auth.getUser();
+        const {
+          data: { user },
+          error: userError
+        } = await supabaseService.client.auth.getUser();
 
-  if (user?.id) {
-    const { data: chofer, error } = await supabaseService.client
-      .from('choferes')
-      .select('id_uuid')
-      .eq('user_id', user.id)
-      .maybeSingle();
+        if (userError) {
+          console.error('[TripManager] Error obteniendo auth user:', userError);
+        }
 
-    if (error) {
-      console.error('[TripManager] Error buscando chofer por user_id:', error);
-    }
+        if (user?.id) {
+          const { data: chofer, error } = await supabaseService.client
+            .from('choferes')
+            .select('id_uuid')
+            .eq('user_id', user.id)
+            .maybeSingle();
 
-    if (chofer?.id_uuid) {
-      driverId = chofer.id_uuid;
-      localStorage.setItem('driverId', driverId);
-      sessionStorage.setItem('driverId', driverId);
-    }
-  }
-}
+          if (error) {
+            console.error('[TripManager] Error buscando chofer por user_id:', error);
+          }
 
+          if (chofer?.id_uuid) {
+            driverId = chofer.id_uuid;
+          }
+        }
+      }
       if (!driverId) {
         console.error('[TripManager] ❌ No driverId available after fallback');
         return false;
       }
 
       this.driverId = driverId;
-      await supabaseService.client
-  .from('choferes')
-  .update({
-    online: true,
-    disponible: true,
-    last_seen_at: new Date().toISOString()
-  })
-  .eq('id_uuid', driverId);
 
       console.log('[TripManager] ✅ Initializing for driver UUID:', driverId);
-
       await this._loadInitialState(driverId);
       this._subscribeToRealtime(driverId);
       this._startRefreshInterval(driverId);
@@ -526,13 +519,36 @@ async rejectOffer(offerId) {
     if (this.refreshInterval) clearInterval(this.refreshInterval);
 
     this.refreshInterval = setInterval(() => {
-    if (this.currentTrip) return;
-    if (this.pendingOffer) return;
-    if (this.isLoadingInitial || this.isRefreshingOffers) return;
+      if (this.isLoadingInitial || this.isRefreshingOffers) return;
       this._loadInitialState(driverId);
     }, 6000);
   }
 
+    async setDriverAvailability({ online, disponible }) {
+    const driverId = this.driverId;
+    if (!driverId) return { success: false, error: 'No driverId' };
+
+    const now = new Date().toISOString();
+
+    const payload = {
+      last_seen_at: now
+    };
+
+    if (typeof online === 'boolean') payload.online = online;
+    if (typeof disponible === 'boolean') payload.disponible = disponible;
+
+    const { error } = await supabaseService.client
+      .from('choferes')
+      .update(payload)
+      .eq('id_uuid', driverId);
+
+    if (error) {
+      console.error('[TripManager] setDriverAvailability error:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  }
   // =========================================================
   // ACTIONS (VIAJES)
   // =========================================================
@@ -582,6 +598,7 @@ async rejectOffer(offerId) {
         if (['OFERTA_NO_DISPONIBLE', 'VIAJE_YA_TOMADO', 'VIAJE_BLOQUEADO'].includes(result.reason)) {
           this.pendingOffer = null;
           this.lastOfferIdShown = null;
+          this.currentTrip = null;
 
           this.emit('pendingTripCleared', {
             reason: result.reason,
@@ -589,7 +606,6 @@ async rejectOffer(offerId) {
           });
 
           console.log('[TripManager] Refreshing offers after rejection...');
-          this.currentTrip = { id: tripId };
           await this._loadInitialState(driverId);
         }
 
@@ -598,14 +614,12 @@ async rejectOffer(offerId) {
 
       this.pendingOffer = null;
       this.lastOfferIdShown = null;
-
-      this.currentTrip = { id: tripId };
+      this.currentTrip = null;
 
       this.emit('pendingTripCleared', { reason: 'offer_accepted' });
 
       await this._loadInitialState(driverId);
       return { success: true };
-
     } catch (err) {
       console.error('[TripManager] RPC FAILED:', err);
       return { success: false, error: err.message };
@@ -709,7 +723,8 @@ async finishTrip(tripId) {
 
   return { success: true };
 }
-  async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
+
+    async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
     const driverId = this.driverId;
     if (!driverId) return { success: false, error: 'No driverId' };
 
