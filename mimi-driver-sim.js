@@ -12,32 +12,14 @@ window.DriverSim = (() => {
     return Math.random() * (max - min) + min;
   }
 
-  function buildCarSvg() {
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
-        <g>
-          <ellipse cx="48" cy="54" rx="28" ry="30" fill="rgba(0,0,0,0.38)"/>
-          <g transform="translate(48 48) rotate(90) translate(-48 -48)">
-            <rect x="28" y="16" width="40" height="56" rx="14" fill="#f7f7f7"/>
-            <rect x="33" y="24" width="30" height="18" rx="7" fill="#9fd0ff"/>
-            <rect x="33" y="45" width="30" height="15" rx="7" fill="#ffffff"/>
-            <circle cx="33" cy="28" r="4" fill="#ffffff"/>
-            <circle cx="63" cy="28" r="4" fill="#ffffff"/>
-            <circle cx="34" cy="62" r="6" fill="#222222"/>
-            <circle cx="62" cy="62" r="6" fill="#222222"/>
-            <rect x="29.5" y="17.5" width="37" height="53" rx="13" fill="none" stroke="#2b2b2b" stroke-width="2.5"/>
-          </g>
-        </g>
-      </svg>
-    `.trim();
-  }
-
   function loadCarImage(map) {
     return new Promise((resolve) => {
       if (!map) return resolve(false);
       if (map.hasImage(IMAGE_ID)) return resolve(true);
 
       const img = new Image();
+      img.crossOrigin = 'anonymous';
+
       img.onload = () => {
         try {
           if (!map.hasImage(IMAGE_ID)) {
@@ -49,13 +31,13 @@ window.DriverSim = (() => {
           resolve(false);
         }
       };
+
       img.onerror = () => {
-        console.warn('[DriverSim] no se pudo cargar SVG inline');
+        console.warn('[DriverSim] no se pudo cargar ./driver-car.png');
         resolve(false);
       };
 
-      const svg = buildCarSvg();
-      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      img.src = './driver-car.png';
     });
   }
 
@@ -105,7 +87,7 @@ window.DriverSim = (() => {
           source: SOURCE_ID,
           layout: {
             'icon-image': IMAGE_ID,
-            'icon-size': 1.25,
+            'icon-size': 0.95,
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
             'icon-rotate': ['get', 'bearing'],
