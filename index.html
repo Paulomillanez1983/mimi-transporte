@@ -1965,6 +1965,7 @@ async function restaurarViajeActivoCliente() {
     const session = await obtenerSesionCliente(false);
 
     if (!session?.user) {
+      if (notifStatusCard) notifStatusCard.hidden = true;
       renderizarCentroNotificaciones();
       return;
     }
@@ -1995,6 +1996,7 @@ async function restaurarViajeActivoCliente() {
     }
 
     const estado = normalizarEstadoUpper(viaje?.estado);
+
     const estadosActivos = [
       'PENDIENTE',
       'BUSCANDO_CHOFER',
@@ -2007,47 +2009,63 @@ async function restaurarViajeActivoCliente() {
       'SIN_CHOFER'
     ];
 
+    // ============================
+    // CASO 1: VIAJE ACTIVO REAL
+    // ============================
     if (viaje?.id && estadosActivos.includes(estado)) {
       state.viajeId = viaje.id;
       state.viajeEstado = estado;
       state.estadoViaje = estado;
 
-guardarViajeActivoEnStorage();
-actualizarStatusCardNotificaciones(estado);
+      guardarViajeActivoEnStorage();
+      actualizarStatusCardNotificaciones(estado);
 
-const notifData = mapearEstadoANotificacion(estado);
-if (!historial.length) {
-  agregarNotificacionViaje({
-    estado: notifData.estado,
-    texto: notifData.texto,
-    read: true
-  });
-} else {
-  renderizarCentroNotificaciones();
-}
+      const notifData = mapearEstadoANotificacion(estado);
 
-if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
-}
+      if (!historial.length) {
+        agregarNotificacionViaje({
+          estado: notifData.estado,
+          texto: notifData.texto,
+          read: true
+        });
+      } else {
+        renderizarCentroNotificaciones();
+      }
 
-suscribirseEstadoViajeRealtime(viaje.id);
-return;
-      
-    if (viajeLocal?.viajeId && viajeLocal?.estadoViaje && !viaje?.id) {
+      if (typeof actualizarBotonCancelarViaje === 'function') {
+        actualizarBotonCancelarViaje();
+      }
+
+      suscribirseEstadoViajeRealtime(viaje.id);
+      return;
+    }
+
+    // ============================
+    // CASO 2: VIAJE EN STORAGE
+    // ============================
+    if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
       state.viajeId = viajeLocal.viajeId;
       state.viajeEstado = viajeLocal.estadoViaje;
       state.estadoViaje = viajeLocal.estadoViaje;
+
+      actualizarStatusCardNotificaciones(viajeLocal.estadoViaje);
       renderizarCentroNotificaciones();
-    } else {
-      limpiarViajeActivoEnStorage();
-      renderizarCentroNotificaciones();
+      return;
     }
+
+    // ============================
+    // CASO 3: SIN VIAJE
+    // ============================
+    limpiarViajeActivoEnStorage();
+    if (notifStatusCard) notifStatusCard.hidden = true;
+    renderizarCentroNotificaciones();
+
   } catch (err) {
     console.warn('[restore-trip] no se pudo restaurar viaje activo:', err);
+    if (notifStatusCard) notifStatusCard.hidden = true;
     renderizarCentroNotificaciones();
   }
 }
-
 if (notifBtn && notifPanel) {
   notifBtn.addEventListener('click', (e) => {
     e.stopPropagation();
