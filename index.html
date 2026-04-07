@@ -4112,24 +4112,44 @@ function usarFallbackLocal(payload, requestId) {
     mostrarCotizacion(2500, 0, 0);
   });
 }
-function procesarRespuestaCotizacion(data, payload) {
+
+ function procesarRespuestaCotizacion(data, payload) {
+  console.log('📦 PAYLOAD', payload);
+  console.log('📡 RESPUESTA', data);
+
   const precio = numeroSeguro(data?.precio, 0);
   const distancia = numeroSeguro(data?.distancia_km, 0);
   const duracion = numeroSeguro(data?.duracion_min, 0);
 
   const detallePrecio = data?.detalle_precio || {};
-const fallbackUsado =
-  data?.fallback_usado === true ||
-  detallePrecio?.fallback_usado === true ||
-  data?.metodo_calculo === 'fallback_haversine' ||
-  detallePrecio?.proveedor_ruta === 'fallback_haversine';
-  const metodoCalculo = data?.metodo_calculo || 
-    detallePrecio?.proveedor_ruta || 
+  const fallbackUsado =
+    data?.fallback_usado === true ||
+    detallePrecio?.fallback_usado === true ||
+    data?.metodo_calculo === 'fallback_haversine' ||
+    detallePrecio?.proveedor_ruta === 'fallback_haversine';
+
+  const metodoCalculo =
+    data?.metodo_calculo ||
+    detallePrecio?.proveedor_ruta ||
     'desconocido';
+
+  console.log('📍 ORIGEN PAYLOAD', payload?.origen, payload?.origen_lat, payload?.origen_lng);
+  console.log('🏁 DESTINO PAYLOAD', payload?.destino, payload?.destino_lat, payload?.destino_lng);
+  console.log('📏 DISTANCIA BACKEND', data?.distancia_km);
+  console.log('⏱️ DURACION BACKEND', data?.duracion_min);
+  console.log('🧠 METODO', metodoCalculo);
+  console.log('⚠️ FALLBACK', fallbackUsado);
+  console.log('🗺️ ROUTE_GEOMETRY puntos', Array.isArray(data?.route_geometry) ? data.route_geometry.length : 0);
+  console.log('🦵 LEGS', Array.isArray(data?.legs) ? data.legs.length : 0);
+  console.log('📌 PUNTOS_RUTA', Array.isArray(data?.puntos_ruta) ? data.puntos_ruta.length : 0);
 
   const resumenRuta =
     data?.resumen_ruta ||
-    [payload.origen, ...(payload.paradas || []).map(p => p.direccion), payload.destino]
+    [
+      payload?.origen || '',
+      ...((payload?.paradas || []).map(p => p?.direccion).filter(Boolean)),
+      payload?.destino || ''
+    ]
       .filter(Boolean)
       .join(' → ');
 
@@ -4202,42 +4222,45 @@ const fallbackUsado =
     duration: duracion,
     resumenRuta,
     fallback: fallbackUsado,
+    esRutaReal,
+    provisional: esProvisoria,
     geometry: coordsFinales
       ? {
           type: 'LineString',
           coordinates: coordsFinales
         }
-      : null,
-    provisional: esProvisoria
+      : null
   };
 
-if (coordsFinales) {
-  setSectionVisible('mapSection', true);
-  initMapa().then(async () => {
-    try {
-      if (esRutaReal) {
-        await dibujarRutaReal(coordsFinales);
-      } else {
-        dibujarRutaLineal(coordsFinales);
-      }
-    } catch (e) {
-      console.warn('[mapa] fallo dibujarRutaReal, uso lineal:', e);
+  if (coordsFinales) {
+    setSectionVisible('mapSection', true);
+    initMapa().then(async () => {
       try {
-        dibujarRutaLineal(coordsFinales);
-      } catch (_) {}
-    }
-  });
-}
-if (fallbackUsado && !coordsRouteGeometry && !coordsLegs) {
-  notif.show(
-    'Ruta estimada',
-    'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
-    'warning'
-  );
-}
+        if (esRutaReal) {
+          await dibujarRutaReal(coordsFinales);
+        } else {
+          dibujarRutaLineal(coordsFinales);
+        }
+      } catch (e) {
+        console.warn('[mapa] fallo dibujarRutaReal, uso lineal:', e);
+        try {
+          dibujarRutaLineal(coordsFinales);
+        } catch (_) {}
+      }
+    });
+  }
+
+  if (fallbackUsado && !coordsRouteGeometry && !coordsLegs) {
+    notif.show(
+      'Ruta estimada',
+      'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
+      'warning'
+    );
+  }
+
   mostrarCotizacion(precio, distancia, duracion);
-    guardarViajeActivoEnStorage();
-}  
+  guardarViajeActivoEnStorage();
+} 
 // ==========================================
 // UI COTIZACIÓN
 // ==========================================
