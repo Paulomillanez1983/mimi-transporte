@@ -87,7 +87,9 @@ window.DriverSim = (() => {
           source: SOURCE_ID,
           layout: {
             'icon-image': IMAGE_ID,
-             'icon-size': window.innerWidth <= 768 ? 0.035 : 0.055,
+             'icon-size': (() => {   if (window.innerWidth <= 480) return 0.03;   // celular chico   
+              if (window.innerWidth <= 768) return 0.035;  // celular normal   
+              if (window.innerWidth <= 1024) return 0.045; // tablet   return 0.055; // desktop })(),
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
             'icon-rotate': ['get', 'bearing'],
