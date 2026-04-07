@@ -3268,11 +3268,22 @@ function crearMarkerElement(label, type) {
   return el;
 }
   
-async function initMapa() {
-  if (mapaCliente) return Promise.resolve();
+ async function initMapa() {
+  console.log('[initMapa] entrando', {
+    mapaClienteActual: mapaCliente,
+    mapReadyActual: mapReady
+  });
+
+  if (mapaCliente) {
+    console.log('[initMapa] ya existe mapaCliente');
+    return Promise.resolve();
+  }
 
   const mapDiv = document.getElementById('map');
-  if (!mapDiv) return Promise.resolve();
+  if (!mapDiv) {
+    console.warn('[initMapa] no existe #map');
+    return Promise.resolve();
+  }
 
   const mapSection = document.getElementById('mapSection');
   const wasHidden = mapSection && getComputedStyle(mapSection).display === 'none';
@@ -3282,72 +3293,105 @@ async function initMapa() {
     mapSection.style.visibility = 'hidden';
   }
 
-  return new Promise((resolve) => {
-    const esMobile = window.innerWidth <= 768;
-    const temaOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  return new Promise((resolve, reject) => {
+    try {
+      const esMobile = window.innerWidth <= 768;
 
-    mapaCliente = new maplibregl.Map({
-      container: 'map',
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: [
-              'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-              'https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
-              'https://c.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
-            ],
-            tileSize: 256,
-            attribution: '© OpenStreetMap'
-          }
-        },
-        layers: [
-          {
-            id: 'osm',
-            type: 'raster',
-            source: 'osm',
-            paint: {
-              'raster-opacity': 0.92,
-              'raster-brightness-min': 0.12,
-              'raster-brightness-max': 0.82,
-              'raster-contrast': 0.18,
-              'raster-saturation': -0.45
+      mapaCliente = new maplibregl.Map({
+        container: 'map',
+        style: {
+          version: 8,
+          sources: {
+            osm: {
+              type: 'raster',
+              tiles: [
+                'https://a.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                'https://b.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                'https://c.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
+              ],
+              tileSize: 256,
+              attribution: '© OpenStreetMap'
             }
+          },
+          layers: [
+            {
+              id: 'osm',
+              type: 'raster',
+              source: 'osm',
+              paint: {
+                'raster-opacity': 0.92,
+                'raster-brightness-min': 0.12,
+                'raster-brightness-max': 0.82,
+                'raster-contrast': 0.18,
+                'raster-saturation': -0.45
+              }
+            }
+          ]
+        },
+        center: [-64.19, -31.42],
+        zoom: esMobile ? 11.5 : 12,
+        attributionControl: false,
+        dragRotate: false,
+        pitchWithRotate: false,
+        renderWorldCopies: false
+      });
+
+      window.__mapaClienteDebug = mapaCliente;
+
+      mapaCliente.dragPan.disable();
+      mapaCliente.scrollZoom.disable();
+      mapaCliente.boxZoom.disable();
+      mapaCliente.doubleClickZoom.disable();
+      mapaCliente.touchZoomRotate.disable();
+      mapaCliente.keyboard.disable();
+
+      mapaCliente.on('load', () => {
+        console.log('[initMapa] map load OK');
+        mapReady = true;
+
+        setTimeout(() => {
+          try {
+            mapaCliente.resize();
+          } catch (err) {
+            console.warn('[initMapa] resize error', err);
           }
-        ]
-      },
-      center: [-64.19, -31.42],
-      zoom: esMobile ? 11.5 : 12,
-      attributionControl: false,
-      dragRotate: false,
-      pitchWithRotate: false,
-      renderWorldCopies: false
-    });
 
-    // Mapa fijo tipo Uber: el cliente no lo mueve manualmente
-    mapaCliente.dragPan.disable();
-    mapaCliente.scrollZoom.disable();
-    mapaCliente.boxZoom.disable();
-    mapaCliente.doubleClickZoom.disable();
-    mapaCliente.touchZoomRotate.disable();
-    mapaCliente.keyboard.disable();
+          if (wasHidden) {
+            mapSection.style.visibility = 'visible';
+          }
 
-    mapaCliente.on('error', (e) => {
-      console.warn('[mapa] error:', e?.error || e);
-    });
+          console.log('[initMapa] listo', {
+            mapaClienteExiste: !!mapaCliente,
+            mapReady
+          });
 
-    mapaCliente.on('load', () => {
-      mapReady = true;
+          resolve();
+        }, 100);
+      });
+
+      mapaCliente.on('error', (e) => {
+        console.warn('[initMapa] map error:', e?.error || e);
+      });
+
       setTimeout(() => {
-        mapaCliente.resize();
-        if (wasHidden) mapSection.style.visibility = 'visible';
-        resolve();
-      }, 100);
-    });
+        if (!mapReady && mapaCliente) {
+          console.warn('[initMapa] timeout de espera load; continúo igual');
+          try {
+            mapaCliente.resize();
+          } catch (_) {}
+          if (wasHidden) {
+            mapSection.style.visibility = 'visible';
+          }
+          resolve();
+        }
+      }, 2500);
+
+    } catch (err) {
+      console.error('[initMapa] error creando mapa:', err);
+      reject(err);
+    }
   });
-}
-  
+} 
 function detenerAnimacionRuta() {
   if (routeAnimationFrame) {
     cancelAnimationFrame(routeAnimationFrame);
