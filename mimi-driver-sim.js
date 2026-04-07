@@ -134,11 +134,12 @@ window.DriverSim = (() => {
     stop(map);
     ensureLayer(map);
 
-    drivers = buildDriversAroundRoute(routeCoords, count);
-    running = true;
-
-    updateSource(map);
-    animate(map);
+    setTimeout(() => {
+      drivers = buildDriversAroundRoute(routeCoords, count);
+      running = true;
+      updateSource(map);
+      animate(map);
+    }, 300);
   }
 
   function stop(map) {
