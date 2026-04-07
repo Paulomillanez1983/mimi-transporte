@@ -67,11 +67,12 @@ window.DriverSim = (() => {
   function ensureLayer(map) {
     if (!map || !map.isStyleLoaded()) return;
 
-if (map.hasImage(IMAGE_ID)) {
-  ensureSourceAndLayer(map);
-  updateSource(map);
-  return;
-}
+    if (map.hasImage(IMAGE_ID)) {
+      ensureSourceAndLayer(map);
+      updateSource(map);
+      return;
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
@@ -134,16 +135,17 @@ if (map.hasImage(IMAGE_ID)) {
     stop(map);
     ensureLayer(map);
 
-setTimeout(() => {
-  ensureLayer(map); // 🔥 clave
+    setTimeout(() => {
+      ensureLayer(map);
 
-  drivers = buildDriversAroundRoute(routeCoords, count);
-  running = true;
+      drivers = buildDriversAroundRoute(routeCoords, count);
+      running = true;
 
-  updateSource(map);
-  animate(map);
-}, 400);
-    
+      updateSource(map);
+      animate(map);
+    }, 400);
+  }
+
   function stop(map) {
     running = false;
 
