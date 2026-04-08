@@ -820,61 +820,72 @@ class UIController {
     this._closeIncomingModal();
   }
 
-  updateDriverState(mode, isOnline) {
-    this.state.isOnline = isOnline;
+updateDriverState(mode, isOnline) {
+  const online = Boolean(isOnline);
+  this.state.isOnline = online;
 
-    const dot = this.elements['status-dot'];
-    const text = this.elements['status-text'];
-    const fab = this.elements['fab-online'];
-    const fabText = this.elements['fab-text'];
-    const fabIcon = this.elements['fab-icon'];
-    const fabPulse = this.elements['fab-pulse'];
-    const navText = this.elements['nav-next'];
+  const dot = this.elements['status-dot'];
+  const text = this.elements['status-text'];
+  const fab = this.elements['fab-online'];
+  const fabText = this.elements['fab-text'];
+  const fabIcon = this.elements['fab-icon'];
+  const fabPulse = this.elements['fab-pulse'];
+  const navText = this.elements['nav-next'];
+  const sheet = this.elements['bottom-sheet'];
 
-    if (dot) {
-      dot.classList.toggle('online', isOnline);
-      dot.style.animation = isOnline ? 'pulse-ring 2s infinite' : '';
-    }
+  document.body.classList.toggle('driver-online', online);
+  document.body.classList.toggle('driver-offline', !online);
 
-    if (text) {
-      text.textContent = isOnline ? 'Conectado · Buscando viajes' : 'Desconectado';
-      text.classList.toggle('online', isOnline);
-    }
-
-    if (fab) {
-      fab.classList.toggle('online', isOnline);
-      if (isOnline) {
-        fab.style.background = 'linear-gradient(135deg, #05944F 0%, #06C167 100%)';
-        fab.style.boxShadow = '0 4px 20px rgba(5,148,79,0.4)';
-      } else {
-        fab.style.background = '';
-        fab.style.boxShadow = '';
-      }
-    }
-
-    if (fabText) {
-      fabText.textContent = isOnline ? 'DESCONECTAR' : 'CONECTAR';
-    }
-
-    if (fabIcon) {
-      fabIcon.textContent = isOnline ? '●' : '○';
-      fabIcon.style.color = isOnline ? '#fff' : '';
-    }
-
-    if (fabPulse) {
-      fabPulse.style.display = isOnline ? 'block' : 'none';
-    }
-
-    if (navText) {
-      navText.textContent = isOnline
-        ? 'Buscando viajes cercanos...'
-        : 'Conectate para recibir viajes';
-    }
-
-    this._updateBottomSheetState(isOnline);
-    this._haptic(isOnline ? 'success' : 'light');
+  if (dot) {
+    dot.classList.toggle('online', online);
+    dot.style.animation = online ? 'pulse-ring 2s infinite' : '';
   }
 
+  if (text) {
+    text.textContent = online ? 'Conectado · Buscando viajes' : 'Desconectado';
+    text.classList.toggle('online', online);
+  }
+
+  if (fab) {
+    fab.classList.toggle('online', online);
+    fab.setAttribute('aria-pressed', online ? 'true' : 'false');
+
+    if (online) {
+      fab.style.background = 'linear-gradient(135deg, #05944F 0%, #06C167 100%)';
+      fab.style.boxShadow = '0 10px 26px rgba(5,148,79,0.32)';
+    } else {
+      fab.style.background = 'linear-gradient(135deg, #2f6fed 0%, #3a7dff 100%)';
+      fab.style.boxShadow = '0 10px 26px rgba(47,111,237,0.28)';
+    }
+  }
+
+  if (fabText) {
+    fabText.textContent = online ? 'DESCONECTAR' : 'CONECTAR';
+  }
+
+  if (fabIcon) {
+    fabIcon.textContent = online ? '●' : '○';
+    fabIcon.style.color = '#fff';
+  }
+
+  if (fabPulse) {
+    fabPulse.style.display = online ? 'block' : 'none';
+  }
+
+  if (navText && !this.state.currentTrip) {
+    navText.textContent = online
+      ? 'Buscando viajes cercanos...'
+      : 'Conectate para recibir viajes';
+  }
+
+  if (sheet && !this.state.currentTrip) {
+    sheet.classList.toggle('has-trip', false);
+  }
+
+  this._updateBottomSheetState(online);
+  this.showWaitingState();
+  this._haptic(online ? 'success' : 'light');
+}
   _updateBottomSheetState(isOnline) {
     const sheetContent = this.elements['sheet-content'];
     if (!sheetContent) return;
