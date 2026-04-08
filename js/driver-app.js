@@ -86,25 +86,21 @@ class DriverApp {
       const dbReady = await supabaseService.init();
       if (!dbReady) throw new Error('No se pudo conectar a Supabase');
 
-      // 2) Usuario autenticado
-      const {
-        data: { user },
-        error: userError
-      } = await supabaseService.client.auth.getUser();
+      // 2) Resolver sesión válida antes de pedir user
+      const authData = await this._requireValidAuth();
 
-      if (userError) {
-        throw new Error(userError.message || 'No se pudo obtener el usuario autenticado');
-      }
-
-      if (!user) {
-        console.log('[DriverApp] No autenticado, redirigiendo a login');
+      if (!authData) {
+        console.log('[DriverApp] Sin sesión válida, redirigiendo a login');
         window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
 
-      this._authUserId = user.id;
-      console.log('[DriverApp] Auth user detectado:', this._authUserId);
+      const { session, user } = authData;
 
+      this._authUserId = user.id;
+      this._session = session;
+
+      console.log('[DriverApp] Auth user detectado:', this._authUserId);
       // Perfil visible en UI (nombre + foto Google si existe)
       uiController.setDriverProfile({
         name:
