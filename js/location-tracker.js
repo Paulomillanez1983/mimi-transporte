@@ -13,18 +13,27 @@ class LocationTracker {
     this.callbacks = [];
     this.isTracking = false;
     this.updateInterval = null;
-    this._updateTimeout = null;
     this.permissionStatus = null;
+
+    this._visibilityHandler = this._handleVisibilityChange.bind(this);
+    this._lastDbUpdate = 0;
   }
 
   async start(callback) {
     console.log('[LocationTracker] Starting...');
 
-    // 1. VERIFICAR PERMISOS PRIMERO
+    if (!navigator.geolocation) {
+      console.error('[LocationTracker] Geolocation not supported');
+      return false;
+    }
+
+    if (this.isTracking) {
+      this.stop();
+    }
+
     const hasPermission = await this._checkPermission();
     if (!hasPermission) {
-      console.error('[LocationTracker] Permission denied or not available');
-      // Intentar solicitar de todas formas
+      console.warn('[LocationTracker] Permission not granted yet, requesting...');
       const requested = await this._requestPermission();
       if (!requested) {
         console.error('[LocationTracker] Could not get permission');
@@ -32,19 +41,13 @@ class LocationTracker {
       }
     }
 
-    if (!navigator.geolocation) {
-      console.error('[LocationTracker] Geolocation not supported');
-      return false;
+    if (callback) {
+      this.callbacks.push(callback);
     }
-
-    if (this.isTracking) this.stop();
-
-    if (callback) this.callbacks.push(callback);
 
     this.isTracking = true;
 
     return new Promise((resolve) => {
-      // 2. OBTENER POSICIÓN INICIAL CON TIMEOUT LARGO
       navigator.geolocation.getCurrentPosition(
         (position) => {
           console.log('[LocationTracker] Initial position:', position.coords);
@@ -53,53 +56,45 @@ class LocationTracker {
         },
         (error) => {
           console.warn('[LocationTracker] Initial position error:', error.message);
-          // No rechazamos, intentamos watchPosition de todas formas
           resolve(false);
         },
-        { 
-          enableHighAccuracy: true, 
-          timeout: 30000, // 30 segundos
-          maximumAge: 10000 // 10 segundos
+        {
+          enableHighAccuracy: navigator.connection?.effectiveType !== '2g',
+          timeout: 30000,
+          maximumAge: 10000
         }
       );
 
-      // 3. INICIAR WATCH POSITION
       this.watchId = navigator.geolocation.watchPosition(
         (position) => this._handlePosition(position),
         (error) => this._handleError(error),
-        { 
-          enableHighAccuracy: true, 
-          timeout: 30000, // 30 segundos
-          maximumAge: 5000 // 5 segundos
+        {
+          enableHighAccuracy: navigator.connection?.effectiveType !== '2g',
+          timeout: 30000,
+          maximumAge: 5000
         }
       );
 
       console.log('[LocationTracker] Watch started, ID:', this.watchId);
 
-      // 4. BACKUP REFRESH INTERVAL
       this.updateInterval = setInterval(() => {
         this._refreshPosition();
       }, CONFIG.LOCATION_UPDATE_INTERVAL || 5000);
 
-      // 5. MANEJAR CAMBIO DE VISIBILIDAD
-      document.addEventListener('visibilitychange', () => {
-        this._handleVisibilityChange();
-      });
+      document.removeEventListener('visibilitychange', this._visibilityHandler);
+      document.addEventListener('visibilitychange', this._visibilityHandler);
     });
   }
 
-  // NUEVO: Verificar permisos de forma explícita
   async _checkPermission() {
     if (!navigator.permissions || !navigator.permissions.query) {
-      // Navegador no soporta Permissions API, asumir que necesitamos pedir
       return false;
     }
 
     try {
       this.permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
       console.log('[LocationTracker] Permission status:', this.permissionStatus.state);
-      
-      // Escuchar cambios en el permiso
+
       this.permissionStatus.onchange = () => {
         console.log('[LocationTracker] Permission changed to:', this.permissionStatus.state);
         if (this.permissionStatus.state === 'denied') {
@@ -114,10 +109,8 @@ class LocationTracker {
     }
   }
 
-  // NUEVO: Solicitar permiso explícitamente
   async _requestPermission() {
     return new Promise((resolve) => {
-      // Intentar obtener posición una vez para disparar el prompt de permiso
       navigator.geolocation.getCurrentPosition(
         () => {
           console.log('[LocationTracker] Permission granted via getCurrentPosition');
@@ -127,13 +120,18 @@ class LocationTracker {
           console.warn('[LocationTracker] Permission denied or error:', error.message);
           resolve(false);
         },
-        { timeout: 10000 }
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
       );
     });
   }
 
   _handlePosition(position, isInitial = false) {
     const coords = position.coords;
+
     console.log('[LocationTracker] Position update:', {
       lat: coords.latitude,
       lng: coords.longitude,
@@ -142,9 +140,13 @@ class LocationTracker {
       speed: coords.speed
     });
 
-    // Aumentar tolerancia de precisión para aceptar más lecturas
     if (coords.accuracy > 500 && !isInitial) {
       console.warn('[LocationTracker] Low accuracy, skipping:', coords.accuracy);
+      return;
+    }
+
+    if (coords.speed && coords.speed * 3.6 > 150) {
+      console.warn('[LocationTracker] Ignoring unrealistic speed:', coords.speed);
       return;
     }
 
@@ -157,63 +159,76 @@ class LocationTracker {
       timestamp: position.timestamp
     };
 
+    if (this.lastPosition) {
+      const dist = this._distanceMeters(
+        this.lastPosition.lat,
+        this.lastPosition.lng,
+        newPosition.lat,
+        newPosition.lng
+      );
+
+      if (dist < 5 && !isInitial) {
+        return;
+      }
+    }
+
     if (
       this.lastPosition &&
       this.lastPosition.lat === newPosition.lat &&
       this.lastPosition.lng === newPosition.lng
     ) {
-      return; // Misma posición, no actualizar
+      return;
     }
 
     this.lastPosition = newPosition;
 
-    // Notificar callbacks
     this.callbacks.forEach((cb) => {
-      try { 
-        cb(newPosition); 
+      try {
+        cb(newPosition);
       } catch (e) {
         console.error('[LocationTracker] Callback error:', e);
       }
     });
 
-    // Actualizar Supabase (throttled)
     this._throttledUpdate(newPosition);
   }
 
   _throttledUpdate(position) {
-    if (this._updateTimeout) clearTimeout(this._updateTimeout);
+    const now = Date.now();
 
-    this._updateTimeout = setTimeout(async () => {
-      try {
-        const { data: { user } } = await supabaseService.client.auth.getUser();
-        if (!user) {
-          console.warn('[LocationTracker] No user, skipping update');
-          return;
-        }
+    if (!this._lastDbUpdate || now - this._lastDbUpdate > 4000) {
+      this._lastDbUpdate = now;
+      this._sendToSupabase(position);
+    }
+  }
 
-        const { error } = await supabaseService.client
-          .from('choferes')
-          .update({
-            lat: position.lat,
-            lng: position.lng,
-            accuracy: position.accuracy,
-            heading: position.heading,
-            speed: position.speed,
-            last_location_at: new Date().toISOString(),
-            last_seen_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
-
-        if (error) {
-          console.error('[LocationTracker] Supabase update error:', error);
-        } else {
-          console.log('[LocationTracker] Location updated in Supabase');
-        }
-
-      } catch (err) {
-        console.error('[LocationTracker] Error updating location:', err);
+  async _sendToSupabase(position) {
+    try {
+      const { data: { user } } = await supabaseService.client.auth.getUser();
+      if (!user) {
+        console.warn('[LocationTracker] No user, skipping update');
+        return;
       }
-    }, 2000);
+
+      const { error } = await supabaseService.client
+        .from('choferes')
+        .update({
+          lat: position.lat,
+          lng: position.lng,
+          accuracy: position.accuracy,
+          heading: position.heading,
+          speed: position.speed,
+          last_location_at: new Date().toISOString(),
+          last_seen_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('[LocationTracker] Supabase error:', error);
+      }
+    } catch (err) {
+      console.error('[LocationTracker] Update error:', err);
+    }
   }
 
   _refreshPosition() {
@@ -222,49 +237,70 @@ class LocationTracker {
     navigator.geolocation.getCurrentPosition(
       (pos) => this._handlePosition(pos),
       (err) => console.warn('[LocationTracker] Refresh error:', err.message),
-      { 
-        enableHighAccuracy: true, 
-        timeout: 30000, 
-        maximumAge: 10000 
+      {
+        enableHighAccuracy: navigator.connection?.effectiveType !== '2g',
+        timeout: 30000,
+        maximumAge: 10000
       }
     );
   }
 
   _handleError(error) {
     console.error('[LocationTracker] GPS Error:', error.code, error.message);
-    
+
     const errorMessages = {
       1: 'Permiso de ubicación denegado',
       2: 'Posición no disponible',
       3: 'Timeout al obtener ubicación'
     };
 
-    // Disparar evento para UI
-    window.dispatchEvent(new CustomEvent('locationError', {
-      detail: { 
-        code: error.code, 
-        message: errorMessages[error.code] || error.message 
-      }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('locationError', {
+        detail: {
+          code: error.code,
+          message: errorMessages[error.code] || error.message
+        }
+      })
+    );
   }
 
   _handleVisibilityChange() {
     const isHidden = document.hidden;
     console.log('[LocationTracker] Visibility changed:', isHidden ? 'hidden' : 'visible');
 
-    if (this.updateInterval) clearInterval(this.updateInterval);
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+    }
 
-    // Intervalo más largo cuando está en background
     const interval = isHidden ? 60000 : (CONFIG.LOCATION_UPDATE_INTERVAL || 5000);
-    
+
     this.updateInterval = setInterval(() => {
       this._refreshPosition();
     }, interval);
 
     if (!isHidden) {
-      // Forzar actualización al volver a visible
       this._refreshPosition();
     }
+  }
+
+  _haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) *
+      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  _distanceMeters(lat1, lon1, lat2, lon2) {
+    return this._haversine(lat1, lon1, lat2, lon2);
   }
 
   stop() {
@@ -280,17 +316,19 @@ class LocationTracker {
       this.updateInterval = null;
     }
 
-    if (this._updateTimeout) {
-      clearTimeout(this._updateTimeout);
-      this._updateTimeout = null;
-    }
+    document.removeEventListener('visibilitychange', this._visibilityHandler);
 
     this.isTracking = false;
     this.callbacks = [];
     this.lastPosition = null;
+    this._lastDbUpdate = 0;
   }
 
   getLastPosition() {
+    return this.lastPosition;
+  }
+
+  getCurrentPosition() {
     return this.lastPosition;
   }
 
