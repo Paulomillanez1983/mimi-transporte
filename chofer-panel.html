@@ -245,30 +245,43 @@
     </div>
   </div>
 
-  <!-- LOGOUT SCRIPT -->
-  <script type="module">
-    import supabaseService from "./js/supabase-client.js";
-    import CONFIG from "./js/config.js";
+<script type="module">
+  import supabaseService from "./js/supabase-client.js";
+  import CONFIG from "./js/config.js";
 
-    const logoutBtn = document.getElementById("logoutBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const menuLogoutBtn = document.getElementById("menu-logout");
 
-    async function initLogout() {
-      await supabaseService.init();
-      const { data } = await supabaseService.client.auth.getSession();
+  async function doLogout() {
+    try {
+      await supabaseService.client.auth.signOut();
+    } catch (err) {
+      console.error("[logout] Error cerrando sesión:", err);
+    } finally {
+      window.location.href = CONFIG.REDIRECTS.LOGIN;
+    }
+  }
 
-      if (data?.session) {
-        logoutBtn.classList.add("visible");
-      }
+  async function initLogout() {
+    await supabaseService.init();
 
-      logoutBtn.addEventListener("click", async () => {
-        await supabaseService.client.auth.signOut();
-        window.location.href = CONFIG.REDIRECTS.LOGIN;
-      });
+    const { data } = await supabaseService.client.auth.getSession();
+
+    if (data?.session && logoutBtn) {
+      logoutBtn.classList.add("visible");
     }
 
-    initLogout();
-  </script>
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", doLogout);
+    }
 
+    if (menuLogoutBtn) {
+      menuLogoutBtn.addEventListener("click", doLogout);
+    }
+  }
+
+  initLogout();
+</script>
 <script>
   // ⚠️ Solo asegurar que el SW esté listo, no registrarlo dos veces
   if ('serviceWorker' in navigator) {
