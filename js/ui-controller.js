@@ -899,62 +899,69 @@ updateDriverState(mode, isOnline) {
     delete sheetContent.dataset.flowState;
 
     if (isOnline) {
-      sheetContent.innerHTML = `
-        <div class="waiting-state uber-style">
-          <div class="pulse-rings">
-            <div class="ring ring-1"></div>
-            <div class="ring ring-2"></div>
-            <div class="ring ring-3"></div>
-          </div>
-          <div class="waiting-text">
-            <h3>Conectado</h3>
-            <p>Buscando viajes en tu zona...</p>
-          </div>
-          <div class="zone-indicator">
-            <span class="zone-dot"></span>
-            <span>Zona activa</span>
-          </div>
-        </div>
-      `;
-    } else {
-      sheetContent.innerHTML = `
-        <div class="waiting-state offline">
-          <div class="offline-icon">⚪</div>
-          <div class="waiting-text">
-            <h3>Estás desconectado</h3>
-            <p>Tocá el botón verde para empezar a recibir viajes</p>
-          </div>
-        </div>
-      `;
-    }
+_updateBottomSheetState(isOnline) {
+  const sheetContent = this.elements['sheet-content'];
+  const sheet = this.elements['bottom-sheet'];
+  if (!sheetContent || !sheet) return;
+
+  const desiredState = isOnline ? 'online' : 'offline';
+
+  if (sheetContent.dataset.waitingState === desiredState && !sheetContent.dataset.flowState) {
+    return;
   }
 
+  sheetContent.dataset.waitingState = desiredState;
+  delete sheetContent.dataset.flowState;
+
+  if (isOnline) {
+    sheet.classList.remove('has-trip');
+    sheetContent.innerHTML = `
+      <div class="waiting-state uber-style">
+        <div class="waiting-text">
+          <h3>Conectado</h3>
+          <p>Buscando viajes cercanos en tu zona</p>
+        </div>
+      </div>
+    `;
+  } else {
+    sheet.classList.remove('has-trip');
+    sheetContent.innerHTML = `
+      <div class="waiting-state offline">
+        <div class="waiting-text">
+          <h3>Desconectado</h3>
+          <p>Tocá el botón azul para empezar a recibir viajes</p>
+        </div>
+      </div>
+    `;
+  }
+}
   showWaitingState() {
     this._collapseBottomSheet();
     this._updateBottomSheetState(this.state.isOnline);
   }
 
-  showNavigationState(trip) {
-    this.state.currentTrip = trip;
+showNavigationState(trip) {
+  this.state.currentTrip = trip;
 
-    const navBar = this.elements['nav-bar'];
-    const sheet = this.elements['bottom-sheet'];
+  const navBar = this.elements['nav-bar'];
+  const sheet = this.elements['bottom-sheet'];
 
-    if (navBar) {
-      navBar.classList.add('active');
-      navBar.style.transform = 'translateY(0)';
-    }
+  document.body.classList.add('trip-active');
 
-    if (sheet) {
-      sheet.classList.add('has-trip');
-      this._expandBottomSheet();
-    }
-
-    this._updateNavigationInfo(trip);
-    this._showTripActions(trip);
-    this._haptic('success');
+  if (navBar) {
+    navBar.classList.add('active');
+    navBar.style.transform = 'translateY(0)';
   }
 
+  if (sheet) {
+    sheet.classList.add('has-trip');
+    this._expandBottomSheet();
+  }
+
+  this._updateNavigationInfo(trip);
+  this._showTripActions(trip);
+  this._haptic('success');
+}
   _updateNavigateButton(trip) {
     const btn = document.getElementById('btn-navigate');
     if (!btn) return;
@@ -1143,24 +1150,25 @@ updateDriverState(mode, isOnline) {
     });
   }
 
-  hideNavigation() {
-    const navBar = this.elements['nav-bar'];
-    const sheet = this.elements['bottom-sheet'];
+hideNavigation() {
+  const navBar = this.elements['nav-bar'];
+  const sheet = this.elements['bottom-sheet'];
 
-    if (navBar) {
-      navBar.classList.remove('active');
-      navBar.style.transform = 'translateY(-100%)';
-    }
+  document.body.classList.remove('trip-active');
 
-    if (sheet) {
-      sheet.classList.remove('has-trip');
-      this._collapseBottomSheet();
-    }
-
-    this.state.currentTrip = null;
-    this._lastTripRendered = null;
+  if (navBar) {
+    navBar.classList.remove('active');
+    navBar.style.transform = 'translateY(-100%)';
   }
 
+  if (sheet) {
+    sheet.classList.remove('has-trip');
+    this._collapseBottomSheet();
+  }
+
+  this.state.currentTrip = null;
+  this._lastTripRendered = null;
+}
   showArrival() {
     const panel = this.elements['arrival-panel'];
     if (!panel) return;
