@@ -252,6 +252,66 @@
   const logoutBtn = document.getElementById("logoutBtn");
   const menuLogoutBtn = document.getElementById("menu-logout");
 
+  // 🔒 PROTECCIÓN DE ACCESO (ESTO ES LO IMPORTANTE)
+  async function protectRoute() {
+    try {
+      await supabaseService.init();
+
+      const { data, error } = await supabaseService.client.auth.getSession();
+
+      if (error || !data?.session?.access_token) {
+        console.warn("[AUTH] No autenticado → redirigiendo");
+        window.location.replace("./login-chofer.html");
+        return;
+      }
+
+      // 👇 opcional: validar usuario real
+      const { data: userRes } = await supabaseService.client.auth.getUser();
+
+      if (!userRes?.user) {
+        window.location.replace("./login-chofer.html");
+        return;
+      }
+
+    } catch (err) {
+      console.error("[AUTH] Error:", err);
+      window.location.replace("./login-chofer.html");
+    }
+  }
+
+  async function doLogout() {
+    try {
+      await supabaseService.client.auth.signOut();
+    } catch (err) {
+      console.error("[logout] Error cerrando sesión:", err);
+    } finally {
+      window.location.href = CONFIG.REDIRECTS.LOGIN;
+    }
+  }
+
+  async function initLogout() {
+    const { data } = await supabaseService.client.auth.getSession();
+
+    if (data?.session && logoutBtn) {
+      logoutBtn.classList.add("visible");
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", doLogout);
+    }
+
+    if (menuLogoutBtn) {
+      menuLogoutBtn.addEventListener("click", doLogout);
+    }
+  }
+
+  // 🚀 EJECUCIÓN
+  await protectRoute();
+  await initLogout();
+</script>
+  const logoutBtn = document.getElementById("logoutBtn");
+  const menuLogoutBtn = document.getElementById("menu-logout");
+
   async function doLogout() {
     try {
       await supabaseService.client.auth.signOut();
