@@ -392,7 +392,8 @@ class DriverApp {
         !Number.isFinite(Number(trip?.origen_lng)) ||
         !Number.isFinite(Number(trip?.destino_lat)) ||
         !Number.isFinite(Number(trip?.destino_lng))
-      ) {        console.warn('[DriverApp] Viaje sin coordenadas, no se puede trazar ruta');
+            ) {
+        console.warn('[DriverApp] Viaje sin coordenadas, no se puede trazar ruta');
         return;
       }
 
@@ -470,8 +471,9 @@ class DriverApp {
   }
 
   async _rejectOffer(offerId) {
-    console.log('[DriverApp] Rechazando oferta:', offerId);
+    if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
 
+    console.log('[DriverApp] Rechazando oferta:', offerId);
     try {
       await tripManager.rejectOffer(offerId);
 
@@ -488,11 +490,14 @@ class DriverApp {
       return { success: false, error: err.message };
     }
   }
+  
 
   // =========================================================
   // TRIP ACTIONS
   // =========================================================
   async _acceptTrip(tripId) {
+    if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
+
     console.log('[DriverApp] Aceptando viaje:', tripId);
     uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
 
@@ -534,6 +539,8 @@ class DriverApp {
   }
 
   async _rejectTrip(tripId) {
+    if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
+
     console.log('[DriverApp] Rechazando viaje:', tripId);
     await tripManager.rejectTrip(tripId);
 
