@@ -175,7 +175,9 @@
 <body>
   <div class="shell">
     <div class="card">
-      <div class="logo">🚐</div>
+<div class="logo">
+  <img src="./assets/icons/icon-192x192.png" style="width:60px;">
+</div>
       <h1>MIMI Driver</h1>
       <p class="subtitle">
         Ingresá con tu cuenta o continuá con Google
@@ -325,25 +327,28 @@ async function checkSession() {
   try {
     await supabaseService.init();
 
-    const { data: sessionData, error: sessionError } =
+    let { data: sessionData } =
       await supabaseService.client.auth.getSession();
 
-    if (sessionError) {
-      console.warn("[checkSession] getSession error:", sessionError);
-      return;
+    let session = sessionData?.session || null;
+
+    // 🔥 fallback para OAuth (MUY IMPORTANTE)
+    if (!session) {
+      await new Promise(r => setTimeout(r, 800));
+
+      const retry = await supabaseService.client.auth.getSession();
+      session = retry?.data?.session || null;
     }
 
-    if (!sessionData?.session) return;
+    if (!session?.access_token) return;
 
-    const { data: userData, error: userError } =
+    const { data: userData } =
       await supabaseService.client.auth.getUser();
 
-    if (userError || !userData?.user) {
-      console.warn("[checkSession] getUser error:", userError);
-      return;
-    }
+    if (!userData?.user) return;
 
-    window.location.replace("chofer-panel.html");
+    await redirectAfterAuth();
+
   } catch (err) {
     console.error("[checkSession] fatal:", err);
   }
