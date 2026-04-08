@@ -84,6 +84,7 @@ class UIController {
 
     // DOM listeners
     this._removeDOMListeners();
+    this._removeViewportListeners();
 
     // Timers
     this._clearCountdownTimers();
