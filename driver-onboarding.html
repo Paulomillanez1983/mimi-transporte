@@ -2062,6 +2062,36 @@ if (docType === "dni_front") {
     console.warn("[kyc-dni] warning:", edgeErr);
     setDocStatus(docType, "⚠ DNI subido, pero no pudimos analizarlo", "warning");
   }
+} else if (docType === "selfie") {
+  try {
+    const base64 = await fileToBase64(file);
+
+    const { data: edgeData, error: edgeError } = await supabaseService.client.functions.invoke(
+      "kyc-selfie",
+      {
+        body: {
+          image_base64: base64,
+          mime_type: file.type || "image/jpeg"
+        }
+      }
+    );
+
+    console.log("[kyc-selfie]", edgeData, edgeError);
+
+    if (edgeError) {
+      console.warn("[kyc-selfie] error:", edgeError);
+      setDocStatus(docType, "⚠ Selfie subida, pero falló la validación automática", "warning");
+    } else if (edgeData?.face_detected && edgeData?.review_required === false) {
+      setDocStatus(docType, "✅ Rostro validado automáticamente", "ok");
+    } else if (edgeData?.face_detected) {
+      setDocStatus(docType, "⚠ Rostro detectado, quedó para revisión manual", "warning");
+    } else {
+      setDocStatus(docType, "❌ No se detectó rostro correctamente", "error");
+    }
+  } catch (edgeErr) {
+    console.warn("[kyc-selfie] warning:", edgeErr);
+    setDocStatus(docType, "⚠ Selfie subida, pero no pudimos analizarla", "warning");
+  }
 } else {
   setDocStatus(docType, "✅ Archivo cargado correctamente", "ok");
 }
