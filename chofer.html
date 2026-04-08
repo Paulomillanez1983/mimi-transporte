@@ -6,193 +6,697 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
-  <title>MIMI - Portal Choferes</title>
-  <meta
-    name="description"
-    content="Conducí con confianza, trabajá con tranquilidad. Sumate como chofer de MIMI Transporte Infantil."
-  />
+  <meta name="theme-color" content="#000000" />
+  <title>MIMI Driver - Onboarding</title>
 
-  <!-- Open Graph -->
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="MIMI - Portal Choferes" />
-  <meta
-    property="og:description"
-    content="Conducí con confianza, trabajá con tranquilidad. Viajes programados, traslados escolares y soporte directo."
-  />
-  <meta
-    property="og:image"
-    content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
-  />
-  <meta
-    property="og:image:secure_url"
-    content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
-  />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="1600" />
-  <meta
-    property="og:url"
-    content="https://paulomillanez1983.github.io/mimi-transporte/chofer.html"
-  />
-  <meta property="og:site_name" content="MIMI Transporte Infantil" />
-  <meta property="og:locale" content="es_AR" />
-
-  <!-- Twitter / X -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="MIMI - Portal Choferes" />
-  <meta
-    name="twitter:description"
-    content="Conducí con confianza, trabajá con tranquilidad."
-  />
-  <meta
-    name="twitter:image"
-    content="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
-  />
-
-  <meta name="theme-color" content="#1a1a2e" />
-
-  <!-- Favicon -->
   <link
-    rel="icon"
-    type="image/jpeg"
-    href="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
   />
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #000;
+      --card: #131416;
+      --line: rgba(255,255,255,0.1);
+      --muted: rgba(255,255,255,0.62);
+      --primary: #276EF1;
+      --success: #22c55e;
+      --danger: #E11900;
+      --radius: 18px;
     }
 
     body {
-      background: #1a1a2e;
+      font-family: 'Inter', sans-serif;
+      background: #000;
+      color: #fff;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
+      padding: 18px;
     }
 
-    .logo-mini {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      color: white;
-      font-size: 1.5rem;
-      font-weight: 800;
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-      z-index: 10;
-    }
-
-    .hero-image {
+    .container {
       width: 100%;
-      height: 100vh;
-      object-fit: cover;
-      object-position: top;
+      max-width: 760px;
+      margin: 0 auto;
+      padding-bottom: 40px;
+    }
+
+    .topbar {
+      margin-bottom: 18px;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .progress {
+      margin: 18px 0 24px;
+      width: 100%;
+      height: 10px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: var(--primary);
+      transition: width .2s ease;
+    }
+
+    .step-card {
+      display: none;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .step-card.active {
       display: block;
     }
 
-    .cta-container {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 20px;
-      background: linear-gradient(to top, rgba(26, 26, 46, 0.97), rgba(26, 26, 46, 0.2), transparent);
+    .step-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .step-text {
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      z-index: 20;
+      gap: 8px;
     }
 
-    .btn-ingresar {
-      background: linear-gradient(135deg, #ff9800, #f57c00);
-      color: white;
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.82);
+      letter-spacing: .04em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 14px 15px;
+      background: #1C1C1E;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      color: #fff;
+      font-size: 15px;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    input[type="file"] {
+      padding: 12px;
+      background: #111214;
+    }
+
+    .doc-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .doc-item {
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .doc-item h4 {
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .doc-item p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+      margin-bottom: 12px;
+    }
+
+    .doc-status {
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .ok { color: var(--success); }
+    .error { color: var(--danger); }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+
+    button {
       border: none;
-      padding: 18px 32px;
-      border-radius: 30px;
-      font-size: 1.05rem;
+      border-radius: 16px;
+      padding: 15px 18px;
+      font-size: 15px;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(255, 152, 0, 0.4);
-      transition: all 0.25s ease;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
     }
 
-    .btn-ingresar:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255, 152, 0, 0.5);
-    }
-
-    .btn-ingresar:active {
-      transform: translateY(0);
-    }
-
-    .btn-secundario {
-      background: transparent;
-      color: rgba(255, 255, 255, 0.82);
-      border: 2px solid rgba(255, 255, 255, 0.28);
-      padding: 14px 32px;
-      border-radius: 30px;
-      font-size: 0.95rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.25s ease;
-    }
-
-    .btn-secundario:hover {
-      background: rgba(255, 255, 255, 0.08);
+    .btn-primary {
+      background: var(--primary);
       color: white;
+      flex: 1 1 220px;
     }
 
-    @media (max-width: 480px) {
-      .btn-ingresar {
-        font-size: 1rem;
-        padding: 16px 24px;
-      }
+    .btn-secondary {
+      background: #232428;
+      color: white;
+      flex: 1 1 160px;
+    }
 
-      .btn-secundario {
-        font-size: 0.9rem;
+    .status-box {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      line-height: 1.45;
+      display: none;
+    }
+
+    .status-box.visible { display: block; }
+
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
-  <div class="logo-mini">🚐 MIMI</div>
+  <div class="container">
+    <div class="topbar">
+      <div class="title">Validación de chofer</div>
+      <div class="subtitle">
+        Completá tu identidad, vehículo y documentación para habilitar tu cuenta.
+      </div>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </div>
 
-  <!-- Imagen promocional -->
-  <img
-    src="https://raw.githubusercontent.com/Paulomillanez1983/mimi-transporte/main/flyer-chofer.png"
-    alt="Sumate como chofer MIMI"
-    class="hero-image"
-    onerror="this.src='https://placehold.co/1080x1920/1a1a2e/ffffff?text=MIMI+Transporte+Infantil'"
-  />
+    <section class="step-card active" data-step="1">
+      <div class="step-title">Paso 1 · Datos personales</div>
+      <div class="step-text">Necesitamos tus datos básicos del chofer.</div>
 
-  <div class="cta-container">
-    <button class="btn-ingresar" onclick="ingresarPanel()">
-      🚀 Ingresar al Panel
-    </button>
+      <div class="grid">
+        <div class="field">
+          <label for="full_name">Nombre completo</label>
+          <input id="full_name" type="text" />
+        </div>
 
-    <button class="btn-secundario" onclick="contactar()">
-      📞 Quiero ser chofer
-    </button>
+        <div class="field">
+          <label for="phone">Teléfono</label>
+          <input id="phone" type="tel" />
+        </div>
+
+        <div class="field">
+          <label for="dni_number">DNI</label>
+          <input id="dni_number" type="text" />
+        </div>
+
+        <div class="field">
+          <label for="birth_date">Fecha de nacimiento</label>
+          <input id="birth_date" type="date" />
+        </div>
+
+        <div class="field full">
+          <label for="address">Domicilio</label>
+          <input id="address" type="text" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" id="toStep2">Continuar</button>
+      </div>
+    </section>
+
+    <section class="step-card" data-step="2">
+      <div class="step-title">Paso 2 · Vehículo</div>
+      <div class="step-text">Cargá los datos del vehículo con el que vas a trabajar.</div>
+
+      <div class="grid">
+        <div class="field">
+          <label for="vehicle_brand">Marca</label>
+          <input id="vehicle_brand" type="text" />
+        </div>
+
+        <div class="field">
+          <label for="vehicle_model">Modelo</label>
+          <input id="vehicle_model" type="text" />
+        </div>
+
+        <div class="field">
+          <label for="vehicle_year">Año</label>
+          <input id="vehicle_year" type="number" min="1990" max="2100" />
+        </div>
+
+        <div class="field">
+          <label for="vehicle_color">Color</label>
+          <input id="vehicle_color" type="text" />
+        </div>
+
+        <div class="field full">
+          <label for="vehicle_plate">Patente</label>
+          <input id="vehicle_plate" type="text" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" id="backTo1">Volver</button>
+        <button class="btn-primary" id="toStep3">Continuar</button>
+      </div>
+    </section>
+
+    <section class="step-card" data-step="3">
+      <div class="step-title">Paso 3 · Documentación</div>
+      <div class="step-text">
+        Subí fotos nítidas. Fondo claro, sin recortes y sin reflejos.
+      </div>
+
+      <div class="doc-list">
+        <div class="doc-item">
+          <h4>DNI · Frente</h4>
+          <p>Foto del frente del DNI.</p>
+          <input type="file" id="dni_front" accept="image/*,.pdf" />
+          <div class="doc-status" id="status_dni_front"></div>
+        </div>
+
+        <div class="doc-item">
+          <h4>DNI · Dorso</h4>
+          <p>Foto del reverso del DNI.</p>
+          <input type="file" id="dni_back" accept="image/*,.pdf" />
+          <div class="doc-status" id="status_dni_back"></div>
+        </div>
+
+        <div class="doc-item">
+          <h4>Selfie</h4>
+          <p>Foto tipo selfie del rostro del chofer.</p>
+          <input type="file" id="selfie" accept="image/*" />
+          <div class="doc-status" id="status_selfie"></div>
+        </div>
+
+        <div class="doc-item">
+          <h4>Licencia · Frente</h4>
+          <p>Foto del frente del carnet/licencia.</p>
+          <input type="file" id="license_front" accept="image/*,.pdf" />
+          <div class="doc-status" id="status_license_front"></div>
+        </div>
+
+        <div class="doc-item">
+          <h4>Licencia · Dorso</h4>
+          <p>Foto del dorso del carnet/licencia.</p>
+          <input type="file" id="license_back" accept="image/*,.pdf" />
+          <div class="doc-status" id="status_license_back"></div>
+        </div>
+
+        <div class="doc-item">
+          <h4>Tarjeta verde · Frente</h4>
+          <p>Foto del frente de la tarjeta verde.</p>
+          <input type="file" id="vehicle_card_front" accept="image/*,.pdf" />
+          <div class="doc-status" id="status_vehicle_card_front"></div>
+        </div>
+
+        <div class="doc-item">
+          <h4>Tarjeta verde · Dorso</h4>
+          <p>Foto del dorso de la tarjeta verde.</p>
+          <input type="file" id="vehicle_card_back" accept="image/*,.pdf" />
+          <div class="doc-status" id="status_vehicle_card_back"></div>
+        </div>
+
+        <div class="doc-item">
+          <h4>Foto del vehículo</h4>
+          <p>Opcional, pero recomendable para control interno.</p>
+          <input type="file" id="vehicle_photo" accept="image/*" />
+          <div class="doc-status" id="status_vehicle_photo"></div>
+        </div>
+
+        <div class="doc-item">
+          <h4>Certificado de antecedentes / buena conducta</h4>
+          <p>Documento obligatorio para revisión.</p>
+          <input type="file" id="background_check" accept="image/*,.pdf" />
+          <div class="doc-status" id="status_background_check"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" id="backTo2">Volver</button>
+        <button class="btn-primary" id="submitAllBtn">Enviar documentación</button>
+      </div>
+
+      <div class="status-box" id="globalStatus"></div>
+    </section>
   </div>
 
-<script>
-  function ingresarPanel() {
-    window.location.href = 'login-chofer.html';
-  }
+  <script type="module">
+    import supabaseService from "./js/supabase-client.js";
 
-  function contactar() {
-    window.open(
-      'https://wa.me/5493517014863?text=Hola!%20Quiero%20sumarme%20como%20chofer%20MIMI',
-      '_blank'
-    );
-  }
-</script>
+    const REQUIRED_DOCS = [
+      "dni_front",
+      "dni_back",
+      "selfie",
+      "license_front",
+      "license_back",
+      "vehicle_card_front",
+      "vehicle_card_back",
+      "background_check"
+    ];
+
+    const OPTIONAL_DOCS = ["vehicle_photo"];
+    const ALL_DOCS = [...REQUIRED_DOCS, ...OPTIONAL_DOCS];
+
+    let currentStep = 1;
+    let currentUser = null;
+
+    const progressBar = document.getElementById("progressBar");
+    const globalStatus = document.getElementById("globalStatus");
+
+    function setGlobalStatus(msg, type = "ok") {
+      globalStatus.textContent = msg;
+      globalStatus.classList.add("visible");
+      globalStatus.style.color = type === "error" ? "#E11900" : "#22c55e";
+    }
+
+    function showStep(step) {
+      currentStep = step;
+      document.querySelectorAll(".step-card").forEach((el) => {
+        el.classList.toggle("active", Number(el.dataset.step) === step);
+      });
+
+      const pct = step === 1 ? 33 : step === 2 ? 66 : 100;
+      progressBar.style.width = pct + "%";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function getField(id) {
+      return document.getElementById(id)?.value?.trim() || "";
+    }
+
+    function validateStep1() {
+      if (!getField("full_name")) return "Ingresá nombre completo";
+      if (!getField("phone")) return "Ingresá teléfono";
+      if (!getField("dni_number")) return "Ingresá DNI";
+      return null;
+    }
+
+    function validateStep2() {
+      if (!getField("vehicle_brand")) return "Ingresá marca del vehículo";
+      if (!getField("vehicle_model")) return "Ingresá modelo del vehículo";
+      if (!getField("vehicle_year")) return "Ingresá año del vehículo";
+      if (!getField("vehicle_color")) return "Ingresá color del vehículo";
+      if (!getField("vehicle_plate")) return "Ingresá patente del vehículo";
+      return null;
+    }
+
+    function fileExt(file) {
+      const name = String(file?.name || "");
+      const idx = name.lastIndexOf(".");
+      return idx >= 0 ? name.slice(idx + 1).toLowerCase() : "bin";
+    }
+
+    async function getUserOrRedirect() {
+      await supabaseService.init();
+      const { data, error } = await supabaseService.client.auth.getUser();
+      if (error || !data?.user) {
+        window.location.replace("login.html");
+        return null;
+      }
+      return data.user;
+    }
+
+    async function ensureProfileExists(user) {
+      const { error } = await supabaseService.client.rpc("ensure_driver_profile_exists", {
+        p_user_id: user.id
+      });
+
+      if (error) throw error;
+    }
+
+    async function loadProfile() {
+      const { data, error } = await supabaseService.client
+        .from("driver_profiles")
+        .select("*")
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        document.getElementById("full_name").value = data.full_name || "";
+        document.getElementById("phone").value = data.phone || "";
+        document.getElementById("dni_number").value = data.dni_number || "";
+        document.getElementById("birth_date").value = data.birth_date || "";
+        document.getElementById("address").value = data.address || "";
+
+        document.getElementById("vehicle_brand").value = data.vehicle_brand || "";
+        document.getElementById("vehicle_model").value = data.vehicle_model || "";
+        document.getElementById("vehicle_year").value = data.vehicle_year || "";
+        document.getElementById("vehicle_color").value = data.vehicle_color || "";
+        document.getElementById("vehicle_plate").value = data.vehicle_plate || "";
+      }
+    }
+
+    async function saveProfilePartial(payload) {
+      const { error } = await supabaseService.client
+        .from("driver_profiles")
+        .upsert({
+          user_id: currentUser.id,
+          email: currentUser.email || null,
+          ...payload
+        });
+
+      if (error) throw error;
+    }
+
+    async function uploadDocument(docType, file) {
+      const statusEl = document.getElementById("status_" + docType);
+
+      try {
+        if (!file) {
+          if (REQUIRED_DOCS.includes(docType)) {
+            throw new Error("Falta archivo obligatorio");
+          }
+          statusEl.textContent = "Opcional sin subir";
+          statusEl.className = "doc-status";
+          return;
+        }
+
+        statusEl.textContent = "Subiendo...";
+        statusEl.className = "doc-status";
+
+        const ext = fileExt(file);
+        const safePath = `${currentUser.id}/${docType}.${ext}`;
+
+        const { error: uploadError } = await supabaseService.client.storage
+          .from("driver-documents")
+          .upload(safePath, file, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: file.type || "application/octet-stream"
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { error: upsertError } = await supabaseService.client
+          .from("driver_documents")
+          .upsert({
+            user_id: currentUser.id,
+            doc_type: docType,
+            storage_path: safePath,
+            mime_type: file.type || null,
+            file_size: file.size || null,
+            status: "PENDIENTE",
+            rejection_reason: null
+          }, {
+            onConflict: "user_id,doc_type"
+          });
+
+        if (upsertError) throw upsertError;
+
+        statusEl.textContent = "✅ Archivo cargado";
+        statusEl.className = "doc-status ok";
+      } catch (err) {
+        console.error("[uploadDocument] " + docType, err);
+        statusEl.textContent = "❌ Error al subir";
+        statusEl.className = "doc-status error";
+        throw err;
+      }
+    }
+
+    async function submitAll() {
+      try {
+        setGlobalStatus("Guardando información...", "ok");
+
+        const step1Error = validateStep1();
+        if (step1Error) throw new Error(step1Error);
+
+        const step2Error = validateStep2();
+        if (step2Error) throw new Error(step2Error);
+
+        await saveProfilePartial({
+          full_name: getField("full_name"),
+          phone: getField("phone"),
+          dni_number: getField("dni_number"),
+          birth_date: getField("birth_date") || null,
+          address: getField("address"),
+          vehicle_brand: getField("vehicle_brand"),
+          vehicle_model: getField("vehicle_model"),
+          vehicle_year: Number(getField("vehicle_year")) || null,
+          vehicle_color: getField("vehicle_color"),
+          vehicle_plate: getField("vehicle_plate"),
+          profile_completed: true,
+          onboarding_status: "PENDIENTE_DOCUMENTOS"
+        });
+
+        for (const docType of ALL_DOCS) {
+          const file = document.getElementById(docType)?.files?.[0] || null;
+          await uploadDocument(docType, file);
+        }
+
+        const { data: docs, error: docsErr } = await supabaseService.client
+          .from("driver_documents")
+          .select("doc_type")
+          .eq("user_id", currentUser.id);
+
+        if (docsErr) throw docsErr;
+
+        const present = new Set((docs || []).map((d) => d.doc_type));
+        const missingRequired = REQUIRED_DOCS.filter((doc) => !present.has(doc));
+
+        if (missingRequired.length > 0) {
+          throw new Error("Faltan documentos obligatorios: " + missingRequired.join(", "));
+        }
+
+        await saveProfilePartial({
+          documents_completed: true,
+          onboarding_status: "PENDIENTE_REVISION",
+          documents_approved: false
+        });
+
+        setGlobalStatus("✅ Documentación enviada correctamente. Tu cuenta quedó en revisión.", "ok");
+
+        setTimeout(() => {
+          window.location.replace("driver-review-pending.html");
+        }, 1200);
+      } catch (err) {
+        console.error("[submitAll] error:", err);
+        setGlobalStatus("❌ " + (err.message || "No pudimos enviar la documentación"), "error");
+      }
+    }
+
+    document.getElementById("toStep2").addEventListener("click", async () => {
+      const err = validateStep1();
+      if (err) {
+        setGlobalStatus("❌ " + err, "error");
+        return;
+      }
+
+      try {
+        await saveProfilePartial({
+          full_name: getField("full_name"),
+          phone: getField("phone"),
+          dni_number: getField("dni_number"),
+          birth_date: getField("birth_date") || null,
+          address: getField("address"),
+          profile_completed: false
+        });
+        globalStatus.classList.remove("visible");
+        showStep(2);
+      } catch (e) {
+        setGlobalStatus("❌ No pudimos guardar tus datos personales", "error");
+      }
+    });
+
+    document.getElementById("toStep3").addEventListener("click", async () => {
+      const err = validateStep2();
+      if (err) {
+        setGlobalStatus("❌ " + err, "error");
+        return;
+      }
+
+      try {
+        await saveProfilePartial({
+          vehicle_brand: getField("vehicle_brand"),
+          vehicle_model: getField("vehicle_model"),
+          vehicle_year: Number(getField("vehicle_year")) || null,
+          vehicle_color: getField("vehicle_color"),
+          vehicle_plate: getField("vehicle_plate")
+        });
+        globalStatus.classList.remove("visible");
+        showStep(3);
+      } catch (e) {
+        setGlobalStatus("❌ No pudimos guardar los datos del vehículo", "error");
+      }
+    });
+
+    document.getElementById("backTo1").addEventListener("click", () => showStep(1));
+    document.getElementById("backTo2").addEventListener("click", () => showStep(2));
+    document.getElementById("submitAllBtn").addEventListener("click", submitAll);
+
+    (async function init() {
+      try {
+        currentUser = await getUserOrRedirect();
+        if (!currentUser) return;
+
+        await ensureProfileExists(currentUser);
+        await loadProfile();
+
+        const { data: profile } = await supabaseService.client
+          .from("driver_profiles")
+          .select("documents_approved, onboarding_status")
+          .eq("user_id", currentUser.id)
+          .maybeSingle();
+
+        if (profile?.documents_approved && profile?.onboarding_status === "APROBADO") {
+          window.location.replace("chofer-panel.html");
+          return;
+        }
+      } catch (err) {
+        console.error("[onboarding init] error:", err);
+        setGlobalStatus("❌ No pudimos cargar tu onboarding", "error");
+      }
+    })();
+  </script>
 </body>
 </html>
-
-
