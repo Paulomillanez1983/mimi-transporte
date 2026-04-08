@@ -282,6 +282,50 @@ window.addEventListener("driverFlowStateChanged", (e) => {
     document.addEventListener('touchmove', this._onTouchMove, { passive: false });
     document.addEventListener('touchend', this._onTouchEnd, { passive: true });
   }
+
+  _onTouchStart(e) {
+    const touch = e.touches?.[0];
+    if (!touch) return;
+
+    this.touchStartY = touch.clientY;
+    this.touchCurrentY = touch.clientY;
+
+    const sheet = this.elements['bottom-sheet'];
+    this.sheetHeight = sheet ? sheet.offsetHeight : 0;
+  }
+
+  _onTouchMove(e) {
+    if (!this.touchStartY) return;
+
+    const touch = e.touches?.[0];
+    if (!touch) return;
+
+    this.touchCurrentY = touch.clientY;
+    const deltaY = this.touchCurrentY - this.touchStartY;
+
+    // Solo bloquea el scroll si realmente hay gesto vertical
+    if (Math.abs(deltaY) > 8) {
+      e.preventDefault();
+    }
+  }
+
+  _onTouchEnd() {
+    if (!this.touchStartY) return;
+
+    const deltaY = this.touchCurrentY - this.touchStartY;
+    const threshold = 60;
+
+    if (deltaY < -threshold) {
+      this._expandBottomSheet();
+    } else if (deltaY > threshold) {
+      this._collapseBottomSheet();
+    }
+
+    this.touchStartY = 0;
+    this.touchCurrentY = 0;
+    this.sheetHeight = 0;
+  }
+
   _toggleBottomSheet() {
     if (this.state.bottomSheetExpanded) {
       this._collapseBottomSheet();
@@ -289,7 +333,6 @@ window.addEventListener("driverFlowStateChanged", (e) => {
       this._expandBottomSheet();
     }
   }
-
   _expandBottomSheet() {
     const sheet = this.elements['bottom-sheet'];
     if (!sheet) return;
