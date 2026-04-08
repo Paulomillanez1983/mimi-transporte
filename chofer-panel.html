@@ -71,7 +71,7 @@
           </div>
         </div>
 
-        <button class="icon-btn" id="menu-btn" aria-label="Menú">
+        <button class="icon-btn" id="menu-button" aria-label="Menú">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
@@ -276,5 +276,22 @@
   }
 </script>
   <script type="module" src="js/driver-app.js"></script>
+  <!-- MENU BACKDROP -->
+<div id="menu-backdrop"></div>
+
+<!-- SIDE MENU -->
+<aside id="side-menu">
+  <div class="menu-header">
+    <div class="menu-avatar" id="menu-avatar"></div>
+    <div class="menu-name" id="menu-name">Conductor</div>
+  </div>
+
+  <div class="menu-items">
+    <button>💰 Ganancias</button>
+    <button>📊 Historial</button>
+    <button>⚙️ Configuración</button>
+    <button id="menu-logout">🚪 Cerrar sesión</button>
+  </div>
+</aside>
 </body>
 </html>
