@@ -1669,3 +1669,46 @@ body {
     right: 12px;
   }
 }
+#menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s;
+  z-index: 200;
+}
+
+#menu-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#side-menu {
+  position: fixed;
+  top: 0;
+  left: -260px;
+  width: 260px;
+  height: 100%;
+  background: #fff;
+  z-index: 210;
+  transition: 0.3s;
+  padding: 16px;
+}
+
+#side-menu.active {
+  left: 0;
+}
+
+.menu-header {
+  margin-bottom: 20px;
+}
+
+.menu-items button {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: none;
+  text-align: left;
+}
