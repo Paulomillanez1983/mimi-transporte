@@ -501,6 +501,28 @@
     const splashEl = document.getElementById("appSplash");
     const loginShell = document.getElementById("loginShell");
     const loginCard = document.querySelector(".card");
+    function setSplashMessage(message = "Cargando...") {
+  const brand = document.querySelector(".app-splash__brand");
+  if (brand) brand.textContent = message;
+}
+
+function isOAuthReturn() {
+  const url = new URL(window.location.href);
+  const hash = window.location.hash || "";
+
+  return (
+    url.searchParams.has("code") ||
+    url.searchParams.has("access_token") ||
+    hash.includes("access_token") ||
+    hash.includes("refresh_token") ||
+    sessionStorage.getItem("mimi_driver_oauth_pending") === "1"
+  );
+}
+
+function revealLoginUI() {
+  setSplashMessage("MIMI DRIVER");
+  hideSplashAndRevealUI();
+}
 
     function showError(msg) {
       errorEl.textContent = msg;
@@ -643,41 +665,44 @@
       await smoothNavigate("driver-onboarding.html");
     }
 
-    async function checkSession() {
-      try {
-        await supabaseService.init();
+async function checkSession() {
+  try {
+    await supabaseService.init();
 
-        let { data: sessionData, error: sessionError } =
-          await supabaseService.client.auth.getSession();
+    const returningFromOAuth = isOAuthReturn();
 
-        if (sessionError) {
-          console.warn("[checkSession] getSession error:", sessionError);
-        }
-
-        let session = sessionData?.session || null;
-
-        if (!session) {
-          await new Promise((r) => setTimeout(r, 800));
-          const retry = await supabaseService.client.auth.getSession();
-          session = retry?.data?.session || null;
-        }
-
-        if (!session?.access_token) return;
-
-        const { data: userData, error: userError } =
-          await supabaseService.client.auth.getUser();
-
-        if (userError || !userData?.user) {
-          console.warn("[checkSession] getUser error:", userError);
-          return;
-        }
-
-        await redirectAfterAuth();
-      } catch (err) {
-        console.error("[checkSession] fatal:", err);
-      }
+    if (returningFromOAuth) {
+      setSplashMessage("Iniciando sesión...");
     }
 
+    let { data: sessionData, error: sessionError } =
+      await supabaseService.client.auth.getSession();
+
+    if (sessionError) {
+      console.warn("[checkSession] getSession error:", sessionError);
+    }
+
+    let session = sessionData?.session || null;
+
+    if (!session) {
+      await new Promise((r) => setTimeout(r, returningFromOAuth ? 1400 : 500));
+      const retry = await supabaseService.client.auth.getSession();
+      session = retry?.data?.session || null;
+    }
+
+    if (session?.access_token) {
+      sessionStorage.removeItem("mimi_driver_oauth_pending");
+      setSplashMessage("Preparando tu cuenta...");
+      await redirectAfterAuth();
+      return;
+    }
+
+    revealLoginUI();
+  } catch (err) {
+    console.error("[checkSession] fatal:", err);
+    revealLoginUI();
+  }
+}
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       clearMessages();
@@ -714,34 +739,39 @@
       }
     });
 
-    googleLoginBtn.addEventListener("click", async () => {
-      clearMessages();
-      setLoading(true, googleLoginBtn);
+googleLoginBtn.addEventListener("click", async () => {
+  clearMessages();
+  setLoading(true, googleLoginBtn);
 
-      try {
-        await supabaseService.init();
+  try {
+    await supabaseService.init();
 
-        const { error } = await supabaseService.client.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login-chofer.html"
-          }
-        });
+    sessionStorage.setItem("mimi_driver_oauth_pending", "1");
+    setSplashMessage("Abriendo Google...");
+    splashEl?.classList.remove("hidden");
 
-        if (error) {
-          showError("❌ Error Google: " + error.message);
-          return;
-        }
-
-        showOk("Abriendo Google...");
-      } catch (err) {
-        console.error("[googleLogin] error:", err);
-        showError("❌ No pudimos abrir Google");
-      } finally {
-        setLoading(false);
+    const { error } = await supabaseService.client.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login-chofer.html"
       }
     });
 
+    if (error) {
+      sessionStorage.removeItem("mimi_driver_oauth_pending");
+      showError("❌ Error Google: " + error.message);
+      revealLoginUI();
+      return;
+    }
+  } catch (err) {
+    sessionStorage.removeItem("mimi_driver_oauth_pending");
+    console.error("[googleLogin] error:", err);
+    showError("❌ No pudimos abrir Google");
+    revealLoginUI();
+  } finally {
+    setLoading(false);
+  }
+});
     forgotPasswordBtn.addEventListener("click", async () => {
       clearMessages();
       setLoading(true, forgotPasswordBtn);
@@ -776,10 +806,6 @@
 
     showInitialLoadingUI();
 
-window.addEventListener("load", async () => {
-  await new Promise((r) => setTimeout(r, 1100));
-  hideSplashAndRevealUI();
-});
     checkSession();
   </script>
 </body>
