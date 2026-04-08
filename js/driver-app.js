@@ -326,6 +326,79 @@ class DriverApp {
     }
   }
   // =========================================================
+  // UX PRO · HAPTICS + AUDIO FEEDBACK
+  // =========================================================
+  _vibrate(pattern = [90, 50, 140]) {
+    try {
+      if ('vibrate' in navigator) {
+        navigator.vibrate(pattern);
+      }
+    } catch (err) {
+      console.warn('[DriverApp] vibrate error:', err);
+    }
+  }
+
+  _playAcceptTone() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'sine';
+
+      osc1.frequency.setValueAtTime(740, now);
+      osc2.frequency.setValueAtTime(988, now + 0.08);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.075, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now + 0.08);
+
+      osc1.stop(now + 0.34);
+      osc2.stop(now + 0.42);
+
+      setTimeout(() => {
+        try {
+          ctx.close?.();
+        } catch (_) {}
+      }, 700);
+    } catch (err) {
+      console.warn('[DriverApp] accept tone error:', err);
+    }
+  }
+
+  _celebrateAcceptFeedback() {
+    this._vibrate([90, 50, 140]);
+
+    // usa soundManager si ya tiene algo cargado; si no, cae al tono WebAudio
+    try {
+      if (typeof soundManager?.play === 'function') {
+        soundManager.play('trip-accepted');
+      } else if (typeof soundManager?.playSuccess === 'function') {
+        soundManager.playSuccess();
+      } else {
+        this._playAcceptTone();
+      }
+    } catch (err) {
+      console.warn('[DriverApp] soundManager feedback error:', err);
+      this._playAcceptTone();
+    }
+  }
+  
+  // =========================================================
   // RESOLVER DRIVER ID
   // =========================================================
   async _resolveDriverId() {
@@ -360,13 +433,14 @@ class DriverApp {
       console.log('[DriverApp] 📨 newPendingTrip', trip.id);
       this._setFlowState('RECEIVING_OFFER');
 
+      this._vibrate([120, 60, 120]);
+
       uiController.showIncomingTrip(
         trip,
         () => this._acceptOffer(trip.offerId),
         () => this._rejectOffer(trip.offerId)
       );
     });
-
     const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
       if (this._currentTripId === trip.id) return;
 
@@ -381,13 +455,13 @@ class DriverApp {
 
       console.log('[DriverApp] tripAccepted', trip.id);
 
+      this._celebrateAcceptFeedback();
       uiController.hideIncomingModal?.();
       uiController.showToast('¡Viaje aceptado!', 'success');
 
       await this._showRouteOnMap(trip);
       uiController.showNavigationState(trip);
     });
-
     const unsubStarted = tripManager.on('tripStarted', async (trip) => {
       console.log('[DriverApp] tripStarted', trip.id);
       this._setFlowState('TRIP_STARTED');
@@ -565,6 +639,7 @@ class DriverApp {
         return result;
       }
 
+      this._celebrateAcceptFeedback();
       await tripManager.refresh();
       return result;
     } catch (err) {
@@ -575,7 +650,6 @@ class DriverApp {
       uiController.setGlobalLoading?.(false);
     }
   }
-
   async _rejectOffer(offerId) {
     if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
 
@@ -631,6 +705,7 @@ class DriverApp {
         return result;
       }
 
+      this._celebrateAcceptFeedback();
       await tripManager.refresh();
       return result;
     } catch (err) {
@@ -643,7 +718,6 @@ class DriverApp {
       uiController.setGlobalLoading?.(false);
     }
   }
-
   async _rejectTrip(tripId) {
     if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
 
