@@ -1,106 +1,223 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#000000">
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+  />
+  <meta name="theme-color" content="#000000" />
   <title>MIMI Driver - Login</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
 
-  <!-- LIB SUPABASE LOCAL -->
   <script src="./libs/supabase-js.js"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #000;
+      --card: #111214;
+      --muted: rgba(255,255,255,0.62);
+      --line: rgba(255,255,255,0.1);
+      --primary: #276EF1;
+      --primary-hover: #448AFF;
+      --danger: #E11900;
+      --success: #22c55e;
+      --radius: 16px;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
-      background: #000;
+      background: var(--bg);
       color: #fff;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
       padding: 20px;
     }
-    .logo { font-size: 48px; margin-bottom: 8px; }
-    h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; text-align: center; }
-    .subtitle { color: rgba(255,255,255,0.6); margin-bottom: 30px; text-align: center; }
-    .login-form { width: 100%; max-width: 320px; }
-    .form-group { margin-bottom: 16px; }
+
+    .shell {
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+
+    .logo {
+      font-size: 52px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 24px;
+      line-height: 1.45;
+    }
+
+    .login-form {
+      width: 100%;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
     label {
       display: block;
-      font-size: 13px;
-      font-weight: 600;
-      margin-bottom: 6px;
-      color: rgba(255,255,255,0.8);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: rgba(255,255,255,0.82);
       text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
+
     input {
       width: 100%;
-      padding: 16px;
+      padding: 15px 16px;
       background: #1C1C1E;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      color: white;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      color: #fff;
       font-size: 16px;
     }
-    input:focus { outline: none; border-color: #276EF1; }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
     button {
       width: 100%;
-      padding: 18px;
-      background: #276EF1;
-      color: white;
+      padding: 16px;
       border: none;
-      border-radius: 12px;
+      border-radius: var(--radius);
       font-size: 16px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease, background .12s ease;
+    }
+
+    button:active {
+      transform: scale(0.99);
+    }
+
+    .primary-btn {
+      background: var(--primary);
+      color: #fff;
       margin-top: 8px;
     }
-    button:hover { background: #448AFF; }
-    .google-btn { margin-top: 12px; background: #fff; color: #000; font-weight: 800; }
-    .error { color: #E11900; font-size: 14px; margin-top: 12px; text-align: center; display: none; }
-    .error.visible { display: block; }
-    .ok { color: #22c55e; font-size: 14px; margin-top: 12px; text-align: center; display: none; }
-    .ok.visible { display: block; }
+
+    .primary-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .google-btn {
+      margin-top: 12px;
+      background: #fff;
+      color: #000;
+    }
+
+    .link-btn {
+      margin-top: 12px;
+      padding: 10px 0 0;
+      background: transparent;
+      color: #8ab4ff;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .error,
+    .ok {
+      font-size: 14px;
+      margin-top: 14px;
+      text-align: center;
+      display: none;
+      line-height: 1.45;
+    }
+
+    .error.visible { display: block; color: var(--danger); }
+    .ok.visible { display: block; color: var(--success); }
+
+    .footer-note {
+      margin-top: 16px;
+      text-align: center;
+      color: rgba(255,255,255,0.48);
+      font-size: 12px;
+      line-height: 1.45;
+    }
   </style>
 </head>
 
 <body>
-  <div class="logo">🚐</div>
-  <h1>MIMI Driver</h1>
-  <p class="subtitle">Ingresá tus credenciales</p>
+  <div class="shell">
+    <div class="card">
+      <div class="logo">🚐</div>
+      <h1>MIMI Driver</h1>
+      <p class="subtitle">
+        Ingresá con tu cuenta o continuá con Google
+      </p>
 
-  <form class="login-form" id="loginForm">
-    <div class="form-group">
-      <label for="email">Email</label>
-      <input type="email" id="email" required autocomplete="username">
+      <form class="login-form" id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" required autocomplete="username" />
+        </div>
+
+        <div class="form-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" required autocomplete="current-password" />
+        </div>
+
+        <button type="submit" class="primary-btn" id="loginBtn">Ingresar</button>
+
+        <button type="button" class="google-btn" id="googleLoginBtn">
+          Continuar con Google
+        </button>
+
+        <button type="button" class="link-btn" id="forgotPasswordBtn">
+          Olvidé mi contraseña
+        </button>
+
+        <div class="error" id="error"></div>
+        <div class="ok" id="ok"></div>
+      </form>
+
+      <p class="footer-note">
+        Si ingresás por primera vez como chofer, luego del login te pediremos validar identidad y documentación.
+      </p>
     </div>
+  </div>
 
-    <div class="form-group">
-      <label for="password">Contraseña</label>
-      <input type="password" id="password" required autocomplete="current-password">
-    </div>
-
-    <button type="submit">Ingresar</button>
-
-    <button type="button" class="google-btn" id="googleLoginBtn">
-      Continuar con Google
-    </button>
-
-    <div class="error" id="error"></div>
-    <div class="ok" id="ok"></div>
-  </form>
-
-  <!-- LOGIN CONTROLADO (UN SOLO CLIENT) -->
   <script type="module">
     import supabaseService from "./js/supabase-client.js";
     import CONFIG from "./js/config.js";
 
     const errorEl = document.getElementById("error");
     const okEl = document.getElementById("ok");
+    const loginBtn = document.getElementById("loginBtn");
+    const googleLoginBtn = document.getElementById("googleLoginBtn");
+    const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
 
     function showError(msg) {
       errorEl.textContent = msg;
@@ -114,12 +231,108 @@
       errorEl.classList.remove("visible");
     }
 
-    async function checkSession() {
-      await supabaseService.init();
-      const { data } = await supabaseService.client.auth.getSession();
+    function clearMessages() {
+      errorEl.textContent = "";
+      okEl.textContent = "";
+      errorEl.classList.remove("visible");
+      okEl.classList.remove("visible");
+    }
 
-      if (data?.session) {
+    function setLoading(loading, target = null) {
+      const buttons = [loginBtn, googleLoginBtn, forgotPasswordBtn];
+      buttons.forEach((btn) => {
+        if (!btn) return;
+        btn.disabled = loading;
+        btn.style.opacity = loading ? "0.7" : "1";
+        btn.style.pointerEvents = loading ? "none" : "auto";
+      });
+
+      if (target === loginBtn) loginBtn.textContent = loading ? "Ingresando..." : "Ingresar";
+      if (target === googleLoginBtn) googleLoginBtn.textContent = loading ? "Abriendo Google..." : "Continuar con Google";
+      if (target === forgotPasswordBtn) forgotPasswordBtn.textContent = loading ? "Enviando..." : "Olvidé mi contraseña";
+    }
+
+    async function ensureProfile(user) {
+      const { error } = await supabaseService.client.rpc("ensure_driver_profile_exists", {
+        p_user_id: user.id
+      });
+
+      if (error) {
+        console.error("[ensureProfile] error:", error);
+        throw error;
+      }
+    }
+
+    async function fetchOnboardingStatus(userId) {
+      const { data, error } = await supabaseService.client.rpc("get_driver_onboarding_status", {
+        p_user_id: userId
+      });
+
+      if (error) {
+        console.error("[fetchOnboardingStatus] error:", error);
+        throw error;
+      }
+
+      return data || null;
+    }
+
+    async function redirectAfterAuth() {
+      await supabaseService.init();
+
+      const { data: userRes, error: userErr } = await supabaseService.client.auth.getUser();
+      if (userErr || !userRes?.user) {
+        throw userErr || new Error("No hay usuario autenticado");
+      }
+
+      const user = userRes.user;
+
+      await ensureProfile(user);
+      const status = await fetchOnboardingStatus(user.id);
+
+      const onboardingStatus = status?.onboarding_status || "PENDIENTE_DOCUMENTOS";
+      const documentsApproved = status?.documents_approved === true;
+      const profileCompleted = status?.profile_completed === true;
+      const documentsCompleted = status?.documents_completed === true;
+      const hasObservedDocs = status?.has_observed_docs === true;
+
+      if (documentsApproved && onboardingStatus === "APROBADO") {
         window.location.replace("chofer-panel.html");
+        return;
+      }
+
+      if (hasObservedDocs || onboardingStatus === "OBSERVADO") {
+        window.location.replace("driver-documents-observed.html");
+        return;
+      }
+
+      if (onboardingStatus === "PENDIENTE_REVISION") {
+        window.location.replace("driver-review-pending.html");
+        return;
+      }
+
+      if (!profileCompleted || !documentsCompleted) {
+        window.location.replace("driver-onboarding.html");
+        return;
+      }
+
+      window.location.replace("driver-onboarding.html");
+    }
+
+    async function checkSession() {
+      try {
+        await supabaseService.init();
+
+        const { data, error } = await supabaseService.client.auth.getSession();
+        if (error) {
+          console.warn("[checkSession] error:", error);
+          return;
+        }
+
+        if (data?.session) {
+          await redirectAfterAuth();
+        }
+      } catch (err) {
+        console.error("[checkSession] fatal:", err);
       }
     }
 
@@ -127,45 +340,99 @@
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      clearMessages();
+      setLoading(true, loginBtn);
 
-      await supabaseService.init();
+      try {
+        await supabaseService.init();
 
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
 
-      showOk("Ingresando...");
+        if (!email || !password) {
+          showError("Ingresá email y contraseña");
+          return;
+        }
 
-      const { error } = await supabaseService.client.auth.signInWithPassword({
-        email,
-        password
-      });
+        const { error } = await supabaseService.client.auth.signInWithPassword({
+          email,
+          password
+        });
 
-      if (error) {
-        showError("❌ " + error.message);
-        return;
+        if (error) {
+          showError("❌ " + error.message);
+          return;
+        }
+
+        showOk("✅ Login correcto...");
+        await redirectAfterAuth();
+      } catch (err) {
+        console.error("[login] error:", err);
+        showError("❌ No pudimos iniciar sesión");
+      } finally {
+        setLoading(false);
       }
-
-      showOk("✅ Login correcto...");
-      window.location.replace("chofer-panel.html");
     });
 
-    document.getElementById("googleLoginBtn").addEventListener("click", async () => {
-      await supabaseService.init();
+    googleLoginBtn.addEventListener("click", async () => {
+      clearMessages();
+      setLoading(true, googleLoginBtn);
 
-      showOk("Abriendo Google...");
+      try {
+        await supabaseService.init();
 
-      const { error } = await supabaseService.client.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/chofer-panel.html"
+        const { error } = await supabaseService.client.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login.html"
+          }
+        });
+
+        if (error) {
+          showError("❌ Error Google: " + error.message);
+          return;
         }
-      });
 
-      if (error) {
-        showError("❌ Error Google: " + error.message);
+        showOk("Abriendo Google...");
+      } catch (err) {
+        console.error("[googleLogin] error:", err);
+        showError("❌ No pudimos abrir Google");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    forgotPasswordBtn.addEventListener("click", async () => {
+      clearMessages();
+      setLoading(true, forgotPasswordBtn);
+
+      try {
+        await supabaseService.init();
+
+        const email = document.getElementById("email").value.trim();
+
+        if (!email) {
+          showError("Ingresá tu email para recuperar la contraseña");
+          return;
+        }
+
+        const { error } = await supabaseService.client.auth.resetPasswordForEmail(email, {
+          redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/reset-password.html"
+        });
+
+        if (error) {
+          showError("❌ " + error.message);
+          return;
+        }
+
+        showOk("✅ Te enviamos un email para restablecer la contraseña");
+      } catch (err) {
+        console.error("[forgotPassword] error:", err);
+        showError("❌ No pudimos enviar el email de recuperación");
+      } finally {
+        setLoading(false);
       }
     });
   </script>
-
 </body>
 </html>
