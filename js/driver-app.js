@@ -105,16 +105,26 @@ class DriverApp {
       this._authUserId = user.id;
       console.log('[DriverApp] Auth user detectado:', this._authUserId);
 
+      // Perfil visible en UI (nombre + foto Google si existe)
+      uiController.setDriverProfile({
+        name:
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          user?.email ||
+          'Conductor',
+        email: user?.email || '',
+        avatarUrl:
+          user?.user_metadata?.avatar_url ||
+          user?.user_metadata?.picture ||
+          ''
+      });
+
       // Desbloqueo audio/haptics en interacción real
       window.addEventListener('click', this._unlockAudioOnClick, { once: true });
       window.addEventListener('touchstart', this._unlockAudioOnTouch, { once: true });
 
       // 3) Inicializar mapa
       console.log('[DriverApp] Inicializando servicios...');
-      const results = await Promise.allSettled([
-        mapService.init('map-container')
-      ]);
-
       console.log('[DriverApp] Resultados inicialización:', {
         mapa: results[0]?.status
       });
