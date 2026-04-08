@@ -920,6 +920,77 @@
   animation: brandLogoIntro .7s cubic-bezier(.22,1,.36,1) both,
              brandLogoFloat 2.8s ease-in-out infinite .7s;
 }
+    .docs-progress-box {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.docs-progress-box__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.docs-progress-box__top strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.docs-progress-box__top span {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.82);
+}
+
+.docs-progress-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.docs-progress-bar__fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #22c55e, #4e89ff);
+  transition: width .25s ease;
+}
+
+.docs-progress-help {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.45;
+}
+
+.doc-item.doc-complete {
+  border-color: rgba(34,197,94,0.28);
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.12) inset;
+}
+
+.doc-item.doc-warning {
+  border-color: rgba(245,158,11,0.28);
+}
+
+.doc-item.doc-error {
+  border-color: rgba(225,25,0,0.28);
+}
+
+.btn-primary[disabled],
+.sticky-btn[disabled] {
+  opacity: 0.55;
+  pointer-events: none;
+  filter: grayscale(0.1);
+}
   </style>
 </head>
 <body>
@@ -1081,6 +1152,20 @@
     </section>
 
     <section class="step-card" data-step="3">
+      <div class="docs-progress-box">
+  <div class="docs-progress-box__top">
+    <strong id="docsProgressTitle">Documentación obligatoria</strong>
+    <span id="docsProgressCount">0/7</span>
+  </div>
+
+  <div class="docs-progress-bar">
+    <div class="docs-progress-bar__fill" id="docsProgressBar"></div>
+  </div>
+
+  <div class="docs-progress-help" id="docsProgressHelp">
+    Cargá los 7 documentos obligatorios para completar este paso.
+  </div>
+</div>
       <div class="step-head">
         <div>
           <div class="step-title">Paso 3 · Documentación</div>
@@ -1378,8 +1463,15 @@
   </div>
 
   <script type="module">
-    import supabaseService from "./js/supabase-client.js";
-
+import supabaseService from "./js/supabase-client.js";
+import {
+  getDocumentsProgress,
+  getOverallOnboardingState
+} from "./js/onboarding-progress.js";
+import {
+  validateSelectedDocument
+} from "./js/onboarding-doc-validator.js";
+    
     const REQUIRED_DOCS = [
       "dni_front",
       "dni_back",
@@ -1432,6 +1524,13 @@
     const stickyTitle = document.getElementById("stickyTitle");
     const stickyText = document.getElementById("stickyText");
     const exitOnboardingBtn = document.getElementById("exitOnboardingBtn");
+    const docsProgressTitle = document.getElementById("docsProgressTitle");
+    const docsProgressCount = document.getElementById("docsProgressCount");
+    const docsProgressBar = document.getElementById("docsProgressBar");
+    const docsProgressHelp = document.getElementById("docsProgressHelp");
+    const submitAllBtn = document.getElementById("submitAllBtn");
+
+    
     function setGlobalStatus(msg, type = "success") {
       globalStatus.textContent = msg;
       globalStatus.classList.add("visible");
@@ -1447,6 +1546,85 @@
     function getField(id) {
       return document.getElementById(id)?.value?.trim() || "";
     }
+    function getDocCard(docType) {
+  return document
+    .getElementById(`status_${docType}`)
+    ?.closest(".doc-item") || null;
+}
+
+function setDocCardState(docType, state = "default") {
+  const card = getDocCard(docType);
+  if (!card) return;
+
+  card.classList.remove("doc-complete", "doc-warning", "doc-error");
+
+  if (state === "complete") card.classList.add("doc-complete");
+  if (state === "warning") card.classList.add("doc-warning");
+  if (state === "error") card.classList.add("doc-error");
+}
+
+function updateDocumentsProgressUI() {
+  const progress = getDocumentsProgress(REQUIRED_DOCS, getChosenFile);
+
+  if (docsProgressCount) {
+    docsProgressCount.textContent = `${progress.completed}/${progress.total}`;
+  }
+
+  if (docsProgressBar) {
+    docsProgressBar.style.width = `${progress.pct}%`;
+  }
+
+  if (docsProgressHelp) {
+    docsProgressHelp.textContent = progress.isComplete
+      ? "✅ Ya completaste todos los documentos obligatorios."
+      : `Faltan ${progress.total - progress.completed} documentos obligatorios para completar este paso.`;
+  }
+
+  if (submitAllBtn) {
+    submitAllBtn.disabled = !progress.isComplete;
+  }
+
+  if (stickyPrimaryBtn && currentStep === 3) {
+    stickyPrimaryBtn.disabled = !progress.isComplete;
+    stickyPrimaryBtn.textContent = progress.isComplete
+      ? "Enviar documentación"
+      : `Faltan ${progress.total - progress.completed} docs`;
+  }
+}
+
+function updateOverallStepperState() {
+  const overall = getOverallOnboardingState({
+    getField,
+    requiredDocs: REQUIRED_DOCS,
+    getChosenFile
+  });
+
+  const step1El = document.getElementById("uberStep1");
+  const step2El = document.getElementById("uberStep2");
+  const step3El = document.getElementById("uberStep3");
+  const line1 = document.getElementById("uberLine1");
+  const line2 = document.getElementById("uberLine2");
+
+  if (step1El) {
+    step1El.classList.toggle("done", overall.profileComplete);
+  }
+
+  if (step2El) {
+    step2El.classList.toggle("done", overall.vehicleComplete);
+  }
+
+  if (step3El) {
+    step3El.classList.toggle("done", overall.docsProgress.isComplete);
+  }
+
+  if (line1) {
+    line1.classList.toggle("done", overall.profileComplete);
+  }
+
+  if (line2) {
+    line2.classList.toggle("done", overall.vehicleComplete);
+  }
+}
 
 function updateDots(step) {
   [1, 2, 3].forEach((n) => {
@@ -1513,9 +1691,9 @@ const stepLabels = {
   3: "Paso 3 de 3 · Documentación"
 };
 progressLabel.textContent = stepLabels[step] || `Paso ${step} de 3`;
-  updateDots(step);
-  updateSticky(step);
-
+updateDocumentsProgressUI();
+updateOverallStepperState();
+  
   requestAnimationFrame(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
@@ -1584,22 +1762,41 @@ progressLabel.textContent = stepLabels[step] || `Paso ${step} de 3`;
       }
     }
 
-    function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionado") {
-      if (!file) return;
+async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionado") {
+  if (!file) return;
 
-      selectedFiles.set(docType, file);
-      renderPreview(docType, file);
+  selectedFiles.set(docType, file);
+  renderPreview(docType, file);
 
-      const isImage = String(file.type || "").startsWith("image/");
-      const name = file.name || DOC_META[docType]?.label || "archivo";
+  const name = file.name || DOC_META[docType]?.label || "archivo";
 
-      setDocStatus(
-        docType,
-        `✅ ${sourceLabel}: ${name}${isImage ? "" : " (listo para subir)"}`,
-        "ok"
-      );
+  setDocStatus(docType, `Analizando ${name}...`, "pending");
+  setDocCardState(docType);
+
+  try {
+    const validation = await validateSelectedDocument(docType, file);
+
+    if (validation.ok) {
+      if (validation.kind === "document-warning") {
+        setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "warning");
+        setDocCardState(docType, "warning");
+      } else {
+        setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "ok");
+        setDocCardState(docType, "complete");
+      }
+    } else {
+      setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "error");
+      setDocCardState(docType, "error");
     }
+  } catch (err) {
+    console.error("[setSelectedFile validation]", docType, err);
+    setDocStatus(docType, `${sourceLabel}: ${name} · No pudimos validar la imagen`, "warning");
+    setDocCardState(docType, "warning");
+  }
 
+  updateDocumentsProgressUI();
+  updateOverallStepperState();
+}
     function initFileInputs() {
       Object.entries(DOC_INPUT_ALIASES).forEach(([docType, inputIds]) => {
         inputIds.forEach((inputId) => {
@@ -1611,7 +1808,7 @@ progressLabel.textContent = stepLabels[step] || `Paso ${step} de 3`;
             if (!file) return;
 
             const sourceLabel = inputId.endsWith("_camera") ? "Foto capturada" : "Archivo seleccionado";
-            setSelectedFile(docType, file, sourceLabel);
+            void setSelectedFile(docType, file, sourceLabel);
 
             inputIds.forEach((otherId) => {
               if (otherId === inputId) return;
@@ -1959,6 +2156,22 @@ stickyPrimaryBtn.addEventListener("click", async () => {
   }
 });    
   exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
+    [
+  "full_name",
+  "phone",
+  "dni_number",
+  "birth_date",
+  "address",
+  "vehicle_brand",
+  "vehicle_model",
+  "vehicle_year",
+  "vehicle_color",
+  "vehicle_plate"
+].forEach((id) => {
+  document.getElementById(id)?.addEventListener("input", () => {
+    updateOverallStepperState();
+  });
+});
     (async function init() {
       try {
         initFileInputs();
@@ -1982,6 +2195,8 @@ stickyPrimaryBtn.addEventListener("click", async () => {
         }
 
         setDocStatus("background_check", "⏳ Podés subirlo ahora o dentro de 15 días hábiles", "warning");
+        updateDocumentsProgressUI();
+        updateOverallStepperState();
       } catch (err) {
         console.error("[onboarding init] error:", err);
         setGlobalStatus("❌ No pudimos cargar tu onboarding", "error");
