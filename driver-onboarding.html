@@ -1775,7 +1775,27 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
 
   try {
     const validation = await validateSelectedDocument(docType, file);
+try {
+  const serverValidation = await fetch(
+    "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: supabaseService.client.supabaseKey
+      },
+      body: JSON.stringify({
+        doc_type: docType,
+        mime_type: file.type,
+        file_size: file.size
+      })
+    }
+  ).then((r) => r.json());
 
+  console.log("[server validation]", serverValidation);
+} catch (e) {
+  console.warn("[server validation error]", e);
+}
     if (validation.ok) {
       if (validation.kind === "document-warning") {
         setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "warning");
