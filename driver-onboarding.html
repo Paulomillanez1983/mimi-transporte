@@ -1712,6 +1712,7 @@ function updateWizardPrimaryState() {
   }
 }
 
+
 async function validateWithRetry(docType, file, maxAttempts = 2) {
   let lastError = null;
 
@@ -1724,26 +1725,45 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
           data: { session }
         } = await supabaseService.client.auth.getSession();
 
-        await fetch(
-          "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: supabaseService.client.supabaseKey,
-              Authorization: `Bearer ${session?.access_token || supabaseService.client.supabaseKey}`
-            },
-            body: JSON.stringify({
-              doc_type: docType,
-              mime_type: file.type,
-              file_size: file.size
-            })
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+        try {
+          const response = await fetch(
+            "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                apikey: supabaseService.client.supabaseKey,
+                Authorization: `Bearer ${session?.access_token || supabaseService.client.supabaseKey}`
+              },
+              body: JSON.stringify({
+                doc_type: docType,
+                mime_type: file.type,
+                file_size: file.size
+              }),
+              signal: controller.signal
+            }
+          );
+
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`Remote validation HTTP ${response.status}`);
           }
-        ).then((r) => r.json());
-      } catch (remoteErr) {
-        console.warn(`[server validation retry ${attempt}]`, remoteErr);
+
+          const remoteJson = await response.json();
+          console.log("[remote validation ok]", remoteJson);
+        } catch (remoteErr) {
+          clearTimeout(timeoutId);
+          console.warn(`[server validation retry ${attempt}]`, remoteErr);
+        }
+      } catch (sessionErr) {
+        console.warn(`[server session retry ${attempt}]`, sessionErr);
       }
 
+      // ✅ importante: devolvemos la validación local aunque la remota falle o tarde
       return validation;
     } catch (err) {
       lastError = err;
@@ -1754,7 +1774,8 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
   }
 
   throw lastError || new Error("No pudimos validar el documento");
-}
+}    
+    
 function renderDocWizardPreview(docType) {
   const file = getChosenFile(docType);
 
