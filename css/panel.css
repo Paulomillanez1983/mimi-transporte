@@ -1691,3 +1691,320 @@ body {
     display: none !important;
   }
 }
+/* =========================================================
+   MIMI DRIVER - MOBILE CLEAN FIX FINAL
+   Agregar AL FINAL ABSOLUTO de css/panel.css
+   ========================================================= */
+
+@media (max-width: 767px) {
+  :root {
+    --mobile-side: 12px;
+    --mobile-top: calc(var(--safe-top) + 10px);
+    --mobile-header-h: 52px;
+    --mobile-nav-gap: 10px;
+    --mobile-nav-top: calc(var(--mobile-top) + var(--mobile-header-h) + var(--mobile-nav-gap));
+    --mobile-fab-h: 58px;
+    --mobile-fab-bottom: calc(var(--safe-bottom) + 10px);
+    --mobile-sheet-peek-offline: 92px;
+    --mobile-sheet-peek-online: 108px;
+    --mobile-sheet-peek-trip: 156px;
+  }
+
+  html,
+  body,
+  #map-container,
+  #ui-layer {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  /* HEADER */
+  .header {
+    top: var(--mobile-top);
+    left: var(--mobile-side);
+    right: var(--mobile-side);
+    z-index: 210;
+  }
+
+  .header-content {
+    min-height: var(--mobile-header-h);
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .avatar,
+  .icon-btn {
+    width: 46px;
+    height: 46px;
+  }
+
+  /* Ocultamos stats en mobile para limpiar */
+  .stats-floating {
+    display: none !important;
+  }
+
+  /* NAV */
+  .nav-bar {
+    top: var(--mobile-nav-top);
+    left: var(--mobile-side);
+    right: var(--mobile-side);
+    z-index: 230;
+    border-radius: 18px;
+  }
+
+  .nav-content {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .maneuver-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .nav-street {
+    font-size: 11px;
+  }
+
+  .nav-next {
+    font-size: 14px;
+    line-height: 1.15;
+  }
+
+  .nav-distance {
+    font-size: 15px;
+  }
+
+  /* Si hay navegación activa, escondemos header para evitar “botones atrás” */
+  .nav-bar.active ~ .header,
+  body.trip-active .header {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+  }
+
+  /* BANNER NARANJA: oculto por defecto en mobile */
+  .offline-banner {
+    display: none !important;
+  }
+
+  /* BOTTOM SHEET */
+  .bottom-sheet {
+    z-index: 240;
+    max-height: min(78dvh, 720px);
+    border-radius: 22px 22px 0 0;
+    transform: translateY(calc(100% - var(--mobile-sheet-peek-offline)));
+  }
+
+  .bottom-sheet.expanded {
+    transform: translateY(0);
+  }
+
+  .bottom-sheet.has-trip {
+    transform: translateY(calc(100% - var(--mobile-sheet-peek-trip)));
+  }
+
+  .bottom-sheet.has-trip.expanded {
+    transform: translateY(0);
+  }
+
+  .sheet-handle {
+    padding: 8px 16px 6px;
+  }
+
+  .handle-bar {
+    width: 38px;
+    height: 5px;
+  }
+
+  .sheet-content {
+    padding: 2px 16px calc(var(--mobile-fab-h) + 26px + var(--safe-bottom));
+    max-height: calc(78dvh - 20px);
+  }
+
+  /* WAITING STATE */
+  .waiting-state {
+    gap: 10px;
+    padding-top: 2px;
+  }
+
+  .waiting-state h3 {
+    font-size: clamp(22px, 7vw, 30px);
+    line-height: 1;
+    margin: 0;
+  }
+
+  .waiting-state p {
+    font-size: 14px;
+    line-height: 1.3;
+    margin: 0;
+    max-width: 100%;
+  }
+
+  /* FAB */
+  .fab-online {
+    left: var(--mobile-side);
+    right: var(--mobile-side);
+    bottom: var(--mobile-fab-bottom);
+    min-height: var(--mobile-fab-h);
+    z-index: 260;
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+  }
+
+  .fab-content {
+    gap: 8px;
+  }
+
+  .fab-icon {
+    font-size: 18px;
+  }
+
+  .fab-text {
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  /* ACTIVO / VIAJE */
+  .trip-active-panel {
+    gap: 12px;
+  }
+
+  .trip-header {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .client-info-large {
+    grid-template-columns: 42px 1fr auto;
+    gap: 10px;
+  }
+
+  .client-avatar-large {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+
+  .client-details h4 {
+    font-size: 15px;
+  }
+
+  .trip-destination {
+    font-size: 12px;
+  }
+
+  .trip-price-large {
+    font-size: 18px;
+  }
+
+  .action-buttons-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .action-btn-large {
+    min-height: 50px;
+    border-radius: 14px;
+    font-size: 14px;
+    padding: 12px;
+  }
+
+  .trip-progress-steps {
+    gap: 6px;
+  }
+
+  .step span {
+    font-size: 10px;
+  }
+
+  .btn-arrived {
+    min-height: 54px;
+    border-radius: 16px;
+    font-size: 14px;
+    padding: 12px;
+  }
+
+  /* MODAL */
+  .modal-content {
+    border-radius: 22px 22px 0 0;
+    padding: 18px 14px calc(18px + var(--safe-bottom));
+    max-height: min(84dvh, 720px);
+  }
+
+  .trip-metrics-horizontal {
+    gap: 8px;
+  }
+
+  .metric-box {
+    padding: 10px 8px;
+    border-radius: 14px;
+  }
+
+  .metric-value {
+    font-size: 18px;
+  }
+
+  .metric-label {
+    font-size: 10px;
+  }
+
+  .modal-actions-uber {
+    grid-template-columns: 1fr 1.2fr;
+    gap: 10px;
+  }
+
+  .btn-reject,
+  .btn-accept {
+    min-height: 52px;
+    border-radius: 14px;
+    font-size: 14px;
+    padding: 12px;
+  }
+
+  /* TOAST */
+  .toast-container {
+    top: calc(var(--safe-top) + 8px);
+    width: calc(100% - 24px);
+    max-width: none;
+  }
+
+  .toast {
+    max-width: 100%;
+  }
+
+  /* ARRIVAL */
+  .arrival-panel {
+    left: var(--mobile-side);
+    right: var(--mobile-side);
+    bottom: calc(var(--mobile-fab-h) + 18px + var(--safe-bottom));
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+}
+
+@media (max-width: 390px) {
+  .nav-next {
+    font-size: 13px;
+  }
+
+  .nav-distance {
+    font-size: 14px;
+  }
+
+  .fab-text {
+    font-size: 14px;
+  }
+
+  .waiting-state h3 {
+    font-size: 20px;
+  }
+
+  .waiting-state p {
+    font-size: 13px;
+  }
+
+  .trip-price-large {
+    font-size: 16px;
+  }
+}
