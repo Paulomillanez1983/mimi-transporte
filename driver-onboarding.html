@@ -1734,16 +1734,20 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3500);
 
+        const headers = {
+          "Content-Type": "application/json",
+          apikey: supabaseService.client.supabaseKey,
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {})
+        };
+
         try {
           const response = await fetch(
             "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
             {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                apikey: supabaseService.client.supabaseKey,
-                Authorization: `Bearer ${session?.access_token || supabaseService.client.supabaseKey}`
-              },
+              headers,
               body: JSON.stringify({
                 doc_type: docType,
                 mime_type: file.type,
@@ -1769,7 +1773,6 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         console.warn(`[server session retry ${attempt}]`, sessionErr);
       }
 
-      // ✅ importante: devolvemos la validación local aunque la remota falle o tarde
       return validation;
     } catch (err) {
       lastError = err;
@@ -1781,7 +1784,6 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
 
   throw lastError || new Error("No pudimos validar el documento");
 }    
-    
 function renderDocWizardPreview(docType) {
   const file = getChosenFile(docType);
 
