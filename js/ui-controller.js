@@ -886,19 +886,6 @@ updateDriverState(mode, isOnline) {
   this.showWaitingState();
   this._haptic(online ? 'success' : 'light');
 }
-  _updateBottomSheetState(isOnline) {
-    const sheetContent = this.elements['sheet-content'];
-    if (!sheetContent) return;
-
-    const desiredState = isOnline ? 'online' : 'offline';
-    if (sheetContent.dataset.waitingState === desiredState && !sheetContent.dataset.flowState) {
-      return;
-    }
-
-    sheetContent.dataset.waitingState = desiredState;
-    delete sheetContent.dataset.flowState;
-
-    if (isOnline) {
 _updateBottomSheetState(isOnline) {
   const sheetContent = this.elements['sheet-content'];
   const sheet = this.elements['bottom-sheet'];
