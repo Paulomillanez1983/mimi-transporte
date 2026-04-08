@@ -1088,6 +1088,57 @@
     grid-template-columns: 1fr;
   }
 }
+    .doc-wizard-card.is-validating {
+  border-color: rgba(78,137,255,0.45);
+  box-shadow: 0 0 0 1px rgba(78,137,255,0.18) inset, 0 18px 46px rgba(39,110,241,0.14);
+}
+
+.doc-wizard-card.is-success {
+  border-color: rgba(34,197,94,0.42);
+  box-shadow: 0 0 0 1px rgba(34,197,94,0.18) inset, 0 18px 46px rgba(34,197,94,0.14);
+  animation: wizardSuccessPop .46s cubic-bezier(.22,1,.36,1);
+}
+
+.doc-wizard-card.is-error {
+  border-color: rgba(225,25,0,0.34);
+  box-shadow: 0 0 0 1px rgba(225,25,0,0.14) inset;
+  animation: wizardShake .34s ease;
+}
+
+.doc-wizard-card.is-warning {
+  border-color: rgba(245,158,11,0.34);
+  box-shadow: 0 0 0 1px rgba(245,158,11,0.14) inset;
+}
+
+.doc-wizard-next-ready {
+  box-shadow: 0 0 0 3px rgba(34,197,94,0.14), 0 18px 34px rgba(39,110,241,0.26);
+}
+
+.doc-wizard-status-ok {
+  color: var(--success);
+}
+
+.doc-wizard-status-warning {
+  color: var(--warning);
+}
+
+.doc-wizard-status-error {
+  color: var(--danger);
+}
+
+@keyframes wizardSuccessPop {
+  0% { transform: scale(0.992); }
+  45% { transform: scale(1.012); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wizardShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
   </style>
 </head>
 <body>
@@ -1545,6 +1596,13 @@ const docWizardDeadlineBox = document.getElementById("docWizardDeadlineBox");
 const docWizardExternalLink = document.getElementById("docWizardExternalLink");
 const docWizardBackBtn = document.getElementById("docWizardBackBtn");
 const docWizardNextBtn = document.getElementById("docWizardNextBtn");
+const docWizardCard = document.querySelector(".doc-wizard-card");
+const DOC_CACHE_KEY = "mimi_driver_doc_cache_v1";
+const VALIDATION_SOUND_SRC =
+  "data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTAAAAAAAP//AAD//wAA//8AAP//AAD//wAA";
+let audioValidationOk = null;
+
+    
 function getCurrentDocType() {
   return DOCUMENT_FLOW[currentDocumentIndex] || DOCUMENT_FLOW[0];
 }
@@ -1553,6 +1611,150 @@ function getRequiredDocsCompletedCount() {
   return REQUIRED_DOCS.filter((doc) => !!getChosenFile(doc)).length;
 }
 
+function getDocCache() {
+  try {
+    return JSON.parse(localStorage.getItem(DOC_CACHE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function setDocCache(cache) {
+  try {
+    localStorage.setItem(DOC_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
+async function cacheSelectedFile(docType, file) {
+  try {
+    if (!file || !String(file.type || "").startsWith("image/")) return;
+    const base64 = await fileToBase64(file);
+    const cache = getDocCache();
+    cache[docType] = {
+      name: file.name || `${docType}.jpg`,
+      type: file.type || "image/jpeg",
+      size: file.size || 0,
+      base64,
+      updatedAt: Date.now()
+    };
+    setDocCache(cache);
+  } catch (err) {
+    console.warn("[doc cache] no se pudo guardar", err);
+  }
+}
+
+function restoreCachedFiles() {
+  const cache = getDocCache();
+  Object.entries(cache).forEach(([docType, value]) => {
+    try {
+      if (!value?.base64 || !value?.type) return;
+      const bytes = atob(value.base64);
+      const arr = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+      const file = new File([arr], value.name || `${docType}.jpg`, {
+        type: value.type || "image/jpeg"
+      });
+      selectedFiles.set(docType, file);
+    } catch (err) {
+      console.warn("[doc cache restore]", docType, err);
+    }
+  });
+}
+
+function setWizardVisualState(state = "idle") {
+  if (!docWizardCard) return;
+  docWizardCard.classList.remove("is-validating", "is-success", "is-error", "is-warning");
+
+  if (state === "validating") docWizardCard.classList.add("is-validating");
+  if (state === "success") docWizardCard.classList.add("is-success");
+  if (state === "error") docWizardCard.classList.add("is-error");
+  if (state === "warning") docWizardCard.classList.add("is-warning");
+}
+
+function playValidationOkSound() {
+  try {
+    if (!audioValidationOk) {
+      audioValidationOk = new Audio(VALIDATION_SOUND_SRC);
+      audioValidationOk.volume = 0.35;
+    }
+    audioValidationOk.currentTime = 0;
+    void audioValidationOk.play().catch(() => {});
+  } catch {}
+}
+
+function triggerValidationFeedback(type = "success") {
+  if (navigator.vibrate) {
+    if (type === "success") navigator.vibrate([16, 40, 22]);
+    else if (type === "warning") navigator.vibrate([14]);
+    else if (type === "error") navigator.vibrate([24, 50, 24]);
+  }
+
+  if (type === "success") {
+    playValidationOkSound();
+  }
+}
+
+function updateWizardPrimaryState() {
+  const docType = getCurrentDocType();
+  const meta = DOC_META[docType];
+  const hasFile = !!getChosenFile(docType);
+  const statusClass = docWizardStatus?.className || "";
+  const passed = statusClass.includes("ok") || statusClass.includes("warning");
+  const allowContinue = meta?.optional ? true : hasFile && passed;
+
+  if (docWizardNextBtn) {
+    docWizardNextBtn.disabled = !allowContinue;
+    docWizardNextBtn.classList.toggle("doc-wizard-next-ready", allowContinue);
+  }
+
+  if (stickyPrimaryBtn && currentStep === 3) {
+    stickyPrimaryBtn.disabled = !allowContinue;
+  }
+}
+
+async function validateWithRetry(docType, file, maxAttempts = 2) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const validation = await validateSelectedDocument(docType, file);
+
+      try {
+        const {
+          data: { session }
+        } = await supabaseService.client.auth.getSession();
+
+        await fetch(
+          "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: supabaseService.client.supabaseKey,
+              Authorization: `Bearer ${session?.access_token || supabaseService.client.supabaseKey}`
+            },
+            body: JSON.stringify({
+              doc_type: docType,
+              mime_type: file.type,
+              file_size: file.size
+            })
+          }
+        ).then((r) => r.json());
+      } catch (remoteErr) {
+        console.warn(`[server validation retry ${attempt}]`, remoteErr);
+      }
+
+      return validation;
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 450 * attempt));
+      }
+    }
+  }
+
+  throw lastError || new Error("No pudimos validar el documento");
+}
 function renderDocWizardPreview(docType) {
   const file = getChosenFile(docType);
 
@@ -1610,7 +1812,7 @@ function renderDocumentWizard() {
   docWizardTitle.textContent = meta?.title || meta?.label || "Documento";
   docWizardDescription.textContent = meta?.description || "";
 
-  docWizardCameraInput.accept = docType === "background_check" ? "image/*" : "image/*";
+  docWizardCameraInput.accept = "image/*";
   docWizardFileInput.accept = docType === "selfie" || docType === "vehicle_photo"
     ? "image/*"
     : "image/*,.pdf";
@@ -1649,6 +1851,7 @@ function renderDocumentWizard() {
 
   renderDocWizardPreview(docType);
   syncDocWizardStatus();
+  updateWizardPrimaryState();
 
   docWizardBackBtn.textContent = currentDocumentIndex === 0 ? "Volver al vehículo" : "Volver";
   docWizardNextBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
@@ -1658,8 +1861,7 @@ function renderDocumentWizard() {
       : isOptional
         ? "Omitir y continuar"
         : "Continuar";
-}
-    
+}    
     function setGlobalStatus(msg, type = "success") {
       globalStatus.textContent = msg;
       globalStatus.classList.add("visible");
@@ -1675,22 +1877,7 @@ function renderDocumentWizard() {
     function getField(id) {
       return document.getElementById(id)?.value?.trim() || "";
     }
-    function getDocCard(docType) {
-  return document
-    .getElementById(`status_${docType}`)
-    ?.closest(".doc-item") || null;
-}
 
-function setDocCardState(docType, state = "default") {
-  const card = getDocCard(docType);
-  if (!card) return;
-
-  card.classList.remove("doc-complete", "doc-warning", "doc-error");
-
-  if (state === "complete") card.classList.add("doc-complete");
-  if (state === "warning") card.classList.add("doc-warning");
-  if (state === "error") card.classList.add("doc-error");
-}
 
 function updateDocumentsProgressUI() {
   const progress = getDocumentsProgress(REQUIRED_DOCS, getChosenFile);
@@ -1788,28 +1975,42 @@ function updateSticky(step) {
     stickyText.textContent = "Completá tus datos para continuar con el alta.";
     stickyPrimaryBtn.textContent = "Continuar";
     stickyPrimaryBtn.disabled = false;
-  } else if (step === 2) {
+    return;
+  }
+
+  if (step === 2) {
     stickyTitle.textContent = "Paso 2 · Vehículo";
     stickyText.textContent = "Cargá el vehículo con el que vas a trabajar.";
     stickyPrimaryBtn.textContent = "Continuar";
     stickyPrimaryBtn.disabled = false;
-  } else {
-    const docType = getCurrentDocType();
-    const meta = DOC_META[docType];
-    const hasFile = !!getChosenFile(docType);
-
-    stickyTitle.textContent = `Paso 3 · ${meta?.label || "Documentación"}`;
-    stickyText.textContent = meta?.optional
-      ? "Este documento es opcional. Podés omitirlo o cargarlo ahora."
-      : "Tomá una foto clara o subí el archivo para continuar.";
-
-    stickyPrimaryBtn.textContent = hasFile
-      ? (currentDocumentIndex === DOCUMENT_FLOW.length - 1 ? "Ir a revisión" : "Continuar")
-      : (meta?.optional ? "Omitir y continuar" : "Continuar");
-
-    stickyPrimaryBtn.disabled = !meta?.optional && !hasFile;
+    return;
   }
+
+  const docType = getCurrentDocType();
+  const meta = DOC_META[docType];
+  const hasFile = !!getChosenFile(docType);
+  const statusClass = docWizardStatus?.className || "";
+  const passed = statusClass.includes("ok") || statusClass.includes("warning");
+  const allowContinue = meta?.optional ? true : hasFile && passed;
+
+  stickyTitle.textContent = `Paso 3 · ${meta?.label || "Documentación"}`;
+  stickyText.textContent = meta?.optional
+    ? "Este documento es opcional. Podés omitirlo o cargarlo ahora."
+    : passed
+      ? "Documento validado. Ya podés continuar."
+      : hasFile
+        ? "Esperando validación real del documento."
+        : "Tomá una foto clara o subí el archivo para continuar.";
+
+  stickyPrimaryBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
+    ? "Ir a revisión"
+    : meta?.optional && !hasFile
+      ? "Omitir y continuar"
+      : "Continuar";
+
+  stickyPrimaryBtn.disabled = !allowContinue;
 }
+    
 function showStep(step) {
   currentStep = step;
 
@@ -1925,86 +2126,80 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
 
   selectedFiles.set(docType, file);
   renderPreview(docType, file);
+  await cacheSelectedFile(docType, file);
 
   const name = file.name || DOC_META[docType]?.label || "archivo";
 
+  setWizardVisualState("validating");
   setDocStatus(docType, `Analizando ${name}...`, "pending");
+  updateWizardPrimaryState();
+  updateSticky(3);
 
   try {
-    const validation = await validateSelectedDocument(docType, file);
-
-    try {
-      const {
-        data: { session }
-      } = await supabaseService.client.auth.getSession();
-
-      const serverValidation = await fetch(
-        "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: supabaseService.client.supabaseKey,
-            Authorization: `Bearer ${session?.access_token || supabaseService.client.supabaseKey}`
-          },
-          body: JSON.stringify({
-            doc_type: docType,
-            mime_type: file.type,
-            file_size: file.size
-          })
-        }
-      ).then((r) => r.json());
-
-      console.log("[server validation]", serverValidation);
-    } catch (e) {
-      console.warn("[server validation error]", e);
-    }
+    const validation = await validateWithRetry(docType, file, 2);
 
     if (validation.ok) {
       if (validation.kind === "document-warning") {
         setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "warning");
-        setDocCardState(docType, "warning");
+        setWizardVisualState("warning");
+        triggerValidationFeedback("warning");
       } else {
         setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "ok");
-        setDocCardState(docType, "complete");
+        setWizardVisualState("success");
+        triggerValidationFeedback("success");
       }
     } else {
       setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "error");
-      setDocCardState(docType, "error");
+      setWizardVisualState("error");
+      triggerValidationFeedback("error");
     }
   } catch (err) {
     console.error("[setSelectedFile validation]", docType, err);
     setDocStatus(docType, `${sourceLabel}: ${name} · No pudimos validar la imagen`, "warning");
-    setDocCardState(docType, "warning");
+    setWizardVisualState("warning");
+    triggerValidationFeedback("warning");
   }
 
   updateDocumentsProgressUI();
   updateOverallStepperState();
   renderDocumentWizard();
   updateSticky(3);
+  updateWizardPrimaryState();
 
-if (docType === getCurrentDocType()) {
+  if (docType === getCurrentDocType()) {
+    const currentStatus = document.getElementById("docWizardStatus")?.className || "";
+    const passed = currentStatus.includes("ok") || currentStatus.includes("warning");
 
+    if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+      setTimeout(() => {
+        currentDocumentIndex += 1;
+        setWizardVisualState("idle");
+        renderDocumentWizard();
+        updateSticky(3);
+        updateWizardPrimaryState();
+      }, 650);
+    }
+  }
+}
 function initFileInputs() {
-  docWizardCameraInput?.addEventListener("change", (e) => {
+  docWizardCameraInput?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0] || null;
     if (!file) return;
 
     const docType = getCurrentDocType();
-    void setSelectedFile(docType, file, "Foto capturada");
+    await setSelectedFile(docType, file, "Foto capturada");
     docWizardCameraInput.value = "";
   });
 
-  docWizardFileInput?.addEventListener("change", (e) => {
+  docWizardFileInput?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0] || null;
     if (!file) return;
 
     const docType = getCurrentDocType();
-    void setSelectedFile(docType, file, "Archivo seleccionado");
+    await setSelectedFile(docType, file, "Archivo seleccionado");
     docWizardFileInput.value = "";
   });
-}
-    
+}    
     function getChosenFile(docType) {
       if (selectedFiles.has(docType)) return selectedFiles.get(docType);
 
@@ -2368,22 +2563,25 @@ docWizardNextBtn?.addEventListener("click", async () => {
   const docType = getCurrentDocType();
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
+  const statusClass = docWizardStatus?.className || "";
+  const passed = statusClass.includes("ok") || statusClass.includes("warning");
 
-  if (!hasFile && !meta?.optional) {
-    setGlobalStatus(`❌ Tenés que cargar ${meta?.label || "este documento"} para continuar`, "error");
+  if (!meta?.optional && (!hasFile || !passed)) {
+    setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
     return;
   }
 
   if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
     currentDocumentIndex += 1;
+    setWizardVisualState("idle");
     renderDocumentWizard();
     updateSticky(3);
+    updateWizardPrimaryState();
     return;
   }
 
   submitAll();
 });
-
 stickyPrimaryBtn.addEventListener("click", async () => {
   if (navigator.vibrate) {
     navigator.vibrate(18);
@@ -2435,19 +2633,22 @@ stickyPrimaryBtn.addEventListener("click", async () => {
     const docType = getCurrentDocType();
     const meta = DOC_META[docType];
     const hasFile = !!getChosenFile(docType);
+    const statusClass = docWizardStatus?.className || "";
+    const passed = statusClass.includes("ok") || statusClass.includes("warning");
 
-    if (!hasFile && !meta?.optional) {
-      setGlobalStatus(`❌ Tenés que cargar ${meta?.label || "este documento"} para continuar`, "error");
+    if (!meta?.optional && (!hasFile || !passed)) {
+      setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
       return;
     }
 
     if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
       currentDocumentIndex += 1;
+      setWizardVisualState("idle");
       renderDocumentWizard();
       updateSticky(3);
+      updateWizardPrimaryState();
       return;
     }
-
     submitAll();
 
   } catch (e) {
@@ -2476,6 +2677,7 @@ exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
     (async function init() {
       try {
         initFileInputs();
+        restoreCachedFiles();
         showStep(1);
 
         currentUser = await getUserOrRedirect();
