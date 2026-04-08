@@ -214,6 +214,169 @@
   border-bottom-color: #fff;
   opacity: 1;
 }
+ .progress-shell--pro {
+  gap: 14px;
+}
+
+.progress--pro {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.04);
+}
+
+.uber-steps {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 36px minmax(0,1fr) 36px minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.uber-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  opacity: 0.52;
+  transition: opacity .22s ease, transform .22s ease;
+}
+
+.uber-step.active,
+.uber-step.done {
+  opacity: 1;
+}
+
+.uber-step.active {
+  transform: translateY(-1px);
+}
+
+.uber-step__node {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+  transition: all .22s ease;
+}
+
+.uber-step__number,
+.uber-step__check {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.uber-step__check {
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.uber-step.active .uber-step__node {
+  background: linear-gradient(135deg, #276EF1, #4e89ff);
+  border-color: rgba(95,152,255,0.95);
+  box-shadow: 0 14px 28px rgba(39,110,241,0.30);
+}
+
+.uber-step.done .uber-step__node {
+  background: linear-gradient(135deg, #22c55e, #34d399);
+  border-color: rgba(52,211,153,0.8);
+  box-shadow: 0 14px 28px rgba(34,197,94,0.24);
+}
+
+.uber-step.done .uber-step__number {
+  opacity: 0;
+  transform: scale(0.7);
+}
+
+.uber-step.done .uber-step__check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.uber-step__meta {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.uber-step__meta strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.96);
+  line-height: 1.15;
+}
+
+.uber-step__meta span {
+  font-size: 12px;
+  color: rgba(255,255,255,0.52);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uber-step.active .uber-step__meta span,
+.uber-step.done .uber-step__meta span {
+  color: rgba(255,255,255,0.78);
+}
+
+.uber-step__line {
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  position: relative;
+  overflow: hidden;
+}
+
+.uber-step__line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(90deg, #22c55e, #4e89ff);
+  transition: transform .28s ease;
+}
+
+.uber-step__line.done::after {
+  transform: scaleX(1);
+}
+
+@media (max-width: 720px) {
+  .uber-steps {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .uber-step__line {
+    display: none;
+  }
+
+  .uber-step {
+    padding: 10px 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .uber-step.active {
+    background: rgba(39,110,241,0.10);
+    border-color: rgba(39,110,241,0.28);
+  }
+
+  .uber-step.done {
+    background: rgba(34,197,94,0.10);
+    border-color: rgba(34,197,94,0.24);
+  }
+}   
     .step-card {
       display: none;
       background:
@@ -781,21 +944,55 @@
     Podés sacar fotos desde esta misma pantalla y terminar la carga mucho más rápido.
   </div>
 
-  <div class="progress-shell">
-    <div class="progress-top">
-          <div class="progress-label" id="progressLabel">Paso 1 de 3</div>
-          <div class="steps-dots" aria-hidden="true">
-            <span class="step-dot active" id="dot1"></span>
-            <span class="step-dot" id="dot2"></span>
-            <span class="step-dot" id="dot3"></span>
-          </div>
-        </div>
+<div class="progress-shell progress-shell--pro">
+  <div class="progress-top">
+    <div class="progress-label" id="progressLabel">Paso 1 de 3 · Datos personales</div>
+  </div>
 
-        <div class="progress">
-          <div class="progress-bar" id="progressBar"></div>
-        </div>
+  <div class="uber-steps" id="uberSteps" aria-label="Progreso de onboarding">
+    <div class="uber-step active" id="uberStep1">
+      <div class="uber-step__node">
+        <span class="uber-step__number">1</span>
+        <span class="uber-step__check">✓</span>
+      </div>
+      <div class="uber-step__meta">
+        <strong>Perfil</strong>
+        <span>Datos personales</span>
       </div>
     </div>
+
+    <div class="uber-step__line" id="uberLine1"></div>
+
+    <div class="uber-step" id="uberStep2">
+      <div class="uber-step__node">
+        <span class="uber-step__number">2</span>
+        <span class="uber-step__check">✓</span>
+      </div>
+      <div class="uber-step__meta">
+        <strong>Vehículo</strong>
+        <span>Datos del auto</span>
+      </div>
+    </div>
+
+    <div class="uber-step__line" id="uberLine2"></div>
+
+    <div class="uber-step" id="uberStep3">
+      <div class="uber-step__node">
+        <span class="uber-step__number">3</span>
+        <span class="uber-step__check">✓</span>
+      </div>
+      <div class="uber-step__meta">
+        <strong>Documentos</strong>
+        <span>Carga final</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress progress--pro">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+</div>
+</div>
 
     <section class="step-card active" data-step="1">
       <div class="step-head">
@@ -1251,11 +1448,20 @@
       return document.getElementById(id)?.value?.trim() || "";
     }
 
-    function updateDots(step) {
-      [1, 2, 3].forEach((n) => {
-        document.getElementById(`dot${n}`)?.classList.toggle("active", n <= step);
-      });
-    }
+function updateDots(step) {
+  [1, 2, 3].forEach((n) => {
+    const stepEl = document.getElementById(`uberStep${n}`);
+    const isActive = n === step;
+    const isDone = n < step;
+
+    stepEl?.classList.toggle("active", isActive);
+    stepEl?.classList.toggle("done", isDone);
+  });
+
+  document.getElementById("uberLine1")?.classList.toggle("done", step > 1);
+  document.getElementById("uberLine2")?.classList.toggle("done", step > 2);
+}
+    
 async function exitOnboardingFlow() {
   const confirmExit = window.confirm(
     "¿Querés salir del alta de chofer? Se perderá el progreso no guardado."
@@ -1301,8 +1507,12 @@ function showStep(step) {
 
   const pct = step === 1 ? 33 : step === 2 ? 66 : 100;
   progressBar.style.width = pct + "%";
-  progressLabel.textContent = `Paso ${step} de 3`;
-
+const stepLabels = {
+  1: "Paso 1 de 3 · Datos personales",
+  2: "Paso 2 de 3 · Vehículo",
+  3: "Paso 3 de 3 · Documentación"
+};
+progressLabel.textContent = stepLabels[step] || `Paso ${step} de 3`;
   updateDots(step);
   updateSticky(step);
 
