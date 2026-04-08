@@ -991,6 +991,103 @@
   pointer-events: none;
   filter: grayscale(0.1);
 }
+.doc-wizard-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.doc-wizard-progress {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.doc-wizard-progress__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.doc-wizard-card {
+  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  padding: 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.doc-wizard-card__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(39,110,241,0.14);
+  border: 1px solid rgba(39,110,241,0.22);
+  font-size: 28px;
+}
+
+.doc-wizard-card__content {
+  display: grid;
+  gap: 14px;
+}
+
+.doc-wizard-card__content h3 {
+  font-size: 22px;
+  line-height: 1.12;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.doc-wizard-card__content p {
+  color: rgba(255,255,255,0.70);
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.doc-preview--hero {
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.025);
+}
+
+.doc-preview--hero img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  background: #0d0f13;
+}
+
+.doc-actions-inline--wizard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 720px) {
+  .doc-wizard-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .doc-wizard-card__content h3 {
+    font-size: 20px;
+  }
+
+  .doc-actions-inline--wizard {
+    grid-template-columns: 1fr;
+  }
+}
   </style>
 </head>
 <body>
@@ -1151,302 +1248,128 @@
 </div>
     </section>
 
-    <section class="step-card" data-step="3">
-      <div class="docs-progress-box">
-  <div class="docs-progress-box__top">
-    <strong id="docsProgressTitle">Documentación obligatoria</strong>
-    <span id="docsProgressCount">0/7</span>
+<section class="step-card" data-step="3">
+  <div class="docs-progress-box">
+    <div class="docs-progress-box__top">
+      <strong id="docsProgressTitle">Documentación obligatoria</strong>
+      <span id="docsProgressCount">0/7</span>
+    </div>
+
+    <div class="docs-progress-bar">
+      <div class="docs-progress-bar__fill" id="docsProgressBar"></div>
+    </div>
+
+    <div class="docs-progress-help" id="docsProgressHelp">
+      Cargá los 7 documentos obligatorios para completar este paso.
+    </div>
   </div>
 
-  <div class="docs-progress-bar">
-    <div class="docs-progress-bar__fill" id="docsProgressBar"></div>
+  <div class="step-head">
+    <div>
+      <div class="step-title">Paso 3 · Documentación</div>
+      <div class="step-text">
+        Sacá fotos nítidas, sin reflejos y mostrando el documento completo.
+        En el celular vas a poder abrir la cámara directamente y avanzar paso a paso.
+      </div>
+    </div>
+    <div class="step-badge">Documentos</div>
   </div>
 
-  <div class="docs-progress-help" id="docsProgressHelp">
-    Cargá los 7 documentos obligatorios para completar este paso.
+  <div class="doc-wizard-shell">
+    <div class="doc-wizard-progress">
+      <div class="doc-wizard-progress__top">
+        <strong id="docWizardStepTitle">Documento 1 de 9</strong>
+        <span id="docWizardStepBadge">Obligatorio</span>
+      </div>
+
+      <div class="docs-progress-bar">
+        <div class="docs-progress-bar__fill" id="docWizardProgressBar"></div>
+      </div>
+
+      <div class="docs-progress-help" id="docWizardProgressHelp">
+        Completá cada documento paso a paso.
+      </div>
+    </div>
+
+    <div class="doc-wizard-card">
+      <div class="doc-wizard-card__icon" id="docWizardIcon">🪪</div>
+
+      <div class="doc-wizard-card__content">
+        <h3 id="docWizardTitle">Sacá una foto del frente del DNI</h3>
+        <p id="docWizardDescription">
+          Asegurate de que se vea completo, sin reflejos y bien enfocado.
+        </p>
+
+        <div class="doc-preview doc-preview--hero visible" id="docWizardPreview">
+          <div class="doc-preview-file">
+            <strong>Esperando archivo</strong>
+            <span>Tomá una foto o subí un archivo para continuar.</span>
+          </div>
+        </div>
+
+        <div class="doc-status" id="docWizardStatus"></div>
+
+        <div class="doc-actions-inline doc-actions-inline--wizard">
+          <label class="doc-action-btn doc-camera-btn" id="docWizardCameraLabel" for="docWizardCameraInput">
+            📷 Sacar foto
+          </label>
+
+          <label class="doc-action-btn doc-upload-btn" id="docWizardUploadLabel" for="docWizardFileInput">
+            ⬆ Subir archivo
+          </label>
+        </div>
+
+        <input
+          class="hidden-input"
+          type="file"
+          id="docWizardCameraInput"
+          accept="image/*"
+          capture="environment"
+        />
+
+        <input
+          class="hidden-input"
+          type="file"
+          id="docWizardFileInput"
+          accept="image/*,.pdf"
+        />
+
+        <div class="doc-guidelines" id="docWizardGuidelines">
+          <span>Que se vea completo.</span>
+          <span>Sin reflejos.</span>
+          <span>Bien enfocado.</span>
+        </div>
+
+        <div class="doc-deadline-box" id="docWizardDeadlineBox" style="display:none;">
+          <strong>Entrega diferida:</strong> este documento puede presentarse más adelante.
+        </div>
+
+        <a
+          class="doc-link-btn"
+          id="docWizardExternalLink"
+          href="https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="display:none;"
+        >
+          🛡 Solicitar certificado
+        </a>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-secondary" id="docWizardBackBtn" type="button">Volver</button>
+      <button class="btn-primary" id="docWizardNextBtn" type="button">Continuar</button>
+    </div>
   </div>
-</div>
-      <div class="step-head">
-        <div>
-          <div class="step-title">Paso 3 · Documentación</div>
-          <div class="step-text">
-            Sacá fotos nítidas, sin reflejos y mostrando el documento completo. En el celular vas a poder abrir la cámara directamente desde cada tarjeta.
-          </div>
-        </div>
-        <div class="step-badge">Documentos</div>
-      </div>
 
-      <div class="doc-list">
-        <div class="doc-item">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>DNI · Frente</h4>
-              <p>Foto del frente del DNI.</p>
-            </div>
-            <span class="doc-chip required">Obligatorio</span>
-          </div>
+  <div class="actions">
+    <button class="btn-secondary" id="backTo2" type="button">Volver</button>
+    <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentación</button>
+  </div>
 
-          <div class="doc-guidelines">
-            <span>Que se vea completo.</span>
-            <span>Sin reflejos ni dedos tapando.</span>
-            <span>Fondo claro si es posible.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <label class="doc-action-btn doc-camera-btn" for="dni_front_camera">📷 Sacar foto</label>
-            <label class="doc-action-btn doc-upload-btn" for="dni_front">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="dni_front_camera" accept="image/*" capture="environment" />
-          <input class="hidden-input" type="file" id="dni_front" accept="image/*,.pdf" />
-
-          <div class="doc-preview" id="preview_dni_front"></div>
-          <div class="doc-status" id="status_dni_front"></div>
-        </div>
-
-        <div class="doc-item">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>DNI · Dorso</h4>
-              <p>Foto del reverso del DNI.</p>
-            </div>
-            <span class="doc-chip required">Obligatorio</span>
-          </div>
-
-          <div class="doc-guidelines">
-            <span>Mostrá el reverso completo.</span>
-            <span>Buena iluminación.</span>
-            <span>Sin cortes en los bordes.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <label class="doc-action-btn doc-camera-btn" for="dni_back_camera">📷 Sacar foto</label>
-            <label class="doc-action-btn doc-upload-btn" for="dni_back">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="dni_back_camera" accept="image/*" capture="environment" />
-          <input class="hidden-input" type="file" id="dni_back" accept="image/*,.pdf" />
-
-          <div class="doc-preview" id="preview_dni_back"></div>
-          <div class="doc-status" id="status_dni_back"></div>
-        </div>
-
-        <div class="doc-item">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>Selfie del chofer</h4>
-              <p>Foto tipo selfie de tu rostro, bien iluminada.</p>
-            </div>
-            <span class="doc-chip required">Obligatorio</span>
-          </div>
-
-          <div class="doc-guidelines">
-            <span>Mirando al frente.</span>
-            <span>Sin lentes oscuros.</span>
-            <span>Buena luz en la cara.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <label class="doc-action-btn doc-camera-btn" for="selfie_camera">🤳 Sacar selfie</label>
-            <label class="doc-action-btn doc-upload-btn" for="selfie">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="selfie_camera" accept="image/*" capture="user" />
-          <input class="hidden-input" type="file" id="selfie" accept="image/*" />
-
-          <div class="doc-preview" id="preview_selfie"></div>
-          <div class="doc-status" id="status_selfie"></div>
-        </div>
-
-        <div class="doc-item">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>Licencia · Frente</h4>
-              <p>Foto del frente de la licencia de conducir.</p>
-            </div>
-            <span class="doc-chip required">Obligatorio</span>
-          </div>
-
-          <div class="doc-guidelines">
-            <span>Texto legible.</span>
-            <span>Sin brillos.</span>
-            <span>Documento completo.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <label class="doc-action-btn doc-camera-btn" for="license_front_camera">📷 Sacar foto</label>
-            <label class="doc-action-btn doc-upload-btn" for="license_front">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="license_front_camera" accept="image/*" capture="environment" />
-          <input class="hidden-input" type="file" id="license_front" accept="image/*,.pdf" />
-
-          <div class="doc-preview" id="preview_license_front"></div>
-          <div class="doc-status" id="status_license_front"></div>
-        </div>
-
-        <div class="doc-item">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>Licencia · Dorso</h4>
-              <p>Foto del dorso de la licencia de conducir.</p>
-            </div>
-            <span class="doc-chip required">Obligatorio</span>
-          </div>
-
-          <div class="doc-guidelines">
-            <span>Mostrá todos los datos.</span>
-            <span>Evitar sombras.</span>
-            <span>Sin recortes.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <label class="doc-action-btn doc-camera-btn" for="license_back_camera">📷 Sacar foto</label>
-            <label class="doc-action-btn doc-upload-btn" for="license_back">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="license_back_camera" accept="image/*" capture="environment" />
-          <input class="hidden-input" type="file" id="license_back" accept="image/*,.pdf" />
-
-          <div class="doc-preview" id="preview_license_back"></div>
-          <div class="doc-status" id="status_license_back"></div>
-        </div>
-
-        <div class="doc-item">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>Tarjeta verde · Frente</h4>
-              <p>Foto del frente de la cédula verde.</p>
-            </div>
-            <span class="doc-chip required">Obligatorio</span>
-          </div>
-
-          <div class="doc-guidelines">
-            <span>Que la cédula se vea entera.</span>
-            <span>Texto legible.</span>
-            <span>Sin desenfoque.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <label class="doc-action-btn doc-camera-btn" for="vehicle_card_front_camera">📷 Sacar foto</label>
-            <label class="doc-action-btn doc-upload-btn" for="vehicle_card_front">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="vehicle_card_front_camera" accept="image/*" capture="environment" />
-          <input class="hidden-input" type="file" id="vehicle_card_front" accept="image/*,.pdf" />
-
-          <div class="doc-preview" id="preview_vehicle_card_front"></div>
-          <div class="doc-status" id="status_vehicle_card_front"></div>
-        </div>
-
-        <div class="doc-item">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>Tarjeta verde · Dorso</h4>
-              <p>Foto del dorso de la cédula verde.</p>
-            </div>
-            <span class="doc-chip required">Obligatorio</span>
-          </div>
-
-          <div class="doc-guidelines">
-            <span>Todo el documento visible.</span>
-            <span>Sin reflejos.</span>
-            <span>Buena luz.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <label class="doc-action-btn doc-camera-btn" for="vehicle_card_back_camera">📷 Sacar foto</label>
-            <label class="doc-action-btn doc-upload-btn" for="vehicle_card_back">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="vehicle_card_back_camera" accept="image/*" capture="environment" />
-          <input class="hidden-input" type="file" id="vehicle_card_back" accept="image/*,.pdf" />
-
-          <div class="doc-preview" id="preview_vehicle_card_back"></div>
-          <div class="doc-status" id="status_vehicle_card_back"></div>
-        </div>
-
-        <div class="doc-item">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>Foto del vehículo</h4>
-              <p>Opcional, pero recomendable para control interno.</p>
-            </div>
-            <span class="doc-chip optional">Opcional</span>
-          </div>
-
-          <div class="doc-guidelines">
-            <span>Foto exterior clara.</span>
-            <span>Que se vea bien el vehículo.</span>
-            <span>Puede ser frente 3/4.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <label class="doc-action-btn doc-camera-btn" for="vehicle_photo_camera">📷 Sacar foto</label>
-            <label class="doc-action-btn doc-upload-btn" for="vehicle_photo">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="vehicle_photo_camera" accept="image/*" capture="environment" />
-          <input class="hidden-input" type="file" id="vehicle_photo" accept="image/*" />
-
-          <div class="doc-preview" id="preview_vehicle_photo"></div>
-          <div class="doc-status" id="status_vehicle_photo"></div>
-        </div>
-
-        <div class="doc-item doc-item-highlight">
-          <div class="doc-header">
-            <div class="doc-title-wrap">
-              <h4>Certificado de antecedentes penales</h4>
-              <p>
-                Podés subirlo ahora o presentarlo dentro de los próximos 15 días hábiles.
-                No bloquea tu carga inicial.
-              </p>
-            </div>
-            <span class="doc-chip deadline">15 días hábiles</span>
-          </div>
-
-          <div class="doc-deadline-box">
-            <strong>Entrega diferida:</strong> vas a poder completar el alta inicial ahora y presentar este certificado dentro del plazo indicado.
-          </div>
-
-          <div class="doc-guidelines">
-            <span>Trámite oficial del Registro Nacional de Reincidencia.</span>
-            <span>Podés gestionarlo en línea.</span>
-            <span>También podés subir PDF si ya lo tenés.</span>
-          </div>
-
-          <div class="doc-actions-inline">
-            <a
-              class="doc-link-btn"
-              href="https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              🛡 Solicitar certificado
-            </a>
-
-            <label class="doc-action-btn doc-camera-btn" for="background_check_camera">📷 Sacar foto</label>
-            <label class="doc-action-btn doc-upload-btn" for="background_check">⬆ Subir archivo</label>
-          </div>
-
-          <input class="hidden-input" type="file" id="background_check_camera" accept="image/*" capture="environment" />
-          <input class="hidden-input" type="file" id="background_check" accept="image/*,.pdf" />
-
-          <div class="doc-preview" id="preview_background_check"></div>
-          <small class="doc-help">
-            Link oficial del trámite. El sitio informa modalidades en línea y tiempos de entrega según la opción elegida. 
-          </small>
-          <div class="doc-status" id="status_background_check"></div>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button class="btn-secondary" id="backTo2" type="button">Volver</button>
-        <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentación</button>
-      </div>
-
-      <div class="status-box" id="globalStatus"></div>
-    </section>
+  <div class="status-box" id="globalStatus"></div>
+</section>
   </div>
 
   <div class="sticky-actions">
@@ -1472,23 +1395,36 @@ import {
   validateSelectedDocument
 } from "./js/onboarding-doc-validator.js";
     
-    const REQUIRED_DOCS = [
-      "dni_front",
-      "dni_back",
-      "selfie",
-      "license_front",
-      "license_back",
-      "vehicle_card_front",
-      "vehicle_card_back"
-    ];
+const REQUIRED_DOCS = [
+  "dni_front",
+  "dni_back",
+  "selfie",
+  "license_front",
+  "license_back",
+  "vehicle_card_front",
+  "vehicle_card_back"
+];
 
-    const OPTIONAL_DOCS = [
-      "vehicle_photo",
-      "background_check"
-    ];
+const OPTIONAL_DOCS = [
+  "vehicle_photo",
+  "background_check"
+];
 
-    const ALL_DOCS = [...REQUIRED_DOCS, ...OPTIONAL_DOCS];
+const ALL_DOCS = [...REQUIRED_DOCS, ...OPTIONAL_DOCS];
 
+const DOCUMENT_FLOW = [
+  "dni_front",
+  "dni_back",
+  "selfie",
+  "license_front",
+  "license_back",
+  "vehicle_card_front",
+  "vehicle_card_back",
+  "vehicle_photo",
+  "background_check"
+];
+
+let currentDocumentIndex = 0;
     const DOC_INPUT_ALIASES = {
       dni_front: ["dni_front", "dni_front_camera"],
       dni_back: ["dni_back", "dni_back_camera"],
@@ -1501,18 +1437,80 @@ import {
       background_check: ["background_check", "background_check_camera"]
     };
 
-    const DOC_META = {
-      dni_front: { label: "DNI frente", optional: false },
-      dni_back: { label: "DNI dorso", optional: false },
-      selfie: { label: "Selfie", optional: false },
-      license_front: { label: "Licencia frente", optional: false },
-      license_back: { label: "Licencia dorso", optional: false },
-      vehicle_card_front: { label: "Tarjeta verde frente", optional: false },
-      vehicle_card_back: { label: "Tarjeta verde dorso", optional: false },
-      vehicle_photo: { label: "Foto del vehículo", optional: true },
-      background_check: { label: "Antecedentes penales", optional: true }
-    };
-
+const DOC_META = {
+  dni_front: {
+    label: "DNI frente",
+    optional: false,
+    title: "Sacá una foto del frente del DNI",
+    description: "Asegurate de que se vea completo, sin reflejos y bien enfocado.",
+    icon: "🪪",
+    capture: "environment"
+  },
+  dni_back: {
+    label: "DNI dorso",
+    optional: false,
+    title: "Sacá una foto del dorso del DNI",
+    description: "Mostrá todo el reverso, con buena luz y sin recortes.",
+    icon: "🪪",
+    capture: "environment"
+  },
+  selfie: {
+    label: "Selfie",
+    optional: false,
+    title: "Tomate una selfie",
+    description: "Mirá al frente, con buena iluminación y sin lentes oscuros.",
+    icon: "🤳",
+    capture: "user"
+  },
+  license_front: {
+    label: "Licencia frente",
+    optional: false,
+    title: "Sacá una foto del frente de tu licencia",
+    description: "La licencia debe verse completa y el texto debe ser legible.",
+    icon: "🪪",
+    capture: "environment"
+  },
+  license_back: {
+    label: "Licencia dorso",
+    optional: false,
+    title: "Sacá una foto del dorso de tu licencia",
+    description: "Mostrá todos los datos, evitando sombras y reflejos.",
+    icon: "🪪",
+    capture: "environment"
+  },
+  vehicle_card_front: {
+    label: "Tarjeta verde frente",
+    optional: false,
+    title: "Sacá una foto del frente de la tarjeta verde",
+    description: "La cédula debe verse completa y bien enfocada.",
+    icon: "🚘",
+    capture: "environment"
+  },
+  vehicle_card_back: {
+    label: "Tarjeta verde dorso",
+    optional: false,
+    title: "Sacá una foto del dorso de la tarjeta verde",
+    description: "Todo el documento visible, sin reflejos ni bordes cortados.",
+    icon: "🚘",
+    capture: "environment"
+  },
+  vehicle_photo: {
+    label: "Foto del vehículo",
+    optional: true,
+    title: "Sacá una foto del vehículo",
+    description: "Opcional, pero recomendable para control interno.",
+    icon: "🚗",
+    capture: "environment"
+  },
+  background_check: {
+    label: "Antecedentes penales",
+    optional: true,
+    title: "Subí tu certificado de antecedentes penales",
+    description: "Podés subirlo ahora o presentarlo dentro de 15 días hábiles.",
+    icon: "🛡️",
+    capture: "environment"
+  }
+};
     let currentStep = 1;
     let currentUser = null;
     const selectedFiles = new Map();
@@ -1529,7 +1527,138 @@ import {
     const docsProgressBar = document.getElementById("docsProgressBar");
     const docsProgressHelp = document.getElementById("docsProgressHelp");
     const submitAllBtn = document.getElementById("submitAllBtn");
+    const docWizardStepTitle = document.getElementById("docWizardStepTitle");
+const docWizardStepBadge = document.getElementById("docWizardStepBadge");
+const docWizardProgressBar = document.getElementById("docWizardProgressBar");
+const docWizardProgressHelp = document.getElementById("docWizardProgressHelp");
+const docWizardIcon = document.getElementById("docWizardIcon");
+const docWizardTitle = document.getElementById("docWizardTitle");
+const docWizardDescription = document.getElementById("docWizardDescription");
+const docWizardPreview = document.getElementById("docWizardPreview");
+const docWizardStatus = document.getElementById("docWizardStatus");
+const docWizardCameraInput = document.getElementById("docWizardCameraInput");
+const docWizardFileInput = document.getElementById("docWizardFileInput");
+const docWizardCameraLabel = document.getElementById("docWizardCameraLabel");
+const docWizardUploadLabel = document.getElementById("docWizardUploadLabel");
+const docWizardGuidelines = document.getElementById("docWizardGuidelines");
+const docWizardDeadlineBox = document.getElementById("docWizardDeadlineBox");
+const docWizardExternalLink = document.getElementById("docWizardExternalLink");
+const docWizardBackBtn = document.getElementById("docWizardBackBtn");
+const docWizardNextBtn = document.getElementById("docWizardNextBtn");
+function getCurrentDocType() {
+  return DOCUMENT_FLOW[currentDocumentIndex] || DOCUMENT_FLOW[0];
+}
 
+function getRequiredDocsCompletedCount() {
+  return REQUIRED_DOCS.filter((doc) => !!getChosenFile(doc)).length;
+}
+
+function renderDocWizardPreview(docType) {
+  const file = getChosenFile(docType);
+
+  if (!file) {
+    docWizardPreview.innerHTML = `
+      <div class="doc-preview-file">
+        <strong>Esperando archivo</strong>
+        <span>Tomá una foto o subí un archivo para continuar.</span>
+      </div>
+    `;
+    docWizardPreview.classList.add("visible");
+    return;
+  }
+
+  if (String(file.type || "").startsWith("image/")) {
+    const url = URL.createObjectURL(file);
+    docWizardPreview.innerHTML = `<img src="${url}" alt="${DOC_META[docType]?.label || docType}" />`;
+    docWizardPreview.classList.add("visible");
+    return;
+  }
+
+  docWizardPreview.innerHTML = `
+    <div class="doc-preview-file">
+      <strong>Archivo seleccionado</strong>
+      <span>${file.name || "Documento"}</span>
+      <span>${file.type || "application/octet-stream"}</span>
+    </div>
+  `;
+  docWizardPreview.classList.add("visible");
+}
+
+function syncDocWizardStatus() {
+  if (!docWizardStatus) return;
+  if (!docWizardStatus.className) {
+    docWizardStatus.className = "doc-status";
+  }
+}
+function renderDocumentWizard() {
+  const docType = getCurrentDocType();
+  const meta = DOC_META[docType];
+  const isOptional = !!meta?.optional;
+  const stepNumber = currentDocumentIndex + 1;
+  const total = DOCUMENT_FLOW.length;
+  const file = getChosenFile(docType);
+
+  docWizardStepTitle.textContent = `Documento ${stepNumber} de ${total}`;
+  docWizardStepBadge.textContent = isOptional ? "Opcional" : "Obligatorio";
+  docWizardProgressBar.style.width = `${(stepNumber / total) * 100}%`;
+
+  docWizardProgressHelp.textContent = isOptional
+    ? "Este documento puede omitirse y continuar."
+    : "Este documento es obligatorio para completar el alta.";
+
+  docWizardIcon.textContent = meta?.icon || "📄";
+  docWizardTitle.textContent = meta?.title || meta?.label || "Documento";
+  docWizardDescription.textContent = meta?.description || "";
+
+  docWizardCameraInput.accept = docType === "background_check" ? "image/*" : "image/*";
+  docWizardFileInput.accept = docType === "selfie" || docType === "vehicle_photo"
+    ? "image/*"
+    : "image/*,.pdf";
+
+  if (meta?.capture === "user") {
+    docWizardCameraInput.setAttribute("capture", "user");
+  } else {
+    docWizardCameraInput.setAttribute("capture", "environment");
+  }
+
+  docWizardCameraLabel.textContent = docType === "selfie" ? "🤳 Sacar selfie" : "📷 Sacar foto";
+  docWizardUploadLabel.textContent = "⬆ Subir archivo";
+
+  docWizardGuidelines.innerHTML = "";
+
+  const defaultGuidelines = {
+    dni_front: ["Documento completo", "Sin reflejos", "Bien enfocado"],
+    dni_back: ["Reverso completo", "Buena luz", "Sin bordes cortados"],
+    selfie: ["Mirando al frente", "Buena luz", "Sin lentes oscuros"],
+    license_front: ["Texto legible", "Sin brillos", "Documento completo"],
+    license_back: ["Todos los datos visibles", "Sin sombras", "Sin recortes"],
+    vehicle_card_front: ["Cédula completa", "Texto legible", "Sin desenfoque"],
+    vehicle_card_back: ["Todo visible", "Buena luz", "Sin reflejos"],
+    vehicle_photo: ["Foto exterior clara", "Que se vea bien el vehículo", "Preferible ángulo 3/4"],
+    background_check: ["Puede ser foto o PDF", "Documento legible", "Podés presentarlo luego"]
+  };
+
+  (defaultGuidelines[docType] || []).forEach((text) => {
+    const span = document.createElement("span");
+    span.textContent = text;
+    docWizardGuidelines.appendChild(span);
+  });
+
+  docWizardDeadlineBox.style.display = docType === "background_check" ? "block" : "none";
+  docWizardExternalLink.style.display = docType === "background_check" ? "inline-flex" : "none";
+
+  renderDocWizardPreview(docType);
+  syncDocWizardStatus();
+
+  docWizardBackBtn.textContent = currentDocumentIndex === 0 ? "Volver al vehículo" : "Volver";
+  docWizardNextBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
+    ? "Ir a revisión"
+    : file
+      ? "Continuar"
+      : isOptional
+        ? "Omitir y continuar"
+        : "Continuar";
+}
     
     function setGlobalStatus(msg, type = "success") {
       globalStatus.textContent = msg;
@@ -1582,13 +1711,6 @@ function updateDocumentsProgressUI() {
 
   if (submitAllBtn) {
     submitAllBtn.disabled = !progress.isComplete;
-  }
-
-  if (stickyPrimaryBtn && currentStep === 3) {
-    stickyPrimaryBtn.disabled = !progress.isComplete;
-    stickyPrimaryBtn.textContent = progress.isComplete
-      ? "Enviar documentación"
-      : `Faltan ${progress.total - progress.completed} docs`;
   }
 }
 
@@ -1660,22 +1782,34 @@ async function exitOnboardingFlow() {
     window.location.replace("login-chofer.html");
   }
 }
-    function updateSticky(step) {
-      if (step === 1) {
-        stickyTitle.textContent = "Paso 1 · Datos personales";
-        stickyText.textContent = "Completá tus datos para continuar con el alta.";
-        stickyPrimaryBtn.textContent = "Continuar";
-      } else if (step === 2) {
-        stickyTitle.textContent = "Paso 2 · Vehículo";
-        stickyText.textContent = "Cargá el vehículo con el que vas a trabajar.";
-        stickyPrimaryBtn.textContent = "Continuar";
-      } else {
-        stickyTitle.textContent = "Paso 3 · Documentación";
-        stickyText.textContent = "Sacá o subí fotos y enviá la documentación.";
-        stickyPrimaryBtn.textContent = "Enviar documentación";
-      }
-    }
+function updateSticky(step) {
+  if (step === 1) {
+    stickyTitle.textContent = "Paso 1 · Datos personales";
+    stickyText.textContent = "Completá tus datos para continuar con el alta.";
+    stickyPrimaryBtn.textContent = "Continuar";
+    stickyPrimaryBtn.disabled = false;
+  } else if (step === 2) {
+    stickyTitle.textContent = "Paso 2 · Vehículo";
+    stickyText.textContent = "Cargá el vehículo con el que vas a trabajar.";
+    stickyPrimaryBtn.textContent = "Continuar";
+    stickyPrimaryBtn.disabled = false;
+  } else {
+    const docType = getCurrentDocType();
+    const meta = DOC_META[docType];
+    const hasFile = !!getChosenFile(docType);
 
+    stickyTitle.textContent = `Paso 3 · ${meta?.label || "Documentación"}`;
+    stickyText.textContent = meta?.optional
+      ? "Este documento es opcional. Podés omitirlo o cargarlo ahora."
+      : "Tomá una foto clara o subí el archivo para continuar.";
+
+    stickyPrimaryBtn.textContent = hasFile
+      ? (currentDocumentIndex === DOCUMENT_FLOW.length - 1 ? "Ir a revisión" : "Continuar")
+      : (meta?.optional ? "Omitir y continuar" : "Continuar");
+
+    stickyPrimaryBtn.disabled = !meta?.optional && !hasFile;
+  }
+}
 function showStep(step) {
   currentStep = step;
 
@@ -1685,20 +1819,30 @@ function showStep(step) {
 
   const pct = step === 1 ? 33 : step === 2 ? 66 : 100;
   progressBar.style.width = pct + "%";
-const stepLabels = {
-  1: "Paso 1 de 3 · Datos personales",
-  2: "Paso 2 de 3 · Vehículo",
-  3: "Paso 3 de 3 · Documentación"
-};
-progressLabel.textContent = stepLabels[step] || `Paso ${step} de 3`;
-updateDocumentsProgressUI();
-updateOverallStepperState();
-  
+
+  const stepLabels = {
+    1: "Paso 1 de 3 · Datos personales",
+    2: "Paso 2 de 3 · Vehículo",
+    3: "Paso 3 de 3 · Documentación"
+  };
+
+  progressLabel.textContent = stepLabels[step] || `Paso ${step} de 3`;
+
+  updateDots(step);
+  updateSticky(step);
+  updateDocumentsProgressUI();
+  updateOverallStepperState();
+
+  if (step === 3) {
+    renderDocumentWizard();
+  }
+
   requestAnimationFrame(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 }
-    function validateStep1() {
+    
+  function validateStep1() {
       if (!getField("full_name")) return "Ingresá nombre completo";
       if (!getField("phone")) return "Ingresá teléfono";
       if (!getField("dni_number")) return "Ingresá DNI";
@@ -1741,40 +1885,41 @@ updateOverallStepperState();
   });
 }
 
-    function setDocStatus(docType, message, type = "pending") {
-      const statusEl = document.getElementById(`status_${docType}`);
-      if (!statusEl) return;
+function setDocStatus(docType, message, type = "pending") {
+  if (docType === getCurrentDocType() && docWizardStatus) {
+    docWizardStatus.textContent = message;
+    docWizardStatus.className = `doc-status ${type}`;
+  }
+}
+function renderPreview(docType, file) {
+  if (docType !== getCurrentDocType() || !docWizardPreview) return;
 
-      statusEl.textContent = message;
-      statusEl.className = `doc-status ${type}`;
-    }
+  if (!file) {
+    docWizardPreview.innerHTML = `
+      <div class="doc-preview-file">
+        <strong>Esperando archivo</strong>
+        <span>Tomá una foto o subí un archivo para continuar.</span>
+      </div>
+    `;
+    docWizardPreview.classList.add("visible");
+    return;
+  }
 
-    function renderPreview(docType, file) {
-      const previewEl = document.getElementById(`preview_${docType}`);
-      if (!previewEl) return;
+  docWizardPreview.classList.add("visible");
 
-      if (!file) {
-        previewEl.innerHTML = "";
-        previewEl.classList.remove("visible");
-        return;
-      }
-
-      previewEl.classList.add("visible");
-
-      if (String(file.type || "").startsWith("image/")) {
-        const url = URL.createObjectURL(file);
-        previewEl.innerHTML = `<img src="${url}" alt="Preview ${docType}" />`;
-      } else {
-        previewEl.innerHTML = `
-          <div class="doc-preview-file">
-            <strong>Archivo seleccionado</strong>
-            <span>${file.name || "Documento"}</span>
-            <span>${file.type || "application/octet-stream"}</span>
-          </div>
-        `;
-      }
-    }
-
+  if (String(file.type || "").startsWith("image/")) {
+    const url = URL.createObjectURL(file);
+    docWizardPreview.innerHTML = `<img src="${url}" alt="Preview ${docType}" />`;
+  } else {
+    docWizardPreview.innerHTML = `
+      <div class="doc-preview-file">
+        <strong>Archivo seleccionado</strong>
+        <span>${file.name || "Documento"}</span>
+        <span>${file.type || "application/octet-stream"}</span>
+      </div>
+    `;
+  }
+}
 async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionado") {
   if (!file) return;
 
@@ -1784,7 +1929,6 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   const name = file.name || DOC_META[docType]?.label || "archivo";
 
   setDocStatus(docType, `Analizando ${name}...`, "pending");
-  setDocCardState(docType);
 
   try {
     const validation = await validateSelectedDocument(docType, file);
@@ -1836,37 +1980,31 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
 
   updateDocumentsProgressUI();
   updateOverallStepperState();
-}
+  renderDocumentWizard();
+  updateSticky(3);
 
-    function initFileInputs() {
-  Object.entries(DOC_INPUT_ALIASES).forEach(([docType, inputIds]) => {
-    inputIds.forEach((inputId) => {
-      const input = document.getElementById(inputId);
-      if (!input) return;
+if (docType === getCurrentDocType()) {
 
-      input.addEventListener("change", (e) => {
-        const file = e.target?.files?.[0] || null;
-        if (!file) return;
+function initFileInputs() {
+  docWizardCameraInput?.addEventListener("change", (e) => {
+    const file = e.target?.files?.[0] || null;
+    if (!file) return;
 
-        const sourceLabel = inputId.endsWith("_camera")
-          ? "Foto capturada"
-          : "Archivo seleccionado";
+    const docType = getCurrentDocType();
+    void setSelectedFile(docType, file, "Foto capturada");
+    docWizardCameraInput.value = "";
+  });
 
-        void setSelectedFile(docType, file, sourceLabel);
+  docWizardFileInput?.addEventListener("change", (e) => {
+    const file = e.target?.files?.[0] || null;
+    if (!file) return;
 
-        inputIds.forEach((otherId) => {
-          if (otherId === inputId) return;
-          const otherInput = document.getElementById(otherId);
-          if (otherInput) {
-            try {
-              otherInput.value = "";
-            } catch (_) {}
-          }
-        });
-      });
-    });
+    const docType = getCurrentDocType();
+    void setSelectedFile(docType, file, "Archivo seleccionado");
+    docWizardFileInput.value = "";
   });
 }
+    
     function getChosenFile(docType) {
       if (selectedFiles.has(docType)) return selectedFiles.get(docType);
 
@@ -2211,6 +2349,40 @@ if (docType === "dni_front") {
     });
 
     document.getElementById("submitAllBtn").addEventListener("click", submitAll);
+    docWizardBackBtn?.addEventListener("click", () => {
+  clearGlobalStatus();
+
+  if (currentDocumentIndex === 0) {
+    showStep(2);
+    return;
+  }
+
+  currentDocumentIndex -= 1;
+  renderDocumentWizard();
+  updateSticky(3);
+});
+
+docWizardNextBtn?.addEventListener("click", async () => {
+  clearGlobalStatus();
+
+  const docType = getCurrentDocType();
+  const meta = DOC_META[docType];
+  const hasFile = !!getChosenFile(docType);
+
+  if (!hasFile && !meta?.optional) {
+    setGlobalStatus(`❌ Tenés que cargar ${meta?.label || "este documento"} para continuar`, "error");
+    return;
+  }
+
+  if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+    currentDocumentIndex += 1;
+    renderDocumentWizard();
+    updateSticky(3);
+    return;
+  }
+
+  submitAll();
+});
 
 stickyPrimaryBtn.addEventListener("click", async () => {
   if (navigator.vibrate) {
@@ -2236,9 +2408,10 @@ stickyPrimaryBtn.addEventListener("click", async () => {
 
       clearGlobalStatus();
       showStep(2);
+      return;
     }
 
-    else if (currentStep === 2) {
+    if (currentStep === 2) {
       const err = validateStep2();
       if (err) {
         setGlobalStatus("❌ " + err, "error");
@@ -2254,19 +2427,36 @@ stickyPrimaryBtn.addEventListener("click", async () => {
       });
 
       clearGlobalStatus();
+      currentDocumentIndex = 0;
       showStep(3);
+      return;
     }
 
-    else {
-      submitAll();
+    const docType = getCurrentDocType();
+    const meta = DOC_META[docType];
+    const hasFile = !!getChosenFile(docType);
+
+    if (!hasFile && !meta?.optional) {
+      setGlobalStatus(`❌ Tenés que cargar ${meta?.label || "este documento"} para continuar`, "error");
+      return;
     }
+
+    if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+      currentDocumentIndex += 1;
+      renderDocumentWizard();
+      updateSticky(3);
+      return;
+    }
+
+    submitAll();
 
   } catch (e) {
     console.error("[sticky flow error]", e);
     setGlobalStatus("❌ Error en el flujo", "error");
   }
-});    
-  exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
+});
+    
+exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
     [
   "full_name",
   "phone",
@@ -2305,9 +2495,11 @@ stickyPrimaryBtn.addEventListener("click", async () => {
           return;
         }
 
-        setDocStatus("background_check", "⏳ Podés subirlo ahora o dentro de 15 días hábiles", "warning");
-        updateDocumentsProgressUI();
-        updateOverallStepperState();
+      setDocStatus("background_check", "⏳ Podés subirlo ahora o dentro de 15 días hábiles", "warning");
+      updateDocumentsProgressUI();
+      updateOverallStepperState();
+      renderDocumentWizard();
+      updateSticky(currentStep);
       } catch (err) {
         console.error("[onboarding init] error:", err);
         setGlobalStatus("❌ No pudimos cargar tu onboarding", "error");
