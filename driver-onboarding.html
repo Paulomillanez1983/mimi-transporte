@@ -13,7 +13,8 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   />
-<link rel="manifest" href="/mimi-transporte/manifest.json">
+  <link rel="manifest" href="/mimi-transporte/manifest.json">
+  <script src="./libs/supabase-js.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -456,36 +457,63 @@
       return idx >= 0 ? name.slice(idx + 1).toLowerCase() : "bin";
     }
 
-async function getUserOrRedirect() {
-  try {
-    const dbReady = await supabaseService.init();
+    async function getUserOrRedirect() {
+      try {
+        const dbReady = await supabaseService.init();
 
-    if (!dbReady || !supabaseService?.client) {
-      console.error("[onboarding] Supabase no inicializado");
-      window.location.replace("login-chofer.html");
-      return null;
+        if (!dbReady || !supabaseService?.client?.auth) {
+          console.error("[onboarding] Supabase/Auth no inicializado");
+          window.location.replace("login-chofer.html");
+          return null;
+        }
+
+        let { data: sessionData, error: sessionError } = await supabaseService.client.auth.getSession();
+
+        if (sessionError) {
+          console.warn("[onboarding] getSession error:", sessionError);
+        }
+
+        let session = sessionData?.session || null;
+
+        if (!session?.access_token) {
+          await new Promise((r) => setTimeout(r, 700));
+          const retry = await supabaseService.client.auth.getSession();
+          session = retry?.data?.session || null;
+        }
+
+        if (!session?.access_token) {
+          const refresh = await supabaseService.client.auth.refreshSession().catch(() => null);
+          session = refresh?.data?.session || session || null;
+        }
+
+        if (!session?.access_token) {
+          console.warn("[onboarding] No hay sesión válida");
+          window.location.replace("login-chofer.html");
+          return null;
+        }
+
+        const { data, error } = await supabaseService.client.auth.getUser();
+
+        if (error) {
+          console.warn("[onboarding] getUser error:", error);
+          window.location.replace("login-chofer.html");
+          return null;
+        }
+
+        if (!data?.user) {
+          console.warn("[onboarding] getUser sin usuario");
+          window.location.replace("login-chofer.html");
+          return null;
+        }
+
+        return data.user;
+      } catch (err) {
+        console.error("[onboarding] getUserOrRedirect fatal:", err);
+        window.location.replace("login-chofer.html");
+        return null;
+      }
     }
 
-    const { data, error } = await supabaseService.client.auth.getUser();
-
-    if (error) {
-      console.warn("[onboarding] getUser error:", error);
-      window.location.replace("login-chofer.html");
-      return null;
-    }
-
-    if (!data?.user) {
-      window.location.replace("login-chofer.html");
-      return null;
-    }
-
-    return data.user;
-  } catch (err) {
-    console.error("[onboarding] getUserOrRedirect fatal:", err);
-    window.location.replace("login-chofer.html");
-    return null;
-  }
-}
     async function ensureProfileExists(user) {
       const { error } = await supabaseService.client.rpc("ensure_driver_profile_exists", {
         p_user_id: user.id
