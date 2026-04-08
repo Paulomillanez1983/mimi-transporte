@@ -1442,16 +1442,15 @@ top: calc(var(--mobile-top) + 56px);
   }
 
   .fab-online {
-    left: var(--mobile-side);
-    right: var(--mobile-side);
-    bottom: var(--mobile-fab-bottom);
-    min-height: var(--mobile-fab-h);
+    left: 16px;
+    right: 16px;
+    bottom: calc(var(--safe-bottom) + 14px);
+    min-height: 64px;
     z-index: 260;
-    padding: 14px 20px;
-    border-radius: 18px;
-    box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+    padding: 14px 22px;
+    border-radius: 999px;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.20);
   }
-
   .fab-content {
     gap: 8px;
   }
