@@ -24,7 +24,9 @@ class UIController {
     };
 
     // ✅ FIX anti-parpadeo modal
-    this.lastTripModalId = null;
+this.lastTripModalId = null;
+this._gestureCleanup = false;
+this._lastTripRendered = null;
 
     // Bindings
     this._handleAccept = this._handleAccept.bind(this);
@@ -198,20 +200,15 @@ _updateNavigateButton(trip) {
     const backdrop = this.elements['modal-backdrop'];
 // Cambios de estado del viaje (DB)
 window.addEventListener("tripStateChanged", (e) => {
-  const estado = e.detail?.estado;
-  if (!estado) return;
+  if (!e.detail) return;
 
+  const estado = e.detail.estado;
+  if (!estado) return;
   if (this.state.currentTrip) {
     this.state.currentTrip.estado = estado;
     this._updateNavigateButton(this.state.currentTrip);
     this._updateNavigationInfo(this.state.currentTrip);
   }
-});
-window.addEventListener("driverFlowStateChanged", (e) => {
-  const state = e.detail?.state;
-  const trip = this.state.currentTrip;
-
-  this.renderDriverFlowState(state, trip);
 });
 
 // Cambios de flow del driver (app)
@@ -270,78 +267,21 @@ window.addEventListener("driverFlowStateChanged", (e) => {
     if (whatsappBtn) whatsappBtn.addEventListener('click', () => this._haptic('medium'));
     if (navigateBtn) navigateBtn.addEventListener('click', () => this._haptic('medium'));
   }
-
   _setupGestures() {
+    if (this._gestureCleanup) return;
+    this._gestureCleanup = true;
+
     const sheet = this.elements['bottom-sheet'];
     const handle = this.elements['sheet-handle'];
-    
+
     if (!sheet || !handle) return;
 
-    // Touch events for sheet dragging
     handle.addEventListener('touchstart', this._onTouchStart, { passive: true });
     sheet.addEventListener('touchstart', this._onTouchStart, { passive: true });
-    
+
     document.addEventListener('touchmove', this._onTouchMove, { passive: false });
     document.addEventListener('touchend', this._onTouchEnd, { passive: true });
   }
-
-  _onTouchStart(e) {
-    const sheet = this.elements['bottom-sheet'];
-    if (!sheet) return;
-    
-    this.touchStartY = e.touches[0].clientY;
-    this.sheetHeight = sheet.offsetHeight;
-    sheet.style.transition = 'none';
-  }
-
-  _onTouchMove(e) {
-    if (!this.touchStartY) return;
-    
-    const sheet = this.elements['bottom-sheet'];
-    if (!sheet) return;
-
-    this.touchCurrentY = e.touches[0].clientY;
-    const deltaY = this.touchStartY - this.touchCurrentY;
-    
-    // Only allow dragging up from collapsed or down from expanded
-    const isCollapsed = !this.state.bottomSheetExpanded;
-    const currentTransform = isCollapsed ? 0 : -this.sheetHeight + 80;
-    
-    if ((isCollapsed && deltaY > 0) || (!isCollapsed && deltaY < 0)) {
-      const newTransform = currentTransform + deltaY;
-      const clampedTransform = Math.max(-this.sheetHeight + 80, Math.min(0, newTransform));
-      sheet.style.transform = `translateY(${Math.abs(clampedTransform)}px)`;
-    }
-  }
-
-  _onTouchEnd() {
-    const sheet = this.elements['bottom-sheet'];
-    if (!sheet) return;
-
-    sheet.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    
-    const deltaY = this.touchStartY - this.touchCurrentY;
-    const threshold = 50;
-
-    if (Math.abs(deltaY) > threshold) {
-      if (deltaY > 0 && !this.state.bottomSheetExpanded) {
-        this._expandBottomSheet();
-      } else if (deltaY < 0 && this.state.bottomSheetExpanded) {
-        this._collapseBottomSheet();
-      }
-    } else {
-      // Snap back to current state
-      if (this.state.bottomSheetExpanded) {
-        this._expandBottomSheet();
-      } else {
-        this._collapseBottomSheet();
-      }
-    }
-
-    this.touchStartY = 0;
-    this.touchCurrentY = 0;
-  }
-
   _toggleBottomSheet() {
     if (this.state.bottomSheetExpanded) {
       this._collapseBottomSheet();
@@ -872,129 +812,126 @@ _updateNavigationInfo(trip) {
     distanceEl.textContent = dist;
   }
 }
+  _showTripActions(trip) {
+    const sheetContent = this.elements['sheet-content'];
+    if (!sheetContent || !trip?.id) return;
 
-_showTripActions(trip) {
-  const sheetContent = this.elements['sheet-content'];
-  if (!sheetContent) return;
-
-const flowState = window?.driverFlowState || null;
-
-let irADestino = false;
-
-if (flowState === 'TRIP_STARTED' || flowState === 'ARRIVED_DESTINATION') {
-  irADestino = true;
-}
-  const lat = irADestino ? trip.destino_lat : trip.origen_lat;
-  const lng = irADestino ? trip.destino_lng : trip.origen_lng;
-
-  const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
-  const icono = `🏁`;
-
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
-
-  sheetContent.innerHTML = `
-    <div class="trip-active-panel">
-
-      <div class="trip-header">
-        <div class="client-info-large">
-          <div class="client-avatar-large">
-            ${(trip.pasajero_nombre || trip.cliente || 'C').charAt(0)}
-          </div>
-
-          <div class="client-details">
-            <h4>${trip.pasajero_nombre || trip.cliente || 'Cliente'}</h4>
-            <span class="trip-destination">${trip.destino_direccion || trip.destino || 'Destino'}</span>
-          </div>
-
-          <div class="trip-price-large">
-            $${Math.round(trip.precio || 0).toLocaleString('es-AR')}
-          </div>
-        </div>
-      </div>
-
-      <div class="action-buttons-grid">
-
-        <button class="action-btn-large navigate" id="btn-navigate">
-          <span class="icon">${icono}</span>
-          <span>${texto}</span>
-        </button>
-
-        <button class="action-btn-large call" id="btn-call">
-          <span class="icon">📞</span>
-          <span>Llamar</span>
-        </button>
-
-        <button class="action-btn-large cancel" id="btn-cancel">
-          <span class="icon">❌</span>
-          <span>Cancelar</span>
-        </button>
-
-      </div>
-
-      <div class="trip-progress-steps">
-        <div class="step active" data-step="pickup">
-          <div class="step-dot"></div>
-          <span>Recoger</span>
-        </div>
-        <div class="step-line"></div>
-        <div class="step" data-step="trip">
-          <div class="step-dot"></div>
-          <span>En viaje</span>
-        </div>
-        <div class="step-line"></div>
-        <div class="step" data-step="finish">
-          <div class="step-dot"></div>
-          <span>Finalizar</span>
-        </div>
-      </div>
-
-<button class="btn-arrived" id="btn-arrived">
-  <span>✓</span>
-  <span>${irADestino ? 'Finalizar viaje' : 'He llegado · Iniciar viaje'}</span>
-</button>
-    </div>
-  `;
-
-  // Activar botones
-  setTimeout(() => {
-    const btnNavigate = document.getElementById("btn-navigate");
-    const btnCall = document.getElementById("btn-call");
-    const btnCancel = document.getElementById("btn-cancel");
-    const btnArrived = document.getElementById("btn-arrived");
-
-    if (btnNavigate) {
-      btnNavigate.onclick = () => window.open(url, "_blank");
+    if (this._lastTripRendered === trip.id && sheetContent.dataset.flowState === String(trip.estado || '')) {
+      return;
     }
 
-    if (btnCall) {
-      const phone = trip.pasajero_telefono || trip.telefono;
-      btnCall.onclick = () => {
-        if (phone) window.location.href = `tel:${phone}`;
-        else alert("Teléfono no disponible");
-      };
-    }
+    this._lastTripRendered = trip.id;
 
-    if (btnCancel) {
-      btnCancel.onclick = () => {
-        if (confirm("¿Seguro que querés cancelar este viaje?")) {
-          window.dispatchEvent(new CustomEvent("driverAction", {
-            detail: { action: "cancel", tripId: trip.id }
+    const flowState = String(trip.estado || '').toUpperCase();
+    const irADestino = flowState === 'EN_CURSO';
+
+    const lat = irADestino ? trip.destino_lat : trip.origen_lat;
+    const lng = irADestino ? trip.destino_lng : trip.origen_lng;
+
+    const texto = irADestino ? 'Ir a destino' : 'Ir a recogida';
+    const icono = '🏁';
+
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`;
+
+    sheetContent.dataset.flowState = String(trip.estado || '');
+
+    sheetContent.innerHTML = `
+      <div class="trip-active-panel">
+        <div class="trip-header">
+          <div class="client-info-large">
+            <div class="client-avatar-large">
+              ${(trip.pasajero_nombre || trip.cliente || 'C').charAt(0)}
+            </div>
+
+            <div class="client-details">
+              <h4>${trip.pasajero_nombre || trip.cliente || 'Cliente'}</h4>
+              <span class="trip-destination">${trip.destino_direccion || trip.destino || 'Destino'}</span>
+            </div>
+
+            <div class="trip-price-large">
+              $${Math.round(trip.precio || 0).toLocaleString('es-AR')}
+            </div>
+          </div>
+        </div>
+
+        <div class="action-buttons-grid">
+          <button class="action-btn-large navigate" id="btn-navigate">
+            <span class="icon">${icono}</span>
+            <span>${texto}</span>
+          </button>
+
+          <button class="action-btn-large call" id="btn-call">
+            <span class="icon">📞</span>
+            <span>Llamar</span>
+          </button>
+
+          <button class="action-btn-large cancel" id="btn-cancel">
+            <span class="icon">❌</span>
+            <span>Cancelar</span>
+          </button>
+        </div>
+
+        <div class="trip-progress-steps">
+          <div class="step active" data-step="pickup">
+            <div class="step-dot"></div>
+            <span>Recoger</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="trip">
+            <div class="step-dot"></div>
+            <span>En viaje</span>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" data-step="finish">
+            <div class="step-dot"></div>
+            <span>Finalizar</span>
+          </div>
+        </div>
+
+        <button class="btn-arrived" id="btn-arrived">
+          <span>✓</span>
+          <span>${irADestino ? 'Finalizar viaje' : 'He llegado · Iniciar viaje'}</span>
+        </button>
+      </div>
+    `;
+
+    setTimeout(() => {
+      const btnNavigate = document.getElementById('btn-navigate');
+      const btnCall = document.getElementById('btn-call');
+      const btnCancel = document.getElementById('btn-cancel');
+      const btnArrived = document.getElementById('btn-arrived');
+
+      if (btnNavigate) {
+        btnNavigate.onclick = () => window.open(url, '_blank');
+      }
+
+      if (btnCall) {
+        const phone = trip.pasajero_telefono || trip.telefono;
+        btnCall.onclick = () => {
+          if (phone) window.location.href = `tel:${phone}`;
+          else alert('Teléfono no disponible');
+        };
+      }
+
+      if (btnCancel) {
+        btnCancel.onclick = () => {
+          if (confirm('¿Seguro que querés cancelar este viaje?')) {
+            window.dispatchEvent(new CustomEvent('driverAction', {
+              detail: { action: 'cancel', tripId: trip.id }
+            }));
+          }
+        };
+      }
+
+      if (btnArrived) {
+        btnArrived.onclick = () => {
+          window.dispatchEvent(new CustomEvent('driverAction', {
+            detail: { action: irADestino ? 'finish' : 'start', tripId: trip.id }
           }));
-        }
-      };
-    }
-
-    if (btnArrived) {
-  btnArrived.onclick = () => {
-    window.dispatchEvent(new CustomEvent("driverAction", {
-      detail: { action: irADestino ? "finish" : "start", tripId: trip.id }
-    }));
-  };
-}
-
-  }, 50);
-}
-
+        };
+      }
+    }, 50);
+  }
 
   updateTripStep(step) {
     const steps = document.querySelectorAll('.trip-progress-steps .step');
