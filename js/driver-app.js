@@ -234,6 +234,19 @@ class DriverApp {
       }
     } catch (error) {
       console.error('[DriverApp] Error fatal:', error);
+
+      const msg = String(error?.message || '').toLowerCase();
+
+      if (
+        msg.includes('auth') ||
+        msg.includes('session') ||
+        msg.includes('jwt') ||
+        msg.includes('forbidden')
+      ) {
+        window.location.href = CONFIG.REDIRECTS.LOGIN;
+        return;
+      }
+
       uiController.showToast(
         'Error: ' + (error?.message || 'Error desconocido'),
         'error',
@@ -243,7 +256,75 @@ class DriverApp {
       uiController.setGlobalLoading(false);
     }
   }
+  async _requireValidAuth() {
+    try {
+      // 1) Intento normal
+      let {
+        data: sessionData,
+        error: sessionError
+      } = await supabaseService.client.auth.getSession();
 
+      if (sessionError) {
+        console.warn('[DriverApp] getSession error:', sessionError);
+      }
+
+      let session = sessionData?.session || null;
+
+      // 2) Si no hay sesión, esperamos un poco por hydration post-OAuth
+      if (!session?.access_token) {
+        await new Promise((resolve) => setTimeout(resolve, 900));
+
+        const {
+          data: retrySessionData,
+          error: retrySessionError
+        } = await supabaseService.client.auth.getSession();
+
+        if (retrySessionError) {
+          console.warn('[DriverApp] getSession retry error:', retrySessionError);
+        }
+
+        session = retrySessionData?.session || null;
+      }
+
+      // 3) Si sigue sin haber sesión, intentamos refresh
+      if (!session?.access_token) {
+        const {
+          data: refreshData,
+          error: refreshError
+        } = await supabaseService.client.auth.refreshSession();
+
+        if (refreshError) {
+          console.warn('[DriverApp] refreshSession error:', refreshError);
+        }
+
+        session = refreshData?.session || null;
+      }
+
+      // 4) Si no logramos sesión válida, salimos
+      if (!session?.access_token) {
+        return null;
+      }
+
+      // 5) Recién acá pedimos el user real
+      const {
+        data: userData,
+        error: userError
+      } = await supabaseService.client.auth.getUser();
+
+      if (userError) {
+        console.warn('[DriverApp] getUser error:', userError);
+        return null;
+      }
+
+      const user = userData?.user || null;
+      if (!user) return null;
+
+      return { session, user };
+    } catch (err) {
+      console.error('[DriverApp] _requireValidAuth fatal:', err);
+      return null;
+    }
+  }
   // =========================================================
   // RESOLVER DRIVER ID
   // =========================================================
