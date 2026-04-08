@@ -231,10 +231,11 @@ class UIController {
       whatsappBtn.addEventListener('click', this._whatsappBtnHapticHandler);
     }
 
-    if (navigateBtn) {
-      this._navigateBtnHapticHandler = () => this._haptic('medium');
-      navigateBtn.addEventListener('click', this._navigateBtnHapticHandler);
-          if (menuButton) {
+if (navigateBtn) {
+  this._navigateBtnHapticHandler = () => this._haptic('medium');
+  navigateBtn.addEventListener('click', this._navigateBtnHapticHandler);
+
+      if (menuButton) {
       this._menuButtonClickHandler = () => this.toggleMenu();
       menuButton.addEventListener('click', this._menuButtonClickHandler);
     }
