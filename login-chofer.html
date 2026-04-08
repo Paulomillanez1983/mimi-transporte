@@ -7,17 +7,22 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
   <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
   <title>MIMI Driver - Login</title>
-<link rel="icon" href="./assets/favicon.png" type="image/png">
-<link rel="apple-touch-icon" href="./assets/favicon.png">
-  <link rel="manifest" href="/mimi-transporte/manifest.json">
+
+  <link rel="icon" href="./assets/favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="./assets/favicon.png" />
+  <link rel="manifest" href="/mimi-transporte/manifest.json" />
+
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   />
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">  <script src="./libs/supabase-js.js"></script>
+
+  <script src="./libs/supabase-js.js"></script>
 
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,6 +47,7 @@
       display: grid;
       place-items: center;
       padding: 20px;
+      overflow-x: hidden;
     }
 
     .shell {
@@ -49,18 +55,49 @@
       max-width: 380px;
     }
 
+    .shell--hidden {
+      opacity: 0;
+      transform: translateY(18px) scale(0.985);
+      filter: blur(10px);
+      pointer-events: none;
+    }
+
+    .shell--ready {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+      pointer-events: auto;
+      transition:
+        opacity .45s ease,
+        transform .45s ease,
+        filter .45s ease;
+    }
+
     .card {
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
+        radial-gradient(circle at top, rgba(255,255,255,0.05), transparent 44%);
       border: 1px solid var(--line);
       border-radius: 24px;
       padding: 24px;
       backdrop-filter: blur(10px);
+      box-shadow:
+        0 20px 60px rgba(0,0,0,0.45),
+        inset 0 1px 0 rgba(255,255,255,0.04);
     }
 
     .logo {
-      font-size: 52px;
       text-align: center;
       margin-bottom: 8px;
+    }
+
+    .logo img {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.32));
     }
 
     h1 {
@@ -103,6 +140,7 @@
       border-radius: var(--radius);
       color: #fff;
       font-size: 16px;
+      transition: border-color .16s ease, transform .12s ease, opacity .12s ease;
     }
 
     input:focus {
@@ -169,6 +207,196 @@
       font-size: 12px;
       line-height: 1.45;
     }
+
+    .app-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,0.04), transparent 42%),
+        #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 1;
+      visibility: visible;
+      transition: opacity .42s ease, visibility .42s ease;
+    }
+
+    .app-splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .app-splash__inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      animation: splashEnter .45s ease both;
+    }
+
+    .app-splash__logo-wrap {
+      width: 88px;
+      height: 88px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 18px 46px rgba(0,0,0,0.38);
+      backdrop-filter: blur(10px);
+    }
+
+    .app-splash__logo {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      animation: pulseLogo 1.5s ease-in-out infinite;
+    }
+
+    .app-splash__brand {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .app-splash__loader {
+      width: 96px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .app-splash__loader span {
+      display: block;
+      width: 45%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(255,255,255,0.22), #fff, rgba(255,255,255,0.22));
+      animation: splashLoader 1s ease-in-out infinite;
+    }
+
+    @keyframes splashEnter {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+        filter: blur(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    @keyframes pulseLogo {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.96;
+      }
+      50% {
+        transform: scale(1.04);
+        opacity: 1;
+      }
+    }
+
+    @keyframes splashLoader {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(260%); }
+    }
+
+    .skeleton {
+      position: relative;
+      overflow: hidden;
+      background: rgba(255,255,255,0.06) !important;
+      color: transparent !important;
+      user-select: none;
+    }
+
+    .skeleton::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255,255,255,0.12),
+        transparent
+      );
+      animation: skeletonShimmer 1.25s infinite;
+    }
+
+    @keyframes skeletonShimmer {
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    .card.loading .logo,
+    .card.loading h1,
+    .card.loading .subtitle,
+    .card.loading .footer-note {
+      border-radius: 12px;
+    }
+
+    .card.loading .logo {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 8px;
+    }
+
+    .card.loading h1 {
+      width: 56%;
+      height: 28px;
+      margin: 0 auto 8px;
+    }
+
+    .card.loading .subtitle {
+      width: 84%;
+      height: 18px;
+      margin: 0 auto 24px;
+    }
+
+    .card.loading .form-group label {
+      width: 72px;
+      height: 12px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+
+    .card.loading input,
+    .card.loading button,
+    .card.loading .footer-note {
+      border-radius: 16px;
+    }
+
+    .card.loading input {
+      color: transparent;
+    }
+
+    .page-enter {
+      animation: pageEnter .38s ease both;
+    }
+
+    @keyframes pageEnter {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.992);
+        filter: blur(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
   </style>
 </head>
 
@@ -191,9 +419,10 @@
 
   <div class="shell shell--hidden" id="loginShell">
     <div class="card">
-<div class="logo">
-  <img src="./assets/icons/icon-192x192.png" style="width:60px;">
-</div>
+      <div class="logo">
+        <img src="./assets/icons/icon-192x192.png" alt="MIMI Driver" />
+      </div>
+
       <h1>MIMI Driver</h1>
       <p class="subtitle">
         Ingresá con tu cuenta o continuá con Google
@@ -240,6 +469,10 @@
     const googleLoginBtn = document.getElementById("googleLoginBtn");
     const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
 
+    const splashEl = document.getElementById("appSplash");
+    const loginShell = document.getElementById("loginShell");
+    const loginCard = document.querySelector(".card");
+
     function showError(msg) {
       errorEl.textContent = msg;
       errorEl.classList.add("visible");
@@ -261,6 +494,7 @@
 
     function setLoading(loading, target = null) {
       const buttons = [loginBtn, googleLoginBtn, forgotPasswordBtn];
+
       buttons.forEach((btn) => {
         if (!btn) return;
         btn.disabled = loading;
@@ -268,9 +502,50 @@
         btn.style.pointerEvents = loading ? "none" : "auto";
       });
 
-      if (target === loginBtn) loginBtn.textContent = loading ? "Ingresando..." : "Ingresar";
-      if (target === googleLoginBtn) googleLoginBtn.textContent = loading ? "Abriendo Google..." : "Continuar con Google";
-      if (target === forgotPasswordBtn) forgotPasswordBtn.textContent = loading ? "Enviando..." : "Olvidé mi contraseña";
+      loginBtn.textContent = "Ingresar";
+      googleLoginBtn.textContent = "Continuar con Google";
+      forgotPasswordBtn.textContent = "Olvidé mi contraseña";
+
+      if (loading && target === loginBtn) loginBtn.textContent = "Ingresando...";
+      if (loading && target === googleLoginBtn) googleLoginBtn.textContent = "Abriendo Google...";
+      if (loading && target === forgotPasswordBtn) forgotPasswordBtn.textContent = "Enviando...";
+    }
+
+    function addSkeletons() {
+      document.querySelector(".logo")?.classList.add("skeleton");
+      document.querySelector("h1")?.classList.add("skeleton");
+      document.querySelector(".subtitle")?.classList.add("skeleton");
+      document.querySelector(".footer-note")?.classList.add("skeleton");
+
+      document.querySelectorAll(".form-group label").forEach((el) => el.classList.add("skeleton"));
+      document.querySelectorAll("input").forEach((el) => el.classList.add("skeleton"));
+      document.querySelectorAll("button").forEach((el) => el.classList.add("skeleton"));
+    }
+
+    function removeSkeletons() {
+      document.querySelectorAll(".skeleton").forEach((el) => el.classList.remove("skeleton"));
+    }
+
+    function showInitialLoadingUI() {
+      loginCard?.classList.add("loading");
+      addSkeletons();
+    }
+
+    function hideSplashAndRevealUI() {
+      splashEl?.classList.add("hidden");
+      loginShell?.classList.remove("shell--hidden");
+      loginShell?.classList.add("shell--ready", "page-enter");
+      loginCard?.classList.remove("loading");
+      removeSkeletons();
+    }
+
+    async function smoothNavigate(url) {
+      loginShell?.classList.remove("page-enter");
+      loginShell.style.opacity = "0";
+      loginShell.style.transform = "translateY(10px) scale(0.992)";
+      loginShell.style.filter = "blur(8px)";
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      window.location.replace(url);
     }
 
     async function ensureProfile(user) {
@@ -317,59 +592,62 @@
       const hasObservedDocs = status?.has_observed_docs === true;
 
       if (documentsApproved && onboardingStatus === "APROBADO") {
-        window.location.replace("chofer-panel.html");
+        await smoothNavigate("chofer-panel.html");
         return;
       }
 
       if (hasObservedDocs || onboardingStatus === "OBSERVADO") {
-        window.location.replace("driver-documents-observed.html");
+        await smoothNavigate("driver-documents-observed.html");
         return;
       }
 
       if (onboardingStatus === "PENDIENTE_REVISION") {
-        window.location.replace("driver-review-pending.html");
+        await smoothNavigate("driver-review-pending.html");
         return;
       }
 
       if (!profileCompleted || !documentsCompleted) {
-        window.location.replace("driver-onboarding.html");
+        await smoothNavigate("driver-onboarding.html");
         return;
       }
 
-      window.location.replace("driver-onboarding.html");
+      await smoothNavigate("driver-onboarding.html");
     }
 
-async function checkSession() {
-  try {
-    await supabaseService.init();
+    async function checkSession() {
+      try {
+        await supabaseService.init();
 
-    let { data: sessionData } =
-      await supabaseService.client.auth.getSession();
+        let { data: sessionData, error: sessionError } =
+          await supabaseService.client.auth.getSession();
 
-    let session = sessionData?.session || null;
+        if (sessionError) {
+          console.warn("[checkSession] getSession error:", sessionError);
+        }
 
-    // 🔥 fallback para OAuth (MUY IMPORTANTE)
-    if (!session) {
-      await new Promise(r => setTimeout(r, 800));
+        let session = sessionData?.session || null;
 
-      const retry = await supabaseService.client.auth.getSession();
-      session = retry?.data?.session || null;
+        if (!session) {
+          await new Promise((r) => setTimeout(r, 800));
+          const retry = await supabaseService.client.auth.getSession();
+          session = retry?.data?.session || null;
+        }
+
+        if (!session?.access_token) return;
+
+        const { data: userData, error: userError } =
+          await supabaseService.client.auth.getUser();
+
+        if (userError || !userData?.user) {
+          console.warn("[checkSession] getUser error:", userError);
+          return;
+        }
+
+        await redirectAfterAuth();
+      } catch (err) {
+        console.error("[checkSession] fatal:", err);
+      }
     }
-
-    if (!session?.access_token) return;
-
-    const { data: userData } =
-      await supabaseService.client.auth.getUser();
-
-    if (!userData?.user) return;
-
-    await redirectAfterAuth();
-
-  } catch (err) {
-    console.error("[checkSession] fatal:", err);
-  }
-}
-    checkSession();
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -414,12 +692,13 @@ async function checkSession() {
       try {
         await supabaseService.init();
 
-const { error } = await supabaseService.client.auth.signInWithOAuth({
-  provider: "google",
-  options: {
-    redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login.html"
-  }
-});
+        const { error } = await supabaseService.client.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login.html"
+          }
+        });
+
         if (error) {
           showError("❌ Error Google: " + error.message);
           return;
@@ -465,6 +744,15 @@ const { error } = await supabaseService.client.auth.signInWithOAuth({
         setLoading(false);
       }
     });
+
+    showInitialLoadingUI();
+
+    window.addEventListener("load", async () => {
+      await new Promise((r) => setTimeout(r, 750));
+      hideSplashAndRevealUI();
+    });
+
+    checkSession();
   </script>
 </body>
 </html>
