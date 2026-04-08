@@ -1672,11 +1672,13 @@ body {
 #menu-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   opacity: 0;
   pointer-events: none;
-  transition: 0.2s;
-  z-index: 200;
+  transition: opacity 220ms ease;
+  z-index: 320;
 }
 
 #menu-backdrop.active {
@@ -1686,29 +1688,193 @@ body {
 
 #side-menu {
   position: fixed;
-  top: 0;
-  left: -260px;
-  width: 260px;
-  height: 100%;
-  background: #fff;
-  z-index: 210;
-  transition: 0.3s;
-  padding: 16px;
+  inset: 0 auto 0 0;
+  width: min(86vw, 320px);
+  z-index: 330;
+  pointer-events: none;
 }
 
-#side-menu.active {
-  left: 0;
+#side-menu .menu-sheet {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: min(86vw, 320px);
+  height: 100%;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 12px 0 34px rgba(0,0,0,0.16);
+  transform: translateX(-108%);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  padding: calc(12px + var(--safe-top)) 14px calc(18px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  pointer-events: auto;
+  will-change: transform;
+}
+
+#side-menu.active .menu-sheet {
+  transform: translateX(0);
+}
+
+.menu-drag-handle {
+  width: 42px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.14);
+  margin: 0 auto 4px;
 }
 
 .menu-header {
-  margin-bottom: 20px;
+  display: grid;
+  gap: 10px;
+  margin-bottom: 2px;
 }
 
-.menu-items button {
-  display: block;
+.menu-profile {
   width: 100%;
-  padding: 12px;
   border: none;
-  background: none;
+  background: linear-gradient(135deg, rgba(47,111,237,0.10), rgba(6,193,103,0.08));
+  border-radius: 20px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 12px;
   text-align: left;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+}
+
+.menu-profile:active {
+  transform: scale(0.99);
+}
+
+.menu-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #111;
+  font-weight: 800;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+}
+
+.menu-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.menu-profile-text {
+  min-width: 0;
+}
+
+.menu-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-email {
+  margin-top: 3px;
+  font-size: 12px;
+  color: rgba(17,17,17,0.58);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-chevron {
+  font-size: 20px;
+  color: rgba(17,17,17,0.55);
+  transition: transform 180ms ease;
+}
+
+#side-menu.profile-expanded .menu-chevron {
+  transform: rotate(180deg);
+}
+
+.menu-profile-expand {
+  display: grid;
+  gap: 8px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 220ms ease, opacity 180ms ease;
+}
+
+#side-menu.profile-expanded .menu-profile-expand {
+  max-height: 120px;
+  opacity: 1;
+}
+
+.menu-secondary-action {
+  border: none;
+  background: #f4f4f5;
+  color: #111;
+  min-height: 44px;
+  border-radius: 14px;
+  text-align: left;
+  padding: 0 14px;
+  font-weight: 700;
+}
+
+.menu-secondary-action.danger {
+  background: rgba(225,25,0,0.08);
+  color: #ad1200;
+}
+
+.menu-items {
+  display: grid;
+  gap: 8px;
+}
+
+.menu-item {
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #111;
+}
+
+.menu-item:active {
+  transform: scale(0.99);
+}
+
+.menu-item-icon {
+  font-size: 18px;
+}
+
+.menu-item-text {
+  font-size: 14px;
+}
+
+body.menu-open {
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  #side-menu {
+    width: 320px;
+  }
+
+  #side-menu .menu-sheet {
+    width: 320px;
+  }
 }
