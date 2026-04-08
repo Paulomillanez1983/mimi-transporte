@@ -1824,6 +1824,36 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   updateDocumentsProgressUI();
   updateOverallStepperState();
 }
+
+    function initFileInputs() {
+  Object.entries(DOC_INPUT_ALIASES).forEach(([docType, inputIds]) => {
+    inputIds.forEach((inputId) => {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+
+      input.addEventListener("change", (e) => {
+        const file = e.target?.files?.[0] || null;
+        if (!file) return;
+
+        const sourceLabel = inputId.endsWith("_camera")
+          ? "Foto capturada"
+          : "Archivo seleccionado";
+
+        void setSelectedFile(docType, file, sourceLabel);
+
+        inputIds.forEach((otherId) => {
+          if (otherId === inputId) return;
+          const otherInput = document.getElementById(otherId);
+          if (otherInput) {
+            try {
+              otherInput.value = "";
+            } catch (_) {}
+          }
+        });
+      });
+    });
+  });
+}
     function getChosenFile(docType) {
       if (selectedFiles.has(docType)) return selectedFiles.get(docType);
 
