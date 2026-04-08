@@ -45,7 +45,8 @@ class UIController {
     this._rejectTouchStartHandler = null;
     this._callBtnHapticHandler = null;
     this._whatsappBtnHapticHandler = null;
-    this._navigateBtnHapticHandler = null;
+    this._menuButtonClickHandler = null;     
+    this._menuBackdropClickHandler = null;
 
     // Bindings base
     this._handleAccept = this._handleAccept.bind(this);
@@ -158,13 +159,23 @@ class UIController {
       'trip-actions': 'trip-actions',
       'toast-container': 'toast-container',
       'global-loading': 'global-loading',
-      'offline-banner': 'offline-banner'
+      'offline-banner': 'offline-banner',
+
+      'menu-button': 'menu-button',
+      'side-menu': 'side-menu',
+      'menu-backdrop': 'menu-backdrop'
     };
 
     Object.entries(selectors).forEach(([key, id]) => {
       this.elements[key] = document.getElementById(id);
     });
+
+    this.avatarEl =
+      this.elements['driver-initial']?.closest('.avatar') ||
+      document.querySelector('.avatar') ||
+      null;
   }
+
 
   _setupEventListeners() {
     const acceptBtn = this.elements['btn-accept'];
@@ -175,10 +186,11 @@ class UIController {
     const callBtn = this.elements['btn-call'];
     const whatsappBtn = this.elements['btn-whatsapp'];
     const navigateBtn = this.elements['btn-navigate'];
+    const menuButton = this.elements['menu-button'];
+    const menuBackdrop = this.elements['menu-backdrop'];
 
     window.addEventListener('tripStateChanged', this._boundTripStateChanged);
     window.addEventListener('driverFlowStateChanged', this._boundDriverFlowStateChanged);
-
     if (acceptBtn) {
       acceptBtn.addEventListener('click', this._handleAccept);
       this._acceptTouchStartHandler = () => this._haptic('light');
@@ -222,6 +234,15 @@ class UIController {
     if (navigateBtn) {
       this._navigateBtnHapticHandler = () => this._haptic('medium');
       navigateBtn.addEventListener('click', this._navigateBtnHapticHandler);
+          if (menuButton) {
+      this._menuButtonClickHandler = () => this.toggleMenu();
+      menuButton.addEventListener('click', this._menuButtonClickHandler);
+    }
+
+     if (menuBackdrop) {
+        this._menuBackdropClickHandler = () => this.closeMenu();
+        menuBackdrop.addEventListener('click', this._menuBackdropClickHandler);
+      }
     }
   }
 
@@ -234,7 +255,8 @@ class UIController {
     const callBtn = this.elements['btn-call'];
     const whatsappBtn = this.elements['btn-whatsapp'];
     const navigateBtn = this.elements['btn-navigate'];
-
+    const menuButton = this.elements['menu-button'];
+    const menuBackdrop = this.elements['menu-backdrop'];
     if (acceptBtn) {
       acceptBtn.removeEventListener('click', this._handleAccept);
       if (this._acceptTouchStartHandler) {
@@ -271,6 +293,13 @@ class UIController {
 
     if (navigateBtn && this._navigateBtnHapticHandler) {
       navigateBtn.removeEventListener('click', this._navigateBtnHapticHandler);
+          if (menuButton && this._menuButtonClickHandler) {
+      menuButton.removeEventListener('click', this._menuButtonClickHandler);
+    }
+
+      if (menuBackdrop && this._menuBackdropClickHandler) {
+        menuBackdrop.removeEventListener('click', this._menuBackdropClickHandler);
+      }
     }
   }
 
@@ -1231,19 +1260,92 @@ hideNavigation() {
     }
   }
 
-  setDriverProfile(nameOrEmail) {
+  setDriverProfile(profileOrName, maybeAvatarUrl = '') {
     const nameEl = this.elements['driver-name'];
     const initialEl = this.elements['driver-initial'];
+    const statusDot = this.elements['status-dot'];
+    const avatarContainer = this.avatarEl;
+
+    const isObject = profileOrName && typeof profileOrName === 'object';
+    const displayName = isObject
+      ? (profileOrName.name || profileOrName.full_name || profileOrName.email || 'Conductor')
+      : (profileOrName || 'Conductor');
+
+    const email = isObject ? (profileOrName.email || '') : '';
+    const avatarUrl = isObject
+      ? (profileOrName.avatarUrl || profileOrName.avatar_url || profileOrName.picture || '')
+      : (maybeAvatarUrl || '');
 
     if (nameEl) {
-      nameEl.textContent = nameOrEmail || 'Conductor';
+      nameEl.textContent = displayName;
+      if (email) {
+        nameEl.title = email;
+      }
+    }
+
+    if (avatarContainer) {
+      const safeInitial = String(displayName || 'C').charAt(0).toUpperCase();
+
+      if (avatarUrl) {
+        avatarContainer.innerHTML = `
+          <img
+            src="${avatarUrl}"
+            alt="${displayName}"
+            referrerpolicy="no-referrer"
+            loading="eager"
+            decoding="async"
+            style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"
+          />
+          <span id="status-dot" class="status-dot${this.state.isOnline ? ' online' : ''}"></span>
+        `;
+        this.elements['status-dot'] = avatarContainer.querySelector('#status-dot');
+        this.elements['driver-initial'] = null;
+      } else {
+        avatarContainer.innerHTML = `
+          <span id="driver-initial">${safeInitial}</span>
+          <span id="status-dot" class="status-dot${this.state.isOnline ? ' online' : ''}"></span>
+        `;
+        this.elements['driver-initial'] = avatarContainer.querySelector('#driver-initial');
+        this.elements['status-dot'] = avatarContainer.querySelector('#status-dot');
+      }
+
+      return;
     }
 
     if (initialEl) {
-      initialEl.textContent = (nameOrEmail || 'C').charAt(0).toUpperCase();
+      initialEl.textContent = String(displayName || 'C').charAt(0).toUpperCase();
+    }
+
+    if (statusDot) {
+      statusDot.classList.toggle('online', this.state.isOnline);
     }
   }
 
+    toggleMenu() {
+    const menu = this.elements['side-menu'];
+    const backdrop = this.elements['menu-backdrop'];
+    if (!menu) return;
+
+    const isOpen = menu.classList.contains('active');
+
+    if (isOpen) {
+      this.closeMenu();
+    } else {
+      menu.classList.add('active');
+      backdrop?.classList.add('active');
+      document.body.classList.add('menu-open');
+      this._haptic('light');
+    }
+  }
+
+  closeMenu() {
+    const menu = this.elements['side-menu'];
+    const backdrop = this.elements['menu-backdrop'];
+
+    menu?.classList.remove('active');
+    backdrop?.classList.remove('active');
+    document.body.classList.remove('menu-open');
+  }
   _haptic(type = 'light') {
     if (!navigator.vibrate) return;
     if (!soundManager?._hapticsUnlocked) return;
