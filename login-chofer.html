@@ -654,56 +654,70 @@ function setSplashStatus(text = "") {
     return data || null;
   }
 
-  async function redirectAfterAuth() {
-    await supabaseService.init();
+async function redirectAfterAuth() {
+  await supabaseService.init();
+  setSplashMessage("Iniciando sesión...");
+  setSplashStatus("Recuperando usuario autenticado...");
 
-    setSplashMessage("Validando perfil...");
+  const { data: userRes, error: userErr } = await supabaseService.client.auth.getUser();
+  console.log("[redirectAfterAuth] userRes:", userRes);
+  console.log("[redirectAfterAuth] userErr:", userErr);
 
-    const { data: userRes, error: userErr } = await supabaseService.client.auth.getUser();
-
-    if (userErr || !userRes?.user) {
-      throw userErr || new Error("No hay usuario autenticado");
-    }
-
-    const user = userRes.user;
-
-    await ensureProfile(user);
-    const status = await fetchOnboardingStatus(user.id);
-
-    const onboardingStatus = status?.onboarding_status || "PENDIENTE_DOCUMENTOS";
-    const documentsApproved = status?.documents_approved === true;
-    const profileCompleted = status?.profile_completed === true;
-    const documentsCompleted = status?.documents_completed === true;
-    const hasObservedDocs = status?.has_observed_docs === true;
-
-    if (documentsApproved && onboardingStatus === "APROBADO") {
-      setSplashMessage("Ingresando al panel...");
-      await smoothNavigate("chofer-panel.html");
-      return;
-    }
-
-    if (hasObservedDocs || onboardingStatus === "OBSERVADO") {
-      setSplashMessage("Cargando observaciones...");
-      await smoothNavigate("driver-documents-observed.html");
-      return;
-    }
-
-    if (onboardingStatus === "PENDIENTE_REVISION") {
-      setSplashMessage("Cargando revisión...");
-      await smoothNavigate("driver-review-pending.html");
-      return;
-    }
-
-    if (!profileCompleted || !documentsCompleted) {
-      setSplashMessage("Preparando onboarding...");
-      await smoothNavigate("driver-onboarding.html");
-      return;
-    }
-
-    setSplashMessage("Preparando onboarding...");
-    await smoothNavigate("driver-onboarding.html");
+  if (userErr || !userRes?.user) {
+    throw userErr || new Error("No hay usuario autenticado");
   }
 
+  const user = userRes.user;
+
+  setSplashMessage("Validando perfil...");
+  setSplashStatus("Comprobando perfil de chofer...");
+  await ensureProfile(user);
+  console.log("[redirectAfterAuth] ensureProfile OK");
+
+  setSplashMessage("Preparando onboarding...");
+  setSplashStatus("Consultando estado de documentación...");
+  const status = await fetchOnboardingStatus(user.id);
+  console.log("[redirectAfterAuth] onboarding status:", status);
+
+  const onboardingStatus = status?.onboarding_status || "PENDIENTE_DOCUMENTOS";
+  const documentsApproved = status?.documents_approved === true;
+  const profileCompleted = status?.profile_completed === true;
+  const documentsCompleted = status?.documents_completed === true;
+  const hasObservedDocs = status?.has_observed_docs === true;
+
+  console.log("[redirectAfterAuth] decision:", {
+    onboardingStatus,
+    documentsApproved,
+    profileCompleted,
+    documentsCompleted,
+    hasObservedDocs
+  });
+
+  if (documentsApproved && onboardingStatus === "APROBADO") {
+    setSplashMessage("Ingresando al panel...");
+    setSplashStatus("Cargando tu panel principal...");
+    await smoothNavigate("chofer-panel.html");
+    return;
+  }
+
+  if (hasObservedDocs || onboardingStatus === "OBSERVADO") {
+    setSplashMessage("Cargando observaciones...");
+    setSplashStatus("Revisá la documentación pendiente...");
+    await smoothNavigate("driver-documents-observed.html");
+    return;
+  }
+
+  if (onboardingStatus === "PENDIENTE_REVISION") {
+    setSplashMessage("Cargando revisión...");
+    setSplashStatus("Tu documentación está siendo revisada...");
+    await smoothNavigate("driver-review-pending.html");
+    return;
+  }
+
+  setSplashMessage("Preparando onboarding...");
+  setSplashStatus("Completá tu perfil y documentación...");
+  await smoothNavigate("driver-onboarding.html");
+}
   async function checkSession() {
     try {
       await supabaseService.init();
