@@ -657,11 +657,12 @@
 .sticky-actions {
   display: block;
 }
+@media (max-width: 720px) {
   .brand-logo {
-  width: 36px;
-  height: 36px;
-}  
-    @media (max-width: 480px) {
+    width: 48px;
+    height: 48px;
+  }
+}    @media (max-width: 480px) {
       body {
         padding-left: 12px;
         padding-right: 12px;
@@ -781,9 +782,7 @@
         </div>
       </div>
 
-      <div class="actions">
-        <button class="btn-primary" id="toStep2" type="button">Continuar</button>
-      </div>
+<div class="actions"></div>
     </section>
 
     <section class="step-card" data-step="2">
@@ -825,10 +824,9 @@
         </div>
       </div>
 
-      <div class="actions">
-        <button class="btn-secondary" id="backTo1" type="button">Volver</button>
-        <button class="btn-primary" id="toStep3" type="button">Continuar</button>
-      </div>
+<div class="actions">
+  <button class="btn-secondary" id="backTo1">Volver</button>
+</div>
     </section>
 
     <section class="step-card" data-step="3">
