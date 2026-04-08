@@ -1,7 +1,7 @@
 /**
- * MIMI Driver - UI Controller v2.0 (Uber-Style) - FINAL PROD
- * Features: Map-first design, fluid animations, haptic feedback, gesture support
- * Compatible con: driver-app.js, trip-manager.js, supabase-client.js (sin cambios)
+ * MIMI Driver - UI Controller v3.0 (Uber Driver PRO)
+ * Final production version
+ * Compatible con: driver-app.js, trip-manager.js, supabase-client.js
  */
 
 import CONFIG from './config.js';
@@ -31,12 +31,12 @@ class UIController {
     this._arrivalTimeout = null;
     this._countdownSoundInterval = null;
 
-    // Touch handling for bottom sheet
+    // Touch handling
     this.touchStartY = 0;
     this.touchCurrentY = 0;
     this.sheetHeight = 0;
 
-    // Refs para cleanup
+    // Refs de listeners para cleanup
     this._viewportResizeHandler = null;
     this._viewportOrientationHandler = null;
     this._modalTouchMoveHandler = null;
@@ -47,7 +47,7 @@ class UIController {
     this._whatsappBtnHapticHandler = null;
     this._navigateBtnHapticHandler = null;
 
-    // Bindings
+    // Bindings base
     this._handleAccept = this._handleAccept.bind(this);
     this._handleReject = this._handleReject.bind(this);
     this._onBackdropClick = this._onBackdropClick.bind(this);
@@ -55,6 +55,7 @@ class UIController {
     this._onTouchMove = this._onTouchMove.bind(this);
     this._onTouchEnd = this._onTouchEnd.bind(this);
 
+    // Bindings globales
     this._boundTripStateChanged = this._handleTripStateChanged.bind(this);
     this._boundDriverFlowStateChanged = this._handleDriverFlowStateChanged.bind(this);
   }
@@ -71,29 +72,19 @@ class UIController {
     this._setupGestures();
 
     this._isInitialized = true;
-    console.log('[UI] Controller v2.0 initialized - Uber Style');
+    console.log('[UI] Controller v3.0 initialized - Uber Driver PRO');
   }
 
   destroy() {
-    // Global listeners
     window.removeEventListener('tripStateChanged', this._boundTripStateChanged);
     window.removeEventListener('driverFlowStateChanged', this._boundDriverFlowStateChanged);
 
-    // Gesture listeners
     this._removeGestureListeners();
-
-    // DOM listeners
     this._removeDOMListeners();
     this._removeViewportListeners();
 
-    // Timers
     this._clearCountdownTimers();
     this._clearArrivalTimer();
-
-    if (this._countdownSoundInterval) {
-      clearInterval(this._countdownSoundInterval);
-      this._countdownSoundInterval = null;
-    }
 
     this._gestureCleanup = false;
     this._isInitialized = false;
@@ -109,30 +100,25 @@ class UIController {
 
   _cacheElements() {
     const selectors = {
-      // Header
       'driver-name': 'driver-name',
       'driver-initial': 'driver-initial',
       'status-dot': 'status-dot',
       'status-text': 'status-text',
 
-      // Stats
       'stat-earnings': 'stat-earnings',
       'stat-trips': 'stat-trips',
       'stat-rating': 'stat-rating',
 
-      // FAB Online
       'fab-online': 'fab-online',
       'fab-text': 'fab-text',
       'fab-icon': 'fab-icon',
       'fab-pulse': 'fab-pulse',
 
-      // Bottom Sheet
       'bottom-sheet': 'bottom-sheet',
       'sheet-handle': 'sheet-handle',
       'sheet-content': 'sheet-content',
       'sheet-header': 'sheet-header',
 
-      // Modal Incoming
       'incoming-modal': 'incoming-modal',
       'modal-backdrop': 'modal-backdrop',
       'modal-content': 'modal-content',
@@ -140,7 +126,6 @@ class UIController {
       'countdown-number': 'countdown-number',
       'countdown-circle': 'countdown-circle',
 
-      // Trip info
       'trip-pickup': 'trip-pickup',
       'trip-dropoff': 'trip-dropoff',
       'trip-distance': 'trip-distance',
@@ -154,7 +139,6 @@ class UIController {
       'pickup-address': 'pickup-address',
       'dropoff-address': 'dropoff-address',
 
-      // Buttons
       'btn-accept': 'btn-accept',
       'btn-reject': 'btn-reject',
       'btn-call': 'btn-call',
@@ -163,7 +147,6 @@ class UIController {
       'btn-arrived': 'btn-arrived',
       'btn-finish': 'btn-finish',
 
-      // Navigation bar
       'nav-bar': 'nav-bar',
       'nav-street': 'nav-street',
       'nav-next': 'nav-next',
@@ -171,7 +154,6 @@ class UIController {
       'nav-progress-bar': 'nav-progress-bar',
       'maneuver-icon': 'maneuver-icon',
 
-      // Panels
       'arrival-panel': 'arrival-panel',
       'trip-actions': 'trip-actions',
       'toast-container': 'toast-container',
@@ -292,39 +274,6 @@ class UIController {
     }
   }
 
-  _setupGestures() {
-    if (this._gestureCleanup) return;
-
-    const sheet = this.elements['bottom-sheet'];
-    const handle = this.elements['sheet-handle'];
-
-    if (!sheet || !handle) return;
-
-    handle.addEventListener('touchstart', this._onTouchStart, { passive: true });
-    sheet.addEventListener('touchstart', this._onTouchStart, { passive: true });
-
-    document.addEventListener('touchmove', this._onTouchMove, { passive: false });
-    document.addEventListener('touchend', this._onTouchEnd, { passive: true });
-
-    this._gestureCleanup = true;
-  }
-
-  _removeGestureListeners() {
-    const sheet = this.elements['bottom-sheet'];
-    const handle = this.elements['sheet-handle'];
-
-    if (handle) {
-      handle.removeEventListener('touchstart', this._onTouchStart);
-    }
-
-    if (sheet) {
-      sheet.removeEventListener('touchstart', this._onTouchStart);
-    }
-
-    document.removeEventListener('touchmove', this._onTouchMove);
-    document.removeEventListener('touchend', this._onTouchEnd);
-  }
-
   _setupViewport() {
     const setVH = () => {
       const vh = window.innerHeight * 0.01;
@@ -332,9 +281,7 @@ class UIController {
     };
 
     this._viewportResizeHandler = setVH;
-    this._viewportOrientationHandler = () => {
-      setTimeout(setVH, 100);
-    };
+    this._viewportOrientationHandler = () => setTimeout(setVH, 100);
 
     setVH();
     window.addEventListener('resize', this._viewportResizeHandler);
@@ -350,13 +297,44 @@ class UIController {
     }
   }
 
+  _setupGestures() {
+    if (this._gestureCleanup) return;
+
+    const sheet = this.elements['bottom-sheet'];
+    const handle = this.elements['sheet-handle'];
+
+    if (!sheet || !handle) return;
+
+    handle.addEventListener('touchstart', this._onTouchStart, { passive: true });
+    sheet.addEventListener('touchstart', this._onTouchStart, { passive: true });
+    document.addEventListener('touchmove', this._onTouchMove, { passive: false });
+    document.addEventListener('touchend', this._onTouchEnd, { passive: true });
+
+    this._gestureCleanup = true;
+  }
+
+  _removeGestureListeners() {
+    const sheet = this.elements['bottom-sheet'];
+    const handle = this.elements['sheet-handle'];
+
+    if (handle) {
+      handle.removeEventListener('touchstart', this._onTouchStart);
+    }
+    if (sheet) {
+      sheet.removeEventListener('touchstart', this._onTouchStart);
+    }
+
+    document.removeEventListener('touchmove', this._onTouchMove);
+    document.removeEventListener('touchend', this._onTouchEnd);
+  }
+
   _normalizeTripState(estado) {
     return String(estado || '').trim().toUpperCase();
   }
 
   _isDestinationState(estado) {
-    const normalized = this._normalizeTripState(estado);
-    return normalized === 'EN_CURSO' || normalized === 'EN_VIAJE' || normalized === 'TRIP_STARTED';
+    const s = this._normalizeTripState(estado);
+    return s === 'EN_CURSO' || s === 'EN_VIAJE' || s === 'TRIP_STARTED';
   }
 
   _getNavigateMeta(trip) {
@@ -365,16 +343,17 @@ class UIController {
     const lat = irADestino ? trip?.destino_lat : trip?.origen_lat;
     const lng = irADestino ? trip?.destino_lng : trip?.origen_lng;
 
+    const hasCoords = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+
     return {
       irADestino,
       lat,
       lng,
       texto: irADestino ? 'Ir a destino' : 'Ir a recogida',
       icono: '🏁',
-      url:
-        Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
-          ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`
-          : null
+      url: hasCoords
+        ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`
+        : null
     };
   }
 
@@ -536,7 +515,6 @@ class UIController {
     }
 
     this._populateTripData(tripData);
-
     modal.classList.add('active');
     this.state.isModalOpen = true;
 
@@ -574,7 +552,7 @@ class UIController {
         setTimeout(() => {
           el.textContent = value;
           el.style.opacity = '1';
-        }, 150);
+        }, 120);
       }
     });
 
@@ -665,8 +643,8 @@ class UIController {
 
     if (!this.state.isModalOpen || this.state.isProcessing) return;
 
-    console.log('[UI] Trip accepted');
     this.state.isProcessing = true;
+    console.log('[UI] Trip accepted');
 
     const btn = this.elements['btn-accept'];
     if (btn) {
@@ -727,8 +705,8 @@ class UIController {
 
     if (!this.state.isModalOpen || this.state.isProcessing) return;
 
-    console.log('[UI] Trip rejected');
     this.state.isProcessing = true;
+    console.log('[UI] Trip rejected');
 
     soundManager.play('reject');
     this._haptic('light');
@@ -759,7 +737,6 @@ class UIController {
   _closeIncomingModal() {
     if (!this.state.isModalOpen) return;
 
-    console.log('[UI] Closing incoming modal');
     this._clearCountdownTimers();
 
     const modal = this.elements['incoming-modal'];
@@ -866,7 +843,7 @@ class UIController {
       fab.classList.toggle('online', isOnline);
       if (isOnline) {
         fab.style.background = 'linear-gradient(135deg, #05944F 0%, #06C167 100%)';
-        fab.style.boxShadow = '0 4px 20px rgba(5, 148, 79, 0.4)';
+        fab.style.boxShadow = '0 4px 20px rgba(5,148,79,0.4)';
       } else {
         fab.style.background = '';
         fab.style.boxShadow = '';
@@ -1024,16 +1001,14 @@ class UIController {
     const flowState = this._normalizeTripState(trip.estado);
     const renderKey = `${trip.id}:${flowState}`;
 
-    if (
-      this._lastTripRendered === renderKey &&
-      sheetContent.dataset.flowState === flowState
-    ) {
+    if (this._lastTripRendered === renderKey && sheetContent.dataset.flowState === flowState) {
       return;
     }
 
     this._lastTripRendered = renderKey;
 
     const { irADestino, texto, icono, url } = this._getNavigateMeta(trip);
+
     sheetContent.dataset.flowState = flowState;
     delete sheetContent.dataset.waitingState;
 
@@ -1225,8 +1200,7 @@ class UIController {
       toast.style.opacity = '1';
     });
 
-    const hapticType =
-      type === 'error' ? 'error' : type === 'success' ? 'success' : 'light';
+    const hapticType = type === 'error' ? 'error' : type === 'success' ? 'success' : 'light';
     this._haptic(hapticType);
 
     setTimeout(() => {
