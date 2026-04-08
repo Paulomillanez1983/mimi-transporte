@@ -470,20 +470,22 @@ class UIController {
     }
   }
 
-  _expandBottomSheet() {
+    _expandBottomSheet() {
     const sheet = this.elements['bottom-sheet'];
     if (!sheet) return;
 
     sheet.classList.add('expanded');
+    document.body.classList.add('sheet-expanded');
     this.state.bottomSheetExpanded = true;
     this._haptic('light');
   }
 
-  _collapseBottomSheet() {
+    _collapseBottomSheet() {
     const sheet = this.elements['bottom-sheet'];
     if (!sheet) return;
 
     sheet.classList.remove('expanded');
+    document.body.classList.remove('sheet-expanded');
     this.state.bottomSheetExpanded = false;
   }
 
