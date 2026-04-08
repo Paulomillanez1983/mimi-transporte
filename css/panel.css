@@ -245,7 +245,7 @@ body {
 
 .nav-bar {
   position: fixed;
-  top: calc(82px + var(--safe-top));
+top: calc(110px + var(--safe-top));
   left: 16px;
   right: 16px;
   z-index: var(--z-nav);
