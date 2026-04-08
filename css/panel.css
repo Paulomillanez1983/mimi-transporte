@@ -1386,9 +1386,17 @@ top: calc(var(--mobile-top) + 56px);
     max-height: min(78dvh, 720px);
     z-index: 240;
     border-radius: 22px 22px 0 0;
-    transform: translateY(calc(100% - var(--mobile-sheet-peek)));
+    transform: translateY(calc(100% - 24px));
+    background: transparent;
+    box-shadow: none;
+    border-top: none;
+    backdrop-filter: none;
   }
 
+  .sheet-handle,
+  .sheet-content {
+    display: none;
+  }
   .bottom-sheet.expanded {
     transform: translateY(0);
   }
