@@ -318,24 +318,33 @@
       window.location.replace("driver-onboarding.html");
     }
 
-    async function checkSession() {
-      try {
-        await supabaseService.init();
+async function checkSession() {
+  try {
+    await supabaseService.init();
 
-        const { data, error } = await supabaseService.client.auth.getSession();
-        if (error) {
-          console.warn("[checkSession] error:", error);
-          return;
-        }
+    const { data: sessionData, error: sessionError } =
+      await supabaseService.client.auth.getSession();
 
-        if (data?.session) {
-          await redirectAfterAuth();
-        }
-      } catch (err) {
-        console.error("[checkSession] fatal:", err);
-      }
+    if (sessionError) {
+      console.warn("[checkSession] getSession error:", sessionError);
+      return;
     }
 
+    if (!sessionData?.session) return;
+
+    const { data: userData, error: userError } =
+      await supabaseService.client.auth.getUser();
+
+    if (userError || !userData?.user) {
+      console.warn("[checkSession] getUser error:", userError);
+      return;
+    }
+
+    window.location.replace("chofer-panel.html");
+  } catch (err) {
+    console.error("[checkSession] fatal:", err);
+  }
+}
     checkSession();
 
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
@@ -381,13 +390,12 @@
       try {
         await supabaseService.init();
 
-        const { error } = await supabaseService.client.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login.html"
-          }
-        });
-
+const { error } = await supabaseService.client.auth.signInWithOAuth({
+  provider: "google",
+  options: {
+    redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login.html"
+  }
+});
         if (error) {
           showError("❌ Error Google: " + error.message);
           return;
