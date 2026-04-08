@@ -208,26 +208,6 @@
       line-height: 1.45;
     }
 
-    .app-splash {
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background:
-        radial-gradient(circle at center, rgba(255,255,255,0.04), transparent 42%),
-        #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 1;
-      visibility: visible;
-      transition: opacity .42s ease, visibility .42s ease;
-    }
-
-    .app-splash.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
 
 .app-splash {
   position: fixed;
@@ -358,60 +338,6 @@
   0% { transform: translateX(-120%); }
   100% { transform: translateX(260%); }
 }
-    .app-splash__brand {
-      font-size: 15px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.9);
-    }
-
-    .app-splash__loader {
-      width: 96px;
-      height: 4px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.08);
-      overflow: hidden;
-      position: relative;
-    }
-
-    .app-splash__loader span {
-      display: block;
-      width: 45%;
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, rgba(255,255,255,0.22), #fff, rgba(255,255,255,0.22));
-      animation: splashLoader 1s ease-in-out infinite;
-    }
-
-    @keyframes splashEnter {
-      from {
-        opacity: 0;
-        transform: translateY(10px) scale(0.985);
-        filter: blur(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0);
-      }
-    }
-
-    @keyframes pulseLogo {
-      0%, 100% {
-        transform: scale(1);
-        opacity: 0.96;
-      }
-      50% {
-        transform: scale(1.04);
-        opacity: 1;
-      }
-    }
-
-    @keyframes splashLoader {
-      0% { transform: translateX(-120%); }
-      100% { transform: translateX(260%); }
-    }
 
     .skeleton {
       position: relative;
@@ -506,12 +432,12 @@
 <div id="appSplash" class="app-splash">
   <div class="app-splash__inner">
     <div class="app-splash__stage">
-    <img
-      src="./assets/icons/logo-mimi.png"
-      alt="MIMI"
-      class="app-splash__logo"
-    />      
       <div class="app-splash__glow"></div>
+      <img
+        src="./assets/icons/logo-mimi.png"
+        alt="MIMI"
+        class="app-splash__logo"
+      />
     </div>
 
     <div class="app-splash__brand">MIMI DRIVER</div>
@@ -850,11 +776,10 @@
 
     showInitialLoadingUI();
 
-    window.addEventListener("load", async () => {
-      await new Promise((r) => setTimeout(r, 750));
-      hideSplashAndRevealUI();
-    });
-
+window.addEventListener("load", async () => {
+  await new Promise((r) => setTimeout(r, 1100));
+  hideSplashAndRevealUI();
+});
     checkSession();
   </script>
 </body>
