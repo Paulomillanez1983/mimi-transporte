@@ -1313,3 +1313,381 @@ body {
     font-size: 34px;
   }
 }
+/* =========================================================
+   MIMI DRIVER - SMARTPHONE FIX FINAL
+   Evita superposiciones en pantallas chicas
+   Agregar AL FINAL de css/panel.css
+   ========================================================= */
+
+html,
+body {
+  min-height: 100dvh;
+}
+
+#map-container,
+#ui-layer {
+  height: 100dvh;
+}
+
+/* -------------------------
+   Base mobile-first
+   ------------------------- */
+@media (max-width: 767px) {
+  :root {
+    --mobile-top-offset: calc(var(--safe-top) + 84px);
+    --mobile-side: 12px;
+    --mobile-fab-h: 60px;
+    --mobile-fab-gap: 14px;
+    --mobile-sheet-peek: 126px;
+  }
+
+  /* HEADER */
+  .header {
+    top: calc(var(--safe-top) + 10px);
+    left: var(--mobile-side);
+    right: 72px;
+  }
+
+  .header-content {
+    min-height: 48px;
+  }
+
+  .avatar,
+  .icon-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  /* STATS:
+     en mobile ocupan demasiado arriba y chocan con la nav verde.
+     los dejamos ocultos por defecto */
+  .stats-floating {
+    display: none;
+  }
+
+  /* Si querés mostrarlas solo cuando hay viaje/navegación activa */
+  .nav-bar.active ~ .stats-floating,
+  body.has-trip .stats-floating {
+    display: none;
+  }
+
+  /* NAV BAR */
+  .nav-bar {
+    top: var(--mobile-top-offset);
+    left: var(--mobile-side);
+    right: var(--mobile-side);
+    border-radius: 20px;
+  }
+
+  .nav-content {
+    padding: 12px 14px 10px;
+    gap: 10px;
+  }
+
+  .maneuver-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .nav-street {
+    font-size: 12px;
+  }
+
+  .nav-next {
+    font-size: 15px;
+  }
+
+  .nav-distance {
+    font-size: 17px;
+  }
+
+  /* BOTTOM SHEET */
+  .bottom-sheet {
+    max-height: min(82dvh, 760px);
+    transform: translateY(calc(100% - var(--mobile-sheet-peek)));
+    border-radius: 24px 24px 0 0;
+  }
+
+  .bottom-sheet.expanded {
+    transform: translateY(0);
+  }
+
+  .bottom-sheet.has-trip {
+    transform: translateY(calc(100% - 168px));
+  }
+
+  .bottom-sheet.has-trip.expanded {
+    transform: translateY(0);
+  }
+
+  .sheet-content {
+    padding:
+      4px
+      16px
+      calc(var(--mobile-fab-h) + var(--mobile-fab-gap) + 34px + var(--safe-bottom));
+    max-height: calc(82dvh - 24px);
+  }
+
+  .sheet-handle {
+    padding-top: 8px;
+    padding-bottom: 6px;
+  }
+
+  .handle-bar {
+    width: 40px;
+    height: 5px;
+  }
+
+  /* WAITING STATE */
+  .waiting-state {
+    gap: 12px;
+    padding-top: 4px;
+  }
+
+  .waiting-state h3 {
+    font-size: clamp(26px, 8vw, 38px);
+    line-height: 0.98;
+  }
+
+  .waiting-state p {
+    font-size: 16px;
+    line-height: 1.32;
+    max-width: 100%;
+  }
+
+  /* FAB:
+     siempre por encima del sheet pero sin tapar texto */
+  .fab-online {
+    left: var(--mobile-side);
+    right: var(--mobile-side);
+    bottom: calc(var(--safe-bottom) + 12px);
+    min-height: var(--mobile-fab-h);
+    padding: 14px 20px;
+    z-index: 320;
+  }
+
+  .fab-text {
+    font-size: 15px;
+  }
+
+  .fab-icon {
+    font-size: 20px;
+  }
+
+  /* cuando el sheet está expandido, el FAB no debe tapar contenido */
+  .bottom-sheet.expanded ~ .fab-online,
+  body.sheet-expanded .fab-online {
+    bottom: calc(var(--safe-bottom) + 10px);
+  }
+
+  /* TOAST */
+  .toast-container {
+    top: calc(var(--safe-top) + 8px);
+    width: calc(100% - 24px);
+    max-width: none;
+  }
+
+  /* ARRIVAL PANEL */
+  .arrival-panel {
+    left: var(--mobile-side);
+    right: var(--mobile-side);
+    bottom: calc(var(--mobile-fab-h) + 24px + var(--safe-bottom));
+    border-radius: 22px;
+    padding: 20px 16px;
+  }
+
+  .arrival-content h2 {
+    font-size: 24px;
+  }
+
+  /* INCOMING MODAL */
+  .incoming-modal {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .modal-content {
+    max-height: min(84dvh, 760px);
+    padding: 20px 14px calc(20px + var(--safe-bottom));
+    border-radius: 24px 24px 0 0;
+  }
+
+  .trip-metrics-horizontal {
+    gap: 8px;
+  }
+
+  .metric-box {
+    padding: 12px 8px;
+    border-radius: 14px;
+  }
+
+  .metric-value {
+    font-size: clamp(18px, 5vw, 22px);
+  }
+
+  .client-row {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .modal-actions-uber {
+    grid-template-columns: 1fr 1.35fr;
+    gap: 10px;
+  }
+
+  .btn-reject,
+  .btn-accept {
+    min-height: 54px;
+    padding: 14px 12px;
+    font-size: 14px;
+    border-radius: 16px;
+  }
+
+  /* TRIP ACTIVE PANEL */
+  .trip-header {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .client-avatar-large {
+    width: 46px;
+    height: 46px;
+    font-size: 20px;
+  }
+
+  .client-details h4 {
+    font-size: 16px;
+  }
+
+  .trip-price-large {
+    font-size: 19px;
+  }
+
+  .action-buttons-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .action-btn-large {
+    min-height: 52px;
+    border-radius: 16px;
+    padding: 13px 10px;
+    font-size: 14px;
+  }
+
+  .trip-progress-steps {
+    gap: 6px;
+  }
+
+  .step span {
+    font-size: 11px;
+  }
+
+  .btn-arrived {
+    min-height: 56px;
+    border-radius: 18px;
+    font-size: 15px;
+  }
+}
+
+/* -------------------------
+   Pantallas MUY chicas
+   ------------------------- */
+@media (max-width: 390px) {
+  :root {
+    --mobile-top-offset: calc(var(--safe-top) + 78px);
+    --mobile-sheet-peek: 118px;
+  }
+
+  .header {
+    right: 66px;
+  }
+
+  .avatar,
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .nav-content {
+    padding: 10px 12px 9px;
+  }
+
+  .maneuver-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .nav-next {
+    font-size: 14px;
+  }
+
+  .nav-distance {
+    font-size: 15px;
+  }
+
+  .waiting-state h3 {
+    font-size: 30px;
+  }
+
+  .waiting-state p {
+    font-size: 15px;
+  }
+
+  .fab-online {
+    min-height: 56px;
+  }
+
+  .fab-text {
+    font-size: 14px;
+  }
+
+  .sheet-content {
+    padding-bottom: calc(56px + 14px + 30px + var(--safe-bottom));
+  }
+}
+
+/* -------------------------
+   Landscape smartphone
+   ------------------------- */
+@media (max-width: 900px) and (orientation: landscape) {
+  .stats-floating {
+    display: none;
+  }
+
+  .nav-bar {
+    top: calc(var(--safe-top) + 64px);
+    left: 12px;
+    right: 12px;
+  }
+
+  .bottom-sheet {
+    max-height: 72dvh;
+    transform: translateY(calc(100% - 96px));
+  }
+
+  .bottom-sheet.has-trip {
+    transform: translateY(calc(100% - 140px));
+  }
+
+  .sheet-content {
+    max-height: calc(72dvh - 24px);
+    padding-bottom: calc(54px + 16px + var(--safe-bottom));
+  }
+
+  .fab-online {
+    max-width: 320px;
+    left: auto;
+    right: 12px;
+  }
+
+  .arrival-panel {
+    max-width: 360px;
+    left: auto;
+    right: 12px;
+  }
+}
+@media (max-width: 767px) {
+  .logout-btn {
+    display: none !important;
+  }
+}
