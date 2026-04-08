@@ -1334,47 +1334,50 @@ top: calc(var(--mobile-top) + 56px);
   }
 
   .nav-bar {
-    top: calc(var(--mobile-top) + 56px);
-    left: calc(var(--mobile-side) + var(--mobile-header-size) + var(--mobile-nav-gap));
-    right: calc(var(--mobile-side) + var(--mobile-header-size) + var(--mobile-nav-gap));
-    min-height: var(--mobile-nav-height);
+    top: calc(var(--mobile-top) + 52px);
+    left: calc(var(--mobile-side) + var(--mobile-header-size) + 10px);
+    right: calc(var(--mobile-side) + var(--mobile-header-size) + 10px);
+    min-height: 46px;
     z-index: 250;
-    border-radius: 18px;
-    background: rgba(17, 77, 54, 0.64);
-    border: 1px solid rgba(255,255,255,0.10);
-    box-shadow: 0 10px 26px rgba(0,0,0,0.18);
+    border-radius: 16px;
+    background: rgba(17, 77, 54, 0.46);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.14);
   }
 
   .nav-content {
-    min-height: var(--mobile-nav-height);
-    padding: 8px 12px;
-    gap: 10px;
+    min-height: 46px;
+    padding: 6px 10px;
+    gap: 8px;
   }
 
   .maneuver-icon {
-    width: 36px;
-    height: 36px;
+    width: 30px;
+    height: 30px;
   }
 
   .nav-street {
-    font-size: 11px;
-    line-height: 1.1;
+    font-size: 10px;
+    line-height: 1;
+    color: rgba(255,255,255,0.68);
   }
 
   .nav-next {
-    font-size: 14px;
-    line-height: 1.15;
+    font-size: 12px;
+    line-height: 1.1;
     margin-top: 1px;
   }
 
   .nav-distance {
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: 800;
   }
 
   .nav-progress {
-    height: 3px;
+    height: 2px;
   }
-
   .offline-banner {
     display: none !important;
   }
