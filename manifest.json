@@ -3,7 +3,7 @@
   "short_name": "MIMI",
   "description": "Panel de conductor para MIMI Transporte Escolar",
 
-  "start_url": "/mimi-transporte/login.html",
+  "start_url": "/mimi-transporte/login-chofer.html",
   "scope": "/mimi-transporte/",
 
   "display": "standalone",
