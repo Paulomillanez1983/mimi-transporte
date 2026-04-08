@@ -1775,27 +1775,34 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
 
   try {
     const validation = await validateSelectedDocument(docType, file);
-try {
-  const serverValidation = await fetch(
-    "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseService.client.supabaseKey
-      },
-      body: JSON.stringify({
-        doc_type: docType,
-        mime_type: file.type,
-        file_size: file.size
-      })
-    }
-  ).then((r) => r.json());
 
-  console.log("[server validation]", serverValidation);
-} catch (e) {
-  console.warn("[server validation error]", e);
-}
+    try {
+      const {
+        data: { session }
+      } = await supabaseService.client.auth.getSession();
+
+      const serverValidation = await fetch(
+        "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: supabaseService.client.supabaseKey,
+            Authorization: `Bearer ${session?.access_token || supabaseService.client.supabaseKey}`
+          },
+          body: JSON.stringify({
+            doc_type: docType,
+            mime_type: file.type,
+            file_size: file.size
+          })
+        }
+      ).then((r) => r.json());
+
+      console.log("[server validation]", serverValidation);
+    } catch (e) {
+      console.warn("[server validation error]", e);
+    }
+
     if (validation.ok) {
       if (validation.kind === "document-warning") {
         setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "warning");
@@ -1817,31 +1824,6 @@ try {
   updateDocumentsProgressUI();
   updateOverallStepperState();
 }
-    function initFileInputs() {
-      Object.entries(DOC_INPUT_ALIASES).forEach(([docType, inputIds]) => {
-        inputIds.forEach((inputId) => {
-          const input = document.getElementById(inputId);
-          if (!input) return;
-
-          input.addEventListener("change", (e) => {
-            const file = e.target?.files?.[0] || null;
-            if (!file) return;
-
-            const sourceLabel = inputId.endsWith("_camera") ? "Foto capturada" : "Archivo seleccionado";
-            void setSelectedFile(docType, file, sourceLabel);
-
-            inputIds.forEach((otherId) => {
-              if (otherId === inputId) return;
-              const otherInput = document.getElementById(otherId);
-              if (otherInput) {
-                try { otherInput.value = ""; } catch (_) {}
-              }
-            });
-          });
-        });
-      });
-    }
-
     function getChosenFile(docType) {
       if (selectedFiles.has(docType)) return selectedFiles.get(docType);
 
@@ -1995,15 +1977,46 @@ try {
           rejection_reason: null
         };
 
-        const { error: upsertError } = await supabaseService.client
-          .from("driver_documents")
-          .upsert(payload, {
-            onConflict: "user_id,doc_type"
-          });
+const { error: upsertError } = await supabaseService.client
+  .from("driver_documents")
+  .upsert(payload, {
+    onConflict: "user_id,doc_type"
+  });
 
-        if (upsertError) throw upsertError;
+if (upsertError) throw upsertError;
 
-        setDocStatus(docType, "✅ Archivo cargado correctamente", "ok");
+// 🔥 disparar análisis backend solo para docs clave
+if (["selfie", "dni_front", "license_front"].includes(docType)) {
+  try {
+    const { data: edgeData, error: edgeError } = await supabaseService.client.functions.invoke(
+      "extract-driver-document",
+      {
+        body: {
+          user_id: currentUser.id,
+          doc_type: docType,
+          storage_path: safePath,
+          mime_type: file.type || null
+        }
+      }
+    );
+
+    console.log("[extract-driver-document]", docType, edgeData, edgeError);
+
+    if (edgeError) {
+      console.warn("[extract-driver-document] error:", edgeError);
+      setDocStatus(docType, "⚠ Archivo subido, pero no pudimos analizarlo automáticamente", "warning");
+    } else if (edgeData?.validation_status === "VALID") {
+      setDocStatus(docType, "✅ Archivo cargado y validado automáticamente", "ok");
+    } else {
+      setDocStatus(docType, "⚠ Archivo cargado. Quedó para revisión automática/manual", "warning");
+    }
+  } catch (edgeErr) {
+    console.warn("[extract-driver-document] warning:", edgeErr);
+    setDocStatus(docType, "⚠ Archivo subido, pero el análisis automático falló", "warning");
+  }
+} else {
+  setDocStatus(docType, "✅ Archivo cargado correctamente", "ok");
+}
       } catch (err) {
         console.error("[uploadDocument] " + docType, err);
         setDocStatus(docType, "❌ Error al subir", "error");
