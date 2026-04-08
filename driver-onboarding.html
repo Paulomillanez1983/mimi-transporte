@@ -1679,54 +1679,7 @@ function showStep(step) {
       }
     }
 
-    document.getElementById("toStep2").addEventListener("click", async () => {
-      const err = validateStep1();
-      if (err) {
-        setGlobalStatus("❌ " + err, "error");
-        return;
-      }
 
-      try {
-        await saveProfilePartial({
-          full_name: getField("full_name"),
-          phone: getField("phone"),
-          dni_number: getField("dni_number"),
-          birth_date: getField("birth_date") || null,
-          address: getField("address"),
-          profile_completed: false
-        });
-
-        clearGlobalStatus();
-        showStep(2);
-      } catch (e) {
-        console.error("[step1 save] error:", e);
-        setGlobalStatus("❌ No pudimos guardar tus datos personales", "error");
-      }
-    });
-
-    document.getElementById("toStep3").addEventListener("click", async () => {
-      const err = validateStep2();
-      if (err) {
-        setGlobalStatus("❌ " + err, "error");
-        return;
-      }
-
-      try {
-        await saveProfilePartial({
-          vehicle_brand: getField("vehicle_brand"),
-          vehicle_model: getField("vehicle_model"),
-          vehicle_year: Number(getField("vehicle_year")) || null,
-          vehicle_color: getField("vehicle_color"),
-          vehicle_plate: getField("vehicle_plate")
-        });
-
-        clearGlobalStatus();
-        showStep(3);
-      } catch (e) {
-        console.error("[step2 save] error:", e);
-        setGlobalStatus("❌ No pudimos guardar los datos del vehículo", "error");
-      }
-    });
 
     document.getElementById("backTo1").addEventListener("click", () => {
       clearGlobalStatus();
@@ -1740,20 +1693,60 @@ function showStep(step) {
 
     document.getElementById("submitAllBtn").addEventListener("click", submitAll);
 
-stickyPrimaryBtn.addEventListener("click", () => {
+stickyPrimaryBtn.addEventListener("click", async () => {
   if (navigator.vibrate) {
     navigator.vibrate(18);
   }
 
-  if (currentStep === 1) {
-    document.getElementById("toStep2").click();
-  } else if (currentStep === 2) {
-    document.getElementById("toStep3").click();
-  } else {
-    document.getElementById("submitAllBtn").click();
+  try {
+    if (currentStep === 1) {
+      const err = validateStep1();
+      if (err) {
+        setGlobalStatus("❌ " + err, "error");
+        return;
+      }
+
+      await saveProfilePartial({
+        full_name: getField("full_name"),
+        phone: getField("phone"),
+        dni_number: getField("dni_number"),
+        birth_date: getField("birth_date") || null,
+        address: getField("address"),
+        profile_completed: false
+      });
+
+      clearGlobalStatus();
+      showStep(2);
+    }
+
+    else if (currentStep === 2) {
+      const err = validateStep2();
+      if (err) {
+        setGlobalStatus("❌ " + err, "error");
+        return;
+      }
+
+      await saveProfilePartial({
+        vehicle_brand: getField("vehicle_brand"),
+        vehicle_model: getField("vehicle_model"),
+        vehicle_year: Number(getField("vehicle_year")) || null,
+        vehicle_color: getField("vehicle_color"),
+        vehicle_plate: getField("vehicle_plate")
+      });
+
+      clearGlobalStatus();
+      showStep(3);
+    }
+
+    else {
+      submitAll();
+    }
+
+  } catch (e) {
+    console.error("[sticky flow error]", e);
+    setGlobalStatus("❌ Error en el flujo", "error");
   }
-});
-    
+});    
   exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
     (async function init() {
       try {
