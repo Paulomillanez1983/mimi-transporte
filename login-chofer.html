@@ -425,6 +425,13 @@
         filter: blur(0);
       }
     }
+   .app-splash__status {
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+  text-align: center;
+  margin-top: -6px;
+  letter-spacing: 0.04em;
+} 
   </style>
 </head>
 
@@ -529,7 +536,10 @@
     setSplashMessage(message);
     splashEl?.classList.remove("hidden");
   }
-
+function setSplashStatus(text = "") {
+  const el = document.getElementById("appSplashStatus");
+  if (el) el.textContent = text;
+}
   function revealLoginUI() {
     setSplashMessage("MIMI DRIVER");
     splashEl?.classList.add("hidden");
@@ -647,7 +657,7 @@
   async function redirectAfterAuth() {
     await supabaseService.init();
 
-    setSplashMessage("Iniciando sesión...");
+    setSplashMessage("Validando perfil...");
 
     const { data: userRes, error: userErr } = await supabaseService.client.auth.getUser();
 
