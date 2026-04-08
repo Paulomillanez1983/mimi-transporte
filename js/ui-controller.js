@@ -937,11 +937,11 @@ updateDriverState(mode, isOnline) {
   }
 
   if (fabText) {
-    fabText.textContent = online ? 'DESCONECTAR' : 'CONECTAR';
+    fabText.textContent = online ? 'ACTIVO' : 'ENCENDER';
   }
 
-  if (fabIcon) {
-    fabIcon.textContent = online ? '●' : '○';
+    if (fabIcon) {
+    fabIcon.textContent = online ? '●' : '';
     fabIcon.style.color = '#fff';
   }
 
