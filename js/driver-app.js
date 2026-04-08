@@ -1,5 +1,5 @@
 /**
- * Driver App producción (RLS + UUID + FLOW)
+ * Driver App producción FINAL (RLS + UUID + FLOW + UBER DRIVER)
  */
 
 import CONFIG from './config.js';
@@ -38,10 +38,11 @@ class DriverApp {
     this._unlockAudioOnClick = () => {
       soundManager.enableOnUserInteraction?.();
     };
-      this._unlockAudioOnTouch = () => {
-        soundManager.enableOnUserInteraction?.();
-      };
-    }
+    this._unlockAudioOnTouch = () => {
+      soundManager.enableOnUserInteraction?.();
+    };
+  }
+
   // =========================================================
   // FLOW STATE
   // =========================================================
@@ -69,6 +70,11 @@ class DriverApp {
   // INIT
   // =========================================================
   async init() {
+    if (this.initialized) {
+      console.warn('[DriverApp] Ya estaba inicializada');
+      return;
+    }
+
     console.log('[DriverApp] Iniciando aplicación...');
 
     uiController.init();
@@ -102,6 +108,7 @@ class DriverApp {
       // Desbloqueo audio/haptics en interacción real
       window.addEventListener('click', this._unlockAudioOnClick, { once: true });
       window.addEventListener('touchstart', this._unlockAudioOnTouch, { once: true });
+
       // 3) Inicializar mapa
       console.log('[DriverApp] Inicializando servicios...');
       const results = await Promise.allSettled([
@@ -213,7 +220,11 @@ class DriverApp {
       }
     } catch (error) {
       console.error('[DriverApp] Error fatal:', error);
-      uiController.showToast('Error: ' + (error?.message || 'Error desconocido'), 'error', 5000);
+      uiController.showToast(
+        'Error: ' + (error?.message || 'Error desconocido'),
+        'error',
+        5000
+      );
     } finally {
       uiController.setGlobalLoading(false);
     }
@@ -392,7 +403,7 @@ class DriverApp {
         !Number.isFinite(Number(trip?.origen_lng)) ||
         !Number.isFinite(Number(trip?.destino_lat)) ||
         !Number.isFinite(Number(trip?.destino_lng))
-            ) {
+      ) {
         console.warn('[DriverApp] Viaje sin coordenadas, no se puede trazar ruta');
         return;
       }
@@ -474,6 +485,7 @@ class DriverApp {
     if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
 
     console.log('[DriverApp] Rechazando oferta:', offerId);
+
     try {
       await tripManager.rejectOffer(offerId);
 
@@ -490,7 +502,6 @@ class DriverApp {
       return { success: false, error: err.message };
     }
   }
-  
 
   // =========================================================
   // TRIP ACTIONS
@@ -551,6 +562,7 @@ class DriverApp {
     }
 
     uiController.showWaitingState();
+    return { success: true };
   }
 
   // =========================================================
@@ -602,7 +614,6 @@ class DriverApp {
     if (currentTrip) {
       const estado = String(currentTrip.estado || '').toUpperCase();
 
-      // Llegada al origen
       if (
         (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
         this._driverFlowState === 'GOING_TO_PICKUP'
@@ -620,7 +631,6 @@ class DriverApp {
         }
       }
 
-      // Llegada al destino
       if (
         estado === 'EN_CURSO' &&
         this._driverFlowState === 'TRIP_STARTED'
@@ -708,11 +718,12 @@ class DriverApp {
 
     window.addEventListener('driverAction', this._driverActionHandler);
   }
+
   async _handleDriverActionEvent(e) {
     const { action, tripId } = e.detail || {};
     await this._handleAction(action, tripId);
   }
-    
+
   async _handleAction(action, tripId) {
     if (!action) return null;
 
@@ -793,8 +804,8 @@ class DriverApp {
       }
     }
   }
-  
-// =========================================================
+
+  // =========================================================
   // EXTERNAL ACTIONS
   // =========================================================
   _openExternalNav() {
