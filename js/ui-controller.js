@@ -1394,20 +1394,27 @@ hideNavigation() {
       statusDot.classList.toggle('online', this.state.isOnline);
     }
   }
-    toggleMenu() {
+  openMenu() {
     const menu = this.elements['side-menu'];
     const backdrop = this.elements['menu-backdrop'];
     if (!menu) return;
 
-    const isOpen = menu.classList.contains('active');
+    menu.classList.add('active');
+    menu.setAttribute('aria-hidden', 'false');
+    backdrop?.classList.add('active');
+    document.body.classList.add('menu-open');
+    this._haptic('light');
+  }
 
+  toggleMenu() {
+    const menu = this.elements['side-menu'];
+    if (!menu) return;
+
+    const isOpen = menu.classList.contains('active');
     if (isOpen) {
       this.closeMenu();
     } else {
-      menu.classList.add('active');
-      backdrop?.classList.add('active');
-      document.body.classList.add('menu-open');
-      this._haptic('light');
+      this.openMenu();
     }
   }
 
@@ -1416,9 +1423,22 @@ hideNavigation() {
     const backdrop = this.elements['menu-backdrop'];
 
     menu?.classList.remove('active');
+    menu?.classList.remove('profile-expanded');
+    menu?.setAttribute('aria-hidden', 'true');
     backdrop?.classList.remove('active');
     document.body.classList.remove('menu-open');
   }
+
+  toggleProfileMenu() {
+    const menu = this.elements['side-menu'];
+    const profile = this.elements['menu-profile'];
+    if (!menu || !profile) return;
+
+    const expanded = menu.classList.toggle('profile-expanded');
+    profile.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    this._haptic('light');
+  }
+  
   _haptic(type = 'light') {
     if (!navigator.vibrate) return;
     if (!soundManager?._hapticsUnlocked) return;
