@@ -123,20 +123,20 @@ class DriverApp {
       window.addEventListener('click', this._unlockAudioOnClick, { once: true });
       window.addEventListener('touchstart', this._unlockAudioOnTouch, { once: true });
 
-// 3) Inicializar mapa
-console.log('[DriverApp] Inicializando servicios...');
+      // 3) Inicializar mapa
+      console.log('[DriverApp] Inicializando servicios...');
 
-const results = await Promise.allSettled([
-  mapService.init('map-container')
-]);
+      const results = await Promise.allSettled([
+        mapService.init('map-container')
+      ]);
 
-console.log('[DriverApp] Resultados inicialización:', {
-  mapa: results[0]?.status
-});
+      console.log('[DriverApp] Resultados inicialización:', {
+        mapa: results[0]?.status
+      });
 
-if (results[0]?.status === 'rejected') {
-  console.error('[DriverApp] Error mapa:', results[0].reason);
-}
+      if (results[0]?.status === 'rejected') {
+        console.error('[DriverApp] Error mapa:', results[0].reason);
+      }
       if (results[0]?.status === 'rejected') {
         console.error('[DriverApp] Error mapa:', results[0].reason);
       }
