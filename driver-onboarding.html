@@ -456,16 +456,36 @@
       return idx >= 0 ? name.slice(idx + 1).toLowerCase() : "bin";
     }
 
-    async function getUserOrRedirect() {
-      await supabaseService.init();
-      const { data, error } = await supabaseService.client.auth.getUser();
-      if (error || !data?.user) {
-        window.location.replace("login.html");
-        return null;
-      }
-      return data.user;
+async function getUserOrRedirect() {
+  try {
+    const dbReady = await supabaseService.init();
+
+    if (!dbReady || !supabaseService?.client) {
+      console.error("[onboarding] Supabase no inicializado");
+      window.location.replace("login-chofer.html");
+      return null;
     }
 
+    const { data, error } = await supabaseService.client.auth.getUser();
+
+    if (error) {
+      console.warn("[onboarding] getUser error:", error);
+      window.location.replace("login-chofer.html");
+      return null;
+    }
+
+    if (!data?.user) {
+      window.location.replace("login-chofer.html");
+      return null;
+    }
+
+    return data.user;
+  } catch (err) {
+    console.error("[onboarding] getUserOrRedirect fatal:", err);
+    window.location.replace("login-chofer.html");
+    return null;
+  }
+}
     async function ensureProfileExists(user) {
       const { error } = await supabaseService.client.rpc("ensure_driver_profile_exists", {
         p_user_id: user.id
