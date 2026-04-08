@@ -4,106 +4,229 @@
   <meta charset="UTF-8" />
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
   <meta name="theme-color" content="#000000" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
   <title>MIMI Driver - Onboarding</title>
 
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   />
-  <link rel="manifest" href="/mimi-transporte/manifest.json">
+  <link rel="manifest" href="/mimi-transporte/manifest.json" />
   <script src="./libs/supabase-js.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #000;
-      --card: #131416;
-      --line: rgba(255,255,255,0.1);
-      --muted: rgba(255,255,255,0.62);
+      --bg: #000000;
+      --card: #111214;
+      --card-2: #15171b;
+      --field: #1b1d21;
+      --line: rgba(255,255,255,0.10);
+      --line-strong: rgba(255,255,255,0.16);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.66);
+      --muted-2: rgba(255,255,255,0.48);
       --primary: #276EF1;
+      --primary-2: #4e89ff;
       --success: #22c55e;
       --danger: #E11900;
-      --radius: 18px;
+      --warning: #f59e0b;
+      --radius: 20px;
+      --shadow: 0 24px 64px rgba(0,0,0,0.38);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
     }
 
     body {
       font-family: 'Inter', sans-serif;
-      background: #000;
-      color: #fff;
       min-height: 100vh;
-      padding: 18px;
+      padding:
+        calc(16px + var(--safe-top))
+        16px
+        calc(112px + var(--safe-bottom))
+        16px;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at top center, rgba(39,110,241,0.12), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(39,110,241,0.08), transparent 30%),
+        #000;
     }
 
     .container {
       width: 100%;
-      max-width: 760px;
+      max-width: 1080px;
       margin: 0 auto;
-      padding-bottom: 40px;
     }
 
     .topbar {
-      margin-bottom: 18px;
+      margin-bottom: 20px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(39,110,241,0.12);
+      border: 1px solid rgba(39,110,241,0.24);
+      color: #dbe8ff;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
     }
 
     .title {
-      font-size: 28px;
+      font-size: clamp(28px, 4.2vw, 42px);
+      line-height: 1.05;
       font-weight: 800;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
     }
 
     .subtitle {
+      max-width: 760px;
       color: var(--muted);
-      line-height: 1.45;
+      line-height: 1.5;
+      font-size: 15px;
+    }
+
+    .progress-shell {
+      margin-top: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .progress-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .progress-label {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 700;
     }
 
     .progress {
-      margin: 18px 0 24px;
       width: 100%;
       height: 10px;
       background: rgba(255,255,255,0.08);
       border-radius: 999px;
       overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.04);
     }
 
     .progress-bar {
       width: 0%;
       height: 100%;
+      background: linear-gradient(90deg, #276EF1, #5f98ff);
+      transition: width .25s ease;
+    }
+
+    .steps-dots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      transition: transform .2s ease, background .2s ease;
+    }
+
+    .step-dot.active {
       background: var(--primary);
-      transition: width .2s ease;
+      transform: scale(1.15);
     }
 
     .step-card {
       display: none;
-      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
+        radial-gradient(circle at top left, rgba(255,255,255,0.04), transparent 40%);
       border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 18px;
+      border-radius: 28px;
+      padding: 22px;
+      box-shadow: var(--shadow);
       margin-bottom: 18px;
     }
 
     .step-card.active {
       display: block;
+      animation: cardIn .28s ease both;
+    }
+
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.992);
+        filter: blur(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    .step-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
     }
 
     .step-title {
-      font-size: 20px;
+      font-size: 22px;
+      line-height: 1.15;
       font-weight: 800;
       margin-bottom: 8px;
+      letter-spacing: -0.01em;
     }
 
     .step-text {
       color: var(--muted);
       line-height: 1.5;
-      margin-bottom: 18px;
+      max-width: 720px;
+    }
+
+    .step-badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.82);
+      white-space: nowrap;
     }
 
     .grid {
       display: grid;
-      gap: 14px;
+      gap: 16px;
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -119,70 +242,240 @@
 
     label {
       font-size: 12px;
-      font-weight: 700;
+      font-weight: 800;
       text-transform: uppercase;
       color: rgba(255,255,255,0.82);
-      letter-spacing: .04em;
+      letter-spacing: .05em;
     }
 
     input, select, textarea {
       width: 100%;
-      padding: 14px 15px;
-      background: #1C1C1E;
+      padding: 15px 16px;
+      background: var(--field);
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 16px;
       color: #fff;
       font-size: 15px;
+      transition: border-color .15s ease, transform .1s ease, box-shadow .15s ease;
     }
 
-    textarea {
-      min-height: 100px;
-      resize: vertical;
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(78,137,255,0.9);
+      box-shadow: 0 0 0 4px rgba(39,110,241,0.16);
     }
 
-    input[type="file"] {
-      padding: 12px;
-      background: #111214;
+    .field-help {
+      color: var(--muted-2);
+      font-size: 12px;
+      line-height: 1.45;
     }
 
     .doc-list {
       display: grid;
-      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
     }
 
     .doc-item {
-      padding: 14px;
-      border-radius: 16px;
+      padding: 16px;
+      border-radius: 20px;
       border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      display: grid;
+      gap: 12px;
+      min-height: 100%;
+    }
+
+    .doc-item-highlight {
+      border-color: rgba(245,158,11,0.28);
+      background:
+        linear-gradient(180deg, rgba(245,158,11,0.08), rgba(255,255,255,0.02));
+    }
+
+    .doc-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .doc-title-wrap {
+      min-width: 0;
     }
 
     .doc-item h4 {
       font-size: 15px;
       font-weight: 800;
       margin-bottom: 6px;
+      line-height: 1.2;
     }
 
     .doc-item p {
       color: var(--muted);
       font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .doc-chip {
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.82);
+      white-space: nowrap;
+    }
+
+    .doc-chip.required {
+      background: rgba(225,25,0,0.08);
+      border-color: rgba(225,25,0,0.22);
+      color: #ffd3cd;
+    }
+
+    .doc-chip.optional {
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.76);
+    }
+
+    .doc-chip.deadline {
+      background: rgba(245,158,11,0.12);
+      border-color: rgba(245,158,11,0.22);
+      color: #ffd78d;
+    }
+
+    .doc-guidelines {
+      display: grid;
+      gap: 6px;
+      color: var(--muted-2);
+      font-size: 12px;
       line-height: 1.45;
-      margin-bottom: 12px;
+    }
+
+    .doc-guidelines span::before {
+      content: "• ";
+      color: rgba(255,255,255,0.6);
+    }
+
+    .doc-actions-inline {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .doc-action-btn,
+    .doc-link-btn {
+      appearance: none;
+      border: none;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 14px;
+      min-height: 46px;
+      transition: transform .1s ease, opacity .12s ease, background .15s ease, border-color .15s ease;
+    }
+
+    .doc-action-btn:active,
+    .doc-link-btn:active,
+    button:active {
+      transform: scale(0.985);
+    }
+
+    .doc-camera-btn {
+      background: #ffffff;
+      color: #000000;
+      flex: 1 1 150px;
+    }
+
+    .doc-upload-btn {
+      background: #23262c;
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.08);
+      flex: 1 1 150px;
+    }
+
+    .doc-link-btn {
+      background: rgba(245,158,11,0.14);
+      color: #ffd78d;
+      border: 1px solid rgba(245,158,11,0.24);
+      flex: 1 1 100%;
+    }
+
+    .doc-preview {
+      display: none;
+      border: 1px dashed rgba(255,255,255,0.14);
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.02);
+      min-height: 120px;
+    }
+
+    .doc-preview.visible {
+      display: block;
+    }
+
+    .doc-preview img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+      max-height: 220px;
+    }
+
+    .doc-preview-file {
+      padding: 14px;
+      display: grid;
+      gap: 6px;
+      color: rgba(255,255,255,0.85);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .doc-preview-file strong {
+      font-size: 14px;
+    }
+
+    .doc-help {
+      color: var(--muted-2);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .doc-deadline-box {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(245,158,11,0.24);
+      background: rgba(245,158,11,0.08);
+      color: #ffe2ab;
+      font-size: 13px;
+      line-height: 1.45;
     }
 
     .doc-status {
-      margin-top: 10px;
+      min-height: 22px;
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
+      line-height: 1.4;
     }
 
-    .ok { color: var(--success); }
-    .error { color: var(--danger); }
+    .doc-status.ok { color: var(--success); }
+    .doc-status.error { color: var(--danger); }
+    .doc-status.pending { color: rgba(255,255,255,0.72); }
+    .doc-status.warning { color: var(--warning); }
 
     .actions {
       display: flex;
       gap: 12px;
-      margin-top: 18px;
+      margin-top: 22px;
       flex-wrap: wrap;
     }
 
@@ -193,35 +486,163 @@
       font-size: 15px;
       font-weight: 800;
       cursor: pointer;
+      transition: transform .1s ease, opacity .12s ease, background .15s ease;
     }
 
     .btn-primary {
-      background: var(--primary);
-      color: white;
-      flex: 1 1 220px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: #fff;
+      flex: 1 1 240px;
+      box-shadow: 0 18px 34px rgba(39,110,241,0.26);
     }
 
     .btn-secondary {
       background: #232428;
-      color: white;
+      color: #fff;
       flex: 1 1 160px;
+    }
+
+    .sticky-actions {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
+      padding:
+        12px
+        16px
+        calc(12px + var(--safe-bottom))
+        16px;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.82) 30%, rgba(0,0,0,0.96));
+      backdrop-filter: blur(12px);
+      pointer-events: none;
+    }
+
+    .sticky-actions__inner {
+      width: 100%;
+      max-width: 1080px;
+      margin: 0 auto;
+      pointer-events: auto;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(17,18,20,0.92);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 10px;
+      box-shadow: 0 18px 46px rgba(0,0,0,0.38);
+      flex-wrap: wrap;
+    }
+
+    .sticky-summary {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+      flex: 1 1 220px;
+    }
+
+    .sticky-summary strong {
+      font-size: 14px;
+    }
+
+    .sticky-summary span {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .sticky-btn {
+      min-width: 170px;
     }
 
     .status-box {
       margin-top: 16px;
-      padding: 14px;
+      padding: 14px 16px;
       border-radius: 16px;
       background: rgba(255,255,255,0.04);
       border: 1px solid var(--line);
-      line-height: 1.45;
+      line-height: 1.5;
       display: none;
+      font-size: 14px;
     }
 
     .status-box.visible { display: block; }
 
-    @media (max-width: 640px) {
+    .status-box.success {
+      color: #d7ffe4;
+      border-color: rgba(34,197,94,0.24);
+      background: rgba(34,197,94,0.08);
+    }
+
+    .status-box.error {
+      color: #ffd4d0;
+      border-color: rgba(225,25,0,0.24);
+      background: rgba(225,25,0,0.08);
+    }
+
+    .hidden-input {
+      display: none !important;
+    }
+
+    @media (max-width: 900px) {
+      .doc-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
       .grid {
         grid-template-columns: 1fr;
+      }
+
+      .step-card {
+        padding: 18px;
+        border-radius: 24px;
+      }
+
+      .title {
+        letter-spacing: -0.03em;
+      }
+
+      .doc-actions-inline {
+        flex-direction: column;
+      }
+
+      .doc-camera-btn,
+      .doc-upload-btn,
+      .doc-link-btn {
+        width: 100%;
+      }
+
+      .sticky-actions__inner {
+        align-items: stretch;
+      }
+
+      .sticky-btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .step-title {
+        font-size: 20px;
+      }
+
+      .subtitle,
+      .step-text,
+      .doc-item p {
+        font-size: 14px;
+      }
+
+      input, select, textarea {
+        font-size: 16px;
       }
     }
   </style>
@@ -229,33 +650,56 @@
 <body>
   <div class="container">
     <div class="topbar">
+      <div class="eyebrow">MIMI Driver · Alta de chofer</div>
+
       <div class="title">Validación de chofer</div>
+
       <div class="subtitle">
         Completá tu identidad, vehículo y documentación para habilitar tu cuenta.
+        Podés sacar fotos desde esta misma pantalla y terminar la carga mucho más rápido.
       </div>
-      <div class="progress">
-        <div class="progress-bar" id="progressBar"></div>
+
+      <div class="progress-shell">
+        <div class="progress-top">
+          <div class="progress-label" id="progressLabel">Paso 1 de 3</div>
+          <div class="steps-dots" aria-hidden="true">
+            <span class="step-dot active" id="dot1"></span>
+            <span class="step-dot" id="dot2"></span>
+            <span class="step-dot" id="dot3"></span>
+          </div>
+        </div>
+
+        <div class="progress">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
       </div>
     </div>
 
     <section class="step-card active" data-step="1">
-      <div class="step-title">Paso 1 · Datos personales</div>
-      <div class="step-text">Necesitamos tus datos básicos del chofer.</div>
+      <div class="step-head">
+        <div>
+          <div class="step-title">Paso 1 · Datos personales</div>
+          <div class="step-text">
+            Necesitamos tus datos básicos para crear tu perfil de conductor.
+          </div>
+        </div>
+        <div class="step-badge">Perfil</div>
+      </div>
 
       <div class="grid">
         <div class="field">
           <label for="full_name">Nombre completo</label>
-          <input id="full_name" type="text" />
+          <input id="full_name" type="text" autocomplete="name" />
         </div>
 
         <div class="field">
           <label for="phone">Teléfono</label>
-          <input id="phone" type="tel" />
+          <input id="phone" type="tel" autocomplete="tel" />
         </div>
 
         <div class="field">
           <label for="dni_number">DNI</label>
-          <input id="dni_number" type="text" />
+          <input id="dni_number" type="text" inputmode="numeric" />
         </div>
 
         <div class="field">
@@ -265,18 +709,26 @@
 
         <div class="field full">
           <label for="address">Domicilio</label>
-          <input id="address" type="text" />
+          <input id="address" type="text" autocomplete="street-address" />
+          <div class="field-help">Dirección donde residís actualmente.</div>
         </div>
       </div>
 
       <div class="actions">
-        <button class="btn-primary" id="toStep2">Continuar</button>
+        <button class="btn-primary" id="toStep2" type="button">Continuar</button>
       </div>
     </section>
 
     <section class="step-card" data-step="2">
-      <div class="step-title">Paso 2 · Vehículo</div>
-      <div class="step-text">Cargá los datos del vehículo con el que vas a trabajar.</div>
+      <div class="step-head">
+        <div>
+          <div class="step-title">Paso 2 · Vehículo</div>
+          <div class="step-text">
+            Cargá los datos del vehículo con el que vas a trabajar.
+          </div>
+        </div>
+        <div class="step-badge">Vehículo</div>
+      </div>
 
       <div class="grid">
         <div class="field">
@@ -291,7 +743,7 @@
 
         <div class="field">
           <label for="vehicle_year">Año</label>
-          <input id="vehicle_year" type="number" min="1990" max="2100" />
+          <input id="vehicle_year" type="number" min="1990" max="2100" inputmode="numeric" />
         </div>
 
         <div class="field">
@@ -301,94 +753,312 @@
 
         <div class="field full">
           <label for="vehicle_plate">Patente</label>
-          <input id="vehicle_plate" type="text" />
+          <input id="vehicle_plate" type="text" autocapitalize="characters" />
+          <div class="field-help">Ingresala tal como figura en la cédula del vehículo.</div>
         </div>
       </div>
 
       <div class="actions">
-        <button class="btn-secondary" id="backTo1">Volver</button>
-        <button class="btn-primary" id="toStep3">Continuar</button>
+        <button class="btn-secondary" id="backTo1" type="button">Volver</button>
+        <button class="btn-primary" id="toStep3" type="button">Continuar</button>
       </div>
     </section>
 
     <section class="step-card" data-step="3">
-      <div class="step-title">Paso 3 · Documentación</div>
-      <div class="step-text">
-        Subí fotos nítidas. Fondo claro, sin recortes y sin reflejos.
+      <div class="step-head">
+        <div>
+          <div class="step-title">Paso 3 · Documentación</div>
+          <div class="step-text">
+            Sacá fotos nítidas, sin reflejos y mostrando el documento completo. En el celular vas a poder abrir la cámara directamente desde cada tarjeta.
+          </div>
+        </div>
+        <div class="step-badge">Documentos</div>
       </div>
 
       <div class="doc-list">
         <div class="doc-item">
-          <h4>DNI · Frente</h4>
-          <p>Foto del frente del DNI.</p>
-          <input type="file" id="dni_front" accept="image/*,.pdf" />
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>DNI · Frente</h4>
+              <p>Foto del frente del DNI.</p>
+            </div>
+            <span class="doc-chip required">Obligatorio</span>
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Que se vea completo.</span>
+            <span>Sin reflejos ni dedos tapando.</span>
+            <span>Fondo claro si es posible.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <label class="doc-action-btn doc-camera-btn" for="dni_front_camera">📷 Sacar foto</label>
+            <label class="doc-action-btn doc-upload-btn" for="dni_front">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="dni_front_camera" accept="image/*" capture="environment" />
+          <input class="hidden-input" type="file" id="dni_front" accept="image/*,.pdf" />
+
+          <div class="doc-preview" id="preview_dni_front"></div>
           <div class="doc-status" id="status_dni_front"></div>
         </div>
 
         <div class="doc-item">
-          <h4>DNI · Dorso</h4>
-          <p>Foto del reverso del DNI.</p>
-          <input type="file" id="dni_back" accept="image/*,.pdf" />
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>DNI · Dorso</h4>
+              <p>Foto del reverso del DNI.</p>
+            </div>
+            <span class="doc-chip required">Obligatorio</span>
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Mostrá el reverso completo.</span>
+            <span>Buena iluminación.</span>
+            <span>Sin cortes en los bordes.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <label class="doc-action-btn doc-camera-btn" for="dni_back_camera">📷 Sacar foto</label>
+            <label class="doc-action-btn doc-upload-btn" for="dni_back">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="dni_back_camera" accept="image/*" capture="environment" />
+          <input class="hidden-input" type="file" id="dni_back" accept="image/*,.pdf" />
+
+          <div class="doc-preview" id="preview_dni_back"></div>
           <div class="doc-status" id="status_dni_back"></div>
         </div>
 
         <div class="doc-item">
-          <h4>Selfie</h4>
-          <p>Foto tipo selfie del rostro del chofer.</p>
-          <input type="file" id="selfie" accept="image/*" />
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>Selfie del chofer</h4>
+              <p>Foto tipo selfie de tu rostro, bien iluminada.</p>
+            </div>
+            <span class="doc-chip required">Obligatorio</span>
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Mirando al frente.</span>
+            <span>Sin lentes oscuros.</span>
+            <span>Buena luz en la cara.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <label class="doc-action-btn doc-camera-btn" for="selfie_camera">🤳 Sacar selfie</label>
+            <label class="doc-action-btn doc-upload-btn" for="selfie">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="selfie_camera" accept="image/*" capture="user" />
+          <input class="hidden-input" type="file" id="selfie" accept="image/*" />
+
+          <div class="doc-preview" id="preview_selfie"></div>
           <div class="doc-status" id="status_selfie"></div>
         </div>
 
         <div class="doc-item">
-          <h4>Licencia · Frente</h4>
-          <p>Foto del frente del carnet/licencia.</p>
-          <input type="file" id="license_front" accept="image/*,.pdf" />
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>Licencia · Frente</h4>
+              <p>Foto del frente de la licencia de conducir.</p>
+            </div>
+            <span class="doc-chip required">Obligatorio</span>
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Texto legible.</span>
+            <span>Sin brillos.</span>
+            <span>Documento completo.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <label class="doc-action-btn doc-camera-btn" for="license_front_camera">📷 Sacar foto</label>
+            <label class="doc-action-btn doc-upload-btn" for="license_front">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="license_front_camera" accept="image/*" capture="environment" />
+          <input class="hidden-input" type="file" id="license_front" accept="image/*,.pdf" />
+
+          <div class="doc-preview" id="preview_license_front"></div>
           <div class="doc-status" id="status_license_front"></div>
         </div>
 
         <div class="doc-item">
-          <h4>Licencia · Dorso</h4>
-          <p>Foto del dorso del carnet/licencia.</p>
-          <input type="file" id="license_back" accept="image/*,.pdf" />
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>Licencia · Dorso</h4>
+              <p>Foto del dorso de la licencia de conducir.</p>
+            </div>
+            <span class="doc-chip required">Obligatorio</span>
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Mostrá todos los datos.</span>
+            <span>Evitar sombras.</span>
+            <span>Sin recortes.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <label class="doc-action-btn doc-camera-btn" for="license_back_camera">📷 Sacar foto</label>
+            <label class="doc-action-btn doc-upload-btn" for="license_back">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="license_back_camera" accept="image/*" capture="environment" />
+          <input class="hidden-input" type="file" id="license_back" accept="image/*,.pdf" />
+
+          <div class="doc-preview" id="preview_license_back"></div>
           <div class="doc-status" id="status_license_back"></div>
         </div>
 
         <div class="doc-item">
-          <h4>Tarjeta verde · Frente</h4>
-          <p>Foto del frente de la tarjeta verde.</p>
-          <input type="file" id="vehicle_card_front" accept="image/*,.pdf" />
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>Tarjeta verde · Frente</h4>
+              <p>Foto del frente de la cédula verde.</p>
+            </div>
+            <span class="doc-chip required">Obligatorio</span>
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Que la cédula se vea entera.</span>
+            <span>Texto legible.</span>
+            <span>Sin desenfoque.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <label class="doc-action-btn doc-camera-btn" for="vehicle_card_front_camera">📷 Sacar foto</label>
+            <label class="doc-action-btn doc-upload-btn" for="vehicle_card_front">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="vehicle_card_front_camera" accept="image/*" capture="environment" />
+          <input class="hidden-input" type="file" id="vehicle_card_front" accept="image/*,.pdf" />
+
+          <div class="doc-preview" id="preview_vehicle_card_front"></div>
           <div class="doc-status" id="status_vehicle_card_front"></div>
         </div>
 
         <div class="doc-item">
-          <h4>Tarjeta verde · Dorso</h4>
-          <p>Foto del dorso de la tarjeta verde.</p>
-          <input type="file" id="vehicle_card_back" accept="image/*,.pdf" />
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>Tarjeta verde · Dorso</h4>
+              <p>Foto del dorso de la cédula verde.</p>
+            </div>
+            <span class="doc-chip required">Obligatorio</span>
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Todo el documento visible.</span>
+            <span>Sin reflejos.</span>
+            <span>Buena luz.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <label class="doc-action-btn doc-camera-btn" for="vehicle_card_back_camera">📷 Sacar foto</label>
+            <label class="doc-action-btn doc-upload-btn" for="vehicle_card_back">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="vehicle_card_back_camera" accept="image/*" capture="environment" />
+          <input class="hidden-input" type="file" id="vehicle_card_back" accept="image/*,.pdf" />
+
+          <div class="doc-preview" id="preview_vehicle_card_back"></div>
           <div class="doc-status" id="status_vehicle_card_back"></div>
         </div>
 
         <div class="doc-item">
-          <h4>Foto del vehículo</h4>
-          <p>Opcional, pero recomendable para control interno.</p>
-          <input type="file" id="vehicle_photo" accept="image/*" />
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>Foto del vehículo</h4>
+              <p>Opcional, pero recomendable para control interno.</p>
+            </div>
+            <span class="doc-chip optional">Opcional</span>
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Foto exterior clara.</span>
+            <span>Que se vea bien el vehículo.</span>
+            <span>Puede ser frente 3/4.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <label class="doc-action-btn doc-camera-btn" for="vehicle_photo_camera">📷 Sacar foto</label>
+            <label class="doc-action-btn doc-upload-btn" for="vehicle_photo">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="vehicle_photo_camera" accept="image/*" capture="environment" />
+          <input class="hidden-input" type="file" id="vehicle_photo" accept="image/*" />
+
+          <div class="doc-preview" id="preview_vehicle_photo"></div>
           <div class="doc-status" id="status_vehicle_photo"></div>
         </div>
 
-        <div class="doc-item">
-          <h4>Certificado de antecedentes / buena conducta</h4>
-          <p>Documento obligatorio para revisión.</p>
-          <input type="file" id="background_check" accept="image/*,.pdf" />
+        <div class="doc-item doc-item-highlight">
+          <div class="doc-header">
+            <div class="doc-title-wrap">
+              <h4>Certificado de antecedentes penales</h4>
+              <p>
+                Podés subirlo ahora o presentarlo dentro de los próximos 15 días hábiles.
+                No bloquea tu carga inicial.
+              </p>
+            </div>
+            <span class="doc-chip deadline">15 días hábiles</span>
+          </div>
+
+          <div class="doc-deadline-box">
+            <strong>Entrega diferida:</strong> vas a poder completar el alta inicial ahora y presentar este certificado dentro del plazo indicado.
+          </div>
+
+          <div class="doc-guidelines">
+            <span>Trámite oficial del Registro Nacional de Reincidencia.</span>
+            <span>Podés gestionarlo en línea.</span>
+            <span>También podés subir PDF si ya lo tenés.</span>
+          </div>
+
+          <div class="doc-actions-inline">
+            <a
+              class="doc-link-btn"
+              href="https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              🛡 Solicitar certificado
+            </a>
+
+            <label class="doc-action-btn doc-camera-btn" for="background_check_camera">📷 Sacar foto</label>
+            <label class="doc-action-btn doc-upload-btn" for="background_check">⬆ Subir archivo</label>
+          </div>
+
+          <input class="hidden-input" type="file" id="background_check_camera" accept="image/*" capture="environment" />
+          <input class="hidden-input" type="file" id="background_check" accept="image/*,.pdf" />
+
+          <div class="doc-preview" id="preview_background_check"></div>
+          <small class="doc-help">
+            Link oficial del trámite. El sitio informa modalidades en línea y tiempos de entrega según la opción elegida. 
+          </small>
           <div class="doc-status" id="status_background_check"></div>
         </div>
       </div>
 
       <div class="actions">
-        <button class="btn-secondary" id="backTo2">Volver</button>
-        <button class="btn-primary" id="submitAllBtn">Enviar documentación</button>
+        <button class="btn-secondary" id="backTo2" type="button">Volver</button>
+        <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentación</button>
       </div>
 
       <div class="status-box" id="globalStatus"></div>
     </section>
+  </div>
+
+  <div class="sticky-actions">
+    <div class="sticky-actions__inner">
+      <div class="sticky-summary">
+        <strong id="stickyTitle">Paso 1 · Datos personales</strong>
+        <span id="stickyText">Completá tus datos para continuar con el alta.</span>
+      </div>
+
+      <button class="btn-primary sticky-btn" id="stickyPrimaryBtn" type="button">
+        Continuar
+      </button>
+    </div>
   </div>
 
   <script type="module">
@@ -401,38 +1071,103 @@
       "license_front",
       "license_back",
       "vehicle_card_front",
-      "vehicle_card_back",
+      "vehicle_card_back"
+    ];
+
+    const OPTIONAL_DOCS = [
+      "vehicle_photo",
       "background_check"
     ];
 
-    const OPTIONAL_DOCS = ["vehicle_photo"];
     const ALL_DOCS = [...REQUIRED_DOCS, ...OPTIONAL_DOCS];
+
+    const DOC_INPUT_ALIASES = {
+      dni_front: ["dni_front", "dni_front_camera"],
+      dni_back: ["dni_back", "dni_back_camera"],
+      selfie: ["selfie", "selfie_camera"],
+      license_front: ["license_front", "license_front_camera"],
+      license_back: ["license_back", "license_back_camera"],
+      vehicle_card_front: ["vehicle_card_front", "vehicle_card_front_camera"],
+      vehicle_card_back: ["vehicle_card_back", "vehicle_card_back_camera"],
+      vehicle_photo: ["vehicle_photo", "vehicle_photo_camera"],
+      background_check: ["background_check", "background_check_camera"]
+    };
+
+    const DOC_META = {
+      dni_front: { label: "DNI frente", optional: false },
+      dni_back: { label: "DNI dorso", optional: false },
+      selfie: { label: "Selfie", optional: false },
+      license_front: { label: "Licencia frente", optional: false },
+      license_back: { label: "Licencia dorso", optional: false },
+      vehicle_card_front: { label: "Tarjeta verde frente", optional: false },
+      vehicle_card_back: { label: "Tarjeta verde dorso", optional: false },
+      vehicle_photo: { label: "Foto del vehículo", optional: true },
+      background_check: { label: "Antecedentes penales", optional: true }
+    };
 
     let currentStep = 1;
     let currentUser = null;
+    const selectedFiles = new Map();
 
     const progressBar = document.getElementById("progressBar");
+    const progressLabel = document.getElementById("progressLabel");
     const globalStatus = document.getElementById("globalStatus");
+    const stickyPrimaryBtn = document.getElementById("stickyPrimaryBtn");
+    const stickyTitle = document.getElementById("stickyTitle");
+    const stickyText = document.getElementById("stickyText");
 
-    function setGlobalStatus(msg, type = "ok") {
+    function setGlobalStatus(msg, type = "success") {
       globalStatus.textContent = msg;
       globalStatus.classList.add("visible");
-      globalStatus.style.color = type === "error" ? "#E11900" : "#22c55e";
+      globalStatus.classList.remove("success", "error");
+      globalStatus.classList.add(type === "error" ? "error" : "success");
+    }
+
+    function clearGlobalStatus() {
+      globalStatus.textContent = "";
+      globalStatus.classList.remove("visible", "success", "error");
+    }
+
+    function getField(id) {
+      return document.getElementById(id)?.value?.trim() || "";
+    }
+
+    function updateDots(step) {
+      [1, 2, 3].forEach((n) => {
+        document.getElementById(`dot${n}`)?.classList.toggle("active", n <= step);
+      });
+    }
+
+    function updateSticky(step) {
+      if (step === 1) {
+        stickyTitle.textContent = "Paso 1 · Datos personales";
+        stickyText.textContent = "Completá tus datos para continuar con el alta.";
+        stickyPrimaryBtn.textContent = "Continuar";
+      } else if (step === 2) {
+        stickyTitle.textContent = "Paso 2 · Vehículo";
+        stickyText.textContent = "Cargá el vehículo con el que vas a trabajar.";
+        stickyPrimaryBtn.textContent = "Continuar";
+      } else {
+        stickyTitle.textContent = "Paso 3 · Documentación";
+        stickyText.textContent = "Sacá o subí fotos y enviá la documentación.";
+        stickyPrimaryBtn.textContent = "Enviar documentación";
+      }
     }
 
     function showStep(step) {
       currentStep = step;
+
       document.querySelectorAll(".step-card").forEach((el) => {
         el.classList.toggle("active", Number(el.dataset.step) === step);
       });
 
       const pct = step === 1 ? 33 : step === 2 ? 66 : 100;
       progressBar.style.width = pct + "%";
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+      progressLabel.textContent = `Paso ${step} de 3`;
 
-    function getField(id) {
-      return document.getElementById(id)?.value?.trim() || "";
+      updateDots(step);
+      updateSticky(step);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function validateStep1() {
@@ -455,6 +1190,100 @@
       const name = String(file?.name || "");
       const idx = name.lastIndexOf(".");
       return idx >= 0 ? name.slice(idx + 1).toLowerCase() : "bin";
+    }
+
+    function sanitizeFileName(name = "archivo") {
+      return String(name)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w.\-]+/g, "_")
+        .toLowerCase();
+    }
+
+    function setDocStatus(docType, message, type = "pending") {
+      const statusEl = document.getElementById(`status_${docType}`);
+      if (!statusEl) return;
+
+      statusEl.textContent = message;
+      statusEl.className = `doc-status ${type}`;
+    }
+
+    function renderPreview(docType, file) {
+      const previewEl = document.getElementById(`preview_${docType}`);
+      if (!previewEl) return;
+
+      if (!file) {
+        previewEl.innerHTML = "";
+        previewEl.classList.remove("visible");
+        return;
+      }
+
+      previewEl.classList.add("visible");
+
+      if (String(file.type || "").startsWith("image/")) {
+        const url = URL.createObjectURL(file);
+        previewEl.innerHTML = `<img src="${url}" alt="Preview ${docType}" />`;
+      } else {
+        previewEl.innerHTML = `
+          <div class="doc-preview-file">
+            <strong>Archivo seleccionado</strong>
+            <span>${file.name || "Documento"}</span>
+            <span>${file.type || "application/octet-stream"}</span>
+          </div>
+        `;
+      }
+    }
+
+    function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionado") {
+      if (!file) return;
+
+      selectedFiles.set(docType, file);
+      renderPreview(docType, file);
+
+      const isImage = String(file.type || "").startsWith("image/");
+      const name = file.name || DOC_META[docType]?.label || "archivo";
+
+      setDocStatus(
+        docType,
+        `✅ ${sourceLabel}: ${name}${isImage ? "" : " (listo para subir)"}`,
+        "ok"
+      );
+    }
+
+    function initFileInputs() {
+      Object.entries(DOC_INPUT_ALIASES).forEach(([docType, inputIds]) => {
+        inputIds.forEach((inputId) => {
+          const input = document.getElementById(inputId);
+          if (!input) return;
+
+          input.addEventListener("change", (e) => {
+            const file = e.target?.files?.[0] || null;
+            if (!file) return;
+
+            const sourceLabel = inputId.endsWith("_camera") ? "Foto capturada" : "Archivo seleccionado";
+            setSelectedFile(docType, file, sourceLabel);
+
+            inputIds.forEach((otherId) => {
+              if (otherId === inputId) return;
+              const otherInput = document.getElementById(otherId);
+              if (otherInput) {
+                try { otherInput.value = ""; } catch (_) {}
+              }
+            });
+          });
+        });
+      });
+    }
+
+    function getChosenFile(docType) {
+      if (selectedFiles.has(docType)) return selectedFiles.get(docType);
+
+      const ids = DOC_INPUT_ALIASES[docType] || [docType];
+      for (const id of ids) {
+        const file = document.getElementById(id)?.files?.[0] || null;
+        if (file) return file;
+      }
+      return null;
     }
 
     async function getUserOrRedirect() {
@@ -559,23 +1388,25 @@
     }
 
     async function uploadDocument(docType, file) {
-      const statusEl = document.getElementById("status_" + docType);
-
       try {
         if (!file) {
           if (REQUIRED_DOCS.includes(docType)) {
-            throw new Error("Falta archivo obligatorio");
+            throw new Error(`Falta archivo obligatorio: ${DOC_META[docType]?.label || docType}`);
           }
-          statusEl.textContent = "Opcional sin subir";
-          statusEl.className = "doc-status";
+
+          if (docType === "background_check") {
+            setDocStatus(docType, "⏳ Podés presentarlo dentro de 15 días hábiles", "warning");
+          } else {
+            setDocStatus(docType, "Opcional sin subir", "pending");
+          }
           return;
         }
 
-        statusEl.textContent = "Subiendo...";
-        statusEl.className = "doc-status";
+        setDocStatus(docType, "Subiendo...", "pending");
 
         const ext = fileExt(file);
-        const safePath = `${currentUser.id}/${docType}.${ext}`;
+        const safeName = sanitizeFileName(file.name || `${docType}.${ext}`);
+        const safePath = `${currentUser.id}/${docType}_${safeName}`;
 
         const { error: uploadError } = await supabaseService.client.storage
           .from("driver-documents")
@@ -587,41 +1418,66 @@
 
         if (uploadError) throw uploadError;
 
+        const payload = {
+          user_id: currentUser.id,
+          doc_type: docType,
+          storage_path: safePath,
+          mime_type: file.type || null,
+          file_size: file.size || null,
+          status: "PENDIENTE",
+          rejection_reason: null
+        };
+
         const { error: upsertError } = await supabaseService.client
           .from("driver_documents")
-          .upsert({
-            user_id: currentUser.id,
-            doc_type: docType,
-            storage_path: safePath,
-            mime_type: file.type || null,
-            file_size: file.size || null,
-            status: "PENDIENTE",
-            rejection_reason: null
-          }, {
+          .upsert(payload, {
             onConflict: "user_id,doc_type"
           });
 
         if (upsertError) throw upsertError;
 
-        statusEl.textContent = "✅ Archivo cargado";
-        statusEl.className = "doc-status ok";
+        setDocStatus(docType, "✅ Archivo cargado correctamente", "ok");
       } catch (err) {
         console.error("[uploadDocument] " + docType, err);
-        statusEl.textContent = "❌ Error al subir";
-        statusEl.className = "doc-status error";
+        setDocStatus(docType, "❌ Error al subir", "error");
         throw err;
       }
     }
 
+    function addBusinessDays(startDate, businessDays) {
+      const date = new Date(startDate);
+      let added = 0;
+
+      while (added < businessDays) {
+        date.setDate(date.getDate() + 1);
+        const day = date.getDay();
+        if (day !== 0 && day !== 6) {
+          added += 1;
+        }
+      }
+
+      return date;
+    }
+
+    function toDateOnlyString(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
     async function submitAll() {
       try {
-        setGlobalStatus("Guardando información...", "ok");
+        setGlobalStatus("Guardando información...", "success");
 
         const step1Error = validateStep1();
         if (step1Error) throw new Error(step1Error);
 
         const step2Error = validateStep2();
         if (step2Error) throw new Error(step2Error);
+
+        const dueDate = toDateOnlyString(addBusinessDays(new Date(), 15));
+        const backgroundCheckProvided = !!getChosenFile("background_check");
 
         await saveProfilePartial({
           full_name: getField("full_name"),
@@ -635,11 +1491,15 @@
           vehicle_color: getField("vehicle_color"),
           vehicle_plate: getField("vehicle_plate"),
           profile_completed: true,
-          onboarding_status: "PENDIENTE_DOCUMENTOS"
+          onboarding_status: "PENDIENTE_DOCUMENTOS",
+          documents_completed: false,
+          documents_approved: false,
+          background_check_due_date: dueDate,
+          background_check_pending: !backgroundCheckProvided
         });
 
         for (const docType of ALL_DOCS) {
-          const file = document.getElementById(docType)?.files?.[0] || null;
+          const file = getChosenFile(docType);
           await uploadDocument(docType, file);
         }
 
@@ -660,14 +1520,20 @@
         await saveProfilePartial({
           documents_completed: true,
           onboarding_status: "PENDIENTE_REVISION",
-          documents_approved: false
+          documents_approved: false,
+          background_check_due_date: dueDate,
+          background_check_pending: !backgroundCheckProvided
         });
 
-        setGlobalStatus("✅ Documentación enviada correctamente. Tu cuenta quedó en revisión.", "ok");
+        const successMessage = backgroundCheckProvided
+          ? "✅ Documentación enviada correctamente. Tu cuenta quedó en revisión."
+          : "✅ Documentación enviada correctamente. Tu cuenta quedó en revisión y el certificado de antecedentes quedó pendiente con plazo de 15 días hábiles.";
+
+        setGlobalStatus(successMessage, "success");
 
         setTimeout(() => {
           window.location.replace("driver-review-pending.html");
-        }, 1200);
+        }, 1400);
       } catch (err) {
         console.error("[submitAll] error:", err);
         setGlobalStatus("❌ " + (err.message || "No pudimos enviar la documentación"), "error");
@@ -690,9 +1556,11 @@
           address: getField("address"),
           profile_completed: false
         });
-        globalStatus.classList.remove("visible");
+
+        clearGlobalStatus();
         showStep(2);
       } catch (e) {
+        console.error("[step1 save] error:", e);
         setGlobalStatus("❌ No pudimos guardar tus datos personales", "error");
       }
     });
@@ -712,19 +1580,42 @@
           vehicle_color: getField("vehicle_color"),
           vehicle_plate: getField("vehicle_plate")
         });
-        globalStatus.classList.remove("visible");
+
+        clearGlobalStatus();
         showStep(3);
       } catch (e) {
+        console.error("[step2 save] error:", e);
         setGlobalStatus("❌ No pudimos guardar los datos del vehículo", "error");
       }
     });
 
-    document.getElementById("backTo1").addEventListener("click", () => showStep(1));
-    document.getElementById("backTo2").addEventListener("click", () => showStep(2));
+    document.getElementById("backTo1").addEventListener("click", () => {
+      clearGlobalStatus();
+      showStep(1);
+    });
+
+    document.getElementById("backTo2").addEventListener("click", () => {
+      clearGlobalStatus();
+      showStep(2);
+    });
+
     document.getElementById("submitAllBtn").addEventListener("click", submitAll);
+
+    stickyPrimaryBtn.addEventListener("click", () => {
+      if (currentStep === 1) {
+        document.getElementById("toStep2").click();
+      } else if (currentStep === 2) {
+        document.getElementById("toStep3").click();
+      } else {
+        document.getElementById("submitAllBtn").click();
+      }
+    });
 
     (async function init() {
       try {
+        initFileInputs();
+        showStep(1);
+
         currentUser = await getUserOrRedirect();
         if (!currentUser) return;
 
@@ -741,6 +1632,8 @@
           window.location.replace("chofer-panel.html");
           return;
         }
+
+        setDocStatus("background_check", "⏳ Podés subirlo ahora o dentro de 15 días hábiles", "warning");
       } catch (err) {
         console.error("[onboarding init] error:", err);
         setGlobalStatus("❌ No pudimos cargar tu onboarding", "error");
