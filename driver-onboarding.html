@@ -860,11 +860,12 @@
         width: 100%;
       }
     }
-@media (max-width: 720px) {
-  .sticky-actions {
-    display: block;
+    @media (max-width: 720px) {
+     .sticky-actions {
+      display: block;
+    }
   }
-}
+
     
 @media (max-width: 720px) {
   .brand-logo {
@@ -1252,7 +1253,9 @@
         </div>
       </div>
 
-<div class="actions"></div>
+<div class="actions">
+  <button class="btn-primary" id="step1ContinueBtn" type="button">Continuar</button>
+</div>
     </section>
 
     <section class="step-card" data-step="2">
@@ -1295,7 +1298,8 @@
       </div>
 
 <div class="actions">
-  <button class="btn-secondary" id="backTo1">Volver</button>
+  <button class="btn-secondary" id="backTo1" type="button">Volver</button>
+  <button class="btn-primary" id="step2ContinueBtn" type="button">Continuar</button>
 </div>
     </section>
 
@@ -2568,7 +2572,45 @@ if (docType === "dni_front") {
       clearGlobalStatus();
       showStep(1);
     });
+document.getElementById("step1ContinueBtn")?.addEventListener("click", async () => {
+  const err = validateStep1();
+  if (err) {
+    setGlobalStatus("❌ " + err, "error");
+    return;
+  }
 
+  await saveProfilePartial({
+    full_name: getField("full_name"),
+    phone: getField("phone"),
+    dni_number: getField("dni_number"),
+    birth_date: getField("birth_date") || null,
+    address: getField("address"),
+    profile_completed: false
+  });
+
+  clearGlobalStatus();
+  showStep(2);
+});
+
+document.getElementById("step2ContinueBtn")?.addEventListener("click", async () => {
+  const err = validateStep2();
+  if (err) {
+    setGlobalStatus("❌ " + err, "error");
+    return;
+  }
+
+  await saveProfilePartial({
+    vehicle_brand: getField("vehicle_brand"),
+    vehicle_model: getField("vehicle_model"),
+    vehicle_year: Number(getField("vehicle_year")) || null,
+    vehicle_color: getField("vehicle_color"),
+    vehicle_plate: getField("vehicle_plate")
+  });
+
+  clearGlobalStatus();
+  currentDocumentIndex = 0;
+  showStep(3);
+});
     document.getElementById("backTo2").addEventListener("click", () => {
       clearGlobalStatus();
       showStep(2);
