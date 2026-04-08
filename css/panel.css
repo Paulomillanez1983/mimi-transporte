@@ -1334,7 +1334,7 @@ top: calc(var(--mobile-top) + 56px);
   }
 
   .nav-bar {
-    top: calc(var(--mobile-top) + 4px);
+    top: calc(var(--mobile-top) + 56px);
     left: calc(var(--mobile-side) + var(--mobile-header-size) + var(--mobile-nav-gap));
     right: calc(var(--mobile-side) + var(--mobile-header-size) + var(--mobile-nav-gap));
     min-height: var(--mobile-nav-height);
