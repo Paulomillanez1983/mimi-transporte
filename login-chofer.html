@@ -173,7 +173,23 @@
 </head>
 
 <body>
-  <div class="shell">
+  <div id="appSplash" class="app-splash">
+    <div class="app-splash__inner">
+      <div class="app-splash__logo-wrap">
+        <img
+          src="./assets/icons/icon-192x192.png"
+          alt="MIMI"
+          class="app-splash__logo"
+        />
+      </div>
+      <div class="app-splash__brand">MIMI Driver</div>
+      <div class="app-splash__loader">
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell shell--hidden" id="loginShell">
     <div class="card">
 <div class="logo">
   <img src="./assets/icons/icon-192x192.png" style="width:60px;">
