@@ -1895,3 +1895,7 @@ body.menu-open {
   text-transform: uppercase;
   letter-spacing: .05em;
 }
+.menu-item-danger {
+  background: rgba(225, 25, 0, 0.08);
+  color: #ad1200;
+}
