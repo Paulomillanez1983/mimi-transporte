@@ -13,6 +13,7 @@ class MapService {
     this.isInitialized = false;
     this.isLoaded = false;
     this.containerId = null;
+    this._lastHeading = 0;
 
     // Seguimiento tipo Uber
     this.followDriver = true;
@@ -564,6 +565,7 @@ updateDriverPosition(lng, lat, heading = 0) {
 
       if (this.navigationMode) {
         const duration = isMobile ? 600 : 700;
+     if (!this._isValidLatLng(lat, lng)) return;   
 
         this.map.easeTo({
           center: [lng, lat],
@@ -592,7 +594,7 @@ updateDriverPosition(lng, lat, heading = 0) {
     const now = Date.now();
 
     // 🔥 más sano: cada 5 segundos
-    if (!this._lastRerouteCheck || now - this._lastRerouteCheck > 5000) {
+    if (!this._lastRerouteCheck || now - this._lastRerouteCheck > 8000) {
       this._lastRerouteCheck = now;
       this._checkReroute(lat, lng);
     }
@@ -741,7 +743,9 @@ updateDriverPosition(lng, lat, heading = 0) {
       this._routeCache.clear();
 
       this.setNavigationMode(false);
-      this.followDriver = true;      ["pickup", "dropoff"].forEach((key) => {
+      this.followDriver = true;
+
+      ["pickup", "dropoff"].forEach((key) => {        
         if (this.markers[key]) {
           this.markers[key].remove();
           delete this.markers[key];
@@ -868,7 +872,7 @@ updateDriverPosition(lng, lat, heading = 0) {
     }, 12000);
 
     try {
-const url = `${CONFIG.OSRM_URL}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+const url = `${CONFIG.OSRM_URL}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=false`;
       const res = await fetch(url, {
         signal: this._osrmController.signal,
         headers: { Accept: "application/json" },
