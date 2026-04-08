@@ -73,7 +73,37 @@
     .topbar {
       margin-bottom: 20px;
     }
+.topbar-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
 
+.exit-btn {
+  width: auto;
+  min-width: 92px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(17,18,20,0.78);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.28);
+}
+
+.exit-btn:hover {
+  opacity: 0.92;
+}
+
+.exit-btn:active {
+  transform: scale(0.98);
+}
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -502,23 +532,23 @@
       flex: 1 1 160px;
     }
 
-    .sticky-actions {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 40;
-      padding:
-        12px
-        16px
-        calc(12px + var(--safe-bottom))
-        16px;
-      background:
-        linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.82) 30%, rgba(0,0,0,0.96));
-      backdrop-filter: blur(12px);
-      pointer-events: none;
-    }
-
+.sticky-actions {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  padding:
+    12px
+    16px
+    calc(12px + var(--safe-bottom))
+    16px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.82) 30%, rgba(0,0,0,0.96));
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
     .sticky-actions__inner {
       width: 100%;
       max-width: 1080px;
@@ -624,7 +654,13 @@
         width: 100%;
       }
     }
-
+.sticky-actions {
+  display: block;
+}
+  .brand-logo {
+  width: 36px;
+  height: 36px;
+}  
     @media (max-width: 480px) {
       body {
         padding-left: 12px;
@@ -645,22 +681,63 @@
         font-size: 16px;
       }
     }
+    .topbar-head {
+  align-items: stretch;
+}
+
+.exit-btn {
+  width: 100%;
+}
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  padding: 6px;
+}    
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="topbar">
+<div class="topbar">
+<div class="topbar-head">
+  <div class="brand-block">
+    <img src="/mimi-transporte/assets/icons/logo-mimi.png" class="brand-logo" />
+
+    <div>
       <div class="eyebrow">MIMI Driver · Alta de chofer</div>
-
       <div class="title">Validación de chofer</div>
+    </div>
+  </div>
 
-      <div class="subtitle">
-        Completá tu identidad, vehículo y documentación para habilitar tu cuenta.
-        Podés sacar fotos desde esta misma pantalla y terminar la carga mucho más rápido.
-      </div>
+  <button type="button" class="exit-btn" id="exitOnboardingBtn">
+    Salir
+  </button>
+</div>
+  <div>
+      <div class="eyebrow">MIMI Driver · Alta de chofer</div>
+      <div class="title">Validación de chofer</div>
+    </div>
 
-      <div class="progress-shell">
-        <div class="progress-top">
+    <button type="button" class="exit-btn" id="exitOnboardingBtn">
+      Salir
+    </button>
+  </div>
+
+  <div class="subtitle">
+    Completá tu identidad, vehículo y documentación para habilitar tu cuenta.
+    Podés sacar fotos desde esta misma pantalla y terminar la carga mucho más rápido.
+  </div>
+
+  <div class="progress-shell">
+    <div class="progress-top">
           <div class="progress-label" id="progressLabel">Paso 1 de 3</div>
           <div class="steps-dots" aria-hidden="true">
             <span class="step-dot active" id="dot1"></span>
@@ -1115,7 +1192,7 @@
     const stickyPrimaryBtn = document.getElementById("stickyPrimaryBtn");
     const stickyTitle = document.getElementById("stickyTitle");
     const stickyText = document.getElementById("stickyText");
-
+    const exitOnboardingBtn = document.getElementById("exitOnboardingBtn");
     function setGlobalStatus(msg, type = "success") {
       globalStatus.textContent = msg;
       globalStatus.classList.add("visible");
@@ -1137,7 +1214,26 @@
         document.getElementById(`dot${n}`)?.classList.toggle("active", n <= step);
       });
     }
+async function exitOnboardingFlow() {
+  const confirmExit = window.confirm(
+    "¿Querés salir del alta de chofer? Se perderá el progreso no guardado."
+  );
 
+  if (!confirmExit) return;
+
+  try {
+    localStorage.removeItem("mimi_driver_onboarding_draft");
+    sessionStorage.clear();
+
+    if (supabaseService?.client?.auth) {
+      await supabaseService.client.auth.signOut().catch(() => null);
+    }
+  } catch (err) {
+    console.warn("[exitOnboardingFlow] warning:", err);
+  } finally {
+    window.location.replace("login-chofer.html");
+  }
+}
     function updateSticky(step) {
       if (step === 1) {
         stickyTitle.textContent = "Paso 1 · Datos personales";
@@ -1610,7 +1706,7 @@
         document.getElementById("submitAllBtn").click();
       }
     });
-
+   exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
     (async function init() {
       try {
         initFileInputs();
