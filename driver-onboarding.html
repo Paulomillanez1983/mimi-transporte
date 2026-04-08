@@ -2142,6 +2142,7 @@ function renderPreview(docType, file) {
     `;
   }
 }
+
 async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionado") {
   if (!file) return;
 
@@ -2176,7 +2177,11 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     }
   } catch (err) {
     console.error("[setSelectedFile validation]", docType, err);
-    setDocStatus(docType, `${sourceLabel}: ${name} · No pudimos validar la imagen`, "warning");
+    setDocStatus(
+      docType,
+      `${sourceLabel}: ${name} · Validación demorada, podés continuar`,
+      "warning"
+    );
     setWizardVisualState("warning");
     triggerValidationFeedback("warning");
   }
@@ -2201,7 +2206,7 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
       }, 650);
     }
   }
-}
+}  
 function initFileInputs() {
   docWizardCameraInput?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0] || null;
@@ -2220,8 +2225,9 @@ function initFileInputs() {
     await setSelectedFile(docType, file, "Archivo seleccionado");
     docWizardFileInput.value = "";
   });
-}    
-    function getChosenFile(docType) {
+}
+    
+function getChosenFile(docType) {
       if (selectedFiles.has(docType)) return selectedFiles.get(docType);
 
       const ids = DOC_INPUT_ALIASES[docType] || [docType];
