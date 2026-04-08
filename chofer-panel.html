@@ -276,21 +276,54 @@
   }
 </script>
   <script type="module" src="js/driver-app.js"></script>
-  <!-- MENU BACKDROP -->
+<!-- MENU BACKDROP -->
 <div id="menu-backdrop"></div>
 
-<!-- SIDE MENU -->
-<aside id="side-menu">
-  <div class="menu-header">
-    <div class="menu-avatar" id="menu-avatar"></div>
-    <div class="menu-name" id="menu-name">Conductor</div>
-  </div>
+<!-- SIDE MENU PRO -->
+<aside id="side-menu" aria-hidden="true">
+  <div class="menu-sheet">
+    <div class="menu-drag-handle"></div>
 
-  <div class="menu-items">
-    <button>💰 Ganancias</button>
-    <button>📊 Historial</button>
-    <button>⚙️ Configuración</button>
-    <button id="menu-logout">🚪 Cerrar sesión</button>
+    <div class="menu-header">
+      <button class="menu-profile" id="menu-profile" type="button" aria-expanded="false">
+        <div class="menu-avatar" id="menu-avatar">
+          <span id="menu-avatar-initial">M</span>
+        </div>
+
+        <div class="menu-profile-text">
+          <div class="menu-name" id="menu-name">Conductor</div>
+          <div class="menu-email" id="menu-email">Sin sesión</div>
+        </div>
+
+        <div class="menu-chevron" id="menu-chevron">⌄</div>
+      </button>
+
+      <div class="menu-profile-expand" id="menu-profile-expand">
+        <button class="menu-secondary-action" id="menu-view-profile" type="button">
+          Ver perfil
+        </button>
+        <button class="menu-secondary-action danger" id="menu-logout" type="button">
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+
+    <div class="menu-items">
+      <button class="menu-item" id="menu-earnings" type="button">
+        <span class="menu-item-icon">💰</span>
+        <span class="menu-item-text">Ganancias</span>
+      </button>
+
+      <button class="menu-item" id="menu-history" type="button">
+        <span class="menu-item-icon">📊</span>
+        <span class="menu-item-text">Historial</span>
+      </button>
+
+      <button class="menu-item" id="menu-settings" type="button">
+        <span class="menu-item-icon">⚙️</span>
+        <span class="menu-item-text">Configuración</span>
+      </button>
+    </div>
   </div>
 </aside>
 </body>
