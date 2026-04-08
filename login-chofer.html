@@ -488,325 +488,355 @@
     </div>
   </div>
 
-  <script type="module">
-    import supabaseService from "./js/supabase-client.js";
-    import CONFIG from "./js/config.js";
+<script type="module">
+  import supabaseService from "./js/supabase-client.js";
+  import CONFIG from "./js/config.js";
 
-    const errorEl = document.getElementById("error");
-    const okEl = document.getElementById("ok");
-    const loginBtn = document.getElementById("loginBtn");
-    const googleLoginBtn = document.getElementById("googleLoginBtn");
-    const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+  const errorEl = document.getElementById("error");
+  const okEl = document.getElementById("ok");
+  const loginBtn = document.getElementById("loginBtn");
+  const googleLoginBtn = document.getElementById("googleLoginBtn");
+  const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
 
-    const splashEl = document.getElementById("appSplash");
-    const loginShell = document.getElementById("loginShell");
-    const loginCard = document.querySelector(".card");
-    function setSplashMessage(message = "Cargando...") {
-  const brand = document.querySelector(".app-splash__brand");
-  if (brand) brand.textContent = message;
-}
+  const splashEl = document.getElementById("appSplash");
+  const loginShell = document.getElementById("loginShell");
+  const loginCard = document.querySelector(".card");
 
-function isOAuthReturn() {
-  const url = new URL(window.location.href);
-  const hash = window.location.hash || "";
-
-  return (
-    url.searchParams.has("code") ||
-    url.searchParams.has("access_token") ||
-    hash.includes("access_token") ||
-    hash.includes("refresh_token") ||
-    sessionStorage.getItem("mimi_driver_oauth_pending") === "1"
-  );
-}
-
-function revealLoginUI() {
-  setSplashMessage("MIMI DRIVER");
-  hideSplashAndRevealUI();
-}
-
-    function showError(msg) {
-      errorEl.textContent = msg;
-      errorEl.classList.add("visible");
-      okEl.classList.remove("visible");
-    }
-
-    function showOk(msg) {
-      okEl.textContent = msg;
-      okEl.classList.add("visible");
-      errorEl.classList.remove("visible");
-    }
-
-    function clearMessages() {
-      errorEl.textContent = "";
-      okEl.textContent = "";
-      errorEl.classList.remove("visible");
-      okEl.classList.remove("visible");
-    }
-
-    function setLoading(loading, target = null) {
-      const buttons = [loginBtn, googleLoginBtn, forgotPasswordBtn];
-
-      buttons.forEach((btn) => {
-        if (!btn) return;
-        btn.disabled = loading;
-        btn.style.opacity = loading ? "0.7" : "1";
-        btn.style.pointerEvents = loading ? "none" : "auto";
-      });
-
-      loginBtn.textContent = "Ingresar";
-      googleLoginBtn.textContent = "Continuar con Google";
-      forgotPasswordBtn.textContent = "Olvidé mi contraseña";
-
-      if (loading && target === loginBtn) loginBtn.textContent = "Ingresando...";
-      if (loading && target === googleLoginBtn) googleLoginBtn.textContent = "Abriendo Google...";
-      if (loading && target === forgotPasswordBtn) forgotPasswordBtn.textContent = "Enviando...";
-    }
-
-    function addSkeletons() {
-      document.querySelector(".logo")?.classList.add("skeleton");
-      document.querySelector("h1")?.classList.add("skeleton");
-      document.querySelector(".subtitle")?.classList.add("skeleton");
-      document.querySelector(".footer-note")?.classList.add("skeleton");
-
-      document.querySelectorAll(".form-group label").forEach((el) => el.classList.add("skeleton"));
-      document.querySelectorAll("input").forEach((el) => el.classList.add("skeleton"));
-      document.querySelectorAll("button").forEach((el) => el.classList.add("skeleton"));
-    }
-
-    function removeSkeletons() {
-      document.querySelectorAll(".skeleton").forEach((el) => el.classList.remove("skeleton"));
-    }
-
-    function showInitialLoadingUI() {
-      loginCard?.classList.add("loading");
-      addSkeletons();
-    }
-
-    function hideSplashAndRevealUI() {
-      splashEl?.classList.add("hidden");
-      loginShell?.classList.remove("shell--hidden");
-      loginShell?.classList.add("shell--ready", "page-enter");
-      loginCard?.classList.remove("loading");
-      removeSkeletons();
-    }
-
-    async function smoothNavigate(url) {
-      loginShell?.classList.remove("page-enter");
-      loginShell.style.opacity = "0";
-      loginShell.style.transform = "translateY(10px) scale(0.992)";
-      loginShell.style.filter = "blur(8px)";
-      await new Promise((resolve) => setTimeout(resolve, 220));
-      window.location.replace(url);
-    }
-
-    async function ensureProfile(user) {
-      const { error } = await supabaseService.client.rpc("ensure_driver_profile_exists", {
-        p_user_id: user.id
-      });
-
-      if (error) {
-        console.error("[ensureProfile] error:", error);
-        throw error;
-      }
-    }
-
-    async function fetchOnboardingStatus(userId) {
-      const { data, error } = await supabaseService.client.rpc("get_driver_onboarding_status", {
-        p_user_id: userId
-      });
-
-      if (error) {
-        console.error("[fetchOnboardingStatus] error:", error);
-        throw error;
-      }
-
-      return data || null;
-    }
-
-    async function redirectAfterAuth() {
-      await supabaseService.init();
-
-      const { data: userRes, error: userErr } = await supabaseService.client.auth.getUser();
-      if (userErr || !userRes?.user) {
-        throw userErr || new Error("No hay usuario autenticado");
-      }
-
-      const user = userRes.user;
-
-      await ensureProfile(user);
-      const status = await fetchOnboardingStatus(user.id);
-
-      const onboardingStatus = status?.onboarding_status || "PENDIENTE_DOCUMENTOS";
-      const documentsApproved = status?.documents_approved === true;
-      const profileCompleted = status?.profile_completed === true;
-      const documentsCompleted = status?.documents_completed === true;
-      const hasObservedDocs = status?.has_observed_docs === true;
-
-      if (documentsApproved && onboardingStatus === "APROBADO") {
-        await smoothNavigate("chofer-panel.html");
-        return;
-      }
-
-      if (hasObservedDocs || onboardingStatus === "OBSERVADO") {
-        await smoothNavigate("driver-documents-observed.html");
-        return;
-      }
-
-      if (onboardingStatus === "PENDIENTE_REVISION") {
-        await smoothNavigate("driver-review-pending.html");
-        return;
-      }
-
-      if (!profileCompleted || !documentsCompleted) {
-        await smoothNavigate("driver-onboarding.html");
-        return;
-      }
-
-      await smoothNavigate("driver-onboarding.html");
-    }
-
-async function checkSession() {
-  try {
-    await supabaseService.init();
-
-    const returningFromOAuth = isOAuthReturn();
-
-    if (returningFromOAuth) {
-      setSplashMessage("Iniciando sesión...");
-    }
-
-    let { data: sessionData, error: sessionError } =
-      await supabaseService.client.auth.getSession();
-
-    if (sessionError) {
-      console.warn("[checkSession] getSession error:", sessionError);
-    }
-
-    let session = sessionData?.session || null;
-
-    if (!session) {
-      await new Promise((r) => setTimeout(r, returningFromOAuth ? 1400 : 500));
-      const retry = await supabaseService.client.auth.getSession();
-      session = retry?.data?.session || null;
-    }
-
-    if (session?.access_token) {
-      sessionStorage.removeItem("mimi_driver_oauth_pending");
-      setSplashMessage("Preparando tu cuenta...");
-      await redirectAfterAuth();
-      return;
-    }
-
-    revealLoginUI();
-  } catch (err) {
-    console.error("[checkSession] fatal:", err);
-    revealLoginUI();
+  function setSplashMessage(message = "Cargando...") {
+    const brand = document.querySelector(".app-splash__brand");
+    if (brand) brand.textContent = message;
   }
-}
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      clearMessages();
-      setLoading(true, loginBtn);
 
-      try {
-        await supabaseService.init();
+  function isOAuthReturn() {
+    const url = new URL(window.location.href);
+    const hash = window.location.hash || "";
 
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value;
+    return (
+      url.searchParams.has("code") ||
+      url.searchParams.has("access_token") ||
+      hash.includes("access_token") ||
+      hash.includes("refresh_token") ||
+      sessionStorage.getItem("mimi_driver_oauth_pending") === "1"
+    );
+  }
 
-        if (!email || !password) {
-          showError("Ingresá email y contraseña");
-          return;
-        }
+  function showSplash(message = "Cargando...") {
+    setSplashMessage(message);
+    splashEl?.classList.remove("hidden");
+  }
 
-        const { error } = await supabaseService.client.auth.signInWithPassword({
-          email,
-          password
-        });
+  function revealLoginUI() {
+    setSplashMessage("MIMI DRIVER");
+    splashEl?.classList.add("hidden");
+    loginShell?.classList.remove("shell--hidden");
+    loginShell?.classList.add("shell--ready", "page-enter");
+    loginCard?.classList.remove("loading");
+    removeSkeletons();
+  }
 
-        if (error) {
-          showError("❌ " + error.message);
-          return;
-        }
+  function showError(msg) {
+    errorEl.textContent = msg;
+    errorEl.classList.add("visible");
+    okEl.classList.remove("visible");
+  }
 
-        showOk("✅ Login correcto...");
-        await redirectAfterAuth();
-      } catch (err) {
-        console.error("[login] error:", err);
-        showError("❌ No pudimos iniciar sesión");
-      } finally {
-        setLoading(false);
-      }
+  function showOk(msg) {
+    okEl.textContent = msg;
+    okEl.classList.add("visible");
+    errorEl.classList.remove("visible");
+  }
+
+  function clearMessages() {
+    errorEl.textContent = "";
+    okEl.textContent = "";
+    errorEl.classList.remove("visible");
+    okEl.classList.remove("visible");
+  }
+
+  function setLoading(loading, target = null) {
+    const buttons = [loginBtn, googleLoginBtn, forgotPasswordBtn];
+
+    buttons.forEach((btn) => {
+      if (!btn) return;
+      btn.disabled = loading;
+      btn.style.opacity = loading ? "0.7" : "1";
+      btn.style.pointerEvents = loading ? "none" : "auto";
     });
 
-googleLoginBtn.addEventListener("click", async () => {
-  clearMessages();
-  setLoading(true, googleLoginBtn);
+    if (loginBtn) loginBtn.textContent = "Ingresar";
+    if (googleLoginBtn) googleLoginBtn.textContent = "Continuar con Google";
+    if (forgotPasswordBtn) forgotPasswordBtn.textContent = "Olvidé mi contraseña";
 
-  try {
-    await supabaseService.init();
+    if (loading && target === loginBtn && loginBtn) {
+      loginBtn.textContent = "Ingresando...";
+    }
 
-    sessionStorage.setItem("mimi_driver_oauth_pending", "1");
-    setSplashMessage("Abriendo Google...");
-    splashEl?.classList.remove("hidden");
+    if (loading && target === googleLoginBtn && googleLoginBtn) {
+      googleLoginBtn.textContent = "Abriendo Google...";
+    }
 
-    const { error } = await supabaseService.client.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login-chofer.html"
-      }
+    if (loading && target === forgotPasswordBtn && forgotPasswordBtn) {
+      forgotPasswordBtn.textContent = "Enviando...";
+    }
+  }
+
+  function addSkeletons() {
+    document.querySelector(".logo")?.classList.add("skeleton");
+    document.querySelector("h1")?.classList.add("skeleton");
+    document.querySelector(".subtitle")?.classList.add("skeleton");
+    document.querySelector(".footer-note")?.classList.add("skeleton");
+
+    document.querySelectorAll(".form-group label").forEach((el) => el.classList.add("skeleton"));
+    document.querySelectorAll("input").forEach((el) => el.classList.add("skeleton"));
+    document.querySelectorAll("button").forEach((el) => el.classList.add("skeleton"));
+  }
+
+  function removeSkeletons() {
+    document.querySelectorAll(".skeleton").forEach((el) => el.classList.remove("skeleton"));
+  }
+
+  function showInitialLoadingUI() {
+    loginCard?.classList.add("loading");
+    addSkeletons();
+    showSplash("Cargando...");
+  }
+
+  async function smoothNavigate(url) {
+    showSplash("Redirigiendo...");
+    loginShell?.classList.remove("page-enter");
+    loginShell.style.opacity = "0";
+    loginShell.style.transform = "translateY(10px) scale(0.992)";
+    loginShell.style.filter = "blur(8px)";
+    await new Promise((resolve) => setTimeout(resolve, 220));
+    window.location.replace(url);
+  }
+
+  async function ensureProfile(user) {
+    setSplashMessage("Validando perfil...");
+
+    const { error } = await supabaseService.client.rpc("ensure_driver_profile_exists", {
+      p_user_id: user.id
     });
 
     if (error) {
-      sessionStorage.removeItem("mimi_driver_oauth_pending");
-      showError("❌ Error Google: " + error.message);
-      revealLoginUI();
-      return;
+      console.error("[ensureProfile] error:", error);
+      throw error;
     }
-  } catch (err) {
-    sessionStorage.removeItem("mimi_driver_oauth_pending");
-    console.error("[googleLogin] error:", err);
-    showError("❌ No pudimos abrir Google");
-    revealLoginUI();
-  } finally {
-    setLoading(false);
   }
-});
-    forgotPasswordBtn.addEventListener("click", async () => {
-      clearMessages();
-      setLoading(true, forgotPasswordBtn);
 
-      try {
-        await supabaseService.init();
+  async function fetchOnboardingStatus(userId) {
+    setSplashMessage("Preparando onboarding...");
 
-        const email = document.getElementById("email").value.trim();
-
-        if (!email) {
-          showError("Ingresá tu email para recuperar la contraseña");
-          return;
-        }
-
-        const { error } = await supabaseService.client.auth.resetPasswordForEmail(email, {
-          redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/reset-password.html"
-        });
-
-        if (error) {
-          showError("❌ " + error.message);
-          return;
-        }
-
-        showOk("✅ Te enviamos un email para restablecer la contraseña");
-      } catch (err) {
-        console.error("[forgotPassword] error:", err);
-        showError("❌ No pudimos enviar el email de recuperación");
-      } finally {
-        setLoading(false);
-      }
+    const { data, error } = await supabaseService.client.rpc("get_driver_onboarding_status", {
+      p_user_id: userId
     });
 
-    showInitialLoadingUI();
+    if (error) {
+      console.error("[fetchOnboardingStatus] error:", error);
+      throw error;
+    }
 
-    checkSession();
-  </script>
+    return data || null;
+  }
+
+  async function redirectAfterAuth() {
+    await supabaseService.init();
+
+    setSplashMessage("Iniciando sesión...");
+
+    const { data: userRes, error: userErr } = await supabaseService.client.auth.getUser();
+
+    if (userErr || !userRes?.user) {
+      throw userErr || new Error("No hay usuario autenticado");
+    }
+
+    const user = userRes.user;
+
+    await ensureProfile(user);
+    const status = await fetchOnboardingStatus(user.id);
+
+    const onboardingStatus = status?.onboarding_status || "PENDIENTE_DOCUMENTOS";
+    const documentsApproved = status?.documents_approved === true;
+    const profileCompleted = status?.profile_completed === true;
+    const documentsCompleted = status?.documents_completed === true;
+    const hasObservedDocs = status?.has_observed_docs === true;
+
+    if (documentsApproved && onboardingStatus === "APROBADO") {
+      setSplashMessage("Ingresando al panel...");
+      await smoothNavigate("chofer-panel.html");
+      return;
+    }
+
+    if (hasObservedDocs || onboardingStatus === "OBSERVADO") {
+      setSplashMessage("Cargando observaciones...");
+      await smoothNavigate("driver-documents-observed.html");
+      return;
+    }
+
+    if (onboardingStatus === "PENDIENTE_REVISION") {
+      setSplashMessage("Cargando revisión...");
+      await smoothNavigate("driver-review-pending.html");
+      return;
+    }
+
+    if (!profileCompleted || !documentsCompleted) {
+      setSplashMessage("Preparando onboarding...");
+      await smoothNavigate("driver-onboarding.html");
+      return;
+    }
+
+    setSplashMessage("Preparando onboarding...");
+    await smoothNavigate("driver-onboarding.html");
+  }
+
+  async function checkSession() {
+    try {
+      await supabaseService.init();
+
+      const returningFromOAuth = isOAuthReturn();
+
+      if (returningFromOAuth) {
+        showSplash("Iniciando sesión...");
+      }
+
+      let { data: sessionData, error: sessionError } =
+        await supabaseService.client.auth.getSession();
+
+      if (sessionError) {
+        console.warn("[checkSession] getSession error:", sessionError);
+      }
+
+      let session = sessionData?.session || null;
+
+      if (!session) {
+        await new Promise((r) => setTimeout(r, returningFromOAuth ? 1400 : 500));
+        const retry = await supabaseService.client.auth.getSession();
+        session = retry?.data?.session || null;
+      }
+
+      if (session?.access_token) {
+        sessionStorage.removeItem("mimi_driver_oauth_pending");
+        showSplash("Preparando tu cuenta...");
+        await redirectAfterAuth();
+        return;
+      }
+
+      revealLoginUI();
+    } catch (err) {
+      console.error("[checkSession] fatal:", err);
+      revealLoginUI();
+    }
+  }
+
+  document.getElementById("loginForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearMessages();
+    setLoading(true, loginBtn);
+
+    try {
+      await supabaseService.init();
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      if (!email || !password) {
+        showError("Ingresá email y contraseña");
+        return;
+      }
+
+      showSplash("Iniciando sesión...");
+
+      const { error } = await supabaseService.client.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        splashEl?.classList.add("hidden");
+        showError("❌ " + error.message);
+        return;
+      }
+
+      showOk("✅ Login correcto...");
+      await redirectAfterAuth();
+    } catch (err) {
+      console.error("[login] error:", err);
+      splashEl?.classList.add("hidden");
+      showError("❌ No pudimos iniciar sesión");
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  googleLoginBtn.addEventListener("click", async () => {
+    clearMessages();
+    setLoading(true, googleLoginBtn);
+
+    try {
+      await supabaseService.init();
+
+      sessionStorage.setItem("mimi_driver_oauth_pending", "1");
+      showSplash("Abriendo Google...");
+
+      const { error } = await supabaseService.client.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login-chofer.html"
+        }
+      });
+
+      if (error) {
+        sessionStorage.removeItem("mimi_driver_oauth_pending");
+        splashEl?.classList.add("hidden");
+        showError("❌ Error Google: " + error.message);
+        revealLoginUI();
+        return;
+      }
+    } catch (err) {
+      sessionStorage.removeItem("mimi_driver_oauth_pending");
+      console.error("[googleLogin] error:", err);
+      splashEl?.classList.add("hidden");
+      showError("❌ No pudimos abrir Google");
+      revealLoginUI();
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  forgotPasswordBtn.addEventListener("click", async () => {
+    clearMessages();
+    setLoading(true, forgotPasswordBtn);
+
+    try {
+      await supabaseService.init();
+
+      const email = document.getElementById("email").value.trim();
+
+      if (!email) {
+        showError("Ingresá tu email para recuperar la contraseña");
+        return;
+      }
+
+      const { error } = await supabaseService.client.auth.resetPasswordForEmail(email, {
+        redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/reset-password.html"
+      });
+
+      if (error) {
+        showError("❌ " + error.message);
+        return;
+      }
+
+      showOk("✅ Te enviamos un email para restablecer la contraseña");
+    } catch (err) {
+      console.error("[forgotPassword] error:", err);
+      showError("❌ No pudimos enviar el email de recuperación");
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  showInitialLoadingUI();
+  checkSession();
+</script>
 </body>
 </html>
