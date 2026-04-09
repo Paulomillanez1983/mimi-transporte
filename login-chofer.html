@@ -749,9 +749,11 @@ if (onboardingStatus === "BLOQUEADO") {
 setSplashMessage("Preparando onboarding...");
 setSplashStatus("Completá tu perfil y documentación...");
 await smoothNavigate("driver-onboarding.html");
+return;
+}
   
 async function checkSession() {
-    try {
+  try {
       await supabaseService.init();
 
       const returningFromOAuth = isOAuthReturn();
