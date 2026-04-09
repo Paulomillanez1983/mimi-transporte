@@ -1570,7 +1570,7 @@ const DOC_META = {
     let currentUser = null;
     const selectedFiles = new Map();
     const docValidationState = new Map();
-
+    const docValidationMessage = new Map();
     const progressBar = document.getElementById("progressBar");
     const progressLabel = document.getElementById("progressLabel");
     const globalStatus = document.getElementById("globalStatus");
@@ -1817,10 +1817,15 @@ function renderDocWizardPreview(docType) {
 
 function syncDocWizardStatus() {
   if (!docWizardStatus) return;
-  if (!docWizardStatus.className) {
-    docWizardStatus.className = "doc-status";
-  }
+
+  const docType = getCurrentDocType();
+  const state = docValidationState.get(docType) || "pending";
+  const message = docValidationMessage.get(docType) || "";
+
+  docWizardStatus.textContent = message;
+  docWizardStatus.className = `doc-status ${state}`;
 }
+    
 function renderDocumentWizard() {
   const docType = getCurrentDocType();
   const meta = DOC_META[docType];
@@ -2117,13 +2122,13 @@ function showStep(step) {
 
 function setDocStatus(docType, message, type = "pending") {
   docValidationState.set(docType, type);
+  docValidationMessage.set(docType, message);
 
   if (docType === getCurrentDocType() && docWizardStatus) {
     docWizardStatus.textContent = message;
     docWizardStatus.className = `doc-status ${type}`;
   }
-}
-    
+}    
 function renderPreview(docType, file) {
   if (docType !== getCurrentDocType() || !docWizardPreview) return;
 
@@ -2203,20 +2208,21 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   updateSticky(3);
   updateWizardPrimaryState();
 
-  if (docType === getCurrentDocType()) {
-      const state = docValidationState.get(docType);
-      const passed = state === "ok" || state === "warning";
-    if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-      setTimeout(() => {
-        currentDocumentIndex += 1;
-        setWizardVisualState("idle");
-        renderDocumentWizard();
-        updateSticky(3);
-        updateWizardPrimaryState();
-      }, 650);
-    }
+if (docType === getCurrentDocType()) {
+  const currentStatus = document.getElementById("docWizardStatus")?.className || "";
+  const passed = currentStatus.includes("ok") || currentStatus.includes("warning");
+
+      if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+        setTimeout(() => {
+          currentDocumentIndex += 1;
+          setWizardVisualState("idle");
+           renderDocumentWizard();
+          updateSticky(3);
+          updateWizardPrimaryState();
+        }, 650);
+      }
+    }  
   }
-}  
 function initFileInputs() {
   docWizardCameraInput?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0] || null;
