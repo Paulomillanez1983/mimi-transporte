@@ -1603,10 +1603,11 @@ const docWizardBackBtn = document.getElementById("docWizardBackBtn");
 const docWizardNextBtn = document.getElementById("docWizardNextBtn");
 const docWizardCard = document.querySelector(".doc-wizard-card");
 const DOC_CACHE_KEY = "mimi_driver_doc_cache_v1";
+const FORM_DRAFT_KEY = "mimi_driver_onboarding_draft";
 const VALIDATION_SOUND_SRC =
   "data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTAAAAAAAP//AAD//wAA//8AAP//AAD//wAA";
 let audioValidationOk = null;
-
+let currentPreviewUrl = null;
     
 function getCurrentDocType() {
   return DOCUMENT_FLOW[currentDocumentIndex] || DOCUMENT_FLOW[0];
@@ -1809,11 +1810,16 @@ function renderDocWizardPreview(docType) {
   }
 
   if (String(file.type || "").startsWith("image/")) {
-    const url = URL.createObjectURL(file);
-    docWizardPreview.innerHTML = `<img src="${url}" alt="${DOC_META[docType]?.label || docType}" />`;
-    docWizardPreview.classList.add("visible");
-    return;
+  if (currentPreviewUrl) {
+    URL.revokeObjectURL(currentPreviewUrl);
+    currentPreviewUrl = null;
   }
+
+  currentPreviewUrl = URL.createObjectURL(file);
+  docWizardPreview.innerHTML = `<img src="${currentPreviewUrl}" alt="${DOC_META[docType]?.label || docType}" />`;
+  docWizardPreview.classList.add("visible");
+  return;
+}
 
   docWizardPreview.innerHTML = `
     <div class="doc-preview-file">
@@ -2001,6 +2007,7 @@ async function exitOnboardingFlow() {
   if (!confirmExit) return;
 
   try {
+    localStorage.removeItem(DOC_CACHE_KEY);
     localStorage.removeItem("mimi_driver_onboarding_draft");
     sessionStorage.clear();
 
@@ -2087,13 +2094,13 @@ function showStep(step) {
   });
 }
     
-  function validateStep1() {
-      if (!getField("full_name")) return "Ingresá nombre completo";
-      if (!getField("phone")) return "Ingresá teléfono";
-      if (!getField("dni_number")) return "Ingresá DNI";
-      return null;
-    }
-
+function validateStep1() {
+  if (!getField("full_name")) return "Ingresá nombre completo";
+  if (!getField("phone")) return "Ingresá teléfono";
+  if (!getField("dni_number")) return "Ingresá DNI";
+  if (!getField("birth_date")) return "Ingresá fecha de nacimiento";
+  return null;
+}
     function validateStep2() {
       if (!getField("vehicle_brand")) return "Ingresá marca del vehículo";
       if (!getField("vehicle_model")) return "Ingresá modelo del vehículo";
@@ -2155,11 +2162,16 @@ function renderPreview(docType, file) {
 
   docWizardPreview.classList.add("visible");
 
-  if (String(file.type || "").startsWith("image/")) {
-    const url = URL.createObjectURL(file);
-    docWizardPreview.innerHTML = `<img src="${url}" alt="Preview ${docType}" />`;
-  } else {
-    docWizardPreview.innerHTML = `
+if (String(file.type || "").startsWith("image/")) {
+  if (currentPreviewUrl) {
+    URL.revokeObjectURL(currentPreviewUrl);
+    currentPreviewUrl = null;
+  }
+
+  currentPreviewUrl = URL.createObjectURL(file);
+  docWizardPreview.innerHTML = `<img src="${currentPreviewUrl}" alt="Preview ${docType}" />`;
+} else {
+  docWizardPreview.innerHTML = `
       <div class="doc-preview-file">
         <strong>Archivo seleccionado</strong>
         <span>${file.name || "Documento"}</span>
@@ -2363,7 +2375,42 @@ function getChosenFile(docType) {
 
       if (error) throw error;
     }
+function saveDraft() {
+  const payload = {
+    full_name: getField("full_name"),
+    phone: getField("phone"),
+    dni_number: getField("dni_number"),
+    birth_date: getField("birth_date"),
+    address: getField("address"),
+    vehicle_brand: getField("vehicle_brand"),
+    vehicle_model: getField("vehicle_model"),
+    vehicle_year: getField("vehicle_year"),
+    vehicle_color: getField("vehicle_color"),
+    vehicle_plate: getField("vehicle_plate")
+  };
 
+  localStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(payload));
+}
+    function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(FORM_DRAFT_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+
+    document.getElementById("full_name").value = data.full_name || "";
+    document.getElementById("phone").value = data.phone || "";
+    document.getElementById("dni_number").value = data.dni_number || "";
+    document.getElementById("birth_date").value = data.birth_date || "";
+    document.getElementById("address").value = data.address || "";
+    document.getElementById("vehicle_brand").value = data.vehicle_brand || "";
+    document.getElementById("vehicle_model").value = data.vehicle_model || "";
+    document.getElementById("vehicle_year").value = data.vehicle_year || "";
+    document.getElementById("vehicle_color").value = data.vehicle_color || "";
+    document.getElementById("vehicle_plate").value = data.vehicle_plate || "";
+  } catch (err) {
+    console.warn("[restoreDraft]", err);
+  }
+}
     async function uploadDocument(docType, file) {
       try {
         if (!file) {
@@ -2385,14 +2432,16 @@ function getChosenFile(docType) {
         const safeName = sanitizeFileName(file.name || `${docType}.${ext}`);
         const safePath = `${currentUser.id}/${docType}_${safeName}`;
 
-        const { error: uploadError } = await supabaseService.client.storage
-          .from("driver-documents")
-          .upload(safePath, file, {
-             cacheControl: "3600",
-             upsert: false,
-             contentType: file.type || "application/octet-stream"
-        });
-        if (uploadError) throw uploadError;
+          const { error: uploadError } = await supabaseService.client.storage
+             .from("driver-documents")
+             .upload(safePath, file, {
+              cacheControl: "3600",
+              upsert: true,
+              contentType: file.type || "application/octet-stream"
+
+        }); 
+        if (uploadError) throw uploadError; 
+      
 
         const payload = {
           user_id: currentUser.id,
@@ -2531,7 +2580,7 @@ if (docType === "dni_front") {
           vehicle_model: getField("vehicle_model"),
           vehicle_year: Number(getField("vehicle_year")) || null,
           vehicle_color: getField("vehicle_color"),
-          vehicle_plate: getField("vehicle_plate"),
+          vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, ""),
           profile_completed: true,
           onboarding_status: "PENDIENTE_DOCUMENTOS",
           documents_completed: false,
@@ -2573,8 +2622,11 @@ if (docType === "dni_front") {
 
         setGlobalStatus(successMessage, "success");
 
+        localStorage.removeItem(DOC_CACHE_KEY);
+        localStorage.removeItem(FORM_DRAFT_KEY);
+
         setTimeout(() => {
-          window.location.replace("driver-review-pending.html");
+        window.location.replace("driver-review-pending.html");
         }, 1400);
       } catch (err) {
         console.error("[submitAll] error:", err);
@@ -2616,12 +2668,12 @@ document.getElementById("step2ContinueBtn")?.addEventListener("click", async () 
   }
 
   await saveProfilePartial({
-    vehicle_brand: getField("vehicle_brand"),
-    vehicle_model: getField("vehicle_model"),
-    vehicle_year: Number(getField("vehicle_year")) || null,
-    vehicle_color: getField("vehicle_color"),
-    vehicle_plate: getField("vehicle_plate")
-  });
+  vehicle_brand: getField("vehicle_brand"),
+  vehicle_model: getField("vehicle_model"),
+  vehicle_year: Number(getField("vehicle_year")) || null,
+  vehicle_color: getField("vehicle_color"),
+  vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, "")
+});
 
   clearGlobalStatus();
   currentDocumentIndex = 0;
@@ -2705,14 +2757,13 @@ stickyPrimaryBtn.addEventListener("click", async () => {
         return;
       }
 
-      await saveProfilePartial({
-        vehicle_brand: getField("vehicle_brand"),
-        vehicle_model: getField("vehicle_model"),
-        vehicle_year: Number(getField("vehicle_year")) || null,
-        vehicle_color: getField("vehicle_color"),
-        vehicle_plate: getField("vehicle_plate")
+        await saveProfilePartial({
+          vehicle_brand: getField("vehicle_brand"),
+          vehicle_model: getField("vehicle_model"),
+          vehicle_year: Number(getField("vehicle_year")) || null,
+          vehicle_color: getField("vehicle_color"),
+          vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, "")
       });
-
       clearGlobalStatus();
       currentDocumentIndex = 0;
       showStep(3);
@@ -2747,7 +2798,7 @@ stickyPrimaryBtn.addEventListener("click", async () => {
 });
     
 exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
-    [
+[
   "full_name",
   "phone",
   "dni_number",
@@ -2761,15 +2812,17 @@ exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
 ].forEach((id) => {
   document.getElementById(id)?.addEventListener("input", () => {
     updateOverallStepperState();
+    saveDraft();
   });
 });
-    (async function init() {
-      try {
-        initFileInputs();
-        restoreCachedFiles();
-        showStep(1);
+  (async function init() {
+  try {
+    initFileInputs();
+    restoreCachedFiles();
+    restoreDraft();
+    showStep(1);
 
-        currentUser = await getUserOrRedirect();
+    currentUser = await getUserOrRedirect();
         if (!currentUser) return;
 
         await ensureProfileExists(currentUser);
