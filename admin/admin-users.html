@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin · Usuarios</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
+
+  <style>
+    body {
+      background: #000;
+      color: #fff;
+      font-family: Inter;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    input {
+      padding: 10px;
+      margin-bottom: 10px;
+      width: 300px;
+    }
+
+    button {
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    .user {
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Admins</h1>
+
+<input id="email" placeholder="email admin"/>
+<button onclick="addAdmin()">Agregar Admin</button>
+
+<div id="list"></div>
+
+<script type="module">
+import supabaseService from "../js/supabase-client.js";
+
+async function init() {
+  await supabaseService.init();
+
+  const { data: sessionData } = await supabaseService.client.auth.getSession();
+  const user = sessionData?.session?.user;
+
+  if (!user) {
+    location.href = "./admin-login.html";
+    return;
+  }
+
+  const { data: admin } = await supabaseService.client
+    .from("admin_users")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!admin) {
+    location.href = "./admin-login.html";
+    return;
+  }
+
+  loadAdmins();
+}
+
+async function loadAdmins() {
+  const { data } = await supabaseService.client
+    .from("admin_users")
+    .select("*");
+
+  const list = document.getElementById("list");
+
+  list.innerHTML = data.map(u => `
+    <div class="user">
+      <b>${u.email}</b><br/>
+      Activo: ${u.active}
+    </div>
+  `).join("");
+}
+
+window.addAdmin = async () => {
+  const email = document.getElementById("email").value;
+
+  const { data: users } = await supabaseService.client
+    .from("auth.users")
+    .select("*")
+    .eq("email", email);
+
+  if (!users?.length) {
+    alert("Usuario no existe en Auth");
+    return;
+  }
+
+  const user = users[0];
+
+  await supabaseService.client
+    .from("admin_users")
+    .insert({
+      user_id: user.id,
+      email: user.email,
+      active: true
+    });
+
+  loadAdmins();
+};
+
+init();
+</script>
+
+</body>
+</html>
