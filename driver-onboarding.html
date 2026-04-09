@@ -2819,14 +2819,14 @@ exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
   try {
     initFileInputs();
     restoreCachedFiles();
-    restoreDraft();
     showStep(1);
 
     currentUser = await getUserOrRedirect();
-        if (!currentUser) return;
+    if (!currentUser) return;
 
-        await ensureProfileExists(currentUser);
-        await loadProfile();
+    await ensureProfileExists(currentUser);
+    await loadProfile();
+    restoreDraft();
 
         const { data: profile } = await supabaseService.client
           .from("driver_profiles")
