@@ -461,7 +461,7 @@
   </div>
 
   <script type="module">
-    import supabaseService from "./js/supabase-client.js";
+    import supabaseService from "../js/supabase-client.js";
 
     let currentAdmin = null;
     let selectedDriver = null;
@@ -488,7 +488,7 @@
       const ready = await supabaseService.init();
 
       if (!ready || !supabaseService?.client?.auth) {
-        window.location.replace("admin-login.html");
+        window.location.replace("./admin-login.html");
         return null;
       }
 
@@ -496,7 +496,7 @@
       const session = sessionData?.session || null;
 
       if (!session?.user?.id) {
-        window.location.replace("admin-login.html");
+        window.location.replace("./admin-login.html");
         return null;
       }
 
@@ -508,7 +508,7 @@
 
       if (error || !adminProfile || !adminProfile.active) {
         await supabaseService.client.auth.signOut().catch(() => null);
-        window.location.replace("admin-login.html");
+        window.location.replace("./admin-login.html");
         return null;
       }
 
@@ -778,7 +778,7 @@
       try {
         await supabaseService.client.auth.signOut().catch(() => null);
       } finally {
-        window.location.replace("admin-login.html");
+        window.location.replace("./admin-login.html");
       }
     });
 
