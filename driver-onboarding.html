@@ -1725,6 +1725,7 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const validation = await validateSelectedDocument(docType, file);
+      let remoteJson = null;
 
       try {
         const {
@@ -1763,7 +1764,7 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
             throw new Error(`Remote validation HTTP ${response.status}`);
           }
 
-          const remoteJson = await response.json();
+          remoteJson = await response.json();
           console.log("[remote validation ok]", remoteJson);
         } catch (remoteErr) {
           clearTimeout(timeoutId);
@@ -1773,15 +1774,15 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         console.warn(`[server session retry ${attempt}]`, sessionErr);
       }
 
-if (!validation.ok && remoteJson?.ok === true) {
-  return {
-    ok: true,
-    kind: "document-warning",
-    message: `${validation.message} · pero el documento fue aceptado por validación remota`
-  };
-}
+      if (!validation.ok && remoteJson?.ok === true) {
+        return {
+          ok: true,
+          kind: "document-warning",
+          message: `${validation.message} · pero el documento fue aceptado por validación remota`
+        };
+      }
 
-return validation;
+      return validation;
     } catch (err) {
       lastError = err;
       if (attempt < maxAttempts) {
@@ -1791,7 +1792,8 @@ return validation;
   }
 
   throw lastError || new Error("No pudimos validar el documento");
-}    
+}
+    
 function renderDocWizardPreview(docType) {
   const file = getChosenFile(docType);
 
