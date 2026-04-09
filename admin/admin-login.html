@@ -284,7 +284,7 @@
       try {
         const check = await ensureAdminAccess(session.user.id);
         if (check.ok) {
-          window.location.replace("admin-panel.html");
+          window.location.replace("./admin-panel.html");
           return;
         }
 
@@ -343,7 +343,7 @@
         setStatus("Acceso correcto. Redirigiendo...", "success");
 
         setTimeout(() => {
-          window.location.replace("admin-panel.html");
+          window.location.replace("./admin-panel.html");
         }, 500);
       } catch (err) {
         console.error("[admin login]", err);
