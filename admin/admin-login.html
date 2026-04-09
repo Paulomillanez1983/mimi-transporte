@@ -167,6 +167,12 @@
       pointer-events: none;
     }
 
+    .btn-google {
+      background: #ffffff;
+      color: #000000;
+      box-shadow: none;
+    }
+
     .status {
       display: none;
       margin-top: 16px;
@@ -227,6 +233,7 @@
         </div>
 
         <button class="btn" id="loginBtn" type="submit">Entrar al panel</button>
+        <button class="btn btn-google" id="googleLoginBtn" type="button">Continuar con Google</button>
       </form>
 
       <div class="status" id="statusBox"></div>
@@ -243,6 +250,7 @@
     const form = document.getElementById("adminLoginForm");
     const statusBox = document.getElementById("statusBox");
     const loginBtn = document.getElementById("loginBtn");
+    const googleLoginBtn = document.getElementById("googleLoginBtn");
 
     function setStatus(message, type = "error") {
       statusBox.textContent = message;
@@ -283,14 +291,28 @@
 
       try {
         const check = await ensureAdminAccess(session.user.id);
+
         if (check.ok) {
           window.location.replace("./admin-panel.html");
           return;
         }
 
         await supabaseService.client.auth.signOut().catch(() => null);
+
+        if (check.reason === "inactive_admin") {
+          setStatus("Tu cuenta admin está inactiva.", "error");
+          return;
+        }
+
+        setStatus("Ese Gmail no tiene permisos de administrador.", "error");
       } catch (err) {
         console.error("[admin bootstrap]", err);
+        setStatus("No pudimos validar el acceso admin.", "error");
+      } finally {
+        if (googleLoginBtn) {
+          googleLoginBtn.disabled = false;
+          googleLoginBtn.textContent = "Continuar con Google";
+        }
       }
     }
 
@@ -351,6 +373,35 @@
       } finally {
         loginBtn.disabled = false;
         loginBtn.textContent = "Entrar al panel";
+      }
+    });
+
+    googleLoginBtn?.addEventListener("click", async () => {
+      clearStatus();
+
+      try {
+        const ready = await supabaseService.init();
+
+        if (!ready || !supabaseService?.client?.auth) {
+          throw new Error("No pudimos inicializar Supabase");
+        }
+
+        googleLoginBtn.disabled = true;
+        googleLoginBtn.textContent = "Abriendo Google...";
+
+        const { error } = await supabaseService.client.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/admin/admin-login.html"
+          }
+        });
+
+        if (error) throw error;
+      } catch (err) {
+        console.error("[admin google login]", err);
+        setStatus(err?.message || "No pudimos abrir Google", "error");
+        googleLoginBtn.disabled = false;
+        googleLoginBtn.textContent = "Continuar con Google";
       }
     });
 
