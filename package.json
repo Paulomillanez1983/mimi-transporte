@@ -1,0 +1,9 @@
+{
+  "name": "mimi-transporte",
+  "version": "1.0.0",
+  "description": "MIMI Transporte Escolar - Panel de conductor",
+  "private": true,
+  "dependencies": {
+    "@vercel/speed-insights": "^1.1.0"
+  }
+}
