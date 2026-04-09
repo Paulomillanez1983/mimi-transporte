@@ -2388,11 +2388,10 @@ function getChosenFile(docType) {
         const { error: uploadError } = await supabaseService.client.storage
           .from("driver-documents")
           .upload(safePath, file, {
-            cacheControl: "3600",
-            upsert: true,
-            contentType: file.type || "application/octet-stream"
-          });
-
+             cacheControl: "3600",
+             upsert: false,
+             contentType: file.type || "application/octet-stream"
+        });
         if (uploadError) throw uploadError;
 
         const payload = {
