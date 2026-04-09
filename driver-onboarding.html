@@ -1773,7 +1773,15 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         console.warn(`[server session retry ${attempt}]`, sessionErr);
       }
 
-      return validation;
+if (!validation.ok && remoteJson?.ok === true) {
+  return {
+    ok: true,
+    kind: "document-warning",
+    message: `${validation.message} · pero el documento fue aceptado por validación remota`
+  };
+}
+
+return validation;
     } catch (err) {
       lastError = err;
       if (attempt < maxAttempts) {
