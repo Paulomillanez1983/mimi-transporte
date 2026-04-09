@@ -2209,9 +2209,8 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   updateWizardPrimaryState();
 
 if (docType === getCurrentDocType()) {
-  const currentStatus = document.getElementById("docWizardStatus")?.className || "";
-  const passed = currentStatus.includes("ok") || currentStatus.includes("warning");
-
+const state = docValidationState.get(docType);
+const passed = state === "ok" || state === "warning";
       if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
         setTimeout(() => {
           currentDocumentIndex += 1;
