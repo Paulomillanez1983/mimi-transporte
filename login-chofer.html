@@ -711,32 +711,46 @@ async function redirectAfterAuth() {
     hasObservedDocs
   });
 
-  if (documentsApproved && onboardingStatus === "APROBADO") {
-    setSplashMessage("Ingresando al panel...");
-    setSplashStatus("Cargando tu panel principal...");
-    await smoothNavigate("chofer-panel.html");
-    return;
-  }
-
-  if (hasObservedDocs || onboardingStatus === "OBSERVADO") {
-    setSplashMessage("Cargando observaciones...");
-    setSplashStatus("Revisá la documentación pendiente...");
-    await smoothNavigate("driver-documents-observed.html");
-    return;
-  }
-
-  if (onboardingStatus === "PENDIENTE_REVISION") {
-    setSplashMessage("Cargando revisión...");
-    setSplashStatus("Tu documentación está siendo revisada...");
-    await smoothNavigate("driver-review-pending.html");
-    return;
-  }
-
-  setSplashMessage("Preparando onboarding...");
-  setSplashStatus("Completá tu perfil y documentación...");
-  await smoothNavigate("driver-onboarding.html");
+if (documentsApproved && onboardingStatus === "APROBADO") {
+  setSplashMessage("Ingresando al panel...");
+  setSplashStatus("Cargando tu panel principal...");
+  await smoothNavigate("chofer-panel.html");
+  return;
 }
-  async function checkSession() {
+
+if (hasObservedDocs || onboardingStatus === "OBSERVADO") {
+  setSplashMessage("Cargando observaciones...");
+  setSplashStatus("Revisá la documentación pendiente...");
+  await smoothNavigate("driver-documents-observed.html");
+  return;
+}
+
+if (onboardingStatus === "PENDIENTE_REVISION") {
+  setSplashMessage("Cargando revisión...");
+  setSplashStatus("Tu documentación está siendo revisada...");
+  await smoothNavigate("driver-review-pending.html");
+  return;
+}
+
+if (onboardingStatus === "RECHAZADO") {
+  setSplashMessage("Documentación rechazada");
+  setSplashStatus("Necesitás corregir datos o documentos para continuar...");
+  await smoothNavigate("driver-review-rejected.html");
+  return;
+}
+
+if (onboardingStatus === "BLOQUEADO") {
+  setSplashMessage("Cuenta bloqueada");
+  setSplashStatus("Tu cuenta no está habilitada para operar...");
+  await smoothNavigate("driver-blocked.html");
+  return;
+}
+
+setSplashMessage("Preparando onboarding...");
+setSplashStatus("Completá tu perfil y documentación...");
+await smoothNavigate("driver-onboarding.html");
+  
+async function checkSession() {
     try {
       await supabaseService.init();
 
