@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+  <title>MIMI Driver - Cuenta bloqueada</title>
+
+  <link rel="icon" href="./assets/favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="./assets/favicon.png" />
+  <link rel="manifest" href="/mimi-transporte/manifest.json" />
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #000000;
+      --card: #111214;
+      --line: rgba(255,255,255,0.10);
+      --text: #ffffff;
+      --muted: rgba(255,255,255,0.66);
+      --muted-2: rgba(255,255,255,0.48);
+      --danger: #E11900;
+      --danger-2: #ff563f;
+      --warning: #f59e0b;
+      --shadow: 0 24px 64px rgba(0,0,0,0.42);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: #000;
+      color: #fff;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding:
+        calc(20px + var(--safe-top))
+        16px
+        calc(20px + var(--safe-bottom))
+        16px;
+      background:
+        radial-gradient(circle at top center, rgba(225,25,0,0.16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(255,86,63,0.08), transparent 30%),
+        #000;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 560px;
+    }
+
+    .card {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
+        radial-gradient(circle at top, rgba(255,255,255,0.04), transparent 42%);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      animation: cardIn .38s ease both;
+    }
+
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.992);
+        filter: blur(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .brand img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      padding: 8px;
+      box-shadow:
+        0 10px 28px rgba(0,0,0,0.28),
+        0 0 0 1px rgba(255,255,255,0.06) inset;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(225,25,0,0.10);
+      border: 1px solid rgba(225,25,0,0.20);
+      color: #ffd4d0;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 38px);
+      line-height: 1.04;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 15px;
+      margin-bottom: 22px;
+    }
+
+    .alert {
+      border-radius: 20px;
+      padding: 16px;
+      border: 1px solid rgba(225,25,0,0.20);
+      background: rgba(225,25,0,0.08);
+      color: #ffd4d0;
+      margin-bottom: 18px;
+    }
+
+    .alert strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .alert span {
+      display: block;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .info-grid {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .info-item {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      border-radius: 18px;
+      padding: 14px 15px;
+    }
+
+    .info-item strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .info-item span {
+      display: block;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      appearance: none;
+      border: none;
+      border-radius: 16px;
+      padding: 15px 18px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease, background .15s ease;
+      min-height: 52px;
+    }
+
+    .btn:active {
+      transform: scale(0.985);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger), var(--danger-2));
+      color: #fff;
+      flex: 1 1 220px;
+      box-shadow: 0 18px 34px rgba(225,25,0,0.22);
+    }
+
+    .btn-secondary {
+      background: #232428;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.08);
+      flex: 1 1 180px;
+    }
+
+    .footer-note {
+      margin-top: 16px;
+      color: var(--muted-2);
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .card {
+        padding: 20px;
+        border-radius: 24px;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .brand {
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="card">
+      <div class="brand">
+        <img src="./assets/icons/logo-mimi.png" alt="MIMI Driver" />
+        <div>
+          <div class="eyebrow">Estado de cuenta</div>
+          <h1>Cuenta bloqueada</h1>
+        </div>
+      </div>
+
+      <p class="subtitle">
+        Tu cuenta de chofer no se encuentra habilitada para operar en este momento.
+      </p>
+
+      <div class="alert">
+        <strong>Acceso restringido</strong>
+        <span>
+          El ingreso al panel de conductor fue deshabilitado. Para continuar,
+          necesitás contactar al administrador o al soporte del sistema.
+        </span>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <strong>Estado operativo</strong>
+          <span>No podés conectarte ni recibir viajes mientras la cuenta esté bloqueada.</span>
+        </div>
+
+        <div class="info-item">
+          <strong>Próximo paso</strong>
+          <span>Consultá con administración para revisar el motivo del bloqueo y la posible reactivación.</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-danger" type="button" id="logoutBtn">
+          Cerrar sesión
+        </button>
+
+        <button class="btn btn-secondary" type="button" id="loginBtn">
+          Volver al login
+        </button>
+      </div>
+
+      <p class="footer-note">
+        MIMI Driver protege el acceso operativo según el estado de validación y administración.
+      </p>
+    </section>
+  </main>
+
+  <script type="module">
+    import supabaseService from "./js/supabase-client.js";
+
+    const logoutBtn = document.getElementById("logoutBtn");
+    const loginBtn = document.getElementById("loginBtn");
+
+    async function safeSignOut() {
+      try {
+        await supabaseService.init();
+        if (supabaseService?.client?.auth) {
+          await supabaseService.client.auth.signOut().catch(() => null);
+        }
+      } catch (err) {
+        console.warn("[driver-blocked] signOut warning:", err);
+      } finally {
+        window.location.replace("login-chofer.html");
+      }
+    }
+
+    logoutBtn?.addEventListener("click", safeSignOut);
+    loginBtn?.addEventListener("click", safeSignOut);
+  </script>
+</body>
+</html>
