@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin · Choferes</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet"/>
+
+  <style>
+    body {
+      background: #000;
+      color: #fff;
+      font-family: Inter;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .driver {
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .driver:hover {
+      border-color: #276EF1;
+    }
+
+    .status {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .btn {
+      padding: 10px;
+      margin-top: 10px;
+      margin-right: 8px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .approve { background: green; }
+    .reject { background: red; }
+  </style>
+</head>
+<body>
+
+<h1>Choferes</h1>
+<div id="list"></div>
+
+<script type="module">
+import supabaseService from "../js/supabase-client.js";
+
+async function init() {
+  await supabaseService.init();
+
+  const { data: sessionData } = await supabaseService.client.auth.getSession();
+  const user = sessionData?.session?.user;
+
+  if (!user) {
+    location.href = "./admin-login.html";
+    return;
+  }
+
+  const { data: admin } = await supabaseService.client
+    .from("admin_users")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!admin) {
+    location.href = "./admin-login.html";
+    return;
+  }
+
+  loadDrivers();
+}
+
+async function loadDrivers() {
+  const { data } = await supabaseService.client
+    .from("driver_profiles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  const list = document.getElementById("list");
+
+  list.innerHTML = data.map(d => `
+    <div class="driver">
+      <b>${d.full_name || "Sin nombre"}</b><br/>
+      <div class="status">${d.onboarding_status}</div>
+
+      <button class="btn approve" onclick="approve('${d.user_id}')">Aprobar</button>
+      <button class="btn reject" onclick="reject('${d.user_id}')">Rechazar</button>
+    </div>
+  `).join("");
+}
+
+window.approve = async (id) => {
+  await supabaseService.client.functions.invoke("admin-review-driver", {
+    body: { driver_user_id: id, action: "approve" }
+  });
+  loadDrivers();
+};
+
+window.reject = async (id) => {
+  await supabaseService.client.functions.invoke("admin-review-driver", {
+    body: { driver_user_id: id, action: "reject" }
+  });
+  loadDrivers();
+};
+
+init();
+</script>
+
+</body>
+</html>
