@@ -356,8 +356,11 @@ select {
 
 /* =========================================================
    LOGIN
+   ---------------------------------------------------------
+   Estructura y estilos de la pantalla de acceso
    ========================================================= */
 
+/* Contenedor centrado full screen */
 .centered {
   min-height: 100vh;
   min-height: 100dvh;
@@ -371,58 +374,77 @@ select {
     max(16px, var(--safe-left));
 }
 
+/* Shell general del login */
 .admin-login-shell {
-  width: 100%;
-  display: flex;
-  justify-content: center;
   position: relative;
   isolation: isolate;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
+/* Fondo decorativo difuminado detrás de la card */
 .admin-login-bg {
   position: absolute;
   inset: 0;
+  pointer-events: none;
   background:
     radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.14), transparent 30%),
     radial-gradient(circle at 70% 20%, rgba(34, 197, 94, 0.10), transparent 26%),
     radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.03), transparent 35%);
   filter: blur(18px);
-  pointer-events: none;
 }
 
+/* Card base reutilizable */
 .card {
   width: 100%;
   max-width: 430px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
   padding: 32px 24px;
   text-align: center;
+
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
   box-shadow: var(--shadow-lg);
+
   backdrop-filter: blur(18px) saturate(130%);
   -webkit-backdrop-filter: blur(18px) saturate(130%);
+
   transition:
     transform 0.28s var(--ease-premium),
     box-shadow 0.28s var(--ease-premium),
     border-color 0.28s ease,
     background 0.28s ease;
+
   will-change: transform;
 }
 
-.logo {
-  width: 122px;
-  max-width: 60%;
-  display: block;
-  margin: 0 auto 18px;
-  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
+/* Variante específica de la card de login */
+.admin-login-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 430px;
 }
 
+/* Wrapper del logo */
 .logo-wrap {
   display: flex;
   justify-content: center;
 }
 
+/* Logo principal */
+.logo {
+  display: block;
+  width: 122px;
+  max-width: 60%;
+  margin: 0 auto 18px;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
+}
+
+/* Etiqueta superior chica */
 .eyebrow {
   display: inline-block;
   margin-bottom: 8px;
@@ -433,25 +455,22 @@ select {
   text-transform: uppercase;
 }
 
+/* Título principal dentro de la card */
 .card h1 {
   margin: 0 0 10px;
   font-size: clamp(24px, 4vw, 30px);
   line-height: 1.08;
   letter-spacing: -0.02em;
+  color: var(--text);
 }
 
+/* Párrafos generales dentro de la card */
 .card p {
   margin: 0;
   color: var(--muted);
 }
 
-.admin-login-card {
-  width: 100%;
-  max-width: 430px;
-  position: relative;
-  z-index: 1;
-}
-
+/* Subtítulo del login */
 .login-subtitle {
   margin: 0 0 18px;
   color: var(--muted);
@@ -459,6 +478,7 @@ select {
   line-height: 1.5;
 }
 
+/* Botón de login con Google */
 .login-google-btn {
   width: 100%;
   min-height: 54px;
@@ -466,6 +486,7 @@ select {
   border-radius: 18px;
 }
 
+/* Mensaje de error */
 .login-error {
   min-height: 22px;
   margin-top: 12px;
@@ -475,12 +496,15 @@ select {
   word-break: break-word;
 }
 
+/* Estado oculto del loader */
 .login-loading.hidden {
   display: none;
 }
-
 /* =========================================================
    HEADER
+   ---------------------------------------------------------
+   Barra superior sticky con branding, datos del admin
+   y acciones rápidas
    ========================================================= */
 
 .header,
@@ -488,16 +512,23 @@ header {
   position: sticky;
   top: 0;
   z-index: 60;
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
+
   min-height: var(--header-h);
   padding:
     calc(10px + var(--safe-top))
     max(18px, var(--safe-right))
     10px
     max(18px, var(--safe-left));
+
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+
   transition:
     padding 220ms ease,
     min-height 220ms ease,
@@ -506,6 +537,8 @@ header {
     box-shadow 220ms ease,
     border-color 220ms ease;
 }
+
+/* Agrupadores laterales */
 .left,
 .right {
   display: flex;
@@ -522,100 +555,100 @@ header {
   flex: 0 0 auto;
 }
 
+/* Logo pequeño del header */
 .logo-small {
   width: 42px;
   height: 42px;
-  object-fit: contain;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 5px;
   flex: 0 0 auto;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  object-fit: contain;
+
+  padding: 5px;
+  border-radius: 14px;
+
+  background: color-mix(in srgb, var(--panel-3) 90%, transparent);
+  border: 1px solid var(--border);
 }
 
+/* Bloque de textos del header */
 .header-copy {
   min-width: 0;
 }
 
+/* Título principal */
 .header h1,
 header h1 {
   margin: 0;
   font-size: clamp(18px, 3.2vw, 22px);
   line-height: 1;
-  white-space: nowrap;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: var(--text);
 }
 
+/* Subtítulo */
 .header-subtitle {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 13px;
 }
 
+/* Avatar del usuario */
 .avatar {
   width: 40px;
   height: 40px;
-  border-radius: 999px;
+  flex: 0 0 auto;
   object-fit: cover;
+  border-radius: 999px;
   border: 1px solid var(--border);
   background: #1f1f1f;
-  flex: 0 0 auto;
 }
 
+/* Pastilla del admin */
 .admin-pill {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
+
   padding: 6px 10px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-2);
+
+  background: color-mix(in srgb, var(--panel-2) 92%, transparent);
+  border: 1px solid var(--border);
 }
 
+/* Datos textuales dentro de la pastilla */
 .admin-meta {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
+/* Rol del usuario */
 .admin-role {
+  color: #93c5fd;
   font-size: 11px;
+  font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #93c5fd;
-  font-weight: 700;
 }
 
+/* Email del usuario */
 .admin-email {
-  font-size: 13px;
-  color: var(--muted);
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.header,
-header {
-  background: color-mix(in srgb, var(--panel) 86%, transparent);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.logo-small {
-  background: color-mix(in srgb, var(--panel-3) 90%, transparent);
-  border: 1px solid var(--border);
-}
-
-.admin-pill {
-  background: color-mix(in srgb, var(--panel-2) 92%, transparent);
-  border: 1px solid var(--border);
-}
-
+/* Botón logout */
 #logout {
+  border: none;
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
-  border: none;
   font-weight: 900;
   letter-spacing: 0.02em;
   box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
@@ -624,6 +657,8 @@ header {
 #logout:hover {
   filter: brightness(1.1);
 }
+
+/* Botón recargar */
 #reloadBtn {
   background: var(--text);
   color: var(--bg);
