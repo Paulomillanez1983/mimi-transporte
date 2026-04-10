@@ -2715,16 +2715,19 @@ const { data: ticket, error: ticketError } = await window.supabaseInsert(
     }
 
     // 2) Crear mensaje
-    const { data: soporteMensaje, error: mensajeError } = await window.supabaseInsert("soporte_mensajes", {
-      ticket_id: ticket.id,
-      sender_user_id: userId,
-      sender_role: "client",
-      mensaje,
-      leido: false,
-      mensaje_tipo: "texto",
-      metadata
-    });
-
+const { data: soporteMensaje, error: mensajeError } = await window.supabaseInsert(
+  "soporte_mensajes",
+  {
+    ticket_id: ticket.id,
+    sender_user_id: userId,
+    sender_role: "client",
+    mensaje,
+    leido: false,
+    mensaje_tipo: "texto",
+    metadata
+  },
+  session.access_token
+);
     if (mensajeError || !soporteMensaje?.id) {
       console.error("[supportSendBtn] mensajeError:", mensajeError);
       notif.show(
