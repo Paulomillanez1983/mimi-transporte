@@ -1743,6 +1743,49 @@ textarea:focus {
   pointer-events: none;
 }
 /* =========================================================
+   CIERRE UBER PRO
+   ========================================================= */
+
+.modal-close-btn,
+#closeModalBtn {
+  position: relative;
+  z-index: 80;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.modal.is-bottom-sheet .modal-dialog {
+  overflow-x: hidden;
+}
+
+.modal.is-bottom-sheet .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+}
+
+.modal-sheet-handle {
+  width: 52px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.42);
+  margin: 2px auto 10px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.modal.is-bottom-sheet.is-dragging .modal-dialog {
+  transition: none !important;
+}
+
+.modal.is-bottom-sheet.is-closing .modal-dialog {
+  transition: transform 180ms ease !important;
+}
+
+.modal.is-bottom-sheet.is-closing .modal-backdrop {
+  transition: opacity 180ms ease !important;
+}
+/* =========================================================
    ESTADOS VACÍOS Y TOASTS
    Para qué sirve:
    - Sin resultados
