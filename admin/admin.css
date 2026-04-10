@@ -1,23 +1,47 @@
+/* =========================================================
+   TOKENS / DESIGN SYSTEM BASE
+   ---------------------------------------------------------
+   Acá definimos todas las variables globales del tema.
+   Estas variables después se reutilizan en todo el CSS:
+   fondos, textos, bordes, sombras, radios, etc.
+   ========================================================= */
+
 :root {
+  /* Le dice al navegador que este tema base es claro */
   color-scheme: light;
 
-  --bg: #f5f7fb;
-  --bg-2: #eef2f7;
-  --bg-3: #e8edf5;
+  /* =========================
+     FONDOS
+     ========================= */
+  --bg: #f5f7fb;   /* fondo principal de la app */
+  --bg-2: #eef2f7; /* fondo secundario */
+  --bg-3: #e8edf5; /* fondo terciario / capas suaves */
 
-  --panel: rgba(255, 255, 255, 0.86);
-  --panel-2: rgba(255, 255, 255, 0.72);
-  --panel-3: rgba(248, 250, 252, 0.9);
+  /* =========================
+     PANELES / CARDS / SUPERFICIES
+     ========================= */
+  --panel: rgba(255, 255, 255, 0.86);   /* panel principal con transparencia */
+  --panel-2: rgba(255, 255, 255, 0.72); /* panel secundario */
+  --panel-3: rgba(248, 250, 252, 0.9);  /* panel más sólido */
 
-  --border: rgba(15, 23, 42, 0.08);
-  --border-2: rgba(15, 23, 42, 0.06);
-  --border-strong: rgba(15, 23, 42, 0.14);
+  /* =========================
+     BORDES
+     ========================= */
+  --border: rgba(15, 23, 42, 0.08);        /* borde normal */
+  --border-2: rgba(15, 23, 42, 0.06);      /* borde más sutil */
+  --border-strong: rgba(15, 23, 42, 0.14); /* borde más visible */
 
-  --text: #0f172a;
-  --text-soft: #111827;
-  --muted: #475569;
-  --muted-2: #64748b;
+  /* =========================
+     TEXTOS
+     ========================= */
+  --text: #0f172a;      /* texto principal */
+  --text-soft: #111827; /* texto fuerte alternativo */
+  --muted: #475569;     /* texto secundario */
+  --muted-2: #64748b;   /* texto aún más suave */
 
+  /* =========================
+     ESTADOS SEMÁNTICOS
+     ========================= */
   --success: #16a34a;
   --success-soft: rgba(22, 163, 74, 0.12);
 
@@ -30,11 +54,17 @@
   --pending: #2563eb;
   --pending-soft: rgba(37, 99, 235, 0.12);
 
+  /* =========================
+     SOMBRAS
+     ========================= */
   --shadow-xs: 0 2px 8px rgba(15, 23, 42, 0.08);
   --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.10);
   --shadow: 0 16px 42px rgba(15, 23, 42, 0.12);
   --shadow-lg: 0 24px 64px rgba(15, 23, 42, 0.16);
 
+  /* =========================
+     RADIOS / ESQUINAS
+     ========================= */
   --radius-xs: 12px;
   --radius-sm: 16px;
   --radius-md: 20px;
@@ -42,17 +72,34 @@
   --radius-xl: 28px;
   --radius-pill: 999px;
 
+  /* =========================
+     SAFE AREAS (iPhone / notch / bordes)
+     ========================= */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
 
+  /* =========================
+     MEDIDAS GLOBALES
+     ========================= */
   --header-h: 76px;
-  --tap-min: 48px;
+  --tap-min: 48px;      /* tamaño mínimo táctil recomendado */
   --content-max: 1380px;
 
+  /* =========================
+     ANIMACIONES
+     ========================= */
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+/* =========================================================
+   TEMA OSCURO MANUAL
+   ---------------------------------------------------------
+   Se activa cuando en el HTML seteás:
+   <html data-theme="dark">
+   Esto tiene prioridad sobre el automático del sistema.
+   ========================================================= */
 
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -91,6 +138,13 @@ html[data-theme="dark"] {
   --shadow: 0 14px 42px rgba(0, 0, 0, 0.34);
   --shadow-lg: 0 22px 64px rgba(0, 0, 0, 0.44);
 }
+
+/* =========================================================
+   TEMA OSCURO AUTOMÁTICO
+   ---------------------------------------------------------
+   Esto se aplica solo si el usuario tiene dark mode
+   en el sistema Y vos NO forzaste data-theme="light".
+   ========================================================= */
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) {
@@ -131,12 +185,19 @@ html[data-theme="dark"] {
     --shadow-lg: 0 22px 64px rgba(0, 0, 0, 0.44);
   }
 }
+
+/* =========================================================
+   RESET BASE
+   ---------------------------------------------------------
+   Hace que padding y border no rompan los tamaños.
+   Muy recomendado para layout estable.
+   ========================================================= */
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
-
 html {
   margin: 0;
   padding: 0;
