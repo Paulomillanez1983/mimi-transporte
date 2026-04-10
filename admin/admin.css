@@ -2086,3 +2086,9 @@ body:not(.modal-open) {
 .driver-card-surface {
   touch-action: pan-y;
 }
+.toolbar {
+  margin-bottom: 10px;
+}
+.toolbar + * {
+  margin-top: 0;
+}
