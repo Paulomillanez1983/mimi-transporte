@@ -1,0 +1,48 @@
+body {
+  font-family: Arial;
+  background: #0a0a0a;
+  color: white;
+  margin: 0;
+}
+
+.centered {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.card {
+  background: #111;
+  padding: 30px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.logo {
+  width: 120px;
+  margin-bottom: 20px;
+}
+
+button {
+  background: #00ff88;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin: 5px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  background: #111;
+}
+
+.driver {
+  background: #111;
+  margin: 10px;
+  padding: 15px;
+  border-radius: 10px;
+}
