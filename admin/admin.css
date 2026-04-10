@@ -777,7 +777,6 @@ button:disabled,
    PANELS
    ========================================================= */
 
-
 .hero-card,
 .ops-card,
 .map-card,
@@ -789,16 +788,6 @@ button:disabled,
     border-color 0.28s ease;
 }
 
-@media (hover: hover) {
-  .hero-card:hover,
-  .ops-card:hover,
-  .map-card:hover,
-  .metric-card:hover,
-  .premium-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.11);
-  }
-}
 .hero-card,
 .ops-card,
 .map-card,
@@ -812,13 +801,25 @@ button:disabled,
 .hero-chart-card,
 .hero-stat {
   background:
-    linear-gradient(180deg,
+    linear-gradient(
+      180deg,
       color-mix(in srgb, var(--panel) 96%, white 4%),
-      color-mix(in srgb, var(--panel-2) 98%, transparent));
+      color-mix(in srgb, var(--panel-2) 98%, transparent)
+    );
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
 }
 
+@media (hover: hover) {
+  .hero-card:hover,
+  .ops-card:hover,
+  .map-card:hover,
+  .metric-card:hover,
+  .premium-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-strong);
+  }
+}
 
 .review-note,
 textarea {
