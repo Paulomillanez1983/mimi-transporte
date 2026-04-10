@@ -2131,16 +2131,34 @@ header.is-condensed h1 {
 .map-shell.is-loading .drivers-map {
   opacity: 0.85;
 }
+/* ===============================
+   SWIPE FEEDBACK (OPTIMIZADO MOBILE)
+   =============================== */
+
 .driver-card.swipe-success .driver-card-surface {
   box-shadow:
     0 0 0 1px rgba(34, 197, 94, 0.25),
-    0 18px 46px rgba(34, 197, 94, 0.18);
+    0 12px 32px rgba(34, 197, 94, 0.18);
+  will-change: transform;
 }
 
 .driver-card.swipe-error .driver-card-surface {
   box-shadow:
     0 0 0 1px rgba(239, 68, 68, 0.25),
-    0 18px 46px rgba(239, 68, 68, 0.18);
+    0 12px 32px rgba(239, 68, 68, 0.18);
+  will-change: transform;
+}
+
+/* evitar lag en algunos Android */
+.driver-card-surface {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* swipe backgrounds */
+.driver-card .swipe-bg {
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
 .driver-card.swiping-right .swipe-bg-right,
@@ -2148,12 +2166,27 @@ header.is-condensed h1 {
   opacity: 1;
 }
 
+/* ===============================
+   HEADER PRO MOBILE
+   =============================== */
+
 .header.is-condensed {
   min-height: 58px;
-  padding-top: calc(6px + var(--safe-top));
+
+  padding-top: calc(6px + env(safe-area-inset-top));
   padding-bottom: 6px;
+
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
+
+  transition: all 0.25s ease;
+}
+
+/* fallback si safe-area no existe */
+@supports not (padding: env(safe-area-inset-top)) {
+  .header.is-condensed {
+    padding-top: 6px;
+  }
 }
 
 .header.is-condensed .logo-small {
