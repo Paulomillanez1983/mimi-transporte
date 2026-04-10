@@ -1,56 +1,123 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <title>MIMI Admin</title>
-  <link rel="stylesheet" href="admin.css" />
-</head>
-<body class="centered">
+const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
-  <div class="card">
-    <img src="../assets/icons/logo-mimi.png" class="logo" />
-    <h1>Panel Admin</h1>
-    <button id="loginGoogle">Ingresar con Google</button>
-    <p id="error"></p>
-  </div>
+class SupabaseAdminService {
+  constructor() {
+    this.client = null;
+    this.initialized = false;
+    this.initPromise = null;
+  }
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  async init() {
+    if (this.initialized && this.client) return true;
+    if (this.initPromise) return this.initPromise;
 
-  <script>
-    const supabase = window.supabase.createClient(
-      "https://xrphpqmutvadjrucqicn.supabase.co",
-      "TU_ANON_KEY"
-    );
-
-    document.getElementById("loginGoogle").onclick = async () => {
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: location.origin + "/admin/admin-dashboard.html"
+    this.initPromise = (async () => {
+      try {
+        if (!window.supabase?.createClient) {
+          throw new Error("La librería de Supabase no está cargada");
         }
-      });
-    };
 
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return;
+        if (
+          !SUPABASE_URL ||
+          !SUPABASE_ANON_KEY ||
+          SUPABASE_ANON_KEY === "TU_ANON_KEY"
+        ) {
+          throw new Error("Falta configurar SUPABASE_URL o SUPABASE_ANON_KEY");
+        }
 
-      const user = data.session.user;
+        this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storageKey: "mimi-admin-auth"
+          }
+        });
 
-      const { data: admin } = await supabase
-        .from("admin_users")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("active", true)
-        .maybeSingle();
+        this.client.auth.onAuthStateChange((event, session) => {
+          console.log("[MIMI Admin Auth]", event, {
+            userId: session?.user?.id || null,
+            email: session?.user?.email || null
+          });
+        });
 
-      if (admin) {
-        window.location.href = "admin-dashboard.html";
-      } else {
-        document.getElementById("error").innerText =
-          "No autorizado como administrador";
+        this.initialized = true;
+        return true;
+      } catch (err) {
+        console.error("[SupabaseAdminService.init]", err);
+        this.client = null;
+        this.initialized = false;
+        return false;
+      } finally {
+        this.initPromise = null;
       }
     })();
-  </script>
-</body>
-</html>
+
+    return this.initPromise;
+  }
+
+  async getSession() {
+    const ready = await this.init();
+    if (!ready || !this.client?.auth) return null;
+
+    const { data, error } = await this.client.auth.getSession();
+    if (error) {
+      console.error("[SupabaseAdminService.getSession]", error);
+      return null;
+    }
+
+    return data?.session || null;
+  }
+
+  async signOut() {
+    const ready = await this.init();
+    if (!ready || !this.client?.auth) return;
+
+    const { error } = await this.client.auth.signOut();
+    if (error) {
+      console.error("[SupabaseAdminService.signOut]", error);
+      throw error;
+    }
+  }
+
+  async requireActiveAdmin() {
+    const ready = await this.init();
+    if (!ready || !this.client) {
+      return { ok: false, reason: "init_failed" };
+    }
+
+    const session = await this.getSession();
+    const user = session?.user || null;
+
+    if (!user?.id) {
+      return { ok: false, reason: "no_session" };
+    }
+
+    const { data, error } = await this.client
+      .from("admin_users")
+      .select("user_id, email, full_name, active, is_super_admin")
+      .eq("user_id", user.id)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[SupabaseAdminService.requireActiveAdmin]", error);
+      return { ok: false, reason: "admin_lookup_error", error };
+    }
+
+    if (!data) {
+      return { ok: false, reason: "not_admin" };
+    }
+
+    return {
+      ok: true,
+      user,
+      admin: data,
+      session
+    };
+  }
+}
+
+const supabaseAdminService = new SupabaseAdminService();
+export default supabaseAdminService;
