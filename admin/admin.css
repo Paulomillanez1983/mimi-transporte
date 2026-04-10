@@ -1099,12 +1099,7 @@ color: var(--text);
 
 .toolbar-search {
   flex: 1 1 320px;
-  min-width: 0;
-}
-
-/* Resalta todo el bloque cuando el input recibe foco */
-.toolbar-search:focus-within {
-  border-radius: 18px;
+  min-width: 0; /* evita desbordes en mobile */
 }
 
 .toolbar-search input {
@@ -1121,8 +1116,7 @@ color: var(--text);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
-    background 0.2s ease,
-    transform 0.16s ease;
+    background 0.2s ease;
 }
 
 .toolbar-search input:focus {
@@ -1132,9 +1126,7 @@ color: var(--text);
 
 .toolbar-search input:focus-visible {
   border-color: rgba(59, 130, 246, 0.72);
-  box-shadow:
-    0 0 0 4px rgba(59, 130, 246, 0.14),
-    var(--shadow-xs);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
 }
 
 .toolbar-search input::placeholder,
@@ -1163,7 +1155,7 @@ textarea::placeholder {
   border-color: transparent;
 }
 
-/* Hover real solo donde existe hover */
+/* Hover solo en dispositivos con hover real */
 @media (hover: hover) {
   .filter-btn:hover,
   .btn-secondary:hover,
@@ -1172,7 +1164,7 @@ textarea::placeholder {
   }
 }
 
-/* Menos movimiento si el usuario lo pidió */
+/* Accesibilidad: reduce animaciones */
 @media (prefers-reduced-motion: reduce) {
   .toolbar-search input,
   .filter-btn,
