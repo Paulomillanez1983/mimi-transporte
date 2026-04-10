@@ -147,28 +147,67 @@
 </div>
 
 <div class="map-surface">
-  <div class="map-floating-controls" aria-label="Controles flotantes del mapa">
-    <button id="fitDriversBtn" type="button" class="map-fab map-fab-primary" title="Ver todos los choferes">
-      ⤢
-    </button>
+<div class="map-floating-controls" aria-label="Controles flotantes del mapa">
+  <button id="fitDriversBtn" type="button" class="map-fab map-fab-primary" title="Ver todos los choferes">
+    ⤢
+  </button>
 
-    <button id="focusArgentinaBtn" type="button" class="map-fab" title="Ver Argentina">
-      AR
-    </button>
+  <button id="locateMeBtn" type="button" class="map-fab" title="Detectar mi ubicación">
+    ◎
+  </button>
 
-    <button id="focusCordobaBtn" type="button" class="map-fab" title="Ver Córdoba">
-      CBA
-    </button>
+  <button id="focusArgentinaBtn" type="button" class="map-fab" title="Ver Argentina">
+    AR
+  </button>
 
-    <select id="citySelector" class="map-city-select" aria-label="Seleccionar ciudad">
+  <button id="focusCordobaBtn" type="button" class="map-fab" title="Ver Córdoba">
+    CBA
+  </button>
+
+  <select id="citySelector" class="map-city-select" aria-label="Seleccionar provincia o ciudad">
+    <optgroup label="General">
       <option value="drivers">Choferes activos</option>
       <option value="argentina">Argentina</option>
-      <option value="cordoba">Córdoba Capital</option>
+    </optgroup>
+
+    <optgroup label="Provincias">
+      <option value="buenos_aires">Buenos Aires</option>
+      <option value="caba">CABA</option>
+      <option value="catamarca">Catamarca</option>
+      <option value="chaco">Chaco</option>
+      <option value="chubut">Chubut</option>
+      <option value="cordoba">Córdoba</option>
+      <option value="corrientes">Corrientes</option>
+      <option value="entre_rios">Entre Ríos</option>
+      <option value="formosa">Formosa</option>
+      <option value="jujuy">Jujuy</option>
+      <option value="la_pampa">La Pampa</option>
+      <option value="la_rioja">La Rioja</option>
+      <option value="mendoza">Mendoza</option>
+      <option value="misiones">Misiones</option>
+      <option value="neuquen">Neuquén</option>
+      <option value="rio_negro">Río Negro</option>
+      <option value="salta">Salta</option>
+      <option value="san_juan">San Juan</option>
+      <option value="san_luis">San Luis</option>
+      <option value="santa_cruz">Santa Cruz</option>
+      <option value="santa_fe">Santa Fe</option>
+      <option value="santiago_del_estero">Santiago del Estero</option>
+      <option value="tierra_del_fuego">Tierra del Fuego</option>
+      <option value="tucuman">Tucumán</option>
+    </optgroup>
+
+    <optgroup label="Ciudades">
       <option value="villa_allende">Villa Allende</option>
       <option value="carlos_paz">Villa Carlos Paz</option>
-    </select>
-  </div>
-          
+      <option value="rosario">Rosario</option>
+      <option value="mendoza_capital">Mendoza Capital</option>
+      <option value="salta_capital">Salta Capital</option>
+      <option value="ushuaia">Ushuaia</option>
+    </optgroup>
+  </select>
+</div>
+  
           <div
             id="driversMap"
             class="drivers-map"
