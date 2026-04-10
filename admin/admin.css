@@ -2131,3 +2131,36 @@ header.is-condensed h1 {
 .map-shell.is-loading .drivers-map {
   opacity: 0.85;
 }
+.driver-card.swipe-success .driver-card-surface {
+  box-shadow:
+    0 0 0 1px rgba(34, 197, 94, 0.25),
+    0 18px 46px rgba(34, 197, 94, 0.18);
+}
+
+.driver-card.swipe-error .driver-card-surface {
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.25),
+    0 18px 46px rgba(239, 68, 68, 0.18);
+}
+
+.driver-card.swiping-right .swipe-bg-right,
+.driver-card.swiping-left .swipe-bg-left {
+  opacity: 1;
+}
+
+.header.is-condensed {
+  min-height: 58px;
+  padding-top: calc(6px + var(--safe-top));
+  padding-bottom: 6px;
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.header.is-condensed .logo-small {
+  width: 30px;
+  height: 30px;
+}
+
+.header.is-condensed h1 {
+  font-size: 15px;
+}
