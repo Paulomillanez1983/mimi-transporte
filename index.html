@@ -1597,6 +1597,7 @@ async function reanudarViajePendientePostLogin() {
 
     renderSesionUI(session);
     localStorage.removeItem('mimi_pending_trip_request');
+    await subscribeSupportRealtimeForUser();
 
     notif.show(
       'Sesión iniciada',
@@ -2559,7 +2560,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   cargarNotificacionesDesdeStorage();
   renderizarCentroNotificaciones();
   await restaurarViajeActivoCliente();
-
+  await subscribeSupportRealtimeForUser();
 // ==========================================
 // SOPORTE CHAT SHEET
 // ==========================================
@@ -2597,8 +2598,6 @@ function closeSupportSheet() {
   supportSheetOverlay.classList.remove("is-open");
   supportSheet.setAttribute("aria-hidden", "true");
 
-  cleanupSupportRealtime();
-
   setTimeout(() => {
     if (!supportSheet.classList.contains("is-open")) {
       supportSheet.hidden = true;
@@ -2608,6 +2607,7 @@ function closeSupportSheet() {
 
   document.body.style.overflow = "";
 }
+  
 function appendSupportMessage(text, type = "user", messageId = null) {
   if (!supportChatBody || !text) return;
   if (messageId && supportChatBody.querySelector(`[data-support-message-id="${messageId}"]`)) {
@@ -2690,11 +2690,10 @@ async function loadOrCreateSupportTicketContext() {
   renderSupportMessages(Array.isArray(messages) ? messages : []);
   currentSupportMessagesLoaded = true;
 
-  subscribeSupportRealtime(currentSupportTicketId);
-
   return { session, ticketId: currentSupportTicketId };
-}
+ }
 
+  
 function cleanupSupportRealtime() {
   try {
     if (currentSupportChannel && window.sbRealtime) {
@@ -2707,33 +2706,73 @@ function cleanupSupportRealtime() {
   }
 }
 
-function subscribeSupportRealtime(ticketId) {
-  if (!ticketId || !window.sbRealtime) return;
+async function subscribeSupportRealtimeForUser() {
+  if (!window.sbRealtime) return;
+
+  const session = await obtenerSesionCliente(true);
+  if (!session?.user?.id) return;
+
+  const userId = session.user.id;
 
   cleanupSupportRealtime();
 
   currentSupportChannel = window.sbRealtime
-    .channel(`support-ticket-${ticketId}`)
+    .channel(`support-user-${userId}`)
     .on(
       "postgres_changes",
       {
         event: "INSERT",
         schema: "public",
-        table: "soporte_mensajes",
-        filter: `ticket_id=eq.${ticketId}`
+        table: "soporte_mensajes"
       },
-      (payload) => {
+      async (payload) => {
         try {
           const msg = payload?.new;
-          if (!msg?.mensaje) return;
+          if (!msg?.ticket_id || !msg?.mensaje) return;
+
+          const { data: ticketRows, error: ticketError } = await window.supabase
+            .from("soporte_tickets")
+            .select("id, user_id")
+            .eq("id", msg.ticket_id)
+            .eq("user_id", userId)
+            .limit(1);
+
+          if (ticketError) {
+            console.warn("[support realtime] ticket lookup error", ticketError);
+            return;
+          }
+
+          const belongsToUser = Array.isArray(ticketRows) && ticketRows.length > 0;
+          if (!belongsToUser) return;
 
           const senderRole = String(msg.sender_role || "").toLowerCase();
           const type = senderRole === "admin" ? "agent" : "user";
 
-          appendSupportMessage(msg.mensaje, type, msg.id || null);
+          if (currentSupportTicketId === msg.ticket_id) {
+            appendSupportMessage(msg.mensaje, type, msg.id || null);
+          }
 
           if (senderRole === "admin") {
-            notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 3500);
+            notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 4000);
+
+            historial = [
+              {
+                id: `support_${msg.id}`,
+                estado: "SOPORTE",
+                texto: "Soporte respondió tu consulta.",
+                fecha: new Date().toLocaleTimeString("es-AR", {
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }),
+                read: false
+              },
+              ...historial
+            ].slice(0, MAX_NOTIFICATIONS);
+
+            unreadCount += 1;
+            renderizarCentroNotificaciones();
+            guardarNotificacionesEnStorage();
+            actualizarBadgeNotificaciones();
           }
         } catch (err) {
           console.error("[support realtime] error", err);
@@ -2839,9 +2878,8 @@ document.addEventListener("keydown", (e) => {
         return;
       }
 
-      currentSupportTicketId = ticket.id;
-      subscribeSupportRealtime(currentSupportTicketId);
-    } else {
+       currentSupportTicketId = ticket.id;
+       await subscribeSupportRealtimeForUser();    } else {
       const { error: ticketUpdateError } = await window.supabaseUpdate(
         "soporte_tickets",
         "id",
