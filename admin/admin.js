@@ -429,13 +429,12 @@ function createDriverCard(driver) {
   const driverId = escapeHtml(driver.user_id);
 
   return `
-    <article class="driver-card premium-card" data-driver-card data-driver-id="${driverId}">
-<div class="swipe-bg swipe-bg-left"></div>
-<div class="swipe-bg swipe-bg-right"></div>
-<span>Aprobar</span>
-      </div>
+  <article class="driver-card premium-card" data-driver-card data-driver-id="${driverId}">
+    <div class="swipe-bg swipe-bg-left">Rechazar</div>
+    <div class="swipe-bg swipe-bg-right">Aprobar</div>
 
-      <div class="driver-card-surface">
+    <div class="driver-card-surface">
+  
         <div class="driver-card-top">
           <div class="driver-identity">
             <div class="driver-avatar">
@@ -499,14 +498,19 @@ function renderDrivers() {
   if (!filtered.length) {
     driversContainer.innerHTML = `<div class="empty-state">No encontramos choferes con esos filtros.</div>`;
     syncMap(filtered);
+
+    window.setTimeout(() => map?.resize(), 120);
+    window.setTimeout(() => map?.resize(), 300);
     return;
   }
 
   driversContainer.innerHTML = filtered.map(createDriverCard).join("");
   enableSwipeCards();
   syncMap(filtered);
-}
 
+  window.setTimeout(() => map?.resize(), 120);
+  window.setTimeout(() => map?.resize(), 300);
+}
 function setFilterButtonState(nextFilter) {
   filterButtons.forEach((button) => {
     const isActive = (button.dataset.filter || "ALL") === nextFilter;
@@ -646,28 +650,36 @@ function initMap() {
   if (map || !window.maplibregl) return;
 
   map = new window.maplibregl.Map({
-  container: "driversMap",
-  style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-  center: CORDOBA_CENTER,
-  zoom: CORDOBA_ZOOM,
-  attributionControl: true,
-  dragRotate: false,
-  touchZoomRotate: false
-});
+    container: "driversMap",
+    style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    center: CORDOBA_CENTER,
+    zoom: CORDOBA_ZOOM,
+    attributionControl: true,
+    dragRotate: false,
+    touchZoomRotate: false
+  });
 
-if (window.innerWidth <= 820) {
-  map.scrollZoom.disable();
-  map.boxZoom.disable();
-  map.doubleClickZoom.disable();
-}
+  if (window.innerWidth <= 820) {
+    map.scrollZoom.disable();
+    map.boxZoom.disable();
+    map.doubleClickZoom.disable();
+  }
 
   map.addControl(new window.maplibregl.NavigationControl(), "top-right");
 
   map.on("load", () => {
+    map?.resize();
+
+    map.flyTo({
+      center: CORDOBA_CENTER,
+      zoom: CORDOBA_ZOOM,
+      duration: 0
+    });
+
     window.setTimeout(() => map?.resize(), 80);
+    window.setTimeout(() => map?.resize(), 220);
   });
 }
-
 function buildMarkerElement(driver) {
   const el = document.createElement("button");
   el.type = "button";
@@ -713,6 +725,15 @@ function syncMap(drivers) {
       : "Sin coordenadas aún";
   }
 
+  if (!locatedDrivers.length) {
+    map.easeTo({
+      center: CORDOBA_CENTER,
+      zoom: CORDOBA_ZOOM,
+      duration: 700
+    });
+    return;
+  }
+
   if (locatedDrivers.length === 1) {
     const d = locatedDrivers[0];
     map.easeTo({
@@ -723,20 +744,17 @@ function syncMap(drivers) {
     return;
   }
 
-  if (locatedDrivers.length > 1) {
-    const bounds = new window.maplibregl.LngLatBounds();
-    locatedDrivers.forEach((driver) => {
-      bounds.extend([Number(driver.last_lng), Number(driver.last_lat)]);
-    });
+  const bounds = new window.maplibregl.LngLatBounds();
+  locatedDrivers.forEach((driver) => {
+    bounds.extend([Number(driver.last_lng), Number(driver.last_lat)]);
+  });
 
-    map.fitBounds(bounds, {
-      padding: 60,
-      maxZoom: 14,
-      duration: 800
-    });
-  }
+  map.fitBounds(bounds, {
+    padding: 60,
+    maxZoom: 14,
+    duration: 800
+  });
 }
-
 function focusCordoba() {
   if (!map) return;
   map.easeTo({
@@ -796,9 +814,12 @@ async function bootstrap() {
 
   initMap();
   await loadDrivers();
+
+  window.setTimeout(() => map?.resize(), 120);
+  window.setTimeout(() => map?.resize(), 320);
+
   subscribeRealtime();
 }
-
 async function loadDrivers(force = false) {
   if (loadDriversPromise && !force) return loadDriversPromise;
 
@@ -964,14 +985,18 @@ function resetCardTransform(card) {
 
   surface.style.transition = "transform 0.2s ease";
   surface.style.transform = "translateX(0px)";
-  card.classList.remove("swiping-left", "swiping-right");
+  card.classList.remove(
+    "swiping-left",
+    "swiping-right",
+    "swipe-success",
+    "swipe-error"
+  );
   activeCardTransforms.set(card, 0);
 
   window.setTimeout(() => {
     surface.style.transition = "";
   }, 220);
 }
-
 function enableSwipeCards() {
   const cards = Array.from(document.querySelectorAll("[data-driver-card]"));
 
@@ -999,34 +1024,41 @@ function enableSwipeCards() {
       activeCardTransforms.set(card, delta);
     };
 
-    const finishSwipe = async () => {
-      if (!dragging) return;
-      dragging = false;
+const finishSwipe = async () => {
+  if (!dragging) return;
+  dragging = false;
 
-      const delta = activeCardTransforms.get(card) || 0;
-      const driverId = card.getAttribute("data-driver-id");
-      const approveBtn = card.querySelector('[data-action="approve"]');
-      const rejectBtn = card.querySelector('[data-action="reject"]');
+  const delta = activeCardTransforms.get(card) || 0;
+  const driverId = card.getAttribute("data-driver-id");
+  const approveBtn = card.querySelector('[data-action="approve"]');
+  const rejectBtn = card.querySelector('[data-action="reject"]');
 
-      if (delta >= SWIPE_TRIGGER_PX && driverId) {
-        surface.style.transition = "transform 0.18s ease";
-        surface.style.transform = "translateX(160px)";
-        window.setTimeout(() => resetCardTransform(card), 180);
-        await reviewDriver(driverId, "approve", approveBtn);
-        return;
-      }
+  if (delta >= SWIPE_TRIGGER_PX && driverId) {
+    surface.style.transition = "transform 0.18s ease";
+    surface.style.transform = "translateX(160px)";
+    card.classList.add("swipe-success");
 
-      if (delta <= -SWIPE_TRIGGER_PX && driverId) {
-        surface.style.transition = "transform 0.18s ease";
-        surface.style.transform = "translateX(-160px)";
-        window.setTimeout(() => resetCardTransform(card), 180);
-        await reviewDriver(driverId, "reject", rejectBtn);
-        return;
-      }
+    if (navigator.vibrate) navigator.vibrate(20);
 
-      resetCardTransform(card);
-    };
+    window.setTimeout(() => resetCardTransform(card), 220);
+    await reviewDriver(driverId, "approve", approveBtn);
+    return;
+  }
 
+  if (delta <= -SWIPE_TRIGGER_PX && driverId) {
+    surface.style.transition = "transform 0.18s ease";
+    surface.style.transform = "translateX(-160px)";
+    card.classList.add("swipe-error");
+
+    if (navigator.vibrate) navigator.vibrate(20);
+
+    window.setTimeout(() => resetCardTransform(card), 220);
+    await reviewDriver(driverId, "reject", rejectBtn);
+    return;
+  }
+
+  resetCardTransform(card);
+};
     card.addEventListener("pointerdown", (event) => {
       if (event.target.closest("textarea, button, a, input")) return;
 
@@ -1132,6 +1164,19 @@ window.addEventListener("resize", () => {
   }
 });
 
+function setupDynamicHeader() {
+  const header = document.querySelector(".header");
+  if (!header) return;
+
+  const onScroll = () => {
+    header.classList.toggle("is-condensed", window.scrollY > 20);
+  };
+
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+}
+
 setFilterButtonState(currentFilter);
 initAdaptiveTheme();
+setupDynamicHeader();
 bootstrap();
