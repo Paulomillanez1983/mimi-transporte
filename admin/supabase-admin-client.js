@@ -7,6 +7,28 @@ class SupabaseAdminService {
     this.initialized = false;
     this.initPromise = null;
     this.authListenerRegistered = false;
+    this.lastSession = null;
+  }
+
+  isConfigured() {
+    return Boolean(
+      SUPABASE_URL &&
+      SUPABASE_ANON_KEY &&
+      SUPABASE_ANON_KEY !== "TU_ANON_KEY" &&
+      SUPABASE_ANON_KEY !== "TU_ANON_KEY_REAL"
+    );
+  }
+
+  isSupabaseLoaded() {
+    return Boolean(window.supabase && typeof window.supabase.createClient === "function");
+  }
+
+  getBaseUrl() {
+    return window.location.origin + window.location.pathname.replace(/[^/]*$/, "");
+  }
+
+  getRedirectUrl(path = "./admin-panel.html") {
+    return new URL(path, this.getBaseUrl()).toString();
   }
 
   async init() {
@@ -15,39 +37,38 @@ class SupabaseAdminService {
 
     this.initPromise = (async () => {
       try {
-        if (!window.supabase || typeof window.supabase.createClient !== "function") {
+        if (!this.isSupabaseLoaded()) {
           throw new Error("La librería de Supabase no está cargada.");
         }
 
-        if (
-          !SUPABASE_URL ||
-          !SUPABASE_ANON_KEY ||
-          SUPABASE_ANON_KEY === "TU_ANON_KEY" ||
-          SUPABASE_ANON_KEY === "TU_ANON_KEY_REAL"
-        ) {
+        if (!this.isConfigured()) {
           throw new Error("Falta configurar SUPABASE_URL o SUPABASE_ANON_KEY.");
         }
 
-        this.client = window.supabase.createClient(
-          SUPABASE_URL,
-          SUPABASE_ANON_KEY,
-          {
-            auth: {
-              persistSession: true,
-              autoRefreshToken: true,
-              detectSessionInUrl: true,
-              storageKey: "mimi-admin-auth"
-            }
+        this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storageKey: "mimi-admin-auth",
+            flowType: "pkce"
           }
-        );
+        });
 
         if (!this.authListenerRegistered) {
           this.client.auth.onAuthStateChange((event, session) => {
+            this.lastSession = session || null;
+
             console.log("[MIMI Admin Auth]", event, {
               userId: session?.user?.id || null,
               email: session?.user?.email || null
             });
+
+            if (event === "SIGNED_OUT") {
+              this.lastSession = null;
+            }
           });
+
           this.authListenerRegistered = true;
         }
 
@@ -66,21 +87,67 @@ class SupabaseAdminService {
     return this.initPromise;
   }
 
-  getRedirectUrl(path = "./admin-panel.html") {
-    return new URL(path, window.location.href).toString();
-  }
-
   async getSession() {
     const ready = await this.init();
     if (!ready || !this.client?.auth) return null;
 
-    const { data, error } = await this.client.auth.getSession();
-    if (error) {
-      console.error("[SupabaseAdminService.getSession]", error);
+    try {
+      const { data, error } = await this.client.auth.getSession();
+
+      if (error) {
+        console.error("[SupabaseAdminService.getSession]", error);
+        return null;
+      }
+
+      const session = data?.session || null;
+      this.lastSession = session;
+
+      return session;
+    } catch (err) {
+      console.error("[SupabaseAdminService.getSession.catch]", err);
       return null;
     }
+  }
 
-    return data?.session || null;
+  async refreshSessionIfNeeded() {
+    const ready = await this.init();
+    if (!ready || !this.client?.auth) return null;
+
+    const currentSession = await this.getSession();
+    if (!currentSession?.refresh_token) {
+      return currentSession;
+    }
+
+    const expiresAt = Number(currentSession.expires_at || 0) * 1000;
+    const now = Date.now();
+    const isNearExpiry = expiresAt > 0 && expiresAt - now <= 60_000;
+
+    if (!isNearExpiry) {
+      return currentSession;
+    }
+
+    try {
+      const { data, error } = await this.client.auth.refreshSession({
+        refresh_token: currentSession.refresh_token
+      });
+
+      if (error) {
+        console.error("[SupabaseAdminService.refreshSessionIfNeeded]", error);
+        return currentSession;
+      }
+
+      const refreshed = data?.session || currentSession;
+      this.lastSession = refreshed;
+      return refreshed;
+    } catch (err) {
+      console.error("[SupabaseAdminService.refreshSessionIfNeeded.catch]", err);
+      return currentSession;
+    }
+  }
+
+  async getUser() {
+    const session = await this.refreshSessionIfNeeded();
+    return session?.user || null;
   }
 
   async signInWithGoogle() {
@@ -93,7 +160,12 @@ class SupabaseAdminService {
 
     const { error } = await this.client.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo }
+      options: {
+        redirectTo,
+        queryParams: {
+          prompt: "select_account"
+        }
+      }
     });
 
     if (error) {
@@ -106,10 +178,18 @@ class SupabaseAdminService {
     const ready = await this.init();
     if (!ready || !this.client?.auth) return;
 
-    const { error } = await this.client.auth.signOut();
-    if (error) {
-      console.error("[SupabaseAdminService.signOut]", error);
-      throw error;
+    try {
+      const { error } = await this.client.auth.signOut();
+
+      if (error) {
+        console.error("[SupabaseAdminService.signOut]", error);
+        throw error;
+      }
+
+      this.lastSession = null;
+    } catch (err) {
+      console.error("[SupabaseAdminService.signOut.catch]", err);
+      throw err;
     }
   }
 
@@ -119,35 +199,40 @@ class SupabaseAdminService {
       return { ok: false, reason: "init_failed" };
     }
 
-    const session = await this.getSession();
+    const session = await this.refreshSessionIfNeeded();
     const user = session?.user || null;
 
     if (!user?.id) {
       return { ok: false, reason: "no_session" };
     }
 
-    const { data, error } = await this.client
-      .from("admin_users")
-      .select("user_id, email, full_name, active, is_super_admin")
-      .eq("user_id", user.id)
-      .eq("active", true)
-      .maybeSingle();
+    try {
+      const { data, error } = await this.client
+        .from("admin_users")
+        .select("user_id, email, full_name, active, is_super_admin")
+        .eq("user_id", user.id)
+        .eq("active", true)
+        .maybeSingle();
 
-    if (error) {
-      console.error("[SupabaseAdminService.requireActiveAdmin]", error);
-      return { ok: false, reason: "admin_lookup_error", error };
+      if (error) {
+        console.error("[SupabaseAdminService.requireActiveAdmin]", error);
+        return { ok: false, reason: "admin_lookup_error", error };
+      }
+
+      if (!data) {
+        return { ok: false, reason: "not_admin" };
+      }
+
+      return {
+        ok: true,
+        user,
+        admin: data,
+        session
+      };
+    } catch (err) {
+      console.error("[SupabaseAdminService.requireActiveAdmin.catch]", err);
+      return { ok: false, reason: "unexpected_error", error: err };
     }
-
-    if (!data) {
-      return { ok: false, reason: "not_admin" };
-    }
-
-    return {
-      ok: true,
-      user,
-      admin: data,
-      session
-    };
   }
 }
 
