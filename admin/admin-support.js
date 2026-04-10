@@ -67,56 +67,6 @@ function getSupportElements() {
   };
 }
 
-/* DEMO LOCAL
-   Después lo reemplazamos por Supabase real
-*/
-function getMockSupportData() {
-  return [
-    {
-      id: "conv_1",
-      name: "Paulo Millanez",
-      role: "cliente",
-      subject: "Consulta sobre mi viaje",
-      email: "paulomillanez@gmail.com",
-      status: "UNREAD",
-      unread_count: 2,
-      updated_at: new Date().toISOString(),
-      messages: [
-        {
-          id: "m1",
-          sender_role: "cliente",
-          text: "Hola, no veo al chofer todavía. ¿Me pueden ayudar?",
-          created_at: new Date(Date.now() - 1000 * 60 * 12).toISOString()
-        },
-        {
-          id: "m2",
-          sender_role: "cliente",
-          text: "Ya estoy en el punto de retiro.",
-          created_at: new Date(Date.now() - 1000 * 60 * 7).toISOString()
-        }
-      ]
-    },
-    {
-      id: "conv_2",
-      name: "Juan Pérez",
-      role: "chofer",
-      subject: "Problema con validación",
-      email: "juanchofer@gmail.com",
-      status: "PENDING",
-      unread_count: 0,
-      updated_at: new Date(Date.now() - 1000 * 60 * 26).toISOString(),
-      messages: [
-        {
-          id: "m3",
-          sender_role: "chofer",
-          text: "Hola, no me deja subir la foto del seguro.",
-          created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-        }
-      ]
-    }
-  ];
-}
-
 function applySupportFilters() {
   const { search, filter } = getSupportElements();
 
@@ -484,5 +434,11 @@ els.markRead?.addEventListener("click", () => persistConversationStatus("READ"))
 els.markPending?.addEventListener("click", () => persistConversationStatus("PENDING"));
 els.markResolved?.addEventListener("click", () => persistConversationStatus("RESOLVED"));
 
-loadSupportConversations();
-}
+els.reply?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendSupportReply();
+  }
+});
+
+loadSupportConversations();}
