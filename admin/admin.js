@@ -527,14 +527,15 @@ function createDriverCard(driver) {
   `;
 }
 
-function renderDrivers() {
+function renderDrivers(options = {}) {
   if (!driversContainer) return;
 
+  const { keepViewport = false } = options;
   const filtered = filterDrivers(allDrivers);
 
   if (!filtered.length) {
     driversContainer.innerHTML = `<div class="empty-state">No encontramos choferes con esos filtros.</div>`;
-    syncMap(filtered, { keepViewport: false });
+    syncMap(filtered, { keepViewport });
 
     window.setTimeout(() => map?.resize(), 120);
     window.setTimeout(() => map?.resize(), 300);
@@ -543,11 +544,12 @@ function renderDrivers() {
 
   driversContainer.innerHTML = filtered.map(createDriverCard).join("");
   enableSwipeCards();
-  syncMap(filtered, { keepViewport: false });
+  syncMap(filtered, { keepViewport });
 
   window.setTimeout(() => map?.resize(), 120);
   window.setTimeout(() => map?.resize(), 300);
 }
+
 function setFilterButtonState(nextFilter) {
   filterButtons.forEach((button) => {
     const isActive = (button.dataset.filter || "ALL") === nextFilter;
@@ -1003,13 +1005,13 @@ async function bootstrap() {
     };
   }
 
-  initMap();
-  await loadDrivers();
+initMap();
+await loadDrivers(false);
 
-  window.setTimeout(() => map?.resize(), 120);
-  window.setTimeout(() => map?.resize(), 320);
+window.setTimeout(() => map?.resize(), 120);
+window.setTimeout(() => map?.resize(), 320);
 
-  subscribeRealtime();
+subscribeRealtime();
 }
 async function loadDrivers(force = false) {
   if (loadDriversPromise && !force) return loadDriversPromise;
@@ -1071,10 +1073,9 @@ async function loadDrivers(force = false) {
 
       if (error) throw error;
 
-      allDrivers = Array.isArray(data) ? data : [];
-      updateMetrics(allDrivers);
-      syncMap(filterDrivers(allDrivers), { keepViewport: true });
-    } catch (err) {
+       allDrivers = Array.isArray(data) ? data : [];
+       updateMetrics(allDrivers);
+       renderDrivers({ keepViewport: force });    } catch (err) {
       console.error("[admin.loadDrivers]", err);
       setErrorState("No pudimos cargar los choferes.");
       showToast("No pudimos cargar choferes", "error");
@@ -1304,17 +1305,16 @@ priorityQueue?.addEventListener("click", (event) => {
 
 searchInput?.addEventListener("input", (event) => {
   currentSearch = normalizeText(event.target.value);
-  syncMap(filterDrivers(allDrivers), { keepViewport: true });
+  renderDrivers({ keepViewport: true });
 });
 
 filterButtons.forEach((button) => {
   button.addEventListener("click", () => {
     currentFilter = button.dataset.filter || "ALL";
     setFilterButtonState(currentFilter);
-    syncMap(filterDrivers(allDrivers), { keepViewport: true });
+    renderDrivers({ keepViewport: true });
   });
 });
-
 logoutBtn?.addEventListener("click", async () => {
   try {
     if (realtimeChannel && supabaseAdminService.client) {
@@ -1335,9 +1335,11 @@ reloadBtn?.addEventListener("click", async () => {
 
 fitDriversBtn?.addEventListener("click", fitDrivers);
 focusCordobaBtn?.addEventListener("click", focusCordoba);
-const focusArgentinaBtn = document.getElementById("focusArgentinaBtn");
 focusArgentinaBtn?.addEventListener("click", focusArgentina);
-
+citySelector?.addEventListener("change", (event) => {
+  const value = event.target?.value || "drivers";
+  animateToPreset(value);
+});
 closeModalBtn?.addEventListener("click", closeDriverModal);
 
 modal?.addEventListener("click", (event) => {
