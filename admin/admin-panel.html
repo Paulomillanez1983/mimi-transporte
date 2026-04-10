@@ -8,62 +8,103 @@
   <meta name="color-scheme" content="dark" />
 
   <link rel="icon" href="../assets/icons/logo-mimi.png" type="image/png" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="./admin.css" />
 </head>
 <body>
   <header class="header">
     <div class="left">
       <img src="../assets/icons/logo-mimi.png" class="logo-small" alt="MIMI" />
-      <h1>MIMI Admin</h1>
+      <div class="header-copy">
+        <h1>MIMI Admin</h1>
+        <p class="header-subtitle">Operaciones · KYC · Choferes en vivo</p>
+      </div>
     </div>
 
     <div class="right">
-      <img id="avatar" class="avatar" alt="Avatar del administrador" />
-      <span id="email"></span>
+      <div class="admin-pill">
+        <img id="avatar" class="avatar" alt="Avatar del administrador" />
+        <div class="admin-meta">
+          <span class="admin-role">Administrador</span>
+          <span id="email" class="admin-email"></span>
+        </div>
+      </div>
       <button id="logout" type="button">Salir</button>
     </div>
   </header>
 
-  <main>
-    <section class="metrics-grid" aria-label="Métricas">
-      <article class="metric-card">
-        <span class="metric-label">Total</span>
-        <strong id="metricTotal">0</strong>
-      </article>
-
-      <article class="metric-card">
-        <span class="metric-label">Pendientes</span>
-        <strong id="metricPending">0</strong>
-      </article>
-
-      <article class="metric-card">
-        <span class="metric-label">Aprobados</span>
-        <strong id="metricApproved">0</strong>
-      </article>
-
-      <article class="metric-card">
-        <span class="metric-label">Rechazados</span>
-        <strong id="metricRejected">0</strong>
-      </article>
-
-      <article class="metric-card">
-        <span class="metric-label">Bloqueados</span>
-        <strong id="metricBlocked">0</strong>
-      </article>
-    </section>
-
-    <section class="map-card">
-      <div class="map-card-header">
-        <div>
-          <h2>Choferes</h2>
-          <p class="map-hint">Panel de revisión, búsqueda y control operativo</p>
+  <main class="admin-main">
+    <section class="hero-grid">
+      <article class="hero-card hero-card-primary">
+        <div class="hero-card-head">
+          <div>
+            <span class="eyebrow">Centro de operaciones</span>
+            <h2>Panel Uber-level para MIMI</h2>
+          </div>
+          <button id="reloadBtn" type="button">Recargar</button>
         </div>
-        <button id="reloadBtn" type="button">Recargar</button>
-      </div>
 
-      <div class="drivers-map" id="driversMap">
-        Próximamente: mapa de choferes
-      </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span>Total</span>
+            <strong id="metricTotal">0</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Pendientes</span>
+            <strong id="metricPending">0</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Aprobados</span>
+            <strong id="metricApproved">0</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Rechazados</span>
+            <strong id="metricRejected">0</strong>
+          </div>
+          <div class="hero-stat">
+            <span>Bloqueados</span>
+            <strong id="metricBlocked">0</strong>
+          </div>
+        </div>
+
+        <div class="hero-chart-card">
+          <div class="hero-chart-head">
+            <div>
+              <h3>Resumen operativo</h3>
+              <p>Distribución actual de revisión</p>
+            </div>
+            <span id="liveBadge" class="live-badge">En vivo</span>
+          </div>
+          <div id="reviewChart" class="review-chart" aria-label="Gráfico de revisión"></div>
+        </div>
+      </article>
+
+      <article class="hero-card map-shell">
+        <div class="map-card-header">
+          <div>
+            <h2>Mapa de choferes en vivo</h2>
+            <p class="map-hint">Online, última ubicación y foco operativo</p>
+          </div>
+
+          <div class="map-actions">
+            <button id="fitDriversBtn" type="button" class="btn-secondary">Ver todos</button>
+            <button id="focusCordobaBtn" type="button" class="btn-secondary">Córdoba</button>
+          </div>
+        </div>
+
+        <div class="map-surface">
+          <div id="driversMap" class="drivers-map"></div>
+
+          <div class="map-overlay">
+            <div class="map-legend">
+              <span><i class="dot dot-online"></i> Activo</span>
+              <span><i class="dot dot-pending"></i> Pendiente</span>
+              <span><i class="dot dot-blocked"></i> Bloqueado</span>
+            </div>
+            <div id="mapMeta" class="map-meta">Esperando datos...</div>
+          </div>
+        </div>
+      </article>
     </section>
 
     <section class="toolbar toolbar-pro">
@@ -85,7 +126,36 @@
       </div>
     </section>
 
-    <section id="drivers" class="drivers" aria-live="polite"></section>
+    <section class="ops-grid">
+      <article class="ops-card">
+        <div class="ops-card-head">
+          <div>
+            <h3>Cola prioritaria</h3>
+            <p>Choferes que necesitan revisión rápida</p>
+          </div>
+        </div>
+        <div id="priorityQueue" class="priority-queue"></div>
+      </article>
+
+      <article class="ops-card">
+        <div class="ops-card-head">
+          <div>
+            <h3>Resumen IA</h3>
+            <p>Score visual mientras conectás Vision/Rekognition</p>
+          </div>
+        </div>
+        <div id="aiSummary" class="ai-summary"></div>
+      </article>
+    </section>
+
+    <section class="section-head">
+      <div>
+        <h2>Choferes</h2>
+        <p>Swipe a la derecha para aprobar, a la izquierda para rechazar</p>
+      </div>
+    </section>
+
+    <section id="drivers" class="drivers drivers-premium" aria-live="polite"></section>
   </main>
 
   <section id="driverModal" class="modal hidden" aria-hidden="true">
@@ -116,7 +186,7 @@
         </section>
 
         <section class="modal-section">
-          <h4>Score</h4>
+          <h4>Score IA / operativo</h4>
           <div id="modalScore"></div>
         </section>
 
@@ -136,6 +206,7 @@
   <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script type="module" src="./admin.js"></script>
 </body>
 </html>
