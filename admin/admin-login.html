@@ -89,6 +89,7 @@
 
       errorEl.textContent = "No autorizado como administrador.";
       await supabase.auth.signOut();
+      setLoadingState(false);
     }
 
     loginBtn.addEventListener("click", async () => {
@@ -114,6 +115,10 @@
       if (event === "SIGNED_OUT") {
         setLoadingState(false);
       }
+    });
+
+    window.addEventListener("pageshow", () => {
+      setLoadingState(false);
     });
 
     goToDashboardIfAdmin();
