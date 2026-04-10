@@ -656,7 +656,8 @@ function initMap() {
     zoom: CORDOBA_ZOOM,
     attributionControl: true,
     dragRotate: false,
-    touchZoomRotate: false
+    touchZoomRotate: false,
+    fadeDuration: 0
   });
 
   if (window.innerWidth <= 820) {
@@ -667,18 +668,23 @@ function initMap() {
 
   map.addControl(new window.maplibregl.NavigationControl(), "top-right");
 
-  map.on("load", () => {
+  const forcePaint = () => {
     map?.resize();
+    map?.triggerRepaint?.();
 
-    map.flyTo({
-      center: CORDOBA_CENTER,
-      zoom: CORDOBA_ZOOM,
-      duration: 0
-    });
+    window.setTimeout(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    }, 100);
 
-    window.setTimeout(() => map?.resize(), 80);
-    window.setTimeout(() => map?.resize(), 220);
-  });
+    window.setTimeout(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    }, 300);
+  };
+
+  map.on("load", forcePaint);
+  map.on("idle", forcePaint);
 }
 function buildMarkerElement(driver) {
   const el = document.createElement("button");
