@@ -647,7 +647,99 @@ function closeDriverModal() {
 }
 
 function initMap() {
+  if (map || !window.maplibregl) return;
 
+  const mapEl = document.getElementById("driversMap");
+  if (!mapEl) return;
+
+  map = new window.maplibregl.Map({
+    container: "driversMap",
+    style: {
+      version: 8,
+      sources: {
+        cartoLight: {
+          type: "raster",
+          tiles: [
+            "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+            "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+          ],
+          tileSize: 256,
+          attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+        }
+      },
+      layers: [
+        {
+          id: "cartoLightLayer",
+          type: "raster",
+          source: "cartoLight"
+        }
+      ]
+    },
+    center: CORDOBA_CENTER,
+    zoom: CORDOBA_ZOOM,
+    attributionControl: true,
+    dragRotate: false,
+    touchZoomRotate: false,
+    fadeDuration: 0
+  });
+
+  window.map = map;
+
+  if (window.innerWidth <= 820) {
+    map.scrollZoom.disable();
+    map.boxZoom.disable();
+    map.doubleClickZoom.disable();
+  }
+
+  map.addControl(new window.maplibregl.NavigationControl(), "top-right");
+
+  const forcePaint = () => {
+    requestAnimationFrame(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    });
+
+    window.setTimeout(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    }, 100);
+
+    window.setTimeout(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    }, 300);
+
+    window.setTimeout(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    }, 600);
+  };
+
+  map.on("load", () => {
+    map.jumpTo({
+      center: CORDOBA_CENTER,
+      zoom: CORDOBA_ZOOM
+    });
+
+    forcePaint();
+  });
+
+  map.on("idle", forcePaint);
+  map.once("render", forcePaint);
+}
+
+function buildMarkerElement(driver) {
+  const el = document.createElement("button");
+  el.type = "button";
+  el.className = `map-driver-marker marker-${getStatusClass(driver.review_status, driver.is_blocked)} ${isOnlineDriver(driver) ? "marker-live" : ""}`;
+  el.title = getDriverDisplayName(driver);
+  el.setAttribute("aria-label", `Abrir detalle de ${getDriverDisplayName(driver)}`);
+  el.innerHTML = "<span></span>";
+  el.addEventListener("click", () => openDriverModal(driver));
+  return el;
+}
   
 function buildMarkerElement(driver) {
   const el = document.createElement("button");
