@@ -647,70 +647,8 @@ function closeDriverModal() {
 }
 
 function initMap() {
-  if (map || !window.maplibregl) return;
 
-  const mapEl = document.getElementById("driversMap");
-  if (!mapEl) return;
-
-  map = new window.maplibregl.Map({
-    container: "driversMap",
-    style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-    center: CORDOBA_CENTER,
-    zoom: CORDOBA_ZOOM,
-    attributionControl: true,
-    dragRotate: false,
-    touchZoomRotate: false,
-    fadeDuration: 0
-  });
-
-  // solo para debug temporal
-  window.map = map;
-
-  if (window.innerWidth <= 820) {
-    map.scrollZoom.disable();
-    map.boxZoom.disable();
-    map.doubleClickZoom.disable();
-  }
-
-  map.addControl(new window.maplibregl.NavigationControl(), "top-right");
-
-  const forcePaint = () => {
-    requestAnimationFrame(() => {
-      map?.resize();
-      map?.triggerRepaint?.();
-    });
-
-    window.setTimeout(() => {
-      map?.resize();
-      map?.triggerRepaint?.();
-    }, 100);
-
-    window.setTimeout(() => {
-      map?.resize();
-      map?.triggerRepaint?.();
-    }, 300);
-
-    window.setTimeout(() => {
-      map?.resize();
-      map?.triggerRepaint?.();
-    }, 600);
-  };
-
-  map.on("load", () => {
-    map.jumpTo({
-      center: CORDOBA_CENTER,
-      zoom: CORDOBA_ZOOM
-    });
-
-    forcePaint();
-  });
-
-  map.on("idle", forcePaint);
-
-  map.once("render", () => {
-    forcePaint();
-  });
-}
+  
 function buildMarkerElement(driver) {
   const el = document.createElement("button");
   el.type = "button";
