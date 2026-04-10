@@ -285,7 +285,102 @@
         <div id="aiSummary" class="ai-summary" aria-live="polite"></div>
       </article>
     </section>
+    <section class="support-section" aria-label="Centro de soporte">
+      <div class="section-head support-section-head">
+        <div>
+          <h2>Centro de soporte</h2>
+          <p>Mensajes de clientes y choferes, organizados por conversación</p>
+        </div>
 
+        <div class="support-head-actions">
+          <button id="supportRefreshBtn" type="button" class="support-head-btn">
+            Recargar
+          </button>
+
+          <select id="supportFilterStatus" class="support-filter-select" aria-label="Filtrar conversaciones por estado">
+            <option value="ALL">Todos</option>
+            <option value="UNREAD">No leídos</option>
+            <option value="PENDING">Pendientes</option>
+            <option value="RESOLVED">Resueltos</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="support-shell">
+        <aside class="support-sidebar" aria-label="Lista de conversaciones">
+          <div class="support-search-wrap">
+            <input
+              id="supportSearchInput"
+              type="text"
+              class="support-search-input"
+              placeholder="Buscar por nombre, email o asunto..."
+              autocomplete="off"
+              inputmode="search"
+              enterkeyhint="search"
+              spellcheck="false"
+            />
+          </div>
+
+          <div id="supportConversationList" class="support-conversation-list" aria-live="polite">
+            <div class="support-empty-state">
+              Todavía no hay conversaciones.
+            </div>
+          </div>
+        </aside>
+
+        <section class="support-thread" aria-label="Detalle de conversación">
+          <div id="supportThreadEmpty" class="support-thread-empty">
+            <div class="support-thread-empty-icon">💬</div>
+            <h3>Seleccioná una conversación</h3>
+            <p>Acá vas a ver los mensajes del cliente o chofer y vas a poder responder.</p>
+          </div>
+
+          <div id="supportThreadPanel" class="support-thread-panel" hidden>
+            <div class="support-thread-header">
+              <div class="support-thread-user">
+                <div id="supportThreadAvatar" class="support-thread-avatar">U</div>
+
+                <div class="support-thread-meta">
+                  <strong id="supportThreadName">Usuario</strong>
+                  <span id="supportThreadSubmeta">cliente · pendiente</span>
+                </div>
+              </div>
+
+              <div class="support-thread-actions">
+                <button id="supportMarkReadBtn" type="button" class="support-thread-btn">
+                  Marcar leído
+                </button>
+
+                <button id="supportMarkPendingBtn" type="button" class="support-thread-btn">
+                  Pendiente
+                </button>
+
+                <button id="supportMarkResolvedBtn" type="button" class="support-thread-btn support-thread-btn-primary">
+                  Resolver
+                </button>
+              </div>
+            </div>
+
+            <div id="supportMessages" class="support-messages" aria-live="polite"></div>
+
+            <div class="support-composer">
+              <textarea
+                id="supportReplyInput"
+                class="support-reply-input"
+                rows="3"
+                placeholder="Escribí una respuesta..."
+              ></textarea>
+
+              <div class="support-composer-actions">
+                <button id="supportSendReplyBtn" type="button" class="support-send-btn">
+                  Enviar respuesta
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
     <section class="section-head" aria-label="Listado principal">
       <div>
         <h2>Choferes</h2>
@@ -371,6 +466,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
+  <script type="module" src="./admin-support.js"></script>
   <script type="module" src="./admin.js"></script>
 </body>
 </html>
