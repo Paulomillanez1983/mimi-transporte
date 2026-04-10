@@ -317,23 +317,23 @@
       aria-describedby="driverModalSubtitle"
       tabindex="-1"
     >
-      <div class="modal-header">
-        <div>
-          <h3 id="driverModalTitle">Detalle del chofer</h3>
-          <p id="driverModalSubtitle" class="modal-subtitle"></p>
-        </div>
+<div class="modal-header">
+  <div class="modal-header-main">
+    <div class="modal-sheet-handle" aria-hidden="true"></div>
+    <h3 id="driverModalTitle">Detalle del chofer</h3>
+    <p id="driverModalSubtitle" class="modal-subtitle"></p>
+  </div>
 
-        <button
-          id="closeModalBtn"
-          class="icon-btn"
-          type="button"
-          aria-label="Cerrar detalle"
-          data-close-modal="true"
-        >
-          ✕
-        </button>
-      </div>
-
+  <button
+    id="closeModalBtn"
+    class="icon-btn modal-close-btn"
+    type="button"
+    aria-label="Cerrar detalle"
+    data-close-modal="true"
+  >
+    ✕
+  </button>
+</div>
       <div class="modal-content">
         <section class="modal-section" aria-labelledby="modalSummaryTitle">
           <h4 id="modalSummaryTitle">Resumen</h4>
