@@ -648,12 +648,20 @@ function initMap() {
   if (map || !window.maplibregl) return;
 
   map = new window.maplibregl.Map({
-    container: "driversMap",
-    style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
-    center: CORDOBA_CENTER,
-    zoom: CORDOBA_ZOOM,
-    attributionControl: true
-  });
+  container: "driversMap",
+  style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+  center: CORDOBA_CENTER,
+  zoom: CORDOBA_ZOOM,
+  attributionControl: true,
+  dragRotate: false,
+  touchZoomRotate: false
+});
+
+if (window.innerWidth <= 820) {
+  map.scrollZoom.disable();
+  map.boxZoom.disable();
+  map.doubleClickZoom.disable();
+}
 
   map.addControl(new window.maplibregl.NavigationControl(), "top-right");
 
