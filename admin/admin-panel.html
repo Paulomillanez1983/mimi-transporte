@@ -2,41 +2,140 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>MIMI Admin</title>
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
+  <title>MIMI Admin Panel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0a0a" />
   <meta name="color-scheme" content="dark" />
 
+  <link rel="icon" href="../assets/icons/logo-mimi.png" type="image/png" />
   <link rel="stylesheet" href="./admin.css" />
 </head>
 <body>
+  <header class="header">
+    <div class="left">
+      <img src="../assets/icons/logo-mimi.png" class="logo-small" alt="MIMI" />
+      <h1>MIMI Admin</h1>
+    </div>
 
-<header class="header">
-  <div class="left">
-    <img src="../assets/icons/logo-mimi.png" class="logo-small" alt="MIMI" />
-    <h1>MIMI Admin</h1>
-  </div>
+    <div class="right">
+      <img id="avatar" class="avatar" alt="Avatar del administrador" />
+      <span id="email"></span>
+      <button id="logout" type="button">Salir</button>
+    </div>
+  </header>
 
-  <div class="right">
-    <img id="avatar" class="avatar" alt="Avatar del administrador" />
-    <span id="email"></span>
-    <button id="logout" type="button">Salir</button>
-  </div>
-</header>
+  <main>
+    <section class="metrics-grid" aria-label="Métricas">
+      <article class="metric-card">
+        <span class="metric-label">Total</span>
+        <strong id="metricTotal">0</strong>
+      </article>
 
-<main>
-  <div class="toolbar">
-    <h2>Choferes</h2>
-    <button id="reloadBtn" type="button">Recargar</button>
-  </div>
+      <article class="metric-card">
+        <span class="metric-label">Pendientes</span>
+        <strong id="metricPending">0</strong>
+      </article>
 
-  <div id="drivers" class="drivers" aria-live="polite"></div>
-</main>
+      <article class="metric-card">
+        <span class="metric-label">Aprobados</span>
+        <strong id="metricApproved">0</strong>
+      </article>
 
-<script type="module" src="./admin.js"></script>
+      <article class="metric-card">
+        <span class="metric-label">Rechazados</span>
+        <strong id="metricRejected">0</strong>
+      </article>
 
+      <article class="metric-card">
+        <span class="metric-label">Bloqueados</span>
+        <strong id="metricBlocked">0</strong>
+      </article>
+    </section>
+
+    <section class="map-card">
+      <div class="map-card-header">
+        <div>
+          <h2>Choferes</h2>
+          <p class="map-hint">Panel de revisión, búsqueda y control operativo</p>
+        </div>
+        <button id="reloadBtn" type="button">Recargar</button>
+      </div>
+
+      <div class="drivers-map" id="driversMap">
+        Próximamente: mapa de choferes
+      </div>
+    </section>
+
+    <section class="toolbar toolbar-pro">
+      <div class="toolbar-search">
+        <input
+          id="searchInput"
+          type="text"
+          placeholder="Buscar por nombre, email, teléfono o user_id"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="toolbar-filters">
+        <button class="filter-btn active" type="button" data-filter="ALL">Todos</button>
+        <button class="filter-btn" type="button" data-filter="PENDING">Pendientes</button>
+        <button class="filter-btn" type="button" data-filter="APPROVED">Aprobados</button>
+        <button class="filter-btn" type="button" data-filter="REJECTED">Rechazados</button>
+        <button class="filter-btn" type="button" data-filter="BLOCKED">Bloqueados</button>
+      </div>
+    </section>
+
+    <section id="drivers" class="drivers" aria-live="polite"></section>
+  </main>
+
+  <section id="driverModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="driverModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="driverModalTitle">Detalle del chofer</h3>
+          <p id="driverModalSubtitle" class="modal-subtitle"></p>
+        </div>
+
+        <button
+          id="closeModalBtn"
+          class="icon-btn"
+          type="button"
+          aria-label="Cerrar detalle"
+          data-close-modal="true"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-content">
+        <section class="modal-section">
+          <h4>Resumen</h4>
+          <div id="modalSummary"></div>
+        </section>
+
+        <section class="modal-section">
+          <h4>Score</h4>
+          <div id="modalScore"></div>
+        </section>
+
+        <section class="modal-section">
+          <h4>Documentos</h4>
+          <div id="modalDocuments" class="documents-grid"></div>
+        </section>
+
+        <section class="modal-section">
+          <h4>Ubicación</h4>
+          <div id="modalMapInfo" class="modal-map-info"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="./admin.js"></script>
 </body>
 </html>
