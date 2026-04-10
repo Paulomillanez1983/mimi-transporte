@@ -2,412 +2,55 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-  />
-  <meta name="theme-color" content="#000000" />
-  <title>MIMI Admin · Login</title>
-
-<link
-  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-  rel="stylesheet"
-/>
-<link rel="icon" type="image/png" href="/mimi-transporte/assets/icons/logo-mimi.png" />
-<link rel="shortcut icon" href="/mimi-transporte/assets/icons/logo-mimi.png" />
-
-<script src="../libs/supabase-js.js"></script>
-  
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #000000;
-      --card: #111214;
-      --field: #1b1d21;
-      --line: rgba(255,255,255,0.10);
-      --text: #ffffff;
-      --muted: rgba(255,255,255,0.66);
-      --primary: #276EF1;
-      --primary-2: #4e89ff;
-      --danger: #E11900;
-      --success: #22c55e;
-      --shadow: 0 24px 64px rgba(0,0,0,0.38);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-top: env(safe-area-inset-top, 0px);
-    }
-
-    html, body {
-      min-height: 100%;
-      background: #000;
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-    }
-
-    body {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding:
-        calc(20px + var(--safe-top))
-        16px
-        calc(20px + var(--safe-bottom))
-        16px;
-      background:
-        radial-gradient(circle at top center, rgba(39,110,241,0.14), transparent 30%),
-        radial-gradient(circle at bottom right, rgba(39,110,241,0.08), transparent 30%),
-        #000;
-    }
-
-    .shell {
-      width: 100%;
-      max-width: 440px;
-    }
-
-    .card {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 18px;
-    }
-
-    .brand img {
-      width: 64px;
-      height: 64px;
-      object-fit: contain;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.05);
-      padding: 8px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      padding: 7px 11px;
-      border-radius: 999px;
-      background: rgba(39,110,241,0.12);
-      border: 1px solid rgba(39,110,241,0.22);
-      color: #dbe8ff;
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 10px;
-    }
-
-    h1 {
-      font-size: 30px;
-      line-height: 1.05;
-      font-weight: 800;
-      margin-bottom: 10px;
-      letter-spacing: -0.03em;
-    }
-
-    .subtitle {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-      margin-bottom: 22px;
-    }
-
-    .field {
-      display: grid;
-      gap: 8px;
-      margin-bottom: 14px;
-    }
-
-    label {
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: rgba(255,255,255,0.84);
-    }
-
-    input {
-      width: 100%;
-      padding: 15px 16px;
-      border-radius: 16px;
-      border: 1px solid var(--line);
-      background: var(--field);
-      color: #fff;
-      font-size: 15px;
-    }
-
-    input:focus {
-      outline: none;
-      border-color: rgba(78,137,255,0.9);
-      box-shadow: 0 0 0 4px rgba(39,110,241,0.16);
-    }
-
-    .btn {
-      width: 100%;
-      border: none;
-      border-radius: 16px;
-      padding: 15px 18px;
-      font-size: 15px;
-      font-weight: 800;
-      cursor: pointer;
-      background: linear-gradient(135deg, var(--primary), var(--primary-2));
-      color: #fff;
-      box-shadow: 0 18px 34px rgba(39,110,241,0.26);
-      margin-top: 8px;
-    }
-
-    .btn:disabled {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-
-    .btn-google {
-      background: #ffffff;
-      color: #000000;
-      box-shadow: none;
-    }
-
-    .status {
-      display: none;
-      margin-top: 16px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      font-size: 14px;
-      line-height: 1.5;
-      border: 1px solid var(--line);
-    }
-
-    .status.visible { display: block; }
-
-    .status.error {
-      background: rgba(225,25,0,0.08);
-      border-color: rgba(225,25,0,0.24);
-      color: #ffd4d0;
-    }
-
-    .status.success {
-      background: rgba(34,197,94,0.08);
-      border-color: rgba(34,197,94,0.24);
-      color: #d7ffe4;
-    }
-
-    .footer-note {
-      margin-top: 14px;
-      color: rgba(255,255,255,0.48);
-      font-size: 12px;
-      line-height: 1.45;
-      text-align: center;
-    }
-  </style>
+  <title>MIMI Admin</title>
+  <link rel="stylesheet" href="admin.css" />
 </head>
-<body>
-  <div class="shell">
-    <div class="card">
-      <div class="brand">
-        <img src="/mimi-transporte/assets/icons/logo-mimi.png" alt="MIMI" />
-        <div>
-          <div class="eyebrow">Panel administrativo</div>
-          <h1>Ingreso admin</h1>
-        </div>
-      </div>
+<body class="centered">
 
-      <div class="subtitle">
-        Accedé al panel de revisión de choferes, documentos y activaciones.
-      </div>
-
-      <form id="adminLoginForm">
-        <div class="field">
-          <label for="email">Email</label>
-          <input id="email" type="email" autocomplete="email" required />
-        </div>
-
-        <div class="field">
-          <label for="password">Contraseña</label>
-          <input id="password" type="password" autocomplete="current-password" required />
-        </div>
-
-        <button class="btn" id="loginBtn" type="submit">Entrar al panel</button>
-        <button class="btn btn-google" id="googleLoginBtn" type="button">Continuar con Google</button>
-      </form>
-
-      <div class="status" id="statusBox"></div>
-
-      <div class="footer-note">
-        Solo usuarios registrados en <strong>admin_users</strong> pueden acceder.
-      </div>
-    </div>
+  <div class="card">
+    <img src="../assets/icons/logo-mimi.png" class="logo" />
+    <h1>Panel Admin</h1>
+    <button id="loginGoogle">Ingresar con Google</button>
+    <p id="error"></p>
   </div>
 
-  <script type="module">
-    import supabaseService from "../js/supabase-client.js";
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-    const form = document.getElementById("adminLoginForm");
-    const statusBox = document.getElementById("statusBox");
-    const loginBtn = document.getElementById("loginBtn");
-    const googleLoginBtn = document.getElementById("googleLoginBtn");
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://xrphpqmutvadjrucqicn.supabase.co",
+      "TU_ANON_KEY"
+    );
 
-    function setStatus(message, type = "error") {
-      statusBox.textContent = message;
-      statusBox.className = `status visible ${type}`;
-    }
+    document.getElementById("loginGoogle").onclick = async () => {
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: location.origin + "/admin/admin-dashboard.html"
+        }
+      });
+    };
 
-    function clearStatus() {
-      statusBox.textContent = "";
-      statusBox.className = "status";
-    }
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
 
-    async function ensureAdminAccess(userId) {
-      const { data, error } = await supabaseService.client
+      const user = data.session.user;
+
+      const { data: admin } = await supabase
         .from("admin_users")
-        .select("user_id, email, active")
-        .eq("user_id", userId)
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("active", true)
         .maybeSingle();
 
-      if (error) throw error;
-      if (!data) return { ok: false, reason: "not_admin" };
-      if (!data.active) return { ok: false, reason: "inactive_admin" };
-
-      return { ok: true, admin: data };
-    }
-
-    async function bootstrap() {
-      const ready = await supabaseService.init();
-
-      if (!ready || !supabaseService?.client?.auth) {
-        setStatus("No pudimos inicializar Supabase.", "error");
-        return;
+      if (admin) {
+        window.location.href = "admin-dashboard.html";
+      } else {
+        document.getElementById("error").innerText =
+          "No autorizado como administrador";
       }
-
-      const { data: sessionData } = await supabaseService.client.auth.getSession();
-      const session = sessionData?.session || null;
-
-      if (!session?.user?.id) return;
-
-      try {
-        const check = await ensureAdminAccess(session.user.id);
-
-        if (check.ok) {
-          window.location.replace("./admin-panel.html");
-          return;
-        }
-
-        await supabaseService.client.auth.signOut().catch(() => null);
-
-        if (check.reason === "inactive_admin") {
-          setStatus("Tu cuenta admin está inactiva.", "error");
-          return;
-        }
-
-        setStatus("Ese Gmail no tiene permisos de administrador.", "error");
-      } catch (err) {
-        console.error("[admin bootstrap]", err);
-        setStatus("No pudimos validar el acceso admin.", "error");
-      } finally {
-        if (googleLoginBtn) {
-          googleLoginBtn.disabled = false;
-          googleLoginBtn.textContent = "Continuar con Google";
-        }
-      }
-    }
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      clearStatus();
-
-      const email = document.getElementById("email").value.trim().toLowerCase();
-      const password = document.getElementById("password").value;
-
-      if (!email || !password) {
-        setStatus("Completá email y contraseña.", "error");
-        return;
-      }
-
-      loginBtn.disabled = true;
-      loginBtn.textContent = "Ingresando...";
-
-      try {
-        const ready = await supabaseService.init();
-
-        if (!ready || !supabaseService?.client?.auth) {
-          throw new Error("No pudimos inicializar Supabase");
-        }
-
-        const { data, error } = await supabaseService.client.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (error) throw error;
-
-        const userId = data?.user?.id;
-        if (!userId) {
-          throw new Error("No se pudo obtener el usuario autenticado");
-        }
-
-        const check = await ensureAdminAccess(userId);
-
-        if (!check.ok) {
-          await supabaseService.client.auth.signOut().catch(() => null);
-
-          if (check.reason === "inactive_admin") {
-            throw new Error("Tu cuenta admin está inactiva");
-          }
-
-          throw new Error("Este usuario no tiene permisos de administrador");
-        }
-
-        setStatus("Acceso correcto. Redirigiendo...", "success");
-
-        setTimeout(() => {
-          window.location.replace("./admin-panel.html");
-        }, 500);
-      } catch (err) {
-        console.error("[admin login]", err);
-        setStatus(err?.message || "No pudimos iniciar sesión", "error");
-      } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = "Entrar al panel";
-      }
-    });
-
-    googleLoginBtn?.addEventListener("click", async () => {
-      clearStatus();
-
-      try {
-        const ready = await supabaseService.init();
-
-        if (!ready || !supabaseService?.client?.auth) {
-          throw new Error("No pudimos inicializar Supabase");
-        }
-
-        googleLoginBtn.disabled = true;
-        googleLoginBtn.textContent = "Abriendo Google...";
-
-        const { error } = await supabaseService.client.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/admin/admin-login.html"
-          }
-        });
-
-        if (error) throw error;
-      } catch (err) {
-        console.error("[admin google login]", err);
-        setStatus(err?.message || "No pudimos abrir Google", "error");
-        googleLoginBtn.disabled = false;
-        googleLoginBtn.textContent = "Continuar con Google";
-      }
-    });
-
-    bootstrap();
+    })();
   </script>
 </body>
 </html>
