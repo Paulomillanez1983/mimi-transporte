@@ -1828,7 +1828,6 @@ body.modal-open {
       max(14px, var(--safe-left));
   }
 
-
   .header h1,
   header h1 {
     font-size: 18px;
@@ -1891,6 +1890,35 @@ body.modal-open {
     right: 0;
     bottom: 0;
     top: auto;
+  }
+
+  .modal.is-bottom-sheet {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .modal.is-bottom-sheet .modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 24px 24px 0 0;
+    min-height: 58vh;
+    max-height: 88vh;
+    overflow: auto;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(0);
+    touch-action: pan-y;
+    box-shadow: 0 -20px 60px rgba(0,0,0,.22);
+  }
+
+  .modal.is-bottom-sheet .modal-dialog::before {
+    content: "";
+    display: block;
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(128,128,128,.45);
+    margin: 10px auto 14px;
   }
 }
 @media (max-width: 640px) {
@@ -2448,32 +2476,4 @@ header.is-condensed h1 {
 .modal-dialog {
   background: var(--panel);
   color: var(--text);
-}
-.modal.is-bottom-sheet {
-  align-items: flex-end;
-  padding: 0;
-}
-
-.modal.is-bottom-sheet .modal-dialog {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  border-radius: 24px 24px 0 0;
-  min-height: 58vh;
-  max-height: 88vh;
-  overflow: auto;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  transform: translateY(0);
-  touch-action: pan-y;
-  box-shadow: 0 -20px 60px rgba(0,0,0,.22);
-}
-
-.modal.is-bottom-sheet .modal-dialog::before {
-  content: "";
-  display: block;
-  width: 44px;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(128,128,128,.45);
-  margin: 10px auto 14px;
 }
