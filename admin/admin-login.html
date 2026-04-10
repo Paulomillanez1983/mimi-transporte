@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>MIMI Admin Login</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="color-scheme" content="dark" />
+  <meta
+    name="description"
+    content="Acceso administrativo a MIMI para operaciones, revisión KYC y monitoreo de choferes."
+  />
+
+  <link rel="icon" href="../assets/icons/logo-mimi.png" type="image/png" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="preconnect" href="https://xrphpqmutvadjrucqicn.supabase.co" crossorigin />
+  <link rel="stylesheet" href="./admin.css" />
+
+  <style>
+    .login-page {
+      position: relative;
+      isolation: isolate;
+    }
+
+    .admin-login-shell {
+      min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+      align-items: center;
+    }
+
+    .admin-login-card {
+      overflow: hidden;
+    }
+
+    .admin-login-top {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .admin-login-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .admin-login-copy .eyebrow {
+      align-self: center;
+    }
+
+    .login-status-row {
+      display: flex;
+      justify-content: center;
+      margin-top: 14px;
+      min-height: 24px;
+    }
+
+    .login-loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted, #a1a1aa);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .login-loading.hidden {
+      display: none;
+    }
+
+    .login-spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid rgba(255, 255, 255, 0.16);
+      border-top-color: rgba(255, 255, 255, 0.92);
+      animation: mimiSpin 0.8s linear infinite;
+      flex: 0 0 auto;
+    }
+
+    @keyframes mimiSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .login-google-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-weight: 800;
+    }
+
+    .google-mark {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: #fff;
+      color: #111;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    .login-helper {
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted, #a1a1aa);
+    }
+
+    .login-helper strong {
+      color: var(--text, #fff);
+    }
+
+    .login-footer {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: var(--muted, #a1a1aa);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .login-error {
+      min-height: 22px;
+      margin-top: 12px;
+      color: #fca5a5;
+      font-size: 14px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .login-error:empty {
+      display: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 560px) {
+      .admin-login-card {
+        padding: 24px 18px;
+      }
+
+      .login-google-btn {
+        min-height: 52px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .login-spinner {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body class="centered login-page">
+  <main class="admin-login-shell" role="main">
+    <div class="admin-login-bg" aria-hidden="true"></div>
+
+    <section
+      class="card admin-login-card"
+      aria-labelledby="loginTitle"
+      aria-describedby="loginSubtitle"
+    >
+      <div class="admin-login-top">
+        <div class="logo-wrap">
+          <img
+            src="../assets/icons/logo-mimi.png"
+            class="logo"
+            alt="MIMI Admin"
+            width="122"
+            height="122"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
+
+        <div class="admin-login-copy">
+          <span class="eyebrow">MIMI ADMIN</span>
+          <h1 id="loginTitle">Panel de administración</h1>
+          <p id="loginSubtitle" class="login-subtitle">
+            Acceso seguro para operaciones, revisión de choferes, KYC y monitoreo en vivo.
+          </p>
+        </div>
+      </div>
+
+      <button
+        id="googleLoginBtn"
+        type="button"
+        class="btn login-google-btn"
+        aria-label="Ingresar con Google"
+      >
+        <span class="google-mark" aria-hidden="true">G</span>
+        <span>Ingresar con Google</span>
+      </button>
+
+      <div class="login-status-row">
+        <div id="loginLoading" class="login-loading hidden" aria-live="polite">
+          <span class="login-spinner" aria-hidden="true"></span>
+          <span id="loginLoadingText">Preparando acceso...</span>
+        </div>
+      </div>
+
+      <div id="loginError" class="login-error" aria-live="assertive"></div>
+
+      <p class="login-helper">
+        Solo pueden ingresar usuarios autorizados en la tabla <strong>admin_users</strong>.
+      </p>
+
+      <div class="login-footer">
+        <span>Producción · 2026 · Flujo seguro con Google OAuth + Supabase</span>
+        <span id="envHint">Verificando entorno...</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script type="module">
+    import supabaseAdminService from "./supabase-admin-client.js";
+
+    const googleLoginBtn = document.getElementById("googleLoginBtn");
+    const loginLoading = document.getElementById("loginLoading");
+    const loginLoadingText = document.getElementById("loginLoadingText");
+    const loginError = document.getElementById("loginError");
+    const envHint = document.getElementById("envHint");
+
+    let isSubmitting = false;
+
+    function setLoading(isLoading, message = "Procesando...") {
+      isSubmitting = isLoading;
+
+      if (loginLoading) {
+        loginLoading.classList.toggle("hidden", !isLoading);
+      }
+
+      if (loginLoadingText) {
+        loginLoadingText.textContent = message;
+      }
+
+      if (googleLoginBtn) {
+        googleLoginBtn.disabled = isLoading;
+        googleLoginBtn.setAttribute("aria-busy", isLoading ? "true" : "false");
+      }
+    }
+
+    function setError(message = "") {
+      if (!loginError) return;
+      loginError.textContent = message || "";
+    }
+
+    function setEnvHint(message = "") {
+      if (!envHint) return;
+      envHint.textContent = message;
+    }
+
+    async function goToPanel() {
+      window.location.href = "./admin-panel.html";
+    }
+
+    async function verifyExistingAccess() {
+      setLoading(true, "Verificando sesión..."); 
+      setError("");
+
+      try {
+        const ready = await supabaseAdminService.init();
+
+        if (!ready) {
+          throw new Error("No pudimos inicializar Supabase.");
+        }
+
+        setEnvHint("Supabase listo.");
+
+        const result = await supabaseAdminService.requireActiveAdmin();
+
+        if (result?.ok) {
+          setLoading(true, "Redirigiendo al panel...");
+          await goToPanel();
+          return;
+        }
+
+        if (result?.reason === "no_session") {
+          setLoading(false);
+          return;
+        }
+
+        if (result?.reason === "not_admin") {
+          setLoading(false);
+          setError("Tu cuenta inició sesión, pero no tiene permisos de administrador activos.");
+          return;
+        }
+
+        if (result?.reason === "admin_lookup_error") {
+          setLoading(false);
+          setError("No pudimos validar permisos de administrador. Probá nuevamente.");
+          return;
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("[admin-login.verifyExistingAccess]", err);
+        setLoading(false);
+        setError(err instanceof Error ? err.message : "Ocurrió un error al verificar la sesión.");
+      }
+    }
+
+    async function handleGoogleLogin() {
+      if (isSubmitting) return;
+
+      setError("");
+      setLoading(true, "Abriendo Google...");
+
+      try {
+        const ready = await supabaseAdminService.init();
+
+        if (!ready) {
+          throw new Error("No pudimos inicializar Supabase.");
+        }
+
+        setEnvHint("Iniciando OAuth con Google...");
+        await supabaseAdminService.signInWithGoogle();
+      } catch (err) {
+        console.error("[admin-login.handleGoogleLogin]", err);
+        setLoading(false);
+        setError(err instanceof Error ? err.message : "No pudimos iniciar sesión con Google.");
+      }
+    }
+
+    googleLoginBtn?.addEventListener("click", handleGoogleLogin);
+
+    window.addEventListener("pageshow", () => {
+      if (!document.hidden) {
+        verifyExistingAccess();
+      }
+    });
+
+    verifyExistingAccess();
+  </script>
+</body>
+</html>
