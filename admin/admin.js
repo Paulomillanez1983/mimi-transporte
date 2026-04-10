@@ -194,12 +194,22 @@ function getPriorityLabel(driver) {
 
 function getPriorityValue(driver) {
   let score = 0;
-  if (isPendingDriver(driver)) score += 50;
-  if (!driver.documents_approved) score += 22;
-  if (!driver.selfie_url) score += 12;
-  if (!driver.dni_front_url || !driver.dni_back_url) score += 12;
+
+  if (driver.kyc_status === "HIGH_RISK") score += 100;
+  if (driver.kyc_status === "MANUAL_REVIEW") score += 70;
+  if (driver.kyc_status === "READY_FOR_APPROVAL") score += 10;
+
+  if (driver.review_required === true) score += 40;
+  if (driver.dni_match === false) score += 30;
+  if (driver.name_match === false) score += 20;
+  if (driver.birth_match === false) score += 20;
+  if (driver.face_detected === false) score += 35;
+
+  if (isPendingDriver(driver)) score += 20;
   if (isBlockedDriver(driver)) score += 40;
-  score += Math.max(0, 100 - getDriverScore(driver)) * 0.4;
+
+  score += Math.max(0, 100 - getDriverScore(driver));
+
   return score;
 }
 
@@ -289,12 +299,14 @@ function renderAiSummary(drivers) {
   }
 
   const avgScore = Math.round(
-    drivers.reduce((acc, driver) => acc + getDriverScore(driver), 0) / drivers.length
+    drivers.reduce((acc, driver) => acc + Number(driver.ai_score || getDriverScore(driver)), 0) /
+    Math.max(drivers.length, 1)
   );
 
-  const docsReady = drivers.filter(d => d.documents_approved).length;
-  const withSelfie = drivers.filter(d => !!d.selfie_url).length;
-  const highRisk = drivers.filter(d => getDriverScore(d) < 55).length;
+  const readyForApproval = drivers.filter(d => d.kyc_status === "READY_FOR_APPROVAL").length;
+  const manualReview = drivers.filter(d => d.kyc_status === "MANUAL_REVIEW").length;
+  const highRisk = drivers.filter(d => d.kyc_status === "HIGH_RISK").length;
+  const reviewRequiredCount = drivers.filter(d => d.review_required === true).length;
 
   aiSummary.innerHTML = `
     <div class="ai-kpi-grid">
@@ -303,12 +315,12 @@ function renderAiSummary(drivers) {
         <strong>${avgScore}</strong>
       </div>
       <div class="ai-kpi">
-        <span>Docs aprobados</span>
-        <strong>${docsReady}</strong>
+        <span>Listos para aprobar</span>
+        <strong>${readyForApproval}</strong>
       </div>
       <div class="ai-kpi">
-        <span>Con selfie</span>
-        <strong>${withSelfie}</strong>
+        <span>Revisión manual</span>
+        <strong>${manualReview}</strong>
       </div>
       <div class="ai-kpi">
         <span>Riesgo alto</span>
@@ -316,11 +328,10 @@ function renderAiSummary(drivers) {
       </div>
     </div>
     <p class="ai-help">
-      Hoy esto es score operativo. Cuando conectes Vision/Rekognition, este mismo bloque puede mostrar confidence, face match, OCR y fraude.
+      ${reviewRequiredCount} choferes todavía requieren revisión manual.
     </p>
   `;
 }
-
 function filterDrivers(drivers) {
   return drivers.filter((driver) => {
     const haystack = normalizeText([
@@ -386,11 +397,13 @@ function createDriverCard(driver) {
         </div>
 
         <div class="driver-meta premium-meta">
-          <span>Activación: ${escapeHtml(driver.activation_status || "-")}</span>
-          <span>Docs: ${driver.documents_approved ? "OK" : "Pendiente"}</span>
-          <span>Score: ${score}/100</span>
-          <span>${escapeHtml(scoreLabel)}</span>
-        </div>
+           <span>Activación: ${escapeHtml(driver.activation_status || "-")}</span>
+           <span>Docs: ${driver.documents_approved ? "OK" : "Pendiente"}</span>
+           <span>Score IA: ${score}/100</span>
+           <span>KYC: ${escapeHtml(driver.kyc_status || "-")}</span>
+           <span>Review: ${driver.review_required ? "Sí" : "No"}</span>
+           <span>${escapeHtml(scoreLabel)}</span>
+          </div>
 
         <div class="driver-progress">
           <div class="driver-progress-track">
@@ -436,34 +449,50 @@ function openDriverModal(driver) {
   modalSubtitle.textContent = driver.email || driver.user_id || "";
 
   modalSummary.innerHTML = `
-    <div class="summary-grid">
-      <div><strong>user_id:</strong><br>${escapeHtml(driver.user_id || "-")}</div>
-      <div><strong>Teléfono:</strong><br>${escapeHtml(driver.phone || "-")}</div>
-      <div><strong>Revisión:</strong><br>${escapeHtml(formatStatus(driver.review_status || "-"))}</div>
-      <div><strong>Activación:</strong><br>${escapeHtml(driver.activation_status || "-")}</div>
-      <div><strong>Documentos aprobados:</strong><br>${driver.documents_approved ? "Sí" : "No"}</div>
-      <div><strong>Última señal:</strong><br>${escapeHtml(formatDate(driver.last_location_at || driver.reviewed_at || "-"))}</div>
-    </div>
-  `;
+  <div class="summary-grid">
+    <div><strong>user_id:</strong><br>${escapeHtml(driver.user_id || "-")}</div>
+    <div><strong>Teléfono:</strong><br>${escapeHtml(driver.phone || "-")}</div>
+    <div><strong>Revisión:</strong><br>${escapeHtml(formatStatus(driver.review_status || "-"))}</div>
+    <div><strong>Activación:</strong><br>${escapeHtml(driver.activation_status || "-")}</div>
+    <div><strong>KYC status:</strong><br>${escapeHtml(driver.kyc_status || "-")}</div>
+    <div><strong>Review requerida:</strong><br>${driver.review_required ? "Sí" : "No"}</div>
+    <div><strong>Documentos aprobados:</strong><br>${driver.documents_approved ? "Sí" : "No"}</div>
+    <div><strong>Última señal:</strong><br>${escapeHtml(formatDate(driver.last_location_at || driver.reviewed_at || "-"))}</div>
+  </div>
+`;
 
-  modalScore.innerHTML = `
-    <div class="score-panel">
-      <div class="score-pill">
-        <strong>${score}/100</strong>
-        <span>${escapeHtml(getScoreLabel(score))}</span>
-      </div>
-      <div class="score-breakdown">
-        <div><strong>Perfil completo:</strong> ${driver.profile_completed ? "Sí" : "No"}</div>
-        <div><strong>Docs aprobados:</strong> ${driver.documents_approved ? "Sí" : "No"}</div>
-        <div><strong>Selfie:</strong> ${driver.selfie_url ? "Sí" : "No"}</div>
-        <div><strong>Estado operativo:</strong> ${isOnlineDriver(driver) ? "En vivo" : "No activo"}</div>
-      </div>
-    </div>
-    <p class="score-help">
-      Este score ya está preparado para ser reemplazado por Vision + Rekognition + OCR sin tocar la UI.
-    </p>
-  `;
+const kycStatus = driver.kyc_status || "PENDIENTE";
+const kycLabel = {
+  READY_FOR_APPROVAL: "✅ Listo para aprobar",
+  MANUAL_REVIEW: "⚠ Revisión manual",
+  HIGH_RISK: "❌ Riesgo alto",
+  PENDIENTE: "⏳ Pendiente"
+}[kycStatus] || kycStatus;
 
+modalScore.innerHTML = `
+  <div class="score-panel">
+    <div class="score-pill">
+      <strong>${score}/100</strong>
+      <span>${escapeHtml(getScoreLabel(score))}</span>
+    </div>
+
+    <div class="score-breakdown">
+      <div><strong>Estado KYC:</strong> ${escapeHtml(kycLabel)}</div>
+      <div><strong>Perfil completo:</strong> ${driver.profile_completed ? "Sí" : "No"}</div>
+      <div><strong>Docs aprobados:</strong> ${driver.documents_approved ? "Sí" : "No"}</div>
+      <div><strong>Selfie:</strong> ${driver.selfie_url ? "Sí" : "No"}</div>
+      <div><strong>Rostro detectado:</strong> ${driver.face_detected === true ? "✔ Sí" : driver.face_detected === false ? "❌ No" : "-"}</div>
+      <div><strong>DNI match:</strong> ${driver.dni_match === true ? "✔ Sí" : driver.dni_match === false ? "❌ No" : "-"}</div>
+      <div><strong>Nombre match:</strong> ${driver.name_match === true ? "✔ Sí" : driver.name_match === false ? "❌ No" : "-"}</div>
+      <div><strong>Nacimiento match:</strong> ${driver.birth_match === true ? "✔ Sí" : driver.birth_match === false ? "❌ No" : "-"}</div>
+      <div><strong>Review requerida:</strong> ${driver.review_required ? "⚠ Sí" : "✅ No"}</div>
+      <div><strong>Estado operativo:</strong> ${isOnlineDriver(driver) ? "En vivo" : "No activo"}</div>
+    </div>
+  </div>
+  <p class="score-help">
+    Este score ahora refleja KYC automático, OCR y coincidencias de identidad.
+  </p>
+`;
   const possibleDocs = [
     { label: "DNI frente", url: driver.dni_front_url || null },
     { label: "DNI dorso", url: driver.dni_back_url || null },
@@ -637,43 +666,50 @@ async function loadDrivers() {
     driversContainer.innerHTML = `<div class="empty-state">Cargando choferes...</div>`;
 
     const { data, error } = await supabaseAdminService.client
-      .from("driver_profiles")
-      .select(`
-        user_id,
-        full_name,
-        email,
-        phone,
+  .from("driver_profiles")
+  .select(`
+    user_id,
+    full_name,
+    email,
+    phone,
 
-        review_status,
-        is_blocked,
-        blocked_reason,
+    review_status,
+    is_blocked,
+    blocked_reason,
 
-        onboarding_status,
-        activation_status,
+    onboarding_status,
+    activation_status,
 
-        documents_approved,
-        profile_completed,
+    documents_approved,
+    profile_completed,
 
-        ai_score,
-        ai_score_label,
+    ai_score,
+    ai_score_label,
+    review_required,
+    kyc_status,
 
-        dni_front_url,
-        dni_back_url,
-        license_front_url,
-        license_back_url,
-        vehicle_insurance_url,
-        vehicle_registration_url,
-        selfie_url,
+    dni_match,
+    name_match,
+    birth_match,
+    face_detected,
 
-        last_lat,
-        last_lng,
-        last_location_at,
+    dni_front_url,
+    dni_back_url,
+    license_front_url,
+    license_back_url,
+    vehicle_insurance_url,
+    vehicle_registration_url,
+    selfie_url,
 
-        review_notes,
-        reviewed_at,
-        created_at
-      `)
-      .order("created_at", { ascending: false });
+    last_lat,
+    last_lng,
+    last_location_at,
+
+    review_notes,
+    reviewed_at,
+    created_at
+  `)
+  .order("created_at", { ascending: false });
 
     if (error) throw error;
 
