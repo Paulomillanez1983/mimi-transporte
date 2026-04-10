@@ -2461,73 +2461,70 @@ const { error: upsertError } = await supabaseService.client
 
 if (upsertError) throw upsertError;
 
-// 🔥 análisis automático por tipo de documento
-if (docType === "dni_front") {
-  try {
-    const base64 = await fileToBase64(file);
-
-    const { data: edgeData, error: edgeError } = await supabaseService.client.functions.invoke(
-      "kyc-dni",
-      {
-        body: {
-          image_base64: base64,
-          mime_type: file.type || "image/jpeg",
-          expected_dni: getField("dni_number"),
-          expected_full_name: getField("full_name"),
-          expected_birth_date: getField("birth_date") || null
-        }
+// 🔥 análisis automático unificado
+try {
+  const { data: edgeData, error: edgeError } = await supabaseService.client.functions.invoke(
+    "extract-driver-document",
+    {
+      body: {
+        user_id: currentUser.id,
+        doc_type: docType,
+        storage_path: safePath,
+        mime_type: file.type || null,
+        expected_dni: docType === "dni_front" ? getField("dni_number") : null,
+        expected_full_name: docType === "dni_front" ? getField("full_name") : null,
+        expected_birth_date: docType === "dni_front" ? (getField("birth_date") || null) : null
       }
-    );
-
-    console.log("[kyc-dni]", edgeData, edgeError);
-
-    if (edgeError) {
-      console.warn("[kyc-dni] error:", edgeError);
-      setDocStatus(docType, "⚠ DNI subido, pero falló la validación automática", "warning");
-    } else if (edgeData?.document_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "✅ DNI validado automáticamente", "ok");
-    } else if (edgeData?.document_detected) {
-      setDocStatus(docType, "⚠ DNI detectado, quedó para revisión manual", "warning");
-    } else {
-      setDocStatus(docType, "⚠ No se detectó correctamente el documento", "error");
     }
-  } catch (edgeErr) {
-    console.warn("[kyc-dni] warning:", edgeErr);
-    setDocStatus(docType, "⚠ DNI subido, pero no pudimos analizarlo", "warning");
+  );
+
+  console.log("[extract-driver-document]", docType, edgeData, edgeError);
+
+  if (edgeError) {
+    console.warn("[extract-driver-document] error:", edgeError);
+    setDocStatus(docType, "⚠ Archivo subido, pero falló el análisis automático", "warning");
+    return;
   }
-} else if (docType === "selfie") {
-  try {
-    const base64 = await fileToBase64(file);
 
-    const { data: edgeData, error: edgeError } = await supabaseService.client.functions.invoke(
-      "kyc-selfie",
-      {
-        body: {
-          image_base64: base64,
-          mime_type: file.type || "image/jpeg"
-        }
-      }
-    );
-
-    console.log("[kyc-selfie]", edgeData, edgeError);
-
-    if (edgeError) {
-      console.warn("[kyc-selfie] error:", edgeError);
-      setDocStatus(docType, "⚠ Selfie subida, pero falló la validación automática", "warning");
-    } else if (edgeData?.face_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "✅ Rostro validado automáticamente", "ok");
+  if (docType === "selfie") {
+    if (edgeData?.face_detected && edgeData?.review_required === false) {
+      setDocStatus(docType, "✅ Selfie validada automáticamente", "ok");
     } else if (edgeData?.face_detected) {
       setDocStatus(docType, "⚠ Rostro detectado, quedó para revisión manual", "warning");
     } else {
       setDocStatus(docType, "❌ No se detectó rostro correctamente", "error");
     }
-  } catch (edgeErr) {
-    console.warn("[kyc-selfie] warning:", edgeErr);
-    setDocStatus(docType, "⚠ Selfie subida, pero no pudimos analizarla", "warning");
+    return;
   }
-} else {
+
+  if (docType === "dni_front") {
+    if (edgeData?.document_detected && edgeData?.review_required === false) {
+      setDocStatus(docType, "✅ DNI validado automáticamente", "ok");
+    } else if (edgeData?.document_detected) {
+      setDocStatus(docType, "⚠ DNI detectado, quedó para revisión manual", "warning");
+    } else {
+      setDocStatus(docType, "❌ No se detectó correctamente el DNI", "error");
+    }
+    return;
+  }
+
+  if (docType === "license_front") {
+    if (edgeData?.document_detected && edgeData?.review_required === false) {
+      setDocStatus(docType, "✅ Licencia validada automáticamente", "ok");
+    } else if (edgeData?.document_detected) {
+      setDocStatus(docType, "⚠ Licencia detectada, quedó para revisión manual", "warning");
+    } else {
+      setDocStatus(docType, "❌ No se detectó correctamente la licencia", "error");
+    }
+    return;
+  }
+
   setDocStatus(docType, "✅ Archivo cargado correctamente", "ok");
+} catch (edgeErr) {
+  console.warn("[extract-driver-document] warning:", edgeErr);
+  setDocStatus(docType, "⚠ Archivo subido, pero no pudimos analizarlo", "warning");
 }
+        
       } catch (err) {
         console.error("[uploadDocument] " + docType, err);
         setDocStatus(docType, "❌ Error al subir", "error");
