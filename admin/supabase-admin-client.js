@@ -1,11 +1,5 @@
-/**
- * MIMI Admin - Supabase Client (PRODUCTION)
- * Cliente exclusivo para panel admin.
- */
-
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-const SUPABASE_ANON_KEY =
-  "TU_ANON_KEY";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
 class SupabaseAdminService {
   constructor() {
@@ -76,19 +70,6 @@ class SupabaseAdminService {
     return data?.session || null;
   }
 
-  async getUser() {
-    const ready = await this.init();
-    if (!ready || !this.client?.auth) return null;
-
-    const { data, error } = await this.client.auth.getUser();
-    if (error) {
-      console.error("[SupabaseAdminService.getUser]", error);
-      return null;
-    }
-
-    return data?.user || null;
-  }
-
   async signOut() {
     const ready = await this.init();
     if (!ready || !this.client?.auth) return;
@@ -117,6 +98,7 @@ class SupabaseAdminService {
       .from("admin_users")
       .select("user_id, email, full_name, active, is_super_admin")
       .eq("user_id", user.id)
+      .eq("active", true)
       .maybeSingle();
 
     if (error) {
@@ -126,10 +108,6 @@ class SupabaseAdminService {
 
     if (!data) {
       return { ok: false, reason: "not_admin" };
-    }
-
-    if (!data.active) {
-      return { ok: false, reason: "inactive_admin", admin: data };
     }
 
     return {
