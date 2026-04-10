@@ -1,108 +1,154 @@
 import supabaseAdminService from "./supabase-admin-client.js";
 
-const loginBtn = document.getElementById("loginGoogle");
-const loginBtnText = loginBtn?.querySelector(".login-google-btn__text");
-const errorEl = document.getElementById("error");
-const loadingEl = document.getElementById("loading");
+const loginBtn = document.getElementById("googleLoginBtn");
+const loginError = document.getElementById("loginError");
+const loginLoading = document.getElementById("loginLoading");
+const loginLoadingText = document.getElementById("loginLoadingText");
+const envHint = document.getElementById("envHint");
+
+let isSubmitting = false;
+let initialized = false;
 
 function setError(message = "") {
-  if (errorEl) errorEl.textContent = message;
+  if (!loginError) return;
+  loginError.textContent = message;
 }
 
-function setLoadingMessage(message = "") {
-  if (!loadingEl) return;
+function setEnvHint(message = "") {
+  if (!envHint) return;
+  envHint.textContent = message;
+}
 
-  if (!message) {
-    loadingEl.textContent = "";
-    loadingEl.classList.add("hidden");
-    return;
+function setLoading(isLoading, message = "Procesando...") {
+  isSubmitting = isLoading;
+
+  if (loginLoading) {
+    loginLoading.classList.toggle("hidden", !isLoading);
   }
 
-  loadingEl.textContent = message;
-  loadingEl.classList.remove("hidden");
-}
+  if (loginLoadingText) {
+    loginLoadingText.textContent = message;
+  }
 
-function setLoadingState(isLoading, label = "Ingresar con Google") {
-  if (!loginBtn) return;
-
-  loginBtn.disabled = isLoading;
-  loginBtn.setAttribute("aria-busy", String(isLoading));
-
-  if (loginBtnText) {
-    loginBtnText.textContent = isLoading ? "Ingresando..." : label;
-  } else {
-    loginBtn.textContent = isLoading ? "Ingresando..." : label;
+  if (loginBtn) {
+    loginBtn.disabled = isLoading;
+    loginBtn.setAttribute("aria-busy", isLoading ? "true" : "false");
   }
 }
 
-async function handleExistingSession() {
+function redirectToPanel() {
+  window.location.href = "./admin-panel.html";
+}
+
+async function verifyExistingAccess() {
   setError("");
-  setLoadingMessage("Verificando acceso...");
-  setLoadingState(true);
+  setLoading(true, "Verificando sesión...");
 
-  const result = await supabaseAdminService.requireActiveAdmin();
+  try {
+    const ready = await supabaseAdminService.init();
 
-  if (result.ok) {
-    window.location.href = "./admin-panel.html";
-    return;
-  }
-
-  if (result.reason === "no_session") {
-    setLoadingMessage("");
-    setLoadingState(false);
-    return;
-  }
-
-  if (result.reason === "not_admin") {
-    setError("Tu cuenta no tiene permisos de administrador.");
-    try {
-      await supabaseAdminService.signOut();
-    } catch (err) {
-      console.error("[admin-login.signOut.notAdmin]", err);
+    if (!ready) {
+      throw new Error("No pudimos inicializar Supabase.");
     }
-    setLoadingMessage("");
-    setLoadingState(false);
-    return;
-  }
 
-  if (result.reason === "init_failed") {
-    setError("No pudimos inicializar Supabase.");
-    setLoadingMessage("");
-    setLoadingState(false);
-    return;
-  }
+    setEnvHint("Supabase listo.");
 
-  setError("No pudimos validar tus permisos de administrador.");
-  setLoadingMessage("");
-  setLoadingState(false);
+    const result = await supabaseAdminService.requireActiveAdmin();
+
+    if (result?.ok) {
+      setLoading(true, "Redirigiendo al panel...");
+      redirectToPanel();
+      return;
+    }
+
+    if (result?.reason === "no_session") {
+      setLoading(false);
+      setEnvHint("Listo para iniciar sesión.");
+      return;
+    }
+
+    if (result?.reason === "not_admin") {
+      setLoading(false);
+      setError("Tu cuenta inició sesión, pero no tiene permisos de administrador activos.");
+      setEnvHint("Acceso restringido.");
+      try {
+        await supabaseAdminService.signOut();
+      } catch (err) {
+        console.warn("[admin-login.signOut.notAdmin]", err);
+      }
+      return;
+    }
+
+    if (result?.reason === "admin_lookup_error") {
+      setLoading(false);
+      setError("No pudimos validar permisos de administrador. Probá nuevamente.");
+      setEnvHint("Error al consultar permisos.");
+      return;
+    }
+
+    if (result?.reason === "init_failed") {
+      setLoading(false);
+      setError("No pudimos inicializar Supabase.");
+      setEnvHint("Falló la inicialización.");
+      return;
+    }
+
+    setLoading(false);
+    setError("No pudimos validar tu acceso.");
+    setEnvHint("Error inesperado.");
+  } catch (err) {
+    console.error("[admin-login.verifyExistingAccess]", err);
+    setLoading(false);
+    setError(err instanceof Error ? err.message : "Ocurrió un error al verificar la sesión.");
+    setEnvHint("Error de verificación.");
+  }
 }
 
 async function handleGoogleLogin() {
+  if (isSubmitting) return;
+
+  setError("");
+  setLoading(true, "Abriendo Google...");
+  setEnvHint("Iniciando OAuth con Google...");
+
   try {
-    setError("");
-    setLoadingMessage("Redirigiendo a Google...");
-    setLoadingState(true);
+    const ready = await supabaseAdminService.init();
+
+    if (!ready) {
+      throw new Error("No pudimos inicializar Supabase.");
+    }
+
     await supabaseAdminService.signInWithGoogle();
   } catch (err) {
     console.error("[admin-login.handleGoogleLogin]", err);
-    setError(err instanceof Error ? err.message : "No se pudo iniciar sesión.");
-    setLoadingMessage("");
-    setLoadingState(false);
+    setLoading(false);
+    setError(err instanceof Error ? err.message : "No se pudo iniciar sesión con Google.");
+    setEnvHint("Login cancelado o con error.");
   }
 }
 
 function bindEvents() {
+  if (initialized) return;
+  initialized = true;
+
   loginBtn?.addEventListener("click", handleGoogleLogin);
 
   window.addEventListener("pageshow", () => {
-    setLoadingState(false);
-    setLoadingMessage("");
+    if (!document.hidden) {
+      verifyExistingAccess();
+    }
+  });
+
+  window.addEventListener("focus", () => {
+    if (!document.hidden) {
+      verifyExistingAccess();
+    }
   });
 }
 
 async function init() {
   bindEvents();
-  await handleExistingSession();
+  await verifyExistingAccess();
 }
 
 init();
