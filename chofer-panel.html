@@ -308,46 +308,6 @@
   // 🚀 EJECUCIÓN
   await protectRoute();
   await initLogout();
-</script>
-  const logoutBtn = document.getElementById("logoutBtn");
-  const menuLogoutBtn = document.getElementById("menu-logout");
-
-  async function doLogout() {
-    try {
-      await supabaseService.client.auth.signOut();
-    } catch (err) {
-      console.error("[logout] Error cerrando sesión:", err);
-    } finally {
-      window.location.href = CONFIG.REDIRECTS.LOGIN;
-    }
-  }
-
-  async function initLogout() {
-    await supabaseService.init();
-
-    const { data } = await supabaseService.client.auth.getSession();
-
-    if (data?.session && logoutBtn) {
-      logoutBtn.classList.add("visible");
-    }
-
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", doLogout);
-    }
-
-    if (menuLogoutBtn) {
-      menuLogoutBtn.addEventListener("click", doLogout);
-    }
-  }
-
-  initLogout();
-</script>
-<script>
-  // ⚠️ Solo asegurar que el SW esté listo, no registrarlo dos veces
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.catch(() => {});
-  }
-</script>
 
 <script type="module" src="js/driver-app.js"></script>
 
