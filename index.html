@@ -789,16 +789,6 @@ async function buscarDireccion(query) {
 </div>
   </div>
 
-  <!-- BOTÓN SOPORTE -->
-  <button
-    id="supportBtn"
-    class="trip-notifications"
-    type="button"
-    aria-label="Abrir soporte"
-    title="Soporte"
-  >
-    💬
-  </button>
 
 </div>
     <div class="header-user" id="headerUser">
@@ -1082,15 +1072,86 @@ async function buscarDireccion(query) {
 </main>
 
 <footer class="footer">
-  <div style="margin-bottom:10px;">📍 Villa Allende y zona norte de Córdoba</div>
+  <div class="footer-location">📍 Villa Allende y zona norte de Córdoba</div>
+
+  <button
+    id="supportBtn"
+    class="support-launcher"
+    type="button"
+    aria-label="Abrir soporte"
+    title="Soporte"
+  >
+    <span class="support-launcher-icon" aria-hidden="true">💬</span>
+    <span class="support-launcher-text">Soporte</span>
+  </button>
+
   <a href="tel:+543517014863" class="footer-phone" aria-label="Llamar al 351 701 4863">
     📞 351 701 4863
   </a>
+
   <div style="opacity:0.6; font-size:0.75rem; margin-top:10px;">
     © 2026 MIMI Transporte Infantil
   </div>
-</footer>
-  
+</footer>  
+  <div id="supportSheetOverlay" class="support-sheet-overlay" hidden></div>
+
+<section
+  id="supportSheet"
+  class="support-sheet"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="supportSheetTitle"
+  aria-hidden="true"
+>
+  <div class="support-sheet-handle" aria-hidden="true">
+    <span></span>
+  </div>
+
+  <div class="support-sheet-header">
+    <div class="support-sheet-avatar" aria-hidden="true">🎧</div>
+    <div class="support-sheet-header-copy">
+      <h3 id="supportSheetTitle">Soporte MIMICAR</h3>
+      <p>Contanos qué pasó y te ayudamos.</p>
+    </div>
+
+    <button
+      id="supportSheetClose"
+      class="support-sheet-close"
+      type="button"
+      aria-label="Cerrar soporte"
+    >
+      ✕
+    </button>
+  </div>
+
+  <div class="support-chat-body" id="supportChatBody">
+    <div class="support-msg support-msg-agent">
+      <div class="support-bubble">
+        Hola. Soy soporte de MIMICAR. Escribinos tu consulta y la recibimos con los datos de tu cuenta.
+      </div>
+    </div>
+  </div>
+
+  <div class="support-sheet-composer">
+    <label class="sr-only" for="supportMessageInput">Escribí tu mensaje</label>
+    <textarea
+      id="supportMessageInput"
+      class="support-message-input"
+      rows="3"
+      placeholder="Ej.: Necesito ayuda con mi viaje, no veo al chofer, quiero cambiar el destino..."
+    ></textarea>
+
+    <div class="support-sheet-actions">
+      <button
+        id="supportSendBtn"
+        class="support-send-btn"
+        type="button"
+      >
+        Enviar mensaje
+      </button>
+    </div>
+  </div>
+</section>
 <script>
 // ==========================================
 // CONFIGURACIÓN
