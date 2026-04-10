@@ -8,6 +8,14 @@ const SUPABASE_ANON_KEY =
 
 const CORDOBA_CENTER = [-64.1888, -31.4201];
 const CORDOBA_ZOOM = 11.7;
+
+const ARGENTINA_CENTER = [-64.0, -38.0];
+const ARGENTINA_ZOOM = 4;
+
+const ARGENTINA_BOUNDS = [
+  [-73.6, -55.0], // sudoeste
+  [-53.6, -21.8]  // noreste
+];
 const DRIVER_CHANNEL = "mimi-admin-driver-profiles-realtime";
 
 const LIVE_WINDOW_MINUTES = 10;
@@ -677,8 +685,8 @@ function initMap() {
         }
       ]
     },
-    center: CORDOBA_CENTER,
-    zoom: CORDOBA_ZOOM,
+    center: ARGENTINA_CENTER,
+    zoom: ARGENTINA_ZOOM,
     attributionControl: true,
     dragRotate: false,
     touchZoomRotate: false,
@@ -717,15 +725,14 @@ function initMap() {
     }, 600);
   };
 
-  map.on("load", () => {
-    map.jumpTo({
-      center: CORDOBA_CENTER,
-      zoom: CORDOBA_ZOOM
-    });
-
-    forcePaint();
+map.on("load", () => {
+  map.fitBounds(ARGENTINA_BOUNDS, {
+    padding: 20,
+    duration: 0
   });
 
+  forcePaint();
+});    
   map.on("idle", forcePaint);
   map.once("render", forcePaint);
 }
@@ -793,15 +800,14 @@ function syncMap(drivers) {
     }, 320);
   };
 
-  if (!locatedDrivers.length) {
-    map.jumpTo({
-      center: CORDOBA_CENTER,
-      zoom: CORDOBA_ZOOM
-    });
-    forcePaint();
-    return;
-  }
-
+if (!locatedDrivers.length) {
+  map.fitBounds(ARGENTINA_BOUNDS, {
+    padding: 20,
+    duration: 0
+  });
+  forcePaint();
+  return;
+}
   if (locatedDrivers.length === 1) {
     const d = locatedDrivers[0];
     map.jumpTo({
@@ -833,7 +839,13 @@ function focusCordoba() {
     duration: 700
   });
 }
-
+function focusArgentina() {
+  if (!map) return;
+  map.fitBounds(ARGENTINA_BOUNDS, {
+    padding: 20,
+    duration: 700
+  });
+}
 function fitDrivers() {
   syncMap(filterDrivers(allDrivers));
 }
@@ -1214,6 +1226,8 @@ reloadBtn?.addEventListener("click", async () => {
 
 fitDriversBtn?.addEventListener("click", fitDrivers);
 focusCordobaBtn?.addEventListener("click", focusCordoba);
+const focusArgentinaBtn = document.getElementById("focusArgentinaBtn");
+focusArgentinaBtn?.addEventListener("click", focusArgentina);
 
 closeModalBtn?.addEventListener("click", closeDriverModal);
 
