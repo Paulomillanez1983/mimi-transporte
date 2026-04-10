@@ -191,11 +191,15 @@ select {
   font: inherit;
 }
 
-.driver-card-surface,
-#driversMap,
-.maplibregl-canvas {
+.driver-card-surface {
   transform: translateZ(0);
   will-change: transform;
+}
+
+#driversMap,
+.maplibregl-canvas {
+  transform: none !important;
+  will-change: auto !important;
 }
 #driversMap,
 .drivers-map {
