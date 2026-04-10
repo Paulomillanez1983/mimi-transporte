@@ -545,11 +545,6 @@ button:disabled,
   transform: none !important;
 }
 
-#logout {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-}
-
 #reloadBtn {
   background: #fff;
   color: #000;
@@ -947,9 +942,9 @@ textarea {
   width: 100%;
   min-height: 52px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(16, 16, 16, 0.92);
-  color: #fff;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
   padding: 12px 14px;
   outline: none;
   font: inherit;
@@ -1177,8 +1172,8 @@ textarea::placeholder {
 .driver-card-surface {
   position: relative;
   z-index: 2;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02));
+  background: var(--panel);
+  border-radius: var(--radius-lg);
   padding: 18px;
   will-change: transform;
   transition:
@@ -1259,10 +1254,10 @@ textarea::placeholder {
   min-height: 34px;
   padding: 8px 12px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.04);
-  color: #d4d4d8;
+  background: var(--panel-3);
+  color: var(--text);
   font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
 }
 
 .driver-progress {
@@ -1421,8 +1416,8 @@ textarea:focus {
   max-height: calc(100dvh - 24px);
   overflow: auto;
   margin: 12px auto;
-  background:
-    linear-gradient(180deg, rgba(17, 17, 17, 0.98), rgba(15, 15, 15, 0.98));
+  background: var(--panel);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: 24px;
   box-shadow: var(--shadow-lg);
@@ -1433,7 +1428,7 @@ textarea:focus {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: rgba(17, 17, 17, 0.94);
+  background: var(--panel-2);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
