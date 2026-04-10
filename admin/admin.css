@@ -198,37 +198,78 @@ html[data-theme="dark"] {
 *::after {
   box-sizing: border-box;
 }
+/* =========================================================
+   HTML / BODY BASE
+   ---------------------------------------------------------
+   Base global del documento:
+   - fondo general
+   - color de texto
+   - fuente
+   - scroll
+   - suavizado de texto
+   ========================================================= */
+
 html {
   margin: 0;
   padding: 0;
+
+  /* Fondo general de toda la app */
   background:
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 30%),
     radial-gradient(circle at top right, rgba(22, 163, 74, 0.06), transparent 28%),
     radial-gradient(circle at bottom center, rgba(255, 255, 255, 0.45), transparent 42%),
     linear-gradient(180deg, var(--bg), var(--bg-2) 55%, var(--bg-3) 100%);
+
+  /* Color de texto base */
   color: var(--text);
+
+  /* Fuente base global */
   font-family: Arial, Helvetica, sans-serif;
+
+  /* Evita zoom raro / cambios de tamaño de texto en mobile */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+
+  /* Evita scroll horizontal accidental */
   overflow-x: hidden;
+
+  /* Mantiene scroll vertical normal */
   overflow-y: auto;
+
+  /* Scroll suave para anchors o scroll programático */
   scroll-behavior: smooth;
+
+  /* Mejor render de tipografía */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
 body {
   margin: 0;
   padding: 0;
+
+  /* Hereda el color principal */
   color: var(--text);
+
+  /* Altura mínima del viewport */
   min-height: 100vh;
   min-height: 100dvh;
+
+  /* Evita desbordes horizontales */
   overflow-x: hidden;
+
+  /* Mantiene scroll vertical */
   overflow-y: auto;
+
+  /* Comportamiento estándar del rebote vertical */
   overscroll-behavior-y: auto;
+
+  /* Scroll más natural en iOS */
   -webkit-overflow-scrolling: touch;
+
+  /* Mejora legibilidad tipográfica */
   text-rendering: optimizeLegibility;
 }
-
 /* =========================================================
    BASE
    ========================================================= */
