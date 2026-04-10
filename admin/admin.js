@@ -66,8 +66,9 @@ const DRIVER_CHANNEL = "mimi-admin-driver-profiles-realtime";
 const LIVE_WINDOW_MINUTES = 10;
 const RELOAD_DEBOUNCE_MS = 450;
 const TOAST_DURATION_MS = 2600;
-const SWIPE_TRIGGER_PX = 110;
-const SWIPE_MAX_PX = 140;
+const SWIPE_TRIGGER_PX = window.innerWidth <= 820 ? 70 : 110;
+const SWIPE_MAX_PX = window.innerWidth <= 820 ? 90 : 140;
+
 
 const driversContainer = document.getElementById("drivers");
 const logoutBtn = document.getElementById("logout");
@@ -76,7 +77,7 @@ const emailEl = document.getElementById("email");
 const avatarEl = document.getElementById("avatar");
 const searchInput = document.getElementById("searchInput");
 const filterButtons = Array.from(document.querySelectorAll(".filter-btn"));
-
+const IS_MOBILE = window.innerWidth <= 820;
 const metricTotal = document.getElementById("metricTotal");
 const metricPending = document.getElementById("metricPending");
 const metricApproved = document.getElementById("metricApproved");
@@ -762,8 +763,24 @@ function initMap() {
     map.scrollZoom.disable();
     map.boxZoom.disable();
     map.doubleClickZoom.disable();
-  }
+    map.dragPan.disable(); // 👈 ESTO TE FALTA
 
+  }
+if (window.innerWidth <= 820) {
+  let mapActive = false;
+
+  map.getCanvas().addEventListener("touchstart", () => {
+    mapActive = true;
+    map.dragPan.enable();
+  });
+
+  document.addEventListener("touchstart", (e) => {
+    if (!e.target.closest("#driversMap")) {
+      mapActive = false;
+      map.dragPan.disable();
+    }
+  });
+}
   map.addControl(new window.maplibregl.NavigationControl(), "top-right");
 
   const forcePaint = () => {
