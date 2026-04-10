@@ -1,11 +1,12 @@
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
+const SUPABASE_ANON_KEY = "TU_ANON_KEY_REAL";
 
 class SupabaseAdminService {
   constructor() {
     this.client = null;
     this.initialized = false;
     this.initPromise = null;
+    this.authListenerRegistered = false;
   }
 
   async init() {
@@ -15,32 +16,39 @@ class SupabaseAdminService {
     this.initPromise = (async () => {
       try {
         if (!window.supabase?.createClient) {
-          throw new Error("La librería de Supabase no está cargada");
+          throw new Error("La librería de Supabase no está cargada.");
         }
 
         if (
           !SUPABASE_URL ||
           !SUPABASE_ANON_KEY ||
-          SUPABASE_ANON_KEY === "TU_ANON_KEY"
+          SUPABASE_ANON_KEY === "TU_ANON_KEY_REAL"
         ) {
-          throw new Error("Falta configurar SUPABASE_URL o SUPABASE_ANON_KEY");
+          throw new Error("Falta configurar SUPABASE_URL o SUPABASE_ANON_KEY.");
         }
 
-        this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-            storageKey: "mimi-admin-auth"
+        this.client = window.supabase.createClient(
+          SUPABASE_URL,
+          SUPABASE_ANON_KEY,
+          {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true,
+              detectSessionInUrl: true,
+              storageKey: "mimi-admin-auth"
+            }
           }
-        });
+        );
 
-        this.client.auth.onAuthStateChange((event, session) => {
-          console.log("[MIMI Admin Auth]", event, {
-            userId: session?.user?.id || null,
-            email: session?.user?.email || null
+        if (!this.authListenerRegistered) {
+          this.client.auth.onAuthStateChange((event, session) => {
+            console.log("[MIMI Admin Auth]", event, {
+              userId: session?.user?.id || null,
+              email: session?.user?.email || null
+            });
           });
-        });
+          this.authListenerRegistered = true;
+        }
 
         this.initialized = true;
         return true;
@@ -57,6 +65,11 @@ class SupabaseAdminService {
     return this.initPromise;
   }
 
+  getRedirectUrl(path = "/admin/admin-panel.html") {
+    const origin = window.location.origin;
+    return `${origin}${path}`;
+  }
+
   async getSession() {
     const ready = await this.init();
     if (!ready || !this.client?.auth) return null;
@@ -68,6 +81,27 @@ class SupabaseAdminService {
     }
 
     return data?.session || null;
+  }
+
+  async signInWithGoogle() {
+    const ready = await this.init();
+    if (!ready || !this.client?.auth) {
+      throw new Error("No pudimos inicializar Supabase.");
+    }
+
+    const redirectTo = this.getRedirectUrl("/admin/admin-panel.html");
+
+    const { error } = await this.client.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo
+      }
+    });
+
+    if (error) {
+      console.error("[SupabaseAdminService.signInWithGoogle]", error);
+      throw error;
+    }
   }
 
   async signOut() {
