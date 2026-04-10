@@ -2735,37 +2735,39 @@ const { data: ticket, error: ticketError } = await window.supabaseInsert(
       return;
     }
 
-    appendSupportMessage(mensaje, "user");
-    supportMessageInput.value = "";
+        appendSupportMessage(mensaje, "user");
+        supportMessageInput.value = "";
 
-    notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
+        notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
 
-    console.log("SOPORTE_CHAT_OK:", {
-      ticket_id: ticket.id,
-      mensaje_id: soporteMensaje.id,
-      user: userId,
-      email,
-      mensaje,
-      viaje_id: viajeId,
-      estado_viaje: estadoViaje,
-      origen,
-      destino
-    });
+        console.log("SOPORTE_CHAT_OK:", {
+           ticket_id: ticket.id,
+           mensaje_id: soporteMensaje.id,
+           user: userId,
+           email,
+           mensaje,
+           viaje_id: viajeId,
+           estado_viaje: estadoViaje,
+           origen,
+           destino
+         });
 
-    setTimeout(() => {
-      appendSupportMessage(
-        "Recibimos tu mensaje. En breve te vamos a responder.",
-        "agent"
-      );
-    }, 500);
+        setTimeout(() => {
+          appendSupportMessage(
+            "Recibimos tu mensaje. En breve te vamos a responder.",
+            "agent"
+          );
+        }, 500);
 
-  } catch (err) {
-    console.error("[supportSendBtn] error:", err);
-    notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
-  } finally {
-    supportSendBtn.disabled = false;
-  }
-});
+      } catch (err) {
+        console.error("[supportSendBtn] error:", err);
+        notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
+      } finally {
+        supportSendBtn.disabled = false;
+       }
+     });
+  }); // <- cierra document.addEventListener('DOMContentLoaded', async () => { ... })
+
   
 // ==========================================
 // UI LOADING
