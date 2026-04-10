@@ -741,16 +741,6 @@ function buildMarkerElement(driver) {
   return el;
 }
   
-function buildMarkerElement(driver) {
-  const el = document.createElement("button");
-  el.type = "button";
-  el.className = `map-driver-marker marker-${getStatusClass(driver.review_status, driver.is_blocked)} ${isOnlineDriver(driver) ? "marker-live" : ""}`;
-  el.title = getDriverDisplayName(driver);
-  el.setAttribute("aria-label", `Abrir detalle de ${getDriverDisplayName(driver)}`);
-  el.innerHTML = "<span></span>";
-  el.addEventListener("click", () => openDriverModal(driver));
-  return el;
-}
 
 function clearMapMarkers() {
   for (const marker of mapMarkers.values()) {
