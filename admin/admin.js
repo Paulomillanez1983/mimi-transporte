@@ -3,9 +3,7 @@ import supabaseAdminService from "./supabase-admin-client.js";
 const API_URL =
   "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/admin-review-driver";
 
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
-
+const SUPABASE_ANON_KEY = null;
 const driversContainer = document.getElementById("drivers");
 const logoutBtn = document.getElementById("logout");
 const reloadBtn = document.getElementById("reloadBtn");
@@ -95,11 +93,22 @@ function getScoreLabel(score) {
 function updateMetrics(drivers) {
   const total = drivers.length;
 
-  const pending = drivers.filter(d => d.review_status === "pending").length;
-  const approved = drivers.filter(d => d.review_status === "approved").length;
-  const rejected = drivers.filter(d => d.review_status === "rejected").length;
-  const blocked = drivers.filter(d => d.review_status === "blocked" || d.is_blocked).length;
+const pending = drivers.filter(d =>
+  String(d.review_status || "").toLowerCase() === "pending"
+).length;
 
+const approved = drivers.filter(d =>
+  String(d.review_status || "").toLowerCase() === "approved"
+).length;
+
+const rejected = drivers.filter(d =>
+  String(d.review_status || "").toLowerCase() === "rejected"
+).length;
+
+const blocked = drivers.filter(d =>
+  String(d.review_status || "").toLowerCase() === "blocked" || d.is_blocked === true
+).length;
+  
   metricTotal.textContent = total;
   metricPending.textContent = pending;
   metricApproved.textContent = approved;
@@ -108,10 +117,13 @@ function updateMetrics(drivers) {
 }
 function filterDrivers(drivers) {
   return drivers.filter((driver) => {
-    const status = String(driver.review_status || "PENDIENTE_REVISION").toUpperCase();
+const status = String(driver.review_status || "").trim().toUpperCase();
 
-    const matchesFilter = currentFilter === "ALL" || status === currentFilter;
-
+const matchesFilter =
+  currentFilter === "ALL" ||
+  status === currentFilter ||
+  (currentFilter === "PENDING" && (status === "" || status === "PENDIENTE_REVISION"));
+    
     if (!matchesFilter) return false;
 
     const haystack = normalizeText([
