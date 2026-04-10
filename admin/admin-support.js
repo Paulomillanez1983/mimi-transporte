@@ -529,31 +529,54 @@ async function sendSupportReply() {
     const token = await getAdminAccessToken();
     const uploadedAttachments = await uploadSupportAttachments(current.id, files);
 
-    const response = await fetch(`${SUPPORT_API_BASE}/support-send-message`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        conversation_id: current.id,
-        message: text,
-        sender_role: "admin",
-        attachments: uploadedAttachments
-      })
-    });
+const response = await fetch(`${SUPPORT_API_BASE}/support-send-message`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    conversation_id: current.id,
+    message: text,
+    sender_role: "admin",
+    attachments: uploadedAttachments
+  })
+});
 
-    const data = await response.json().catch(() => ({}));
+const data = await response.json().catch(() => ({}));
 
-    if (!response.ok || !data?.ok) {
-      throw new Error(data?.error || "No se pudo enviar la respuesta");
-    }
+if (!response.ok || !data?.ok) {
+  throw new Error(data?.error || "No se pudo enviar la respuesta");
+}
 
-    if (els.reply) {
-      els.reply.value = "";
-      els.reply.style.height = "";
-    }
+const newMessageId =
+  data?.message?.id ||
+  data?.message_id ||
+  data?.data?.id ||
+  null;
 
+try {
+  await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      ticket_id: current.id,
+      message_id: newMessageId,
+      title: "Soporte MIMICAR",
+      body: "Tenés una nueva respuesta de soporte."
+    })
+  });
+} catch (pushErr) {
+  console.warn("[support.sendSupportReply] push warning:", pushErr);
+}
+
+if (els.reply) {
+  els.reply.value = "";
+  els.reply.style.height = "";
+}
     if (els.attachmentInput) {
       els.attachmentInput.value = "";
     }
