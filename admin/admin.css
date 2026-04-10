@@ -2962,3 +2962,7 @@ header.is-condensed h1 {
     max-width: 92%;
   }
 }
+  .support-attachment-input {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
