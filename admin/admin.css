@@ -1721,7 +1721,27 @@ textarea:focus {
   color: var(--text);
   border: 1px solid var(--border);
 }
+/* =========================================================
+   FIX CIERRE MODAL MOBILE
+   ========================================================= */
 
+.modal-header {
+  position: sticky;
+  z-index: 30;
+  pointer-events: auto;
+}
+
+#closeModalBtn,
+.modal [data-close-modal="true"] {
+  position: relative;
+  z-index: 40;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.modal.is-bottom-sheet .modal-dialog::before {
+  pointer-events: none;
+}
 /* =========================================================
    ESTADOS VACÍOS Y TOASTS
    Para qué sirve:
