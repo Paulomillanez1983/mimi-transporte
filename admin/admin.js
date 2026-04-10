@@ -13,9 +13,36 @@ const ARGENTINA_CENTER = [-64.0, -38.0];
 const ARGENTINA_ZOOM = 4;
 
 const ARGENTINA_BOUNDS = [
-  [-73.6, -55.0], // sudoeste
-  [-53.6, -21.8]  // noreste
+  [-73.6, -55.0],
+  [-53.6, -21.8]
 ];
+
+const CITY_PRESETS = {
+  drivers: {
+    type: "drivers"
+  },
+  argentina: {
+    type: "bounds",
+    bounds: ARGENTINA_BOUNDS,
+    padding: 28,
+    maxZoom: 5.2
+  },
+  cordoba: {
+    type: "center",
+    center: [-64.1888, -31.4201],
+    zoom: 11.7
+  },
+  villa_allende: {
+    type: "center",
+    center: [-64.2956, -31.2946],
+    zoom: 12.4
+  },
+  carlos_paz: {
+    type: "center",
+    center: [-64.4978, -31.4241],
+    zoom: 12.1
+  }
+};
 const DRIVER_CHANNEL = "mimi-admin-driver-profiles-realtime";
 
 const LIVE_WINDOW_MINUTES = 10;
@@ -41,7 +68,9 @@ const metricBlocked = document.getElementById("metricBlocked");
 const reviewChart = document.getElementById("reviewChart");
 const mapMeta = document.getElementById("mapMeta");
 const fitDriversBtn = document.getElementById("fitDriversBtn");
+const focusArgentinaBtn = document.getElementById("focusArgentinaBtn");
 const focusCordobaBtn = document.getElementById("focusCordobaBtn");
+const citySelector = document.getElementById("citySelector");
 const priorityQueue = document.getElementById("priorityQueue");
 const aiSummary = document.getElementById("aiSummary");
 const liveBadge = document.getElementById("liveBadge");
@@ -505,7 +534,7 @@ function renderDrivers() {
 
   if (!filtered.length) {
     driversContainer.innerHTML = `<div class="empty-state">No encontramos choferes con esos filtros.</div>`;
-    syncMap(filtered);
+    syncMap(filtered, { keepViewport: false });
 
     window.setTimeout(() => map?.resize(), 120);
     window.setTimeout(() => map?.resize(), 300);
@@ -514,7 +543,7 @@ function renderDrivers() {
 
   driversContainer.innerHTML = filtered.map(createDriverCard).join("");
   enableSwipeCards();
-  syncMap(filtered);
+  syncMap(filtered, { keepViewport: false });
 
   window.setTimeout(() => map?.resize(), 120);
   window.setTimeout(() => map?.resize(), 300);
@@ -755,10 +784,87 @@ function clearMapMarkers() {
   }
   mapMarkers.clear();
 }
+function smartMapPadding() {
+  return window.innerWidth <= 640 ? 28 : 60;
+}
 
-function syncMap(drivers) {
+function animateToPreset(presetKey) {
+  if (!map) return;
+
+  const preset = CITY_PRESETS[presetKey];
+  if (!preset) return;
+
+  if (preset.type === "drivers") {
+    smartFitDrivers();
+    return;
+  }
+
+  if (preset.type === "bounds") {
+    map.fitBounds(preset.bounds, {
+      padding: preset.padding ?? smartMapPadding(),
+      maxZoom: preset.maxZoom ?? 14,
+      duration: 900,
+      essential: true
+    });
+    return;
+  }
+
+  if (preset.type === "center") {
+    map.easeTo({
+      center: preset.center,
+      zoom: preset.zoom,
+      duration: 900,
+      essential: true
+    });
+  }
+}
+
+function smartFitDrivers() {
   initMap();
   if (!map) return;
+
+  const filtered = filterDrivers(allDrivers);
+  const locatedDrivers = filtered.filter(hasLocation);
+
+  if (!locatedDrivers.length) {
+    map.fitBounds(ARGENTINA_BOUNDS, {
+      padding: smartMapPadding(),
+      duration: 900,
+      essential: true
+    });
+    return;
+  }
+
+  if (locatedDrivers.length === 1) {
+    const d = locatedDrivers[0];
+    map.easeTo({
+      center: [Number(d.last_lng), Number(d.last_lat)],
+      zoom: 13.6,
+      duration: 900,
+      essential: true
+    });
+    return;
+  }
+
+  const bounds = new window.maplibregl.LngLatBounds();
+  locatedDrivers.forEach((driver) => {
+    bounds.extend([Number(driver.last_lng), Number(driver.last_lat)]);
+  });
+
+  map.fitBounds(bounds, {
+    padding: smartMapPadding(),
+    maxZoom: 14,
+    duration: 900,
+    essential: true
+  });
+}
+function syncMap(drivers, options = {}) {
+  initMap();
+  if (!map) return;
+
+  const {
+    keepViewport = false
+  } = options;
 
   const locatedDrivers = drivers.filter(hasLocation);
 
@@ -800,19 +906,28 @@ function syncMap(drivers) {
     }, 320);
   };
 
-if (!locatedDrivers.length) {
-  map.fitBounds(ARGENTINA_BOUNDS, {
-    padding: 20,
-    duration: 0
-  });
-  forcePaint();
-  return;
-}
+  if (keepViewport) {
+    forcePaint();
+    return;
+  }
+
+  if (!locatedDrivers.length) {
+    map.fitBounds(ARGENTINA_BOUNDS, {
+      padding: smartMapPadding(),
+      duration: 900,
+      essential: true
+    });
+    forcePaint();
+    return;
+  }
+
   if (locatedDrivers.length === 1) {
     const d = locatedDrivers[0];
-    map.jumpTo({
+    map.easeTo({
       center: [Number(d.last_lng), Number(d.last_lat)],
-      zoom: 13.5
+      zoom: 13.5,
+      duration: 900,
+      essential: true
     });
     forcePaint();
     return;
@@ -824,30 +939,24 @@ if (!locatedDrivers.length) {
   });
 
   map.fitBounds(bounds, {
-    padding: 60,
+    padding: smartMapPadding(),
     maxZoom: 14,
-    duration: 0
+    duration: 900,
+    essential: true
   });
 
   forcePaint();
 }
 function focusCordoba() {
-  if (!map) return;
-  map.easeTo({
-    center: CORDOBA_CENTER,
-    zoom: CORDOBA_ZOOM,
-    duration: 700
-  });
+  animateToPreset("cordoba");
 }
+
 function focusArgentina() {
-  if (!map) return;
-  map.fitBounds(ARGENTINA_BOUNDS, {
-    padding: 20,
-    duration: 700
-  });
+  animateToPreset("argentina");
 }
+
 function fitDrivers() {
-  syncMap(filterDrivers(allDrivers));
+  animateToPreset("drivers");
 }
 function initAdaptiveTheme() {
   const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -964,7 +1073,7 @@ async function loadDrivers(force = false) {
 
       allDrivers = Array.isArray(data) ? data : [];
       updateMetrics(allDrivers);
-      renderDrivers();
+      syncMap(filterDrivers(allDrivers), { keepViewport: true });
     } catch (err) {
       console.error("[admin.loadDrivers]", err);
       setErrorState("No pudimos cargar los choferes.");
@@ -1195,14 +1304,14 @@ priorityQueue?.addEventListener("click", (event) => {
 
 searchInput?.addEventListener("input", (event) => {
   currentSearch = normalizeText(event.target.value);
-  renderDrivers();
+  syncMap(filterDrivers(allDrivers), { keepViewport: true });
 });
 
 filterButtons.forEach((button) => {
   button.addEventListener("click", () => {
     currentFilter = button.dataset.filter || "ALL";
     setFilterButtonState(currentFilter);
-    renderDrivers();
+    syncMap(filterDrivers(allDrivers), { keepViewport: true });
   });
 });
 
