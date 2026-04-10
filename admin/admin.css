@@ -462,9 +462,16 @@ header {
 }
 
 #logout {
-  background: var(--danger);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
   border: none;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
+}
+
+#logout:hover {
+  filter: brightness(1.1);
 }
 #reloadBtn {
   background: var(--text);
@@ -2196,4 +2203,15 @@ header.is-condensed h1 {
 
 .header.is-condensed h1 {
   font-size: 15px;
+}
+.card,
+.driver-card-surface,
+.ops-card,
+.hero-card,
+.metric-card {
+  color: var(--text);
+}
+.modal-dialog {
+  background: var(--panel);
+  color: var(--text);
 }
