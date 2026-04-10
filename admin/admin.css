@@ -349,7 +349,7 @@ select {
 header {
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 60;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -360,8 +360,14 @@ header {
     max(18px, var(--safe-right))
     10px
     max(18px, var(--safe-left));
+  transition:
+    padding 220ms ease,
+    min-height 220ms ease,
+    background-color 220ms ease,
+    backdrop-filter 220ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease;
 }
-
 .left,
 .right {
   display: flex;
@@ -792,8 +798,13 @@ textarea {
 
 .map-shell {
   padding: 16px;
+  transition:
+    transform 220ms ease,
+    filter 220ms ease,
+    opacity 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
 }
-
 .map-actions {
   display: flex;
   flex-wrap: wrap;
@@ -805,8 +816,13 @@ textarea {
   margin-top: 12px;
   overflow: hidden;
   border-radius: 22px;
+  transition:
+    transform 220ms ease,
+    filter 220ms ease,
+    opacity 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
 }
-
 .map-floating-controls {
   position: absolute;
   top: 14px;
@@ -864,7 +880,8 @@ textarea {
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
 }
 
-.drivers-map {
+.drivers-map,
+#driversMap {
   width: 100%;
   min-height: 420px;
   height: 100%;
@@ -876,8 +893,13 @@ textarea {
   display: block;
   visibility: visible;
   opacity: 1;
+  transition:
+    transform 220ms ease,
+    filter 220ms ease,
+    opacity 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
 }
-
 .map-overlay {
   position: absolute;
   left: 14px;
@@ -1052,6 +1074,17 @@ textarea {
     border-radius: 16px;
     overflow: hidden;
   }
+}
+.map-shell.is-scrolled .map-surface {
+  filter: blur(2px) saturate(.94);
+  transform: scale(.985);
+  opacity: .92;
+}
+
+.map-shell.is-deep-scrolled .map-surface {
+  filter: blur(4px) saturate(.88);
+  transform: scale(.975);
+  opacity: .85;
 }
 /* =========================================================
    TOOLBAR
@@ -1256,8 +1289,26 @@ textarea::placeholder {
   min-width: 0;
   border-radius: var(--radius-lg);
   overflow: hidden;
+
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  will-change: transform, opacity;
+}
+.driver-card.card-enter {
+  animation: cardIn 520ms cubic-bezier(.22,1,.36,1) both;
+  animation-delay: var(--card-delay, 0ms);
 }
 
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 .premium-card {
   background: rgba(255, 255, 255, 0.025);
   border: 1px solid var(--border);
@@ -1733,11 +1784,9 @@ body.modal-open {
 .hero-card,
 .ops-card,
 .map-card,
-.driver-card,
 .modal-dialog {
   animation: fadeUp 0.28s var(--ease-premium);
 }
-
 /* =========================================================
    RESPONSIVE
    ========================================================= */
@@ -1779,16 +1828,6 @@ body.modal-open {
       max(14px, var(--safe-left));
   }
 
-  /* 🔥 FIX MAPA + GLITCH MOBILE */
-  .header,
-  .header.is-condensed,
-  .map-legend,
-  .map-meta,
-  .modal-header,
-  .modal-backdrop {
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-  }
 
   .header h1,
   header h1 {
@@ -2315,6 +2354,12 @@ header.is-condensed {
   padding-bottom: 6px;
   backdrop-filter: blur(18px) saturate(140%);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 10px 30px rgba(0,0,0,.10);
+}
+.header.has-map-blur,
+header.has-map-blur {
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
 }
 
 .header.is-condensed .logo-small,
@@ -2377,17 +2422,6 @@ header.is-condensed h1 {
    HEADER PRO MOBILE
    =============================== */
 
-.header.is-condensed {
-  min-height: 58px;
-
-  padding-top: calc(6px + env(safe-area-inset-top));
-  padding-bottom: 6px;
-
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-
-  transition: all 0.25s ease;
-}
 
 /* fallback si safe-area no existe */
 @supports not (padding: env(safe-area-inset-top)) {
@@ -2414,4 +2448,32 @@ header.is-condensed h1 {
 .modal-dialog {
   background: var(--panel);
   color: var(--text);
+}
+.modal.is-bottom-sheet {
+  align-items: flex-end;
+  padding: 0;
+}
+
+.modal.is-bottom-sheet .modal-dialog {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  border-radius: 24px 24px 0 0;
+  min-height: 58vh;
+  max-height: 88vh;
+  overflow: auto;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(0);
+  touch-action: pan-y;
+  box-shadow: 0 -20px 60px rgba(0,0,0,.22);
+}
+
+.modal.is-bottom-sheet .modal-dialog::before {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(128,128,128,.45);
+  margin: 10px auto 14px;
 }
