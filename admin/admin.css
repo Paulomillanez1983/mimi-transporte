@@ -1,48 +1,470 @@
-body {
-  font-family: Arial;
-  background: #0a0a0a;
-  color: white;
-  margin: 0;
+:root {
+  --bg: #0a0a0a;
+  --panel: #121212;
+  --panel-2: #181818;
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #ffffff;
+  --muted: #a1a1aa;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --pending: #3b82f6;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --radius: 18px;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* =========================
+   LOGIN
+   ========================= */
 .centered {
+  min-height: 100vh;
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: 100vh;
+  justify-content: center;
+  padding: 24px;
 }
 
 .card {
-  background: #111;
-  padding: 30px;
-  border-radius: 16px;
+  width: 100%;
+  max-width: 430px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px 24px;
   text-align: center;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
 }
 
 .logo {
   width: 120px;
-  margin-bottom: 20px;
+  max-width: 60%;
+  display: block;
+  margin: 0 auto 18px;
 }
 
-button {
-  background: #00ff88;
-  border: none;
-  padding: 12px;
-  border-radius: 10px;
-  cursor: pointer;
-  margin: 5px;
+.card h1 {
+  margin: 0 0 10px;
+  font-size: 28px;
+  line-height: 1.1;
 }
 
+.card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* =========================
+   HEADER
+   ========================= */
+.header,
 header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 15px;
-  background: #111;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(10, 10, 10, 0.9);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
 }
 
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-small {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  padding: 4px;
+}
+
+.header h1,
+header h1 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: #1f1f1f;
+}
+
+#email {
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================
+   MAIN
+   ========================= */
+main {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 22px 18px 40px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.toolbar h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.drivers {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* =========================
+   CARD CHOFER
+   ========================= */
+.driver-card,
 .driver {
-  background: #111;
-  margin: 10px;
-  padding: 15px;
-  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.driver-card-top,
+.driver-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.driver-card h3,
+.driver h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.driver-card p,
+.driver p {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.driver-card small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.driver-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.driver-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  color: #d4d4d8;
+  font-size: 13px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* =========================
+   STATUS
+   ========================= */
+.status-badge,
+.status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status-badge.approved,
+.status.APROBADO {
+  background: rgba(34, 197, 94, 0.14);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.24);
+}
+
+.status-badge.rejected,
+.status.RECHAZADO {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.24);
+}
+
+.status-badge.blocked,
+.status.BLOQUEADO {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.24);
+}
+
+.status-badge.pending,
+.status.PENDIENTE_REVISION,
+.status.PENDIENTE {
+  background: rgba(59, 130, 246, 0.14);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.24);
+}
+
+/* =========================
+   TEXTAREA
+   ========================= */
+.review-note,
+textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: #101010;
+  color: #fff;
+  padding: 14px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.45;
+  margin-bottom: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.review-note:focus,
+textarea:focus {
+  border-color: rgba(59, 130, 246, 0.55);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+/* =========================
+   BUTTONS
+   ========================= */
+button,
+.btn {
+  appearance: none;
+  border: 0;
+  border-radius: 14px;
+  min-height: 44px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow);
+}
+
+button:hover,
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+button:active,
+.btn:active {
+  transform: translateY(0);
+}
+
+button:disabled,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+#logout {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+#reloadBtn {
+  background: #fff;
+  color: #000;
+}
+
+.driver-actions,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn.approve,
+.actions button:nth-child(1) {
+  background: var(--success);
+  color: #04130a;
+}
+
+.btn.reject,
+.actions button:nth-child(2) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn.block,
+.actions button:nth-child(3) {
+  background: var(--warning);
+  color: #1a1203;
+}
+
+/* =========================
+   STATES
+   ========================= */
+.empty-state {
+  width: 100%;
+  padding: 28px 18px;
+  text-align: center;
+  border-radius: var(--radius);
+  border: 1px dashed rgba(255,255,255,0.12);
+  color: var(--muted);
+  background: rgba(255,255,255,0.02);
+}
+
+.empty-state.error {
+  color: #fca5a5;
+  border-color: rgba(239,68,68,0.24);
+  background: rgba(239,68,68,0.06);
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+@media (min-width: 768px) {
+  .drivers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .drivers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .header,
+  header {
+    padding: 14px 14px;
+  }
+
+  .header h1,
+  header h1 {
+    font-size: 18px;
+  }
+
+  #email {
+    display: none;
+  }
+
+  main {
+    padding: 16px 12px 28px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar h2 {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 560px) {
+  .right {
+    gap: 8px;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  #logout,
+  #reloadBtn,
+  button,
+  .btn {
+    min-height: 42px;
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .driver-card,
+  .driver {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .driver-card-top,
+  .driver-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .driver-actions,
+  .actions {
+    flex-direction: column;
+  }
+
+  .driver-actions .btn,
+  .actions button {
+    width: 100%;
+  }
+
+  .logo-small {
+    width: 34px;
+    height: 34px;
+  }
 }
