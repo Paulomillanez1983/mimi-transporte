@@ -327,16 +327,15 @@ async function loadSupportConversations() {
   try {
     const token = await getAdminAccessToken();
 
-    const response = await fetch(
-      "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/support-list-conversations",
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-
+const response = await fetch(
+  "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/support-list-conversation",
+  {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  }
+);
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data?.ok) {
