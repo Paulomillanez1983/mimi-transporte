@@ -14,115 +14,41 @@
   <link rel="stylesheet" href="./admin.css" />
 </head>
 <body class="centered">
+  <div class="admin-login-shell">
+    <div class="admin-login-bg"></div>
 
-  <div class="card admin-login-card">
-    <img
-      src="../assets/icons/logo-mimi.png"
-      class="logo"
-      alt="MIMI Admin"
-      loading="eager"
-      decoding="async"
-    />
+    <div class="card admin-login-card">
+      <div class="logo-wrap">
+        <img
+          src="../assets/icons/logo-mimi.png"
+          class="logo"
+          alt="MIMI Admin"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
 
-    <h1>Panel Admin</h1>
-    <p class="login-subtitle">
-      Acceso seguro para administradores autorizados
-    </p>
+      <div class="admin-login-copy">
+        <span class="eyebrow">MIMI ADMIN</span>
+        <h1>Panel Admin</h1>
+        <p class="login-subtitle">
+          Acceso seguro para administradores autorizados
+        </p>
+      </div>
 
-    <button id="loginGoogle" class="login-google-btn" type="button">
-      Ingresar con Google
-    </button>
+      <button id="loginGoogle" class="login-google-btn" type="button">
+        <span class="login-google-btn__text">Ingresar con Google</span>
+      </button>
 
-    <p id="error" class="login-error" aria-live="polite"></p>
+      <div id="loading" class="login-loading hidden" aria-live="polite">
+        Verificando acceso...
+      </div>
+
+      <p id="error" class="login-error" aria-live="polite"></p>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJz...TU_KEY_REAL";
-
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storageKey: "mimi-admin-auth"
-      }
-    });
-
-    const loginBtn = document.getElementById("loginGoogle");
-    const errorEl = document.getElementById("error");
-
-    function setLoadingState(isLoading) {
-      loginBtn.disabled = isLoading;
-      loginBtn.textContent = isLoading ? "Ingresando..." : "Ingresar con Google";
-    }
-
-    async function goToDashboardIfAdmin() {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("[admin-login.getSession]", sessionError);
-        errorEl.textContent = "No pudimos validar la sesión.";
-        return;
-      }
-
-      const session = sessionData?.session;
-      if (!session?.user?.id) return;
-
-      const { data: admin, error: adminError } = await supabase
-        .from("admin_users")
-        .select("user_id, active")
-        .eq("user_id", session.user.id)
-        .eq("active", true)
-        .maybeSingle();
-
-      if (adminError) {
-        console.error("[admin-login.adminLookup]", adminError);
-        errorEl.textContent = "No pudimos validar permisos de administrador.";
-        return;
-      }
-
-      if (admin) {
-        window.location.href = "./admin-panel.html";
-        return;
-      }
-
-      errorEl.textContent = "No autorizado como administrador.";
-      await supabase.auth.signOut();
-      setLoadingState(false);
-    }
-
-    loginBtn.addEventListener("click", async () => {
-      try {
-        errorEl.textContent = "";
-        setLoadingState(true);
-
-        await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: new URL("./admin-panel.html", window.location.href).href
-          }
-        });
-      } catch (err) {
-        console.error("[admin-login.google]", err);
-        errorEl.textContent =
-          err instanceof Error ? err.message : "No se pudo iniciar sesión.";
-        setLoadingState(false);
-      }
-    });
-
-    supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        setLoadingState(false);
-      }
-    });
-
-    window.addEventListener("pageshow", () => {
-      setLoadingState(false);
-    });
-
-    goToDashboardIfAdmin();
-  </script>
+  <script type="module" src="./admin-login.js"></script>
 </body>
 </html>
