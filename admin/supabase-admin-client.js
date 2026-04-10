@@ -93,9 +93,7 @@ class SupabaseAdminService {
 
     const { error } = await this.client.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo
-      }
+      options: { redirectTo }
     });
 
     if (error) {
