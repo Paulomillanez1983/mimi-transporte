@@ -2,796 +2,153 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-  />
-  <meta name="theme-color" content="#000000" />
-  <title>MIMI Admin · Panel</title>
+  <title>MIMI Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
-  />
-  <link rel="icon" type="image/png" href="/mimi-transporte/assets/icons/logo-mimi.png" />
-  <link rel="shortcut icon" href="/mimi-transporte/assets/icons/logo-mimi.png" />
-
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #000000;
-      --card: #111214;
-      --field: #1b1d21;
-      --line: rgba(255,255,255,0.10);
-      --text: #ffffff;
-      --muted: rgba(255,255,255,0.66);
-      --primary: #276EF1;
-      --primary-2: #4e89ff;
-      --danger: #E11900;
-      --success: #22c55e;
-      --warning: #f59e0b;
-      --shadow: 0 24px 64px rgba(0,0,0,0.38);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-top: env(safe-area-inset-top, 0px);
-    }
-
-    html, body {
-      min-height: 100%;
-      background: #000;
-      color: #fff;
-      font-family: 'Inter', sans-serif;
-    }
-
-    body {
-      min-height: 100vh;
-      padding:
-        calc(16px + var(--safe-top))
-        16px
-        calc(16px + var(--safe-bottom))
-        16px;
-      background:
-        radial-gradient(circle at top center, rgba(39,110,241,0.12), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(39,110,241,0.08), transparent 30%),
-        #000;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 1360px;
-      margin: 0 auto;
-      display: grid;
-      gap: 18px;
-    }
-
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      flex-wrap: wrap;
-      padding: 18px;
-      border-radius: 24px;
-      background: rgba(17,18,20,0.88);
-      border: 1px solid var(--line);
-      box-shadow: var(--shadow);
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
-    .brand img {
-      width: 58px;
-      height: 58px;
-      object-fit: contain;
-      border-radius: 16px;
-      padding: 7px;
-      background: rgba(255,255,255,0.05);
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      padding: 7px 11px;
-      border-radius: 999px;
-      background: rgba(39,110,241,0.12);
-      border: 1px solid rgba(39,110,241,0.22);
-      color: #dbe8ff;
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 8px;
-    }
-
-    h1 {
-      font-size: clamp(28px, 4vw, 42px);
-      line-height: 1.02;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-    }
-
-    .topbar-subtitle {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-      margin-top: 6px;
-    }
-
-    .topbar-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    button {
-      border: none;
-      border-radius: 16px;
-      padding: 14px 16px;
-      font-size: 14px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-2));
-      color: #fff;
-      box-shadow: 0 18px 34px rgba(39,110,241,0.26);
-    }
-
-    .btn-secondary {
-      background: #232428;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: 420px minmax(0, 1fr);
-      gap: 18px;
-    }
-
-    .panel {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      padding: 18px;
-      box-shadow: var(--shadow);
-      min-height: 200px;
-    }
-
-    .panel h2 {
-      font-size: 20px;
-      font-weight: 800;
-      margin-bottom: 6px;
-    }
-
-    .panel-subtitle {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-      margin-bottom: 16px;
-    }
-
-    .queue {
-      display: grid;
-      gap: 12px;
-    }
-
-    .queue-item {
-      padding: 16px;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.03);
-      cursor: pointer;
-      transition: transform .12s ease, border-color .15s ease, background .15s ease;
-    }
-
-    .queue-item:hover {
-      transform: translateY(-1px);
-      border-color: rgba(78,137,255,0.45);
-    }
-
-    .queue-item.active {
-      border-color: rgba(78,137,255,0.95);
-      background: rgba(39,110,241,0.10);
-    }
-
-    .queue-item__title {
-      font-size: 16px;
-      font-weight: 800;
-      margin-bottom: 8px;
-    }
-
-    .queue-item__meta {
-      display: grid;
-      gap: 4px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.4;
-    }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 999px;
-      padding: 8px 11px;
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      border: 1px solid rgba(255,255,255,0.10);
-      width: fit-content;
-      margin-top: 10px;
-    }
-
-    .status-pending {
-      color: #ffe2ab;
-      background: rgba(245,158,11,0.10);
-      border-color: rgba(245,158,11,0.24);
-    }
-
-    .status-approved {
-      color: #d7ffe4;
-      background: rgba(34,197,94,0.10);
-      border-color: rgba(34,197,94,0.24);
-    }
-
-    .status-rejected {
-      color: #ffd4d0;
-      background: rgba(225,25,0,0.10);
-      border-color: rgba(225,25,0,0.24);
-    }
-
-    .detail-grid {
-      display: grid;
-      gap: 18px;
-    }
-
-    .detail-card {
-      padding: 16px;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.03);
-    }
-
-    .detail-card h3 {
-      font-size: 16px;
-      font-weight: 800;
-      margin-bottom: 12px;
-    }
-
-    .kv {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .kv-item {
-      display: grid;
-      gap: 5px;
-    }
-
-    .kv-item strong {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: rgba(255,255,255,0.82);
-    }
-
-    .kv-item span {
-      color: var(--muted);
-      line-height: 1.45;
-      font-size: 14px;
-      word-break: break-word;
-    }
-
-    .docs-list {
-      display: grid;
-      gap: 12px;
-    }
-
-    .doc-item {
-      padding: 14px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.025);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .doc-item__left {
-      display: grid;
-      gap: 4px;
-    }
-
-    .doc-item__left strong {
-      font-size: 14px;
-      font-weight: 800;
-    }
-
-    .doc-item__left span {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .doc-link {
-      text-decoration: none;
-      color: #fff;
-      background: #232428;
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 14px;
-      padding: 10px 12px;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    textarea {
-      width: 100%;
-      min-height: 120px;
-      resize: vertical;
-      padding: 14px 15px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: #1b1d21;
-      color: #fff;
-      font-size: 14px;
-      font-family: inherit;
-    }
-
-    textarea:focus {
-      outline: none;
-      border-color: rgba(78,137,255,0.9);
-      box-shadow: 0 0 0 4px rgba(39,110,241,0.16);
-    }
-
-    .action-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-    }
-
-    .btn-success {
-      background: linear-gradient(135deg, #22c55e, #34d399);
-      color: #051b0d;
-    }
-
-    .btn-danger {
-      background: linear-gradient(135deg, #e11900, #ff563f);
-      color: #fff;
-    }
-
-    .status-box {
-      display: none;
-      padding: 14px 16px;
-      border-radius: 16px;
-      font-size: 14px;
-      line-height: 1.5;
-      border: 1px solid var(--line);
-    }
-
-    .status-box.visible { display: block; }
-
-    .status-box.success {
-      background: rgba(34,197,94,0.08);
-      border-color: rgba(34,197,94,0.24);
-      color: #d7ffe4;
-    }
-
-    .status-box.error {
-      background: rgba(225,25,0,0.08);
-      border-color: rgba(225,25,0,0.24);
-      color: #ffd4d0;
-    }
-
-    .empty {
-      color: var(--muted);
-      line-height: 1.5;
-      font-size: 14px;
-      padding: 10px 0;
-    }
-
-    @media (max-width: 1080px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 720px) {
-      .kv {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="admin.css" />
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <div class="brand">
-        <img src="/mimi-transporte/assets/icons/logo-mimi.png" alt="MIMI" />
-        <div>
-          <div class="eyebrow">MIMI Admin</div>
-          <h1>Panel de revisión</h1>
-          <div class="topbar-subtitle" id="adminWelcomeText">
-            Cargando administrador...
-          </div>
-        </div>
-      </div>
 
-      <div class="topbar-actions">
-        <button class="btn-secondary" id="refreshBtn" type="button">Actualizar</button>
-        <button class="btn-secondary" id="logoutBtn" type="button">Cerrar sesión</button>
-      </div>
-    </div>
-
-    <div class="layout">
-      <section class="panel">
-        <h2>Choferes pendientes</h2>
-        <div class="panel-subtitle">
-          Revisá la cola de onboarding y abrí cada perfil para aprobar o rechazar.
-        </div>
-
-        <div class="queue" id="queueList">
-          <div class="empty">Cargando solicitudes...</div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Detalle del chofer</h2>
-        <div class="panel-subtitle">
-          Datos personales, vehículo, documentos y acciones administrativas.
-        </div>
-
-        <div class="status-box" id="statusBox"></div>
-
-        <div class="detail-grid" id="detailContent">
-          <div class="empty">Seleccioná un chofer para ver el detalle.</div>
-        </div>
-      </section>
-    </div>
+<header class="header">
+  <div class="left">
+    <img src="../assets/icons/logo-mimi.png" class="logo-small" />
+    <h1>MIMI Admin</h1>
   </div>
 
-  <script type="module">
-    import supabaseService from "../js/supabase-client.js";
+  <div class="right">
+    <img id="avatar" class="avatar" />
+    <span id="email"></span>
+    <button id="logout">Salir</button>
+  </div>
+</header>
 
-    let currentAdmin = null;
-    let selectedDriver = null;
-    let driversQueue = [];
+<main>
+  <div class="toolbar">
+    <h2>Choferes</h2>
+    <button onclick="loadDrivers()">🔄 Recargar</button>
+  </div>
 
-    const adminWelcomeText = document.getElementById("adminWelcomeText");
-    const queueList = document.getElementById("queueList");
-    const detailContent = document.getElementById("detailContent");
-    const statusBox = document.getElementById("statusBox");
-    const refreshBtn = document.getElementById("refreshBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
+  <div id="drivers" class="drivers"></div>
+</main>
 
-    function setStatus(message, type = "success") {
-      statusBox.textContent = message;
-      statusBox.className = `status-box visible ${type}`;
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+const supabase = window.supabase.createClient(
+  "https://xrphpqmutvadjrucqicn.supabase.co",
+  "TU_ANON_KEY"
+);
+
+// 🔐 VALIDAR SESIÓN + ADMIN
+(async () => {
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error || !data.session) {
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  const user = data.session.user;
+
+  // UI user
+  document.getElementById("email").innerText = user.email;
+  document.getElementById("avatar").src =
+    user.user_metadata?.avatar_url || "";
+
+  // validar admin
+  const { data: admin } = await supabase
+    .from("admin_users")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("active", true)
+    .maybeSingle();
+
+  if (!admin) {
+    alert("No autorizado");
+    await supabase.auth.signOut();
+    window.location.href = "admin-login.html";
+    return;
+  }
+
+  loadDrivers();
+})();
+
+// 🚗 CARGAR CHOFERES
+async function loadDrivers() {
+  const { data } = await supabase
+    .from("driver_profiles")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  const container = document.getElementById("drivers");
+  container.innerHTML = "";
+
+  data.forEach(driver => {
+    const div = document.createElement("div");
+    div.className = "driver-card";
+
+    div.innerHTML = `
+      <div class="driver-header">
+        <strong>${driver.user_id}</strong>
+        <span class="status ${driver.onboarding_status}">
+          ${driver.onboarding_status}
+        </span>
+      </div>
+
+      <textarea id="note-${driver.user_id}" placeholder="Notas..."></textarea>
+
+      <div class="actions">
+        <button onclick="review('${driver.user_id}','approve')">✅ Aprobar</button>
+        <button onclick="review('${driver.user_id}','reject')">❌ Rechazar</button>
+        <button onclick="review('${driver.user_id}','block')">⛔ Bloquear</button>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+// 🔥 LLAMAR A TU EDGE FUNCTION
+async function review(driverId, action) {
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
+
+  const note = document.getElementById(`note-${driverId}`).value;
+
+  const res = await fetch(
+    "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/admin-review-driver",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + session.access_token
+      },
+      body: JSON.stringify({
+        driver_user_id: driverId,
+        action,
+        review_notes: note
+      })
     }
+  );
 
-    function clearStatus() {
-      statusBox.textContent = "";
-      statusBox.className = "status-box";
-    }
+  const data = await res.json();
 
-    async function requireAdmin() {
-      const ready = await supabaseService.init();
+  if (!data.ok) {
+    alert("Error: " + data.error);
+    return;
+  }
 
-      if (!ready || !supabaseService?.client?.auth) {
-        window.location.replace("./admin-login.html");
-        return null;
-      }
+  alert("✔ Acción realizada");
+  loadDrivers();
+}
 
-      const { data: sessionData } = await supabaseService.client.auth.getSession();
-      const session = sessionData?.session || null;
+// 🚪 LOGOUT
+document.getElementById("logout").onclick = async () => {
+  await supabase.auth.signOut();
+  window.location.href = "admin-login.html";
+};
+</script>
 
-      if (!session?.user?.id) {
-        window.location.replace("./admin-login.html");
-        return null;
-      }
-
-      const { data: adminProfile, error } = await supabaseService.client
-        .from("admin_users")
-        .select("user_id, email, full_name, active, is_super_admin")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
-
-      if (error || !adminProfile || !adminProfile.active) {
-        await supabaseService.client.auth.signOut().catch(() => null);
-        window.location.replace("./admin-login.html");
-        return null;
-      }
-
-      currentAdmin = adminProfile;
-      adminWelcomeText.textContent =
-        `Administrador: ${adminProfile.full_name || adminProfile.email}`;
-
-      return adminProfile;
-    }
-
-    function mapStatusClass(status) {
-      const normalized = String(status || "").toUpperCase();
-      if (normalized === "APROBADO") return "status-approved";
-      if (normalized === "RECHAZADO" || normalized === "BLOQUEADO") return "status-rejected";
-      return "status-pending";
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    async function loadQueue() {
-      const { data, error } = await supabaseService.client
-        .from("driver_profiles")
-        .select(`
-          user_id,
-          email,
-          full_name,
-          phone,
-          dni_number,
-          vehicle_brand,
-          vehicle_model,
-          vehicle_year,
-          vehicle_color,
-          vehicle_plate,
-          onboarding_status,
-          documents_completed,
-          documents_approved,
-          activation_status,
-          review_notes,
-          reviewed_at,
-          background_check_pending
-        `)
-        .in("onboarding_status", ["PENDIENTE_REVISION", "RECHAZADO", "APROBADO", "BLOQUEADO"])
-        .order("updated_at", { ascending: false, nullsFirst: false });
-
-      if (error) throw error;
-
-      driversQueue = Array.isArray(data) ? data : [];
-      renderQueue();
-    }
-
-    function renderQueue() {
-      if (!driversQueue.length) {
-        queueList.innerHTML = `<div class="empty">No hay choferes para revisar.</div>`;
-        return;
-      }
-
-      queueList.innerHTML = driversQueue.map((driver) => {
-        const isActive = selectedDriver?.user_id === driver.user_id;
-        const statusClass = mapStatusClass(driver.onboarding_status);
-
-        return `
-          <div class="queue-item ${isActive ? "active" : ""}" data-user-id="${driver.user_id}">
-            <div class="queue-item__title">${escapeHtml(driver.full_name || driver.email || "Chofer sin nombre")}</div>
-            <div class="queue-item__meta">
-              <span>${escapeHtml(driver.phone || "Sin teléfono")}</span>
-              <span>DNI: ${escapeHtml(driver.dni_number || "Sin DNI")}</span>
-              <span>${escapeHtml(
-                [driver.vehicle_brand, driver.vehicle_model, driver.vehicle_plate].filter(Boolean).join(" · ") || "Vehículo incompleto"
-              )}</span>
-            </div>
-            <div class="status-pill ${statusClass}">
-              ${escapeHtml(driver.onboarding_status || "SIN_ESTADO")}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      queueList.querySelectorAll(".queue-item").forEach((item) => {
-        item.addEventListener("click", async () => {
-          const userId = item.dataset.userId;
-          const driver = driversQueue.find((d) => d.user_id === userId);
-          if (!driver) return;
-          selectedDriver = driver;
-          renderQueue();
-          await loadDriverDetail(userId);
-        });
-      });
-    }
-
-    async function loadDriverDetail(userId) {
-      clearStatus();
-
-      const { data: profile, error: profileError } = await supabaseService.client
-        .from("driver_profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-      if (!profile) {
-        detailContent.innerHTML = `<div class="empty">No encontramos el perfil del chofer.</div>`;
-        return;
-      }
-
-      const { data: documents, error: docsError } = await supabaseService.client
-        .from("driver_documents")
-        .select("*")
-        .eq("user_id", userId)
-        .order("doc_type", { ascending: true });
-
-      if (docsError) throw docsError;
-
-      const docsHtml = await Promise.all((documents || []).map(async (doc) => {
-        let openUrl = "#";
-
-        if (doc.storage_path) {
-          const { data: signed, error } = await supabaseService.client.storage
-            .from("driver-documents")
-            .createSignedUrl(doc.storage_path, 3600);
-
-          if (!error && signed?.signedUrl) {
-            openUrl = signed.signedUrl;
-          }
-        }
-
-        return `
-          <div class="doc-item">
-            <div class="doc-item__left">
-              <strong>${escapeHtml(doc.doc_type || "documento")}</strong>
-              <span>Estado: ${escapeHtml(doc.status || "PENDIENTE")}</span>
-              <span>${escapeHtml(doc.mime_type || "")}</span>
-            </div>
-            <a class="doc-link" href="${escapeHtml(openUrl)}" target="_blank" rel="noopener noreferrer">
-              Ver documento
-            </a>
-          </div>
-        `;
-      }));
-
-      detailContent.innerHTML = `
-        <div class="detail-card">
-          <h3>Datos personales</h3>
-          <div class="kv">
-            <div class="kv-item"><strong>Nombre</strong><span>${escapeHtml(profile.full_name || "-")}</span></div>
-            <div class="kv-item"><strong>Email</strong><span>${escapeHtml(profile.email || "-")}</span></div>
-            <div class="kv-item"><strong>Teléfono</strong><span>${escapeHtml(profile.phone || "-")}</span></div>
-            <div class="kv-item"><strong>DNI</strong><span>${escapeHtml(profile.dni_number || "-")}</span></div>
-            <div class="kv-item"><strong>Fecha de nacimiento</strong><span>${escapeHtml(profile.birth_date || "-")}</span></div>
-            <div class="kv-item"><strong>Domicilio</strong><span>${escapeHtml(profile.address || "-")}</span></div>
-          </div>
-        </div>
-
-        <div class="detail-card">
-          <h3>Vehículo</h3>
-          <div class="kv">
-            <div class="kv-item"><strong>Marca</strong><span>${escapeHtml(profile.vehicle_brand || "-")}</span></div>
-            <div class="kv-item"><strong>Modelo</strong><span>${escapeHtml(profile.vehicle_model || "-")}</span></div>
-            <div class="kv-item"><strong>Año</strong><span>${escapeHtml(profile.vehicle_year || "-")}</span></div>
-            <div class="kv-item"><strong>Color</strong><span>${escapeHtml(profile.vehicle_color || "-")}</span></div>
-            <div class="kv-item"><strong>Patente</strong><span>${escapeHtml(profile.vehicle_plate || "-")}</span></div>
-            <div class="kv-item"><strong>Estado</strong><span>${escapeHtml(profile.onboarding_status || "-")}</span></div>
-          </div>
-        </div>
-
-        <div class="detail-card">
-          <h3>Documentos</h3>
-          <div class="docs-list">
-            ${docsHtml.length ? docsHtml.join("") : `<div class="empty">No hay documentos cargados.</div>`}
-          </div>
-        </div>
-
-        <div class="detail-card">
-          <h3>Revisión administrativa</h3>
-          <div class="kv" style="margin-bottom: 14px;">
-            <div class="kv-item"><strong>Documentos completos</strong><span>${profile.documents_completed ? "Sí" : "No"}</span></div>
-            <div class="kv-item"><strong>Documentos aprobados</strong><span>${profile.documents_approved ? "Sí" : "No"}</span></div>
-            <div class="kv-item"><strong>Activación</strong><span>${escapeHtml(profile.activation_status || "-")}</span></div>
-            <div class="kv-item"><strong>Antecedentes pendientes</strong><span>${profile.background_check_pending ? "Sí" : "No"}</span></div>
-          </div>
-
-          <label for="reviewNotes" style="display:block; margin-bottom:8px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:rgba(255,255,255,0.82);">
-            Notas de revisión
-          </label>
-          <textarea id="reviewNotes" placeholder="Escribí observaciones, motivo de rechazo o notas internas...">${escapeHtml(profile.review_notes || "")}</textarea>
-
-          <div class="action-row">
-            <button class="btn-success" id="approveBtn" type="button">Aprobar chofer</button>
-            <button class="btn-danger" id="rejectBtn" type="button">Rechazar chofer</button>
-            <button class="btn-secondary" id="blockBtn" type="button">Bloquear cuenta</button>
-          </div>
-        </div>
-      `;
-
-      document.getElementById("approveBtn")?.addEventListener("click", async () => {
-        await reviewDriver(profile.user_id, "approve");
-      });
-
-      document.getElementById("rejectBtn")?.addEventListener("click", async () => {
-        await reviewDriver(profile.user_id, "reject");
-      });
-
-      document.getElementById("blockBtn")?.addEventListener("click", async () => {
-        await reviewDriver(profile.user_id, "block");
-      });
-    }
-
-    async function reviewDriver(driverUserId, action) {
-      const notes = document.getElementById("reviewNotes")?.value?.trim() || "";
-
-      if (!driverUserId) return;
-
-      const confirmText =
-        action === "approve"
-          ? "¿Querés aprobar este chofer?"
-          : action === "reject"
-            ? "¿Querés rechazar este chofer?"
-            : "¿Querés bloquear esta cuenta?";
-
-      const confirmed = window.confirm(confirmText);
-      if (!confirmed) return;
-
-      clearStatus();
-
-      try {
-        const { data, error } = await supabaseService.client.functions.invoke("admin-review-driver", {
-          body: {
-            driver_user_id: driverUserId,
-            action,
-            review_notes: notes,
-            reviewed_by: currentAdmin?.user_id || null
-          }
-        });
-
-        if (error) throw error;
-        if (!data?.ok) throw new Error(data?.error || "No pudimos actualizar el chofer");
-
-        setStatus(`Acción aplicada correctamente: ${action}`, "success");
-        await loadQueue();
-        await loadDriverDetail(driverUserId);
-      } catch (err) {
-        console.error("[reviewDriver]", err);
-        setStatus(err?.message || "No pudimos procesar la revisión", "error");
-      }
-    }
-
-    refreshBtn.addEventListener("click", async () => {
-      clearStatus();
-      try {
-        await loadQueue();
-        if (selectedDriver?.user_id) {
-          await loadDriverDetail(selectedDriver.user_id);
-        }
-      } catch (err) {
-        console.error("[refresh]", err);
-        setStatus("No pudimos actualizar el panel", "error");
-      }
-    });
-
-    logoutBtn.addEventListener("click", async () => {
-      try {
-        await supabaseService.client.auth.signOut().catch(() => null);
-      } finally {
-        window.location.replace("./admin-login.html");
-      }
-    });
-
-    (async function init() {
-      try {
-        const admin = await requireAdmin();
-        if (!admin) return;
-        await loadQueue();
-      } catch (err) {
-        console.error("[admin panel init]", err);
-        setStatus("No pudimos cargar el panel admin", "error");
-      }
-    })();
-  </script>
 </body>
 </html>
