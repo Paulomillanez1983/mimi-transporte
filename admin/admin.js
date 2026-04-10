@@ -49,13 +49,14 @@ function normalizeText(value) {
 }
 
 function getStatusClass(status) {
-  const normalized = String(status || "").toUpperCase();
-  if (normalized === "APROBADO") return "approved";
-  if (normalized === "RECHAZADO") return "rejected";
-  if (normalized === "BLOQUEADO") return "blocked";
+  const normalized = String(status || "").toLowerCase();
+
+  if (normalized === "approved") return "approved";
+  if (normalized === "rejected") return "rejected";
+  if (normalized === "blocked") return "blocked";
+
   return "pending";
 }
-
 function showToast(message, type = "info") {
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
@@ -77,10 +78,10 @@ function getDriverScore(driver) {
 
   if (driver.documents_approved) score += 25;
   if (String(driver.activation_status || "").toUpperCase() === "ACTIVO") score += 15;
-  if (String(driver.onboarding_status || "").toUpperCase() === "APROBADO") score += 10;
+  if (String(driver.review_status || "").toUpperCase() === "APROBADO") score += 10;
 
-  if (String(driver.onboarding_status || "").toUpperCase() === "RECHAZADO") score -= 15;
-  if (String(driver.onboarding_status || "").toUpperCase() === "BLOQUEADO") score -= 25;
+  if (String(driver.review_status || "").toUpperCase() === "RECHAZADO") score -= 15;
+  if (String(driver.review_status || "").toUpperCase() === "BLOQUEADO") score -= 25;
 
   return Math.max(0, Math.min(100, score));
 }
@@ -93,21 +94,21 @@ function getScoreLabel(score) {
 
 function updateMetrics(drivers) {
   const total = drivers.length;
-  const pending = drivers.filter(d => (d.onboarding_status || "PENDIENTE_REVISION") === "PENDIENTE_REVISION").length;
-  const approved = drivers.filter(d => d.onboarding_status === "APROBADO").length;
-  const rejected = drivers.filter(d => d.onboarding_status === "RECHAZADO").length;
-  const blocked = drivers.filter(d => d.onboarding_status === "BLOQUEADO").length;
 
-  metricTotal.textContent = String(total);
-  metricPending.textContent = String(pending);
-  metricApproved.textContent = String(approved);
-  metricRejected.textContent = String(rejected);
-  metricBlocked.textContent = String(blocked);
+  const pending = drivers.filter(d => d.review_status === "pending").length;
+  const approved = drivers.filter(d => d.review_status === "approved").length;
+  const rejected = drivers.filter(d => d.review_status === "rejected").length;
+  const blocked = drivers.filter(d => d.review_status === "blocked" || d.is_blocked).length;
+
+  metricTotal.textContent = total;
+  metricPending.textContent = pending;
+  metricApproved.textContent = approved;
+  metricRejected.textContent = rejected;
+  metricBlocked.textContent = blocked;
 }
-
 function filterDrivers(drivers) {
   return drivers.filter((driver) => {
-    const status = String(driver.onboarding_status || "PENDIENTE_REVISION").toUpperCase();
+    const status = String(driver.review_status || "PENDIENTE_REVISION").toUpperCase();
 
     const matchesFilter = currentFilter === "ALL" || status === currentFilter;
 
@@ -134,9 +135,9 @@ function renderDrivers() {
   }
 
   driversContainer.innerHTML = filtered.map((driver) => {
-    const status = driver.onboarding_status || "PENDIENTE_REVISION";
+    const status = driver.review_status || "PENDIENTE_REVISION";
     const noteValue = driver.review_notes || "";
-    const score = getDriverScore(driver);
+    const score = driver.ai_score ?? getDriverScore(driver);
 
     return `
       <article class="driver-card">
@@ -175,7 +176,7 @@ function renderDrivers() {
 }
 
 function openDriverModal(driver) {
-  const score = getDriverScore(driver);
+  const score = driver.ai_score ?? getDriverScore(driver);
 
   modalTitle.textContent = driver.full_name || "Chofer sin nombre";
   modalSubtitle.textContent = driver.email || driver.user_id || "";
@@ -184,7 +185,7 @@ function openDriverModal(driver) {
     <div class="summary-grid">
       <div><strong>user_id:</strong><br>${escapeHtml(driver.user_id || "-")}</div>
       <div><strong>Teléfono:</strong><br>${escapeHtml(driver.phone || "-")}</div>
-      <div><strong>Onboarding:</strong><br>${escapeHtml(driver.onboarding_status || "-")}</div>
+      <div><strong>Onboarding:</strong><br>${escapeHtml(driver.review_status || "-")}</div>
       <div><strong>Activación:</strong><br>${escapeHtml(driver.activation_status || "-")}</div>
       <div><strong>Documentos aprobados:</strong><br>${driver.documents_approved ? "Sí" : "No"}</div>
       <div><strong>Revisado:</strong><br>${escapeHtml(driver.reviewed_at || "-")}</div>
@@ -269,30 +270,43 @@ async function loadDrivers() {
 
     const { data, error } = await supabaseAdminService.client
       .from("driver_profiles")
-      .select(`
-        user_id,
-        full_name,
-        email,
-        phone,
-        onboarding_status,
-        activation_status,
-        documents_approved,
-        review_notes,
-        created_at,
-        reviewed_at,
-        dni_front_url,
-        dni_back_url,
-        license_url,
-        license_front_url,
-        selfie_url,
-        document_front_url,
-        document_back_url,
-        lat,
-        lng,
-        last_lat,
-        last_lng
-      `)
-      .order("created_at", { ascending: false });
+.select(`
+  user_id,
+  full_name,
+  email,
+  phone,
+
+  review_status,
+  is_blocked,
+  blocked_reason,
+
+  onboarding_status,
+  activation_status,
+
+  documents_approved,
+  profile_completed,
+
+  ai_score,
+  ai_score_label,
+
+  dni_front_url,
+  dni_back_url,
+  license_front_url,
+  license_back_url,
+  vehicle_insurance_url,
+  vehicle_registration_url,
+  selfie_url,
+
+  last_lat,
+  last_lng,
+  last_location_at,
+
+  review_notes,
+  reviewed_at,
+
+  created_at
+`)
+  .order("created_at", { ascending: false });
 
     if (error) throw error;
 
