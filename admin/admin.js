@@ -430,11 +430,9 @@ function createDriverCard(driver) {
 
   return `
     <article class="driver-card premium-card" data-driver-card data-driver-id="${driverId}">
-      <div class="swipe-bg swipe-bg-left">
-        <span>Rechazar</span>
-      </div>
-      <div class="swipe-bg swipe-bg-right">
-        <span>Aprobar</span>
+<div class="swipe-bg swipe-bg-left"></div>
+<div class="swipe-bg swipe-bg-right"></div>
+<span>Aprobar</span>
       </div>
 
       <div class="driver-card-surface">
