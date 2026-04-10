@@ -751,7 +751,29 @@ function focusCordoba() {
 function fitDrivers() {
   syncMap(filterDrivers(allDrivers));
 }
+function initAdaptiveTheme() {
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
 
+  const applyTheme = () => {
+    const saved = localStorage.getItem("mimi-admin-theme");
+    const theme = saved || (media.matches ? "dark" : "light");
+
+    document.documentElement.setAttribute("data-theme", theme);
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute("content", theme === "dark" ? "#0b1220" : "#f5f7fb");
+    }
+  };
+
+  applyTheme();
+
+  if (typeof media.addEventListener === "function") {
+    media.addEventListener("change", applyTheme);
+  } else if (typeof media.addListener === "function") {
+    media.addListener(applyTheme);
+  }
+}
 async function bootstrap() {
   if (isBootstrapped) return;
   isBootstrapped = true;
@@ -1113,4 +1135,5 @@ window.addEventListener("resize", () => {
 });
 
 setFilterButtonState(currentFilter);
+initAdaptiveTheme();
 bootstrap();
