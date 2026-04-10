@@ -2554,14 +2554,69 @@ document.addEventListener('touchstart', (e) => {
     cerrarPanelNotificaciones();
   }
 }, { passive: true });
+const processedSupportMessageIds = new Set();
+
+function markSupportMessageProcessed(messageId) {
+  const id = String(messageId || "").trim();
+  if (!id) return false;
+
+  if (processedSupportMessageIds.has(id)) {
+    return true;
+  }
+
+  processedSupportMessageIds.add(id);
+
+  if (processedSupportMessageIds.size > 300) {
+    const first = processedSupportMessageIds.values().next().value;
+    if (first) processedSupportMessageIds.delete(first);
+  }
+
+  return false;
+}
+
+window.handleSupportPushForeground = function ({ messageId, title, body }) {
+  if (messageId && markSupportMessageProcessed(messageId)) {
+    return;
+  }
+
+  notif.show(
+    title || "Soporte",
+    body || "Tenés una nueva respuesta de soporte.",
+    "success",
+    4000
+  );
+
+  historial = [
+    {
+      id: `support_push_${messageId || Date.now()}`,
+      estado: "SOPORTE",
+      texto: body || "Soporte respondió tu consulta.",
+      fecha: new Date().toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      }),
+      read: false
+    },
+    ...historial
+  ].slice(0, MAX_NOTIFICATIONS);
+
+  unreadCount += 1;
+  renderizarCentroNotificaciones();
+  guardarNotificacionesEnStorage();
+  actualizarBadgeNotificaciones();
+};  
 let currentSupportTicketId = null;
 let currentSupportChannel = null;
 let currentSupportMessagesLoaded = false;
+  
 document.addEventListener('DOMContentLoaded', async () => {
   cargarNotificacionesDesdeStorage();
   renderizarCentroNotificaciones();
   await restaurarViajeActivoCliente();
   await subscribeSupportRealtimeForUser();
+    if (window.initSupportPushFCM) {
+    await window.initSupportPushFCM();
+  }
 // ==========================================
 // SOPORTE CHAT SHEET
 // ==========================================
@@ -2753,23 +2808,32 @@ async function subscribeSupportRealtimeForUser() {
             appendSupportMessage(msg.mensaje, type, msg.id || null);
           }
 
-          if (senderRole === "admin") {
-            notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 4000);
+if (senderRole === "admin") {
+  if (msg.id && markSupportMessageProcessed(msg.id)) {
+    return;
+  }
 
-            historial = [
-              {
-                id: `support_${msg.id}`,
-                estado: "SOPORTE",
-                texto: "Soporte respondió tu consulta.",
-                fecha: new Date().toLocaleTimeString("es-AR", {
-                  hour: "2-digit",
-                  minute: "2-digit"
-                }),
-                read: false
-              },
-              ...historial
-            ].slice(0, MAX_NOTIFICATIONS);
+  notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 4000);
 
+  historial = [
+    {
+      id: `support_${msg.id}`,
+      estado: "SOPORTE",
+      texto: "Soporte respondió tu consulta.",
+      fecha: new Date().toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit"
+      }),
+      read: false
+    },
+    ...historial
+  ].slice(0, MAX_NOTIFICATIONS);
+
+  unreadCount += 1;
+  renderizarCentroNotificaciones();
+  guardarNotificacionesEnStorage();
+  actualizarBadgeNotificaciones();
+}
             unreadCount += 1;
             renderizarCentroNotificaciones();
             guardarNotificacionesEnStorage();
