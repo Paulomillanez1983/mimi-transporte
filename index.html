@@ -2552,104 +2552,228 @@ document.addEventListener('touchstart', (e) => {
     cerrarPanelNotificaciones();
   }
 }, { passive: true });
-
+let currentSupportTicketId = null;
+let currentSupportChannel = null;
+let currentSupportMessagesLoaded = false;
 document.addEventListener('DOMContentLoaded', async () => {
   cargarNotificacionesDesdeStorage();
   renderizarCentroNotificaciones();
   await restaurarViajeActivoCliente();
 
-  // ==========================================
-  // SOPORTE CHAT SHEET
-  // ==========================================
-  const supportBtn = document.getElementById("supportBtn");
-  const supportSheet = document.getElementById("supportSheet");
-  const supportSheetOverlay = document.getElementById("supportSheetOverlay");
-  const supportSheetClose = document.getElementById("supportSheetClose");
-  const supportMessageInput = document.getElementById("supportMessageInput");
-  const supportSendBtn = document.getElementById("supportSendBtn");
-  const supportChatBody = document.getElementById("supportChatBody");
+// ==========================================
+// SOPORTE CHAT SHEET
+// ==========================================
+const supportBtn = document.getElementById("supportBtn");
+const supportSheet = document.getElementById("supportSheet");
+const supportSheetOverlay = document.getElementById("supportSheetOverlay");
+const supportSheetClose = document.getElementById("supportSheetClose");
+const supportMessageInput = document.getElementById("supportMessageInput");
+const supportSendBtn = document.getElementById("supportSendBtn");
+const supportChatBody = document.getElementById("supportChatBody");
 
-  function openSupportSheet() {
-    if (!supportSheet || !supportSheetOverlay) return;
+function openSupportSheet() {
+  if (!supportSheet || !supportSheetOverlay) return;
 
-    supportSheet.hidden = false;
-    supportSheetOverlay.hidden = false;
+  supportSheet.hidden = false;
+  supportSheetOverlay.hidden = false;
 
-    requestAnimationFrame(() => {
-      supportSheet.classList.add("is-open");
-      supportSheetOverlay.classList.add("is-open");
-      supportSheet.setAttribute("aria-hidden", "false");
-    });
-
-    setTimeout(() => {
-      supportMessageInput?.focus();
-    }, 220);
-
-    document.body.style.overflow = "hidden";
-  }
-
-  function closeSupportSheet() {
-    if (!supportSheet || !supportSheetOverlay) return;
-
-    supportSheet.classList.remove("is-open");
-    supportSheetOverlay.classList.remove("is-open");
-    supportSheet.setAttribute("aria-hidden", "true");
-
-    setTimeout(() => {
-      if (!supportSheet.classList.contains("is-open")) {
-        supportSheet.hidden = true;
-        supportSheetOverlay.hidden = true;
-      }
-    }, 280);
-
-    document.body.style.overflow = "";
-  }
-
-  function appendSupportMessage(text, type = "user") {
-    if (!supportChatBody || !text) return;
-
-    const row = document.createElement("div");
-    row.className = `support-msg support-msg-${type}`;
-
-    const bubble = document.createElement("div");
-    bubble.className = "support-bubble";
-    bubble.textContent = text;
-
-    row.appendChild(bubble);
-    supportChatBody.appendChild(row);
-    supportChatBody.scrollTop = supportChatBody.scrollHeight;
-  }
-
-  supportBtn?.addEventListener("click", async () => {
-    try {
-      const session = await obtenerSesionCliente(true);
-
-      if (!session?.access_token || !session?.user) {
-        notif.show(
-          "Ingresá primero",
-          "Necesitás iniciar sesión para contactar soporte.",
-          "warning"
-        );
-        return;
-      }
-
-      openSupportSheet();
-    } catch (err) {
-      console.error("[supportBtn] error:", err);
-      notif.show("Error", "No se pudo abrir soporte", "error");
-    }
+  requestAnimationFrame(() => {
+    supportSheet.classList.add("is-open");
+    supportSheetOverlay.classList.add("is-open");
+    supportSheet.setAttribute("aria-hidden", "false");
   });
 
-  supportSheetClose?.addEventListener("click", closeSupportSheet);
-  supportSheetOverlay?.addEventListener("click", closeSupportSheet);
+  setTimeout(() => {
+    supportMessageInput?.focus();
+  }, 220);
 
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && supportSheet?.classList.contains("is-open")) {
-      closeSupportSheet();
+  document.body.style.overflow = "hidden";
+}
+
+function closeSupportSheet() {
+  if (!supportSheet || !supportSheetOverlay) return;
+
+  supportSheet.classList.remove("is-open");
+  supportSheetOverlay.classList.remove("is-open");
+  supportSheet.setAttribute("aria-hidden", "true");
+
+  cleanupSupportRealtime();
+
+  setTimeout(() => {
+    if (!supportSheet.classList.contains("is-open")) {
+      supportSheet.hidden = true;
+      supportSheetOverlay.hidden = true;
     }
-  });
+  }, 280);
 
-supportSendBtn?.addEventListener("click", async () => {
+  document.body.style.overflow = "";
+}
+function appendSupportMessage(text, type = "user", messageId = null) {
+  if (!supportChatBody || !text) return;
+  if (messageId && supportChatBody.querySelector(`[data-support-message-id="${messageId}"]`)) {
+    return;
+  }
+
+  const row = document.createElement("div");
+  row.className = `support-msg support-msg-${type}`;
+  if (messageId) {
+    row.setAttribute("data-support-message-id", messageId);
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = "support-bubble";
+  bubble.textContent = text;
+
+  row.appendChild(bubble);
+  supportChatBody.appendChild(row);
+  supportChatBody.scrollTop = supportChatBody.scrollHeight;
+}
+
+function renderSupportMessages(messages = []) {
+  if (!supportChatBody) return;
+
+  supportChatBody.innerHTML = `
+    <div class="support-msg support-msg-agent">
+      <div class="support-bubble">
+        Hola. Soy soporte de MIMICAR. Escribinos tu consulta y la recibimos con los datos de tu cuenta.
+      </div>
+    </div>
+  `;
+
+  messages.forEach((msg) => {
+    const senderRole = String(msg?.sender_role || "").toLowerCase();
+    const type = senderRole === "admin" ? "agent" : "user";
+    appendSupportMessage(msg?.mensaje || "", type, msg?.id || null);
+  });
+}
+
+async function loadOrCreateSupportTicketContext() {
+  const session = await obtenerSesionCliente(true);
+
+  if (!session?.access_token || !session?.user) {
+    throw new Error("No hay sesión activa");
+  }
+
+  const userId = session.user.id;
+
+  const { data: existingTickets, error: ticketLookupError } = await window.supabase
+    .from("soporte_tickets")
+    .select("id, estado, last_message_at, user_id")
+    .eq("user_id", userId)
+    .in("estado", ["abierto", "en_proceso", "esperando_usuario"])
+    .order("last_message_at", { ascending: false })
+    .limit(1);
+
+  if (ticketLookupError) {
+    throw new Error(ticketLookupError.message || "No se pudo consultar soporte_tickets");
+  }
+
+  const existingTicket = Array.isArray(existingTickets) ? existingTickets[0] : null;
+  currentSupportTicketId = existingTicket?.id || null;
+
+  if (!currentSupportTicketId) {
+    renderSupportMessages([]);
+    currentSupportMessagesLoaded = true;
+    return { session, ticketId: null };
+  }
+
+  const { data: messages, error: messagesError } = await window.supabase
+    .from("soporte_mensajes")
+    .select("id, sender_role, mensaje, created_at")
+    .eq("ticket_id", currentSupportTicketId)
+    .order("created_at", { ascending: true });
+
+  if (messagesError) {
+    throw new Error(messagesError.message || "No se pudieron cargar los mensajes");
+  }
+
+  renderSupportMessages(Array.isArray(messages) ? messages : []);
+  currentSupportMessagesLoaded = true;
+
+  subscribeSupportRealtime(currentSupportTicketId);
+
+  return { session, ticketId: currentSupportTicketId };
+}
+
+function cleanupSupportRealtime() {
+  try {
+    if (currentSupportChannel && window.sbRealtime) {
+      window.sbRealtime.removeChannel(currentSupportChannel);
+    }
+  } catch (err) {
+    console.warn("[support] no se pudo remover canal anterior", err);
+  } finally {
+    currentSupportChannel = null;
+  }
+}
+
+function subscribeSupportRealtime(ticketId) {
+  if (!ticketId || !window.sbRealtime) return;
+
+  cleanupSupportRealtime();
+
+  currentSupportChannel = window.sbRealtime
+    .channel(`support-ticket-${ticketId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "soporte_mensajes",
+        filter: `ticket_id=eq.${ticketId}`
+      },
+      (payload) => {
+        try {
+          const msg = payload?.new;
+          if (!msg?.mensaje) return;
+
+          const senderRole = String(msg.sender_role || "").toLowerCase();
+          const type = senderRole === "admin" ? "agent" : "user";
+
+          appendSupportMessage(msg.mensaje, type, msg.id || null);
+
+          if (senderRole === "admin") {
+            notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 3500);
+          }
+        } catch (err) {
+          console.error("[support realtime] error", err);
+        }
+      }
+    )
+    .subscribe();
+}
+
+supportBtn?.addEventListener("click", async () => {
+  try {
+    const session = await obtenerSesionCliente(true);
+
+    if (!session?.access_token || !session?.user) {
+      notif.show(
+        "Ingresá primero",
+        "Necesitás iniciar sesión para contactar soporte.",
+        "warning"
+      );
+      return;
+    }
+
+    openSupportSheet();
+    await loadOrCreateSupportTicketContext();
+  } catch (err) {
+    console.error("[supportBtn] error:", err);
+    notif.show("Error", err?.message || "No se pudo abrir soporte", "error");
+  }
+});
+
+supportSheetClose?.addEventListener("click", closeSupportSheet);
+supportSheetOverlay?.addEventListener("click", closeSupportSheet);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && supportSheet?.classList.contains("is-open")) {
+    closeSupportSheet();
+  }
+});
+
+ supportSendBtn?.addEventListener("click", async () => {
   try {
     const mensaje = supportMessageInput?.value?.trim();
     if (!mensaje) {
@@ -2686,92 +2810,92 @@ supportSendBtn?.addEventListener("click", async () => {
         ? `Consulta sobre viaje ${viajeId}`
         : "Consulta general desde app cliente";
 
-    // 1) Crear ticket
-const { data: ticket, error: ticketError } = await window.supabaseInsert(
-  "soporte_tickets",
-  {
-    created_by: userId,
-    rol_origen: "client",
-    user_id: userId,
-    asunto,
-    canal: "in_app",
-    categoria: viajeId ? "viaje" : "general",
-    prioridad: "normal",
-    estado: "abierto",
-    ultimo_mensaje: mensaje,
-    last_message_at: new Date().toISOString(),
-    metadata
-  },
-  session.access_token
-);
-    if (ticketError || !ticket?.id) {
-      console.error("[supportSendBtn] ticketError:", ticketError);
-      notif.show(
-        "Error",
-        ticketError?.message || "No se pudo crear el ticket de soporte",
-        "error"
+    if (!currentSupportTicketId) {
+      const { data: ticket, error: ticketError } = await window.supabaseInsert(
+        "soporte_tickets",
+        {
+          created_by: userId,
+          rol_origen: "client",
+          user_id: userId,
+          asunto,
+          canal: "in_app",
+          categoria: viajeId ? "viaje" : "general",
+          prioridad: "normal",
+          estado: "abierto",
+          ultimo_mensaje: mensaje,
+          last_message_at: new Date().toISOString(),
+          metadata
+        },
+        session.access_token
       );
-      return;
+
+      if (ticketError || !ticket?.id) {
+        console.error("[supportSendBtn] ticketError:", ticketError);
+        notif.show(
+          "Error",
+          ticketError?.message || "No se pudo crear el ticket de soporte",
+          "error"
+        );
+        return;
+      }
+
+      currentSupportTicketId = ticket.id;
+      subscribeSupportRealtime(currentSupportTicketId);
+    } else {
+      const { error: ticketUpdateError } = await window.supabaseUpdate(
+        "soporte_tickets",
+        "id",
+        currentSupportTicketId,
+        {
+          ultimo_mensaje: mensaje,
+          last_message_at: new Date().toISOString(),
+          estado: "abierto"
+        }
+      );
+
+      if (ticketUpdateError) {
+        console.warn("[supportSendBtn] ticketUpdateError:", ticketUpdateError);
+      }
     }
 
-    // 2) Crear mensaje
-const { data: soporteMensaje, error: mensajeError } = await window.supabaseInsert(
-  "soporte_mensajes",
-  {
-    ticket_id: ticket.id,
-    sender_user_id: userId,
-    sender_role: "client",
-    mensaje,
-    leido: false,
-    mensaje_tipo: "texto",
-    metadata
-  },
-  session.access_token
-);
+    const { data: soporteMensaje, error: mensajeError } = await window.supabaseInsert(
+      "soporte_mensajes",
+      {
+        ticket_id: currentSupportTicketId,
+        sender_user_id: userId,
+        sender_role: "client",
+        mensaje,
+        leido: false,
+        mensaje_tipo: "texto",
+        metadata
+      },
+      session.access_token
+    );
+
     if (mensajeError || !soporteMensaje?.id) {
       console.error("[supportSendBtn] mensajeError:", mensajeError);
       notif.show(
         "Error",
-        mensajeError?.message || "Se creó el ticket pero no se pudo guardar el mensaje",
+        mensajeError?.message || "No se pudo guardar el mensaje",
         "error"
       );
       return;
     }
 
-        appendSupportMessage(mensaje, "user");
-        supportMessageInput.value = "";
+    appendSupportMessage(mensaje, "user", soporteMensaje.id);
+    supportMessageInput.value = "";
 
-        notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
+    notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
+  } catch (err) {
+    console.error("[supportSendBtn] error:", err);
+    notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
+  } finally {
+    supportSendBtn.disabled = false;
+  }
+});
 
-        console.log("SOPORTE_CHAT_OK:", {
-           ticket_id: ticket.id,
-           mensaje_id: soporteMensaje.id,
-           user: userId,
-           email,
-           mensaje,
-           viaje_id: viajeId,
-           estado_viaje: estadoViaje,
-           origen,
-           destino
-         });
+}); // <- CERRAR DOMContentLoaded ACÁ
 
-        setTimeout(() => {
-          appendSupportMessage(
-            "Recibimos tu mensaje. En breve te vamos a responder.",
-            "agent"
-          );
-        }, 500);
-
-      } catch (err) {
-        console.error("[supportSendBtn] error:", err);
-        notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
-      } finally {
-        supportSendBtn.disabled = false;
-       }
-     });
-  }); // <- cierra document.addEventListener('DOMContentLoaded', async () => { ... })
-
-  
 // ==========================================
 // UI LOADING
 // ==========================================
