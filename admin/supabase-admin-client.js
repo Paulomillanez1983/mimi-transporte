@@ -15,13 +15,14 @@ class SupabaseAdminService {
 
     this.initPromise = (async () => {
       try {
-        if (!window.supabase?.createClient) {
+        if (!window.supabase || typeof window.supabase.createClient !== "function") {
           throw new Error("La librería de Supabase no está cargada.");
         }
 
         if (
           !SUPABASE_URL ||
           !SUPABASE_ANON_KEY ||
+          SUPABASE_ANON_KEY === "TU_ANON_KEY" ||
           SUPABASE_ANON_KEY === "TU_ANON_KEY_REAL"
         ) {
           throw new Error("Falta configurar SUPABASE_URL o SUPABASE_ANON_KEY.");
@@ -65,9 +66,8 @@ class SupabaseAdminService {
     return this.initPromise;
   }
 
-  getRedirectUrl(path = "/admin/admin-panel.html") {
-    const origin = window.location.origin;
-    return `${origin}${path}`;
+  getRedirectUrl(path = "./admin-panel.html") {
+    return new URL(path, window.location.href).toString();
   }
 
   async getSession() {
@@ -89,11 +89,13 @@ class SupabaseAdminService {
       throw new Error("No pudimos inicializar Supabase.");
     }
 
-    const redirectTo = this.getRedirectUrl("/admin/admin-panel.html");
+    const redirectTo = this.getRedirectUrl("./admin-panel.html");
 
     const { error } = await this.client.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo }
+      options: {
+        redirectTo
+      }
     });
 
     if (error) {
