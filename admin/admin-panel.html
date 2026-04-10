@@ -4,151 +4,34 @@
   <meta charset="UTF-8" />
   <title>MIMI Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <link rel="stylesheet" href="admin.css" />
+  <link rel="stylesheet" href="../css/admin.css" />
 </head>
 <body>
 
 <header class="header">
   <div class="left">
-    <img src="../assets/icons/logo-mimi.png" class="logo-small" />
+    <img src="../assets/icons/logo-mimi.png" class="logo-small" alt="MIMI" />
     <h1>MIMI Admin</h1>
   </div>
 
   <div class="right">
-    <img id="avatar" class="avatar" />
+    <img id="avatar" class="avatar" alt="Avatar" />
     <span id="email"></span>
-    <button id="logout">Salir</button>
+    <button id="logout" type="button">Salir</button>
   </div>
 </header>
 
 <main>
   <div class="toolbar">
     <h2>Choferes</h2>
-    <button onclick="loadDrivers()">🔄 Recargar</button>
+    <button id="reloadBtn" type="button">🔄 Recargar</button>
   </div>
 
   <div id="drivers" class="drivers"></div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-const supabase = window.supabase.createClient(
-  "https://xrphpqmutvadjrucqicn.supabase.co",
-  "TU_ANON_KEY"
-);
-
-// 🔐 VALIDAR SESIÓN + ADMIN
-(async () => {
-  const { data, error } = await supabase.auth.getSession();
-
-  if (error || !data.session) {
-    window.location.href = "admin-login.html";
-    return;
-  }
-
-  const user = data.session.user;
-
-  // UI user
-  document.getElementById("email").innerText = user.email;
-  document.getElementById("avatar").src =
-    user.user_metadata?.avatar_url || "";
-
-  // validar admin
-  const { data: admin } = await supabase
-    .from("admin_users")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("active", true)
-    .maybeSingle();
-
-  if (!admin) {
-    alert("No autorizado");
-    await supabase.auth.signOut();
-    window.location.href = "admin-login.html";
-    return;
-  }
-
-  loadDrivers();
-})();
-
-// 🚗 CARGAR CHOFERES
-async function loadDrivers() {
-  const { data } = await supabase
-    .from("driver_profiles")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  const container = document.getElementById("drivers");
-  container.innerHTML = "";
-
-  data.forEach(driver => {
-    const div = document.createElement("div");
-    div.className = "driver-card";
-
-    div.innerHTML = `
-      <div class="driver-header">
-        <strong>${driver.user_id}</strong>
-        <span class="status ${driver.onboarding_status}">
-          ${driver.onboarding_status}
-        </span>
-      </div>
-
-      <textarea id="note-${driver.user_id}" placeholder="Notas..."></textarea>
-
-      <div class="actions">
-        <button onclick="review('${driver.user_id}','approve')">✅ Aprobar</button>
-        <button onclick="review('${driver.user_id}','reject')">❌ Rechazar</button>
-        <button onclick="review('${driver.user_id}','block')">⛔ Bloquear</button>
-      </div>
-    `;
-
-    container.appendChild(div);
-  });
-}
-
-// 🔥 LLAMAR A TU EDGE FUNCTION
-async function review(driverId, action) {
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
-
-  const note = document.getElementById(`note-${driverId}`).value;
-
-  const res = await fetch(
-    "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/admin-review-driver",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + session.access_token
-      },
-      body: JSON.stringify({
-        driver_user_id: driverId,
-        action,
-        review_notes: note
-      })
-    }
-  );
-
-  const data = await res.json();
-
-  if (!data.ok) {
-    alert("Error: " + data.error);
-    return;
-  }
-
-  alert("✔ Acción realizada");
-  loadDrivers();
-}
-
-// 🚪 LOGOUT
-document.getElementById("logout").onclick = async () => {
-  await supabase.auth.signOut();
-  window.location.href = "admin-login.html";
-};
-</script>
+<script type="module" src="../js/admin.js"></script>
 
 </body>
 </html>
