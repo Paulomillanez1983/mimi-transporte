@@ -649,6 +649,9 @@ function closeDriverModal() {
 function initMap() {
   if (map || !window.maplibregl) return;
 
+  const mapEl = document.getElementById("driversMap");
+  if (!mapEl) return;
+
   map = new window.maplibregl.Map({
     container: "driversMap",
     style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
@@ -660,6 +663,9 @@ function initMap() {
     fadeDuration: 0
   });
 
+  // solo para debug temporal
+  window.map = map;
+
   if (window.innerWidth <= 820) {
     map.scrollZoom.disable();
     map.boxZoom.disable();
@@ -669,8 +675,10 @@ function initMap() {
   map.addControl(new window.maplibregl.NavigationControl(), "top-right");
 
   const forcePaint = () => {
-    map?.resize();
-    map?.triggerRepaint?.();
+    requestAnimationFrame(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    });
 
     window.setTimeout(() => {
       map?.resize();
@@ -681,10 +689,27 @@ function initMap() {
       map?.resize();
       map?.triggerRepaint?.();
     }, 300);
+
+    window.setTimeout(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    }, 600);
   };
 
-  map.on("load", forcePaint);
+  map.on("load", () => {
+    map.jumpTo({
+      center: CORDOBA_CENTER,
+      zoom: CORDOBA_ZOOM
+    });
+
+    forcePaint();
+  });
+
   map.on("idle", forcePaint);
+
+  map.once("render", () => {
+    forcePaint();
+  });
 }
 function buildMarkerElement(driver) {
   const el = document.createElement("button");
@@ -780,7 +805,6 @@ function syncMap(drivers) {
 
   forcePaint();
 }
-
 function focusCordoba() {
   if (!map) return;
   map.easeTo({
