@@ -725,22 +725,39 @@ function syncMap(drivers) {
       : "Sin coordenadas aún";
   }
 
-  if (!locatedDrivers.length) {
-    map.easeTo({
-      center: CORDOBA_CENTER,
-      zoom: CORDOBA_ZOOM,
-      duration: 700
+  const forcePaint = () => {
+    requestAnimationFrame(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
     });
+
+    window.setTimeout(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    }, 120);
+
+    window.setTimeout(() => {
+      map?.resize();
+      map?.triggerRepaint?.();
+    }, 320);
+  };
+
+  if (!locatedDrivers.length) {
+    map.jumpTo({
+      center: CORDOBA_CENTER,
+      zoom: CORDOBA_ZOOM
+    });
+    forcePaint();
     return;
   }
 
   if (locatedDrivers.length === 1) {
     const d = locatedDrivers[0];
-    map.easeTo({
+    map.jumpTo({
       center: [Number(d.last_lng), Number(d.last_lat)],
-      zoom: 13.5,
-      duration: 800
+      zoom: 13.5
     });
+    forcePaint();
     return;
   }
 
@@ -752,9 +769,12 @@ function syncMap(drivers) {
   map.fitBounds(bounds, {
     padding: 60,
     maxZoom: 14,
-    duration: 800
+    duration: 0
   });
+
+  forcePaint();
 }
+
 function focusCordoba() {
   if (!map) return;
   map.easeTo({
