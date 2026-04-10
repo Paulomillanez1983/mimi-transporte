@@ -546,10 +546,9 @@ button:disabled,
 }
 
 #reloadBtn {
-  background: #fff;
-  color: #000;
+  background: var(--text);
+  color: var(--bg);
 }
-
 .btn-secondary,
 .filter-btn,
 .btn.secondary {
@@ -1357,9 +1356,9 @@ textarea {
   min-height: 110px;
   resize: vertical;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #101010;
-  color: #fff;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
   padding: 14px;
   outline: none;
   font-size: 16px;
@@ -1370,7 +1369,6 @@ textarea {
     box-shadow 0.2s ease,
     background 0.2s ease;
 }
-
 .review-note:focus,
 textarea:focus {
   border-color: rgba(59, 130, 246, 0.55);
@@ -1517,10 +1515,10 @@ textarea:focus {
 .icon-btn {
   min-width: 44px;
   min-height: 44px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--panel-3);
+  color: var(--text);
+  border: 1px solid var(--border);
 }
-
 /* =========================================================
    STATES
    ========================================================= */
