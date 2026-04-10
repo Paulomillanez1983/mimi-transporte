@@ -720,8 +720,8 @@ function openDriverModal(driver) {
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("modal-open");
-setupBottomSheet();
 modal.classList.toggle("is-bottom-sheet", window.innerWidth <= 820);
+setupBottomSheet();
   requestAnimationFrame(() => {
     modalDialog?.focus();
   });
@@ -732,9 +732,20 @@ function closeDriverModal() {
 
   modal.classList.add("hidden");
   modal.setAttribute("aria-hidden", "true");
+
+  modal.classList.remove("is-bottom-sheet", "is-dragging", "is-closing");
+
+  if (modalDialog) {
+    modalDialog.style.transform = "";
+    modalDialog.style.transition = "";
+  }
+
+  const backdrop = modal.querySelector(".modal-backdrop");
+  if (backdrop) backdrop.style.opacity = "";
+
   document.body.classList.remove("modal-open");
 
-  if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+  if (lastFocusedElement) {
     requestAnimationFrame(() => lastFocusedElement.focus());
   }
 }
@@ -746,65 +757,102 @@ function setupBottomSheet() {
 
   const isMobileSheet = () => window.innerWidth <= 820;
 
+  let activePointerId = null;
+  let startY = 0;
+  let currentY = 0;
+  let dragging = false;
+
+  const getHandle = () => modalDialog.querySelector(".modal-sheet-handle");
+
   const resetSheet = () => {
-    modalDialog.style.transition = "transform 0.22s ease";
+    modal.classList.remove("is-dragging", "is-closing");
+
+    modalDialog.style.transition = "transform 260ms cubic-bezier(0.22, 1, 0.36, 1)";
     modalDialog.style.transform = "translateY(0)";
-    window.setTimeout(() => {
+
+    const backdrop = modal.querySelector(".modal-backdrop");
+    if (backdrop) backdrop.style.opacity = "1";
+
+    setTimeout(() => {
       modalDialog.style.transition = "";
-    }, 220);
+    }, 260);
   };
 
-  const finishSheetGesture = () => {
-    if (!bottomSheetDragging) return;
-    bottomSheetDragging = false;
+  const closeSheet = () => {
+    modal.classList.add("is-closing");
 
-    const delta = Math.max(0, bottomSheetCurrentY - bottomSheetStartY);
+    const backdrop = modal.querySelector(".modal-backdrop");
 
-    if (delta > 110) {
-      modalDialog.style.transition = "transform 0.18s ease";
-      modalDialog.style.transform = "translateY(110%)";
-      if (navigator.vibrate) navigator.vibrate(12);
+    modalDialog.style.transition = "transform 180ms ease";
+    modalDialog.style.transform = "translateY(110%)";
 
-      window.setTimeout(() => {
-        closeDriverModal();
-        modalDialog.style.transition = "";
-        modalDialog.style.transform = "";
-      }, 180);
-      return;
+    if (backdrop) backdrop.style.opacity = "0";
+
+    if (navigator.vibrate) navigator.vibrate(12);
+
+    setTimeout(() => {
+      closeDriverModal();
+      modal.classList.remove("is-closing");
+      modalDialog.style.transition = "";
+      modalDialog.style.transform = "";
+    }, 180);
+  };
+
+  const finish = () => {
+    if (!dragging) return;
+
+    dragging = false;
+    modal.classList.remove("is-dragging");
+
+    const delta = Math.max(0, currentY - startY);
+
+    if (delta > 95) {
+      closeSheet();
+    } else {
+      resetSheet();
     }
-
-    resetSheet();
   };
 
-  modalDialog.addEventListener("pointerdown", (event) => {
+  const start = (e) => {
     if (!isMobileSheet()) return;
-    if (event.target.closest(".summary-grid a, .doc-card a, button, textarea, input")) return;
 
-    bottomSheetPointerId = event.pointerId;
-    bottomSheetStartY = event.clientY;
-    bottomSheetCurrentY = event.clientY;
-    bottomSheetDragging = true;
+    if (!e.target.closest(".modal-sheet-handle")) return;
+
+    activePointerId = e.pointerId;
+    startY = e.clientY;
+    currentY = e.clientY;
+    dragging = true;
+
+    modal.classList.add("is-dragging");
     modalDialog.style.transition = "none";
+  };
 
-    if (typeof modalDialog.setPointerCapture === "function") {
-      try {
-        modalDialog.setPointerCapture(bottomSheetPointerId);
-      } catch (_) {}
+  const move = (e) => {
+    if (!dragging || e.pointerId !== activePointerId) return;
+
+    currentY = e.clientY;
+
+    const delta = Math.max(0, currentY - startY);
+    const clamped = Math.min(delta, 160);
+
+    modalDialog.style.transform = `translateY(${clamped}px)`;
+
+    const backdrop = modal.querySelector(".modal-backdrop");
+    if (backdrop) {
+      backdrop.style.opacity = String(1 - clamped / 200);
     }
-  });
+  };
 
-  modalDialog.addEventListener("pointermove", (event) => {
-    if (!bottomSheetDragging || event.pointerId !== bottomSheetPointerId) return;
+  const handle = getHandle();
+  if (!handle) return;
 
-    bottomSheetCurrentY = event.clientY;
-    const delta = Math.max(0, bottomSheetCurrentY - bottomSheetStartY);
-    modalDialog.style.transform = `translateY(${Math.min(delta, 160)}px)`;
-  });
-
-  modalDialog.addEventListener("pointerup", finishSheetGesture);
-  modalDialog.addEventListener("pointercancel", finishSheetGesture);
-  modalDialog.addEventListener("lostpointercapture", finishSheetGesture);
+  handle.addEventListener("pointerdown", start);
+  handle.addEventListener("pointermove", move);
+  handle.addEventListener("pointerup", finish);
+  handle.addEventListener("pointercancel", finish);
 }
+
+
 function initMap() {
   if (map || !window.maplibregl) return;
 
