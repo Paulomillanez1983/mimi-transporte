@@ -222,13 +222,13 @@ function sendSupportReply() {
 
   if (!current || !text) return;
 
-  current.messages.push({
-    id: `admin_${Date.now()}`,
+await supabase
+  .from("support_messages")
+  .insert({
+    conversation_id: current.id,
     sender_role: "admin",
-    text,
-    created_at: new Date().toISOString()
+    message: text
   });
-
   current.status = "PENDING";
   current.updated_at = new Date().toISOString();
   els.reply.value = "";
