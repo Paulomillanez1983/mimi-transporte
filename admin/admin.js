@@ -1738,13 +1738,35 @@ citySelector?.addEventListener("change", (event) => {
   const value = event.target?.value || "drivers";
   animateToPreset(value);
 });
+function handleCloseModalInteraction(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  closeDriverModal();
+}
 
-closeModalBtn?.addEventListener("click", closeDriverModal);
+closeModalBtn?.addEventListener("click", handleCloseModalInteraction);
+closeModalBtn?.addEventListener("touchend", handleCloseModalInteraction, { passive: false });
+closeModalBtn?.addEventListener("pointerup", handleCloseModalInteraction);
 
 modal?.addEventListener("click", (event) => {
   const close = event.target.closest("[data-close-modal='true']");
-  if (close) closeDriverModal();
+  if (close) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeDriverModal();
+  }
 });
+
+modal?.addEventListener("touchend", (event) => {
+  const close = event.target.closest("[data-close-modal='true']");
+  if (close) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeDriverModal();
+  }
+}, { passive: false });
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
