@@ -5863,141 +5863,180 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// ==========================================
-// MIMI NEXT LEVEL UI
-// Seguro: no rompe la lógica existente
-// ==========================================
+  // ==========================================
+  // MIMI NEXT LEVEL UI
+  // Seguro: no rompe la lógica existente
+  // ==========================================
 
-function initNextLevelUI() {
-  initHeaderScrollFX();
-  initPageTransitionsFX();
-  initAuthLoadingFX();
-  initButtonPulseFX();
-  replayVehicleIntroIfNeeded();
-}
+  function initNextLevelUI() {
+    initHeaderScrollFX();
+    initPageTransitionsFX();
+    initAuthLoadingFX();
+    initButtonPulseFX();
+    replayVehicleIntroIfNeeded();
+  }
 
-function initHeaderScrollFX() {
-  const header = document.querySelector('.header');
-  if (!header) return;
+  function initHeaderScrollFX() {
+    const header = document.querySelector('.header');
+    if (!header) return;
 
-  let ticking = false;
+    let ticking = false;
 
-  const updateHeader = () => {
-    const y = window.scrollY || window.pageYOffset || 0;
-    header.classList.toggle('header-scrolled', y > 20);
-    ticking = false;
-  };
+    const updateHeader = () => {
+      const y = window.scrollY || window.pageYOffset || 0;
+      header.classList.toggle('header-scrolled', y > 20);
+      ticking = false;
+    };
 
-  const onScroll = () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(updateHeader);
-  };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(updateHeader);
+    };
 
-  window.addEventListener('scroll', onScroll, { passive: true });
-  updateHeader();
-}
+    window.addEventListener('scroll', onScroll, { passive: true });
+    updateHeader();
+  }
 
-function initPageTransitionsFX() {
-  const triggerTransition = () => {
-    document.body.classList.add('page-transitioning');
-    clearTimeout(window.__mimiPageTransitionTimer);
-    window.__mimiPageTransitionTimer = setTimeout(() => {
-      document.body.classList.remove('page-transitioning');
-    }, 260);
-  };
+  function initPageTransitionsFX() {
+    const triggerTransition = () => {
+      document.body.classList.add('page-transitioning');
+      clearTimeout(window.__mimiPageTransitionTimer);
+      window.__mimiPageTransitionTimer = setTimeout(() => {
+        document.body.classList.remove('page-transitioning');
+      }, 260);
+    };
 
-  const ids = [
-    'btnCalcular',
-    'btnConfirmarViaje',
-    'btnCompartirRuta',
-    'btnReiniciarRuta',
-    'btnSwapRoute',
-    'btnAddStop'
-  ];
+    const ids = [
+      'btnCalcular',
+      'btnConfirmarViaje',
+      'btnCompartirRuta',
+      'btnReiniciarRuta',
+      'btnSwapRoute',
+      'btnAddStop'
+    ];
 
-  ids.forEach((id) => {
-    const el = document.getElementById(id);
-    el?.addEventListener('click', triggerTransition);
-  });
-}
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      el?.addEventListener('click', triggerTransition);
+    });
+  }
 
-function initAuthLoadingFX() {
-  const btnLogin = document.getElementById('btnLoginHeader');
-  const btnLogout = document.getElementById('btnLogoutHeader');
+  function initAuthLoadingFX() {
+    const btnLogin = document.getElementById('btnLoginHeader');
+    const btnLogout = document.getElementById('btnLogoutHeader');
 
-  btnLogin?.addEventListener('click', () => {
-    setHeaderAuthLoading(true);
-  });
+    btnLogin?.addEventListener('click', () => {
+      setHeaderAuthLoading(true);
+    });
 
-  btnLogout?.addEventListener('click', () => {
-    setHeaderAuthLoading(true);
-    setTimeout(() => setHeaderAuthLoading(false), 1200);
-  });
+    btnLogout?.addEventListener('click', () => {
+      setHeaderAuthLoading(true);
+      setTimeout(() => setHeaderAuthLoading(false), 1200);
+    });
 
-  window.addEventListener('pageshow', () => {
-    setTimeout(() => setHeaderAuthLoading(false), 500);
-  });
-}
+    window.addEventListener('pageshow', () => {
+      setTimeout(() => setHeaderAuthLoading(false), 500);
+    });
+  }
 
-function initButtonPulseFX() {
-  const btn = document.getElementById('btnCalcular');
-  if (!btn) return;
+  function initButtonPulseFX() {
+    const btn = document.getElementById('btnCalcular');
+    if (!btn) return;
 
-  const stopPulseWhileTyping = () => {
-    btn.style.animation = 'none';
-    clearTimeout(window.__mimiBtnPulseTimer);
-    window.__mimiBtnPulseTimer = setTimeout(() => {
-      btn.style.animation = '';
-    }, 1200);
-  };
+    const stopPulseWhileTyping = () => {
+      btn.style.animation = 'none';
+      clearTimeout(window.__mimiBtnPulseTimer);
+      window.__mimiBtnPulseTimer = setTimeout(() => {
+        btn.style.animation = '';
+      }, 1200);
+    };
 
-  ['inputOrigen', 'inputDestino'].forEach((id) => {
-    document.getElementById(id)?.addEventListener('input', stopPulseWhileTyping);
-  });
-}
+    ['inputOrigen', 'inputDestino'].forEach((id) => {
+      document.getElementById(id)?.addEventListener('input', stopPulseWhileTyping);
+    });
+  }
 
-function replayVehicleIntroIfNeeded() {
-  const jeep = document.querySelector('.vehicle-img');
-  if (!jeep) return;
+  function replayVehicleIntroIfNeeded() {
+    const jeep = document.querySelector('.vehicle-img');
+    if (!jeep) return;
 
-  jeep.addEventListener('load', () => {
-    jeep.style.animation = 'none';
-    void jeep.offsetWidth;
-    jeep.style.animation = 'mimiJeepIntro 900ms cubic-bezier(0.22, 1, 0.36, 1) both';
-  });
-}
+    jeep.addEventListener('load', () => {
+      jeep.style.animation = 'none';
+      void jeep.offsetWidth;
+      jeep.style.animation = 'mimiJeepIntro 900ms cubic-bezier(0.22, 1, 0.36, 1) both';
+    });
+  }
 
-// --------- WRAPPERS SEGUROS SOBRE TU LÓGICA EXISTENTE ---------
+  (function patchRenderSesionUI() {
+    if (typeof window.renderSesionUI !== 'function') return;
 
-(function patchRenderSesionUI() {
-  if (typeof window.renderSesionUI !== 'function') return;
+    const original = window.renderSesionUI;
+    window.renderSesionUI = function patchedRenderSesionUI(session) {
+      setHeaderAuthLoading(false);
+      original(session);
 
-  const original = window.renderSesionUI;
-  window.renderSesionUI = function patchedRenderSesionUI(session) {
-    setHeaderAuthLoading(false);
-    original(session);
+      const avatar = document.getElementById('userAvatar');
+      const box = document.getElementById('userSessionBox');
 
-    const avatar = document.getElementById('userAvatar');
-    const box = document.getElementById('userSessionBox');
+      if (session?.user && avatar && box) {
+        box.animate(
+          [
+            { opacity: 0, transform: 'translateY(6px) scale(0.98)' },
+            { opacity: 1, transform: 'translateY(0) scale(1)' }
+          ],
+          {
+            duration: 280,
+            easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            fill: 'both'
+          }
+        );
 
-    if (session?.user && avatar && box) {
-      box.animate(
+        avatar.animate(
+          [
+            { opacity: 0, transform: 'scale(0.86)' },
+            { opacity: 1, transform: 'scale(1)' }
+          ],
+          {
+            duration: 320,
+            easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+            fill: 'both'
+          }
+        );
+      }
+    };
+  })();
+
+  (function patchLoginConGoogleParaViaje() {
+    if (typeof window.loginConGoogleParaViaje !== 'function') return;
+
+    const original = window.loginConGoogleParaViaje;
+    window.loginConGoogleParaViaje = async function patchedLoginConGoogleParaViaje() {
+      try {
+        setHeaderAuthLoading(true);
+        return await original();
+      } catch (err) {
+        setHeaderAuthLoading(false);
+        throw err;
+      }
+    };
+  })();
+
+  (function patchSetSectionVisible() {
+    if (typeof window.setSectionVisible !== 'function') return;
+
+    const original = window.setSectionVisible;
+    window.setSectionVisible = function patchedSetSectionVisible(elementId, visible) {
+      original(elementId, visible);
+
+      if (!visible) return;
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      el.animate(
         [
-          { opacity: 0, transform: 'translateY(6px) scale(0.98)' },
+          { opacity: 0, transform: 'translateY(10px) scale(0.99)' },
           { opacity: 1, transform: 'translateY(0) scale(1)' }
-        ],
-        {
-          duration: 280,
-          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-          fill: 'both'
-        }
-      );
-
-      avatar.animate(
-        [
-          { opacity: 0, transform: 'scale(0.86)' },
-          { opacity: 1, transform: 'scale(1)' }
         ],
         {
           duration: 320,
@@ -6005,51 +6044,10 @@ function replayVehicleIntroIfNeeded() {
           fill: 'both'
         }
       );
-    }
-  };
-})();
+    };
+  })();
 
-(function patchLoginConGoogleParaViaje() {
-  if (typeof window.loginConGoogleParaViaje !== 'function') return;
-
-  const original = window.loginConGoogleParaViaje;
-  window.loginConGoogleParaViaje = async function patchedLoginConGoogleParaViaje() {
-    try {
-      setHeaderAuthLoading(true);
-      return await original();
-    } catch (err) {
-      setHeaderAuthLoading(false);
-      throw err;
-    }
-  };
-})();
-
-(function patchSetSectionVisible() {
-  if (typeof window.setSectionVisible !== 'function') return;
-
-  const original = window.setSectionVisible;
-  window.setSectionVisible = function patchedSetSectionVisible(elementId, visible) {
-    original(elementId, visible);
-
-    if (!visible) return;
-    const el = document.getElementById(elementId);
-    if (!el) return;
-
-    el.animate(
-      [
-        { opacity: 0, transform: 'translateY(10px) scale(0.99)' },
-        { opacity: 1, transform: 'translateY(0) scale(1)' }
-      ],
-      {
-        duration: 320,
-        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-        fill: 'both'
-      }
-    );
-  };
-})();
-
-document.addEventListener('DOMContentLoaded', initNextLevelUI);
+  document.addEventListener('DOMContentLoaded', initNextLevelUI);
 </script>
 </body>
 </html>
