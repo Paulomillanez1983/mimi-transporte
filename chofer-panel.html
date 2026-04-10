@@ -252,7 +252,6 @@
   const logoutBtn = document.getElementById("logoutBtn");
   const menuLogoutBtn = document.getElementById("menu-logout");
 
-  // 🔒 PROTECCIÓN DE ACCESO (ESTO ES LO IMPORTANTE)
   async function protectRoute() {
     try {
       await supabaseService.init();
@@ -265,14 +264,12 @@
         return;
       }
 
-      // 👇 opcional: validar usuario real
       const { data: userRes } = await supabaseService.client.auth.getUser();
 
       if (!userRes?.user) {
         window.location.replace("./login-chofer.html");
         return;
       }
-
     } catch (err) {
       console.error("[AUTH] Error:", err);
       window.location.replace("./login-chofer.html");
@@ -305,13 +302,17 @@
     }
   }
 
-  // 🚀 EJECUCIÓN
   await protectRoute();
   await initLogout();
+</script>
 
-<script type="module" src="js/driver-app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.catch(() => {});
+  }
+</script>
 
-<!-- MENU BACKDROP -->
+<script type="module" src="js/driver-app.js"></script><!-- MENU BACKDROP -->
 <div id="menu-backdrop"></div>
 
 <!-- SIDE MENU PRO -->
