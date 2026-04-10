@@ -434,18 +434,28 @@ window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
   }
 };
 
-window.supabaseInsert = async function(table, data) {
+window.supabaseInsert = async function(table, data, accessToken = null) {
   try {
     const body = Array.isArray(data) ? data : [data];
 
-    const result = await safeFetch(`${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}`, {
-      method: "POST",
-      headers: getPublicSupabaseHeaders({
-        "Content-Type": "application/json",
-        Prefer: "return=representation"
-      }),
-      body: JSON.stringify(body)
-    });
+    const headers = accessToken
+      ? getAuthSupabaseHeaders(accessToken, {
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        })
+      : getPublicSupabaseHeaders({
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        });
+
+    const result = await safeFetch(
+      `${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      }
+    );
 
     if (!result.response) {
       return {
@@ -477,7 +487,6 @@ window.supabaseInsert = async function(table, data) {
     };
   }
 };
-
 const geocodingCache = new Map();
 
 function setGeocodingCache(key, value) {
@@ -2678,20 +2687,23 @@ supportSendBtn?.addEventListener("click", async () => {
         : "Consulta general desde app cliente";
 
     // 1) Crear ticket
-    const { data: ticket, error: ticketError } = await window.supabaseInsert("soporte_tickets", {
-      created_by: userId,
-      rol_origen: "client",
-      user_id: userId,
-      asunto,
-      canal: "in_app",
-      categoria: viajeId ? "viaje" : "general",
-      prioridad: "normal",
-      estado: "abierto",
-      ultimo_mensaje: mensaje,
-      last_message_at: new Date().toISOString(),
-      metadata
-    });
-
+const { data: ticket, error: ticketError } = await window.supabaseInsert(
+  "soporte_tickets",
+  {
+    created_by: userId,
+    rol_origen: "client",
+    user_id: userId,
+    asunto,
+    canal: "in_app",
+    categoria: viajeId ? "viaje" : "general",
+    prioridad: "normal",
+    estado: "abierto",
+    ultimo_mensaje: mensaje,
+    last_message_at: new Date().toISOString(),
+    metadata
+  },
+  session.access_token
+);
     if (ticketError || !ticket?.id) {
       console.error("[supportSendBtn] ticketError:", ticketError);
       notif.show(
