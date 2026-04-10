@@ -250,6 +250,8 @@ body {
 
   /* Hereda el color principal */
   color: var(--text);
+  font-family: inherit;
+  background: transparent;
 
   /* Altura mínima del viewport */
   min-height: 100vh;
