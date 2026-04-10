@@ -539,3 +539,44 @@ button:disabled,
     height: 34px;
   }
 }
+.admin-login-card {
+  width: 100%;
+  max-width: 430px;
+}
+
+.login-subtitle {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.login-google-btn {
+  width: 100%;
+  min-height: 48px;
+  font-size: 15px;
+}
+
+.login-error {
+  min-height: 22px;
+  margin-top: 12px;
+  color: #fca5a5;
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+@media (max-width: 560px) {
+  .admin-login-card {
+    padding: 24px 18px;
+    border-radius: 20px;
+  }
+
+  .logo {
+    width: 104px;
+  }
+
+  .card h1 {
+    font-size: 24px;
+  }
+}
