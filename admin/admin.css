@@ -69,11 +69,11 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
 body {
   margin: 0;
   padding: 0;
@@ -81,7 +81,8 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   overflow-x: hidden;
-  overscroll-behavior-y: contain;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
   -webkit-overflow-scrolling: touch;
   text-rendering: optimizeLegibility;
 }
@@ -376,6 +377,8 @@ main {
   width: 100%;
   max-width: var(--content-max);
   margin: 0 auto;
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100dvh - var(--header-h));
   padding:
     22px
     max(18px, var(--safe-right))
@@ -1427,6 +1430,7 @@ textarea:focus {
 
 body.modal-open {
   overflow: hidden;
+  touch-action: none;
 }
 
 /* =========================================================
@@ -1731,4 +1735,20 @@ body.modal-open {
   color: #fff;
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+body:not(.modal-open) {
+  overflow-y: auto;
+}
+
+@media (max-width: 820px) {
+  html,
+  body {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .admin-main,
+  main {
+    overflow: visible;
+  }
 }
