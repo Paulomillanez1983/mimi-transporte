@@ -10,6 +10,12 @@ const CORDOBA_CENTER = [-64.1888, -31.4201];
 const CORDOBA_ZOOM = 11.7;
 const DRIVER_CHANNEL = "mimi-admin-driver-profiles-realtime";
 
+const LIVE_WINDOW_MINUTES = 10;
+const RELOAD_DEBOUNCE_MS = 450;
+const TOAST_DURATION_MS = 2600;
+const SWIPE_TRIGGER_PX = 110;
+const SWIPE_MAX_PX = 140;
+
 const driversContainer = document.getElementById("drivers");
 const logoutBtn = document.getElementById("logout");
 const reloadBtn = document.getElementById("reloadBtn");
@@ -30,9 +36,11 @@ const fitDriversBtn = document.getElementById("fitDriversBtn");
 const focusCordobaBtn = document.getElementById("focusCordobaBtn");
 const priorityQueue = document.getElementById("priorityQueue");
 const aiSummary = document.getElementById("aiSummary");
+const liveBadge = document.getElementById("liveBadge");
 
 const modal = document.getElementById("driverModal");
 const closeModalBtn = document.getElementById("closeModalBtn");
+const modalDialog = modal?.querySelector(".modal-dialog") || null;
 const modalTitle = document.getElementById("driverModalTitle");
 const modalSubtitle = document.getElementById("driverModalSubtitle");
 const modalSummary = document.getElementById("modalSummary");
@@ -49,6 +57,10 @@ let map = null;
 let mapMarkers = new Map();
 let realtimeChannel = null;
 let activeCardTransforms = new WeakMap();
+let loadDriversPromise = null;
+let realtimeReloadTimer = null;
+let lastFocusedElement = null;
+let isBootstrapped = false;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -67,10 +79,14 @@ function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 function formatDate(value) {
   if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  if (Number.isNaN(date.getTime())) return String(value);
   return new Intl.DateTimeFormat("es-AR", {
     dateStyle: "short",
     timeStyle: "short"
@@ -107,74 +123,63 @@ function getStatusClass(status, isBlocked = false) {
 }
 
 function isBlockedDriver(driver) {
-  const status = String(driver.review_status || "").trim().toUpperCase();
-  return Boolean(driver.is_blocked) || status === "BLOCKED" || status === "BLOQUEADO";
+  const status = String(driver?.review_status || "").trim().toUpperCase();
+  return Boolean(driver?.is_blocked) || status === "BLOCKED" || status === "BLOQUEADO";
 }
 
 function isApprovedDriver(driver) {
-  const status = String(driver.review_status || "").trim().toUpperCase();
+  const status = String(driver?.review_status || "").trim().toUpperCase();
   return status === "APPROVED" || status === "APROBADO";
 }
 
 function isRejectedDriver(driver) {
-  const status = String(driver.review_status || "").trim().toUpperCase();
+  const status = String(driver?.review_status || "").trim().toUpperCase();
   return status === "REJECTED" || status === "RECHAZADO";
 }
 
 function isPendingDriver(driver) {
-  const status = String(driver.review_status || "").trim().toUpperCase();
+  const status = String(driver?.review_status || "").trim().toUpperCase();
   return !status || status === "PENDIENTE_REVISION" || status === "PENDING" || status === "PENDIENTE";
 }
 
-function isOnlineDriver(driver) {
-  const lastLocation = driver.last_location_at ? new Date(driver.last_location_at).getTime() : 0;
-  const ageMinutes = lastLocation ? (Date.now() - lastLocation) / 60000 : Number.POSITIVE_INFINITY;
-  return ageMinutes <= 10 && !isBlockedDriver(driver);
-}
-
 function hasLocation(driver) {
-  return Number.isFinite(Number(driver.last_lng)) && Number.isFinite(Number(driver.last_lat));
+  return Number.isFinite(Number(driver?.last_lng)) && Number.isFinite(Number(driver?.last_lat));
 }
 
-function showToast(message, type = "info") {
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
-  toast.textContent = message;
-  toastContainer.appendChild(toast);
+function minutesSince(value) {
+  if (!value) return Number.POSITIVE_INFINITY;
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return Number.POSITIVE_INFINITY;
+  return (Date.now() - time) / 60000;
+}
 
-  requestAnimationFrame(() => {
-    toast.classList.add("show");
-  });
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 220);
-  }, 2600);
+function isOnlineDriver(driver) {
+  return minutesSince(driver?.last_location_at) <= LIVE_WINDOW_MINUTES && !isBlockedDriver(driver);
 }
 
 function getDriverScore(driver) {
-  if (Number.isFinite(Number(driver.ai_score))) {
-    return Math.max(0, Math.min(100, Number(driver.ai_score)));
+  if (Number.isFinite(Number(driver?.ai_score))) {
+    return clamp(Number(driver.ai_score), 0, 100);
   }
 
   let score = 40;
 
-  if (driver.profile_completed) score += 10;
-  if (driver.documents_approved) score += 22;
+  if (driver?.profile_completed) score += 10;
+  if (driver?.documents_approved) score += 22;
 
-  if (driver.dni_front_url) score += 6;
-  if (driver.dni_back_url) score += 6;
-  if (driver.license_front_url || driver.license_back_url) score += 8;
-  if (driver.vehicle_insurance_url) score += 4;
-  if (driver.vehicle_registration_url) score += 4;
-  if (driver.selfie_url) score += 6;
+  if (driver?.dni_front_url) score += 6;
+  if (driver?.dni_back_url) score += 6;
+  if (driver?.license_front_url || driver?.license_back_url) score += 8;
+  if (driver?.vehicle_insurance_url) score += 4;
+  if (driver?.vehicle_registration_url) score += 4;
+  if (driver?.selfie_url) score += 6;
 
-  if (String(driver.activation_status || "").toUpperCase() === "ACTIVO") score += 8;
+  if (String(driver?.activation_status || "").toUpperCase() === "ACTIVO") score += 8;
   if (isApprovedDriver(driver)) score += 10;
   if (isRejectedDriver(driver)) score -= 18;
   if (isBlockedDriver(driver)) score -= 30;
 
-  return Math.max(0, Math.min(100, score));
+  return clamp(score, 0, 100);
 }
 
 function getScoreLabel(score) {
@@ -195,15 +200,15 @@ function getPriorityLabel(driver) {
 function getPriorityValue(driver) {
   let score = 0;
 
-  if (driver.kyc_status === "HIGH_RISK") score += 100;
-  if (driver.kyc_status === "MANUAL_REVIEW") score += 70;
-  if (driver.kyc_status === "READY_FOR_APPROVAL") score += 10;
+  if (driver?.kyc_status === "HIGH_RISK") score += 100;
+  if (driver?.kyc_status === "MANUAL_REVIEW") score += 70;
+  if (driver?.kyc_status === "READY_FOR_APPROVAL") score += 10;
 
-  if (driver.review_required === true) score += 40;
-  if (driver.dni_match === false) score += 30;
-  if (driver.name_match === false) score += 20;
-  if (driver.birth_match === false) score += 20;
-  if (driver.face_detected === false) score += 35;
+  if (driver?.review_required === true) score += 40;
+  if (driver?.dni_match === false) score += 30;
+  if (driver?.name_match === false) score += 20;
+  if (driver?.birth_match === false) score += 20;
+  if (driver?.face_detected === false) score += 35;
 
   if (isPendingDriver(driver)) score += 20;
   if (isBlockedDriver(driver)) score += 40;
@@ -213,6 +218,57 @@ function getPriorityValue(driver) {
   return score;
 }
 
+function getDriverDisplayName(driver) {
+  return driver?.full_name || "Chofer sin nombre";
+}
+
+function getDriverSubline(driver) {
+  return driver?.email || driver?.user_id || "";
+}
+
+function getDriverPhone(driver) {
+  return driver?.phone || "Sin teléfono";
+}
+
+function setLoadingState(message = "Cargando...") {
+  if (!driversContainer) return;
+  driversContainer.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+}
+
+function setErrorState(message = "Ocurrió un error.") {
+  if (!driversContainer) return;
+  driversContainer.innerHTML = `<div class="empty-state error">${escapeHtml(message)}</div>`;
+}
+
+function showToast(message, type = "info") {
+  if (!toastContainer) return;
+
+  const existing = Array.from(toastContainer.children);
+  if (existing.length >= 4) {
+    existing[0]?.remove();
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toastContainer.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add("show");
+  });
+
+  window.setTimeout(() => {
+    toast.classList.remove("show");
+    window.setTimeout(() => toast.remove(), 220);
+  }, TOAST_DURATION_MS);
+}
+
+function updateLiveBadge() {
+  if (!liveBadge) return;
+  const onlineCount = allDrivers.filter(isOnlineDriver).length;
+  liveBadge.textContent = onlineCount > 0 ? `En vivo · ${onlineCount}` : "En vivo";
+}
+
 function updateMetrics(drivers) {
   const total = drivers.length;
   const pending = drivers.filter(isPendingDriver).length;
@@ -220,15 +276,16 @@ function updateMetrics(drivers) {
   const rejected = drivers.filter(isRejectedDriver).length;
   const blocked = drivers.filter(isBlockedDriver).length;
 
-  metricTotal.textContent = total;
-  metricPending.textContent = pending;
-  metricApproved.textContent = approved;
-  metricRejected.textContent = rejected;
-  metricBlocked.textContent = blocked;
+  if (metricTotal) metricTotal.textContent = String(total);
+  if (metricPending) metricPending.textContent = String(pending);
+  if (metricApproved) metricApproved.textContent = String(approved);
+  if (metricRejected) metricRejected.textContent = String(rejected);
+  if (metricBlocked) metricBlocked.textContent = String(blocked);
 
   renderReviewChart({ total, pending, approved, rejected, blocked });
   renderPriorityQueue(drivers);
   renderAiSummary(drivers);
+  updateLiveBadge();
 }
 
 function renderReviewChart({ total, pending, approved, rejected, blocked }) {
@@ -241,17 +298,20 @@ function renderReviewChart({ total, pending, approved, rejected, blocked }) {
     { label: "Bloqueados", value: blocked, className: "bar-blocked" }
   ];
 
-  const max = Math.max(1, ...data.map(item => item.value));
+  const max = Math.max(1, ...data.map((item) => item.value));
 
   reviewChart.innerHTML = `
     <div class="mini-bars">
-      ${data.map(item => `
+      ${data.map((item) => `
         <div class="mini-bar-col">
           <div class="mini-bar-track">
-            <div class="mini-bar ${item.className}" style="height:${Math.max(8, (item.value / max) * 100)}%"></div>
+            <div
+              class="mini-bar ${item.className}"
+              style="height:${Math.max(8, (item.value / max) * 100)}%"
+            ></div>
           </div>
           <strong>${item.value}</strong>
-          <span>${item.label}</span>
+          <span>${escapeHtml(item.label)}</span>
         </div>
       `).join("")}
     </div>
@@ -273,16 +333,18 @@ function renderPriorityQueue(drivers) {
     return;
   }
 
-  priorityQueue.innerHTML = top.map(driver => {
+  priorityQueue.innerHTML = top.map((driver) => {
     const score = getDriverScore(driver);
     return `
       <button class="queue-item" type="button" data-open-driver="${escapeHtml(driver.user_id)}">
         <div class="queue-item-main">
-          <strong>${escapeHtml(driver.full_name || "Chofer sin nombre")}</strong>
-          <span>${escapeHtml(driver.email || driver.user_id || "")}</span>
+          <strong>${escapeHtml(getDriverDisplayName(driver))}</strong>
+          <span>${escapeHtml(getDriverSubline(driver))}</span>
         </div>
         <div class="queue-item-side">
-          <span class="queue-tag ${getStatusClass(driver.review_status, driver.is_blocked)}">${escapeHtml(getPriorityLabel(driver))}</span>
+          <span class="queue-tag ${getStatusClass(driver.review_status, driver.is_blocked)}">
+            ${escapeHtml(getPriorityLabel(driver))}
+          </span>
           <strong>${score}</strong>
         </div>
       </button>
@@ -303,10 +365,10 @@ function renderAiSummary(drivers) {
     Math.max(drivers.length, 1)
   );
 
-  const readyForApproval = drivers.filter(d => d.kyc_status === "READY_FOR_APPROVAL").length;
-  const manualReview = drivers.filter(d => d.kyc_status === "MANUAL_REVIEW").length;
-  const highRisk = drivers.filter(d => d.kyc_status === "HIGH_RISK").length;
-  const reviewRequiredCount = drivers.filter(d => d.review_required === true).length;
+  const readyForApproval = drivers.filter((d) => d.kyc_status === "READY_FOR_APPROVAL").length;
+  const manualReview = drivers.filter((d) => d.kyc_status === "MANUAL_REVIEW").length;
+  const highRisk = drivers.filter((d) => d.kyc_status === "HIGH_RISK").length;
+  const reviewRequiredCount = drivers.filter((d) => d.review_required === true).length;
 
   aiSummary.innerHTML = `
     <div class="ai-kpi-grid">
@@ -332,27 +394,28 @@ function renderAiSummary(drivers) {
     </p>
   `;
 }
+
 function filterDrivers(drivers) {
   return drivers.filter((driver) => {
     const haystack = normalizeText([
-      driver.full_name,
-      driver.email,
-      driver.phone,
-      driver.user_id
+      driver?.full_name,
+      driver?.email,
+      driver?.phone,
+      driver?.user_id
     ].join(" "));
 
     const allowedStatuses = mapFilterToStatus(currentFilter);
-    const normalizedStatus = String(driver.review_status || "").trim().toUpperCase();
+    const normalizedStatus = String(driver?.review_status || "").trim().toUpperCase();
+
     const matchesFilter = currentFilter === "ALL"
       ? true
       : currentFilter === "BLOCKED"
         ? isBlockedDriver(driver)
-        : allowedStatuses.includes(normalizedStatus);
+        : Array.isArray(allowedStatuses) && allowedStatuses.includes(normalizedStatus);
 
     if (!matchesFilter) return false;
 
-    const matchesSearch = !currentSearch || haystack.includes(currentSearch);
-    return matchesSearch;
+    return !currentSearch || haystack.includes(currentSearch);
   });
 }
 
@@ -363,9 +426,10 @@ function createDriverCard(driver) {
   const statusClass = getStatusClass(driver.review_status, driver.is_blocked);
   const online = isOnlineDriver(driver);
   const noteValue = escapeHtml(driver.review_notes || "");
+  const driverId = escapeHtml(driver.user_id);
 
   return `
-    <article class="driver-card premium-card" data-driver-card data-driver-id="${escapeHtml(driver.user_id)}">
+    <article class="driver-card premium-card" data-driver-card data-driver-id="${driverId}">
       <div class="swipe-bg swipe-bg-left">
         <span>Rechazar</span>
       </div>
@@ -377,12 +441,13 @@ function createDriverCard(driver) {
         <div class="driver-card-top">
           <div class="driver-identity">
             <div class="driver-avatar">
-              ${(driver.full_name || "C").trim().charAt(0).toUpperCase()}
+              ${escapeHtml((getDriverDisplayName(driver).trim().charAt(0) || "C").toUpperCase())}
             </div>
+
             <div>
-              <h3>${escapeHtml(driver.full_name || "Chofer sin nombre")}</h3>
-              <p>${escapeHtml(driver.email || driver.user_id || "")}</p>
-              <small>${escapeHtml(driver.phone || "Sin teléfono")}</small>
+              <h3>${escapeHtml(getDriverDisplayName(driver))}</h3>
+              <p>${escapeHtml(getDriverSubline(driver))}</p>
+              <small>${escapeHtml(getDriverPhone(driver))}</small>
             </div>
           </div>
 
@@ -397,13 +462,13 @@ function createDriverCard(driver) {
         </div>
 
         <div class="driver-meta premium-meta">
-           <span>Activación: ${escapeHtml(driver.activation_status || "-")}</span>
-           <span>Docs: ${driver.documents_approved ? "OK" : "Pendiente"}</span>
-           <span>Score IA: ${score}/100</span>
-           <span>KYC: ${escapeHtml(driver.kyc_status || "-")}</span>
-           <span>Review: ${driver.review_required ? "Sí" : "No"}</span>
-           <span>${escapeHtml(scoreLabel)}</span>
-          </div>
+          <span>Activación: ${escapeHtml(driver.activation_status || "-")}</span>
+          <span>Docs: ${driver.documents_approved ? "OK" : "Pendiente"}</span>
+          <span>Score IA: ${score}/100</span>
+          <span>KYC: ${escapeHtml(driver.kyc_status || "-")}</span>
+          <span>Review: ${driver.review_required ? "Sí" : "No"}</span>
+          <span>${escapeHtml(scoreLabel)}</span>
+        </div>
 
         <div class="driver-progress">
           <div class="driver-progress-track">
@@ -412,16 +477,16 @@ function createDriverCard(driver) {
         </div>
 
         <textarea
-          id="note-${driver.user_id}"
+          id="note-${driverId}"
           class="review-note"
           placeholder="Notas de revisión"
         >${noteValue}</textarea>
 
         <div class="driver-actions premium-actions">
-          <button class="btn approve" data-driver-id="${escapeHtml(driver.user_id)}" data-action="approve">Aprobar</button>
-          <button class="btn reject" data-driver-id="${escapeHtml(driver.user_id)}" data-action="reject">Rechazar</button>
-          <button class="btn block" data-driver-id="${escapeHtml(driver.user_id)}" data-action="block">Bloquear</button>
-          <button class="btn secondary" data-open-driver="${escapeHtml(driver.user_id)}">Ver detalle</button>
+          <button class="btn approve" data-driver-id="${driverId}" data-action="approve">Aprobar</button>
+          <button class="btn reject" data-driver-id="${driverId}" data-action="reject">Rechazar</button>
+          <button class="btn block" data-driver-id="${driverId}" data-action="block">Bloquear</button>
+          <button class="btn secondary" data-open-driver="${driverId}">Ver detalle</button>
         </div>
       </div>
     </article>
@@ -429,6 +494,8 @@ function createDriverCard(driver) {
 }
 
 function renderDrivers() {
+  if (!driversContainer) return;
+
   const filtered = filterDrivers(allDrivers);
 
   if (!filtered.length) {
@@ -442,57 +509,15 @@ function renderDrivers() {
   syncMap(filtered);
 }
 
-function openDriverModal(driver) {
-  const score = getDriverScore(driver);
+function setFilterButtonState(nextFilter) {
+  filterButtons.forEach((button) => {
+    const isActive = (button.dataset.filter || "ALL") === nextFilter;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
 
-  modalTitle.textContent = driver.full_name || "Chofer sin nombre";
-  modalSubtitle.textContent = driver.email || driver.user_id || "";
-
-  modalSummary.innerHTML = `
-  <div class="summary-grid">
-    <div><strong>user_id:</strong><br>${escapeHtml(driver.user_id || "-")}</div>
-    <div><strong>Teléfono:</strong><br>${escapeHtml(driver.phone || "-")}</div>
-    <div><strong>Revisión:</strong><br>${escapeHtml(formatStatus(driver.review_status || "-"))}</div>
-    <div><strong>Activación:</strong><br>${escapeHtml(driver.activation_status || "-")}</div>
-    <div><strong>KYC status:</strong><br>${escapeHtml(driver.kyc_status || "-")}</div>
-    <div><strong>Review requerida:</strong><br>${driver.review_required ? "Sí" : "No"}</div>
-    <div><strong>Documentos aprobados:</strong><br>${driver.documents_approved ? "Sí" : "No"}</div>
-    <div><strong>Última señal:</strong><br>${escapeHtml(formatDate(driver.last_location_at || driver.reviewed_at || "-"))}</div>
-  </div>
-`;
-
-const kycStatus = driver.kyc_status || "PENDIENTE";
-const kycLabel = {
-  READY_FOR_APPROVAL: "✅ Listo para aprobar",
-  MANUAL_REVIEW: "⚠ Revisión manual",
-  HIGH_RISK: "❌ Riesgo alto",
-  PENDIENTE: "⏳ Pendiente"
-}[kycStatus] || kycStatus;
-
-modalScore.innerHTML = `
-  <div class="score-panel">
-    <div class="score-pill">
-      <strong>${score}/100</strong>
-      <span>${escapeHtml(getScoreLabel(score))}</span>
-    </div>
-
-    <div class="score-breakdown">
-      <div><strong>Estado KYC:</strong> ${escapeHtml(kycLabel)}</div>
-      <div><strong>Perfil completo:</strong> ${driver.profile_completed ? "Sí" : "No"}</div>
-      <div><strong>Docs aprobados:</strong> ${driver.documents_approved ? "Sí" : "No"}</div>
-      <div><strong>Selfie:</strong> ${driver.selfie_url ? "Sí" : "No"}</div>
-      <div><strong>Rostro detectado:</strong> ${driver.face_detected === true ? "✔ Sí" : driver.face_detected === false ? "❌ No" : "-"}</div>
-      <div><strong>DNI match:</strong> ${driver.dni_match === true ? "✔ Sí" : driver.dni_match === false ? "❌ No" : "-"}</div>
-      <div><strong>Nombre match:</strong> ${driver.name_match === true ? "✔ Sí" : driver.name_match === false ? "❌ No" : "-"}</div>
-      <div><strong>Nacimiento match:</strong> ${driver.birth_match === true ? "✔ Sí" : driver.birth_match === false ? "❌ No" : "-"}</div>
-      <div><strong>Review requerida:</strong> ${driver.review_required ? "⚠ Sí" : "✅ No"}</div>
-      <div><strong>Estado operativo:</strong> ${isOnlineDriver(driver) ? "En vivo" : "No activo"}</div>
-    </div>
-  </div>
-  <p class="score-help">
-    Este score ahora refleja KYC automático, OCR y coincidencias de identidad.
-  </p>
-`;
+function buildDocumentCards(driver) {
   const possibleDocs = [
     { label: "DNI frente", url: driver.dni_front_url || null },
     { label: "DNI dorso", url: driver.dni_back_url || null },
@@ -503,7 +528,7 @@ modalScore.innerHTML = `
     { label: "Selfie", url: driver.selfie_url || null }
   ];
 
-  modalDocuments.innerHTML = possibleDocs.map((doc) => {
+  return possibleDocs.map((doc) => {
     if (!doc.url) {
       return `
         <article class="doc-card empty">
@@ -516,10 +541,71 @@ modalScore.innerHTML = `
     return `
       <article class="doc-card">
         <strong>${escapeHtml(doc.label)}</strong>
-        <a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer">Abrir archivo</a>
+        <a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer">
+          Abrir archivo
+        </a>
       </article>
     `;
   }).join("");
+}
+
+function openDriverModal(driver) {
+  if (!modal || !modalTitle || !modalSubtitle || !modalSummary || !modalScore || !modalDocuments || !modalMapInfo) {
+    return;
+  }
+
+  const score = getDriverScore(driver);
+  const kycStatus = driver.kyc_status || "PENDIENTE";
+  const kycLabel = {
+    READY_FOR_APPROVAL: "✅ Listo para aprobar",
+    MANUAL_REVIEW: "⚠ Revisión manual",
+    HIGH_RISK: "❌ Riesgo alto",
+    PENDIENTE: "⏳ Pendiente"
+  }[kycStatus] || kycStatus;
+
+  modalTitle.textContent = getDriverDisplayName(driver);
+  modalSubtitle.textContent = getDriverSubline(driver);
+
+  modalSummary.innerHTML = `
+    <div class="summary-grid">
+      <div><strong>user_id:</strong><br>${escapeHtml(driver.user_id || "-")}</div>
+      <div><strong>Teléfono:</strong><br>${escapeHtml(driver.phone || "-")}</div>
+      <div><strong>Revisión:</strong><br>${escapeHtml(formatStatus(driver.review_status || "-"))}</div>
+      <div><strong>Activación:</strong><br>${escapeHtml(driver.activation_status || "-")}</div>
+      <div><strong>KYC status:</strong><br>${escapeHtml(driver.kyc_status || "-")}</div>
+      <div><strong>Review requerida:</strong><br>${driver.review_required ? "Sí" : "No"}</div>
+      <div><strong>Documentos aprobados:</strong><br>${driver.documents_approved ? "Sí" : "No"}</div>
+      <div><strong>Última señal:</strong><br>${escapeHtml(formatDate(driver.last_location_at || driver.reviewed_at || "-"))}</div>
+    </div>
+  `;
+
+  modalScore.innerHTML = `
+    <div class="score-panel">
+      <div class="score-pill">
+        <strong>${score}/100</strong>
+        <span>${escapeHtml(getScoreLabel(score))}</span>
+      </div>
+
+      <div class="score-breakdown">
+        <div><strong>Estado KYC:</strong> ${escapeHtml(kycLabel)}</div>
+        <div><strong>Perfil completo:</strong> ${driver.profile_completed ? "Sí" : "No"}</div>
+        <div><strong>Docs aprobados:</strong> ${driver.documents_approved ? "Sí" : "No"}</div>
+        <div><strong>Selfie:</strong> ${driver.selfie_url ? "Sí" : "No"}</div>
+        <div><strong>Rostro detectado:</strong> ${driver.face_detected === true ? "✔ Sí" : driver.face_detected === false ? "❌ No" : "-"}</div>
+        <div><strong>DNI match:</strong> ${driver.dni_match === true ? "✔ Sí" : driver.dni_match === false ? "❌ No" : "-"}</div>
+        <div><strong>Nombre match:</strong> ${driver.name_match === true ? "✔ Sí" : driver.name_match === false ? "❌ No" : "-"}</div>
+        <div><strong>Nacimiento match:</strong> ${driver.birth_match === true ? "✔ Sí" : driver.birth_match === false ? "❌ No" : "-"}</div>
+        <div><strong>Review requerida:</strong> ${driver.review_required ? "⚠ Sí" : "✅ No"}</div>
+        <div><strong>Estado operativo:</strong> ${isOnlineDriver(driver) ? "En vivo" : "No activo"}</div>
+      </div>
+    </div>
+
+    <p class="score-help">
+      Este score refleja KYC automático, OCR y coincidencias de identidad.
+    </p>
+  `;
+
+  modalDocuments.innerHTML = buildDocumentCards(driver);
 
   const lat = Number(driver.last_lat);
   const lng = Number(driver.last_lng);
@@ -535,15 +621,27 @@ modalScore.innerHTML = `
     `
     : `<div class="empty-state">No hay coordenadas disponibles para este chofer.</div>`;
 
+  lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("modal-open");
+
+  requestAnimationFrame(() => {
+    modalDialog?.focus();
+  });
 }
 
 function closeDriverModal() {
+  if (!modal) return;
+
   modal.classList.add("hidden");
   modal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("modal-open");
+
+  if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+    requestAnimationFrame(() => lastFocusedElement.focus());
+  }
 }
 
 function initMap() {
@@ -560,7 +658,7 @@ function initMap() {
   map.addControl(new window.maplibregl.NavigationControl(), "top-right");
 
   map.on("load", () => {
-    setTimeout(() => map.resize(), 80);
+    window.setTimeout(() => map?.resize(), 80);
   });
 }
 
@@ -568,10 +666,18 @@ function buildMarkerElement(driver) {
   const el = document.createElement("button");
   el.type = "button";
   el.className = `map-driver-marker marker-${getStatusClass(driver.review_status, driver.is_blocked)} ${isOnlineDriver(driver) ? "marker-live" : ""}`;
-  el.title = driver.full_name || driver.email || driver.user_id || "Chofer";
-  el.innerHTML = `<span></span>`;
+  el.title = getDriverDisplayName(driver);
+  el.setAttribute("aria-label", `Abrir detalle de ${getDriverDisplayName(driver)}`);
+  el.innerHTML = "<span></span>";
   el.addEventListener("click", () => openDriverModal(driver));
   return el;
+}
+
+function clearMapMarkers() {
+  for (const marker of mapMarkers.values()) {
+    marker.remove();
+  }
+  mapMarkers.clear();
 }
 
 function syncMap(drivers) {
@@ -580,12 +686,9 @@ function syncMap(drivers) {
 
   const locatedDrivers = drivers.filter(hasLocation);
 
-  for (const marker of mapMarkers.values()) {
-    marker.remove();
-  }
-  mapMarkers.clear();
+  clearMapMarkers();
 
-  locatedDrivers.forEach(driver => {
+  locatedDrivers.forEach((driver) => {
     const marker = new window.maplibregl.Marker({
       element: buildMarkerElement(driver),
       anchor: "center"
@@ -597,9 +700,12 @@ function syncMap(drivers) {
   });
 
   const onlineCount = locatedDrivers.filter(isOnlineDriver).length;
-  mapMeta.textContent = locatedDrivers.length
-    ? `${locatedDrivers.length} con ubicación · ${onlineCount} activos`
-    : "Sin coordenadas aún";
+
+  if (mapMeta) {
+    mapMeta.textContent = locatedDrivers.length
+      ? `${locatedDrivers.length} con ubicación · ${onlineCount} activos`
+      : "Sin coordenadas aún";
+  }
 
   if (locatedDrivers.length === 1) {
     const d = locatedDrivers[0];
@@ -613,9 +719,10 @@ function syncMap(drivers) {
 
   if (locatedDrivers.length > 1) {
     const bounds = new window.maplibregl.LngLatBounds();
-    locatedDrivers.forEach(driver => {
+    locatedDrivers.forEach((driver) => {
       bounds.extend([Number(driver.last_lng), Number(driver.last_lat)]);
     });
+
     map.fitBounds(bounds, {
       padding: 60,
       maxZoom: 14,
@@ -638,93 +745,105 @@ function fitDrivers() {
 }
 
 async function bootstrap() {
+  if (isBootstrapped) return;
+  isBootstrapped = true;
+
   const result = await supabaseAdminService.requireActiveAdmin();
 
-  if (!result.ok) {
+  if (!result?.ok) {
     window.location.href = "./admin-login.html";
     return;
   }
 
-  emailEl.textContent = result.user?.email || result.admin?.email || "";
-  avatarEl.src = result.user?.user_metadata?.avatar_url || "../assets/icons/logo-mimi.png";
-  avatarEl.onerror = () => {
-    avatarEl.src = "../assets/icons/logo-mimi.png";
-  };
+  if (emailEl) {
+    emailEl.textContent = result.user?.email || result.admin?.email || "";
+  }
+
+  if (avatarEl) {
+    avatarEl.src = result.user?.user_metadata?.avatar_url || "../assets/icons/logo-mimi.png";
+    avatarEl.onerror = () => {
+      avatarEl.src = "../assets/icons/logo-mimi.png";
+    };
+  }
 
   initMap();
   await loadDrivers();
   subscribeRealtime();
 }
 
-async function loadDrivers() {
-  try {
-    const ready = await supabaseAdminService.init();
-    if (!ready || !supabaseAdminService.client) {
-      throw new Error("No se pudo inicializar Supabase");
+async function loadDrivers(force = false) {
+  if (loadDriversPromise && !force) return loadDriversPromise;
+
+  loadDriversPromise = (async () => {
+    try {
+      const ready = await supabaseAdminService.init();
+      if (!ready || !supabaseAdminService.client) {
+        throw new Error("No se pudo inicializar Supabase");
+      }
+
+      setLoadingState("Cargando choferes...");
+
+      const { data, error } = await supabaseAdminService.client
+        .from("driver_profiles")
+        .select(`
+          user_id,
+          full_name,
+          email,
+          phone,
+
+          review_status,
+          is_blocked,
+          blocked_reason,
+
+          onboarding_status,
+          activation_status,
+
+          documents_approved,
+          profile_completed,
+
+          ai_score,
+          ai_score_label,
+          review_required,
+          kyc_status,
+
+          dni_match,
+          name_match,
+          birth_match,
+          face_detected,
+
+          dni_front_url,
+          dni_back_url,
+          license_front_url,
+          license_back_url,
+          vehicle_insurance_url,
+          vehicle_registration_url,
+          selfie_url,
+
+          last_lat,
+          last_lng,
+          last_location_at,
+
+          review_notes,
+          reviewed_at,
+          created_at
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      allDrivers = Array.isArray(data) ? data : [];
+      updateMetrics(allDrivers);
+      renderDrivers();
+    } catch (err) {
+      console.error("[admin.loadDrivers]", err);
+      setErrorState("No pudimos cargar los choferes.");
+      showToast("No pudimos cargar choferes", "error");
+    } finally {
+      loadDriversPromise = null;
     }
+  })();
 
-    driversContainer.innerHTML = `<div class="empty-state">Cargando choferes...</div>`;
-
-    const { data, error } = await supabaseAdminService.client
-  .from("driver_profiles")
-  .select(`
-    user_id,
-    full_name,
-    email,
-    phone,
-
-    review_status,
-    is_blocked,
-    blocked_reason,
-
-    onboarding_status,
-    activation_status,
-
-    documents_approved,
-    profile_completed,
-
-    ai_score,
-    ai_score_label,
-    review_required,
-    kyc_status,
-
-    dni_match,
-    name_match,
-    birth_match,
-    face_detected,
-
-    dni_front_url,
-    dni_back_url,
-    license_front_url,
-    license_back_url,
-    vehicle_insurance_url,
-    vehicle_registration_url,
-    selfie_url,
-
-    last_lat,
-    last_lng,
-    last_location_at,
-
-    review_notes,
-    reviewed_at,
-    created_at
-  `)
-  .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    allDrivers = Array.isArray(data) ? data : [];
-    updateMetrics(allDrivers);
-    renderDrivers();
-  } catch (err) {
-    console.error("[admin.loadDrivers]", err);
-    driversContainer.innerHTML = `
-      <div class="empty-state error">
-        No pudimos cargar los choferes.
-      </div>
-    `;
-    showToast("No pudimos cargar choferes", "error");
-  }
+  return loadDriversPromise;
 }
 
 async function reviewDriver(driverId, action, button) {
@@ -744,8 +863,8 @@ async function reviewDriver(driverId, action, button) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.access_token}`,
-        "apikey": SUPABASE_ANON_KEY
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: SUPABASE_ANON_KEY
       },
       body: JSON.stringify({
         driver_user_id: driverId,
@@ -769,13 +888,24 @@ async function reviewDriver(driverId, action, button) {
       "success"
     );
 
-    await loadDrivers();
+    await loadDrivers(true);
   } catch (err) {
     console.error("[admin.reviewDriver]", err);
     showToast(err instanceof Error ? err.message : "Error inesperado", "error");
   } finally {
     if (button) button.disabled = false;
   }
+}
+
+function scheduleRealtimeReload() {
+  if (realtimeReloadTimer) {
+    window.clearTimeout(realtimeReloadTimer);
+  }
+
+  realtimeReloadTimer = window.setTimeout(() => {
+    realtimeReloadTimer = null;
+    loadDrivers(true);
+  }, RELOAD_DEBOUNCE_MS);
 }
 
 function subscribeRealtime() {
@@ -792,7 +922,7 @@ function subscribeRealtime() {
       "postgres_changes",
       { event: "*", schema: "public", table: "driver_profiles" },
       () => {
-        loadDrivers();
+        scheduleRealtimeReload();
       }
     )
     .subscribe((status) => {
@@ -803,12 +933,13 @@ function subscribeRealtime() {
 function resetCardTransform(card) {
   const surface = card.querySelector(".driver-card-surface");
   if (!surface) return;
+
   surface.style.transition = "transform 0.2s ease";
   surface.style.transform = "translateX(0px)";
   card.classList.remove("swiping-left", "swiping-right");
   activeCardTransforms.set(card, 0);
 
-  setTimeout(() => {
+  window.setTimeout(() => {
     surface.style.transition = "";
   }, 220);
 }
@@ -830,10 +961,11 @@ function enableSwipeCards() {
 
     const onPointerMove = (event) => {
       if (!dragging || event.pointerId !== pointerId) return;
-      currentX = event.clientX;
-      const delta = Math.max(-140, Math.min(140, currentX - startX));
-      surface.style.transform = `translateX(${delta}px)`;
 
+      currentX = event.clientX;
+      const delta = clamp(currentX - startX, -SWIPE_MAX_PX, SWIPE_MAX_PX);
+
+      surface.style.transform = `translateX(${delta}px)`;
       card.classList.toggle("swiping-right", delta > 18);
       card.classList.toggle("swiping-left", delta < -18);
       activeCardTransforms.set(card, delta);
@@ -848,18 +980,18 @@ function enableSwipeCards() {
       const approveBtn = card.querySelector('[data-action="approve"]');
       const rejectBtn = card.querySelector('[data-action="reject"]');
 
-      if (delta >= 110 && driverId) {
+      if (delta >= SWIPE_TRIGGER_PX && driverId) {
         surface.style.transition = "transform 0.18s ease";
         surface.style.transform = "translateX(160px)";
-        setTimeout(() => resetCardTransform(card), 180);
+        window.setTimeout(() => resetCardTransform(card), 180);
         await reviewDriver(driverId, "approve", approveBtn);
         return;
       }
 
-      if (delta <= -110 && driverId) {
+      if (delta <= -SWIPE_TRIGGER_PX && driverId) {
         surface.style.transition = "transform 0.18s ease";
         surface.style.transform = "translateX(-160px)";
-        setTimeout(() => resetCardTransform(card), 180);
+        window.setTimeout(() => resetCardTransform(card), 180);
         await reviewDriver(driverId, "reject", rejectBtn);
         return;
       }
@@ -869,12 +1001,19 @@ function enableSwipeCards() {
 
     card.addEventListener("pointerdown", (event) => {
       if (event.target.closest("textarea, button, a, input")) return;
+
       pointerId = event.pointerId;
       dragging = true;
       startX = event.clientX;
       currentX = event.clientX;
+      activeCardTransforms.set(card, 0);
       surface.style.transition = "none";
-      card.setPointerCapture(pointerId);
+
+      if (typeof card.setPointerCapture === "function") {
+        try {
+          card.setPointerCapture(pointerId);
+        } catch (_) {}
+      }
     });
 
     card.addEventListener("pointermove", onPointerMove);
@@ -919,9 +1058,8 @@ searchInput?.addEventListener("input", (event) => {
 
 filterButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    filterButtons.forEach((b) => b.classList.remove("active"));
-    button.classList.add("active");
     currentFilter = button.dataset.filter || "ALL";
+    setFilterButtonState(currentFilter);
     renderDrivers();
   });
 });
@@ -941,26 +1079,30 @@ logoutBtn?.addEventListener("click", async () => {
 });
 
 reloadBtn?.addEventListener("click", async () => {
-  await loadDrivers();
+  await loadDrivers(true);
 });
 
 fitDriversBtn?.addEventListener("click", fitDrivers);
 focusCordobaBtn?.addEventListener("click", focusCordoba);
 
 closeModalBtn?.addEventListener("click", closeDriverModal);
+
 modal?.addEventListener("click", (event) => {
   const close = event.target.closest("[data-close-modal='true']");
   if (close) closeDriverModal();
 });
 
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeDriverModal();
+  if (event.key === "Escape") {
+    closeDriverModal();
+  }
 });
 
 window.addEventListener("resize", () => {
   if (map) {
-    setTimeout(() => map.resize(), 100);
+    window.setTimeout(() => map?.resize(), 100);
   }
 });
 
+setFilterButtonState(currentFilter);
 bootstrap();
