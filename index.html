@@ -3410,35 +3410,36 @@ function limpiarMarkersMapa() {
   state.markers = [];
 }
 
-function agregarMarkersRutaDesdeCoords(coords) {
+function agregarMarkersRutaDesdeCoords(_coords) {
   limpiarMarkersMapa();
 
-  if (!Array.isArray(coords) || coords.length < 2) return;
+  const puntos = obtenerPuntosOrdenados()
+    .filter((p) =>
+      p &&
+      Number.isFinite(Number(p.lng)) &&
+      Number.isFinite(Number(p.lat))
+    );
 
-  const inicio = coords[0];
-  const fin = coords[coords.length - 1];
+  if (!puntos.length) return;
 
-  try {
-    const markerInicio = new maplibregl.Marker({
-      element: crearMarkerElement('A', 'origin'),
-      anchor: 'center'
-    })
-      .setLngLat(inicio)
-      .addTo(mapaCliente);
+  puntos.forEach((punto, index) => {
+    const isOrigin = index === 0;
+    const isDest = index === puntos.length - 1;
 
-    state.markers.push(markerInicio);
-  } catch (_) {}
+    const label = isOrigin ? 'A' : isDest ? 'B' : String(index);
+    const type = isOrigin ? 'origin' : isDest ? 'dest' : 'waypoint';
 
-  try {
-    const markerFin = new maplibregl.Marker({
-      element: crearMarkerElement('B', 'dest'),
-      anchor: 'center'
-    })
-      .setLngLat(fin)
-      .addTo(mapaCliente);
+    try {
+      const marker = new maplibregl.Marker({
+        element: crearMarkerElement(label, type),
+        anchor: 'center'
+      })
+        .setLngLat([Number(punto.lng), Number(punto.lat)])
+        .addTo(mapaCliente);
 
-    state.markers.push(markerFin);
-  } catch (_) {}
+      state.markers.push(marker);
+    } catch (_) {}
+  });
 }
 function ajustarVistaRuta(coords, duration = 800) {
   if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
@@ -3494,25 +3495,9 @@ async function dibujarRutaEnMapa(coords) {
     if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
   } catch (_) {}
 
-  state.markers.forEach((m) => {
-    try { m.remove(); } catch (_) {}
-  });
-  state.markers = [];
+  limpiarMarkersMapa();
 
-  const puntos = obtenerPuntosOrdenados();
-  puntos.forEach((punto, index) => {
-    const isOrigin = index === 0;
-    const isDest = index === puntos.length - 1;
-    const label = isOrigin ? 'A' : isDest ? 'B' : String(index);
-    const type = isOrigin ? 'origin' : isDest ? 'dest' : 'waypoint';
-
-    const marker = new maplibregl.Marker({ element: crearMarkerElement(label, type) })
-      .setLngLat([punto.lng, punto.lat])
-      .addTo(mapaCliente);
-
-    state.markers.push(marker);
-  });
-
+  
   const coordinates = coords || puntos.map((p) => [p.lng, p.lat]);
   if (!coordinates || coordinates.length < 2) return;
 
@@ -3691,6 +3676,23 @@ async function dibujarRutaReal(coords) {
     }
   });
   
+    mapaCliente.addLayer({
+    id: 'route-anim',
+    type: 'line',
+    source: 'route',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round'
+    },
+    paint: {
+      'line-color': '#93c5fd',
+      'line-width': 3,
+      'line-opacity': 0.9,
+      'line-dasharray': [0, 1.2, 0.7, 2.2]
+    }
+  });
+
+  iniciarAnimacionRuta();
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
