@@ -1099,27 +1099,42 @@ color: var(--text);
 
 .toolbar-search {
   flex: 1 1 320px;
+  min-width: 0;
+}
+
+/* Resalta todo el bloque cuando el input recibe foco */
+.toolbar-search:focus-within {
+  border-radius: 18px;
 }
 
 .toolbar-search input {
   width: 100%;
+  min-width: 0;
   min-height: 52px;
   padding: 12px 14px;
   border-radius: 18px;
   border: 1px solid var(--border);
-  background: var(--panel);
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
   color: var(--text);
   outline: none;
   font: inherit;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease,
-    background 0.2s ease;
+    background 0.2s ease,
+    transform 0.16s ease;
 }
 
 .toolbar-search input:focus {
   border-color: rgba(59, 130, 246, 0.6);
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+}
+
+.toolbar-search input:focus-visible {
+  border-color: rgba(59, 130, 246, 0.72);
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.14),
+    var(--shadow-xs);
 }
 
 .toolbar-search input::placeholder,
@@ -1145,8 +1160,27 @@ textarea::placeholder {
 .filter-btn.active {
   background: var(--text);
   color: var(--bg);
+  border-color: transparent;
 }
 
+/* Hover real solo donde existe hover */
+@media (hover: hover) {
+  .filter-btn:hover,
+  .btn-secondary:hover,
+  .btn.secondary:hover {
+    border-color: var(--border-strong);
+  }
+}
+
+/* Menos movimiento si el usuario lo pidió */
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-search input,
+  .filter-btn,
+  .btn-secondary,
+  .btn.secondary {
+    transition: none !important;
+  }
+}
 /* =========================================================
    OPS
    Para qué sirve:
