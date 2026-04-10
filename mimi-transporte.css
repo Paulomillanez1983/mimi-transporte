@@ -2960,3 +2960,11 @@ select:focus-visible {
   font-size: 0.78rem;
   opacity: 0.78;
 }
+/* ==========================================
+   SOPORTE BUTTON
+   ========================================== */
+#supportBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
