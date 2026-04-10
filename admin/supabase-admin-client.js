@@ -1,13 +1,11 @@
 /**
  * MIMI Admin - Supabase Client (PRODUCTION)
  * Cliente exclusivo para panel admin.
- * No crea perfil de chofer.
- * No reutiliza storage del driver.
  */
 
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
 const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
+  "TU_ANON_KEY";
 
 class SupabaseAdminService {
   constructor() {
@@ -26,7 +24,11 @@ class SupabaseAdminService {
           throw new Error("La librería de Supabase no está cargada");
         }
 
-        if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === "TU_SUPABASE_ANON_KEY") {
+        if (
+          !SUPABASE_URL ||
+          !SUPABASE_ANON_KEY ||
+          SUPABASE_ANON_KEY === "TU_ANON_KEY"
+        ) {
           throw new Error("Falta configurar SUPABASE_URL o SUPABASE_ANON_KEY");
         }
 
@@ -88,7 +90,9 @@ class SupabaseAdminService {
   }
 
   async signOut() {
-    if (!this.client?.auth) return;
+    const ready = await this.init();
+    if (!ready || !this.client?.auth) return;
+
     const { error } = await this.client.auth.signOut();
     if (error) {
       console.error("[SupabaseAdminService.signOut]", error);
