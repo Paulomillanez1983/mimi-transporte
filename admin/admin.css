@@ -947,7 +947,17 @@ textarea {
   50% { transform: scale(1.14); }
   100% { transform: scale(1); }
 }
-
+.map-user-location {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #2563eb;
+  border: 3px solid rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 0 0 8px rgba(37, 99, 235, 0.18),
+    0 0 18px rgba(37, 99, 235, 0.35);
+  animation: markerPulse 1.8s infinite ease;
+}
 /* =========================================================
    TOOLBAR
    ========================================================= */
