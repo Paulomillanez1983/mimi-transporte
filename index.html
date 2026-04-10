@@ -2487,7 +2487,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   cargarNotificacionesDesdeStorage();
   renderizarCentroNotificaciones();
   await restaurarViajeActivoCliente();
-});  
+
+  // ==========================================
+  // BOTÓN SOPORTE (PEGAR ACÁ)
+  // ==========================================
+  const supportBtn = document.getElementById("supportBtn");
+
+  supportBtn?.addEventListener("click", async () => {
+    try {
+      const session = await obtenerSesionCliente(true);
+
+      if (!session?.access_token || !session?.user) {
+        notif.show(
+          "Ingresá primero",
+          "Necesitás iniciar sesión para contactar soporte.",
+          "warning"
+        );
+        return;
+      }
+
+      const asunto = prompt("Asunto del soporte:", "Consulta sobre mi viaje");
+      if (!asunto) return;
+
+      const mensaje = prompt("Contanos brevemente tu problema:");
+      if (!mensaje) return;
+
+      notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
+
+      console.log("SOPORTE:", {
+        user: session.user.id,
+        asunto,
+        mensaje
+      });
+
+    } catch (err) {
+      console.error("[supportBtn] error:", err);
+      notif.show("Error", "No se pudo abrir soporte", "error");
+    }
+  });
+});
+  
 // ==========================================
 // UI LOADING
 // ==========================================
