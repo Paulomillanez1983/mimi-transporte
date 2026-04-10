@@ -363,20 +363,29 @@
 
             <div id="supportMessages" class="support-messages" aria-live="polite"></div>
 
-            <div class="support-composer">
-              <textarea
-                id="supportReplyInput"
-                class="support-reply-input"
-                rows="3"
-                placeholder="Escribí una respuesta..."
-              ></textarea>
+  <div class="support-composer">
+    <textarea
+      id="supportReplyInput"
+        class="support-reply-input"
+          rows="3"
+           placeholder="Escribí una respuesta..."
+            ></textarea>
 
-              <div class="support-composer-actions">
-                <button id="supportSendReplyBtn" type="button" class="support-send-btn">
-                  Enviar respuesta
-                </button>
-              </div>
+              <!-- 📎 INPUT DE ARCHIVOS -->
+               <input
+             id="supportAttachmentInput"
+             type="file"
+             multiple
+           accept="image/*,.pdf,.doc,.docx,.txt"
+           class="support-attachment-input"
+          />
+
+          <div class="support-composer-actions">
+          <button id="supportSendReplyBtn" type="button" class="support-send-btn">
+             Enviar respuesta
+            </button>
             </div>
+           </div>
           </div>
         </section>
       </div>
