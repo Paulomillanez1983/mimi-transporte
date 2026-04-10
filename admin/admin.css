@@ -663,8 +663,11 @@ header h1 {
   background: var(--text);
   color: var(--bg);
 }
+
 /* =========================================================
    MAIN
+   ---------------------------------------------------------
+   Contenedor principal del contenido del panel
    ========================================================= */
 
 .admin-main,
@@ -672,32 +675,47 @@ main {
   width: 100%;
   max-width: var(--content-max);
   margin: 0 auto;
+
   min-height: calc(100vh - var(--header-h));
   min-height: calc(100dvh - var(--header-h));
+
   padding:
     22px
     max(18px, var(--safe-right))
     calc(44px + var(--safe-bottom))
     max(18px, var(--safe-left));
 }
-
 /* =========================================================
    BUTTONS
+   ---------------------------------------------------------
+   Estilo base de botones y variantes de acción
    ========================================================= */
 
 button,
 .btn {
   appearance: none;
   -webkit-appearance: none;
+
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  padding: 12px 16px;
+
   border: 0;
   border-radius: 18px;
-  min-height: var(--tap-min);
-  min-width: var(--tap-min);
-  padding: 12px 16px;
+
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+
   font-size: 14px;
   font-weight: 800;
   line-height: 1.2;
+
+  box-shadow: var(--shadow-sm);
+
+  user-select: none;
+  -webkit-user-select: none;
+
   transition:
     transform 0.16s ease,
     opacity 0.16s ease,
@@ -705,14 +723,11 @@ button,
     background 0.22s ease,
     border-color 0.22s ease,
     filter 0.22s ease;
-  box-shadow: var(--shadow-sm);
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  -webkit-user-select: none;
+
   will-change: transform;
 }
 
+/* Hover solo en dispositivos que realmente tienen hover */
 @media (hover: hover) {
   button:hover,
   .btn:hover {
@@ -721,23 +736,29 @@ button,
   }
 }
 
+/* Feedback táctil / click */
 button:active,
 .btn:active {
   transform: scale(0.975);
 }
 
+/* Estado deshabilitado */
 button:disabled,
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none !important;
+  filter: none !important;
+  box-shadow: none;
 }
 
+/* Botón recargar */
 #reloadBtn {
   background: var(--text);
   color: var(--bg);
 }
 
+/* Variantes semánticas */
 .btn.approve {
   background: var(--success);
   color: #04130a;
@@ -752,7 +773,6 @@ button:disabled,
   background: var(--warning);
   color: #1a1203;
 }
-
 /* =========================================================
    PANELS
    ========================================================= */
