@@ -1,3 +1,5 @@
+import supabaseAdminService from "./supabase-admin-client.js";
+
 const supportState = {
   conversations: [],
   filtered: [],
@@ -24,7 +26,16 @@ function supportFormatTime(value) {
     return "";
   }
 }
+async function getAdminAccessToken() {
+  const session = await supabaseAdminService.getSession();
+  const token = session?.access_token;
 
+  if (!token) {
+    throw new Error("Sesión admin expirada");
+  }
+
+  return token;
+}
 function supportStatusClass(status) {
   switch (String(status || "").toUpperCase()) {
     case "UNREAD":
@@ -162,6 +173,37 @@ function renderConversationList() {
     `;
   }).join("");
 }
+function escapeHtmlSupport(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function escapeHtmlAttr(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function supportMessageTicks(status) {
+  switch (String(status || "").toUpperCase()) {
+    case "READ":
+      return "✓✓";
+    case "DELIVERED":
+      return "✓✓";
+    case "SENT":
+      return "✓";
+    default:
+      return "✓";
+  }
+}
+
+
 
 function renderSelectedConversation() {
   const els = getSupportElements();
@@ -180,17 +222,43 @@ function renderSelectedConversation() {
   els.threadName.textContent = current.name;
   els.threadSubmeta.textContent = `${current.role} · ${current.status.toLowerCase()} · ${current.subject || "sin asunto"}`;
 
-  els.messages.innerHTML = (current.messages || []).map((msg) => `
-    <div class="support-message-row ${msg.sender_role === "admin" ? "admin" : "user"}">
+els.messages.innerHTML = (current.messages || []).map((msg) => {
+  const isAdmin = msg.sender_role === "admin";
+  const ticks = isAdmin ? supportMessageTicks(msg.delivery_status) : "";
+  const attachments = Array.isArray(msg.attachments) ? msg.attachments : [];
+
+  return `
+    <div class="support-message-row ${isAdmin ? "admin" : "user"}">
       <div class="support-message-bubble">
-        <div>${msg.text}</div>
+        ${msg.text ? `<div>${escapeHtmlSupport(msg.text)}</div>` : ""}
+        
+        ${
+          attachments.length
+            ? `
+              <div class="support-message-attachments">
+                ${attachments.map((file) => `
+                  <a
+                    href="${escapeHtmlAttr(file.url || "#")}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="support-attachment-chip"
+                  >
+                    📎 ${escapeHtmlSupport(file.name || "Adjunto")}
+                  </a>
+                `).join("")}
+              </div>
+            `
+            : ""
+        }
+
         <div class="support-message-meta">
           ${msg.sender_role} · ${supportFormatTime(msg.created_at)}
+          ${ticks ? `<span class="support-message-ticks">${ticks}</span>` : ""}
         </div>
       </div>
     </div>
-  `).join("");
-
+  `;
+}).join("");
   els.messages.scrollTop = els.messages.scrollHeight;
 }
 
@@ -215,41 +283,179 @@ function updateConversationStatus(status) {
   renderSelectedConversation();
 }
 
-function sendSupportReply() {
+async function sendSupportReply() {
   const els = getSupportElements();
   const current = supportState.conversations.find((x) => x.id === supportState.selectedId);
   const text = String(els.reply?.value || "").trim();
 
-  if (!current || !text) return;
+  const attachmentInput = document.getElementById("supportAttachmentInput");
+  const files = Array.from(attachmentInput?.files || []);
 
-await supabase
-  .from("support_messages")
-  .insert({
-    conversation_id: current.id,
-    sender_role: "admin",
-    message: text
-  });
-  current.status = "PENDING";
-  current.updated_at = new Date().toISOString();
-  els.reply.value = "";
+  if (!current || (!text && !files.length)) return;
 
-  applySupportFilters();
-  renderConversationList();
-  renderSelectedConversation();
-}
+  const previousText = els.reply.value;
+  els.send.disabled = true;
 
-async function loadSupportConversations() {
-  supportState.conversations = getMockSupportData();
-  applySupportFilters();
-  renderConversationList();
+  try {
+    const token = await getAdminAccessToken();
 
-  if (!supportState.selectedId && supportState.filtered[0]) {
-    supportState.selectedId = supportState.filtered[0].id;
+    const uploadedAttachments = [];
+
+    for (const file of files) {
+      const fileExt = file.name.split(".").pop() || "bin";
+      const fileName = `support/${current.id}/${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
+
+      const ready = await supabaseAdminService.init();
+      if (!ready || !supabaseAdminService.client) {
+        throw new Error("No se pudo inicializar Supabase para adjuntos");
+      }
+
+      const { error: uploadError } = await supabaseAdminService.client
+        .storage
+        .from("support-attachments")
+        .upload(fileName, file, {
+          upsert: false,
+          contentType: file.type || "application/octet-stream"
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabaseAdminService.client
+        .storage
+        .from("support-attachments")
+        .getPublicUrl(fileName);
+
+      uploadedAttachments.push({
+        name: file.name,
+        path: fileName,
+        url: publicData?.publicUrl || "",
+        mime_type: file.type || "application/octet-stream",
+        size_bytes: file.size || 0
+      });
+    }
+
+    const response = await fetch(
+      "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/support-send-message",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          conversation_id: current.id,
+          message: text,
+          sender_role: "admin",
+          attachments: uploadedAttachments
+        })
+      }
+    );
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(data?.error || "No se pudo enviar la respuesta");
+    }
+
+    els.reply.value = "";
+    if (attachmentInput) attachmentInput.value = "";
+
+    await loadSupportConversations();
+
+    if (supportState.selectedId) {
+      selectConversation(supportState.selectedId);
+    }
+  } catch (err) {
+    console.error("[support.sendSupportReply]", err);
+    els.reply.value = previousText;
+    alert(err?.message || "No se pudo enviar el mensaje");
+  } finally {
+    els.send.disabled = false;
   }
-
-  renderConversationList();
-  renderSelectedConversation();
 }
+async function loadSupportConversations() {
+  try {
+    const token = await getAdminAccessToken();
+
+    const response = await fetch(
+      "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/support-list-conversations",
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(data?.error || "No se pudieron cargar las conversaciones");
+    }
+
+    supportState.conversations = Array.isArray(data.conversations)
+      ? data.conversations
+      : [];
+
+    applySupportFilters();
+
+    if (
+      !supportState.selectedId &&
+      supportState.filtered[0]
+    ) {
+      supportState.selectedId = supportState.filtered[0].id;
+    }
+
+    renderConversationList();
+    renderSelectedConversation();
+  } catch (err) {
+    console.error("[support.loadSupportConversations]", err);
+    supportState.conversations = [];
+    applySupportFilters();
+    renderConversationList();
+    renderSelectedConversation();
+  }
+}
+
+async function persistConversationStatus(status) {
+  const current = supportState.conversations.find((x) => x.id === supportState.selectedId);
+  if (!current) return;
+
+  try {
+    const token = await getAdminAccessToken();
+
+    const response = await fetch(
+      "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/support-update-status",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          conversation_id: current.id,
+          status
+        })
+      }
+    );
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(data?.error || "No se pudo actualizar el estado");
+    }
+
+    await loadSupportConversations();
+
+    if (supportState.selectedId) {
+      selectConversation(supportState.selectedId);
+    }
+  } catch (err) {
+    console.error("[support.persistConversationStatus]", err);
+    alert(err?.message || "No se pudo actualizar el estado");
+  }
+}
+
 
 export function initAdminSupport() {
   const els = getSupportElements();
@@ -273,10 +479,10 @@ export function initAdminSupport() {
     selectConversation(btn.getAttribute("data-support-id"));
   });
 
-  els.send?.addEventListener("click", sendSupportReply);
-  els.markRead?.addEventListener("click", () => updateConversationStatus("PENDING"));
-  els.markPending?.addEventListener("click", () => updateConversationStatus("PENDING"));
-  els.markResolved?.addEventListener("click", () => updateConversationStatus("RESOLVED"));
+els.send?.addEventListener("click", sendSupportReply);
+els.markRead?.addEventListener("click", () => persistConversationStatus("READ"));
+els.markPending?.addEventListener("click", () => persistConversationStatus("PENDING"));
+els.markResolved?.addEventListener("click", () => persistConversationStatus("RESOLVED"));
 
-  loadSupportConversations();
+loadSupportConversations();
 }
