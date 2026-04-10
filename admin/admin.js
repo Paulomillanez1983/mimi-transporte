@@ -18,31 +18,49 @@ const ARGENTINA_BOUNDS = [
 ];
 
 const CITY_PRESETS = {
-  drivers: {
-    type: "drivers"
-  },
+  drivers: { type: "drivers", label: "Choferes activos" },
+
   argentina: {
     type: "bounds",
+    label: "Argentina",
     bounds: ARGENTINA_BOUNDS,
     padding: 28,
     maxZoom: 5.2
   },
-  cordoba: {
-    type: "center",
-    center: [-64.1888, -31.4201],
-    zoom: 11.7
-  },
-  villa_allende: {
-    type: "center",
-    center: [-64.2956, -31.2946],
-    zoom: 12.4
-  },
-  carlos_paz: {
-    type: "center",
-    center: [-64.4978, -31.4241],
-    zoom: 12.1
-  }
+
+  buenos_aires: { type: "center", label: "Buenos Aires", center: [-60.0, -36.5], zoom: 6 },
+  caba: { type: "center", label: "CABA", center: [-58.3816, -34.6037], zoom: 11 },
+  catamarca: { type: "center", label: "Catamarca", center: [-65.7795, -28.4696], zoom: 7 },
+  chaco: { type: "center", label: "Chaco", center: [-60.7653, -27.4514], zoom: 6.4 },
+  chubut: { type: "center", label: "Chubut", center: [-66.5, -43.3], zoom: 6 },
+  cordoba: { type: "center", label: "Córdoba", center: [-64.1888, -31.4201], zoom: 11.7 },
+  corrientes: { type: "center", label: "Corrientes", center: [-58.8341, -27.4692], zoom: 6.5 },
+  entre_rios: { type: "center", label: "Entre Ríos", center: [-59.3, -31.7], zoom: 6.5 },
+  formosa: { type: "center", label: "Formosa", center: [-58.1781, -26.1775], zoom: 6.5 },
+  jujuy: { type: "center", label: "Jujuy", center: [-65.2995, -24.1858], zoom: 7 },
+  la_pampa: { type: "center", label: "La Pampa", center: [-64.2833, -36.6167], zoom: 6.3 },
+  la_rioja: { type: "center", label: "La Rioja", center: [-66.8558, -29.4131], zoom: 6.8 },
+  mendoza: { type: "center", label: "Mendoza", center: [-68.8458, -32.8895], zoom: 7.2 },
+  misiones: { type: "center", label: "Misiones", center: [-54.5756, -27.3621], zoom: 7 },
+  neuquen: { type: "center", label: "Neuquén", center: [-68.0591, -38.9516], zoom: 7 },
+  rio_negro: { type: "center", label: "Río Negro", center: [-67.5, -40.8], zoom: 6 },
+  salta: { type: "center", label: "Salta", center: [-65.4232, -24.7821], zoom: 7 },
+  san_juan: { type: "center", label: "San Juan", center: [-68.5214, -31.5375], zoom: 7 },
+  san_luis: { type: "center", label: "San Luis", center: [-66.3399, -33.3017], zoom: 7 },
+  santa_cruz: { type: "center", label: "Santa Cruz", center: [-69.0, -48.5], zoom: 5.5 },
+  santa_fe: { type: "center", label: "Santa Fe", center: [-60.7, -31.6], zoom: 6.4 },
+  santiago_del_estero: { type: "center", label: "Santiago del Estero", center: [-64.2615, -27.7834], zoom: 6.5 },
+  tierra_del_fuego: { type: "center", label: "Tierra del Fuego", center: [-68.3030, -54.8019], zoom: 7 },
+  tucuman: { type: "center", label: "Tucumán", center: [-65.2226, -26.8241], zoom: 7.5 },
+
+  villa_allende: { type: "center", label: "Villa Allende", center: [-64.2956, -31.2946], zoom: 12.4 },
+  carlos_paz: { type: "center", label: "Villa Carlos Paz", center: [-64.4978, -31.4241], zoom: 12.1 },
+  rosario: { type: "center", label: "Rosario", center: [-60.6505, -32.9442], zoom: 11 },
+  mendoza_capital: { type: "center", label: "Mendoza Capital", center: [-68.8458, -32.8895], zoom: 11.2 },
+  salta_capital: { type: "center", label: "Salta Capital", center: [-65.4117, -24.7829], zoom: 11.2 },
+  ushuaia: { type: "center", label: "Ushuaia", center: [-68.3030, -54.8019], zoom: 11.5 }
 };
+
 const DRIVER_CHANNEL = "mimi-admin-driver-profiles-realtime";
 
 const LIVE_WINDOW_MINUTES = 10;
@@ -68,6 +86,7 @@ const metricBlocked = document.getElementById("metricBlocked");
 const reviewChart = document.getElementById("reviewChart");
 const mapMeta = document.getElementById("mapMeta");
 const fitDriversBtn = document.getElementById("fitDriversBtn");
+const locateMeBtn = document.getElementById("locateMeBtn");
 const focusArgentinaBtn = document.getElementById("focusArgentinaBtn");
 const focusCordobaBtn = document.getElementById("focusCordobaBtn");
 const citySelector = document.getElementById("citySelector");
@@ -98,6 +117,19 @@ let loadDriversPromise = null;
 let realtimeReloadTimer = null;
 let lastFocusedElement = null;
 let isBootstrapped = false;
+let userLocationMarker = null;
+
+const GEOLOCATION_OPTIONS = {
+  enableHighAccuracy: true,
+  timeout: 12000,
+  maximumAge: 300000
+};
+
+const CLUSTER_SOURCE_ID = "drivers-source";
+const CLUSTER_LAYER_ID = "drivers-clusters";
+const CLUSTER_COUNT_LAYER_ID = "drivers-cluster-count";
+const UNCLUSTERED_LAYER_ID = "drivers-unclustered";
+const HEATMAP_LAYER_ID = "drivers-heatmap";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -757,37 +789,282 @@ function initMap() {
   };
 
 map.on("load", () => {
+  map.addSource(CLUSTER_SOURCE_ID, {
+    type: "geojson",
+    data: {
+      type: "FeatureCollection",
+      features: []
+    },
+    cluster: true,
+    clusterMaxZoom: 13,
+    clusterRadius: 52
+  });
+
+  map.addLayer({
+    id: HEATMAP_LAYER_ID,
+    type: "heatmap",
+    source: CLUSTER_SOURCE_ID,
+    maxzoom: 8,
+    paint: {
+      "heatmap-weight": [
+        "interpolate",
+        ["linear"],
+        ["get", "score"],
+        0, 0.2,
+        100, 1
+      ],
+      "heatmap-intensity": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        0, 0.6,
+        8, 1.4
+      ],
+      "heatmap-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        0, 8,
+        8, 28
+      ],
+      "heatmap-opacity": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        0, 0.55,
+        8, 0.12
+      ]
+    }
+  });
+
+  map.addLayer({
+    id: CLUSTER_LAYER_ID,
+    type: "circle",
+    source: CLUSTER_SOURCE_ID,
+    filter: ["has", "point_count"],
+    minzoom: 6,
+    paint: {
+      "circle-color": [
+        "step",
+        ["get", "point_count"],
+        "#60a5fa",
+        10, "#3b82f6",
+        30, "#1d4ed8"
+      ],
+      "circle-radius": [
+        "step",
+        ["get", "point_count"],
+        18,
+        10, 24,
+        30, 32
+      ],
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "#ffffff"
+    }
+  });
+
+  map.addLayer({
+    id: CLUSTER_COUNT_LAYER_ID,
+    type: "symbol",
+    source: CLUSTER_SOURCE_ID,
+    filter: ["has", "point_count"],
+    minzoom: 6,
+    layout: {
+      "text-field": ["get", "point_count_abbreviated"],
+      "text-size": 12
+    },
+    paint: {
+      "text-color": "#ffffff"
+    }
+  });
+
+  map.addLayer({
+    id: UNCLUSTERED_LAYER_ID,
+    type: "circle",
+    source: CLUSTER_SOURCE_ID,
+    filter: ["!", ["has", "point_count"]],
+    minzoom: 7,
+    paint: {
+      "circle-color": [
+        "match",
+        ["get", "statusClass"],
+        "approved", "#22c55e",
+        "rejected", "#ef4444",
+        "blocked", "#f59e0b",
+        "#3b82f6"
+      ],
+      "circle-radius": [
+        "case",
+        ["==", ["get", "isOnline"], true], 8,
+        6
+      ],
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "#ffffff"
+    }
+  });
+
+  map.on("click", CLUSTER_LAYER_ID, async (event) => {
+    const features = map.queryRenderedFeatures(event.point, {
+      layers: [CLUSTER_LAYER_ID]
+    });
+
+    const clusterId = features?.[0]?.properties?.cluster_id;
+    if (clusterId == null) return;
+
+    const source = map.getSource(CLUSTER_SOURCE_ID);
+    if (!source?.getClusterExpansionZoom) return;
+
+    source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+      if (err) return;
+      map.easeTo({
+        center: features[0].geometry.coordinates,
+        zoom,
+        duration: 700,
+        essential: true
+      });
+    });
+  });
+
+  map.on("click", UNCLUSTERED_LAYER_ID, (event) => {
+    const feature = event.features?.[0];
+    const driverId = feature?.properties?.driverId;
+    if (!driverId) return;
+
+    const driver = allDrivers.find((d) => d.user_id === driverId);
+    if (driver) openDriverModal(driver);
+  });
+
+  map.on("mouseenter", CLUSTER_LAYER_ID, () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+
+  map.on("mouseleave", CLUSTER_LAYER_ID, () => {
+    map.getCanvas().style.cursor = "";
+  });
+
+  map.on("mouseenter", UNCLUSTERED_LAYER_ID, () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+
+  map.on("mouseleave", UNCLUSTERED_LAYER_ID, () => {
+    map.getCanvas().style.cursor = "";
+  });
+
   map.fitBounds(ARGENTINA_BOUNDS, {
     padding: 20,
     duration: 0
   });
 
   forcePaint();
-});    
+});
+  
   map.on("idle", forcePaint);
   map.once("render", forcePaint);
 }
 
-function buildMarkerElement(driver) {
-  const el = document.createElement("button");
-  el.type = "button";
-  el.className = `map-driver-marker marker-${getStatusClass(driver.review_status, driver.is_blocked)} ${isOnlineDriver(driver) ? "marker-live" : ""}`;
-  el.title = getDriverDisplayName(driver);
-  el.setAttribute("aria-label", `Abrir detalle de ${getDriverDisplayName(driver)}`);
-  el.innerHTML = "<span></span>";
-  el.addEventListener("click", () => openDriverModal(driver));
-  return el;
+function clearMapMarkers() {
+  if (userLocationMarker) {
+    userLocationMarker.remove();
+  }
 }
   
 
-function clearMapMarkers() {
-  for (const marker of mapMarkers.values()) {
-    marker.remove();
-  }
-  mapMarkers.clear();
-}
+
 function smartMapPadding() {
   return window.innerWidth <= 640 ? 28 : 60;
+}
+function toRad(value) {
+  return (value * Math.PI) / 180;
+}
+
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function findNearestPresetKey(lat, lng) {
+  const candidates = Object.entries(CITY_PRESETS)
+    .filter(([, preset]) => preset.type === "center" && Array.isArray(preset.center));
+
+  if (!candidates.length) return "argentina";
+
+  let bestKey = "argentina";
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const [key, preset] of candidates) {
+    const [presetLng, presetLat] = preset.center;
+    const km = distanceKm(lat, lng, presetLat, presetLng);
+
+    if (km < bestDistance) {
+      bestDistance = km;
+      bestKey = key;
+    }
+  }
+
+  return bestKey;
+}
+
+function setCitySelectorValue(value) {
+  if (!citySelector) return;
+  citySelector.value = value;
+}
+
+function updateUserLocationMarker(lat, lng) {
+  if (!map || !window.maplibregl) return;
+
+  if (!userLocationMarker) {
+    const el = document.createElement("div");
+    el.className = "map-user-location";
+    userLocationMarker = new window.maplibregl.Marker({
+      element: el,
+      anchor: "center"
+    });
+  }
+
+  userLocationMarker.setLngLat([lng, lat]).addTo(map);
+}
+
+function detectUserLocationAndSelect() {
+  if (!navigator.geolocation) {
+    showToast("Tu navegador no soporta geolocalización", "error");
+    return;
+  }
+
+  showToast("Detectando ubicación...", "info");
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const lat = Number(position.coords.latitude);
+      const lng = Number(position.coords.longitude);
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        showToast("No pudimos leer tu ubicación", "error");
+        return;
+      }
+
+      updateUserLocationMarker(lat, lng);
+
+      const nearestKey = findNearestPresetKey(lat, lng);
+      setCitySelectorValue(nearestKey);
+      animateToPreset(nearestKey);
+
+      const presetLabel = CITY_PRESETS[nearestKey]?.label || "tu zona";
+      showToast(`Ubicación detectada · ${presetLabel}`, "success");
+    },
+    (error) => {
+      console.warn("[admin.geolocation]", error);
+      showToast("No pudimos detectar tu ubicación", "error");
+    },
+    GEOLOCATION_OPTIONS
+  );
 }
 
 function animateToPreset(presetKey) {
@@ -860,35 +1137,46 @@ function smartFitDrivers() {
     essential: true
   });
 }
+function buildDriversGeoJSON(drivers) {
+  return {
+    type: "FeatureCollection",
+    features: drivers
+      .filter(hasLocation)
+      .map((driver) => ({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: [Number(driver.last_lng), Number(driver.last_lat)]
+        },
+        properties: {
+          driverId: driver.user_id,
+          name: getDriverDisplayName(driver),
+          statusClass: getStatusClass(driver.review_status, driver.is_blocked),
+          isOnline: isOnlineDriver(driver),
+          score: getDriverScore(driver)
+        }
+      }))
+  };
+}
+
+
 function syncMap(drivers, options = {}) {
   initMap();
   if (!map) return;
 
-  const {
-    keepViewport = false
-  } = options;
-
+  const { keepViewport = false } = options;
   const locatedDrivers = drivers.filter(hasLocation);
-
-  clearMapMarkers();
-
-  locatedDrivers.forEach((driver) => {
-    const marker = new window.maplibregl.Marker({
-      element: buildMarkerElement(driver),
-      anchor: "center"
-    })
-      .setLngLat([Number(driver.last_lng), Number(driver.last_lat)])
-      .addTo(map);
-
-    mapMarkers.set(driver.user_id, marker);
-  });
-
   const onlineCount = locatedDrivers.filter(isOnlineDriver).length;
 
   if (mapMeta) {
     mapMeta.textContent = locatedDrivers.length
       ? `${locatedDrivers.length} con ubicación · ${onlineCount} activos`
       : "Sin coordenadas aún";
+  }
+
+  const source = map.getSource(CLUSTER_SOURCE_ID);
+  if (source) {
+    source.setData(buildDriversGeoJSON(drivers));
   }
 
   const forcePaint = () => {
@@ -949,6 +1237,7 @@ function syncMap(drivers, options = {}) {
 
   forcePaint();
 }
+
 function focusCordoba() {
   animateToPreset("cordoba");
 }
@@ -1006,10 +1295,14 @@ async function bootstrap() {
   }
 
 initMap();
-await loadDrivers(false);
+await loadDrivers();
 
 window.setTimeout(() => map?.resize(), 120);
 window.setTimeout(() => map?.resize(), 320);
+
+window.setTimeout(() => {
+  detectUserLocationAndSelect();
+}, 700);
 
 subscribeRealtime();
 }
@@ -1334,12 +1627,14 @@ reloadBtn?.addEventListener("click", async () => {
 });
 
 fitDriversBtn?.addEventListener("click", fitDrivers);
+locateMeBtn?.addEventListener("click", detectUserLocationAndSelect);
 focusCordobaBtn?.addEventListener("click", focusCordoba);
 focusArgentinaBtn?.addEventListener("click", focusArgentina);
 citySelector?.addEventListener("change", (event) => {
   const value = event.target?.value || "drivers";
   animateToPreset(value);
 });
+
 closeModalBtn?.addEventListener("click", closeDriverModal);
 
 modal?.addEventListener("click", (event) => {
