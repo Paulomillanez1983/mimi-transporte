@@ -119,7 +119,10 @@ let realtimeReloadTimer = null;
 let lastFocusedElement = null;
 let isBootstrapped = false;
 let userLocationMarker = null;
-
+let bottomSheetPointerId = null;
+let bottomSheetStartY = 0;
+let bottomSheetCurrentY = 0;
+let bottomSheetDragging = false;
 const GEOLOCATION_OPTIONS = {
   enableHighAccuracy: true,
   timeout: 12000,
@@ -575,13 +578,30 @@ function renderDrivers(options = {}) {
     return;
   }
 
-  driversContainer.innerHTML = filtered.map(createDriverCard).join("");
-  enableSwipeCards();
-  syncMap(filtered, { keepViewport });
+driversContainer.innerHTML = filtered.map(createDriverCard).join("");
+enableSwipeCards();
+animateCardsIn();
+syncMap(filtered, { keepViewport });
 
+  
   window.setTimeout(() => map?.resize(), 120);
   window.setTimeout(() => map?.resize(), 300);
 }
+
+function animateCardsIn() {
+  const cards = Array.from(document.querySelectorAll("[data-driver-card]"));
+  if (!cards.length) return;
+
+  cards.forEach((card, index) => {
+    card.classList.remove("card-enter");
+    card.style.setProperty("--card-delay", `${Math.min(index * 45, 240)}ms`);
+  });
+
+  requestAnimationFrame(() => {
+    cards.forEach((card) => card.classList.add("card-enter"));
+  });
+}
+
 
 function setFilterButtonState(nextFilter) {
   filterButtons.forEach((button) => {
@@ -700,7 +720,8 @@ function openDriverModal(driver) {
   modal.classList.remove("hidden");
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("modal-open");
-
+setupBottomSheet();
+modal.classList.toggle("is-bottom-sheet", window.innerWidth <= 820);
   requestAnimationFrame(() => {
     modalDialog?.focus();
   });
@@ -717,7 +738,73 @@ function closeDriverModal() {
     requestAnimationFrame(() => lastFocusedElement.focus());
   }
 }
+function setupBottomSheet() {
+  if (!modal || !modalDialog) return;
+  if (modalDialog.dataset.sheetReady === "true") return;
 
+  modalDialog.dataset.sheetReady = "true";
+
+  const isMobileSheet = () => window.innerWidth <= 820;
+
+  const resetSheet = () => {
+    modalDialog.style.transition = "transform 0.22s ease";
+    modalDialog.style.transform = "translateY(0)";
+    window.setTimeout(() => {
+      modalDialog.style.transition = "";
+    }, 220);
+  };
+
+  const finishSheetGesture = () => {
+    if (!bottomSheetDragging) return;
+    bottomSheetDragging = false;
+
+    const delta = Math.max(0, bottomSheetCurrentY - bottomSheetStartY);
+
+    if (delta > 110) {
+      modalDialog.style.transition = "transform 0.18s ease";
+      modalDialog.style.transform = "translateY(110%)";
+      if (navigator.vibrate) navigator.vibrate(12);
+
+      window.setTimeout(() => {
+        closeDriverModal();
+        modalDialog.style.transition = "";
+        modalDialog.style.transform = "";
+      }, 180);
+      return;
+    }
+
+    resetSheet();
+  };
+
+  modalDialog.addEventListener("pointerdown", (event) => {
+    if (!isMobileSheet()) return;
+    if (event.target.closest(".summary-grid a, .doc-card a, button, textarea, input")) return;
+
+    bottomSheetPointerId = event.pointerId;
+    bottomSheetStartY = event.clientY;
+    bottomSheetCurrentY = event.clientY;
+    bottomSheetDragging = true;
+    modalDialog.style.transition = "none";
+
+    if (typeof modalDialog.setPointerCapture === "function") {
+      try {
+        modalDialog.setPointerCapture(bottomSheetPointerId);
+      } catch (_) {}
+    }
+  });
+
+  modalDialog.addEventListener("pointermove", (event) => {
+    if (!bottomSheetDragging || event.pointerId !== bottomSheetPointerId) return;
+
+    bottomSheetCurrentY = event.clientY;
+    const delta = Math.max(0, bottomSheetCurrentY - bottomSheetStartY);
+    modalDialog.style.transform = `translateY(${Math.min(delta, 160)}px)`;
+  });
+
+  modalDialog.addEventListener("pointerup", finishSheetGesture);
+  modalDialog.addEventListener("pointercancel", finishSheetGesture);
+  modalDialog.addEventListener("lostpointercapture", finishSheetGesture);
+}
 function initMap() {
   if (map || !window.maplibregl) return;
 
@@ -1540,7 +1627,7 @@ const finishSwipe = async () => {
     surface.style.transform = "translateX(160px)";
     card.classList.add("swipe-success");
 
-    if (navigator.vibrate) navigator.vibrate(20);
+    if (navigator.vibrate) navigator.vibrate([12, 18, 12]);
 
     window.setTimeout(() => resetCardTransform(card), 220);
     await reviewDriver(driverId, "approve", approveBtn);
@@ -1552,7 +1639,7 @@ const finishSwipe = async () => {
     surface.style.transform = "translateX(-160px)";
     card.classList.add("swipe-error");
 
-    if (navigator.vibrate) navigator.vibrate(20);
+    if (navigator.vibrate) navigator.vibrate([12, 18, 12]);
 
     window.setTimeout(() => resetCardTransform(card), 220);
     await reviewDriver(driverId, "reject", rejectBtn);
@@ -1683,7 +1770,41 @@ function setupDynamicHeader() {
   window.addEventListener("scroll", onScroll, { passive: true });
 }
 
+function setupMapScrollEffects() {
+  const mapShell = document.querySelector(".map-shell");
+  const mapSurface = document.querySelector(".map-surface");
+  const header = document.querySelector(".header");
+
+  if (!mapShell || !mapSurface) return;
+
+  let ticking = false;
+
+  const update = () => {
+    const y = window.scrollY || 0;
+    const blurActive = y > 18;
+    const deepBlur = y > 80;
+
+    mapShell.classList.toggle("is-scrolled", blurActive);
+    mapShell.classList.toggle("is-deep-scrolled", deepBlur);
+
+    if (header) {
+      header.classList.toggle("has-map-blur", blurActive);
+    }
+
+    ticking = false;
+  };
+
+  const onScroll = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  };
+
+  update();
+  window.addEventListener("scroll", onScroll, { passive: true });
+}
 setFilterButtonState(currentFilter);
 initAdaptiveTheme();
 setupDynamicHeader();
+setupMapScrollEffects();
 bootstrap();
