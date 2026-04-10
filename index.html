@@ -2640,49 +2640,121 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  supportSendBtn?.addEventListener("click", async () => {
-    try {
-      const mensaje = supportMessageInput?.value?.trim();
-      if (!mensaje) {
-        notif.show("Mensaje vacío", "Escribí tu consulta antes de enviar.", "warning");
-        return;
-      }
-
-      const session = await obtenerSesionCliente(true);
-      if (!session?.access_token || !session?.user) {
-        notif.show("Sesión requerida", "Volvé a iniciar sesión para enviar soporte.", "warning");
-        return;
-      }
-
-      appendSupportMessage(mensaje, "user");
-      supportMessageInput.value = "";
-
-      notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
-
-      console.log("SOPORTE_CHAT:", {
-        user: session.user.id,
-        email: session.user.email || null,
-        mensaje,
-        viaje_id: state?.viajeId || null,
-        estado_viaje: state?.estadoViaje || state?.viajeEstado || null,
-        origen: state?.origen?.direccionCorta || state?.origen?.direccion || null,
-        destino: state?.destino?.direccionCorta || state?.destino?.direccion || null,
-        ts: new Date().toISOString()
-      });
-
-      setTimeout(() => {
-        appendSupportMessage(
-          "Recibimos tu mensaje. En breve te vamos a responder.",
-          "agent"
-        );
-      }, 500);
-
-    } catch (err) {
-      console.error("[supportSendBtn] error:", err);
-      notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
+supportSendBtn?.addEventListener("click", async () => {
+  try {
+    const mensaje = supportMessageInput?.value?.trim();
+    if (!mensaje) {
+      notif.show("Mensaje vacío", "Escribí tu consulta antes de enviar.", "warning");
+      return;
     }
-  });
+
+    const session = await obtenerSesionCliente(true);
+    if (!session?.access_token || !session?.user) {
+      notif.show("Sesión requerida", "Volvé a iniciar sesión para enviar soporte.", "warning");
+      return;
+    }
+
+    supportSendBtn.disabled = true;
+
+    const userId = session.user.id;
+    const email = session.user.email || null;
+    const viajeId = state?.viajeId || null;
+    const estadoViaje = state?.estadoViaje || state?.viajeEstado || null;
+    const origen = state?.origen?.direccionCorta || state?.origen?.direccion || null;
+    const destino = state?.destino?.direccionCorta || state?.destino?.direccion || null;
+
+    const metadata = {
+      viaje_id: viajeId,
+      estado_viaje: estadoViaje,
+      email,
+      origen,
+      destino,
+      ts: new Date().toISOString()
+    };
+
+    const asunto =
+      viajeId
+        ? `Consulta sobre viaje ${viajeId}`
+        : "Consulta general desde app cliente";
+
+    // 1) Crear ticket
+    const { data: ticket, error: ticketError } = await window.supabaseInsert("soporte_tickets", {
+      created_by: userId,
+      rol_origen: "client",
+      user_id: userId,
+      asunto,
+      canal: "in_app",
+      categoria: viajeId ? "viaje" : "general",
+      prioridad: "normal",
+      estado: "abierto",
+      ultimo_mensaje: mensaje,
+      last_message_at: new Date().toISOString(),
+      metadata
+    });
+
+    if (ticketError || !ticket?.id) {
+      console.error("[supportSendBtn] ticketError:", ticketError);
+      notif.show(
+        "Error",
+        ticketError?.message || "No se pudo crear el ticket de soporte",
+        "error"
+      );
+      return;
+    }
+
+    // 2) Crear mensaje
+    const { data: soporteMensaje, error: mensajeError } = await window.supabaseInsert("soporte_mensajes", {
+      ticket_id: ticket.id,
+      sender_user_id: userId,
+      sender_role: "client",
+      mensaje,
+      leido: false,
+      mensaje_tipo: "texto",
+      metadata
+    });
+
+    if (mensajeError || !soporteMensaje?.id) {
+      console.error("[supportSendBtn] mensajeError:", mensajeError);
+      notif.show(
+        "Error",
+        mensajeError?.message || "Se creó el ticket pero no se pudo guardar el mensaje",
+        "error"
+      );
+      return;
+    }
+
+    appendSupportMessage(mensaje, "user");
+    supportMessageInput.value = "";
+
+    notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
+
+    console.log("SOPORTE_CHAT_OK:", {
+      ticket_id: ticket.id,
+      mensaje_id: soporteMensaje.id,
+      user: userId,
+      email,
+      mensaje,
+      viaje_id: viajeId,
+      estado_viaje: estadoViaje,
+      origen,
+      destino
+    });
+
+    setTimeout(() => {
+      appendSupportMessage(
+        "Recibimos tu mensaje. En breve te vamos a responder.",
+        "agent"
+      );
+    }, 500);
+
+  } catch (err) {
+    console.error("[supportSendBtn] error:", err);
+    notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
+  } finally {
+    supportSendBtn.disabled = false;
+  }
 });
+  
 // ==========================================
 // UI LOADING
 // ==========================================
