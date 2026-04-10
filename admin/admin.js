@@ -9,6 +9,12 @@ const reloadBtn = document.getElementById("reloadBtn");
 const emailEl = document.getElementById("email");
 const avatarEl = document.getElementById("avatar");
 
+const SUPABASE_ANON_KEY = "TU_ANON_KEY";
+
+/* =========================
+   UTILS
+========================= */
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -26,6 +32,14 @@ function getStatusClass(status) {
   return "pending";
 }
 
+function showMessage(msg) {
+  alert(msg); // después lo mejoramos a toast
+}
+
+/* =========================
+   INIT
+========================= */
+
 async function bootstrap() {
   const result = await supabaseAdminService.requireActiveAdmin();
 
@@ -40,6 +54,10 @@ async function bootstrap() {
 
   await loadDrivers();
 }
+
+/* =========================
+   LOAD DRIVERS
+========================= */
 
 async function loadDrivers() {
   try {
@@ -73,11 +91,12 @@ async function loadDrivers() {
       return;
     }
 
-    driversContainer.innerHTML = data.map((driver) => {
-      const status = driver.onboarding_status || "PENDIENTE_REVISION";
-      const noteValue = driver.review_notes || "";
+    driversContainer.innerHTML = data
+      .map((driver) => {
+        const status = driver.onboarding_status || "PENDIENTE_REVISION";
+        const noteValue = driver.review_notes || "";
 
-      return `
+        return `
         <article class="driver-card">
           <div class="driver-card-top">
             <div>
@@ -108,7 +127,8 @@ async function loadDrivers() {
           </div>
         </article>
       `;
-    }).join("");
+      })
+      .join("");
   } catch (err) {
     console.error("[admin.loadDrivers]", err);
     driversContainer.innerHTML = `
@@ -119,12 +139,16 @@ async function loadDrivers() {
   }
 }
 
+/* =========================
+   REVIEW DRIVER
+========================= */
+
 async function reviewDriver(driverId, action) {
   try {
     const session = await supabaseAdminService.getSession();
 
     if (!session?.access_token) {
-      throw new Error("Sesión inválida o expirada");
+      throw new Error("Sesión expirada. Volvé a iniciar sesión.");
     }
 
     const noteEl = document.getElementById(`note-${driverId}`);
@@ -134,7 +158,8 @@ async function reviewDriver(driverId, action) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${session.access_token}`
+        "Authorization": `Bearer ${session.access_token}`,
+        "apikey": SUPABASE_ANON_KEY
       },
       body: JSON.stringify({
         driver_user_id: driverId,
@@ -146,16 +171,20 @@ async function reviewDriver(driverId, action) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data?.ok) {
-      throw new Error(data?.error || "No se pudo procesar la revisión");
+      throw new Error(data?.error || "Error al procesar");
     }
 
-    alert(`Acción realizada: ${action}`);
+    showMessage("✔ Acción realizada");
     await loadDrivers();
   } catch (err) {
     console.error("[admin.reviewDriver]", err);
-    alert(err instanceof Error ? err.message : "Error inesperado");
+    showMessage(err.message || "Error inesperado");
   }
 }
+
+/* =========================
+   EVENTS
+========================= */
 
 driversContainer?.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-driver-id][data-action]");
@@ -178,6 +207,8 @@ reloadBtn?.addEventListener("click", async () => {
   await loadDrivers();
 });
 
-window.loadDrivers = loadDrivers;
+/* =========================
+   START
+========================= */
 
 bootstrap();
