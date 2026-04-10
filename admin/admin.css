@@ -272,22 +272,30 @@ body {
   /* Mejora legibilidad tipográfica */
   text-rendering: optimizeLegibility;
 }
+
 /* =========================================================
-   BASE
+   BASE / NORMALIZACIÓN
+   ---------------------------------------------------------
+   Ajustes globales para elementos comunes
    ========================================================= */
 
+/* Media responsive por defecto */
 img,
 svg,
 video,
 canvas {
-  max-width: 100%;
-  display: block;
+  max-width: 100%;   /* nunca desbordan su contenedor */
+  height: auto;      /* mantiene proporción */
+  display: block;    /* elimina espacios inline raros */
 }
 
+/* Links heredan color (evita azul default feo) */
 a {
   color: inherit;
+  text-decoration: none; /* opcional: estilo más limpio tipo app */
 }
 
+/* Inputs y controles usan la misma tipografía */
 button,
 input,
 textarea,
@@ -295,26 +303,52 @@ select {
   font: inherit;
 }
 
+
+/* =========================================================
+   PERFORMANCE / RENDERING
+   ---------------------------------------------------------
+   Optimizaciones de GPU y animaciones
+   ========================================================= */
+
+/* Mejora animaciones en cards (evita lag) */
 .driver-card-surface {
-  transform: translateZ(0);
-  will-change: transform;
+  transform: translateZ(0);   /* fuerza capa GPU */
+  will-change: transform;     /* optimiza animaciones */
 }
 
+
+/* =========================================================
+   MAPA (MapLibre / WebGL)
+   ---------------------------------------------------------
+   MUY IMPORTANTE: evita bugs visuales con transform
+   ========================================================= */
+
+/* ⚠️ Nunca transformar el canvas del mapa */
 #driversMap,
 .maplibregl-canvas {
   transform: none !important;
   will-change: auto !important;
 }
+
+/* Contenedor del mapa aislado */
 #driversMap,
 .drivers-map {
   position: relative;
-  isolation: isolate;
-  z-index: 1;
+  isolation: isolate; /* crea nuevo stacking context */
+  z-index: 1;         /* evita conflictos con overlays */
 }
 
+/* Superficie del mapa separada del resto */
 .map-surface {
   isolation: isolate;
 }
+
+
+/* =========================================================
+   UX / DETALLES VISUALES
+   ========================================================= */
+
+/* Selección de texto personalizada */
 ::selection {
   background: rgba(59, 130, 246, 0.28);
   color: #fff;
