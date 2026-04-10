@@ -2550,9 +2550,66 @@ document.addEventListener('DOMContentLoaded', async () => {
   await restaurarViajeActivoCliente();
 
   // ==========================================
-  // BOTÓN SOPORTE (PEGAR ACÁ)
+  // SOPORTE CHAT SHEET
   // ==========================================
   const supportBtn = document.getElementById("supportBtn");
+  const supportSheet = document.getElementById("supportSheet");
+  const supportSheetOverlay = document.getElementById("supportSheetOverlay");
+  const supportSheetClose = document.getElementById("supportSheetClose");
+  const supportMessageInput = document.getElementById("supportMessageInput");
+  const supportSendBtn = document.getElementById("supportSendBtn");
+  const supportChatBody = document.getElementById("supportChatBody");
+
+  function openSupportSheet() {
+    if (!supportSheet || !supportSheetOverlay) return;
+
+    supportSheet.hidden = false;
+    supportSheetOverlay.hidden = false;
+
+    requestAnimationFrame(() => {
+      supportSheet.classList.add("is-open");
+      supportSheetOverlay.classList.add("is-open");
+      supportSheet.setAttribute("aria-hidden", "false");
+    });
+
+    setTimeout(() => {
+      supportMessageInput?.focus();
+    }, 220);
+
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeSupportSheet() {
+    if (!supportSheet || !supportSheetOverlay) return;
+
+    supportSheet.classList.remove("is-open");
+    supportSheetOverlay.classList.remove("is-open");
+    supportSheet.setAttribute("aria-hidden", "true");
+
+    setTimeout(() => {
+      if (!supportSheet.classList.contains("is-open")) {
+        supportSheet.hidden = true;
+        supportSheetOverlay.hidden = true;
+      }
+    }, 280);
+
+    document.body.style.overflow = "";
+  }
+
+  function appendSupportMessage(text, type = "user") {
+    if (!supportChatBody || !text) return;
+
+    const row = document.createElement("div");
+    row.className = `support-msg support-msg-${type}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = "support-bubble";
+    bubble.textContent = text;
+
+    row.appendChild(bubble);
+    supportChatBody.appendChild(row);
+    supportChatBody.scrollTop = supportChatBody.scrollHeight;
+  }
 
   supportBtn?.addEventListener("click", async () => {
     try {
@@ -2567,142 +2624,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const asunto = prompt("Asunto del soporte:", "Consulta sobre mi viaje");
-      if (!asunto) return;
-
-// ==========================================
-// SOPORTE CHAT SHEET
-// ==========================================
-const supportBtn = document.getElementById("supportBtn");
-const supportSheet = document.getElementById("supportSheet");
-const supportSheetOverlay = document.getElementById("supportSheetOverlay");
-const supportSheetClose = document.getElementById("supportSheetClose");
-const supportMessageInput = document.getElementById("supportMessageInput");
-const supportSendBtn = document.getElementById("supportSendBtn");
-const supportChatBody = document.getElementById("supportChatBody");
-
-function openSupportSheet() {
-  if (!supportSheet || !supportSheetOverlay) return;
-
-  supportSheet.hidden = false;
-  supportSheetOverlay.hidden = false;
-
-  requestAnimationFrame(() => {
-    supportSheet.classList.add("is-open");
-    supportSheetOverlay.classList.add("is-open");
-    supportSheet.setAttribute("aria-hidden", "false");
+      openSupportSheet();
+    } catch (err) {
+      console.error("[supportBtn] error:", err);
+      notif.show("Error", "No se pudo abrir soporte", "error");
+    }
   });
 
-  setTimeout(() => {
-    supportMessageInput?.focus();
-  }, 220);
+  supportSheetClose?.addEventListener("click", closeSupportSheet);
+  supportSheetOverlay?.addEventListener("click", closeSupportSheet);
 
-  document.body.style.overflow = "hidden";
-}
-
-function closeSupportSheet() {
-  if (!supportSheet || !supportSheetOverlay) return;
-
-  supportSheet.classList.remove("is-open");
-  supportSheetOverlay.classList.remove("is-open");
-  supportSheet.setAttribute("aria-hidden", "true");
-
-  setTimeout(() => {
-    if (!supportSheet.classList.contains("is-open")) {
-      supportSheet.hidden = true;
-      supportSheetOverlay.hidden = true;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && supportSheet?.classList.contains("is-open")) {
+      closeSupportSheet();
     }
-  }, 280);
+  });
 
-  document.body.style.overflow = "";
-}
+  supportSendBtn?.addEventListener("click", async () => {
+    try {
+      const mensaje = supportMessageInput?.value?.trim();
+      if (!mensaje) {
+        notif.show("Mensaje vacío", "Escribí tu consulta antes de enviar.", "warning");
+        return;
+      }
 
-function appendSupportMessage(text, type = "user") {
-  if (!supportChatBody || !text) return;
+      const session = await obtenerSesionCliente(true);
+      if (!session?.access_token || !session?.user) {
+        notif.show("Sesión requerida", "Volvé a iniciar sesión para enviar soporte.", "warning");
+        return;
+      }
 
-  const row = document.createElement("div");
-  row.className = `support-msg support-msg-${type}`;
+      appendSupportMessage(mensaje, "user");
+      supportMessageInput.value = "";
 
-  const bubble = document.createElement("div");
-  bubble.className = "support-bubble";
-  bubble.textContent = text;
+      notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
 
-  row.appendChild(bubble);
-  supportChatBody.appendChild(row);
-  supportChatBody.scrollTop = supportChatBody.scrollHeight;
-}
+      console.log("SOPORTE_CHAT:", {
+        user: session.user.id,
+        email: session.user.email || null,
+        mensaje,
+        viaje_id: state?.viajeId || null,
+        estado_viaje: state?.estadoViaje || state?.viajeEstado || null,
+        origen: state?.origen?.direccionCorta || state?.origen?.direccion || null,
+        destino: state?.destino?.direccionCorta || state?.destino?.direccion || null,
+        ts: new Date().toISOString()
+      });
 
-supportBtn?.addEventListener("click", async () => {
-  try {
-    const session = await obtenerSesionCliente(true);
+      setTimeout(() => {
+        appendSupportMessage(
+          "Recibimos tu mensaje. En breve te vamos a responder.",
+          "agent"
+        );
+      }, 500);
 
-    if (!session?.access_token || !session?.user) {
-      notif.show(
-        "Ingresá primero",
-        "Necesitás iniciar sesión para contactar soporte.",
-        "warning"
-      );
-      return;
+    } catch (err) {
+      console.error("[supportSendBtn] error:", err);
+      notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
     }
-
-    openSupportSheet();
-  } catch (err) {
-    console.error("[supportBtn] error:", err);
-    notif.show("Error", "No se pudo abrir soporte", "error");
-  }
+  });
 });
-
-supportSheetClose?.addEventListener("click", closeSupportSheet);
-supportSheetOverlay?.addEventListener("click", closeSupportSheet);
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && supportSheet?.classList.contains("is-open")) {
-    closeSupportSheet();
-  }
-});
-
-supportSendBtn?.addEventListener("click", async () => {
-  try {
-    const mensaje = supportMessageInput?.value?.trim();
-    if (!mensaje) {
-      notif.show("Mensaje vacío", "Escribí tu consulta antes de enviar.", "warning");
-      return;
-    }
-
-    const session = await obtenerSesionCliente(true);
-    if (!session?.access_token || !session?.user) {
-      notif.show("Sesión requerida", "Volvé a iniciar sesión para enviar soporte.", "warning");
-      return;
-    }
-
-    appendSupportMessage(mensaje, "user");
-    supportMessageInput.value = "";
-
-    notif.show("Enviado", "Tu mensaje fue enviado a soporte.", "success");
-
-    console.log("SOPORTE_CHAT:", {
-      user: session.user.id,
-      email: session.user.email || null,
-      mensaje,
-      viaje_id: state?.viajeId || null,
-      estado_viaje: state?.estadoViaje || state?.viajeEstado || null,
-      origen: state?.origen?.direccionCorta || state?.origen?.direccion || null,
-      destino: state?.destino?.direccionCorta || state?.destino?.direccion || null,
-      ts: new Date().toISOString()
-    });
-
-    setTimeout(() => {
-      appendSupportMessage(
-        "Recibimos tu mensaje. En breve te vamos a responder.",
-        "agent"
-      );
-    }, 500);
-
-  } catch (err) {
-    console.error("[supportSendBtn] error:", err);
-    notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
-  }
-});  
 // ==========================================
 // UI LOADING
 // ==========================================
