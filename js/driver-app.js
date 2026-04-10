@@ -822,72 +822,84 @@ class DriverApp {
   // =========================================================
   // UI SETUP
   // =========================================================
-  _setupUI() {
-    const btnFab = document.getElementById('fab-online');
+_setupUI() {
+  const btnFab = document.getElementById('fab-online');
+  const supportBtn = document.getElementById('menu-support');
 
-    this._fabClickHandler = async () => {
-      try {
-        const hasActiveTrip = !!tripManager.getCurrentTrip();
+  this._fabClickHandler = async () => {
+    try {
+      const hasActiveTrip = !!tripManager.getCurrentTrip();
 
-        if (hasActiveTrip && this._onlineStatus) {
-          uiController.showToast('No podés ponerte offline durante un viaje', 'warning');
+      if (hasActiveTrip && this._onlineStatus) {
+        uiController.showToast('No podés ponerte offline durante un viaje', 'warning');
+        return;
+      }
+
+      const nextOnline = !this._onlineStatus;
+
+      if (nextOnline) {
+        await tripManager.setDriverAvailability({
+          online: true,
+          disponible: true
+        });
+
+        await this._startLocationTracking();
+        await initPushFCM('chofer');
+
+        this._onlineStatus = true;
+        this._setFlowState('ONLINE_IDLE');
+        uiController.showWaitingState();
+      } else {
+        if (tripManager.getCurrentTrip()) {
+          uiController.showToast('No podés desconectarte en viaje', 'warning');
           return;
         }
 
-        const nextOnline = !this._onlineStatus;
+        await tripManager.setDriverAvailability({
+          online: false,
+          disponible: false
+        });
 
-        if (nextOnline) {
-          await tripManager.setDriverAvailability({
-            online: true,
-            disponible: true
-          });
-
-          await this._startLocationTracking();
-          await initPushFCM('chofer');
-
-          this._onlineStatus = true;
-          this._setFlowState('ONLINE_IDLE');
-          uiController.showWaitingState();
-        } else {
-          if (tripManager.getCurrentTrip()) {
-            uiController.showToast('No podés desconectarte en viaje', 'warning');
-            return;
-          }
-
-          await tripManager.setDriverAvailability({
-            online: false,
-            disponible: false
-          });
-
-          this._onlineStatus = false;
-          this._setFlowState('OFFLINE');
-          mapService.clearRoute?.();
-          uiController.hideNavigation?.();
-          locationTracker.stop?.();
-        }
-
-        uiController.updateDriverState(
-          this._onlineStatus ? 'ONLINE' : 'OFFLINE',
-          this._onlineStatus
-        );
-
-        uiController.showToast(
-          this._onlineStatus ? '🟢 Online' : '🔴 Offline',
-          'success'
-        );
-      } catch (err) {
-        console.error('[DriverApp] Error cambiando estado:', err);
-        uiController.showToast('Error cambiando estado', 'error');
+        this._onlineStatus = false;
+        this._setFlowState('OFFLINE');
+        mapService.clearRoute?.();
+        uiController.hideNavigation?.();
+        locationTracker.stop?.();
       }
-    };
 
-    if (btnFab) {
-      btnFab.addEventListener('click', this._fabClickHandler);
+      uiController.updateDriverState(
+        this._onlineStatus ? 'ONLINE' : 'OFFLINE',
+        this._onlineStatus
+      );
+
+      uiController.showToast(
+        this._onlineStatus ? '🟢 Online' : '🔴 Offline',
+        'success'
+      );
+    } catch (err) {
+      console.error('[DriverApp] Error cambiando estado:', err);
+      uiController.showToast('Error cambiando estado', 'error');
     }
+  };
 
-    window.addEventListener('driverAction', this._driverActionHandler);
+  if (btnFab) {
+    btnFab.addEventListener('click', this._fabClickHandler);
   }
 
+  if (supportBtn) {
+    supportBtn.addEventListener('click', () => {
+      uiController.showToast('Abriendo soporte...', 'success');
+
+      // Opción 1: abrir modal de soporte
+      uiController.openSupportModal?.();
+
+      // Opción 2: navegar a pantalla soporte
+      // window.location.href = './soporte.html';
+    });
+  }
+
+  window.addEventListener('driverAction', this._driverActionHandler);
+}
   async _handleDriverActionEvent(e) {
     const { action, tripId } = e.detail || {};
     await this._handleAction(action, tripId);
