@@ -15,7 +15,7 @@ const firebaseConfig = {
   appId: "1:1066211116754:web:8cfb14cfb15ecd0cb28f0b"
 };
 
-const FIREBASE_VAPID_KEY = "BD2TKeACzqKVeKp8jWYuznNdjMgscYaygddedP06iTX26kXKiQRk5MR4kv_lJCfKxdjRqvoRB53rfMxg8WEhTME".trim();
+const FIREBASE_VAPID_KEY = "BKjAYoEwolpGEXVXpLRRBD5zHdkBbCHaUo9QgwFoPAULSdPn7qt8RNsMHAT2RrJtQpBsO3sRfMOHhFh1YBTfKSo".trim();
 let initialized = false;
 function getAppBasePath() {
   const isGithubPages = window.location.hostname === "paulomillanez1983.github.io";
