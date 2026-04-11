@@ -115,6 +115,21 @@ function escapeHtmlAttr(value) {
     .replaceAll("'", "&#039;");
 }
 
+function sanitizeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ""), window.location.origin);
+    const protocol = url.protocol.toLowerCase();
+
+    if (protocol === "http:" || protocol === "https:") {
+      return url.toString();
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function supportMessageTicks(status) {
   switch (String(status || "").toUpperCase()) {
     case "READ":
@@ -168,6 +183,7 @@ function getCurrentConversation() {
 function setSupportBusy(isBusy) {
   supportState.loadingList = !!isBusy;
   const els = getSupportElements();
+
   if (els.refresh) {
     els.refresh.disabled = !!isBusy;
   }
@@ -344,20 +360,6 @@ function renderConversationList() {
     `;
   }).join("");
 }
-function sanitizeExternalUrl(value) {
-  try {
-    const url = new URL(String(value || ""), window.location.origin);
-    const protocol = url.protocol.toLowerCase();
-
-    if (protocol === "http:" || protocol === "https:") {
-      return url.toString();
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 function renderSelectedConversation() {
   const els = getSupportElements();
@@ -401,39 +403,33 @@ function renderSelectedConversation() {
         const ticks = isAdmin ? supportMessageTicks(msg.delivery_status) : "";
         const attachments = Array.isArray(msg.attachments) ? msg.attachments : [];
 
+        const attachmentsHtml = attachments.length
+          ? `
+            <div class="support-message-attachments">
+              ${attachments.map((file) => {
+                const safeUrl = sanitizeExternalUrl(file?.url);
+                if (!safeUrl) return "";
+
+                return `
+                  <a
+                    href="${escapeHtmlAttr(safeUrl)}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="support-attachment-chip"
+                  >
+                    📎 ${escapeHtmlSupport(file?.name || "Adjunto")}
+                  </a>
+                `;
+              }).join("")}
+            </div>
+          `
+          : "";
+
         return `
           <div class="support-message-row ${isAdmin ? "admin" : "user"}">
             <div class="support-message-bubble">
               ${msg.text ? `<div>${escapeHtmlSupport(msg.text)}</div>` : ""}
-
-              ${
-                attachments.length
-                  ? `
-                    <div class="support-message-attachments">
-${
-  attachments.length
-    ? `
-      <div class="support-message-attachments">
-        ${attachments.map((file) => `
-${attachments.map((file) => {
-  const safeUrl = sanitizeExternalUrl(file?.url);
-  if (!safeUrl) return "";
-
-  return `
-    <a
-      href="${escapeHtmlAttr(safeUrl)}"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="support-attachment-chip"
-    >
-      📎 ${escapeHtmlSupport(file?.name || "Adjunto")}
-    </a>
-  `;
-}).join("")}
-      </div>
-    `
-    : ""
-}
+              ${attachmentsHtml}
               <div class="support-message-meta">
                 ${escapeHtmlSupport(msg.sender_role || "user")} · ${supportFormatTime(msg.created_at)}
                 ${ticks ? `<span class="support-message-ticks">${ticks}</span>` : ""}
@@ -459,13 +455,13 @@ function selectConversation(id, options = {}) {
 
   supportState.selectedId = id;
 
-if (markVisualRead) {
-  const current = getCurrentConversation();
-  if (current && normalizeSupportStatus(current.status) === "esperando_usuario") {
-    current.status = "en_proceso";
-    current.unread_count = 0;
+  if (markVisualRead) {
+    const current = getCurrentConversation();
+    if (current && normalizeSupportStatus(current.status) === "esperando_usuario") {
+      current.status = "en_proceso";
+      current.unread_count = 0;
+    }
   }
-}
 
   renderConversationList();
   renderSelectedConversation();
@@ -481,9 +477,9 @@ function updateConversationStatusLocally(status) {
 
   current.status = normalizeSupportStatus(status);
 
-if (current.status !== "esperando_usuario") {
-  current.unread_count = 0;
-}
+  if (current.status !== "esperando_usuario") {
+    current.unread_count = 0;
+  }
 
   applySupportFilters();
   renderConversationList();
@@ -559,70 +555,74 @@ async function sendSupportReply() {
     const token = await getAdminAccessToken();
     const uploadedAttachments = await uploadSupportAttachments(current.id, files);
 
-const response = await fetch(`${SUPPORT_API_BASE}/support-send-message`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    conversation_id: current.id,
-    message: text,
-    sender_role: "admin",
-    attachments: uploadedAttachments,
-    metadata: {
-      push_title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
-      push_body: text || "Tenés una nueva respuesta de soporte.",
-      sender_name: current.name || "Soporte MIMICAR",
-      conversation_name: current.name || "Usuario",
-      unread_count: Number(current.unread_count || 0) + 1
+    const response = await fetch(`${SUPPORT_API_BASE}/support-send-message`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        conversation_id: current.id,
+        message: text,
+        sender_role: "admin",
+        attachments: uploadedAttachments,
+        metadata: {
+          push_title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
+          push_body: text || "Tenés una nueva respuesta de soporte.",
+          sender_name: current.name || "Soporte MIMICAR",
+          conversation_name: current.name || "Usuario",
+          unread_count: Number(current.unread_count || 0) + 1
+        }
+      })
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data?.ok) {
+      throw new Error(data?.error || "No se pudo enviar la respuesta");
     }
-  })
-});
-const data = await response.json().catch(() => ({}));
 
-if (!response.ok || !data?.ok) {
-  throw new Error(data?.error || "No se pudo enviar la respuesta");
-}
+    const newMessageId =
+      data?.message?.id ||
+      data?.message_id ||
+      data?.data?.id ||
+      null;
 
-const newMessageId =
-  data?.message?.id ||
-  data?.message_id ||
-  data?.data?.id ||
-  null;
+    try {
+      const pushResponse = await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          ticket_id: current.id,
+          message_id: newMessageId,
+          title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
+          body: text || "Tenés una nueva respuesta de soporte.",
+          sender_name: current.name || "Soporte MIMICAR",
+          sender_role: "admin",
+          conversation_name: current.name || "Usuario",
+          unread_count: Number(current.unread_count || 0) + 1
+        })
+      });
 
-try {
-const pushResponse = await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`
-  },
-  body: JSON.stringify({
-    ticket_id: current.id,
-    message_id: newMessageId,
-    title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
-    body: text || "Tenés una nueva respuesta de soporte.",
-    sender_name: current.name || "Soporte MIMICAR",
-    sender_role: "admin",
-    conversation_name: current.name || "Usuario",
-    unread_count: Number(current.unread_count || 0) + 1
-  })
-});
-  const pushData = await pushResponse.json().catch(() => ({}));
+      const pushData = await pushResponse.json().catch(() => ({}));
 
-  if (!pushResponse.ok || pushData?.ok === false) {
-    console.warn("[support.sendSupportReply] push response warning:", pushData);
-  } else {
-    console.log("[support.sendSupportReply] push enviada:", pushData);
-  }
-} catch (pushErr) {
-  console.warn("[support.sendSupportReply] push warning:", pushErr);
-}    
-if (els.reply) {
-  els.reply.value = "";
-  els.reply.style.height = "";
-}
+      if (!pushResponse.ok || pushData?.ok === false) {
+        console.warn("[support.sendSupportReply] push response warning:", pushData);
+      } else {
+        console.log("[support.sendSupportReply] push enviada:", pushData);
+      }
+    } catch (pushErr) {
+      console.warn("[support.sendSupportReply] push warning:", pushErr);
+    }
+
+    if (els.reply) {
+      els.reply.value = "";
+      els.reply.style.height = "";
+    }
+
     if (els.attachmentInput) {
       els.attachmentInput.value = "";
     }
@@ -836,10 +836,9 @@ export function initAdminSupport() {
   });
 
   els.send?.addEventListener("click", sendSupportReply);
-
-els.markRead?.addEventListener("click", () => persistConversationStatus("en_proceso"));
-els.markPending?.addEventListener("click", () => persistConversationStatus("esperando_usuario"));
-els.markResolved?.addEventListener("click", () => persistConversationStatus("resuelto"));
+  els.markRead?.addEventListener("click", () => persistConversationStatus("en_proceso"));
+  els.markPending?.addEventListener("click", () => persistConversationStatus("esperando_usuario"));
+  els.markResolved?.addEventListener("click", () => persistConversationStatus("resuelto"));
   els.reply?.addEventListener("input", autoResizeSupportReply);
 
   els.reply?.addEventListener("keydown", (event) => {
