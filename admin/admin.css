@@ -3230,6 +3230,9 @@ header.is-condensed h1 {
   border-radius: 14px;
 }
 
-.support-thread-actions > *:last-child {
-  grid-column: 1 / -1;
+.support-thread-actions > * {
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 12px;
+  border-radius: 12px;
 }
