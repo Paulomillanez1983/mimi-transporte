@@ -2864,7 +2864,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
- supportSendBtn?.addEventListener("click", async () => {
+supportSendBtn?.addEventListener("click", async () => {
   try {
     const mensaje = supportMessageInput?.value?.trim();
     if (!mensaje) {
@@ -2930,8 +2930,9 @@ document.addEventListener("keydown", (e) => {
         return;
       }
 
-       currentSupportTicketId = ticket.id;
-       await subscribeSupportRealtimeForUser();    } else {
+      currentSupportTicketId = ticket.id;
+      await subscribeSupportRealtimeForUser();
+    } else {
       const { error: ticketUpdateError } = await window.supabaseUpdate(
         "soporte_tickets",
         "id",
@@ -2982,22 +2983,22 @@ document.addEventListener("keydown", (e) => {
   } finally {
     supportSendBtn.disabled = false;
   }
-     try {
-    cargarNotificacionesDesdeStorage();
-    renderizarCentroNotificaciones();
-    await restaurarViajeActivoCliente();
-    await subscribeSupportRealtimeForUser();
-
-    if (window.initSupportPushFCM) {
-      await window.initSupportPushFCM();
-    }
-  } catch (err) {
-    console.error("[DOMContentLoaded bootstrap] error:", err);
-  }
 });
 
-}); // <- CERRAR DOMContentLoaded ACÁ
+try {
+  cargarNotificacionesDesdeStorage();
+  renderizarCentroNotificaciones();
+  await restaurarViajeActivoCliente();
+  await subscribeSupportRealtimeForUser();
 
+  if (window.initSupportPushFCM) {
+    await window.initSupportPushFCM();
+  }
+} catch (err) {
+  console.error("[DOMContentLoaded bootstrap] error:", err);
+}
+
+}); // <- CERRAR DOMContentLoaded ACÁ
 // ==========================================
 // UI LOADING
 // ==========================================
