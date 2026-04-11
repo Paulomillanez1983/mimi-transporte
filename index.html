@@ -2801,15 +2801,27 @@ const { data: existingTickets, error: ticketLookupError } = await window.supabas
   
 function cleanupSupportRealtime() {
   try {
+    if (supportRealtimeRetryTimer) {
+      clearTimeout(supportRealtimeRetryTimer);
+      supportRealtimeRetryTimer = null;
+    }
+
     if (currentSupportChannel && window.sbRealtime) {
+      supportRealtimeManuallyClosing = true;
       window.sbRealtime.removeChannel(currentSupportChannel);
     }
   } catch (err) {
     console.warn("[support] no se pudo remover canal anterior", err);
   } finally {
     currentSupportChannel = null;
+    supportRealtimeActiveUserId = null;
+
+    setTimeout(() => {
+      supportRealtimeManuallyClosing = false;
+    }, 300);
   }
 }
+  
 async function handleIncomingSupportMessage(payload) {
   try {
     console.log("[support realtime payload]", payload);
@@ -2874,7 +2886,7 @@ async function handleIncomingSupportMessage(payload) {
 }
 
 
-async function subscribeSupportRealtimeForUser() {
+async function subscribeSupportRealtimeForUser(force = false) {
   if (!window.sbRealtime) return null;
 
   const session = await obtenerSesionCliente(true);
@@ -2886,7 +2898,15 @@ async function subscribeSupportRealtimeForUser() {
 
   const userId = session.user.id;
 
+  // Si ya existe un canal activo para este usuario, no lo recrees
+  if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
+    return currentSupportChannel;
+  }
+
   cleanupSupportRealtime();
+
+  supportRealtimeActiveUserId = userId;
+  supportRealtimeManuallyClosing = false;
 
   currentSupportChannel = window.sbRealtime
     .channel(`support-user-${userId}`)
@@ -2902,18 +2922,28 @@ async function subscribeSupportRealtimeForUser() {
     .subscribe((status) => {
       console.log("[support realtime status]", status);
 
-      if (
-        status === "CHANNEL_ERROR" ||
-        status === "TIMED_OUT" ||
-        status === "CLOSED"
-      ) {
+      if (status === "SUBSCRIBED") {
+        return;
+      }
+
+      // Si el cierre fue provocado por nuestro propio removeChannel, no reintentar
+      if (status === "CLOSED" && supportRealtimeManuallyClosing) {
+        console.log("[support realtime] cierre manual ignorado");
+        return;
+      }
+
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         console.warn("[support realtime] reintentando suscripción...");
 
-        setTimeout(async () => {
+        if (supportRealtimeRetryTimer) {
+          clearTimeout(supportRealtimeRetryTimer);
+        }
+
+        supportRealtimeRetryTimer = setTimeout(async () => {
           try {
             const activeSession = await obtenerSesionCliente(false);
             if (!activeSession?.user?.id) return;
-            await subscribeSupportRealtimeForUser();
+            await subscribeSupportRealtimeForUser(true);
           } catch (err) {
             console.warn("[support realtime] error reintentando:", err);
           }
@@ -2924,7 +2954,6 @@ async function subscribeSupportRealtimeForUser() {
   window._supportChannel = currentSupportChannel;
   return currentSupportChannel;
 }
-
 supportBtn?.addEventListener("click", async () => {
   try {
     const session = await obtenerSesionCliente(true);
