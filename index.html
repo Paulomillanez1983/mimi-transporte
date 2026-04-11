@@ -394,16 +394,23 @@ if (SupabaseSDK?.createClient) {
 } else {
   console.error('No se pudo inicializar Supabase Realtime/Auth');
 }
-window.supabaseUpdate = async function(table, matchColumn, matchValue, data) {
+window.supabaseUpdate = async function(table, matchColumn, matchValue, data, accessToken = null) {
   try {
     const url = `${SUPABASE_URL}/rest/v1/${encodeURIComponent(table)}?${encodeURIComponent(matchColumn)}=eq.${encodeURIComponent(matchValue)}`;
 
+    const headers = accessToken
+      ? getAuthSupabaseHeaders(accessToken, {
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        })
+      : getPublicSupabaseHeaders({
+          "Content-Type": "application/json",
+          Prefer: "return=representation"
+        });
+
     const result = await safeFetch(url, {
       method: "PATCH",
-      headers: getPublicSupabaseHeaders({
-        "Content-Type": "application/json",
-        Prefer: "return=representation"
-      }),
+      headers,
       body: JSON.stringify(data ?? {})
     });
 
@@ -3214,16 +3221,17 @@ supportSendBtn?.addEventListener("click", async () => {
       currentSupportTicketId = ticket.id;
       await subscribeSupportRealtimeForUser(false);
     } else {
-      const { error: ticketUpdateError } = await window.supabaseUpdate(
-        "soporte_tickets",
-        "id",
-        currentSupportTicketId,
-        {
-          ultimo_mensaje: mensaje,
-          last_message_at: new Date().toISOString(),
-          estado: "abierto"
-        }
-      );
+const { error: ticketUpdateError } = await window.supabaseUpdate(
+  "soporte_tickets",
+  "id",
+  currentSupportTicketId,
+  {
+    ultimo_mensaje: mensaje,
+    last_message_at: new Date().toISOString(),
+    estado: "abierto"
+  },
+  session.access_token
+);
 
       if (ticketUpdateError) {
         console.warn("[supportSendBtn] ticketUpdateError:", ticketUpdateError);
