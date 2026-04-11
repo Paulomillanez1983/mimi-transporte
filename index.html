@@ -2834,11 +2834,6 @@ if (senderRole === "admin") {
   guardarNotificacionesEnStorage();
   actualizarBadgeNotificaciones();
 }
-            unreadCount += 1;
-            renderizarCentroNotificaciones();
-            guardarNotificacionesEnStorage();
-            actualizarBadgeNotificaciones();
-          }
         } catch (err) {
           console.error("[support realtime] error", err);
         }
