@@ -2851,34 +2851,61 @@ async function handleIncomingSupportMessage(payload) {
 
     const session = await obtenerSesionCliente(true);
     const userId = session?.user?.id;
-    if (!userId) return;
 
-    const { data: ticketRows, error: ticketError } = await window.supabase
+    if (!userId) {
+      console.warn("[support realtime] sin sesión de cliente activa");
+      return;
+    }
+
+    const senderRole = String(msg.sender_role || "").toLowerCase();
+
+    // Evita duplicados ANTES de seguir procesando
+    if (senderRole === "admin") {
+      if (msg.id && markSupportMessageProcessed(msg.id)) {
+        console.log("[support realtime] mensaje admin duplicado ignorado", msg.id);
+        return;
+      }
+    }
+
+    // Buscar ticket por ID solamente
+    const { data: ticket, error: ticketError } = await window.supabase
       .from("soporte_tickets")
-      .select("id, user_id")
+      .select("id, user_id, created_by, estado, asunto, updated_at")
       .eq("id", msg.ticket_id)
-      .eq("user_id", userId)
-      .limit(1);
+      .maybeSingle();
 
     if (ticketError) {
       console.warn("[support realtime ticket check error]", ticketError);
       return;
     }
 
-    if (!Array.isArray(ticketRows) || !ticketRows.length) {
-      console.warn("[support realtime] mensaje ignorado: ticket no pertenece al usuario");
+    if (!ticket) {
+      console.warn("[support realtime] ticket no encontrado", {
+        ticketId: msg.ticket_id,
+        msg
+      });
       return;
     }
 
-    if (String(msg.sender_role || "").toLowerCase() === "admin") {
-      if (msg.id && markSupportMessageProcessed(msg.id)) {
-        return;
-      }
+    // Aceptar user_id o created_by como dueño del ticket
+    const ownerId = ticket.user_id || ticket.created_by || null;
+    const belongsToUser = !!ownerId && String(ownerId) === String(userId);
+
+    if (!belongsToUser) {
+      console.warn("[support realtime] mensaje ignorado: ticket no pertenece al usuario", {
+        ticketId: msg.ticket_id,
+        currentUserId: userId,
+        ticketUserId: ticket.user_id || null,
+        ticketCreatedBy: ticket.created_by || null,
+        ticket
+      });
+      return;
     }
 
+    // Refrescar contexto para que la UI quede sincronizada
     await loadOrCreateSupportTicketContext();
 
-    if (String(msg.sender_role || "").toLowerCase() === "admin") {
+    if (senderRole === "admin") {
       notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 4000);
 
       historial = [
@@ -2904,7 +2931,6 @@ async function handleIncomingSupportMessage(payload) {
     console.error("[support realtime] error:", err);
   }
 }
-
 
 async function subscribeSupportRealtimeForUser(force = false) {
   if (!window.sbRealtime) return null;
