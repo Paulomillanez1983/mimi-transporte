@@ -2847,7 +2847,16 @@ async function handleIncomingSupportMessage(payload) {
     console.log("[support realtime payload]", payload);
 
     const msg = payload?.new;
-    if (!msg?.ticket_id) return;
+    if (!msg?.ticket_id) {
+      console.warn("[support realtime] mensaje sin ticket_id", msg);
+      return;
+    }
+
+    // Verificar duplicados primero
+    if (msg.id && markSupportMessageProcessed(msg.id)) {
+      console.log("[support realtime] mensaje duplicado ignorado", msg.id);
+      return;
+    }
 
     const session = await obtenerSesionCliente(true);
     const userId = session?.user?.id;
@@ -2857,38 +2866,49 @@ async function handleIncomingSupportMessage(payload) {
       return;
     }
 
-    const senderRole = String(msg.sender_role || "").toLowerCase();
+    // Esperar un poco si el mensaje llegó muy rápido (race condition)
+    await new Promise(r => setTimeout(r, 300));
 
-    // Evita duplicados ANTES de seguir procesando
-    if (senderRole === "admin") {
-      if (msg.id && markSupportMessageProcessed(msg.id)) {
-        console.log("[support realtime] mensaje admin duplicado ignorado", msg.id);
-        return;
+    // Buscar ticket con retry simple
+    let ticket = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (!ticket && attempts < maxAttempts) {
+      attempts++;
+      
+      const { data: ticketRows, error: ticketError } = await window.supabase
+        .from("soporte_tickets")
+        .select("id, user_id, created_by, estado, asunto, updated_at")
+        .eq("id", msg.ticket_id)
+        .limit(1)
+        .maybeSingle(); // Usar maybeSingle en vez de limit(1)
+
+      if (ticketError) {
+        console.warn(`[support realtime] intento ${attempts} - error:`, ticketError);
+        await new Promise(r => setTimeout(r, 200 * attempts));
+        continue;
+      }
+
+      ticket = ticketRows;
+      
+      // Si no encontramos el ticket, puede ser que no pertenezca a este usuario
+      // o que el RLS lo esté bloqueando
+      if (!ticket) {
+        console.warn(`[support realtime] intento ${attempts} - ticket no encontrado:`, msg.ticket_id);
+        await new Promise(r => setTimeout(r, 200 * attempts));
       }
     }
 
-    // Buscar ticket por ID solamente
-const { data: ticketRows, error: ticketError } = await window.supabase
-  .from("soporte_tickets")
-  .select("id, user_id, created_by, estado, asunto, updated_at")
-  .eq("id", msg.ticket_id)
-  .limit(1);
-
-const ticket = Array.isArray(ticketRows) ? ticketRows[0] || null : null;
-    if (ticketError) {
-      console.warn("[support realtime ticket check error]", ticketError);
-      return;
-    }
-
     if (!ticket) {
-      console.warn("[support realtime] ticket no encontrado", {
+      console.warn("[support realtime] ticket no recuperado después de reintentos", {
         ticketId: msg.ticket_id,
-        msg
+        userId: userId
       });
       return;
     }
 
-    // Aceptar user_id o created_by como dueño del ticket
+    // Verificar ownership (doble check)
     const ownerId = ticket.user_id || ticket.created_by || null;
     const belongsToUser = !!ownerId && String(ownerId) === String(userId);
 
@@ -2896,67 +2916,72 @@ const ticket = Array.isArray(ticketRows) ? ticketRows[0] || null : null;
       console.warn("[support realtime] mensaje ignorado: ticket no pertenece al usuario", {
         ticketId: msg.ticket_id,
         currentUserId: userId,
-        ticketUserId: ticket.user_id || null,
-        ticketCreatedBy: ticket.created_by || null,
-        ticket
+        ticketUserId: ticket.user_id || null
       });
       return;
     }
 
-    // Refrescar contexto para que la UI quede sincronizada
-    await loadOrCreateSupportTicketContext();
-
-    if (senderRole === "admin") {
-      notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 4000);
-
-      historial = [
-        {
-          id: `support_${msg.id || Date.now()}`,
+    // Solo actualizar UI si es mensaje de admin y el chat está abierto
+    const senderRole = String(msg.sender_role || "").toLowerCase();
+    
+    if (senderRole === "admin" && !markSupportMessageProcessed(msg.id)) {
+      appendSupportMessage(msg.mensaje || "", "agent", msg.id);
+      
+      // Notificación solo si el sheet está cerrado
+      if (!supportSheet?.classList.contains("is-open")) {
+        notif.show("Soporte", "Tenés una nueva respuesta", "success", 4000);
+        
+        // Agregar al centro de notificaciones
+        agregarNotificacionViaje({
           estado: "SOPORTE",
-          texto: "Soporte respondió tu consulta.",
-          fecha: new Date().toLocaleTimeString("es-AR", {
-            hour: "2-digit",
-            minute: "2-digit"
-          }),
+          texto: "Soporte respondió tu consulta",
           read: false
-        },
-        ...historial
-      ].slice(0, MAX_NOTIFICATIONS);
-
-      unreadCount += 1;
-      renderizarCentroNotificaciones();
-      guardarNotificacionesEnStorage();
-      actualizarBadgeNotificaciones();
+        });
+      }
     }
+
   } catch (err) {
     console.error("[support realtime] error:", err);
   }
 }
+let supportRealtimeRetryCount = 0;
+const MAX_SUPPORT_RETRIES = 5;
+let supportRealtimeRetryTimer = null;
 
 async function subscribeSupportRealtimeForUser(force = false) {
   if (!window.sbRealtime) return null;
 
   const session = await obtenerSesionCliente(true);
-
   if (!session?.user?.id) {
     cleanupSupportRealtime();
     return null;
   }
 
-const userId = session.user.id;
+  const userId = session.user.id;
 
-await syncRealtimeAuthToken(true);
-console.log('[support realtime] suscribiendo con userId:', userId);
-console.log('[support realtime] ticket actual:', currentSupportTicketId);
+  // Si ya hay un canal activo y no forzamos, retornar
+  if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
+    return currentSupportChannel;
+  }
 
-// Si ya existe un canal activo para este usuario, no lo recrees
-if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
-  return currentSupportChannel;
-}
+  // Limpiar canal anterior
   cleanupSupportRealtime();
+
+  // Resetear contador si fue exitoso hace más de 30 segundos
+  if (window._lastSupportSubscribeSuccess && (Date.now() - window._lastSupportSubscribeSuccess > 30000)) {
+    supportRealtimeRetryCount = 0;
+  }
+
+  // Evitar bucle infinito de reintentos
+  if (supportRealtimeRetryCount >= MAX_SUPPORT_RETRIES) {
+    console.error("[support realtime] máximo de reintentos alcanzado");
+    notif.show("Error de conexión", "No se pudo conectar al soporte en tiempo real", "error");
+    return null;
+  }
 
   supportRealtimeActiveUserId = userId;
   supportRealtimeManuallyClosing = false;
+  supportRealtimeRetryCount++;
 
   currentSupportChannel = window.sbRealtime
     .channel(`support-user-${userId}`)
@@ -2965,7 +2990,9 @@ if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
       {
         event: "INSERT",
         schema: "public",
-        table: "soporte_mensajes"
+        table: "soporte_mensajes",
+        // Agregar filtro por user_id si es posible en tu schema
+        // filter: `sender_user_id=neq.${userId}` // Solo mensajes de otros (admin)
       },
       handleIncomingSupportMessage
     )
@@ -2973,17 +3000,20 @@ if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
       console.log("[support realtime status]", status);
 
       if (status === "SUBSCRIBED") {
+        supportRealtimeRetryCount = 0; // Resetear contador en éxito
+        window._lastSupportSubscribeSuccess = Date.now();
         return;
       }
 
-      // Si el cierre fue provocado por nuestro propio removeChannel, no reintentar
       if (status === "CLOSED" && supportRealtimeManuallyClosing) {
         console.log("[support realtime] cierre manual ignorado");
         return;
       }
 
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        console.warn("[support realtime] reintentando suscripción...");
+      if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT") && supportRealtimeRetryCount < MAX_SUPPORT_RETRIES) {
+        const delay = Math.min(2000 * supportRealtimeRetryCount, 10000); // Backoff exponencial
+        
+        console.warn(`[support realtime] reintentando en ${delay}ms... (intento ${supportRealtimeRetryCount})`);
 
         if (supportRealtimeRetryTimer) {
           clearTimeout(supportRealtimeRetryTimer);
@@ -2997,13 +3027,14 @@ if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
           } catch (err) {
             console.warn("[support realtime] error reintentando:", err);
           }
-        }, 2000);
+        }, delay);
       }
     });
 
   window._supportChannel = currentSupportChannel;
   return currentSupportChannel;
 }
+  
 supportBtn?.addEventListener("click", async () => {
   try {
     const session = await obtenerSesionCliente(true);
