@@ -289,7 +289,7 @@ function applySupportFilters() {
       String(item.subject || "").toLowerCase().includes(term);
 
     const currentStatus = normalizeSupportStatus(item.status);
-    const matchesStatus = status === "ALL" ? true : currentStatus === status;
+    const matchesStatus = status === "all" ? true : currentStatus === status;
 
     return matchesSearch && matchesStatus;
   });
@@ -344,6 +344,20 @@ function renderConversationList() {
     `;
   }).join("");
 }
+function sanitizeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ""), window.location.origin);
+    const protocol = url.protocol.toLowerCase();
+
+    if (protocol === "http:" || protocol === "https:") {
+      return url.toString();
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 function renderSelectedConversation() {
   const els = getSupportElements();
@@ -397,15 +411,21 @@ function renderSelectedConversation() {
                   ? `
                     <div class="support-message-attachments">
                       ${attachments.map((file) => `
-                        <a
-                          href="${escapeHtmlAttr(file?.url || "#")}"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="support-attachment-chip"
-                        >
-                          📎 ${escapeHtmlSupport(file?.name || "Adjunto")}
-                        </a>
-                      `).join("")}
+${attachments.map((file) => {
+  const safeUrl = sanitizeExternalUrl(file?.url);
+  if (!safeUrl) return "";
+
+  return `
+    <a
+      href="${escapeHtmlAttr(safeUrl)}"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="support-attachment-chip"
+    >
+      📎 ${escapeHtmlSupport(file?.name || "Adjunto")}
+    </a>
+  `;
+}).join("")}
                     </div>
                   `
                   : ""
@@ -436,13 +456,13 @@ function selectConversation(id, options = {}) {
 
   supportState.selectedId = id;
 
-  if (markVisualRead) {
-    const current = getCurrentConversation();
-    if (current && normalizeSupportStatus(current.status) === "UNREAD") {
-      current.status = "READ";
-      current.unread_count = 0;
-    }
+if (markVisualRead) {
+  const current = getCurrentConversation();
+  if (current && normalizeSupportStatus(current.status) === "esperando_usuario") {
+    current.status = "en_proceso";
+    current.unread_count = 0;
   }
+}
 
   renderConversationList();
   renderSelectedConversation();
@@ -458,9 +478,9 @@ function updateConversationStatusLocally(status) {
 
   current.status = normalizeSupportStatus(status);
 
-  if (current.status !== "UNREAD") {
-    current.unread_count = 0;
-  }
+if (current.status !== "esperando_usuario") {
+  current.unread_count = 0;
+}
 
   applySupportFilters();
   renderConversationList();
