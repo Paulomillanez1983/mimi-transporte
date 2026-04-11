@@ -1405,6 +1405,12 @@ async function cerrarSesionCliente() {
     }
   }
 }  
+  
+ let sessionPromise = null; // Evita llamadas simultáneas duplicadas
+let lastUserCheck = 0;
+const USER_CHECK_INTERVAL = 300000; // 5 minutos entre checks de getUser
+const SESSION_CACHE_MS = 30000; // 30 segundos de cache local
+
 async function obtenerSesionCliente(forceRefresh = false) {
   const canToggleHeaderLoading =
     typeof window.setHeaderAuthLoading === 'function';
@@ -1417,86 +1423,165 @@ async function obtenerSesionCliente(forceRefresh = false) {
 
   const now = Date.now();
 
+  // EVITAR RACE CONDITIONS: Si hay una petición en curso, esperarla
+  if (sessionPromise && !forceRefresh) {
+    try {
+      const cached = await sessionPromise;
+      // Si es reciente (menos de 30 seg), devolver directo
+      if (now - lastSessionCheck < SESSION_CACHE_MS) {
+        if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
+        return cached;
+      }
+    } catch (e) {
+      // Si la anterior falló, continuar con nueva petición
+      sessionPromise = null;
+    }
+  }
+
+  // Cache rápido (30 segundos) - si no forzamos refresh
   if (
     !forceRefresh &&
     cachedSession?.access_token &&
-    now - lastSessionCheck < 10000
+    now - lastSessionCheck < SESSION_CACHE_MS
   ) {
-    if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
-    return cachedSession;
+    // Verificar si expira en menos de 2 minutos
+    const payload = decodificarJwtPayload(cachedSession.access_token);
+    const expMs = Number(payload?.exp || 0) * 1000;
+    
+    // Si vence en >2 minutos, usar cache sin más
+    if (expMs && (expMs - now > 120000)) {
+      if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
+      return cachedSession;
+    }
+    
+    // Si vence pronto, refresh en background (no bloquear UI)
+    if (expMs && (expMs - now < 120000)) {
+      obtenerSesionCliente(true).catch(console.warn);
+      return cachedSession; // Devolver cache mientras refresca
+    }
   }
 
-  if (canToggleHeaderLoading) window.setHeaderAuthLoading(true);
-
-  try {
-    let { data, error } = await window.sbRealtime.auth.getSession();
-
-    if (error) {
-      console.warn('[auth] getSession error:', error);
-      limpiarSesionCache();
-      return null;
-    }
-
-    let session = data?.session || null;
-
-    if (!session?.access_token) {
-      session = await esperarSesionInicial(2500);
-    }
-
-    if (!session?.access_token && forceRefresh) {
-      try {
-        const refreshResult = await window.sbRealtime.auth.refreshSession();
-
-        if (!refreshResult?.error && refreshResult?.data?.session?.access_token) {
-          session = refreshResult.data.session;
-        }
-      } catch (err) {
-        console.warn('[auth] refreshSession error:', err);
-      }
-    }
-
-    if (!session?.access_token) {
-      limpiarSesionCache();
-      return null;
-    }
-
-    const payload = decodificarJwtPayload(session.access_token);
-    const expMs = Number(payload?.exp || 0) * 1000;
-
-    if (expMs && expMs - Date.now() < 60_000) {
-      try {
-        const refreshResult = await window.sbRealtime.auth.refreshSession();
-
-        if (!refreshResult?.error && refreshResult?.data?.session?.access_token) {
-          session = refreshResult.data.session;
-        }
-      } catch (err) {
-        console.warn('[auth] refresh por expiración cercana falló:', err);
-      }
-    }
+  // Crear nueva promesa de obtención
+  sessionPromise = (async () => {
+    if (canToggleHeaderLoading) window.setHeaderAuthLoading(true);
 
     try {
-      const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+      // 1. Obtener sesión actual
+      let { data, error } = await window.sbRealtime.auth.getSession();
 
-      if (userCheck?.error || !userCheck?.data?.user) {
-        console.warn('[auth] getUser inválido:', userCheck?.error || 'sin user');
+      if (error) {
+        console.warn('[auth] getSession error:', error);
         limpiarSesionCache();
         return null;
       }
-    } catch (err) {
-      console.warn('[auth] getUser explotó:', err);
-      limpiarSesionCache();
-      return null;
-    }
 
-    cachedSession = session;
-    lastSessionCheck = Date.now();
-    return session;
-  } finally {
-    if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
-  }
-}
-async function syncRealtimeAuthToken(forceRefresh = false) {
+      let session = data?.session || null;
+
+      // 2. Si no hay sesión (ej: después de OAuth redirect), esperar
+      if (!session?.access_token) {
+        session = await esperarSesionInicial(2500);
+      }
+
+      // 3. Si sigue sin haber sesión y forzamos, intentar refresh explícito
+      if (!session?.access_token && forceRefresh) {
+        try {
+          const refreshResult = await window.sbRealtime.auth.refreshSession();
+          if (!refreshResult?.error && refreshResult?.data?.session?.access_token) {
+            session = refreshResult.data.session;
+          }
+        } catch (err) {
+          console.warn('[auth] refreshSession error:', err);
+        }
+      }
+
+      if (!session?.access_token) {
+        limpiarSesionCache();
+        return null;
+      }
+
+      // 4. Verificar expiración (refresh automático si <2 minutos)
+      const payload = decodificarJwtPayload(session.access_token);
+      const expMs = Number(payload?.exp || 0) * 1000;
+      const timeUntilExp = expMs - now;
+
+      if (expMs && timeUntilExp < 120000) {
+        try {
+          const refreshResult = await window.sbRealtime.auth.refreshSession();
+          if (!refreshResult?.error && refreshResult?.data?.session?.access_token) {
+            session = refreshResult.data.session;
+          } else if (timeUntilExp < 0) {
+            // Ya expiró y no se pudo refrescar
+            limpiarSesionCache();
+            return null;
+          }
+        } catch (err) {
+          if (timeUntilExp < 0) {
+            limpiarSesionCache();
+            return null;
+          }
+        }
+      }
+
+      // 5. Validar con getUser SOLO cada 5 minutos (optimización crítica)
+      if (forceRefresh || now - lastUserCheck > USER_CHECK_INTERVAL) {
+        try {
+          const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
+          
+          if (userCheck?.error || !userCheck?.data?.user) {
+            console.warn('[auth] getUser inválido:', userCheck?.error || 'sin user');
+            
+            // Reintentar una vez con refresh
+            if (!forceRefresh) {
+              const refreshResult = await window.sbRealtime.auth.refreshSession();
+              if (refreshResult?.data?.session?.access_token) {
+                session = refreshResult.data.session;
+                // Verificar nuevamente
+                const reCheck = await window.sbRealtime.auth.getUser(session.access_token);
+                if (reCheck?.error || !reCheck?.data?.user) {
+                  limpiarSesionCache();
+                  return null;
+                }
+              } else {
+                limpiarSesionCache();
+                return null;
+              }
+            } else {
+              limpiarSesionCache();
+              return null;
+            }
+          }
+          lastUserCheck = now;
+        } catch (err) {
+          console.warn('[auth] getUser error:', err);
+          if (forceRefresh) {
+            limpiarSesionCache();
+            return null;
+          }
+          // Si no es forzado, confiar en el token que tenemos
+        }
+      }
+
+      // 6. Actualizar cache global
+      cachedSession = session;
+      lastSessionCheck = Date.now();
+      
+      return session;
+      
+    } catch (err) {
+      console.error('[auth] Error inesperado:', err);
+      if (forceRefresh) limpiarSesionCache();
+      return cachedSession || null; // Fallback a anterior
+    } finally {
+      if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
+      // Limpiar promesa pendiente después de breve delay
+      setTimeout(() => { sessionPromise = null; }, 50);
+    }
+  })();
+
+  return sessionPromise;
+} 
+  
+  async function syncRealtimeAuthToken(forceRefresh = false) {
   try {
     if (!window.sbRealtime?.realtime) return null;
 
