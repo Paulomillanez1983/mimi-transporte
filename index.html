@@ -2119,7 +2119,49 @@ function animarCampanitaNotificaciones() {
 }
 
 let audioContextNotifs = null;
+function reproducirSonidoSoporte() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
 
+    if (!audioContextNotifs) {
+      audioContextNotifs = new AudioCtx();
+    }
+
+    const ctx = audioContextNotifs;
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = 'triangle';
+    osc2.type = 'sine';
+
+    osc1.frequency.setValueAtTime(660, now);
+    osc2.frequency.setValueAtTime(880, now + 0.06);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.06, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.26);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now + 0.06);
+
+    osc1.stop(now + 0.16);
+    osc2.stop(now + 0.26);
+  } catch (err) {
+    console.warn('[notif] no se pudo reproducir sonido soporte:', err);
+  }
+}
 function reproducirSonidoAceptado() {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -2574,23 +2616,28 @@ function markSupportMessageProcessed(messageId) {
   return false;
 }
 
-window.handleSupportPushForeground = function ({ messageId, title, body }) {
+window.handleSupportPushForeground = function ({
+  messageId,
+  title,
+  body,
+  senderName,
+  unreadCount: incomingUnreadCount,
+  notificationKind
+}) {
   if (messageId && markSupportMessageProcessed(messageId)) {
     return;
   }
 
-  notif.show(
-    title || "Soporte",
-    body || "Tenés una nueva respuesta de soporte.",
-    "success",
-    4000
-  );
+  const finalTitle = title || `Soporte MIMICAR · ${senderName || "Soporte"}`;
+  const finalBody = body || "Tenés una nueva respuesta de soporte.";
+
+  notif.show(finalTitle, finalBody, "success", 4000);
 
   historial = [
     {
       id: `support_push_${messageId || Date.now()}`,
       estado: "SOPORTE",
-      texto: body || "Soporte respondió tu consulta.",
+      texto: finalBody,
       fecha: new Date().toLocaleTimeString("es-AR", {
         hour: "2-digit",
         minute: "2-digit"
@@ -2600,11 +2647,19 @@ window.handleSupportPushForeground = function ({ messageId, title, body }) {
     ...historial
   ].slice(0, MAX_NOTIFICATIONS);
 
-  unreadCount += 1;
+unreadCount = Math.max(
+  unreadCount + 1,
+  Number(incomingUnreadCount || 0) || unreadCount + 1
+);
   renderizarCentroNotificaciones();
   guardarNotificacionesEnStorage();
   actualizarBadgeNotificaciones();
-};  
+
+  if (notificationKind === "support" && typeof reproducirSonidoSoporte === "function") {
+    reproducirSonidoSoporte();
+  }
+};
+  
 let currentSupportTicketId = null;
 let currentSupportChannel = null;
 let currentSupportMessagesLoaded = false;
