@@ -279,7 +279,7 @@ function applySupportFilters() {
   const { search, filter } = getSupportElements();
 
   const term = String(search?.value || "").trim().toLowerCase();
-  const status = String(filter?.value || "ALL").trim().toUpperCase();
+  const status = String(filter?.value || "all").trim().toLowerCase();
 
   supportState.filtered = supportState.conversations.filter((item) => {
     const matchesSearch =
@@ -410,7 +410,11 @@ function renderSelectedConversation() {
                 attachments.length
                   ? `
                     <div class="support-message-attachments">
-                      ${attachments.map((file) => `
+${
+  attachments.length
+    ? `
+      <div class="support-message-attachments">
+        ${attachments.map((file) => `
 ${attachments.map((file) => {
   const safeUrl = sanitizeExternalUrl(file?.url);
   if (!safeUrl) return "";
@@ -426,11 +430,10 @@ ${attachments.map((file) => {
     </a>
   `;
 }).join("")}
-                    </div>
-                  `
-                  : ""
-              }
-
+      </div>
+    `
+    : ""
+}
               <div class="support-message-meta">
                 ${escapeHtmlSupport(msg.sender_role || "user")} · ${supportFormatTime(msg.created_at)}
                 ${ticks ? `<span class="support-message-ticks">${ticks}</span>` : ""}
