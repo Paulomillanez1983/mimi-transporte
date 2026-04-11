@@ -2808,56 +2808,6 @@ function cleanupSupportRealtime() {
     currentSupportChannel = null;
   }
 }
-
-async function subscribeSupportRealtimeForUser() {
-if (!window.sbRealtime) return null;
-
-const session = await obtenerSesionCliente(true);
-if (!session?.user?.id) {
-  cleanupSupportRealtime();
-  return null;
-}
-  const userId = session.user.id;
-
-  cleanupSupportRealtime();
-
-currentSupportChannel = window.sbRealtime
-  .channel(`support-user-${userId}`)
-  .on(
-    "postgres_changes",
-    {
-      event: "INSERT",
-      schema: "public",
-      table: "soporte_mensajes"
-    },
-    handleIncomingSupportMessage
-  )
-  .subscribe((status) => {
-    console.log("[support realtime status]", status);
-  });
-  async (payload) => {
-        try {
-          const msg = payload?.new;
-          if (!msg?.ticket_id || !msg?.mensaje) return;
-
-          const { data: ticketRows, error: ticketError } = await window.supabase
-            .from("soporte_tickets")
-            .select("id, user_id")
-            .eq("id", msg.ticket_id)
-            .eq("user_id", userId)
-            .limit(1);
-
-          if (ticketError) {
-            console.warn("[support realtime] ticket lookup error", ticketError);
-            return;
-          }
-
-          const belongsToUser = Array.isArray(ticketRows) && ticketRows.length > 0;
-          if (!belongsToUser) return;
-
-          const senderRole = String(msg.sender_role || "").toLowerCase();
-          const type = senderRole === "admin" ? "agent" : "user";
-
 async function handleIncomingSupportMessage(payload) {
   try {
     console.log("[support realtime payload]", payload);
@@ -2886,58 +2836,100 @@ async function handleIncomingSupportMessage(payload) {
       return;
     }
 
+    if (String(msg.sender_role || "").toLowerCase() === "admin") {
+      if (msg.id && markSupportMessageProcessed(msg.id)) {
+        return;
+      }
+    }
+
     await loadOrCreateSupportTicketContext();
 
     if (String(msg.sender_role || "").toLowerCase() === "admin") {
-      showSupportToast("Soporte respondió tu mensaje.", "success");
+      notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 4000);
+
+      historial = [
+        {
+          id: `support_${msg.id || Date.now()}`,
+          estado: "SOPORTE",
+          texto: "Soporte respondió tu consulta.",
+          fecha: new Date().toLocaleTimeString("es-AR", {
+            hour: "2-digit",
+            minute: "2-digit"
+          }),
+          read: false
+        },
+        ...historial
+      ].slice(0, MAX_NOTIFICATIONS);
+
+      unreadCount += 1;
+      renderizarCentroNotificaciones();
+      guardarNotificacionesEnStorage();
+      actualizarBadgeNotificaciones();
     }
   } catch (err) {
     console.error("[support realtime] error:", err);
   }
 }
-          if (senderRole === "admin") {
-            if (msg.id && markSupportMessageProcessed(msg.id)) {
-              return;
-            }
 
-            notif.show("Soporte", "Tenés una nueva respuesta de soporte.", "success", 4000);
-
-            historial = [
-              {
-                id: `support_${msg.id}`,
-                estado: "SOPORTE",
-                texto: "Soporte respondió tu consulta.",
-                fecha: new Date().toLocaleTimeString("es-AR", {
-                  hour: "2-digit",
-                  minute: "2-digit"
-                }),
-                read: false
-              },
-              ...historial
-            ].slice(0, MAX_NOTIFICATIONS);
-
-            unreadCount += 1;
-            renderizarCentroNotificaciones();
-            guardarNotificacionesEnStorage();
-            actualizarBadgeNotificaciones();
-          }
-        } catch (err) {
-          console.error("[support realtime] error", err);
-        }
-      }
-    )
-.subscribe((status) => {
-  console.log("[support realtime status]", status);
-
-  if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
-    console.warn("[support realtime] reintentando suscripción...");
-    setTimeout(async () => {
-      const activeSession = await obtenerSesionCliente(false);
-      if (!activeSession?.user?.id) return;
-      subscribeSupportRealtimeForUser();
-    }, 2000);
+function cleanupSupportRealtime() {
+  try {
+    if (currentSupportChannel && window.sbRealtime) {
+      window.sbRealtime.removeChannel(currentSupportChannel);
+    }
+  } catch (err) {
+    console.warn("[support] no se pudo remover canal anterior", err);
+  } finally {
+    currentSupportChannel = null;
   }
-});
+}
+
+async function subscribeSupportRealtimeForUser() {
+  if (!window.sbRealtime) return null;
+
+  const session = await obtenerSesionCliente(true);
+
+  if (!session?.user?.id) {
+    cleanupSupportRealtime();
+    return null;
+  }
+
+  const userId = session.user.id;
+
+  cleanupSupportRealtime();
+
+  currentSupportChannel = window.sbRealtime
+    .channel(`support-user-${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "soporte_mensajes"
+      },
+      handleIncomingSupportMessage
+    )
+    .subscribe((status) => {
+      console.log("[support realtime status]", status);
+
+      if (
+        status === "CHANNEL_ERROR" ||
+        status === "TIMED_OUT" ||
+        status === "CLOSED"
+      ) {
+        console.warn("[support realtime] reintentando suscripción...");
+
+        setTimeout(async () => {
+          try {
+            const activeSession = await obtenerSesionCliente(false);
+            if (!activeSession?.user?.id) return;
+            await subscribeSupportRealtimeForUser();
+          } catch (err) {
+            console.warn("[support realtime] error reintentando:", err);
+          }
+        }, 2000);
+      }
+    });
+
   window._supportChannel = currentSupportChannel;
   return currentSupportChannel;
 }
@@ -2957,12 +2949,13 @@ supportBtn?.addEventListener("click", async () => {
 
     openSupportSheet();
     await loadOrCreateSupportTicketContext();
-    await subscribeSupportRealtimeForUser();  } catch (err) {
+    await subscribeSupportRealtimeForUser();
+  } catch (err) {
     console.error("[supportBtn] error:", err);
     notif.show("Error", err?.message || "No se pudo abrir soporte", "error");
   }
 });
-  
+
 supportSheetClose?.addEventListener("click", closeSupportSheet);
 supportSheetOverlay?.addEventListener("click", closeSupportSheet);
 
@@ -2975,12 +2968,14 @@ document.addEventListener("keydown", (e) => {
 supportSendBtn?.addEventListener("click", async () => {
   try {
     const mensaje = supportMessageInput?.value?.trim();
+
     if (!mensaje) {
       notif.show("Mensaje vacío", "Escribí tu consulta antes de enviar.", "warning");
       return;
     }
 
     const session = await obtenerSesionCliente(true);
+
     if (!session?.access_token || !session?.user) {
       notif.show("Sesión requerida", "Volvé a iniciar sesión para enviar soporte.", "warning");
       return;
@@ -3004,10 +2999,9 @@ supportSendBtn?.addEventListener("click", async () => {
       ts: new Date().toISOString()
     };
 
-    const asunto =
-      viajeId
-        ? `Consulta sobre viaje ${viajeId}`
-        : "Consulta general desde app cliente";
+    const asunto = viajeId
+      ? `Consulta sobre viaje ${viajeId}`
+      : "Consulta general desde app cliente";
 
     if (!currentSupportTicketId) {
       const { data: ticket, error: ticketError } = await window.supabaseInsert(
@@ -3106,7 +3100,6 @@ try {
   console.error("[DOMContentLoaded bootstrap] error:", err);
 }
 
-}); // <- CERRAR DOMContentLoaded ACÁ
 // ==========================================
 // UI LOADING
 // ==========================================
