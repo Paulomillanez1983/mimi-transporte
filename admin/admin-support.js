@@ -556,7 +556,6 @@ const newMessageId =
   null;
 
 try {
-try {
   const pushResponse = await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
     method: "POST",
     headers: {
