@@ -3119,7 +3119,8 @@ try {
 } catch (err) {
   console.error("[DOMContentLoaded bootstrap] error:", err);
 }
-  
+  }); // ← CIERRA DOMContentLoaded
+
 // ==========================================
 // UI LOADING
 // ==========================================
@@ -6465,7 +6466,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   })();
 
   document.addEventListener('DOMContentLoaded', initNextLevelUI);
-  }); 
 
 </script>
 </body>
