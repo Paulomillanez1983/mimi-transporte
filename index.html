@@ -3053,7 +3053,7 @@ supportSendBtn?.addEventListener("click", async () => {
       }
 
       currentSupportTicketId = ticket.id;
-      await subscribeSupportRealtimeForUser();
+      await subscribeSupportRealtimeForUser(false);
     } else {
       const { error: ticketUpdateError } = await window.supabaseUpdate(
         "soporte_tickets",
@@ -3119,7 +3119,7 @@ try {
 } catch (err) {
   console.error("[DOMContentLoaded bootstrap] error:", err);
 }
-}); // <- CIERRE DE DOMContentLoaded
+  
 // ==========================================
 // UI LOADING
 // ==========================================
