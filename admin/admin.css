@@ -642,6 +642,7 @@ textarea {
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 18px;
   margin-bottom: 18px;
+  align-items: start;
 }
 
 .hero-card {
@@ -1101,6 +1102,8 @@ textarea {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 18px;
+  position: relative;
+  z-index: 4;
 }
 
 .toolbar-pro {
@@ -1287,6 +1290,7 @@ textarea::placeholder {
 
 .drivers-premium {
   gap: 18px;
+  align-items: stretch;
 }
 
 .driver-card {
@@ -2553,6 +2557,11 @@ header.is-condensed h1 {
   grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
+  min-height: clamp(620px, 72vh, 980px);
+}
+
+.support-section {
+  margin-bottom: 22px;
 }
 
 .support-section-head,
@@ -2575,6 +2584,14 @@ header.is-condensed h1 {
   padding: 14px 14px 0;
 }
 
+.support-search-hint,
+.support-composer-hint {
+  margin: 8px 2px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .support-sidebar,
 .support-thread {
   background:
@@ -2591,10 +2608,12 @@ header.is-condensed h1 {
   display: flex;
   flex-direction: column;
   min-height: 720px;
+  position: relative;
 }
 
 .support-thread {
   min-height: 720px;
+  position: relative;
 }
 
 .support-toolbar {
@@ -2650,6 +2669,7 @@ header.is-condensed h1 {
   overflow-y: auto;
   min-height: 0;
   flex: 1;
+  scroll-padding-top: 18px;
 }
 
 .support-conversation-item {
@@ -2664,6 +2684,11 @@ header.is-condensed h1 {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--panel) 94%, transparent);
   box-shadow: var(--shadow-xs);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
 }
 
 .support-conversation-item.active {
@@ -2672,6 +2697,14 @@ header.is-condensed h1 {
     0 0 0 1px rgba(37, 99, 235, 0.22),
     0 10px 24px rgba(37, 99, 235, 0.08);
   background: rgba(37, 99, 235, 0.06);
+}
+
+@media (hover: hover) {
+  .support-conversation-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(37, 99, 235, 0.18);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  }
 }
 
 .support-conversation-avatar {
@@ -2816,6 +2849,8 @@ header.is-condensed h1 {
   padding: 16px 18px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--panel) 96%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .support-thread-user {
@@ -2888,6 +2923,7 @@ header.is-condensed h1 {
   flex-direction: column;
   gap: 12px;
   min-height: 240px;
+  scroll-behavior: smooth;
 }
 
 .support-message-row {
@@ -2965,6 +3001,7 @@ header.is-condensed h1 {
   padding: 16px 18px;
   border-top: 1px solid var(--border);
   background: var(--panel);
+  box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.04);
 }
 
 .support-reply-input {
@@ -2995,6 +3032,7 @@ header.is-condensed h1 {
   display: flex;
   justify-content: flex-end;
   margin-top: 10px;
+  gap: 10px;
 }
 
 .support-empty-state {
@@ -3020,6 +3058,7 @@ header.is-condensed h1 {
   .support-shell {
     grid-template-columns: 1fr;
     gap: 12px;
+    min-height: auto;
   }
 
   .support-shell.is-mobile-support .support-sidebar,
@@ -3069,6 +3108,10 @@ header.is-condensed h1 {
     max-width: 94%;
   }
 
+  .support-conversation-list {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+
   .support-composer {
     position: sticky;
     bottom: 0;
@@ -3115,6 +3158,11 @@ header.is-condensed h1 {
     border-radius: 14px;
   }
 
+  .support-search-hint,
+  .support-composer-hint {
+    font-size: 11px;
+  }
+
   .support-thread,
   .support-thread-panel,
   .support-thread-empty,
@@ -3143,5 +3191,14 @@ header.is-condensed h1 {
 
   .support-composer-actions > * {
     width: 100%;
+  }
+
+  .support-thread-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .support-thread-actions > *:last-child {
+    grid-column: 1 / -1;
   }
 }
