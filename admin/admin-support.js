@@ -50,53 +50,6 @@ function supportFormatDateTime(value) {
   }
 }
 
-function normalizeSupportStatus(status) {
-  const normalized = String(status || "").trim().toLowerCase();
-
-  switch (normalized) {
-    case "abierto":
-      return "abierto";
-    case "en_proceso":
-      return "en_proceso";
-    case "esperando_usuario":
-      return "esperando_usuario";
-    case "resuelto":
-      return "resuelto";
-    default:
-      return "abierto";
-  }
-}
-
-function supportStatusClass(status) {
-  switch (normalizeSupportStatus(status)) {
-    case "abierto":
-      return "pending";
-    case "en_proceso":
-      return "read";
-    case "esperando_usuario":
-      return "unread";
-    case "resuelto":
-      return "resolved";
-    default:
-      return "pending";
-  }
-}
-
-function supportStatusLabel(status) {
-  switch (normalizeSupportStatus(status)) {
-    case "abierto":
-      return "Abierto";
-    case "en_proceso":
-      return "En proceso";
-    case "esperando_usuario":
-      return "Esperando usuario";
-    case "resuelto":
-      return "Resuelto";
-    default:
-      return "Abierto";
-  }
-}
-
 function escapeHtmlSupport(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -119,27 +72,68 @@ function sanitizeExternalUrl(value) {
   try {
     const url = new URL(String(value || ""), window.location.origin);
     const protocol = url.protocol.toLowerCase();
-
-    if (protocol === "http:" || protocol === "https:") {
-      return url.toString();
-    }
-
-    return null;
+    return protocol === "http:" || protocol === "https:" ? url.toString() : null;
   } catch {
     return null;
+  }
+}
+
+function normalizeSupportStatus(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+
+  switch (normalized) {
+    case "unread":
+    case "esperando_usuario":
+      return "esperando_usuario";
+    case "read":
+    case "pending":
+    case "en_proceso":
+      return "en_proceso";
+    case "resolved":
+    case "resuelto":
+      return "resuelto";
+    case "abierto":
+    default:
+      return "abierto";
+  }
+}
+
+function supportStatusClass(status) {
+  switch (normalizeSupportStatus(status)) {
+    case "esperando_usuario":
+      return "unread";
+    case "en_proceso":
+      return "read";
+    case "resuelto":
+      return "resolved";
+    default:
+      return "pending";
+  }
+}
+
+function supportStatusLabel(status) {
+  switch (normalizeSupportStatus(status)) {
+    case "esperando_usuario":
+      return "Esperando usuario";
+    case "en_proceso":
+      return "En proceso";
+    case "resuelto":
+      return "Resuelto";
+    default:
+      return "Abierto";
   }
 }
 
 function supportMessageTicks(status) {
   switch (String(status || "").toUpperCase()) {
     case "READ":
-      return "✓✓";
+      return "??";
     case "DELIVERED":
-      return "✓✓";
+      return "??";
     case "SENT":
-      return "✓";
+      return "?";
     default:
-      return "✓";
+      return "?";
   }
 }
 
@@ -147,29 +141,141 @@ function isMobileSupport() {
   return window.matchMedia("(max-width: 720px)").matches;
 }
 
+function normalizeSupportRole(role) {
+  const normalized = String(role || "").trim().toLowerCase();
+
+  switch (normalized) {
+    case "driver":
+    case "chofer":
+      return "chofer";
+    case "admin":
+      return "admin";
+    default:
+      return "cliente";
+  }
+}
+
+function supportRoleLabel(role) {
+  switch (normalizeSupportRole(role)) {
+    case "chofer":
+      return "Chofer";
+    case "admin":
+      return "Admin";
+    default:
+      return "Cliente";
+  }
+}
+
+function getConversationEmail(item) {
+  return (
+    item?.email ||
+    item?.user_email ||
+    item?.cliente_email ||
+    item?.driver_email ||
+    item?.chofer_email ||
+    item?.participant_email ||
+    item?.metadata?.email ||
+    ""
+  );
+}
+
+function getConversationName(item) {
+  return (
+    item?.name ||
+    item?.full_name ||
+    item?.user_name ||
+    item?.participant_name ||
+    item?.metadata?.name ||
+    ""
+  );
+}
+
+function getConversationRole(item) {
+  return (
+    item?.role ||
+    item?.sender_role ||
+    item?.user_type ||
+    item?.rol_origen ||
+    item?.participant_role ||
+    item?.metadata?.role ||
+    "cliente"
+  );
+}
+
+function getConversationDisplayName(item) {
+  return getConversationEmail(item) || getConversationName(item) || "Usuario";
+}
+
+function getConversationSecondary(item) {
+  const email = getConversationEmail(item);
+  const name = getConversationName(item);
+  const role = supportRoleLabel(getConversationRole(item));
+  const subject = String(item?.subject || item?.asunto || "").trim();
+  const parts = [];
+
+  if (name && email && name !== email) {
+    parts.push(name);
+  }
+
+  parts.push(role);
+
+  if (subject) {
+    parts.push(subject);
+  }
+
+  return parts.join(" � ");
+}
+
+function getMessageText(msg) {
+  return String(msg?.text || msg?.mensaje || msg?.body || "").trim();
+}
+
+function normalizeAttachments(msg) {
+  if (Array.isArray(msg?.attachments)) return msg.attachments;
+  if (Array.isArray(msg?.adjuntos)) return msg.adjuntos;
+  return [];
+}
+
+function normalizeConversation(item) {
+  if (!item || typeof item !== "object") return null;
+
+  const messages = Array.isArray(item.messages) ? item.messages : [];
+  const lastMessage = messages[messages.length - 1] || null;
+
+  return {
+    ...item,
+    id: item.id || item.ticket_id || item.conversation_id || "",
+    email: getConversationEmail(item),
+    name: getConversationName(item),
+    role: normalizeSupportRole(getConversationRole(item)),
+    subject: String(item.subject || item.asunto || "").trim(),
+    status: normalizeSupportStatus(item.status),
+    unread_count: Number(item.unread_count || item.unreadCount || 0),
+    messages,
+    updated_at: item.updated_at || item.last_message_at || item.created_at || null,
+    preview_text: getMessageText(lastMessage) || String(item.last_message || item.ultimo_mensaje || "").trim()
+  };
+}
+
 function getSupportElements() {
   return {
     shell: document.getElementById("supportShell"),
     sidebar: document.getElementById("supportSidebar"),
     thread: document.getElementById("supportThread"),
-
     list: document.getElementById("supportConversationList"),
     search: document.getElementById("supportSearchInput"),
     filter: document.getElementById("supportFilterStatus"),
     refresh: document.getElementById("supportRefreshBtn"),
-
     threadEmpty: document.getElementById("supportThreadEmpty"),
     threadPanel: document.getElementById("supportThreadPanel"),
     threadAvatar: document.getElementById("supportThreadAvatar"),
     threadName: document.getElementById("supportThreadName"),
     threadSubmeta: document.getElementById("supportThreadSubmeta"),
     threadBack: document.getElementById("supportThreadBackBtn"),
-
     messages: document.getElementById("supportMessages"),
     reply: document.getElementById("supportReplyInput"),
     send: document.getElementById("supportSendReplyBtn"),
     attachmentInput: document.getElementById("supportAttachmentInput"),
-
     markRead: document.getElementById("supportMarkReadBtn"),
     markPending: document.getElementById("supportMarkPendingBtn"),
     markResolved: document.getElementById("supportMarkResolvedBtn")
@@ -183,7 +289,6 @@ function getCurrentConversation() {
 function setSupportBusy(isBusy) {
   supportState.loadingList = !!isBusy;
   const els = getSupportElements();
-
   if (els.refresh) {
     els.refresh.disabled = !!isBusy;
   }
@@ -195,7 +300,7 @@ function setSendBusy(isBusy) {
 
   if (els.send) {
     els.send.disabled = !!isBusy;
-    els.send.textContent = isBusy ? "Enviando..." : "Enviar";
+    els.send.textContent = isBusy ? "Enviando..." : "Enviar respuesta";
   }
 
   if (els.reply) {
@@ -219,11 +324,11 @@ function syncSupportLayout() {
   els.shell.classList.toggle("is-thread-open", threadOpen);
 
   if (els.sidebar) {
-    els.sidebar.hidden = threadOpen;
+    els.sidebar.hidden = mobile ? threadOpen : false;
   }
 
   if (els.thread) {
-    els.thread.hidden = mobile ? !threadOpen && !hasSelected : false;
+    els.thread.hidden = mobile ? !threadOpen : false;
   }
 
   if (els.threadBack) {
@@ -285,7 +390,7 @@ async function getAdminAccessToken() {
   const token = session?.access_token;
 
   if (!token) {
-    throw new Error("Sesión admin expirada");
+    throw new Error("Sesion admin expirada");
   }
 
   return token;
@@ -293,17 +398,25 @@ async function getAdminAccessToken() {
 
 function applySupportFilters() {
   const { search, filter } = getSupportElements();
-
   const term = String(search?.value || "").trim().toLowerCase();
-  const status = String(filter?.value || "all").trim().toLowerCase();
+  let status = String(filter?.value || "all").trim().toLowerCase();
+
+  if (status !== "all") {
+    status = normalizeSupportStatus(status);
+  }
 
   supportState.filtered = supportState.conversations.filter((item) => {
-    const matchesSearch =
-      !term ||
-      String(item.name || "").toLowerCase().includes(term) ||
-      String(item.email || "").toLowerCase().includes(term) ||
-      String(item.subject || "").toLowerCase().includes(term);
+    const haystack = [
+      getConversationDisplayName(item),
+      getConversationSecondary(item),
+      item?.email,
+      item?.subject,
+      item?.preview_text
+    ]
+      .join(" ")
+      .toLowerCase();
 
+    const matchesSearch = !term || haystack.includes(term);
     const currentStatus = normalizeSupportStatus(item.status);
     const matchesStatus = status === "all" ? true : currentStatus === status;
 
@@ -325,11 +438,11 @@ function renderConversationList() {
   }
 
   list.innerHTML = supportState.filtered.map((item) => {
-    const last = item.messages?.[item.messages.length - 1];
-    const safeName = escapeHtmlSupport(item.name || "Usuario");
-    const safeRole = escapeHtmlSupport(item.role || "user");
+    const safeName = escapeHtmlSupport(getConversationDisplayName(item));
+    const safeRole = escapeHtmlSupport(supportRoleLabel(item.role));
     const statusLabel = supportStatusLabel(item.status);
-    const preview = escapeHtmlSupport(last?.text || item.subject || "Sin mensajes");
+    const preview = escapeHtmlSupport(item.preview_text || item.subject || "Sin mensajes");
+    const secondary = escapeHtmlSupport(getConversationSecondary(item) || "Sin detalles");
     const unreadCount = Number(item.unread_count || 0);
 
     return `
@@ -337,9 +450,9 @@ function renderConversationList() {
         class="support-conversation-item ${supportState.selectedId === item.id ? "active" : ""}"
         data-support-id="${escapeHtmlAttr(item.id)}"
         type="button"
-        aria-label="Abrir conversación con ${safeName}"
+        aria-label="Abrir conversacion con ${safeName}"
       >
-        <div class="support-conversation-avatar">${escapeHtmlSupport(supportInitials(item.name))}</div>
+        <div class="support-conversation-avatar">${escapeHtmlSupport(supportInitials(getConversationDisplayName(item)))}</div>
 
         <div class="support-conversation-body">
           <div class="support-conversation-top">
@@ -352,6 +465,7 @@ function renderConversationList() {
             <span class="support-status-badge ${supportStatusClass(item.status)}">${escapeHtmlSupport(statusLabel)}</span>
           </div>
 
+          <div class="support-conversation-secondary">${secondary}</div>
           <div class="support-conversation-preview">${preview}</div>
         </div>
 
@@ -365,9 +479,7 @@ function renderSelectedConversation() {
   const els = getSupportElements();
   const current = getCurrentConversation();
 
-  if (!els.threadEmpty || !els.threadPanel || !els.messages) {
-    return;
-  }
+  if (!els.threadEmpty || !els.threadPanel || !els.messages) return;
 
   if (!current) {
     els.threadEmpty.hidden = false;
@@ -379,29 +491,37 @@ function renderSelectedConversation() {
   els.threadEmpty.hidden = true;
   els.threadPanel.hidden = false;
 
+  const displayName = getConversationDisplayName(current);
+  const secondary = getConversationSecondary(current);
+
   if (els.threadAvatar) {
-    els.threadAvatar.textContent = supportInitials(current.name);
+    els.threadAvatar.textContent = supportInitials(displayName);
   }
 
   if (els.threadName) {
-    els.threadName.textContent = current.name || "Usuario";
+    els.threadName.textContent = displayName;
   }
 
   if (els.threadSubmeta) {
-    const role = String(current.role || "user");
-    const status = supportStatusLabel(current.status);
-    const subject = current.subject || "sin asunto";
-    const updatedAt = supportFormatDateTime(current.updated_at);
-    els.threadSubmeta.textContent = `${role} · ${status.toLowerCase()} · ${subject}${updatedAt ? ` · ${updatedAt}` : ""}`;
+    const bits = [
+      supportRoleLabel(current.role),
+      supportStatusLabel(current.status),
+      secondary,
+      supportFormatDateTime(current.updated_at)
+    ].filter(Boolean);
+
+    els.threadSubmeta.textContent = bits.join(" � ");
   }
 
   const messages = Array.isArray(current.messages) ? current.messages : [];
 
   els.messages.innerHTML = messages.length
     ? messages.map((msg) => {
-        const isAdmin = String(msg.sender_role || "").toLowerCase() === "admin";
+        const senderRole = String(msg.sender_role || msg.role || "user").toLowerCase();
+        const isAdmin = senderRole === "admin";
         const ticks = isAdmin ? supportMessageTicks(msg.delivery_status) : "";
-        const attachments = Array.isArray(msg.attachments) ? msg.attachments : [];
+        const text = getMessageText(msg);
+        const attachments = normalizeAttachments(msg);
 
         const attachmentsHtml = attachments.length
           ? `
@@ -417,7 +537,7 @@ function renderSelectedConversation() {
                     rel="noopener noreferrer"
                     class="support-attachment-chip"
                   >
-                    📎 ${escapeHtmlSupport(file?.name || "Adjunto")}
+                    Adj. ${escapeHtmlSupport(file?.name || "Archivo")}
                   </a>
                 `;
               }).join("")}
@@ -428,10 +548,10 @@ function renderSelectedConversation() {
         return `
           <div class="support-message-row ${isAdmin ? "admin" : "user"}">
             <div class="support-message-bubble">
-              ${msg.text ? `<div>${escapeHtmlSupport(msg.text)}</div>` : ""}
+              ${text ? `<div>${escapeHtmlSupport(text)}</div>` : ""}
               ${attachmentsHtml}
               <div class="support-message-meta">
-                ${escapeHtmlSupport(msg.sender_role || "user")} · ${supportFormatTime(msg.created_at)}
+                ${escapeHtmlSupport(supportRoleLabel(senderRole))} � ${supportFormatTime(msg.created_at)}
                 ${ticks ? `<span class="support-message-ticks">${ticks}</span>` : ""}
               </div>
             </div>
@@ -440,7 +560,7 @@ function renderSelectedConversation() {
       }).join("")
     : `
       <div class="support-empty-state">
-        Esta conversación todavía no tiene mensajes.
+        Esta conversacion todavia no tiene mensajes.
       </div>
     `;
 
@@ -450,7 +570,6 @@ function renderSelectedConversation() {
 
 function selectConversation(id, options = {}) {
   const { openThread = true, markVisualRead = false } = options;
-
   if (!id) return;
 
   supportState.selectedId = id;
@@ -468,6 +587,8 @@ function selectConversation(id, options = {}) {
 
   if (openThread && isMobileSupport()) {
     openMobileThread();
+  } else {
+    syncSupportLayout();
   }
 }
 
@@ -538,12 +659,12 @@ async function sendSupportReply() {
   const files = Array.from(els.attachmentInput?.files || []);
 
   if (!current) {
-    showSupportToast("Primero seleccioná una conversación.", "error");
+    showSupportToast("Primero selecciona una conversacion.", "error");
     return;
   }
 
   if (!text && !files.length) {
-    showSupportToast("Escribí un mensaje o adjuntá un archivo.", "warning");
+    showSupportToast("Escribi un mensaje o adjunta un archivo.", "warning");
     return;
   }
 
@@ -567,10 +688,10 @@ async function sendSupportReply() {
         sender_role: "admin",
         attachments: uploadedAttachments,
         metadata: {
-          push_title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
-          push_body: text || "Tenés una nueva respuesta de soporte.",
-          sender_name: current.name || "Soporte MIMICAR",
-          conversation_name: current.name || "Usuario",
+          push_title: `Soporte MIMICAR � ${getConversationDisplayName(current)}`,
+          push_body: text || "Tenes una nueva respuesta de soporte.",
+          sender_name: "Soporte MIMICAR",
+          conversation_name: getConversationDisplayName(current),
           unread_count: Number(current.unread_count || 0) + 1
         }
       })
@@ -598,21 +719,18 @@ async function sendSupportReply() {
         body: JSON.stringify({
           ticket_id: current.id,
           message_id: newMessageId,
-          title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
-          body: text || "Tenés una nueva respuesta de soporte.",
-          sender_name: current.name || "Soporte MIMICAR",
+          title: `Soporte MIMICAR � ${getConversationDisplayName(current)}`,
+          body: text || "Tenes una nueva respuesta de soporte.",
+          sender_name: "Soporte MIMICAR",
           sender_role: "admin",
-          conversation_name: current.name || "Usuario",
+          conversation_name: getConversationDisplayName(current),
           unread_count: Number(current.unread_count || 0) + 1
         })
       });
 
       const pushData = await pushResponse.json().catch(() => ({}));
-
       if (!pushResponse.ok || pushData?.ok === false) {
         console.warn("[support.sendSupportReply] push response warning:", pushData);
-      } else {
-        console.log("[support.sendSupportReply] push enviada:", pushData);
       }
     } catch (pushErr) {
       console.warn("[support.sendSupportReply] push warning:", pushErr);
@@ -649,10 +767,7 @@ async function sendSupportReply() {
 }
 
 async function loadSupportConversations(options = {}) {
-  const {
-    preserveSelection = true,
-    silent = false
-  } = options;
+  const { preserveSelection = true, silent = false } = options;
 
   try {
     if (!silent) {
@@ -676,9 +791,9 @@ async function loadSupportConversations(options = {}) {
 
     const previousSelectedId = preserveSelection ? supportState.selectedId : null;
 
-    supportState.conversations = Array.isArray(data.conversations)
-      ? data.conversations
-      : [];
+    supportState.conversations = (Array.isArray(data.conversations) ? data.conversations : [])
+      .map(normalizeConversation)
+      .filter((item) => item && item.id);
 
     applySupportFilters();
 
@@ -690,6 +805,7 @@ async function loadSupportConversations(options = {}) {
       supportState.selectedId = supportState.filtered[0].id;
     } else {
       supportState.selectedId = null;
+      supportState.mobileThreadOpen = false;
     }
 
     renderConversationList();
@@ -700,6 +816,7 @@ async function loadSupportConversations(options = {}) {
     supportState.conversations = [];
     supportState.filtered = [];
     supportState.selectedId = null;
+    supportState.mobileThreadOpen = false;
 
     renderConversationList();
     renderSelectedConversation();
@@ -717,7 +834,7 @@ async function loadSupportConversations(options = {}) {
 async function persistConversationStatus(status) {
   const current = getCurrentConversation();
   if (!current) {
-    showSupportToast("Primero seleccioná una conversación.", "warning");
+    showSupportToast("Primero selecciona una conversacion.", "warning");
     return;
   }
 
@@ -789,8 +906,8 @@ function handleVisibilitySupportRefresh() {
 function handleSupportResize() {
   if (!isMobileSupport()) {
     supportState.mobileThreadOpen = false;
-  } else if (supportState.selectedId && supportState.mobileThreadOpen) {
-    supportState.mobileThreadOpen = true;
+  } else if (!supportState.selectedId) {
+    supportState.mobileThreadOpen = false;
   }
 
   syncSupportLayout();
@@ -803,6 +920,14 @@ export function initAdminSupport() {
   if (!els.list) return;
 
   supportState.initialized = true;
+
+  if (els.filter) {
+    const rawValue = String(els.filter.value || "").trim().toUpperCase();
+    if (rawValue === "ALL") els.filter.value = "all";
+    if (rawValue === "UNREAD") els.filter.value = "esperando_usuario";
+    if (rawValue === "PENDING") els.filter.value = "en_proceso";
+    if (rawValue === "RESOLVED") els.filter.value = "resuelto";
+  }
 
   els.search?.addEventListener("input", () => {
     applySupportFilters();
