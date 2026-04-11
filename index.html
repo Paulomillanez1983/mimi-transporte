@@ -2866,14 +2866,15 @@ async function loadOrCreateSupportTicketContext() {
 
   const userId = session.user.id;
 
-const { data: existingTickets, error: ticketLookupError } = await window.supabase
-  .from("soporte_tickets")
-  .select("id, estado, last_message_at, user_id, created_at")
-  .eq("user_id", userId)
-  .order("last_message_at", { ascending: false, nullsFirst: false })
-  .order("created_at", { ascending: false })
-  .limit(1);
-  
+  // Usar sbRealtime (cliente con auth) en lugar de supabase (cliente anónimo)
+  const { data: existingTickets, error: ticketLookupError } = await window.sbRealtime
+    .from("soporte_tickets")
+    .select("id, estado, last_message_at, user_id, created_at")
+    .eq("user_id", userId)
+    .order("last_message_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(1);
+
   if (ticketLookupError) {
     throw new Error(ticketLookupError.message || "No se pudo consultar soporte_tickets");
   }
@@ -2887,7 +2888,8 @@ const { data: existingTickets, error: ticketLookupError } = await window.supabas
     return { session, ticketId: null };
   }
 
-  const { data: messages, error: messagesError } = await window.supabase
+  // También usar sbRealtime aquí
+  const { data: messages, error: messagesError } = await window.sbRealtime
     .from("soporte_mensajes")
     .select("id, sender_role, mensaje, created_at")
     .eq("ticket_id", currentSupportTicketId)
@@ -2901,8 +2903,7 @@ const { data: existingTickets, error: ticketLookupError } = await window.supabas
   currentSupportMessagesLoaded = true;
 
   return { session, ticketId: currentSupportTicketId };
- }
-
+}
   
 function cleanupSupportRealtime() {
   try {
