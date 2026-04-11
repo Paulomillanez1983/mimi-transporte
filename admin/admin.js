@@ -611,6 +611,21 @@ function setFilterButtonState(nextFilter) {
   });
 }
 
+function sanitizeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ""), window.location.origin);
+    const protocol = url.protocol.toLowerCase();
+
+    if (protocol === "http:" || protocol === "https:") {
+      return url.toString();
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function buildDocumentCards(driver) {
   const possibleDocs = [
     { label: "DNI frente", url: driver.dni_front_url || null },
@@ -623,7 +638,9 @@ function buildDocumentCards(driver) {
   ];
 
   return possibleDocs.map((doc) => {
-    if (!doc.url) {
+    const safeUrl = sanitizeExternalUrl(doc.url);
+
+    if (!safeUrl) {
       return `
         <article class="doc-card empty">
           <strong>${escapeHtml(doc.label)}</strong>
@@ -635,7 +652,7 @@ function buildDocumentCards(driver) {
     return `
       <article class="doc-card">
         <strong>${escapeHtml(doc.label)}</strong>
-        <a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer">
+        <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">
           Abrir archivo
         </a>
       </article>
