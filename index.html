@@ -2871,17 +2871,6 @@ async function handleIncomingSupportMessage(payload) {
   }
 }
 
-function cleanupSupportRealtime() {
-  try {
-    if (currentSupportChannel && window.sbRealtime) {
-      window.sbRealtime.removeChannel(currentSupportChannel);
-    }
-  } catch (err) {
-    console.warn("[support] no se pudo remover canal anterior", err);
-  } finally {
-    currentSupportChannel = null;
-  }
-}
 
 async function subscribeSupportRealtimeForUser() {
   if (!window.sbRealtime) return null;
@@ -3099,7 +3088,7 @@ try {
 } catch (err) {
   console.error("[DOMContentLoaded bootstrap] error:", err);
 }
-
+}); // <- CIERRE DE DOMContentLoaded
 // ==========================================
 // UI LOADING
 // ==========================================
