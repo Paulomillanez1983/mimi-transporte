@@ -536,14 +536,17 @@ const response = await fetch(`${SUPPORT_API_BASE}/support-send-message`, {
     Authorization: `Bearer ${token}`
   },
       body: JSON.stringify({
-       ticket_id: current.id,
-       message_id: newMessageId,
-       title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
-       body: text || "Tenés una nueva respuesta de soporte.",
-       sender_name: current.name || "Soporte MIMICAR",
-       sender_role: "admin",
-       conversation_name: current.name || "Usuario",
-       unread_count: Number(current.unread_count || 0) + 1
+  conversation_id: current.id,
+  message: text,
+  sender_role: "admin",
+  attachments: uploadedAttachments,
+  metadata: {
+    push_title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
+    push_body: text || "Tenés una nueva respuesta de soporte.",
+    sender_name: current.name || "Soporte MIMICAR",
+    conversation_name: current.name || "Usuario",
+    unread_count: Number(current.unread_count || 0) + 1
+
     })
  });
 
