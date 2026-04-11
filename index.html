@@ -2663,7 +2663,9 @@ unreadCount = Math.max(
 let currentSupportTicketId = null;
 let currentSupportChannel = null;
 let currentSupportMessagesLoaded = false;
-  
+let supportRealtimeRetryTimer = null;
+let supportRealtimeManuallyClosing = false;
+let supportRealtimeActiveUserId = null;
 document.addEventListener('DOMContentLoaded', async () => {
 // ==========================================
 // SOPORTE CHAT SHEET
