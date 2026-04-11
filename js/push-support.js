@@ -15,9 +15,7 @@ const firebaseConfig = {
   appId: "1:1066211116754:web:8cfb14cfb15ecd0cb28f0b"
 };
 
-// IMPORTANTE:
-// pegá acá tu VAPID KEY pública de Firebase Web Push
-const FIREBASE_VAPID_KEY = "ACA_TU_VAPID_KEY";
+const FIREBASE_VAPID_KEY = "BPcP-vGxjeXhO4PoDzv_4gfrIsv52DFRMWJjj5AjE935xmxQX8rg2S7vA5qtDKqWnLZgIErnTi36JTsNOtmcQ4";
 
 let initialized = false;
 
@@ -40,7 +38,6 @@ async function upsertPushToken({ userId, token, accessToken }) {
     updated_at: new Date().toISOString()
   };
 
-  // intenta insertar
   const insertResult = await window.supabaseInsert?.("push_tokens", payload, accessToken);
 
   if (!insertResult?.error) {
@@ -48,7 +45,6 @@ async function upsertPushToken({ userId, token, accessToken }) {
     return;
   }
 
-  // fallback: si ya existe el registro, actualiza
   console.warn("[push-support] insert falló, intento update", insertResult.error);
 
   const updateResult = await window.supabaseUpdate?.("push_tokens", "user_id", userId, {
@@ -105,6 +101,11 @@ export async function initSupportPushFCM() {
       scope: getAppBasePath()
     });
 
+    if (!FIREBASE_VAPID_KEY || FIREBASE_VAPID_KEY === "ACA_TU_VAPID_KEY") {
+      console.error("[push-support] Falta configurar FIREBASE_VAPID_KEY");
+      return;
+    }
+
     const token = await getToken(messaging, {
       vapidKey: FIREBASE_VAPID_KEY,
       serviceWorkerRegistration: swRegistration
@@ -114,6 +115,8 @@ export async function initSupportPushFCM() {
       console.warn("[push-support] Firebase no devolvió token");
       return;
     }
+
+    console.log("[push-support] token FCM:", token);
 
     await upsertPushToken({
       userId: session.user.id,
