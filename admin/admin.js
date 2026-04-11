@@ -1,4 +1,5 @@
 import supabaseAdminService from "./supabase-admin-client.js";
+window.supabaseAdminService = supabaseAdminService;
 import { initAdminSupport } from "./admin-support.js";
 const API_URL =
   "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/admin-review-driver";
