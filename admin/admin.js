@@ -94,6 +94,7 @@ const citySelector = document.getElementById("citySelector");
 const priorityQueue = document.getElementById("priorityQueue");
 const aiSummary = document.getElementById("aiSummary");
 const liveBadge = document.getElementById("liveBadge");
+const mobileDockButtons = Array.from(document.querySelectorAll("[data-admin-mobile-view-target]"));
 
 const modal = document.getElementById("driverModal");
 const closeModalBtn = document.getElementById("closeModalBtn");
@@ -563,6 +564,87 @@ function createDriverCard(driver) {
   `;
 }
 
+function createDriverCard(driver) {
+  const score = getDriverScore(driver);
+  const scoreLabel = getScoreLabel(score);
+  const statusText = formatStatus(driver.review_status);
+  const statusClass = getStatusClass(driver.review_status, driver.is_blocked);
+  const online = isOnlineDriver(driver);
+  const noteValue = escapeHtml(driver.review_notes || "");
+  const driverId = escapeHtml(driver.user_id);
+
+  return `
+  <article class="driver-card premium-card" data-driver-card data-driver-id="${driverId}">
+    <div class="swipe-bg swipe-bg-left">Rechazar</div>
+    <div class="swipe-bg swipe-bg-right">Aprobar</div>
+
+    <div class="driver-card-surface">
+      <div class="driver-card-top">
+        <div class="driver-identity">
+          <div class="driver-avatar">
+            ${escapeHtml((getDriverDisplayName(driver).trim().charAt(0) || "C").toUpperCase())}
+          </div>
+
+          <div>
+            <h3>${escapeHtml(getDriverDisplayName(driver))}</h3>
+            <p>${escapeHtml(getDriverSubline(driver))}</p>
+            <small>${escapeHtml(getDriverPhone(driver))}</small>
+          </div>
+        </div>
+
+        <div class="driver-top-side">
+          <span class="status-badge ${statusClass}">
+            ${escapeHtml(statusText)}
+          </span>
+          <span class="online-badge ${online ? "is-online" : "is-offline"}">
+            ${online ? "En vivo" : "Sin seÃ±al"}
+          </span>
+          <button
+            class="driver-expand-toggle"
+            type="button"
+            data-driver-toggle
+            aria-expanded="false"
+            aria-controls="driver-extra-${driverId}"
+          >
+            Ver acciones
+          </button>
+        </div>
+      </div>
+
+      <div class="driver-card-expandable" id="driver-extra-${driverId}">
+        <div class="driver-meta premium-meta">
+          <span>ActivaciÃ³n: ${escapeHtml(driver.activation_status || "-")}</span>
+          <span>Docs: ${driver.documents_approved ? "OK" : "Pendiente"}</span>
+          <span>Score IA: ${score}/100</span>
+          <span>KYC: ${escapeHtml(driver.kyc_status || "-")}</span>
+          <span>Review: ${driver.review_required ? "SÃ­" : "No"}</span>
+          <span>${escapeHtml(scoreLabel)}</span>
+        </div>
+
+        <div class="driver-progress">
+          <div class="driver-progress-track">
+            <div class="driver-progress-fill" style="width:${score}%"></div>
+          </div>
+        </div>
+
+        <textarea
+          id="note-${driverId}"
+          class="review-note"
+          placeholder="Notas de revisiÃ³n"
+        >${noteValue}</textarea>
+
+        <div class="driver-actions premium-actions">
+          <button class="btn approve" data-driver-id="${driverId}" data-action="approve">Aprobar</button>
+          <button class="btn reject" data-driver-id="${driverId}" data-action="reject">Rechazar</button>
+          <button class="btn block" data-driver-id="${driverId}" data-action="block">Bloquear</button>
+          <button class="btn secondary" data-open-driver="${driverId}">Ver detalle</button>
+        </div>
+      </div>
+    </div>
+  </article>
+  `;
+}
+
 function renderDrivers(options = {}) {
   if (!driversContainer) return;
 
@@ -602,6 +684,31 @@ function animateCardsIn() {
   });
 }
 
+function setDriverCardExpanded(card, expanded) {
+  if (!card) return;
+  const toggle = card.querySelector("[data-driver-toggle]");
+  card.classList.toggle("is-expanded", !!expanded);
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    toggle.textContent = expanded ? "Ocultar acciones" : "Ver acciones";
+  }
+}
+
+function toggleDriverCard(card) {
+  if (!card) return;
+  const shouldExpand = !card.classList.contains("is-expanded");
+
+  if (IS_MOBILE && shouldExpand) {
+    document.querySelectorAll("[data-driver-card].is-expanded").forEach((item) => {
+      if (item !== card) {
+        setDriverCardExpanded(item, false);
+      }
+    });
+  }
+
+  setDriverCardExpanded(card, shouldExpand);
+}
+
 
 function setFilterButtonState(nextFilter) {
   filterButtons.forEach((button) => {
@@ -609,21 +716,6 @@ function setFilterButtonState(nextFilter) {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
   });
-}
-
-function sanitizeExternalUrl(value) {
-  try {
-    const url = new URL(String(value || ""), window.location.origin);
-    const protocol = url.protocol.toLowerCase();
-
-    if (protocol === "http:" || protocol === "https:") {
-      return url.toString();
-    }
-
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 function buildDocumentCards(driver) {
@@ -638,9 +730,7 @@ function buildDocumentCards(driver) {
   ];
 
   return possibleDocs.map((doc) => {
-    const safeUrl = sanitizeExternalUrl(doc.url);
-
-    if (!safeUrl) {
+    if (!doc.url) {
       return `
         <article class="doc-card empty">
           <strong>${escapeHtml(doc.label)}</strong>
@@ -652,7 +742,7 @@ function buildDocumentCards(driver) {
     return `
       <article class="doc-card">
         <strong>${escapeHtml(doc.label)}</strong>
-        <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">
+        <a href="${escapeHtml(doc.url)}" target="_blank" rel="noopener noreferrer">
           Abrir archivo
         </a>
       </article>
@@ -1738,6 +1828,13 @@ const finishSwipe = async () => {
 }
 
 driversContainer?.addEventListener("click", async (event) => {
+  const toggleButton = event.target.closest("button[data-driver-toggle]");
+  if (toggleButton) {
+    const card = toggleButton.closest("[data-driver-card]");
+    toggleDriverCard(card);
+    return;
+  }
+
   const actionButton = event.target.closest("button[data-driver-id][data-action]");
   if (actionButton) {
     const driverId = actionButton.getAttribute("data-driver-id");
@@ -1890,8 +1987,41 @@ function setupMapScrollEffects() {
   update();
   window.addEventListener("scroll", onScroll, { passive: true });
 }
+
+function applyMobileAdminView(view = "choferes") {
+  const mobile = window.innerWidth <= 820;
+  const nextView = mobile ? view : "all";
+
+  document.body.setAttribute("data-admin-mobile-view", nextView);
+
+  mobileDockButtons.forEach((button) => {
+    const isActive = (button.dataset.adminMobileViewTarget || "") === view && mobile;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+function setupMobileAdminViews() {
+  if (!mobileDockButtons.length) return;
+
+  let currentView = "choferes";
+  applyMobileAdminView(currentView);
+
+  mobileDockButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      currentView = button.dataset.adminMobileViewTarget || "choferes";
+      applyMobileAdminView(currentView);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
+
+  window.addEventListener("resize", () => {
+    applyMobileAdminView(currentView);
+  });
+}
 setFilterButtonState(currentFilter);
 initAdaptiveTheme();
 setupDynamicHeader();
 setupMapScrollEffects();
+setupMobileAdminViews();
 bootstrap();
