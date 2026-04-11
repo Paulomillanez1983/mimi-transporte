@@ -55,21 +55,27 @@ function normalizeSupportStatus(status) {
 
   switch (normalized) {
     case "abierto":
+      return "abierto";
     case "en_proceso":
+      return "en_proceso";
     case "esperando_usuario":
+      return "esperando_usuario";
     case "resuelto":
-      return normalized;
+      return "resuelto";
     default:
       return "abierto";
   }
 }
+
 function supportStatusClass(status) {
   switch (normalizeSupportStatus(status)) {
-    case "UNREAD":
-      return "unread";
-    case "READ":
+    case "abierto":
+      return "pending";
+    case "en_proceso":
       return "read";
-    case "RESOLVED":
+    case "esperando_usuario":
+      return "unread";
+    case "resuelto":
       return "resolved";
     default:
       return "pending";
@@ -78,14 +84,16 @@ function supportStatusClass(status) {
 
 function supportStatusLabel(status) {
   switch (normalizeSupportStatus(status)) {
-    case "UNREAD":
-      return "UNREAD";
-    case "READ":
-      return "READ";
-    case "RESOLVED":
-      return "RESOLVED";
+    case "abierto":
+      return "Abierto";
+    case "en_proceso":
+      return "En proceso";
+    case "esperando_usuario":
+      return "Esperando usuario";
+    case "resuelto":
+      return "Resuelto";
     default:
-      return "PENDING";
+      return "Abierto";
   }
 }
 
