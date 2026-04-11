@@ -2839,11 +2839,11 @@ header.is-condensed h1 {
 }
 
 .support-thread-empty {
-  min-height: 420px;
+  min-height: 340px;
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 24px;
+  padding: 18px;
   color: var(--muted);
 }
 
@@ -2961,11 +2961,11 @@ header.is-condensed h1 {
 }
 
 .support-message-bubble {
-  max-width: min(78%, 640px);
-  padding: 12px 14px;
-  border-radius: 18px;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
-  line-height: 1.4;
+  max-width: min(72%, 420px);
+  padding: 8px 10px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  line-height: 1.32;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -2983,8 +2983,8 @@ header.is-condensed h1 {
 }
 
 .support-message-meta {
-  margin-top: 6px;
-  font-size: 0.75rem;
+  margin-top: 4px;
+  font-size: 0.68rem;
   opacity: 0.74;
 }
 
@@ -3085,7 +3085,7 @@ header.is-condensed h1 {
 
   .support-shell.is-mobile-support .support-sidebar,
   .support-shell.is-mobile-support .support-thread {
-    min-height: 320px;
+    min-height: 250px;
   }
 
   .support-shell.is-mobile-support.is-thread-open .support-sidebar {
@@ -3126,9 +3126,11 @@ header.is-condensed h1 {
     flex: 1 1 auto;
   }
 
-  .support-message-bubble {
-    max-width: 94%;
-  }
+.support-message-bubble {
+  max-width: 78%;
+  padding: 8px 10px;
+  border-radius: 14px;
+}
 
   .support-conversation-list {
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
@@ -3146,7 +3148,7 @@ header.is-condensed h1 {
   }
 
   .support-reply-input {
-    min-height: 84px;
+    min-height: 64px;
   }
 }
 
@@ -3189,7 +3191,7 @@ header.is-condensed h1 {
   .support-thread-panel,
   .support-thread-empty,
   .support-sidebar {
-    min-height: 280px;
+    min-height: 220px;
   }
 
   .support-messages {
@@ -3215,12 +3217,19 @@ header.is-condensed h1 {
     width: 100%;
   }
 
-  .support-thread-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
+.support-thread-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 
-  .support-thread-actions > *:last-child {
-    grid-column: 1 / -1;
-  }
+.support-thread-actions > * {
+  min-height: 40px;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-radius: 14px;
+}
+
+.support-thread-actions > *:last-child {
+  grid-column: 1 / -1;
 }
