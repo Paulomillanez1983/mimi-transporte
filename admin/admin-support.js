@@ -556,7 +556,7 @@ const newMessageId =
   null;
 
 try {
-  await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
+  const pushResponse = await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -569,10 +569,18 @@ try {
       body: "Tenés una nueva respuesta de soporte."
     })
   });
+
+  const pushData = await pushResponse.json().catch(() => ({}));
+
+  if (!pushResponse.ok || pushData?.ok === false) {
+    console.warn("[support.sendSupportReply] push response warning:", pushData);
+  } else {
+    console.log("[support.sendSupportReply] push enviada:", pushData);
+  }
 } catch (pushErr) {
   console.warn("[support.sendSupportReply] push warning:", pushErr);
 }
-
+    
 if (els.reply) {
   els.reply.value = "";
   els.reply.style.height = "";
