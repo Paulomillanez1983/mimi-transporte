@@ -51,19 +51,18 @@ function supportFormatDateTime(value) {
 }
 
 function normalizeSupportStatus(status) {
-  const normalized = String(status || "").trim().toUpperCase();
+  const normalized = String(status || "").trim().toLowerCase();
 
   switch (normalized) {
-    case "UNREAD":
-    case "READ":
-    case "PENDING":
-    case "RESOLVED":
+    case "abierto":
+    case "en_proceso":
+    case "esperando_usuario":
+    case "resuelto":
       return normalized;
     default:
-      return "PENDING";
+      return "abierto";
   }
 }
-
 function supportStatusClass(status) {
   switch (normalizeSupportStatus(status)) {
     case "UNREAD":
@@ -807,10 +806,9 @@ export function initAdminSupport() {
 
   els.send?.addEventListener("click", sendSupportReply);
 
-  els.markRead?.addEventListener("click", () => persistConversationStatus("READ"));
-  els.markPending?.addEventListener("click", () => persistConversationStatus("PENDING"));
-  els.markResolved?.addEventListener("click", () => persistConversationStatus("RESOLVED"));
-
+els.markRead?.addEventListener("click", () => persistConversationStatus("en_proceso"));
+els.markPending?.addEventListener("click", () => persistConversationStatus("esperando_usuario"));
+els.markResolved?.addEventListener("click", () => persistConversationStatus("resuelto"));
   els.reply?.addEventListener("input", autoResizeSupportReply);
 
   els.reply?.addEventListener("keydown", (event) => {
