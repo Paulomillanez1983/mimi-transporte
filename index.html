@@ -2868,12 +2868,13 @@ async function handleIncomingSupportMessage(payload) {
     }
 
     // Buscar ticket por ID solamente
-    const { data: ticket, error: ticketError } = await window.supabase
-      .from("soporte_tickets")
-      .select("id, user_id, created_by, estado, asunto, updated_at")
-      .eq("id", msg.ticket_id)
-      .maybeSingle();
+const { data: ticketRows, error: ticketError } = await window.supabase
+  .from("soporte_tickets")
+  .select("id, user_id, created_by, estado, asunto, updated_at")
+  .eq("id", msg.ticket_id)
+  .limit(1);
 
+const ticket = Array.isArray(ticketRows) ? ticketRows[0] || null : null;
     if (ticketError) {
       console.warn("[support realtime ticket check error]", ticketError);
       return;
