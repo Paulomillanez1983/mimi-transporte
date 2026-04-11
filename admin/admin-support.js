@@ -560,8 +560,8 @@ try {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-internal-key": "mi_clave_super_privada_larga_2026"
-    },
+       Authorization: `Bearer ${token}`
+     },
     body: JSON.stringify({
       ticket_id: current.id,
       message_id: newMessageId,
