@@ -535,13 +535,17 @@ const response = await fetch(`${SUPPORT_API_BASE}/support-send-message`, {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`
   },
-  body: JSON.stringify({
-    conversation_id: current.id,
-    message: text,
-    sender_role: "admin",
-    attachments: uploadedAttachments
-  })
-});
+      body: JSON.stringify({
+       ticket_id: current.id,
+       message_id: newMessageId,
+       title: `Soporte MIMICAR · ${current.name || "Administrador"}`,
+       body: text || "Tenés una nueva respuesta de soporte.",
+       sender_name: current.name || "Soporte MIMICAR",
+       sender_role: "admin",
+       conversation_name: current.name || "Usuario",
+       unread_count: Number(current.unread_count || 0) + 1
+    })
+ });
 
 const data = await response.json().catch(() => ({}));
 
