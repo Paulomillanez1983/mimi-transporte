@@ -1771,9 +1771,29 @@ textarea:focus {
 
 body.modal-open {
   overflow: hidden;
-  touch-action: none;
 }
 
+@media (max-width: 820px) {
+  body.modal-open {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  .modal,
+  .modal-dialog,
+  .modal-content,
+  .modal-header,
+  .modal-section,
+  .icon-btn,
+  .btn,
+  button,
+  a,
+  textarea,
+  input,
+  select {
+    touch-action: manipulation;
+  }
+}
 /* =========================================================
    MICRO ANIMATIONS
    ========================================================= */
