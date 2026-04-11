@@ -2938,7 +2938,6 @@ async function handleIncomingSupportMessage(payload) {
       return;
     }
 
-    // Verificar duplicados primero
     if (msg.id && markSupportMessageProcessed(msg.id)) {
       console.log("[support realtime] mensaje duplicado ignorado", msg.id);
       return;
@@ -2952,48 +2951,46 @@ async function handleIncomingSupportMessage(payload) {
       return;
     }
 
-    // Esperar un poco si el mensaje llegó muy rápido (race condition)
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 300));
 
-    // Buscar ticket con retry simple
     let ticket = null;
     let attempts = 0;
     const maxAttempts = 3;
 
     while (!ticket && attempts < maxAttempts) {
       attempts++;
-      
-// ✅ CORRECTO - cliente oficial con autenticación
-const { data: ticket, error: ticketError } = await window.sbRealtime
-  .from("soporte_tickets")
-  .select("id, user_id, created_by, estado, asunto, updated_at")
-  .eq("id", msg.ticket_id)
-  .maybeSingle(); // .maybeSingle() ya implica limit(1)
-      if (ticketError) {
-        console.warn(`[support realtime] intento ${attempts} - error:`, ticketError);
-        await new Promise(r => setTimeout(r, 200 * attempts));
+
+      const { data, error } = await window.sbRealtime
+        .from("soporte_tickets")
+        .select("id, user_id, created_by, estado, asunto, updated_at")
+        .eq("id", msg.ticket_id)
+        .maybeSingle();
+
+      if (error) {
+        console.warn(`[support realtime] intento ${attempts} - error:`, error);
+        await new Promise((r) => setTimeout(r, 200 * attempts));
         continue;
       }
 
-      ticket = ticketRows;
-      
-      // Si no encontramos el ticket, puede ser que no pertenezca a este usuario
-      // o que el RLS lo esté bloqueando
+      ticket = data || null;
+
       if (!ticket) {
-        console.warn(`[support realtime] intento ${attempts} - ticket no encontrado:`, msg.ticket_id);
-        await new Promise(r => setTimeout(r, 200 * attempts));
+        console.warn(
+          `[support realtime] intento ${attempts} - ticket no encontrado:`,
+          msg.ticket_id
+        );
+        await new Promise((r) => setTimeout(r, 200 * attempts));
       }
     }
 
     if (!ticket) {
       console.warn("[support realtime] ticket no recuperado después de reintentos", {
         ticketId: msg.ticket_id,
-        userId: userId
+        userId
       });
       return;
     }
 
-    // Verificar ownership (doble check)
     const ownerId = ticket.user_id || ticket.created_by || null;
     const belongsToUser = !!ownerId && String(ownerId) === String(userId);
 
@@ -3006,17 +3003,14 @@ const { data: ticket, error: ticketError } = await window.sbRealtime
       return;
     }
 
-    // Solo actualizar UI si es mensaje de admin y el chat está abierto
     const senderRole = String(msg.sender_role || "").toLowerCase();
-    
-    if (senderRole === "admin" && !markSupportMessageProcessed(msg.id)) {
+
+    if (senderRole === "admin") {
       appendSupportMessage(msg.mensaje || "", "agent", msg.id);
-      
-      // Notificación solo si el sheet está cerrado
+
       if (!supportSheet?.classList.contains("is-open")) {
         notif.show("Soporte", "Tenés una nueva respuesta", "success", 4000);
-        
-        // Agregar al centro de notificaciones
+
         agregarNotificacionViaje({
           estado: "SOPORTE",
           texto: "Soporte respondió tu consulta",
@@ -3024,14 +3018,13 @@ const { data: ticket, error: ticketError } = await window.sbRealtime
         });
       }
     }
-
   } catch (err) {
     console.error("[support realtime] error:", err);
   }
 }
-let supportRealtimeRetryCount = 0;
+
+  let supportRealtimeRetryCount = 0;
 const MAX_SUPPORT_RETRIES = 5;
-let supportRealtimeRetryTimer = null;
 
 async function subscribeSupportRealtimeForUser(force = false) {
   if (!window.sbRealtime) return null;
@@ -3333,10 +3326,11 @@ async function resolverPuntoDesdeTexto(texto) {
 
   try {
     const geo = await buscarDireccion(texto.trim());
+    const resultados = Array.isArray(geo?.resultados) ? geo.resultados : [];
 
-    if (!Array.isArray(geo) || geo.length === 0) return null;
+    if (resultados.length === 0) return null;
 
-    const mejor = geo[0];
+    const mejor = resultados[0];
     if (!mejor?.lat || !mejor?.lon) return null;
 
     return {
@@ -6562,6 +6556,9 @@ if (window.sbRealtime?.auth && !window.__mimiAuthListenerBound) {
       jeep.style.animation = 'mimiJeepIntro 900ms cubic-bezier(0.22, 1, 0.36, 1) both';
     });
   }
+window.renderSesionUI = renderSesionUI;
+window.loginConGoogleParaViaje = loginConGoogleParaViaje;
+window.setSectionVisible = setSectionVisible;
 
   (function patchRenderSesionUI() {
     if (typeof window.renderSesionUI !== 'function') return;
