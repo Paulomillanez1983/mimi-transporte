@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getMessaging,
   getToken,
@@ -20,7 +20,8 @@ const FIREBASE_VAPID_KEY = "BPcP-vGxjeXhO4PoDzv_4gfrIsv52DFRMWJjj5AjE935xmxQX8rg
 let initialized = false;
 
 function getAppBasePath() {
-  return "/mimi-transporte/";
+  const isGithubPages = window.location.hostname === "paulomillanez1983.github.io";
+  return isGithubPages ? "/mimi-transporte/" : "/";
 }
 
 function getSwPath() {
@@ -94,7 +95,7 @@ export async function initSupportPushFCM() {
       return;
     }
 
-    const app = initializeApp(firebaseConfig);
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
 
     const swRegistration = await navigator.serviceWorker.register(getSwPath(), {
@@ -105,6 +106,14 @@ export async function initSupportPushFCM() {
       console.error("[push-support] Falta configurar FIREBASE_VAPID_KEY");
       return;
     }
+
+    console.log("[push-support] origin:", window.location.origin);
+    console.log("[push-support] sw path:", getSwPath());
+    console.log("[push-support] scope:", getAppBasePath());
+    console.log("[push-support] apiKey:", firebaseConfig.apiKey);
+    console.log("[push-support] projectId:", firebaseConfig.projectId);
+    console.log("[push-support] senderId:", firebaseConfig.messagingSenderId);
+    console.log("[push-support] vapid length:", FIREBASE_VAPID_KEY?.length || 0);
 
     const token = await getToken(messaging, {
       vapidKey: FIREBASE_VAPID_KEY,
