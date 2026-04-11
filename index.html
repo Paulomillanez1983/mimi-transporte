@@ -1496,6 +1496,26 @@ async function obtenerSesionCliente(forceRefresh = false) {
     if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
   }
 }
+async function syncRealtimeAuthToken(forceRefresh = false) {
+  try {
+    if (!window.sbRealtime?.realtime) return null;
+
+    const session = await obtenerSesionCliente(forceRefresh);
+    const token = session?.access_token || null;
+
+    if (token) {
+      await window.sbRealtime.realtime.setAuth(token);
+      console.log('[support realtime auth] token sincronizado');
+    } else {
+      console.warn('[support realtime auth] sin token de sesión');
+    }
+
+    return token;
+  } catch (err) {
+    console.warn('[support realtime auth] error sincronizando token:', err);
+    return null;
+  }
+}
   
 function startPageTransition() {
   document.body.classList.add('page-transitioning');
@@ -2896,13 +2916,16 @@ async function subscribeSupportRealtimeForUser(force = false) {
     return null;
   }
 
-  const userId = session.user.id;
+const userId = session.user.id;
 
-  // Si ya existe un canal activo para este usuario, no lo recrees
-  if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
-    return currentSupportChannel;
-  }
+await syncRealtimeAuthToken(true);
+console.log('[support realtime] suscribiendo con userId:', userId);
+console.log('[support realtime] ticket actual:', currentSupportTicketId);
 
+// Si ya existe un canal activo para este usuario, no lo recrees
+if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
+  return currentSupportChannel;
+}
   cleanupSupportRealtime();
 
   supportRealtimeActiveUserId = userId;
@@ -6252,27 +6275,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     const session = await obtenerSesionCliente(true);
     renderSesionUI(session);
 
-    if (window.sbRealtime?.auth && !window.__mimiAuthListenerBound) {
-      window.__mimiAuthListenerBound = true;
+if (window.sbRealtime?.auth && !window.__mimiAuthListenerBound) {
+  window.__mimiAuthListenerBound = true;
 
-      window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
-        console.log('[auth] onAuthStateChange:', event, session);
+  window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
+    console.log('[auth] onAuthStateChange:', event, session);
 
-        cachedSession = session || null;
-        lastSessionCheck = Date.now();
+    cachedSession = session || null;
+    lastSessionCheck = Date.now();
 
-        renderSesionUI(session || null);
+    renderSesionUI(session || null);
 
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          await reanudarViajePendientePostLogin();
-        }
+    try {
+      const token = session?.access_token || null;
 
-        if (event === 'SIGNED_OUT') {
-          limpiarSesionCache();
-          renderSesionUI(null);
-        }
-      });
+      if (token && window.sbRealtime?.realtime) {
+        await window.sbRealtime.realtime.setAuth(token);
+        console.log('[auth] realtime token actualizado');
+      }
+    } catch (err) {
+      console.warn('[auth] no se pudo actualizar token realtime:', err);
     }
+
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      await reanudarViajePendientePostLogin();
+    }
+
+    if (event === 'SIGNED_OUT') {
+      limpiarSesionCache();
+      renderSesionUI(null);
+    }
+  });
+}
 
     await reanudarViajePendientePostLogin();
     actualizarBotonCancelarViaje();
