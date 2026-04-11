@@ -2610,13 +2610,6 @@ let currentSupportChannel = null;
 let currentSupportMessagesLoaded = false;
   
 document.addEventListener('DOMContentLoaded', async () => {
-  cargarNotificacionesDesdeStorage();
-  renderizarCentroNotificaciones();
-  await restaurarViajeActivoCliente();
-  await subscribeSupportRealtimeForUser();
-    if (window.initSupportPushFCM) {
-    await window.initSupportPushFCM();
-  }
 // ==========================================
 // SOPORTE CHAT SHEET
 // ==========================================
@@ -2627,7 +2620,6 @@ const supportSheetClose = document.getElementById("supportSheetClose");
 const supportMessageInput = document.getElementById("supportMessageInput");
 const supportSendBtn = document.getElementById("supportSendBtn");
 const supportChatBody = document.getElementById("supportChatBody");
-
 function openSupportSheet() {
   if (!supportSheet || !supportSheetOverlay) return;
 
@@ -2989,6 +2981,18 @@ document.addEventListener("keydown", (e) => {
     notif.show("Error", "No se pudo enviar el mensaje de soporte", "error");
   } finally {
     supportSendBtn.disabled = false;
+  }
+     try {
+    cargarNotificacionesDesdeStorage();
+    renderizarCentroNotificaciones();
+    await restaurarViajeActivoCliente();
+    await subscribeSupportRealtimeForUser();
+
+    if (window.initSupportPushFCM) {
+      await window.initSupportPushFCM();
+    }
+  } catch (err) {
+    console.error("[DOMContentLoaded bootstrap] error:", err);
   }
 });
 
