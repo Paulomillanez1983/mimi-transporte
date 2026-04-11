@@ -2615,14 +2615,15 @@ header.is-condensed h1 {
 .support-sidebar {
   display: flex;
   flex-direction: column;
-  min-height: 720px;
+  min-height: 420px;
   position: relative;
 }
 
 .support-thread {
-  min-height: 720px;
+  min-height: 420px;
   position: relative;
 }
+
 
 .support-shell:not(.is-mobile-support) .support-thread {
   max-height: min(72vh, 920px);
@@ -2838,12 +2839,11 @@ header.is-condensed h1 {
 }
 
 .support-thread-empty {
-  height: 100%;
-  min-height: 720px;
+  min-height: 420px;
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 32px;
+  padding: 24px;
   color: var(--muted);
 }
 
@@ -2855,8 +2855,7 @@ header.is-condensed h1 {
 .support-thread-panel {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 720px;
+  min-height: 420px;
   min-width: 0;
 }
 
@@ -3073,7 +3072,7 @@ header.is-condensed h1 {
   .support-thread,
   .support-thread-empty,
   .support-thread-panel {
-    min-height: 460px;
+    min-height: 360px;
   }
 }
 
@@ -3086,7 +3085,7 @@ header.is-condensed h1 {
 
   .support-shell.is-mobile-support .support-sidebar,
   .support-shell.is-mobile-support .support-thread {
-    min-height: calc(100dvh - 140px);
+    min-height: 320px;
   }
 
   .support-shell.is-mobile-support.is-thread-open .support-sidebar {
