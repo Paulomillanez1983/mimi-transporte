@@ -1,4 +1,4 @@
-import supabaseAdminService from "./supabase-admin-client.js";
+﻿import supabaseAdminService from "./supabase-admin-client.js";
 
 const SUPPORT_API_BASE = "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1";
 const SUPPORT_POLL_MS = 12000;
@@ -223,7 +223,7 @@ function getConversationSecondary(item) {
     parts.push(subject);
   }
 
-  return parts.join(" · ");
+  return parts.join(" Â· ");
 }
 
 function getMessageText(msg) {
@@ -244,7 +244,7 @@ function normalizeConversation(item) {
 
   return {
     ...item,
-    id: item.id || item.ticket_id || item.conversation_id || "",
+    id: String(item.id || item.ticket_id || item.conversation_id || ""),
     email: getConversationEmail(item),
     name: getConversationName(item),
     role: normalizeSupportRole(getConversationRole(item)),
@@ -283,7 +283,7 @@ function getSupportElements() {
 }
 
 function getCurrentConversation() {
-  return supportState.conversations.find((item) => item.id === supportState.selectedId) || null;
+  return supportState.conversations.find((item) => String(item.id) === String(supportState.selectedId)) || null;
 }
 
 function setSupportBusy(isBusy) {
@@ -501,7 +501,7 @@ function renderConversationList() {
 
     return `
       <button
-        class="support-conversation-item ${supportState.selectedId === item.id ? "active" : ""}"
+        class="support-conversation-item ${String(supportState.selectedId) === String(item.id) ? "active" : ""}"
         data-support-id="${escapeHtmlAttr(item.id)}"
         type="button"
         aria-label="Abrir conversacion con ${safeName}"
@@ -538,6 +538,7 @@ function renderSelectedConversation() {
   if (!current) {
     els.threadEmpty.hidden = false;
     els.threadPanel.hidden = true;
+    updateSupportActionState();
     syncSupportLayout();
     return;
   }
@@ -619,6 +620,7 @@ function renderSelectedConversation() {
     `;
 
   syncSupportLayout();
+  updateSupportActionState();
   scrollMessagesToBottom(false);
 }
 
@@ -626,7 +628,7 @@ function selectConversation(id, options = {}) {
   const { openThread = true, markVisualRead = false } = options;
   if (!id) return;
 
-  supportState.selectedId = id;
+  supportState.selectedId = String(id);
 
   if (markVisualRead) {
     const current = getCurrentConversation();
@@ -643,6 +645,7 @@ function selectConversation(id, options = {}) {
     openMobileThread();
   } else {
     syncSupportLayout();
+    focusSupportReply({ preventScroll: true });
   }
 }
 
@@ -659,6 +662,7 @@ function updateConversationStatusLocally(status) {
   applySupportFilters();
   renderConversationList();
   renderSelectedConversation();
+  updateSupportActionState();
 }
 
 async function uploadSupportAttachments(conversationId, files) {
@@ -1031,6 +1035,7 @@ export function initAdminSupport() {
   document.addEventListener("visibilitychange", handleVisibilitySupportRefresh);
 
   handleSupportResize();
+  updateSupportActionState();
   loadSupportConversations({ preserveSelection: true, silent: false });
   startSupportPolling();
 }
