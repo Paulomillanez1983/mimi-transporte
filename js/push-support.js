@@ -106,14 +106,16 @@ export async function initSupportPushFCM() {
       return;
     }
 
-    console.log("[push-support] origin:", window.location.origin);
-    console.log("[push-support] sw path:", getSwPath());
-    console.log("[push-support] scope:", getAppBasePath());
-    console.log("[push-support] apiKey:", firebaseConfig.apiKey);
-    console.log("[push-support] projectId:", firebaseConfig.projectId);
-    console.log("[push-support] senderId:", firebaseConfig.messagingSenderId);
-    console.log("[push-support] vapid length:", FIREBASE_VAPID_KEY?.length || 0);
-
+console.log("[push-support] href:", window.location.href);
+console.log("[push-support] origin:", window.location.origin);
+console.log("[push-support] hostname:", window.location.hostname);
+console.log("[push-support] sw path:", getSwPath());
+console.log("[push-support] scope:", getAppBasePath());
+console.log("[push-support] apiKey:", firebaseConfig.apiKey);
+console.log("[push-support] projectId:", firebaseConfig.projectId);
+console.log("[push-support] senderId:", firebaseConfig.messagingSenderId);
+console.log("[push-support] appId:", firebaseConfig.appId);
+console.log("[push-support] vapid:", FIREBASE_VAPID_KEY);
     const token = await getToken(messaging, {
       vapidKey: FIREBASE_VAPID_KEY,
       serviceWorkerRegistration: swRegistration
