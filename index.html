@@ -2854,8 +2854,8 @@ if (!session?.user?.id) {
           const type = senderRole === "admin" ? "agent" : "user";
 
           if (currentSupportTicketId === msg.ticket_id) {
-            appendSupportMessage(msg.mensaje, type, msg.id || null);
-          }
+          await loadOrCreateSupportTicketContext();
+        }
 
           if (senderRole === "admin") {
             if (msg.id && markSupportMessageProcessed(msg.id)) {
@@ -2919,7 +2919,7 @@ supportBtn?.addEventListener("click", async () => {
 
     openSupportSheet();
     await loadOrCreateSupportTicketContext();
-  } catch (err) {
+    await subscribeSupportRealtimeForUser();  } catch (err) {
     console.error("[supportBtn] error:", err);
     notif.show("Error", err?.message || "No se pudo abrir soporte", "error");
   }
