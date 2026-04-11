@@ -1986,6 +1986,8 @@ body.modal-open {
   max-height: 96vh;
   border-radius: 18px 18px 0 0;
 }
+}
+
 @media (max-width: 640px) {
   .hero-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2560,6 +2562,12 @@ header.is-condensed h1 {
   min-height: clamp(620px, 72vh, 980px);
 }
 
+@media (min-width: 1101px) {
+  .support-shell {
+    grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  }
+}
+
 .support-section {
   margin-bottom: 22px;
 }
@@ -2616,6 +2624,12 @@ header.is-condensed h1 {
   position: relative;
 }
 
+.support-shell:not(.is-mobile-support) .support-thread {
+  max-height: min(72vh, 920px);
+  display: flex;
+  flex-direction: column;
+}
+
 .support-toolbar {
   padding: 16px 16px 12px;
   border-bottom: 1px solid var(--border);
@@ -2670,6 +2684,10 @@ header.is-condensed h1 {
   min-height: 0;
   flex: 1;
   scroll-padding-top: 18px;
+}
+
+.support-shell:not(.is-mobile-support) .support-conversation-list {
+  max-height: min(72vh, 920px);
 }
 
 .support-conversation-item {
@@ -2839,6 +2857,7 @@ header.is-condensed h1 {
   flex-direction: column;
   height: 100%;
   min-height: 720px;
+  min-width: 0;
 }
 
 .support-thread-header {
@@ -2886,6 +2905,9 @@ header.is-condensed h1 {
 .support-thread-meta span {
   color: var(--muted);
   font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .support-thread-actions {
@@ -2924,6 +2946,7 @@ header.is-condensed h1 {
   gap: 12px;
   min-height: 240px;
   scroll-behavior: smooth;
+  min-width: 0;
 }
 
 .support-message-row {
