@@ -127,13 +127,13 @@ function supportStatusLabel(status) {
 function supportMessageTicks(status) {
   switch (String(status || "").toUpperCase()) {
     case "READ":
-      return "??";
+      return "Leido";
     case "DELIVERED":
-      return "??";
+      return "Leido";
     case "SENT":
-      return "?";
+      return "";
     default:
-      return "?";
+      return "";
   }
 }
 
@@ -223,7 +223,7 @@ function getConversationSecondary(item) {
     parts.push(subject);
   }
 
-  return parts.join(" � ");
+  return parts.join(" · ");
 }
 
 function getMessageText(msg) {
@@ -309,6 +309,60 @@ function setSendBusy(isBusy) {
 
   if (els.attachmentInput) {
     els.attachmentInput.disabled = !!isBusy;
+  }
+}
+
+function focusSupportReply(options = {}) {
+  const { preventScroll = false } = options;
+  const els = getSupportElements();
+  if (!els.reply || isMobileSupport()) return;
+
+  requestAnimationFrame(() => {
+    try {
+      els.reply.focus({ preventScroll });
+    } catch {
+      els.reply.focus();
+    }
+  });
+}
+
+function updateSupportActionState() {
+  const els = getSupportElements();
+  const current = getCurrentConversation();
+  const normalizedStatus = normalizeSupportStatus(current?.status);
+
+  if (els.markRead) {
+    els.markRead.textContent = normalizedStatus === "en_proceso" ? "Tomada" : "Marcar leido";
+    els.markRead.disabled = !current || normalizedStatus === "en_proceso";
+  }
+
+  if (els.markPending) {
+    els.markPending.textContent = "Esperando usuario";
+    els.markPending.disabled = !current || normalizedStatus === "esperando_usuario";
+  }
+
+  if (els.markResolved) {
+    els.markResolved.textContent = normalizedStatus === "resuelto" ? "Resuelto" : "Resolver";
+    els.markResolved.disabled = !current || normalizedStatus === "resuelto";
+  }
+
+  if (els.send) {
+    els.send.disabled = supportState.sendingReply || !current;
+  }
+
+  if (els.reply) {
+    els.reply.disabled = supportState.sendingReply || !current;
+    if (!current) {
+      els.reply.value = "";
+      els.reply.style.height = "";
+    }
+  }
+
+  if (els.attachmentInput) {
+    els.attachmentInput.disabled = supportState.sendingReply || !current;
+    if (!current) {
+      els.attachmentInput.value = "";
+    }
   }
 }
 
@@ -510,7 +564,7 @@ function renderSelectedConversation() {
       supportFormatDateTime(current.updated_at)
     ].filter(Boolean);
 
-    els.threadSubmeta.textContent = bits.join(" � ");
+    els.threadSubmeta.textContent = bits.join(" · ");
   }
 
   const messages = Array.isArray(current.messages) ? current.messages : [];
@@ -551,7 +605,7 @@ function renderSelectedConversation() {
               ${text ? `<div>${escapeHtmlSupport(text)}</div>` : ""}
               ${attachmentsHtml}
               <div class="support-message-meta">
-                ${escapeHtmlSupport(supportRoleLabel(senderRole))} � ${supportFormatTime(msg.created_at)}
+                ${escapeHtmlSupport(supportRoleLabel(senderRole))} · ${supportFormatTime(msg.created_at)}
                 ${ticks ? `<span class="support-message-ticks">${ticks}</span>` : ""}
               </div>
             </div>
@@ -688,7 +742,7 @@ async function sendSupportReply() {
         sender_role: "admin",
         attachments: uploadedAttachments,
         metadata: {
-          push_title: `Soporte MIMICAR � ${getConversationDisplayName(current)}`,
+          push_title: `Soporte MIMICAR · ${getConversationDisplayName(current)}`,
           push_body: text || "Tenes una nueva respuesta de soporte.",
           sender_name: "Soporte MIMICAR",
           conversation_name: getConversationDisplayName(current),
@@ -719,7 +773,7 @@ async function sendSupportReply() {
         body: JSON.stringify({
           ticket_id: current.id,
           message_id: newMessageId,
-          title: `Soporte MIMICAR � ${getConversationDisplayName(current)}`,
+          title: `Soporte MIMICAR · ${getConversationDisplayName(current)}`,
           body: text || "Tenes una nueva respuesta de soporte.",
           sender_name: "Soporte MIMICAR",
           sender_role: "admin",
