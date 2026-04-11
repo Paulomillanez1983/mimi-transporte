@@ -78,7 +78,7 @@
 
   <main id="mainContent" class="admin-main" role="main">
     <section class="hero-grid" aria-label="Resumen general del panel">
-      <article class="hero-card hero-card-primary" aria-labelledby="opsCenterTitle">
+      <article class="hero-card hero-card-primary admin-mobile-panel admin-mobile-choferes admin-mobile-ai" aria-labelledby="opsCenterTitle">
         <div class="hero-card-head">
           <div>
             <span class="eyebrow">Centro de operaciones</span>
@@ -138,7 +138,7 @@
         </div>
       </article>
 
-      <article class="hero-card map-shell" aria-labelledby="liveMapTitle">
+      <article class="hero-card map-shell admin-mobile-panel admin-mobile-map" aria-labelledby="liveMapTitle">
 <div class="map-card-header">
   <div>
     <h2 id="liveMapTitle">Mapa de choferes en vivo</h2>
@@ -229,7 +229,7 @@
       </article>
     </section>
 
-    <section class="toolbar toolbar-pro" aria-label="Búsqueda y filtros">
+    <section class="toolbar toolbar-pro admin-mobile-panel admin-mobile-choferes" aria-label="Búsqueda y filtros">
       <div class="toolbar-search">
         <label for="searchInput" class="sr-only">Buscar chofer</label>
         <input
@@ -263,7 +263,7 @@
     </section>
 
     <section class="ops-grid" aria-label="Panel operativo secundario">
-      <article class="ops-card" aria-labelledby="priorityQueueTitle">
+      <article class="ops-card admin-mobile-panel admin-mobile-choferes" aria-labelledby="priorityQueueTitle">
         <div class="ops-card-head">
           <div>
             <h3 id="priorityQueueTitle">Cola prioritaria</h3>
@@ -274,7 +274,7 @@
         <div id="priorityQueue" class="priority-queue" aria-live="polite"></div>
       </article>
 
-      <article class="ops-card" aria-labelledby="aiSummaryTitle">
+      <article class="ops-card admin-mobile-panel admin-mobile-ai" aria-labelledby="aiSummaryTitle">
         <div class="ops-card-head">
           <div>
             <h3 id="aiSummaryTitle">Resumen IA</h3>
@@ -285,7 +285,7 @@
         <div id="aiSummary" class="ai-summary" aria-live="polite"></div>
       </article>
     </section>
-    <section class="support-section" aria-label="Centro de soporte">
+    <section class="support-section admin-mobile-panel admin-mobile-support" aria-label="Centro de soporte">
   <div class="section-head support-section-head">
     <div>
       <h2>Centro de soporte</h2>
@@ -426,7 +426,7 @@
     </section>
   </div>
 </section>  
-    <section class="section-head" aria-label="Listado principal">
+    <section class="section-head admin-mobile-panel admin-mobile-choferes" aria-label="Listado principal">
       <div>
         <h2>Choferes</h2>
         <p>Swipe a la derecha para aprobar, a la izquierda para rechazar</p>
@@ -435,11 +435,31 @@
 
     <section
       id="drivers"
-      class="drivers drivers-premium"
+      class="drivers drivers-premium admin-mobile-panel admin-mobile-choferes"
       aria-live="polite"
       aria-label="Listado de choferes"
     ></section>
   </main>
+
+  <nav class="admin-mobile-dock" aria-label="Navegación principal del panel">
+    <button class="admin-mobile-dock-btn is-active" type="button" data-admin-mobile-view-target="choferes" aria-pressed="true">
+      <span class="admin-mobile-dock-icon">Cho</span>
+      <span class="admin-mobile-dock-label">Choferes</span>
+    </button>
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="map" aria-pressed="false">
+      <span class="admin-mobile-dock-icon">Map</span>
+      <span class="admin-mobile-dock-label">Mapa</span>
+    </button>
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="support" aria-pressed="false">
+      <span class="admin-mobile-dock-icon">Sup</span>
+      <span class="admin-mobile-dock-label">Soporte</span>
+      <span id="supportDockBadge" class="admin-mobile-dock-badge" hidden>0</span>
+    </button>
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="ai" aria-pressed="false">
+      <span class="admin-mobile-dock-icon">IA</span>
+      <span class="admin-mobile-dock-label">Resumen IA</span>
+    </button>
+  </nav>
 
   <section
     id="driverModal"
