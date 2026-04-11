@@ -16,7 +16,7 @@ const firebaseConfig = {
   appId: '1:1066211116754:web:8cfb14cfb15ecd0cb28f0b'
 };
 
-const FIREBASE_VAPID_KEY = "rhsJPi1DonGDISx6gRMNWX1WSDaPFVQ2mMV9KR3U4-0".trim();
+const FIREBASE_VAPID_KEY = "BKjAYoEwolpGEXVXpLRRBD5zHdkBbCHaUo9QgwFoPAULSdPn7qt8RNsMHAT2RrJtQpBsO3sRfMOHhFh1YBTfKSo".trim();
 const SERVICE_WORKER_PATH = '/mimi-transporte/firebase-messaging-sw.js';
 
 const app = initializeApp(firebaseConfig);
