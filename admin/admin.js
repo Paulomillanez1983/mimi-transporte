@@ -1576,10 +1576,10 @@ async function loadDrivers(force = false) {
 
 async function reviewDriver(driverId, action, button) {
   try {
-    const session = await supabaseAdminService.getSession();
+    const session = await supabaseAdminService.refreshSessionIfNeeded();
 
-    if (!session?.access_token) {
-      throw new Error("Sesión expirada. Volvé a iniciar sesión.");
+    if (!session?.access_token || !session?.user?.id) {
+      throw new Error("Sesión admin expirada. Volvé a iniciar sesión.");
     }
 
     const noteEl = document.getElementById(`note-${driverId}`);
@@ -1601,10 +1601,17 @@ async function reviewDriver(driverId, action, button) {
       })
     });
 
-    const data = await response.json().catch(() => ({}));
+    const rawText = await response.text();
+    let data = {};
+
+    try {
+      data = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      data = { error: rawText || `HTTP ${response.status}` };
+    }
 
     if (!response.ok || !data?.ok) {
-      throw new Error(data?.error || "Error al procesar");
+      throw new Error(data?.error || `Error HTTP ${response.status}`);
     }
 
     showToast(
