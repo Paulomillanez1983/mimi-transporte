@@ -3189,12 +3189,12 @@ header.is-condensed h1 {
   .support-thread-panel,
   .support-thread-empty,
   .support-sidebar {
-    min-height: auto;
+    min-height: 280px;
   }
 
   .support-messages {
-    min-height: 34dvh;
-    max-height: 52dvh;
+    min-height: 26dvh;
+    max-height: 42dvh;
     padding-top: 12px;
     padding-bottom: 12px;
   }
