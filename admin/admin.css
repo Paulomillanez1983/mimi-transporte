@@ -2555,6 +2555,26 @@ header.is-condensed h1 {
   align-items: stretch;
 }
 
+.support-section-head,
+.support-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.support-head-btn,
+.support-thread-btn {
+  background: color-mix(in srgb, var(--panel-2) 94%, transparent);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.support-search-wrap {
+  padding: 14px 14px 0;
+}
+
 .support-sidebar,
 .support-thread {
   background:
@@ -2742,6 +2762,15 @@ header.is-condensed h1 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.support-conversation-secondary {
+  font-size: 0.8rem;
+  color: var(--muted-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
 }
 
 .support-conversation-unread {
@@ -2995,7 +3024,7 @@ header.is-condensed h1 {
 
   .support-shell.is-mobile-support .support-sidebar,
   .support-shell.is-mobile-support .support-thread {
-    min-height: calc(100dvh - 170px);
+    min-height: calc(100dvh - 140px);
   }
 
   .support-shell.is-mobile-support.is-thread-open .support-sidebar {
@@ -3009,9 +3038,10 @@ header.is-condensed h1 {
   .support-thread-header {
     position: sticky;
     top: 0;
-    z-index: 2;
+    z-index: 3;
     flex-direction: column;
     align-items: stretch;
+    padding: 14px;
   }
 
   .support-thread-user {
@@ -3036,13 +3066,17 @@ header.is-condensed h1 {
   }
 
   .support-message-bubble {
-    max-width: 92%;
+    max-width: 94%;
   }
 
   .support-composer {
     position: sticky;
     bottom: 0;
-    z-index: 2;
+    z-index: 3;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 -10px 24px rgba(15, 23, 42, 0.08);
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -3052,7 +3086,7 @@ header.is-condensed h1 {
 }
 
 @media (max-width: 560px) {
-  .support-toolbar,
+  .support-search-wrap,
   .support-conversation-list,
   .support-thread-header,
   .support-composer,
@@ -3064,6 +3098,8 @@ header.is-condensed h1 {
   .support-conversation-item {
     padding: 10px;
     border-radius: 16px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 10px;
   }
 
   .support-conversation-avatar,
@@ -3077,5 +3113,35 @@ header.is-condensed h1 {
   .support-filter-select {
     min-height: 44px;
     border-radius: 14px;
+  }
+
+  .support-thread,
+  .support-thread-panel,
+  .support-thread-empty,
+  .support-sidebar {
+    min-height: auto;
+  }
+
+  .support-messages {
+    min-height: 34dvh;
+    max-height: 52dvh;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .support-thread-meta strong,
+  .support-thread-meta span,
+  .support-conversation-name,
+  .support-conversation-secondary,
+  .support-conversation-preview {
+    word-break: break-word;
+  }
+
+  .support-composer-actions {
+    justify-content: stretch;
+  }
+
+  .support-composer-actions > * {
+    width: 100%;
   }
 }
