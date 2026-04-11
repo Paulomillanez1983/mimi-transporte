@@ -2314,6 +2314,271 @@ body.modal-open {
 }
 
 /* =========================================================
+   MOBILE APP SHELL
+   ========================================================= */
+
+.admin-mobile-dock {
+  display: none;
+}
+
+.driver-expand-toggle {
+  display: none;
+  background: color-mix(in srgb, var(--panel-2) 96%, transparent);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.driver-card-expandable {
+  display: block;
+}
+
+@media (max-width: 820px) {
+  body {
+    padding-bottom: calc(92px + var(--safe-bottom));
+  }
+
+  .admin-mobile-dock {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(10px + var(--safe-bottom));
+    z-index: 95;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .admin-mobile-dock-btn {
+    position: relative;
+    min-width: 0;
+    min-height: 58px;
+    padding: 10px 8px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    box-shadow: none;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid transparent;
+  }
+
+  .admin-mobile-dock-btn.is-active {
+    color: var(--text);
+    background: color-mix(in srgb, var(--panel-2) 98%, transparent);
+    border-color: var(--border);
+  }
+
+  .admin-mobile-dock-icon {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .admin-mobile-dock-label {
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .admin-mobile-dock-badge {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    display: inline-grid;
+    place-items: center;
+    background: #2563eb;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  body[data-admin-mobile-view="choferes"] .admin-mobile-panel:not(.admin-mobile-choferes),
+  body[data-admin-mobile-view="map"] .admin-mobile-panel:not(.admin-mobile-map),
+  body[data-admin-mobile-view="support"] .admin-mobile-panel:not(.admin-mobile-support),
+  body[data-admin-mobile-view="ai"] .admin-mobile-panel:not(.admin-mobile-ai) {
+    display: none !important;
+  }
+
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .driver-expand-toggle {
+    display: inline-flex;
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 12px;
+    border-radius: 12px;
+  }
+
+  .driver-card-expandable {
+    display: grid;
+    grid-template-rows: 0fr;
+    overflow: hidden;
+    transition: grid-template-rows 220ms ease;
+  }
+
+  .driver-card-expandable > * {
+    min-height: 0;
+  }
+
+  .driver-card.is-expanded .driver-card-expandable {
+    grid-template-rows: 1fr;
+    margin-top: 12px;
+  }
+
+  .driver-card:not(.is-expanded) .driver-actions,
+  .driver-card:not(.is-expanded) .driver-progress,
+  .driver-card:not(.is-expanded) .driver-meta,
+  .driver-card:not(.is-expanded) .review-note {
+    opacity: 0;
+  }
+
+  .driver-card.is-expanded .driver-actions,
+  .driver-card.is-expanded .driver-progress,
+  .driver-card.is-expanded .driver-meta,
+  .driver-card.is-expanded .review-note {
+    opacity: 1;
+  }
+
+  .support-sidebar,
+  .support-thread,
+  .support-thread-panel {
+    min-height: 240px;
+  }
+
+  .support-thread-empty {
+    min-height: 180px;
+    align-content: center;
+    justify-items: center;
+    gap: 8px;
+    padding: 14px 12px;
+  }
+
+  .support-thread-empty-icon {
+    font-size: 1.7rem;
+    margin-bottom: 2px;
+  }
+
+  .support-thread-header {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .support-messages {
+    padding: 10px 12px;
+    gap: 8px;
+    min-height: 140px;
+  }
+
+  .support-message-bubble {
+    width: fit-content;
+    max-width: min(72%, 320px);
+    padding: 6px 8px;
+    border-radius: 13px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    line-height: 1.28;
+  }
+
+  .support-message-row.admin .support-message-bubble,
+  .support-message-row.user .support-message-bubble {
+    display: inline-block;
+  }
+
+  .support-message-meta {
+    margin-top: 3px;
+    font-size: 0.62rem;
+    opacity: 0.72;
+  }
+
+  .support-composer {
+    padding: 10px 12px;
+  }
+
+  .support-reply-input {
+    min-height: 50px;
+    max-height: 120px;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-mobile-dock {
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + var(--safe-bottom));
+    padding: 8px;
+    border-radius: 22px;
+  }
+
+  .admin-mobile-dock-btn {
+    min-height: 54px;
+    border-radius: 16px;
+  }
+
+  .admin-mobile-dock-label {
+    font-size: 10px;
+  }
+
+  .support-sidebar,
+  .support-thread,
+  .support-thread-panel,
+  .support-thread-empty {
+    min-height: 170px;
+  }
+
+  .support-thread-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .support-thread-actions > * {
+    min-height: 36px;
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 12px;
+  }
+
+  .support-thread-actions > *:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .support-messages {
+    min-height: 26dvh;
+    max-height: 42dvh;
+  }
+
+  .support-message-bubble {
+    max-width: 70%;
+    padding: 6px 8px;
+    border-radius: 12px;
+  }
+
+  .support-message-meta {
+    font-size: 0.6rem;
+  }
+}
+
+/* =========================================================
    REDUCE MOTION
    ========================================================= */
 
@@ -2615,15 +2880,14 @@ header.is-condensed h1 {
 .support-sidebar {
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  min-height: 720px;
   position: relative;
 }
 
 .support-thread {
-  min-height: 420px;
+  min-height: 720px;
   position: relative;
 }
-
 
 .support-shell:not(.is-mobile-support) .support-thread {
   max-height: min(72vh, 920px);
@@ -2839,34 +3103,34 @@ header.is-condensed h1 {
 }
 
 .support-thread-empty {
-  min-height: 180px;
+  height: 100%;
+  min-height: 720px;
   display: grid;
-  align-content: center;
-  justify-items: center;
+  place-items: center;
   text-align: center;
-  padding: 14px 12px;
-  gap: 8px;
+  padding: 32px;
   color: var(--muted);
 }
 
 .support-thread-empty-icon {
-  font-size: 1.7rem;
-  margin-bottom: 2px;
+  font-size: 2.2rem;
+  margin-bottom: 10px;
 }
 
 .support-thread-panel {
   display: flex;
   flex-direction: column;
-  min-height: 420px;
+  height: 100%;
+  min-height: 720px;
   min-width: 0;
 }
 
 .support-thread-header {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 14px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--panel) 96%, transparent);
   backdrop-filter: blur(12px);
@@ -2940,12 +3204,12 @@ header.is-condensed h1 {
 .support-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 12px;
+  padding: 18px;
   background: linear-gradient(180deg, rgba(248,250,252,0.95), rgba(241,245,249,0.95));
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  min-height: 140px;
+  gap: 12px;
+  min-height: 240px;
   scroll-behavior: smooth;
   min-width: 0;
 }
@@ -2963,12 +3227,11 @@ header.is-condensed h1 {
 }
 
 .support-message-bubble {
-  width: fit-content;
-  max-width: min(68%, 320px);
-  padding: 7px 9px;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-  line-height: 1.28;
+  max-width: min(78%, 640px);
+  padding: 12px 14px;
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -2986,9 +3249,9 @@ header.is-condensed h1 {
 }
 
 .support-message-meta {
-  margin-top: 3px;
-  font-size: 0.62rem;
-  opacity: 0.72;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  opacity: 0.74;
 }
 
 .support-message-ticks {
@@ -3023,7 +3286,7 @@ header.is-condensed h1 {
 }
 
 .support-composer {
-  padding: 10px 12px;
+  padding: 16px 18px;
   border-top: 1px solid var(--border);
   background: var(--panel);
   box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.04);
@@ -3031,8 +3294,8 @@ header.is-condensed h1 {
 
 .support-reply-input {
   width: 100%;
-  min-height: 56px;
-  max-height: 120px;
+  min-height: 92px;
+  max-height: 180px;
   resize: vertical;
   border-radius: 18px;
   border: 1px solid var(--border);
@@ -3075,7 +3338,7 @@ header.is-condensed h1 {
   .support-thread,
   .support-thread-empty,
   .support-thread-panel {
-    min-height: 360px;
+    min-height: 460px;
   }
 }
 
@@ -3088,7 +3351,7 @@ header.is-condensed h1 {
 
   .support-shell.is-mobile-support .support-sidebar,
   .support-shell.is-mobile-support .support-thread {
-    min-height: 150px;
+    min-height: calc(100dvh - 140px);
   }
 
   .support-shell.is-mobile-support.is-thread-open .support-sidebar {
@@ -3129,16 +3392,9 @@ header.is-condensed h1 {
     flex: 1 1 auto;
   }
 
-.support-message-bubble {
-  width: fit-content;
-  max-width: 72%;
-  padding: 6px 8px;
-  border-radius: 13px;
-}
-.support-message-row.admin .support-message-bubble,
-.support-message-row.user .support-message-bubble {
-  display: inline-block;
-}
+  .support-message-bubble {
+    max-width: 94%;
+  }
 
   .support-conversation-list {
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
@@ -3156,7 +3412,7 @@ header.is-condensed h1 {
   }
 
   .support-reply-input {
-    min-height: 50px;
+    min-height: 84px;
   }
 }
 
@@ -3199,12 +3455,12 @@ header.is-condensed h1 {
   .support-thread-panel,
   .support-thread-empty,
   .support-sidebar {
-    min-height: 170px;
+    min-height: auto;
   }
 
   .support-messages {
-    min-height: 26dvh;
-    max-height: 42dvh;
+    min-height: 34dvh;
+    max-height: 52dvh;
     padding-top: 12px;
     padding-bottom: 12px;
   }
@@ -3225,25 +3481,12 @@ header.is-condensed h1 {
     width: 100%;
   }
 
-.support-thread-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
+  .support-thread-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 
-
-.support-thread-actions > * {
-  min-height: 36px;
-  padding: 8px 10px;
-  font-size: 12px;
-  border-radius: 12px;
-}
-.support-message-bubble {
-  max-width: 70%;
-  padding: 6px 8px;
-  border-radius: 12px;
-}
-
-.support-message-meta {
-  font-size: 0.6rem;
+  .support-thread-actions > *:last-child {
+    grid-column: 1 / -1;
+  }
 }
