@@ -556,11 +556,12 @@ const newMessageId =
   null;
 
 try {
+try {
   const pushResponse = await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
+      "x-internal-key": "mi_clave_super_privada_larga_2026"
     },
     body: JSON.stringify({
       ticket_id: current.id,
@@ -579,8 +580,7 @@ try {
   }
 } catch (pushErr) {
   console.warn("[support.sendSupportReply] push warning:", pushErr);
-}
-    
+}    
 if (els.reply) {
   els.reply.value = "";
   els.reply.style.height = "";
