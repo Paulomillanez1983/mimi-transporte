@@ -2821,16 +2821,21 @@ if (!session?.user?.id) {
 
   cleanupSupportRealtime();
 
-  currentSupportChannel = window.sbRealtime
-    .channel(`support-user-${userId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "soporte_mensajes"
-      },
-      async (payload) => {
+currentSupportChannel = window.sbRealtime
+  .channel(`support-user-${userId}`)
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "soporte_mensajes"
+    },
+    handleIncomingSupportMessage
+  )
+  .subscribe((status) => {
+    console.log("[support realtime status]", status);
+  });
+  async (payload) => {
         try {
           const msg = payload?.new;
           if (!msg?.ticket_id || !msg?.mensaje) return;
@@ -2853,10 +2858,43 @@ if (!session?.user?.id) {
           const senderRole = String(msg.sender_role || "").toLowerCase();
           const type = senderRole === "admin" ? "agent" : "user";
 
-          if (currentSupportTicketId === msg.ticket_id) {
-          await loadOrCreateSupportTicketContext();
-        }
+async function handleIncomingSupportMessage(payload) {
+  try {
+    console.log("[support realtime payload]", payload);
 
+    const msg = payload?.new;
+    if (!msg?.ticket_id) return;
+
+    const session = await obtenerSesionCliente(true);
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    const { data: ticketRows, error: ticketError } = await window.supabase
+      .from("soporte_tickets")
+      .select("id, user_id")
+      .eq("id", msg.ticket_id)
+      .eq("user_id", userId)
+      .limit(1);
+
+    if (ticketError) {
+      console.warn("[support realtime ticket check error]", ticketError);
+      return;
+    }
+
+    if (!Array.isArray(ticketRows) || !ticketRows.length) {
+      console.warn("[support realtime] mensaje ignorado: ticket no pertenece al usuario");
+      return;
+    }
+
+    await loadOrCreateSupportTicketContext();
+
+    if (String(msg.sender_role || "").toLowerCase() === "admin") {
+      showSupportToast("Soporte respondió tu mensaje.", "success");
+    }
+  } catch (err) {
+    console.error("[support realtime] error:", err);
+  }
+}
           if (senderRole === "admin") {
             if (msg.id && markSupportMessageProcessed(msg.id)) {
               return;
