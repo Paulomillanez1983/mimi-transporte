@@ -2869,6 +2869,8 @@ supportBtn?.addEventListener("click", async () => {
     console.error("[supportBtn] error:", err);
     notif.show("Error", err?.message || "No se pudo abrir soporte", "error");
   }
+  window._supportChannel = currentSupportChannel;
+return currentSupportChannel;
 });
 
 supportSheetClose?.addEventListener("click", closeSupportSheet);
