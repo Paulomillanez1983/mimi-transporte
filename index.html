@@ -2963,13 +2963,12 @@ async function handleIncomingSupportMessage(payload) {
     while (!ticket && attempts < maxAttempts) {
       attempts++;
       
-      const { data: ticketRows, error: ticketError } = await window.supabase
-        .from("soporte_tickets")
-        .select("id, user_id, created_by, estado, asunto, updated_at")
-        .eq("id", msg.ticket_id)
-        .limit(1)
-        .maybeSingle(); // Usar maybeSingle en vez de limit(1)
-
+// ✅ CORRECTO - cliente oficial con autenticación
+const { data: ticket, error: ticketError } = await window.sbRealtime
+  .from("soporte_tickets")
+  .select("id, user_id, created_by, estado, asunto, updated_at")
+  .eq("id", msg.ticket_id)
+  .maybeSingle(); // .maybeSingle() ya implica limit(1)
       if (ticketError) {
         console.warn(`[support realtime] intento ${attempts} - error:`, ticketError);
         await new Promise(r => setTimeout(r, 200 * attempts));
