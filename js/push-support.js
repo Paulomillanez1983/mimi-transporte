@@ -15,7 +15,7 @@ const firebaseConfig = {
   appId: "1:1066211116754:web:8cfb14cfb15ecd0cb28f0b"
 };
 
-const FIREBASE_VAPID_KEY = "BPcP-yGxjeXhO4PoDzv_4gfrIsv52DFRMWJjj5AjE935xmxQX8rg2S7vA5qtDKqWnLZgIErnTi36JTsNOtmcQ4";
+const FIREBASE_VAPID_KEY = "BD2TKeACzqkVekp8jVWuznNdjMgscYaygddePd06iTX26KXKQrk5MR4kv_lJCFKXdjRovRB53rFMXg8WEhTME";
 let initialized = false;
 
 function getAppBasePath() {
