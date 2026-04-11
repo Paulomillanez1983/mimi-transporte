@@ -16,9 +16,7 @@ const firebaseConfig = {
   appId: '1:1066211116754:web:8cfb14cfb15ecd0cb28f0b'
 };
 
-const VAPID_KEY =
-  'BPcP-yGxjeXhO4PoDzy_4qfrlsy52DFRMWJJj5AjF935xmxQX8rg2S7vA5qtDKqWnLLzglEnrTi36JTsNOtmcQ4';
-
+const FIREBASE_VAPID_KEY = "BPcP-yGxjeXhO4PoDzv_4gfrIsv52DFRMWJjj5AjE935xmxQX8rg2S7vA5qtDKqWnLZgIErnTi36JTsNOtmcQ4";
 const SERVICE_WORKER_PATH = '/mimi-transporte/firebase-messaging-sw.js';
 
 const app = initializeApp(firebaseConfig);
@@ -185,11 +183,10 @@ export async function initPushFCM(rol = 'cliente') {
 
       const registration = await ensureServiceWorkerRegistration();
 
-      const token = await getToken(messaging, {
-        vapidKey: VAPID_KEY,
-        serviceWorkerRegistration: registration
+       const token = await getToken(messaging, {
+        vapidKey: FIREBASE_VAPID_KEY,
+       serviceWorkerRegistration: registration
       });
-
       if (!token) {
         console.warn('[push-fcm] No se pudo obtener token FCM');
         return null;
