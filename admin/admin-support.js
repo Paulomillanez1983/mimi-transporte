@@ -282,6 +282,18 @@ function getSupportElements() {
   };
 }
 
+function updateSupportDockBadge() {
+  const badge = document.getElementById("supportDockBadge");
+  if (!badge) return;
+
+  const unreadTotal = supportState.conversations.reduce((total, item) => {
+    return total + Number(item?.unread_count || 0);
+  }, 0);
+
+  badge.hidden = unreadTotal <= 0;
+  badge.textContent = unreadTotal > 99 ? "99+" : String(unreadTotal);
+}
+
 function getCurrentConversation() {
   return supportState.conversations.find((item) => String(item.id) === String(supportState.selectedId)) || null;
 }
@@ -868,6 +880,7 @@ async function loadSupportConversations(options = {}) {
 
     renderConversationList();
     renderSelectedConversation();
+    updateSupportDockBadge();
   } catch (err) {
     console.error("[support.loadSupportConversations]", err);
 
@@ -878,6 +891,7 @@ async function loadSupportConversations(options = {}) {
 
     renderConversationList();
     renderSelectedConversation();
+    updateSupportDockBadge();
 
     if (!silent) {
       showSupportToast(err?.message || "No se pudieron cargar las conversaciones", "error");
