@@ -1705,10 +1705,10 @@ function updateWizardPrimaryState() {
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
 
-  const state = docValidationState.get(docType);
-  const passed = state === "ok" || state === "warning";
-
-  const allowContinue = meta?.optional ? true : hasFile && passed;
+  // 🔥 cambio clave:
+  // para obligatorios solo exigimos que haya archivo cargado
+  // la validación pasa a ser informativa, no bloqueante
+  const allowContinue = meta?.optional ? true : hasFile;
 
   if (docWizardNextBtn) {
     docWizardNextBtn.disabled = !allowContinue;
@@ -1719,7 +1719,6 @@ function updateWizardPrimaryState() {
     stickyPrimaryBtn.disabled = !allowContinue;
   }
 }
-
 async function validateWithRetry(docType, file, maxAttempts = 2) {
   let lastError = null;
 
@@ -2040,19 +2039,19 @@ function updateSticky(step) {
   const docType = getCurrentDocType();
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
-  const state = docValidationState.get(docType);
-  const passed = state === "ok" || state === "warning";
-  const allowContinue = meta?.optional ? true : hasFile && passed;
+const state = docValidationState.get(docType);
+const passed = state === "ok" || state === "warning";
+const allowContinue = meta?.optional ? true : hasFile;
 
-  stickyTitle.textContent = `Paso 3 · ${meta?.label || "Documentación"}`;
-  stickyText.textContent = meta?.optional
-    ? "Este documento es opcional. Podés omitirlo o cargarlo ahora."
-    : passed
-      ? "Documento validado. Ya podés continuar."
-      : hasFile
-        ? "Esperando validación real del documento."
-        : "Tomá una foto clara o subí el archivo para continuar.";
-
+stickyTitle.textContent = `Paso 3 · ${meta?.label || "Documentación"}`;
+stickyText.textContent = meta?.optional
+  ? "Este documento es opcional. Podés omitirlo o cargarlo ahora."
+  : hasFile
+    ? passed
+      ? "Documento cargado correctamente. Ya podés continuar."
+      : "Documento cargado. Si la validación tarda o falla, igual podés continuar."
+    : "Tomá una foto clara o subí el archivo para continuar.";
+  
   stickyPrimaryBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
     ? "Ir a revisión"
     : meta?.optional && !hasFile
@@ -2195,7 +2194,7 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   updateWizardPrimaryState();
   updateSticky(3);
 
-  try {
+    try {
     const validation = await validateWithRetry(docType, file, 2);
 
     if (validation.ok) {
@@ -2209,9 +2208,15 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
         triggerValidationFeedback("success");
       }
     } else {
-      setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "error");
-      setWizardVisualState("error");
-      triggerValidationFeedback("error");
+      // 🔥 cambio clave:
+      // si la validación local no pasa, no lo dejamos en error bloqueante
+      setDocStatus(
+        docType,
+        `${sourceLabel}: ${name} · Validación no concluyente, podés continuar y quedará para revisión`,
+        "warning"
+      );
+      setWizardVisualState("warning");
+      triggerValidationFeedback("warning");
     }
   } catch (err) {
     console.error("[setSelectedFile validation]", docType, err);
@@ -2222,7 +2227,7 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     );
     setWizardVisualState("warning");
     triggerValidationFeedback("warning");
-  }
+  };
 
   updateDocumentsProgressUI();
   updateOverallStepperState();
@@ -2230,20 +2235,21 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   updateSticky(3);
   updateWizardPrimaryState();
 
-if (docType === getCurrentDocType()) {
-const state = docValidationState.get(docType);
-const passed = state === "ok" || state === "warning";
-      if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-        setTimeout(() => {
-          currentDocumentIndex += 1;
-          setWizardVisualState("idle");
-           renderDocumentWizard();
-          updateSticky(3);
-          updateWizardPrimaryState();
-        }, 650);
-      }
-    }  
+  if (docType === getCurrentDocType()) {
+    const hasFileNow = !!getChosenFile(docType);
+
+    if (hasFileNow && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+      setTimeout(() => {
+        if (getCurrentDocType() !== docType) return;
+        currentDocumentIndex += 1;
+        setWizardVisualState("idle");
+        renderDocumentWizard();
+        updateSticky(3);
+        updateWizardPrimaryState();
+      }, 650);
+    }
   }
+}
 function initFileInputs() {
   docWizardCameraInput?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0] || null;
@@ -2701,11 +2707,9 @@ docWizardNextBtn?.addEventListener("click", async () => {
   const docType = getCurrentDocType();
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
-  const state = docValidationState.get(docType);
-  const passed = state === "ok" || state === "warning";
 
-  if (!meta?.optional && (!hasFile || !passed)) {
-    setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
+  if (!meta?.optional && !hasFile) {
+    setGlobalStatus(`❌ Tenés que cargar ${meta?.label || "este documento"} para continuar`, "error");
     return;
   }
 
@@ -2720,7 +2724,7 @@ docWizardNextBtn?.addEventListener("click", async () => {
 
   submitAll();
 });
-stickyPrimaryBtn.addEventListener("click", async () => {
+    stickyPrimaryBtn.addEventListener("click", async () => {
   if (navigator.vibrate) {
     navigator.vibrate(18);
   }
@@ -2767,17 +2771,14 @@ stickyPrimaryBtn.addEventListener("click", async () => {
       return;
     }
 
-    const docType = getCurrentDocType();
-    const meta = DOC_META[docType];
-    const hasFile = !!getChosenFile(docType);
-    const state = docValidationState.get(docType);
-    const passed = state === "ok" || state === "warning";
+const docType = getCurrentDocType();
+const meta = DOC_META[docType];
+const hasFile = !!getChosenFile(docType);
 
-    if (!meta?.optional && (!hasFile || !passed)) {
-      setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
-      return;
-    }
-
+if (!meta?.optional && !hasFile) {
+  setGlobalStatus(`❌ Tenés que cargar ${meta?.label || "este documento"} para continuar`, "error");
+  return;
+}
     if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
       currentDocumentIndex += 1;
       setWizardVisualState("idle");
