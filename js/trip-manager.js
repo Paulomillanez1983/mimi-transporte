@@ -415,7 +415,7 @@ async rejectOffer(offerId) {
           event: '*',
           schema: 'public',
           table: 'viajes',
-          filter: `chofer_user_id=eq.${driverId}`
+          filter: `chofer_id=eq.${driverId}`
         },
         (payload) => {
           console.log('[TripManager] Trip realtime payload:', payload);
