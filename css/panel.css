@@ -2637,8 +2637,8 @@ body.menu-open {
   .empty-conversation-state,
   .thread-empty-state {
     width: min(100%, 100%);
-    min-height: 180px;
-    padding: 22px 16px;
+    min-height: 170px;
+    padding: 20px 16px;
     border-radius: 18px;
   }
 }
