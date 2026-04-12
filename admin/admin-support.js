@@ -234,7 +234,7 @@ function getConversationSecondary(item) {
     parts.push(subject);
   }
 
-  return parts.join(" Â· ");
+  return parts.join(" · ");
 }
 
 function getMessageText(msg) {
@@ -648,6 +648,7 @@ function renderSelectedConversation() {
   smartScrollAfterRender();
   preloadNearbyConversations();
 }
+
 function selectConversation(id, options = {}) {
   const { openThread = true, markVisualRead = false } = options;
   if (!id) return;
