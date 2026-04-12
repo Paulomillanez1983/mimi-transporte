@@ -29,9 +29,11 @@ function getSwPath() {
 async function upsertPushToken({ userId, token, accessToken }) {
   if (!userId || !token || !accessToken) return;
 
+  const supportRole = window.__mimiSupportPushRole || "client";
+
   const payload = {
     user_id: userId,
-    rol: "client",
+    rol: supportRole,
     token,
     platform: "web",
     updated_at: new Date().toISOString()
@@ -48,7 +50,7 @@ async function upsertPushToken({ userId, token, accessToken }) {
 
   const updateResult = await window.supabaseUpdate?.("push_tokens", "user_id", userId, {
     token,
-    rol: "client",
+    rol: supportRole,
     platform: "web",
     updated_at: new Date().toISOString()
   });
