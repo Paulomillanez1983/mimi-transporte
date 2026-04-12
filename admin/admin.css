@@ -3763,8 +3763,8 @@ header.is-condensed h1 {
   .support-shell.is-mobile-support .support-thread,
   .support-shell.is-mobile-support .support-thread-panel,
   .support-shell.is-mobile-support .support-thread-empty {
-    min-height: calc(100dvh - 170px) !important;
-    max-height: calc(100dvh - 170px) !important;
-    height: calc(100dvh - 170px) !important;
+    min-height: calc(100dvh - 100px) !important;
+    max-height: calc(100dvh - 100px) !important;
+    height: calc(100dvh - 100px) !important;
   }
 }
