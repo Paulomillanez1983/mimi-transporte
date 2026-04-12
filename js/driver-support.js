@@ -603,34 +603,54 @@ async function sendSupportReply() {
   try {
     setSendBusy(true);
 
-    const token = await getAccessToken(true);
+    const session = await getSession(true);
+    if (!session?.user?.id) {
+      throw new Error("No hay sesion activa");
+    }
+
     const conversationId = await createConversationIfNeeded(previousText);
     const uploadedAttachments = await uploadAttachments(conversationId, files);
 
-    const response = await fetch(`${SUPPORT_API_BASE}/support-send-message`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        conversation_id: conversationId,
-        message: previousText,
-        sender_role: "chofer",
+    const nowIso = new Date().toISOString();
+    const messagePayload = {
+      ticket_id: conversationId,
+      sender_user_id: session.user.id,
+      sender_role: "chofer",
+      mensaje: previousText || "",
+      leido: false,
+      mensaje_tipo: uploadedAttachments.length
+        ? (previousText ? "mixto" : "archivo")
+        : "texto",
+      metadata: {
         attachments: uploadedAttachments,
-        metadata: {
-          sender_name: "Chofer MIMI",
-          push_title: "Nuevo mensaje de soporte",
-          push_body: previousText || "Tenes un nuevo mensaje del chofer.",
-          source: "chofer-panel"
-        }
+        sender_name: "Chofer MIMI",
+        source: "chofer-panel",
+        created_at: nowIso
+      }
+    };
+
+    const { error: ticketUpdateError } = await supabaseService.client
+      .from("soporte_tickets")
+      .update({
+        ultimo_mensaje: previousText || (uploadedAttachments.length ? "Adjunto enviado" : ""),
+        last_message_at: nowIso,
+        estado: "esperando_usuario",
+        updated_at: nowIso
       })
-    });
+      .eq("id", conversationId);
 
-    const data = await response.json().catch(() => ({}));
+    if (ticketUpdateError) {
+      console.warn("[driver-support.sendSupportReply] ticket update warning:", ticketUpdateError);
+    }
 
-    if (!response.ok || data?.ok === false) {
-      throw new Error(data?.error || "No se pudo enviar el mensaje");
+    const { data: insertedMessage, error: messageError } = await supabaseService.client
+      .from("soporte_mensajes")
+      .insert(messagePayload)
+      .select("*")
+      .single();
+
+    if (messageError || !insertedMessage?.id) {
+      throw new Error(messageError?.message || "No se pudo enviar el mensaje");
     }
 
     if (reply) {
