@@ -3907,3 +3907,242 @@ header.is-condensed h1 {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+/* =========================================
+   SUPPORT UI COMPACT PRO - MOBILE
+   ========================================= */
+
+@media (max-width: 720px) {
+  .support-thread {
+    border-radius: 22px;
+  }
+
+  .support-thread-header {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+
+  .support-thread-top-mobile {
+    gap: 8px !important;
+    align-items: center;
+  }
+
+  .support-thread-user {
+    grid-template-columns: 40px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .support-thread-back {
+    min-width: 38px !important;
+    min-height: 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 12px !important;
+    padding: 0 !important;
+    flex: 0 0 38px !important;
+  }
+
+  .support-thread-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+    font-size: 0.95rem !important;
+    flex: 0 0 40px !important;
+  }
+
+  .support-thread-meta strong {
+    font-size: 0.95rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .support-thread-meta span {
+    font-size: 0.72rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .support-thread-actions {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    margin-top: 2px;
+  }
+
+  .support-thread-actions > * {
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 6px 10px !important;
+    font-size: 0.78rem !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+  }
+
+  .support-thread-actions > *:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .support-messages {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+  }
+
+  .support-message-row {
+    margin: 0 !important;
+  }
+
+  .support-message-bubble {
+    max-width: 82% !important;
+    padding: 8px 10px !important;
+    border-radius: 14px !important;
+    line-height: 1.2 !important;
+    font-size: 0.9rem !important;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+  }
+
+  .support-message-row.user .support-message-bubble {
+    border-top-left-radius: 8px !important;
+  }
+
+  .support-message-row.admin .support-message-bubble {
+    border-top-right-radius: 8px !important;
+  }
+
+  .support-message-meta {
+    margin-top: 4px !important;
+    font-size: 0.68rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .support-message-row.admin .support-message-bubble::after,
+  .support-message-row.user .support-message-bubble::after {
+    width: 8px !important;
+    height: 8px !important;
+    bottom: 7px !important;
+  }
+
+  .support-message-row.user .support-message-bubble::after {
+    left: -3px !important;
+  }
+
+  .support-message-row.admin .support-message-bubble::after {
+    right: -3px !important;
+  }
+
+  .support-composer {
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    gap: 6px !important;
+  }
+
+  .support-reply-input {
+    min-height: 54px !important;
+    max-height: 100px !important;
+    border-radius: 14px !important;
+    padding: 10px 12px !important;
+    font-size: 0.92rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .support-attachment-input {
+    margin-top: 6px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .support-composer-hint {
+    margin-top: 4px !important;
+    font-size: 0.68rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .support-composer-actions {
+    margin-top: 6px !important;
+    gap: 6px !important;
+  }
+
+  .support-send-btn,
+  #supportSendReplyBtn {
+    min-height: 38px !important;
+    height: 38px !important;
+    border-radius: 12px !important;
+    font-size: 0.85rem !important;
+    padding: 8px 12px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .support-thread {
+    border-radius: 20px !important;
+  }
+
+  .support-thread-header {
+    padding: 8px !important;
+  }
+
+  .support-thread-user {
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  .support-thread-back {
+    min-width: 34px !important;
+    min-height: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+    flex: 0 0 34px !important;
+  }
+
+  .support-thread-avatar {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
+    font-size: 0.9rem !important;
+    flex: 0 0 36px !important;
+  }
+
+  .support-thread-meta strong {
+    font-size: 0.88rem !important;
+  }
+
+  .support-thread-meta span {
+    font-size: 0.68rem !important;
+  }
+
+  .support-thread-actions > * {
+    min-height: 32px !important;
+    height: 32px !important;
+    font-size: 0.74rem !important;
+    border-radius: 10px !important;
+  }
+
+  .support-messages {
+    padding: 8px !important;
+    gap: 7px !important;
+  }
+
+  .support-message-bubble {
+    max-width: 80% !important;
+    padding: 7px 9px !important;
+    font-size: 0.86rem !important;
+    border-radius: 13px !important;
+  }
+
+  .support-message-meta {
+    font-size: 0.64rem !important;
+  }
+
+  .support-composer {
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .support-reply-input {
+    min-height: 50px !important;
+    max-height: 92px !important;
+    font-size: 0.88rem !important;
+    border-radius: 12px !important;
+  }
+
+  .support-send-btn,
+  #supportSendReplyBtn {
+    min-height: 36px !important;
+    height: 36px !important;
+    font-size: 0.8rem !important;
+  }
+}
