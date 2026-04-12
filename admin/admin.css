@@ -2520,45 +2520,6 @@ body.modal-open {
     font-size: 10px;
   }
 
-  .support-sidebar,
-  .support-thread,
-  .support-thread-panel,
-  .support-thread-empty {
-    min-height: 170px;
-  }
-
-  .support-thread-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .support-thread-actions > * {
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 12px;
-    border-radius: 12px;
-  }
-
-  .support-thread-actions > *:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .support-messages {
-    min-height: 26dvh;
-    max-height: 42dvh;
-  }
-
-  .support-message-bubble {
-    max-width: 70%;
-    padding: 6px 8px;
-    border-radius: 12px;
-  }
-
-  .support-message-meta {
-    font-size: 0.6rem;
-  }
-}
 
 /* =========================================================
    REDUCE MOTION
