@@ -627,6 +627,44 @@
       transform: scale(0.985);
     }
 
+    .doc-action-btn.is-disabled,
+    .doc-link-btn.is-disabled,
+    button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none !important;
+      pointer-events: none;
+    }
+
+    .btn-loading {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-spinner {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.28);
+      border-top-color: currentColor;
+      animation: buttonSpin .7s linear infinite;
+      flex: 0 0 auto;
+    }
+
+    .doc-camera-btn .btn-spinner {
+      border-color: rgba(0,0,0,0.14);
+      border-top-color: currentColor;
+    }
+
+    @keyframes buttonSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     .doc-camera-btn {
       background: #ffffff;
       color: #000000;
@@ -1574,6 +1612,8 @@ const DOC_META = {
     const progressBar = document.getElementById("progressBar");
     const progressLabel = document.getElementById("progressLabel");
     const globalStatus = document.getElementById("globalStatus");
+    const step1ContinueBtn = document.getElementById("step1ContinueBtn");
+    const step2ContinueBtn = document.getElementById("step2ContinueBtn");
     const stickyPrimaryBtn = document.getElementById("stickyPrimaryBtn");
     const stickyTitle = document.getElementById("stickyTitle");
     const stickyText = document.getElementById("stickyText");
@@ -1608,6 +1648,8 @@ const VALIDATION_SOUND_SRC =
   "data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTAAAAAAAP//AAD//wAA//8AAP//AAD//wAA";
 let audioValidationOk = null;
 let currentPreviewUrl = null;
+let onboardingBusy = false;
+let autoAdvanceTimer = null;
     
 function getCurrentDocType() {
   return DOCUMENT_FLOW[currentDocumentIndex] || DOCUMENT_FLOW[0];
@@ -1705,10 +1747,10 @@ function updateWizardPrimaryState() {
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
 
-  // 🔥 cambio clave:
-  // para obligatorios solo exigimos que haya archivo cargado
-  // la validación pasa a ser informativa, no bloqueante
-  const allowContinue = meta?.optional ? true : hasFile;
+  const state = docValidationState.get(docType);
+  const passed = state === "ok" || state === "warning";
+
+  const allowContinue = onboardingBusy ? false : (meta?.optional ? true : hasFile && passed);
 
   if (docWizardNextBtn) {
     docWizardNextBtn.disabled = !allowContinue;
@@ -1719,6 +1761,125 @@ function updateWizardPrimaryState() {
     stickyPrimaryBtn.disabled = !allowContinue;
   }
 }
+
+function clearAutoAdvanceTimer() {
+  if (!autoAdvanceTimer) return;
+  clearTimeout(autoAdvanceTimer);
+  autoAdvanceTimer = null;
+}
+
+function rememberButtonLabel(button) {
+  if (!button) return;
+  if (!button.dataset.defaultLabel) {
+    button.dataset.defaultLabel = button.textContent.trim();
+  }
+}
+
+function setButtonLoading(button, isLoading, loadingText = "Procesando...") {
+  if (!button) return;
+
+  rememberButtonLabel(button);
+
+  if (isLoading) {
+    button.disabled = true;
+    button.classList.add("btn-loading");
+    button.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span><span>${loadingText}</span>`;
+    return;
+  }
+
+  button.classList.remove("btn-loading");
+  button.textContent = button.dataset.defaultLabel || "Continuar";
+}
+
+function setDocInputsBusy(isBusy, mode = "validating") {
+  const cameraText = mode === "uploading"
+    ? "Subiendo foto..."
+    : mode === "saving"
+      ? "Guardando..."
+      : "Validando...";
+  const uploadText = mode === "uploading"
+    ? "Subiendo archivo..."
+    : mode === "saving"
+      ? "Guardando..."
+      : "Validando...";
+
+  if (docWizardCameraInput) {
+    docWizardCameraInput.disabled = isBusy;
+  }
+
+  if (docWizardFileInput) {
+    docWizardFileInput.disabled = isBusy;
+  }
+
+  if (docWizardCameraLabel) {
+    rememberButtonLabel(docWizardCameraLabel);
+    docWizardCameraLabel.classList.toggle("is-disabled", isBusy);
+    docWizardCameraLabel.innerHTML = isBusy
+      ? `<span class="btn-spinner" aria-hidden="true"></span><span>${cameraText}</span>`
+      : (docWizardCameraLabel.dataset.defaultLabel || "📷 Sacar foto");
+  }
+
+  if (docWizardUploadLabel) {
+    rememberButtonLabel(docWizardUploadLabel);
+    docWizardUploadLabel.classList.toggle("is-disabled", isBusy);
+    docWizardUploadLabel.innerHTML = isBusy
+      ? `<span class="btn-spinner" aria-hidden="true"></span><span>${uploadText}</span>`
+      : (docWizardUploadLabel.dataset.defaultLabel || "⬆ Subir archivo");
+  }
+}
+
+function setOnboardingBusy(isBusy, options = {}) {
+  onboardingBusy = isBusy;
+
+  if (isBusy) {
+    const {
+      button = null,
+      text = "Procesando...",
+      docMode = null
+    } = options;
+
+    [
+      stickyPrimaryBtn,
+      docWizardNextBtn,
+      submitAllBtn,
+      step1ContinueBtn,
+      step2ContinueBtn
+    ].forEach((btn) => {
+      if (!btn) return;
+      if (button && btn === button) {
+        setButtonLoading(btn, true, text);
+      } else {
+        btn.disabled = true;
+      }
+    });
+
+    if (docWizardBackBtn) docWizardBackBtn.disabled = true;
+    if (exitOnboardingBtn) exitOnboardingBtn.disabled = true;
+    if (docMode) setDocInputsBusy(true, docMode);
+    updateWizardPrimaryState();
+    return;
+  }
+
+  [
+    stickyPrimaryBtn,
+    docWizardNextBtn,
+    submitAllBtn,
+    step1ContinueBtn,
+    step2ContinueBtn
+  ].forEach((btn) => {
+    if (!btn) return;
+    setButtonLoading(btn, false);
+    btn.disabled = false;
+  });
+
+  if (docWizardBackBtn) docWizardBackBtn.disabled = false;
+  if (exitOnboardingBtn) exitOnboardingBtn.disabled = false;
+  setDocInputsBusy(false);
+  renderDocumentWizard();
+  updateSticky(currentStep);
+  updateWizardPrimaryState();
+}
+
 async function validateWithRetry(docType, file, maxAttempts = 2) {
   let lastError = null;
 
@@ -1874,6 +2035,8 @@ function renderDocumentWizard() {
 
   docWizardCameraLabel.textContent = docType === "selfie" ? "🤳 Sacar selfie" : "📷 Sacar foto";
   docWizardUploadLabel.textContent = "⬆ Subir archivo";
+  docWizardCameraLabel.dataset.defaultLabel = docWizardCameraLabel.textContent;
+  docWizardUploadLabel.dataset.defaultLabel = docWizardUploadLabel.textContent;
 
   docWizardGuidelines.innerHTML = "";
 
@@ -2039,19 +2202,19 @@ function updateSticky(step) {
   const docType = getCurrentDocType();
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
-const state = docValidationState.get(docType);
-const passed = state === "ok" || state === "warning";
-const allowContinue = meta?.optional ? true : hasFile;
+  const state = docValidationState.get(docType);
+  const passed = state === "ok" || state === "warning";
+  const allowContinue = meta?.optional ? true : hasFile && passed;
 
-stickyTitle.textContent = `Paso 3 · ${meta?.label || "Documentación"}`;
-stickyText.textContent = meta?.optional
-  ? "Este documento es opcional. Podés omitirlo o cargarlo ahora."
-  : hasFile
-    ? passed
-      ? "Documento cargado correctamente. Ya podés continuar."
-      : "Documento cargado. Si la validación tarda o falla, igual podés continuar."
-    : "Tomá una foto clara o subí el archivo para continuar.";
-  
+  stickyTitle.textContent = `Paso 3 · ${meta?.label || "Documentación"}`;
+  stickyText.textContent = meta?.optional
+    ? "Este documento es opcional. Podés omitirlo o cargarlo ahora."
+    : passed
+      ? "Documento validado. Ya podés continuar."
+      : hasFile
+        ? "Esperando validación real del documento."
+        : "Tomá una foto clara o subí el archivo para continuar.";
+
   stickyPrimaryBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
     ? "Ir a revisión"
     : meta?.optional && !hasFile
@@ -2182,6 +2345,13 @@ if (String(file.type || "").startsWith("image/")) {
 
 async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionado") {
   if (!file) return;
+  if (onboardingBusy) return;
+
+  clearAutoAdvanceTimer();
+  setOnboardingBusy(true, {
+    text: "Validando documento...",
+    docMode: "validating"
+  });
 
   selectedFiles.set(docType, file);
   renderPreview(docType, file);
@@ -2194,7 +2364,7 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   updateWizardPrimaryState();
   updateSticky(3);
 
-    try {
+  try {
     const validation = await validateWithRetry(docType, file, 2);
 
     if (validation.ok) {
@@ -2208,15 +2378,9 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
         triggerValidationFeedback("success");
       }
     } else {
-      // 🔥 cambio clave:
-      // si la validación local no pasa, no lo dejamos en error bloqueante
-      setDocStatus(
-        docType,
-        `${sourceLabel}: ${name} · Validación no concluyente, podés continuar y quedará para revisión`,
-        "warning"
-      );
-      setWizardVisualState("warning");
-      triggerValidationFeedback("warning");
+      setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "error");
+      setWizardVisualState("error");
+      triggerValidationFeedback("error");
     }
   } catch (err) {
     console.error("[setSelectedFile validation]", docType, err);
@@ -2227,29 +2391,30 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     );
     setWizardVisualState("warning");
     triggerValidationFeedback("warning");
-  };
+  }
 
   updateDocumentsProgressUI();
   updateOverallStepperState();
   renderDocumentWizard();
   updateSticky(3);
   updateWizardPrimaryState();
+  setOnboardingBusy(false);
 
-  if (docType === getCurrentDocType()) {
-    const hasFileNow = !!getChosenFile(docType);
-
-    if (hasFileNow && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-      setTimeout(() => {
-        if (getCurrentDocType() !== docType) return;
-        currentDocumentIndex += 1;
-        setWizardVisualState("idle");
-        renderDocumentWizard();
-        updateSticky(3);
-        updateWizardPrimaryState();
-      }, 650);
-    }
+if (docType === getCurrentDocType()) {
+const state = docValidationState.get(docType);
+const passed = state === "ok" || state === "warning";
+      if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+        autoAdvanceTimer = setTimeout(() => {
+          currentDocumentIndex += 1;
+          setWizardVisualState("idle");
+           renderDocumentWizard();
+          updateSticky(3);
+          updateWizardPrimaryState();
+          autoAdvanceTimer = null;
+        }, 650);
+      }
+    }  
   }
-}
 function initFileInputs() {
   docWizardCameraInput?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0] || null;
@@ -2560,7 +2725,15 @@ try {
       return `${year}-${month}-${day}`;
     }
 
-    async function submitAll() {
+    async function submitAll(triggerButton = submitAllBtn) {
+      if (onboardingBusy) return;
+
+      setOnboardingBusy(true, {
+        button: triggerButton,
+        text: "Enviando documentacion...",
+        docMode: "uploading"
+      });
+
       try {
         setGlobalStatus("Guardando información...", "success");
 
@@ -2594,6 +2767,8 @@ try {
 
         for (const docType of ALL_DOCS) {
           const file = getChosenFile(docType);
+          const label = DOC_META[docType]?.label || docType;
+          setGlobalStatus(`Subiendo ${label}...`, "success");
           await uploadDocument(docType, file);
         }
 
@@ -2634,6 +2809,8 @@ try {
       } catch (err) {
         console.error("[submitAll] error:", err);
         setGlobalStatus("❌ " + (err.message || "No pudimos enviar la documentación"), "error");
+      } finally {
+        setOnboardingBusy(false);
       }
     }
 
@@ -2644,50 +2821,80 @@ try {
       showStep(1);
     });
 document.getElementById("step1ContinueBtn")?.addEventListener("click", async () => {
+  if (onboardingBusy) return;
+
   const err = validateStep1();
   if (err) {
     setGlobalStatus("❌ " + err, "error");
     return;
   }
 
-  await saveProfilePartial({
-    full_name: getField("full_name"),
-    phone: getField("phone"),
-    dni_number: getField("dni_number"),
-    birth_date: getField("birth_date") || null,
-    address: getField("address"),
-    profile_completed: false
+  setOnboardingBusy(true, {
+    button: step1ContinueBtn,
+    text: "Guardando datos...",
+    docMode: "saving"
   });
 
-  clearGlobalStatus();
-  showStep(2);
+  try {
+    await saveProfilePartial({
+      full_name: getField("full_name"),
+      phone: getField("phone"),
+      dni_number: getField("dni_number"),
+      birth_date: getField("birth_date") || null,
+      address: getField("address"),
+      profile_completed: false
+    });
+
+    clearGlobalStatus();
+    showStep(2);
+  } catch (errSave) {
+    console.error("[step1Continue]", errSave);
+    setGlobalStatus("❌ No pudimos guardar tus datos personales", "error");
+  } finally {
+    setOnboardingBusy(false);
+  }
 });
 
 document.getElementById("step2ContinueBtn")?.addEventListener("click", async () => {
+  if (onboardingBusy) return;
+
   const err = validateStep2();
   if (err) {
     setGlobalStatus("❌ " + err, "error");
     return;
   }
 
-  await saveProfilePartial({
-  vehicle_brand: getField("vehicle_brand"),
-  vehicle_model: getField("vehicle_model"),
-  vehicle_year: Number(getField("vehicle_year")) || null,
-  vehicle_color: getField("vehicle_color"),
-  vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, "")
-});
+  setOnboardingBusy(true, {
+    button: step2ContinueBtn,
+    text: "Guardando vehiculo...",
+    docMode: "saving"
+  });
 
-  clearGlobalStatus();
-  currentDocumentIndex = 0;
-  showStep(3);
+  try {
+    await saveProfilePartial({
+      vehicle_brand: getField("vehicle_brand"),
+      vehicle_model: getField("vehicle_model"),
+      vehicle_year: Number(getField("vehicle_year")) || null,
+      vehicle_color: getField("vehicle_color"),
+      vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, "")
+    });
+
+    clearGlobalStatus();
+    currentDocumentIndex = 0;
+    showStep(3);
+  } catch (errSave) {
+    console.error("[step2Continue]", errSave);
+    setGlobalStatus("❌ No pudimos guardar los datos del vehiculo", "error");
+  } finally {
+    setOnboardingBusy(false);
+  }
 });
     document.getElementById("backTo2").addEventListener("click", () => {
       clearGlobalStatus();
       showStep(2);
     });
 
-    document.getElementById("submitAllBtn").addEventListener("click", submitAll);
+    document.getElementById("submitAllBtn").addEventListener("click", () => submitAll(submitAllBtn));
     docWizardBackBtn?.addEventListener("click", () => {
   clearGlobalStatus();
 
@@ -2702,14 +2909,17 @@ document.getElementById("step2ContinueBtn")?.addEventListener("click", async () 
 });
 
 docWizardNextBtn?.addEventListener("click", async () => {
+  if (onboardingBusy) return;
   clearGlobalStatus();
 
   const docType = getCurrentDocType();
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
+  const state = docValidationState.get(docType);
+  const passed = state === "ok" || state === "warning";
 
-  if (!meta?.optional && !hasFile) {
-    setGlobalStatus(`❌ Tenés que cargar ${meta?.label || "este documento"} para continuar`, "error");
+  if (!meta?.optional && (!hasFile || !passed)) {
+    setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
     return;
   }
 
@@ -2722,9 +2932,10 @@ docWizardNextBtn?.addEventListener("click", async () => {
     return;
   }
 
-  submitAll();
+  submitAll(docWizardNextBtn);
 });
-    stickyPrimaryBtn.addEventListener("click", async () => {
+stickyPrimaryBtn.addEventListener("click", async () => {
+  if (onboardingBusy) return;
   if (navigator.vibrate) {
     navigator.vibrate(18);
   }
@@ -2737,6 +2948,12 @@ docWizardNextBtn?.addEventListener("click", async () => {
         return;
       }
 
+      setOnboardingBusy(true, {
+        button: stickyPrimaryBtn,
+        text: "Guardando datos...",
+        docMode: "saving"
+      });
+
       await saveProfilePartial({
         full_name: getField("full_name"),
         phone: getField("phone"),
@@ -2748,6 +2965,7 @@ docWizardNextBtn?.addEventListener("click", async () => {
 
       clearGlobalStatus();
       showStep(2);
+      setOnboardingBusy(false);
       return;
     }
 
@@ -2758,27 +2976,37 @@ docWizardNextBtn?.addEventListener("click", async () => {
         return;
       }
 
-        await saveProfilePartial({
-          vehicle_brand: getField("vehicle_brand"),
-          vehicle_model: getField("vehicle_model"),
-          vehicle_year: Number(getField("vehicle_year")) || null,
-          vehicle_color: getField("vehicle_color"),
-          vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, "")
+      setOnboardingBusy(true, {
+        button: stickyPrimaryBtn,
+        text: "Guardando vehiculo...",
+        docMode: "saving"
+      });
+
+      await saveProfilePartial({
+        vehicle_brand: getField("vehicle_brand"),
+        vehicle_model: getField("vehicle_model"),
+        vehicle_year: Number(getField("vehicle_year")) || null,
+        vehicle_color: getField("vehicle_color"),
+        vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, "")
       });
       clearGlobalStatus();
       currentDocumentIndex = 0;
       showStep(3);
+      setOnboardingBusy(false);
       return;
     }
 
-const docType = getCurrentDocType();
-const meta = DOC_META[docType];
-const hasFile = !!getChosenFile(docType);
+    const docType = getCurrentDocType();
+    const meta = DOC_META[docType];
+    const hasFile = !!getChosenFile(docType);
+    const state = docValidationState.get(docType);
+    const passed = state === "ok" || state === "warning";
 
-if (!meta?.optional && !hasFile) {
-  setGlobalStatus(`❌ Tenés que cargar ${meta?.label || "este documento"} para continuar`, "error");
-  return;
-}
+    if (!meta?.optional && (!hasFile || !passed)) {
+      setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
+      return;
+    }
+
     if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
       currentDocumentIndex += 1;
       setWizardVisualState("idle");
@@ -2787,10 +3015,11 @@ if (!meta?.optional && !hasFile) {
       updateWizardPrimaryState();
       return;
     }
-    submitAll();
+    submitAll(stickyPrimaryBtn);
 
   } catch (e) {
     console.error("[sticky flow error]", e);
+    setOnboardingBusy(false);
     setGlobalStatus("❌ Error en el flujo", "error");
   }
 });
