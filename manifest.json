@@ -2,16 +2,12 @@
   "name": "MIMI Driver",
   "short_name": "MIMI",
   "description": "Panel de conductor para MIMI Transporte Escolar",
-
   "start_url": "/mimi-transporte/login-chofer.html",
   "scope": "/mimi-transporte/",
-
   "display": "standalone",
   "orientation": "portrait",
-
   "background_color": "#000000",
   "theme_color": "#000000",
-
   "icons": [
     {
       "src": "/mimi-transporte/assets/icons/icon-192x192.png",
@@ -26,7 +22,7 @@
       "purpose": "any"
     },
     {
-      "src": "/mimi-transporte/assets/icons/icon-512x512.png",
+      "src": "/mimi-transporte/assets/icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
