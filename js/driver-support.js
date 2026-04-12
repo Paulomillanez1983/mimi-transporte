@@ -773,6 +773,7 @@ async function fallbackLoadConversations(preferredId = null) {
   const { data: tickets, error } = await supabaseService.client
     .from("soporte_tickets")
     .select("*")
+    .eq("rol_origen", "chofer")
     .or(`user_id.eq.${user.id},created_by.eq.${user.id}`)
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
@@ -824,49 +825,52 @@ async function loadSupportConversations(options = {}) {
   try {
     if (!silent) setBusy(true);
 
-    const token = await getAccessToken(true);
-    const response = await fetch(`${SUPPORT_API_BASE}/support-list-conversation`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    await fallbackLoadConversations(preferredId || (preserveSelection ? supportState.selectedId : null));
+    return;
+  } catch (scopedErr) {
+    console.warn("[driver-support.loadSupportConversations.scoped]", scopedErr);
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || data?.ok === false) {
-      throw new Error(data?.error || "Fallback to direct support query");
-    }
-
-    const previousId = preserveSelection ? (preferredId || supportState.selectedId) : null;
-
-    supportState.conversations = (Array.isArray(data.conversations) ? data.conversations : [])
-      .map(normalizeConversation)
-      .filter((item) => item && isDriverOwnedConversation(item));
-
-    applyFilters();
-
-    const existing = previousId && supportState.conversations.some((item) => String(item.id) === String(previousId));
-    if (existing) {
-      supportState.selectedId = String(previousId);
-    } else if (supportState.filtered[0]) {
-      supportState.selectedId = String(supportState.filtered[0].id);
-    } else {
-      supportState.selectedId = null;
-      supportState.mobileThreadOpen = false;
-    }
-
-    renderConversationList();
-    renderSelectedConversation();
-    updateBadge();
-  } catch (err) {
-    console.warn("[driver-support.loadSupportConversations]", err);
     try {
-      await fallbackLoadConversations(preferredId || (preserveSelection ? supportState.selectedId : null));
+      const token = await getAccessToken(true);
+      const response = await fetch(`${SUPPORT_API_BASE}/support-list-conversation`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.ok === false) {
+        throw new Error(data?.error || "No se pudo cargar soporte");
+      }
+
+      const previousId = preserveSelection ? (preferredId || supportState.selectedId) : null;
+
+      supportState.conversations = (Array.isArray(data.conversations) ? data.conversations : [])
+        .map(normalizeConversation)
+        .filter((item) => item && isDriverOwnedConversation(item));
+
+      applyFilters();
+
+      const existing = previousId && supportState.conversations.some((item) => String(item.id) === String(previousId));
+      if (existing) {
+        supportState.selectedId = String(previousId);
+      } else if (supportState.filtered[0]) {
+        supportState.selectedId = String(supportState.filtered[0].id);
+      } else {
+        supportState.selectedId = null;
+        supportState.mobileThreadOpen = false;
+      }
+
+      renderConversationList();
+      renderSelectedConversation();
+      updateBadge();
+
       if (!silent) {
-        showToast("Soporte cargado", "success");
+        showToast("Soporte cargado con respaldo", "success");
       }
     } catch (fallbackErr) {
-      console.error("[driver-support.fallbackLoadConversations]", fallbackErr);
+      console.error("[driver-support.loadSupportConversations]", fallbackErr);
       supportState.conversations = [];
       supportState.filtered = [];
       supportState.selectedId = null;
