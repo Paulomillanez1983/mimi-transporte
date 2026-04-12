@@ -3719,3 +3719,52 @@ header.is-condensed h1 {
     max-width: 88%;
   }
 }
+@media (max-width: 720px) {
+  .support-shell.is-mobile-support .support-thread,
+  .support-shell.is-mobile-support .support-thread-panel,
+  .support-shell.is-mobile-support .support-thread-empty {
+    min-height: calc(100dvh - 180px) !important;
+    max-height: calc(100dvh - 180px) !important;
+    height: calc(100dvh - 180px) !important;
+  }
+
+  .support-shell.is-mobile-support .support-thread-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px !important;
+  }
+
+  .support-shell.is-mobile-support .support-thread-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .support-shell.is-mobile-support .support-thread-header {
+    flex: 0 0 auto;
+  }
+
+  .support-shell.is-mobile-support .support-messages {
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto;
+  }
+
+  .support-shell.is-mobile-support .support-composer {
+    flex: 0 0 auto;
+    position: sticky;
+    bottom: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .support-shell.is-mobile-support .support-thread,
+  .support-shell.is-mobile-support .support-thread-panel,
+  .support-shell.is-mobile-support .support-thread-empty {
+    min-height: calc(100dvh - 170px) !important;
+    max-height: calc(100dvh - 170px) !important;
+    height: calc(100dvh - 170px) !important;
+  }
+}
