@@ -15,6 +15,7 @@ const supportState = {
   filtered: [],
   selectedId: null,
   currentUserId: null,
+  currentUserEmail: null,
   realtimeChannel: null
 };
 
@@ -215,6 +216,21 @@ function normalizeConversation(item) {
   };
 }
 
+function isDriverOwnedConversation(item) {
+  const currentUserId = String(supportState.currentUserId || "").trim();
+  const currentUserEmail = normalizeText(supportState.currentUserEmail || "");
+  const conversationRole = normalizeRole(item?.role || item?.rol_origen || item?.metadata?.role || "chofer");
+  const ownerId = String(item?.user_id || item?.created_by || item?.owner_id || "").trim();
+  const email = normalizeText(item?.email || item?.user_email || item?.metadata?.email || "");
+
+  if (conversationRole !== "chofer") return false;
+
+  if (currentUserId && ownerId && ownerId === currentUserId) return true;
+  if (currentUserEmail && email && email === currentUserEmail) return true;
+
+  return false;
+}
+
 function isMobileSupport() {
   return window.matchMedia("(max-width: 860px)").matches;
 }
@@ -275,6 +291,7 @@ async function getAccessToken(forceRefresh = false) {
   }
 
   supportState.currentUserId = session.user.id;
+  supportState.currentUserEmail = session.user.email || null;
   return session.access_token;
 }
 
@@ -284,6 +301,7 @@ async function getCurrentUser() {
     throw new Error("No hay usuario activo");
   }
   supportState.currentUserId = session.user.id;
+  supportState.currentUserEmail = session.user.email || null;
   return session.user;
 }
 
@@ -780,7 +798,7 @@ async function fallbackLoadConversations(preferredId = null) {
     })
   );
 
-  supportState.conversations = conversations.filter(Boolean);
+  supportState.conversations = conversations.filter((item) => item && isDriverOwnedConversation(item));
   applyFilters();
 
   const previousId = preferredId || supportState.selectedId;
@@ -823,7 +841,7 @@ async function loadSupportConversations(options = {}) {
 
     supportState.conversations = (Array.isArray(data.conversations) ? data.conversations : [])
       .map(normalizeConversation)
-      .filter(Boolean);
+      .filter((item) => item && isDriverOwnedConversation(item));
 
     applyFilters();
 
