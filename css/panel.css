@@ -2288,51 +2288,57 @@ body.menu-open {
 }
 /* =========================================================
    ADMIN SUPPORT LAYOUT PRO
-   Achica panel vacío + ordena lista de chats
+   FIX REAL PC + MOBILE
+   Corrige zoom visual, ancho útil y lista de chats
    ========================================================= */
 
 :root {
-  --support-list-w: 360px;
-  --support-list-w-lg: 390px;
-  --support-panel-min: 0;
-  --support-gap: 16px;
+  --support-list-min: 380px;
+  --support-list-ideal: 430px;
+  --support-list-max: 460px;
+  --support-gap: 18px;
+
   --support-radius: 24px;
   --support-border: rgba(15, 23, 42, 0.08);
-  --support-bg: rgba(255, 255, 255, 0.92);
+  --support-bg: rgba(255, 255, 255, 0.94);
   --support-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+
   --support-text: #0f172a;
   --support-muted: #64748b;
   --support-chip: #eef2ff;
+  --support-panel-pad: 14px;
 }
 
-/* CONTENEDOR GENERAL DE MENSAJERÍA */
+/* =========================================================
+   CONTENEDOR GENERAL
+   ========================================================= */
+
 .support-layout,
 .admin-support-layout,
 .messages-layout,
 .support-grid {
   display: grid;
-  grid-template-columns: minmax(320px, var(--support-list-w)) minmax(var(--support-panel-min), 1fr);
+  grid-template-columns:
+    clamp(var(--support-list-min), 31vw, var(--support-list-max))
+    minmax(0, 1fr);
   gap: var(--support-gap);
   align-items: stretch;
-  min-height: 560px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 620px;
 }
 
-/* PANTALLAS GRANDES */
-@media (min-width: 1400px) {
-  .support-layout,
-  .admin-support-layout,
-  .messages-layout,
-  .support-grid {
-    grid-template-columns: minmax(340px, var(--support-list-w-lg)) minmax(0, 1fr);
-  }
-}
+/* =========================================================
+   COLUMNA IZQUIERDA / LISTA
+   ========================================================= */
 
-/* COLUMNA IZQUIERDA */
 .support-sidebar,
 .support-conversations,
 .messages-sidebar,
 .chat-list-panel {
   min-width: 0;
+  width: 100%;
   background: var(--support-bg);
   border: 1px solid var(--support-border);
   border-radius: var(--support-radius);
@@ -2340,10 +2346,54 @@ body.menu-open {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 560px;
+  min-height: 620px;
 }
 
-/* LISTA SCROLLEABLE */
+.support-sidebar-header,
+.conversations-header,
+.chat-list-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(10px);
+}
+
+.support-sidebar-header h3,
+.conversations-header h3,
+.chat-list-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--support-text);
+}
+
+.support-search,
+.conversation-search,
+.chat-search {
+  padding: 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.support-search input,
+.conversation-search input,
+.chat-search input {
+  width: 100%;
+  height: 46px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 0 14px;
+  font: inherit;
+  outline: none;
+}
+
+.support-search input:focus,
+.conversation-search input:focus,
+.chat-search input:focus {
+  border-color: rgba(37, 99, 235, 0.26);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+}
+
 .support-conversation-list,
 .conversation-list,
 .messages-list,
@@ -2351,27 +2401,37 @@ body.menu-open {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-/* ITEM CHAT */
+/* =========================================================
+   ITEM CHAT
+   ========================================================= */
+
 .support-conversation-item,
 .conversation-item,
 .message-thread-item,
 .chat-row {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
+  min-height: 76px;
   padding: 12px;
   border-radius: 18px;
   border: 1px solid rgba(15, 23, 42, 0.06);
   background: #fff;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .support-conversation-item:hover,
@@ -2396,12 +2456,11 @@ body.menu-open {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
 }
 
-/* AVATAR */
 .support-conversation-avatar,
 .conversation-avatar,
 .chat-avatar {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   border-radius: 16px;
   overflow: hidden;
   flex-shrink: 0;
@@ -2413,14 +2472,13 @@ body.menu-open {
   font-size: 1rem;
 }
 
-/* BLOQUE CENTRAL */
 .support-conversation-main,
 .conversation-main,
 .chat-main {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .support-conversation-top,
@@ -2449,12 +2507,16 @@ body.menu-open {
 .conversation-role,
 .chat-role {
   flex: 0 0 auto;
+  max-width: 120px;
   padding: 4px 8px;
   border-radius: 999px;
   background: #f1f5f9;
   color: #334155;
   font-size: 0.72rem;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .support-conversation-preview,
@@ -2467,15 +2529,16 @@ body.menu-open {
   text-overflow: ellipsis;
 }
 
-/* BLOQUE DERECHO DEL ITEM */
 .support-conversation-side,
 .conversation-side,
 .chat-side {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  justify-content: center;
   gap: 8px;
   flex-shrink: 0;
+  min-width: 58px;
 }
 
 .support-conversation-time,
@@ -2503,34 +2566,41 @@ body.menu-open {
   font-weight: 800;
 }
 
-/* PANEL DERECHO */
+/* =========================================================
+   PANEL DERECHO
+   ========================================================= */
+
 .support-thread-panel,
 .support-chat-panel,
 .messages-thread,
 .chat-thread-panel,
 .support-detail-panel {
   min-width: 0;
+  width: 100%;
   background: var(--support-bg);
   border: 1px solid var(--support-border);
   border-radius: var(--support-radius);
   box-shadow: var(--support-shadow);
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 560px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 620px;
 }
 
-/* ESTADO VACÍO: MUCHÍSIMO MÁS CHICO */
+/* =========================================================
+   ESTADO VACÍO
+   ========================================================= */
+
 .support-empty-state,
 .support-placeholder,
 .empty-conversation-state,
 .thread-empty-state {
-  width: min(100%, 420px);
-  min-height: 220px;
+  width: min(100%, 340px);
+  min-height: 170px;
   margin: auto;
-  padding: 28px 22px;
-  border-radius: 22px;
-  background: rgba(255,255,255,0.9);
+  padding: 20px 16px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.90);
   border: 1px dashed rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
@@ -2544,8 +2614,8 @@ body.menu-open {
 .support-placeholder h2,
 .empty-conversation-state h2,
 .thread-empty-state h2 {
-  margin: 0 0 10px;
-  font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+  margin: 0 0 8px;
+  font-size: 1.05rem;
   line-height: 1.15;
   font-weight: 800;
   color: var(--support-text);
@@ -2556,60 +2626,38 @@ body.menu-open {
 .empty-conversation-state p,
 .thread-empty-state p {
   margin: 0;
-  max-width: 320px;
-  font-size: 0.92rem;
-  line-height: 1.45;
+  max-width: 280px;
+  font-size: 0.84rem;
+  line-height: 1.4;
   color: var(--support-muted);
 }
 
-/* HEADER DE LA COLUMNA IZQUIERDA */
-.support-sidebar-header,
-.conversations-header,
-.chat-list-header {
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(255,255,255,0.82);
-  backdrop-filter: blur(10px);
+/* =========================================================
+   TABLET / NOTEBOOK
+   ========================================================= */
+
+@media (max-width: 1280px) {
+  .support-layout,
+  .admin-support-layout,
+  .messages-layout,
+  .support-grid {
+    grid-template-columns: 380px minmax(0, 1fr);
+  }
 }
 
-.support-sidebar-header h3,
-.conversations-header h3,
-.chat-list-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 800;
-  color: var(--support-text);
+@media (max-width: 1080px) {
+  .support-layout,
+  .admin-support-layout,
+  .messages-layout,
+  .support-grid {
+    grid-template-columns: 350px minmax(0, 1fr);
+  }
 }
 
-/* BUSCADOR */
-.support-search,
-.conversation-search,
-.chat-search {
-  padding: 12px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-}
+/* =========================================================
+   MOBILE / TABLET ANGOSTO
+   ========================================================= */
 
-.support-search input,
-.conversation-search input,
-.chat-search input {
-  width: 100%;
-  height: 46px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 14px;
-  background: #f8fafc;
-  padding: 0 14px;
-  font: inherit;
-  outline: none;
-}
-
-.support-search input:focus,
-.conversation-search input:focus,
-.chat-search input:focus {
-  border-color: rgba(37, 99, 235, 0.26);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
-}
-
-/* MOBILE / TABLET */
 @media (max-width: 980px) {
   .support-layout,
   .admin-support-layout,
@@ -2637,13 +2685,16 @@ body.menu-open {
   .empty-conversation-state,
   .thread-empty-state {
     width: min(100%, 100%);
-    min-height: 170px;
-    padding: 20px 16px;
+    min-height: 160px;
+    padding: 18px 14px;
     border-radius: 18px;
   }
 }
 
-/* CELULARES */
+/* =========================================================
+   CELULARES
+   ========================================================= */
+
 @media (max-width: 640px) {
   .support-conversation-list,
   .conversation-list,
@@ -2658,6 +2709,7 @@ body.menu-open {
   .message-thread-item,
   .chat-row {
     grid-template-columns: 42px minmax(0, 1fr) auto;
+    min-height: 68px;
     gap: 10px;
     padding: 10px;
     border-radius: 16px;
@@ -2702,13 +2754,13 @@ body.menu-open {
   .support-placeholder h2,
   .empty-conversation-state h2,
   .thread-empty-state h2 {
-    font-size: 1rem;
+    font-size: 0.98rem;
   }
 
   .support-empty-state p,
   .support-placeholder p,
   .empty-conversation-state p,
   .thread-empty-state p {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
   }
 }
