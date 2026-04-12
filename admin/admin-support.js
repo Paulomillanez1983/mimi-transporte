@@ -306,9 +306,21 @@ function updateSupportDockBadge() {
 }
 
 function getCurrentConversation() {
-  return supportState.conversations.find((item) => String(item.id) === String(supportState.selectedId)) || null;
-}
+  const selectedId = String(supportState.selectedId || "").trim();
+  if (!selectedId) return null;
 
+  const fromConversations = supportState.conversations.find(
+    (item) => String(item?.id || "").trim() === selectedId
+  );
+  if (fromConversations) return fromConversations;
+
+  const fromFiltered = supportState.filtered.find(
+    (item) => String(item?.id || "").trim() === selectedId
+  );
+  if (fromFiltered) return fromFiltered;
+
+  return null;
+}
 function setSupportBusy(isBusy) {
   supportState.loadingList = !!isBusy;
   const els = getSupportElements();
