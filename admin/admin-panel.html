@@ -394,16 +394,16 @@
           </div>
         </div>
 
-        <div id="supportMessages" class="support-messages" aria-live="polite"></div>
+        <div id="supportMessages" class="support-messages" aria-live="polite" aria-atomic="false"></div>
 
         <div class="support-composer">
           <textarea
-            id="supportReplyInput"
-            class="support-reply-input"
-            rows="3"
-            placeholder="Escribí una respuesta..."
+           id="supportReplyInput"
+           class="support-reply-input"
+           rows="3"
+           placeholder="Escribí una respuesta..."
+           enterkeyhint="send"
           ></textarea>
-
           <input
             id="supportAttachmentInput"
             type="file"
