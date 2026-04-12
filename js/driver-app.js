@@ -807,6 +807,8 @@ async _resolveDriverId() {
 _setupUI() {
   const btnFab = document.getElementById('fab-online');
   const supportBtn = document.getElementById('menu-support');
+  const supportCloseBtn = document.getElementById('support-close');
+  const supportModal = document.getElementById('support-modal');
 
   this._fabClickHandler = async () => {
     try {
@@ -870,18 +872,72 @@ _setupUI() {
 
   if (supportBtn) {
     supportBtn.addEventListener('click', () => {
-      uiController.showToast('Abriendo soporte...', 'success');
-
-      // Opción 1: abrir modal de soporte
-      uiController.openSupportModal?.();
-
-      // Opción 2: navegar a pantalla soporte
-      // window.location.href = './soporte.html';
+      this._openSupportModal();
     });
   }
 
+  if (supportCloseBtn) {
+    supportCloseBtn.addEventListener('click', () => {
+      this._closeSupportModal();
+    });
+  }
+
+  if (supportModal) {
+    supportModal.addEventListener('click', (event) => {
+      if (event.target.closest('[data-close-support="true"]')) {
+        this._closeSupportModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      const modal = document.getElementById('support-modal');
+      if (modal && !modal.classList.contains('hidden')) {
+        this._closeSupportModal();
+      }
+    }
+  });
+
   window.addEventListener('driverAction', this._driverActionHandler);
 }
+_openSupportModal() {
+  const modal = document.getElementById('support-modal');
+  const sheet = document.querySelector('#support-modal .support-sheet');
+  const input = document.getElementById('support-input');
+
+  if (!modal || !sheet) return;
+
+  modal.classList.remove('hidden', 'is-closing');
+  modal.setAttribute('aria-hidden', 'false');
+
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+
+  requestAnimationFrame(() => {
+    sheet.focus?.({ preventScroll: true });
+    setTimeout(() => input?.focus(), 180);
+  });
+}
+
+_closeSupportModal() {
+  const modal = document.getElementById('support-modal');
+  if (!modal) return;
+
+  modal.classList.add('is-closing');
+  modal.setAttribute('aria-hidden', 'true');
+
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    modal.classList.remove('is-closing');
+
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+  }, 280);
+}
+  
   async _handleDriverActionEvent(e) {
     const { action, tripId } = e.detail || {};
     await this._handleAction(action, tripId);
