@@ -53,62 +53,48 @@ class TripManager {
   // =========================================================
   // INIT
   // =========================================================
-  async init(driverIdParam = null) {
-    try {
-      await supabaseService.ensureDriverProfile();
+async init(driverIdParam = null) {
+  try {
+    await supabaseService.ensureDriverProfile();
 
-      let driverId =
-        driverIdParam ||
-        supabaseService.getDriverId?.() ||
-        null;
-      
-      // Fallback real: buscar chofer desde auth si no vino por parámetro
-      if (!driverId && supabaseService.client?.auth) {
-        const {
-          data: { user },
-          error: userError
-        } = await supabaseService.client.auth.getUser();
+    let driverId =
+      driverIdParam ||
+      supabaseService.getDriverId?.() ||
+      null;
 
-        if (userError) {
-          console.error('[TripManager] Error obteniendo auth user:', userError);
-        }
+    if (!driverId && supabaseService.client?.auth) {
+      const {
+        data: { user },
+        error: userError
+      } = await supabaseService.client.auth.getUser();
 
-        if (user?.id) {
-          const { data: chofer, error } = await supabaseService.client
-            .from('choferes')
-            .select('user_id')
-            .eq('user_id', user.id)
-            .maybeSingle();
-
-          if (error) {
-            console.error('[TripManager] Error buscando chofer por user_id:', error);
-          }
-
-          if (chofer?.user_id) {
-            driverId = chofer.user_id;
-          }
-        }
-      }
-      if (!driverId) {
-        console.error('[TripManager] ❌ No driverId available after fallback');
-        return false;
+      if (userError) {
+        console.error('[TripManager] Error obteniendo auth user:', userError);
       }
 
-      this.driverId = driverId;
+      if (user?.id) {
+        driverId = user.id;
+      }
+    }
 
-      console.log('[TripManager] ✅ Initializing for driver UUID:', driverId);
-      await this._loadInitialState(driverId);
-      this._subscribeToRealtime(driverId);
-      this._startRefreshInterval(driverId);
-
-      return true;
-
-    } catch (error) {
-      console.error('[TripManager] ❌ Init error:', error);
+    if (!driverId) {
+      console.error('[TripManager] ❌ No driverId available after fallback');
       return false;
     }
-  }
 
+    this.driverId = driverId;
+
+    console.log('[TripManager] ✅ Initializing for driver user_id:', driverId);
+    await this._loadInitialState(driverId);
+    this._subscribeToRealtime(driverId);
+    this._startRefreshInterval(driverId);
+
+    return true;
+  } catch (error) {
+    console.error('[TripManager] ❌ Init error:', error);
+    return false;
+  }
+}
   // =========================================================
   // LOAD INITIAL STATE
   // =========================================================
@@ -407,7 +393,7 @@ async rejectOffer(offerId) {
           event: '*',
           schema: 'public',
           table: 'viaje_ofertas',
-          filter: `chofer_id=eq.${driverId}`
+          filter: `chofer_user_id=eq.${driverId}`
         },
         async (payload) => {
           console.log('[TripManager] Offer realtime payload:', payload);
