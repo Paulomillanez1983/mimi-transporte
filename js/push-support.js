@@ -78,7 +78,7 @@ export async function initSupportPushFCM() {
       return;
     }
 
-    const session = await window.obtenerSesionCliente(true);
+    const session = await window.obtenerSesionCliente(false);
     if (!session?.user?.id || !session?.access_token) {
       console.warn("[push-support] no hay sesión cliente activa");
       return;
