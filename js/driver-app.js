@@ -914,26 +914,47 @@ _setupUI() {
     supportModal.dataset.bound = '1';
   }
 
-  if (supportSendBtn && !supportSendBtn.dataset.bound) {
-    supportSendBtn.addEventListener('click', async () => {
+if (supportSendBtn && !supportSendBtn.dataset.bound) {
+  const handleSupportSend = async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (supportSendBtn.disabled) return;
+
+    await this._sendSupportMessage();
+  };
+
+  supportSendBtn.addEventListener('click', handleSupportSend, { passive: false });
+  supportSendBtn.addEventListener('touchend', handleSupportSend, { passive: false });
+
+  supportSendBtn.dataset.bound = '1';
+}
+if (supportInput && !supportInput.dataset.bound) {
+  supportInput.addEventListener('input', () => {
+    supportInput.style.height = 'auto';
+    supportInput.style.height = `${Math.min(supportInput.scrollHeight, 132)}px`;
+  });
+
+  supportInput.addEventListener('keydown', async (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
       await this._sendSupportMessage();
-    });
-    supportSendBtn.dataset.bound = '1';
-  }
+    }
+  });
 
-  if (supportInput && !supportInput.dataset.bound) {
-    supportInput.addEventListener('input', () => {
-      supportInput.style.height = 'auto';
-      supportInput.style.height = `${Math.min(supportInput.scrollHeight, 132)}px`;
-    });
+  supportInput.addEventListener('focus', () => {
+    setTimeout(() => {
+      const messages = document.getElementById('support-messages');
+      messages?.scrollTo({
+        top: messages.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 250);
+  });
 
-    supportInput.addEventListener('keydown', async (event) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        await this._sendSupportMessage();
-      }
-    });
-
+  supportInput.dataset.bound = '1';
+}
     supportInput.dataset.bound = '1';
   }
 
