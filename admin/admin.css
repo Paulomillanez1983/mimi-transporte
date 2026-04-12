@@ -3721,18 +3721,25 @@ header.is-condensed h1 {
 }
 @media (max-width: 720px) {
   .support-shell.is-mobile-support .support-thread,
-  .support-shell.is-mobile-support .support-thread-panel,
-  .support-shell.is-mobile-support .support-thread-empty {
+  .support-shell.is-mobile-support .support-thread-panel {
     min-height: calc(100dvh - 180px) !important;
     max-height: calc(100dvh - 180px) !important;
     height: calc(100dvh - 180px) !important;
   }
 
   .support-shell.is-mobile-support .support-thread-empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px 16px !important;
+    min-height: auto !important;
+    max-height: none !important;
+    height: auto !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: center !important;
+
+    padding: 14px 16px 8px !important;
+    gap: 6px !important;
   }
 
   .support-shell.is-mobile-support .support-thread-panel {
@@ -3758,7 +3765,6 @@ header.is-condensed h1 {
     bottom: 0;
   }
 }
-
 @media (max-width: 560px) {
   .support-shell.is-mobile-support .support-thread,
   .support-shell.is-mobile-support .support-thread-panel,
