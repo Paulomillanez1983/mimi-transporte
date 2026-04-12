@@ -2510,8 +2510,8 @@ header.is-condensed h1 {
   overflow: hidden;
   height: 100%;
   min-width: 0;
+  min-height: 0;
 }
-
 .support-search-wrap {
   padding: 12px;
   border-bottom: 1px solid var(--border);
@@ -3184,20 +3184,22 @@ header.is-condensed h1 {
     min-height: 0;
   }
 
-  .support-thread {
-    position: absolute;
-    inset: 0;
-    z-index: 20;
-    border-radius: 22px;
-    background: var(--bg);
-    transform: translateX(100%);
-    opacity: 0;
-    pointer-events: none;
-    transition:
-      transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 180ms ease;
-  }
-
+.support-thread {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border-radius: 22px;
+  background: var(--bg);
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
   .support-shell.is-thread-open .support-thread {
     transform: translateX(0);
     opacity: 1;
@@ -3333,16 +3335,67 @@ header.is-condensed h1 {
 }
 
 @media (max-width: 820px) {
-  body[data-admin-mobile-view="support"] {
-    overflow: hidden;
+  html,
+  body {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  body[data-admin-mobile-view="support"] .admin-main,
-  body[data-admin-mobile-view="support"] main {
-    overflow: hidden;
+  .admin-main,
+  main {
+    overflow: visible !important;
+    min-height: auto;
+    padding-bottom: calc(92px + var(--safe-bottom));
   }
 
-  body[data-admin-mobile-view="support"] .support-section {
+  .admin-mobile-panel {
+    min-height: 0;
+  }
+
+  .support-section {
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .support-shell {
+    min-height: calc(100dvh - var(--header-h) - 140px);
+    height: calc(100dvh - var(--header-h) - 140px);
+    max-height: calc(100dvh - var(--header-h) - 140px);
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+
+  .support-sidebar,
+  .support-thread,
+  .support-thread-panel {
+    min-height: 0;
+  }
+
+  .support-conversation-list,
+  .support-messages {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .support-search-input,
+  .support-reply-input,
+  .support-send-btn,
+  .support-head-btn,
+  .support-filter-select,
+  .support-conversation-item,
+  .support-thread-btn {
+    touch-action: manipulation;
+  }
+
+  .drivers,
+  #drivers {
     min-height: 0;
   }
 }
