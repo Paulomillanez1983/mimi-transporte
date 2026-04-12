@@ -46,24 +46,43 @@ function getEls() {
     threadBack: document.getElementById("supportThreadBackBtn"),
     messages: document.getElementById("supportMessages"),
     reply: document.getElementById("supportReplyInput"),
+function getEls() {
+  return {
+    overlay: document.getElementById("supportOverlay"),
+    backdrop: document.getElementById("supportOverlayBackdrop"),
+    panel: document.getElementById("supportPanel"),
+    close: document.getElementById("supportCloseBtn"),
+    shell: document.getElementById("supportShell"),
+    sidebar: document.getElementById("supportSidebar"),
+    thread: document.getElementById("supportThread"),
+    list: document.getElementById("supportConversationList"),
+    search: document.getElementById("supportSearchInput"),
+    filter: document.getElementById("supportFilterStatus"),
+    refresh: document.getElementById("supportRefreshBtn"),
+    threadRefresh: document.getElementById("supportThreadRefreshBtn"),
+    threadEmpty: document.getElementById("supportThreadEmpty"),
+    threadPanel: document.getElementById("supportThreadPanel"),
+    threadAvatar: document.getElementById("supportThreadAvatar"),
+    threadName: document.getElementById("supportThreadName"),
+    threadSubmeta: document.getElementById("supportThreadSubmeta"),
+    threadBack: document.getElementById("supportThreadBackBtn"),
+    messages: document.getElementById("supportMessages"),
+    reply: document.getElementById("supportReplyInput"),
     send: document.getElementById("supportSendReplyBtn"),
     attachmentInput: document.getElementById("supportAttachmentInput"),
-badge: document.getElementById("supportDockBadge"),
 
-enableAlertsBtn: document.getElementById("supportEnableAlertsBtn"),
-installAppBtn: document.getElementById("supportInstallAppBtn"),
+    badge: document.getElementById("supportDockBadge"),
 
-enableAlertsBtnEmpty: document.getElementById("supportEnableAlertsBtnEmpty"),
-installAppBtnEmpty: document.getElementById("supportInstallAppBtnEmpty"),
+    enableAlertsBtn: document.getElementById("supportEnableAlertsBtn"),
+    installAppBtn: document.getElementById("supportInstallAppBtn"),
 
-setupStatus: document.getElementById("supportSetupStatus"),
-alertsBadge: document.getElementById("supportAlertsBadge")
-  pushBtn: document.getElementById("supportEnablePushBtn"),
-    installBtn: document.getElementById("supportInstallAppBtn"),
-    pushBadge: document.getElementById("supportPushStatusBadge"),
-    smartNote: document.getElementById("supportSmartNote")  };
-   }
+    enableAlertsBtnEmpty: document.getElementById("supportEnableAlertsBtnEmpty"),
+    installAppBtnEmpty: document.getElementById("supportInstallAppBtnEmpty"),
 
+    setupStatus: document.getElementById("supportSetupStatus"),
+    alertsBadge: document.getElementById("supportAlertsBadge")
+  };
+}
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -349,39 +368,100 @@ function updateSupportSmartActionsUI() {
     }
   }
 
-  if (smartNote) {
-    if (!notificationSupported) {
-      smartNote.textContent = "Este navegador no soporta notificaciones web para soporte.";
-    } else if (pushActive && installAvailable) {
-      smartNote.textContent = "Ya tenés alertas activas. También podés instalar la app para una experiencia más rápida.";
-    } else if (pushActive) {
-      smartNote.textContent = "Ya tenés activadas las alertas de soporte.";
+function updateSupportUIState() {
+  const {
+    enableAlertsBtn,
+    enableAlertsBtnEmpty,
+    installAppBtn,
+    installAppBtnEmpty,
+    setupStatus,
+    alertsBadge
+  } = getEls();
+
+  const permission = "Notification" in window ? Notification.permission : "unsupported";
+  const enabled = supportState.pushEnabled || permission === "granted";
+  const installAvailable = !!supportState.installPromptEvent;
+
+  const paintAlertBtn = (btn) => {
+    if (!btn) return;
+
+    if (enabled) {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <span class="support-utility-btn-icon" aria-hidden="true">✅</span>
+        <span class="support-utility-btn-text">Alertas activadas</span>
+      `;
+      return;
+    }
+
+    if (permission === "denied") {
+      btn.disabled = true;
+      btn.innerHTML = `
+        <span class="support-utility-btn-icon" aria-hidden="true">⚠️</span>
+        <span class="support-utility-btn-text">Bloqueadas</span>
+      `;
+      return;
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = `
+      <span class="support-utility-btn-icon" aria-hidden="true">🔔</span>
+      <span class="support-utility-btn-text">Activar alertas</span>
+    `;
+  };
+
+  paintAlertBtn(enableAlertsBtn);
+  paintAlertBtn(enableAlertsBtnEmpty);
+
+  const paintInstallBtn = (btn) => {
+    if (!btn) return;
+    btn.hidden = !installAvailable;
+    btn.disabled = !installAvailable;
+  };
+
+  paintInstallBtn(installAppBtn);
+  paintInstallBtn(installAppBtnEmpty);
+
+  if (alertsBadge) {
+    alertsBadge.hidden = !enabled;
+  }
+
+  if (setupStatus) {
+    if (enabled) {
+      setupStatus.textContent = "Ya tenés activadas las alertas de soporte.";
     } else if (permission === "denied") {
-      smartNote.textContent = "Las alertas están bloqueadas en el navegador. Tenés que habilitarlas manualmente en la configuración del sitio.";
-    } else if (installAvailable) {
-      smartNote.textContent = "Activá alertas e instalá la app para recibir respuestas de soporte más rápido.";
+      setupStatus.textContent = "Las alertas están bloqueadas en el navegador.";
     } else {
-      smartNote.textContent = "Recibí respuestas de soporte aunque no estés mirando esta pantalla.";
+      setupStatus.textContent = "Las alertas están desactivadas.";
     }
   }
 }
+  
 async function ensureSupportPushPermissionOnOpen(options = {}) {
   const { forcePrompt = false, silentDenied = false } = options;
 
   if (supportState.pushEnabled) {
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
+    return true;
+  }
+
+async function ensureSupportPushPermissionOnOpen(options = {}) {
+  const { forcePrompt = false, silentDenied = false } = options;
+
+  if (supportState.pushEnabled) {
+    updateSupportUIState();
     return true;
   }
 
   if (!canAskForNotifications()) {
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
     return false;
   }
 
   if (supportState.pushPromptShown && !forcePrompt) {
     const granted = Notification.permission === "granted";
     supportState.pushEnabled = granted;
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
     return granted;
   }
 
@@ -397,7 +477,7 @@ async function ensureSupportPushPermissionOnOpen(options = {}) {
     if (permission !== "granted") {
       console.warn("[driver-support] permiso de notificaciones no concedido:", permission);
       supportState.pushEnabled = false;
-      updateSupportSmartActionsUI();
+      updateSupportUIState();
 
       if (!silentDenied) {
         showToast("No activaste las notificaciones de soporte", "warning");
@@ -405,38 +485,38 @@ async function ensureSupportPushPermissionOnOpen(options = {}) {
       return false;
     }
 
-await initSupportPushFCM();
-supportState.pushEnabled = true;
-updateSupportUIState();
-    updateSupportSmartActionsUI();
+    await initSupportPushFCM();
+    supportState.pushEnabled = true;
+    updateSupportUIState();
     showToast("Notificaciones de soporte activadas", "success");
     return true;
   } catch (err) {
     supportState.pushEnabled = false;
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
     console.warn("[driver-support] error activando notificaciones:", err);
     showToast("No se pudieron activar las notificaciones", "error");
     return false;
   }
 }
+  
 function bindInstallPrompt() {
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
     supportState.installPromptEvent = event;
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
   });
 
   window.addEventListener("appinstalled", () => {
     supportState.installPromptEvent = null;
     supportState.installPromptShown = true;
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
     showToast("App instalada correctamente", "success");
   });
 }
 async function maybeShowInstallPrompt() {
   const deferredPrompt = supportState.installPromptEvent;
   if (!deferredPrompt) {
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
     return false;
   }
 
@@ -445,11 +525,11 @@ async function maybeShowInstallPrompt() {
     const choice = await deferredPrompt.userChoice;
     supportState.installPromptEvent = null;
     supportState.installPromptShown = choice?.outcome === "accepted";
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
     return choice?.outcome === "accepted";
   } catch (err) {
     console.warn("[driver-support] install prompt error:", err);
-    updateSupportSmartActionsUI();
+    updateSupportUIState();
     return false;
   }
 }
@@ -1149,7 +1229,7 @@ export async function openDriverSupportPanel() {
   startPolling();
 
 await ensureSupportPushPermissionOnOpen({ silentDenied: true }).catch(() => null);
-updateSupportSmartActionsUI();
+updateSupportUIState();
 }
 export function closeDriverSupportPanel() {
   const { overlay, panel } = getEls();
@@ -1237,7 +1317,7 @@ export function initDriverSupport() {
   els.threadRefresh?.addEventListener("click", () => loadSupportConversations({ preserveSelection: true, silent: false }));
   els.pushBtn?.addEventListener("click", async () => {
   await ensureSupportPushPermissionOnOpen({ forcePrompt: true, silentDenied: false });
-  updateSupportSmartActionsUI();
+  updateSupportUIState();
 });
 
 els.installBtn?.addEventListener("click", async () => {
@@ -1245,7 +1325,7 @@ els.installBtn?.addEventListener("click", async () => {
   if (!installed && !supportState.installPromptEvent) {
     showToast("La instalacion no esta disponible todavia en este navegador", "warning");
   }
-  updateSupportSmartActionsUI();
+  updateSupportUIState();
 });
   els.search?.addEventListener("input", () => {
     applyFilters();
@@ -1287,6 +1367,5 @@ els.installBtn?.addEventListener("click", async () => {
 bindInstallPrompt();
 updateSupportUIState();
 handleResize();
-updateSupportSmartActionsUI();
 loadSupportConversations({ preserveSelection: true, silent: true }).catch(() => null);
 }
