@@ -44,6 +44,20 @@ class DriverApp {
     };
   }
 
+  _startRealtimeServicesInBackground() {
+    Promise.resolve()
+      .then(() => this._startLocationTracking())
+      .catch((err) => {
+        console.warn('[DriverApp] GPS en background con error:', err);
+      });
+
+    Promise.resolve()
+      .then(() => initPushFCM('chofer'))
+      .catch((err) => {
+        console.warn('[DriverApp] Push en background con error:', err);
+      });
+  }
+
   // =========================================================
   // FLOW STATE
   // =========================================================
@@ -193,8 +207,7 @@ class DriverApp {
       );
 
       if (this._onlineStatus) {
-        await this._startLocationTracking();
-        await initPushFCM('chofer');
+        this._startRealtimeServicesInBackground();
       } else {
         this._setFlowState('OFFLINE');
       }
@@ -850,8 +863,7 @@ _setupUI() {
           disponible: true
         });
 
-        await this._startLocationTracking();
-        await initPushFCM('chofer');
+        this._startRealtimeServicesInBackground();
 
         this._onlineStatus = true;
         this._setFlowState('ONLINE_IDLE');
