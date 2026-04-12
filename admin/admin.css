@@ -2285,18 +2285,21 @@ body:not(.modal-open) {
   body {
     height: auto;
     min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .admin-main,
   main {
-    overflow: visible;
+    overflow: visible !important;
+    -webkit-overflow-scrolling: touch;
   }
 
   .drivers-map {
     touch-action: pan-y !important;
   }
 }
-
 .driver-card,
 .driver-card-surface {
   touch-action: pan-y;
