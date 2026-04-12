@@ -455,27 +455,6 @@ if (!current) {
   syncLayout();
   return;
 }
-    messages.innerHTML = `
-      <div class="support-message-row incoming">
-        <div class="support-message-bubble">
-          <div>Hola. Somos el equipo de soporte de MIMI.</div>
-          <div class="support-message-meta">Soporte · ahora</div>
-        </div>
-      </div>
-      <div class="support-message-row incoming">
-        <div class="support-message-bubble">
-          <div>Contanos tu consulta y te respondemos por aca, como en un chat.</div>
-          <div class="support-message-meta">Soporte · ahora</div>
-        </div>
-      </div>
-    `;
-
-    updateBadge();
-    setSendBusy(false);
-    syncLayout();
-    scrollMessagesToBottom(false);
-    return;
-  }
 
   threadEmpty.hidden = true;
   threadPanel.hidden = false;
