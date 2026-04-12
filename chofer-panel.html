@@ -398,7 +398,8 @@
   <div class="support-overlay-backdrop" id="supportOverlayBackdrop"></div>
 
   <section class="support-panel" id="supportPanel" aria-hidden="true">
-<div class="support-panel-topbar">
+
+    <div class="support-panel-topbar">
   <div class="support-panel-topbar-copy">
     <h2>Soporte MIMI</h2>
     <p>Escribinos por acá y te respondemos en el mismo chat.</p>
@@ -426,6 +427,14 @@
       <span class="support-utility-btn-text">Instalar app</span>
     </button>
 
+    <span
+      class="support-topbar-badge"
+      id="supportAlertsBadge"
+      hidden
+    >
+      Alertas activas
+    </span>
+
     <button
       class="support-close-btn"
       id="supportCloseBtn"
@@ -438,23 +447,33 @@
 </div>
     <div class="support-shell" id="supportShell">
       <aside class="support-sidebar" id="supportSidebar">
-        <div class="support-toolbar">
-          <div class="support-toolbar-top">
-            <h3 class="support-toolbar-title">Tus chats</h3>
-            <button class="support-head-btn" id="supportRefreshBtn" type="button">Recargar</button>
-          </div>
+<div class="support-toolbar">
+  <div class="support-toolbar-top">
+    <div class="support-toolbar-heading">
+      <h3 class="support-toolbar-title">Tus chats</h3>
+      <span class="support-toolbar-subtitle">Centro de soporte del chofer</span>
+    </div>
 
-          <div class="support-toolbar-controls">
-            <input class="support-search-input" id="supportSearchInput" type="search" placeholder="Buscar chat" />
-            <select class="support-filter-select" id="supportFilterStatus">
-              <option value="all">Todas</option>
-              <option value="esperando_usuario">Esperando usuario</option>
-              <option value="en_proceso">En proceso</option>
-              <option value="resuelto">Resuelto</option>
-            </select>
-          </div>
-        </div>
+    <button class="support-head-btn" id="supportRefreshBtn" type="button">
+      Recargar
+    </button>
+  </div>
 
+  <div class="support-toolbar-controls">
+    <input
+      class="support-search-input"
+      id="supportSearchInput"
+      type="search"
+      placeholder="Buscar chat"
+    />
+    <select class="support-filter-select" id="supportFilterStatus">
+      <option value="all">Todas</option>
+      <option value="esperando_usuario">Esperando usuario</option>
+      <option value="en_proceso">En proceso</option>
+      <option value="resuelto">Resuelto</option>
+    </select>
+  </div>
+</div>
         <div class="support-conversation-list" id="supportConversationList"></div>
       </aside>
 
@@ -476,12 +495,21 @@
     </div>
 
     <div class="support-setup-actions">
-      <button class="support-utility-btn support-utility-btn-primary" id="supportEnableAlertsBtnEmpty" type="button">
+      <button
+        class="support-utility-btn support-utility-btn-primary"
+        id="supportEnableAlertsBtnEmpty"
+        type="button"
+      >
         <span class="support-utility-btn-icon" aria-hidden="true">🔔</span>
         <span class="support-utility-btn-text">Activar alertas</span>
       </button>
 
-      <button class="support-utility-btn" id="supportInstallAppBtnEmpty" type="button" hidden>
+      <button
+        class="support-utility-btn"
+        id="supportInstallAppBtnEmpty"
+        type="button"
+        hidden
+      >
         <span class="support-utility-btn-icon" aria-hidden="true">⬇️</span>
         <span class="support-utility-btn-text">Instalar app</span>
       </button>
@@ -490,9 +518,13 @@
     <div class="support-setup-status" id="supportSetupStatus">
       Las alertas están desactivadas.
     </div>
+
+    <div class="support-setup-status success" id="supportSetupStatusOk" hidden>
+      Ya tenés activadas las alertas de soporte.
+    </div>
   </div>
 </div>
-        <div class="support-thread-panel" id="supportThreadPanel" hidden>
+      <div class="support-thread-panel" id="supportThreadPanel" hidden>
           <div class="support-thread-header">
             <div class="support-thread-top-mobile">
               <button class="support-thread-back" id="supportThreadBackBtn" type="button">←</button>
