@@ -11,9 +11,20 @@ const supportState = {
   loadingList: false,
   sendingReply: false,
   pollTimer: null,
-  initialized: false
+  initialized: false,
+  lastConversationIds: new Set(),
+  typingTimer: null,
+  preloadController: null,
+  activeFetchToken: 0,
+  shouldStickToBottom: true,
+  touchSwipe: {
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    deltaX: 0,
+    dragging: false
+  }
 };
-
 function supportInitials(name = "U") {
   return String(name)
     .trim()
@@ -633,15 +644,16 @@ function renderSelectedConversation() {
 
   syncSupportLayout();
   updateSupportActionState();
-  scrollMessagesToBottom(false);
+  bindMessageScroll();
+  smartScrollAfterRender();
+  preloadNearbyConversations();
 }
-
 function selectConversation(id, options = {}) {
   const { openThread = true, markVisualRead = false } = options;
   if (!id) return;
 
+  preloadConversation(id);
   supportState.selectedId = String(id);
-
   if (markVisualRead) {
     const current = getCurrentConversation();
     if (current && normalizeSupportStatus(current.status) === "esperando_usuario") {
@@ -741,8 +753,8 @@ async function sendSupportReply() {
   const previousText = els.reply?.value || "";
 
   try {
-    setSendBusy(true);
-
+setSendBusy(true);
+showTypingIndicator();
     const token = await getAdminAccessToken();
     const uploadedAttachments = await uploadSupportAttachments(current.id, files);
 
@@ -832,6 +844,7 @@ async function sendSupportReply() {
 
     alert(err?.message || "No se pudo enviar el mensaje");
   } finally {
+    hideTypingIndicator();
     setSendBusy(false);
   }
 }
@@ -892,7 +905,27 @@ async function loadSupportConversations(options = {}) {
     renderConversationList();
     renderSelectedConversation();
     updateSupportDockBadge();
+    applySupportFilters();
+    renderConversationList();
+    updateSupportDockBadge();
+    markNewUnreadVisuals();
+    animateDockBadge();
 
+    if (previousSelectedId) {
+      const stillExists = supportState.conversations.some(
+        (item) => String(item.id) === String(previousSelectedId)
+      );
+
+      if (stillExists) {
+        supportState.selectedId = String(previousSelectedId);
+      } else {
+        supportState.selectedId = supportState.filtered[0]?.id || null;
+      }
+    } else {
+      supportState.selectedId = supportState.filtered[0]?.id || null;
+    }
+
+    renderSelectedConversation();
     if (!silent) {
       showSupportToast(err?.message || "No se pudieron cargar las conversaciones", "error");
     }
@@ -984,7 +1017,178 @@ function handleSupportResize() {
 
   syncSupportLayout();
 }
+function getConversationIndexById(id) {
+  return supportState.filtered.findIndex((item) => String(item.id) === String(id));
+}
 
+function getNextConversationId(direction = 1) {
+  if (!supportState.filtered.length) return null;
+
+  const currentIndex = getConversationIndexById(supportState.selectedId);
+  if (currentIndex < 0) return supportState.filtered[0]?.id || null;
+
+  const nextIndex = currentIndex + direction;
+  if (nextIndex < 0 || nextIndex >= supportState.filtered.length) return null;
+
+  return supportState.filtered[nextIndex]?.id || null;
+}
+
+function markNewUnreadVisuals() {
+  const list = document.getElementById("supportConversationList");
+  if (!list) return;
+
+  const currentIds = new Set(supportState.conversations.map((item) => String(item.id)));
+  const previousIds = supportState.lastConversationIds;
+
+  supportState.conversations.forEach((item) => {
+    const isNew = !previousIds.has(String(item.id)) && Number(item.unread_count || 0) > 0;
+    if (!isNew) return;
+
+    const node = list.querySelector(`[data-support-id="${CSS.escape(String(item.id))}"]`);
+    if (!node) return;
+
+    node.classList.remove("is-new-unread");
+    void node.offsetWidth;
+    node.classList.add("is-new-unread");
+  });
+
+  supportState.lastConversationIds = currentIds;
+}
+
+function animateDockBadge() {
+  const badge = document.getElementById("supportDockBadge");
+  if (!badge || badge.hidden) return;
+
+  badge.classList.remove("support-dock-badge-live");
+  void badge.offsetWidth;
+  badge.classList.add("support-dock-badge-live");
+}
+
+function bindMessageScroll() {
+  const els = getSupportElements();
+  if (!els.messages || els.messages.dataset.bound === "1") return;
+
+  els.messages.dataset.bound = "1";
+  els.messages.addEventListener("scroll", () => {
+    const distance = els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight;
+    supportState.shouldStickToBottom = distance < 42;
+  }, { passive: true });
+}
+
+function smartScrollAfterRender() {
+  if (supportState.shouldStickToBottom) {
+    scrollMessagesToBottom(false);
+  }
+}
+
+function showTypingIndicator() {
+  const els = getSupportElements();
+  if (!els.messages) return;
+  if (els.messages.querySelector(".support-typing-row")) return;
+
+  const row = document.createElement("div");
+  row.className = "support-typing-row";
+  row.innerHTML = `
+    <div class="support-typing-bubble">
+      <span class="support-typing-dot"></span>
+      <span class="support-typing-dot"></span>
+      <span class="support-typing-dot"></span>
+    </div>
+  `;
+  els.messages.appendChild(row);
+  smartScrollAfterRender();
+}
+
+function hideTypingIndicator() {
+  const els = getSupportElements();
+  els.messages?.querySelector(".support-typing-row")?.remove();
+}
+
+function preloadConversation(id) {
+  if (!id) return;
+  const btn = document.querySelector(`[data-support-id="${CSS.escape(String(id))}"]`);
+  btn?.classList.add("is-preloading");
+
+  window.clearTimeout(supportState.preloadController);
+  supportState.preloadController = window.setTimeout(() => {
+    btn?.classList.remove("is-preloading");
+  }, 260);
+}
+
+function initConversationSwipe() {
+  const list = document.getElementById("supportConversationList");
+  if (!list || list.dataset.swipeBound === "1") return;
+  list.dataset.swipeBound = "1";
+
+  list.addEventListener("pointerdown", (event) => {
+    const item = event.target.closest(".support-conversation-item");
+    if (!item || !isMobileSupport()) return;
+
+    supportState.touchSwipe.pointerId = event.pointerId;
+    supportState.touchSwipe.startX = event.clientX;
+    supportState.touchSwipe.startY = event.clientY;
+    supportState.touchSwipe.deltaX = 0;
+    supportState.touchSwipe.dragging = false;
+  });
+
+  list.addEventListener("pointermove", (event) => {
+    if (supportState.touchSwipe.pointerId !== event.pointerId) return;
+
+    const item = event.target.closest(".support-conversation-item");
+    if (!item) return;
+
+    const deltaX = event.clientX - supportState.touchSwipe.startX;
+    const deltaY = event.clientY - supportState.touchSwipe.startY;
+
+    if (Math.abs(deltaY) > 18 && Math.abs(deltaY) > Math.abs(deltaX)) return;
+    if (Math.abs(deltaX) < 12) return;
+
+    supportState.touchSwipe.dragging = true;
+    supportState.touchSwipe.deltaX = deltaX;
+
+    item.classList.add("swiping");
+    item.style.transform = `translateX(${Math.max(-72, Math.min(72, deltaX))}px)`;
+    item.classList.toggle("swipe-next", deltaX < -24);
+    item.classList.toggle("swipe-prev", deltaX > 24);
+  });
+
+  function endSwipe(event) {
+    if (supportState.touchSwipe.pointerId !== event.pointerId) return;
+
+    const item = event.target.closest(".support-conversation-item");
+    const deltaX = supportState.touchSwipe.deltaX;
+
+    supportState.touchSwipe.pointerId = null;
+    supportState.touchSwipe.deltaX = 0;
+
+    if (!item) return;
+
+    item.classList.remove("swiping");
+    item.style.transform = "";
+    item.classList.remove("swipe-next", "swipe-prev");
+
+    if (!supportState.touchSwipe.dragging) return;
+    supportState.touchSwipe.dragging = false;
+
+    if (deltaX <= -56) {
+      const nextId = getNextConversationId(1);
+      if (nextId) selectConversation(nextId, { openThread: true, markVisualRead: false });
+    } else if (deltaX >= 56) {
+      const prevId = getNextConversationId(-1);
+      if (prevId) selectConversation(prevId, { openThread: true, markVisualRead: false });
+    }
+  }
+
+  list.addEventListener("pointerup", endSwipe);
+  list.addEventListener("pointercancel", endSwipe);
+}
+
+function preloadNearbyConversations() {
+  const nextId = getNextConversationId(1);
+  const prevId = getNextConversationId(-1);
+  if (nextId) preloadConversation(nextId);
+  if (prevId) preloadConversation(prevId);
+}
 export function initAdminSupport() {
   if (supportState.initialized) return;
 
@@ -1050,6 +1254,7 @@ export function initAdminSupport() {
 
   handleSupportResize();
   updateSupportActionState();
+  initConversationSwipe();
   loadSupportConversations({ preserveSelection: true, silent: false });
   startSupportPolling();
 }
