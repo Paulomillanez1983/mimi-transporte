@@ -19,7 +19,6 @@ const supportState = {
   realtimeChannel: null
 };
 
-const SESSION_TIMEOUT_MS = 8000;
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 
 function getEls() {
@@ -258,30 +257,28 @@ async function getSession(forceRefresh = false) {
     throw new Error("No se pudo inicializar Supabase");
   }
 
-  let session = null;
-
   try {
-    const { data } = await withTimeout(supabaseService.client.auth.getSession(), SESSION_TIMEOUT_MS);
-    session = data?.session || null;
-  } catch (err) {
-    console.warn("[driver-support.getSession] getSession warning:", err);
-  }
+    const { data } = await supabaseService.client.auth.getSession();
+    let session = data?.session || null;
 
-  if (forceRefresh && session?.refresh_token) {
-    try {
-      const { data } = await withTimeout(
-        supabaseService.client.auth.refreshSession({
-          refresh_token: session.refresh_token
-        }),
-        SESSION_TIMEOUT_MS
-      );
-      session = data?.session || session;
-    } catch (err) {
-      console.warn("[driver-support.getSession] refresh warning:", err);
+    if (session?.user?.id) {
+      return session;
     }
-  }
 
-  return session;
+    if (forceRefresh) {
+      try {
+        const { data: refreshed } = await supabaseService.client.auth.refreshSession();
+        session = refreshed?.session || session;
+      } catch (refreshErr) {
+        console.warn("[driver-support.getSession] refresh warning:", refreshErr);
+      }
+    }
+
+    return session;
+  } catch (err) {
+    console.warn("[driver-support.getSession] getSession error:", err);
+    return null;
+  }
 }
 
 async function getAccessToken(forceRefresh = false) {
