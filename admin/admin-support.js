@@ -685,7 +685,6 @@ function selectConversation(id, options = {}) {
     focusSupportReply({ preventScroll: true });
   }
 }
-
 function updateConversationStatusLocally(status) {
   const current = getCurrentConversation();
   if (!current) return;
