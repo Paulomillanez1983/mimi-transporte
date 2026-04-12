@@ -378,6 +378,7 @@
       <button class="menu-item" id="menu-support" type="button" aria-label="Abrir soporte">
         <span class="menu-item-icon">💬</span>
         <span class="menu-item-text">Soporte</span>
+        <span class="menu-item-badge" id="supportDockBadge" hidden>0</span>
       </button>
 
       <button class="menu-item" id="menu-settings" type="button">
@@ -393,95 +394,79 @@
     </div>
   </div>
 </aside>
-<!-- =========================
-     SUPPORT MODAL PRO MAX
-     Va antes de </body>
-========================= -->
-<div
-  class="support-modal hidden"
-  id="support-modal"
-  aria-hidden="true"
->
-  <div class="support-backdrop" data-close-support="true"></div>
+<div class="support-overlay" id="supportOverlay" hidden>
+  <div class="support-overlay-backdrop" id="supportOverlayBackdrop"></div>
 
-  <section
-    class="support-sheet"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="support-title"
-    tabindex="-1"
-  >
-    <div class="support-handle-wrap" aria-hidden="true">
-      <div class="support-handle"></div>
+  <section class="support-panel" id="supportPanel" aria-hidden="true">
+    <div class="support-panel-topbar">
+      <div>
+        <h2>Centro de soporte</h2>
+        <p>Conversaciones y respuestas en tiempo real para el chofer.</p>
+      </div>
+      <button class="support-close-btn" id="supportCloseBtn" type="button" aria-label="Cerrar soporte">Cerrar</button>
     </div>
 
-    <header class="support-header">
-      <button
-        class="support-close"
-        id="support-close"
-        type="button"
-        aria-label="Cerrar soporte"
-      >
-        <span aria-hidden="true">←</span>
-      </button>
+    <div class="support-shell" id="supportShell">
+      <aside class="support-sidebar" id="supportSidebar">
+        <div class="support-toolbar">
+          <div class="support-toolbar-top">
+            <h3 class="support-toolbar-title">Conversaciones</h3>
+            <button class="support-head-btn" id="supportRefreshBtn" type="button">Recargar</button>
+          </div>
 
-      <div class="support-header-text">
-        <h2 id="support-title">Soporte</h2>
-        <p id="support-subtitle">Chat con administración</p>
-      </div>
-    </header>
-
-    <div class="support-body">
-      <div
-        class="support-messages"
-        id="support-messages"
-        role="log"
-        aria-live="polite"
-        aria-relevant="additions"
-      >
-        <div class="support-empty" id="support-empty">
-          Todavía no hay mensajes. Escribí tu consulta y te respondemos desde administración.
+          <div class="support-toolbar-controls">
+            <input class="support-search-input" id="supportSearchInput" type="search" placeholder="Buscar conversacion" />
+            <select class="support-filter-select" id="supportFilterStatus">
+              <option value="all">Todas</option>
+              <option value="esperando_usuario">Esperando usuario</option>
+              <option value="en_proceso">En proceso</option>
+              <option value="resuelto">Resuelto</option>
+            </select>
+          </div>
         </div>
-      </div>
+
+        <div class="support-conversation-list" id="supportConversationList"></div>
+      </aside>
+
+      <section class="support-thread" id="supportThread">
+        <div class="support-thread-empty" id="supportThreadEmpty">
+          <div class="support-thread-empty-icon">💬</div>
+          <strong>Selecciona una conversacion</strong>
+          <p>Aca vas a ver los mensajes de soporte y vas a poder responder desde el chofer.</p>
+        </div>
+
+        <div class="support-thread-panel" id="supportThreadPanel" hidden>
+          <div class="support-thread-header">
+            <div class="support-thread-top-mobile">
+              <button class="support-thread-back" id="supportThreadBackBtn" type="button">←</button>
+
+              <div class="support-thread-user">
+                <div class="support-thread-avatar" id="supportThreadAvatar">S</div>
+                <div class="support-thread-meta">
+                  <strong id="supportThreadName">Soporte</strong>
+                  <span id="supportThreadSubmeta"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="support-thread-actions">
+              <button class="support-thread-btn" id="supportThreadRefreshBtn" type="button">Actualizar</button>
+            </div>
+          </div>
+
+          <div class="support-messages" id="supportMessages"></div>
+
+          <div class="support-composer">
+            <textarea class="support-reply-input" id="supportReplyInput" placeholder="Escribi tu mensaje para soporte..."></textarea>
+            <input class="support-attachment-input" id="supportAttachmentInput" type="file" multiple />
+            <div class="support-composer-hint">Enter envia. Shift + Enter agrega una nueva linea.</div>
+            <div class="support-composer-actions">
+              <button class="support-send-btn" id="supportSendReplyBtn" type="button">Enviar respuesta</button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-
-    <footer class="support-composer">
-      <div class="support-composer-inner">
-        <textarea
-          id="support-input"
-          class="support-input"
-          placeholder="Escribí tu mensaje..."
-          rows="1"
-          maxlength="1500"
-        ></textarea>
-
-        <div class="support-actions">
-          <label
-            class="support-attach"
-            for="support-attachment"
-            aria-label="Adjuntar archivos"
-            title="Adjuntar archivos"
-          >
-            📎
-          </label>
-
-          <input
-            id="support-attachment"
-            type="file"
-            hidden
-            multiple
-          />
-
-          <button
-            class="support-send"
-            id="support-send"
-            type="button"
-          >
-            Enviar
-          </button>
-        </div>
-      </div>
-    </footer>
   </section>
 </div>
 </body>
