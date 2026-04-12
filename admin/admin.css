@@ -2492,15 +2492,15 @@ header.is-condensed h1 {
   grid-template-columns: 360px minmax(0, 1fr);
   gap: 0;
   align-items: stretch;
-  height: calc(100dvh - var(--header-h) - 24px);
-  max-height: calc(100dvh - var(--header-h) - 24px);
+  min-height: 620px;
+  height: calc(100dvh - var(--header-h) - 40px);
+  max-height: calc(100dvh - var(--header-h) - 40px);
   overflow: hidden;
   border-radius: 24px;
   box-shadow: var(--shadow-lg);
   background: var(--panel);
   border: 1px solid var(--border);
 }
-
 .support-sidebar {
   display: flex;
   flex-direction: column;
@@ -2761,11 +2761,12 @@ header.is-condensed h1 {
 .support-thread-panel {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   height: 100%;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
-
 .support-thread-header {
   flex-shrink: 0;
   display: grid;
@@ -2875,8 +2876,9 @@ header.is-condensed h1 {
 }
 
 .support-messages {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 14px 14px 10px;
@@ -2887,10 +2889,11 @@ header.is-condensed h1 {
     radial-gradient(circle at top left, rgba(37, 99, 235, 0.025), transparent 48%),
     linear-gradient(180deg, var(--bg), var(--bg-2));
   scroll-behavior: smooth;
-  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
-
 .support-messages.is-auto-scroll {
   scroll-behavior: smooth;
 }
@@ -3164,16 +3167,16 @@ header.is-condensed h1 {
 }
 
 @media (max-width: 900px) {
-  .support-shell {
-    position: relative;
-    display: grid;
-    grid-template-columns: 1fr;
-    height: calc(100dvh - var(--header-h) - 120px);
-    min-height: calc(100dvh - var(--header-h) - 120px);
-    border-radius: 22px;
-    overflow: hidden;
-  }
-
+.support-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  height: calc(100dvh - var(--header-h) - 140px);
+  min-height: calc(100dvh - var(--header-h) - 140px);
+  max-height: calc(100dvh - var(--header-h) - 140px);
+  border-radius: 22px;
+  overflow: hidden;
+}
   .support-sidebar {
     border-radius: 22px;
     border-right: none;
@@ -3239,14 +3242,14 @@ header.is-condensed h1 {
     max-width: 28ch;
   }
 
-  .support-shell {
-    border-radius: 18px;
-    height: calc(100dvh - var(--header-h) - 120px);
-    min-height: calc(100dvh - var(--header-h) - 120px);
-    margin: 0;
-    border: 1px solid var(--border);
-  }
-
+.support-shell {
+  border-radius: 18px;
+  height: calc(100dvh - var(--header-h) - 150px);
+  min-height: calc(100dvh - var(--header-h) - 150px);
+  max-height: calc(100dvh - var(--header-h) - 150px);
+  margin: 0;
+  border: 1px solid var(--border);
+}
   .support-sidebar,
   .support-thread {
     border-radius: 18px;
@@ -3316,5 +3319,30 @@ header.is-condensed h1 {
     min-height: 42px;
     padding: 0 16px;
     border-radius: 18px;
+  }
+}
+/* FIX SCROLL SOPORTE */
+.support-thread,
+.support-sidebar {
+  min-height: 0;
+}
+
+.support-conversation-list,
+.support-messages {
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 820px) {
+  body[data-admin-mobile-view="support"] {
+    overflow: hidden;
+  }
+
+  body[data-admin-mobile-view="support"] .admin-main,
+  body[data-admin-mobile-view="support"] main {
+    overflow: hidden;
+  }
+
+  body[data-admin-mobile-view="support"] .support-section {
+    min-height: 0;
   }
 }
