@@ -663,16 +663,24 @@ function renderSelectedConversation() {
 
 function selectConversation(id, options = {}) {
   const { openThread = true, markVisualRead = false } = options;
-  if (!id) return;
+  const normalizedId = String(id || "").trim();
+  if (!normalizedId) return;
 
-  preloadConversation(id);
-  supportState.selectedId = String(id);
-  if (markVisualRead) {
-    const current = getCurrentConversation();
-    if (current && normalizeSupportStatus(current.status) === "esperando_usuario") {
-      current.status = "en_proceso";
-      current.unread_count = 0;
-    }
+  preloadConversation(normalizedId);
+  supportState.selectedId = normalizedId;
+
+  let current =
+    supportState.conversations.find((item) => String(item?.id || "").trim() === normalizedId) ||
+    supportState.filtered.find((item) => String(item?.id || "").trim() === normalizedId) ||
+    null;
+
+  if (current && !supportState.conversations.some((item) => String(item?.id || "").trim() === normalizedId)) {
+    supportState.conversations = [current, ...supportState.conversations];
+  }
+
+  if (markVisualRead && current && normalizeSupportStatus(current.status) === "esperando_usuario") {
+    current.status = "en_proceso";
+    current.unread_count = 0;
   }
 
   renderConversationList();
@@ -685,6 +693,7 @@ function selectConversation(id, options = {}) {
     focusSupportReply({ preventScroll: true });
   }
 }
+
 function updateConversationStatusLocally(status) {
   const current = getCurrentConversation();
   if (!current) return;
