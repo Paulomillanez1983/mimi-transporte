@@ -1,4 +1,4 @@
-import supabaseAdminService from "./supabase-admin-client.js";
+﻿import supabaseAdminService from "./supabase-admin-client.js";
 
 const SUPPORT_API_BASE = "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1";
 const SUPPORT_POLL_MS = 12000;
@@ -11,20 +11,7 @@ const supportState = {
   loadingList: false,
   sendingReply: false,
   pollTimer: null,
-  initialized: false,
-  lastConversationIds: new Set(),
-  typingTimer: null,
-  preloadController: null,
-  activeFetchToken: 0,
-  shouldStickToBottom: true,
-  lastRenderedMessageIds: new Set(),
-  touchSwipe: {
-    pointerId: null,
-    startX: 0,
-    startY: 0,
-    deltaX: 0,
-    dragging: false
-  }
+  initialized: false
 };
 
 function supportInitials(name = "U") {
@@ -140,9 +127,11 @@ function supportStatusLabel(status) {
 function supportMessageTicks(status) {
   switch (String(status || "").toUpperCase()) {
     case "READ":
+      return "Leido";
     case "DELIVERED":
       return "Leido";
     case "SENT":
+      return "";
     default:
       return "";
   }
@@ -234,7 +223,7 @@ function getConversationSecondary(item) {
     parts.push(subject);
   }
 
-  return parts.join(" · ");
+  return parts.join(" Â· ");
 }
 
 function getMessageText(msg) {
@@ -244,6 +233,7 @@ function getMessageText(msg) {
 function normalizeAttachments(msg) {
   if (Array.isArray(msg?.attachments)) return msg.attachments;
   if (Array.isArray(msg?.adjuntos)) return msg.adjuntos;
+  if (Array.isArray(msg?.metadata?.attachments)) return msg.metadata.attachments;
   return [];
 }
 
@@ -264,9 +254,7 @@ function normalizeConversation(item) {
     unread_count: Number(item.unread_count || item.unreadCount || 0),
     messages,
     updated_at: item.updated_at || item.last_message_at || item.created_at || null,
-    preview_text:
-      getMessageText(lastMessage) ||
-      String(item.last_message || item.ultimo_mensaje || "").trim()
+    preview_text: getMessageText(lastMessage) || String(item.last_message || item.ultimo_mensaje || "").trim()
   };
 }
 
@@ -305,24 +293,10 @@ function updateSupportDockBadge() {
 
   badge.hidden = unreadTotal <= 0;
   badge.textContent = unreadTotal > 99 ? "99+" : String(unreadTotal);
-  badge.classList.toggle("is-live", unreadTotal > 0);
 }
 
 function getCurrentConversation() {
-  const selectedId = String(supportState.selectedId || "").trim();
-  if (!selectedId) return null;
-
-  const fromConversations = supportState.conversations.find(
-    (item) => String(item?.id || "").trim() === selectedId
-  );
-  if (fromConversations) return fromConversations;
-
-  const fromFiltered = supportState.filtered.find(
-    (item) => String(item?.id || "").trim() === selectedId
-  );
-  if (fromFiltered) return fromFiltered;
-
-  return null;
+  return supportState.conversations.find((item) => String(item.id) === String(supportState.selectedId)) || null;
 }
 
 function setSupportBusy(isBusy) {
@@ -464,16 +438,6 @@ function scrollMessagesToBottom(smooth = false) {
   }
 }
 
-function isNearBottom() {
-  const els = getSupportElements();
-  if (!els.messages) return true;
-
-  const distance =
-    els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight;
-
-  return distance < 42;
-}
-
 function showSupportToast(message, type = "info") {
   if (typeof window.showToast === "function") {
     window.showToast(message, type);
@@ -540,69 +504,42 @@ function renderConversationList() {
     return;
   }
 
-  list.innerHTML = supportState.filtered
-    .map((item) => {
-      const safeName = escapeHtmlSupport(getConversationDisplayName(item));
-      const safeRole = escapeHtmlSupport(supportRoleLabel(item.role));
-      const statusLabel = supportStatusLabel(item.status);
-      const preview = escapeHtmlSupport(item.preview_text || item.subject || "Sin mensajes");
-      const secondary = escapeHtmlSupport(getConversationSecondary(item) || "Sin detalles");
-      const unreadCount = Number(item.unread_count || 0);
-      const isActive = String(supportState.selectedId) === String(item.id);
+  list.innerHTML = supportState.filtered.map((item) => {
+    const safeName = escapeHtmlSupport(getConversationDisplayName(item));
+    const safeRole = escapeHtmlSupport(supportRoleLabel(item.role));
+    const statusLabel = supportStatusLabel(item.status);
+    const preview = escapeHtmlSupport(item.preview_text || item.subject || "Sin mensajes");
+    const secondary = escapeHtmlSupport(getConversationSecondary(item) || "Sin detalles");
+    const unreadCount = Number(item.unread_count || 0);
 
-      return `
-        <button
-          class="support-conversation-item ${isActive ? "active" : ""}"
-          data-support-id="${escapeHtmlAttr(item.id)}"
-          type="button"
-          aria-label="Abrir conversacion con ${safeName}"
-        >
-          <div class="support-conversation-avatar">${escapeHtmlSupport(
-            supportInitials(getConversationDisplayName(item))
-          )}</div>
+    return `
+      <button
+        class="support-conversation-item ${String(supportState.selectedId) === String(item.id) ? "active" : ""}"
+        data-support-id="${escapeHtmlAttr(item.id)}"
+        type="button"
+        aria-label="Abrir conversacion con ${safeName}"
+      >
+        <div class="support-conversation-avatar">${escapeHtmlSupport(supportInitials(getConversationDisplayName(item)))}</div>
 
-          <div class="support-conversation-body">
-            <div class="support-conversation-top">
-              <div class="support-conversation-name">${safeName}</div>
-              <div class="support-conversation-time">${supportFormatTime(item.updated_at)}</div>
-            </div>
-
-            <div class="support-conversation-meta">
-              <span class="support-role-badge">${safeRole}</span>
-              <span class="support-status-badge ${supportStatusClass(item.status)}">${escapeHtmlSupport(
-                statusLabel
-              )}</span>
-            </div>
-
-            <div class="support-conversation-secondary">${secondary}</div>
-            <div class="support-conversation-preview">${preview}</div>
+        <div class="support-conversation-body">
+          <div class="support-conversation-top">
+            <div class="support-conversation-name">${safeName}</div>
+            <div class="support-conversation-time">${supportFormatTime(item.updated_at)}</div>
           </div>
 
-          ${unreadCount > 0 ? `<div class="support-conversation-unread">${unreadCount}</div>` : ""}
-        </button>
-      `;
-    })
-    .join("");
-}
+          <div class="support-conversation-meta">
+            <span class="support-role-badge">${safeRole}</span>
+            <span class="support-status-badge ${supportStatusClass(item.status)}">${escapeHtmlSupport(statusLabel)}</span>
+          </div>
 
-function buildUnreadSeparator() {
-  return `
-    <div class="support-unread-separator">
-      <span>Mensajes no leidos</span>
-    </div>
-  `;
-}
+          <div class="support-conversation-secondary">${secondary}</div>
+          <div class="support-conversation-preview">${preview}</div>
+        </div>
 
-function buildTypingIndicator() {
-  return `
-    <div class="support-typing-row is-visible" data-support-typing="1">
-      <div class="support-typing-bubble">
-        <span class="support-typing-dot"></span>
-        <span class="support-typing-dot"></span>
-        <span class="support-typing-dot"></span>
-      </div>
-    </div>
-  `;
+        ${unreadCount > 0 ? `<div class="support-conversation-unread">${unreadCount}</div>` : ""}
+      </button>
+    `;
+  }).join("");
 }
 
 function renderSelectedConversation() {
@@ -612,7 +549,6 @@ function renderSelectedConversation() {
   if (!els.threadEmpty || !els.threadPanel || !els.messages) return;
 
   if (!current) {
-    supportState.mobileThreadOpen = false;
     els.threadEmpty.hidden = false;
     els.threadPanel.hidden = true;
     updateSupportActionState();
@@ -646,36 +582,19 @@ function renderSelectedConversation() {
   }
 
   const messages = Array.isArray(current.messages) ? current.messages : [];
-  const unreadCount = Number(current.unread_count || 0);
-  const unreadStartIndex =
-    unreadCount > 0 && unreadCount <= messages.length ? messages.length - unreadCount : -1;
 
-  const html = [];
+  els.messages.innerHTML = messages.length
+    ? messages.map((msg) => {
+        const senderRole = String(msg.sender_role || msg.role || "user").toLowerCase();
+        const isAdmin = senderRole === "admin";
+        const ticks = isAdmin ? supportMessageTicks(msg.delivery_status) : "";
+        const text = getMessageText(msg);
+        const attachments = normalizeAttachments(msg);
 
-  if (!messages.length) {
-    html.push(`
-      <div class="support-empty-state">
-        Esta conversacion todavia no tiene mensajes.
-      </div>
-    `);
-  } else {
-    messages.forEach((msg, index) => {
-      if (index === unreadStartIndex) {
-        html.push(buildUnreadSeparator());
-      }
-
-      const senderRole = String(msg.sender_role || msg.role || "user").toLowerCase();
-      const isAdmin = senderRole === "admin";
-      const ticks = isAdmin ? supportMessageTicks(msg.delivery_status) : "";
-      const text = getMessageText(msg);
-      const attachments = normalizeAttachments(msg);
-      const messageId = String(msg.id || `${current.id}-${index}`);
-
-      const attachmentsHtml = attachments.length
-        ? `
-          <div class="support-message-attachments">
-            ${attachments
-              .map((file) => {
+        const attachmentsHtml = attachments.length
+          ? `
+            <div class="support-message-attachments">
+              ${attachments.map((file) => {
                 const safeUrl = sanitizeExternalUrl(file?.url);
                 if (!safeUrl) return "";
 
@@ -689,64 +608,49 @@ function renderSelectedConversation() {
                     Adj. ${escapeHtmlSupport(file?.name || "Archivo")}
                   </a>
                 `;
-              })
-              .join("")}
-          </div>
-        `
-        : "";
+              }).join("")}
+            </div>
+          `
+          : "";
 
-      html.push(`
-        <div class="support-message-row ${isAdmin ? "admin" : "user"}" data-message-id="${escapeHtmlAttr(
-          messageId
-        )}">
-          <div class="support-message-bubble">
-            ${text ? `<div>${escapeHtmlSupport(text)}</div>` : ""}
-            ${attachmentsHtml}
-            <div class="support-message-meta">
-              ${escapeHtmlSupport(supportRoleLabel(senderRole))} · ${supportFormatTime(msg.created_at)}
-              ${ticks ? `<span class="support-message-ticks">${ticks}</span>` : ""}
+        return `
+          <div class="support-message-row ${isAdmin ? "admin" : "user"}">
+            <div class="support-message-bubble">
+              ${text ? `<div>${escapeHtmlSupport(text)}</div>` : ""}
+              ${attachmentsHtml}
+              <div class="support-message-meta">
+                ${escapeHtmlSupport(supportRoleLabel(senderRole))} · ${supportFormatTime(msg.created_at)}
+                ${ticks ? `<span class="support-message-ticks">${ticks}</span>` : ""}
+              </div>
             </div>
           </div>
-        </div>
-      `);
-    });
-  }
-
-  els.messages.innerHTML = html.join("");
+        `;
+      }).join("")
+    : `
+      <div class="support-empty-state">
+        Esta conversacion todavia no tiene mensajes.
+      </div>
+    `;
 
   syncSupportLayout();
   updateSupportActionState();
-  bindMessageScroll();
-  smartScrollAfterRender();
-  preloadNearbyConversations();
+  scrollMessagesToBottom(false);
 }
 
 function selectConversation(id, options = {}) {
   const { openThread = true, markVisualRead = false } = options;
-  const normalizedId = String(id || "").trim();
-  if (!normalizedId) return;
+  if (!id) return;
 
-  preloadConversation(normalizedId);
-  supportState.selectedId = normalizedId;
+  supportState.selectedId = String(id);
 
-  let current =
-    supportState.conversations.find((item) => String(item?.id || "").trim() === normalizedId) ||
-    supportState.filtered.find((item) => String(item?.id || "").trim() === normalizedId) ||
-    null;
-
-  if (
-    current &&
-    !supportState.conversations.some((item) => String(item?.id || "").trim() === normalizedId)
-  ) {
-    supportState.conversations = [current, ...supportState.conversations];
+  if (markVisualRead) {
+    const current = getCurrentConversation();
+    if (current && normalizeSupportStatus(current.status) === "esperando_usuario") {
+      current.status = "en_proceso";
+      current.unread_count = 0;
+    }
   }
 
-  if (markVisualRead && current && normalizeSupportStatus(current.status) === "esperando_usuario") {
-    current.status = "en_proceso";
-    current.unread_count = 0;
-  }
-
-  supportState.shouldStickToBottom = true;
   renderConversationList();
   renderSelectedConversation();
 
@@ -788,7 +692,8 @@ async function uploadSupportAttachments(conversationId, files) {
     const fileExt = file.name.split(".").pop() || "bin";
     const fileName = `support/${conversationId}/${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
 
-    const { error: uploadError } = await supabaseAdminService.client.storage
+    const { error: uploadError } = await supabaseAdminService.client
+      .storage
       .from("support-attachments")
       .upload(fileName, file, {
         upsert: false,
@@ -799,7 +704,8 @@ async function uploadSupportAttachments(conversationId, files) {
       throw uploadError;
     }
 
-    const { data: publicData } = supabaseAdminService.client.storage
+    const { data: publicData } = supabaseAdminService.client
+      .storage
       .from("support-attachments")
       .getPublicUrl(fileName);
 
@@ -837,7 +743,6 @@ async function sendSupportReply() {
 
   try {
     setSendBusy(true);
-    showTypingIndicator();
 
     const token = await getAdminAccessToken();
     const uploadedAttachments = await uploadSupportAttachments(current.id, files);
@@ -869,7 +774,11 @@ async function sendSupportReply() {
       throw new Error(data?.error || "No se pudo enviar la respuesta");
     }
 
-    const newMessageId = data?.message?.id || data?.message_id || data?.data?.id || null;
+    const newMessageId =
+      data?.message?.id ||
+      data?.message_id ||
+      data?.data?.id ||
+      null;
 
     try {
       const pushResponse = await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
@@ -907,8 +816,6 @@ async function sendSupportReply() {
       els.attachmentInput.value = "";
     }
 
-    supportState.shouldStickToBottom = true;
-
     await loadSupportConversations({ preserveSelection: true, silent: true });
 
     if (supportState.selectedId) {
@@ -926,7 +833,6 @@ async function sendSupportReply() {
 
     alert(err?.message || "No se pudo enviar el mensaje");
   } finally {
-    hideTypingIndicator();
     setSendBusy(false);
   }
 }
@@ -961,30 +867,21 @@ async function loadSupportConversations(options = {}) {
       .filter((item) => item && item.id);
 
     applySupportFilters();
-    renderConversationList();
-    updateSupportDockBadge();
-    markNewUnreadVisuals();
-    animateDockBadge();
 
-    if (previousSelectedId) {
-      const stillExists = supportState.conversations.some(
-        (item) => String(item.id) === String(previousSelectedId)
-      );
+    const stillExists = previousSelectedId && supportState.conversations.some((item) => item.id === previousSelectedId);
 
-      if (stillExists) {
-        supportState.selectedId = String(previousSelectedId);
-      } else {
-        supportState.selectedId = supportState.filtered[0]?.id || null;
-      }
+    if (stillExists) {
+      supportState.selectedId = previousSelectedId;
+    } else if (supportState.filtered[0]) {
+      supportState.selectedId = supportState.filtered[0].id;
     } else {
-      supportState.selectedId = supportState.filtered[0]?.id || null;
-    }
-
-    if (!supportState.selectedId) {
+      supportState.selectedId = null;
       supportState.mobileThreadOpen = false;
     }
 
+    renderConversationList();
     renderSelectedConversation();
+    updateSupportDockBadge();
   } catch (err) {
     console.error("[support.loadSupportConversations]", err);
 
@@ -1089,181 +986,6 @@ function handleSupportResize() {
   syncSupportLayout();
 }
 
-function getConversationIndexById(id) {
-  return supportState.filtered.findIndex((item) => String(item.id) === String(id));
-}
-
-function getNextConversationId(direction = 1) {
-  if (!supportState.filtered.length) return null;
-
-  const currentIndex = getConversationIndexById(supportState.selectedId);
-  if (currentIndex < 0) return supportState.filtered[0]?.id || null;
-
-  const nextIndex = currentIndex + direction;
-  if (nextIndex < 0 || nextIndex >= supportState.filtered.length) return null;
-
-  return supportState.filtered[nextIndex]?.id || null;
-}
-
-function markNewUnreadVisuals() {
-  const list = document.getElementById("supportConversationList");
-  if (!list) return;
-
-  const currentIds = new Set(supportState.conversations.map((item) => String(item.id)));
-  const previousIds = supportState.lastConversationIds;
-
-  supportState.conversations.forEach((item) => {
-    const isNew = !previousIds.has(String(item.id)) && Number(item.unread_count || 0) > 0;
-    if (!isNew) return;
-
-    const node = list.querySelector(`[data-support-id="${CSS.escape(String(item.id))}"]`);
-    if (!node) return;
-
-    node.classList.remove("is-new");
-    void node.offsetWidth;
-    node.classList.add("is-new");
-  });
-
-  supportState.lastConversationIds = currentIds;
-}
-
-function animateDockBadge() {
-  const badge = document.getElementById("supportDockBadge");
-  if (!badge || badge.hidden) return;
-
-  badge.classList.remove("is-live");
-  void badge.offsetWidth;
-  badge.classList.add("is-live");
-}
-
-function bindMessageScroll() {
-  const els = getSupportElements();
-  if (!els.messages || els.messages.dataset.bound === "1") return;
-
-  els.messages.dataset.bound = "1";
-  els.messages.addEventListener(
-    "scroll",
-    () => {
-      const distance =
-        els.messages.scrollHeight - els.messages.scrollTop - els.messages.clientHeight;
-      supportState.shouldStickToBottom = distance < 42;
-    },
-    { passive: true }
-  );
-}
-
-function smartScrollAfterRender() {
-  const els = getSupportElements();
-  if (!els.messages) return;
-
-  els.messages.classList.toggle("is-auto-scroll", supportState.shouldStickToBottom);
-
-  if (supportState.shouldStickToBottom) {
-    scrollMessagesToBottom(false);
-  }
-}
-
-function showTypingIndicator() {
-  const els = getSupportElements();
-  if (!els.messages) return;
-  if (els.messages.querySelector('[data-support-typing="1"]')) return;
-
-  els.messages.insertAdjacentHTML("beforeend", buildTypingIndicator());
-  smartScrollAfterRender();
-}
-
-function hideTypingIndicator() {
-  const els = getSupportElements();
-  const row = els.messages?.querySelector('[data-support-typing="1"]');
-  row?.remove();
-}
-
-function preloadConversation(id) {
-  if (!id) return;
-  const btn = document.querySelector(`[data-support-id="${CSS.escape(String(id))}"]`);
-  btn?.classList.add("is-preloading");
-
-  window.clearTimeout(supportState.preloadController);
-  supportState.preloadController = window.setTimeout(() => {
-    btn?.classList.remove("is-preloading");
-  }, 260);
-}
-
-function initConversationSwipe() {
-  const list = document.getElementById("supportConversationList");
-  if (!list || list.dataset.swipeBound === "1") return;
-  list.dataset.swipeBound = "1";
-
-  list.addEventListener("pointerdown", (event) => {
-    const item = event.target.closest(".support-conversation-item");
-    if (!item || !isMobileSupport()) return;
-
-    supportState.touchSwipe.pointerId = event.pointerId;
-    supportState.touchSwipe.startX = event.clientX;
-    supportState.touchSwipe.startY = event.clientY;
-    supportState.touchSwipe.deltaX = 0;
-    supportState.touchSwipe.dragging = false;
-  });
-
-  list.addEventListener("pointermove", (event) => {
-    if (supportState.touchSwipe.pointerId !== event.pointerId) return;
-
-    const item = event.target.closest(".support-conversation-item");
-    if (!item) return;
-
-    const deltaX = event.clientX - supportState.touchSwipe.startX;
-    const deltaY = event.clientY - supportState.touchSwipe.startY;
-
-    if (Math.abs(deltaY) > 18 && Math.abs(deltaY) > Math.abs(deltaX)) return;
-    if (Math.abs(deltaX) < 12) return;
-
-    supportState.touchSwipe.dragging = true;
-    supportState.touchSwipe.deltaX = deltaX;
-
-    item.classList.add("swiping");
-    item.style.transform = `translateX(${Math.max(-72, Math.min(72, deltaX))}px)`;
-    item.classList.toggle("swipe-next", deltaX < -24);
-    item.classList.toggle("swipe-prev", deltaX > 24);
-  });
-
-  function endSwipe(event) {
-    if (supportState.touchSwipe.pointerId !== event.pointerId) return;
-
-    const item = event.target.closest(".support-conversation-item");
-    const deltaX = supportState.touchSwipe.deltaX;
-
-    supportState.touchSwipe.pointerId = null;
-    supportState.touchSwipe.deltaX = 0;
-
-    if (!item) return;
-
-    item.classList.remove("swiping");
-    item.style.transform = "";
-    item.classList.remove("swipe-next", "swipe-prev");
-
-    if (!supportState.touchSwipe.dragging) return;
-    supportState.touchSwipe.dragging = false;
-
-    if (deltaX <= -56) {
-      const nextId = getNextConversationId(1);
-      if (nextId) selectConversation(nextId, { openThread: true, markVisualRead: false });
-    } else if (deltaX >= 56) {
-      const prevId = getNextConversationId(-1);
-      if (prevId) selectConversation(prevId, { openThread: true, markVisualRead: false });
-    }
-  }
-
-  list.addEventListener("pointerup", endSwipe);
-  list.addEventListener("pointercancel", endSwipe);
-}
-
-function preloadNearbyConversations() {
-  const nextId = getNextConversationId(1);
-  const prevId = getNextConversationId(-1);
-  if (nextId) preloadConversation(nextId);
-  if (prevId) preloadConversation(prevId);
-}
-
 export function initAdminSupport() {
   if (supportState.initialized) return;
 
@@ -1329,7 +1051,6 @@ export function initAdminSupport() {
 
   handleSupportResize();
   updateSupportActionState();
-  initConversationSwipe();
   loadSupportConversations({ preserveSelection: true, silent: false });
   startSupportPolling();
 }
