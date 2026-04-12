@@ -48,8 +48,17 @@ function getEls() {
     reply: document.getElementById("supportReplyInput"),
     send: document.getElementById("supportSendReplyBtn"),
     attachmentInput: document.getElementById("supportAttachmentInput"),
-    badge: document.getElementById("supportDockBadge"),
-    pushBtn: document.getElementById("supportEnablePushBtn"),
+badge: document.getElementById("supportDockBadge"),
+
+enableAlertsBtn: document.getElementById("supportEnableAlertsBtn"),
+installAppBtn: document.getElementById("supportInstallAppBtn"),
+
+enableAlertsBtnEmpty: document.getElementById("supportEnableAlertsBtnEmpty"),
+installAppBtnEmpty: document.getElementById("supportInstallAppBtnEmpty"),
+
+setupStatus: document.getElementById("supportSetupStatus"),
+alertsBadge: document.getElementById("supportAlertsBadge")
+  pushBtn: document.getElementById("supportEnablePushBtn"),
     installBtn: document.getElementById("supportInstallAppBtn"),
     pushBadge: document.getElementById("supportPushStatusBadge"),
     smartNote: document.getElementById("supportSmartNote")  };
@@ -63,7 +72,64 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+function updateSupportUIState() {
+  const {
+    enableAlertsBtn,
+    enableAlertsBtnEmpty,
+    installAppBtn,
+    installAppBtnEmpty,
+    setupStatus,
+    alertsBadge
+  } = getEls();
 
+  const permission = "Notification" in window ? Notification.permission : "unsupported";
+  const enabled = supportState.pushEnabled || permission === "granted";
+  const installAvailable = !!supportState.installPromptEvent;
+
+  // 🔔 BOTONES ALERTAS
+  const updateBtn = (btn) => {
+    if (!btn) return;
+
+    if (enabled) {
+      btn.disabled = true;
+      btn.innerHTML = "✅ Alertas activadas";
+    } else if (permission === "denied") {
+      btn.disabled = true;
+      btn.innerHTML = "⚠️ Bloqueadas";
+    } else {
+      btn.disabled = false;
+      btn.innerHTML = "🔔 Activar alertas";
+    }
+  };
+
+  updateBtn(enableAlertsBtn);
+  updateBtn(enableAlertsBtnEmpty);
+
+  // 📥 BOTÓN INSTALAR
+  const updateInstall = (btn) => {
+    if (!btn) return;
+    btn.hidden = !installAvailable;
+  };
+
+  updateInstall(installAppBtn);
+  updateInstall(installAppBtnEmpty);
+
+  // 🟢 BADGE
+  if (alertsBadge) {
+    alertsBadge.hidden = !enabled;
+  }
+
+  // 📝 TEXTO
+  if (setupStatus) {
+    if (enabled) {
+      setupStatus.textContent = "Ya tenés activadas las alertas de soporte.";
+    } else if (permission === "denied") {
+      setupStatus.textContent = "Las alertas están bloqueadas en el navegador.";
+    } else {
+      setupStatus.textContent = "Las alertas están desactivadas.";
+    }
+  }
+}
 function escapeAttr(value) {
   return escapeHtml(value);
 }
@@ -339,8 +405,9 @@ async function ensureSupportPushPermissionOnOpen(options = {}) {
       return false;
     }
 
-    await initSupportPushFCM();
-    supportState.pushEnabled = true;
+await initSupportPushFCM();
+supportState.pushEnabled = true;
+updateSupportUIState();
     updateSupportSmartActionsUI();
     showToast("Notificaciones de soporte activadas", "success");
     return true;
@@ -1218,7 +1285,7 @@ els.installBtn?.addEventListener("click", async () => {
   });
 
 bindInstallPrompt();
-
+updateSupportUIState();
 handleResize();
 updateSupportSmartActionsUI();
 loadSupportConversations({ preserveSelection: true, silent: true }).catch(() => null);
