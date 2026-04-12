@@ -3889,3 +3889,21 @@ header.is-condensed h1 {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
+/* =========================================
+   SUPPORT SCROLL FALLBACK
+   ========================================= */
+
+.support-thread {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.support-thread-empty {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.support-messages {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
