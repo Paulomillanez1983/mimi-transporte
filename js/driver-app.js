@@ -10,6 +10,7 @@ import tripManager from './trip-manager.js';
 import uiController from './ui-controller.js';
 import soundManager from './sound-manager.js';
 import { initPushFCM } from './push-fcm.js';
+import { initDriverSupport, openDriverSupportPanel } from './driver-support.js';
 
 class DriverApp {
   constructor() {
@@ -31,18 +32,6 @@ class DriverApp {
     // Protección lifecycle / acciones
     this._destroyed = false;
     this._actionLock = false;
-    // =========================================================
-// SUPPORT STATE
-// =========================================================
-this._support = {
-  ticketId: null,
-  channel: null,
-  sending: false,
-  loaded: false,
-  processedIds: new Set(),
-  openBound: false,
-  escHandler: null
-};
 
     // Refs para cleanup
     this._fabClickHandler = null;
@@ -90,6 +79,7 @@ this._support = {
     console.log('[DriverApp] Iniciando aplicación...');
 
     uiController.init();
+    window.uiController = uiController;
     uiController.setGlobalLoading(true, 'Cargando...');
 
     try {
@@ -166,6 +156,7 @@ this._support = {
       // 6) Eventos + UI
       this._subscribeToEvents();
       this._setupUI();
+      initDriverSupport();
 
       this.initialized = true;
       console.log('[DriverApp] Aplicación inicializada correctamente');
@@ -413,11 +404,29 @@ this._support = {
   // =========================================================
   // RESOLVER DRIVER ID
   // =========================================================
-async _resolveDriverId() {
-  return this._authUserId || null;
-}
-  
-// =========================================================
+  async _resolveDriverId() {
+    try {
+      if (!this._authUserId) return null;
+
+      const { data: chofer, error } = await supabaseService.client
+        .from('choferes')
+        .select('id_uuid')
+        .eq('user_id', this._authUserId)
+        .single();
+
+      if (error) {
+        console.error('[DriverApp] Error resolviendo chofer:', error);
+        return null;
+      }
+
+      return chofer?.id_uuid || null;
+    } catch (err) {
+      console.error('[DriverApp] Error buscando driverId:', err);
+      return null;
+    }
+  }
+
+  // =========================================================
   // EVENTS
   // =========================================================
   _subscribeToEvents() {
@@ -819,10 +828,10 @@ async _resolveDriverId() {
 _setupUI() {
   const btnFab = document.getElementById('fab-online');
   const supportBtn = document.getElementById('menu-support');
-  const supportCloseBtn = document.getElementById('support-close');
-  const supportModal = document.getElementById('support-modal');
-  const supportSendBtn = document.getElementById('support-send');
-  const supportInput = document.getElementById('support-input');
+  const earningsBtn = document.getElementById('menu-earnings');
+  const historyBtn = document.getElementById('menu-history');
+  const settingsBtn = document.getElementById('menu-settings');
+  const profileBtn = document.getElementById('menu-view-profile');
 
   this._fabClickHandler = async () => {
     try {
@@ -884,486 +893,71 @@ _setupUI() {
     btnFab.addEventListener('click', this._fabClickHandler);
   }
 
-  if (supportBtn && !supportBtn.dataset.bound) {
+  if (supportBtn) {
     supportBtn.addEventListener('click', async () => {
-      try {
-        this._openSupportModal();
-        await this._loadDriverSupportConversation();
-        await this._subscribeSupportRealtime();
-      } catch (err) {
-        console.error('[DriverApp] error abriendo soporte:', err);
-        uiController.showToast(err?.message || 'No se pudo abrir soporte', 'error');
-      }
+      uiController.closeMenu?.();
+      await openDriverSupportPanel();
     });
-    supportBtn.dataset.bound = '1';
   }
 
-  if (supportCloseBtn && !supportCloseBtn.dataset.bound) {
-    supportCloseBtn.addEventListener('click', () => {
-      this._closeSupportModal();
-    });
-    supportCloseBtn.dataset.bound = '1';
-  }
-
-  if (supportModal && !supportModal.dataset.bound) {
-    supportModal.addEventListener('click', (event) => {
-      if (event.target.closest('[data-close-support="true"]')) {
-        this._closeSupportModal();
-      }
-    });
-    supportModal.dataset.bound = '1';
-  }
-
-if (supportSendBtn && !supportSendBtn.dataset.bound) {
-  const handleSupportSend = async (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (supportSendBtn.disabled) return;
-
-    await this._sendSupportMessage();
-  };
-
-  supportSendBtn.addEventListener('click', handleSupportSend, { passive: false });
-  supportSendBtn.addEventListener('touchend', handleSupportSend, { passive: false });
-
-  supportSendBtn.dataset.bound = '1';
-}
-  
-if (supportInput && !supportInput.dataset.bound) {
-  supportInput.addEventListener('input', () => {
-    supportInput.style.height = 'auto';
-    supportInput.style.height = `${Math.min(supportInput.scrollHeight, 132)}px`;
-  });
-
-  supportInput.addEventListener('keydown', async (event) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      event.stopPropagation();
-      await this._sendSupportMessage();
-    }
-  });
-
-  supportInput.addEventListener('focus', () => {
-    setTimeout(() => {
-      const messages = document.getElementById('support-messages');
-      messages?.scrollTo({
-        top: messages.scrollHeight,
-        behavior: 'smooth'
+  if (earningsBtn) {
+    earningsBtn.addEventListener('click', () => {
+      uiController.closeMenu?.();
+      uiController.showInfoSheet?.({
+        title: 'Ganancias',
+        description: 'Resumen rapido de tu jornada para revisar ingresos y rendimiento desde el celular.',
+        metrics: [
+          { label: 'Hoy', value: document.getElementById('stat-earnings')?.textContent || '$0' },
+          { label: 'Viajes', value: document.getElementById('stat-trips')?.textContent || '0' },
+          { label: 'Rating', value: document.getElementById('stat-rating')?.textContent || '5.0' }
+        ]
       });
-    }, 250);
-  });
+    });
+  }
 
-  supportInput.dataset.bound = '1';
-}
+  if (historyBtn) {
+    historyBtn.addEventListener('click', () => {
+      uiController.closeMenu?.();
+      uiController.showInfoSheet?.({
+        title: 'Historial',
+        description: 'Aca vas a poder revisar tus ultimos viajes y el estado general de tu actividad.',
+        metrics: [
+          { label: 'Viajes', value: document.getElementById('stat-trips')?.textContent || '0' },
+          { label: 'Estado', value: this._onlineStatus ? 'Online' : 'Offline' }
+        ]
+      });
+    });
+  }
 
-  if (!this._support.escHandler) {
-    this._support.escHandler = (event) => {
-      if (event.key === 'Escape') {
-        const modal = document.getElementById('support-modal');
-        if (modal && !modal.classList.contains('hidden')) {
-          this._closeSupportModal();
-        }
-      }
-    };
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+      uiController.closeMenu?.();
+      uiController.showInfoSheet?.({
+        title: 'Configuracion',
+        description: 'Desde aca vas a poder revisar preferencias basicas del chofer, conexion y estado de la cuenta.',
+        metrics: [
+          { label: 'Sesion', value: this._authUserId ? 'Activa' : 'Sin datos' },
+          { label: 'Modo', value: this._onlineStatus ? 'Disponible' : 'Desconectado' }
+        ]
+      });
+    });
+  }
 
-    document.addEventListener('keydown', this._support.escHandler);
+  if (profileBtn) {
+    profileBtn.addEventListener('click', () => {
+      uiController.closeMenu?.();
+      uiController.showInfoSheet?.({
+        title: 'Perfil',
+        description: 'Resumen del perfil del chofer cargado actualmente en la aplicacion.',
+        metrics: [
+          { label: 'Nombre', value: document.getElementById('driver-name')?.textContent || 'Conductor' },
+          { label: 'Estado', value: this._onlineStatus ? 'Online' : 'Offline' }
+        ]
+      });
+    });
   }
 
   window.addEventListener('driverAction', this._driverActionHandler);
-}
-  
-_openSupportModal() {
-  const modal = document.getElementById('support-modal');
-  const sheet = document.querySelector('#support-modal .support-sheet');
-  const input = document.getElementById('support-input');
-
-  if (!modal || !sheet) return;
-
-  modal.classList.remove('hidden', 'is-closing');
-  modal.setAttribute('aria-hidden', 'false');
-
-  document.documentElement.style.overflow = 'hidden';
-  document.body.style.overflow = 'hidden';
-  document.body.style.touchAction = 'none';
-
-  requestAnimationFrame(() => {
-    sheet.focus?.({ preventScroll: true });
-    setTimeout(() => input?.focus(), 180);
-  });
-}
-
-_closeSupportModal() {
-  const modal = document.getElementById('support-modal');
-  if (!modal) return;
-
-  modal.classList.add('is-closing');
-  modal.setAttribute('aria-hidden', 'true');
-
-  setTimeout(() => {
-    modal.classList.add('hidden');
-    modal.classList.remove('is-closing');
-
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
-    document.body.style.touchAction = '';
-  }, 280);
-}
-async _getSupportSession() {
-  const { data, error } = await supabaseService.client.auth.getSession();
-  if (error) throw error;
-
-  const session = data?.session || null;
-  if (!session?.access_token || !session?.user) {
-    throw new Error('No hay sesión activa');
-  }
-
-  return session;
-}
-
-_getSupportElements() {
-  return {
-    modal: document.getElementById('support-modal'),
-    messages: document.getElementById('support-messages'),
-    empty: document.getElementById('support-empty'),
-    input: document.getElementById('support-input'),
-    send: document.getElementById('support-send'),
-    attachment: document.getElementById('support-attachment'),
-    subtitle: document.getElementById('support-subtitle')
-  };
-}
-
-_escapeHtml(value = '') {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-_formatSupportTime(value) {
-  try {
-    if (!value) return '';
-    return new Date(value).toLocaleTimeString('es-AR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  } catch (_) {
-    return '';
-  }
-}
-
-_renderSupportMessages(messages = []) {
-  const els = this._getSupportElements();
-  if (!els.messages) return;
-
-  if (!Array.isArray(messages) || !messages.length) {
-    els.messages.innerHTML = `
-      <div class="support-empty" id="support-empty">
-        Todavía no hay mensajes. Escribí tu consulta y te respondemos desde administración.
-      </div>
-    `;
-    return;
-  }
-
-  els.messages.innerHTML = messages.map((msg) => {
-    const senderRole = String(msg?.sender_role || '').toLowerCase();
-    const bubbleClass = senderRole === 'admin' ? 'admin' : 'client';
-    const text = this._escapeHtml(msg?.mensaje || '');
-    const time = this._formatSupportTime(msg?.created_at);
-
-    return `
-      <div class="support-message ${bubbleClass}" data-message-id="${this._escapeHtml(msg?.id || '')}">
-        <div>${text.replace(/\n/g, '<br>')}</div>
-        <div class="support-meta">${time}</div>
-      </div>
-    `;
-  }).join('');
-
-  els.messages.scrollTop = els.messages.scrollHeight;
-}
-
-_appendSupportMessage(msg) {
-  const els = this._getSupportElements();
-  if (!els.messages || !msg?.id) return;
-
-  if (this._support.processedIds.has(msg.id)) return;
-  this._support.processedIds.add(msg.id);
-
-  const senderRole = String(msg?.sender_role || '').toLowerCase();
-  const bubbleClass = senderRole === 'admin' ? 'admin' : 'client';
-  const text = this._escapeHtml(msg?.mensaje || '');
-  const time = this._formatSupportTime(msg?.created_at);
-
-  const empty = els.messages.querySelector('.support-empty');
-  if (empty) empty.remove();
-
-  const wrapper = document.createElement('div');
-  wrapper.className = `support-message ${bubbleClass}`;
-  wrapper.dataset.messageId = msg.id;
-  wrapper.innerHTML = `
-    <div>${text.replace(/\n/g, '<br>')}</div>
-    <div class="support-meta">${time}</div>
-  `;
-
-  els.messages.appendChild(wrapper);
-  els.messages.scrollTop = els.messages.scrollHeight;
-}
-
-async _loadDriverSupportConversation() {
-  const els = this._getSupportElements();
-  const session = await this._getSupportSession();
-  const userId = session.user.id;
-
-  if (els.subtitle) {
-    els.subtitle.textContent = 'Chat con administración';
-  }
-
-  const { data: tickets, error: ticketError } = await supabaseService.client
-    .from('soporte_tickets')
-    .select('id, estado, asunto, created_at, last_message_at, user_id, created_by')
-    .or(`user_id.eq.${userId},created_by.eq.${userId}`)
-    .eq('rol_origen', 'driver')
-    .order('last_message_at', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (ticketError) {
-    console.error('[DriverApp] soporte ticket error:', ticketError);
-    throw new Error(ticketError.message || 'No se pudo cargar soporte');
-  }
-
-  const ticket = Array.isArray(tickets) ? tickets[0] : null;
-  this._support.ticketId = ticket?.id || null;
-
-  if (!this._support.ticketId) {
-    this._renderSupportMessages([]);
-    this._support.loaded = true;
-    return;
-  }
-
-  const { data: messages, error: messagesError } = await supabaseService.client
-    .from('soporte_mensajes')
-    .select('id, ticket_id, sender_role, mensaje, created_at')
-    .eq('ticket_id', this._support.ticketId)
-    .order('created_at', { ascending: true });
-
-  if (messagesError) {
-    console.error('[DriverApp] soporte mensajes error:', messagesError);
-    throw new Error(messagesError.message || 'No se pudieron cargar los mensajes');
-  }
-
-  this._support.processedIds.clear();
-  (messages || []).forEach((m) => {
-    if (m?.id) this._support.processedIds.add(m.id);
-  });
-
-  this._renderSupportMessages(messages || []);
-  this._support.loaded = true;
-}
-
-async _ensureDriverSupportTicket(messageText) {
-  if (this._support.ticketId) return this._support.ticketId;
-
-  const session = await this._getSupportSession();
-  const userId = session.user.id;
-  const email = session.user.email || null;
-  const currentTrip = tripManager.getCurrentTrip?.() || null;
-
-  const asunto = currentTrip?.id
-    ? `Consulta del chofer sobre viaje ${currentTrip.id}`
-    : 'Consulta general desde app chofer';
-
-  const metadata = {
-    email,
-    trip_id: currentTrip?.id || null,
-    estado_viaje: currentTrip?.estado || null,
-    origen: currentTrip?.origen_direccion || null,
-    destino: currentTrip?.destino_direccion || null,
-    ts: new Date().toISOString(),
-    source: 'driver_app'
-  };
-
-const payload = {
-  created_by: userId,
-  user_id: userId,
-  rol_origen: 'driver',
-  asunto,
-  estado: 'abierto',
-  ultimo_mensaje: messageText,
-  last_message_at: new Date().toISOString(),
-  metadata
-};
-  const { data, error } = await supabaseService.client
-    .from('soporte_tickets')
-    .insert(payload)
-    .select('id')
-    .single();
-
-  if (error || !data?.id) {
-    console.error('[DriverApp] crear ticket soporte error:', error);
-    throw new Error(error?.message || 'No se pudo crear el ticket de soporte');
-  }
-
-  this._support.ticketId = data.id;
-  return data.id;
-}
-
-async _sendSupportMessage() {
-  if (this._support.sending) return;
-
-  const els = this._getSupportElements();
-
-  const liveInput = document.getElementById('support-input');
-  const rawValue =
-    liveInput?.value ??
-    els.input?.value ??
-    '';
-
-  const text = String(rawValue).trim();
-
-  console.log('[DriverApp] support send tap', {
-    textLength: text.length,
-    sending: this._support.sending,
-    hasInput: !!els.input,
-    hasSend: !!els.send
-  });
-
-  if (!text) {
-    uiController.showToast('Escribí tu mensaje antes de enviar', 'warning');
-    return;
-  }
-
-  this._support.sending = true;
-
-  if (els.send) {
-    els.send.disabled = true;
-    els.send.setAttribute('aria-disabled', 'true');
-  }
-
-  try {
-    liveInput?.blur?.();
-
-    const session = await this._getSupportSession();
-    const userId = session.user.id;
-    const ticketId = await this._ensureDriverSupportTicket(text);
-
-    const currentTrip = tripManager.getCurrentTrip?.() || null;
-    const metadata = {
-      trip_id: currentTrip?.id || null,
-      estado_viaje: currentTrip?.estado || null,
-      ts: new Date().toISOString(),
-      source: 'driver_app'
-    };
-
-    const { error: updateTicketError } = await supabaseService.client
-      .from('soporte_tickets')
-      .update({
-        ultimo_mensaje: text,
-        last_message_at: new Date().toISOString(),
-        estado: 'abierto'
-      })
-      .eq('id', ticketId);
-
-    if (updateTicketError) {
-      console.warn('[DriverApp] update ticket soporte warning:', updateTicketError);
-    }
-
-    const { data: inserted, error: insertError } = await supabaseService.client
-      .from('soporte_mensajes')
-      .insert({
-        ticket_id: ticketId,
-        sender_user_id: userId,
-        sender_role: 'driver',
-        mensaje: text,
-        metadata
-      })
-      .select('id, ticket_id, sender_role, mensaje, created_at')
-      .single();
-
-    if (insertError || !inserted?.id) {
-      console.error('[DriverApp] enviar soporte error:', insertError);
-      throw new Error(insertError?.message || 'No se pudo enviar el mensaje');
-    }
-
-    this._appendSupportMessage(inserted);
-
-    if (els.input) {
-      els.input.value = '';
-      els.input.style.height = 'auto';
-    }
-
-    await this._subscribeSupportRealtime();
-
-    setTimeout(() => {
-      els.input?.focus?.();
-      const messages = document.getElementById('support-messages');
-      messages?.scrollTo({
-        top: messages.scrollHeight,
-        behavior: 'smooth'
-      });
-    }, 120);
-  } catch (err) {
-    console.error('[DriverApp] _sendSupportMessage:', err);
-    uiController.showToast(err?.message || 'No se pudo enviar el mensaje', 'error');
-  } finally {
-    this._support.sending = false;
-
-    if (els.send) {
-      els.send.disabled = false;
-      els.send.removeAttribute('aria-disabled');
-    }
-  }
-}
-async _subscribeSupportRealtime() {
-  if (!this._support.ticketId) return null;
-
-  try {
-    if (this._support.channel) {
-      supabaseService.client.removeChannel(this._support.channel);
-      this._support.channel = null;
-    }
-
-    this._support.channel = supabaseService.client
-      .channel(`driver-support-${this._support.ticketId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'soporte_mensajes',
-          filter: `ticket_id=eq.${this._support.ticketId}`
-        },
-        (payload) => {
-          this._handleSupportRealtimeInsert(payload);
-        }
-      )
-      .subscribe((status) => {
-        console.log('[DriverApp] support realtime status:', status);
-      });
-
-    return this._support.channel;
-  } catch (err) {
-    console.warn('[DriverApp] subscribe soporte realtime error:', err);
-    return null;
-  }
-}
-
-_handleSupportRealtimeInsert(payload) {
-  const msg = payload?.new;
-  if (!msg?.id || !msg?.ticket_id) return;
-  if (String(msg.ticket_id) !== String(this._support.ticketId)) return;
-  if (String(msg.sender_role || '').toLowerCase() === 'driver') return;
-
-  this._appendSupportMessage(msg);
-
-  const modal = document.getElementById('support-modal');
-  const isHidden = !modal || modal.classList.contains('hidden');
-
-  if (isHidden) {
-    uiController.showToast('Soporte respondió tu consulta', 'success');
-  }
 }
   async _handleDriverActionEvent(e) {
     const { action, tripId } = e.detail || {};
@@ -1520,18 +1114,6 @@ _handleSupportRealtimeInsert(payload) {
       window.removeEventListener('touchstart', this._unlockAudioOnTouch);
 
       locationTracker.stop?.();
-
-      if (this._support?.channel) {
-  try {
-    supabaseService.client.removeChannel(this._support.channel);
-  } catch (_) {}
-  this._support.channel = null;
-}
-
-if (this._support?.escHandler) {
-  document.removeEventListener('keydown', this._support.escHandler);
-  this._support.escHandler = null;
-}
       uiController.destroy?.();
 
       this._actionLock = false;
