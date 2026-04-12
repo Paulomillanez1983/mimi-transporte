@@ -16,9 +16,12 @@ const supportState = {
   selectedId: null,
   currentUserId: null,
   currentUserEmail: null,
-  realtimeChannel: null
+  realtimeChannel: null,
+  pushPromptShown: false,
+  pushEnabled: false,
+  installPromptEvent: null,
+  installPromptShown: false
 };
-
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
 
 function getEls() {
@@ -238,7 +241,72 @@ function showToast(message, type = "info") {
   }
   console.log(`[driver-support.${type}]`, message);
 }
+function canAskForNotifications() {
+  return "Notification" in window && "serviceWorker" in navigator;
+}
 
+async function ensureSupportPushPermissionOnOpen() {
+  if (supportState.pushEnabled) return true;
+  if (supportState.pushPromptShown) return Notification.permission === "granted";
+  if (!canAskForNotifications()) return false;
+
+  supportState.pushPromptShown = true;
+
+  try {
+    let permission = Notification.permission;
+
+    if (permission === "default") {
+      permission = await Notification.requestPermission();
+    }
+
+    if (permission !== "granted") {
+      console.warn("[driver-support] permiso de notificaciones no concedido:", permission);
+      showToast("No activaste las notificaciones de soporte", "warning");
+      return false;
+    }
+
+    await initSupportPushFCM();
+    supportState.pushEnabled = true;
+    showToast("Notificaciones de soporte activadas", "success");
+    return true;
+  } catch (err) {
+    console.warn("[driver-support] error activando notificaciones:", err);
+    showToast("No se pudieron activar las notificaciones", "error");
+    return false;
+  }
+}
+
+function bindInstallPrompt() {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    supportState.installPromptEvent = event;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    supportState.installPromptEvent = null;
+    supportState.installPromptShown = true;
+    showToast("App instalada correctamente", "success");
+  });
+}
+
+async function maybeShowInstallPrompt() {
+  if (supportState.installPromptShown) return false;
+
+  const deferredPrompt = supportState.installPromptEvent;
+  if (!deferredPrompt) return false;
+
+  supportState.installPromptShown = true;
+
+  try {
+    await deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    supportState.installPromptEvent = null;
+    return true;
+  } catch (err) {
+    console.warn("[driver-support] install prompt error:", err);
+    return false;
+  }
+}
 function withTimeout(promise, timeoutMs = SUPPORT_REQUEST_TIMEOUT_MS, message = "Tiempo de espera agotado") {
   return Promise.race([
     promise,
@@ -932,8 +1000,10 @@ export async function openDriverSupportPanel() {
   await loadSupportConversations({ preserveSelection: true, silent: false });
   await subscribeRealtime().catch(() => null);
   startPolling();
-}
 
+  await ensureSupportPushPermissionOnOpen().catch(() => null);
+  await maybeShowInstallPrompt().catch(() => null);
+}
 export function closeDriverSupportPanel() {
   const { overlay, panel } = getEls();
   if (!overlay || !panel) return;
@@ -1055,7 +1125,7 @@ export function initDriverSupport() {
     }
   });
 
-  handleResize();
-  loadSupportConversations({ preserveSelection: true, silent: true }).catch(() => null);
-  initSupportPushFCM().catch(() => null);
-}
+bindInstallPrompt();
+
+handleResize();
+loadSupportConversations({ preserveSelection: true, silent: true }).catch(() => null);
