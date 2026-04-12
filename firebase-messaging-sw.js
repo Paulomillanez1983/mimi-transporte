@@ -54,42 +54,78 @@ function buildNotificationFromPayload(payload) {
 
   const url = normalizeUrl(
     data.url ||
+    data.link ||
     data.click_action ||
     notification.click_action ||
+    notification.link ||
     DEFAULT_URL
   );
 
   const tag = safeString(
-    data.viaje_id || data.trip_id || data.tag,
+    notification.tag ||
+    data.tag ||
+    data.ticket_id ||
+    data.viaje_id ||
+    data.trip_id,
     DEFAULT_TAG
+  );
+
+  const icon = safeString(
+    notification.icon || data.icon,
+    DEFAULT_ICON
+  );
+
+  const badge = safeString(
+    notification.badge || data.badge,
+    DEFAULT_BADGE
   );
 
   return {
     title,
     options: {
       body,
-      icon: safeString(data.icon, DEFAULT_ICON),
-      badge: safeString(data.badge, DEFAULT_BADGE),
+      icon,
+      badge,
       tag,
+      requireInteraction: true,
+      renotify: true,
       data: {
         ...data,
-        url
-      },
-      requireInteraction: true,
-      renotify: true
+        url,
+        tag,
+        icon,
+        badge
+      }
     }
   };
 }
 
+async function showPayloadNotification(payload) {
+  const { title, options } = buildNotificationFromPayload(payload);
+  await self.registration.showNotification(title, options);
+}
+
 messaging.onBackgroundMessage(async (payload) => {
   try {
-    console.log('[firebase-messaging-sw.js] Background:', payload);
-
-    const { title, options } = buildNotificationFromPayload(payload);
-    await self.registration.showNotification(title, options);
+    console.log('[firebase-messaging-sw.js] onBackgroundMessage:', payload);
+    await showPayloadNotification(payload);
   } catch (err) {
-    console.error('[firebase-messaging-sw.js] Error showing notification:', err);
+    console.error('[firebase-messaging-sw.js] Error in onBackgroundMessage:', err);
   }
+});
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  event.waitUntil((async () => {
+    try {
+      const payload = event.data.json();
+      console.log('[firebase-messaging-sw.js] push fallback:', payload);
+      await showPayloadNotification(payload);
+    } catch (err) {
+      console.error('[firebase-messaging-sw.js] Error in push fallback:', err);
+    }
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -97,33 +133,32 @@ self.addEventListener('notificationclick', (event) => {
 
   const targetUrl = normalizeUrl(event.notification?.data?.url || DEFAULT_URL);
 
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        try {
-          const clientUrl = new URL(client.url);
+  event.waitUntil((async () => {
+    const clientList = await clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    });
 
-          if (
-            clientUrl.pathname.startsWith(APP_BASE_PATH) &&
-            'focus' in client
-          ) {
-            return client.focus().then(() => {
-              if ('navigate' in client) {
-                return client.navigate(targetUrl);
-              }
-              return client;
-            });
+    for (const client of clientList) {
+      try {
+        const clientUrl = new URL(client.url);
+
+        if (clientUrl.pathname.startsWith(APP_BASE_PATH) && 'focus' in client) {
+          await client.focus();
+
+          if ('navigate' in client) {
+            await client.navigate(targetUrl);
           }
-        } catch (err) {
-          console.warn('[firebase-messaging-sw.js] Error focusing existing client:', err);
+
+          return;
         }
+      } catch (err) {
+        console.warn('[firebase-messaging-sw.js] Error focusing existing client:', err);
       }
+    }
 
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
-
-      return Promise.resolve();
-    })
-  );
+    if (clients.openWindow) {
+      await clients.openWindow(targetUrl);
+    }
+  })());
 });
