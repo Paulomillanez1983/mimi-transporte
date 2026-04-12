@@ -3845,3 +3845,47 @@ header.is-condensed h1 {
     padding-top: 12px !important;
   }
 }
+/* =========================================
+   SUPPORT THREAD SCROLL PRO
+   ========================================= */
+
+/* CONTENEDOR GENERAL */
+.support-thread,
+.support-thread-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* HEADER */
+.support-thread-header {
+  flex: 0 0 auto;
+  z-index: 2;
+}
+
+/* MENSAJES (SCROLL REAL) */
+.support-messages {
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  overflow-y: auto;
+  padding-bottom: 12px;
+  scroll-behavior: smooth;
+}
+
+/* INPUT FIJO ABAJO */
+.support-composer {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  background: var(--panel);
+  z-index: 3;
+}
+@media (max-width: 720px) {
+  .support-messages {
+    padding-bottom: 80px; /* espacio para el input */
+  }
+}
+.support-messages {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
