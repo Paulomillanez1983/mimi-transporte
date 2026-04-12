@@ -559,13 +559,13 @@ function renderSelectedConversation() {
   if (!els.threadEmpty || !els.threadPanel || !els.messages) return;
 
   if (!current) {
+    supportState.mobileThreadOpen = false;
     els.threadEmpty.hidden = false;
     els.threadPanel.hidden = true;
     updateSupportActionState();
     syncSupportLayout();
     return;
   }
-
   els.threadEmpty.hidden = true;
   els.threadPanel.hidden = false;
 
