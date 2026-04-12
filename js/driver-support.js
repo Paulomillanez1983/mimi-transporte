@@ -149,21 +149,19 @@ function statusClass(status) {
 function normalizeRole(role) {
   const normalized = normalizeText(role);
   if (normalized === "admin") return "admin";
-  if (normalized === "driver" || normalized === "chofer") return "chofer";
-  return "cliente";
+  if (normalized === "driver" || normalized === "chofer") return "driver";
+  return "client";
 }
-
 function roleLabel(role) {
   switch (normalizeRole(role)) {
     case "admin":
       return "Admin";
-    case "chofer":
+    case "driver":
       return "Chofer";
     default:
       return "Cliente";
   }
 }
-
 function getMessageText(msg) {
   return String(msg?.text || msg?.mensaje || msg?.body || "").trim();
 }
@@ -188,14 +186,13 @@ function conversationName(item) {
 
 function conversationSecondary(item) {
   const parts = [
-    roleLabel(item?.role || item?.rol_origen || "chofer"),
+    roleLabel(item?.role || item?.rol_origen || "driver"),
     statusLabel(item?.status || item?.estado || "abierto"),
     String(item?.subject || item?.asunto || "").trim()
   ].filter(Boolean);
 
   return parts.join(" · ");
 }
-
 function normalizeConversation(item) {
   if (!item || typeof item !== "object") return null;
   const messages = Array.isArray(item.messages) ? item.messages : [];
@@ -205,7 +202,7 @@ function normalizeConversation(item) {
     ...item,
     id: String(item.id || item.ticket_id || item.conversation_id || ""),
     status: normalizeStatus(item.status || item.estado),
-    role: normalizeRole(item.role || item.rol_origen || "chofer"),
+    role: normalizeRole(item.role || item.rol_origen || "driver"),
     name: conversationName(item),
     subject: String(item.subject || item.asunto || "").trim(),
     unread_count: Number(item.unread_count || item.unreadCount || 0),
@@ -218,11 +215,11 @@ function normalizeConversation(item) {
 function isDriverOwnedConversation(item) {
   const currentUserId = String(supportState.currentUserId || "").trim();
   const currentUserEmail = normalizeText(supportState.currentUserEmail || "");
-  const conversationRole = normalizeRole(item?.role || item?.rol_origen || item?.metadata?.role || "chofer");
+  const conversationRole = normalizeRole(item?.role || item?.rol_origen || item?.metadata?.role || "driver");
   const ownerId = String(item?.user_id || item?.created_by || item?.owner_id || "").trim();
   const email = normalizeText(item?.email || item?.user_email || item?.metadata?.email || "");
 
-  if (conversationRole !== "chofer") return false;
+  if (conversationRole !== "driver") return false;
 
   if (currentUserId && ownerId && ownerId === currentUserId) return true;
   if (currentUserEmail && email && email === currentUserEmail) return true;
@@ -449,16 +446,15 @@ function renderSelectedConversation() {
 
   if (!threadEmpty || !threadPanel || !messages) return;
 
-  if (!current) {
-    threadEmpty.hidden = true;
-    threadPanel.hidden = false;
-
-    if (threadAvatar) threadAvatar.textContent = "M";
-    if (threadName) threadName.textContent = "Soporte MIMI";
-    if (threadSubmeta) {
-      threadSubmeta.textContent = "Te respondemos por este chat";
-    }
-
+if (!current) {
+  threadEmpty.hidden = false;
+  threadPanel.hidden = true;
+  messages.innerHTML = "";
+  updateBadge();
+  setSendBusy(false);
+  syncLayout();
+  return;
+}
     messages.innerHTML = `
       <div class="support-message-row incoming">
         <div class="support-message-bubble">
@@ -497,7 +493,7 @@ function renderSelectedConversation() {
   const msgList = Array.isArray(current.messages) ? current.messages : [];
   messages.innerHTML = msgList.length
     ? msgList.map((msg) => {
-        const role = normalizeRole(msg.sender_role || msg.role || "chofer");
+        const role = normalizeRole(msg.sender_role || msg.role || "driver");
         const isIncoming = role === "admin";
         const attachments = normalizeAttachments(msg);
 
@@ -606,23 +602,24 @@ async function createConversationIfNeeded(initialMessage) {
     : "Consulta general chofer";
 
   const { data, error } = await supabaseService.client
-    .from("soporte_tickets")
-    .insert({
-      created_by: user.id,
-      user_id: user.id,
-      rol_origen: "chofer",
-      asunto: subject,
-      canal: "in_app",
-      categoria: "chofer",
-      prioridad: "normal",
-      estado: "abierto",
-      ultimo_mensaje: initialMessage || "",
-      last_message_at: new Date().toISOString(),
-      metadata: {
-        email: user.email || null,
-        source: "chofer-panel"
-      }
-    })
+.from("soporte_tickets")
+.insert({
+  created_by: user.id,
+  user_id: user.id,
+  rol_origen: "driver",
+  asunto: subject,
+  canal: "in_app",
+  categoria: "driver",
+  prioridad: "normal",
+  estado: "abierto",
+  ultimo_mensaje: initialMessage || "",
+  last_message_at: new Date().toISOString(),
+  metadata: {
+    email: user.email || null,
+    role: "driver",
+    source: "chofer-panel"
+  }
+})
     .select("*")
     .single();
 
@@ -685,7 +682,7 @@ async function sendSupportReply() {
     const messagePayload = {
       ticket_id: conversationId,
       sender_user_id: session.user.id,
-      sender_role: "chofer",
+      sender_role: "driver",
       mensaje: previousText || "",
       leido: false,
       mensaje_tipo: uploadedAttachments.length
@@ -770,7 +767,7 @@ async function fallbackLoadConversations(preferredId = null) {
   const { data: tickets, error } = await supabaseService.client
     .from("soporte_tickets")
     .select("*")
-    .eq("rol_origen", "chofer")
+    .in("rol_origen", ["driver", "chofer"])
     .or(`user_id.eq.${user.id},created_by.eq.${user.id}`)
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
@@ -979,7 +976,7 @@ function handleResize() {
 }
 
 function bindPushHooks() {
-  window.__mimiSupportPushRole = "chofer";
+  window.__mimiSupportPushRole = "driver";
 
   window.obtenerSesionCliente = async function obtenerSesionCliente(forceRefresh = false) {
     return getSession(forceRefresh);
