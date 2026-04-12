@@ -22,11 +22,9 @@
  <meta name="apple-mobile-web-app-title" content="MIMI Driver">
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚐</text></svg>">
-<link rel="manifest" href="/mimi-transporte/manifest.json">
-  <!-- PWA -->
-  <link rel="apple-touch-icon" href="/mimi-transporte/assets/icons/icon-192x192.png" />
-  <link rel="manifest" href="./manifest.json" />
-
+<link rel="manifest" href="/mimi-transporte/manifest.json" />
+<link rel="apple-touch-icon" href="/mimi-transporte/assets/icons/icon-192x192.png" />
+  
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -397,50 +395,52 @@
 <div class="support-overlay" id="supportOverlay" hidden>
   <div class="support-overlay-backdrop" id="supportOverlayBackdrop"></div>
 
-  <section class="support-panel" id="supportPanel" aria-hidden="true">
+<section class="support-panel" id="supportPanel" aria-hidden="true">
+  <div class="support-panel-topbar">
+    <div class="support-panel-topbar-copy">
+      <h2>Soporte MIMI</h2>
+      <p>Escribinos por acá y te respondemos en el mismo chat.</p>
+    </div>
 
-    <div class="support-panel-topbar">
-  <div class="support-panel-topbar-copy">
-    <h2>Soporte MIMI</h2>
-    <p>Escribinos por acá y te respondemos en el mismo chat.</p>
+    <div class="support-panel-topbar-actions">
+      <button
+        class="support-utility-btn"
+        id="supportEnableAlertsBtn"
+        type="button"
+        aria-label="Activar alertas de soporte"
+      >
+        <span class="support-utility-btn-icon" aria-hidden="true">🔔</span>
+        <span class="support-utility-btn-text">Activar alertas</span>
+      </button>
+
+      <button
+        class="support-utility-btn"
+        id="supportInstallAppBtn"
+        type="button"
+        aria-label="Instalar app"
+        hidden
+      >
+        <span class="support-utility-btn-icon" aria-hidden="true">⬇️</span>
+        <span class="support-utility-btn-text">Instalar app</span>
+      </button>
+
+      <span class="support-topbar-badge" id="supportAlertsBadge" hidden>
+        Alertas activas
+      </span>
+
+      <button
+        class="support-close-btn"
+        id="supportCloseBtn"
+        type="button"
+        aria-label="Cerrar soporte"
+      >
+        Cerrar
+      </button>
+    </div>
   </div>
 
-<div class="support-panel-topbar-actions">
-  <button
-    class="support-utility-btn"
-    id="supportEnableAlertsBtn"
-    type="button"
-    aria-label="Activar alertas de soporte"
-  >
-    <span class="support-utility-btn-icon" aria-hidden="true">🔔</span>
-    <span class="support-utility-btn-text">Activar alertas</span>
-  </button>
-
-  <button
-    class="support-utility-btn"
-    id="supportInstallAppBtn"
-    type="button"
-    aria-label="Instalar app"
-    hidden
-  >
-    <span class="support-utility-btn-icon" aria-hidden="true">⬇️</span>
-    <span class="support-utility-btn-text">Instalar app</span>
-  </button>
-
-  <span class="support-topbar-badge" id="supportAlertsBadge" hidden>
-    Alertas activas
-  </span>
-
-  <button
-    class="support-close-btn"
-    id="supportCloseBtn"
-    type="button"
-    aria-label="Cerrar soporte"
-  >
-    Cerrar
-  </button>
-</div>
-      <div class="support-shell" id="supportShell">
+  <div class="support-shell" id="supportShell">
+    
       <aside class="support-sidebar" id="supportSidebar">
 <div class="support-toolbar">
   <div class="support-toolbar-top">
@@ -512,10 +512,6 @@
 
     <div class="support-setup-status" id="supportSetupStatus">
       Las alertas están desactivadas.
-    </div>
-
-    <div class="support-setup-status success" id="supportSetupStatusOk" hidden>
-      Ya tenés activadas las alertas de soporte.
     </div>
   </div>
 </div>
