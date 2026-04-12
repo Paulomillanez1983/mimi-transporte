@@ -314,7 +314,7 @@ function syncLayout() {
   if (!shell) return;
 
   const mobile = isMobileSupport();
-  const threadOpen = mobile && supportState.mobileThreadOpen && !!supportState.selectedId;
+  const threadOpen = mobile && (supportState.mobileThreadOpen || !supportState.filtered.length);
 
   shell.classList.toggle("is-mobile-support", mobile);
   shell.classList.toggle("is-thread-open", threadOpen);
@@ -356,7 +356,7 @@ function renderConversationList() {
   if (!supportState.filtered.length) {
     list.innerHTML = `
       <div class="support-empty-state">
-        No hay conversaciones todavia. Envia tu primer mensaje y abrimos una nueva.
+        No hay chats todavia. Escribinos y abrimos la conversacion automaticamente.
       </div>
     `;
     return;
@@ -405,9 +405,32 @@ function renderSelectedConversation() {
   if (!threadEmpty || !threadPanel || !messages) return;
 
   if (!current) {
-    threadEmpty.hidden = false;
-    threadPanel.hidden = true;
+    threadEmpty.hidden = true;
+    threadPanel.hidden = false;
+
+    if (threadAvatar) threadAvatar.textContent = "M";
+    if (threadName) threadName.textContent = "Soporte MIMI";
+    if (threadSubmeta) {
+      threadSubmeta.textContent = "Te respondemos por este chat";
+    }
+
+    messages.innerHTML = `
+      <div class="support-message-row incoming">
+        <div class="support-message-bubble">
+          <div>Hola. Somos el equipo de soporte de MIMI.</div>
+          <div class="support-message-meta">Soporte · ahora</div>
+        </div>
+      </div>
+      <div class="support-message-row incoming">
+        <div class="support-message-bubble">
+          <div>Contanos tu consulta y te respondemos por aca, como en un chat.</div>
+          <div class="support-message-meta">Soporte · ahora</div>
+        </div>
+      </div>
+    `;
+
     syncLayout();
+    scrollMessagesToBottom(false);
     return;
   }
 
@@ -428,7 +451,7 @@ function renderSelectedConversation() {
   messages.innerHTML = msgList.length
     ? msgList.map((msg) => {
         const role = normalizeRole(msg.sender_role || msg.role || "chofer");
-        const isAdmin = role === "admin";
+        const isIncoming = role === "admin";
         const attachments = normalizeAttachments(msg);
 
         const attachmentsHtml = attachments.length
@@ -448,7 +471,7 @@ function renderSelectedConversation() {
           : "";
 
         return `
-          <div class="support-message-row ${isAdmin ? "admin" : "user"}">
+          <div class="support-message-row ${isIncoming ? "incoming" : "outgoing"}">
             <div class="support-message-bubble">
               ${getMessageText(msg) ? `<div>${escapeHtml(getMessageText(msg))}</div>` : ""}
               ${attachmentsHtml}
