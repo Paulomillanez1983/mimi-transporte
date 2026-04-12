@@ -732,8 +732,12 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 .hero-chart-card {
-  border-radius: 18px;
-  padding: 12px;
+  border-radius: 20px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 98%, white 2%), color-mix(in srgb, var(--panel-2) 98%, transparent));
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
 .hero-chart-head {
@@ -744,42 +748,8 @@ textarea {
   margin-bottom: 14px;
 }
 
-.hero-chart-head h3 {
-  margin: 0 0 6px;
-  letter-spacing: -0.02em;
-}
-
-.hero-chart-head p,
-.map-hint,
-.section-head p,
-.ops-card-head p,
-.chart-footer,
-.ai-help,
-.score-help,
-.modal-subtitle {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.live-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: var(--radius-pill);
-  background: rgba(34, 197, 94, 0.10);
-  border: 1px solid rgba(34, 197, 94, 0.18);
-  color: var(--success);
-  font-weight: 800;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 .review-chart {
-  min-height: 240px;
+  min-height: 230px;
 }
 
 .mini-bars {
@@ -787,7 +757,7 @@ textarea {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   align-items: end;
-  min-height: 180px;
+  min-height: 176px;
 }
 
 .mini-bar-col {
@@ -801,31 +771,126 @@ textarea {
 .mini-bar-track {
   width: 100%;
   max-width: 72px;
-  height: 132px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--panel-2) 92%, transparent);
+  height: 136px;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-2) 96%, transparent), color-mix(in srgb, var(--panel-3) 96%, transparent));
   display: flex;
   align-items: flex-end;
   padding: 6px;
   border: 1px solid var(--border);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
 }
 
 .mini-bar {
   width: 100%;
-  border-radius: var(--radius-pill);
+  border-radius: 999px;
   min-height: 12px;
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.18);
 }
 
-.bar-pending { background: #60a5fa; }
-.bar-approved { background: #4ade80; }
-.bar-rejected { background: #f87171; }
-.bar-blocked { background: #fbbf24; }
+.bar-pending { background: linear-gradient(180deg, #60a5fa, #3b82f6); }
+.bar-approved { background: linear-gradient(180deg, #4ade80, #22c55e); }
+.bar-rejected { background: linear-gradient(180deg, #f87171, #ef4444); }
+.bar-blocked { background: linear-gradient(180deg, #fbbf24, #f59e0b); }
+
+.mini-bar-col strong {
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-bar-col span {
+  font-size: 13px;
+  line-height: 1.2;
+  color: var(--muted);
+  text-align: center;
+  text-wrap: balance;
+}
 
 .chart-footer {
-  margin-top: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
 }
+  .hero-chart-card {
+    padding: 12px;
+    border-radius: 18px;
+  }
 
+  .hero-chart-head {
+    margin-bottom: 10px;
+  }
 
+  .hero-chart-head h3 {
+    font-size: 18px;
+    line-height: 1.05;
+  }
+
+  .hero-chart-head p {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .review-chart {
+    min-height: auto;
+  }
+
+  .mini-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: auto;
+  }
+
+  .mini-bar-col {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mini-bar-track {
+    order: 2;
+    width: 100%;
+    max-width: none;
+    height: 14px;
+    min-height: 14px;
+    padding: 2px;
+    border-radius: 999px;
+  }
+
+  .mini-bar {
+    height: 100% !important;
+    min-height: 0;
+    width: var(--bar-width, 0%);
+    border-radius: 999px;
+  }
+
+  .mini-bar-col strong {
+    order: 3;
+    font-size: 20px;
+    text-align: right;
+  }
+
+  .mini-bar-col span {
+    order: 1;
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chart-footer {
+    margin-top: 12px;
+    padding-top: 10px;
+    font-size: 12px;
+  }
+}
 /* =========================================================
    MAP
    ========================================================= */
@@ -1119,7 +1184,6 @@ textarea {
   transform: scale(.99);
   opacity: .94;
 }
-@media (max-width: 560px) {
   .hero-stat {
     padding: 9px 7px;
     border-radius: 12px;
