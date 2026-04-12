@@ -2500,65 +2500,7 @@ body.modal-open {
     opacity: 1;
   }
 
-  .support-sidebar,
-  .support-thread,
-  .support-thread-panel {
-    min-height: 240px;
-  }
 
-  .support-thread-empty {
-    min-height: 180px;
-    align-content: center;
-    justify-items: center;
-    gap: 8px;
-    padding: 14px 12px;
-  }
-
-  .support-thread-empty-icon {
-    font-size: 1.7rem;
-    margin-bottom: 2px;
-  }
-
-  .support-thread-header {
-    gap: 10px;
-    padding: 10px 12px;
-  }
-
-  .support-messages {
-    padding: 10px 12px;
-    gap: 8px;
-    min-height: 140px;
-  }
-
-  .support-message-bubble {
-    width: fit-content;
-    max-width: min(72%, 320px);
-    padding: 6px 8px;
-    border-radius: 13px;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
-    line-height: 1.28;
-  }
-
-  .support-message-row.admin .support-message-bubble,
-  .support-message-row.user .support-message-bubble {
-    display: inline-block;
-  }
-
-  .support-message-meta {
-    margin-top: 3px;
-    font-size: 0.62rem;
-    opacity: 0.72;
-  }
-
-  .support-composer {
-    padding: 10px 12px;
-  }
-
-  .support-reply-input {
-    min-height: 50px;
-    max-height: 120px;
-  }
-}
 
 @media (max-width: 560px) {
   .admin-mobile-dock {
