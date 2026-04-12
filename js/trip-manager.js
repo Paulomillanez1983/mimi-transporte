@@ -76,7 +76,7 @@ class TripManager {
         if (user?.id) {
           const { data: chofer, error } = await supabaseService.client
             .from('choferes')
-            .select('id_uuid')
+            .select('user_id')
             .eq('user_id', user.id)
             .maybeSingle();
 
@@ -84,8 +84,8 @@ class TripManager {
             console.error('[TripManager] Error buscando chofer por user_id:', error);
           }
 
-          if (chofer?.id_uuid) {
-            driverId = chofer.id_uuid;
+          if (chofer?.user_id) {
+            driverId = chofer.user_id;
           }
         }
       }
@@ -126,7 +126,7 @@ class TripManager {
         const { data: activeTrip, error: tripError } = await supabaseService.client
           .from('viajes')
           .select('*')
-          .eq('chofer_id_uuid', driverId)
+          .eq('chofer_user_id', driverId)
           .in('estado', ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'])
           .order('updated_at', { ascending: false })
           .limit(1)
@@ -429,7 +429,7 @@ async rejectOffer(offerId) {
           event: '*',
           schema: 'public',
           table: 'viajes',
-          filter: `chofer_id_uuid=eq.${driverId}`
+          filter: `chofer_user_id=eq.${driverId}`
         },
         (payload) => {
           console.log('[TripManager] Trip realtime payload:', payload);
@@ -501,7 +501,7 @@ async rejectOffer(offerId) {
     const { error } = await supabaseService.client
       .from('choferes')
       .update(payload)
-      .eq('id_uuid', driverId);
+      .eq('user_id', driverId);
 
     if (error) {
       console.error('[TripManager] setDriverAvailability error:', error);
@@ -634,7 +634,7 @@ async startTrip(tripId) {
       updated_at: now
     })
     .eq('id', tripId)
-    .eq('chofer_id_uuid', driverId);
+    .eq('chofer_user_id', driverId);
 
   if (error) {
     console.error('[TripManager] Start trip error:', error);
@@ -648,7 +648,7 @@ async startTrip(tripId) {
       disponible: false,
       last_seen_at: now
     })
-    .eq('id_uuid', driverId);
+    .eq('user_id', driverId);
 
   return { success: true };
 }
@@ -666,7 +666,7 @@ async finishTrip(tripId) {
       updated_at: now
     })
     .eq('id', tripId)
-    .eq('chofer_id_uuid', driverId);
+    .eq('chofer_user_id', driverId);
 
   if (error) {
     console.error('[TripManager] Finish trip error:', error);
@@ -680,7 +680,7 @@ async finishTrip(tripId) {
       disponible: true,
       last_seen_at: now
     })
-    .eq('id_uuid', driverId);
+    .eq('user_id', driverId);
 
   return { success: true };
 }
@@ -703,7 +703,7 @@ async finishTrip(tripId) {
         updated_at: now
       })
       .eq('id', tripId)
-      .eq('chofer_id_uuid', driverId);
+      .eq('chofer_user_id', driverId);
 
     if (error) {
       console.error('[TripManager] Cancel trip error:', error);
@@ -716,7 +716,7 @@ async finishTrip(tripId) {
         disponible: true,
         last_seen_at: now
       })
-      .eq('id_uuid', driverId);
+      .eq('user_id', driverId);
 
     this.currentTrip = null;
     this.pendingOffer = null;
