@@ -1129,3 +1129,4 @@ bindInstallPrompt();
 
 handleResize();
 loadSupportConversations({ preserveSelection: true, silent: true }).catch(() => null);
+}
