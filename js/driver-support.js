@@ -18,6 +18,9 @@ const supportState = {
   realtimeChannel: null
 };
 
+const SESSION_TIMEOUT_MS = 8000;
+const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
+
 function getEls() {
   return {
     overlay: document.getElementById("supportOverlay"),
@@ -224,18 +227,45 @@ function showToast(message, type = "info") {
   console.log(`[driver-support.${type}]`, message);
 }
 
+function withTimeout(promise, timeoutMs = SUPPORT_REQUEST_TIMEOUT_MS, message = "Tiempo de espera agotado") {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    })
+  ]);
+}
+
 async function getSession(forceRefresh = false) {
   const ready = await supabaseService.init();
   if (!ready || !supabaseService.client) {
     throw new Error("No se pudo inicializar Supabase");
   }
 
-  if (forceRefresh) {
-    await supabaseService.client.auth.refreshSession().catch(() => null);
+  let session = null;
+
+  try {
+    const { data } = await withTimeout(supabaseService.client.auth.getSession(), SESSION_TIMEOUT_MS);
+    session = data?.session || null;
+  } catch (err) {
+    console.warn("[driver-support.getSession] getSession warning:", err);
   }
 
-  const { data } = await supabaseService.client.auth.getSession();
-  return data?.session || null;
+  if (forceRefresh && session?.refresh_token) {
+    try {
+      const { data } = await withTimeout(
+        supabaseService.client.auth.refreshSession({
+          refresh_token: session.refresh_token
+        }),
+        SESSION_TIMEOUT_MS
+      );
+      session = data?.session || session;
+    } catch (err) {
+      console.warn("[driver-support.getSession] refresh warning:", err);
+    }
+  }
+
+  return session;
 }
 
 async function getAccessToken(forceRefresh = false) {
@@ -429,6 +459,8 @@ function renderSelectedConversation() {
       </div>
     `;
 
+    updateBadge();
+    setSendBusy(false);
     syncLayout();
     scrollMessagesToBottom(false);
     return;
@@ -583,6 +615,21 @@ async function createConversationIfNeeded(initialMessage) {
     throw new Error(error?.message || "No se pudo crear la conversacion");
   }
 
+  const normalized = normalizeConversation({
+    ...data,
+    id: data.id,
+    status: data.estado,
+    subject: data.asunto,
+    last_message: data.ultimo_mensaje,
+    messages: []
+  });
+
+  if (normalized) {
+    supportState.conversations = [normalized, ...supportState.conversations.filter((item) => String(item.id) !== String(normalized.id))];
+    applyFilters();
+    supportState.selectedId = String(normalized.id);
+  }
+
   return String(data.id);
 }
 
@@ -603,13 +650,21 @@ async function sendSupportReply() {
   try {
     setSendBusy(true);
 
-    const session = await getSession(true);
+    const session = await getSession(false);
     if (!session?.user?.id) {
       throw new Error("No hay sesion activa");
     }
 
-    const conversationId = await createConversationIfNeeded(previousText);
-    const uploadedAttachments = await uploadAttachments(conversationId, files);
+    const conversationId = await withTimeout(
+      createConversationIfNeeded(previousText),
+      SUPPORT_REQUEST_TIMEOUT_MS,
+      "No se pudo abrir el chat de soporte"
+    );
+    const uploadedAttachments = await withTimeout(
+      uploadAttachments(conversationId, files),
+      SUPPORT_REQUEST_TIMEOUT_MS,
+      "No se pudieron subir los adjuntos"
+    );
 
     const nowIso = new Date().toISOString();
     const messagePayload = {
@@ -629,25 +684,33 @@ async function sendSupportReply() {
       }
     };
 
-    const { error: ticketUpdateError } = await supabaseService.client
-      .from("soporte_tickets")
-      .update({
-        ultimo_mensaje: previousText || (uploadedAttachments.length ? "Adjunto enviado" : ""),
-        last_message_at: nowIso,
-        estado: "esperando_usuario",
-        updated_at: nowIso
-      })
-      .eq("id", conversationId);
+    const { error: ticketUpdateError } = await withTimeout(
+      supabaseService.client
+        .from("soporte_tickets")
+        .update({
+          ultimo_mensaje: previousText || (uploadedAttachments.length ? "Adjunto enviado" : ""),
+          last_message_at: nowIso,
+          estado: "esperando_usuario",
+          updated_at: nowIso
+        })
+        .eq("id", conversationId),
+      SUPPORT_REQUEST_TIMEOUT_MS,
+      "No se pudo actualizar la conversacion"
+    );
 
     if (ticketUpdateError) {
       console.warn("[driver-support.sendSupportReply] ticket update warning:", ticketUpdateError);
     }
 
-    const { data: insertedMessage, error: messageError } = await supabaseService.client
-      .from("soporte_mensajes")
-      .insert(messagePayload)
-      .select("*")
-      .single();
+    const { data: insertedMessage, error: messageError } = await withTimeout(
+      supabaseService.client
+        .from("soporte_mensajes")
+        .insert(messagePayload)
+        .select("*")
+        .single(),
+      SUPPORT_REQUEST_TIMEOUT_MS,
+      "No se pudo enviar el mensaje"
+    );
 
     if (messageError || !insertedMessage?.id) {
       throw new Error(messageError?.message || "No se pudo enviar el mensaje");
@@ -660,6 +723,16 @@ async function sendSupportReply() {
 
     if (attachmentInput) {
       attachmentInput.value = "";
+    }
+
+    const currentConversation = supportState.conversations.find((item) => String(item.id) === String(conversationId));
+    if (currentConversation) {
+      currentConversation.status = "esperando_usuario";
+      currentConversation.updated_at = nowIso;
+      currentConversation.preview_text = previousText || "Adjunto enviado";
+      currentConversation.messages = Array.isArray(currentConversation.messages)
+        ? [...currentConversation.messages, insertedMessage]
+        : [insertedMessage];
     }
 
     await loadSupportConversations({ preserveSelection: true, silent: true, preferredId: conversationId });
