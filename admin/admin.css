@@ -3780,4 +3780,68 @@ header.is-condensed h1 {
     padding-top: 12px !important;
   }
 }
+/* MOBILE */
+@media (max-width: 720px) {
+  .support-shell.is-mobile-support .support-thread,
+  .support-shell.is-mobile-support .support-thread-panel {
+    min-height: calc(100dvh - 180px) !important;
+    max-height: calc(100dvh - 180px) !important;
+    height: calc(100dvh - 180px) !important;
+  }
 
+  .support-shell.is-mobile-support .support-thread-empty {
+    min-height: auto !important;
+    max-height: none !important;
+    height: auto !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    text-align: center !important;
+
+    padding: 14px 16px 8px !important;
+    gap: 6px !important;
+  }
+
+  .support-shell.is-mobile-support .support-thread-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .support-shell.is-mobile-support .support-thread-header {
+    flex: 0 0 auto;
+  }
+
+  .support-shell.is-mobile-support .support-messages {
+    flex: 1 1 auto;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow-y: auto;
+  }
+
+  .support-shell.is-mobile-support .support-composer {
+    flex: 0 0 auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+  }
+
+  .support-thread-empty-icon {
+    margin-bottom: 4px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .support-shell.is-mobile-support .support-thread,
+  .support-shell.is-mobile-support .support-thread-panel {
+    min-height: calc(100dvh - 100px) !important;
+    max-height: calc(100dvh - 100px) !important;
+    height: calc(100dvh - 100px) !important;
+  }
+
+  .support-shell.is-mobile-support .support-thread-empty {
+    padding-top: 12px !important;
+  }
+}
