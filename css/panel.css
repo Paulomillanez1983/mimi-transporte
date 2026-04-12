@@ -2796,15 +2796,14 @@ body.support-open {
 }
 
 .support-send-btn,
-.support-thread-btn,
-.support-head-btn {
+.support-thread-btn {
   width: 100%;
 }
+
 .support-smart-actions {
   flex-direction: column;
   align-items: stretch;
 }
-
 .support-smart-btn,
 .support-smart-badge {
   width: 100%;
