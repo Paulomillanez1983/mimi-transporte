@@ -31,10 +31,10 @@
   --pending-soft: rgba(37, 99, 235, 0.12);
 
   --shadow-xs: 0 2px 8px rgba(15, 23, 42, 0.08);
-  --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.10);
-  --shadow: 0 16px 42px rgba(15, 23, 42, 0.12);
-  --shadow-lg: 0 24px 64px rgba(15, 23, 42, 0.16);
-
+  --shadow-sm: 0 6px 16px rgba(15, 23, 42, 0.08);
+  --shadow: 0 10px 28px rgba(15, 23, 42, 0.10);
+  --shadow-lg: 0 18px 42px rgba(15, 23, 42, 0.14);
+  
   --radius-xs: 12px;
   --radius-sm: 16px;
   --radius-md: 20px;
@@ -148,7 +148,7 @@ html {
   text-size-adjust: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  scroll-behavior: smooth;
+    scroll-behavior: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -363,7 +363,7 @@ header {
     border-color 220ms ease;
   background: color-mix(in srgb, var(--panel) 86%, transparent);
   border-bottom: 1px solid var(--border);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
 }
 
 .left,
@@ -2098,7 +2098,7 @@ body.modal-open {
     border: 1px solid var(--border);
     border-radius: 24px;
     background: color-mix(in srgb, var(--panel) 96%, transparent);
-    backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(22px) saturate(160%);
     -webkit-backdrop-filter: blur(18px) saturate(140%);
     box-shadow: var(--shadow-sm);
   }
@@ -2948,7 +2948,7 @@ header.is-condensed h1 {
 }
 
 .support-message-bubble {
-  max-width: min(78%, 420px);
+  max-width: min(82%, 460px);
   padding: 10px 12px 8px;
   border-radius: 18px;
   font-size: 14px;
