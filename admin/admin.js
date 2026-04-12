@@ -1950,14 +1950,29 @@ function setupMobileAdminViews() {
   let currentView = "choferes";
   applyMobileAdminView(currentView);
 
-  mobileDockButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      currentView = button.dataset.adminMobileViewTarget || "choferes";
-      applyMobileAdminView(currentView);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+mobileDockButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    currentView = button.dataset.adminMobileViewTarget || "choferes";
+    applyMobileAdminView(currentView);
+
+    requestAnimationFrame(() => {
+      window.scrollTo(0, 0);
+
+      if (currentView === "support") {
+        const supportShell = document.getElementById("supportShell");
+        const supportList = document.getElementById("supportConversationList");
+        const supportMessages = document.getElementById("supportMessages");
+
+        supportShell?.scrollTo?.(0, 0);
+        supportList?.scrollTo?.(0, 0);
+
+        if (supportMessages && supportMessages.scrollTop < 8) {
+          supportMessages.scrollTop = 0;
+        }
+      }
     });
   });
-
+});
   window.addEventListener("resize", () => {
     applyMobileAdminView(currentView);
   });
