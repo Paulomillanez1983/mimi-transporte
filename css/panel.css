@@ -1979,12 +1979,12 @@ body.menu-open {
   gap: 16px;
   padding: 16px 18px;
   border-bottom: 1px solid rgba(255,255,255,0.08);
-  background: rgba(9, 14, 26, 0.84);
+  background: linear-gradient(180deg, rgba(8, 13, 24, 0.96), rgba(11, 17, 32, 0.88));
 }
 
 .support-panel-topbar h2 {
   margin: 0 0 4px;
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.08;
   letter-spacing: -0.03em;
 }
@@ -2347,11 +2347,11 @@ body.menu-open {
   display: flex;
 }
 
-.support-message-row.user {
+.support-message-row.incoming {
   justify-content: flex-start;
 }
 
-.support-message-row.admin {
+.support-message-row.outgoing {
   justify-content: flex-end;
 }
 
@@ -2366,14 +2366,14 @@ body.menu-open {
   white-space: pre-wrap;
 }
 
-.support-message-row.user .support-message-bubble {
-  background: rgba(255,255,255,0.94);
+.support-message-row.incoming .support-message-bubble {
+  background: rgba(255,255,255,0.96);
   color: #0f172a;
   border-top-left-radius: 8px;
 }
 
-.support-message-row.admin .support-message-bubble {
-  background: linear-gradient(135deg, #2563eb, #0f172a);
+.support-message-row.outgoing .support-message-bubble {
+  background: linear-gradient(135deg, #2f6fed, #1d4ed8);
   color: #fff;
   border-top-right-radius: 8px;
 }
@@ -2409,7 +2409,7 @@ body.menu-open {
   border: 1px solid rgba(255,255,255,0.18);
 }
 
-.support-message-row.user .support-attachment-chip {
+.support-message-row.incoming .support-attachment-chip {
   background: rgba(15,23,42,0.06);
   border-color: rgba(15,23,42,0.08);
   color: #0f172a;
@@ -2446,12 +2446,164 @@ body.support-open {
 }
 
 @media (max-width: 860px) {
+  .support-panel-topbar h2 {
+    font-size: 18px;
+    color: #0f172a;
+    margin-bottom: 2px;
+  }
+
+  .support-panel-topbar p {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .support-close-btn {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(15,23,42,0.08);
+    background: #fff;
+    color: #0f172a;
+  }
+
+  .support-toolbar {
+    gap: 12px;
+    padding-top: 10px;
+    background: transparent;
+    border-bottom: none;
+  }
+
+  .support-toolbar-title {
+    font-size: 20px;
+    color: #0f172a;
+  }
+
+  .support-head-btn,
+  .support-thread-btn {
+    border: 1px solid rgba(15,23,42,0.08);
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+  }
+
+  .support-search-input,
+  .support-filter-select,
+  .support-reply-input {
+    border: 1px solid rgba(15,23,42,0.08);
+    background: rgba(255,255,255,0.92);
+    color: #0f172a;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.05);
+  }
+
+  .support-search-input::placeholder,
+  .support-reply-input::placeholder {
+    color: #64748b;
+  }
+
+  .support-conversation-list {
+    gap: 8px;
+    padding-top: 6px;
+    padding-bottom: calc(16px + var(--safe-bottom));
+  }
+
+  .support-conversation-item {
+    border-radius: 18px;
+    border: 1px solid rgba(15,23,42,0.08);
+    background: rgba(255,255,255,0.94);
+    color: #0f172a;
+    box-shadow: 0 12px 26px rgba(15,23,42,0.07);
+  }
+
+  .support-conversation-item.active {
+    border-color: rgba(47,111,237,0.24);
+    box-shadow: 0 0 0 1px rgba(47,111,237,0.12), 0 14px 30px rgba(47,111,237,0.10);
+    background: rgba(239, 246, 255, 0.98);
+  }
+
+  .support-conversation-time,
+  .support-conversation-secondary,
+  .support-conversation-preview,
+  .support-thread-meta span,
+  .support-composer-hint,
+  .support-empty-state,
+  .support-thread-empty {
+    color: #64748b;
+  }
+
+  .support-role-badge {
+    background: rgba(15,23,42,0.06);
+    color: #334155;
+  }
+
+  .support-thread-header {
+    position: sticky;
+    top: calc(62px + var(--safe-top));
+    z-index: 4;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    background: rgba(247, 250, 255, 0.92);
+    border-bottom: 1px solid rgba(15,23,42,0.08);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .support-thread-avatar,
+  .support-conversation-avatar {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+  }
+
+  .support-thread-back {
+    min-width: 38px;
+    min-height: 38px;
+    border-radius: 999px;
+    border: 1px solid rgba(15,23,42,0.08);
+    background: #fff;
+    color: #0f172a;
+  }
+
+  .support-messages {
+    background:
+      radial-gradient(circle at top left, rgba(47,111,237,0.08), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(34,197,94,0.08), transparent 30%),
+      linear-gradient(180deg, #f6f9fd, #eef3f9);
+    gap: 10px;
+    padding-top: 14px;
+    padding-bottom: 18px;
+  }
+
+  .support-message-row.incoming .support-message-bubble {
+    box-shadow: 0 10px 20px rgba(15,23,42,0.08);
+  }
+
+  .support-message-row.outgoing .support-message-bubble {
+    box-shadow: 0 12px 24px rgba(47,111,237,0.20);
+  }
+
+  .support-reply-input {
+    min-height: 52px;
+    max-height: 120px;
+    border-radius: 22px;
+    resize: none;
+    padding: 14px 16px;
+  }
+
+  .support-send-btn {
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: 999px;
+    box-shadow: 0 12px 24px rgba(47,111,237,0.20);
+  }
+
   .support-panel {
     width: 100vw;
     height: 100dvh;
     max-height: 100dvh;
     margin: 0;
     border-radius: 0;
+    background:
+      linear-gradient(180deg, rgba(244,248,255,0.98), rgba(233,240,251,0.96)),
+      #edf3fb;
+    color: #0f172a;
   }
 
   .support-shell {
@@ -2469,12 +2621,23 @@ body.support-open {
   }
 
   .support-panel-topbar {
-    padding-top: calc(14px + var(--safe-top));
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: calc(10px + var(--safe-top)) 14px 10px;
+    background: rgba(247, 250, 255, 0.92);
+    border-bottom: 1px solid rgba(15,23,42,0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .support-sidebar,
   .support-thread {
     min-height: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
   }
 
   .support-thread-header,
@@ -2491,12 +2654,19 @@ body.support-open {
   }
 
   .support-message-bubble {
-    max-width: 78%;
-    padding: 7px 9px;
-    border-radius: 14px;
+    max-width: 82%;
+    padding: 8px 10px;
+    border-radius: 16px;
   }
 
   .support-composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    background: rgba(247, 250, 255, 0.94);
+    border-top: 1px solid rgba(15,23,42,0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     padding-bottom: calc(14px + var(--safe-bottom));
   }
 }
