@@ -3778,6 +3778,8 @@ header.is-condensed h1 {
     justify-content: flex-start !important;
     align-items: center;
     text-align: center;
+     opacity: 0.85;
+     font-size: 0.95rem;
 
     padding-top: 18px !important;
     padding-bottom: 10px !important;
