@@ -407,10 +407,13 @@ function renderReviewChart({ total, pending, approved, rejected, blocked }) {
         <div class="mini-bar-col">
           <div class="mini-bar-track">
             <div
-              class="mini-bar ${item.className}"
-              style="height:${Math.max(8, (item.value / max) * 100)}%"
-            ></div>
-          </div>
+             class="mini-bar ${item.className}"
+             style="
+              height:${Math.max(8, (item.value / max) * 100)}%;
+              --bar-width:${Math.max(8, (item.value / max) * 100)}%;
+              "
+              ></div>
+           </div>
           <strong>${item.value}</strong>
           <span>${escapeHtml(item.label)}</span>
         </div>
