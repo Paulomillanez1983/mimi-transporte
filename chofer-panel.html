@@ -393,27 +393,36 @@
     </div>
   </div>
 </aside>
-  <!-- 🔥 SUPPORT MODAL PRO -->
-<div class="support-modal hidden" id="support-modal" aria-hidden="true">
-
-  <!-- BACKDROP -->
+<!-- =========================
+     SUPPORT MODAL PRO MAX
+     Va antes de </body>
+========================= -->
+<div
+  class="support-modal hidden"
+  id="support-modal"
+  aria-hidden="true"
+>
   <div class="support-backdrop" data-close-support="true"></div>
 
-  <!-- SHEET -->
   <section
     class="support-sheet"
     role="dialog"
     aria-modal="true"
     aria-labelledby="support-title"
+    tabindex="-1"
   >
+    <div class="support-handle-wrap" aria-hidden="true">
+      <div class="support-handle"></div>
+    </div>
 
-    <!-- HANDLE (tipo Uber) -->
-    <div class="support-handle"></div>
-
-    <!-- HEADER -->
     <header class="support-header">
-      <button class="support-close" id="support-close" type="button">
-        ←
+      <button
+        class="support-close"
+        id="support-close"
+        type="button"
+        aria-label="Cerrar soporte"
+      >
+        <span aria-hidden="true">←</span>
       </button>
 
       <div class="support-header-text">
@@ -422,34 +431,57 @@
       </div>
     </header>
 
-    <!-- BODY -->
     <div class="support-body">
-      <div class="support-messages" id="support-messages">
-        <div class="support-empty">
-          Todavía no hay mensajes. Escribí tu consulta.
+      <div
+        class="support-messages"
+        id="support-messages"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+      >
+        <div class="support-empty" id="support-empty">
+          Todavía no hay mensajes. Escribí tu consulta y te respondemos desde administración.
         </div>
       </div>
     </div>
 
-    <!-- COMPOSER -->
     <footer class="support-composer">
-      <textarea
-        id="support-input"
-        class="support-input"
-        placeholder="Escribí tu mensaje..."
-        rows="1"
-      ></textarea>
+      <div class="support-composer-inner">
+        <textarea
+          id="support-input"
+          class="support-input"
+          placeholder="Escribí tu mensaje..."
+          rows="1"
+          maxlength="1500"
+        ></textarea>
 
-      <div class="support-actions">
-        <label class="support-attach" for="support-attachment">📎</label>
-        <input id="support-attachment" type="file" hidden multiple />
+        <div class="support-actions">
+          <label
+            class="support-attach"
+            for="support-attachment"
+            aria-label="Adjuntar archivos"
+            title="Adjuntar archivos"
+          >
+            📎
+          </label>
 
-        <button class="support-send" id="support-send" type="button">
-          Enviar
-        </button>
+          <input
+            id="support-attachment"
+            type="file"
+            hidden
+            multiple
+          />
+
+          <button
+            class="support-send"
+            id="support-send"
+            type="button"
+          >
+            Enviar
+          </button>
+        </div>
       </div>
     </footer>
-
   </section>
 </div>
 </body>
