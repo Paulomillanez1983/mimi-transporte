@@ -1445,6 +1445,7 @@ hideNavigation() {
       </div>
     `;
 
+    sheetContent.scrollTop = 0;
     this._expandBottomSheet();
     this._haptic('light');
   }
