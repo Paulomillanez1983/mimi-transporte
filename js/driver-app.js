@@ -401,29 +401,11 @@ class DriverApp {
   // =========================================================
   // RESOLVER DRIVER ID
   // =========================================================
-  async _resolveDriverId() {
-    try {
-      if (!this._authUserId) return null;
-
-      const { data: chofer, error } = await supabaseService.client
-        .from('choferes')
-        .select('id_uuid')
-        .eq('user_id', this._authUserId)
-        .single();
-
-      if (error) {
-        console.error('[DriverApp] Error resolviendo chofer:', error);
-        return null;
-      }
-
-      return chofer?.id_uuid || null;
-    } catch (err) {
-      console.error('[DriverApp] Error buscando driverId:', err);
-      return null;
-    }
-  }
-
-  // =========================================================
+async _resolveDriverId() {
+  return this._authUserId || null;
+}
+  
+// =========================================================
   // EVENTS
   // =========================================================
   _subscribeToEvents() {
