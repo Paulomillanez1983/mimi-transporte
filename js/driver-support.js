@@ -1103,7 +1103,7 @@ export async function openDriverSupportPanel() {
   await subscribeRealtime().catch(() => null);
   startPolling();
 
-await ensureSupportPushPermissionOnOpen({ silentDenied: true }).catch(() => null);
+// solo sincroniza estado, NO pide permiso automáticamente
 updateSupportUIState();
 }
 export function closeDriverSupportPanel() {
