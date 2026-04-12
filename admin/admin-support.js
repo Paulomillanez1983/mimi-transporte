@@ -879,33 +879,6 @@ async function loadSupportConversations(options = {}) {
       .filter((item) => item && item.id);
 
     applySupportFilters();
-
-    const stillExists = previousSelectedId && supportState.conversations.some((item) => item.id === previousSelectedId);
-
-    if (stillExists) {
-      supportState.selectedId = previousSelectedId;
-    } else if (supportState.filtered[0]) {
-      supportState.selectedId = supportState.filtered[0].id;
-    } else {
-      supportState.selectedId = null;
-      supportState.mobileThreadOpen = false;
-    }
-
-    renderConversationList();
-    renderSelectedConversation();
-    updateSupportDockBadge();
-  } catch (err) {
-    console.error("[support.loadSupportConversations]", err);
-
-    supportState.conversations = [];
-    supportState.filtered = [];
-    supportState.selectedId = null;
-    supportState.mobileThreadOpen = false;
-
-    renderConversationList();
-    renderSelectedConversation();
-    updateSupportDockBadge();
-    applySupportFilters();
     renderConversationList();
     updateSupportDockBadge();
     markNewUnreadVisuals();
@@ -925,7 +898,23 @@ async function loadSupportConversations(options = {}) {
       supportState.selectedId = supportState.filtered[0]?.id || null;
     }
 
+    if (!supportState.selectedId) {
+      supportState.mobileThreadOpen = false;
+    }
+
     renderSelectedConversation();
+  } catch (err) {
+    console.error("[support.loadSupportConversations]", err);
+
+    supportState.conversations = [];
+    supportState.filtered = [];
+    supportState.selectedId = null;
+    supportState.mobileThreadOpen = false;
+
+    renderConversationList();
+    renderSelectedConversation();
+    updateSupportDockBadge();
+
     if (!silent) {
       showSupportToast(err?.message || "No se pudieron cargar las conversaciones", "error");
     }
@@ -935,7 +924,6 @@ async function loadSupportConversations(options = {}) {
     }
   }
 }
-
 async function persistConversationStatus(status) {
   const current = getCurrentConversation();
   if (!current) {
