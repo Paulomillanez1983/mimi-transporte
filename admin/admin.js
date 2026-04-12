@@ -351,18 +351,44 @@ function updateMetrics(drivers) {
   const rejected = drivers.filter(isRejectedDriver).length;
   const blocked = drivers.filter(isBlockedDriver).length;
 
-  if (metricTotal) metricTotal.textContent = String(total);
-  if (metricPending) metricPending.textContent = String(pending);
-  if (metricApproved) metricApproved.textContent = String(approved);
-  if (metricRejected) metricRejected.textContent = String(rejected);
-  if (metricBlocked) metricBlocked.textContent = String(blocked);
-
+animateMetricValue(metricTotal, total);
+animateMetricValue(metricPending, pending);
+animateMetricValue(metricApproved, approved);
+animateMetricValue(metricRejected, rejected);
+animateMetricValue(metricBlocked, blocked);
+  
   renderReviewChart({ total, pending, approved, rejected, blocked });
   renderPriorityQueue(drivers);
   renderAiSummary(drivers);
   updateLiveBadge();
 }
+function animateMetricValue(element, nextValue) {
+  if (!element) return;
 
+  const target = Number(nextValue || 0);
+  const current = Number(String(element.textContent || "0").replace(/[^\d.-]/g, "")) || 0;
+
+  if (current === target) {
+    element.textContent = String(target);
+    return;
+  }
+
+  const duration = 420;
+  const start = performance.now();
+
+  function frame(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const value = Math.round(current + (target - current) * eased);
+    element.textContent = String(value);
+
+    if (progress < 1) {
+      requestAnimationFrame(frame);
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
 function renderReviewChart({ total, pending, approved, rejected, blocked }) {
   if (!reviewChart) return;
 
