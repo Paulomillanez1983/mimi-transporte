@@ -1394,6 +1394,61 @@ hideNavigation() {
       statusDot.classList.toggle('online', this.state.isOnline);
     }
   }
+
+  _escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  showInfoSheet(options = {}) {
+    const sheet = this.elements['bottom-sheet'];
+    const sheetContent = this.elements['sheet-content'];
+
+    if (!sheet || !sheetContent) return;
+    if (this.state.currentTrip) {
+      this.showToast('Esta opcion no esta disponible durante un viaje', 'warning');
+      return;
+    }
+
+    const {
+      title = 'Detalle',
+      description = '',
+      metrics = []
+    } = options;
+
+    const safeMetrics = Array.isArray(metrics) ? metrics : [];
+
+    sheet.classList.remove('has-trip');
+    sheetContent.dataset.flowState = 'info';
+    delete sheetContent.dataset.waitingState;
+
+    sheetContent.innerHTML = `
+      <div class="waiting-state uber-style">
+        <div class="waiting-text">
+          <h3>${this._escapeHtml(title)}</h3>
+          <p>${this._escapeHtml(description)}</p>
+        </div>
+        ${safeMetrics.length ? `
+          <div class="trip-metrics-horizontal">
+            ${safeMetrics.map((item) => `
+              <div class="metric-box">
+                <span class="metric-value">${this._escapeHtml(item.value)}</span>
+                <span class="metric-label">${this._escapeHtml(item.label)}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    this._expandBottomSheet();
+    this._haptic('light');
+  }
+
   openMenu() {
     const menu = this.elements['side-menu'];
     const backdrop = this.elements['menu-backdrop'];
