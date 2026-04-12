@@ -3768,3 +3768,25 @@ header.is-condensed h1 {
     height: calc(100dvh - 100px) !important;
   }
 }
+/* =========================================
+   FIX EMPTY STATE POSITION (MOBILE)
+   ========================================= */
+
+@media (max-width: 720px) {
+
+  .support-thread-empty {
+    justify-content: flex-start !important;
+    align-items: center;
+    text-align: center;
+
+    padding-top: 18px !important;
+    padding-bottom: 10px !important;
+
+    gap: 6px;
+  }
+
+  .support-thread-empty-icon {
+    margin-bottom: 4px !important;
+  }
+
+}
