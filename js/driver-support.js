@@ -69,64 +69,6 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-function updateSupportUIState() {
-  const {
-    enableAlertsBtn,
-    enableAlertsBtnEmpty,
-    installAppBtn,
-    installAppBtnEmpty,
-    setupStatus,
-    alertsBadge
-  } = getEls();
-
-  const permission = "Notification" in window ? Notification.permission : "unsupported";
-  const enabled = supportState.pushEnabled || permission === "granted";
-  const installAvailable = !!supportState.installPromptEvent;
-
-  // 🔔 BOTONES ALERTAS
-  const updateBtn = (btn) => {
-    if (!btn) return;
-
-    if (enabled) {
-      btn.disabled = true;
-      btn.innerHTML = "✅ Alertas activadas";
-    } else if (permission === "denied") {
-      btn.disabled = true;
-      btn.innerHTML = "⚠️ Bloqueadas";
-    } else {
-      btn.disabled = false;
-      btn.innerHTML = "🔔 Activar alertas";
-    }
-  };
-
-  updateBtn(enableAlertsBtn);
-  updateBtn(enableAlertsBtnEmpty);
-
-  // 📥 BOTÓN INSTALAR
-  const updateInstall = (btn) => {
-    if (!btn) return;
-    btn.hidden = !installAvailable;
-  };
-
-  updateInstall(installAppBtn);
-  updateInstall(installAppBtnEmpty);
-
-  // 🟢 BADGE
-  if (alertsBadge) {
-    alertsBadge.hidden = !enabled;
-  }
-
-  // 📝 TEXTO
-  if (setupStatus) {
-    if (enabled) {
-      setupStatus.textContent = "Ya tenés activadas las alertas de soporte.";
-    } else if (permission === "denied") {
-      setupStatus.textContent = "Las alertas están bloqueadas en el navegador.";
-    } else {
-      setupStatus.textContent = "Las alertas están desactivadas.";
-    }
-  }
-}
 function escapeAttr(value) {
   return escapeHtml(value);
 }
@@ -310,42 +252,6 @@ function showToast(message, type = "info") {
 function canAskForNotifications() {
   return "Notification" in window && "serviceWorker" in navigator;
 }
-function updateSupportSmartActionsUI() {
-  const { pushBtn, installBtn, pushBadge, smartNote } = getEls();
-
-  const notificationSupported = "Notification" in window;
-  const installAvailable = !!supportState.installPromptEvent;
-  const permission = notificationSupported ? Notification.permission : "unsupported";
-  const pushActive = supportState.pushEnabled || permission === "granted";
-
-  if (pushBtn) {
-    if (!notificationSupported) {
-      pushBtn.disabled = true;
-      pushBtn.innerHTML = `<span aria-hidden="true">🔕</span><span>Alertas no compatibles</span>`;
-    } else if (pushActive) {
-      pushBtn.disabled = true;
-      pushBtn.innerHTML = `<span aria-hidden="true">✅</span><span>Alertas activadas</span>`;
-    } else if (permission === "denied") {
-      pushBtn.disabled = true;
-      pushBtn.innerHTML = `<span aria-hidden="true">⚠️</span><span>Alertas bloqueadas</span>`;
-    } else {
-      pushBtn.disabled = false;
-      pushBtn.innerHTML = `<span aria-hidden="true">🔔</span><span>Activar alertas</span>`;
-    }
-  }
-
-  if (pushBadge) {
-    pushBadge.hidden = !pushActive;
-  }
-
-  if (installBtn) {
-    installBtn.hidden = !installAvailable;
-    installBtn.disabled = !installAvailable;
-    if (installAvailable) {
-      installBtn.innerHTML = `<span aria-hidden="true">⬇️</span><span>Instalar app</span>`;
-    }
-  }
-
 function updateSupportUIState() {
   const {
     enableAlertsBtn,
@@ -414,15 +320,6 @@ function updateSupportUIState() {
     }
   }
 }
-  
-async function ensureSupportPushPermissionOnOpen(options = {}) {
-  const { forcePrompt = false, silentDenied = false } = options;
-
-  if (supportState.pushEnabled) {
-    updateSupportUIState();
-    return true;
-  }
-
 async function ensureSupportPushPermissionOnOpen(options = {}) {
   const { forcePrompt = false, silentDenied = false } = options;
 
@@ -1293,12 +1190,25 @@ export function initDriverSupport() {
   els.backdrop?.addEventListener("click", closeDriverSupportPanel);
   els.refresh?.addEventListener("click", () => loadSupportConversations({ preserveSelection: true, silent: false }));
   els.threadRefresh?.addEventListener("click", () => loadSupportConversations({ preserveSelection: true, silent: false }));
-  els.pushBtn?.addEventListener("click", async () => {
+els.enableAlertsBtn?.addEventListener("click", async () => {
   await ensureSupportPushPermissionOnOpen({ forcePrompt: true, silentDenied: false });
   updateSupportUIState();
 });
 
-els.installBtn?.addEventListener("click", async () => {
+els.enableAlertsBtnEmpty?.addEventListener("click", async () => {
+  await ensureSupportPushPermissionOnOpen({ forcePrompt: true, silentDenied: false });
+  updateSupportUIState();
+});
+
+els.installAppBtn?.addEventListener("click", async () => {
+  const installed = await maybeShowInstallPrompt();
+  if (!installed && !supportState.installPromptEvent) {
+    showToast("La instalacion no esta disponible todavia en este navegador", "warning");
+  }
+  updateSupportUIState();
+});
+
+els.installAppBtnEmpty?.addEventListener("click", async () => {
   const installed = await maybeShowInstallPrompt();
   if (!installed && !supportState.installPromptEvent) {
     showToast("La instalacion no esta disponible todavia en este navegador", "warning");
