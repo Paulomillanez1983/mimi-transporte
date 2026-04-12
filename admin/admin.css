@@ -3767,34 +3767,17 @@ header.is-condensed h1 {
 }
 @media (max-width: 560px) {
   .support-shell.is-mobile-support .support-thread,
-  .support-shell.is-mobile-support .support-thread-panel,
-  .support-shell.is-mobile-support .support-thread-empty {
+  .support-shell.is-mobile-support .support-thread-panel {
     min-height: calc(100dvh - 100px) !important;
     max-height: calc(100dvh - 100px) !important;
     height: calc(100dvh - 100px) !important;
   }
-}
-/* =========================================
-   FIX EMPTY STATE POSITION (MOBILE)
-   ========================================= */
 
-@media (max-width: 720px) {
-
-  .support-thread-empty {
-    justify-content: flex-start !important;
-    align-items: center;
-    text-align: center;
-     opacity: 0.85;
-     font-size: 0.95rem;
-
-    padding-top: 18px !important;
-    padding-bottom: 10px !important;
-
-    gap: 6px;
+  .support-shell.is-mobile-support .support-thread-empty {
+    min-height: auto !important;
+    max-height: none !important;
+    height: auto !important;
+    padding-top: 12px !important;
   }
-
-  .support-thread-empty-icon {
-    margin-bottom: 4px !important;
-  }
-
 }
+
