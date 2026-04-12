@@ -956,8 +956,6 @@ if (supportInput && !supportInput.dataset.bound) {
 
   supportInput.dataset.bound = '1';
 }
-    supportInput.dataset.bound = '1';
-  }
 
   if (!this._support.escHandler) {
     this._support.escHandler = (event) => {
