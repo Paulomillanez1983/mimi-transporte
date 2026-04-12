@@ -2270,3 +2270,19 @@ body.menu-open {
     min-width: 98px;
   }
 }
+.support-composer,
+.support-composer-inner,
+.support-actions {
+  pointer-events: auto;
+}
+
+.support-send,
+.support-attach,
+.support-input {
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.support-send {
+  -webkit-tap-highlight-color: transparent;
+}
