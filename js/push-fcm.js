@@ -161,6 +161,12 @@ export async function initPushFCM(rol = 'cliente') {
 
   initInFlight = (async () => {
     try {
+      console.log('[push-fcm] initPushFCM start', {
+        rol,
+        permission: typeof Notification !== 'undefined' ? Notification.permission : 'unsupported',
+        swSupported: 'serviceWorker' in navigator
+      });
+
       if (!('serviceWorker' in navigator)) {
         console.warn('[push-fcm] Service Worker no disponible');
         return null;
@@ -171,22 +177,33 @@ export async function initPushFCM(rol = 'cliente') {
         console.error('[push-fcm] Supabase no inicializado');
         return null;
       }
+      console.log('[push-fcm] supabase ok');
 
       const messaging = await getMessagingSafe();
-      if (!messaging) return null;
+      if (!messaging) {
+        console.warn('[push-fcm] messaging no soportado');
+        return null;
+      }
+      console.log('[push-fcm] messaging ok');
 
       const permission = await ensureNotificationPermission();
+      console.log('[push-fcm] permission result:', permission);
+
       if (permission !== 'granted') {
         console.warn('[push-fcm] Permiso de notificaciones no concedido:', permission);
         return null;
       }
 
       const registration = await ensureServiceWorkerRegistration();
+      console.log('[push-fcm] service worker registration ok:', registration);
 
-       const token = await getToken(messaging, {
+      const token = await getToken(messaging, {
         vapidKey: FIREBASE_VAPID_KEY,
-       serviceWorkerRegistration: registration
+        serviceWorkerRegistration: registration
       });
+
+      console.log('[push-fcm] token result:', token);
+
       if (!token) {
         console.warn('[push-fcm] No se pudo obtener token FCM');
         return null;
@@ -195,6 +212,8 @@ export async function initPushFCM(rol = 'cliente') {
       bindForegroundListenerOnce(messaging);
 
       const userId = await getAuthenticatedUserId(supabase);
+      console.log('[push-fcm] authenticated user id:', userId);
+
       if (!userId) {
         console.warn('[push-fcm] No hay usuario autenticado para guardar token push');
         return null;
@@ -212,7 +231,10 @@ export async function initPushFCM(rol = 'cliente') {
         token
       });
 
+      console.log('[push-fcm] upsert result:', saved);
+
       if (!saved) {
+        console.warn('[push-fcm] upsert devolvió null');
         return null;
       }
 
