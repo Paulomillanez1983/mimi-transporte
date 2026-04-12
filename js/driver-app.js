@@ -929,6 +929,7 @@ if (supportSendBtn && !supportSendBtn.dataset.bound) {
 
   supportSendBtn.dataset.bound = '1';
 }
+  
 if (supportInput && !supportInput.dataset.bound) {
   supportInput.addEventListener('input', () => {
     supportInput.style.height = 'auto';
@@ -1215,7 +1216,21 @@ async _sendSupportMessage() {
   if (this._support.sending) return;
 
   const els = this._getSupportElements();
-  const text = String(els.input?.value || '').trim();
+
+  const liveInput = document.getElementById('support-input');
+  const rawValue =
+    liveInput?.value ??
+    els.input?.value ??
+    '';
+
+  const text = String(rawValue).trim();
+
+  console.log('[DriverApp] support send tap', {
+    textLength: text.length,
+    sending: this._support.sending,
+    hasInput: !!els.input,
+    hasSend: !!els.send
+  });
 
   if (!text) {
     uiController.showToast('Escribí tu mensaje antes de enviar', 'warning');
@@ -1223,9 +1238,15 @@ async _sendSupportMessage() {
   }
 
   this._support.sending = true;
-  if (els.send) els.send.disabled = true;
+
+  if (els.send) {
+    els.send.disabled = true;
+    els.send.setAttribute('aria-disabled', 'true');
+  }
 
   try {
+    liveInput?.blur?.();
+
     const session = await this._getSupportSession();
     const userId = session.user.id;
     const ticketId = await this._ensureDriverSupportTicket(text);
@@ -1251,18 +1272,18 @@ async _sendSupportMessage() {
       console.warn('[DriverApp] update ticket soporte warning:', updateTicketError);
     }
 
-const { data: inserted, error: insertError } = await supabaseService.client
-  .from('soporte_mensajes')
-  .insert({
-    ticket_id: ticketId,
-    sender_user_id: userId,
-    sender_role: 'driver',
-    mensaje: text,
-    metadata
-  })
-  .select('id, ticket_id, sender_role, mensaje, created_at')
-  .single();
-    
+    const { data: inserted, error: insertError } = await supabaseService.client
+      .from('soporte_mensajes')
+      .insert({
+        ticket_id: ticketId,
+        sender_user_id: userId,
+        sender_role: 'driver',
+        mensaje: text,
+        metadata
+      })
+      .select('id, ticket_id, sender_role, mensaje, created_at')
+      .single();
+
     if (insertError || !inserted?.id) {
       console.error('[DriverApp] enviar soporte error:', insertError);
       throw new Error(insertError?.message || 'No se pudo enviar el mensaje');
@@ -1273,19 +1294,30 @@ const { data: inserted, error: insertError } = await supabaseService.client
     if (els.input) {
       els.input.value = '';
       els.input.style.height = 'auto';
-      els.input.focus();
     }
 
     await this._subscribeSupportRealtime();
+
+    setTimeout(() => {
+      els.input?.focus?.();
+      const messages = document.getElementById('support-messages');
+      messages?.scrollTo({
+        top: messages.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 120);
   } catch (err) {
     console.error('[DriverApp] _sendSupportMessage:', err);
     uiController.showToast(err?.message || 'No se pudo enviar el mensaje', 'error');
   } finally {
     this._support.sending = false;
-    if (els.send) els.send.disabled = false;
+
+    if (els.send) {
+      els.send.disabled = false;
+      els.send.removeAttribute('aria-disabled');
+    }
   }
 }
-
 async _subscribeSupportRealtime() {
   if (!this._support.ticketId) return null;
 
