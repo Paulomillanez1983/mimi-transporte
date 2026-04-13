@@ -445,22 +445,35 @@ class DriverApp {
         this._setFlowState('OFFLINE');
       }
 
-      // 8) Estado inicial de viajes
-      const currentTrip = tripManager.getCurrentTrip();
-      const pendingTrip = tripManager.getPendingTrip();
+// 8) Estado inicial de viajes
+let currentTrip = tripManager.getCurrentTrip();
+const pendingTrip = tripManager.getPendingTrip();
 
-      if (currentTrip) {
-        console.log('[DriverApp] Estado inicial: viaje activo');
-        this._currentTripId = currentTrip.id;
+// blindaje contra estado viejo roto
+if (currentTrip) {
+  const estadoTrip = String(currentTrip.estado || '').toUpperCase();
 
-        if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
-          this._setFlowState('TRIP_STARTED');
-        } else {
-          this._setFlowState('GOING_TO_PICKUP');
-        }
+  if (!['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoTrip)) {
+    console.warn('[DriverApp] Viaje invalido detectado en memoria, limpiando estado local...');
+    tripManager.resetState?.();
+    currentTrip = null;
+  }
+}
 
-        await this._showRouteOnMap(currentTrip);
-        uiController.showNavigationState(currentTrip);
+if (currentTrip) {
+  console.log('[DriverApp] Estado inicial: viaje activo');
+  this._currentTripId = currentTrip.id;
+
+  if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
+    this._setFlowState('TRIP_STARTED');
+  } else {
+    this._setFlowState('GOING_TO_PICKUP');
+  }
+
+  await this._showRouteOnMap(currentTrip);
+  uiController.showNavigationState(currentTrip);
+} else if (pendingTrip) {
+  uiController.showNavigationState(currentTrip);
       } else if (pendingTrip) {
         console.log('[DriverApp] Estado inicial: oferta pendiente');
         this._setFlowState('RECEIVING_OFFER');
