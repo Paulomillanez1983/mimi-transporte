@@ -1691,49 +1691,6 @@ async function loginConGoogleParaViaje() {
 
   return data;
 }  
-  let supportRealtimeChannel = null;
-
-async function subscribeSupportRealtimeForUser(userId) {
-  try {
-    if (!userId || !window.supabase) return;
-
-    if (supportRealtimeChannel) {
-      try {
-        await window.supabase.removeChannel(supportRealtimeChannel);
-      } catch (_) {}
-      supportRealtimeChannel = null;
-    }
-
-    supportRealtimeChannel = window.supabase
-      .channel(`support-user-${userId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'soporte_mensajes'
-        },
-        async (payload) => {
-          try {
-            if (typeof handleIncomingSupportMessage === 'function') {
-              await handleIncomingSupportMessage(payload);
-            } else {
-              console.warn('[support realtime] handleIncomingSupportMessage no está definido');
-            }
-          } catch (err) {
-            console.error('[support realtime] error procesando mensaje entrante:', err);
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('[support realtime] status:', status);
-      });
-
-    console.log('[support realtime] suscripción creada para usuario:', userId);
-  } catch (err) {
-    console.error('[support realtime] no se pudo suscribir:', err);
-  }
-}
 async function reanudarViajePendientePostLogin() {
   try {
     const pending = localStorage.getItem('mimi_pending_trip_request');
@@ -1753,7 +1710,9 @@ async function reanudarViajePendientePostLogin() {
 
     renderSesionUI(session);
     localStorage.removeItem('mimi_pending_trip_request');
-    await subscribeSupportRealtimeForUser();
+
+    await syncRealtimeAuthToken(true);
+    await subscribeSupportRealtimeForUser(true);
 
     notif.show(
       'Sesión iniciada',
@@ -1768,8 +1727,7 @@ async function reanudarViajePendientePostLogin() {
   } catch (err) {
     console.error('[reanudarViajePendientePostLogin] ERROR:', err);
   }
-}
-  
+}  
 function construirTooltip(resuelto) {
   return `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`;
 }
