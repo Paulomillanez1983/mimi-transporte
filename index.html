@@ -2779,141 +2779,10 @@ let currentSupportMessagesLoaded = false;
 let supportRealtimeRetryTimer = null;
 let supportRealtimeManuallyClosing = false;
 let supportRealtimeActiveUserId = null;
-document.addEventListener('DOMContentLoaded', async () => {
-// ==========================================
-// SOPORTE CHAT SHEET
-// ==========================================
-const supportBtn = document.getElementById("supportBtn");
-const supportSheet = document.getElementById("supportSheet");
-const supportSheetOverlay = document.getElementById("supportSheetOverlay");
-const supportSheetClose = document.getElementById("supportSheetClose");
-const supportMessageInput = document.getElementById("supportMessageInput");
-const supportSendBtn = document.getElementById("supportSendBtn");
-const supportChatBody = document.getElementById("supportChatBody");
-function openSupportSheet() {
-  if (!supportSheet || !supportSheetOverlay) return;
-
-  supportSheet.hidden = false;
-  supportSheetOverlay.hidden = false;
-
-  requestAnimationFrame(() => {
-    supportSheet.classList.add("is-open");
-    supportSheetOverlay.classList.add("is-open");
-    supportSheet.setAttribute("aria-hidden", "false");
-  });
-
-  setTimeout(() => {
-    supportMessageInput?.focus();
-  }, 220);
-
-  document.body.style.overflow = "hidden";
-}
-
-function closeSupportSheet() {
-  if (!supportSheet || !supportSheetOverlay) return;
-
-  supportSheet.classList.remove("is-open");
-  supportSheetOverlay.classList.remove("is-open");
-  supportSheet.setAttribute("aria-hidden", "true");
-
-  setTimeout(() => {
-    if (!supportSheet.classList.contains("is-open")) {
-      supportSheet.hidden = true;
-      supportSheetOverlay.hidden = true;
-    }
-  }, 280);
-
-  document.body.style.overflow = "";
-}
+let supportRealtimeRetryCount = 0;
+const MAX_SUPPORT_RETRIES = 5;
   
-function appendSupportMessage(text, type = "user", messageId = null) {
-  if (!supportChatBody || !text) return;
-  if (messageId && supportChatBody.querySelector(`[data-support-message-id="${messageId}"]`)) {
-    return;
-  }
-
-  const row = document.createElement("div");
-  row.className = `support-msg support-msg-${type}`;
-  if (messageId) {
-    row.setAttribute("data-support-message-id", messageId);
-  }
-
-  const bubble = document.createElement("div");
-  bubble.className = "support-bubble";
-  bubble.textContent = text;
-
-  row.appendChild(bubble);
-  supportChatBody.appendChild(row);
-  supportChatBody.scrollTop = supportChatBody.scrollHeight;
-}
-
-function renderSupportMessages(messages = []) {
-  if (!supportChatBody) return;
-
-  supportChatBody.innerHTML = `
-    <div class="support-msg support-msg-agent">
-      <div class="support-bubble">
-        Hola. Soy soporte de MIMICAR. Escribinos tu consulta y la recibimos con los datos de tu cuenta.
-      </div>
-    </div>
-  `;
-
-  messages.forEach((msg) => {
-    const senderRole = String(msg?.sender_role || "").toLowerCase();
-    const type = senderRole === "admin" ? "agent" : "user";
-    appendSupportMessage(msg?.mensaje || "", type, msg?.id || null);
-  });
-}
-
-async function loadOrCreateSupportTicketContext() {
-  const session = await obtenerSesionCliente(true);
-
-  if (!session?.access_token || !session?.user) {
-    throw new Error("No hay sesión activa");
-  }
-
-  const userId = session.user.id;
-
-  // Usar sbRealtime (cliente con auth) en lugar de supabase (cliente anónimo)
-  const { data: existingTickets, error: ticketLookupError } = await window.sbRealtime
-    .from("soporte_tickets")
-    .select("id, estado, last_message_at, user_id, created_at")
-    .eq("user_id", userId)
-    .order("last_message_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (ticketLookupError) {
-    throw new Error(ticketLookupError.message || "No se pudo consultar soporte_tickets");
-  }
-
-  const existingTicket = Array.isArray(existingTickets) ? existingTickets[0] : null;
-  currentSupportTicketId = existingTicket?.id || null;
-
-  if (!currentSupportTicketId) {
-    renderSupportMessages([]);
-    currentSupportMessagesLoaded = true;
-    return { session, ticketId: null };
-  }
-
-  // También usar sbRealtime aquí
-  const { data: messages, error: messagesError } = await window.sbRealtime
-    .from("soporte_mensajes")
-    .select("id, sender_role, mensaje, created_at")
-    .eq("ticket_id", currentSupportTicketId)
-    .order("created_at", { ascending: true });
-
-  if (messagesError) {
-    throw new Error(messagesError.message || "No se pudieron cargar los mensajes");
-  }
-
-  renderSupportMessages(Array.isArray(messages) ? messages : []);
-  currentSupportMessagesLoaded = true;
-
-  return { session, ticketId: currentSupportTicketId };
-}
-  
-function cleanupSupportRealtime() {
+  function cleanupSupportRealtime() {
   try {
     if (supportRealtimeRetryTimer) {
       clearTimeout(supportRealtimeRetryTimer);
@@ -2935,7 +2804,7 @@ function cleanupSupportRealtime() {
     }, 300);
   }
 }
-  
+
 async function handleIncomingSupportMessage(payload) {
   try {
     console.log("[support realtime payload]", payload);
@@ -3014,8 +2883,27 @@ async function handleIncomingSupportMessage(payload) {
     const senderRole = String(msg.sender_role || "").toLowerCase();
 
     if (senderRole === "admin") {
-      appendSupportMessage(msg.mensaje || "", "agent", msg.id);
+if (typeof window.appendSupportMessage === "function") {
+  window.appendSupportMessage(msg.mensaje || "", "agent", msg.id);
+}
+if (senderRole === "admin") {
+  if (typeof window.appendSupportMessage === "function") {
+    window.appendSupportMessage(msg.mensaje || "", "agent", msg.id);
+  }
 
+  const supportSheet = document.getElementById("supportSheet");
+  const supportSheetOpen = supportSheet?.classList.contains("is-open");
+
+  if (!supportSheetOpen) {
+    notif.show("Soporte", "Tenés una nueva respuesta", "success", 4000);
+
+    agregarNotificacionViaje({
+      estado: "SOPORTE",
+      texto: "Soporte respondió tu consulta",
+      read: false
+    });
+  }
+}
       if (!supportSheet?.classList.contains("is-open")) {
         notif.show("Soporte", "Tenés una nueva respuesta", "success", 4000);
 
@@ -3031,9 +2919,6 @@ async function handleIncomingSupportMessage(payload) {
   }
 }
 
-  let supportRealtimeRetryCount = 0;
-const MAX_SUPPORT_RETRIES = 5;
-
 async function subscribeSupportRealtimeForUser(force = false) {
   if (!window.sbRealtime) return null;
 
@@ -3045,20 +2930,16 @@ async function subscribeSupportRealtimeForUser(force = false) {
 
   const userId = session.user.id;
 
-  // Si ya hay un canal activo y no forzamos, retornar
   if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
     return currentSupportChannel;
   }
 
-  // Limpiar canal anterior
   cleanupSupportRealtime();
 
-  // Resetear contador si fue exitoso hace más de 30 segundos
   if (window._lastSupportSubscribeSuccess && (Date.now() - window._lastSupportSubscribeSuccess > 30000)) {
     supportRealtimeRetryCount = 0;
   }
 
-  // Evitar bucle infinito de reintentos
   if (supportRealtimeRetryCount >= MAX_SUPPORT_RETRIES) {
     console.error("[support realtime] máximo de reintentos alcanzado");
     notif.show("Error de conexión", "No se pudo conectar al soporte en tiempo real", "error");
@@ -3076,9 +2957,7 @@ async function subscribeSupportRealtimeForUser(force = false) {
       {
         event: "INSERT",
         schema: "public",
-        table: "soporte_mensajes",
-        // Agregar filtro por user_id si es posible en tu schema
-        // filter: `sender_user_id=neq.${userId}` // Solo mensajes de otros (admin)
+        table: "soporte_mensajes"
       },
       handleIncomingSupportMessage
     )
@@ -3086,7 +2965,7 @@ async function subscribeSupportRealtimeForUser(force = false) {
       console.log("[support realtime status]", status);
 
       if (status === "SUBSCRIBED") {
-        supportRealtimeRetryCount = 0; // Resetear contador en éxito
+        supportRealtimeRetryCount = 0;
         window._lastSupportSubscribeSuccess = Date.now();
         return;
       }
@@ -3097,8 +2976,8 @@ async function subscribeSupportRealtimeForUser(force = false) {
       }
 
       if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT") && supportRealtimeRetryCount < MAX_SUPPORT_RETRIES) {
-        const delay = Math.min(2000 * supportRealtimeRetryCount, 10000); // Backoff exponencial
-        
+        const delay = Math.min(2000 * supportRealtimeRetryCount, 10000);
+
         console.warn(`[support realtime] reintentando en ${delay}ms... (intento ${supportRealtimeRetryCount})`);
 
         if (supportRealtimeRetryTimer) {
@@ -3120,6 +2999,143 @@ async function subscribeSupportRealtimeForUser(force = false) {
   window._supportChannel = currentSupportChannel;
   return currentSupportChannel;
 }
+document.addEventListener('DOMContentLoaded', async () => {
+// ==========================================
+// SOPORTE CHAT SHEET
+// ==========================================
+const supportBtn = document.getElementById("supportBtn");
+const supportSheet = document.getElementById("supportSheet");
+const supportSheetOverlay = document.getElementById("supportSheetOverlay");
+const supportSheetClose = document.getElementById("supportSheetClose");
+const supportMessageInput = document.getElementById("supportMessageInput");
+const supportSendBtn = document.getElementById("supportSendBtn");
+const supportChatBody = document.getElementById("supportChatBody");
+function openSupportSheet() {
+  if (!supportSheet || !supportSheetOverlay) return;
+
+  supportSheet.hidden = false;
+  supportSheetOverlay.hidden = false;
+
+  requestAnimationFrame(() => {
+    supportSheet.classList.add("is-open");
+    supportSheetOverlay.classList.add("is-open");
+    supportSheet.setAttribute("aria-hidden", "false");
+  });
+
+  setTimeout(() => {
+    supportMessageInput?.focus();
+  }, 220);
+
+  document.body.style.overflow = "hidden";
+}
+
+function closeSupportSheet() {
+  if (!supportSheet || !supportSheetOverlay) return;
+
+  supportSheet.classList.remove("is-open");
+  supportSheetOverlay.classList.remove("is-open");
+  supportSheet.setAttribute("aria-hidden", "true");
+
+  setTimeout(() => {
+    if (!supportSheet.classList.contains("is-open")) {
+      supportSheet.hidden = true;
+      supportSheetOverlay.hidden = true;
+    }
+  }, 280);
+
+  document.body.style.overflow = "";
+}
+  
+function appendSupportMessage(text, type = "user", messageId = null) {
+
+  if (!supportChatBody || !text) return;
+  if (messageId && supportChatBody.querySelector(`[data-support-message-id="${messageId}"]`)) {
+    return;
+  }
+
+  const row = document.createElement("div");
+  row.className = `support-msg support-msg-${type}`;
+  if (messageId) {
+    row.setAttribute("data-support-message-id", messageId);
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = "support-bubble";
+  bubble.textContent = text;
+
+  row.appendChild(bubble);
+  supportChatBody.appendChild(row);
+  supportChatBody.scrollTop = supportChatBody.scrollHeight;
+}
+window.appendSupportMessage = appendSupportMessage;
+function renderSupportMessages(messages = []) {
+  if (!supportChatBody) return;
+
+  supportChatBody.innerHTML = `
+    <div class="support-msg support-msg-agent">
+      <div class="support-bubble">
+        Hola. Soy soporte de MIMICAR. Escribinos tu consulta y la recibimos con los datos de tu cuenta.
+      </div>
+    </div>
+  `;
+
+  messages.forEach((msg) => {
+    const senderRole = String(msg?.sender_role || "").toLowerCase();
+    const type = senderRole === "admin" ? "agent" : "user";
+    appendSupportMessage(msg?.mensaje || "", type, msg?.id || null);
+  });
+}
+
+async function loadOrCreateSupportTicketContext() {
+  const session = await obtenerSesionCliente(true);
+
+  if (!session?.access_token || !session?.user) {
+    throw new Error("No hay sesión activa");
+  }
+
+  const userId = session.user.id;
+
+  // Usar sbRealtime (cliente con auth) en lugar de supabase (cliente anónimo)
+  const { data: existingTickets, error: ticketLookupError } = await window.sbRealtime
+    .from("soporte_tickets")
+    .select("id, estado, last_message_at, user_id, created_at")
+    .eq("user_id", userId)
+    .order("last_message_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (ticketLookupError) {
+    throw new Error(ticketLookupError.message || "No se pudo consultar soporte_tickets");
+  }
+
+  const existingTicket = Array.isArray(existingTickets) ? existingTickets[0] : null;
+  currentSupportTicketId = existingTicket?.id || null;
+
+  if (!currentSupportTicketId) {
+    renderSupportMessages([]);
+    currentSupportMessagesLoaded = true;
+    return { session, ticketId: null };
+  }
+
+  // También usar sbRealtime aquí
+  const { data: messages, error: messagesError } = await window.sbRealtime
+    .from("soporte_mensajes")
+    .select("id, sender_role, mensaje, created_at")
+    .eq("ticket_id", currentSupportTicketId)
+    .order("created_at", { ascending: true });
+
+  if (messagesError) {
+    throw new Error(messagesError.message || "No se pudieron cargar los mensajes");
+  }
+
+  renderSupportMessages(Array.isArray(messages) ? messages : []);
+  currentSupportMessagesLoaded = true;
+
+  return { session, ticketId: currentSupportTicketId };
+}
+  
+  
+
   
 supportBtn?.addEventListener("click", async () => {
   try {
@@ -6452,62 +6468,6 @@ function bindUIActions() {
     btnLogoutHeader.dataset.bound = '1';
   }
 }
-
-document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    initHeaderScrollEffect();
-    bindUIActions();
-
-    setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
-      state.origen = data;
-    });
-
-    setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
-      state.destino = data;
-    });
-
-    const session = await obtenerSesionCliente(true);
-    renderSesionUI(session);
-
-if (window.sbRealtime?.auth && !window.__mimiAuthListenerBound) {
-  window.__mimiAuthListenerBound = true;
-
-  window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
-    console.log('[auth] onAuthStateChange:', event, session);
-
-    cachedSession = session || null;
-    lastSessionCheck = Date.now();
-
-    renderSesionUI(session || null);
-
-    try {
-      const token = session?.access_token || null;
-
-      if (token && window.sbRealtime?.realtime) {
-        await window.sbRealtime.realtime.setAuth(token);
-        console.log('[auth] realtime token actualizado');
-      }
-    } catch (err) {
-      console.warn('[auth] no se pudo actualizar token realtime:', err);
-    }
-
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      await reanudarViajePendientePostLogin();
-    }
-
-    if (event === 'SIGNED_OUT') {
-      limpiarSesionCache();
-      renderSesionUI(null);
-    }
-  });
-}
-
-    await reanudarViajePendientePostLogin();
-    actualizarBotonCancelarViaje();
-  } catch (err) {
-    console.error('❌ Error en DOMContentLoaded:', err);
-  }
-});
 
   // ==========================================
   // MIMI NEXT LEVEL UI
