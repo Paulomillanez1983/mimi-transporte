@@ -453,8 +453,11 @@ function showSupportToast(message, type = "info") {
 }
 
 async function getAdminAccessToken() {
-  const session = await supabaseAdminService.refreshSessionIfNeeded();
-  const token = session?.access_token;
+  const activeAdmin = await supabaseAdminService.requireActiveAdmin();
+  const token =
+    activeAdmin?.session?.access_token ||
+    activeAdmin?.user?.access_token ||
+    null;
 
   if (!token) {
     throw new Error("Sesion admin expirada");
@@ -480,8 +483,11 @@ async function fetchSupportApiWithAdminRetry(url, options = {}) {
     return response;
   }
 
-  const refreshedSession = await supabaseAdminService.refreshSessionIfNeeded();
-  const refreshedToken = refreshedSession?.access_token;
+  const refreshedAdmin = await supabaseAdminService.requireActiveAdmin();
+  const refreshedToken =
+    refreshedAdmin?.session?.access_token ||
+    refreshedAdmin?.user?.access_token ||
+    null;
 
   if (!refreshedToken || refreshedToken === token) {
     return response;
