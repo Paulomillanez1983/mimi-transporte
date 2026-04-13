@@ -3133,29 +3133,70 @@ supportBtn?.addEventListener("click", async () => {
       return;
     }
 
-    if (window.initSupportPushFCM) {
-      try {
-        await window.initSupportPushFCM();
-      } catch (pushErr) {
-        console.warn("[supportBtn] push init warning:", pushErr);
-      }
-    }
-
     openSupportSheet();
     await loadOrCreateSupportTicketContext();
     await subscribeSupportRealtimeForUser();
+
+    if (window.initSupportPushFCM) {
+      try {
+        if (!("Notification" in window)) {
+          console.warn("[supportBtn] Notification API no disponible");
+          notif.show(
+            "Notificaciones no disponibles",
+            "Este navegador no soporta notificaciones push.",
+            "warning"
+          );
+        } else if (Notification.permission === "denied") {
+          notif.show(
+            "Notificaciones bloqueadas",
+            "Las notificaciones están bloqueadas en este navegador. Tenés que habilitarlas manualmente desde la configuración del sitio.",
+            "warning",
+            5000
+          );
+        } else if (Notification.permission === "default") {
+          const ok = window.confirm(
+            "¿Querés activar las notificaciones de soporte para recibir respuestas aunque no tengas la app abierta?"
+          );
+
+          if (ok) {
+            const pushToken = await window.initSupportPushFCM();
+            console.log("[supportBtn] push token:", pushToken);
+
+            if (pushToken) {
+              notif.show(
+                "Notificaciones activadas",
+                "Listo. Ya vas a recibir respuestas de soporte también fuera de la app.",
+                "success",
+                3500
+              );
+            } else {
+              notif.show(
+                "No se pudo activar",
+                "No pudimos activar las notificaciones en este dispositivo.",
+                "warning",
+                4000
+              );
+            }
+          } else {
+            console.log("[supportBtn] usuario canceló activación de notificaciones");
+          }
+        } else if (Notification.permission === "granted") {
+          const pushToken = await window.initSupportPushFCM();
+          console.log("[supportBtn] push token:", pushToken);
+        }
+      } catch (pushErr) {
+        console.warn("[supportBtn] push init warning:", pushErr);
+        notif.show(
+          "Error de notificaciones",
+          "No se pudieron activar las notificaciones en este dispositivo.",
+          "error",
+          4000
+        );
+      }
+    }
   } catch (err) {
     console.error("[supportBtn] error:", err);
     notif.show("Error", err?.message || "No se pudo abrir soporte", "error");
-  }
-});
-
-supportSheetClose?.addEventListener("click", closeSupportSheet);
-supportSheetOverlay?.addEventListener("click", closeSupportSheet);
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && supportSheet?.classList.contains("is-open")) {
-    closeSupportSheet();
   }
 });
 
