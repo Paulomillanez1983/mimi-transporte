@@ -32,11 +32,8 @@ function getSwPath() {
 function normalizeSupportRole(rawRole) {
   const role = String(rawRole || "").trim().toLowerCase();
 
-  if (role === "chofer" || role === "driver") return "driver";
-  if (role === "admin") return "admin";
-  if (role === "cliente" || role === "client") return "client";
-
-  return "client";
+  if (role === "chofer" || role === "driver") return "chofer";
+  return "cliente";
 }
 
 function isDuplicateError(error) {
@@ -59,7 +56,7 @@ async function upsertPushToken({ userId, token, accessToken }) {
     return null;
   }
 
-  const supportRole = normalizeSupportRole(window.__mimiSupportPushRole || "client");
+  const supportRole = normalizeSupportRole(window.__mimiSupportPushRole || "cliente");
 
   const payload = {
     user_id: userId,
