@@ -1,4 +1,4 @@
-import supabaseService from "./supabase-client.js";
+﻿import supabaseService from "./supabase-client.js";
 import { initSupportPushFCM } from "./push-support.js";
 
 const SUPPORT_API_BASE = "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1";
@@ -203,7 +203,7 @@ function conversationSecondary(item) {
     String(item?.subject || item?.asunto || "").trim()
   ].filter(Boolean);
 
-  return parts.join(" · ");
+  return parts.join(" Â· ");
 }
 function normalizeConversation(item) {
   if (!item || typeof item !== "object") return null;
@@ -273,7 +273,7 @@ function updateSupportUIState() {
     if (enabled) {
       btn.disabled = true;
       btn.innerHTML = `
-        <span class="support-utility-btn-icon" aria-hidden="true">✅</span>
+        <span class="support-utility-btn-icon" aria-hidden="true">âœ…</span>
         <span class="support-utility-btn-text">Alertas activadas</span>
       `;
       return;
@@ -282,7 +282,7 @@ function updateSupportUIState() {
     if (permission === "denied") {
       btn.disabled = true;
       btn.innerHTML = `
-        <span class="support-utility-btn-icon" aria-hidden="true">⚠️</span>
+        <span class="support-utility-btn-icon" aria-hidden="true">âš ï¸</span>
         <span class="support-utility-btn-text">Bloqueadas</span>
       `;
       return;
@@ -290,7 +290,7 @@ function updateSupportUIState() {
 
     btn.disabled = false;
     btn.innerHTML = `
-      <span class="support-utility-btn-icon" aria-hidden="true">🔔</span>
+      <span class="support-utility-btn-icon" aria-hidden="true">ðŸ””</span>
       <span class="support-utility-btn-text">Activar alertas</span>
     `;
   };
@@ -313,11 +313,11 @@ function updateSupportUIState() {
 
   if (setupStatus) {
     if (enabled) {
-      setupStatus.textContent = "Ya tenés activadas las alertas de soporte.";
+      setupStatus.textContent = "Ya tenÃ©s activadas las alertas de soporte.";
     } else if (permission === "denied") {
-      setupStatus.textContent = "Las alertas están bloqueadas en el navegador.";
+      setupStatus.textContent = "Las alertas estÃ¡n bloqueadas en el navegador.";
     } else {
-      setupStatus.textContent = "Las alertas están desactivadas.";
+      setupStatus.textContent = "Las alertas estÃ¡n desactivadas.";
     }
   }
 }
@@ -637,7 +637,7 @@ if (!current) {
       roleLabel(current.role),
       statusLabel(current.status),
       formatDateTime(current.updated_at)
-    ].filter(Boolean).join(" · ");
+    ].filter(Boolean).join(" Â· ");
   }
 
   const msgList = Array.isArray(current.messages) ? current.messages : [];
@@ -669,7 +669,7 @@ if (!current) {
               ${getMessageText(msg) ? `<div>${escapeHtml(getMessageText(msg))}</div>` : ""}
               ${attachmentsHtml}
               <div class="support-message-meta">
-                ${escapeHtml(roleLabel(role))} · ${formatTime(msg.created_at)}
+                ${escapeHtml(roleLabel(role))} Â· ${formatTime(msg.created_at)}
               </div>
             </div>
           </div>
@@ -748,7 +748,7 @@ async function createConversationIfNeeded(initialMessage) {
 
   const user = await getCurrentUser();
   const subject = initialMessage
-    ? `Consulta chofer · ${new Date().toLocaleDateString("es-AR")}`
+    ? `Consulta chofer Â· ${new Date().toLocaleDateString("es-AR")}`
     : "Consulta general chofer";
 
   const { data, error } = await supabaseService.client
@@ -1113,11 +1113,30 @@ export async function openDriverSupportPanel() {
   syncLayout();
 
   await loadSupportConversations({ preserveSelection: true, silent: false });
+
+  if (isMobileSupport()) {
+    const targetConversation =
+      supportState.filtered.find((item) => String(item.id) === String(supportState.selectedId)) ||
+      supportState.filtered[0] ||
+      supportState.conversations[0] ||
+      null;
+
+    if (targetConversation?.id) {
+      selectConversation(targetConversation.id, { openThread: true });
+      getEls().reply?.focus();
+    } else {
+      await startSupportConversation().catch((err) => {
+        console.error("[driver-support.openDriverSupportPanel.startSupportConversation]", err);
+        showToast("No pudimos abrir el chat de soporte", "error");
+      });
+    }
+  }
+
   await subscribeRealtime().catch(() => null);
   startPolling();
 
-// solo sincroniza estado, NO pide permiso automáticamente
-updateSupportUIState();
+  // Solo sincroniza estado. El permiso de alertas se activa a pedido del usuario.
+  updateSupportUIState();
 }
 export function closeDriverSupportPanel() {
   const { overlay, panel } = getEls();
