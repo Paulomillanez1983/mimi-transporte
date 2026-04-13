@@ -2957,3 +2957,118 @@ body.support-open {
     font-size: 10px;
   }
 }
+
+body.driver-online .fab-online {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(18px) scale(0.92);
+}
+
+body.driver-offline .fab-online {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 860px) {
+  .fab-online {
+    left: auto !important;
+    right: 16px !important;
+    bottom: calc(var(--safe-bottom) + 18px) !important;
+    width: 94px !important;
+    height: 94px !important;
+    min-height: 94px !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    max-width: none !important;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.28) !important;
+  }
+
+  .fab-content {
+    gap: 5px;
+  }
+
+  .fab-icon {
+    min-width: 36px;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .fab-text {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .fab-subtext {
+    max-width: 68px;
+    font-size: 9px;
+  }
+
+  .support-panel-topbar-actions .support-utility-btn,
+  .support-panel-topbar-actions .support-topbar-badge,
+  .support-toolbar-subtitle,
+  .support-toolbar-controls,
+  .support-head-btn,
+  .support-thread-actions,
+  .support-composer-hint,
+  .support-setup-actions .support-utility-btn:not(.support-utility-btn-primary),
+  .support-setup-status {
+    display: none !important;
+  }
+
+  .support-panel-topbar {
+    align-items: center;
+  }
+
+  .support-panel-topbar-copy h2 {
+    font-size: 26px;
+  }
+
+  .support-panel-topbar-copy p {
+    font-size: 15px;
+    max-width: 24ch;
+  }
+
+  .support-shell.is-mobile-support.is-thread-open .support-sidebar {
+    display: none !important;
+  }
+
+  .support-thread {
+    padding-bottom: calc(12px + var(--safe-bottom));
+  }
+
+  .support-thread-header {
+    padding-bottom: 10px;
+  }
+
+  .support-thread-top-mobile {
+    width: 100%;
+  }
+
+  .support-messages {
+    padding-top: 8px;
+  }
+
+  .support-composer {
+    position: sticky;
+    bottom: 0;
+    padding: 12px 0 calc(6px + var(--safe-bottom));
+    background: linear-gradient(180deg, rgba(237,243,251,0.2), rgba(237,243,251,0.96) 24%);
+  }
+
+  .support-reply-input {
+    min-height: 104px;
+    border-radius: 24px;
+  }
+
+  .support-send-btn {
+    width: 100%;
+  }
+
+  .menu-header {
+    margin-bottom: 10px;
+  }
+}
