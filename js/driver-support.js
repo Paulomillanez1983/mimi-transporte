@@ -1170,9 +1170,42 @@ function bindPushHooks() {
     }
   };
 
+  async function showSupportSystemNotification({ title, body } = {}) {
+    if (!("Notification" in window) || Notification.permission !== "granted") {
+      return false;
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.getRegistration("/mimi-transporte/firebase-messaging-sw.js");
+
+      if (registration?.showNotification) {
+        await registration.showNotification(title || "Soporte MIMI", {
+          body: body || "Tenes una respuesta nueva de soporte.",
+          icon: "/mimi-transporte/assets/icons/icon-192x192.png",
+          badge: "/mimi-transporte/assets/icons/badge-icon.png",
+          tag: "driver-support-foreground",
+          renotify: true,
+          requireInteraction: true,
+          data: {
+            url: "/mimi-transporte/chofer-panel.html",
+            type: "support-message"
+          }
+        });
+        return true;
+      }
+    } catch (err) {
+      console.warn("[driver-support] no se pudo mostrar notificacion local:", err);
+    }
+
+    return false;
+  }
+
   window.handleSupportPushForeground = async ({ title, body } = {}) => {
     await loadSupportConversations({ preserveSelection: true, silent: true });
     updateBadge();
+    if (document.hidden || !document.hasFocus()) {
+      await showSupportSystemNotification({ title, body });
+    }
     showToast(body || title || "Tenes una nueva respuesta de soporte", "success");
   };
 }
@@ -1256,4 +1289,7 @@ bindInstallPrompt();
 updateSupportUIState();
 handleResize();
 loadSupportConversations({ preserveSelection: true, silent: true }).catch(() => null);
+if ("Notification" in window && Notification.permission === "granted") {
+  ensureSupportPushPermissionOnOpen({ forcePrompt: false, silentDenied: true }).catch(() => null);
+}
 }
