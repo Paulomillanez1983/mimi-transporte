@@ -1,14 +1,30 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
+const CACHE_NAME = 'mimi-driver-v5';
+const APP_SHELL = '/mimi-transporte/index.html';
 const APP_BASE_PATH = '/mimi-transporte/';
+
+const STATIC_ASSETS = [
+  '/mimi-transporte/',
+  '/mimi-transporte/index.html',
+  '/mimi-transporte/mimi-transporte.css',
+  '/mimi-transporte/js/driver-app.js',
+  '/mimi-transporte/js/trip-manager.js',
+  '/mimi-transporte/js/ui-controller.js',
+  '/mimi-transporte/js/location-tracker.js',
+  '/mimi-transporte/js/map-service.js',
+  '/mimi-transporte/js/sound-manager.js',
+  '/mimi-transporte/js/push-fcm.js'
+];
+
 const DEFAULT_ICON = `${APP_BASE_PATH}assets/icons/icon-192x192.png`;
-const DEFAULT_BADGE = `${APP_BASE_PATH}assets/icons/icon-192x192.png`;
-const DEFAULT_URL = APP_BASE_PATH;
+const DEFAULT_BADGE = `${APP_BASE_PATH}assets/icons/badge-icon.png`;
+const DEFAULT_URL = `${APP_BASE_PATH}index.html`;
 const DEFAULT_TAG = 'mimi-driver-notification';
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjY',
+  apiKey: 'AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjE',
   authDomain: 'mimi-transporte.firebaseapp.com',
   projectId: 'mimi-transporte',
   storageBucket: 'mimi-transporte.firebasestorage.app',
@@ -22,6 +38,35 @@ function safeString(value, fallback = '') {
   if (value == null) return fallback;
   const text = String(value).trim();
   return text || fallback;
+}
+
+function isSameOrigin(url) {
+  try {
+    return new URL(url).origin === self.location.origin;
+  } catch (_) {
+    return false;
+  }
+}
+
+function isAppAsset(url) {
+  try {
+    const u = new URL(url);
+
+    if (u.origin !== self.location.origin) return false;
+    if (!u.pathname.startsWith('/mimi-transporte/')) return false;
+
+    if (
+      u.pathname.includes('/functions/v1/') ||
+      u.pathname.includes('/rest/v1/') ||
+      u.pathname.includes('/auth/v1/')
+    ) {
+      return false;
+    }
+
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 function normalizeUrl(rawUrl) {
@@ -43,13 +88,13 @@ function buildNotificationFromPayload(payload) {
   const data = payload?.data || {};
 
   const title = safeString(
-    notification.title || data.title,
-    'Nuevo mensaje'
+    data.title || notification.title,
+    '🚗 Nuevo mensaje MIMI'
   );
 
   const body = safeString(
-    notification.body || data.body,
-    'Tenés una nueva notificación'
+    data.body || notification.body,
+    '📩 Te respondió soporte — tocá para ver'
   );
 
   const url = normalizeUrl(
@@ -62,8 +107,8 @@ function buildNotificationFromPayload(payload) {
   );
 
   const tag = safeString(
-    notification.tag ||
     data.tag ||
+    notification.tag ||
     data.ticket_id ||
     data.viaje_id ||
     data.trip_id,
@@ -71,13 +116,18 @@ function buildNotificationFromPayload(payload) {
   );
 
   const icon = safeString(
-    notification.icon || data.icon,
+    data.icon || notification.icon,
     DEFAULT_ICON
   );
 
   const badge = safeString(
-    notification.badge || data.badge,
+    data.badge || notification.badge,
     DEFAULT_BADGE
+  );
+
+  const image = safeString(
+    data.image || notification.image,
+    ''
   );
 
   return {
@@ -86,9 +136,12 @@ function buildNotificationFromPayload(payload) {
       body,
       icon,
       badge,
+      image: image || undefined,
       tag,
       requireInteraction: true,
       renotify: true,
+      silent: false,
+      vibrate: [300, 100, 300, 100, 500],
       data: {
         ...data,
         url,
@@ -105,6 +158,105 @@ async function showPayloadNotification(payload) {
   await self.registration.showNotification(title, options);
 }
 
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of STATIC_ASSETS) {
+        try {
+          await cache.add(asset);
+        } catch (err) {
+          console.warn('[sw] no se pudo precachear:', asset, err);
+        }
+      }
+    })
+  );
+
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  if (request.method !== 'GET') return;
+
+  const isNavigation = request.mode === 'navigate';
+  const sameOrigin = isSameOrigin(request.url);
+  const cacheableAsset = isAppAsset(request.url);
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const cloned = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(APP_SHELL, cloned).catch(() => {});
+            });
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cachedApp = await caches.match(APP_SHELL);
+          if (cachedApp) return cachedApp;
+
+          return new Response('Sin conexión', {
+            status: 503,
+            statusText: 'Offline',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+          });
+        })
+    );
+    return;
+  }
+
+  if (!sameOrigin || !cacheableAsset) {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(request)
+        .then((response) => {
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+
+          const cloned = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, cloned).catch((err) => {
+              console.warn('[sw] no se pudo guardar en cache:', request.url, err);
+            });
+          });
+
+          return response;
+        })
+        .catch(async () => {
+          const fallback = await caches.match(request);
+          if (fallback) return fallback;
+
+          return new Response('', {
+            status: 504,
+            statusText: 'Offline cache miss'
+          });
+        });
+    })
+  );
+});
+
 messaging.onBackgroundMessage(async (payload) => {
   try {
     console.log('[firebase-messaging-sw.js] onBackgroundMessage:', payload);
@@ -114,24 +266,12 @@ messaging.onBackgroundMessage(async (payload) => {
   }
 });
 
-self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  event.waitUntil((async () => {
-    try {
-      const payload = event.data.json();
-      console.log('[firebase-messaging-sw.js] push fallback:', payload);
-      await showPayloadNotification(payload);
-    } catch (err) {
-      console.error('[firebase-messaging-sw.js] Error in push fallback:', err);
-    }
-  })());
-});
-
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = normalizeUrl(event.notification?.data?.url || DEFAULT_URL);
+  const action = safeString(event.action, '');
+  const data = event.notification?.data || {};
+  const targetUrl = normalizeUrl(data.url || DEFAULT_URL);
 
   event.waitUntil((async () => {
     const clientList = await clients.matchAll({
