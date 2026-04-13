@@ -1,254 +1,279 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+﻿import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getMessaging,
   getToken,
-  onMessage,
-  isSupported
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js';
-import supabaseService from './supabase-client.js';
+  isSupported,
+  onMessage
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjY',
-  authDomain: 'mimi-transporte.firebaseapp.com',
-  projectId: 'mimi-transporte',
-  storageBucket: 'mimi-transporte.firebasestorage.app',
-  messagingSenderId: '1066211116754',
-  appId: '1:1066211116754:web:8cfb14cfb15ecd0cb28f0b'
+  apiKey: "AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjY",
+  authDomain: "mimi-transporte.firebaseapp.com",
+  projectId: "mimi-transporte",
+  storageBucket: "mimi-transporte.firebasestorage.app",
+  messagingSenderId: "1066211116754",
+  appId: "1:1066211116754:web:8cfb14cfb15ecd0cb28f0b"
 };
 
 const FIREBASE_VAPID_KEY = "BKjAYoEwolpGEXVXpLRRBD5zHdkBbCHaUo9QgwFoPAULSdPn7qt8RNsMHAT2RrJtQpBsO3sRfMOHhFh1YBTfKSo".trim();
-const SERVICE_WORKER_PATH = '/mimi-transporte/firebase-messaging-sw.js';
 
-const app = initializeApp(firebaseConfig);
-
-let messagingInstance = null;
+let initialized = false;
 let foregroundListenerBound = false;
-let initInFlight = null;
-let lastSavedToken = null;
+const PUSH_PROMPT_DISMISSED_KEY = "mimi_client_push_prompt_dismissed_v1";
 
-function safeRole(value) {
-  const rol = String(value || '').trim().toLowerCase();
-  if (rol === 'chofer' || rol === 'cliente' || rol === 'admin') return rol;
-  return 'cliente';
+function getAppBasePath() {
+  const isGithubPages = window.location.hostname === "paulomillanez1983.github.io";
+  return isGithubPages ? "/mimi-transporte/" : "/";
 }
 
-function detectDeviceType() {
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
-    ? 'mobile'
-    : 'desktop';
+function getSwPath() {
+  return `${getAppBasePath()}firebase-messaging-sw.js`;
 }
 
-async function getMessagingSafe() {
-  const supported = await isSupported().catch(() => false);
-  if (!supported) {
-    console.warn('[push-fcm] Firebase Messaging no soportado en este navegador');
+function normalizeSupportRole(rawRole) {
+  const role = String(rawRole || "").trim().toLowerCase();
+
+  if (role === "chofer" || role === "driver") return "chofer";
+  return "cliente";
+}
+
+function isDuplicateError(error) {
+  const text = JSON.stringify(error || {}).toLowerCase();
+  return (
+    text.includes("duplicate") ||
+    text.includes("409") ||
+    text.includes("23505") ||
+    text.includes("unique")
+  );
+}
+
+async function upsertPushToken({ userId, token, accessToken }) {
+  if (!userId || !token || !accessToken) {
+    console.warn("[push-support] faltan datos para guardar token", {
+      hasUserId: !!userId,
+      hasToken: !!token,
+      hasAccessToken: !!accessToken
+    });
     return null;
   }
 
-  if (!messagingInstance) {
-    messagingInstance = getMessaging(app);
-  }
+  const supportRole = normalizeSupportRole(window.__mimiSupportPushRole || "cliente");
 
-  return messagingInstance;
-}
-
-async function ensureSupabase() {
-  if (!supabaseService.client) {
-    await supabaseService.init();
-  }
-  return supabaseService.client || null;
-}
-
-async function ensureServiceWorkerRegistration() {
-  const existingReg = await navigator.serviceWorker.getRegistration(SERVICE_WORKER_PATH);
-  if (existingReg) return existingReg;
-
-  const reg = await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
-  await navigator.serviceWorker.ready;
-  return reg;
-}
-
-async function ensureNotificationPermission() {
-  if (!('Notification' in window)) {
-    console.warn('[push-fcm] Notification API no disponible');
-    return 'denied';
-  }
-
-  if (Notification.permission === 'granted') {
-    return 'granted';
-  }
-
-  if (Notification.permission === 'denied') {
-    console.warn('[push-fcm] Permiso de notificaciones denegado previamente');
-    return 'denied';
-  }
-
-  const permission = await Notification.requestPermission();
-  return permission;
-}
-
-function bindForegroundListenerOnce(messaging) {
-  if (foregroundListenerBound) return;
-
-  onMessage(messaging, (payload) => {
-    try {
-      console.log('[push-fcm] Push en foreground:', payload);
-
-      const title =
-        payload?.notification?.title ||
-        payload?.data?.title ||
-        'Nueva notificación';
-
-      const body =
-        payload?.notification?.body ||
-        payload?.data?.body ||
-        '';
-
-      window.dispatchEvent(
-        new CustomEvent('pushForegroundMessage', {
-          detail: {
-            title,
-            body,
-            payload
-          }
-        })
-      );
-    } catch (err) {
-      console.error('[push-fcm] Error en onMessage:', err);
-    }
-  });
-
-  foregroundListenerBound = true;
-}
-
-async function getAuthenticatedUserId(supabase) {
-  const { data, error } = await supabase.auth.getUser();
-
-  if (error) {
-    console.error('[push-fcm] Error obteniendo usuario autenticado:', error);
-    return null;
-  }
-
-  return data?.user?.id || null;
-}
-
-async function upsertPushToken({ supabase, userId, rol, token }) {
   const payload = {
     user_id: userId,
-    rol: safeRole(rol),
+    rol: supportRole,
     token,
-    device: detectDeviceType(),
-    updated_at: new Date().toISOString(),
-    platform: navigator.userAgent
+    platform: "web",
+    updated_at: new Date().toISOString()
   };
 
-  const { data, error } = await supabase
-    .from('push_tokens')
-    .upsert(payload, { onConflict: 'token' })
-    .select()
-    .single();
+  const upsertResult = await window.supabaseUpsert?.("push_tokens", payload, "token");
 
-  if (error) {
-    console.error('[push-fcm] Error guardando token en Supabase:', error);
+  if (!upsertResult?.error) {
+    console.log("[push-support] token guardado correctamente");
+    return upsertResult?.data || null;
+  }
+
+  if (!isDuplicateError(upsertResult.error)) {
+    console.warn("[push-support] upsert fallÃ³", upsertResult.error);
     return null;
   }
 
-  return data;
-}
-
-export async function initPushFCM(rol = 'cliente') {
-  if (initInFlight) return initInFlight;
-
-  initInFlight = (async () => {
-    try {
-      console.log('[push-fcm] initPushFCM start', {
-        rol,
-        permission: typeof Notification !== 'undefined' ? Notification.permission : 'unsupported',
-        swSupported: 'serviceWorker' in navigator
-      });
-
-      if (!('serviceWorker' in navigator)) {
-        console.warn('[push-fcm] Service Worker no disponible');
-        return null;
-      }
-
-      const supabase = await ensureSupabase();
-      if (!supabase) {
-        console.error('[push-fcm] Supabase no inicializado');
-        return null;
-      }
-      console.log('[push-fcm] supabase ok');
-
-      const messaging = await getMessagingSafe();
-      if (!messaging) {
-        console.warn('[push-fcm] messaging no soportado');
-        return null;
-      }
-      console.log('[push-fcm] messaging ok');
-
-      const permission = await ensureNotificationPermission();
-      console.log('[push-fcm] permission result:', permission);
-
-      if (permission !== 'granted') {
-        console.warn('[push-fcm] Permiso de notificaciones no concedido:', permission);
-        return null;
-      }
-
-      const registration = await ensureServiceWorkerRegistration();
-      console.log('[push-fcm] service worker registration ok:', registration);
-
-      const token = await getToken(messaging, {
-        vapidKey: FIREBASE_VAPID_KEY,
-        serviceWorkerRegistration: registration
-      });
-
-      console.log('[push-fcm] token result:', token);
-
-      if (!token) {
-        console.warn('[push-fcm] No se pudo obtener token FCM');
-        return null;
-      }
-
-      bindForegroundListenerOnce(messaging);
-
-      const userId = await getAuthenticatedUserId(supabase);
-      console.log('[push-fcm] authenticated user id:', userId);
-
-      if (!userId) {
-        console.warn('[push-fcm] No hay usuario autenticado para guardar token push');
-        return null;
-      }
-
-      if (lastSavedToken === token) {
-        console.log('[push-fcm] Token ya guardado en esta sesión');
-        return token;
-      }
-
-      const saved = await upsertPushToken({
-        supabase,
-        userId,
-        rol,
-        token
-      });
-
-      console.log('[push-fcm] upsert result:', saved);
-
-      if (!saved) {
-        console.warn('[push-fcm] upsert devolvió null');
-        return null;
-      }
-
-      lastSavedToken = token;
-      console.log('[push-fcm] Token FCM guardado correctamente:', saved);
-
-      return token;
-    } catch (err) {
-      console.error('[push-fcm] Error initPushFCM:', err);
-      return null;
-    } finally {
-      initInFlight = null;
+  const updateResult = await window.supabaseUpdate?.(
+    "push_tokens",
+    "token",
+    token,
+    {
+      user_id: userId,
+      rol: supportRole,
+      platform: "web",
+      updated_at: new Date().toISOString()
     }
-  })();
+  );
 
-  return initInFlight;
+  if (updateResult?.error) {
+    console.warn("[push-support] tampoco se pudo actualizar token", updateResult.error);
+    return null;
+  }
+
+  console.log("[push-support] token actualizado correctamente");
+  return updateResult?.data || null;
 }
+
+function getNotificationPermission() {
+  if (!("Notification" in window)) return "unsupported";
+  return Notification.permission || "default";
+}
+
+function markPushPromptDismissed(userId) {
+  if (!userId) return;
+
+  try {
+    localStorage.setItem(PUSH_PROMPT_DISMISSED_KEY, String(userId));
+  } catch (_) {}
+}
+
+function clearPushPromptDismissed(userId) {
+  if (!userId) return;
+
+  try {
+    const current = localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY);
+    if (current === String(userId)) {
+      localStorage.removeItem(PUSH_PROMPT_DISMISSED_KEY);
+    }
+  } catch (_) {}
+}
+
+function wasPushPromptDismissed(userId) {
+  if (!userId) return false;
+
+  try {
+    return localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === String(userId);
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function initSupportPushFCM(options = {}) {
+  try {
+    if (initialized) {
+      console.log("[push-support] ya inicializado");
+      return null;
+    }
+
+    const {
+      promptIfNeeded = false,
+      forcePrompt = false
+    } = options || {};
+
+    const supported = await isSupported().catch(() => false);
+    if (!supported) {
+      console.warn("[push-support] Firebase Messaging no soportado en este navegador");
+      return null;
+    }
+
+    if (!window.obtenerSesionCliente) {
+      console.warn("[push-support] obtenerSesionCliente no disponible todavÃ­a");
+      return null;
+    }
+
+    const session = await window.obtenerSesionCliente(false);
+    if (!session?.user?.id || !session?.access_token) {
+      console.warn("[push-support] no hay sesiÃ³n cliente activa");
+      return null;
+    }
+
+    if (!("serviceWorker" in navigator) || !("Notification" in window)) {
+      console.warn("[push-support] browser sin soporte de SW/Notification");
+      return null;
+    }
+
+    let permission = getNotificationPermission();
+    console.log("[push-support] notification permission before init:", permission);
+
+    if (permission === "default") {
+      if (!promptIfNeeded) {
+        console.log("[push-support] permiso pendiente; init silenciosa sin prompt");
+        return null;
+      }
+
+      if (!forcePrompt && wasPushPromptDismissed(session.user.id)) {
+        console.log("[push-support] prompt ya pospuesto para este usuario");
+        return null;
+      }
+
+      permission = await Notification.requestPermission();
+      console.log("[push-support] notification permission after prompt:", permission);
+
+      if (permission === "granted") {
+        clearPushPromptDismissed(session.user.id);
+      } else {
+        markPushPromptDismissed(session.user.id);
+      }
+    }
+
+    if (permission !== "granted") {
+      console.warn("[push-support] permiso de notificaciones no concedido");
+      return null;
+    }
+
+    clearPushPromptDismissed(session.user.id);
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    const swRegistration = await navigator.serviceWorker.register(getSwPath(), {
+      scope: getAppBasePath()
+    });
+
+    if (!FIREBASE_VAPID_KEY || FIREBASE_VAPID_KEY === "ACA_TU_VAPID_KEY") {
+      console.error("[push-support] Falta configurar FIREBASE_VAPID_KEY");
+      return null;
+    }
+
+    console.log("[push-support] href:", window.location.href);
+    console.log("[push-support] origin:", window.location.origin);
+    console.log("[push-support] hostname:", window.location.hostname);
+    console.log("[push-support] sw path:", getSwPath());
+    console.log("[push-support] scope:", getAppBasePath());
+    console.log("[push-support] apiKey:", firebaseConfig.apiKey);
+    console.log("[push-support] projectId:", firebaseConfig.projectId);
+    console.log("[push-support] senderId:", firebaseConfig.messagingSenderId);
+    console.log("[push-support] appId:", firebaseConfig.appId);
+    console.log("[push-support] vapid:", FIREBASE_VAPID_KEY);
+
+    const token = await getToken(messaging, {
+      vapidKey: FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration: swRegistration
+    });
+
+    if (!token) {
+      console.warn("[push-support] Firebase no devolviÃ³ token");
+      return null;
+    }
+
+    console.log("[push-support] token FCM:", token);
+
+    await upsertPushToken({
+      userId: session.user.id,
+      token,
+      accessToken: session.access_token
+    });
+
+    if (!foregroundListenerBound) {
+      onMessage(messaging, (payload) => {
+        console.log("[push-support] foreground message", payload);
+
+        const messageId =
+          payload?.data?.message_id ||
+          payload?.data?.messageId ||
+          null;
+
+        if (typeof window.handleSupportPushForeground === "function") {
+          window.handleSupportPushForeground({
+            messageId,
+            title: payload?.notification?.title || payload?.data?.title || "Soporte",
+            body: payload?.notification?.body || payload?.data?.body || "TenÃ©s una nueva respuesta de soporte."
+          });
+        }
+      });
+
+      foregroundListenerBound = true;
+    }
+
+    initialized = true;
+    console.log("[push-support] initSupportPushFCM OK");
+    return token;
+  } catch (err) {
+    console.error("[push-support] init error:", err);
+    return null;
+  }
+}
+
+export function resetSupportPushFCMState() {
+  initialized = false;
+}
+
+window.initSupportPushFCM = initSupportPushFCM;
+window.getSupportPushPermissionState = getNotificationPermission;
+window.resetSupportPushFCMState = resetSupportPushFCMState;
