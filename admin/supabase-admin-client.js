@@ -8,6 +8,31 @@ class SupabaseAdminService {
     this.initPromise = null;
     this.authListenerRegistered = false;
     this.lastSession = null;
+
+    this.waitForActiveAdmin = async (timeoutMs = 3200) => {
+      const ready = await this.init();
+      if (!ready || !this.client?.auth) {
+        return { ok: false, reason: "init_failed" };
+      }
+
+      const first = await this.requireActiveAdmin();
+      if (first?.ok) {
+        return first;
+      }
+
+      const startedAt = Date.now();
+
+      while (Date.now() - startedAt < timeoutMs) {
+        await new Promise((resolve) => window.setTimeout(resolve, 180));
+
+        const next = await this.requireActiveAdmin();
+        if (next?.ok) {
+          return next;
+        }
+      }
+
+      return first;
+    };
   }
 
   isConfigured() {
@@ -225,31 +250,6 @@ class SupabaseAdminService {
       console.error("[SupabaseAdminService.signOut.catch]", err);
       throw err;
     }
-  }
-
-  async waitForActiveAdmin(timeoutMs = 3200) {
-    const ready = await this.init();
-    if (!ready || !this.client?.auth) {
-      return { ok: false, reason: "init_failed" };
-    }
-
-    const first = await this.requireActiveAdmin();
-    if (first?.ok) {
-      return first;
-    }
-
-    const startedAt = Date.now();
-
-    while (Date.now() - startedAt < timeoutMs) {
-      await new Promise((resolve) => window.setTimeout(resolve, 180));
-
-      const next = await this.requireActiveAdmin();
-      if (next?.ok) {
-        return next;
-      }
-    }
-
-    return first;
   }
 
   async requireActiveAdmin() {
