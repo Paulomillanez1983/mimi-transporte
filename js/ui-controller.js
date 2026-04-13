@@ -150,8 +150,8 @@ class UIController {
       'btn-whatsapp': 'btn-whatsapp',
       'btn-navigate': 'btn-navigate',
       'btn-arrived': 'btn-arrived',
+      'btn-continue': 'btn-continue',
       'btn-finish': 'btn-finish',
-
       'nav-bar': 'nav-bar',
       'nav-street': 'nav-street',
       'nav-next': 'nav-next',
@@ -197,10 +197,12 @@ class UIController {
     const callBtn = this.elements['btn-call'];
     const whatsappBtn = this.elements['btn-whatsapp'];
     const navigateBtn = this.elements['btn-navigate'];
+    const btnContinue = this.elements['btn-continue'];
+    const btnFinish = this.elements['btn-finish'];
     const menuButton = this.elements['menu-button'];
     const menuBackdrop = this.elements['menu-backdrop'];
     const menuProfile = this.elements['menu-profile'];
-
+    
     window.addEventListener('tripStateChanged', this._boundTripStateChanged);
     window.addEventListener('driverFlowStateChanged', this._boundDriverFlowStateChanged);
 
@@ -248,7 +250,27 @@ class UIController {
       this._navigateBtnHapticHandler = () => this._haptic('medium');
       navigateBtn.addEventListener('click', this._navigateBtnHapticHandler);
     }
+if (btnContinue) {
+  btnContinue.addEventListener('click', () => {
+    this.hideArrival();
+    this._haptic('light');
+  });
+}
 
+if (btnFinish) {
+  btnFinish.addEventListener('click', () => {
+    if (btnFinish.disabled) return;
+
+    btnFinish.disabled = true;
+    btnFinish.textContent = 'Finalizando...';
+
+    window.dispatchEvent(
+      new CustomEvent('driverAction', {
+        detail: { action: 'finishTrip' }
+      })
+    );
+  });
+}
     if (menuButton) {
       this._menuButtonClickHandler = () => this.toggleMenu();
       menuButton.addEventListener('click', this._menuButtonClickHandler);
@@ -298,10 +320,12 @@ class UIController {
     const callBtn = this.elements['btn-call'];
     const whatsappBtn = this.elements['btn-whatsapp'];
     const navigateBtn = this.elements['btn-navigate'];
+    const btnContinue = this.elements['btn-continue'];
+    const btnFinish = this.elements['btn-finish'];
     const menuButton = this.elements['menu-button'];
     const menuBackdrop = this.elements['menu-backdrop'];
     const menuProfile = this.elements['menu-profile'];
-
+    
     if (acceptBtn) {
       acceptBtn.removeEventListener('click', this._handleAccept);
       if (this._acceptTouchStartHandler) {
@@ -339,6 +363,15 @@ class UIController {
     if (navigateBtn && this._navigateBtnHapticHandler) {
       navigateBtn.removeEventListener('click', this._navigateBtnHapticHandler);
     }
+    if (btnContinue) {
+  btnContinue.replaceWith(btnContinue.cloneNode(true));
+  this.elements['btn-continue'] = document.getElementById('btn-continue');
+}
+
+if (btnFinish) {
+  btnFinish.replaceWith(btnFinish.cloneNode(true));
+  this.elements['btn-finish'] = document.getElementById('btn-finish');
+}
 
     if (menuButton && this._menuButtonClickHandler) {
       menuButton.removeEventListener('click', this._menuButtonClickHandler);
