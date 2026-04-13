@@ -2904,16 +2904,16 @@ body.support-open {
 }
 
 body.driver-online .fab-online {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(18px) scale(0.92);
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
 }
 
 body.driver-offline .fab-online {
   opacity: 1;
   pointer-events: auto;
+  transform: none;
 }
-
 @media (max-width: 860px) {
   .fab-online,
   .fab-online.online,
