@@ -1026,8 +1026,11 @@ top: calc(var(--mobile-top) + 56px);
   border-radius: 24px;
   padding: 22px 18px;
   text-align: center;
-  transform: translateY(200%);
-  transition: transform 0.3s ease;
+  transform: translateY(calc(100% + 32px));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.3s ease, opacity 0.2s ease, visibility 0.2s ease;
   z-index: var(--z-arrival);
   border: 1px solid rgba(0,0,0,0.06);
   box-shadow: var(--uber-shadow-lg);
@@ -1035,8 +1038,10 @@ top: calc(var(--mobile-top) + 56px);
 
 .arrival-panel.active {
   transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
-
 .arrival-content h2 {
   font-size: 28px;
   font-weight: 900;
