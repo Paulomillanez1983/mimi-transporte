@@ -453,7 +453,7 @@ function showSupportToast(message, type = "info") {
 }
 
 async function getAdminAccessToken() {
-  const session = await supabaseAdminService.getSession();
+  const session = await supabaseAdminService.refreshSessionIfNeeded();
   const token = session?.access_token;
 
   if (!token) {
@@ -461,6 +461,38 @@ async function getAdminAccessToken() {
   }
 
   return token;
+}
+
+async function fetchSupportApiWithAdminRetry(url, options = {}) {
+  let token = await getAdminAccessToken();
+
+  const buildHeaders = (accessToken) => ({
+    ...(options.headers || {}),
+    Authorization: `Bearer ${accessToken}`
+  });
+
+  let response = await fetch(url, {
+    ...options,
+    headers: buildHeaders(token)
+  });
+
+  if (response.status !== 401) {
+    return response;
+  }
+
+  const refreshedSession = await supabaseAdminService.refreshSessionIfNeeded();
+  const refreshedToken = refreshedSession?.access_token;
+
+  if (!refreshedToken || refreshedToken === token) {
+    return response;
+  }
+
+  response = await fetch(url, {
+    ...options,
+    headers: buildHeaders(refreshedToken)
+  });
+
+  return response;
 }
 
 function applySupportFilters() {
@@ -744,14 +776,12 @@ async function sendSupportReply() {
   try {
     setSendBusy(true);
 
-    const token = await getAdminAccessToken();
     const uploadedAttachments = await uploadSupportAttachments(current.id, files);
 
-    const response = await fetch(`${SUPPORT_API_BASE}/support-send-message`, {
+    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/support-send-message`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         conversation_id: current.id,
@@ -780,12 +810,14 @@ async function sendSupportReply() {
       data?.data?.id ||
       null;
 
+    let pushDeliveryOk = false;
+    let pushDeliveryMessage = "";
+
     try {
-      const pushResponse = await fetch(`${SUPPORT_API_BASE}/send-push-support-reply`, {
+      const pushResponse = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/send-push-support-reply`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           ticket_id: current.id,
@@ -801,9 +833,18 @@ async function sendSupportReply() {
 
       const pushData = await pushResponse.json().catch(() => ({}));
       if (!pushResponse.ok || pushData?.ok === false) {
+        pushDeliveryMessage =
+          pushData?.error ||
+          pushData?.message ||
+          "La respuesta se guardo, pero el push no se pudo enviar.";
         console.warn("[support.sendSupportReply] push response warning:", pushData);
+      } else {
+        pushDeliveryOk = true;
       }
     } catch (pushErr) {
+      pushDeliveryMessage =
+        pushErr?.message ||
+        "La respuesta se guardo, pero el push no se pudo enviar.";
       console.warn("[support.sendSupportReply] push warning:", pushErr);
     }
 
@@ -823,7 +864,12 @@ async function sendSupportReply() {
     }
 
     scrollMessagesToBottom(true);
-    showSupportToast("Respuesta enviada.", "success");
+
+    if (pushDeliveryOk) {
+      showSupportToast("Respuesta enviada y push disparado.", "success");
+    } else {
+      showSupportToast(pushDeliveryMessage || "Respuesta enviada, pero el push no salio.", "warning");
+    }
   } catch (err) {
     console.error("[support.sendSupportReply]", err);
 
@@ -845,13 +891,9 @@ async function loadSupportConversations(options = {}) {
       setSupportBusy(true);
     }
 
-    const token = await getAdminAccessToken();
-
-    const response = await fetch(`${SUPPORT_API_BASE}/support-list-conversation`, {
+    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/support-list-conversation`, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: {}
     });
 
     const data = await response.json().catch(() => ({}));
@@ -973,13 +1015,10 @@ async function persistConversationStatus(status) {
   }
 
   try {
-    const token = await getAdminAccessToken();
-
-    const response = await fetch(`${SUPPORT_API_BASE}/support-update-status`, {
+    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/support-update-status`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         conversation_id: current.id,
