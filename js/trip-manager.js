@@ -477,31 +477,59 @@ async rejectOffer(offerId) {
     }, CONFIG.TRIP_REFRESH_INTERVAL || 8000);
   }
 
-    async setDriverAvailability({ online, disponible }) {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
+async setDriverAvailability({ online, disponible }) {
+  let authUserId = null;
 
-    const now = new Date().toISOString();
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseService.client.auth.getUser();
 
-    const payload = {
-      last_seen_at: now
-    };
-
-    if (typeof online === 'boolean') payload.online = online;
-    if (typeof disponible === 'boolean') payload.disponible = disponible;
-
-    const { error } = await supabaseService.client
-      .from('choferes')
-      .update(payload)
-      .eq('user_id', driverId);
-
-    if (error) {
-      console.error('[TripManager] setDriverAvailability error:', error);
-      return { success: false, error: error.message };
+    if (userError) {
+      console.error('[TripManager] auth.getUser error:', userError);
+      return { success: false, error: userError.message };
     }
 
-    return { success: true };
+    authUserId = user?.id || null;
+  } catch (err) {
+    console.error('[TripManager] auth.getUser failed:', err);
+    return { success: false, error: err.message };
   }
+
+  if (!authUserId) {
+    return { success: false, error: 'No auth user id' };
+  }
+
+  const now = new Date().toISOString();
+
+  const payload = {
+    last_seen_at: now
+  };
+
+  if (typeof online === 'boolean') payload.online = online;
+  if (typeof disponible === 'boolean') payload.disponible = disponible;
+
+  const updatePromise = supabaseService.client
+    .from('choferes')
+    .update(payload)
+    .eq('user_id', authUserId);
+
+  const timeoutPromise = new Promise((resolve) =>
+    setTimeout(() => resolve({ error: new Error('TIMEOUT_ACTUALIZANDO_CHOFER') }), 8000)
+  );
+
+  const result = await Promise.race([updatePromise, timeoutPromise]);
+  const error = result?.error || null;
+
+  if (error) {
+    console.error('[TripManager] setDriverAvailability error:', error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+  
   // =========================================================
   // ACTIONS (VIAJES)
   // =========================================================
