@@ -1131,8 +1131,23 @@ _setupUI() {
   const profileBtn = document.getElementById('menu-view-profile');
   const profileQuickBtn = document.getElementById('menu-view-profile-quick');
 
-  this._fabClickHandler = async () => {
+  this._fabClickHandler = async (ev) => {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
+
+    const fab = document.getElementById('fab-online');
+
     try {
+      console.log('[DriverApp] FAB toggle presionado', {
+        onlineActual: this._onlineStatus,
+        flow: this._driverFlowState
+      });
+
+      if (fab) {
+        fab.disabled = true;
+        fab.style.pointerEvents = 'none';
+      }
+
       const hasActiveTrip = !!tripManager.getCurrentTrip();
 
       if (hasActiveTrip && this._onlineStatus) {
@@ -1144,10 +1159,15 @@ _setupUI() {
 
       if (nextOnline) {
         await this._ensureDriverShellReady();
-        await tripManager.setDriverAvailability({
+
+        const result = await tripManager.setDriverAvailability({
           online: true,
           disponible: true
         });
+
+        if (!result?.success) {
+          throw new Error(result?.error || 'No se pudo poner online');
+        }
 
         this._startRealtimeServicesInBackground();
 
@@ -1160,22 +1180,25 @@ _setupUI() {
           return;
         }
 
-        await tripManager.setDriverAvailability({
+        const result = await tripManager.setDriverAvailability({
           online: false,
           disponible: false
         });
 
-          this._onlineStatus = false;
-          this._setFlowState('OFFLINE');
-          this._currentTripId = null;
+        if (!result?.success) {
+          throw new Error(result?.error || 'No se pudo poner offline');
+        }
 
-          tripManager.resetState(); // 👈 ESTE ES EL CAMBIO
+        this._onlineStatus = false;
+        this._setFlowState('OFFLINE');
+        this._currentTripId = null;
 
-          mapService.clearRoute?.();
-          uiController.hideIncomingModal?.();
-          uiController.hideNavigation?.();
-          uiController.hideArrival?.();
-          locationTracker.stop?.();
+        tripManager.resetState();
+        mapService.clearRoute?.();
+        uiController.hideIncomingModal?.();
+        uiController.hideNavigation?.();
+        uiController.hideArrival?.();
+        locationTracker.stop?.();
       }
 
       uiController.updateDriverState(
@@ -1189,14 +1212,24 @@ _setupUI() {
       );
     } catch (err) {
       console.error('[DriverApp] Error cambiando estado:', err);
-      uiController.showToast('Error cambiando estado', 'error');
+      uiController.showToast(err?.message || 'Error cambiando estado', 'error');
+    } finally {
+      if (fab) {
+        fab.disabled = false;
+        fab.style.pointerEvents = 'auto';
+      }
     }
   };
 
   if (btnFab) {
-    btnFab.addEventListener('click', this._fabClickHandler);
-  }
+    btnFab.replaceWith(btnFab.cloneNode(true));
+    const freshFab = document.getElementById('fab-online');
 
+    if (freshFab) {
+      freshFab.addEventListener('click', this._fabClickHandler);
+      freshFab.addEventListener('touchend', this._fabClickHandler, { passive: false });
+    }
+  }
   if (supportBtn) {
     supportBtn.addEventListener('click', async () => {
       uiController.closeMenu?.();
