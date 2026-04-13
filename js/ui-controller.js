@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MIMI Driver - UI Controller v3.0 (Uber Driver PRO)
  * Final production version
  * Compatible con: driver-app.js, trip-manager.js, supabase-client.js
@@ -116,6 +116,7 @@ class UIController {
       'fab-online': 'fab-online',
       'fab-text': 'fab-text',
       'fab-icon': 'fab-icon',
+      'fab-subtext': 'fab-subtext',
       'fab-pulse': 'fab-pulse',
 
       'bottom-sheet': 'bottom-sheet',
@@ -427,7 +428,7 @@ class UIController {
       lat,
       lng,
       texto: irADestino ? 'Ir a destino' : 'Ir a recogida',
-      icono: '🏁',
+      icono: 'ðŸ',
       url: hasCoords
         ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`
         : null
@@ -618,7 +619,7 @@ class UIController {
       'trip-price': trip.precio ? `$${Math.round(trip.precio).toLocaleString('es-AR')}` : '$--',
       'trip-duration': trip.tiempo_espera ? `${trip.tiempo_espera} min` : '-- min',
       'client-name': trip.pasajero_nombre || trip.cliente || 'Cliente',
-      'client-phone': trip.pasajero_telefono || trip.telefono || 'Sin teléfono',
+      'client-phone': trip.pasajero_telefono || trip.telefono || 'Sin telÃ©fono',
       'pickup-time': trip.tiempo_espera ? `${trip.tiempo_espera} min` : '-- min',
       'pickup-address': trip.origen_direccion || trip.origen || '',
       'dropoff-address': trip.destino_direccion || trip.destino || ''
@@ -766,7 +767,7 @@ class UIController {
         this._closeIncomingModal();
       } catch (err) {
         console.error('[UI] Error in accept callback:', err);
-        this.showToast('Error al procesar aceptación', 'error');
+        this.showToast('Error al procesar aceptaciÃ³n', 'error');
         this._resetCountdownUI();
         this.state.isProcessing = false;
         return;
@@ -889,7 +890,7 @@ class UIController {
 
     if (btn) {
       btn.classList.remove('accepting');
-      btn.innerHTML = '<span>✓</span><small>Aceptar</small>';
+      btn.innerHTML = '<span>âœ“</span><small>Aceptar</small>';
     }
   }
 
@@ -898,6 +899,122 @@ class UIController {
   }
 
 updateDriverState(mode, isOnline) {
+  const online = Boolean(isOnline);
+  this.state.isOnline = online;
+
+  const dot = this.elements['status-dot'];
+  const text = this.elements['status-text'];
+  const fab = this.elements['fab-online'];
+  const fabText = this.elements['fab-text'];
+  const fabIcon = this.elements['fab-icon'];
+  const fabSubtext = this.elements['fab-subtext'];
+  const fabPulse = this.elements['fab-pulse'];
+  const navText = this.elements['nav-next'];
+  const sheet = this.elements['bottom-sheet'];
+
+  document.body.classList.toggle('driver-online', online);
+  document.body.classList.toggle('driver-offline', !online);
+
+  if (dot) {
+    dot.classList.toggle('online', online);
+    dot.style.animation = online ? 'pulse-ring 2s infinite' : '';
+  }
+
+  if (text) {
+    text.textContent = online ? 'En linea · Buscando viajes' : 'Fuera de linea';
+    text.classList.toggle('online', online);
+  }
+
+  if (fab) {
+    fab.classList.toggle('online', online);
+    fab.setAttribute('aria-pressed', online ? 'true' : 'false');
+    fab.setAttribute('aria-label', online ? 'Estas en linea. Toca para desconectarte' : 'Estas fuera de linea. Toca para conectarte');
+  }
+
+  if (fabText) {
+    fabText.textContent = online ? 'En linea' : 'Conectar';
+  }
+
+  if (fabIcon) {
+    fabIcon.textContent = online ? 'ON' : 'OFF';
+    fabIcon.style.color = '#fff';
+  }
+
+  if (fabSubtext) {
+    fabSubtext.textContent = online ? 'Toca para pausar' : 'Fuera de linea';
+  }
+
+  if (fabPulse) {
+    fabPulse.style.display = online ? 'block' : 'none';
+  }
+
+  if (navText && !this.state.currentTrip) {
+    navText.textContent = online
+      ? 'Buscando viajes cercanos...'
+      : 'Conectate para recibir viajes';
+  }
+
+  if (sheet && !this.state.currentTrip) {
+    sheet.classList.toggle('has-trip', false);
+  }
+
+  this._updateBottomSheetState(online);
+  this.showWaitingState();
+  this._haptic(online ? 'success' : 'light');
+}
+_updateBottomSheetState(isOnline) {
+  const sheetContent = this.elements['sheet-content'];
+  const sheet = this.elements['bottom-sheet'];
+  if (!sheetContent || !sheet) return;
+
+  const desiredState = isOnline ? 'online' : 'offline';
+
+  if (sheetContent.dataset.waitingState === desiredState && !sheetContent.dataset.flowState) {
+    return;
+  }
+
+  sheetContent.dataset.waitingState = desiredState;
+  delete sheetContent.dataset.flowState;
+
+  if (isOnline) {
+    sheet.classList.remove('has-trip');
+    sheetContent.innerHTML = `
+      <div class="waiting-state uber-style">
+        <div class="waiting-text">
+          <h3>Listo para recibir viajes</h3>
+          <p>Quedate en linea y te vamos mostrando pedidos cercanos apenas entren.</p>
+        </div>
+        <div class="trip-metrics-horizontal">
+          <div class="metric-box">
+            <span class="metric-value">En linea</span>
+            <span class="metric-label">Estado</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-value">${this._escapeHtml(document.getElementById('stat-trips')?.textContent || '0')}</span>
+            <span class="metric-label">Viajes hoy</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-value">${this._escapeHtml(document.getElementById('stat-rating')?.textContent || '5.0')}</span>
+            <span class="metric-label">Calificacion</span>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    sheet.classList.remove('has-trip');
+    sheetContent.innerHTML = `
+      <div class="waiting-state offline">
+        <div class="waiting-text">
+          <h3>Todo listo para salir a trabajar</h3>
+          <p>Toca el boton redondo para conectarte. Cuando estes en linea te van a entrar viajes y alertas.</p>
+        </div>
+        <div class="trip-metrics-horizontal">
+          <div class="metric-box">
+            <span class="metric-value">Off</span>
+            <span class="metric-label">Estado</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-value">${this._escapeHtml(document.getElementById('stat-earnings')?.textContent || 'updateDriverState(mode, isOnline) {
   const online = Boolean(isOnline);
   this.state.isOnline = online;
 
@@ -919,7 +1036,7 @@ updateDriverState(mode, isOnline) {
   }
 
   if (text) {
-    text.textContent = online ? 'Conectado · Buscando viajes' : 'Desconectado';
+    text.textContent = online ? 'Conectado Â· Buscando viajes' : 'Desconectado';
     text.classList.toggle('online', online);
   }
 
@@ -941,7 +1058,7 @@ updateDriverState(mode, isOnline) {
   }
 
     if (fabIcon) {
-    fabIcon.textContent = online ? '●' : '';
+    fabIcon.textContent = online ? 'â—' : '';
     fabIcon.style.color = '#fff';
   }
 
@@ -993,7 +1110,18 @@ _updateBottomSheetState(isOnline) {
       <div class="waiting-state offline">
         <div class="waiting-text">
           <h3>Desconectado</h3>
-          <p>Tocá el botón azul para empezar a recibir viajes</p>
+          <p>TocÃ¡ el botÃ³n azul para empezar a recibir viajes</p>
+        </div>
+      </div>
+    `;
+  }
+}')}</span>
+            <span class="metric-label">Ganado hoy</span>
+          </div>
+          <div class="metric-box">
+            <span class="metric-value">${this._escapeHtml(document.getElementById('stat-trips')?.textContent || '0')}</span>
+            <span class="metric-label">Viajes hoy</span>
+          </div>
         </div>
       </div>
     `;
@@ -1055,8 +1183,8 @@ showNavigationState(trip) {
 
     if (streetEl) {
       streetEl.textContent = irADestino
-        ? 'Dirígete al destino final'
-        : 'Dirígete al punto de recogida';
+        ? 'DirÃ­gete al destino final'
+        : 'DirÃ­gete al punto de recogida';
     }
 
     if (nextEl) {
@@ -1122,12 +1250,12 @@ showNavigationState(trip) {
           </button>
 
           <button class="action-btn-large call" id="btn-call">
-            <span class="icon">📞</span>
+            <span class="icon">ðŸ“ž</span>
             <span>Llamar</span>
           </button>
 
           <button class="action-btn-large cancel" id="btn-cancel">
-            <span class="icon">❌</span>
+            <span class="icon">âŒ</span>
             <span>Cancelar</span>
           </button>
         </div>
@@ -1150,8 +1278,8 @@ showNavigationState(trip) {
         </div>
 
         <button class="btn-arrived" id="btn-arrived">
-          <span>✓</span>
-          <span>${irADestino ? 'Finalizar viaje' : 'He llegado · Iniciar viaje'}</span>
+          <span>âœ“</span>
+          <span>${irADestino ? 'Finalizar viaje' : 'He llegado Â· Iniciar viaje'}</span>
         </button>
       </div>
     `;
@@ -1177,14 +1305,14 @@ showNavigationState(trip) {
         if (phone) {
           window.location.href = `tel:${phone}`;
         } else {
-          this.showToast('Teléfono no disponible', 'warning');
+          this.showToast('TelÃ©fono no disponible', 'warning');
         }
       };
     }
 
     if (btnCancel) {
       btnCancel.onclick = () => {
-        if (confirm('¿Seguro que querés cancelar este viaje?')) {
+        if (confirm('Â¿Seguro que querÃ©s cancelar este viaje?')) {
           window.dispatchEvent(new CustomEvent('driverAction', {
             detail: { action: 'cancel', tripId: trip.id }
           }));
@@ -1266,10 +1394,10 @@ hideNavigation() {
 
     const toast = document.createElement('div');
     const icons = {
-      info: 'ℹ️',
-      success: '✅',
-      error: '❌',
-      warning: '⚠️'
+      info: 'â„¹ï¸',
+      success: 'âœ…',
+      error: 'âŒ',
+      warning: 'âš ï¸'
     };
 
     toast.className = `toast toast-${type}`;
@@ -1365,7 +1493,7 @@ hideNavigation() {
     }
 
     if (menuEmail) {
-      menuEmail.textContent = email || 'Sin sesión';
+      menuEmail.textContent = email || 'Sin sesiÃ³n';
     }
 
     if (menuAvatar) {
@@ -1404,7 +1532,7 @@ hideNavigation() {
       .replaceAll("'", '&#039;');
   }
 
-  showInfoSheet(options = {}) {
+    showInfoSheet(options = {}) {
     const sheet = this.elements['bottom-sheet'];
     const sheetContent = this.elements['sheet-content'];
 
@@ -1417,17 +1545,21 @@ hideNavigation() {
     const {
       title = 'Detalle',
       description = '',
-      metrics = []
+      metrics = [],
+      sections = [],
+      actions = []
     } = options;
 
     const safeMetrics = Array.isArray(metrics) ? metrics : [];
+    const safeSections = Array.isArray(sections) ? sections : [];
+    const safeActions = Array.isArray(actions) ? actions : [];
 
     sheet.classList.remove('has-trip');
     sheetContent.dataset.flowState = 'info';
     delete sheetContent.dataset.waitingState;
 
     sheetContent.innerHTML = `
-      <div class="waiting-state uber-style">
+      <div class="waiting-state uber-style info-sheet-view">
         <div class="waiting-text">
           <h3>${this._escapeHtml(title)}</h3>
           <p>${this._escapeHtml(description)}</p>
@@ -1442,8 +1574,40 @@ hideNavigation() {
             `).join('')}
           </div>
         ` : ''}
+        ${safeSections.map((section) => `
+          <section class="info-sheet-section">
+            <div class="info-sheet-section-title">${this._escapeHtml(section.title || '')}</div>
+            <div class="info-sheet-list">
+              ${(Array.isArray(section.items) ? section.items : []).map((item) => `
+                <div class="info-sheet-item">
+                  <span class="info-sheet-item-label">${this._escapeHtml(item.label || '')}</span>
+                  <span class="info-sheet-item-value">${this._escapeHtml(item.value || 'Sin datos')}</span>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        `).join('')}
+        ${safeActions.length ? `
+          <div class="info-sheet-actions">
+            ${safeActions.map((action, index) => `
+              <button class="action-btn-large ${this._escapeHtml(action.variant || 'navigate')}" data-sheet-action="${index}">
+                <span>${this._escapeHtml(action.label || 'Abrir')}</span>
+              </button>
+            `).join('')}
+          </div>
+        ` : ''}
       </div>
     `;
+
+    sheetContent.querySelectorAll('[data-sheet-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const idx = Number(button.getAttribute('data-sheet-action'));
+        const action = safeActions[idx];
+        if (typeof action?.onClick === 'function') {
+          action.onClick();
+        }
+      });
+    });
 
     sheetContent.scrollTop = 0;
     this._expandBottomSheet();
