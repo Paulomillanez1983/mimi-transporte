@@ -2900,6 +2900,11 @@ if (senderRole === "admin") {
     });
   }
 }
+    } catch (err) {
+  console.error("[support realtime] error:", err);
+}
+} // 👈🔥 ESTE ES EL QUE FALTABA (cierra la función)
+
 async function subscribeSupportRealtimeForUser(force = false) {
   if (!window.sbRealtime) return null;
 
