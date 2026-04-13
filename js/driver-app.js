@@ -472,29 +472,28 @@ if (currentTrip) {
 
   await this._showRouteOnMap(currentTrip);
   uiController.showNavigationState(currentTrip);
+
 } else if (pendingTrip) {
-  uiController.showNavigationState(currentTrip);
-      } else if (pendingTrip) {
-        console.log('[DriverApp] Estado inicial: oferta pendiente');
-        this._setFlowState('RECEIVING_OFFER');
+  console.log('[DriverApp] Estado inicial: oferta pendiente');
+  this._setFlowState('RECEIVING_OFFER');
 
-        uiController.showIncomingTrip(
-          pendingTrip,
-          () => this._acceptOffer(pendingTrip.offerId),
-          () => this._rejectOffer(pendingTrip.offerId)
-        );
-      } else {
-        console.log('[DriverApp] Estado inicial: esperando');
+  uiController.showIncomingTrip(
+    pendingTrip,
+    () => this._acceptOffer(pendingTrip.offerId),
+    () => this._rejectOffer(pendingTrip.offerId)
+  );
 
-        if (this._onlineStatus) {
-          this._setFlowState('ONLINE_IDLE');
-        } else {
-          this._setFlowState('OFFLINE');
-        }
+} else {
+  console.log('[DriverApp] Estado inicial: esperando');
 
-        uiController.showWaitingState();
-      }
-    } catch (error) {
+  if (this._onlineStatus) {
+    this._setFlowState('ONLINE_IDLE');
+  } else {
+    this._setFlowState('OFFLINE');
+  }
+
+  uiController.showWaitingState();
+} catch (error) {
       console.error('[DriverApp] Error fatal:', error);
 
       const msg = String(error?.message || '').toLowerCase();
