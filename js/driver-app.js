@@ -393,6 +393,7 @@ class DriverApp {
       }
 
       // 6) Eventos + UI
+
       this._subscribeToEvents();
       this._setupUI();
       initDriverSupport();
@@ -990,20 +991,23 @@ class DriverApp {
   // =========================================================
   async _onPositionUpdate(position) {
     if (this._destroyed) return;
-const currentTrip = tripManager.getCurrentTrip();
-
-if (!this._onlineStatus && !currentTrip) return;
-
-if (!currentTrip) {
-  uiController.hideArrival?.();
-  return;
-}
     if (!position || !Number.isFinite(position.lat) || !Number.isFinite(position.lng)) return;
 
-    mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
     const currentTrip = tripManager.getCurrentTrip();
 
-    if (String(currentTrip?.estado || '').toUpperCase() === 'EN_CURSO') {
+    if (!this._onlineStatus && !currentTrip) {
+      uiController.hideArrival?.();
+      return;
+    }
+
+    mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
+
+    if (!currentTrip) {
+      uiController.hideArrival?.();
+      return;
+    }
+
+    if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
       this._locationUpdateInterval = 5000;
     } else if (this._onlineStatus) {
       this._locationUpdateInterval = 15000;
@@ -1038,73 +1042,51 @@ if (!currentTrip) {
       }
     }
 
-    if (currentTrip) {
-      const estado = String(currentTrip.estado || '').toUpperCase();
+    if (!currentTrip?.id) {
+      uiController.hideArrival?.();
+      return;
+    }
 
-if (!currentTrip?.id) {
-  uiController.hideArrival?.();
-  return;
-}
+    const estado = String(currentTrip.estado || '').toUpperCase();
 
-const estado = String(currentTrip.estado || '').toUpperCase();
+    if (
+      (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
+      this._driverFlowState === 'GOING_TO_PICKUP'
+    ) {
+      const distPickup = this._calculateDistance(
+        position.lat,
+        position.lng,
+        currentTrip.origen_lat,
+        currentTrip.origen_lng
+      );
 
-if (
-  (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
-  this._driverFlowState === 'GOING_TO_PICKUP'
-) {
-  const distPickup = this._calculateDistance(
-    position.lat,
-    position.lng,
-    currentTrip.origen_lat,
-    currentTrip.origen_lng
-  );
-
-  if (distPickup < 100) {
-    this._setFlowState('ARRIVED_PICKUP');
-    uiController.showArrival?.();
-  } else {
-    uiController.hideArrival?.();
-  }
-} else if (
-  estado === 'EN_CURSO' &&
-  this._driverFlowState === 'TRIP_STARTED'
-) {
-  const distDestination = this._calculateDistance(
-    position.lat,
-    position.lng,
-    currentTrip.destino_lat,
-    currentTrip.destino_lng
-  );
-
-  if (distDestination < 100) {
-    this._setFlowState('ARRIVED_DESTINATION');
-    uiController.showArrival?.();
-  } else {
-    uiController.hideArrival?.();
-  }
-} else {
-  uiController.hideArrival?.();
-}
-
-      if (
-        estado === 'EN_CURSO' &&
-        this._driverFlowState === 'TRIP_STARTED'
-      ) {
-        const distDestination = this._calculateDistance(
-          position.lat,
-          position.lng,
-          currentTrip.destino_lat,
-          currentTrip.destino_lng
-        );
-
-        if (distDestination < 100) {
-          this._setFlowState('ARRIVED_DESTINATION');
-          uiController.showArrival?.();
-        }
+      if (distPickup < 100) {
+        this._setFlowState('ARRIVED_PICKUP');
+        uiController.showArrival?.();
+      } else {
+        uiController.hideArrival?.();
       }
+    } else if (
+      estado === 'EN_CURSO' &&
+      this._driverFlowState === 'TRIP_STARTED'
+    ) {
+      const distDestination = this._calculateDistance(
+        position.lat,
+        position.lng,
+        currentTrip.destino_lat,
+        currentTrip.destino_lng
+      );
+
+      if (distDestination < 100) {
+        this._setFlowState('ARRIVED_DESTINATION');
+        uiController.showArrival?.();
+      } else {
+        uiController.hideArrival?.();
+      }
+    } else {
+      uiController.hideArrival?.();
     }
   }
-
   // =========================================================
   // UI SETUP
   // =========================================================
@@ -1153,8 +1135,11 @@ _setupUI() {
 
         this._onlineStatus = false;
         this._setFlowState('OFFLINE');
+        this._currentTripId = null;
         mapService.clearRoute?.();
+        uiController.hideIncomingModal?.();
         uiController.hideNavigation?.();
+        uiController.hideArrival?.();
         locationTracker.stop?.();
       }
 
