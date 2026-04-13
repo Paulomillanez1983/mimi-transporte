@@ -53,7 +53,7 @@ async function verifyExistingAccess() {
 
     setEnvHint("Supabase listo.");
 
-    const result = await supabaseAdminService.requireActiveAdmin();
+    const result = await supabaseAdminService.waitForActiveAdmin(3200);
 
     if (result?.ok) {
       setLoading(true, "Redirigiendo al panel...");
