@@ -19,6 +19,7 @@ const FIREBASE_VAPID_KEY = "BKjAYoEwolpGEXVXpLRRBD5zHdkBbCHaUo9QgwFoPAULSdPn7qt8
 
 let initialized = false;
 let foregroundListenerBound = false;
+const PUSH_PROMPT_DISMISSED_KEY = "mimi_client_push_prompt_dismissed_v1";
 
 function getAppBasePath() {
   const isGithubPages = window.location.hostname === "paulomillanez1983.github.io";
@@ -112,12 +113,51 @@ async function upsertPushToken({ userId, token, accessToken }) {
   return updateResult?.data || null;
 }
 
-export async function initSupportPushFCM() {
+function getNotificationPermission() {
+  if (!("Notification" in window)) return "unsupported";
+  return Notification.permission || "default";
+}
+
+function markPushPromptDismissed(userId) {
+  if (!userId) return;
+
+  try {
+    localStorage.setItem(PUSH_PROMPT_DISMISSED_KEY, String(userId));
+  } catch (_) {}
+}
+
+function clearPushPromptDismissed(userId) {
+  if (!userId) return;
+
+  try {
+    const current = localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY);
+    if (current === String(userId)) {
+      localStorage.removeItem(PUSH_PROMPT_DISMISSED_KEY);
+    }
+  } catch (_) {}
+}
+
+function wasPushPromptDismissed(userId) {
+  if (!userId) return false;
+
+  try {
+    return localStorage.getItem(PUSH_PROMPT_DISMISSED_KEY) === String(userId);
+  } catch (_) {
+    return false;
+  }
+}
+
+export async function initSupportPushFCM(options = {}) {
   try {
     if (initialized) {
       console.log("[push-support] ya inicializado");
       return null;
     }
+
+    const {
+      promptIfNeeded = false,
+      forcePrompt = false
+    } = options || {};
 
     const supported = await isSupported().catch(() => false);
     if (!supported) {
@@ -141,13 +181,36 @@ export async function initSupportPushFCM() {
       return null;
     }
 
-    const permission = await Notification.requestPermission();
-    console.log("[push-support] notification permission:", permission);
+    let permission = getNotificationPermission();
+    console.log("[push-support] notification permission before init:", permission);
+
+    if (permission === "default") {
+      if (!promptIfNeeded) {
+        console.log("[push-support] permiso pendiente; init silenciosa sin prompt");
+        return null;
+      }
+
+      if (!forcePrompt && wasPushPromptDismissed(session.user.id)) {
+        console.log("[push-support] prompt ya pospuesto para este usuario");
+        return null;
+      }
+
+      permission = await Notification.requestPermission();
+      console.log("[push-support] notification permission after prompt:", permission);
+
+      if (permission === "granted") {
+        clearPushPromptDismissed(session.user.id);
+      } else {
+        markPushPromptDismissed(session.user.id);
+      }
+    }
 
     if (permission !== "granted") {
       console.warn("[push-support] permiso de notificaciones no concedido");
       return null;
     }
+
+    clearPushPromptDismissed(session.user.id);
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
@@ -220,4 +283,10 @@ export async function initSupportPushFCM() {
   }
 }
 
+export function resetSupportPushFCMState() {
+  initialized = false;
+}
+
 window.initSupportPushFCM = initSupportPushFCM;
+window.getSupportPushPermissionState = getNotificationPermission;
+window.resetSupportPushFCMState = resetSupportPushFCMState;
