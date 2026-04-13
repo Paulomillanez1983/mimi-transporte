@@ -5,57 +5,45 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="theme-color" content="#f8f8f8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  
+
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="color-scheme" content="light" />
-  <meta name="color-scheme" content="dark light" />
   <meta name="format-detection" content="telephone=no" />
 
   <title>MIMI Driver</title>
 
-  <meta name="description" content="Panel de conductor MIMI - Transporte seguro" />
+  <meta name="description" content="Panel de chofer MIMI - Transporte seguro" />
   <meta property="og:title" content="MIMI Driver" />
-  <meta property="og:description" content="Panel de conductor MIMI" />
+  <meta property="og:description" content="Panel de chofer MIMI" />
   <meta property="og:type" content="website" />
- <meta name="application-name" content="MIMI Driver">
- <meta name="apple-mobile-web-app-title" content="MIMI Driver">
-  <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>ðŸš</text></svg>">
-<link rel="manifest" href="/mimi-transporte/manifest.json" />
-<link rel="apple-touch-icon" href="/mimi-transporte/assets/icons/icon-192x192.png" />
-  
-  <!-- Fonts -->
+  <meta name="application-name" content="MIMI Driver" />
+  <meta name="apple-mobile-web-app-title" content="MIMI Driver" />
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#128652;</text></svg>">
+  <link rel="manifest" href="/mimi-transporte/manifest.json" />
+  <link rel="apple-touch-icon" href="/mimi-transporte/assets/icons/icon-192x192.png" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- MapLibre CDN -->
   <link href="https://unpkg.com/maplibre-gl@5.21.1/dist/maplibre-gl.css" rel="stylesheet" />
   <script src="https://unpkg.com/maplibre-gl@5.21.1/dist/maplibre-gl.js"></script>
 
-  <!-- Supabase local -->
   <script src="./libs/supabase-js.js"></script>
 
-  <!-- CSS -->
   <link rel="stylesheet" href="css/design-system.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/animations.css" />
   <link rel="stylesheet" href="css/panel.css" />
 </head>
-
 <body>
-
-  <!-- BotÃ³n Logout -->
   <button class="logout-btn" id="logoutBtn">Salir</button>
 
-  <!-- MAP -->
   <div id="map-container"></div>
 
-  <!-- UI -->
   <div id="ui-layer">
-
-    <!-- HEADER -->
     <header class="header" id="header">
       <div class="header-content">
         <div class="driver-profile">
@@ -69,7 +57,7 @@
           </div>
         </div>
 
-        <button class="icon-btn" id="menu-button" aria-label="MenÃº">
+        <button class="icon-btn" id="menu-button" aria-label="Men&uacute;">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
@@ -77,7 +65,6 @@
       </div>
     </header>
 
-    <!-- STATS FLOTANTES -->
     <div class="stats-floating">
       <div class="stat-card">
         <div class="stat-value" id="stat-earnings">$0</div>
@@ -91,11 +78,10 @@
 
       <div class="stat-card">
         <div class="stat-value" id="stat-rating">5.0</div>
-        <div class="stat-label">Rating</div>
+        <div class="stat-label">Calificaci&oacute;n</div>
       </div>
     </div>
 
-    <!-- NAV BAR -->
     <div class="nav-bar" id="nav-bar">
       <div class="nav-content">
         <div class="nav-maneuver">
@@ -116,30 +102,27 @@
       </div>
     </div>
 
-    <!-- FAB ONLINE -->
-    <button class="fab-online" id="fab-online">
+    <button class="fab-online" id="fab-online" type="button" aria-label="Cambiar estado de conexi&oacute;n">
       <div class="fab-content">
         <span class="fab-icon">OFF</span>
         <span class="fab-text">Conectar</span>
-        <span class="fab-subtext" id="fab-subtext">Fuera de linea</span>
+        <span class="fab-subtext" id="fab-subtext">Fuera de l&iacute;nea</span>
       </div>
       <div class="fab-pulse"></div>
     </button>
 
-    <!-- BOTTOM SHEET -->
     <div class="bottom-sheet" id="bottom-sheet">
       <div class="sheet-handle" id="sheet-handle">
         <div class="handle-bar"></div>
       </div>
-         <div class="sheet-content" id="sheet-content">
-         <div class="waiting-state">
-         <h3>EstÃ¡s desconectado</h3>
-         <p>UsÃ¡ la app en cualquier momento para empezar a generar ganancias adicionales.</p>
+      <div class="sheet-content" id="sheet-content">
+        <div class="waiting-state">
+          <h3>Est&aacute;s desconectado</h3>
+          <p>Us&aacute; la app cuando quieras para empezar a generar ingresos.</p>
         </div>
       </div>
     </div>
 
-    <!-- INCOMING MODAL -->
     <div class="incoming-modal" id="incoming-modal">
       <div class="modal-backdrop"></div>
 
@@ -168,7 +151,7 @@
             </div>
             <div class="route-info-compact">
               <div class="route-stop">
-                <span class="route-label">Recoger en</span>
+                <span class="route-label">Retirar en</span>
                 <span class="route-value" id="trip-pickup">--</span>
               </div>
               <div class="route-stop">
@@ -189,13 +172,13 @@
             </div>
             <div class="metric-box">
               <span class="metric-value" id="trip-duration">-- min</span>
-              <span class="metric-label">DuraciÃ³n</span>
+              <span class="metric-label">Duraci&oacute;n</span>
             </div>
           </div>
         </div>
 
         <div class="client-row">
-          <div class="client-avatar-large" id="client-avatar">ðŸ‘¤</div>
+          <div class="client-avatar-large" id="client-avatar">&#128100;</div>
           <div class="client-info-text">
             <div class="client-name" id="client-name">--</div>
             <div class="client-phone" id="client-phone">--</div>
@@ -204,382 +187,373 @@
 
         <div class="modal-actions-uber">
           <button class="btn-reject" id="btn-reject" type="button">
-            <span>âœ•</span>
+            <span>&times;</span>
             <span>Rechazar</span>
           </button>
 
           <button class="btn-accept" id="btn-accept" type="button">
-            <span>âœ“</span>
+            <span>&#10003;</span>
             <span>Aceptar viaje</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- ARRIVAL PANEL -->
     <div class="arrival-panel" id="arrival-panel">
       <div class="arrival-content">
-        <div class="arrival-icon">ðŸ</div>
-        <h2>Â¡Has llegado!</h2>
-        <p>Â¿Deseas finalizar el viaje?</p>
+        <div class="arrival-icon">&#127937;</div>
+        <h2>&iexcl;Llegaste!</h2>
+        <p>&iquest;Quer&eacute;s finalizar el viaje?</p>
         <div class="arrival-actions">
-          <button class="btn-secondary" id="btn-continue">Continuar</button>
-          <button class="btn-primary" id="btn-finish">Finalizar</button>
+          <button class="btn-secondary" id="btn-continue" type="button">Continuar</button>
+          <button class="btn-primary" id="btn-finish" type="button">Finalizar</button>
         </div>
       </div>
     </div>
 
-    <!-- TOAST -->
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- GLOBAL LOADING -->
     <div class="global-loading" id="global-loading">
       <div class="spinner"></div>
       <span class="loading-text">Cargando...</span>
     </div>
 
-    <!-- OFFLINE BANNER -->
     <div class="offline-banner" id="offline-banner">
-      <span>âš  Sin conexiÃ³n</span>
+      <span>&#9888; Sin conexi&oacute;n</span>
     </div>
   </div>
 
-<script type="module">
-  import supabaseService from "./js/supabase-client.js";
-  import CONFIG from "./js/config.js";
+  <script type="module">
+    import supabaseService from "./js/supabase-client.js";
+    import CONFIG from "./js/config.js";
 
-  const logoutBtn = document.getElementById("logoutBtn");
-  const menuLogoutBtn = document.getElementById("menu-logout");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const menuLogoutBtn = document.getElementById("menu-logout");
 
-  async function protectRoute() {
-    try {
-      await supabaseService.init();
+    async function protectRoute() {
+      try {
+        await supabaseService.init();
 
-      const { data, error } = await supabaseService.client.auth.getSession();
+        const { data, error } = await supabaseService.client.auth.getSession();
 
-      if (error || !data?.session?.access_token) {
-        console.warn("[AUTH] No autenticado â†’ redirigiendo");
+        if (error || !data?.session?.access_token) {
+          console.warn("[AUTH] No autenticado -> redirigiendo");
+          window.location.replace("./login-chofer.html");
+          return;
+        }
+
+        const { data: userRes } = await supabaseService.client.auth.getUser();
+
+        if (!userRes?.user) {
+          window.location.replace("./login-chofer.html");
+          return;
+        }
+      } catch (err) {
+        console.error("[AUTH] Error:", err);
         window.location.replace("./login-chofer.html");
-        return;
+      }
+    }
+
+    async function doLogout() {
+      try {
+        await supabaseService.client.auth.signOut();
+      } catch (err) {
+        console.error("[logout] Error cerrando sesi&oacute;n:", err);
+      } finally {
+        window.location.href = CONFIG.REDIRECTS.LOGIN;
+      }
+    }
+
+    async function initLogout() {
+      const { data } = await supabaseService.client.auth.getSession();
+
+      if (data?.session && logoutBtn) {
+        logoutBtn.classList.add("visible");
       }
 
-      const { data: userRes } = await supabaseService.client.auth.getUser();
-
-      if (!userRes?.user) {
-        window.location.replace("./login-chofer.html");
-        return;
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", doLogout);
       }
-    } catch (err) {
-      console.error("[AUTH] Error:", err);
-      window.location.replace("./login-chofer.html");
-    }
-  }
 
-  async function doLogout() {
-    try {
-      await supabaseService.client.auth.signOut();
-    } catch (err) {
-      console.error("[logout] Error cerrando sesiÃ³n:", err);
-    } finally {
-      window.location.href = CONFIG.REDIRECTS.LOGIN;
-    }
-  }
-
-  async function initLogout() {
-    const { data } = await supabaseService.client.auth.getSession();
-
-    if (data?.session && logoutBtn) {
-      logoutBtn.classList.add("visible");
+      if (menuLogoutBtn) {
+        menuLogoutBtn.addEventListener("click", doLogout);
+      }
     }
 
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", doLogout);
+    await protectRoute();
+    await initLogout();
+  </script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready.catch(() => {});
     }
+  </script>
 
-    if (menuLogoutBtn) {
-      menuLogoutBtn.addEventListener("click", doLogout);
-    }
-  }
+  <script type="module" src="js/driver-app.js"></script>
 
-  await protectRoute();
-  await initLogout();
-</script>
+  <div id="menu-backdrop"></div>
 
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.catch(() => {});
-  }
-</script>
+  <aside id="side-menu" aria-hidden="true">
+    <div class="menu-sheet">
+      <div class="menu-drag-handle"></div>
 
-<script type="module" src="js/driver-app.js"></script>
+      <div class="menu-header">
+        <button class="menu-profile" id="menu-profile" type="button" aria-expanded="false">
+          <div class="menu-avatar" id="menu-avatar">
+            <span id="menu-avatar-initial">M</span>
+          </div>
 
-<!-- MENU BACKDROP -->
-<div id="menu-backdrop"></div>
-<!-- SIDE MENU PRO -->
-<aside id="side-menu" aria-hidden="true">
-  <div class="menu-sheet">
-    <div class="menu-drag-handle"></div>
+          <div class="menu-profile-text">
+            <div class="menu-name" id="menu-name">Conductor</div>
+            <div class="menu-email" id="menu-email">Sin sesi&oacute;n</div>
+          </div>
 
-    <!-- HEADER -->
-    <div class="menu-header">
-      <button class="menu-profile" id="menu-profile" type="button" aria-expanded="false">
-        <div class="menu-avatar" id="menu-avatar">
-          <span id="menu-avatar-initial">M</span>
+          <div class="menu-chevron" id="menu-chevron">&#8964;</div>
+        </button>
+
+        <div class="menu-profile-expand" id="menu-profile-expand">
+          <button class="menu-secondary-action" id="menu-view-profile-quick" type="button">
+            Ver perfil
+          </button>
+        </div>
+      </div>
+
+      <div class="menu-stats">
+        <div class="menu-stat-card">
+          <div class="menu-stat-value" id="stat-earnings-menu">$0</div>
+          <div class="menu-stat-label">Hoy</div>
         </div>
 
-        <div class="menu-profile-text">
-          <div class="menu-name" id="menu-name">Conductor</div>
-          <div class="menu-email" id="menu-email">Sin sesiÃ³n</div>
+        <div class="menu-stat-card">
+          <div class="menu-stat-value" id="stat-trips-menu">0</div>
+          <div class="menu-stat-label">Viajes</div>
         </div>
 
-        <div class="menu-chevron" id="menu-chevron">âŒ„</div>
-      </button>
+        <div class="menu-stat-card">
+          <div class="menu-stat-value" id="stat-rating-menu">5.0</div>
+          <div class="menu-stat-label">Calificaci&oacute;n</div>
+        </div>
+      </div>
 
-      <div class="menu-profile-expand" id="menu-profile-expand">
-        <button class="menu-secondary-action" id="menu-view-profile-quick" type="button">
-          Ver perfil
+      <div class="menu-items">
+        <button class="menu-item" id="menu-view-profile" type="button">
+          <span class="menu-item-icon">&#128100;</span>
+          <span class="menu-item-copy">
+            <span class="menu-item-text">Perfil del chofer</span>
+            <span class="menu-item-hint">Datos, veh&iacute;culo y documentos</span>
+          </span>
+        </button>
+
+        <button class="menu-item menu-item-support" id="menu-support" type="button" aria-label="Abrir soporte">
+          <span class="menu-item-icon">&#128172;</span>
+          <span class="menu-item-copy">
+            <span class="menu-item-text">Ayuda y soporte</span>
+            <span class="menu-item-hint">Escribinos y segu&iacute; la respuesta</span>
+          </span>
+          <span class="menu-item-badge" id="supportDockBadge" hidden>0</span>
+        </button>
+
+        <button class="menu-item" id="menu-earnings" type="button">
+          <span class="menu-item-icon">&#128176;</span>
+          <span class="menu-item-copy">
+            <span class="menu-item-text">Ganancias</span>
+            <span class="menu-item-hint">Resumen r&aacute;pido del d&iacute;a</span>
+          </span>
+        </button>
+
+        <button class="menu-item" id="menu-history" type="button">
+          <span class="menu-item-icon">&#128202;</span>
+          <span class="menu-item-copy">
+            <span class="menu-item-text">Actividad</span>
+            <span class="menu-item-hint">Viajes recientes y estado</span>
+          </span>
+        </button>
+
+        <button class="menu-item" id="menu-settings" type="button">
+          <span class="menu-item-icon">&#9881;</span>
+          <span class="menu-item-copy">
+            <span class="menu-item-text">Cuenta</span>
+            <span class="menu-item-hint">Sesi&oacute;n, alertas y configuraci&oacute;n</span>
+          </span>
+        </button>
+
+        <button class="menu-item menu-item-danger" id="menu-logout" type="button">
+          <span class="menu-item-icon">&#128682;</span>
+          <span class="menu-item-copy">
+            <span class="menu-item-text">Cerrar sesi&oacute;n</span>
+            <span class="menu-item-hint">Salir en este dispositivo</span>
+          </span>
         </button>
       </div>
     </div>
+  </aside>
 
-    <!-- STATS -->
-    <div class="menu-stats">
-      <div class="menu-stat-card">
-        <div class="menu-stat-value" id="stat-earnings-menu">$0</div>
-        <div class="menu-stat-label">Hoy</div>
+  <div class="support-overlay" id="supportOverlay" hidden>
+    <div class="support-overlay-backdrop" id="supportOverlayBackdrop"></div>
+
+    <section class="support-panel" id="supportPanel" aria-hidden="true">
+      <div class="support-panel-topbar">
+        <div class="support-panel-topbar-copy">
+          <h2>Soporte MIMI</h2>
+          <p>Escribinos por ac&aacute; y te respondemos en el mismo chat.</p>
+        </div>
+
+        <div class="support-panel-topbar-actions">
+          <button
+            class="support-utility-btn"
+            id="supportEnableAlertsBtn"
+            type="button"
+            aria-label="Activar alertas de soporte"
+          >
+            <span class="support-utility-btn-icon" aria-hidden="true">&#128276;</span>
+            <span class="support-utility-btn-text">Activar alertas</span>
+          </button>
+
+          <button
+            class="support-utility-btn"
+            id="supportInstallAppBtn"
+            type="button"
+            aria-label="Instalar app"
+            hidden
+          >
+            <span class="support-utility-btn-icon" aria-hidden="true">&#11015;</span>
+            <span class="support-utility-btn-text">Instalar app</span>
+          </button>
+
+          <span class="support-topbar-badge" id="supportAlertsBadge" hidden>
+            Alertas activas
+          </span>
+
+          <button
+            class="support-close-btn"
+            id="supportCloseBtn"
+            type="button"
+            aria-label="Cerrar soporte"
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
 
-      <div class="menu-stat-card">
-        <div class="menu-stat-value" id="stat-trips-menu">0</div>
-        <div class="menu-stat-label">Viajes</div>
-      </div>
+      <div class="support-shell" id="supportShell">
+        <aside class="support-sidebar" id="supportSidebar">
+          <div class="support-toolbar">
+            <div class="support-toolbar-top">
+              <div class="support-toolbar-heading">
+                <h3 class="support-toolbar-title">Tus chats</h3>
+                <span class="support-toolbar-subtitle">Centro de soporte del chofer</span>
+              </div>
 
-      <div class="menu-stat-card">
-        <div class="menu-stat-value" id="stat-rating-menu">5.0</div>
-        <div class="menu-stat-label">Rating</div>
-      </div>
-    </div>
+              <button class="support-head-btn" id="supportRefreshBtn" type="button">
+                Recargar
+              </button>
+            </div>
 
-    <!-- ITEMS -->
-    <div class="menu-items">
+            <div class="support-toolbar-controls">
+              <input
+                class="support-search-input"
+                id="supportSearchInput"
+                type="search"
+                placeholder="Buscar chat"
+              />
+              <select class="support-filter-select" id="supportFilterStatus">
+                <option value="all">Todas</option>
+                <option value="esperando_usuario">Esperando usuario</option>
+                <option value="en_proceso">En proceso</option>
+                <option value="resuelto">Resuelto</option>
+              </select>
+            </div>
+          </div>
+          <div class="support-conversation-list" id="supportConversationList"></div>
+        </aside>
 
-      <button class="menu-item" id="menu-view-profile" type="button">
-        <span class="menu-item-icon">ðŸ‘¤</span>
-        <span class="menu-item-copy">
-          <span class="menu-item-text">Perfil del chofer</span>
-          <span class="menu-item-hint">Datos, vehiculo y documentos</span>
-        </span>
-      </button>
+        <section class="support-thread" id="supportThread">
+          <div class="support-thread-empty" id="supportThreadEmpty">
+            <div class="support-thread-empty-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 10H16M8 14H13M7 19L3.8 21.2C3.47 21.43 3 21.19 3 20.79V6.8C3 5.81 3.81 5 4.8 5H19.2C20.19 5 21 5.81 21 6.8V17.2C21 18.19 20.19 19 19.2 19H7Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
 
-      <button class="menu-item menu-item-support" id="menu-support" type="button" aria-label="Abrir soporte">
-        <span class="menu-item-icon">ðŸ’¬</span>
-        <span class="menu-item-copy">
-          <span class="menu-item-text">Ayuda y soporte</span>
-          <span class="menu-item-hint">Escribinos y segui la respuesta</span>
-        </span>
-        <span class="menu-item-badge" id="supportDockBadge" hidden>0</span>
-      </button>
+            <strong>Eleg&iacute; un chat</strong>
+            <p>Ac&aacute; vas a ver los mensajes de soporte y responder desde el panel del chofer.</p>
 
-      <button class="menu-item" id="menu-earnings" type="button">
-        <span class="menu-item-icon">ðŸ’°</span>
-        <span class="menu-item-copy">
-          <span class="menu-item-text">Ganancias</span>
-          <span class="menu-item-hint">Resumen rapido del dia</span>
-        </span>
-      </button>
+            <div class="support-setup-card" id="supportSetupCard">
+              <div class="support-setup-copy">
+                <strong>&iquest;Necesit&aacute;s ayuda?</strong>
+                <p>Pod&eacute;s iniciar un chat nuevo con soporte o activar alertas para no perder respuestas.</p>
+              </div>
 
-      <button class="menu-item" id="menu-history" type="button">
-        <span class="menu-item-icon">ðŸ“Š</span>
-        <span class="menu-item-copy">
-          <span class="menu-item-text">Actividad</span>
-          <span class="menu-item-hint">Viajes recientes y estado</span>
-        </span>
-      </button>
+              <div class="support-setup-actions">
+                <button
+                  class="support-utility-btn support-utility-btn-primary"
+                  id="supportStartChatBtnEmpty"
+                  type="button"
+                >
+                  <span class="support-utility-btn-icon" aria-hidden="true">&#9997;</span>
+                  <span class="support-utility-btn-text">Escribir a soporte</span>
+                </button>
 
-      <button class="menu-item" id="menu-settings" type="button">
-        <span class="menu-item-icon">âš™ï¸</span>
-        <span class="menu-item-copy">
-          <span class="menu-item-text">Cuenta</span>
-          <span class="menu-item-hint">Sesion, alertas y configuracion</span>
-        </span>
-      </button>
+                <button
+                  class="support-utility-btn"
+                  id="supportEnableAlertsBtnEmpty"
+                  type="button"
+                >
+                  <span class="support-utility-btn-icon" aria-hidden="true">&#128276;</span>
+                  <span class="support-utility-btn-text">Activar alertas</span>
+                </button>
 
-      <button class="menu-item menu-item-danger" id="menu-logout" type="button">
-        <span class="menu-item-icon">ðŸšª</span>
-        <span class="menu-item-copy">
-          <span class="menu-item-text">Cerrar sesiÃ³n</span>
-          <span class="menu-item-hint">Salir en este dispositivo</span>
-        </span>
-      </button>
+                <button
+                  class="support-utility-btn"
+                  id="supportInstallAppBtnEmpty"
+                  type="button"
+                  hidden
+                >
+                  <span class="support-utility-btn-icon" aria-hidden="true">&#11015;</span>
+                  <span class="support-utility-btn-text">Instalar app</span>
+                </button>
+              </div>
 
-    </div>
-  </div>
-</aside>
-<div class="support-overlay" id="supportOverlay" hidden>
-  <div class="support-overlay-backdrop" id="supportOverlayBackdrop"></div>
+              <div class="support-setup-status" id="supportSetupStatus">
+                Las alertas est&aacute;n desactivadas.
+              </div>
+            </div>
+          </div>
 
-<section class="support-panel" id="supportPanel" aria-hidden="true">
-  <div class="support-panel-topbar">
-    <div class="support-panel-topbar-copy">
-      <h2>Soporte MIMI</h2>
-      <p>Escribinos por acÃ¡ y te respondemos en el mismo chat.</p>
-    </div>
+          <div class="support-thread-panel" id="supportThreadPanel" hidden>
+            <div class="support-thread-header">
+              <div class="support-thread-top-mobile">
+                <button class="support-thread-back" id="supportThreadBackBtn" type="button">&larr;</button>
 
-    <div class="support-panel-topbar-actions">
-      <button
-        class="support-utility-btn"
-        id="supportEnableAlertsBtn"
-        type="button"
-        aria-label="Activar alertas de soporte"
-      >
-        <span class="support-utility-btn-icon" aria-hidden="true">ðŸ””</span>
-        <span class="support-utility-btn-text">Activar alertas</span>
-      </button>
-
-      <button
-        class="support-utility-btn"
-        id="supportInstallAppBtn"
-        type="button"
-        aria-label="Instalar app"
-        hidden
-      >
-        <span class="support-utility-btn-icon" aria-hidden="true">â¬‡ï¸</span>
-        <span class="support-utility-btn-text">Instalar app</span>
-      </button>
-
-      <span class="support-topbar-badge" id="supportAlertsBadge" hidden>
-        Alertas activas
-      </span>
-
-      <button
-        class="support-close-btn"
-        id="supportCloseBtn"
-        type="button"
-        aria-label="Cerrar soporte"
-      >
-        Cerrar
-      </button>
-    </div>
-  </div>
-
-  <div class="support-shell" id="supportShell">
-    
-      <aside class="support-sidebar" id="supportSidebar">
-<div class="support-toolbar">
-  <div class="support-toolbar-top">
-    <div class="support-toolbar-heading">
-      <h3 class="support-toolbar-title">Tus chats</h3>
-      <span class="support-toolbar-subtitle">Centro de soporte del chofer</span>
-    </div>
-
-    <button class="support-head-btn" id="supportRefreshBtn" type="button">
-      Recargar
-    </button>
-  </div>
-
-  <div class="support-toolbar-controls">
-    <input
-      class="support-search-input"
-      id="supportSearchInput"
-      type="search"
-      placeholder="Buscar chat"
-    />
-    <select class="support-filter-select" id="supportFilterStatus">
-      <option value="all">Todas</option>
-      <option value="esperando_usuario">Esperando usuario</option>
-      <option value="en_proceso">En proceso</option>
-      <option value="resuelto">Resuelto</option>
-    </select>
-  </div>
-</div>
-        <div class="support-conversation-list" id="supportConversationList"></div>
-      </aside>
-
-      <section class="support-thread" id="supportThread">
-<div class="support-thread-empty" id="supportThreadEmpty">
-  <div class="support-thread-empty-icon" aria-hidden="true">
-    <svg viewBox="0 0 24 24" width="26" height="26" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M8 10H16M8 14H13M7 19L3.8 21.2C3.47 21.43 3 21.19 3 20.79V6.8C3 5.81 3.81 5 4.8 5H19.2C20.19 5 21 5.81 21 6.8V17.2C21 18.19 20.19 19 19.2 19H7Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </div>
-
-  <strong>ElegÃ­ un chat</strong>
-  <p>AcÃ¡ vas a ver los mensajes de soporte y responder desde el panel del chofer.</p>
-
-  <div class="support-setup-card" id="supportSetupCard">
-    <div class="support-setup-copy">
-      <strong>NecesitÃ¡s ayuda?</strong>
-      <p>PodÃ©s iniciar un chat nuevo con soporte o activar alertas para no perder respuestas.</p>
-    </div>
-
-    <div class="support-setup-actions">
-      <button
-        class="support-utility-btn support-utility-btn-primary"
-        id="supportStartChatBtnEmpty"
-        type="button"
-      >
-        <span class="support-utility-btn-icon" aria-hidden="true">âœï¸</span>
-        <span class="support-utility-btn-text">Escribir a soporte</span>
-      </button>
-
-      <button
-        class="support-utility-btn"
-        id="supportEnableAlertsBtnEmpty"
-        type="button"
-      >
-        <span class="support-utility-btn-icon" aria-hidden="true">ðŸ””</span>
-        <span class="support-utility-btn-text">Activar alertas</span>
-      </button>
-
-      <button
-        class="support-utility-btn"
-        id="supportInstallAppBtnEmpty"
-        type="button"
-        hidden
-      >
-        <span class="support-utility-btn-icon" aria-hidden="true">â¬‡ï¸</span>
-        <span class="support-utility-btn-text">Instalar app</span>
-      </button>
-    </div>
-
-    <div class="support-setup-status" id="supportSetupStatus">
-      Las alertas estÃ¡n desactivadas.
-    </div>
-  </div>
-</div>
-      <div class="support-thread-panel" id="supportThreadPanel" hidden>
-          <div class="support-thread-header">
-            <div class="support-thread-top-mobile">
-              <button class="support-thread-back" id="supportThreadBackBtn" type="button">â†</button>
-
-              <div class="support-thread-user">
-                <div class="support-thread-avatar" id="supportThreadAvatar">S</div>
-                <div class="support-thread-meta">
-                  <strong id="supportThreadName">Soporte</strong>
-                  <span id="supportThreadSubmeta"></span>
+                <div class="support-thread-user">
+                  <div class="support-thread-avatar" id="supportThreadAvatar">S</div>
+                  <div class="support-thread-meta">
+                    <strong id="supportThreadName">Soporte</strong>
+                    <span id="supportThreadSubmeta"></span>
+                  </div>
                 </div>
+              </div>
+
+              <div class="support-thread-actions">
+                <button class="support-thread-btn" id="supportThreadRefreshBtn" type="button">Actualizar</button>
               </div>
             </div>
 
-            <div class="support-thread-actions">
-              <button class="support-thread-btn" id="supportThreadRefreshBtn" type="button">Actualizar</button>
+            <div class="support-messages" id="supportMessages"></div>
+
+            <div class="support-composer">
+              <textarea class="support-reply-input" id="supportReplyInput" placeholder="Escrib&iacute; tu mensaje..."></textarea>
+              <input class="support-attachment-input" id="supportAttachmentInput" type="file" multiple />
+              <div class="support-composer-hint">Enter env&iacute;a. Shift + Enter agrega una nueva l&iacute;nea.</div>
+              <div class="support-composer-actions">
+                <button class="support-send-btn" id="supportSendReplyBtn" type="button">Enviar respuesta</button>
+              </div>
             </div>
           </div>
-
-          <div class="support-messages" id="supportMessages"></div>
-
-          <div class="support-composer">
-            <textarea class="support-reply-input" id="supportReplyInput" placeholder="Escribi tu mensaje..."></textarea>
-            <input class="support-attachment-input" id="supportAttachmentInput" type="file" multiple />
-            <div class="support-composer-hint">Enter envia. Shift + Enter agrega una nueva linea.</div>
-            <div class="support-composer-actions">
-              <button class="support-send-btn" id="supportSendReplyBtn" type="button">Enviar respuesta</button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  </section>
-</div>
+        </section>
+      </div>
+    </section>
+  </div>
 </body>
 </html>
