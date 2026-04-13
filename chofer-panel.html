@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -21,7 +21,7 @@
  <meta name="application-name" content="MIMI Driver">
  <meta name="apple-mobile-web-app-title" content="MIMI Driver">
   <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚐</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>ðŸš</text></svg>">
 <link rel="manifest" href="/mimi-transporte/manifest.json" />
 <link rel="apple-touch-icon" href="/mimi-transporte/assets/icons/icon-192x192.png" />
   
@@ -46,7 +46,7 @@
 
 <body>
 
-  <!-- Botón Logout -->
+  <!-- BotÃ³n Logout -->
   <button class="logout-btn" id="logoutBtn">Salir</button>
 
   <!-- MAP -->
@@ -69,7 +69,7 @@
           </div>
         </div>
 
-        <button class="icon-btn" id="menu-button" aria-label="Menú">
+        <button class="icon-btn" id="menu-button" aria-label="MenÃº">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M3 12H21M3 6H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
@@ -119,8 +119,9 @@
     <!-- FAB ONLINE -->
     <button class="fab-online" id="fab-online">
       <div class="fab-content">
-        <span class="fab-icon">○</span>
-        <span class="fab-text">CONECTAR</span>
+        <span class="fab-icon">OFF</span>
+        <span class="fab-text">Conectar</span>
+        <span class="fab-subtext" id="fab-subtext">Fuera de linea</span>
       </div>
       <div class="fab-pulse"></div>
     </button>
@@ -132,8 +133,8 @@
       </div>
          <div class="sheet-content" id="sheet-content">
          <div class="waiting-state">
-         <h3>Estás desconectado</h3>
-         <p>Usá la app en cualquier momento para empezar a generar ganancias adicionales.</p>
+         <h3>EstÃ¡s desconectado</h3>
+         <p>UsÃ¡ la app en cualquier momento para empezar a generar ganancias adicionales.</p>
         </div>
       </div>
     </div>
@@ -188,13 +189,13 @@
             </div>
             <div class="metric-box">
               <span class="metric-value" id="trip-duration">-- min</span>
-              <span class="metric-label">Duración</span>
+              <span class="metric-label">DuraciÃ³n</span>
             </div>
           </div>
         </div>
 
         <div class="client-row">
-          <div class="client-avatar-large" id="client-avatar">👤</div>
+          <div class="client-avatar-large" id="client-avatar">ðŸ‘¤</div>
           <div class="client-info-text">
             <div class="client-name" id="client-name">--</div>
             <div class="client-phone" id="client-phone">--</div>
@@ -203,12 +204,12 @@
 
         <div class="modal-actions-uber">
           <button class="btn-reject" id="btn-reject" type="button">
-            <span>✕</span>
+            <span>âœ•</span>
             <span>Rechazar</span>
           </button>
 
           <button class="btn-accept" id="btn-accept" type="button">
-            <span>✓</span>
+            <span>âœ“</span>
             <span>Aceptar viaje</span>
           </button>
         </div>
@@ -218,9 +219,9 @@
     <!-- ARRIVAL PANEL -->
     <div class="arrival-panel" id="arrival-panel">
       <div class="arrival-content">
-        <div class="arrival-icon">🏁</div>
-        <h2>¡Has llegado!</h2>
-        <p>¿Deseas finalizar el viaje?</p>
+        <div class="arrival-icon">ðŸ</div>
+        <h2>Â¡Has llegado!</h2>
+        <p>Â¿Deseas finalizar el viaje?</p>
         <div class="arrival-actions">
           <button class="btn-secondary" id="btn-continue">Continuar</button>
           <button class="btn-primary" id="btn-finish">Finalizar</button>
@@ -239,7 +240,7 @@
 
     <!-- OFFLINE BANNER -->
     <div class="offline-banner" id="offline-banner">
-      <span>⚠ Sin conexión</span>
+      <span>âš  Sin conexiÃ³n</span>
     </div>
   </div>
 
@@ -257,7 +258,7 @@
       const { data, error } = await supabaseService.client.auth.getSession();
 
       if (error || !data?.session?.access_token) {
-        console.warn("[AUTH] No autenticado → redirigiendo");
+        console.warn("[AUTH] No autenticado â†’ redirigiendo");
         window.location.replace("./login-chofer.html");
         return;
       }
@@ -278,7 +279,7 @@
     try {
       await supabaseService.client.auth.signOut();
     } catch (err) {
-      console.error("[logout] Error cerrando sesión:", err);
+      console.error("[logout] Error cerrando sesiÃ³n:", err);
     } finally {
       window.location.href = CONFIG.REDIRECTS.LOGIN;
     }
@@ -328,14 +329,14 @@
 
         <div class="menu-profile-text">
           <div class="menu-name" id="menu-name">Conductor</div>
-          <div class="menu-email" id="menu-email">Sin sesión</div>
+          <div class="menu-email" id="menu-email">Sin sesiÃ³n</div>
         </div>
 
-        <div class="menu-chevron" id="menu-chevron">⌄</div>
+        <div class="menu-chevron" id="menu-chevron">âŒ„</div>
       </button>
 
       <div class="menu-profile-expand" id="menu-profile-expand">
-        <button class="menu-secondary-action" id="menu-view-profile" type="button">
+        <button class="menu-secondary-action" id="menu-view-profile-quick" type="button">
           Ver perfil
         </button>
       </div>
@@ -362,31 +363,53 @@
     <!-- ITEMS -->
     <div class="menu-items">
 
-      <button class="menu-item" id="menu-earnings" type="button">
-        <span class="menu-item-icon">💰</span>
-        <span class="menu-item-text">Ganancias</span>
+      <button class="menu-item" id="menu-view-profile" type="button">
+        <span class="menu-item-icon">ðŸ‘¤</span>
+        <span class="menu-item-copy">
+          <span class="menu-item-text">Perfil del chofer</span>
+          <span class="menu-item-hint">Datos, vehiculo y documentos</span>
+        </span>
       </button>
 
-      <button class="menu-item" id="menu-history" type="button">
-        <span class="menu-item-icon">📊</span>
-        <span class="menu-item-text">Historial</span>
-      </button>
-
-      <!-- 🔥 SOPORTE -->
-      <button class="menu-item" id="menu-support" type="button" aria-label="Abrir soporte">
-        <span class="menu-item-icon">💬</span>
-        <span class="menu-item-text">Soporte</span>
+      <button class="menu-item menu-item-support" id="menu-support" type="button" aria-label="Abrir soporte">
+        <span class="menu-item-icon">ðŸ’¬</span>
+        <span class="menu-item-copy">
+          <span class="menu-item-text">Ayuda y soporte</span>
+          <span class="menu-item-hint">Escribinos y segui la respuesta</span>
+        </span>
         <span class="menu-item-badge" id="supportDockBadge" hidden>0</span>
       </button>
 
+      <button class="menu-item" id="menu-earnings" type="button">
+        <span class="menu-item-icon">ðŸ’°</span>
+        <span class="menu-item-copy">
+          <span class="menu-item-text">Ganancias</span>
+          <span class="menu-item-hint">Resumen rapido del dia</span>
+        </span>
+      </button>
+
+      <button class="menu-item" id="menu-history" type="button">
+        <span class="menu-item-icon">ðŸ“Š</span>
+        <span class="menu-item-copy">
+          <span class="menu-item-text">Actividad</span>
+          <span class="menu-item-hint">Viajes recientes y estado</span>
+        </span>
+      </button>
+
       <button class="menu-item" id="menu-settings" type="button">
-        <span class="menu-item-icon">⚙️</span>
-        <span class="menu-item-text">Configuración</span>
+        <span class="menu-item-icon">âš™ï¸</span>
+        <span class="menu-item-copy">
+          <span class="menu-item-text">Cuenta</span>
+          <span class="menu-item-hint">Sesion, alertas y configuracion</span>
+        </span>
       </button>
 
       <button class="menu-item menu-item-danger" id="menu-logout" type="button">
-        <span class="menu-item-icon">🚪</span>
-        <span class="menu-item-text">Cerrar sesión</span>
+        <span class="menu-item-icon">ðŸšª</span>
+        <span class="menu-item-copy">
+          <span class="menu-item-text">Cerrar sesiÃ³n</span>
+          <span class="menu-item-hint">Salir en este dispositivo</span>
+        </span>
       </button>
 
     </div>
@@ -399,7 +422,7 @@
   <div class="support-panel-topbar">
     <div class="support-panel-topbar-copy">
       <h2>Soporte MIMI</h2>
-      <p>Escribinos por acá y te respondemos en el mismo chat.</p>
+      <p>Escribinos por acÃ¡ y te respondemos en el mismo chat.</p>
     </div>
 
     <div class="support-panel-topbar-actions">
@@ -409,7 +432,7 @@
         type="button"
         aria-label="Activar alertas de soporte"
       >
-        <span class="support-utility-btn-icon" aria-hidden="true">🔔</span>
+        <span class="support-utility-btn-icon" aria-hidden="true">ðŸ””</span>
         <span class="support-utility-btn-text">Activar alertas</span>
       </button>
 
@@ -420,7 +443,7 @@
         aria-label="Instalar app"
         hidden
       >
-        <span class="support-utility-btn-icon" aria-hidden="true">⬇️</span>
+        <span class="support-utility-btn-icon" aria-hidden="true">â¬‡ï¸</span>
         <span class="support-utility-btn-text">Instalar app</span>
       </button>
 
@@ -480,22 +503,31 @@
     </svg>
   </div>
 
-  <strong>Elegí un chat</strong>
-  <p>Acá vas a ver los mensajes de soporte y responder desde el panel del chofer.</p>
+  <strong>ElegÃ­ un chat</strong>
+  <p>AcÃ¡ vas a ver los mensajes de soporte y responder desde el panel del chofer.</p>
 
   <div class="support-setup-card" id="supportSetupCard">
     <div class="support-setup-copy">
-      <strong>Mejorá tu experiencia</strong>
-      <p>Activá alertas e instalá la app para recibir respuestas más rápido.</p>
+      <strong>NecesitÃ¡s ayuda?</strong>
+      <p>PodÃ©s iniciar un chat nuevo con soporte o activar alertas para no perder respuestas.</p>
     </div>
 
     <div class="support-setup-actions">
       <button
         class="support-utility-btn support-utility-btn-primary"
+        id="supportStartChatBtnEmpty"
+        type="button"
+      >
+        <span class="support-utility-btn-icon" aria-hidden="true">âœï¸</span>
+        <span class="support-utility-btn-text">Escribir a soporte</span>
+      </button>
+
+      <button
+        class="support-utility-btn"
         id="supportEnableAlertsBtnEmpty"
         type="button"
       >
-        <span class="support-utility-btn-icon" aria-hidden="true">🔔</span>
+        <span class="support-utility-btn-icon" aria-hidden="true">ðŸ””</span>
         <span class="support-utility-btn-text">Activar alertas</span>
       </button>
 
@@ -505,20 +537,20 @@
         type="button"
         hidden
       >
-        <span class="support-utility-btn-icon" aria-hidden="true">⬇️</span>
+        <span class="support-utility-btn-icon" aria-hidden="true">â¬‡ï¸</span>
         <span class="support-utility-btn-text">Instalar app</span>
       </button>
     </div>
 
     <div class="support-setup-status" id="supportSetupStatus">
-      Las alertas están desactivadas.
+      Las alertas estÃ¡n desactivadas.
     </div>
   </div>
 </div>
       <div class="support-thread-panel" id="supportThreadPanel" hidden>
           <div class="support-thread-header">
             <div class="support-thread-top-mobile">
-              <button class="support-thread-back" id="supportThreadBackBtn" type="button">←</button>
+              <button class="support-thread-back" id="supportThreadBackBtn" type="button">â†</button>
 
               <div class="support-thread-user">
                 <div class="support-thread-avatar" id="supportThreadAvatar">S</div>
