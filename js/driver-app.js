@@ -9,7 +9,7 @@ import locationTracker from './location-tracker.js';
 import tripManager from './trip-manager.js';
 import uiController from './ui-controller.js';
 import soundManager from './sound-manager.js';
-import { initPushFCM } from './push-fcm.js';
+import { initSupportPushFCM } from './push-fcm.js';
 import { initDriverSupport, openDriverSupportPanel } from './driver-support.js';
 
 const APP_BASE_PATH = '/mimi-transporte/';
