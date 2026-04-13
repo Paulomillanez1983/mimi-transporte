@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -6,7 +6,8 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#f5f7fb" />
+  <meta name="color-scheme" content="light" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
@@ -593,7 +594,7 @@
     }
 
     .doc-guidelines span::before {
-      content: "• ";
+      content: "â€¢ ";
       color: rgba(255,255,255,0.6);
     }
 
@@ -1178,6 +1179,99 @@
   60% { transform: translateX(-3px); }
   80% { transform: translateX(3px); }
 }
+      /* Light refresh para onboarding de chofer */
+    :root {
+      --bg: #f5f7fb;
+      --card: rgba(255,255,255,0.92);
+      --card-2: #ffffff;
+      --field: #ffffff;
+      --line: rgba(15,23,42,0.10);
+      --line-strong: rgba(15,23,42,0.16);
+      --text: #0f172a;
+      --muted: rgba(15,23,42,0.70);
+      --muted-2: rgba(15,23,42,0.52);
+      --shadow: 0 26px 60px rgba(47,111,237,0.12);
+    }
+
+    html, body {
+      color-scheme: light;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top center, rgba(47,111,237,0.16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(56,189,248,0.12), transparent 30%),
+        linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+    }
+
+    .exit-btn,
+    .sticky-bar,
+    .step-card,
+    .doc-wizard-card,
+    .docs-progress-box,
+    .field input,
+    .field select,
+    .field textarea,
+    .doc-preview,
+    .doc-preview-file,
+    .doc-deadline-box {
+      background: rgba(255,255,255,0.94) !important;
+      color: var(--text) !important;
+      border-color: rgba(15,23,42,0.10) !important;
+      box-shadow: 0 18px 40px rgba(15,23,42,0.08);
+    }
+
+    .eyebrow,
+    .step-badge,
+    .doc-link-btn,
+    .doc-wizard-step-badge,
+    .docs-progress-help,
+    .field-help,
+    .subtitle,
+    .step-text,
+    .doc-wizard-card__content p,
+    .doc-preview-file span {
+      color: var(--muted) !important;
+    }
+
+    .doc-upload-btn {
+      background: #eff4ff !important;
+      color: #1e3a8a !important;
+      border-color: rgba(47,111,237,0.14) !important;
+    }
+
+    .doc-camera-btn {
+      background: linear-gradient(135deg, #2f6fed, #5b8cff) !important;
+      color: #ffffff !important;
+      border: none !important;
+    }
+
+    .progress,
+    .progress--pro,
+    .docs-progress-bar {
+      background: rgba(47,111,237,0.10) !important;
+      border-color: rgba(47,111,237,0.08) !important;
+    }
+
+    .uber-step,
+    .uber-step__meta strong,
+    .title,
+    .step-title,
+    label {
+      color: var(--text) !important;
+    }
+
+    .uber-step__node,
+    .panel-grabber {
+      background: rgba(47,111,237,0.08) !important;
+      border-color: rgba(47,111,237,0.12) !important;
+    }
+
+    .doc-guidelines span {
+      background: rgba(47,111,237,0.08) !important;
+      color: #1e3a8a !important;
+      border: 1px solid rgba(47,111,237,0.12) !important;
+    }
   </style>
 </head>
 <body>
@@ -1188,8 +1282,8 @@
     <img src="/mimi-transporte/assets/icons/logo-mimi.png" class="brand-logo" />
 
     <div>
-      <div class="eyebrow">MIMI Driver · Alta de chofer</div>
-      <div class="title">Validación de chofer</div>
+      <div class="eyebrow">MIMI Driver Â· Alta de chofer</div>
+      <div class="title">ValidaciÃ³n de chofer</div>
     </div>
   </div>
 
@@ -1198,20 +1292,20 @@
   </button>
 </div>
   <div class="subtitle">
-    Completá tu identidad, vehículo y documentación para habilitar tu cuenta.
-    Podés sacar fotos desde esta misma pantalla y terminar la carga mucho más rápido.
+    CompletÃ¡ tu identidad, vehÃ­culo y documentaciÃ³n para habilitar tu cuenta.
+    PodÃ©s sacar fotos desde esta misma pantalla y terminar la carga mucho mÃ¡s rÃ¡pido.
   </div>
 
 <div class="progress-shell progress-shell--pro">
   <div class="progress-top">
-    <div class="progress-label" id="progressLabel">Paso 1 de 3 · Datos personales</div>
+    <div class="progress-label" id="progressLabel">Paso 1 de 3 Â· Datos personales</div>
   </div>
 
   <div class="uber-steps" id="uberSteps" aria-label="Progreso de onboarding">
     <div class="uber-step active" id="uberStep1">
       <div class="uber-step__node">
         <span class="uber-step__number">1</span>
-        <span class="uber-step__check">✓</span>
+        <span class="uber-step__check">âœ“</span>
       </div>
       <div class="uber-step__meta">
         <strong>Perfil</strong>
@@ -1224,10 +1318,10 @@
     <div class="uber-step" id="uberStep2">
       <div class="uber-step__node">
         <span class="uber-step__number">2</span>
-        <span class="uber-step__check">✓</span>
+        <span class="uber-step__check">âœ“</span>
       </div>
       <div class="uber-step__meta">
-        <strong>Vehículo</strong>
+        <strong>VehÃ­culo</strong>
         <span>Datos del auto</span>
       </div>
     </div>
@@ -1237,7 +1331,7 @@
     <div class="uber-step" id="uberStep3">
       <div class="uber-step__node">
         <span class="uber-step__number">3</span>
-        <span class="uber-step__check">✓</span>
+        <span class="uber-step__check">âœ“</span>
       </div>
       <div class="uber-step__meta">
         <strong>Documentos</strong>
@@ -1255,9 +1349,9 @@
     <section class="step-card active" data-step="1">
       <div class="step-head">
         <div>
-          <div class="step-title">Paso 1 · Datos personales</div>
+          <div class="step-title">Paso 1 Â· Datos personales</div>
           <div class="step-text">
-            Necesitamos tus datos básicos para crear tu perfil de conductor.
+            Necesitamos tus datos bÃ¡sicos para crear tu perfil de conductor.
           </div>
         </div>
         <div class="step-badge">Perfil</div>
@@ -1270,7 +1364,7 @@
         </div>
 
         <div class="field">
-          <label for="phone">Teléfono</label>
+          <label for="phone">TelÃ©fono</label>
           <input id="phone" type="tel" autocomplete="tel" />
         </div>
 
@@ -1287,7 +1381,7 @@
         <div class="field full">
           <label for="address">Domicilio</label>
           <input id="address" type="text" autocomplete="street-address" />
-          <div class="field-help">Dirección donde residís actualmente.</div>
+          <div class="field-help">DirecciÃ³n donde residÃ­s actualmente.</div>
         </div>
       </div>
 
@@ -1299,12 +1393,12 @@
     <section class="step-card" data-step="2">
       <div class="step-head">
         <div>
-          <div class="step-title">Paso 2 · Vehículo</div>
+          <div class="step-title">Paso 2 Â· VehÃ­culo</div>
           <div class="step-text">
-            Cargá los datos del vehículo con el que vas a trabajar.
+            CargÃ¡ los datos del vehÃ­culo con el que vas a trabajar.
           </div>
         </div>
-        <div class="step-badge">Vehículo</div>
+        <div class="step-badge">VehÃ­culo</div>
       </div>
 
       <div class="grid">
@@ -1319,7 +1413,7 @@
         </div>
 
         <div class="field">
-          <label for="vehicle_year">Año</label>
+          <label for="vehicle_year">AÃ±o</label>
           <input id="vehicle_year" type="number" min="1990" max="2100" inputmode="numeric" />
         </div>
 
@@ -1331,7 +1425,7 @@
         <div class="field full">
           <label for="vehicle_plate">Patente</label>
           <input id="vehicle_plate" type="text" autocapitalize="characters" />
-          <div class="field-help">Ingresala tal como figura en la cédula del vehículo.</div>
+          <div class="field-help">Ingresala tal como figura en la cÃ©dula del vehÃ­culo.</div>
         </div>
       </div>
 
@@ -1344,7 +1438,7 @@
 <section class="step-card" data-step="3">
   <div class="docs-progress-box">
     <div class="docs-progress-box__top">
-      <strong id="docsProgressTitle">Documentación obligatoria</strong>
+      <strong id="docsProgressTitle">DocumentaciÃ³n obligatoria</strong>
       <span id="docsProgressCount">0/7</span>
     </div>
 
@@ -1353,16 +1447,16 @@
     </div>
 
     <div class="docs-progress-help" id="docsProgressHelp">
-      Cargá los 7 documentos obligatorios para completar este paso.
+      CargÃ¡ los 7 documentos obligatorios para completar este paso.
     </div>
   </div>
 
   <div class="step-head">
     <div>
-      <div class="step-title">Paso 3 · Documentación</div>
+      <div class="step-title">Paso 3 Â· DocumentaciÃ³n</div>
       <div class="step-text">
-        Sacá fotos nítidas, sin reflejos y mostrando el documento completo.
-        En el celular vas a poder abrir la cámara directamente y avanzar paso a paso.
+        SacÃ¡ fotos nÃ­tidas, sin reflejos y mostrando el documento completo.
+        En el celular vas a poder abrir la cÃ¡mara directamente y avanzar paso a paso.
       </div>
     </div>
     <div class="step-badge">Documentos</div>
@@ -1380,15 +1474,15 @@
       </div>
 
       <div class="docs-progress-help" id="docWizardProgressHelp">
-        Completá cada documento paso a paso.
+        CompletÃ¡ cada documento paso a paso.
       </div>
     </div>
 
     <div class="doc-wizard-card">
-      <div class="doc-wizard-card__icon" id="docWizardIcon">🪪</div>
+      <div class="doc-wizard-card__icon" id="docWizardIcon">ðŸªª</div>
 
       <div class="doc-wizard-card__content">
-        <h3 id="docWizardTitle">Sacá una foto del frente del DNI</h3>
+        <h3 id="docWizardTitle">SacÃ¡ una foto del frente del DNI</h3>
         <p id="docWizardDescription">
           Asegurate de que se vea completo, sin reflejos y bien enfocado.
         </p>
@@ -1396,7 +1490,7 @@
         <div class="doc-preview doc-preview--hero visible" id="docWizardPreview">
           <div class="doc-preview-file">
             <strong>Esperando archivo</strong>
-            <span>Tomá una foto o subí un archivo para continuar.</span>
+            <span>TomÃ¡ una foto o subÃ­ un archivo para continuar.</span>
           </div>
         </div>
 
@@ -1404,11 +1498,11 @@
 
         <div class="doc-actions-inline doc-actions-inline--wizard">
           <label class="doc-action-btn doc-camera-btn" id="docWizardCameraLabel" for="docWizardCameraInput">
-            📷 Sacar foto
+            ðŸ“· Sacar foto
           </label>
 
           <label class="doc-action-btn doc-upload-btn" id="docWizardUploadLabel" for="docWizardFileInput">
-            ⬆ Subir archivo
+            â¬† Subir archivo
           </label>
         </div>
 
@@ -1434,7 +1528,7 @@
         </div>
 
         <div class="doc-deadline-box" id="docWizardDeadlineBox" style="display:none;">
-          <strong>Entrega diferida:</strong> este documento puede presentarse más adelante.
+          <strong>Entrega diferida:</strong> este documento puede presentarse mÃ¡s adelante.
         </div>
 
         <a
@@ -1445,7 +1539,7 @@
           rel="noopener noreferrer"
           style="display:none;"
         >
-          🛡 Solicitar certificado
+          ðŸ›¡ Solicitar certificado
         </a>
       </div>
     </div>
@@ -1458,7 +1552,7 @@
 
   <div class="actions">
     <button class="btn-secondary" id="backTo2" type="button">Volver</button>
-    <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentación</button>
+    <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentaciÃ³n</button>
   </div>
 
   <div class="status-box" id="globalStatus"></div>
@@ -1468,8 +1562,8 @@
   <div class="sticky-actions">
     <div class="sticky-actions__inner">
       <div class="sticky-summary">
-        <strong id="stickyTitle">Paso 1 · Datos personales</strong>
-        <span id="stickyText">Completá tus datos para continuar con el alta.</span>
+        <strong id="stickyTitle">Paso 1 Â· Datos personales</strong>
+        <span id="stickyText">CompletÃ¡ tus datos para continuar con el alta.</span>
       </div>
 
       <button class="btn-primary sticky-btn" id="stickyPrimaryBtn" type="button">
@@ -1534,73 +1628,73 @@ const DOC_META = {
   dni_front: {
     label: "DNI frente",
     optional: false,
-    title: "Sacá una foto del frente del DNI",
+    title: "SacÃ¡ una foto del frente del DNI",
     description: "Asegurate de que se vea completo, sin reflejos y bien enfocado.",
-    icon: "🪪",
+    icon: "ðŸªª",
     capture: "environment"
   },
   dni_back: {
     label: "DNI dorso",
     optional: false,
-    title: "Sacá una foto del dorso del DNI",
-    description: "Mostrá todo el reverso, con buena luz y sin recortes.",
-    icon: "🪪",
+    title: "SacÃ¡ una foto del dorso del DNI",
+    description: "MostrÃ¡ todo el reverso, con buena luz y sin recortes.",
+    icon: "ðŸªª",
     capture: "environment"
   },
   selfie: {
     label: "Selfie",
     optional: false,
     title: "Tomate una selfie",
-    description: "Mirá al frente, con buena iluminación y sin lentes oscuros.",
-    icon: "🤳",
+    description: "MirÃ¡ al frente, con buena iluminaciÃ³n y sin lentes oscuros.",
+    icon: "ðŸ¤³",
     capture: "user"
   },
   license_front: {
     label: "Licencia frente",
     optional: false,
-    title: "Sacá una foto del frente de tu licencia",
+    title: "SacÃ¡ una foto del frente de tu licencia",
     description: "La licencia debe verse completa y el texto debe ser legible.",
-    icon: "🪪",
+    icon: "ðŸªª",
     capture: "environment"
   },
   license_back: {
     label: "Licencia dorso",
     optional: false,
-    title: "Sacá una foto del dorso de tu licencia",
-    description: "Mostrá todos los datos, evitando sombras y reflejos.",
-    icon: "🪪",
+    title: "SacÃ¡ una foto del dorso de tu licencia",
+    description: "MostrÃ¡ todos los datos, evitando sombras y reflejos.",
+    icon: "ðŸªª",
     capture: "environment"
   },
   vehicle_card_front: {
     label: "Tarjeta verde frente",
     optional: false,
-    title: "Sacá una foto del frente de la tarjeta verde",
-    description: "La cédula debe verse completa y bien enfocada.",
-    icon: "🚘",
+    title: "SacÃ¡ una foto del frente de la tarjeta verde",
+    description: "La cÃ©dula debe verse completa y bien enfocada.",
+    icon: "ðŸš˜",
     capture: "environment"
   },
   vehicle_card_back: {
     label: "Tarjeta verde dorso",
     optional: false,
-    title: "Sacá una foto del dorso de la tarjeta verde",
+    title: "SacÃ¡ una foto del dorso de la tarjeta verde",
     description: "Todo el documento visible, sin reflejos ni bordes cortados.",
-    icon: "🚘",
+    icon: "ðŸš˜",
     capture: "environment"
   },
   vehicle_photo: {
-    label: "Foto del vehículo",
+    label: "Foto del vehÃ­culo",
     optional: true,
-    title: "Sacá una foto del vehículo",
+    title: "SacÃ¡ una foto del vehÃ­culo",
     description: "Opcional, pero recomendable para control interno.",
-    icon: "🚗",
+    icon: "ðŸš—",
     capture: "environment"
   },
   background_check: {
     label: "Antecedentes penales",
     optional: true,
-    title: "Subí tu certificado de antecedentes penales",
-    description: "Podés subirlo ahora o presentarlo dentro de 15 días hábiles.",
-    icon: "🛡️",
+    title: "SubÃ­ tu certificado de antecedentes penales",
+    description: "PodÃ©s subirlo ahora o presentarlo dentro de 15 dÃ­as hÃ¡biles.",
+    icon: "ðŸ›¡ï¸",
     capture: "environment"
   }
 };
@@ -1816,7 +1910,7 @@ function setDocInputsBusy(isBusy, mode = "validating") {
     docWizardCameraLabel.classList.toggle("is-disabled", isBusy);
     docWizardCameraLabel.innerHTML = isBusy
       ? `<span class="btn-spinner" aria-hidden="true"></span><span>${cameraText}</span>`
-      : (docWizardCameraLabel.dataset.defaultLabel || "📷 Sacar foto");
+      : (docWizardCameraLabel.dataset.defaultLabel || "ðŸ“· Sacar foto");
   }
 
   if (docWizardUploadLabel) {
@@ -1824,7 +1918,7 @@ function setDocInputsBusy(isBusy, mode = "validating") {
     docWizardUploadLabel.classList.toggle("is-disabled", isBusy);
     docWizardUploadLabel.innerHTML = isBusy
       ? `<span class="btn-spinner" aria-hidden="true"></span><span>${uploadText}</span>`
-      : (docWizardUploadLabel.dataset.defaultLabel || "⬆ Subir archivo");
+      : (docWizardUploadLabel.dataset.defaultLabel || "â¬† Subir archivo");
   }
 }
 
@@ -1894,7 +1988,7 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         } = await supabaseService.client.auth.getSession();
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const timeoutId = setTimeout(() => controller.abort(), 1800);
 
         const headers = {
           "Content-Type": "application/json",
@@ -1939,7 +2033,7 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         return {
           ok: true,
           kind: "document-warning",
-          message: `${validation.message} · pero el documento fue aceptado por validación remota`
+          message: `${validation.message} Â· pero el documento fue aceptado por validaciÃ³n remota`
         };
       }
 
@@ -1962,7 +2056,7 @@ function renderDocWizardPreview(docType) {
     docWizardPreview.innerHTML = `
       <div class="doc-preview-file">
         <strong>Esperando archivo</strong>
-        <span>Tomá una foto o subí un archivo para continuar.</span>
+        <span>TomÃ¡ una foto o subÃ­ un archivo para continuar.</span>
       </div>
     `;
     docWizardPreview.classList.add("visible");
@@ -2018,7 +2112,7 @@ function renderDocumentWizard() {
     ? "Este documento puede omitirse y continuar."
     : "Este documento es obligatorio para completar el alta.";
 
-  docWizardIcon.textContent = meta?.icon || "📄";
+  docWizardIcon.textContent = meta?.icon || "ðŸ“„";
   docWizardTitle.textContent = meta?.title || meta?.label || "Documento";
   docWizardDescription.textContent = meta?.description || "";
 
@@ -2033,8 +2127,8 @@ function renderDocumentWizard() {
     docWizardCameraInput.setAttribute("capture", "environment");
   }
 
-  docWizardCameraLabel.textContent = docType === "selfie" ? "🤳 Sacar selfie" : "📷 Sacar foto";
-  docWizardUploadLabel.textContent = "⬆ Subir archivo";
+  docWizardCameraLabel.textContent = docType === "selfie" ? "ðŸ¤³ Sacar selfie" : "ðŸ“· Sacar foto";
+  docWizardUploadLabel.textContent = "â¬† Subir archivo";
   docWizardCameraLabel.dataset.defaultLabel = docWizardCameraLabel.textContent;
   docWizardUploadLabel.dataset.defaultLabel = docWizardUploadLabel.textContent;
 
@@ -2046,10 +2140,10 @@ function renderDocumentWizard() {
     selfie: ["Mirando al frente", "Buena luz", "Sin lentes oscuros"],
     license_front: ["Texto legible", "Sin brillos", "Documento completo"],
     license_back: ["Todos los datos visibles", "Sin sombras", "Sin recortes"],
-    vehicle_card_front: ["Cédula completa", "Texto legible", "Sin desenfoque"],
+    vehicle_card_front: ["CÃ©dula completa", "Texto legible", "Sin desenfoque"],
     vehicle_card_back: ["Todo visible", "Buena luz", "Sin reflejos"],
-    vehicle_photo: ["Foto exterior clara", "Que se vea bien el vehículo", "Preferible ángulo 3/4"],
-    background_check: ["Puede ser foto o PDF", "Documento legible", "Podés presentarlo luego"]
+    vehicle_photo: ["Foto exterior clara", "Que se vea bien el vehÃ­culo", "Preferible Ã¡ngulo 3/4"],
+    background_check: ["Puede ser foto o PDF", "Documento legible", "PodÃ©s presentarlo luego"]
   };
 
   (defaultGuidelines[docType] || []).forEach((text) => {
@@ -2065,9 +2159,9 @@ function renderDocumentWizard() {
   syncDocWizardStatus();
   updateWizardPrimaryState();
 
-  docWizardBackBtn.textContent = currentDocumentIndex === 0 ? "Volver al vehículo" : "Volver";
+  docWizardBackBtn.textContent = currentDocumentIndex === 0 ? "Volver al vehÃ­culo" : "Volver";
   docWizardNextBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
-    ? "Ir a revisión"
+    ? "Ir a revisiÃ³n"
     : file
       ? "Continuar"
       : isOptional
@@ -2104,7 +2198,7 @@ function updateDocumentsProgressUI() {
 
   if (docsProgressHelp) {
     docsProgressHelp.textContent = progress.isComplete
-      ? "✅ Ya completaste todos los documentos obligatorios."
+      ? "âœ… Ya completaste todos los documentos obligatorios."
       : `Faltan ${progress.total - progress.completed} documentos obligatorios para completar este paso.`;
   }
 
@@ -2163,7 +2257,7 @@ function updateDots(step) {
     
 async function exitOnboardingFlow() {
   const confirmExit = window.confirm(
-    "¿Querés salir del alta de chofer? Se perderá el progreso no guardado."
+    "Â¿QuerÃ©s salir del alta de chofer? Se perderÃ¡ el progreso no guardado."
   );
 
   if (!confirmExit) return;
@@ -2184,16 +2278,16 @@ async function exitOnboardingFlow() {
 }
 function updateSticky(step) {
   if (step === 1) {
-    stickyTitle.textContent = "Paso 1 · Datos personales";
-    stickyText.textContent = "Completá tus datos para continuar con el alta.";
+    stickyTitle.textContent = "Paso 1 Â· Datos personales";
+    stickyText.textContent = "CompletÃ¡ tus datos para continuar con el alta.";
     stickyPrimaryBtn.textContent = "Continuar";
     stickyPrimaryBtn.disabled = false;
     return;
   }
 
   if (step === 2) {
-    stickyTitle.textContent = "Paso 2 · Vehículo";
-    stickyText.textContent = "Cargá el vehículo con el que vas a trabajar.";
+    stickyTitle.textContent = "Paso 2 Â· VehÃ­culo";
+    stickyText.textContent = "CargÃ¡ el vehÃ­culo con el que vas a trabajar.";
     stickyPrimaryBtn.textContent = "Continuar";
     stickyPrimaryBtn.disabled = false;
     return;
@@ -2206,17 +2300,17 @@ function updateSticky(step) {
   const passed = state === "ok" || state === "warning";
   const allowContinue = meta?.optional ? true : hasFile && passed;
 
-  stickyTitle.textContent = `Paso 3 · ${meta?.label || "Documentación"}`;
+  stickyTitle.textContent = `Paso 3 Â· ${meta?.label || "DocumentaciÃ³n"}`;
   stickyText.textContent = meta?.optional
-    ? "Este documento es opcional. Podés omitirlo o cargarlo ahora."
+    ? "Este documento es opcional. PodÃ©s omitirlo o cargarlo ahora."
     : passed
-      ? "Documento validado. Ya podés continuar."
+      ? "Documento validado. Ya podÃ©s continuar."
       : hasFile
-        ? "Esperando validación real del documento."
-        : "Tomá una foto clara o subí el archivo para continuar.";
+        ? "Esperando validaciÃ³n real del documento."
+        : "TomÃ¡ una foto clara o subÃ­ el archivo para continuar.";
 
   stickyPrimaryBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
-    ? "Ir a revisión"
+    ? "Ir a revisiÃ³n"
     : meta?.optional && !hasFile
       ? "Omitir y continuar"
       : "Continuar";
@@ -2235,9 +2329,9 @@ function showStep(step) {
   progressBar.style.width = pct + "%";
 
   const stepLabels = {
-    1: "Paso 1 de 3 · Datos personales",
-    2: "Paso 2 de 3 · Vehículo",
-    3: "Paso 3 de 3 · Documentación"
+    1: "Paso 1 de 3 Â· Datos personales",
+    2: "Paso 2 de 3 Â· VehÃ­culo",
+    3: "Paso 3 de 3 Â· DocumentaciÃ³n"
   };
 
   progressLabel.textContent = stepLabels[step] || `Paso ${step} de 3`;
@@ -2257,18 +2351,18 @@ function showStep(step) {
 }
     
 function validateStep1() {
-  if (!getField("full_name")) return "Ingresá nombre completo";
-  if (!getField("phone")) return "Ingresá teléfono";
-  if (!getField("dni_number")) return "Ingresá DNI";
-  if (!getField("birth_date")) return "Ingresá fecha de nacimiento";
+  if (!getField("full_name")) return "IngresÃ¡ nombre completo";
+  if (!getField("phone")) return "IngresÃ¡ telÃ©fono";
+  if (!getField("dni_number")) return "IngresÃ¡ DNI";
+  if (!getField("birth_date")) return "IngresÃ¡ fecha de nacimiento";
   return null;
 }
     function validateStep2() {
-      if (!getField("vehicle_brand")) return "Ingresá marca del vehículo";
-      if (!getField("vehicle_model")) return "Ingresá modelo del vehículo";
-      if (!getField("vehicle_year")) return "Ingresá año del vehículo";
-      if (!getField("vehicle_color")) return "Ingresá color del vehículo";
-      if (!getField("vehicle_plate")) return "Ingresá patente del vehículo";
+      if (!getField("vehicle_brand")) return "IngresÃ¡ marca del vehÃ­culo";
+      if (!getField("vehicle_model")) return "IngresÃ¡ modelo del vehÃ­culo";
+      if (!getField("vehicle_year")) return "IngresÃ¡ aÃ±o del vehÃ­culo";
+      if (!getField("vehicle_color")) return "IngresÃ¡ color del vehÃ­culo";
+      if (!getField("vehicle_plate")) return "IngresÃ¡ patente del vehÃ­culo";
       return null;
     }
 
@@ -2315,7 +2409,7 @@ function renderPreview(docType, file) {
     docWizardPreview.innerHTML = `
       <div class="doc-preview-file">
         <strong>Esperando archivo</strong>
-        <span>Tomá una foto o subí un archivo para continuar.</span>
+        <span>TomÃ¡ una foto o subÃ­ un archivo para continuar.</span>
       </div>
     `;
     docWizardPreview.classList.add("visible");
@@ -2369,16 +2463,16 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
 
     if (validation.ok) {
       if (validation.kind === "document-warning") {
-        setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "warning");
+        setDocStatus(docType, `${sourceLabel}: ${name} Â· ${validation.message}`, "warning");
         setWizardVisualState("warning");
         triggerValidationFeedback("warning");
       } else {
-        setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "ok");
+        setDocStatus(docType, `${sourceLabel}: ${name} Â· ${validation.message}`, "ok");
         setWizardVisualState("success");
         triggerValidationFeedback("success");
       }
     } else {
-      setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "error");
+      setDocStatus(docType, `${sourceLabel}: ${name} Â· ${validation.message}`, "error");
       setWizardVisualState("error");
       triggerValidationFeedback("error");
     }
@@ -2386,7 +2480,7 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     console.error("[setSelectedFile validation]", docType, err);
     setDocStatus(
       docType,
-      `${sourceLabel}: ${name} · Validación demorada, podés continuar`,
+      `${sourceLabel}: ${name} Â· ValidaciÃ³n demorada, podÃ©s continuar`,
       "warning"
     );
     setWizardVisualState("warning");
@@ -2411,7 +2505,7 @@ const passed = state === "ok" || state === "warning";
           updateSticky(3);
           updateWizardPrimaryState();
           autoAdvanceTimer = null;
-        }, 650);
+        }, 280);
       }
     }  
   }
@@ -2476,7 +2570,7 @@ function getChosenFile(docType) {
         }
 
         if (!session?.access_token) {
-          console.warn("[onboarding] No hay sesión válida");
+          console.warn("[onboarding] No hay sesiÃ³n vÃ¡lida");
           window.location.replace("login-chofer.html");
           return null;
         }
@@ -2590,7 +2684,7 @@ function saveDraft() {
           }
 
           if (docType === "background_check") {
-            setDocStatus(docType, "⏳ Podés presentarlo dentro de 15 días hábiles", "warning");
+            setDocStatus(docType, "â³ PodÃ©s presentarlo dentro de 15 dÃ­as hÃ¡biles", "warning");
           } else {
             setDocStatus(docType, "Opcional sin subir", "pending");
           }
@@ -2632,7 +2726,7 @@ const { error: upsertError } = await supabaseService.client
 
 if (upsertError) throw upsertError;
 
-// 🔥 análisis automático unificado
+// ðŸ”¥ anÃ¡lisis automÃ¡tico unificado
 try {
   const { data: edgeData, error: edgeError } = await supabaseService.client.functions.invoke(
     "extract-driver-document",
@@ -2653,52 +2747,52 @@ try {
 
   if (edgeError) {
     console.warn("[extract-driver-document] error:", edgeError);
-    setDocStatus(docType, "⚠ Archivo subido, pero falló el análisis automático", "warning");
+    setDocStatus(docType, "âš  Archivo subido, pero fallÃ³ el anÃ¡lisis automÃ¡tico", "warning");
     return;
   }
 
   if (docType === "selfie") {
     if (edgeData?.face_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "✅ Selfie validada automáticamente", "ok");
+      setDocStatus(docType, "âœ… Selfie validada automÃ¡ticamente", "ok");
     } else if (edgeData?.face_detected) {
-      setDocStatus(docType, "⚠ Rostro detectado, quedó para revisión manual", "warning");
+      setDocStatus(docType, "âš  Rostro detectado, quedÃ³ para revisiÃ³n manual", "warning");
     } else {
-      setDocStatus(docType, "❌ No se detectó rostro correctamente", "error");
+      setDocStatus(docType, "âŒ No se detectÃ³ rostro correctamente", "error");
     }
     return;
   }
 
   if (docType === "dni_front") {
     if (edgeData?.document_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "✅ DNI validado automáticamente", "ok");
+      setDocStatus(docType, "âœ… DNI validado automÃ¡ticamente", "ok");
     } else if (edgeData?.document_detected) {
-      setDocStatus(docType, "⚠ DNI detectado, quedó para revisión manual", "warning");
+      setDocStatus(docType, "âš  DNI detectado, quedÃ³ para revisiÃ³n manual", "warning");
     } else {
-      setDocStatus(docType, "❌ No se detectó correctamente el DNI", "error");
+      setDocStatus(docType, "âŒ No se detectÃ³ correctamente el DNI", "error");
     }
     return;
   }
 
   if (docType === "license_front") {
     if (edgeData?.document_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "✅ Licencia validada automáticamente", "ok");
+      setDocStatus(docType, "âœ… Licencia validada automÃ¡ticamente", "ok");
     } else if (edgeData?.document_detected) {
-      setDocStatus(docType, "⚠ Licencia detectada, quedó para revisión manual", "warning");
+      setDocStatus(docType, "âš  Licencia detectada, quedÃ³ para revisiÃ³n manual", "warning");
     } else {
-      setDocStatus(docType, "❌ No se detectó correctamente la licencia", "error");
+      setDocStatus(docType, "âŒ No se detectÃ³ correctamente la licencia", "error");
     }
     return;
   }
 
-  setDocStatus(docType, "✅ Archivo cargado correctamente", "ok");
+  setDocStatus(docType, "âœ… Archivo cargado correctamente", "ok");
 } catch (edgeErr) {
   console.warn("[extract-driver-document] warning:", edgeErr);
-  setDocStatus(docType, "⚠ Archivo subido, pero no pudimos analizarlo", "warning");
+  setDocStatus(docType, "âš  Archivo subido, pero no pudimos analizarlo", "warning");
 }
         
       } catch (err) {
         console.error("[uploadDocument] " + docType, err);
-        setDocStatus(docType, "❌ Error al subir", "error");
+        setDocStatus(docType, "âŒ Error al subir", "error");
         throw err;
       }
     }
@@ -2735,7 +2829,7 @@ try {
       });
 
       try {
-        setGlobalStatus("Guardando información...", "success");
+        setGlobalStatus("Guardando informaciÃ³n...", "success");
 
         const step1Error = validateStep1();
         if (step1Error) throw new Error(step1Error);
@@ -2795,8 +2889,8 @@ try {
         });
 
         const successMessage = backgroundCheckProvided
-          ? "✅ Documentación enviada correctamente. Tu cuenta quedó en revisión."
-          : "✅ Documentación enviada correctamente. Tu cuenta quedó en revisión y el certificado de antecedentes quedó pendiente con plazo de 15 días hábiles.";
+          ? "âœ… DocumentaciÃ³n enviada correctamente. Tu cuenta quedÃ³ en revisiÃ³n."
+          : "âœ… DocumentaciÃ³n enviada correctamente. Tu cuenta quedÃ³ en revisiÃ³n y el certificado de antecedentes quedÃ³ pendiente con plazo de 15 dÃ­as hÃ¡biles.";
 
         setGlobalStatus(successMessage, "success");
 
@@ -2808,7 +2902,7 @@ try {
         }, 1400);
       } catch (err) {
         console.error("[submitAll] error:", err);
-        setGlobalStatus("❌ " + (err.message || "No pudimos enviar la documentación"), "error");
+        setGlobalStatus("âŒ " + (err.message || "No pudimos enviar la documentaciÃ³n"), "error");
       } finally {
         setOnboardingBusy(false);
       }
@@ -2825,7 +2919,7 @@ document.getElementById("step1ContinueBtn")?.addEventListener("click", async () 
 
   const err = validateStep1();
   if (err) {
-    setGlobalStatus("❌ " + err, "error");
+    setGlobalStatus("âŒ " + err, "error");
     return;
   }
 
@@ -2849,7 +2943,7 @@ document.getElementById("step1ContinueBtn")?.addEventListener("click", async () 
     showStep(2);
   } catch (errSave) {
     console.error("[step1Continue]", errSave);
-    setGlobalStatus("❌ No pudimos guardar tus datos personales", "error");
+    setGlobalStatus("âŒ No pudimos guardar tus datos personales", "error");
   } finally {
     setOnboardingBusy(false);
   }
@@ -2860,7 +2954,7 @@ document.getElementById("step2ContinueBtn")?.addEventListener("click", async () 
 
   const err = validateStep2();
   if (err) {
-    setGlobalStatus("❌ " + err, "error");
+    setGlobalStatus("âŒ " + err, "error");
     return;
   }
 
@@ -2884,7 +2978,7 @@ document.getElementById("step2ContinueBtn")?.addEventListener("click", async () 
     showStep(3);
   } catch (errSave) {
     console.error("[step2Continue]", errSave);
-    setGlobalStatus("❌ No pudimos guardar los datos del vehiculo", "error");
+    setGlobalStatus("âŒ No pudimos guardar los datos del vehiculo", "error");
   } finally {
     setOnboardingBusy(false);
   }
@@ -2919,7 +3013,7 @@ docWizardNextBtn?.addEventListener("click", async () => {
   const passed = state === "ok" || state === "warning";
 
   if (!meta?.optional && (!hasFile || !passed)) {
-    setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
+    setGlobalStatus(`âŒ TenÃ©s que validar ${meta?.label || "este documento"} para continuar`, "error");
     return;
   }
 
@@ -2944,7 +3038,7 @@ stickyPrimaryBtn.addEventListener("click", async () => {
     if (currentStep === 1) {
       const err = validateStep1();
       if (err) {
-        setGlobalStatus("❌ " + err, "error");
+        setGlobalStatus("âŒ " + err, "error");
         return;
       }
 
@@ -2972,7 +3066,7 @@ stickyPrimaryBtn.addEventListener("click", async () => {
     if (currentStep === 2) {
       const err = validateStep2();
       if (err) {
-        setGlobalStatus("❌ " + err, "error");
+        setGlobalStatus("âŒ " + err, "error");
         return;
       }
 
@@ -3003,7 +3097,7 @@ stickyPrimaryBtn.addEventListener("click", async () => {
     const passed = state === "ok" || state === "warning";
 
     if (!meta?.optional && (!hasFile || !passed)) {
-      setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
+      setGlobalStatus(`âŒ TenÃ©s que validar ${meta?.label || "este documento"} para continuar`, "error");
       return;
     }
 
@@ -3020,7 +3114,7 @@ stickyPrimaryBtn.addEventListener("click", async () => {
   } catch (e) {
     console.error("[sticky flow error]", e);
     setOnboardingBusy(false);
-    setGlobalStatus("❌ Error en el flujo", "error");
+    setGlobalStatus("âŒ Error en el flujo", "error");
   }
 });
     
@@ -3037,7 +3131,22 @@ exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
   "vehicle_color",
   "vehicle_plate"
 ].forEach((id) => {
-  document.getElementById(id)?.addEventListener("input", () => {
+  document.getElementById(id)?.addEventListener("input", (event) => {
+    const target = event?.target;
+    if (!target) return;
+
+    if (id === "dni_number") {
+      target.value = target.value.replace(/\D+/g, "").slice(0, 8);
+    }
+
+    if (id === "phone") {
+      target.value = target.value.replace(/[^\d+\s()-]/g, "").slice(0, 24);
+    }
+
+    if (id === "vehicle_plate") {
+      target.value = target.value.toUpperCase().replace(/\s+/g, "");
+    }
+
     updateOverallStepperState();
     saveDraft();
   });
@@ -3066,14 +3175,14 @@ exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
           return;
         }
 
-      setDocStatus("background_check", "⏳ Podés subirlo ahora o dentro de 15 días hábiles", "warning");
+      setDocStatus("background_check", "â³ PodÃ©s subirlo ahora o dentro de 15 dÃ­as hÃ¡biles", "warning");
       updateDocumentsProgressUI();
       updateOverallStepperState();
       renderDocumentWizard();
       updateSticky(currentStep);
       } catch (err) {
         console.error("[onboarding init] error:", err);
-        setGlobalStatus("❌ No pudimos cargar tu onboarding", "error");
+        setGlobalStatus("âŒ No pudimos cargar tu onboarding", "error");
       }
     })();
   </script>
