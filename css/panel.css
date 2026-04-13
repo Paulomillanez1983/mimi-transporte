@@ -11,6 +11,8 @@
   --uber-surface-soft: rgba(255, 255, 255, 0.82);
   --uber-border: rgba(15, 15, 15, 0.08);
   --uber-border-strong: rgba(15, 15, 15, 0.14);
+   --mobile-header-size: 44px;
+
 
   --uber-text: #111111;
   --uber-text-soft: rgba(17, 17, 17, 0.68);
@@ -109,8 +111,8 @@ body {
 }
 
 .avatar {
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: var(--uber-surface);
   border: 1px solid var(--uber-border);
@@ -123,7 +125,6 @@ body {
   backdrop-filter: blur(12px);
   overflow: hidden;
 }
-
 .avatar img {
   width: 100%;
   height: 100%;
@@ -156,8 +157,8 @@ body {
 }
 
 .icon-btn {
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   border: 1px solid var(--uber-border);
   background: var(--uber-surface);
@@ -167,7 +168,6 @@ body {
   box-shadow: var(--uber-shadow-sm);
   backdrop-filter: blur(12px);
 }
-
 .icon-btn:active {
   transform: scale(0.97);
 }
