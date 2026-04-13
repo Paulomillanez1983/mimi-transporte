@@ -1378,6 +1378,9 @@ async function cerrarSesionCliente() {
     }
 
     limpiarSesionCache();
+    if (typeof window.resetSupportPushFCMState === 'function') {
+      window.resetSupportPushFCMState();
+    }
 
     localStorage.removeItem('mimi_pending_trip_request');
     localStorage.removeItem('mimi-cliente-auth');
@@ -1588,7 +1591,7 @@ async function obtenerSesionCliente(forceRefresh = false) {
   return sessionPromise;
 } 
   
-  async function syncRealtimeAuthToken(forceRefresh = false) {
+async function syncRealtimeAuthToken(forceRefresh = false) {
   try {
     if (!window.sbRealtime?.realtime) return null;
 
@@ -1605,6 +1608,88 @@ async function obtenerSesionCliente(forceRefresh = false) {
     return token;
   } catch (err) {
     console.warn('[support realtime auth] error sincronizando token:', err);
+    return null;
+  }
+}
+
+async function asegurarPushCliente({ promptIfNeeded = false, forcePrompt = false, source = 'runtime' } = {}) {
+  try {
+    if (typeof window.initSupportPushFCM !== 'function') {
+      return null;
+    }
+
+    const permission =
+      typeof window.getSupportPushPermissionState === 'function'
+        ? window.getSupportPushPermissionState()
+        : (window.Notification?.permission || 'default');
+
+    if (permission === 'denied') {
+      console.warn('[push-cliente] permiso denegado por el navegador');
+      return null;
+    }
+
+    const token = await window.initSupportPushFCM({
+      promptIfNeeded,
+      forcePrompt
+    });
+
+    if (token && promptIfNeeded) {
+      notif.show(
+        'Notificaciones activadas',
+        'Te vamos a avisar sobre soporte y novedades del viaje.',
+        'success',
+        3200
+      );
+    }
+
+    console.log('[push-cliente] init resultado', {
+      source,
+      prompted: !!promptIfNeeded,
+      token: !!token
+    });
+
+    return token;
+  } catch (err) {
+    console.warn('[push-cliente] no se pudo inicializar push:', err);
+    return null;
+  }
+}
+
+async function solicitarPermisosClientePostLogin(session, { forcePrompt = false } = {}) {
+  try {
+    if (!session?.user?.id) return null;
+
+    const permission =
+      typeof window.getSupportPushPermissionState === 'function'
+        ? window.getSupportPushPermissionState()
+        : (window.Notification?.permission || 'default');
+
+    if (permission === 'granted') {
+      return await asegurarPushCliente({
+        promptIfNeeded: false,
+        forcePrompt,
+        source: 'post-login-granted'
+      });
+    }
+
+    if (permission === 'default') {
+      notif.show(
+        'Activá notificaciones',
+        'Permiten recibir respuestas de soporte y avisos del viaje aunque no tengas la app abierta.',
+        'info',
+        4200
+      );
+
+      return await asegurarPushCliente({
+        promptIfNeeded: true,
+        forcePrompt,
+        source: 'post-login-prompt'
+      });
+    }
+
+    return null;
+  } catch (err) {
+    console.warn('[push-cliente] error solicitando permisos post login:', err);
     return null;
   }
 }
@@ -1711,6 +1796,7 @@ async function reanudarViajePendientePostLogin() {
     renderSesionUI(session);
     localStorage.removeItem('mimi_pending_trip_request');
     await subscribeSupportRealtimeForUser();
+    await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
 
     notif.show(
       'Sesión iniciada',
@@ -3280,8 +3366,11 @@ try {
   await restaurarViajeActivoCliente();
   await subscribeSupportRealtimeForUser();
 
-  if (window.initSupportPushFCM) {
-    await window.initSupportPushFCM();
+if (window.initSupportPushFCM) {
+    await asegurarPushCliente({
+      promptIfNeeded: false,
+      source: 'bootstrap'
+    });
   }
 } catch (err) {
   console.error("[DOMContentLoaded bootstrap] error:", err);
@@ -6419,6 +6508,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const session = await obtenerSesionCliente(true);
     renderSesionUI(session);
+    await asegurarPushCliente({
+      promptIfNeeded: false,
+      source: 'dom-ready'
+    });
 
 if (window.sbRealtime?.auth && !window.__mimiAuthListenerBound) {
   window.__mimiAuthListenerBound = true;
@@ -6443,11 +6536,23 @@ if (window.sbRealtime?.auth && !window.__mimiAuthListenerBound) {
     }
 
     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      if (event === 'SIGNED_IN') {
+        await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
+      } else {
+        await asegurarPushCliente({
+          promptIfNeeded: false,
+          source: 'token-refreshed'
+        });
+      }
+
       await reanudarViajePendientePostLogin();
     }
 
     if (event === 'SIGNED_OUT') {
       limpiarSesionCache();
+      if (typeof window.resetSupportPushFCMState === 'function') {
+        window.resetSupportPushFCMState();
+      }
       renderSesionUI(null);
     }
   });
