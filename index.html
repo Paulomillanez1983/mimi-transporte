@@ -9,7 +9,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>MIMICAR</title>
-<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/854/854878.png">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="./assets/icons/mimi-mark.svg">
+<link rel="shortcut icon" href="./assets/icons/icon-192x192.png">
+<link rel="apple-touch-icon" href="./assets/icons/icon-192x192.png">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <link rel="stylesheet" href="./mimi-transporte.css">
 
@@ -1693,6 +1696,51 @@ async function solicitarPermisosClientePostLogin(session, { forcePrompt = false 
     return null;
   }
 }
+
+async function manejarPermisoNotificacionesEnSoporte(session) {
+  try {
+    if (!session?.user?.id) return null;
+
+    const permission =
+      typeof window.getSupportPushPermissionState === 'function'
+        ? window.getSupportPushPermissionState()
+        : (window.Notification?.permission || 'default');
+
+    if (permission === 'granted') {
+      return await asegurarPushCliente({
+        promptIfNeeded: false,
+        source: 'support-granted'
+      });
+    }
+
+    if (permission === 'default') {
+      notif.show(
+        'Activá notificaciones para soporte',
+        'Así te avisamos cuando soporte responda aunque estés fuera de la app.',
+        'info',
+        4200
+      );
+
+      return await asegurarPushCliente({
+        promptIfNeeded: true,
+        forcePrompt: true,
+        source: 'support-context-prompt'
+      });
+    }
+
+    notif.show(
+      'Notificaciones desactivadas',
+      'Si querés recibir respuestas de soporte, habilitalas manualmente desde la configuración del navegador.',
+      'warning',
+      5200
+    );
+
+    return null;
+  } catch (err) {
+    console.warn('[push-cliente] error en recordatorio contextual de soporte:', err);
+    return null;
+  }
+}
   
 function startPageTransition() {
   document.body.classList.add('page-transitioning');
@@ -3219,6 +3267,7 @@ supportBtn?.addEventListener("click", async () => {
       return;
     }
 
+    await manejarPermisoNotificacionesEnSoporte(session);
     openSupportSheet();
     await loadOrCreateSupportTicketContext();
     await subscribeSupportRealtimeForUser();
