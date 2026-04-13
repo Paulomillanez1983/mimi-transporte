@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'mimi-driver-v5';
+const CACHE_NAME = 'mimi-client-v6';
 const APP_SHELL = '/mimi-transporte/index.html';
 const APP_BASE_PATH = '/mimi-transporte/';
 
@@ -21,7 +21,7 @@ const STATIC_ASSETS = [
 const DEFAULT_ICON = `${APP_BASE_PATH}assets/icons/icon-192x192.png`;
 const DEFAULT_BADGE = `${APP_BASE_PATH}assets/icons/badge-icon.png`;
 const DEFAULT_URL = `${APP_BASE_PATH}index.html`;
-const DEFAULT_TAG = 'mimi-driver-notification';
+const DEFAULT_TAG = 'mimi-client-notification';
 
 firebase.initializeApp({
   apiKey: 'AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjE',
@@ -89,7 +89,7 @@ function buildNotificationFromPayload(payload) {
 
   const title = safeString(
     data.title || notification.title,
-    '🚗 Nuevo mensaje MIMI'
+    'MIMI'
   );
 
   const body = safeString(
