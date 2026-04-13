@@ -1,5 +1,5 @@
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmZlIiwicmVmIjoieHJwaHBxbXV0dmFkanJ1Y3FpY24iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc3NDQwNjk4OCwiZXhwIjoyMDg5OTgyOTg4fQ.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
 class SupabaseAdminService {
   constructor() {
@@ -8,6 +8,7 @@ class SupabaseAdminService {
     this.initPromise = null;
     this.authListenerRegistered = false;
     this.lastSession = null;
+    this.pendingAuthWaiters = [];
   }
 
   isConfigured() {
@@ -117,7 +118,7 @@ class SupabaseAdminService {
       const { data, error } = await this.client.auth.getUser(session.access_token);
 
       if (error || !data?.user) {
-        console.warn("[SupabaseAdminService.validateAccessToken]", error || "token inválido");
+        console.warn("[SupabaseAdminService.validateAccessToken]", error || "token invalido");
         return null;
       }
 
@@ -226,6 +227,31 @@ class SupabaseAdminService {
       console.error("[SupabaseAdminService.signOut.catch]", err);
       throw err;
     }
+  }
+
+  async waitForActiveAdmin(timeoutMs = 2500) {
+    const ready = await this.init();
+    if (!ready || !this.client?.auth) {
+      return { ok: false, reason: "init_failed" };
+    }
+
+    const initial = await this.requireActiveAdmin();
+    if (initial?.ok) {
+      return initial;
+    }
+
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+
+      const retried = await this.requireActiveAdmin();
+      if (retried?.ok) {
+        return retried;
+      }
+    }
+
+    return initial;
   }
 
   async requireActiveAdmin() {
