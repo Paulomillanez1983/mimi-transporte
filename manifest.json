@@ -1,13 +1,13 @@
 {
-  "name": "MIMI Cliente",
+  "name": "MIMI Transporte",
   "short_name": "MIMI",
-  "description": "App cliente de MIMI Transporte Escolar",
+  "description": "App clara de MIMI para choferes y clientes, con soporte y alertas activas.",
   "start_url": "/mimi-transporte/index.html",
   "scope": "/mimi-transporte/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#102a5f",
-  "theme_color": "#1f6fe5",
+  "background_color": "#f5f7fb",
+  "theme_color": "#2f6fed",
   "icons": [
     {
       "src": "/mimi-transporte/assets/icons/icon-192x192.png",
