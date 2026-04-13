@@ -1,9 +1,9 @@
-// js/onboarding-doc-validator.js
+﻿// js/onboarding-doc-validator.js
 
 function loadImageFromFile(file) {
   return new Promise((resolve, reject) => {
     if (!file || !String(file.type || "").startsWith("image/")) {
-      reject(new Error("Archivo no válido para análisis de imagen"));
+      reject(new Error("Archivo no vÃ¡lido para anÃ¡lisis de imagen"));
       return;
     }
 
@@ -163,11 +163,11 @@ export async function validateSelectedDocument(docType, file) {
   const brightness = getBrightnessStats(ctx, width, height);
   const edgeDensity = getEdgeDensity(ctx, width, height);
 
-  const tooSmall = width < 900 || height < 900;
-  const tooDark = brightness.mean < 45;
-  const tooBright = brightness.mean > 235;
-  const tooFlat = brightness.stdDev < 18;
-  const suspiciouslyBlurred = edgeDensity < 0.015;
+  const tooSmall = width < 720 || height < 720;
+  const tooDark = brightness.mean < 34;
+  const tooBright = brightness.mean > 245;
+  const tooFlat = brightness.stdDev < 13;
+  const suspiciouslyBlurred = edgeDensity < 0.011;
 
   if (docType === "selfie") {
     const face = await detectFaceWithNativeAPI(file);
@@ -192,7 +192,7 @@ export async function validateSelectedDocument(docType, file) {
       return {
         ok: false,
         kind: "selfie",
-        message: "Selfie con baja calidad. Probá con mejor luz y enfoque"
+        message: "Selfie con baja calidad. Proba con mejor luz o sosteniendo el celu un poco mas quieto"
       };
     }
 
@@ -200,8 +200,8 @@ export async function validateSelectedDocument(docType, file) {
       ok: true,
       kind: "selfie",
       message: face.supported
-        ? "✅ Selfie válida. Rostro detectado"
-        : "✅ Selfie lista para subir"
+        ? "âœ… Selfie vÃ¡lida. Rostro detectado"
+        : "âœ… Selfie lista para subir"
     };
   }
 
@@ -212,7 +212,7 @@ export async function validateSelectedDocument(docType, file) {
     return {
       ok: false,
       kind: "document",
-      message: "Imagen muy chica. Sacá una foto más nítida"
+      message: "Imagen chica. Proba una foto un poco mas cerca y enfocada"
     };
   }
 
@@ -220,7 +220,7 @@ export async function validateSelectedDocument(docType, file) {
     return {
       ok: false,
       kind: "document",
-      message: "La foto está muy oscura"
+      message: "La foto estÃ¡ muy oscura"
     };
   }
 
@@ -244,13 +244,13 @@ export async function validateSelectedDocument(docType, file) {
     return {
       ok: true,
       kind: "document-warning",
-      message: "⚠ Revisá el encuadre: no parece documento completo"
+      message: "âš  RevisÃ¡ el encuadre: no parece documento completo"
     };
   }
 
   return {
     ok: true,
     kind: "document",
-    message: "✅ Documento detectado y listo para subir"
+    message: "âœ… Documento detectado y listo para subir"
   };
 }
