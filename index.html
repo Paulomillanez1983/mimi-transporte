@@ -3133,6 +3133,14 @@ supportBtn?.addEventListener("click", async () => {
       return;
     }
 
+    if (window.initSupportPushFCM) {
+      try {
+        await window.initSupportPushFCM();
+      } catch (pushErr) {
+        console.warn("[supportBtn] push init warning:", pushErr);
+      }
+    }
+
     openSupportSheet();
     await loadOrCreateSupportTicketContext();
     await subscribeSupportRealtimeForUser();
@@ -3279,10 +3287,8 @@ try {
   renderizarCentroNotificaciones();
   await restaurarViajeActivoCliente();
   await subscribeSupportRealtimeForUser();
-
-  if (window.initSupportPushFCM) {
-    await window.initSupportPushFCM();
-  }
+// No pedir permisos automáticamente al cargar.
+// Se pide después de una interacción real del usuario.
 } catch (err) {
   console.error("[DOMContentLoaded bootstrap] error:", err);
 }
