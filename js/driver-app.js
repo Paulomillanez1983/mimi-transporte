@@ -12,6 +12,10 @@ import soundManager from './sound-manager.js';
 import { initPushFCM } from './push-fcm.js';
 import { initDriverSupport, openDriverSupportPanel } from './driver-support.js';
 
+const APP_BASE_PATH = '/mimi-transporte/';
+const DRIVER_PANEL_URL = `${APP_BASE_PATH}chofer-panel.html`;
+const DRIVER_SW_PATH = `${APP_BASE_PATH}firebase-messaging-sw.js`;
+
 class DriverApp {
   constructor() {
     this.initialized = false;
@@ -36,6 +40,8 @@ class DriverApp {
     // Refs para cleanup
     this._fabClickHandler = null;
     this._driverActionHandler = this._handleDriverActionEvent.bind(this);
+    this._visibilityChangeHandler = this._handleVisibilityChange.bind(this);
+    this._foregroundPushHandler = this._handleForegroundPush.bind(this);
     this._unlockAudioOnClick = () => {
       soundManager.enableOnUserInteraction?.();
     };
@@ -56,6 +62,113 @@ class DriverApp {
       .catch((err) => {
         console.warn('[DriverApp] Push en background con error:', err);
       });
+  }
+
+  async _ensureDriverShellReady() {
+    if (!('serviceWorker' in navigator)) return null;
+
+    try {
+      const registration = await navigator.serviceWorker.register(DRIVER_SW_PATH, {
+        scope: APP_BASE_PATH
+      });
+      await navigator.serviceWorker.ready;
+      return registration;
+    } catch (err) {
+      console.warn('[DriverApp] No se pudo registrar el service worker del chofer:', err);
+      return null;
+    }
+  }
+
+  _isDocumentHidden() {
+    return document.visibilityState === 'hidden' || !document.hasFocus();
+  }
+
+  async _showSystemNotification({ title, body, tag, data = {} } = {}) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      return false;
+    }
+
+    try {
+      const registration = await this._ensureDriverShellReady();
+
+      if (registration?.showNotification) {
+        await registration.showNotification(title || 'MIMI Chofer', {
+          body: body || 'Tenes una actualizacion nueva.',
+          icon: `${APP_BASE_PATH}assets/icons/icon-192x192.png`,
+          badge: `${APP_BASE_PATH}assets/icons/badge-icon.png`,
+          tag: tag || 'mimi-driver-notification',
+          renotify: true,
+          requireInteraction: true,
+          vibrate: [250, 100, 250, 100, 400],
+          data: {
+            url: DRIVER_PANEL_URL,
+            ...data
+          }
+        });
+        return true;
+      }
+
+      new Notification(title || 'MIMI Chofer', {
+        body: body || 'Tenes una actualizacion nueva.',
+        tag: tag || 'mimi-driver-notification'
+      });
+      return true;
+    } catch (err) {
+      console.warn('[DriverApp] No se pudo mostrar notificacion del sistema:', err);
+      return false;
+    }
+  }
+
+  async _notifyIncomingTrip(trip) {
+    const amount = Number(trip?.precio ?? trip?.monto ?? 0);
+    const origin = String(trip?.origen_direccion || trip?.origen_texto || 'Nuevo viaje disponible').trim();
+    const destination = String(trip?.destino_direccion || trip?.destino_texto || '').trim();
+    const fareLabel = Number.isFinite(amount) && amount > 0 ? ` · $${amount}` : '';
+    const routeLabel = destination ? `${origin} -> ${destination}` : origin;
+
+    await this._showSystemNotification({
+      title: 'Nuevo viaje para aceptar',
+      body: `${routeLabel}${fareLabel}`,
+      tag: `driver-trip-offer-${trip?.offerId || trip?.id || 'pending'}`,
+      data: {
+        url: DRIVER_PANEL_URL,
+        offerId: trip?.offerId || null,
+        tripId: trip?.id || trip?.viajeId || null,
+        type: 'trip-offer'
+      }
+    });
+  }
+
+  async _notifySupportMessage(detail = {}) {
+    await this._showSystemNotification({
+      title: detail?.title || 'Soporte MIMI',
+      body: detail?.body || 'Tenes una respuesta nueva de soporte.',
+      tag: detail?.payload?.data?.tag || 'driver-support-message',
+      data: {
+        url: DRIVER_PANEL_URL,
+        type: 'support-message'
+      }
+    });
+  }
+
+  _handleForegroundPush(event) {
+    const detail = event?.detail || {};
+
+    if (!this._isDocumentHidden()) {
+      uiController.showToast(detail.body || detail.title || 'Nueva notificacion', 'success', 4500);
+      return;
+    }
+
+    this._notifySupportMessage(detail).catch(() => null);
+  }
+
+  _handleVisibilityChange() {
+    if (!this._onlineStatus) return;
+    if (document.visibilityState !== 'visible') return;
+
+    tripManager.refresh?.().catch((err) => {
+      console.warn('[DriverApp] No se pudo refrescar el estado al volver a foco:', err);
+    });
   }
 
   // =========================================================
@@ -137,6 +250,7 @@ class DriverApp {
 
       // 3) Inicializar mapa
       console.log('[DriverApp] Inicializando servicios...');
+      await this._ensureDriverShellReady();
 
       const results = await Promise.allSettled([
         mapService.init('map-container')
@@ -171,6 +285,8 @@ class DriverApp {
       this._subscribeToEvents();
       this._setupUI();
       initDriverSupport();
+      document.addEventListener('visibilitychange', this._visibilityChangeHandler);
+      window.addEventListener('pushForegroundMessage', this._foregroundPushHandler);
 
       this.initialized = true;
       console.log('[DriverApp] Aplicación inicializada correctamente');
@@ -450,6 +566,9 @@ class DriverApp {
       this._setFlowState('RECEIVING_OFFER');
 
       this._vibrate([120, 60, 120]);
+      if (this._isDocumentHidden()) {
+        this._notifyIncomingTrip(trip).catch(() => null);
+      }
 
       uiController.showIncomingTrip(
         trip,
@@ -858,6 +977,7 @@ _setupUI() {
       const nextOnline = !this._onlineStatus;
 
       if (nextOnline) {
+        await this._ensureDriverShellReady();
         await tripManager.setDriverAvailability({
           online: true,
           disponible: true
@@ -1122,6 +1242,8 @@ _setupUI() {
       }
 
       window.removeEventListener('driverAction', this._driverActionHandler);
+      document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
+      window.removeEventListener('pushForegroundMessage', this._foregroundPushHandler);
       window.removeEventListener('click', this._unlockAudioOnClick);
       window.removeEventListener('touchstart', this._unlockAudioOnTouch);
 
