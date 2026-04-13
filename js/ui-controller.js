@@ -1304,30 +1304,39 @@ hideNavigation() {
   this.state.currentTrip = null;
   this._lastTripRendered = null;
 }
-  showArrival() {
-    const panel = this.elements['arrival-panel'];
-    if (!panel) return;
+showArrival() {
+  const panel = this.elements['arrival-panel'];
+  if (!panel) return;
 
-    panel.classList.add('active');
-    soundManager.play('arrival');
-    this._haptic('success');
+  panel.classList.add('active');
+  panel.setAttribute('aria-hidden', 'false');
+  panel.style.opacity = '1';
+  panel.style.visibility = 'visible';
+  panel.style.pointerEvents = 'auto';
+  panel.style.transform = 'translateY(0)';
 
-    this._clearArrivalTimer();
-    this._arrivalTimeout = setTimeout(() => {
-      if (panel.classList.contains('active')) {
-        this.hideArrival();
-      }
-    }, 10000);
-  }
+  soundManager.play('arrival');
+  this._haptic('success');
 
-  hideArrival() {
-    const panel = this.elements['arrival-panel'];
-    if (panel) {
-      panel.classList.remove('active');
+  this._clearArrivalTimer();
+  this._arrivalTimeout = setTimeout(() => {
+    if (panel.classList.contains('active')) {
+      this.hideArrival();
     }
-    this._clearArrivalTimer();
+  }, 10000);
+}
+hideArrival() {
+  const panel = this.elements['arrival-panel'];
+  if (panel) {
+    panel.classList.remove('active');
+    panel.setAttribute('aria-hidden', 'true');
+    panel.style.opacity = '0';
+    panel.style.visibility = 'hidden';
+    panel.style.pointerEvents = 'none';
+    panel.style.transform = 'translateY(calc(100% + 32px))';
   }
-
+  this._clearArrivalTimer();
+}
   showToast(message, type = 'info', duration = 3000) {
     const container = this.elements['toast-container'];
     if (!container) {
