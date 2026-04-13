@@ -1225,9 +1225,8 @@ _setupUI() {
     btnFab.replaceWith(btnFab.cloneNode(true));
     const freshFab = document.getElementById('fab-online');
 
-    if (freshFab) {
+     if (freshFab) {
       freshFab.addEventListener('click', this._fabClickHandler);
-      freshFab.addEventListener('touchend', this._fabClickHandler, { passive: false });
     }
   }
   if (supportBtn) {
