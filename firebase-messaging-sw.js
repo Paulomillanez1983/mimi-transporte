@@ -8,8 +8,18 @@ const APP_BASE_PATH = '/mimi-transporte/';
 const STATIC_ASSETS = [
   '/mimi-transporte/',
   '/mimi-transporte/index.html',
+  '/mimi-transporte/chofer-panel.html',
+  '/mimi-transporte/driver-onboarding.html',
   '/mimi-transporte/mimi-transporte.css',
+  '/mimi-transporte/css/design-system.css',
+  '/mimi-transporte/css/components.css',
+  '/mimi-transporte/css/animations.css',
+  '/mimi-transporte/css/panel.css',
   '/mimi-transporte/js/push-support.js',
+  '/mimi-transporte/js/driver-app.js',
+  '/mimi-transporte/js/driver-support.js',
+  '/mimi-transporte/js/trip-manager.js',
+  '/mimi-transporte/js/ui-controller.js',
   '/mimi-transporte/assets/icons/icon-192x192.png',
   '/mimi-transporte/assets/icons/badge-icon.png',
   '/mimi-transporte/assets/icons/mimi-mark.svg',
@@ -79,6 +89,22 @@ function normalizeUrl(rawUrl) {
   }
 
   return DEFAULT_URL;
+}
+
+function getNavigationFallback(requestUrl) {
+  try {
+    const url = new URL(requestUrl);
+
+    if (url.pathname.endsWith('/chofer-panel.html')) {
+      return `${APP_BASE_PATH}chofer-panel.html`;
+    }
+
+    if (url.pathname.endsWith('/driver-onboarding.html')) {
+      return `${APP_BASE_PATH}driver-onboarding.html`;
+    }
+  } catch (_) {}
+
+  return APP_SHELL;
 }
 
 function buildNotificationFromPayload(payload) {
@@ -194,19 +220,20 @@ self.addEventListener('fetch', (event) => {
   const cacheableAsset = isAppAsset(request.url);
 
   if (isNavigation) {
+    const fallbackUrl = getNavigationFallback(request.url);
     event.respondWith(
       fetch(request)
         .then((response) => {
           if (response && response.status === 200) {
             const cloned = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
-              cache.put(APP_SHELL, cloned).catch(() => {});
+              cache.put(fallbackUrl, cloned).catch(() => {});
             });
           }
           return response;
         })
         .catch(async () => {
-          const cachedApp = await caches.match(APP_SHELL);
+          const cachedApp = await caches.match(fallbackUrl);
           if (cachedApp) return cachedApp;
 
           return new Response('Sin conexión', {
