@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'mimi-client-v6';
+const CACHE_NAME = 'mimi-client-v7';
 const APP_SHELL = '/mimi-transporte/index.html';
 const APP_BASE_PATH = '/mimi-transporte/';
 
