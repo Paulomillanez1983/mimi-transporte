@@ -1,17 +1,9 @@
-// js/onboarding-doc-validator.js
-
-const DEBUG_VALIDATOR = false;
-
-function debugLog(...args) {
-  if (DEBUG_VALIDATOR) {
-    console.log("[onboarding-doc-validator]", ...args);
-  }
-}
+﻿// js/onboarding-doc-validator.js
 
 function loadImageFromFile(file) {
   return new Promise((resolve, reject) => {
     if (!file || !String(file.type || "").startsWith("image/")) {
-      reject(new Error("Archivo no válido para análisis de imagen"));
+      reject(new Error("Archivo no vÃ¡lido para anÃ¡lisis de imagen"));
       return;
     }
 
@@ -32,79 +24,28 @@ function loadImageFromFile(file) {
   });
 }
 
-function getScaledDimensions(width, height, maxSide = 1600) {
-  const safeWidth = Number(width) || 0;
-  const safeHeight = Number(height) || 0;
-
-  if (safeWidth <= 0 || safeHeight <= 0) {
-    return { width: 0, height: 0, scale: 1 };
-  }
-
-  const longestSide = Math.max(safeWidth, safeHeight);
-
-  if (longestSide <= maxSide) {
-    return {
-      width: safeWidth,
-      height: safeHeight,
-      scale: 1
-    };
-  }
-
-  const scale = maxSide / longestSide;
-
-  return {
-    width: Math.max(1, Math.round(safeWidth * scale)),
-    height: Math.max(1, Math.round(safeHeight * scale)),
-    scale
-  };
-}
-
-function drawImageToCanvas(img, maxSide = 1600) {
-  const originalWidth = img.naturalWidth || img.width || 0;
-  const originalHeight = img.naturalHeight || img.height || 0;
-
-  const scaled = getScaledDimensions(originalWidth, originalHeight, maxSide);
-
-  if (!scaled.width || !scaled.height) {
-    throw new Error("No se pudo calcular el tamaño de la imagen");
-  }
-
+function drawImageToCanvas(img) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-  if (!ctx) {
-    throw new Error("No se pudo crear el contexto de análisis");
-  }
-
-  canvas.width = scaled.width;
-  canvas.height = scaled.height;
-
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-  return {
-    canvas,
-    ctx,
-    width: canvas.width,
-    height: canvas.height,
-    originalWidth,
-    originalHeight,
-    scale: scaled.scale
-  };
+  return { canvas, ctx, width: canvas.width, height: canvas.height };
 }
 
 function getBrightnessStats(ctx, width, height) {
-  const safeWidth = Math.max(1, Number(width) || 1);
-  const safeHeight = Math.max(1, Number(height) || 1);
-  const sampleStep = Math.max(1, Math.floor(Math.min(safeWidth, safeHeight) / 120));
-  const imageData = ctx.getImageData(0, 0, safeWidth, safeHeight).data;
+  const sampleStep = Math.max(1, Math.floor(Math.min(width, height) / 120));
+  const imageData = ctx.getImageData(0, 0, width, height).data;
 
   let count = 0;
   let sum = 0;
   let sumSq = 0;
 
-  for (let y = 0; y < safeHeight; y += sampleStep) {
-    for (let x = 0; x < safeWidth; x += sampleStep) {
-      const i = (y * safeWidth + x) * 4;
+  for (let y = 0; y < height; y += sampleStep) {
+    for (let x = 0; x < width; x += sampleStep) {
+      const i = (y * width + x) * 4;
       const r = imageData[i];
       const g = imageData[i + 1];
       const b = imageData[i + 2];
@@ -112,7 +53,7 @@ function getBrightnessStats(ctx, width, height) {
 
       sum += lum;
       sumSq += lum * lum;
-      count += 1;
+      count++;
     }
   }
 
@@ -124,23 +65,14 @@ function getBrightnessStats(ctx, width, height) {
 }
 
 function getEdgeDensity(ctx, width, height) {
-  const safeWidth = Math.max(1, Number(width) || 1);
-  const safeHeight = Math.max(1, Number(height) || 1);
-
-  const sampleW = Math.min(safeWidth, 320);
-  const sampleH = Math.min(safeHeight, 320);
+  const sampleW = Math.min(width, 320);
+  const sampleH = Math.min(height, 320);
 
   const temp = document.createElement("canvas");
   temp.width = sampleW;
   temp.height = sampleH;
-
   const tctx = temp.getContext("2d", { willReadFrequently: true });
-
-  if (!tctx) {
-    throw new Error("No se pudo crear el contexto temporal");
-  }
-
-  tctx.drawImage(ctx.canvas, 0, 0, safeWidth, safeHeight, 0, 0, sampleW, sampleH);
+  tctx.drawImage(ctx.canvas, 0, 0, width, height, 0, 0, sampleW, sampleH);
 
   const data = tctx.getImageData(0, 0, sampleW, sampleH).data;
 
@@ -159,15 +91,52 @@ function getEdgeDensity(ctx, width, height) {
 
       const diff = Math.abs(lum - lumR) + Math.abs(lum - lumD);
 
-      if (diff > 55) {
-        strongEdges += 1;
-      }
-
-      total += 1;
+      if (diff > 55) strongEdges++;
+      total++;
     }
   }
 
   return total ? strongEdges / total : 0;
+}
+
+function getDocRules(docType) {
+  const base = {
+    minWidth: 720,
+    minHeight: 720,
+    minBrightness: 34,
+    maxBrightness: 245,
+    minStdDev: 13,
+    minEdgeDensity: 0.011,
+    relaxedWarnings: false
+  };
+
+  if (docType === "license_back" || docType === "vehicle_card_back") {
+    return {
+      ...base,
+      minStdDev: 10,
+      minEdgeDensity: 0.0075,
+      relaxedWarnings: true
+    };
+  }
+
+  if (docType === "license_front" || docType === "vehicle_card_front" || docType === "dni_back") {
+    return {
+      ...base,
+      minStdDev: 11,
+      minEdgeDensity: 0.0085,
+      relaxedWarnings: true
+    };
+  }
+
+  if (docType === "dni_front") {
+    return {
+      ...base,
+      minStdDev: 11,
+      minEdgeDensity: 0.009
+    };
+  }
+
+  return base;
 }
 
 async function detectFaceWithNativeAPI(file) {
@@ -181,12 +150,10 @@ async function detectFaceWithNativeAPI(file) {
 
   try {
     const img = await loadImageFromFile(file);
-
     const detector = new window.FaceDetector({
       fastMode: true,
       maxDetectedFaces: 5
     });
-
     const faces = await detector.detect(img);
 
     return {
@@ -195,8 +162,6 @@ async function detectFaceWithNativeAPI(file) {
       hasSingleFace: Array.isArray(faces) && faces.length === 1
     };
   } catch (err) {
-    debugLog("FaceDetector error:", err);
-
     return {
       supported: false,
       faceCount: null,
@@ -205,21 +170,7 @@ async function detectFaceWithNativeAPI(file) {
   }
 }
 
-function isDocumentType(docType) {
-  return [
-    "dni_front",
-    "dni_back",
-    "license_front",
-    "license_back",
-    "vehicle_card_front",
-    "vehicle_card_back",
-    "background_check"
-  ].includes(String(docType || ""));
-}
-
 export async function validateSelectedDocument(docType, file) {
-  debugLog("start", docType, file?.name, file?.type, file?.size);
-
   if (!file) {
     return {
       ok: false,
@@ -228,9 +179,8 @@ export async function validateSelectedDocument(docType, file) {
     };
   }
 
-  const mimeType = String(file.type || "").toLowerCase();
-  const isImage = mimeType.startsWith("image/");
-  const isPdf = mimeType.includes("pdf");
+  const isImage = String(file.type || "").startsWith("image/");
+  const isPdf = String(file.type || "").includes("pdf");
 
   if (!isImage && !isPdf) {
     return {
@@ -240,111 +190,28 @@ export async function validateSelectedDocument(docType, file) {
     };
   }
 
-  if (file.size > 8_000_000) {
-    return {
-      ok: false,
-      kind: "size",
-      message: "El archivo supera el tamaño permitido"
-    };
-  }
-
   if (isPdf) {
-    if (docType === "selfie") {
-      return {
-        ok: false,
-        kind: "selfie",
-        message: "La selfie debe subirse como imagen, no PDF"
-      };
-    }
-
     return {
       ok: true,
       kind: "pdf",
-      message: "PDF válido para subir"
+      message: "PDF listo para subir"
     };
   }
 
-  let img;
-  try {
-    img = await loadImageFromFile(file);
-  } catch (err) {
-    debugLog("loadImageFromFile error", err);
+  const img = await loadImageFromFile(file);
+  const { ctx, width, height } = drawImageToCanvas(img);
+  const brightness = getBrightnessStats(ctx, width, height);
+  const edgeDensity = getEdgeDensity(ctx, width, height);
+  const rules = getDocRules(docType);
 
-    return {
-      ok: false,
-      kind: "image-load",
-      message: "No pudimos abrir la imagen"
-    };
-  }
-
-  debugLog("image loaded", img.naturalWidth, img.naturalHeight);
-
-  let analysis;
-  try {
-    analysis = drawImageToCanvas(img, 1600);
-  } catch (err) {
-    debugLog("drawImageToCanvas error", err);
-
-    return {
-      ok: false,
-      kind: "canvas",
-      message: "No pudimos procesar la imagen"
-    };
-  }
-
-  const {
-    ctx,
-    width,
-    height,
-    originalWidth,
-    originalHeight,
-    scale
-  } = analysis;
-
-  debugLog("canvas ready", {
-    originalWidth,
-    originalHeight,
-    width,
-    height,
-    scale
-  });
-
-  let brightness;
-  let edgeDensity;
-
-  try {
-    brightness = getBrightnessStats(ctx, width, height);
-    debugLog("brightness ready", brightness);
-
-    edgeDensity = getEdgeDensity(ctx, width, height);
-    debugLog("edgeDensity ready", edgeDensity);
-  } catch (err) {
-    debugLog("pixel analysis error", err);
-
-    return {
-      ok: false,
-      kind: "analysis",
-      message: "No pudimos analizar la calidad de la imagen"
-    };
-  }
-
-  const tooSmall = originalWidth < 720 || originalHeight < 720;
-  const tooDark = brightness.mean < 34;
-  const tooBright = brightness.mean > 245;
-  const tooFlat = brightness.stdDev < 13;
-  const suspiciouslyBlurred = edgeDensity < 0.011;
-
-  debugLog("flags", {
-    tooSmall,
-    tooDark,
-    tooBright,
-    tooFlat,
-    suspiciouslyBlurred
-  });
+  const tooSmall = width < rules.minWidth || height < rules.minHeight;
+  const tooDark = brightness.mean < rules.minBrightness;
+  const tooBright = brightness.mean > rules.maxBrightness;
+  const tooFlat = brightness.stdDev < rules.minStdDev;
+  const suspiciouslyBlurred = edgeDensity < rules.minEdgeDensity;
 
   if (docType === "selfie") {
     const face = await detectFaceWithNativeAPI(file);
-    debugLog("face detection", face);
 
     if (face.supported && face.faceCount === 0) {
       return {
@@ -362,35 +229,11 @@ export async function validateSelectedDocument(docType, file) {
       };
     }
 
-    if (tooSmall) {
+    if (tooSmall || tooDark || tooBright || suspiciouslyBlurred) {
       return {
         ok: false,
         kind: "selfie",
-        message: "La selfie tiene resolución muy baja"
-      };
-    }
-
-    if (tooDark) {
-      return {
-        ok: false,
-        kind: "selfie",
-        message: "La selfie está muy oscura"
-      };
-    }
-
-    if (tooBright) {
-      return {
-        ok: false,
-        kind: "selfie",
-        message: "La selfie tiene demasiado brillo"
-      };
-    }
-
-    if (suspiciouslyBlurred) {
-      return {
-        ok: false,
-        kind: "selfie",
-        message: "La selfie se ve borrosa"
+        message: "Selfie con baja calidad. Proba con mejor luz o sosteniendo el celu un poco mas quieto"
       };
     }
 
@@ -398,97 +241,65 @@ export async function validateSelectedDocument(docType, file) {
       ok: true,
       kind: "selfie",
       message: face.supported
-        ? "✅ Selfie válida. Rostro detectado"
-        : "✅ Selfie válida y lista para subir"
+        ? "âœ… Selfie vÃ¡lida. Rostro detectado"
+        : "âœ… Selfie lista para subir"
     };
   }
 
-  if (isDocumentType(docType)) {
-    const aspectRatio = width > height ? width / height : height / width;
-    const looksLikeDocumentShape = aspectRatio >= 1.2 && aspectRatio <= 2.2;
-
-    if (tooSmall) {
-      return {
-        ok: false,
-        kind: "document",
-        message: "Imagen chica. Sacá la foto más cerca y bien enfocada"
-      };
-    }
-
-    if (tooDark) {
-      return {
-        ok: false,
-        kind: "document",
-        message: "La foto está muy oscura"
-      };
-    }
-
-    if (tooBright) {
-      return {
-        ok: false,
-        kind: "document",
-        message: "La foto tiene demasiado brillo"
-      };
-    }
-
-    if (tooFlat || suspiciouslyBlurred) {
-      return {
-        ok: false,
-        kind: "document",
-        message: "La imagen se ve borrosa o poco legible"
-      };
-    }
-
-    if (!looksLikeDocumentShape) {
-      return {
-        ok: false,
-        kind: "document",
-        message: "El encuadre no parece mostrar el documento completo"
-      };
-    }
-
-    return {
-      ok: true,
-      kind: "document",
-      message: "✅ Documento detectado y listo para subir"
-    };
-  }
+  const aspectRatio = width > height ? width / height : height / width;
+  const looksLikeDocumentShape = aspectRatio >= 1.2 && aspectRatio <= 2.2;
 
   if (tooSmall) {
     return {
       ok: false,
-      kind: "image",
-      message: "La imagen tiene resolución muy baja"
+      kind: "document",
+      message: "Imagen chica. Proba una foto un poco mas cerca y enfocada"
     };
   }
 
   if (tooDark) {
     return {
       ok: false,
-      kind: "image",
-      message: "La imagen está muy oscura"
+      kind: "document",
+      message: "La foto estÃ¡ muy oscura"
     };
   }
 
   if (tooBright) {
     return {
       ok: false,
-      kind: "image",
-      message: "La imagen tiene demasiado brillo"
+      kind: "document",
+      message: "La foto tiene demasiado brillo"
     };
   }
 
-  if (suspiciouslyBlurred) {
+  if (tooFlat || suspiciouslyBlurred) {
+    if (rules.relaxedWarnings) {
+      return {
+        ok: true,
+        kind: "document-warning",
+        message: "La foto se ve justa de nitidez, pero la vamos a enviar igual para revision"
+      };
+    }
+
     return {
       ok: false,
-      kind: "image",
-      message: "La imagen se ve borrosa"
+      kind: "document",
+      message: "La imagen se ve borrosa o poco legible"
+    };
+  }
+
+  if (!looksLikeDocumentShape) {
+    return {
+      ok: true,
+      kind: "document-warning",
+      message: "âš  RevisÃ¡ el encuadre: no parece documento completo"
     };
   }
 
   return {
     ok: true,
-    kind: "image",
-    message: "✅ Imagen válida y lista para subir"
+    kind: "document",
+    message: "âœ… Documento detectado y listo para subir"
   };
 }
