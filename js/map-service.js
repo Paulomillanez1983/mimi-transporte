@@ -22,8 +22,8 @@ class MapService {
     // Routing + reroute
     this.currentDestination = null;
     this.lastRouteUpdate = 0;
-    this.routeUpdateCooldown = 20000; // 20s
-    this.rerouteDistanceThreshold = 80; // metros
+    this.routeUpdateCooldown = 12000; // 12s
+    this.rerouteDistanceThreshold = 65; // metros
 
     // Ruta completa guardada (OSRM)
     this.routeGeometry = [];
@@ -41,6 +41,7 @@ class MapService {
     // Camera throttle (mejor performance en smartphones)
     this._lastCameraUpdate = 0;
     this._cameraThrottle = 400;
+    this._lastDriverPosition = null;
   }
 
   // =========================================================
@@ -325,38 +326,39 @@ class MapService {
     const isMobile = window.innerWidth <= 768;
     btn.style.cssText = `
       position: absolute;
-      bottom: ${isMobile ? "140px" : "180px"};
+      bottom: ${isMobile ? "128px" : "154px"};
       right: 14px;
-      width: 48px;
-      height: 48px;
+      width: 54px;
+      height: 54px;
       border-radius: 50%;
-      border: none;
-      background: rgba(28,28,30,0.95);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      border: 1px solid rgba(15,23,42,0.08);
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 14px 28px rgba(15,23,42,0.14);
       z-index: 9999;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
+      color: #0f172a;
       font-size: 20px;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       transition: transform 0.15s, background 0.15s;
+      backdrop-filter: blur(14px);
     `;
 
     const handlePress = (e) => {
       e.preventDefault();
       e.stopPropagation();
       btn.style.transform = "scale(0.9)";
-      btn.style.background = "rgba(39,110,241,0.9)";
+      btn.style.background = "rgba(219,234,254,0.95)";
     };
 
     const handleRelease = (e) => {
       e.preventDefault();
       e.stopPropagation();
       btn.style.transform = "scale(1)";
-      btn.style.background = "rgba(28,28,30,0.95)";
+      btn.style.background = "rgba(255,255,255,0.95)";
       this.recenterOnDriver();
     };
 
@@ -419,9 +421,9 @@ class MapService {
 
   recenterOnDriver() {
     if (!this.map || !this.isLoaded) return;
-    if (!this.markers.driver) return;
+    if (!this.markers.driver && !this._lastDriverPosition) return;
 
-    const pos = this.markers.driver.getLngLat();
+    const pos = this.markers.driver?.getLngLat?.() || this._lastDriverPosition;
     if (!pos) return;
 
     this.followDriver = true;
@@ -549,7 +551,10 @@ class MapService {
     }
   }
 
-updateDriverPosition(lng, lat, heading = 0) {
+  updateDriverPosition(lng, lat, heading = 0) {
+  if (!this._isValidLatLng(lat, lng)) return;
+
+  this._lastDriverPosition = { lng, lat };
   this.updateDriverMarker(lng, lat, heading);
 
   if (!this.map || !this.isLoaded) return;
@@ -565,8 +570,6 @@ updateDriverPosition(lng, lat, heading = 0) {
 
       if (this.navigationMode) {
         const duration = isMobile ? 600 : 700;
-     if (!this._isValidLatLng(lat, lng)) return;   
-
         this.map.easeTo({
           center: [lng, lat],
           bearing: isMobile ? safeHeading : 0,
@@ -700,7 +703,9 @@ updateDriverPosition(lng, lat, heading = 0) {
 
         const isMobile = window.innerWidth <= 768;
         this.map.fitBounds(bounds, {
-          padding: isMobile ? 80 : 120,
+          padding: isMobile
+            ? { top: 138, right: 28, bottom: 244, left: 28 }
+            : { top: 120, right: 120, bottom: 180, left: 120 },
           duration: 800,
           maxZoom: 18,
         });
