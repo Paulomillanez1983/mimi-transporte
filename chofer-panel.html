@@ -266,22 +266,37 @@
       }
     }
 
-    async function initLogout() {
-      const { data } = await supabaseService.client.auth.getSession();
+async function initLogout() {
+  const { data } = await supabaseService.client.auth.getSession();
 
-      if (data?.session && logoutBtn) {
-        logoutBtn.classList.add("visible");
-      }
+  if (data?.session && logoutBtn) {
+    logoutBtn.classList.add("visible");
+  }
 
-      if (logoutBtn) {
-        logoutBtn.addEventListener("click", doLogout);
-      }
+  // Botón superior
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+      logoutBtn.innerText = "Cerrando...";
+      await doLogout();
+    });
+  }
 
-      if (menuLogoutBtn) {
-        menuLogoutBtn.addEventListener("click", doLogout);
-      }
+  // 🔥 FIX REAL → buscar el botón cuando ya existe
+  setTimeout(() => {
+    const menuLogoutBtn = document.getElementById("menu-logout");
+
+    if (menuLogoutBtn && !menuLogoutBtn.dataset.bound) {
+      menuLogoutBtn.dataset.bound = "1";
+
+      menuLogoutBtn.addEventListener("click", async () => {
+        menuLogoutBtn.disabled = true;
+        menuLogoutBtn.innerText = "Cerrando...";
+        await doLogout();
+      });
     }
-
+  }, 300);
+}
     await protectRoute();
     await initLogout();
   </script>
