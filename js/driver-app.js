@@ -1177,11 +1177,22 @@ _setupUI() {
     settingsBtn.addEventListener('click', () => {
       uiController.closeMenu?.();
       uiController.showInfoSheet?.({
-        title: 'Configuracion',
-        description: 'Desde aca vas a poder revisar preferencias basicas del chofer, conexion y estado de la cuenta.',
+        title: 'Estado de conexion',
+        description: this._onlineStatus
+          ? 'Estas en linea. Si queres salir de linea, hacelo desde aca sin tapar el mapa.'
+          : 'Estas fuera de linea. Cuando quieras volver a trabajar, conectate desde aca.',
         metrics: [
           { label: 'Sesion', value: this._authUserId ? 'Activa' : 'Sin datos' },
-          { label: 'Modo', value: this._onlineStatus ? 'Disponible' : 'Desconectado' }
+          { label: 'Modo', value: this._onlineStatus ? 'En linea' : 'Fuera de linea' }
+        ],
+        actions: [
+          {
+            label: this._onlineStatus ? 'Ponerte offline' : 'Conectarte',
+            variant: this._onlineStatus ? 'cancel' : 'navigate',
+            onClick: async () => {
+              await this._fabClickHandler();
+            }
+          }
         ]
       });
     });
@@ -1376,4 +1387,3 @@ const app = new DriverApp();
 app.init();
 
 export default DriverApp;
-
