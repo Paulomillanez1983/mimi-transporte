@@ -736,10 +736,11 @@ class DriverApp {
 
       this._currentTripId = null;
       mapService.clearRoute?.();
+      uiController.hideIncomingModal?.();
       uiController.hideNavigation?.();
+      uiController.hideArrival?.();
 
       uiController.showToast(`Viaje completado +$${trip.precio ?? 0}`, 'success', 5000);
-
       if (this._onlineStatus) {
         this._setFlowState('ONLINE_IDLE');
         uiController.showWaitingState();
@@ -753,10 +754,12 @@ class DriverApp {
 
       this._currentTripId = null;
       mapService.clearRoute?.();
+      uiController.hideIncomingModal?.();
       uiController.hideNavigation?.();
+      uiController.hideArrival?.();
 
       uiController.showToast('Viaje cancelado', 'warning');
-
+      
       if (this._onlineStatus) {
         this._setFlowState('ONLINE_IDLE');
       } else {
@@ -1289,10 +1292,12 @@ _setupUI() {
 
             this._currentTripId = null;
             mapService.clearRoute?.();
+            uiController.hideIncomingModal?.();
             uiController.hideNavigation?.();
+            uiController.hideArrival?.();
 
             uiController.showToast('Viaje finalizado', 'success');
-
+            
             if (this._onlineStatus) {
               this._setFlowState('ONLINE_IDLE');
               uiController.showWaitingState();
