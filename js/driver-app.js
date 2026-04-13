@@ -1323,7 +1323,7 @@ _setupUI() {
 
   _openWhatsApp() {
     const trip = tripManager.getCurrentTrip();
-    if (!trip?.telefono) return;
+    if (!trip || !trip.telefono) return;
 
     const msg = encodeURIComponent('Hola, soy tu conductor de MIMI');
     window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
