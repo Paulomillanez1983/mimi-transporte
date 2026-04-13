@@ -1,5 +1,5 @@
 ﻿/**
- * Driver App producciÃ³n FINAL (RLS + UUID + FLOW + UBER DRIVER)
+ * Driver App produccion FINAL (RLS + UUID + FLOW + UBER DRIVER)
  */
 
 import CONFIG from './config.js';
@@ -34,7 +34,7 @@ class DriverApp {
     // Flujo chofer
     this._driverFlowState = 'OFFLINE';
 
-    // ProtecciÃ³n lifecycle / acciones
+    // Proteccion lifecycle / acciones
     this._destroyed = false;
     this._actionLock = false;
 
@@ -124,7 +124,7 @@ class DriverApp {
     const amount = Number(trip?.precio ?? trip?.monto ?? 0);
     const origin = String(trip?.origen_direccion || trip?.origen_texto || 'Nuevo viaje disponible').trim();
     const destination = String(trip?.destino_direccion || trip?.destino_texto || '').trim();
-    const fareLabel = Number.isFinite(amount) && amount > 0 ? ` Â· $${amount}` : '';
+    const fareLabel = Number.isFinite(amount) && amount > 0 ? ` - $${amount}` : '';
     const routeLabel = destination ? `${origin} -> ${destination}` : origin;
 
     await this._showSystemNotification({
@@ -313,7 +313,7 @@ class DriverApp {
       return;
     }
 
-    console.log('[DriverApp] Iniciando aplicaciÃ³n...');
+    console.log('[DriverApp] Iniciando aplicacion...');
 
     uiController.init();
     window.uiController = uiController;
@@ -325,11 +325,11 @@ class DriverApp {
       const dbReady = await supabaseService.init();
       if (!dbReady) throw new Error('No se pudo conectar a Supabase');
 
-      // 2) Resolver sesiÃ³n vÃ¡lida antes de pedir user
+      // 2) Resolver sesion valida antes de pedir user
       const authData = await this._requireValidAuth();
 
       if (!authData) {
-        console.log('[DriverApp] Sin sesiÃ³n vÃ¡lida, redirigiendo a login');
+        console.log('[DriverApp] Sin sesion valida, redirigiendo a login');
         window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
@@ -355,7 +355,7 @@ class DriverApp {
       });
       await this._loadDriverProfileSummary(user);
 
-      // Desbloqueo audio/haptics en interacciÃ³n real
+      // Desbloqueo audio/haptics en interaccion real
       window.addEventListener('click', this._unlockAudioOnClick, { once: true });
       window.addEventListener('touchstart', this._unlockAudioOnTouch, { once: true });
 
@@ -367,7 +367,7 @@ class DriverApp {
         mapService.init('map-container')
       ]);
 
-      console.log('[DriverApp] Resultados inicializaciÃ³n:', {
+      console.log('[DriverApp] Resultados inicializacion:', {
         mapa: results[0]?.status
       });
 
@@ -400,7 +400,7 @@ class DriverApp {
       window.addEventListener('pushForegroundMessage', this._foregroundPushHandler);
 
       this.initialized = true;
-      console.log('[DriverApp] AplicaciÃ³n inicializada correctamente');
+      console.log('[DriverApp] Aplicacion inicializada correctamente');
 
       if (!tripManagerReady) {
         this._onlineStatus = false;
@@ -513,7 +513,7 @@ class DriverApp {
 
       let session = sessionData?.session || null;
 
-      // 2) Si no hay sesiÃ³n, esperamos un poco por hydration post-OAuth
+      // 2) Si no hay sesion, esperamos un poco por hydration post-OAuth
       if (!session?.access_token) {
         await new Promise((resolve) => setTimeout(resolve, 900));
 
@@ -529,7 +529,7 @@ class DriverApp {
         session = retrySessionData?.session || null;
       }
 
-      // 3) Si sigue sin haber sesiÃ³n, intentamos refresh
+      // 3) Si sigue sin haber sesion, intentamos refresh
       if (!session?.access_token) {
         const {
           data: refreshData,
@@ -543,12 +543,12 @@ class DriverApp {
         session = refreshData?.session || null;
       }
 
-      // 4) Si no logramos sesiÃ³n vÃ¡lida, salimos
+      // 4) Si no logramos sesion valida, salimos
       if (!session?.access_token) {
         return null;
       }
 
-      // 5) ReciÃ©n acÃ¡ pedimos el user real
+      // 5) Recien aca pedimos el user real
       const {
         data: userData,
         error: userError
@@ -569,7 +569,7 @@ class DriverApp {
     }
   }
   // =========================================================
-  // UX PRO Â· HAPTICS + AUDIO FEEDBACK
+  // UX PRO - HAPTICS + AUDIO FEEDBACK
   // =========================================================
   _vibrate(pattern = [90, 50, 140]) {
     try {
@@ -673,7 +673,7 @@ class DriverApp {
     console.log('[DriverApp] Suscribiendo a eventos de TripManager...');
 
     const unsubOffer = tripManager.on('newPendingTrip', (trip) => {
-      console.log('[DriverApp] ðŸ“¨ newPendingTrip', trip.id);
+      console.log('[DriverApp] [evento] newPendingTrip', trip.id);
       this._setFlowState('RECEIVING_OFFER');
 
       this._vibrate([120, 60, 120]);
@@ -703,7 +703,7 @@ class DriverApp {
 
       this._celebrateAcceptFeedback();
       uiController.hideIncomingModal?.();
-      uiController.showToast('Â¡Viaje aceptado!', 'success');
+      uiController.showToast('Viaje aceptado', 'success');
 
       await this._showRouteOnMap(trip);
       uiController.showNavigationState(trip);
@@ -853,7 +853,7 @@ class DriverApp {
         return;
       }
 
-      console.warn('[DriverApp] No existe mÃ©todo para mostrar ruta en mapService');
+      console.warn('[DriverApp] No existe metodo para mostrar ruta en mapService');
     } catch (error) {
       console.error('[DriverApp] Error mostrando ruta:', error);
     }
@@ -934,7 +934,7 @@ class DriverApp {
       if (!result.success) {
         uiController.showToast(
           result.error === 'VIAJE_YA_TOMADO'
-            ? 'âŒ Otro chofer tomÃ³ el viaje'
+            ? 'Otro chofer tomo el viaje'
             : result.error || 'Error aceptando viaje',
           'warning'
         );
@@ -1019,10 +1019,10 @@ class DriverApp {
           .eq('user_id', this._authUserId);
 
         if (error) {
-          console.error('[DriverApp] Error guardando ubicaciÃ³n:', error);
+          console.error('[DriverApp] Error guardando ubicacion:', error);
         }
       } catch (err) {
-        console.error('[DriverApp] FallÃ³ update ubicaciÃ³n:', err);
+        console.error('[DriverApp] Fallo update ubicacion:', err);
       }
     }
 
@@ -1082,7 +1082,7 @@ _setupUI() {
       const hasActiveTrip = !!tripManager.getCurrentTrip();
 
       if (hasActiveTrip && this._onlineStatus) {
-        uiController.showToast('No podÃ©s ponerte offline durante un viaje', 'warning');
+        uiController.showToast('No podes ponerte offline durante un viaje', 'warning');
         return;
       }
 
@@ -1102,7 +1102,7 @@ _setupUI() {
         uiController.showWaitingState();
       } else {
         if (tripManager.getCurrentTrip()) {
-          uiController.showToast('No podÃ©s desconectarte en viaje', 'warning');
+          uiController.showToast('No podes desconectarte en viaje', 'warning');
           return;
         }
 
@@ -1214,11 +1214,11 @@ _setupUI() {
     if (!action) return null;
 
     if (this._actionLock && action !== 'navigate' && action !== 'whatsapp') {
-      console.warn('[DriverApp] AcciÃ³n bloqueada por lock:', action);
+      console.warn('[DriverApp] Accion bloqueada por lock:', action);
       return null;
     }
 
-    console.log('[DriverApp] AcciÃ³n:', action, tripId);
+    console.log('[DriverApp] Accion:', action, tripId);
 
     const pending = tripManager.getPendingTrip();
     const current = tripManager.getCurrentTrip();
@@ -1279,7 +1279,7 @@ _setupUI() {
           return this._openWhatsApp();
 
         default:
-          console.warn('[DriverApp] AcciÃ³n desconocida:', action);
+          console.warn('[DriverApp] Accion desconocida:', action);
           return null;
       }
     } finally {
@@ -1314,7 +1314,7 @@ _setupUI() {
     const trip = tripManager.getCurrentTrip();
     if (!trip?.telefono) return;
 
-    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI ðŸš');
+    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI');
     window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
   }
 
@@ -1376,3 +1376,4 @@ const app = new DriverApp();
 app.init();
 
 export default DriverApp;
+
