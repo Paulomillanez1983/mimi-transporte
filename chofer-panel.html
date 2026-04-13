@@ -273,29 +273,27 @@ async function initLogout() {
     logoutBtn.classList.add("visible");
   }
 
-  // Botón superior
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      logoutBtn.disabled = true;
-      logoutBtn.innerText = "Cerrando...";
-      await doLogout();
-    });
-  }
+  const bindLogout = (btn) => {
+    if (!btn || btn.dataset.bound === "1") return;
 
-  // 🔥 FIX REAL → buscar el botón cuando ya existe
-  setTimeout(() => {
-    const menuLogoutBtn = document.getElementById("menu-logout");
+    btn.dataset.bound = "1";
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      const originalText = btn.innerText;
+      btn.innerText = "Cerrando...";
 
-    if (menuLogoutBtn && !menuLogoutBtn.dataset.bound) {
-      menuLogoutBtn.dataset.bound = "1";
-
-      menuLogoutBtn.addEventListener("click", async () => {
-        menuLogoutBtn.disabled = true;
-        menuLogoutBtn.innerText = "Cerrando...";
+      try {
         await doLogout();
-      });
-    }
-  }, 300);
+      } catch (err) {
+        console.error("[logout] fallo:", err);
+        btn.disabled = false;
+        btn.innerText = originalText;
+      }
+    });
+  };
+
+  bindLogout(logoutBtn);
+  bindLogout(document.getElementById("menu-logout"));
 }
     await protectRoute();
     await initLogout();
