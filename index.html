@@ -3328,8 +3328,9 @@ try {
   cargarNotificacionesDesdeStorage();
   renderizarCentroNotificaciones();
   await restaurarViajeActivoCliente();
-  await subscribeSupportRealtimeForUser();
-// No pedir permisos automáticamente al cargar.
+await syncRealtimeAuthToken(true);
+await subscribeSupportRealtimeForUser(true);
+  // No pedir permisos automáticamente al cargar.
 // Se pide después de una interacción real del usuario.
 } catch (err) {
   console.error("[DOMContentLoaded bootstrap] error:", err);
