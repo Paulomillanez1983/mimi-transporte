@@ -67,52 +67,32 @@ async function upsertPushToken({ userId, token, accessToken }) {
     updated_at: new Date().toISOString()
   };
 
-  console.log("[push-support] intentando guardar token:", {
+  console.log("[push-support] upsert token:", {
     user_id: payload.user_id,
     rol: payload.rol,
     platform: payload.platform,
     token_preview: `${String(token).slice(0, 12)}...${String(token).slice(-10)}`
   });
 
-  const insertResult = await window.supabaseInsert?.("push_tokens", payload, accessToken);
-  console.log("[push-support] insert result:", insertResult);
+  try {
+    const { data, error } = await supabaseService.client
+      .from("push_tokens")
+      .upsert(payload, { onConflict: "token" })
+      .select()
+      .single();
 
-  if (!insertResult?.error) {
+    if (error) {
+      console.error("[push-support] upsert error:", error);
+      return null;
+    }
+
     console.log("[push-support] token guardado correctamente");
-    return insertResult?.data || null;
-  }
-
-  if (!isDuplicateError(insertResult.error)) {
-    console.warn("[push-support] insert falló con error no duplicado", insertResult.error);
+    return data;
+  } catch (err) {
+    console.error("[push-support] fallo upsert:", err);
     return null;
   }
-
-  console.warn("[push-support] insert duplicado, intento update por token");
-
-  const updateResult = await window.supabaseUpdate?.(
-    "push_tokens",
-    "token",
-    token,
-    {
-      user_id: userId,
-      rol: supportRole,
-      platform: "web",
-      updated_at: new Date().toISOString()
-    },
-    accessToken
-  );
-
-  console.log("[push-support] update result:", updateResult);
-
-  if (updateResult?.error) {
-    console.warn("[push-support] tampoco se pudo actualizar token", updateResult.error);
-    return null;
-  }
-
-  console.log("[push-support] token actualizado correctamente");
-  return updateResult?.data || null;
 }
-
 function getNotificationPermission() {
   if (!("Notification" in window)) return "unsupported";
   return Notification.permission || "default";
