@@ -266,12 +266,13 @@ if (btnFinish) {
 
     window.dispatchEvent(
       new CustomEvent('driverAction', {
-        detail: { action: 'finishTrip' }
+        detail: { action: 'finish' }
       })
     );
   });
 }
-    if (menuButton) {
+    
+  if (menuButton) {
       this._menuButtonClickHandler = () => this.toggleMenu();
       menuButton.addEventListener('click', this._menuButtonClickHandler);
     }
