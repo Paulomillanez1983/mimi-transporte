@@ -1303,9 +1303,17 @@ _setupUI() {
           return result;
         }
 
-        case 'finish': {
-          const result = await tripManager.finishTrip(current?.id || tripId);
-          if (result?.success) {
+       case 'finish': {
+         const tripIdFinal = current?.id || this._currentTripId || tripId;
+
+         if (!tripIdFinal) {
+           console.error('[DriverApp] No hay tripId para finalizar');
+           uiController.showToast?.('Error: no hay viaje activo', 'error');
+           return;
+         }
+
+         const result = await tripManager.finishTrip(tripIdFinal);
+         if (result?.success) {
             this._setFlowState('TRIP_COMPLETED');
  
             this._currentTripId = null;
