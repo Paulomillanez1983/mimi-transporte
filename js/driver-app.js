@@ -398,6 +398,11 @@ class DriverApp {
       initDriverSupport();
       document.addEventListener('visibilitychange', this._visibilityChangeHandler);
       window.addEventListener('pushForegroundMessage', this._foregroundPushHandler);
+      uiController.hideIncomingModal?.();
+      uiController.hideNavigation?.();
+      uiController.hideArrival?.();
+      mapService.clearRoute?.();
+      this._currentTripId = null;
 
       this.initialized = true;
       console.log('[DriverApp] Aplicacion inicializada correctamente');
@@ -985,7 +990,14 @@ class DriverApp {
   // =========================================================
   async _onPositionUpdate(position) {
     if (this._destroyed) return;
-    if (!this._onlineStatus && !tripManager.getCurrentTrip()) return;
+const currentTrip = tripManager.getCurrentTrip();
+
+if (!this._onlineStatus && !currentTrip) return;
+
+if (!currentTrip) {
+  uiController.hideArrival?.();
+  return;
+}
     if (!position || !Number.isFinite(position.lat) || !Number.isFinite(position.lng)) return;
 
     mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
@@ -1029,22 +1041,50 @@ class DriverApp {
     if (currentTrip) {
       const estado = String(currentTrip.estado || '').toUpperCase();
 
-      if (
-        (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
-        this._driverFlowState === 'GOING_TO_PICKUP'
-      ) {
-        const distPickup = this._calculateDistance(
-          position.lat,
-          position.lng,
-          currentTrip.origen_lat,
-          currentTrip.origen_lng
-        );
+if (!currentTrip?.id) {
+  uiController.hideArrival?.();
+  return;
+}
 
-        if (distPickup < 100) {
-          this._setFlowState('ARRIVED_PICKUP');
-          uiController.showArrival?.();
-        }
-      }
+const estado = String(currentTrip.estado || '').toUpperCase();
+
+if (
+  (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
+  this._driverFlowState === 'GOING_TO_PICKUP'
+) {
+  const distPickup = this._calculateDistance(
+    position.lat,
+    position.lng,
+    currentTrip.origen_lat,
+    currentTrip.origen_lng
+  );
+
+  if (distPickup < 100) {
+    this._setFlowState('ARRIVED_PICKUP');
+    uiController.showArrival?.();
+  } else {
+    uiController.hideArrival?.();
+  }
+} else if (
+  estado === 'EN_CURSO' &&
+  this._driverFlowState === 'TRIP_STARTED'
+) {
+  const distDestination = this._calculateDistance(
+    position.lat,
+    position.lng,
+    currentTrip.destino_lat,
+    currentTrip.destino_lng
+  );
+
+  if (distDestination < 100) {
+    this._setFlowState('ARRIVED_DESTINATION');
+    uiController.showArrival?.();
+  } else {
+    uiController.hideArrival?.();
+  }
+} else {
+  uiController.hideArrival?.();
+}
 
       if (
         estado === 'EN_CURSO' &&
