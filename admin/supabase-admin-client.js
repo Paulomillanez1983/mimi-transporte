@@ -1,5 +1,5 @@
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmZlIiwicmVmIjoieHJwaHBxbXV0dmFkanJ1Y3FpY24iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc3NDQwNjk4OCwiZXhwIjoyMDg5OTgyOTg4fQ.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
 
 class SupabaseAdminService {
   constructor() {
@@ -109,21 +109,47 @@ class SupabaseAdminService {
     }
   }
 
+  async validateAccessToken(session) {
+    const ready = await this.init();
+    if (!ready || !this.client?.auth || !session?.access_token) return null;
+
+    try {
+      const { data, error } = await this.client.auth.getUser(session.access_token);
+
+      if (error || !data?.user) {
+        console.warn("[SupabaseAdminService.validateAccessToken]", error || "token inválido");
+        return null;
+      }
+
+      const validated = {
+        ...session,
+        user: data.user
+      };
+
+      this.lastSession = validated;
+      return validated;
+    } catch (err) {
+      console.error("[SupabaseAdminService.validateAccessToken.catch]", err);
+      return null;
+    }
+  }
+
   async refreshSessionIfNeeded() {
     const ready = await this.init();
     if (!ready || !this.client?.auth) return null;
 
     const currentSession = await this.getSession();
-    if (!currentSession?.refresh_token) {
-      return currentSession;
+    if (!currentSession) {
+      return null;
     }
 
-    const expiresAt = Number(currentSession.expires_at || 0) * 1000;
-    const now = Date.now();
-    const isNearExpiry = expiresAt > 0 && expiresAt - now <= 60_000;
+    const validatedCurrent = await this.validateAccessToken(currentSession);
+    if (validatedCurrent) {
+      return validatedCurrent;
+    }
 
-    if (!isNearExpiry) {
-      return currentSession;
+    if (!currentSession?.refresh_token) {
+      return null;
     }
 
     try {
@@ -133,15 +159,24 @@ class SupabaseAdminService {
 
       if (error) {
         console.error("[SupabaseAdminService.refreshSessionIfNeeded]", error);
-        return currentSession;
+        return null;
       }
 
-      const refreshed = data?.session || currentSession;
-      this.lastSession = refreshed;
-      return refreshed;
+      const refreshed = data?.session || null;
+      if (!refreshed) {
+        return null;
+      }
+
+      const validatedRefreshed = await this.validateAccessToken(refreshed);
+      if (!validatedRefreshed) {
+        return null;
+      }
+
+      this.lastSession = validatedRefreshed;
+      return validatedRefreshed;
     } catch (err) {
       console.error("[SupabaseAdminService.refreshSessionIfNeeded.catch]", err);
-      return currentSession;
+      return null;
     }
   }
 
