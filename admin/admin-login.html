@@ -9,7 +9,7 @@
   <meta name="color-scheme" content="dark" />
   <meta
     name="description"
-    content="Acceso administrativo a MIMI para operaciones, revisión KYC y monitoreo de choferes."
+    content="Acceso administrativo a MIMI para operaciones, revisión de choferes, KYC y monitoreo de choferes."
   />
 
   <link rel="icon" href="../assets/icons/logo-mimi.png" type="image/png" />
@@ -236,6 +236,7 @@
     const envHint = document.getElementById("envHint");
 
     let isSubmitting = false;
+    let verifyTimer = null;
 
     function setLoading(isLoading, message = "Procesando...") {
       isSubmitting = isLoading;
@@ -261,15 +262,15 @@
 
     function setEnvHint(message = "") {
       if (!envHint) return;
-      envHint.textContent = message;
+      envHint.textContent = message || "";
     }
 
-    async function goToPanel() {
-      window.location.href = "./admin-panel.html";
+    function goToPanel() {
+      window.location.replace("./admin-panel.html");
     }
 
     async function verifyExistingAccess() {
-      setLoading(true, "Verificando sesión..."); 
+      setLoading(true, "Verificando sesión...");
       setError("");
 
       try {
@@ -281,36 +282,54 @@
 
         setEnvHint("Supabase listo.");
 
-        const result = await supabaseAdminService.requireActiveAdmin();
+        const result = await supabaseAdminService.waitForActiveAdmin(3200);
 
         if (result?.ok) {
           setLoading(true, "Redirigiendo al panel...");
-          await goToPanel();
+          goToPanel();
           return;
         }
 
         if (result?.reason === "no_session") {
           setLoading(false);
+          setEnvHint("Listo para iniciar sesión.");
           return;
         }
 
         if (result?.reason === "not_admin") {
           setLoading(false);
           setError("Tu cuenta inició sesión, pero no tiene permisos de administrador activos.");
+          setEnvHint("Acceso restringido.");
+
+          try {
+            await supabaseAdminService.signOut();
+          } catch (err) {
+            console.warn("[admin-login.signOut.notAdmin]", err);
+          }
           return;
         }
 
         if (result?.reason === "admin_lookup_error") {
           setLoading(false);
           setError("No pudimos validar permisos de administrador. Probá nuevamente.");
+          setEnvHint("Error al consultar permisos.");
+          return;
+        }
+
+        if (result?.reason === "init_failed") {
+          setLoading(false);
+          setError("No pudimos inicializar Supabase.");
+          setEnvHint("Falló la inicialización.");
           return;
         }
 
         setLoading(false);
+        setEnvHint("Listo para iniciar sesión.");
       } catch (err) {
         console.error("[admin-login.verifyExistingAccess]", err);
         setLoading(false);
         setError(err instanceof Error ? err.message : "Ocurrió un error al verificar la sesión.");
+        setEnvHint("Error de verificación.");
       }
     }
 
@@ -319,6 +338,7 @@
 
       setError("");
       setLoading(true, "Abriendo Google...");
+      setEnvHint("Iniciando OAuth con Google...");
 
       try {
         const ready = await supabaseAdminService.init();
@@ -327,24 +347,40 @@
           throw new Error("No pudimos inicializar Supabase.");
         }
 
-        setEnvHint("Iniciando OAuth con Google...");
         await supabaseAdminService.signInWithGoogle();
       } catch (err) {
         console.error("[admin-login.handleGoogleLogin]", err);
         setLoading(false);
         setError(err instanceof Error ? err.message : "No pudimos iniciar sesión con Google.");
+        setEnvHint("Login cancelado o con error.");
       }
+    }
+
+    function scheduleVerify(delay = 120) {
+      if (verifyTimer) {
+        window.clearTimeout(verifyTimer);
+      }
+
+      verifyTimer = window.setTimeout(() => {
+        verifyExistingAccess();
+      }, delay);
     }
 
     googleLoginBtn?.addEventListener("click", handleGoogleLogin);
 
     window.addEventListener("pageshow", () => {
       if (!document.hidden) {
-        verifyExistingAccess();
+        scheduleVerify(120);
       }
     });
 
-    verifyExistingAccess();
+    window.addEventListener("focus", () => {
+      if (!document.hidden) {
+        scheduleVerify(180);
+      }
+    });
+
+    scheduleVerify(0);
   </script>
 </body>
 </html>
