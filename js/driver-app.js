@@ -59,7 +59,7 @@ class DriverApp {
       });
 
     Promise.resolve()
-      .then(() => initPushFCM('chofer'))
+      .then(() => initSupportPushFCM({ promptIfNeeded: false }))
       .catch((err) => {
         console.warn('[DriverApp] Push en background con error:', err);
       });
