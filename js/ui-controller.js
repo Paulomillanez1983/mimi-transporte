@@ -261,6 +261,17 @@ if (btnFinish) {
   btnFinish.addEventListener('click', () => {
     if (btnFinish.disabled) return;
 
+    const hasTrip =
+      typeof window.tripManager !== 'undefined' &&
+      typeof window.tripManager.getCurrentTrip === 'function' &&
+      !!window.tripManager.getCurrentTrip();
+
+    if (!hasTrip) {
+      this.hideArrival?.();
+      this.showToast?.('No hay viaje activo para finalizar', 'warning');
+      return;
+    }
+
     btnFinish.disabled = true;
     btnFinish.textContent = 'Finalizando...';
 
@@ -270,8 +281,7 @@ if (btnFinish) {
       })
     );
   });
-}
-    
+}    
   if (menuButton) {
       this._menuButtonClickHandler = () => this.toggleMenu();
       menuButton.addEventListener('click', this._menuButtonClickHandler);
