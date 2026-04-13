@@ -56,6 +56,7 @@ function getEls() {
 
     enableAlertsBtnEmpty: document.getElementById("supportEnableAlertsBtnEmpty"),
     installAppBtnEmpty: document.getElementById("supportInstallAppBtnEmpty"),
+    startChatBtnEmpty: document.getElementById("supportStartChatBtnEmpty"),
 
     setupStatus: document.getElementById("supportSetupStatus"),
     alertsBadge: document.getElementById("supportAlertsBadge")
@@ -794,6 +795,18 @@ async function createConversationIfNeeded(initialMessage) {
   return String(data.id);
 }
 
+async function startSupportConversation() {
+  const conversationId = await createConversationIfNeeded("Hola, necesito ayuda con mi cuenta de chofer.");
+  await loadSupportConversations({ preserveSelection: true, silent: true, preferredId: conversationId });
+  selectConversation(conversationId, { openThread: true, markVisualRead: true });
+
+  const { reply } = getEls();
+  if (reply) {
+    reply.focus();
+    reply.setSelectionRange(reply.value.length, reply.value.length);
+  }
+}
+
 async function sendSupportReply() {
   if (supportState.sendingReply) return;
 
@@ -1231,6 +1244,13 @@ els.enableAlertsBtn?.addEventListener("click", async () => {
 els.enableAlertsBtnEmpty?.addEventListener("click", async () => {
   await ensureSupportPushPermissionOnOpen({ forcePrompt: true, silentDenied: false });
   updateSupportUIState();
+});
+
+els.startChatBtnEmpty?.addEventListener("click", async () => {
+  await startSupportConversation().catch((err) => {
+    console.error("[driver-support.startSupportConversation]", err);
+    showToast("No pudimos abrir el chat de soporte", "error");
+  });
 });
 
 els.installAppBtn?.addEventListener("click", async () => {
