@@ -1285,18 +1285,6 @@ top: calc(var(--mobile-top) + 56px);
    MOBILE FINAL ÚNICO
    ========================================================= */
 
-@media (max-width: 767px) {
-  :root {
-    --mobile-side: 12px;
-    --mobile-top: calc(var(--safe-top) + 12px);
-    --mobile-header-size: 46px;
-    --mobile-nav-gap: 10px;
-    --mobile-nav-height: 54px;
-    --mobile-sheet-peek: 108px;
-    --mobile-sheet-peek-trip: 156px;
-    --mobile-fab-h: 58px;
-    --mobile-fab-bottom: calc(var(--safe-bottom) + 10px);
-  }
 
   .logout-btn {
     display: none !important;
