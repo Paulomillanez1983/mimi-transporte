@@ -735,6 +735,8 @@ class DriverApp {
       this._setFlowState('TRIP_COMPLETED');
 
       this._currentTripId = null;
+      tripManager.resetState(); // 👈 ESTE TAMBIÉN
+
       mapService.clearRoute?.();
       uiController.hideIncomingModal?.();
       uiController.hideNavigation?.();
@@ -1136,14 +1138,17 @@ _setupUI() {
           disponible: false
         });
 
-        this._onlineStatus = false;
-        this._setFlowState('OFFLINE');
-        this._currentTripId = null;
-        mapService.clearRoute?.();
-        uiController.hideIncomingModal?.();
-        uiController.hideNavigation?.();
-        uiController.hideArrival?.();
-        locationTracker.stop?.();
+          this._onlineStatus = false;
+          this._setFlowState('OFFLINE');
+          this._currentTripId = null;
+
+          tripManager.resetState(); // 👈 ESTE ES EL CAMBIO
+
+          mapService.clearRoute?.();
+          uiController.hideIncomingModal?.();
+          uiController.hideNavigation?.();
+          uiController.hideArrival?.();
+          locationTracker.stop?.();
       }
 
       uiController.updateDriverState(
@@ -1289,13 +1294,15 @@ _setupUI() {
           const result = await tripManager.finishTrip(current?.id || tripId);
           if (result?.success) {
             this._setFlowState('TRIP_COMPLETED');
-
+ 
             this._currentTripId = null;
+
+            tripManager.resetState(); // 👈 ESTE ES CLAVE
+
             mapService.clearRoute?.();
             uiController.hideIncomingModal?.();
             uiController.hideNavigation?.();
             uiController.hideArrival?.();
-
             uiController.showToast('Viaje finalizado', 'success');
             
             if (this._onlineStatus) {
@@ -1310,9 +1317,27 @@ _setupUI() {
           return result;
         }
 
-        case 'cancel':
-          return tripManager.cancelTrip(current?.id || tripId);
+case 'cancel': {
+  const result = await tripManager.cancelTrip(current?.id || tripId);
 
+  if (result?.success) {
+    this._currentTripId = null;
+    tripManager.resetState();
+    mapService.clearRoute?.();
+    uiController.hideIncomingModal?.();
+    uiController.hideNavigation?.();
+    uiController.hideArrival?.();
+
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+      uiController.showWaitingState();
+    } else {
+      this._setFlowState('OFFLINE');
+    }
+  }
+
+  return result;
+}
         case 'navigate':
           return this._openExternalNav();
 
