@@ -1068,6 +1068,58 @@ async _requireValidAuth() {
 
     const estado = String(currentTrip.estado || '').toUpperCase();
 
+    const hasPickupCoords =
+      Number.isFinite(Number(currentTrip.origen_lat)) &&
+      Number.isFinite(Number(currentTrip.origen_lng));
+
+    const hasDestinationCoords =
+      Number.isFinite(Number(currentTrip.destino_lat)) &&
+      Number.isFinite(Number(currentTrip.destino_lng));
+
+    if (
+      currentTrip?.id &&
+      hasPickupCoords &&
+      (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
+      this._driverFlowState === 'GOING_TO_PICKUP'
+    ) {
+      const distPickup = this._calculateDistance(
+        position.lat,
+        position.lng,
+        Number(currentTrip.origen_lat),
+        Number(currentTrip.origen_lng)
+      );
+
+      if (distPickup < 100) {
+        this._setFlowState('ARRIVED_PICKUP');
+        uiController.showArrival?.();
+      } else {
+        uiController.hideArrival?.();
+      }
+    } else if (
+      currentTrip?.id &&
+      hasDestinationCoords &&
+      estado === 'EN_CURSO' &&
+      this._driverFlowState === 'TRIP_STARTED'
+    ) {
+      const distDestination = this._calculateDistance(
+        position.lat,
+        position.lng,
+        Number(currentTrip.destino_lat),
+        Number(currentTrip.destino_lng)
+      );
+
+      if (distDestination < 100) {
+        this._setFlowState('ARRIVED_DESTINATION');
+        uiController.showArrival?.();
+      } else {
+        uiController.hideArrival?.();
+      }
+    } else {
+      uiController.hideArrival?.();
+    }
+  }
+    const estado = String(currentTrip.estado || '').toUpperCase();
+
     if (
       (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
       this._driverFlowState === 'GOING_TO_PICKUP'
