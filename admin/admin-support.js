@@ -468,9 +468,11 @@ async function getAdminAccessToken() {
 
 async function fetchSupportApiWithAdminRetry(url, options = {}) {
   let token = await getAdminAccessToken();
+  const apiKey = supabaseAdminService?.client?.supabaseKey || "";
 
   const buildHeaders = (accessToken) => ({
     ...(options.headers || {}),
+    ...(apiKey ? { apikey: apiKey } : {}),
     Authorization: `Bearer ${accessToken}`
   });
 
