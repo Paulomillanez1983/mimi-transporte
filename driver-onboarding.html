@@ -1495,15 +1495,14 @@
         <div class="doc-status" id="docWizardStatus"></div>
 
         <div class="doc-actions-inline doc-actions-inline--wizard">
-          <label class="doc-action-btn doc-camera-btn" id="docWizardCameraLabel" for="docWizardCameraInput">
-            ðŸ“· Sacar foto
-          </label>
+<label class="doc-action-btn doc-camera-btn" id="docWizardCameraLabel" for="docWizardCameraInput">
+  📷 Sacar foto
+</label>
 
-          <label class="doc-action-btn doc-upload-btn" id="docWizardUploadLabel" for="docWizardFileInput">
-            â¬† Subir archivo
-          </label>
-        </div>
-
+<label class="doc-action-btn doc-upload-btn" id="docWizardUploadLabel" for="docWizardFileInput">
+  ⬆ Subir archivo
+</label>
+          
         <input
           class="hidden-input"
           type="file"
@@ -2185,7 +2184,10 @@ function renderDocumentWizard() {
 
 
 function updateDocumentsProgressUI() {
-  const progress = getDocumentsProgress(REQUIRED_DOCS, getChosenFile);
+  const progress = REQUIRED_DOCS.filter(doc => {   
+    const state = docValidationState.get(doc);  
+    return state === "ok" || state === "warning"; 
+  }).length;
 
   if (docsProgressCount) {
     docsProgressCount.textContent = `${progress.completed}/${progress.total}`;
@@ -2575,7 +2577,7 @@ function getChosenFile(docType) {
         }
 
         if (!session?.access_token) {
-          console.warn("[onboarding] No hay sesiá³n vá¡lida");
+          console.warn("[onboarding] No hay sesión válida");
           window.location.replace("login-chofer.html");
           return null;
         }
@@ -2784,7 +2786,7 @@ try {
     } else if (edgeData?.document_detected) {
       setDocStatus(docType, "⚠ Licencia detectada, quedó para revisión manual", "warning");
     } else {
-      setDocStatus(docType, "❌ No se detectó correctamente la licencia", "error");
+      setDocStatus(docType, "⚠ No pudimos validar automáticamente la licencia, quedará en revisión manual", "warning");
     }
     return;
   }
