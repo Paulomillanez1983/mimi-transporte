@@ -1,3 +1,4 @@
+import supabaseService from "./supabase-client.js";
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getMessaging,
@@ -37,16 +38,6 @@ function normalizeSupportRole(rawRole) {
   return "cliente";
 }
 
-function isDuplicateError(error) {
-  const text = JSON.stringify(error || {}).toLowerCase();
-  return (
-    text.includes("duplicate") ||
-    text.includes("409") ||
-    text.includes("23505") ||
-    text.includes("unique")
-  );
-}
-
 async function upsertPushToken({ userId, token, accessToken }) {
   if (!userId || !token || !accessToken) {
     console.warn("[push-support] faltan datos para guardar token", {
@@ -75,6 +66,17 @@ async function upsertPushToken({ userId, token, accessToken }) {
   });
 
   try {
+    const originalAccessToken = supabaseService.client?.auth?.getSession
+      ? (await supabaseService.client.auth.getSession())?.data?.session?.access_token || null
+      : null;
+
+    if (accessToken) {
+      await supabaseService.client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: (await supabaseService.client.auth.getSession())?.data?.session?.refresh_token || ""
+      }).catch(() => {});
+    }
+
     const { data, error } = await supabaseService.client
       .from("push_tokens")
       .upsert(payload, { onConflict: "token" })
@@ -93,6 +95,7 @@ async function upsertPushToken({ userId, token, accessToken }) {
     return null;
   }
 }
+
 function getNotificationPermission() {
   if (!("Notification" in window)) return "unsupported";
   return Notification.permission || "default";
