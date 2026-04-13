@@ -126,6 +126,7 @@ async init(driverIdParam = null) {
           console.log('[TripManager] Active trip found:', activeTrip.id, activeTrip.estado);
 
           this.currentTrip = activeTrip;
+          this.emit('noPendingTrips');
           this.pendingOffer = null;
           this.lastOfferIdShown = null;
 
@@ -441,11 +442,16 @@ async rejectOffer(offerId) {
             this.emit('tripCancelled', trip);
           }
 
-          if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
-            this.currentTrip = trip;
-          } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
-            this.currentTrip = null;
-          }
+               if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
+               this.currentTrip = trip;
+               } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
+               this.currentTrip = null;
+               this.pendingOffer = null;
+               this.lastOfferIdShown = null;
+
+              this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
+              this.emit('noPendingTrips');
+           }  
         }
       )
       .subscribe((status) => {
@@ -545,7 +551,6 @@ async rejectOffer(offerId) {
         if (['OFERTA_NO_DISPONIBLE', 'VIAJE_YA_TOMADO', 'VIAJE_BLOQUEADO'].includes(result.reason)) {
           this.pendingOffer = null;
           this.lastOfferIdShown = null;
-          this.currentTrip = null;
 
           this.emit('pendingTripCleared', {
             reason: result.reason,
@@ -808,6 +813,17 @@ async finishTrip(tripId) {
 
     console.log('[TripManager] Destroyed');
   }
+// =========================================================
+// STATE RESET (ANTI BUGS)
+// =========================================================
+resetState() {
+  this.currentTrip = null;
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+
+  this.emit('pendingTripCleared', { reason: 'manual_reset' });
+  this.emit('noPendingTrips');
+}
 
   // =========================================================
   // GETTERS
