@@ -1426,9 +1426,6 @@ top: calc(var(--mobile-top) + 56px);
     max-height: calc(78dvh - 20px);
   }
 
-  .nav-bar {
-    top: calc(var(--mobile-top) + var(--mobile-header-size) + 18px);
-  }
 
   .waiting-state {
     gap: 10px;
@@ -1584,10 +1581,6 @@ top: calc(var(--mobile-top) + 56px);
     --mobile-sheet-peek-trip: 148px;
   }
 
-  .nav-bar {
-    left: calc(12px + var(--mobile-header-size) + 8px);
-    right: calc(12px + var(--mobile-header-size) + 8px);
-  }
 
   .nav-content {
     padding: 8px 10px;
