@@ -2970,16 +2970,24 @@ body.driver-offline .fab-online {
 }
 
 @media (max-width: 860px) {
-  .fab-online {
+  .fab-online,
+  .fab-online.online,
+  body .fab-online,
+  body .fab-online.online {
     left: auto !important;
     right: 16px !important;
     bottom: calc(var(--safe-bottom) + 18px) !important;
     width: 94px !important;
     height: 94px !important;
+    min-width: 94px !important;
     min-height: 94px !important;
     padding: 0 !important;
+    inset-inline-start: auto !important;
+    inset-inline-end: 16px !important;
     border-radius: 50% !important;
     display: flex !important;
+    flex: 0 0 94px !important;
+    aspect-ratio: 1 / 1 !important;
     align-items: center !important;
     justify-content: center !important;
     max-width: none !important;
@@ -3014,6 +3022,8 @@ body.driver-offline .fab-online {
   .support-head-btn,
   .support-thread-actions,
   .support-composer-hint,
+  .support-attachment-input,
+  #supportThreadSubmeta,
   .support-setup-actions .support-utility-btn:not(.support-utility-btn-primary),
   .support-setup-status {
     display: none !important;
@@ -3021,15 +3031,19 @@ body.driver-offline .fab-online {
 
   .support-panel-topbar {
     align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-right: 12px;
   }
 
   .support-panel-topbar-copy h2 {
-    font-size: 26px;
+    font-size: 22px;
+    line-height: 1;
   }
 
   .support-panel-topbar-copy p {
-    font-size: 15px;
-    max-width: 24ch;
+    font-size: 13px;
+    max-width: 18ch;
   }
 
   .support-shell.is-mobile-support.is-thread-open .support-sidebar {
@@ -3041,31 +3055,59 @@ body.driver-offline .fab-online {
   }
 
   .support-thread-header {
-    padding-bottom: 10px;
+    padding: 8px 0 10px;
   }
 
   .support-thread-top-mobile {
     width: 100%;
   }
 
+  .support-thread-avatar,
+  .support-conversation-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 13px;
+    font-size: 13px;
+  }
+
+  .support-thread-user {
+    gap: 8px;
+  }
+
+  .support-thread-meta strong {
+    font-size: 15px;
+    line-height: 1.1;
+  }
+
   .support-messages {
-    padding-top: 8px;
+    padding-top: 6px;
+    gap: 6px;
+  }
+
+  .support-message-bubble {
+    max-width: min(78%, 280px);
+    padding: 8px 10px;
+    font-size: 14px;
+    line-height: 1.32;
   }
 
   .support-composer {
     position: sticky;
     bottom: 0;
-    padding: 12px 0 calc(6px + var(--safe-bottom));
+    padding: 10px 0 calc(6px + var(--safe-bottom));
     background: linear-gradient(180deg, rgba(237,243,251,0.2), rgba(237,243,251,0.96) 24%);
   }
 
   .support-reply-input {
-    min-height: 104px;
-    border-radius: 24px;
+    min-height: 58px;
+    max-height: 96px;
+    border-radius: 20px;
+    padding: 12px 14px;
   }
 
   .support-send-btn {
     width: 100%;
+    min-height: 52px;
   }
 
   .menu-header {
