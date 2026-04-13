@@ -9,13 +9,11 @@ const STATIC_ASSETS = [
   '/mimi-transporte/',
   '/mimi-transporte/index.html',
   '/mimi-transporte/mimi-transporte.css',
-  '/mimi-transporte/js/driver-app.js',
-  '/mimi-transporte/js/trip-manager.js',
-  '/mimi-transporte/js/ui-controller.js',
-  '/mimi-transporte/js/location-tracker.js',
-  '/mimi-transporte/js/map-service.js',
-  '/mimi-transporte/js/sound-manager.js',
-  '/mimi-transporte/js/push-fcm.js'
+  '/mimi-transporte/js/push-support.js',
+  '/mimi-transporte/assets/icons/icon-192x192.png',
+  '/mimi-transporte/assets/icons/badge-icon.png',
+  '/mimi-transporte/assets/icons/mimi-mark.svg',
+  '/mimi-transporte/manifest.json'
 ];
 
 const DEFAULT_ICON = `${APP_BASE_PATH}assets/icons/icon-192x192.png`;
