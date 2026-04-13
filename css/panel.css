@@ -1448,28 +1448,6 @@ top: calc(var(--mobile-top) + 56px);
     max-width: 100%;
   }
 
-  .fab-online {
-    left: 16px;
-    right: 16px;
-    bottom: calc(var(--safe-bottom) + 14px);
-    min-height: 64px;
-    z-index: 260;
-    padding: 14px 22px;
-    border-radius: 999px;
-    box-shadow: 0 14px 30px rgba(0,0,0,0.20);
-  }
-  .fab-content {
-    gap: 8px;
-  }
-
-  .fab-icon {
-    font-size: 18px;
-  }
-
-  .fab-text {
-    font-size: 15px;
-    font-weight: 800;
-  }
 
   .arrival-panel {
     left: var(--mobile-side);
@@ -2900,25 +2878,6 @@ body.support-open {
   backdrop-filter: blur(14px);
 }
 
-@media (max-width: 860px) {
-  .fab-online {
-    width: 96px;
-    height: 96px;
-    right: 16px;
-    left: auto;
-    bottom: calc(var(--safe-bottom) + 18px);
-    min-height: 0;
-  }
-
-  .fab-text {
-    font-size: 16px;
-  }
-
-  .fab-subtext {
-    font-size: 10px;
-    max-width: 74px;
-  }
-}
 
 @media (max-width: 480px) {
   .fab-online {
