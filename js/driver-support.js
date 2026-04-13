@@ -1202,6 +1202,28 @@ function bindPushHooks() {
     }
   };
 
+  window.supabaseUpsert = async function supabaseUpsert(table, data, onConflict = "id") {
+    const ready = await supabaseService.init();
+    if (!ready || !supabaseService.client) {
+      return { error: { message: "Supabase no disponible" } };
+    }
+
+    try {
+      const query = supabaseService.client
+        .from(table)
+        .upsert(data, { onConflict })
+        .select();
+
+      const { data: result, error } = Array.isArray(data)
+        ? await query
+        : await query.single();
+
+      return { data: result, error };
+    } catch (err) {
+      return { error: { message: err?.message || "Upsert error" } };
+    }
+  };
+
   async function showSupportSystemNotification({ title, body } = {}) {
     if (!("Notification" in window) || Notification.permission !== "granted") {
       return false;
