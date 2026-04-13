@@ -2882,10 +2882,6 @@ async function handleIncomingSupportMessage(payload) {
 
     const senderRole = String(msg.sender_role || "").toLowerCase();
 
-    if (senderRole === "admin") {
-if (typeof window.appendSupportMessage === "function") {
-  window.appendSupportMessage(msg.mensaje || "", "agent", msg.id);
-}
 if (senderRole === "admin") {
   if (typeof window.appendSupportMessage === "function") {
     window.appendSupportMessage(msg.mensaje || "", "agent", msg.id);
@@ -2904,21 +2900,6 @@ if (senderRole === "admin") {
     });
   }
 }
-      if (!supportSheet?.classList.contains("is-open")) {
-        notif.show("Soporte", "Tenés una nueva respuesta", "success", 4000);
-
-        agregarNotificacionViaje({
-          estado: "SOPORTE",
-          texto: "Soporte respondió tu consulta",
-          read: false
-        });
-      }
-    }
-  } catch (err) {
-    console.error("[support realtime] error:", err);
-  }
-}
-
 async function subscribeSupportRealtimeForUser(force = false) {
   if (!window.sbRealtime) return null;
 
