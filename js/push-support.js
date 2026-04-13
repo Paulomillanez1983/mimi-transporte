@@ -16,7 +16,10 @@ const firebaseConfig = {
 };
 
 const FIREBASE_VAPID_KEY = "BKjAYoEwolpGEXVXpLRRBD5zHdkBbCHaUo9QgwFoPAULSdPn7qt8RNsMHAT2RrJtQpBsO3sRfMOHhFh1YBTfKSo".trim();
+
 let initialized = false;
+let foregroundListenerBound = false;
+
 function getAppBasePath() {
   const isGithubPages = window.location.hostname === "paulomillanez1983.github.io";
   return isGithubPages ? "/mimi-transporte/" : "/";
@@ -26,10 +29,37 @@ function getSwPath() {
   return `${getAppBasePath()}firebase-messaging-sw.js`;
 }
 
-async function upsertPushToken({ userId, token, accessToken }) {
-  if (!userId || !token || !accessToken) return;
+function normalizeSupportRole(rawRole) {
+  const role = String(rawRole || "").trim().toLowerCase();
 
-  const supportRole = window.__mimiSupportPushRole || "client";
+  if (role === "chofer" || role === "driver") return "driver";
+  if (role === "admin") return "admin";
+  if (role === "cliente" || role === "client") return "client";
+
+  return "client";
+}
+
+function isDuplicateError(error) {
+  const text = JSON.stringify(error || {}).toLowerCase();
+  return (
+    text.includes("duplicate") ||
+    text.includes("409") ||
+    text.includes("23505") ||
+    text.includes("unique")
+  );
+}
+
+async function upsertPushToken({ userId, token, accessToken }) {
+  if (!userId || !token || !accessToken) {
+    console.warn("[push-support] faltan datos para guardar token", {
+      hasUserId: !!userId,
+      hasToken: !!token,
+      hasAccessToken: !!accessToken
+    });
+    return null;
+  }
+
+  const supportRole = normalizeSupportRole(window.__mimiSupportPushRole || "client");
 
   const payload = {
     user_id: userId,
@@ -39,60 +69,87 @@ async function upsertPushToken({ userId, token, accessToken }) {
     updated_at: new Date().toISOString()
   };
 
+  console.log("[push-support] intentando guardar token:", {
+    user_id: payload.user_id,
+    rol: payload.rol,
+    platform: payload.platform,
+    token_preview: `${String(token).slice(0, 12)}...${String(token).slice(-10)}`
+  });
+
   const insertResult = await window.supabaseInsert?.("push_tokens", payload, accessToken);
+  console.log("[push-support] insert result:", insertResult);
 
   if (!insertResult?.error) {
-    console.log("[push-support] token guardado");
-    return;
+    console.log("[push-support] token guardado correctamente");
+    return insertResult?.data || null;
   }
 
-  console.warn("[push-support] insert falló, intento update", insertResult.error);
+  if (!isDuplicateError(insertResult.error)) {
+    console.warn("[push-support] insert falló con error no duplicado", insertResult.error);
+    return null;
+  }
 
-  const updateResult = await window.supabaseUpdate?.("push_tokens", "user_id", userId, {
+  console.warn("[push-support] insert duplicado, intento update por token");
+
+  const updateResult = await window.supabaseUpdate?.(
+    "push_tokens",
+    "token",
     token,
-    rol: supportRole,
-    platform: "web",
-    updated_at: new Date().toISOString()
-  });
+    {
+      user_id: userId,
+      rol: supportRole,
+      platform: "web",
+      updated_at: new Date().toISOString()
+    },
+    accessToken
+  );
+
+  console.log("[push-support] update result:", updateResult);
 
   if (updateResult?.error) {
     console.warn("[push-support] tampoco se pudo actualizar token", updateResult.error);
-  } else {
-    console.log("[push-support] token actualizado");
+    return null;
   }
+
+  console.log("[push-support] token actualizado correctamente");
+  return updateResult?.data || null;
 }
 
 export async function initSupportPushFCM() {
   try {
-    if (initialized) return;
-    initialized = true;
+    if (initialized) {
+      console.log("[push-support] ya inicializado");
+      return null;
+    }
 
-    const supported = await isSupported();
+    const supported = await isSupported().catch(() => false);
     if (!supported) {
       console.warn("[push-support] Firebase Messaging no soportado en este navegador");
-      return;
+      return null;
     }
 
     if (!window.obtenerSesionCliente) {
       console.warn("[push-support] obtenerSesionCliente no disponible todavía");
-      return;
+      return null;
     }
 
     const session = await window.obtenerSesionCliente(false);
     if (!session?.user?.id || !session?.access_token) {
       console.warn("[push-support] no hay sesión cliente activa");
-      return;
+      return null;
     }
 
     if (!("serviceWorker" in navigator) || !("Notification" in window)) {
       console.warn("[push-support] browser sin soporte de SW/Notification");
-      return;
+      return null;
     }
 
     const permission = await Notification.requestPermission();
+    console.log("[push-support] notification permission:", permission);
+
     if (permission !== "granted") {
       console.warn("[push-support] permiso de notificaciones no concedido");
-      return;
+      return null;
     }
 
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -104,19 +161,20 @@ export async function initSupportPushFCM() {
 
     if (!FIREBASE_VAPID_KEY || FIREBASE_VAPID_KEY === "ACA_TU_VAPID_KEY") {
       console.error("[push-support] Falta configurar FIREBASE_VAPID_KEY");
-      return;
+      return null;
     }
 
-console.log("[push-support] href:", window.location.href);
-console.log("[push-support] origin:", window.location.origin);
-console.log("[push-support] hostname:", window.location.hostname);
-console.log("[push-support] sw path:", getSwPath());
-console.log("[push-support] scope:", getAppBasePath());
-console.log("[push-support] apiKey:", firebaseConfig.apiKey);
-console.log("[push-support] projectId:", firebaseConfig.projectId);
-console.log("[push-support] senderId:", firebaseConfig.messagingSenderId);
-console.log("[push-support] appId:", firebaseConfig.appId);
-console.log("[push-support] vapid:", FIREBASE_VAPID_KEY);
+    console.log("[push-support] href:", window.location.href);
+    console.log("[push-support] origin:", window.location.origin);
+    console.log("[push-support] hostname:", window.location.hostname);
+    console.log("[push-support] sw path:", getSwPath());
+    console.log("[push-support] scope:", getAppBasePath());
+    console.log("[push-support] apiKey:", firebaseConfig.apiKey);
+    console.log("[push-support] projectId:", firebaseConfig.projectId);
+    console.log("[push-support] senderId:", firebaseConfig.messagingSenderId);
+    console.log("[push-support] appId:", firebaseConfig.appId);
+    console.log("[push-support] vapid:", FIREBASE_VAPID_KEY);
+
     const token = await getToken(messaging, {
       vapidKey: FIREBASE_VAPID_KEY,
       serviceWorkerRegistration: swRegistration
@@ -124,7 +182,7 @@ console.log("[push-support] vapid:", FIREBASE_VAPID_KEY);
 
     if (!token) {
       console.warn("[push-support] Firebase no devolvió token");
-      return;
+      return null;
     }
 
     console.log("[push-support] token FCM:", token);
@@ -135,26 +193,33 @@ console.log("[push-support] vapid:", FIREBASE_VAPID_KEY);
       accessToken: session.access_token
     });
 
-    onMessage(messaging, (payload) => {
-      console.log("[push-support] foreground message", payload);
+    if (!foregroundListenerBound) {
+      onMessage(messaging, (payload) => {
+        console.log("[push-support] foreground message", payload);
 
-      const messageId =
-        payload?.data?.message_id ||
-        payload?.data?.messageId ||
-        null;
+        const messageId =
+          payload?.data?.message_id ||
+          payload?.data?.messageId ||
+          null;
 
-      if (typeof window.handleSupportPushForeground === "function") {
-        window.handleSupportPushForeground({
-          messageId,
-          title: payload?.notification?.title || payload?.data?.title || "Soporte",
-          body: payload?.notification?.body || payload?.data?.body || "Tenés una nueva respuesta de soporte."
-        });
-      }
-    });
+        if (typeof window.handleSupportPushForeground === "function") {
+          window.handleSupportPushForeground({
+            messageId,
+            title: payload?.notification?.title || payload?.data?.title || "Soporte",
+            body: payload?.notification?.body || payload?.data?.body || "Tenés una nueva respuesta de soporte."
+          });
+        }
+      });
 
+      foregroundListenerBound = true;
+    }
+
+    initialized = true;
     console.log("[push-support] initSupportPushFCM OK");
+    return token;
   } catch (err) {
     console.error("[push-support] init error:", err);
+    return null;
   }
 }
 
