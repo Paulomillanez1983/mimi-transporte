@@ -1500,7 +1500,7 @@ async function bootstrap() {
   if (isBootstrapped) return;
   isBootstrapped = true;
 
-  const result = await supabaseAdminService.requireActiveAdmin();
+  const result = await supabaseAdminService.waitForActiveAdmin(3200);
 
   if (!result?.ok) {
     window.location.href = "./admin-login.html";
