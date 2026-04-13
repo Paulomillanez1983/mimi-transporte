@@ -1590,17 +1590,20 @@ hideArrival() {
     }
   }
 
-  closeMenu() {
-    const menu = this.elements['side-menu'];
-    const backdrop = this.elements['menu-backdrop'];
+closeMenu() {
+  const menu = this.elements['side-menu'];
+  const backdrop = this.elements['menu-backdrop'];
 
-    menu?.classList.remove('active');
-    menu?.classList.remove('profile-expanded');
-    menu?.setAttribute('aria-hidden', 'true');
-    backdrop?.classList.remove('active');
-    document.body.classList.remove('menu-open');
+  if (menu && menu.contains(document.activeElement)) {
+    document.activeElement.blur();
   }
 
+  menu?.classList.remove('active');
+  menu?.classList.remove('profile-expanded');
+  menu?.setAttribute('aria-hidden', 'true');
+  backdrop?.classList.remove('active');
+  document.body.classList.remove('menu-open');
+}
   toggleProfileMenu() {
     const menu = this.elements['side-menu'];
     const profile = this.elements['menu-profile'];
