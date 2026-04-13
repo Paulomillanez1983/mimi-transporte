@@ -566,7 +566,6 @@ async rejectOffer(offerId) {
 
       this.pendingOffer = null;
       this.lastOfferIdShown = null;
-      this.currentTrip = null;
 
       this.emit('pendingTripCleared', { reason: 'offer_accepted' });
 
