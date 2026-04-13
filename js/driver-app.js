@@ -1,5 +1,5 @@
-/**
- * Driver App producción FINAL (RLS + UUID + FLOW + UBER DRIVER)
+﻿/**
+ * Driver App producciÃ³n FINAL (RLS + UUID + FLOW + UBER DRIVER)
  */
 
 import CONFIG from './config.js';
@@ -29,11 +29,12 @@ class DriverApp {
 
     // Cache auth
     this._authUserId = null;
+    this._driverProfileSummary = null;
 
     // Flujo chofer
     this._driverFlowState = 'OFFLINE';
 
-    // Protección lifecycle / acciones
+    // ProtecciÃ³n lifecycle / acciones
     this._destroyed = false;
     this._actionLock = false;
 
@@ -123,7 +124,7 @@ class DriverApp {
     const amount = Number(trip?.precio ?? trip?.monto ?? 0);
     const origin = String(trip?.origen_direccion || trip?.origen_texto || 'Nuevo viaje disponible').trim();
     const destination = String(trip?.destino_direccion || trip?.destino_texto || '').trim();
-    const fareLabel = Number.isFinite(amount) && amount > 0 ? ` · $${amount}` : '';
+    const fareLabel = Number.isFinite(amount) && amount > 0 ? ` Â· $${amount}` : '';
     const routeLabel = destination ? `${origin} -> ${destination}` : origin;
 
     await this._showSystemNotification({
@@ -171,6 +172,115 @@ class DriverApp {
     });
   }
 
+  async _loadDriverProfileSummary(user) {
+    if (!this._authUserId) return null;
+
+    try {
+      const [{ data: profile }, { data: documents }] = await Promise.all([
+        supabaseService.client
+          .from('driver_profiles')
+          .select('*')
+          .eq('user_id', this._authUserId)
+          .maybeSingle(),
+        supabaseService.client
+          .from('driver_documents')
+          .select('doc_type,status,updated_at')
+          .eq('user_id', this._authUserId)
+          .order('updated_at', { ascending: false })
+      ]);
+
+      this._driverProfileSummary = {
+        email: user?.email || '',
+        name:
+          profile?.full_name ||
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          user?.email ||
+          'Conductor',
+        phone: profile?.phone || '',
+        dni: profile?.dni_number || '',
+        onboardingStatus: profile?.onboarding_status || 'PENDIENTE_DOCUMENTOS',
+        documentsApproved: profile?.documents_approved === true,
+        vehicle: [
+          profile?.vehicle_brand,
+          profile?.vehicle_model
+        ].filter(Boolean).join(' ') || '',
+        vehiclePlate: profile?.vehicle_plate || '',
+        vehicleColor: profile?.vehicle_color || '',
+        vehicleYear: profile?.vehicle_year || '',
+        documents: Array.isArray(documents) ? documents : []
+      };
+
+      return this._driverProfileSummary;
+    } catch (err) {
+      console.warn('[DriverApp] No se pudo cargar el resumen del perfil:', err);
+      return null;
+    }
+  }
+
+  _openDriverProfileSheet() {
+    const summary = this._driverProfileSummary || {};
+    const documents = Array.isArray(summary.documents) ? summary.documents : [];
+    const docsLabel = documents.length
+      ? `${documents.length} cargados`
+      : 'Sin documentos visibles';
+
+    uiController.showInfoSheet?.({
+      title: 'Perfil del chofer',
+      description: 'Aca tenes tus datos verificados, estado del alta y la documentacion ya cargada.',
+      metrics: [
+        { label: 'Estado', value: this._onlineStatus ? 'En linea' : 'Fuera de linea' },
+        { label: 'Onboarding', value: summary.onboardingStatus || 'Pendiente' },
+        { label: 'Documentos', value: docsLabel }
+      ],
+      sections: [
+        {
+          title: 'Datos personales',
+          items: [
+            { label: 'Nombre', value: summary.name || 'Conductor' },
+            { label: 'Email', value: summary.email || 'Sin email' },
+            { label: 'Telefono', value: summary.phone || 'Sin telefono' },
+            { label: 'DNI', value: summary.dni || 'Sin DNI cargado' }
+          ]
+        },
+        {
+          title: 'Vehiculo',
+          items: [
+            { label: 'Unidad', value: summary.vehicle || 'Sin vehiculo cargado' },
+            { label: 'Patente', value: summary.vehiclePlate || 'Sin patente' },
+            { label: 'Color', value: summary.vehicleColor || 'Sin color' },
+            { label: 'Ano', value: summary.vehicleYear || 'Sin ano' }
+          ]
+        },
+        {
+          title: 'Documentacion',
+          items: documents.length
+            ? documents.slice(0, 7).map((doc) => ({
+                label: String(doc.doc_type || 'documento').replaceAll('_', ' '),
+                value: doc.status || 'PENDIENTE'
+              }))
+            : [{ label: 'Documentos', value: 'Todavia no hay cargas visibles' }]
+        }
+      ],
+      actions: [
+        {
+          label: 'Revisar documentos',
+          variant: 'navigate',
+          onClick: () => {
+            window.location.href = `${APP_BASE_PATH}driver-onboarding.html`;
+          }
+        },
+        {
+          label: 'Hablar con soporte',
+          variant: 'secondary',
+          onClick: async () => {
+            await openDriverSupportPanel();
+          }
+        }
+      ]
+    });
+  }
+
   // =========================================================
   // FLOW STATE
   // =========================================================
@@ -203,7 +313,7 @@ class DriverApp {
       return;
     }
 
-    console.log('[DriverApp] Iniciando aplicación...');
+    console.log('[DriverApp] Iniciando aplicaciÃ³n...');
 
     uiController.init();
     window.uiController = uiController;
@@ -215,11 +325,11 @@ class DriverApp {
       const dbReady = await supabaseService.init();
       if (!dbReady) throw new Error('No se pudo conectar a Supabase');
 
-      // 2) Resolver sesión válida antes de pedir user
+      // 2) Resolver sesiÃ³n vÃ¡lida antes de pedir user
       const authData = await this._requireValidAuth();
 
       if (!authData) {
-        console.log('[DriverApp] Sin sesión válida, redirigiendo a login');
+        console.log('[DriverApp] Sin sesiÃ³n vÃ¡lida, redirigiendo a login');
         window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
@@ -243,8 +353,9 @@ class DriverApp {
           user?.user_metadata?.picture ||
           ''
       });
+      await this._loadDriverProfileSummary(user);
 
-      // Desbloqueo audio/haptics en interacción real
+      // Desbloqueo audio/haptics en interacciÃ³n real
       window.addEventListener('click', this._unlockAudioOnClick, { once: true });
       window.addEventListener('touchstart', this._unlockAudioOnTouch, { once: true });
 
@@ -256,7 +367,7 @@ class DriverApp {
         mapService.init('map-container')
       ]);
 
-      console.log('[DriverApp] Resultados inicialización:', {
+      console.log('[DriverApp] Resultados inicializaciÃ³n:', {
         mapa: results[0]?.status
       });
 
@@ -289,7 +400,7 @@ class DriverApp {
       window.addEventListener('pushForegroundMessage', this._foregroundPushHandler);
 
       this.initialized = true;
-      console.log('[DriverApp] Aplicación inicializada correctamente');
+      console.log('[DriverApp] AplicaciÃ³n inicializada correctamente');
 
       if (!tripManagerReady) {
         this._onlineStatus = false;
@@ -402,7 +513,7 @@ class DriverApp {
 
       let session = sessionData?.session || null;
 
-      // 2) Si no hay sesión, esperamos un poco por hydration post-OAuth
+      // 2) Si no hay sesiÃ³n, esperamos un poco por hydration post-OAuth
       if (!session?.access_token) {
         await new Promise((resolve) => setTimeout(resolve, 900));
 
@@ -418,7 +529,7 @@ class DriverApp {
         session = retrySessionData?.session || null;
       }
 
-      // 3) Si sigue sin haber sesión, intentamos refresh
+      // 3) Si sigue sin haber sesiÃ³n, intentamos refresh
       if (!session?.access_token) {
         const {
           data: refreshData,
@@ -432,12 +543,12 @@ class DriverApp {
         session = refreshData?.session || null;
       }
 
-      // 4) Si no logramos sesión válida, salimos
+      // 4) Si no logramos sesiÃ³n vÃ¡lida, salimos
       if (!session?.access_token) {
         return null;
       }
 
-      // 5) Recién acá pedimos el user real
+      // 5) ReciÃ©n acÃ¡ pedimos el user real
       const {
         data: userData,
         error: userError
@@ -458,7 +569,7 @@ class DriverApp {
     }
   }
   // =========================================================
-  // UX PRO · HAPTICS + AUDIO FEEDBACK
+  // UX PRO Â· HAPTICS + AUDIO FEEDBACK
   // =========================================================
   _vibrate(pattern = [90, 50, 140]) {
     try {
@@ -562,7 +673,7 @@ class DriverApp {
     console.log('[DriverApp] Suscribiendo a eventos de TripManager...');
 
     const unsubOffer = tripManager.on('newPendingTrip', (trip) => {
-      console.log('[DriverApp] 📨 newPendingTrip', trip.id);
+      console.log('[DriverApp] ðŸ“¨ newPendingTrip', trip.id);
       this._setFlowState('RECEIVING_OFFER');
 
       this._vibrate([120, 60, 120]);
@@ -592,7 +703,7 @@ class DriverApp {
 
       this._celebrateAcceptFeedback();
       uiController.hideIncomingModal?.();
-      uiController.showToast('¡Viaje aceptado!', 'success');
+      uiController.showToast('Â¡Viaje aceptado!', 'success');
 
       await this._showRouteOnMap(trip);
       uiController.showNavigationState(trip);
@@ -742,7 +853,7 @@ class DriverApp {
         return;
       }
 
-      console.warn('[DriverApp] No existe método para mostrar ruta en mapService');
+      console.warn('[DriverApp] No existe mÃ©todo para mostrar ruta en mapService');
     } catch (error) {
       console.error('[DriverApp] Error mostrando ruta:', error);
     }
@@ -823,7 +934,7 @@ class DriverApp {
       if (!result.success) {
         uiController.showToast(
           result.error === 'VIAJE_YA_TOMADO'
-            ? '❌ Otro chofer tomó el viaje'
+            ? 'âŒ Otro chofer tomÃ³ el viaje'
             : result.error || 'Error aceptando viaje',
           'warning'
         );
@@ -908,10 +1019,10 @@ class DriverApp {
           .eq('user_id', this._authUserId);
 
         if (error) {
-          console.error('[DriverApp] Error guardando ubicación:', error);
+          console.error('[DriverApp] Error guardando ubicaciÃ³n:', error);
         }
       } catch (err) {
-        console.error('[DriverApp] Falló update ubicación:', err);
+        console.error('[DriverApp] FallÃ³ update ubicaciÃ³n:', err);
       }
     }
 
@@ -964,13 +1075,14 @@ _setupUI() {
   const historyBtn = document.getElementById('menu-history');
   const settingsBtn = document.getElementById('menu-settings');
   const profileBtn = document.getElementById('menu-view-profile');
+  const profileQuickBtn = document.getElementById('menu-view-profile-quick');
 
   this._fabClickHandler = async () => {
     try {
       const hasActiveTrip = !!tripManager.getCurrentTrip();
 
       if (hasActiveTrip && this._onlineStatus) {
-        uiController.showToast('No podés ponerte offline durante un viaje', 'warning');
+        uiController.showToast('No podÃ©s ponerte offline durante un viaje', 'warning');
         return;
       }
 
@@ -990,7 +1102,7 @@ _setupUI() {
         uiController.showWaitingState();
       } else {
         if (tripManager.getCurrentTrip()) {
-          uiController.showToast('No podés desconectarte en viaje', 'warning');
+          uiController.showToast('No podÃ©s desconectarte en viaje', 'warning');
           return;
         }
 
@@ -1012,7 +1124,7 @@ _setupUI() {
       );
 
       uiController.showToast(
-        this._onlineStatus ? '🟢 Online' : '🔴 Offline',
+        this._onlineStatus ? 'Ya estas en linea' : 'Quedaste fuera de linea',
         'success'
       );
     } catch (err) {
@@ -1076,16 +1188,18 @@ _setupUI() {
   }
 
   if (profileBtn) {
-    profileBtn.addEventListener('click', () => {
+    profileBtn.addEventListener('click', async () => {
       uiController.closeMenu?.();
-      uiController.showInfoSheet?.({
-        title: 'Perfil',
-        description: 'Resumen del perfil del chofer cargado actualmente en la aplicacion.',
-        metrics: [
-          { label: 'Nombre', value: document.getElementById('driver-name')?.textContent || 'Conductor' },
-          { label: 'Estado', value: this._onlineStatus ? 'Online' : 'Offline' }
-        ]
-      });
+      await this._loadDriverProfileSummary({ email: this._session?.user?.email || '' });
+      this._openDriverProfileSheet();
+    });
+  }
+
+  if (profileQuickBtn) {
+    profileQuickBtn.addEventListener('click', async () => {
+      uiController.closeMenu?.();
+      await this._loadDriverProfileSummary({ email: this._session?.user?.email || '' });
+      this._openDriverProfileSheet();
     });
   }
 
@@ -1100,11 +1214,11 @@ _setupUI() {
     if (!action) return null;
 
     if (this._actionLock && action !== 'navigate' && action !== 'whatsapp') {
-      console.warn('[DriverApp] Acción bloqueada por lock:', action);
+      console.warn('[DriverApp] AcciÃ³n bloqueada por lock:', action);
       return null;
     }
 
-    console.log('[DriverApp] Acción:', action, tripId);
+    console.log('[DriverApp] AcciÃ³n:', action, tripId);
 
     const pending = tripManager.getPendingTrip();
     const current = tripManager.getCurrentTrip();
@@ -1165,7 +1279,7 @@ _setupUI() {
           return this._openWhatsApp();
 
         default:
-          console.warn('[DriverApp] Acción desconocida:', action);
+          console.warn('[DriverApp] AcciÃ³n desconocida:', action);
           return null;
       }
     } finally {
@@ -1200,7 +1314,7 @@ _setupUI() {
     const trip = tripManager.getCurrentTrip();
     if (!trip?.telefono) return;
 
-    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI 🚐');
+    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI ðŸš');
     window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
   }
 
@@ -1209,15 +1323,15 @@ _setupUI() {
   // =========================================================
   _calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371e3;
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+    const Ï†1 = (lat1 * Math.PI) / 180;
+    const Ï†2 = (lat2 * Math.PI) / 180;
+    const Î”Ï† = ((lat2 - lat1) * Math.PI) / 180;
+    const Î”Î» = ((lon2 - lon1) * Math.PI) / 180;
 
     const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) *
-      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      Math.sin(Î”Ï† / 2) * Math.sin(Î”Ï† / 2) +
+      Math.cos(Ï†1) * Math.cos(Ï†2) *
+      Math.sin(Î”Î» / 2) * Math.sin(Î”Î» / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
