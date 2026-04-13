@@ -1,13 +1,13 @@
 {
-  "name": "MIMI Driver",
+  "name": "MIMI Cliente",
   "short_name": "MIMI",
-  "description": "Panel de conductor para MIMI Transporte Escolar",
-  "start_url": "/mimi-transporte/login-chofer.html",
+  "description": "App cliente de MIMI Transporte Escolar",
+  "start_url": "/mimi-transporte/index.html",
   "scope": "/mimi-transporte/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#102a5f",
+  "theme_color": "#1f6fe5",
   "icons": [
     {
       "src": "/mimi-transporte/assets/icons/icon-192x192.png",
