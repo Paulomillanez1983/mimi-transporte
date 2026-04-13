@@ -593,11 +593,10 @@
       line-height: 1.45;
     }
 
-    .doc-guidelines span::before {
-      content: "â€¢ ";
-      color: rgba(255,255,255,0.6);
-    }
-
+.doc-guidelines span::before {
+  content: "• ";
+  color: rgba(255,255,255,0.6);
+}
     .doc-actions-inline {
       display: flex;
       gap: 10px;
@@ -1291,11 +1290,11 @@
     Salir
   </button>
 </div>
-  <div class="subtitle">
-Completá tu identidad, vehículo y documentación...
-Podés sacar fotos...
-  </div>
-
+<div class="subtitle">
+  Completá tu identidad, vehículo y documentación para habilitar tu cuenta.
+  Podés sacar fotos desde esta misma pantalla y terminar la carga mucho más rápido.
+</div>
+  
 <div class="progress-shell progress-shell--pro">
   <div class="progress-top">
     <div class="progress-label" id="progressLabel">Paso 1 de 3 · Datos personales</div>
@@ -1842,7 +1841,7 @@ function updateWizardPrimaryState() {
   const hasFile = !!getChosenFile(docType);
 
   const state = docValidationState.get(docType);
-  const passed = state === "ok" || state === "warning";
+  const passed = state === "ok";
 
   const allowContinue = onboardingBusy ? false : (meta?.optional ? true : hasFile && passed);
 
@@ -2408,7 +2407,7 @@ function renderPreview(docType, file) {
     docWizardPreview.innerHTML = `
       <div class="doc-preview-file">
         <strong>Esperando archivo</strong>
-        <span>Tomá¡ una foto o subá­ un archivo para continuar.</span>
+        <span>Tomá una foto o subí un archivo para continuar.</span>
       </div>
     `;
     docWizardPreview.classList.add("visible");
@@ -2726,7 +2725,7 @@ const { error: upsertError } = await supabaseService.client
 
 if (upsertError) throw upsertError;
 
-// ðŸ”¥ aná¡lisis automá¡tico unificado
+// 🔥 análisis automático unificado
 try {
   const { data: edgeData, error: edgeError } = await supabaseService.client.functions.invoke(
     "extract-driver-document",
@@ -2755,29 +2754,29 @@ try {
     if (edgeData?.face_detected && edgeData?.review_required === false) {
       setDocStatus(docType, "✅ Selfie validada automáticamente", "ok");
     } else if (edgeData?.face_detected) {
-      setDocStatus(docType, "âš  Rostro detectado, quedá³ para revisiá³n manual", "warning");
+      setDocStatus(docType, "⚠ Rostro detectado, quedó para revisión manual", "warning");
     } else {
-      setDocStatus(docType, "âŒ No se detectá³ rostro correctamente", "error");
+      setDocStatus(docType, "❌ No se detectó rostro correctamente", "error");
     }
     return;
   }
 
   if (docType === "dni_front") {
     if (edgeData?.document_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "âœ… DNI validado automá¡ticamente", "ok");
+      setDocStatus(docType, "✅ DNI validado automáticamente", "ok");
     } else if (edgeData?.document_detected) {
-      setDocStatus(docType, "âš  DNI detectado, quedá³ para revisiá³n manual", "warning");
+      setDocStatus(docType, "⚠ DNI detectado, quedó para revisión manual", "warning");
     } else {
-      setDocStatus(docType, "âŒ No se detectá³ correctamente el DNI", "error");
+      setDocStatus(docType, "❌ No se detectó correctamente el DNI", "error");
     }
     return;
   }
 
   if (docType === "license_front") {
     if (edgeData?.document_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "âœ… Licencia validada automá¡ticamente", "ok");
+      setDocStatus(docType, "✅ Licencia validada automáticamente", "ok");
     } else if (edgeData?.document_detected) {
-      setDocStatus(docType, "âš  Licencia detectada, quedá³ para revisiá³n manual", "warning");
+      setDocStatus(docType, "⚠ Licencia detectada, quedó para revisión manual", "warning");
     } else {
       setDocStatus(docType, "❌ No se detectó correctamente la licencia", "error");
     }
@@ -2787,12 +2786,12 @@ try {
   setDocStatus(docType, "✅ Archivo cargado correctamente", "ok");
 } catch (edgeErr) {
   console.warn("[extract-driver-document] warning:", edgeErr);
-  setDocStatus(docType, "âš  Archivo subido, pero no pudimos analizarlo", "warning");
+  setDocStatus(docType, "⚠ Archivo subido, pero no pudimos analizarlo", "warning");
 }
         
       } catch (err) {
         console.error("[uploadDocument] " + docType, err);
-        setDocStatus(docType, "âŒ Error al subir", "error");
+        setDocStatus(docType, "❌ Error al subir", "error");
         throw err;
       }
     }
@@ -2824,12 +2823,12 @@ try {
 
       setOnboardingBusy(true, {
         button: triggerButton,
-        text: "Enviando documentacion...",
+        text: "Enviando documentación...",
         docMode: "uploading"
       });
 
       try {
-        setGlobalStatus("Guardando informaciá³n...", "success");
+        setGlobalStatus("Guardando información...", "success");
 
         const step1Error = validateStep1();
         if (step1Error) throw new Error(step1Error);
@@ -2889,8 +2888,8 @@ try {
         });
 
         const successMessage = backgroundCheckProvided
-          ? "âœ… Documentaciá³n enviada correctamente. Tu cuenta quedá³ en revisiá³n."
-          : "âœ… Documentaciá³n enviada correctamente. Tu cuenta quedá³ en revisiá³n y el certificado de antecedentes quedá³ pendiente con plazo de 15 dá­as há¡biles.";
+          ? "✅ Documentación enviada correctamente. Tu cuenta quedó en revisión."
+          : "✅ Documentación enviada correctamente. Tu cuenta quedó en revisión y el certificado de antecedentes quedó pendiente con plazo de 15 días hábiles.";
 
         setGlobalStatus(successMessage, "success");
 
@@ -2902,7 +2901,7 @@ try {
         }, 1400);
       } catch (err) {
         console.error("[submitAll] error:", err);
-        setGlobalStatus("âŒ " + (err.message || "No pudimos enviar la documentaciá³n"), "error");
+        setGlobalStatus("❌ " + (err.message || "No pudimos enviar la documentación"), "error");
       } finally {
         setOnboardingBusy(false);
       }
@@ -2919,7 +2918,7 @@ document.getElementById("step1ContinueBtn")?.addEventListener("click", async () 
 
   const err = validateStep1();
   if (err) {
-    setGlobalStatus("âŒ " + err, "error");
+    setGlobalStatus("❌ " + err, "error");
     return;
   }
 
@@ -2943,7 +2942,7 @@ document.getElementById("step1ContinueBtn")?.addEventListener("click", async () 
     showStep(2);
   } catch (errSave) {
     console.error("[step1Continue]", errSave);
-    setGlobalStatus("âŒ No pudimos guardar tus datos personales", "error");
+    setGlobalStatus("❌ No pudimos guardar tus datos personales", "error");
   } finally {
     setOnboardingBusy(false);
   }
@@ -2954,13 +2953,13 @@ document.getElementById("step2ContinueBtn")?.addEventListener("click", async () 
 
   const err = validateStep2();
   if (err) {
-    setGlobalStatus("âŒ " + err, "error");
+    setGlobalStatus("❌ " + err, "error");
     return;
   }
 
   setOnboardingBusy(true, {
     button: step2ContinueBtn,
-    text: "Guardando vehiculo...",
+    text: "Guardando vehículo...",
     docMode: "saving"
   });
 
@@ -2978,7 +2977,7 @@ document.getElementById("step2ContinueBtn")?.addEventListener("click", async () 
     showStep(3);
   } catch (errSave) {
     console.error("[step2Continue]", errSave);
-    setGlobalStatus("âŒ No pudimos guardar los datos del vehiculo", "error");
+    setGlobalStatus("❌ No pudimos guardar los datos del vehículo", "error");
   } finally {
     setOnboardingBusy(false);
   }
@@ -3013,7 +3012,7 @@ docWizardNextBtn?.addEventListener("click", async () => {
   const passed = state === "ok";
 
   if (!meta?.optional && (!hasFile || !passed)) {
-    setGlobalStatus(`âŒ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
+    setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
     return;
   }
 
@@ -3038,7 +3037,7 @@ stickyPrimaryBtn.addEventListener("click", async () => {
     if (currentStep === 1) {
       const err = validateStep1();
       if (err) {
-        setGlobalStatus("âŒ " + err, "error");
+        setGlobalStatus("❌ " + err, "error");
         return;
       }
 
@@ -3066,13 +3065,13 @@ stickyPrimaryBtn.addEventListener("click", async () => {
     if (currentStep === 2) {
       const err = validateStep2();
       if (err) {
-        setGlobalStatus("âŒ " + err, "error");
+        setGlobalStatus("❌ " + err, "error");
         return;
       }
 
       setOnboardingBusy(true, {
         button: stickyPrimaryBtn,
-        text: "Guardando vehiculo...",
+        text: "Guardando vehículo...",
         docMode: "saving"
       });
 
@@ -3094,10 +3093,10 @@ stickyPrimaryBtn.addEventListener("click", async () => {
     const meta = DOC_META[docType];
     const hasFile = !!getChosenFile(docType);
     const state = docValidationState.get(docType);
-    const passed = state === "ok" || state === "warning";
+    const passed = state === "ok";
 
     if (!meta?.optional && (!hasFile || !passed)) {
-      setGlobalStatus(`âŒ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
+      setGlobalStatus(`❌ Tenés que validar ${meta?.label || "este documento"} para continuar`, "error");
       return;
     }
 
@@ -3114,7 +3113,7 @@ stickyPrimaryBtn.addEventListener("click", async () => {
   } catch (e) {
     console.error("[sticky flow error]", e);
     setOnboardingBusy(false);
-    setGlobalStatus("âŒ Error en el flujo", "error");
+    setGlobalStatus("❌ Error en el flujo", "error");
   }
 });
     
@@ -3175,14 +3174,14 @@ exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
           return;
         }
 
-      setDocStatus("background_check", "â³ Podés subirlo ahora o dentro de 15 dá­as há¡biles", "warning");
+      setDocStatus("background_check", "⏳ Podés subirlo ahora o dentro de 15 días hábiles", "warning");
       updateDocumentsProgressUI();
       updateOverallStepperState();
       renderDocumentWizard();
       updateSticky(currentStep);
       } catch (err) {
         console.error("[onboarding init] error:", err);
-        setGlobalStatus("âŒ No pudimos cargar tu onboarding", "error");
+        setGlobalStatus("❌ No pudimos cargar tu onboarding", "error");
       }
     })();
   </script>
