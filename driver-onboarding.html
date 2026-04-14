@@ -1988,7 +1988,7 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         } = await supabaseService.client.auth.getSession();
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1800);
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos
 
         const headers = {
           "Content-Type": "application/json",
