@@ -1277,6 +1277,57 @@
       color: #1e3a8a !important;
       border: 1px solid rgba(47,111,237,0.12) !important;
     }
+  .upload-runtime-box {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(47,111,237,0.08);
+  border: 1px solid rgba(47,111,237,0.14);
+  display: grid;
+  gap: 10px;
+}
+
+.upload-runtime-box__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.upload-runtime-box__top strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.upload-runtime-box__top span {
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(15,23,42,0.72);
+}
+
+.upload-runtime-bar {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(47,111,237,0.10);
+  border: 1px solid rgba(47,111,237,0.08);
+}
+
+.upload-runtime-bar__fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2f6fed, #22c55e);
+  transition: width .25s ease;
+}
+
+.upload-runtime-help {
+  font-size: 12px;
+  color: rgba(15,23,42,0.68);
+  line-height: 1.45;
+}
   </style>
 </head>
 <body>
@@ -1558,6 +1609,20 @@
     <button class="btn-secondary" id="backTo2" type="button">Volver</button>
     <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentaciÃ³n</button>
   </div>
+  <div class="upload-runtime-box" id="uploadRuntimeBox" style="display:none;">
+  <div class="upload-runtime-box__top">
+    <strong id="uploadRuntimeTitle">Preparando envío...</strong>
+    <span id="uploadRuntimeCount">0/0</span>
+  </div>
+
+  <div class="upload-runtime-bar">
+    <div class="upload-runtime-bar__fill" id="uploadRuntimeBar"></div>
+  </div>
+
+  <div class="upload-runtime-help" id="uploadRuntimeHelp">
+    Esperando inicio...
+  </div>
+</div>
 
   <div class="status-box" id="globalStatus"></div>
 </section>
@@ -1744,6 +1809,12 @@ const docWizardNextBtn = document.getElementById("docWizardNextBtn");
 const docWizardCard = document.querySelector(".doc-wizard-card");
 const DOC_CACHE_KEY = "mimi_driver_doc_cache_v1";
 const FORM_DRAFT_KEY = "mimi_driver_onboarding_draft";
+const uploadRuntimeBox = document.getElementById("uploadRuntimeBox");
+const uploadRuntimeTitle = document.getElementById("uploadRuntimeTitle");
+const uploadRuntimeCount = document.getElementById("uploadRuntimeCount");
+const uploadRuntimeBar = document.getElementById("uploadRuntimeBar");
+const uploadRuntimeHelp = document.getElementById("uploadRuntimeHelp");    
+    
 const VALIDATION_SOUND_SRC =
   "data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTAAAAAAAP//AAD//wAA//8AAP//AAD//wAA";
 let audioValidationOk = null;
@@ -1927,7 +1998,36 @@ function setDocInputsBusy(isBusy, mode = "validating") {
       : (docWizardUploadLabel.dataset.defaultLabel || "â¬† Subir archivo");
   }
 }
+function resetUploadRuntime() {
+  if (uploadRuntimeBox) uploadRuntimeBox.style.display = "none";
+  if (uploadRuntimeTitle) uploadRuntimeTitle.textContent = "Preparando envío...";
+  if (uploadRuntimeCount) uploadRuntimeCount.textContent = "0/0";
+  if (uploadRuntimeBar) uploadRuntimeBar.style.width = "0%";
+  if (uploadRuntimeHelp) uploadRuntimeHelp.textContent = "Esperando inicio...";
+}
 
+function showUploadRuntime() {
+  if (uploadRuntimeBox) uploadRuntimeBox.style.display = "grid";
+}
+
+function updateUploadRuntime({
+  title = "Procesando...",
+  current = 0,
+  total = 0,
+  help = ""
+} = {}) {
+  showUploadRuntime();
+
+  if (uploadRuntimeTitle) uploadRuntimeTitle.textContent = title;
+  if (uploadRuntimeCount) uploadRuntimeCount.textContent = `${current}/${total}`;
+
+  const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+  if (uploadRuntimeBar) uploadRuntimeBar.style.width = `${pct}%`;
+
+  if (uploadRuntimeHelp) {
+    uploadRuntimeHelp.textContent = help || "Procesando archivos...";
+  }
+}
 function setOnboardingBusy(isBusy, options = {}) {
   onboardingBusy = isBusy;
 
@@ -2968,6 +3068,7 @@ async function uploadDocument(docType, file) {
       } else {
         setDocStatus(docType, "Opcional sin subir", "pending");
       }
+
       return null;
     }
 
@@ -2976,10 +3077,14 @@ async function uploadDocument(docType, file) {
     }
 
     setDocStatus(docType, "Preparando archivo...", "pending");
+    setGlobalStatus(`Preparando ${DOC_META[docType]?.label || docType}...`, "success");
 
     let uploadFile = file;
 
     if (isImageFile(file)) {
+      setDocStatus(docType, "Comprimiendo imagen...", "pending");
+      setGlobalStatus(`Comprimiendo ${DOC_META[docType]?.label || docType}...`, "success");
+
       uploadFile = await withTimeout(
         compressImageForUpload(file, {
           maxWidth: 1600,
@@ -2993,6 +3098,7 @@ async function uploadDocument(docType, file) {
     }
 
     setDocStatus(docType, "Subiendo archivo...", "pending");
+    setGlobalStatus(`Subiendo ${DOC_META[docType]?.label || docType}...`, "success");
 
     const ext = fileExt(uploadFile);
     const safeName = sanitizeFileName(uploadFile.name || `${docType}.${ext}`);
@@ -3013,6 +3119,7 @@ async function uploadDocument(docType, file) {
     if (uploadError) throw uploadError;
 
     setDocStatus(docType, "Guardando registro...", "pending");
+    setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema...`, "success");
 
     const payload = {
       user_id: currentUser.id,
@@ -3055,8 +3162,7 @@ async function uploadDocument(docType, file) {
     setDocStatus(docType, explainUploadError(err), "error");
     throw err;
   }
-}
-  
+}  
   
 function addBusinessDays(startDate, businessDays) {
       const date = new Date(startDate);
@@ -3095,6 +3201,9 @@ async function submitAll(triggerButton = submitAllBtn) {
   });
 
   try {
+    resetUploadRuntime();
+    showUploadRuntime();
+
     setGlobalStatus("Guardando información del perfil...", "success");
 
     const step1Error = validateStep1();
@@ -3131,11 +3240,43 @@ async function submitAll(triggerButton = submitAllBtn) {
       label: DOC_META[docType]?.label || docType
     }));
 
-    setGlobalStatus("Subiendo documentación...", "success");
+    const uploadableDocs = docsToUpload.filter(({ file, docType }) => {
+      if (file) return true;
+      return REQUIRED_DOCS.includes(docType);
+    });
 
-    await mapWithConcurrency(docsToUpload, 1, async ({ docType, file, label }) => {
-      setGlobalStatus(`Subiendo ${label}...`, "success");
+    let processedCount = 0;
+    const totalToProcess = uploadableDocs.length;
+
+    updateUploadRuntime({
+      title: "Preparando envío",
+      current: 0,
+      total: totalToProcess,
+      help: "Estamos organizando la carga de documentos..."
+    });
+
+    await mapWithConcurrency(uploadableDocs, 1, async ({ docType, file, label }) => {
+      updateUploadRuntime({
+        title: `Subiendo ${label}`,
+        current: processedCount,
+        total: totalToProcess,
+        help: file
+          ? `Procesando ${label}. No cierres esta pantalla.`
+          : `Verificando obligatoriedad de ${label}.`
+      });
+
       await uploadDocument(docType, file);
+
+      processedCount += 1;
+
+      updateUploadRuntime({
+        title: `${label} listo`,
+        current: processedCount,
+        total: totalToProcess,
+        help: processedCount < totalToProcess
+          ? "Continuamos con el siguiente documento..."
+          : "Todos los documentos fueron procesados."
+      });
     });
 
     setGlobalStatus("Verificando documentos subidos...", "success");
@@ -3174,6 +3315,13 @@ async function submitAll(triggerButton = submitAllBtn) {
 
     setGlobalStatus(successMessage, "success");
 
+    updateUploadRuntime({
+      title: "Envío completado",
+      current: totalToProcess,
+      total: totalToProcess,
+      help: "Todos los documentos obligatorios fueron recibidos correctamente."
+    });
+
     localStorage.removeItem(DOC_CACHE_KEY);
     localStorage.removeItem(FORM_DRAFT_KEY);
 
@@ -3185,9 +3333,12 @@ async function submitAll(triggerButton = submitAllBtn) {
     setGlobalStatus(explainUploadError(err), "error");
   } finally {
     setOnboardingBusy(false);
+
+    setTimeout(() => {
+      resetUploadRuntime();
+    }, 1200);
   }
 }
-
 
     document.getElementById("backTo1").addEventListener("click", () => {
       clearGlobalStatus();
