@@ -3064,14 +3064,18 @@ async function uploadDocument(docType, file) {
       throw offlineError("Sin conexión antes de subir el archivo");
     }
 
-    setDocStatus(docType, "Preparando archivo...", "pending");
-    setGlobalStatus(`Preparando ${DOC_META[docType]?.label || docType}...`, "success");
+    if (!currentUser?.id) {
+      throw new Error("Usuario no autenticado");
+    }
+
+    setDocStatus(docType, "Preparando archivo.", "pending");
+    setGlobalStatus(`Preparando ${DOC_META[docType]?.label || docType}.`, "success");
 
     let uploadFile = file;
 
     if (isImageFile(file)) {
-      setDocStatus(docType, "Comprimiendo imagen...", "pending");
-      setGlobalStatus(`Comprimiendo ${DOC_META[docType]?.label || docType}...`, "success");
+      setDocStatus(docType, "Comprimiendo imagen.", "pending");
+      setGlobalStatus(`Comprimiendo ${DOC_META[docType]?.label || docType}.`, "success");
 
       uploadFile = await withTimeout(
         compressImageForUpload(file, {
@@ -3085,8 +3089,8 @@ async function uploadDocument(docType, file) {
       );
     }
 
-    setDocStatus(docType, "Subiendo archivo...", "pending");
-    setGlobalStatus(`Subiendo ${DOC_META[docType]?.label || docType}...`, "success");
+    setDocStatus(docType, "Subiendo archivo.", "pending");
+    setGlobalStatus(`Subiendo ${DOC_META[docType]?.label || docType}.`, "success");
 
     const ext = fileExt(uploadFile);
     const safeName = sanitizeFileName(uploadFile.name || `${docType}.${ext}`);
@@ -3104,12 +3108,13 @@ async function uploadDocument(docType, file) {
       `La subida de ${DOC_META[docType]?.label || docType} tardó demasiado`
     );
 
-if (uploadError) {
-  console.error("[UPLOAD STORAGE ERROR]", uploadError);
-  throw uploadError;
-}
-    setDocStatus(docType, "Guardando registro...", "pending");
-    setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema...`, "success");
+    if (uploadError) {
+      console.error("[UPLOAD STORAGE ERROR]", uploadError);
+      throw uploadError;
+    }
+
+    setDocStatus(docType, "Guardando registro.", "pending");
+    setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema.`, "success");
 
     const payload = {
       user_id: currentUser.id,
@@ -3119,27 +3124,29 @@ if (uploadError) {
       file_size: uploadFile.size || null,
       status: "PENDIENTE",
       rejection_reason: null,
-      review_required: true,
-      analysis_status: "queued"
+      review_required: true
     };
 
-    const { error: upsertError } = await withTimeout(
+    const { data, error: upsertError } = await withTimeout(
       supabaseService.client
         .from("driver_documents")
         .upsert(payload, {
           onConflict: "user_id,doc_type"
-        }),
+        })
+        .select()
+        .single(),
       20000,
       `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
     );
 
-if (upsertError) {
-  console.error("[DB ERROR driver_documents]", upsertError);
-  throw upsertError;
-}
+    if (upsertError) {
+      console.error("[DB ERROR driver_documents]", upsertError, payload);
+      throw upsertError;
+    }
+
     setDocStatus(
       docType,
-      "Archivo subido correctamente. Quedó pendiente de análisis/revisión",
+      "Archivo subido correctamente. Quedó pendiente de revisión.",
       "ok"
     );
 
@@ -3147,7 +3154,8 @@ if (upsertError) {
       docType,
       storage_path: safePath,
       mime_type: uploadFile.type || null,
-      file_size: uploadFile.size || null
+      file_size: uploadFile.size || null,
+      db_row: data || null
     };
   } catch (err) {
     console.error("[uploadDocument] " + docType, err);
@@ -3155,7 +3163,6 @@ if (upsertError) {
     throw err;
   }
 }  
-  
 function addBusinessDays(startDate, businessDays) {
       const date = new Date(startDate);
       let added = 0;
