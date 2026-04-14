@@ -2979,9 +2979,9 @@ body.support-open {
 }
 
 body.driver-online .fab-online {
-  opacity: 1;
-  pointer-events: auto;
-  transform: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px) scale(0.94);
 }
 
 body.driver-offline .fab-online {
