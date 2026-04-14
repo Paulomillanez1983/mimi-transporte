@@ -3,7 +3,7 @@
  * Offline support and background sync
  */
 
-const CACHE_NAME = 'mimi-driver-v2';
+const CACHE_NAME = 'mimi-driver-v3';
 const STATIC_ASSETS = [
   '/mimi-transporte/login-chofer.html',
   '/mimi-transporte/driver-onboarding.html',
@@ -12,6 +12,7 @@ const STATIC_ASSETS = [
   '/mimi-transporte/reset-password.html',
   '/mimi-transporte/chofer-panel.html',
   '/mimi-transporte/manifest.json',
+  '/mimi-transporte/manifest-driver.json',
   '/mimi-transporte/libs/supabase-js.js',
   '/mimi-transporte/css/design-system.css',
   '/mimi-transporte/css/components.css',
