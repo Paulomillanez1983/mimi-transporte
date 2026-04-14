@@ -2492,21 +2492,25 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     console.error("[setSelectedFile validation]", docType, err);
     setDocStatus(
       docType,
-      `${sourceLabel}: ${name} Â· ValidaciÃ³n demorada, podÃ©s continuar`,
+      `${sourceLabel}: ${name} · Validación demorada, podés continuar`,
       "warning"
     );
     setWizardVisualState("warning");
     triggerValidationFeedback("warning");
+  } finally {
+    try {
+      updateDocumentsProgressUI();
+      updateOverallStepperState();
+      renderDocumentWizard();
+      updateSticky(3);
+      updateWizardPrimaryState();
+    } catch (renderErr) {
+      console.error("[setSelectedFile post-render]", docType, renderErr);
+    }
+    setOnboardingBusy(false);
   }
 
-  updateDocumentsProgressUI();
-  updateOverallStepperState();
-  renderDocumentWizard();
-  updateSticky(3);
-  updateWizardPrimaryState();
-  setOnboardingBusy(false);
-
-if (docType === getCurrentDocType()) {
+  if (docType === getCurrentDocType()) {
 const state = docValidationState.get(docType);
 const passed = state === "ok" || state === "warning";
       if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
