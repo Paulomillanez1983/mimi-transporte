@@ -2537,18 +2537,23 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     docMode: "validating"
   });
 
-  selectedFiles.set(docType, file);
-  renderDocWizardPreview(docType);
-  await cacheSelectedFile(docType, file);
-
-  const name = file.name || DOC_META[docType]?.label || "archivo";
-
-  setWizardVisualState("validating");
-  setDocStatus(docType, `Analizando ${name}...`, "pending");
-  updateWizardPrimaryState();
-
   try {
-    const validation = await validateWithRetry(docType, file, 2);
+    selectedFiles.set(docType, file);
+    renderDocWizardPreview(docType);
+    await cacheSelectedFile(docType, file);
+
+    const name = file.name || DOC_META[docType]?.label || "archivo";
+
+    setWizardVisualState("validating");
+    setDocStatus(docType, `Analizando ${name}...`, "pending");
+    updateWizardPrimaryState();
+
+    const validation = await Promise.race([
+      validateWithRetry(docType, file, 2),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("La validación tardó demasiado")), 15000)
+      )
+    ]);
 
     if (validation.ok) {
       if (validation.kind === "document-warning") {
@@ -2561,36 +2566,31 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
         triggerValidationFeedback("success");
       }
 
-      // 👉 AUTO AVANCE (PRO UX)
       clearAutoAdvanceTimer();
       autoAdvanceTimer = setTimeout(() => {
-        if (!onboardingBusy) {
-currentDocumentIndex = Math.min(currentDocumentIndex + 1, DOCUMENT_FLOW.length - 1);
-renderDocumentWizard();
-updateWizardPrimaryState();
-        }
+        currentDocumentIndex = Math.min(currentDocumentIndex + 1, DOCUMENT_FLOW.length - 1);
+        renderDocumentWizard();
+        updateWizardPrimaryState();
       }, 900);
-
     } else {
       setDocStatus(docType, validation.message || "Documento inválido", "error");
       setWizardVisualState("error");
       triggerValidationFeedback("error");
     }
-
   } catch (err) {
     console.error("[validateWithRetry error]", err);
-
     setDocStatus(
       docType,
-      "No pudimos validar el documento. Intentá nuevamente.",
+      err?.message || "No pudimos validar el documento. Intentá nuevamente.",
       "error"
     );
-
     setWizardVisualState("error");
+  } finally {
+    setOnboardingBusy(false);
+    updateWizardPrimaryState();
   }
-
-  setOnboardingBusy(false);
-}    
+}
+    
 function initFileInputs() {
   docWizardCameraLabel?.addEventListener("click", async (e) => {
     e.preventDefault();
