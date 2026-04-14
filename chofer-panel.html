@@ -21,7 +21,7 @@
   <meta name="apple-mobile-web-app-title" content="MIMI Driver" />
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#128652;</text></svg>">
-  <link rel="manifest" href="/mimi-transporte/manifest.json" />
+  <link rel="manifest" href="/mimi-transporte/manifest-driver.json" />
   <link rel="apple-touch-icon" href="/mimi-transporte/assets/icons/icon-192x192.png" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -41,8 +41,6 @@
 <script type="module" src="js/driver-app.js?v=20260413-1"></script>
 </head>
 <body>
-  <button class="logout-btn" id="logoutBtn">Salir</button>
-
   <div id="map-container"></div>
 
   <div id="ui-layer">
@@ -228,9 +226,8 @@
   <script type="module">
     import supabaseService from "./js/supabase-client.js";
     import CONFIG from "./js/config.js";
-
-    const logoutBtn = document.getElementById("logoutBtn");
-    const menuLogoutBtn = document.getElementById("menu-logout");
+    import tripManager from "./js/trip-manager.js";
+    import uiController from "./js/ui-controller.js";
 
     async function protectRoute() {
       try {
@@ -257,6 +254,13 @@
     }
 
     async function doLogout() {
+      const activeTrip = tripManager.getCurrentTrip?.();
+
+      if (activeTrip?.id) {
+        uiController.showToast?.("No podés cerrar sesión durante un viaje en curso", "warning");
+        return false;
+      }
+
       try {
         await supabaseService.client.auth.signOut();
       } catch (err) {
@@ -264,15 +268,11 @@
       } finally {
         window.location.href = CONFIG.REDIRECTS.LOGIN;
       }
+
+      return true;
     }
 
 async function initLogout() {
-  const { data } = await supabaseService.client.auth.getSession();
-
-  if (data?.session && logoutBtn) {
-    logoutBtn.classList.add("visible");
-  }
-
   const bindLogout = (btn) => {
     if (!btn || btn.dataset.bound === "1") return;
 
@@ -283,7 +283,11 @@ async function initLogout() {
       btn.innerText = "Cerrando...";
 
       try {
-        await doLogout();
+        const loggedOut = await doLogout();
+        if (loggedOut === false) {
+          btn.disabled = false;
+          btn.innerText = originalText;
+        }
       } catch (err) {
         console.error("[logout] fallo:", err);
         btn.disabled = false;
@@ -292,7 +296,6 @@ async function initLogout() {
     });
   };
 
-  bindLogout(logoutBtn);
   bindLogout(document.getElementById("menu-logout"));
 }
     await protectRoute();
