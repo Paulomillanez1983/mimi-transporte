@@ -75,9 +75,27 @@ body {
    LOGOUT
    ========================================================= */
 
-.logout-btn,
+.logout-btn {
+  position: fixed;
+  top: calc(14px + var(--safe-top));
+  right: 16px;
+  z-index: calc(var(--z-header) + 2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--uber-border);
+  border-radius: 999px;
+  background: var(--uber-surface);
+  color: var(--uber-text);
+  box-shadow: var(--uber-shadow-sm);
+  backdrop-filter: blur(12px);
+}
+
 .logout-btn.visible {
-  display: none !important;
+  display: inline-flex !important;
 }
 /* =========================================================
    HEADER FLOTANTE
