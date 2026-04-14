@@ -862,7 +862,18 @@
     }
 
     .hidden-input {
-      display: none !important;
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      margin: -1px !important;
+      padding: 0 !important;
+      border: 0 !important;
+      overflow: hidden !important;
+      clip: rect(0 0 0 0) !important;
+      clip-path: inset(50%) !important;
+      white-space: nowrap !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
     }
 
     @media (max-width: 900px) {
@@ -2085,42 +2096,36 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const validation = await validateSelectedDocument(docType, file);
-      let remoteJson = null;
+      if (!validation.ok) {
+        return validation;
+      }
 
       try {
-        const { data: remoteData, error: remoteError } =
-          await supabaseService.client.functions.invoke("validate-driver-document", {
+        const { data: remoteData, error: remoteError } = await withTimeout(
+          supabaseService.client.functions.invoke("validate-driver-document", {
             body: {
               doc_type: docType,
               mime_type: file.type,
-              file_size: file.size
+              file_size: file.size,
+              client_validation_ok: validation.ok,
+              client_validation_kind: validation.kind
             }
-          });
+          }),
+          5000,
+          "La validación remota tardó demasiado"
+        );
 
-        if (!remoteError) {
-          remoteJson = remoteData;
-          console.log("[remote validation ok]", remoteJson);
-        } else {
+        if (remoteError) {
           console.warn(`[server validation retry ${attempt}]`, remoteError);
+        } else if (remoteData?.review_required === true && validation.kind !== "document-warning") {
+          return {
+            ...validation,
+            kind: "document-warning",
+            message: remoteData?.message || validation.message
+          };
         }
       } catch (remoteErr) {
         console.warn(`[server validation retry ${attempt}]`, remoteErr);
-      }
-
-      if (!validation.ok && remoteJson?.ok === true) {
-        return {
-          ok: true,
-          kind: "document-warning",
-          message: `${validation.message} · pero el documento fue aceptado por validación remota`
-        };
-      }
-
-      if (!validation.ok && remoteJson?.review_required === true) {
-        return {
-          ok: true,
-          kind: "document-warning",
-          message: remoteJson?.message || "Documento recibido. Quedo para revision manual"
-        };
       }
 
       return validation;
@@ -2244,10 +2249,13 @@ function renderDocumentWizard() {
   syncDocWizardStatus();
   updateWizardPrimaryState();
 
+  const state = docValidationState.get(docType);
+  const isValidated = !!file && (state === "ok" || state === "warning");
+
   docWizardBackBtn.textContent = currentDocumentIndex === 0 ? "Volver al vehÃ­culo" : "Volver";
   docWizardNextBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
     ? "Ir a revisiÃ³n"
-    : file
+    : isValidated
       ? "Continuar"
       : isOptional
         ? "Omitir y continuar"
@@ -2264,6 +2272,39 @@ function renderDocumentWizard() {
       globalStatus.textContent = "";
       globalStatus.classList.remove("visible", "success", "error");
     }
+
+function isIosLikeDevice() {
+  const ua = String(navigator.userAgent || "");
+  const touchMac = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return /iPad|iPhone|iPod/i.test(ua) || touchMac;
+}
+
+function canUseCustomCameraCapture() {
+  const hasCameraApi = !!navigator.mediaDevices?.getUserMedia;
+  const isSecure =
+    window.isSecureContext ||
+    location.hostname === "localhost" ||
+    location.hostname === "127.0.0.1";
+
+  return hasCameraApi && isSecure;
+}
+
+function shouldUseNativeCameraInput() {
+  return !canUseCustomCameraCapture() || isIosLikeDevice();
+}
+
+function openNativeCameraInput(meta = {}) {
+  if (!docWizardCameraInput) return;
+
+  if (meta?.capture === "user") {
+    docWizardCameraInput.setAttribute("capture", "user");
+  } else {
+    docWizardCameraInput.setAttribute("capture", "environment");
+  }
+
+  docWizardCameraInput.value = "";
+  docWizardCameraInput.click();
+}
 
     function getField(id) {
       return document.getElementById(id)?.value?.trim() || "";
@@ -2538,12 +2579,9 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   });
 
   try {
-    selectedFiles.set(docType, file);
-    renderDocWizardPreview(docType);
-    await cacheSelectedFile(docType, file);
-
     const name = file.name || DOC_META[docType]?.label || "archivo";
 
+    renderPreview(docType, file);
     setWizardVisualState("validating");
     setDocStatus(docType, `Analizando ${name}...`, "pending");
     updateWizardPrimaryState();
@@ -2551,11 +2589,14 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     const validation = await Promise.race([
       validateWithRetry(docType, file, 2),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("La validación tardó demasiado")), 15000)
+        setTimeout(() => reject(new Error("La validación tardó demasiado")), 30000)
       )
     ]);
 
     if (validation.ok) {
+      selectedFiles.set(docType, file);
+      await cacheSelectedFile(docType, file);
+
       if (validation.kind === "document-warning") {
         setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "warning");
         setWizardVisualState("warning");
@@ -2576,12 +2617,16 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
       }, 900);
     } else {
       clearAutoAdvanceTimer();
+      selectedFiles.delete(docType);
+      renderDocWizardPreview(docType);
       setDocStatus(docType, validation.message || "Documento inválido", "error");
       setWizardVisualState("error");
       triggerValidationFeedback("error");
     }
   } catch (err) {
     clearAutoAdvanceTimer();
+    selectedFiles.delete(docType);
+    renderDocWizardPreview(docType);
     console.error("[validateWithRetry error]", err);
     setDocStatus(
       docType,
@@ -2604,6 +2649,15 @@ function initFileInputs() {
     const meta = DOC_META[docType] || {};
     const isSelfie = meta.capture === "user";
 
+    if (shouldUseNativeCameraInput()) {
+      try {
+        openNativeCameraInput(meta);
+      } catch (nativeErr) {
+        console.error("[camera native] no se pudo abrir input capture", nativeErr);
+      }
+      return;
+    }
+
     try {
       const result = await openCameraCaptureModal({
         docType,
@@ -2624,12 +2678,7 @@ function initFileInputs() {
       console.warn("[camera custom] fallback a input nativo", err);
 
       try {
-        if (meta?.capture === "user") {
-          docWizardCameraInput?.setAttribute("capture", "user");
-        } else {
-          docWizardCameraInput?.setAttribute("capture", "environment");
-        }
-        docWizardCameraInput?.click();
+        openNativeCameraInput(meta);
       } catch (fallbackErr) {
         console.error("[camera fallback] no se pudo abrir input capture", fallbackErr);
       }
@@ -3088,7 +3137,7 @@ async function uploadDocument(docType, file) {
           quality: 0.8,
           outputType: "image/jpeg"
         }),
-        20000,
+        35000,
         "La compresión del archivo tardó demasiado"
       );
     }
