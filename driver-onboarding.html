@@ -2566,34 +2566,35 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
         triggerValidationFeedback("success");
       }
 
-clearAutoAdvanceTimer();
-autoAdvanceTimer = setTimeout(() => {
-  if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-    currentDocumentIndex += 1;
-    renderDocumentWizard();
-    updateWizardPrimaryState();
-  }
-}, 900);
+      clearAutoAdvanceTimer();
+      autoAdvanceTimer = setTimeout(() => {
+        if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+          currentDocumentIndex += 1;
+          renderDocumentWizard();
+          updateWizardPrimaryState();
+        }
+      }, 900);
     } else {
+      clearAutoAdvanceTimer();
       setDocStatus(docType, validation.message || "Documento inválido", "error");
       setWizardVisualState("error");
       triggerValidationFeedback("error");
     }
-  catch (err) {
-  clearAutoAdvanceTimer();
-  console.error("[validateWithRetry error]", err);
-  setDocStatus(
-    docType,
-    err?.message || "No pudimos validar el documento. Intentá nuevamente.",
-    "error"
-  );
-  setWizardVisualState("error");
-} finally {
+  } catch (err) {
+    clearAutoAdvanceTimer();
+    console.error("[validateWithRetry error]", err);
+    setDocStatus(
+      docType,
+      err?.message || "No pudimos validar el documento. Intentá nuevamente.",
+      "error"
+    );
+    setWizardVisualState("error");
+    triggerValidationFeedback("error");
+  } finally {
     setOnboardingBusy(false);
     updateWizardPrimaryState();
   }
-}
-    
+}    
 function initFileInputs() {
   docWizardCameraLabel?.addEventListener("click", async (e) => {
     e.preventDefault();
