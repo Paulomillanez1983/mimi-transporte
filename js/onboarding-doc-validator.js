@@ -1,9 +1,9 @@
-﻿// js/onboarding-doc-validator.js
+// js/onboarding-doc-validator.js
 
 function loadImageFromFile(file) {
   return new Promise((resolve, reject) => {
     if (!file || !String(file.type || "").startsWith("image/")) {
-      reject(new Error("Archivo no vÃ¡lido para anÃ¡lisis de imagen"));
+      reject(new Error("Archivo no válido para análisis de imagen"));
       return;
     }
 
@@ -24,14 +24,18 @@ function loadImageFromFile(file) {
   });
 }
 
+/**
+ * Crea un canvas de análisis reducido.
+ * Esto NO cambia el archivo que se sube.
+ * Solo reduce el costo del análisis local para móvil.
+ */
 function drawImageToCanvas(img) {
-  const maxSide = 1400;
+  const maxSide = 1280;
 
   const originalWidth = img.naturalWidth || img.width;
   const originalHeight = img.naturalHeight || img.height;
 
   const scale = Math.min(1, maxSide / Math.max(originalWidth, originalHeight));
-
   const targetWidth = Math.max(1, Math.round(originalWidth * scale));
   const targetHeight = Math.max(1, Math.round(originalHeight * scale));
 
@@ -42,28 +46,47 @@ function drawImageToCanvas(img) {
   canvas.height = targetHeight;
   ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
-  return { canvas, ctx, width: canvas.width, height: canvas.height };
+  return {
+    canvas,
+    ctx,
+    width: targetWidth,
+    height: targetHeight,
+    originalWidth,
+    originalHeight,
+    scale
+  };
 }
+
+/**
+ * En vez de leer TODA la imagen completa con getImageData(width,height),
+ * leemos una versión reducida para análisis estadístico.
+ */
 function getBrightnessStats(ctx, width, height) {
-  const sampleStep = Math.max(1, Math.floor(Math.min(width, height) / 120));
-  const imageData = ctx.getImageData(0, 0, width, height).data;
+  const sampleW = Math.min(width, 320);
+  const sampleH = Math.min(height, 320);
+
+  const temp = document.createElement("canvas");
+  temp.width = sampleW;
+  temp.height = sampleH;
+
+  const tctx = temp.getContext("2d", { willReadFrequently: true });
+  tctx.drawImage(ctx.canvas, 0, 0, width, height, 0, 0, sampleW, sampleH);
+
+  const imageData = tctx.getImageData(0, 0, sampleW, sampleH).data;
 
   let count = 0;
   let sum = 0;
   let sumSq = 0;
 
-  for (let y = 0; y < height; y += sampleStep) {
-    for (let x = 0; x < width; x += sampleStep) {
-      const i = (y * width + x) * 4;
-      const r = imageData[i];
-      const g = imageData[i + 1];
-      const b = imageData[i + 2];
-      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  for (let i = 0; i < imageData.length; i += 4) {
+    const r = imageData[i];
+    const g = imageData[i + 1];
+    const b = imageData[i + 2];
+    const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-      sum += lum;
-      sumSq += lum * lum;
-      count++;
-    }
+    sum += lum;
+    sumSq += lum * lum;
+    count++;
   }
 
   const mean = count ? sum / count : 0;
@@ -80,6 +103,7 @@ function getEdgeDensity(ctx, width, height) {
   const temp = document.createElement("canvas");
   temp.width = sampleW;
   temp.height = sampleH;
+
   const tctx = temp.getContext("2d", { willReadFrequently: true });
   tctx.drawImage(ctx.canvas, 0, 0, width, height, 0, 0, sampleW, sampleH);
 
@@ -208,12 +232,20 @@ export async function validateSelectedDocument(docType, file) {
   }
 
   const img = await loadImageFromFile(file);
-  const { ctx, width, height } = drawImageToCanvas(img);
+  const {
+    ctx,
+    width,
+    height,
+    originalWidth,
+    originalHeight
+  } = drawImageToCanvas(img);
+
   const brightness = getBrightnessStats(ctx, width, height);
   const edgeDensity = getEdgeDensity(ctx, width, height);
   const rules = getDocRules(docType);
 
-  const tooSmall = width < rules.minWidth || height < rules.minHeight;
+  // Tamaño real original de cámara, no solo el canvas reducido
+  const tooSmall = originalWidth < rules.minWidth || originalHeight < rules.minHeight;
   const tooDark = brightness.mean < rules.minBrightness;
   const tooBright = brightness.mean > rules.maxBrightness;
   const tooFlat = brightness.stdDev < rules.minStdDev;
@@ -242,7 +274,7 @@ export async function validateSelectedDocument(docType, file) {
       return {
         ok: false,
         kind: "selfie",
-        message: "Selfie con baja calidad. Proba con mejor luz o sosteniendo el celu un poco mas quieto"
+        message: "Selfie con baja calidad. Probá con mejor luz o sosteniendo el celu un poco más quieto"
       };
     }
 
@@ -250,19 +282,23 @@ export async function validateSelectedDocument(docType, file) {
       ok: true,
       kind: "selfie",
       message: face.supported
-        ? "âœ… Selfie vÃ¡lida. Rostro detectado"
-        : "âœ… Selfie lista para subir"
+        ? "✅ Selfie válida. Rostro detectado"
+        : "✅ Selfie lista para subir"
     };
   }
 
-  const aspectRatio = width > height ? width / height : height / width;
+  const aspectRatio =
+    originalWidth > originalHeight
+      ? originalWidth / originalHeight
+      : originalHeight / originalWidth;
+
   const looksLikeDocumentShape = aspectRatio >= 1.2 && aspectRatio <= 2.2;
 
   if (tooSmall) {
     return {
       ok: false,
       kind: "document",
-      message: "Imagen chica. Proba una foto un poco mas cerca y enfocada"
+      message: "Imagen chica. Probá una foto un poco más cerca y enfocada"
     };
   }
 
@@ -270,7 +306,7 @@ export async function validateSelectedDocument(docType, file) {
     return {
       ok: false,
       kind: "document",
-      message: "La foto estÃ¡ muy oscura"
+      message: "La foto está muy oscura"
     };
   }
 
@@ -287,7 +323,7 @@ export async function validateSelectedDocument(docType, file) {
       return {
         ok: true,
         kind: "document-warning",
-        message: "La foto se ve justa de nitidez, pero la vamos a enviar igual para revision"
+        message: "La foto se ve justa de nitidez, pero la vamos a enviar igual para revisión"
       };
     }
 
@@ -302,13 +338,13 @@ export async function validateSelectedDocument(docType, file) {
     return {
       ok: true,
       kind: "document-warning",
-      message: "âš  RevisÃ¡ el encuadre: no parece documento completo"
+      message: "⚠ Revisá el encuadre: no parece documento completo"
     };
   }
 
   return {
     ok: true,
     kind: "document",
-    message: "âœ… Documento detectado y listo para subir"
+    message: "✅ Documento detectado y listo para subir"
   };
 }
