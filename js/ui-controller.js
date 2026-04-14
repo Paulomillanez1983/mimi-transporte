@@ -537,7 +537,6 @@ if (btnFinish) {
         this.hideNavigation();
         this.hideArrival();
         this.showWaitingState();
-        this.showToast('Viaje finalizado', 'success');
         break;
     }
   }
@@ -1342,6 +1341,16 @@ hideArrival() {
     if (!container) {
       console.log('[Toast]', message);
       return;
+    }
+
+    const duplicateToast = [...container.querySelectorAll('.toast')]
+      .find((item) => {
+        const text = item.querySelector('.toast-message')?.textContent || '';
+        return text === message && item.classList.contains(`toast-${type}`);
+      });
+
+    if (duplicateToast) {
+      duplicateToast.remove();
     }
 
     const toast = document.createElement('div');
