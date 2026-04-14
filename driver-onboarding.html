@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="./styles.css" />
 <link rel="stylesheet" href="./css/onboarding-camera.css" />
 
-<script src="./libs/supabase-js.js"></script>
+<script src="./libs/supabase-js.js">
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -3054,7 +3054,6 @@ function explainUploadError(err) {
 
   return "❌ " + (msg || "No pudimos enviar la documentación.");
 }
-</script>
     
 async function uploadDocument(docType, file) {
   try {
