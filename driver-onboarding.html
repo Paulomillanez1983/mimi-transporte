@@ -2566,12 +2566,14 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
         triggerValidationFeedback("success");
       }
 
-      clearAutoAdvanceTimer();
-      autoAdvanceTimer = setTimeout(() => {
-        currentDocumentIndex = Math.min(currentDocumentIndex + 1, DOCUMENT_FLOW.length - 1);
-        renderDocumentWizard();
-        updateWizardPrimaryState();
-      }, 900);
+clearAutoAdvanceTimer();
+autoAdvanceTimer = setTimeout(() => {
+  if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+    currentDocumentIndex += 1;
+    renderDocumentWizard();
+    updateWizardPrimaryState();
+  }
+}, 900);
     } else {
       setDocStatus(docType, validation.message || "Documento inválido", "error");
       setWizardVisualState("error");
