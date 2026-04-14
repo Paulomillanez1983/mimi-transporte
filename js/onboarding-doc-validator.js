@@ -25,16 +25,25 @@ function loadImageFromFile(file) {
 }
 
 function drawImageToCanvas(img) {
+  const maxSide = 1400;
+
+  const originalWidth = img.naturalWidth || img.width;
+  const originalHeight = img.naturalHeight || img.height;
+
+  const scale = Math.min(1, maxSide / Math.max(originalWidth, originalHeight));
+
+  const targetWidth = Math.max(1, Math.round(originalWidth * scale));
+  const targetHeight = Math.max(1, Math.round(originalHeight * scale));
+
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
-  canvas.width = img.naturalWidth || img.width;
-  canvas.height = img.naturalHeight || img.height;
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
   return { canvas, ctx, width: canvas.width, height: canvas.height };
 }
-
 function getBrightnessStats(ctx, width, height) {
   const sampleStep = Math.max(1, Math.floor(Math.min(width, height) / 120));
   const imageData = ctx.getImageData(0, 0, width, height).data;
