@@ -2579,15 +2579,16 @@ autoAdvanceTimer = setTimeout(() => {
       setWizardVisualState("error");
       triggerValidationFeedback("error");
     }
-  } catch (err) {
-    console.error("[validateWithRetry error]", err);
-    setDocStatus(
-      docType,
-      err?.message || "No pudimos validar el documento. Intentá nuevamente.",
-      "error"
-    );
-    setWizardVisualState("error");
-  } finally {
+  catch (err) {
+  clearAutoAdvanceTimer();
+  console.error("[validateWithRetry error]", err);
+  setDocStatus(
+    docType,
+    err?.message || "No pudimos validar el documento. Intentá nuevamente.",
+    "error"
+  );
+  setWizardVisualState("error");
+} finally {
     setOnboardingBusy(false);
     updateWizardPrimaryState();
   }
