@@ -2803,7 +2803,7 @@ function getChosenFile(docType) {
       }
     }
 
-async function saveProfilePartial(payload) {
+async function saveProfilePartial(payload, options = {}) {
   if (isProbablyOffline()) {
     throw offlineError("No hay conexión para guardar el perfil");
   }
@@ -2813,6 +2813,9 @@ async function saveProfilePartial(payload) {
   }
 
   try {
+    const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : 20000;
+    const timeoutMessage = options.timeoutMessage || "La actualización del perfil tardó demasiado";
+
     const cleanPayload = {
       user_id: currentUser.id,
       email: currentUser.email || null,
@@ -2828,8 +2831,8 @@ async function saveProfilePartial(payload) {
         })
         .select()
         .single(),
-      20000,
-      "La actualización del perfil tardó demasiado"
+      timeoutMs,
+      timeoutMessage
     );
 
     if (error) {
@@ -3353,13 +3356,29 @@ async function submitAll(triggerButton = submitAllBtn) {
 
     setGlobalStatus("Finalizando envío...", "success");
 
-    await saveProfilePartial({
-      documents_completed: true,
-      onboarding_status: "PENDIENTE_REVISION",
-      documents_approved: false,
-      background_check_due_date: dueDate,
-      background_check_pending: !backgroundCheckProvided
-    });
+    try {
+      await saveProfilePartial({
+        documents_completed: true,
+        onboarding_status: "PENDIENTE_REVISION",
+        documents_approved: false,
+        background_check_due_date: dueDate,
+        background_check_pending: !backgroundCheckProvided
+      }, {
+        timeoutMs: 45000,
+        timeoutMessage: "La actualización final del perfil tardó demasiado"
+      });
+    } catch (finalProfileErr) {
+      console.warn("[submitAll] final profile update warning:", finalProfileErr);
+
+      if (finalProfileErr?.code !== "TIMEOUT") {
+        throw finalProfileErr;
+      }
+
+      setGlobalStatus(
+        "Los documentos ya fueron recibidos. La confirmación final tardó más de lo normal, pero vamos a continuar.",
+        "success"
+      );
+    }
 
     const successMessage = backgroundCheckProvided
       ? "✅ Documentación recibida correctamente. Tu cuenta quedó en revisión y los archivos se analizarán en segundo plano."
