@@ -3116,8 +3116,10 @@ async function uploadDocument(docType, file) {
       `La subida de ${DOC_META[docType]?.label || docType} tardó demasiado`
     );
 
-    if (uploadError) throw uploadError;
-
+if (uploadError) {
+  console.error("[UPLOAD STORAGE ERROR]", uploadError);
+  throw uploadError;
+}
     setDocStatus(docType, "Guardando registro...", "pending");
     setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema...`, "success");
 
@@ -3143,8 +3145,10 @@ async function uploadDocument(docType, file) {
       `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
     );
 
-    if (upsertError) throw upsertError;
-
+if (upsertError) {
+  console.error("[DB ERROR driver_documents]", upsertError);
+  throw upsertError;
+}
     setDocStatus(
       docType,
       "Archivo subido correctamente. Quedó pendiente de análisis/revisión",
@@ -3330,6 +3334,7 @@ async function submitAll(triggerButton = submitAllBtn) {
     }, 1400);
   } catch (err) {
     console.error("[submitAll] error:", err);
+    alert("ERROR REAL:\n" + (err?.message || JSON.stringify(err)));
     setGlobalStatus(explainUploadError(err), "error");
   } finally {
     setOnboardingBusy(false);
