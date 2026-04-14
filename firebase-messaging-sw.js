@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'mimi-client-v7';
+const CACHE_NAME = 'mimi-client-v8';
 const APP_SHELL = '/mimi-transporte/index.html';
 const APP_BASE_PATH = '/mimi-transporte/';
 
@@ -23,7 +23,8 @@ const STATIC_ASSETS = [
   '/mimi-transporte/assets/icons/icon-192x192.png',
   '/mimi-transporte/assets/icons/badge-icon.png',
   '/mimi-transporte/assets/icons/mimi-mark.svg',
-  '/mimi-transporte/manifest.json'
+  '/mimi-transporte/manifest.json',
+  '/mimi-transporte/manifest-driver.json'
 ];
 
 const DEFAULT_ICON = `${APP_BASE_PATH}assets/icons/icon-192x192.png`;
