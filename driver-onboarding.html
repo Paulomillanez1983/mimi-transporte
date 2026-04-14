@@ -1983,57 +1983,30 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
       let remoteJson = null;
 
       try {
-        const {
-          data: { session }
-        } = await supabaseService.client.auth.getSession();
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos
-
-        const headers = {
-          "Content-Type": "application/json",
-          apikey: supabaseService.client.supabaseKey,
-          ...(session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {})
-        };
-
-        try {
-          const response = await fetch(
-            "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/validate-driver-document",
-            {
-              method: "POST",
-              headers,
-              body: JSON.stringify({
-                doc_type: docType,
-                mime_type: file.type,
-                file_size: file.size
-              }),
-              signal: controller.signal
+        const { data: remoteData, error: remoteError } =
+          await supabaseService.client.functions.invoke("validate-driver-document", {
+            body: {
+              doc_type: docType,
+              mime_type: file.type,
+              file_size: file.size
             }
-          );
+          });
 
-          clearTimeout(timeoutId);
-
-          if (!response.ok) {
-            throw new Error(`Remote validation HTTP ${response.status}`);
-          }
-
-          remoteJson = await response.json();
+        if (!remoteError) {
+          remoteJson = remoteData;
           console.log("[remote validation ok]", remoteJson);
-        } catch (remoteErr) {
-          clearTimeout(timeoutId);
-          console.warn(`[server validation retry ${attempt}]`, remoteErr);
+        } else {
+          console.warn(`[server validation retry ${attempt}]`, remoteError);
         }
-      } catch (sessionErr) {
-        console.warn(`[server session retry ${attempt}]`, sessionErr);
+      } catch (remoteErr) {
+        console.warn(`[server validation retry ${attempt}]`, remoteErr);
       }
 
       if (!validation.ok && remoteJson?.ok === true) {
         return {
           ok: true,
           kind: "document-warning",
-          message: `${validation.message} Â· pero el documento fue aceptado por validaciÃ³n remota`
+          message: `${validation.message} · pero el documento fue aceptado por validación remota`
         };
       }
 
@@ -2055,8 +2028,7 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
   }
 
   throw lastError || new Error("No pudimos validar el documento");
-}
-    
+}    
 function renderDocWizardPreview(docType) {
   const file = getChosenFile(docType);
 
