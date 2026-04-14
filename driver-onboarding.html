@@ -2565,7 +2565,9 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
       clearAutoAdvanceTimer();
       autoAdvanceTimer = setTimeout(() => {
         if (!onboardingBusy) {
-          goNextDocument();
+currentDocumentIndex = Math.min(currentDocumentIndex + 1, DOCUMENT_FLOW.length - 1);
+renderDocumentWizard();
+updateWizardPrimaryState();
         }
       }, 900);
 
@@ -2753,21 +2755,51 @@ async function saveProfilePartial(payload) {
     throw offlineError("No hay conexión para guardar el perfil");
   }
 
-  const { error } = await withTimeout(
-    supabaseService.client
-      .from("driver_profiles")
-      .upsert({
-        user_id: currentUser.id,
-        email: currentUser.email || null,
-        ...payload
-      }),
-    20000,
-    "La actualización del perfil tardó demasiado"
-  );
+  if (!currentUser?.id) {
+    throw new Error("Usuario no autenticado");
+  }
 
-  if (error) throw error;
-}
-    
+  try {
+    const cleanPayload = {
+      user_id: currentUser.id,
+      email: currentUser.email || null,
+      ...payload,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await withTimeout(
+      supabaseService.client
+        .from("driver_profiles")
+        .upsert(cleanPayload, {
+          onConflict: "user_id"
+        })
+        .select()
+        .single(),
+      20000,
+      "La actualización del perfil tardó demasiado"
+    );
+
+    if (error) {
+      console.error("[saveProfilePartial] Supabase error:", error);
+      throw new Error(error.message || "Error al guardar el perfil");
+    }
+
+    return data;
+
+  } catch (err) {
+    console.error("[saveProfilePartial] Error:", err);
+
+    if (err?.message?.includes("JWT") || err?.message?.includes("Auth")) {
+      throw new Error("Sesión expirada. Volvé a iniciar sesión.");
+    }
+
+    if (err?.message?.includes("timeout")) {
+      throw new Error("La conexión es lenta. Intentá nuevamente.");
+    }
+
+    throw err;
+  }
+}    
 function saveDraft() {
   const payload = {
     full_name: getField("full_name"),
