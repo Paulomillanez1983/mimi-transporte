@@ -65,6 +65,34 @@ class DriverApp {
       });
   }
 
+  _syncConnectionMenuItem() {
+    const settingsBtn = document.getElementById('menu-settings');
+    if (!settingsBtn) return;
+
+    const textEl = settingsBtn.querySelector('.menu-item-text');
+    const hintEl = settingsBtn.querySelector('.menu-item-hint');
+    const iconEl = settingsBtn.querySelector('.menu-item-icon');
+    const hasActiveTrip = !!tripManager.getCurrentTrip?.();
+
+    if (textEl) {
+      textEl.textContent = this._onlineStatus ? 'Ponerte offline' : 'Conectarte';
+    }
+
+    if (hintEl) {
+      hintEl.textContent = hasActiveTrip
+        ? 'No disponible mientras hay un viaje en curso'
+        : this._onlineStatus
+          ? 'Quedar fuera de servicio desde el menú'
+          : 'Entrar en línea sin volver al mapa';
+    }
+
+    if (iconEl) {
+      iconEl.innerHTML = this._onlineStatus ? '&#128308;' : '&#128994;';
+    }
+
+    settingsBtn.classList.toggle('menu-item-danger', this._onlineStatus && !hasActiveTrip);
+  }
+
   async _ensureDriverShellReady() {
     if (!('serviceWorker' in navigator)) return null;
 
@@ -1206,6 +1234,7 @@ _setupUI() {
         this._onlineStatus ? 'ONLINE' : 'OFFLINE',
         this._onlineStatus
       );
+      this._syncConnectionMenuItem();
 
       uiController.showToast(
         this._onlineStatus ? 'Ya estas en linea' : 'Quedaste fuera de linea',
@@ -1267,27 +1296,9 @@ _setupUI() {
   }
 
   if (settingsBtn) {
-    settingsBtn.addEventListener('click', () => {
+    settingsBtn.addEventListener('click', async () => {
       uiController.closeMenu?.();
-      uiController.showInfoSheet?.({
-        title: 'Estado de conexion',
-        description: this._onlineStatus
-          ? 'Estas en linea. Si queres salir de linea, hacelo desde aca sin tapar el mapa.'
-          : 'Estas fuera de linea. Cuando quieras volver a trabajar, conectate desde aca.',
-        metrics: [
-          { label: 'Sesion', value: this._authUserId ? 'Activa' : 'Sin datos' },
-          { label: 'Modo', value: this._onlineStatus ? 'En linea' : 'Fuera de linea' }
-        ],
-        actions: [
-          {
-            label: this._onlineStatus ? 'Ponerte offline' : 'Conectarte',
-            variant: this._onlineStatus ? 'cancel' : 'navigate',
-            onClick: async () => {
-              await this._fabClickHandler();
-            }
-          }
-        ]
-      });
+      await this._fabClickHandler();
     });
   }
 
@@ -1306,6 +1317,8 @@ _setupUI() {
       this._openDriverProfileSheet();
     });
   }
+
+  this._syncConnectionMenuItem();
 
   window.addEventListener('driverAction', this._driverActionHandler);
 }
