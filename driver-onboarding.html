@@ -2531,105 +2531,64 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   if (onboardingBusy) return;
 
   clearAutoAdvanceTimer();
+
   setOnboardingBusy(true, {
-    text: "Revisando archivo...",
+    text: "Validando documento...",
     docMode: "validating"
   });
 
   selectedFiles.set(docType, file);
-  renderPreview(docType, file);
+  renderDocWizardPreview(docType);
   await cacheSelectedFile(docType, file);
 
   const name = file.name || DOC_META[docType]?.label || "archivo";
 
   setWizardVisualState("validating");
-  setDocStatus(docType, `Revisando ${name}...`, "pending");
+  setDocStatus(docType, `Analizando ${name}...`, "pending");
   updateWizardPrimaryState();
-  updateSticky(3);
 
   try {
-    // SOLO validación local rápida
-    const validation = await validateSelectedDocument(docType, file);
+    const validation = await validateWithRetry(docType, file, 2);
 
     if (validation.ok) {
       if (validation.kind === "document-warning") {
-        setDocStatus(
-          docType,
-          `${sourceLabel}: ${name} · ${validation.message}. Se validará en servidor después de subir`,
-          "warning"
-        );
+        setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "warning");
         setWizardVisualState("warning");
         triggerValidationFeedback("warning");
       } else {
-        setDocStatus(
-          docType,
-          `${sourceLabel}: ${name} · ${validation.message}`,
-          "ok"
-        );
+        setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "ok");
         setWizardVisualState("success");
         triggerValidationFeedback("success");
       }
-    } else {
-      const isHardError =
-        validation.kind === "format" || validation.kind === "missing";
 
-      if (isHardError) {
-        setDocStatus(
-          docType,
-          `${sourceLabel}: ${name} · ${validation.message}`,
-          "error"
-        );
-        setWizardVisualState("error");
-        triggerValidationFeedback("error");
-      } else {
-        setDocStatus(
-          docType,
-          `${sourceLabel}: ${name} · ${validation.message}. Podés continuar, pero puede quedar observado`,
-          "warning"
-        );
-        setWizardVisualState("warning");
-        triggerValidationFeedback("warning");
-      }
+      // 👉 AUTO AVANCE (PRO UX)
+      clearAutoAdvanceTimer();
+      autoAdvanceTimer = setTimeout(() => {
+        if (!onboardingBusy) {
+          goNextDocument();
+        }
+      }, 900);
+
+    } else {
+      setDocStatus(docType, validation.message || "Documento inválido", "error");
+      setWizardVisualState("error");
+      triggerValidationFeedback("error");
     }
+
   } catch (err) {
-    console.error("[setSelectedFile validation]", docType, err);
+    console.error("[validateWithRetry error]", err);
+
     setDocStatus(
       docType,
-      `${sourceLabel}: ${name} · Revisión local demorada, podés continuar`,
-      "warning"
+      "No pudimos validar el documento. Intentá nuevamente.",
+      "error"
     );
-    setWizardVisualState("warning");
-    triggerValidationFeedback("warning");
-  } finally {
-    try {
-      updateDocumentsProgressUI();
-      updateOverallStepperState();
-      renderDocumentWizard();
-      updateSticky(3);
-      updateWizardPrimaryState();
-    } catch (renderErr) {
-      console.error("[setSelectedFile post-render]", docType, renderErr);
-    }
-    setOnboardingBusy(false);
+
+    setWizardVisualState("error");
   }
 
-  if (docType === getCurrentDocType()) {
-    const state = docValidationState.get(docType);
-    const passed = state === "ok" || state === "warning";
-
-    if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-      autoAdvanceTimer = setTimeout(() => {
-        currentDocumentIndex += 1;
-        setWizardVisualState("idle");
-        renderDocumentWizard();
-        updateSticky(3);
-        updateWizardPrimaryState();
-        autoAdvanceTimer = null;
-      }, 500);
-    }
-  }
-}
-    
+  setOnboardingBusy(false);
+}    
 function initFileInputs() {
   docWizardCameraLabel?.addEventListener("click", async (e) => {
     e.preventDefault();
