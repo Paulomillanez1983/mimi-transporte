@@ -529,8 +529,12 @@ if (btnFinish) {
         break;
 
       case 'ARRIVED_PICKUP':
+        this.hideArrival();
+        this.showNavigationState(trip);
+        break;
+
       case 'ARRIVED_DESTINATION':
-        this.showArrival();
+        this.showArrival(trip);
         break;
 
       case 'TRIP_COMPLETED':
@@ -1303,16 +1307,26 @@ hideNavigation() {
   this.state.currentTrip = null;
   this._lastTripRendered = null;
 }
-showArrival() {
+showArrival(trip = this.state.currentTrip) {
   const panel = this.elements['arrival-panel'];
   if (!panel) return;
+
+  const hasTrip = !!trip?.id;
+  const isDestinationTrip = this._isDestinationState(trip?.estado);
+
+  if (!hasTrip || !isDestinationTrip) {
+    this.hideArrival();
+    return;
+  }
+
+  this.state.currentTrip = trip;
 
   panel.classList.add('active');
   panel.setAttribute('aria-hidden', 'false');
   panel.style.opacity = '1';
   panel.style.visibility = 'visible';
   panel.style.pointerEvents = 'auto';
-  panel.style.transform = 'translateY(0)';
+  panel.style.transform = '';
 
   soundManager.play('arrival');
   this._haptic('success');
@@ -1332,7 +1346,7 @@ hideArrival() {
     panel.style.opacity = '0';
     panel.style.visibility = 'hidden';
     panel.style.pointerEvents = 'none';
-    panel.style.transform = 'translateY(calc(100% + 32px))';
+    panel.style.transform = '';
   }
   this._clearArrivalTimer();
 }
