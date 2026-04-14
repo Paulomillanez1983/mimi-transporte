@@ -1,0 +1,318 @@
+html.camera-capture-open,
+body.camera-capture-open {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+.camera-capture-modal[hidden] {
+  display: none !important;
+}
+
+.camera-capture-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background:
+    radial-gradient(circle at top, rgba(47,111,237,0.18), transparent 30%),
+    rgba(4, 10, 22, 0.96);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease;
+}
+
+.camera-capture-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.camera-capture-panel {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100dvh;
+  padding:
+    calc(12px + env(safe-area-inset-top, 0px))
+    12px
+    calc(16px + env(safe-area-inset-bottom, 0px))
+    12px;
+  gap: 12px;
+}
+
+.camera-capture-topbar,
+.camera-capture-actions {
+  width: min(100%, 880px);
+  margin: 0 auto;
+}
+
+.camera-capture-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.camera-capture-meta {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.camera-capture-title {
+  font-size: clamp(20px, 4vw, 28px);
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.camera-capture-subtitle {
+  color: rgba(255,255,255,0.78);
+  font-size: 14px;
+  line-height: 1.45;
+  max-width: 640px;
+}
+
+.camera-capture-close {
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  min-width: 46px;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.camera-capture-shell {
+  position: relative;
+  width: min(100%, 880px);
+  margin: 0 auto;
+  min-height: 0;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #030712;
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 22px 64px rgba(0,0,0,0.40);
+}
+
+.camera-capture-video {
+  width: 100%;
+  height: 100%;
+  min-height: 56dvh;
+  display: block;
+  object-fit: contain;
+  background: #000;
+}
+
+.camera-capture-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.camera-capture-guide {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(84vw, 520px);
+  aspect-ratio: 1.58 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 24px;
+  border: 2px solid rgba(255,255,255,0.96);
+  box-shadow:
+    0 0 0 9999px rgba(0,0,0,0.42),
+    0 0 0 1px rgba(255,255,255,0.16) inset,
+    0 0 32px rgba(255,255,255,0.18);
+}
+
+.camera-capture-guide.is-document::before,
+.camera-capture-guide.is-document::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 18px;
+  border: 1px dashed rgba(255,255,255,0.34);
+}
+
+.camera-capture-guide.is-selfie {
+  width: min(72vw, 360px);
+  aspect-ratio: 0.78 / 1;
+  border-radius: 999px;
+}
+
+.camera-capture-guide.is-selfie::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 999px;
+  border: 1px dashed rgba(255,255,255,0.34);
+}
+
+.camera-capture-corners span {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border-color: #7dd3fc;
+  border-style: solid;
+  border-width: 0;
+}
+
+.camera-capture-corners span:nth-child(1) {
+  top: 10px;
+  left: 10px;
+  border-top-width: 4px;
+  border-left-width: 4px;
+  border-top-left-radius: 12px;
+}
+
+.camera-capture-corners span:nth-child(2) {
+  top: 10px;
+  right: 10px;
+  border-top-width: 4px;
+  border-right-width: 4px;
+  border-top-right-radius: 12px;
+}
+
+.camera-capture-corners span:nth-child(3) {
+  bottom: 10px;
+  left: 10px;
+  border-bottom-width: 4px;
+  border-left-width: 4px;
+  border-bottom-left-radius: 12px;
+}
+
+.camera-capture-corners span:nth-child(4) {
+  bottom: 10px;
+  right: 10px;
+  border-bottom-width: 4px;
+  border-right-width: 4px;
+  border-bottom-right-radius: 12px;
+}
+
+.camera-capture-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.72));
+}
+
+.camera-capture-hint {
+  text-align: center;
+  color: rgba(255,255,255,0.88);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.camera-capture-status {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  min-height: 18px;
+}
+
+.camera-capture-status[data-state="success"] {
+  color: #86efac;
+}
+
+.camera-capture-status[data-state="warning"] {
+  color: #fcd34d;
+}
+
+.camera-capture-status[data-state="error"] {
+  color: #fca5a5;
+}
+
+.camera-capture-preview-wrap {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.94);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.camera-capture-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 22px;
+}
+
+.camera-capture-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.camera-capture-btn {
+  min-height: 52px;
+  border-radius: 18px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 0 16px;
+}
+
+.camera-capture-btn--ghost {
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.camera-capture-btn--secondary {
+  background: rgba(255,255,255,0.14);
+  color: #fff;
+}
+
+.camera-capture-btn--primary {
+  background: linear-gradient(135deg, #2f6fed, #5b8cff);
+  color: #fff;
+  box-shadow: 0 16px 34px rgba(47,111,237,0.30);
+}
+
+.camera-capture-btn:disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.camera-capture-hidden-canvas {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .camera-capture-panel {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .camera-capture-shell {
+    border-radius: 22px;
+  }
+
+  .camera-capture-video {
+    min-height: 58dvh;
+  }
+
+  .camera-capture-guide.is-document {
+    width: min(90vw, 520px);
+  }
+
+  .camera-capture-guide.is-selfie {
+    width: min(76vw, 360px);
+  }
+
+  .camera-capture-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
