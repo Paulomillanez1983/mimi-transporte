@@ -1091,7 +1091,8 @@ async _requireValidAuth() {
 
       if (distPickup < 100) {
         this._setFlowState('ARRIVED_PICKUP');
-        uiController.showArrival?.();
+        uiController.hideArrival?.();
+        uiController.showNavigationState?.(currentTrip);
       } else {
         uiController.hideArrival?.();
       }
@@ -1110,7 +1111,7 @@ async _requireValidAuth() {
 
       if (distDestination < 100) {
         this._setFlowState('ARRIVED_DESTINATION');
-        uiController.showArrival?.();
+        uiController.showArrival?.(currentTrip);
       } else {
         uiController.hideArrival?.();
       }
