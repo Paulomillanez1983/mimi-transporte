@@ -2942,7 +2942,6 @@ async function mapWithConcurrency(items, limit, worker) {
   await Promise.all(workers);
   return results;
 }
-<script type="module">
 function isProbablyOffline() {
   return typeof navigator !== "undefined" && navigator.onLine === false;
 }
