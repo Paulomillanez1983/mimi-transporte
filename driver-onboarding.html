@@ -1769,39 +1769,33 @@ function setDocCache(cache) {
 
 async function cacheSelectedFile(docType, file) {
   try {
-    if (!file || !String(file.type || "").startsWith("image/")) return;
-    const base64 = await fileToBase64(file);
+    if (!file) return;
+
     const cache = getDocCache();
     cache[docType] = {
       name: file.name || `${docType}.jpg`,
-      type: file.type || "image/jpeg",
+      type: file.type || "application/octet-stream",
       size: file.size || 0,
-      base64,
-      updatedAt: Date.now()
+      updatedAt: Date.now(),
+      cached: true
     };
     setDocCache(cache);
   } catch (err) {
-    console.warn("[doc cache] no se pudo guardar", err);
+    console.warn("[doc cache] no se pudo guardar metadata", err);
   }
 }
-
 function restoreCachedFiles() {
   const cache = getDocCache();
+
   Object.entries(cache).forEach(([docType, value]) => {
     try {
-      if (!value?.base64 || !value?.type) return;
-      const bytes = atob(value.base64);
-      const arr = new Uint8Array(bytes.length);
-      for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
-      const file = new File([arr], value.name || `${docType}.jpg`, {
-        type: value.type || "image/jpeg"
-      });
-      selectedFiles.set(docType, file);
+      if (!value?.cached) return;
+
       if (!docValidationState.has(docType)) {
         docValidationState.set(docType, "warning");
         docValidationMessage.set(
           docType,
-          "Archivo recuperado. Podés continuar y lo revisamos al enviar."
+          "Archivo marcado como seleccionado previamente. Si recargaste la página, volvé a elegirlo antes de enviar."
         );
       }
     } catch (err) {
@@ -1809,7 +1803,6 @@ function restoreCachedFiles() {
     }
   });
 }
-
 function setWizardVisualState(state = "idle") {
   if (!docWizardCard) return;
   docWizardCard.classList.remove("is-validating", "is-success", "is-error", "is-warning");
@@ -2434,7 +2427,7 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
 
   clearAutoAdvanceTimer();
   setOnboardingBusy(true, {
-    text: "Validando documento...",
+    text: "Revisando archivo...",
     docMode: "validating"
   });
 
@@ -2445,34 +2438,48 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   const name = file.name || DOC_META[docType]?.label || "archivo";
 
   setWizardVisualState("validating");
-  setDocStatus(docType, `Analizando ${name}...`, "pending");
+  setDocStatus(docType, `Revisando ${name}...`, "pending");
   updateWizardPrimaryState();
   updateSticky(3);
 
   try {
-    const validation = await validateWithRetry(docType, file, 2);
+    // SOLO validación local rápida
+    const validation = await validateSelectedDocument(docType, file);
 
     if (validation.ok) {
       if (validation.kind === "document-warning") {
-        setDocStatus(docType, `${sourceLabel}: ${name} Â· ${validation.message}`, "warning");
+        setDocStatus(
+          docType,
+          `${sourceLabel}: ${name} · ${validation.message}. Se validará en servidor después de subir`,
+          "warning"
+        );
         setWizardVisualState("warning");
         triggerValidationFeedback("warning");
       } else {
-        setDocStatus(docType, `${sourceLabel}: ${name} Â· ${validation.message}`, "ok");
+        setDocStatus(
+          docType,
+          `${sourceLabel}: ${name} · ${validation.message}`,
+          "ok"
+        );
         setWizardVisualState("success");
         triggerValidationFeedback("success");
       }
     } else {
-      const isHardError = validation.kind === "format" || validation.kind === "missing";
+      const isHardError =
+        validation.kind === "format" || validation.kind === "missing";
 
       if (isHardError) {
-        setDocStatus(docType, `${sourceLabel}: ${name} Â· ${validation.message}`, "error");
+        setDocStatus(
+          docType,
+          `${sourceLabel}: ${name} · ${validation.message}`,
+          "error"
+        );
         setWizardVisualState("error");
         triggerValidationFeedback("error");
       } else {
         setDocStatus(
           docType,
-          `${sourceLabel}: ${name} Â· ${validation.message}. Lo enviamos igual para revisión manual`,
+          `${sourceLabel}: ${name} · ${validation.message}. Podés continuar, pero puede quedar observado`,
           "warning"
         );
         setWizardVisualState("warning");
@@ -2483,7 +2490,7 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     console.error("[setSelectedFile validation]", docType, err);
     setDocStatus(
       docType,
-      `${sourceLabel}: ${name} · Validación demorada, podés continuar`,
+      `${sourceLabel}: ${name} · Revisión local demorada, podés continuar`,
       "warning"
     );
     setWizardVisualState("warning");
@@ -2502,21 +2509,23 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   }
 
   if (docType === getCurrentDocType()) {
-const state = docValidationState.get(docType);
-const passed = state === "ok" || state === "warning";
-      if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-        autoAdvanceTimer = setTimeout(() => {
-          currentDocumentIndex += 1;
-          setWizardVisualState("idle");
-           renderDocumentWizard();
-          updateSticky(3);
-          updateWizardPrimaryState();
-          autoAdvanceTimer = null;
-        }, 280);
-      }
-    }  
+    const state = docValidationState.get(docType);
+    const passed = state === "ok" || state === "warning";
+
+    if (passed && currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
+      autoAdvanceTimer = setTimeout(() => {
+        currentDocumentIndex += 1;
+        setWizardVisualState("idle");
+        renderDocumentWizard();
+        updateSticky(3);
+        updateWizardPrimaryState();
+        autoAdvanceTimer = null;
+      }, 500);
+    }
   }
-function initFileInputs() {
+}
+    
+  function initFileInputs() {
   docWizardCameraInput?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0] || null;
     if (!file) return;
@@ -2683,127 +2692,185 @@ function saveDraft() {
     console.warn("[restoreDraft]", err);
   }
 }
-    async function uploadDocument(docType, file) {
-      try {
-        if (!file) {
-          if (REQUIRED_DOCS.includes(docType)) {
-            throw new Error(`Falta archivo obligatorio: ${DOC_META[docType]?.label || docType}`);
-          }
+    function isImageFile(file) {
+  return !!file && String(file.type || "").startsWith("image/");
+}
 
-          if (docType === "background_check") {
-            setDocStatus(docType, "â³ PodÃ©s presentarlo dentro de 15 dÃ­as hÃ¡biles", "warning");
-          } else {
-            setDocStatus(docType, "Opcional sin subir", "pending");
-          }
-          return;
-        }
+async function compressImageForUpload(file, options = {}) {
+  const {
+    maxWidth = 1600,
+    maxHeight = 1600,
+    quality = 0.8,
+    outputType = "image/jpeg"
+  } = options;
 
-        setDocStatus(docType, "Subiendo...", "pending");
+  if (!isImageFile(file)) return file;
 
-        const ext = fileExt(file);
-        const safeName = sanitizeFileName(file.name || `${docType}.${ext}`);
-        const safePath = `${currentUser.id}/${docType}_${safeName}`;
+  const img = await new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
 
-          const { error: uploadError } = await supabaseService.client.storage
-             .from("driver-documents")
-             .upload(safePath, file, {
-              cacheControl: "3600",
-              upsert: true,
-              contentType: file.type || "application/octet-stream"
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
 
-        }); 
-        if (uploadError) throw uploadError; 
-      
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("No se pudo leer la imagen para comprimir"));
+    };
 
-        const payload = {
-          user_id: currentUser.id,
-          doc_type: docType,
-          storage_path: safePath,
-          mime_type: file.type || null,
-          file_size: file.size || null,
-          status: "PENDIENTE",
-          rejection_reason: null
-        };
-
-const { error: upsertError } = await supabaseService.client
-  .from("driver_documents")
-  .upsert(payload, {
-    onConflict: "user_id,doc_type"
+    image.src = url;
   });
 
-if (upsertError) throw upsertError;
+  let width = img.naturalWidth || img.width;
+  let height = img.naturalHeight || img.height;
 
-// ðŸ”¥ anÃ¡lisis automÃ¡tico unificado
-try {
-  const { data: edgeData, error: edgeError } = await supabaseService.client.functions.invoke(
-    "extract-driver-document",
-    {
-      body: {
-        user_id: currentUser.id,
-        doc_type: docType,
-        storage_path: safePath,
-        mime_type: file.type || null,
-        expected_dni: docType === "dni_front" ? getField("dni_number") : null,
-        expected_full_name: docType === "dni_front" ? getField("full_name") : null,
-        expected_birth_date: docType === "dni_front" ? (getField("birth_date") || null) : null
-      }
-    }
+  const scale = Math.min(
+    1,
+    maxWidth / width || 1,
+    maxHeight / height || 1
   );
 
-  console.log("[extract-driver-document]", docType, edgeData, edgeError);
+  const targetWidth = Math.max(1, Math.round(width * scale));
+  const targetHeight = Math.max(1, Math.round(height * scale));
 
-  if (edgeError) {
-    console.warn("[extract-driver-document] error:", edgeError);
-    setDocStatus(docType, "âš  Archivo subido, pero fallÃ³ el anÃ¡lisis automÃ¡tico", "warning");
-    return;
-  }
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
 
-  if (docType === "selfie") {
-    if (edgeData?.face_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "âœ… Selfie validada automÃ¡ticamente", "ok");
-    } else if (edgeData?.face_detected) {
-      setDocStatus(docType, "âš  Rostro detectado, quedÃ³ para revisiÃ³n manual", "warning");
-    } else {
-      setDocStatus(docType, "âŒ No se detectÃ³ rostro correctamente", "error");
+  const ctx = canvas.getContext("2d", { alpha: false });
+  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (result) => {
+        if (!result) {
+          reject(new Error("No se pudo generar la imagen comprimida"));
+          return;
+        }
+        resolve(result);
+      },
+      outputType,
+      quality
+    );
+  });
+
+  const safeBaseName = (file.name || "documento")
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^\w.-]+/g, "_");
+
+  return new File(
+    [blob],
+    `${safeBaseName}.jpg`,
+    {
+      type: outputType,
+      lastModified: Date.now()
     }
-    return;
-  }
-
-  if (docType === "dni_front") {
-    if (edgeData?.document_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "âœ… DNI validado automÃ¡ticamente", "ok");
-    } else if (edgeData?.document_detected) {
-      setDocStatus(docType, "âš  DNI detectado, quedÃ³ para revisiÃ³n manual", "warning");
-    } else {
-      setDocStatus(docType, "âŒ No se detectÃ³ correctamente el DNI", "error");
-    }
-    return;
-  }
-
-  if (docType === "license_front") {
-    if (edgeData?.document_detected && edgeData?.review_required === false) {
-      setDocStatus(docType, "âœ… Licencia validada automÃ¡ticamente", "ok");
-    } else if (edgeData?.document_detected) {
-      setDocStatus(docType, "âš  Licencia detectada, quedÃ³ para revisiÃ³n manual", "warning");
-    } else {
-      setDocStatus(docType, "âŒ No se detectÃ³ correctamente la licencia", "error");
-    }
-    return;
-  }
-
-  setDocStatus(docType, "âœ… Archivo cargado correctamente", "ok");
-} catch (edgeErr) {
-  console.warn("[extract-driver-document] warning:", edgeErr);
-  setDocStatus(docType, "âš  Archivo subido, pero no pudimos analizarlo", "warning");
+  );
 }
-        
-      } catch (err) {
-        console.error("[uploadDocument] " + docType, err);
-        setDocStatus(docType, "âŒ Error al subir", "error");
-        throw err;
+
+async function mapWithConcurrency(items, limit, worker) {
+  const results = [];
+  let index = 0;
+
+  async function runner() {
+    while (index < items.length) {
+      const currentIndex = index++;
+      results[currentIndex] = await worker(items[currentIndex], currentIndex);
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.max(1, Math.min(limit, items.length || 1)) },
+    () => runner()
+  );
+
+  await Promise.all(workers);
+  return results;
+}
+async function uploadDocument(docType, file) {
+  try {
+    if (!file) {
+      if (REQUIRED_DOCS.includes(docType)) {
+        throw new Error(`Falta archivo obligatorio: ${DOC_META[docType]?.label || docType}`);
       }
+
+      if (docType === "background_check") {
+        setDocStatus(docType, "Podés presentarlo dentro de 15 días hábiles", "warning");
+      } else {
+        setDocStatus(docType, "Opcional sin subir", "pending");
+      }
+      return null;
     }
 
+    setDocStatus(docType, "Preparando archivo...", "pending");
+
+    let uploadFile = file;
+
+    if (isImageFile(file)) {
+      uploadFile = await compressImageForUpload(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.8,
+        outputType: "image/jpeg"
+      });
+    }
+
+    setDocStatus(docType, "Subiendo...", "pending");
+
+    const ext = fileExt(uploadFile);
+    const safeName = sanitizeFileName(uploadFile.name || `${docType}.${ext}`);
+    const safePath = `${currentUser.id}/${docType}_${safeName}`;
+
+    const { error: uploadError } = await supabaseService.client.storage
+      .from("driver-documents")
+      .upload(safePath, uploadFile, {
+        cacheControl: "3600",
+        upsert: true,
+        contentType: uploadFile.type || "application/octet-stream"
+      });
+
+    if (uploadError) throw uploadError;
+
+    const payload = {
+      user_id: currentUser.id,
+      doc_type: docType,
+      storage_path: safePath,
+      mime_type: uploadFile.type || null,
+      file_size: uploadFile.size || null,
+      status: "PENDIENTE",
+      rejection_reason: null,
+      review_required: true,
+      analysis_status: "queued"
+    };
+
+    const { error: upsertError } = await supabaseService.client
+      .from("driver_documents")
+      .upsert(payload, {
+        onConflict: "user_id,doc_type"
+      });
+
+    if (upsertError) throw upsertError;
+
+    setDocStatus(
+      docType,
+      "Archivo subido correctamente. Quedó pendiente de análisis/revisión",
+      "ok"
+    );
+
+    return {
+      docType,
+      storage_path: safePath,
+      mime_type: uploadFile.type || null,
+      file_size: uploadFile.size || null
+    };
+  } catch (err) {
+    console.error("[uploadDocument] " + docType, err);
+    setDocStatus(docType, "Error al subir", "error");
+    throw err;
+  }
+}
     function addBusinessDays(startDate, businessDays) {
       const date = new Date(startDate);
       let added = 0;
@@ -2866,13 +2933,19 @@ try {
           background_check_pending: !backgroundCheckProvided
         });
 
-        for (const docType of ALL_DOCS) {
-          const file = getChosenFile(docType);
-          const label = DOC_META[docType]?.label || docType;
-          setGlobalStatus(`Subiendo ${label}...`, "success");
-          await uploadDocument(docType, file);
-        }
+const docsToUpload = ALL_DOCS.map((docType) => ({
+  docType,
+  file: getChosenFile(docType),
+  label: DOC_META[docType]?.label || docType
+}));
 
+setGlobalStatus("Subiendo documentación...", "success");
+
+await mapWithConcurrency(docsToUpload, 2, async ({ docType, file, label }) => {
+  setGlobalStatus(`Subiendo ${label}...`, "success");
+  await uploadDocument(docType, file);
+});
+        
         const { data: docs, error: docsErr } = await supabaseService.client
           .from("driver_documents")
           .select("doc_type")
@@ -2895,10 +2968,9 @@ try {
           background_check_pending: !backgroundCheckProvided
         });
 
-        const successMessage = backgroundCheckProvided
-          ? "âœ… DocumentaciÃ³n enviada correctamente. Tu cuenta quedÃ³ en revisiÃ³n."
-          : "âœ… DocumentaciÃ³n enviada correctamente. Tu cuenta quedÃ³ en revisiÃ³n y el certificado de antecedentes quedÃ³ pendiente con plazo de 15 dÃ­as hÃ¡biles.";
-
+const successMessage = backgroundCheckProvided
+  ? "Documentación recibida correctamente. Tu cuenta quedó en revisión y los archivos se analizarán en segundo plano."
+  : "Documentación recibida correctamente. Tu cuenta quedó en revisión. El certificado de antecedentes sigue pendiente con plazo de 15 días hábiles.";
         setGlobalStatus(successMessage, "success");
 
         localStorage.removeItem(DOC_CACHE_KEY);
