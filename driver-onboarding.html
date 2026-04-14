@@ -1797,6 +1797,13 @@ function restoreCachedFiles() {
         type: value.type || "image/jpeg"
       });
       selectedFiles.set(docType, file);
+      if (!docValidationState.has(docType)) {
+        docValidationState.set(docType, "warning");
+        docValidationMessage.set(
+          docType,
+          "Archivo recuperado. Podés continuar y lo revisamos al enviar."
+        );
+      }
     } catch (err) {
       console.warn("[doc cache restore]", docType, err);
     }
@@ -1842,9 +1849,9 @@ function updateWizardPrimaryState() {
   const hasFile = !!getChosenFile(docType);
 
   const state = docValidationState.get(docType);
-  const passed = state === "ok" || state === "warning";
+  const hasBlockingError = state === "error";
 
-  const allowContinue = onboardingBusy ? false : (meta?.optional ? true : hasFile && passed);
+  const allowContinue = onboardingBusy ? false : (meta?.optional ? true : hasFile && !hasBlockingError);
 
   if (docWizardNextBtn) {
     docWizardNextBtn.disabled = !allowContinue;
@@ -2456,9 +2463,21 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
         triggerValidationFeedback("success");
       }
     } else {
-      setDocStatus(docType, `${sourceLabel}: ${name} Â· ${validation.message}`, "error");
-      setWizardVisualState("error");
-      triggerValidationFeedback("error");
+      const isHardError = validation.kind === "format" || validation.kind === "missing";
+
+      if (isHardError) {
+        setDocStatus(docType, `${sourceLabel}: ${name} Â· ${validation.message}`, "error");
+        setWizardVisualState("error");
+        triggerValidationFeedback("error");
+      } else {
+        setDocStatus(
+          docType,
+          `${sourceLabel}: ${name} Â· ${validation.message}. Lo enviamos igual para revisión manual`,
+          "warning"
+        );
+        setWizardVisualState("warning");
+        triggerValidationFeedback("warning");
+      }
     }
   } catch (err) {
     console.error("[setSelectedFile validation]", docType, err);
@@ -2998,10 +3017,10 @@ docWizardNextBtn?.addEventListener("click", async () => {
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
   const state = docValidationState.get(docType);
-  const passed = state === "ok" || state === "warning";
+  const hasBlockingError = state === "error";
 
-  if (!meta?.optional && (!hasFile || !passed)) {
-    setGlobalStatus(`âŒ TenÃ©s que validar ${meta?.label || "este documento"} para continuar`, "error");
+  if (!meta?.optional && (!hasFile || hasBlockingError)) {
+    setGlobalStatus(`âŒ TenÃ©s que cargar ${meta?.label || "este documento"} para continuar`, "error");
     return;
   }
 
@@ -3082,10 +3101,10 @@ stickyPrimaryBtn.addEventListener("click", async () => {
     const meta = DOC_META[docType];
     const hasFile = !!getChosenFile(docType);
     const state = docValidationState.get(docType);
-    const passed = state === "ok" || state === "warning";
+    const hasBlockingError = state === "error";
 
-    if (!meta?.optional && (!hasFile || !passed)) {
-      setGlobalStatus(`âŒ TenÃ©s que validar ${meta?.label || "este documento"} para continuar`, "error");
+    if (!meta?.optional && (!hasFile || hasBlockingError)) {
+      setGlobalStatus(`âŒ TenÃ©s que cargar ${meta?.label || "este documento"} para continuar`, "error");
       return;
     }
 
