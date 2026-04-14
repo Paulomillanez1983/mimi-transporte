@@ -1,8 +1,9 @@
 {
-  "name": "MIMI Transporte",
-  "short_name": "MIMI",
-  "description": "App clara de MIMI para choferes y clientes, con soporte y alertas activas.",
-  "start_url": "/mimi-transporte/index.html",
+  "id": "/mimi-transporte/driver",
+  "name": "MIMI Driver",
+  "short_name": "Chofer",
+  "description": "App del chofer MIMI para recibir viajes, navegar y gestionar soporte.",
+  "start_url": "/mimi-transporte/login-chofer.html",
   "scope": "/mimi-transporte/",
   "display": "standalone",
   "orientation": "portrait",
