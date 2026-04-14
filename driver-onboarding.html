@@ -12,7 +12,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="format-detection" content="telephone=no" />
   <title>MIMI Driver - Onboarding</title>
-
 <link
   href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
   rel="stylesheet"
@@ -1503,10 +1502,9 @@
         <div class="doc-status" id="docWizardStatus"></div>
 
         <div class="doc-actions-inline doc-actions-inline--wizard">
-          <label class="doc-action-btn doc-camera-btn" id="docWizardCameraLabel" for="docWizardCameraInput">
-            ðŸ“· Sacar foto
-          </label>
-
+           <button class="doc-action-btn doc-camera-btn" id="docWizardCameraLabel" type="button">
+           📷 Sacar foto
+           </button>
           <label class="doc-action-btn doc-upload-btn" id="docWizardUploadLabel" for="docWizardFileInput">
             â¬† Subir archivo
           </label>
@@ -1579,6 +1577,8 @@
   </div>
 
   <script type="module">
+import { openCameraCaptureModal } from "./js/onboarding-camera-capture.js";    
+    
 import supabaseService from "./js/supabase-client.js";
 import {
   getDocumentsProgress,
@@ -2531,7 +2531,47 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
   }
 }
     
-  function initFileInputs() {
+function initFileInputs() {
+  docWizardCameraLabel?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    if (onboardingBusy) return;
+
+    const docType = getCurrentDocType();
+    const meta = DOC_META[docType] || {};
+    const isSelfie = meta.capture === "user";
+
+    try {
+      const result = await openCameraCaptureModal({
+        docType,
+        mode: isSelfie ? "selfie" : "document",
+        title: isSelfie
+          ? (meta.title || "Tomate una selfie")
+          : (meta.title || "Sacá una foto del documento"),
+        subtitle: isSelfie
+          ? "Alineá el rostro dentro de la guía, con buena luz y sin lentes oscuros."
+          : "Centrá el documento dentro del marco. Que se vea completo, sin reflejos y bien enfocado.",
+        captureFacingMode: isSelfie ? "user" : "environment"
+      });
+
+      if (result?.file) {
+        await setSelectedFile(docType, result.file, "Foto capturada");
+      }
+    } catch (err) {
+      console.warn("[camera custom] fallback a input nativo", err);
+
+      try {
+        if (meta?.capture === "user") {
+          docWizardCameraInput?.setAttribute("capture", "user");
+        } else {
+          docWizardCameraInput?.setAttribute("capture", "environment");
+        }
+        docWizardCameraInput?.click();
+      } catch (fallbackErr) {
+        console.error("[camera fallback] no se pudo abrir input capture", fallbackErr);
+      }
+    }
+  });
+
   docWizardCameraInput?.addEventListener("change", async (e) => {
     const file = e.target?.files?.[0] || null;
     if (!file) return;
@@ -2549,8 +2589,7 @@ async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionad
     await setSelectedFile(docType, file, "Archivo seleccionado");
     docWizardFileInput.value = "";
   });
-}
-    
+}    
 function getChosenFile(docType) {
       if (selectedFiles.has(docType)) return selectedFiles.get(docType);
 
@@ -2651,17 +2690,26 @@ function getChosenFile(docType) {
       }
     }
 
-    async function saveProfilePartial(payload) {
-      const { error } = await supabaseService.client
-        .from("driver_profiles")
-        .upsert({
-          user_id: currentUser.id,
-          email: currentUser.email || null,
-          ...payload
-        });
+async function saveProfilePartial(payload) {
+  if (isProbablyOffline()) {
+    throw offlineError("No hay conexión para guardar el perfil");
+  }
 
-      if (error) throw error;
-    }
+  const { error } = await withTimeout(
+    supabaseService.client
+      .from("driver_profiles")
+      .upsert({
+        user_id: currentUser.id,
+        email: currentUser.email || null,
+        ...payload
+      }),
+    20000,
+    "La actualización del perfil tardó demasiado"
+  );
+
+  if (error) throw error;
+}
+    
 function saveDraft() {
   const payload = {
     full_name: getField("full_name"),
@@ -2795,6 +2843,119 @@ async function mapWithConcurrency(items, limit, worker) {
   await Promise.all(workers);
   return results;
 }
+<script type="module">
+function isProbablyOffline() {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+function offlineError(message = "Sin conexión a internet") {
+  const err = new Error(message);
+  err.code = "OFFLINE";
+  return err;
+}
+
+function timeoutError(message = "Tiempo de espera agotado") {
+  const err = new Error(message);
+  err.code = "TIMEOUT";
+  return err;
+}
+
+function withTimeout(promise, timeoutMs = 45000, message = "Tiempo de espera agotado") {
+  let timer = null;
+
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(timeoutError(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+function normalizeUiText(text = "") {
+  return String(text)
+    .replaceAll("Ã¡", "á")
+    .replaceAll("Ã©", "é")
+    .replaceAll("Ã­", "í")
+    .replaceAll("Ã³", "ó")
+    .replaceAll("Ãº", "ú")
+    .replaceAll("Ã±", "ñ")
+    .replaceAll("Â¿", "¿")
+    .replaceAll("Â¡", "¡")
+    .replaceAll("Â·", "·")
+    .replaceAll("âœ…", "✅")
+    .replaceAll("â³", "⏳")
+    .replaceAll("âŒ", "❌")
+    .replaceAll("ðŸ“·", "📷")
+    .replaceAll("ðŸ¤³", "🤳")
+    .replaceAll("â¬†", "⬆")
+    .replaceAll("ðŸ›¡", "🛡")
+    .replaceAll("ðŸªª", "🪪")
+    .replaceAll("ðŸš˜", "🚘")
+    .replaceAll("ðŸš—", "🚗");
+}
+
+function applySpanishTextFixes() {
+  document.title = "MIMI Driver - Onboarding";
+
+  [
+    "progressLabel",
+    "docsProgressTitle",
+    "docsProgressHelp",
+    "docWizardStepTitle",
+    "docWizardStepBadge",
+    "docWizardProgressHelp",
+    "docWizardTitle",
+    "docWizardDescription",
+    "docWizardStatus",
+    "docWizardBackBtn",
+    "docWizardNextBtn",
+    "submitAllBtn",
+    "stickyTitle",
+    "stickyText",
+    "globalStatus",
+    "exitOnboardingBtn"
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el && el.textContent) {
+      el.textContent = normalizeUiText(el.textContent);
+    }
+  });
+
+  document.querySelectorAll(".title, .subtitle, .step-title, .step-text, .field-help, .doc-guidelines span, .doc-preview-file span, .doc-preview-file strong, .doc-deadline-box, .step-badge, .eyebrow, label, button, a").forEach((el) => {
+    if (el.childElementCount === 0 && el.textContent) {
+      el.textContent = normalizeUiText(el.textContent);
+    }
+  });
+}
+
+function explainUploadError(err) {
+  const msg = String(err?.message || err || "");
+
+  if (err?.code === "OFFLINE" || isProbablyOffline()) {
+    return "❌ No hay conexión a internet. Revisá la señal y volvé a intentar.";
+  }
+
+  if (err?.code === "TIMEOUT") {
+    return "❌ La carga demoró demasiado. Puede ser por internet lento o por el servidor.";
+  }
+
+  if (/row-level security|rls|policy/i.test(msg)) {
+    return "❌ El servidor rechazó la carga por permisos de base de datos.";
+  }
+
+  if (/storage|bucket|object/i.test(msg)) {
+    return "❌ Hubo un problema al subir el archivo al almacenamiento.";
+  }
+
+  if (/network|fetch|failed to fetch/i.test(msg)) {
+    return "❌ No se pudo conectar con el servidor. Revisá internet e intentá otra vez.";
+  }
+
+  return "❌ " + (msg || "No pudimos enviar la documentación.");
+}
+</script>
+    
 async function uploadDocument(docType, file) {
   try {
     if (!file) {
@@ -2810,34 +2971,48 @@ async function uploadDocument(docType, file) {
       return null;
     }
 
+    if (isProbablyOffline()) {
+      throw offlineError("Sin conexión antes de subir el archivo");
+    }
+
     setDocStatus(docType, "Preparando archivo...", "pending");
 
     let uploadFile = file;
 
     if (isImageFile(file)) {
-      uploadFile = await compressImageForUpload(file, {
-        maxWidth: 1600,
-        maxHeight: 1600,
-        quality: 0.8,
-        outputType: "image/jpeg"
-      });
+      uploadFile = await withTimeout(
+        compressImageForUpload(file, {
+          maxWidth: 1600,
+          maxHeight: 1600,
+          quality: 0.8,
+          outputType: "image/jpeg"
+        }),
+        20000,
+        "La compresión del archivo tardó demasiado"
+      );
     }
 
-    setDocStatus(docType, "Subiendo...", "pending");
+    setDocStatus(docType, "Subiendo archivo...", "pending");
 
     const ext = fileExt(uploadFile);
     const safeName = sanitizeFileName(uploadFile.name || `${docType}.${ext}`);
-    const safePath = `${currentUser.id}/${docType}_${safeName}`;
+    const safePath = `${currentUser.id}/${docType}_${Date.now()}_${safeName}`;
 
-    const { error: uploadError } = await supabaseService.client.storage
-      .from("driver-documents")
-      .upload(safePath, uploadFile, {
-        cacheControl: "3600",
-        upsert: true,
-        contentType: uploadFile.type || "application/octet-stream"
-      });
+    const { error: uploadError } = await withTimeout(
+      supabaseService.client.storage
+        .from("driver-documents")
+        .upload(safePath, uploadFile, {
+          cacheControl: "3600",
+          upsert: true,
+          contentType: uploadFile.type || "application/octet-stream"
+        }),
+      45000,
+      `La subida de ${DOC_META[docType]?.label || docType} tardó demasiado`
+    );
 
     if (uploadError) throw uploadError;
+
+    setDocStatus(docType, "Guardando registro...", "pending");
 
     const payload = {
       user_id: currentUser.id,
@@ -2851,11 +3026,15 @@ async function uploadDocument(docType, file) {
       analysis_status: "queued"
     };
 
-    const { error: upsertError } = await supabaseService.client
-      .from("driver_documents")
-      .upsert(payload, {
-        onConflict: "user_id,doc_type"
-      });
+    const { error: upsertError } = await withTimeout(
+      supabaseService.client
+        .from("driver_documents")
+        .upsert(payload, {
+          onConflict: "user_id,doc_type"
+        }),
+      20000,
+      `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
+    );
 
     if (upsertError) throw upsertError;
 
@@ -2873,11 +3052,13 @@ async function uploadDocument(docType, file) {
     };
   } catch (err) {
     console.error("[uploadDocument] " + docType, err);
-    setDocStatus(docType, "Error al subir", "error");
+    setDocStatus(docType, explainUploadError(err), "error");
     throw err;
   }
 }
-    function addBusinessDays(startDate, businessDays) {
+  
+  
+function addBusinessDays(startDate, businessDays) {
       const date = new Date(startDate);
       let added = 0;
 
@@ -2899,100 +3080,113 @@ async function uploadDocument(docType, file) {
       return `${year}-${month}-${day}`;
     }
 
-    async function submitAll(triggerButton = submitAllBtn) {
-      if (onboardingBusy) return;
+async function submitAll(triggerButton = submitAllBtn) {
+  if (onboardingBusy) return;
 
-      setOnboardingBusy(true, {
-        button: triggerButton,
-        text: "Enviando documentacion...",
-        docMode: "uploading"
-      });
+  if (isProbablyOffline()) {
+    setGlobalStatus("❌ No hay conexión a internet. Conectate e intentá nuevamente.", "error");
+    return;
+  }
 
-      try {
-        setGlobalStatus("Guardando informaciÃ³n...", "success");
+  setOnboardingBusy(true, {
+    button: triggerButton,
+    text: "Enviando documentación...",
+    docMode: "uploading"
+  });
 
-        const step1Error = validateStep1();
-        if (step1Error) throw new Error(step1Error);
+  try {
+    setGlobalStatus("Guardando información del perfil...", "success");
 
-        const step2Error = validateStep2();
-        if (step2Error) throw new Error(step2Error);
+    const step1Error = validateStep1();
+    if (step1Error) throw new Error(step1Error);
 
-        const dueDate = toDateOnlyString(addBusinessDays(new Date(), 15));
-        const backgroundCheckProvided = !!getChosenFile("background_check");
+    const step2Error = validateStep2();
+    if (step2Error) throw new Error(step2Error);
 
-        await saveProfilePartial({
-          full_name: getField("full_name"),
-          phone: getField("phone"),
-          dni_number: getField("dni_number"),
-          birth_date: getField("birth_date") || null,
-          address: getField("address"),
-          vehicle_brand: getField("vehicle_brand"),
-          vehicle_model: getField("vehicle_model"),
-          vehicle_year: Number(getField("vehicle_year")) || null,
-          vehicle_color: getField("vehicle_color"),
-          vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, ""),
-          profile_completed: true,
-          onboarding_status: "PENDIENTE_DOCUMENTOS",
-          documents_completed: false,
-          documents_approved: false,
-          background_check_due_date: dueDate,
-          background_check_pending: !backgroundCheckProvided
-        });
+    const dueDate = toDateOnlyString(addBusinessDays(new Date(), 15));
+    const backgroundCheckProvided = !!getChosenFile("background_check");
 
-const docsToUpload = ALL_DOCS.map((docType) => ({
-  docType,
-  file: getChosenFile(docType),
-  label: DOC_META[docType]?.label || docType
-}));
+    await saveProfilePartial({
+      full_name: getField("full_name"),
+      phone: getField("phone"),
+      dni_number: getField("dni_number"),
+      birth_date: getField("birth_date") || null,
+      address: getField("address"),
+      vehicle_brand: getField("vehicle_brand"),
+      vehicle_model: getField("vehicle_model"),
+      vehicle_year: Number(getField("vehicle_year")) || null,
+      vehicle_color: getField("vehicle_color"),
+      vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, ""),
+      profile_completed: true,
+      onboarding_status: "PENDIENTE_DOCUMENTOS",
+      documents_completed: false,
+      documents_approved: false,
+      background_check_due_date: dueDate,
+      background_check_pending: !backgroundCheckProvided
+    });
 
-setGlobalStatus("Subiendo documentación...", "success");
+    const docsToUpload = ALL_DOCS.map((docType) => ({
+      docType,
+      file: getChosenFile(docType),
+      label: DOC_META[docType]?.label || docType
+    }));
 
-await mapWithConcurrency(docsToUpload, 2, async ({ docType, file, label }) => {
-  setGlobalStatus(`Subiendo ${label}...`, "success");
-  await uploadDocument(docType, file);
-});
-        
-        const { data: docs, error: docsErr } = await supabaseService.client
-          .from("driver_documents")
-          .select("doc_type")
-          .eq("user_id", currentUser.id);
+    setGlobalStatus("Subiendo documentación...", "success");
 
-        if (docsErr) throw docsErr;
+    await mapWithConcurrency(docsToUpload, 1, async ({ docType, file, label }) => {
+      setGlobalStatus(`Subiendo ${label}...`, "success");
+      await uploadDocument(docType, file);
+    });
 
-        const present = new Set((docs || []).map((d) => d.doc_type));
-        const missingRequired = REQUIRED_DOCS.filter((doc) => !present.has(doc));
+    setGlobalStatus("Verificando documentos subidos...", "success");
 
-        if (missingRequired.length > 0) {
-          throw new Error("Faltan documentos obligatorios: " + missingRequired.join(", "));
-        }
+    const { data: docs, error: docsErr } = await withTimeout(
+      supabaseService.client
+        .from("driver_documents")
+        .select("doc_type")
+        .eq("user_id", currentUser.id),
+      20000,
+      "La verificación final tardó demasiado"
+    );
 
-        await saveProfilePartial({
-          documents_completed: true,
-          onboarding_status: "PENDIENTE_REVISION",
-          documents_approved: false,
-          background_check_due_date: dueDate,
-          background_check_pending: !backgroundCheckProvided
-        });
+    if (docsErr) throw docsErr;
 
-const successMessage = backgroundCheckProvided
-  ? "Documentación recibida correctamente. Tu cuenta quedó en revisión y los archivos se analizarán en segundo plano."
-  : "Documentación recibida correctamente. Tu cuenta quedó en revisión. El certificado de antecedentes sigue pendiente con plazo de 15 días hábiles.";
-        setGlobalStatus(successMessage, "success");
+    const present = new Set((docs || []).map((d) => d.doc_type));
+    const missingRequired = REQUIRED_DOCS.filter((doc) => !present.has(doc));
 
-        localStorage.removeItem(DOC_CACHE_KEY);
-        localStorage.removeItem(FORM_DRAFT_KEY);
-
-        setTimeout(() => {
-        window.location.replace("driver-review-pending.html");
-        }, 1400);
-      } catch (err) {
-        console.error("[submitAll] error:", err);
-        setGlobalStatus("âŒ " + (err.message || "No pudimos enviar la documentaciÃ³n"), "error");
-      } finally {
-        setOnboardingBusy(false);
-      }
+    if (missingRequired.length > 0) {
+      throw new Error("Faltan documentos obligatorios: " + missingRequired.join(", "));
     }
 
+    setGlobalStatus("Finalizando envío...", "success");
+
+    await saveProfilePartial({
+      documents_completed: true,
+      onboarding_status: "PENDIENTE_REVISION",
+      documents_approved: false,
+      background_check_due_date: dueDate,
+      background_check_pending: !backgroundCheckProvided
+    });
+
+    const successMessage = backgroundCheckProvided
+      ? "✅ Documentación recibida correctamente. Tu cuenta quedó en revisión y los archivos se analizarán en segundo plano."
+      : "✅ Documentación recibida correctamente. Tu cuenta quedó en revisión. El certificado de antecedentes sigue pendiente con plazo de 15 días hábiles.";
+
+    setGlobalStatus(successMessage, "success");
+
+    localStorage.removeItem(DOC_CACHE_KEY);
+    localStorage.removeItem(FORM_DRAFT_KEY);
+
+    setTimeout(() => {
+      window.location.replace("driver-review-pending.html");
+    }, 1400);
+  } catch (err) {
+    console.error("[submitAll] error:", err);
+    setGlobalStatus(explainUploadError(err), "error");
+  } finally {
+    setOnboardingBusy(false);
+  }
+}
 
 
     document.getElementById("backTo1").addEventListener("click", () => {
