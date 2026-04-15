@@ -32,7 +32,7 @@ const DEFAULT_URL = `${APP_BASE_PATH}index.html`;
 const DEFAULT_TAG = 'mimi-client-notification';
 
 firebase.initializeApp({
-  apiKey: 'AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjE',
+  apiKey: 'AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjY',
   authDomain: 'mimi-transporte.firebaseapp.com',
   projectId: 'mimi-transporte',
   storageBucket: 'mimi-transporte.firebasestorage.app',
