@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'mimi-client-v8';
+const CACHE_NAME = 'mimi-client-v9';
 const APP_SHELL = '/mimi-transporte/index.html';
 const APP_BASE_PATH = '/mimi-transporte/';
 
@@ -9,7 +9,6 @@ const STATIC_ASSETS = [
   '/mimi-transporte/',
   '/mimi-transporte/index.html',
   '/mimi-transporte/chofer-panel.html',
-  '/mimi-transporte/driver-onboarding.html',
   '/mimi-transporte/mimi-transporte.css',
   '/mimi-transporte/css/design-system.css',
   '/mimi-transporte/css/components.css',
