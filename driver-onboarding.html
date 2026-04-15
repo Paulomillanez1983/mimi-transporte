@@ -2845,12 +2845,18 @@ async function saveProfilePartial(payload, options = {}) {
   } catch (err) {
     console.error("[saveProfilePartial] Error:", err);
 
-    if (err?.message?.includes("JWT") || err?.message?.includes("Auth")) {
+    const errCode = String(err?.code || "").toUpperCase();
+    const errMessage = String(err?.message || "");
+
+    if (errMessage.includes("JWT") || errMessage.includes("Auth")) {
       throw new Error("Sesión expirada. Volvé a iniciar sesión.");
     }
 
-    if (err?.message?.includes("timeout")) {
-      throw new Error("La conexión es lenta. Intentá nuevamente.");
+    if (errCode === "TIMEOUT" || /timeout|demor[oó]|tard[oó]\s+demasiado/i.test(errMessage)) {
+      const timeoutErr = new Error("La conexión es lenta. Intentá nuevamente.");
+      timeoutErr.code = "TIMEOUT";
+      timeoutErr.cause = err;
+      throw timeoutErr;
     }
 
     throw err;
