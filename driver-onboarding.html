@@ -3376,13 +3376,8 @@ async function submitAll(triggerButton = submitAllBtn) {
       });
     } catch (finalProfileErr) {
       console.warn("[submitAll] final profile update warning:", finalProfileErr);
-
-      if (finalProfileErr?.code !== "TIMEOUT") {
-        throw finalProfileErr;
-      }
-
       setGlobalStatus(
-        "Los documentos ya fueron recibidos. La confirmación final tardó más de lo normal, pero vamos a continuar.",
+        "Los documentos ya fueron recibidos. La actualización final del perfil quedó pendiente, pero vamos a continuar a revisión.",
         "success"
       );
     }
