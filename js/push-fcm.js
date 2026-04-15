@@ -136,17 +136,16 @@ function wasPushPromptDismissed(userId) {
 
 export async function initSupportPushFCM(options = {}) {
   try {
-    if (window.__APP_ROLE__ === "chofer") {
-      console.log("[push-support] bloqueado en chofer");
-      return null;
-    }
+if (window.__APP_ROLE__ !== "chofer") {
+  console.log("[push-fcm] no es chofer, cancelando");
+  return null;
+}
 
-    if (window.__PUSH_ACTIVE__) {
-      console.log("[push-support] push ya inicializado globalmente");
-      return null;
-    }
-    window.__PUSH_ACTIVE__ = true;
-
+if (window.__PUSH_ACTIVE__) {
+  console.log("[push-fcm] push ya inicializado globalmente");
+  return null;
+}
+window.__PUSH_ACTIVE__ = true;
     if (initialized) {
       console.log("[push-support] ya inicializado");
       return null;
