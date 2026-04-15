@@ -2815,6 +2815,7 @@ async function saveProfilePartial(payload, options = {}) {
   try {
     const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : 20000;
     const timeoutMessage = options.timeoutMessage || "La actualización del perfil tardó demasiado";
+    const returnData = options.returnData === true;
 
     const cleanPayload = {
       user_id: currentUser.id,
@@ -2823,17 +2824,17 @@ async function saveProfilePartial(payload, options = {}) {
       updated_at: new Date().toISOString()
     };
 
-    const { data, error } = await withTimeout(
-      supabaseService.client
-        .from("driver_profiles")
-        .upsert(cleanPayload, {
-          onConflict: "user_id"
-        })
-        .select()
-        .single(),
-      timeoutMs,
-      timeoutMessage
-    );
+    let query = supabaseService.client
+      .from("driver_profiles")
+      .upsert(cleanPayload, {
+        onConflict: "user_id"
+      });
+
+    if (returnData) {
+      query = query.select().single();
+    }
+
+    const { data, error } = await withTimeout(query, timeoutMs, timeoutMessage);
 
     if (error) {
       console.error("[saveProfilePartial] Supabase error:", error);
