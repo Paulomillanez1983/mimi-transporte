@@ -621,11 +621,14 @@ async setDriverAvailability({ online, disponible }) {
       return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
     }
 
-    const result = await this._invokeEdgeFunction('aceptar-viaje-ts', {
-      viaje_id: offerRow.viaje_id,
-      chofer_id: driverId
-    });
+const result = await this._invokeEdgeFunction('aceptar-viaje-ts', {
+  viaje_id: offerRow.viaje_id,
+  chofer_id: driverId
+});
 
+console.log('[TripManager] acceptOffer result:', result);
+console.log('[TripManager] acceptOffer body:', result?.body);
+    
     if (!result.success) {
       const paso = result?.body?.paso || '';
       if (
@@ -654,10 +657,16 @@ async setDriverAvailability({ online, disponible }) {
     return { success: true, data: result.data };
   }
 
-  async acceptTrip(tripId) {
-    return this.acceptOffer(tripId);
+async acceptTrip() {
+  const offerId = this.pendingOffer?.offerId || null;
+
+  if (!offerId) {
+    console.error('[TripManager] acceptTrip: no pending offerId available');
+    return { success: false, error: 'No hay oferta pendiente para aceptar' };
   }
 
+  return this.acceptOffer(offerId);
+}
   async rejectTrip(reason = 'RECHAZADO_POR_CHOFER') {
     return this.rejectOffer(this.pendingOffer?.offerId, reason);
   }
