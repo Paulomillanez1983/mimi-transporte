@@ -1998,7 +1998,7 @@ function cargarNotificacionesDesdeStorage() {
     ultimoEstadoNotificado = null;
   }
 }
-  function resolverEstadoViajeCliente(viajeLike = {}) {
+function resolverEstadoViajeCliente(viajeLike = {}) {
   const estadoBase = normalizarEstadoUpper(viajeLike?.estado);
   const tieneChoferAsignado = !!(
     viajeLike?.assigned_driver_id ||
@@ -2015,6 +2015,71 @@ function cargarNotificacionesDesdeStorage() {
   }
 
   return estadoBase;
+}
+
+async function enriquecerViajeConChofer(viajeLike = null) {
+  if (!viajeLike || typeof viajeLike !== 'object') return viajeLike;
+
+  const choferNombreExistente = String(
+    viajeLike?.chofer_nombre ||
+    viajeLike?.choferNombre ||
+    ''
+  ).trim();
+  const choferTelefonoExistente = String(
+    viajeLike?.chofer_telefono ||
+    viajeLike?.choferTelefono ||
+    ''
+  ).trim();
+
+  if (choferNombreExistente && choferTelefonoExistente) {
+    return viajeLike;
+  }
+
+  const choferId = viajeLike?.assigned_driver_id || viajeLike?.chofer_id_uuid || null;
+  if (!choferId || !window.supabase) return viajeLike;
+
+  try {
+    const { data, error } = await window.supabase
+      .from('choferes')
+      .select('id_uuid, nombre, telefono, email')
+      .eq('id_uuid', choferId)
+      .maybeSingle();
+
+    if (error || !data) {
+      if (error) {
+        console.warn('[cliente] no se pudo enriquecer chofer:', error);
+      }
+      return viajeLike;
+    }
+
+    return {
+      ...viajeLike,
+      chofer_nombre: choferNombreExistente || data.nombre || data.email || '',
+      chofer_telefono: choferTelefonoExistente || data.telefono || ''
+    };
+  } catch (err) {
+    console.warn('[cliente] error enriqueciendo viaje con chofer:', err);
+    return viajeLike;
+  }
+}
+
+function construirMensajeEstadoViaje(viaje = {}, estado = '', fallback = '') {
+  const estadoUpper = normalizarEstadoUpper(estado);
+  const choferNombre = String(
+    viaje?.chofer_nombre ||
+    viaje?.choferNombre ||
+    ''
+  ).trim();
+
+  if ((estadoUpper === 'ASIGNADO' || estadoUpper === 'ACEPTADO') && choferNombre) {
+    return `${choferNombre} aceptó tu viaje y está yendo a buscarte.`;
+  }
+
+  if (estadoUpper === 'EN_CAMINO' && choferNombre) {
+    return `${choferNombre} va en camino a tu punto de retiro.`;
+  }
+
+  return fallback;
 }
 
 function guardarViajeActivoEnStorage() {
@@ -2526,10 +2591,10 @@ function suscribirseEstadoViajeRealtime(viajeId) {
         table: 'viajes',
         filter: `id=eq.${viajeId}`
       },
-      (payload) => {
+      async (payload) => {
         try {
           const oldRow = payload?.old || {};
-          const newRow = payload?.new || {};
+          const newRow = await enriquecerViajeConChofer(payload?.new || {});
 
           const choferAntes = !!(oldRow?.assigned_driver_id || oldRow?.chofer_id_uuid);
           const choferAhora = !!(newRow?.assigned_driver_id || newRow?.chofer_id_uuid);
@@ -2550,7 +2615,18 @@ function suscribirseEstadoViajeRealtime(viajeId) {
           actualizarEstadoLocalViaje(nuevoEstado);
 
           const notifData = mapearEstadoANotificacion(nuevoEstado);
-          actualizarCentroNotificacionesViaje(notifData);
+          const textoEstado = construirMensajeEstadoViaje(newRow, nuevoEstado, notifData.texto);
+          if (typeof actualizarEstadoSolicitudUI === 'function') {
+            actualizarEstadoSolicitudUI({
+              estado: nuevoEstado,
+              texto: textoEstado,
+              viaje: newRow
+            });
+          }
+          actualizarCentroNotificacionesViaje({
+            estado: notifData.estado,
+            texto: textoEstado
+          });
           guardarNotificacionesEnStorage();
           guardarViajeActivoEnStorage();
 
@@ -2559,7 +2635,7 @@ function suscribirseEstadoViajeRealtime(viajeId) {
 
             notif.show(
               'Chofer asignado',
-              'Tu viaje fue aceptado por un chofer.',
+              textoEstado || 'Tu viaje fue aceptado por un chofer.',
               'success',
               3500
             );
@@ -2653,6 +2729,7 @@ async function restaurarViajeActivoCliente() {
     // CASO 1: VIAJE ACTIVO REAL
     // ============================
 if (viaje?.id && estadosActivos.includes(estado)) {
+  viaje = await enriquecerViajeConChofer(viaje);
   state.viajeId = viaje.id;
   state.viajeEstado = estado;
   state.estadoViaje = estado;
@@ -2681,9 +2758,11 @@ if (viaje?.id && estadosActivos.includes(estado)) {
   }
 
   if (typeof actualizarEstadoSolicitudUI === 'function') {
+    const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
     actualizarEstadoSolicitudUI({
       estado,
-      texto: notifData.texto
+      texto: textoEstado,
+      viaje
     });
   }
 
