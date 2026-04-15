@@ -110,24 +110,6 @@ async init(driverIdParam = null) {
     return false;
   }
 }
-  if (!driverId) {
-      console.error('[TripManager] ❌ No driverId available after fallback');
-      return false;
-    }
-
-    this.driverId = driverId;
-
-    console.log('[TripManager] ✅ Initializing for chofer_id_uuid:', driverId);
-    await this._loadInitialState(driverId);
-    this._subscribeToRealtime(driverId);
-    this._startRefreshInterval(driverId);
-
-    return true;
-  } catch (error) {
-    console.error('[TripManager] ❌ Init error:', error);
-    return false;
-  }
-}
   // =========================================================
   // LOAD INITIAL STATE
   // =========================================================
