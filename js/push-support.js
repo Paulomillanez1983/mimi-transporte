@@ -1,3 +1,8 @@
+if (window.__PUSH_ACTIVE__) {
+  console.log("[push] ya inicializado, cancelando duplicado");
+  return;
+}
+window.__PUSH_ACTIVE__ = true;
 import supabaseService from "./supabase-client.js";
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
