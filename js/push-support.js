@@ -16,7 +16,8 @@ const firebaseConfig = {
   appId: "1:1066211116754:web:8cfb14cfb15ecd0cb28f0b"
 };
 
-const FIREBASE_VAPID_KEY = "BKjAYoEwolpGEXVXpLRRBD5zHdkBbCHaUo9QgwFoPAULSdPn7qt8RNsMHAT2RrJtQpBsO3sRfMOHhFh1YBTfKSo".trim();
+const FIREBASE_VAPID_KEY =
+  "BKjAYoEwolpGEXVXpLRRBD5zHdkBbCHaUo9QgwFoPAULSdPn7qt8RNsMHAT2RrJtQpBsO3sRfMOHhFh1YBTfKSo".trim();
 
 let initialized = false;
 let foregroundListenerBound = false;
@@ -38,6 +39,28 @@ function normalizeSupportRole(rawRole) {
   return "cliente";
 }
 
+async function getSupportPushDbClient() {
+  // 1) Cliente correcto del lado pasajero/cliente
+  if (window.sbRealtime?.auth && typeof window.sbRealtime.from === "function") {
+    return window.sbRealtime;
+  }
+
+  // 2) Fallback defensivo para otros contextos
+  try {
+    if (!supabaseService?.client && typeof supabaseService?.init === "function") {
+      await supabaseService.init();
+    }
+
+    if (supabaseService?.client?.auth && typeof supabaseService.client.from === "function") {
+      return supabaseService.client;
+    }
+  } catch (err) {
+    console.warn("[push-support] fallback supabaseService init warning:", err);
+  }
+
+  return null;
+}
+
 async function upsertPushToken({ userId, token, accessToken }) {
   if (!userId || !token || !accessToken) {
     console.warn("[push-support] faltan datos para guardar token", {
@@ -45,6 +68,13 @@ async function upsertPushToken({ userId, token, accessToken }) {
       hasToken: !!token,
       hasAccessToken: !!accessToken
     });
+    return null;
+  }
+
+  const client = await getSupportPushDbClient();
+
+  if (!client) {
+    console.warn("[push-support] no hay cliente Supabase con auth disponible");
     return null;
   }
 
@@ -66,18 +96,24 @@ async function upsertPushToken({ userId, token, accessToken }) {
   });
 
   try {
-    const originalAccessToken = supabaseService.client?.auth?.getSession
-      ? (await supabaseService.client.auth.getSession())?.data?.session?.access_token || null
-      : null;
+    let refreshToken = null;
 
-    if (accessToken) {
-      await supabaseService.client.auth.setSession({
-        access_token: accessToken,
-        refresh_token: (await supabaseService.client.auth.getSession())?.data?.session?.refresh_token || ""
-      }).catch(() => {});
+    if (client.auth?.getSession) {
+      const currentSession = await client.auth.getSession();
+      refreshToken = currentSession?.data?.session?.refresh_token || null;
     }
 
-    const { data, error } = await supabaseService.client
+    // Solo intentamos setSession si realmente hay refresh token disponible.
+    if (accessToken && refreshToken && client.auth?.setSession) {
+      await client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken
+      }).catch((err) => {
+        console.warn("[push-support] setSession warning:", err);
+      });
+    }
+
+    const { data, error } = await client
       .from("push_tokens")
       .upsert(payload, { onConflict: "token" })
       .select()
@@ -249,7 +285,10 @@ export async function initSupportPushFCM(options = {}) {
           window.handleSupportPushForeground({
             messageId,
             title: payload?.notification?.title || payload?.data?.title || "Soporte",
-            body: payload?.notification?.body || payload?.data?.body || "Tenés una nueva respuesta de soporte."
+            body:
+              payload?.notification?.body ||
+              payload?.data?.body ||
+              "Tenés una nueva respuesta de soporte."
           });
         }
       });
@@ -258,6 +297,7 @@ export async function initSupportPushFCM(options = {}) {
     }
 
     initialized = true;
+
     console.log("[push-support] initSupportPushFCM OK");
     return token;
   } catch (err) {
