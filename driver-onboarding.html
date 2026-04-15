@@ -2211,40 +2211,58 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const validation = await validateSelectedDocument(docType, file);
-      if (!validation.ok) {
-        return validation;
+      const localValidation = await validateSelectedDocument(docType, file);
+
+      if (!localValidation?.ok) {
+        return {
+          ok: false,
+          kind: localValidation?.kind || "local-error",
+          message: localValidation?.message || "No pudimos validar el archivo",
+          local: localValidation || null,
+          remote: null
+        };
       }
+
+      let remote = null;
 
       try {
         const { data: remoteData, error: remoteError } = await withTimeout(
           supabaseService.client.functions.invoke("validate-driver-document", {
             body: {
               doc_type: docType,
-              mime_type: file.type,
-              file_size: file.size,
-              client_validation_ok: validation.ok,
-              client_validation_kind: validation.kind
+              mime_type: file.type || null,
+              file_size: file.size || null,
+              client_validation_ok: true,
+              client_validation_kind: localValidation.kind || "ok"
             }
           }),
-          5000,
+          8000,
           "La validación remota tardó demasiado"
         );
 
         if (remoteError) {
           console.warn(`[server validation retry ${attempt}]`, remoteError);
-        } else if (remoteData?.review_required === true && validation.kind !== "document-warning") {
-          return {
-            ...validation,
-            kind: "document-warning",
-            message: remoteData?.message || validation.message
-          };
+        } else {
+          remote = remoteData || null;
         }
       } catch (remoteErr) {
         console.warn(`[server validation retry ${attempt}]`, remoteErr);
       }
 
-      return validation;
+      const reviewRequired =
+        remote?.review_required === true ||
+        localValidation?.kind === "document-warning";
+
+      return {
+        ok: true,
+        kind: reviewRequired ? "document-warning" : (localValidation.kind || "ok"),
+        message:
+          remote?.message ||
+          localValidation.message ||
+          "Documento validado",
+        local: localValidation,
+        remote
+      };
     } catch (err) {
       lastError = err;
       if (attempt < maxAttempts) {
@@ -2254,7 +2272,8 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
   }
 
   throw lastError || new Error("No pudimos validar el documento");
-}    
+}
+    
 function renderDocWizardPreview(docType) {
   const file = getChosenFile(docType);
 
@@ -3295,51 +3314,123 @@ async function uploadDocument(docType, file) {
       throw uploadError;
     }
 
-    setDocStatus(docType, "Guardando registro.", "pending");
-    setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema.`, "success");
+setDocStatus(docType, "Analizando documento.", "pending");
+setGlobalStatus(`Analizando ${DOC_META[docType]?.label || docType}.`, "success");
 
-    const payload = {
-      user_id: currentUser.id,
-      doc_type: docType,
-      storage_path: safePath,
-      mime_type: uploadFile.type || null,
-      file_size: uploadFile.size || null,
-      status: "PENDIENTE",
-      rejection_reason: null,
-      review_required: true
-    };
+let validationResult = null;
 
-    const { error: upsertError } = await retryOperation(
-      () => withTimeout(
-        supabaseService.client
-          .from("driver_documents")
-          .upsert(payload, {
-            onConflict: "user_id,doc_type"
-          }),
-        getUploadTimeoutMs("document-upsert"),
-        `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
-      ),
-      { label: `driver_documents upsert ${docType}` }
-    );
+try {
+  validationResult = await validateWithRetry(docType, uploadFile, 2);
+} catch (validationErr) {
+  console.warn(`[uploadDocument] validateWithRetry ${docType}`, validationErr);
+  validationResult = null;
+}
 
-    if (upsertError) {
-      console.error("[DB ERROR driver_documents]", upsertError, payload);
-      throw upsertError;
-    }
+const remote = validationResult?.remote || null;
+const local = validationResult?.local || null;
 
-    setDocStatus(
-      docType,
-      "Archivo subido correctamente. Quedó pendiente de revisión.",
-      "ok"
-    );
+setDocStatus(docType, "Guardando registro.", "pending");
+setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema.`, "success");
 
-    return {
-      docType,
-      storage_path: safePath,
-      mime_type: uploadFile.type || null,
-      file_size: uploadFile.size || null,
-      db_row: null
-    };
+const payload = {
+  user_id: currentUser.id,
+  doc_type: docType,
+  storage_path: safePath,
+  mime_type: uploadFile.type || null,
+  file_size: uploadFile.size || null,
+
+  status:
+    remote?.status ||
+    "PENDIENTE",
+
+  rejection_reason:
+    remote?.rejection_reason ||
+    null,
+
+  review_required:
+    typeof remote?.review_required === "boolean"
+      ? remote.review_required
+      : true,
+
+  validation_status:
+    remote?.validation_status ||
+    null,
+
+  face_detected:
+    typeof remote?.face_detected === "boolean"
+      ? remote.face_detected
+      : null,
+
+  document_detected:
+    typeof remote?.document_detected === "boolean"
+      ? remote.document_detected
+      : null,
+
+  confidence_score:
+    remote?.confidence_score ?? null,
+
+  ocr_text:
+    remote?.ocr_text || null,
+
+  ocr_fields:
+    remote?.ocr_fields || null,
+
+  validation_notes:
+    remote?.message ||
+    local?.message ||
+    null,
+
+  provider:
+    remote?.provider || null,
+
+  provider_raw:
+    remote || null,
+
+  auto_checked_at:
+    remote ? new Date().toISOString() : null
+};
+
+const { data: savedRow, error: upsertError } = await retryOperation(
+  () => withTimeout(
+    supabaseService.client
+      .from("driver_documents")
+      .upsert(payload, {
+        onConflict: "user_id,doc_type"
+      })
+      .select()
+      .single(),
+    getUploadTimeoutMs("document-upsert"),
+    `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
+  ),
+  { label: `driver_documents upsert ${docType}` }
+);
+
+if (upsertError) {
+  console.error("[DB ERROR driver_documents]", upsertError, payload);
+  throw upsertError;
+}
+
+const finalMessage =
+  payload.validation_status === "VALID"
+    ? "Archivo subido y validado correctamente."
+    : payload.review_required
+      ? "Archivo subido. Quedó pendiente de revisión."
+      : "Archivo subido correctamente.";
+
+setDocStatus(
+  docType,
+  finalMessage,
+  payload.validation_status === "VALID" ? "ok" : (payload.review_required ? "warning" : "ok")
+);
+
+return {
+  docType,
+  storage_path: safePath,
+  mime_type: uploadFile.type || null,
+  file_size: uploadFile.size || null,
+  db_row: savedRow || null,
+  validation: validationResult || null
+};
   } catch (err) {
     console.error("[uploadDocument] " + docType, err);
     setDocStatus(docType, explainUploadError(err), "error");
