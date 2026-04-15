@@ -533,6 +533,49 @@ async setDriverAvailability({ online, disponible }) {
   // =========================================================
   // ACTIONS (VIAJES)
   // =========================================================
+  _parseAcceptTripRpcResult(data) {
+    if (data == null) return null;
+    if (typeof data === 'object' && data.ok !== undefined) return data;
+    if (Array.isArray(data)) {
+      const first = data[0];
+      if (first?.aceptar_oferta_viaje && typeof first.aceptar_oferta_viaje === 'object') {
+        return first.aceptar_oferta_viaje;
+      }
+      if (first && typeof first === 'object' && first.ok !== undefined) {
+        return first;
+      }
+    }
+    if (typeof data === 'boolean') {
+      return { ok: data };
+    }
+    return null;
+  }
+
+  async acceptOffer(offerId) {
+    const driverId = this.driverId;
+    if (!driverId) return { success: false, error: 'No driverId' };
+    if (!offerId) return { success: false, error: 'No offerId disponible' };
+
+    const { data: offerRow, error: offerError } = await supabaseService.client
+      .from('viaje_ofertas')
+      .select('id, viaje_id, chofer_id, estado')
+      .eq('id', offerId)
+      .eq('chofer_id', driverId)
+      .in('estado', ['pendiente', 'enviada'])
+      .maybeSingle();
+
+    if (offerError) {
+      console.error('[TripManager] Error reading offer before accept:', offerError);
+      return { success: false, error: offerError.message };
+    }
+
+    if (!offerRow?.viaje_id) {
+      return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
+    }
+
+    return this.acceptTrip(offerRow.viaje_id);
+  }
+
   async acceptTrip(tripId) {
     const driverId = this.driverId;
     if (!driverId) return { success: false, error: 'No driverId' };
@@ -558,15 +601,7 @@ async setDriverAvailability({ online, disponible }) {
 
       console.log('[TripManager] RPC raw response:', data);
 
-      let result = null;
-
-      if (data?.ok !== undefined) {
-        result = data;
-      }
-
-      if (!result && Array.isArray(data)) {
-        result = data?.[0]?.aceptar_oferta_viaje;
-      }
+      const result = this._parseAcceptTripRpcResult(data);
 
       if (!result) {
         console.error('[TripManager] Invalid RPC response format:', data);
