@@ -3409,7 +3409,9 @@ async function triggerRemoteValidationInBackground({
   documentId = null
 }) {
   try {
-    if (!currentUser?.id || !file) return;
+    if (!currentUser?.id || !file || !docType) return;
+
+    const startedAt = Date.now();
 
     const { data: remoteData, error: remoteError } = await withTimeout(
       supabaseService.client.functions.invoke("validate-driver-document", {
@@ -3432,35 +3434,58 @@ async function triggerRemoteValidationInBackground({
     }
 
     const remote = remoteData || null;
-    if (!remote || !currentUser?.id) return;
+    if (!remote) return;
 
+    // 🧠 PATCH LIMPIO (sin meter basura ni null innecesario)
     const patch = {
-      validation_status: remote?.validation_status || null,
-      status: remote?.status || "PENDIENTE",
-      rejection_reason: remote?.rejection_reason || null,
+      validation_status: remote.validation_status || "UNKNOWN",
+
+      status:
+        remote.status ||
+        (remote.validation_status === "VALID"
+          ? "APROBADO"
+          : "PENDIENTE"),
+
+      rejection_reason: remote.rejection_reason || null,
+
       review_required:
-        typeof remote?.review_required === "boolean"
+        typeof remote.review_required === "boolean"
           ? remote.review_required
-          : true,
+          : remote.validation_status !== "VALID",
+
       face_detected:
-        typeof remote?.face_detected === "boolean"
+        typeof remote.face_detected === "boolean"
           ? remote.face_detected
           : null,
+
       document_detected:
-        typeof remote?.document_detected === "boolean"
+        typeof remote.document_detected === "boolean"
           ? remote.document_detected
           : null,
-      confidence_score: remote?.confidence_score ?? null,
-      ocr_text: remote?.ocr_text || null,
+
+      confidence_score:
+        typeof remote.confidence_score === "number"
+          ? remote.confidence_score
+          : null,
+
+      ocr_text: remote.ocr_text || null,
+
       ocr_fields:
-        remote?.ocr_fields && typeof remote.ocr_fields === "object"
+        remote.ocr_fields && typeof remote.ocr_fields === "object"
           ? remote.ocr_fields
           : null,
-      validation_notes: remote?.message || null,
-      provider: remote?.provider || null,
-      provider_raw: remote && typeof remote === "object" ? remote : null,
+
+      validation_notes: remote.message || null,
+
+      provider: remote.provider || null,
+
+      provider_raw:
+        remote && typeof remote === "object"
+          ? remote
+          : null,
+
       auto_checked_at:
-        remote?.provider || remote?.validation_status
+        remote.provider || remote.validation_status
           ? new Date().toISOString()
           : null
     };
@@ -3476,38 +3501,53 @@ async function triggerRemoteValidationInBackground({
       return;
     }
 
+    // 🔄 Sync liviano del perfil (NO crítico)
     try {
-      await saveProfilePartial({
-        validation_status: "validated",
-        validation_source: remote?.provider || "background_validation",
-        validation_updated_at: new Date().toISOString()
-      }, {
-        timeoutMs: getUploadTimeoutMs("profile-finalize"),
-        timeoutMessage: "La sincronización del perfil tardó demasiado"
-      });
+      await saveProfilePartial(
+        {
+          validation_status: "validated",
+          validation_source: remote.provider || "background_validation",
+          validation_updated_at: new Date().toISOString()
+        },
+        {
+          timeoutMs: getUploadTimeoutMs("profile-finalize"),
+          timeoutMessage: "La sincronización del perfil tardó demasiado"
+        }
+      );
     } catch (profileErr) {
       console.warn("[background validation] profile sync warning", profileErr);
     }
 
+    // 🎯 UI SOLO SI ES EL DOC ACTUAL
     if (docType === getCurrentDocType()) {
-      const uiMessage =
-        patch.validation_status === "VALID"
-          ? "Documento validado automáticamente."
-          : patch.review_required
-            ? "Documento recibido. Quedó en revisión manual."
-            : "Documento procesado.";
+      let uiMessage = "Documento procesado.";
+      let uiState = "ok";
 
-      setDocStatus(
-        docType,
-        uiMessage,
-        patch.validation_status === "VALID" ? "ok" : (patch.review_required ? "warning" : "ok")
-      );
+      if (patch.validation_status === "VALID") {
+        uiMessage = "Documento validado automáticamente.";
+        uiState = "ok";
+      } else if (patch.review_required) {
+        uiMessage = "Documento recibido. Quedó en revisión manual.";
+        uiState = "warning";
+      } else if (patch.validation_status === "REJECTED") {
+        uiMessage = "Documento rechazado. Revisá la calidad o contenido.";
+        uiState = "error";
+      }
+
+      setDocStatus(docType, uiMessage, uiState);
     }
+
+    console.info("[background validation OK]", {
+      docType,
+      tookMs: Date.now() - startedAt,
+      status: patch.status,
+      validation_status: patch.validation_status
+    });
+
   } catch (err) {
     console.warn("[background validation] failed", docType, err);
   }
 }
-
     
 function addBusinessDays(startDate, businessDays) {
       const date = new Date(startDate);
