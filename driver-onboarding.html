@@ -1853,6 +1853,29 @@ function setDocCache(cache) {
     localStorage.setItem(DOC_CACHE_KEY, JSON.stringify(cache));
   } catch {}
 }
+    // Fix de encoding para texto dinámico
+function fixEncoding(text) {
+  if (!text) return text;
+  return text
+    .replace(/Ã¡/g, 'á')
+    .replace(/Ã©/g, 'é')
+    .replace(/Ã­/g, 'í')
+    .replace(/Ã³/g, 'ó')
+    .replace(/Ãº/g, 'ú')
+    .replace(/Ã±/g, 'ñ')
+    .replace(/Â¿/g, '¿')
+    .replace(/Â¡/g, '¡')
+    .replace(/Â·/g, '·');
+}
+
+// Aplicar a todos los elementos al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('*').forEach(el => {
+    if (el.children.length === 0 && el.textContent) {
+      el.textContent = fixEncoding(el.textContent);
+    }
+  });
+});
 
 async function cacheSelectedFile(docType, file) {
   try {
