@@ -1835,6 +1835,8 @@ const UPLOAD_RETRY_LIMIT = 3;
 const UPLOAD_RETRY_BASE_DELAY_MS = 1200;
 const PROFILE_WARMUP_TIMEOUT_MS = 12000;
 const REMOTE_TIMEOUT = 12000;
+const PENDING_VALIDATION_STATUS = "PENDING";
+    
 function getConnectionProfile() {
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   const effectiveType = String(connection?.effectiveType || "").toLowerCase();
@@ -3305,17 +3307,18 @@ async function uploadDocument(docType, file) {
     const safePath = `${currentUser.id}/${docType}_${Date.now()}_${safeName}`;
 
     const { error: uploadError } = await retryOperation(
-      () => withTimeout(
-        supabaseService.client.storage
-          .from("driver-documents")
-          .upload(safePath, uploadFile, {
-            cacheControl: "3600",
-            upsert: true,
-            contentType: uploadFile.type || "application/octet-stream"
-          }),
-        getUploadTimeoutMs("storage"),
-        `La subida de ${DOC_META[docType]?.label || docType} tardó demasiado`
-      ),
+      () =>
+        withTimeout(
+          supabaseService.client.storage
+            .from("driver-documents")
+            .upload(safePath, uploadFile, {
+              cacheControl: "3600",
+              upsert: true,
+              contentType: uploadFile.type || "application/octet-stream"
+            }),
+          getUploadTimeoutMs("storage"),
+          `La subida de ${DOC_META[docType]?.label || docType} tardó demasiado`
+        ),
       { label: `storage upload ${docType}` }
     );
 
@@ -3324,125 +3327,188 @@ async function uploadDocument(docType, file) {
       throw uploadError;
     }
 
-setDocStatus(docType, "Analizando documento.", "pending");
-setGlobalStatus(`Analizando ${DOC_META[docType]?.label || docType}.`, "success");
+    setDocStatus(docType, "Guardando registro.", "pending");
+    setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema.`, "success");
 
-let validationResult = null;
+    const payload = {
+      user_id: currentUser.id,
+      doc_type: docType,
+      storage_path: safePath,
+      mime_type: uploadFile.type || null,
+      file_size: uploadFile.size || null,
 
-try {
-  validationResult = await validateWithRetry(docType, uploadFile, 2);
-} catch (validationErr) {
-  console.warn(`[uploadDocument] validateWithRetry ${docType}`, validationErr);
-  validationResult = null;
-}
+      status: "PENDIENTE",
+      rejection_reason: null,
+      review_required: true,
 
-const remote = validationResult?.remote || null;
-const local = validationResult?.local || null;
+      validation_status: PENDING_VALIDATION_STATUS,
+      face_detected: null,
+      document_detected: null,
+      confidence_score: null,
+      ocr_text: null,
+      ocr_fields: null,
+      validation_notes: "Pendiente de validación automática",
+      provider: null,
+      provider_raw: null,
+      auto_checked_at: null
+    };
 
-setDocStatus(docType, "Guardando registro.", "pending");
-setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema.`, "success");
+    const { data: savedRow, error: upsertError } = await retryOperation(
+      () =>
+        withTimeout(
+          supabaseService.client
+            .from("driver_documents")
+            .upsert(payload, {
+              onConflict: "user_id,doc_type"
+            })
+            .select()
+            .single(),
+          getUploadTimeoutMs("document-upsert"),
+          `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
+        ),
+      { label: `driver_documents upsert ${docType}` }
+    );
 
-const payload = {
-  user_id: currentUser.id,
-  doc_type: docType,
-  storage_path: safePath,
-  mime_type: uploadFile.type || null,
-  file_size: uploadFile.size || null,
+    if (upsertError) {
+      console.error("[DB ERROR driver_documents]", upsertError, payload);
+      throw upsertError;
+    }
 
-  status: remote?.status || "PENDIENTE",
+    setDocStatus(
+      docType,
+      "Archivo subido. La validación automática continúa en segundo plano.",
+      "warning"
+    );
 
-  rejection_reason: remote?.rejection_reason || null,
+    void triggerRemoteValidationInBackground({
+      docType,
+      file: uploadFile,
+      storagePath: safePath,
+      documentId: savedRow?.id || null
+    });
 
-  review_required:
-    typeof remote?.review_required === "boolean"
-      ? remote.review_required
-      : (validationResult?.kind === "document-warning"),
-
-  validation_status: remote?.validation_status || null,
-
-  face_detected:
-    typeof remote?.face_detected === "boolean"
-      ? remote.face_detected
-      : null,
-
-  document_detected:
-    typeof remote?.document_detected === "boolean"
-      ? remote.document_detected
-      : null,
-
-  confidence_score: remote?.confidence_score ?? null,
-
-  ocr_text: remote?.ocr_text || null,
-
-  ocr_fields:
-    remote?.ocr_fields && typeof remote.ocr_fields === "object"
-      ? remote.ocr_fields
-      : null,
-
-  validation_notes:
-    remote?.message ||
-    local?.message ||
-    null,
-
-  provider: remote?.provider || null,
-
-  provider_raw:
-    remote && typeof remote === "object"
-      ? remote
-      : null,
-
-  auto_checked_at:
-    remote?.provider || remote?.validation_status
-      ? new Date().toISOString()
-      : null
-};
-const { data: savedRow, error: upsertError } = await retryOperation(
-  () => withTimeout(
-    supabaseService.client
-      .from("driver_documents")
-      .upsert(payload, {
-        onConflict: "user_id,doc_type"
-      })
-      .select()
-      .single(),
-    getUploadTimeoutMs("document-upsert"),
-    `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
-  ),
-  { label: `driver_documents upsert ${docType}` }
-);
-
-if (upsertError) {
-  console.error("[DB ERROR driver_documents]", upsertError, payload);
-  throw upsertError;
-}
-
-const finalMessage =
-  payload.validation_status === "VALID"
-    ? "Archivo subido y validado correctamente."
-    : payload.review_required
-      ? "Archivo subido. Quedó pendiente de revisión."
-      : "Archivo subido correctamente.";
-
-setDocStatus(
-  docType,
-  finalMessage,
-  payload.validation_status === "VALID" ? "ok" : (payload.review_required ? "warning" : "ok")
-);
-
-return {
-  docType,
-  storage_path: safePath,
-  mime_type: uploadFile.type || null,
-  file_size: uploadFile.size || null,
-  db_row: savedRow || null,
-  validation: validationResult || null
-};
+    return {
+      docType,
+      storage_path: safePath,
+      mime_type: uploadFile.type || null,
+      file_size: uploadFile.size || null,
+      db_row: savedRow || null,
+      validation: null
+    };
   } catch (err) {
     console.error("[uploadDocument] " + docType, err);
     setDocStatus(docType, explainUploadError(err), "error");
     throw err;
   }
-}  
+}
+    
+async function triggerRemoteValidationInBackground({
+  docType,
+  file,
+  storagePath,
+  documentId = null
+}) {
+  try {
+    if (!currentUser?.id || !file) return;
+
+    const { data: remoteData, error: remoteError } = await withTimeout(
+      supabaseService.client.functions.invoke("validate-driver-document", {
+        body: {
+          user_id: currentUser.id,
+          doc_type: docType,
+          storage_path: storagePath,
+          mime_type: file.type || null,
+          file_size: file.size || null,
+          document_id: documentId || null
+        }
+      }),
+      REMOTE_TIMEOUT,
+      "La validación remota tardó demasiado"
+    );
+
+    if (remoteError) {
+      console.warn("[background validation] remote error", docType, remoteError);
+      return;
+    }
+
+    const remote = remoteData || null;
+    if (!remote || !currentUser?.id) return;
+
+    const patch = {
+      validation_status: remote?.validation_status || null,
+      status: remote?.status || "PENDIENTE",
+      rejection_reason: remote?.rejection_reason || null,
+      review_required:
+        typeof remote?.review_required === "boolean"
+          ? remote.review_required
+          : true,
+      face_detected:
+        typeof remote?.face_detected === "boolean"
+          ? remote.face_detected
+          : null,
+      document_detected:
+        typeof remote?.document_detected === "boolean"
+          ? remote.document_detected
+          : null,
+      confidence_score: remote?.confidence_score ?? null,
+      ocr_text: remote?.ocr_text || null,
+      ocr_fields:
+        remote?.ocr_fields && typeof remote.ocr_fields === "object"
+          ? remote.ocr_fields
+          : null,
+      validation_notes: remote?.message || null,
+      provider: remote?.provider || null,
+      provider_raw: remote && typeof remote === "object" ? remote : null,
+      auto_checked_at:
+        remote?.provider || remote?.validation_status
+          ? new Date().toISOString()
+          : null
+    };
+
+    const { error: patchError } = await supabaseService.client
+      .from("driver_documents")
+      .update(patch)
+      .eq("user_id", currentUser.id)
+      .eq("doc_type", docType);
+
+    if (patchError) {
+      console.warn("[background validation] patch error", docType, patchError);
+      return;
+    }
+
+    try {
+      await saveProfilePartial({
+        validation_status: "validated",
+        validation_source: remote?.provider || "background_validation",
+        validation_updated_at: new Date().toISOString()
+      }, {
+        timeoutMs: getUploadTimeoutMs("profile-finalize"),
+        timeoutMessage: "La sincronización del perfil tardó demasiado"
+      });
+    } catch (profileErr) {
+      console.warn("[background validation] profile sync warning", profileErr);
+    }
+
+    if (docType === getCurrentDocType()) {
+      const uiMessage =
+        patch.validation_status === "VALID"
+          ? "Documento validado automáticamente."
+          : patch.review_required
+            ? "Documento recibido. Quedó en revisión manual."
+            : "Documento procesado.";
+
+      setDocStatus(
+        docType,
+        uiMessage,
+        patch.validation_status === "VALID" ? "ok" : (patch.review_required ? "warning" : "ok")
+      );
+    }
+  } catch (err) {
+    console.warn("[background validation] failed", docType, err);
+  }
+}
+
+    
 function addBusinessDays(startDate, businessDays) {
       const date = new Date(startDate);
       let added = 0;
