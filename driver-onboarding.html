@@ -3339,22 +3339,16 @@ const payload = {
   mime_type: uploadFile.type || null,
   file_size: uploadFile.size || null,
 
-  status:
-    remote?.status ||
-    "PENDIENTE",
+  status: remote?.status || "PENDIENTE",
 
-  rejection_reason:
-    remote?.rejection_reason ||
-    null,
+  rejection_reason: remote?.rejection_reason || null,
 
   review_required:
     typeof remote?.review_required === "boolean"
       ? remote.review_required
-      : true,
+      : (validationResult?.kind === "document-warning"),
 
-  validation_status:
-    remote?.validation_status ||
-    null,
+  validation_status: remote?.validation_status || null,
 
   face_detected:
     typeof remote?.face_detected === "boolean"
@@ -3366,30 +3360,32 @@ const payload = {
       ? remote.document_detected
       : null,
 
-  confidence_score:
-    remote?.confidence_score ?? null,
+  confidence_score: remote?.confidence_score ?? null,
 
-  ocr_text:
-    remote?.ocr_text || null,
+  ocr_text: remote?.ocr_text || null,
 
   ocr_fields:
-    remote?.ocr_fields || null,
+    remote?.ocr_fields && typeof remote.ocr_fields === "object"
+      ? remote.ocr_fields
+      : null,
 
   validation_notes:
     remote?.message ||
     local?.message ||
     null,
 
-  provider:
-    remote?.provider || null,
+  provider: remote?.provider || null,
 
   provider_raw:
-    remote || null,
+    remote && typeof remote === "object"
+      ? remote
+      : null,
 
   auto_checked_at:
-    remote ? new Date().toISOString() : null
+    remote?.provider || remote?.validation_status
+      ? new Date().toISOString()
+      : null
 };
-
 const { data: savedRow, error: upsertError } = await retryOperation(
   () => withTimeout(
     supabaseService.client
