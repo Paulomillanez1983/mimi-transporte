@@ -1834,7 +1834,7 @@ let autoAdvanceTimer = null;
 const UPLOAD_RETRY_LIMIT = 3;
 const UPLOAD_RETRY_BASE_DELAY_MS = 1200;
 const PROFILE_WARMUP_TIMEOUT_MS = 12000;
-
+const REMOTE_TIMEOUT = 12000;
 function getConnectionProfile() {
   const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
   const effectiveType = String(connection?.effectiveType || "").toLowerCase();
@@ -2236,8 +2236,8 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
               client_validation_kind: localValidation.kind || "ok"
             }
           }),
-          8000,
-          "La validación remota tardó demasiado"
+           REMOTE_TIMEOUT,
+             "La validación remota tardó demasiado"       
         );
 
         if (remoteError) {
@@ -2245,13 +2245,23 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         } else {
           remote = remoteData || null;
         }
+
       } catch (remoteErr) {
         console.warn(`[server validation retry ${attempt}]`, remoteErr);
+
+        return {
+          ok: true,
+          kind: "document-warning",
+          message: "Validación parcial. Se revisará manualmente.",
+          local: localValidation,
+          remote: null
+        };
       }
 
       const reviewRequired =
         remote?.review_required === true ||
-        localValidation?.kind === "document-warning";
+        localValidation?.kind === "document-warning" ||
+        remote === null;
 
       return {
         ok: true,
@@ -2263,6 +2273,7 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
         local: localValidation,
         remote
       };
+
     } catch (err) {
       lastError = err;
       if (attempt < maxAttempts) {
@@ -2272,8 +2283,7 @@ async function validateWithRetry(docType, file, maxAttempts = 2) {
   }
 
   throw lastError || new Error("No pudimos validar el documento");
-}
-    
+}    
 function renderDocWizardPreview(docType) {
   const file = getChosenFile(docType);
 
