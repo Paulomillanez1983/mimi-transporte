@@ -533,22 +533,56 @@ async setDriverAvailability({ online, disponible }) {
   // =========================================================
   // ACTIONS (VIAJES)
   // =========================================================
-  _parseAcceptTripRpcResult(data) {
-    if (data == null) return null;
-    if (typeof data === 'object' && data.ok !== undefined) return data;
-    if (Array.isArray(data)) {
-      const first = data[0];
-      if (first?.aceptar_oferta_viaje && typeof first.aceptar_oferta_viaje === 'object') {
-        return first.aceptar_oferta_viaje;
+  async _invokeEdgeFunction(functionName, body = {}) {
+    try {
+      const sessionData = await supabaseService.client.auth.getSession();
+      const accessToken = sessionData?.data?.session?.access_token;
+
+      if (!accessToken) {
+        return { success: false, error: 'No access token' };
       }
-      if (first && typeof first === 'object' && first.ok !== undefined) {
-        return first;
+
+      const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/${functionName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: CONFIG.SUPABASE_KEY,
+          Authorization: `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(body)
+      });
+
+      const raw = await res.text();
+      let json = null;
+
+      try {
+        json = raw ? JSON.parse(raw) : null;
+      } catch (_) {
+        json = { raw };
       }
+
+      if (!res.ok) {
+        return {
+          success: false,
+          error: json?.error || json?.message || `HTTP ${res.status}`,
+          body: json,
+          status: res.status
+        };
+      }
+
+      return {
+        success: !!(json?.exito || json?.ok),
+        data: json,
+        body: json,
+        error: json?.error || null
+      };
+    } catch (err) {
+      console.error(`[TripManager] Edge ${functionName} error:`, err);
+      return {
+        success: false,
+        error: err.message || `Error invocando ${functionName}`
+      };
     }
-    if (typeof data === 'boolean') {
-      return { ok: data };
-    }
-    return null;
   }
 
   async acceptOffer(offerId) {
@@ -573,125 +607,59 @@ async setDriverAvailability({ online, disponible }) {
       return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
     }
 
-    return this.acceptTrip(offerRow.viaje_id);
-  }
-
-  async acceptTrip(tripId) {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
-
-    console.log('[TripManager] Calling RPC aceptar_oferta_viaje...', tripId, driverId);
-
-    const rpcPromise = supabaseService.client.rpc('aceptar_oferta_viaje', {
-      p_viaje_id: tripId,
-      p_chofer_id: driverId
+    const result = await this._invokeEdgeFunction('aceptar-viaje-ts', {
+      viaje_id: offerRow.viaje_id,
+      chofer_id: driverId
     });
 
-    const timeoutPromise = new Promise((resolve) =>
-      setTimeout(() => resolve({ data: null, error: new Error('RPC_TIMEOUT') }), 8000)
-    );
-
-    try {
-      const { data, error } = await Promise.race([rpcPromise, timeoutPromise]);
-
-      if (error) {
-        console.error('[TripManager] RPC accept error:', error);
-        return { success: false, error: error.message };
+    if (!result.success) {
+      const paso = result?.body?.paso || '';
+      if (
+        [
+          'viaje_ya_asignado',
+          'estado_final',
+          'estado_invalido',
+          'chofer_no_autorizado',
+          'oferta_vencida'
+        ].includes(paso)
+      ) {
+        this.pendingOffer = null;
+        this.lastOfferIdShown = null;
+        this.emit('pendingTripCleared', { reason: result.error || 'offer_unavailable' });
+        await this._loadInitialState(driverId);
       }
 
-      console.log('[TripManager] RPC raw response:', data);
-
-      const result = this._parseAcceptTripRpcResult(data);
-
-      if (!result) {
-        console.error('[TripManager] Invalid RPC response format:', data);
-        return { success: false, error: 'Respuesta RPC inválida' };
-      }
-
-      if (!result.ok) {
-        console.warn('[TripManager] Offer rejected:', result.reason);
-
-        if (['OFERTA_NO_DISPONIBLE', 'VIAJE_YA_TOMADO', 'VIAJE_BLOQUEADO'].includes(result.reason)) {
-          this.pendingOffer = null;
-          this.lastOfferIdShown = null;
-
-          this.emit('pendingTripCleared', {
-            reason: result.reason,
-            tripId
-          });
-
-          console.log('[TripManager] Refreshing offers after rejection...');
-          await this._loadInitialState(driverId);
-        }
-
-        return { success: false, error: result.reason || 'No se pudo aceptar el viaje' };
-      }
-
-      this.pendingOffer = null;
-      this.lastOfferIdShown = null;
-
-      this.emit('pendingTripCleared', { reason: 'offer_accepted' });
-
-      await this._loadInitialState(driverId);
-      return { success: true };
-    } catch (err) {
-      console.error('[TripManager] RPC FAILED:', err);
-      return { success: false, error: err.message };
-    }
-  }
-
-  async rejectTrip(reason = 'RECHAZADO_POR_CHOFER') {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
-
-    if (!this.pendingOffer?.offerId) {
-      return { success: false, error: 'No offerId disponible' };
-    }
-
-    const { error } = await supabaseService.client
-      .from('viaje_ofertas')
-      .update({
-        estado: 'rechazada',
-        respondida_en: new Date().toISOString()
-      })
-      .eq('id', this.pendingOffer.offerId)
-      .eq('chofer_id', driverId)
-      .eq('estado', 'pendiente');
-
-    if (error) {
-      console.error('[TripManager] Reject error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: result.error || 'No se pudo aceptar el viaje' };
     }
 
     this.pendingOffer = null;
     this.lastOfferIdShown = null;
-
-    this.emit('pendingTripCleared', { reason: 'trip_rejected' });
+    this.emit('pendingTripCleared', { reason: 'offer_accepted' });
 
     await this._loadInitialState(driverId);
+    return { success: true, data: result.data };
+  }
 
-    return { success: true };
+  async acceptTrip(tripId) {
+    return this.acceptOffer(tripId);
+  }
+
+  async rejectTrip(reason = 'RECHAZADO_POR_CHOFER') {
+    return this.rejectOffer(this.pendingOffer?.offerId, reason);
   }
 
 async startTrip(tripId) {
   const driverId = this.driverId;
   if (!driverId) return { success: false, error: 'No driverId' };
 
-  const now = new Date().toISOString();
+  const result = await this._invokeEdgeFunction('iniciar-viaje-ts', {
+    viaje_id: tripId,
+    chofer_id: driverId
+  });
 
-  const { error } = await supabaseService.client
-    .from('viajes')
-    .update({
-      estado: 'EN_CURSO',
-      iniciado_at: now,
-      updated_at: now
-    })
-    .eq('id', tripId)
-    .eq('chofer_user_id', driverId);
-
-  if (error) {
-    console.error('[TripManager] Start trip error:', error);
-    return { success: false, error: error.message };
+  if (!result.success) {
+    console.error('[TripManager] Start trip error:', result.error);
+    return { success: false, error: result.error };
   }
 
   // 🚕 Chofer ocupado
@@ -699,31 +667,24 @@ async startTrip(tripId) {
     .from('choferes')
     .update({
       disponible: false,
-      last_seen_at: now
+      last_seen_at: new Date().toISOString()
     })
     .eq('user_id', driverId);
 
-  return { success: true };
+  return { success: true, data: result.data };
 }
 async finishTrip(tripId) {
   const driverId = this.driverId;
   if (!driverId) return { success: false, error: 'No driverId' };
 
-  const now = new Date().toISOString();
+  const result = await this._invokeEdgeFunction('completar-viaje-ts', {
+    viaje_id: tripId,
+    chofer_id: driverId
+  });
 
-  const { error } = await supabaseService.client
-    .from('viajes')
-    .update({
-      estado: 'COMPLETADO',
-      completado_at: now,
-      updated_at: now
-    })
-    .eq('id', tripId)
-    .eq('chofer_user_id', driverId);
-
-  if (error) {
-    console.error('[TripManager] Finish trip error:', error);
-    return { success: false, error: error.message };
+  if (!result.success) {
+    console.error('[TripManager] Finish trip error:', result.error);
+    return { success: false, error: result.error };
   }
 
   // 🚕 Chofer vuelve a disponible
@@ -731,11 +692,11 @@ async finishTrip(tripId) {
     .from('choferes')
     .update({
       disponible: true,
-      last_seen_at: now
+      last_seen_at: new Date().toISOString()
     })
     .eq('user_id', driverId);
 
-  return { success: true };
+  return { success: true, data: result.data };
 }
 
   async cancelTrip(tripId, motivo = 'CANCELADO_POR_CHOFER') {
@@ -744,30 +705,23 @@ async finishTrip(tripId) {
 
     console.log('[TripManager] Cancelando viaje:', tripId);
 
-    const now = new Date().toISOString();
+    const result = await this._invokeEdgeFunction('cancelar-viaje-ts', {
+      viaje_id: tripId,
+      chofer_id: driverId,
+      cancelado_por: 'chofer',
+      motivo
+    });
 
-    const { error } = await supabaseService.client
-      .from('viajes')
-      .update({
-        estado: 'CANCELADO',
-        cancelado_at: now,
-        cancelado_por: 'CHOFER',
-        cancel_reason: motivo,
-        updated_at: now
-      })
-      .eq('id', tripId)
-      .eq('chofer_user_id', driverId);
-
-    if (error) {
-      console.error('[TripManager] Cancel trip error:', error);
-      return { success: false, error: error.message };
+    if (!result.success) {
+      console.error('[TripManager] Cancel trip error:', result.error);
+      return { success: false, error: result.error };
     }
 
     await supabaseService.client
       .from('choferes')
       .update({
         disponible: true,
-        last_seen_at: now
+        last_seen_at: new Date().toISOString()
       })
       .eq('user_id', driverId);
 
@@ -780,7 +734,7 @@ async finishTrip(tripId) {
 
     await this._loadInitialState(driverId);
 
-    return { success: true };
+    return { success: true, data: result.data };
   }
     async _redispatchViaje(viajeId, attempt = 0) {
     if (!viajeId) return { success: false, error: 'No viajeId' };
