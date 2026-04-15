@@ -147,7 +147,7 @@ if (window.__PUSH_ACTIVE__) {
 }
 window.__PUSH_ACTIVE__ = true;
     if (initialized) {
-      console.log("[push-support] ya inicializado");
+      console.log("[push-fcm] ya inicializado");
       return null;
     }
     const {
@@ -157,7 +157,7 @@ window.__PUSH_ACTIVE__ = true;
 
     const supported = await isSupported().catch(() => false);
     if (!supported) {
-      console.warn("[push-support] Firebase Messaging no soportado en este navegador");
+      console.warn("[push-fcm] Firebase Messaging no soportado en este navegador");
       return null;
     }
 
@@ -271,10 +271,10 @@ window.__PUSH_ACTIVE__ = true;
     }
 
     initialized = true;
-    console.log("[push-support] initSupportPushFCM OK");
+    console.log("[push-fcm] initPushFCM OK");
     return token;
   } catch (err) {
-    console.error("[push-support] init error:", err);
+    console.error("[push-fcm] init error:", err);
     return null;
   }
 }
