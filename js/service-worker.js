@@ -3,10 +3,9 @@
  * Offline support and background sync
  */
 
-const CACHE_NAME = 'mimi-driver-v3';
+const CACHE_NAME = 'mimi-driver-v4';
 const STATIC_ASSETS = [
   '/mimi-transporte/login-chofer.html',
-  '/mimi-transporte/driver-onboarding.html',
   '/mimi-transporte/driver-review-pending.html',
   '/mimi-transporte/driver-documents-observed.html',
   '/mimi-transporte/reset-password.html',
