@@ -982,7 +982,9 @@ this._celebrateAcceptFeedback();
 // 🔥 NO refrescar inmediatamente
 setTimeout(() => {
   tripManager.refresh?.();
-}, 1500);      return result;
+}, 1500);     
+      return result;
+    
     } catch (err) {
       console.error('[DriverApp] Error aceptando oferta:', err);
       uiController.showToast('Error aceptando viaje', 'error');
