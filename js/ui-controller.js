@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MIMI Driver - UI Controller v3.0 (Uber Driver PRO)
  * Final production version
  * Compatible con: driver-app.js, trip-manager.js, supabase-client.js
@@ -23,7 +23,6 @@ class UIController {
       bottomSheetExpanded: false
     };
 
-    // Estado interno
     this.lastTripModalId = null;
     this._gestureCleanup = false;
     this._lastTripRendered = null;
@@ -31,12 +30,10 @@ class UIController {
     this._arrivalTimeout = null;
     this._countdownSoundInterval = null;
 
-    // Touch handling
     this.touchStartY = 0;
     this.touchCurrentY = 0;
     this.sheetHeight = 0;
 
-    // Refs de listeners para cleanup
     this._viewportResizeHandler = null;
     this._viewportOrientationHandler = null;
     this._modalTouchMoveHandler = null;
@@ -45,13 +42,13 @@ class UIController {
     this._rejectTouchStartHandler = null;
     this._callBtnHapticHandler = null;
     this._whatsappBtnHapticHandler = null;
-    this._menuButtonClickHandler = null;     
+    this._navigateBtnHapticHandler = null;
+    this._menuButtonClickHandler = null;
     this._menuBackdropClickHandler = null;
     this._menuProfileClickHandler = null;
     this._menuTouchStartX = 0;
     this._menuTouchCurrentX = 0;
 
-    // Bindings base
     this._handleAccept = this._handleAccept.bind(this);
     this._handleReject = this._handleReject.bind(this);
     this._onBackdropClick = this._onBackdropClick.bind(this);
@@ -59,7 +56,6 @@ class UIController {
     this._onTouchMove = this._onTouchMove.bind(this);
     this._onTouchEnd = this._onTouchEnd.bind(this);
 
-    // Bindings globales
     this._boundTripStateChanged = this._handleTripStateChanged.bind(this);
     this._boundDriverFlowStateChanged = this._handleDriverFlowStateChanged.bind(this);
   }
@@ -168,7 +164,7 @@ class UIController {
       'menu-button': 'menu-button',
       'side-menu': 'side-menu',
       'menu-backdrop': 'menu-backdrop',
-            'menu-profile': 'menu-profile',
+      'menu-profile': 'menu-profile',
       'menu-avatar': 'menu-avatar',
       'menu-name': 'menu-name',
       'menu-email': 'menu-email',
@@ -187,7 +183,6 @@ class UIController {
       null;
   }
 
-
   _setupEventListeners() {
     const acceptBtn = this.elements['btn-accept'];
     const rejectBtn = this.elements['btn-reject'];
@@ -202,7 +197,7 @@ class UIController {
     const menuButton = this.elements['menu-button'];
     const menuBackdrop = this.elements['menu-backdrop'];
     const menuProfile = this.elements['menu-profile'];
-    
+
     window.addEventListener('tripStateChanged', this._boundTripStateChanged);
     window.addEventListener('driverFlowStateChanged', this._boundDriverFlowStateChanged);
 
@@ -250,39 +245,41 @@ class UIController {
       this._navigateBtnHapticHandler = () => this._haptic('medium');
       navigateBtn.addEventListener('click', this._navigateBtnHapticHandler);
     }
-if (btnContinue) {
-  btnContinue.addEventListener('click', () => {
-    this.hideArrival();
-    this._haptic('light');
-  });
-}
 
-if (btnFinish) {
-  btnFinish.addEventListener('click', () => {
-    if (btnFinish.disabled) return;
-
-    const hasTrip =
-      typeof window.tripManager !== 'undefined' &&
-      typeof window.tripManager.getCurrentTrip === 'function' &&
-      !!window.tripManager.getCurrentTrip();
-
-    if (!hasTrip) {
-      this.hideArrival?.();
-      this.showToast?.('No hay viaje activo para finalizar', 'warning');
-      return;
+    if (btnContinue) {
+      btnContinue.addEventListener('click', () => {
+        this.hideArrival();
+        this._haptic('light');
+      });
     }
 
-    btnFinish.disabled = true;
-    btnFinish.textContent = 'Finalizando...';
+    if (btnFinish) {
+      btnFinish.addEventListener('click', () => {
+        if (btnFinish.disabled) return;
 
-    window.dispatchEvent(
-      new CustomEvent('driverAction', {
-        detail: { action: 'finish' }
-      })
-    );
-  });
-}    
-  if (menuButton) {
+        const hasTrip =
+          typeof window.tripManager !== 'undefined' &&
+          typeof window.tripManager.getCurrentTrip === 'function' &&
+          !!window.tripManager.getCurrentTrip();
+
+        if (!hasTrip) {
+          this.hideArrival?.();
+          this.showToast?.('No hay viaje activo para finalizar', 'warning');
+          return;
+        }
+
+        btnFinish.disabled = true;
+        btnFinish.textContent = 'Finalizando...';
+
+        window.dispatchEvent(
+          new CustomEvent('driverAction', {
+            detail: { action: 'finish' }
+          })
+        );
+      });
+    }
+
+    if (menuButton) {
       this._menuButtonClickHandler = () => this.toggleMenu();
       menuButton.addEventListener('click', this._menuButtonClickHandler);
     }
@@ -297,31 +294,44 @@ if (btnFinish) {
       menuProfile.addEventListener('click', this._menuProfileClickHandler);
     }
 
-    document.addEventListener('touchstart', (e) => {
-      this._menuTouchStartX = e.touches?.[0]?.clientX || 0;
-      this._menuTouchCurrentX = this._menuTouchStartX;
-    }, { passive: true });
+    document.addEventListener(
+      'touchstart',
+      (e) => {
+        this._menuTouchStartX = e.touches?.[0]?.clientX || 0;
+        this._menuTouchCurrentX = this._menuTouchStartX;
+      },
+      { passive: true }
+    );
 
-    document.addEventListener('touchmove', (e) => {
-      this._menuTouchCurrentX = e.touches?.[0]?.clientX || this._menuTouchCurrentX;
-    }, { passive: true });
+    document.addEventListener(
+      'touchmove',
+      (e) => {
+        this._menuTouchCurrentX = e.touches?.[0]?.clientX || this._menuTouchCurrentX;
+      },
+      { passive: true }
+    );
 
-    document.addEventListener('touchend', () => {
-      const deltaX = this._menuTouchCurrentX - this._menuTouchStartX;
-      const menuOpen = document.body.classList.contains('menu-open');
+    document.addEventListener(
+      'touchend',
+      () => {
+        const deltaX = this._menuTouchCurrentX - this._menuTouchStartX;
+        const menuOpen = document.body.classList.contains('menu-open');
 
-      if (!menuOpen && this._menuTouchStartX < 18 && deltaX > 70) {
-        this.openMenu();
-      }
+        if (!menuOpen && this._menuTouchStartX < 18 && deltaX > 70) {
+          this.openMenu();
+        }
 
-      if (menuOpen && deltaX < -70) {
-        this.closeMenu();
-      }
+        if (menuOpen && deltaX < -70) {
+          this.closeMenu();
+        }
 
-      this._menuTouchStartX = 0;
-      this._menuTouchCurrentX = 0;
-    }, { passive: true });
+        this._menuTouchStartX = 0;
+        this._menuTouchCurrentX = 0;
+      },
+      { passive: true }
+    );
   }
+
   _removeDOMListeners() {
     const acceptBtn = this.elements['btn-accept'];
     const rejectBtn = this.elements['btn-reject'];
@@ -336,7 +346,7 @@ if (btnFinish) {
     const menuButton = this.elements['menu-button'];
     const menuBackdrop = this.elements['menu-backdrop'];
     const menuProfile = this.elements['menu-profile'];
-    
+
     if (acceptBtn) {
       acceptBtn.removeEventListener('click', this._handleAccept);
       if (this._acceptTouchStartHandler) {
@@ -374,15 +384,16 @@ if (btnFinish) {
     if (navigateBtn && this._navigateBtnHapticHandler) {
       navigateBtn.removeEventListener('click', this._navigateBtnHapticHandler);
     }
-    if (btnContinue) {
-  btnContinue.replaceWith(btnContinue.cloneNode(true));
-  this.elements['btn-continue'] = document.getElementById('btn-continue');
-}
 
-if (btnFinish) {
-  btnFinish.replaceWith(btnFinish.cloneNode(true));
-  this.elements['btn-finish'] = document.getElementById('btn-finish');
-}
+    if (btnContinue) {
+      btnContinue.replaceWith(btnContinue.cloneNode(true));
+      this.elements['btn-continue'] = document.getElementById('btn-continue');
+    }
+
+    if (btnFinish) {
+      btnFinish.replaceWith(btnFinish.cloneNode(true));
+      this.elements['btn-finish'] = document.getElementById('btn-finish');
+    }
 
     if (menuButton && this._menuButtonClickHandler) {
       menuButton.removeEventListener('click', this._menuButtonClickHandler);
@@ -396,6 +407,7 @@ if (btnFinish) {
       menuProfile.removeEventListener('click', this._menuProfileClickHandler);
     }
   }
+
   _setupViewport() {
     const setVH = () => {
       const vh = window.innerHeight * 0.01;
@@ -472,7 +484,7 @@ if (btnFinish) {
       lat,
       lng,
       texto: irADestino ? 'Ir a destino' : 'Ir a recogida',
-      icono: 'ðŸ',
+      icono: '🏁',
       url: hasCoords
         ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving&dir_action=navigate`
         : null
@@ -595,7 +607,7 @@ if (btnFinish) {
     }
   }
 
-    _expandBottomSheet() {
+  _expandBottomSheet() {
     const sheet = this.elements['bottom-sheet'];
     if (!sheet) return;
 
@@ -605,7 +617,7 @@ if (btnFinish) {
     this._haptic('light');
   }
 
-    _collapseBottomSheet() {
+  _collapseBottomSheet() {
     const sheet = this.elements['bottom-sheet'];
     if (!sheet) return;
 
@@ -657,17 +669,33 @@ if (btnFinish) {
     }, offerTimeout * 1000);
   }
 
+  _getEstimatedMinutes(trip) {
+    const raw =
+      trip?.duracion_min ??
+      trip?.duracion_estimada_min ??
+      trip?.minutos ??
+      trip?.duration_min ??
+      trip?.tiempo_estimado ??
+      trip?.tiempo_espera ??
+      null;
+
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+  }
+
   _populateTripData(trip) {
+    const estimatedMinutes = this._getEstimatedMinutes(trip);
+
     const data = {
       'trip-pickup': trip.origen_direccion || trip.origen || 'Origen no disponible',
       'trip-dropoff': trip.destino_direccion || trip.destino || 'Destino no disponible',
       'trip-distance': trip.km ? `${Number(trip.km).toFixed(1)} km` : '-- km',
       'trip-km': trip.km ? `${Number(trip.km).toFixed(1)} km` : '-- km',
       'trip-price': trip.precio ? `$${Math.round(trip.precio).toLocaleString('es-AR')}` : '$--',
-      'trip-duration': trip.tiempo_espera ? `${trip.tiempo_espera} min` : '-- min',
+      'trip-duration': estimatedMinutes ? `${estimatedMinutes} min` : '-- min',
       'client-name': trip.pasajero_nombre || trip.cliente || 'Cliente',
-      'client-phone': trip.pasajero_telefono || trip.telefono || 'Sin telÃ©fono',
-      'pickup-time': trip.tiempo_espera ? `${trip.tiempo_espera} min` : '-- min',
+      'client-phone': trip.pasajero_telefono || trip.telefono || 'Sin teléfono',
+      'pickup-time': estimatedMinutes ? `${estimatedMinutes} min` : '-- min',
       'pickup-address': trip.origen_direccion || trip.origen || '',
       'dropoff-address': trip.destino_direccion || trip.destino || ''
     };
@@ -729,7 +757,7 @@ if (btnFinish) {
       }
 
       if (circle) {
-        const offset = 283 - ((Math.max(count, 0) / totalSeconds) * 283);
+        const offset = 283 - (Math.max(count, 0) / totalSeconds) * 283;
         circle.style.strokeDashoffset = String(offset);
       }
 
@@ -814,7 +842,7 @@ if (btnFinish) {
         this._closeIncomingModal();
       } catch (err) {
         console.error('[UI] Error in accept callback:', err);
-        this.showToast('Error al procesar aceptaciÃ³n', 'error');
+        this.showToast('Error al procesar aceptación', 'error');
         this._resetCountdownUI();
         this.state.isProcessing = false;
         return;
@@ -937,7 +965,7 @@ if (btnFinish) {
 
     if (btn) {
       btn.classList.remove('accepting');
-      btn.innerHTML = '<span>âœ“</span><small>Aceptar</small>';
+      btn.innerHTML = '<span>✓</span><small>Aceptar viaje</small>';
     }
   }
 
@@ -945,164 +973,172 @@ if (btnFinish) {
     this._closeIncomingModal();
   }
 
-updateDriverState(mode, isOnline) {
-  const online = Boolean(isOnline);
-  this.state.isOnline = online;
+  updateDriverState(mode, isOnline) {
+    const online = Boolean(isOnline);
+    this.state.isOnline = online;
 
-  const dot = this.elements['status-dot'];
-  const text = this.elements['status-text'];
-  const fab = this.elements['fab-online'];
-  const fabText = this.elements['fab-text'];
-  const fabIcon = this.elements['fab-icon'];
-  const fabSubtext = this.elements['fab-subtext'];
-  const fabPulse = this.elements['fab-pulse'];
-  const navText = this.elements['nav-next'];
-  const sheet = this.elements['bottom-sheet'];
+    const dot = this.elements['status-dot'];
+    const text = this.elements['status-text'];
+    const fab = this.elements['fab-online'];
+    const fabText = this.elements['fab-text'];
+    const fabIcon = this.elements['fab-icon'];
+    const fabSubtext = this.elements['fab-subtext'];
+    const fabPulse = this.elements['fab-pulse'];
+    const navText = this.elements['nav-next'];
+    const sheet = this.elements['bottom-sheet'];
 
-  document.body.classList.toggle('driver-online', online);
-  document.body.classList.toggle('driver-offline', !online);
+    document.body.classList.toggle('driver-online', online);
+    document.body.classList.toggle('driver-offline', !online);
 
-  if (dot) {
-    dot.classList.toggle('online', online);
-    dot.style.animation = online ? 'pulse-ring 2s infinite' : '';
+    if (dot) {
+      dot.classList.toggle('online', online);
+      dot.style.animation = online ? 'pulse-ring 2s infinite' : '';
+    }
+
+    if (text) {
+      text.textContent = online ? 'En línea · Buscando viajes' : 'Fuera de línea';
+      text.classList.toggle('online', online);
+    }
+
+    if (fab) {
+      fab.classList.toggle('online', online);
+      fab.setAttribute('aria-pressed', online ? 'true' : 'false');
+      fab.setAttribute(
+        'aria-label',
+        online
+          ? 'Estás en línea. Tocá para desconectarte'
+          : 'Estás fuera de línea. Tocá para conectarte'
+      );
+    }
+
+    if (fabText) {
+      fabText.textContent = online ? 'En línea' : 'Conectar';
+    }
+
+    if (fabIcon) {
+      fabIcon.textContent = online ? 'ON' : 'OFF';
+      fabIcon.style.color = '#fff';
+    }
+
+    if (fabSubtext) {
+      fabSubtext.textContent = online ? 'Tocá para pausar' : 'Fuera de línea';
+    }
+
+    if (fabPulse) {
+      fabPulse.style.display = online ? 'block' : 'none';
+    }
+
+    if (navText && !this.state.currentTrip) {
+      navText.textContent = online
+        ? 'Buscando viajes cercanos...'
+        : 'Conectate para recibir viajes';
+    }
+
+    if (sheet && !this.state.currentTrip) {
+      sheet.classList.toggle('has-trip', false);
+    }
+
+    this._updateBottomSheetState(online);
+    this.showWaitingState();
+    this._haptic(online ? 'success' : 'light');
   }
 
-  if (text) {
-    text.textContent = online ? 'En linea · Buscando viajes' : 'Fuera de linea';
-    text.classList.toggle('online', online);
-  }
+  _updateBottomSheetState(isOnline) {
+    const sheetContent = this.elements['sheet-content'];
+    const sheet = this.elements['bottom-sheet'];
+    if (!sheetContent || !sheet) return;
 
-  if (fab) {
-    fab.classList.toggle('online', online);
-    fab.setAttribute('aria-pressed', online ? 'true' : 'false');
-    fab.setAttribute('aria-label', online ? 'Estas en linea. Toca para desconectarte' : 'Estas fuera de linea. Toca para conectarte');
-  }
+    const desiredState = isOnline ? 'online' : 'offline';
 
-  if (fabText) {
-    fabText.textContent = online ? 'En linea' : 'Conectar';
-  }
+    if (sheetContent.dataset.waitingState === desiredState && !sheetContent.dataset.flowState) {
+      return;
+    }
 
-  if (fabIcon) {
-    fabIcon.textContent = online ? 'ON' : 'OFF';
-    fabIcon.style.color = '#fff';
-  }
+    sheetContent.dataset.waitingState = desiredState;
+    delete sheetContent.dataset.flowState;
 
-  if (fabSubtext) {
-    fabSubtext.textContent = online ? 'Toca para pausar' : 'Fuera de linea';
-  }
-
-  if (fabPulse) {
-    fabPulse.style.display = online ? 'block' : 'none';
-  }
-
-  if (navText && !this.state.currentTrip) {
-    navText.textContent = online
-      ? 'Buscando viajes cercanos...'
-      : 'Conectate para recibir viajes';
-  }
-
-  if (sheet && !this.state.currentTrip) {
-    sheet.classList.toggle('has-trip', false);
-  }
-
-  this._updateBottomSheetState(online);
-  this.showWaitingState();
-  this._haptic(online ? 'success' : 'light');
-}
-_updateBottomSheetState(isOnline) {
-  const sheetContent = this.elements['sheet-content'];
-  const sheet = this.elements['bottom-sheet'];
-  if (!sheetContent || !sheet) return;
-
-  const desiredState = isOnline ? 'online' : 'offline';
-
-  if (sheetContent.dataset.waitingState === desiredState && !sheetContent.dataset.flowState) {
-    return;
-  }
-
-  sheetContent.dataset.waitingState = desiredState;
-  delete sheetContent.dataset.flowState;
-
-  if (isOnline) {
-    sheet.classList.remove('has-trip');
-    sheetContent.innerHTML = `
-      <div class="waiting-state uber-style">
-        <div class="waiting-text">
-          <h3>Listo para recibir viajes</h3>
-          <p>Quedate en linea y te vamos mostrando pedidos cercanos apenas entren.</p>
-        </div>
-        <div class="trip-metrics-horizontal">
-          <div class="metric-box">
-            <span class="metric-value">En linea</span>
-            <span class="metric-label">Estado</span>
+    if (isOnline) {
+      sheet.classList.remove('has-trip');
+      sheetContent.innerHTML = `
+        <div class="waiting-state uber-style">
+          <div class="waiting-text">
+            <h3>Listo para recibir viajes</h3>
+            <p>Quedate en línea y te vamos mostrando pedidos cercanos apenas entren.</p>
           </div>
-          <div class="metric-box">
-            <span class="metric-value">${this._escapeHtml(document.getElementById('stat-trips')?.textContent || '0')}</span>
-            <span class="metric-label">Viajes hoy</span>
-          </div>
-          <div class="metric-box">
-            <span class="metric-value">${this._escapeHtml(document.getElementById('stat-rating')?.textContent || '5.0')}</span>
-            <span class="metric-label">Calificacion</span>
-          </div>
-        </div>
-      </div>
-    `;
-  } else {
-    sheet.classList.remove('has-trip');
-    sheetContent.innerHTML = `
-      <div class="waiting-state offline">
-        <div class="waiting-text">
-          <h3>Todo listo para salir a trabajar</h3>
-          <p>Toca el boton redondo para conectarte. Cuando estes en linea te van a entrar viajes y alertas.</p>
-        </div>
-        <div class="trip-metrics-horizontal">
-          <div class="metric-box">
-            <span class="metric-value">Off</span>
-            <span class="metric-label">Estado</span>
-          </div>
-          <div class="metric-box">
-            <span class="metric-value">${this._escapeHtml(document.getElementById('stat-earnings')?.textContent || '$0')}</span>
-            <span class="metric-label">Ganado hoy</span>
-          </div>
-          <div class="metric-box">
-            <span class="metric-value">${this._escapeHtml(document.getElementById('stat-trips')?.textContent || '0')}</span>
-            <span class="metric-label">Viajes hoy</span>
+          <div class="trip-metrics-horizontal">
+            <div class="metric-box">
+              <span class="metric-value">En línea</span>
+              <span class="metric-label">Estado</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-value">${this._escapeHtml(document.getElementById('stat-trips')?.textContent || '0')}</span>
+              <span class="metric-label">Viajes hoy</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-value">${this._escapeHtml(document.getElementById('stat-rating')?.textContent || '5.0')}</span>
+              <span class="metric-label">Calificación</span>
+            </div>
           </div>
         </div>
-      </div>
-    `;
+      `;
+    } else {
+      sheet.classList.remove('has-trip');
+      sheetContent.innerHTML = `
+        <div class="waiting-state offline">
+          <div class="waiting-text">
+            <h3>Todo listo para salir a trabajar</h3>
+            <p>Tocá el botón redondo para conectarte. Cuando estés en línea te van a entrar viajes y alertas.</p>
+          </div>
+          <div class="trip-metrics-horizontal">
+            <div class="metric-box">
+              <span class="metric-value">Off</span>
+              <span class="metric-label">Estado</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-value">${this._escapeHtml(document.getElementById('stat-earnings')?.textContent || '$0')}</span>
+              <span class="metric-label">Ganado hoy</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-value">${this._escapeHtml(document.getElementById('stat-trips')?.textContent || '0')}</span>
+              <span class="metric-label">Viajes hoy</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
   }
-}
+
   showWaitingState() {
     this._collapseBottomSheet();
     this._updateBottomSheetState(this.state.isOnline);
   }
 
-showNavigationState(trip) {
-  if (!trip || typeof trip !== 'object') {
-    console.warn('[UI] showNavigationState llamado sin trip válido');
-    return;
+  showNavigationState(trip) {
+    if (!trip || typeof trip !== 'object') {
+      console.warn('[UI] showNavigationState llamado sin trip válido');
+      return;
+    }
+
+    this.state.currentTrip = trip;
+
+    const navBar = this.elements['nav-bar'];
+    const sheet = this.elements['bottom-sheet'];
+
+    if (navBar) {
+      navBar.classList.add('active');
+      navBar.style.transform = 'translateY(0)';
+    }
+
+    if (sheet) {
+      sheet.classList.add('has-trip');
+      this._expandBottomSheet();
+    }
+
+    this._updateNavigationInfo(trip);
+    this._showTripActions(trip);
+    this._haptic('success');
   }
 
-  this.state.currentTrip = trip;
-
-  const navBar = this.elements['nav-bar'];
-  const sheet = this.elements['bottom-sheet'];
-
-  if (navBar) {
-    navBar.classList.add('active');
-    navBar.style.transform = 'translateY(0)';
-  }
-
-  if (sheet) {
-    sheet.classList.add('has-trip');
-    this._expandBottomSheet();
-  }
-
-  this._updateNavigationInfo(trip);
-  this._showTripActions(trip);
-  this._haptic('success');
-}
   _updateNavigateButton(trip) {
     const btn = document.getElementById('btn-navigate');
     if (!btn) return;
@@ -1123,45 +1159,46 @@ showNavigationState(trip) {
     };
   }
 
-_updateNavigationInfo(trip) {
-  if (!trip || typeof trip !== 'object') {
-    console.warn('[UI] _updateNavigationInfo sin trip válido');
-    return;
-  }
-
-  const streetEl = this.elements['nav-street'];
-  const nextEl = this.elements['nav-next'];
-  const distanceEl = this.elements['nav-distance'];
-
-  const estado = String(trip.estado || '').toLowerCase();
-  const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
-
-  if (streetEl) {
-    streetEl.textContent = irADestino
-      ? 'Dirígete al destino final'
-      : 'Dirígete al punto de recogida';
-  }
-
-  if (nextEl) {
-    nextEl.textContent = irADestino
-      ? (trip.destino_direccion || trip.destino || 'Destino')
-      : (trip.origen_direccion || trip.origen || 'Recoger pasajero');
-  }
-
-  if (distanceEl) {
-    let dist = '--';
-
-    if (!irADestino && trip.distancia_al_origen) {
-      dist = (Number(trip.distancia_al_origen) / 1000).toFixed(1) + ' km';
-    } else if (irADestino && trip.km) {
-      dist = Number(trip.km).toFixed(1) + ' km';
+  _updateNavigationInfo(trip) {
+    if (!trip || typeof trip !== 'object') {
+      console.warn('[UI] _updateNavigationInfo sin trip válido');
+      return;
     }
 
-    distanceEl.textContent = dist;
+    const streetEl = this.elements['nav-street'];
+    const nextEl = this.elements['nav-next'];
+    const distanceEl = this.elements['nav-distance'];
+
+    const estado = String(trip.estado || '').toLowerCase();
+    const irADestino = estado === 'en_curso' || estado === 'en_viaje';
+
+    if (streetEl) {
+      streetEl.textContent = irADestino
+        ? 'Dirígete al destino final'
+        : 'Dirígete al punto de recogida';
+    }
+
+    if (nextEl) {
+      nextEl.textContent = irADestino
+        ? trip.destino_direccion || trip.destino || 'Destino'
+        : trip.origen_direccion || trip.origen || 'Recoger pasajero';
+    }
+
+    if (distanceEl) {
+      let dist = '--';
+
+      if (!irADestino && trip.distancia_al_origen) {
+        dist = (Number(trip.distancia_al_origen) / 1000).toFixed(1) + ' km';
+      } else if (irADestino && trip.km) {
+        dist = Number(trip.km).toFixed(1) + ' km';
+      }
+
+      distanceEl.textContent = dist;
+    }
+
+    this._updateNavigateButton?.(trip);
   }
 
-  this._updateNavigateButton?.(trip);
-}
   _showTripActions(trip) {
     const sheetContent = this.elements['sheet-content'];
     if (!sheetContent || !trip?.id) return;
@@ -1206,12 +1243,12 @@ _updateNavigationInfo(trip) {
           </button>
 
           <button class="action-btn-large call" id="btn-call">
-            <span class="icon">ðŸ“ž</span>
+            <span class="icon">📞</span>
             <span>Llamar</span>
           </button>
 
           <button class="action-btn-large cancel" id="btn-cancel">
-            <span class="icon">âŒ</span>
+            <span class="icon">❌</span>
             <span>Cancelar</span>
           </button>
         </div>
@@ -1234,8 +1271,8 @@ _updateNavigationInfo(trip) {
         </div>
 
         <button class="btn-arrived" id="btn-arrived">
-          <span>âœ“</span>
-          <span>${irADestino ? 'Finalizar viaje' : 'He llegado Â· Iniciar viaje'}</span>
+          <span>✓</span>
+          <span>${irADestino ? 'Finalizar viaje' : 'He llegado · Iniciar viaje'}</span>
         </button>
       </div>
     `;
@@ -1261,26 +1298,30 @@ _updateNavigationInfo(trip) {
         if (phone) {
           window.location.href = `tel:${phone}`;
         } else {
-          this.showToast('TelÃ©fono no disponible', 'warning');
+          this.showToast('Teléfono no disponible', 'warning');
         }
       };
     }
 
     if (btnCancel) {
       btnCancel.onclick = () => {
-        if (confirm('Â¿Seguro que querÃ©s cancelar este viaje?')) {
-          window.dispatchEvent(new CustomEvent('driverAction', {
-            detail: { action: 'cancel', tripId: trip.id }
-          }));
+        if (confirm('¿Seguro que querés cancelar este viaje?')) {
+          window.dispatchEvent(
+            new CustomEvent('driverAction', {
+              detail: { action: 'cancel', tripId: trip.id }
+            })
+          );
         }
       };
     }
 
     if (btnArrived) {
       btnArrived.onclick = () => {
-        window.dispatchEvent(new CustomEvent('driverAction', {
-          detail: { action: irADestino ? 'finish' : 'start', tripId: trip.id }
-        }));
+        window.dispatchEvent(
+          new CustomEvent('driverAction', {
+            detail: { action: irADestino ? 'finish' : 'start', tripId: trip.id }
+          })
+        );
       };
     }
   }
@@ -1298,68 +1339,71 @@ _updateNavigationInfo(trip) {
     });
   }
 
-hideNavigation() {
-  const navBar = this.elements['nav-bar'];
-  const sheet = this.elements['bottom-sheet'];
+  hideNavigation() {
+    const navBar = this.elements['nav-bar'];
+    const sheet = this.elements['bottom-sheet'];
 
-  document.body.classList.remove('trip-active');
+    document.body.classList.remove('trip-active');
 
-  if (navBar) {
-    navBar.classList.remove('active');
-    navBar.style.transform = 'translateY(-100%)';
-  }
-
-  if (sheet) {
-    sheet.classList.remove('has-trip');
-    this._collapseBottomSheet();
-  }
-
-  this.state.currentTrip = null;
-  this._lastTripRendered = null;
-}
-showArrival(trip = this.state.currentTrip) {
-  const panel = this.elements['arrival-panel'];
-  if (!panel) return;
-
-  const hasTrip = !!trip?.id;
-  const isDestinationTrip = this._isDestinationState(trip?.estado);
-
-  if (!hasTrip || !isDestinationTrip) {
-    this.hideArrival();
-    return;
-  }
-
-  this.state.currentTrip = trip;
-
-  panel.classList.add('active');
-  panel.setAttribute('aria-hidden', 'false');
-  panel.style.opacity = '1';
-  panel.style.visibility = 'visible';
-  panel.style.pointerEvents = 'auto';
-  panel.style.transform = '';
-
-  soundManager.play('arrival');
-  this._haptic('success');
-
-  this._clearArrivalTimer();
-  this._arrivalTimeout = setTimeout(() => {
-    if (panel.classList.contains('active')) {
-      this.hideArrival();
+    if (navBar) {
+      navBar.classList.remove('active');
+      navBar.style.transform = 'translateY(-100%)';
     }
-  }, 10000);
-}
-hideArrival() {
-  const panel = this.elements['arrival-panel'];
-  if (panel) {
-    panel.classList.remove('active');
-    panel.setAttribute('aria-hidden', 'true');
-    panel.style.opacity = '0';
-    panel.style.visibility = 'hidden';
-    panel.style.pointerEvents = 'none';
-    panel.style.transform = '';
+
+    if (sheet) {
+      sheet.classList.remove('has-trip');
+      this._collapseBottomSheet();
+    }
+
+    this.state.currentTrip = null;
+    this._lastTripRendered = null;
   }
-  this._clearArrivalTimer();
-}
+
+  showArrival(trip = this.state.currentTrip) {
+    const panel = this.elements['arrival-panel'];
+    if (!panel) return;
+
+    const hasTrip = !!trip?.id;
+    const isDestinationTrip = this._isDestinationState(trip?.estado);
+
+    if (!hasTrip || !isDestinationTrip) {
+      this.hideArrival();
+      return;
+    }
+
+    this.state.currentTrip = trip;
+
+    panel.classList.add('active');
+    panel.setAttribute('aria-hidden', 'false');
+    panel.style.opacity = '1';
+    panel.style.visibility = 'visible';
+    panel.style.pointerEvents = 'auto';
+    panel.style.transform = '';
+
+    soundManager.play('arrival');
+    this._haptic('success');
+
+    this._clearArrivalTimer();
+    this._arrivalTimeout = setTimeout(() => {
+      if (panel.classList.contains('active')) {
+        this.hideArrival();
+      }
+    }, 10000);
+  }
+
+  hideArrival() {
+    const panel = this.elements['arrival-panel'];
+    if (panel) {
+      panel.classList.remove('active');
+      panel.setAttribute('aria-hidden', 'true');
+      panel.style.opacity = '0';
+      panel.style.visibility = 'hidden';
+      panel.style.pointerEvents = 'none';
+      panel.style.transform = '';
+    }
+    this._clearArrivalTimer();
+  }
+
   showToast(message, type = 'info', duration = 3000) {
     const container = this.elements['toast-container'];
     if (!container) {
@@ -1367,11 +1411,10 @@ hideArrival() {
       return;
     }
 
-    const duplicateToast = [...container.querySelectorAll('.toast')]
-      .find((item) => {
-        const text = item.querySelector('.toast-message')?.textContent || '';
-        return text === message && item.classList.contains(`toast-${type}`);
-      });
+    const duplicateToast = [...container.querySelectorAll('.toast')].find((item) => {
+      const text = item.querySelector('.toast-message')?.textContent || '';
+      return text === message && item.classList.contains(`toast-${type}`);
+    });
 
     if (duplicateToast) {
       duplicateToast.remove();
@@ -1379,10 +1422,10 @@ hideArrival() {
 
     const toast = document.createElement('div');
     const icons = {
-      info: 'â„¹ï¸',
-      success: 'âœ…',
-      error: 'âŒ',
-      warning: 'âš ï¸'
+      info: 'ℹ️',
+      success: '✅',
+      error: '❌',
+      warning: '⚠️'
     };
 
     toast.className = `toast toast-${type}`;
@@ -1433,13 +1476,13 @@ hideArrival() {
 
     const isObject = profileOrName && typeof profileOrName === 'object';
     const displayName = isObject
-      ? (profileOrName.name || profileOrName.full_name || profileOrName.email || 'Conductor')
-      : (profileOrName || 'Conductor');
+      ? profileOrName.name || profileOrName.full_name || profileOrName.email || 'Conductor'
+      : profileOrName || 'Conductor';
 
-    const email = isObject ? (profileOrName.email || '') : '';
+    const email = isObject ? profileOrName.email || '' : '';
     const avatarUrl = isObject
-      ? (profileOrName.avatarUrl || profileOrName.avatar_url || profileOrName.picture || '')
-      : (maybeAvatarUrl || '');
+      ? profileOrName.avatarUrl || profileOrName.avatar_url || profileOrName.picture || ''
+      : maybeAvatarUrl || '';
 
     if (nameEl) {
       nameEl.textContent = displayName;
@@ -1478,7 +1521,7 @@ hideArrival() {
     }
 
     if (menuEmail) {
-      menuEmail.textContent = email || 'Sin sesiÃ³n';
+      menuEmail.textContent = email || 'Sin sesión';
     }
 
     if (menuAvatar) {
@@ -1517,13 +1560,13 @@ hideArrival() {
       .replaceAll("'", '&#039;');
   }
 
-    showInfoSheet(options = {}) {
+  showInfoSheet(options = {}) {
     const sheet = this.elements['bottom-sheet'];
     const sheetContent = this.elements['sheet-content'];
 
     if (!sheet || !sheetContent) return;
     if (this.state.currentTrip) {
-      this.showToast('Esta opcion no esta disponible durante un viaje', 'warning');
+      this.showToast('Esta opción no está disponible durante un viaje', 'warning');
       return;
     }
 
@@ -1623,20 +1666,21 @@ hideArrival() {
     }
   }
 
-closeMenu() {
-  const menu = this.elements['side-menu'];
-  const backdrop = this.elements['menu-backdrop'];
+  closeMenu() {
+    const menu = this.elements['side-menu'];
+    const backdrop = this.elements['menu-backdrop'];
 
-  if (menu && menu.contains(document.activeElement)) {
-    document.activeElement.blur();
+    if (menu && menu.contains(document.activeElement)) {
+      document.activeElement.blur();
+    }
+
+    menu?.classList.remove('active');
+    menu?.classList.remove('profile-expanded');
+    menu?.setAttribute('aria-hidden', 'true');
+    backdrop?.classList.remove('active');
+    document.body.classList.remove('menu-open');
   }
 
-  menu?.classList.remove('active');
-  menu?.classList.remove('profile-expanded');
-  menu?.setAttribute('aria-hidden', 'true');
-  backdrop?.classList.remove('active');
-  document.body.classList.remove('menu-open');
-}
   toggleProfileMenu() {
     const menu = this.elements['side-menu'];
     const profile = this.elements['menu-profile'];
@@ -1646,7 +1690,7 @@ closeMenu() {
     profile.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     this._haptic('light');
   }
-  
+
   _haptic(type = 'light') {
     if (!navigator.vibrate) return;
     if (!soundManager?._hapticsUnlocked) return;
