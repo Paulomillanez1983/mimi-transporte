@@ -5778,7 +5778,6 @@ state.estadoViaje = normalizarEstadoUpper(estadoInicialSeguro);
     });
 
     const dispatchOk = !!dispatchInfo?.ok;
-    const dispatchResultado = dispatchInfo?.resultado || null;
     const choferDetectado =
       dispatchResultado?.rpc_resultado?.chofer_id ||
       dispatchResultado?.chofer_id ||
