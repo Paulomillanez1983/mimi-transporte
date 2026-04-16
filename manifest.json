@@ -1,29 +1,29 @@
 {
-  "id": "/mimi-transporte/driver",
-  "name": "MIMI Driver",
-  "short_name": "Chofer",
-  "description": "App del chofer MIMI para recibir viajes, navegar y gestionar soporte.",
-  "start_url": "/mimi-transporte/login-chofer.html",
-  "scope": "/mimi-transporte/",
+  "id": "./cliente",
+  "name": "MIMI Cliente",
+  "short_name": "MIMI",
+  "description": "App del cliente MIMI para cotizar, seguir viajes y hablar con soporte.",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f5f7fb",
   "theme_color": "#2f6fed",
   "icons": [
     {
-      "src": "/mimi-transporte/assets/icons/icon-192x192.png",
+      "src": "./assets/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mimi-transporte/assets/icons/icon-512x512.png",
+      "src": "./assets/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/mimi-transporte/assets/icons/icon-maskable-512.png",
+      "src": "./assets/icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
