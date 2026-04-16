@@ -746,27 +746,22 @@ async _requireValidAuth() {
         () => this._rejectOffer(trip.offerId)
       );
     });
-    const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
-      if (this._currentTripId === trip.id) return;
+const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
+  const alreadySameTrip = this._currentTripId === trip.id;
 
-      this._currentTripId = trip.id;
-      this._setFlowState('GOING_TO_PICKUP');
+  this._currentTripId = trip.id;
+  this._setFlowState('GOING_TO_PICKUP');
 
-      window.dispatchEvent(
-        new CustomEvent('tripStateChanged', {
-          detail: { estado: trip.estado }
-        })
-      );
+  console.log('[DriverApp] tripAccepted', trip.id, 'alreadySame:', alreadySameTrip);
 
-      console.log('[DriverApp] tripAccepted', trip.id);
+  this._celebrateAcceptFeedback();
+  uiController.hideIncomingModal?.();
+  uiController.showToast('Viaje aceptado', 'success');
 
-      this._celebrateAcceptFeedback();
-      uiController.hideIncomingModal?.();
-      uiController.showToast('Viaje aceptado', 'success');
-
-      await this._showRouteOnMap(trip);
-      uiController.showNavigationState(trip);
-    });
+  // 🔥 SIEMPRE renderizar, aunque sea el mismo ID
+  await this._showRouteOnMap(trip);
+  uiController.showNavigationState(trip);
+});
     const unsubStarted = tripManager.on('tripStarted', async (trip) => {
       console.log('[DriverApp] tripStarted', trip.id);
       this._setFlowState('TRIP_STARTED');
@@ -982,9 +977,12 @@ if (typeof mapService.showTripRoute === 'function') {
         return result;
       }
 
-      this._celebrateAcceptFeedback();
-      await tripManager.refresh();
-      return result;
+this._celebrateAcceptFeedback();
+
+// 🔥 NO refrescar inmediatamente
+setTimeout(() => {
+  tripManager.refresh?.();
+}, 1500);      return result;
     } catch (err) {
       console.error('[DriverApp] Error aceptando oferta:', err);
       uiController.showToast('Error aceptando viaje', 'error');
