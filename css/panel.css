@@ -11,8 +11,14 @@
   --uber-surface-soft: rgba(255, 255, 255, 0.82);
   --uber-border: rgba(15, 15, 15, 0.08);
   --uber-border-strong: rgba(15, 15, 15, 0.14);
-   --mobile-header-size: 44px;
 
+  --mobile-header-size: clamp(40px, 10vw, 44px);
+  --mobile-side: clamp(10px, 3.4vw, 16px);
+  --mobile-top: calc(var(--safe-top) + clamp(8px, 2.6vw, 14px));
+  --mobile-fab-size: clamp(72px, 21vw, 92px);
+  --mobile-fab-h: clamp(72px, 21vw, 92px);
+  --mobile-sheet-peek: clamp(78px, 16vw, 96px);
+  --mobile-sheet-peek-trip: clamp(116px, 24vw, 148px);
 
   --uber-text: #111111;
   --uber-text-soft: rgba(17, 17, 17, 0.68);
