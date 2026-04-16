@@ -3,6 +3,13 @@
  * Centralized config
  */
 
+const APP_BASE_PATH = (() => {
+  if (typeof window === 'undefined') return '/';
+  const path = window.location.pathname || '/';
+  return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
+})();
+const resolveAppUrl = (relativePath) => new URL(relativePath, window.location.href).toString();
+
 const CONFIG = {
   // =========================================================
   // SUPABASE
@@ -84,8 +91,8 @@ const CONFIG = {
   // REDIRECTS
   // =========================================================
   REDIRECTS: {
-    LOGIN: '/mimi-transporte/login-chofer.html',
-    PANEL: '/mimi-transporte/chofer-panel.html'
+    LOGIN: resolveAppUrl('login-chofer.html'),
+    PANEL: resolveAppUrl('chofer-panel.html')
   },
 
   // =========================================================
