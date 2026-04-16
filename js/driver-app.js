@@ -481,16 +481,28 @@ class DriverApp {
       const pendingTrip = tripManager.getPendingTrip();
 
       // blindaje contra estado viejo roto
-      if (currentTrip) {
-        const estadoTrip = String(currentTrip.estado || '').toUpperCase();
+if (currentTrip) {
+  const estadoTrip = String(currentTrip.estado || '').toUpperCase();
+  const choferAsignado =
+    !!currentTrip?.chofer_id_uuid &&
+    String(currentTrip.chofer_id_uuid) === String(this.driverId);
 
-        if (!['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoTrip)) {
-          console.warn('[DriverApp] Viaje invalido detectado en memoria, limpiando estado local...');
-          tripManager.resetState?.();
-          currentTrip = null;
-        }
-      }
+  const estadoNormalizado =
+    estadoTrip === 'OFERTADO' && choferAsignado
+      ? 'ASIGNADO'
+      : estadoTrip;
 
+  if (!['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoNormalizado)) {
+    console.warn('[DriverApp] Viaje invalido detectado en memoria, limpiando estado local...');
+    tripManager.resetState?.();
+    currentTrip = null;
+  } else {
+    currentTrip = {
+      ...currentTrip,
+      estado: estadoNormalizado
+    };
+  }
+}
       if (currentTrip) {
         console.log('[DriverApp] Estado inicial: viaje activo');
         this._currentTripId = currentTrip.id;
