@@ -22,8 +22,8 @@ let foregroundListenerBound = false;
 const PUSH_PROMPT_DISMISSED_KEY = "mimi_client_push_prompt_dismissed_v1";
 
 function getAppBasePath() {
-  const isGithubPages = window.location.hostname === "paulomillanez1983.github.io";
-  return isGithubPages ? "/mimi-transporte/" : "/";
+  const path = window.location.pathname || "/";
+  return path.endsWith("/") ? path : path.replace(/[^/]*$/, "");
 }
 
 function getSwPath() {
