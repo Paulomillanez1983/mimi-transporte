@@ -12,7 +12,10 @@ import soundManager from './sound-manager.js';
 import { initSupportPushFCM } from './push-fcm.js';
 import { initDriverSupport, openDriverSupportPanel } from './driver-support.js';
 
-const APP_BASE_PATH = '/mimi-transporte/';
+const APP_BASE_PATH = (() => {
+  const path = window.location.pathname || '/';
+  return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
+})();
 const DRIVER_PANEL_URL = `${APP_BASE_PATH}chofer-panel.html`;
 const DRIVER_SW_PATH = `${APP_BASE_PATH}firebase-messaging-sw.js`;
 
