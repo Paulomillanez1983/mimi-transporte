@@ -952,7 +952,24 @@ const url = `${CONFIG.OSRM_URL}/route/v1/driving/${from.lng},${from.lat};${to.ln
       throw error;
     }
   }
+async _waitForMapLibre(timeout = 10000) {
+  const start = Date.now();
 
+  while (Date.now() - start < timeout) {
+    if (
+      typeof window !== 'undefined' &&
+      window.maplibregl &&
+      typeof window.maplibregl.Map === 'function'
+    ) {
+      return true;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  console.error("[Map] MapLibre no cargó a tiempo");
+  return false;
+}
   // =========================================================
   // DESTROY
   // =========================================================
