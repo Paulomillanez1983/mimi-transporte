@@ -197,10 +197,11 @@ body.menu-open .nav-bar {
 
 .driver-info h1,
 .status-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
 }
+
 .icon-btn {
   width: 46px;
   height: 46px;
@@ -1634,7 +1635,7 @@ top: calc(var(--mobile-top) + 56px);
   }
 }
 .header-content {
-  display: grid;
+  display: flex;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
