@@ -1,5 +1,8 @@
 const CACHE_NAME = 'mimi-driver-v6';
-const APP_BASE_PATH = '/mimi-transporte/';
+const APP_BASE_PATH = (() => {
+  const path = self.location.pathname || '/';
+  return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
+})();
 const STATIC_ASSETS = [
   `${APP_BASE_PATH}login-chofer.html`,
   `${APP_BASE_PATH}driver-review-pending.html`,
