@@ -5785,12 +5785,14 @@ const choferDetectado =
   dispatchResultado?.chofer_id_uuid ||
   null;
     
-    if (dispatchOk) {
+if (dispatchOk) {
   if (choferDetectado) {
+    state.viajeEstado = 'asignado';
+    state.estadoViaje = 'ASIGNADO';
+  } else {
     state.viajeEstado = 'ofertando';
     state.estadoViaje = 'OFERTANDO';
   }
-
   actualizarBotonCancelarViaje();
   guardarViajeActivoEnStorage();
 
