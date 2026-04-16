@@ -233,10 +233,9 @@
 
     async function protectRoute() {
       try {
-        await supabaseService.init();
+const client = await supabaseService.init();
 
-        const { data, error } = await supabaseService.client.auth.getSession();
-
+const { data, error } = await client.auth.getSession();
         if (error || !data?.session?.access_token) {
           console.warn("[AUTH] No autenticado -> redirigiendo");
           window.location.replace("./login-chofer.html");
