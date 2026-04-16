@@ -1427,14 +1427,6 @@ top: calc(var(--mobile-top) + 56px);
     gap: 10px;
   }
 
-.driver-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1 1 auto;
-  width: auto;
-}
   .avatar,
   .icon-btn {
     width: var(--mobile-header-size);
