@@ -1048,9 +1048,13 @@ setTimeout(() => {
         return result;
       }
 
-      this._celebrateAcceptFeedback();
-      await tripManager.refresh();
-      return result;
+this._celebrateAcceptFeedback();
+
+setTimeout(() => {
+  tripManager.refresh?.();
+}, 1500);
+
+return result;
     } catch (err) {
       console.error('[DriverApp] Error aceptando viaje:', err);
       uiController.showToast('Error aceptando viaje', 'error');
