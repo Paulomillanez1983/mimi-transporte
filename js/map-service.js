@@ -137,23 +137,19 @@ class MapService {
     }
   }
 
-  async _waitForMapLibre(timeoutMs = 10000) {
-    if (window.maplibregl) return true;
+async _ensureMapReady() {
+  if (this.map && this.isLoaded) return true;
 
-    console.log("[Map] Waiting for MapLibre...");
-    const start = Date.now();
-
-    while (!window.maplibregl) {
-      await new Promise((r) => setTimeout(r, 100));
-      if (Date.now() - start > timeoutMs) {
-        console.error("[Map] Timeout waiting for MapLibre");
-        return false;
-      }
-    }
-
-    return true;
+  let tries = 0;
+  while (tries < 20) {
+    if (this.map && this.isLoaded) return true;
+    await new Promise((r) => setTimeout(r, 100));
+    tries++;
   }
 
+  console.warn("[Map] Map not ready after wait");
+  return false;
+}
   // =========================================================
   // EVENTOS TÁCTILES OPTIMIZADOS
   // =========================================================
@@ -648,98 +644,114 @@ class MapService {
   // =========================================================
   // ROUTING
   // =========================================================
-  async showRoute(from, to) {
-    if (!this.map || !this.isLoaded) return null;
-    if (!from || !to) return null;
-    if (!this._isValidLatLng(from.lat, from.lng)) return null;
-    if (!this._isValidLatLng(to.lat, to.lng)) return null;
+async showRoute(from, to) {
+  const ready = await this._ensureMapReady();
+  if (!ready) return null;
 
-    this.setNavigationMode(true);
-    this.clearRoute();
+  if (!from || !to) return null;
+  if (!this._isValidLatLng(from.lat, from.lng)) return null;
+  if (!this._isValidLatLng(to.lat, to.lng)) return null;
 
-    this.addPickupMarker(from.lng, from.lat);
-    this.addDropoffMarker(to.lng, to.lat);
+  this.setNavigationMode(true);
+  this.clearRoute();
 
-    let routeData = null;
+  this.addPickupMarker(from.lng, from.lat);
+  this.addDropoffMarker(to.lng, to.lat);
 
-    try {
-      routeData = await this._getOSRMRoute(from, to);
+  let routeData = null;
 
-      if (!routeData?.geometry || routeData.geometry.length < 2) {
-        throw new Error("Ruta inválida o vacía");
-      }
+  try {
+    routeData = await this._getOSRMRoute(from, to);
 
-      console.log("[Map] Ruta OSRM cargada (calles reales)");
-    } catch (err) {
-      console.warn("[Map] OSRM falló, usando línea recta:", err);
-      routeData = this._getStraightLineRoute(from, to);
+    if (!routeData?.geometry || routeData.geometry.length < 2) {
+      throw new Error("Ruta inválida o vacía");
     }
 
-    this.currentDestination = to;
-    this.routeGeometry = routeData.geometry || [];
-
-    try {
-      const source = this.map.getSource("route");
-
-      if (source) {
-        source.setData({
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates: routeData.geometry,
-          },
-        });
-      }
-
-if (routeData.geometry.length >= 2) {
-  const bounds = routeData.geometry.reduce(
-    (b, coord) => b.extend(coord),
-    new window.maplibregl.LngLatBounds(
-      routeData.geometry[0],
-      routeData.geometry[0]
-    )
-  );
-
-  const isMobile = window.innerWidth <= 768;
-
-  this.map.fitBounds(bounds, {
-    padding: isMobile
-      ? {
-          top: 110,
-          right: 20,
-          bottom: Math.max(140, window.innerHeight * 0.22),
-          left: 20
-        }
-      : {
-          top: 120,
-          right: 120,
-          bottom: 180,
-          left: 120
-        },
-    duration: 800,
-    maxZoom: 18,
-  });
-
-  setTimeout(() => {
-    try {
-      this.map.resize();
-    } catch {}
-  }, 300);
-}
-        console.log("[Map] Route drawn", {
-        distance: Math.round(routeData.distance),
-        duration: Math.round(routeData.duration),
-        fallback: routeData.isFallback,
-      });
-
-      return routeData;
-    } catch (e) {
-      console.error("[Map] Error showing route:", e);
-      return null;
-    }
+    console.log("[Map] Ruta OSRM cargada (calles reales)");
+  } catch (err) {
+    console.warn("[Map] OSRM falló, usando línea recta:", err);
+    routeData = this._getStraightLineRoute(from, to);
   }
 
+  this.currentDestination = to;
+  this.routeGeometry = routeData.geometry || [];
+
+  try {
+    const source = this.map.getSource("route");
+
+    if (source) {
+      source.setData({
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: routeData.geometry,
+        },
+      });
+    }
+
+    if (routeData.geometry.length >= 2) {
+      const bounds = routeData.geometry.reduce(
+        (b, coord) => b.extend(coord),
+        new window.maplibregl.LngLatBounds(
+          routeData.geometry[0],
+          routeData.geometry[0]
+        )
+      );
+
+      const isMobile = window.innerWidth <= 768;
+
+      this.map.fitBounds(bounds, {
+        padding: isMobile
+          ? {
+              top: 110,
+              right: 20,
+              bottom: Math.max(140, window.innerHeight * 0.22),
+              left: 20,
+            }
+          : {
+              top: 120,
+              right: 120,
+              bottom: 180,
+              left: 120,
+            },
+        duration: 800,
+        maxZoom: 18,
+      });
+
+      setTimeout(() => {
+        try {
+          this.map.resize();
+        } catch {}
+      }, 300);
+
+      setTimeout(() => {
+        try {
+          const first = routeData.geometry?.[0];
+          if (first) {
+            this.map.easeTo({
+              center: first,
+              zoom: isMobile ? 16 : 15.5,
+              duration: 400,
+              essential: true,
+            });
+          }
+        } catch {}
+      }, 450);
+    }
+
+    console.log("[Map] Route drawn", {
+      distance: Math.round(routeData.distance),
+      duration: Math.round(routeData.duration),
+      fallback: routeData.isFallback,
+    });
+
+    return routeData;
+  } catch (e) {
+    console.error("[Map] Error showing route:", e);
+    return null;
+  }
+}
   // =========================================================
   // CLEAR ROUTE
   // =========================================================
@@ -862,11 +874,11 @@ if (routeData.geometry.length >= 2) {
   // =========================================================
   // OSRM ROUTING - FIX AbortError DEFINITIVO
   // =========================================================
-  async _getOSRMRoute(from, to) {
-    const dist = this._haversine(from.lat, from.lng, to.lat, to.lng);  if (dist < 20) {
+async _getOSRMRoute(from, to) {
+  const dist = this._haversine(from.lat, from.lng, to.lat, to.lng);
+  if (dist < 20) {
     return this._getStraightLineRoute(from, to);
   }
-
   const cacheKey = `${from.lat.toFixed(4)},${from.lng.toFixed(
     4
   )}-${to.lat.toFixed(4)},${to.lng.toFixed(4)}`;
