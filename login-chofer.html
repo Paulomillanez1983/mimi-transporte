@@ -771,12 +771,17 @@ async function checkSession() {
 
       let session = sessionData?.session || null;
 
-      if (!session) {
-        await new Promise((r) => setTimeout(r, returningFromOAuth ? 1400 : 500));
-        const retry = await supabaseService.client.auth.getSession();
-        session = retry?.data?.session || null;
-      }
+// 🔁 Esperar estabilidad de sesión (mobile fix)
+for (let i = 0; i < 3; i++) {
+  if (session?.access_token) break;
 
+  await new Promise((r) =>
+    setTimeout(r, returningFromOAuth ? 1200 : 600)
+  );
+
+  const retry = await supabaseService.client.auth.getSession();
+  session = retry?.data?.session || null;
+}
       if (session?.access_token) {
         sessionStorage.removeItem("mimi_driver_oauth_pending");
         showSplash("Preparando tu cuenta...");
