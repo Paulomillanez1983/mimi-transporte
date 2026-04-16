@@ -163,17 +163,15 @@ if (activeTrip) {
 
   console.log('[TripManager] Active trip found:', normalizedTrip.id, normalizedTrip.estado);
 
-  this.currentTrip = normalizedTrip;
-  this.emit('noPendingTrips');
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
+this.currentTrip = normalizedTrip;
+this.pendingOffer = null;
+this.lastOfferIdShown = null;
 
-  if (normalizedState === 'EN_CURSO') {
-    this.emit('tripStarted', normalizedTrip);
-  } else {
-    this.emit('tripAccepted', normalizedTrip);
-  }
-
+if (normalizedState === 'EN_CURSO') {
+  this.emit('tripStarted', normalizedTrip);
+} else {
+  this.emit('tripAccepted', normalizedTrip);
+}
   return;
 }
         this.currentTrip = null;
