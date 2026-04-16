@@ -782,13 +782,15 @@ for (let i = 0; i < 3; i++) {
   const retry = await supabaseService.client.auth.getSession();
   session = retry?.data?.session || null;
 }
-      if (session?.access_token) {
-        sessionStorage.removeItem("mimi_driver_oauth_pending");
-        showSplash("Preparando tu cuenta...");
-        await redirectAfterAuth();
-        return;
-      }
+if (session?.access_token) {
+  if (window.__REDIRECTING__) return;
+  window.__REDIRECTING__ = true;
 
+  sessionStorage.removeItem("mimi_driver_oauth_pending");
+  showSplash("Preparando tu cuenta...");
+  await redirectAfterAuth();
+  return;
+}
       revealLoginUI();
     } catch (err) {
       console.error("[checkSession] fatal:", err);
