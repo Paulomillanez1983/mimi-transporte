@@ -1840,11 +1840,16 @@ async function reanudarViajePendientePostLogin() {
       return;
     }
 
-    renderSesionUI(session);
-    localStorage.removeItem('mimi_pending_trip_request');
-    await subscribeSupportRealtimeForUser();
-    await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
+renderSesionUI(session);
+localStorage.removeItem('mimi_pending_trip_request');
 
+if (typeof window.subscribeSupportRealtimeForUser === 'function') {
+  await window.subscribeSupportRealtimeForUser();
+} else {
+  console.warn('[reanudarViajePendientePostLogin] subscribeSupportRealtimeForUser no disponible todavía');
+}
+
+await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
     notif.show(
       'Sesión iniciada',
       `Ingresaste como ${session.user.email || 'usuario'}`,
@@ -3256,20 +3261,19 @@ async function subscribeSupportRealtimeForUser(force = false) {
 
   const userId = session.user.id;
 
-  // Si ya hay un canal activo y no forzamos, retornar
   if (!force && currentSupportChannel && supportRealtimeActiveUserId === userId) {
     return currentSupportChannel;
   }
 
-  // Limpiar canal anterior
   cleanupSupportRealtime();
 
-  // Resetear contador si fue exitoso hace más de 30 segundos
-  if (window._lastSupportSubscribeSuccess && (Date.now() - window._lastSupportSubscribeSuccess > 30000)) {
+  if (
+    window._lastSupportSubscribeSuccess &&
+    (Date.now() - window._lastSupportSubscribeSuccess > 30000)
+  ) {
     supportRealtimeRetryCount = 0;
   }
 
-  // Evitar bucle infinito de reintentos
   if (supportRealtimeRetryCount >= MAX_SUPPORT_RETRIES) {
     console.error("[support realtime] máximo de reintentos alcanzado");
     notif.show("Error de conexión", "No se pudo conectar al soporte en tiempo real", "error");
@@ -3288,8 +3292,6 @@ async function subscribeSupportRealtimeForUser(force = false) {
         event: "INSERT",
         schema: "public",
         table: "soporte_mensajes",
-        // Agregar filtro por user_id si es posible en tu schema
-        // filter: `sender_user_id=neq.${userId}` // Solo mensajes de otros (admin)
       },
       handleIncomingSupportMessage
     )
@@ -3297,7 +3299,7 @@ async function subscribeSupportRealtimeForUser(force = false) {
       console.log("[support realtime status]", status);
 
       if (status === "SUBSCRIBED") {
-        supportRealtimeRetryCount = 0; // Resetear contador en éxito
+        supportRealtimeRetryCount = 0;
         window._lastSupportSubscribeSuccess = Date.now();
         return;
       }
@@ -3307,9 +3309,12 @@ async function subscribeSupportRealtimeForUser(force = false) {
         return;
       }
 
-      if ((status === "CHANNEL_ERROR" || status === "TIMED_OUT") && supportRealtimeRetryCount < MAX_SUPPORT_RETRIES) {
-        const delay = Math.min(2000 * supportRealtimeRetryCount, 10000); // Backoff exponencial
-        
+      if (
+        (status === "CHANNEL_ERROR" || status === "TIMED_OUT") &&
+        supportRealtimeRetryCount < MAX_SUPPORT_RETRIES
+      ) {
+        const delay = Math.min(2000 * supportRealtimeRetryCount, 10000);
+
         console.warn(`[support realtime] reintentando en ${delay}ms... (intento ${supportRealtimeRetryCount})`);
 
         if (supportRealtimeRetryTimer) {
@@ -3331,7 +3336,12 @@ async function subscribeSupportRealtimeForUser(force = false) {
   window._supportChannel = currentSupportChannel;
   return currentSupportChannel;
 }
-  
+
+// exponer API de soporte para código fuera de este DOMContentLoaded
+window.subscribeSupportRealtimeForUser = subscribeSupportRealtimeForUser;
+window.cleanupSupportRealtime = cleanupSupportRealtime;
+window.loadOrCreateSupportTicketContext = loadOrCreateSupportTicketContext;
+window.handleIncomingSupportMessage = handleIncomingSupportMessage;  
 supportBtn?.addEventListener("click", async () => {
   try {
     const session = await obtenerSesionCliente(true);
