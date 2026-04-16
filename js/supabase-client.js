@@ -101,9 +101,8 @@ async _waitForSupabaseLib(timeoutMs = 8000) {
     if (Date.now() - start > timeoutMs) return false;
   }
 
-return this.client;
+  return true;
 }
-
   async _loadSession() {
     const { data } = await this.client.auth.getSession();
     this.session = data?.session || null;
