@@ -2050,12 +2050,12 @@ async function enriquecerViajeConChofer(viajeLike = null) {
   if (!choferId || !window.supabase) return viajeLike;
 
   try {
-    const { data, error } = await window.supabase
-      .from('choferes')
-      .select('id_uuid, nombre, telefono, email, lat, lng, heading, last_seen_at')
-      .eq('id_uuid', choferId)
-      .maybeSingle();
-
+const { data, error } = await window.supabase
+  .from('choferes')
+  .select('id_uuid, nombre, telefono, email, lat, lng, heading, last_seen_at')
+  .eq('id_uuid', choferId)
+  .single();
+    
     if (error || !data) {
       if (error) {
         console.warn('[cliente] no se pudo enriquecer chofer:', error);
