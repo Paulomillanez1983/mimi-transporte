@@ -353,9 +353,8 @@ class DriverApp {
     try {
       // 1) Inicializar Supabase
       console.log('[DriverApp] Inicializando Supabase...');
-      const dbReady = await supabaseService.init();
-      if (!dbReady) throw new Error('No se pudo conectar a Supabase');
-
+      const client = await supabaseService.init();
+       if (!client) throw new Error('No se pudo conectar a Supabase');
       // 2) Resolver sesion valida antes de pedir user
       const authData = await this._requireValidAuth();
 
@@ -402,9 +401,6 @@ class DriverApp {
         mapa: results[0]?.status
       });
 
-      if (results[0]?.status === 'rejected') {
-        console.error('[DriverApp] Error mapa:', results[0].reason);
-      }
       if (results[0]?.status === 'rejected') {
         console.error('[DriverApp] Error mapa:', results[0].reason);
       }
