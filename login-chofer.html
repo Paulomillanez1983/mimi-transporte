@@ -31,9 +31,9 @@
 <meta name="twitter:description" content="Panel profesional para choferes" />
 <meta name="twitter:image" content="https://paulomillanez1983.github.io/mimi-transporte/assets/icons/logo-mimi.png" />
 
-  <link rel="icon" href="./assets/favicon.png" type="image/png" />
-  <link rel="apple-touch-icon" href="./assets/favicon.png" />
-  <link rel="manifest" href="/mimi-transporte/manifest-driver.json" />
+  <link rel="icon" href="./assets/icons/favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="./assets/icons/favicon.png" />
+  <link rel="manifest" href="./manifest-driver.json" />
 
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
@@ -841,10 +841,12 @@ async function checkSession() {
       sessionStorage.setItem("mimi_driver_oauth_pending", "1");
       showSplash("Abriendo Google...");
 
+      const redirectTo = new URL("./login-chofer.html", window.location.href).toString();
+
       const { error } = await supabaseService.client.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/login-chofer.html"
+          redirectTo
         }
       });
 
@@ -880,8 +882,10 @@ async function checkSession() {
         return;
       }
 
+      const redirectTo = new URL("./reset-password.html", window.location.href).toString();
+
       const { error } = await supabaseService.client.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://paulomillanez1983.github.io/mimi-transporte/reset-password.html"
+        redirectTo
       });
 
       if (error) {
