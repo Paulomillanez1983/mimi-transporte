@@ -628,64 +628,129 @@ async setDriverAvailability({ online, disponible }) {
     }
   }
 
-  async acceptOffer(offerId) {
-    const driverId = this.driverId;
-    if (!driverId) return { success: false, error: 'No driverId' };
-    if (!offerId) return { success: false, error: 'No offerId disponible' };
+async acceptOffer(offerId) {
+  const driverId = this.driverId;
+  if (!driverId) return { success: false, error: 'No driverId' };
+  if (!offerId) return { success: false, error: 'No offerId disponible' };
 
-    const { data: offerRow, error: offerError } = await supabaseService.client
-      .from('viaje_ofertas')
-      .select('id, viaje_id, chofer_id, estado')
-      .eq('id', offerId)
-      .eq('chofer_id', driverId)
-      .in('estado', ['pendiente', 'enviada'])
-      .maybeSingle();
+  const { data: offerRow, error: offerError } = await supabaseService.client
+    .from('viaje_ofertas')
+    .select('id, viaje_id, chofer_id, estado')
+    .eq('id', offerId)
+    .eq('chofer_id', driverId)
+    .in('estado', ['pendiente', 'enviada'])
+    .maybeSingle();
 
-    if (offerError) {
-      console.error('[TripManager] Error reading offer before accept:', offerError);
-      return { success: false, error: offerError.message };
-    }
-
-    if (!offerRow?.viaje_id) {
-      return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
-    }
-
-const result = await this._invokeEdgeFunction('aceptar-viaje-ts', {
-  viaje_id: offerRow.viaje_id,
-  chofer_id: driverId
-});
-
-console.log('[TripManager] acceptOffer result:', result);
-console.log('[TripManager] acceptOffer body:', result?.body);
-    
-    if (!result.success) {
-      const paso = result?.body?.paso || '';
-      if (
-        [
-          'viaje_ya_asignado',
-          'estado_final',
-          'estado_invalido',
-          'chofer_no_autorizado',
-          'oferta_vencida'
-        ].includes(paso)
-      ) {
-        this.pendingOffer = null;
-        this.lastOfferIdShown = null;
-        this.emit('pendingTripCleared', { reason: result.error || 'offer_unavailable' });
-        await this._loadInitialState(driverId);
-      }
-
-      return { success: false, error: result.error || 'No se pudo aceptar el viaje' };
-    }
-
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
-    this.emit('pendingTripCleared', { reason: 'offer_accepted' });
-
-    await this._loadInitialState(driverId);
-    return { success: true, data: result.data };
+  if (offerError) {
+    console.error('[TripManager] Error reading offer before accept:', offerError);
+    return { success: false, error: offerError.message };
   }
 
+  if (!offerRow?.viaje_id) {
+    return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
+  }
+
+  const result = await this._invokeEdgeFunction('aceptar-viaje-ts', {
+    viaje_id: offerRow.viaje_id,
+    chofer_id: driverId
+  });
+
+  console.log('[TripManager] acceptOffer result:', result);
+  console.log('[TripManager] acceptOffer body:', result?.body);
+
+  if (!result.success) {
+    const paso = result?.body?.paso || '';
+
+    if (
+      [
+        'viaje_ya_asignado',
+        'estado_final',
+        'estado_invalido',
+        'chofer_no_autorizado',
+        'oferta_vencida'
+      ].includes(paso)
+    ) {
+      this.pendingOffer = null;
+      this.lastOfferIdShown = null;
+      this.emit('pendingTripCleared', {
+        reason: result.error || 'offer_unavailable'
+      });
+
+      await this._loadInitialState(driverId);
+    }
+
+    return {
+      success: false,
+      error: result.error || 'No se pudo aceptar el viaje'
+    };
+  }
+
+  // =====================================================
+  // NUEVO: hidratar el viaje aceptado inmediatamente
+  // =====================================================
+  const { data: acceptedTripRaw, error: acceptedTripError } = await supabaseService.client
+    .from('viajes')
+    .select('*')
+    .eq('id', offerRow.viaje_id)
+    .maybeSingle();
+
+  if (acceptedTripError) {
+    console.error('[TripManager] Error loading accepted trip:', acceptedTripError);
+  }
+
+  if (acceptedTripRaw) {
+    const normalizedState = this._normalizeDriverTripState(acceptedTripRaw);
+    const acceptedTrip = {
+      ...acceptedTripRaw,
+      estado: normalizedState
+    };
+
+    console.log(
+      '[TripManager] Accepted trip hydrated immediately:',
+      acceptedTrip.id,
+      acceptedTrip.estado
+    );
+
+    this.currentTrip = acceptedTrip;
+    this.pendingOffer = null;
+    this.lastOfferIdShown = null;
+
+    if (normalizedState === 'EN_CURSO') {
+      this.emit('tripStarted', acceptedTrip);
+    } else {
+      this.emit('tripAccepted', acceptedTrip);
+    }
+
+    return {
+      success: true,
+      data: result.data,
+      trip: acceptedTrip
+    };
+  }
+
+  // =====================================================
+  // Fallback: si aún no se ve reflejado en DB, refrescar
+  // =====================================================
+  await this._loadInitialState(driverId);
+
+  if (this.currentTrip) {
+    return {
+      success: true,
+      data: result.data,
+      trip: this.currentTrip
+    };
+  }
+
+  console.warn(
+    '[TripManager] acceptOffer OK, pero el viaje aún no pudo hidratarse en frontend'
+  );
+
+  return {
+    success: true,
+    data: result.data,
+    warning: 'trip_not_hydrated_yet'
+  };
+}
 async acceptTrip() {
   const offerId = this.pendingOffer?.offerId || null;
 
