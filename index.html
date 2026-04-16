@@ -704,7 +704,7 @@ async function buscarDireccion(query) {
     <div class="vehicle-section" aria-hidden="true">
       <img
         class="vehicle-img"
-        src="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/jeep-renegade.png?raw=true"
+        src="./jeep-renegade.png"
         alt=""
         loading="eager"
         decoding="async"
@@ -1804,8 +1804,7 @@ async function loginConGoogleParaViaje() {
   sessionStorage.removeItem('mimi-cliente-auth');
   localStorage.setItem('mimi_pending_trip_request', '1');
 
-  const redirectTo =
-    "https://paulomillanez1983.github.io/mimi-transporte/";
+  const redirectTo = new URL("./index.html", window.location.href).toString();
 
   const { data, error } = await window.sbRealtime.auth.signInWithOAuth({
     provider: 'google',
