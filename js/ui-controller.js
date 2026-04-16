@@ -1079,12 +1079,15 @@ _updateBottomSheetState(isOnline) {
   }
 
 showNavigationState(trip) {
+  if (!trip || typeof trip !== 'object') {
+    console.warn('[UI] showNavigationState llamado sin trip válido');
+    return;
+  }
+
   this.state.currentTrip = trip;
 
   const navBar = this.elements['nav-bar'];
   const sheet = this.elements['bottom-sheet'];
-
-  document.body.classList.add('trip-active');
 
   if (navBar) {
     navBar.classList.add('active');
@@ -1120,38 +1123,45 @@ showNavigationState(trip) {
     };
   }
 
-  _updateNavigationInfo(trip) {
-    const streetEl = this.elements['nav-street'];
-    const nextEl = this.elements['nav-next'];
-    const distanceEl = this.elements['nav-distance'];
-
-    const irADestino = this._isDestinationState(trip?.estado);
-
-    if (streetEl) {
-      streetEl.textContent = irADestino
-        ? 'DirÃ­gete al destino final'
-        : 'DirÃ­gete al punto de recogida';
-    }
-
-    if (nextEl) {
-      nextEl.textContent = irADestino
-        ? (trip.destino_direccion || trip.destino || 'Destino')
-        : (trip.origen_direccion || trip.origen || 'Recoger pasajero');
-    }
-
-    if (distanceEl) {
-      let dist = '--';
-
-      if (!irADestino && trip.distancia_al_origen) {
-        dist = `${(trip.distancia_al_origen / 1000).toFixed(1)} km`;
-      } else if (irADestino && trip.km) {
-        dist = `${Number(trip.km).toFixed(1)} km`;
-      }
-
-      distanceEl.textContent = dist;
-    }
+_updateNavigationInfo(trip) {
+  if (!trip || typeof trip !== 'object') {
+    console.warn('[UI] _updateNavigationInfo sin trip válido');
+    return;
   }
 
+  const streetEl = this.elements['nav-street'];
+  const nextEl = this.elements['nav-next'];
+  const distanceEl = this.elements['nav-distance'];
+
+  const estado = String(trip.estado || '').toLowerCase();
+  const irADestino = (estado === 'en_curso' || estado === 'en_viaje');
+
+  if (streetEl) {
+    streetEl.textContent = irADestino
+      ? 'Dirígete al destino final'
+      : 'Dirígete al punto de recogida';
+  }
+
+  if (nextEl) {
+    nextEl.textContent = irADestino
+      ? (trip.destino_direccion || trip.destino || 'Destino')
+      : (trip.origen_direccion || trip.origen || 'Recoger pasajero');
+  }
+
+  if (distanceEl) {
+    let dist = '--';
+
+    if (!irADestino && trip.distancia_al_origen) {
+      dist = (Number(trip.distancia_al_origen) / 1000).toFixed(1) + ' km';
+    } else if (irADestino && trip.km) {
+      dist = Number(trip.km).toFixed(1) + ' km';
+    }
+
+    distanceEl.textContent = dist;
+  }
+
+  this._updateNavigateButton?.(trip);
+}
   _showTripActions(trip) {
     const sheetContent = this.elements['sheet-content'];
     if (!sheetContent || !trip?.id) return;
