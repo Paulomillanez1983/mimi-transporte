@@ -2602,13 +2602,17 @@ function suscribirseEstadoViajeRealtime(viajeId) {
     .on(
       'postgres_changes',
       {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
         table: 'viajes',
         filter: `id=eq.${viajeId}`
       },
       async (payload) => {
         try {
+          console.log('[realtime][viajes] payload old:', payload?.old);
+          console.log('[realtime][viajes] payload new:', payload?.new);
+          console.log('[realtime][viajes] eventType:', payload?.eventType);
+
           const oldRow = payload?.old || {};
           const newRow = await enriquecerViajeConChofer(payload?.new || {});
 
@@ -2617,26 +2621,32 @@ function suscribirseEstadoViajeRealtime(viajeId) {
           const choferRecienAsignado = !choferAntes && choferAhora;
           const choferIdActual = newRow?.assigned_driver_id || newRow?.chofer_id_uuid || null;
 
-if (choferIdActual) {
-  state.choferId = choferIdActual;
+          if (choferIdActual) {
+            state.choferId = choferIdActual;
 
-  if (coordenadasValidas(newRow?.chofer_lat, newRow?.chofer_lng)) {
-    actualizarMarkerChoferEnMapa(newRow.chofer_lat, newRow.chofer_lng, {
-      heading: newRow?.chofer_heading || 0
-    });
-  }
+            if (coordenadasValidas(newRow?.chofer_lat, newRow?.chofer_lng)) {
+              actualizarMarkerChoferEnMapa(newRow.chofer_lat, newRow.chofer_lng, {
+                heading: newRow?.chofer_heading || 0
+              });
+            }
 
-  if (typeof suscribirseUbicacionChoferRealtime === 'function') {
-    suscribirseUbicacionChoferRealtime(choferIdActual);
-  }
-}
+            if (typeof suscribirseUbicacionChoferRealtime === 'function') {
+              suscribirseUbicacionChoferRealtime(choferIdActual);
+            }
+          }
 
           let nuevoEstado = resolverEstadoViajeCliente(newRow);
 
-          // Si todavía no vino el estado final pero apareció chofer, al cliente le mostramos ASIGNADO.
           if (choferRecienAsignado && ['BUSCANDO_CHOFER', 'OFERTANDO', 'OFERTADO', 'PENDIENTE'].includes(nuevoEstado)) {
             nuevoEstado = 'ASIGNADO';
           }
+
+          console.log('[realtime][viajes] estado resuelto cliente:', {
+            estado_db: payload?.new?.estado,
+            assigned_driver_id: payload?.new?.assigned_driver_id || null,
+            chofer_id_uuid: payload?.new?.chofer_id_uuid || null,
+            nuevoEstado
+          });
 
           if (!nuevoEstado) return;
           if (nuevoEstado === ultimoEstadoNotificado && !choferRecienAsignado) return;
@@ -2647,6 +2657,7 @@ if (choferIdActual) {
 
           const notifData = mapearEstadoANotificacion(nuevoEstado);
           const textoEstado = construirMensajeEstadoViaje(newRow, nuevoEstado, notifData.texto);
+
           if (typeof actualizarEstadoSolicitudUI === 'function') {
             actualizarEstadoSolicitudUI({
               estado: nuevoEstado,
@@ -2654,10 +2665,12 @@ if (choferIdActual) {
               viaje: newRow
             });
           }
+
           actualizarCentroNotificacionesViaje({
             estado: notifData.estado,
             texto: textoEstado
           });
+
           guardarNotificacionesEnStorage();
           guardarViajeActivoEnStorage();
 
@@ -2689,17 +2702,18 @@ if (choferIdActual) {
               3000
             );
           }
+
           if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
-  if (typeof limpiarCanalChoferRealtime === 'function') {
-    limpiarCanalChoferRealtime();
-  }
+            if (typeof limpiarCanalChoferRealtime === 'function') {
+              limpiarCanalChoferRealtime();
+            }
 
-  if (typeof limpiarMarkerChofer === 'function') {
-    limpiarMarkerChofer();
-  }
+            if (typeof limpiarMarkerChofer === 'function') {
+              limpiarMarkerChofer();
+            }
 
-  state.choferId = null;
-}
+            state.choferId = null;
+          }
 
           if (nuevoEstado === 'CANCELADO') {
             notif.show(
@@ -2714,11 +2728,13 @@ if (choferIdActual) {
         }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log('[realtime] estado canal viaje:', status, { viajeId });
+    });
 
   return currentTripChannel;
 }
-async function restaurarViajeActivoCliente() {
+  async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
 
@@ -5738,9 +5754,19 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
     ultimoEstadoNotificado = null;
 
     // compatibilidad total: guardamos en ambos nombres
-    state.viajeEstado = json.estado || 'buscando_chofer';
-    state.estadoViaje = String(state.viajeEstado || '').toUpperCase();
+const dispatchInfo = json?.dispatch || null;
+const dispatchResultado = dispatchInfo?.resultado || null;
+const viajeActualizado = dispatchResultado?.viaje_actualizado || null;
 
+const estadoInicialSeguro =
+  viajeActualizado?.estado ||
+  dispatchResultado?.estado ||
+  json?.estado ||
+  'BUSCANDO_CHOFER';
+
+state.viajeEstado = estadoInicialSeguro;
+state.estadoViaje = normalizarEstadoUpper(estadoInicialSeguro);
+    
     actualizarBotonCancelarViaje();
     guardarViajeActivoEnStorage();
 
