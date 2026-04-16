@@ -116,13 +116,14 @@ body.menu-open .nav-bar {
 }
 /* =========================================================
    HEADER FLOTANTE
+   LIMPIO / ESTABLE / TODOS LOS CELULARES
    ========================================================= */
 
 .header {
   position: fixed;
   top: calc(14px + var(--safe-top));
   left: 16px;
-  right: 76px;
+  right: 16px;
   z-index: var(--z-header);
   background: transparent;
   border: none;
@@ -134,20 +135,23 @@ body.menu-open .nav-bar {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0;
   min-height: 56px;
+  padding: 0;
+  width: 100%;
 }
 
 .driver-profile {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 12px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .avatar {
   width: 46px;
   height: 46px;
+  flex: 0 0 46px;
   border-radius: 50%;
   background: var(--uber-surface);
   border: 1px solid var(--uber-border);
@@ -157,9 +161,10 @@ body.menu-open .nav-bar {
   color: var(--uber-text);
   font-weight: 800;
   position: relative;
-  backdrop-filter: blur(12px);
   overflow: hidden;
+  backdrop-filter: blur(12px);
 }
+
 .avatar img {
   width: 100%;
   height: 100%;
@@ -188,23 +193,38 @@ body.menu-open .nav-bar {
 }
 
 .driver-info {
+  min-width: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-width: 0;
-  flex: 1;
 }
 
-.driver-info h1,
+.driver-info h1 {
+  margin: 0;
+  font-size: clamp(13px, 3.8vw, 16px);
+  line-height: 1.15;
+  font-weight: 800;
+  color: var(--uber-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .status-text {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
+  margin-top: 2px;
+  font-size: clamp(11px, 3.1vw, 13px);
+  line-height: 1.15;
+  color: rgba(17,17,17,0.68);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .icon-btn {
   width: 46px;
   height: 46px;
+  flex: 0 0 46px;
   border-radius: 50%;
   border: 1px solid var(--uber-border);
   background: var(--uber-surface);
@@ -214,10 +234,63 @@ body.menu-open .nav-bar {
   box-shadow: var(--uber-shadow-sm);
   backdrop-filter: blur(12px);
 }
+
 .icon-btn:active {
   transform: scale(0.97);
 }
 
+/* =========================================================
+   HEADER MOBILE
+   ========================================================= */
+@media (max-width: 767px) {
+  .header {
+    top: var(--mobile-top);
+    left: var(--mobile-side);
+    right: var(--mobile-side);
+    z-index: 260;
+  }
+
+  .header-content {
+    min-height: var(--mobile-header-size);
+    gap: 10px;
+  }
+
+  .driver-profile {
+    gap: 10px;
+  }
+
+  .avatar,
+  .icon-btn {
+    width: var(--mobile-header-size);
+    height: var(--mobile-header-size);
+    flex-basis: var(--mobile-header-size);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+    background: rgba(255,255,255,0.82);
+    border-color: rgba(255,255,255,0.12);
+  }
+
+  .driver-info h1 {
+    font-size: clamp(13px, 3.9vw, 15px);
+  }
+
+  .status-text {
+    font-size: clamp(11px, 3vw, 12px);
+  }
+}
+
+@media (max-width: 390px) {
+  .driver-profile {
+    gap: 8px;
+  }
+
+  .driver-info h1 {
+    font-size: 13px;
+  }
+
+  .status-text {
+    font-size: 11px;
+  }
+}
 /* =========================================================
    STATS - CHIP CENTRAL NEGRO TIPO UBER
    ========================================================= */
@@ -1633,27 +1706,6 @@ top: calc(var(--mobile-top) + 56px);
   .toast {
     max-width: 100%;
   }
-}
-.header-content {
-  display: flex;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-}
-.icon-btn {
-  flex: 0 0 auto;
-}
-.driver-info h1 {
-  font-size: clamp(13px, 3.6vw, 16px);
-  line-height: 1.1;
-  font-weight: 800;
-  margin: 0;
-}
-
-.status-text {
-  font-size: clamp(11px, 3vw, 13px);
-  line-height: 1.1;
-  color: rgba(17,17,17,0.68);
 }
 @media (max-width: 390px) {
   :root {
