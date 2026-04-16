@@ -916,11 +916,18 @@ const unsubNoPending = tripManager.on('noPendingTrips', () => {
         ? { lat: trip.destino_lat, lng: trip.destino_lng }
         : { lat: trip.origen_lat, lng: trip.origen_lng };
 
-      if (typeof mapService.showRoute === 'function') {
-        await mapService.showRoute(origin, destination);
-        return;
-      }
+if (typeof mapService.showRoute === 'function') {
+  await mapService.showRoute(origin, destination);
 
+  // 🔥 FIX MOBILE: forzar resize después de cambios de UI
+  setTimeout(() => {
+    try {
+      mapService.map?.resize?.();
+    } catch {}
+  }, 400);
+
+  return;
+}
       if (typeof mapService.drawRoute === 'function') {
         await mapService.drawRoute(origin, destination);
         return;
