@@ -29,78 +29,80 @@ class SupabaseClient {
   // =========================================================
   // INIT
   // =========================================================
-  async init() {
-    if (this._initPromise) return this._initPromise;
+async init() {
+  if (this._initPromise) return this._initPromise;
 
-    this._initPromise = (async () => {
-      console.log("[Supabase] Initializing...");
+  this._initPromise = (async () => {
+    console.log("[Supabase] Initializing...");
 
-      const ok = await this._waitForSupabaseLib();
-      if (!ok) return false;
+    const ok = await this._waitForSupabaseLib();
+    if (!ok) return null;
 
-      this.client = window.supabase.createClient(
-        CONFIG.SUPABASE_URL,
-        CONFIG.SUPABASE_KEY,
-        {
-          auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true,
-            storageKey: "mimi-driver-auth",
-            flowType: "pkce",
-          },
-          realtime: {
-            params: { eventsPerSecond: 10 },
-          },
+    this.client = window.supabase.createClient(
+      CONFIG.SUPABASE_URL,
+      CONFIG.SUPABASE_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storageKey: "mimi-driver-auth",
+          flowType: "pkce",
+        },
+        realtime: {
+          params: { eventsPerSecond: 10 },
+        },
+      }
+    );
+
+    await this._loadSession();
+
+    if (!this.authSubscription) {
+      const { data } = this.client.auth.onAuthStateChange(
+        async (event, session) => {
+          this.session = session || null;
+          this.userId = session?.user?.id || null;
+          this.userEmail = session?.user?.email || null;
+
+          console.log("[Supabase] Auth event:", event);
+
+          this.profileEnsured = false;
+          this.profileEnsuring = false;
+          this.driverId = null;
+
+          if (!this.userId) {
+            this.unsubscribeAll();
+            return;
+          }
+
+          await this.ensureDriverProfile();
         }
       );
 
-      await this._loadSession();
-
-      if (!this.authSubscription) {
-        const { data } = this.client.auth.onAuthStateChange(
-          async (event, session) => {
-            this.session = session || null;
-            this.userId = session?.user?.id || null;
-            this.userEmail = session?.user?.email || null;
-
-            console.log("[Supabase] Auth event:", event);
-
-            this.profileEnsured = false;
-            this.profileEnsuring = false;
-            this.driverId = null;
-
-            if (!this.userId) {
-              this.unsubscribeAll();
-              return;
-            }
-
-            await this.ensureDriverProfile();
-          }
-        );
-
-        this.authSubscription = data?.subscription || null;
-      }
-
-      if (this.userId) {
-        await this.ensureDriverProfile();
-      }
-
-      console.log("[Supabase] Ready");
-      return true;
-    })();
-
-    return this._initPromise;
-  }
-
-  async _waitForSupabaseLib(timeoutMs = 8000) {
-    const start = Date.now();
-    while (!window.supabase) {
-      await new Promise((r) => setTimeout(r, 100));
-      if (Date.now() - start > timeoutMs) return false;
+      this.authSubscription = data?.subscription || null;
     }
-    return true;
+
+    if (this.userId) {
+      await this.ensureDriverProfile();
+    }
+
+    console.log("[Supabase] Ready");
+    return this.client;
+  })();
+
+  return this._initPromise;
+}
+
+async _waitForSupabaseLib(timeoutMs = 8000) {
+  const start = Date.now();
+
+  while (!window.supabase?.createClient) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (Date.now() - start > timeoutMs) return false;
   }
+
+  return true;
+}
 
   async _loadSession() {
     const { data } = await this.client.auth.getSession();
