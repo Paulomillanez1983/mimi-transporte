@@ -101,7 +101,7 @@ async _waitForSupabaseLib(timeoutMs = 8000) {
     if (Date.now() - start > timeoutMs) return false;
   }
 
-  return true;
+return this.client;
 }
 
   async _loadSession() {
