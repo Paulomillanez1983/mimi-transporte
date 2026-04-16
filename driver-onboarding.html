@@ -1,4023 +1,1597 @@
-﻿<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-  />
-  <meta name="theme-color" content="#f5f7fb" />
-  <meta name="color-scheme" content="light" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="format-detection" content="telephone=no" />
-  <title>MIMI Driver - Onboarding</title>
-<link
-  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-  rel="stylesheet"
-/>
-
-<link rel="icon" type="image/png" href="/mimi-transporte/assets/icons/logo-mimi.png" /> 
-<link rel="shortcut icon" href="/mimi-transporte/assets/icons/logo-mimi.png" />
-
-<!-- 👇 ACA -->
-<link rel="stylesheet" href="./css/onboarding-camera.css" />
-
-<script src="./libs/supabase-js.js"></script>
-
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #000000;
-      --card: #111214;
-      --card-2: #15171b;
-      --field: #1b1d21;
-      --line: rgba(255,255,255,0.10);
-      --line-strong: rgba(255,255,255,0.16);
-      --text: #ffffff;
-      --muted: rgba(255,255,255,0.66);
-      --muted-2: rgba(255,255,255,0.48);
-      --primary: #276EF1;
-      --primary-2: #4e89ff;
-      --success: #22c55e;
-      --danger: #E11900;
-      --warning: #f59e0b;
-      --radius: 20px;
-      --shadow: 0 24px 64px rgba(0,0,0,0.38);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --safe-top: env(safe-area-inset-top, 0px);
-    }
-
-    html, body {
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100%;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      min-height: 100vh;
-      padding:
-        calc(16px + var(--safe-top))
-        16px
-        calc(112px + var(--safe-bottom))
-        16px;
-      overflow-x: hidden;
-      background:
-        radial-gradient(circle at top center, rgba(39,110,241,0.12), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(39,110,241,0.08), transparent 30%),
-        #000;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 1080px;
-      margin: 0 auto;
-    }
-
-    .topbar {
-      margin-bottom: 20px;
-    }
-.topbar-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-}
-
-.exit-btn {
-  width: auto;
-  min-width: 92px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(17,18,20,0.78);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 10px 28px rgba(0,0,0,0.28);
-}
-
-.exit-btn:hover {
-  opacity: 0.92;
-}
-
-.exit-btn:active {
-  transform: scale(0.98);
-}
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(39,110,241,0.12);
-      border: 1px solid rgba(39,110,241,0.24);
-      color: #dbe8ff;
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-
-    .title {
-      font-size: clamp(28px, 4.2vw, 42px);
-      line-height: 1.05;
-      font-weight: 800;
-      margin-bottom: 10px;
-      letter-spacing: -0.02em;
-    }
-
-    .subtitle {
-      max-width: 760px;
-      color: var(--muted);
-      line-height: 1.5;
-      font-size: 15px;
-    }
-
-    .progress-shell {
-      margin-top: 18px;
-      display: grid;
-      gap: 10px;
-    }
-
-    .progress-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .progress-label {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 700;
-    }
-
-    .progress {
-      width: 100%;
-      height: 10px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 999px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.04);
-    }
-
-    .progress-bar {
-      width: 0%;
-      height: 100%;
-      background: linear-gradient(90deg, #276EF1, #5f98ff);
-      transition: width .25s ease;
-    }
-
-    .steps-dots {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-.step-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.16);
-  border: 1px solid rgba(255,255,255,0.10);
-  transition: transform .22s ease, background .22s ease, border-color .22s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.step-dot::after {
-  content: "";
-  width: 6px;
-  height: 10px;
-  border-right: 2px solid transparent;
-  border-bottom: 2px solid transparent;
-  transform: rotate(45deg) scale(0.7);
-  opacity: 0;
-  transition: opacity .18s ease;
-  margin-top: -1px;
-}
-
-.step-dot.active {
-  background: var(--primary);
-  border-color: rgba(95,152,255,0.9);
-  transform: scale(1.08);
-}
-
-.step-dot.active::after {
-  border-right-color: #fff;
-  border-bottom-color: #fff;
-  opacity: 1;
-}
- .progress-shell--pro {
-  gap: 14px;
-}
-
-.progress--pro {
-  height: 6px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.04);
-}
-
-.uber-steps {
-  display: grid;
-  grid-template-columns: minmax(0,1fr) 36px minmax(0,1fr) 36px minmax(0,1fr);
-  align-items: center;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.uber-step {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-  opacity: 0.52;
-  transition: opacity .22s ease, transform .22s ease;
-}
-
-.uber-step.active,
-.uber-step.done {
-  opacity: 1;
-}
-
-.uber-step.active {
-  transform: translateY(-1px);
-}
-
-.uber-step__node {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.06);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.18);
-  transition: all .22s ease;
-}
-
-.uber-step__number,
-.uber-step__check {
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1;
-  transition: opacity .18s ease, transform .18s ease;
-}
-
-.uber-step__check {
-  position: absolute;
-  opacity: 0;
-  transform: scale(0.7);
-}
-
-.uber-step.active .uber-step__node {
-  background: linear-gradient(135deg, #276EF1, #4e89ff);
-  border-color: rgba(95,152,255,0.95);
-  box-shadow: 0 14px 28px rgba(39,110,241,0.30);
-}
-
-.uber-step.done .uber-step__node {
-  background: linear-gradient(135deg, #22c55e, #34d399);
-  border-color: rgba(52,211,153,0.8);
-  box-shadow: 0 14px 28px rgba(34,197,94,0.24);
-}
-
-.uber-step.done .uber-step__number {
-  opacity: 0;
-  transform: scale(0.7);
-}
-
-.uber-step.done .uber-step__check {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.uber-step__meta {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.uber-step__meta strong {
-  font-size: 13px;
-  font-weight: 800;
-  color: rgba(255,255,255,0.96);
-  line-height: 1.15;
-}
-
-.uber-step__meta span {
-  font-size: 12px;
-  color: rgba(255,255,255,0.52);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.uber-step.active .uber-step__meta span,
-.uber-step.done .uber-step__meta span {
-  color: rgba(255,255,255,0.78);
-}
-
-.uber-step__line {
-  height: 2px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.10);
-  position: relative;
-  overflow: hidden;
-}
-
-.uber-step__line::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: scaleX(0);
-  transform-origin: left center;
-  background: linear-gradient(90deg, #22c55e, #4e89ff);
-  transition: transform .28s ease;
-}
-
-.uber-step__line.done::after {
-  transform: scaleX(1);
-}
-
-@media (max-width: 720px) {
-  .uber-steps {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .uber-step__line {
-    display: none;
-  }
-
-  .uber-step {
-    padding: 10px 12px;
-    border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03);
-  }
-
-  .uber-step.active {
-    background: rgba(39,110,241,0.10);
-    border-color: rgba(39,110,241,0.28);
-  }
-
-  .uber-step.done {
-    background: rgba(34,197,94,0.10);
-    border-color: rgba(34,197,94,0.24);
-  }
-}   
-    .step-card {
-      display: none;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)),
-        radial-gradient(circle at top left, rgba(255,255,255,0.04), transparent 40%);
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      padding: 22px;
-      box-shadow: var(--shadow);
-      margin-bottom: 18px;
-    }
-
-.step-card.active {
-  display: block;
-  animation: cardIn .38s cubic-bezier(.22,1,.36,1) both;
-}
-    @keyframes cardIn {
-      from {
-        opacity: 0;
-        transform: translateY(10px) scale(0.992);
-        filter: blur(8px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0);
-      }
-    }
-@keyframes brandLogoIntro {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.92);
-    filter: blur(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@keyframes brandLogoFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-}
-    .step-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 14px;
-      margin-bottom: 18px;
-      flex-wrap: wrap;
-    }
-
-    .step-title {
-      font-size: 22px;
-      line-height: 1.15;
-      font-weight: 800;
-      margin-bottom: 8px;
-      letter-spacing: -0.01em;
-    }
-
-    .step-text {
-      color: var(--muted);
-      line-height: 1.5;
-      max-width: 720px;
-    }
-
-    .step-badge {
-      padding: 8px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid var(--line);
-      font-size: 12px;
-      font-weight: 800;
-      color: rgba(255,255,255,0.82);
-      white-space: nowrap;
-    }
-
-    .grid {
-      display: grid;
-      gap: 16px;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .field.full {
-      grid-column: 1 / -1;
-    }
-
-    label {
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-      color: rgba(255,255,255,0.82);
-      letter-spacing: .05em;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 15px 16px;
-      background: var(--field);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      color: #fff;
-      font-size: 15px;
-      transition: border-color .15s ease, transform .1s ease, box-shadow .15s ease;
-    }
-
-    input:focus,
-    select:focus,
-    textarea:focus {
-      outline: none;
-      border-color: rgba(78,137,255,0.9);
-      box-shadow: 0 0 0 4px rgba(39,110,241,0.16);
-    }
-
-    .field-help {
-      color: var(--muted-2);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .doc-list {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
-
-    .doc-item {
-      padding: 16px;
-      border-radius: 20px;
-      border: 1px solid var(--line);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-      display: grid;
-      gap: 12px;
-      min-height: 100%;
-    }
-
-    .doc-item-highlight {
-      border-color: rgba(245,158,11,0.28);
-      background:
-        linear-gradient(180deg, rgba(245,158,11,0.08), rgba(255,255,255,0.02));
-    }
-
-    .doc-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .doc-title-wrap {
-      min-width: 0;
-    }
-
-    .doc-item h4 {
-      font-size: 15px;
-      font-weight: 800;
-      margin-bottom: 6px;
-      line-height: 1.2;
-    }
-
-    .doc-item p {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .doc-chip {
-      padding: 7px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 800;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.05);
-      color: rgba(255,255,255,0.82);
-      white-space: nowrap;
-    }
-
-    .doc-chip.required {
-      background: rgba(225,25,0,0.08);
-      border-color: rgba(225,25,0,0.22);
-      color: #ffd3cd;
-    }
-
-    .doc-chip.optional {
-      background: rgba(255,255,255,0.05);
-      color: rgba(255,255,255,0.76);
-    }
-
-    .doc-chip.deadline {
-      background: rgba(245,158,11,0.12);
-      border-color: rgba(245,158,11,0.22);
-      color: #ffd78d;
-    }
-
-    .doc-guidelines {
-      display: grid;
-      gap: 6px;
-      color: var(--muted-2);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .doc-guidelines span::before {
-      content: "â€¢ ";
-      color: rgba(255,255,255,0.6);
-    }
-
-    .doc-actions-inline {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .doc-action-btn,
-    .doc-link-btn {
-      appearance: none;
-      border: none;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 14px;
-      border-radius: 14px;
-      cursor: pointer;
-      font-weight: 800;
-      font-size: 14px;
-      min-height: 46px;
-      transition: transform .1s ease, opacity .12s ease, background .15s ease, border-color .15s ease;
-    }
-
-    .doc-action-btn:active,
-    .doc-link-btn:active,
-    button:active {
-      transform: scale(0.985);
-    }
-
-    .doc-action-btn.is-disabled,
-    .doc-link-btn.is-disabled,
-    button:disabled {
-      opacity: 0.58;
-      cursor: not-allowed;
-      transform: none !important;
-      pointer-events: none;
-    }
-
-    .btn-loading {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .btn-spinner {
-      width: 16px;
-      height: 16px;
-      border-radius: 999px;
-      border: 2px solid rgba(255,255,255,0.28);
-      border-top-color: currentColor;
-      animation: buttonSpin .7s linear infinite;
-      flex: 0 0 auto;
-    }
-
-    .doc-camera-btn .btn-spinner {
-      border-color: rgba(0,0,0,0.14);
-      border-top-color: currentColor;
-    }
-
-    @keyframes buttonSpin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .doc-camera-btn {
-      background: #ffffff;
-      color: #000000;
-      flex: 1 1 150px;
-    }
-
-    .doc-upload-btn {
-      background: #23262c;
-      color: #ffffff;
-      border: 1px solid rgba(255,255,255,0.08);
-      flex: 1 1 150px;
-    }
-
-    .doc-link-btn {
-      background: rgba(245,158,11,0.14);
-      color: #ffd78d;
-      border: 1px solid rgba(245,158,11,0.24);
-      flex: 1 1 100%;
-    }
-
-    .doc-preview {
-      display: none;
-      border: 1px dashed rgba(255,255,255,0.14);
-      border-radius: 16px;
-      overflow: hidden;
-      background: rgba(255,255,255,0.02);
-      min-height: 120px;
-    }
-
-    .doc-preview.visible {
-      display: block;
-    }
-
-    .doc-preview img {
-      width: 100%;
-      display: block;
-      object-fit: cover;
-      max-height: 220px;
-    }
-
-    .doc-preview-file {
-      padding: 14px;
-      display: grid;
-      gap: 6px;
-      color: rgba(255,255,255,0.85);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .doc-preview-file strong {
-      font-size: 14px;
-    }
-
-    .doc-help {
-      color: var(--muted-2);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .doc-deadline-box {
-      padding: 12px 14px;
-      border-radius: 14px;
-      border: 1px solid rgba(245,158,11,0.24);
-      background: rgba(245,158,11,0.08);
-      color: #ffe2ab;
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .doc-status {
-      min-height: 22px;
-      font-size: 13px;
-      font-weight: 800;
-      line-height: 1.4;
-    }
-
-    .doc-status.ok { color: var(--success); }
-    .doc-status.error { color: var(--danger); }
-    .doc-status.pending { color: rgba(255,255,255,0.72); }
-    .doc-status.warning { color: var(--warning); }
-
-    .actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 22px;
-      flex-wrap: wrap;
-    }
-
-    button {
-      border: none;
-      border-radius: 16px;
-      padding: 15px 18px;
-      font-size: 15px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: transform .1s ease, opacity .12s ease, background .15s ease;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-2));
-      color: #fff;
-      flex: 1 1 240px;
-      box-shadow: 0 18px 34px rgba(39,110,241,0.26);
-    }
-
-    .btn-secondary {
-      background: #232428;
-      color: #fff;
-      flex: 1 1 160px;
-    }
-
-.sticky-actions {
-  display: none;
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
-  padding:
-    12px
-    16px
-    calc(12px + var(--safe-bottom))
-    16px;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,0.82) 30%, rgba(0,0,0,0.96));
-  backdrop-filter: blur(12px);
-  pointer-events: none;
-}
-    .sticky-actions__inner {
-      width: 100%;
-      max-width: 1080px;
-      margin: 0 auto;
-      pointer-events: auto;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(17,18,20,0.92);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 20px;
-      padding: 10px;
-      box-shadow: 0 18px 46px rgba(0,0,0,0.38);
-      flex-wrap: wrap;
-    }
-
-    .sticky-summary {
-      display: grid;
-      gap: 4px;
-      min-width: 0;
-      flex: 1 1 220px;
-    }
-
-    .sticky-summary strong {
-      font-size: 14px;
-    }
-
-    .sticky-summary span {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.4;
-    }
-
-    .sticky-btn {
-      min-width: 170px;
-    }
-
-    .status-box {
-      margin-top: 16px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--line);
-      line-height: 1.5;
-      display: none;
-      font-size: 14px;
-    }
-
-    .status-box.visible { display: block; }
-
-    .status-box.success {
-      color: #d7ffe4;
-      border-color: rgba(34,197,94,0.24);
-      background: rgba(34,197,94,0.08);
-    }
-
-    .status-box.error {
-      color: #ffd4d0;
-      border-color: rgba(225,25,0,0.24);
-      background: rgba(225,25,0,0.08);
-    }
-
-    .hidden-input {
-      position: absolute !important;
-      width: 1px !important;
-      height: 1px !important;
-      margin: -1px !important;
-      padding: 0 !important;
-      border: 0 !important;
-      overflow: hidden !important;
-      clip: rect(0 0 0 0) !important;
-      clip-path: inset(50%) !important;
-      white-space: nowrap !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
-
-    @media (max-width: 900px) {
-      .doc-list {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 720px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-
-      .step-card {
-        padding: 18px;
-        border-radius: 24px;
-      }
-
-      .title {
-        letter-spacing: -0.03em;
-      }
-
-      .doc-actions-inline {
-        flex-direction: column;
-      }
-
-      .doc-camera-btn,
-      .doc-upload-btn,
-      .doc-link-btn {
-        width: 100%;
-      }
-
-      .sticky-actions__inner {
-        align-items: stretch;
-      }
-
-      .sticky-btn {
-        width: 100%;
-      }
-    }
-    @media (max-width: 720px) {
-     .sticky-actions {
-      display: block;
-    }
-  }
-
-    
-@media (max-width: 720px) {
-  .brand-logo {
-    width: 56px;
-    height: 56px;
-  }
-}
-    
-  @media (max-width: 480px) {
-      body {
-        padding-left: 12px;
-        padding-right: 12px;
-      }
-
-      .step-title {
-        font-size: 20px;
-      }
-
-      .subtitle,
-      .step-text,
-      .doc-item p {
-        font-size: 14px;
-      }
-
-      input, select, textarea {
-        font-size: 16px;
-      }
-    }
-@media (max-width: 720px) {
-  .topbar-head {
-    align-items: stretch;
-  }
-
-  .exit-btn {
-    width: 100%;
-  }
-}
-.brand-block {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.brand-logo {
-  width: 64px;
-  height: 64px;
-  object-fit: contain;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.05);
-  padding: 8px;
-  box-shadow:
-    0 10px 28px rgba(0,0,0,0.28),
-    0 0 0 1px rgba(255,255,255,0.06) inset;
-  animation: brandLogoIntro .7s cubic-bezier(.22,1,.36,1) both,
-             brandLogoFloat 2.8s ease-in-out infinite .7s;
-}
-    .docs-progress-box {
-  margin-bottom: 18px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  display: grid;
-  gap: 10px;
-}
-
-.docs-progress-box__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.docs-progress-box__top strong {
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.docs-progress-box__top span {
-  font-size: 13px;
-  font-weight: 800;
-  color: rgba(255,255,255,0.82);
-}
-
-.docs-progress-bar {
-  width: 100%;
-  height: 10px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.04);
-}
-
-.docs-progress-bar__fill {
-  width: 0%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #22c55e, #4e89ff);
-  transition: width .25s ease;
-}
-
-.docs-progress-help {
-  font-size: 12px;
-  color: rgba(255,255,255,0.6);
-  line-height: 1.45;
-}
-
-.doc-item.doc-complete {
-  border-color: rgba(34,197,94,0.28);
-  box-shadow: 0 0 0 1px rgba(34,197,94,0.12) inset;
-}
-
-.doc-item.doc-warning {
-  border-color: rgba(245,158,11,0.28);
-}
-
-.doc-item.doc-error {
-  border-color: rgba(225,25,0,0.28);
-}
-
-.btn-primary[disabled],
-.sticky-btn[disabled] {
-  opacity: 0.55;
-  pointer-events: none;
-  filter: grayscale(0.1);
-}
-.doc-wizard-shell {
-  display: grid;
-  gap: 18px;
-}
-
-.doc-wizard-progress {
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  display: grid;
-  gap: 10px;
-}
-
-.doc-wizard-progress__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.doc-wizard-card {
-  border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
-  padding: 20px;
-  display: grid;
-  gap: 18px;
-}
-
-.doc-wizard-card__icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(39,110,241,0.14);
-  border: 1px solid rgba(39,110,241,0.22);
-  font-size: 28px;
-}
-
-.doc-wizard-card__content {
-  display: grid;
-  gap: 14px;
-}
-
-.doc-wizard-card__content h3 {
-  font-size: 22px;
-  line-height: 1.12;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.doc-wizard-card__content p {
-  color: rgba(255,255,255,0.70);
-  line-height: 1.5;
-  font-size: 14px;
-}
-
-.doc-preview--hero {
-  min-height: 240px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,255,255,0.025);
-}
-
-.doc-preview--hero img {
-  width: 100%;
-  max-height: 320px;
-  object-fit: contain;
-  background: #0d0f13;
-}
-
-.doc-actions-inline--wizard {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-@media (max-width: 720px) {
-  .doc-wizard-card {
-    padding: 18px;
-    border-radius: 22px;
-  }
-
-  .doc-wizard-card__content h3 {
-    font-size: 20px;
-  }
-
-  .doc-actions-inline--wizard {
-    grid-template-columns: 1fr;
-  }
-}
-    .doc-wizard-card.is-validating {
-  border-color: rgba(78,137,255,0.45);
-  box-shadow: 0 0 0 1px rgba(78,137,255,0.18) inset, 0 18px 46px rgba(39,110,241,0.14);
-}
-
-.doc-wizard-card.is-success {
-  border-color: rgba(34,197,94,0.42);
-  box-shadow: 0 0 0 1px rgba(34,197,94,0.18) inset, 0 18px 46px rgba(34,197,94,0.14);
-  animation: wizardSuccessPop .46s cubic-bezier(.22,1,.36,1);
-}
-
-.doc-wizard-card.is-error {
-  border-color: rgba(225,25,0,0.34);
-  box-shadow: 0 0 0 1px rgba(225,25,0,0.14) inset;
-  animation: wizardShake .34s ease;
-}
-
-.doc-wizard-card.is-warning {
-  border-color: rgba(245,158,11,0.34);
-  box-shadow: 0 0 0 1px rgba(245,158,11,0.14) inset;
-}
-
-.doc-wizard-next-ready {
-  box-shadow: 0 0 0 3px rgba(34,197,94,0.14), 0 18px 34px rgba(39,110,241,0.26);
-}
-
-.doc-wizard-status-ok {
-  color: var(--success);
-}
-
-.doc-wizard-status-warning {
-  color: var(--warning);
-}
-
-.doc-wizard-status-error {
-  color: var(--danger);
-}
-
-@keyframes wizardSuccessPop {
-  0% { transform: scale(0.992); }
-  45% { transform: scale(1.012); }
-  100% { transform: scale(1); }
-}
-
-@keyframes wizardShake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px); }
-  40% { transform: translateX(4px); }
-  60% { transform: translateX(-3px); }
-  80% { transform: translateX(3px); }
-}
-      /* Light refresh para onboarding de chofer */
-    :root {
-      --bg: #f5f7fb;
-      --card: rgba(255,255,255,0.92);
-      --card-2: #ffffff;
-      --field: #ffffff;
-      --line: rgba(15,23,42,0.10);
-      --line-strong: rgba(15,23,42,0.16);
-      --text: #0f172a;
-      --muted: rgba(15,23,42,0.70);
-      --muted-2: rgba(15,23,42,0.52);
-      --shadow: 0 26px 60px rgba(47,111,237,0.12);
-    }
-
-    html, body {
-      color-scheme: light;
-    }
-
-    body {
-      background:
-        radial-gradient(circle at top center, rgba(47,111,237,0.16), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(56,189,248,0.12), transparent 30%),
-        linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
-    }
-
-    .exit-btn,
-    .sticky-bar,
-    .step-card,
-    .doc-wizard-card,
-    .docs-progress-box,
-    .field input,
-    .field select,
-    .field textarea,
-    .doc-preview,
-    .doc-preview-file,
-    .doc-deadline-box {
-      background: rgba(255,255,255,0.94) !important;
-      color: var(--text) !important;
-      border-color: rgba(15,23,42,0.10) !important;
-      box-shadow: 0 18px 40px rgba(15,23,42,0.08);
-    }
-
-    .eyebrow,
-    .step-badge,
-    .doc-link-btn,
-    .doc-wizard-step-badge,
-    .docs-progress-help,
-    .field-help,
-    .subtitle,
-    .step-text,
-    .doc-wizard-card__content p,
-    .doc-preview-file span {
-      color: var(--muted) !important;
-    }
-
-    .doc-upload-btn {
-      background: #eff4ff !important;
-      color: #1e3a8a !important;
-      border-color: rgba(47,111,237,0.14) !important;
-    }
-
-    .doc-camera-btn {
-      background: linear-gradient(135deg, #2f6fed, #5b8cff) !important;
-      color: #ffffff !important;
-      border: none !important;
-    }
-
-    .progress,
-    .progress--pro,
-    .docs-progress-bar {
-      background: rgba(47,111,237,0.10) !important;
-      border-color: rgba(47,111,237,0.08) !important;
-    }
-
-    .uber-step,
-    .uber-step__meta strong,
-    .title,
-    .step-title,
-    label {
-      color: var(--text) !important;
-    }
-
-    .uber-step__node,
-    .panel-grabber {
-      background: rgba(47,111,237,0.08) !important;
-      border-color: rgba(47,111,237,0.12) !important;
-    }
-
-    .doc-guidelines span {
-      background: rgba(47,111,237,0.08) !important;
-      color: #1e3a8a !important;
-      border: 1px solid rgba(47,111,237,0.12) !important;
-    }
-  .upload-runtime-box {
-  margin-top: 14px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(47,111,237,0.08);
-  border: 1px solid rgba(47,111,237,0.14);
-  display: grid;
-  gap: 10px;
-}
-
-.upload-runtime-box__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.upload-runtime-box__top strong {
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.upload-runtime-box__top span {
-  font-size: 13px;
-  font-weight: 800;
-  color: rgba(15,23,42,0.72);
-}
-
-.upload-runtime-bar {
-  width: 100%;
-  height: 10px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(47,111,237,0.10);
-  border: 1px solid rgba(47,111,237,0.08);
-}
-
-.upload-runtime-bar__fill {
-  width: 0%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #2f6fed, #22c55e);
-  transition: width .25s ease;
-}
-
-.upload-runtime-help {
-  font-size: 12px;
-  color: rgba(15,23,42,0.68);
-  line-height: 1.45;
-}
-  </style>
-</head>
-<body>
-  <div class="container">
-<div class="topbar">
-<div class="topbar-head">
-  <div class="brand-block">
-    <img src="/mimi-transporte/assets/icons/logo-mimi.png" class="brand-logo" />
-
-    <div>
-      <div class="eyebrow">MIMI Driver Â· Alta de chofer</div>
-      <div class="title">ValidaciÃ³n de chofer</div>
-    </div>
-  </div>
-
-  <button type="button" class="exit-btn" id="exitOnboardingBtn">
-    Salir
-  </button>
-</div>
-  <div class="subtitle">
-    CompletÃ¡ tu identidad, vehÃ­culo y documentaciÃ³n para habilitar tu cuenta.
-    PodÃ©s sacar fotos desde esta misma pantalla y terminar la carga mucho mÃ¡s rÃ¡pido.
-  </div>
-
-<div class="progress-shell progress-shell--pro">
-  <div class="progress-top">
-    <div class="progress-label" id="progressLabel">Paso 1 de 3 Â· Datos personales</div>
-  </div>
-
-  <div class="uber-steps" id="uberSteps" aria-label="Progreso de onboarding">
-    <div class="uber-step active" id="uberStep1">
-      <div class="uber-step__node">
-        <span class="uber-step__number">1</span>
-        <span class="uber-step__check">âœ“</span>
-      </div>
-      <div class="uber-step__meta">
-        <strong>Perfil</strong>
-        <span>Datos personales</span>
-      </div>
-    </div>
-
-    <div class="uber-step__line" id="uberLine1"></div>
-
-    <div class="uber-step" id="uberStep2">
-      <div class="uber-step__node">
-        <span class="uber-step__number">2</span>
-        <span class="uber-step__check">âœ“</span>
-      </div>
-      <div class="uber-step__meta">
-        <strong>VehÃ­culo</strong>
-        <span>Datos del auto</span>
-      </div>
-    </div>
-
-    <div class="uber-step__line" id="uberLine2"></div>
-
-    <div class="uber-step" id="uberStep3">
-      <div class="uber-step__node">
-        <span class="uber-step__number">3</span>
-        <span class="uber-step__check">âœ“</span>
-      </div>
-      <div class="uber-step__meta">
-        <strong>Documentos</strong>
-        <span>Carga final</span>
-      </div>
-    </div>
-  </div>
-
-  <div class="progress progress--pro">
-    <div class="progress-bar" id="progressBar"></div>
-  </div>
-</div>
-</div>
-
-    <section class="step-card active" data-step="1">
-      <div class="step-head">
-        <div>
-          <div class="step-title">Paso 1 · Datos personales</div>
-          <div class="step-text">
-            Necesitamos tus datos bÃ¡sicos para crear tu perfil de conductor.
-          </div>
-        </div>
-        <div class="step-badge">Perfil</div>
-      </div>
-
-      <div class="grid">
-        <div class="field">
-          <label for="full_name">Nombre completo</label>
-          <input id="full_name" type="text" autocomplete="name" />
-        </div>
-
-        <div class="field">
-          <label for="phone">TelÃ©fono</label>
-          <input id="phone" type="tel" autocomplete="tel" />
-        </div>
-
-        <div class="field">
-          <label for="dni_number">DNI</label>
-          <input id="dni_number" type="text" inputmode="numeric" />
-        </div>
-
-        <div class="field">
-          <label for="birth_date">Fecha de nacimiento</label>
-          <input id="birth_date" type="date" />
-        </div>
-
-        <div class="field full">
-          <label for="address">Domicilio</label>
-          <input id="address" type="text" autocomplete="street-address" />
-          <div class="field-help">DirecciÃ³n donde residÃ­s actualmente.</div>
-        </div>
-      </div>
-
-<div class="actions">
-  <button class="btn-primary" id="step1ContinueBtn" type="button">Continuar</button>
-</div>
-    </section>
-
-    <section class="step-card" data-step="2">
-      <div class="step-head">
-        <div>
-          <div class="step-title">Paso 2 Â· VehÃ­culo</div>
-          <div class="step-text">
-            CargÃ¡ los datos del vehÃ­culo con el que vas a trabajar.
-          </div>
-        </div>
-        <div class="step-badge">VehÃ­culo</div>
-      </div>
-
-      <div class="grid">
-        <div class="field">
-          <label for="vehicle_brand">Marca</label>
-          <input id="vehicle_brand" type="text" />
-        </div>
-
-        <div class="field">
-          <label for="vehicle_model">Modelo</label>
-          <input id="vehicle_model" type="text" />
-        </div>
-
-        <div class="field">
-          <label for="vehicle_year">AÃ±o</label>
-          <input id="vehicle_year" type="number" min="1990" max="2100" inputmode="numeric" />
-        </div>
-
-        <div class="field">
-          <label for="vehicle_color">Color</label>
-          <input id="vehicle_color" type="text" />
-        </div>
-
-        <div class="field full">
-          <label for="vehicle_plate">Patente</label>
-          <input id="vehicle_plate" type="text" autocapitalize="characters" />
-          <div class="field-help">Ingresala tal como figura en la cÃ©dula del vehÃ­culo.</div>
-        </div>
-      </div>
-
-<div class="actions">
-  <button class="btn-secondary" id="backTo1" type="button">Volver</button>
-  <button class="btn-primary" id="step2ContinueBtn" type="button">Continuar</button>
-</div>
-    </section>
-
-<section class="step-card" data-step="3">
-  <div class="docs-progress-box">
-    <div class="docs-progress-box__top">
-      <strong id="docsProgressTitle">DocumentaciÃ³n obligatoria</strong>
-      <span id="docsProgressCount">0/7</span>
-    </div>
-
-    <div class="docs-progress-bar">
-      <div class="docs-progress-bar__fill" id="docsProgressBar"></div>
-    </div>
-
-    <div class="docs-progress-help" id="docsProgressHelp">
-      CargÃ¡ los 7 documentos obligatorios para completar este paso.
-    </div>
-  </div>
-
-  <div class="step-head">
-    <div>
-      <div class="step-title">Paso 3 Â· DocumentaciÃ³n</div>
-      <div class="step-text">
-        SacÃ¡ fotos nÃ­tidas, sin reflejos y mostrando el documento completo.
-        En el celular vas a poder abrir la cÃ¡mara directamente y avanzar paso a paso.
-      </div>
-    </div>
-    <div class="step-badge">Documentos</div>
-  </div>
-
-  <div class="doc-wizard-shell">
-    <div class="doc-wizard-progress">
-      <div class="doc-wizard-progress__top">
-        <strong id="docWizardStepTitle">Documento 1 de 9</strong>
-        <span id="docWizardStepBadge">Obligatorio</span>
-      </div>
-
-      <div class="docs-progress-bar">
-        <div class="docs-progress-bar__fill" id="docWizardProgressBar"></div>
-      </div>
-
-      <div class="docs-progress-help" id="docWizardProgressHelp">
-        CompletÃ¡ cada documento paso a paso.
-      </div>
-    </div>
-
-    <div class="doc-wizard-card">
-      <div class="doc-wizard-card__icon" id="docWizardIcon">ðŸªª</div>
-
-      <div class="doc-wizard-card__content">
-        <h3 id="docWizardTitle">SacÃ¡ una foto del frente del DNI</h3>
-        <p id="docWizardDescription">
-          Asegurate de que se vea completo, sin reflejos y bien enfocado.
-        </p>
-
-        <div class="doc-preview doc-preview--hero visible" id="docWizardPreview">
-          <div class="doc-preview-file">
-            <strong>Esperando archivo</strong>
-            <span>TomÃ¡ una foto o subÃ­ un archivo para continuar.</span>
-          </div>
-        </div>
-
-        <div class="doc-status" id="docWizardStatus"></div>
-
-        <div class="doc-actions-inline doc-actions-inline--wizard">
-           <button class="doc-action-btn doc-camera-btn" id="docWizardCameraLabel" type="button">
-           📷 Sacar foto
-           </button>
-          <label class="doc-action-btn doc-upload-btn" id="docWizardUploadLabel" for="docWizardFileInput">
-            â¬† Subir archivo
-          </label>
-        </div>
-
-        <input
-          class="hidden-input"
-          type="file"
-          id="docWizardCameraInput"
-          accept="image/*"
-          capture="environment"
-        />
-
-        <input
-          class="hidden-input"
-          type="file"
-          id="docWizardFileInput"
-          accept="image/*,.pdf"
-        />
-
-        <div class="doc-guidelines" id="docWizardGuidelines">
-          <span>Que se vea completo.</span>
-          <span>Sin reflejos.</span>
-          <span>Bien enfocado.</span>
-        </div>
-
-        <div class="doc-deadline-box" id="docWizardDeadlineBox" style="display:none;">
-          <strong>Entrega diferida:</strong> este documento puede presentarse mÃ¡s adelante.
-        </div>
-
-        <a
-          class="doc-link-btn"
-          id="docWizardExternalLink"
-          href="https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales"
-          target="_blank"
-          rel="noopener noreferrer"
-          style="display:none;"
-        >
-          ðŸ›¡ Solicitar certificado
-        </a>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button class="btn-secondary" id="docWizardBackBtn" type="button">Volver</button>
-      <button class="btn-primary" id="docWizardNextBtn" type="button">Continuar</button>
-    </div>
-  </div>
-
-  <div class="actions">
-    <button class="btn-secondary" id="backTo2" type="button">Volver</button>
-    <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentaciÃ³n</button>
-  </div>
-  <div class="upload-runtime-box" id="uploadRuntimeBox" style="display:none;">
-  <div class="upload-runtime-box__top">
-    <strong id="uploadRuntimeTitle">Preparando envío...</strong>
-    <span id="uploadRuntimeCount">0/0</span>
-  </div>
-
-  <div class="upload-runtime-bar">
-    <div class="upload-runtime-bar__fill" id="uploadRuntimeBar"></div>
-  </div>
-
-  <div class="upload-runtime-help" id="uploadRuntimeHelp">
-    Esperando inicio...
-  </div>
-</div>
-
-  <div class="status-box" id="globalStatus"></div>
-</section>
-  </div>
-
-  <div class="sticky-actions">
-    <div class="sticky-actions__inner">
-      <div class="sticky-summary">
-        <strong id="stickyTitle">Paso 1 Â· Datos personales</strong>
-        <span id="stickyText">CompletÃ¡ tus datos para continuar con el alta.</span>
-      </div>
-
-      <button class="btn-primary sticky-btn" id="stickyPrimaryBtn" type="button">
-        Continuar
-      </button>
-    </div>
-  </div>
-
-  <script type="module">
-import { openCameraCaptureModal } from "./js/onboarding-camera-capture.js";    
-    
-import supabaseService from "./js/supabase-client.js";
-import {
-  getDocumentsProgress,
-  getOverallOnboardingState
-} from "./js/onboarding-progress.js";
-import {
-  validateSelectedDocument
-} from "./js/onboarding-doc-validator.js";
-    
-const REQUIRED_DOCS = [
-  "dni_front",
-  "dni_back",
-  "selfie",
-  "license_front",
-  "license_back",
-  "vehicle_card_front",
-  "vehicle_card_back"
-];
-
-const OPTIONAL_DOCS = [
-  "vehicle_photo",
-  "background_check"
-];
-
-const ALL_DOCS = [...REQUIRED_DOCS, ...OPTIONAL_DOCS];
-
-const DOCUMENT_FLOW = [
-  "dni_front",
-  "dni_back",
-  "selfie",
-  "license_front",
-  "license_back",
-  "vehicle_card_front",
-  "vehicle_card_back",
-  "vehicle_photo",
-  "background_check"
-];
-
-let currentDocumentIndex = 0;
-    const DOC_INPUT_ALIASES = {
-      dni_front: ["dni_front", "dni_front_camera"],
-      dni_back: ["dni_back", "dni_back_camera"],
-      selfie: ["selfie", "selfie_camera"],
-      license_front: ["license_front", "license_front_camera"],
-      license_back: ["license_back", "license_back_camera"],
-      vehicle_card_front: ["vehicle_card_front", "vehicle_card_front_camera"],
-      vehicle_card_back: ["vehicle_card_back", "vehicle_card_back_camera"],
-      vehicle_photo: ["vehicle_photo", "vehicle_photo_camera"],
-      background_check: ["background_check", "background_check_camera"]
+/**
+ * Driver App producción FINAL
+ * RLS + UUID + FLOW + UBER DRIVER
+ */
+
+import CONFIG from './config.js';
+import supabaseService from './supabase-client.js';
+import mapService from './map-service.js';
+import locationTracker from './location-tracker.js';
+import tripManager from './trip-manager.js';
+import uiController from './ui-controller.js';
+import soundManager from './sound-manager.js';
+import { initSupportPushFCM } from './push-fcm.js';
+import { initDriverSupport, openDriverSupportPanel } from './driver-support.js';
+
+const APP_BASE_PATH = (() => {
+  const path = window.location.pathname || '/';
+  return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
+})();
+
+const DRIVER_PANEL_URL = `${APP_BASE_PATH}chofer-panel.html`;
+const DRIVER_SW_PATH = `${APP_BASE_PATH}firebase-messaging-sw.js`;
+
+class DriverApp {
+  constructor() {
+    this.initialized = false;
+    this._onlineStatus = false;
+    this._currentTripId = null;
+    this._unsubscribers = [];
+
+    this._lastLocationUpdate = 0;
+    this._locationUpdateInterval = 15000;
+
+    this._authUserId = null;
+    this._driverProfileSummary = null;
+    this._session = null;
+
+    this._driverFlowState = 'OFFLINE';
+
+    this._destroyed = false;
+    this._actionLock = false;
+    this.driverId = null;
+
+    this._fabClickHandler = null;
+    this._driverActionHandler = this._handleDriverActionEvent.bind(this);
+    this._visibilityChangeHandler = this._handleVisibilityChange.bind(this);
+    this._foregroundPushHandler = this._handleForegroundPush.bind(this);
+
+    this._unlockAudioOnClick = () => {
+      soundManager.enableOnUserInteraction?.();
     };
 
-const DOC_META = {
-  dni_front: {
-    label: "DNI frente",
-    optional: false,
-    title: "SacÃ¡ una foto del frente del DNI",
-    description: "Asegurate de que se vea completo, sin reflejos y bien enfocado.",
-    icon: "ðŸªª",
-    capture: "environment"
-  },
-  dni_back: {
-    label: "DNI dorso",
-    optional: false,
-    title: "SacÃ¡ una foto del dorso del DNI",
-    description: "MostrÃ¡ todo el reverso, con buena luz y sin recortes.",
-    icon: "ðŸªª",
-    capture: "environment"
-  },
-  selfie: {
-    label: "Selfie",
-    optional: false,
-    title: "Tomate una selfie",
-    description: "MirÃ¡ al frente, con buena iluminaciÃ³n y sin lentes oscuros.",
-    icon: "ðŸ¤³",
-    capture: "user"
-  },
-  license_front: {
-    label: "Licencia frente",
-    optional: false,
-    title: "SacÃ¡ una foto del frente de tu licencia",
-    description: "La licencia debe verse completa y el texto debe ser legible.",
-    icon: "ðŸªª",
-    capture: "environment"
-  },
-  license_back: {
-    label: "Licencia dorso",
-    optional: false,
-    title: "SacÃ¡ una foto del dorso de tu licencia",
-    description: "MostrÃ¡ todos los datos, evitando sombras y reflejos.",
-    icon: "ðŸªª",
-    capture: "environment"
-  },
-  vehicle_card_front: {
-    label: "Tarjeta verde frente",
-    optional: false,
-    title: "SacÃ¡ una foto del frente de la tarjeta verde",
-    description: "La cÃ©dula debe verse completa y bien enfocada.",
-    icon: "ðŸš˜",
-    capture: "environment"
-  },
-  vehicle_card_back: {
-    label: "Tarjeta verde dorso",
-    optional: false,
-    title: "SacÃ¡ una foto del dorso de la tarjeta verde",
-    description: "Todo el documento visible, sin reflejos ni bordes cortados.",
-    icon: "ðŸš˜",
-    capture: "environment"
-  },
-  vehicle_photo: {
-    label: "Foto del vehÃ­culo",
-    optional: true,
-    title: "SacÃ¡ una foto del vehÃ­culo",
-    description: "Opcional, pero recomendable para control interno.",
-    icon: "ðŸš—",
-    capture: "environment"
-  },
-  background_check: {
-    label: "Antecedentes penales",
-    optional: true,
-    title: "SubÃ­ tu certificado de antecedentes penales",
-    description: "PodÃ©s subirlo ahora o presentarlo dentro de 15 dÃ­as hÃ¡biles.",
-    icon: "ðŸ›¡ï¸",
-    capture: "environment"
-  }
-};
-    let currentStep = 1;
-    let currentUser = null;
-    const selectedFiles = new Map();
-    const docValidationState = new Map();
-    const docValidationMessage = new Map();
-    const progressBar = document.getElementById("progressBar");
-    const progressLabel = document.getElementById("progressLabel");
-    const globalStatus = document.getElementById("globalStatus");
-    const step1ContinueBtn = document.getElementById("step1ContinueBtn");
-    const step2ContinueBtn = document.getElementById("step2ContinueBtn");
-    const stickyPrimaryBtn = document.getElementById("stickyPrimaryBtn");
-    const stickyTitle = document.getElementById("stickyTitle");
-    const stickyText = document.getElementById("stickyText");
-    const exitOnboardingBtn = document.getElementById("exitOnboardingBtn");
-    const docsProgressTitle = document.getElementById("docsProgressTitle");
-    const docsProgressCount = document.getElementById("docsProgressCount");
-    const docsProgressBar = document.getElementById("docsProgressBar");
-    const docsProgressHelp = document.getElementById("docsProgressHelp");
-    const submitAllBtn = document.getElementById("submitAllBtn");
-    const docWizardStepTitle = document.getElementById("docWizardStepTitle");
-const docWizardStepBadge = document.getElementById("docWizardStepBadge");
-const docWizardProgressBar = document.getElementById("docWizardProgressBar");
-const docWizardProgressHelp = document.getElementById("docWizardProgressHelp");
-const docWizardIcon = document.getElementById("docWizardIcon");
-const docWizardTitle = document.getElementById("docWizardTitle");
-const docWizardDescription = document.getElementById("docWizardDescription");
-const docWizardPreview = document.getElementById("docWizardPreview");
-const docWizardStatus = document.getElementById("docWizardStatus");
-const docWizardCameraInput = document.getElementById("docWizardCameraInput");
-const docWizardFileInput = document.getElementById("docWizardFileInput");
-const docWizardCameraLabel = document.getElementById("docWizardCameraLabel");
-const docWizardUploadLabel = document.getElementById("docWizardUploadLabel");
-const docWizardGuidelines = document.getElementById("docWizardGuidelines");
-const docWizardDeadlineBox = document.getElementById("docWizardDeadlineBox");
-const docWizardExternalLink = document.getElementById("docWizardExternalLink");
-const docWizardBackBtn = document.getElementById("docWizardBackBtn");
-const docWizardNextBtn = document.getElementById("docWizardNextBtn");
-const docWizardCard = document.querySelector(".doc-wizard-card");
-const DOC_CACHE_KEY = "mimi_driver_doc_cache_v1";
-const FORM_DRAFT_KEY = "mimi_driver_onboarding_draft";
-const uploadRuntimeBox = document.getElementById("uploadRuntimeBox");
-const uploadRuntimeTitle = document.getElementById("uploadRuntimeTitle");
-const uploadRuntimeCount = document.getElementById("uploadRuntimeCount");
-const uploadRuntimeBar = document.getElementById("uploadRuntimeBar");
-const uploadRuntimeHelp = document.getElementById("uploadRuntimeHelp");    
-    
-const VALIDATION_SOUND_SRC =
-  "data:audio/wav;base64,UklGRlQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YTAAAAAAAP//AAD//wAA//8AAP//AAD//wAA";
-let audioValidationOk = null;
-let currentPreviewUrl = null;
-let onboardingBusy = false;
-let autoAdvanceTimer = null;
-const UPLOAD_RETRY_LIMIT = 3;
-const UPLOAD_RETRY_BASE_DELAY_MS = 1200;
-const PROFILE_WARMUP_TIMEOUT_MS = 12000;
-const REMOTE_TIMEOUT = 12000;
-const PENDING_VALIDATION_STATUS = "PENDING";
-    
-function getConnectionProfile() {
-  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  const effectiveType = String(connection?.effectiveType || "").toLowerCase();
-  const saveData = connection?.saveData === true;
-
-  if (saveData || effectiveType === "slow-2g" || effectiveType === "2g") {
-    return "slow";
-  }
-
-  if (effectiveType === "3g") {
-    return "medium";
-  }
-
-  if (effectiveType === "4g" || effectiveType === "wifi") {
-    return "fast";
-  }
-
-  return "unknown";
-}
-
-function getUploadTimeoutMs(kind = "storage") {
-  const profile = getConnectionProfile();
-
-  if (kind === "storage") {
-    if (profile === "slow") return 75000;
-    if (profile === "medium") return 60000;
-    if (profile === "fast") return 45000;
-    return 60000;
-  }
-
-  if (kind === "document-upsert") {
-    if (profile === "slow") return 30000;
-    if (profile === "medium") return 22000;
-    return 18000;
-  }
-
-  if (kind === "profile-finalize") {
-    if (profile === "slow") return 30000;
-    if (profile === "medium") return 22000;
-    return 18000;
-  }
-
-  return 20000;
-}
-
-function isRetryableUploadError(err) {
-  const code = String(err?.code || "").toUpperCase();
-  const msg = String(err?.message || err || "").toLowerCase();
-
-  if (code === "TIMEOUT" || code === "OFFLINE") return true;
-
-  return /timeout|network|fetch|failed to fetch|lenta|demor|tard|temporarily|503|504/.test(msg);
-}
-
-async function retryOperation(task, options = {}) {
-  const {
-    retries = UPLOAD_RETRY_LIMIT,
-    label = "operation"
-  } = options;
-
-  let lastError = null;
-
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      return await task(attempt);
-    } catch (err) {
-      lastError = err;
-      if (attempt >= retries || !isRetryableUploadError(err)) {
-        throw err;
-      }
-
-      const delayMs = UPLOAD_RETRY_BASE_DELAY_MS * attempt;
-      console.warn(`[retry] ${label} attempt ${attempt} failed, retrying in ${delayMs}ms`, err);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-
-  throw lastError || new Error(`No pudimos completar ${label}`);
-}
-
-function logOnboardingStage(stage, extra = {}) {
-  try {
-    console.info("[onboarding stage]", stage, {
-      connectionProfile: getConnectionProfile(),
-      userId: currentUser?.id || null,
-      ...extra
-    });
-  } catch {}
-}
-    
-function getCurrentDocType() {
-  return DOCUMENT_FLOW[currentDocumentIndex] || DOCUMENT_FLOW[0];
-}
-
-function getRequiredDocsCompletedCount() {
-  return REQUIRED_DOCS.filter((doc) => !!getChosenFile(doc)).length;
-}
-
-function getDocCache() {
-  try {
-    return JSON.parse(localStorage.getItem(DOC_CACHE_KEY) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function setDocCache(cache) {
-  try {
-    localStorage.setItem(DOC_CACHE_KEY, JSON.stringify(cache));
-  } catch {}
-}
-    // Fix de encoding para texto dinámico
-function fixEncoding(text) {
-  if (!text) return text;
-  return text
-    .replace(/Ã¡/g, 'á')
-    .replace(/Ã©/g, 'é')
-    .replace(/Ã­/g, 'í')
-    .replace(/Ã³/g, 'ó')
-    .replace(/Ãº/g, 'ú')
-    .replace(/Ã±/g, 'ñ')
-    .replace(/Â¿/g, '¿')
-    .replace(/Â¡/g, '¡')
-    .replace(/Â·/g, '·');
-}
-
-// Aplicar a todos los elementos al cargar
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('*').forEach(el => {
-    if (el.children.length === 0 && el.textContent) {
-      el.textContent = fixEncoding(el.textContent);
-    }
-  });
-});
-
-async function cacheSelectedFile(docType, file) {
-  try {
-    if (!file) return;
-
-    const cache = getDocCache();
-    cache[docType] = {
-      name: file.name || `${docType}.jpg`,
-      type: file.type || "application/octet-stream",
-      size: file.size || 0,
-      updatedAt: Date.now(),
-      cached: true
+    this._unlockAudioOnTouch = () => {
+      soundManager.enableOnUserInteraction?.();
     };
-    setDocCache(cache);
-  } catch (err) {
-    console.warn("[doc cache] no se pudo guardar metadata", err);
   }
-}
-function restoreCachedFiles() {
-  const cache = getDocCache();
 
-  Object.entries(cache).forEach(([docType, value]) => {
+  // =========================================================
+  // BACKGROUND SERVICES
+  // =========================================================
+  _startRealtimeServicesInBackground() {
+    Promise.resolve()
+      .then(() => this._startLocationTracking())
+      .catch((err) => {
+        console.warn('[DriverApp] GPS en background con error:', err);
+      });
+
+    Promise.resolve()
+      .then(() => initSupportPushFCM({ promptIfNeeded: false }))
+      .catch((err) => {
+        console.warn('[DriverApp] Push en background con error:', err);
+      });
+  }
+
+  _syncConnectionMenuItem() {
+    const settingsBtn = document.getElementById('menu-settings');
+    if (!settingsBtn) return;
+
+    const textEl = settingsBtn.querySelector('.menu-item-text');
+    const hintEl = settingsBtn.querySelector('.menu-item-hint');
+    const iconEl = settingsBtn.querySelector('.menu-item-icon');
+    const hasActiveTrip = !!tripManager.getCurrentTrip?.();
+
+    if (textEl) {
+      textEl.textContent = this._onlineStatus ? 'Ponerte offline' : 'Conectarte';
+    }
+
+    if (hintEl) {
+      hintEl.textContent = hasActiveTrip
+        ? 'No disponible mientras hay un viaje en curso'
+        : this._onlineStatus
+          ? 'Quedar fuera de servicio desde el menú'
+          : 'Entrar en línea sin volver al mapa';
+    }
+
+    if (iconEl) {
+      iconEl.innerHTML = this._onlineStatus ? '&#128308;' : '&#128994;';
+    }
+
+    settingsBtn.classList.toggle('menu-item-danger', this._onlineStatus && !hasActiveTrip);
+  }
+
+  async _ensureDriverShellReady() {
+    if (!('serviceWorker' in navigator)) return null;
+
     try {
-      if (!value?.cached) return;
-
-      if (!docValidationState.has(docType)) {
-        docValidationState.set(docType, "warning");
-        docValidationMessage.set(
-          docType,
-          "Archivo marcado como seleccionado previamente. Si recargaste la página, volvé a elegirlo antes de enviar."
-        );
-      }
+      const registration = await navigator.serviceWorker.register(DRIVER_SW_PATH, {
+        scope: APP_BASE_PATH
+      });
+      await navigator.serviceWorker.ready;
+      return registration;
     } catch (err) {
-      console.warn("[doc cache restore]", docType, err);
+      console.warn('[DriverApp] No se pudo registrar el service worker del chofer:', err);
+      return null;
     }
-  });
-}
-function setWizardVisualState(state = "idle") {
-  if (!docWizardCard) return;
-  docWizardCard.classList.remove("is-validating", "is-success", "is-error", "is-warning");
+  }
 
-  if (state === "validating") docWizardCard.classList.add("is-validating");
-  if (state === "success") docWizardCard.classList.add("is-success");
-  if (state === "error") docWizardCard.classList.add("is-error");
-  if (state === "warning") docWizardCard.classList.add("is-warning");
-}
+  _isDocumentHidden() {
+    return document.visibilityState === 'hidden' || !document.hasFocus();
+  }
 
-function playValidationOkSound() {
-  try {
-    if (!audioValidationOk) {
-      audioValidationOk = new Audio(VALIDATION_SOUND_SRC);
-      audioValidationOk.volume = 0.35;
+  async _showSystemNotification({ title, body, tag, data = {} } = {}) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      return false;
     }
-    audioValidationOk.currentTime = 0;
-    void audioValidationOk.play().catch(() => {});
-  } catch {}
-}
 
-function triggerValidationFeedback(type = "success") {
-  if (navigator.vibrate) {
-    if (type === "success") navigator.vibrate([16, 40, 22]);
-    else if (type === "warning") navigator.vibrate([14]);
-    else if (type === "error") navigator.vibrate([24, 50, 24]);
+    try {
+      const registration = await this._ensureDriverShellReady();
+
+      if (registration?.showNotification) {
+        await registration.showNotification(title || 'MIMI Chofer', {
+          body: body || 'Tenés una actualización nueva.',
+          icon: `${APP_BASE_PATH}assets/icons/icon-192x192.png`,
+          badge: `${APP_BASE_PATH}assets/icons/badge-icon.png`,
+          tag: tag || 'mimi-driver-notification',
+          renotify: true,
+          requireInteraction: true,
+          vibrate: [250, 100, 250, 100, 400],
+          data: {
+            url: DRIVER_PANEL_URL,
+            ...data
+          }
+        });
+        return true;
+      }
+
+      new Notification(title || 'MIMI Chofer', {
+        body: body || 'Tenés una actualización nueva.',
+        tag: tag || 'mimi-driver-notification'
+      });
+      return true;
+    } catch (err) {
+      console.warn('[DriverApp] No se pudo mostrar notificación del sistema:', err);
+      return false;
+    }
   }
 
-  if (type === "success") {
-    playValidationOkSound();
-  }
-}
+  async _notifyIncomingTrip(trip) {
+    const amount = Number(trip?.precio ?? trip?.monto ?? 0);
+    const origin = String(
+      trip?.origen_direccion || trip?.origen_texto || 'Nuevo viaje disponible'
+    ).trim();
+    const destination = String(
+      trip?.destino_direccion || trip?.destino_texto || ''
+    ).trim();
 
-function updateWizardPrimaryState() {
-  const docType = getCurrentDocType();
-  const meta = DOC_META[docType];
-  const hasFile = !!getChosenFile(docType);
+    const fareLabel = Number.isFinite(amount) && amount > 0 ? ` - $${amount}` : '';
+    const routeLabel = destination ? `${origin} -> ${destination}` : origin;
 
-  const state = docValidationState.get(docType);
-  const hasBlockingError = state === "error";
-
-  const allowContinue = onboardingBusy ? false : (meta?.optional ? true : hasFile && !hasBlockingError);
-
-  if (docWizardNextBtn) {
-    docWizardNextBtn.disabled = !allowContinue;
-    docWizardNextBtn.classList.toggle("doc-wizard-next-ready", allowContinue);
-  }
-
-  if (stickyPrimaryBtn && currentStep === 3) {
-    stickyPrimaryBtn.disabled = !allowContinue;
-  }
-}
-
-function clearAutoAdvanceTimer() {
-  if (!autoAdvanceTimer) return;
-  clearTimeout(autoAdvanceTimer);
-  autoAdvanceTimer = null;
-}
-
-function rememberButtonLabel(button) {
-  if (!button) return;
-  if (!button.dataset.defaultLabel) {
-    button.dataset.defaultLabel = button.textContent.trim();
-  }
-}
-
-function setButtonLoading(button, isLoading, loadingText = "Procesando...") {
-  if (!button) return;
-
-  rememberButtonLabel(button);
-
-  if (isLoading) {
-    button.disabled = true;
-    button.classList.add("btn-loading");
-    button.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span><span>${loadingText}</span>`;
-    return;
-  }
-
-  button.classList.remove("btn-loading");
-  button.textContent = button.dataset.defaultLabel || "Continuar";
-}
-
-function setDocInputsBusy(isBusy, mode = "validating") {
-  const cameraText = mode === "uploading"
-    ? "Subiendo foto..."
-    : mode === "saving"
-      ? "Guardando..."
-      : "Validando...";
-  const uploadText = mode === "uploading"
-    ? "Subiendo archivo..."
-    : mode === "saving"
-      ? "Guardando..."
-      : "Validando...";
-
-  if (docWizardCameraInput) {
-    docWizardCameraInput.disabled = isBusy;
-  }
-
-  if (docWizardFileInput) {
-    docWizardFileInput.disabled = isBusy;
-  }
-
-  if (docWizardCameraLabel) {
-    rememberButtonLabel(docWizardCameraLabel);
-    docWizardCameraLabel.classList.toggle("is-disabled", isBusy);
-    docWizardCameraLabel.innerHTML = isBusy
-      ? `<span class="btn-spinner" aria-hidden="true"></span><span>${cameraText}</span>`
-      : (docWizardCameraLabel.dataset.defaultLabel || "ðŸ“· Sacar foto");
-  }
-
-  if (docWizardUploadLabel) {
-    rememberButtonLabel(docWizardUploadLabel);
-    docWizardUploadLabel.classList.toggle("is-disabled", isBusy);
-    docWizardUploadLabel.innerHTML = isBusy
-      ? `<span class="btn-spinner" aria-hidden="true"></span><span>${uploadText}</span>`
-      : (docWizardUploadLabel.dataset.defaultLabel || "â¬† Subir archivo");
-  }
-}
-function resetUploadRuntime() {
-  if (uploadRuntimeBox) uploadRuntimeBox.style.display = "none";
-  if (uploadRuntimeTitle) uploadRuntimeTitle.textContent = "Preparando envío...";
-  if (uploadRuntimeCount) uploadRuntimeCount.textContent = "0/0";
-  if (uploadRuntimeBar) uploadRuntimeBar.style.width = "0%";
-  if (uploadRuntimeHelp) uploadRuntimeHelp.textContent = "Esperando inicio...";
-}
-
-function showUploadRuntime() {
-  if (uploadRuntimeBox) uploadRuntimeBox.style.display = "grid";
-}
-
-function updateUploadRuntime({
-  title = "Procesando...",
-  current = 0,
-  total = 0,
-  help = ""
-} = {}) {
-  showUploadRuntime();
-
-  if (uploadRuntimeTitle) uploadRuntimeTitle.textContent = title;
-  if (uploadRuntimeCount) uploadRuntimeCount.textContent = `${current}/${total}`;
-
-  const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
-  if (uploadRuntimeBar) uploadRuntimeBar.style.width = `${pct}%`;
-
-  if (uploadRuntimeHelp) {
-    uploadRuntimeHelp.textContent = help || "Procesando archivos...";
-  }
-}
-function setOnboardingBusy(isBusy, options = {}) {
-  onboardingBusy = isBusy;
-
-  if (isBusy) {
-    const {
-      button = null,
-      text = "Procesando...",
-      docMode = null
-    } = options;
-
-    [
-      stickyPrimaryBtn,
-      docWizardNextBtn,
-      submitAllBtn,
-      step1ContinueBtn,
-      step2ContinueBtn
-    ].forEach((btn) => {
-      if (!btn) return;
-      if (button && btn === button) {
-        setButtonLoading(btn, true, text);
-      } else {
-        btn.disabled = true;
+    await this._showSystemNotification({
+      title: 'Nuevo viaje para aceptar',
+      body: `${routeLabel}${fareLabel}`,
+      tag: `driver-trip-offer-${trip?.offerId || trip?.id || 'pending'}`,
+      data: {
+        url: DRIVER_PANEL_URL,
+        offerId: trip?.offerId || null,
+        tripId: trip?.id || trip?.viajeId || null,
+        type: 'trip-offer'
       }
     });
-
-    if (docWizardBackBtn) docWizardBackBtn.disabled = true;
-    if (exitOnboardingBtn) exitOnboardingBtn.disabled = true;
-    if (docMode) setDocInputsBusy(true, docMode);
-    updateWizardPrimaryState();
-    return;
   }
 
-  [
-    stickyPrimaryBtn,
-    docWizardNextBtn,
-    submitAllBtn,
-    step1ContinueBtn,
-    step2ContinueBtn
-  ].forEach((btn) => {
-    if (!btn) return;
-    setButtonLoading(btn, false);
-    btn.disabled = false;
-  });
+  async _notifySupportMessage(detail = {}) {
+    await this._showSystemNotification({
+      title: detail?.title || 'Soporte MIMI',
+      body: detail?.body || 'Tenés una respuesta nueva de soporte.',
+      tag: detail?.payload?.data?.tag || 'driver-support-message',
+      data: {
+        url: DRIVER_PANEL_URL,
+        type: 'support-message'
+      }
+    });
+  }
 
-  if (docWizardBackBtn) docWizardBackBtn.disabled = false;
-  if (exitOnboardingBtn) exitOnboardingBtn.disabled = false;
-  setDocInputsBusy(false);
-  renderDocumentWizard();
-  updateSticky(currentStep);
-  updateWizardPrimaryState();
-}
+  _handleForegroundPush(event) {
+    const detail = event?.detail || {};
 
-async function validateWithRetry(docType, file, maxAttempts = 2) {
-  let lastError = null;
+    if (!this._isDocumentHidden()) {
+      uiController.showToast(
+        detail.body || detail.title || 'Nueva notificación',
+        'success',
+        4500
+      );
+      return;
+    }
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    this._notifySupportMessage(detail).catch(() => null);
+  }
+
+  _handleVisibilityChange() {
+    if (!this._onlineStatus) return;
+    if (document.visibilityState !== 'visible') return;
+
+    tripManager.refresh?.().catch((err) => {
+      console.warn('[DriverApp] No se pudo refrescar el estado al volver a foco:', err);
+    });
+  }
+
+  async _loadDriverProfileSummary(user) {
+    if (!this._authUserId) return null;
+
     try {
-      const localValidation = await validateSelectedDocument(docType, file);
+      const [{ data: profile }, { data: documents }] = await Promise.all([
+        supabaseService.client
+          .from('driver_profiles')
+          .select('*')
+          .eq('user_id', this._authUserId)
+          .maybeSingle(),
+        supabaseService.client
+          .from('driver_documents')
+          .select('doc_type,status,updated_at')
+          .eq('user_id', this._authUserId)
+          .order('updated_at', { ascending: false })
+      ]);
 
-      if (!localValidation?.ok) {
-        return {
-          ok: false,
-          kind: localValidation?.kind || "local-error",
-          message: localValidation?.message || "No pudimos validar el archivo",
-          local: localValidation || null,
-          remote: null
-        };
-      }
-
-      let remote = null;
-
-      try {
-        const { data: remoteData, error: remoteError } = await withTimeout(
-          supabaseService.client.functions.invoke("validate-driver-document", {
-            body: {
-              doc_type: docType,
-              mime_type: file.type || null,
-              file_size: file.size || null,
-              client_validation_ok: true,
-              client_validation_kind: localValidation.kind || "ok"
-            }
-          }),
-           REMOTE_TIMEOUT,
-             "La validación remota tardó demasiado"       
-        );
-
-        if (remoteError) {
-          console.warn(`[server validation retry ${attempt}]`, remoteError);
-        } else {
-          remote = remoteData || null;
-        }
-
-      } catch (remoteErr) {
-        console.warn(`[server validation retry ${attempt}]`, remoteErr);
-
-        return {
-          ok: true,
-          kind: "document-warning",
-          message: "Validación parcial. Se revisará manualmente.",
-          local: localValidation,
-          remote: null
-        };
-      }
-
-      const reviewRequired =
-        remote?.review_required === true ||
-        localValidation?.kind === "document-warning" ||
-        remote === null;
-
-      return {
-        ok: true,
-        kind: reviewRequired ? "document-warning" : (localValidation.kind || "ok"),
-        message:
-          remote?.message ||
-          localValidation.message ||
-          "Documento validado",
-        local: localValidation,
-        remote
+      this._driverProfileSummary = {
+        email: user?.email || '',
+        name:
+          profile?.full_name ||
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          user?.email ||
+          'Conductor',
+        phone: profile?.phone || '',
+        dni: profile?.dni_number || '',
+        onboardingStatus: profile?.onboarding_status || 'PENDIENTE_DOCUMENTOS',
+        documentsApproved: profile?.documents_approved === true,
+        vehicle: [profile?.vehicle_brand, profile?.vehicle_model].filter(Boolean).join(' ') || '',
+        vehiclePlate: profile?.vehicle_plate || '',
+        vehicleColor: profile?.vehicle_color || '',
+        vehicleYear: profile?.vehicle_year || '',
+        documents: Array.isArray(documents) ? documents : []
       };
 
+      return this._driverProfileSummary;
     } catch (err) {
-      lastError = err;
-      if (attempt < maxAttempts) {
-        await new Promise((r) => setTimeout(r, 450 * attempt));
-      }
-    }
-  }
-
-  throw lastError || new Error("No pudimos validar el documento");
-}    
-function renderDocWizardPreview(docType) {
-  const file = getChosenFile(docType);
-
-  if (!file) {
-    docWizardPreview.innerHTML = `
-      <div class="doc-preview-file">
-        <strong>Esperando archivo</strong>
-        <span>TomÃ¡ una foto o subÃ­ un archivo para continuar.</span>
-      </div>
-    `;
-    docWizardPreview.classList.add("visible");
-    return;
-  }
-
-  if (String(file.type || "").startsWith("image/")) {
-  if (currentPreviewUrl) {
-    URL.revokeObjectURL(currentPreviewUrl);
-    currentPreviewUrl = null;
-  }
-
-  currentPreviewUrl = URL.createObjectURL(file);
-  docWizardPreview.innerHTML = `<img src="${currentPreviewUrl}" alt="${DOC_META[docType]?.label || docType}" />`;
-  docWizardPreview.classList.add("visible");
-  return;
-}
-
-  docWizardPreview.innerHTML = `
-    <div class="doc-preview-file">
-      <strong>Archivo seleccionado</strong>
-      <span>${file.name || "Documento"}</span>
-      <span>${file.type || "application/octet-stream"}</span>
-    </div>
-  `;
-  docWizardPreview.classList.add("visible");
-}
-
-function syncDocWizardStatus() {
-  if (!docWizardStatus) return;
-
-  const docType = getCurrentDocType();
-  const state = docValidationState.get(docType) || "pending";
-  const message = docValidationMessage.get(docType) || "";
-
-  docWizardStatus.textContent = message;
-  docWizardStatus.className = `doc-status ${state}`;
-}
-    
-function renderDocumentWizard() {
-  const docType = getCurrentDocType();
-  const meta = DOC_META[docType];
-  const isOptional = !!meta?.optional;
-  const stepNumber = currentDocumentIndex + 1;
-  const total = DOCUMENT_FLOW.length;
-  const file = getChosenFile(docType);
-
-  docWizardStepTitle.textContent = `Documento ${stepNumber} de ${total}`;
-  docWizardStepBadge.textContent = isOptional ? "Opcional" : "Obligatorio";
-  docWizardProgressBar.style.width = `${(stepNumber / total) * 100}%`;
-
-  docWizardProgressHelp.textContent = isOptional
-    ? "Este documento puede omitirse y continuar."
-    : "Este documento es obligatorio para completar el alta.";
-
-  docWizardIcon.textContent = meta?.icon || "ðŸ“„";
-  docWizardTitle.textContent = meta?.title || meta?.label || "Documento";
-  docWizardDescription.textContent = meta?.description || "";
-
-  docWizardCameraInput.accept = "image/*";
-  docWizardFileInput.accept = docType === "selfie" || docType === "vehicle_photo"
-    ? "image/*"
-    : "image/*,.pdf";
-
-  if (meta?.capture === "user") {
-    docWizardCameraInput.setAttribute("capture", "user");
-  } else {
-    docWizardCameraInput.setAttribute("capture", "environment");
-  }
-
-  docWizardCameraLabel.textContent = docType === "selfie" ? "ðŸ¤³ Sacar selfie" : "ðŸ“· Sacar foto";
-  docWizardUploadLabel.textContent = "â¬† Subir archivo";
-  docWizardCameraLabel.dataset.defaultLabel = docWizardCameraLabel.textContent;
-  docWizardUploadLabel.dataset.defaultLabel = docWizardUploadLabel.textContent;
-
-  docWizardGuidelines.innerHTML = "";
-
-  const defaultGuidelines = {
-    dni_front: ["Documento completo", "Sin reflejos", "Bien enfocado"],
-    dni_back: ["Reverso completo", "Buena luz", "Sin bordes cortados"],
-    selfie: ["Mirando al frente", "Buena luz", "Sin lentes oscuros"],
-    license_front: ["Texto legible", "Sin brillos", "Documento completo"],
-    license_back: ["Todos los datos visibles", "Sin sombras", "Sin recortes"],
-    vehicle_card_front: ["CÃ©dula completa", "Texto legible", "Sin desenfoque"],
-    vehicle_card_back: ["Todo visible", "Buena luz", "Sin reflejos"],
-    vehicle_photo: ["Foto exterior clara", "Que se vea bien el vehÃ­culo", "Preferible Ã¡ngulo 3/4"],
-    background_check: ["Puede ser foto o PDF", "Documento legible", "PodÃ©s presentarlo luego"]
-  };
-
-  (defaultGuidelines[docType] || []).forEach((text) => {
-    const span = document.createElement("span");
-    span.textContent = text;
-    docWizardGuidelines.appendChild(span);
-  });
-
-  docWizardDeadlineBox.style.display = docType === "background_check" ? "block" : "none";
-  docWizardExternalLink.style.display = docType === "background_check" ? "inline-flex" : "none";
-
-  renderDocWizardPreview(docType);
-  syncDocWizardStatus();
-  updateWizardPrimaryState();
-
-  const state = docValidationState.get(docType);
-  const isValidated = !!file && (state === "ok" || state === "warning");
-
-  docWizardBackBtn.textContent = currentDocumentIndex === 0 ? "Volver al vehÃ­culo" : "Volver";
-  docWizardNextBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
-    ? "Ir a revisiÃ³n"
-    : isValidated
-      ? "Continuar"
-      : isOptional
-        ? "Omitir y continuar"
-        : "Continuar";
-}    
-    function setGlobalStatus(msg, type = "success") {
-      globalStatus.textContent = msg;
-      globalStatus.classList.add("visible");
-      globalStatus.classList.remove("success", "error");
-      globalStatus.classList.add(type === "error" ? "error" : "success");
-    }
-
-    function clearGlobalStatus() {
-      globalStatus.textContent = "";
-      globalStatus.classList.remove("visible", "success", "error");
-    }
-
-function isIosLikeDevice() {
-  const ua = String(navigator.userAgent || "");
-  const touchMac = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  return /iPad|iPhone|iPod/i.test(ua) || touchMac;
-}
-
-function canUseCustomCameraCapture() {
-  const hasCameraApi = !!navigator.mediaDevices?.getUserMedia;
-  const isSecure =
-    window.isSecureContext ||
-    location.hostname === "localhost" ||
-    location.hostname === "127.0.0.1";
-
-  return hasCameraApi && isSecure;
-}
-
-function shouldUseNativeCameraInput() {
-  return !canUseCustomCameraCapture() || isIosLikeDevice();
-}
-
-function openNativeCameraInput(meta = {}) {
-  if (!docWizardCameraInput) return;
-
-  if (meta?.capture === "user") {
-    docWizardCameraInput.setAttribute("capture", "user");
-  } else {
-    docWizardCameraInput.setAttribute("capture", "environment");
-  }
-
-  docWizardCameraInput.value = "";
-  docWizardCameraInput.click();
-}
-
-    function getField(id) {
-      return document.getElementById(id)?.value?.trim() || "";
-    }
-
-
-function updateDocumentsProgressUI() {
-  const progress = getDocumentsProgress(REQUIRED_DOCS, getChosenFile);
-
-  if (docsProgressCount) {
-    docsProgressCount.textContent = `${progress.completed}/${progress.total}`;
-  }
-
-  if (docsProgressBar) {
-    docsProgressBar.style.width = `${progress.pct}%`;
-  }
-
-  if (docsProgressHelp) {
-    docsProgressHelp.textContent = progress.isComplete
-      ? "âœ… Ya completaste todos los documentos obligatorios."
-      : `Faltan ${progress.total - progress.completed} documentos obligatorios para completar este paso.`;
-  }
-
-  if (submitAllBtn) {
-    submitAllBtn.disabled = !progress.isComplete;
-  }
-}
-
-function updateOverallStepperState() {
-  const overall = getOverallOnboardingState({
-    getField,
-    requiredDocs: REQUIRED_DOCS,
-    getChosenFile
-  });
-
-  const step1El = document.getElementById("uberStep1");
-  const step2El = document.getElementById("uberStep2");
-  const step3El = document.getElementById("uberStep3");
-  const line1 = document.getElementById("uberLine1");
-  const line2 = document.getElementById("uberLine2");
-
-  if (step1El) {
-    step1El.classList.toggle("done", overall.profileComplete);
-  }
-
-  if (step2El) {
-    step2El.classList.toggle("done", overall.vehicleComplete);
-  }
-
-  if (step3El) {
-    step3El.classList.toggle("done", overall.docsProgress.isComplete);
-  }
-
-  if (line1) {
-    line1.classList.toggle("done", overall.profileComplete);
-  }
-
-  if (line2) {
-    line2.classList.toggle("done", overall.vehicleComplete);
-  }
-}
-
-function updateDots(step) {
-  [1, 2, 3].forEach((n) => {
-    const stepEl = document.getElementById(`uberStep${n}`);
-    const isActive = n === step;
-    const isDone = n < step;
-
-    stepEl?.classList.toggle("active", isActive);
-    stepEl?.classList.toggle("done", isDone);
-  });
-
-  document.getElementById("uberLine1")?.classList.toggle("done", step > 1);
-  document.getElementById("uberLine2")?.classList.toggle("done", step > 2);
-}
-    
-async function exitOnboardingFlow() {
-  const confirmExit = window.confirm(
-    "Â¿QuerÃ©s salir del alta de chofer? Se perderÃ¡ el progreso no guardado."
-  );
-
-  if (!confirmExit) return;
-
-  try {
-    localStorage.removeItem(DOC_CACHE_KEY);
-    localStorage.removeItem("mimi_driver_onboarding_draft");
-    sessionStorage.clear();
-
-    if (supabaseService?.client?.auth) {
-      await supabaseService.client.auth.signOut().catch(() => null);
-    }
-  } catch (err) {
-    console.warn("[exitOnboardingFlow] warning:", err);
-  } finally {
-    window.location.replace("login-chofer.html");
-  }
-}
-function updateSticky(step) {
-  if (step === 1) {
-    stickyTitle.textContent = "Paso 1 Â· Datos personales";
-    stickyText.textContent = "CompletÃ¡ tus datos para continuar con el alta.";
-    stickyPrimaryBtn.textContent = "Continuar";
-    stickyPrimaryBtn.disabled = false;
-    return;
-  }
-
-  if (step === 2) {
-    stickyTitle.textContent = "Paso 2 Â· VehÃ­culo";
-    stickyText.textContent = "CargÃ¡ el vehÃ­culo con el que vas a trabajar.";
-    stickyPrimaryBtn.textContent = "Continuar";
-    stickyPrimaryBtn.disabled = false;
-    return;
-  }
-
-  const docType = getCurrentDocType();
-  const meta = DOC_META[docType];
-  const hasFile = !!getChosenFile(docType);
-  const state = docValidationState.get(docType);
-  const passed = state === "ok" || state === "warning";
-  const allowContinue = meta?.optional ? true : hasFile && passed;
-
-  stickyTitle.textContent = `Paso 3 Â· ${meta?.label || "DocumentaciÃ³n"}`;
-  stickyText.textContent = meta?.optional
-    ? "Este documento es opcional. PodÃ©s omitirlo o cargarlo ahora."
-    : passed
-      ? "Documento validado. Ya podÃ©s continuar."
-      : hasFile
-        ? "Esperando validaciÃ³n real del documento."
-        : "TomÃ¡ una foto clara o subÃ­ el archivo para continuar.";
-
-  stickyPrimaryBtn.textContent = currentDocumentIndex === DOCUMENT_FLOW.length - 1
-    ? "Ir a revisiÃ³n"
-    : meta?.optional && !hasFile
-      ? "Omitir y continuar"
-      : "Continuar";
-
-  stickyPrimaryBtn.disabled = !allowContinue;
-}
-    
-function showStep(step) {
-  currentStep = step;
-
-  document.querySelectorAll(".step-card").forEach((el) => {
-    el.classList.toggle("active", Number(el.dataset.step) === step);
-  });
-
-  const pct = step === 1 ? 33 : step === 2 ? 66 : 100;
-  progressBar.style.width = pct + "%";
-
-  const stepLabels = {
-    1: "Paso 1 de 3 Â· Datos personales",
-    2: "Paso 2 de 3 Â· VehÃ­culo",
-    3: "Paso 3 de 3 Â· DocumentaciÃ³n"
-  };
-
-  progressLabel.textContent = stepLabels[step] || `Paso ${step} de 3`;
-
-  updateDots(step);
-  updateSticky(step);
-  updateDocumentsProgressUI();
-  updateOverallStepperState();
-
-  if (step === 3) {
-    renderDocumentWizard();
-  }
-
-  requestAnimationFrame(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
-}
-    
-function validateStep1() {
-  if (!getField("full_name")) return "IngresÃ¡ nombre completo";
-  if (!getField("phone")) return "IngresÃ¡ telÃ©fono";
-  if (!getField("dni_number")) return "IngresÃ¡ DNI";
-  if (!getField("birth_date")) return "IngresÃ¡ fecha de nacimiento";
-  return null;
-}
-    function validateStep2() {
-      if (!getField("vehicle_brand")) return "IngresÃ¡ marca del vehÃ­culo";
-      if (!getField("vehicle_model")) return "IngresÃ¡ modelo del vehÃ­culo";
-      if (!getField("vehicle_year")) return "IngresÃ¡ aÃ±o del vehÃ­culo";
-      if (!getField("vehicle_color")) return "IngresÃ¡ color del vehÃ­culo";
-      if (!getField("vehicle_plate")) return "IngresÃ¡ patente del vehÃ­culo";
+      console.warn('[DriverApp] No se pudo cargar el resumen del perfil:', err);
       return null;
     }
-
-    function fileExt(file) {
-      const name = String(file?.name || "");
-      const idx = name.lastIndexOf(".");
-      return idx >= 0 ? name.slice(idx + 1).toLowerCase() : "bin";
-    }
-
-    function sanitizeFileName(name = "archivo") {
-      return String(name)
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^\w.\-]+/g, "_")
-        .toLowerCase();
-    }
-    async function fileToBase64(file) {
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const result = String(reader.result || "");
-      resolve(result.replace(/^data:.*;base64,/, ""));
-    };
-
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function setDocStatus(docType, message, type = "pending") {
-  docValidationState.set(docType, type);
-  docValidationMessage.set(docType, message);
-
-  if (docType === getCurrentDocType() && docWizardStatus) {
-    docWizardStatus.textContent = message;
-    docWizardStatus.className = `doc-status ${type}`;
   }
 
-  updateDocumentsProgressUI();
-  updateOverallStepperState();
-  updateWizardPrimaryState();
-}    
-function renderPreview(docType, file) {
-  if (docType !== getCurrentDocType() || !docWizardPreview) return;
-
-  if (!file) {
-    docWizardPreview.innerHTML = `
-      <div class="doc-preview-file">
-        <strong>Esperando archivo</strong>
-        <span>TomÃ¡ una foto o subÃ­ un archivo para continuar.</span>
-      </div>
-    `;
-    docWizardPreview.classList.add("visible");
-    return;
-  }
-
-  docWizardPreview.classList.add("visible");
-
-if (String(file.type || "").startsWith("image/")) {
-  if (currentPreviewUrl) {
-    URL.revokeObjectURL(currentPreviewUrl);
-    currentPreviewUrl = null;
-  }
-
-  currentPreviewUrl = URL.createObjectURL(file);
-  docWizardPreview.innerHTML = `<img src="${currentPreviewUrl}" alt="Preview ${docType}" />`;
-} else {
-  docWizardPreview.innerHTML = `
-      <div class="doc-preview-file">
-        <strong>Archivo seleccionado</strong>
-        <span>${file.name || "Documento"}</span>
-        <span>${file.type || "application/octet-stream"}</span>
-      </div>
-    `;
-  }
-}
-
-async function setSelectedFile(docType, file, sourceLabel = "Archivo seleccionado") {
-  if (!file) return;
-  if (onboardingBusy) return;
-
-  clearAutoAdvanceTimer();
-
-  setOnboardingBusy(true, {
-    text: "Validando documento...",
-    docMode: "validating"
-  });
-
-  try {
-    const name = file.name || DOC_META[docType]?.label || "archivo";
-
-    renderPreview(docType, file);
-    setWizardVisualState("validating");
-    setDocStatus(docType, `Analizando ${name}...`, "pending");
-    updateWizardPrimaryState();
-
-    const validation = await Promise.race([
-      validateWithRetry(docType, file, 2),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("La validación tardó demasiado")), 30000)
-      )
-    ]);
-
-    if (validation.ok) {
-      selectedFiles.set(docType, file);
-      await cacheSelectedFile(docType, file);
-
-      if (validation.kind === "document-warning") {
-        setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "warning");
-        setWizardVisualState("warning");
-        triggerValidationFeedback("warning");
-      } else {
-        setDocStatus(docType, `${sourceLabel}: ${name} · ${validation.message}`, "ok");
-        setWizardVisualState("success");
-        triggerValidationFeedback("success");
-      }
-
-      clearAutoAdvanceTimer();
-      autoAdvanceTimer = setTimeout(() => {
-        if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-          currentDocumentIndex += 1;
-          renderDocumentWizard();
-          updateWizardPrimaryState();
-        }
-      }, 900);
-    } else {
-      clearAutoAdvanceTimer();
-      selectedFiles.delete(docType);
-      renderDocWizardPreview(docType);
-      setDocStatus(docType, validation.message || "Documento inválido", "error");
-      setWizardVisualState("error");
-      triggerValidationFeedback("error");
-    }
-  } catch (err) {
-    clearAutoAdvanceTimer();
-    selectedFiles.delete(docType);
-    renderDocWizardPreview(docType);
-    console.error("[validateWithRetry error]", err);
-    setDocStatus(
-      docType,
-      err?.message || "No pudimos validar el documento. Intentá nuevamente.",
-      "error"
-    );
-    setWizardVisualState("error");
-    triggerValidationFeedback("error");
-  } finally {
-    setOnboardingBusy(false);
-    updateWizardPrimaryState();
-  }
-}    
-function initFileInputs() {
-  docWizardCameraLabel?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    if (onboardingBusy) return;
-
-    const docType = getCurrentDocType();
-    const meta = DOC_META[docType] || {};
-    const isSelfie = meta.capture === "user";
-
-    if (shouldUseNativeCameraInput()) {
-      try {
-        openNativeCameraInput(meta);
-      } catch (nativeErr) {
-        console.error("[camera native] no se pudo abrir input capture", nativeErr);
-      }
-      return;
-    }
-
-    try {
-      const result = await openCameraCaptureModal({
-        docType,
-        mode: isSelfie ? "selfie" : "document",
-        title: isSelfie
-          ? (meta.title || "Tomate una selfie")
-          : (meta.title || "Sacá una foto del documento"),
-        subtitle: isSelfie
-          ? "Alineá el rostro dentro de la guía, con buena luz y sin lentes oscuros."
-          : "Centrá el documento dentro del marco. Que se vea completo, sin reflejos y bien enfocado.",
-        captureFacingMode: isSelfie ? "user" : "environment"
-      });
-
-      if (result?.file) {
-        await setSelectedFile(docType, result.file, "Foto capturada");
-      }
-    } catch (err) {
-      console.warn("[camera custom] fallback a input nativo", err);
-
-      try {
-        openNativeCameraInput(meta);
-      } catch (fallbackErr) {
-        console.error("[camera fallback] no se pudo abrir input capture", fallbackErr);
-      }
-    }
-  });
-
-  docWizardCameraInput?.addEventListener("change", async (e) => {
-    const file = e.target?.files?.[0] || null;
-    if (!file) return;
-
-    const docType = getCurrentDocType();
-    await setSelectedFile(docType, file, "Foto capturada");
-    docWizardCameraInput.value = "";
-  });
-
-  docWizardFileInput?.addEventListener("change", async (e) => {
-    const file = e.target?.files?.[0] || null;
-    if (!file) return;
-
-    const docType = getCurrentDocType();
-    await setSelectedFile(docType, file, "Archivo seleccionado");
-    docWizardFileInput.value = "";
-  });
-}    
-function getChosenFile(docType) {
-      if (selectedFiles.has(docType)) return selectedFiles.get(docType);
-
-      const ids = DOC_INPUT_ALIASES[docType] || [docType];
-      for (const id of ids) {
-        const file = document.getElementById(id)?.files?.[0] || null;
-        if (file) return file;
-      }
-      return null;
-    }
-
-    async function getUserOrRedirect() {
-      try {
-        const dbReady = await supabaseService.init();
-
-        if (!dbReady || !supabaseService?.client?.auth) {
-          console.error("[onboarding] Supabase/Auth no inicializado");
-          window.location.replace("login-chofer.html");
-          return null;
-        }
-
-        let { data: sessionData, error: sessionError } = await supabaseService.client.auth.getSession();
-
-        if (sessionError) {
-          console.warn("[onboarding] getSession error:", sessionError);
-        }
-
-        let session = sessionData?.session || null;
-
-        if (!session?.access_token) {
-          await new Promise((r) => setTimeout(r, 700));
-          const retry = await supabaseService.client.auth.getSession();
-          session = retry?.data?.session || null;
-        }
-
-        if (!session?.access_token) {
-          const refresh = await supabaseService.client.auth.refreshSession().catch(() => null);
-          session = refresh?.data?.session || session || null;
-        }
-
-        if (!session?.access_token) {
-          console.warn("[onboarding] No hay sesiÃ³n vÃ¡lida");
-          window.location.replace("login-chofer.html");
-          return null;
-        }
-
-        const { data, error } = await supabaseService.client.auth.getUser();
-
-        if (error) {
-          console.warn("[onboarding] getUser error:", error);
-          window.location.replace("login-chofer.html");
-          return null;
-        }
-
-        if (!data?.user) {
-          console.warn("[onboarding] getUser sin usuario");
-          window.location.replace("login-chofer.html");
-          return null;
-        }
-
-        return data.user;
-      } catch (err) {
-        console.error("[onboarding] getUserOrRedirect fatal:", err);
-        window.location.replace("login-chofer.html");
-        return null;
-      }
-    }
-
-    async function ensureProfileExists(user) {
-      const { error } = await supabaseService.client.rpc("ensure_driver_profile_exists", {
-        p_user_id: user.id
-      });
-
-      if (error) throw error;
-    }
-
-    async function loadProfile() {
-      const { data, error } = await supabaseService.client
-        .from("driver_profiles")
-        .select("*")
-        .eq("user_id", currentUser.id)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (data) {
-        document.getElementById("full_name").value = data.full_name || "";
-        document.getElementById("phone").value = data.phone || "";
-        document.getElementById("dni_number").value = data.dni_number || "";
-        document.getElementById("birth_date").value = data.birth_date || "";
-        document.getElementById("address").value = data.address || "";
-
-        document.getElementById("vehicle_brand").value = data.vehicle_brand || "";
-        document.getElementById("vehicle_model").value = data.vehicle_model || "";
-        document.getElementById("vehicle_year").value = data.vehicle_year || "";
-        document.getElementById("vehicle_color").value = data.vehicle_color || "";
-        document.getElementById("vehicle_plate").value = data.vehicle_plate || "";
-      }
-    }
-
-async function saveProfilePartial(payload, options = {}) {
-  if (isProbablyOffline()) {
-    throw offlineError("No hay conexión para guardar el perfil");
-  }
-
-  if (!currentUser?.id) {
-    throw new Error("Usuario no autenticado");
-  }
-
-  try {
-    const timeoutMs = Number(options.timeoutMs) > 0 ? Number(options.timeoutMs) : 20000;
-    const timeoutMessage = options.timeoutMessage || "La actualización del perfil tardó demasiado";
-    const returnData = options.returnData === true;
-
-    const cleanPayload = {
-      user_id: currentUser.id,
-      email: currentUser.email || null,
-      ...payload,
-      updated_at: new Date().toISOString()
-    };
-
-    let query = supabaseService.client
-      .from("driver_profiles")
-      .upsert(cleanPayload, {
-        onConflict: "user_id"
-      });
-
-    if (returnData) {
-      query = query.select().single();
-    }
-
-    const { data, error } = await withTimeout(query, timeoutMs, timeoutMessage);
-
-    if (error) {
-      console.error("[saveProfilePartial] Supabase error:", error);
-      throw new Error(error.message || "Error al guardar el perfil");
-    }
-
-    return data;
-
-  } catch (err) {
-    console.error("[saveProfilePartial] Error:", err);
-
-    const errCode = String(err?.code || "").toUpperCase();
-    const errMessage = String(err?.message || "");
-
-    if (errMessage.includes("JWT") || errMessage.includes("Auth")) {
-      throw new Error("Sesión expirada. Volvé a iniciar sesión.");
-    }
-
-    if (errCode === "TIMEOUT" || /timeout|demor[oó]|tard[oó]\s+demasiado/i.test(errMessage)) {
-      const timeoutErr = new Error("La conexión es lenta. Intentá nuevamente.");
-      timeoutErr.code = "TIMEOUT";
-      timeoutErr.cause = err;
-      throw timeoutErr;
-    }
-
-    throw err;
-  }
-}    
-function saveDraft() {
-  const payload = {
-    full_name: getField("full_name"),
-    phone: getField("phone"),
-    dni_number: getField("dni_number"),
-    birth_date: getField("birth_date"),
-    address: getField("address"),
-    vehicle_brand: getField("vehicle_brand"),
-    vehicle_model: getField("vehicle_model"),
-    vehicle_year: getField("vehicle_year"),
-    vehicle_color: getField("vehicle_color"),
-    vehicle_plate: getField("vehicle_plate")
-  };
-
-  localStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(payload));
-}
-    function restoreDraft() {
-  try {
-    const raw = localStorage.getItem(FORM_DRAFT_KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-
-    document.getElementById("full_name").value = data.full_name || "";
-    document.getElementById("phone").value = data.phone || "";
-    document.getElementById("dni_number").value = data.dni_number || "";
-    document.getElementById("birth_date").value = data.birth_date || "";
-    document.getElementById("address").value = data.address || "";
-    document.getElementById("vehicle_brand").value = data.vehicle_brand || "";
-    document.getElementById("vehicle_model").value = data.vehicle_model || "";
-    document.getElementById("vehicle_year").value = data.vehicle_year || "";
-    document.getElementById("vehicle_color").value = data.vehicle_color || "";
-    document.getElementById("vehicle_plate").value = data.vehicle_plate || "";
-  } catch (err) {
-    console.warn("[restoreDraft]", err);
-  }
-}
-    function isImageFile(file) {
-  return !!file && String(file.type || "").startsWith("image/");
-}
-
-async function compressImageForUpload(file, options = {}) {
-  const {
-    maxWidth = 1600,
-    maxHeight = 1600,
-    quality = 0.8,
-    outputType = "image/jpeg"
-  } = options;
-
-  if (!isImageFile(file)) return file;
-
-  const img = await new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(image);
-    };
-
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("No se pudo leer la imagen para comprimir"));
-    };
-
-    image.src = url;
-  });
-
-  let width = img.naturalWidth || img.width;
-  let height = img.naturalHeight || img.height;
-
-  const scale = Math.min(
-    1,
-    maxWidth / width || 1,
-    maxHeight / height || 1
-  );
-
-  const targetWidth = Math.max(1, Math.round(width * scale));
-  const targetHeight = Math.max(1, Math.round(height * scale));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-
-  const ctx = canvas.getContext("2d", { alpha: false });
-  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-
-  const blob = await new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (result) => {
-        if (!result) {
-          reject(new Error("No se pudo generar la imagen comprimida"));
-          return;
-        }
-        resolve(result);
-      },
-      outputType,
-      quality
-    );
-  });
-
-  const safeBaseName = (file.name || "documento")
-    .replace(/\.[^.]+$/, "")
-    .replace(/[^\w.-]+/g, "_");
-
-  return new File(
-    [blob],
-    `${safeBaseName}.jpg`,
-    {
-      type: outputType,
-      lastModified: Date.now()
-    }
-  );
-}
-
-async function mapWithConcurrency(items, limit, worker) {
-  const results = [];
-  let index = 0;
-
-  async function runner() {
-    while (index < items.length) {
-      const currentIndex = index++;
-      results[currentIndex] = await worker(items[currentIndex], currentIndex);
-    }
-  }
-
-  const workers = Array.from(
-    { length: Math.max(1, Math.min(limit, items.length || 1)) },
-    () => runner()
-  );
-
-  await Promise.all(workers);
-  return results;
-}
-function isProbablyOffline() {
-  return typeof navigator !== "undefined" && navigator.onLine === false;
-}
-
-function offlineError(message = "Sin conexión a internet") {
-  const err = new Error(message);
-  err.code = "OFFLINE";
-  return err;
-}
-
-function timeoutError(message = "Tiempo de espera agotado") {
-  const err = new Error(message);
-  err.code = "TIMEOUT";
-  return err;
-}
-
-function withTimeout(promise, timeoutMs = 45000, message = "Tiempo de espera agotado") {
-  let timer = null;
-
-  const timeoutPromise = new Promise((_, reject) => {
-    timer = setTimeout(() => reject(timeoutError(message)), timeoutMs);
-  });
-
-  return Promise.race([promise, timeoutPromise]).finally(() => {
-    if (timer) clearTimeout(timer);
-  });
-}
-
-function normalizeUiText(text = "") {
-  return String(text)
-    .replaceAll("Ã¡", "á")
-    .replaceAll("Ã©", "é")
-    .replaceAll("Ã­", "í")
-    .replaceAll("Ã³", "ó")
-    .replaceAll("Ãº", "ú")
-    .replaceAll("Ã±", "ñ")
-    .replaceAll("Â¿", "¿")
-    .replaceAll("Â¡", "¡")
-    .replaceAll("Â·", "·")
-    .replaceAll("âœ…", "✅")
-    .replaceAll("â³", "⏳")
-    .replaceAll("âŒ", "❌")
-    .replaceAll("ðŸ“·", "📷")
-    .replaceAll("ðŸ¤³", "🤳")
-    .replaceAll("â¬†", "⬆")
-    .replaceAll("ðŸ›¡", "🛡")
-    .replaceAll("ðŸªª", "🪪")
-    .replaceAll("ðŸš˜", "🚘")
-    .replaceAll("ðŸš—", "🚗");
-}
-
-function applySpanishTextFixes() {
-  document.title = "MIMI Driver - Onboarding";
-
-  [
-    "progressLabel",
-    "docsProgressTitle",
-    "docsProgressHelp",
-    "docWizardStepTitle",
-    "docWizardStepBadge",
-    "docWizardProgressHelp",
-    "docWizardTitle",
-    "docWizardDescription",
-    "docWizardStatus",
-    "docWizardBackBtn",
-    "docWizardNextBtn",
-    "submitAllBtn",
-    "stickyTitle",
-    "stickyText",
-    "globalStatus",
-    "exitOnboardingBtn"
-  ].forEach((id) => {
-    const el = document.getElementById(id);
-    if (el && el.textContent) {
-      el.textContent = normalizeUiText(el.textContent);
-    }
-  });
-
-  document.querySelectorAll(".title, .subtitle, .step-title, .step-text, .field-help, .doc-guidelines span, .doc-preview-file span, .doc-preview-file strong, .doc-deadline-box, .step-badge, .eyebrow, label, button, a").forEach((el) => {
-    if (el.childElementCount === 0 && el.textContent) {
-      el.textContent = normalizeUiText(el.textContent);
-    }
-  });
-}
-
-function explainUploadError(err) {
-  const msg = String(err?.message || err || "");
-
-  if (err?.code === "OFFLINE" || isProbablyOffline()) {
-    return "❌ No hay conexión a internet. Revisá la señal y volvé a intentar.";
-  }
-
-  if (err?.code === "TIMEOUT") {
-    return "❌ La carga demoró demasiado. Puede ser por internet lento o por el servidor.";
-  }
-
-  if (/row-level security|rls|policy/i.test(msg)) {
-    return "❌ El servidor rechazó la carga por permisos de base de datos.";
-  }
-
-  if (/storage|bucket|object/i.test(msg)) {
-    return "❌ Hubo un problema al subir el archivo al almacenamiento.";
-  }
-
-  if (/network|fetch|failed to fetch/i.test(msg)) {
-    return "❌ No se pudo conectar con el servidor. Revisá internet e intentá otra vez.";
-  }
-
-  return "❌ " + (msg || "No pudimos enviar la documentación.");
-}
-
-async function uploadDocument(docType, file) {
-  try {
-    if (!file) {
-      if (REQUIRED_DOCS.includes(docType)) {
-        throw new Error(`Falta archivo obligatorio: ${DOC_META[docType]?.label || docType}`);
-      }
-
-      if (docType === "background_check") {
-        setDocStatus(docType, "Podés presentarlo dentro de 15 días hábiles", "warning");
-      } else {
-        setDocStatus(docType, "Opcional sin subir", "pending");
-      }
-
-      return null;
-    }
-
-    if (isProbablyOffline()) {
-      throw offlineError("Sin conexión antes de subir el archivo");
-    }
-
-    if (!currentUser?.id) {
-      throw new Error("Usuario no autenticado");
-    }
-
-    setDocStatus(docType, "Preparando archivo.", "pending");
-    setGlobalStatus(`Preparando ${DOC_META[docType]?.label || docType}.`, "success");
-
-    let uploadFile = file;
-
-    if (isImageFile(file)) {
-      setDocStatus(docType, "Comprimiendo imagen.", "pending");
-      setGlobalStatus(`Comprimiendo ${DOC_META[docType]?.label || docType}.`, "success");
-
-      uploadFile = await withTimeout(
-        compressImageForUpload(file, {
-          maxWidth: 1600,
-          maxHeight: 1600,
-          quality: 0.8,
-          outputType: "image/jpeg"
-        }),
-        35000,
-        "La compresión del archivo tardó demasiado"
-      );
-    }
-
-    setDocStatus(docType, "Subiendo archivo.", "pending");
-    setGlobalStatus(`Subiendo ${DOC_META[docType]?.label || docType}.`, "success");
-
-    const ext = fileExt(uploadFile);
-    const safeName = sanitizeFileName(uploadFile.name || `${docType}.${ext}`);
-    const safePath = `${currentUser.id}/${docType}_${Date.now()}_${safeName}`;
-
-    const { error: uploadError } = await retryOperation(
-      () =>
-        withTimeout(
-          supabaseService.client.storage
-            .from("driver-documents")
-            .upload(safePath, uploadFile, {
-              cacheControl: "3600",
-              upsert: true,
-              contentType: uploadFile.type || "application/octet-stream"
-            }),
-          getUploadTimeoutMs("storage"),
-          `La subida de ${DOC_META[docType]?.label || docType} tardó demasiado`
-        ),
-      { label: `storage upload ${docType}` }
-    );
-
-    if (uploadError) {
-      console.error("[UPLOAD STORAGE ERROR]", uploadError);
-      throw uploadError;
-    }
-
-    setDocStatus(docType, "Guardando registro.", "pending");
-    setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema.`, "success");
-
-    const payload = {
-      user_id: currentUser.id,
-      doc_type: docType,
-      storage_path: safePath,
-      mime_type: uploadFile.type || null,
-      file_size: uploadFile.size || null,
-
-      status: "PENDIENTE",
-      rejection_reason: null,
-      review_required: true,
-
-      validation_status: PENDING_VALIDATION_STATUS,
-      face_detected: null,
-      document_detected: null,
-      confidence_score: null,
-      ocr_text: null,
-      ocr_fields: null,
-      validation_notes: "Pendiente de validación automática",
-      provider: null,
-      provider_raw: null,
-      auto_checked_at: null
-    };
-
-    const { data: savedRow, error: upsertError } = await retryOperation(
-      () =>
-        withTimeout(
-          supabaseService.client
-            .from("driver_documents")
-            .upsert(payload, {
-              onConflict: "user_id,doc_type"
-            })
-            .select()
-            .single(),
-          getUploadTimeoutMs("document-upsert"),
-          `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
-        ),
-      { label: `driver_documents upsert ${docType}` }
-    );
-
-    if (upsertError) {
-      console.error("[DB ERROR driver_documents]", upsertError, payload);
-      throw upsertError;
-    }
-
-    setDocStatus(
-      docType,
-      "Archivo subido. La validación automática continúa en segundo plano.",
-      "warning"
-    );
-
-    void triggerRemoteValidationInBackground({
-      docType,
-      file: uploadFile,
-      storagePath: safePath,
-      documentId: savedRow?.id || null
-    });
-
-    return {
-      docType,
-      storage_path: safePath,
-      mime_type: uploadFile.type || null,
-      file_size: uploadFile.size || null,
-      db_row: savedRow || null,
-      validation: null
-    };
-  } catch (err) {
-    console.error("[uploadDocument] " + docType, err);
-    setDocStatus(docType, explainUploadError(err), "error");
-    throw err;
-  }
-}
-    
-async function triggerRemoteValidationInBackground({
-  docType,
-  file,
-  storagePath,
-  documentId = null
-}) {
-  try {
-    if (!currentUser?.id || !file || !docType) return;
-
-    const startedAt = Date.now();
-
-    const { data: remoteData, error: remoteError } = await withTimeout(
-      supabaseService.client.functions.invoke("validate-driver-document", {
-        body: {
-          user_id: currentUser.id,
-          doc_type: docType,
-          storage_path: storagePath,
-          mime_type: file.type || null,
-          file_size: file.size || null,
-          document_id: documentId || null
-        }
-      }),
-      REMOTE_TIMEOUT,
-      "La validación remota tardó demasiado"
-    );
-
-    if (remoteError) {
-      console.warn("[background validation] remote error", docType, remoteError);
-      return;
-    }
-
-    const remote = remoteData || null;
-    if (!remote) return;
-
-    // 🧠 PATCH LIMPIO (sin meter basura ni null innecesario)
-    const patch = {
-      validation_status: remote.validation_status || "UNKNOWN",
-
-      status:
-        remote.status ||
-        (remote.validation_status === "VALID"
-          ? "APROBADO"
-          : "PENDIENTE"),
-
-      rejection_reason: remote.rejection_reason || null,
-
-      review_required:
-        typeof remote.review_required === "boolean"
-          ? remote.review_required
-          : remote.validation_status !== "VALID",
-
-      face_detected:
-        typeof remote.face_detected === "boolean"
-          ? remote.face_detected
-          : null,
-
-      document_detected:
-        typeof remote.document_detected === "boolean"
-          ? remote.document_detected
-          : null,
-
-      confidence_score:
-        typeof remote.confidence_score === "number"
-          ? remote.confidence_score
-          : null,
-
-      ocr_text: remote.ocr_text || null,
-
-      ocr_fields:
-        remote.ocr_fields && typeof remote.ocr_fields === "object"
-          ? remote.ocr_fields
-          : null,
-
-      validation_notes: remote.message || null,
-
-      provider: remote.provider || null,
-
-      provider_raw:
-        remote && typeof remote === "object"
-          ? remote
-          : null,
-
-      auto_checked_at:
-        remote.provider || remote.validation_status
-          ? new Date().toISOString()
-          : null
-    };
-
-    const { error: patchError } = await supabaseService.client
-      .from("driver_documents")
-      .update(patch)
-      .eq("user_id", currentUser.id)
-      .eq("doc_type", docType);
-
-    if (patchError) {
-      console.warn("[background validation] patch error", docType, patchError);
-      return;
-    }
-
-    // 🔄 Sync liviano del perfil (NO crítico)
-    try {
-      await saveProfilePartial(
+  _openDriverProfileSheet() {
+    const summary = this._driverProfileSummary || {};
+    const documents = Array.isArray(summary.documents) ? summary.documents : [];
+    const docsLabel = documents.length ? `${documents.length} cargados` : 'Sin documentos visibles';
+
+    uiController.showInfoSheet?.({
+      title: 'Perfil del chofer',
+      description: 'Acá tenés tus datos verificados, estado del alta y la documentación ya cargada.',
+      metrics: [
+        { label: 'Estado', value: this._onlineStatus ? 'En línea' : 'Fuera de línea' },
+        { label: 'Onboarding', value: summary.onboardingStatus || 'Pendiente' },
+        { label: 'Documentos', value: docsLabel }
+      ],
+      sections: [
         {
-          validation_status: "validated",
-          validation_source: remote.provider || "background_validation",
-          validation_updated_at: new Date().toISOString()
+          title: 'Datos personales',
+          items: [
+            { label: 'Nombre', value: summary.name || 'Conductor' },
+            { label: 'Email', value: summary.email || 'Sin email' },
+            { label: 'Teléfono', value: summary.phone || 'Sin teléfono' },
+            { label: 'DNI', value: summary.dni || 'Sin DNI cargado' }
+          ]
         },
         {
-          timeoutMs: getUploadTimeoutMs("profile-finalize"),
-          timeoutMessage: "La sincronización del perfil tardó demasiado"
+          title: 'Vehículo',
+          items: [
+            { label: 'Unidad', value: summary.vehicle || 'Sin vehículo cargado' },
+            { label: 'Patente', value: summary.vehiclePlate || 'Sin patente' },
+            { label: 'Color', value: summary.vehicleColor || 'Sin color' },
+            { label: 'Año', value: summary.vehicleYear || 'Sin año' }
+          ]
+        },
+        {
+          title: 'Documentación',
+          items: documents.length
+            ? documents.slice(0, 7).map((doc) => ({
+                label: String(doc.doc_type || 'documento').replaceAll('_', ' '),
+                value: doc.status || 'PENDIENTE'
+              }))
+            : [{ label: 'Documentos', value: 'Todavía no hay cargas visibles' }]
         }
-      );
-    } catch (profileErr) {
-      console.warn("[background validation] profile sync warning", profileErr);
-    }
-
-    // 🎯 UI SOLO SI ES EL DOC ACTUAL
-    if (docType === getCurrentDocType()) {
-      let uiMessage = "Documento procesado.";
-      let uiState = "ok";
-
-      if (patch.validation_status === "VALID") {
-        uiMessage = "Documento validado automáticamente.";
-        uiState = "ok";
-      } else if (patch.review_required) {
-        uiMessage = "Documento recibido. Quedó en revisión manual.";
-        uiState = "warning";
-      } else if (patch.validation_status === "REJECTED") {
-        uiMessage = "Documento rechazado. Revisá la calidad o contenido.";
-        uiState = "error";
-      }
-
-      setDocStatus(docType, uiMessage, uiState);
-    }
-
-    console.info("[background validation OK]", {
-      docType,
-      tookMs: Date.now() - startedAt,
-      status: patch.status,
-      validation_status: patch.validation_status
+      ],
+      actions: [
+        {
+          label: 'Revisar documentos',
+          variant: 'navigate',
+          onClick: () => {
+            window.location.href = `${APP_BASE_PATH}driver-onboarding.html`;
+          }
+        },
+        {
+          label: 'Hablar con soporte',
+          variant: 'secondary',
+          onClick: async () => {
+            await openDriverSupportPanel();
+          }
+        }
+      ]
     });
-
-  } catch (err) {
-    console.warn("[background validation] failed", docType, err);
   }
-}
-    
-function addBusinessDays(startDate, businessDays) {
-      const date = new Date(startDate);
-      let added = 0;
 
-      while (added < businessDays) {
-        date.setDate(date.getDate() + 1);
-        const day = date.getDay();
-        if (day !== 0 && day !== 6) {
-          added += 1;
+  // =========================================================
+  // FLOW STATE
+  // =========================================================
+  _setFlowState(nextState) {
+    if (this._driverFlowState === nextState) return;
+
+    const prevState = this._driverFlowState;
+    this._driverFlowState = nextState;
+    window.driverFlowState = nextState;
+
+    console.log('[DriverApp] FLOW:', prevState, '->', nextState);
+
+    window.dispatchEvent(
+      new CustomEvent('driverFlowStateChanged', {
+        detail: {
+          from: prevState,
+          to: nextState,
+          state: nextState
         }
-      }
-
-      return date;
-    }
-
-    function toDateOnlyString(date) {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    }
-
-async function submitAll(triggerButton = submitAllBtn) {
-  if (onboardingBusy) return;
-
-  if (isProbablyOffline()) {
-    setGlobalStatus("❌ No hay conexión a internet. Conectate e intentá nuevamente.", "error");
-    return;
+      })
+    );
   }
 
-  setOnboardingBusy(true, {
-    button: triggerButton,
-    text: "Enviando documentación...",
-    docMode: "uploading"
-  });
+  // =========================================================
+  // INIT
+  // =========================================================
+  async init() {
+    if (this.initialized) {
+      console.warn('[DriverApp] Ya estaba inicializada');
+      return;
+    }
 
-  try {
-    resetUploadRuntime();
-    showUploadRuntime();
-    logOnboardingStage("submit-start");
+    console.log('[DriverApp] Iniciando aplicación...');
 
-    setGlobalStatus("Guardando información del perfil...", "success");
-
-    const step1Error = validateStep1();
-    if (step1Error) throw new Error(step1Error);
-
-    const step2Error = validateStep2();
-    if (step2Error) throw new Error(step2Error);
-
-    const dueDate = toDateOnlyString(addBusinessDays(new Date(), 15));
-    const backgroundCheckProvided = !!getChosenFile("background_check");
+    uiController.init();
+    window.uiController = uiController;
+    uiController.setGlobalLoading(true, 'Cargando...');
 
     try {
-      await saveProfilePartial({
-        full_name: getField("full_name"),
-        phone: getField("phone"),
-        dni_number: getField("dni_number"),
-        birth_date: getField("birth_date") || null,
-        address: getField("address"),
-        vehicle_brand: getField("vehicle_brand"),
-        vehicle_model: getField("vehicle_model"),
-        vehicle_year: Number(getField("vehicle_year")) || null,
-        vehicle_color: getField("vehicle_color"),
-        vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, ""),
-        profile_completed: true,
-        onboarding_status: "PENDIENTE_DOCUMENTOS",
-        documents_completed: false,
-        documents_approved: false,
-        background_check_due_date: dueDate,
-        background_check_pending: !backgroundCheckProvided
-      }, {
-        timeoutMs: PROFILE_WARMUP_TIMEOUT_MS,
-        timeoutMessage: "La actualización previa del perfil tardó demasiado"
-      });
-    } catch (profileWarmupErr) {
-      console.warn("[submitAll] initial profile sync warning:", profileWarmupErr);
-      setGlobalStatus(
-        "La actualización previa del perfil demoró más de lo normal. Seguimos con la carga de documentos.",
-        "success"
-      );
-    }
+      console.log('[DriverApp] Inicializando Supabase...');
+      const client = await supabaseService.init();
 
-    const docsToUpload = ALL_DOCS.map((docType) => ({
-      docType,
-      file: getChosenFile(docType),
-      label: DOC_META[docType]?.label || docType
-    }));
+      if (!client) {
+        throw new Error('No se pudo conectar a Supabase');
+      }
 
-    const uploadableDocs = docsToUpload.filter(({ file, docType }) => {
-      if (file) return true;
-      return REQUIRED_DOCS.includes(docType);
-    });
+      const authData = await this._requireValidAuth();
 
-    let processedCount = 0;
-    const successfulUploads = new Set();
-    const totalToProcess = uploadableDocs.length;
-
-    updateUploadRuntime({
-      title: "Preparando envío",
-      current: 0,
-      total: totalToProcess,
-      help: "Estamos organizando la carga de documentos..."
-    });
-
-    await mapWithConcurrency(uploadableDocs, 1, async ({ docType, file, label }) => {
-      updateUploadRuntime({
-        title: `Subiendo ${label}`,
-        current: processedCount,
-        total: totalToProcess,
-        help: file
-          ? `Procesando ${label}. No cierres esta pantalla.`
-          : `Verificando obligatoriedad de ${label}.`
-      });
-
-      await uploadDocument(docType, file);
-      successfulUploads.add(docType);
-      logOnboardingStage("document-uploaded", { docType, processedCount: processedCount + 1, totalToProcess });
-
-      processedCount += 1;
-
-      updateUploadRuntime({
-        title: `${label} listo`,
-        current: processedCount,
-        total: totalToProcess,
-        help: processedCount < totalToProcess
-          ? "Continuamos con el siguiente documento..."
-          : "Todos los documentos fueron procesados."
-      });
-    });
-
-    setGlobalStatus("Verificando documentos subidos...", "success");
-    const missingRequired = REQUIRED_DOCS.filter((doc) => !successfulUploads.has(doc));
-
-    if (missingRequired.length > 0) {
-      throw new Error("Faltan documentos obligatorios: " + missingRequired.join(", "));
-    }
-
-    setGlobalStatus("Finalizando envío...", "success");
-
-    try {
-      await saveProfilePartial({
-        documents_completed: true,
-        onboarding_status: "PENDIENTE_REVISION",
-        documents_approved: false,
-        background_check_due_date: dueDate,
-        background_check_pending: !backgroundCheckProvided
-      }, {
-        timeoutMs: getUploadTimeoutMs("profile-finalize"),
-        timeoutMessage: "La actualización final del perfil tardó demasiado"
-      });
-    } catch (finalProfileErr) {
-      console.warn("[submitAll] final profile update warning:", finalProfileErr);
-      setGlobalStatus(
-        "Los documentos ya fueron recibidos. La actualización final del perfil quedó pendiente, pero vamos a continuar a revisión.",
-        "success"
-      );
-    }
-
-    const successMessage = backgroundCheckProvided
-      ? "✅ Documentación recibida correctamente. Tu cuenta quedó en revisión y los archivos se analizarán en segundo plano."
-      : "✅ Documentación recibida correctamente. Tu cuenta quedó en revisión. El certificado de antecedentes sigue pendiente con plazo de 15 días hábiles.";
-
-    setGlobalStatus(successMessage, "success");
-
-    updateUploadRuntime({
-      title: "Envío completado",
-      current: totalToProcess,
-      total: totalToProcess,
-      help: "Todos los documentos obligatorios fueron recibidos correctamente."
-    });
-
-    localStorage.removeItem(DOC_CACHE_KEY);
-    localStorage.removeItem(FORM_DRAFT_KEY);
-    logOnboardingStage("submit-success", { totalToProcess });
-
-    setTimeout(() => {
-      window.location.replace("driver-review-pending.html");
-    }, 1400);
-  } catch (err) {
-    console.error("[submitAll] error:", err);
-    logOnboardingStage("submit-error", {
-      message: String(err?.message || err || ""),
-      code: String(err?.code || "")
-    });
-    setGlobalStatus(explainUploadError(err), "error");
-  } finally {
-    setOnboardingBusy(false);
-
-    setTimeout(() => {
-      resetUploadRuntime();
-    }, 1200);
-  }
-}
-
-    document.getElementById("backTo1").addEventListener("click", () => {
-      clearGlobalStatus();
-      showStep(1);
-    });
-document.getElementById("step1ContinueBtn")?.addEventListener("click", async () => {
-  if (onboardingBusy) return;
-
-  const err = validateStep1();
-  if (err) {
-    setGlobalStatus("âŒ " + err, "error");
-    return;
-  }
-
-  setOnboardingBusy(true, {
-    button: step1ContinueBtn,
-    text: "Guardando datos...",
-    docMode: "saving"
-  });
-
-  try {
-    await saveProfilePartial({
-      full_name: getField("full_name"),
-      phone: getField("phone"),
-      dni_number: getField("dni_number"),
-      birth_date: getField("birth_date") || null,
-      address: getField("address"),
-      profile_completed: false
-    });
-
-    clearGlobalStatus();
-    showStep(2);
-  } catch (errSave) {
-    console.error("[step1Continue]", errSave);
-    setGlobalStatus("âŒ No pudimos guardar tus datos personales", "error");
-  } finally {
-    setOnboardingBusy(false);
-  }
-});
-
-document.getElementById("step2ContinueBtn")?.addEventListener("click", async () => {
-  if (onboardingBusy) return;
-
-  const err = validateStep2();
-  if (err) {
-    setGlobalStatus("âŒ " + err, "error");
-    return;
-  }
-
-  setOnboardingBusy(true, {
-    button: step2ContinueBtn,
-    text: "Guardando vehiculo...",
-    docMode: "saving"
-  });
-
-  try {
-    await saveProfilePartial({
-      vehicle_brand: getField("vehicle_brand"),
-      vehicle_model: getField("vehicle_model"),
-      vehicle_year: Number(getField("vehicle_year")) || null,
-      vehicle_color: getField("vehicle_color"),
-      vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, "")
-    });
-
-    clearGlobalStatus();
-    currentDocumentIndex = 0;
-    showStep(3);
-  } catch (errSave) {
-    console.error("[step2Continue]", errSave);
-    setGlobalStatus("âŒ No pudimos guardar los datos del vehiculo", "error");
-  } finally {
-    setOnboardingBusy(false);
-  }
-});
-    document.getElementById("backTo2").addEventListener("click", () => {
-      clearGlobalStatus();
-      showStep(2);
-    });
-
-    document.getElementById("submitAllBtn").addEventListener("click", () => submitAll(submitAllBtn));
-    docWizardBackBtn?.addEventListener("click", () => {
-  clearGlobalStatus();
-
-  if (currentDocumentIndex === 0) {
-    showStep(2);
-    return;
-  }
-
-  currentDocumentIndex -= 1;
-  renderDocumentWizard();
-  updateSticky(3);
-});
-
-docWizardNextBtn?.addEventListener("click", async () => {
-  if (onboardingBusy) return;
-  clearGlobalStatus();
-
-  const docType = getCurrentDocType();
-  const meta = DOC_META[docType];
-  const hasFile = !!getChosenFile(docType);
-  const state = docValidationState.get(docType);
-  const hasBlockingError = state === "error";
-
-  if (!meta?.optional && (!hasFile || hasBlockingError)) {
-    setGlobalStatus(`âŒ TenÃ©s que cargar ${meta?.label || "este documento"} para continuar`, "error");
-    return;
-  }
-
-  if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-    currentDocumentIndex += 1;
-    setWizardVisualState("idle");
-    renderDocumentWizard();
-    updateSticky(3);
-    updateWizardPrimaryState();
-    return;
-  }
-
-  submitAll(docWizardNextBtn);
-});
-stickyPrimaryBtn.addEventListener("click", async () => {
-  if (onboardingBusy) return;
-  if (navigator.vibrate) {
-    navigator.vibrate(18);
-  }
-
-  try {
-    if (currentStep === 1) {
-      const err = validateStep1();
-      if (err) {
-        setGlobalStatus("âŒ " + err, "error");
+      if (!authData) {
+        console.log('[DriverApp] Sin sesión válida, redirigiendo a login');
+        window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
 
-      setOnboardingBusy(true, {
-        button: stickyPrimaryBtn,
-        text: "Guardando datos...",
-        docMode: "saving"
+      const { session, user } = authData;
+
+      this._authUserId = user.id;
+      this._session = session;
+
+      console.log('[DriverApp] Auth user detectado:', this._authUserId);
+
+      uiController.setDriverProfile({
+        name:
+          user?.user_metadata?.full_name ||
+          user?.user_metadata?.name ||
+          user?.email ||
+          'Conductor',
+        email: user?.email || '',
+        avatarUrl:
+          user?.user_metadata?.avatar_url ||
+          user?.user_metadata?.picture ||
+          ''
       });
 
-      await saveProfilePartial({
-        full_name: getField("full_name"),
-        phone: getField("phone"),
-        dni_number: getField("dni_number"),
-        birth_date: getField("birth_date") || null,
-        address: getField("address"),
-        profile_completed: false
+      await this._loadDriverProfileSummary(user);
+
+      window.addEventListener('click', this._unlockAudioOnClick, { once: true });
+      window.addEventListener('touchstart', this._unlockAudioOnTouch, { once: true });
+
+      console.log('[DriverApp] Inicializando servicios...');
+      await this._ensureDriverShellReady();
+
+      const results = await Promise.allSettled([
+        mapService.init('map-container')
+      ]);
+
+      console.log('[DriverApp] Resultados inicialización:', {
+        mapa: results[0]?.status
       });
 
-      clearGlobalStatus();
-      showStep(2);
-      setOnboardingBusy(false);
-      return;
-    }
+      if (results[0]?.status === 'rejected') {
+        console.error('[DriverApp] Error mapa:', results[0].reason);
+      }
 
-    if (currentStep === 2) {
-      const err = validateStep2();
-      if (err) {
-        setGlobalStatus("âŒ " + err, "error");
+      console.log('[DriverApp] Resolviendo driverId...');
+      const driverId = await this._resolveDriverId();
+      this.driverId = driverId;
+      console.log('[DriverApp] driverId detectado:', driverId);
+
+      console.log('[DriverApp] Inicializando TripManager...');
+      const tripManagerReady = await tripManager.init(driverId);
+
+      if (!tripManagerReady) {
+        console.warn('[DriverApp] TripManager no pudo inicializarse');
+        uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
+      }
+
+      this._subscribeToEvents();
+      this._setupUI();
+      initDriverSupport();
+
+      document.addEventListener('visibilitychange', this._visibilityChangeHandler);
+      window.addEventListener('pushForegroundMessage', this._foregroundPushHandler);
+
+      uiController.hideIncomingModal?.();
+      uiController.hideNavigation?.();
+      uiController.hideArrival?.();
+      mapService.clearRoute?.();
+      this._currentTripId = null;
+
+      this.initialized = true;
+      console.log('[DriverApp] Aplicación inicializada correctamente');
+
+      if (!tripManagerReady) {
+        this._onlineStatus = false;
+        uiController.updateDriverState('OFFLINE', false);
+        this._setFlowState('OFFLINE');
+        uiController.showWaitingState();
         return;
       }
 
-      setOnboardingBusy(true, {
-        button: stickyPrimaryBtn,
-        text: "Guardando vehiculo...",
-        docMode: "saving"
-      });
-
-      await saveProfilePartial({
-        vehicle_brand: getField("vehicle_brand"),
-        vehicle_model: getField("vehicle_model"),
-        vehicle_year: Number(getField("vehicle_year")) || null,
-        vehicle_color: getField("vehicle_color"),
-        vehicle_plate: getField("vehicle_plate").toUpperCase().replace(/\s+/g, "")
-      });
-      clearGlobalStatus();
-      currentDocumentIndex = 0;
-      showStep(3);
-      setOnboardingBusy(false);
-      return;
-    }
-
-    const docType = getCurrentDocType();
-    const meta = DOC_META[docType];
-    const hasFile = !!getChosenFile(docType);
-    const state = docValidationState.get(docType);
-    const hasBlockingError = state === "error";
-
-    if (!meta?.optional && (!hasFile || hasBlockingError)) {
-      setGlobalStatus(`âŒ TenÃ©s que cargar ${meta?.label || "este documento"} para continuar`, "error");
-      return;
-    }
-
-    if (currentDocumentIndex < DOCUMENT_FLOW.length - 1) {
-      currentDocumentIndex += 1;
-      setWizardVisualState("idle");
-      renderDocumentWizard();
-      updateSticky(3);
-      updateWizardPrimaryState();
-      return;
-    }
-    submitAll(stickyPrimaryBtn);
-
-  } catch (e) {
-    console.error("[sticky flow error]", e);
-    setOnboardingBusy(false);
-    setGlobalStatus("âŒ Error en el flujo", "error");
-  }
-});
-    
-exitOnboardingBtn?.addEventListener("click", exitOnboardingFlow);
-[
-  "full_name",
-  "phone",
-  "dni_number",
-  "birth_date",
-  "address",
-  "vehicle_brand",
-  "vehicle_model",
-  "vehicle_year",
-  "vehicle_color",
-  "vehicle_plate"
-].forEach((id) => {
-  document.getElementById(id)?.addEventListener("input", (event) => {
-    const target = event?.target;
-    if (!target) return;
-
-    if (id === "dni_number") {
-      target.value = target.value.replace(/\D+/g, "").slice(0, 8);
-    }
-
-    if (id === "phone") {
-      target.value = target.value.replace(/[^\d+\s()-]/g, "").slice(0, 24);
-    }
-
-    if (id === "vehicle_plate") {
-      target.value = target.value.toUpperCase().replace(/\s+/g, "");
-    }
-
-    updateOverallStepperState();
-    saveDraft();
-  });
-});
-  (async function init() {
-  try {
-    initFileInputs();
-    restoreCachedFiles();
-    showStep(1);
-
-    currentUser = await getUserOrRedirect();
-    if (!currentUser) return;
-
-    await ensureProfileExists(currentUser);
-    await loadProfile();
-    restoreDraft();
-
-        const { data: profile } = await supabaseService.client
-          .from("driver_profiles")
-          .select("documents_approved, onboarding_status")
-          .eq("user_id", currentUser.id)
+      try {
+        const { data: choferRow, error: choferError } = await supabaseService.client
+          .from('choferes')
+          .select('online, disponible')
+          .eq('user_id', this._authUserId)
           .maybeSingle();
 
-        if (profile?.documents_approved && profile?.onboarding_status === "APROBADO") {
-          window.location.replace("chofer-panel.html");
+        if (choferError) {
+          console.warn('[DriverApp] No se pudo leer estado inicial del chofer:', choferError);
+        }
+
+        this._onlineStatus = !!choferRow?.online;
+      } catch (e) {
+        console.warn('[DriverApp] Error leyendo estado inicial online:', e);
+        this._onlineStatus = false;
+      }
+
+      uiController.updateDriverState(
+        this._onlineStatus ? 'ONLINE' : 'OFFLINE',
+        this._onlineStatus
+      );
+
+      if (this._onlineStatus) {
+        this._startRealtimeServicesInBackground();
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      let currentTrip = tripManager.getCurrentTrip();
+      const pendingTrip = tripManager.getPendingTrip();
+
+      if (currentTrip) {
+        const estadoTrip = String(currentTrip.estado || '').toUpperCase();
+        const choferAsignado =
+          !!currentTrip?.chofer_id_uuid &&
+          String(currentTrip.chofer_id_uuid) === String(this.driverId);
+
+        const estadoNormalizado =
+          estadoTrip === 'OFERTADO' && choferAsignado
+            ? 'ASIGNADO'
+            : estadoTrip;
+
+        if (!['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoNormalizado)) {
+          console.warn('[DriverApp] Viaje inválido detectado en memoria, limpiando estado local...');
+          tripManager.resetState?.();
+          currentTrip = null;
+        } else {
+          currentTrip = {
+            ...currentTrip,
+            estado: estadoNormalizado
+          };
+        }
+      }
+
+      if (currentTrip) {
+        console.log('[DriverApp] Estado inicial: viaje activo');
+        this._currentTripId = currentTrip.id;
+
+        if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
+          this._setFlowState('TRIP_STARTED');
+        } else {
+          this._setFlowState('GOING_TO_PICKUP');
+        }
+
+        await this._showRouteOnMap(currentTrip);
+        uiController.showNavigationState(currentTrip);
+      } else if (pendingTrip) {
+        console.log('[DriverApp] Estado inicial: oferta pendiente');
+        this._setFlowState('RECEIVING_OFFER');
+
+        uiController.showIncomingTrip(
+          pendingTrip,
+          () => this._acceptOffer(pendingTrip.offerId),
+          () => this._rejectOffer(pendingTrip.offerId)
+        );
+      } else {
+        console.log('[DriverApp] Estado inicial: esperando');
+
+        if (this._onlineStatus) {
+          this._setFlowState('ONLINE_IDLE');
+        } else {
+          this._setFlowState('OFFLINE');
+        }
+
+        uiController.showWaitingState();
+      }
+    } catch (error) {
+      console.error('[DriverApp] Error fatal:', error);
+
+      const msg = String(error?.message || '').toLowerCase();
+
+      if (
+        msg.includes('auth') ||
+        msg.includes('session') ||
+        msg.includes('jwt') ||
+        msg.includes('forbidden')
+      ) {
+        window.location.href = CONFIG.REDIRECTS.LOGIN;
+        return;
+      }
+
+      uiController.showToast(
+        'Error: ' + (error?.message || 'Error desconocido'),
+        'error',
+        5000
+      );
+    } finally {
+      uiController.setGlobalLoading(false);
+    }
+  }
+
+  async _requireValidAuth() {
+    try {
+      let {
+        data: sessionData,
+        error: sessionError
+      } = await supabaseService.client.auth.getSession();
+
+      if (sessionError) {
+        console.warn('[DriverApp] getSession error:', sessionError);
+      }
+
+      let session = sessionData?.session || null;
+
+      if (!session?.access_token) {
+        await new Promise((resolve) => setTimeout(resolve, 900));
+
+        const {
+          data: retrySessionData,
+          error: retrySessionError
+        } = await supabaseService.client.auth.getSession();
+
+        if (retrySessionError) {
+          console.warn('[DriverApp] getSession retry error:', retrySessionError);
+        }
+
+        session = retrySessionData?.session || null;
+      }
+
+      if (!session?.access_token) {
+        const {
+          data: refreshData,
+          error: refreshError
+        } = await supabaseService.client.auth.refreshSession();
+
+        if (refreshError) {
+          console.warn('[DriverApp] refreshSession error:', refreshError);
+        }
+
+        session = refreshData?.session || null;
+      }
+
+      if (!session?.access_token) {
+        return null;
+      }
+
+      const {
+        data: userData,
+        error: userError
+      } = await supabaseService.client.auth.getUser();
+
+      if (userError) {
+        console.warn('[DriverApp] getUser error:', userError);
+        return null;
+      }
+
+      const user = userData?.user || null;
+      if (!user) return null;
+
+      return { session, user };
+    } catch (err) {
+      console.error('[DriverApp] _requireValidAuth fatal:', err);
+      return null;
+    }
+  }
+
+  // =========================================================
+  // UX PRO - HAPTICS + AUDIO FEEDBACK
+  // =========================================================
+  _vibrate(pattern = [90, 50, 140]) {
+    try {
+      if ('vibrate' in navigator) {
+        navigator.vibrate(pattern);
+      }
+    } catch (err) {
+      console.warn('[DriverApp] vibrate error:', err);
+    }
+  }
+
+  _playAcceptTone() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'sine';
+
+      osc1.frequency.setValueAtTime(740, now);
+      osc2.frequency.setValueAtTime(988, now + 0.08);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.075, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now + 0.08);
+
+      osc1.stop(now + 0.34);
+      osc2.stop(now + 0.42);
+
+      setTimeout(() => {
+        try {
+          ctx.close?.();
+        } catch (_) {}
+      }, 700);
+    } catch (err) {
+      console.warn('[DriverApp] accept tone error:', err);
+    }
+  }
+
+  _celebrateAcceptFeedback() {
+    this._vibrate([90, 50, 140]);
+
+    try {
+      if (typeof soundManager?.play === 'function') {
+        soundManager.play('trip-accepted');
+      } else if (typeof soundManager?.playSuccess === 'function') {
+        soundManager.playSuccess();
+      } else {
+        this._playAcceptTone();
+      }
+    } catch (err) {
+      console.warn('[DriverApp] soundManager feedback error:', err);
+      this._playAcceptTone();
+    }
+  }
+
+  // =========================================================
+  // RESOLVER DRIVER ID
+  // =========================================================
+  async _resolveDriverId() {
+    try {
+      if (!this._authUserId) return null;
+
+      const { data: chofer, error } = await supabaseService.client
+        .from('choferes')
+        .select('id_uuid')
+        .eq('user_id', this._authUserId)
+        .single();
+
+      if (error) {
+        console.error('[DriverApp] Error resolviendo chofer:', error);
+        return null;
+      }
+
+      return chofer?.id_uuid || null;
+    } catch (err) {
+      console.error('[DriverApp] Error buscando driverId:', err);
+      return null;
+    }
+  }
+
+  // =========================================================
+  // EVENTS
+  // =========================================================
+  _subscribeToEvents() {
+    console.log('[DriverApp] Suscribiendo a eventos de TripManager...');
+
+    const unsubOffer = tripManager.on('newPendingTrip', (trip) => {
+      console.log('[DriverApp] [evento] newPendingTrip', trip.id);
+      this._setFlowState('RECEIVING_OFFER');
+
+      this._vibrate([120, 60, 120]);
+
+      if (this._isDocumentHidden()) {
+        this._notifyIncomingTrip(trip).catch(() => null);
+      }
+
+      uiController.showIncomingTrip(
+        trip,
+        () => this._acceptOffer(trip.offerId),
+        () => this._rejectOffer(trip.offerId)
+      );
+    });
+
+    const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
+      const alreadySameTrip = this._currentTripId === trip.id;
+
+      this._currentTripId = trip.id;
+      this._setFlowState('GOING_TO_PICKUP');
+
+      console.log('[DriverApp] tripAccepted', trip.id, 'alreadySame:', alreadySameTrip);
+
+      this._celebrateAcceptFeedback();
+      uiController.hideIncomingModal?.();
+      uiController.showToast('Viaje aceptado', 'success');
+
+      await this._showRouteOnMap(trip);
+      uiController.showNavigationState(trip);
+    });
+
+    const unsubStarted = tripManager.on('tripStarted', async (trip) => {
+      console.log('[DriverApp] tripStarted', trip.id);
+      this._setFlowState('TRIP_STARTED');
+
+      uiController.showToast('Viaje iniciado', 'success');
+
+      await this._showRouteOnMap(trip);
+      uiController.showNavigationState(trip);
+
+      window.dispatchEvent(
+        new CustomEvent('tripStateChanged', {
+          detail: { estado: trip.estado }
+        })
+      );
+    });
+
+    const unsubCompleted = tripManager.on('tripCompleted', async (trip) => {
+      console.log('[DriverApp] tripCompleted', trip.id);
+      this._setFlowState('TRIP_COMPLETED');
+
+      this._currentTripId = null;
+      tripManager.resetState();
+
+      mapService.clearRoute?.();
+      uiController.hideIncomingModal?.();
+      uiController.hideNavigation?.();
+      uiController.hideArrival?.();
+
+      uiController.showToast(`Viaje completado +$${trip.precio ?? 0}`, 'success', 5000);
+
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+        uiController.showWaitingState();
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+    });
+
+    const unsubCancelled = tripManager.on('tripCancelled', () => {
+      console.log('[DriverApp] tripCancelled');
+
+      this._currentTripId = null;
+      mapService.clearRoute?.();
+      uiController.hideIncomingModal?.();
+      uiController.hideNavigation?.();
+      uiController.hideArrival?.();
+
+      uiController.showToast('Viaje cancelado', 'warning');
+
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      uiController.showWaitingState();
+    });
+
+    const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
+      console.log('[DriverApp] pendingTripCleared', reason);
+
+      const currentTrip = tripManager.getCurrentTrip?.();
+
+      if (currentTrip?.id) {
+        console.log(
+          '[DriverApp] pendingTripCleared ignorado porque ya hay viaje activo:',
+          currentTrip.id
+        );
+        return;
+      }
+
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      uiController.hideIncomingModal?.();
+      uiController.showWaitingState();
+    });
+
+    const unsubNoPending = tripManager.on('noPendingTrips', () => {
+      console.log('[DriverApp] noPendingTrips');
+
+      const currentTrip = tripManager.getCurrentTrip?.();
+
+      if (currentTrip?.id) {
+        console.log(
+          '[DriverApp] noPendingTrips ignorado porque ya hay viaje activo:',
+          currentTrip.id
+        );
+        return;
+      }
+
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      uiController.showWaitingState();
+    });
+
+    this._unsubscribers.push(
+      unsubOffer,
+      unsubAccepted,
+      unsubStarted,
+      unsubCompleted,
+      unsubCancelled,
+      unsubCleared,
+      unsubNoPending
+    );
+  }
+
+  // =========================================================
+  // LOCATION TRACKING
+  // =========================================================
+  async _startLocationTracking() {
+    try {
+      await locationTracker.start((pos) => this._onPositionUpdate(pos));
+      console.log('[DriverApp] GPS iniciado');
+    } catch (err) {
+      console.error('[DriverApp] Error iniciando GPS:', err);
+    }
+  }
+
+  // =========================================================
+  // MAP ROUTE
+  // =========================================================
+  async _showRouteOnMap(trip) {
+    console.log('[DriverApp] Mostrando ruta en mapa...');
+
+    try {
+      if (
+        !Number.isFinite(Number(trip?.origen_lat)) ||
+        !Number.isFinite(Number(trip?.origen_lng)) ||
+        !Number.isFinite(Number(trip?.destino_lat)) ||
+        !Number.isFinite(Number(trip?.destino_lng))
+      ) {
+        console.warn('[DriverApp] Viaje sin coordenadas, no se puede trazar ruta');
+        return;
+      }
+
+      const estado = String(trip.estado || '').toUpperCase();
+      const goingToDestination = estado === 'EN_CURSO';
+
+      const driverPosition = locationTracker.getCurrentPosition?.() || null;
+
+      const origin = goingToDestination
+        ? { lat: trip.origen_lat, lng: trip.origen_lng }
+        : driverPosition
+          ? { lat: driverPosition.lat, lng: driverPosition.lng }
+          : { lat: trip.origen_lat, lng: trip.origen_lng };
+
+      const destination = goingToDestination
+        ? { lat: trip.destino_lat, lng: trip.destino_lng }
+        : { lat: trip.origen_lat, lng: trip.origen_lng };
+
+      if (typeof mapService.showRoute === 'function') {
+        await mapService.showRoute(origin, destination);
+
+        setTimeout(() => {
+          try {
+            mapService.map?.resize?.();
+          } catch {}
+        }, 400);
+
+        return;
+      }
+
+      if (typeof mapService.drawRoute === 'function') {
+        await mapService.drawRoute(origin, destination);
+
+        setTimeout(() => {
+          try {
+            mapService.map?.resize?.();
+          } catch {}
+        }, 400);
+
+        return;
+      }
+
+      if (typeof mapService.showTripRoute === 'function') {
+        await mapService.showTripRoute(origin, destination);
+
+        setTimeout(() => {
+          try {
+            mapService.map?.resize?.();
+          } catch {}
+        }, 400);
+
+        return;
+      }
+
+      console.warn('[DriverApp] No existe método para mostrar ruta en mapService');
+    } catch (error) {
+      console.error('[DriverApp] Error mostrando ruta:', error);
+    }
+  }
+
+  // =========================================================
+  // OFFER ACTIONS
+  // =========================================================
+  async _acceptOffer(offerId) {
+    if (this._destroyed) {
+      return { success: false, error: 'APP_DESTROYED' };
+    }
+
+    console.log('[DriverApp] Aceptando oferta:', offerId);
+    uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
+
+    try {
+      const result = await tripManager.acceptOffer(offerId);
+
+      if (!result.success) {
+        uiController.showToast(result.error || 'Error aceptando viaje', 'warning');
+        uiController.hideIncomingModal?.();
+
+        if (this._onlineStatus) {
+          this._setFlowState('ONLINE_IDLE');
+        } else {
+          this._setFlowState('OFFLINE');
+        }
+
+        uiController.showWaitingState();
+        return result;
+      }
+
+      this._celebrateAcceptFeedback();
+
+      setTimeout(() => {
+        tripManager.refresh?.();
+      }, 1500);
+
+      return result;
+    } catch (err) {
+      console.error('[DriverApp] Error aceptando oferta:', err);
+      uiController.showToast('Error aceptando viaje', 'error');
+      return { success: false, error: err.message };
+    } finally {
+      uiController.setGlobalLoading?.(false);
+    }
+  }
+
+  async _rejectOffer(offerId) {
+    if (this._destroyed) {
+      return { success: false, error: 'APP_DESTROYED' };
+    }
+
+    console.log('[DriverApp] Rechazando oferta:', offerId);
+
+    try {
+      await tripManager.rejectOffer(offerId);
+
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      uiController.showWaitingState();
+      return { success: true };
+    } catch (err) {
+      console.error('[DriverApp] Error rechazando oferta:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // =========================================================
+  // TRIP ACTIONS
+  // =========================================================
+  async _acceptTrip() {
+    if (this._destroyed) {
+      return { success: false, error: 'APP_DESTROYED' };
+    }
+
+    console.log('[DriverApp] Aceptando viaje...');
+    uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
+
+    try {
+      const result = await tripManager.acceptTrip();
+      console.log('[DriverApp] acceptTrip result:', result);
+
+      if (!result.success) {
+        uiController.showToast(
+          result.error === 'VIAJE_YA_TOMADO'
+            ? 'Otro chofer tomó el viaje'
+            : result.error || 'Error aceptando viaje',
+          'warning'
+        );
+
+        uiController.hideIncomingModal?.();
+
+        if (this._onlineStatus) {
+          this._setFlowState('ONLINE_IDLE');
+        } else {
+          this._setFlowState('OFFLINE');
+        }
+
+        uiController.showWaitingState();
+        return result;
+      }
+
+      this._celebrateAcceptFeedback();
+
+      setTimeout(() => {
+        tripManager.refresh?.();
+      }, 1500);
+
+      return result;
+    } catch (err) {
+      console.error('[DriverApp] Error aceptando viaje:', err);
+      uiController.showToast('Error aceptando viaje', 'error');
+      uiController.showWaitingState();
+
+      return { success: false, error: err.message };
+    } finally {
+      uiController.setGlobalLoading?.(false);
+    }
+  }
+
+  async _rejectTrip() {
+    if (this._destroyed) {
+      return { success: false, error: 'APP_DESTROYED' };
+    }
+
+    console.log('[DriverApp] Rechazando viaje...');
+    await tripManager.rejectTrip();
+
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+    } else {
+      this._setFlowState('OFFLINE');
+    }
+
+    uiController.showWaitingState();
+    return { success: true };
+  }
+
+  // =========================================================
+  // LOCATION UPDATE
+  // =========================================================
+  async _onPositionUpdate(position) {
+    if (this._destroyed) return;
+    if (!position || !Number.isFinite(position.lat) || !Number.isFinite(position.lng)) return;
+
+    const currentTrip = tripManager.getCurrentTrip();
+
+    if (!this._onlineStatus && !currentTrip) {
+      uiController.hideArrival?.();
+      return;
+    }
+
+    mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
+
+    if (!currentTrip) {
+      uiController.hideArrival?.();
+      return;
+    }
+
+    if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
+      this._locationUpdateInterval = 5000;
+    } else if (this._onlineStatus) {
+      this._locationUpdateInterval = 15000;
+    } else {
+      this._locationUpdateInterval = 30000;
+    }
+
+    const now = Date.now();
+    if (now - this._lastLocationUpdate >= this._locationUpdateInterval) {
+      this._lastLocationUpdate = now;
+
+      try {
+        if (!this._authUserId) return;
+
+        const { error } = await supabaseService.client
+          .from('choferes')
+          .update({
+            lat: position.lat,
+            lng: position.lng,
+            heading: position.heading || 0,
+            speed: position.speed || 0,
+            accuracy: position.accuracy || null,
+            last_seen_at: new Date().toISOString()
+          })
+          .eq('user_id', this._authUserId);
+
+        if (error) {
+          console.error('[DriverApp] Error guardando ubicación:', error);
+        }
+      } catch (err) {
+        console.error('[DriverApp] Falló update ubicación:', err);
+      }
+    }
+
+    if (!currentTrip?.id) {
+      uiController.hideArrival?.();
+      return;
+    }
+
+    const estado = String(currentTrip.estado || '').toUpperCase();
+
+    const hasPickupCoords =
+      Number.isFinite(Number(currentTrip.origen_lat)) &&
+      Number.isFinite(Number(currentTrip.origen_lng));
+
+    const hasDestinationCoords =
+      Number.isFinite(Number(currentTrip.destino_lat)) &&
+      Number.isFinite(Number(currentTrip.destino_lng));
+
+    if (
+      currentTrip?.id &&
+      hasPickupCoords &&
+      (estado === 'ACEPTADO' || estado === 'ASIGNADO' || estado === 'PENDIENTE') &&
+      this._driverFlowState === 'GOING_TO_PICKUP'
+    ) {
+      const distPickup = this._calculateDistance(
+        position.lat,
+        position.lng,
+        Number(currentTrip.origen_lat),
+        Number(currentTrip.origen_lng)
+      );
+
+      if (distPickup < 100) {
+        this._setFlowState('ARRIVED_PICKUP');
+        uiController.hideArrival?.();
+        uiController.showNavigationState?.(currentTrip);
+      } else {
+        uiController.hideArrival?.();
+      }
+    } else if (
+      currentTrip?.id &&
+      hasDestinationCoords &&
+      estado === 'EN_CURSO' &&
+      this._driverFlowState === 'TRIP_STARTED'
+    ) {
+      const distDestination = this._calculateDistance(
+        position.lat,
+        position.lng,
+        Number(currentTrip.destino_lat),
+        Number(currentTrip.destino_lng)
+      );
+
+      if (distDestination < 100) {
+        this._setFlowState('ARRIVED_DESTINATION');
+        uiController.showArrival?.(currentTrip);
+      } else {
+        uiController.hideArrival?.();
+      }
+    } else {
+      uiController.hideArrival?.();
+    }
+  }
+
+  // =========================================================
+  // UI SETUP
+  // =========================================================
+  _setupUI() {
+    const btnFab = document.getElementById('fab-online');
+    const supportBtn = document.getElementById('menu-support');
+    const earningsBtn = document.getElementById('menu-earnings');
+    const historyBtn = document.getElementById('menu-history');
+    const settingsBtn = document.getElementById('menu-settings');
+    const profileBtn = document.getElementById('menu-view-profile');
+    const profileQuickBtn = document.getElementById('menu-view-profile-quick');
+
+    this._fabClickHandler = async (ev) => {
+      ev?.preventDefault?.();
+      ev?.stopPropagation?.();
+
+      const fab = document.getElementById('fab-online');
+
+      try {
+        console.log('[DriverApp] FAB toggle presionado', {
+          onlineActual: this._onlineStatus,
+          flow: this._driverFlowState
+        });
+
+        if (fab) {
+          fab.disabled = true;
+          fab.style.pointerEvents = 'none';
+        }
+
+        const hasActiveTrip = !!tripManager.getCurrentTrip();
+
+        if (hasActiveTrip && this._onlineStatus) {
+          uiController.showToast('No podés ponerte offline durante un viaje', 'warning');
           return;
         }
 
-      setDocStatus("background_check", "â³ PodÃ©s subirlo ahora o dentro de 15 dÃ­as hÃ¡biles", "warning");
-      updateDocumentsProgressUI();
-      updateOverallStepperState();
-      renderDocumentWizard();
-      updateSticky(currentStep);
+        const nextOnline = !this._onlineStatus;
+
+        if (nextOnline) {
+          await this._ensureDriverShellReady();
+
+          const result = await tripManager.setDriverAvailability({
+            online: true,
+            disponible: true
+          });
+
+          if (!result?.success) {
+            throw new Error(result?.error || 'No se pudo poner online');
+          }
+
+          this._startRealtimeServicesInBackground();
+
+          this._onlineStatus = true;
+          this._setFlowState('ONLINE_IDLE');
+          uiController.showWaitingState();
+        } else {
+          if (tripManager.getCurrentTrip()) {
+            uiController.showToast('No podés desconectarte en viaje', 'warning');
+            return;
+          }
+
+          const result = await tripManager.setDriverAvailability({
+            online: false,
+            disponible: false
+          });
+
+          if (!result?.success) {
+            throw new Error(result?.error || 'No se pudo poner offline');
+          }
+
+          this._onlineStatus = false;
+          this._setFlowState('OFFLINE');
+          this._currentTripId = null;
+
+          tripManager.resetState();
+          mapService.clearRoute?.();
+          uiController.hideIncomingModal?.();
+          uiController.hideNavigation?.();
+          uiController.hideArrival?.();
+          locationTracker.stop?.();
+        }
+
+        uiController.updateDriverState(
+          this._onlineStatus ? 'ONLINE' : 'OFFLINE',
+          this._onlineStatus
+        );
+        this._syncConnectionMenuItem();
+
+        uiController.showToast(
+          this._onlineStatus ? 'Ya estás en línea' : 'Quedaste fuera de línea',
+          'success'
+        );
       } catch (err) {
-        console.error("[onboarding init] error:", err);
-        setGlobalStatus("âŒ No pudimos cargar tu onboarding", "error");
+        console.error('[DriverApp] Error cambiando estado:', err);
+        uiController.showToast(err?.message || 'Error cambiando estado', 'error');
+      } finally {
+        if (fab) {
+          fab.disabled = false;
+          fab.style.pointerEvents = 'auto';
+        }
       }
-    })();
-  </script>
-</body>
-</html>
+    };
+
+    if (btnFab) {
+      btnFab.replaceWith(btnFab.cloneNode(true));
+      const freshFab = document.getElementById('fab-online');
+
+      if (freshFab) {
+        freshFab.addEventListener('click', this._fabClickHandler);
+      }
+    }
+
+    if (supportBtn) {
+      supportBtn.addEventListener('click', async () => {
+        uiController.closeMenu?.();
+        await openDriverSupportPanel();
+      });
+    }
+
+    if (earningsBtn) {
+      earningsBtn.addEventListener('click', () => {
+        uiController.closeMenu?.();
+        uiController.showInfoSheet?.({
+          title: 'Ganancias',
+          description: 'Resumen rápido de tu jornada para revisar ingresos y rendimiento desde el celular.',
+          metrics: [
+            { label: 'Hoy', value: document.getElementById('stat-earnings')?.textContent || '$0' },
+            { label: 'Viajes', value: document.getElementById('stat-trips')?.textContent || '0' },
+            { label: 'Rating', value: document.getElementById('stat-rating')?.textContent || '5.0' }
+          ]
+        });
+      });
+    }
+
+    if (historyBtn) {
+      historyBtn.addEventListener('click', () => {
+        uiController.closeMenu?.();
+        uiController.showInfoSheet?.({
+          title: 'Historial',
+          description: 'Acá vas a poder revisar tus últimos viajes y el estado general de tu actividad.',
+          metrics: [
+            { label: 'Viajes', value: document.getElementById('stat-trips')?.textContent || '0' },
+            { label: 'Estado', value: this._onlineStatus ? 'Online' : 'Offline' }
+          ]
+        });
+      });
+    }
+
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', async () => {
+        uiController.closeMenu?.();
+        await this._fabClickHandler();
+      });
+    }
+
+    if (profileBtn) {
+      profileBtn.addEventListener('click', async () => {
+        uiController.closeMenu?.();
+        await this._loadDriverProfileSummary({ email: this._session?.user?.email || '' });
+        this._openDriverProfileSheet();
+      });
+    }
+
+    if (profileQuickBtn) {
+      profileQuickBtn.addEventListener('click', async () => {
+        uiController.closeMenu?.();
+        await this._loadDriverProfileSummary({ email: this._session?.user?.email || '' });
+        this._openDriverProfileSheet();
+      });
+    }
+
+    this._syncConnectionMenuItem();
+    window.addEventListener('driverAction', this._driverActionHandler);
+  }
+
+  async _handleDriverActionEvent(e) {
+    const { action, tripId } = e.detail || {};
+    await this._handleAction(action, tripId);
+  }
+
+  async _handleAction(action, tripId) {
+    if (!action) return null;
+
+    if (this._actionLock && action !== 'navigate' && action !== 'whatsapp') {
+      console.warn('[DriverApp] Acción bloqueada por lock:', action);
+      return null;
+    }
+
+    console.log('[DriverApp] Acción:', action, tripId);
+
+    const pending = tripManager.getPendingTrip();
+    const current = tripManager.getCurrentTrip();
+
+    const lockableActions = new Set(['accept', 'reject', 'start', 'finish', 'cancel']);
+    if (lockableActions.has(action)) {
+      this._actionLock = true;
+    }
+
+    try {
+      switch (action) {
+        case 'accept':
+          return this._acceptOffer(pending?.offerId || tripId);
+
+        case 'reject':
+          return this._rejectOffer(pending?.offerId || tripId);
+
+        case 'start': {
+          const result = await tripManager.startTrip(current?.id || tripId);
+          if (result?.success) {
+            this._setFlowState('TRIP_STARTED');
+            uiController.showToast('Viaje iniciado', 'success');
+            await tripManager.refresh();
+          }
+          return result;
+        }
+
+        case 'finish': {
+          const tripIdFinal = current?.id || this._currentTripId || tripId;
+
+          if (!tripIdFinal) {
+            console.error('[DriverApp] No hay tripId para finalizar');
+            uiController.showToast?.('Error: no hay viaje activo', 'error');
+            return;
+          }
+
+          const result = await tripManager.finishTrip(tripIdFinal);
+
+          if (result?.success) {
+            this._setFlowState('TRIP_COMPLETED');
+            this._currentTripId = null;
+
+            tripManager.resetState();
+
+            mapService.clearRoute?.();
+            uiController.hideIncomingModal?.();
+            uiController.hideNavigation?.();
+            uiController.hideArrival?.();
+            uiController.showToast('Viaje finalizado', 'success');
+
+            if (this._onlineStatus) {
+              this._setFlowState('ONLINE_IDLE');
+              uiController.showWaitingState();
+            } else {
+              this._setFlowState('OFFLINE');
+            }
+
+            await tripManager.refresh();
+          }
+
+          return result;
+        }
+
+        case 'cancel': {
+          const result = await tripManager.cancelTrip(current?.id || tripId);
+
+          if (result?.success) {
+            this._currentTripId = null;
+            tripManager.resetState();
+            mapService.clearRoute?.();
+            uiController.hideIncomingModal?.();
+            uiController.hideNavigation?.();
+            uiController.hideArrival?.();
+
+            if (this._onlineStatus) {
+              this._setFlowState('ONLINE_IDLE');
+              uiController.showWaitingState();
+            } else {
+              this._setFlowState('OFFLINE');
+            }
+          }
+
+          return result;
+        }
+
+        case 'navigate':
+          return this._openExternalNav();
+
+        case 'whatsapp':
+          return this._openWhatsApp();
+
+        default:
+          console.warn('[DriverApp] Acción desconocida:', action);
+          return null;
+      }
+    } finally {
+      if (lockableActions.has(action)) {
+        setTimeout(() => {
+          this._actionLock = false;
+        }, 500);
+      }
+    }
+  }
+
+  // =========================================================
+  // EXTERNAL ACTIONS
+  // =========================================================
+  _openExternalNav() {
+    const trip = tripManager.getCurrentTrip();
+    if (!trip) return;
+
+    const estado = String(trip.estado || '').toUpperCase();
+    const goingToDestination = estado === 'EN_CURSO';
+
+    const lat = goingToDestination ? trip.destino_lat : trip.origen_lat;
+    const lng = goingToDestination ? trip.destino_lng : trip.origen_lng;
+
+    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return;
+
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    window.open(url, '_blank');
+  }
+
+  _openWhatsApp() {
+    const trip = tripManager.getCurrentTrip();
+    if (!trip || !trip.telefono) return;
+
+    const msg = encodeURIComponent('Hola, soy tu conductor de MIMI');
+    window.open(`https://wa.me/${trip.telefono}?text=${msg}`, '_blank');
+  }
+
+  // =========================================================
+  // DISTANCE UTILS
+  // =========================================================
+  _calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const phi1 = (lat1 * Math.PI) / 180;
+    const phi2 = (lat2 * Math.PI) / 180;
+    const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+    const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+      Math.cos(phi1) * Math.cos(phi2) *
+      Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  }
+
+  // =========================================================
+  // DESTROY
+  // =========================================================
+  destroy() {
+    try {
+      this._destroyed = true;
+
+      this._unsubscribers.forEach((fn) => {
+        if (typeof fn === 'function') fn();
+      });
+      this._unsubscribers = [];
+
+      const btnFab = document.getElementById('fab-online');
+      if (btnFab && this._fabClickHandler) {
+        btnFab.removeEventListener('click', this._fabClickHandler);
+      }
+
+      window.removeEventListener('driverAction', this._driverActionHandler);
+      document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
+      window.removeEventListener('pushForegroundMessage', this._foregroundPushHandler);
+      window.removeEventListener('click', this._unlockAudioOnClick);
+      window.removeEventListener('touchstart', this._unlockAudioOnTouch);
+
+      locationTracker.stop?.();
+      uiController.destroy?.();
+
+      this._actionLock = false;
+      this.initialized = false;
+    } catch (err) {
+      console.warn('[DriverApp] Error en destroy:', err);
+    }
+  }
+}
+
+const app = new DriverApp();
+app.init();
+
+export default DriverApp;
