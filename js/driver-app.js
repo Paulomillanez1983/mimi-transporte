@@ -928,16 +928,28 @@ if (typeof mapService.showRoute === 'function') {
 
   return;
 }
-      if (typeof mapService.drawRoute === 'function') {
-        await mapService.drawRoute(origin, destination);
-        return;
-      }
+if (typeof mapService.drawRoute === 'function') {
+  await mapService.drawRoute(origin, destination);
 
-      if (typeof mapService.showTripRoute === 'function') {
-        await mapService.showTripRoute(origin, destination);
-        return;
-      }
+  setTimeout(() => {
+    try {
+      mapService.map?.resize?.();
+    } catch {}
+  }, 400);
 
+  return;
+}
+if (typeof mapService.showTripRoute === 'function') {
+  await mapService.showTripRoute(origin, destination);
+
+  setTimeout(() => {
+    try {
+      mapService.map?.resize?.();
+    } catch {}
+  }, 400);
+
+  return;
+}
       console.warn('[DriverApp] No existe metodo para mostrar ruta en mapService');
     } catch (error) {
       console.error('[DriverApp] Error mostrando ruta:', error);
