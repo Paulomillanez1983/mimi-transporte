@@ -2,28 +2,31 @@ importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
 const CACHE_NAME = 'mimi-client-v10';
-const APP_SHELL = '/mimi-transporte/index.html';
-const APP_BASE_PATH = '/mimi-transporte/';
+const APP_BASE_PATH = (() => {
+  const path = self.location.pathname || '/';
+  return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
+})();
+const APP_SHELL = `${APP_BASE_PATH}index.html`;
 
 const STATIC_ASSETS = [
-  '/mimi-transporte/',
-  '/mimi-transporte/index.html',
-  '/mimi-transporte/chofer-panel.html',
-  '/mimi-transporte/mimi-transporte.css',
-  '/mimi-transporte/css/design-system.css',
-  '/mimi-transporte/css/components.css',
-  '/mimi-transporte/css/animations.css',
-  '/mimi-transporte/css/panel.css',
-  '/mimi-transporte/js/push-support.js',
-  '/mimi-transporte/js/driver-app.js',
-  '/mimi-transporte/js/driver-support.js',
-  '/mimi-transporte/js/trip-manager.js',
-  '/mimi-transporte/js/ui-controller.js',
-  '/mimi-transporte/assets/icons/icon-192x192.png',
-  '/mimi-transporte/assets/icons/badge-icon.png',
-  '/mimi-transporte/assets/icons/mimi-mark.svg',
-  '/mimi-transporte/manifest.json',
-  '/mimi-transporte/manifest-driver.json'
+  APP_BASE_PATH,
+  `${APP_BASE_PATH}index.html`,
+  `${APP_BASE_PATH}chofer-panel.html`,
+  `${APP_BASE_PATH}mimi-transporte.css`,
+  `${APP_BASE_PATH}css/design-system.css`,
+  `${APP_BASE_PATH}css/components.css`,
+  `${APP_BASE_PATH}css/animations.css`,
+  `${APP_BASE_PATH}css/panel.css`,
+  `${APP_BASE_PATH}js/push-support.js`,
+  `${APP_BASE_PATH}js/driver-app.js`,
+  `${APP_BASE_PATH}js/driver-support.js`,
+  `${APP_BASE_PATH}js/trip-manager.js`,
+  `${APP_BASE_PATH}js/ui-controller.js`,
+  `${APP_BASE_PATH}assets/icons/icon-192x192.png`,
+  `${APP_BASE_PATH}assets/icons/badge-icon.png`,
+  `${APP_BASE_PATH}assets/icons/mimi-mark.svg`,
+  `${APP_BASE_PATH}manifest.json`,
+  `${APP_BASE_PATH}manifest-driver.json`
 ];
 
 const DEFAULT_ICON = `${APP_BASE_PATH}assets/icons/icon-192x192.png`;
@@ -61,7 +64,7 @@ function isAppAsset(url) {
     const u = new URL(url);
 
     if (u.origin !== self.location.origin) return false;
-    if (!u.pathname.startsWith('/mimi-transporte/')) return false;
+    if (!u.pathname.startsWith(APP_BASE_PATH)) return false;
 
     if (
       u.pathname.includes('/functions/v1/') ||
@@ -80,15 +83,15 @@ function isAppAsset(url) {
 function normalizeUrl(rawUrl) {
   const url = safeString(rawUrl, DEFAULT_URL);
 
-  if (
-    url.startsWith('http://') ||
-    url.startsWith('https://') ||
-    url.startsWith('/')
-  ) {
+  if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;
   }
 
-  return DEFAULT_URL;
+  if (url.startsWith('/')) {
+    return url;
+  }
+
+  return new URL(url, `${self.location.origin}${APP_BASE_PATH}`).toString();
 }
 
 function getNavigationFallback(requestUrl) {
