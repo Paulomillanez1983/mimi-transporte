@@ -231,29 +231,63 @@
     import tripManager from "./js/trip-manager.js";
     import uiController from "./js/ui-controller.js";
 
-    async function protectRoute() {
-      try {
-const client = await supabaseService.init();
-
-const { data, error } = await client.auth.getSession();
-        if (error || !data?.session?.access_token) {
-          console.warn("[AUTH] No autenticado -> redirigiendo");
-          window.location.replace("./login-chofer.html");
-          return;
-        }
-
-        const { data: userRes } = await supabaseService.client.auth.getUser();
-
-        if (!userRes?.user) {
-          window.location.replace("./login-chofer.html");
-          return;
-        }
-      } catch (err) {
-        console.error("[AUTH] Error:", err);
-        window.location.replace("./login-chofer.html");
-      }
+async function protectRoute() {
+  try {
+    const client = await supabaseService.init();
+    if (!client) {
+      window.location.replace("./login-chofer.html");
+      return;
     }
 
+    let { data: sessionData, error: sessionError } = await client.auth.getSession();
+
+    if (sessionError) {
+      console.warn("[AUTH] getSession error:", sessionError);
+    }
+
+    let session = sessionData?.session || null;
+
+    // Espera breve para mobile / hydration post login OAuth
+    if (!session?.access_token) {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+
+      const { data: retryData, error: retryError } = await client.auth.getSession();
+      if (retryError) {
+        console.warn("[AUTH] getSession retry error:", retryError);
+      }
+
+      session = retryData?.session || null;
+    }
+
+    // Intento de refresh si todavía no apareció
+    if (!session?.access_token) {
+      const { data: refreshData, error: refreshError } = await client.auth.refreshSession();
+
+      if (refreshError) {
+        console.warn("[AUTH] refreshSession error:", refreshError);
+      }
+
+      session = refreshData?.session || null;
+    }
+
+    if (!session?.access_token) {
+      console.warn("[AUTH] No autenticado -> redirigiendo");
+      window.location.replace("./login-chofer.html");
+      return;
+    }
+
+    const { data: userRes, error: userError } = await client.auth.getUser();
+
+    if (userError || !userRes?.user) {
+      console.warn("[AUTH] getUser sin usuario valido:", userError);
+      window.location.replace("./login-chofer.html");
+      return;
+    }
+  } catch (err) {
+    console.error("[AUTH] Error:", err);
+    window.location.replace("./login-chofer.html");
+  }
+}
     async function doLogout() {
       const activeTrip = tripManager.getCurrentTrip?.();
 
