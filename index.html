@@ -1881,8 +1881,11 @@ let state = {
   markers: [],
   cotizacion: null,
   viajeId: null,
-  estadoViaje: null
+  estadoViaje: null,
+  choferId: null,
+  choferLocation: null
 };
+
 let mapaCliente = null;
 let mapReady = false;
 let isCalculatingQuote = false;
@@ -1890,7 +1893,9 @@ let currentQuoteRequestId = 0;
 let waypointCounter = 0;
 let routeAnimationFrame = null;
 let routeDashPhase = 0;
-  
+let choferRealtimeChannel = null;
+let choferMarker = null;
+let choferPulseMarker = null;  
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
