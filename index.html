@@ -2063,15 +2063,17 @@ async function enriquecerViajeConChofer(viajeLike = null) {
       return viajeLike;
     }
 
-    return {
-  ...viajeLike,
-  chofer_nombre: choferNombreExistente || data.nombre || data.email || '',
-  chofer_telefono: choferTelefonoExistente || data.telefono || '',
-  chofer_lat: Number(data.lat),
-  chofer_lng: Number(data.lng),
-  chofer_heading: Number(data.heading || 0),
-  chofer_last_seen_at: data.last_seen_at || null
-}; catch (err) {
+     return {
+    ...viajeLike,
+    chofer_nombre: choferNombreExistente || data.nombre || data.email || '',
+    chofer_telefono: choferTelefonoExistente || data.telefono || '',
+    chofer_lat: Number(data.lat),
+    chofer_lng: Number(data.lng),
+    chofer_heading: Number(data.heading || 0),
+    chofer_last_seen_at: data.last_seen_at || null
+  };
+
+  } catch (err) {
     console.warn('[cliente] error enriqueciendo viaje con chofer:', err);
     return viajeLike;
   }
