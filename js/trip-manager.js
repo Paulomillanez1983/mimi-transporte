@@ -110,6 +110,24 @@ async init(driverIdParam = null) {
     return false;
   }
 }
+  _normalizeDriverTripState(trip) {
+  if (!trip) return '';
+
+  const estado = String(trip.estado || '').toUpperCase();
+  const choferAsignado = !!trip.chofer_id_uuid;
+  const esMiChofer =
+    choferAsignado &&
+    String(trip.chofer_id_uuid) === String(this.driverId);
+
+  // Blindaje: si el backend todavía dejó OFERTADO
+  // pero ya está asignado a este chofer, para el panel
+  // del chofer lo tratamos como ASIGNADO.
+  if (estado === 'OFERTADO' && esMiChofer) {
+    return 'ASIGNADO';
+  }
+
+  return estado;
+}
   // =========================================================
   // LOAD INITIAL STATE
   // =========================================================
@@ -128,7 +146,7 @@ const { data: activeTrip, error: tripError } = await supabaseService.client
   .from('viajes')
   .select('*')
   .eq('chofer_id_uuid', driverId)
-  .in('estado', ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'])
+  .in('estado', ['OFERTADO', 'ASIGNADO', 'ACEPTADO', 'EN_CURSO'])
   .order('updated_at', { ascending: false })
   .limit(1)
   .maybeSingle();
@@ -136,23 +154,28 @@ const { data: activeTrip, error: tripError } = await supabaseService.client
           console.error('[TripManager] Error loading active trip:', tripError);
         }
 
-        if (activeTrip) {
-          console.log('[TripManager] Active trip found:', activeTrip.id, activeTrip.estado);
+if (activeTrip) {
+  const normalizedState = this._normalizeDriverTripState(activeTrip);
+  const normalizedTrip = {
+    ...activeTrip,
+    estado: normalizedState
+  };
 
-          this.currentTrip = activeTrip;
-          this.emit('noPendingTrips');
-          this.pendingOffer = null;
-          this.lastOfferIdShown = null;
+  console.log('[TripManager] Active trip found:', normalizedTrip.id, normalizedTrip.estado);
 
-          if (activeTrip.estado === 'EN_CURSO') {
-            this.emit('tripStarted', activeTrip);
-          } else {
-            this.emit('tripAccepted', activeTrip);
-          }
+  this.currentTrip = normalizedTrip;
+  this.emit('noPendingTrips');
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
 
-          return;
-        }
+  if (normalizedState === 'EN_CURSO') {
+    this.emit('tripStarted', normalizedTrip);
+  } else {
+    this.emit('tripAccepted', normalizedTrip);
+  }
 
+  return;
+}
         this.currentTrip = null;
 
         // =====================================================
@@ -435,37 +458,45 @@ async rejectOffer(offerId) {
         (payload) => {
           console.log('[TripManager] Trip realtime payload:', payload);
 
-          const trip = payload.new;
-          if (!trip) return;
+const tripRaw = payload.new;
+if (!tripRaw) return;
 
-          console.log('[TripManager] Trip update:', trip.id, trip.estado);
+const normalizedState = this._normalizeDriverTripState(tripRaw);
+const trip = {
+  ...tripRaw,
+  estado: normalizedState
+};
 
-          if (trip.estado === 'ASIGNADO' || trip.estado === 'ACEPTADO') {
-            this.emit('tripAccepted', trip);
-          }
+console.log('[TripManager] Trip update:', trip.id, trip.estado);
 
-          if (trip.estado === 'EN_CURSO') {
-            this.emit('tripStarted', trip);
-          }
+if (trip.estado === 'ASIGNADO' || trip.estado === 'ACEPTADO') {
+  this.emit('tripAccepted', trip);
+}
 
-          if (trip.estado === 'COMPLETADO') {
-            this.emit('tripCompleted', trip);
-          }
+if (trip.estado === 'EN_CURSO') {
+  this.emit('tripStarted', trip);
+}
 
-          if (trip.estado === 'CANCELADO') {
-            this.emit('tripCancelled', trip);
-          }
+if (trip.estado === 'COMPLETADO') {
+  this.emit('tripCompleted', trip);
+}
 
-               if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
-               this.currentTrip = trip;
-               } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
-               this.currentTrip = null;
-               this.pendingOffer = null;
-               this.lastOfferIdShown = null;
+if (trip.estado === 'CANCELADO') {
+  this.emit('tripCancelled', trip);
+}
 
-              this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
-              this.emit('noPendingTrips');
-           }  
+if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
+  this.currentTrip = trip;
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+} else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
+  this.currentTrip = null;
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+
+  this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
+  this.emit('noPendingTrips');
+}
         }
       )
       .subscribe((status) => {
