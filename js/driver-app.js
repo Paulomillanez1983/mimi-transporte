@@ -1,5 +1,6 @@
-﻿/**
- * Driver App produccion FINAL (RLS + UUID + FLOW + UBER DRIVER)
+/**
+ * Driver App producción FINAL
+ * RLS + UUID + FLOW + UBER DRIVER
  */
 
 import CONFIG from './config.js';
@@ -16,6 +17,7 @@ const APP_BASE_PATH = (() => {
   const path = window.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
 })();
+
 const DRIVER_PANEL_URL = `${APP_BASE_PATH}chofer-panel.html`;
 const DRIVER_SW_PATH = `${APP_BASE_PATH}firebase-messaging-sw.js`;
 
@@ -26,34 +28,36 @@ class DriverApp {
     this._currentTripId = null;
     this._unsubscribers = [];
 
-    // Control para no spamear Supabase
     this._lastLocationUpdate = 0;
     this._locationUpdateInterval = 15000;
 
-    // Cache auth
     this._authUserId = null;
     this._driverProfileSummary = null;
+    this._session = null;
 
-    // Flujo chofer
     this._driverFlowState = 'OFFLINE';
 
-    // Proteccion lifecycle / acciones
     this._destroyed = false;
     this._actionLock = false;
     this.driverId = null;
-    // Refs para cleanup
+
     this._fabClickHandler = null;
     this._driverActionHandler = this._handleDriverActionEvent.bind(this);
     this._visibilityChangeHandler = this._handleVisibilityChange.bind(this);
     this._foregroundPushHandler = this._handleForegroundPush.bind(this);
+
     this._unlockAudioOnClick = () => {
       soundManager.enableOnUserInteraction?.();
     };
+
     this._unlockAudioOnTouch = () => {
       soundManager.enableOnUserInteraction?.();
     };
   }
 
+  // =========================================================
+  // BACKGROUND SERVICES
+  // =========================================================
   _startRealtimeServicesInBackground() {
     Promise.resolve()
       .then(() => this._startLocationTracking())
@@ -125,7 +129,7 @@ class DriverApp {
 
       if (registration?.showNotification) {
         await registration.showNotification(title || 'MIMI Chofer', {
-          body: body || 'Tenes una actualizacion nueva.',
+          body: body || 'Tenés una actualización nueva.',
           icon: `${APP_BASE_PATH}assets/icons/icon-192x192.png`,
           badge: `${APP_BASE_PATH}assets/icons/badge-icon.png`,
           tag: tag || 'mimi-driver-notification',
@@ -141,20 +145,25 @@ class DriverApp {
       }
 
       new Notification(title || 'MIMI Chofer', {
-        body: body || 'Tenes una actualizacion nueva.',
+        body: body || 'Tenés una actualización nueva.',
         tag: tag || 'mimi-driver-notification'
       });
       return true;
     } catch (err) {
-      console.warn('[DriverApp] No se pudo mostrar notificacion del sistema:', err);
+      console.warn('[DriverApp] No se pudo mostrar notificación del sistema:', err);
       return false;
     }
   }
 
   async _notifyIncomingTrip(trip) {
     const amount = Number(trip?.precio ?? trip?.monto ?? 0);
-    const origin = String(trip?.origen_direccion || trip?.origen_texto || 'Nuevo viaje disponible').trim();
-    const destination = String(trip?.destino_direccion || trip?.destino_texto || '').trim();
+    const origin = String(
+      trip?.origen_direccion || trip?.origen_texto || 'Nuevo viaje disponible'
+    ).trim();
+    const destination = String(
+      trip?.destino_direccion || trip?.destino_texto || ''
+    ).trim();
+
     const fareLabel = Number.isFinite(amount) && amount > 0 ? ` - $${amount}` : '';
     const routeLabel = destination ? `${origin} -> ${destination}` : origin;
 
@@ -174,7 +183,7 @@ class DriverApp {
   async _notifySupportMessage(detail = {}) {
     await this._showSystemNotification({
       title: detail?.title || 'Soporte MIMI',
-      body: detail?.body || 'Tenes una respuesta nueva de soporte.',
+      body: detail?.body || 'Tenés una respuesta nueva de soporte.',
       tag: detail?.payload?.data?.tag || 'driver-support-message',
       data: {
         url: DRIVER_PANEL_URL,
@@ -187,7 +196,11 @@ class DriverApp {
     const detail = event?.detail || {};
 
     if (!this._isDocumentHidden()) {
-      uiController.showToast(detail.body || detail.title || 'Nueva notificacion', 'success', 4500);
+      uiController.showToast(
+        detail.body || detail.title || 'Nueva notificación',
+        'success',
+        4500
+      );
       return;
     }
 
@@ -232,10 +245,7 @@ class DriverApp {
         dni: profile?.dni_number || '',
         onboardingStatus: profile?.onboarding_status || 'PENDIENTE_DOCUMENTOS',
         documentsApproved: profile?.documents_approved === true,
-        vehicle: [
-          profile?.vehicle_brand,
-          profile?.vehicle_model
-        ].filter(Boolean).join(' ') || '',
+        vehicle: [profile?.vehicle_brand, profile?.vehicle_model].filter(Boolean).join(' ') || '',
         vehiclePlate: profile?.vehicle_plate || '',
         vehicleColor: profile?.vehicle_color || '',
         vehicleYear: profile?.vehicle_year || '',
@@ -252,15 +262,13 @@ class DriverApp {
   _openDriverProfileSheet() {
     const summary = this._driverProfileSummary || {};
     const documents = Array.isArray(summary.documents) ? summary.documents : [];
-    const docsLabel = documents.length
-      ? `${documents.length} cargados`
-      : 'Sin documentos visibles';
+    const docsLabel = documents.length ? `${documents.length} cargados` : 'Sin documentos visibles';
 
     uiController.showInfoSheet?.({
       title: 'Perfil del chofer',
-      description: 'Aca tenes tus datos verificados, estado del alta y la documentacion ya cargada.',
+      description: 'Acá tenés tus datos verificados, estado del alta y la documentación ya cargada.',
       metrics: [
-        { label: 'Estado', value: this._onlineStatus ? 'En linea' : 'Fuera de linea' },
+        { label: 'Estado', value: this._onlineStatus ? 'En línea' : 'Fuera de línea' },
         { label: 'Onboarding', value: summary.onboardingStatus || 'Pendiente' },
         { label: 'Documentos', value: docsLabel }
       ],
@@ -270,27 +278,27 @@ class DriverApp {
           items: [
             { label: 'Nombre', value: summary.name || 'Conductor' },
             { label: 'Email', value: summary.email || 'Sin email' },
-            { label: 'Telefono', value: summary.phone || 'Sin telefono' },
+            { label: 'Teléfono', value: summary.phone || 'Sin teléfono' },
             { label: 'DNI', value: summary.dni || 'Sin DNI cargado' }
           ]
         },
         {
-          title: 'Vehiculo',
+          title: 'Vehículo',
           items: [
-            { label: 'Unidad', value: summary.vehicle || 'Sin vehiculo cargado' },
+            { label: 'Unidad', value: summary.vehicle || 'Sin vehículo cargado' },
             { label: 'Patente', value: summary.vehiclePlate || 'Sin patente' },
             { label: 'Color', value: summary.vehicleColor || 'Sin color' },
-            { label: 'Ano', value: summary.vehicleYear || 'Sin ano' }
+            { label: 'Año', value: summary.vehicleYear || 'Sin año' }
           ]
         },
         {
-          title: 'Documentacion',
+          title: 'Documentación',
           items: documents.length
             ? documents.slice(0, 7).map((doc) => ({
                 label: String(doc.doc_type || 'documento').replaceAll('_', ' '),
                 value: doc.status || 'PENDIENTE'
               }))
-            : [{ label: 'Documentos', value: 'Todavia no hay cargas visibles' }]
+            : [{ label: 'Documentos', value: 'Todavía no hay cargas visibles' }]
         }
       ],
       actions: [
@@ -344,22 +352,24 @@ class DriverApp {
       return;
     }
 
-    console.log('[DriverApp] Iniciando aplicacion...');
+    console.log('[DriverApp] Iniciando aplicación...');
 
     uiController.init();
     window.uiController = uiController;
     uiController.setGlobalLoading(true, 'Cargando...');
 
     try {
-      // 1) Inicializar Supabase
       console.log('[DriverApp] Inicializando Supabase...');
       const client = await supabaseService.init();
-       if (!client) throw new Error('No se pudo conectar a Supabase');
-      // 2) Resolver sesion valida antes de pedir user
+
+      if (!client) {
+        throw new Error('No se pudo conectar a Supabase');
+      }
+
       const authData = await this._requireValidAuth();
 
       if (!authData) {
-        console.log('[DriverApp] Sin sesion valida, redirigiendo a login');
+        console.log('[DriverApp] Sin sesión válida, redirigiendo a login');
         window.location.href = CONFIG.REDIRECTS.LOGIN;
         return;
       }
@@ -370,7 +380,7 @@ class DriverApp {
       this._session = session;
 
       console.log('[DriverApp] Auth user detectado:', this._authUserId);
-      // Perfil visible en UI (nombre + foto Google si existe)
+
       uiController.setDriverProfile({
         name:
           user?.user_metadata?.full_name ||
@@ -383,13 +393,12 @@ class DriverApp {
           user?.user_metadata?.picture ||
           ''
       });
+
       await this._loadDriverProfileSummary(user);
 
-      // Desbloqueo audio/haptics en interaccion real
       window.addEventListener('click', this._unlockAudioOnClick, { once: true });
       window.addEventListener('touchstart', this._unlockAudioOnTouch, { once: true });
 
-      // 3) Inicializar mapa
       console.log('[DriverApp] Inicializando servicios...');
       await this._ensureDriverShellReady();
 
@@ -397,7 +406,7 @@ class DriverApp {
         mapService.init('map-container')
       ]);
 
-      console.log('[DriverApp] Resultados inicializacion:', {
+      console.log('[DriverApp] Resultados inicialización:', {
         mapa: results[0]?.status
       });
 
@@ -405,12 +414,11 @@ class DriverApp {
         console.error('[DriverApp] Error mapa:', results[0].reason);
       }
 
-      // 4) Resolver driverId
       console.log('[DriverApp] Resolviendo driverId...');
       const driverId = await this._resolveDriverId();
       this.driverId = driverId;
       console.log('[DriverApp] driverId detectado:', driverId);
-      // 5) Inicializar TripManager
+
       console.log('[DriverApp] Inicializando TripManager...');
       const tripManagerReady = await tripManager.init(driverId);
 
@@ -419,13 +427,13 @@ class DriverApp {
         uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
       }
 
-      // 6) Eventos + UI
-
       this._subscribeToEvents();
       this._setupUI();
       initDriverSupport();
+
       document.addEventListener('visibilitychange', this._visibilityChangeHandler);
       window.addEventListener('pushForegroundMessage', this._foregroundPushHandler);
+
       uiController.hideIncomingModal?.();
       uiController.hideNavigation?.();
       uiController.hideArrival?.();
@@ -433,7 +441,7 @@ class DriverApp {
       this._currentTripId = null;
 
       this.initialized = true;
-      console.log('[DriverApp] Aplicacion inicializada correctamente');
+      console.log('[DriverApp] Aplicación inicializada correctamente');
 
       if (!tripManagerReady) {
         this._onlineStatus = false;
@@ -443,7 +451,6 @@ class DriverApp {
         return;
       }
 
-      // 7) Estado inicial real desde BD
       try {
         const { data: choferRow, error: choferError } = await supabaseService.client
           .from('choferes')
@@ -472,33 +479,32 @@ class DriverApp {
         this._setFlowState('OFFLINE');
       }
 
-      // 8) Estado inicial de viajes
       let currentTrip = tripManager.getCurrentTrip();
       const pendingTrip = tripManager.getPendingTrip();
 
-      // blindaje contra estado viejo roto
-if (currentTrip) {
-  const estadoTrip = String(currentTrip.estado || '').toUpperCase();
-  const choferAsignado =
-    !!currentTrip?.chofer_id_uuid &&
-    String(currentTrip.chofer_id_uuid) === String(this.driverId);
+      if (currentTrip) {
+        const estadoTrip = String(currentTrip.estado || '').toUpperCase();
+        const choferAsignado =
+          !!currentTrip?.chofer_id_uuid &&
+          String(currentTrip.chofer_id_uuid) === String(this.driverId);
 
-  const estadoNormalizado =
-    estadoTrip === 'OFERTADO' && choferAsignado
-      ? 'ASIGNADO'
-      : estadoTrip;
+        const estadoNormalizado =
+          estadoTrip === 'OFERTADO' && choferAsignado
+            ? 'ASIGNADO'
+            : estadoTrip;
 
-  if (!['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoNormalizado)) {
-    console.warn('[DriverApp] Viaje invalido detectado en memoria, limpiando estado local...');
-    tripManager.resetState?.();
-    currentTrip = null;
-  } else {
-    currentTrip = {
-      ...currentTrip,
-      estado: estadoNormalizado
-    };
-  }
-}
+        if (!['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoNormalizado)) {
+          console.warn('[DriverApp] Viaje inválido detectado en memoria, limpiando estado local...');
+          tripManager.resetState?.();
+          currentTrip = null;
+        } else {
+          currentTrip = {
+            ...currentTrip,
+            estado: estadoNormalizado
+          };
+        }
+      }
+
       if (currentTrip) {
         console.log('[DriverApp] Estado inicial: viaje activo');
         this._currentTripId = currentTrip.id;
@@ -511,7 +517,6 @@ if (currentTrip) {
 
         await this._showRouteOnMap(currentTrip);
         uiController.showNavigationState(currentTrip);
-
       } else if (pendingTrip) {
         console.log('[DriverApp] Estado inicial: oferta pendiente');
         this._setFlowState('RECEIVING_OFFER');
@@ -521,7 +526,6 @@ if (currentTrip) {
           () => this._acceptOffer(pendingTrip.offerId),
           () => this._rejectOffer(pendingTrip.offerId)
         );
-
       } else {
         console.log('[DriverApp] Estado inicial: esperando');
 
@@ -557,10 +561,9 @@ if (currentTrip) {
       uiController.setGlobalLoading(false);
     }
   }
-  
-async _requireValidAuth() {
+
+  async _requireValidAuth() {
     try {
-      // 1) Intento normal
       let {
         data: sessionData,
         error: sessionError
@@ -572,7 +575,6 @@ async _requireValidAuth() {
 
       let session = sessionData?.session || null;
 
-      // 2) Si no hay sesion, esperamos un poco por hydration post-OAuth
       if (!session?.access_token) {
         await new Promise((resolve) => setTimeout(resolve, 900));
 
@@ -588,7 +590,6 @@ async _requireValidAuth() {
         session = retrySessionData?.session || null;
       }
 
-      // 3) Si sigue sin haber sesion, intentamos refresh
       if (!session?.access_token) {
         const {
           data: refreshData,
@@ -602,12 +603,10 @@ async _requireValidAuth() {
         session = refreshData?.session || null;
       }
 
-      // 4) Si no logramos sesion valida, salimos
       if (!session?.access_token) {
         return null;
       }
 
-      // 5) Recien aca pedimos el user real
       const {
         data: userData,
         error: userError
@@ -627,6 +626,7 @@ async _requireValidAuth() {
       return null;
     }
   }
+
   // =========================================================
   // UX PRO - HAPTICS + AUDIO FEEDBACK
   // =========================================================
@@ -685,7 +685,6 @@ async _requireValidAuth() {
   _celebrateAcceptFeedback() {
     this._vibrate([90, 50, 140]);
 
-    // usa soundManager si ya tiene algo cargado; si no, cae al tono WebAudio
     try {
       if (typeof soundManager?.play === 'function') {
         soundManager.play('trip-accepted');
@@ -699,7 +698,7 @@ async _requireValidAuth() {
       this._playAcceptTone();
     }
   }
-  
+
   // =========================================================
   // RESOLVER DRIVER ID
   // =========================================================
@@ -736,6 +735,7 @@ async _requireValidAuth() {
       this._setFlowState('RECEIVING_OFFER');
 
       this._vibrate([120, 60, 120]);
+
       if (this._isDocumentHidden()) {
         this._notifyIncomingTrip(trip).catch(() => null);
       }
@@ -746,22 +746,23 @@ async _requireValidAuth() {
         () => this._rejectOffer(trip.offerId)
       );
     });
-const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
-  const alreadySameTrip = this._currentTripId === trip.id;
 
-  this._currentTripId = trip.id;
-  this._setFlowState('GOING_TO_PICKUP');
+    const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
+      const alreadySameTrip = this._currentTripId === trip.id;
 
-  console.log('[DriverApp] tripAccepted', trip.id, 'alreadySame:', alreadySameTrip);
+      this._currentTripId = trip.id;
+      this._setFlowState('GOING_TO_PICKUP');
 
-  this._celebrateAcceptFeedback();
-  uiController.hideIncomingModal?.();
-  uiController.showToast('Viaje aceptado', 'success');
+      console.log('[DriverApp] tripAccepted', trip.id, 'alreadySame:', alreadySameTrip);
 
-  // 🔥 SIEMPRE renderizar, aunque sea el mismo ID
-  await this._showRouteOnMap(trip);
-  uiController.showNavigationState(trip);
-});
+      this._celebrateAcceptFeedback();
+      uiController.hideIncomingModal?.();
+      uiController.showToast('Viaje aceptado', 'success');
+
+      await this._showRouteOnMap(trip);
+      uiController.showNavigationState(trip);
+    });
+
     const unsubStarted = tripManager.on('tripStarted', async (trip) => {
       console.log('[DriverApp] tripStarted', trip.id);
       this._setFlowState('TRIP_STARTED');
@@ -783,7 +784,7 @@ const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
       this._setFlowState('TRIP_COMPLETED');
 
       this._currentTripId = null;
-      tripManager.resetState(); // 👈 ESTE TAMBIÉN
+      tripManager.resetState();
 
       mapService.clearRoute?.();
       uiController.hideIncomingModal?.();
@@ -791,6 +792,7 @@ const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
       uiController.hideArrival?.();
 
       uiController.showToast(`Viaje completado +$${trip.precio ?? 0}`, 'success', 5000);
+
       if (this._onlineStatus) {
         this._setFlowState('ONLINE_IDLE');
         uiController.showWaitingState();
@@ -809,7 +811,7 @@ const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
       uiController.hideArrival?.();
 
       uiController.showToast('Viaje cancelado', 'warning');
-      
+
       if (this._onlineStatus) {
         this._setFlowState('ONLINE_IDLE');
       } else {
@@ -819,43 +821,51 @@ const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
       uiController.showWaitingState();
     });
 
-const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
-  console.log('[DriverApp] pendingTripCleared', reason);
+    const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
+      console.log('[DriverApp] pendingTripCleared', reason);
 
-  const currentTrip = tripManager.getCurrentTrip?.();
+      const currentTrip = tripManager.getCurrentTrip?.();
 
-  if (currentTrip?.id) {
-    console.log('[DriverApp] pendingTripCleared ignorado porque ya hay viaje activo:', currentTrip.id);
-    return;
-  }
+      if (currentTrip?.id) {
+        console.log(
+          '[DriverApp] pendingTripCleared ignorado porque ya hay viaje activo:',
+          currentTrip.id
+        );
+        return;
+      }
 
-  if (this._onlineStatus) {
-    this._setFlowState('ONLINE_IDLE');
-  } else {
-    this._setFlowState('OFFLINE');
-  }
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
 
-  uiController.hideIncomingModal?.();
-  uiController.showWaitingState();
-});
-const unsubNoPending = tripManager.on('noPendingTrips', () => {
-  console.log('[DriverApp] noPendingTrips');
+      uiController.hideIncomingModal?.();
+      uiController.showWaitingState();
+    });
 
-  const currentTrip = tripManager.getCurrentTrip?.();
+    const unsubNoPending = tripManager.on('noPendingTrips', () => {
+      console.log('[DriverApp] noPendingTrips');
 
-  if (currentTrip?.id) {
-    console.log('[DriverApp] noPendingTrips ignorado porque ya hay viaje activo:', currentTrip.id);
-    return;
-  }
+      const currentTrip = tripManager.getCurrentTrip?.();
 
-  if (this._onlineStatus) {
-    this._setFlowState('ONLINE_IDLE');
-  } else {
-    this._setFlowState('OFFLINE');
-  }
+      if (currentTrip?.id) {
+        console.log(
+          '[DriverApp] noPendingTrips ignorado porque ya hay viaje activo:',
+          currentTrip.id
+        );
+        return;
+      }
 
-  uiController.showWaitingState();
-});
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      uiController.showWaitingState();
+    });
+
     this._unsubscribers.push(
       unsubOffer,
       unsubAccepted,
@@ -911,41 +921,43 @@ const unsubNoPending = tripManager.on('noPendingTrips', () => {
         ? { lat: trip.destino_lat, lng: trip.destino_lng }
         : { lat: trip.origen_lat, lng: trip.origen_lng };
 
-if (typeof mapService.showRoute === 'function') {
-  await mapService.showRoute(origin, destination);
+      if (typeof mapService.showRoute === 'function') {
+        await mapService.showRoute(origin, destination);
 
-  // 🔥 FIX MOBILE: forzar resize después de cambios de UI
-  setTimeout(() => {
-    try {
-      mapService.map?.resize?.();
-    } catch {}
-  }, 400);
+        setTimeout(() => {
+          try {
+            mapService.map?.resize?.();
+          } catch {}
+        }, 400);
 
-  return;
-}
-if (typeof mapService.drawRoute === 'function') {
-  await mapService.drawRoute(origin, destination);
+        return;
+      }
 
-  setTimeout(() => {
-    try {
-      mapService.map?.resize?.();
-    } catch {}
-  }, 400);
+      if (typeof mapService.drawRoute === 'function') {
+        await mapService.drawRoute(origin, destination);
 
-  return;
-}
-if (typeof mapService.showTripRoute === 'function') {
-  await mapService.showTripRoute(origin, destination);
+        setTimeout(() => {
+          try {
+            mapService.map?.resize?.();
+          } catch {}
+        }, 400);
 
-  setTimeout(() => {
-    try {
-      mapService.map?.resize?.();
-    } catch {}
-  }, 400);
+        return;
+      }
 
-  return;
-}
-      console.warn('[DriverApp] No existe metodo para mostrar ruta en mapService');
+      if (typeof mapService.showTripRoute === 'function') {
+        await mapService.showTripRoute(origin, destination);
+
+        setTimeout(() => {
+          try {
+            mapService.map?.resize?.();
+          } catch {}
+        }, 400);
+
+        return;
+      }
+
+      console.warn('[DriverApp] No existe método para mostrar ruta en mapService');
     } catch (error) {
       console.error('[DriverApp] Error mostrando ruta:', error);
     }
@@ -955,7 +967,9 @@ if (typeof mapService.showTripRoute === 'function') {
   // OFFER ACTIONS
   // =========================================================
   async _acceptOffer(offerId) {
-    if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
+    if (this._destroyed) {
+      return { success: false, error: 'APP_DESTROYED' };
+    }
 
     console.log('[DriverApp] Aceptando oferta:', offerId);
     uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
@@ -977,14 +991,13 @@ if (typeof mapService.showTripRoute === 'function') {
         return result;
       }
 
-this._celebrateAcceptFeedback();
+      this._celebrateAcceptFeedback();
 
-// 🔥 NO refrescar inmediatamente
-setTimeout(() => {
-  tripManager.refresh?.();
-}, 1500);     
+      setTimeout(() => {
+        tripManager.refresh?.();
+      }, 1500);
+
       return result;
-    
     } catch (err) {
       console.error('[DriverApp] Error aceptando oferta:', err);
       uiController.showToast('Error aceptando viaje', 'error');
@@ -993,8 +1006,11 @@ setTimeout(() => {
       uiController.setGlobalLoading?.(false);
     }
   }
+
   async _rejectOffer(offerId) {
-    if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
+    if (this._destroyed) {
+      return { success: false, error: 'APP_DESTROYED' };
+    }
 
     console.log('[DriverApp] Rechazando oferta:', offerId);
 
@@ -1018,20 +1034,22 @@ setTimeout(() => {
   // =========================================================
   // TRIP ACTIONS
   // =========================================================
-  async _acceptTrip(tripId) {
-    if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
+  async _acceptTrip() {
+    if (this._destroyed) {
+      return { success: false, error: 'APP_DESTROYED' };
+    }
 
-    console.log('[DriverApp] Aceptando viaje:', tripId);
+    console.log('[DriverApp] Aceptando viaje...');
     uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
 
     try {
-      const result = await tripManager.acceptTrip(tripId);
+      const result = await tripManager.acceptTrip();
       console.log('[DriverApp] acceptTrip result:', result);
 
       if (!result.success) {
         uiController.showToast(
           result.error === 'VIAJE_YA_TOMADO'
-            ? 'Otro chofer tomo el viaje'
+            ? 'Otro chofer tomó el viaje'
             : result.error || 'Error aceptando viaje',
           'warning'
         );
@@ -1048,13 +1066,13 @@ setTimeout(() => {
         return result;
       }
 
-this._celebrateAcceptFeedback();
+      this._celebrateAcceptFeedback();
 
-setTimeout(() => {
-  tripManager.refresh?.();
-}, 1500);
+      setTimeout(() => {
+        tripManager.refresh?.();
+      }, 1500);
 
-return result;
+      return result;
     } catch (err) {
       console.error('[DriverApp] Error aceptando viaje:', err);
       uiController.showToast('Error aceptando viaje', 'error');
@@ -1065,11 +1083,14 @@ return result;
       uiController.setGlobalLoading?.(false);
     }
   }
-  async _rejectTrip(tripId) {
-    if (this._destroyed) return { success: false, error: 'APP_DESTROYED' };
 
-    console.log('[DriverApp] Rechazando viaje:', tripId);
-    await tripManager.rejectTrip(tripId);
+  async _rejectTrip() {
+    if (this._destroyed) {
+      return { success: false, error: 'APP_DESTROYED' };
+    }
+
+    console.log('[DriverApp] Rechazando viaje...');
+    await tripManager.rejectTrip();
 
     if (this._onlineStatus) {
       this._setFlowState('ONLINE_IDLE');
@@ -1130,10 +1151,10 @@ return result;
           .eq('user_id', this._authUserId);
 
         if (error) {
-          console.error('[DriverApp] Error guardando ubicacion:', error);
+          console.error('[DriverApp] Error guardando ubicación:', error);
         }
       } catch (err) {
-        console.error('[DriverApp] Fallo update ubicacion:', err);
+        console.error('[DriverApp] Falló update ubicación:', err);
       }
     }
 
@@ -1199,177 +1220,178 @@ return result;
   // =========================================================
   // UI SETUP
   // =========================================================
-_setupUI() {
-  const btnFab = document.getElementById('fab-online');
-  const supportBtn = document.getElementById('menu-support');
-  const earningsBtn = document.getElementById('menu-earnings');
-  const historyBtn = document.getElementById('menu-history');
-  const settingsBtn = document.getElementById('menu-settings');
-  const profileBtn = document.getElementById('menu-view-profile');
-  const profileQuickBtn = document.getElementById('menu-view-profile-quick');
+  _setupUI() {
+    const btnFab = document.getElementById('fab-online');
+    const supportBtn = document.getElementById('menu-support');
+    const earningsBtn = document.getElementById('menu-earnings');
+    const historyBtn = document.getElementById('menu-history');
+    const settingsBtn = document.getElementById('menu-settings');
+    const profileBtn = document.getElementById('menu-view-profile');
+    const profileQuickBtn = document.getElementById('menu-view-profile-quick');
 
-  this._fabClickHandler = async (ev) => {
-    ev?.preventDefault?.();
-    ev?.stopPropagation?.();
+    this._fabClickHandler = async (ev) => {
+      ev?.preventDefault?.();
+      ev?.stopPropagation?.();
 
-    const fab = document.getElementById('fab-online');
+      const fab = document.getElementById('fab-online');
 
-    try {
-      console.log('[DriverApp] FAB toggle presionado', {
-        onlineActual: this._onlineStatus,
-        flow: this._driverFlowState
-      });
-
-      if (fab) {
-        fab.disabled = true;
-        fab.style.pointerEvents = 'none';
-      }
-
-      const hasActiveTrip = !!tripManager.getCurrentTrip();
-
-      if (hasActiveTrip && this._onlineStatus) {
-        uiController.showToast('No podes ponerte offline durante un viaje', 'warning');
-        return;
-      }
-
-      const nextOnline = !this._onlineStatus;
-
-      if (nextOnline) {
-        await this._ensureDriverShellReady();
-
-        const result = await tripManager.setDriverAvailability({
-          online: true,
-          disponible: true
+      try {
+        console.log('[DriverApp] FAB toggle presionado', {
+          onlineActual: this._onlineStatus,
+          flow: this._driverFlowState
         });
 
-        if (!result?.success) {
-          throw new Error(result?.error || 'No se pudo poner online');
+        if (fab) {
+          fab.disabled = true;
+          fab.style.pointerEvents = 'none';
         }
 
-        this._startRealtimeServicesInBackground();
+        const hasActiveTrip = !!tripManager.getCurrentTrip();
 
-        this._onlineStatus = true;
-        this._setFlowState('ONLINE_IDLE');
-        uiController.showWaitingState();
-      } else {
-        if (tripManager.getCurrentTrip()) {
-          uiController.showToast('No podes desconectarte en viaje', 'warning');
+        if (hasActiveTrip && this._onlineStatus) {
+          uiController.showToast('No podés ponerte offline durante un viaje', 'warning');
           return;
         }
 
-        const result = await tripManager.setDriverAvailability({
-          online: false,
-          disponible: false
-        });
+        const nextOnline = !this._onlineStatus;
 
-        if (!result?.success) {
-          throw new Error(result?.error || 'No se pudo poner offline');
+        if (nextOnline) {
+          await this._ensureDriverShellReady();
+
+          const result = await tripManager.setDriverAvailability({
+            online: true,
+            disponible: true
+          });
+
+          if (!result?.success) {
+            throw new Error(result?.error || 'No se pudo poner online');
+          }
+
+          this._startRealtimeServicesInBackground();
+
+          this._onlineStatus = true;
+          this._setFlowState('ONLINE_IDLE');
+          uiController.showWaitingState();
+        } else {
+          if (tripManager.getCurrentTrip()) {
+            uiController.showToast('No podés desconectarte en viaje', 'warning');
+            return;
+          }
+
+          const result = await tripManager.setDriverAvailability({
+            online: false,
+            disponible: false
+          });
+
+          if (!result?.success) {
+            throw new Error(result?.error || 'No se pudo poner offline');
+          }
+
+          this._onlineStatus = false;
+          this._setFlowState('OFFLINE');
+          this._currentTripId = null;
+
+          tripManager.resetState();
+          mapService.clearRoute?.();
+          uiController.hideIncomingModal?.();
+          uiController.hideNavigation?.();
+          uiController.hideArrival?.();
+          locationTracker.stop?.();
         }
 
-        this._onlineStatus = false;
-        this._setFlowState('OFFLINE');
-        this._currentTripId = null;
+        uiController.updateDriverState(
+          this._onlineStatus ? 'ONLINE' : 'OFFLINE',
+          this._onlineStatus
+        );
+        this._syncConnectionMenuItem();
 
-        tripManager.resetState();
-        mapService.clearRoute?.();
-        uiController.hideIncomingModal?.();
-        uiController.hideNavigation?.();
-        uiController.hideArrival?.();
-        locationTracker.stop?.();
+        uiController.showToast(
+          this._onlineStatus ? 'Ya estás en línea' : 'Quedaste fuera de línea',
+          'success'
+        );
+      } catch (err) {
+        console.error('[DriverApp] Error cambiando estado:', err);
+        uiController.showToast(err?.message || 'Error cambiando estado', 'error');
+      } finally {
+        if (fab) {
+          fab.disabled = false;
+          fab.style.pointerEvents = 'auto';
+        }
       }
+    };
 
-      uiController.updateDriverState(
-        this._onlineStatus ? 'ONLINE' : 'OFFLINE',
-        this._onlineStatus
-      );
-      this._syncConnectionMenuItem();
+    if (btnFab) {
+      btnFab.replaceWith(btnFab.cloneNode(true));
+      const freshFab = document.getElementById('fab-online');
 
-      uiController.showToast(
-        this._onlineStatus ? 'Ya estas en linea' : 'Quedaste fuera de linea',
-        'success'
-      );
-    } catch (err) {
-      console.error('[DriverApp] Error cambiando estado:', err);
-      uiController.showToast(err?.message || 'Error cambiando estado', 'error');
-    } finally {
-      if (fab) {
-        fab.disabled = false;
-        fab.style.pointerEvents = 'auto';
+      if (freshFab) {
+        freshFab.addEventListener('click', this._fabClickHandler);
       }
     }
-  };
 
-  if (btnFab) {
-    btnFab.replaceWith(btnFab.cloneNode(true));
-    const freshFab = document.getElementById('fab-online');
-
-     if (freshFab) {
-      freshFab.addEventListener('click', this._fabClickHandler);
+    if (supportBtn) {
+      supportBtn.addEventListener('click', async () => {
+        uiController.closeMenu?.();
+        await openDriverSupportPanel();
+      });
     }
-  }
-  if (supportBtn) {
-    supportBtn.addEventListener('click', async () => {
-      uiController.closeMenu?.();
-      await openDriverSupportPanel();
-    });
-  }
 
-  if (earningsBtn) {
-    earningsBtn.addEventListener('click', () => {
-      uiController.closeMenu?.();
-      uiController.showInfoSheet?.({
-        title: 'Ganancias',
-        description: 'Resumen rapido de tu jornada para revisar ingresos y rendimiento desde el celular.',
-        metrics: [
-          { label: 'Hoy', value: document.getElementById('stat-earnings')?.textContent || '$0' },
-          { label: 'Viajes', value: document.getElementById('stat-trips')?.textContent || '0' },
-          { label: 'Rating', value: document.getElementById('stat-rating')?.textContent || '5.0' }
-        ]
+    if (earningsBtn) {
+      earningsBtn.addEventListener('click', () => {
+        uiController.closeMenu?.();
+        uiController.showInfoSheet?.({
+          title: 'Ganancias',
+          description: 'Resumen rápido de tu jornada para revisar ingresos y rendimiento desde el celular.',
+          metrics: [
+            { label: 'Hoy', value: document.getElementById('stat-earnings')?.textContent || '$0' },
+            { label: 'Viajes', value: document.getElementById('stat-trips')?.textContent || '0' },
+            { label: 'Rating', value: document.getElementById('stat-rating')?.textContent || '5.0' }
+          ]
+        });
       });
-    });
-  }
+    }
 
-  if (historyBtn) {
-    historyBtn.addEventListener('click', () => {
-      uiController.closeMenu?.();
-      uiController.showInfoSheet?.({
-        title: 'Historial',
-        description: 'Aca vas a poder revisar tus ultimos viajes y el estado general de tu actividad.',
-        metrics: [
-          { label: 'Viajes', value: document.getElementById('stat-trips')?.textContent || '0' },
-          { label: 'Estado', value: this._onlineStatus ? 'Online' : 'Offline' }
-        ]
+    if (historyBtn) {
+      historyBtn.addEventListener('click', () => {
+        uiController.closeMenu?.();
+        uiController.showInfoSheet?.({
+          title: 'Historial',
+          description: 'Acá vas a poder revisar tus últimos viajes y el estado general de tu actividad.',
+          metrics: [
+            { label: 'Viajes', value: document.getElementById('stat-trips')?.textContent || '0' },
+            { label: 'Estado', value: this._onlineStatus ? 'Online' : 'Offline' }
+          ]
+        });
       });
-    });
+    }
+
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', async () => {
+        uiController.closeMenu?.();
+        await this._fabClickHandler();
+      });
+    }
+
+    if (profileBtn) {
+      profileBtn.addEventListener('click', async () => {
+        uiController.closeMenu?.();
+        await this._loadDriverProfileSummary({ email: this._session?.user?.email || '' });
+        this._openDriverProfileSheet();
+      });
+    }
+
+    if (profileQuickBtn) {
+      profileQuickBtn.addEventListener('click', async () => {
+        uiController.closeMenu?.();
+        await this._loadDriverProfileSummary({ email: this._session?.user?.email || '' });
+        this._openDriverProfileSheet();
+      });
+    }
+
+    this._syncConnectionMenuItem();
+    window.addEventListener('driverAction', this._driverActionHandler);
   }
 
-  if (settingsBtn) {
-    settingsBtn.addEventListener('click', async () => {
-      uiController.closeMenu?.();
-      await this._fabClickHandler();
-    });
-  }
-
-  if (profileBtn) {
-    profileBtn.addEventListener('click', async () => {
-      uiController.closeMenu?.();
-      await this._loadDriverProfileSummary({ email: this._session?.user?.email || '' });
-      this._openDriverProfileSheet();
-    });
-  }
-
-  if (profileQuickBtn) {
-    profileQuickBtn.addEventListener('click', async () => {
-      uiController.closeMenu?.();
-      await this._loadDriverProfileSummary({ email: this._session?.user?.email || '' });
-      this._openDriverProfileSheet();
-    });
-  }
-
-  this._syncConnectionMenuItem();
-
-  window.addEventListener('driverAction', this._driverActionHandler);
-}
   async _handleDriverActionEvent(e) {
     const { action, tripId } = e.detail || {};
     await this._handleAction(action, tripId);
@@ -1379,11 +1401,11 @@ _setupUI() {
     if (!action) return null;
 
     if (this._actionLock && action !== 'navigate' && action !== 'whatsapp') {
-      console.warn('[DriverApp] Accion bloqueada por lock:', action);
+      console.warn('[DriverApp] Acción bloqueada por lock:', action);
       return null;
     }
 
-    console.log('[DriverApp] Accion:', action, tripId);
+    console.log('[DriverApp] Acción:', action, tripId);
 
     const pending = tripManager.getPendingTrip();
     const current = tripManager.getCurrentTrip();
@@ -1411,29 +1433,29 @@ _setupUI() {
           return result;
         }
 
-       case 'finish': {
-         const tripIdFinal = current?.id || this._currentTripId || tripId;
+        case 'finish': {
+          const tripIdFinal = current?.id || this._currentTripId || tripId;
 
-         if (!tripIdFinal) {
-           console.error('[DriverApp] No hay tripId para finalizar');
-           uiController.showToast?.('Error: no hay viaje activo', 'error');
-           return;
-         }
+          if (!tripIdFinal) {
+            console.error('[DriverApp] No hay tripId para finalizar');
+            uiController.showToast?.('Error: no hay viaje activo', 'error');
+            return;
+          }
 
-         const result = await tripManager.finishTrip(tripIdFinal);
-         if (result?.success) {
+          const result = await tripManager.finishTrip(tripIdFinal);
+
+          if (result?.success) {
             this._setFlowState('TRIP_COMPLETED');
- 
             this._currentTripId = null;
 
-            tripManager.resetState(); // 👈 ESTE ES CLAVE
+            tripManager.resetState();
 
             mapService.clearRoute?.();
             uiController.hideIncomingModal?.();
             uiController.hideNavigation?.();
             uiController.hideArrival?.();
             uiController.showToast('Viaje finalizado', 'success');
-            
+
             if (this._onlineStatus) {
               this._setFlowState('ONLINE_IDLE');
               uiController.showWaitingState();
@@ -1443,30 +1465,32 @@ _setupUI() {
 
             await tripManager.refresh();
           }
+
           return result;
         }
 
-case 'cancel': {
-  const result = await tripManager.cancelTrip(current?.id || tripId);
+        case 'cancel': {
+          const result = await tripManager.cancelTrip(current?.id || tripId);
 
-  if (result?.success) {
-    this._currentTripId = null;
-    tripManager.resetState();
-    mapService.clearRoute?.();
-    uiController.hideIncomingModal?.();
-    uiController.hideNavigation?.();
-    uiController.hideArrival?.();
+          if (result?.success) {
+            this._currentTripId = null;
+            tripManager.resetState();
+            mapService.clearRoute?.();
+            uiController.hideIncomingModal?.();
+            uiController.hideNavigation?.();
+            uiController.hideArrival?.();
 
-    if (this._onlineStatus) {
-      this._setFlowState('ONLINE_IDLE');
-      uiController.showWaitingState();
-    } else {
-      this._setFlowState('OFFLINE');
-    }
-  }
+            if (this._onlineStatus) {
+              this._setFlowState('ONLINE_IDLE');
+              uiController.showWaitingState();
+            } else {
+              this._setFlowState('OFFLINE');
+            }
+          }
 
-  return result;
-}
+          return result;
+        }
+
         case 'navigate':
           return this._openExternalNav();
 
@@ -1474,7 +1498,7 @@ case 'cancel': {
           return this._openWhatsApp();
 
         default:
-          console.warn('[DriverApp] Accion desconocida:', action);
+          console.warn('[DriverApp] Acción desconocida:', action);
           return null;
       }
     } finally {
