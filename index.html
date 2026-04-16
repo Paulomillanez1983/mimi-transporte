@@ -2052,7 +2052,7 @@ async function enriquecerViajeConChofer(viajeLike = null) {
   try {
     const { data, error } = await window.supabase
       .from('choferes')
-      .select('id_uuid, nombre, telefono, email')
+      .select('id_uuid, nombre, telefono, email, lat, lng, heading, last_seen_at')
       .eq('id_uuid', choferId)
       .maybeSingle();
 
@@ -2064,11 +2064,14 @@ async function enriquecerViajeConChofer(viajeLike = null) {
     }
 
     return {
-      ...viajeLike,
-      chofer_nombre: choferNombreExistente || data.nombre || data.email || '',
-      chofer_telefono: choferTelefonoExistente || data.telefono || ''
-    };
-  } catch (err) {
+  ...viajeLike,
+  chofer_nombre: choferNombreExistente || data.nombre || data.email || '',
+  chofer_telefono: choferTelefonoExistente || data.telefono || '',
+  chofer_lat: Number(data.lat),
+  chofer_lng: Number(data.lng),
+  chofer_heading: Number(data.heading || 0),
+  chofer_last_seen_at: data.last_seen_at || null
+}; catch (err) {
     console.warn('[cliente] error enriqueciendo viaje con chofer:', err);
     return viajeLike;
   }
@@ -2610,6 +2613,21 @@ function suscribirseEstadoViajeRealtime(viajeId) {
           const choferAntes = !!(oldRow?.assigned_driver_id || oldRow?.chofer_id_uuid);
           const choferAhora = !!(newRow?.assigned_driver_id || newRow?.chofer_id_uuid);
           const choferRecienAsignado = !choferAntes && choferAhora;
+          const choferIdActual = newRow?.assigned_driver_id || newRow?.chofer_id_uuid || null;
+
+if (choferIdActual) {
+  state.choferId = choferIdActual;
+
+  if (coordenadasValidas(newRow?.chofer_lat, newRow?.chofer_lng)) {
+    actualizarMarkerChoferEnMapa(newRow.chofer_lat, newRow.chofer_lng, {
+      heading: newRow?.chofer_heading || 0
+    });
+  }
+
+  if (typeof suscribirseUbicacionChoferRealtime === 'function') {
+    suscribirseUbicacionChoferRealtime(choferIdActual);
+  }
+}
 
           let nuevoEstado = resolverEstadoViajeCliente(newRow);
 
@@ -2669,6 +2687,17 @@ function suscribirseEstadoViajeRealtime(viajeId) {
               3000
             );
           }
+          if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
+  if (typeof limpiarCanalChoferRealtime === 'function') {
+    limpiarCanalChoferRealtime();
+  }
+
+  if (typeof limpiarMarkerChofer === 'function') {
+    limpiarMarkerChofer();
+  }
+
+  state.choferId = null;
+}
 
           if (nuevoEstado === 'CANCELADO') {
             notif.show(
