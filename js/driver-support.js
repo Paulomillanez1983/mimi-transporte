@@ -23,6 +23,10 @@ const supportState = {
   installPromptShown: false
 };
 const SUPPORT_REQUEST_TIMEOUT_MS = 12000;
+const APP_BASE_PATH = (() => {
+  const path = window.location.pathname || "/";
+  return path.endsWith("/") ? path : path.replace(/[^/]*$/, "");
+})();
 
 function getEls() {
   return {
@@ -1230,18 +1234,18 @@ function bindPushHooks() {
     }
 
     try {
-      const registration = await navigator.serviceWorker.getRegistration("/mimi-transporte/firebase-messaging-sw.js");
+      const registration = await navigator.serviceWorker.getRegistration(`${APP_BASE_PATH}firebase-messaging-sw.js`);
 
       if (registration?.showNotification) {
         await registration.showNotification(title || "Soporte MIMI", {
           body: body || "Tenes una respuesta nueva de soporte.",
-          icon: "/mimi-transporte/assets/icons/icon-192x192.png",
-          badge: "/mimi-transporte/assets/icons/badge-icon.png",
+          icon: `${APP_BASE_PATH}assets/icons/icon-192x192.png`,
+          badge: `${APP_BASE_PATH}assets/icons/badge-icon.png`,
           tag: "driver-support-foreground",
           renotify: true,
           requireInteraction: true,
           data: {
-            url: "/mimi-transporte/chofer-panel.html",
+            url: `${APP_BASE_PATH}chofer-panel.html`,
             type: "support-message"
           }
         });
