@@ -828,29 +828,43 @@ async _requireValidAuth() {
       uiController.showWaitingState();
     });
 
-    const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
-      console.log('[DriverApp] pendingTripCleared', reason);
+const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
+  console.log('[DriverApp] pendingTripCleared', reason);
 
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-      } else {
-        this._setFlowState('OFFLINE');
-      }
+  const currentTrip = tripManager.getCurrentTrip?.();
 
-      uiController.hideIncomingModal?.();
-      uiController.showWaitingState();
-    });
+  if (currentTrip?.id) {
+    console.log('[DriverApp] pendingTripCleared ignorado porque ya hay viaje activo:', currentTrip.id);
+    return;
+  }
 
-    const unsubNoPending = tripManager.on('noPendingTrips', () => {
-      console.log('[DriverApp] noPendingTrips');
+  if (this._onlineStatus) {
+    this._setFlowState('ONLINE_IDLE');
+  } else {
+    this._setFlowState('OFFLINE');
+  }
 
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-      }
+  uiController.hideIncomingModal?.();
+  uiController.showWaitingState();
+});
+const unsubNoPending = tripManager.on('noPendingTrips', () => {
+  console.log('[DriverApp] noPendingTrips');
 
-      uiController.showWaitingState();
-    });
+  const currentTrip = tripManager.getCurrentTrip?.();
 
+  if (currentTrip?.id) {
+    console.log('[DriverApp] noPendingTrips ignorado porque ya hay viaje activo:', currentTrip.id);
+    return;
+  }
+
+  if (this._onlineStatus) {
+    this._setFlowState('ONLINE_IDLE');
+  } else {
+    this._setFlowState('OFFLINE');
+  }
+
+  uiController.showWaitingState();
+});
     this._unsubscribers.push(
       unsubOffer,
       unsubAccepted,
