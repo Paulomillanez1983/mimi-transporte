@@ -1414,17 +1414,16 @@ top: calc(var(--mobile-top) + 56px);
     display: none !important;
   }
 
-  .bottom-sheet {
-    max-height: min(78dvh, 720px);
-    z-index: 240;
-    border-radius: 22px 22px 0 0;
-    transform: translateY(calc(100% - 24px));
-    background: transparent;
-    box-shadow: none;
-    border-top: none;
-    backdrop-filter: none;
-  }
-
+.bottom-sheet {
+  max-height: min(64dvh, 560px);
+  z-index: 240;
+  border-radius: 18px 18px 0 0;
+  transform: translateY(calc(100% - 18px));
+  background: transparent;
+  box-shadow: none;
+  border-top: none;
+  backdrop-filter: none;
+}
   .bottom-sheet:not(.expanded) .sheet-handle,
   .bottom-sheet:not(.expanded) .sheet-content {
     display: none;
@@ -1465,11 +1464,10 @@ top: calc(var(--mobile-top) + 56px);
     height: 5px;
   }
 
-  .sheet-content {
-    padding: 2px 16px calc(var(--mobile-fab-h) + 26px + var(--safe-bottom));
-    max-height: calc(78dvh - 20px);
-  }
-
+.sheet-content {
+  padding: 2px 12px calc(var(--mobile-fab-h) + 16px + var(--safe-bottom));
+  max-height: calc(64dvh - 18px);
+}
 
   .waiting-state {
     gap: 10px;
@@ -1490,89 +1488,83 @@ top: calc(var(--mobile-top) + 56px);
   }
 
 
-  .arrival-panel {
-    left: 50%;
-    right: auto;
-    width: min(calc(100vw - 32px), 360px);
-    max-width: calc(100vw - 32px);
-    bottom: calc(var(--mobile-fab-h) + 26px + var(--safe-bottom));
-    transform: translateX(-50%) translateY(calc(100% + 32px));
-    border-radius: 24px;
-    padding: 20px 16px;
-    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
-    z-index: 420;
-  }
-
+.arrival-panel {
+  left: 50%;
+  right: auto;
+  width: min(calc(100vw - 24px), 300px);
+  max-width: calc(100vw - 24px);
+  bottom: calc(var(--mobile-fab-h) + 14px + var(--safe-bottom));
+  transform: translateX(-50%) translateY(calc(100% + 24px));
+  border-radius: 18px;
+  padding: 14px 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.20);
+  z-index: 420;
+}
   .arrival-panel.active {
     transform: translateX(-50%) translateY(0);
   }
 
-  .arrival-content h2 {
-    font-size: clamp(28px, 8vw, 34px);
-    line-height: 1.02;
-    margin: 0;
-  }
+.arrival-content h2 {
+  font-size: clamp(20px, 6vw, 24px);
+  line-height: 1.02;
+  margin: 0;
+}
 
-  .arrival-content p {
-    font-size: 17px;
-    line-height: 1.35;
-    margin-top: 10px;
-  }
-
+.arrival-content p {
+  font-size: 13px;
+  line-height: 1.25;
+  margin-top: 6px;
+}
   .incoming-modal {
     padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
 
-  .modal-content {
-    max-height: min(84dvh, 720px);
-    padding: 18px 14px calc(18px + var(--safe-bottom));
-    border-radius: 22px 22px 0 0;
-  }
-
+.modal-content {
+  max-height: min(72dvh, 560px);
+  padding: 14px 12px calc(14px + var(--safe-bottom));
+  border-radius: 18px 18px 0 0;
+}
   .trip-metrics-horizontal {
     gap: 8px;
   }
 
-  .metric-box {
-    padding: 10px 8px;
-    border-radius: 14px;
-  }
-
-  .metric-value {
-    font-size: clamp(18px, 5vw, 22px);
-  }
-
+.metric-box {
+  padding: 8px 6px;
+  border-radius: 12px;
+}
+.metric-value {
+  font-size: clamp(14px, 4vw, 18px);
+}
   .metric-label {
     font-size: 10px;
   }
 
-  .client-row {
-    padding: 12px;
-    border-radius: 14px;
-  }
-
+.client-row {
+  padding: 10px;
+  border-radius: 12px;
+  gap: 8px;
+  margin-bottom: 10px;
+}
   .modal-actions-uber {
     grid-template-columns: 1fr 1.2fr;
     gap: 10px;
   }
 
-  .btn-reject,
-  .btn-accept {
-    min-height: 52px;
-    padding: 12px;
-    font-size: 14px;
-    border-radius: 14px;
-  }
-
+.btn-reject,
+.btn-accept {
+  min-height: 44px;
+  padding: 10px;
+  font-size: 12px;
+  border-radius: 12px;
+}
   .trip-active-panel {
     gap: 12px;
   }
 
-  .trip-header {
-    padding: 12px;
-    border-radius: 16px;
-  }
-
+.trip-header {
+  padding: 10px;
+  border-radius: 14px;
+}
   .client-info-large {
     grid-template-columns: 42px 1fr auto;
     gap: 10px;
@@ -1601,13 +1593,12 @@ top: calc(var(--mobile-top) + 56px);
     gap: 8px;
   }
 
-  .action-btn-large {
-    min-height: 50px;
-    border-radius: 14px;
-    font-size: 14px;
-    padding: 12px;
-  }
-
+.action-btn-large {
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 10px;
+}
   .trip-progress-steps {
     gap: 6px;
   }
@@ -1636,51 +1627,65 @@ top: calc(var(--mobile-top) + 56px);
 
 @media (max-width: 390px) {
   :root {
-    --mobile-header-size: 44px;
-    --mobile-nav-height: 50px;
-    --mobile-sheet-peek: 100px;
-    --mobile-sheet-peek-trip: 148px;
+    --mobile-header-size: 42px;
+    --mobile-nav-height: 46px;
+    --mobile-sheet-peek: 86px;
+    --mobile-sheet-peek-trip: 126px;
   }
 
-
   .nav-content {
-    padding: 8px 10px;
+    padding: 6px 8px;
   }
 
   .maneuver-icon {
-    width: 34px;
-    height: 34px;
+    width: 26px;
+    height: 26px;
   }
 
   .nav-next {
-    font-size: 13px;
+    font-size: 10px;
   }
 
   .nav-distance {
-    font-size: 13px;
+    font-size: 10px;
   }
 
   .fab-online {
-    min-height: 56px;
+    width: 84px;
+    height: 84px;
+    min-height: 84px;
   }
 
   .fab-text {
-    font-size: 14px;
+    font-size: 12px;
+  }
+
+  .fab-subtext {
+    font-size: 8px;
+    max-width: 58px;
   }
 
   .waiting-state h3 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .waiting-state p {
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .trip-price-large {
-    font-size: 16px;
+    font-size: 14px;
+  }
+
+  .metric-value {
+    font-size: 13px;
+  }
+
+  .client-details h4,
+  .client-name {
+    font-size: 13px;
   }
 }
-
 @media (max-width: 900px) and (orientation: landscape) {
   .stats-floating {
     display: none !important;
