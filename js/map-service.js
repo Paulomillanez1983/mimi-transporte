@@ -692,26 +692,42 @@ class MapService {
         });
       }
 
-      if (routeData.geometry.length >= 2) {
-        const bounds = routeData.geometry.reduce(
-          (b, coord) => b.extend(coord),
-          new window.maplibregl.LngLatBounds(
-            routeData.geometry[0],
-            routeData.geometry[0]
-          )
-        );
+if (routeData.geometry.length >= 2) {
+  const bounds = routeData.geometry.reduce(
+    (b, coord) => b.extend(coord),
+    new window.maplibregl.LngLatBounds(
+      routeData.geometry[0],
+      routeData.geometry[0]
+    )
+  );
 
-        const isMobile = window.innerWidth <= 768;
-        this.map.fitBounds(bounds, {
-          padding: isMobile
-            ? { top: 138, right: 28, bottom: 244, left: 28 }
-            : { top: 120, right: 120, bottom: 180, left: 120 },
-          duration: 800,
-          maxZoom: 18,
-        });
-      }
+  const isMobile = window.innerWidth <= 768;
 
-      console.log("[Map] Route drawn", {
+  this.map.fitBounds(bounds, {
+    padding: isMobile
+      ? {
+          top: 110,
+          right: 20,
+          bottom: Math.max(140, window.innerHeight * 0.22),
+          left: 20
+        }
+      : {
+          top: 120,
+          right: 120,
+          bottom: 180,
+          left: 120
+        },
+    duration: 800,
+    maxZoom: 18,
+  });
+
+  setTimeout(() => {
+    try {
+      this.map.resize();
+    } catch {}
+  }, 300);
+}
+        console.log("[Map] Route drawn", {
         distance: Math.round(routeData.distance),
         duration: Math.round(routeData.duration),
         fallback: routeData.isFallback,
