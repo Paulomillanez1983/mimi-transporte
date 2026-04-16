@@ -188,9 +188,19 @@ body.menu-open .nav-bar {
 }
 
 .driver-info {
-  display: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
 }
 
+.driver-info h1,
+.status-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .icon-btn {
   width: 46px;
   height: 46px;
@@ -1322,9 +1332,6 @@ top: calc(var(--mobile-top) + 56px);
 }
 
 /* =========================================================
-   MOBILE FINAL ÚNICO
-   ========================================================= */
-/* =========================================================
    SMARTPHONE
    Estas reglas priorizan la experiencia real del chofer en celular.
    ========================================================= */
@@ -1346,12 +1353,14 @@ top: calc(var(--mobile-top) + 56px);
     gap: 10px;
   }
 
-  .driver-profile {
-    width: var(--mobile-header-size);
-    min-width: var(--mobile-header-size);
-    justify-content: flex-start;
-  }
-
+.driver-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+  width: auto;
+}
   .avatar,
   .icon-btn {
     width: var(--mobile-header-size);
@@ -1624,7 +1633,27 @@ top: calc(var(--mobile-top) + 56px);
     max-width: 100%;
   }
 }
+.header-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+.icon-btn {
+  flex: 0 0 auto;
+}
+.driver-info h1 {
+  font-size: clamp(13px, 3.6vw, 16px);
+  line-height: 1.1;
+  font-weight: 800;
+  margin: 0;
+}
 
+.status-text {
+  font-size: clamp(11px, 3vw, 13px);
+  line-height: 1.1;
+  color: rgba(17,17,17,0.68);
+}
 @media (max-width: 390px) {
   :root {
     --mobile-header-size: 42px;
