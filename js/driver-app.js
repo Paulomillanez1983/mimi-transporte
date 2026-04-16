@@ -40,7 +40,7 @@ class DriverApp {
     // Proteccion lifecycle / acciones
     this._destroyed = false;
     this._actionLock = false;
-
+    this.driverId = null;
     // Refs para cleanup
     this._fabClickHandler = null;
     this._driverActionHandler = this._handleDriverActionEvent.bind(this);
@@ -412,8 +412,8 @@ class DriverApp {
       // 4) Resolver driverId
       console.log('[DriverApp] Resolviendo driverId...');
       const driverId = await this._resolveDriverId();
+      this.driverId = driverId;
       console.log('[DriverApp] driverId detectado:', driverId);
-
       // 5) Inicializar TripManager
       console.log('[DriverApp] Inicializando TripManager...');
       const tripManagerReady = await tripManager.init(driverId);
