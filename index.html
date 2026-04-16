@@ -5778,11 +5778,14 @@ state.estadoViaje = normalizarEstadoUpper(estadoInicialSeguro);
     });
 
     const dispatchOk = !!dispatchInfo?.ok;
-    const choferDetectado =
-      dispatchResultado?.rpc_resultado?.chofer_id ||
-      dispatchResultado?.chofer_id ||
-      null;
-if (dispatchOk) {
+const choferDetectado =
+  dispatchResultado?.viaje_actualizado?.assigned_driver_id ||
+  dispatchResultado?.viaje_actualizado?.chofer_id_uuid ||
+  dispatchResultado?.assigned_driver_id ||
+  dispatchResultado?.chofer_id_uuid ||
+  null;
+    
+    if (dispatchOk) {
   if (choferDetectado) {
     state.viajeEstado = 'ofertando';
     state.estadoViaje = 'OFERTANDO';
