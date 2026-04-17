@@ -4841,7 +4841,8 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
   try {
     if (!window.mapaCliente || !window.mapReady) return;
     if (!origenChofer || !destinoCliente) return;
-
+    if (typeof window.mapaCliente.isStyleLoaded === 'function' && !window.mapaCliente.isStyleLoaded()) return;
+  
     const choferLat = Number(origenChofer.lat);
     const choferLng = Number(origenChofer.lng);
     const clienteLat = Number(destinoCliente.lat);
