@@ -182,8 +182,8 @@ if (!mapa || !listo) {
   }
 }
   
-async function cargarUbicacionActualChofer(choferId) {
-  if (!choferId || !window.sbRealtime) return null;
+async function cargarUltimoTrackingViaje(viajeId) {
+  if (!viajeId || !window.sbRealtime) return null;
 
   try {
     const { data: sessionData, error: sessionError } = await window.sbRealtime.auth.getSession();
@@ -195,14 +195,15 @@ async function cargarUbicacionActualChofer(choferId) {
 
     const accessToken = sessionData?.session?.access_token || null;
     if (!accessToken) {
-      console.warn('[realtime-chofer] no hay access token para leer ubicación del chofer');
+      console.warn('[realtime-chofer] no hay access token para leer tracking');
       return null;
     }
 
     const url =
-      `https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/choferes` +
-      `?select=id_uuid,lat,lng,heading,last_seen_at` +
-      `&id_uuid=eq.${encodeURIComponent(choferId)}`;
+      `https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viaje_tracking` +
+      `?select=viaje_id,chofer_id_uuid,lat,lng,heading,speed,accuracy,timestamp` +
+      `&viaje_id=eq.${encodeURIComponent(viajeId)}` +
+      `&order=timestamp.desc&limit=1`;
 
     const resp = await fetch(url, {
       method: 'GET',
@@ -216,33 +217,101 @@ async function cargarUbicacionActualChofer(choferId) {
     const json = await resp.json().catch(() => null);
 
     if (!resp.ok) {
-      console.warn('[realtime-chofer] error leyendo ubicación inicial:', json || resp.status);
+      console.warn('[realtime-chofer] error leyendo tracking inicial:', json || resp.status);
       return null;
     }
 
-    const data = Array.isArray(json) ? (json[0] || null) : null;
+    const row = Array.isArray(json) ? (json[0] || null) : null;
 
-    if (!data) {
-      console.warn('[realtime-chofer] sin fila visible para el chofer asignado', { choferId });
+    if (!row) {
+      console.warn('[realtime-chofer] sin tracking visible para el viaje', { viajeId });
       return null;
     }
 
     if (
       typeof window.coordenadasValidas === 'function' &&
-      window.coordenadasValidas(data.lat, data.lng)
+      window.coordenadasValidas(row.lat, row.lng)
     ) {
-      actualizarMarkerChoferEnMapa(data.lat, data.lng, {
-        heading: data.heading || 0
+      actualizarMarkerChoferEnMapa(row.lat, row.lng, {
+        heading: row.heading || 0
       });
     }
 
-    return data;
+    return row;
   } catch (err) {
-    console.warn('[realtime-chofer] error ubicación inicial chofer:', err);
+    console.warn('[realtime-chofer] error tracking inicial:', err);
     return null;
   }
 }
-  function suscribirseUbicacionChoferRealtime(choferId) {
+
+function suscribirseUbicacionChoferRealtime(viajeId) {
+  if (!viajeId || !window.sbRealtime) {
+    console.warn('[realtime-chofer] faltan datos para suscribirse');
+    return null;
+  }
+
+  if (
+    window.state?.trackingViajeId &&
+    String(window.state.trackingViajeId) === String(viajeId) &&
+    window.choferRealtimeChannel
+  ) {
+    return window.choferRealtimeChannel;
+  }
+
+  limpiarCanalChoferRealtime();
+
+  if (window.state) {
+    window.state.trackingViajeId = viajeId;
+  }
+
+  cargarUltimoTrackingViaje(viajeId).catch(() => null);
+
+  window.choferRealtimeChannel = window.sbRealtime
+    .channel(`viaje-tracking-${viajeId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'viaje_tracking',
+        filter: `viaje_id=eq.${viajeId}`
+      },
+      (payload) => {
+        console.log('[viaje_tracking realtime] insert recibido', payload?.new);
+
+        try {
+          const row = payload?.new || {};
+          if (typeof window.coordenadasValidas !== 'function') return;
+          if (!window.coordenadasValidas(row.lat, row.lng)) return;
+
+          actualizarMarkerChoferEnMapa(row.lat, row.lng, {
+            heading: row.heading || 0
+          });
+
+          const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
+
+          if (
+            ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
+            typeof window.actualizarEstadoSolicitudUI === 'function'
+          ) {
+            window.actualizarEstadoSolicitudUI({
+              estado: 'EN_CAMINO',
+              texto: 'Tu chofer se está acercando al punto de retiro.'
+            });
+          }
+        } catch (err) {
+          console.error('[realtime-chofer] error procesando tracking:', err);
+        }
+      }
+    )
+    .subscribe((status) => {
+      console.log('[realtime-chofer] subscribe status:', status);
+    });
+
+  return window.choferRealtimeChannel;
+}
+  
+function suscribirseUbicacionChoferRealtime(choferId) {
     if (!choferId || !window.sbRealtime) {
       console.warn('[realtime-chofer] faltan datos para suscribirse');
       return null;
