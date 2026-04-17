@@ -2576,10 +2576,13 @@ function actualizarEstadoLocalViaje(nuevoEstado) {
     guardarViajeActivoEnStorage();
   }
 
-  if (typeof actualizarBotonCancelarViaje === 'function') {
-    actualizarBotonCancelarViaje();
-  }
-
+if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
+if (typeof actualizarBotonCotizar === 'function') {
+  actualizarBotonCotizar();
+}
+  
   if (typeof actualizarEstadoSolicitudUI === 'function') {
     const notifData = mapearEstadoANotificacion(upper);
     actualizarEstadoSolicitudUI({
@@ -2877,10 +2880,13 @@ if (viaje?.id && estadosActivos.includes(estado)) {
     renderizarCentroNotificaciones();
   }
 
-  if (typeof actualizarBotonCancelarViaje === 'function') {
-    actualizarBotonCancelarViaje();
-  }
-
+if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
+if (typeof actualizarBotonCotizar === 'function') {
+  actualizarBotonCotizar();
+}
+  
   if (typeof actualizarEstadoSolicitudUI === 'function') {
     const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
     actualizarEstadoSolicitudUI({
@@ -2906,10 +2912,13 @@ if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
   actualizarStatusCardNotificaciones(viajeLocal.estadoViaje);
   renderizarCentroNotificaciones();
 
-  if (typeof actualizarBotonCancelarViaje === 'function') {
-    actualizarBotonCancelarViaje();
-  }
-
+if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
+if (typeof actualizarBotonCotizar === 'function') {
+  actualizarBotonCotizar();
+}
+  
   if (typeof actualizarEstadoSolicitudUI === 'function') {
     const notifData = mapearEstadoANotificacion(viajeLocal.estadoViaje);
     actualizarEstadoSolicitudUI({
@@ -5328,6 +5337,27 @@ window.actualizarCamaraSeguimientoChofer = actualizarCamaraSeguimientoChofer;
 
 async function calcularRuta() {
     startPageTransition();
+  const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+const estadosBloqueados = [
+  'BUSCANDO_CHOFER',
+  'OFERTANDO',
+  'OFERTADO',
+  'ASIGNADO',
+  'ACEPTADO',
+  'EN_CAMINO',
+  'INICIADO',
+  'EN_CURSO'
+];
+
+if (state?.viajeId && estadosBloqueados.includes(estado)) {
+  notif.show(
+    'Viaje en proceso',
+    'No podés volver a cotizar mientras haya un viaje activo.',
+    'warning'
+  );
+  actualizarBotonCotizar?.();
+  return;
+}
 
   if (isCalculatingQuote) return;
   const requestId = ++currentQuoteRequestId;
@@ -6173,8 +6203,9 @@ state.viajeEstado = estadoInicialSeguro;
 state.estadoViaje = normalizarEstadoUpper(estadoInicialSeguro);
     
     actualizarBotonCancelarViaje();
+    actualizarBotonCotizar();
     guardarViajeActivoEnStorage();
-
+    
     console.log('[confirmarViaje] viaje creado OK:', {
       viajeId: state.viajeId,
       estado: state.viajeEstado,
@@ -6198,10 +6229,10 @@ if (dispatchOk) {
     state.viajeEstado = 'ofertando';
     state.estadoViaje = 'OFERTANDO';
   }
-  actualizarBotonCancelarViaje();
-  guardarViajeActivoEnStorage();
+    actualizarBotonCancelarViaje();
+    guardarViajeActivoEnStorage();
 
-  actualizarEstadoSolicitudUI({
+    actualizarEstadoSolicitudUI({
     estado: state.viajeEstado,
     texto: 'Estamos notificando choferes cercanos...'
   });
@@ -6259,6 +6290,31 @@ if (btnCancelar) btnCancelar.hidden = true;
 
   btnCancelar.hidden = !visible;
 }
+function actualizarBotonCotizar() {
+  const btnCalcular = document.getElementById('btnCalcular');
+  if (!btnCalcular) return;
+
+  const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+
+  const estadosBloqueados = [
+    'BUSCANDO_CHOFER',
+    'OFERTANDO',
+    'OFERTADO',
+    'ASIGNADO',
+    'ACEPTADO',
+    'EN_CAMINO',
+    'INICIADO',
+    'EN_CURSO'
+  ];
+
+  const bloquear = !!state?.viajeId && estadosBloqueados.includes(estado);
+
+  btnCalcular.disabled = bloquear;
+  btnCalcular.hidden = bloquear;
+  btnCalcular.style.display = bloquear ? 'none' : '';
+  btnCalcular.style.pointerEvents = bloquear ? 'none' : 'auto';
+  btnCalcular.setAttribute('aria-hidden', bloquear ? 'true' : 'false');
+}  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
@@ -6940,7 +6996,8 @@ async function cancelarViajeCliente() {
     state.estadoViaje = 'CANCELADO';
 
     actualizarBotonCancelarViaje?.();
-
+    actualizarBotonCotizar?.();
+    
     if (typeof actualizarEstadoSolicitudUI === 'function') {
       actualizarEstadoSolicitudUI({
         estado: 'CANCELADO',
