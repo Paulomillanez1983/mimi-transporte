@@ -97,6 +97,53 @@
 
     marker.__animFrame = requestAnimationFrame(step);
   }
+  async function actualizarRutaChoferDinamica(lat, lng) {
+  try {
+    const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
+
+    const estadosSeguimiento = [
+      'ASIGNADO',
+      'ACEPTADO',
+      'EN_CAMINO',
+      'INICIADO',
+      'EN_CURSO'
+    ];
+
+    if (!estadosSeguimiento.includes(estadoUpper)) return;
+
+    const usarDestinoFinal =
+      estadoUpper === 'INICIADO' || estadoUpper === 'EN_CURSO';
+
+    const puntoObjetivo = usarDestinoFinal
+      ? window.state?.destino
+      : window.state?.origen;
+
+    if (!puntoObjetivo) return;
+    if (typeof window.coordenadasValidas !== 'function') return;
+    if (!window.coordenadasValidas(lat, lng)) return;
+    if (!window.coordenadasValidas(puntoObjetivo.lat, puntoObjetivo.lng)) return;
+    if (typeof window.dibujarRutaChoferHastaCliente !== 'function') return;
+
+    const now = Date.now();
+    if (now - lastDriverRouteRefreshAt < 4000) return; // throttle 4s
+
+    lastDriverRouteRefreshAt = now;
+
+    await window.dibujarRutaChoferHastaCliente(
+      {
+        lat: Number(lat),
+        lng: Number(lng)
+      },
+      {
+        lat: Number(puntoObjetivo.lat),
+        lng: Number(puntoObjetivo.lng)
+      }
+    );
+  } catch (err) {
+    console.warn('[chofer-map] no se pudo refrescar ruta dinámica:', err);
+  }
+}
+  let lastDriverRouteRefreshAt = 0;
 
   function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
     const mapa = window.mapaCliente;
@@ -160,23 +207,17 @@
     }
 
     const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
-    const origenCliente = window.state?.origen || null;
 
     if (
-      ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
-      origenCliente &&
-      typeof window.dibujarRutaChoferHastaCliente === 'function'
-    ) {
-      window.dibujarRutaChoferHastaCliente(
-        { lat: Number(lat), lng: Number(lng) },
-        { lat: Number(origenCliente.lat), lng: Number(origenCliente.lng) }
-      );
-    }
+      ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO', 'INICIADO', 'EN_CURSO'].includes(estadoUpper)
+     ) {
+       actualizarRutaChoferDinamica(Number(lat), Number(lng));
+     }
 
     if (
-      ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
+      ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO', 'INICIADO', 'EN_CURSO'].includes(estadoUpper) &&
       typeof window.actualizarCamaraSeguimientoChofer === 'function'
-    ) {
+     ) {
       window.actualizarCamaraSeguimientoChofer();
     }
   }
