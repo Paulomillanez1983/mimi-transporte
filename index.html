@@ -4616,7 +4616,25 @@ window.__mapaClienteDebug = mapaCliente;
       mapaCliente.doubleClickZoom.disable();
       mapaCliente.touchZoomRotate.disable();
       mapaCliente.keyboard.disable();
+window.__userInteractingMap = false;
+window.__userInteractingMapTimer = null;
 
+const marcarInteraccionUsuarioMapa = () => {
+  window.__userInteractingMap = true;
+
+  if (window.__userInteractingMapTimer) {
+    clearTimeout(window.__userInteractingMapTimer);
+  }
+
+  window.__userInteractingMapTimer = setTimeout(() => {
+    window.__userInteractingMap = false;
+  }, 8000);
+};
+
+mapaCliente.on('dragstart', marcarInteraccionUsuarioMapa);
+mapaCliente.on('zoomstart', marcarInteraccionUsuarioMapa);
+mapaCliente.on('rotatestart', marcarInteraccionUsuarioMapa);
+mapaCliente.on('pitchstart', marcarInteraccionUsuarioMapa);
 mapaCliente.on('load', () => {
   console.log('[initMapa] map load OK');
 
@@ -5201,10 +5219,11 @@ function limpiarMarkersRutaCotizacion() {
   }
 }
 
-  function actualizarCamaraSeguimientoChofer() {
+function actualizarCamaraSeguimientoChofer() {
   try {
     if (!window.mapaCliente || !window.mapReady) return;
     if (!state?.choferLocation || !state?.origen) return;
+    if (window.__userInteractingMap) return;
 
     const choferLat = Number(state.choferLocation.lat);
     const choferLng = Number(state.choferLocation.lng);
@@ -5225,7 +5244,6 @@ function limpiarMarkersRutaCotizacion() {
     ) * 1000;
 
     let zoomObjetivo = 11.8;
-
     if (distanciaMetros <= 6000) zoomObjetivo = 12.6;
     if (distanciaMetros <= 3000) zoomObjetivo = 13.4;
     if (distanciaMetros <= 1500) zoomObjetivo = 14.2;
@@ -5233,32 +5251,47 @@ function limpiarMarkersRutaCotizacion() {
     if (distanciaMetros <= 400)  zoomObjetivo = 16.0;
     if (distanciaMetros <= 200)  zoomObjetivo = 16.8;
 
-    const centerLng = (choferLng + clienteLng) / 2;
-    const centerLat = (choferLat + clienteLat) / 2;
-if (!window.__lastCameraUpdate) {
-  window.__lastCameraUpdate = 0;
-}
+    const dx = clienteLng - choferLng;
+    const dy = clienteLat - choferLat;
 
-const now = Date.now();
+    const centerLng = choferLng + (dx * 0.42);
+    const centerLat = choferLat + (dy * 0.42);
 
-if (now - window.__lastCameraUpdate < 1200) {
-  return; // 🔥 evita spam de cámara
-}
+    if (!window.__lastCameraUpdate) {
+      window.__lastCameraUpdate = 0;
+    }
 
-window.__lastCameraUpdate = now;
-window.mapaCliente.easeTo({
-  center: [centerLng, centerLat],
-  zoom: zoomObjetivo,
-  duration: 1400,
-  easing: (t) => t * (2 - t), // 🔥 easing tipo Uber (suave)
-  essential: true
-});
+    const now = Date.now();
+    if (now - window.__lastCameraUpdate < 1200) {
+      return;
+    }
+    window.__lastCameraUpdate = now;
+
+    const currentCenter = window.mapaCliente.getCenter();
+    const currentZoom = window.mapaCliente.getZoom();
+
+    const deltaLng = Math.abs(currentCenter.lng - centerLng);
+    const deltaLat = Math.abs(currentCenter.lat - centerLat);
+    const deltaZoom = Math.abs(currentZoom - zoomObjetivo);
+
+    if (deltaLng < 0.00015 && deltaLat < 0.00015 && deltaZoom < 0.12) {
+      return;
+    }
+
+    window.mapaCliente.easeTo({
+      center: [centerLng, centerLat],
+      zoom: zoomObjetivo,
+      duration: 1400,
+      easing: (t) => t * (2 - t),
+      essential: true
+    });
   } catch (err) {
     console.warn('[MAP] no se pudo actualizar cámara chofer/cliente:', err);
   }
 }
-  window.actualizarCamaraSeguimientoChofer = actualizarCamaraSeguimientoChofer;
-// ==========================================
+window.actualizarCamaraSeguimientoChofer = actualizarCamaraSeguimientoChofer;
+  
+  // ==========================================
 // COTIZACIÓN
 // ==========================================
 
