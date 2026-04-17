@@ -4395,23 +4395,25 @@ function crearMarkerElement(label, type) {
       const temaOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 
-            mapaCliente = new maplibregl.Map({
-        container: 'map',
-        style: temaOscuro
-          ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
-          : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-        center: [-64.19, -31.42],
-        zoom: esMobile ? 11.8 : 12.4,
-        pitch: esMobile ? 0 : 18,
-        bearing: 0,
-        antialias: true,
-        attributionControl: false,
-        dragRotate: false,
-        pitchWithRotate: false,
-        renderWorldCopies: false
-      });
-      window.__mapaClienteDebug = mapaCliente;
+mapaCliente = new maplibregl.Map({
+  container: 'map',
+  style: temaOscuro
+    ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+    : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  center: [-64.19, -31.42],
+  zoom: esMobile ? 11.8 : 12.4,
+  pitch: esMobile ? 0 : 18,
+  bearing: 0,
+  antialias: true,
+  attributionControl: false,
+  dragRotate: false,
+  pitchWithRotate: false,
+  renderWorldCopies: false
+});
 
+window.mapaCliente = mapaCliente;
+window.__mapaClienteDebug = mapaCliente;
+      
       mapaCliente.dragPan.disable();
       mapaCliente.scrollZoom.disable();
       mapaCliente.boxZoom.disable();
