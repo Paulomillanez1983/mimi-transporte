@@ -3403,3 +3403,80 @@ select:focus-visible {
     justify-content: center;
   }
 }
+@media (max-width: 480px) {
+  .client-install-banner__actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .client-install-banner__btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+/* ==========================================
+   PWA INSTALL BANNER (CLIENT)
+========================================== */
+
+.client-install-banner {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  border: 1px solid rgba(21, 101, 192, 0.15);
+  box-shadow: var(--shadow-sm);
+}
+
+.client-install-banner__content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.client-install-banner__title {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--azul-oscuro);
+}
+
+.client-install-banner__text {
+  font-size: 13px;
+  color: #334155;
+}
+
+.client-install-banner__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.client-install-banner__btn {
+  flex: 1;
+  min-height: 42px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.client-install-banner__btn.primary {
+  background: var(--azul-primario);
+  color: white;
+}
+
+.client-install-banner__btn.secondary {
+  background: white;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+/* MOBILE */
+@media (max-width: 480px) {
+  .client-install-banner__actions {
+    flex-direction: column;
+  }
+
+  .client-install-banner__btn {
+    width: 100%;
+  }
+}
