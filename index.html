@@ -694,6 +694,37 @@ async function buscarDireccion(query) {
     };
   }
 }
+  async function guardarFeedbackGeocoding(rawQuery, item) {
+  try {
+    if (!rawQuery || !item) return;
+
+    const bias = getGeocodingClientBias();
+
+    await safeFetch(
+      `${SUPABASE_URL}/functions/v1/geocodificar`,
+      {
+        method: 'POST',
+        headers: getPublicSupabaseHeaders({
+          'Content-Type': 'application/json'
+        }),
+        body: JSON.stringify({
+          mode: 'feedback',
+          raw_query: rawQuery,
+          display_name: item.display_name || item.direccion || '',
+          lat: Number(item.lat),
+          lng: Number(item.lon ?? item.lng),
+          address: item.address || {},
+          source: 'user_selection',
+          client_lat: bias?.lat ?? null,
+          client_lng: bias?.lng ?? null
+        })
+      },
+      5000
+    );
+  } catch (err) {
+    console.warn('[geocoding-feedback] no se pudo guardar feedback:', err);
+  }
+}
 </script>
 </head>
 <body>
@@ -7809,14 +7840,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     initHeaderScrollEffect();
     bindUIActions();
 
-    setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
-      state.origen = data;
-    });
+setupAutocomplete('inputOrigen', 'sugerenciasOrigen', async (data) => {
+  state.origen = data;
 
-    setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
-      state.destino = data;
-    });
+  try {
+    await guardarFeedbackGeocoding(
+      document.getElementById('inputOrigen')?.value || data?.display_name || data?.direccion || '',
+      data
+    );
+  } catch (err) {
+    console.warn('[origen-feedback] no se pudo guardar feedback:', err);
+  }
+});
 
+setupAutocomplete('inputDestino', 'sugerenciasDestino', async (data) => {
+  state.destino = data;
+
+  try {
+    await guardarFeedbackGeocoding(
+      document.getElementById('inputDestino')?.value || data?.display_name || data?.direccion || '',
+      data
+    );
+  } catch (err) {
+    console.warn('[destino-feedback] no se pudo guardar feedback:', err);
+  }
+});
     const session = await obtenerSesionCliente(true);
     renderSesionUI(session);
     await asegurarPushCliente({
