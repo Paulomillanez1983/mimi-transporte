@@ -2897,10 +2897,10 @@ function suscribirseEstadoViajeRealtime(viajeId) {
               });
             }
 
-            if (typeof suscribirseUbicacionChoferRealtime === 'function') {
-              suscribirseUbicacionChoferRealtime(choferIdActual);
+            if (viajeId && typeof suscribirseUbicacionChoferRealtime === 'function') {
+               suscribirseUbicacionChoferRealtime(viajeId);
+               }
             }
-          }
 
           let nuevoEstado = resolverEstadoViajeCliente(newRow);
 
@@ -2944,7 +2944,12 @@ if (
     mostrarSoloPickupClienteEnMapa();
   }
 
-  const origenCliente = state?.origen || null;
+const origenCliente = state?.origen || null;
+const destinoCliente = state?.destino || null;
+const puntoObjetivo =
+  (nuevoEstado === 'INICIADO' || nuevoEstado === 'EN_CURSO')
+    ? destinoCliente
+    : origenCliente;
 
 if (
   state?.choferLocation &&
@@ -2962,28 +2967,28 @@ if (
     }
   );
 } else if (
-    state?.choferId &&
-    typeof window.cargarUbicacionActualChofer === 'function'
-  ) {
-    window.cargarUbicacionActualChofer(state.choferId).then((driverData) => {
-      if (
-        driverData &&
-        origenCliente &&
-        typeof window.dibujarRutaChoferHastaCliente === 'function'
-      ) {
-        window.dibujarRutaChoferHastaCliente(
+  state?.viajeId &&
+  typeof window.cargarUltimoTrackingViaje === 'function'
+) {
+  window.cargarUltimoTrackingViaje(state.viajeId).then((trackData) => {
+    if (
+      trackData &&
+      puntoObjetivo &&
+      typeof window.dibujarRutaChoferHastaCliente === 'function'
+    ) {
+      window.dibujarRutaChoferHastaCliente(
+        {
+          lat: Number(trackData.lat),
+          lng: Number(trackData.lng)
+         },
           {
-            lat: Number(driverData.lat),
-            lng: Number(driverData.lng)
-          },
-          {
-            lat: Number(origenCliente.lat),
-            lng: Number(origenCliente.lng)
+            lat: Number(puntoObjetivo.lat),
+            lng: Number(puntoObjetivo.lng)
           }
         );
       }
     }).catch((err) => {
-      console.warn('[MAP] no se pudo dibujar ruta chofer → cliente', err);
+      console.warn('[MAP] no se pudo dibujar ruta chofer → cliente desde tracking', err);
     });
   }
 }
@@ -3144,10 +3149,9 @@ async function restaurarViajeActivoCliente() {
         };
       }
 
-      if (state.choferId && typeof suscribirseUbicacionChoferRealtime === 'function') {
-        suscribirseUbicacionChoferRealtime(state.choferId);
-      }
-
+if (state.viajeId && typeof suscribirseUbicacionChoferRealtime === 'function') {
+  suscribirseUbicacionChoferRealtime(state.viajeId);
+}
       const viajeRestore = {
         viajeId: viaje.id,
         estadoViaje: estado,
