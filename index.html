@@ -5273,32 +5273,33 @@ function limpiarMarkersMapa() {
 function agregarMarkersRutaDesdeCoords(coords) {
   limpiarMarkersMapa();
 
-  if (!Array.isArray(coords) || coords.length < 2) return;
+  const puntos = obtenerPuntosOrdenados();
 
-  const inicio = coords[0];
-  const fin = coords[coords.length - 1];
+  if (!Array.isArray(puntos) || puntos.length < 2 || !mapaCliente) return;
 
-  try {
-    const markerInicio = new maplibregl.Marker({
-      element: crearMarkerElement('A', 'origin'),
-      anchor: 'center'
-    })
-      .setLngLat(inicio)
-      .addTo(mapaCliente);
+  puntos.forEach((punto, index) => {
+    const lat = Number(punto?.lat);
+    const lng = Number(punto?.lng);
 
-    state.markers.push(markerInicio);
-  } catch (_) {}
+    if (!coordenadasValidas(lat, lng)) return;
 
-  try {
-    const markerFin = new maplibregl.Marker({
-      element: crearMarkerElement('B', 'dest'),
-      anchor: 'center'
-    })
-      .setLngLat(fin)
-      .addTo(mapaCliente);
+    const isOrigin = index === 0;
+    const isDest = index === puntos.length - 1;
 
-    state.markers.push(markerFin);
-  } catch (_) {}
+    const label = isOrigin ? 'A' : isDest ? 'B' : String(index);
+    const type = isOrigin ? 'origin' : isDest ? 'dest' : 'waypoint';
+
+    try {
+      const marker = new maplibregl.Marker({
+        element: crearMarkerElement(label, type),
+        anchor: 'center'
+      })
+        .setLngLat([lng, lat])
+        .addTo(mapaCliente);
+
+      state.markers.push(marker);
+    } catch (_) {}
+  });
 }
 function ajustarVistaRuta(coords, duration = 800) {
   if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
