@@ -1057,60 +1057,37 @@ async function buscarDireccion(query) {
         <div id="priceBreakdownContent"></div>
       </div>
 
-<div class="trip-driver-card" id="tripDriverCard" hidden>
-  <div class="trip-driver-card__avatar" id="tripDriverAvatar">C</div>
+      <div class="quote-actions">
+        <button
+          class="btn-primary"
+          id="btnConfirmarViaje"
+          type="button"
+          aria-label="Confirmar viaje"
+        >
+          <span aria-hidden="true">✓</span>
+          <span>Confirmar viaje</span>
+        </button>
 
-  <div class="trip-driver-card__info">
-    <div class="trip-driver-card__name" id="tripDriverName">Chofer asignado</div>
-    <div class="trip-driver-card__meta" id="tripDriverMeta">En camino hacia tu ubicación</div>
-    <div class="trip-driver-card__contact" id="tripDriverContact"></div>
-  </div>
-</div>
-
-<div class="quote-actions" id="quoteActions">
-  <button
-    class="btn-primary"
-    id="btnConfirmarViaje"
-    type="button"
-    aria-label="Confirmar viaje"
-  >
-    <span aria-hidden="true">✓</span>
-    <span>Confirmar viaje</span>
-  </button>
-
-  <button
-    class="btn-secondary"
-    id="btnCompartirRuta"
-    type="button"
-    aria-label="Compartir ruta"
-  >
-    <span aria-hidden="true">📤</span>
-    <span>Compartir ruta</span>
-  </button>
-</div>
-
-<div class="trip-active-actions" id="tripActiveActions" hidden>
-  <button
-    class="btn-secondary btn-chat-trip"
-    id="btnChatChofer"
-    type="button"
-    aria-label="Chatear con el chofer"
-  >
-    <span aria-hidden="true">💬</span>
-    <span>Chat</span>
-  </button>
-
-  <button
-    class="btn-secondary btn-cancel-trip"
-    id="btnCancelarViaje"
-    type="button"
-    aria-label="Cancelar viaje"
-    hidden
-  >
-    <span aria-hidden="true">✕</span>
-    <span>Cancelar viaje</span>
-  </button>
-</div>
+        <button
+          class="btn-secondary"
+          id="btnCompartirRuta"
+          type="button"
+          aria-label="Compartir ruta"
+        >
+          <span aria-hidden="true">📤</span>
+          <span>Compartir ruta</span>
+        </button>
+      </div>
+      <button
+  class="btn-secondary btn-cancel-trip"
+  id="btnCancelarViaje"
+  type="button"
+  aria-label="Cancelar viaje"
+  hidden
+>
+  <span aria-hidden="true">✕</span>
+  <span>Cancelar viaje</span>
+</button>
     </section>
   </section>
 </main>
@@ -2751,18 +2728,6 @@ const notifData = mapearEstadoANotificacion(nuevoEstado);
               viaje: newRow
             });
           }
-          const viajeUI = await enriquecerViajeConChofer(newRow);
-
-state.estadoViaje = nuevoEstado;
-state.viajeEstado = nuevoEstado;
-state.choferId =
-  viajeUI?.assigned_driver_id ||
-  viajeUI?.chofer_id_uuid ||
-  state.choferId ||
-  null;
-
-actualizarBotonCancelarViaje();
-actualizarModoViajeActivoCliente(viajeUI);
 
           actualizarCentroNotificacionesViaje({
             estado: notifData.estado,
@@ -2813,13 +2778,7 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
   if (typeof window.limpiarRutaChoferHastaCliente === 'function') {
     window.limpiarRutaChoferHastaCliente();
   }
-document.body.classList.remove('trip-live-mode');
 
-const tripActiveActions = document.getElementById('tripActiveActions');
-const tripDriverCard = document.getElementById('tripDriverCard');
-
-if (tripActiveActions) tripActiveActions.hidden = true;
-if (tripDriverCard) tripDriverCard.hidden = true;
   state.choferId = null;
 }
           if (nuevoEstado === 'CANCELADO') {
@@ -2844,7 +2803,6 @@ if (tripDriverCard) tripDriverCard.hidden = true;
   async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
-
 
     if (!session?.user) {
       if (notifStatusCard) notifStatusCard.hidden = true;
@@ -2919,23 +2877,21 @@ if (viaje?.id && estadosActivos.includes(estado)) {
     renderizarCentroNotificaciones();
   }
 
-if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
-}
+  if (typeof actualizarBotonCancelarViaje === 'function') {
+    actualizarBotonCancelarViaje();
+  }
 
-if (typeof actualizarEstadoSolicitudUI === 'function') {
-  const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
-  actualizarEstadoSolicitudUI({
-    estado,
-    texto: textoEstado,
-    viaje
-  });
-}
+  if (typeof actualizarEstadoSolicitudUI === 'function') {
+    const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
+    actualizarEstadoSolicitudUI({
+      estado,
+      texto: textoEstado,
+      viaje
+    });
+  }
 
-actualizarModoViajeActivoCliente(viaje);
-
-suscribirseEstadoViajeRealtime(viaje.id);
-return;
+  suscribirseEstadoViajeRealtime(viaje.id);
+  return;
 }
     // ============================
     // CASO 2: VIAJE EN STORAGE
@@ -2950,24 +2906,20 @@ if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
   actualizarStatusCardNotificaciones(viajeLocal.estadoViaje);
   renderizarCentroNotificaciones();
 
- if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
-}
+  if (typeof actualizarBotonCancelarViaje === 'function') {
+    actualizarBotonCancelarViaje();
+  }
 
-if (typeof actualizarEstadoSolicitudUI === 'function') {
-  const notifData = mapearEstadoANotificacion(viajeLocal.estadoViaje);
-  actualizarEstadoSolicitudUI({
-    estado: viajeLocal.estadoViaje,
-    texto: notifData.texto
-  });
-}
+  if (typeof actualizarEstadoSolicitudUI === 'function') {
+    const notifData = mapearEstadoANotificacion(viajeLocal.estadoViaje);
+    actualizarEstadoSolicitudUI({
+      estado: viajeLocal.estadoViaje,
+      texto: notifData.texto
+    });
+  }
 
-actualizarModoViajeActivoCliente({
-  estado: viajeLocal.estadoViaje
-});
-
-suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
-return;
+  suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
+  return;
 }
     
   // ============================
@@ -3174,15 +3126,11 @@ const supportSheetClose = document.getElementById("supportSheetClose");
 const supportMessageInput = document.getElementById("supportMessageInput");
 const supportSendBtn = document.getElementById("supportSendBtn");
 const supportChatBody = document.getElementById("supportChatBody");
-
-  
 function openSupportSheet() {
   if (!supportSheet || !supportSheetOverlay) return;
 
   supportSheet.hidden = false;
   supportSheetOverlay.hidden = false;
-
-document.body.classList.add('support-open');
 
   requestAnimationFrame(() => {
     supportSheet.classList.add("is-open");
@@ -3203,7 +3151,6 @@ function closeSupportSheet() {
   supportSheet.classList.remove("is-open");
   supportSheetOverlay.classList.remove("is-open");
   supportSheet.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("support-open");
 
   setTimeout(() => {
     if (!supportSheet.classList.contains("is-open")) {
@@ -3213,7 +3160,8 @@ function closeSupportSheet() {
   }, 280);
 
   document.body.style.overflow = "";
-}  
+}
+  
 function appendSupportMessage(text, type = "user", messageId = null) {
   if (!supportChatBody || !text) return;
   if (messageId && supportChatBody.querySelector(`[data-support-message-id="${messageId}"]`)) {
@@ -6303,99 +6251,14 @@ notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
 }
   
 function actualizarBotonCancelarViaje() {
-  const btnCancelar = document.getElementById('btnCancelarViaje');
-  if (!btnCancelar) return;
-
+const btnCancelar = document.getElementById('btnCancelarViaje');
+if (btnCancelar) btnCancelar.hidden = true;
+  
   const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
-  const visible =
-    !!state?.viajeId &&
-    !['CANCELADO', 'COMPLETADO'].includes(estado) &&
-    esEstadoViajeActivoCliente(estado);
+  const visible = !!state?.viajeId && !['CANCELADO', 'COMPLETADO'].includes(estado);
 
   btnCancelar.hidden = !visible;
 }
-  
-function esEstadoViajeActivoCliente(estadoLike) {
-  const estado = String(estadoLike || '').trim().toUpperCase();
-
-  return [
-    'ASIGNADO',
-    'ACEPTADO',
-    'EN_CAMINO',
-    'ARRIVING',
-    'LLEGANDO',
-    'EN_CURSO'
-  ].includes(estado);
-}
-
-function actualizarCardChoferUI(viaje = {}) {
-  const card = document.getElementById('tripDriverCard');
-  const nameEl = document.getElementById('tripDriverName');
-  const metaEl = document.getElementById('tripDriverMeta');
-  const contactEl = document.getElementById('tripDriverContact');
-  const avatarEl = document.getElementById('tripDriverAvatar');
-
-  if (!card || !nameEl || !metaEl || !contactEl || !avatarEl) return;
-
-  const nombre =
-    viaje?.chofer_nombre ||
-    viaje?.choferNombre ||
-    'Chofer asignado';
-
-  const telefono =
-    viaje?.chofer_telefono ||
-    viaje?.choferTelefono ||
-    '';
-
-  const email = viaje?.chofer_email || '';
-  const contacto = telefono || email || '';
-
-  nameEl.textContent = nombre;
-  metaEl.textContent = 'En camino hacia tu ubicación';
-  contactEl.textContent = contacto ? `Contacto: ${contacto}` : '';
-  avatarEl.textContent = (String(nombre).trim().charAt(0) || 'C').toUpperCase();
-
-  card.hidden = false;
-}
-  function actualizarModoViajeActivoCliente(viaje = null) {
-  const estado =
-    resolverEstadoViajeCliente(viaje || {
-      estado: state?.estadoViaje || state?.viajeEstado || ''
-    });
-
-  const tripActiveActions = document.getElementById('tripActiveActions');
-  const btnCancelar = document.getElementById('btnCancelarViaje');
-  const supportBtn = document.getElementById('supportBtn');
-
-  const activo =
-    !!state?.viajeId &&
-    esEstadoViajeActivoCliente(estado);
-
-  document.body.classList.toggle('trip-live-mode', activo);
-
-  if (tripActiveActions) {
-    tripActiveActions.hidden = !activo;
-  }
-
-  if (btnCancelar) {
-    btnCancelar.hidden = !activo || ['CANCELADO', 'COMPLETADO'].includes(estado);
-  }
-
-  if (activo) {
-    actualizarCardChoferUI(viaje || {});
-    setSectionVisible('mapSection', true);
-    setSectionVisible('quoteCard', true);
-actualizarBotonCancelarViaje();
-actualizarModoViajeActivoCliente({
-  estado: state.estadoViaje || state.viajeEstado
-});
-  }
-
-  if (supportBtn) {
-    supportBtn.hidden = !!activo;
-  }
-}
-  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
@@ -7172,27 +7035,7 @@ function bindUIActions() {
   const btnToggleBreakdown = document.getElementById('btnToggleBreakdown');
   const btnLoginHeader = document.getElementById('btnLoginHeader');
   const btnLogoutHeader = document.getElementById('btnLogoutHeader');
-  const btnChatChofer = document.getElementById('btnChatChofer');
-  const supportOverlay = document.getElementById('supportSheetOverlay');
-  const supportSheetClose = document.getElementById('supportSheetClose');
-if (supportOverlay && !supportOverlay.dataset.bound) {
-supportOverlay.addEventListener('click', () => {
-  closeSupportSheet();
-});
-  supportOverlay.dataset.bound = '1';
-}
-  if (supportSheetClose && !supportSheetClose.dataset.bound) {
-supportSheetClose.addEventListener('click', () => {
-  closeSupportSheet();
-});
-  supportSheetClose.dataset.bound = '1';
-}
-  if (btnChatChofer && !btnChatChofer.dataset.bound) {
-btnChatChofer.addEventListener('click', () => {
-  openSupportSheet();
-});
-  btnChatChofer.dataset.bound = '1';
-}
+
   if (btnAddStop && !btnAddStop.dataset.bound) {
     btnAddStop.addEventListener('click', agregarWaypoint);
     btnAddStop.dataset.bound = '1';
