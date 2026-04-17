@@ -2659,7 +2659,59 @@ function suscribirseEstadoViajeRealtime(viajeId) {
 
           actualizarEstadoLocalViaje(nuevoEstado);
 
-          const notifData = mapearEstadoANotificacion(nuevoEstado);
+// 🔥 REEMPLAZAR RUTA COTIZADA POR RUTA CHOFER → CLIENTE
+if (nuevoEstado === 'ASIGNADO' || nuevoEstado === 'ACEPTADO' || nuevoEstado === 'EN_CAMINO') {
+  console.log('[MAP] cambiando a ruta chofer → cliente');
+
+  if (typeof limpiarCapasRutaMapa === 'function') {
+    limpiarCapasRutaMapa();
+  }
+
+  const origenCliente = state?.origen || null;
+
+  if (
+    state?.choferLocation &&
+    origenCliente &&
+    typeof window.dibujarRutaChoferHastaCliente === 'function'
+  ) {
+    window.dibujarRutaChoferHastaCliente(
+      {
+        lat: Number(state.choferLocation.lat),
+        lng: Number(state.choferLocation.lng)
+      },
+      {
+        lat: Number(origenCliente.lat),
+        lng: Number(origenCliente.lng)
+      }
+    );
+  } else if (
+    state?.choferId &&
+    typeof window.cargarUbicacionActualChofer === 'function'
+  ) {
+    window.cargarUbicacionActualChofer(state.choferId).then((driverData) => {
+      if (
+        driverData &&
+        origenCliente &&
+        typeof window.dibujarRutaChoferHastaCliente === 'function'
+      ) {
+        window.dibujarRutaChoferHastaCliente(
+          {
+            lat: Number(driverData.lat),
+            lng: Number(driverData.lng)
+          },
+          {
+            lat: Number(origenCliente.lat),
+            lng: Number(origenCliente.lng)
+          }
+        );
+      }
+    }).catch((err) => {
+      console.warn('[MAP] no se pudo dibujar ruta chofer → cliente', err);
+    });
+  }
+}
+
+const notifData = mapearEstadoANotificacion(nuevoEstado);
           const textoEstado = construirMensajeEstadoViaje(newRow, nuevoEstado, notifData.texto);
 
           if (typeof actualizarEstadoSolicitudUI === 'function') {
