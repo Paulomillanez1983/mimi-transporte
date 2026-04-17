@@ -3293,3 +3293,26 @@ select:focus-visible {
 #tripRequestStatus.trip-status-searching {
   animation: tripStatusPulse 1.4s ease-in-out infinite;
 }
+/* =========================
+   TRIP STATUS ANIMATIONS
+========================= */
+
+@keyframes tripStatusPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  }
+  50% {
+    transform: scale(1.01);
+    box-shadow: 0 12px 28px rgba(15, 61, 145, 0.16);
+  }
+}
+
+@keyframes tripStatusShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
