@@ -8152,7 +8152,24 @@ window.setSectionVisible = setSectionVisible;
     console.warn('[client-pwa] init error:', err);
   }
 });
+(function () {
+  const banner = document.getElementById('clientInstallBanner');
+  if (!banner) return;
 
+  let lastY = window.scrollY;
+
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+
+    if (y > lastY && y > 80) {
+      banner.classList.remove('is-visible');
+    } else {
+      banner.classList.add('is-visible');
+    }
+
+    lastY = y;
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>
