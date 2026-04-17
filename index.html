@@ -6356,7 +6356,7 @@ function actualizarCardChoferUI(viaje = {}) {
 
   card.hidden = false;
 }
-function actualizarModoViajeActivoCliente(viaje = null) {
+  function actualizarModoViajeActivoCliente(viaje = null) {
   const estado =
     resolverEstadoViajeCliente(viaje || {
       estado: state?.estadoViaje || state?.viajeEstado || ''
@@ -6384,6 +6384,10 @@ function actualizarModoViajeActivoCliente(viaje = null) {
     actualizarCardChoferUI(viaje || {});
     setSectionVisible('mapSection', true);
     setSectionVisible('quoteCard', true);
+actualizarBotonCancelarViaje();
+actualizarModoViajeActivoCliente({
+  estado: state.estadoViaje || state.viajeEstado
+});
   }
 
   if (supportBtn) {
@@ -7168,6 +7172,43 @@ function bindUIActions() {
   const btnLoginHeader = document.getElementById('btnLoginHeader');
   const btnLogoutHeader = document.getElementById('btnLogoutHeader');
   const btnChatChofer = document.getElementById('btnChatChofer');
+  const supportOverlay = document.getElementById('supportSheetOverlay');
+  const supportSheetClose = document.getElementById('supportSheetClose');
+if (supportOverlay && !supportOverlay.dataset.bound) {
+  supportOverlay.addEventListener('click', () => {
+    const supportSheet = document.getElementById('supportSheet');
+
+    if (supportSheet) {
+      supportSheet.hidden = true;
+      supportSheet.setAttribute('aria-hidden', 'true');
+    }
+
+    supportOverlay.hidden = true;
+
+    document.body.classList.remove('support-open'); // 🔥 CLAVE
+  });
+
+  supportOverlay.dataset.bound = '1';
+}
+  if (supportSheetClose && !supportSheetClose.dataset.bound) {
+  supportSheetClose.addEventListener('click', () => {
+    const supportSheet = document.getElementById('supportSheet');
+    const supportOverlay = document.getElementById('supportSheetOverlay');
+
+    if (supportSheet) {
+      supportSheet.hidden = true;
+      supportSheet.setAttribute('aria-hidden', 'true');
+    }
+
+    if (supportOverlay) {
+      supportOverlay.hidden = true;
+    }
+
+    document.body.classList.remove('support-open');
+  });
+
+  supportSheetClose.dataset.bound = '1';
+}
   if (btnChatChofer && !btnChatChofer.dataset.bound) {
   btnChatChofer.addEventListener('click', () => {
     const supportSheet = document.getElementById('supportSheet');
@@ -7180,6 +7221,7 @@ function bindUIActions() {
       supportSheet.hidden = false;
       supportSheet.setAttribute('aria-hidden', 'false');
     }
+      document.body.classList.add('support-open'); // 🔥 ACÁ
 
     input?.focus();
   });
