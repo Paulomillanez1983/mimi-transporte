@@ -1887,17 +1887,21 @@ let state = {
   choferLocation: null
 };
 
-let mapaCliente = null;
-let mapReady = false;
+window.mapaCliente = null;
+window.mapReady = false;
+
+let mapaCliente = window.mapaCliente;
+let mapReady = window.mapReady;
+
 let isCalculatingQuote = false;
 let currentQuoteRequestId = 0;
 let waypointCounter = 0;
 let routeAnimationFrame = null;
 let routeDashPhase = 0;
+
 window.choferRealtimeChannel = null;
 window.choferMarker = null;
-window.choferPulseMarker = null;
-  
+window.choferPulseMarker = null;  
 // ==========================================
 // NOTIFICACIONES
 // ==========================================
@@ -4415,10 +4419,14 @@ function crearMarkerElement(label, type) {
       mapaCliente.touchZoomRotate.disable();
       mapaCliente.keyboard.disable();
 
-            mapaCliente.on('load', () => {
-        console.log('[initMapa] map load OK');
-        mapReady = true;
+mapaCliente.on('load', () => {
+  console.log('[initMapa] map load OK');
 
+  mapReady = true;
+
+  // 👇 AGREGÁ ESTA LÍNEA
+  window.mapReady = true;
+  
         setTimeout(() => {
           try {
             mapaCliente.resize();
@@ -4449,10 +4457,14 @@ function crearMarkerElement(label, type) {
         console.warn('[initMapa] map error:', e?.error || e);
       });
 
-      setTimeout(() => {
-        if (!mapReady && mapaCliente) {
-          console.warn('[initMapa] timeout de espera load; continúo igual');
-          try {
+setTimeout(() => {
+  if (!mapReady && mapaCliente) {
+    console.warn('[initMapa] timeout de espera load; continúo igual');
+
+    // 👇 AGREGÁ ESTO
+    mapReady = true;
+    window.mapReady = true;
+    try {
             mapaCliente.resize();
           } catch (_) {}
 
