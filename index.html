@@ -5342,13 +5342,13 @@ const estadosBloqueados = [
   'BUSCANDO_CHOFER',
   'OFERTANDO',
   'OFERTADO',
+  'SIN_CHOFER',
   'ASIGNADO',
   'ACEPTADO',
   'EN_CAMINO',
   'INICIADO',
   'EN_CURSO'
 ];
-
 if (state?.viajeId && estadosBloqueados.includes(estado)) {
   notif.show(
     'Viaje en proceso',
