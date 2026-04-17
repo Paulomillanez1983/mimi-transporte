@@ -3121,6 +3121,7 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
 
   return currentTripChannel;
 }
+  
 async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
@@ -5851,6 +5852,51 @@ function actualizarCamaraSeguimientoChofer() {
 }
 
 window.actualizarCamaraSeguimientoChofer = actualizarCamaraSeguimientoChofer;  
+
+let lastRouteRefreshAt = 0;
+
+async function actualizarRutaChoferDinamica() {
+  try {
+    const estadoActual = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+
+    const estadosSeguimiento = [
+      'ASIGNADO',
+      'ACEPTADO',
+      'EN_CAMINO',
+      'INICIADO',
+      'EN_CURSO'
+    ];
+
+    if (!estadosSeguimiento.includes(estadoActual)) return;
+    if (!state?.choferLocation) return;
+
+    const usarDestinoFinal = estadoUsaDestinoFinal(estadoActual);
+    const puntoObjetivo = usarDestinoFinal ? state?.destino : state?.origen;
+
+    if (!puntoObjetivo) return;
+    if (!coordenadasValidas(state.choferLocation.lat, state.choferLocation.lng)) return;
+    if (!coordenadasValidas(puntoObjetivo.lat, puntoObjetivo.lng)) return;
+
+    const now = Date.now();
+    if (now - lastRouteRefreshAt < 4000) return; // throttle 4s
+
+    lastRouteRefreshAt = now;
+
+    await window.dibujarRutaChoferHastaCliente(
+      {
+        lat: Number(state.choferLocation.lat),
+        lng: Number(state.choferLocation.lng)
+      },
+      {
+        lat: Number(puntoObjetivo.lat),
+        lng: Number(puntoObjetivo.lng)
+      }
+    );
+  } catch (err) {
+    console.warn('[tracking] no se pudo refrescar ruta dinámica del chofer:', err);
+  }
+}
+  
 async function esperarMapaClienteListo(timeoutMs = 2500) {
   const start = Date.now();
 
