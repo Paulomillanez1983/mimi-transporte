@@ -132,6 +132,12 @@ function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
       { lat: Number(origenCliente.lat), lng: Number(origenCliente.lng) }
     );
   }
+    if (
+    ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
+    typeof window.actualizarCamaraSeguimientoChofer === 'function'
+  ) {
+    window.actualizarCamaraSeguimientoChofer();
+  }
 }
   
 async function cargarUbicacionActualChofer(choferId) {
