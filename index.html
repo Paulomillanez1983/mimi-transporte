@@ -2706,6 +2706,18 @@ function actualizarEstadoLocalViaje(nuevoEstado) {
   state.viajeEstado = upper;
   state.estadoViaje = upper;
 
+  // 🔥 limpiar datos de cotización en estados de seguimiento
+  if ([
+    'ASIGNADO',
+    'ACEPTADO',
+    'EN_CAMINO',
+    'INICIADO',
+    'EN_CURSO'
+  ].includes(upper)) {
+    state.routeData = null;
+    state.cotizacion = null;
+  }
+
   if (['COMPLETADO', 'CANCELADO'].includes(upper)) {
     limpiarViajeActivoEnStorage();
   } else {
@@ -2741,8 +2753,7 @@ function actualizarEstadoLocalViaje(nuevoEstado) {
   }
 
   actualizarStatusCardNotificaciones(upper);
-}
-  
+}  
 function suscribirseEstadoViajeRealtime(viajeId) {
   if (!viajeId || !window.sbRealtime) {
     console.warn('[realtime] No hay viajeId o cliente supabase');
