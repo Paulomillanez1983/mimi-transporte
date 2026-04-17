@@ -75,36 +75,51 @@
     return wrap;
   }
 
-  function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
-    if (!window.mapaCliente || !window.mapReady) return;
-    if (typeof window.coordenadasValidas !== 'function') return;
-    if (!window.coordenadasValidas(lat, lng)) return;
-    if (!window.maplibregl) return;
+function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
+  const mapa = window.mapaCliente;
+  const listo = window.mapReady;
 
-    asegurarAnimacionMarkerChofer();
+  if (!mapa || !listo) {
+    console.warn('[chofer-map] mapa no listo, reintentando...', { mapa: !!mapa, listo });
 
-    const lngLat = [Number(lng), Number(lat)];
+    setTimeout(() => {
+      actualizarMarkerChoferEnMapa(lat, lng, opts);
+    }, 500);
 
-    if (!window.choferMarker) {
-      window.choferMarker = new window.maplibregl.Marker({
-        element: crearElementoMarkerChofer(),
-        anchor: 'center'
-      })
-        .setLngLat(lngLat)
-        .addTo(window.mapaCliente);
-    } else {
-      window.choferMarker.setLngLat(lngLat);
-    }
-
-    if (window.state) {
-      window.state.choferLocation = {
-        lat: Number(lat),
-        lng: Number(lng),
-        heading: Number(opts?.heading || 0)
-      };
-    }
+    return;
   }
 
+  if (typeof window.coordenadasValidas !== 'function') return;
+  if (!window.coordenadasValidas(lat, lng)) return;
+  if (!window.maplibregl) return;
+
+  asegurarAnimacionMarkerChofer();
+
+  const lngLat = [Number(lng), Number(lat)];
+
+  if (!window.choferMarker) {
+    window.choferMarker = new window.maplibregl.Marker({
+      element: crearElementoMarkerChofer(),
+      anchor: 'center'
+    })
+      .setLngLat(lngLat)
+      .addTo(mapa);
+
+    console.log('[chofer-map] marker creado', { lat, lng });
+
+  } else {
+    window.choferMarker.setLngLat(lngLat);
+    console.log('[chofer-map] marker actualizado', { lat, lng });
+  }
+
+  if (window.state) {
+    window.state.choferLocation = {
+      lat: Number(lat),
+      lng: Number(lng),
+      heading: Number(opts?.heading || 0)
+    };
+  }
+}
   async function cargarUbicacionActualChofer(choferId) {
     if (!choferId || !window.supabase) return null;
 
@@ -168,6 +183,8 @@
           filter: `id_uuid=eq.${choferId}`
         },
         (payload) => {
+        console.log('[chofer realtime] update recibido', payload?.new);
+
           try {
             const row = payload?.new || {};
             if (typeof window.coordenadasValidas !== 'function') return;
