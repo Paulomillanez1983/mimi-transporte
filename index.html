@@ -6297,17 +6297,17 @@ function actualizarBotonCotizar() {
 
   const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
 
-  const estadosBloqueados = [
-    'BUSCANDO_CHOFER',
-    'OFERTANDO',
-    'OFERTADO',
-    'ASIGNADO',
-    'ACEPTADO',
-    'EN_CAMINO',
-    'INICIADO',
-    'EN_CURSO'
-  ];
-
+const estadosBloqueados = [
+  'BUSCANDO_CHOFER',
+  'OFERTANDO',
+  'OFERTADO',
+  'SIN_CHOFER',
+  'ASIGNADO',
+  'ACEPTADO',
+  'EN_CAMINO',
+  'INICIADO',
+  'EN_CURSO'
+];
   const bloquear = !!state?.viajeId && estadosBloqueados.includes(estado);
 
   btnCalcular.disabled = bloquear;
