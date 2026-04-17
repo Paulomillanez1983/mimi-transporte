@@ -2234,7 +2234,15 @@ async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
 
     setSectionVisible('quoteCard', true);
     setSectionVisible('mapSection', true);
+    setTimeout(() => {
+  try {
+    mapaCliente?.resize?.();
+  } catch (_) {}
+}, 80);
 
+    await esperarMapaClienteListo(2500);
+      
+    
 if (usarSeguimientoChofer) {
   if (typeof limpiarCapasRutaMapa === 'function') {
     limpiarCapasRutaMapa();
@@ -2248,48 +2256,27 @@ if (usarSeguimientoChofer) {
     window.limpiarRutaChoferHastaCliente();
   }
 
-  if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
-    mostrarSoloPickupClienteEnMapa();
-  }
-
   const origenCliente = state?.origen || null;
   let rutaSeguimientoDibujada = false;
 
-  if (
-    state?.choferLocation &&
-    origenCliente &&
-    typeof window.dibujarRutaChoferHastaCliente === 'function'
-  ) {
-    await window.dibujarRutaChoferHastaCliente(
-      {
-        lat: Number(state.choferLocation.lat),
-        lng: Number(state.choferLocation.lng)
-      },
-      {
-        lat: Number(origenCliente.lat),
-        lng: Number(origenCliente.lng)
-      }
-    );
-    rutaSeguimientoDibujada = true;
+  if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
+    try {
+      mostrarSoloPickupClienteEnMapa();
+    } catch (err) {
+      console.warn('[restore-map] no se pudo mostrar pickup', err);
+    }
+  }
 
-  } else if (
-    state?.choferId &&
-    origenCliente &&
-    typeof window.cargarUbicacionActualChofer === 'function' &&
-    typeof window.dibujarRutaChoferHastaCliente === 'function'
-  ) {
-    const driverData = await window.cargarUbicacionActualChofer(state.choferId);
-
-    if (driverData) {
-      state.choferLocation = {
-        lat: Number(driverData.lat),
-        lng: Number(driverData.lng)
-      };
-
+  try {
+    if (
+      state?.choferLocation &&
+      origenCliente &&
+      typeof window.dibujarRutaChoferHastaCliente === 'function'
+    ) {
       await window.dibujarRutaChoferHastaCliente(
         {
-          lat: Number(driverData.lat),
-          lng: Number(driverData.lng)
+          lat: Number(state.choferLocation.lat),
+          lng: Number(state.choferLocation.lng)
         },
         {
           lat: Number(origenCliente.lat),
@@ -2297,12 +2284,49 @@ if (usarSeguimientoChofer) {
         }
       );
       rutaSeguimientoDibujada = true;
+      console.log('[restore-map] ruta seguimiento dibujada con choferLocation');
+    } else if (
+      state?.choferId &&
+      origenCliente &&
+      typeof window.cargarUbicacionActualChofer === 'function' &&
+      typeof window.dibujarRutaChoferHastaCliente === 'function'
+    ) {
+      const driverData = await window.cargarUbicacionActualChofer(state.choferId);
+      console.log('[restore-map] driverData', driverData);
+
+      if (
+        driverData &&
+        Number.isFinite(Number(driverData.lat)) &&
+        Number.isFinite(Number(driverData.lng))
+      ) {
+        state.choferLocation = {
+          lat: Number(driverData.lat),
+          lng: Number(driverData.lng)
+        };
+
+        await window.dibujarRutaChoferHastaCliente(
+          {
+            lat: Number(driverData.lat),
+            lng: Number(driverData.lng)
+          },
+          {
+            lat: Number(origenCliente.lat),
+            lng: Number(origenCliente.lng)
+          }
+        );
+        rutaSeguimientoDibujada = true;
+        console.log('[restore-map] ruta seguimiento dibujada con driverData');
+      }
     }
+  } catch (err) {
+    console.warn('[restore-map] error dibujando seguimiento', err);
   }
 
   if (!rutaSeguimientoDibujada && origenCliente) {
+    console.warn('[restore-map] fallback a centrar pickup');
+
     if (typeof centrarMapaEnPunto === 'function') {
-      centrarMapaEnPunto(origenCliente.lat, origenCliente.lng, 15);
+      centrarMapaEnPunto(Number(origenCliente.lat), Number(origenCliente.lng), 15);
     } else if (mapaCliente && typeof mapaCliente.easeTo === 'function') {
       mapaCliente.easeTo({
         center: [Number(origenCliente.lng), Number(origenCliente.lat)],
@@ -2312,8 +2336,14 @@ if (usarSeguimientoChofer) {
     }
   }
 
+  setTimeout(() => {
+    try {
+      mapaCliente?.resize?.();
+    } catch (_) {}
+  }, 80);
+
   return;
-}    
+}
     const coords =
       state?.routeData?.geometry?.coordinates ||
       state?.cotizacion?.route_geometry ||
@@ -5122,6 +5152,11 @@ async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
   setSectionVisible('mapSection', true);
+  setTimeout(() => {
+  try {
+    mapaCliente?.resize?.();
+  } catch (_) {}
+}, 80);
   await initMapa();
   if (!mapaCliente) return;
 
@@ -5205,6 +5240,11 @@ async function dibujarRutaReal(coords) {
 
 function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
+  setTimeout(() => {
+  try {
+    mapaCliente?.resize?.();
+  } catch (_) {}
+}, 80);
 
   requestAnimationFrame(() => {
     initMapa().then(() => {
@@ -5471,6 +5511,22 @@ function actualizarCamaraSeguimientoChofer() {
 }
 
 window.actualizarCamaraSeguimientoChofer = actualizarCamaraSeguimientoChofer;  
+async function esperarMapaClienteListo(timeoutMs = 2500) {
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    if (
+      mapaCliente &&
+      typeof mapaCliente.isStyleLoaded === 'function' &&
+      mapaCliente.isStyleLoaded()
+    ) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+
+  return false;
+}
   // ==========================================
 // COTIZACIÓN
 // ==========================================
@@ -5797,6 +5853,11 @@ function usarFallbackLocal(payload, requestId) {
       
       // Dibujar línea simple
       setSectionVisible('mapSection', true);
+      setTimeout(() => {
+  try {
+    mapaCliente?.resize?.();
+  } catch (_) {}
+}, 80);
       initMapa().then(() => {
         dibujarRutaLineal([[origen.lng, origen.lat], [destino.lng, destino.lat]]);
       });
@@ -5934,6 +5995,11 @@ if (distancia < 2) {
 
   if (coordsFinales) {
     setSectionVisible('mapSection', true);
+    setTimeout(() => {
+  try {
+    mapaCliente?.resize?.();
+  } catch (_) {}
+}, 80);
     initMapa().then(async () => {
       try {
         if (esRutaReal) {
