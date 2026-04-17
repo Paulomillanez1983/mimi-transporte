@@ -5235,13 +5235,24 @@ function limpiarMarkersRutaCotizacion() {
 
     const centerLng = (choferLng + clienteLng) / 2;
     const centerLat = (choferLat + clienteLat) / 2;
+if (!window.__lastCameraUpdate) {
+  window.__lastCameraUpdate = 0;
+}
 
-    window.mapaCliente.easeTo({
-      center: [centerLng, centerLat],
-      zoom: zoomObjetivo,
-      duration: 1200,
-      essential: true
-    });
+const now = Date.now();
+
+if (now - window.__lastCameraUpdate < 1200) {
+  return; // 🔥 evita spam de cámara
+}
+
+window.__lastCameraUpdate = now;
+window.mapaCliente.easeTo({
+  center: [centerLng, centerLat],
+  zoom: zoomObjetivo,
+  duration: 1400,
+  easing: (t) => t * (2 - t), // 🔥 easing tipo Uber (suave)
+  essential: true
+});
   } catch (err) {
     console.warn('[MAP] no se pudo actualizar cámara chofer/cliente:', err);
   }
