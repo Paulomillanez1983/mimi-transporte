@@ -1869,7 +1869,52 @@ await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
 function construirTooltip(resuelto) {
   return `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`;
 }
+function soportaWebGLMapa() {
+  try {
+    const canvas = document.createElement('canvas');
+    if (!window.WebGLRenderingContext) return false;
 
+    const gl =
+      canvas.getContext('webgl', { antialias: true, alpha: true }) ||
+      canvas.getContext('experimental-webgl', { antialias: true, alpha: true });
+
+    return !!gl;
+  } catch (_) {
+    return false;
+  }
+}
+
+function mostrarFallbackMapaSinWebGL() {
+  const mapEl = document.getElementById('map');
+  if (!mapEl) return;
+
+  mapEl.innerHTML = `
+    <div style="
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      width:100%;
+      height:100%;
+      min-height:220px;
+      padding:16px;
+      text-align:center;
+      background:linear-gradient(180deg,#0f172a 0%, #1e293b 100%);
+      color:#ffffff;
+      border-radius:18px;
+      font-size:14px;
+      line-height:1.45;
+      box-sizing:border-box;
+    ">
+      <div>
+        <div style="font-size:28px; margin-bottom:8px;">🗺️</div>
+        <div style="font-weight:700; margin-bottom:6px;">Mapa no disponible en este entorno</div>
+        <div style="opacity:.88;">
+          El viaje puede seguir funcionando, pero este navegador o dispositivo no pudo iniciar WebGL.
+        </div>
+      </div>
+    </div>
+  `;
+}
 // ==========================================
 // ESTADO GLOBAL
 // ==========================================
@@ -4874,13 +4919,31 @@ function crearMarkerElement(label, type) {
   const mapSection = document.getElementById('mapSection');
   const wasHidden = mapSection && getComputedStyle(mapSection).display === 'none';
 
+if (wasHidden) {
+  mapSection.style.display = 'block';
+  mapSection.style.visibility = 'hidden';
+}
+
+if (!soportaWebGLMapa()) {
+  console.warn('[initMapa] WebGL no disponible; fallback sin mapa interactivo');
+
+  mapReady = false;
+  window.mapReady = false;
+  mapaCliente = null;
+  window.mapaCliente = null;
+
+  mostrarFallbackMapaSinWebGL();
+
   if (wasHidden) {
-    mapSection.style.display = 'block';
-    mapSection.style.visibility = 'hidden';
+    mapSection.style.visibility = 'visible';
   }
 
-  return new Promise((resolve, reject) => {
-    try {
+  return Promise.resolve();
+}
+
+return new Promise((resolve, reject) => {
+  
+  try {
       const esMobile = window.innerWidth <= 768;
       const temaOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
@@ -4973,23 +5036,27 @@ setTimeout(() => {
     window.mapReady = true;
     try {
             mapaCliente.resize();
-          } catch (_) {}
+} catch (err) {
+  console.error('[initMapa] error creando mapa:', err);
 
-          if (wasHidden) {
-            mapSection.style.visibility = 'visible';
-          }
+  mapReady = false;
+  window.mapReady = false;
 
-          resolve();
-        }
-      }, 2500);
+  try {
+    mapaCliente?.remove?.();
+  } catch (_) {}
 
-    } catch (err) {
-      console.error('[initMapa] error creando mapa:', err);
-      reject(err);
-    }
-  });
-}
-  
+  mapaCliente = null;
+  window.mapaCliente = null;
+
+  mostrarFallbackMapaSinWebGL();
+
+  if (wasHidden) {
+    mapSection.style.visibility = 'visible';
+  }
+
+  resolve();
+}  
 function detenerAnimacionRuta() {
   if (routeAnimationFrame) {
     cancelAnimationFrame(routeAnimationFrame);
@@ -5125,8 +5192,10 @@ function iniciarAnimacionRuta() {
   
 async function dibujarRutaEnMapa(coords) {
   await initMapa();
-  if (!mapaCliente || !mapReady) return;
-
+  if (!mapaCliente || !mapReady) {
+    console.warn('[dibujarRutaEnMapa] mapa no disponible; se omite dibujo');
+    return;
+  }
   try {
     if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
     if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
@@ -5267,17 +5336,21 @@ async function dibujarRutaReal(coords) {
 
   setSectionVisible('mapSection', true);
   setTimeout(() => {
-  try {
-    mapaCliente?.resize?.();
-  } catch (_) {}
-}, 80);
+    try {
+      mapaCliente?.resize?.();
+    } catch (_) {}
+  }, 80);
+
   await initMapa();
-  if (!mapaCliente) return;
+
+  if (!mapaCliente || !mapReady) {
+    console.warn('[dibujarRutaReal] mapa no disponible; se omite dibujo de ruta');
+    return;
+  }
 
   if (!mapaCliente.isStyleLoaded()) {
     await new Promise((resolve) => mapaCliente.once('load', resolve));
   }
-
   const coordsLimpias = coords
     .map((c) => [Number(c?.[0]), Number(c?.[1])])
     .filter((c) =>
