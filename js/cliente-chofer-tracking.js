@@ -43,283 +43,215 @@
     document.head.appendChild(style);
   }
 
-function crearElementoMarkerChofer(heading = 0) {
-  const el = document.createElement('div');
+  function crearElementoMarkerChofer(heading = 0) {
+    const el = document.createElement('div');
 
-  el.style.width = '48px';
-  el.style.height = '48px';
-  el.style.height = '48px';
-  el.style.position = 'relative';
-  el.style.transform = 'translate(-50%, -50%)';
+    el.style.width = '48px';
+    el.style.height = '48px';
+    el.style.position = 'relative';
+    el.style.transform = 'translate(-50%, -50%)';
 
-  const img = document.createElement('img');
-  img.src = '/mimi-transporte/driver-car.png';
-  img.style.width = '100%';
-  img.style.height = '100%';
-  img.style.objectFit = 'contain';
+    const img = document.createElement('img');
+    img.src = '/mimi-transporte/driver-car.png';
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'contain';
+    img.style.transform = `rotate(${heading}deg)`;
+    img.style.transition = 'transform 0.45s ease-out';
 
-  img.style.transform = `rotate(${heading}deg)`;
-  img.style.transition = 'transform 0.45s ease-out';
+    el.style.filter = 'drop-shadow(0 6px 10px rgba(0,0,0,0.35))';
+    el.appendChild(img);
 
-  // sombra pro tipo Uber
-  el.style.filter = 'drop-shadow(0 6px 10px rgba(0,0,0,0.35))';
+    return el;
+  }
 
-  el.appendChild(img);
+  function animarMovimientoChofer(marker, fromLngLat, toLngLat, duration = 900) {
+    if (!marker || !fromLngLat || !toLngLat) return;
 
-  return el;
-}
+    const start = performance.now();
+    const fromLng = Number(fromLngLat[0]);
+    const fromLat = Number(fromLngLat[1]);
+    const toLng = Number(toLngLat[0]);
+    const toLat = Number(toLngLat[1]);
 
-function animarMovimientoChofer(marker, fromLngLat, toLngLat, duration = 900) {
-  if (!marker || !fromLngLat || !toLngLat) return;
+    const step = (now) => {
+      const t = Math.min((now - start) / duration, 1);
+      const eased = t * (2 - t);
 
-  const start = performance.now();
-  const fromLng = Number(fromLngLat[0]);
-  const fromLat = Number(fromLngLat[1]);
-  const toLng = Number(toLngLat[0]);
-  const toLat = Number(toLngLat[1]);
+      const lng = fromLng + (toLng - fromLng) * eased;
+      const lat = fromLat + (toLat - fromLat) * eased;
 
-  const step = (now) => {
-    const t = Math.min((now - start) / duration, 1);
-    const eased = t * (2 - t);
+      marker.setLngLat([lng, lat]);
 
-    const lng = fromLng + (toLng - fromLng) * eased;
-    const lat = fromLat + (toLat - fromLat) * eased;
+      if (t < 1) {
+        marker.__animFrame = requestAnimationFrame(step);
+      } else {
+        marker.__animFrame = null;
+      }
+    };
 
-    marker.setLngLat([lng, lat]);
-
-    if (t < 1) {
-      marker.__animFrame = requestAnimationFrame(step);
-    } else {
+    if (marker.__animFrame) {
+      cancelAnimationFrame(marker.__animFrame);
       marker.__animFrame = null;
     }
-  };
 
-  if (marker.__animFrame) {
-    cancelAnimationFrame(marker.__animFrame);
-    marker.__animFrame = null;
+    marker.__animFrame = requestAnimationFrame(step);
   }
 
-  marker.__animFrame = requestAnimationFrame(step);
-}  
-function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
-  const mapa = window.mapaCliente;
-  const listo = window.mapReady;
+  function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
+    const mapa = window.mapaCliente;
+    const listo = window.mapReady;
 
-if (!mapa || !listo) {
-  console.warn('[chofer-map] mapa no listo', { mapa: !!mapa, listo });
+    if (!mapa || !listo) {
+      console.warn('[chofer-map] mapa no listo', { mapa: !!mapa, listo });
 
-  // 🔥 cortar loop infinito si el entorno no soporta WebGL
-  if (typeof soportaWebGLMapa === 'function' && !soportaWebGLMapa()) {
-    console.warn('[chofer-map] sin WebGL, no reintento');
-    return;
-  }
-
-  setTimeout(() => {
-    actualizarMarkerChoferEnMapa(lat, lng, opts);
-  }, 800);
-
-  return;
-}
-  if (typeof window.coordenadasValidas !== 'function') return;
-  if (!window.coordenadasValidas(lat, lng)) return;
-  if (!window.maplibregl) return;
-
-  asegurarAnimacionMarkerChofer();
-
-  const lngLat = [Number(lng), Number(lat)];
-
-  if (!window.choferMarker) {
-    window.choferMarker = new window.maplibregl.Marker({
-      element: crearElementoMarkerChofer(opts?.heading || 0),
-      anchor: 'center'
-    })
-      .setLngLat(lngLat)
-      .addTo(mapa);
-
-    console.log('[chofer-map] marker creado', { lat, lng });
-} else {
-  const prev = window.choferMarker.getLngLat();
-  const fromLngLat = [Number(prev.lng), Number(prev.lat)];
-  const toLngLat = [Number(lng), Number(lat)];
-
-  animarMovimientoChofer(window.choferMarker, fromLngLat, toLngLat, 900);
-
-  const el = window.choferMarker.getElement();
-  const img = el?.querySelector('img');
-
-  if (img) {
-    img.style.transform = `rotate(${Number(opts?.heading || 0)}deg)`;
-  }
-
-  console.log('[chofer-map] marker actualizado', { lat, lng });
-}
-  if (window.state) {
-    window.state.choferLocation = {
-      lat: Number(lat),
-      lng: Number(lng),
-      heading: Number(opts?.heading || 0)
-    };
-  }
-
-  const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
-  const origenCliente = window.state?.origen || null;
-
-  if (
-    ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
-    origenCliente &&
-    typeof window.dibujarRutaChoferHastaCliente === 'function'
-  ) {
-    window.dibujarRutaChoferHastaCliente(
-      { lat: Number(lat), lng: Number(lng) },
-      { lat: Number(origenCliente.lat), lng: Number(origenCliente.lng) }
-    );
-  }
-    if (
-    ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
-    typeof window.actualizarCamaraSeguimientoChofer === 'function'
-  ) {
-    window.actualizarCamaraSeguimientoChofer();
-  }
-}
-  
-async function cargarUltimoTrackingViaje(viajeId) {
-  if (!viajeId || !window.sbRealtime) return null;
-
-  try {
-    const { data: sessionData, error: sessionError } = await window.sbRealtime.auth.getSession();
-
-    if (sessionError) {
-      console.warn('[realtime-chofer] error obteniendo sesión:', sessionError);
-      return null;
-    }
-
-    const accessToken = sessionData?.session?.access_token || null;
-    if (!accessToken) {
-      console.warn('[realtime-chofer] no hay access token para leer tracking');
-      return null;
-    }
-
-    const url =
-      `https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viaje_tracking` +
-      `?select=viaje_id,chofer_id_uuid,lat,lng,heading,speed,accuracy,timestamp` +
-      `&viaje_id=eq.${encodeURIComponent(viajeId)}` +
-      `&order=timestamp.desc&limit=1`;
-
-    const resp = await fetch(url, {
-      method: 'GET',
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/json'
+      if (typeof soportaWebGLMapa === 'function' && !soportaWebGLMapa()) {
+        console.warn('[chofer-map] sin WebGL, no reintento');
+        return;
       }
-    });
 
-    const json = await resp.json().catch(() => null);
+      setTimeout(() => {
+        actualizarMarkerChoferEnMapa(lat, lng, opts);
+      }, 800);
 
-    if (!resp.ok) {
-      console.warn('[realtime-chofer] error leyendo tracking inicial:', json || resp.status);
-      return null;
+      return;
     }
 
-    const row = Array.isArray(json) ? (json[0] || null) : null;
+    if (typeof window.coordenadasValidas !== 'function') return;
+    if (!window.coordenadasValidas(lat, lng)) return;
+    if (!window.maplibregl) return;
 
-    if (!row) {
-      console.warn('[realtime-chofer] sin tracking visible para el viaje', { viajeId });
-      return null;
+    asegurarAnimacionMarkerChofer();
+
+    const lngLat = [Number(lng), Number(lat)];
+
+    if (!window.choferMarker) {
+      window.choferMarker = new window.maplibregl.Marker({
+        element: crearElementoMarkerChofer(opts?.heading || 0),
+        anchor: 'center'
+      })
+        .setLngLat(lngLat)
+        .addTo(mapa);
+
+      console.log('[chofer-map] marker creado', { lat, lng });
+    } else {
+      const prev = window.choferMarker.getLngLat();
+      const fromLngLat = [Number(prev.lng), Number(prev.lat)];
+      const toLngLat = [Number(lng), Number(lat)];
+
+      animarMovimientoChofer(window.choferMarker, fromLngLat, toLngLat, 900);
+
+      const el = window.choferMarker.getElement();
+      const img = el?.querySelector('img');
+
+      if (img) {
+        img.style.transform = `rotate(${Number(opts?.heading || 0)}deg)`;
+      }
+
+      console.log('[chofer-map] marker actualizado', { lat, lng });
     }
+
+    if (window.state) {
+      window.state.choferLocation = {
+        lat: Number(lat),
+        lng: Number(lng),
+        heading: Number(opts?.heading || 0)
+      };
+    }
+
+    const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
+    const origenCliente = window.state?.origen || null;
 
     if (
-      typeof window.coordenadasValidas === 'function' &&
-      window.coordenadasValidas(row.lat, row.lng)
+      ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
+      origenCliente &&
+      typeof window.dibujarRutaChoferHastaCliente === 'function'
     ) {
-      actualizarMarkerChoferEnMapa(row.lat, row.lng, {
-        heading: row.heading || 0
-      });
+      window.dibujarRutaChoferHastaCliente(
+        { lat: Number(lat), lng: Number(lng) },
+        { lat: Number(origenCliente.lat), lng: Number(origenCliente.lng) }
+      );
     }
 
-    return row;
-  } catch (err) {
-    console.warn('[realtime-chofer] error tracking inicial:', err);
-    return null;
-  }
-}
-
-function suscribirseUbicacionChoferRealtime(viajeId) {
-  if (!viajeId || !window.sbRealtime) {
-    console.warn('[realtime-chofer] faltan datos para suscribirse');
-    return null;
+    if (
+      ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
+      typeof window.actualizarCamaraSeguimientoChofer === 'function'
+    ) {
+      window.actualizarCamaraSeguimientoChofer();
+    }
   }
 
-  if (
-    window.state?.trackingViajeId &&
-    String(window.state.trackingViajeId) === String(viajeId) &&
-    window.choferRealtimeChannel
-  ) {
-    return window.choferRealtimeChannel;
-  }
+  async function cargarUltimoTrackingViaje(viajeId) {
+    if (!viajeId || !window.sbRealtime) return null;
 
-  limpiarCanalChoferRealtime();
+    try {
+      const { data: sessionData, error: sessionError } = await window.sbRealtime.auth.getSession();
 
-  if (window.state) {
-    window.state.trackingViajeId = viajeId;
-  }
-
-  cargarUltimoTrackingViaje(viajeId).catch(() => null);
-
-  window.choferRealtimeChannel = window.sbRealtime
-    .channel(`viaje-tracking-${viajeId}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'viaje_tracking',
-        filter: `viaje_id=eq.${viajeId}`
-      },
-      (payload) => {
-        console.log('[viaje_tracking realtime] insert recibido', payload?.new);
-
-        try {
-          const row = payload?.new || {};
-          if (typeof window.coordenadasValidas !== 'function') return;
-          if (!window.coordenadasValidas(row.lat, row.lng)) return;
-
-          actualizarMarkerChoferEnMapa(row.lat, row.lng, {
-            heading: row.heading || 0
-          });
-
-          const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
-
-          if (
-            ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
-            typeof window.actualizarEstadoSolicitudUI === 'function'
-          ) {
-            window.actualizarEstadoSolicitudUI({
-              estado: 'EN_CAMINO',
-              texto: 'Tu chofer se está acercando al punto de retiro.'
-            });
-          }
-        } catch (err) {
-          console.error('[realtime-chofer] error procesando tracking:', err);
-        }
+      if (sessionError) {
+        console.warn('[realtime-chofer] error obteniendo sesión:', sessionError);
+        return null;
       }
-    )
-    .subscribe((status) => {
-      console.log('[realtime-chofer] subscribe status:', status);
-    });
 
-  return window.choferRealtimeChannel;
-}
-  
-function suscribirseUbicacionChoferRealtime(choferId) {
-    if (!choferId || !window.sbRealtime) {
+      const accessToken = sessionData?.session?.access_token || null;
+      if (!accessToken) {
+        console.warn('[realtime-chofer] no hay access token para leer tracking');
+        return null;
+      }
+
+      const url =
+        `https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/viaje_tracking` +
+        `?select=viaje_id,chofer_id_uuid,lat,lng,heading,speed,accuracy,timestamp` +
+        `&viaje_id=eq.${encodeURIComponent(viajeId)}` +
+        `&order=timestamp.desc&limit=1`;
+
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json'
+        }
+      });
+
+      const json = await resp.json().catch(() => null);
+
+      if (!resp.ok) {
+        console.warn('[realtime-chofer] error leyendo tracking inicial:', json || resp.status);
+        return null;
+      }
+
+      const row = Array.isArray(json) ? (json[0] || null) : null;
+
+      if (!row) {
+        console.warn('[realtime-chofer] sin tracking visible para el viaje', { viajeId });
+        return null;
+      }
+
+      if (
+        typeof window.coordenadasValidas === 'function' &&
+        window.coordenadasValidas(row.lat, row.lng)
+      ) {
+        actualizarMarkerChoferEnMapa(row.lat, row.lng, {
+          heading: row.heading || 0
+        });
+      }
+
+      return row;
+    } catch (err) {
+      console.warn('[realtime-chofer] error tracking inicial:', err);
+      return null;
+    }
+  }
+
+  function suscribirseUbicacionChoferRealtime(viajeId) {
+    if (!viajeId || !window.sbRealtime) {
       console.warn('[realtime-chofer] faltan datos para suscribirse');
       return null;
     }
 
     if (
-      window.state?.choferId &&
-      String(window.state.choferId) === String(choferId) &&
+      window.state?.trackingViajeId &&
+      String(window.state.trackingViajeId) === String(viajeId) &&
       window.choferRealtimeChannel
     ) {
       return window.choferRealtimeChannel;
@@ -328,23 +260,23 @@ function suscribirseUbicacionChoferRealtime(choferId) {
     limpiarCanalChoferRealtime();
 
     if (window.state) {
-      window.state.choferId = choferId;
+      window.state.trackingViajeId = viajeId;
     }
 
-    cargarUbicacionActualChofer(choferId).catch(() => null);
+    cargarUltimoTrackingViaje(viajeId).catch(() => null);
 
     window.choferRealtimeChannel = window.sbRealtime
-      .channel(`chofer-location-${choferId}`)
+      .channel(`viaje-tracking-${viajeId}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: 'INSERT',
           schema: 'public',
-          table: 'choferes',
-          filter: `id_uuid=eq.${choferId}`
+          table: 'viaje_tracking',
+          filter: `viaje_id=eq.${viajeId}`
         },
         (payload) => {
-        console.log('[chofer realtime] update recibido', payload?.new);
+          console.log('[viaje_tracking realtime] insert recibido', payload?.new);
 
           try {
             const row = payload?.new || {};
@@ -367,7 +299,7 @@ function suscribirseUbicacionChoferRealtime(choferId) {
               });
             }
           } catch (err) {
-            console.error('[realtime-chofer] error procesando ubicación:', err);
+            console.error('[realtime-chofer] error procesando tracking:', err);
           }
         }
       )
@@ -381,6 +313,6 @@ function suscribirseUbicacionChoferRealtime(choferId) {
   window.limpiarCanalChoferRealtime = limpiarCanalChoferRealtime;
   window.limpiarMarkerChofer = limpiarMarkerChofer;
   window.actualizarMarkerChoferEnMapa = actualizarMarkerChoferEnMapa;
-  window.cargarUbicacionActualChofer = cargarUbicacionActualChofer;
+  window.cargarUltimoTrackingViaje = cargarUltimoTrackingViaje;
   window.suscribirseUbicacionChoferRealtime = suscribirseUbicacionChoferRealtime;
 })();
