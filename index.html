@@ -4836,6 +4836,8 @@ function limpiarPuntosRuta(puntos) {
   };
 }
 async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
+  let coords = null;
+
   try {
     if (!window.mapaCliente || !window.mapReady) return;
     if (!origenChofer || !destinoCliente) return;
@@ -4860,7 +4862,7 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
     const resp = await fetch(url);
     const json = await resp.json().catch(() => null);
 
-    const coords = json?.routes?.[0]?.geometry?.coordinates || null;
+    coords = json?.routes?.[0]?.geometry?.coordinates || null;
     if (!Array.isArray(coords) || coords.length < 2) return;
 
     const sourceId = 'driver-to-client-route';
@@ -4889,75 +4891,74 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       }
     });
 
-window.mapaCliente.addLayer({
-  id: glowLayerId,
-  type: 'line',
-  source: sourceId,
-  layout: {
-    'line-cap': 'round',
-    'line-join': 'round'
-  },
-  paint: {
-    'line-color': '#4da3ff',
-    'line-width': 18,
-    'line-opacity': 0.24,
-    'line-blur': 1.4
-  }
-});
+    window.mapaCliente.addLayer({
+      id: glowLayerId,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round'
+      },
+      paint: {
+        'line-color': '#4da3ff',
+        'line-width': 18,
+        'line-opacity': 0.24,
+        'line-blur': 1.4
+      }
+    });
 
-window.mapaCliente.addLayer({
-  id: casingLayerId,
-  type: 'line',
-  source: sourceId,
-  layout: {
-    'line-cap': 'round',
-    'line-join': 'round'
-  },
-  paint: {
-    'line-color': '#ffffff',
-    'line-width': 9,
-    'line-opacity': 0.95
-  }
-});
+    window.mapaCliente.addLayer({
+      id: casingLayerId,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round'
+      },
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': 9,
+        'line-opacity': 0.95
+      }
+    });
 
-window.mapaCliente.addLayer({
-  id: lineLayerId,
-  type: 'line',
-  source: sourceId,
-  layout: {
-    'line-cap': 'round',
-    'line-join': 'round'
-  },
-  paint: {
-    'line-color': '#0A84FF',
-    'line-width': 7,
-    'line-opacity': 1
-  }
-});
+    window.mapaCliente.addLayer({
+      id: lineLayerId,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round'
+      },
+      paint: {
+        'line-color': '#0A84FF',
+        'line-width': 7,
+        'line-opacity': 1
+      }
+    });
+
+    const bounds = coords.reduce(
+      (b, c) => b.extend(c),
+      new maplibregl.LngLatBounds(coords[0], coords[0])
+    );
+
+    window.mapaCliente.fitBounds(bounds, {
+      padding: { top: 70, bottom: 70, left: 50, right: 50 },
+      duration: 700,
+      maxZoom: 15.5
+    });
+
+    setTimeout(() => {
+      try {
+        window.mapaCliente?.resize?.();
+      } catch (_) {}
+    }, 80);
+
   } catch (err) {
     console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
   }
-  try {
-  const bounds = coords.reduce(
-    (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coords[0], coords[0])
-  );
-
-  window.mapaCliente.fitBounds(bounds, {
-    padding: { top: 70, bottom: 70, left: 50, right: 50 },
-    duration: 700,
-    maxZoom: 15.5
-  });
-
-  setTimeout(() => {
-    try {
-      window.mapaCliente?.resize?.();
-    } catch (_) {}
-  }, 80);
-} catch (err) {
-    console.warn('[mapa] no se pudo ajustar vista chofer→cliente:', err);
-  }
 }
+
   
 function limpiarRutaChoferHastaCliente() {
   try {
