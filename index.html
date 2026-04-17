@@ -5800,64 +5800,95 @@ if (state?.viajeId && estadosBloqueados.includes(estado)) {
     const origenNormalizado = normalizarTextoDireccion(textoOrigen);
     const destinoNormalizado = normalizarTextoDireccion(textoDestino);
 
-if (
-  !origenActual ||
-  !coordenadasValidas(origenActual.lat, origenActual.lng) ||
-  normalizarTextoDireccion(origenActual.direccionCorta || origenActual.direccion || '') !== origenNormalizado
-) {
+const origenActualNormalizado = normalizarTextoDireccion(
+  origenActual?.direccionCorta || origenActual?.direccion || ''
+);
+
+const origenCoincideAproximado =
+  !!origenActual &&
+  coordenadasValidas(origenActual.lat, origenActual.lng) &&
+  (
+    origenActualNormalizado === origenNormalizado ||
+    origenNormalizado.includes(origenActualNormalizado) ||
+    origenActualNormalizado.includes(origenNormalizado)
+  );
+
+if (!origenCoincideAproximado) {
   console.log('[calcularRuta] debug origen antes de resolver', {
     textoOrigen,
     stateOrigen: state?.origen || null
   });
 
   setLoadingCotizacion(true, 'Resolviendo origen...');
-  origenActual = await resolverPuntoDesdeTexto(textoOrigen);
+  const origenResuelto = await resolverPuntoDesdeTexto(textoOrigen);
 
-  console.log('[calcularRuta] debug origen resuelto', origenActual);
+  console.log('[calcularRuta] debug origen resuelto', origenResuelto);
 
-  if (!origenActual) {
+  if (origenResuelto) {
+    state.origen = {
+      id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      direccion: origenResuelto.direccion,
+      direccionCorta: origenResuelto.direccionCorta,
+      direccionSecundaria: origenResuelto.direccionSecundaria,
+      lat: Number(origenResuelto.lat),
+      lng: Number(origenResuelto.lng),
+      raw: origenResuelto.raw || null
+    };
+    origenActual = state.origen;
+  } else if (!origenActual || !coordenadasValidas(origenActual.lat, origenActual.lng)) {
     throw new Error(`No pudimos ubicar el origen: ${textoOrigen}`);
+  } else {
+    console.warn('[calcularRuta] se conserva state.origen válido aunque no se pudo re-geocodificar', {
+      textoOrigen,
+      origenActual
+    });
   }
-
-  state.origen = {
-    id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    direccion: origenActual.direccion,
-    direccionCorta: origenActual.direccionCorta,
-    direccionSecundaria: origenActual.direccionSecundaria,
-    lat: Number(origenActual.lat),
-    lng: Number(origenActual.lng),
-    raw: origenActual.raw || null
-  };
 }
-if (
-  !destinoActual ||
-  !coordenadasValidas(destinoActual.lat, destinoActual.lng) ||
-  normalizarTextoDireccion(destinoActual.direccionCorta || destinoActual.direccion || '') !== destinoNormalizado
-) {
+const destinoActualNormalizado = normalizarTextoDireccion(
+  destinoActual?.direccionCorta || destinoActual?.direccion || ''
+);
+
+const destinoCoincideAproximado =
+  !!destinoActual &&
+  coordenadasValidas(destinoActual.lat, destinoActual.lng) &&
+  (
+    destinoActualNormalizado === destinoNormalizado ||
+    destinoNormalizado.includes(destinoActualNormalizado) ||
+    destinoActualNormalizado.includes(destinoNormalizado)
+  );
+
+if (!destinoCoincideAproximado) {
   console.log('[calcularRuta] debug destino antes de resolver', {
     textoDestino,
     stateDestino: state?.destino || null
   });
 
   setLoadingCotizacion(true, 'Resolviendo destino...');
-  destinoActual = await resolverPuntoDesdeTexto(textoDestino);
+  const destinoResuelto = await resolverPuntoDesdeTexto(textoDestino);
 
-  console.log('[calcularRuta] debug destino resuelto', destinoActual);
+  console.log('[calcularRuta] debug destino resuelto', destinoResuelto);
 
-  if (!destinoActual) {
+  if (destinoResuelto) {
+    state.destino = {
+      id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      direccion: destinoResuelto.direccion,
+      direccionCorta: destinoResuelto.direccionCorta,
+      direccionSecundaria: destinoResuelto.direccionSecundaria,
+      lat: Number(destinoResuelto.lat),
+      lng: Number(destinoResuelto.lng),
+      raw: destinoResuelto.raw || null
+    };
+    destinoActual = state.destino;
+  } else if (!destinoActual || !coordenadasValidas(destinoActual.lat, destinoActual.lng)) {
     throw new Error(`No pudimos ubicar el destino: ${textoDestino}`);
+  } else {
+    console.warn('[calcularRuta] se conserva state.destino válido aunque no se pudo re-geocodificar', {
+      textoDestino,
+      destinoActual
+    });
   }
-
-  state.destino = {
-    id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    direccion: destinoActual.direccion,
-    direccionCorta: destinoActual.direccionCorta,
-    direccionSecundaria: destinoActual.direccionSecundaria,
-    lat: Number(destinoActual.lat),
-    lng: Number(destinoActual.lng),
-    raw: destinoActual.raw || null
-  };
 }
+    
     setLoadingCotizacion(true, 'Resolviendo paradas...');
     const erroresWaypoints = await resolverWaypointsPendientes();
 
