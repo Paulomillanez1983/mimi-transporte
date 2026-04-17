@@ -4399,7 +4399,7 @@ function limpiarPuntosRuta(puntos) {
     factor_zona: 1
   };
 }
-  async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
+async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
   try {
     if (!window.mapaCliente || !window.mapReady) return;
     if (!origenChofer || !destinoCliente) return;
@@ -4428,11 +4428,15 @@ function limpiarPuntosRuta(puntos) {
     if (!Array.isArray(coords) || coords.length < 2) return;
 
     const sourceId = 'driver-to-client-route';
-    const layerId = 'driver-to-client-route-line';
+    const glowLayerId = 'driver-to-client-route-glow';
+    const casingLayerId = 'driver-to-client-route-casing';
+    const lineLayerId = 'driver-to-client-route-line';
 
-    if (window.mapaCliente.getLayer(layerId)) {
-      window.mapaCliente.removeLayer(layerId);
-    }
+    [glowLayerId, casingLayerId, lineLayerId].forEach((layerId) => {
+      if (window.mapaCliente.getLayer(layerId)) {
+        window.mapaCliente.removeLayer(layerId);
+      }
+    });
 
     if (window.mapaCliente.getSource(sourceId)) {
       window.mapaCliente.removeSource(sourceId);
@@ -4450,7 +4454,38 @@ function limpiarPuntosRuta(puntos) {
     });
 
     window.mapaCliente.addLayer({
-      id: layerId,
+      id: glowLayerId,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round'
+      },
+      paint: {
+        'line-color': '#4da3ff',
+        'line-width': 16,
+        'line-opacity': 0.18,
+        'line-blur': 1.2
+      }
+    });
+
+    window.mapaCliente.addLayer({
+      id: casingLayerId,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round'
+      },
+      paint: {
+        'line-color': '#ffffff',
+        'line-width': 9,
+        'line-opacity': 0.95
+      }
+    });
+
+    window.mapaCliente.addLayer({
+      id: lineLayerId,
       type: 'line',
       source: sourceId,
       layout: {
@@ -4459,8 +4494,8 @@ function limpiarPuntosRuta(puntos) {
       },
       paint: {
         'line-color': '#1565c0',
-        'line-width': 5,
-        'line-opacity': 0.9,
+        'line-width': 6,
+        'line-opacity': 1,
         'line-dasharray': [2, 2]
       }
     });
@@ -4468,16 +4503,24 @@ function limpiarPuntosRuta(puntos) {
     console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
   }
 }
+  
+  
 function limpiarRutaChoferHastaCliente() {
   try {
     if (!window.mapaCliente) return;
 
     const sourceId = 'driver-to-client-route';
-    const layerId = 'driver-to-client-route-line';
+    const layerIds = [
+      'driver-to-client-route-line',
+      'driver-to-client-route-casing',
+      'driver-to-client-route-glow'
+    ];
 
-    if (window.mapaCliente.getLayer(layerId)) {
-      window.mapaCliente.removeLayer(layerId);
-    }
+    layerIds.forEach((layerId) => {
+      if (window.mapaCliente.getLayer(layerId)) {
+        window.mapaCliente.removeLayer(layerId);
+      }
+    });
 
     if (window.mapaCliente.getSource(sourceId)) {
       window.mapaCliente.removeSource(sourceId);
@@ -4486,6 +4529,7 @@ function limpiarRutaChoferHastaCliente() {
     console.warn('[mapa] no se pudo limpiar ruta chofer→cliente:', err);
   }
 }
+  
 // ==========================================
 // MAPA - MARKERS
 // ==========================================
