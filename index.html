@@ -5244,18 +5244,37 @@ function actualizarCamaraSeguimientoChofer() {
     ) * 1000;
 
     let zoomObjetivo = 11.8;
+    let bearingObjetivo = 0;
+    let pitchObjetivo = window.innerWidth <= 768 ? 0 : 18;
+
     if (distanciaMetros <= 6000) zoomObjetivo = 12.6;
     if (distanciaMetros <= 3000) zoomObjetivo = 13.4;
     if (distanciaMetros <= 1500) zoomObjetivo = 14.2;
     if (distanciaMetros <= 800)  zoomObjetivo = 15.1;
     if (distanciaMetros <= 400)  zoomObjetivo = 16.0;
-    if (distanciaMetros <= 200)  zoomObjetivo = 16.8;
+    if (distanciaMetros <= 200)  zoomObjetivo = 16.9;
 
     const dx = clienteLng - choferLng;
     const dy = clienteLat - choferLat;
 
-    const centerLng = choferLng + (dx * 0.42);
-    const centerLat = choferLat + (dy * 0.42);
+    // cámara un poco adelantada hacia el cliente
+    let factorCentro = 0.42;
+
+    if (distanciaMetros <= 300) {
+      factorCentro = 0.58;
+      zoomObjetivo = Math.max(zoomObjetivo, 17.2);
+      pitchObjetivo = 38;
+
+      const anguloRad = Math.atan2(dx, dy);
+      bearingObjetivo = (anguloRad * 180 / Math.PI);
+
+      if (!Number.isFinite(bearingObjetivo)) {
+        bearingObjetivo = 0;
+      }
+    }
+
+    const centerLng = choferLng + (dx * factorCentro);
+    const centerLat = choferLat + (dy * factorCentro);
 
     if (!window.__lastCameraUpdate) {
       window.__lastCameraUpdate = 0;
@@ -5269,18 +5288,30 @@ function actualizarCamaraSeguimientoChofer() {
 
     const currentCenter = window.mapaCliente.getCenter();
     const currentZoom = window.mapaCliente.getZoom();
+    const currentBearing = window.mapaCliente.getBearing();
+    const currentPitch = window.mapaCliente.getPitch();
 
     const deltaLng = Math.abs(currentCenter.lng - centerLng);
     const deltaLat = Math.abs(currentCenter.lat - centerLat);
     const deltaZoom = Math.abs(currentZoom - zoomObjetivo);
+    const deltaBearing = Math.abs(currentBearing - bearingObjetivo);
+    const deltaPitch = Math.abs(currentPitch - pitchObjetivo);
 
-    if (deltaLng < 0.00015 && deltaLat < 0.00015 && deltaZoom < 0.12) {
+    if (
+      deltaLng < 0.00015 &&
+      deltaLat < 0.00015 &&
+      deltaZoom < 0.12 &&
+      deltaBearing < 2 &&
+      deltaPitch < 2
+    ) {
       return;
     }
 
     window.mapaCliente.easeTo({
       center: [centerLng, centerLat],
       zoom: zoomObjetivo,
+      bearing: bearingObjetivo,
+      pitch: pitchObjetivo,
       duration: 1400,
       easing: (t) => t * (2 - t),
       essential: true
@@ -5289,8 +5320,8 @@ function actualizarCamaraSeguimientoChofer() {
     console.warn('[MAP] no se pudo actualizar cámara chofer/cliente:', err);
   }
 }
-window.actualizarCamaraSeguimientoChofer = actualizarCamaraSeguimientoChofer;
-  
+
+window.actualizarCamaraSeguimientoChofer = actualizarCamaraSeguimientoChofer;  
   // ==========================================
 // COTIZACIÓN
 // ==========================================
