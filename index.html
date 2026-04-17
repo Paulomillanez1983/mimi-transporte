@@ -4899,7 +4899,7 @@ function crearMarkerElement(label, type) {
 
   return el;
 }
-  async function initMapa() {
+async function initMapa() {
   console.log('[initMapa] entrando', {
     mapaClienteActual: mapaCliente,
     mapReadyActual: mapReady
@@ -4919,85 +4919,85 @@ function crearMarkerElement(label, type) {
   const mapSection = document.getElementById('mapSection');
   const wasHidden = mapSection && getComputedStyle(mapSection).display === 'none';
 
-if (wasHidden) {
-  mapSection.style.display = 'block';
-  mapSection.style.visibility = 'hidden';
-}
-
-if (!soportaWebGLMapa()) {
-  console.warn('[initMapa] WebGL no disponible; fallback sin mapa interactivo');
-
-  mapReady = false;
-  window.mapReady = false;
-  mapaCliente = null;
-  window.mapaCliente = null;
-
-  mostrarFallbackMapaSinWebGL();
-
   if (wasHidden) {
-    mapSection.style.visibility = 'visible';
+    mapSection.style.display = 'block';
+    mapSection.style.visibility = 'hidden';
   }
 
-  return Promise.resolve();
-}
+  if (!soportaWebGLMapa()) {
+    console.warn('[initMapa] WebGL no disponible; fallback sin mapa interactivo');
 
-return new Promise((resolve, reject) => {
-  
-  try {
+    mapReady = false;
+    window.mapReady = false;
+    mapaCliente = null;
+    window.mapaCliente = null;
+
+    mostrarFallbackMapaSinWebGL();
+
+    if (wasHidden) {
+      mapSection.style.visibility = 'visible';
+    }
+
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    try {
       const esMobile = window.innerWidth <= 768;
       const temaOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
+      mapaCliente = new maplibregl.Map({
+        container: 'map',
+        style: temaOscuro
+          ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+          : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        center: [-64.19, -31.42],
+        zoom: esMobile ? 11.8 : 12.4,
+        pitch: esMobile ? 0 : 18,
+        bearing: 0,
+        antialias: true,
+        attributionControl: false,
+        dragRotate: false,
+        pitchWithRotate: false,
+        renderWorldCopies: false
+      });
 
-mapaCliente = new maplibregl.Map({
-  container: 'map',
-  style: temaOscuro
-    ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
-    : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  center: [-64.19, -31.42],
-  zoom: esMobile ? 11.8 : 12.4,
-  pitch: esMobile ? 0 : 18,
-  bearing: 0,
-  antialias: true,
-  attributionControl: false,
-  dragRotate: false,
-  pitchWithRotate: false,
-  renderWorldCopies: false
-});
-window.mapaCliente = mapaCliente;
-window.__mapaClienteDebug = mapaCliente;
-      
+      window.mapaCliente = mapaCliente;
+      window.__mapaClienteDebug = mapaCliente;
+
       mapaCliente.dragPan.disable();
       mapaCliente.scrollZoom.disable();
       mapaCliente.boxZoom.disable();
       mapaCliente.doubleClickZoom.disable();
       mapaCliente.touchZoomRotate.disable();
       mapaCliente.keyboard.disable();
-window.__userInteractingMap = false;
-window.__userInteractingMapTimer = null;
 
-const marcarInteraccionUsuarioMapa = () => {
-  window.__userInteractingMap = true;
+      window.__userInteractingMap = false;
+      window.__userInteractingMapTimer = null;
 
-  if (window.__userInteractingMapTimer) {
-    clearTimeout(window.__userInteractingMapTimer);
-  }
+      const marcarInteraccionUsuarioMapa = () => {
+        window.__userInteractingMap = true;
 
-  window.__userInteractingMapTimer = setTimeout(() => {
-    window.__userInteractingMap = false;
-  }, 8000);
-};
+        if (window.__userInteractingMapTimer) {
+          clearTimeout(window.__userInteractingMapTimer);
+        }
 
-mapaCliente.on('dragstart', marcarInteraccionUsuarioMapa);
-mapaCliente.on('zoomstart', marcarInteraccionUsuarioMapa);
-mapaCliente.on('rotatestart', marcarInteraccionUsuarioMapa);
-mapaCliente.on('pitchstart', marcarInteraccionUsuarioMapa);
-mapaCliente.on('load', () => {
-  console.log('[initMapa] map load OK');
+        window.__userInteractingMapTimer = setTimeout(() => {
+          window.__userInteractingMap = false;
+        }, 8000);
+      };
 
-  mapReady = true;
+      mapaCliente.on('dragstart', marcarInteraccionUsuarioMapa);
+      mapaCliente.on('zoomstart', marcarInteraccionUsuarioMapa);
+      mapaCliente.on('rotatestart', marcarInteraccionUsuarioMapa);
+      mapaCliente.on('pitchstart', marcarInteraccionUsuarioMapa);
 
-  window.mapReady = true;
-  
+      mapaCliente.on('load', () => {
+        console.log('[initMapa] map load OK');
+
+        mapReady = true;
+        window.mapReady = true;
+
         setTimeout(() => {
           try {
             mapaCliente.resize();
@@ -5028,35 +5028,51 @@ mapaCliente.on('load', () => {
         console.warn('[initMapa] map error:', e?.error || e);
       });
 
-setTimeout(() => {
-  if (!mapReady && mapaCliente) {
-    console.warn('[initMapa] timeout de espera load; continúo igual');
+      setTimeout(() => {
+        if (!mapReady && mapaCliente) {
+          console.warn('[initMapa] timeout de espera load; continúo igual');
 
-    mapReady = true;
-    window.mapReady = true;
-    try {
+          mapReady = true;
+          window.mapReady = true;
+
+          try {
             mapaCliente.resize();
-} catch (err) {
-  console.error('[initMapa] error creando mapa:', err);
+          } catch (err) {
+            console.warn('[initMapa] resize post-timeout error', err);
+          }
 
-  mapReady = false;
-  window.mapReady = false;
+          if (wasHidden) {
+            mapSection.style.visibility = 'visible';
+          }
 
-  try {
-    mapaCliente?.remove?.();
-  } catch (_) {}
+          resolve();
+        }
+      }, 2500);
 
-  mapaCliente = null;
-  window.mapaCliente = null;
+    } catch (err) {
+      console.error('[initMapa] error creando mapa:', err);
 
-  mostrarFallbackMapaSinWebGL();
+      mapReady = false;
+      window.mapReady = false;
 
-  if (wasHidden) {
-    mapSection.style.visibility = 'visible';
-  }
+      try {
+        mapaCliente?.remove?.();
+      } catch (_) {}
 
-  resolve();
-}  
+      mapaCliente = null;
+      window.mapaCliente = null;
+
+      mostrarFallbackMapaSinWebGL();
+
+      if (wasHidden) {
+        mapSection.style.visibility = 'visible';
+      }
+
+      resolve();
+    }
+  });
+}
+  
 function detenerAnimacionRuta() {
   if (routeAnimationFrame) {
     cancelAnimationFrame(routeAnimationFrame);
