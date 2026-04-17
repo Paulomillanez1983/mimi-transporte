@@ -43,38 +43,64 @@
     document.head.appendChild(style);
   }
 
-  function crearElementoMarkerChofer() {
-    const wrap = document.createElement('div');
-    wrap.className = 'mimi-driver-marker-wrap';
-    wrap.style.width = '26px';
-    wrap.style.height = '26px';
-    wrap.style.position = 'relative';
-    wrap.style.display = 'flex';
-    wrap.style.alignItems = 'center';
-    wrap.style.justifyContent = 'center';
+function crearElementoMarkerChofer(heading = 0) {
+  const el = document.createElement('div');
 
-    const pulse = document.createElement('div');
-    pulse.style.position = 'absolute';
-    pulse.style.width = '26px';
-    pulse.style.height = '26px';
-    pulse.style.borderRadius = '999px';
-    pulse.style.background = 'rgba(21,101,192,0.18)';
-    pulse.style.border = '2px solid rgba(21,101,192,0.22)';
-    pulse.style.animation = 'mimiDriverPulse 1.8s ease-out infinite';
+  el.style.width = '48px';
+  el.style.height = '48px';
+  el.style.height = '48px';
+  el.style.position = 'relative';
+  el.style.transform = 'translate(-50%, -50%)';
 
-    const dot = document.createElement('div');
-    dot.style.width = '14px';
-    dot.style.height = '14px';
-    dot.style.borderRadius = '999px';
-    dot.style.background = '#1565c0';
-    dot.style.border = '3px solid #ffffff';
-    dot.style.boxShadow = '0 4px 14px rgba(0,0,0,0.22)';
+  const img = document.createElement('img');
+  img.src = '/mimi-transporte/driver-car.png';
+  img.style.width = '100%';
+  img.style.height = '100%';
+  img.style.objectFit = 'contain';
 
-    wrap.appendChild(pulse);
-    wrap.appendChild(dot);
-    return wrap;
+  img.style.transform = `rotate(${heading}deg)`;
+  img.style.transition = 'transform 0.45s ease-out';
+
+  // sombra pro tipo Uber
+  el.style.filter = 'drop-shadow(0 6px 10px rgba(0,0,0,0.35))';
+
+  el.appendChild(img);
+
+  return el;
+}
+
+function animarMovimientoChofer(marker, fromLngLat, toLngLat, duration = 900) {
+  if (!marker || !fromLngLat || !toLngLat) return;
+
+  const start = performance.now();
+  const fromLng = Number(fromLngLat[0]);
+  const fromLat = Number(fromLngLat[1]);
+  const toLng = Number(toLngLat[0]);
+  const toLat = Number(toLngLat[1]);
+
+  const step = (now) => {
+    const t = Math.min((now - start) / duration, 1);
+    const eased = t * (2 - t);
+
+    const lng = fromLng + (toLng - fromLng) * eased;
+    const lat = fromLat + (toLat - fromLat) * eased;
+
+    marker.setLngLat([lng, lat]);
+
+    if (t < 1) {
+      marker.__animFrame = requestAnimationFrame(step);
+    } else {
+      marker.__animFrame = null;
+    }
+  };
+
+  if (marker.__animFrame) {
+    cancelAnimationFrame(marker.__animFrame);
+    marker.__animFrame = null;
   }
 
+  marker.__animFrame = requestAnimationFrame(step);
+}  
 function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
   const mapa = window.mapaCliente;
   const listo = window.mapReady;
@@ -99,18 +125,29 @@ function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
 
   if (!window.choferMarker) {
     window.choferMarker = new window.maplibregl.Marker({
-      element: crearElementoMarkerChofer(),
+      element: crearElementoMarkerChofer(opts?.heading || 0),
       anchor: 'center'
     })
       .setLngLat(lngLat)
       .addTo(mapa);
 
     console.log('[chofer-map] marker creado', { lat, lng });
-  } else {
-    window.choferMarker.setLngLat(lngLat);
-    console.log('[chofer-map] marker actualizado', { lat, lng });
+} else {
+  const prev = window.choferMarker.getLngLat();
+  const fromLngLat = [Number(prev.lng), Number(prev.lat)];
+  const toLngLat = [Number(lng), Number(lat)];
+
+  animarMovimientoChofer(window.choferMarker, fromLngLat, toLngLat, 900);
+
+  const el = window.choferMarker.getElement();
+  const img = el?.querySelector('img');
+
+  if (img) {
+    img.style.transform = `rotate(${Number(opts?.heading || 0)}deg)`;
   }
 
+  console.log('[chofer-map] marker actualizado', { lat, lng });
+}
   if (window.state) {
     window.state.choferLocation = {
       lat: Number(lat),
