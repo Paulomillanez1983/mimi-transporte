@@ -3018,17 +3018,43 @@ if (state.choferId && typeof suscribirseUbicacionChoferRealtime === 'function') 
 }
 
 const viajeRestore = {
-  ...(viajeLocal || {}),
   viajeId: viaje.id,
   estadoViaje: estado,
   viajeEstado: estado,
-  origen: viajeLocal?.origen || state?.origen || null,
-  destino: viajeLocal?.destino || state?.destino || null,
-  waypoints: Array.isArray(viajeLocal?.waypoints) ? viajeLocal.waypoints : [],
-  routeData: viajeLocal?.routeData || null,
-  cotizacion: viajeLocal?.cotizacion || null
-};
 
+  // 🔥 PRIORIDAD BACKEND
+  origen:
+    (coordenadasValidas(viaje?.origen_lat, viaje?.origen_lng)
+      ? {
+          lat: Number(viaje.origen_lat),
+          lng: Number(viaje.origen_lng),
+          direccion: viaje?.origen_direccion || '',
+          direccionCorta: viaje?.origen_direccion || ''
+        }
+      : null)
+    || state?.origen
+    || viajeLocal?.origen
+    || null,
+
+  destino:
+    (coordenadasValidas(viaje?.destino_lat, viaje?.destino_lng)
+      ? {
+          lat: Number(viaje.destino_lat),
+          lng: Number(viaje.destino_lng),
+          direccion: viaje?.destino_direccion || '',
+          direccionCorta: viaje?.destino_direccion || ''
+        }
+      : null)
+    || state?.destino
+    || viajeLocal?.destino
+    || null,
+
+  waypoints: Array.isArray(viajeLocal?.waypoints) ? viajeLocal.waypoints : [],
+
+  // ⚠️ SOLO SI NO HAY VIAJE ACTIVO REAL
+  routeData: null,
+  cotizacion: null
+};
 await restaurarMapaYCotizacionDesdeStorage(viajeRestore);
   guardarViajeActivoEnStorage();
   actualizarStatusCardNotificaciones(estado);
