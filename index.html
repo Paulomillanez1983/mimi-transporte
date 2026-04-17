@@ -6494,14 +6494,18 @@ const estadoInicialSeguro =
 
 state.viajeEstado = estadoInicialSeguro;
 state.estadoViaje = normalizarEstadoUpper(estadoInicialSeguro);
-    
-    actualizarBotonCancelarViaje();
-    actualizarBotonCotizar();
-    guardarViajeActivoEnStorage();
-    actualizarPanelPlanificacionViaje();
-    actualizarResumenCotizacionCompacto();
-    actualizarBotonConfirmarViaje();
-    actualizarBotonReiniciarRuta?.();
+
+// 🔥 al pasar de cotización a viaje activo, no arrastrar ruta vieja
+state.routeData = null;
+state.cotizacion = null;
+
+actualizarBotonCancelarViaje();
+actualizarBotonCotizar();
+guardarViajeActivoEnStorage();
+actualizarPanelPlanificacionViaje();
+actualizarResumenCotizacionCompacto();
+actualizarBotonConfirmarViaje();
+actualizarBotonReiniciarRuta?.();
     
     console.log('[confirmarViaje] viaje creado OK:', {
       viajeId: state.viajeId,
@@ -6518,21 +6522,26 @@ const choferDetectado =
   dispatchResultado?.chofer_id_uuid ||
   null;
     
-   if (dispatchOk) {
-     if (choferDetectado) {
-       state.viajeEstado = 'asignado';
-       state.estadoViaje = 'ASIGNADO';
-     } else {
-       state.viajeEstado = 'ofertando';
-       state.estadoViaje = 'OFERTANDO';
-     }
-     actualizarBotonCancelarViaje();
-     actualizarBotonCotizar();
-     guardarViajeActivoEnStorage();
-     actualizarPanelPlanificacionViaje();
-     actualizarResumenCotizacionCompacto();
-     actualizarBotonConfirmarViaje();
-     actualizarBotonReiniciarRuta?.();
+if (dispatchOk) {
+  if (choferDetectado) {
+    state.viajeEstado = 'asignado';
+    state.estadoViaje = 'ASIGNADO';
+  } else {
+    state.viajeEstado = 'ofertando';
+    state.estadoViaje = 'OFERTANDO';
+  }
+
+  // 🔥 no seguir manteniendo la ruta/cotización vieja
+  state.routeData = null;
+  state.cotizacion = null;
+
+  actualizarBotonCancelarViaje();
+  actualizarBotonCotizar();
+  guardarViajeActivoEnStorage();
+  actualizarPanelPlanificacionViaje();
+  actualizarResumenCotizacionCompacto();
+  actualizarBotonConfirmarViaje();
+  actualizarBotonReiniciarRuta?.();
   
      actualizarEstadoSolicitudUI({
      estado: state.viajeEstado,
