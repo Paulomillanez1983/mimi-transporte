@@ -26,10 +26,6 @@ function getDismissBtn() {
   return document.getElementById("btnDismissClientInstall");
 }
 
-function getLocationBtn() {
-  return document.getElementById("btnEnableClientLocation");
-}
-
 function getStatusText() {
   return document.getElementById("clientInstallStatusText");
 }
