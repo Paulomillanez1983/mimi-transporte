@@ -4468,6 +4468,11 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
         'line-blur': 1.4
       }
     });
+    try {
+  window.mapaCliente.moveLayer('driver-to-client-route-glow');
+  window.mapaCliente.moveLayer('driver-to-client-route-casing');
+  window.mapaCliente.moveLayer('driver-to-client-route-line');
+} catch (_) {}
 
     window.mapaCliente.addLayer({
       id: casingLayerId,
@@ -4493,7 +4498,7 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
         'line-join': 'round'
       },
       paint: {
-        'line-color': '##0A84FF',
+        'line-color': '#0A84FF',
         'line-width': 7,
         'line-opacity': 1
       }
@@ -4502,11 +4507,6 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
     console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
   }
 }
-  try {
-  window.mapaCliente.moveLayer('driver-to-client-route-glow');
-  window.mapaCliente.moveLayer('driver-to-client-route-casing');
-  window.mapaCliente.moveLayer('driver-to-client-route-line');
-} catch (_) {}
   
 function limpiarRutaChoferHastaCliente() {
   try {
