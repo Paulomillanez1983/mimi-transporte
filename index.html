@@ -2576,22 +2576,26 @@ function actualizarEstadoLocalViaje(nuevoEstado) {
     guardarViajeActivoEnStorage();
   }
 
-if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
-}
-if (typeof actualizarBotonCotizar === 'function') {
-  actualizarBotonCotizar();
-}
-if (typeof actualizarPanelPlanificacionViaje === 'function') {
-  actualizarPanelPlanificacionViaje();
-}
-if (typeof actualizarResumenCotizacionCompacto === 'function') {
-  actualizarResumenCotizacionCompacto();
-}
-if (typeof actualizarBotonConfirmarViaje === 'function') {
-  actualizarBotonConfirmarViaje();
-}
-  
+  if (typeof actualizarBotonCancelarViaje === 'function') {
+    actualizarBotonCancelarViaje();
+  }
+
+  if (typeof actualizarBotonCotizar === 'function') {
+    actualizarBotonCotizar();
+  }
+
+  if (typeof actualizarPanelPlanificacionViaje === 'function') {
+    actualizarPanelPlanificacionViaje();
+  }
+
+  if (typeof actualizarResumenCotizacionCompacto === 'function') {
+    actualizarResumenCotizacionCompacto();
+  }
+
+  if (typeof actualizarBotonConfirmarViaje === 'function') {
+    actualizarBotonConfirmarViaje();
+  }
+
   if (typeof actualizarEstadoSolicitudUI === 'function') {
     const notifData = mapearEstadoANotificacion(upper);
     actualizarEstadoSolicitudUI({
@@ -2921,34 +2925,44 @@ if (typeof actualizarBotonConfirmarViaje === 'function') {
     // CASO 2: VIAJE EN STORAGE
     // ============================
 if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
+  const estadoStorage = normalizarEstadoUpper(viajeLocal.estadoViaje);
+
   state.viajeId = viajeLocal.viajeId;
-  state.viajeEstado = viajeLocal.estadoViaje;
-  state.estadoViaje = viajeLocal.estadoViaje;
+  state.viajeEstado = estadoStorage;
+  state.estadoViaje = estadoStorage;
 
   await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
 
-  actualizarStatusCardNotificaciones(viajeLocal.estadoViaje);
+  actualizarStatusCardNotificaciones(estadoStorage);
   renderizarCentroNotificaciones();
 
-if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
-}
-if (typeof actualizarBotonCotizar === 'function') {
-  actualizarBotonCotizar();
-}
-  
+  if (typeof actualizarBotonCancelarViaje === 'function') {
+    actualizarBotonCancelarViaje();
+  }
+  if (typeof actualizarBotonCotizar === 'function') {
+    actualizarBotonCotizar();
+  }
+  if (typeof actualizarPanelPlanificacionViaje === 'function') {
+    actualizarPanelPlanificacionViaje();
+  }
+  if (typeof actualizarResumenCotizacionCompacto === 'function') {
+    actualizarResumenCotizacionCompacto();
+  }
+  if (typeof actualizarBotonConfirmarViaje === 'function') {
+    actualizarBotonConfirmarViaje();
+  }
+
   if (typeof actualizarEstadoSolicitudUI === 'function') {
-    const notifData = mapearEstadoANotificacion(viajeLocal.estadoViaje);
+    const notifData = mapearEstadoANotificacion(estadoStorage);
     actualizarEstadoSolicitudUI({
-      estado: viajeLocal.estadoViaje,
+      estado: estadoStorage,
       texto: notifData.texto
     });
   }
 
   suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
   return;
-}
-    
+}    
   // ============================
     // CASO 3: SIN VIAJE
     // ============================
