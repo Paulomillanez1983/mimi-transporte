@@ -2870,7 +2870,6 @@ if (viaje?.id && estadosActivos.has(estado)) {
   // ============================
     // CASO 1: VIAJE ACTIVO REAL
     // ============================
-if (viaje?.id && estadosActivos.includes(estado)) {
   viaje = await enriquecerViajeConChofer(viaje);
   state.viajeId = viaje.id;
   state.viajeEstado = estado;
