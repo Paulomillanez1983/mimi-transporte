@@ -3660,3 +3660,34 @@ select:focus-visible {
     border-color: rgba(255,255,255,0.12);
   }
 }
+.route-marker.waypoint .route-marker-pin,
+.route-marker-pin.route-marker-pin-stop {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.28);
+  border: 2px solid rgba(255,255,255,0.95);
+}
+
+.route-marker.waypoint .route-marker-halo,
+.route-marker-halo.small {
+  width: 40px;
+  height: 40px;
+  opacity: 0.16;
+}
+
+.route-marker-stop-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
