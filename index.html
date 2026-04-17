@@ -5800,52 +5800,64 @@ if (state?.viajeId && estadosBloqueados.includes(estado)) {
     const origenNormalizado = normalizarTextoDireccion(textoOrigen);
     const destinoNormalizado = normalizarTextoDireccion(textoDestino);
 
-    if (
-      !origenActual ||
-      !coordenadasValidas(origenActual.lat, origenActual.lng) ||
-      normalizarTextoDireccion(origenActual.direccionCorta || origenActual.direccion || '') !== origenNormalizado
-    ) {
-      setLoadingCotizacion(true, 'Resolviendo origen...');
-      origenActual = await resolverPuntoDesdeTexto(textoOrigen);
+if (
+  !origenActual ||
+  !coordenadasValidas(origenActual.lat, origenActual.lng) ||
+  normalizarTextoDireccion(origenActual.direccionCorta || origenActual.direccion || '') !== origenNormalizado
+) {
+  console.log('[calcularRuta] debug origen antes de resolver', {
+    textoOrigen,
+    stateOrigen: state?.origen || null
+  });
 
-      if (!origenActual) {
-        throw new Error('No pudimos ubicar el origen');
-      }
+  setLoadingCotizacion(true, 'Resolviendo origen...');
+  origenActual = await resolverPuntoDesdeTexto(textoOrigen);
 
-      state.origen = {
-        id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        direccion: origenActual.direccion,
-        direccionCorta: origenActual.direccionCorta,
-        direccionSecundaria: origenActual.direccionSecundaria,
-        lat: Number(origenActual.lat),
-        lng: Number(origenActual.lng),
-        raw: origenActual.raw || null
-      };
-    }
+  console.log('[calcularRuta] debug origen resuelto', origenActual);
 
-    if (
-      !destinoActual ||
-      !coordenadasValidas(destinoActual.lat, destinoActual.lng) ||
-      normalizarTextoDireccion(destinoActual.direccionCorta || destinoActual.direccion || '') !== destinoNormalizado
-    ) {
-      setLoadingCotizacion(true, 'Resolviendo destino...');
-      destinoActual = await resolverPuntoDesdeTexto(textoDestino);
+  if (!origenActual) {
+    throw new Error(`No pudimos ubicar el origen: ${textoOrigen}`);
+  }
 
-      if (!destinoActual) {
-        throw new Error('No pudimos ubicar el destino');
-      }
+  state.origen = {
+    id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    direccion: origenActual.direccion,
+    direccionCorta: origenActual.direccionCorta,
+    direccionSecundaria: origenActual.direccionSecundaria,
+    lat: Number(origenActual.lat),
+    lng: Number(origenActual.lng),
+    raw: origenActual.raw || null
+  };
+}
+if (
+  !destinoActual ||
+  !coordenadasValidas(destinoActual.lat, destinoActual.lng) ||
+  normalizarTextoDireccion(destinoActual.direccionCorta || destinoActual.direccion || '') !== destinoNormalizado
+) {
+  console.log('[calcularRuta] debug destino antes de resolver', {
+    textoDestino,
+    stateDestino: state?.destino || null
+  });
 
-      state.destino = {
-        id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        direccion: destinoActual.direccion,
-        direccionCorta: destinoActual.direccionCorta,
-        direccionSecundaria: destinoActual.direccionSecundaria,
-        lat: Number(destinoActual.lat),
-        lng: Number(destinoActual.lng),
-        raw: destinoActual.raw || null
-      };
-    }
+  setLoadingCotizacion(true, 'Resolviendo destino...');
+  destinoActual = await resolverPuntoDesdeTexto(textoDestino);
 
+  console.log('[calcularRuta] debug destino resuelto', destinoActual);
+
+  if (!destinoActual) {
+    throw new Error(`No pudimos ubicar el destino: ${textoDestino}`);
+  }
+
+  state.destino = {
+    id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    direccion: destinoActual.direccion,
+    direccionCorta: destinoActual.direccionCorta,
+    direccionSecundaria: destinoActual.direccionSecundaria,
+    lat: Number(destinoActual.lat),
+    lng: Number(destinoActual.lng),
+    raw: destinoActual.raw || null
+  };
+}
     setLoadingCotizacion(true, 'Resolviendo paradas...');
     const erroresWaypoints = await resolverWaypointsPendientes();
 
