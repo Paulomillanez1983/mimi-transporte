@@ -105,16 +105,21 @@ function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
   const mapa = window.mapaCliente;
   const listo = window.mapReady;
 
-  if (!mapa || !listo) {
-    console.warn('[chofer-map] mapa no listo, reintentando...', { mapa: !!mapa, listo });
+if (!mapa || !listo) {
+  console.warn('[chofer-map] mapa no listo', { mapa: !!mapa, listo });
 
-    setTimeout(() => {
-      actualizarMarkerChoferEnMapa(lat, lng, opts);
-    }, 500);
-
+  // 🔥 cortar loop infinito si el entorno no soporta WebGL
+  if (typeof soportaWebGLMapa === 'function' && !soportaWebGLMapa()) {
+    console.warn('[chofer-map] sin WebGL, no reintento');
     return;
   }
 
+  setTimeout(() => {
+    actualizarMarkerChoferEnMapa(lat, lng, opts);
+  }, 800);
+
+  return;
+}
   if (typeof window.coordenadasValidas !== 'function') return;
   if (!window.coordenadasValidas(lat, lng)) return;
   if (!window.maplibregl) return;
