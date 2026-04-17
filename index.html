@@ -2846,10 +2846,6 @@ if (tripDriverCard) tripDriverCard.hidden = true;
     const session = await obtenerSesionCliente(false);
 
 
-actualizarModoViajeActivoCliente({
-  estado: viajeLocal.estadoViaje
-});
-actualizarModoViajeActivoCliente(viaje);
     if (!session?.user) {
       if (notifStatusCard) notifStatusCard.hidden = true;
       renderizarCentroNotificaciones();
