@@ -2292,7 +2292,14 @@ console.log('[restore-map] origenCliente', origenCliente);
 console.log('[restore-map] destinoCliente', destinoCliente);
 console.log('[restore-map] puntoObjetivo', puntoObjetivo);
   
-  if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
+if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
+  try {
+    mostrarSoloPickupClienteEnMapa();
+  } catch (err) {
+    console.warn('[restore-map] no se pudo mostrar pickup', err);
+  }
+}
+
 try {
   if (
     state?.choferLocation &&
@@ -2347,6 +2354,7 @@ try {
 } catch (err) {
   console.warn('[restore-map] error dibujando seguimiento', err);
 }
+  
 if (!rutaSeguimientoDibujada && puntoObjetivo) {
   console.warn('[restore-map] fallback a centrar objetivo');
 
