@@ -73,7 +73,6 @@ function updateBannerUI() {
   const state = getPwaInstallState();
   const installBtn = getInstallBtn();
   const openBrowserBtn = getOpenBrowserBtn();
-  const locationBtn = getLocationBtn();
 
   if (!getBanner()) return;
 
@@ -81,7 +80,6 @@ function updateBannerUI() {
     setStatus("La instalación y las notificaciones requieren HTTPS.");
     installBtn && (installBtn.style.display = "none");
     openBrowserBtn && (openBrowserBtn.style.display = "none");
-    locationBtn && (locationBtn.style.display = "none");
     showBanner();
     return;
   }
@@ -95,7 +93,6 @@ function updateBannerUI() {
     setStatus("Abrí este enlace en Chrome o Safari para instalar la app.");
     installBtn && (installBtn.style.display = "none");
     openBrowserBtn && (openBrowserBtn.style.display = "inline-flex");
-    locationBtn && (locationBtn.style.display = "inline-flex");
     if (!wasDismissed()) showBanner();
     return;
   }
@@ -104,7 +101,6 @@ function updateBannerUI() {
     setStatus("Instalá la app para recibir avisos y entrar más rápido.");
     installBtn && (installBtn.style.display = "inline-flex");
     openBrowserBtn && (openBrowserBtn.style.display = "none");
-    locationBtn && (locationBtn.style.display = "inline-flex");
     if (!wasDismissed()) showBanner();
     return;
   }
@@ -112,7 +108,6 @@ function updateBannerUI() {
   setStatus("La app se puede usar desde web, pero conviene instalarla cuando el navegador lo permita.");
   installBtn && (installBtn.style.display = "none");
   openBrowserBtn && (openBrowserBtn.style.display = "none");
-  locationBtn && (locationBtn.style.display = "inline-flex");
 }
 
 async function requestLocationPermission({ silent = false } = {}) {
@@ -163,6 +158,10 @@ async function maybeAskLocationAfterLogin() {
 }
 
 async function handleInstallClick() {
+  try {
+    if (navigator.vibrate) navigator.vibrate(18);
+  } catch (_) {}
+
   const result = await promptInstall();
 
   if (result.accepted) {
@@ -191,9 +190,6 @@ function bindBannerEvents() {
   getDismissBtn()?.addEventListener("click", () => {
     markDismissed();
     hideBanner();
-  });
-  getLocationBtn()?.addEventListener("click", async () => {
-    await requestLocationPermission({ silent: false });
   });
 }
 
