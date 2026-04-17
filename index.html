@@ -2301,21 +2301,24 @@ console.log('[restore-map] puntoObjetivo', puntoObjetivo);
   }
 
   try {
-    if (
-      state?.choferLocation &&
-      origenCliente &&
-      typeof window.dibujarRutaChoferHastaCliente === 'function'
-    ) {
-await window.dibujarRutaChoferHastaCliente(
-  {
-    lat: Number(driverData.lat),
-    lng: Number(driverData.lng)
-  },
-  {
-    lat: Number(puntoObjetivo.lat),
-    lng: Number(puntoObjetivo.lng)
-  }
-);
+   if (
+  state?.choferLocation &&
+  puntoObjetivo &&
+  typeof window.dibujarRutaChoferHastaCliente === 'function'
+) {
+  await window.dibujarRutaChoferHastaCliente(
+    {
+      lat: Number(state.choferLocation.lat),
+      lng: Number(state.choferLocation.lng)
+    },
+    {
+      lat: Number(puntoObjetivo.lat),
+      lng: Number(puntoObjetivo.lng)
+    }
+  );
+  rutaSeguimientoDibujada = true;
+  console.log('[restore-map] ruta seguimiento dibujada con choferLocation');
+}
       rutaSeguimientoDibujada = true;
       console.log('[restore-map] ruta seguimiento dibujada con choferLocation');
 } else if (
@@ -2337,17 +2340,16 @@ await window.dibujarRutaChoferHastaCliente(
           lng: Number(driverData.lng)
         };
 
-        await window.dibujarRutaChoferHastaCliente(
-          {
-            lat: Number(driverData.lat),
-            lng: Number(driverData.lng)
-          },
-          {
-            lat: Number(origenCliente.lat),
-            lng: Number(origenCliente.lng)
-          }
-        );
-        rutaSeguimientoDibujada = true;
+await window.dibujarRutaChoferHastaCliente(
+  {
+    lat: Number(driverData.lat),
+    lng: Number(driverData.lng)
+  },
+  {
+    lat: Number(puntoObjetivo.lat),
+    lng: Number(puntoObjetivo.lng)
+  }
+);        rutaSeguimientoDibujada = true;
         console.log('[restore-map] ruta seguimiento dibujada con driverData');
       }
     }
