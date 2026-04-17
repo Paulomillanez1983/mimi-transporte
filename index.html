@@ -2199,7 +2199,16 @@ function leerViajeActivoEnStorage() {
 
   actualizarTimeline();
 }
-
+function estadoUsaSeguimientoChofer(estado) {
+  const e = String(estado || '').trim().toUpperCase();
+  return [
+    'ASIGNADO',
+    'ACEPTADO',
+    'EN_CAMINO',
+    'INICIADO',
+    'EN_CURSO'
+  ].includes(e);
+}
 async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
     if (!viajeLocal) return;
@@ -2220,13 +2229,77 @@ async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
       );
     }
 
+    const estadoActual = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+    const usarSeguimientoChofer = estadoUsaSeguimientoChofer(estadoActual);
+
+    setSectionVisible('quoteCard', true);
+    setSectionVisible('mapSection', true);
+
+    if (usarSeguimientoChofer) {
+      if (typeof limpiarCapasRutaMapa === 'function') {
+        limpiarCapasRutaMapa();
+      }
+
+      if (typeof limpiarMarkersRutaCotizacion === 'function') {
+        limpiarMarkersRutaCotizacion();
+      }
+
+      if (typeof window.limpiarRutaChoferHastaCliente === 'function') {
+        window.limpiarRutaChoferHastaCliente();
+      }
+
+      if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
+        mostrarSoloPickupClienteEnMapa();
+      }
+
+      const origenCliente = state?.origen || null;
+
+      if (
+        state?.choferLocation &&
+        origenCliente &&
+        typeof window.dibujarRutaChoferHastaCliente === 'function'
+      ) {
+        await window.dibujarRutaChoferHastaCliente(
+          {
+            lat: Number(state.choferLocation.lat),
+            lng: Number(state.choferLocation.lng)
+          },
+          {
+            lat: Number(origenCliente.lat),
+            lng: Number(origenCliente.lng)
+          }
+        );
+      } else if (
+        state?.choferId &&
+        origenCliente &&
+        typeof window.cargarUbicacionActualChofer === 'function' &&
+        typeof window.dibujarRutaChoferHastaCliente === 'function'
+      ) {
+        const driverData = await window.cargarUbicacionActualChofer(state.choferId);
+
+        if (driverData) {
+          await window.dibujarRutaChoferHastaCliente(
+            {
+              lat: Number(driverData.lat),
+              lng: Number(driverData.lng)
+            },
+            {
+              lat: Number(origenCliente.lat),
+              lng: Number(origenCliente.lng)
+            }
+          );
+        }
+      }
+
+      return;
+    }
+
     const coords =
       state?.routeData?.geometry?.coordinates ||
       state?.cotizacion?.route_geometry ||
       null;
 
     if (Array.isArray(coords) && coords.length >= 2) {
-      setSectionVisible('mapSection', true);
       await dibujarRutaReal(coords);
     } else {
       const puntos = obtenerPuntosOrdenados();
@@ -2235,17 +2308,13 @@ async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
         .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
 
       if (coordsFallback.length >= 2) {
-        setSectionVisible('mapSection', true);
         dibujarRutaLineal(coordsFallback);
       }
     }
-
-    setSectionVisible('quoteCard', true);
   } catch (err) {
     console.warn('[restore-trip] no se pudo restaurar mapa/cotización:', err);
   }
 }
-
 function abrirPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
   notifPanel.classList.add('is-open');
@@ -2676,7 +2745,13 @@ function suscribirseEstadoViajeRealtime(viajeId) {
           actualizarEstadoLocalViaje(nuevoEstado);
 
 // 🔥 REEMPLAZAR RUTA COTIZADA POR RUTA CHOFER → CLIENTE
-if (nuevoEstado === 'ASIGNADO' || nuevoEstado === 'ACEPTADO' || nuevoEstado === 'EN_CAMINO') {
+if (
+  nuevoEstado === 'ASIGNADO' ||
+  nuevoEstado === 'ACEPTADO' ||
+  nuevoEstado === 'EN_CAMINO' ||
+  nuevoEstado === 'INICIADO' ||
+  nuevoEstado === 'EN_CURSO'
+) {
   console.log('[MAP] cambiando a ruta chofer → cliente');
 
   if (typeof limpiarCapasRutaMapa === 'function') {
