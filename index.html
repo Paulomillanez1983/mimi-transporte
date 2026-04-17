@@ -2258,6 +2258,10 @@ if (usarSeguimientoChofer) {
 
   const origenCliente = state?.origen || null;
   let rutaSeguimientoDibujada = false;
+  console.log('[restore-map] estadoActual', estadoActual);
+console.log('[restore-map] state.choferId', state?.choferId);
+console.log('[restore-map] state.choferLocation', state?.choferLocation);
+console.log('[restore-map] origenCliente', origenCliente);
 
   if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
     try {
