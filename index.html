@@ -5200,6 +5200,52 @@ function limpiarMarkersRutaCotizacion() {
     console.warn('[MAP] no se pudo mostrar pickup del cliente:', err);
   }
 }
+
+  function actualizarCamaraSeguimientoChofer() {
+  try {
+    if (!window.mapaCliente || !window.mapReady) return;
+    if (!state?.choferLocation || !state?.origen) return;
+
+    const choferLat = Number(state.choferLocation.lat);
+    const choferLng = Number(state.choferLocation.lng);
+    const clienteLat = Number(state.origen.lat);
+    const clienteLng = Number(state.origen.lng);
+
+    if (
+      !coordenadasValidas(choferLat, choferLng) ||
+      !coordenadasValidas(clienteLat, clienteLng)
+    ) {
+      return;
+    }
+
+    const distanciaMetros = turf.distance(
+      [choferLng, choferLat],
+      [clienteLng, clienteLat],
+      { units: 'kilometers' }
+    ) * 1000;
+
+    let zoomObjetivo = 11.8;
+
+    if (distanciaMetros <= 6000) zoomObjetivo = 12.6;
+    if (distanciaMetros <= 3000) zoomObjetivo = 13.4;
+    if (distanciaMetros <= 1500) zoomObjetivo = 14.2;
+    if (distanciaMetros <= 800)  zoomObjetivo = 15.1;
+    if (distanciaMetros <= 400)  zoomObjetivo = 16.0;
+    if (distanciaMetros <= 200)  zoomObjetivo = 16.8;
+
+    const centerLng = (choferLng + clienteLng) / 2;
+    const centerLat = (choferLat + clienteLat) / 2;
+
+    window.mapaCliente.easeTo({
+      center: [centerLng, centerLat],
+      zoom: zoomObjetivo,
+      duration: 1200,
+      essential: true
+    });
+  } catch (err) {
+    console.warn('[MAP] no se pudo actualizar cámara chofer/cliente:', err);
+  }
+}
 // ==========================================
 // COTIZACIÓN
 // ==========================================
