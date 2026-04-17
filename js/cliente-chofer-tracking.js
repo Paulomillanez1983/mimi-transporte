@@ -106,7 +106,6 @@ function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
       .addTo(mapa);
 
     console.log('[chofer-map] marker creado', { lat, lng });
-
   } else {
     window.choferMarker.setLngLat(lngLat);
     console.log('[chofer-map] marker actualizado', { lat, lng });
@@ -119,20 +118,22 @@ function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
       heading: Number(opts?.heading || 0)
     };
   }
-}
-  const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
-const origenCliente = window.state?.origen || null;
 
-if (
-  ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
-  origenCliente &&
-  typeof window.dibujarRutaChoferHastaCliente === 'function'
-) {
-  window.dibujarRutaChoferHastaCliente(
-    { lat: Number(lat), lng: Number(lng) },
-    { lat: Number(origenCliente.lat), lng: Number(origenCliente.lng) }
-  );
+  const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
+  const origenCliente = window.state?.origen || null;
+
+  if (
+    ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
+    origenCliente &&
+    typeof window.dibujarRutaChoferHastaCliente === 'function'
+  ) {
+    window.dibujarRutaChoferHastaCliente(
+      { lat: Number(lat), lng: Number(lng) },
+      { lat: Number(origenCliente.lat), lng: Number(origenCliente.lng) }
+    );
+  }
 }
+  
 async function cargarUbicacionActualChofer(choferId) {
   if (!choferId || !window.sbRealtime) return null;
 
