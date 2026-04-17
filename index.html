@@ -24,9 +24,11 @@
 <meta property="og:image" content="https://github.com/Paulomillanez1983/mimi-transporte/blob/main/WhatsApp%20Image%202026-03-18%20at%2018.48.46%20(2).jpeg?raw=true">
 <meta property="og:url" content="https://paulomillanez1983.github.io/mimi-transporte/">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="./js/pwa-install-manager.js"></script>
+<script type="module" src="./js/client-pwa-onboarding.js"></script>
 <script type="module" src="./js/push-support.js"></script>
 <script src="./js/cliente-chofer-tracking.js"></script>
-<!-- SUPABASE REST CLIENT -->
+  <!-- SUPABASE REST CLIENT -->
 <script>
 const SupabaseSDK = window.supabase;
 const SUPABASE_URL = "https://xrphpqmutvadjrucqicn.supabase.co";
@@ -728,7 +730,32 @@ async function buscarDireccion(query) {
 </script>
 </head>
 <body>
+<div id="clientInstallBanner" class="client-install-banner" hidden>
+  <div class="client-install-banner__content">
+    <div class="client-install-banner__title">Instalá MIMI en tu celular</div>
+    <div id="clientInstallStatusText" class="client-install-banner__text">
+      Instalá la app para recibir avisos y entrar más rápido.
+    </div>
 
+    <div class="client-install-banner__actions">
+      <button id="btnInstallClientApp" type="button" class="client-install-banner__btn client-install-banner__btn--primary">
+        Instalar app
+      </button>
+
+      <button id="btnOpenBrowserGuide" type="button" class="client-install-banner__btn client-install-banner__btn--primary" style="display:none;">
+        Abrir en navegador
+      </button>
+
+      <button id="btnEnableClientLocation" type="button" class="client-install-banner__btn client-install-banner__btn--ghost">
+        Activar ubicación
+      </button>
+
+      <button id="btnDismissClientInstall" type="button" class="client-install-banner__btn client-install-banner__btn--ghost">
+        Más tarde
+      </button>
+    </div>
+  </div>
+</div>
 <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
 <header class="header" role="banner">
@@ -1881,8 +1908,15 @@ if (typeof window.subscribeSupportRealtimeForUser === 'function') {
   console.warn('[reanudarViajePendientePostLogin] subscribeSupportRealtimeForUser no disponible todavía');
 }
 
-await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
-    notif.show(
+if (typeof window.runClientPostLoginOnboarding === 'function') {
+  await window.runClientPostLoginOnboarding(session);
+} else {
+if (typeof window.runClientPostLoginOnboarding === 'function') {
+  await window.runClientPostLoginOnboarding(session);
+} else {
+  await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
+}
+  notif.show(
       'Sesión iniciada',
       `Ingresaste como ${session.user.email || 'usuario'}`,
       'success',
@@ -8116,6 +8150,15 @@ window.setSectionVisible = setSectionVisible;
   })();
 
   document.addEventListener('DOMContentLoaded', initNextLevelUI);
+  document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    if (typeof window.initClientPwaOnboarding === 'function') {
+      await window.initClientPwaOnboarding();
+    }
+  } catch (err) {
+    console.warn('[client-pwa] init error:', err);
+  }
+});
 
 </script>
 </body>
