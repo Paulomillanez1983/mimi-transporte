@@ -3316,3 +3316,77 @@ select:focus-visible {
     transform: translateX(100%);
   }
 }
+.client-install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease;
+}
+
+.client-install-banner.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.client-install-banner__content {
+  background: rgba(15, 23, 42, 0.94);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+  backdrop-filter: blur(14px);
+}
+
+.client-install-banner__title {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.client-install-banner__text {
+  font-size: 13px;
+  line-height: 1.35;
+  opacity: 0.92;
+}
+
+.client-install-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.client-install-banner__btn {
+  min-height: 42px;
+  border-radius: 999px;
+  padding: 0 14px;
+  border: 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.client-install-banner__btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.client-install-banner__btn--ghost {
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.14);
+}
+
+@media (min-width: 821px) {
+  .client-install-banner {
+    left: auto;
+    right: 20px;
+    width: min(420px, calc(100vw - 40px));
+  }
+}
