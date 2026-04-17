@@ -1057,37 +1057,60 @@ async function buscarDireccion(query) {
         <div id="priceBreakdownContent"></div>
       </div>
 
-      <div class="quote-actions">
-        <button
-          class="btn-primary"
-          id="btnConfirmarViaje"
-          type="button"
-          aria-label="Confirmar viaje"
-        >
-          <span aria-hidden="true">✓</span>
-          <span>Confirmar viaje</span>
-        </button>
+<div class="trip-driver-card" id="tripDriverCard" hidden>
+  <div class="trip-driver-card__avatar" id="tripDriverAvatar">C</div>
 
-        <button
-          class="btn-secondary"
-          id="btnCompartirRuta"
-          type="button"
-          aria-label="Compartir ruta"
-        >
-          <span aria-hidden="true">📤</span>
-          <span>Compartir ruta</span>
-        </button>
-      </div>
-      <button
-  class="btn-secondary btn-cancel-trip"
-  id="btnCancelarViaje"
-  type="button"
-  aria-label="Cancelar viaje"
-  hidden
->
-  <span aria-hidden="true">✕</span>
-  <span>Cancelar viaje</span>
-</button>
+  <div class="trip-driver-card__info">
+    <div class="trip-driver-card__name" id="tripDriverName">Chofer asignado</div>
+    <div class="trip-driver-card__meta" id="tripDriverMeta">En camino hacia tu ubicación</div>
+    <div class="trip-driver-card__contact" id="tripDriverContact"></div>
+  </div>
+</div>
+
+<div class="quote-actions" id="quoteActions">
+  <button
+    class="btn-primary"
+    id="btnConfirmarViaje"
+    type="button"
+    aria-label="Confirmar viaje"
+  >
+    <span aria-hidden="true">✓</span>
+    <span>Confirmar viaje</span>
+  </button>
+
+  <button
+    class="btn-secondary"
+    id="btnCompartirRuta"
+    type="button"
+    aria-label="Compartir ruta"
+  >
+    <span aria-hidden="true">📤</span>
+    <span>Compartir ruta</span>
+  </button>
+</div>
+
+<div class="trip-active-actions" id="tripActiveActions" hidden>
+  <button
+    class="btn-secondary btn-chat-trip"
+    id="btnChatChofer"
+    type="button"
+    aria-label="Chatear con el chofer"
+  >
+    <span aria-hidden="true">💬</span>
+    <span>Chat</span>
+  </button>
+
+  <button
+    class="btn-secondary btn-cancel-trip"
+    id="btnCancelarViaje"
+    type="button"
+    aria-label="Cancelar viaje"
+    hidden
+  >
+    <span aria-hidden="true">✕</span>
+    <span>Cancelar viaje</span>
+  </button>
+</div>
     </section>
   </section>
 </main>
@@ -2728,6 +2751,18 @@ const notifData = mapearEstadoANotificacion(nuevoEstado);
               viaje: newRow
             });
           }
+          const viajeUI = await enriquecerViajeConChofer(newRow);
+
+state.estadoViaje = nuevoEstado;
+state.viajeEstado = nuevoEstado;
+state.choferId =
+  viajeUI?.assigned_driver_id ||
+  viajeUI?.chofer_id_uuid ||
+  state.choferId ||
+  null;
+
+actualizarBotonCancelarViaje();
+actualizarModoViajeActivoCliente(viajeUI);
 
           actualizarCentroNotificacionesViaje({
             estado: notifData.estado,
@@ -2778,7 +2813,13 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
   if (typeof window.limpiarRutaChoferHastaCliente === 'function') {
     window.limpiarRutaChoferHastaCliente();
   }
+document.body.classList.remove('trip-live-mode');
 
+const tripActiveActions = document.getElementById('tripActiveActions');
+const tripDriverCard = document.getElementById('tripDriverCard');
+
+if (tripActiveActions) tripActiveActions.hidden = true;
+if (tripDriverCard) tripDriverCard.hidden = true;
   state.choferId = null;
 }
           if (nuevoEstado === 'CANCELADO') {
@@ -6251,14 +6292,95 @@ notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
 }
   
 function actualizarBotonCancelarViaje() {
-const btnCancelar = document.getElementById('btnCancelarViaje');
-if (btnCancelar) btnCancelar.hidden = true;
-  
+  const btnCancelar = document.getElementById('btnCancelarViaje');
+  if (!btnCancelar) return;
+
   const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
-  const visible = !!state?.viajeId && !['CANCELADO', 'COMPLETADO'].includes(estado);
+  const visible =
+    !!state?.viajeId &&
+    !['CANCELADO', 'COMPLETADO'].includes(estado) &&
+    esEstadoViajeActivoCliente(estado);
 
   btnCancelar.hidden = !visible;
 }
+  
+function esEstadoViajeActivoCliente(estadoLike) {
+  const estado = String(estadoLike || '').trim().toUpperCase();
+
+  return [
+    'ASIGNADO',
+    'ACEPTADO',
+    'EN_CAMINO',
+    'ARRIVING',
+    'LLEGANDO',
+    'EN_CURSO'
+  ].includes(estado);
+}
+
+function actualizarCardChoferUI(viaje = {}) {
+  const card = document.getElementById('tripDriverCard');
+  const nameEl = document.getElementById('tripDriverName');
+  const metaEl = document.getElementById('tripDriverMeta');
+  const contactEl = document.getElementById('tripDriverContact');
+  const avatarEl = document.getElementById('tripDriverAvatar');
+
+  if (!card || !nameEl || !metaEl || !contactEl || !avatarEl) return;
+
+  const nombre =
+    viaje?.chofer_nombre ||
+    viaje?.choferNombre ||
+    'Chofer asignado';
+
+  const telefono =
+    viaje?.chofer_telefono ||
+    viaje?.choferTelefono ||
+    '';
+
+  const email = viaje?.chofer_email || '';
+  const contacto = telefono || email || '';
+
+  nameEl.textContent = nombre;
+  metaEl.textContent = 'En camino hacia tu ubicación';
+  contactEl.textContent = contacto ? `Contacto: ${contacto}` : '';
+
+  avatarEl.textContent = (String(nombre).trim().charAt(0) || '🚘').toUpperCase();
+}
+
+function actualizarModoViajeActivoCliente(viaje = null) {
+  const estado =
+    resolverEstadoViajeCliente(viaje || {
+      estado: state?.estadoViaje || state?.viajeEstado || ''
+    });
+
+  const tripActiveActions = document.getElementById('tripActiveActions');
+  const btnCancelar = document.getElementById('btnCancelarViaje');
+  const supportBtn = document.getElementById('supportBtn');
+
+  const activo =
+    !!state?.viajeId &&
+    esEstadoViajeActivoCliente(estado);
+
+  document.body.classList.toggle('trip-live-mode', activo);
+
+  if (tripActiveActions) {
+    tripActiveActions.hidden = !activo;
+  }
+
+  if (btnCancelar) {
+    btnCancelar.hidden = !activo || ['CANCELADO', 'COMPLETADO'].includes(estado);
+  }
+
+  if (activo) {
+    actualizarCardChoferUI(viaje || {});
+    setSectionVisible('mapSection', true);
+    setSectionVisible('quoteCard', true);
+  }
+
+  if (supportBtn) {
+    supportBtn.hidden = !!activo;
+  }
+}
+  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
