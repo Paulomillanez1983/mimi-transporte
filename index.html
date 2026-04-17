@@ -2253,15 +2253,7 @@ if (usarSeguimientoChofer) {
   }
 
   const origenCliente = state?.origen || null;
-
-  if (
-    !state?.choferLocation &&
-    !state?.choferId &&
-    origenCliente &&
-    typeof centrarMapaEnPunto === 'function'
-  ) {
-    centrarMapaEnPunto(origenCliente.lat, origenCliente.lng, 15);
-  }
+  let rutaSeguimientoDibujada = false;
 
   if (
     state?.choferLocation &&
@@ -2278,6 +2270,8 @@ if (usarSeguimientoChofer) {
         lng: Number(origenCliente.lng)
       }
     );
+    rutaSeguimientoDibujada = true;
+
   } else if (
     state?.choferId &&
     origenCliente &&
@@ -2302,12 +2296,24 @@ if (usarSeguimientoChofer) {
           lng: Number(origenCliente.lng)
         }
       );
+      rutaSeguimientoDibujada = true;
+    }
+  }
+
+  if (!rutaSeguimientoDibujada && origenCliente) {
+    if (typeof centrarMapaEnPunto === 'function') {
+      centrarMapaEnPunto(origenCliente.lat, origenCliente.lng, 15);
+    } else if (mapaCliente && typeof mapaCliente.easeTo === 'function') {
+      mapaCliente.easeTo({
+        center: [Number(origenCliente.lng), Number(origenCliente.lat)],
+        zoom: 15,
+        duration: 800
+      });
     }
   }
 
   return;
-}
-    
+}    
     const coords =
       state?.routeData?.geometry?.coordinates ||
       state?.cotizacion?.route_geometry ||
