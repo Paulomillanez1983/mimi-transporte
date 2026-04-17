@@ -5024,10 +5024,31 @@ async function initMapa() {
         }, 180);
       });
 
-      mapaCliente.on('error', (e) => {
-        console.warn('[initMapa] map error:', e?.error || e);
-      });
+mapaCliente.on('error', (e) => {
+  console.warn('[initMapa] map error:', e?.error || e);
 
+  if (!mapReady) {
+    console.warn('[initMapa] fallback por error de mapa');
+
+    mapReady = false;
+    window.mapReady = false;
+
+    try {
+      mapaCliente?.remove?.();
+    } catch (_) {}
+
+    mapaCliente = null;
+    window.mapaCliente = null;
+
+    mostrarFallbackMapaSinWebGL();
+
+    if (wasHidden) {
+      mapSection.style.visibility = 'visible';
+    }
+
+    resolve(); // 🔥 ESTO ES LO QUE TE FALTABA
+  }
+});
       setTimeout(() => {
         if (!mapReady && mapaCliente) {
           console.warn('[initMapa] timeout de espera load; continúo igual');
