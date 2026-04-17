@@ -4640,11 +4640,37 @@ function limpiarCapasRutaMapa() {
   }
 
   try {
-    if (mapaCliente.getLayer('route-anim')) mapaCliente.removeLayer('route-anim');
-    if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-    if (mapaCliente.getLayer('route-glow')) mapaCliente.removeLayer('route-glow');
-    if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
-  } catch (_) {}
+    const layers = [
+      'route-anim',
+      'route-line',
+      'route-glow',
+      'route-casing',
+      'route-shadow'
+    ];
+
+    const sources = [
+      'route',
+      'route-source',
+      'route-line-source'
+    ];
+
+    layers.forEach((layerId) => {
+      if (mapaCliente.getLayer(layerId)) {
+        mapaCliente.removeLayer(layerId);
+        console.log('[MAP] layer eliminado:', layerId);
+      }
+    });
+
+    sources.forEach((sourceId) => {
+      if (mapaCliente.getSource(sourceId)) {
+        mapaCliente.removeSource(sourceId);
+        console.log('[MAP] source eliminado:', sourceId);
+      }
+    });
+
+  } catch (err) {
+    console.warn('[MAP] error limpiando capas:', err);
+  }
 }
 function limpiarMarkersMapa() {
   if (Array.isArray(state.markers)) {
