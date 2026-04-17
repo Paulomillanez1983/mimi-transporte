@@ -3290,3 +3290,6 @@ select:focus-visible {
     color: #dbe4ff;
   }
 }
+#tripRequestStatus.trip-status-searching {
+  animation: tripStatusPulse 1.4s ease-in-out infinite;
+}
