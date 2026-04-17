@@ -2844,11 +2844,6 @@ if (tripDriverCard) tripDriverCard.hidden = true;
   async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
-    if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
-}
-if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
 }
 
 actualizarModoViajeActivoCliente({
@@ -2928,21 +2923,23 @@ if (viaje?.id && estadosActivos.includes(estado)) {
     renderizarCentroNotificaciones();
   }
 
-  if (typeof actualizarBotonCancelarViaje === 'function') {
-    actualizarBotonCancelarViaje();
-  }
+if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
 
-  if (typeof actualizarEstadoSolicitudUI === 'function') {
-    const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
-    actualizarEstadoSolicitudUI({
-      estado,
-      texto: textoEstado,
-      viaje
-    });
-  }
+if (typeof actualizarEstadoSolicitudUI === 'function') {
+  const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
+  actualizarEstadoSolicitudUI({
+    estado,
+    texto: textoEstado,
+    viaje
+  });
+}
 
-  suscribirseEstadoViajeRealtime(viaje.id);
-  return;
+actualizarModoViajeActivoCliente(viaje);
+
+suscribirseEstadoViajeRealtime(viaje.id);
+return;
 }
     // ============================
     // CASO 2: VIAJE EN STORAGE
@@ -2957,20 +2954,24 @@ if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
   actualizarStatusCardNotificaciones(viajeLocal.estadoViaje);
   renderizarCentroNotificaciones();
 
-  if (typeof actualizarBotonCancelarViaje === 'function') {
-    actualizarBotonCancelarViaje();
-  }
+ if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
 
-  if (typeof actualizarEstadoSolicitudUI === 'function') {
-    const notifData = mapearEstadoANotificacion(viajeLocal.estadoViaje);
-    actualizarEstadoSolicitudUI({
-      estado: viajeLocal.estadoViaje,
-      texto: notifData.texto
-    });
-  }
+if (typeof actualizarEstadoSolicitudUI === 'function') {
+  const notifData = mapearEstadoANotificacion(viajeLocal.estadoViaje);
+  actualizarEstadoSolicitudUI({
+    estado: viajeLocal.estadoViaje,
+    texto: notifData.texto
+  });
+}
 
-  suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
-  return;
+actualizarModoViajeActivoCliente({
+  estado: viajeLocal.estadoViaje
+});
+
+suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
+return;
 }
     
   // ============================
@@ -3177,11 +3178,15 @@ const supportSheetClose = document.getElementById("supportSheetClose");
 const supportMessageInput = document.getElementById("supportMessageInput");
 const supportSendBtn = document.getElementById("supportSendBtn");
 const supportChatBody = document.getElementById("supportChatBody");
+
+  
 function openSupportSheet() {
   if (!supportSheet || !supportSheetOverlay) return;
 
   supportSheet.hidden = false;
   supportSheetOverlay.hidden = false;
+
+document.body.classList.add('support-open');
 
   requestAnimationFrame(() => {
     supportSheet.classList.add("is-open");
@@ -3202,6 +3207,7 @@ function closeSupportSheet() {
   supportSheet.classList.remove("is-open");
   supportSheetOverlay.classList.remove("is-open");
   supportSheet.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("support-open");
 
   setTimeout(() => {
     if (!supportSheet.classList.contains("is-open")) {
@@ -3211,8 +3217,7 @@ function closeSupportSheet() {
   }, 280);
 
   document.body.style.overflow = "";
-}
-  
+}  
 function appendSupportMessage(text, type = "user", messageId = null) {
   if (!supportChatBody || !text) return;
   if (messageId && supportChatBody.querySelector(`[data-support-message-id="${messageId}"]`)) {
@@ -7175,57 +7180,21 @@ function bindUIActions() {
   const supportOverlay = document.getElementById('supportSheetOverlay');
   const supportSheetClose = document.getElementById('supportSheetClose');
 if (supportOverlay && !supportOverlay.dataset.bound) {
-  supportOverlay.addEventListener('click', () => {
-    const supportSheet = document.getElementById('supportSheet');
-
-    if (supportSheet) {
-      supportSheet.hidden = true;
-      supportSheet.setAttribute('aria-hidden', 'true');
-    }
-
-    supportOverlay.hidden = true;
-
-    document.body.classList.remove('support-open'); // 🔥 CLAVE
-  });
-
+supportOverlay.addEventListener('click', () => {
+  closeSupportSheet();
+});
   supportOverlay.dataset.bound = '1';
 }
   if (supportSheetClose && !supportSheetClose.dataset.bound) {
-  supportSheetClose.addEventListener('click', () => {
-    const supportSheet = document.getElementById('supportSheet');
-    const supportOverlay = document.getElementById('supportSheetOverlay');
-
-    if (supportSheet) {
-      supportSheet.hidden = true;
-      supportSheet.setAttribute('aria-hidden', 'true');
-    }
-
-    if (supportOverlay) {
-      supportOverlay.hidden = true;
-    }
-
-    document.body.classList.remove('support-open');
-  });
-
+supportSheetClose.addEventListener('click', () => {
+  closeSupportSheet();
+});
   supportSheetClose.dataset.bound = '1';
 }
   if (btnChatChofer && !btnChatChofer.dataset.bound) {
-  btnChatChofer.addEventListener('click', () => {
-    const supportSheet = document.getElementById('supportSheet');
-    const supportOverlay = document.getElementById('supportSheetOverlay');
-    const input = document.getElementById('supportMessageInput');
-
-    if (supportOverlay) supportOverlay.hidden = false;
-
-    if (supportSheet) {
-      supportSheet.hidden = false;
-      supportSheet.setAttribute('aria-hidden', 'false');
-    }
-      document.body.classList.add('support-open'); // 🔥 ACÁ
-
-    input?.focus();
-  });
-
+btnChatChofer.addEventListener('click', () => {
+  openSupportSheet();
+});
   btnChatChofer.dataset.bound = '1';
 }
   if (btnAddStop && !btnAddStop.dataset.bound) {
