@@ -6205,6 +6205,7 @@ state.estadoViaje = normalizarEstadoUpper(estadoInicialSeguro);
     actualizarBotonCancelarViaje();
     actualizarBotonCotizar();
     guardarViajeActivoEnStorage();
+    actualizarPanelPlanificacionViaje();
     
     console.log('[confirmarViaje] viaje creado OK:', {
       viajeId: state.viajeId,
@@ -6232,6 +6233,7 @@ const choferDetectado =
      actualizarBotonCancelarViaje();
      actualizarBotonCotizar();
      guardarViajeActivoEnStorage();
+     actualizarPanelPlanificacionViaje();
   
      actualizarEstadoSolicitudUI({
      estado: state.viajeEstado,
@@ -6316,6 +6318,41 @@ const estadosBloqueados = [
   btnCalcular.style.pointerEvents = bloquear ? 'none' : 'auto';
   btnCalcular.setAttribute('aria-hidden', bloquear ? 'true' : 'false');
 }  
+  function actualizarPanelPlanificacionViaje() {
+  const routePlanner = document.getElementById('routePlanner');
+  if (!routePlanner) return;
+
+  const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+
+  const estadosOcultos = [
+    'BUSCANDO_CHOFER',
+    'OFERTANDO',
+    'OFERTADO',
+    'SIN_CHOFER',
+    'ASIGNADO',
+    'ACEPTADO',
+    'EN_CAMINO',
+    'INICIADO',
+    'EN_CURSO'
+  ];
+
+  const ocultar = !!state?.viajeId && estadosOcultos.includes(estado);
+
+  routePlanner.hidden = ocultar;
+  routePlanner.style.display = ocultar ? 'none' : '';
+  routePlanner.setAttribute('aria-hidden', ocultar ? 'true' : 'false');
+
+  const inputOrigen = document.getElementById('inputOrigen');
+  const inputDestino = document.getElementById('inputDestino');
+  const btnSwapRoute = document.getElementById('btnSwapRoute');
+  const btnAddStop = document.getElementById('btnAddStop');
+
+  [inputOrigen, inputDestino, btnSwapRoute, btnAddStop].forEach((el) => {
+    if (!el) return;
+    el.disabled = ocultar;
+    el.style.pointerEvents = ocultar ? 'none' : 'auto';
+  });
+}
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
