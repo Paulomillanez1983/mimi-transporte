@@ -3399,8 +3399,11 @@ select:focus-visible {
   }
 
   .client-install-banner__btn {
-    width: 100%;
-    justify-content: center;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     text-align: center;
+     width: 100%;
   }
 }
 @media (max-width: 480px) {
@@ -3461,15 +3464,15 @@ select:focus-visible {
 }
 
 .client-install-banner__btn.primary {
-  background: var(--azul-primario);
-  color: white;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
 }
 
 .client-install-banner__btn.secondary {
-  background: white;
-  border: 1px solid rgba(0,0,0,0.1);
+  background: rgba(255,255,255,0.9);
+  color: #111111;
+  border: 1px solid rgba(0,0,0,0.12);
 }
-
 /* MOBILE */
 @media (max-width: 480px) {
   .client-install-banner__actions {
@@ -3478,5 +3481,36 @@ select:focus-visible {
 
   .client-install-banner__btn {
     width: 100%;
+  }
+}
+.client-install-banner {
+  color: #111;
+}
+
+.client-install-banner__title {
+  color: #0f172a;
+}
+
+.client-install-banner__text {
+  color: #334155;
+}
+@media (prefers-color-scheme: dark) {
+  .client-install-banner {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .client-install-banner__title {
+    color: #ffffff;
+  }
+
+  .client-install-banner__text {
+    color: rgba(255,255,255,0.8);
+  }
+
+  .client-install-banner__btn.secondary {
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+    border: 1px solid rgba(255,255,255,0.12);
   }
 }
