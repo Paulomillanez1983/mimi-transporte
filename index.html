@@ -2582,7 +2582,9 @@ if (typeof actualizarBotonCancelarViaje === 'function') {
 if (typeof actualizarBotonCotizar === 'function') {
   actualizarBotonCotizar();
 }
-  
+if (typeof actualizarPanelPlanificacionViaje === 'function') {
+  actualizarPanelPlanificacionViaje();
+}  
   if (typeof actualizarEstadoSolicitudUI === 'function') {
     const notifData = mapearEstadoANotificacion(upper);
     actualizarEstadoSolicitudUI({
@@ -2886,7 +2888,9 @@ if (typeof actualizarBotonCancelarViaje === 'function') {
 if (typeof actualizarBotonCotizar === 'function') {
   actualizarBotonCotizar();
 }
-  
+if (typeof actualizarPanelPlanificacionViaje === 'function') {
+  actualizarPanelPlanificacionViaje();
+}  
   if (typeof actualizarEstadoSolicitudUI === 'function') {
     const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
     actualizarEstadoSolicitudUI({
@@ -7030,11 +7034,12 @@ async function cancelarViajeCliente() {
       );
     }
 
-    state.viajeEstado = 'CANCELADO';
-    state.estadoViaje = 'CANCELADO';
+     state.viajeEstado = 'CANCELADO';
+     state.estadoViaje = 'CANCELADO';
 
-    actualizarBotonCancelarViaje?.();
-    actualizarBotonCotizar?.();
+     actualizarBotonCancelarViaje?.();
+     actualizarBotonCotizar?.();
+     actualizarPanelPlanificacionViaje?.(); 
     
     if (typeof actualizarEstadoSolicitudUI === 'function') {
       actualizarEstadoSolicitudUI({
