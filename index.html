@@ -2300,16 +2300,24 @@ const estadoActual = String(state?.estadoViaje || state?.viajeEstado || '').toUp
 const usarSeguimientoChofer = estadoUsaSeguimientoChofer(estadoActual);
 const usarDestinoFinal = estadoUsaDestinoFinal(estadoActual);
     
-    setSectionVisible('quoteCard', true);
-    setSectionVisible('mapSection', true);
-    setTimeout(() => {
+setSectionVisible('quoteCard', true);
+setSectionVisible('mapSection', true);
+
+await initMapa();
+
+setTimeout(() => {
   try {
     mapaCliente?.resize?.();
   } catch (_) {}
 }, 80);
 
-    await esperarMapaClienteListo(2500);
-      
+await esperarMapaClienteListo(2500);
+
+setTimeout(() => {
+  try {
+    mapaCliente?.resize?.();
+  } catch (_) {}
+}, 250);      
     
 if (usarSeguimientoChofer) {
   if (typeof limpiarCapasRutaMapa === 'function') {
@@ -4905,11 +4913,23 @@ async function initMapa() {
     mapReadyActual: mapReady
   });
 
-  if (mapaCliente) {
-    console.log('[initMapa] ya existe mapaCliente');
-    return Promise.resolve();
+if (mapaCliente) {
+  console.log('[initMapa] ya existe mapaCliente');
+
+  const mapSection = document.getElementById('mapSection');
+  if (mapSection) {
+    mapSection.style.display = 'block';
+    mapSection.style.visibility = 'visible';
   }
 
+  setTimeout(() => {
+    try {
+      mapaCliente.resize();
+    } catch (_) {}
+  }, 50);
+
+  return Promise.resolve();
+}
   const mapDiv = document.getElementById('map');
   if (!mapDiv) {
     console.warn('[initMapa] no existe #map');
