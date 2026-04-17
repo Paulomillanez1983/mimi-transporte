@@ -2104,6 +2104,18 @@ function construirMensajeEstadoViaje(viaje = {}, estado = '', fallback = '') {
 
 function guardarViajeActivoEnStorage() {
   try {
+    const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+
+    const estadosSeguimiento = [
+      'ASIGNADO',
+      'ACEPTADO',
+      'EN_CAMINO',
+      'INICIADO',
+      'EN_CURSO'
+    ];
+
+    const enSeguimiento = estadosSeguimiento.includes(estado);
+
     const payload = {
       viajeId: state?.viajeId || null,
       estadoViaje: state?.estadoViaje || state?.viajeEstado || null,
@@ -2112,8 +2124,10 @@ function guardarViajeActivoEnStorage() {
       origen: state?.origen || null,
       destino: state?.destino || null,
       waypoints: Array.isArray(state?.waypoints) ? state.waypoints : [],
-      routeData: state?.routeData || null,
-      cotizacion: state?.cotizacion || null,
+
+      // 🔥 CLAVE: no guardar ruta vieja en seguimiento
+      routeData: enSeguimiento ? null : (state?.routeData || null),
+      cotizacion: enSeguimiento ? null : (state?.cotizacion || null),
 
       inputOrigen: document.getElementById('inputOrigen')?.value || '',
       inputDestino: document.getElementById('inputDestino')?.value || '',
@@ -2126,8 +2140,7 @@ function guardarViajeActivoEnStorage() {
   } catch (err) {
     console.warn('[trip] no se pudo guardar viaje activo:', err);
   }
-}
-  
+}  
 function limpiarViajeActivoEnStorage() {
   try {
     localStorage.removeItem(ACTIVE_TRIP_STORAGE_KEY);
