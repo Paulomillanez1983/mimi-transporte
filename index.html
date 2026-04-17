@@ -2235,65 +2235,79 @@ async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
     setSectionVisible('quoteCard', true);
     setSectionVisible('mapSection', true);
 
-    if (usarSeguimientoChofer) {
-      if (typeof limpiarCapasRutaMapa === 'function') {
-        limpiarCapasRutaMapa();
+if (usarSeguimientoChofer) {
+  if (typeof limpiarCapasRutaMapa === 'function') {
+    limpiarCapasRutaMapa();
+  }
+
+  if (typeof limpiarMarkersRutaCotizacion === 'function') {
+    limpiarMarkersRutaCotizacion();
+  }
+
+  if (typeof window.limpiarRutaChoferHastaCliente === 'function') {
+    window.limpiarRutaChoferHastaCliente();
+  }
+
+  if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
+    mostrarSoloPickupClienteEnMapa();
+  }
+
+  const origenCliente = state?.origen || null;
+
+  if (
+    !state?.choferLocation &&
+    !state?.choferId &&
+    origenCliente &&
+    typeof centrarMapaEnPunto === 'function'
+  ) {
+    centrarMapaEnPunto(origenCliente.lat, origenCliente.lng, 15);
+  }
+
+  if (
+    state?.choferLocation &&
+    origenCliente &&
+    typeof window.dibujarRutaChoferHastaCliente === 'function'
+  ) {
+    await window.dibujarRutaChoferHastaCliente(
+      {
+        lat: Number(state.choferLocation.lat),
+        lng: Number(state.choferLocation.lng)
+      },
+      {
+        lat: Number(origenCliente.lat),
+        lng: Number(origenCliente.lng)
       }
+    );
+  } else if (
+    state?.choferId &&
+    origenCliente &&
+    typeof window.cargarUbicacionActualChofer === 'function' &&
+    typeof window.dibujarRutaChoferHastaCliente === 'function'
+  ) {
+    const driverData = await window.cargarUbicacionActualChofer(state.choferId);
 
-      if (typeof limpiarMarkersRutaCotizacion === 'function') {
-        limpiarMarkersRutaCotizacion();
-      }
+    if (driverData) {
+      state.choferLocation = {
+        lat: Number(driverData.lat),
+        lng: Number(driverData.lng)
+      };
 
-      if (typeof window.limpiarRutaChoferHastaCliente === 'function') {
-        window.limpiarRutaChoferHastaCliente();
-      }
-
-      if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
-        mostrarSoloPickupClienteEnMapa();
-      }
-
-      const origenCliente = state?.origen || null;
-
-      if (
-        state?.choferLocation &&
-        origenCliente &&
-        typeof window.dibujarRutaChoferHastaCliente === 'function'
-      ) {
-        await window.dibujarRutaChoferHastaCliente(
-          {
-            lat: Number(state.choferLocation.lat),
-            lng: Number(state.choferLocation.lng)
-          },
-          {
-            lat: Number(origenCliente.lat),
-            lng: Number(origenCliente.lng)
-          }
-        );
-      } else if (
-        state?.choferId &&
-        origenCliente &&
-        typeof window.cargarUbicacionActualChofer === 'function' &&
-        typeof window.dibujarRutaChoferHastaCliente === 'function'
-      ) {
-        const driverData = await window.cargarUbicacionActualChofer(state.choferId);
-
-        if (driverData) {
-          await window.dibujarRutaChoferHastaCliente(
-            {
-              lat: Number(driverData.lat),
-              lng: Number(driverData.lng)
-            },
-            {
-              lat: Number(origenCliente.lat),
-              lng: Number(origenCliente.lng)
-            }
-          );
+      await window.dibujarRutaChoferHastaCliente(
+        {
+          lat: Number(driverData.lat),
+          lng: Number(driverData.lng)
+        },
+        {
+          lat: Number(origenCliente.lat),
+          lng: Number(origenCliente.lng)
         }
-      }
-
-      return;
+      );
     }
+  }
 
+  return;
+}
+    
     const coords =
       state?.routeData?.geometry?.coordinates ||
       state?.cotizacion?.route_geometry ||
@@ -2945,15 +2959,27 @@ if (viaje?.id && estadosActivos.has(estado)) {
   // ============================
     // CASO 1: VIAJE ACTIVO REAL
     // ============================
-  viaje = await enriquecerViajeConChofer(viaje);
-  state.viajeId = viaje.id;
-  state.viajeEstado = estado;
-  state.estadoViaje = estado;
+viaje = await enriquecerViajeConChofer(viaje);
 
-  if (viajeLocal) {
-    await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
-  }
+state.viajeId = viaje.id;
+state.viajeEstado = estado;
+state.estadoViaje = estado;
+state.choferId = viaje?.assigned_driver_id || viaje?.chofer_id_uuid || null;
 
+if (coordenadasValidas(viaje?.chofer_lat, viaje?.chofer_lng)) {
+  state.choferLocation = {
+    lat: Number(viaje.chofer_lat),
+    lng: Number(viaje.chofer_lng)
+  };
+}
+
+if (state.choferId && typeof suscribirseUbicacionChoferRealtime === 'function') {
+  suscribirseUbicacionChoferRealtime(state.choferId);
+}
+
+if (viajeLocal) {
+  await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
+}
   guardarViajeActivoEnStorage();
   actualizarStatusCardNotificaciones(estado);
 
@@ -6316,6 +6342,7 @@ state.estadoViaje = normalizarEstadoUpper(estadoInicialSeguro);
     actualizarPanelPlanificacionViaje();
     actualizarResumenCotizacionCompacto();
     actualizarBotonConfirmarViaje();
+    actualizarBotonReiniciarRuta?.();
     
     console.log('[confirmarViaje] viaje creado OK:', {
       viajeId: state.viajeId,
@@ -6346,6 +6373,7 @@ const choferDetectado =
      actualizarPanelPlanificacionViaje();
      actualizarResumenCotizacionCompacto();
      actualizarBotonConfirmarViaje();
+     actualizarBotonReiniciarRuta?.();
   
      actualizarEstadoSolicitudUI({
      estado: state.viajeEstado,
@@ -6516,6 +6544,33 @@ function actualizarBotonConfirmarViaje() {
   btnConfirmarViaje.style.pointerEvents = ocultar ? 'none' : 'auto';
   btnConfirmarViaje.setAttribute('aria-hidden', ocultar ? 'true' : 'false');
 }  
+function actualizarBotonReiniciarRuta() {
+  const btn = document.getElementById('btnReiniciarRuta');
+  if (!btn) return;
+
+  const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+
+  const estadosOcultar = [
+    'BUSCANDO_CHOFER',
+    'OFERTANDO',
+    'OFERTADO',
+    'SIN_CHOFER',
+    'ASIGNADO',
+    'ACEPTADO',
+    'EN_CAMINO',
+    'INICIADO',
+    'EN_CURSO'
+  ];
+
+  const ocultar = !!state?.viajeId && estadosOcultar.includes(estado);
+
+  btn.hidden = ocultar;
+  btn.disabled = ocultar;
+  btn.style.display = ocultar ? 'none' : '';
+  btn.style.pointerEvents = ocultar ? 'none' : 'auto';
+  btn.setAttribute('aria-hidden', ocultar ? 'true' : 'false');
+}
+  
 function confirmarViajePorWhatsAppFallback() {
   const cotizacionId = state.cotizacion?.cotizacion_id || 'sin-id';
   const precioTexto =
@@ -6578,9 +6633,10 @@ function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
     }
   }
 
-  const estadoRaw = String(estado || '').trim();
-  const estadoKey = estadoRaw.toLowerCase();
-
+const estadoRaw = String(estado || '').trim();
+const estadoKey = estadoRaw.toLowerCase();
+const estadoUpper = estadoRaw.toUpperCase();
+  
   const estadosUI = {
     pendiente: {
       label: 'Pendiente',
@@ -6727,12 +6783,29 @@ function actualizarEstadoSolicitudUI({ estado, texto = '', viaje = null }) {
     icon: 'ℹ️'
   };
 
-  box.style.background = estadoInfo.bg;
-  box.style.border = estadoInfo.border;
-  box.style.color = estadoInfo.color;
-  box.style.boxShadow = '0 6px 18px rgba(0,0,0,0.06)';
+box.style.background = estadoInfo.bg;
+box.style.border = estadoInfo.border;
+box.style.color = estadoInfo.color;
+box.style.boxShadow = '0 6px 18px rgba(0,0,0,0.06)';
 
-  const mensaje = texto || estadoInfo.texto;
+box.classList.remove(
+  'trip-status-searching',
+  'trip-status-assigned',
+  'trip-status-onway',
+  'trip-status-inprogress'
+);
+
+if (['BUSCANDO_CHOFER', 'OFERTANDO', 'OFERTADO', 'SIN_CHOFER'].includes(estadoUpper)) {
+  box.classList.add('trip-status-searching');
+} else if (['ASIGNADO', 'ACEPTADO'].includes(estadoUpper)) {
+  box.classList.add('trip-status-assigned');
+} else if (['EN_CAMINO'].includes(estadoUpper)) {
+  box.classList.add('trip-status-onway');
+} else if (['INICIADO', 'EN_CURSO', 'EN_VIAJE'].includes(estadoUpper)) {
+  box.classList.add('trip-status-inprogress');
+}
+
+const mensaje = texto || estadoInfo.texto;
   const choferNombre = viaje?.chofer_nombre || viaje?.choferNombre || '';
   const choferTelefono = viaje?.chofer_telefono || viaje?.choferTelefono || '';
 
