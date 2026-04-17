@@ -4993,19 +4993,23 @@ function crearMarkerElement(label, type) {
   const el = document.createElement('div');
   el.className = `route-marker ${type}`;
 
+  const esParada = type === 'waypoint';
+
   const icono =
     type === 'origin' ? '📍' :
     type === 'dest' ? '🏁' :
-    label;
+    `<span class="route-marker-stop-label">${label}</span>`;
 
   el.innerHTML = `
-    <div class="route-marker-halo"></div>
-    <div class="route-marker-pin">${icono}</div>
+    <div class="route-marker-halo ${esParada ? 'small' : ''}"></div>
+    <div class="route-marker-pin ${esParada ? 'route-marker-pin-stop' : ''}">
+      ${icono}
+    </div>
   `;
 
   return el;
 }
-async function initMapa() {
+  async function initMapa() {
   console.log('[initMapa] entrando', {
     mapaClienteActual: mapaCliente,
     mapReadyActual: mapReady
