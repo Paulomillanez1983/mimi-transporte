@@ -430,6 +430,15 @@ class DriverApp {
       this._subscribeToEvents();
       this._setupUI();
       initDriverSupport();
+      if (this._activeTripGuardInterval) {
+       clearInterval(this._activeTripGuardInterval);
+     }
+
+     this._activeTripGuardInterval = setInterval(() => {
+       this._verifyActiveTripStillValid().catch((err) => {
+         console.warn('[DriverApp] Guard interval error:', err);
+       });
+     }, 3000);
 
       document.addEventListener('visibilitychange', this._visibilityChangeHandler);
       window.addEventListener('pushForegroundMessage', this._foregroundPushHandler);
@@ -451,23 +460,21 @@ class DriverApp {
         return;
       }
 
-      try {
-        const { data: choferRow, error: choferError } = await supabaseService.client
-          .from('choferes')
-          .select('online, disponible')
-          .eq('user_id', this._authUserId)
-          .maybeSingle();
+    try {
+      const { error: choferOfflineError } = await tripManager.setDriverAvailability({
+        online: false,
+        disponible: false
+      });
 
-        if (choferError) {
-          console.warn('[DriverApp] No se pudo leer estado inicial del chofer:', choferError);
-        }
-
-        this._onlineStatus = !!choferRow?.online;
-      } catch (e) {
-        console.warn('[DriverApp] Error leyendo estado inicial online:', e);
-        this._onlineStatus = false;
+      if (choferOfflineError) {
+        console.warn('[DriverApp] No se pudo forzar OFFLINE inicial:', choferOfflineError);
       }
 
+      this._onlineStatus = false;
+    } catch (e) {
+      console.warn('[DriverApp] Error forzando estado inicial offline:', e);
+      this._onlineStatus = false;
+     }
       uiController.updateDriverState(
         this._onlineStatus ? 'ONLINE' : 'OFFLINE',
         this._onlineStatus
@@ -801,26 +808,27 @@ class DriverApp {
       }
     });
 
-    const unsubCancelled = tripManager.on('tripCancelled', () => {
-      console.log('[DriverApp] tripCancelled');
+const unsubCancelled = tripManager.on('tripCancelled', () => {
+  console.log('[DriverApp] tripCancelled');
 
-      this._currentTripId = null;
-      mapService.clearRoute?.();
-      uiController.hideIncomingModal?.();
-      uiController.hideNavigation?.();
-      uiController.hideArrival?.();
+  this._currentTripId = null;
+  tripManager.resetState?.();
 
-      uiController.showToast('Viaje cancelado', 'warning');
+  mapService.clearRoute?.();
+  uiController.hideIncomingModal?.();
+  uiController.hideNavigation?.();
+  uiController.hideArrival?.();
 
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-      } else {
-        this._setFlowState('OFFLINE');
-      }
+  uiController.showToast('Viaje cancelado', 'warning');
 
-      uiController.showWaitingState();
-    });
+  if (this._onlineStatus) {
+    this._setFlowState('ONLINE_IDLE');
+  } else {
+    this._setFlowState('OFFLINE');
+  }
 
+  uiController.showWaitingState();
+});
     const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
       console.log('[DriverApp] pendingTripCleared', reason);
 
@@ -848,6 +856,7 @@ class DriverApp {
       console.log('[DriverApp] noPendingTrips');
 
       const currentTrip = tripManager.getCurrentTrip?.();
+      tripManager.resetState?.();
 
       if (currentTrip?.id) {
         console.log(
@@ -888,7 +897,51 @@ class DriverApp {
       console.error('[DriverApp] Error iniciando GPS:', err);
     }
   }
+async _verifyActiveTripStillValid() {
+  try {
+    const currentTrip = tripManager.getCurrentTrip?.();
+    if (!currentTrip?.id) return;
 
+    const { data, error } = await supabaseService.client
+      .from('viajes')
+      .select('id, estado, cancelado_por, cancel_reason, updated_at')
+      .eq('id', currentTrip.id)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('[DriverApp] No se pudo verificar viaje activo:', error);
+      return;
+    }
+
+    if (!data) return;
+
+    const estado = String(data.estado || '').toUpperCase();
+
+    if (estado === 'CANCELADO') {
+      console.warn('[DriverApp] Cancelación detectada por verificación defensiva:', data);
+
+      this._currentTripId = null;
+      tripManager.resetState?.();
+
+      mapService.clearRoute?.();
+      uiController.hideIncomingModal?.();
+      uiController.hideNavigation?.();
+      uiController.hideArrival?.();
+
+      uiController.showToast('El cliente canceló el viaje', 'warning');
+
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      uiController.showWaitingState?.();
+    }
+  } catch (err) {
+    console.warn('[DriverApp] Error en verificación defensiva de viaje:', err);
+  }
+}
   // =========================================================
   // MAP ROUTE
   // =========================================================
@@ -1568,6 +1621,11 @@ class DriverApp {
         if (typeof fn === 'function') fn();
       });
       this._unsubscribers = [];
+      if (this._activeTripGuardInterval) {
+        clearInterval(this._activeTripGuardInterval);
+        this._activeTripGuardInterval = null;
+      }
+
 
       const btnFab = document.getElementById('fab-online');
       if (btnFab && this._fabClickHandler) {
