@@ -2844,7 +2844,17 @@ if (tripDriverCard) tripDriverCard.hidden = true;
   async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
+    if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
+if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
 
+actualizarModoViajeActivoCliente({
+  estado: viajeLocal.estadoViaje
+});
+actualizarModoViajeActivoCliente(viaje);
     if (!session?.user) {
       if (notifStatusCard) notifStatusCard.hidden = true;
       renderizarCentroNotificaciones();
@@ -6342,10 +6352,10 @@ function actualizarCardChoferUI(viaje = {}) {
   nameEl.textContent = nombre;
   metaEl.textContent = 'En camino hacia tu ubicación';
   contactEl.textContent = contacto ? `Contacto: ${contacto}` : '';
+  avatarEl.textContent = (String(nombre).trim().charAt(0) || 'C').toUpperCase();
 
-  avatarEl.textContent = (String(nombre).trim().charAt(0) || '🚘').toUpperCase();
+  card.hidden = false;
 }
-
 function actualizarModoViajeActivoCliente(viaje = null) {
   const estado =
     resolverEstadoViajeCliente(viaje || {
@@ -7157,7 +7167,25 @@ function bindUIActions() {
   const btnToggleBreakdown = document.getElementById('btnToggleBreakdown');
   const btnLoginHeader = document.getElementById('btnLoginHeader');
   const btnLogoutHeader = document.getElementById('btnLogoutHeader');
+  const btnChatChofer = document.getElementById('btnChatChofer');
+  if (btnChatChofer && !btnChatChofer.dataset.bound) {
+  btnChatChofer.addEventListener('click', () => {
+    const supportSheet = document.getElementById('supportSheet');
+    const supportOverlay = document.getElementById('supportSheetOverlay');
+    const input = document.getElementById('supportMessageInput');
 
+    if (supportOverlay) supportOverlay.hidden = false;
+
+    if (supportSheet) {
+      supportSheet.hidden = false;
+      supportSheet.setAttribute('aria-hidden', 'false');
+    }
+
+    input?.focus();
+  });
+
+  btnChatChofer.dataset.bound = '1';
+}
   if (btnAddStop && !btnAddStop.dataset.bound) {
     btnAddStop.addEventListener('click', agregarWaypoint);
     btnAddStop.dataset.bound = '1';
