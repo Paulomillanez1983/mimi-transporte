@@ -4426,7 +4426,6 @@ mapaCliente.on('load', () => {
 
   mapReady = true;
 
-  // 👇 AGREGÁ ESTA LÍNEA
   window.mapReady = true;
   
         setTimeout(() => {
@@ -4463,7 +4462,6 @@ setTimeout(() => {
   if (!mapReady && mapaCliente) {
     console.warn('[initMapa] timeout de espera load; continúo igual');
 
-    // 👇 AGREGÁ ESTO
     mapReady = true;
     window.mapReady = true;
     try {
