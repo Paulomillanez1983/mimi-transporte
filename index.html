@@ -14,7 +14,7 @@
 <link rel="shortcut icon" href="./assets/icons/icon-192x192.png">
 <link rel="apple-touch-icon" href="./assets/icons/icon-192x192.png">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link rel="stylesheet" href="./mimi-transporte.css?v=<?= Date.now() ?>">
+<link rel="stylesheet" href="./mimi-transporte.css?v=20260417-4">
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
@@ -2402,14 +2402,14 @@ console.log('[restore-map] origenCliente', origenCliente);
 console.log('[restore-map] destinoCliente', destinoCliente);
 console.log('[restore-map] puntoObjetivo', puntoObjetivo);
   
-if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
+if (typeof mostrarSoloPickupClienteEnMapa === 'function' && !usarDestinoFinal) {
   try {
     mostrarSoloPickupClienteEnMapa();
   } catch (err) {
     console.warn('[restore-map] no se pudo mostrar pickup', err);
   }
 }
-
+  
 try {
   if (
     state?.choferLocation &&
@@ -2468,9 +2468,31 @@ try {
 if (!rutaSeguimientoDibujada && puntoObjetivo) {
   console.warn('[restore-map] fallback a centrar objetivo');
 
-  if (typeof centrarMapaEnPunto === 'function') {
-    centrarMapaEnPunto(Number(puntoObjetivo.lat), Number(puntoObjetivo.lng), 15);
-  } else if (mapaCliente && typeof mapaCliente.easeTo === 'function') {
+  if (
+    state?.choferLocation &&
+    typeof window.dibujarRutaChoferHastaCliente === 'function'
+  ) {
+    try {
+      await window.dibujarRutaChoferHastaCliente(
+        {
+          lat: Number(state.choferLocation.lat),
+          lng: Number(state.choferLocation.lng)
+        },
+        {
+          lat: Number(puntoObjetivo.lat),
+          lng: Number(puntoObjetivo.lng)
+        }
+      );
+      rutaSeguimientoDibujada = true;
+    } catch (err) {
+      console.warn('[restore-map] fallback de dibujo también falló', err);
+    }
+  }
+
+  if (!rutaSeguimientoDibujada) {
+    if (typeof centrarMapaEnPunto === 'function') {
+      centrarMapaEnPunto(Number(puntoObjetivo.lat), Number(puntoObjetivo.lng), 15);
+    } else if (mapaCliente && typeof mapaCliente.easeTo === 'function') {
       mapaCliente.easeTo({
         center: [Number(puntoObjetivo.lng), Number(puntoObjetivo.lat)],
         zoom: 15,
@@ -2478,14 +2500,13 @@ if (!rutaSeguimientoDibujada && puntoObjetivo) {
       });
     }
   }
-
+}
+  
   setTimeout(() => {
     try {
       mapaCliente?.resize?.();
     } catch (_) {}
   }, 80);
-
-  return;
 }
     const coords =
       state?.routeData?.geometry?.coordinates ||
@@ -3175,9 +3196,6 @@ async function restaurarViajeActivoCliente() {
         };
       }
 
-if (state.viajeId && typeof suscribirseUbicacionChoferRealtime === 'function') {
-  suscribirseUbicacionChoferRealtime(state.viajeId);
-}
       const viajeRestore = {
         viajeId: viaje.id,
         estadoViaje: estado,
@@ -3232,6 +3250,9 @@ if (state.viajeId && typeof suscribirseUbicacionChoferRealtime === 'function') {
       };
 
       await restaurarMapaYCotizacionDesdeStorage(viajeRestore);
+if (state.viajeId && typeof suscribirseUbicacionChoferRealtime === 'function') {
+  suscribirseUbicacionChoferRealtime(state.viajeId);
+}
 
       guardarViajeActivoEnStorage();
       actualizarStatusCardNotificaciones(estado);
@@ -4867,60 +4888,73 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       }
     });
 
-    window.mapaCliente.addLayer({
-      id: glowLayerId,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-cap': 'round',
-        'line-join': 'round'
-      },
-      paint: {
-        'line-color': '#4da3ff',
-        'line-width': 18,
-        'line-opacity': 0.24,
-        'line-blur': 1.4
-      }
-    });
-['driver-to-client-route-glow', 'driver-to-client-route-casing', 'driver-to-client-route-line']
-  .forEach((layerId) => {
-    if (window.mapaCliente.getLayer(layerId)) {
-      try {
-        window.mapaCliente.moveLayer(layerId);
-      } catch (_) {}
-    }
-  });
-    window.mapaCliente.addLayer({
-      id: casingLayerId,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-cap': 'round',
-        'line-join': 'round'
-      },
-      paint: {
-        'line-color': '#ffffff',
-        'line-width': 9,
-        'line-opacity': 0.95
-      }
-    });
+window.mapaCliente.addLayer({
+  id: glowLayerId,
+  type: 'line',
+  source: sourceId,
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
+  },
+  paint: {
+    'line-color': '#4da3ff',
+    'line-width': 18,
+    'line-opacity': 0.24,
+    'line-blur': 1.4
+  }
+});
 
-    window.mapaCliente.addLayer({
-      id: lineLayerId,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-cap': 'round',
-        'line-join': 'round'
-      },
-      paint: {
-        'line-color': '#0A84FF',
-        'line-width': 7,
-        'line-opacity': 1
-      }
-    });
+window.mapaCliente.addLayer({
+  id: casingLayerId,
+  type: 'line',
+  source: sourceId,
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
+  },
+  paint: {
+    'line-color': '#ffffff',
+    'line-width': 9,
+    'line-opacity': 0.95
+  }
+});
+
+window.mapaCliente.addLayer({
+  id: lineLayerId,
+  type: 'line',
+  source: sourceId,
+  layout: {
+    'line-cap': 'round',
+    'line-join': 'round'
+  },
+  paint: {
+    'line-color': '#0A84FF',
+    'line-width': 7,
+    'line-opacity': 1
+  }
+});
   } catch (err) {
     console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
+  }
+  try {
+  const bounds = coords.reduce(
+    (b, c) => b.extend(c),
+    new maplibregl.LngLatBounds(coords[0], coords[0])
+  );
+
+  window.mapaCliente.fitBounds(bounds, {
+    padding: { top: 70, bottom: 70, left: 50, right: 50 },
+    duration: 700,
+    maxZoom: 15.5
+  });
+
+  setTimeout(() => {
+    try {
+      window.mapaCliente?.resize?.();
+    } catch (_) {}
+  }, 80);
+} catch (err) {
+    console.warn('[mapa] no se pudo ajustar vista chofer→cliente:', err);
   }
 }
   
@@ -5631,9 +5665,10 @@ state = {
   cotizacion: null,
   viajeId: null,
   viajeEstado: null,
-  estadoViaje: null
+  estadoViaje: null,
+  choferId: null,
+  choferLocation: null
 };
-
 actualizarBotonCancelarViaje();
   waypointCounter = 0;
   isCalculatingQuote = false;
