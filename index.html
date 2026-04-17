@@ -2853,19 +2853,21 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
 
     const estado = resolverEstadoViajeCliente(viaje);
 
-    const estadosActivos = [
-      'PENDIENTE',
-      'BUSCANDO_CHOFER',
-      'OFERTANDO',
-      'OFERTADO',
-      'ASIGNADO',
-      'ACEPTADO',
-      'EN_CAMINO',
-      'EN_CURSO',
-      'SIN_CHOFER'
-    ];
+const estadosActivos = new Set([
+  'PENDIENTE',
+  'BUSCANDO_CHOFER',
+  'OFERTANDO',
+  'OFERTADO',
+  'SIN_CHOFER',
+  'ASIGNADO',
+  'ACEPTADO',
+  'EN_CAMINO',
+  'INICIADO',
+  'EN_CURSO'
+]);
 
-    // ============================
+if (viaje?.id && estadosActivos.has(estado)) {
+  // ============================
     // CASO 1: VIAJE ACTIVO REAL
     // ============================
 if (viaje?.id && estadosActivos.includes(estado)) {
