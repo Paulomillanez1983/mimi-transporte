@@ -3017,9 +3017,19 @@ if (state.choferId && typeof suscribirseUbicacionChoferRealtime === 'function') 
   suscribirseUbicacionChoferRealtime(state.choferId);
 }
 
-if (viajeLocal) {
-  await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
-}
+const viajeRestore = {
+  ...(viajeLocal || {}),
+  viajeId: viaje.id,
+  estadoViaje: estado,
+  viajeEstado: estado,
+  origen: viajeLocal?.origen || state?.origen || null,
+  destino: viajeLocal?.destino || state?.destino || null,
+  waypoints: Array.isArray(viajeLocal?.waypoints) ? viajeLocal.waypoints : [],
+  routeData: viajeLocal?.routeData || null,
+  cotizacion: viajeLocal?.cotizacion || null
+};
+
+await restaurarMapaYCotizacionDesdeStorage(viajeRestore);
   guardarViajeActivoEnStorage();
   actualizarStatusCardNotificaciones(estado);
 
