@@ -2707,18 +2707,21 @@ function suscribirseEstadoViajeRealtime(viajeId) {
             );
           }
 
-          if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
-            if (typeof limpiarCanalChoferRealtime === 'function') {
-              limpiarCanalChoferRealtime();
-            }
+if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
+  if (typeof limpiarCanalChoferRealtime === 'function') {
+    limpiarCanalChoferRealtime();
+  }
 
-            if (typeof limpiarMarkerChofer === 'function') {
-              limpiarMarkerChofer();
-            }
+  if (typeof limpiarMarkerChofer === 'function') {
+    limpiarMarkerChofer();
+  }
 
-            state.choferId = null;
-          }
+  if (typeof window.limpiarRutaChoferHastaCliente === 'function') {
+    window.limpiarRutaChoferHastaCliente();
+  }
 
+  state.choferId = null;
+}
           if (nuevoEstado === 'CANCELADO') {
             notif.show(
               'Viaje cancelado',
@@ -4496,8 +4499,6 @@ mapaCliente = new maplibregl.Map({
   pitchWithRotate: false,
   renderWorldCopies: false
 });
-window.dibujarRutaChoferHastaCliente = dibujarRutaChoferHastaCliente;
-window.limpiarRutaChoferHastaCliente = limpiarRutaChoferHastaCliente;
 window.mapaCliente = mapaCliente;
 window.__mapaClienteDebug = mapaCliente;
       
@@ -4933,6 +4934,9 @@ function centrarEnRuta() {
     duration: 600
   });
 }
+  window.dibujarRutaChoferHastaCliente = dibujarRutaChoferHastaCliente;
+window.limpiarRutaChoferHastaCliente = limpiarRutaChoferHastaCliente;
+
 function reiniciarRuta() {
   const inputOrigen = document.getElementById('inputOrigen');
   const inputDestino = document.getElementById('inputDestino');
