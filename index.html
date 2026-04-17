@@ -2945,7 +2945,7 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
 
   return currentTripChannel;
 }
-  async function restaurarViajeActivoCliente() {
+async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
 
@@ -2968,6 +2968,12 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
         cliente_email,
         assigned_driver_id,
         chofer_id_uuid,
+        origen_lat,
+        origen_lng,
+        origen_direccion,
+        destino_lat,
+        destino_lng,
+        destino_direccion,
         created_at,
         updated_at
       `)
@@ -2982,166 +2988,193 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
 
     const estado = resolverEstadoViajeCliente(viaje);
 
-const estadosActivos = new Set([
-  'PENDIENTE',
-  'BUSCANDO_CHOFER',
-  'OFERTANDO',
-  'OFERTADO',
-  'SIN_CHOFER',
-  'ASIGNADO',
-  'ACEPTADO',
-  'EN_CAMINO',
-  'INICIADO',
-  'EN_CURSO'
-]);
+    const estadosActivos = new Set([
+      'PENDIENTE',
+      'BUSCANDO_CHOFER',
+      'OFERTANDO',
+      'OFERTADO',
+      'SIN_CHOFER',
+      'ASIGNADO',
+      'ACEPTADO',
+      'EN_CAMINO',
+      'INICIADO',
+      'EN_CURSO'
+    ]);
 
-if (viaje?.id && estadosActivos.has(estado)) {
-  // ============================
-    // CASO 1: VIAJE ACTIVO REAL
-    // ============================
-viaje = await enriquecerViajeConChofer(viaje);
+    if (viaje?.id && estadosActivos.has(estado)) {
+      // ============================
+      // CASO 1: VIAJE ACTIVO REAL
+      // ============================
+      viaje = await enriquecerViajeConChofer(viaje);
 
-state.viajeId = viaje.id;
-state.viajeEstado = estado;
-state.estadoViaje = estado;
-state.choferId = viaje?.assigned_driver_id || viaje?.chofer_id_uuid || null;
+      state.viajeId = viaje.id;
+      state.viajeEstado = estado;
+      state.estadoViaje = estado;
+      state.choferId = viaje?.assigned_driver_id || viaje?.chofer_id_uuid || null;
+      state.choferLocation = null;
 
-if (coordenadasValidas(viaje?.chofer_lat, viaje?.chofer_lng)) {
-  state.choferLocation = {
-    lat: Number(viaje.chofer_lat),
-    lng: Number(viaje.chofer_lng)
-  };
-}
+      if (coordenadasValidas(viaje?.chofer_lat, viaje?.chofer_lng)) {
+        state.choferLocation = {
+          lat: Number(viaje.chofer_lat),
+          lng: Number(viaje.chofer_lng)
+        };
+      }
 
-if (state.choferId && typeof suscribirseUbicacionChoferRealtime === 'function') {
-  suscribirseUbicacionChoferRealtime(state.choferId);
-}
+      if (state.choferId && typeof suscribirseUbicacionChoferRealtime === 'function') {
+        suscribirseUbicacionChoferRealtime(state.choferId);
+      }
 
-const viajeRestore = {
-  viajeId: viaje.id,
-  estadoViaje: estado,
-  viajeEstado: estado,
+      const viajeRestore = {
+        viajeId: viaje.id,
+        estadoViaje: estado,
+        viajeEstado: estado,
 
-  // 🔥 PRIORIDAD BACKEND
-  origen:
-    (coordenadasValidas(viaje?.origen_lat, viaje?.origen_lng)
-      ? {
-          lat: Number(viaje.origen_lat),
-          lng: Number(viaje.origen_lng),
-          direccion: viaje?.origen_direccion || '',
-          direccionCorta: viaje?.origen_direccion || ''
-        }
-      : null)
-    || state?.origen
-    || viajeLocal?.origen
-    || null,
+        // Backend primero, storage solo de respaldo
+        origen:
+          (coordenadasValidas(viaje?.origen_lat, viaje?.origen_lng)
+            ? {
+                lat: Number(viaje.origen_lat),
+                lng: Number(viaje.origen_lng),
+                direccion: viaje?.origen_direccion || '',
+                direccionCorta: viaje?.origen_direccion || ''
+              }
+            : null) ||
+          state?.origen ||
+          viajeLocal?.origen ||
+          null,
 
-  destino:
-    (coordenadasValidas(viaje?.destino_lat, viaje?.destino_lng)
-      ? {
-          lat: Number(viaje.destino_lat),
-          lng: Number(viaje.destino_lng),
-          direccion: viaje?.destino_direccion || '',
-          direccionCorta: viaje?.destino_direccion || ''
-        }
-      : null)
-    || state?.destino
-    || viajeLocal?.destino
-    || null,
+        destino:
+          (coordenadasValidas(viaje?.destino_lat, viaje?.destino_lng)
+            ? {
+                lat: Number(viaje.destino_lat),
+                lng: Number(viaje.destino_lng),
+                direccion: viaje?.destino_direccion || '',
+                direccionCorta: viaje?.destino_direccion || ''
+              }
+            : null) ||
+          state?.destino ||
+          viajeLocal?.destino ||
+          null,
 
-  waypoints: Array.isArray(viajeLocal?.waypoints) ? viajeLocal.waypoints : [],
+        waypoints: Array.isArray(viajeLocal?.waypoints) ? viajeLocal.waypoints : [],
 
-  // ⚠️ SOLO SI NO HAY VIAJE ACTIVO REAL
-  routeData: null,
-  cotizacion: null
-};
-await restaurarMapaYCotizacionDesdeStorage(viajeRestore);
-  guardarViajeActivoEnStorage();
-  actualizarStatusCardNotificaciones(estado);
+        // Cuando hay viaje activo real no reutilizamos la ruta vieja cotizada
+        routeData: null,
+        cotizacion: null,
 
-  const notifData = mapearEstadoANotificacion(estado);
+        inputOrigen:
+          viajeLocal?.inputOrigen ||
+          viaje?.origen_direccion ||
+          '',
 
-  if (!historial.length) {
-    agregarNotificacionViaje({
-      estado: notifData.estado,
-      texto: notifData.texto,
-      read: true
-    });
-  } else {
-    renderizarCentroNotificaciones();
-  }
+        inputDestino:
+          viajeLocal?.inputDestino ||
+          viaje?.destino_direccion ||
+          '',
 
-if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
-}
-if (typeof actualizarBotonCotizar === 'function') {
-  actualizarBotonCotizar();
-}
-if (typeof actualizarPanelPlanificacionViaje === 'function') {
-  actualizarPanelPlanificacionViaje();
-}
-if (typeof actualizarResumenCotizacionCompacto === 'function') {
-  actualizarResumenCotizacionCompacto();
-}
-if (typeof actualizarBotonConfirmarViaje === 'function') {
-  actualizarBotonConfirmarViaje();
-}
-  
-  if (typeof actualizarEstadoSolicitudUI === 'function') {
-    const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
-    actualizarEstadoSolicitudUI({
-      estado,
-      texto: textoEstado,
-      viaje
-    });
-  }
+        waypointTexts: Array.isArray(viajeLocal?.waypointTexts)
+          ? viajeLocal.waypointTexts
+          : []
+      };
 
-  suscribirseEstadoViajeRealtime(viaje.id);
-  return;
-}
+      await restaurarMapaYCotizacionDesdeStorage(viajeRestore);
+
+      guardarViajeActivoEnStorage();
+      actualizarStatusCardNotificaciones(estado);
+
+      const notifData = mapearEstadoANotificacion(estado);
+
+      if (!historial.length) {
+        agregarNotificacionViaje({
+          estado: notifData.estado,
+          texto: notifData.texto,
+          read: true
+        });
+      } else {
+        renderizarCentroNotificaciones();
+      }
+
+      if (typeof actualizarBotonCancelarViaje === 'function') {
+        actualizarBotonCancelarViaje();
+      }
+      if (typeof actualizarBotonCotizar === 'function') {
+        actualizarBotonCotizar();
+      }
+      if (typeof actualizarPanelPlanificacionViaje === 'function') {
+        actualizarPanelPlanificacionViaje();
+      }
+      if (typeof actualizarResumenCotizacionCompacto === 'function') {
+        actualizarResumenCotizacionCompacto();
+      }
+      if (typeof actualizarBotonConfirmarViaje === 'function') {
+        actualizarBotonConfirmarViaje();
+      }
+      if (typeof actualizarBotonReiniciarRuta === 'function') {
+        actualizarBotonReiniciarRuta();
+      }
+
+      if (typeof actualizarEstadoSolicitudUI === 'function') {
+        const textoEstado = construirMensajeEstadoViaje(viaje, estado, notifData.texto);
+        actualizarEstadoSolicitudUI({
+          estado,
+          texto: textoEstado,
+          viaje
+        });
+      }
+
+      suscribirseEstadoViajeRealtime(viaje.id);
+      return;
+    }
+
     // ============================
     // CASO 2: VIAJE EN STORAGE
     // ============================
-if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
-  const estadoStorage = normalizarEstadoUpper(viajeLocal.estadoViaje);
+    if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
+      const estadoStorage = normalizarEstadoUpper(viajeLocal.estadoViaje);
 
-  state.viajeId = viajeLocal.viajeId;
-  state.viajeEstado = estadoStorage;
-  state.estadoViaje = estadoStorage;
+      state.viajeId = viajeLocal.viajeId;
+      state.viajeEstado = estadoStorage;
+      state.estadoViaje = estadoStorage;
+      state.choferId = null;
+      state.choferLocation = null;
 
-  await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
+      await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
 
-  actualizarStatusCardNotificaciones(estadoStorage);
-  renderizarCentroNotificaciones();
+      actualizarStatusCardNotificaciones(estadoStorage);
+      renderizarCentroNotificaciones();
 
-  if (typeof actualizarBotonCancelarViaje === 'function') {
-    actualizarBotonCancelarViaje();
-  }
-  if (typeof actualizarBotonCotizar === 'function') {
-    actualizarBotonCotizar();
-  }
-  if (typeof actualizarPanelPlanificacionViaje === 'function') {
-    actualizarPanelPlanificacionViaje();
-  }
-  if (typeof actualizarResumenCotizacionCompacto === 'function') {
-    actualizarResumenCotizacionCompacto();
-  }
-  if (typeof actualizarBotonConfirmarViaje === 'function') {
-    actualizarBotonConfirmarViaje();
-  }
+      if (typeof actualizarBotonCancelarViaje === 'function') {
+        actualizarBotonCancelarViaje();
+      }
+      if (typeof actualizarBotonCotizar === 'function') {
+        actualizarBotonCotizar();
+      }
+      if (typeof actualizarPanelPlanificacionViaje === 'function') {
+        actualizarPanelPlanificacionViaje();
+      }
+      if (typeof actualizarResumenCotizacionCompacto === 'function') {
+        actualizarResumenCotizacionCompacto();
+      }
+      if (typeof actualizarBotonConfirmarViaje === 'function') {
+        actualizarBotonConfirmarViaje();
+      }
+      if (typeof actualizarBotonReiniciarRuta === 'function') {
+        actualizarBotonReiniciarRuta();
+      }
 
-  if (typeof actualizarEstadoSolicitudUI === 'function') {
-    const notifData = mapearEstadoANotificacion(estadoStorage);
-    actualizarEstadoSolicitudUI({
-      estado: estadoStorage,
-      texto: notifData.texto
-    });
-  }
+      if (typeof actualizarEstadoSolicitudUI === 'function') {
+        const notifData = mapearEstadoANotificacion(estadoStorage);
+        actualizarEstadoSolicitudUI({
+          estado: estadoStorage,
+          texto: notifData.texto
+        });
+      }
 
-  suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
-  return;
-}    
-  // ============================
+      suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
+      return;
+    }
+
+    // ============================
     // CASO 3: SIN VIAJE
     // ============================
     limpiarViajeActivoEnStorage();
@@ -3154,6 +3187,7 @@ if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
     renderizarCentroNotificaciones();
   }
 }
+
 let notifTouchStartY = 0;
 let notifTouchDeltaY = 0;
 
