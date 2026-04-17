@@ -6221,21 +6221,22 @@ const choferDetectado =
   dispatchResultado?.chofer_id_uuid ||
   null;
     
-if (dispatchOk) {
-  if (choferDetectado) {
-    state.viajeEstado = 'asignado';
-    state.estadoViaje = 'ASIGNADO';
-  } else {
-    state.viajeEstado = 'ofertando';
-    state.estadoViaje = 'OFERTANDO';
-  }
-    actualizarBotonCancelarViaje();
-    guardarViajeActivoEnStorage();
-
-    actualizarEstadoSolicitudUI({
-    estado: state.viajeEstado,
-    texto: 'Estamos notificando choferes cercanos...'
-  });
+   if (dispatchOk) {
+     if (choferDetectado) {
+       state.viajeEstado = 'asignado';
+       state.estadoViaje = 'ASIGNADO';
+     } else {
+       state.viajeEstado = 'ofertando';
+       state.estadoViaje = 'OFERTANDO';
+     }
+     actualizarBotonCancelarViaje();
+     actualizarBotonCotizar();
+     guardarViajeActivoEnStorage();
+  
+     actualizarEstadoSolicitudUI({
+     estado: state.viajeEstado,
+     texto: 'Estamos notificando choferes cercanos...'
+   });
 
   if (typeof actualizarCentroNotificacionesViaje === 'function') {
     actualizarCentroNotificacionesViaje({
