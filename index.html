@@ -4344,7 +4344,93 @@ function limpiarPuntosRuta(puntos) {
     factor_zona: 1
   };
 }
+  async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
+  try {
+    if (!window.mapaCliente || !window.mapReady) return;
+    if (!origenChofer || !destinoCliente) return;
 
+    const choferLat = Number(origenChofer.lat);
+    const choferLng = Number(origenChofer.lng);
+    const clienteLat = Number(destinoCliente.lat);
+    const clienteLng = Number(destinoCliente.lng);
+
+    if (
+      !coordenadasValidas(choferLat, choferLng) ||
+      !coordenadasValidas(clienteLat, clienteLng)
+    ) {
+      return;
+    }
+
+    const url =
+      `https://router.project-osrm.org/route/v1/driving/` +
+      `${choferLng},${choferLat};${clienteLng},${clienteLat}` +
+      `?overview=full&geometries=geojson&steps=false`;
+
+    const resp = await fetch(url);
+    const json = await resp.json().catch(() => null);
+
+    const coords = json?.routes?.[0]?.geometry?.coordinates || null;
+    if (!Array.isArray(coords) || coords.length < 2) return;
+
+    const sourceId = 'driver-to-client-route';
+    const layerId = 'driver-to-client-route-line';
+
+    if (window.mapaCliente.getLayer(layerId)) {
+      window.mapaCliente.removeLayer(layerId);
+    }
+
+    if (window.mapaCliente.getSource(sourceId)) {
+      window.mapaCliente.removeSource(sourceId);
+    }
+
+    window.mapaCliente.addSource(sourceId, {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: coords
+        }
+      }
+    });
+
+    window.mapaCliente.addLayer({
+      id: layerId,
+      type: 'line',
+      source: sourceId,
+      layout: {
+        'line-cap': 'round',
+        'line-join': 'round'
+      },
+      paint: {
+        'line-color': '#1565c0',
+        'line-width': 5,
+        'line-opacity': 0.9,
+        'line-dasharray': [2, 2]
+      }
+    });
+  } catch (err) {
+    console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
+  }
+}
+function limpiarRutaChoferHastaCliente() {
+  try {
+    if (!window.mapaCliente) return;
+
+    const sourceId = 'driver-to-client-route';
+    const layerId = 'driver-to-client-route-line';
+
+    if (window.mapaCliente.getLayer(layerId)) {
+      window.mapaCliente.removeLayer(layerId);
+    }
+
+    if (window.mapaCliente.getSource(sourceId)) {
+      window.mapaCliente.removeSource(sourceId);
+    }
+  } catch (err) {
+    console.warn('[mapa] no se pudo limpiar ruta chofer→cliente:', err);
+  }
+}
 // ==========================================
 // MAPA - MARKERS
 // ==========================================
@@ -4410,7 +4496,8 @@ mapaCliente = new maplibregl.Map({
   pitchWithRotate: false,
   renderWorldCopies: false
 });
-
+window.dibujarRutaChoferHastaCliente = dibujarRutaChoferHastaCliente;
+window.limpiarRutaChoferHastaCliente = limpiarRutaChoferHastaCliente;
 window.mapaCliente = mapaCliente;
 window.__mapaClienteDebug = mapaCliente;
       
