@@ -8152,22 +8152,32 @@ window.setSectionVisible = setSectionVisible;
     console.warn('[client-pwa] init error:', err);
   }
 });
-(function () {
+(function initClientInstallBannerScrollBehavior() {
   const banner = document.getElementById('clientInstallBanner');
   if (!banner) return;
 
-  let lastY = window.scrollY;
+  let lastY = window.scrollY || 0;
+  let ticking = false;
 
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
+  function updateOnScroll() {
+    const currentY = window.scrollY || 0;
+    const delta = currentY - lastY;
 
-    if (y > lastY && y > 80) {
-      banner.classList.remove('is-visible');
-    } else {
-      banner.classList.add('is-visible');
+    if (currentY > 70 && delta > 6) {
+      banner.classList.add('is-hidden-by-scroll');
+    } else if (delta < -6 || currentY <= 24) {
+      banner.classList.remove('is-hidden-by-scroll');
     }
 
-    lastY = y;
+    lastY = currentY;
+    ticking = false;
+  }
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(updateOnScroll);
+      ticking = true;
+    }
   }, { passive: true });
 })();
 </script>
