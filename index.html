@@ -2667,6 +2667,14 @@ if (nuevoEstado === 'ASIGNADO' || nuevoEstado === 'ACEPTADO' || nuevoEstado === 
     limpiarCapasRutaMapa();
   }
 
+  if (typeof limpiarMarkersRutaCotizacion === 'function') {
+    limpiarMarkersRutaCotizacion();
+  }
+
+  if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
+    mostrarSoloPickupClienteEnMapa();
+  }
+
   const origenCliente = state?.origen || null;
 
   if (
@@ -2710,7 +2718,6 @@ if (nuevoEstado === 'ASIGNADO' || nuevoEstado === 'ACEPTADO' || nuevoEstado === 
     });
   }
 }
-
 const notifData = mapearEstadoANotificacion(nuevoEstado);
           const textoEstado = construirMensajeEstadoViaje(newRow, nuevoEstado, notifData.texto);
 
@@ -4468,12 +4475,14 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
         'line-blur': 1.4
       }
     });
-    try {
-  window.mapaCliente.moveLayer('driver-to-client-route-glow');
-  window.mapaCliente.moveLayer('driver-to-client-route-casing');
-  window.mapaCliente.moveLayer('driver-to-client-route-line');
-} catch (_) {}
-
+['driver-to-client-route-glow', 'driver-to-client-route-casing', 'driver-to-client-route-line']
+  .forEach((layerId) => {
+    if (window.mapaCliente.getLayer(layerId)) {
+      try {
+        window.mapaCliente.moveLayer(layerId);
+      } catch (_) {}
+    }
+  });
     window.mapaCliente.addLayer({
       id: casingLayerId,
       type: 'line',
@@ -5144,7 +5153,53 @@ actualizarBotonCancelarViaje();
 
   notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
 }
+function limpiarMarkersRutaCotizacion() {
+  try {
+    if (Array.isArray(state?.markers)) {
+      state.markers.forEach((marker) => {
+        try {
+          marker?.remove?.();
+        } catch (_) {}
+      });
+    }
 
+    state.markers = [];
+  } catch (err) {
+    console.warn('[MAP] no se pudieron limpiar markers de cotización:', err);
+  }
+}
+  function mostrarSoloPickupClienteEnMapa() {
+  try {
+    if (!window.mapaCliente || !window.mapReady) return;
+    if (!state?.origen) return;
+
+    const lat = Number(state.origen.lat);
+    const lng = Number(state.origen.lng);
+
+    if (!coordenadasValidas(lat, lng)) return;
+
+    const el = document.createElement('div');
+    el.style.width = '18px';
+    el.style.height = '18px';
+    el.style.borderRadius = '999px';
+    el.style.background = '#16a34a';
+    el.style.border = '3px solid #ffffff';
+    el.style.boxShadow = '0 4px 14px rgba(0,0,0,0.22)';
+
+    const pickupMarker = new maplibregl.Marker({
+      element: el,
+      anchor: 'center'
+    }).setLngLat([lng, lat]).addTo(window.mapaCliente);
+
+    if (!Array.isArray(state.markers)) {
+      state.markers = [];
+    }
+
+    state.markers.push(pickupMarker);
+  } catch (err) {
+    console.warn('[MAP] no se pudo mostrar pickup del cliente:', err);
+  }
+}
 // ==========================================
 // COTIZACIÓN
 // ==========================================
