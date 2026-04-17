@@ -120,36 +120,66 @@ function actualizarMarkerChoferEnMapa(lat, lng, opts = {}) {
     };
   }
 }
-  async function cargarUbicacionActualChofer(choferId) {
-    if (!choferId || !window.supabase) return null;
+async function cargarUbicacionActualChofer(choferId) {
+  if (!choferId || !window.sbRealtime) return null;
 
-    try {
-      const { data, error } = await window.supabase
-        .from('choferes')
-        .select('id_uuid, lat, lng, heading, last_seen_at')
-        .eq('id_uuid', choferId)
-        .single();
+  try {
+    const { data: sessionData, error: sessionError } = await window.sbRealtime.auth.getSession();
 
-      if (error || !data) {
-        if (error) {
-          console.warn('[realtime-chofer] error leyendo ubicación inicial:', error);
-        }
-        return null;
-      }
-
-      if (typeof window.coordenadasValidas === 'function' && window.coordenadasValidas(data.lat, data.lng)) {
-        actualizarMarkerChoferEnMapa(data.lat, data.lng, {
-          heading: data.heading || 0
-        });
-      }
-
-      return data;
-    } catch (err) {
-      console.warn('[realtime-chofer] error ubicación inicial chofer:', err);
+    if (sessionError) {
+      console.warn('[realtime-chofer] error obteniendo sesión:', sessionError);
       return null;
     }
-  }
 
+    const accessToken = sessionData?.session?.access_token || null;
+    if (!accessToken) {
+      console.warn('[realtime-chofer] no hay access token para leer ubicación del chofer');
+      return null;
+    }
+
+    const url =
+      `https://xrphpqmutvadjrucqicn.supabase.co/rest/v1/choferes` +
+      `?select=id_uuid,lat,lng,heading,last_seen_at` +
+      `&id_uuid=eq.${encodeURIComponent(choferId)}`;
+
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json'
+      }
+    });
+
+    const json = await resp.json().catch(() => null);
+
+    if (!resp.ok) {
+      console.warn('[realtime-chofer] error leyendo ubicación inicial:', json || resp.status);
+      return null;
+    }
+
+    const data = Array.isArray(json) ? (json[0] || null) : null;
+
+    if (!data) {
+      console.warn('[realtime-chofer] sin fila visible para el chofer asignado', { choferId });
+      return null;
+    }
+
+    if (
+      typeof window.coordenadasValidas === 'function' &&
+      window.coordenadasValidas(data.lat, data.lng)
+    ) {
+      actualizarMarkerChoferEnMapa(data.lat, data.lng, {
+        heading: data.heading || 0
+      });
+    }
+
+    return data;
+  } catch (err) {
+    console.warn('[realtime-chofer] error ubicación inicial chofer:', err);
+    return null;
+  }
+}
   function suscribirseUbicacionChoferRealtime(choferId) {
     if (!choferId || !window.sbRealtime) {
       console.warn('[realtime-chofer] faltan datos para suscribirse');
