@@ -2293,70 +2293,60 @@ console.log('[restore-map] destinoCliente', destinoCliente);
 console.log('[restore-map] puntoObjetivo', puntoObjetivo);
   
   if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
-    try {
-      mostrarSoloPickupClienteEnMapa();
-    } catch (err) {
-      console.warn('[restore-map] no se pudo mostrar pickup', err);
-    }
-  }
+try {
+  if (
+    state?.choferLocation &&
+    puntoObjetivo &&
+    typeof window.dibujarRutaChoferHastaCliente === 'function'
+  ) {
+    await window.dibujarRutaChoferHastaCliente(
+      {
+        lat: Number(state.choferLocation.lat),
+        lng: Number(state.choferLocation.lng)
+      },
+      {
+        lat: Number(puntoObjetivo.lat),
+        lng: Number(puntoObjetivo.lng)
+      }
+    );
+    rutaSeguimientoDibujada = true;
+    console.log('[restore-map] ruta seguimiento dibujada con choferLocation');
+  } else if (
+    state?.choferId &&
+    puntoObjetivo &&
+    typeof window.cargarUbicacionActualChofer === 'function' &&
+    typeof window.dibujarRutaChoferHastaCliente === 'function'
+  ) {
+    const driverData = await window.cargarUbicacionActualChofer(state.choferId);
+    console.log('[restore-map] driverData', driverData);
 
-  try {
-   if (
-  state?.choferLocation &&
-  puntoObjetivo &&
-  typeof window.dibujarRutaChoferHastaCliente === 'function'
-) {
-  await window.dibujarRutaChoferHastaCliente(
-    {
-      lat: Number(state.choferLocation.lat),
-      lng: Number(state.choferLocation.lng)
-    },
-    {
-      lat: Number(puntoObjetivo.lat),
-      lng: Number(puntoObjetivo.lng)
-    }
-  );
-  rutaSeguimientoDibujada = true;
-  console.log('[restore-map] ruta seguimiento dibujada con choferLocation');
-}
-      rutaSeguimientoDibujada = true;
-      console.log('[restore-map] ruta seguimiento dibujada con choferLocation');
-} else if (
-  state?.choferId &&
-  puntoObjetivo &&
-  typeof window.cargarUbicacionActualChofer === 'function' &&
-  typeof window.dibujarRutaChoferHastaCliente === 'function'
-) {
-      const driverData = await window.cargarUbicacionActualChofer(state.choferId);
-      console.log('[restore-map] driverData', driverData);
+    if (
+      driverData &&
+      Number.isFinite(Number(driverData.lat)) &&
+      Number.isFinite(Number(driverData.lng))
+    ) {
+      state.choferLocation = {
+        lat: Number(driverData.lat),
+        lng: Number(driverData.lng)
+      };
 
-      if (
-        driverData &&
-        Number.isFinite(Number(driverData.lat)) &&
-        Number.isFinite(Number(driverData.lng))
-      ) {
-        state.choferLocation = {
+      await window.dibujarRutaChoferHastaCliente(
+        {
           lat: Number(driverData.lat),
           lng: Number(driverData.lng)
-        };
-
-await window.dibujarRutaChoferHastaCliente(
-  {
-    lat: Number(driverData.lat),
-    lng: Number(driverData.lng)
-  },
-  {
-    lat: Number(puntoObjetivo.lat),
-    lng: Number(puntoObjetivo.lng)
-  }
-);        rutaSeguimientoDibujada = true;
-        console.log('[restore-map] ruta seguimiento dibujada con driverData');
-      }
+        },
+        {
+          lat: Number(puntoObjetivo.lat),
+          lng: Number(puntoObjetivo.lng)
+        }
+      );
+      rutaSeguimientoDibujada = true;
+      console.log('[restore-map] ruta seguimiento dibujada con driverData');
     }
-  } catch (err) {
-    console.warn('[restore-map] error dibujando seguimiento', err);
   }
-
+} catch (err) {
+  console.warn('[restore-map] error dibujando seguimiento', err);
+}
 if (!rutaSeguimientoDibujada && puntoObjetivo) {
   console.warn('[restore-map] fallback a centrar objetivo');
 
