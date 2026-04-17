@@ -330,14 +330,17 @@
 
             const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
 
-            if (
-              ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO'].includes(estadoUpper) &&
-              typeof window.actualizarEstadoSolicitudUI === 'function'
-            ) {
-              window.actualizarEstadoSolicitudUI({
-                estado: 'EN_CAMINO',
-                texto: 'Tu chofer se está acercando al punto de retiro.'
-              });
+                if (
+                 ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO', 'INICIADO', 'EN_CURSO'].includes(estadoUpper) &&
+                typeof window.actualizarEstadoSolicitudUI === 'function'
+                   ) {
+                window.actualizarEstadoSolicitudUI({
+                 estado: estadoUpper === 'INICIADO' || estadoUpper === 'EN_CURSO' ? 'EN_CURSO' : 'EN_CAMINO',
+                   texto:
+                 estadoUpper === 'INICIADO' || estadoUpper === 'EN_CURSO'
+                  ? 'Tu viaje está en curso.'
+                : 'Tu chofer se está acercando al punto de retiro.'
+             });
             }
           } catch (err) {
             console.error('[realtime-chofer] error procesando tracking:', err);
