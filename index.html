@@ -2222,6 +2222,15 @@ function estadoUsaSeguimientoChofer(estado) {
     'EN_CURSO'
   ].includes(e);
 }
+
+function estadoUsaDestinoFinal(estado) {
+  const e = String(estado || '').trim().toUpperCase();
+  return [
+    'INICIADO',
+    'EN_CURSO'
+  ].includes(e);
+}
+  
 async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
     if (!viajeLocal) return;
@@ -2242,9 +2251,10 @@ async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
       );
     }
 
-    const estadoActual = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
-    const usarSeguimientoChofer = estadoUsaSeguimientoChofer(estadoActual);
-
+const estadoActual = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+const usarSeguimientoChofer = estadoUsaSeguimientoChofer(estadoActual);
+const usarDestinoFinal = estadoUsaDestinoFinal(estadoActual);
+    
     setSectionVisible('quoteCard', true);
     setSectionVisible('mapSection', true);
     setTimeout(() => {
@@ -2269,13 +2279,19 @@ if (usarSeguimientoChofer) {
     window.limpiarRutaChoferHastaCliente();
   }
 
-  const origenCliente = state?.origen || null;
-  let rutaSeguimientoDibujada = false;
-  console.log('[restore-map] estadoActual', estadoActual);
+const origenCliente = state?.origen || null;
+const destinoCliente = state?.destino || null;
+const puntoObjetivo = usarDestinoFinal ? destinoCliente : origenCliente;
+
+let rutaSeguimientoDibujada = false;
+
+console.log('[restore-map] estadoActual', estadoActual);
 console.log('[restore-map] state.choferId', state?.choferId);
 console.log('[restore-map] state.choferLocation', state?.choferLocation);
 console.log('[restore-map] origenCliente', origenCliente);
-
+console.log('[restore-map] destinoCliente', destinoCliente);
+console.log('[restore-map] puntoObjetivo', puntoObjetivo);
+  
   if (typeof mostrarSoloPickupClienteEnMapa === 'function') {
     try {
       mostrarSoloPickupClienteEnMapa();
@@ -2290,24 +2306,24 @@ console.log('[restore-map] origenCliente', origenCliente);
       origenCliente &&
       typeof window.dibujarRutaChoferHastaCliente === 'function'
     ) {
-      await window.dibujarRutaChoferHastaCliente(
-        {
-          lat: Number(state.choferLocation.lat),
-          lng: Number(state.choferLocation.lng)
-        },
-        {
-          lat: Number(origenCliente.lat),
-          lng: Number(origenCliente.lng)
-        }
-      );
+await window.dibujarRutaChoferHastaCliente(
+  {
+    lat: Number(driverData.lat),
+    lng: Number(driverData.lng)
+  },
+  {
+    lat: Number(puntoObjetivo.lat),
+    lng: Number(puntoObjetivo.lng)
+  }
+);
       rutaSeguimientoDibujada = true;
       console.log('[restore-map] ruta seguimiento dibujada con choferLocation');
-    } else if (
-      state?.choferId &&
-      origenCliente &&
-      typeof window.cargarUbicacionActualChofer === 'function' &&
-      typeof window.dibujarRutaChoferHastaCliente === 'function'
-    ) {
+} else if (
+  state?.choferId &&
+  puntoObjetivo &&
+  typeof window.cargarUbicacionActualChofer === 'function' &&
+  typeof window.dibujarRutaChoferHastaCliente === 'function'
+) {
       const driverData = await window.cargarUbicacionActualChofer(state.choferId);
       console.log('[restore-map] driverData', driverData);
 
@@ -2339,14 +2355,14 @@ console.log('[restore-map] origenCliente', origenCliente);
     console.warn('[restore-map] error dibujando seguimiento', err);
   }
 
-  if (!rutaSeguimientoDibujada && origenCliente) {
-    console.warn('[restore-map] fallback a centrar pickup');
+if (!rutaSeguimientoDibujada && puntoObjetivo) {
+  console.warn('[restore-map] fallback a centrar objetivo');
 
-    if (typeof centrarMapaEnPunto === 'function') {
-      centrarMapaEnPunto(Number(origenCliente.lat), Number(origenCliente.lng), 15);
-    } else if (mapaCliente && typeof mapaCliente.easeTo === 'function') {
+  if (typeof centrarMapaEnPunto === 'function') {
+    centrarMapaEnPunto(Number(puntoObjetivo.lat), Number(puntoObjetivo.lng), 15);
+  } else if (mapaCliente && typeof mapaCliente.easeTo === 'function') {
       mapaCliente.easeTo({
-        center: [Number(origenCliente.lng), Number(origenCliente.lat)],
+        center: [Number(puntoObjetivo.lng), Number(puntoObjetivo.lat)],
         zoom: 15,
         duration: 800
       });
@@ -2846,22 +2862,22 @@ if (
 
   const origenCliente = state?.origen || null;
 
-  if (
-    state?.choferLocation &&
-    origenCliente &&
-    typeof window.dibujarRutaChoferHastaCliente === 'function'
-  ) {
-    window.dibujarRutaChoferHastaCliente(
-      {
-        lat: Number(state.choferLocation.lat),
-        lng: Number(state.choferLocation.lng)
-      },
-      {
-        lat: Number(origenCliente.lat),
-        lng: Number(origenCliente.lng)
-      }
-    );
-  } else if (
+if (
+  state?.choferLocation &&
+  puntoObjetivo &&
+  typeof window.dibujarRutaChoferHastaCliente === 'function'
+) {
+  await window.dibujarRutaChoferHastaCliente(
+    {
+      lat: Number(state.choferLocation.lat),
+      lng: Number(state.choferLocation.lng)
+    },
+    {
+      lat: Number(puntoObjetivo.lat),
+      lng: Number(puntoObjetivo.lng)
+    }
+  );
+} else if (
     state?.choferId &&
     typeof window.cargarUbicacionActualChofer === 'function'
   ) {
