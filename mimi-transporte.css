@@ -3392,3 +3392,14 @@ select:focus-visible {
     width: min(390px, calc(100vw - 40px));
   }
 }
+@media (max-width: 480px) {
+  .client-install-banner__actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .client-install-banner__btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
