@@ -1899,24 +1899,22 @@ async function reanudarViajePendientePostLogin() {
       return;
     }
 
-renderSesionUI(session);
-localStorage.removeItem('mimi_pending_trip_request');
+    renderSesionUI(session);
+    localStorage.removeItem('mimi_pending_trip_request');
 
-if (typeof window.subscribeSupportRealtimeForUser === 'function') {
-  await window.subscribeSupportRealtimeForUser();
-} else {
-  console.warn('[reanudarViajePendientePostLogin] subscribeSupportRealtimeForUser no disponible todavía');
-}
+    if (typeof window.subscribeSupportRealtimeForUser === 'function') {
+      await window.subscribeSupportRealtimeForUser();
+    } else {
+      console.warn('[reanudarViajePendientePostLogin] subscribeSupportRealtimeForUser no disponible todavía');
+    }
 
-if (typeof window.runClientPostLoginOnboarding === 'function') {
-  await window.runClientPostLoginOnboarding(session);
-} else {
-if (typeof window.runClientPostLoginOnboarding === 'function') {
-  await window.runClientPostLoginOnboarding(session);
-} else {
-  await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
-}
-  notif.show(
+    if (typeof window.runClientPostLoginOnboarding === 'function') {
+      await window.runClientPostLoginOnboarding(session);
+    } else {
+      await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
+    }
+
+    notif.show(
       'Sesión iniciada',
       `Ingresaste como ${session.user.email || 'usuario'}`,
       'success',
@@ -1929,8 +1927,7 @@ if (typeof window.runClientPostLoginOnboarding === 'function') {
   } catch (err) {
     console.error('[reanudarViajePendientePostLogin] ERROR:', err);
   }
-}
-  
+}  
 function construirTooltip(resuelto) {
   return `${resuelto.direccionCorta}${resuelto.direccionSecundaria ? ' - ' + resuelto.direccionSecundaria : ''}`;
 }
