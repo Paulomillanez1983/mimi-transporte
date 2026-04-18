@@ -2236,13 +2236,16 @@ function cargarNotificacionesDesdeStorage() {
 function resolverEstadoViajeCliente(viajeLike = {}) {
   const estadoBase = normalizarEstadoUpper(viajeLike?.estado);
 
-  // El cliente debe respetar el estado REAL que viene del backend.
-  // Tener assigned_driver_id no significa necesariamente que el chofer
-  // haya aceptado. Puede estar solo ofertado, reservado o en intento.
+  // Respetar el estado REAL del backend.
+  // Tener chofer vinculado no implica aceptación.
   if (!estadoBase) {
     return 'PENDIENTE';
   }
 
+  if (estadoBase === 'EN_CURSO') return 'INICIADO';
+
+  return estadoBase;
+}
   // Normalizaciones suaves para compatibilidad
   if (estadoBase === 'EN_CURSO') return 'INICIADO';
   if (estadoBase === 'COMPLETADO') return 'COMPLETADO';
