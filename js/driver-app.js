@@ -751,167 +751,192 @@ this._syncNavFabVisibility();
     }
   }
 
-  // =========================================================
-  // EVENTS
-  // =========================================================
-  _subscribeToEvents() {
-    console.log('[DriverApp] Suscribiendo a eventos de TripManager...');
+// =========================================================
+// EVENTS
+// =========================================================
+_subscribeToEvents() {
+  console.log('[DriverApp] Suscribiendo a eventos de TripManager...');
 
-    const unsubOffer = tripManager.on('newPendingTrip', (trip) => {
-      console.log('[DriverApp] [evento] newPendingTrip', trip.id);
-      this._setFlowState('RECEIVING_OFFER');
+  const unsubOffer = tripManager.on('newPendingTrip', (trip) => {
+    console.log('[DriverApp] [evento] newPendingTrip', trip.id);
+    this._setFlowState('RECEIVING_OFFER');
 
-      this._vibrate([120, 60, 120]);
+    this._vibrate([120, 60, 120]);
 
-      if (this._isDocumentHidden()) {
-        this._notifyIncomingTrip(trip).catch(() => null);
-      }
+    if (this._isDocumentHidden()) {
+      this._notifyIncomingTrip(trip).catch(() => null);
+    }
 
-      uiController.showIncomingTrip(
-        trip,
-        () => this._acceptOffer(trip.offerId),
-        () => this._rejectOffer(trip.offerId)
-      );
-    });
-
-    const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
-      const alreadySameTrip = this._currentTripId === trip.id;
-
-      this._currentTripId = trip.id;
-      this._setFlowState('GOING_TO_PICKUP');
-
-      console.log('[DriverApp] tripAccepted', trip.id, 'alreadySame:', alreadySameTrip);
-
-      this._celebrateAcceptFeedback();
-uiController.hideIncomingModal?.();
-uiController.showToast('Viaje aceptado', 'success');
-
-await this._showRouteOnMap(trip);
-uiController.showNavigationState(trip);
-this._syncNavFabVisibility();
-    });
-
-    const unsubStarted = tripManager.on('tripStarted', async (trip) => {
-      console.log('[DriverApp] tripStarted', trip.id);
-      this._setFlowState('TRIP_STARTED');
-
-      uiController.showToast('Viaje iniciado', 'success');
-
-await this._showRouteOnMap(trip);
-uiController.showNavigationState(trip);
-this._syncNavFabVisibility();
-
-window.dispatchEvent(
-  new CustomEvent('tripStateChanged', {
-          detail: { estado: trip.estado }
-        })
-      );
-    });
-
-    const unsubCompleted = tripManager.on('tripCompleted', async (trip) => {
-      console.log('[DriverApp] tripCompleted', trip.id);
-      this._setFlowState('TRIP_COMPLETED');
-
-      this._currentTripId = null;
-      tripManager.resetState();
-
-mapService.clearRoute?.();
-uiController.hideIncomingModal?.();
-uiController.hideNavigation?.();
-uiController.hideArrival?.();
-this._syncNavFabVisibility();
-
-uiController.showToast(`Viaje completado +$${trip.precio ?? 0}`, 'success', 5000);
-      
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-        uiController.showWaitingState();
-      } else {
-        this._setFlowState('OFFLINE');
-      }
-    });
-
-const unsubCancelled = tripManager.on('tripCancelled', () => {
-  console.log('[DriverApp] tripCancelled');
-
-  this._currentTripId = null;
-  tripManager.resetState?.();
-
-mapService.clearRoute?.();
-uiController.hideIncomingModal?.();
-uiController.hideNavigation?.();
-uiController.hideArrival?.();
-this._syncNavFabVisibility();
-
-uiController.showToast('Viaje cancelado', 'warning');
-  
-  if (this._onlineStatus) {
-    this._setFlowState('ONLINE_IDLE');
-  } else {
-    this._setFlowState('OFFLINE');
-  }
-
-  uiController.showWaitingState();
-});
-    const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
-      console.log('[DriverApp] pendingTripCleared', reason);
-
-      const currentTrip = tripManager.getCurrentTrip?.();
-
-      if (currentTrip?.id) {
-        console.log(
-          '[DriverApp] pendingTripCleared ignorado porque ya hay viaje activo:',
-          currentTrip.id
-        );
-        return;
-      }
-
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-      } else {
-        this._setFlowState('OFFLINE');
-      }
-
-      uiController.hideIncomingModal?.();
-      uiController.showWaitingState();
-      this._syncNavFabVisibility();
-    });
-
-    const unsubNoPending = tripManager.on('noPendingTrips', () => {
-      console.log('[DriverApp] noPendingTrips');
-
-      const currentTrip = tripManager.getCurrentTrip?.();
-      tripManager.resetState?.();
-
-      if (currentTrip?.id) {
-        console.log(
-          '[DriverApp] noPendingTrips ignorado porque ya hay viaje activo:',
-          currentTrip.id
-        );
-        return;
-      }
-
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-      } else {
-        this._setFlowState('OFFLINE');
-      }
-
-      uiController.showWaitingState();
-      this._syncNavFabVisibility();
-    });
-
-    this._unsubscribers.push(
-      unsubOffer,
-      unsubAccepted,
-      unsubStarted,
-      unsubCompleted,
-      unsubCancelled,
-      unsubCleared,
-      unsubNoPending
+    uiController.showIncomingTrip(
+      trip,
+      () => this._acceptOffer(trip.offerId),
+      () => this._rejectOffer(trip.offerId)
     );
-  }
+  });
 
+  const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
+    const alreadySameTrip = String(this._currentTripId || '') === String(trip?.id || '');
+
+    this._currentTripId = trip.id;
+    this._setFlowState('GOING_TO_PICKUP');
+
+    console.log('[DriverApp] tripAccepted', trip.id, 'alreadySame:', alreadySameTrip);
+
+    uiController.hideIncomingModal?.();
+
+    if (!alreadySameTrip) {
+      this._celebrateAcceptFeedback();
+      uiController.showToast('Viaje aceptado', 'success');
+    }
+
+    await this._showRouteOnMap(trip);
+    uiController.showNavigationState(trip);
+    this._syncNavFabVisibility();
+
+    window.dispatchEvent(
+      new CustomEvent('tripStateChanged', {
+        detail: { estado: trip.estado }
+      })
+    );
+  });
+
+  const unsubStarted = tripManager.on('tripStarted', async (trip) => {
+    console.log('[DriverApp] tripStarted', trip.id);
+
+    this._currentTripId = trip.id;
+    this._setFlowState('TRIP_STARTED');
+
+    uiController.showToast('Viaje iniciado', 'success');
+
+    await this._showRouteOnMap(trip);
+    uiController.showNavigationState(trip);
+    this._syncNavFabVisibility();
+
+    window.dispatchEvent(
+      new CustomEvent('tripStateChanged', {
+        detail: { estado: trip.estado }
+      })
+    );
+  });
+
+  const unsubCompleted = tripManager.on('tripCompleted', async (trip) => {
+    console.log('[DriverApp] tripCompleted', trip.id);
+
+    if (trip?.id && this._currentTripId && String(trip.id) !== String(this._currentTripId)) {
+      console.warn('[DriverApp] tripCompleted ignorado (no es viaje actual)');
+      return;
+    }
+
+    this._setFlowState('TRIP_COMPLETED');
+
+    this._currentTripId = null;
+    tripManager.resetState?.();
+
+    mapService.clearRoute?.();
+    uiController.hideIncomingModal?.();
+    uiController.hideNavigation?.();
+    uiController.hideArrival?.();
+    this._syncNavFabVisibility();
+
+    uiController.showToast(`Viaje completado +$${trip?.precio ?? 0}`, 'success', 5000);
+
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+      uiController.showWaitingState();
+    } else {
+      this._setFlowState('OFFLINE');
+      uiController.showWaitingState();
+    }
+  });
+
+  const unsubCancelled = tripManager.on('tripCancelled', (trip) => {
+    console.log('[DriverApp] tripCancelled', trip?.id);
+
+    if (trip?.id && this._currentTripId && String(trip.id) !== String(this._currentTripId)) {
+      console.warn('[DriverApp] Cancelación ignorada (no es viaje actual)');
+      return;
+    }
+
+    this._currentTripId = null;
+    tripManager.resetState?.();
+
+    mapService.clearRoute?.();
+    uiController.hideIncomingModal?.();
+    uiController.hideNavigation?.();
+    uiController.hideArrival?.();
+    this._syncNavFabVisibility();
+
+    uiController.showToast('Viaje cancelado', 'warning');
+
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+    } else {
+      this._setFlowState('OFFLINE');
+    }
+
+    uiController.showWaitingState();
+  });
+
+  const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
+    console.log('[DriverApp] pendingTripCleared', reason);
+
+    const currentTrip = tripManager.getCurrentTrip?.();
+
+    if (currentTrip?.id) {
+      console.log(
+        '[DriverApp] pendingTripCleared ignorado porque ya hay viaje activo:',
+        currentTrip.id
+      );
+      return;
+    }
+
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+    } else {
+      this._setFlowState('OFFLINE');
+    }
+
+    uiController.hideIncomingModal?.();
+    uiController.showWaitingState();
+    this._syncNavFabVisibility();
+  });
+
+  const unsubNoPending = tripManager.on('noPendingTrips', () => {
+    console.log('[DriverApp] noPendingTrips');
+
+    const currentTrip = tripManager.getCurrentTrip?.();
+
+    if (currentTrip?.id) {
+      console.log(
+        '[DriverApp] noPendingTrips ignorado porque ya hay viaje activo:',
+        currentTrip.id
+      );
+      return;
+    }
+
+    tripManager.resetState?.();
+
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+    } else {
+      this._setFlowState('OFFLINE');
+    }
+
+    uiController.showWaitingState();
+    this._syncNavFabVisibility();
+  });
+
+  this._unsubscribers.push(
+    unsubOffer,
+    unsubAccepted,
+    unsubStarted,
+    unsubCompleted,
+    unsubCancelled,
+    unsubCleared,
+    unsubNoPending
+  );
+}
+  
   // =========================================================
   // LOCATION TRACKING
   // =========================================================
