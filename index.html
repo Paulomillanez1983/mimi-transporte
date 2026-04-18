@@ -8382,6 +8382,10 @@ window.setSectionVisible = setSectionVisible;
     console.warn('[client-pwa] init error:', err);
   }
 });
+document.addEventListener('DOMContentLoaded', () => {
+  bindUIActions(); // 🔥 ESTE ES EL FIX
+});
+  
 (function initClientInstallBannerScrollBehavior() {
   const banner = document.getElementById('clientInstallBanner');
   if (!banner) return;
