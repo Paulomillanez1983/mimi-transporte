@@ -5397,31 +5397,25 @@ function iniciarAnimacionRuta() {
   
 async function dibujarRutaEnMapa(coords) {
   await initMapa();
+
   if (!mapaCliente || !mapReady) {
     console.warn('[dibujarRutaEnMapa] mapa no disponible; se omite dibujo');
     return;
   }
+
   try {
-    if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-    if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+    limpiarCapasRutaMapa();
   } catch (_) {}
 
-limpiarMarkersMapa();
-agregarMarkersRutaDesdeCoords(coords);
-  const isOrigin = index === 0;
-    const isDest = index === puntos.length - 1;
-    const label = isOrigin ? 'A' : isDest ? 'B' : String(index);
-    const type = isOrigin ? 'origin' : isDest ? 'dest' : 'waypoint';
+  limpiarMarkersMapa();
+  agregarMarkersRutaDesdeCoords(coords);
 
-    const marker = new maplibregl.Marker({ element: crearMarkerElement(label, type) })
-      .setLngLat([punto.lng, punto.lat])
-      .addTo(mapaCliente);
+  const puntos = obtenerPuntosOrdenados();
+  const coordinates = Array.isArray(coords) && coords.length >= 2
+    ? coords
+    : puntos.map((p) => [Number(p.lng), Number(p.lat)]);
 
-    state.markers.push(marker);
-  });
-
-  const coordinates = coords || puntos.map((p) => [p.lng, p.lat]);
-  if (!coordinates || coordinates.length < 2) return;
+  if (!Array.isArray(coordinates) || coordinates.length < 2) return;
 
   mapaCliente.addSource('route', {
     type: 'geojson',
@@ -5459,7 +5453,6 @@ agregarMarkersRutaDesdeCoords(coords);
     duration: 1000
   });
 }
-
 
   
 function dibujarRutaLineal(coords) {
