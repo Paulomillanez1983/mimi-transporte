@@ -32,7 +32,7 @@
   <script src="https://unpkg.com/maplibre-gl@5.21.1/dist/maplibre-gl.js"></script>
 
   <script src="./libs/supabase-js.js"></script>
-
+<script type="module" src="./js/driver-pwa-onboarding.js"></script>
 <link rel="stylesheet" href="css/design-system.css?v=20260413-1" />
 <link rel="stylesheet" href="css/components.css?v=20260413-1" />
 <link rel="stylesheet" href="css/animations.css?v=20260413-1" />
@@ -103,6 +103,28 @@
         <div class="nav-progress-bar" id="nav-progress-bar"></div>
       </div>
     </div>
+    <div id="driverInstallBanner" class="client-install-banner driver-install-banner" hidden>
+  <div class="client-install-banner__content">
+    <div class="client-install-banner__title">Instalá MIMI Chofer en tu celular</div>
+    <div id="driverInstallStatusText" class="client-install-banner__text">
+      Instalá la app para recibir viajes y entrar más rápido.
+    </div>
+  </div>
+
+  <div class="client-install-banner__actions">
+    <button id="btnInstallDriverApp" type="button" class="client-install-banner__btn client-install-banner__btn--primary">
+      Instalar
+    </button>
+
+    <button id="btnOpenDriverBrowserGuide" type="button" class="client-install-banner__btn client-install-banner__btn--primary" style="display:none;">
+      Abrir en navegador
+    </button>
+
+    <button id="btnDismissDriverInstall" type="button" class="client-install-banner__btn client-install-banner__btn--ghost">
+      Ahora no
+    </button>
+  </div>
+</div>
 
     <button class="fab-online" id="fab-online" type="button" aria-label="Cambiar estado de conexi&oacute;n">
       <div class="fab-content">
