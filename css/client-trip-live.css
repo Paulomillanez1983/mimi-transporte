@@ -209,3 +209,15 @@ body.trip-live-mode .btn-cancel-trip {
     color: #ff6b6b;
   }
 }
+body.trip-live-mode #quoteCard {
+  transition:
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.28s ease,
+    opacity 0.28s ease;
+  will-change: transform;
+}
+
+body.trip-live-mode #quoteCard.trip-live-collapsed {
+  transform: translateY(180px);
+  opacity: 0.98;
+}
