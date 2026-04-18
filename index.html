@@ -5506,7 +5506,7 @@ function dibujarRutaLineal(coords) {
       }
     });
 
-    agregarMarkersRutaDesdeCoords(coordsLimpias);
+    agregarMarkersRutaDesdeCoords();
     ajustarVistaRuta(coordsLimpias, 500);
 
     if (window.DriverSim) {
@@ -5598,7 +5598,7 @@ async function dibujarRutaReal(coords) {
   };
   state.routeData.fallback = false;
 
-  agregarMarkersRutaDesdeCoords(coordsLimpias);
+  agregarMarkersRutaDesdeCoords();
   ajustarVistaRuta(coordsLimpias, 900);
 
   if (window.DriverSim) {
@@ -6383,60 +6383,70 @@ if (distancia < 2) {
       .filter(Boolean)
       .join(' → ');
 
-  const coordsRouteGeometry =
-    Array.isArray(data?.route_geometry) && data.route_geometry.length >= 2
-      ? data.route_geometry
-      : null;
+const limpiarCoordsRuta = (arr) => {
+  if (!Array.isArray(arr)) return null;
 
-  let coordsLegs = null;
-  if (!coordsRouteGeometry && Array.isArray(data?.legs)) {
-    const merged = [];
+  const limpias = arr
+    .map((c) => [Number(c?.[0]), Number(c?.[1])])
+    .filter((c) =>
+      Number.isFinite(c[0]) &&
+      Number.isFinite(c[1]) &&
+      Math.abs(c[0]) <= 180 &&
+      Math.abs(c[1]) <= 90
+    );
 
-    data.legs.forEach((leg) => {
-      const g = Array.isArray(leg?.geometry) ? leg.geometry : [];
-      g.forEach((c) => {
-        const lng = Number(c?.[0]);
-        const lat = Number(c?.[1]);
+  if (limpias.length < 2) return null;
 
-        if (
-          Number.isFinite(lng) &&
-          Number.isFinite(lat) &&
-          Math.abs(lng) <= 180 &&
-          Math.abs(lat) <= 90
-        ) {
-          const last = merged[merged.length - 1];
-          if (!last || last[0] !== lng || last[1] !== lat) {
-            merged.push([lng, lat]);
-          }
-        }
-      });
+  const resultado = [];
+  for (const c of limpias) {
+    const last = resultado[resultado.length - 1];
+    if (!last || last[0] !== c[0] || last[1] !== c[1]) {
+      resultado.push(c);
+    }
+  }
+
+  return resultado.length >= 2 ? resultado : null;
+};
+
+const coordsRouteGeometry = limpiarCoordsRuta(data?.route_geometry);
+
+let coordsLegs = null;
+if (!coordsRouteGeometry && Array.isArray(data?.legs)) {
+  const merged = [];
+
+  data.legs.forEach((leg) => {
+    const g = limpiarCoordsRuta(leg?.geometry);
+    if (!g) return;
+
+    g.forEach((c) => {
+      const last = merged[merged.length - 1];
+      if (!last || last[0] !== c[0] || last[1] !== c[1]) {
+        merged.push(c);
+      }
     });
+  });
 
-    if (merged.length >= 2) {
-      coordsLegs = merged;
-    }
-  }
+  coordsLegs = merged.length >= 2 ? merged : null;
+}
 
-  let coordsPuntos = null;
-  if (!coordsRouteGeometry && !coordsLegs && Array.isArray(data?.puntos_ruta)) {
-    const simples = data.puntos_ruta
-      .map((p) => [Number(p.lng), Number(p.lat)])
-      .filter((c) =>
-        Number.isFinite(c[0]) &&
-        Number.isFinite(c[1]) &&
-        Math.abs(c[0]) <= 180 &&
-        Math.abs(c[1]) <= 90
-      );
+let coordsPuntos = null;
+if (!coordsRouteGeometry && !coordsLegs && Array.isArray(data?.puntos_ruta)) {
+  const simples = data.puntos_ruta
+    .map((p) => [Number(p.lng), Number(p.lat)])
+    .filter((c) =>
+      Number.isFinite(c[0]) &&
+      Number.isFinite(c[1]) &&
+      Math.abs(c[0]) <= 180 &&
+      Math.abs(c[1]) <= 90
+    );
 
-    if (simples.length >= 2) {
-      coordsPuntos = simples;
-    }
-  }
+  coordsPuntos = simples.length >= 2 ? simples : null;
+}
 
-  const coordsFinales = coordsRouteGeometry || coordsLegs || coordsPuntos || null;
-  const esRutaReal = !!(coordsRouteGeometry || coordsLegs);
-  const esProvisoria = !esRutaReal && !!coordsPuntos;
-
+const coordsFinales = coordsRouteGeometry || coordsLegs || coordsPuntos || null;
+const esRutaReal = !!(coordsRouteGeometry || coordsLegs);
+const esProvisoria = !esRutaReal && !!coordsPuntos;
+   
   state.cotizacion = {
     ...data,
     precio,
@@ -6462,29 +6472,30 @@ if (distancia < 2) {
       : null
   };
 
-  if (coordsFinales) {
-    setSectionVisible('mapSection', true);
-    setTimeout(() => {
-  try {
-    mapaCliente?.resize?.();
-  } catch (_) {}
-}, 80);
-    initMapa().then(async () => {
-      try {
-        if (esRutaReal) {
-          await dibujarRutaReal(coordsFinales);
-        } else {
-          dibujarRutaLineal(coordsFinales);
-        }
-      } catch (e) {
-        console.warn('[mapa] fallo dibujarRutaReal, uso lineal:', e);
+if (coordsFinales) {
+  setSectionVisible('mapSection', true);
+
+  setTimeout(() => {
+    try {
+      mapaCliente?.resize?.();
+    } catch (_) {}
+  }, 80);
+
+  initMapa().then(async () => {
+    try {
+      await dibujarRutaReal(coordsFinales);
+    } catch (e) {
+      console.warn('[mapa] fallo dibujarRutaReal:', e);
+
+      if (!esRutaReal && coordsPuntos) {
         try {
-          dibujarRutaLineal(coordsFinales);
+          dibujarRutaLineal(coordsPuntos);
         } catch (_) {}
       }
-    });
-  }
-
+    }
+  });
+}
+   
   if (fallbackUsado && !coordsRouteGeometry && !coordsLegs) {
     notif.show(
       'Ruta estimada',
