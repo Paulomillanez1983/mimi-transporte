@@ -4257,13 +4257,6 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
           input.value = direccionCorta;
 
           onSelect({
-            setTimeout(() => {
-  try {
-    dibujarRutaEnMapa();
-  } catch (err) {
-    console.warn('[AUTO] error refrescando mapa', err);
-  }
-}, 0);
             id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
             direccion: r.display_name,
             direccionCorta,
@@ -4272,6 +4265,14 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
             lng: parseFloat(r.lon),
             raw: r
           });
+
+          setTimeout(() => {
+            try {
+              dibujarRutaEnMapa();
+            } catch (err) {
+              console.warn('[AUTO] error refrescando mapa', err);
+            }
+          }, 0);
 
           input.setAttribute(
             'title',
@@ -4322,6 +4323,7 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
     }, 200);
   });
 }
+
 function mostrarSugerencias(contenedor, resultados, callback, meta = {}) {
   contenedor.innerHTML = '';
 
