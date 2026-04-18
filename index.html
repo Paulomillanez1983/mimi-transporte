@@ -5845,6 +5845,7 @@ async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
   setSectionVisible('mapSection', true);
+
   setTimeout(() => {
     try {
       mapaCliente?.resize?.();
@@ -5861,6 +5862,7 @@ async function dibujarRutaReal(coords) {
   if (!mapaCliente.isStyleLoaded()) {
     await new Promise((resolve) => mapaCliente.once('load', resolve));
   }
+
   const coordsLimpias = coords
     .map((c) => [Number(c?.[0]), Number(c?.[1])])
     .filter((c) =>
@@ -5871,6 +5873,32 @@ async function dibujarRutaReal(coords) {
     );
 
   if (coordsLimpias.length < 2) return;
+
+  const puntosOrdenados = obtenerPuntosOrdenados();
+  const origenReal = puntosOrdenados?.[0];
+  const destinoReal = puntosOrdenados?.[puntosOrdenados.length - 1];
+
+  if (
+    origenReal &&
+    coordenadasValidas(origenReal.lat, origenReal.lng)
+  ) {
+    const exactStart = [Number(origenReal.lng), Number(origenReal.lat)];
+    const first = coordsLimpias[0];
+    if (first[0] !== exactStart[0] || first[1] !== exactStart[1]) {
+      coordsLimpias.unshift(exactStart);
+    }
+  }
+
+  if (
+    destinoReal &&
+    coordenadasValidas(destinoReal.lat, destinoReal.lng)
+  ) {
+    const exactEnd = [Number(destinoReal.lng), Number(destinoReal.lat)];
+    const last = coordsLimpias[coordsLimpias.length - 1];
+    if (last[0] !== exactEnd[0] || last[1] !== exactEnd[1]) {
+      coordsLimpias.push(exactEnd);
+    }
+  }
 
   limpiarCapasRutaMapa();
   limpiarMarkersMapa();
@@ -5887,22 +5915,6 @@ async function dibujarRutaReal(coords) {
   });
 
   mapaCliente.addLayer({
-    id: 'route-glow',
-    type: 'line',
-    source: 'route',
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round'
-    },
-    paint: {
-      'line-color': '#60a5fa',
-      'line-width': 10,
-      'line-opacity': 0.28,
-      'line-blur': 1.5
-    }
-  });
-
-  mapaCliente.addLayer({
     id: 'route-line',
     type: 'line',
     source: 'route',
@@ -5911,12 +5923,12 @@ async function dibujarRutaReal(coords) {
       'line-cap': 'round'
     },
     paint: {
-      'line-color': '#1565c0',
-      'line-width': 6,
-      'line-opacity': 0.95
+      'line-color': '#111111',
+      'line-width': 3,
+      'line-opacity': 0.97
     }
   });
-  
+
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
@@ -5934,7 +5946,6 @@ async function dibujarRutaReal(coords) {
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 180);
   setTimeout(() => { try { mapaCliente.resize(); } catch (_) {} }, 450);
 }
-
 function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
   setTimeout(() => {
