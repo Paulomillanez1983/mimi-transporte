@@ -4257,6 +4257,13 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
           input.value = direccionCorta;
 
           onSelect({
+            setTimeout(() => {
+  try {
+    dibujarRutaEnMapa();
+  } catch (err) {
+    console.warn('[AUTO] error refrescando mapa', err);
+  }
+}, 0);
             id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
             direccion: r.display_name,
             direccionCorta,
@@ -4446,6 +4453,11 @@ function agregarWaypoint() {
 
   actualizarTimeline();
   renumerarWaypoints();
+  setTimeout(() => {
+  try {
+    dibujarRutaEnMapa();
+  } catch (_) {}
+}, 0);
 
   setTimeout(() => {
     document.getElementById(waypointId)?.focus();
@@ -4460,6 +4472,11 @@ function eliminarWaypoint(id) {
 
   actualizarTimeline();
   renumerarWaypoints();
+  setTimeout(() => {
+  try {
+    dibujarRutaEnMapa();
+  } catch (_) {}
+}, 0);
 }
 
 function renumerarWaypoints() {
@@ -4485,7 +4502,7 @@ function actualizarTimeline() {
   dots += `<div class="timeline-dot destination"></div>`;
   timeline.innerHTML = dots;
 }
-
+let routeRequestId = 0;
 async function resolverWaypointsPendientes() {
   const waypointInputs = [...document.querySelectorAll('.waypoint-input')];
   const errores = [];
@@ -4537,7 +4554,13 @@ async function resolverWaypointsPendientes() {
     input.setAttribute('title', construirTooltip(dataNormalizada));
   }
 
-  return errores;
+setTimeout(() => {
+  try {
+    dibujarRutaEnMapa();
+  } catch (_) {}
+}, 0);
+
+return errores;
 }
 
 // ==========================================
@@ -4860,7 +4883,11 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       `${choferLng},${choferLat};${clienteLng},${clienteLat}` +
       `?overview=full&geometries=geojson&steps=false`;
 
-    const resp = await fetch(url);
+const currentRequest = ++routeRequestId;
+
+const resp = await fetch(url);
+
+if (currentRequest !== routeRequestId) return;
     const json = await resp.json().catch(() => null);
 
     coords = json?.routes?.[0]?.geometry?.coordinates || null;
@@ -5377,14 +5404,9 @@ async function dibujarRutaEnMapa(coords) {
     if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
   } catch (_) {}
 
-  state.markers.forEach((m) => {
-    try { m.remove(); } catch (_) {}
-  });
-  state.markers = [];
-
-  const puntos = obtenerPuntosOrdenados();
-  puntos.forEach((punto, index) => {
-    const isOrigin = index === 0;
+limpiarMarkersMapa();
+agregarMarkersRutaDesdeCoords(coords);
+  const isOrigin = index === 0;
     const isDest = index === puntos.length - 1;
     const label = isOrigin ? 'A' : isDest ? 'B' : String(index);
     const type = isOrigin ? 'origin' : isDest ? 'dest' : 'waypoint';
@@ -7546,8 +7568,7 @@ function intercambiarOrigenDestino() {
 
   if (mapaCliente && mapReady) {
     try {
-      if (mapaCliente.getLayer('route-line')) mapaCliente.removeLayer('route-line');
-      if (mapaCliente.getSource('route')) mapaCliente.removeSource('route');
+limpiarCapasRutaMapa();
     } catch (_) {}
   }
 
