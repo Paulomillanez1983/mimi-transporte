@@ -1063,89 +1063,120 @@ async function buscarDireccion(query) {
 
     <!-- CARD DE COTIZACIÓN -->
     <section
-      class="quote-card"
-      id="quoteCard"
-      aria-hidden="true"
-      aria-label="Resumen del viaje"
-    >
-      <div class="quote-header">
-        <div class="quote-title">Resumen del viaje</div>
-        <div class="quote-route-info">
-          <span id="resumenParadas">0 paradas</span>
-        </div>
-      </div>
-
-      <div class="quote-main">
-        <div class="quote-price" id="quotePrice">$0</div>
-        <div class="quote-price-label">Precio estimado</div>
-      </div>
-
-      <div class="quote-details">
-        <div class="quote-detail">
-          <div class="quote-detail-value" id="detailDistance">0 km</div>
-          <div class="quote-detail-label">Distancia</div>
-        </div>
-        <div class="quote-detail">
-          <div class="quote-detail-value" id="detailDuration">0 min</div>
-          <div class="quote-detail-label">Duración</div>
-        </div>
-        <div class="quote-detail">
-          <div class="quote-detail-value" id="detailStops">0</div>
-          <div class="quote-detail-label">Paradas</div>
-        </div>
-      </div>
-
-      <button
-        id="btnToggleBreakdown"
-        class="breakdown-toggle"
-        type="button"
-        aria-expanded="false"
-        aria-controls="priceBreakdown"
-      >
-        <span>Ver desglose del precio</span>
-        <span id="breakdownChevron" aria-hidden="true">▾</span>
-      </button>
-
-      <div id="priceBreakdown" class="price-breakdown" hidden>
-        <div class="price-breakdown-title">Desglose del precio</div>
-        <div id="priceBreakdownContent"></div>
-      </div>
-
-      <div class="quote-actions">
-        <button
-          class="btn-primary"
-          id="btnConfirmarViaje"
-          type="button"
-          aria-label="Confirmar viaje"
-        >
-          <span aria-hidden="true">✓</span>
-          <span>Confirmar viaje</span>
-        </button>
-
-        <button
-          class="btn-secondary"
-          id="btnCompartirRuta"
-          type="button"
-          aria-label="Compartir ruta"
-        >
-          <span aria-hidden="true">📤</span>
-          <span>Compartir ruta</span>
-        </button>
-      </div>
-      <button
-  class="btn-secondary btn-cancel-trip"
-  id="btnCancelarViaje"
-  type="button"
-  aria-label="Cancelar viaje"
-  hidden
+<section
+  class="quote-card"
+  id="quoteCard"
+  aria-hidden="true"
+  aria-label="Resumen del viaje"
 >
-  <span aria-hidden="true">✕</span>
-  <span>Cancelar viaje</span>
-</button>
-    </section>
-  </section>
-</main>
+  <div class="trip-driver-card" id="tripDriverCard" hidden>
+    <div class="trip-driver-card__avatar" id="tripDriverAvatar">C</div>
 
+    <div class="trip-driver-card__info">
+      <div class="trip-driver-card__name" id="tripDriverName">Chofer asignado</div>
+      <div class="trip-driver-card__meta" id="tripDriverMeta">En camino a buscarte</div>
+      <div class="trip-driver-card__contact" id="tripDriverContact">Sin contacto</div>
+    </div>
+  </div>
+
+  <div class="trip-active-actions" id="tripActiveActions" hidden>
+    <button
+      class="btn-secondary btn-chat-trip"
+      id="btnChatChofer"
+      type="button"
+      aria-label="Chatear con el chofer"
+    >
+      <span aria-hidden="true">💬</span>
+      <span>Chat</span>
+    </button>
+
+    <button
+      class="btn-secondary btn-cancel-trip"
+      id="btnCancelarViajeLive"
+      type="button"
+      aria-label="Cancelar viaje"
+    >
+      <span aria-hidden="true">✕</span>
+      <span>Cancelar</span>
+    </button>
+  </div>
+
+  <div class="quote-header">
+    <div class="quote-title">Resumen del viaje</div>
+    <div class="quote-route-info">
+      <span id="resumenParadas">0 paradas</span>
+    </div>
+  </div>
+
+  <div class="quote-main">
+    <div class="quote-price" id="quotePrice">$0</div>
+    <div class="quote-price-label">Precio estimado</div>
+  </div>
+
+  <div class="quote-details">
+    <div class="quote-detail">
+      <div class="quote-detail-value" id="detailDistance">0 km</div>
+      <div class="quote-detail-label">Distancia</div>
+    </div>
+    <div class="quote-detail">
+      <div class="quote-detail-value" id="detailDuration">0 min</div>
+      <div class="quote-detail-label">Duración</div>
+    </div>
+    <div class="quote-detail">
+      <div class="quote-detail-value" id="detailStops">0</div>
+      <div class="quote-detail-label">Paradas</div>
+    </div>
+  </div>
+
+  <button
+    id="btnToggleBreakdown"
+    class="breakdown-toggle"
+    type="button"
+    aria-expanded="false"
+    aria-controls="priceBreakdown"
+  >
+    <span>Ver desglose del precio</span>
+    <span id="breakdownChevron" aria-hidden="true">▾</span>
+  </button>
+
+  <div id="priceBreakdown" class="price-breakdown" hidden>
+    <div class="price-breakdown-title">Desglose del precio</div>
+    <div id="priceBreakdownContent"></div>
+  </div>
+
+  <div class="quote-actions">
+    <button
+      class="btn-primary"
+      id="btnConfirmarViaje"
+      type="button"
+      aria-label="Confirmar viaje"
+    >
+      <span aria-hidden="true">✓</span>
+      <span>Confirmar viaje</span>
+    </button>
+
+    <button
+      class="btn-secondary"
+      id="btnCompartirRuta"
+      type="button"
+      aria-label="Compartir ruta"
+    >
+      <span aria-hidden="true">📤</span>
+      <span>Compartir ruta</span>
+    </button>
+  </div>
+
+  <button
+    class="btn-secondary btn-cancel-trip"
+    id="btnCancelarViaje"
+    type="button"
+    aria-label="Cancelar viaje"
+    hidden
+  >
+    <span aria-hidden="true">✕</span>
+    <span>Cancelar viaje</span>
+  </button>
+</section>
 <footer class="footer">
   <div class="footer-location">📍 Villa Allende y zona norte de Córdoba</div>
 
