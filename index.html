@@ -927,25 +927,35 @@ async function buscarDireccion(query) {
 
         <!-- Origen -->
         <div class="route-input-group route-input-group-origin">
-          <div class="route-input-wrapper">
-            <span class="route-input-icon" aria-hidden="true">📍</span>
-            <input
-              type="text"
-              id="inputOrigen"
-              class="route-input"
-              placeholder="¿Dónde te buscamos?"
-              autocomplete="off"
-              autocapitalize="words"
-              autocorrect="off"
-              spellcheck="false"
-              inputmode="search"
-              enterkeyhint="search"
-              aria-label="Origen"
-              aria-autocomplete="list"
-              aria-controls="sugerenciasOrigen"
-              aria-expanded="false"
-            >
-          </div>
+        <div class="route-input-wrapper">
+        <span class="route-input-icon" aria-hidden="true">📍</span>
+        <input
+         type="text"
+         id="inputOrigen"
+        class="route-input"
+        placeholder="¿Dónde te buscamos?"
+        autocomplete="off"
+        autocapitalize="words"
+        autocorrect="off"
+        spellcheck="false"
+        inputmode="search"
+        enterkeyhint="search"
+        aria-label="Origen"
+        aria-autocomplete="list"
+        aria-controls="sugerenciasOrigen"
+        aria-expanded="false"
+        >
+       <div class="route-input-actions">
+         <button
+       id="btnClearOrigen"
+       class="btn-input-action clear"
+       type="button"
+       title="Borrar origen"
+       aria-label="Borrar origen"
+       hidden
+     >✕</button>
+   </div>
+ </div>
           <div
             id="sugerenciasOrigen"
             class="sugerencias"
@@ -969,25 +979,35 @@ async function buscarDireccion(query) {
 
         <!-- Destino -->
         <div class="route-input-group route-input-group-destination">
-          <div class="route-input-wrapper">
-            <span class="route-input-icon" aria-hidden="true">🏁</span>
-            <input
-              type="text"
-              id="inputDestino"
-              class="route-input"
-              placeholder="¿A dónde vamos?"
-              autocomplete="off"
-              autocapitalize="words"
-              autocorrect="off"
-              spellcheck="false"
-              inputmode="search"
-              enterkeyhint="search"
-              aria-label="Destino"
-              aria-autocomplete="list"
-              aria-controls="sugerenciasDestino"
-              aria-expanded="false"
-            >
-          </div>
+        <div class="route-input-wrapper">
+        <span class="route-input-icon" aria-hidden="true">🏁</span>
+        <input
+        type="text"
+        id="inputDestino"
+        class="route-input"
+        placeholder="¿A dónde vamos?"
+        autocomplete="off"
+        autocapitalize="words"
+        autocorrect="off"
+        spellcheck="false"
+        inputmode="search"
+        enterkeyhint="search"
+        aria-label="Destino"
+        aria-autocomplete="list"
+        aria-controls="sugerenciasDestino"
+        aria-expanded="false"
+        >
+     <div class="route-input-actions">
+       <button
+         id="btnClearDestino"
+         class="btn-input-action clear"
+         type="button"
+         title="Borrar destino"
+         aria-label="Borrar destino"
+         hidden
+      >✕</button>
+      </div>
+        </div>
           <div
             id="sugerenciasDestino"
             class="sugerencias"
@@ -8184,7 +8204,16 @@ function bindUIActions() {
   const btnToggleBreakdown = document.getElementById('btnToggleBreakdown');
   const btnLoginHeader = document.getElementById('btnLoginHeader');
   const btnLogoutHeader = document.getElementById('btnLogoutHeader');
+  const inputOrigen = document.getElementById('inputOrigen');
+  const inputDestino = document.getElementById('inputDestino');
+  const btnClearOrigen = document.getElementById('btnClearOrigen');
+  const btnClearDestino = document.getElementById('btnClearDestino');
 
+  inputOrigen?.addEventListener('input', actualizarBotonesClearDireccion);
+  inputDestino?.addEventListener('input', actualizarBotonesClearDireccion);
+
+  btnClearOrigen?.addEventListener('click', () => limpiarCampoDireccion('origen'));
+  btnClearDestino?.addEventListener('click', () => limpiarCampoDireccion('destino'));
   if (btnAddStop && !btnAddStop.dataset.bound) {
     btnAddStop.addEventListener('click', agregarWaypoint);
     btnAddStop.dataset.bound = '1';
@@ -8410,7 +8439,55 @@ window.setSectionVisible = setSectionVisible;
       }
     };
   })();
+function actualizarBotonesClearDireccion() {
+  const inputOrigen = document.getElementById('inputOrigen');
+  const inputDestino = document.getElementById('inputDestino');
+  const btnClearOrigen = document.getElementById('btnClearOrigen');
+  const btnClearDestino = document.getElementById('btnClearDestino');
 
+  if (btnClearOrigen) {
+    btnClearOrigen.hidden = !inputOrigen?.value?.trim();
+  }
+
+  if (btnClearDestino) {
+    btnClearDestino.hidden = !inputDestino?.value?.trim();
+  }
+}
+
+function limpiarCampoDireccion(tipo) {
+  if (tipo === 'origen') {
+    const input = document.getElementById('inputOrigen');
+    const sugerencias = document.getElementById('sugerenciasOrigen');
+
+    if (input) input.value = '';
+    if (sugerencias) {
+      sugerencias.innerHTML = '';
+      hideSuggestions(sugerencias);
+    }
+
+    state.origen = null;
+  }
+
+  if (tipo === 'destino') {
+    const input = document.getElementById('inputDestino');
+    const sugerencias = document.getElementById('sugerenciasDestino');
+
+    if (input) input.value = '';
+    if (sugerencias) {
+      sugerencias.innerHTML = '';
+      hideSuggestions(sugerencias);
+    }
+
+    state.destino = null;
+  }
+
+  guardarViajeActivoEnStorage?.();
+  actualizarBotonesClearDireccion();
+
+  try {
+    dibujarRutaEnMapa?.();
+  } catch (_) {}
+}
   (function patchLoginConGoogleParaViaje() {
     if (typeof window.loginConGoogleParaViaje !== 'function') return;
 
