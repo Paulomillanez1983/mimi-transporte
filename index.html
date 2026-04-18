@@ -1413,21 +1413,27 @@ function renderSesionUI(session) {
     box.classList.remove('open');
     box.removeAttribute('title');
     avatar.src = '';
+    avatar.onerror = null;
     nameEl.textContent = '';
     emailEl.textContent = '';
     return;
   }
 
   const { nombre, email, foto } = getUserDisplayData(session);
+  const fallbackAvatar =
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || 'Usuario')}&background=1e3c72&color=fff`;
 
   btnLogin.hidden = true;
   box.hidden = false;
   nameEl.textContent = nombre || 'Usuario';
   emailEl.textContent = email || '';
 
-  avatar.src =
-    foto ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(nombre || 'Usuario')}&background=1e3c72&color=fff`;
+  avatar.referrerPolicy = 'no-referrer';
+  avatar.onerror = () => {
+    avatar.onerror = null;
+    avatar.src = fallbackAvatar;
+  };
+  avatar.src = foto || fallbackAvatar;
   avatar.alt = nombre ? `Foto de ${nombre}` : 'Foto de perfil';
 
   box.classList.remove('open');
@@ -1435,7 +1441,6 @@ function renderSesionUI(session) {
 
   initUserSessionDropdown();
 }
-
 function initUserSessionDropdown() {
   const box = document.getElementById('userSessionBox');
   const logoutBtn = document.getElementById('btnLogoutHeader');
