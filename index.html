@@ -6119,13 +6119,22 @@ if (!destinoCoincideAproximado) {
       state.origen = puntosBackend.find((p) => p.rol === 'pickup') || puntosBackend[0];
       state.destino = puntosBackend.find((p) => p.rol === 'dropoff') || puntosBackend[puntosBackend.length - 1];
 
-      state.waypoints = puntosBackend
-        .filter((p) => p.rol === 'stop')
-        .map((p, idx) => ({
-          id: `waypoint-${idx + 1}`,
-          data: p
-        }));
-
+state.waypoints = puntosBackend
+  .filter((p) => {
+    const rol = String(p?.rol || '').toLowerCase();
+    return rol === 'stop' || rol === 'waypoint' || rol === 'parada';
+  })
+  .map((p, idx) => ({
+    id: p?.id || `waypoint-${idx + 1}`,
+    data: {
+      ...p,
+      lat: Number(p?.lat),
+      lng: Number(p?.lng),
+      direccion: p?.direccion || p?.direccion_completa || p?.direccionCorta || `Parada ${idx + 1}`,
+      direccionCorta: p?.direccion_corta || p?.direccionCorta || p?.direccion || `Parada ${idx + 1}`
+    }
+  }))
+  .filter((wp) => coordenadasValidas(wp?.data?.lat, wp?.data?.lng));
       const inputOrigen = document.getElementById('inputOrigen');
       const inputDestino = document.getElementById('inputDestino');
 
