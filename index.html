@@ -565,7 +565,30 @@ function guardarRecentPlaces(items) {
     );
   } catch (_) {}
 }
+function inferirAliasLugar(item) {
+  const text = normalizarBusqueda(
+    item?.display_name || item?.direccion || item?.direccionCorta || ''
+  );
 
+  if (!text) return 'Reciente';
+  if (text.includes('casa')) return 'Casa';
+  if (text.includes('hogar')) return 'Casa';
+  if (text.includes('colegio') || text.includes('escuela') || text.includes('instituto')) return 'Colegio';
+  if (text.includes('trabajo') || text.includes('oficina')) return 'Trabajo';
+  if (text.includes('hospital') || text.includes('clinica') || text.includes('sanatorio')) return 'Salud';
+
+  return 'Reciente';
+}
+
+function obtenerSugerenciasRecientes() {
+  return leerRecentPlaces()
+    .filter((item) => item && (item.display_name || item.direccion))
+    .slice(0, 5)
+    .map((item) => ({
+      ...item,
+      suggested_alias: inferirAliasLugar(item)
+    }));
+}
 function pushRecentPlace(item) {
   if (!item?.display_name) return;
 
@@ -4452,13 +4475,50 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
 
     onSelect(null);
 
-    if (texto.length < 3) {
-      hideSuggestions(contenedor);
-      contenedor.innerHTML = '';
-      input.setAttribute('aria-expanded', 'false');
-      return;
-    }
+if (texto.length < 2) {
+  const recientes = obtenerSugerenciasRecientes();
+  if (recientes.length) {
+    mostrarSugerencias(
+      contenedor,
+      recientes,
+      (r) => {
+        const direccionCorta = formatearDireccionCorta(r);
+        const direccionSecundaria = formatearDireccionSecundaria(r);
 
+        suppressNextInputSearch = true;
+        input.value = direccionCorta;
+
+        onSelect({
+          id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          direccion: r.display_name,
+          direccionCorta,
+          direccionSecundaria,
+          lat: parseFloat(r.lat),
+          lng: parseFloat(r.lon ?? r.lng),
+          raw: r
+        });
+
+        input.setAttribute(
+          'title',
+          `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
+        );
+
+        hideSuggestions(contenedor);
+        input.setAttribute('aria-expanded', 'false');
+      },
+      {
+        source: 'history',
+        query: texto
+      }
+    );
+    input.setAttribute('aria-expanded', 'true');
+  } else {
+    hideSuggestions(contenedor);
+    contenedor.innerHTML = '';
+    input.setAttribute('aria-expanded', 'false');
+  }
+  return;
+}
     const currentRequest = ++requestId;
 
     timer = setTimeout(async () => {
@@ -4492,28 +4552,32 @@ function setupAutocomplete(inputId, sugerenciasId, onSelect) {
           suppressNextInputSearch = true;
           input.value = direccionCorta;
 
-          onSelect({
-            id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-            direccion: r.display_name,
-            direccionCorta,
-            direccionSecundaria,
-            lat: parseFloat(r.lat),
-            lng: parseFloat(r.lon),
-            raw: r
-          });
+onSelect({
+  id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+  direccion: r.display_name,
+  direccionCorta,
+  direccionSecundaria,
+  lat: parseFloat(r.lat),
+  lng: parseFloat(r.lon),
+  raw: r
+});
 
-          setTimeout(() => {
-            try {
-              dibujarRutaEnMapa();
-            } catch (err) {
-              console.warn('[AUTO] error refrescando mapa', err);
+           setTimeout(() => {
+           try {
+             dibujarRutaEnMapa();
+             } catch (err) {
+             console.warn('[AUTO] error refrescando mapa', err);
             }
           }, 0);
 
           input.setAttribute(
-            'title',
-            `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
+         'title',
+         `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
           );
+
+          // 🔥 ACA VA LO QUE TE FALTA
+          guardarFeedbackGeocoding?.(texto, r).catch?.(() => {});
+          pushRecentPlace?.(r);
 
           hideSuggestions(contenedor);
           input.setAttribute('aria-expanded', 'false');
@@ -4577,11 +4641,13 @@ function mostrarSugerencias(contenedor, resultados, callback, meta = {}) {
     const direccionPrincipal = formatearDireccionCorta(r);
     const direccionSecundaria = formatearDireccionSecundaria(r);
 
-    const badge =
-      meta.approximateMatch && index === 0
-        ? `<span class="sugerencia-badge">Aprox.</span>`
-        : '';
+let badge = '';
 
+if (meta.source === 'history' && r?.suggested_alias) {
+  badge = `<span class="sugerencia-badge">${r.suggested_alias}</span>`;
+} else if (meta.approximateMatch && index === 0) {
+  badge = `<span class="sugerencia-badge">Aprox.</span>`;
+}
     item.innerHTML = `
       <div class="sugerencia-icon" aria-hidden="true">📍</div>
       <div class="sugerencia-text">
@@ -4623,7 +4689,12 @@ function mostrarSugerencias(contenedor, resultados, callback, meta = {}) {
     avisoFallback.innerHTML = 'Mostrando sugerencias guardadas localmente.';
     contenedor.appendChild(avisoFallback);
   }
-
+if (meta.source === 'history' && resultados.length > 0) {
+  const avisoHistory = document.createElement('div');
+  avisoHistory.className = 'sugerencia-help';
+  avisoHistory.innerHTML = 'Tus lugares recientes.';
+  contenedor.appendChild(avisoHistory);
+}
   showSuggestions(contenedor);
 }
 // ==========================================
@@ -8209,11 +8280,79 @@ function bindUIActions() {
   const btnClearOrigen = document.getElementById('btnClearOrigen');
   const btnClearDestino = document.getElementById('btnClearDestino');
 
-  inputOrigen?.addEventListener('input', actualizarBotonesClearDireccion);
-  inputDestino?.addEventListener('input', actualizarBotonesClearDireccion);
+  if (inputOrigen && !inputOrigen.dataset.autocompleteBound) {
+setupAutocomplete('inputOrigen', 'sugerenciasOrigen', (data) => {
+  state.origen = data;
 
-  btnClearOrigen?.addEventListener('click', () => limpiarCampoDireccion('origen'));
-  btnClearDestino?.addEventListener('click', () => limpiarCampoDireccion('destino'));
+  if (inputOrigen) {
+    inputOrigen.setAttribute(
+      'title',
+      data
+        ? `${data.direccionCorta || data.direccion || ''}${data.direccionSecundaria ? ' - ' + data.direccionSecundaria : ''}`
+        : ''
+    );
+  }
+
+  actualizarBotonesClearDireccion();
+  guardarViajeActivoEnStorage?.();
+
+  setTimeout(() => {
+    try {
+      dibujarRutaEnMapa();
+    } catch (_) {}
+  }, 0);
+});
+    
+    inputOrigen.dataset.autocompleteBound = '1';
+  }
+
+  if (inputDestino && !inputDestino.dataset.autocompleteBound) {
+setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
+  state.destino = data;
+
+  if (inputDestino) {
+    inputDestino.setAttribute(
+      'title',
+      data
+        ? `${data.direccionCorta || data.direccion || ''}${data.direccionSecundaria ? ' - ' + data.direccionSecundaria : ''}`
+        : ''
+    );
+  }
+
+  actualizarBotonesClearDireccion();
+  guardarViajeActivoEnStorage?.();
+
+  setTimeout(() => {
+    try {
+      dibujarRutaEnMapa();
+    } catch (_) {}
+  }, 0);
+});
+    
+    inputDestino.dataset.autocompleteBound = '1';
+  }
+
+  if (inputOrigen && !inputOrigen.dataset.clearBound) {
+    inputOrigen.addEventListener('input', actualizarBotonesClearDireccion);
+    inputOrigen.dataset.clearBound = '1';
+  }
+
+  if (inputDestino && !inputDestino.dataset.clearBound) {
+    inputDestino.addEventListener('input', actualizarBotonesClearDireccion);
+    inputDestino.dataset.clearBound = '1';
+  }
+
+  if (btnClearOrigen && !btnClearOrigen.dataset.bound) {
+    btnClearOrigen.addEventListener('click', () => limpiarCampoDireccion('origen'));
+    btnClearOrigen.dataset.bound = '1';
+  }
+
+  if (btnClearDestino && !btnClearDestino.dataset.bound) {
+    btnClearDestino.addEventListener('click', () => limpiarCampoDireccion('destino'));
+    btnClearDestino.dataset.bound = '1';
+  }
+
+  actualizarBotonesClearDireccion();
   if (btnAddStop && !btnAddStop.dataset.bound) {
     btnAddStop.addEventListener('click', agregarWaypoint);
     btnAddStop.dataset.bound = '1';
@@ -8455,12 +8594,15 @@ function actualizarBotonesClearDireccion() {
 }
 
 function limpiarCampoDireccion(tipo) {
-  if (tipo === 'origen') {
-    const input = document.getElementById('inputOrigen');
-    const sugerencias = document.getElementById('sugerenciasOrigen');
+if (tipo === 'origen') {
+  const input = document.getElementById('inputOrigen');
+  const sugerencias = document.getElementById('sugerenciasOrigen');
 
-    if (input) input.value = '';
-    if (sugerencias) {
+  if (input) {
+    input.value = '';
+    input.removeAttribute('title');
+  }
+  if (sugerencias) {
       sugerencias.innerHTML = '';
       hideSuggestions(sugerencias);
     }
@@ -8468,12 +8610,15 @@ function limpiarCampoDireccion(tipo) {
     state.origen = null;
   }
 
-  if (tipo === 'destino') {
-    const input = document.getElementById('inputDestino');
-    const sugerencias = document.getElementById('sugerenciasDestino');
+if (tipo === 'destino') {
+  const input = document.getElementById('inputDestino');
+  const sugerencias = document.getElementById('sugerenciasDestino');
 
-    if (input) input.value = '';
-    if (sugerencias) {
+  if (input) {
+    input.value = '';
+    input.removeAttribute('title');
+  }
+  if (sugerencias) {
       sugerencias.innerHTML = '';
       hideSuggestions(sugerencias);
     }
