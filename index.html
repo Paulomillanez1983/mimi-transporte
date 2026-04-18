@@ -5979,11 +5979,12 @@ function centrarEnRuta() {
   );
 
   mapaCliente.fitBounds(bounds, {
-    padding: { top: 50, bottom: 50, left: 50, right: 50 },
-    duration: 600
+    padding: { top: 34, bottom: 34, left: 34, right: 34 },
+    duration: 600,
+    maxZoom: 16.2
   });
 }
-  window.dibujarRutaChoferHastaCliente = dibujarRutaChoferHastaCliente;
+window.dibujarRutaChoferHastaCliente = dibujarRutaChoferHastaCliente;
 window.limpiarRutaChoferHastaCliente = limpiarRutaChoferHastaCliente;
 
 function reiniciarRuta() {
