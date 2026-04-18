@@ -2310,7 +2310,8 @@ function guardarViajeActivoEnStorage() {
       inputDestino: document.getElementById('inputDestino')?.value || '',
       waypointTexts: [...document.querySelectorAll('.waypoint-input')].map((el) => el.value || ''),
 
-      ts: Date.now()
+      ts: Date.now(),
+      updatedAt: new Date().toISOString()
     };
 
     localStorage.setItem(ACTIVE_TRIP_STORAGE_KEY, JSON.stringify(payload));
@@ -3525,48 +3526,46 @@ if (state.viajeId && typeof suscribirseUbicacionChoferRealtime === 'function') {
     if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
       const estadoStorage = normalizarEstadoUpper(viajeLocal.estadoViaje);
 
-      state.viajeId = viajeLocal.viajeId;
-      state.viajeEstado = estadoStorage;
-      state.estadoViaje = estadoStorage;
-      state.choferId = null;
-      state.choferLocation = null;
+      const estadosStoragePermitidos = new Set([
+        'PENDIENTE',
+        'BUSCANDO_CHOFER',
+        'OFERTANDO',
+        'OFERTADO',
+        'SIN_CHOFER',
+        'ASIGNADO',
+        'ACEPTADO',
+        'EN_CAMINO',
+        'INICIADO',
+        'EN_CURSO'
+      ]);
 
-      await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
+      const tsMs = Number(viajeLocal?.ts || 0);
+      const updatedAtMs = viajeLocal?.updatedAt
+        ? new Date(viajeLocal.updatedAt).getTime()
+        : 0;
 
-      actualizarStatusCardNotificaciones(estadoStorage);
+      const referenciaMs = updatedAtMs || tsMs || 0;
+
+      const storageExpirado =
+        !referenciaMs ||
+        Number.isNaN(referenciaMs) ||
+        (Date.now() - referenciaMs > 1000 * 60 * 60 * 6);
+
+      if (!estadosStoragePermitidos.has(estadoStorage) || storageExpirado) {
+        limpiarViajeActivoEnStorage();
+        desactivarModoViajeLive?.();
+        if (notifStatusCard) notifStatusCard.hidden = true;
+        renderizarCentroNotificaciones();
+        return;
+      }
+
+      // Si backend no devolvió viaje activo real, no revivimos uno viejo desde storage
+      limpiarViajeActivoEnStorage();
+      desactivarModoViajeLive?.();
+      if (notifStatusCard) notifStatusCard.hidden = true;
       renderizarCentroNotificaciones();
-
-      if (typeof actualizarBotonCancelarViaje === 'function') {
-        actualizarBotonCancelarViaje();
-      }
-      if (typeof actualizarBotonCotizar === 'function') {
-        actualizarBotonCotizar();
-      }
-      if (typeof actualizarPanelPlanificacionViaje === 'function') {
-        actualizarPanelPlanificacionViaje();
-      }
-      if (typeof actualizarResumenCotizacionCompacto === 'function') {
-        actualizarResumenCotizacionCompacto();
-      }
-      if (typeof actualizarBotonConfirmarViaje === 'function') {
-        actualizarBotonConfirmarViaje();
-      }
-      if (typeof actualizarBotonReiniciarRuta === 'function') {
-        actualizarBotonReiniciarRuta();
-      }
-
-      if (typeof actualizarEstadoSolicitudUI === 'function') {
-        const notifData = mapearEstadoANotificacion(estadoStorage);
-        actualizarEstadoSolicitudUI({
-          estado: estadoStorage,
-          texto: notifData.texto
-        });
-      }
-
-      suscribirseEstadoViajeRealtime(viajeLocal.viajeId);
       return;
     }
-
     // ============================
     // CASO 3: SIN VIAJE
     // ============================
@@ -7204,14 +7203,33 @@ notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
 }
   
 function actualizarBotonCancelarViaje() {
-const btnCancelar = document.getElementById('btnCancelarViaje');
-if (btnCancelar) btnCancelar.hidden = true;
-  
+  const btnCancelar = document.getElementById('btnCancelarViaje');
+  const btnCancelarLive = document.getElementById('btnCancelarViajeLive');
+  const tripActiveActions = document.getElementById('tripActiveActions');
+
   const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+
   const visible = !!state?.viajeId && !['CANCELADO', 'COMPLETADO'].includes(estado);
 
-  btnCancelar.hidden = !visible;
+  // Botón inferior viejo: siempre oculto para evitar duplicado
+  if (btnCancelar) {
+    btnCancelar.hidden = true;
+    btnCancelar.style.display = 'none';
+    btnCancelar.setAttribute('aria-hidden', 'true');
+  }
+
+  // Acciones live (chat + cancelar)
+  if (tripActiveActions) {
+    tripActiveActions.hidden = !visible;
+  }
+
+  if (btnCancelarLive) {
+    btnCancelarLive.hidden = !visible;
+    btnCancelarLive.style.display = visible ? '' : 'none';
+    btnCancelarLive.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  }
 }
+  
 function actualizarBotonCotizar() {
   const btnCalcular = document.getElementById('btnCalcular');
   if (!btnCalcular) return;
@@ -7953,17 +7971,27 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
 
 async function cancelarViajeCliente() {
   const btnCancelar = document.getElementById('btnCancelarViaje');
+  const btnCancelarLive = document.getElementById('btnCancelarViajeLive');
   const btnConfirmar = document.getElementById('btnConfirmarViaje');
 
   const setCancelBtnLoading = (loading) => {
-    if (!btnCancelar) return;
+    const buttons = [btnCancelar, btnCancelarLive].filter(Boolean);
 
-    btnCancelar.disabled = loading;
-    btnCancelar.style.opacity = loading ? '0.7' : '1';
-    btnCancelar.style.pointerEvents = loading ? 'none' : 'auto';
-    btnCancelar.innerHTML = loading
-      ? '<span aria-hidden="true">⏳</span><span>Cancelando...</span>'
-      : '<span aria-hidden="true">✕</span><span>Cancelar viaje</span>';
+    buttons.forEach((btn) => {
+      btn.disabled = loading;
+      btn.style.opacity = loading ? '0.7' : '1';
+      btn.style.pointerEvents = loading ? 'none' : 'auto';
+
+      const isLive = btn.id === 'btnCancelarViajeLive';
+
+      btn.innerHTML = loading
+        ? '<span aria-hidden="true">⏳</span><span>Cancelando...</span>'
+        : (
+            isLive
+              ? '<span aria-hidden="true">✕</span><span>Cancelar</span>'
+              : '<span aria-hidden="true">✕</span><span>Cancelar viaje</span>'
+          );
+    });
   };
 
   try {
@@ -8044,15 +8072,24 @@ async function cancelarViajeCliente() {
       );
     }
 
-     state.viajeEstado = 'CANCELADO';
-     state.estadoViaje = 'CANCELADO';
+    state.viajeEstado = 'CANCELADO';
+    state.estadoViaje = 'CANCELADO';
+    state.viajeId = null;
+    state.choferId = null;
+    state.choferLocation = null;
+    state.routeData = null;
+    state.cotizacion = null;
 
-     actualizarBotonCancelarViaje?.();
-     actualizarBotonCotizar?.();
-     actualizarPanelPlanificacionViaje?.();
-     actualizarResumenCotizacionCompacto?.();
-     actualizarBotonConfirmarViaje?.(); 
-    
+    limpiarViajeActivoEnStorage?.();
+    desactivarModoViajeLive?.();
+
+    actualizarBotonCancelarViaje?.();
+    actualizarBotonCotizar?.();
+    actualizarPanelPlanificacionViaje?.();
+    actualizarResumenCotizacionCompacto?.();
+    actualizarBotonConfirmarViaje?.();
+    actualizarBotonReiniciarRuta?.();
+
     if (typeof actualizarEstadoSolicitudUI === 'function') {
       actualizarEstadoSolicitudUI({
         estado: 'CANCELADO',
@@ -8060,24 +8097,27 @@ async function cancelarViajeCliente() {
       });
     }
 
+    setSectionVisible?.('mapSection', false);
+    setSectionVisible?.('quoteCard', false);
+
     if (btnConfirmar) {
       btnConfirmar.disabled = false;
       btnConfirmar.style.opacity = '1';
       btnConfirmar.style.pointerEvents = 'auto';
     }
 
-notif.show(
-  'Viaje cancelado',
-  'Tu viaje fue cancelado correctamente',
-  'success'
-);
+    notif.show(
+      'Viaje cancelado',
+      'Tu viaje fue cancelado correctamente',
+      'success'
+    );
 
-if (typeof actualizarCentroNotificacionesViaje === 'function') {
-  actualizarCentroNotificacionesViaje({
-    estado: 'CANCELADO',
-    texto: 'Tu viaje fue cancelado correctamente'
-  });
-}
+    if (typeof actualizarCentroNotificacionesViaje === 'function') {
+      actualizarCentroNotificacionesViaje({
+        estado: 'CANCELADO',
+        texto: 'Tu viaje fue cancelado correctamente'
+      });
+    }
   } catch (err) {
     console.error('[cancelarViajeCliente] ERROR:', err);
 
