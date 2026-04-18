@@ -1067,59 +1067,30 @@ async _verifyActiveTripStillValid() {
     }
   }
 
-  // =========================================================
-  // OFFER ACTIONS
-  // =========================================================
-  async _acceptOffer(offerId) {
-    if (this._destroyed) {
-      return { success: false, error: 'APP_DESTROYED' };
-    }
-
-    console.log('[DriverApp] Aceptando oferta:', offerId);
-    uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
-
-    try {
-      const result = await tripManager.acceptOffer(offerId);
-
-      if (!result.success) {
-        uiController.showToast(result.error || 'Error aceptando viaje', 'warning');
-        uiController.hideIncomingModal?.();
-
-        if (this._onlineStatus) {
-          this._setFlowState('ONLINE_IDLE');
-        } else {
-          this._setFlowState('OFFLINE');
-        }
-
-        uiController.showWaitingState();
-        return result;
-      }
-
-      this._celebrateAcceptFeedback();
-
-      setTimeout(() => {
-        tripManager.refresh?.();
-      }, 1500);
-
-      return result;
-    } catch (err) {
-      console.error('[DriverApp] Error aceptando oferta:', err);
-      uiController.showToast('Error aceptando viaje', 'error');
-      return { success: false, error: err.message };
-    } finally {
-      uiController.setGlobalLoading?.(false);
-    }
+// =========================================================
+// OFFER ACTIONS
+// =========================================================
+async _acceptOffer(offerId) {
+  if (this._destroyed) {
+    return { success: false, error: 'APP_DESTROYED' };
   }
 
-  async _rejectOffer(offerId) {
-    if (this._destroyed) {
-      return { success: false, error: 'APP_DESTROYED' };
-    }
+  if (this._actionLock) {
+    console.warn('[DriverApp] _acceptOffer bloqueado: ya hay una acción en curso');
+    return { success: false, error: 'ACCION_EN_CURSO' };
+  }
 
-    console.log('[DriverApp] Rechazando oferta:', offerId);
+  this._actionLock = true;
 
-    try {
-      await tripManager.rejectOffer(offerId);
+  console.log('[DriverApp] Aceptando oferta:', offerId);
+  uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
+
+  try {
+    const result = await tripManager.acceptOffer(offerId);
+
+    if (!result.success) {
+      uiController.showToast(result.error || 'Error aceptando viaje', 'warning');
+      uiController.hideIncomingModal?.();
 
       if (this._onlineStatus) {
         this._setFlowState('ONLINE_IDLE');
@@ -1128,73 +1099,46 @@ async _verifyActiveTripStillValid() {
       }
 
       uiController.showWaitingState();
-      return { success: true };
-    } catch (err) {
-      console.error('[DriverApp] Error rechazando oferta:', err);
-      return { success: false, error: err.message };
-    }
-  }
-
-  // =========================================================
-  // TRIP ACTIONS
-  // =========================================================
-  async _acceptTrip() {
-    if (this._destroyed) {
-      return { success: false, error: 'APP_DESTROYED' };
-    }
-
-    console.log('[DriverApp] Aceptando viaje...');
-    uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
-
-    try {
-      const result = await tripManager.acceptTrip();
-      console.log('[DriverApp] acceptTrip result:', result);
-
-      if (!result.success) {
-        uiController.showToast(
-          result.error === 'VIAJE_YA_TOMADO'
-            ? 'Otro chofer tomó el viaje'
-            : result.error || 'Error aceptando viaje',
-          'warning'
-        );
-
-        uiController.hideIncomingModal?.();
-
-        if (this._onlineStatus) {
-          this._setFlowState('ONLINE_IDLE');
-        } else {
-          this._setFlowState('OFFLINE');
-        }
-
-        uiController.showWaitingState();
-        return result;
-      }
-
-      this._celebrateAcceptFeedback();
-
-      setTimeout(() => {
-        tripManager.refresh?.();
-      }, 1500);
-
       return result;
-    } catch (err) {
-      console.error('[DriverApp] Error aceptando viaje:', err);
-      uiController.showToast('Error aceptando viaje', 'error');
-      uiController.showWaitingState();
-
-      return { success: false, error: err.message };
-    } finally {
-      uiController.setGlobalLoading?.(false);
     }
+
+    setTimeout(() => {
+      tripManager.refresh?.();
+    }, 1500);
+
+    return result;
+  } catch (err) {
+    console.error('[DriverApp] Error aceptando oferta:', err);
+    uiController.showToast('Error aceptando viaje', 'error');
+    return { success: false, error: err.message };
+  } finally {
+    this._actionLock = false;
+    uiController.setGlobalLoading?.(false);
+  }
+}
+
+async _rejectOffer(offerId) {
+  if (this._destroyed) {
+    return { success: false, error: 'APP_DESTROYED' };
   }
 
-  async _rejectTrip() {
-    if (this._destroyed) {
-      return { success: false, error: 'APP_DESTROYED' };
-    }
+  if (this._actionLock) {
+    console.warn('[DriverApp] _rejectOffer bloqueado: ya hay una acción en curso');
+    return { success: false, error: 'ACCION_EN_CURSO' };
+  }
 
-    console.log('[DriverApp] Rechazando viaje...');
-    await tripManager.rejectTrip();
+  this._actionLock = true;
+
+  console.log('[DriverApp] Rechazando oferta:', offerId);
+  uiController.setGlobalLoading?.(true, 'Rechazando viaje...');
+
+  try {
+    const result = await tripManager.rejectOffer(offerId);
+
+    if (!result?.success) {
+      uiController.showToast(result?.error || 'Error rechazando viaje', 'warning');
+      return result || { success: false, error: 'ERROR_RECHAZANDO' };
+    }
 
     if (this._onlineStatus) {
       this._setFlowState('ONLINE_IDLE');
@@ -1204,8 +1148,115 @@ async _verifyActiveTripStillValid() {
 
     uiController.showWaitingState();
     return { success: true };
+  } catch (err) {
+    console.error('[DriverApp] Error rechazando oferta:', err);
+    uiController.showToast('Error rechazando viaje', 'error');
+    return { success: false, error: err.message };
+  } finally {
+    this._actionLock = false;
+    uiController.setGlobalLoading?.(false);
+  }
+}
+
+// =========================================================
+// TRIP ACTIONS
+// =========================================================
+async _acceptTrip() {
+  if (this._destroyed) {
+    return { success: false, error: 'APP_DESTROYED' };
   }
 
+  if (this._actionLock) {
+    console.warn('[DriverApp] _acceptTrip bloqueado: ya hay una acción en curso');
+    return { success: false, error: 'ACCION_EN_CURSO' };
+  }
+
+  this._actionLock = true;
+
+  console.log('[DriverApp] Aceptando viaje...');
+  uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
+
+  try {
+    const result = await tripManager.acceptTrip();
+    console.log('[DriverApp] acceptTrip result:', result);
+
+    if (!result.success) {
+      uiController.showToast(
+        result.error === 'VIAJE_YA_TOMADO'
+          ? 'Otro chofer tomó el viaje'
+          : result.error || 'Error aceptando viaje',
+        'warning'
+      );
+
+      uiController.hideIncomingModal?.();
+
+      if (this._onlineStatus) {
+        this._setFlowState('ONLINE_IDLE');
+      } else {
+        this._setFlowState('OFFLINE');
+      }
+
+      uiController.showWaitingState();
+      return result;
+    }
+
+    setTimeout(() => {
+      tripManager.refresh?.();
+    }, 1500);
+
+    return result;
+  } catch (err) {
+    console.error('[DriverApp] Error aceptando viaje:', err);
+    uiController.showToast('Error aceptando viaje', 'error');
+    uiController.showWaitingState();
+
+    return { success: false, error: err.message };
+  } finally {
+    this._actionLock = false;
+    uiController.setGlobalLoading?.(false);
+  }
+}
+
+async _rejectTrip() {
+  if (this._destroyed) {
+    return { success: false, error: 'APP_DESTROYED' };
+  }
+
+  if (this._actionLock) {
+    console.warn('[DriverApp] _rejectTrip bloqueado: ya hay una acción en curso');
+    return { success: false, error: 'ACCION_EN_CURSO' };
+  }
+
+  this._actionLock = true;
+
+  console.log('[DriverApp] Rechazando viaje...');
+  uiController.setGlobalLoading?.(true, 'Rechazando viaje...');
+
+  try {
+    const result = await tripManager.rejectTrip();
+
+    if (!result?.success) {
+      uiController.showToast(result?.error || 'Error rechazando viaje', 'warning');
+      return result || { success: false, error: 'ERROR_RECHAZANDO' };
+    }
+
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+    } else {
+      this._setFlowState('OFFLINE');
+    }
+
+    uiController.showWaitingState();
+    return { success: true };
+  } catch (err) {
+    console.error('[DriverApp] Error rechazando viaje:', err);
+    uiController.showToast('Error rechazando viaje', 'error');
+    return { success: false, error: err.message };
+  } finally {
+    this._actionLock = false;
+    uiController.setGlobalLoading?.(false);
+  }
+}
   // =========================================================
   // LOCATION UPDATE
   // =========================================================
