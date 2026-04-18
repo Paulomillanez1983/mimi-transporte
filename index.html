@@ -5223,20 +5223,29 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
 
     if (coords.length < 2) return;
 
-    const exactStart = [choferLng, choferLat];
-    const exactEnd = [clienteLng, clienteLat];
+const exactStart = [choferLng, choferLat];
 
-    const first = coords[0];
-    const last = coords[coords.length - 1];
+const first = coords[0];
+const last = coords[coords.length - 1];
 
-    if (first[0] !== exactStart[0] || first[1] !== exactStart[1]) {
-      coords.unshift(exactStart);
-    }
+const almostEqual = (a, b, epsilon = 0.00001) => Math.abs(a - b) <= epsilon;
 
-    if (last[0] !== exactEnd[0] || last[1] !== exactEnd[1]) {
-      coords.push(exactEnd);
-    }
+if (
+  !almostEqual(first[0], exactStart[0]) ||
+  !almostEqual(first[1], exactStart[1])
+) {
+  coords.unshift(exactStart);
+}
 
+if (
+  !almostEqual(last[0], exactEnd[0]) ||
+  !almostEqual(last[1], exactEnd[1])
+) {
+  coords.push(exactEnd);
+}
+
+// refuerzo visual final: asegura último tramo recto exacto al punto
+coords.push(exactEnd);
     const sourceId = 'driver-to-client-route';
     const lineLayerId = 'driver-to-client-route-line';
 
@@ -5271,7 +5280,7 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       },
       paint: {
         'line-color': '#111111',
-        'line-width': 3,
+        'line-width': 2.6,
         'line-opacity': 0.96
       }
     });
@@ -5281,12 +5290,12 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       new maplibregl.LngLatBounds(coords[0], coords[0])
     );
 
-    window.mapaCliente.fitBounds(bounds, {
-      padding: { top: 36, bottom: 36, left: 36, right: 36 },
-      duration: 700,
-      maxZoom: 16.2
-    });
-
+mapaCliente.fitBounds(bounds, {
+  padding: { top: 22, bottom: 22, left: 22, right: 22 },
+  duration: 600,
+  maxZoom: 16.8
+});
+    
     setTimeout(() => {
       try {
         window.mapaCliente?.resize?.();
@@ -5815,7 +5824,7 @@ function dibujarRutaLineal(coords) {
       },
       paint: {
         'line-color': '#111111',
-        'line-width': 3,
+        'line-width': 2.6,
         'line-opacity': 0.96
       }
     });
@@ -5911,7 +5920,7 @@ async function dibujarRutaReal(coords) {
     },
     paint: {
       'line-color': '#111111',
-      'line-width': 3,
+      'line-width': 2.6,
       'line-opacity': 0.97
     }
   });
