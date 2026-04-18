@@ -2234,26 +2234,21 @@ function cargarNotificacionesDesdeStorage() {
   }
 }
 function resolverEstadoViajeCliente(viajeLike = {}) {
+function resolverEstadoViajeCliente(viajeLike = {}) {
   const estadoBase = normalizarEstadoUpper(viajeLike?.estado);
 
   // Respetar el estado REAL del backend.
-  // Tener chofer vinculado no implica aceptación.
   if (!estadoBase) {
     return 'PENDIENTE';
   }
 
-  if (estadoBase === 'EN_CURSO') return 'INICIADO';
-
-  return estadoBase;
-}
   // Normalizaciones suaves para compatibilidad
   if (estadoBase === 'EN_CURSO') return 'INICIADO';
   if (estadoBase === 'COMPLETADO') return 'COMPLETADO';
   if (estadoBase === 'CANCELADO') return 'CANCELADO';
 
   return estadoBase;
-}
-async function enriquecerViajeConChofer(viajeLike = null) {
+}async function enriquecerViajeConChofer(viajeLike = null) {
   if (!viajeLike || typeof viajeLike !== 'object') return viajeLike;
 
   const choferNombreExistente = String(
