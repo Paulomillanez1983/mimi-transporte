@@ -5277,8 +5277,18 @@ function limpiarMarkersMapa() {
 function agregarMarkersRutaDesdeCoords(coords) {
   limpiarMarkersMapa();
 
-  const puntos = obtenerPuntosOrdenados();
+  let puntos = [];
 
+  // 👉 usar coords reales si vienen (OSRM)
+  if (Array.isArray(coords) && coords.length >= 2) {
+    puntos = coords.map(c => ({
+      lat: Number(c[1]),
+      lng: Number(c[0])
+    }));
+  } else {
+    // 👉 fallback al state
+    puntos = obtenerPuntosOrdenados();
+  }
   console.log('[MARKERS] puntos ordenados reales:', puntos);
 
   if (!Array.isArray(puntos) || puntos.length < 2 || !mapaCliente) return;
