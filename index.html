@@ -737,21 +737,22 @@ async function buscarDireccion(query) {
       Instalá la app para recibir avisos y entrar más rápido.
     </div>
 
-<div class="client-install-banner__actions">
-  <button id="btnInstallClientApp" type="button" class="client-install-banner__btn client-install-banner__btn--primary">
-    Instalar app
-  </button>
+    <div class="client-install-banner__actions">
+      <button id="btnInstallClientApp" type="button" class="client-install-banner__btn client-install-banner__btn--primary">
+        Instalar app
+      </button>
 
-  <button id="btnOpenBrowserGuide" type="button" class="client-install-banner__btn client-install-banner__btn--primary" style="display:none;">
-    Abrir en navegador
-  </button>
+      <button id="btnOpenBrowserGuide" type="button" class="client-install-banner__btn client-install-banner__btn--primary" style="display:none;">
+        Abrir en navegador
+      </button>
 
-  <button id="btnDismissClientInstall" type="button" class="client-install-banner__btn client-install-banner__btn--ghost">
-    Más tarde
-  </button>
-</div>
+      <button id="btnDismissClientInstall" type="button" class="client-install-banner__btn client-install-banner__btn--ghost">
+        Más tarde
+      </button>
+    </div>
   </div>
 </div>
+
 <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
 <header class="header" role="banner">
@@ -771,101 +772,100 @@ async function buscarDireccion(query) {
       <div class="logo-subtitle">Transporte infantil seguro</div>
     </div>
 
-<div class="header-icons">
-  <div class="header-notifications-wrapper">
-    <button
-      id="tripNotificationsBtn"
-      class="trip-notifications"
-      type="button"
-      aria-label="Notificaciones del viaje"
-      aria-expanded="false"
-      aria-controls="tripNotificationsPanel"
-    >
-      🔔
-      <span class="trip-notifications-dot"></span>
-      <span
-        class="trip-notifications-badge"
-        id="tripNotificationsBadge"
-        hidden
-      >0</span>
-    </button>
+    <div class="header-icons">
+      <div class="header-notifications-wrapper">
+        <button
+          id="tripNotificationsBtn"
+          class="trip-notifications"
+          type="button"
+          aria-label="Notificaciones del viaje"
+          aria-expanded="false"
+          aria-controls="tripNotificationsPanel"
+        >
+          🔔
+          <span class="trip-notifications-dot"></span>
+          <span
+            class="trip-notifications-badge"
+            id="tripNotificationsBadge"
+            hidden
+          >0</span>
+        </button>
 
-<div
-  id="tripNotificationsOverlay"
-  class="trip-notifications-overlay"
-  hidden
-></div>
+        <div
+          id="tripNotificationsOverlay"
+          class="trip-notifications-overlay"
+          hidden
+        ></div>
 
-<div
-  id="tripNotificationsPanel"
-  class="trip-notifications-panel"
-  role="dialog"
-  aria-label="Panel de notificaciones"
-  aria-hidden="true"
->
-  <div class="trip-notifications-sheet-handle" aria-hidden="true">
-    <span></span>
-  </div>
+        <div
+          id="tripNotificationsPanel"
+          class="trip-notifications-panel"
+          role="dialog"
+          aria-label="Panel de notificaciones"
+          aria-hidden="true"
+        >
+          <div class="trip-notifications-sheet-handle" aria-hidden="true">
+            <span></span>
+          </div>
 
-  <div
-    id="tripNotificationsStatusCard"
-    class="trip-notifications-status-card"
-    hidden
-  >
-    <div class="trip-notifications-status-icon" aria-hidden="true">🚐</div>
-    <div class="trip-notifications-status-copy">
-      <strong id="tripNotificationsStatusTitle">Estado del viaje</strong>
-      <span id="tripNotificationsStatusText">Sin novedades por ahora.</span>
+          <div
+            id="tripNotificationsStatusCard"
+            class="trip-notifications-status-card"
+            hidden
+          >
+            <div class="trip-notifications-status-icon" aria-hidden="true">🚐</div>
+            <div class="trip-notifications-status-copy">
+              <strong id="tripNotificationsStatusTitle">Estado del viaje</strong>
+              <span id="tripNotificationsStatusText">Sin novedades por ahora.</span>
+            </div>
+          </div>
+
+          <div class="trip-notifications-panel-header">
+            <div class="trip-notifications-panel-title">
+              <strong>Notificaciones</strong>
+              <span>Estado del viaje y novedades</span>
+            </div>
+
+            <div class="trip-notifications-actions">
+              <button
+                id="tripNotificationsMarkReadBtn"
+                class="trip-notifications-action-btn"
+                type="button"
+                aria-label="Marcar como leídas"
+              >
+                Leídas
+              </button>
+
+              <button
+                id="tripNotificationsClearBtn"
+                class="trip-notifications-action-btn danger"
+                type="button"
+                aria-label="Vaciar notificaciones"
+              >
+                Vaciar
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="tripNotificationsSummary"
+            class="trip-notifications-summary"
+          >
+            Sin novedades por ahora.
+          </div>
+
+          <div
+            id="tripNotificationsList"
+            class="trip-notifications-list"
+          >
+            <div class="trip-notification-empty">
+              Todavía no hay notificaciones.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <div class="trip-notifications-panel-header">
-    <div class="trip-notifications-panel-title">
-      <strong>Notificaciones</strong>
-      <span>Estado del viaje y novedades</span>
-    </div>
-
-    <div class="trip-notifications-actions">
-      <button
-        id="tripNotificationsMarkReadBtn"
-        class="trip-notifications-action-btn"
-        type="button"
-        aria-label="Marcar como leídas"
-      >
-        Leídas
-      </button>
-
-      <button
-        id="tripNotificationsClearBtn"
-        class="trip-notifications-action-btn danger"
-        type="button"
-        aria-label="Vaciar notificaciones"
-      >
-        Vaciar
-      </button>
-    </div>
-  </div>
-
-  <div
-    id="tripNotificationsSummary"
-    class="trip-notifications-summary"
-  >
-    Sin novedades por ahora.
-  </div>
-
-  <div
-    id="tripNotificationsList"
-    class="trip-notifications-list"
-  >
-    <div class="trip-notification-empty">
-      Todavía no hay notificaciones.
-    </div>
-  </div>
-</div>
-  </div>
-
-
-</div>
     <div class="header-user" id="headerUser">
       <div class="header-auth-skeleton" aria-hidden="true">
         <div class="header-auth-skeleton-avatar"></div>
@@ -910,7 +910,8 @@ async function buscarDireccion(query) {
     </div>
   </div>
 </header>
-  <main class="container" role="main">
+
+<main class="container" role="main">
   <section class="hero-text" aria-labelledby="heroTitle">
     <h1 class="hero-title" id="heroTitle">Planificá tu viaje</h1>
     <p class="hero-subtitle">Agregá paradas y calculá el precio exacto</p>
@@ -1063,120 +1064,122 @@ async function buscarDireccion(query) {
 
     <!-- CARD DE COTIZACIÓN -->
     <section
-<section
-  class="quote-card"
-  id="quoteCard"
-  aria-hidden="true"
-  aria-label="Resumen del viaje"
->
-  <div class="trip-driver-card" id="tripDriverCard" hidden>
-    <div class="trip-driver-card__avatar" id="tripDriverAvatar">C</div>
-
-    <div class="trip-driver-card__info">
-      <div class="trip-driver-card__name" id="tripDriverName">Chofer asignado</div>
-      <div class="trip-driver-card__meta" id="tripDriverMeta">En camino a buscarte</div>
-      <div class="trip-driver-card__contact" id="tripDriverContact">Sin contacto</div>
-    </div>
-  </div>
-
-  <div class="trip-active-actions" id="tripActiveActions" hidden>
-    <button
-      class="btn-secondary btn-chat-trip"
-      id="btnChatChofer"
-      type="button"
-      aria-label="Chatear con el chofer"
+      class="quote-card"
+      id="quoteCard"
+      aria-hidden="true"
+      aria-label="Resumen del viaje"
     >
-      <span aria-hidden="true">💬</span>
-      <span>Chat</span>
-    </button>
+      <div class="trip-driver-card" id="tripDriverCard" hidden>
+        <div class="trip-driver-card__avatar" id="tripDriverAvatar">C</div>
 
-    <button
-      class="btn-secondary btn-cancel-trip"
-      id="btnCancelarViajeLive"
-      type="button"
-      aria-label="Cancelar viaje"
-    >
-      <span aria-hidden="true">✕</span>
-      <span>Cancelar</span>
-    </button>
-  </div>
+        <div class="trip-driver-card__info">
+          <div class="trip-driver-card__name" id="tripDriverName">Chofer asignado</div>
+          <div class="trip-driver-card__meta" id="tripDriverMeta">En camino a buscarte</div>
+          <div class="trip-driver-card__contact" id="tripDriverContact">Sin contacto</div>
+        </div>
+      </div>
 
-  <div class="quote-header">
-    <div class="quote-title">Resumen del viaje</div>
-    <div class="quote-route-info">
-      <span id="resumenParadas">0 paradas</span>
-    </div>
-  </div>
+      <div class="trip-active-actions" id="tripActiveActions" hidden>
+        <button
+          class="btn-secondary btn-chat-trip"
+          id="btnChatChofer"
+          type="button"
+          aria-label="Chatear con el chofer"
+        >
+          <span aria-hidden="true">💬</span>
+          <span>Chat</span>
+        </button>
 
-  <div class="quote-main">
-    <div class="quote-price" id="quotePrice">$0</div>
-    <div class="quote-price-label">Precio estimado</div>
-  </div>
+        <button
+          class="btn-secondary btn-cancel-trip"
+          id="btnCancelarViajeLive"
+          type="button"
+          aria-label="Cancelar viaje"
+        >
+          <span aria-hidden="true">✕</span>
+          <span>Cancelar</span>
+        </button>
+      </div>
 
-  <div class="quote-details">
-    <div class="quote-detail">
-      <div class="quote-detail-value" id="detailDistance">0 km</div>
-      <div class="quote-detail-label">Distancia</div>
-    </div>
-    <div class="quote-detail">
-      <div class="quote-detail-value" id="detailDuration">0 min</div>
-      <div class="quote-detail-label">Duración</div>
-    </div>
-    <div class="quote-detail">
-      <div class="quote-detail-value" id="detailStops">0</div>
-      <div class="quote-detail-label">Paradas</div>
-    </div>
-  </div>
+      <div class="quote-header">
+        <div class="quote-title">Resumen del viaje</div>
+        <div class="quote-route-info">
+          <span id="resumenParadas">0 paradas</span>
+        </div>
+      </div>
 
-  <button
-    id="btnToggleBreakdown"
-    class="breakdown-toggle"
-    type="button"
-    aria-expanded="false"
-    aria-controls="priceBreakdown"
-  >
-    <span>Ver desglose del precio</span>
-    <span id="breakdownChevron" aria-hidden="true">▾</span>
-  </button>
+      <div class="quote-main">
+        <div class="quote-price" id="quotePrice">$0</div>
+        <div class="quote-price-label">Precio estimado</div>
+      </div>
 
-  <div id="priceBreakdown" class="price-breakdown" hidden>
-    <div class="price-breakdown-title">Desglose del precio</div>
-    <div id="priceBreakdownContent"></div>
-  </div>
+      <div class="quote-details">
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailDistance">0 km</div>
+          <div class="quote-detail-label">Distancia</div>
+        </div>
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailDuration">0 min</div>
+          <div class="quote-detail-label">Duración</div>
+        </div>
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailStops">0</div>
+          <div class="quote-detail-label">Paradas</div>
+        </div>
+      </div>
 
-  <div class="quote-actions">
-    <button
-      class="btn-primary"
-      id="btnConfirmarViaje"
-      type="button"
-      aria-label="Confirmar viaje"
-    >
-      <span aria-hidden="true">✓</span>
-      <span>Confirmar viaje</span>
-    </button>
+      <button
+        id="btnToggleBreakdown"
+        class="breakdown-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="priceBreakdown"
+      >
+        <span>Ver desglose del precio</span>
+        <span id="breakdownChevron" aria-hidden="true">▾</span>
+      </button>
 
-    <button
-      class="btn-secondary"
-      id="btnCompartirRuta"
-      type="button"
-      aria-label="Compartir ruta"
-    >
-      <span aria-hidden="true">📤</span>
-      <span>Compartir ruta</span>
-    </button>
-  </div>
+      <div id="priceBreakdown" class="price-breakdown" hidden>
+        <div class="price-breakdown-title">Desglose del precio</div>
+        <div id="priceBreakdownContent"></div>
+      </div>
 
-  <button
-    class="btn-secondary btn-cancel-trip"
-    id="btnCancelarViaje"
-    type="button"
-    aria-label="Cancelar viaje"
-    hidden
-  >
-    <span aria-hidden="true">✕</span>
-    <span>Cancelar viaje</span>
-  </button>
-</section>
+      <div class="quote-actions">
+        <button
+          class="btn-primary"
+          id="btnConfirmarViaje"
+          type="button"
+          aria-label="Confirmar viaje"
+        >
+          <span aria-hidden="true">✓</span>
+          <span>Confirmar viaje</span>
+        </button>
+
+        <button
+          class="btn-secondary"
+          id="btnCompartirRuta"
+          type="button"
+          aria-label="Compartir ruta"
+        >
+          <span aria-hidden="true">📤</span>
+          <span>Compartir ruta</span>
+        </button>
+      </div>
+
+      <button
+        class="btn-secondary btn-cancel-trip"
+        id="btnCancelarViaje"
+        type="button"
+        aria-label="Cancelar viaje"
+        hidden
+      >
+        <span aria-hidden="true">✕</span>
+        <span>Cancelar viaje</span>
+      </button>
+    </section>
+  </section>
+</main>
+
 <footer class="footer">
   <div class="footer-location">📍 Villa Allende y zona norte de Córdoba</div>
 
@@ -1198,8 +1201,9 @@ async function buscarDireccion(query) {
   <div style="opacity:0.6; font-size:0.75rem; margin-top:10px;">
     © 2026 MIMI Transporte Infantil
   </div>
-</footer>  
-  <div id="supportSheetOverlay" class="support-sheet-overlay" hidden></div>
+</footer>
+
+<div id="supportSheetOverlay" class="support-sheet-overlay" hidden></div>
 
 <section
   id="supportSheet"
@@ -1258,7 +1262,10 @@ async function buscarDireccion(query) {
     </div>
   </div>
 </section>
+
 <script>
+
+  
 // ==========================================
 // CONFIGURACIÓN
 // ==========================================
