@@ -901,31 +901,33 @@ _subscribeToEvents() {
     this._syncNavFabVisibility();
   });
 
-  const unsubNoPending = tripManager.on('noPendingTrips', () => {
-    console.log('[DriverApp] noPendingTrips');
+const unsubNoPending = tripManager.on('noPendingTrips', () => {
+  console.log('[DriverApp] noPendingTrips');
 
-    const currentTrip = tripManager.getCurrentTrip?.();
+  const currentTrip = tripManager.getCurrentTrip?.();
 
-    if (currentTrip?.id) {
-      console.log(
-        '[DriverApp] noPendingTrips ignorado porque ya hay viaje activo:',
-        currentTrip.id
-      );
-      return;
-    }
+  if (currentTrip?.id) {
+    console.log(
+      '[DriverApp] noPendingTrips ignorado porque ya hay viaje activo:',
+      currentTrip.id
+    );
+    return;
+  }
 
-    tripManager.resetState?.();
+  // IMPORTANTE:
+  // no llamar resetState() desde este evento porque resetState()
+  // vuelve a emitir pendingTripCleared/noPendingTrips y genera loop.
 
-    if (this._onlineStatus) {
-      this._setFlowState('ONLINE_IDLE');
-    } else {
-      this._setFlowState('OFFLINE');
-    }
+  if (this._onlineStatus) {
+    this._setFlowState('ONLINE_IDLE');
+  } else {
+    this._setFlowState('OFFLINE');
+  }
 
-    uiController.showWaitingState();
-    this._syncNavFabVisibility();
-  });
-
+  uiController.showWaitingState();
+  this._syncNavFabVisibility();
+});
+  
   this._unsubscribers.push(
     unsubOffer,
     unsubAccepted,
@@ -968,27 +970,27 @@ async _verifyActiveTripStillValid() {
 
     const estado = String(data.estado || '').toUpperCase();
 
-    if (estado === 'CANCELADO') {
-      console.warn('[DriverApp] Cancelación detectada por verificación defensiva:', data);
+     if (estado === 'CANCELADO') {
+       console.warn('[DriverApp] Cancelación detectada por verificación defensiva:', data);
 
-      this._currentTripId = null;
-      tripManager.resetState?.();
+       this._currentTripId = null;
 
-      mapService.clearRoute?.();
-      uiController.hideIncomingModal?.();
-      uiController.hideNavigation?.();
-      uiController.hideArrival?.();
+       mapService.clearRoute?.();
+       uiController.hideIncomingModal?.();
+       uiController.hideNavigation?.();
+       uiController.hideArrival?.();
 
-      uiController.showToast('El cliente canceló el viaje', 'warning');
+       uiController.showToast('El cliente canceló el viaje', 'warning');
 
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-      } else {
-        this._setFlowState('OFFLINE');
-      }
+       if (this._onlineStatus) {
+         this._setFlowState('ONLINE_IDLE');
+       } else {
+         this._setFlowState('OFFLINE');
+       }
 
-      uiController.showWaitingState?.();
-    }
+       uiController.showWaitingState?.();
+       await tripManager.refresh?.();
+     }
   } catch (err) {
     console.warn('[DriverApp] Error en verificación defensiva de viaje:', err);
   }
@@ -1443,19 +1445,22 @@ _setupUI() {
             throw new Error(result?.error || 'No se pudo poner offline');
           }
 
-          this._onlineStatus = false;
-          this._setFlowState('OFFLINE');
-          this._currentTripId = null;
+           this._onlineStatus = false;
+           this._setFlowState('OFFLINE');
+           this._currentTripId = null;
 
-          tripManager.resetState();
+        // al desconectarte manualmente sí conviene limpiar,
+        // pero sin depender de que los listeners vuelvan a resetear todo
+          tripManager.resetState?.();
+
           mapService.clearRoute?.();
           uiController.hideIncomingModal?.();
           uiController.hideNavigation?.();
           uiController.hideArrival?.();
-          locationTracker.stop?.();
-        }
+          uiController.showWaitingState?.();
+          locationTracker.stop?.();        }
 
-        uiController.updateDriverState(
+          uiController.updateDriverState(
           this._onlineStatus ? 'ONLINE' : 'OFFLINE',
           this._onlineStatus
         );
@@ -1599,66 +1604,69 @@ async _handleAction(action, tripId) {
         return result;
       }
 
-      case 'finish': {
-        const tripIdFinal = current?.id || this._currentTripId || tripId;
+case 'finish': {
+  const tripIdFinal = current?.id || this._currentTripId || tripId;
 
-        if (!tripIdFinal) {
-          console.error('[DriverApp] No hay tripId para finalizar');
-          uiController.showToast?.('Error: no hay viaje activo', 'error');
-          return;
-        }
+  if (!tripIdFinal) {
+    console.error('[DriverApp] No hay tripId para finalizar');
+    uiController.showToast?.('Error: no hay viaje activo', 'error');
+    return;
+  }
 
-        const result = await tripManager.finishTrip(tripIdFinal);
+  const result = await tripManager.finishTrip(tripIdFinal);
 
-        if (result?.success) {
-          this._setFlowState('TRIP_COMPLETED');
-          this._currentTripId = null;
+  if (result?.success) {
+    this._setFlowState('TRIP_COMPLETED');
+    this._currentTripId = null;
 
-          tripManager.resetState();
+    // no resetState() acá: esperamos realtime/refresh para limpiar
+    mapService.clearRoute?.();
+    uiController.hideIncomingModal?.();
+    uiController.hideNavigation?.();
+    uiController.hideArrival?.();
 
-          mapService.clearRoute?.();
-          uiController.hideIncomingModal?.();
-          uiController.hideNavigation?.();
-          uiController.hideArrival?.();
+    uiController.showToast('Viaje finalizado', 'success');
 
-          uiController.showToast('Viaje finalizado', 'success');
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+      uiController.showWaitingState();
+    } else {
+      this._setFlowState('OFFLINE');
+      uiController.showWaitingState();
+    }
 
-          if (this._onlineStatus) {
-            this._setFlowState('ONLINE_IDLE');
-            uiController.showWaitingState();
-          } else {
-            this._setFlowState('OFFLINE');
-          }
+    await tripManager.refresh?.();
+  }
 
-          await tripManager.refresh();
-        }
+  return result;
+}
+        
+case 'cancel': {
+  const result = await tripManager.cancelTrip(current?.id || tripId);
 
-        return result;
-      }
+  if (result?.success) {
+    this._currentTripId = null;
 
-      case 'cancel': {
-        const result = await tripManager.cancelTrip(current?.id || tripId);
+    // no resetState() acá: esperamos realtime/refresh para limpiar
+    mapService.clearRoute?.();
+    uiController.hideIncomingModal?.();
+    uiController.hideNavigation?.();
+    uiController.hideArrival?.();
 
-        if (result?.success) {
-          this._currentTripId = null;
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+      uiController.showWaitingState();
+    } else {
+      this._setFlowState('OFFLINE');
+      uiController.showWaitingState();
+    }
 
-          tripManager.resetState();
-          mapService.clearRoute?.();
-          uiController.hideIncomingModal?.();
-          uiController.hideNavigation?.();
-          uiController.hideArrival?.();
+    await tripManager.refresh?.();
+  }
 
-          if (this._onlineStatus) {
-            this._setFlowState('ONLINE_IDLE');
-            uiController.showWaitingState();
-          } else {
-            this._setFlowState('OFFLINE');
-          }
-        }
-
-        return result;
-      }
-
+  return result;
+}
+        
       case 'navigate':
         return this._openExternalNav();
 
