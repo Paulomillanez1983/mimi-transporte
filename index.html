@@ -8604,15 +8604,16 @@ function actualizarBotonesClearDireccion() {
 }
 
 function limpiarCampoDireccion(tipo) {
-if (tipo === 'origen') {
-  const input = document.getElementById('inputOrigen');
-  const sugerencias = document.getElementById('sugerenciasOrigen');
+  if (tipo === 'origen') {
+    const input = document.getElementById('inputOrigen');
+    const sugerencias = document.getElementById('sugerenciasOrigen');
 
-  if (input) {
-    input.value = '';
-    input.removeAttribute('title');
-  }
-  if (sugerencias) {
+    if (input) {
+      input.value = '';
+      input.removeAttribute('title');
+    }
+
+    if (sugerencias) {
       sugerencias.innerHTML = '';
       hideSuggestions(sugerencias);
     }
@@ -8620,15 +8621,16 @@ if (tipo === 'origen') {
     state.origen = null;
   }
 
-if (tipo === 'destino') {
-  const input = document.getElementById('inputDestino');
-  const sugerencias = document.getElementById('sugerenciasDestino');
+  if (tipo === 'destino') {
+    const input = document.getElementById('inputDestino');
+    const sugerencias = document.getElementById('sugerenciasDestino');
 
-  if (input) {
-    input.value = '';
-    input.removeAttribute('title');
-  }
-  if (sugerencias) {
+    if (input) {
+      input.value = '';
+      input.removeAttribute('title');
+    }
+
+    if (sugerencias) {
       sugerencias.innerHTML = '';
       hideSuggestions(sugerencias);
     }
@@ -8639,52 +8641,57 @@ if (tipo === 'destino') {
   guardarViajeActivoEnStorage?.();
   actualizarBotonesClearDireccion();
 
-  try {
-    dibujarRutaEnMapa?.();
-  } catch (_) {}
+  setTimeout(() => {
+    try {
+      dibujarRutaEnMapa?.();
+    } catch (_) {}
+  }, 0);
 }
-  (function patchLoginConGoogleParaViaje() {
-    if (typeof window.loginConGoogleParaViaje !== 'function') return;
 
-    const original = window.loginConGoogleParaViaje;
-    window.loginConGoogleParaViaje = async function patchedLoginConGoogleParaViaje() {
-      try {
-        setHeaderAuthLoading(true);
-        return await original();
-      } catch (err) {
-        setHeaderAuthLoading(false);
-        throw err;
+(function patchLoginConGoogleParaViaje() {
+  if (typeof window.loginConGoogleParaViaje !== 'function') return;
+
+  const original = window.loginConGoogleParaViaje;
+  window.loginConGoogleParaViaje = async function patchedLoginConGoogleParaViaje() {
+    try {
+      setHeaderAuthLoading(true);
+      return await original();
+    } catch (err) {
+      setHeaderAuthLoading(false);
+      throw err;
+    }
+  };
+})();
+
+(function patchSetSectionVisible() {
+  if (typeof window.setSectionVisible !== 'function') return;
+
+  const original = window.setSectionVisible;
+  window.setSectionVisible = function patchedSetSectionVisible(elementId, visible) {
+    original(elementId, visible);
+
+    if (!visible) return;
+
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    el.animate(
+      [
+        { opacity: 0, transform: 'translateY(10px) scale(0.99)' },
+        { opacity: 1, transform: 'translateY(0) scale(1)' }
+      ],
+      {
+        duration: 320,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        fill: 'both'
       }
-    };
-  })();
+    );
+  };
+})();
 
-  (function patchSetSectionVisible() {
-    if (typeof window.setSectionVisible !== 'function') return;
+document.addEventListener('DOMContentLoaded', initNextLevelUI);
 
-    const original = window.setSectionVisible;
-    window.setSectionVisible = function patchedSetSectionVisible(elementId, visible) {
-      original(elementId, visible);
-
-      if (!visible) return;
-      const el = document.getElementById(elementId);
-      if (!el) return;
-
-      el.animate(
-        [
-          { opacity: 0, transform: 'translateY(10px) scale(0.99)' },
-          { opacity: 1, transform: 'translateY(0) scale(1)' }
-        ],
-        {
-          duration: 320,
-          easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
-          fill: 'both'
-        }
-      );
-    };
-  })();
-
-  document.addEventListener('DOMContentLoaded', initNextLevelUI);
-  document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
   try {
     if (typeof window.initClientPwaOnboarding === 'function') {
       await window.initClientPwaOnboarding();
@@ -8693,10 +8700,30 @@ if (tipo === 'destino') {
     console.warn('[client-pwa] init error:', err);
   }
 });
+
 document.addEventListener('DOMContentLoaded', () => {
-  bindUIActions(); // 🔥 ESTE ES EL FIX
+  bindUIActions();
+
+  try {
+    if (!state.currentLocation && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          state.currentLocation = {
+            lat: Number(pos.coords.latitude),
+            lng: Number(pos.coords.longitude)
+          };
+        },
+        () => {},
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 60000
+        }
+      );
+    }
+  } catch (_) {}
 });
-  
+
 (function initClientInstallBannerScrollBehavior() {
   const banner = document.getElementById('clientInstallBanner');
   if (!banner) return;
@@ -8718,14 +8745,19 @@ document.addEventListener('DOMContentLoaded', () => {
     ticking = false;
   }
 
-  window.addEventListener('scroll', () => {
-    if (!ticking) {
-      window.requestAnimationFrame(updateOnScroll);
-      ticking = true;
-    }
-  }, { passive: true });
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!ticking) {
+        window.requestAnimationFrame(updateOnScroll);
+        ticking = true;
+      }
+    },
+    { passive: true }
+  );
 })();
-  function initTripLiveCardDraggable() {
+
+function initTripLiveCardDraggable() {
   const card = document.getElementById('quoteCard');
   if (!card || card.dataset.dragReady === '1') return;
 
@@ -8750,6 +8782,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const onEnd = () => {
     if (!dragging) return;
+
     dragging = false;
     card.style.transition = 'transform 0.25s ease';
 
@@ -8764,15 +8797,23 @@ document.addEventListener('DOMContentLoaded', () => {
     currentY = 0;
   };
 
-  card.addEventListener('touchstart', (e) => {
-    if (!e.touches?.[0]) return;
-    onStart(e.touches[0].clientY);
-  }, { passive: true });
+  card.addEventListener(
+    'touchstart',
+    (e) => {
+      if (!e.touches?.[0]) return;
+      onStart(e.touches[0].clientY);
+    },
+    { passive: true }
+  );
 
-  card.addEventListener('touchmove', (e) => {
-    if (!e.touches?.[0]) return;
-    onMove(e.touches[0].clientY);
-  }, { passive: true });
+  card.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!e.touches?.[0]) return;
+      onMove(e.touches[0].clientY);
+    },
+    { passive: true }
+  );
 
   card.addEventListener('touchend', onEnd);
 }
