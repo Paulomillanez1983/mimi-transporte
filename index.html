@@ -5306,19 +5306,9 @@ function limpiarMarkersMapa() {
 function agregarMarkersRutaDesdeCoords(coords) {
   limpiarMarkersMapa();
 
-  let puntos = [];
+  const puntos = obtenerPuntosOrdenados();
 
-  // 👉 usar coords reales si vienen (OSRM)
-  if (Array.isArray(coords) && coords.length >= 2) {
-    puntos = coords.map(c => ({
-      lat: Number(c[1]),
-      lng: Number(c[0])
-    }));
-  } else {
-    // 👉 fallback al state
-    puntos = obtenerPuntosOrdenados();
-  }
-  console.log('[MARKERS] puntos ordenados reales:', puntos);
+  console.log('[MARKERS] puntos lógicos:', puntos);
 
   if (!Array.isArray(puntos) || puntos.length < 2 || !mapaCliente) return;
 
@@ -5348,9 +5338,10 @@ function agregarMarkersRutaDesdeCoords(coords) {
     }
   });
 
-  console.log('[MARKERS] total reales:', state.markers.length);
+  console.log('[MARKERS] total renderizados:', state.markers.length);
 }
-  function ajustarVistaRuta(coords, duration = 800) {
+  
+function ajustarVistaRuta(coords, duration = 800) {
   if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
 
   try {
