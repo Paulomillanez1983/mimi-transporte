@@ -12,7 +12,7 @@ import uiController from './ui-controller.js';
 import soundManager from './sound-manager.js';
 import { initSupportPushFCM } from './push-fcm.js';
 import { initDriverSupport, openDriverSupportPanel } from './driver-support.js';
-
+import { initDriverPwaOnboarding, runDriverPostLoginOnboarding } from './driver-pwa-onboarding.js';
 const APP_BASE_PATH = (() => {
   const path = window.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
@@ -401,6 +401,8 @@ class DriverApp {
 
       console.log('[DriverApp] Inicializando servicios...');
       await this._ensureDriverShellReady();
+      await initDriverPwaOnboarding();
+      await runDriverPostLoginOnboarding(session);
 
       const results = await Promise.allSettled([
         mapService.init('map-container')
