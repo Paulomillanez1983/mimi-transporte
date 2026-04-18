@@ -1397,25 +1397,53 @@ function getUserDisplayData(session) {
 
   return { nombre, email, foto };
 }
-
-function renderSesionUI(session) {
+  function renderSesionUI(session) {
   const btnLogin = document.getElementById('btnLoginHeader');
   const box = document.getElementById('userSessionBox');
   const avatar = document.getElementById('userAvatar');
   const nameEl = document.getElementById('userName');
   const emailEl = document.getElementById('userEmail');
+  const skeleton = document.querySelector('.header-auth-skeleton');
 
   if (!btnLogin || !box || !avatar || !nameEl || !emailEl) return;
 
+  const showSkeleton = () => {
+    if (!skeleton) return;
+    skeleton.hidden = false;
+    skeleton.style.display = '';
+    skeleton.style.opacity = '1';
+    skeleton.style.pointerEvents = 'auto';
+  };
+
+  const hideSkeletonSmooth = () => {
+    if (!skeleton) return;
+
+    skeleton.style.transition = 'opacity 220ms ease';
+    skeleton.style.opacity = '0';
+    skeleton.style.pointerEvents = 'none';
+
+    setTimeout(() => {
+      if (!skeleton) return;
+      skeleton.hidden = true;
+      skeleton.style.display = 'none';
+    }, 220);
+  };
+
   if (!session?.user) {
+    showSkeleton();
+
     btnLogin.hidden = false;
     box.hidden = true;
     box.classList.remove('open');
     box.removeAttribute('title');
+
     avatar.src = '';
     avatar.onerror = null;
+    avatar.alt = 'Foto de perfil';
+
     nameEl.textContent = '';
     emailEl.textContent = '';
+
     return;
   }
 
@@ -1425,6 +1453,7 @@ function renderSesionUI(session) {
 
   btnLogin.hidden = true;
   box.hidden = false;
+
   nameEl.textContent = nombre || 'Usuario';
   emailEl.textContent = email || '';
 
@@ -1439,8 +1468,10 @@ function renderSesionUI(session) {
   box.classList.remove('open');
   box.title = email || nombre || 'Cuenta';
 
+  hideSkeletonSmooth();
   initUserSessionDropdown();
 }
+
 function initUserSessionDropdown() {
   const box = document.getElementById('userSessionBox');
   const logoutBtn = document.getElementById('btnLogoutHeader');
