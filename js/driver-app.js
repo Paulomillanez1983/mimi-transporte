@@ -19,7 +19,7 @@ const APP_BASE_PATH = (() => {
 })();
 
 const DRIVER_PANEL_URL = `${APP_BASE_PATH}chofer-panel.html`;
-const DRIVER_SW_PATH = `${APP_BASE_PATH}js/service-worker.js`;
+const DRIVER_SW_PATH = `${APP_BASE_PATH}service-worker.js`;
 
 class DriverApp {
   constructor() {
