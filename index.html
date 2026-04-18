@@ -3198,9 +3198,12 @@ function suscribirseEstadoViajeRealtime(viajeId) {
 
           ultimoEstadoNotificado = nuevoEstado;
 
-          actualizarEstadoLocalViaje(nuevoEstado);
-          activarModoViajeLive();
-// 🔥 REEMPLAZAR RUTA COTIZADA POR RUTA CHOFER → CLIENTE
+actualizarEstadoLocalViaje(nuevoEstado);
+
+if (['ASIGNADO', 'ACEPTADO', 'EN_CAMINO', 'INICIADO', 'EN_CURSO'].includes(nuevoEstado)) {
+  activarModoViajeLive();
+}
+          // 🔥 REEMPLAZAR RUTA COTIZADA POR RUTA CHOFER → CLIENTE
 if (
   nuevoEstado === 'ASIGNADO' ||
   nuevoEstado === 'ACEPTADO' ||
@@ -3361,11 +3364,11 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
 
   if (!viaje) return;
 
-  const nombre =
-    viaje?.chofer_nombre ||
-    viaje?.driver_name ||
-    'Chofer asignado';
-
+const nombre =
+  viaje?.chofer_nombre ||
+  viaje?.driver_name ||
+  'Chofer';
+    
   const telefono =
     viaje?.chofer_telefono ||
     viaje?.driver_phone ||
