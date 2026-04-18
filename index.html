@@ -5184,7 +5184,7 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
     if (!window.mapaCliente || !window.mapReady) return;
     if (!origenChofer || !destinoCliente) return;
     if (typeof window.mapaCliente.isStyleLoaded === 'function' && !window.mapaCliente.isStyleLoaded()) return;
-  
+
     const choferLat = Number(origenChofer.lat);
     const choferLng = Number(origenChofer.lng);
     const clienteLat = Number(destinoCliente.lat);
@@ -5202,22 +5202,45 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       `${choferLng},${choferLat};${clienteLng},${clienteLat}` +
       `?overview=full&geometries=geojson&steps=false`;
 
-const currentRequest = ++routeRequestId;
+    const currentRequest = ++routeRequestId;
+    const resp = await fetch(url);
 
-const resp = await fetch(url);
+    if (currentRequest !== routeRequestId) return;
 
-if (currentRequest !== routeRequestId) return;
     const json = await resp.json().catch(() => null);
 
     coords = json?.routes?.[0]?.geometry?.coordinates || null;
     if (!Array.isArray(coords) || coords.length < 2) return;
 
+    coords = coords
+      .map((c) => [Number(c?.[0]), Number(c?.[1])])
+      .filter((c) =>
+        Number.isFinite(c[0]) &&
+        Number.isFinite(c[1]) &&
+        Math.abs(c[0]) <= 180 &&
+        Math.abs(c[1]) <= 90
+      );
+
+    if (coords.length < 2) return;
+
+    const exactStart = [choferLng, choferLat];
+    const exactEnd = [clienteLng, clienteLat];
+
+    const first = coords[0];
+    const last = coords[coords.length - 1];
+
+    if (first[0] !== exactStart[0] || first[1] !== exactStart[1]) {
+      coords.unshift(exactStart);
+    }
+
+    if (last[0] !== exactEnd[0] || last[1] !== exactEnd[1]) {
+      coords.push(exactEnd);
+    }
+
     const sourceId = 'driver-to-client-route';
-    const glowLayerId = 'driver-to-client-route-glow';
-    const casingLayerId = 'driver-to-client-route-casing';
     const lineLayerId = 'driver-to-client-route-line';
 
-    [glowLayerId, casingLayerId, lineLayerId].forEach((layerId) => {
+    [lineLayerId].forEach((layerId) => {
       if (window.mapaCliente.getLayer(layerId)) {
         window.mapaCliente.removeLayer(layerId);
       }
@@ -5239,37 +5262,6 @@ if (currentRequest !== routeRequestId) return;
     });
 
     window.mapaCliente.addLayer({
-      id: glowLayerId,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-cap': 'round',
-        'line-join': 'round'
-      },
-      paint: {
-        'line-color': '#4da3ff',
-        'line-width': 18,
-        'line-opacity': 0.24,
-        'line-blur': 1.4
-      }
-    });
-
-    window.mapaCliente.addLayer({
-      id: casingLayerId,
-      type: 'line',
-      source: sourceId,
-      layout: {
-        'line-cap': 'round',
-        'line-join': 'round'
-      },
-      paint: {
-        'line-color': '#ffffff',
-        'line-width': 9,
-        'line-opacity': 0.95
-      }
-    });
-
-    window.mapaCliente.addLayer({
       id: lineLayerId,
       type: 'line',
       source: sourceId,
@@ -5278,9 +5270,9 @@ if (currentRequest !== routeRequestId) return;
         'line-join': 'round'
       },
       paint: {
-        'line-color': '#0A84FF',
-        'line-width': 7,
-        'line-opacity': 1
+        'line-color': '#111111',
+        'line-width': 3,
+        'line-opacity': 0.96
       }
     });
 
@@ -5290,9 +5282,9 @@ if (currentRequest !== routeRequestId) return;
     );
 
     window.mapaCliente.fitBounds(bounds, {
-      padding: { top: 70, bottom: 70, left: 50, right: 50 },
+      padding: { top: 36, bottom: 36, left: 36, right: 36 },
       duration: 700,
-      maxZoom: 15.5
+      maxZoom: 16.2
     });
 
     setTimeout(() => {
@@ -5305,7 +5297,6 @@ if (currentRequest !== routeRequestId) return;
     console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
   }
 }
-
   
 function limpiarRutaChoferHastaCliente() {
   try {
@@ -5313,9 +5304,7 @@ function limpiarRutaChoferHastaCliente() {
 
     const sourceId = 'driver-to-client-route';
     const layerIds = [
-      'driver-to-client-route-line',
-      'driver-to-client-route-casing',
-      'driver-to-client-route-glow'
+      'driver-to-client-route-line'
     ];
 
     layerIds.forEach((layerId) => {
@@ -5330,8 +5319,7 @@ function limpiarRutaChoferHastaCliente() {
   } catch (err) {
     console.warn('[mapa] no se pudo limpiar ruta chofer→cliente:', err);
   }
-}
-  
+}  
 // ==========================================
 // MAPA - MARKERS
 // ==========================================
@@ -5668,13 +5656,12 @@ function ajustarVistaRuta(coords, duration = 800) {
     );
 
     mapaCliente.fitBounds(bounds, {
-      padding: { top: 55, bottom: 55, left: 55, right: 55 },
+      padding: { top: 34, bottom: 34, left: 34, right: 34 },
       duration,
-      maxZoom: 15
+      maxZoom: 16.2
     });
   } catch (_) {}
 }
-
 function iniciarAnimacionRuta() {
   if (!mapaCliente || !mapReady || !mapaCliente.getLayer('route-anim')) return;
 
