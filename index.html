@@ -2364,6 +2364,87 @@ function estadoUsaDestinoFinal(estado) {
     'EN_CURSO'
   ].includes(e);
 }  
+
+ function activarModoViajeLive() {
+  document.body.classList.add('trip-live-mode');
+
+  const quoteCard = document.getElementById('quoteCard');
+  const tripDriverCard = document.getElementById('tripDriverCard');
+  const tripActiveActions = document.getElementById('tripActiveActions');
+
+  quoteCard?.setAttribute('aria-hidden', 'false');
+  tripDriverCard?.removeAttribute('hidden');
+  tripActiveActions?.removeAttribute('hidden');
+
+  setSectionVisible('mapSection', true);
+  setSectionVisible('quoteCard', true);
+
+  try {
+    mapaCliente?.resize?.();
+  } catch (_) {}
+}
+
+function desactivarModoViajeLive() {
+  document.body.classList.remove('trip-live-mode');
+
+  const tripDriverCard = document.getElementById('tripDriverCard');
+  const tripActiveActions = document.getElementById('tripActiveActions');
+
+  tripDriverCard?.setAttribute('hidden', 'hidden');
+  tripActiveActions?.setAttribute('hidden', 'hidden');
+}
+
+function actualizarCardChofer(viaje = {}) {
+  const card = document.getElementById('tripDriverCard');
+  const avatar = document.getElementById('tripDriverAvatar');
+  const name = document.getElementById('tripDriverName');
+  const meta = document.getElementById('tripDriverMeta');
+  const contact = document.getElementById('tripDriverContact');
+  const btnChat = document.getElementById('btnChatChofer');
+
+  if (!card || !name || !meta || !contact) return;
+
+  const choferNombre = String(
+    viaje?.chofer_nombre ||
+    viaje?.choferNombre ||
+    'Chofer asignado'
+  ).trim();
+
+  const choferTelefono = String(
+    viaje?.chofer_telefono ||
+    viaje?.choferTelefono ||
+    ''
+  ).trim();
+
+  const estado = String(viaje?.estado || state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+
+  let metaText = 'Chofer asignado';
+  if (estado === 'ASIGNADO' || estado === 'ACEPTADO') metaText = 'Va en camino a buscarte';
+  else if (estado === 'EN_CAMINO') metaText = 'Está llegando a tu origen';
+  else if (estado === 'INICIADO' || estado === 'EN_CURSO') metaText = 'Viaje en curso';
+
+  card.hidden = false;
+  name.textContent = choferNombre || 'Chofer asignado';
+  meta.textContent = metaText;
+  contact.textContent = choferTelefono || 'Sin teléfono disponible';
+
+  if (avatar) {
+    avatar.textContent = (choferNombre || 'C').charAt(0).toUpperCase();
+  }
+
+  if (btnChat) {
+    btnChat.onclick = () => {
+      if (!choferTelefono) {
+        notif.show('Chofer', 'Todavía no hay teléfono disponible', 'warning');
+        return;
+      }
+
+      const telefonoLimpio = choferTelefono.replace(/\D/g, '');
+      const mensaje = encodeURIComponent('Hola, te escribo por el viaje de MIMICAR.');
+      window.open(`https://wa.me/${telefonoLimpio}?text=${mensaje}`, '_blank');
+    };
+  }
+} 
 async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
     if (!viajeLocal) return;
@@ -2387,6 +2468,12 @@ async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
 const estadoActual = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
 const usarSeguimientoChofer = estadoUsaSeguimientoChofer(estadoActual);
 const usarDestinoFinal = estadoUsaDestinoFinal(estadoActual);
+    if (usarSeguimientoChofer) {
+  activarModoViajeLive();
+  actualizarCardChofer(viajeLocal || {});
+} else {
+  desactivarModoViajeLive();
+}
     
 setSectionVisible('quoteCard', true);
 setSectionVisible('mapSection', true);
@@ -2559,6 +2646,23 @@ if (!rutaSeguimientoDibujada && puntoObjetivo) {
   } catch (err) {
     console.warn('[restore-trip] no se pudo restaurar mapa/cotización:', err);
   }
+}
+  function actualizarModoViajeLiveConTracking() {
+  const estadoActual = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+
+  if (!estadoUsaSeguimientoChofer(estadoActual)) {
+    desactivarModoViajeLive();
+    return;
+  }
+
+  activarModoViajeLive();
+  actualizarCardChofer({
+    estado: estadoActual,
+    chofer_nombre: state?.choferNombre || state?.chofer_nombre || '',
+    chofer_telefono: state?.choferTelefono || state?.chofer_telefono || ''
+  });
+
+  actualizarRutaChoferDinamica?.().catch?.(() => null);
 }
 function abrirPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
@@ -8341,6 +8445,57 @@ window.setSectionVisible = setSectionVisible;
     }
   }, { passive: true });
 })();
+  function initTripLiveCardDraggable() {
+  const card = document.getElementById('quoteCard');
+  if (!card || card.dataset.dragReady === '1') return;
+
+  card.dataset.dragReady = '1';
+
+  let startY = 0;
+  let currentY = 0;
+  let dragging = false;
+
+  const onStart = (y) => {
+    if (!document.body.classList.contains('trip-live-mode')) return;
+    dragging = true;
+    startY = y;
+    card.style.transition = 'none';
+  };
+
+  const onMove = (y) => {
+    if (!dragging) return;
+    currentY = Math.max(0, y - startY);
+    card.style.transform = `translateY(${Math.min(currentY, 220)}px)`;
+  };
+
+  const onEnd = () => {
+    if (!dragging) return;
+    dragging = false;
+    card.style.transition = 'transform 0.25s ease';
+
+    if (currentY > 120) {
+      card.style.transform = 'translateY(180px)';
+      card.classList.add('trip-live-collapsed');
+    } else {
+      card.style.transform = 'translateY(0)';
+      card.classList.remove('trip-live-collapsed');
+    }
+
+    currentY = 0;
+  };
+
+  card.addEventListener('touchstart', (e) => {
+    if (!e.touches?.[0]) return;
+    onStart(e.touches[0].clientY);
+  }, { passive: true });
+
+  card.addEventListener('touchmove', (e) => {
+    if (!e.touches?.[0]) return;
+    onMove(e.touches[0].clientY);
+  }, { passive: true });
+
+  card.addEventListener('touchend', onEnd);
+}
 </script>
 </body>
 </html>
