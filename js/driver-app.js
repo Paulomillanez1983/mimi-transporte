@@ -1560,119 +1560,125 @@ if (fabNav) {
     await this._handleAction(action, tripId);
   }
 
-  async _handleAction(action, tripId) {
-    if (!action) return null;
+async _handleAction(action, tripId) {
+  if (!action) return null;
 
-    if (this._actionLock && action !== 'navigate' && action !== 'whatsapp') {
-      console.warn('[DriverApp] Acción bloqueada por lock:', action);
-      return null;
-    }
+  const lockableActions = new Set(['accept', 'reject', 'start', 'finish', 'cancel']);
 
-    console.log('[DriverApp] Acción:', action, tripId);
-
-    const pending = tripManager.getPendingTrip();
-    const current = tripManager.getCurrentTrip();
-
-    const lockableActions = new Set(['accept', 'reject', 'start', 'finish', 'cancel']);
-    if (lockableActions.has(action)) {
-      this._actionLock = true;
-    }
-
-    try {
-      switch (action) {
-        case 'accept':
-          return this._acceptOffer(pending?.offerId || tripId);
-
-        case 'reject':
-          return this._rejectOffer(pending?.offerId || tripId);
-
-        case 'start': {
-          const result = await tripManager.startTrip(current?.id || tripId);
-          if (result?.success) {
-            this._setFlowState('TRIP_STARTED');
-            uiController.showToast('Viaje iniciado', 'success');
-            await tripManager.refresh();
-          }
-          return result;
-        }
-
-        case 'finish': {
-          const tripIdFinal = current?.id || this._currentTripId || tripId;
-
-          if (!tripIdFinal) {
-            console.error('[DriverApp] No hay tripId para finalizar');
-            uiController.showToast?.('Error: no hay viaje activo', 'error');
-            return;
-          }
-
-          const result = await tripManager.finishTrip(tripIdFinal);
-
-          if (result?.success) {
-            this._setFlowState('TRIP_COMPLETED');
-            this._currentTripId = null;
-
-            tripManager.resetState();
-
-            mapService.clearRoute?.();
-            uiController.hideIncomingModal?.();
-            uiController.hideNavigation?.();
-            uiController.hideArrival?.();
-            uiController.showToast('Viaje finalizado', 'success');
-
-            if (this._onlineStatus) {
-              this._setFlowState('ONLINE_IDLE');
-              uiController.showWaitingState();
-            } else {
-              this._setFlowState('OFFLINE');
-            }
-
-            await tripManager.refresh();
-          }
-
-          return result;
-        }
-
-        case 'cancel': {
-          const result = await tripManager.cancelTrip(current?.id || tripId);
-
-          if (result?.success) {
-            this._currentTripId = null;
-            tripManager.resetState();
-            mapService.clearRoute?.();
-            uiController.hideIncomingModal?.();
-            uiController.hideNavigation?.();
-            uiController.hideArrival?.();
-
-            if (this._onlineStatus) {
-              this._setFlowState('ONLINE_IDLE');
-              uiController.showWaitingState();
-            } else {
-              this._setFlowState('OFFLINE');
-            }
-          }
-
-          return result;
-        }
-
-        case 'navigate':
-          return this._openExternalNav();
-
-        case 'whatsapp':
-          return this._openWhatsApp();
-
-        default:
-          console.warn('[DriverApp] Acción desconocida:', action);
-          return null;
-      }
-    } finally {
-      if (lockableActions.has(action)) {
-        setTimeout(() => {
-          this._actionLock = false;
-        }, 500);
-      }
-    }
+  if (this._actionLock && lockableActions.has(action)) {
+    console.warn('[DriverApp] Acción bloqueada:', action);
+    return null;
   }
 
+  console.log('[DriverApp] Acción:', action, tripId);
+
+  const pending = tripManager.getPendingTrip();
+  const current = tripManager.getCurrentTrip();
+
+  if (lockableActions.has(action)) {
+    this._actionLock = true;
+  }
+
+  try {
+    switch (action) {
+      case 'accept':
+        return await this._acceptOffer(pending?.offerId || tripId);
+
+      case 'reject':
+        return await this._rejectOffer(pending?.offerId || tripId);
+
+      case 'start': {
+        const result = await tripManager.startTrip(current?.id || tripId);
+
+        if (result?.success) {
+          this._setFlowState('TRIP_STARTED');
+          uiController.showToast('Viaje iniciado', 'success');
+          await tripManager.refresh();
+        }
+
+        return result;
+      }
+
+      case 'finish': {
+        const tripIdFinal = current?.id || this._currentTripId || tripId;
+
+        if (!tripIdFinal) {
+          console.error('[DriverApp] No hay tripId para finalizar');
+          uiController.showToast?.('Error: no hay viaje activo', 'error');
+          return;
+        }
+
+        const result = await tripManager.finishTrip(tripIdFinal);
+
+        if (result?.success) {
+          this._setFlowState('TRIP_COMPLETED');
+          this._currentTripId = null;
+
+          tripManager.resetState();
+
+          mapService.clearRoute?.();
+          uiController.hideIncomingModal?.();
+          uiController.hideNavigation?.();
+          uiController.hideArrival?.();
+
+          uiController.showToast('Viaje finalizado', 'success');
+
+          if (this._onlineStatus) {
+            this._setFlowState('ONLINE_IDLE');
+            uiController.showWaitingState();
+          } else {
+            this._setFlowState('OFFLINE');
+          }
+
+          await tripManager.refresh();
+        }
+
+        return result;
+      }
+
+      case 'cancel': {
+        const result = await tripManager.cancelTrip(current?.id || tripId);
+
+        if (result?.success) {
+          this._currentTripId = null;
+
+          tripManager.resetState();
+          mapService.clearRoute?.();
+          uiController.hideIncomingModal?.();
+          uiController.hideNavigation?.();
+          uiController.hideArrival?.();
+
+          if (this._onlineStatus) {
+            this._setFlowState('ONLINE_IDLE');
+            uiController.showWaitingState();
+          } else {
+            this._setFlowState('OFFLINE');
+          }
+        }
+
+        return result;
+      }
+
+      case 'navigate':
+        return this._openExternalNav();
+
+      case 'whatsapp':
+        return this._openWhatsApp();
+
+      default:
+        console.warn('[DriverApp] Acción desconocida:', action);
+        return null;
+    }
+  } catch (err) {
+    console.error('[DriverApp] Error en acción:', action, err);
+    uiController.showToast('Error procesando acción', 'error');
+    return { success: false, error: err.message };
+  } finally {
+    if (lockableActions.has(action)) {
+      this._actionLock = false;
+    }
+  }
+}
 // =========================================================
 // EXTERNAL ACTIONS
 // =========================================================
