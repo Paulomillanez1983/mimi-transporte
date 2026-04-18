@@ -4497,7 +4497,8 @@ if (texto.length < 2) {
           lng: parseFloat(r.lon ?? r.lng),
           raw: r
         });
-
+         guardarFeedbackGeocoding?.(texto, r).catch?.(() => {});
+         pushRecentPlace?.(r);
         input.setAttribute(
           'title',
           `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
