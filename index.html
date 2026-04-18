@@ -5277,18 +5277,9 @@ function limpiarMarkersMapa() {
 function agregarMarkersRutaDesdeCoords(coords) {
   limpiarMarkersMapa();
 
-  let puntos = obtenerPuntosOrdenados();
+  const puntos = obtenerPuntosOrdenados();
 
-  // 🔥 fallback inteligente: si no hay waypoints en state
-  if (!puntos || puntos.length <= 2) {
-    console.warn('[MARKERS] usando fallback desde coords');
-
-    puntos = coords.map((c, i) => ({
-      lat: c[1],
-      lng: c[0],
-      direccion: `Punto ${i}`
-    }));
-  }
+  console.log('[MARKERS] puntos ordenados reales:', puntos);
 
   if (!Array.isArray(puntos) || puntos.length < 2 || !mapaCliente) return;
 
@@ -5314,9 +5305,11 @@ function agregarMarkersRutaDesdeCoords(coords) {
 
       state.markers.push(marker);
     } catch (err) {
-      console.error('[MARKERS ERROR]', err);
+      console.error('[MARKERS] error creando marker', err);
     }
   });
+
+  console.log('[MARKERS] total reales:', state.markers.length);
 }
   function ajustarVistaRuta(coords, duration = 800) {
   if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
