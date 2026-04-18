@@ -3289,17 +3289,16 @@ const notifData = mapearEstadoANotificacion(nuevoEstado);
           guardarNotificacionesEnStorage();
           guardarViajeActivoEnStorage();
 
-          if (nuevoEstado === 'ACEPTADO' || nuevoEstado === 'ASIGNADO' || choferRecienAsignado) {
-            ejecutarFeedbackAceptado();
+if (nuevoEstado === 'ACEPTADO' || nuevoEstado === 'ASIGNADO') {
+  ejecutarFeedbackAceptado();
 
-            notif.show(
-              'Chofer asignado',
-              textoEstado || 'Tu viaje fue aceptado por un chofer.',
-              'success',
-              3500
-            );
-          }
-
+  notif.show(
+    'Chofer asignado',
+    textoEstado || 'Tu viaje fue aceptado por un chofer.',
+    'success',
+    3500
+  );
+}
           if (nuevoEstado === 'EN_CURSO') {
             notif.show(
               'Viaje en curso',
