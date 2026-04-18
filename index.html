@@ -3171,12 +3171,18 @@ function suscribirseEstadoViajeRealtime(viajeId) {
                }
             }
 
-          let nuevoEstado = resolverEstadoViajeCliente(newRow);
+               let nuevoEstado = resolverEstadoViajeCliente(newRow);
 
-          if (choferRecienAsignado && ['BUSCANDO_CHOFER', 'OFERTANDO', 'OFERTADO', 'PENDIENTE'].includes(nuevoEstado)) {
-            nuevoEstado = 'ASIGNADO';
-          }
-
+             // No forzar ASIGNADO solo porque apareció assigned_driver_id.
+             // Esperamos confirmación real del backend.
+             if (choferRecienAsignado && ['BUSCANDO_CHOFER', 'OFERTANDO', 'OFERTADO', 'PENDIENTE'].includes(nuevoEstado)) {
+             console.log('[cliente] chofer vinculado pero aún no aceptado:', {
+             viajeId,
+             estado_db: newRow?.estado || null,
+             assigned_driver_id: newRow?.assigned_driver_id || null,
+             chofer_id_uuid: newRow?.chofer_id_uuid || null
+           });
+         }
           console.log('[realtime][viajes] estado resuelto cliente:', {
             estado_db: payload?.new?.estado,
             assigned_driver_id: payload?.new?.assigned_driver_id || null,
