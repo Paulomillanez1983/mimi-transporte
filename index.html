@@ -2372,35 +2372,28 @@ function estadoUsaDestinoFinal(estado) {
   ].includes(e);
 }  
 
- function activarModoViajeLive() {
+function activarModoViajeLive() {
   document.body.classList.add('trip-live-mode');
 
-  const quoteCard = document.getElementById('quoteCard');
-  const tripDriverCard = document.getElementById('tripDriverCard');
-  const tripActiveActions = document.getElementById('tripActiveActions');
+  const driverCard = document.getElementById('tripDriverCard');
+  const actions = document.getElementById('tripActiveActions');
 
-  quoteCard?.setAttribute('aria-hidden', 'false');
-  tripDriverCard?.removeAttribute('hidden');
-  tripActiveActions?.removeAttribute('hidden');
+  if (driverCard) driverCard.hidden = false;
+  if (actions) actions.hidden = false;
 
-  setSectionVisible('mapSection', true);
-  setSectionVisible('quoteCard', true);
-
-  try {
-    mapaCliente?.resize?.();
-  } catch (_) {}
+  console.log('[LIVE MODE] activado');
 }
-
 function desactivarModoViajeLive() {
   document.body.classList.remove('trip-live-mode');
 
-  const tripDriverCard = document.getElementById('tripDriverCard');
-  const tripActiveActions = document.getElementById('tripActiveActions');
+  const driverCard = document.getElementById('tripDriverCard');
+  const actions = document.getElementById('tripActiveActions');
 
-  tripDriverCard?.setAttribute('hidden', 'hidden');
-  tripActiveActions?.setAttribute('hidden', 'hidden');
+  if (driverCard) driverCard.hidden = true;
+  if (actions) actions.hidden = true;
+
+  console.log('[LIVE MODE] desactivado');
 }
-
 function actualizarCardChofer(viaje = {}) {
   const card = document.getElementById('tripDriverCard');
   const avatar = document.getElementById('tripDriverAvatar');
@@ -3078,6 +3071,7 @@ function suscribirseEstadoViajeRealtime(viajeId) {
           const choferIdActual = newRow?.assigned_driver_id || newRow?.chofer_id_uuid || null;
 
           if (choferIdActual) {
+            actualizarCardChofer(newRow);
             state.choferId = choferIdActual;
 
             if (coordenadasValidas(newRow?.chofer_lat, newRow?.chofer_lng)) {
@@ -3110,7 +3104,7 @@ function suscribirseEstadoViajeRealtime(viajeId) {
           ultimoEstadoNotificado = nuevoEstado;
 
           actualizarEstadoLocalViaje(nuevoEstado);
-
+          activarModoViajeLive();
 // 🔥 REEMPLAZAR RUTA COTIZADA POR RUTA CHOFER → CLIENTE
 if (
   nuevoEstado === 'ASIGNADO' ||
@@ -3230,6 +3224,8 @@ const notifData = mapearEstadoANotificacion(nuevoEstado);
           }
 
 if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
+  desactivarModoViajeLive();
+
   if (typeof limpiarCanalChoferRealtime === 'function') {
     limpiarCanalChoferRealtime();
   }
@@ -3263,7 +3259,47 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
 
   return currentTripChannel;
 }
-  
+  function actualizarCardChofer(viaje) {
+  const nameEl = document.getElementById('tripDriverName');
+  const metaEl = document.getElementById('tripDriverMeta');
+  const contactEl = document.getElementById('tripDriverContact');
+  const avatarEl = document.getElementById('tripDriverAvatar');
+
+  if (!viaje) return;
+
+  const nombre =
+    viaje?.chofer_nombre ||
+    viaje?.driver_name ||
+    'Chofer asignado';
+
+  const telefono =
+    viaje?.chofer_telefono ||
+    viaje?.driver_phone ||
+    'Sin contacto';
+
+  const estado = resolverEstadoViajeCliente(viaje);
+
+  if (nameEl) nameEl.textContent = nombre;
+  if (contactEl) contactEl.textContent = telefono;
+
+  if (metaEl) {
+    metaEl.textContent = construirTextoEstadoChofer(estado);
+  }
+
+  if (avatarEl) {
+    avatarEl.textContent = nombre.charAt(0).toUpperCase();
+  }
+}
+  function construirTextoEstadoChofer(estado) {
+  switch (estado) {
+    case 'ASIGNADO': return 'Chofer asignado';
+    case 'ACEPTADO': return 'En camino a buscarte';
+    case 'EN_CAMINO': return 'Llegando al punto de recogida';
+    case 'INICIADO':
+    case 'EN_CURSO': return 'Viaje en curso';
+    default: return 'Estado del viaje';
+  }
+}
 async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
@@ -7115,6 +7151,7 @@ if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
   suscribirseEstadoViajeRealtime(state.viajeId);
 }
 notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
+    activarModoViajeLive();
   } catch (err) {
     console.error('[confirmarViaje] ERROR completo:', err);
     console.error('[confirmarViaje] ERROR message:', err?.message);
@@ -8054,11 +8091,6 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
     setCancelBtnLoading(false);
   }
 }
-  
-  
-// ==========================================
-// INICIALIZACIÓN
-// ==========================================
 function bindUIActions() {
   const btnAddStop = document.getElementById('btnAddStop');
   const btnCalcular = document.getElementById('btnCalcular');
@@ -8067,6 +8099,8 @@ function bindUIActions() {
   const btnConfirmarViaje = document.getElementById('btnConfirmarViaje');
   const btnCompartirRuta = document.getElementById('btnCompartirRuta');
   const btnCancelarViaje = document.getElementById('btnCancelarViaje');
+  const btnCancelarViajeLive = document.getElementById('btnCancelarViajeLive');
+  const btnChatChofer = document.getElementById('btnChatChofer');
   const btnSwapRoute = document.getElementById('btnSwapRoute');
   const btnToggleBreakdown = document.getElementById('btnToggleBreakdown');
   const btnLoginHeader = document.getElementById('btnLoginHeader');
@@ -8107,6 +8141,18 @@ function bindUIActions() {
     btnCancelarViaje.dataset.bound = '1';
   }
 
+  if (btnCancelarViajeLive && !btnCancelarViajeLive.dataset.bound) {
+    btnCancelarViajeLive.addEventListener('click', cancelarViajeCliente);
+    btnCancelarViajeLive.dataset.bound = '1';
+  }
+
+  if (btnChatChofer && !btnChatChofer.dataset.bound) {
+    btnChatChofer.addEventListener('click', () => {
+      notif.show('Chat', 'Abriremos el chat con el chofer', 'info');
+    });
+    btnChatChofer.dataset.bound = '1';
+  }
+
   if (btnSwapRoute && !btnSwapRoute.dataset.bound) {
     btnSwapRoute.addEventListener('click', intercambiarOrigenDestino);
     btnSwapRoute.dataset.bound = '1';
@@ -8136,97 +8182,9 @@ function bindUIActions() {
     btnLogoutHeader.addEventListener('click', cerrarSesionCliente);
     btnLogoutHeader.dataset.bound = '1';
   }
-}
+}  
 
-document.addEventListener('DOMContentLoaded', async () => {
-  try {
-    initHeaderScrollEffect();
-    bindUIActions();
-
-setupAutocomplete('inputOrigen', 'sugerenciasOrigen', async (data) => {
-  state.origen = data;
-
-  try {
-    await guardarFeedbackGeocoding(
-      document.getElementById('inputOrigen')?.value || data?.display_name || data?.direccion || '',
-      data
-    );
-  } catch (err) {
-    console.warn('[origen-feedback] no se pudo guardar feedback:', err);
-  }
-});
-
-setupAutocomplete('inputDestino', 'sugerenciasDestino', async (data) => {
-  state.destino = data;
-
-  try {
-    await guardarFeedbackGeocoding(
-      document.getElementById('inputDestino')?.value || data?.display_name || data?.direccion || '',
-      data
-    );
-  } catch (err) {
-    console.warn('[destino-feedback] no se pudo guardar feedback:', err);
-  }
-});
-    const session = await obtenerSesionCliente(true);
-    renderSesionUI(session);
-    await asegurarPushCliente({
-      promptIfNeeded: false,
-      source: 'dom-ready'
-    });
-
-if (window.sbRealtime?.auth && !window.__mimiAuthListenerBound) {
-  window.__mimiAuthListenerBound = true;
-
-  window.sbRealtime.auth.onAuthStateChange(async (event, session) => {
-    console.log('[auth] onAuthStateChange:', event, session);
-
-    cachedSession = session || null;
-    lastSessionCheck = Date.now();
-
-    renderSesionUI(session || null);
-
-    try {
-      const token = session?.access_token || null;
-
-      if (token && window.sbRealtime?.realtime) {
-        await window.sbRealtime.realtime.setAuth(token);
-        console.log('[auth] realtime token actualizado');
-      }
-    } catch (err) {
-      console.warn('[auth] no se pudo actualizar token realtime:', err);
-    }
-
-    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-      if (event === 'SIGNED_IN') {
-        await solicitarPermisosClientePostLogin(session, { forcePrompt: false });
-      } else {
-        await asegurarPushCliente({
-          promptIfNeeded: false,
-          source: 'token-refreshed'
-        });
-      }
-
-      await reanudarViajePendientePostLogin();
-    }
-
-    if (event === 'SIGNED_OUT') {
-      limpiarSesionCache();
-      if (typeof window.resetSupportPushFCMState === 'function') {
-        window.resetSupportPushFCMState();
-      }
-      renderSesionUI(null);
-    }
-  });
-}
-
-    await reanudarViajePendientePostLogin();
-    actualizarBotonCancelarViaje();
-  } catch (err) {
-    console.error('❌ Error en DOMContentLoaded:', err);
-  }
-});
-
+  
   // ==========================================
   // MIMI NEXT LEVEL UI
   // Seguro: no rompe la lógica existente
