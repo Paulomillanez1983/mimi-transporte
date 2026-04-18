@@ -1565,25 +1565,22 @@ async _verifyActiveTripStillValid() {
     }
   }
 
-  // =========================================================
-  // EXTERNAL ACTIONS
-  // =========================================================
-  _openExternalNav() {
-    const trip = tripManager.getCurrentTrip();
-    if (!trip) return;
+// =========================================================
+// EXTERNAL ACTIONS
+// =========================================================
+_openExternalNav() {
+  const trip = tripManager.getCurrentTrip();
+  if (!trip || !window.uiController?._getNavigateMeta) return;
 
-    const estado = String(trip.estado || '').toUpperCase();
-    const goingToDestination = estado === 'EN_CURSO';
+  const meta = window.uiController._getNavigateMeta(trip);
 
-    const lat = goingToDestination ? trip.destino_lat : trip.origen_lat;
-    const lng = goingToDestination ? trip.destino_lng : trip.origen_lng;
-
-    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return;
-
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    window.open(url, '_blank');
+  if (!meta?.url) {
+    uiController.showToast('Coordenadas no disponibles para navegar', 'warning');
+    return;
   }
 
+  window.open(meta.url, '_blank');
+}
   _openWhatsApp() {
     const trip = tripManager.getCurrentTrip();
     if (!trip || !trip.telefono) return;
