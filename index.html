@@ -4488,17 +4488,26 @@ if (texto.length < 2) {
         suppressNextInputSearch = true;
         input.value = direccionCorta;
 
-        onSelect({
-          id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          direccion: r.display_name,
-          direccionCorta,
-          direccionSecundaria,
-          lat: parseFloat(r.lat),
-          lng: parseFloat(r.lon ?? r.lng),
-          raw: r
-        });
-         guardarFeedbackGeocoding?.(texto, r).catch?.(() => {});
-         pushRecentPlace?.(r);
+onSelect({
+  id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+  direccion: r.display_name,
+  direccionCorta,
+  direccionSecundaria,
+  lat: parseFloat(r.lat),
+  lng: parseFloat(r.lon ?? r.lng),
+  raw: r
+});
+
+setTimeout(() => {
+  try {
+    dibujarRutaEnMapa();
+  } catch (err) {
+    console.warn('[AUTO] error refrescando mapa', err);
+  }
+}, 0);
+
+        guardarFeedbackGeocoding?.(texto, r).catch?.(() => {});
+        pushRecentPlace?.(r);
         input.setAttribute(
           'title',
           `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
@@ -4553,32 +4562,32 @@ if (texto.length < 2) {
           suppressNextInputSearch = true;
           input.value = direccionCorta;
 
-onSelect({
-  id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-  direccion: r.display_name,
-  direccionCorta,
-  direccionSecundaria,
-  lat: parseFloat(r.lat),
-  lng: parseFloat(r.lon),
-  raw: r
-});
 
-           setTimeout(() => {
-           try {
-             dibujarRutaEnMapa();
+           onSelect({
+            id: `stop_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            direccion: r.display_name,
+            direccionCorta,
+            direccionSecundaria,
+            lat: parseFloat(r.lat),
+           lng: parseFloat(r.lon ?? r.lng),
+           raw: r
+          });
+ 
+        setTimeout(() => {
+          try {
+            dibujarRutaEnMapa();
              } catch (err) {
              console.warn('[AUTO] error refrescando mapa', err);
             }
-          }, 0);
+           }, 0);
 
-          input.setAttribute(
-         'title',
-         `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
-          );
+           guardarFeedbackGeocoding?.(texto, r).catch?.(() => {});
+           pushRecentPlace?.(r);
 
-          // 🔥 ACA VA LO QUE TE FALTA
-          guardarFeedbackGeocoding?.(texto, r).catch?.(() => {});
-          pushRecentPlace?.(r);
+           input.setAttribute(
+          'title',
+          `${direccionCorta}${direccionSecundaria ? ' - ' + direccionSecundaria : ''}`
+         );
 
           hideSuggestions(contenedor);
           input.setAttribute('aria-expanded', 'false');
@@ -4609,10 +4618,10 @@ onSelect({
 
   input.addEventListener('focus', () => {
     const texto = input.value.trim();
-    if (texto.length >= 3 && !contenedor.innerHTML.trim()) {
-      input.dispatchEvent(new Event('input'));
-    }
-  });
+        if (texto.length >= 2 && !contenedor.innerHTML.trim()) {
+         input.dispatchEvent(new Event('input'));
+       }
+   });
 
   input.addEventListener('blur', () => {
     setTimeout(() => {
