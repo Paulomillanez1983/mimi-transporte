@@ -45,7 +45,7 @@ class DriverApp {
     this._driverActionHandler = this._handleDriverActionEvent.bind(this);
     this._visibilityChangeHandler = this._handleVisibilityChange.bind(this);
     this._foregroundPushHandler = this._handleForegroundPush.bind(this);
-
+    this._fabNavClickHandler = null;
     this._unlockAudioOnClick = () => {
       soundManager.enableOnUserInteraction?.();
     };
@@ -99,7 +99,21 @@ class DriverApp {
 
     settingsBtn.classList.toggle('menu-item-danger', this._onlineStatus && !hasActiveTrip);
   }
+_syncNavFabVisibility() {
+  const fabNav = document.getElementById('fab-nav');
+  if (!fabNav) return;
 
+  const trip = tripManager.getCurrentTrip?.();
+  const pending = tripManager.getPendingTrip?.();
+  const hasActiveTrip = !!trip?.id;
+  const hasPendingOnly = !!pending?.id || !!pending?.offerId;
+
+  if (hasActiveTrip && !hasPendingOnly) {
+    fabNav.classList.add('visible');
+  } else {
+    fabNav.classList.remove('visible');
+  }
+}
   async _ensureDriverShellReady() {
     if (!('serviceWorker' in navigator)) return null;
 
@@ -514,26 +528,28 @@ class DriverApp {
         }
       }
 
-      if (currentTrip) {
-        console.log('[DriverApp] Estado inicial: viaje activo');
-        this._currentTripId = currentTrip.id;
+if (currentTrip) {
+  console.log('[DriverApp] Estado inicial: viaje activo');
+  this._currentTripId = currentTrip.id;
 
-        if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
-          this._setFlowState('TRIP_STARTED');
-        } else {
-          this._setFlowState('GOING_TO_PICKUP');
-        }
+  if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
+    this._setFlowState('TRIP_STARTED');
+  } else {
+    this._setFlowState('GOING_TO_PICKUP');
+  }
 
-        await this._showRouteOnMap(currentTrip);
-        uiController.showNavigationState(currentTrip);
-      } else if (pendingTrip) {
-        console.log('[DriverApp] Estado inicial: oferta pendiente');
+  await this._showRouteOnMap(currentTrip);
+  uiController.showNavigationState(currentTrip);
+  this._syncNavFabVisibility();
+} else if (pendingTrip) {
+  console.log('[DriverApp] Estado inicial: oferta pendiente');
         this._setFlowState('RECEIVING_OFFER');
 
         uiController.showIncomingTrip(
           pendingTrip,
           () => this._acceptOffer(pendingTrip.offerId),
           () => this._rejectOffer(pendingTrip.offerId)
+          this._syncNavFabVisibility();
         );
       } else {
         console.log('[DriverApp] Estado inicial: esperando');
@@ -545,6 +561,7 @@ class DriverApp {
         }
 
         uiController.showWaitingState();
+        this._syncNavFabVisibility();
       }
     } catch (error) {
       console.error('[DriverApp] Error fatal:', error);
@@ -765,11 +782,12 @@ class DriverApp {
       console.log('[DriverApp] tripAccepted', trip.id, 'alreadySame:', alreadySameTrip);
 
       this._celebrateAcceptFeedback();
-      uiController.hideIncomingModal?.();
-      uiController.showToast('Viaje aceptado', 'success');
+uiController.hideIncomingModal?.();
+uiController.showToast('Viaje aceptado', 'success');
 
-      await this._showRouteOnMap(trip);
-      uiController.showNavigationState(trip);
+await this._showRouteOnMap(trip);
+uiController.showNavigationState(trip);
+this._syncNavFabVisibility();
     });
 
     const unsubStarted = tripManager.on('tripStarted', async (trip) => {
@@ -778,11 +796,12 @@ class DriverApp {
 
       uiController.showToast('Viaje iniciado', 'success');
 
-      await this._showRouteOnMap(trip);
-      uiController.showNavigationState(trip);
+await this._showRouteOnMap(trip);
+uiController.showNavigationState(trip);
+this._syncNavFabVisibility();
 
-      window.dispatchEvent(
-        new CustomEvent('tripStateChanged', {
+window.dispatchEvent(
+  new CustomEvent('tripStateChanged', {
           detail: { estado: trip.estado }
         })
       );
@@ -795,13 +814,14 @@ class DriverApp {
       this._currentTripId = null;
       tripManager.resetState();
 
-      mapService.clearRoute?.();
-      uiController.hideIncomingModal?.();
-      uiController.hideNavigation?.();
-      uiController.hideArrival?.();
+mapService.clearRoute?.();
+uiController.hideIncomingModal?.();
+uiController.hideNavigation?.();
+uiController.hideArrival?.();
+this._syncNavFabVisibility();
 
-      uiController.showToast(`Viaje completado +$${trip.precio ?? 0}`, 'success', 5000);
-
+uiController.showToast(`Viaje completado +$${trip.precio ?? 0}`, 'success', 5000);
+      
       if (this._onlineStatus) {
         this._setFlowState('ONLINE_IDLE');
         uiController.showWaitingState();
@@ -816,13 +836,14 @@ const unsubCancelled = tripManager.on('tripCancelled', () => {
   this._currentTripId = null;
   tripManager.resetState?.();
 
-  mapService.clearRoute?.();
-  uiController.hideIncomingModal?.();
-  uiController.hideNavigation?.();
-  uiController.hideArrival?.();
+mapService.clearRoute?.();
+uiController.hideIncomingModal?.();
+uiController.hideNavigation?.();
+uiController.hideArrival?.();
+this._syncNavFabVisibility();
 
-  uiController.showToast('Viaje cancelado', 'warning');
-
+uiController.showToast('Viaje cancelado', 'warning');
+  
   if (this._onlineStatus) {
     this._setFlowState('ONLINE_IDLE');
   } else {
@@ -852,6 +873,7 @@ const unsubCancelled = tripManager.on('tripCancelled', () => {
 
       uiController.hideIncomingModal?.();
       uiController.showWaitingState();
+      this._syncNavFabVisibility();
     });
 
     const unsubNoPending = tripManager.on('noPendingTrips', () => {
@@ -875,6 +897,7 @@ const unsubCancelled = tripManager.on('tripCancelled', () => {
       }
 
       uiController.showWaitingState();
+      this._syncNavFabVisibility();
     });
 
     this._unsubscribers.push(
@@ -1275,15 +1298,15 @@ async _verifyActiveTripStillValid() {
   // =========================================================
   // UI SETUP
   // =========================================================
-  _setupUI() {
-    const btnFab = document.getElementById('fab-online');
-    const supportBtn = document.getElementById('menu-support');
-    const earningsBtn = document.getElementById('menu-earnings');
-    const historyBtn = document.getElementById('menu-history');
-    const settingsBtn = document.getElementById('menu-settings');
-    const profileBtn = document.getElementById('menu-view-profile');
-    const profileQuickBtn = document.getElementById('menu-view-profile-quick');
-
+_setupUI() {
+  const btnFab = document.getElementById('fab-online');
+  const fabNav = document.getElementById('fab-nav');
+  const supportBtn = document.getElementById('menu-support');
+  const earningsBtn = document.getElementById('menu-earnings');
+  const historyBtn = document.getElementById('menu-history');
+  const settingsBtn = document.getElementById('menu-settings');
+  const profileBtn = document.getElementById('menu-view-profile');
+  const profileQuickBtn = document.getElementById('menu-view-profile-quick');
     this._fabClickHandler = async (ev) => {
       ev?.preventDefault?.();
       ev?.stopPropagation?.();
@@ -1323,6 +1346,7 @@ async _verifyActiveTripStillValid() {
           }
 
           this._startRealtimeServicesInBackground();
+          await this._startLocationTracking().catch(() => null);
 
           this._onlineStatus = true;
           this._setFlowState('ONLINE_IDLE');
@@ -1383,8 +1407,14 @@ async _verifyActiveTripStillValid() {
         freshFab.addEventListener('click', this._fabClickHandler);
       }
     }
+this._fabNavClickHandler = () => {
+  this._openExternalNav();
+};
 
-    if (supportBtn) {
+if (fabNav) {
+  fabNav.addEventListener('click', this._fabNavClickHandler);
+}
+  if (supportBtn) {
       supportBtn.addEventListener('click', async () => {
         uiController.closeMenu?.();
         await openDriverSupportPanel();
@@ -1444,6 +1474,7 @@ async _verifyActiveTripStillValid() {
     }
 
     this._syncConnectionMenuItem();
+    this._syncNavFabVisibility();
     window.addEventListener('driverAction', this._driverActionHandler);
   }
 
@@ -1630,7 +1661,11 @@ _openExternalNav() {
       if (btnFab && this._fabClickHandler) {
         btnFab.removeEventListener('click', this._fabClickHandler);
       }
-
+      const fabNav = document.getElementById('fab-nav');
+if (fabNav && this._fabNavClickHandler) {
+  fabNav.removeEventListener('click', this._fabNavClickHandler);
+}
+      
       window.removeEventListener('driverAction', this._driverActionHandler);
       document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
       window.removeEventListener('pushForegroundMessage', this._foregroundPushHandler);
