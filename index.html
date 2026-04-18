@@ -5223,29 +5223,31 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
 
     if (coords.length < 2) return;
 
-const exactStart = [choferLng, choferLat];
+    const exactStart = [choferLng, choferLat];
+    const exactEnd = [clienteLng, clienteLat];
 
-const first = coords[0];
-const last = coords[coords.length - 1];
+    const almostEqual = (a, b, epsilon = 0.00001) => Math.abs(a - b) <= epsilon;
 
-const almostEqual = (a, b, epsilon = 0.00001) => Math.abs(a - b) <= epsilon;
+    const first = coords[0];
+    const last = coords[coords.length - 1];
 
-if (
-  !almostEqual(first[0], exactStart[0]) ||
-  !almostEqual(first[1], exactStart[1])
-) {
-  coords.unshift(exactStart);
-}
+    if (
+      !almostEqual(first[0], exactStart[0]) ||
+      !almostEqual(first[1], exactStart[1])
+    ) {
+      coords.unshift(exactStart);
+    }
 
-if (
-  !almostEqual(last[0], exactEnd[0]) ||
-  !almostEqual(last[1], exactEnd[1])
-) {
-  coords.push(exactEnd);
-}
+    if (
+      !almostEqual(last[0], exactEnd[0]) ||
+      !almostEqual(last[1], exactEnd[1])
+    ) {
+      coords.push(exactEnd);
+    }
 
-// refuerzo visual final: asegura último tramo recto exacto al punto
-coords.push(exactEnd);
+    // Refuerzo visual final para que cierre exacto sobre destino
+    coords.push(exactEnd);
+
     const sourceId = 'driver-to-client-route';
     const lineLayerId = 'driver-to-client-route-line';
 
@@ -5290,12 +5292,12 @@ coords.push(exactEnd);
       new maplibregl.LngLatBounds(coords[0], coords[0])
     );
 
-mapaCliente.fitBounds(bounds, {
-  padding: { top: 22, bottom: 22, left: 22, right: 22 },
-  duration: 600,
-  maxZoom: 16.8
-});
-    
+    window.mapaCliente.fitBounds(bounds, {
+      padding: { top: 22, bottom: 22, left: 22, right: 22 },
+      duration: 600,
+      maxZoom: 16.8
+    });
+
     setTimeout(() => {
       try {
         window.mapaCliente?.resize?.();
@@ -5305,8 +5307,7 @@ mapaCliente.fitBounds(bounds, {
   } catch (err) {
     console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
   }
-}
-  
+}  
 function limpiarRutaChoferHastaCliente() {
   try {
     if (!window.mapaCliente) return;
