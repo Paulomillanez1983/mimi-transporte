@@ -545,12 +545,13 @@ if (currentTrip) {
   console.log('[DriverApp] Estado inicial: oferta pendiente');
         this._setFlowState('RECEIVING_OFFER');
 
-        uiController.showIncomingTrip(
-          pendingTrip,
-          () => this._acceptOffer(pendingTrip.offerId),
-          () => this._rejectOffer(pendingTrip.offerId)
-          this._syncNavFabVisibility();
-        );
+uiController.showIncomingTrip(
+  pendingTrip,
+  () => this._acceptOffer(pendingTrip.offerId),
+  () => this._rejectOffer(pendingTrip.offerId)
+);
+
+this._syncNavFabVisibility();
       } else {
         console.log('[DriverApp] Estado inicial: esperando');
 
