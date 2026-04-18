@@ -2235,23 +2235,21 @@ function cargarNotificacionesDesdeStorage() {
 }
 function resolverEstadoViajeCliente(viajeLike = {}) {
   const estadoBase = normalizarEstadoUpper(viajeLike?.estado);
-  const tieneChoferAsignado = !!(
-    viajeLike?.assigned_driver_id ||
-    viajeLike?.chofer_id_uuid
-  );
 
-  // Si ya hay chofer asignado pero el backend todavía no movió el estado,
-  // para el cliente lo tratamos como ASIGNADO.
-  if (
-    tieneChoferAsignado &&
-    ['PENDIENTE', 'BUSCANDO_CHOFER', 'OFERTANDO', 'OFERTADO', 'SIN_CHOFER'].includes(estadoBase)
-  ) {
-    return 'ASIGNADO';
+  // El cliente debe respetar el estado REAL que viene del backend.
+  // Tener assigned_driver_id no significa necesariamente que el chofer
+  // haya aceptado. Puede estar solo ofertado, reservado o en intento.
+  if (!estadoBase) {
+    return 'PENDIENTE';
   }
+
+  // Normalizaciones suaves para compatibilidad
+  if (estadoBase === 'EN_CURSO') return 'INICIADO';
+  if (estadoBase === 'COMPLETADO') return 'COMPLETADO';
+  if (estadoBase === 'CANCELADO') return 'CANCELADO';
 
   return estadoBase;
 }
-
 async function enriquecerViajeConChofer(viajeLike = null) {
   if (!viajeLike || typeof viajeLike !== 'object') return viajeLike;
 
