@@ -23,6 +23,7 @@ class TripManager {
     this.driverId = null;
 
     this.lastOfferIdShown = null;
+    this._resetting = false;
   }
 
   // =========================================================
@@ -1001,18 +1002,35 @@ _debouncedRefresh(driverId) {
     console.log('[TripManager] Destroyed');
   }
 
-  // =========================================================
-  // STATE RESET (ANTI BUGS)
-  // =========================================================
-  resetState() {
+// =========================================================
+// STATE RESET (ANTI BUGS)
+// =========================================================
+resetState(options = {}) {
+  if (this._resetting) {
+    console.warn('[TripManager] resetState ignorado: ya se está ejecutando');
+    return;
+  }
+
+  const {
+    silent = false,
+    reason = 'manual_reset'
+  } = options || {};
+
+  this._resetting = true;
+
+  try {
     this.currentTrip = null;
     this.pendingOffer = null;
     this.lastOfferIdShown = null;
 
-    this.emit('pendingTripCleared', { reason: 'manual_reset' });
-    this.emit('noPendingTrips');
+    if (!silent) {
+      this.emit('pendingTripCleared', { reason });
+      this.emit('noPendingTrips');
+    }
+  } finally {
+    this._resetting = false;
   }
-
+}
   // =========================================================
   // GETTERS
   // =========================================================
