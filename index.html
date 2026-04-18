@@ -3340,12 +3340,15 @@ async function restaurarViajeActivoCliente() {
   try {
     const session = await obtenerSesionCliente(false);
 
+    if (session?.user) {
+      renderSesionUI(session);
+    }
+
     if (!session?.user) {
       if (notifStatusCard) notifStatusCard.hidden = true;
       renderizarCentroNotificaciones();
       return;
     }
-
     const viajeLocal = leerViajeActivoEnStorage();
     const clienteId = session.user.id;
     const clienteEmail = String(session.user.email || '').toLowerCase();
