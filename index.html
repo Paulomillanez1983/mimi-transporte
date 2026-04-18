@@ -2457,9 +2457,14 @@ function activarModoViajeLive() {
 
   const driverCard = document.getElementById('tripDriverCard');
   const actions = document.getElementById('tripActiveActions');
+  const card = document.getElementById('quoteCard');
 
   if (driverCard) driverCard.hidden = false;
   if (actions) actions.hidden = false;
+  if (card) card.classList.remove('trip-live-collapsed');
+
+  actualizarBotonCancelarViaje?.();
+  initTripLiveCardDraggable?.();
 
   console.log('[LIVE MODE] activado');
 }
@@ -2468,12 +2473,15 @@ function desactivarModoViajeLive() {
 
   const driverCard = document.getElementById('tripDriverCard');
   const actions = document.getElementById('tripActiveActions');
+  const card = document.getElementById('quoteCard');
 
   if (driverCard) driverCard.hidden = true;
   if (actions) actions.hidden = true;
+  if (card) card.classList.remove('trip-live-collapsed');
 
   console.log('[LIVE MODE] desactivado');
 }
+  
 function actualizarCardChofer(viaje = {}) {
   const card = document.getElementById('tripDriverCard');
   const avatar = document.getElementById('tripDriverAvatar');
@@ -7725,44 +7733,35 @@ const mensaje = texto || estadoInfo.texto;
   const choferNombre = viaje?.chofer_nombre || viaje?.choferNombre || '';
   const choferTelefono = viaje?.chofer_telefono || viaje?.choferTelefono || '';
 
-  box.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <span style="font-size:18px;line-height:1;">${estadoInfo.icon}</span>
-        <strong style="font-size:14px;">Estado del viaje</strong>
+box.innerHTML = `
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:nowrap;">
+    <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+      <span style="font-size:16px;line-height:1;flex:0 0 auto;">${estadoInfo.icon}</span>
+      <div style="min-width:0;flex:1;">
+        <div style="font-size:12px;font-weight:800;line-height:1.2;">${estadoInfo.label}</div>
+        <div style="font-size:12px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${mensaje}
+        </div>
       </div>
-      <span style="
-        display:inline-flex;
-        align-items:center;
-        padding:6px 10px;
-        border-radius:999px;
-        background:${estadoInfo.badgeBg};
-        color:${estadoInfo.badgeColor};
-        font-size:12px;
-        font-weight:700;
-        letter-spacing:.2px;
-        white-space:nowrap;
-      ">
-        ${estadoInfo.label}
-      </span>
     </div>
 
-    <div style="font-size:14px;opacity:0.95;margin-bottom:${(choferNombre || choferTelefono) ? '10px' : '0'};">
-      ${mensaje}
-    </div>
-
-    ${(choferNombre || choferTelefono) ? `
-      <div style="
-        padding:10px 12px;
-        border-radius:10px;
-        background:rgba(255,255,255,0.45);
-        border:1px solid rgba(255,255,255,0.35);
-      ">
-        ${choferNombre ? `<div style="margin-bottom:${choferTelefono ? '4px' : '0'};"><strong>Chofer:</strong> ${choferNombre}</div>` : ''}
-        ${choferTelefono ? `<div><strong>Tel:</strong> <a href="tel:${choferTelefono.replace(/\s+/g, '')}" style="color:inherit;text-decoration:none;">${choferTelefono}</a></div>` : ''}
-      </div>
-    ` : ''}
-  `;
+    <span style="
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:5px 9px;
+      border-radius:999px;
+      background:${estadoInfo.badgeBg};
+      color:${estadoInfo.badgeColor};
+      font-size:11px;
+      font-weight:800;
+      white-space:nowrap;
+      flex:0 0 auto;
+    ">
+      ${estadoInfo.label}
+    </span>
+  </div>
+`;
 }
 function escucharEstadoViajeCliente(viajeId) {
   if (!window.sbRealtime || !viajeId) return;
@@ -8421,13 +8420,9 @@ setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
     btnCancelarViajeLive.dataset.bound = '1';
   }
 
-  if (btnChatChofer && !btnChatChofer.dataset.bound) {
-    btnChatChofer.addEventListener('click', () => {
-      notif.show('Chat', 'Abriremos el chat con el chofer', 'info');
-    });
-    btnChatChofer.dataset.bound = '1';
-  }
-
+if (btnChatChofer && !btnChatChofer.dataset.bound) {
+  btnChatChofer.dataset.bound = '1';
+}
   if (btnSwapRoute && !btnSwapRoute.dataset.bound) {
     btnSwapRoute.addEventListener('click', intercambiarOrigenDestino);
     btnSwapRoute.dataset.bound = '1';
