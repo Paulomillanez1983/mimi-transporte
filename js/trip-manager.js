@@ -467,76 +467,82 @@ class TripManager {
         console.log('[TripManager] Offer channel status:', status);
       });
 
-    // =====================================================
-    // VIAJES
-    // =====================================================
-    this.tripChannel = supabaseService.client
-      .channel(`trips-${driverId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'viajes',
-          filter: `chofer_id_uuid=eq.${driverId}`
-        },
-        (payload) => {
-          console.log('[TripManager] Trip realtime payload:', payload);
+// =====================================================
+// VIAJES
+// =====================================================
+this.tripChannel = supabaseService.client
+  .channel(`trips-${driverId}`)
+  .on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'viajes',
+      filter: `chofer_id_uuid=eq.${driverId}`
+    },
+    (payload) => {
+      console.log('[TripManager] Trip realtime payload:', payload);
 
-          const tripRaw = payload.new;
-          if (!tripRaw) return;
+      const tripRaw = payload.new;
+      if (!tripRaw) return;
 
-          const normalizedState = this._normalizeDriverTripState(tripRaw);
-          const trip = {
-            ...tripRaw,
-            estado: normalizedState
-          };
+      const normalizedState = this._normalizeDriverTripState(tripRaw);
+      const trip = {
+        ...tripRaw,
+        estado: normalizedState
+      };
 
-          console.log('[TripManager] Trip update:', trip.id, trip.estado);
+      console.log('[TripManager] Trip update:', trip.id, trip.estado);
 
-          if (trip.estado === 'ASIGNADO' || trip.estado === 'ACEPTADO') {
-            this.emit('tripAccepted', trip);
-          }
+      const currentTripId = this.currentTrip?.id ? String(this.currentTrip.id) : null;
+      const incomingTripId = trip?.id ? String(trip.id) : null;
+      const isSameCurrentTrip = !!currentTripId && !!incomingTripId && currentTripId === incomingTripId;
 
-          if (trip.estado === 'EN_CURSO') {
-            this.emit('tripStarted', trip);
-          }
+      if (
+        (trip.estado === 'ASIGNADO' || trip.estado === 'ACEPTADO') &&
+        !isSameCurrentTrip
+      ) {
+        this.emit('tripAccepted', trip);
+      }
 
-          if (trip.estado === 'COMPLETADO') {
-            this.emit('tripCompleted', trip);
-          }
+      if (trip.estado === 'EN_CURSO') {
+        this.emit('tripStarted', trip);
+      }
 
-          if (trip.estado === 'CANCELADO') {
-            this.emit('tripCancelled', trip);
-          }
+      if (trip.estado === 'COMPLETADO') {
+        this.emit('tripCompleted', trip);
+      }
 
-          if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
-            this.currentTrip = trip;
-            this.pendingOffer = null;
-            this.lastOfferIdShown = null;
-          } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
-            this.currentTrip = null;
-            this.pendingOffer = null;
-            this.lastOfferIdShown = null;
+      if (trip.estado === 'CANCELADO') {
+        this.emit('tripCancelled', trip);
+      }
 
-            this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
-            this.emit('noPendingTrips');
-          }
-        }
-      )
-      .subscribe((status) => {
-        console.log('[TripManager] Trip channel status:', status);
-      });
-  }
+      if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
+        this.currentTrip = trip;
+        this.pendingOffer = null;
+        this.lastOfferIdShown = null;
+      } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
+        this.currentTrip = null;
+        this.pendingOffer = null;
+        this.lastOfferIdShown = null;
 
-  _debouncedRefresh(driverId) {
-    clearTimeout(this._debounceTimer);
+        this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
+        this.emit('noPendingTrips');
+      }
+    }
+  )
+  .subscribe((status) => {
+    console.log('[TripManager] Trip channel status:', status);
+  });
+}
 
-    this._debounceTimer = setTimeout(() => {
-      this._loadInitialState(driverId);
-    }, 400);
-  }
+_debouncedRefresh(driverId) {
+  clearTimeout(this._debounceTimer);
 
+  this._debounceTimer = setTimeout(() => {
+    this._loadInitialState(driverId);
+  }, 400);
+}
   // =========================================================
   // REFRESH
   // =========================================================
