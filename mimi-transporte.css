@@ -1768,7 +1768,13 @@ select:focus-visible {
   position: relative;
   z-index: 2;
 }
+.header-auth-skeleton {
+  transition: opacity 220ms ease;
+}
 
+.header-auth-skeleton[hidden] {
+  display: none !important;
+}
 /* MARCA */
 .logo-section {
   grid-area: brand;
