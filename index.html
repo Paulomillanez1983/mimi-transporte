@@ -8225,10 +8225,16 @@ if (dispatchOk) {
     'info'
   );
 }
+
+// 🔥 ACTUALIZAR CARD INMEDIATAMENTE
+actualizarCardChofer({
+  estado: state.estadoViaje
+});
+
 if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
   suscribirseEstadoViajeRealtime(state.viajeId);
 }
-notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
+    notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
     activarModoViajeLive();
   } catch (err) {
     console.error('[confirmarViaje] ERROR completo:', err);
