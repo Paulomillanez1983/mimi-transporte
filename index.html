@@ -5705,26 +5705,25 @@ function crearMarkerElement(label, type) {
   const el = document.createElement('div');
   el.className = `route-marker ${type}`;
 
-  let inner = '';
+  let contenidoInterno = '';
 
   if (type === 'origin') {
-    inner = '<span class="route-marker-core route-marker-core-origin"></span>';
+    contenidoInterno = '<span class="route-marker-dot-origin"></span>';
   } else if (type === 'dest') {
-    inner = '<span class="route-marker-core route-marker-core-dest"></span>';
+    contenidoInterno = '<span class="route-marker-dot-dest"></span>';
   } else {
-    inner = `<span class="route-marker-stop-badge">${label}</span>`;
+    contenidoInterno = `<span class="route-marker-stop-label">${label}</span>`;
   }
 
   el.innerHTML = `
     <div class="route-marker-halo"></div>
     <div class="route-marker-body">
-      ${inner}
+      ${contenidoInterno}
     </div>
   `;
 
   return el;
-}
-  
+}  
   async function initMapa() {
   console.log('[initMapa] entrando', {
     mapaClienteActual: mapaCliente,
