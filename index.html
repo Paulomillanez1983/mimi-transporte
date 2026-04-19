@@ -16,6 +16,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <link rel="stylesheet" href="./mimi-transporte.css?v=20260417-6">
 <link rel="stylesheet" href="./css/client-trip-live.css?v=20260418-2">
+<link rel="stylesheet" href="./css/trip-chat.css?v=20260419-1">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 <script src="./mimi-driver-sim.js"></script>
@@ -28,6 +29,7 @@
 <script type="module" src="/mimi-transporte/js/client-pwa-onboarding.js"></script>
 <script type="module" src="/mimi-transporte/js/push-support.js"></script>
 <script src="/mimi-transporte/js/cliente-chofer-tracking.js"></script>
+<script type="module" src="/mimi-transporte/js/trip-chat.js?v=20260419-1"></script>
   <!-- SUPABASE REST CLIENT -->
 <script>
 const SupabaseSDK = window.supabase;
@@ -2732,20 +2734,45 @@ if (estado === 'OFERTANDO' || estado === 'OFERTADO') {
     avatar.textContent = (choferNombre || 'C').charAt(0).toUpperCase();
   }
 
-  if (btnChat) {
-    btnChat.onclick = () => {
-      if (!choferTelefono) {
-        notif.show('Chofer', 'Todavía no hay teléfono disponible', 'warning');
+if (btnChat) {
+  btnChat.onclick = async () => {
+    try {
+      const viajeChat = {
+        ...viaje,
+        id: viaje?.id || state?.viajeId || null,
+        assigned_driver_id:
+          viaje?.assigned_driver_id ||
+          viaje?.chofer_id_uuid ||
+          state?.choferId ||
+          null,
+        chofer_id_uuid:
+          viaje?.chofer_id_uuid ||
+          viaje?.assigned_driver_id ||
+          state?.choferId ||
+          null,
+        chofer_nombre:
+          viaje?.chofer_nombre ||
+          viaje?.choferNombre ||
+          state?.choferNombre ||
+          '',
+        cliente_nombre:
+          state?.sessionUser?.nombre ||
+          state?.profile?.nombre ||
+          'Cliente'
+      };
+
+      if (!window.tripChat?.openTripChatForClientTrip) {
+        notif.show('Chat', 'El módulo de chat todavía no está disponible', 'warning');
         return;
       }
 
-      const telefonoLimpio = choferTelefono.replace(/\D/g, '');
-      const mensaje = encodeURIComponent('Hola, te escribo por el viaje de MIMICAR.');
-      window.open(`https://wa.me/${telefonoLimpio}?text=${mensaje}`, '_blank');
-    };
-  }
-} 
-  
+      await window.tripChat.openTripChatForClientTrip(viajeChat);
+    } catch (err) {
+      console.error('[cliente.chatChofer]', err);
+      notif.show('Chat', err?.message || 'No se pudo abrir el chat con el chofer', 'error');
+    }
+  };
+}  
 async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
     if (!viajeLocal) return;
