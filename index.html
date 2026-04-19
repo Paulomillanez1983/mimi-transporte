@@ -6050,11 +6050,32 @@ function ajustarVistaRuta(coords, duration = 800) {
     );
 
     const isMobile = window.innerWidth <= 768;
+    const quoteCard = document.getElementById('quoteCard');
+    const quoteVisible =
+      !!quoteCard &&
+      quoteCard.classList.contains('visible') &&
+      quoteCard.getAttribute('aria-hidden') !== 'true';
+
+    const quoteHeight = quoteVisible
+      ? Math.min(quoteCard.offsetHeight || 0, isMobile ? 220 : 260)
+      : 0;
+
+    const padding = isMobile
+      ? {
+          top: 64,
+          right: 42,
+          left: 42,
+          bottom: Math.max(130, quoteHeight + 28)
+        }
+      : {
+          top: 52,
+          right: 52,
+          left: 52,
+          bottom: Math.max(52, quoteHeight + 24)
+        };
 
     mapaCliente.fitBounds(bounds, {
-      padding: isMobile
-        ? { top: 64, bottom: 150, left: 42, right: 42 }
-        : { top: 52, bottom: 52, left: 52, right: 52 },
+      padding,
       duration,
       maxZoom: isMobile ? 15.2 : 16.2,
       linear: false
@@ -6069,7 +6090,7 @@ function ajustarVistaRuta(coords, duration = 800) {
     console.warn('[MAP] error ajustando vista de ruta:', err);
   }
 }
-function iniciarAnimacionRuta() {
+  function iniciarAnimacionRuta() {
   if (!mapaCliente || !mapReady || !mapaCliente.getLayer('route-anim')) return;
 
   detenerAnimacionRuta();
@@ -6343,20 +6364,21 @@ async function dibujarRutaReal(coords) {
       'line-join': 'round',
       'line-cap': 'round'
     },
-    paint: {
-  'line-color': '#111111',
+paint: {
+  'line-color': 'rgba(17,17,17,0.16)',
   'line-width': [
     'interpolate',
     ['linear'],
     ['zoom'],
-    5, 2.4,
-    8, 3.2,
-    10, 4.2,
-    12, 5.2,
-    14, 6.2,
-    16, 7.2
+    5, 5,
+    8, 7,
+    10, 9,
+    12, 11,
+    14, 13,
+    16, 15
   ],
-  'line-opacity': 0.97
+  'line-opacity': 0.9,
+  'line-blur': 0.9
 }
   });
 
@@ -7341,30 +7363,31 @@ state.routeData = {
     : null,
   visualConnectors: construirConectoresVisuales(data)
 };
-  if (coordsFinales) {
-    setSectionVisible('mapSection', true);
+if (coordsFinales) {
+  setSectionVisible('mapSection', true);
 
-    setTimeout(() => {
-      try {
-        mapaCliente?.resize?.();
-      } catch (_) {}
-    }, 80);
+  setTimeout(() => {
+    try {
+      mapaCliente?.resize?.();
+    } catch (_) {}
+  }, 80);
 
-    initMapa().then(async () => {
-      try {
-        await dibujarRutaReal(coordsFinales);
-      } catch (e) {
-        console.warn('[mapa] fallo dibujarRutaReal:', e);
+  initMapa().then(async () => {
+    try {
+      await dibujarRutaReal(coordsFinales);
+      ajustarVistaRuta(coordsFinales, 900);
+    } catch (e) {
+      console.warn('[mapa] fallo dibujarRutaReal:', e);
 
-        if (!esRutaReal && coordsPuntos) {
-          try {
-            dibujarRutaLineal(coordsPuntos);
-          } catch (_) {}
-        }
+      if (!esRutaReal && coordsPuntos) {
+        try {
+          dibujarRutaLineal(coordsPuntos);
+          ajustarVistaRuta(coordsPuntos, 900);
+        } catch (_) {}
       }
-    });
-  }
-
+    }
+  });
+}
   if ((data?.source === 'fallback' || data?.source === 'mixed' || fallbackUsado) && !esRutaReal) {
     notif.show(
       'Ruta estimada',
@@ -7377,8 +7400,17 @@ state.routeData = {
     console.warn('[cotizacion] ruta mixta: algunos tramos vinieron por OSRM y otros por fallback');
   }
 
-  mostrarCotizacion(precio, distancia, duracion);
-  guardarViajeActivoEnStorage();
+mostrarCotizacion(precio, distancia, duracion);
+
+if (coordsFinales) {
+  setTimeout(() => {
+    try {
+      centrarEnRuta();
+    } catch (_) {}
+  }, 140);
+}
+
+guardarViajeActivoEnStorage();
 }
 
   
