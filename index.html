@@ -3579,6 +3579,15 @@ function actualizarMetaTrackingChoferUI({ estado, etaMin = null, lastTrackingUpd
 
   metaEl.textContent = texto;
 }
+
+// 🔥 EXPONER HELPERS PARA cliente-chofer-tracking.js
+window.calcularEtaMinutosSimple = calcularEtaMinutosSimple;
+window.obtenerObjetivoSeguimientoSegunEstado = obtenerObjetivoSeguimientoSegunEstado;
+window.hidratarTrackingDesdeStorage = hidratarTrackingDesdeStorage;
+window.reconectarRealtimeViajeTrasRefresh = reconectarRealtimeViajeTrasRefresh;
+window.actualizarMetaTrackingChoferUI = actualizarMetaTrackingChoferUI;
+window.guardarViajeActivoEnStorage = guardarViajeActivoEnStorage;
+
 async function restaurarViajeActivoCliente() {
   try {
     const viajeLocal = leerViajeActivoEnStorage();
