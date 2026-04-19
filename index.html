@@ -7307,13 +7307,6 @@ function procesarRespuestaCotizacion(data, payload) {
   const esRutaReal = !!(coordsLegsVisuales || coordsRouteGeometry || coordsGeometry || coordsLegsCrudas);
   const esProvisoria = !esRutaReal && !!coordsPuntos;
   
-  const puntosLogicosVisuales = Array.isArray(data?.puntos_ruta) && data.puntos_ruta.length >= 2
-    ? data.puntos_ruta
-    : obtenerPuntosOrdenados();
-
-  const coordsFinales = esRutaReal
-    ? insertarConectoresVisualesEnRuta(coordsFinalesBase, puntosLogicosVisuales)
-    : coordsFinalesBase;
   
   state.cotizacion = {
     ...data,
