@@ -5555,6 +5555,7 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       !almostEqual(last[0], exactEnd[0]) ||
       !almostEqual(last[1], exactEnd[1])
     ) {
+      coords.push(exactEnd);
     }
 
     const sourceId = 'driver-to-client-route';
@@ -6248,7 +6249,11 @@ function dibujarRutaLineal(coords, { autoFit = true } = {}) {
       }
     });
 
-agregarMarkersRutaDesdeCoords();
+const puntosBackendMarkers = Array.isArray(state?.cotizacion?.puntos_ruta)
+  ? state.cotizacion.puntos_ruta
+  : null;
+
+agregarMarkersRutaDesdeCoords(puntosBackendMarkers);
 
 if (autoFit) {
   ajustarVistaRuta(coordsFinales, 500);
@@ -6469,9 +6474,14 @@ mapaCliente.addLayer({
   }, 'route-line');
 }
 
-const connectorFeatures = Array.isArray(state.routeData?.visualConnectors)
-  ? state.routeData.visualConnectors
-  : [];
+const connectorFeatures =
+  Array.isArray(state.routeData?.visualConnectors) && state.routeData.visualConnectors.length
+    ? state.routeData.visualConnectors
+    : construirConectoresVisuales(state.cotizacion || {});
+
+if (!state.routeData) state.routeData = {};
+state.routeData.visualConnectors = connectorFeatures;
+
 
 if (connectorFeatures.length) {
   try {
@@ -7111,9 +7121,6 @@ if (!destinoCoincideAproximado) {
       throw new Error(resultado?.error || 'Error en la cotización');
     }
 
-    state.routeData = resultado;
-    state.cotizacion = resultado;
-
     if (Array.isArray(resultado.puntos_ruta) && resultado.puntos_ruta.length >= 2) {
       const puntosBackend = resultado.puntos_ruta;
 
@@ -7478,7 +7485,41 @@ const mergearGeometriasLegs = (legs) => {
   const esRutaReal = !!(coordsRouteGeometry || coordsGeometry || coordsLegsCrudas);
   const esProvisoria = !esRutaReal && !!coordsPuntos;  
   
-  state.cotizacion = {
+  const puntosRutaNormalizados = Array.isArray(data?.puntos_ruta)
+    ? data.puntos_ruta
+        .map((p, idx) => {
+          const rol = String(p?.rol || '').toLowerCase();
+
+          return {
+            ...p,
+            lat:
+              rol === 'pickup'
+                ? Number(data?.origen_lat ?? p?.lat)
+                : rol === 'dropoff'
+                  ? Number(data?.destino_lat ?? p?.lat)
+                  : Number(p?.lat),
+            lng:
+              rol === 'pickup'
+                ? Number(data?.origen_lng ?? p?.lng)
+                : rol === 'dropoff'
+                  ? Number(data?.destino_lng ?? p?.lng)
+                  : Number(p?.lng),
+            direccion:
+              p?.direccion ||
+              p?.direccion_completa ||
+              p?.direccionCorta ||
+              `Punto ${idx + 1}`,
+            direccionCorta:
+              p?.direccion_corta ||
+              p?.direccionCorta ||
+              p?.direccion ||
+              `Punto ${idx + 1}`
+          };
+        })
+        .filter((p) => coordenadasValidas(p?.lat, p?.lng))
+    : [];
+
+  const cotizacionNormalizada = {
     ...data,
     precio,
     distancia_km: distancia,
@@ -7486,67 +7527,60 @@ const mergearGeometriasLegs = (legs) => {
     resumen_ruta: resumenRuta,
     fallback_usado: fallbackUsado,
     metodo_calculo: metodoCalculo,
-    source: data?.source || null
+    source: data?.source || null,
+    puntos_ruta: puntosRutaNormalizados
   };
-if (!debeMostrarSimuladoresChoferes() && window.DriverSim?.stop) {
-  window.DriverSim.stop();
-}
-const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
-if (Array.isArray(data?.puntos_ruta) && data.puntos_ruta.length >= 2) {
-  const puntosBackend = data.puntos_ruta.map((p, idx) => ({
-    ...p,
-    lat: Number(p?.lat),
-    lng: Number(p?.lng),
-    direccion:
-      p?.direccion ||
-      p?.direccion_completa ||
-      p?.direccionCorta ||
-      `Punto ${idx + 1}`,
-    direccionCorta:
-      p?.direccion_corta ||
-      p?.direccionCorta ||
-      p?.direccion ||
-      `Punto ${idx + 1}`
-  }));
 
-  state.origen =
-    puntosBackend.find((p) => String(p?.rol || '').toLowerCase() === 'pickup') ||
-    puntosBackend[0];
+  state.cotizacion = cotizacionNormalizada;
 
-  state.destino =
-    puntosBackend.find((p) => String(p?.rol || '').toLowerCase() === 'dropoff') ||
-    puntosBackend[puntosBackend.length - 1];
+  if (!debeMostrarSimuladoresChoferes() && window.DriverSim?.stop) {
+    window.DriverSim.stop();
+  }
 
-  state.waypoints = puntosBackend
-    .filter((p) => String(p?.rol || '').toLowerCase() === 'stop')
-    .map((p, idx) => ({
-      id: p?.id || `waypoint-${idx + 1}`,
-      data: p
-    }));
-}
+  if (puntosRutaNormalizados.length >= 2) {
+    state.origen =
+      puntosRutaNormalizados.find((p) => String(p?.rol || '').toLowerCase() === 'pickup') ||
+      puntosRutaNormalizados[0];
 
-state.routeData = {
-  distance: distancia,
-  duration: duracion,
-  resumenRuta,
-  fallback: fallbackUsado,
-  source: data?.source || null,
-  esRutaReal,
-  provisional: esProvisoria,
-  geometry: coordsFinales
-    ? {
-        type: 'LineString',
-        coordinates: coordsFinales
-      }
-    : null,
-visualConnectors: construirConectoresVisuales(data)
-};
+    state.destino =
+      puntosRutaNormalizados.find((p) => String(p?.rol || '').toLowerCase() === 'dropoff') ||
+      puntosRutaNormalizados[puntosRutaNormalizados.length - 1];
+
+    state.waypoints = puntosRutaNormalizados
+      .filter((p) => String(p?.rol || '').toLowerCase() === 'stop')
+      .map((p, idx) => ({
+        id: p?.id || `waypoint-${idx + 1}`,
+        data: p
+      }));
+  }
+
+  const visualConnectors = construirConectoresVisuales(cotizacionNormalizada);
+  console.log('[visual-connectors] generados:', visualConnectors.length);
+
+  state.routeData = {
+    distance: distancia,
+    duration: duracion,
+    resumenRuta,
+    fallback: fallbackUsado,
+    source: data?.source || null,
+    esRutaReal,
+    provisional: esProvisoria,
+    geometry: coordsFinales
+      ? {
+          type: 'LineString',
+          coordinates: coordsFinales
+        }
+      : null,
+    visualConnectors
+  };
+
   if (coordsFinales) {
   setSectionVisible('mapSection', true);
 
-  const puntosRutaForFit = Array.isArray(data?.puntos_ruta)
-    ? data.puntos_ruta
-    : (Array.isArray(data?.stops) ? data.stops : []);
+  const puntosRutaForFit =
+    Array.isArray(state?.cotizacion?.puntos_ruta) && state.cotizacion.puntos_ruta.length
+      ? state.cotizacion.puntos_ruta
+      : (Array.isArray(data?.stops) ? data.stops : []);
 
   setTimeout(() => {
     try {
