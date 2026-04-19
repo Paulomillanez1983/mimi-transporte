@@ -821,21 +821,22 @@ select:focus-visible {
 }
 
 /* ==========================================
-   MARKERS
+   MARKERS - STYLE UBER CLEAN
 ========================================== */
 .route-marker {
   position: relative;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   pointer-events: none;
 }
 
+/* PIN BASE */
 .route-marker-pin {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  border: 2px solid #fff;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -843,72 +844,62 @@ select:focus-visible {
   z-index: 2;
 }
 
+/* COLORES */
 .route-marker.origin .route-marker-pin {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: #22c55e; /* verde */
 }
 
 .route-marker.dest .route-marker-pin {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: #ef4444; /* rojo */
 }
 
 .route-marker.waypoint .route-marker-pin {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
+  background: #f59e0b; /* naranja */
 }
 
-.route-marker-pin-stop {
-  width: 28px;
-  height: 28px;
-}
-
+/* HALO SUAVE (SIN ANIMACIÓN) */
 .route-marker-halo {
   position: absolute;
-  inset: -4px;
+  inset: -3px;
   border-radius: 50%;
   z-index: 1;
   pointer-events: none;
   opacity: 1;
 }
 
-.route-marker-halo.small {
-  inset: -3px;
-}
-
 .route-marker.origin .route-marker-halo {
-  background: rgba(34, 197, 94, 0.14);
+  background: rgba(34, 197, 94, 0.15);
 }
 
 .route-marker.dest .route-marker-halo {
-  background: rgba(239, 68, 68, 0.14);
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .route-marker.waypoint .route-marker-halo {
-  background: rgba(245, 158, 11, 0.14);
+  background: rgba(245, 158, 11, 0.15);
 }
 
+/* DOT INTERNO */
 .route-marker-dot {
-  display: block;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #fff;
+  background: #ffffff;
 }
 
-.route-marker-dot-origin {
-  width: 10px;
-  height: 10px;
-}
-
+/* DESTINO (círculo con borde tipo Uber) */
 .route-marker-dot-dest {
-  width: 9px;
-  height: 9px;
-  background: #fff;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+  width: 8px;
+  height: 8px;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px #ef4444 inset;
 }
 
+/* LABEL PARADAS */
 .route-marker-stop-label {
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
 }
 /* ==========================================
