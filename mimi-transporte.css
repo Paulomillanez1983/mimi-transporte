@@ -832,29 +832,30 @@ select:focus-visible {
 
 /* PIN BASE */
 .route-marker-pin {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   border: 2px solid #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
   z-index: 2;
 }
 
 /* COLORES */
 .route-marker.origin .route-marker-pin {
-  background: #22c55e; /* verde */
+  background: #22c55e;
 }
 
 .route-marker.dest .route-marker-pin {
-  background: #ef4444; /* rojo */
+  background: #ef4444;
 }
 
 .route-marker.waypoint .route-marker-pin {
-  background: #f59e0b; /* naranja */
+  background: #f59e0b;
 }
 
 /* HALO SUAVE (SIN ANIMACIÓN) */
@@ -881,9 +882,14 @@ select:focus-visible {
 
 /* DOT INTERNO */
 .route-marker-dot {
+  display: block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  background: #ffffff;
+}
+
+.route-marker-dot-origin {
   background: #ffffff;
 }
 
