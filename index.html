@@ -3577,17 +3577,29 @@ const nombre =
     avatarEl.textContent = nombre.charAt(0).toUpperCase();
   }
 }
-  function construirTextoEstadoChofer(estado) {
-  switch (estado) {
-    case 'ASIGNADO': return 'Chofer asignado';
-    case 'ACEPTADO': return 'En camino a buscarte';
-    case 'EN_CAMINO': return 'Llegando al punto de recogida';
+function construirTextoEstadoChofer(estado) {
+  switch (String(estado || '').toUpperCase()) {
+    case 'BUSCANDO_CHOFER':
+      return 'Buscando chofer disponible';
+    case 'OFERTANDO':
+    case 'OFERTADO':
+      return 'Estamos notificando choferes cercanos';
+    case 'SIN_CHOFER':
+      return 'Todavía no encontramos un chofer';
+    case 'ASIGNADO':
+      return 'Chofer asignado';
+    case 'ACEPTADO':
+      return 'En camino a buscarte';
+    case 'EN_CAMINO':
+      return 'Llegando al punto de recogida';
     case 'INICIADO':
-    case 'EN_CURSO': return 'Viaje en curso';
-    default: return 'Estado del viaje';
+    case 'EN_CURSO':
+      return 'Viaje en curso';
+    default:
+      return 'Estado del viaje';
   }
 }
-function actualizarMetaTrackingChoferUI({ estado, etaMin = null, lastTrackingUpdate = null } = {}) {
+  function actualizarMetaTrackingChoferUI({ estado, etaMin = null, lastTrackingUpdate = null } = {}) {
   const metaEl = document.getElementById('tripDriverMeta');
   if (!metaEl) return;
 
@@ -8123,15 +8135,16 @@ const choferDetectado =
   null;
     
 if (dispatchOk) {
+  // ✅ NO forzar "ASIGNADO" solo porque el dispatch vinculó un chofer.
+  // La asignación real debe venir por estado confirmado del backend/realtime.
   if (choferDetectado) {
-    state.viajeEstado = 'asignado';
-    state.estadoViaje = 'ASIGNADO';
-  } else {
     state.viajeEstado = 'ofertando';
     state.estadoViaje = 'OFERTANDO';
+  } else {
+    state.viajeEstado = 'buscando_chofer';
+    state.estadoViaje = 'BUSCANDO_CHOFER';
   }
 
-  // 🔥 no seguir manteniendo la ruta/cotización vieja
   state.routeData = null;
   state.cotizacion = null;
 
@@ -8142,40 +8155,54 @@ if (dispatchOk) {
   actualizarResumenCotizacionCompacto();
   actualizarBotonConfirmarViaje();
   actualizarBotonReiniciarRuta?.();
-  
-     actualizarEstadoSolicitudUI({
-     estado: state.viajeEstado,
-     texto: 'Estamos notificando choferes cercanos...'
-   });
+
+  actualizarEstadoSolicitudUI({
+    estado: state.viajeEstado,
+    texto: choferDetectado
+      ? 'Estamos notificando choferes cercanos...'
+      : 'Viaje creado. Buscando chofer disponible...'
+  });
 
   if (typeof actualizarCentroNotificacionesViaje === 'function') {
     actualizarCentroNotificacionesViaje({
-      estado: 'OFERTANDO',
-      texto: 'Estamos notificando choferes cercanos...'
+      estado: state.estadoViaje,
+      texto: choferDetectado
+        ? 'Estamos notificando choferes cercanos...'
+        : 'Viaje creado. Buscando chofer disponible...'
     });
   }
-  
-  } else {
-actualizarEstadoSolicitudUI({
-  estado: state.viajeEstado,
-  texto: 'Viaje creado. Buscando chofer...'
-});
+} else {
+  state.viajeEstado = 'buscando_chofer';
+  state.estadoViaje = 'BUSCANDO_CHOFER';
 
-if (typeof actualizarCentroNotificacionesViaje === 'function') {
-  actualizarCentroNotificacionesViaje({
-    estado: 'BUSCANDO_CHOFER',
-    texto: 'Viaje creado. Buscando chofer...'
+  actualizarBotonCancelarViaje();
+  actualizarBotonCotizar();
+  guardarViajeActivoEnStorage();
+  actualizarPanelPlanificacionViaje();
+  actualizarResumenCotizacionCompacto();
+  actualizarBotonConfirmarViaje();
+  actualizarBotonReiniciarRuta?.();
+
+  actualizarEstadoSolicitudUI({
+    estado: state.viajeEstado,
+    texto: 'Viaje creado. Buscando chofer disponible...'
   });
+
+  if (typeof actualizarCentroNotificacionesViaje === 'function') {
+    actualizarCentroNotificacionesViaje({
+      estado: 'BUSCANDO_CHOFER',
+      texto: 'Viaje creado. Buscando chofer disponible...'
+    });
+  }
+
+  console.warn('[confirmarViaje] dispatch interno no exitoso o pendiente:', dispatchInfo);
+
+  notif.show(
+    'Viaje creado',
+    'La solicitud se guardó correctamente. Estamos iniciando la búsqueda de chofer.',
+    'info'
+  );
 }
-      console.warn('[confirmarViaje] dispatch interno no exitoso o pendiente:', dispatchInfo);
-
-      notif.show(
-        'Viaje creado',
-        'La solicitud se guardó correctamente. Estamos iniciando la búsqueda de chofer.',
-        'info'
-      );
-    }
-
 if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
   suscribirseEstadoViajeRealtime(state.viajeId);
 }
