@@ -6103,20 +6103,23 @@ function ajustarVistaRuta(coords, duration = 800, puntosExtras = []) {
 
     const baseBottom = isMobile ? Math.max(130, quoteHeight + 28) : Math.max(52, quoteHeight + 24);
 
-    const padding = isMobile
-      ? {
-          top: span < 0.03 ? 78 : 64,
-          right: span < 0.03 ? 52 : 42,
-          left: span < 0.03 ? 52 : 42,
-          bottom: baseBottom + (cantidadParadas >= 1 ? 10 : 0)
-        }
-      : {
-          top: span < 0.03 ? 64 : 52,
-          right: span < 0.03 ? 64 : 52,
-          left: span < 0.03 ? 64 : 52,
-          bottom: baseBottom + (cantidadParadas >= 1 ? 8 : 0)
-        };
-
+const padding = isMobile
+  ? {
+      top: 100,
+      right: 60,
+      left: 60,
+      bottom: Math.max(
+        Math.round(window.innerHeight * 0.35),
+        baseBottom + (cantidadParadas >= 1 ? 14 : 0)
+      )
+    }
+  : {
+      top: span < 0.03 ? 64 : 52,
+      right: span < 0.03 ? 64 : 52,
+      left: span < 0.03 ? 64 : 52,
+      bottom: baseBottom + (cantidadParadas >= 1 ? 8 : 0)
+    };
+    
     let maxZoom;
     if (span < 0.008) {
       maxZoom = isMobile ? 16.4 : 17.2;   // viaje corto
@@ -6535,7 +6538,7 @@ if (connectorFeatures.length) {
   };
 
   agregarMarkersRutaDesdeCoords();
-  ajustarVistaRuta(coordsFinales, 900);
+  ajustarVistaRuta(coordsFinales, window.innerWidth <= 768 ? 120 : 220);
 
 if (window.DriverSim?.stop) {
   window.DriverSim.stop();
