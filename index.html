@@ -6016,7 +6016,7 @@ function agregarMarkersRutaDesdeCoords(puntosOverride = null) {
       ? puntosOverride
       : obtenerPuntosOrdenados();
 
-  console.log('[MARKERS] puntos lógicos:', puntos);
+  console.log('[MARKERS] puntos usados:', puntos);
 
   if (!Array.isArray(puntos) || puntos.length < 2 || !mapaCliente) return;
 
@@ -6026,8 +6026,9 @@ function agregarMarkersRutaDesdeCoords(puntosOverride = null) {
 
     if (!coordenadasValidas(lat, lng)) return;
 
-    const isOrigin = index === 0;
-    const isDest = index === puntos.length - 1;
+    const rol = String(punto?.rol || '').toLowerCase();
+    const isOrigin = rol ? rol === 'pickup' : index === 0;
+    const isDest = rol ? rol === 'dropoff' : index === puntos.length - 1;
 
     const label = isOrigin ? 'A' : isDest ? 'B' : String(index);
     const type = isOrigin ? 'origin' : isDest ? 'dest' : 'waypoint';
@@ -6047,8 +6048,9 @@ function agregarMarkersRutaDesdeCoords(puntosOverride = null) {
   });
 
   console.log('[MARKERS] total renderizados:', state.markers.length);
-}  
-function ajustarVistaRuta(coords, duration = 800, puntosExtras = []) {
+}
+
+  function ajustarVistaRuta(coords, duration = 800, puntosExtras = []) {
   if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
 
   try {
