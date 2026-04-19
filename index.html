@@ -6268,37 +6268,49 @@ function limpiarCoordsMapa(arr) {
   return resultado.length >= 2 ? resultado : null;
 }
 
-function construirConectoresVisuales(data) {
-  const features = [];
+const agregarConector = (a, b) => {
+  const ax = Number(a?.[0]);
+  const ay = Number(a?.[1]);
+  const bx = Number(b?.[0]);
+  const by = Number(b?.[1]);
 
-  const agregarConector = (a, b) => {
-    const ax = Number(a?.[0]);
-    const ay = Number(a?.[1]);
-    const bx = Number(b?.[0]);
-    const by = Number(b?.[1]);
+  if (
+    !Number.isFinite(ax) || !Number.isFinite(ay) ||
+    !Number.isFinite(bx) || !Number.isFinite(by)
+  ) {
+    return;
+  }
 
-    if (
-      !Number.isFinite(ax) || !Number.isFinite(ay) ||
-      !Number.isFinite(bx) || !Number.isFinite(by)
-    ) {
-      return;
+  if (ax === bx && ay === by) return;
+
+  // 🧠 distancia real en metros
+  const toRad = d => d * Math.PI / 180;
+  const R = 6371000;
+
+  const dLat = toRad(by - ay);
+  const dLng = toRad(bx - ax);
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(ay)) * Math.cos(toRad(by)) *
+    Math.sin(dLng / 2) ** 2;
+
+  const distanciaMetros = 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+
+  features.push({
+    type: 'Feature',
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [ax, ay],
+        [bx, by]
+      ]
+    },
+    properties: {
+      distancia: distanciaMetros
     }
-
-    if (ax === bx && ay === by) return;
-
-    features.push({
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [ax, ay],
-          [bx, by]
-        ]
-      },
-      properties: {}
-    });
-  };
-
+  });
+};
   if (Array.isArray(data?.legs) && data.legs.length) {
     data.legs.forEach((leg) => {
       const geom = limpiarCoordsMapa(leg?.geometry);
@@ -6399,20 +6411,20 @@ async function dibujarRutaReal(coords) {
     }
   });
 
-  mapaCliente.addLayer({
-    id: 'route-line',
-    type: 'line',
-    source: 'route',
-    layout: {
-      'line-join': 'round',
-      'line-cap': 'round'
-    },
-    paint: {
-      'line-color': '#111111',
-      'line-width': 2.6,
-      'line-opacity': 0.97
-    }
-  });
+mapaCliente.addLayer({
+  id: 'route-connectors-line',
+  type: 'line',
+  source: 'route-connectors',
+  layout: {
+    'line-join': 'round',
+    'line-cap': 'round'
+  },
+  paint: {
+    'line-color': '#FF6B00', // 🔥 naranja tipo Uber
+    'line-width': 4,
+    'line-opacity': 0.85
+  }
+});
   const connectorFeatures = Array.isArray(state.routeData?.visualConnectors)
     ? state.routeData.visualConnectors
     : [];
@@ -6434,14 +6446,31 @@ async function dibujarRutaReal(coords) {
         'line-join': 'round',
         'line-cap': 'round'
       },
-      paint: {
-        'line-color': '#111111',
-        'line-width': 2.2,
-        'line-opacity': 0.72,
-        'line-dasharray': [1.1, 1.1]
-      }
-    });
-  }
+paint: {
+  // 🔥 color dinámico según distancia
+  'line-color': [
+    'case',
+    ['>', ['get', 'distancia'], 200],
+    '#FF6B00', // largo → naranja
+    '#111111'  // corto → negro
+  ],
+
+  'line-width': [
+    'case',
+    ['>', ['get', 'distancia'], 200],
+    4,
+    2
+  ],
+
+  'line-opacity': 0.85,
+
+  'line-dasharray': [
+    'case',
+    ['>', ['get', 'distancia'], 200],
+    ['literal', [1.2, 1.2]], // largo → punteado
+    ['literal', [0]]         // corto → sólido
+  ]
+}
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
