@@ -6589,6 +6589,7 @@ function actualizarCamaraSeguimientoChofer() {
 window.actualizarCamaraSeguimientoChofer = actualizarCamaraSeguimientoChofer;  
 
 let lastRouteRefreshAt = 0;
+let lastRouteSignature = '';
 
 async function actualizarRutaChoferDinamica() {
   try {
@@ -6609,29 +6610,50 @@ async function actualizarRutaChoferDinamica() {
     const puntoObjetivo = usarDestinoFinal ? state?.destino : state?.origen;
 
     if (!puntoObjetivo) return;
-    if (!coordenadasValidas(state.choferLocation.lat, state.choferLocation.lng)) return;
-    if (!coordenadasValidas(puntoObjetivo.lat, puntoObjetivo.lng)) return;
+
+    const choferLat = Number(state.choferLocation.lat);
+    const choferLng = Number(state.choferLocation.lng);
+    const objetivoLat = Number(puntoObjetivo.lat);
+    const objetivoLng = Number(puntoObjetivo.lng);
+
+    if (!coordenadasValidas(choferLat, choferLng)) return;
+    if (!coordenadasValidas(objetivoLat, objetivoLng)) return;
 
     const now = Date.now();
-    if (now - lastRouteRefreshAt < 4000) return; // throttle 4s
+
+    // Firma reducida para detectar cambio real de posición/ruta
+    const routeSignature = [
+      choferLat.toFixed(5),
+      choferLng.toFixed(5),
+      objetivoLat.toFixed(5),
+      objetivoLng.toFixed(5),
+      estadoActual
+    ].join('|');
+
+    const cambioRuta = routeSignature !== lastRouteSignature;
+
+    // Si cambió realmente la posición o el objetivo, refrescar más rápido
+    if (!cambioRuta && (now - lastRouteRefreshAt < 2500)) {
+      return;
+    }
 
     lastRouteRefreshAt = now;
+    lastRouteSignature = routeSignature;
 
     await window.dibujarRutaChoferHastaCliente(
       {
-        lat: Number(state.choferLocation.lat),
-        lng: Number(state.choferLocation.lng)
+        lat: choferLat,
+        lng: choferLng
       },
       {
-        lat: Number(puntoObjetivo.lat),
-        lng: Number(puntoObjetivo.lng)
+        lat: objetivoLat,
+        lng: objetivoLng
       }
     );
   } catch (err) {
     console.warn('[tracking] no se pudo refrescar ruta dinámica del chofer:', err);
   }
-}
-  
+}  
 async function esperarMapaClienteListo(timeoutMs = 2500) {
   const start = Date.now();
 
