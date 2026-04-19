@@ -6214,8 +6214,8 @@ function dibujarRutaLineal(coords) {
     }
   });
 }
-  function limpiarCoordsMapa(arr) {
-  if (!Array.isArray(arr)) return [];
+function limpiarCoordsMapa(arr) {
+  if (!Array.isArray(arr)) return null;
 
   const limpias = arr
     .map((c) => [Number(c?.[0]), Number(c?.[1])])
@@ -6226,6 +6226,8 @@ function dibujarRutaLineal(coords) {
       Math.abs(c[1]) <= 90
     );
 
+  if (limpias.length < 2) return null;
+
   const resultado = [];
   for (const c of limpias) {
     const last = resultado[resultado.length - 1];
@@ -6234,87 +6236,80 @@ function dibujarRutaLineal(coords) {
     }
   }
 
-  return resultado;
+  return resultado.length >= 2 ? resultado : null;
 }
 
-function distanciaCuadradaLngLat(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b)) return Number.POSITIVE_INFINITY;
-  const dx = Number(a[0]) - Number(b[0]);
-  const dy = Number(a[1]) - Number(b[1]);
-  return (dx * dx) + (dy * dy);
-}
+  function construirRutaVisualDesdeLegs(legs) {
+  if (!Array.isArray(legs) || !legs.length) return null;
 
-function buscarIndiceMasCercanoEnRuta(rutaCoords, punto) {
-  if (!Array.isArray(rutaCoords) || rutaCoords.length < 2 || !Array.isArray(punto)) {
-    return -1;
-  }
+  const rutaFinal = [];
 
-  let bestIdx = -1;
-  let bestDist = Number.POSITIVE_INFINITY;
+  legs.forEach((leg, index) => {
+    let tramo = limpiarCoordsMapa(leg?.geometry);
 
-  for (let i = 0; i < rutaCoords.length; i++) {
-    const dist = distanciaCuadradaLngLat(rutaCoords[i], punto);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestIdx = i;
+    const fromLng = Number(leg?.from?.lng);
+    const fromLat = Number(leg?.from?.lat);
+    const toLng = Number(leg?.to?.lng);
+    const toLat = Number(leg?.to?.lat);
+
+    const fromOk =
+      Number.isFinite(fromLng) &&
+      Number.isFinite(fromLat) &&
+      Math.abs(fromLng) <= 180 &&
+      Math.abs(fromLat) <= 90;
+
+    const toOk =
+      Number.isFinite(toLng) &&
+      Number.isFinite(toLat) &&
+      Math.abs(toLng) <= 180 &&
+      Math.abs(toLat) <= 90;
+
+    if (!tramo || tramo.length < 2) {
+      if (!fromOk || !toOk) return;
+      tramo = [
+        [fromLng, fromLat],
+        [toLng, toLat]
+      ];
+    } else {
+      if (fromOk) tramo[0] = [fromLng, fromLat];
+      if (toOk) tramo[tramo.length - 1] = [toLng, toLat];
     }
-  }
 
-  return bestIdx;
+    tramo = limpiarCoordsMapa(tramo);
+    if (!tramo) return;
+
+    if (index === 0 || rutaFinal.length === 0) {
+      rutaFinal.push(...tramo);
+    } else {
+      rutaFinal.push(...tramo.slice(1));
+    }
+  });
+
+  return limpiarCoordsMapa(rutaFinal);
 }
 
-function insertarConectoresVisualesEnRuta(routeCoords, puntosLogicos) {
+function ajustarExtremosRutaConPuntos(routeCoords, puntos) {
   const ruta = limpiarCoordsMapa(routeCoords);
-  if (ruta.length < 2) return ruta;
+  if (!ruta || ruta.length < 2) return null;
 
-  const puntos = Array.isArray(puntosLogicos)
-    ? puntosLogicos
-        .map((p) => [Number(p?.lng), Number(p?.lat)])
-        .filter((c) =>
-          Number.isFinite(c[0]) &&
-          Number.isFinite(c[1]) &&
-          Math.abs(c[0]) <= 180 &&
-          Math.abs(c[1]) <= 90
-        )
-    : [];
+  const listaPuntos = Array.isArray(puntos) ? puntos : [];
+  const origen = listaPuntos[0];
+  const destino = listaPuntos[listaPuntos.length - 1];
 
-  if (puntos.length < 2) return ruta;
+  const salida = [...ruta];
 
-  const inserciones = puntos
-    .map((p) => ({
-      punto: p,
-      idx: buscarIndiceMasCercanoEnRuta(ruta, p)
-    }))
-    .filter((x) => x.idx >= 0)
-    .sort((a, b) => a.idx - b.idx);
+  if (origen && coordenadasValidas(origen.lat, origen.lng)) {
+    salida[0] = [Number(origen.lng), Number(origen.lat)];
+  }
 
-  if (!inserciones.length) return ruta;
-
-  const salida = [];
-  let cursorInsercion = 0;
-
-  for (let i = 0; i < ruta.length; i++) {
-    salida.push(ruta[i]);
-
-    while (
-      cursorInsercion < inserciones.length &&
-      inserciones[cursorInsercion].idx === i
-    ) {
-      const p = inserciones[cursorInsercion].punto;
-      const last = salida[salida.length - 1];
-
-      if (!last || last[0] !== p[0] || last[1] !== p[1]) {
-        salida.push(p);      // va al punto exacto elegido
-        salida.push(ruta[i]); // vuelve a la ruta vial
-      }
-
-      cursorInsercion += 1;
-    }
+  if (destino && coordenadasValidas(destino.lat, destino.lng)) {
+    salida[salida.length - 1] = [Number(destino.lng), Number(destino.lat)];
   }
 
   return limpiarCoordsMapa(salida);
 }
-  async function dibujarRutaReal(coords) {
+  
+async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
   setSectionVisible('mapSection', true);
@@ -7269,12 +7264,14 @@ function procesarRespuestaCotizacion(data, payload) {
 
   const coordsRouteGeometry = limpiarCoordsRuta(data?.route_geometry);
   const coordsGeometry = !coordsRouteGeometry ? limpiarCoordsRuta(data?.geometry) : null;
-  const coordsLegs = !coordsRouteGeometry && !coordsGeometry
-    ? mergearGeometriasLegs(data?.legs)
-    : null;
+
+  const coordsLegsCrudas =
+    Array.isArray(data?.legs) && data.legs.length
+      ? mergearGeometriasLegs(data.legs)
+      : null;
 
   let coordsPuntos = null;
-  if (!coordsRouteGeometry && !coordsGeometry && !coordsLegs && Array.isArray(data?.puntos_ruta)) {
+  if (!coordsRouteGeometry && !coordsGeometry && !coordsLegsCrudas && Array.isArray(data?.puntos_ruta)) {
     const simples = data.puntos_ruta
       .map((p) => [Number(p?.lng), Number(p?.lat)])
       .filter((c) =>
@@ -7287,16 +7284,29 @@ function procesarRespuestaCotizacion(data, payload) {
     coordsPuntos = simples.length >= 2 ? limpiarCoordsRuta(simples) : null;
   }
 
-  const coordsFinalesBase =
+  const puntosLogicos = Array.isArray(data?.puntos_ruta) && data.puntos_ruta.length >= 2
+    ? data.puntos_ruta
+    : obtenerPuntosOrdenados();
+
+  const coordsLegsVisuales = construirRutaVisualDesdeLegs(data?.legs);
+
+  const coordsBase =
+    coordsLegsVisuales ||
     coordsRouteGeometry ||
     coordsGeometry ||
-    coordsLegs ||
+    coordsLegsCrudas ||
     coordsPuntos ||
     null;
 
-  const esRutaReal = !!(coordsRouteGeometry || coordsGeometry || coordsLegs);
-  const esProvisoria = !esRutaReal && !!coordsPuntos;
+  const coordsFinales = coordsLegsVisuales
+    ? coordsLegsVisuales
+    : (coordsRouteGeometry || coordsGeometry)
+      ? ajustarExtremosRutaConPuntos(coordsBase, puntosLogicos)
+      : coordsBase;
 
+  const esRutaReal = !!(coordsLegsVisuales || coordsRouteGeometry || coordsGeometry || coordsLegsCrudas);
+  const esProvisoria = !esRutaReal && !!coordsPuntos;
+  
   const puntosLogicosVisuales = Array.isArray(data?.puntos_ruta) && data.puntos_ruta.length >= 2
     ? data.puntos_ruta
     : obtenerPuntosOrdenados();
