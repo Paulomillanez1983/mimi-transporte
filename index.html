@@ -3779,9 +3779,9 @@ async function restaurarViajeActivoCliente() {
           null,
 
         waypoints: Array.isArray(viajeLocal?.waypoints) ? viajeLocal.waypoints : [],
-        routeData: null,
+        routeData: viajeLocal?.routeData || null,
         cotizacion: null,
-
+        
         inputOrigen:
           viajeLocal?.inputOrigen ||
           viaje?.origen_direccion ||
