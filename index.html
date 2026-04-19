@@ -6029,11 +6029,11 @@ function agregarMarkersRutaDesdeCoords() {
 
   console.log('[MARKERS] total renderizados:', state.markers.length);
 }  
-function ajustarVistaRuta(coords, duration = 800) {
+function ajustarVistaRuta(coords, duration = 800, puntosExtras = []) {
   if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
 
   try {
-    const coordsLimpias = coords
+    const coordsRuta = coords
       .map((c) => [Number(c?.[0]), Number(c?.[1])])
       .filter((c) =>
         Number.isFinite(c[0]) &&
@@ -6042,12 +6042,32 @@ function ajustarVistaRuta(coords, duration = 800) {
         Math.abs(c[1]) <= 90
       );
 
+    const coordsPuntos = Array.isArray(puntosExtras)
+      ? puntosExtras
+          .map((p) => [Number(p?.lng), Number(p?.lat)])
+          .filter((c) =>
+            Number.isFinite(c[0]) &&
+            Number.isFinite(c[1]) &&
+            Math.abs(c[0]) <= 180 &&
+            Math.abs(c[1]) <= 90
+          )
+      : [];
+
+    const coordsLimpias = [...coordsRuta, ...coordsPuntos];
+
     if (coordsLimpias.length < 2) return;
 
     const bounds = coordsLimpias.reduce(
       (b, c) => b.extend(c),
       new maplibregl.LngLatBounds(coordsLimpias[0], coordsLimpias[0])
     );
+
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+
+    const deltaLng = Math.abs(ne.lng - sw.lng);
+    const deltaLat = Math.abs(ne.lat - sw.lat);
+    const span = Math.max(deltaLng, deltaLat);
 
     const isMobile = window.innerWidth <= 768;
     const quoteCard = document.getElementById('quoteCard');
@@ -6060,19 +6080,37 @@ function ajustarVistaRuta(coords, duration = 800) {
       ? Math.min(quoteCard.offsetHeight || 0, isMobile ? 220 : 260)
       : 0;
 
+    const cantidadParadas = Math.max(
+      0,
+      (Array.isArray(puntosExtras) ? puntosExtras.length : 0) - 2
+    );
+
+    const baseBottom = isMobile ? Math.max(130, quoteHeight + 28) : Math.max(52, quoteHeight + 24);
+
     const padding = isMobile
       ? {
-          top: 64,
-          right: 42,
-          left: 42,
-          bottom: Math.max(130, quoteHeight + 28)
+          top: span < 0.03 ? 78 : 64,
+          right: span < 0.03 ? 52 : 42,
+          left: span < 0.03 ? 52 : 42,
+          bottom: baseBottom + (cantidadParadas >= 1 ? 10 : 0)
         }
       : {
-          top: 52,
-          right: 52,
-          left: 52,
-          bottom: Math.max(52, quoteHeight + 24)
+          top: span < 0.03 ? 64 : 52,
+          right: span < 0.03 ? 64 : 52,
+          left: span < 0.03 ? 64 : 52,
+          bottom: baseBottom + (cantidadParadas >= 1 ? 8 : 0)
         };
+
+    let maxZoom;
+    if (span < 0.008) {
+      maxZoom = isMobile ? 16.4 : 17.2;   // viaje corto
+    } else if (span < 0.03) {
+      maxZoom = isMobile ? 15.6 : 16.4;   // urbano medio
+    } else if (span < 0.12) {
+      maxZoom = isMobile ? 14.8 : 15.6;   // recorrido amplio
+    } else {
+      maxZoom = isMobile ? 13.8 : 14.8;   // viaje largo
+    }
 
     try {
       mapaCliente.resize();
@@ -6082,7 +6120,7 @@ function ajustarVistaRuta(coords, duration = 800) {
     mapaCliente.fitBounds(bounds, {
       padding,
       duration,
-      maxZoom: isMobile ? 15.2 : 16.2,
+      maxZoom,
       linear: false
     });
 
@@ -6095,7 +6133,6 @@ function ajustarVistaRuta(coords, duration = 800) {
     console.warn('[MAP] error ajustando vista de ruta:', err);
   }
 }
-
   function iniciarAnimacionRuta() {
   if (!mapaCliente || !mapReady || !mapaCliente.getLayer('route-anim')) return;
 
@@ -6495,9 +6532,16 @@ function centrarEnRuta() {
 
   if (!coords || coords.length < 2) return;
 
-  ajustarVistaRuta(coords, 650);
-}
+  const puntosRuta = Array.isArray(state?.cotizacion?.puntos_ruta)
+    ? state.cotizacion.puntos_ruta
+    : (
+        Array.isArray(state?.cotizacion?.stops)
+          ? state.cotizacion.stops
+          : []
+      );
 
+  ajustarVistaRuta(coords, 650, puntosRuta);
+}
   
 window.dibujarRutaChoferHastaCliente = dibujarRutaChoferHastaCliente;
 window.limpiarRutaChoferHastaCliente = limpiarRutaChoferHastaCliente;
@@ -7373,6 +7417,10 @@ state.routeData = {
 if (coordsFinales) {
   setSectionVisible('mapSection', true);
 
+  const puntosRutaForFit = Array.isArray(data?.puntos_ruta)
+    ? data.puntos_ruta
+    : (Array.isArray(data?.stops) ? data.stops : []);
+
   setTimeout(() => {
     try {
       mapaCliente?.resize?.();
@@ -7382,37 +7430,42 @@ if (coordsFinales) {
   initMapa().then(async () => {
     try {
       await dibujarRutaReal(coordsFinales);
-      ajustarVistaRuta(coordsFinales, 900);
+      ajustarVistaRuta(coordsFinales, 900, puntosRutaForFit);
     } catch (e) {
       console.warn('[mapa] fallo dibujarRutaReal:', e);
 
       if (!esRutaReal && coordsPuntos) {
         try {
           dibujarRutaLineal(coordsPuntos);
-          ajustarVistaRuta(coordsPuntos, 900);
+          ajustarVistaRuta(coordsPuntos, 900, puntosRutaForFit);
         } catch (_) {}
       }
     }
   });
 }
-  if ((data?.source === 'fallback' || data?.source === 'mixed' || fallbackUsado) && !esRutaReal) {
-    notif.show(
-      'Ruta estimada',
-      'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
-      'warning'
-    );
-  }
 
-  if (data?.source === 'mixed') {
-    console.warn('[cotizacion] ruta mixta: algunos tramos vinieron por OSRM y otros por fallback');
-  }
+if ((data?.source === 'fallback' || data?.source === 'mixed' || fallbackUsado) && !esRutaReal) {
+  notif.show(
+    'Ruta estimada',
+    'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
+    'warning'
+  );
+}
+
+if (data?.source === 'mixed') {
+  console.warn('[cotizacion] ruta mixta: algunos tramos vinieron por OSRM y otros por fallback');
+}
 
 mostrarCotizacion(precio, distancia, duracion);
 
 if (coordsFinales) {
+  const puntosRutaForFit = Array.isArray(data?.puntos_ruta)
+    ? data.puntos_ruta
+    : (Array.isArray(data?.stops) ? data.stops : []);
+
   setTimeout(() => {
     try {
-      centrarEnRuta();
+      ajustarVistaRuta(coordsFinales, 650, puntosRutaForFit);
     } catch (_) {}
   }, 140);
 }
