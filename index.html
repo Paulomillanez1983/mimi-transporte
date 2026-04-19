@@ -7423,24 +7423,54 @@ function procesarRespuestaCotizacion(data, payload) {
     return resultado.length >= 2 ? resultado : null;
   };
 
-  const mergearGeometriasLegs = (legs) => {
-    if (!Array.isArray(legs) || !legs.length) return null;
+const mergearGeometriasLegs = (legs) => {
+  if (!Array.isArray(legs) || !legs.length) return null;
 
-    const merged = [];
+  const merged = [];
+  const casiIguales = (a, b, epsilon = 0.00001) =>
+    Math.abs(Number(a) - Number(b)) <= epsilon;
 
-    legs.forEach((leg, index) => {
-      const g = limpiarCoordsRuta(leg?.geometry);
-      if (!g) return;
+  legs.forEach((leg, index) => {
+    const g = limpiarCoordsRuta(leg?.geometry);
+    if (!g) return;
 
-      if (index === 0 || merged.length === 0) {
-        merged.push(...g);
-      } else {
-        merged.push(...g.slice(1));
-      }
-    });
+    const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
+    const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
 
-    return merged.length >= 2 ? limpiarCoordsRuta(merged) : null;
-  };
+    const tramo = [...g];
+
+    if (
+      Number.isFinite(fromReal[0]) &&
+      Number.isFinite(fromReal[1]) &&
+      (
+        !casiIguales(tramo[0]?.[0], fromReal[0]) ||
+        !casiIguales(tramo[0]?.[1], fromReal[1])
+      )
+    ) {
+      tramo.unshift(fromReal);
+    }
+
+    const ultimo = tramo[tramo.length - 1];
+    if (
+      Number.isFinite(toReal[0]) &&
+      Number.isFinite(toReal[1]) &&
+      (
+        !casiIguales(ultimo?.[0], toReal[0]) ||
+        !casiIguales(ultimo?.[1], toReal[1])
+      )
+    ) {
+      tramo.push(toReal);
+    }
+
+    if (index === 0 || merged.length === 0) {
+      merged.push(...tramo);
+    } else {
+      merged.push(...tramo.slice(1));
+    }
+  });
+
+  return merged.length >= 2 ? limpiarCoordsRuta(merged) : null;
+};
 
   const coordsRouteGeometry = limpiarCoordsRuta(data?.route_geometry);
   const coordsGeometry = !coordsRouteGeometry ? limpiarCoordsRuta(data?.geometry) : null;
@@ -7503,9 +7533,7 @@ state.routeData = {
         coordinates: coordsFinales
       }
     : null,
-  visualConnectors: tieneLegsReales
-    ? []
-    : construirConectoresVisuales(data)
+visualConnectors: construirConectoresVisuales(data)
 };
   if (coordsFinales) {
   setSectionVisible('mapSection', true);
