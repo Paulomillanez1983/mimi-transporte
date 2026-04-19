@@ -6008,10 +6008,13 @@ function limpiarMarkersMapa() {
   state.markers = [];
 }
 
-function agregarMarkersRutaDesdeCoords() {
+function agregarMarkersRutaDesdeCoords(puntosOverride = null) {
   limpiarMarkersMapa();
 
-  const puntos = obtenerPuntosOrdenados();
+  const puntos =
+    Array.isArray(puntosOverride) && puntosOverride.length >= 2
+      ? puntosOverride
+      : obtenerPuntosOrdenados();
 
   console.log('[MARKERS] puntos lógicos:', puntos);
 
@@ -6603,7 +6606,11 @@ if (connectorFeatures.length) {
     coordinates: coordsFinales
   };
 
-agregarMarkersRutaDesdeCoords();
+const puntosBackendMarkers = Array.isArray(state?.cotizacion?.puntos_ruta)
+  ? state.cotizacion.puntos_ruta
+  : null;
+
+agregarMarkersRutaDesdeCoords(puntosBackendMarkers);
 
 if (autoFit) {
   ajustarVistaRuta(coordsFinales, window.innerWidth <= 768 ? 120 : 220);
@@ -7573,6 +7580,38 @@ if (!debeMostrarSimuladoresChoferes() && window.DriverSim?.stop) {
   window.DriverSim.stop();
 }
 const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
+if (Array.isArray(data?.puntos_ruta) && data.puntos_ruta.length >= 2) {
+  const puntosBackend = data.puntos_ruta.map((p, idx) => ({
+    ...p,
+    lat: Number(p?.lat),
+    lng: Number(p?.lng),
+    direccion:
+      p?.direccion ||
+      p?.direccion_completa ||
+      p?.direccionCorta ||
+      `Punto ${idx + 1}`,
+    direccionCorta:
+      p?.direccion_corta ||
+      p?.direccionCorta ||
+      p?.direccion ||
+      `Punto ${idx + 1}`
+  }));
+
+  state.origen =
+    puntosBackend.find((p) => String(p?.rol || '').toLowerCase() === 'pickup') ||
+    puntosBackend[0];
+
+  state.destino =
+    puntosBackend.find((p) => String(p?.rol || '').toLowerCase() === 'dropoff') ||
+    puntosBackend[puntosBackend.length - 1];
+
+  state.waypoints = puntosBackend
+    .filter((p) => String(p?.rol || '').toLowerCase() === 'stop')
+    .map((p, idx) => ({
+      id: p?.id || `waypoint-${idx + 1}`,
+      data: p
+    }));
+}
 
 state.routeData = {
   distance: distancia,
