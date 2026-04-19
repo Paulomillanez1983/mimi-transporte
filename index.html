@@ -6365,7 +6365,80 @@ function construirConectoresVisuales(data) {
 
   return features;
 }
-  
+  function forzarRutaAPasarPorPuntos(coords, puntosRuta) {
+  if (!Array.isArray(coords) || coords.length < 2) return coords;
+  if (!Array.isArray(puntosRuta) || puntosRuta.length < 2) return coords;
+
+  const casiIguales = (a, b, epsilon = 0.00001) =>
+    Math.abs(Number(a) - Number(b)) <= epsilon;
+
+  const distancia2 = (a, b) => {
+    const dx = Number(a[0]) - Number(b[0]);
+    const dy = Number(a[1]) - Number(b[1]);
+    return (dx * dx) + (dy * dy);
+  };
+
+  const ruta = coords
+    .map((c) => [Number(c?.[0]), Number(c?.[1])])
+    .filter((c) =>
+      Number.isFinite(c[0]) &&
+      Number.isFinite(c[1]) &&
+      Math.abs(c[0]) <= 180 &&
+      Math.abs(c[1]) <= 90
+    );
+
+  if (ruta.length < 2) return coords;
+
+  let desdeIndice = 0;
+
+  puntosRuta.forEach((p) => {
+    const punto = [Number(p?.lng), Number(p?.lat)];
+
+    if (
+      !Number.isFinite(punto[0]) ||
+      !Number.isFinite(punto[1]) ||
+      Math.abs(punto[0]) > 180 ||
+      Math.abs(punto[1]) > 90
+    ) {
+      return;
+    }
+
+    let mejorIdx = desdeIndice;
+    let mejorDist = Infinity;
+
+    for (let i = desdeIndice; i < ruta.length; i++) {
+      const d = distancia2(ruta[i], punto);
+      if (d < mejorDist) {
+        mejorDist = d;
+        mejorIdx = i;
+      }
+    }
+
+    const actual = ruta[mejorIdx];
+
+    if (
+      !actual ||
+      !casiIguales(actual[0], punto[0]) ||
+      !casiIguales(actual[1], punto[1])
+    ) {
+      ruta.splice(mejorIdx, 0, punto);
+      desdeIndice = mejorIdx + 1;
+    } else {
+      desdeIndice = mejorIdx;
+    }
+  });
+
+  const dedup = [];
+  for (const c of ruta) {
+    const last = dedup[dedup.length - 1];
+    if (!last || !casiIguales(last[0], c[0]) || !casiIguales(last[1], c[1])) {
+      dedup.push(c);
+    }
+  }
+
+  return dedup.length >= 2 ? dedup : coords;
+}
+
 async function dibujarRutaReal(coords, { autoFit = true } = {}) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
@@ -7404,54 +7477,54 @@ function procesarRespuestaCotizacion(data, payload) {
     return resultado.length >= 2 ? resultado : null;
   };
 
-const mergearGeometriasLegs = (legs) => {
-  if (!Array.isArray(legs) || !legs.length) return null;
+  const mergearGeometriasLegs = (legs) => {
+    if (!Array.isArray(legs) || !legs.length) return null;
 
-  const merged = [];
-  const casiIguales = (a, b, epsilon = 0.00001) =>
-    Math.abs(Number(a) - Number(b)) <= epsilon;
+    const merged = [];
+    const casiIguales = (a, b, epsilon = 0.00001) =>
+      Math.abs(Number(a) - Number(b)) <= epsilon;
 
-  legs.forEach((leg, index) => {
-    const g = limpiarCoordsRuta(leg?.geometry);
-    if (!g) return;
+    legs.forEach((leg, index) => {
+      const g = limpiarCoordsRuta(leg?.geometry);
+      if (!g) return;
 
-    const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
-    const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
+      const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
+      const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
 
-    const tramo = [...g];
+      const tramo = [...g];
 
-    if (
-      Number.isFinite(fromReal[0]) &&
-      Number.isFinite(fromReal[1]) &&
-      (
-        !casiIguales(tramo[0]?.[0], fromReal[0]) ||
-        !casiIguales(tramo[0]?.[1], fromReal[1])
-      )
-    ) {
-      tramo.unshift(fromReal);
-    }
+      if (
+        Number.isFinite(fromReal[0]) &&
+        Number.isFinite(fromReal[1]) &&
+        (
+          !casiIguales(tramo[0]?.[0], fromReal[0]) ||
+          !casiIguales(tramo[0]?.[1], fromReal[1])
+        )
+      ) {
+        tramo.unshift(fromReal);
+      }
 
-    const ultimo = tramo[tramo.length - 1];
-    if (
-      Number.isFinite(toReal[0]) &&
-      Number.isFinite(toReal[1]) &&
-      (
-        !casiIguales(ultimo?.[0], toReal[0]) ||
-        !casiIguales(ultimo?.[1], toReal[1])
-      )
-    ) {
-      tramo.push(toReal);
-    }
+      const ultimo = tramo[tramo.length - 1];
+      if (
+        Number.isFinite(toReal[0]) &&
+        Number.isFinite(toReal[1]) &&
+        (
+          !casiIguales(ultimo?.[0], toReal[0]) ||
+          !casiIguales(ultimo?.[1], toReal[1])
+        )
+      ) {
+        tramo.push(toReal);
+      }
 
-    if (index === 0 || merged.length === 0) {
-      merged.push(...tramo);
-    } else {
-      merged.push(...tramo.slice(1));
-    }
-  });
+      if (index === 0 || merged.length === 0) {
+        merged.push(...tramo);
+      } else {
+        merged.push(...tramo.slice(1));
+      }
+    });
 
-  return merged.length >= 2 ? limpiarCoordsRuta(merged) : null;
-};
+    return merged.length >= 2 ? limpiarCoordsRuta(merged) : null;
+  };
 
   const coordsRouteGeometry = limpiarCoordsRuta(data?.route_geometry);
   const coordsGeometry = !coordsRouteGeometry ? limpiarCoordsRuta(data?.geometry) : null;
@@ -7475,7 +7548,7 @@ const mergearGeometriasLegs = (legs) => {
     coordsPuntos = simples.length >= 2 ? limpiarCoordsRuta(simples) : null;
   }
 
-  const coordsFinales =
+  const coordsBase =
     coordsRouteGeometry ||
     coordsGeometry ||
     coordsLegsCrudas ||
@@ -7483,8 +7556,8 @@ const mergearGeometriasLegs = (legs) => {
     null;
 
   const esRutaReal = !!(coordsRouteGeometry || coordsGeometry || coordsLegsCrudas);
-  const esProvisoria = !esRutaReal && !!coordsPuntos;  
-  
+  const esProvisoria = !esRutaReal && !!coordsPuntos;
+
   const puntosRutaNormalizados = Array.isArray(data?.puntos_ruta)
     ? data.puntos_ruta
         .map((p, idx) => {
@@ -7518,6 +7591,10 @@ const mergearGeometriasLegs = (legs) => {
         })
         .filter((p) => coordenadasValidas(p?.lat, p?.lng))
     : [];
+
+  const coordsFinales = coordsBase
+    ? forzarRutaAPasarPorPuntos(coordsBase, puntosRutaNormalizados)
+    : null;
 
   const cotizacionNormalizada = {
     ...data,
@@ -7575,52 +7652,50 @@ const mergearGeometriasLegs = (legs) => {
   };
 
   if (coordsFinales) {
-  setSectionVisible('mapSection', true);
+    setSectionVisible('mapSection', true);
 
-  const puntosRutaForFit =
-    Array.isArray(state?.cotizacion?.puntos_ruta) && state.cotizacion.puntos_ruta.length
-      ? state.cotizacion.puntos_ruta
-      : (Array.isArray(data?.stops) ? data.stops : []);
+    const puntosRutaForFit =
+      Array.isArray(state?.cotizacion?.puntos_ruta) && state.cotizacion.puntos_ruta.length
+        ? state.cotizacion.puntos_ruta
+        : (Array.isArray(data?.stops) ? data.stops : []);
 
-  setTimeout(() => {
-    try {
-      mapaCliente?.resize?.();
-    } catch (_) {}
-  }, 80);
-
-initMapa().then(async () => {
-  try {
-    await dibujarRutaReal(coordsFinales, { autoFit: false });
-    ajustarVistaRuta(coordsFinales, window.innerWidth <= 768 ? 520 : 700, puntosRutaForFit);
-  } catch (e) {
-    console.warn('[mapa] fallo dibujarRutaReal:', e);
-
-    if (!esRutaReal && coordsPuntos) {
+    setTimeout(() => {
       try {
-        dibujarRutaLineal(coordsPuntos, { autoFit: false });
-        ajustarVistaRuta(coordsPuntos, window.innerWidth <= 768 ? 520 : 700, puntosRutaForFit);
+        mapaCliente?.resize?.();
       } catch (_) {}
-    }
+    }, 80);
+
+    initMapa().then(async () => {
+      try {
+        await dibujarRutaReal(coordsFinales, { autoFit: false });
+        ajustarVistaRuta(coordsFinales, window.innerWidth <= 768 ? 520 : 700, puntosRutaForFit);
+      } catch (e) {
+        console.warn('[mapa] fallo dibujarRutaReal:', e);
+
+        if (!esRutaReal && coordsFinales) {
+          try {
+            dibujarRutaLineal(coordsFinales, { autoFit: false });
+            ajustarVistaRuta(coordsFinales, window.innerWidth <= 768 ? 520 : 700, puntosRutaForFit);
+          } catch (_) {}
+        }
+      }
+    });
   }
-});
-}
 
-if ((data?.source === 'fallback' || data?.source === 'mixed' || fallbackUsado) && !esRutaReal) {
-  notif.show(
-    'Ruta estimada',
-    'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
-    'warning'
-  );
-}
+  if ((data?.source === 'fallback' || data?.source === 'mixed' || fallbackUsado) && !esRutaReal) {
+    notif.show(
+      'Ruta estimada',
+      'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
+      'warning'
+    );
+  }
 
-if (data?.source === 'mixed') {
-  console.warn('[cotizacion] ruta mixta: algunos tramos vinieron por OSRM y otros por fallback');
-}
+  if (data?.source === 'mixed') {
+    console.warn('[cotizacion] ruta mixta: algunos tramos vinieron por OSRM y otros por fallback');
+  }
 
-mostrarCotizacion(precio, distancia, duracion);
-
-
-guardarViajeActivoEnStorage();
+  mostrarCotizacion(precio, distancia, duracion);
+  guardarViajeActivoEnStorage();
 }
 
   
