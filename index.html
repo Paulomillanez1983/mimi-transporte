@@ -6382,6 +6382,71 @@ function construirConectoresVisuales(data) {
   return features;
 }
 
+  function agregarConector(a, b) {
+    const ax = Number(a?.[0]);
+    const ay = Number(a?.[1]);
+    const bx = Number(b?.[0]);
+    const by = Number(b?.[1]);
+
+    if (
+      !Number.isFinite(ax) || !Number.isFinite(ay) ||
+      !Number.isFinite(bx) || !Number.isFinite(by)
+    ) {
+      return;
+    }
+
+    if (ax === bx && ay === by) return;
+
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [ax, ay],
+          [bx, by]
+        ]
+      },
+      properties: {}
+    });
+  }
+
+  const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
+
+  if (tieneLegsReales) {
+    data.legs.forEach((leg) => {
+      const geom = extraerCoordsLeg(leg);
+      if (!geom || geom.length < 2) return;
+
+      const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
+      const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
+
+      agregarConector(fromReal, geom[0]);
+      agregarConector(geom[geom.length - 1], toReal);
+    });
+
+    if (features.length > 0) {
+      return features;
+    }
+  }
+
+  const puntos = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
+
+  if (puntos.length >= 2) {
+    for (let i = 0; i < puntos.length - 1; i++) {
+      const a = puntos[i];
+      const b = puntos[i + 1];
+      if (!a || !b) continue;
+
+      agregarConector(
+        [Number(a.lng), Number(a.lat)],
+        [Number(b.lng), Number(b.lat)]
+      );
+    }
+  }
+
+  return features;
+}
+
   function limpiarCoordsMapa(arr) {
     if (!Array.isArray(arr)) return null;
     const limpias = arr
