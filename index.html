@@ -3879,160 +3879,98 @@ async function restaurarViajeActivoCliente() {
     // ============================
     // CASO 2: VIAJE EN STORAGE
     // ============================
-    if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
-      const estadoStorage = normalizarEstadoUpper(viajeLocal.estadoViaje);
+if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
+  const estadoStorage = normalizarEstadoUpper(viajeLocal.estadoViaje);
 
-      const tsMs = Number(viajeLocal?.ts || 0);
-      const updatedAtMs = viajeLocal?.updatedAt
-        ? new Date(viajeLocal.updatedAt).getTime()
-        : 0;
+  const tsMs = Number(viajeLocal?.ts || 0);
+  const updatedAtMs = viajeLocal?.updatedAt
+    ? new Date(viajeLocal.updatedAt).getTime()
+    : 0;
 
-      const referenciaMs = updatedAtMs || tsMs || 0;
+  const referenciaMs = updatedAtMs || tsMs || 0;
 
-      const storageExpirado =
-        !referenciaMs ||
-        Number.isNaN(referenciaMs) ||
-        (Date.now() - referenciaMs > 1000 * 60 * 60 * 6);
+  const storageExpirado =
+    !referenciaMs ||
+    Number.isNaN(referenciaMs) ||
+    (Date.now() - referenciaMs > 1000 * 60 * 60 * 6);
 
-if (!estadosActivos.has(estadoStorage) || storageExpirado) {
-  limpiarViajeActivoEnStorage();
-  desactivarModoViajeLive?.();
-  if (notifStatusCard) notifStatusCard.hidden = true;
+  if (!estadosActivos.has(estadoStorage) || storageExpirado) {
+    limpiarViajeActivoEnStorage();
+    desactivarModoViajeLive?.();
+    if (notifStatusCard) notifStatusCard.hidden = true;
+    renderizarCentroNotificaciones();
+    return;
+  }
+
+  state.viajeId = viajeLocal.viajeId;
+  state.viajeEstado = estadoStorage;
+  state.estadoViaje = estadoStorage;
+  state.origen = viajeLocal.origen || null;
+  state.destino = viajeLocal.destino || null;
+  state.waypoints = Array.isArray(viajeLocal.waypoints) ? viajeLocal.waypoints : [];
+  state.routeData = viajeLocal.routeData || null;
+  state.cotizacion = viajeLocal.cotizacion || null;
+  state.choferId = viajeLocal?.choferId || null;
+  state.choferLocation = viajeLocal?.choferLocation || null;
+  state.driverETA = Number.isFinite(Number(viajeLocal?.driverETA))
+    ? Number(viajeLocal.driverETA)
+    : null;
+  state.driverHeading = Number.isFinite(Number(viajeLocal?.driverHeading))
+    ? Number(viajeLocal.driverHeading)
+    : null;
+  state.lastTrackingUpdate = viajeLocal?.lastTrackingUpdate || null;
+
+  await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
+  await hidratarTrackingDesdeStorage(viajeLocal);
+  await reconectarRealtimeViajeTrasRefresh(state.viajeId);
+
+  if (typeof actualizarStatusCardNotificaciones === 'function') {
+    actualizarStatusCardNotificaciones(estadoStorage);
+  }
+
+  if (typeof actualizarBotonCancelarViaje === 'function') {
+    actualizarBotonCancelarViaje();
+  }
+  if (typeof actualizarBotonCotizar === 'function') {
+    actualizarBotonCotizar();
+  }
+  if (typeof actualizarPanelPlanificacionViaje === 'function') {
+    actualizarPanelPlanificacionViaje();
+  }
+  if (typeof actualizarResumenCotizacionCompacto === 'function') {
+    actualizarResumenCotizacionCompacto();
+  }
+  if (typeof actualizarBotonConfirmarViaje === 'function') {
+    actualizarBotonConfirmarViaje();
+  }
+  if (typeof actualizarBotonReiniciarRuta === 'function') {
+    actualizarBotonReiniciarRuta();
+  }
+
+  if (typeof actualizarEstadoSolicitudUI === 'function') {
+    const textosEstado = {
+      PENDIENTE: 'Tu viaje sigue pendiente de confirmación.',
+      BUSCANDO_CHOFER: 'Estamos buscando un chofer para tu viaje.',
+      OFERTANDO: 'Estamos notificando choferes cercanos.',
+      OFERTADO: 'Tu solicitud fue enviada a choferes cercanos.',
+      SIN_CHOFER: 'Todavía no encontramos chofer disponible.',
+      ASIGNADO: 'Tu viaje ya tiene chofer asignado.',
+      ACEPTADO: 'Tu chofer aceptó el viaje.',
+      EN_CAMINO: 'Tu chofer va en camino.',
+      INICIADO: 'Tu viaje está en curso.',
+      EN_CURSO: 'Tu viaje está en curso.'
+    };
+
+    actualizarEstadoSolicitudUI({
+      estado: estadoStorage,
+      texto: textosEstado[estadoStorage] || 'Recuperamos tu viaje activo.',
+      viaje: viajeLocal
+    });
+  }
+
   renderizarCentroNotificaciones();
   return;
 }
-
-state.viajeId = viajeLocal.viajeId;
-state.viajeEstado = estadoStorage;
-state.estadoViaje = estadoStorage;
-state.origen = viajeLocal.origen || null;
-state.destino = viajeLocal.destino || null;
-state.waypoints = Array.isArray(viajeLocal.waypoints) ? viajeLocal.waypoints : [];
-state.routeData = viajeLocal.routeData || null;
-state.cotizacion = viajeLocal.cotizacion || null;
-state.choferId = viajeLocal?.choferId || null;
-state.choferLocation = viajeLocal?.choferLocation || null;
-state.driverETA = Number.isFinite(Number(viajeLocal?.driverETA))
-  ? Number(viajeLocal.driverETA)
-  : null;
-state.driverHeading = Number.isFinite(Number(viajeLocal?.driverHeading))
-  ? Number(viajeLocal.driverHeading)
-  : null;
-state.lastTrackingUpdate = viajeLocal?.lastTrackingUpdate || null;
-
-await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
-await hidratarTrackingDesdeStorage(viajeLocal);
-await reconectarRealtimeViajeTrasRefresh(state.viajeId);
-
-if (typeof actualizarStatusCardNotificaciones === 'function') {
-  actualizarStatusCardNotificaciones(estadoStorage);
-}
-
-if (typeof actualizarBotonCancelarViaje === 'function') {
-  actualizarBotonCancelarViaje();
-}
-if (typeof actualizarBotonCotizar === 'function') {
-  actualizarBotonCotizar();
-}
-if (typeof actualizarPanelPlanificacionViaje === 'function') {
-  actualizarPanelPlanificacionViaje();
-}
-if (typeof actualizarResumenCotizacionCompacto === 'function') {
-  actualizarResumenCotizacionCompacto();
-}
-if (typeof actualizarBotonConfirmarViaje === 'function') {
-  actualizarBotonConfirmarViaje();
-}
-if (typeof actualizarBotonReiniciarRuta === 'function') {
-  actualizarBotonReiniciarRuta();
-}
-
-if (typeof actualizarEstadoSolicitudUI === 'function') {
-  const textosEstado = {
-    PENDIENTE: 'Tu viaje sigue pendiente de confirmación.',
-    BUSCANDO_CHOFER: 'Estamos buscando un chofer para tu viaje.',
-    OFERTANDO: 'Estamos notificando choferes cercanos.',
-    OFERTADO: 'Tu solicitud fue enviada a choferes cercanos.',
-    SIN_CHOFER: 'Todavía no encontramos chofer disponible.',
-    ASIGNADO: 'Tu viaje ya tiene chofer asignado.',
-    ACEPTADO: 'Tu chofer aceptó el viaje.',
-    EN_CAMINO: 'Tu chofer va en camino.',
-    INICIADO: 'Tu viaje está en curso.',
-    EN_CURSO: 'Tu viaje está en curso.'
-  };
-
-  actualizarEstadoSolicitudUI({
-    estado: estadoStorage,
-    texto: textosEstado[estadoStorage] || 'Recuperamos tu viaje activo.',
-    viaje: viajeLocal
-  });
-}
-
-renderizarCentroNotificaciones();
-return;
-    }
-
-      state.viajeId = viajeLocal.viajeId;
-      state.viajeEstado = estadoStorage;
-      state.estadoViaje = estadoStorage;
-      state.origen = viajeLocal.origen || null;
-      state.destino = viajeLocal.destino || null;
-      state.waypoints = Array.isArray(viajeLocal.waypoints) ? viajeLocal.waypoints : [];
-      state.routeData = viajeLocal.routeData || null;
-      state.cotizacion = viajeLocal.cotizacion || null;
-      state.choferId = viajeLocal?.choferId || null;
-      state.choferLocation = viajeLocal?.choferLocation || null;
-
-      await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
-
-      if (typeof actualizarStatusCardNotificaciones === 'function') {
-        actualizarStatusCardNotificaciones(estadoStorage);
-      }
-
-      if (typeof actualizarBotonCancelarViaje === 'function') {
-        actualizarBotonCancelarViaje();
-      }
-      if (typeof actualizarBotonCotizar === 'function') {
-        actualizarBotonCotizar();
-      }
-      if (typeof actualizarPanelPlanificacionViaje === 'function') {
-        actualizarPanelPlanificacionViaje();
-      }
-      if (typeof actualizarResumenCotizacionCompacto === 'function') {
-        actualizarResumenCotizacionCompacto();
-      }
-      if (typeof actualizarBotonConfirmarViaje === 'function') {
-        actualizarBotonConfirmarViaje();
-      }
-      if (typeof actualizarBotonReiniciarRuta === 'function') {
-        actualizarBotonReiniciarRuta();
-      }
-
-      if (typeof actualizarEstadoSolicitudUI === 'function') {
-        const textosEstado = {
-          PENDIENTE: 'Tu viaje sigue pendiente de confirmación.',
-          BUSCANDO_CHOFER: 'Estamos buscando un chofer para tu viaje.',
-          OFERTANDO: 'Estamos notificando choferes cercanos.',
-          OFERTADO: 'Tu solicitud fue enviada a choferes cercanos.',
-          SIN_CHOFER: 'Todavía no encontramos chofer disponible.',
-          ASIGNADO: 'Tu viaje ya tiene chofer asignado.',
-          ACEPTADO: 'Tu chofer aceptó el viaje.',
-          EN_CAMINO: 'Tu chofer va en camino.',
-          INICIADO: 'Tu viaje está en curso.',
-          EN_CURSO: 'Tu viaje está en curso.'
-        };
-
-        actualizarEstadoSolicitudUI({
-          estado: estadoStorage,
-          texto: textosEstado[estadoStorage] || 'Recuperamos tu viaje activo.',
-          viaje: viajeLocal
-        });
-      }
-
-      renderizarCentroNotificaciones();
-      return;
-    }
-
     // ============================
     // CASO 3: SIN VIAJE
     // ============================
@@ -5251,9 +5189,9 @@ function sonMismoPunto(a, b) {
 
 function obtenerPuntosOrdenados() {
   const origen = state.origen;
-  const destino = state.destino;
+  const destinoPrincipal = state.destino;
 
-  if (!origen || !destino) return [];
+  if (!origen || !destinoPrincipal) return [];
 
   const waypointsValidos = (state.waypoints || [])
     .filter((w) =>
@@ -5264,26 +5202,30 @@ function obtenerPuntosOrdenados() {
     )
     .map((w) => w.data);
 
-  const intermedios = [];
+  const destinosAdicionales = [];
   let retornoFinal = null;
 
   for (const wp of waypointsValidos) {
-    // Si una parada coincide con el origen, la tratamos como retorno final
+    if (!wp || !coordenadasValidas(wp.lat, wp.lng)) continue;
+
+    // Si coincide con origen, lo tratamos como retorno final
     if (sonMismoPunto(wp, origen)) {
       retornoFinal = wp;
       continue;
     }
 
-    // Si coincide con el destino ya cargado, no sumar duplicado
-    if (sonMismoPunto(wp, destino)) continue;
+    // Si coincide con el destino principal, no duplicar
+    if (sonMismoPunto(wp, destinoPrincipal)) continue;
 
-    // Evitar duplicados entre intermedios
-    if (intermedios.some((x) => sonMismoPunto(x, wp))) continue;
+    // Evitar duplicados entre destinos adicionales
+    if (destinosAdicionales.some((x) => sonMismoPunto(x, wp))) continue;
 
-    intermedios.push(wp);
+    destinosAdicionales.push(wp);
   }
 
-  const puntos = [origen, ...intermedios, destino];
+  // NUEVA LÓGICA:
+  // origen -> destino principal -> destinos adicionales
+  const puntos = [origen, destinoPrincipal, ...destinosAdicionales];
 
   if (retornoFinal) {
     puntos.push({
@@ -5293,8 +5235,7 @@ function obtenerPuntosOrdenados() {
   }
 
   return puntos.filter((p) => p && coordenadasValidas(p.lat, p.lng));
-}
-  
+}  
 function limpiarPuntos(puntos) {
   if (!Array.isArray(puntos)) return [];
 
