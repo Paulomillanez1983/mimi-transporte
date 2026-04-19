@@ -12,6 +12,7 @@ import uiController from './ui-controller.js';
 import soundManager from './sound-manager.js';
 import { initSupportPushFCM } from './push-fcm.js';
 import { initDriverSupport, openDriverSupportPanel } from './driver-support.js';
+import { initTripChat, openTripChatForDriverTrip } from './trip-chat.js';
 import { initDriverPwaOnboarding, runDriverPostLoginOnboarding } from './driver-pwa-onboarding.js';
 const APP_BASE_PATH = (() => {
   const path = window.location.pathname || '/';
@@ -446,6 +447,7 @@ _syncNavFabVisibility() {
       this._subscribeToEvents();
       this._setupUI();
       initDriverSupport();
+      initTripChat();
       if (this._activeTripGuardInterval) {
        clearInterval(this._activeTripGuardInterval);
      }
@@ -1655,15 +1657,27 @@ case 'cancel': {
   return result;
 }
         
-      case 'navigate':
-        return this._openExternalNav();
+case 'navigate':
+  return this._openExternalNav();
 
-      case 'whatsapp':
-        return this._openWhatsApp();
+case 'chat': {
+  const tripForChat = tripManager.getCurrentTrip?.() || current || null;
 
-      default:
-        console.warn('[DriverApp] Acción desconocida:', action);
-        return null;
+  if (!tripForChat?.id) {
+    uiController.showToast('No hay viaje activo para abrir el chat', 'warning');
+    return;
+  }
+
+  await openTripChatForDriverTrip(tripForChat);
+  return { success: true };
+}
+
+case 'whatsapp':
+  return this._openWhatsApp();
+
+default:
+  console.warn('[DriverApp] Acción desconocida:', action);
+  return null;
     }
   } catch (err) {
     console.error('[DriverApp] Error en acción:', action, err);
