@@ -847,10 +847,12 @@ select:focus-visible {
 
 /* COLORES */
 .route-marker.origin .route-marker-pin {
+  transform: scale(1.05);
   background: #22c55e;
 }
 
 .route-marker.dest .route-marker-pin {
+  transform: scale(1.1);
   background: #ef4444;
 }
 
