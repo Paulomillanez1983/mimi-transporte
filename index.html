@@ -1353,6 +1353,22 @@ function numeroSeguro(n, fallback = 0) {
   const v = Number(n);
   return Number.isFinite(v) ? v : fallback;
 }
+  function debeMostrarSimuladoresChoferes() {
+  const dp = state?.cotizacion?.detalle_precio || null;
+  const puntosRuta = Array.isArray(state?.cotizacion?.puntos_ruta)
+    ? state.cotizacion.puntos_ruta
+    : [];
+
+  const paradasIntermedias =
+    numeroSeguro(state?.cotizacion?.waypoints_count, -1) >= 0
+      ? numeroSeguro(state.cotizacion.waypoints_count, 0)
+      : numeroSeguro(dp?.cantidad_paradas_intermedias, -1) >= 0
+        ? numeroSeguro(dp?.cantidad_paradas_intermedias, 0)
+        : Math.max(0, puntosRuta.length - 2);
+
+  return paradasIntermedias === 0;
+}
+
 
 function coordenadasValidas(lat, lng) {
   return (
@@ -6219,13 +6235,17 @@ function dibujarRutaLineal(coords) {
     agregarMarkersRutaDesdeCoords();
     ajustarVistaRuta(coordsFinales, 500);
 
-    if (window.DriverSim) {
-      window.DriverSim.start(
-        mapaCliente,
-        coordsFinales,
-        window.innerWidth <= 768 ? 5 : 8
+if (window.DriverSim?.stop) {
+  window.DriverSim.stop();
+}
+
+  if (window.DriverSim && debeMostrarSimuladoresChoferes()) {
+    window.DriverSim.start(
+      mapaCliente,
+       coordsFinales,
+       window.innerWidth <= 768 ? 5 : 8
       );
-    }
+     }
   });
 }
 function limpiarCoordsMapa(arr) {
@@ -6497,10 +6517,17 @@ mapaCliente.addLayer({
   agregarMarkersRutaDesdeCoords();
   ajustarVistaRuta(coordsFinales, 900);
 
-  if (window.DriverSim) {
-    window.DriverSim.start(mapaCliente, coordsFinales, 10);
-  }
+if (window.DriverSim?.stop) {
+  window.DriverSim.stop();
+}
 
+if (window.DriverSim && debeMostrarSimuladoresChoferes()) {
+  window.DriverSim.start(
+    mapaCliente,
+    coordsFinales,
+    window.innerWidth <= 768 ? 5 : 8
+  );
+}
   setTimeout(() => {
     try {
       mapaCliente.resize();
@@ -7420,7 +7447,9 @@ function procesarRespuestaCotizacion(data, payload) {
     metodo_calculo: metodoCalculo,
     source: data?.source || null
   };
-
+if (!debeMostrarSimuladoresChoferes() && window.DriverSim?.stop) {
+  window.DriverSim.stop();
+}
 state.routeData = {
   distance: distancia,
   duration: duracion,
