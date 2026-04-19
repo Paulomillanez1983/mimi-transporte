@@ -2331,27 +2331,30 @@ function guardarViajeActivoEnStorage() {
 
     const enSeguimiento = estadosSeguimiento.includes(estado);
 
-    const payload = {
-      viajeId: state?.viajeId || null,
-      estadoViaje: state?.estadoViaje || state?.viajeEstado || null,
-      viajeEstado: state?.viajeEstado || state?.estadoViaje || null,
+const payload = {
+  viajeId: state?.viajeId || null,
+  estadoViaje: state?.estadoViaje || state?.viajeEstado || null,
+  viajeEstado: state?.viajeEstado || state?.estadoViaje || null,
 
-      origen: state?.origen || null,
-      destino: state?.destino || null,
-      waypoints: Array.isArray(state?.waypoints) ? state.waypoints : [],
+  origen: state?.origen || null,
+  destino: state?.destino || null,
+  waypoints: Array.isArray(state?.waypoints) ? state.waypoints : [],
 
-      // 🔥 CLAVE: no guardar ruta vieja en seguimiento
-      routeData: enSeguimiento ? null : (state?.routeData || null),
-      cotizacion: enSeguimiento ? null : (state?.cotizacion || null),
+  // 🔥 IMPORTANTE
+  choferId: state?.choferId || null,
+  choferLocation: state?.choferLocation || null,
 
-      inputOrigen: document.getElementById('inputOrigen')?.value || '',
-      inputDestino: document.getElementById('inputDestino')?.value || '',
-      waypointTexts: [...document.querySelectorAll('.waypoint-input')].map((el) => el.value || ''),
+  // 🔥 CLAVE: no guardar ruta vieja en seguimiento
+  routeData: enSeguimiento ? null : (state?.routeData || null),
+  cotizacion: enSeguimiento ? null : (state?.cotizacion || null),
 
-      ts: Date.now(),
-      updatedAt: new Date().toISOString()
-    };
+  inputOrigen: document.getElementById('inputOrigen')?.value || '',
+  inputDestino: document.getElementById('inputDestino')?.value || '',
+  waypointTexts: [...document.querySelectorAll('.waypoint-input')].map((el) => el.value || ''),
 
+  ts: Date.now(),
+  updatedAt: new Date().toISOString()
+};
     localStorage.setItem(ACTIVE_TRIP_STORAGE_KEY, JSON.stringify(payload));
   } catch (err) {
     console.warn('[trip] no se pudo guardar viaje activo:', err);
