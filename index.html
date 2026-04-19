@@ -2697,12 +2697,13 @@ function actualizarCardChofer(viaje = {}) {
   if (!estadosConChoferReal.includes(estado)) {
     name.textContent = 'Estado del viaje';
 
-    if (estado === 'OFERTANDO' || estado === 'OFERTADO') {
-      meta.textContent = 'Estamos notificando choferes cercanos';
-    } else {
-      meta.textContent = 'Buscando chofer disponible';
-    }
-
+if (estado === 'OFERTANDO' || estado === 'OFERTADO') {
+  meta.textContent = 'Estamos notificando choferes cercanos';
+} else if (estado === 'SIN_CHOFER') {
+  meta.textContent = 'Todavía no encontramos un chofer';
+} else {
+  meta.textContent = 'Buscando chofer disponible';
+}
     contact.textContent = 'Sin chofer asignado todavía';
 
     if (avatar) {
