@@ -3894,76 +3894,83 @@ async function restaurarViajeActivoCliente() {
         Number.isNaN(referenciaMs) ||
         (Date.now() - referenciaMs > 1000 * 60 * 60 * 6);
 
-      if (!estadosActivos.has(estadoStorage) || storageExpirado) {
-      state.viajeId = viajeLocal.viajeId;
-      state.viajeEstado = estadoStorage;
-      state.estadoViaje = estadoStorage;
-      state.origen = viajeLocal.origen || null;
-      state.destino = viajeLocal.destino || null;
-      state.waypoints = Array.isArray(viajeLocal.waypoints) ? viajeLocal.waypoints : [];
-      state.routeData = viajeLocal.routeData || null;
-      state.cotizacion = viajeLocal.cotizacion || null;
-      state.choferId = viajeLocal?.choferId || null;
-      state.choferLocation = viajeLocal?.choferLocation || null;
-      state.driverETA = Number.isFinite(Number(viajeLocal?.driverETA))
-        ? Number(viajeLocal.driverETA)
-        : null;
-      state.driverHeading = Number.isFinite(Number(viajeLocal?.driverHeading))
-        ? Number(viajeLocal.driverHeading)
-        : null;
-      state.lastTrackingUpdate = viajeLocal?.lastTrackingUpdate || null;
+if (!estadosActivos.has(estadoStorage) || storageExpirado) {
+  limpiarViajeActivoEnStorage();
+  desactivarModoViajeLive?.();
+  if (notifStatusCard) notifStatusCard.hidden = true;
+  renderizarCentroNotificaciones();
+  return;
+}
 
-      await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
-      await hidratarTrackingDesdeStorage(viajeLocal);
-      await reconectarRealtimeViajeTrasRefresh(state.viajeId);
+state.viajeId = viajeLocal.viajeId;
+state.viajeEstado = estadoStorage;
+state.estadoViaje = estadoStorage;
+state.origen = viajeLocal.origen || null;
+state.destino = viajeLocal.destino || null;
+state.waypoints = Array.isArray(viajeLocal.waypoints) ? viajeLocal.waypoints : [];
+state.routeData = viajeLocal.routeData || null;
+state.cotizacion = viajeLocal.cotizacion || null;
+state.choferId = viajeLocal?.choferId || null;
+state.choferLocation = viajeLocal?.choferLocation || null;
+state.driverETA = Number.isFinite(Number(viajeLocal?.driverETA))
+  ? Number(viajeLocal.driverETA)
+  : null;
+state.driverHeading = Number.isFinite(Number(viajeLocal?.driverHeading))
+  ? Number(viajeLocal.driverHeading)
+  : null;
+state.lastTrackingUpdate = viajeLocal?.lastTrackingUpdate || null;
 
-      if (typeof actualizarStatusCardNotificaciones === 'function') {
-        actualizarStatusCardNotificaciones(estadoStorage);
-      }
+await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
+await hidratarTrackingDesdeStorage(viajeLocal);
+await reconectarRealtimeViajeTrasRefresh(state.viajeId);
 
-      if (typeof actualizarBotonCancelarViaje === 'function') {
-        actualizarBotonCancelarViaje();
-      }
-      if (typeof actualizarBotonCotizar === 'function') {
-        actualizarBotonCotizar();
-      }
-      if (typeof actualizarPanelPlanificacionViaje === 'function') {
-        actualizarPanelPlanificacionViaje();
-      }
-      if (typeof actualizarResumenCotizacionCompacto === 'function') {
-        actualizarResumenCotizacionCompacto();
-      }
-      if (typeof actualizarBotonConfirmarViaje === 'function') {
-        actualizarBotonConfirmarViaje();
-      }
-      if (typeof actualizarBotonReiniciarRuta === 'function') {
-        actualizarBotonReiniciarRuta();
-      }
+if (typeof actualizarStatusCardNotificaciones === 'function') {
+  actualizarStatusCardNotificaciones(estadoStorage);
+}
 
-      if (typeof actualizarEstadoSolicitudUI === 'function') {
-        const textosEstado = {
-          PENDIENTE: 'Tu viaje sigue pendiente de confirmación.',
-          BUSCANDO_CHOFER: 'Estamos buscando un chofer para tu viaje.',
-          OFERTANDO: 'Estamos notificando choferes cercanos.',
-          OFERTADO: 'Tu solicitud fue enviada a choferes cercanos.',
-          SIN_CHOFER: 'Todavía no encontramos chofer disponible.',
-          ASIGNADO: 'Tu viaje ya tiene chofer asignado.',
-          ACEPTADO: 'Tu chofer aceptó el viaje.',
-          EN_CAMINO: 'Tu chofer va en camino.',
-          INICIADO: 'Tu viaje está en curso.',
-          EN_CURSO: 'Tu viaje está en curso.'
-        };
+if (typeof actualizarBotonCancelarViaje === 'function') {
+  actualizarBotonCancelarViaje();
+}
+if (typeof actualizarBotonCotizar === 'function') {
+  actualizarBotonCotizar();
+}
+if (typeof actualizarPanelPlanificacionViaje === 'function') {
+  actualizarPanelPlanificacionViaje();
+}
+if (typeof actualizarResumenCotizacionCompacto === 'function') {
+  actualizarResumenCotizacionCompacto();
+}
+if (typeof actualizarBotonConfirmarViaje === 'function') {
+  actualizarBotonConfirmarViaje();
+}
+if (typeof actualizarBotonReiniciarRuta === 'function') {
+  actualizarBotonReiniciarRuta();
+}
 
-        actualizarEstadoSolicitudUI({
-          estado: estadoStorage,
-          texto: textosEstado[estadoStorage] || 'Recuperamos tu viaje activo.',
-          viaje: viajeLocal
-        });
-      }
+if (typeof actualizarEstadoSolicitudUI === 'function') {
+  const textosEstado = {
+    PENDIENTE: 'Tu viaje sigue pendiente de confirmación.',
+    BUSCANDO_CHOFER: 'Estamos buscando un chofer para tu viaje.',
+    OFERTANDO: 'Estamos notificando choferes cercanos.',
+    OFERTADO: 'Tu solicitud fue enviada a choferes cercanos.',
+    SIN_CHOFER: 'Todavía no encontramos chofer disponible.',
+    ASIGNADO: 'Tu viaje ya tiene chofer asignado.',
+    ACEPTADO: 'Tu chofer aceptó el viaje.',
+    EN_CAMINO: 'Tu chofer va en camino.',
+    INICIADO: 'Tu viaje está en curso.',
+    EN_CURSO: 'Tu viaje está en curso.'
+  };
 
-      renderizarCentroNotificaciones();
-      return;
-      }
+  actualizarEstadoSolicitudUI({
+    estado: estadoStorage,
+    texto: textosEstado[estadoStorage] || 'Recuperamos tu viaje activo.',
+    viaje: viajeLocal
+  });
+}
+
+renderizarCentroNotificaciones();
+return;
+    }
 
       state.viajeId = viajeLocal.viajeId;
       state.viajeEstado = estadoStorage;
