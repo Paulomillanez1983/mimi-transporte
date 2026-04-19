@@ -5703,21 +5703,24 @@ function limpiarRutaChoferHastaCliente() {
 // ==========================================
 function crearMarkerElement(label, type) {
   const el = document.createElement('div');
-  el.className = `route-marker ${type}`;
+  el.className = 'route-marker';
 
   const esParada = type === 'waypoint';
-  const texto = esParada ? String(label || '') : '';
+
+  let contenidoInterno = '';
+
+  if (type === 'origin') {
+    contenidoInterno = '<span class="route-marker-dot route-marker-dot-origin"></span>';
+  } else if (type === 'dest') {
+    contenidoInterno = '<span class="route-marker-dot route-marker-dot-dest"></span>';
+  } else {
+    contenidoInterno = `<span class="route-marker-stop-label">${label}</span>`;
+  }
 
   el.innerHTML = `
-    <div class="route-marker-halo"></div>
-    <div class="route-marker-pin">
-      ${
-        type === 'origin'
-          ? '<span class="route-marker-dot"></span>'
-          : type === 'dest'
-            ? '<span class="route-marker-dot route-marker-dot-dest"></span>'
-            : `<span class="route-marker-stop-label">${texto}</span>`
-      }
+    <div class="route-marker-halo ${esParada ? 'small' : ''}"></div>
+    <div class="route-marker-pin ${esParada ? 'route-marker-pin-stop' : ''}">
+      ${contenidoInterno}
     </div>
   `;
 
