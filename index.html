@@ -6295,7 +6295,29 @@ function construirConectoresVisuales(data) {
     return resultado.length >= 2 ? resultado : null;
   }
 
-  const agregarConector = (a, b, maxDistanciaMetros = 120) => {
+  function extraerCoordsLeg(leg) {
+    if (!leg) return null;
+
+    if (Array.isArray(leg.geometry)) {
+      return limpiarCoordsMapa(leg.geometry);
+    }
+
+    if (Array.isArray(leg?.geometry?.coordinates)) {
+      return limpiarCoordsMapa(leg.geometry.coordinates);
+    }
+
+    if (Array.isArray(leg?.route_geometry)) {
+      return limpiarCoordsMapa(leg.route_geometry);
+    }
+
+    if (Array.isArray(leg?.route_geometry?.coordinates)) {
+      return limpiarCoordsMapa(leg.route_geometry.coordinates);
+    }
+
+    return null;
+  }
+
+  function agregarConector(a, b) {
     const ax = Number(a?.[0]);
     const ay = Number(a?.[1]);
     const bx = Number(b?.[0]);
@@ -6310,31 +6332,6 @@ function construirConectoresVisuales(data) {
 
     if (ax === bx && ay === by) return;
 
-    const toRad = (d) => d * Math.PI / 180;
-    const R = 6371000;
-
-    const dLat = toRad(by - ay);
-    const dLng = toRad(bx - ax);
-
-    const x =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(ay)) * Math.cos(toRad(by)) *
-      Math.sin(dLng / 2) ** 2;
-
-    const distanciaMetros =
-      2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-
-    if (!Number.isFinite(distanciaMetros) || distanciaMetros <= 0) return;
-
-if (distanciaMetros > maxDistanciaMetros) {
-  console.warn('[visual-connectors] conector largo, se dibuja igual:', {
-    distanciaMetros: Math.round(distanciaMetros),
-    desde: [ax, ay],
-    hasta: [bx, by],
-    maxDistanciaMetros
-  });
-}
-
     features.push({
       type: 'Feature',
       geometry: {
@@ -6344,16 +6341,46 @@ if (distanciaMetros > maxDistanciaMetros) {
           [bx, by]
         ]
       },
-      properties: {
-        distancia: distanciaMetros
-      }
+      properties: {}
     });
-  };
+  }
 
   const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
 
-construirConectoresVisuales = function(data) {
-  const features = [];
+  if (tieneLegsReales) {
+    data.legs.forEach((leg) => {
+      const geom = extraerCoordsLeg(leg);
+      if (!geom || geom.length < 2) return;
+
+      const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
+      const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
+
+      agregarConector(fromReal, geom[0]);
+      agregarConector(geom[geom.length - 1], toReal);
+    });
+
+    if (features.length > 0) {
+      return features;
+    }
+  }
+
+  const puntos = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
+
+  if (puntos.length >= 2) {
+    for (let i = 0; i < puntos.length - 1; i++) {
+      const a = puntos[i];
+      const b = puntos[i + 1];
+      if (!a || !b) continue;
+
+      agregarConector(
+        [Number(a.lng), Number(a.lat)],
+        [Number(b.lng), Number(b.lat)]
+      );
+    }
+  }
+
+  return features;
+}
 
   function limpiarCoordsMapa(arr) {
     if (!Array.isArray(arr)) return null;
