@@ -2370,7 +2370,6 @@ function guardarViajeActivoEnStorage(extra = {}) {
       choferId: state?.choferId || previous?.choferId || null,
       choferLocation: trackingLocation,
 
-      // 🔥 NUEVO
       driverETA: etaValue,
       driverHeading: headingValue,
       lastTrackingUpdate:
@@ -2379,7 +2378,7 @@ function guardarViajeActivoEnStorage(extra = {}) {
         previous?.lastTrackingUpdate ||
         nowIso,
 
-      routeData: enSeguimiento ? null : (state?.routeData || previous?.routeData || null),
+      routeData: state?.routeData || previous?.routeData || null,
       cotizacion: enSeguimiento ? null : (state?.cotizacion || previous?.cotizacion || null),
 
       inputOrigen: document.getElementById('inputOrigen')?.value || previous?.inputOrigen || '',
