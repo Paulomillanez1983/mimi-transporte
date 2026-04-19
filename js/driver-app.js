@@ -497,16 +497,13 @@ _syncNavFabVisibility() {
 
       if (currentTrip) {
         const estadoTrip = String(currentTrip.estado || '').toUpperCase();
-        const choferAsignado =
-          !!currentTrip?.chofer_id_uuid &&
-          String(currentTrip.chofer_id_uuid) === String(this.driverId);
+const choferRelacionado =
+  (currentTrip?.chofer_id_uuid && String(currentTrip.chofer_id_uuid) === String(this.driverId)) ||
+  (currentTrip?.assigned_driver_id && String(currentTrip.assigned_driver_id) === String(this.driverId));
 
-        const estadoNormalizado =
-          estadoTrip === 'OFERTADO' && choferAsignado
-            ? 'ASIGNADO'
-            : estadoTrip;
-
-        if (!['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoNormalizado)) {
+const estadoNormalizado = estadoTrip;
+        
+        if (!choferRelacionado || !['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoNormalizado)) {
           console.warn('[DriverApp] Viaje inválido detectado en memoria, limpiando estado local...');
           tripManager.resetState?.();
           currentTrip = null;
