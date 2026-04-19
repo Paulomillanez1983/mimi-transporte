@@ -324,10 +324,90 @@
             if (typeof window.coordenadasValidas !== 'function') return;
             if (!window.coordenadasValidas(row.lat, row.lng)) return;
 
-            actualizarMarkerChoferEnMapa(row.lat, row.lng, {
-              heading: row.heading || 0
-            });
+// ==========================================
+// 🔥 TRACKING PRO
+// ==========================================
+if (!window.state) {
+  window.state = {};
+}
 
+const nuevaUbicacionChofer = {
+  lat: Number(row?.lat),
+  lng: Number(row?.lng)
+};
+
+if (
+  typeof window.coordenadasValidas === 'function' &&
+  window.coordenadasValidas(nuevaUbicacionChofer.lat, nuevaUbicacionChofer.lng)
+) {
+  window.state.choferLocation = nuevaUbicacionChofer;
+}
+
+const nuevoHeading = Number(row?.heading);
+
+if (Number.isFinite(nuevoHeading)) {
+  window.state.driverHeading = nuevoHeading;
+}
+
+window.state.lastTrackingUpdate =
+  row?.timestamp ||
+  row?.created_at ||
+  new Date().toISOString();
+
+const objetivoSeguimiento =
+  typeof window.obtenerObjetivoSeguimientoSegunEstado === 'function'
+    ? window.obtenerObjetivoSeguimientoSegunEstado(
+        window.state?.estadoViaje || window.state?.viajeEstado,
+        window.state
+      )
+    : null;
+
+if (window.state.choferLocation && objetivoSeguimiento) {
+  if (typeof window.calcularEtaMinutosSimple === 'function') {
+    window.state.driverETA = window.calcularEtaMinutosSimple(
+      window.state.choferLocation,
+      objetivoSeguimiento
+    );
+  }
+
+  if (typeof window.dibujarRutaChoferHastaCliente === 'function') {
+    window.dibujarRutaChoferHastaCliente(
+      {
+        lat: Number(window.state.choferLocation.lat),
+        lng: Number(window.state.choferLocation.lng)
+      },
+      {
+        lat: Number(objetivoSeguimiento.lat),
+        lng: Number(objetivoSeguimiento.lng)
+      }
+    );
+  }
+}
+
+if (typeof window.actualizarMetaTrackingChoferUI === 'function') {
+  window.actualizarMetaTrackingChoferUI({
+    estado: window.state?.estadoViaje || window.state?.viajeEstado,
+    etaMin: window.state.driverETA,
+    lastTrackingUpdate: window.state.lastTrackingUpdate
+  });
+}
+
+if (typeof window.guardarViajeActivoEnStorage === 'function') {
+  window.guardarViajeActivoEnStorage({
+    choferLocation: window.state.choferLocation,
+    driverETA: window.state.driverETA,
+    driverHeading: window.state.driverHeading,
+    lastTrackingUpdate: window.state.lastTrackingUpdate
+  });
+}
+// ==========================================
+// 🔥 FIN TRACKING PRO
+// ==========================================
+
+// 👇 DEJÁ ESTO ABAJO (NO LO BORRES)
+actualizarMarkerChoferEnMapa(row.lat, row.lng, {
+  heading: row.heading || 0
+});
             const estadoUpper = String(window.state?.estadoViaje || '').toUpperCase();
 
                 if (
