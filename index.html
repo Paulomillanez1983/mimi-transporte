@@ -6386,7 +6386,15 @@ async function dibujarRutaReal(coords) {
     } catch (_) {}
   }, 450);
 }
+window.dibujarRutaEnMapa = async function(coords) {
+  if (!coords || coords.length < 2) return;
 
+  try {
+    await dibujarRutaReal(coords);
+  } catch (e) {
+    console.warn('[wrapper dibujarRutaEnMapa] error:', e);
+  }
+};
   
 function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
