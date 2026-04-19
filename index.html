@@ -5538,7 +5538,6 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       !almostEqual(last[0], exactEnd[0]) ||
       !almostEqual(last[1], exactEnd[1])
     ) {
-      coords.push(exactEnd);
     }
 
     const sourceId = 'driver-to-client-route';
