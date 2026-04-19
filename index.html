@@ -5459,13 +5459,19 @@ function limpiarPuntosRuta(puntos) {
     factor_zona: 1
   };
 }
+
 async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
   let coords = null;
 
   try {
     if (!window.mapaCliente || !window.mapReady) return;
     if (!origenChofer || !destinoCliente) return;
-    if (typeof window.mapaCliente.isStyleLoaded === 'function' && !window.mapaCliente.isStyleLoaded()) return;
+    if (
+      typeof window.mapaCliente.isStyleLoaded === 'function' &&
+      !window.mapaCliente.isStyleLoaded()
+    ) {
+      return;
+    }
 
     const choferLat = Number(origenChofer.lat);
     const choferLng = Number(origenChofer.lng);
@@ -5489,10 +5495,16 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
 
     if (currentRequest !== routeRequestId) return;
 
+    if (!resp.ok) {
+      throw new Error(`OSRM_HTTP_${resp.status}`);
+    }
+
     const json = await resp.json().catch(() => null);
 
     coords = json?.routes?.[0]?.geometry?.coordinates || null;
-    if (!Array.isArray(coords) || coords.length < 2) return;
+    if (!Array.isArray(coords) || coords.length < 2) {
+      throw new Error('OSRM_SIN_GEOMETRIA');
+    }
 
     coords = coords
       .map((c) => [Number(c?.[0]), Number(c?.[1])])
@@ -5503,7 +5515,9 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
         Math.abs(c[1]) <= 90
       );
 
-    if (coords.length < 2) return;
+    if (coords.length < 2) {
+      throw new Error('GEOMETRIA_INVALIDA');
+    }
 
     const exactStart = [choferLng, choferLat];
     const exactEnd = [clienteLng, clienteLat];
@@ -5527,17 +5541,12 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       coords.push(exactEnd);
     }
 
-    // Refuerzo visual final para que cierre exacto sobre destino
-    coords.push(exactEnd);
-
     const sourceId = 'driver-to-client-route';
     const lineLayerId = 'driver-to-client-route-line';
 
-    [lineLayerId].forEach((layerId) => {
-      if (window.mapaCliente.getLayer(layerId)) {
-        window.mapaCliente.removeLayer(layerId);
-      }
-    });
+    if (window.mapaCliente.getLayer(lineLayerId)) {
+      window.mapaCliente.removeLayer(lineLayerId);
+    }
 
     if (window.mapaCliente.getSource(sourceId)) {
       window.mapaCliente.removeSource(sourceId);
@@ -5569,6 +5578,17 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
       }
     });
 
+    // Guardar la ruta real actual para el resto del flujo
+    state.routeData = {
+      ...(state.routeData || {}),
+      geometry: {
+        type: 'LineString',
+        coordinates: coords
+      },
+      fallback: false,
+      updatedAt: new Date().toISOString()
+    };
+
     const bounds = coords.reduce(
       (b, c) => b.extend(c),
       new maplibregl.LngLatBounds(coords[0], coords[0])
@@ -5588,6 +5608,74 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
 
   } catch (err) {
     console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
+
+    try {
+      const choferLat = Number(origenChofer?.lat);
+      const choferLng = Number(origenChofer?.lng);
+      const clienteLat = Number(destinoCliente?.lat);
+      const clienteLng = Number(destinoCliente?.lng);
+
+      if (
+        !coordenadasValidas(choferLat, choferLng) ||
+        !coordenadasValidas(clienteLat, clienteLng)
+      ) {
+        return;
+      }
+
+      const fallbackCoords = [
+        [choferLng, choferLat],
+        [clienteLng, clienteLat]
+      ];
+
+      const sourceId = 'driver-to-client-route';
+      const lineLayerId = 'driver-to-client-route-line';
+
+      if (window.mapaCliente?.getLayer?.(lineLayerId)) {
+        window.mapaCliente.removeLayer(lineLayerId);
+      }
+
+      if (window.mapaCliente?.getSource?.(sourceId)) {
+        window.mapaCliente.removeSource(sourceId);
+      }
+
+      window.mapaCliente.addSource(sourceId, {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: fallbackCoords
+          }
+        }
+      });
+
+      window.mapaCliente.addLayer({
+        id: lineLayerId,
+        type: 'line',
+        source: sourceId,
+        layout: {
+          'line-cap': 'round',
+          'line-join': 'round'
+        },
+        paint: {
+          'line-color': '#111111',
+          'line-width': 2.2,
+          'line-opacity': 0.72
+        }
+      });
+
+      state.routeData = {
+        ...(state.routeData || {}),
+        geometry: {
+          type: 'LineString',
+          coordinates: fallbackCoords
+        },
+        fallback: true,
+        updatedAt: new Date().toISOString()
+      };
+    } catch (fallbackErr) {
+      console.warn('[mapa] también falló fallback chofer→cliente:', fallbackErr);
+    }
   }
 }  
 function limpiarRutaChoferHastaCliente() {
