@@ -6295,28 +6295,6 @@ function construirConectoresVisuales(data) {
     return resultado.length >= 2 ? resultado : null;
   }
 
-  function extraerCoordsLeg(leg) {
-    if (!leg) return null;
-
-    if (Array.isArray(leg.geometry)) {
-      return limpiarCoordsMapa(leg.geometry);
-    }
-
-    if (Array.isArray(leg?.geometry?.coordinates)) {
-      return limpiarCoordsMapa(leg.geometry.coordinates);
-    }
-
-    if (Array.isArray(leg?.route_geometry)) {
-      return limpiarCoordsMapa(leg.route_geometry);
-    }
-
-    if (Array.isArray(leg?.route_geometry?.coordinates)) {
-      return limpiarCoordsMapa(leg.route_geometry.coordinates);
-    }
-
-    return null;
-  }
-
   function agregarConector(a, b) {
     const ax = Number(a?.[0]);
     const ay = Number(a?.[1]);
@@ -6345,43 +6323,43 @@ function construirConectoresVisuales(data) {
     });
   }
 
-  const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
-
-  if (tieneLegsReales) {
-    data.legs.forEach((leg) => {
-      const geom = extraerCoordsLeg(leg);
-      if (!geom || geom.length < 2) return;
-
-      const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
-      const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
-
-      agregarConector(fromReal, geom[0]);
-      agregarConector(geom[geom.length - 1], toReal);
-    });
-
-    if (features.length > 0) {
-      return features;
-    }
+  function distancia2(a, b) {
+    const dx = Number(a[0]) - Number(b[0]);
+    const dy = Number(a[1]) - Number(b[1]);
+    return (dx * dx) + (dy * dy);
   }
+
+  const routeGeom =
+    limpiarCoordsMapa(data?.route_geometry) ||
+    limpiarCoordsMapa(data?.geometry);
 
   const puntos = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
 
-  if (puntos.length >= 2) {
-    for (let i = 0; i < puntos.length - 1; i++) {
-      const a = puntos[i];
-      const b = puntos[i + 1];
-      if (!a || !b) continue;
-
-      agregarConector(
-        [Number(a.lng), Number(a.lat)],
-        [Number(b.lng), Number(b.lat)]
-      );
-    }
+  if (!routeGeom || routeGeom.length < 2 || puntos.length < 1) {
+    return features;
   }
+
+  puntos.forEach((p) => {
+    const punto = [Number(p?.lng), Number(p?.lat)];
+    if (!Number.isFinite(punto[0]) || !Number.isFinite(punto[1])) return;
+
+    let nearest = routeGeom[0];
+    let best = distancia2(punto, nearest);
+
+    for (let i = 1; i < routeGeom.length; i++) {
+      const candidate = routeGeom[i];
+      const d = distancia2(punto, candidate);
+      if (d < best) {
+        best = d;
+        nearest = candidate;
+      }
+    }
+
+    agregarConector(punto, nearest);
+  });
 
   return features;
 }
-
   
 async function dibujarRutaReal(coords, { autoFit = true } = {}) {
   if (!Array.isArray(coords) || coords.length < 2) return;
