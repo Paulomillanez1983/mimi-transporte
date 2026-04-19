@@ -6273,95 +6273,110 @@ function limpiarCoordsMapa(arr) {
   return resultado.length >= 2 ? resultado : null;
 }
 
-function construirConectoresVisuales(data) {
-  const features = [];
+const agregarConector = (a, b, maxDistanciaMetros = 120) => {
+  const ax = Number(a?.[0]);
+  const ay = Number(a?.[1]);
+  const bx = Number(b?.[0]);
+  const by = Number(b?.[1]);
 
-  const agregarConector = (a, b) => {
-    const ax = Number(a?.[0]);
-    const ay = Number(a?.[1]);
-    const bx = Number(b?.[0]);
-    const by = Number(b?.[1]);
+  if (
+    !Number.isFinite(ax) || !Number.isFinite(ay) ||
+    !Number.isFinite(bx) || !Number.isFinite(by)
+  ) {
+    return;
+  }
 
-    if (
-      !Number.isFinite(ax) || !Number.isFinite(ay) ||
-      !Number.isFinite(bx) || !Number.isFinite(by)
-    ) {
-      return;
+  if (ax === bx && ay === by) return;
+
+  const toRad = (d) => d * Math.PI / 180;
+  const R = 6371000;
+
+  const dLat = toRad(by - ay);
+  const dLng = toRad(bx - ax);
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(ay)) * Math.cos(toRad(by)) *
+    Math.sin(dLng / 2) ** 2;
+
+  const distanciaMetros =
+    2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+
+  if (!Number.isFinite(distanciaMetros) || distanciaMetros <= 0) return;
+
+  // 🔥 Regla principal: no dibujar conectores largos
+  if (distanciaMetros > maxDistanciaMetros) {
+    console.warn('[visual-connectors] conector descartado por distancia:', {
+      distanciaMetros: Math.round(distanciaMetros),
+      desde: [ax, ay],
+      hasta: [bx, by],
+      maxDistanciaMetros
+    });
+    return;
+  }
+
+  features.push({
+    type: 'Feature',
+    geometry: {
+      type: 'LineString',
+      coordinates: [
+        [ax, ay],
+        [bx, by]
+      ]
+    },
+    properties: {
+      distancia: distanciaMetros
     }
+  });
+};
 
-    if (ax === bx && ay === by) return;
+const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
 
-    const toRad = d => d * Math.PI / 180;
-    const R = 6371000;
+if (tieneLegsReales) {
+  data.legs.forEach((leg) => {
+    const geom = limpiarCoordsMapa(leg?.geometry);
+    if (!geom || geom.length < 2) return;
 
-    const dLat = toRad(by - ay);
-    const dLng = toRad(bx - ax);
+    const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
+    const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
 
-    const x =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos(toRad(ay)) * Math.cos(toRad(by)) *
-      Math.sin(dLng / 2) ** 2;
+    const inicioRuta = geom[0];
+    const finRuta = geom[geom.length - 1];
 
-    const distanciaMetros =
-      2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-
-    features.push({
-      type: 'Feature',
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [ax, ay],
-          [bx, by]
-        ]
-      },
-      properties: {
-        distancia: distanciaMetros
-      }
-    });
-  };
-
-  if (Array.isArray(data?.legs) && data.legs.length) {
-    data.legs.forEach((leg) => {
-      const geom = limpiarCoordsMapa(leg?.geometry);
-      if (!geom || geom.length < 2) return;
-
-      const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
-      const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
-
-      const inicioRuta = geom[0];
-      const finRuta = geom[geom.length - 1];
-
-      agregarConector(fromReal, inicioRuta);
-      agregarConector(finRuta, toReal);
-    });
-
-    return features;
-  }
-
-  const routeGeom =
-    limpiarCoordsMapa(data?.route_geometry) ||
-    limpiarCoordsMapa(data?.geometry);
-
-  const puntos = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : null;
-
-  if (routeGeom && puntos && puntos.length >= 2) {
-    const origen = puntos[0];
-    const destino = puntos[puntos.length - 1];
-
-    agregarConector(
-      [Number(origen?.lng), Number(origen?.lat)],
-      routeGeom[0]
-    );
-
-    agregarConector(
-      routeGeom[routeGeom.length - 1],
-      [Number(destino?.lng), Number(destino?.lat)]
-    );
-  }
+    // 🔥 Si hay legs reales, solo permitimos micro-correcciones
+    agregarConector(fromReal, inicioRuta, 40);
+    agregarConector(finRuta, toReal, 40);
+  });
 
   return features;
 }
-  
+
+const routeGeom =
+  limpiarCoordsMapa(data?.route_geometry) ||
+  limpiarCoordsMapa(data?.geometry);
+
+const puntos = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : null;
+
+if (routeGeom && puntos && puntos.length >= 2) {
+  const origen = puntos[0];
+  const destino = puntos[puntos.length - 1];
+
+  agregarConector(
+    [Number(origen?.lng), Number(origen?.lat)],
+    routeGeom[0],
+    120
+  );
+
+  agregarConector(
+    routeGeom[routeGeom.length - 1],
+    [Number(destino?.lng), Number(destino?.lat)],
+    120
+  );
+}
+
+ return features;  
+}
+
 async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
@@ -6470,11 +6485,20 @@ mapaCliente.addLayer({
   }, 'route-line');
 }
 
-  const connectorFeatures = Array.isArray(state.routeData?.visualConnectors)
-    ? state.routeData.visualConnectors
-    : [];
+const connectorFeatures = Array.isArray(state.routeData?.visualConnectors)
+  ? state.routeData.visualConnectors
+  : [];
 
-  if (connectorFeatures.length) {
+if (connectorFeatures.length) {
+  try {
+    if (mapaCliente.getLayer('route-connectors-line')) {
+      mapaCliente.removeLayer('route-connectors-line');
+    }
+
+    if (mapaCliente.getSource('route-connectors')) {
+      mapaCliente.removeSource('route-connectors');
+    }
+
     mapaCliente.addSource('route-connectors', {
       type: 'geojson',
       data: {
@@ -6483,31 +6507,27 @@ mapaCliente.addLayer({
       }
     });
 
-mapaCliente.addLayer({
-  id: 'route-connectors-line',
-  type: 'line',
-  source: 'route-connectors',
-  layout: {
-    'line-join': 'round',
-    'line-cap': 'round'
-  },
-  paint: {
-    'line-color': 'rgba(95,99,104,0.55)',
-    'line-width': [
-      'interpolate',
-      ['linear'],
-      ['zoom'],
-      5, 1.2,
-      10, 1.8,
-      14, 2.2,
-      16, 2.6
-    ],
-    'line-opacity': 0.8,
-    'line-dasharray': [1, 1.6]
+    if (!mapaCliente.getLayer('route-connectors-line')) {
+      mapaCliente.addLayer({
+        id: 'route-connectors-line',
+        type: 'line',
+        source: 'route-connectors',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': 'rgba(95,99,104,0.40)',
+          'line-width': 1.6,
+          'line-opacity': 0.7,
+          'line-dasharray': [1, 1.6]
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('[route-connectors-line] no se pudo crear la capa:', err);
   }
-});
-  }
-
+}
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
@@ -7450,6 +7470,8 @@ function procesarRespuestaCotizacion(data, payload) {
 if (!debeMostrarSimuladoresChoferes() && window.DriverSim?.stop) {
   window.DriverSim.stop();
 }
+const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
+
 state.routeData = {
   distance: distancia,
   duration: duracion,
@@ -7464,9 +7486,11 @@ state.routeData = {
         coordinates: coordsFinales
       }
     : null,
-  visualConnectors: construirConectoresVisuales(data)
+  visualConnectors: tieneLegsReales
+    ? []
+    : construirConectoresVisuales(data)
 };
-if (coordsFinales) {
+  if (coordsFinales) {
   setSectionVisible('mapSection', true);
 
   const puntosRutaForFit = Array.isArray(data?.puntos_ruta)
