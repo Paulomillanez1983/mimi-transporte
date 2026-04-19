@@ -613,7 +613,9 @@ function buscarDireccionFallbackLocal(query) {
 }
 
 async function buscarDireccion(query) {
-  if (!query || query.trim().length < 3) {
+  const normalizedQuery = String(query || '').trim();
+
+  if (normalizedQuery.length < 2) {
     return {
       resultados: [],
       exactMatch: false,
@@ -623,7 +625,7 @@ async function buscarDireccion(query) {
   }
 
   const bias = getGeocodingClientBias();
-  const cacheKey = buildGeocodingCacheKey(query);
+  const cacheKey = buildGeocodingCacheKey(normalizedQuery);
 
   if (geocodingCache.has(cacheKey)) {
     const cached = geocodingCache.get(cacheKey) || {};
@@ -644,7 +646,7 @@ async function buscarDireccion(query) {
           'Content-Type': 'application/json'
         }),
         body: JSON.stringify({
-          query,
+          query: normalizedQuery,
           limit: 5,
           client_lat: bias?.lat ?? null,
           client_lng: bias?.lng ?? null
@@ -654,7 +656,7 @@ async function buscarDireccion(query) {
     );
 
     if (!result.response) {
-      const fallback = buscarDireccionFallbackLocal(query);
+      const fallback = buscarDireccionFallbackLocal(normalizedQuery);
       return {
         resultados: fallback,
         exactMatch: false,
@@ -671,7 +673,7 @@ async function buscarDireccion(query) {
         json?.message || json?.error || json?.raw || result.response.status
       );
 
-      const fallback = buscarDireccionFallbackLocal(query);
+      const fallback = buscarDireccionFallbackLocal(normalizedQuery);
       return {
         resultados: fallback,
         exactMatch: false,
@@ -683,7 +685,7 @@ async function buscarDireccion(query) {
     if (!json || !json.exito) {
       console.warn('⚠️ Error geocodificación:', json?.error || 'Respuesta inválida');
 
-      const fallback = buscarDireccionFallbackLocal(query);
+      const fallback = buscarDireccionFallbackLocal(normalizedQuery);
       return {
         resultados: fallback,
         exactMatch: false,
@@ -710,7 +712,7 @@ async function buscarDireccion(query) {
   } catch (err) {
     console.error('❌ Error buscando dirección:', err);
 
-    const fallback = buscarDireccionFallbackLocal(query);
+    const fallback = buscarDireccionFallbackLocal(normalizedQuery);
     return {
       resultados: fallback,
       exactMatch: false,
