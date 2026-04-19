@@ -6268,49 +6268,53 @@ function limpiarCoordsMapa(arr) {
   return resultado.length >= 2 ? resultado : null;
 }
 
-const agregarConector = (a, b) => {
-  const ax = Number(a?.[0]);
-  const ay = Number(a?.[1]);
-  const bx = Number(b?.[0]);
-  const by = Number(b?.[1]);
+function construirConectoresVisuales(data) {
+  const features = [];
 
-  if (
-    !Number.isFinite(ax) || !Number.isFinite(ay) ||
-    !Number.isFinite(bx) || !Number.isFinite(by)
-  ) {
-    return;
-  }
+  const agregarConector = (a, b) => {
+    const ax = Number(a?.[0]);
+    const ay = Number(a?.[1]);
+    const bx = Number(b?.[0]);
+    const by = Number(b?.[1]);
 
-  if (ax === bx && ay === by) return;
-
-  // 🧠 distancia real en metros
-  const toRad = d => d * Math.PI / 180;
-  const R = 6371000;
-
-  const dLat = toRad(by - ay);
-  const dLng = toRad(bx - ax);
-
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(ay)) * Math.cos(toRad(by)) *
-    Math.sin(dLng / 2) ** 2;
-
-  const distanciaMetros = 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-
-  features.push({
-    type: 'Feature',
-    geometry: {
-      type: 'LineString',
-      coordinates: [
-        [ax, ay],
-        [bx, by]
-      ]
-    },
-    properties: {
-      distancia: distanciaMetros
+    if (
+      !Number.isFinite(ax) || !Number.isFinite(ay) ||
+      !Number.isFinite(bx) || !Number.isFinite(by)
+    ) {
+      return;
     }
-  });
-};
+
+    if (ax === bx && ay === by) return;
+
+    const toRad = d => d * Math.PI / 180;
+    const R = 6371000;
+
+    const dLat = toRad(by - ay);
+    const dLng = toRad(bx - ax);
+
+    const x =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(ay)) * Math.cos(toRad(by)) *
+      Math.sin(dLng / 2) ** 2;
+
+    const distanciaMetros =
+      2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [ax, ay],
+          [bx, by]
+        ]
+      },
+      properties: {
+        distancia: distanciaMetros
+      }
+    });
+  };
+
   if (Array.isArray(data?.legs) && data.legs.length) {
     data.legs.forEach((leg) => {
       const geom = limpiarCoordsMapa(leg?.geometry);
@@ -6352,7 +6356,6 @@ const agregarConector = (a, b) => {
 
   return features;
 }
-
   
 async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
