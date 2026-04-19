@@ -5703,9 +5703,7 @@ function limpiarRutaChoferHastaCliente() {
 // ==========================================
 function crearMarkerElement(label, type) {
   const el = document.createElement('div');
-  el.className = 'route-marker';
-
-  const esParada = type === 'waypoint';
+  el.className = `route-marker ${type}`;
 
   let contenidoInterno = '';
 
@@ -5718,8 +5716,8 @@ function crearMarkerElement(label, type) {
   }
 
   el.innerHTML = `
-    <div class="route-marker-halo ${esParada ? 'small' : ''}"></div>
-    <div class="route-marker-pin ${esParada ? 'route-marker-pin-stop' : ''}">
+    <div class="route-marker-halo"></div>
+    <div class="route-marker-pin">
       ${contenidoInterno}
     </div>
   `;
