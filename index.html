@@ -2678,16 +2678,11 @@ function actualizarCardChofer(viaje = {}) {
 
   const estadosConChoferReal = ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO', 'INICIADO', 'EN_CURSO'];
 
-  if (!estadosConChoferReal.includes(estado)) {
-    card.hidden = true;
-    return;
-  }
-
   const choferNombre = String(
     viaje?.chofer_nombre ||
     viaje?.choferNombre ||
     viaje?.driver_name ||
-    'Chofer'
+    ''
   ).trim();
 
   const choferTelefono = String(
@@ -2697,12 +2692,46 @@ function actualizarCardChofer(viaje = {}) {
     ''
   ).trim();
 
+  // 👇 SIEMPRE mostrar card
+  card.hidden = false;
+
+  // ==========================================
+  // 🟡 ETAPA: BUSCANDO / OFERTANDO
+  // ==========================================
+  if (!estadosConChoferReal.includes(estado)) {
+
+    name.textContent = 'Estado del viaje';
+
+    if (estado === 'OFERTANDO' || estado === 'OFERTADO') {
+      meta.textContent = 'Estamos notificando choferes cercanos';
+    } else {
+      meta.textContent = 'Buscando chofer disponible';
+    }
+
+    contact.textContent = 'Sin chofer asignado todavía';
+
+    if (avatar) {
+      avatar.textContent = '🚐';
+    }
+
+    if (btnChat) {
+      btnChat.onclick = () => {
+        notif.show('Chat', 'El chat estará disponible cuando un chofer acepte el viaje', 'info');
+      };
+    }
+
+    return;
+  }
+
+  // ==========================================
+  // 🟢 ETAPA: CHOFER REAL
+  // ==========================================
+
   let metaText = 'Chofer asignado';
   if (estado === 'ACEPTADO') metaText = 'En camino a buscarte';
   else if (estado === 'EN_CAMINO') metaText = 'Está llegando a tu origen';
   else if (estado === 'INICIADO' || estado === 'EN_CURSO') metaText = 'Viaje en curso';
 
-  card.hidden = false;
   name.textContent = choferNombre || 'Chofer';
   meta.textContent = metaText;
   contact.textContent = choferTelefono || 'Sin contacto disponible';
@@ -2723,7 +2752,7 @@ function actualizarCardChofer(viaje = {}) {
       window.open(`https://wa.me/${telefonoLimpio}?text=${mensaje}`, '_blank');
     };
   }
-}
+}  
   async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
     if (!viajeLocal) return;
