@@ -6033,17 +6033,41 @@ function ajustarVistaRuta(coords, duration = 800) {
   if (!mapaCliente || !Array.isArray(coords) || coords.length < 2) return;
 
   try {
-    const bounds = coords.reduce(
+    const coordsLimpias = coords
+      .map((c) => [Number(c?.[0]), Number(c?.[1])])
+      .filter((c) =>
+        Number.isFinite(c[0]) &&
+        Number.isFinite(c[1]) &&
+        Math.abs(c[0]) <= 180 &&
+        Math.abs(c[1]) <= 90
+      );
+
+    if (coordsLimpias.length < 2) return;
+
+    const bounds = coordsLimpias.reduce(
       (b, c) => b.extend(c),
-      new maplibregl.LngLatBounds(coords[0], coords[0])
+      new maplibregl.LngLatBounds(coordsLimpias[0], coordsLimpias[0])
     );
 
+    const isMobile = window.innerWidth <= 768;
+
     mapaCliente.fitBounds(bounds, {
-      padding: { top: 34, bottom: 34, left: 34, right: 34 },
+      padding: isMobile
+        ? { top: 64, bottom: 150, left: 42, right: 42 }
+        : { top: 52, bottom: 52, left: 52, right: 52 },
       duration,
-      maxZoom: 16.2
+      maxZoom: isMobile ? 15.2 : 16.2,
+      linear: false
     });
-  } catch (_) {}
+
+    setTimeout(() => {
+      try {
+        mapaCliente.resize();
+      } catch (_) {}
+    }, 120);
+  } catch (err) {
+    console.warn('[MAP] error ajustando vista de ruta:', err);
+  }
 }
 function iniciarAnimacionRuta() {
   if (!mapaCliente || !mapReady || !mapaCliente.getLayer('route-anim')) return;
@@ -6320,10 +6344,20 @@ async function dibujarRutaReal(coords) {
       'line-cap': 'round'
     },
     paint: {
-      'line-color': '#111111',
-      'line-width': 2.6,
-      'line-opacity': 0.97
-    }
+  'line-color': '#111111',
+  'line-width': [
+    'interpolate',
+    ['linear'],
+    ['zoom'],
+    5, 2.4,
+    8, 3.2,
+    10, 4.2,
+    12, 5.2,
+    14, 6.2,
+    16, 7.2
+  ],
+  'line-opacity': 0.97
+}
   });
 
   const connectorFeatures = Array.isArray(state.routeData?.visualConnectors)
@@ -6433,17 +6467,9 @@ function centrarEnRuta() {
 
   if (!coords || coords.length < 2) return;
 
-  const bounds = coords.reduce(
-    (b, c) => b.extend(c),
-    new maplibregl.LngLatBounds(coords[0], coords[0])
-  );
-
-  mapaCliente.fitBounds(bounds, {
-    padding: { top: 34, bottom: 34, left: 34, right: 34 },
-    duration: 600,
-    maxZoom: 16.2
-  });
+  ajustarVistaRuta(coords, 650);
 }
+  
 window.dibujarRutaChoferHastaCliente = dibujarRutaChoferHastaCliente;
 window.limpiarRutaChoferHastaCliente = limpiarRutaChoferHastaCliente;
 
