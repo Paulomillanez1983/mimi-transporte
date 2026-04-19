@@ -821,94 +821,111 @@ select:focus-visible {
 }
 
 /* ==========================================
-   MARKERS - STYLE UBER CLEAN
+   MARKERS - UBER STYLE REAL
 ========================================== */
 .route-marker {
   position: relative;
-  width: 24px;
-  height: 24px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.route-marker-halo {
+  position: absolute;
+  z-index: 1;
   pointer-events: none;
 }
 
-/* PIN BASE */
+.route-marker-body,
 .route-marker-pin {
   position: absolute;
   inset: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  z-index: 2;
 }
 
-/* COLORES */
-.route-marker.origin .route-marker-pin {
-  transform: scale(1.05);
-  background: #22c55e;
-}
-
-.route-marker.dest .route-marker-pin {
-  transform: scale(1.1);
-  background: #ef4444;
-}
-
-.route-marker.waypoint .route-marker-pin {
-  background: #f59e0b;
-}
-
-/* HALO SUAVE (SIN ANIMACIÓN) */
-.route-marker-halo {
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 1;
+/* ORIGEN */
+.route-marker.origin {
+  width: 20px;
+  height: 20px;
 }
 
 .route-marker.origin .route-marker-halo {
-  background: rgba(34, 197, 94, 0.15);
-}
-
-.route-marker.dest .route-marker-halo {
-  background: rgba(239, 68, 68, 0.15);
-}
-
-.route-marker.waypoint .route-marker-halo {
-  background: rgba(245, 158, 11, 0.15);
-}
-
-/* DOT INTERNO */
-.route-marker-dot {
-  display: block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ffffff;
+  inset: -4px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.10);
 }
 
 .route-marker-dot-origin {
-  background: #ffffff;
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #111111;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.20);
 }
 
-/* DESTINO (círculo con borde tipo Uber) */
+/* DESTINO */
+.route-marker.dest {
+  width: 24px;
+  height: 24px;
+}
+
+.route-marker.dest .route-marker-halo {
+  inset: -5px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.12);
+}
+
 .route-marker-dot-dest {
-  width: 8px;
-  height: 8px;
-  background: #ffffff;
-  box-shadow: 0 0 0 2px #ef4444 inset;
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: #111111;
+  border: 3px solid #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
 }
 
-/* LABEL PARADAS */
+/* PARADAS */
+.route-marker.waypoint {
+  width: auto;
+  min-width: 28px;
+  height: 28px;
+}
+
+.route-marker.waypoint .route-marker-halo {
+  inset: -3px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.08);
+}
+
 .route-marker-stop-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #111111;
   color: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
+}
+
+@media (max-width: 767px) {
+  .route-marker-stop-label {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 7px;
+    font-size: 10px;
+  }
 }
 /* ==========================================
    QUOTE CARD
@@ -3682,35 +3699,4 @@ select:focus-visible {
     color: #ffffff;
     border-color: rgba(255,255,255,0.12);
   }
-}
-.route-marker.waypoint .route-marker-pin,
-.route-marker-pin.route-marker-pin-stop {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
-  border-radius: 999px;
-  background: #2563eb;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.28);
-  border: 2px solid rgba(255,255,255,0.95);
-}
-
-.route-marker.waypoint .route-marker-halo,
-.route-marker-halo.small {
-  width: 40px;
-  height: 40px;
-  opacity: 0.16;
-}
-
-.route-marker-stop-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
 }
