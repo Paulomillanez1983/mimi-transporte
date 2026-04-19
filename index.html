@@ -6101,18 +6101,24 @@ function ajustarVistaRuta(coords, duration = 800, puntosExtras = []) {
       (Array.isArray(puntosExtras) ? puntosExtras.length : 0) - 2
     );
 
-    const baseBottom = isMobile ? Math.max(130, quoteHeight + 28) : Math.max(52, quoteHeight + 24);
+const baseBottom = isMobile
+  ? (
+      quoteVisible
+        ? Math.max(92, Math.min(132, quoteHeight + 18))
+        : 42
+    )
+  : Math.max(52, quoteHeight + 24);
 
 const isHorizontal = deltaLng > deltaLat * 1.45;
 
 const padding = isMobile
   ? {
-      top: isHorizontal ? 44 : 56,
-      right: isHorizontal ? 24 : 30,
-      left: isHorizontal ? 24 : 30,
+      top: isHorizontal ? 28 : 44,
+      right: isHorizontal ? 20 : 28,
+      left: isHorizontal ? 20 : 28,
       bottom: Math.max(
-        110,
-        Math.min(160, baseBottom + (cantidadParadas >= 1 ? 10 : 0))
+        36,
+        Math.min(120, baseBottom + (cantidadParadas >= 1 ? 8 : 0))
       )
     }
   : {
