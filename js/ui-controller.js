@@ -1236,23 +1236,27 @@ class UIController {
           </div>
         </div>
 
-        <div class="action-buttons-grid">
-          <button class="action-btn-large navigate" id="btn-navigate">
-            <span class="icon">${icono}</span>
-            <span>${texto}</span>
-          </button>
+<div class="action-buttons-grid">
+  <button class="action-btn-large navigate" id="btn-navigate">
+    <span class="icon">${icono}</span>
+    <span>${texto}</span>
+  </button>
 
-          <button class="action-btn-large call" id="btn-call">
-            <span class="icon">📞</span>
-            <span>Llamar</span>
-          </button>
+  <button class="action-btn-large call" id="btn-call">
+    <span class="icon">📞</span>
+    <span>Llamar</span>
+  </button>
 
-          <button class="action-btn-large cancel" id="btn-cancel">
-            <span class="icon">❌</span>
-            <span>Cancelar</span>
-          </button>
-        </div>
+  <button class="action-btn-large whatsapp" id="btn-chat">
+    <span class="icon">💬</span>
+    <span>Chat</span>
+  </button>
 
+  <button class="action-btn-large cancel" id="btn-cancel">
+    <span class="icon">❌</span>
+    <span>Cancelar</span>
+  </button>
+</div>
         <div class="trip-progress-steps">
           <div class="step active" data-step="pickup">
             <div class="step-dot"></div>
@@ -1277,11 +1281,12 @@ class UIController {
       </div>
     `;
 
-    const btnNavigate = document.getElementById('btn-navigate');
-    const btnCall = document.getElementById('btn-call');
-    const btnCancel = document.getElementById('btn-cancel');
-    const btnArrived = document.getElementById('btn-arrived');
-
+const btnNavigate = document.getElementById('btn-navigate');
+const btnCall = document.getElementById('btn-call');
+const btnChat = document.getElementById('btn-chat');
+const btnCancel = document.getElementById('btn-cancel');
+const btnArrived = document.getElementById('btn-arrived');
+    
     if (btnNavigate) {
       btnNavigate.onclick = () => {
         if (!url) {
@@ -1302,7 +1307,15 @@ class UIController {
         }
       };
     }
-
+if (btnChat) {
+  btnChat.onclick = () => {
+    window.dispatchEvent(
+      new CustomEvent('driverAction', {
+        detail: { action: 'chat', tripId: trip.id }
+      })
+    );
+  };
+}
     if (btnCancel) {
       btnCancel.onclick = () => {
         if (confirm('¿Seguro que querés cancelar este viaje?')) {
