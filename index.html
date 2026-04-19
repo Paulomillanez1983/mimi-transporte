@@ -2104,9 +2104,13 @@ let state = {
   viajeId: null,
   estadoViaje: null,
   choferId: null,
-  choferLocation: null
-};
+  choferLocation: null,
 
+  // 🔥 tracking persistente
+  driverETA: null,
+  driverHeading: null,
+  lastTrackingUpdate: null
+};
 window.mapaCliente = null;
 window.mapReady = false;
 
@@ -2317,7 +2321,7 @@ function construirMensajeEstadoViaje(viaje = {}, estado = '', fallback = '') {
   return fallback;
 }
 
-function guardarViajeActivoEnStorage() {
+function guardarViajeActivoEnStorage(extra = {}) {
   try {
     const estado = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
 
@@ -2331,35 +2335,66 @@ function guardarViajeActivoEnStorage() {
 
     const enSeguimiento = estadosSeguimiento.includes(estado);
 
-const payload = {
-  viajeId: state?.viajeId || null,
-  estadoViaje: state?.estadoViaje || state?.viajeEstado || null,
-  viajeEstado: state?.viajeEstado || state?.estadoViaje || null,
+    const previous = leerViajeActivoEnStorage() || {};
+    const nowIso = new Date().toISOString();
 
-  origen: state?.origen || null,
-  destino: state?.destino || null,
-  waypoints: Array.isArray(state?.waypoints) ? state.waypoints : [],
+    const etaValue =
+      Number.isFinite(Number(extra?.driverETA)) ? Number(extra.driverETA) :
+      Number.isFinite(Number(state?.driverETA)) ? Number(state.driverETA) :
+      Number.isFinite(Number(previous?.driverETA)) ? Number(previous.driverETA) :
+      null;
 
-  // 🔥 IMPORTANTE
-  choferId: state?.choferId || null,
-  choferLocation: state?.choferLocation || null,
+    const headingValue =
+      Number.isFinite(Number(extra?.driverHeading)) ? Number(extra.driverHeading) :
+      Number.isFinite(Number(state?.driverHeading)) ? Number(state.driverHeading) :
+      Number.isFinite(Number(previous?.driverHeading)) ? Number(previous.driverHeading) :
+      null;
 
-  // 🔥 CLAVE: no guardar ruta vieja en seguimiento
-  routeData: enSeguimiento ? null : (state?.routeData || null),
-  cotizacion: enSeguimiento ? null : (state?.cotizacion || null),
+    const trackingLocation =
+      extra?.choferLocation ||
+      state?.choferLocation ||
+      previous?.choferLocation ||
+      null;
 
-  inputOrigen: document.getElementById('inputOrigen')?.value || '',
-  inputDestino: document.getElementById('inputDestino')?.value || '',
-  waypointTexts: [...document.querySelectorAll('.waypoint-input')].map((el) => el.value || ''),
+    const payload = {
+      viajeId: state?.viajeId || previous?.viajeId || null,
+      estadoViaje: state?.estadoViaje || state?.viajeEstado || previous?.estadoViaje || null,
+      viajeEstado: state?.viajeEstado || state?.estadoViaje || previous?.viajeEstado || null,
 
-  ts: Date.now(),
-  updatedAt: new Date().toISOString()
-};
+      origen: state?.origen || previous?.origen || null,
+      destino: state?.destino || previous?.destino || null,
+      waypoints: Array.isArray(state?.waypoints)
+        ? state.waypoints
+        : (Array.isArray(previous?.waypoints) ? previous.waypoints : []),
+
+      choferId: state?.choferId || previous?.choferId || null,
+      choferLocation: trackingLocation,
+
+      // 🔥 NUEVO
+      driverETA: etaValue,
+      driverHeading: headingValue,
+      lastTrackingUpdate:
+        extra?.lastTrackingUpdate ||
+        state?.lastTrackingUpdate ||
+        previous?.lastTrackingUpdate ||
+        nowIso,
+
+      routeData: enSeguimiento ? null : (state?.routeData || previous?.routeData || null),
+      cotizacion: enSeguimiento ? null : (state?.cotizacion || previous?.cotizacion || null),
+
+      inputOrigen: document.getElementById('inputOrigen')?.value || previous?.inputOrigen || '',
+      inputDestino: document.getElementById('inputDestino')?.value || previous?.inputDestino || '',
+      waypointTexts: [...document.querySelectorAll('.waypoint-input')].map((el) => el.value || ''),
+
+      ts: Date.now(),
+      updatedAt: nowIso
+    };
+
     localStorage.setItem(ACTIVE_TRIP_STORAGE_KEY, JSON.stringify(payload));
   } catch (err) {
     console.warn('[trip] no se pudo guardar viaje activo:', err);
   }
-}  
+}
 function limpiarViajeActivoEnStorage() {
   try {
     localStorage.removeItem(ACTIVE_TRIP_STORAGE_KEY);
@@ -2441,7 +2476,133 @@ function estadoUsaSeguimientoChofer(estado) {
     'EN_CURSO'
   ].includes(e);
 }
+function calcularEtaMinutosSimple(origen, destino) {
+  try {
+    if (!coordenadasValidas(origen?.lat, origen?.lng)) return null;
+    if (!coordenadasValidas(destino?.lat, destino?.lng)) return null;
 
+    const toRad = (deg) => (Number(deg) * Math.PI) / 180;
+    const R = 6371000;
+
+    const lat1 = toRad(origen.lat);
+    const lat2 = toRad(destino.lat);
+    const dLat = toRad(Number(destino.lat) - Number(origen.lat));
+    const dLng = toRad(Number(destino.lng) - Number(origen.lng));
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distanciaMetros = R * c;
+
+    // velocidad urbana simple ~ 28 km/h
+    const minutos = (distanciaMetros / 1000) / 28 * 60;
+
+    return Math.max(1, Math.round(minutos));
+  } catch (_) {
+    return null;
+  }
+}
+
+function obtenerObjetivoSeguimientoSegunEstado(estado, viajeLike = null) {
+  const estadoUpper = String(estado || '').trim().toUpperCase();
+  const viaje = viajeLike || {};
+
+  if (estadoUsaDestinoFinal(estadoUpper)) {
+    return viaje?.destino || state?.destino || null;
+  }
+
+  return viaje?.origen || state?.origen || null;
+}
+
+async function hidratarTrackingDesdeStorage(viajeLocal) {
+  try {
+    if (!viajeLocal || !estadoUsaSeguimientoChofer(viajeLocal?.estadoViaje || viajeLocal?.viajeEstado)) {
+      return;
+    }
+
+    const estado = normalizarEstadoUpper(viajeLocal?.estadoViaje || viajeLocal?.viajeEstado);
+
+    state.choferId = viajeLocal?.choferId || state?.choferId || null;
+    state.choferLocation = viajeLocal?.choferLocation || state?.choferLocation || null;
+    state.driverETA = Number.isFinite(Number(viajeLocal?.driverETA))
+      ? Number(viajeLocal.driverETA)
+      : null;
+    state.driverHeading = Number.isFinite(Number(viajeLocal?.driverHeading))
+      ? Number(viajeLocal.driverHeading)
+      : null;
+    state.lastTrackingUpdate = viajeLocal?.lastTrackingUpdate || null;
+
+    activarModoViajeLive?.();
+
+    const objetivo = obtenerObjetivoSeguimientoSegunEstado(estado, viajeLocal);
+
+    if (coordenadasValidas(state?.choferLocation?.lat, state?.choferLocation?.lng)) {
+      if (typeof window.actualizarPosicionChoferEnMapa === 'function') {
+        window.actualizarPosicionChoferEnMapa({
+          lat: Number(state.choferLocation.lat),
+          lng: Number(state.choferLocation.lng),
+          heading: Number(state.driverHeading || 0),
+          animate: false
+        });
+      }
+
+      if (objetivo && typeof window.dibujarRutaChoferHastaCliente === 'function') {
+        window.dibujarRutaChoferHastaCliente(
+          {
+            lat: Number(state.choferLocation.lat),
+            lng: Number(state.choferLocation.lng)
+          },
+          {
+            lat: Number(objetivo.lat),
+            lng: Number(objetivo.lng)
+          }
+        );
+      }
+
+      if (!Number.isFinite(Number(state.driverETA)) && objetivo) {
+        state.driverETA = calcularEtaMinutosSimple(state.choferLocation, objetivo);
+      }
+
+      guardarViajeActivoEnStorage({
+        choferLocation: state.choferLocation,
+        driverETA: state.driverETA,
+        driverHeading: state.driverHeading,
+        lastTrackingUpdate: state.lastTrackingUpdate || new Date().toISOString()
+      });
+    }
+
+    if (typeof actualizarMetaTrackingChoferUI === 'function') {
+      actualizarMetaTrackingChoferUI({
+        estado,
+        etaMin: state.driverETA,
+        lastTrackingUpdate: state.lastTrackingUpdate
+      });
+    }
+  } catch (err) {
+    console.warn('[tracking] no se pudo hidratar tracking desde storage:', err);
+  }
+}
+
+async function reconectarRealtimeViajeTrasRefresh(viajeId) {
+  try {
+    if (!viajeId) return;
+
+    await syncRealtimeAuthToken(true);
+
+    if (typeof suscribirseEstadoViajeRealtime === 'function') {
+      suscribirseEstadoViajeRealtime(viajeId);
+    }
+
+    if (typeof suscribirseUbicacionChoferRealtime === 'function') {
+      suscribirseUbicacionChoferRealtime(viajeId);
+    }
+  } catch (err) {
+    console.warn('[reconnect] no se pudo reconectar realtime del viaje:', err);
+  }
+}
 function estadoUsaDestinoFinal(estado) {
   const e = String(estado || '').trim().toUpperCase();
   return [
@@ -3394,7 +3555,30 @@ const nombre =
     default: return 'Estado del viaje';
   }
 }
+function actualizarMetaTrackingChoferUI({ estado, etaMin = null, lastTrackingUpdate = null } = {}) {
+  const metaEl = document.getElementById('tripDriverMeta');
+  if (!metaEl) return;
 
+  const textoBase = construirTextoEstadoChofer(estado);
+
+  let texto = textoBase;
+
+  if (Number.isFinite(Number(etaMin)) && Number(etaMin) > 0) {
+    texto += ` · ETA ${Math.round(Number(etaMin))} min`;
+  }
+
+  if (lastTrackingUpdate) {
+    const ms = new Date(lastTrackingUpdate).getTime();
+    if (Number.isFinite(ms)) {
+      const diffSec = Math.max(0, Math.round((Date.now() - ms) / 1000));
+      if (diffSec <= 90) {
+        texto += ' · en vivo';
+      }
+    }
+  }
+
+  metaEl.textContent = texto;
+}
 async function restaurarViajeActivoCliente() {
   try {
     const viajeLocal = leerViajeActivoEnStorage();
@@ -3607,13 +3791,38 @@ async function restaurarViajeActivoCliente() {
 
       await restaurarMapaYCotizacionDesdeStorage(viajeRestore);
 
-      if (state.viajeId && typeof suscribirseUbicacionChoferRealtime === 'function') {
-        suscribirseUbicacionChoferRealtime(state.viajeId);
-      }
+      state.driverHeading = Number.isFinite(Number(viaje?.chofer_heading))
+        ? Number(viaje.chofer_heading)
+        : null;
 
-      guardarViajeActivoEnStorage();
+      state.lastTrackingUpdate = viaje?.chofer_last_seen_at || new Date().toISOString();
+
+      const objetivoSeguimiento = obtenerObjetivoSeguimientoSegunEstado(estado, viajeRestore);
+
+      state.driverETA =
+        state.choferLocation && objetivoSeguimiento
+          ? calcularEtaMinutosSimple(state.choferLocation, objetivoSeguimiento)
+          : null;
+
+      guardarViajeActivoEnStorage({
+        choferLocation: state.choferLocation,
+        driverETA: state.driverETA,
+        driverHeading: state.driverHeading,
+        lastTrackingUpdate: state.lastTrackingUpdate
+      });
+
+      await hidratarTrackingDesdeStorage({
+        ...viajeRestore,
+        choferId: state.choferId,
+        choferLocation: state.choferLocation,
+        driverETA: state.driverETA,
+        driverHeading: state.driverHeading,
+        lastTrackingUpdate: state.lastTrackingUpdate
+      });
+
+      await reconectarRealtimeViajeTrasRefresh(state.viajeId);
+
       actualizarStatusCardNotificaciones(estado);
-
       const notifData = mapearEstadoANotificacion(estado);
 
       if (!historial.length) {
@@ -3677,11 +3886,74 @@ async function restaurarViajeActivoCliente() {
         (Date.now() - referenciaMs > 1000 * 60 * 60 * 6);
 
       if (!estadosActivos.has(estadoStorage) || storageExpirado) {
-        limpiarViajeActivoEnStorage();
-        desactivarModoViajeLive?.();
-        if (notifStatusCard) notifStatusCard.hidden = true;
-        renderizarCentroNotificaciones();
-        return;
+      state.viajeId = viajeLocal.viajeId;
+      state.viajeEstado = estadoStorage;
+      state.estadoViaje = estadoStorage;
+      state.origen = viajeLocal.origen || null;
+      state.destino = viajeLocal.destino || null;
+      state.waypoints = Array.isArray(viajeLocal.waypoints) ? viajeLocal.waypoints : [];
+      state.routeData = viajeLocal.routeData || null;
+      state.cotizacion = viajeLocal.cotizacion || null;
+      state.choferId = viajeLocal?.choferId || null;
+      state.choferLocation = viajeLocal?.choferLocation || null;
+      state.driverETA = Number.isFinite(Number(viajeLocal?.driverETA))
+        ? Number(viajeLocal.driverETA)
+        : null;
+      state.driverHeading = Number.isFinite(Number(viajeLocal?.driverHeading))
+        ? Number(viajeLocal.driverHeading)
+        : null;
+      state.lastTrackingUpdate = viajeLocal?.lastTrackingUpdate || null;
+
+      await restaurarMapaYCotizacionDesdeStorage(viajeLocal);
+      await hidratarTrackingDesdeStorage(viajeLocal);
+      await reconectarRealtimeViajeTrasRefresh(state.viajeId);
+
+      if (typeof actualizarStatusCardNotificaciones === 'function') {
+        actualizarStatusCardNotificaciones(estadoStorage);
+      }
+
+      if (typeof actualizarBotonCancelarViaje === 'function') {
+        actualizarBotonCancelarViaje();
+      }
+      if (typeof actualizarBotonCotizar === 'function') {
+        actualizarBotonCotizar();
+      }
+      if (typeof actualizarPanelPlanificacionViaje === 'function') {
+        actualizarPanelPlanificacionViaje();
+      }
+      if (typeof actualizarResumenCotizacionCompacto === 'function') {
+        actualizarResumenCotizacionCompacto();
+      }
+      if (typeof actualizarBotonConfirmarViaje === 'function') {
+        actualizarBotonConfirmarViaje();
+      }
+      if (typeof actualizarBotonReiniciarRuta === 'function') {
+        actualizarBotonReiniciarRuta();
+      }
+
+      if (typeof actualizarEstadoSolicitudUI === 'function') {
+        const textosEstado = {
+          PENDIENTE: 'Tu viaje sigue pendiente de confirmación.',
+          BUSCANDO_CHOFER: 'Estamos buscando un chofer para tu viaje.',
+          OFERTANDO: 'Estamos notificando choferes cercanos.',
+          OFERTADO: 'Tu solicitud fue enviada a choferes cercanos.',
+          SIN_CHOFER: 'Todavía no encontramos chofer disponible.',
+          ASIGNADO: 'Tu viaje ya tiene chofer asignado.',
+          ACEPTADO: 'Tu chofer aceptó el viaje.',
+          EN_CAMINO: 'Tu chofer va en camino.',
+          INICIADO: 'Tu viaje está en curso.',
+          EN_CURSO: 'Tu viaje está en curso.'
+        };
+
+        actualizarEstadoSolicitudUI({
+          estado: estadoStorage,
+          texto: textosEstado[estadoStorage] || 'Recuperamos tu viaje activo.',
+          viaje: viajeLocal
+        });
+      }
+
+      renderizarCentroNotificaciones();
+      return;
       }
 
       state.viajeId = viajeLocal.viajeId;
