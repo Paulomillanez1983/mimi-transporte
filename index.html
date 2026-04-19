@@ -6487,14 +6487,17 @@ function limpiarMarkersRutaCotizacion() {
 function actualizarCamaraSeguimientoChofer() {
   try {
     if (!window.mapaCliente || !window.mapReady) return;
-    if (!state?.choferLocation || !state?.origen) return;
+const estadoActual = String(state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
+const usarDestinoFinal = estadoUsaDestinoFinal(estadoActual);
+const puntoObjetivo = usarDestinoFinal ? state?.destino : state?.origen;
+
+if (!state?.choferLocation || !puntoObjetivo) return;
     if (window.__userInteractingMap) return;
 
     const choferLat = Number(state.choferLocation.lat);
     const choferLng = Number(state.choferLocation.lng);
-    const clienteLat = Number(state.origen.lat);
-    const clienteLng = Number(state.origen.lng);
-
+const clienteLat = Number(puntoObjetivo.lat);
+const clienteLng = Number(puntoObjetivo.lng);
     if (
       !coordenadasValidas(choferLat, choferLng) ||
       !coordenadasValidas(clienteLat, clienteLng)
