@@ -6321,15 +6321,14 @@ function construirConectoresVisuales(data) {
 
     if (!Number.isFinite(distanciaMetros) || distanciaMetros <= 0) return;
 
-    if (distanciaMetros > maxDistanciaMetros) {
-      console.warn('[visual-connectors] conector descartado por distancia:', {
-        distanciaMetros: Math.round(distanciaMetros),
-        desde: [ax, ay],
-        hasta: [bx, by],
-        maxDistanciaMetros
-      });
-      return;
-    }
+if (distanciaMetros > maxDistanciaMetros) {
+  console.warn('[visual-connectors] conector largo, se dibuja igual:', {
+    distanciaMetros: Math.round(distanciaMetros),
+    desde: [ax, ay],
+    hasta: [bx, by],
+    maxDistanciaMetros
+  });
+}
 
     features.push({
       type: 'Feature',
@@ -6348,23 +6347,79 @@ function construirConectoresVisuales(data) {
 
   const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
 
-if (tieneLegsReales) {
-  data.legs.forEach((leg) => {
-    const geom = limpiarCoordsMapa(leg?.geometry);
-    if (!geom || geom.length < 2) return;
+construirConectoresVisuales = function(data) {
+  const features = [];
 
-    const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
-    const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
+  function limpiarCoordsMapa(arr) {
+    if (!Array.isArray(arr)) return null;
+    const limpias = arr
+      .map((c) => [Number(c?.[0]), Number(c?.[1])])
+      .filter((c) =>
+        Number.isFinite(c[0]) &&
+        Number.isFinite(c[1]) &&
+        Math.abs(c[0]) <= 180 &&
+        Math.abs(c[1]) <= 90
+      );
 
-    const inicioRuta = geom[0];
-    const finRuta = geom[geom.length - 1];
+    if (limpias.length < 2) return null;
 
-    agregarConector(fromReal, inicioRuta, 120);
-    agregarConector(finRuta, toReal, 120);
-  });
+    const resultado = [];
+    for (const c of limpias) {
+      const last = resultado[resultado.length - 1];
+      if (!last || last[0] !== c[0] || last[1] !== c[1]) {
+        resultado.push(c);
+      }
+    }
+
+    return resultado.length >= 2 ? resultado : null;
+  }
+
+  const agregarConector = (a, b) => {
+    const ax = Number(a?.[0]);
+    const ay = Number(a?.[1]);
+    const bx = Number(b?.[0]);
+    const by = Number(b?.[1]);
+
+    if (
+      !Number.isFinite(ax) || !Number.isFinite(ay) ||
+      !Number.isFinite(bx) || !Number.isFinite(by)
+    ) return;
+
+    if (ax === bx && ay === by) return;
+
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [ax, ay],
+          [bx, by]
+        ]
+      },
+      properties: {}
+    });
+  };
+
+  const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
+
+  if (tieneLegsReales) {
+    data.legs.forEach((leg) => {
+      const geom = limpiarCoordsMapa(leg?.geometry);
+      if (!geom || geom.length < 2) return;
+
+      const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
+      const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
+
+      agregarConector(fromReal, geom[0]);
+      agregarConector(geom[geom.length - 1], toReal);
+    });
+
+    return features;
+  }
 
   return features;
-}
+};
+'patch conectores listo'
 
   const routeGeom =
     limpiarCoordsMapa(data?.route_geometry) ||
