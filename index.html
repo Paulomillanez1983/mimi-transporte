@@ -2872,23 +2872,23 @@ if (!rutaSeguimientoDibujada && puntoObjetivo) {
     } catch (_) {}
   }, 80);
 }
-    const coords =
-      state?.routeData?.geometry?.coordinates ||
-      state?.cotizacion?.route_geometry ||
-      null;
+const coords =
+  state?.routeData?.geometry?.coordinates ||
+  state?.cotizacion?.route_geometry ||
+  null;
 
-    if (Array.isArray(coords) && coords.length >= 2) {
-      await dibujarRutaReal(coords);
-    } else {
-      const puntos = obtenerPuntosOrdenados();
-      const coordsFallback = puntos
-        .map((p) => [Number(p?.lng), Number(p?.lat)])
-        .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
+if (Array.isArray(coords) && coords.length >= 2) {
+  await dibujarRutaReal(coords);
+} else if (!usarSeguimientoChofer) {
+  const puntos = obtenerPuntosOrdenados();
+  const coordsFallback = puntos
+    .map((p) => [Number(p?.lng), Number(p?.lat)])
+    .filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]));
 
-      if (coordsFallback.length >= 2) {
-        dibujarRutaLineal(coordsFallback);
-      }
-    }
+  if (coordsFallback.length >= 2) {
+    dibujarRutaLineal(coordsFallback);
+  }
+}
   } catch (err) {
     console.warn('[restore-trip] no se pudo restaurar mapa/cotización:', err);
   }
