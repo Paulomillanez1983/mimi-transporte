@@ -5945,20 +5945,21 @@ function limpiarCapasRutaMapa() {
   }
 
   try {
-    const layers = [
-      'route-anim',
-      'route-line',
-      'route-glow',
-      'route-casing',
-      'route-shadow'
-    ];
+const layers = [
+  'route-connectors-line',
+  'route-anim',
+  'route-line',
+  'route-glow',
+  'route-casing',
+  'route-shadow'
+];
 
-    const sources = [
-      'route',
-      'route-source',
-      'route-line-source'
-    ];
-
+const sources = [
+  'route-connectors',
+  'route',
+  'route-source',
+  'route-line-source'
+];
     layers.forEach((layerId) => {
       if (mapaCliente.getLayer(layerId)) {
         mapaCliente.removeLayer(layerId);
@@ -6136,7 +6137,35 @@ async function dibujarRutaEnMapa(coords) {
       'line-opacity': 0.9
     }
   });
+  const connectorFeatures = Array.isArray(state.routeData?.visualConnectors)
+    ? state.routeData.visualConnectors
+    : [];
 
+  if (connectorFeatures.length) {
+    mapaCliente.addSource('route-connectors', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: connectorFeatures
+      }
+    });
+
+    mapaCliente.addLayer({
+      id: 'route-connectors-line',
+      type: 'line',
+      source: 'route-connectors',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#111111',
+        'line-width': 2.2,
+        'line-opacity': 0.72,
+        'line-dasharray': [1.1, 1.1]
+      }
+    });
+  }
   const bounds = coordsFinales.reduce(
     (b, c) => b.extend(c),
     new maplibregl.LngLatBounds(coordsFinales[0], coordsFinales[0])
@@ -6239,75 +6268,79 @@ function limpiarCoordsMapa(arr) {
   return resultado.length >= 2 ? resultado : null;
 }
 
-  function construirRutaVisualDesdeLegs(legs) {
-  if (!Array.isArray(legs) || !legs.length) return null;
+function construirConectoresVisuales(data) {
+  const features = [];
 
-  const rutaFinal = [];
+  const agregarConector = (a, b) => {
+    const ax = Number(a?.[0]);
+    const ay = Number(a?.[1]);
+    const bx = Number(b?.[0]);
+    const by = Number(b?.[1]);
 
-  legs.forEach((leg, index) => {
-    let tramo = limpiarCoordsMapa(leg?.geometry);
-
-    const fromLng = Number(leg?.from?.lng);
-    const fromLat = Number(leg?.from?.lat);
-    const toLng = Number(leg?.to?.lng);
-    const toLat = Number(leg?.to?.lat);
-
-    const fromOk =
-      Number.isFinite(fromLng) &&
-      Number.isFinite(fromLat) &&
-      Math.abs(fromLng) <= 180 &&
-      Math.abs(fromLat) <= 90;
-
-    const toOk =
-      Number.isFinite(toLng) &&
-      Number.isFinite(toLat) &&
-      Math.abs(toLng) <= 180 &&
-      Math.abs(toLat) <= 90;
-
-    if (!tramo || tramo.length < 2) {
-      if (!fromOk || !toOk) return;
-      tramo = [
-        [fromLng, fromLat],
-        [toLng, toLat]
-      ];
-    } else {
-      if (fromOk) tramo[0] = [fromLng, fromLat];
-      if (toOk) tramo[tramo.length - 1] = [toLng, toLat];
+    if (
+      !Number.isFinite(ax) || !Number.isFinite(ay) ||
+      !Number.isFinite(bx) || !Number.isFinite(by)
+    ) {
+      return;
     }
 
-    tramo = limpiarCoordsMapa(tramo);
-    if (!tramo) return;
+    if (ax === bx && ay === by) return;
 
-    if (index === 0 || rutaFinal.length === 0) {
-      rutaFinal.push(...tramo);
-    } else {
-      rutaFinal.push(...tramo.slice(1));
-    }
-  });
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [ax, ay],
+          [bx, by]
+        ]
+      },
+      properties: {}
+    });
+  };
 
-  return limpiarCoordsMapa(rutaFinal);
-}
+  if (Array.isArray(data?.legs) && data.legs.length) {
+    data.legs.forEach((leg) => {
+      const geom = limpiarCoordsMapa(leg?.geometry);
+      if (!geom || geom.length < 2) return;
 
-function ajustarExtremosRutaConPuntos(routeCoords, puntos) {
-  const ruta = limpiarCoordsMapa(routeCoords);
-  if (!ruta || ruta.length < 2) return null;
+      const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
+      const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
 
-  const listaPuntos = Array.isArray(puntos) ? puntos : [];
-  const origen = listaPuntos[0];
-  const destino = listaPuntos[listaPuntos.length - 1];
+      const inicioRuta = geom[0];
+      const finRuta = geom[geom.length - 1];
 
-  const salida = [...ruta];
+      agregarConector(fromReal, inicioRuta);
+      agregarConector(finRuta, toReal);
+    });
 
-  if (origen && coordenadasValidas(origen.lat, origen.lng)) {
-    salida[0] = [Number(origen.lng), Number(origen.lat)];
+    return features;
   }
 
-  if (destino && coordenadasValidas(destino.lat, destino.lng)) {
-    salida[salida.length - 1] = [Number(destino.lng), Number(destino.lat)];
+  const routeGeom =
+    limpiarCoordsMapa(data?.route_geometry) ||
+    limpiarCoordsMapa(data?.geometry);
+
+  const puntos = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : null;
+
+  if (routeGeom && puntos && puntos.length >= 2) {
+    const origen = puntos[0];
+    const destino = puntos[puntos.length - 1];
+
+    agregarConector(
+      [Number(origen?.lng), Number(origen?.lat)],
+      routeGeom[0]
+    );
+
+    agregarConector(
+      routeGeom[routeGeom.length - 1],
+      [Number(destino?.lng), Number(destino?.lat)]
+    );
   }
 
-  return limpiarCoordsMapa(salida);
+  return features;
 }
+
   
 async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
@@ -6380,7 +6413,35 @@ async function dibujarRutaReal(coords) {
       'line-opacity': 0.97
     }
   });
+  const connectorFeatures = Array.isArray(state.routeData?.visualConnectors)
+    ? state.routeData.visualConnectors
+    : [];
 
+  if (connectorFeatures.length) {
+    mapaCliente.addSource('route-connectors', {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: connectorFeatures
+      }
+    });
+
+    mapaCliente.addLayer({
+      id: 'route-connectors-line',
+      type: 'line',
+      source: 'route-connectors',
+      layout: {
+        'line-join': 'round',
+        'line-cap': 'round'
+      },
+      paint: {
+        'line-color': '#111111',
+        'line-width': 2.2,
+        'line-opacity': 0.72,
+        'line-dasharray': [1.1, 1.1]
+      }
+    });
+  }
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
@@ -7284,29 +7345,15 @@ function procesarRespuestaCotizacion(data, payload) {
     coordsPuntos = simples.length >= 2 ? limpiarCoordsRuta(simples) : null;
   }
 
-  const puntosLogicos = Array.isArray(data?.puntos_ruta) && data.puntos_ruta.length >= 2
-    ? data.puntos_ruta
-    : obtenerPuntosOrdenados();
-
-  const coordsLegsVisuales = construirRutaVisualDesdeLegs(data?.legs);
-
-  const coordsBase =
-    coordsLegsVisuales ||
+  const coordsFinales =
     coordsRouteGeometry ||
     coordsGeometry ||
     coordsLegsCrudas ||
     coordsPuntos ||
     null;
 
-  const coordsFinales = coordsLegsVisuales
-    ? coordsLegsVisuales
-    : (coordsRouteGeometry || coordsGeometry)
-      ? ajustarExtremosRutaConPuntos(coordsBase, puntosLogicos)
-      : coordsBase;
-
-  const esRutaReal = !!(coordsLegsVisuales || coordsRouteGeometry || coordsGeometry || coordsLegsCrudas);
-  const esProvisoria = !esRutaReal && !!coordsPuntos;
-  
+  const esRutaReal = !!(coordsRouteGeometry || coordsGeometry || coordsLegsCrudas);
+  const esProvisoria = !esRutaReal && !!coordsPuntos;  
   
   state.cotizacion = {
     ...data,
@@ -7319,22 +7366,22 @@ function procesarRespuestaCotizacion(data, payload) {
     source: data?.source || null
   };
 
-  state.routeData = {
-    distance: distancia,
-    duration: duracion,
-    resumenRuta,
-    fallback: fallbackUsado,
-    source: data?.source || null,
-    esRutaReal,
-    provisional: esProvisoria,
-    geometry: coordsFinales
-      ? {
-          type: 'LineString',
-          coordinates: coordsFinales
-        }
-      : null
-  };
-
+state.routeData = {
+  distance: distancia,
+  duration: duracion,
+  resumenRuta,
+  fallback: fallbackUsado,
+  source: data?.source || null,
+  esRutaReal,
+  provisional: esProvisoria,
+  geometry: coordsFinales
+    ? {
+        type: 'LineString',
+        coordinates: coordsFinales
+      }
+    : null,
+  visualConnectors: construirConectoresVisuales(data)
+};
   if (coordsFinales) {
     setSectionVisible('mapSection', true);
 
