@@ -6214,7 +6214,106 @@ function dibujarRutaLineal(coords) {
     }
   });
 }
-  
+  function limpiarCoordsMapa(arr) {
+  if (!Array.isArray(arr)) return [];
+
+  const limpias = arr
+    .map((c) => [Number(c?.[0]), Number(c?.[1])])
+    .filter((c) =>
+      Number.isFinite(c[0]) &&
+      Number.isFinite(c[1]) &&
+      Math.abs(c[0]) <= 180 &&
+      Math.abs(c[1]) <= 90
+    );
+
+  const resultado = [];
+  for (const c of limpias) {
+    const last = resultado[resultado.length - 1];
+    if (!last || last[0] !== c[0] || last[1] !== c[1]) {
+      resultado.push(c);
+    }
+  }
+
+  return resultado;
+}
+
+function distanciaCuadradaLngLat(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b)) return Number.POSITIVE_INFINITY;
+  const dx = Number(a[0]) - Number(b[0]);
+  const dy = Number(a[1]) - Number(b[1]);
+  return (dx * dx) + (dy * dy);
+}
+
+function buscarIndiceMasCercanoEnRuta(rutaCoords, punto) {
+  if (!Array.isArray(rutaCoords) || rutaCoords.length < 2 || !Array.isArray(punto)) {
+    return -1;
+  }
+
+  let bestIdx = -1;
+  let bestDist = Number.POSITIVE_INFINITY;
+
+  for (let i = 0; i < rutaCoords.length; i++) {
+    const dist = distanciaCuadradaLngLat(rutaCoords[i], punto);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestIdx = i;
+    }
+  }
+
+  return bestIdx;
+}
+
+function insertarConectoresVisualesEnRuta(routeCoords, puntosLogicos) {
+  const ruta = limpiarCoordsMapa(routeCoords);
+  if (ruta.length < 2) return ruta;
+
+  const puntos = Array.isArray(puntosLogicos)
+    ? puntosLogicos
+        .map((p) => [Number(p?.lng), Number(p?.lat)])
+        .filter((c) =>
+          Number.isFinite(c[0]) &&
+          Number.isFinite(c[1]) &&
+          Math.abs(c[0]) <= 180 &&
+          Math.abs(c[1]) <= 90
+        )
+    : [];
+
+  if (puntos.length < 2) return ruta;
+
+  const inserciones = puntos
+    .map((p) => ({
+      punto: p,
+      idx: buscarIndiceMasCercanoEnRuta(ruta, p)
+    }))
+    .filter((x) => x.idx >= 0)
+    .sort((a, b) => a.idx - b.idx);
+
+  if (!inserciones.length) return ruta;
+
+  const salida = [];
+  let cursorInsercion = 0;
+
+  for (let i = 0; i < ruta.length; i++) {
+    salida.push(ruta[i]);
+
+    while (
+      cursorInsercion < inserciones.length &&
+      inserciones[cursorInsercion].idx === i
+    ) {
+      const p = inserciones[cursorInsercion].punto;
+      const last = salida[salida.length - 1];
+
+      if (!last || last[0] !== p[0] || last[1] !== p[1]) {
+        salida.push(p);      // va al punto exacto elegido
+        salida.push(ruta[i]); // vuelve a la ruta vial
+      }
+
+      cursorInsercion += 1;
+    }
+  }
+
+  return limpiarCoordsMapa(salida);
+}
   async function dibujarRutaReal(coords) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
@@ -7188,7 +7287,7 @@ function procesarRespuestaCotizacion(data, payload) {
     coordsPuntos = simples.length >= 2 ? limpiarCoordsRuta(simples) : null;
   }
 
-  const coordsFinales =
+  const coordsFinalesBase =
     coordsRouteGeometry ||
     coordsGeometry ||
     coordsLegs ||
@@ -7198,6 +7297,14 @@ function procesarRespuestaCotizacion(data, payload) {
   const esRutaReal = !!(coordsRouteGeometry || coordsGeometry || coordsLegs);
   const esProvisoria = !esRutaReal && !!coordsPuntos;
 
+  const puntosLogicosVisuales = Array.isArray(data?.puntos_ruta) && data.puntos_ruta.length >= 2
+    ? data.puntos_ruta
+    : obtenerPuntosOrdenados();
+
+  const coordsFinales = esRutaReal
+    ? insertarConectoresVisualesEnRuta(coordsFinalesBase, puntosLogicosVisuales)
+    : coordsFinalesBase;
+  
   state.cotizacion = {
     ...data,
     precio,
