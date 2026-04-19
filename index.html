@@ -5706,22 +5706,25 @@ function crearMarkerElement(label, type) {
   el.className = `route-marker ${type}`;
 
   const esParada = type === 'waypoint';
-
-  const icono =
-    type === 'origin' ? '📍' :
-    type === 'dest' ? '🏁' :
-    `<span class="route-marker-stop-label">${label}</span>`;
+  const texto = esParada ? String(label || '') : '';
 
   el.innerHTML = `
     <div class="route-marker-halo ${esParada ? 'small' : ''}"></div>
     <div class="route-marker-pin ${esParada ? 'route-marker-pin-stop' : ''}">
-      ${icono}
+      ${
+        type === 'origin'
+          ? '<span class="route-marker-dot route-marker-dot-origin" aria-hidden="true"></span>'
+          : type === 'dest'
+            ? '<span class="route-marker-dot route-marker-dot-dest" aria-hidden="true"></span>'
+            : `<span class="route-marker-stop-label">${texto}</span>`
+      }
     </div>
   `;
 
   return el;
 }
-  async function initMapa() {
+  
+async function initMapa() {
   console.log('[initMapa] entrando', {
     mapaClienteActual: mapaCliente,
     mapReadyActual: mapReady
