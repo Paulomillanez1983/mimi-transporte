@@ -6429,23 +6429,6 @@ function construirConectoresVisuales(data) {
     }
   }
 
-  const puntos = Array.isArray(data?.puntos_ruta) ? data.puntos_ruta : [];
-
-  if (puntos.length >= 2) {
-    for (let i = 0; i < puntos.length - 1; i++) {
-      const a = puntos[i];
-      const b = puntos[i + 1];
-      if (!a || !b) continue;
-
-      agregarConector(
-        [Number(a.lng), Number(a.lat)],
-        [Number(b.lng), Number(b.lat)]
-      );
-    }
-  }
-
-  return features;
-}
 
   function limpiarCoordsMapa(arr) {
     if (!Array.isArray(arr)) return null;
