@@ -2766,13 +2766,15 @@ if (btnChat) {
         return;
       }
 
-      await window.tripChat.openTripChatForClientTrip(viajeChat);
-    } catch (err) {
-      console.error('[cliente.chatChofer]', err);
-      notif.show('Chat', err?.message || 'No se pudo abrir el chat con el chofer', 'error');
-    }
-  };
-}  
+        await window.tripChat.openTripChatForClientTrip(viajeChat);
+      } catch (err) {
+        console.error('[cliente.chatChofer]', err);
+        notif.show('Chat', err?.message || 'No se pudo abrir el chat con el chofer', 'error');
+      }
+    };
+  }  
+}
+
 async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
     if (!viajeLocal) return;
