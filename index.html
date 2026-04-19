@@ -1118,10 +1118,11 @@ async function buscarDireccion(query) {
         <div class="trip-driver-card__avatar" id="tripDriverAvatar">C</div>
 
         <div class="trip-driver-card__info">
-          <div class="trip-driver-card__name" id="tripDriverName">Chofer asignado</div>
-          <div class="trip-driver-card__meta" id="tripDriverMeta">En camino a buscarte</div>
-          <div class="trip-driver-card__contact" id="tripDriverContact">Sin contacto</div>
+          <div class="trip-driver-card__name" id="tripDriverName">Estado del viaje</div>
+          <div class="trip-driver-card__meta" id="tripDriverMeta">Estamos buscando un chofer</div>
+          <div class="trip-driver-card__contact" id="tripDriverContact">Sin contacto disponible</div> 
         </div>
+        
       </div>
 
       <div class="trip-active-actions" id="tripActiveActions" hidden>
@@ -2668,29 +2669,43 @@ function actualizarCardChofer(viaje = {}) {
 
   if (!card || !name || !meta || !contact) return;
 
+  const estado = String(
+    viaje?.estado ||
+    state?.estadoViaje ||
+    state?.viajeEstado ||
+    ''
+  ).toUpperCase();
+
+  const estadosConChoferReal = ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO', 'INICIADO', 'EN_CURSO'];
+
+  if (!estadosConChoferReal.includes(estado)) {
+    card.hidden = true;
+    return;
+  }
+
   const choferNombre = String(
     viaje?.chofer_nombre ||
     viaje?.choferNombre ||
-    'Chofer asignado'
+    viaje?.driver_name ||
+    'Chofer'
   ).trim();
 
   const choferTelefono = String(
     viaje?.chofer_telefono ||
     viaje?.choferTelefono ||
+    viaje?.driver_phone ||
     ''
   ).trim();
 
-  const estado = String(viaje?.estado || state?.estadoViaje || state?.viajeEstado || '').toUpperCase();
-
   let metaText = 'Chofer asignado';
-  if (estado === 'ASIGNADO' || estado === 'ACEPTADO') metaText = 'Va en camino a buscarte';
+  if (estado === 'ACEPTADO') metaText = 'En camino a buscarte';
   else if (estado === 'EN_CAMINO') metaText = 'Está llegando a tu origen';
   else if (estado === 'INICIADO' || estado === 'EN_CURSO') metaText = 'Viaje en curso';
 
   card.hidden = false;
-  name.textContent = choferNombre || 'Chofer asignado';
+  name.textContent = choferNombre || 'Chofer';
   meta.textContent = metaText;
-  contact.textContent = choferTelefono || 'Sin teléfono disponible';
+  contact.textContent = choferTelefono || 'Sin contacto disponible';
 
   if (avatar) {
     avatar.textContent = (choferNombre || 'C').charAt(0).toUpperCase();
@@ -2708,8 +2723,8 @@ function actualizarCardChofer(viaje = {}) {
       window.open(`https://wa.me/${telefonoLimpio}?text=${mensaje}`, '_blank');
     };
   }
-} 
-async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
+}
+  async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
     if (!viajeLocal) return;
 
