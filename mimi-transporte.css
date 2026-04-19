@@ -825,22 +825,20 @@ select:focus-visible {
 ========================================== */
 .route-marker {
   position: relative;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
 }
 
 .route-marker-pin {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  border: 3px solid #fff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  border: 2px solid #fff;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
   position: relative;
   z-index: 2;
 }
@@ -857,42 +855,62 @@ select:focus-visible {
   background: linear-gradient(135deg, #f59e0b, #d97706);
 }
 
+.route-marker-pin-stop {
+  width: 28px;
+  height: 28px;
+}
+
 .route-marker-halo {
   position: absolute;
-  inset: -8px;
+  inset: -4px;
   border-radius: 50%;
   z-index: 1;
-  animation: markerPulse 1.8s ease-out infinite;
   pointer-events: none;
+  opacity: 1;
+}
+
+.route-marker-halo.small {
+  inset: -3px;
 }
 
 .route-marker.origin .route-marker-halo {
-  background: rgba(34, 197, 94, 0.18);
+  background: rgba(34, 197, 94, 0.14);
 }
 
 .route-marker.dest .route-marker-halo {
-  background: rgba(239, 68, 68, 0.18);
+  background: rgba(239, 68, 68, 0.14);
 }
 
 .route-marker.waypoint .route-marker-halo {
-  background: rgba(245, 158, 11, 0.18);
+  background: rgba(245, 158, 11, 0.14);
 }
 
-@keyframes markerPulse {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.9;
-  }
-  70% {
-    transform: scale(1.35);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1.35);
-    opacity: 0;
-  }
+.route-marker-dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
 }
 
+.route-marker-dot-origin {
+  width: 10px;
+  height: 10px;
+}
+
+.route-marker-dot-dest {
+  width: 9px;
+  height: 9px;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+
+.route-marker-stop-label {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
 /* ==========================================
    QUOTE CARD
 ========================================== */
