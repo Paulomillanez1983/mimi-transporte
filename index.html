@@ -7064,31 +7064,34 @@ function usarFallbackLocal(payload, requestId) {
     mostrarCotizacion(2500, 0, 0);
   });
 }
-
- function procesarRespuestaCotizacion(data, payload) {
+function procesarRespuestaCotizacion(data, payload) {
   console.log('📦 PAYLOAD', payload);
   console.log('📡 RESPUESTA', data);
 
-const precio = numeroSeguro(data?.precio, 0);
+  const precio = numeroSeguro(data?.precio, 0);
 
-let distancia = numeroSeguro(data?.distancia_km, 0);
+  let distancia = numeroSeguro(data?.distancia_km, 0);
+  if (distancia < 2) {
+    distancia *= 0.85;
+  } else if (distancia < 5) {
+    distancia *= 0.9;
+  }
 
-if (distancia < 2) {
-  distancia *= 0.85;
-} else if (distancia < 5) {
-  distancia *= 0.9;
-}
   const duracion = numeroSeguro(data?.duracion_min, 0);
   const detallePrecio = data?.detalle_precio || {};
+
   const fallbackUsado =
     data?.fallback_usado === true ||
     detallePrecio?.fallback_usado === true ||
     data?.metodo_calculo === 'fallback_haversine' ||
-    detallePrecio?.proveedor_ruta === 'fallback_haversine';
+    detallePrecio?.proveedor_ruta === 'fallback_haversine' ||
+    data?.source === 'fallback' ||
+    data?.source === 'mixed';
 
   const metodoCalculo =
     data?.metodo_calculo ||
     detallePrecio?.proveedor_ruta ||
+    data?.source ||
     'desconocido';
 
   console.log('📍 ORIGEN PAYLOAD', payload?.origen, payload?.origen_lat, payload?.origen_lng);
@@ -7097,84 +7100,97 @@ if (distancia < 2) {
   console.log('⏱️ DURACION BACKEND', data?.duracion_min);
   console.log('🧠 METODO', metodoCalculo);
   console.log('⚠️ FALLBACK', fallbackUsado);
+  console.log('🧭 SOURCE', data?.source || 'sin-source');
   console.log('🗺️ ROUTE_GEOMETRY puntos', Array.isArray(data?.route_geometry) ? data.route_geometry.length : 0);
+  console.log('🧵 GEOMETRY puntos', Array.isArray(data?.geometry) ? data.geometry.length : 0);
   console.log('🦵 LEGS', Array.isArray(data?.legs) ? data.legs.length : 0);
   console.log('📌 PUNTOS_RUTA', Array.isArray(data?.puntos_ruta) ? data.puntos_ruta.length : 0);
 
   const resumenRuta =
     data?.resumen_ruta ||
+    data?.resumen_ruta_front ||
     [
       payload?.origen || '',
-      ...((payload?.paradas || []).map(p => p?.direccion).filter(Boolean)),
+      ...((payload?.paradas || payload?.waypoints || []).map(p => p?.direccion || p?.direccionCorta).filter(Boolean)),
       payload?.destino || ''
     ]
       .filter(Boolean)
       .join(' → ');
 
-const limpiarCoordsRuta = (arr) => {
-  if (!Array.isArray(arr)) return null;
+  const limpiarCoordsRuta = (arr) => {
+    if (!Array.isArray(arr)) return null;
 
-  const limpias = arr
-    .map((c) => [Number(c?.[0]), Number(c?.[1])])
-    .filter((c) =>
-      Number.isFinite(c[0]) &&
-      Number.isFinite(c[1]) &&
-      Math.abs(c[0]) <= 180 &&
-      Math.abs(c[1]) <= 90
-    );
+    const limpias = arr
+      .map((c) => [Number(c?.[0]), Number(c?.[1])])
+      .filter((c) =>
+        Number.isFinite(c[0]) &&
+        Number.isFinite(c[1]) &&
+        Math.abs(c[0]) <= 180 &&
+        Math.abs(c[1]) <= 90
+      );
 
-  if (limpias.length < 2) return null;
+    if (limpias.length < 2) return null;
 
-  const resultado = [];
-  for (const c of limpias) {
-    const last = resultado[resultado.length - 1];
-    if (!last || last[0] !== c[0] || last[1] !== c[1]) {
-      resultado.push(c);
-    }
-  }
-
-  return resultado.length >= 2 ? resultado : null;
-};
-
-const coordsRouteGeometry = limpiarCoordsRuta(data?.route_geometry);
-
-let coordsLegs = null;
-if (!coordsRouteGeometry && Array.isArray(data?.legs)) {
-  const merged = [];
-
-  data.legs.forEach((leg) => {
-    const g = limpiarCoordsRuta(leg?.geometry);
-    if (!g) return;
-
-    g.forEach((c) => {
-      const last = merged[merged.length - 1];
+    const resultado = [];
+    for (const c of limpias) {
+      const last = resultado[resultado.length - 1];
       if (!last || last[0] !== c[0] || last[1] !== c[1]) {
-        merged.push(c);
+        resultado.push(c);
+      }
+    }
+
+    return resultado.length >= 2 ? resultado : null;
+  };
+
+  const mergearGeometriasLegs = (legs) => {
+    if (!Array.isArray(legs) || !legs.length) return null;
+
+    const merged = [];
+
+    legs.forEach((leg, index) => {
+      const g = limpiarCoordsRuta(leg?.geometry);
+      if (!g) return;
+
+      if (index === 0 || merged.length === 0) {
+        merged.push(...g);
+      } else {
+        merged.push(...g.slice(1));
       }
     });
-  });
 
-  coordsLegs = merged.length >= 2 ? merged : null;
-}
+    return merged.length >= 2 ? limpiarCoordsRuta(merged) : null;
+  };
 
-let coordsPuntos = null;
-if (!coordsRouteGeometry && !coordsLegs && Array.isArray(data?.puntos_ruta)) {
-  const simples = data.puntos_ruta
-    .map((p) => [Number(p.lng), Number(p.lat)])
-    .filter((c) =>
-      Number.isFinite(c[0]) &&
-      Number.isFinite(c[1]) &&
-      Math.abs(c[0]) <= 180 &&
-      Math.abs(c[1]) <= 90
-    );
+  const coordsRouteGeometry = limpiarCoordsRuta(data?.route_geometry);
+  const coordsGeometry = !coordsRouteGeometry ? limpiarCoordsRuta(data?.geometry) : null;
+  const coordsLegs = !coordsRouteGeometry && !coordsGeometry
+    ? mergearGeometriasLegs(data?.legs)
+    : null;
 
-  coordsPuntos = simples.length >= 2 ? simples : null;
-}
+  let coordsPuntos = null;
+  if (!coordsRouteGeometry && !coordsGeometry && !coordsLegs && Array.isArray(data?.puntos_ruta)) {
+    const simples = data.puntos_ruta
+      .map((p) => [Number(p?.lng), Number(p?.lat)])
+      .filter((c) =>
+        Number.isFinite(c[0]) &&
+        Number.isFinite(c[1]) &&
+        Math.abs(c[0]) <= 180 &&
+        Math.abs(c[1]) <= 90
+      );
 
-const coordsFinales = coordsRouteGeometry || coordsLegs || coordsPuntos || null;
-const esRutaReal = !!(coordsRouteGeometry || coordsLegs);
-const esProvisoria = !esRutaReal && !!coordsPuntos;
-   
+    coordsPuntos = simples.length >= 2 ? limpiarCoordsRuta(simples) : null;
+  }
+
+  const coordsFinales =
+    coordsRouteGeometry ||
+    coordsGeometry ||
+    coordsLegs ||
+    coordsPuntos ||
+    null;
+
+  const esRutaReal = !!(coordsRouteGeometry || coordsGeometry || coordsLegs);
+  const esProvisoria = !esRutaReal && !!coordsPuntos;
+
   state.cotizacion = {
     ...data,
     precio,
@@ -7182,7 +7198,8 @@ const esProvisoria = !esRutaReal && !!coordsPuntos;
     duracion_min: duracion,
     resumen_ruta: resumenRuta,
     fallback_usado: fallbackUsado,
-    metodo_calculo: metodoCalculo
+    metodo_calculo: metodoCalculo,
+    source: data?.source || null
   };
 
   state.routeData = {
@@ -7190,6 +7207,7 @@ const esProvisoria = !esRutaReal && !!coordsPuntos;
     duration: duracion,
     resumenRuta,
     fallback: fallbackUsado,
+    source: data?.source || null,
     esRutaReal,
     provisional: esProvisoria,
     geometry: coordsFinales
@@ -7200,31 +7218,31 @@ const esProvisoria = !esRutaReal && !!coordsPuntos;
       : null
   };
 
-if (coordsFinales) {
-  setSectionVisible('mapSection', true);
+  if (coordsFinales) {
+    setSectionVisible('mapSection', true);
 
-  setTimeout(() => {
-    try {
-      mapaCliente?.resize?.();
-    } catch (_) {}
-  }, 80);
+    setTimeout(() => {
+      try {
+        mapaCliente?.resize?.();
+      } catch (_) {}
+    }, 80);
 
-  initMapa().then(async () => {
-    try {
-      await dibujarRutaReal(coordsFinales);
-    } catch (e) {
-      console.warn('[mapa] fallo dibujarRutaReal:', e);
+    initMapa().then(async () => {
+      try {
+        await dibujarRutaReal(coordsFinales);
+      } catch (e) {
+        console.warn('[mapa] fallo dibujarRutaReal:', e);
 
-      if (!esRutaReal && coordsPuntos) {
-        try {
-          dibujarRutaLineal(coordsPuntos);
-        } catch (_) {}
+        if (!esRutaReal && coordsPuntos) {
+          try {
+            dibujarRutaLineal(coordsPuntos);
+          } catch (_) {}
+        }
       }
-    }
-  });
-}
-   
-  if (fallbackUsado && !coordsRouteGeometry && !coordsLegs) {
+    });
+  }
+
+  if ((data?.source === 'fallback' || data?.source === 'mixed' || fallbackUsado) && !esRutaReal) {
     notif.show(
       'Ruta estimada',
       'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
@@ -7232,9 +7250,15 @@ if (coordsFinales) {
     );
   }
 
+  if (data?.source === 'mixed') {
+    console.warn('[cotizacion] ruta mixta: algunos tramos vinieron por OSRM y otros por fallback');
+  }
+
   mostrarCotizacion(precio, distancia, duracion);
   guardarViajeActivoEnStorage();
-} 
+}
+
+  
 // ==========================================
 // UI COTIZACIÓN
 // ==========================================
