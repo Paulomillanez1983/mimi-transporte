@@ -6348,23 +6348,23 @@ function construirConectoresVisuales(data) {
 
   const tieneLegsReales = Array.isArray(data?.legs) && data.legs.length > 0;
 
-  if (tieneLegsReales) {
-    data.legs.forEach((leg) => {
-      const geom = limpiarCoordsMapa(leg?.geometry);
-      if (!geom || geom.length < 2) return;
+if (tieneLegsReales) {
+  data.legs.forEach((leg) => {
+    const geom = limpiarCoordsMapa(leg?.geometry);
+    if (!geom || geom.length < 2) return;
 
-      const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
-      const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
+    const fromReal = [Number(leg?.from?.lng), Number(leg?.from?.lat)];
+    const toReal = [Number(leg?.to?.lng), Number(leg?.to?.lat)];
 
-      const inicioRuta = geom[0];
-      const finRuta = geom[geom.length - 1];
+    const inicioRuta = geom[0];
+    const finRuta = geom[geom.length - 1];
 
-      agregarConector(fromReal, inicioRuta, 40);
-      agregarConector(finRuta, toReal, 40);
-    });
+    agregarConector(fromReal, inicioRuta, 120);
+    agregarConector(finRuta, toReal, 120);
+  });
 
-    return features;
-  }
+  return features;
+}
 
   const routeGeom =
     limpiarCoordsMapa(data?.route_geometry) ||
