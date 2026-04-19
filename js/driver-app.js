@@ -476,21 +476,10 @@ _syncNavFabVisibility() {
         return;
       }
 
-    try {
-      const { error: choferOfflineError } = await tripManager.setDriverAvailability({
-        online: false,
-        disponible: false
-      });
-
-      if (choferOfflineError) {
-        console.warn('[DriverApp] No se pudo forzar OFFLINE inicial:', choferOfflineError);
-      }
-
+      // No forzar OFFLINE en base al iniciar la app.
+      // Solo dejar el estado local en OFFLINE hasta que el chofer active disponibilidad.
       this._onlineStatus = false;
-    } catch (e) {
-      console.warn('[DriverApp] Error forzando estado inicial offline:', e);
-      this._onlineStatus = false;
-     }
+
       uiController.updateDriverState(
         this._onlineStatus ? 'ONLINE' : 'OFFLINE',
         this._onlineStatus
@@ -501,7 +490,6 @@ _syncNavFabVisibility() {
       } else {
         this._setFlowState('OFFLINE');
       }
-
       let currentTrip = tripManager.getCurrentTrip();
       const pendingTrip = tripManager.getPendingTrip();
 
