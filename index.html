@@ -6103,14 +6103,16 @@ function ajustarVistaRuta(coords, duration = 800, puntosExtras = []) {
 
     const baseBottom = isMobile ? Math.max(130, quoteHeight + 28) : Math.max(52, quoteHeight + 24);
 
+const isHorizontal = deltaLng > deltaLat * 1.45;
+
 const padding = isMobile
   ? {
-      top: 100,
-      right: 60,
-      left: 60,
+      top: isHorizontal ? 44 : 56,
+      right: isHorizontal ? 24 : 30,
+      left: isHorizontal ? 24 : 30,
       bottom: Math.max(
-        Math.round(window.innerHeight * 0.35),
-        baseBottom + (cantidadParadas >= 1 ? 14 : 0)
+        110,
+        Math.min(160, baseBottom + (cantidadParadas >= 1 ? 10 : 0))
       )
     }
   : {
@@ -6181,7 +6183,7 @@ const padding = isMobile
 }
   
   
-function dibujarRutaLineal(coords) {
+function dibujarRutaLineal(coords, { autoFit = true } = {}) {
   if (!mapaCliente || !mapReady || !Array.isArray(coords) || coords.length < 2) return;
 
   requestAnimationFrame(() => {
@@ -6235,8 +6237,11 @@ function dibujarRutaLineal(coords) {
       }
     });
 
-    agregarMarkersRutaDesdeCoords();
-    ajustarVistaRuta(coordsFinales, 500);
+agregarMarkersRutaDesdeCoords();
+
+if (autoFit) {
+  ajustarVistaRuta(coordsFinales, 500);
+}
 
 if (window.DriverSim?.stop) {
   window.DriverSim.stop();
@@ -6380,7 +6385,7 @@ function construirConectoresVisuales(data) {
 
   return features;
 }
-async function dibujarRutaReal(coords) {
+async function dibujarRutaReal(coords, { autoFit = true } = {}) {
   if (!Array.isArray(coords) || coords.length < 2) return;
 
   setSectionVisible('mapSection', true);
@@ -6537,8 +6542,11 @@ if (connectorFeatures.length) {
     coordinates: coordsFinales
   };
 
-  agregarMarkersRutaDesdeCoords();
+agregarMarkersRutaDesdeCoords();
+
+if (autoFit) {
   ajustarVistaRuta(coordsFinales, window.innerWidth <= 768 ? 120 : 220);
+}
 
 if (window.DriverSim?.stop) {
   window.DriverSim.stop();
@@ -7506,21 +7514,21 @@ state.routeData = {
     } catch (_) {}
   }, 80);
 
-  initMapa().then(async () => {
-    try {
-      await dibujarRutaReal(coordsFinales);
-      ajustarVistaRuta(coordsFinales, 900, puntosRutaForFit);
-    } catch (e) {
-      console.warn('[mapa] fallo dibujarRutaReal:', e);
+initMapa().then(async () => {
+  try {
+    await dibujarRutaReal(coordsFinales, { autoFit: false });
+    ajustarVistaRuta(coordsFinales, window.innerWidth <= 768 ? 520 : 700, puntosRutaForFit);
+  } catch (e) {
+    console.warn('[mapa] fallo dibujarRutaReal:', e);
 
-      if (!esRutaReal && coordsPuntos) {
-        try {
-          dibujarRutaLineal(coordsPuntos);
-          ajustarVistaRuta(coordsPuntos, 900, puntosRutaForFit);
-        } catch (_) {}
-      }
+    if (!esRutaReal && coordsPuntos) {
+      try {
+        dibujarRutaLineal(coordsPuntos, { autoFit: false });
+        ajustarVistaRuta(coordsPuntos, window.innerWidth <= 768 ? 520 : 700, puntosRutaForFit);
+      } catch (_) {}
     }
-  });
+  }
+});
 }
 
 if ((data?.source === 'fallback' || data?.source === 'mixed' || fallbackUsado) && !esRutaReal) {
@@ -7537,17 +7545,6 @@ if (data?.source === 'mixed') {
 
 mostrarCotizacion(precio, distancia, duracion);
 
-if (coordsFinales) {
-  const puntosRutaForFit = Array.isArray(data?.puntos_ruta)
-    ? data.puntos_ruta
-    : (Array.isArray(data?.stops) ? data.stops : []);
-
-  setTimeout(() => {
-    try {
-      ajustarVistaRuta(coordsFinales, 650, puntosRutaForFit);
-    } catch (_) {}
-  }, 140);
-}
 
 guardarViajeActivoEnStorage();
 }
