@@ -6414,20 +6414,21 @@ async function dibujarRutaReal(coords) {
     }
   });
 
-mapaCliente.addLayer({
-  id: 'route-connectors-line',
-  type: 'line',
-  source: 'route-connectors',
-  layout: {
-    'line-join': 'round',
-    'line-cap': 'round'
-  },
-  paint: {
-    'line-color': '#FF6B00', // 🔥 naranja tipo Uber
-    'line-width': 4,
-    'line-opacity': 0.85
-  }
-});
+  mapaCliente.addLayer({
+    id: 'route-line',
+    type: 'line',
+    source: 'route',
+    layout: {
+      'line-join': 'round',
+      'line-cap': 'round'
+    },
+    paint: {
+      'line-color': '#111111',
+      'line-width': 2.6,
+      'line-opacity': 0.97
+    }
+  });
+
   const connectorFeatures = Array.isArray(state.routeData?.visualConnectors)
     ? state.routeData.visualConnectors
     : [];
@@ -6449,31 +6450,30 @@ mapaCliente.addLayer({
         'line-join': 'round',
         'line-cap': 'round'
       },
-paint: {
-  // 🔥 color dinámico según distancia
-  'line-color': [
-    'case',
-    ['>', ['get', 'distancia'], 200],
-    '#FF6B00', // largo → naranja
-    '#111111'  // corto → negro
-  ],
+      paint: {
+        'line-color': [
+          'case',
+          ['>', ['get', 'distancia'], 200],
+          '#FF6B00',
+          '#111111'
+        ],
+        'line-width': [
+          'case',
+          ['>', ['get', 'distancia'], 200],
+          4,
+          2
+        ],
+        'line-opacity': 0.85,
+        'line-dasharray': [
+          'case',
+          ['>', ['get', 'distancia'], 200],
+          ['literal', [1.2, 1.2]],
+          ['literal', [1, 0]]
+        ]
+      }
+    });
+  }
 
-  'line-width': [
-    'case',
-    ['>', ['get', 'distancia'], 200],
-    4,
-    2
-  ],
-
-  'line-opacity': 0.85,
-
-  'line-dasharray': [
-    'case',
-    ['>', ['get', 'distancia'], 200],
-    ['literal', [1.2, 1.2]], // largo → punteado
-    ['literal', [0]]         // corto → sólido
-  ]
-}
   if (!state.routeData) state.routeData = {};
   state.routeData.geometry = {
     type: 'LineString',
@@ -6499,6 +6499,7 @@ paint: {
     } catch (_) {}
   }, 450);
 }
+
   
 function mostrarMapaInmediato(_puntos, _coords) {
   setSectionVisible('mapSection', true);
