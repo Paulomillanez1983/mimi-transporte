@@ -6074,6 +6074,11 @@ function ajustarVistaRuta(coords, duration = 800) {
           bottom: Math.max(52, quoteHeight + 24)
         };
 
+    try {
+      mapaCliente.resize();
+      mapaCliente.stop?.();
+    } catch (_) {}
+
     mapaCliente.fitBounds(bounds, {
       padding,
       duration,
@@ -6090,6 +6095,7 @@ function ajustarVistaRuta(coords, duration = 800) {
     console.warn('[MAP] error ajustando vista de ruta:', err);
   }
 }
+
   function iniciarAnimacionRuta() {
   if (!mapaCliente || !mapReady || !mapaCliente.getLayer('route-anim')) return;
 
@@ -6491,6 +6497,7 @@ function centrarEnRuta() {
 
   ajustarVistaRuta(coords, 650);
 }
+
   
 window.dibujarRutaChoferHastaCliente = dibujarRutaChoferHastaCliente;
 window.limpiarRutaChoferHastaCliente = limpiarRutaChoferHastaCliente;
