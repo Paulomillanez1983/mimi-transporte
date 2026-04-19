@@ -2692,14 +2692,9 @@ function actualizarCardChofer(viaje = {}) {
     ''
   ).trim();
 
-  // 👇 SIEMPRE mostrar card
   card.hidden = false;
 
-  // ==========================================
-  // 🟡 ETAPA: BUSCANDO / OFERTANDO
-  // ==========================================
   if (!estadosConChoferReal.includes(estado)) {
-
     name.textContent = 'Estado del viaje';
 
     if (estado === 'OFERTANDO' || estado === 'OFERTADO') {
@@ -2722,10 +2717,6 @@ function actualizarCardChofer(viaje = {}) {
 
     return;
   }
-
-  // ==========================================
-  // 🟢 ETAPA: CHOFER REAL
-  // ==========================================
 
   let metaText = 'Chofer asignado';
   if (estado === 'ACEPTADO') metaText = 'En camino a buscarte';
@@ -2752,8 +2743,9 @@ function actualizarCardChofer(viaje = {}) {
       window.open(`https://wa.me/${telefonoLimpio}?text=${mensaje}`, '_blank');
     };
   }
-}  
-  async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
+} 
+  
+async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
     if (!viajeLocal) return;
 
