@@ -50,6 +50,8 @@ class DriverApp {
     this._fabBusy = false;
     this._gpsStarting = false;
     this._gpsStarted = false;
+    this._acceptingOffer = false;
+    
     this._backgroundServicesStarting = false;
     this._backgroundServicesStarted = false;
     this._fabNavClickHandler = null;
@@ -549,16 +551,23 @@ if (currentTrip) {
   this._syncNavFabVisibility();
 } else if (pendingTrip) {
   console.log('[DriverApp] Estado inicial: oferta pendiente');
-        this._setFlowState('RECEIVING_OFFER');
 
-uiController.showIncomingTrip(
-  pendingTrip,
-  () => this._acceptOffer(pendingTrip.offerId),
-  () => this._rejectOffer(pendingTrip.offerId)
-);
+  // Si hay oferta pendiente, este chofer está efectivamente operativo.
+  this._onlineStatus = true;
+  uiController.updateDriverState('ONLINE', true);
 
-this._syncNavFabVisibility();
-      } else {
+  this._setFlowState('RECEIVING_OFFER');
+
+  uiController.showIncomingTrip(
+    
+    pendingTrip,
+    () => this._acceptOffer(pendingTrip.offerId),
+    () => this._rejectOffer(pendingTrip.offerId)
+  );
+
+  this._syncConnectionMenuItem();
+  this._syncNavFabVisibility();
+} else {
         console.log('[DriverApp] Estado inicial: esperando');
 
         if (this._onlineStatus) {
@@ -781,8 +790,8 @@ _subscribeToEvents() {
   });
 
   const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
+    this._acceptingOffer = false;
     const alreadySameTrip = String(this._currentTripId || '') === String(trip?.id || '');
-
     this._currentTripId = trip.id;
     this._setFlowState('GOING_TO_PICKUP');
 
@@ -826,8 +835,8 @@ _subscribeToEvents() {
   });
 
   const unsubCompleted = tripManager.on('tripCompleted', async (trip) => {
+    this._acceptingOffer = false;
     console.log('[DriverApp] tripCompleted', trip.id);
-
     if (trip?.id && this._currentTripId && String(trip.id) !== String(this._currentTripId)) {
       console.warn('[DriverApp] tripCompleted ignorado (no es viaje actual)');
       return;
@@ -856,6 +865,7 @@ _subscribeToEvents() {
   });
 
   const unsubCancelled = tripManager.on('tripCancelled', (trip) => {
+    this._acceptingOffer = false;
     console.log('[DriverApp] tripCancelled', trip?.id);
 
     if (trip?.id && this._currentTripId && String(trip.id) !== String(this._currentTripId)) {
@@ -883,30 +893,34 @@ _subscribeToEvents() {
     uiController.showWaitingState();
   });
 
-  const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
-    console.log('[DriverApp] pendingTripCleared', reason);
+const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
+  console.log('[DriverApp] pendingTripCleared', reason);
 
-    const currentTrip = tripManager.getCurrentTrip?.();
+  const currentTrip = tripManager.getCurrentTrip?.();
 
-    if (currentTrip?.id) {
-      console.log(
-        '[DriverApp] pendingTripCleared ignorado porque ya hay viaje activo:',
-        currentTrip.id
-      );
-      return;
-    }
+  if (currentTrip?.id) {
+    console.log(
+      '[DriverApp] pendingTripCleared ignorado porque ya hay viaje activo:',
+      currentTrip.id
+    );
+    return;
+  }
 
-    if (this._onlineStatus) {
-      this._setFlowState('ONLINE_IDLE');
-    } else {
-      this._setFlowState('OFFLINE');
-    }
+  if (this._acceptingOffer) {
+    console.log('[DriverApp] pendingTripCleared ignorado porque hay aceptación en curso');
+    return;
+  }
 
-    uiController.hideIncomingModal?.();
-    uiController.showWaitingState();
-    this._syncNavFabVisibility();
-  });
+  if (this._onlineStatus) {
+    this._setFlowState('ONLINE_IDLE');
+  } else {
+    this._setFlowState('OFFLINE');
+  }
 
+  uiController.hideIncomingModal?.();
+  uiController.showWaitingState();
+  this._syncNavFabVisibility();
+});
 const unsubNoPending = tripManager.on('noPendingTrips', () => {
   console.log('[DriverApp] noPendingTrips');
 
@@ -920,9 +934,10 @@ const unsubNoPending = tripManager.on('noPendingTrips', () => {
     return;
   }
 
-  // IMPORTANTE:
-  // no llamar resetState() desde este evento porque resetState()
-  // vuelve a emitir pendingTripCleared/noPendingTrips y genera loop.
+  if (this._acceptingOffer) {
+    console.log('[DriverApp] noPendingTrips ignorado porque hay aceptación en curso');
+    return;
+  }
 
   if (this._onlineStatus) {
     this._setFlowState('ONLINE_IDLE');
@@ -1104,6 +1119,7 @@ async _acceptOffer(offerId) {
   }
 
   this._actionLock = true;
+  this._acceptingOffer = true;
 
   console.log('[DriverApp] Aceptando oferta:', offerId);
   uiController.setGlobalLoading?.(true, 'Aceptando viaje...');
@@ -1137,9 +1153,13 @@ async _acceptOffer(offerId) {
   } finally {
     this._actionLock = false;
     uiController.setGlobalLoading?.(false);
+
+    // Si no llegó tripAccepted, liberamos el flag igual
+    setTimeout(() => {
+      this._acceptingOffer = false;
+    }, 2500);
   }
 }
-
 async _rejectOffer(offerId) {
   if (this._destroyed) {
     return { success: false, error: 'APP_DESTROYED' };
