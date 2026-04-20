@@ -768,57 +768,96 @@ _subscribeToRealtime(driverId) {
   // =========================================================
   // ACTIONS (VIAJES)
   // =========================================================
-  async _invokeEdgeFunction(functionName, body = {}) {
+async _invokeEdgeFunction(functionName, body = {}, options = {}) {
+  const timeoutMs = Number(options?.timeoutMs || 8000);
+
+  let controller = null;
+  let timeoutId = null;
+
+  try {
+    const sessionData = await supabaseService.client.auth.getSession();
+    const accessToken = sessionData?.data?.session?.access_token;
+
+    if (!accessToken) {
+      return { success: false, error: 'No access token' };
+    }
+
+    controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    console.log(`[TripManager] Invocando edge ${functionName}...`, {
+      body,
+      timeoutMs
+    });
+
+    const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/${functionName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: CONFIG.SUPABASE_KEY,
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    });
+
+    const raw = await res.text();
+    let json = null;
+
     try {
-      const sessionData = await supabaseService.client.auth.getSession();
-      const accessToken = sessionData?.data?.session?.access_token;
+      json = raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      json = { raw };
+    }
 
-      if (!accessToken) {
-        return { success: false, error: 'No access token' };
-      }
+    console.log(`[TripManager] Edge ${functionName} HTTP ${res.status}`, json);
 
-      const res = await fetch(`${CONFIG.SUPABASE_URL}/functions/v1/${functionName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: CONFIG.SUPABASE_KEY,
-          Authorization: `Bearer ${accessToken}`
-        },
-        body: JSON.stringify(body)
-      });
-
-      const raw = await res.text();
-      let json = null;
-
-      try {
-        json = raw ? JSON.parse(raw) : null;
-      } catch (_) {
-        json = { raw };
-      }
-
-      if (!res.ok) {
-        return {
-          success: false,
-          error: json?.error || json?.message || `HTTP ${res.status}`,
-          body: json,
-          status: res.status
-        };
-      }
-
-      return {
-        success: !!(json?.exito || json?.ok),
-        data: json,
-        body: json,
-        error: json?.error || null
-      };
-    } catch (error) {
-      console.error(`[TripManager] Edge ${functionName} error:`, error);
+    if (!res.ok) {
       return {
         success: false,
-        error: error.message || `Error invocando ${functionName}`
+        error: json?.error || json?.message || `HTTP ${res.status}`,
+        body: json,
+        status: res.status
       };
     }
+
+    const normalizedBody = json || {};
+    const nested = normalizedBody?.resultado || {};
+
+    return {
+      success: !!(normalizedBody?.exito || normalizedBody?.ok),
+      data: normalizedBody,
+      body: {
+        ...normalizedBody,
+        motivo: normalizedBody?.motivo || nested?.motivo || null,
+        estado: normalizedBody?.estado || nested?.estado || null,
+        oferta_id: normalizedBody?.oferta_id || nested?.oferta_id || null,
+        viaje_id: normalizedBody?.viaje_id || nested?.viaje_id || null,
+        assigned_driver_id:
+          normalizedBody?.assigned_driver_id || nested?.assigned_driver_id || null,
+        chofer_id_uuid:
+          normalizedBody?.chofer_id_uuid || nested?.chofer_id_uuid || null
+      },
+      error: normalizedBody?.error || null
+    };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      console.error(`[TripManager] Edge ${functionName} timeout`);
+      return {
+        success: false,
+        error: `Timeout invocando ${functionName}`
+      };
+    }
+
+    console.error(`[TripManager] Edge ${functionName} error:`, error);
+    return {
+      success: false,
+      error: error?.message || `Error invocando ${functionName}`
+    };
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
+}
 
   async acceptOffer(offerId) {
     const driverId = this.driverId;
@@ -851,40 +890,52 @@ const { data: offerRow, error: offerError } = await supabaseService.client
       return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
     }
 
-const result = await this._invokeEdgeFunction('aceptar-viaje-multi', {
-  viaje_id: offerRow.viaje_id,
-  chofer_id: driverId
-});
-    console.log('[TripManager] acceptOffer result:', result);
-    console.log('[TripManager] acceptOffer body:', result?.body);
+const result = await this._invokeEdgeFunction(
+  'aceptar-viaje-multi',
+  {
+    viaje_id: offerRow.viaje_id,
+    chofer_id: driverId
+  },
+  {
+    timeoutMs: 8000
+  }
+);
 
-    if (!result.success) {
-      const paso = result?.body?.paso || '';
+console.log('[TripManager] acceptOffer result:', result);
+console.log('[TripManager] acceptOffer body:', result?.body);
 
-      if (
-        [
-          'viaje_ya_asignado',
-          'estado_final',
-          'estado_invalido',
-          'chofer_no_autorizado',
-          'oferta_vencida'
-        ].includes(paso)
-      ) {
-        this._clearPendingOffer(result.error || 'offer_unavailable', {
-          emit: false
-        });
-        this.emit('pendingTripCleared', {
-          reason: result.error || 'offer_unavailable'
-        });
+if (!result.success) {
+  const motivo =
+    result?.body?.motivo ||
+    result?.body?.paso ||
+    '';
 
-        await this._loadInitialState(driverId);
-      }
+  if (
+    [
+      'viaje_ya_tomado',
+      'viaje_ya_asignado',
+      'estado_final',
+      'estado_invalido',
+      'chofer_no_autorizado',
+      'oferta_no_valida',
+      'oferta_vencida'
+    ].includes(motivo)
+  ) {
+    this._clearPendingOffer(result.error || motivo || 'offer_unavailable', {
+      emit: false
+    });
+    this.emit('pendingTripCleared', {
+      reason: result.error || motivo || 'offer_unavailable'
+    });
 
-      return {
-        success: false,
-        error: result.error || 'No se pudo aceptar el viaje'
-      };
-    }
+    await this._loadInitialState(driverId);
+  }
+
+  return {
+    success: false,
+    error: result.error || motivo || 'No se pudo aceptar el viaje'
+  };
+}
 
     // =====================================================
     // HIDRATAR EL VIAJE ACEPTADO CON RETRY
