@@ -263,8 +263,10 @@ const { data: offers, error: offerError } = await supabaseService.client
   .eq('chofer_id', driverId)
   .eq('estado', 'PENDIENTE')
   .not('expires_at', 'is', null)
+
+  
   .order('enviada_en', { ascending: false })
-  .limit(1);        
+  .limit(1);
         console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
 
         if (offerError) {
@@ -389,14 +391,6 @@ const remainingSeconds = Math.max(
   1,
   Math.round((expiresAtMs - nowMs) / 1000)
 );
-if (remainingSeconds <= 2) {
-  console.log('[TripManager] Offer descartada por expirar demasiado pronto');
-
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
-  this.emit('noPendingTrips');
-  return;
-}
 const offerWindowSeconds = Math.max(
   1,
   Math.round((expiresAtMs - enviadaEnMs) / 1000)
