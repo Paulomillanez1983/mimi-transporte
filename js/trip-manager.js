@@ -265,8 +265,7 @@ const { data: offers, error: offerError } = await supabaseService.client
   .not('expires_at', 'is', null)
   .gt('expires_at', nowIso)
   .order('enviada_en', { ascending: false })
-  .limit(1);
-        
+  .limit(1);        
         console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
 
         if (offerError) {
@@ -445,75 +444,75 @@ if (
   // =========================================================
   // REJECT OFFER (CORREGIDO CON REASON)
   // =========================================================
-  async rejectOffer(offerId, reason = 'RECHAZADA') {
-    const driverId = this.driverId;
+async rejectOffer(offerId, reason = 'RECHAZADA') {
+  const driverId = this.driverId;
 
-    if (!driverId) {
-      return { success: false, error: 'No driverId' };
-    }
-
-    if (!offerId) {
-      return { success: false, error: 'No offerId' };
-    }
-
-    console.log('[TripManager] Rejecting offer:', offerId, 'reason:', reason);
-
-const { error } = await supabaseService.client
-  .from('viaje_ofertas')
-  .update(updatePayload)
-  .eq('id', offerId)
-  .eq('chofer_id', driverId)
-  .in('estado', ['PENDIENTE']);
-    
-    if (ofertaError) {
-      console.error('[TripManager] Error reading offer before reject:', ofertaError);
-      return { success: false, error: ofertaError.message };
-    }
-
-    if (!ofertaActual) {
-      return { success: false, error: 'Oferta no encontrada' };
-    }
-
-    const viajeId = ofertaActual.viaje_id || null;
-
-    const updatePayload = {
-      estado: 'RECHAZADA',
-      respondida_en: new Date().toISOString()
-    };
-
-    // Solo agregar motivo si la columna existe
-    if (reason && reason !== 'RECHAZADA') {
-      updatePayload.motivo_rechazo = reason;
-    }
-
-    const { error } = await supabaseService.client
-      .from('viaje_ofertas')
-      .update(updatePayload)
-      .eq('id', offerId)
-      .eq('chofer_id_uuid', driverId)
-      .in('estado', ['PENDIENTE']);
-
-    if (error) {
-      console.error('[TripManager] RejectOffer error:', error);
-      return { success: false, error: error.message };
-    }
-
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
-    this.emit('pendingTripCleared', { reason: 'offer_rejected' });
-    await new Promise(resolve => setTimeout(resolve, 200));
-    if (viajeId) {
-      const redispatch = await this._redispatchViaje(viajeId);
-      if (!redispatch.success) {
-        console.warn('[TripManager] Reject ok, pero redispatch falló:', redispatch.error);
-      }
-    }
-
-    await this._loadInitialState(driverId);
-
-    return { success: true };
+  if (!driverId) {
+    return { success: false, error: 'No driverId' };
   }
 
+  if (!offerId) {
+    return { success: false, error: 'No offerId' };
+  }
+
+  console.log('[TripManager] Rejecting offer:', offerId, 'reason:', reason);
+
+  const { data: ofertaActual, error: ofertaError } = await supabaseService.client
+    .from('viaje_ofertas')
+    .select('id, viaje_id, chofer_id, estado')
+    .eq('id', offerId)
+    .eq('chofer_id', driverId)
+    .maybeSingle();
+
+  if (ofertaError) {
+    console.error('[TripManager] Error reading offer before reject:', ofertaError);
+    return { success: false, error: ofertaError.message };
+  }
+
+  if (!ofertaActual) {
+    return { success: false, error: 'Oferta no encontrada' };
+  }
+
+  const viajeId = ofertaActual.viaje_id || null;
+
+  const updatePayload = {
+    estado: 'RECHAZADA',
+    respondida_en: new Date().toISOString()
+  };
+
+const updatePayload = {
+  estado: 'RECHAZADA',
+  respondida_en: new Date().toISOString()
+};
+  const { error } = await supabaseService.client
+    .from('viaje_ofertas')
+    .update(updatePayload)
+    .eq('id', offerId)
+    .eq('chofer_id', driverId)
+    .in('estado', ['PENDIENTE']);
+
+  if (error) {
+    console.error('[TripManager] RejectOffer error:', error);
+    return { success: false, error: error.message };
+  }
+
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+  this.emit('pendingTripCleared', { reason: 'offer_rejected' });
+
+  await new Promise(resolve => setTimeout(resolve, 200));
+
+  if (viajeId) {
+    const redispatch = await this._redispatchViaje(viajeId);
+    if (!redispatch.success) {
+      console.warn('[TripManager] Reject ok, pero redispatch falló:', redispatch.error);
+    }
+  }
+
+  await this._loadInitialState(driverId);
+
+  return { success: true };
+}
   // =========================================================
   // REALTIME (CON RECONEXIÓN AUTOMÁTICA)
   // =========================================================
@@ -749,11 +748,10 @@ const { data: offerRow, error: offerError } = await supabaseService.client
       return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
     }
 
-    const result = await this._invokeEdgeFunction('aceptar-viaje-multi', {
-      viaje_id: offerRow.viaje_id,
-      chofer_id_uuid: driverId
-    });
-
+const result = await this._invokeEdgeFunction('aceptar-viaje-multi', {
+  viaje_id: offerRow.viaje_id,
+  chofer_id: driverId
+});
     console.log('[TripManager] acceptOffer result:', result);
     console.log('[TripManager] acceptOffer body:', result?.body);
 
@@ -794,23 +792,24 @@ const { data: offerRow, error: offerError } = await supabaseService.client
     await new Promise(resolve => setTimeout(resolve, 300));
 
     // Intentar hidratar hasta 3 veces
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const result = await supabaseService.client
-        .from('viajes')
-        .select('*')
-        .eq('id', offerRow.viaje_id)
-        .maybeSingle();
+let acceptedTripQueryResult = null;
 
-      acceptedTripRaw = result.data;
-      acceptedTripError = result.error;
+for (let attempt = 0; attempt < 3; attempt++) {
+  acceptedTripQueryResult = await supabaseService.client
+    .from('viajes')
+    .select('*')
+    .eq('id', offerRow.viaje_id)
+    .maybeSingle();
 
-      if (acceptedTripRaw) break;
+  acceptedTripRaw = acceptedTripQueryResult.data;
+  acceptedTripError = acceptedTripQueryResult.error;
 
-      if (attempt < 2) {
-        await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
-      }
-    }
+  if (acceptedTripRaw) break;
 
+  if (attempt < 2) {
+    await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
+  }
+}
     if (acceptedTripError) {
       console.error('[TripManager] Error loading accepted trip:', acceptedTripError);
     }
@@ -838,36 +837,36 @@ const { data: offerRow, error: offerError } = await supabaseService.client
         this.emit('tripAccepted', acceptedTrip);
       }
 
-      return {
-        success: true,
-        data: result.data,
-        trip: acceptedTrip
-      };
-    }
+return {
+  success: true,
+  data: acceptedTripQueryResult?.data || null,
+  trip: acceptedTrip
+};
+          }
 
     // =====================================================
     // FALLBACK: SI AÚN NO SE REFLEJÓ EN DB, REFRESH
     // =====================================================
     await this._loadInitialState(driverId);
 
-    if (this.currentTrip) {
-      return {
-        success: true,
-        data: result.data,
-        trip: this.currentTrip
-      };
-    }
-
+if (this.currentTrip) {
+  return {
+    success: true,
+    data: acceptedTripQueryResult?.data || result.data || null,
+    trip: this.currentTrip
+  };
+}
+    
     console.warn(
       '[TripManager] acceptOffer OK, pero el viaje aún no pudo hidratarse en frontend'
     );
 
-    return {
-      success: true,
-      data: result.data,
-      warning: 'trip_not_hydrated_yet'
-    };
-  }
+return {
+  success: true,
+  data: acceptedTripQueryResult?.data || null,
+  warning: 'trip_not_hydrated_yet'
+};
+    }
 
   async acceptTrip() {
     const offerId = this.pendingOffer?.offerId || null;
@@ -899,7 +898,7 @@ const { data: offerRow, error: offerError } = await supabaseService.client
 
     const result = await this._invokeEdgeFunction('iniciar-viaje-ts', {
       viaje_id: tripId,
-      chofer_id_uuid: driverId
+      chofer_id: driverId
     });
 
     if (!result.success) {
@@ -921,7 +920,7 @@ const { data: offerRow, error: offerError } = await supabaseService.client
 
     const result = await this._invokeEdgeFunction('completar-viaje-ts', {
       viaje_id: tripId,
-      chofer_id_uuid: driverId
+      chofer_id: driverId
     });
 
     if (!result.success) {
@@ -945,7 +944,7 @@ const { data: offerRow, error: offerError } = await supabaseService.client
 
     const result = await this._invokeEdgeFunction('cancelar-viaje-ts', {
       viaje_id: tripId,
-      chofer_id_uuid: driverId,
+      chofer_id: driverId,
       cancelado_por: 'chofer',
       motivo
     });
