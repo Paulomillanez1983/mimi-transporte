@@ -436,14 +436,17 @@ _syncNavFabVisibility() {
       this.driverId = driverId;
       console.log('[DriverApp] driverId detectado:', driverId);
 
-      console.log('[DriverApp] Inicializando TripManager...');
-      const tripManagerReady = await tripManager.init(driverId);
+console.log('[DriverApp] Inicializando TripManager...');
+const tripManagerReady = await tripManager.init(driverId);
 
-      if (!tripManagerReady) {
-        console.warn('[DriverApp] TripManager no pudo inicializarse');
-        uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
-      }
+// 🔥 EXPONER PARA DEBUG / TESTS
+window.tripManager = tripManager;
+window.driverApp = this;
 
+if (!tripManagerReady) {
+  console.warn('[DriverApp] TripManager no pudo inicializarse');
+  uiController.showToast('No se pudo cargar el perfil del chofer', 'warning', 5000);
+}
       this._subscribeToEvents();
       this._setupUI();
       initDriverSupport();
@@ -1774,6 +1777,12 @@ if (fabNav && this._fabNavClickHandler) {
 }
 
 const app = new DriverApp();
+
+// 🔥 EXPONER APP GLOBAL PARA DEBUG
+window.driverApp = app;
+window.tripManager = tripManager;
+window.supabaseService = supabaseService;
+
 app.init();
 
 export default DriverApp;
