@@ -718,7 +718,7 @@ this.tripAssignedChannel = supabaseService.client
 
     // IMPORTANTE:
     // Se mantiene aceptar-viaje-ts porque esa es la función real en producción.
-    const result = await this._invokeEdgeFunction('aceptar-viaje-ts', {
+    const result = await this._invokeEdgeFunction('aceptar-viaje-multi', {
       viaje_id: offerRow.viaje_id,
       chofer_id: driverId
     });
