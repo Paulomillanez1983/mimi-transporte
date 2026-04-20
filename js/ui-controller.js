@@ -640,8 +640,12 @@ class UIController {
       this._closeIncomingModal();
     }
 
-    const offerTimeout = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15);
-
+const offerTimeout = Number(
+  tripData?.remainingOfferSeconds ||
+  tripData?.offerTimeoutSeconds ||
+  CONFIG.INCOMING_OFFER_TIMEOUT ||
+  8
+);
     this.lastTripModalId = tripData.id;
     this.state.callbacks = { onAccept, onReject };
     this.state.currentTrip = tripData;
