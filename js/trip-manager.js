@@ -263,10 +263,10 @@ const { data: offers, error: offerError } = await supabaseService.client
   .eq('chofer_id', driverId)
   .eq('estado', 'PENDIENTE')
   .not('expires_at', 'is', null)
-
-  
+  .gt('expires_at', nowIso)
   .order('enviada_en', { ascending: false })
   .limit(1);
+        
         console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
 
         if (offerError) {
@@ -327,31 +327,21 @@ const { data: offers, error: offerError } = await supabaseService.client
             .eq('id', validOffer.viaje_id)
             .single();
 
-          if (error) {
-            console.error('[TripManager] Error fetching trip for offer:', error);
+             if (error) {
+               console.error('[TripManager] Error fetching trip for offer:', error);
 
-            this.pendingOffer = null;
-            this.lastOfferIdShown = null;
-            this.emit('noPendingTrips');
-            return;
-          }
+              this.pendingOffer = null;
+              this.lastOfferIdShown = null;
+              this.emit('noPendingTrips');
+              return;
+           }
 
-          trip = data;
+            trip = data;
 
-          const ESTADOS_VALIDOS_OFERTA = ['OFERTADO', 'ASIGNADO'];
-
-          if (trip && !ESTADOS_VALIDOS_OFERTA.includes(String(trip.estado || '').toUpperCase())) {
-            console.warn(
-              '[TripManager] Offer ignored because trip is no longer offerable:',
-              trip.id,
-              trip.estado
-            );
-
-            this.pendingOffer = null;
-            this.lastOfferIdShown = null;
-            this.emit('noPendingTrips');
-            return;
-          }
+           // 🚀 MODO UBER REAL
+          // Si existe una oferta PENDIENTE y no vencida, se muestra.
+          // El backend ya decidió si esa oferta es válida.
+          // No descartamos por estado del viaje acá.
         } else {
           const { data, error } = await supabaseService.client
             .from('cotizaciones')
@@ -388,9 +378,18 @@ const enviadaEnMs = validOffer?.enviada_en ? new Date(validOffer.enviada_en).get
 const nowMs = Date.now();
 
 const remainingSeconds = Math.max(
-  0,
+  1,
   Math.round((expiresAtMs - nowMs) / 1000)
 );
+
+if (remainingSeconds <= 2) {
+  console.log('[TripManager] Offer descartada por expirar demasiado pronto');
+
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+  this.emit('noPendingTrips');
+  return;
+}
         const offerWindowSeconds = Math.max(
   1,
   Math.round((expiresAtMs - enviadaEnMs) / 1000)
@@ -721,13 +720,17 @@ createChannel('offers', 'viaje_ofertas',
       return { success: false, error: 'No offerId disponible' };
     }
 
+const nowIso = new Date().toISOString();
+
 const { data: offerRow, error: offerError } = await supabaseService.client
   .from('viaje_ofertas')
-  .select('id, viaje_id, chofer_id, estado')
+  .select('id, viaje_id, chofer_id, estado, expires_at')
   .eq('id', offerId)
   .eq('chofer_id', driverId)
   .in('estado', ['PENDIENTE'])
-  .maybeSingle();    
+  .gt('expires_at', nowIso)
+  .maybeSingle(); 
+    
     if (offerError) {
       console.error('[TripManager] Error reading offer before accept:', offerError);
       return { success: false, error: offerError.message };
