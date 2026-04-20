@@ -293,20 +293,6 @@ if (!validOffer) {
   this.emit('noPendingTrips');
   return;
 }
-
-        if (!validOffer) {
-          console.warn('[TripManager] No valid non-expired offer found');
-
-          if (this.pendingOffer) {
-            this.emit('pendingTripCleared', { reason: 'all_offers_expired' });
-          }
-
-          this.pendingOffer = null;
-          this.lastOfferIdShown = null;
-          this.emit('noPendingTrips');
-          return;
-        }
-
         if (!validOffer.viaje_id && !validOffer.cotizacion_id) {
           console.warn('[TripManager] Offer has no viaje_id and no cotizacion_id:', validOffer);
 
@@ -944,7 +930,7 @@ this.tripAssignedChannel = supabaseService.client
         },
         body: JSON.stringify({
           viaje_id: viajeId,
-          timeout_seconds: CONFIG.INCOMING_OFFER_TIMEOUT || 15
+          timeout_seconds: Math.max(CONFIG.INCOMING_OFFER_TIMEOUT || 45, 45)
         })
       });
 
