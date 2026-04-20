@@ -257,16 +257,16 @@ class TripManager {
         console.log('[TripManager] Checking offers for driver:', driverId);
         const nowIso = new Date().toISOString();
 
-        const { data: offers, error: offerError } = await supabaseService.client
-          .from('viaje_ofertas')
-          .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en, expires_at')
-          .eq('chofer_id', driverId)
-          .eq('estado', 'PENDIENTE')
-          .not('expires_at', 'is', null)
-          .gt('expires_at', nowIso)
-          .order('enviada_en', { ascending: false })
-          .limit(1);
-
+const { data: offers, error: offerError } = await supabaseService.client
+  .from('viaje_ofertas')
+  .select('id, viaje_id, cotizacion_id, chofer_id_uuid, estado, enviada_en, respondida_en, expires_at')
+  .eq('chofer_id_uuid', driverId)
+  .eq('estado', 'PENDIENTE')
+  .not('expires_at', 'is', null)
+  .gt('expires_at', nowIso)
+  .order('enviada_en', { ascending: false })
+  .limit(1);
+        
         console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
 
         if (offerError) {
@@ -391,7 +391,14 @@ const remainingSeconds = Math.max(
   1,
   Math.round((expiresAtMs - nowMs) / 1000)
 );
+if (remainingSeconds <= 2) {
+  console.log('[TripManager] Offer descartada por expirar demasiado pronto');
 
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+  this.emit('noPendingTrips');
+  return;
+}
 const offerWindowSeconds = Math.max(
   1,
   Math.round((expiresAtMs - enviadaEnMs) / 1000)
@@ -411,8 +418,11 @@ this.pendingOffer = {
 
         console.log('[TripManager] Pending offer found:', validOffer.id);
 
-        if (this.lastOfferIdShown === validOffer.id) {
-          console.log('[TripManager] Offer already shown, skipping emit');
+if (
+  this.lastOfferIdShown === validOffer.id &&
+  this.pendingOffer?.expiresAt === validOffer.expires_at
+) {
+  console.log('[TripManager] Offer already shown, skipping emit');
         } else {
           this.lastOfferIdShown = validOffer.id;
           this.emit('newPendingTrip', this.pendingOffer);
@@ -448,13 +458,13 @@ this.pendingOffer = {
 
     console.log('[TripManager] Rejecting offer:', offerId, 'reason:', reason);
 
-    const { data: ofertaActual, error: ofertaError } = await supabaseService.client
-      .from('viaje_ofertas')
-      .select('id, viaje_id, chofer_id, estado')
-      .eq('id', offerId)
-      .eq('chofer_id', driverId)
-      .maybeSingle();
-
+const { data: ofertaActual, error: ofertaError } = await supabaseService.client
+  .from('viaje_ofertas')
+  .select('id, viaje_id, chofer_id_uuid, estado')
+  .eq('id', offerId)
+  .eq('chofer_id_uuid', driverId)
+  .maybeSingle();
+    
     if (ofertaError) {
       console.error('[TripManager] Error reading offer before reject:', ofertaError);
       return { success: false, error: ofertaError.message };
@@ -480,7 +490,7 @@ this.pendingOffer = {
       .from('viaje_ofertas')
       .update(updatePayload)
       .eq('id', offerId)
-      .eq('chofer_id', driverId)
+      .eq('chofer_id_uuid', driverId)
       .in('estado', ['PENDIENTE']);
 
     if (error) {
@@ -491,7 +501,7 @@ this.pendingOffer = {
     this.pendingOffer = null;
     this.lastOfferIdShown = null;
     this.emit('pendingTripCleared', { reason: 'offer_rejected' });
-
+    await new Promise(resolve => setTimeout(resolve, 200));
     if (viajeId) {
       const redispatch = await this._redispatchViaje(viajeId);
       if (!redispatch.success) {
@@ -561,15 +571,14 @@ this.pendingOffer = {
       this[`${key}Channel`] = channel;
     };
 
-    createChannel('offers', 'viaje_ofertas', 
-      `chofer_id=eq.${driverId}`,
-      (payload) => {
-        console.log('[TripManager] Offer realtime payload:', payload);
-        this._debouncedRefresh(driverId);
-      },
-      'offer'
-    );
-
+createChannel('offers', 'viaje_ofertas', 
+  `chofer_id_uuid=eq.${driverId}`,
+  (payload) => {
+    console.log('[TripManager] Offer realtime payload:', payload);
+    this._debouncedRefresh(driverId);
+  },
+  'offer'
+);
     createChannel('trips', 'viajes',
       `chofer_id_uuid=eq.${driverId}`,
       (payload) => {
@@ -725,14 +734,14 @@ this.pendingOffer = {
       return { success: false, error: 'No offerId disponible' };
     }
 
-    const { data: offerRow, error: offerError } = await supabaseService.client
-      .from('viaje_ofertas')
-      .select('id, viaje_id, chofer_id, estado')
-      .eq('id', offerId)
-      .eq('chofer_id', driverId)
-      .in('estado', ['PENDIENTE'])
-      .maybeSingle();
-
+const { data: offerRow, error: offerError } = await supabaseService.client
+  .from('viaje_ofertas')
+  .select('id, viaje_id, chofer_id_uuid, estado')
+  .eq('id', offerId)
+  .eq('chofer_id_uuid', driverId)
+  .in('estado', ['PENDIENTE'])
+  .maybeSingle();
+    
     if (offerError) {
       console.error('[TripManager] Error reading offer before accept:', offerError);
       return { success: false, error: offerError.message };
@@ -744,7 +753,7 @@ this.pendingOffer = {
 
     const result = await this._invokeEdgeFunction('aceptar-viaje-multi', {
       viaje_id: offerRow.viaje_id,
-      chofer_id: driverId
+      chofer_id_uuid: driverId
     });
 
     console.log('[TripManager] acceptOffer result:', result);
@@ -892,7 +901,7 @@ this.pendingOffer = {
 
     const result = await this._invokeEdgeFunction('iniciar-viaje-ts', {
       viaje_id: tripId,
-      chofer_id: driverId
+      chofer_id_uuid: driverId
     });
 
     if (!result.success) {
@@ -914,7 +923,7 @@ this.pendingOffer = {
 
     const result = await this._invokeEdgeFunction('completar-viaje-ts', {
       viaje_id: tripId,
-      chofer_id: driverId
+      chofer_id_uuid: driverId
     });
 
     if (!result.success) {
@@ -938,7 +947,7 @@ this.pendingOffer = {
 
     const result = await this._invokeEdgeFunction('cancelar-viaje-ts', {
       viaje_id: tripId,
-      chofer_id: driverId,
+      chofer_id_uuid: driverId,
       cancelado_por: 'chofer',
       motivo
     });
@@ -982,9 +991,8 @@ this.pendingOffer = {
           apikey: CONFIG.SUPABASE_KEY,
           Authorization: `Bearer ${accessToken}`
         },
-        body: JSON.stringify({
-          viaje_id: viajeId,
-          timeout_seconds: Math.max(CONFIG.INCOMING_OFFER_TIMEOUT || 45, 45)
+          body: JSON.stringify({
+           viaje_id: viajeId
         })
       });
 
