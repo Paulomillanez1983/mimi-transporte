@@ -452,7 +452,7 @@ if (!['PENDIENTE'].includes(estadoOferta)) return false;
     const { error } = await supabaseService.client
       .from('viaje_ofertas')
       .update({
-        estado: 'rechazada',
+        estado: 'RECHAZADA',
         respondida_en: new Date().toISOString()
       })
       .eq('id', offerId)
