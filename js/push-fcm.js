@@ -75,7 +75,7 @@ async function upsertPushToken({ userId, token, accessToken }) {
   }
 
   if (!isDuplicateError(upsertResult.error)) {
-    console.warn("[push-support] upsert fallÃ³", upsertResult.error);
+    console.warn("[push-support] upsert falló", upsertResult.error);
     return null;
   }
 
@@ -136,20 +136,21 @@ function wasPushPromptDismissed(userId) {
 
 export async function initSupportPushFCM(options = {}) {
   try {
-if (window.__APP_ROLE__ !== "chofer") {
-  console.log("[push-fcm] no es chofer, cancelando");
-  return null;
-}
+    if (window.__APP_ROLE__ !== "chofer") {
+      console.log("[push-fcm] no es chofer, cancelando");
+      return null;
+    }
 
-if (window.__PUSH_ACTIVE__) {
-  console.log("[push-fcm] push ya inicializado globalmente");
-  return null;
-}
-window.__PUSH_ACTIVE__ = true;
+    if (window.__PUSH_ACTIVE__) {
+      console.log("[push-fcm] push ya inicializado globalmente");
+      return null;
+    }
+
     if (initialized) {
       console.log("[push-fcm] ya inicializado");
       return null;
     }
+
     const {
       promptIfNeeded = false,
       forcePrompt = false
@@ -162,13 +163,13 @@ window.__PUSH_ACTIVE__ = true;
     }
 
     if (!window.obtenerSesionCliente) {
-      console.warn("[push-support] obtenerSesionCliente no disponible todavÃ­a");
+      console.warn("[push-support] obtenerSesionCliente no disponible todavía");
       return null;
     }
 
     const session = await window.obtenerSesionCliente(false);
     if (!session?.user?.id || !session?.access_token) {
-      console.warn("[push-support] no hay sesiÃ³n cliente activa");
+      console.warn("[push-support] no hay sesión cliente activa");
       return null;
     }
 
@@ -208,6 +209,8 @@ window.__PUSH_ACTIVE__ = true;
 
     clearPushPromptDismissed(session.user.id);
 
+    window.__PUSH_ACTIVE__ = true;
+
     const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
 
@@ -217,6 +220,7 @@ window.__PUSH_ACTIVE__ = true;
 
     if (!FIREBASE_VAPID_KEY || FIREBASE_VAPID_KEY === "ACA_TU_VAPID_KEY") {
       console.error("[push-support] Falta configurar FIREBASE_VAPID_KEY");
+      window.__PUSH_ACTIVE__ = false;
       return null;
     }
 
@@ -237,7 +241,8 @@ window.__PUSH_ACTIVE__ = true;
     });
 
     if (!token) {
-      console.warn("[push-support] Firebase no devolviÃ³ token");
+      console.warn("[push-support] Firebase no devolvió token");
+      window.__PUSH_ACTIVE__ = false;
       return null;
     }
 
@@ -262,7 +267,7 @@ window.__PUSH_ACTIVE__ = true;
           window.handleSupportPushForeground({
             messageId,
             title: payload?.notification?.title || payload?.data?.title || "Soporte",
-            body: payload?.notification?.body || payload?.data?.body || "TenÃ©s una nueva respuesta de soporte."
+            body: payload?.notification?.body || payload?.data?.body || "Tenés una nueva respuesta de soporte."
           });
         }
       });
@@ -274,6 +279,7 @@ window.__PUSH_ACTIVE__ = true;
     console.log("[push-fcm] initPushFCM OK");
     return token;
   } catch (err) {
+    window.__PUSH_ACTIVE__ = false;
     console.error("[push-fcm] init error:", err);
     return null;
   }
@@ -281,6 +287,7 @@ window.__PUSH_ACTIVE__ = true;
 
 export function resetSupportPushFCMState() {
   initialized = false;
+  window.__PUSH_ACTIVE__ = false;
 }
 
 window.initSupportPushFCM = initSupportPushFCM;
