@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mimi-driver-v6';
+const CACHE_NAME = 'mimi-driver-v7';
 const APP_BASE_PATH = (() => {
   const path = self.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
@@ -79,12 +79,45 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const url = new URL(requestUrl);
+  const isDriverShellAsset =
+    url.pathname.endsWith('/chofer-panel.html') ||
+    url.pathname.endsWith('/js/driver-app.js') ||
+    url.pathname.endsWith('/js/trip-manager.js') ||
+    url.pathname.endsWith('/js/ui-controller.js') ||
+    url.pathname.endsWith('/js/config.js') ||
+    url.pathname.endsWith('/js/supabase-client.js') ||
+    url.pathname.endsWith('/js/driver-pwa-onboarding.js') ||
+    url.pathname.endsWith('/css/design-system.css') ||
+    url.pathname.endsWith('/css/components.css') ||
+    url.pathname.endsWith('/css/animations.css') ||
+    url.pathname.endsWith('/css/panel.css');
+
+  if (isDriverShellAsset) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          throw new Error('Network error and no cache available');
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) {
         void fetch(request).then((response) => {
           if (response && response.ok) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, response));
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, response.clone()));
           }
         }).catch(() => {});
         return cached;
