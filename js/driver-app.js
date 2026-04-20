@@ -46,6 +46,12 @@ class DriverApp {
     this._driverActionHandler = this._handleDriverActionEvent.bind(this);
     this._visibilityChangeHandler = this._handleVisibilityChange.bind(this);
     this._foregroundPushHandler = this._handleForegroundPush.bind(this);
+
+    this._fabBusy = false;
+    this._gpsStarting = false;
+    this._gpsStarted = false;
+    this._backgroundServicesStarting = false;
+    this._backgroundServicesStarted = false;
     this._fabNavClickHandler = null;
     this._unlockAudioOnClick = () => {
       soundManager.enableOnUserInteraction?.();
@@ -59,20 +65,30 @@ class DriverApp {
   // =========================================================
   // BACKGROUND SERVICES
   // =========================================================
-  _startRealtimeServicesInBackground() {
-    Promise.resolve()
-      .then(() => this._startLocationTracking())
-      .catch((err) => {
-        console.warn('[DriverApp] GPS en background con error:', err);
-      });
-
-    Promise.resolve()
-      .then(() => initSupportPushFCM({ promptIfNeeded: false }))
-      .catch((err) => {
-        console.warn('[DriverApp] Push en background con error:', err);
-      });
+async _startRealtimeServicesInBackground() {
+  if (this._backgroundServicesStarting || this._backgroundServicesStarted) {
+    console.warn('[DriverApp] Servicios background ya iniciados o iniciándose');
+    return;
   }
 
+  this._backgroundServicesStarting = true;
+
+  try {
+    await this._startLocationTracking();
+
+    try {
+      await initSupportPushFCM({ promptIfNeeded: false });
+    } catch (err) {
+      console.warn('[DriverApp] Push en background con error:', err);
+    }
+
+    this._backgroundServicesStarted = true;
+  } catch (err) {
+    console.warn('[DriverApp] Error iniciando servicios background:', err);
+  } finally {
+    this._backgroundServicesStarting = false;
+  }
+}
   _syncConnectionMenuItem() {
     const settingsBtn = document.getElementById('menu-settings');
     if (!settingsBtn) return;
@@ -932,15 +948,30 @@ const unsubNoPending = tripManager.on('noPendingTrips', () => {
   // =========================================================
   // LOCATION TRACKING
   // =========================================================
-  async _startLocationTracking() {
-    try {
-      await locationTracker.start((pos) => this._onPositionUpdate(pos));
-      console.log('[DriverApp] GPS iniciado');
-    } catch (err) {
-      console.error('[DriverApp] Error iniciando GPS:', err);
-    }
+async _startLocationTracking() {
+  if (this._gpsStarting || this._gpsStarted) {
+    console.warn('[DriverApp] GPS ya iniciado o iniciándose, se ignora');
+    return;
   }
-async _verifyActiveTripStillValid() {
+
+  this._gpsStarting = true;
+
+  try {
+    const started = await locationTracker.start((pos) => this._onPositionUpdate(pos));
+
+    if (started) {
+      this._gpsStarted = true;
+      console.log('[DriverApp] GPS iniciado');
+    } else {
+      console.warn('[DriverApp] GPS no pudo iniciarse');
+    }
+  } catch (err) {
+    console.error('[DriverApp] Error iniciando GPS:', err);
+  } finally {
+    this._gpsStarting = false;
+  }
+}
+  async _verifyActiveTripStillValid() {
   try {
     const currentTrip = tripManager.getCurrentTrip?.();
     if (!currentTrip?.id) return;
@@ -1376,18 +1407,25 @@ _setupUI() {
   const settingsBtn = document.getElementById('menu-settings');
   const profileBtn = document.getElementById('menu-view-profile');
   const profileQuickBtn = document.getElementById('menu-view-profile-quick');
-    this._fabClickHandler = async (ev) => {
-      ev?.preventDefault?.();
-      ev?.stopPropagation?.();
+this._fabClickHandler = async (ev) => {
+  ev?.preventDefault?.();
+  ev?.stopPropagation?.();
 
-      const fab = document.getElementById('fab-online');
+  if (this._fabBusy) {
+    console.warn('[DriverApp] FAB ignorado: toggle en curso');
+    return;
+  }
 
-      try {
-        console.log('[DriverApp] FAB toggle presionado', {
-          onlineActual: this._onlineStatus,
-          flow: this._driverFlowState
-        });
+  this._fabBusy = true;
 
+  const fab = document.getElementById('fab-online');
+
+  try {
+    console.log('[DriverApp] FAB toggle presionado', {
+      onlineActual: this._onlineStatus,
+      flow: this._driverFlowState
+    });
+    
         if (fab) {
           fab.disabled = true;
           fab.style.pointerEvents = 'none';
@@ -1414,9 +1452,8 @@ _setupUI() {
             throw new Error(result?.error || 'No se pudo poner online');
           }
 
-          this._startRealtimeServicesInBackground();
-          await this._startLocationTracking().catch(() => null);
-
+await this._startRealtimeServicesInBackground();
+          
           this._onlineStatus = true;
           this._setFlowState('ONLINE_IDLE');
           uiController.showWaitingState();
@@ -1448,7 +1485,12 @@ _setupUI() {
           uiController.hideNavigation?.();
           uiController.hideArrival?.();
           uiController.showWaitingState?.();
-          locationTracker.stop?.();        }
+          locationTracker.stop?.();
+          this._gpsStarted = false;
+          this._gpsStarting = false;
+          this._backgroundServicesStarted = false;
+          this._backgroundServicesStarting = false;
+        }
 
           uiController.updateDriverState(
           this._onlineStatus ? 'ONLINE' : 'OFFLINE',
@@ -1464,6 +1506,8 @@ _setupUI() {
         console.error('[DriverApp] Error cambiando estado:', err);
         uiController.showToast(err?.message || 'Error cambiando estado', 'error');
       } finally {
+        this._fabBusy = false;
+
         if (fab) {
           fab.disabled = false;
           fab.style.pointerEvents = 'auto';
@@ -1765,11 +1809,17 @@ if (fabNav && this._fabNavClickHandler) {
       window.removeEventListener('click', this._unlockAudioOnClick);
       window.removeEventListener('touchstart', this._unlockAudioOnTouch);
 
-      locationTracker.stop?.();
-      uiController.destroy?.();
+     locationTracker.stop?.();
+     this._gpsStarted = false;
+     this._gpsStarting = false;
+     this._backgroundServicesStarted = false;
+     this._backgroundServicesStarting = false;
 
-      this._actionLock = false;
-      this.initialized = false;
+     uiController.destroy?.();
+
+     this._actionLock = false;
+     this._fabBusy = false;
+     this.initialized = false;
     } catch (err) {
       console.warn('[DriverApp] Error en destroy:', err);
     }
