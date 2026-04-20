@@ -467,6 +467,11 @@ top: calc(var(--mobile-top) + 56px);
   background: linear-gradient(135deg, var(--uber-green-dark) 0%, var(--uber-green) 100%);
   box-shadow: 0 16px 36px rgba(6, 193, 103, 0.28);
 }
+.fab-online.hidden-during-trip {
+  opacity: 0;
+  pointer-events: none !important;
+  transform: translateX(-50%) scale(0.92);
+}
 
 .fab-content {
   display: grid;
