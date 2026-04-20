@@ -247,7 +247,6 @@ const activeTrip = [...(activeByChofer || []), ...(activeByAssigned || [])]
         // 2) PENDING OFFERS
         // =====================================================
         console.log('[TripManager] Checking offers for driver:', driverId);
-
         const nowIso = new Date().toISOString();
 
 const { data: offers, error: offerError } = await supabaseService.client
@@ -255,40 +254,45 @@ const { data: offers, error: offerError } = await supabaseService.client
   .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en, expires_at')
   .eq('chofer_id', driverId)
   .eq('estado', 'PENDIENTE')
+  .not('expires_at', 'is', null)
+  .gt('expires_at', nowIso)
   .order('enviada_en', { ascending: false })
-  .limit(5);        
-        console.log('[TripManager] Offers fetched:', offers, offerError);
+  .limit(1);
 
-        if (offerError) {
-          console.error('[TripManager] Error loading offers:', offerError);
-        }
+console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
 
-        if (!offers || offers.length === 0) {
-          if (this.pendingOffer) {
-            this.emit('pendingTripCleared', { reason: 'no_offers' });
-          }
+if (offerError) {
+  console.error('[TripManager] Error loading offers:', offerError);
+}
 
-          this.pendingOffer = null;
-          this.lastOfferIdShown = null;
-          this.emit('noPendingTrips');
-          return;
-        }
+if (!offers || offers.length === 0) {
+  if (this.pendingOffer) {
+    this.emit('pendingTripCleared', { reason: 'no_offers' });
+  }
 
-        // =====================================================
-        // 3) VALID OFFER
-        // =====================================================
-       const validOffer = offers.find((offer) => {
-        if (!offer) return false;
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+  this.emit('noPendingTrips');
+  return;
+}
 
-const estadoOferta = String(offer.estado || '').trim().toUpperCase();
-if (!['PENDIENTE'].includes(estadoOferta)) return false;
-         if (!offer.expires_at) return false;
+// =====================================================
+// 3) VALID OFFER
+// =====================================================
+const validOffer = offers[0] || null;
 
-        const expiresAt = new Date(offer.expires_at).getTime();
-        if (Number.isNaN(expiresAt)) return false;
+if (!validOffer) {
+  console.warn('[TripManager] No valid non-expired offer found');
 
-         return expiresAt > Date.now();
-       });
+  if (this.pendingOffer) {
+    this.emit('pendingTripCleared', { reason: 'all_offers_expired' });
+  }
+
+  this.pendingOffer = null;
+  this.lastOfferIdShown = null;
+  this.emit('noPendingTrips');
+  return;
+}
 
         if (!validOffer) {
           console.warn('[TripManager] No valid non-expired offer found');
