@@ -532,7 +532,7 @@ async rejectOffer(offerId, reason = 'RECHAZADA') {
 
   const { data: ofertaActual, error: ofertaError } = await supabaseService.client
     .from('viaje_ofertas')
-    .select('id, viaje_id, chofer_id, estado')
+    .select('id, viaje_id, chofer_id, estado, expires_at')
     .eq('id', offerId)
     .eq('chofer_id', driverId)
     .maybeSingle();
@@ -542,46 +542,72 @@ async rejectOffer(offerId, reason = 'RECHAZADA') {
     return { success: false, error: ofertaError.message };
   }
 
-  if (!ofertaActual) {
-    return { success: false, error: 'Oferta no encontrada' };
+  if (!ofertaActual?.viaje_id) {
+    return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
   }
 
-  const viajeId = ofertaActual.viaje_id || null;
+  const viajeId = ofertaActual.viaje_id;
 
-  const updatePayload = {
-    estado: 'RECHAZADA',
-    respondida_en: new Date().toISOString()
-  };
+  const result = await this._invokeEdgeFunction(
+    'rechazar-viaje-multi',
+    {
+      viaje_id: viajeId,
+      chofer_id: driverId
+    },
+    {
+      timeoutMs: 8000
+    }
+  );
 
-  const { error } = await supabaseService.client
-    .from('viaje_ofertas')
-    .update(updatePayload)
-    .eq('id', offerId)
-    .eq('chofer_id', driverId)
-    .in('estado', ['PENDIENTE']);
+  console.log('[TripManager] rejectOffer result:', result);
+  console.log('[TripManager] rejectOffer body:', result?.body);
 
-  if (error) {
-    console.error('[TripManager] RejectOffer error:', error);
-    return { success: false, error: error.message };
+  if (!result.success) {
+    const motivo =
+      result?.body?.motivo ||
+      result?.body?.paso ||
+      '';
+
+    if (
+      [
+        'viaje_no_rechazable',
+        'viaje_bloqueado',
+        'oferta_bloqueada',
+        'oferta_no_valida',
+        'estado_final',
+        'estado_invalido',
+        'chofer_no_autorizado'
+      ].includes(motivo)
+    ) {
+      this._clearPendingOffer(result.error || motivo || 'offer_rejected_unavailable', {
+        emit: false
+      });
+      this.emit('pendingTripCleared', {
+        reason: result.error || motivo || 'offer_rejected_unavailable'
+      });
+
+      await this._loadInitialState(driverId);
+    }
+
+    return {
+      success: false,
+      error: result.error || motivo || 'No se pudo rechazar el viaje'
+    };
   }
 
   this._clearPendingOffer('offer_rejected', { emit: false });
   this.emit('pendingTripCleared', { reason: 'offer_rejected' });
 
   await new Promise(resolve => setTimeout(resolve, 200));
-
-  if (viajeId) {
-    const redispatch = await this._redispatchViaje(viajeId);
-    if (!redispatch.success) {
-      console.warn('[TripManager] Reject ok, pero redispatch falló:', redispatch.error);
-    }
-  }
-
   await this._loadInitialState(driverId);
 
-  return { success: true };
+  return {
+    success: true,
+    data: result.data || null
+  };
 }
-  // =========================================================
+
+// =========================================================
   // REALTIME (CON RECONEXIÓN AUTOMÁTICA)
   // =========================================================
   _cleanupChannel(key) {
