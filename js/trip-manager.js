@@ -520,70 +520,101 @@ async rejectOffer(offerId, reason = 'RECHAZADA') {
     ['offer', 'trip', 'tripAssigned'].forEach(key => this._cleanupChannel(key));
   }
 
-  _subscribeToRealtime(driverId) {
-    console.log('[TripManager] Subscribing to realtime channels...', driverId);
+_subscribeToRealtime(driverId) {
+  console.log('[TripManager] Subscribing to realtime channels...', driverId);
 
-    // Cleanup previo
-    this._cleanupChannels();
+  this._cleanupChannels();
 
-    const createChannel = (name, table, filter, handler, key) => {
-      const channel = supabaseService.client
-        .channel(`${name}-${driverId}-${Date.now()}`) // nombre único para evitar colisiones
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table,
-          filter
-        }, handler)
-        .subscribe((status) => {
-          console.log(`[TripManager] ${name} channel status:`, status);
+  const createChannel = (name, table, filter, handler, key, event = '*') => {
+    const channel = supabaseService.client
+      .channel(`${name}-${driverId}-${Date.now()}`)
+      .on('postgres_changes', {
+        event,
+        schema: 'public',
+        table,
+        filter
+      }, handler)
+      .subscribe((status) => {
+        console.log(`[TripManager] ${name} channel status:`, status);
 
-          if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-            this._reconnectAttempts[key]++;
-            const delay = Math.min(1000 * 2 ** this._reconnectAttempts[key], 30000);
-            console.warn(`[TripManager] Reconnecting ${name} in ${delay}ms (attempt ${this._reconnectAttempts[key]})...`);
+        if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+          this._reconnectAttempts[key]++;
+          const delay = Math.min(1000 * 2 ** this._reconnectAttempts[key], 30000);
 
-            setTimeout(() => {
-              this._cleanupChannel(key);
-              createChannel(name, table, filter, handler, key);
-            }, delay);
-          } else if (status === 'SUBSCRIBED') {
-            if (this._reconnectAttempts[key] > 0) {
-              console.log(`[TripManager] ${name} channel reconnected successfully`);
-            }
-            this._reconnectAttempts[key] = 0;
-          }
-        });
+          console.warn(
+            `[TripManager] Reconnecting ${name} in ${delay}ms (attempt ${this._reconnectAttempts[key]})...`
+          );
 
-      this[`${key}Channel`] = channel;
-    };
+          setTimeout(() => {
+            this._cleanupChannel(key);
+            this._subscribeToRealtime(driverId);
+          }, delay);
+        } else if (status === 'SUBSCRIBED') {
+          this._reconnectAttempts[key] = 0;
+        }
+      });
 
-createChannel('offers', 'viaje_ofertas', 
-  `chofer_id=eq.${driverId}`,
-  (payload) => {
-    console.log('[TripManager] Offer realtime payload:', payload);
-    this._debouncedRefresh(driverId);
-  },
-  'offer'
-);    createChannel('trips', 'viajes',
-      `chofer_id_uuid=eq.${driverId}`,
-      (payload) => {
-        console.log('[TripManager] Trip realtime payload:', payload);
-        this._handleTripRealtimePayload(payload);
-      },
-      'trip'
-    );
+    this[`${key}Channel`] = channel;
+  };
 
-    createChannel('trips-assigned', 'viajes',
-      `assigned_driver_id=eq.${driverId}`,
-      (payload) => {
-        console.log('[TripManager] Trip assigned realtime payload:', payload);
-        this._handleTripRealtimePayload(payload);
-      },
-      'tripAssigned'
-    );
-  }
+  this.offerChannel = supabaseService.client
+    .channel(`offers-${driverId}-${Date.now()}`)
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'viaje_ofertas',
+      filter: `chofer_id=eq.${driverId}`
+    }, (payload) => {
+      console.log('[TripManager] Offer INSERT realtime payload:', payload);
+      this._debouncedRefresh(driverId);
+    })
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'viaje_ofertas',
+      filter: `chofer_id=eq.${driverId}`
+    }, (payload) => {
+      console.log('[TripManager] Offer UPDATE realtime payload:', payload);
+      this._debouncedRefresh(driverId);
+    })
+    .subscribe((status) => {
+      console.log('[TripManager] offers channel status:', status);
 
+      if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+        this._reconnectAttempts.offer++;
+        const delay = Math.min(1000 * 2 ** this._reconnectAttempts.offer, 30000);
+
+        setTimeout(() => {
+          this._cleanupChannel('offer');
+          this._subscribeToRealtime(driverId);
+        }, delay);
+      } else if (status === 'SUBSCRIBED') {
+        this._reconnectAttempts.offer = 0;
+      }
+    });
+
+  createChannel(
+    'trips',
+    'viajes',
+    `chofer_id_uuid=eq.${driverId}`,
+    (payload) => {
+      console.log('[TripManager] Trip realtime payload:', payload);
+      this._handleTripRealtimePayload(payload);
+    },
+    'trip'
+  );
+
+  createChannel(
+    'trips-assigned',
+    'viajes',
+    `assigned_driver_id=eq.${driverId}`,
+    (payload) => {
+      console.log('[TripManager] Trip assigned realtime payload:', payload);
+      this._handleTripRealtimePayload(payload);
+    },
+    'tripAssigned'
+  );
+}
   // =========================================================
   // REFRESH
   // =========================================================
