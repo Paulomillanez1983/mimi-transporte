@@ -141,6 +141,38 @@ class TripManager {
     return String(trip.estado || '').trim().toUpperCase();
   }
 
+  _isOperationalTripState(estado) {
+    return ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(
+      this._normalizeDriverTripState({ estado })
+    );
+  }
+
+  _isFinalTripState(estado) {
+    return ['CANCELADO', 'COMPLETADO'].includes(
+      this._normalizeDriverTripState({ estado })
+    );
+  }
+
+  _tripBelongsToDriver(trip, driverId = this.driverId) {
+    if (!trip || !driverId) return false;
+
+    return (
+      String(trip.chofer_id_uuid || '') === String(driverId) ||
+      String(trip.assigned_driver_id || '') === String(driverId)
+    );
+  }
+
+  _clearPendingOffer(reason = 'pending_offer_cleared', { emit = true } = {}) {
+    const hadPendingOffer = !!this.pendingOffer;
+
+    this.pendingOffer = null;
+    this.lastOfferIdShown = null;
+
+    if (emit && hadPendingOffer) {
+      this.emit('pendingTripCleared', { reason });
+    }
+  }
+
 _handleTripRealtimePayload(payload) {
   const tripRaw = payload.new;
   if (!tripRaw) return;
@@ -161,8 +193,7 @@ _handleTripRealtimePayload(payload) {
 
   if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
     this.currentTrip = trip;
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
+    this._clearPendingOffer('trip_became_operational', { emit: false });
 
     if (!isSameCurrentTrip) {
       if (trip.estado === 'EN_CURSO') {
@@ -182,8 +213,7 @@ _handleTripRealtimePayload(payload) {
 
   if (trip.estado === 'CANCELADO') {
     this.currentTrip = null;
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
+    this._clearPendingOffer('trip_cancelled_realtime', { emit: false });
 
     this.emit('tripCancelled', trip);
     this.emit('pendingTripCleared', { reason: 'trip_cancelled_realtime' });
@@ -198,8 +228,7 @@ _handleTripRealtimePayload(payload) {
 
   if (trip.estado === 'COMPLETADO') {
     this.currentTrip = null;
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
+    this._clearPendingOffer('trip_finished_realtime', { emit: false });
 
     this.emit('tripCompleted', trip);
     this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
@@ -277,12 +306,15 @@ _handleTripRealtimePayload(payload) {
         // =====================================================
 console.log('[TripManager] Checking offers for driver:', driverId);
 
+const nowIso = new Date().toISOString();
+
 const { data: offers, error: offerError } = await supabaseService.client
   .from('viaje_ofertas')
   .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en, expires_at')
   .eq('chofer_id', driverId)
   .eq('estado', 'PENDIENTE')
   .not('expires_at', 'is', null)
+  .gt('expires_at', nowIso)
   .order('enviada_en', { ascending: false })
   .limit(1);
         
@@ -293,12 +325,7 @@ const { data: offers, error: offerError } = await supabaseService.client
         }
 
         if (!offers || offers.length === 0) {
-          if (this.pendingOffer) {
-            this.emit('pendingTripCleared', { reason: 'no_offers' });
-          }
-
-          this.pendingOffer = null;
-          this.lastOfferIdShown = null;
+          this._clearPendingOffer('no_offers');
           this.emit('noPendingTrips');
           return;
         }
@@ -311,12 +338,7 @@ const { data: offers, error: offerError } = await supabaseService.client
         if (!validOffer) {
           console.warn('[TripManager] No valid non-expired offer found');
 
-          if (this.pendingOffer) {
-            this.emit('pendingTripCleared', { reason: 'all_offers_expired' });
-          }
-
-          this.pendingOffer = null;
-          this.lastOfferIdShown = null;
+          this._clearPendingOffer('all_offers_expired');
           this.emit('noPendingTrips');
           return;
         }
@@ -324,12 +346,7 @@ const { data: offers, error: offerError } = await supabaseService.client
         if (!validOffer.viaje_id && !validOffer.cotizacion_id) {
           console.warn('[TripManager] Offer has no viaje_id and no cotizacion_id:', validOffer);
 
-          if (this.pendingOffer) {
-            this.emit('pendingTripCleared', { reason: 'invalid_offer' });
-          }
-
-          this.pendingOffer = null;
-          this.lastOfferIdShown = null;
+          this._clearPendingOffer('invalid_offer');
           this.emit('noPendingTrips');
           return;
         }
@@ -349,8 +366,7 @@ const { data: offers, error: offerError } = await supabaseService.client
              if (error) {
                console.error('[TripManager] Error fetching trip for offer:', error);
 
-              this.pendingOffer = null;
-              this.lastOfferIdShown = null;
+              this._clearPendingOffer('offer_trip_fetch_error', { emit: false });
               this.emit('noPendingTrips');
               return;
            }
@@ -371,8 +387,7 @@ const { data: offers, error: offerError } = await supabaseService.client
           if (error) {
             console.error('[TripManager] Error fetching cotizacion for offer:', error);
 
-            this.pendingOffer = null;
-            this.lastOfferIdShown = null;
+            this._clearPendingOffer('offer_quote_fetch_error', { emit: false });
             this.emit('noPendingTrips');
             return;
           }
@@ -383,9 +398,63 @@ const { data: offers, error: offerError } = await supabaseService.client
         if (!trip) {
           console.warn('[TripManager] Trip/Cotizacion not found for offer:', validOffer.id);
 
-          this.pendingOffer = null;
-          this.lastOfferIdShown = null;
+          this._clearPendingOffer('offer_trip_missing', { emit: false });
           this.emit('noPendingTrips');
+          return;
+        }
+
+        const tripState = this._normalizeDriverTripState(trip);
+        const tripBelongsToDriver = this._tripBelongsToDriver(trip, driverId);
+
+        if (this._isFinalTripState(tripState)) {
+          console.warn(
+            '[TripManager] Ignoring stale pending offer linked to final trip:',
+            validOffer.id,
+            trip?.id,
+            tripState
+          );
+
+          this._clearPendingOffer('offer_linked_trip_final');
+          this.emit('noPendingTrips');
+          return;
+        }
+
+        if (
+          (trip.chofer_id_uuid || trip.assigned_driver_id) &&
+          !tripBelongsToDriver
+        ) {
+          console.warn(
+            '[TripManager] Ignoring pending offer assigned to another driver:',
+            validOffer.id,
+            trip?.id
+          );
+
+          this._clearPendingOffer('offer_assigned_to_other_driver');
+          this.emit('noPendingTrips');
+          return;
+        }
+
+        if (this._isOperationalTripState(tripState) && tripBelongsToDriver) {
+          const normalizedTrip = {
+            ...trip,
+            estado: tripState
+          };
+
+          console.log(
+            '[TripManager] Trip already operational while offer still pending, promoting active trip:',
+            normalizedTrip.id,
+            tripState
+          );
+
+          this.currentTrip = normalizedTrip;
+          this._clearPendingOffer('offer_promoted_to_active_trip', { emit: false });
+
+          if (tripState === 'EN_CURSO') {
+            this.emit('tripStarted', normalizedTrip);
+          } else {
+            this.emit('tripAccepted', normalizedTrip);
+          }
+
           return;
         }
 
@@ -408,6 +477,7 @@ const offerWindowSeconds = Math.max(
         
 this.pendingOffer = {
   ...trip,
+  estado: tripState,
   offerId: validOffer.id,
   viajeId: validOffer.viaje_id || null,
   cotizacionId: validOffer.cotizacion_id || null,
@@ -495,8 +565,7 @@ async rejectOffer(offerId, reason = 'RECHAZADA') {
     return { success: false, error: error.message };
   }
 
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
+  this._clearPendingOffer('offer_rejected', { emit: false });
   this.emit('pendingTripCleared', { reason: 'offer_rejected' });
 
   await new Promise(resolve => setTimeout(resolve, 200));
@@ -801,8 +870,9 @@ const result = await this._invokeEdgeFunction('aceptar-viaje-multi', {
           'oferta_vencida'
         ].includes(paso)
       ) {
-        this.pendingOffer = null;
-        this.lastOfferIdShown = null;
+        this._clearPendingOffer(result.error || 'offer_unavailable', {
+          emit: false
+        });
         this.emit('pendingTripCleared', {
           reason: result.error || 'offer_unavailable'
         });
@@ -862,8 +932,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
       );
 
       this.currentTrip = acceptedTrip;
-      this.pendingOffer = null;
-      this.lastOfferIdShown = null;
+      this._clearPendingOffer('offer_accepted', { emit: false });
 
       if (normalizedState === 'EN_CURSO') {
         this.emit('tripStarted', acceptedTrip);
@@ -991,8 +1060,7 @@ return {
     await this.setDriverAvailability({ disponible: true });
 
     this.currentTrip = null;
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
+    this._clearPendingOffer('trip_cancelled', { emit: false });
 
     this.emit('tripCancelled', { id: tripId });
     this.emit('pendingTripCleared', { reason: 'trip_cancelled' });
