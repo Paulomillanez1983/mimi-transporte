@@ -8077,13 +8077,20 @@ const payload = {
     session?.user?.user_metadata?.phone ||
     '',
 
-  // 👇 AGREGAR ESTO
+  cotizacion_id:
+    state?.cotizacion?.id ||
+    state?.cotizacion?.cotizacion_id ||
+    state?.routeData?.cotizacion_id ||
+    null,
+
   cliente_auth_id: session?.user?.id || null,
   cliente_email: session?.user?.email || ''
-};
-    console.log('[confirmarViaje] payload:', payload);
+    
+  console.log('[confirmarViaje] payload:', payload);
     console.log('[confirmarViaje] url:', `${SUPABASE_URL}/functions/v1/solicitar-viaje-ts`);
-
+     if (!payload.cotizacion_id) {
+      throw new Error('Falta cotizacion_id en la solicitud del viaje');
+     }
     if (!payload.origen || !payload.destino) {
       throw new Error('Faltan origen o destino');
     }
