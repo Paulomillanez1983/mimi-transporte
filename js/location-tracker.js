@@ -28,9 +28,12 @@ class LocationTracker {
     }
 
     if (this.isTracking) {
-      this.stop();
+      console.warn('[LocationTracker] Ya estaba activo, se ignora start duplicado');
+      if (callback && !this.callbacks.includes(callback)) {
+        this.callbacks.push(callback);
+      }
+      return true;
     }
-
     const hasPermission = await this._checkPermission();
     if (!hasPermission) {
       console.warn('[LocationTracker] Permission not granted yet, requesting...');
