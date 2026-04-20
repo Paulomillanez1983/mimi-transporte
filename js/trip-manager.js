@@ -259,8 +259,8 @@ class TripManager {
 
 const { data: offers, error: offerError } = await supabaseService.client
   .from('viaje_ofertas')
-  .select('id, viaje_id, cotizacion_id, chofer_id_uuid, estado, enviada_en, respondida_en, expires_at')
-  .eq('chofer_id_uuid', driverId)
+  .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en, expires_at')
+  .eq('chofer_id', driverId)
   .eq('estado', 'PENDIENTE')
   .not('expires_at', 'is', null)
   .gt('expires_at', nowIso)
@@ -458,12 +458,12 @@ if (
 
     console.log('[TripManager] Rejecting offer:', offerId, 'reason:', reason);
 
-const { data: ofertaActual, error: ofertaError } = await supabaseService.client
+const { error } = await supabaseService.client
   .from('viaje_ofertas')
-  .select('id, viaje_id, chofer_id_uuid, estado')
+  .update(updatePayload)
   .eq('id', offerId)
-  .eq('chofer_id_uuid', driverId)
-  .maybeSingle();
+  .eq('chofer_id', driverId)
+  .in('estado', ['PENDIENTE']);
     
     if (ofertaError) {
       console.error('[TripManager] Error reading offer before reject:', ofertaError);
@@ -572,14 +572,13 @@ const { data: ofertaActual, error: ofertaError } = await supabaseService.client
     };
 
 createChannel('offers', 'viaje_ofertas', 
-  `chofer_id_uuid=eq.${driverId}`,
+  `chofer_id=eq.${driverId}`,
   (payload) => {
     console.log('[TripManager] Offer realtime payload:', payload);
     this._debouncedRefresh(driverId);
   },
   'offer'
-);
-    createChannel('trips', 'viajes',
+);    createChannel('trips', 'viajes',
       `chofer_id_uuid=eq.${driverId}`,
       (payload) => {
         console.log('[TripManager] Trip realtime payload:', payload);
@@ -736,12 +735,11 @@ createChannel('offers', 'viaje_ofertas',
 
 const { data: offerRow, error: offerError } = await supabaseService.client
   .from('viaje_ofertas')
-  .select('id, viaje_id, chofer_id_uuid, estado')
+  .select('id, viaje_id, chofer_id, estado')
   .eq('id', offerId)
-  .eq('chofer_id_uuid', driverId)
+  .eq('chofer_id', driverId)
   .in('estado', ['PENDIENTE'])
-  .maybeSingle();
-    
+  .maybeSingle();    
     if (offerError) {
       console.error('[TripManager] Error reading offer before accept:', offerError);
       return { success: false, error: offerError.message };
