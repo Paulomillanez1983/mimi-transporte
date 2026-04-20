@@ -263,7 +263,6 @@ const { data: offers, error: offerError } = await supabaseService.client
   .eq('chofer_id', driverId)
   .eq('estado', 'PENDIENTE')
   .not('expires_at', 'is', null)
-  .gt('expires_at', nowIso)
   .order('enviada_en', { ascending: false })
   .limit(1);        
         console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
