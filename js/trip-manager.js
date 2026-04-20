@@ -480,10 +480,6 @@ async rejectOffer(offerId, reason = 'RECHAZADA') {
     respondida_en: new Date().toISOString()
   };
 
-const updatePayload = {
-  estado: 'RECHAZADA',
-  respondida_en: new Date().toISOString()
-};
   const { error } = await supabaseService.client
     .from('viaje_ofertas')
     .update(updatePayload)
