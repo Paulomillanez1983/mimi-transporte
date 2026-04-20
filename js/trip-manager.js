@@ -388,10 +388,10 @@ const enviadaEnMs = validOffer?.enviada_en ? new Date(validOffer.enviada_en).get
 const nowMs = Date.now();
 
 const remainingSeconds = Math.max(
-  1,
+  0,
   Math.round((expiresAtMs - nowMs) / 1000)
 );
-const offerWindowSeconds = Math.max(
+        const offerWindowSeconds = Math.max(
   1,
   Math.round((expiresAtMs - enviadaEnMs) / 1000)
 );
