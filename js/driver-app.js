@@ -376,6 +376,35 @@ _syncNavFabVisibility() {
     );
   }
 
+  _syncOnlinePresentation() {
+    uiController.updateDriverState(
+      this._onlineStatus ? 'ONLINE' : 'OFFLINE',
+      this._onlineStatus
+    );
+    this._syncConnectionMenuItem();
+  }
+
+  _markDriverOperationalOnline(reason = 'operational_state') {
+    if (!this._onlineStatus) {
+      console.log('[DriverApp] Forzando online operativo por:', reason);
+    }
+
+    this._onlineStatus = true;
+    this._syncOnlinePresentation();
+  }
+
+  _renderIdleState() {
+    if (this._onlineStatus) {
+      this._setFlowState('ONLINE_IDLE');
+    } else {
+      this._setFlowState('OFFLINE');
+    }
+
+    uiController.showWaitingState();
+    this._syncNavFabVisibility();
+    this._syncConnectionMenuItem();
+  }
+
   // =========================================================
   // INIT
   // =========================================================
@@ -526,7 +555,7 @@ const estadoNormalizado = estadoTrip;
         
         if (!choferRelacionado || !['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(estadoNormalizado)) {
           console.warn('[DriverApp] Viaje inválido detectado en memoria, limpiando estado local...');
-          tripManager.resetState?.();
+          tripManager.resetState?.({ silent: true, reason: 'invalid_initial_trip' });
           currentTrip = null;
         } else {
           currentTrip = {
@@ -538,6 +567,7 @@ const estadoNormalizado = estadoTrip;
 
 if (currentTrip) {
   console.log('[DriverApp] Estado inicial: viaje activo');
+  this._markDriverOperationalOnline('initial_current_trip');
   this._currentTripId = currentTrip.id;
 
   if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
@@ -553,8 +583,7 @@ if (currentTrip) {
   console.log('[DriverApp] Estado inicial: oferta pendiente');
 
   // Si hay oferta pendiente, este chofer está efectivamente operativo.
-  this._onlineStatus = true;
-  uiController.updateDriverState('ONLINE', true);
+  this._markDriverOperationalOnline('initial_pending_offer');
 
   this._setFlowState('RECEIVING_OFFER');
 
@@ -774,6 +803,7 @@ _subscribeToEvents() {
 
   const unsubOffer = tripManager.on('newPendingTrip', (trip) => {
     console.log('[DriverApp] [evento] newPendingTrip', trip.id);
+    this._markDriverOperationalOnline('new_pending_trip');
     this._setFlowState('RECEIVING_OFFER');
 
     this._vibrate([120, 60, 120]);
@@ -791,6 +821,7 @@ _subscribeToEvents() {
 
   const unsubAccepted = tripManager.on('tripAccepted', async (trip) => {
     this._acceptingOffer = false;
+    this._markDriverOperationalOnline('trip_accepted');
     const alreadySameTrip = String(this._currentTripId || '') === String(trip?.id || '');
     this._currentTripId = trip.id;
     this._setFlowState('GOING_TO_PICKUP');
@@ -817,6 +848,7 @@ _subscribeToEvents() {
 
   const unsubStarted = tripManager.on('tripStarted', async (trip) => {
     console.log('[DriverApp] tripStarted', trip.id);
+    this._markDriverOperationalOnline('trip_started');
 
     this._currentTripId = trip.id;
     this._setFlowState('TRIP_STARTED');
@@ -855,13 +887,7 @@ _subscribeToEvents() {
 
     uiController.showToast(`Viaje completado +$${trip?.precio ?? 0}`, 'success', 5000);
 
-    if (this._onlineStatus) {
-      this._setFlowState('ONLINE_IDLE');
-      uiController.showWaitingState();
-    } else {
-      this._setFlowState('OFFLINE');
-      uiController.showWaitingState();
-    }
+    this._renderIdleState();
   });
 
   const unsubCancelled = tripManager.on('tripCancelled', (trip) => {
@@ -884,13 +910,7 @@ _subscribeToEvents() {
 
     uiController.showToast('Viaje cancelado', 'warning');
 
-    if (this._onlineStatus) {
-      this._setFlowState('ONLINE_IDLE');
-    } else {
-      this._setFlowState('OFFLINE');
-    }
-
-    uiController.showWaitingState();
+    this._renderIdleState();
   });
 
 const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
@@ -911,15 +931,8 @@ const unsubCleared = tripManager.on('pendingTripCleared', ({ reason }) => {
     return;
   }
 
-  if (this._onlineStatus) {
-    this._setFlowState('ONLINE_IDLE');
-  } else {
-    this._setFlowState('OFFLINE');
-  }
-
   uiController.hideIncomingModal?.();
-  uiController.showWaitingState();
-  this._syncNavFabVisibility();
+  this._renderIdleState();
 });
 const unsubNoPending = tripManager.on('noPendingTrips', () => {
   console.log('[DriverApp] noPendingTrips');
@@ -939,14 +952,7 @@ const unsubNoPending = tripManager.on('noPendingTrips', () => {
     return;
   }
 
-  if (this._onlineStatus) {
-    this._setFlowState('ONLINE_IDLE');
-  } else {
-    this._setFlowState('OFFLINE');
-  }
-
-  uiController.showWaitingState();
-  this._syncNavFabVisibility();
+  this._renderIdleState();
 });
   
   this._unsubscribers.push(
@@ -1018,13 +1024,7 @@ async _startLocationTracking() {
 
        uiController.showToast('El cliente canceló el viaje', 'warning');
 
-       if (this._onlineStatus) {
-         this._setFlowState('ONLINE_IDLE');
-       } else {
-         this._setFlowState('OFFLINE');
-       }
-
-       uiController.showWaitingState?.();
+       this._renderIdleState();
        await tripManager.refresh?.();
      }
   } catch (err) {
@@ -1130,14 +1130,7 @@ async _acceptOffer(offerId) {
     if (!result.success) {
       uiController.showToast(result.error || 'Error aceptando viaje', 'warning');
       uiController.hideIncomingModal?.();
-
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-      } else {
-        this._setFlowState('OFFLINE');
-      }
-
-      uiController.showWaitingState();
+      this._renderIdleState();
       return result;
     }
 
@@ -1183,13 +1176,7 @@ async _rejectOffer(offerId) {
       return result || { success: false, error: 'ERROR_RECHAZANDO' };
     }
 
-    if (this._onlineStatus) {
-      this._setFlowState('ONLINE_IDLE');
-    } else {
-      this._setFlowState('OFFLINE');
-    }
-
-    uiController.showWaitingState();
+    this._renderIdleState();
     return { success: true };
   } catch (err) {
     console.error('[DriverApp] Error rechazando oferta:', err);
@@ -1232,14 +1219,7 @@ async _acceptTrip() {
       );
 
       uiController.hideIncomingModal?.();
-
-      if (this._onlineStatus) {
-        this._setFlowState('ONLINE_IDLE');
-      } else {
-        this._setFlowState('OFFLINE');
-      }
-
-      uiController.showWaitingState();
+      this._renderIdleState();
       return result;
     }
 
@@ -1283,13 +1263,7 @@ async _rejectTrip() {
       return result || { success: false, error: 'ERROR_RECHAZANDO' };
     }
 
-    if (this._onlineStatus) {
-      this._setFlowState('ONLINE_IDLE');
-    } else {
-      this._setFlowState('OFFLINE');
-    }
-
-    uiController.showWaitingState();
+    this._renderIdleState();
     return { success: true };
   } catch (err) {
     console.error('[DriverApp] Error rechazando viaje:', err);
@@ -1498,7 +1472,7 @@ await this._startRealtimeServicesInBackground();
 
         // al desconectarte manualmente sí conviene limpiar,
         // pero sin depender de que los listeners vuelvan a resetear todo
-          tripManager.resetState?.();
+          tripManager.resetState?.({ silent: true, reason: 'manual_offline' });
 
           mapService.clearRoute?.();
           uiController.hideIncomingModal?.();
@@ -1512,11 +1486,7 @@ await this._startRealtimeServicesInBackground();
           this._backgroundServicesStarting = false;
         }
 
-          uiController.updateDriverState(
-          this._onlineStatus ? 'ONLINE' : 'OFFLINE',
-          this._onlineStatus
-        );
-        this._syncConnectionMenuItem();
+          this._syncOnlinePresentation();
 
         uiController.showToast(
           this._onlineStatus ? 'Ya estás en línea' : 'Quedaste fuera de línea',
