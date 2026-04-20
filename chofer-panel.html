@@ -32,15 +32,16 @@
   <script src="https://unpkg.com/maplibre-gl@5.21.1/dist/maplibre-gl.js"></script>
 
   <script src="./libs/supabase-js.js"></script>
-<script type="module" src="./js/driver-pwa-onboarding.js"></script>
-<link rel="stylesheet" href="css/design-system.css?v=20260413-1" />
-<link rel="stylesheet" href="css/components.css?v=20260413-1" />
-<link rel="stylesheet" href="css/animations.css?v=20260413-1" />
-<link rel="stylesheet" href="css/panel.css?v=20260413-2" />
+<script type="module" src="./js/driver-pwa-onboarding.js?v=20260420-4"></script>
+<link rel="stylesheet" href="css/design-system.css?v=20260420-4" />
+<link rel="stylesheet" href="css/components.css?v=20260420-4" />
+<link rel="stylesheet" href="css/animations.css?v=20260420-4" />
+<link rel="stylesheet" href="css/panel.css?v=20260420-4" />
 <script>
   window.__APP_ROLE__ = "chofer";
+  window.__APP_VERSION__ = "20260420-4";
 </script>
-<script type="module" src="js/driver-app.js?v=20260413-1"></script>
+<script type="module" src="js/driver-app.js?v=20260420-4"></script>
 </head>
 <body>
   <div id="map-container"></div>
@@ -251,11 +252,11 @@
     </div>
   </div>
 
-  <script type="module">
-    import supabaseService from "./js/supabase-client.js";
-    import CONFIG from "./js/config.js";
-    import tripManager from "./js/trip-manager.js";
-    import uiController from "./js/ui-controller.js";
+<script type="module">
+  import supabaseService from "./js/supabase-client.js?v=20260420-4";
+  import CONFIG from "./js/config.js?v=20260420-4";
+  import tripManager from "./js/trip-manager.js?v=20260420-4";
+  import uiController from "./js/ui-controller.js?v=20260420-4";
 
     async function doLogout() {
       const activeTrip = tripManager.getCurrentTrip?.();
