@@ -254,7 +254,7 @@ const activeTrip = [...(activeByChofer || []), ...(activeByAssigned || [])]
          .from('viaje_ofertas')
          .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en, expires_at')
          .eq('chofer_id', driverId)
-         .in('estado', ['pendiente', 'enviada'])
+         .in('estado', ['PENDIENTE'])
          .gt('expires_at', nowIso)
          .order('enviada_en', { ascending: false })
          .limit(5);
@@ -282,9 +282,9 @@ const activeTrip = [...(activeByChofer || []), ...(activeByAssigned || [])]
        const validOffer = offers.find((offer) => {
         if (!offer) return false;
 
-        const estadoOferta = String(offer.estado || '').trim().toLowerCase();
-         if (!['pendiente', 'enviada'].includes(estadoOferta)) return false;
-        if (!offer.expires_at) return false;
+const estadoOferta = String(offer.estado || '').trim().toUpperCase();
+if (!['PENDIENTE'].includes(estadoOferta)) return false;
+         if (!offer.expires_at) return false;
 
         const expiresAt = new Date(offer.expires_at).getTime();
         if (Number.isNaN(expiresAt)) return false;
@@ -458,7 +458,7 @@ const activeTrip = [...(activeByChofer || []), ...(activeByAssigned || [])]
       })
       .eq('id', offerId)
       .eq('chofer_id', driverId)
-      .in('estado', ['pendiente', 'enviada']);
+      .in('estado', ['PENDIENTE']);
 
     if (error) {
       console.error('[TripManager] RejectOffer error:', error);
@@ -704,7 +704,7 @@ this.tripAssignedChannel = supabaseService.client
       .select('id, viaje_id, chofer_id, estado')
       .eq('id', offerId)
       .eq('chofer_id', driverId)
-      .in('estado', ['pendiente', 'enviada'])
+      .in('estado', ['PENDIENTE'])
       .maybeSingle();
 
     if (offerError) {
