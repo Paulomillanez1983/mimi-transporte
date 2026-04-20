@@ -826,7 +826,12 @@ const offerTimeout = Number(
 
           this._clearCountdownTimers();
 
-          const offerTimeout = Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15);
+const offerTimeout = Number(
+  this.state?.currentTrip?.remainingOfferSeconds ||
+  this.state?.currentTrip?.offerTimeoutSeconds ||
+  CONFIG.INCOMING_OFFER_TIMEOUT ||
+  8
+);
           this._resetCountdownUI();
           this.state.currentCount = offerTimeout;
           this._startCountdown(offerTimeout);
