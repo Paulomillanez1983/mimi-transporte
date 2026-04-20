@@ -383,15 +383,31 @@ class TripManager {
         // =====================================================
         // 5) SET PENDING OFFER
         // =====================================================
-        this.pendingOffer = {
-          ...trip,
-          offerId: validOffer.id,
-          viajeId: validOffer.viaje_id || null,
-          cotizacionId: validOffer.cotizacion_id || null,
-          enviadaEn: validOffer.enviada_en,
-          expiresAt: validOffer.expires_at,
-          tipo: validOffer.viaje_id ? 'VIAJE' : 'COTIZACION'
-        };
+        const expiresAtMs = validOffer?.expires_at ? new Date(validOffer.expires_at).getTime() : 0;
+const enviadaEnMs = validOffer?.enviada_en ? new Date(validOffer.enviada_en).getTime() : 0;
+const nowMs = Date.now();
+
+const remainingSeconds = Math.max(
+  1,
+  Math.round((expiresAtMs - nowMs) / 1000)
+);
+
+const offerWindowSeconds = Math.max(
+  1,
+  Math.round((expiresAtMs - enviadaEnMs) / 1000)
+);
+
+this.pendingOffer = {
+  ...trip,
+  offerId: validOffer.id,
+  viajeId: validOffer.viaje_id || null,
+  cotizacionId: validOffer.cotizacion_id || null,
+  enviadaEn: validOffer.enviada_en,
+  expiresAt: validOffer.expires_at,
+  remainingOfferSeconds: remainingSeconds,
+  offerTimeoutSeconds: offerWindowSeconds,
+  tipo: validOffer.viaje_id ? 'VIAJE' : 'COTIZACION'
+};
 
         console.log('[TripManager] Pending offer found:', validOffer.id);
 
