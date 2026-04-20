@@ -213,6 +213,64 @@ async function resolveDriverAuthUser(driverIdUuid) {
   return data;
 }
 
+async function resolveTripClientContext(trip = {}) {
+  const directClientUserId =
+    trip?.cliente_auth_id ||
+    trip?.cliente_user_id ||
+    trip?.user_id ||
+    trip?.cliente_id ||
+    trip?.client_user_id ||
+    trip?.pasajero_user_id ||
+    null;
+
+  if (directClientUserId) {
+    return {
+      clientUserId: directClientUserId,
+      clientName: trip?.pasajero_nombre || trip?.cliente_nombre || trip?.cliente || "Cliente"
+    };
+  }
+
+  const tripId = trip?.id || null;
+  if (!tripId) {
+    return {
+      clientUserId: null,
+      clientName: trip?.pasajero_nombre || trip?.cliente_nombre || trip?.cliente || "Cliente"
+    };
+  }
+
+  const { client } = await getClientSession();
+  const { data, error } = await client
+    .from("viajes")
+    .select(
+      "id, cliente_auth_id, cliente_user_id, user_id, cliente_id, client_user_id, pasajero_user_id, pasajero_nombre, cliente_nombre, cliente"
+    )
+    .eq("id", tripId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "No se pudo releer el viaje para abrir chat");
+  }
+
+  return {
+    clientUserId:
+      data?.cliente_auth_id ||
+      data?.cliente_user_id ||
+      data?.user_id ||
+      data?.cliente_id ||
+      data?.client_user_id ||
+      data?.pasajero_user_id ||
+      null,
+    clientName:
+      data?.pasajero_nombre ||
+      data?.cliente_nombre ||
+      data?.cliente ||
+      trip?.pasajero_nombre ||
+      trip?.cliente_nombre ||
+      trip?.cliente ||
+      "Cliente"
+  };
+}
+
 function getParticipantNames(ctx) {
   const isDriver = TRIP_CHAT.role === "driver";
 
@@ -532,12 +590,10 @@ export async function openTripChatForDriverTrip(trip = {}) {
   const driverUserId = me?.id || null;
 
   const tripId = trip?.id || null;
-  const clientUserId =
-    trip?.user_id ||
-    trip?.cliente_id ||
-    trip?.client_user_id ||
-    trip?.pasajero_user_id ||
-    null;
+  const {
+    clientUserId,
+    clientName
+  } = await resolveTripClientContext(trip);
 
   const driverIdUuid =
     trip?.chofer_id_uuid ||
@@ -563,7 +619,7 @@ export async function openTripChatForDriverTrip(trip = {}) {
     clientUserId,
     driverUserId,
     driverIdUuid,
-    clientName: trip?.pasajero_nombre || trip?.cliente || "Cliente",
+    clientName,
     driverName: "Chofer"
   });
 }
