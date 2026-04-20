@@ -631,7 +631,9 @@ class UIController {
 
     console.log('[UI] Showing incoming trip:', tripData.id);
 
-    if (this.state.isModalOpen && this.lastTripModalId === tripData.id) {
+    const modalTripKey = String(tripData?.offerId || tripData?.id || '');
+
+    if (this.state.isModalOpen && this.lastTripModalId === modalTripKey) {
       console.log('[UI] Same trip already displayed, skipping reopen');
       return;
     }
@@ -646,7 +648,7 @@ const offerTimeout = Number(
   CONFIG.INCOMING_OFFER_TIMEOUT ||
   8
 );
-    this.lastTripModalId = tripData.id;
+    this.lastTripModalId = modalTripKey;
     this.state.callbacks = { onAccept, onReject };
     this.state.currentTrip = tripData;
     this.state.currentCount = offerTimeout;
