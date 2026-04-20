@@ -141,56 +141,77 @@ class TripManager {
     return String(trip.estado || '').trim().toUpperCase();
   }
 
-  _handleTripRealtimePayload(payload) {
-    const tripRaw = payload.new;
-    if (!tripRaw) return;
+_handleTripRealtimePayload(payload) {
+  const tripRaw = payload.new;
+  if (!tripRaw) return;
 
-    const trip = {
-      ...tripRaw,
-      estado: this._normalizeDriverTripState(tripRaw)
-    };
+  const trip = {
+    ...tripRaw,
+    estado: this._normalizeDriverTripState(tripRaw)
+  };
 
-    console.log('[TripManager] Trip update:', trip.id, trip.estado);
+  console.log('[TripManager] Trip update:', trip.id, trip.estado);
 
-    const currentTripId = this.currentTrip?.id ? String(this.currentTrip.id) : null;
-    const incomingTripId = trip?.id ? String(trip.id) : null;
-    const isSameCurrentTrip =
-      !!currentTripId &&
-      !!incomingTripId &&
-      currentTripId === incomingTripId;
+  const currentTripId = this.currentTrip?.id ? String(this.currentTrip.id) : null;
+  const incomingTripId = trip?.id ? String(trip.id) : null;
+  const isSameCurrentTrip =
+    !!currentTripId &&
+    !!incomingTripId &&
+    currentTripId === incomingTripId;
 
-    if ((trip.estado === 'ASIGNADO' || trip.estado === 'ACEPTADO') && !isSameCurrentTrip) {
-      this.emit('tripAccepted', trip);
+  if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
+    this.currentTrip = trip;
+    this.pendingOffer = null;
+    this.lastOfferIdShown = null;
+
+    if (!isSameCurrentTrip) {
+      if (trip.estado === 'EN_CURSO') {
+        this.emit('tripStarted', trip);
+      } else {
+        this.emit('tripAccepted', trip);
+      }
     }
 
-    if (trip.estado === 'EN_CURSO') {
-      this.emit('tripStarted', trip);
-    }
-
-    if (trip.estado === 'COMPLETADO') {
-      this.emit('tripCompleted', trip);
-    }
-
-    if (trip.estado === 'CANCELADO') {
-      this.emit('tripCancelled', trip);
-    }
-
-    if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
-      this.currentTrip = trip;
-      this.pendingOffer = null;
-      this.lastOfferIdShown = null;
-    } else if (trip.estado === 'OFERTADO') {
-      this.currentTrip = null;
-    } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
-      this.currentTrip = null;
-      this.pendingOffer = null;
-      this.lastOfferIdShown = null;
-
-      this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
-      this.emit('noPendingTrips');
-    }
+    return;
   }
 
+  if (trip.estado === 'OFERTADO') {
+    this.currentTrip = null;
+    return;
+  }
+
+  if (trip.estado === 'CANCELADO') {
+    this.currentTrip = null;
+    this.pendingOffer = null;
+    this.lastOfferIdShown = null;
+
+    this.emit('tripCancelled', trip);
+    this.emit('pendingTripCleared', { reason: 'trip_cancelled_realtime' });
+    this.emit('noPendingTrips');
+
+    if (this.driverId) {
+      this._debouncedRefresh(this.driverId);
+    }
+
+    return;
+  }
+
+  if (trip.estado === 'COMPLETADO') {
+    this.currentTrip = null;
+    this.pendingOffer = null;
+    this.lastOfferIdShown = null;
+
+    this.emit('tripCompleted', trip);
+    this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
+    this.emit('noPendingTrips');
+
+    if (this.driverId) {
+      this._debouncedRefresh(this.driverId);
+    }
+
+    return;
+  }
+}
   // =========================================================
   // LOAD INITIAL STATE (OPTIMIZADO)
   // =========================================================
@@ -254,8 +275,7 @@ class TripManager {
         // =====================================================
         // 2) PENDING OFFERS
         // =====================================================
-        console.log('[TripManager] Checking offers for driver:', driverId);
-        const nowIso = new Date().toISOString();
+console.log('[TripManager] Checking offers for driver:', driverId);
 
 const { data: offers, error: offerError } = await supabaseService.client
   .from('viaje_ofertas')
@@ -263,11 +283,10 @@ const { data: offers, error: offerError } = await supabaseService.client
   .eq('chofer_id', driverId)
   .eq('estado', 'PENDIENTE')
   .not('expires_at', 'is', null)
-  .gt('expires_at', nowIso)
   .order('enviada_en', { ascending: false })
   .limit(1);
         
-        console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
+        console.log('[TripManager] Offers fetched:', offers, offerError);
 
         if (offerError) {
           console.error('[TripManager] Error loading offers:', offerError);
@@ -373,28 +392,20 @@ const { data: offers, error: offerError } = await supabaseService.client
         // =====================================================
         // 5) SET PENDING OFFER
         // =====================================================
-        const expiresAtMs = validOffer?.expires_at ? new Date(validOffer.expires_at).getTime() : 0;
+const expiresAtMs = validOffer?.expires_at ? new Date(validOffer.expires_at).getTime() : 0;
 const enviadaEnMs = validOffer?.enviada_en ? new Date(validOffer.enviada_en).getTime() : 0;
 const nowMs = Date.now();
 
 const remainingSeconds = Math.max(
-  1,
+  0,
   Math.round((expiresAtMs - nowMs) / 1000)
 );
 
-if (remainingSeconds <= 2) {
-  console.log('[TripManager] Offer descartada por expirar demasiado pronto');
-
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
-  this.emit('noPendingTrips');
-  return;
-}
-        const offerWindowSeconds = Math.max(
+const offerWindowSeconds = Math.max(
   1,
   Math.round((expiresAtMs - enviadaEnMs) / 1000)
 );
-
+        
 this.pendingOffer = {
   ...trip,
   offerId: validOffer.id,
@@ -626,7 +637,7 @@ _subscribeToRealtime(driverId) {
     this.refreshInterval = setInterval(() => {
       if (this.isLoadingInitial || this.isRefreshingOffers) return;
       this._loadInitialState(driverId);
-    }, CONFIG.TRIP_REFRESH_INTERVAL || 8000);
+    }, CONFIG.TRIP_REFRESH_INTERVAL || 3000);
   }
 
   async setDriverAvailability({ online, disponible }) {
