@@ -34,7 +34,7 @@ const CONFIG = {
   // INTERVALS (ms)
   // =========================================================
   LOCATION_UPDATE_INTERVAL: 5000,
-  TRIP_REFRESH_INTERVAL: 10000,
+  TRIP_REFRESH_INTERVAL: 3000,
   PRESENCE_INTERVAL: 30000,
 
   // =========================================================
