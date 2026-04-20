@@ -120,17 +120,31 @@ async _startRealtimeServicesInBackground() {
   }
 _syncNavFabVisibility() {
   const fabNav = document.getElementById('fab-nav');
-  if (!fabNav) return;
+  const fabOnline = document.getElementById('fab-online');
 
   const trip = tripManager.getCurrentTrip?.();
   const pending = tripManager.getPendingTrip?.();
   const hasActiveTrip = !!trip?.id;
   const hasPendingOnly = !!pending?.id || !!pending?.offerId;
 
-  if (hasActiveTrip && !hasPendingOnly) {
-    fabNav.classList.add('visible');
-  } else {
-    fabNav.classList.remove('visible');
+  if (fabNav) {
+    if (hasActiveTrip && !hasPendingOnly) {
+      fabNav.classList.add('visible');
+    } else {
+      fabNav.classList.remove('visible');
+    }
+  }
+
+  if (fabOnline) {
+    if (hasActiveTrip) {
+      fabOnline.classList.add('hidden-during-trip');
+      fabOnline.setAttribute('aria-hidden', 'true');
+      fabOnline.style.pointerEvents = 'none';
+    } else {
+      fabOnline.classList.remove('hidden-during-trip');
+      fabOnline.removeAttribute('aria-hidden');
+      fabOnline.style.pointerEvents = 'auto';
+    }
   }
 }
   async _ensureDriverShellReady() {
