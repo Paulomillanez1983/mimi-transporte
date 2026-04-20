@@ -1,5 +1,5 @@
 /**
- * MIMI Driver - Trip Manager (PRODUCTION FINAL FIXED)
+ * MIMI Driver - Trip Manager (PRODUCTION FINAL FIXED v2)
  * Business logic for trip lifecycle
  */
 
@@ -25,6 +25,23 @@ class TripManager {
 
     this.lastOfferIdShown = null;
     this._resetting = false;
+
+    // Reintentos de reconexión para canales realtime
+    this._reconnectAttempts = {
+      offer: 0,
+      trip: 0,
+      tripAssigned: 0
+    };
+  }
+
+  // =========================================================
+  // DEBOUNCE & RECONEXIÓN
+  // =========================================================
+  _debouncedRefresh(driverId) {
+    if (this._debounceTimer) clearTimeout(this._debounceTimer);
+    this._debounceTimer = setTimeout(() => {
+      this._loadInitialState(driverId);
+    }, 500);
   }
 
   // =========================================================
@@ -119,62 +136,63 @@ class TripManager {
     }
   }
 
-_normalizeDriverTripState(trip) {
-  if (!trip) return '';
+  _normalizeDriverTripState(trip) {
+    if (!trip) return '';
+    return String(trip.estado || '').trim().toUpperCase();
+  }
 
-  return String(trip.estado || '').trim().toUpperCase();
-}
   _handleTripRealtimePayload(payload) {
-  const tripRaw = payload.new;
-  if (!tripRaw) return;
+    const tripRaw = payload.new;
+    if (!tripRaw) return;
 
-  const trip = {
-    ...tripRaw,
-    estado: this._normalizeDriverTripState(tripRaw)
-  };
+    const trip = {
+      ...tripRaw,
+      estado: this._normalizeDriverTripState(tripRaw)
+    };
 
-  console.log('[TripManager] Trip update:', trip.id, trip.estado);
+    console.log('[TripManager] Trip update:', trip.id, trip.estado);
 
-  const currentTripId = this.currentTrip?.id ? String(this.currentTrip.id) : null;
-  const incomingTripId = trip?.id ? String(trip.id) : null;
-  const isSameCurrentTrip =
-    !!currentTripId &&
-    !!incomingTripId &&
-    currentTripId === incomingTripId;
+    const currentTripId = this.currentTrip?.id ? String(this.currentTrip.id) : null;
+    const incomingTripId = trip?.id ? String(trip.id) : null;
+    const isSameCurrentTrip =
+      !!currentTripId &&
+      !!incomingTripId &&
+      currentTripId === incomingTripId;
 
-  if ((trip.estado === 'ASIGNADO' || trip.estado === 'ACEPTADO') && !isSameCurrentTrip) {
-    this.emit('tripAccepted', trip);
+    if ((trip.estado === 'ASIGNADO' || trip.estado === 'ACEPTADO') && !isSameCurrentTrip) {
+      this.emit('tripAccepted', trip);
+    }
+
+    if (trip.estado === 'EN_CURSO') {
+      this.emit('tripStarted', trip);
+    }
+
+    if (trip.estado === 'COMPLETADO') {
+      this.emit('tripCompleted', trip);
+    }
+
+    if (trip.estado === 'CANCELADO') {
+      this.emit('tripCancelled', trip);
+    }
+
+    if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
+      this.currentTrip = trip;
+      this.pendingOffer = null;
+      this.lastOfferIdShown = null;
+    } else if (trip.estado === 'OFERTADO') {
+      this.currentTrip = null;
+    } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
+      this.currentTrip = null;
+      this.pendingOffer = null;
+      this.lastOfferIdShown = null;
+
+      this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
+      this.emit('noPendingTrips');
+    }
   }
 
-  if (trip.estado === 'EN_CURSO') {
-    this.emit('tripStarted', trip);
-  }
-
-  if (trip.estado === 'COMPLETADO') {
-    this.emit('tripCompleted', trip);
-  }
-
-  if (trip.estado === 'CANCELADO') {
-    this.emit('tripCancelled', trip);
-  }
-
-  if (['ASIGNADO', 'ACEPTADO', 'EN_CURSO'].includes(trip.estado)) {
-    this.currentTrip = trip;
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
-  } else if (trip.estado === 'OFERTADO') {
-    this.currentTrip = null;
-  } else if (['COMPLETADO', 'CANCELADO'].includes(trip.estado)) {
-    this.currentTrip = null;
-    this.pendingOffer = null;
-    this.lastOfferIdShown = null;
-
-    this.emit('pendingTripCleared', { reason: 'trip_finished_realtime' });
-    this.emit('noPendingTrips');
-  }
-}
   // =========================================================
-  // LOAD INITIAL STATE
+  // LOAD INITIAL STATE (OPTIMIZADO)
   // =========================================================
   async _loadInitialState(driverId) {
     if (this._loadingPromise) {
@@ -187,30 +205,20 @@ _normalizeDriverTripState(trip) {
 
       try {
         // =====================================================
-        // 1) ACTIVE TRIP
+        // 1) ACTIVE TRIP (UNA SOLA CONSULTA CON OR)
         // =====================================================
-const estadosActivos = ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'];
+        const estadosActivos = ['ASIGNADO', 'ACEPTADO', 'EN_CURSO'];
 
-const { data: activeByChofer, error: tripErrorChofer } = await supabaseService.client
-  .from('viajes')
-  .select('*')
-  .eq('chofer_id_uuid', driverId)
-  .in('estado', estadosActivos)
-  .order('updated_at', { ascending: false })
-  .limit(1);
+        const { data: activeTrips, error: tripError } = await supabaseService.client
+          .from('viajes')
+          .select('*')
+          .or(`chofer_id_uuid.eq.${driverId},assigned_driver_id.eq.${driverId}`)
+          .in('estado', estadosActivos)
+          .order('updated_at', { ascending: false })
+          .limit(1);
 
-const { data: activeByAssigned, error: tripErrorAssigned } = await supabaseService.client
-  .from('viajes')
-  .select('*')
-  .eq('assigned_driver_id', driverId)
-  .in('estado', estadosActivos)
-  .order('updated_at', { ascending: false })
-  .limit(1);
+        const activeTrip = activeTrips?.[0] || null;
 
-const tripError = tripErrorChofer || tripErrorAssigned;
-
-const activeTrip = [...(activeByChofer || []), ...(activeByAssigned || [])]
-  .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))[0] || null;        
         if (tripError) {
           console.error('[TripManager] Error loading active trip:', tripError);
         }
@@ -249,50 +257,51 @@ const activeTrip = [...(activeByChofer || []), ...(activeByAssigned || [])]
         console.log('[TripManager] Checking offers for driver:', driverId);
         const nowIso = new Date().toISOString();
 
-const { data: offers, error: offerError } = await supabaseService.client
-  .from('viaje_ofertas')
-  .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en, expires_at')
-  .eq('chofer_id', driverId)
-  .eq('estado', 'PENDIENTE')
-  .not('expires_at', 'is', null)
-  .gt('expires_at', nowIso)
-  .order('enviada_en', { ascending: false })
-  .limit(1);
+        const { data: offers, error: offerError } = await supabaseService.client
+          .from('viaje_ofertas')
+          .select('id, viaje_id, cotizacion_id, chofer_id, estado, enviada_en, respondida_en, expires_at')
+          .eq('chofer_id', driverId)
+          .eq('estado', 'PENDIENTE')
+          .not('expires_at', 'is', null)
+          .gt('expires_at', nowIso)
+          .order('enviada_en', { ascending: false })
+          .limit(1);
 
-console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
+        console.log('[TripManager] Offers fetched:', offers, offerError, 'nowIso=', nowIso);
 
-if (offerError) {
-  console.error('[TripManager] Error loading offers:', offerError);
-}
+        if (offerError) {
+          console.error('[TripManager] Error loading offers:', offerError);
+        }
 
-if (!offers || offers.length === 0) {
-  if (this.pendingOffer) {
-    this.emit('pendingTripCleared', { reason: 'no_offers' });
-  }
+        if (!offers || offers.length === 0) {
+          if (this.pendingOffer) {
+            this.emit('pendingTripCleared', { reason: 'no_offers' });
+          }
 
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
-  this.emit('noPendingTrips');
-  return;
-}
+          this.pendingOffer = null;
+          this.lastOfferIdShown = null;
+          this.emit('noPendingTrips');
+          return;
+        }
 
-// =====================================================
-// 3) VALID OFFER
-// =====================================================
-const validOffer = offers[0] || null;
+        // =====================================================
+        // 3) VALID OFFER
+        // =====================================================
+        const validOffer = offers[0] || null;
 
-if (!validOffer) {
-  console.warn('[TripManager] No valid non-expired offer found');
+        if (!validOffer) {
+          console.warn('[TripManager] No valid non-expired offer found');
 
-  if (this.pendingOffer) {
-    this.emit('pendingTripCleared', { reason: 'all_offers_expired' });
-  }
+          if (this.pendingOffer) {
+            this.emit('pendingTripCleared', { reason: 'all_offers_expired' });
+          }
 
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
-  this.emit('noPendingTrips');
-  return;
-}
+          this.pendingOffer = null;
+          this.lastOfferIdShown = null;
+          this.emit('noPendingTrips');
+          return;
+        }
+
         if (!validOffer.viaje_id && !validOffer.cotizacion_id) {
           console.warn('[TripManager] Offer has no viaje_id and no cotizacion_id:', validOffer);
 
@@ -407,7 +416,10 @@ if (!validOffer) {
     }
   }
 
-  async rejectOffer(offerId) {
+  // =========================================================
+  // REJECT OFFER (CORREGIDO CON REASON)
+  // =========================================================
+  async rejectOffer(offerId, reason = 'RECHAZADA') {
     const driverId = this.driverId;
 
     if (!driverId) {
@@ -418,7 +430,7 @@ if (!validOffer) {
       return { success: false, error: 'No offerId' };
     }
 
-    console.log('[TripManager] Rejecting offer:', offerId);
+    console.log('[TripManager] Rejecting offer:', offerId, 'reason:', reason);
 
     const { data: ofertaActual, error: ofertaError } = await supabaseService.client
       .from('viaje_ofertas')
@@ -438,12 +450,19 @@ if (!validOffer) {
 
     const viajeId = ofertaActual.viaje_id || null;
 
+    const updatePayload = {
+      estado: 'RECHAZADA',
+      respondida_en: new Date().toISOString()
+    };
+
+    // Solo agregar motivo si la columna existe
+    if (reason && reason !== 'RECHAZADA') {
+      updatePayload.motivo_rechazo = reason;
+    }
+
     const { error } = await supabaseService.client
       .from('viaje_ofertas')
-      .update({
-        estado: 'RECHAZADA',
-        respondida_en: new Date().toISOString()
-      })
+      .update(updatePayload)
       .eq('id', offerId)
       .eq('chofer_id', driverId)
       .in('estado', ['PENDIENTE']);
@@ -470,88 +489,91 @@ if (!validOffer) {
   }
 
   // =========================================================
-  // REALTIME
+  // REALTIME (CON RECONEXIÓN AUTOMÁTICA)
   // =========================================================
+  _cleanupChannel(key) {
+    const channel = this[`${key}Channel`];
+    if (channel) {
+      try {
+        supabaseService.client.removeChannel(channel);
+      } catch (e) {
+        console.warn(`[TripManager] Error removing ${key} channel:`, e);
+      }
+      this[`${key}Channel`] = null;
+    }
+  }
+
+  _cleanupChannels() {
+    ['offer', 'trip', 'tripAssigned'].forEach(key => this._cleanupChannel(key));
+  }
+
   _subscribeToRealtime(driverId) {
     console.log('[TripManager] Subscribing to realtime channels...', driverId);
 
-    if (this.offerChannel) {
-      supabaseService.client.removeChannel(this.offerChannel);
-      this.offerChannel = null;
-    }
+    // Cleanup previo
+    this._cleanupChannels();
 
-    if (this.tripChannel) {
-      supabaseService.client.removeChannel(this.tripChannel);
-      this.tripChannel = null;
-    }
-
-    // =====================================================
-    // OFERTAS
-    // =====================================================
-    this.offerChannel = supabaseService.client
-      .channel(`offers-${driverId}`)
-      .on(
-        'postgres_changes',
-        {
+    const createChannel = (name, table, filter, handler, key) => {
+      const channel = supabaseService.client
+        .channel(`${name}-${driverId}-${Date.now()}`) // nombre único para evitar colisiones
+        .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'viaje_ofertas',
-          filter: `chofer_id=eq.${driverId}`
-        },
-        async (payload) => {
-          console.log('[TripManager] Offer realtime payload:', payload);
-          this._debouncedRefresh(driverId);
-        }
-      )
-      .subscribe((status) => {
-        console.log('[TripManager] Offer channel status:', status);
-      });
+          table,
+          filter
+        }, handler)
+        .subscribe((status) => {
+          console.log(`[TripManager] ${name} channel status:`, status);
 
-// =====================================================
-// VIAJES (chofer_id_uuid)
-// =====================================================
-this.tripChannel = supabaseService.client
-  .channel(`trips-${driverId}`)
-  .on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'viajes',
-      filter: `chofer_id_uuid=eq.${driverId}`
-    },
-    (payload) => {
-      console.log('[TripManager] Trip realtime payload:', payload);
-      this._handleTripRealtimePayload(payload);
-    }
-  )
-  .subscribe((status) => {
-    console.log('[TripManager] Trip channel status:', status);
-  });
+          if (status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+            this._reconnectAttempts[key]++;
+            const delay = Math.min(1000 * 2 ** this._reconnectAttempts[key], 30000);
+            console.warn(`[TripManager] Reconnecting ${name} in ${delay}ms (attempt ${this._reconnectAttempts[key]})...`);
 
-// =====================================================
-// VIAJES (assigned_driver_id)
-// =====================================================
-this.tripAssignedChannel = supabaseService.client
-  .channel(`trips-assigned-${driverId}`)
-  .on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'viajes',
-      filter: `assigned_driver_id=eq.${driverId}`
-    },
-    (payload) => {
-      console.log('[TripManager] Trip assigned realtime payload:', payload);
-      this._handleTripRealtimePayload(payload);
-    }
-  )
-  .subscribe((status) => {
-    console.log('[TripManager] Trip assigned channel status:', status);
-  });
-}
-    // =========================================================
+            setTimeout(() => {
+              this._cleanupChannel(key);
+              createChannel(name, table, filter, handler, key);
+            }, delay);
+          } else if (status === 'SUBSCRIBED') {
+            if (this._reconnectAttempts[key] > 0) {
+              console.log(`[TripManager] ${name} channel reconnected successfully`);
+            }
+            this._reconnectAttempts[key] = 0;
+          }
+        });
+
+      this[`${key}Channel`] = channel;
+    };
+
+    createChannel('offers', 'viaje_ofertas', 
+      `chofer_id=eq.${driverId}`,
+      (payload) => {
+        console.log('[TripManager] Offer realtime payload:', payload);
+        this._debouncedRefresh(driverId);
+      },
+      'offer'
+    );
+
+    createChannel('trips', 'viajes',
+      `chofer_id_uuid=eq.${driverId}`,
+      (payload) => {
+        console.log('[TripManager] Trip realtime payload:', payload);
+        this._handleTripRealtimePayload(payload);
+      },
+      'trip'
+    );
+
+    createChannel('trips-assigned', 'viajes',
+      `assigned_driver_id=eq.${driverId}`,
+      (payload) => {
+        console.log('[TripManager] Trip assigned realtime payload:', payload);
+        this._handleTripRealtimePayload(payload);
+      },
+      'tripAssigned'
+    );
+  }
+
+  // =========================================================
   // REFRESH
   // =========================================================
   _startRefreshInterval(driverId) {
@@ -704,8 +726,6 @@ this.tripAssignedChannel = supabaseService.client
       return { success: false, error: 'Oferta no encontrada o sin viaje asociado' };
     }
 
-    // IMPORTANTE:
-    // Se mantiene aceptar-viaje-ts porque esa es la función real en producción.
     const result = await this._invokeEdgeFunction('aceptar-viaje-multi', {
       viaje_id: offerRow.viaje_id,
       chofer_id: driverId
@@ -742,13 +762,31 @@ this.tripAssignedChannel = supabaseService.client
     }
 
     // =====================================================
-    // HIDRATAR EL VIAJE ACEPTADO INMEDIATAMENTE
+    // HIDRATAR EL VIAJE ACEPTADO CON RETRY
     // =====================================================
-    const { data: acceptedTripRaw, error: acceptedTripError } = await supabaseService.client
-      .from('viajes')
-      .select('*')
-      .eq('id', offerRow.viaje_id)
-      .maybeSingle();
+    let acceptedTripRaw = null;
+    let acceptedTripError = null;
+
+    // Esperar un momento para que la transacción se complete
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Intentar hidratar hasta 3 veces
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await supabaseService.client
+        .from('viajes')
+        .select('*')
+        .eq('id', offerRow.viaje_id)
+        .maybeSingle();
+
+      acceptedTripRaw = result.data;
+      acceptedTripError = result.error;
+
+      if (acceptedTripRaw) break;
+
+      if (attempt < 2) {
+        await new Promise(resolve => setTimeout(resolve, 200 * (attempt + 1)));
+      }
+    }
 
     if (acceptedTripError) {
       console.error('[TripManager] Error loading accepted trip:', acceptedTripError);
@@ -978,70 +1016,66 @@ this.tripAssignedChannel = supabaseService.client
   // =========================================================
   // CLEANUP
   // =========================================================
-destroy() {
-  if (this.offerChannel) {
-    supabaseService.client.removeChannel(this.offerChannel);
-    this.offerChannel = null;
-  }
+  destroy() {
+    this._cleanupChannels();
 
-  if (this.tripChannel) {
-    supabaseService.client.removeChannel(this.tripChannel);
-    this.tripChannel = null;
-  }
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
 
-  if (this.tripAssignedChannel) {
-    supabaseService.client.removeChannel(this.tripAssignedChannel);
-    this.tripAssignedChannel = null;
-  }
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
+    }
 
-  if (this.refreshInterval) {
-    clearInterval(this.refreshInterval);
-    this.refreshInterval = null;
-  }
-
-  if (this._debounceTimer) {
-    clearTimeout(this._debounceTimer);
-    this._debounceTimer = null;
-  }
-
-  this.currentTrip = null;
-  this.pendingOffer = null;
-  this.lastOfferIdShown = null;
-  this.driverId = null;
-  this.isLoadingInitial = false;
-  this.isRefreshingOffers = false;
-
-  console.log('[TripManager] Destroyed');
-}
-// =========================================================
-// STATE RESET (ANTI BUGS)
-// =========================================================
-resetState(options = {}) {
-  if (this._resetting) {
-    console.warn('[TripManager] resetState ignorado: ya se está ejecutando');
-    return;
-  }
-
-  const {
-    silent = false,
-    reason = 'manual_reset'
-  } = options || {};
-
-  this._resetting = true;
-
-  try {
     this.currentTrip = null;
     this.pendingOffer = null;
     this.lastOfferIdShown = null;
+    this.driverId = null;
+    this.isLoadingInitial = false;
+    this.isRefreshingOffers = false;
 
-    if (!silent) {
-      this.emit('pendingTripCleared', { reason });
-      this.emit('noPendingTrips');
-    }
-  } finally {
-    this._resetting = false;
+    // Resetear contadores de reconexión
+    this._reconnectAttempts = {
+      offer: 0,
+      trip: 0,
+      tripAssigned: 0
+    };
+
+    console.log('[TripManager] Destroyed');
   }
-}
+
+  // =========================================================
+  // STATE RESET (ANTI BUGS)
+  // =========================================================
+  resetState(options = {}) {
+    if (this._resetting) {
+      console.warn('[TripManager] resetState ignorado: ya se está ejecutando');
+      return;
+    }
+
+    const {
+      silent = false,
+      reason = 'manual_reset'
+    } = options || {};
+
+    this._resetting = true;
+
+    try {
+      this.currentTrip = null;
+      this.pendingOffer = null;
+      this.lastOfferIdShown = null;
+
+      if (!silent) {
+        this.emit('pendingTripCleared', { reason });
+        this.emit('noPendingTrips');
+      }
+    } finally {
+      this._resetting = false;
+    }
+  }
+
   // =========================================================
   // GETTERS
   // =========================================================
