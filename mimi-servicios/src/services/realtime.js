@@ -9,6 +9,7 @@ export function disconnectRealtime() {
   channels.forEach((channel) => {
     supabase.removeChannel(channel);
   });
+
   channels = [];
 }
 
