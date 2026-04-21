@@ -1,10 +1,81 @@
 import { appConfig } from "./config.js";
-import { initMap, updateTrackingMarkers } from "./services/map.js";
-import { bootstrapSession, createRequest, loadMessages, loadNotifications, loadOffers, searchProviders, sendMessage, updateRequestStatus } from "./services/service-api.js";
-import { subscribeToServiceRealtime } from "./services/realtime.js";
-import { playNotificationSound } from "./services/sound.js";
-import { patchState, setState, state, subscribe } from "./state/app-state.js";
-import { renderApp } from "./ui/render.js";
+import { initMap, updateTrackingMarkers } from "./map.js";
+import {
+  bootstrapSession,
+  createRequest,
+  loadActiveRequest,
+  loadConversationForRequest,
+  loadMessages,
+  loadNotifications,
+  loadOffers,
+  prepareRequestPricing,
+  searchProviders,
+  sendMessage,
+  updateRequestStatus
+} from "./service-api.js";
+import { subscribeToServiceRealtime } from "./realtime.js";
+import { playNotificationSound } from "./sound.js";
+import { patchState, setState, state, subscribe } from "./app-state.js";
+import { renderApp } from "./render.js";
+
+function currentUserId() {
+  return state.session.userId ?? appConfig.demoClientUserId ?? null;
+}
+
+async function hydrateLiveContext(activeRequestOverride) {
+  const activeRequest = activeRequestOverride ?? await loadActiveRequest({
+    userId: state.session.userId,
+    providerId: state.session.providerId
+  });
+
+  const conversation = activeRequest?.id
+    ? await loadConversationForRequest(activeRequest.id)
+    : null;
+
+  const messages = conversation?.id
+    ? await loadMessages(conversation.id)
+    : [];
+
+  setState((draft) => {
+    draft.client.activeRequest = activeRequest
+      ? {
+          ...draft.client.activeRequest,
+          ...activeRequest,
+          conversation_id:
+            conversation?.id ??
+            draft.client.activeRequest?.conversation_id ??
+            null
+        }
+      : null;
+
+    if (
+      draft.session.providerId &&
+      activeRequest?.accepted_provider_id === draft.session.providerId
+    ) {
+      draft.provider.activeService = {
+        ...(draft.provider.activeService ?? {}),
+        ...activeRequest,
+        conversation_id: conversation?.id ?? null
+      };
+    } else {
+      draft.provider.activeService = null;
+    }
+
+    draft.chat.messages = messages;
+    draft.chat.unreadCount = messages.filter(
+      (message) => !message.read_at && message.sender_user_id !== draft.session.userId
+    ).length;
+
+    if (activeRequest?.service_lat && activeRequest?.service_lng) {
+      draft.tracking.clientPosition = {
+        lat: activeRequest.service_lat,
+        lng: activeRequest.service_lng
+      };
+    }
+  });
+
+  setupRealtime(activeRequest?.id ?? null, conversation?.id ?? null);
+}
 
 function syncDraftFromForm() {
   patchState("requestDraft.address", document.getElementById("serviceAddressInput").value.trim());
@@ -16,7 +87,8 @@ function syncDraftFromForm() {
 }
 
 function updateScheduledVisibility() {
-  document.getElementById("scheduledForWrapper").hidden = state.requestDraft.requestType !== "SCHEDULED";
+  document.getElementById("scheduledForWrapper").hidden =
+    state.requestDraft.requestType !== "SCHEDULED";
 }
 
 function toggleDrawer(id, force) {
@@ -27,10 +99,17 @@ function toggleDrawer(id, force) {
 }
 
 function bindBasicControls() {
-  document.getElementById("enterServicesHub").addEventListener("click", () => patchState("ui.appEntered", true));
-  document.getElementById("notificationsButton").addEventListener("click", () => toggleDrawer("notificationsDrawer", true));
+  document
+    .getElementById("enterServicesHub")
+    .addEventListener("click", () => patchState("ui.appEntered", true));
+
+  document
+    .getElementById("notificationsButton")
+    .addEventListener("click", () => toggleDrawer("notificationsDrawer", true));
+
   document.getElementById("chatButton").addEventListener("click", async () => {
     toggleDrawer("chatDrawer", true);
+
     if (!state.chat.messages.length) {
       const messages = await loadMessages(state.client.activeRequest?.conversation_id);
       patchState("chat.messages", messages);
@@ -50,38 +129,75 @@ function bindBasicControls() {
   document.getElementById("requestForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     syncDraftFromForm();
-    const providers = await searchProviders(state.ui.selectedCategoryId, state.requestDraft);
+
+    const providers = await searchProviders(
+      state.ui.selectedCategoryId,
+      state.requestDraft
+    );
+
     setState((draft) => {
       draft.client.providers = providers;
-      draft.meta.info = providers.length ? "Prestadores actualizados." : "No encontramos prestadores para este criterio.";
+      draft.meta.info = providers.length
+        ? "Prestadores actualizados."
+        : "No encontramos prestadores para este criterio.";
       draft.meta.lastSearchAt = new Date().toISOString();
     });
   });
 
   document.getElementById("chatForm").addEventListener("submit", async (event) => {
     event.preventDefault();
+
     const input = document.getElementById("chatInput");
     const body = input.value.trim();
     if (!body) return;
-    const message = await sendMessage({ conversationId: state.client.activeRequest?.conversation_id, body });
+
+    const message = await sendMessage({
+      conversationId: state.client.activeRequest?.conversation_id,
+      body
+    });
+
     setState((draft) => {
       draft.chat.messages.push(message);
       draft.chat.unreadCount = 0;
     });
+
     input.value = "";
   });
 
   document.querySelector(".app-shell").addEventListener("click", async (event) => {
     const categoryButton = event.target.closest("[data-category-id]");
-    if (categoryButton) return patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
+    if (categoryButton) {
+      patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
+      return;
+    }
 
     const modeButton = event.target.closest("[data-mode]");
-    if (modeButton) return patchState("ui.activeMode", modeButton.dataset.mode);
+    if (modeButton) {
+      patchState("ui.activeMode", modeButton.dataset.mode);
+      return;
+    }
 
     const selectProvider = event.target.closest("[data-provider-select]");
     if (selectProvider) {
-      const provider = state.client.providers.find((item) => item.provider_id === selectProvider.dataset.providerSelect);
+      const provider = state.client.providers.find(
+        (item) => item.provider_id === selectProvider.dataset.providerSelect
+      );
       if (!provider) return;
+
+      const pricing = await prepareRequestPricing({
+        clientUserId: currentUserId(),
+        categoryId: state.ui.selectedCategoryId,
+        providerId: provider.provider_id,
+        draft: state.requestDraft
+      });
+
+      if (!pricing?.eligible) {
+        setState((draft) => {
+          draft.meta.info = `No se pudo confirmar el prestador: ${pricing?.reason ?? "pricing_error"}`;
+        });
+        return;
+      }
+
       const request = await createRequest({
         categoryId: state.ui.selectedCategoryId,
         selectedProviderId: provider.provider_id,
@@ -92,9 +208,10 @@ function bindBasicControls() {
         requestType: state.requestDraft.requestType,
         scheduledFor: state.requestDraft.scheduledFor || null,
         requestedHours: state.requestDraft.requestedHours,
-        providerPrice: provider.provider_price,
-        platformFee: provider.fee,
-        totalPrice: provider.total_price
+        providerPrice: pricing.provider_price,
+        platformFee: pricing.platform_fee,
+        totalPrice: pricing.total_price,
+        currency: pricing.currency
       });
 
       setState((draft) => {
@@ -104,74 +221,160 @@ function bindBasicControls() {
           providerName: provider.full_name,
           requestType: draft.requestDraft.requestType,
           requestedHours: draft.requestDraft.requestedHours,
-          total_price: provider.total_price,
+          total_price: pricing.total_price,
           conversation_id: request?.conversation_id ?? "demo-conversation"
         };
-        draft.tracking.clientPosition = { lat: draft.requestDraft.lat, lng: draft.requestDraft.lng };
+        draft.tracking.clientPosition = {
+          lat: draft.requestDraft.lat,
+          lng: draft.requestDraft.lng
+        };
         draft.meta.info = "Solicitud creada correctamente.";
       });
-      updateTrackingMarkers({ clientPosition: state.tracking.clientPosition, providerPosition: state.tracking.providerPosition });
+
+      updateTrackingMarkers({
+        clientPosition: state.tracking.clientPosition,
+        providerPosition: state.tracking.providerPosition
+      });
+
+      await hydrateLiveContext(request);
       return;
     }
 
     const requestAction = event.target.closest("[data-request-action]");
     if (requestAction?.dataset.requestAction === "cancel") {
-      await updateRequestStatus(appConfig.functions.cancelRequest, { requestId: state.client.activeRequest?.id });
-      return setState((draft) => {
-        if (draft.client.activeRequest) draft.client.activeRequest.status = "CANCELLED";
+      await updateRequestStatus(appConfig.functions.cancelRequest, {
+        requestId: state.client.activeRequest?.id
       });
+
+      setState((draft) => {
+        if (draft.client.activeRequest) {
+          draft.client.activeRequest.status = "CANCELLED";
+        }
+      });
+
+      await hydrateLiveContext();
+      return;
     }
 
-    if (event.target.closest("[data-open-chat]")) return toggleDrawer("chatDrawer", true);
+    if (event.target.closest("[data-open-chat]")) {
+      toggleDrawer("chatDrawer", true);
+      return;
+    }
 
     const offerAction = event.target.closest("[data-offer-action]");
     if (offerAction) {
-      const offer = state.provider.offers.find((item) => item.id === offerAction.dataset.offerId);
+      const offer = state.provider.offers.find(
+        (item) => item.id === offerAction.dataset.offerId
+      );
       if (!offer) return;
+
       const accept = offerAction.dataset.offerAction === "accept";
-      await updateRequestStatus(appConfig.functions.providerRespondOffer, { offerId: offer.id, accept });
-      return setState((draft) => {
-        draft.provider.offers = draft.provider.offers.filter((item) => item.id !== offer.id);
+
+      await updateRequestStatus(appConfig.functions.providerRespondOffer, {
+        offerId: offer.id,
+        accept
+      });
+
+      setState((draft) => {
+        draft.provider.offers = draft.provider.offers.filter(
+          (item) => item.id !== offer.id
+        );
+
         if (accept) {
-          draft.provider.activeService = { ...offer, status: "ACCEPTED" };
+          draft.provider.activeService = {
+            ...offer,
+            status: "ACCEPTED"
+          };
           draft.provider.stats.offers += 1;
-          draft.client.activeRequest = { ...(draft.client.activeRequest ?? {}), status: "ACCEPTED", providerName: offer.client_name };
+          draft.client.activeRequest = {
+            ...(draft.client.activeRequest ?? {}),
+            status: "ACCEPTED",
+            providerName: offer.client_name
+          };
         }
       });
+
+      await hydrateLiveContext();
+      return;
     }
 
     const providerStatus = event.target.closest("[data-provider-status]");
-    if (providerStatus) return patchState("provider.status", providerStatus.dataset.providerStatus);
+    if (providerStatus) {
+      patchState("provider.status", providerStatus.dataset.providerStatus);
+      return;
+    }
 
     const providerFlow = event.target.closest("[data-provider-flow]");
     if (providerFlow) {
       const action = providerFlow.dataset.providerFlow;
-      if (action === "chat") return toggleDrawer("chatDrawer", true);
-      const nextStatuses = { "en-route": "PROVIDER_EN_ROUTE", arrived: "PROVIDER_ARRIVED", start: "IN_PROGRESS", complete: "COMPLETED" };
+
+      if (action === "chat") {
+        toggleDrawer("chatDrawer", true);
+        return;
+      }
+
+      const nextStatuses = {
+        "en-route": "PROVIDER_EN_ROUTE",
+        arrived: "PROVIDER_ARRIVED",
+        start: "IN_PROGRESS",
+        complete: "COMPLETED"
+      };
+
       const functionName = {
         "en-route": appConfig.functions.providerEnRoute,
         arrived: appConfig.functions.providerArrived,
         start: appConfig.functions.startService,
         complete: appConfig.functions.completeService
       }[action];
-      await updateRequestStatus(functionName, { requestId: state.provider.activeService?.request_id });
-      return setState((draft) => {
-        if (draft.provider.activeService) draft.provider.activeService.status = nextStatuses[action];
-        if (draft.client.activeRequest) draft.client.activeRequest.status = nextStatuses[action];
-        if (action === "complete") draft.provider.stats.completed += 1;
+
+      await updateRequestStatus(functionName, {
+        requestId: state.provider.activeService?.request_id
       });
+
+      setState((draft) => {
+        if (draft.provider.activeService) {
+          draft.provider.activeService.status = nextStatuses[action];
+        }
+
+        if (draft.client.activeRequest) {
+          draft.client.activeRequest.status = nextStatuses[action];
+        }
+
+        if (action === "complete") {
+          draft.provider.stats.completed += 1;
+        }
+      });
+
+      await hydrateLiveContext();
     }
   });
 }
 
 async function bootstrapAsyncData() {
   const session = await bootstrapSession();
-  setState((draft) => { draft.session.userId = session.userId; });
-  const [notifications, offers] = await Promise.all([loadNotifications(), loadOffers()]);
+
+  setState((draft) => {
+    draft.session.userId = session.userId;
+    draft.session.providerId = session.providerId;
+    draft.session.role = session.role;
+    draft.meta.backendMode = session.userId ? "supabase" : "mock";
+
+    if (session.role === "provider") {
+      draft.ui.activeMode = "provider";
+    }
+  });
+
+  const [notifications, offers] = await Promise.all([
+    loadNotifications(session.userId),
+    loadOffers(session.providerId)
+  ]);
+
   setState((draft) => {
     draft.notifications.items = notifications;
-    draft.provider.offers = offers;
+    draft.provider.offers = offers ?? [];
   });
+
+  await hydrateLiveContext();
 }
 
 function registerInstallPrompt() {
@@ -187,33 +390,91 @@ function registerInstallPrompt() {
   });
 }
 
-function setupRealtime() {
+function setupRealtime(
+  requestId = state.client.activeRequest?.id ??
+    state.provider.activeService?.request_id ??
+    state.provider.activeService?.id ??
+    null,
+  conversationId = state.client.activeRequest?.conversation_id ??
+    state.provider.activeService?.conversation_id ??
+    null
+) {
   subscribeToServiceRealtime({
+    userId: state.session.userId,
+    providerId: state.session.providerId,
+    requestId,
+    conversationId,
     onNotification: ({ new: payload }) => {
       if (!payload) return;
-      setState((draft) => { draft.notifications.items.unshift(payload); });
+
+      setState((draft) => {
+        draft.notifications.items.unshift(payload);
+      });
+
       playNotificationSound();
     },
     onMessage: ({ new: payload }) => {
       if (!payload) return;
+
       setState((draft) => {
         draft.chat.messages.push(payload);
-        draft.chat.unreadCount += 1;
+        if (payload.sender_user_id !== draft.session.userId) {
+          draft.chat.unreadCount += 1;
+        }
       });
+
       playNotificationSound();
     },
     onTracking: ({ new: payload }) => {
       if (!payload) return;
-      setState((draft) => { draft.tracking.providerPosition = { lat: payload.lat, lng: payload.lng }; });
-      updateTrackingMarkers({ clientPosition: state.tracking.clientPosition, providerPosition: { lat: payload.lat, lng: payload.lng } });
+
+      setState((draft) => {
+        draft.tracking.providerPosition = {
+          lat: payload.lat,
+          lng: payload.lng
+        };
+      });
+
+      updateTrackingMarkers({
+        clientPosition: state.tracking.clientPosition,
+        providerPosition: {
+          lat: payload.lat,
+          lng: payload.lng
+        }
+      });
     },
     onRequest: ({ new: payload }) => {
-      if (!payload || !state.client.activeRequest || payload.id !== state.client.activeRequest.id) return;
-      setState((draft) => { draft.client.activeRequest = { ...draft.client.activeRequest, ...payload }; });
+      if (!payload) return;
+
+      setState((draft) => {
+        if (draft.client.activeRequest?.id === payload.id) {
+          draft.client.activeRequest = {
+            ...draft.client.activeRequest,
+            ...payload
+          };
+        }
+
+        if (
+          draft.provider.activeService?.id === payload.id ||
+          draft.provider.activeService?.request_id === payload.id
+        ) {
+          draft.provider.activeService = {
+            ...draft.provider.activeService,
+            ...payload
+          };
+        }
+      });
     },
     onOffer: ({ new: payload }) => {
       if (!payload) return;
-      setState((draft) => { draft.provider.offers.unshift(payload); });
+
+      setState((draft) => {
+        const exists = draft.provider.offers.some((offer) => offer.id === payload.id);
+        if (!exists) {
+          draft.provider.offers.unshift(payload);
+        }
+      });
+
       playNotificationSound();
     }
   });
@@ -228,12 +489,18 @@ function seedForm() {
 async function init() {
   subscribe(renderApp);
   renderApp(state);
+
   seedForm();
   updateScheduledVisibility();
   bindBasicControls();
   registerInstallPrompt();
+
   initMap("trackingMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => null);
+
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(() => null);
+  }
+
   await bootstrapAsyncData();
   setupRealtime();
   renderApp(state);
