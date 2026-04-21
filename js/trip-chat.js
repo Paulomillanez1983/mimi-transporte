@@ -15,7 +15,13 @@ const TRIP_CHAT = {
   activeTripId: null,
   activeChannel: null,
   activeContext: null,
-  sending: false
+  unreadCount: 0,
+  badgeClient: null,
+  badgeDriver: null,
+  sending: false,
+  audioEnabled: false,
+  audioCtx: null,
+  lastSoundAt: 0
 };
 
 function escapeHtml(value) {
@@ -51,8 +57,142 @@ function setStatus(text = "") {
   }
 }
 
+function cacheBadgeRefs() {
+  TRIP_CHAT.badgeClient = document.getElementById("tripChatBadgeClient");
+  TRIP_CHAT.badgeDriver = document.getElementById("tripChatBadgeDriver");
+}
+
+function getActiveBadgeEl() {
+  cacheBadgeRefs();
+  return TRIP_CHAT.role === "driver"
+    ? TRIP_CHAT.badgeDriver
+    : TRIP_CHAT.badgeClient;
+}
+
+function setChatBadge(count = 0) {
+  const badge = getActiveBadgeEl();
+  if (!badge) return;
+
+  const safeCount = Number(count) || 0;
+
+  if (safeCount <= 0) {
+    badge.hidden = true;
+    badge.textContent = "";
+    badge.classList.remove("has-count");
+    return;
+  }
+
+  badge.hidden = false;
+
+  if (safeCount === 1) {
+    badge.textContent = "";
+    badge.classList.remove("has-count");
+    return;
+  }
+
+  badge.textContent = safeCount > 9 ? "9+" : String(safeCount);
+  badge.classList.add("has-count");
+}
+
+function canPlaySound() {
+  return typeof window !== "undefined" && typeof window.AudioContext !== "undefined";
+}
+
+function enableIncomingMessageAudio() {
+  if (!canPlaySound()) return;
+
+  try {
+    if (!TRIP_CHAT.audioCtx) {
+      TRIP_CHAT.audioCtx = new window.AudioContext();
+    }
+
+    if (TRIP_CHAT.audioCtx.state === "suspended") {
+      TRIP_CHAT.audioCtx.resume().catch(() => {});
+    }
+
+    TRIP_CHAT.audioEnabled = true;
+  } catch (err) {
+    console.warn("[trip-chat.audio] no se pudo habilitar audio", err);
+  }
+}
+
+function playIncomingMessageSound() {
+  const now = Date.now();
+
+  if (!TRIP_CHAT.audioEnabled) return;
+  if (!TRIP_CHAT.audioCtx) return;
+  if (now - TRIP_CHAT.lastSoundAt < 600) return;
+
+  TRIP_CHAT.lastSoundAt = now;
+
+  try {
+    const ctx = TRIP_CHAT.audioCtx;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.0001, ctx.currentTime);
+    master.connect(ctx.destination);
+
+    // Volumen alto pero controlado
+    master.gain.exponentialRampToValueAtTime(0.85, ctx.currentTime + 0.02);
+    master.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.75);
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const osc3 = ctx.createOscillator();
+
+    osc1.type = "sine";
+    osc2.type = "triangle";
+    osc3.type = "sine";
+
+    osc1.frequency.setValueAtTime(880, ctx.currentTime);
+    osc1.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.10);
+
+    osc2.frequency.setValueAtTime(660, ctx.currentTime + 0.06);
+    osc2.frequency.exponentialRampToValueAtTime(1040, ctx.currentTime + 0.20);
+
+    osc3.frequency.setValueAtTime(1560, ctx.currentTime + 0.12);
+    osc3.frequency.exponentialRampToValueAtTime(1240, ctx.currentTime + 0.28);
+
+    const g1 = ctx.createGain();
+    const g2 = ctx.createGain();
+    const g3 = ctx.createGain();
+
+    g1.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g1.gain.exponentialRampToValueAtTime(0.50, ctx.currentTime + 0.02);
+    g1.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.24);
+
+    g2.gain.setValueAtTime(0.0001, ctx.currentTime + 0.05);
+    g2.gain.exponentialRampToValueAtTime(0.30, ctx.currentTime + 0.09);
+    g2.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.34);
+
+    g3.gain.setValueAtTime(0.0001, ctx.currentTime + 0.11);
+    g3.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.15);
+    g3.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.42);
+
+    osc1.connect(g1).connect(master);
+    osc2.connect(g2).connect(master);
+    osc3.connect(g3).connect(master);
+
+    osc1.start(ctx.currentTime);
+    osc2.start(ctx.currentTime + 0.05);
+    osc3.start(ctx.currentTime + 0.11);
+
+    osc1.stop(ctx.currentTime + 0.26);
+    osc2.stop(ctx.currentTime + 0.36);
+    osc3.stop(ctx.currentTime + 0.44);
+
+    if (navigator?.vibrate) {
+      navigator.vibrate([70, 30, 70]);
+    }
+  } catch (err) {
+    console.warn("[trip-chat.audio] no se pudo reproducir sonido", err);
+  }
+}
+
 function ensureUI() {
-  if (TRIP_CHAT.initialized) return;
+  if (TRIP_CHAT.initialized) {
+    cacheBadgeRefs();
+    return;
+  }
 
   const overlay = document.createElement("div");
   overlay.className = "trip-chat-overlay";
@@ -102,6 +242,8 @@ function ensureUI() {
   TRIP_CHAT.subtitle = sheet.querySelector(".trip-chat-subtitle");
   TRIP_CHAT.status = sheet.querySelector(".trip-chat-status");
 
+  cacheBadgeRefs();
+
   overlay.addEventListener("click", closeTripChat);
   sheet.querySelector(".trip-chat-close")?.addEventListener("click", closeTripChat);
 
@@ -110,14 +252,18 @@ function ensureUI() {
     TRIP_CHAT.input.style.height = `${Math.min(TRIP_CHAT.input.scrollHeight, 140)}px`;
   });
 
+  TRIP_CHAT.input?.addEventListener("focus", enableIncomingMessageAudio);
+  TRIP_CHAT.sendBtn?.addEventListener("pointerdown", enableIncomingMessageAudio);
+  TRIP_CHAT.sendBtn?.addEventListener("click", sendCurrentMessage);
+
   TRIP_CHAT.input?.addEventListener("keydown", async (event) => {
+    enableIncomingMessageAudio();
+
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       await sendCurrentMessage();
     }
   });
-
-  TRIP_CHAT.sendBtn?.addEventListener("click", sendCurrentMessage);
 
   TRIP_CHAT.initialized = true;
 }
@@ -290,14 +436,14 @@ async function findOrCreateTripChat(context) {
     driver_user_id: String(context.driverUserId)
   };
 
-const { data: existing, error: existingError } = await client
-  .from("soporte_tickets")
-  .select("*")
-  .eq("categoria", "viaje")
-  .contains("metadata", metadataFilter)
-  .order("created_at", { ascending: false })
-  .limit(1);
-  
+  const { data: existing, error: existingError } = await client
+    .from("soporte_tickets")
+    .select("*")
+    .eq("categoria", "viaje")
+    .contains("metadata", metadataFilter)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
   if (existingError) {
     throw new Error(existingError.message || "No se pudo consultar el chat del viaje");
   }
@@ -350,7 +496,7 @@ async function loadMessages(ticketId) {
 
   const { data, error } = await client
     .from("soporte_mensajes")
-    .select("id, ticket_id, sender_user_id, sender_role, mensaje, created_at, metadata")
+    .select("id, ticket_id, sender_user_id, sender_role, mensaje, created_at, metadata, leido")
     .eq("ticket_id", ticketId)
     .order("created_at", { ascending: true });
 
@@ -423,6 +569,65 @@ function appendMessage(message) {
   TRIP_CHAT.body.scrollTop = TRIP_CHAT.body.scrollHeight;
 }
 
+async function refreshUnreadBadge(ticketId) {
+  if (!ticketId) {
+    TRIP_CHAT.unreadCount = 0;
+    setChatBadge(0);
+    return;
+  }
+
+  try {
+    const { client } = await getClientSession();
+    const meUserId = String(TRIP_CHAT.activeContext?.meUserId || "");
+
+    const { data, error } = await client
+      .from("soporte_mensajes")
+      .select("id, sender_user_id, leido")
+      .eq("ticket_id", ticketId)
+      .eq("leido", false);
+
+    if (error) {
+      console.warn("[trip-chat.refreshUnreadBadge]", error);
+      return;
+    }
+
+    const unread = (Array.isArray(data) ? data : []).filter(
+      (msg) => String(msg?.sender_user_id || "") !== meUserId
+    ).length;
+
+    TRIP_CHAT.unreadCount = unread;
+    setChatBadge(unread);
+  } catch (err) {
+    console.warn("[trip-chat.refreshUnreadBadge] crash", err);
+  }
+}
+
+async function markMessagesAsRead(ticketId) {
+  if (!ticketId) return;
+
+  try {
+    const { client } = await getClientSession();
+    const meUserId = String(TRIP_CHAT.activeContext?.meUserId || "");
+
+    const { error } = await client
+      .from("soporte_mensajes")
+      .update({ leido: true })
+      .eq("ticket_id", ticketId)
+      .neq("sender_user_id", meUserId)
+      .eq("leido", false);
+
+    if (error) {
+      console.warn("[trip-chat.markMessagesAsRead]", error);
+      return;
+    }
+
+    TRIP_CHAT.unreadCount = 0;
+    setChatBadge(0);
+  } catch (err) {
+    console.warn("[trip-chat.markMessagesAsRead] crash", err);
+  }
+}
+
 async function subscribeRealtime(ticketId) {
   const { client } = await getClientSession();
 
@@ -443,10 +648,25 @@ async function subscribeRealtime(ticketId) {
         table: "soporte_mensajes",
         filter: `ticket_id=eq.${ticketId}`
       },
-      (payload) => {
+      async (payload) => {
         const msg = payload?.new;
         if (!msg?.id) return;
+
         appendMessage(msg);
+
+        const mine =
+          String(msg?.sender_user_id || "") ===
+          String(TRIP_CHAT.activeContext?.meUserId || "");
+
+        if (!mine) {
+          TRIP_CHAT.unreadCount = (TRIP_CHAT.unreadCount || 0) + 1;
+          setChatBadge(TRIP_CHAT.unreadCount);
+          playIncomingMessageSound();
+
+          if (TRIP_CHAT.sheet && !TRIP_CHAT.sheet.hidden) {
+            await markMessagesAsRead(ticketId);
+          }
+        }
       }
     )
     .subscribe();
@@ -454,24 +674,24 @@ async function subscribeRealtime(ticketId) {
 
 async function sendCurrentMessage() {
   if (TRIP_CHAT.sending) return;
-if (!TRIP_CHAT.activeTicketId) {
-  console.warn("[trip-chat] intento de enviar sin ticket");
 
-  setStatus("Error al iniciar el chat. Reintentá.");
-  
-  // opcional: intentar recrear
-  try {
-    const ticket = await findOrCreateTripChat(TRIP_CHAT.activeContext);
-    if (ticket?.id) {
-      TRIP_CHAT.activeTicketId = ticket.id;
-    } else {
+  if (!TRIP_CHAT.activeTicketId) {
+    console.warn("[trip-chat] intento de enviar sin ticket");
+    setStatus("Error al iniciar el chat. Reintentá.");
+
+    try {
+      const ticket = await findOrCreateTripChat(TRIP_CHAT.activeContext);
+      if (ticket?.id) {
+        TRIP_CHAT.activeTicketId = ticket.id;
+      } else {
+        return;
+      }
+    } catch (e) {
+      console.error("[trip-chat] no se pudo recrear ticket", e);
       return;
     }
-  } catch (e) {
-    console.error("[trip-chat] no se pudo recrear ticket", e);
-    return;
   }
-}
+
   const text = String(TRIP_CHAT.input?.value || "").trim();
   if (!text) return;
 
@@ -480,6 +700,8 @@ if (!TRIP_CHAT.activeTicketId) {
   setStatus("Enviando...");
 
   try {
+    enableIncomingMessageAudio();
+
     const { client, user } = await getClientSession();
     const senderRole = TRIP_CHAT.role === "driver" ? "driver" : "client";
     const nowIso = new Date().toISOString();
@@ -537,6 +759,7 @@ if (!TRIP_CHAT.activeTicketId) {
 async function openTripChat(context) {
   ensureUI();
   openUI();
+  enableIncomingMessageAudio();
 
   const names = getParticipantNames(context);
   TRIP_CHAT.title.textContent = `Chat con ${names.other}`;
@@ -557,7 +780,10 @@ async function openTripChat(context) {
     const messages = await loadMessages(ticket.id);
     renderMessages(messages);
 
+    await refreshUnreadBadge(ticket.id);
+    await markMessagesAsRead(ticket.id);
     await subscribeRealtime(ticket.id);
+
     setStatus("");
   } catch (err) {
     console.error("[trip-chat.openTripChat]", err);
@@ -614,10 +840,7 @@ export async function openTripChatForDriverTrip(trip = {}) {
   const driverUserId = me?.id || null;
 
   const tripId = trip?.id || null;
-  const {
-    clientUserId,
-    clientName
-  } = await resolveTripClientContext(trip);
+  const { clientUserId, clientName } = await resolveTripClientContext(trip);
 
   const driverIdUuid =
     trip?.chofer_id_uuid ||
@@ -650,6 +873,8 @@ export async function openTripChatForDriverTrip(trip = {}) {
 
 export function initTripChat() {
   ensureUI();
+  cacheBadgeRefs();
+  setChatBadge(0);
 }
 
 window.tripChat = {
