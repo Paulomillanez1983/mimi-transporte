@@ -1,5 +1,5 @@
 import { appConfig } from "./config.js";
-import { initMap, updateTrackingMarkers } from "./map.js";
+import { initMap, updateTrackingMarkers } from "./services/map.js";
 import {
   bootstrapSession,
   createRequest,
@@ -14,11 +14,11 @@ import {
   sendMessage,
   trackLocation,
   updateRequestStatus,
-} from "./service-api.js";
-import { subscribeToServiceRealtime } from "./realtime.js";
-import { playNotificationSound } from "./sound.js";
-import { patchState, setState, state, subscribe } from "./app-state.js";
-import { renderApp } from "./render.js";
+} from "./services/service-api.js";
+import { subscribeToServiceRealtime } from "./services/realtime.js";
+import { playNotificationSound } from "./services/sound.js";
+import { patchState, setState, state, subscribe } from "./state/app-state.js";
+import { renderApp } from "./ui/render.js";
 
 function currentUserId() {
   return state.session.userId ?? appConfig.demoClientUserId ?? null;
