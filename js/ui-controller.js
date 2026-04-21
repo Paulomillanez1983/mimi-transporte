@@ -11,19 +11,19 @@ class UIController {
   constructor() {
     this.elements = {};
 
-    this.state = {
-      countdown: null,
-      countdownTimeout: null,
-      currentCount: Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15),
-      isModalOpen: false,
-      isProcessing: false,
-      callbacks: {},
-      currentTrip: null,
-      isOnline: false,
-      bottomSheetExpanded: false,
-      bottomSheetLockedUntil: 0
-    };
-
+this.state = {
+  countdown: null,
+  countdownTimeout: null,
+  currentCount: Number(CONFIG.INCOMING_OFFER_TIMEOUT || 15),
+  isModalOpen: false,
+  isProcessing: false,
+  callbacks: {},
+  currentTrip: null,
+  isOnline: false,
+  bottomSheetExpanded: false,
+  bottomSheetLockedUntil: 0,
+  bottomSheetUserPreference: null
+};
     this.lastTripModalId = null;
     this._gestureCleanup = false;
     this._lastTripRendered = null;
@@ -445,37 +445,41 @@ class UIController {
     }
   }
 
-  _setupGestures() {
-    if (this._gestureCleanup) return;
+_setupGestures() {
+  if (this._gestureCleanup) return;
 
-    const sheet = this.elements['bottom-sheet'];
-    const handle = this.elements['sheet-handle'];
+  const sheet = this.elements['bottom-sheet'];
+  const handle = this.elements['sheet-handle'];
+  const peekCard = this.elements['sheet-peek-card'];
 
-    if (!sheet || !handle) return;
+  if (!sheet || !handle) return;
 
-    handle.addEventListener('touchstart', this._onTouchStart, { passive: true });
-    sheet.addEventListener('touchstart', this._onTouchStart, { passive: true });
-    document.addEventListener('touchmove', this._onTouchMove, { passive: false });
-    document.addEventListener('touchend', this._onTouchEnd, { passive: true });
+  handle.addEventListener('touchstart', this._onTouchStart, { passive: true });
 
-    this._gestureCleanup = true;
+  if (peekCard) {
+    peekCard.addEventListener('touchstart', this._onTouchStart, { passive: true });
   }
 
-  _removeGestureListeners() {
-    const sheet = this.elements['bottom-sheet'];
-    const handle = this.elements['sheet-handle'];
+  document.addEventListener('touchmove', this._onTouchMove, { passive: false });
+  document.addEventListener('touchend', this._onTouchEnd, { passive: true });
 
-    if (handle) {
-      handle.removeEventListener('touchstart', this._onTouchStart);
-    }
-    if (sheet) {
-      sheet.removeEventListener('touchstart', this._onTouchStart);
-    }
+  this._gestureCleanup = true;
+}
+_removeGestureListeners() {
+  const handle = this.elements['sheet-handle'];
+  const peekCard = this.elements['sheet-peek-card'];
 
-    document.removeEventListener('touchmove', this._onTouchMove);
-    document.removeEventListener('touchend', this._onTouchEnd);
+  if (handle) {
+    handle.removeEventListener('touchstart', this._onTouchStart);
   }
 
+  if (peekCard) {
+    peekCard.removeEventListener('touchstart', this._onTouchStart);
+  }
+
+  document.removeEventListener('touchmove', this._onTouchMove);
+  document.removeEventListener('touchend', this._onTouchEnd);
+}
   _normalizeTripState(estado) {
     return String(estado || '').trim().toUpperCase();
   }
@@ -625,29 +629,39 @@ class UIController {
     }
   }
 
-  _expandBottomSheet() {
-    const sheet = this.elements['bottom-sheet'];
-    if (!sheet) return;
+_expandBottomSheet(fromUser = true) {
+  const sheet = this.elements['bottom-sheet'];
+  if (!sheet) return;
 
-    if (Date.now() < Number(this.state.bottomSheetLockedUntil || 0)) {
-      return;
-    }
-
-    sheet.classList.add('expanded');
-    document.body.classList.add('sheet-expanded');
-    this.state.bottomSheetExpanded = true;
-    this._haptic('light');
+  if (Date.now() < Number(this.state.bottomSheetLockedUntil || 0)) {
+    return;
   }
 
-  _collapseBottomSheet() {
-    const sheet = this.elements['bottom-sheet'];
-    if (!sheet) return;
+  sheet.classList.add('expanded');
+  document.body.classList.add('sheet-expanded');
+  this.state.bottomSheetExpanded = true;
 
-    sheet.classList.remove('expanded');
-    document.body.classList.remove('sheet-expanded');
-    this.state.bottomSheetExpanded = false;
-    this.state.bottomSheetLockedUntil = Date.now() + 420;
+  if (fromUser) {
+    this.state.bottomSheetUserPreference = true;
   }
+
+  this._haptic('light');
+}
+
+_collapseBottomSheet(fromUser = true) {
+  const sheet = this.elements['bottom-sheet'];
+  if (!sheet) return;
+
+  sheet.classList.remove('expanded');
+  document.body.classList.remove('sheet-expanded');
+  this.state.bottomSheetExpanded = false;
+
+  if (fromUser) {
+    this.state.bottomSheetUserPreference = false;
+  }
+
+  this.state.bottomSheetLockedUntil = Date.now() + 420;
+}
 
   _renderTripPeek(trip) {
     const peekCard = this.elements['sheet-peek-card'];
@@ -1099,9 +1113,13 @@ const offerTimeout = Number(
       sheet.classList.toggle('has-trip', false);
     }
 
-    this._updateBottomSheetState(online);
-    this.showWaitingState();
-    this._haptic(online ? 'success' : 'light');
+this._updateBottomSheetState(online);
+
+if (!this.state.currentTrip) {
+  this.showWaitingState();
+}
+
+this._haptic(online ? 'success' : 'light');
   }
 
   _updateBottomSheetState(isOnline) {
@@ -1171,11 +1189,11 @@ const offerTimeout = Number(
     }
   }
 
-  showWaitingState() {
-    this._collapseBottomSheet();
-    this._updateBottomSheetState(this.state.isOnline);
-  }
-
+showWaitingState() {
+  this._collapseBottomSheet(false);
+  this._updateBottomSheetState(this.state.isOnline);
+}
+  
   showNavigationState(trip) {
     if (!trip || typeof trip !== 'object') {
       console.warn('[UI] showNavigationState llamado sin trip válido');
@@ -1192,13 +1210,17 @@ const offerTimeout = Number(
       navBar.style.transform = 'translateY(0)';
     }
 
-    if (sheet) {
-      sheet.classList.add('has-trip');
-      if (!this.state.bottomSheetExpanded) {
-        this._collapseBottomSheet();
-      }
-    }
+if (sheet) {
+  sheet.classList.add('has-trip');
 
+  if (this.state.bottomSheetUserPreference === true) {
+    this._expandBottomSheet(false);
+  } else if (this.state.bottomSheetUserPreference === false) {
+    this._collapseBottomSheet(false);
+  } else if (!this.state.bottomSheetExpanded) {
+    this._collapseBottomSheet(false);
+  }
+}
     this._updateNavigationInfo(trip);
     this._showTripActions(trip);
     this._renderTripPeek(trip);
@@ -1420,27 +1442,27 @@ if (btnChat) {
     });
   }
 
-  hideNavigation() {
-    const navBar = this.elements['nav-bar'];
-    const sheet = this.elements['bottom-sheet'];
+hideNavigation() {
+  const navBar = this.elements['nav-bar'];
+  const sheet = this.elements['bottom-sheet'];
 
-    document.body.classList.remove('trip-active');
+  document.body.classList.remove('trip-active');
 
-    if (navBar) {
-      navBar.classList.remove('active');
-      navBar.style.transform = 'translateY(-100%)';
-    }
-
-    if (sheet) {
-      sheet.classList.remove('has-trip');
-      this._collapseBottomSheet();
-    }
-
-    this.state.currentTrip = null;
-    this._lastTripRendered = null;
-    this._hideTripPeek();
+  if (navBar) {
+    navBar.classList.remove('active');
+    navBar.style.transform = 'translateY(-100%)';
   }
 
+  if (sheet) {
+    sheet.classList.remove('has-trip');
+    this._collapseBottomSheet(false);
+  }
+
+  this.state.currentTrip = null;
+  this.state.bottomSheetUserPreference = null;
+  this._lastTripRendered = null;
+  this._hideTripPeek();
+}
   showArrival(trip = this.state.currentTrip) {
     const panel = this.elements['arrival-panel'];
     if (!panel) return;
