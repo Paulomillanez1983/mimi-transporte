@@ -12,7 +12,7 @@ import uiController from './ui-controller.js';
 import soundManager from './sound-manager.js';
 import { initSupportPushFCM } from './push-fcm.js';
 import { initDriverSupport, openDriverSupportPanel } from './driver-support.js';
-import { initTripChat, openTripChatForDriverTrip } from './trip-chat.js';
+import { initTripChat, openTripChatForDriverTrip } from './trip-chat.js?v=20260420-8';
 import { initDriverPwaOnboarding, runDriverPostLoginOnboarding } from './driver-pwa-onboarding.js';
 const APP_BASE_PATH = (() => {
   const path = window.location.pathname || '/';
@@ -141,10 +141,16 @@ _syncNavFabVisibility() {
       fabOnline.classList.add('hidden-during-trip');
       fabOnline.setAttribute('aria-hidden', 'true');
       fabOnline.style.pointerEvents = 'none';
+      fabOnline.style.visibility = 'hidden';
+      fabOnline.style.opacity = '0';
+      fabOnline.style.display = 'none';
     } else {
       fabOnline.classList.remove('hidden-during-trip');
       fabOnline.removeAttribute('aria-hidden');
       fabOnline.style.pointerEvents = 'auto';
+      fabOnline.style.visibility = '';
+      fabOnline.style.opacity = '';
+      fabOnline.style.display = '';
     }
   }
 }
@@ -1731,7 +1737,7 @@ default:
     }
   } catch (err) {
     console.error('[DriverApp] Error en acción:', action, err);
-    uiController.showToast('Error procesando acción', 'error');
+    uiController.showToast(err?.message || 'Error procesando acción', 'error');
     return { success: false, error: err.message };
   } finally {
     if (lockableActions.has(action)) {
