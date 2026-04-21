@@ -9,7 +9,6 @@ export function disconnectRealtime() {
   channels.forEach((channel) => {
     supabase.removeChannel(channel);
   });
-
   channels = [];
 }
 
@@ -22,7 +21,7 @@ export function subscribeToServiceRealtime({
   onMessage,
   onTracking,
   onRequest,
-  onOffer
+  onOffer,
 }) {
   const supabase = getSupabaseClient();
   if (!supabase) return;
@@ -39,11 +38,11 @@ export function subscribeToServiceRealtime({
             event: "*",
             schema: "public",
             table: "svc_notifications",
-            filter: `user_id=eq.${userId}`
+            filter: `user_id=eq.${userId}`,
           },
-          onNotification
+          onNotification,
         )
-        .subscribe()
+        .subscribe(),
     );
   }
 
@@ -57,11 +56,11 @@ export function subscribeToServiceRealtime({
             event: "*",
             schema: "public",
             table: "svc_messages",
-            filter: `conversation_id=eq.${conversationId}`
+            filter: `conversation_id=eq.${conversationId}`,
           },
-          onMessage
+          onMessage,
         )
-        .subscribe()
+        .subscribe(),
     );
   }
 
@@ -75,9 +74,9 @@ export function subscribeToServiceRealtime({
             event: "*",
             schema: "public",
             table: "svc_tracking",
-            filter: `request_id=eq.${requestId}`
+            filter: `request_id=eq.${requestId}`,
           },
-          onTracking
+          onTracking,
         )
         .subscribe(),
       supabase
@@ -88,9 +87,9 @@ export function subscribeToServiceRealtime({
             event: "*",
             schema: "public",
             table: "svc_requests",
-            filter: `id=eq.${requestId}`
+            filter: `id=eq.${requestId}`,
           },
-          onRequest
+          onRequest,
         )
         .on(
           "postgres_changes",
@@ -98,11 +97,11 @@ export function subscribeToServiceRealtime({
             event: "*",
             schema: "public",
             table: "svc_request_offers",
-            filter: `request_id=eq.${requestId}`
+            filter: `request_id=eq.${requestId}`,
           },
-          onOffer
+          onOffer,
         )
-        .subscribe()
+        .subscribe(),
     );
   }
 
@@ -116,11 +115,11 @@ export function subscribeToServiceRealtime({
             event: "*",
             schema: "public",
             table: "svc_request_offers",
-            filter: `provider_id=eq.${providerId}`
+            filter: `provider_id=eq.${providerId}`,
           },
-          onOffer
+          onOffer,
         )
-        .subscribe()
+        .subscribe(),
     );
   }
 }
