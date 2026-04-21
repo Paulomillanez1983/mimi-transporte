@@ -198,7 +198,27 @@
   font-weight: 800;
   line-height: 1;
 }
+.has-chat-badge {
+  position: relative;
+}
 
+.has-chat-badge .trip-chat-fab-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  min-width: 10px;
+  height: 10px;
+  padding: 0;
+  border-radius: 999px;
+  background: #e11900;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.has-chat-badge .trip-chat-fab-badge.has-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+}
 @media (max-width: 640px) {
   .trip-chat-sheet {
     width: 100%;
