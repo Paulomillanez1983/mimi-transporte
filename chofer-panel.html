@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -36,12 +36,12 @@
 <link rel="stylesheet" href="css/design-system.css?v=20260420-4" />
 <link rel="stylesheet" href="css/components.css?v=20260420-4" />
 <link rel="stylesheet" href="css/animations.css?v=20260420-4" />
-<link rel="stylesheet" href="css/panel.css?v=20260420-5" />
+<link rel="stylesheet" href="css/panel.css?v=20260420-6" />
 <script>
   window.__APP_ROLE__ = "chofer";
-  window.__APP_VERSION__ = "20260420-4";
+  window.__APP_VERSION__ = "20260420-6";
 </script>
-<script type="module" src="js/driver-app.js?v=20260420-5"></script>
+<script type="module" src="js/driver-app.js?v=20260420-6"></script>
 </head>
 <body>
   <div id="map-container"></div>
@@ -144,6 +144,7 @@
       <div class="sheet-handle" id="sheet-handle">
         <div class="handle-bar"></div>
       </div>
+      <button class="sheet-peek-card" id="sheet-peek-card" type="button" aria-label="Expandir viaje activo" hidden></button>
       <div class="sheet-content" id="sheet-content">
         <div class="waiting-state">
           <h3>Est&aacute;s desconectado</h3>
@@ -253,10 +254,10 @@
   </div>
 
 <script type="module">
-  import supabaseService from "./js/supabase-client.js?v=20260420-4";
-  import CONFIG from "./js/config.js?v=20260420-4";
-  import tripManager from "./js/trip-manager.js?v=20260420-4";
-  import uiController from "./js/ui-controller.js?v=20260420-4";
+  import supabaseService from "./js/supabase-client.js?v=20260420-6";
+  import CONFIG from "./js/config.js?v=20260420-6";
+  import tripManager from "./js/trip-manager.js?v=20260420-6";
+  import uiController from "./js/ui-controller.js?v=20260420-6";
 
     async function doLogout() {
       const activeTrip = tripManager.getCurrentTrip?.();
@@ -267,17 +268,32 @@
       }
 
       try {
+        const maybeOnline =
+          document.body.classList.contains("driver-online") ||
+          Boolean(window.driverApp?._onlineStatus);
+
+        if (maybeOnline) {
+          try {
+            await tripManager.setDriverAvailability({
+              online: false,
+              disponible: false
+            });
+          } catch (availabilityErr) {
+            console.warn("[logout] No se pudo marcar offline antes de salir:", availabilityErr);
+          }
+        }
+
         await supabaseService.client.auth.signOut();
       } catch (err) {
         console.error("[logout] Error cerrando sesi&oacute;n:", err);
       } finally {
-        window.location.href = CONFIG.REDIRECTS.LOGIN;
+        window.location.replace(CONFIG.REDIRECTS.LOGIN);
       }
 
       return true;
     }
 
-async function initLogout() {
+function initLogout() {
   const bindLogout = (btn) => {
     if (!btn || btn.dataset.bound === "1") return;
 
@@ -303,7 +319,11 @@ async function initLogout() {
 
   bindLogout(document.getElementById("menu-logout"));
 }
-    await initLogout();
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => initLogout(), { once: true });
+    } else {
+      initLogout();
+    }
   </script>
 
   <script>
