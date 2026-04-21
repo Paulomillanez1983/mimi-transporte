@@ -16,7 +16,7 @@ function createMarkerElement(color) {
 function ensureMarker(marker, color) {
   if (marker) return marker;
   return new window.maplibregl.Marker({
-    element: createMarkerElement(color)
+    element: createMarkerElement(color),
   });
 }
 
@@ -32,20 +32,20 @@ export function initMap(containerId, initialCenter, zoom) {
           type: "raster",
           tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
           tileSize: 256,
-          attribution: "&copy; OpenStreetMap contributors"
-        }
+          attribution: "&copy; OpenStreetMap contributors",
+        },
       },
       layers: [
         {
           id: "osm",
           type: "raster",
-          source: "osm"
-        }
-      ]
+          source: "osm",
+        },
+      ],
     },
     center: initialCenter,
     zoom,
-    attributionControl: true
+    attributionControl: true,
   });
 
   map.addControl(new window.maplibregl.NavigationControl(), "top-right");
@@ -73,7 +73,7 @@ export function updateTrackingMarkers({ clientPosition, providerPosition }) {
     map.fitBounds(bounds, {
       padding: 64,
       maxZoom: 15,
-      duration: 700
+      duration: 700,
     });
     return;
   }
@@ -82,15 +82,7 @@ export function updateTrackingMarkers({ clientPosition, providerPosition }) {
     map.flyTo({
       center: [points[0].lng, points[0].lat],
       zoom: 14,
-      speed: 0.8
+      speed: 0.8,
     });
   }
-}
-
-export function destroyMap() {
-  if (!map) return;
-  map.remove();
-  map = null;
-  providerMarker = null;
-  clientMarker = null;
 }
