@@ -46,6 +46,34 @@ export async function getCurrentSession() {
   return data?.session ?? null;
 }
 
+export async function getCurrentUser() {
+  const session = await getCurrentSession();
+  return session?.user ?? null;
+}
+
+export async function signInWithGoogle() {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+
+  const redirectTo = `${window.location.origin}${window.location.pathname}`;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo },
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function signOut() {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+  return true;
+}
+
 export async function invokeFunction(name, body = {}, options = {}) {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
@@ -76,4 +104,40 @@ export async function fetchTable(table, queryBuilder) {
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
+}
+
+export async function fetchSingle(table, queryBuilder) {
+  const rows = await fetchTable(table, queryBuilder);
+  return rows[0] ?? null;
+}
+
+export async function getProviderProfileByUserId(userId) {
+  if (!userId) return null;
+
+  return fetchSingle("svc_providers", (query) =>
+    query
+      .select("id,user_id,full_name,email,phone,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
+      .eq("user_id", userId)
+      .limit(1)
+  );
+}
+
+export async function getCurrentProviderContext() {
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      session: null,
+      user: null,
+      provider: null,
+    };
+  }
+
+  const session = await getCurrentSession();
+  const provider = await getProviderProfileByUserId(user.id);
+
+  return {
+    session,
+    user,
+    provider,
+  };
 }
