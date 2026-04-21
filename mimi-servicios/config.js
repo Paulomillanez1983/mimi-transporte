@@ -1,8 +1,14 @@
 export const appConfig = {
   supabaseUrl: window.MIMI_SERVICES_ENV?.SUPABASE_URL ?? "",
   supabaseAnonKey: window.MIMI_SERVICES_ENV?.SUPABASE_ANON_KEY ?? "",
+  demoClientUserId: window.MIMI_SERVICES_ENV?.DEMO_CLIENT_USER_ID ?? null,
+  demoProviderUserId: window.MIMI_SERVICES_ENV?.DEMO_PROVIDER_USER_ID ?? null,
   mapInitialCenter: [-64.1888, -31.4201],
   mapInitialZoom: 12,
+  rpc: {
+    searchProvidersRanked: "svc_search_providers_ranked",
+    prepareRequestPricing: "svc_prepare_request_pricing"
+  },
   functions: {
     createRequest: "svc-create-request",
     providerRespondOffer: "svc-provider-respond-offer",
@@ -11,7 +17,9 @@ export const appConfig = {
     startService: "svc-start-service",
     completeService: "svc-complete-service",
     cancelRequest: "svc-cancel-request",
-    sendMessage: "svc-send-message"
+    sendMessage: "svc-send-message",
+    trackLocation: "svc-track-location",
+    registerDevice: "svc-register-device"
   },
   serviceStates: [
     "SEARCHING",
