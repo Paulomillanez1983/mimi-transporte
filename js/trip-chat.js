@@ -290,14 +290,14 @@ async function findOrCreateTripChat(context) {
     driver_user_id: String(context.driverUserId)
   };
 
-  const { data: existing, error: existingError } = await client
-    .from("soporte_tickets")
-    .select("*")
-    .eq("categoria", "trip_chat")
-    .contains("metadata", metadataFilter)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
+const { data: existing, error: existingError } = await client
+  .from("soporte_tickets")
+  .select("*")
+  .eq("categoria", "viaje")
+  .contains("metadata", metadataFilter)
+  .order("created_at", { ascending: false })
+  .limit(1);
+  
   if (existingError) {
     throw new Error(existingError.message || "No se pudo consultar el chat del viaje");
   }
@@ -312,8 +312,8 @@ async function findOrCreateTripChat(context) {
     user_id: user.id,
     rol_origen: TRIP_CHAT.role === "driver" ? "driver" : "client",
     asunto: subject,
-    canal: "trip_in_app",
-    categoria: "trip_chat",
+    canal: "in_app",
+    categoria: "viaje",
     prioridad: "normal",
     estado: "abierto",
     ultimo_mensaje: "",
