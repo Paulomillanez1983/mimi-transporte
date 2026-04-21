@@ -2746,12 +2746,14 @@ if (btnChat) {
 
       await window.tripChat.openTripChatForClientTrip(viajeChat);
     } catch (err) {
-      console.error('[cliente.chatChofer]', err);
-      notif.show('Chat', err?.message || 'No se pudo abrir el chat con el chofer', 'error');
-    }
-  };
+       console.error('[cliente.chatChofer]', err);
+       notif.show('Chat', err?.message || 'No se pudo abrir el chat con el chofer', 'error');
+      }
+    };
+   }
+  }
 }
-}
+
 
 async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
   try {
@@ -9632,6 +9634,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  
   bindUIActions();
 
   try {
