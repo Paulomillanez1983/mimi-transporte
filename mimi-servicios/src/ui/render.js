@@ -1,5 +1,4 @@
 import { appConfig } from "../../config.js";
-
 const stateLabels = {
   SEARCHING: "Buscando prestador",
   PENDING_PROVIDER_RESPONSE: "Esperando respuesta",
