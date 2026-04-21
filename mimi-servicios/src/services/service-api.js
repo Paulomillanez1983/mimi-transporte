@@ -1,7 +1,9 @@
 import { appConfig } from "../config.js";
 import {
   callRpc,
+  fetchSingle,
   fetchTable,
+  getCurrentProviderContext,
   getCurrentSession,
   getSupabaseClient,
   invokeFunction,
@@ -17,25 +19,39 @@ function hasBackend() {
   return Boolean(getSupabaseClient());
 }
 
-export async function bootstrapSession() {
-  const session = await getCurrentSession();
-  const userId = session?.user?.id ?? appConfig.demoClientUserId ?? null;
-
-  const providerRows = userId && hasBackend()
-    ? await fetchTable("svc_providers", (query) =>
-        query.select("id,user_id,status,approved,blocked").eq("user_id", userId).limit(1)
-      )
-    : [];
+function normalizeProviderCandidate(item) {
+  const providerPrice = Number(item?.provider_price ?? 0);
+  const fee = Math.max(500, Math.round(providerPrice * 0.15));
 
   return {
-    userId,
-    providerId: providerRows[0]?.id ?? null,
-    role: providerRows[0]?.id ? "provider" : "client",
+    ...item,
+    fee,
+    platform_fee: fee,
+    total_price: providerPrice + fee,
+    estimated_eta_min: Math.max(6, Math.round((Number(item?.distance_km ?? 1) || 1) * 6)),
   };
 }
 
+export async function bootstrapSession() {
+  const context = await getCurrentProviderContext();
+  const session = context?.session ?? await getCurrentSession();
+  const userId = session?.user?.id ?? appConfig.demoClientUserId ?? null;
+  const provider = context?.provider ?? null;
+
+  return {
+    userId,
+    providerId: provider?.id ?? null,
+    role: provider?.id ? "provider" : "client",
+    providerProfile: provider,
+  };
+}
+
+/* =========================
+   CLIENTE
+========================= */
+
 export async function searchProviders(categoryId, draft) {
-  if (!hasBackend()) return buildMockProviders(categoryId, draft);
+  if (!hasBackend()) return buildMockProviders(categoryId, draft).map(normalizeProviderCandidate);
 
   const response = await invokeFunction(appConfig.functions.searchProviders, {
     category_id: categoryId,
@@ -47,17 +63,7 @@ export async function searchProviders(categoryId, draft) {
     max_results: 10,
   });
 
-  const providers = response?.providers ?? [];
-  return providers.map((item) => {
-    const fee = Math.max(500, Math.round((item.provider_price ?? 0) * 0.15));
-    return {
-      ...item,
-      fee,
-      platform_fee: fee,
-      total_price: (item.provider_price ?? 0) + fee,
-      estimated_eta_min: Math.max(6, Math.round((item.distance_km ?? 1) * 6)),
-    };
-  });
+  return (response?.providers ?? []).map(normalizeProviderCandidate);
 }
 
 export async function prepareRequestPricing({
@@ -67,7 +73,7 @@ export async function prepareRequestPricing({
   draft,
 }) {
   if (!hasBackend()) {
-    const candidates = buildMockProviders(categoryId, draft);
+    const candidates = buildMockProviders(categoryId, draft).map(normalizeProviderCandidate);
     const provider = candidates.find((item) => item.provider_id === providerId);
 
     return provider
@@ -81,10 +87,7 @@ export async function prepareRequestPricing({
           currency: provider.currency,
           visible_candidates: candidates,
         }
-      : {
-          eligible: false,
-          reason: "provider_not_found",
-        };
+      : { eligible: false, reason: "provider_not_found" };
   }
 
   return callRpc(appConfig.rpc.prepareRequestPricing, {
@@ -132,31 +135,140 @@ export async function createRequest(payload) {
   return response?.request ?? response;
 }
 
-export async function updateRequestStatus(actionName, payload) {
-  if (!hasBackend()) return { ok: true, actionName, payload };
-  return invokeFunction(actionName, payload);
+export async function cancelRequest(requestId, reason = "cancelled_by_user") {
+  if (!hasBackend()) return { ok: true, request_id: requestId };
+
+  return invokeFunction(appConfig.functions.cancelRequest, {
+    request_id: requestId,
+    reason,
+  });
+}
+
+/* =========================
+   PRESTADOR
+========================= */
+
+export async function loadProviderOffers(providerId) {
+  if (!providerId) return [];
+  if (!hasBackend()) return buildMockOffers();
+
+  const offers = await fetchTable("svc_request_offers", (query) =>
+    query
+      .select("*, svc_requests(*)")
+      .eq("provider_id", providerId)
+      .in("status", ["PENDING", "ACCEPTED"])
+      .order("created_at", { ascending: false })
+      .limit(20)
+  );
+
+  return offers.map((offer) => ({
+    ...offer,
+    request: offer.svc_requests ?? null,
+    title: offer?.svc_requests?.request_type === "SCHEDULED"
+      ? "Servicio programado"
+      : "Solicitud inmediata",
+    address_text: offer?.svc_requests?.address_text ?? "Ubicación a confirmar",
+    requested_hours: offer?.svc_requests?.requested_hours ?? 2,
+    total_price_snapshot: offer?.svc_requests?.total_price_snapshot ?? 0,
+  }));
+}
+
+export async function acceptOffer(offerId) {
+  if (!hasBackend()) return { accepted: true, offer_id: offerId };
+
+  return invokeFunction(appConfig.functions.providerRespondOffer, {
+    offer_id: offerId,
+    action: "ACCEPT",
+  });
+}
+
+export async function rejectOffer(offerId) {
+  if (!hasBackend()) return { rejected: true, offer_id: offerId };
+
+  return invokeFunction(appConfig.functions.providerRespondOffer, {
+    offer_id: offerId,
+    action: "REJECT",
+  });
+}
+
+export async function markProviderEnRoute(requestId) {
+  if (!hasBackend()) return { ok: true, request_id: requestId };
+  return invokeFunction(appConfig.functions.providerEnRoute, { request_id: requestId });
+}
+
+export async function markProviderArrived(requestId) {
+  if (!hasBackend()) return { ok: true, request_id: requestId };
+  return invokeFunction(appConfig.functions.providerArrived, { request_id: requestId });
+}
+
+export async function startService(requestId) {
+  if (!hasBackend()) return { ok: true, request_id: requestId };
+  return invokeFunction(appConfig.functions.startService, { request_id: requestId });
+}
+
+export async function completeService(requestId) {
+  if (!hasBackend()) return { ok: true, request_id: requestId };
+  return invokeFunction(appConfig.functions.completeService, { request_id: requestId });
+}
+
+export async function sendProviderLocation(requestId, coords) {
+  if (!hasBackend()) return { tracked: true };
+
+  return invokeFunction(appConfig.functions.trackLocation, {
+    request_id: requestId,
+    lat: coords.lat,
+    lng: coords.lng,
+    accuracy: coords.accuracy ?? null,
+    heading: coords.heading ?? null,
+    speed: coords.speed ?? null,
+  });
+}
+
+export async function sendProviderMessage(conversationId, body) {
+  if (!hasBackend()) {
+    return {
+      id: crypto.randomUUID(),
+      body,
+      conversation_id: conversationId,
+      sender_user_id: "mock-self",
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  const response = await invokeFunction(appConfig.functions.sendMessage, {
+    conversation_id: conversationId,
+    body,
+  });
+
+  return response?.message ?? response;
+}
+
+/* =========================
+   COMPARTIDO
+========================= */
+
+export async function registerDevice(payload) {
+  if (!hasBackend()) return { ok: true };
+
+  return invokeFunction(appConfig.functions.registerDevice, {
+    device_id: payload.deviceId,
+    push_token: payload.pushToken ?? null,
+    platform: payload.platform,
+    notifications_enabled: payload.notificationsEnabled,
+    marketing_opt_in: payload.marketingOptIn,
+  });
 }
 
 export async function loadNotifications(userId) {
   if (!hasBackend()) return buildMockNotifications();
+  if (!userId) return [];
 
   return fetchTable("svc_notifications", (query) =>
-    (userId ? query.select("*").eq("user_id", userId) : query.select("*"))
-      .order("created_at", { ascending: false })
-      .limit(20)
-  );
-}
-
-export async function loadOffers(providerId) {
-  if (!hasBackend()) return buildMockOffers();
-  if (!providerId) return [];
-
-  return fetchTable("svc_request_offers", (query) =>
     query
-      .select("*, svc_requests(*)")
-      .eq("provider_id", providerId)
+      .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(10)
+      .limit(appConfig.providerUi.notificationsMaxItems ?? 50)
   );
 }
 
@@ -169,49 +281,8 @@ export async function loadMessages(conversationId) {
       .select("*")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
-      .limit(50)
+      .limit(100)
   );
-}
-
-export async function sendMessage(payload) {
-  if (!hasBackend()) {
-    return {
-      id: crypto.randomUUID(),
-      ...payload,
-      sender_user_id: "self",
-      created_at: new Date().toISOString(),
-    };
-  }
-
-  const response = await invokeFunction(appConfig.functions.sendMessage, {
-    conversation_id: payload.conversationId,
-    body: payload.body,
-  });
-
-  return response?.message ?? response;
-}
-
-export async function trackLocation(payload) {
-  if (!hasBackend()) return { tracked: true };
-  return invokeFunction(appConfig.functions.trackLocation, {
-    request_id: payload.requestId,
-    lat: payload.lat,
-    lng: payload.lng,
-    accuracy: payload.accuracy ?? null,
-    heading: payload.heading ?? null,
-    speed: payload.speed ?? null,
-  });
-}
-
-export async function registerDevice(payload) {
-  if (!hasBackend()) return { ok: true };
-  return invokeFunction(appConfig.functions.registerDevice, {
-    device_id: payload.deviceId,
-    push_token: payload.pushToken ?? null,
-    platform: payload.platform,
-    notifications_enabled: payload.notificationsEnabled,
-    marketing_opt_in: payload.marketingOptIn,
-  });
 }
 
 export async function loadActiveRequest({ userId, providerId }) {
@@ -227,39 +298,42 @@ export async function loadActiveRequest({ userId, providerId }) {
     "IN_PROGRESS",
   ];
 
-  const clientRows = userId
-    ? await fetchTable("svc_requests", (query) =>
-        query
-          .select("*")
-          .eq("client_user_id", userId)
-          .in("status", activeStatuses)
-          .order("created_at", { ascending: false })
-          .limit(1)
-      )
-    : [];
+  if (providerId) {
+    const providerRequest = await fetchSingle("svc_requests", (query) =>
+      query
+        .select("*")
+        .eq("accepted_provider_id", providerId)
+        .in("status", activeStatuses)
+        .order("created_at", { ascending: false })
+        .limit(1)
+    );
 
-  if (clientRows[0]) return clientRows[0];
+    if (providerRequest) return providerRequest;
+  }
 
-  const providerRows = providerId
-    ? await fetchTable("svc_requests", (query) =>
-        query
-          .select("*")
-          .eq("accepted_provider_id", providerId)
-          .in("status", activeStatuses)
-          .order("created_at", { ascending: false })
-          .limit(1)
-      )
-    : [];
+  if (userId) {
+    const clientRequest = await fetchSingle("svc_requests", (query) =>
+      query
+        .select("*")
+        .eq("client_user_id", userId)
+        .in("status", activeStatuses)
+        .order("created_at", { ascending: false })
+        .limit(1)
+    );
 
-  return providerRows[0] ?? null;
+    if (clientRequest) return clientRequest;
+  }
+
+  return null;
 }
 
 export async function loadConversationForRequest(requestId) {
   if (!requestId || !hasBackend()) return null;
 
-  const rows = await fetchTable("svc_conversations", (query) =>
-    query.select("*").eq("request_id", requestId).limit(1)
+  return fetchSingle("svc_conversations", (query) =>
+    query
+      .select("*")
+      .eq("request_id", requestId)
+      .limit(1)
   );
-
-  return rows[0] ?? null;
 }
