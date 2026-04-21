@@ -126,6 +126,7 @@ _syncNavFabVisibility() {
   const pending = tripManager.getPendingTrip?.();
   const hasActiveTrip = !!trip?.id;
   const hasPendingOnly = !!pending?.id || !!pending?.offerId;
+  const shouldHideOnlineFab = this._onlineStatus || hasActiveTrip;
 
   if (fabNav) {
     if (hasActiveTrip && !hasPendingOnly) {
@@ -136,7 +137,7 @@ _syncNavFabVisibility() {
   }
 
   if (fabOnline) {
-    if (hasActiveTrip) {
+    if (shouldHideOnlineFab) {
       fabOnline.classList.add('hidden-during-trip');
       fabOnline.setAttribute('aria-hidden', 'true');
       fabOnline.style.pointerEvents = 'none';
@@ -396,6 +397,7 @@ _syncNavFabVisibility() {
       this._onlineStatus
     );
     this._syncConnectionMenuItem();
+    this._syncNavFabVisibility();
   }
 
   _markDriverOperationalOnline(reason = 'operational_state') {
