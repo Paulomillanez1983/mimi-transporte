@@ -1,6 +1,17 @@
 import { appConfig } from "./config.js";
-import { callRpc, fetchTable, getCurrentSession, getSupabaseClient, invokeFunction } from "./supabase.js";
-import { buildMockMessages, buildMockNotifications, buildMockOffers, buildMockProviders } from "./mock-data.js";
+import {
+  callRpc,
+  fetchTable,
+  getCurrentSession,
+  getSupabaseClient,
+  invokeFunction
+} from "./supabase.js";
+import {
+  buildMockMessages,
+  buildMockNotifications,
+  buildMockOffers,
+  buildMockProviders
+} from "./mock-data.js";
 
 function hasBackend() {
   return Boolean(getSupabaseClient());
@@ -47,7 +58,12 @@ export async function searchProviders(categoryId, draft) {
   });
 }
 
-export async function prepareRequestPricing({ clientUserId, categoryId, providerId, draft }) {
+export async function prepareRequestPricing({
+  clientUserId,
+  categoryId,
+  providerId,
+  draft
+}) {
   if (!hasBackend()) {
     const candidates = buildMockProviders(categoryId, draft);
     const provider = candidates.find((item) => item.provider_id === providerId);
