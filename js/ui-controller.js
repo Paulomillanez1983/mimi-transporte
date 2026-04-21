@@ -38,6 +38,7 @@ class UIController {
     this._viewportOrientationHandler = null;
     this._modalTouchMoveHandler = null;
     this._sheetHandleClickHandler = null;
+    this._sheetPeekCardClickHandler = null;
     this._acceptTouchStartHandler = null;
     this._rejectTouchStartHandler = null;
     this._callBtnHapticHandler = null;
@@ -117,6 +118,7 @@ class UIController {
 
       'bottom-sheet': 'bottom-sheet',
       'sheet-handle': 'sheet-handle',
+      'sheet-peek-card': 'sheet-peek-card',
       'sheet-content': 'sheet-content',
       'sheet-header': 'sheet-header',
 
@@ -188,6 +190,7 @@ class UIController {
     const rejectBtn = this.elements['btn-reject'];
     const backdrop = this.elements['modal-backdrop'];
     const sheetHandle = this.elements['sheet-handle'];
+    const sheetPeekCard = this.elements['sheet-peek-card'];
     const modal = this.elements['incoming-modal'];
     const callBtn = this.elements['btn-call'];
     const whatsappBtn = this.elements['btn-whatsapp'];
@@ -220,6 +223,11 @@ class UIController {
     if (sheetHandle) {
       this._sheetHandleClickHandler = () => this._toggleBottomSheet();
       sheetHandle.addEventListener('click', this._sheetHandleClickHandler);
+    }
+
+    if (sheetPeekCard) {
+      this._sheetPeekCardClickHandler = () => this._expandBottomSheet();
+      sheetPeekCard.addEventListener('click', this._sheetPeekCardClickHandler);
     }
 
     if (modal) {
@@ -337,6 +345,7 @@ class UIController {
     const rejectBtn = this.elements['btn-reject'];
     const backdrop = this.elements['modal-backdrop'];
     const sheetHandle = this.elements['sheet-handle'];
+    const sheetPeekCard = this.elements['sheet-peek-card'];
     const modal = this.elements['incoming-modal'];
     const callBtn = this.elements['btn-call'];
     const whatsappBtn = this.elements['btn-whatsapp'];
@@ -367,6 +376,10 @@ class UIController {
 
     if (sheetHandle && this._sheetHandleClickHandler) {
       sheetHandle.removeEventListener('click', this._sheetHandleClickHandler);
+    }
+
+    if (sheetPeekCard && this._sheetPeekCardClickHandler) {
+      sheetPeekCard.removeEventListener('click', this._sheetPeekCardClickHandler);
     }
 
     if (modal && this._modalTouchMoveHandler) {
@@ -624,6 +637,33 @@ class UIController {
     sheet.classList.remove('expanded');
     document.body.classList.remove('sheet-expanded');
     this.state.bottomSheetExpanded = false;
+  }
+
+  _renderTripPeek(trip) {
+    const peekCard = this.elements['sheet-peek-card'];
+    if (!peekCard || !trip?.id) return;
+
+    const { irADestino } = this._getNavigateMeta(trip);
+    const title = irADestino ? 'En viaje hacia destino' : 'Viaje activo · Ir a recogida';
+    const subtitle = irADestino
+      ? (trip.destino_direccion || trip.destino || 'Destino')
+      : (trip.origen_direccion || trip.origen || 'Recoger pasajero');
+    const price = Number(trip.precio || 0);
+
+    peekCard.hidden = false;
+    peekCard.innerHTML = `
+      <span class="sheet-peek-card__eyebrow">${this._escapeHtml(title)}</span>
+      <span class="sheet-peek-card__title">${this._escapeHtml(trip.pasajero_nombre || trip.cliente || 'Cliente')}</span>
+      <span class="sheet-peek-card__subtitle">${this._escapeHtml(subtitle)}</span>
+      <span class="sheet-peek-card__meta">${price > 0 ? `$${Math.round(price).toLocaleString('es-AR')}` : 'Ver detalle'}</span>
+    `;
+  }
+
+  _hideTripPeek() {
+    const peekCard = this.elements['sheet-peek-card'];
+    if (!peekCard) return;
+    peekCard.hidden = true;
+    peekCard.innerHTML = '';
   }
 
   showIncomingTrip(tripData, onAccept, onReject) {
@@ -1070,6 +1110,7 @@ const offerTimeout = Number(
 
     if (isOnline) {
       sheet.classList.remove('has-trip');
+      this._hideTripPeek();
       sheetContent.innerHTML = `
         <div class="waiting-state uber-style">
           <div class="waiting-text">
@@ -1094,6 +1135,7 @@ const offerTimeout = Number(
       `;
     } else {
       sheet.classList.remove('has-trip');
+      this._hideTripPeek();
       sheetContent.innerHTML = `
         <div class="waiting-state offline">
           <div class="waiting-text">
@@ -1142,11 +1184,12 @@ const offerTimeout = Number(
 
     if (sheet) {
       sheet.classList.add('has-trip');
-      this._expandBottomSheet();
+      this._collapseBottomSheet();
     }
 
     this._updateNavigationInfo(trip);
     this._showTripActions(trip);
+    this._renderTripPeek(trip);
     this._haptic('success');
   }
 
@@ -1227,6 +1270,7 @@ const offerTimeout = Number(
 
     sheetContent.dataset.flowState = flowState;
     delete sheetContent.dataset.waitingState;
+    this._renderTripPeek(trip);
 
     sheetContent.innerHTML = `
       <div class="trip-active-panel">
@@ -1381,6 +1425,7 @@ if (btnChat) {
 
     this.state.currentTrip = null;
     this._lastTripRendered = null;
+    this._hideTripPeek();
   }
 
   showArrival(trip = this.state.currentTrip) {
@@ -1607,6 +1652,7 @@ if (btnChat) {
     const safeActions = Array.isArray(actions) ? actions : [];
 
     sheet.classList.remove('has-trip');
+    this._hideTripPeek();
     sheetContent.dataset.flowState = 'info';
     delete sheetContent.dataset.waitingState;
 
