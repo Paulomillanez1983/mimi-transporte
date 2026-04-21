@@ -7,12 +7,12 @@ export const state = {
     appEntered: false,
     activeMode: "client",
     selectedCategoryId: appConfig.categories[0].id,
-    installPromptEvent: null
+    installPromptEvent: null,
   },
   session: {
     userId: null,
     providerId: null,
-    role: "client"
+    role: "client",
   },
   requestDraft: {
     address: "",
@@ -20,12 +20,13 @@ export const state = {
     lng: -64.1888,
     requestType: "IMMEDIATE",
     scheduledFor: "",
-    requestedHours: 2
+    requestedHours: 2,
   },
   client: {
     providers: [],
     selectedProvider: null,
-    activeRequest: null
+    activeRequest: null,
+    activeConversationId: null,
   },
   provider: {
     status: "OFFLINE",
@@ -34,29 +35,28 @@ export const state = {
     stats: {
       rating: 5,
       offers: 0,
-      completed: 0
-    }
+      completed: 0,
+    },
   },
   chat: {
     messages: [],
-    unreadCount: 0
+    unreadCount: 0,
   },
   notifications: {
     items: [],
-    unreadCount: 0
+    unreadCount: 0,
   },
   tracking: {
-    enabled: false,
     providerPosition: null,
-    clientPosition: null
+    clientPosition: null,
   },
   meta: {
     loading: {},
     lastSearchAt: null,
     error: null,
     info: "Configuracion lista para integrar con Supabase.",
-    backendMode: "mock"
-  }
+    backendMode: "mock",
+  },
 };
 
 export function subscribe(listener) {
