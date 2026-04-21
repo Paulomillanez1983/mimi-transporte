@@ -20,7 +20,8 @@ class UIController {
       callbacks: {},
       currentTrip: null,
       isOnline: false,
-      bottomSheetExpanded: false
+      bottomSheetExpanded: false,
+      bottomSheetLockedUntil: 0
     };
 
     this.lastTripModalId = null;
@@ -613,6 +614,10 @@ class UIController {
   }
 
   _toggleBottomSheet() {
+    if (Date.now() < Number(this.state.bottomSheetLockedUntil || 0)) {
+      return;
+    }
+
     if (this.state.bottomSheetExpanded) {
       this._collapseBottomSheet();
     } else {
@@ -623,6 +628,10 @@ class UIController {
   _expandBottomSheet() {
     const sheet = this.elements['bottom-sheet'];
     if (!sheet) return;
+
+    if (Date.now() < Number(this.state.bottomSheetLockedUntil || 0)) {
+      return;
+    }
 
     sheet.classList.add('expanded');
     document.body.classList.add('sheet-expanded');
@@ -637,6 +646,7 @@ class UIController {
     sheet.classList.remove('expanded');
     document.body.classList.remove('sheet-expanded');
     this.state.bottomSheetExpanded = false;
+    this.state.bottomSheetLockedUntil = Date.now() + 420;
   }
 
   _renderTripPeek(trip) {
@@ -1184,7 +1194,9 @@ const offerTimeout = Number(
 
     if (sheet) {
       sheet.classList.add('has-trip');
-      this._collapseBottomSheet();
+      if (!this.state.bottomSheetExpanded) {
+        this._collapseBottomSheet();
+      }
     }
 
     this._updateNavigationInfo(trip);
