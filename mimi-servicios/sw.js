@@ -1,4 +1,4 @@
-const CACHE_NAME = "mimi-servicios-v2";
+const CACHE_NAME = "mimi-servicios-v3";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -15,7 +15,7 @@ self.addEventListener("install", (event) => {
         try {
           await cache.add(asset);
         } catch (error) {
-          console.warn("[mimi-servicios/sw] No se pudo cachear asset:", asset, error);
+          console.warn("[SW] No se pudo cachear:", asset, error);
         }
       }
     }),
@@ -30,49 +30,52 @@ self.addEventListener("activate", (event) => {
         keys
           .filter((key) => key !== CACHE_NAME)
           .map((key) => caches.delete(key)),
-      )
+      ),
     ),
   );
   self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-  const { request } = event;
+  const request = event.request;
 
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
 
-  // NO cachear extensiones del navegador, chrome-extension, moz-extension, etc.
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
+  // NO manejar chrome-extension, moz-extension, data, blob, etc.
+  if (!["http:", "https:"].includes(url.protocol)) {
     return;
   }
 
-  // evitar problemas con requests no cacheables
+  // evita error interno del cache con requests especiales
   if (request.cache === "only-if-cached" && request.mode !== "same-origin") {
     return;
   }
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
+    caches.match(request).then((cachedResponse) => {
+      if (cachedResponse) return cachedResponse;
 
       return fetch(request)
-        .then((response) => {
-          // solo cachear respuestas válidas http/https y status OK
-          if (!response || response.status !== 200 || response.type === "opaque") {
-            return response;
+        .then((networkResponse) => {
+          if (
+            !networkResponse ||
+            networkResponse.status !== 200 ||
+            networkResponse.type === "opaque"
+          ) {
+            return networkResponse;
           }
 
-          const responseClone = response.clone();
+          const responseClone = networkResponse.clone();
 
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseClone).catch((error) => {
-              console.warn("[mimi-servicios/sw] cache.put falló:", request.url, error);
+              console.warn("[SW] cache.put falló:", request.url, error);
             });
           });
 
-          return response;
+          return networkResponse;
         })
         .catch(() => {
           if (
