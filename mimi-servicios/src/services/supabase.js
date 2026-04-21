@@ -3,7 +3,11 @@ import { appConfig } from "./config.js";
 let client = null;
 
 export function hasSupabaseEnv() {
-  return Boolean(appConfig.supabaseUrl && appConfig.supabaseAnonKey && window.supabase?.createClient);
+  return Boolean(
+    appConfig.supabaseUrl &&
+    appConfig.supabaseAnonKey &&
+    window.supabase?.createClient
+  );
 }
 
 export function getSupabaseClient() {
@@ -92,8 +96,8 @@ export async function insertRow(table, payload, options = {}) {
 
   const query = supabase.from(table).insert(payload);
   const finalQuery = options.select ? query.select(options.select) : query;
-
   const { data, error } = await finalQuery;
+
   if (error) throw error;
   return data ?? null;
 }
