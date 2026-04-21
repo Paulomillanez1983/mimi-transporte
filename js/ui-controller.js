@@ -1314,10 +1314,11 @@ const offerTimeout = Number(
     <span>Llamar</span>
   </button>
 
-  <button class="action-btn-large whatsapp" id="btn-chat">
-    <span class="icon">💬</span>
-    <span>Chat</span>
-  </button>
+<button class="action-btn-large whatsapp has-chat-badge" id="btn-chat">
+  <span class="icon">💬</span>
+  <span>Chat</span>
+  <span id="tripChatBadgeDriver" class="trip-chat-fab-badge" hidden></span>
+</button>
 
   <button class="action-btn-large cancel" id="btn-cancel">
     <span class="icon">❌</span>
