@@ -41,7 +41,7 @@
   window.__APP_ROLE__ = "chofer";
   window.__APP_VERSION__ = "20260420-7";
 </script>
-<script type="module" src="js/driver-app.js?v=20260420-6"></script>
+<script type="module" src="js/driver-app.js?v=20260420-7"></script>
 </head>
 <body>
   <div id="map-container"></div>
@@ -254,10 +254,10 @@
   </div>
 
 <script type="module">
-  import supabaseService from "./js/supabase-client.js?v=20260420-6";
-  import CONFIG from "./js/config.js?v=20260420-6";
-  import tripManager from "./js/trip-manager.js?v=20260420-6";
-  import uiController from "./js/ui-controller.js?v=20260420-6";
+  import supabaseService from "./js/supabase-client.js?v=20260420-7";
+  import CONFIG from "./js/config.js?v=20260420-7";
+  import tripManager from "./js/trip-manager.js?v=20260420-7";
+  import uiController from "./js/ui-controller.js?v=20260420-7";
 
     async function doLogout() {
       const activeTrip = tripManager.getCurrentTrip?.();
@@ -283,11 +283,35 @@
           }
         }
 
-        await supabaseService.client.auth.signOut();
+        await supabaseService.client.auth.signOut({ scope: "local" });
       } catch (err) {
         console.error("[logout] Error cerrando sesi&oacute;n:", err);
       } finally {
-        window.location.replace(CONFIG.REDIRECTS.LOGIN);
+        try {
+          sessionStorage.setItem("mimi_driver_recent_logout", String(Date.now()));
+        } catch {}
+
+        try {
+          const removableKeys = [];
+          for (let i = 0; i < localStorage.length; i += 1) {
+            const key = localStorage.key(i);
+            if (key && (key === "mimi-driver-auth" || key.startsWith("mimi-driver-auth-"))) {
+              removableKeys.push(key);
+            }
+          }
+          removableKeys.forEach((key) => localStorage.removeItem(key));
+        } catch (storageErr) {
+          console.warn("[logout] No se pudo limpiar localStorage:", storageErr);
+        }
+
+        try {
+          const registrations = await navigator.serviceWorker?.getRegistrations?.();
+          await Promise.all((registrations || []).map((registration) => registration.update?.()));
+        } catch (swErr) {
+          console.warn("[logout] No se pudieron refrescar los service workers:", swErr);
+        }
+
+        window.location.replace(`${CONFIG.REDIRECTS.LOGIN}?logout=${Date.now()}`);
       }
 
       return true;
