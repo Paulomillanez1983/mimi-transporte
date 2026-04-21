@@ -15,7 +15,7 @@ export function buildMockProviders(categoryId, draft) {
       distance_km: 1.4,
       provider_price: 9200,
       currency: "ARS",
-      score: 92.4
+      score: 92.4,
     },
     {
       provider_id: "prov-2",
@@ -26,7 +26,7 @@ export function buildMockProviders(categoryId, draft) {
       distance_km: 2.1,
       provider_price: 8600,
       currency: "ARS",
-      score: 88.7
+      score: 88.7,
     },
     {
       provider_id: "prov-3",
@@ -37,21 +37,20 @@ export function buildMockProviders(categoryId, draft) {
       distance_km: 3.6,
       provider_price: 7900,
       currency: "ARS",
-      score: 84.5
-    }
+      score: 84.5,
+    },
   ];
 
   return base.map((provider, index) => {
-    const platformFee = buildFee(provider.provider_price);
-
+    const fee = buildFee(provider.provider_price);
     return {
       ...provider,
       category_id: categoryId,
-      fee: platformFee,
-      platform_fee: platformFee,
-      total_price: provider.provider_price + platformFee,
+      fee,
+      platform_fee: fee,
+      total_price: provider.provider_price + fee,
       estimated_eta_min: 8 + index * 4,
-      requested_hours: requestedHours
+      requested_hours: requestedHours,
     };
   });
 }
@@ -68,8 +67,8 @@ export function buildMockOffers() {
       requested_hours: 3,
       total_price_snapshot: 12000,
       status: "PENDING_PROVIDER_RESPONSE",
-      created_at: new Date().toISOString()
-    }
+      created_at: new Date().toISOString(),
+    },
   ];
 }
 
@@ -81,7 +80,7 @@ export function buildMockNotifications() {
       body: "Un cliente cercano te eligio.",
       type: "SERVICE_OFFER",
       created_at: new Date().toISOString(),
-      read_at: null
+      read_at: null,
     },
     {
       id: "n2",
@@ -89,8 +88,8 @@ export function buildMockNotifications() {
       body: "Tu servicio acaba de entrar en ruta.",
       type: "PROVIDER_EN_ROUTE",
       created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-      read_at: null
-    }
+      read_at: null,
+    },
   ];
 }
 
@@ -103,7 +102,7 @@ export function buildMockMessages() {
       body: "Hola, llego en 10 minutos.",
       message_type: "TEXT",
       read_at: null,
-      created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString()
+      created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
     },
     {
       id: "m2",
@@ -112,7 +111,7 @@ export function buildMockMessages() {
       body: "Perfecto, te espero en porteria.",
       message_type: "TEXT",
       read_at: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
-      created_at: new Date(Date.now() - 1000 * 60 * 4).toISOString()
-    }
+      created_at: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
+    },
   ];
 }
