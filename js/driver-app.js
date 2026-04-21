@@ -1435,98 +1435,129 @@ this._fabClickHandler = async (ev) => {
   this._fabBusy = true;
 
   const fab = document.getElementById('fab-online');
+  const fabText = fab?.querySelector('.fab-text');
+  const fabSubtext = document.getElementById('fab-subtext');
+  const fabIcon = fab?.querySelector('.fab-icon');
+
+  const prevText = fabText?.textContent || '';
+  const prevSubtext = fabSubtext?.textContent || '';
+  const prevIcon = fabIcon?.textContent || '';
 
   try {
     console.log('[DriverApp] FAB toggle presionado', {
       onlineActual: this._onlineStatus,
       flow: this._driverFlowState
     });
-    
-        if (fab) {
-          fab.disabled = true;
-          fab.style.pointerEvents = 'none';
-        }
 
-        const hasActiveTrip = !!tripManager.getCurrentTrip();
+    if (fab) {
+      fab.disabled = true;
+      fab.style.pointerEvents = 'none';
+      fab.classList.add('is-loading');
+    }
 
-        if (hasActiveTrip && this._onlineStatus) {
-          uiController.showToast('No podés ponerte offline durante un viaje', 'warning');
-          return;
-        }
+    if (fabText) {
+      fabText.textContent = this._onlineStatus ? 'Pausando' : 'Conectando';
+    }
 
-        const nextOnline = !this._onlineStatus;
+    if (fabSubtext) {
+      fabSubtext.textContent = this._onlineStatus
+        ? 'Apagando servicio...'
+        : 'Encendiendo app...';
+    }
 
-        if (nextOnline) {
-          await this._ensureDriverShellReady();
+    if (fabIcon) {
+      fabIcon.textContent = '...';
+    }
 
-          const result = await tripManager.setDriverAvailability({
-            online: true,
-            disponible: true
-          });
+    const hasActiveTrip = !!tripManager.getCurrentTrip();
 
-          if (!result?.success) {
-            throw new Error(result?.error || 'No se pudo poner online');
-          }
+    if (hasActiveTrip && this._onlineStatus) {
+      uiController.showToast('No podés ponerte offline durante un viaje', 'warning');
+      return;
+    }
 
-await this._startRealtimeServicesInBackground();
-          
-          this._onlineStatus = true;
-          this._setFlowState('ONLINE_IDLE');
-          uiController.showWaitingState();
-        } else {
-          if (tripManager.getCurrentTrip()) {
-            uiController.showToast('No podés desconectarte en viaje', 'warning');
-            return;
-          }
+    const nextOnline = !this._onlineStatus;
 
-          const result = await tripManager.setDriverAvailability({
-            online: false,
-            disponible: false
-          });
+    if (nextOnline) {
+      this._ensureDriverShellReady().catch((err) => {
+        console.warn('[DriverApp] SW preparando shell:', err);
+      });
 
-          if (!result?.success) {
-            throw new Error(result?.error || 'No se pudo poner offline');
-          }
+      const result = await tripManager.setDriverAvailability({
+        online: true,
+        disponible: true
+      });
 
-           this._onlineStatus = false;
-           this._setFlowState('OFFLINE');
-           this._currentTripId = null;
-
-        // al desconectarte manualmente sí conviene limpiar,
-        // pero sin depender de que los listeners vuelvan a resetear todo
-          tripManager.resetState?.({ silent: true, reason: 'manual_offline' });
-
-          mapService.clearRoute?.();
-          uiController.hideIncomingModal?.();
-          uiController.hideNavigation?.();
-          uiController.hideArrival?.();
-          uiController.showWaitingState?.();
-          locationTracker.stop?.();
-          this._gpsStarted = false;
-          this._gpsStarting = false;
-          this._backgroundServicesStarted = false;
-          this._backgroundServicesStarting = false;
-        }
-
-          this._syncOnlinePresentation();
-
-        uiController.showToast(
-          this._onlineStatus ? 'Ya estás en línea' : 'Quedaste fuera de línea',
-          'success'
-        );
-      } catch (err) {
-        console.error('[DriverApp] Error cambiando estado:', err);
-        uiController.showToast(err?.message || 'Error cambiando estado', 'error');
-      } finally {
-        this._fabBusy = false;
-
-        if (fab) {
-          fab.disabled = false;
-          fab.style.pointerEvents = 'auto';
-        }
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo poner online');
       }
-    };
 
+      this._onlineStatus = true;
+      this._setFlowState('ONLINE_IDLE');
+      this._syncOnlinePresentation();
+      uiController.showWaitingState();
+
+      this._startRealtimeServicesInBackground().catch((err) => {
+        console.warn('[DriverApp] Background start error:', err);
+      });
+    } else {
+      if (tripManager.getCurrentTrip()) {
+        uiController.showToast('No podés desconectarte en viaje', 'warning');
+        return;
+      }
+
+      const result = await tripManager.setDriverAvailability({
+        online: false,
+        disponible: false
+      });
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'No se pudo poner offline');
+      }
+
+      this._onlineStatus = false;
+      this._setFlowState('OFFLINE');
+      this._currentTripId = null;
+
+      tripManager.resetState?.({ silent: true, reason: 'manual_offline' });
+
+      mapService.clearRoute?.();
+      uiController.hideIncomingModal?.();
+      uiController.hideNavigation?.();
+      uiController.hideArrival?.();
+      uiController.showWaitingState?.();
+      locationTracker.stop?.();
+      this._gpsStarted = false;
+      this._gpsStarting = false;
+      this._backgroundServicesStarted = false;
+      this._backgroundServicesStarting = false;
+
+      this._syncOnlinePresentation();
+    }
+
+    uiController.showToast(
+      this._onlineStatus ? 'Ya estás en línea' : 'Quedaste fuera de línea',
+      'success'
+    );
+  } catch (err) {
+    console.error('[DriverApp] Error cambiando estado:', err);
+    uiController.showToast(err?.message || 'Error cambiando estado', 'error');
+
+    if (fabText) fabText.textContent = prevText;
+    if (fabSubtext) fabSubtext.textContent = prevSubtext;
+    if (fabIcon) fabIcon.textContent = prevIcon;
+  } finally {
+    this._fabBusy = false;
+
+    if (fab) {
+      fab.disabled = false;
+      fab.style.pointerEvents = 'auto';
+      fab.classList.remove('is-loading');
+    }
+
+    this._syncOnlinePresentation?.();
+  }
+};
     if (btnFab) {
       btnFab.replaceWith(btnFab.cloneNode(true));
       const freshFab = document.getElementById('fab-online');
