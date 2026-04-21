@@ -2,31 +2,16 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <meta
-    name="description"
-    content="MIMI Servicios - Marketplace de servicios domesticos con experiencia mobile-first."
-  >
+  <meta name="description" content="MIMI Servicios - Marketplace de servicios domesticos con experiencia mobile-first.">
   <title>MIMI Servicios</title>
-
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="../favicon.png">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Sans:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  >
-
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
-  >
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="./app.css">
 </head>
 <body>
@@ -36,13 +21,11 @@
         <p class="eyebrow">MIMI Marketplace</p>
         <h1>MIMI Servicios</h1>
       </div>
-
       <div class="topbar-actions">
         <button class="icon-button" id="notificationsButton" aria-label="Abrir notificaciones">
           <span>🔔</span>
           <strong id="notificationsCount">0</strong>
         </button>
-
         <button class="icon-button" id="chatButton" aria-label="Abrir chat">
           <span>💬</span>
           <strong id="chatUnreadCount">0</strong>
@@ -55,12 +38,8 @@
         <div class="hero-copy">
           <p class="eyebrow">Hub independiente</p>
           <h2>Entrá a Servicios sin tocar Transporte</h2>
-          <p>
-            Arquitectura desacoplada, UX mobile-first y flujo tipo Uber
-            para cliente y prestador.
-          </p>
+          <p>Arquitectura desacoplada, UX mobile-first y flujo tipo Uber para cliente y prestador.</p>
         </div>
-
         <div class="hero-actions">
           <button class="primary-button" id="enterServicesHub">Servicios</button>
           <button class="ghost-button" id="installButton">Instalar app</button>
@@ -88,35 +67,17 @@
             <form class="form-stack" id="requestForm">
               <label>
                 <span>Ubicación del servicio</span>
-                <input
-                  id="serviceAddressInput"
-                  name="address"
-                  type="text"
-                  placeholder="Ej. Av. Recta Martinolli 7788"
-                >
+                <input id="serviceAddressInput" name="address" type="text" placeholder="Ej. Av. Recta Martinolli 7788">
               </label>
 
               <div class="double-grid">
                 <label>
                   <span>Latitud</span>
-                  <input
-                    id="serviceLatInput"
-                    name="lat"
-                    type="number"
-                    step="any"
-                    placeholder="-31.42"
-                  >
+                  <input id="serviceLatInput" name="lat" type="number" step="any" placeholder="-31.42">
                 </label>
-
                 <label>
                   <span>Longitud</span>
-                  <input
-                    id="serviceLngInput"
-                    name="lng"
-                    type="number"
-                    step="any"
-                    placeholder="-64.18"
-                  >
+                  <input id="serviceLngInput" name="lng" type="number" step="any" placeholder="-64.18">
                 </label>
               </div>
 
@@ -128,17 +89,9 @@
                     <option value="SCHEDULED">Programado</option>
                   </select>
                 </label>
-
                 <label>
                   <span>Duración (hs)</span>
-                  <input
-                    id="requestedHoursInput"
-                    name="requestedHours"
-                    type="number"
-                    min="1"
-                    max="8"
-                    value="2"
-                  >
+                  <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2">
                 </label>
               </div>
 
@@ -147,9 +100,7 @@
                 <input id="scheduledForInput" name="scheduledFor" type="datetime-local">
               </label>
 
-              <button class="primary-button" type="submit" id="searchProvidersButton">
-                Buscar prestadores
-              </button>
+              <button class="primary-button" type="submit" id="searchProvidersButton">Buscar prestadores</button>
             </form>
           </article>
 
@@ -161,7 +112,6 @@
               </div>
               <span class="helper-text" id="providersMeta">Sin búsqueda todavía</span>
             </div>
-
             <div class="card-list" id="providersList"></div>
           </article>
 
@@ -172,7 +122,6 @@
                 <h3>Resumen en tiempo real</h3>
               </div>
             </div>
-
             <div id="requestSummary"></div>
             <div class="timeline" id="requestTimeline"></div>
             <div class="action-row" id="requestActions"></div>
@@ -217,7 +166,6 @@
                 <h3>Bandeja entrante</h3>
               </div>
             </div>
-
             <div class="card-list" id="offersList"></div>
           </article>
 
@@ -228,7 +176,6 @@
                 <h3>Control operativo</h3>
               </div>
             </div>
-
             <div id="providerActiveService"></div>
             <div class="action-row" id="providerActions"></div>
           </article>
@@ -243,7 +190,6 @@
               </div>
               <span class="helper-text" id="mapStatus">Esperando actividad</span>
             </div>
-
             <div id="trackingMap" class="map-surface"></div>
           </article>
 
@@ -254,7 +200,6 @@
                 <h3>Notificaciones recientes</h3>
               </div>
             </div>
-
             <div class="card-list compact" id="notificationsList"></div>
           </article>
         </aside>
@@ -274,17 +219,10 @@
         <h3>Chat en tiempo real</h3>
         <button class="icon-button" data-close-drawer="chatDrawer">✕</button>
       </div>
-
       <div class="drawer-body chat-body">
         <div class="chat-list" id="chatMessages"></div>
-
         <form class="chat-form" id="chatForm">
-          <input
-            id="chatInput"
-            type="text"
-            maxlength="500"
-            placeholder="Escribí un mensaje..."
-          >
+          <input id="chatInput" type="text" maxlength="500" placeholder="Escribí un mensaje...">
           <button class="primary-button" type="submit">Enviar</button>
         </form>
       </div>
