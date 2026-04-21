@@ -454,11 +454,24 @@ async function subscribeRealtime(ticketId) {
 
 async function sendCurrentMessage() {
   if (TRIP_CHAT.sending) return;
-  if (!TRIP_CHAT.activeTicketId) {
-    setStatus("Esperá un momento: el chat todavía no terminó de abrir");
+if (!TRIP_CHAT.activeTicketId) {
+  console.warn("[trip-chat] intento de enviar sin ticket");
+
+  setStatus("Error al iniciar el chat. Reintentá.");
+  
+  // opcional: intentar recrear
+  try {
+    const ticket = await findOrCreateTripChat(TRIP_CHAT.activeContext);
+    if (ticket?.id) {
+      TRIP_CHAT.activeTicketId = ticket.id;
+    } else {
+      return;
+    }
+  } catch (e) {
+    console.error("[trip-chat] no se pudo recrear ticket", e);
     return;
   }
-
+}
   const text = String(TRIP_CHAT.input?.value || "").trim();
   if (!text) return;
 
