@@ -1,4 +1,4 @@
-import { appConfig } from "../config.js";
+import { appConfig } from "./config.js";
 
 const listeners = new Set();
 
@@ -11,7 +11,8 @@ export const state = {
   },
   session: {
     userId: null,
-    providerId: null
+    providerId: null,
+    role: "client"
   },
   requestDraft: {
     address: "",
@@ -30,7 +31,11 @@ export const state = {
     status: "OFFLINE",
     offers: [],
     activeService: null,
-    stats: { rating: 5, offers: 0, completed: 0 }
+    stats: {
+      rating: 5,
+      offers: 0,
+      completed: 0
+    }
   },
   chat: {
     messages: [],
@@ -49,7 +54,8 @@ export const state = {
     loading: {},
     lastSearchAt: null,
     error: null,
-    info: "Configuracion lista para integrar con Supabase."
+    info: "Configuracion lista para integrar con Supabase.",
+    backendMode: "mock"
   }
 };
 
@@ -67,7 +73,9 @@ export function patchState(path, value) {
   const segments = path.split(".");
   setState((draft) => {
     let current = draft;
-    for (let i = 0; i < segments.length - 1; i += 1) current = current[segments[i]];
+    for (let i = 0; i < segments.length - 1; i += 1) {
+      current = current[segments[i]];
+    }
     current[segments.at(-1)] = value;
   });
 }
