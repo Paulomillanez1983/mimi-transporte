@@ -32,12 +32,23 @@ export const appConfig = {
     "COMPLETED",
     "CANCELLED"
   ],
+  providerStatuses: [
+    "OFFLINE",
+    "ONLINE_IDLE",
+    "INVITED",
+    "BOOKED_UPCOMING",
+    "EN_ROUTE",
+    "ARRIVED",
+    "IN_SERVICE",
+    "PAUSED",
+    "BLOCKED"
+  ],
   categories: [
-    { id: "cleaning", code: "cleaning", name: "Limpieza", description: "Hogar, oficinas y express." },
-    { id: "plumbing", code: "plumbing", name: "Plomeria", description: "Urgencias y mantenimientos." },
-    { id: "electricity", code: "electricity", name: "Electricidad", description: "Instalaciones y reparaciones." },
-    { id: "care", code: "care", name: "Cuidados", description: "Acompanamiento y asistencia." },
-    { id: "gardening", code: "gardening", name: "Jardineria", description: "Mantenimiento y poda." },
-    { id: "tech", code: "tech", name: "Soporte tech", description: "WiFi, PC y hogar inteligente." }
+    {
+      id: "cleaning",
+      code: "cleaning",
+      name: "Limpieza",
+      description: "Hogar, oficinas y express."
+    }
   ]
 };
