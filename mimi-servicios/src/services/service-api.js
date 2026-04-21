@@ -4,13 +4,13 @@ import {
   fetchTable,
   getCurrentSession,
   getSupabaseClient,
-  invokeFunction
+  invokeFunction,
 } from "./supabase.js";
 import {
   buildMockMessages,
   buildMockNotifications,
   buildMockOffers,
-  buildMockProviders
+  buildMockProviders,
 } from "./mock-data.js";
 
 function hasBackend() {
@@ -23,37 +23,39 @@ export async function bootstrapSession() {
 
   const providerRows = userId && hasBackend()
     ? await fetchTable("svc_providers", (query) =>
-        query.select("id,user_id,status").eq("user_id", userId).limit(1)
+        query.select("id,user_id,status,approved,blocked").eq("user_id", userId).limit(1)
       )
     : [];
 
   return {
     userId,
     providerId: providerRows[0]?.id ?? null,
-    role: providerRows[0]?.id ? "provider" : "client"
+    role: providerRows[0]?.id ? "provider" : "client",
   };
 }
 
 export async function searchProviders(categoryId, draft) {
   if (!hasBackend()) return buildMockProviders(categoryId, draft);
 
-  const result = await callRpc(appConfig.rpc.searchProvidersRanked, {
-    p_category_id: categoryId,
-    p_service_lat: Number(draft.lat),
-    p_service_lng: Number(draft.lng),
-    p_request_type: draft.requestType,
-    p_scheduled_for: draft.scheduledFor || null,
-    p_requested_hours: Number(draft.requestedHours),
-    p_limit: 10
+  const response = await invokeFunction(appConfig.functions.searchProviders, {
+    category_id: categoryId,
+    service_lat: Number(draft.lat),
+    service_lng: Number(draft.lng),
+    request_type: draft.requestType,
+    scheduled_for: draft.scheduledFor || null,
+    requested_hours: Number(draft.requestedHours),
+    max_results: 10,
   });
 
-  return (result ?? []).map((item) => {
-    const fee = Math.max(500, Math.round(item.provider_price * 0.15));
+  const providers = response?.providers ?? [];
+  return providers.map((item) => {
+    const fee = Math.max(500, Math.round((item.provider_price ?? 0) * 0.15));
     return {
       ...item,
       fee,
-      total_price: item.provider_price + fee,
-      estimated_eta_min: Math.max(6, Math.round((item.distance_km ?? 1) * 6))
+      platform_fee: fee,
+      total_price: (item.provider_price ?? 0) + fee,
+      estimated_eta_min: Math.max(6, Math.round((item.distance_km ?? 1) * 6)),
     };
   });
 }
@@ -62,7 +64,7 @@ export async function prepareRequestPricing({
   clientUserId,
   categoryId,
   providerId,
-  draft
+  draft,
 }) {
   if (!hasBackend()) {
     const candidates = buildMockProviders(categoryId, draft);
@@ -77,11 +79,11 @@ export async function prepareRequestPricing({
           platform_fee: provider.fee,
           total_price: provider.total_price,
           currency: provider.currency,
-          visible_candidates: candidates
+          visible_candidates: candidates,
         }
       : {
           eligible: false,
-          reason: "provider_not_found"
+          reason: "provider_not_found",
         };
   }
 
@@ -93,7 +95,7 @@ export async function prepareRequestPricing({
     p_service_lng: Number(draft.lng),
     p_request_type: draft.requestType,
     p_scheduled_for: draft.scheduledFor || null,
-    p_requested_hours: Number(draft.requestedHours)
+    p_requested_hours: Number(draft.requestedHours),
   });
 }
 
@@ -103,36 +105,31 @@ export async function createRequest(payload) {
       id: crypto.randomUUID(),
       status: payload.requestType === "SCHEDULED" ? "SCHEDULED" : "SEARCHING",
       ...payload,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
   }
 
-  return invokeFunction(appConfig.functions.createRequest, {
-    idempotencyKey: payload.idempotencyKey ?? crypto.randomUUID(),
-    categoryId: payload.categoryId,
-    category_id: payload.categoryId,
-    selectedProviderId: payload.selectedProviderId,
-    selected_provider_id: payload.selectedProviderId,
-    serviceAddress: payload.address,
-    address_text: payload.address,
-    serviceLat: payload.serviceLat,
-    service_lat: payload.serviceLat,
-    serviceLng: payload.serviceLng,
-    service_lng: payload.serviceLng,
-    requestType: payload.requestType,
-    request_type: payload.requestType,
-    scheduledFor: payload.scheduledFor,
-    scheduled_for: payload.scheduledFor,
-    requestedHours: payload.requestedHours,
-    requested_hours: payload.requestedHours,
-    providerPrice: payload.providerPrice,
-    provider_price_snapshot: payload.providerPrice,
-    platformFee: payload.platformFee,
-    platform_fee_snapshot: payload.platformFee,
-    totalPrice: payload.totalPrice,
-    total_price_snapshot: payload.totalPrice,
-    currency: payload.currency ?? "ARS"
-  });
+  const response = await invokeFunction(
+    appConfig.functions.createRequest,
+    {
+      category_id: payload.categoryId,
+      selected_provider_id: payload.selectedProviderId,
+      address_text: payload.address,
+      service_lat: payload.serviceLat,
+      service_lng: payload.serviceLng,
+      request_type: payload.requestType,
+      scheduled_for: payload.scheduledFor,
+      requested_hours: payload.requestedHours,
+      notes: payload.notes ?? null,
+    },
+    {
+      headers: {
+        "x-idempotency-key": payload.idempotencyKey ?? crypto.randomUUID(),
+      },
+    },
+  );
+
+  return response?.request ?? response;
 }
 
 export async function updateRequestStatus(actionName, payload) {
@@ -182,11 +179,39 @@ export async function sendMessage(payload) {
       id: crypto.randomUUID(),
       ...payload,
       sender_user_id: "self",
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
   }
 
-  return invokeFunction(appConfig.functions.sendMessage, payload);
+  const response = await invokeFunction(appConfig.functions.sendMessage, {
+    conversation_id: payload.conversationId,
+    body: payload.body,
+  });
+
+  return response?.message ?? response;
+}
+
+export async function trackLocation(payload) {
+  if (!hasBackend()) return { tracked: true };
+  return invokeFunction(appConfig.functions.trackLocation, {
+    request_id: payload.requestId,
+    lat: payload.lat,
+    lng: payload.lng,
+    accuracy: payload.accuracy ?? null,
+    heading: payload.heading ?? null,
+    speed: payload.speed ?? null,
+  });
+}
+
+export async function registerDevice(payload) {
+  if (!hasBackend()) return { ok: true };
+  return invokeFunction(appConfig.functions.registerDevice, {
+    device_id: payload.deviceId,
+    push_token: payload.pushToken ?? null,
+    platform: payload.platform,
+    notifications_enabled: payload.notificationsEnabled,
+    marketing_opt_in: payload.marketingOptIn,
+  });
 }
 
 export async function loadActiveRequest({ userId, providerId }) {
@@ -199,7 +224,7 @@ export async function loadActiveRequest({ userId, providerId }) {
     "SCHEDULED",
     "PROVIDER_EN_ROUTE",
     "PROVIDER_ARRIVED",
-    "IN_PROGRESS"
+    "IN_PROGRESS",
   ];
 
   const clientRows = userId
