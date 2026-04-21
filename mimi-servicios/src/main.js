@@ -31,6 +31,14 @@ function currentConversationId() {
     null;
 }
 
+function getStorageKey(keyName, fallback) {
+  return appConfig?.storageKeys?.[keyName] ?? fallback;
+}
+
+function getProviderUiValue(keyName, fallback) {
+  return appConfig?.providerUi?.[keyName] ?? fallback;
+}
+
 async function hydrateLiveContext(activeRequestOverride) {
   const activeRequest = activeRequestOverride ?? await loadActiveRequest({
     userId: state.session.userId,
@@ -95,36 +103,53 @@ async function hydrateLiveContext(activeRequestOverride) {
 
 function syncDraftFromForm() {
   patchState("requestDraft.address", document.getElementById("serviceAddressInput").value.trim());
-  patchState("requestDraft.lat", Number(document.getElementById("serviceLatInput").value || state.requestDraft.lat));
-  patchState("requestDraft.lng", Number(document.getElementById("serviceLngInput").value || state.requestDraft.lng));
+  patchState(
+    "requestDraft.lat",
+    Number(document.getElementById("serviceLatInput").value || state.requestDraft.lat),
+  );
+  patchState(
+    "requestDraft.lng",
+    Number(document.getElementById("serviceLngInput").value || state.requestDraft.lng),
+  );
   patchState("requestDraft.requestType", document.getElementById("requestTypeSelect").value);
   patchState("requestDraft.scheduledFor", document.getElementById("scheduledForInput").value);
-  patchState("requestDraft.requestedHours", Number(document.getElementById("requestedHoursInput").value || 2));
+  patchState(
+    "requestDraft.requestedHours",
+    Number(document.getElementById("requestedHoursInput").value || 2),
+  );
 }
 
 function updateScheduledVisibility() {
-  document.getElementById("scheduledForWrapper").hidden =
-    state.requestDraft.requestType !== "SCHEDULED";
+  const wrapper = document.getElementById("scheduledForWrapper");
+  if (!wrapper) return;
+
+  wrapper.hidden = state.requestDraft.requestType !== "SCHEDULED";
 }
 
 function toggleDrawer(id, force) {
   const drawer = document.getElementById(id);
+  if (!drawer) return;
+
   const open = force ?? !drawer.classList.contains("is-open");
   drawer.classList.toggle("is-open", open);
   drawer.setAttribute("aria-hidden", String(!open));
 }
 
 function buildDeviceId() {
-  let deviceId = localStorage.getItem("mimi_services_device_id");
+  const storageKey = getStorageKey("deviceId", "mimi_services_device_id");
+
+  let deviceId = localStorage.getItem(storageKey);
   if (!deviceId) {
     deviceId = crypto.randomUUID();
-    localStorage.setItem("mimi_services_device_id", deviceId);
+    localStorage.setItem(storageKey, deviceId);
   }
+
   return deviceId;
 }
 
 async function registerCurrentDevice() {
   if (!state.session.userId) return;
+
   try {
     await registerDevice({
       deviceId: buildDeviceId(),
@@ -141,7 +166,9 @@ async function registerCurrentDevice() {
 function startProviderTrackingLoop() {
   if (!navigator.geolocation) return;
 
-  setInterval(async () => {
+  const trackingIntervalMs = getProviderUiValue("trackingIntervalMs", 12000);
+
+  setInterval(() => {
     const active = state.provider.activeService;
     if (!active) return;
 
@@ -176,76 +203,105 @@ function startProviderTrackingLoop() {
         // silent
       }
     });
-  }, 12000);
+  }, trackingIntervalMs);
 }
 
 function bindBasicControls() {
-  document.getElementById("enterServicesHub").addEventListener("click", () => {
-    patchState("ui.appEntered", true);
-  });
+  const enterServicesHub = document.getElementById("enterServicesHub");
+  if (enterServicesHub) {
+    enterServicesHub.addEventListener("click", () => {
+      patchState("ui.appEntered", true);
+    });
+  }
 
-  document.getElementById("notificationsButton").addEventListener("click", () => {
-    toggleDrawer("notificationsDrawer", true);
-  });
+  const notificationsButton = document.getElementById("notificationsButton");
+  if (notificationsButton) {
+    notificationsButton.addEventListener("click", () => {
+      toggleDrawer("notificationsDrawer", true);
+    });
+  }
 
-  document.getElementById("chatButton").addEventListener("click", async () => {
-    toggleDrawer("chatDrawer", true);
+  const chatButton = document.getElementById("chatButton");
+  if (chatButton) {
+    chatButton.addEventListener("click", async () => {
+      toggleDrawer("chatDrawer", true);
 
-    if (!state.chat.messages.length) {
-      const messages = await loadMessages(currentConversationId());
-      patchState("chat.messages", messages);
-      patchState("chat.unreadCount", 0);
-    }
-  });
+      if (!state.chat.messages.length) {
+        const conversationId = currentConversationId();
+        if (!conversationId) return;
+
+        const messages = await loadMessages(conversationId);
+        patchState("chat.messages", messages);
+        patchState("chat.unreadCount", 0);
+      }
+    });
+  }
 
   document.querySelectorAll("[data-close-drawer]").forEach((button) => {
     button.addEventListener("click", () => toggleDrawer(button.dataset.closeDrawer, false));
   });
 
-  document.getElementById("requestTypeSelect").addEventListener("change", () => {
-    syncDraftFromForm();
-    updateScheduledVisibility();
-  });
-
-  document.getElementById("requestForm").addEventListener("submit", async (event) => {
-    event.preventDefault();
-    syncDraftFromForm();
-
-    const providers = await searchProviders(
-      state.ui.selectedCategoryId,
-      state.requestDraft,
-    );
-
-    setState((draft) => {
-      draft.client.providers = providers;
-      draft.meta.info = providers.length
-        ? "Prestadores actualizados."
-        : "No encontramos prestadores para este criterio.";
-      draft.meta.lastSearchAt = new Date().toISOString();
+  const requestTypeSelect = document.getElementById("requestTypeSelect");
+  if (requestTypeSelect) {
+    requestTypeSelect.addEventListener("change", () => {
+      syncDraftFromForm();
+      updateScheduledVisibility();
     });
-  });
+  }
 
-  document.getElementById("chatForm").addEventListener("submit", async (event) => {
-    event.preventDefault();
+  const requestForm = document.getElementById("requestForm");
+  if (requestForm) {
+    requestForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      syncDraftFromForm();
 
-    const input = document.getElementById("chatInput");
-    const body = input.value.trim();
-    if (!body) return;
+      const providers = await searchProviders(
+        state.ui.selectedCategoryId,
+        state.requestDraft,
+      );
 
-    const message = await sendMessage({
-      conversationId: currentConversationId(),
-      body,
+      setState((draft) => {
+        draft.client.providers = providers;
+        draft.meta.info = providers.length
+          ? "Prestadores actualizados."
+          : "No encontramos prestadores para este criterio.";
+        draft.meta.lastSearchAt = new Date().toISOString();
+      });
     });
+  }
 
-    setState((draft) => {
-      draft.chat.messages.push(message);
-      draft.chat.unreadCount = 0;
+  const chatForm = document.getElementById("chatForm");
+  if (chatForm) {
+    chatForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const input = document.getElementById("chatInput");
+      if (!input) return;
+
+      const body = input.value.trim();
+      if (!body) return;
+
+      const conversationId = currentConversationId();
+      if (!conversationId) return;
+
+      const message = await sendMessage({
+        conversationId,
+        body,
+      });
+
+      setState((draft) => {
+        draft.chat.messages.push(message);
+        draft.chat.unreadCount = 0;
+      });
+
+      input.value = "";
     });
+  }
 
-    input.value = "";
-  });
+  const appShell = document.querySelector(".app-shell");
+  if (!appShell) return;
 
-  document.querySelector(".app-shell").addEventListener("click", async (event) => {
+  appShell.addEventListener("click", async (event) => {
     const categoryButton = event.target.closest("[data-category-id]");
     if (categoryButton) {
       patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
@@ -323,7 +379,9 @@ function bindBasicControls() {
       });
 
       setState((draft) => {
-        if (draft.client.activeRequest) draft.client.activeRequest.status = "CANCELLED";
+        if (draft.client.activeRequest) {
+          draft.client.activeRequest.status = "CANCELLED";
+        }
       });
 
       await hydrateLiveContext();
@@ -386,6 +444,8 @@ function bindBasicControls() {
         complete: appConfig.functions.completeService,
       }[action];
 
+      if (!functionName) return;
+
       await updateRequestStatus(functionName, {
         request_id: state.provider.activeService?.request_id ?? state.provider.activeService?.id,
       });
@@ -438,7 +498,10 @@ function registerInstallPrompt() {
     patchState("ui.installPromptEvent", event);
   });
 
-  document.getElementById("installButton").addEventListener("click", async () => {
+  const installButton = document.getElementById("installButton");
+  if (!installButton) return;
+
+  installButton.addEventListener("click", async () => {
     const promptEvent = state.ui.installPromptEvent;
     if (!promptEvent) return;
     await promptEvent.prompt();
@@ -462,16 +525,25 @@ function setupRealtime(
 
       setState((draft) => {
         draft.notifications.items.unshift(payload);
+
+        const maxItems = getProviderUiValue("notificationsMaxItems", 50);
+        if (draft.notifications.items.length > maxItems) {
+          draft.notifications.items = draft.notifications.items.slice(0, maxItems);
+        }
       });
 
       playNotificationSound();
     },
+
     onMessage: ({ new: payload }) => {
       if (!payload) return;
 
       setState((draft) => {
         const exists = draft.chat.messages.some((msg) => msg.id === payload.id);
-        if (!exists) draft.chat.messages.push(payload);
+        if (!exists) {
+          draft.chat.messages.push(payload);
+        }
+
         if (payload.sender_user_id !== draft.session.userId) {
           draft.chat.unreadCount += 1;
         }
@@ -479,6 +551,7 @@ function setupRealtime(
 
       playNotificationSound();
     },
+
     onTracking: ({ new: payload }) => {
       if (!payload) return;
 
@@ -497,6 +570,7 @@ function setupRealtime(
         },
       });
     },
+
     onRequest: ({ new: payload }) => {
       if (!payload) return;
 
@@ -519,12 +593,15 @@ function setupRealtime(
         }
       });
     },
+
     onOffer: ({ new: payload }) => {
       if (!payload) return;
 
       setState((draft) => {
         const exists = draft.provider.offers.some((offer) => offer.id === payload.id);
-        if (!exists) draft.provider.offers.unshift(payload);
+        if (!exists) {
+          draft.provider.offers.unshift(payload);
+        }
       });
 
       playNotificationSound();
@@ -533,9 +610,21 @@ function setupRealtime(
 }
 
 function seedForm() {
-  document.getElementById("serviceLatInput").value = String(state.requestDraft.lat);
-  document.getElementById("serviceLngInput").value = String(state.requestDraft.lng);
-  document.getElementById("requestedHoursInput").value = String(state.requestDraft.requestedHours);
+  const serviceLatInput = document.getElementById("serviceLatInput");
+  const serviceLngInput = document.getElementById("serviceLngInput");
+  const requestedHoursInput = document.getElementById("requestedHoursInput");
+
+  if (serviceLatInput) {
+    serviceLatInput.value = String(state.requestDraft.lat);
+  }
+
+  if (serviceLngInput) {
+    serviceLngInput.value = String(state.requestDraft.lng);
+  }
+
+  if (requestedHoursInput) {
+    requestedHoursInput.value = String(state.requestDraft.requestedHours);
+  }
 }
 
 async function init() {
