@@ -473,6 +473,8 @@ body.driver-offline .fab-online.hidden-during-trip {
   opacity: 0 !important;
   pointer-events: none !important;
   transform: translateX(-50%) scale(0.92) !important;
+  visibility: hidden !important;
+  display: none !important;
 }
 
 .fab-content {
@@ -3209,6 +3211,8 @@ body.driver-offline .fab-online {
     opacity: 0 !important;
     pointer-events: none !important;
     transform: translateX(-50%) scale(0.92) !important;
+    visibility: hidden !important;
+    display: none !important;
   }
 }
 
