@@ -1,14 +1,18 @@
 export const appConfig = {
   supabaseUrl: window.MIMI_SERVICES_ENV?.SUPABASE_URL ?? "",
   supabaseAnonKey: window.MIMI_SERVICES_ENV?.SUPABASE_ANON_KEY ?? "",
+
   demoClientUserId: window.MIMI_SERVICES_ENV?.DEMO_CLIENT_USER_ID ?? null,
   demoProviderUserId: window.MIMI_SERVICES_ENV?.DEMO_PROVIDER_USER_ID ?? null,
+
   mapInitialCenter: [-64.1888, -31.4201],
   mapInitialZoom: 12,
+
   rpc: {
     searchProvidersRanked: "svc_search_providers_ranked",
     prepareRequestPricing: "svc_prepare_request_pricing",
   },
+
   functions: {
     searchProviders: "svc-search-providers",
     createRequest: "svc-create-request",
@@ -23,6 +27,22 @@ export const appConfig = {
     trackLocation: "svc-track-location",
     registerDevice: "svc-register-device",
   },
+
+  providerUi: {
+    offerTimeoutMs: 90000,
+    trackingIntervalMs: 12000,
+    reconnectPollingMs: 15000,
+    notificationsMaxItems: 50,
+  },
+
+  storageKeys: {
+    providerMode: "mimi_services_provider_mode",
+    providerStatus: "mimi_services_provider_status",
+    activeService: "mimi_services_active_service",
+    notifications: "mimi_services_notifications",
+    chatDraft: "mimi_services_chat_draft",
+  },
+
   serviceStates: [
     "SEARCHING",
     "PENDING_PROVIDER_RESPONSE",
@@ -34,6 +54,7 @@ export const appConfig = {
     "COMPLETED",
     "CANCELLED",
   ],
+
   providerStatuses: [
     "OFFLINE",
     "ONLINE_IDLE",
@@ -45,6 +66,7 @@ export const appConfig = {
     "PAUSED",
     "BLOCKED",
   ],
+
   categories: [
     {
       id: "cleaning",
