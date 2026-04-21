@@ -1,35 +1,44 @@
 let audioContext = null;
 
-export function playNotificationSound() {
+function ensureAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return audioContext;
+}
+
+function beep({ frequency = 440, duration = 0.14, type = "sine" } = {}) {
   try {
-    audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
+    const context = ensureAudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
 
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+    gain.gain.value = 0.05;
 
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(
-      440,
-      audioContext.currentTime + 0.18,
-    );
-
-    gainNode.gain.setValueAtTime(0.001, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.09,
-      audioContext.currentTime + 0.02,
-    );
-    gainNode.gain.exponentialRampToValueAtTime(
-      0.0001,
-      audioContext.currentTime + 0.22,
-    );
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
 
     oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.22);
+
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
+    oscillator.stop(context.currentTime + duration);
   } catch {
-    // Silent fallback
+    // noop
   }
+}
+
+export function playOfferSound() {
+  beep({ frequency: 720, duration: 0.18, type: "triangle" });
+  setTimeout(() => beep({ frequency: 860, duration: 0.22, type: "triangle" }), 120);
+}
+
+export function playMessageSound() {
+  beep({ frequency: 560, duration: 0.12, type: "sine" });
+}
+
+export function playStatusSound() {
+  beep({ frequency: 460, duration: 0.12, type: "square" });
+  setTimeout(() => beep({ frequency: 620, duration: 0.1, type: "square" }), 90);
 }
