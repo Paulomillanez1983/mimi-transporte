@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="MIMI Servicios - Marketplace de servicios domesticos con experiencia mobile-first.">
+  <title>MIMI Servicios</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="../favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="./styles/app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">MIMI Marketplace</p>
+        <h1>MIMI Servicios</h1>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-button" id="notificationsButton" aria-label="Abrir notificaciones">
+          <span>🔔</span>
+          <strong id="notificationsCount">0</strong>
+        </button>
+        <button class="icon-button" id="chatButton" aria-label="Abrir chat">
+          <span>💬</span>
+          <strong id="chatUnreadCount">0</strong>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="hero-card">
+        <div class="hero-copy">
+          <p class="eyebrow">Hub independiente</p>
+          <h2>Entrá a Servicios sin tocar Transporte</h2>
+          <p>Arquitectura desacoplada, UX mobile-first y flujo tipo Uber para cliente y prestador.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="primary-button" id="enterServicesHub">Servicios</button>
+          <button class="ghost-button" id="installButton">Instalar app</button>
+        </div>
+      </section>
+
+      <section class="mode-switcher" id="modeSwitcher" hidden>
+        <button class="mode-pill is-active" data-mode="client">Cliente</button>
+        <button class="mode-pill" data-mode="provider">Prestador</button>
+      </section>
+
+      <section class="screen-grid">
+        <div class="screen-column" id="clientScreen">
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Cliente</p>
+                <h3>Pedí un servicio</h3>
+              </div>
+              <span class="status-chip" id="requestStateChip">Sin solicitud activa</span>
+            </div>
+
+            <div class="category-grid" id="categoryGrid"></div>
+
+            <form class="form-stack" id="requestForm">
+              <label>
+                <span>Ubicación del servicio</span>
+                <input id="serviceAddressInput" name="address" type="text" placeholder="Ej. Av. Recta Martinolli 7788">
+              </label>
+
+              <div class="double-grid">
+                <label>
+                  <span>Latitud</span>
+                  <input id="serviceLatInput" name="lat" type="number" step="any" placeholder="-31.42">
+                </label>
+                <label>
+                  <span>Longitud</span>
+                  <input id="serviceLngInput" name="lng" type="number" step="any" placeholder="-64.18">
+                </label>
+              </div>
+
+              <div class="double-grid">
+                <label>
+                  <span>Tipo</span>
+                  <select id="requestTypeSelect" name="requestType">
+                    <option value="IMMEDIATE">Inmediato</option>
+                    <option value="SCHEDULED">Programado</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Duración (hs)</span>
+                  <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2">
+                </label>
+              </div>
+
+              <label id="scheduledForWrapper" hidden>
+                <span>Fecha y hora</span>
+                <input id="scheduledForInput" name="scheduledFor" type="datetime-local">
+              </label>
+
+              <button class="primary-button" type="submit" id="searchProvidersButton">Buscar prestadores</button>
+            </form>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Ranking</p>
+                <h3>Prestadores disponibles</h3>
+              </div>
+              <span class="helper-text" id="providersMeta">Sin búsqueda todavía</span>
+            </div>
+            <div class="card-list" id="providersList"></div>
+          </article>
+
+          <article class="panel" id="requestSummaryPanel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Solicitud</p>
+                <h3>Resumen en tiempo real</h3>
+              </div>
+            </div>
+            <div id="requestSummary"></div>
+            <div class="timeline" id="requestTimeline"></div>
+            <div class="action-row" id="requestActions"></div>
+          </article>
+        </div>
+
+        <div class="screen-column" id="providerScreen" hidden>
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Prestador</p>
+                <h3>Panel operativo</h3>
+              </div>
+              <span class="status-chip" id="providerStateChip">OFFLINE</span>
+            </div>
+
+            <div class="provider-toggle">
+              <button class="toggle-button is-active" data-provider-status="OFFLINE">Offline</button>
+              <button class="toggle-button" data-provider-status="ONLINE_IDLE">Online</button>
+            </div>
+
+            <div class="stats-grid">
+              <div class="stat-card">
+                <span>Rating</span>
+                <strong id="providerRating">5.0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Ofertas</span>
+                <strong id="providerOffersCount">0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Servicios</span>
+                <strong id="providerCompletedCount">0</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Ofertas</p>
+                <h3>Bandeja entrante</h3>
+              </div>
+            </div>
+            <div class="card-list" id="offersList"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Servicio activo</p>
+                <h3>Control operativo</h3>
+              </div>
+            </div>
+            <div id="providerActiveService"></div>
+            <div class="action-row" id="providerActions"></div>
+          </article>
+        </div>
+
+        <aside class="screen-column">
+          <article class="panel map-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Tracking</p>
+                <h3>Mapa operativo</h3>
+              </div>
+              <span class="helper-text" id="mapStatus">Esperando actividad</span>
+            </div>
+            <div id="trackingMap" class="map-surface"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Actividad</p>
+                <h3>Notificaciones recientes</h3>
+              </div>
+            </div>
+            <div class="card-list compact" id="notificationsList"></div>
+          </article>
+        </aside>
+      </section>
+    </main>
+
+    <aside class="drawer" id="notificationsDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <h3>Centro de notificaciones</h3>
+        <button class="icon-button" data-close-drawer="notificationsDrawer">✕</button>
+      </div>
+      <div class="drawer-body" id="notificationsDrawerBody"></div>
+    </aside>
+
+    <aside class="drawer" id="chatDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <h3>Chat en tiempo real</h3>
+        <button class="icon-button" data-close-drawer="chatDrawer">✕</button>
+      </div>
+      <div class="drawer-body chat-body">
+        <div class="chat-list" id="chatMessages"></div>
+        <form class="chat-form" id="chatForm">
+          <input id="chatInput" type="text" maxlength="500" placeholder="Escribí un mensaje...">
+          <button class="primary-button" type="submit">Enviar</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+
+  <script src="./env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
