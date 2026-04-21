@@ -2,9 +2,10 @@ const CACHE_NAME = "mimi-servicios-v1";
 const APP_ASSETS = [
   "./",
   "./index.html",
-  "./app.css",
+  "./styles/app.css",
   "./env.js",
-  "./main.js",
+  "./src/main.js",
+  "./manifest.json",
 ];
 
 self.addEventListener("install", (event) => {
