@@ -16,7 +16,7 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <link rel="stylesheet" href="./mimi-transporte.css?v=20260417-6">
 <link rel="stylesheet" href="./css/client-trip-live.css?v=20260418-2">
-<link rel="stylesheet" href="./css/trip-chat.css?v=20260419-1">
+<link rel="stylesheet" href="./css/trip-chat.css?v=20260420-8">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 <script src="./mimi-driver-sim.js"></script>
@@ -29,7 +29,7 @@
 <script type="module" src="/mimi-transporte/js/client-pwa-onboarding.js"></script>
 <script type="module" src="/mimi-transporte/js/push-support.js"></script>
 <script src="/mimi-transporte/js/cliente-chofer-tracking.js"></script>
-<script type="module" src="/mimi-transporte/js/trip-chat.js?v=20260419-1"></script>
+<script type="module" src="/mimi-transporte/js/trip-chat.js?v=20260420-8"></script>
   <!-- SUPABASE REST CLIENT -->
 <script>
 const SupabaseSDK = window.supabase;
@@ -2766,13 +2766,12 @@ if (btnChat) {
         return;
       }
 
-        await window.tripChat.openTripChatForClientTrip(viajeChat);
-      } catch (err) {
-        console.error('[cliente.chatChofer]', err);
-        notif.show('Chat', err?.message || 'No se pudo abrir el chat con el chofer', 'error');
-      }
-    };
-  }  
+      await window.tripChat.openTripChatForClientTrip(viajeChat);
+    } catch (err) {
+      console.error('[cliente.chatChofer]', err);
+      notif.show('Chat', err?.message || 'No se pudo abrir el chat con el chofer', 'error');
+    }
+  };
 }
 
 async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
@@ -9378,8 +9377,20 @@ setupAutocomplete('inputDestino', 'sugerenciasDestino', (data) => {
   }
 
 if (btnChatChofer && !btnChatChofer.dataset.bound) {
+  btnChatChofer.addEventListener('click', async () => {
+    const viajeActivo =
+      state?.viajeActual ||
+      state?.viajeRealtime ||
+      state?.viajePendiente ||
+      (state?.viajeId ? { id: state.viajeId } : null) ||
+      {};
+
+    await actualizarCardChofer(viajeActivo);
+    btnChatChofer.onclick?.();
+  });
   btnChatChofer.dataset.bound = '1';
 }
+
   if (btnSwapRoute && !btnSwapRoute.dataset.bound) {
     btnSwapRoute.addEventListener('click', intercambiarOrigenDestino);
     btnSwapRoute.dataset.bound = '1';
