@@ -3575,37 +3575,6 @@ if (nuevoEstado === 'COMPLETADO' || nuevoEstado === 'CANCELADO') {
 
   return currentTripChannel;
 }
-  function actualizarCardChofer(viaje) {
-  const nameEl = document.getElementById('tripDriverName');
-  const metaEl = document.getElementById('tripDriverMeta');
-  const contactEl = document.getElementById('tripDriverContact');
-  const avatarEl = document.getElementById('tripDriverAvatar');
-
-  if (!viaje) return;
-
-const nombre =
-  viaje?.chofer_nombre ||
-  viaje?.driver_name ||
-  'Chofer';
-    
-  const telefono =
-    viaje?.chofer_telefono ||
-    viaje?.driver_phone ||
-    'Sin contacto';
-
-  const estado = resolverEstadoViajeCliente(viaje);
-
-  if (nameEl) nameEl.textContent = nombre;
-  if (contactEl) contactEl.textContent = telefono;
-
-  if (metaEl) {
-    metaEl.textContent = construirTextoEstadoChofer(estado);
-  }
-
-  if (avatarEl) {
-    avatarEl.textContent = nombre.charAt(0).toUpperCase();
-  }
-}
 function construirTextoEstadoChofer(estado) {
   switch (String(estado || '').toUpperCase()) {
     case 'BUSCANDO_CHOFER':
