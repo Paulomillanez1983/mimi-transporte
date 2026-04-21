@@ -9,9 +9,11 @@ import {
   loadNotifications,
   loadOffers,
   prepareRequestPricing,
+  registerDevice,
   searchProviders,
   sendMessage,
-  updateRequestStatus
+  trackLocation,
+  updateRequestStatus,
 } from "./service-api.js";
 import { subscribeToServiceRealtime } from "./realtime.js";
 import { playNotificationSound } from "./sound.js";
@@ -22,10 +24,17 @@ function currentUserId() {
   return state.session.userId ?? appConfig.demoClientUserId ?? null;
 }
 
+function currentConversationId() {
+  return state.client.activeConversationId ??
+    state.client.activeRequest?.conversation_id ??
+    state.provider.activeService?.conversation_id ??
+    null;
+}
+
 async function hydrateLiveContext(activeRequestOverride) {
   const activeRequest = activeRequestOverride ?? await loadActiveRequest({
     userId: state.session.userId,
-    providerId: state.session.providerId
+    providerId: state.session.providerId,
   });
 
   const conversation = activeRequest?.id
@@ -44,9 +53,11 @@ async function hydrateLiveContext(activeRequestOverride) {
           conversation_id:
             conversation?.id ??
             draft.client.activeRequest?.conversation_id ??
-            null
+            null,
         }
       : null;
+
+    draft.client.activeConversationId = conversation?.id ?? null;
 
     if (
       draft.session.providerId &&
@@ -55,7 +66,7 @@ async function hydrateLiveContext(activeRequestOverride) {
       draft.provider.activeService = {
         ...(draft.provider.activeService ?? {}),
         ...activeRequest,
-        conversation_id: conversation?.id ?? null
+        conversation_id: conversation?.id ?? null,
       };
     } else {
       draft.provider.activeService = null;
@@ -63,15 +74,20 @@ async function hydrateLiveContext(activeRequestOverride) {
 
     draft.chat.messages = messages;
     draft.chat.unreadCount = messages.filter(
-      (message) => !message.read_at && message.sender_user_id !== draft.session.userId
+      (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
     ).length;
 
     if (activeRequest?.service_lat && activeRequest?.service_lng) {
       draft.tracking.clientPosition = {
         lat: activeRequest.service_lat,
-        lng: activeRequest.service_lng
+        lng: activeRequest.service_lng,
       };
     }
+  });
+
+  updateTrackingMarkers({
+    clientPosition: state.tracking.clientPosition,
+    providerPosition: state.tracking.providerPosition,
   });
 
   setupRealtime(activeRequest?.id ?? null, conversation?.id ?? null);
@@ -98,20 +114,85 @@ function toggleDrawer(id, force) {
   drawer.setAttribute("aria-hidden", String(!open));
 }
 
-function bindBasicControls() {
-  document
-    .getElementById("enterServicesHub")
-    .addEventListener("click", () => patchState("ui.appEntered", true));
+function buildDeviceId() {
+  let deviceId = localStorage.getItem("mimi_services_device_id");
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem("mimi_services_device_id", deviceId);
+  }
+  return deviceId;
+}
 
-  document
-    .getElementById("notificationsButton")
-    .addEventListener("click", () => toggleDrawer("notificationsDrawer", true));
+async function registerCurrentDevice() {
+  if (!state.session.userId) return;
+  try {
+    await registerDevice({
+      deviceId: buildDeviceId(),
+      pushToken: null,
+      platform: "web",
+      notificationsEnabled: true,
+      marketingOptIn: false,
+    });
+  } catch {
+    // silent
+  }
+}
+
+function startProviderTrackingLoop() {
+  if (!navigator.geolocation) return;
+
+  setInterval(async () => {
+    const active = state.provider.activeService;
+    if (!active) return;
+
+    const allowed = ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"];
+    if (!allowed.includes(active.status)) return;
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const payload = {
+        requestId: active.request_id ?? active.id,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        heading: position.coords.heading,
+        speed: position.coords.speed,
+      };
+
+      setState((draft) => {
+        draft.tracking.providerPosition = {
+          lat: payload.lat,
+          lng: payload.lng,
+        };
+      });
+
+      updateTrackingMarkers({
+        clientPosition: state.tracking.clientPosition,
+        providerPosition: state.tracking.providerPosition,
+      });
+
+      try {
+        await trackLocation(payload);
+      } catch {
+        // silent
+      }
+    });
+  }, 12000);
+}
+
+function bindBasicControls() {
+  document.getElementById("enterServicesHub").addEventListener("click", () => {
+    patchState("ui.appEntered", true);
+  });
+
+  document.getElementById("notificationsButton").addEventListener("click", () => {
+    toggleDrawer("notificationsDrawer", true);
+  });
 
   document.getElementById("chatButton").addEventListener("click", async () => {
     toggleDrawer("chatDrawer", true);
 
     if (!state.chat.messages.length) {
-      const messages = await loadMessages(state.client.activeRequest?.conversation_id);
+      const messages = await loadMessages(currentConversationId());
       patchState("chat.messages", messages);
       patchState("chat.unreadCount", 0);
     }
@@ -132,7 +213,7 @@ function bindBasicControls() {
 
     const providers = await searchProviders(
       state.ui.selectedCategoryId,
-      state.requestDraft
+      state.requestDraft,
     );
 
     setState((draft) => {
@@ -152,8 +233,8 @@ function bindBasicControls() {
     if (!body) return;
 
     const message = await sendMessage({
-      conversationId: state.client.activeRequest?.conversation_id,
-      body
+      conversationId: currentConversationId(),
+      body,
     });
 
     setState((draft) => {
@@ -180,7 +261,7 @@ function bindBasicControls() {
     const selectProvider = event.target.closest("[data-provider-select]");
     if (selectProvider) {
       const provider = state.client.providers.find(
-        (item) => item.provider_id === selectProvider.dataset.providerSelect
+        (item) => item.provider_id === selectProvider.dataset.providerSelect,
       );
       if (!provider) return;
 
@@ -188,7 +269,7 @@ function bindBasicControls() {
         clientUserId: currentUserId(),
         categoryId: state.ui.selectedCategoryId,
         providerId: provider.provider_id,
-        draft: state.requestDraft
+        draft: state.requestDraft,
       });
 
       if (!pricing?.eligible) {
@@ -201,7 +282,6 @@ function bindBasicControls() {
       const request = await createRequest({
         categoryId: state.ui.selectedCategoryId,
         selectedProviderId: provider.provider_id,
-        providerName: provider.full_name,
         address: state.requestDraft.address,
         serviceLat: state.requestDraft.lat,
         serviceLng: state.requestDraft.lng,
@@ -211,7 +291,7 @@ function bindBasicControls() {
         providerPrice: pricing.provider_price,
         platformFee: pricing.platform_fee,
         totalPrice: pricing.total_price,
-        currency: pricing.currency
+        currency: pricing.currency,
       });
 
       setState((draft) => {
@@ -222,18 +302,13 @@ function bindBasicControls() {
           requestType: draft.requestDraft.requestType,
           requestedHours: draft.requestDraft.requestedHours,
           total_price: pricing.total_price,
-          conversation_id: request?.conversation_id ?? "demo-conversation"
+          conversation_id: request?.conversation_id ?? null,
         };
         draft.tracking.clientPosition = {
           lat: draft.requestDraft.lat,
-          lng: draft.requestDraft.lng
+          lng: draft.requestDraft.lng,
         };
         draft.meta.info = "Solicitud creada correctamente.";
-      });
-
-      updateTrackingMarkers({
-        clientPosition: state.tracking.clientPosition,
-        providerPosition: state.tracking.providerPosition
       });
 
       await hydrateLiveContext(request);
@@ -243,13 +318,12 @@ function bindBasicControls() {
     const requestAction = event.target.closest("[data-request-action]");
     if (requestAction?.dataset.requestAction === "cancel") {
       await updateRequestStatus(appConfig.functions.cancelRequest, {
-        requestId: state.client.activeRequest?.id
+        request_id: state.client.activeRequest?.id,
+        reason: "cancelled_from_client_ui",
       });
 
       setState((draft) => {
-        if (draft.client.activeRequest) {
-          draft.client.activeRequest.status = "CANCELLED";
-        }
+        if (draft.client.activeRequest) draft.client.activeRequest.status = "CANCELLED";
       });
 
       await hydrateLiveContext();
@@ -264,34 +338,19 @@ function bindBasicControls() {
     const offerAction = event.target.closest("[data-offer-action]");
     if (offerAction) {
       const offer = state.provider.offers.find(
-        (item) => item.id === offerAction.dataset.offerId
+        (item) => item.id === offerAction.dataset.offerId,
       );
       if (!offer) return;
 
-      const accept = offerAction.dataset.offerAction === "accept";
+      const action = offerAction.dataset.offerAction === "accept" ? "ACCEPT" : "REJECT";
 
       await updateRequestStatus(appConfig.functions.providerRespondOffer, {
-        offerId: offer.id,
-        accept
+        offer_id: offer.id,
+        action,
       });
 
       setState((draft) => {
-        draft.provider.offers = draft.provider.offers.filter(
-          (item) => item.id !== offer.id
-        );
-
-        if (accept) {
-          draft.provider.activeService = {
-            ...offer,
-            status: "ACCEPTED"
-          };
-          draft.provider.stats.offers += 1;
-          draft.client.activeRequest = {
-            ...(draft.client.activeRequest ?? {}),
-            status: "ACCEPTED",
-            providerName: offer.client_name
-          };
-        }
+        draft.provider.offers = draft.provider.offers.filter((item) => item.id !== offer.id);
       });
 
       await hydrateLiveContext();
@@ -317,31 +376,26 @@ function bindBasicControls() {
         "en-route": "PROVIDER_EN_ROUTE",
         arrived: "PROVIDER_ARRIVED",
         start: "IN_PROGRESS",
-        complete: "COMPLETED"
+        complete: "COMPLETED",
       };
 
       const functionName = {
         "en-route": appConfig.functions.providerEnRoute,
         arrived: appConfig.functions.providerArrived,
         start: appConfig.functions.startService,
-        complete: appConfig.functions.completeService
+        complete: appConfig.functions.completeService,
       }[action];
 
       await updateRequestStatus(functionName, {
-        requestId: state.provider.activeService?.request_id
+        request_id: state.provider.activeService?.request_id ?? state.provider.activeService?.id,
       });
 
       setState((draft) => {
         if (draft.provider.activeService) {
           draft.provider.activeService.status = nextStatuses[action];
         }
-
         if (draft.client.activeRequest) {
           draft.client.activeRequest.status = nextStatuses[action];
-        }
-
-        if (action === "complete") {
-          draft.provider.stats.completed += 1;
         }
       });
 
@@ -366,7 +420,7 @@ async function bootstrapAsyncData() {
 
   const [notifications, offers] = await Promise.all([
     loadNotifications(session.userId),
-    loadOffers(session.providerId)
+    loadOffers(session.providerId),
   ]);
 
   setState((draft) => {
@@ -375,6 +429,7 @@ async function bootstrapAsyncData() {
   });
 
   await hydrateLiveContext();
+  await registerCurrentDevice();
 }
 
 function registerInstallPrompt() {
@@ -395,9 +450,7 @@ function setupRealtime(
     state.provider.activeService?.request_id ??
     state.provider.activeService?.id ??
     null,
-  conversationId = state.client.activeRequest?.conversation_id ??
-    state.provider.activeService?.conversation_id ??
-    null
+  conversationId = currentConversationId(),
 ) {
   subscribeToServiceRealtime({
     userId: state.session.userId,
@@ -417,7 +470,8 @@ function setupRealtime(
       if (!payload) return;
 
       setState((draft) => {
-        draft.chat.messages.push(payload);
+        const exists = draft.chat.messages.some((msg) => msg.id === payload.id);
+        if (!exists) draft.chat.messages.push(payload);
         if (payload.sender_user_id !== draft.session.userId) {
           draft.chat.unreadCount += 1;
         }
@@ -431,7 +485,7 @@ function setupRealtime(
       setState((draft) => {
         draft.tracking.providerPosition = {
           lat: payload.lat,
-          lng: payload.lng
+          lng: payload.lng,
         };
       });
 
@@ -439,8 +493,8 @@ function setupRealtime(
         clientPosition: state.tracking.clientPosition,
         providerPosition: {
           lat: payload.lat,
-          lng: payload.lng
-        }
+          lng: payload.lng,
+        },
       });
     },
     onRequest: ({ new: payload }) => {
@@ -450,7 +504,7 @@ function setupRealtime(
         if (draft.client.activeRequest?.id === payload.id) {
           draft.client.activeRequest = {
             ...draft.client.activeRequest,
-            ...payload
+            ...payload,
           };
         }
 
@@ -460,7 +514,7 @@ function setupRealtime(
         ) {
           draft.provider.activeService = {
             ...draft.provider.activeService,
-            ...payload
+            ...payload,
           };
         }
       });
@@ -470,13 +524,11 @@ function setupRealtime(
 
       setState((draft) => {
         const exists = draft.provider.offers.some((offer) => offer.id === payload.id);
-        if (!exists) {
-          draft.provider.offers.unshift(payload);
-        }
+        if (!exists) draft.provider.offers.unshift(payload);
       });
 
       playNotificationSound();
-    }
+    },
   });
 }
 
@@ -494,7 +546,6 @@ async function init() {
   updateScheduledVisibility();
   bindBasicControls();
   registerInstallPrompt();
-
   initMap("trackingMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
 
   if ("serviceWorker" in navigator) {
@@ -502,6 +553,7 @@ async function init() {
   }
 
   await bootstrapAsyncData();
+  startProviderTrackingLoop();
   setupRealtime();
   renderApp(state);
 }
