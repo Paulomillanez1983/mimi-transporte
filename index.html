@@ -1128,16 +1128,16 @@ async function buscarDireccion(query) {
       </div>
 
       <div class="trip-active-actions" id="tripActiveActions" hidden>
-        <button
-          class="btn-secondary btn-chat-trip"
-          id="btnChatChofer"
-          type="button"
-          aria-label="Chatear con el chofer"
-        >
-          <span aria-hidden="true">💬</span>
-          <span>Chat</span>
-        </button>
-
+<button
+  class="btn-secondary btn-chat-trip has-chat-badge"
+  id="btnChatChofer"
+  type="button"
+  aria-label="Chatear con el chofer"
+>
+  <span aria-hidden="true">💬</span>
+  <span>Chat</span>
+  <span id="tripChatBadgeClient" class="trip-chat-fab-badge" hidden></span>
+</button>
         <button
           class="btn-secondary btn-cancel-trip"
           id="btnCancelarViajeLive"
