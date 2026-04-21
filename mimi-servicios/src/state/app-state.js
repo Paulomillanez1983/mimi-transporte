@@ -1,11 +1,21 @@
 import { appConfig } from "../config.js";
+import {
+  loadActiveService,
+  loadNotifications,
+  loadProviderMode,
+  loadProviderStatus,
+  saveActiveService,
+  saveNotifications,
+  saveProviderMode,
+  saveProviderStatus,
+} from "../services/provider-storage.js";
 
 const listeners = new Set();
 
 export const state = {
   ui: {
     appEntered: false,
-    activeMode: "client",
+    activeMode: loadProviderMode(),
     selectedCategoryId: appConfig.categories[0].id,
     installPromptEvent: null,
   },
@@ -29,24 +39,32 @@ export const state = {
     activeConversationId: null,
   },
   provider: {
-    status: "OFFLINE",
+    profile: null,
+    status: loadProviderStatus(),
+    availability: {
+      isOnline: loadProviderStatus() === "ONLINE_IDLE",
+      lastSeenAt: null,
+    },
     offers: [],
-    activeService: null,
+    activeService: loadActiveService(),
+    offerDeadlineAt: null,
+    lastOfferSoundAt: null,
     stats: {
       rating: 5,
-      offers: 0,
       completed: 0,
     },
   },
   chat: {
+    conversationId: null,
     messages: [],
     unreadCount: 0,
   },
   notifications: {
-    items: [],
+    items: loadNotifications(),
     unreadCount: 0,
   },
   tracking: {
+    active: false,
     providerPosition: null,
     clientPosition: null,
   },
@@ -54,10 +72,17 @@ export const state = {
     loading: {},
     lastSearchAt: null,
     error: null,
-    info: "Configuracion lista para integrar con Supabase.",
+    info: "Configuración lista para integrar con Supabase.",
     backendMode: "mock",
   },
 };
+
+function persistState() {
+  saveProviderMode(state.ui.activeMode);
+  saveProviderStatus(state.provider.status);
+  saveActiveService(state.provider.activeService);
+  saveNotifications(state.notifications.items);
+}
 
 export function subscribe(listener) {
   listeners.add(listener);
@@ -66,6 +91,7 @@ export function subscribe(listener) {
 
 export function setState(updater) {
   updater(state);
+  persistState();
   listeners.forEach((listener) => listener(state));
 }
 
