@@ -7,10 +7,12 @@ export const appConfig = {
   mapInitialZoom: 12,
   rpc: {
     searchProvidersRanked: "svc_search_providers_ranked",
-    prepareRequestPricing: "svc_prepare_request_pricing"
+    prepareRequestPricing: "svc_prepare_request_pricing",
   },
   functions: {
+    searchProviders: "svc-search-providers",
     createRequest: "svc-create-request",
+    sendOffer: "svc-send-offer",
     providerRespondOffer: "svc-provider-respond-offer",
     providerEnRoute: "svc-provider-en-route",
     providerArrived: "svc-provider-arrived",
@@ -19,7 +21,7 @@ export const appConfig = {
     cancelRequest: "svc-cancel-request",
     sendMessage: "svc-send-message",
     trackLocation: "svc-track-location",
-    registerDevice: "svc-register-device"
+    registerDevice: "svc-register-device",
   },
   serviceStates: [
     "SEARCHING",
@@ -30,7 +32,7 @@ export const appConfig = {
     "PROVIDER_ARRIVED",
     "IN_PROGRESS",
     "COMPLETED",
-    "CANCELLED"
+    "CANCELLED",
   ],
   providerStatuses: [
     "OFFLINE",
@@ -41,14 +43,14 @@ export const appConfig = {
     "ARRIVED",
     "IN_SERVICE",
     "PAUSED",
-    "BLOCKED"
+    "BLOCKED",
   ],
   categories: [
     {
       id: "cleaning",
       code: "cleaning",
       name: "Limpieza",
-      description: "Hogar, oficinas y express."
-    }
-  ]
+      description: "Hogar, oficinas y express.",
+    },
+  ],
 };
