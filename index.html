@@ -2712,28 +2712,6 @@ if (estado === 'OFERTANDO' || estado === 'OFERTADO') {
       avatar.textContent = '🚐';
     }
 
-    if (btnChat) {
-      btnChat.onclick = () => {
-        notif.show('Chat', 'El chat estará disponible cuando un chofer acepte el viaje', 'info');
-      };
-    }
-
-    return;
-  }
-
-  let metaText = 'Chofer asignado';
-  if (estado === 'ACEPTADO') metaText = 'En camino a buscarte';
-  else if (estado === 'EN_CAMINO') metaText = 'Está llegando a tu origen';
-  else if (estado === 'INICIADO' || estado === 'EN_CURSO') metaText = 'Viaje en curso';
-
-  name.textContent = choferNombre || 'Chofer';
-  meta.textContent = metaText;
-  contact.textContent = choferTelefono || 'Sin contacto disponible';
-
-  if (avatar) {
-    avatar.textContent = (choferNombre || 'C').charAt(0).toUpperCase();
-  }
-
 if (btnChat) {
   btnChat.onclick = async () => {
     try {
@@ -2772,6 +2750,7 @@ if (btnChat) {
       notif.show('Chat', err?.message || 'No se pudo abrir el chat con el chofer', 'error');
     }
   };
+}
 }
 
 async function restaurarMapaYCotizacionDesdeStorage(viajeLocal) {
