@@ -308,9 +308,9 @@ async function findOrCreateTripChat(context) {
   const subject = `Chat viaje ${context.tripId}`;
 
   const payload = {
-    created_by: context.clientUserId,
-    user_id: context.clientUserId,
-    rol_origen: "client",
+    created_by: user.id,
+    user_id: user.id,
+    rol_origen: TRIP_CHAT.role === "driver" ? "driver" : "client",
     asunto: subject,
     canal: "trip_in_app",
     categoria: "trip_chat",
@@ -326,6 +326,7 @@ async function findOrCreateTripChat(context) {
       driver_id_uuid: String(context.driverIdUuid || ""),
       client_name: context.clientName || "",
       driver_name: context.driverName || "",
+      created_by_role: TRIP_CHAT.role,
       created_from: TRIP_CHAT.role,
       opened_by: user.id
     }
@@ -453,7 +454,10 @@ async function subscribeRealtime(ticketId) {
 
 async function sendCurrentMessage() {
   if (TRIP_CHAT.sending) return;
-  if (!TRIP_CHAT.activeTicketId) return;
+  if (!TRIP_CHAT.activeTicketId) {
+    setStatus("Esperá un momento: el chat todavía no terminó de abrir");
+    return;
+  }
 
   const text = String(TRIP_CHAT.input?.value || "").trim();
   if (!text) return;
@@ -531,15 +535,22 @@ async function openTripChat(context) {
     meUserId: context.meUserId
   };
   TRIP_CHAT.activeTripId = context.tripId;
+  TRIP_CHAT.activeTicketId = null;
 
-  const ticket = await findOrCreateTripChat(context);
-  TRIP_CHAT.activeTicketId = ticket.id;
+  try {
+    const ticket = await findOrCreateTripChat(context);
+    TRIP_CHAT.activeTicketId = ticket.id;
 
-  const messages = await loadMessages(ticket.id);
-  renderMessages(messages);
+    const messages = await loadMessages(ticket.id);
+    renderMessages(messages);
 
-  await subscribeRealtime(ticket.id);
-  setStatus("");
+    await subscribeRealtime(ticket.id);
+    setStatus("");
+  } catch (err) {
+    console.error("[trip-chat.openTripChat]", err);
+    setStatus(err?.message || "No se pudo abrir el chat");
+    throw err;
+  }
 }
 
 export async function openTripChatForClientTrip(viaje = {}) {
