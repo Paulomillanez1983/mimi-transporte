@@ -1,4 +1,4 @@
-import { initMap } from "./services/map.js";
+import { appConfig } from "../config.js";
 import { searchProviders, prepareRequestPricing, createRequest, cancelRequest } from "./services/service-api.js";
 import { patchState, setState, state, subscribe } from "./state/app-state.js";
 import { renderApp } from "./ui/render.js";
