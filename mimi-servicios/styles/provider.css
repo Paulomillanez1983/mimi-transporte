@@ -1,0 +1,32 @@
+.planner-shell-provider {
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.provider-toggle .toggle-button {
+  min-width: 140px;
+}
+
+.offer-card .action-row,
+#providerActions {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.provider-operational-note {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(43, 182, 115, 0.08);
+  color: #12623d;
+  border: 1px solid rgba(43, 182, 115, 0.14);
+}
+
+@media (max-width: 860px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
