@@ -1,4 +1,5 @@
-import { appConfig } from "./config.js";
+===== src/main.js =====
+import { appConfig } from "../config.js";
 import { initMap, updateTrackingMarkers } from "./services/map.js";
 import {
   bootstrapSession,
@@ -707,3 +708,5 @@ init().catch((error) => {
 window.addEventListener("beforeunload", () => {
   authSubscription?.unsubscribe?.();
 });
+
+
