@@ -2,31 +2,21 @@ import { getSupabaseClient } from "./supabase.js";
 
 let channels = [];
 
-function trackChannel(channel) {
-  channels.push(channel);
-  return channel;
-}
-
 export function disconnectRealtime() {
   const supabase = getSupabaseClient();
   if (!supabase) return;
 
   channels.forEach((channel) => {
-    try {
-      supabase.removeChannel(channel);
-    } catch {
-      // noop
-    }
+    supabase.removeChannel(channel);
   });
-
   channels = [];
 }
 
-export function subscribeToUserNotifications(userId, cb) {
+function subscribeNotifications(userId, onNotification) {
   const supabase = getSupabaseClient();
-  if (!supabase || !userId || typeof cb !== "function") return null;
+  if (!supabase || !userId || typeof onNotification !== "function") return;
 
-  return trackChannel(
+  channels.push(
     supabase
       .channel(`mimi-servicios-notifications-${userId}`)
       .on(
@@ -37,17 +27,17 @@ export function subscribeToUserNotifications(userId, cb) {
           table: "svc_notifications",
           filter: `user_id=eq.${userId}`,
         },
-        cb,
+        onNotification,
       )
       .subscribe(),
   );
 }
 
-export function subscribeToConversationMessages(conversationId, cb) {
+function subscribeMessages(conversationId, onMessage) {
   const supabase = getSupabaseClient();
-  if (!supabase || !conversationId || typeof cb !== "function") return null;
+  if (!supabase || !conversationId || typeof onMessage !== "function") return;
 
-  return trackChannel(
+  channels.push(
     supabase
       .channel(`mimi-servicios-messages-${conversationId}`)
       .on(
@@ -58,87 +48,75 @@ export function subscribeToConversationMessages(conversationId, cb) {
           table: "svc_messages",
           filter: `conversation_id=eq.${conversationId}`,
         },
-        cb,
+        onMessage,
       )
       .subscribe(),
   );
 }
 
-export function subscribeToRequestTracking(requestId, cb) {
+function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
   const supabase = getSupabaseClient();
-  if (!supabase || !requestId || typeof cb !== "function") return null;
+  if (!supabase || !requestId) return;
 
-  return trackChannel(
-    supabase
-      .channel(`mimi-servicios-tracking-${requestId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "svc_tracking",
-          filter: `request_id=eq.${requestId}`,
-        },
-        cb,
-      )
-      .subscribe(),
-  );
-}
+  if (typeof onTracking === "function") {
+    channels.push(
+      supabase
+        .channel(`mimi-servicios-tracking-${requestId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "svc_tracking",
+            filter: `request_id=eq.${requestId}`,
+          },
+          onTracking,
+        )
+        .subscribe(),
+    );
+  }
 
-export function subscribeToRequestState(requestId, onRequest, onOffer) {
-  const supabase = getSupabaseClient();
-  if (!supabase || !requestId) return [];
-
-  const localChannels = [];
+  const requestChannel = supabase.channel(`mimi-servicios-requests-${requestId}`);
+  let hasRequestSubscriptions = false;
 
   if (typeof onRequest === "function") {
-    localChannels.push(
-      trackChannel(
-        supabase
-          .channel(`mimi-servicios-request-${requestId}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "svc_requests",
-              filter: `id=eq.${requestId}`,
-            },
-            onRequest,
-          )
-          .subscribe(),
-      ),
+    requestChannel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "svc_requests",
+        filter: `id=eq.${requestId}`,
+      },
+      onRequest,
     );
+    hasRequestSubscriptions = true;
   }
 
   if (typeof onOffer === "function") {
-    localChannels.push(
-      trackChannel(
-        supabase
-          .channel(`mimi-servicios-request-offers-${requestId}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "svc_request_offers",
-              filter: `request_id=eq.${requestId}`,
-            },
-            onOffer,
-          )
-          .subscribe(),
-      ),
+    requestChannel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "svc_request_offers",
+        filter: `request_id=eq.${requestId}`,
+      },
+      onOffer,
     );
+    hasRequestSubscriptions = true;
   }
 
-  return localChannels;
+  if (hasRequestSubscriptions) {
+    channels.push(requestChannel.subscribe());
+  }
 }
 
-export function subscribeToProviderOffers(providerId, cb) {
+function subscribeProviderOffers(providerId, onOffer) {
   const supabase = getSupabaseClient();
-  if (!supabase || !providerId || typeof cb !== "function") return null;
+  if (!supabase || !providerId || typeof onOffer !== "function") return;
 
-  return trackChannel(
+  channels.push(
     supabase
       .channel(`mimi-servicios-provider-offers-${providerId}`)
       .on(
@@ -149,21 +127,54 @@ export function subscribeToProviderOffers(providerId, cb) {
           table: "svc_request_offers",
           filter: `provider_id=eq.${providerId}`,
         },
-        cb,
+        onOffer,
       )
       .subscribe(),
   );
 }
 
+export function subscribeToClientRealtime({
+  userId,
+  requestId,
+  conversationId,
+  onNotification,
+  onMessage,
+  onTracking,
+  onRequest,
+}) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
 
-export function subscribeToServiceRealtime({ userId, providerId, requestId, conversationId, onNotification, onMessage, onTracking, onRequest, onOffer } = {}) {
   disconnectRealtime();
-  if (userId && typeof onNotification === "function") subscribeToUserNotifications(userId, onNotification);
-  if (conversationId && typeof onMessage === "function") subscribeToConversationMessages(conversationId, onMessage);
-  if (requestId) {
-    if (typeof onTracking === "function") subscribeToRequestTracking(requestId, onTracking);
-    if (typeof onRequest === "function" || typeof onOffer === "function") subscribeToRequestState(requestId, onRequest, onOffer);
+  subscribeNotifications(userId, onNotification);
+  subscribeMessages(conversationId, onMessage);
+  subscribeRequest(requestId, onTracking, onRequest, null);
+}
+
+export function subscribeToProviderRealtime({
+  userId,
+  providerId,
+  requestId,
+  conversationId,
+  onNotification,
+  onMessage,
+  onTracking,
+  onRequest,
+  onOffer,
+}) {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+
+  disconnectRealtime();
+  subscribeNotifications(userId, onNotification);
+  subscribeMessages(conversationId, onMessage);
+  subscribeRequest(requestId, onTracking, onRequest, onOffer);
+  subscribeProviderOffers(providerId, onOffer);
+}
+
+export function subscribeToServiceRealtime(options) {
+  if (options?.providerId) {
+    return subscribeToProviderRealtime(options);
   }
-  if (providerId && typeof onOffer === "function") subscribeToProviderOffers(providerId, onOffer);
-  return channels;
+  return subscribeToClientRealtime(options);
 }
