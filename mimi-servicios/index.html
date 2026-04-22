@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <meta name="description" content="MIMI Servicios - Marketplace de servicios domesticos con experiencia mobile-first.">
+  <meta name="description" content="MIMI Servicios - Marketplace de servicios domésticos con experiencia mobile-first.">
   <title>MIMI Servicios</title>
 
   <link rel="manifest" href="./manifest.json">
@@ -28,14 +28,16 @@
       </div>
 
       <div class="topbar-actions">
+        <a class="ghost-button" href="../hub.html" aria-label="Volver al inicio MIMI">MIMI</a>
+
         <span class="status-chip" id="sessionChip">Invitado</span>
 
-        <button class="icon-button" id="notificationsButton" aria-label="Abrir notificaciones">
+        <button class="icon-button" id="notificationsButton" aria-label="Abrir notificaciones" type="button">
           <span>🔔</span>
           <strong id="notificationsCount">0</strong>
         </button>
 
-        <button class="icon-button" id="chatButton" aria-label="Abrir chat">
+        <button class="icon-button" id="chatButton" aria-label="Abrir chat" type="button">
           <span>💬</span>
           <strong id="chatUnreadCount">0</strong>
         </button>
@@ -51,10 +53,10 @@
         </div>
 
         <div class="hero-actions">
-          <button class="primary-button" id="authPrimaryButton" data-auth-action="login">Ingresar con Google</button>
-          <button class="ghost-button" id="authSecondaryButton" hidden>Cerrar sesión</button>
-          <button class="ghost-button" id="enterServicesHub">Servicios</button>
-          <button class="ghost-button" id="installButton">Instalar app</button>
+          <button class="primary-button" id="authPrimaryButton" data-auth-action="login" type="button">Ingresar con Google</button>
+          <button class="ghost-button" id="authSecondaryButton" type="button" hidden>Cerrar sesión</button>
+          <button class="ghost-button" id="enterServicesHub" type="button">Servicios</button>
+          <button class="ghost-button" id="installButton" type="button">Instalar app</button>
         </div>
 
         <p class="helper-text" id="authHint">Iniciá sesión para usar búsquedas, solicitudes, chat y tracking reales.</p>
@@ -63,8 +65,8 @@
       <div class="status-banner is-info" id="statusBanner" hidden></div>
 
       <section class="mode-switcher" id="modeSwitcher" hidden>
-        <button class="mode-pill is-active" data-mode="client">Cliente</button>
-        <button class="mode-pill" data-mode="provider">Prestador</button>
+        <button class="mode-pill is-active" data-mode="client" type="button">Cliente</button>
+        <button class="mode-pill" data-mode="provider" type="button">Prestador</button>
       </section>
 
       <section class="screen-grid">
@@ -161,8 +163,8 @@
             </div>
 
             <div class="provider-toggle">
-              <button class="toggle-button is-active" data-provider-status="OFFLINE">Offline</button>
-              <button class="toggle-button" data-provider-status="ONLINE_IDLE">Online</button>
+              <button class="toggle-button is-active" data-provider-status="OFFLINE" type="button">Offline</button>
+              <button class="toggle-button" data-provider-status="ONLINE_IDLE" type="button">Online</button>
             </div>
 
             <div class="stats-grid">
