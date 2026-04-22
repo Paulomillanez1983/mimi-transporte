@@ -62,7 +62,9 @@ export async function signInWithGoogle() {
   const redirectTarget = currentPageName() === "prestador.html"
     ? "./prestador.html"
     : "./cliente.html";
+
   const redirectTo = new URL(redirectTarget, window.location.href).toString();
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -97,19 +99,35 @@ export function subscribeToAuthChanges(callback) {
   return data?.subscription ?? null;
 }
 
-export function resolveSessionRole(session) {
-  const role =
+export async function resolveSessionRole(session) {
+  if (!session?.user?.id) return "client";
+
+  const supabase = getSupabaseClient();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from("svc_providers")
+      .select("id")
+      .eq("user_id", session.user.id)
+      .limit(1);
+
+    if (!error && Array.isArray(data) && data.length > 0) {
+      return "provider";
+    }
+  }
+
+  const metadataRole =
     session?.user?.app_metadata?.role ||
     session?.user?.user_metadata?.role ||
     "client";
 
-  return role === "provider" ? "provider" : "client";
+  return metadataRole === "provider" ? "provider" : "client";
 }
 
-export function redirectAfterLoginByRole(session) {
-  const role = resolveSessionRole(session);
+export async function redirectAfterLoginByRole(session) {
+  const role = await resolveSessionRole(session);
   const target = role === "provider" ? "./prestador.html" : "./cliente.html";
   const currentPath = currentPageName();
+
   if (currentPath === target.replace("./", "")) return;
   window.location.href = target;
 }
