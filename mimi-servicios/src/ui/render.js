@@ -1,4 +1,3 @@
-===== src/ui/render.js =====
 import { appConfig } from "../../config.js";
 
 const stateLabels = {
