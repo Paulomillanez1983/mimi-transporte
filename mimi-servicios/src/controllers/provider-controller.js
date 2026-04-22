@@ -8,8 +8,10 @@ import {
   loadProviderOffers,
   markProviderArrived,
   markProviderEnRoute,
+  rejectOffer,
   sendProviderLocation,
   startService,
+  updateProviderStatus,
 } from "../services/service-api.js";
 import { playOfferSound, playStatusSound } from "../services/sound.js";
 import { setState, state } from "../state/app-state.js";
@@ -107,11 +109,19 @@ export async function rejectProviderOffer(offerId) {
   return response;
 }
 
-export function setProviderStatus(status) {
+export async function setProviderStatus(status) {
+  const now = new Date().toISOString();
+  let profile = state.provider.profile;
+
+  if (state.session.providerId) {
+    profile = await updateProviderStatus(state.session.providerId, status) ?? profile;
+  }
+
   setState((draft) => {
-    draft.provider.status = status;
-    draft.provider.availability.isOnline = status === "ONLINE_IDLE";
-    draft.provider.availability.lastSeenAt = new Date().toISOString();
+    draft.provider.profile = profile ?? draft.provider.profile;
+    draft.provider.status = profile?.status ?? status;
+    draft.provider.availability.isOnline = (profile?.status ?? status) === "ONLINE_IDLE";
+    draft.provider.availability.lastSeenAt = now;
   });
 }
 
