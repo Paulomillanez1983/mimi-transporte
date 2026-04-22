@@ -1,4 +1,3 @@
-===== src/main.js =====
 import { appConfig } from "../config.js";
 import { initMap, updateTrackingMarkers } from "./services/map.js";
 import {
