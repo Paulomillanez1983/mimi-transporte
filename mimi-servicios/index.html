@@ -1,18 +1,18 @@
+@ -0,0 +1,314 @@
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
-  <meta name="description" content="MIMI Servicios - Marketplace de servicios domésticos con experiencia mobile-first.">
+  <meta name="theme-color" content="#163867">
+  <meta name="description" content="MIMI Servicios. Pedi ayuda en minutos con una experiencia simple, mobile-first y confiable.">
   <title>MIMI Servicios</title>
 
   <link rel="manifest" href="./manifest.json">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Instrument+Sans:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap"
     rel="stylesheet"
   >
 
@@ -21,223 +21,271 @@
 </head>
 <body>
   <div class="app-shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">MIMI Marketplace</p>
-        <h1>MIMI Servicios</h1>
-      </div>
+    <header class="header" role="banner">
+      <div class="header-content">
+        <div class="vehicle-section" aria-hidden="true">
+          <div class="vehicle-badge">SERVICIOS</div>
+        </div>
 
-      <div class="topbar-actions">
-        <a class="ghost-button" href="../hub.html" aria-label="Volver al inicio MIMI">MIMI</a>
+        <div class="logo-section">
+          <div class="logo-title">MIMI</div>
+          <div class="logo-subtitle">Servicios confiables para tu casa</div>
+        </div>
 
-        <span class="status-chip" id="sessionChip">Invitado</span>
+        <div class="header-actions">
+          <div class="header-notifications-wrapper">
+            <button
+              id="notificationsButton"
+              class="trip-notifications"
+              type="button"
+              aria-label="Abrir notificaciones"
+            >
+              &#128276;
+              <span
+                class="trip-notifications-badge"
+                id="notificationsCount"
+                hidden
+              >0</span>
+            </button>
 
-        <button class="icon-button" id="notificationsButton" aria-label="Abrir notificaciones" type="button">
-          <span>🔔</span>
-          <strong id="notificationsCount">0</strong>
-        </button>
+            <button
+              id="chatButton"
+              class="trip-notifications"
+              type="button"
+              aria-label="Abrir chat"
+            >
+              &#128172;
+              <span
+                class="trip-notifications-badge"
+                id="chatUnreadCount"
+                hidden
+              >0</span>
+            </button>
+          </div>
 
-        <button class="icon-button" id="chatButton" aria-label="Abrir chat" type="button">
-          <span>💬</span>
-          <strong id="chatUnreadCount">0</strong>
-        </button>
+          <div class="header-user" id="headerUser">
+            <span class="status-chip session-chip" id="sessionChip">Invitado</span>
+            <button class="header-login-btn" id="authPrimaryButton" data-auth-action="login" type="button">
+              Ingresar
+            </button>
+            <button class="header-logout-btn" id="authSecondaryButton" type="button" hidden>
+              Salir
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 
-    <main class="layout">
-      <section class="hero-card">
-        <div class="hero-copy">
-          <p class="eyebrow">Hub independiente</p>
-          <h2>Entrá a Servicios sin tocar Transporte</h2>
-          <p>Arquitectura desacoplada, UX mobile-first y flujo tipo Uber para cliente y prestador.</p>
-        </div>
-
-        <div class="hero-actions">
-          <button class="primary-button" id="authPrimaryButton" data-auth-action="login" type="button">Ingresar con Google</button>
-          <button class="ghost-button" id="authSecondaryButton" type="button" hidden>Cerrar sesión</button>
-          <button class="ghost-button" id="enterServicesHub" type="button">Servicios</button>
-          <button class="ghost-button" id="installButton" type="button">Instalar app</button>
-        </div>
-
-        <p class="helper-text" id="authHint">Iniciá sesión para usar búsquedas, solicitudes, chat y tracking reales.</p>
+    <main class="container" role="main">
+      <section class="hero-text" aria-labelledby="heroTitle">
+        <h1 class="hero-title" id="heroTitle">Pedi un servicio sin vueltas</h1>
+        <p class="hero-subtitle">Elegi la categoria, indica el lugar y recibi prestadores disponibles cerca tuyo.</p>
       </section>
 
       <div class="status-banner is-info" id="statusBanner" hidden></div>
 
-      <section class="mode-switcher" id="modeSwitcher" hidden>
-        <button class="mode-pill is-active" data-mode="client" type="button">Cliente</button>
-        <button class="mode-pill" data-mode="provider" type="button">Prestador</button>
-      </section>
-
-      <section class="screen-grid">
-        <div class="screen-column" id="clientScreen">
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Cliente</p>
-                <h3>Pedí un servicio</h3>
-              </div>
-              <span class="status-chip" id="requestStateChip">Sin solicitud activa</span>
-            </div>
-
-            <div class="category-grid" id="categoryGrid"></div>
-
-            <form class="form-stack" id="requestForm">
-              <label>
-                <span>Ubicación del servicio</span>
-                <input id="serviceAddressInput" name="address" type="text" placeholder="Ej. Av. Recta Martinolli 7788">
-              </label>
-
-              <div class="double-grid">
-                <label>
-                  <span>Latitud</span>
-                  <input id="serviceLatInput" name="lat" type="number" step="any" placeholder="-31.42">
-                </label>
-
-                <label>
-                  <span>Longitud</span>
-                  <input id="serviceLngInput" name="lng" type="number" step="any" placeholder="-64.18">
-                </label>
+      <section class="main-card" aria-label="Planificador de servicio">
+        <div class="planner-shell">
+          <section class="planner-panel">
+            <div class="planner-topbar">
+              <div class="planner-topbar-copy">
+                <span class="eyebrow">Cliente</span>
+                <h2>Planifica tu servicio</h2>
+                <p id="authHint">Ingresa con Google para usar busquedas, solicitudes, chat y seguimiento real.</p>
               </div>
 
-              <div class="double-grid">
-                <label>
-                  <span>Tipo</span>
-                  <select id="requestTypeSelect" name="requestType">
-                    <option value="IMMEDIATE">Inmediato</option>
-                    <option value="SCHEDULED">Programado</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span>Duración (hs)</span>
-                  <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2">
-                </label>
-              </div>
-
-              <label id="scheduledForWrapper" hidden>
-                <span>Fecha y hora</span>
-                <input id="scheduledForInput" name="scheduledFor" type="datetime-local">
-              </label>
-
-              <button class="primary-button" type="submit" id="searchProvidersButton">
-                Buscar prestadores
-              </button>
-            </form>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Ranking</p>
-                <h3>Prestadores disponibles</h3>
-              </div>
-              <span class="helper-text" id="providersMeta">Sin búsqueda todavía</span>
-            </div>
-
-            <div class="card-list" id="providersList"></div>
-          </article>
-
-          <article class="panel" id="requestSummaryPanel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Solicitud</p>
-                <h3>Resumen en tiempo real</h3>
+              <div class="hero-actions">
+                <button class="btn-secondary" id="enterServicesHub" data-auth-action="enter" type="button">
+                  Entrar
+                </button>
+                <button class="btn-secondary" id="installButton" type="button">
+                  Instalar app
+                </button>
               </div>
             </div>
 
-            <div id="requestSummary"></div>
-            <div class="timeline" id="requestTimeline"></div>
-            <div class="action-row" id="requestActions"></div>
-          </article>
+            <section class="mode-switcher" id="modeSwitcher" hidden>
+              <button class="mode-pill is-active" data-mode="client" type="button">Cliente</button>
+              <button class="mode-pill" data-mode="provider" type="button">Prestador</button>
+            </section>
+
+            <div class="screen-stack">
+              <div class="screen-column" id="clientScreen">
+                <article class="planner-block">
+                  <div class="block-header">
+                    <div>
+                      <span class="eyebrow">Categoria</span>
+                      <h3>Que necesitas hoy?</h3>
+                    </div>
+                    <span class="status-chip" id="requestStateChip">Sin solicitud activa</span>
+                  </div>
+
+                  <div class="category-grid" id="categoryGrid"></div>
+                </article>
+
+                <article class="planner-block">
+                  <div class="block-header">
+                    <div>
+                      <span class="eyebrow">Detalles</span>
+                      <h3>Completa los datos</h3>
+                    </div>
+                  </div>
+
+                  <form class="form-stack" id="requestForm">
+                    <label class="input-group">
+                      <span>Ubicacion del servicio</span>
+                      <input id="serviceAddressInput" name="address" type="text" placeholder="Ej. Av. Recta Martinolli 7788">
+                    </label>
+
+                    <div class="double-grid">
+                      <label class="input-group">
+                        <span>Latitud</span>
+                        <input id="serviceLatInput" name="lat" type="number" step="any" placeholder="-31.42">
+                      </label>
+
+                      <label class="input-group">
+                        <span>Longitud</span>
+                        <input id="serviceLngInput" name="lng" type="number" step="any" placeholder="-64.18">
+                      </label>
+                    </div>
+
+                    <div class="double-grid">
+                      <label class="input-group">
+                        <span>Tipo</span>
+                        <select id="requestTypeSelect" name="requestType">
+                          <option value="IMMEDIATE">Inmediato</option>
+                          <option value="SCHEDULED">Programado</option>
+                        </select>
+                      </label>
+
+                      <label class="input-group">
+                        <span>Duracion</span>
+                        <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2">
+                      </label>
+                    </div>
+
+                    <label class="input-group" id="scheduledForWrapper" hidden>
+                      <span>Fecha y hora</span>
+                      <input id="scheduledForInput" name="scheduledFor" type="datetime-local">
+                    </label>
+
+                    <button class="btn-primary" type="submit" id="searchProvidersButton">
+                      Ver prestadores y cotizar
+                    </button>
+                  </form>
+                </article>
+
+                <article class="planner-block">
+                  <div class="block-header">
+                    <div>
+                      <span class="eyebrow">Prestadores</span>
+                      <h3>Opciones disponibles</h3>
+                    </div>
+                    <span class="helper-text" id="providersMeta">Esperando busqueda</span>
+                  </div>
+
+                  <div class="card-list" id="providersList"></div>
+                </article>
+              </div>
+
+              <div class="screen-column" id="providerScreen" hidden>
+                <article class="planner-block">
+                  <div class="block-header">
+                    <div>
+                      <span class="eyebrow">Prestador</span>
+                      <h3>Panel operativo</h3>
+                    </div>
+                    <span class="status-chip" id="providerStateChip">OFFLINE</span>
+                  </div>
+
+                  <div class="provider-toggle">
+                    <button class="toggle-button is-active" data-provider-status="OFFLINE" type="button">Offline</button>
+                    <button class="toggle-button" data-provider-status="ONLINE_IDLE" type="button">Online</button>
+                  </div>
+
+                  <div class="stats-grid">
+                    <div class="stat-card">
+                      <span>Rating</span>
+                      <strong id="providerRating">5.0</strong>
+                    </div>
+                    <div class="stat-card">
+                      <span>Ofertas</span>
+                      <strong id="providerOffersCount">0</strong>
+                    </div>
+                    <div class="stat-card">
+                      <span>Servicios</span>
+                      <strong id="providerCompletedCount">0</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="planner-block">
+                  <div class="block-header">
+                    <div>
+                      <span class="eyebrow">Ofertas</span>
+                      <h3>Bandeja entrante</h3>
+                    </div>
+                  </div>
+                  <div class="card-list" id="offersList"></div>
+                </article>
+
+                <article class="planner-block">
+                  <div class="block-header">
+                    <div>
+                      <span class="eyebrow">Servicio activo</span>
+                      <h3>Control del servicio</h3>
+                    </div>
+                  </div>
+                  <div id="providerActiveService"></div>
+                  <div class="action-row" id="providerActions"></div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <aside class="summary-panel">
+            <section class="map-card">
+              <div class="map-card-header">
+                <div>
+                  <span class="eyebrow">Mapa</span>
+                  <h3>Seguimiento en vivo</h3>
+                </div>
+                <span class="helper-text" id="mapStatus">Esperando actividad</span>
+              </div>
+              <div id="trackingMap" class="map-surface"></div>
+            </section>
+
+            <section class="request-card" id="requestSummaryPanel">
+              <div class="block-header compact">
+                <div>
+                  <span class="eyebrow">Solicitud</span>
+                  <h3>Resumen del servicio</h3>
+                </div>
+              </div>
+
+              <div id="requestSummary"></div>
+              <div class="timeline" id="requestTimeline"></div>
+              <div class="action-row" id="requestActions"></div>
+            </section>
+
+            <section class="activity-card">
+              <div class="block-header compact">
+                <div>
+                  <span class="eyebrow">Actividad</span>
+                  <h3>Notificaciones recientes</h3>
+                </div>
+              </div>
+              <div class="card-list compact" id="notificationsList"></div>
+            </section>
+          </aside>
         </div>
-
-        <div class="screen-column" id="providerScreen" hidden>
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Prestador</p>
-                <h3>Panel operativo</h3>
-              </div>
-              <span class="status-chip" id="providerStateChip">OFFLINE</span>
-            </div>
-
-            <div class="provider-toggle">
-              <button class="toggle-button is-active" data-provider-status="OFFLINE" type="button">Offline</button>
-              <button class="toggle-button" data-provider-status="ONLINE_IDLE" type="button">Online</button>
-            </div>
-
-            <div class="stats-grid">
-              <div class="stat-card">
-                <span>Rating</span>
-                <strong id="providerRating">5.0</strong>
-              </div>
-              <div class="stat-card">
-                <span>Ofertas</span>
-                <strong id="providerOffersCount">0</strong>
-              </div>
-              <div class="stat-card">
-                <span>Servicios</span>
-                <strong id="providerCompletedCount">0</strong>
-              </div>
-            </div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Ofertas</p>
-                <h3>Bandeja entrante</h3>
-              </div>
-            </div>
-
-            <div class="card-list" id="offersList"></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Servicio activo</p>
-                <h3>Control operativo</h3>
-              </div>
-            </div>
-
-            <div id="providerActiveService"></div>
-            <div class="action-row" id="providerActions"></div>
-          </article>
-        </div>
-
-        <aside class="screen-column">
-          <article class="panel map-panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Tracking</p>
-                <h3>Mapa operativo</h3>
-              </div>
-              <span class="helper-text" id="mapStatus">Esperando actividad</span>
-            </div>
-
-            <div id="trackingMap" class="map-surface"></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Actividad</p>
-                <h3>Notificaciones recientes</h3>
-              </div>
-            </div>
-
-            <div class="card-list compact" id="notificationsList"></div>
-          </article>
-        </aside>
       </section>
     </main>
 
     <aside class="drawer" id="notificationsDrawer" aria-hidden="true">
       <div class="drawer-header">
         <h3>Centro de notificaciones</h3>
-        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">✕</button>
+        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">X</button>
       </div>
       <div class="drawer-body" id="notificationsDrawerBody"></div>
     </aside>
@@ -245,15 +293,15 @@
     <aside class="drawer" id="chatDrawer" aria-hidden="true">
       <div class="drawer-header">
         <h3>Chat en tiempo real</h3>
-        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">✕</button>
+        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">X</button>
       </div>
 
       <div class="drawer-body chat-body">
         <div class="chat-list" id="chatMessages"></div>
 
         <form class="chat-form" id="chatForm">
-          <input id="chatInput" type="text" maxlength="500" placeholder="Escribí un mensaje...">
-          <button class="primary-button" type="submit">Enviar</button>
+          <input id="chatInput" type="text" maxlength="500" placeholder="Escribi un mensaje...">
+          <button class="btn-primary" type="submit">Enviar</button>
         </form>
       </div>
     </aside>
