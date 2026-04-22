@@ -1,11 +1,17 @@
-const CACHE_NAME = "mimi-servicios-v1";
+const CACHE_NAME = "mimi-servicios-v2";
 const APP_ASSETS = [
   "./",
   "./index.html",
-  "./styles/app.css",
+  "./cliente.html",
+  "./prestador.html",
+  "./config.js",
   "./env.js",
-  "./src/main.js",
   "./manifest.json",
+  "./styles/app.css",
+  "./styles/client.css",
+  "./styles/provider.css",
+  "./src/main-client.js",
+  "./src/main-provider.js",
 ];
 
 self.addEventListener("install", (event) => {
@@ -22,7 +28,7 @@ self.addEventListener("activate", (event) => {
         keys
           .filter((key) => key !== CACHE_NAME)
           .map((key) => caches.delete(key)),
-      )
+      ),
     ),
   );
   self.clients.claim();
@@ -31,19 +37,18 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
+  const isNavigation = event.request.mode === "navigate";
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
 
-      return fetch(event.request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, copy);
-          });
-          return response;
-        })
-        .catch(() => caches.match("./index.html"));
+      return fetch(event.request).catch(() => {
+        if (isNavigation) {
+          return caches.match("./cliente.html");
+        }
+        return Response.error();
+      });
     }),
   );
 });
