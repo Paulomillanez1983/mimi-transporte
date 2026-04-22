@@ -1,4 +1,4 @@
-import { appConfig } from "../../config.js";
+import { appConfig } from "../config.js";
 import {
   callRpc,
   fetchSingle,
@@ -6,6 +6,7 @@ import {
   getCurrentSession,
   getSupabaseClient,
   invokeFunction,
+  resolveSessionRole,
 } from "./supabase.js";
 import {
   buildMockMessages,
@@ -16,6 +17,18 @@ import {
 
 function hasBackend() {
   return Boolean(getSupabaseClient());
+}
+
+function validateDraftLocation(draft) {
+  if (
+    !draft?.address ||
+    !Number.isFinite(Number(draft?.lat)) ||
+    !Number.isFinite(Number(draft?.lng))
+  ) {
+    const error = new Error("SERVICE_LOCATION_REQUIRED");
+    error.code = "SERVICE_LOCATION_REQUIRED";
+    throw error;
+  }
 }
 
 function buildAuthError() {
@@ -36,9 +49,11 @@ export async function bootstrapSession() {
 
   const providerRows = userId && hasBackend()
     ? await fetchTable("svc_providers", (query) =>
-        query.select("id,user_id,full_name,email,phone,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at").eq("user_id", userId).limit(1)
+        query.select("id,user_id,status,approved,blocked").eq("user_id", userId).limit(1)
       )
     : [];
+
+  const metadataRole = resolveSessionRole(session);
 
   return {
     isAuthenticated: Boolean(session?.user),
@@ -46,8 +61,7 @@ export async function bootstrapSession() {
     userEmail: session?.user?.email ?? null,
     userName: session?.user?.user_metadata?.full_name ?? session?.user?.user_metadata?.name ?? null,
     providerId: providerRows[0]?.id ?? null,
-    role: providerRows[0]?.id ? "provider" : "client",
-    providerProfile: providerRows[0] ?? null,
+    role: providerRows[0]?.id ? "provider" : metadataRole,
   };
 }
 
@@ -70,6 +84,7 @@ export async function loadCategories() {
 }
 
 export async function searchProviders(categoryId, draft) {
+  validateDraftLocation(draft);
   if (!hasBackend()) return buildMockProviders(categoryId, draft);
   await requireSession();
 
@@ -77,6 +92,7 @@ export async function searchProviders(categoryId, draft) {
     category_id: categoryId,
     service_lat: Number(draft.lat),
     service_lng: Number(draft.lng),
+    address: draft.address,
     request_type: draft.requestType,
     scheduled_for: draft.scheduledFor || null,
     requested_hours: Number(draft.requestedHours),
@@ -102,6 +118,7 @@ export async function prepareRequestPricing({
   providerId,
   draft,
 }) {
+  validateDraftLocation(draft);
   if (!hasBackend()) {
     const candidates = buildMockProviders(categoryId, draft);
     const provider = candidates.find((item) => item.provider_id === providerId);
@@ -138,6 +155,12 @@ export async function prepareRequestPricing({
 }
 
 export async function createRequest(payload) {
+  validateDraftLocation({
+    address: payload.address,
+    lat: payload.serviceLat,
+    lng: payload.serviceLng,
+  });
+
   if (!hasBackend()) {
     return {
       id: crypto.randomUUID(),
