@@ -42,6 +42,49 @@ function renderProviderHeader(state) {
   });
 }
 
+function renderAuth(state) {
+  const authPrimary = document.getElementById("authPrimaryButton");
+  const authSecondary = document.getElementById("authSecondaryButton");
+  const sessionChip = document.getElementById("sessionChip");
+  const authHint = document.getElementById("authHint");
+  const providerModeButton = document.querySelector('[data-mode="provider"]');
+
+  if (sessionChip) {
+    sessionChip.textContent = state.session.isAuthenticated
+      ? (state.session.userName || state.session.userEmail || "Sesion activa")
+      : "Invitado";
+  }
+
+  if (authHint) {
+    authHint.textContent = state.session.isAuthenticated
+      ? (state.session.providerId ? "Modo cliente y prestador habilitados." : "Modo cliente habilitado.")
+      : "Inicia sesion para usar busquedas, solicitudes, chat y tracking reales.";
+  }
+
+  if (authPrimary) {
+    authPrimary.textContent = state.session.isAuthenticated ? "Abrir app" : "Ingresar con Google";
+    authPrimary.dataset.authAction = state.session.isAuthenticated ? "enter" : "login";
+  }
+
+  if (authSecondary) {
+    authSecondary.hidden = !state.session.isAuthenticated;
+  }
+
+  if (providerModeButton) {
+    providerModeButton.hidden = !state.session.providerId;
+  }
+}
+
+function renderMeta(state) {
+  const banner = document.getElementById("statusBanner");
+  if (!banner) return;
+
+  const message = state.meta.error || state.meta.info || "";
+  banner.hidden = !message;
+  banner.className = `status-banner ${state.meta.error ? "is-error" : "is-info"}`;
+  banner.textContent = message;
+}
+
 function renderProviderOffers(state) {
   const offersList = document.getElementById("offersList");
   const offers = state.provider.offers ?? [];
@@ -137,7 +180,9 @@ function renderProviderActiveService(state) {
 
 function renderCategories(state) {
   const container = document.getElementById("categoryGrid");
-  container.innerHTML = appConfig.categories.map((category) => `
+  const categories = state.meta.categories?.length ? state.meta.categories : appConfig.categories;
+
+  container.innerHTML = categories.map((category) => `
     <button class="category-card ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""}" data-category-id="${category.id}">
       <strong>${category.name}</strong>
       <span class="muted">${category.description}</span>
@@ -216,7 +261,7 @@ function renderRequest(state) {
     </div>
   `;
 
-  timeline.innerHTML = appConfig.serviceStates.map((status) => `
+  timeline.innerHTML = Object.values(appConfig.serviceStates).map((status) => `
     <div class="timeline-step ${status === request.status ? "is-active" : ""}">
       <strong>${stateLabels[status]}</strong>
       <span class="muted">${status}</span>
@@ -292,6 +337,8 @@ export function renderApp(state) {
     button.classList.toggle("is-active", button.dataset.mode === state.ui.activeMode);
   });
 
+  renderAuth(state);
+  renderMeta(state);
   renderCategories(state);
   renderProviders(state);
   renderRequest(state);
