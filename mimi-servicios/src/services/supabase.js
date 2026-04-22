@@ -1,6 +1,10 @@
-import { appConfig } from "../../config.js";
+import { appConfig } from "../config.js";
 
 let client = null;
+
+function currentPageName() {
+  return window.location.pathname.split("/").pop() || "";
+}
 
 export function hasSupabaseEnv() {
   return Boolean(
@@ -55,7 +59,10 @@ export async function signInWithGoogle() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  const redirectTo = `${window.location.origin}${window.location.pathname}`;
+  const redirectTarget = currentPageName() === "prestador.html"
+    ? "./prestador.html"
+    : "./cliente.html";
+  const redirectTo = new URL(redirectTarget, window.location.href).toString();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -88,6 +95,23 @@ export function subscribeToAuthChanges(callback) {
   });
 
   return data?.subscription ?? null;
+}
+
+export function resolveSessionRole(session) {
+  const role =
+    session?.user?.app_metadata?.role ||
+    session?.user?.user_metadata?.role ||
+    "client";
+
+  return role === "provider" ? "provider" : "client";
+}
+
+export function redirectAfterLoginByRole(session) {
+  const role = resolveSessionRole(session);
+  const target = role === "provider" ? "./prestador.html" : "./cliente.html";
+  const currentPath = currentPageName();
+  if (currentPath === target.replace("./", "")) return;
+  window.location.href = target;
 }
 
 export async function invokeFunction(name, body = {}, options = {}) {
