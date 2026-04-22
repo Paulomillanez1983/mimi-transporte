@@ -1,4 +1,3 @@
-===== src/services/sound.js =====
 let audioContext = null;
 
 function ensureAudioContext() {
