@@ -1,29 +1,16 @@
-import { appConfig } from "../../config.js";
-import {
-  loadActiveService,
-  loadNotifications,
-  loadProviderMode,
-  loadProviderStatus,
-  saveActiveService,
-  saveNotifications,
-  saveProviderMode,
-  saveProviderStatus,
-} from "../services/provider-storage.js";
+import { appConfig } from "../config.js";
 
 const listeners = new Set();
 
 export const state = {
   ui: {
     appEntered: false,
-    activeMode: loadProviderMode(),
+    activeMode: "client",
     selectedCategoryId: appConfig.categories[0].id,
     installPromptEvent: null,
   },
   session: {
-    isAuthenticated: false,
     userId: null,
-    userEmail: null,
-    userName: null,
     providerId: null,
     role: "client",
   },
@@ -42,32 +29,24 @@ export const state = {
     activeConversationId: null,
   },
   provider: {
-    profile: null,
-    status: loadProviderStatus(),
-    availability: {
-      isOnline: loadProviderStatus() === "ONLINE_IDLE",
-      lastSeenAt: null,
-    },
+    status: "OFFLINE",
     offers: [],
-    activeService: loadActiveService(),
-    offerDeadlineAt: null,
-    lastOfferSoundAt: null,
+    activeService: null,
     stats: {
       rating: 5,
+      offers: 0,
       completed: 0,
     },
   },
   chat: {
-    conversationId: null,
     messages: [],
     unreadCount: 0,
   },
   notifications: {
-    items: loadNotifications(),
+    items: [],
     unreadCount: 0,
   },
   tracking: {
-    active: false,
     providerPosition: null,
     clientPosition: null,
   },
@@ -75,18 +54,10 @@ export const state = {
     loading: {},
     lastSearchAt: null,
     error: null,
-    info: "Configuración lista para integrar con Supabase.",
+    info: "Configuracion lista para integrar con Supabase.",
     backendMode: "mock",
-    categories: appConfig.categories,
   },
 };
-
-function persistState() {
-  saveProviderMode(state.ui.activeMode);
-  saveProviderStatus(state.provider.status);
-  saveActiveService(state.provider.activeService);
-  saveNotifications(state.notifications.items);
-}
 
 export function subscribe(listener) {
   listeners.add(listener);
@@ -95,7 +66,6 @@ export function subscribe(listener) {
 
 export function setState(updater) {
   updater(state);
-  persistState();
   listeners.forEach((listener) => listener(state));
 }
 
