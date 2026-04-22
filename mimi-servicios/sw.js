@@ -2,6 +2,7 @@ const CACHE_NAME = "mimi-servicios-v3";
 const APP_ASSETS = [
   "./",
   "./index.html",
+  "./env.js",
   "./config.js",
   "./styles/app.css",
   "./src/main.js",
