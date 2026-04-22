@@ -1,39 +1,58 @@
-import { appConfig } from "../config.js";
-import { searchProviders, prepareRequestPricing, createRequest, cancelRequest } from "./services/service-api.js";
+import { appConfig } from "./config.js";
+import { initMap, updateTrackingMarkers } from "./services/map.js";
+import {
+  bootstrapSession,
+  createRequest,
+  loadActiveRequest,
+  loadCategories,
+  loadConversationForRequest,
+  loadMessages,
+  loadNotifications,
+  loadOffers,
+  prepareRequestPricing,
+  registerDevice,
+  searchProviders,
+  sendMessage,
+  trackLocation,
+  updateProviderStatus,
+  updateRequestStatus,
+} from "./services/service-api.js";
+import { subscribeToServiceRealtime } from "./services/realtime.js";
+import { playNotificationSound } from "./services/sound.js";
+import {
+  getSupabaseClient,
+  hasSupabaseEnv,
+  signInWithGoogle,
+  signOut,
+  subscribeToAuthChanges,
+} from "./services/supabase.js";
 import { patchState, setState, state, subscribe } from "./state/app-state.js";
 import { renderApp } from "./ui/render.js";
-import { bootstrapApp } from "./controllers/bootstrap-controller.js";
-import { initMap } from "./services/map.js";
-import { signInWithGoogle, signOut, subscribeToAuthChanges } from "./services/supabase.js";
-import {
-  acceptProviderOffer,
-  advanceProviderFlow,
-  refreshProviderOffers,
-  rejectProviderOffer,
-  restoreProviderActiveService,
-  setProviderStatus,
-} from "./controllers/provider-controller.js";
-import {
-  bindChatDraftPersistence,
-  loadConversationMessages,
-  markMessagesRead,
-  openChatDrawer,
-  sendChatMessage,
-} from "./controllers/chat-controller.js";
 
-function syncDraftFromForm() {
-  patchState("requestDraft.address", document.getElementById("serviceAddressInput")?.value?.trim() ?? "");
-  patchState("requestDraft.lat", Number(document.getElementById("serviceLatInput")?.value || state.requestDraft.lat));
-  patchState("requestDraft.lng", Number(document.getElementById("serviceLngInput")?.value || state.requestDraft.lng));
-  patchState("requestDraft.requestType", document.getElementById("requestTypeSelect")?.value ?? "IMMEDIATE");
-  patchState("requestDraft.scheduledFor", document.getElementById("scheduledForInput")?.value ?? "");
-  patchState("requestDraft.requestedHours", Number(document.getElementById("requestedHoursInput")?.value || 2));
+function currentUserId() {
+  return state.session.userId ?? appConfig.demoClientUserId ?? null;
 }
 
-function updateScheduledVisibility() {
-  const wrapper = document.getElementById("scheduledForWrapper");
-  if (!wrapper) return;
-  wrapper.hidden = state.requestDraft.requestType !== "SCHEDULED";
+function currentConversationId() {
+  return state.client.activeConversationId ??
+    state.client.activeRequest?.conversation_id ??
+    state.provider.activeService?.conversation_id ??
+    null;
+}
+
+function setInfo(message, error = null) {
+  setState((draft) => {
+    draft.meta.info = message || null;
+    draft.meta.error = error;
+  });
+}
+
+function normalizeAuthError(error, fallbackMessage) {
+  if (error?.code === "AUTH_REQUIRED") {
+    return "Necesitas iniciar sesion con Google para continuar.";
+  }
+
+  return error?.message || fallbackMessage;
 }
 
 function toggleDrawer(id, force) {
@@ -45,13 +64,409 @@ function toggleDrawer(id, force) {
   drawer.setAttribute("aria-hidden", String(!open));
 }
 
-function reportUiError(error, fallbackMessage) {
+function buildDeviceId() {
+  let deviceId = localStorage.getItem("mimi_services_device_id");
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem("mimi_services_device_id", deviceId);
+  }
+  return deviceId;
+}
+
+async function registerCurrentDevice() {
+  if (!state.session.userId) return;
+
+  try {
+    await registerDevice({
+      deviceId: buildDeviceId(),
+      pushToken: null,
+      platform: "web",
+      notificationsEnabled: true,
+      marketingOptIn: false,
+    });
+  } catch {
+    // silent
+  }
+}
+
+function syncDraftFromForm() {
+  patchState("requestDraft.address", document.getElementById("serviceAddressInput")?.value?.trim() ?? "");
+  patchState("requestDraft.lat", Number(document.getElementById("serviceLatInput")?.value || state.requestDraft.lat));
+  patchState("requestDraft.lng", Number(document.getElementById("serviceLngInput")?.value || state.requestDraft.lng));
+  patchState("requestDraft.requestType", document.getElementById("requestTypeSelect")?.value ?? "IMMEDIATE");
+  patchState("requestDraft.scheduledFor", document.getElementById("scheduledForInput")?.value ?? "");
+  patchState("requestDraft.requestedHours", Number(document.getElementById("requestedHoursInput")?.value || 2));
+}
+
+function seedForm() {
+  const latInput = document.getElementById("serviceLatInput");
+  const lngInput = document.getElementById("serviceLngInput");
+  const requestedHoursInput = document.getElementById("requestedHoursInput");
+
+  if (latInput) latInput.value = String(state.requestDraft.lat);
+  if (lngInput) lngInput.value = String(state.requestDraft.lng);
+  if (requestedHoursInput) requestedHoursInput.value = String(state.requestDraft.requestedHours);
+}
+
+function updateScheduledVisibility() {
+  const wrapper = document.getElementById("scheduledForWrapper");
+  if (!wrapper) return;
+  wrapper.hidden = state.requestDraft.requestType !== "SCHEDULED";
+}
+
+async function hydrateLiveContext(activeRequestOverride) {
+  const activeRequest = activeRequestOverride ?? await loadActiveRequest({
+    userId: state.session.userId,
+    providerId: state.session.providerId,
+  });
+
+  const conversation = activeRequest?.id
+    ? await loadConversationForRequest(activeRequest.id)
+    : null;
+
+  const messages = conversation?.id
+    ? await loadMessages(conversation.id)
+    : [];
+
   setState((draft) => {
-    draft.meta.error = error?.message ?? fallbackMessage;
+    draft.client.activeRequest = activeRequest
+      ? {
+          ...draft.client.activeRequest,
+          ...activeRequest,
+          conversation_id:
+            conversation?.id ??
+            draft.client.activeRequest?.conversation_id ??
+            null,
+        }
+      : null;
+
+    draft.client.activeConversationId = conversation?.id ?? null;
+
+    if (
+      draft.session.providerId &&
+      activeRequest?.accepted_provider_id === draft.session.providerId
+    ) {
+      draft.provider.activeService = {
+        ...(draft.provider.activeService ?? {}),
+        ...activeRequest,
+        conversation_id: conversation?.id ?? null,
+      };
+    } else if (!activeRequest || activeRequest.accepted_provider_id !== draft.session.providerId) {
+      draft.provider.activeService = null;
+    }
+
+    draft.chat.messages = messages;
+    draft.chat.unreadCount = messages.filter(
+      (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
+    ).length;
+
+    if (activeRequest?.service_lat && activeRequest?.service_lng) {
+      draft.tracking.clientPosition = {
+        lat: activeRequest.service_lat,
+        lng: activeRequest.service_lng,
+      };
+    }
+  });
+
+  updateTrackingMarkers({
+    clientPosition: state.tracking.clientPosition,
+    providerPosition: state.tracking.providerPosition,
+  });
+
+  setupRealtime(activeRequest?.id ?? null, conversation?.id ?? null);
+}
+
+async function bootstrapAsyncData() {
+  const session = await bootstrapSession();
+  const categories = await loadCategories();
+
+  if (Array.isArray(categories) && categories.length) {
+    appConfig.categories = categories.map((category) => ({
+      id: category.id,
+      code: category.code,
+      name: category.name,
+      description: category.description,
+    }));
+  }
+
+  setState((draft) => {
+    draft.session.userId = session.userId;
+    draft.session.providerId = session.providerId;
+    draft.session.role = session.role;
+    draft.session.userEmail = session.userEmail ?? null;
+    draft.session.userName = session.userName ?? null;
+    draft.meta.backendMode = session.userId ? "supabase" : (hasSupabaseEnv() ? "supabase" : "mock");
+    draft.ui.appEntered = draft.meta.backendMode === "mock" ? true : Boolean(session.userId);
+
+    if (appConfig.categories.length && !appConfig.categories.some((item) => item.id === draft.ui.selectedCategoryId)) {
+      draft.ui.selectedCategoryId = appConfig.categories[0].id;
+    }
+
+    if (session.role === "provider") {
+      draft.ui.activeMode = "provider";
+    }
+  });
+
+  const [notifications, offers] = await Promise.all([
+    loadNotifications(session.userId),
+    loadOffers(session.providerId),
+  ]);
+
+  setState((draft) => {
+    draft.notifications.items = notifications;
+    draft.provider.offers = offers ?? [];
+    draft.provider.stats.offers = offers?.length ?? 0;
+  });
+
+  await hydrateLiveContext();
+  await registerCurrentDevice();
+
+  if (!hasSupabaseEnv()) {
+    setInfo("La app esta funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real.");
+  } else if (!session.userId) {
+    setInfo("Ingresa con Google para ver categorias activas, buscar prestadores y usar el flujo real.");
+  } else {
+    setInfo("Sesion iniciada correctamente.");
+  }
+}
+
+function registerInstallPrompt() {
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    patchState("ui.installPromptEvent", event);
+  });
+
+  document.getElementById("installButton")?.addEventListener("click", async () => {
+    const promptEvent = state.ui.installPromptEvent;
+    if (!promptEvent) return;
+    await promptEvent.prompt();
   });
 }
 
-function bindGlobalUI() {
+function startProviderTrackingLoop() {
+  if (!navigator.geolocation) return;
+
+  window.setInterval(() => {
+    const active = state.provider.activeService;
+    if (!active) return;
+
+    const allowed = ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"];
+    if (!allowed.includes(active.status)) return;
+
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const payload = {
+        requestId: active.request_id ?? active.id,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        heading: position.coords.heading,
+        speed: position.coords.speed,
+      };
+
+      setState((draft) => {
+        draft.tracking.providerPosition = {
+          lat: payload.lat,
+          lng: payload.lng,
+        };
+      });
+
+      updateTrackingMarkers({
+        clientPosition: state.tracking.clientPosition,
+        providerPosition: state.tracking.providerPosition,
+      });
+
+      try {
+        await trackLocation(payload);
+      } catch {
+        // silent
+      }
+    });
+  }, 12000);
+}
+
+async function handleAuthPrimary() {
+  if (!hasSupabaseEnv()) {
+    patchState("ui.appEntered", true);
+    setInfo("Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real.");
+    return;
+  }
+
+  await signInWithGoogle();
+}
+
+async function handleSearchSubmit(event) {
+  event.preventDefault();
+  syncDraftFromForm();
+
+  const providers = await searchProviders(
+    state.ui.selectedCategoryId,
+    state.requestDraft,
+  );
+
+  setState((draft) => {
+    draft.client.providers = providers;
+    draft.meta.error = null;
+    draft.meta.info = providers.length
+      ? "Prestadores actualizados."
+      : "No encontramos prestadores para este criterio.";
+    draft.meta.lastSearchAt = new Date().toISOString();
+  });
+}
+
+async function handleProviderSelection(providerId) {
+  const provider = state.client.providers.find(
+    (item) => item.provider_id === providerId,
+  );
+  if (!provider) return;
+
+  const pricing = await prepareRequestPricing({
+    clientUserId: currentUserId(),
+    categoryId: state.ui.selectedCategoryId,
+    providerId: provider.provider_id,
+    draft: state.requestDraft,
+  });
+
+  if (!pricing?.eligible) {
+    throw new Error(`No se pudo confirmar el prestador: ${pricing?.reason ?? "pricing_error"}`);
+  }
+
+  const request = await createRequest({
+    categoryId: state.ui.selectedCategoryId,
+    selectedProviderId: provider.provider_id,
+    address: state.requestDraft.address,
+    serviceLat: state.requestDraft.lat,
+    serviceLng: state.requestDraft.lng,
+    requestType: state.requestDraft.requestType,
+    scheduledFor: state.requestDraft.scheduledFor || null,
+    requestedHours: state.requestDraft.requestedHours,
+    providerPrice: pricing.provider_price,
+    platformFee: pricing.platform_fee,
+    totalPrice: pricing.total_price,
+    currency: pricing.currency,
+  });
+
+  setState((draft) => {
+    draft.client.selectedProvider = provider;
+    draft.client.activeRequest = {
+      ...request,
+      providerName: provider.full_name,
+      requestType: draft.requestDraft.requestType,
+      requestedHours: draft.requestDraft.requestedHours,
+      total_price: pricing.total_price,
+      conversation_id: request?.conversation_id ?? null,
+    };
+    draft.tracking.clientPosition = {
+      lat: draft.requestDraft.lat,
+      lng: draft.requestDraft.lng,
+    };
+    draft.meta.error = null;
+    draft.meta.info = "Solicitud creada correctamente.";
+  });
+
+  await hydrateLiveContext(request);
+}
+
+async function handleRequestAction(action) {
+  if (action !== "cancel") return;
+
+  await updateRequestStatus(appConfig.functions.cancelRequest, {
+    request_id: state.client.activeRequest?.id,
+    reason: "cancelled_from_client_ui",
+  });
+
+  setState((draft) => {
+    if (draft.client.activeRequest) draft.client.activeRequest.status = "CANCELLED";
+    draft.meta.info = "Solicitud cancelada correctamente.";
+  });
+
+  await hydrateLiveContext();
+}
+
+async function handleOfferAction(action, offerId) {
+  await updateRequestStatus(appConfig.functions.providerRespondOffer, {
+    offer_id: offerId,
+    action: action === "accept" ? "ACCEPT" : "REJECT",
+  });
+
+  setState((draft) => {
+    draft.provider.offers = draft.provider.offers.filter((item) => item.id !== offerId);
+    draft.provider.stats.offers = draft.provider.offers.length;
+    draft.meta.info = action === "accept"
+      ? "Oferta aceptada correctamente."
+      : "Oferta rechazada.";
+  });
+
+  await hydrateLiveContext();
+}
+
+async function handleProviderStatusChange(status) {
+  patchState("provider.status", status);
+
+  if (!state.session.providerId || !getSupabaseClient()) return;
+
+  const profile = await updateProviderStatus(state.session.providerId, status);
+  if (!profile) return;
+
+  setState((draft) => {
+    draft.provider.status = profile.status ?? status;
+  });
+}
+
+async function handleProviderFlow(action) {
+  if (action === "chat") {
+    toggleDrawer("chatDrawer", true);
+    return;
+  }
+
+  const nextStatuses = {
+    "en-route": "PROVIDER_EN_ROUTE",
+    arrived: "PROVIDER_ARRIVED",
+    start: "IN_PROGRESS",
+    complete: "COMPLETED",
+  };
+
+  const functionName = {
+    "en-route": appConfig.functions.providerEnRoute,
+    arrived: appConfig.functions.providerArrived,
+    start: appConfig.functions.startService,
+    complete: appConfig.functions.completeService,
+  }[action];
+
+  await updateRequestStatus(functionName, {
+    request_id: state.provider.activeService?.request_id ?? state.provider.activeService?.id,
+  });
+
+  setState((draft) => {
+    if (draft.provider.activeService) {
+      draft.provider.activeService.status = nextStatuses[action];
+    }
+    if (draft.client.activeRequest) {
+      draft.client.activeRequest.status = nextStatuses[action];
+    }
+    draft.meta.info = "Estado del servicio actualizado.";
+  });
+
+  await hydrateLiveContext();
+}
+
+function bindBasicControls() {
+  document.getElementById("authPrimaryButton")?.addEventListener("click", async () => {
+    try {
+      await handleAuthPrimary();
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesion."));
+    }
+  });
+
+  document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
+    try {
+      await signOut();
+      window.location.reload();
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesion."));
+    }
+  });
+
   document.getElementById("enterServicesHub")?.addEventListener("click", () => {
     patchState("ui.appEntered", true);
   });
@@ -61,144 +476,21 @@ function bindGlobalUI() {
   });
 
   document.getElementById("chatButton")?.addEventListener("click", async () => {
-    openChatDrawer();
-    if (state.chat.conversationId) {
-      await loadConversationMessages(state.chat.conversationId);
+    try {
+      toggleDrawer("chatDrawer", true);
+
+      if (!state.chat.messages.length && currentConversationId()) {
+        const messages = await loadMessages(currentConversationId());
+        patchState("chat.messages", messages);
+        patchState("chat.unreadCount", 0);
+      }
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo abrir el chat."));
     }
-    markMessagesRead();
   });
 
   document.querySelectorAll("[data-close-drawer]").forEach((button) => {
-    button.addEventListener("click", () => {
-      toggleDrawer(button.dataset.closeDrawer, false);
-    });
-  });
-
-  document.querySelectorAll("[data-mode]").forEach((button) => {
-    button.addEventListener("click", () => {
-      patchState("ui.activeMode", button.dataset.mode);
-    });
-  });
-
-  document.addEventListener("click", async (event) => {
-    try {
-      const authButton = event.target.closest("[data-auth-action]");
-      if (authButton) {
-        const action = authButton.dataset.authAction;
-
-        if (action === "login") {
-          await signInWithGoogle();
-        } else if (action === "enter") {
-          patchState("ui.appEntered", true);
-        }
-
-        return;
-      }
-
-      if (event.target.closest("#authSecondaryButton")) {
-        await signOut();
-        window.location.reload();
-        return;
-      }
-
-      const categoryButton = event.target.closest("[data-category-id]");
-      if (categoryButton) {
-        patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
-        return;
-      }
-
-      const providerButton = event.target.closest("[data-provider-select]");
-      if (providerButton) {
-        const providerId = providerButton.dataset.providerSelect;
-        const pricing = await prepareRequestPricing({
-          clientUserId: state.session.userId,
-          categoryId: state.ui.selectedCategoryId,
-          providerId,
-          draft: state.requestDraft,
-        });
-
-        if (!pricing?.eligible) {
-          setState((draft) => {
-            draft.meta.error = pricing?.reason ?? "No pudimos preparar el precio.";
-          });
-          return;
-        }
-
-        const request = await createRequest({
-          categoryId: state.ui.selectedCategoryId,
-          selectedProviderId: providerId,
-          address: state.requestDraft.address,
-          serviceLat: Number(state.requestDraft.lat),
-          serviceLng: Number(state.requestDraft.lng),
-          requestType: state.requestDraft.requestType,
-          scheduledFor: state.requestDraft.scheduledFor || null,
-          requestedHours: Number(state.requestDraft.requestedHours),
-        });
-
-        setState((draft) => {
-          draft.client.activeRequest = request;
-          draft.client.selectedProvider = state.client.providers.find((item) => item.provider_id === providerId) ?? null;
-          draft.meta.error = null;
-          draft.meta.info = "Solicitud creada correctamente.";
-        });
-
-        return;
-      }
-
-      const offerActionButton = event.target.closest("[data-offer-action]");
-      if (offerActionButton) {
-        const offerId = offerActionButton.dataset.offerId;
-        const action = offerActionButton.dataset.offerAction;
-
-        if (action === "accept") {
-          await acceptProviderOffer(offerId);
-        } else {
-          await rejectProviderOffer(offerId);
-        }
-
-        return;
-      }
-
-      const providerFlowButton = event.target.closest("[data-provider-flow]");
-      if (providerFlowButton) {
-        const action = providerFlowButton.dataset.providerFlow;
-
-        if (action === "chat") {
-          openChatDrawer();
-          return;
-        }
-
-        await advanceProviderFlow(action);
-        return;
-      }
-
-      const requestActionButton = event.target.closest("[data-request-action]");
-      if (requestActionButton?.dataset.requestAction === "cancel") {
-        const requestId = state.client.activeRequest?.id;
-        if (!requestId) return;
-
-        await cancelRequest(requestId);
-        await restoreProviderActiveService();
-
-        setState((draft) => {
-          draft.client.activeRequest = null;
-          draft.meta.error = null;
-          draft.meta.info = "Solicitud cancelada.";
-        });
-      }
-    } catch (error) {
-      reportUiError(error, "No pudimos completar la accion.");
-    }
-  });
-
-  document.querySelectorAll("[data-provider-status]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      try {
-        await setProviderStatus(button.dataset.providerStatus);
-      } catch (error) {
-        reportUiError(error, "No pudimos actualizar el estado del prestador.");
-      }
-    });
+    button.addEventListener("click", () => toggleDrawer(button.dataset.closeDrawer, false));
   });
 
   document.getElementById("requestTypeSelect")?.addEventListener("change", () => {
@@ -207,25 +499,10 @@ function bindGlobalUI() {
   });
 
   document.getElementById("requestForm")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
     try {
-      syncDraftFromForm();
-
-      const providers = await searchProviders(
-        state.ui.selectedCategoryId,
-        state.requestDraft,
-      );
-
-      setState((draft) => {
-        draft.client.providers = providers;
-        draft.meta.error = null;
-        draft.meta.info = providers.length
-          ? "Prestadores actualizados."
-          : "No encontramos prestadores para ese criterio.";
-        draft.meta.lastSearchAt = new Date().toISOString();
-      });
+      await handleSearchSubmit(event);
     } catch (error) {
-      reportUiError(error, "No pudimos buscar prestadores.");
+      setInfo(null, normalizeAuthError(error, "No se pudo buscar prestadores."));
     }
   });
 
@@ -234,55 +511,196 @@ function bindGlobalUI() {
 
     const input = document.getElementById("chatInput");
     const body = input?.value?.trim();
-
     if (!body) return;
 
     try {
-      await sendChatMessage(body);
-    } catch (error) {
-      reportUiError(error, "No pudimos enviar el mensaje.");
-      return;
-    }
+      const message = await sendMessage({
+        conversationId: currentConversationId(),
+        body,
+      });
 
-    if (input) input.value = "";
+      setState((draft) => {
+        draft.chat.messages.push(message);
+        draft.chat.unreadCount = 0;
+      });
+
+      input.value = "";
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo enviar el mensaje."));
+    }
   });
 
-  bindChatDraftPersistence();
+  document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
+    try {
+      const categoryButton = event.target.closest("[data-category-id]");
+      if (categoryButton) {
+        patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
+        return;
+      }
+
+      const modeButton = event.target.closest("[data-mode]");
+      if (modeButton) {
+        patchState("ui.activeMode", modeButton.dataset.mode);
+        return;
+      }
+
+      const selectProvider = event.target.closest("[data-provider-select]");
+      if (selectProvider) {
+        await handleProviderSelection(selectProvider.dataset.providerSelect);
+        return;
+      }
+
+      const requestAction = event.target.closest("[data-request-action]");
+      if (requestAction) {
+        await handleRequestAction(requestAction.dataset.requestAction);
+        return;
+      }
+
+      if (event.target.closest("[data-open-chat]")) {
+        toggleDrawer("chatDrawer", true);
+        return;
+      }
+
+      const offerAction = event.target.closest("[data-offer-action]");
+      if (offerAction) {
+        await handleOfferAction(offerAction.dataset.offerAction, offerAction.dataset.offerId);
+        return;
+      }
+
+      const providerStatus = event.target.closest("[data-provider-status]");
+      if (providerStatus) {
+        await handleProviderStatusChange(providerStatus.dataset.providerStatus);
+        return;
+      }
+
+      const providerFlow = event.target.closest("[data-provider-flow]");
+      if (providerFlow) {
+        await handleProviderFlow(providerFlow.dataset.providerFlow);
+      }
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo completar la accion."));
+    }
+  });
+}
+
+function setupRealtime(
+  requestId = state.client.activeRequest?.id ??
+    state.provider.activeService?.request_id ??
+    state.provider.activeService?.id ??
+    null,
+  conversationId = currentConversationId(),
+) {
+  subscribeToServiceRealtime({
+    userId: state.session.userId,
+    providerId: state.session.providerId,
+    requestId,
+    conversationId,
+    onNotification: ({ new: payload }) => {
+      if (!payload) return;
+
+      setState((draft) => {
+        draft.notifications.items.unshift(payload);
+      });
+
+      playNotificationSound();
+    },
+    onMessage: ({ new: payload }) => {
+      if (!payload) return;
+
+      setState((draft) => {
+        const exists = draft.chat.messages.some((msg) => msg.id === payload.id);
+        if (!exists) draft.chat.messages.push(payload);
+        if (payload.sender_user_id !== draft.session.userId) {
+          draft.chat.unreadCount += 1;
+        }
+      });
+
+      playNotificationSound();
+    },
+    onTracking: ({ new: payload }) => {
+      if (!payload) return;
+
+      setState((draft) => {
+        draft.tracking.providerPosition = {
+          lat: payload.lat,
+          lng: payload.lng,
+        };
+      });
+
+      updateTrackingMarkers({
+        clientPosition: state.tracking.clientPosition,
+        providerPosition: {
+          lat: payload.lat,
+          lng: payload.lng,
+        },
+      });
+    },
+    onRequest: ({ new: payload }) => {
+      if (!payload) return;
+
+      setState((draft) => {
+        if (draft.client.activeRequest?.id === payload.id) {
+          draft.client.activeRequest = {
+            ...draft.client.activeRequest,
+            ...payload,
+          };
+        }
+
+        if (
+          draft.provider.activeService?.id === payload.id ||
+          draft.provider.activeService?.request_id === payload.id
+        ) {
+          draft.provider.activeService = {
+            ...draft.provider.activeService,
+            ...payload,
+          };
+        }
+      });
+    },
+    onOffer: ({ new: payload }) => {
+      if (!payload) return;
+
+      setState((draft) => {
+        const exists = draft.provider.offers.some((offer) => offer.id === payload.id);
+        if (!exists) {
+          draft.provider.offers.unshift(payload);
+          draft.provider.stats.offers = draft.provider.offers.length;
+        }
+      });
+
+      playNotificationSound();
+    },
+  });
+}
+
+async function init() {
+  subscribe(renderApp);
+  renderApp(state);
+
+  seedForm();
   updateScheduledVisibility();
-}
+  bindBasicControls();
+  registerInstallPrompt();
+  initMap("trackingMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
 
-subscribe(renderApp);
-initMap("trackingMap");
-bindGlobalUI();
-
-try {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+    navigator.serviceWorker.register("./sw.js").catch(() => null);
   }
-} catch {
-  // noop
+
+  await bootstrapAsyncData();
+  startProviderTrackingLoop();
+  setupRealtime();
+  renderApp(state);
 }
 
-let deferredInstallPrompt = null;
-window.addEventListener("beforeinstallprompt", (event) => {
-  event.preventDefault();
-  deferredInstallPrompt = event;
-});
-
-document.getElementById("installButton")?.addEventListener("click", async () => {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice.catch(() => {});
-  deferredInstallPrompt = null;
-});
-
-const authSubscription = subscribeToAuthChanges(() => {
+const authSubscription = subscribeToAuthChanges?.(() => {
   window.location.reload();
 });
 
-bootstrapApp().catch((error) => {
+init().catch((error) => {
   setState((draft) => {
-    draft.meta.error = error?.message ?? "No pudimos iniciar la app.";
+    draft.meta.error = normalizeAuthError(error, "La app cargo con fallback local. Revisa la configuracion de Supabase.");
+    draft.meta.info = null;
   });
 });
 
