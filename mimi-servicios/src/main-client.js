@@ -706,9 +706,9 @@ async function init() {
   renderClientScreen(state);
 }
 
-const authSubscription = subscribeToAuthChanges?.((event, session) => {
+const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
   if (event === "SIGNED_IN" && session) {
-    redirectAfterLoginByRole(session);
+    await redirectAfterLoginByRole(session);
   }
 });
 
