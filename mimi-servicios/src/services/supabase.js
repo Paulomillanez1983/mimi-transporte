@@ -1,4 +1,4 @@
-import { appConfig } from "../../config.js";
+import { appConfig } from "../config.js";
 
 let client = null;
 
@@ -58,7 +58,12 @@ export async function signInWithGoogle() {
   const redirectTo = `${window.location.origin}${window.location.pathname}`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo },
+    options: {
+      redirectTo,
+      queryParams: {
+        prompt: "select_account",
+      },
+    },
   });
 
   if (error) throw error;
@@ -120,35 +125,4 @@ export async function fetchTable(table, queryBuilder) {
 export async function fetchSingle(table, queryBuilder) {
   const rows = await fetchTable(table, queryBuilder);
   return rows[0] ?? null;
-}
-
-export async function getProviderProfileByUserId(userId) {
-  if (!userId) return null;
-
-  return fetchSingle("svc_providers", (query) =>
-    query
-      .select("id,user_id,full_name,email,phone,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
-      .eq("user_id", userId)
-      .limit(1)
-  );
-}
-
-export async function getCurrentProviderContext() {
-  const user = await getCurrentUser();
-  if (!user) {
-    return {
-      session: null,
-      user: null,
-      provider: null,
-    };
-  }
-
-  const session = await getCurrentSession();
-  const provider = await getProviderProfileByUserId(user.id);
-
-  return {
-    session,
-    user,
-    provider,
-  };
 }
