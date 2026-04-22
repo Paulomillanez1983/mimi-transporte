@@ -1,4 +1,4 @@
-@ -0,0 +1,729 @@
+===== styles/app.css =====
 :root {
   --bg: #edf4ff;
   --bg-soft: #f6f9ff;
@@ -728,3 +728,4 @@ button {
     height: 240px;
   }
 }
+
