@@ -1,5 +1,4 @@
-import { appConfig } from "../config.js";
-
+import { appConfig } from "../../config.js";
 let map = null;
 let providerMarker = null;
 let clientMarker = null;
