@@ -1,5 +1,6 @@
 import { appConfig } from "../../config.js";
 import {
+  loadCategories,
   loadActiveRequest,
   loadConversationForRequest,
   loadMessages,
@@ -174,16 +175,33 @@ export async function bootstrapApp() {
   const sessionData = await bootstrapSession();
 
   setState((draft) => {
+    draft.session.isAuthenticated = sessionData.isAuthenticated;
     draft.session.userId = sessionData.userId;
+    draft.session.userEmail = sessionData.userEmail;
+    draft.session.userName = sessionData.userName;
     draft.session.providerId = sessionData.providerId;
     draft.session.role = sessionData.role;
     draft.provider.profile = sessionData.providerProfile ?? null;
     draft.provider.status = sessionData.providerProfile?.status ?? draft.provider.status;
+    draft.ui.activeMode = sessionData.providerId && draft.ui.activeMode === "provider"
+      ? "provider"
+      : "client";
     draft.meta.backendMode = sessionData.userId ? "supabase" : "mock";
   });
 
-  await registerCurrentDevice();
-  await refreshNotifications();
+  const categories = await loadCategories();
+  setState((draft) => {
+    draft.meta.categories = categories;
+    if (!categories.some((category) => category.id === draft.ui.selectedCategoryId)) {
+      draft.ui.selectedCategoryId = categories[0]?.id ?? draft.ui.selectedCategoryId;
+    }
+  });
+
+  if (sessionData.isAuthenticated) {
+    await registerCurrentDevice();
+    await refreshNotifications();
+  }
+
   const { activeRequest, conversation } = await hydrateActiveClientContext();
 
   if (state.session.providerId) {
