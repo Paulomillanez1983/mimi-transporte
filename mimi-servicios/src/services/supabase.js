@@ -1,4 +1,5 @@
-import { appConfig } from "../config.js";
+===== src/services/supabase.js =====
+import { appConfig } from "../../config.js";
 
 let client = null;
 
