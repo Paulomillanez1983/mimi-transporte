@@ -1,3 +1,4 @@
+===== src/services/realtime.js =====
 import { getSupabaseClient } from "./supabase.js";
 
 let channels = [];
@@ -153,4 +154,17 @@ export function subscribeToProviderOffers(providerId, cb) {
       )
       .subscribe(),
   );
+}
+
+
+export function subscribeToServiceRealtime({ userId, providerId, requestId, conversationId, onNotification, onMessage, onTracking, onRequest, onOffer } = {}) {
+  disconnectRealtime();
+  if (userId && typeof onNotification === "function") subscribeToUserNotifications(userId, onNotification);
+  if (conversationId && typeof onMessage === "function") subscribeToConversationMessages(conversationId, onMessage);
+  if (requestId) {
+    if (typeof onTracking === "function") subscribeToRequestTracking(requestId, onTracking);
+    if (typeof onRequest === "function" || typeof onOffer === "function") subscribeToRequestState(requestId, onRequest, onOffer);
+  }
+  if (providerId && typeof onOffer === "function") subscribeToProviderOffers(providerId, onOffer);
+  return channels;
 }
