@@ -1,4 +1,4 @@
-import { appConfig } from "./config.js";
+import { appConfig } from "../config.js";
 import { initMap, updateClientMap } from "./services/map.js";
 import {
   bootstrapSession,
