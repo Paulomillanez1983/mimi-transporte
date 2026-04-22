@@ -1,3 +1,4 @@
+===== config.js =====
 export const appConfig = {
   supabaseUrl: window.MIMI_SERVICES_ENV?.SUPABASE_URL ?? "",
   supabaseAnonKey: window.MIMI_SERVICES_ENV?.SUPABASE_ANON_KEY ?? "",
@@ -78,3 +79,4 @@ export const appConfig = {
     },
   ],
 };
+
