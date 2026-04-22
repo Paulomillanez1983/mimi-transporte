@@ -1,4 +1,5 @@
-import { appConfig } from "../config.js";
+===== src/services/provider-storage.js =====
+import { appConfig } from "../../config.js";
 
 function readJson(key, fallback) {
   try {
