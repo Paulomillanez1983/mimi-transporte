@@ -1,4 +1,5 @@
-import { appConfig } from "../config.js";
+===== src/services/service-api.js =====
+import { appConfig } from "../../config.js";
 import {
   callRpc,
   fetchSingle,
@@ -36,7 +37,7 @@ export async function bootstrapSession() {
 
   const providerRows = userId && hasBackend()
     ? await fetchTable("svc_providers", (query) =>
-        query.select("id,user_id,status,approved,blocked").eq("user_id", userId).limit(1)
+        query.select("id,user_id,full_name,email,phone,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at").eq("user_id", userId).limit(1)
       )
     : [];
 
@@ -47,6 +48,7 @@ export async function bootstrapSession() {
     userName: session?.user?.user_metadata?.full_name ?? session?.user?.user_metadata?.name ?? null,
     providerId: providerRows[0]?.id ?? null,
     role: providerRows[0]?.id ? "provider" : "client",
+    providerProfile: providerRows[0] ?? null,
   };
 }
 
