@@ -19,6 +19,18 @@ function hasBackend() {
   return Boolean(getSupabaseClient());
 }
 
+function buildAuthError() {
+  const error = new Error("Necesitas iniciar sesion para continuar.");
+  error.code = "AUTH_REQUIRED";
+  return error;
+}
+
+async function requireSession() {
+  const session = await getCurrentSession();
+  if (!session?.user) throw buildAuthError();
+  return session;
+}
+
 function normalizeProviderCandidate(item) {
   const providerPrice = Number(item?.provider_price ?? 0);
   const fee = Math.max(500, Math.round(providerPrice * 0.15));
@@ -39,7 +51,10 @@ export async function bootstrapSession() {
   const provider = context?.provider ?? null;
 
   return {
+    isAuthenticated: Boolean(session?.user),
     userId,
+    userEmail: session?.user?.email ?? null,
+    userName: session?.user?.user_metadata?.full_name ?? session?.user?.user_metadata?.name ?? null,
     providerId: provider?.id ?? null,
     role: provider?.id ? "provider" : "client",
     providerProfile: provider,
@@ -52,6 +67,7 @@ export async function bootstrapSession() {
 
 export async function searchProviders(categoryId, draft) {
   if (!hasBackend()) return buildMockProviders(categoryId, draft).map(normalizeProviderCandidate);
+  await requireSession();
 
   const response = await invokeFunction(appConfig.functions.searchProviders, {
     category_id: categoryId,
@@ -90,6 +106,8 @@ export async function prepareRequestPricing({
       : { eligible: false, reason: "provider_not_found" };
   }
 
+  await requireSession();
+
   return callRpc(appConfig.rpc.prepareRequestPricing, {
     p_client_user_id: clientUserId,
     p_category_id: categoryId,
@@ -111,6 +129,8 @@ export async function createRequest(payload) {
       created_at: new Date().toISOString(),
     };
   }
+
+  await requireSession();
 
   const response = await invokeFunction(
     appConfig.functions.createRequest,
@@ -137,6 +157,7 @@ export async function createRequest(payload) {
 
 export async function cancelRequest(requestId, reason = "cancelled_by_user") {
   if (!hasBackend()) return { ok: true, request_id: requestId };
+  await requireSession();
 
   return invokeFunction(appConfig.functions.cancelRequest, {
     request_id: requestId,
@@ -151,6 +172,7 @@ export async function cancelRequest(requestId, reason = "cancelled_by_user") {
 export async function loadProviderOffers(providerId) {
   if (!providerId) return [];
   if (!hasBackend()) return buildMockOffers();
+  if (!(await getCurrentSession())?.user) return [];
 
   const offers = await fetchTable("svc_request_offers", (query) =>
     query
@@ -175,6 +197,7 @@ export async function loadProviderOffers(providerId) {
 
 export async function acceptOffer(offerId) {
   if (!hasBackend()) return { accepted: true, offer_id: offerId };
+  await requireSession();
 
   return invokeFunction(appConfig.functions.providerRespondOffer, {
     offer_id: offerId,
@@ -184,6 +207,7 @@ export async function acceptOffer(offerId) {
 
 export async function rejectOffer(offerId) {
   if (!hasBackend()) return { rejected: true, offer_id: offerId };
+  await requireSession();
 
   return invokeFunction(appConfig.functions.providerRespondOffer, {
     offer_id: offerId,
@@ -193,26 +217,31 @@ export async function rejectOffer(offerId) {
 
 export async function markProviderEnRoute(requestId) {
   if (!hasBackend()) return { ok: true, request_id: requestId };
+  await requireSession();
   return invokeFunction(appConfig.functions.providerEnRoute, { request_id: requestId });
 }
 
 export async function markProviderArrived(requestId) {
   if (!hasBackend()) return { ok: true, request_id: requestId };
+  await requireSession();
   return invokeFunction(appConfig.functions.providerArrived, { request_id: requestId });
 }
 
 export async function startService(requestId) {
   if (!hasBackend()) return { ok: true, request_id: requestId };
+  await requireSession();
   return invokeFunction(appConfig.functions.startService, { request_id: requestId });
 }
 
 export async function completeService(requestId) {
   if (!hasBackend()) return { ok: true, request_id: requestId };
+  await requireSession();
   return invokeFunction(appConfig.functions.completeService, { request_id: requestId });
 }
 
 export async function sendProviderLocation(requestId, coords) {
   if (!hasBackend()) return { tracked: true };
+  await requireSession();
 
   return invokeFunction(appConfig.functions.trackLocation, {
     request_id: requestId,
@@ -235,6 +264,8 @@ export async function sendProviderMessage(conversationId, body) {
     };
   }
 
+  await requireSession();
+
   const response = await invokeFunction(appConfig.functions.sendMessage, {
     conversation_id: conversationId,
     body,
@@ -249,6 +280,7 @@ export async function sendProviderMessage(conversationId, body) {
 
 export async function registerDevice(payload) {
   if (!hasBackend()) return { ok: true };
+  await requireSession();
 
   return invokeFunction(appConfig.functions.registerDevice, {
     device_id: payload.deviceId,
@@ -262,6 +294,7 @@ export async function registerDevice(payload) {
 export async function loadNotifications(userId) {
   if (!hasBackend()) return buildMockNotifications();
   if (!userId) return [];
+  if (!(await getCurrentSession())?.user) return [];
 
   return fetchTable("svc_notifications", (query) =>
     query
@@ -275,6 +308,7 @@ export async function loadNotifications(userId) {
 export async function loadMessages(conversationId) {
   if (!conversationId) return [];
   if (!hasBackend()) return buildMockMessages();
+  if (!(await getCurrentSession())?.user) return [];
 
   return fetchTable("svc_messages", (query) =>
     query
@@ -287,6 +321,7 @@ export async function loadMessages(conversationId) {
 
 export async function loadActiveRequest({ userId, providerId }) {
   if (!hasBackend()) return null;
+  if (!(await getCurrentSession())?.user) return null;
 
   const activeStatuses = [
     "SEARCHING",
@@ -329,6 +364,7 @@ export async function loadActiveRequest({ userId, providerId }) {
 
 export async function loadConversationForRequest(requestId) {
   if (!requestId || !hasBackend()) return null;
+  if (!(await getCurrentSession())?.user) return null;
 
   return fetchSingle("svc_conversations", (query) =>
     query
@@ -336,4 +372,36 @@ export async function loadConversationForRequest(requestId) {
       .eq("request_id", requestId)
       .limit(1)
   );
+}
+
+export async function loadCategories() {
+  if (!hasBackend()) return appConfig.categories;
+  if (!(await getCurrentSession())?.user) return appConfig.categories;
+
+  return fetchTable("svc_categories", (query) =>
+    query
+      .select("id,code,name,description,sort_order")
+      .eq("active", true)
+      .order("sort_order", { ascending: true })
+  );
+}
+
+export async function updateProviderStatus(providerId, status) {
+  if (!providerId) return null;
+  if (!hasBackend()) return { id: providerId, status };
+  await requireSession();
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("svc_providers")
+    .update({
+      status,
+      last_seen_at: new Date().toISOString(),
+    })
+    .eq("id", providerId)
+    .select("id,user_id,full_name,email,phone,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
+    .limit(1);
+
+  if (error) throw error;
+  return data?.[0] ?? null;
 }
