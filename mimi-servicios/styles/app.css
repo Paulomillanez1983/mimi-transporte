@@ -168,6 +168,25 @@ select {
   margin-bottom: 16px;
 }
 
+.status-banner {
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.status-banner.is-error {
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(127, 29, 29, 0.35);
+}
+
+.status-banner.is-info {
+  border-color: rgba(73, 222, 164, 0.28);
+  background: rgba(16, 185, 129, 0.12);
+}
+
 .layout,
 .screen-column,
 .category-grid,
