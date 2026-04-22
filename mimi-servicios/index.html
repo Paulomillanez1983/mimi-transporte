@@ -28,6 +28,8 @@
       </div>
 
       <div class="topbar-actions">
+        <span class="status-chip" id="sessionChip">Invitado</span>
+
         <button class="icon-button" id="notificationsButton" aria-label="Abrir notificaciones">
           <span>🔔</span>
           <strong id="notificationsCount">0</strong>
@@ -49,10 +51,16 @@
         </div>
 
         <div class="hero-actions">
-          <button class="primary-button" id="enterServicesHub">Servicios</button>
+          <button class="primary-button" id="authPrimaryButton" data-auth-action="login">Ingresar con Google</button>
+          <button class="ghost-button" id="authSecondaryButton" hidden>Cerrar sesión</button>
+          <button class="ghost-button" id="enterServicesHub">Servicios</button>
           <button class="ghost-button" id="installButton">Instalar app</button>
         </div>
+
+        <p class="helper-text" id="authHint">Iniciá sesión para usar búsquedas, solicitudes, chat y tracking reales.</p>
       </section>
+
+      <div class="status-banner is-info" id="statusBanner" hidden></div>
 
       <section class="mode-switcher" id="modeSwitcher" hidden>
         <button class="mode-pill is-active" data-mode="client">Cliente</button>
@@ -227,7 +235,7 @@
     <aside class="drawer" id="notificationsDrawer" aria-hidden="true">
       <div class="drawer-header">
         <h3>Centro de notificaciones</h3>
-        <button class="icon-button" data-close-drawer="notificationsDrawer">✕</button>
+        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">✕</button>
       </div>
       <div class="drawer-body" id="notificationsDrawerBody"></div>
     </aside>
@@ -235,7 +243,7 @@
     <aside class="drawer" id="chatDrawer" aria-hidden="true">
       <div class="drawer-header">
         <h3>Chat en tiempo real</h3>
-        <button class="icon-button" data-close-drawer="chatDrawer">✕</button>
+        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">✕</button>
       </div>
 
       <div class="drawer-body chat-body">
