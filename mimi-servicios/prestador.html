@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#163867">
+  <meta name="description" content="MIMI Servicios para prestadores. Opera ofertas, estados y seguimiento en vivo.">
+  <title>MIMI Servicios | Prestador</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="./styles/app.css">
+  <link rel="stylesheet" href="./styles/provider.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="header" role="banner">
+      <div class="header-content">
+        <div class="vehicle-section" aria-hidden="true">
+          <div class="vehicle-badge">PRESTADOR</div>
+        </div>
+
+        <div class="logo-section">
+          <div class="logo-title">MIMI</div>
+          <div class="logo-subtitle">Panel operativo para tomar y ejecutar servicios</div>
+        </div>
+
+        <div class="header-actions">
+          <div class="header-notifications-wrapper">
+            <button id="notificationsButton" class="trip-notifications" type="button" aria-label="Abrir notificaciones">
+              &#128276;
+              <span class="trip-notifications-badge" id="notificationsCount" hidden>0</span>
+            </button>
+
+            <button id="chatButton" class="trip-notifications" type="button" aria-label="Abrir chat">
+              &#128172;
+              <span class="trip-notifications-badge" id="chatUnreadCount" hidden>0</span>
+            </button>
+          </div>
+
+          <div class="header-user">
+            <span class="status-chip session-chip" id="sessionChip">Prestador</span>
+            <button class="header-login-btn" id="authPrimaryButton" data-auth-action="login" type="button">
+              Ingresar
+            </button>
+            <button class="header-logout-btn" id="authSecondaryButton" type="button" hidden>
+              Salir
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="container" role="main">
+      <section class="hero-text" aria-labelledby="heroTitle">
+        <h1 class="hero-title" id="heroTitle">Gestiona tu jornada en tiempo real</h1>
+        <p class="hero-subtitle">Activa tu disponibilidad, responde ofertas y sigue el servicio activo desde un panel operativo dedicado.</p>
+      </section>
+
+      <div class="status-banner is-info" id="statusBanner" hidden></div>
+
+      <section class="main-card" aria-label="Panel operativo del prestador">
+        <div class="planner-shell planner-shell-provider">
+          <section class="planner-panel">
+            <div class="planner-topbar">
+              <div class="planner-topbar-copy">
+                <span class="eyebrow">Prestador</span>
+                <h2>Panel operativo</h2>
+                <p id="authHint">Ingresa con Google para ver tus ofertas, actualizar estados y seguir tu servicio activo.</p>
+              </div>
+
+              <div class="hero-actions">
+                <button class="btn-secondary" id="installButton" type="button">
+                  Instalar app
+                </button>
+              </div>
+            </div>
+
+            <article class="planner-block">
+              <div class="block-header">
+                <div>
+                  <span class="eyebrow">Estado</span>
+                  <h3>Disponibilidad actual</h3>
+                </div>
+                <span class="status-chip" id="providerStateChip">OFFLINE</span>
+              </div>
+
+              <div class="provider-toggle">
+                <button class="toggle-button is-active" data-provider-status="OFFLINE" type="button">Offline</button>
+                <button class="toggle-button" data-provider-status="ONLINE_IDLE" type="button">Online</button>
+              </div>
+
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <span>Rating</span>
+                  <strong id="providerRating">5.0</strong>
+                </div>
+                <div class="stat-card">
+                  <span>Ofertas</span>
+                  <strong id="providerOffersCount">0</strong>
+                </div>
+                <div class="stat-card">
+                  <span>Servicios</span>
+                  <strong id="providerCompletedCount">0</strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="planner-block">
+              <div class="block-header">
+                <div>
+                  <span class="eyebrow">Ofertas</span>
+                  <h3>Bandeja entrante</h3>
+                </div>
+              </div>
+              <div class="card-list" id="offersList"></div>
+            </article>
+
+            <article class="planner-block">
+              <div class="block-header">
+                <div>
+                  <span class="eyebrow">Servicio activo</span>
+                  <h3>Control operativo</h3>
+                </div>
+              </div>
+              <div id="providerActiveService"></div>
+              <div class="action-row" id="providerActions"></div>
+            </article>
+          </section>
+
+          <aside class="summary-panel">
+            <section class="map-card">
+              <div class="map-card-header">
+                <div>
+                  <span class="eyebrow">Mapa</span>
+                  <h3>Posición y objetivo</h3>
+                </div>
+                <span class="helper-text" id="mapStatus">Esperando actividad</span>
+              </div>
+              <div id="trackingMap" class="map-surface"></div>
+            </section>
+
+            <section class="activity-card">
+              <div class="block-header compact">
+                <div>
+                  <span class="eyebrow">Actividad</span>
+                  <h3>Notificaciones recientes</h3>
+                </div>
+              </div>
+              <div class="card-list compact" id="notificationsList"></div>
+            </section>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <aside class="drawer" id="notificationsDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <h3>Centro de notificaciones</h3>
+        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">X</button>
+      </div>
+      <div class="drawer-body" id="notificationsDrawerBody"></div>
+    </aside>
+
+    <aside class="drawer" id="chatDrawer" aria-hidden="true">
+      <div class="drawer-header">
+        <h3>Chat en tiempo real</h3>
+        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">X</button>
+      </div>
+
+      <div class="drawer-body chat-body">
+        <div class="chat-list" id="chatMessages"></div>
+
+        <form class="chat-form" id="chatForm">
+          <input id="chatInput" type="text" maxlength="500" placeholder="Escribi un mensaje...">
+          <button class="btn-primary" type="submit">Enviar</button>
+        </form>
+      </div>
+    </aside>
+  </div>
+
+  <script src="./env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script type="module" src="./src/main-provider.js"></script>
+</body>
+</html>
