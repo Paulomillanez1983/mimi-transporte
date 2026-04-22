@@ -1,3 +1,4 @@
+===== src/services/sound.js =====
 let audioContext = null;
 
 function ensureAudioContext() {
@@ -41,4 +42,10 @@ export function playMessageSound() {
 export function playStatusSound() {
   beep({ frequency: 460, duration: 0.12, type: "square" });
   setTimeout(() => beep({ frequency: 620, duration: 0.1, type: "square" }), 90);
+}
+
+
+export function playNotificationSound() {
+  beep({ frequency: 680, duration: 0.11, type: "triangle" });
+  setTimeout(() => beep({ frequency: 820, duration: 0.13, type: "triangle" }), 90);
 }
