@@ -90,8 +90,8 @@ export function subscribeToAuthChanges(callback) {
   const supabase = getSupabaseClient();
   if (!supabase || typeof callback !== "function") return null;
 
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session ?? null);
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    callback(event, session ?? null);
   });
 
   return data?.subscription ?? null;
