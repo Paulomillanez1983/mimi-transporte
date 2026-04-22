@@ -1,3 +1,4 @@
+===== src/state/app-state.js =====
 import { appConfig } from "../../config.js";
 import {
   loadActiveService,
