@@ -693,8 +693,30 @@ async function init() {
   renderApp(state);
 }
 
-const authSubscription = subscribeToAuthChanges?.(() => {
-  window.location.reload();
+let authRefreshInFlight = false;
+
+const authSubscription = subscribeToAuthChanges?.(async (event) => {
+  console.log("[auth change]", event);
+
+  if (event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
+    return;
+  }
+
+  if (authRefreshInFlight) {
+    return;
+  }
+
+  if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+    try {
+      authRefreshInFlight = true;
+      await bootstrapAsyncData();
+      renderApp(state);
+    } catch (error) {
+      console.error("[auth] error refrescando estado:", error);
+    } finally {
+      authRefreshInFlight = false;
+    }
+  }
 });
 
 init().catch((error) => {
