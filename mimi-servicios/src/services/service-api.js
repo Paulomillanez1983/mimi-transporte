@@ -1,4 +1,3 @@
-===== src/services/service-api.js =====
 import { appConfig } from "../../config.js";
 import {
   callRpc,
