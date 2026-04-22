@@ -76,7 +76,23 @@ function buildDeviceId() {
 async function registerCurrentDevice() {
   if (!state.session.userId) return;
 
+  const supabase = getSupabaseClient();
+  if (!supabase?.auth?.getSession) return;
+
   try {
+    const { data, error } = await supabase.auth.getSession();
+    const session = data?.session ?? null;
+
+    if (error || !session?.access_token) {
+      console.warn("[registerCurrentDevice] sin sesion valida, se omite registro de dispositivo", {
+        hasUserId: !!state.session.userId,
+        hasSession: !!session,
+        hasToken: !!session?.access_token,
+        error: error?.message ?? null,
+      });
+      return;
+    }
+
     await registerDevice({
       deviceId: buildDeviceId(),
       pushToken: null,
@@ -84,11 +100,10 @@ async function registerCurrentDevice() {
       notificationsEnabled: true,
       marketingOptIn: false,
     });
-  } catch {
-    // silent
+  } catch (error) {
+    console.warn("[registerCurrentDevice] no se pudo registrar dispositivo", error);
   }
 }
-
 function syncDraftFromForm() {
   patchState("requestDraft.address", document.getElementById("serviceAddressInput")?.value?.trim() ?? "");
   patchState("requestDraft.lat", Number(document.getElementById("serviceLatInput")?.value || state.requestDraft.lat));
