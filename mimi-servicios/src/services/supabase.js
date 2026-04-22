@@ -74,6 +74,17 @@ export async function signOut() {
   return true;
 }
 
+export function subscribeToAuthChanges(callback) {
+  const supabase = getSupabaseClient();
+  if (!supabase || typeof callback !== "function") return null;
+
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    callback(session ?? null);
+  });
+
+  return data?.subscription ?? null;
+}
+
 export async function invokeFunction(name, body = {}, options = {}) {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
