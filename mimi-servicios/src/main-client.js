@@ -82,7 +82,9 @@ function buildDeviceId() {
 }
 
 async function registerCurrentDevice() {
-  if (!state.session.userId) return;
+  const session = await getCurrentSession();
+  if (!session?.user?.id) return;
+  if (!hasSupabaseEnv()) return;
 
   try {
     await registerDevice({
