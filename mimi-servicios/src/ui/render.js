@@ -1,4 +1,5 @@
-import { appConfig } from "../config.js";
+===== src/ui/render.js =====
+import { appConfig } from "../../config.js";
 
 const stateLabels = {
   SEARCHING: "Buscando prestador",
@@ -272,7 +273,7 @@ function renderRequest(state) {
     </div>
   `;
 
-  timeline.innerHTML = appConfig.serviceStates.map((status) => `
+  timeline.innerHTML = Object.values(appConfig.serviceStates).map((status) => `
     <div class="timeline-step ${status === request.status ? "is-active" : ""}">
       <strong>${escapeHtml(stateLabels[status] ?? status)}</strong>
       <span>${escapeHtml(status)}</span>
