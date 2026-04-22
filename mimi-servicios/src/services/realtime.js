@@ -1,4 +1,3 @@
-===== src/services/realtime.js =====
 import { getSupabaseClient } from "./supabase.js";
 
 let channels = [];
