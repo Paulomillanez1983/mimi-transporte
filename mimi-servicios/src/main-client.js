@@ -704,12 +704,10 @@ async function init() {
   renderClientScreen(state);
 }
 
-const authSubscription = subscribeToAuthChanges?.((session) => {
-  if (session) {
+const authSubscription = subscribeToAuthChanges?.((event, session) => {
+  if (event === "SIGNED_IN" && session) {
     redirectAfterLoginByRole(session);
-    return;
   }
-  window.location.reload();
 });
 
 init().catch((error) => {
