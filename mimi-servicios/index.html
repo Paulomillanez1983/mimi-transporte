@@ -4,13 +4,49 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#163867">
-  <meta http-equiv="refresh" content="0; url=./cliente.html">
   <title>MIMI Servicios</title>
-  <script>
-    window.location.replace("./cliente.html");
-  </script>
 </head>
 <body>
-  <p>Redirigiendo a <a href="./cliente.html">cliente.html</a>...</p>
+  <p>Abriendo MIMI Servicios...</p>
+
+  <script src="./env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (async () => {
+      try {
+        const url = window.MIMI_SERVICES_ENV?.SUPABASE_URL;
+        const key = window.MIMI_SERVICES_ENV?.SUPABASE_ANON_KEY;
+
+        if (!url || !key || !window.supabase?.createClient) {
+          window.location.replace("./cliente.html");
+          return;
+        }
+
+        const client = window.supabase.createClient(url, key, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true
+          }
+        });
+
+        const { data } = await client.auth.getSession();
+        const session = data?.session ?? null;
+        const role =
+          session?.user?.app_metadata?.role ||
+          session?.user?.user_metadata?.role ||
+          "client";
+
+        if (role === "provider") {
+          window.location.replace("./prestador.html");
+          return;
+        }
+
+        window.location.replace("./cliente.html");
+      } catch {
+        window.location.replace("./cliente.html");
+      }
+    })();
+  </script>
 </body>
 </html>
