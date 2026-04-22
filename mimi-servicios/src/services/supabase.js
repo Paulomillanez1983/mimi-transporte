@@ -1,4 +1,3 @@
-===== src/services/supabase.js =====
 import { appConfig } from "../../config.js";
 
 let client = null;
