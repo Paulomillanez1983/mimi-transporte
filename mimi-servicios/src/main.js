@@ -190,21 +190,29 @@ async function bootstrapAsyncData() {
   }
 
   setState((draft) => {
-    draft.session.userId = session.userId;
-    draft.session.providerId = session.providerId;
-    draft.session.role = session.role;
-    draft.session.userEmail = session.userEmail ?? null;
-    draft.session.userName = session.userName ?? null;
-    draft.meta.backendMode = session.userId ? "supabase" : (hasSupabaseEnv() ? "supabase" : "mock");
-    draft.ui.appEntered = draft.meta.backendMode === "mock" ? true : Boolean(session.userId);
+const envReady = hasSupabaseEnv();
+const isAuthenticated = Boolean(session.userId);
 
-    if (appConfig.categories.length && !appConfig.categories.some((item) => item.id === draft.ui.selectedCategoryId)) {
-      draft.ui.selectedCategoryId = appConfig.categories[0].id;
-    }
+draft.session.userId = session.userId ?? null;
+draft.session.providerId = session.providerId ?? null;
+draft.session.role = session.role ?? "guest";
+draft.session.userEmail = session.userEmail ?? null;
+draft.session.userName = session.userName ?? null;
+draft.session.isAuthenticated = isAuthenticated;
+draft.session.isGuest = envReady && !isAuthenticated;
 
-    if (session.role === "provider") {
-      draft.ui.activeMode = "provider";
-    }
+draft.meta.backendMode = envReady ? "supabase" : "mock";
+draft.ui.appEntered = envReady ? isAuthenticated : true;
+
+if (appConfig.categories.length && !appConfig.categories.some((item) => item.id === draft.ui.selectedCategoryId)) {
+  draft.ui.selectedCategoryId = appConfig.categories[0].id;
+}
+
+if (session.role === "provider") {
+  draft.ui.activeMode = "provider";
+} else if (!isAuthenticated) {
+  draft.ui.activeMode = "client";
+}
   });
 
   const [notifications, offers] = await Promise.all([
@@ -285,15 +293,18 @@ function startProviderTrackingLoop() {
 }
 
 async function handleAuthPrimary() {
-  if (!hasSupabaseEnv()) {
+  const envReady = hasSupabaseEnv();
+
+  if (!envReady) {
     patchState("ui.appEntered", true);
+    patchState("session.isAuthenticated", false);
+    patchState("session.isGuest", false);
     setInfo("Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real.");
     return;
   }
 
   await signInWithGoogle();
 }
-
 async function handleSearchSubmit(event) {
   event.preventDefault();
   syncDraftFromForm();
