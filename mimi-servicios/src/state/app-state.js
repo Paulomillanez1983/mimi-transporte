@@ -1,4 +1,4 @@
-import { appConfig } from "../config.js";
+import { appConfig } from "../../config.js";
 
 const listeners = new Set();
 
