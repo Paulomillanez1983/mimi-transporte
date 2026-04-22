@@ -20,7 +20,10 @@ export const state = {
     installPromptEvent: null,
   },
   session: {
+    isAuthenticated: false,
     userId: null,
+    userEmail: null,
+    userName: null,
     providerId: null,
     role: "client",
   },
@@ -74,6 +77,7 @@ export const state = {
     error: null,
     info: "Configuración lista para integrar con Supabase.",
     backendMode: "mock",
+    categories: appConfig.categories,
   },
 };
 
