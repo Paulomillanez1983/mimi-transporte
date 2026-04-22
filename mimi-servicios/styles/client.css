@@ -1,0 +1,66 @@
+.service-address-wrapper {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.service-address-wrapper input {
+  padding-right: 16px;
+}
+
+.service-address-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-input-action {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid rgba(30, 60, 114, 0.12);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--primary);
+  box-shadow: 0 10px 24px rgba(17, 41, 86, 0.08);
+}
+
+.btn-input-action.clear {
+  color: var(--danger);
+}
+
+.sugerencias {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.suggestion-item {
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  border: 1px solid rgba(30, 60, 114, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--text);
+  box-shadow: 0 12px 22px rgba(17, 41, 86, 0.06);
+}
+
+.suggestion-item:hover,
+.suggestion-item.is-active {
+  border-color: rgba(43, 182, 115, 0.24);
+  background: linear-gradient(135deg, rgba(43, 182, 115, 0.08) 0%, rgba(125, 224, 177, 0.16) 100%);
+}
+
+.suggestion-item strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.client-empty-state {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(30, 60, 114, 0.05) 0%, rgba(43, 182, 115, 0.08) 100%);
+  border: 1px dashed rgba(30, 60, 114, 0.14);
+}
