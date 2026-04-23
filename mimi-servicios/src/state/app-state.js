@@ -1,4 +1,4 @@
-import { appConfig } from "../../config.js";
+import { appConfig } from "../config.js";
 
 const listeners = new Set();
 
@@ -72,7 +72,7 @@ export const state = {
     loading: {},
     lastSearchAt: null,
     error: null,
-    info: "Configuracion lista para integrar con Supabase.",
+    info: "Configuración lista para integrar con Supabase.",
     backendMode: "mock",
   },
 };
