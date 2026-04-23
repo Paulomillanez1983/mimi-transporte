@@ -97,6 +97,7 @@ export function patchState(path, value) {
     current[segments.at(-1)] = value;
   });
 }
+
 export function setActiveMode(mode) {
   localStorage.setItem("mimi_active_mode", mode);
 
