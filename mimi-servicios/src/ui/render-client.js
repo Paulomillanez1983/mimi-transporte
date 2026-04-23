@@ -9,14 +9,14 @@ const stateLabels = {
   PROVIDER_ARRIVED: "Prestador en puerta",
   IN_PROGRESS: "Servicio en curso",
   COMPLETED: "Servicio completado",
-  CANCELLED: "Servicio cancelado",
+  CANCELLED: "Servicio cancelado"
 };
 
-function currency(value) {
+function currency(value, currencyCode = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: "ARS",
-    maximumFractionDigits: 0,
+    currency: currencyCode,
+    maximumFractionDigits: 0
   }).format(Number(value ?? 0));
 }
 
@@ -26,7 +26,7 @@ function formatDate(value) {
   try {
     return new Intl.DateTimeFormat("es-AR", {
       dateStyle: "short",
-      timeStyle: "short",
+      timeStyle: "short"
     }).format(new Date(value));
   } catch {
     return "Ahora";
@@ -60,7 +60,9 @@ function providerCapabilityChips(provider) {
     provider.pricing_mode || null,
     provider.minimum_hours ? `Mín. ${provider.minimum_hours} hs` : null,
     provider.maximum_hours ? `Máx. ${provider.maximum_hours} hs` : null,
-    provider.completed_services_count ? `${provider.completed_services_count} servicios` : null,
+    provider.completed_services_count
+      ? `${provider.completed_services_count} servicios`
+      : null
   ].filter(Boolean);
 }
 
@@ -71,7 +73,9 @@ function providerSpotlightChips(profile, categories) {
     profile?.pricing_mode || null,
     profile?.city || null,
     profile?.province || null,
-    ...((categories ?? []).map((item) => item.svc_categories?.name || item.category_id).filter(Boolean)),
+    ...(categories ?? [])
+      .map((item) => item.svc_categories?.name || item.category_id)
+      .filter(Boolean)
   ].slice(0, 8);
 }
 
@@ -106,18 +110,20 @@ function renderAuth(state) {
 
   const isAuthenticated = Boolean(state.session.userId);
   const hasBackend = state.meta.backendMode === "supabase";
-  const displayName = state.session.userName || state.session.userEmail || "Cliente";
+  const displayName =
+    state.session.userName || state.session.userEmail || "Cliente";
 
-if (sessionChip) {
-  const activeClient = state.ui.activeMode === "client";
-  const activeProvider = state.ui.activeMode === "provider";
+  if (sessionChip) {
+    const activeClient = state.ui.activeMode === "client";
+    const activeProvider = state.ui.activeMode === "provider";
 
-  sessionChip.textContent = isAuthenticated
-    ? `${activeClient ? "🧑‍💼 Cliente" : "Cliente"} | ${activeProvider ? "🚗 Prestador" : "Prestador"} · ${displayName}`
-    : hasBackend
-      ? "🧑‍💼 Cliente | Prestador"
-      : "Modo demo";
-}
+    sessionChip.textContent = isAuthenticated
+      ? `${activeClient ? "Cliente" : "Cliente"} | ${activeProvider ? "Prestador" : "Prestador"} · ${displayName}`
+      : hasBackend
+        ? "Cliente | Prestador"
+        : "Modo demo";
+  }
+
   if (authPrimaryButton) {
     authPrimaryButton.hidden = isAuthenticated;
     authPrimaryButton.textContent = hasBackend ? "Ingresar" : "Entrar";
@@ -140,7 +146,11 @@ function renderEntryState(state) {
   const enterButton = document.getElementById("enterServicesHub");
   if (!enterButton) return;
 
-  const appVisible = state.ui.appEntered || Boolean(state.session.userId) || state.meta.backendMode !== "supabase";
+  const appVisible =
+    state.ui.appEntered ||
+    Boolean(state.session.userId) ||
+    state.meta.backendMode !== "supabase";
+
   enterButton.hidden = appVisible;
 }
 
@@ -148,19 +158,31 @@ function renderCategories(state) {
   const container = document.getElementById("categoryGrid");
   if (!container) return;
 
-  const categories = Array.isArray(appConfig.categories) ? appConfig.categories : [];
+  const categories = Array.isArray(appConfig.categories)
+    ? appConfig.categories
+    : [];
+
   container.innerHTML = categories.length
-    ? categories.map((category) => `
-      <button
-        class="category-card ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""}"
-        data-category-id="${escapeHtml(category.id)}"
-        type="button"
-      >
-        <strong>${escapeHtml(category.name)}</strong>
-        <span class="muted">${escapeHtml(category.description || "Servicio disponible")}</span>
-      </button>
-    `).join("")
-    : `<div class="summary-empty"><strong>Sin categorías</strong><p>Cuando carguemos categorías del backend aparecerán acá.</p></div>`;
+    ? categories
+        .map(
+          (category) => `
+            <button
+              class="category-card ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""}"
+              data-category-id="${escapeHtml(category.id)}"
+              type="button"
+            >
+              <strong>${escapeHtml(category.name)}</strong>
+              <span class="muted">${escapeHtml(category.description || "Servicio disponible")}</span>
+            </button>
+          `
+        )
+        .join("")
+    : `
+      <div class="summary-empty">
+        <strong>Sin categorías</strong>
+        <p>Cuando carguemos categorías del backend aparecerán acá.</p>
+      </div>
+    `;
 }
 
 export function renderProvidersList(state) {
@@ -168,72 +190,87 @@ export function renderProvidersList(state) {
   const list = document.getElementById("providersList");
   if (!meta || !list) return;
 
-  const providers = Array.isArray(state.client.providers) ? state.client.providers : [];
+  const providers = Array.isArray(state.client.providers)
+    ? state.client.providers
+    : [];
+
   meta.textContent = providers.length
     ? `${providers.length} prestadores ordenados por cercanía y score`
-    : (state.meta.info || "Esperando búsqueda");
+    : state.meta.info || "Esperando búsqueda";
 
   list.innerHTML = providers.length
-    ? providers.map((provider) => `
-      <article class="result-card">
-        <header>
-          <div>
-            <strong>${escapeHtml(provider.full_name || "Prestador disponible")}</strong>
-            <span class="muted">
-              ${escapeHtml(String(provider.rating?.toFixed?.(1) ?? provider.rating ?? "5.0"))} estrellas -
-              ${escapeHtml(String(provider.rating_count ?? 0))} reseñas
-            </span>
-          </div>
-          <strong>${currency(provider.total_price)}</strong>
-        </header>
+    ? providers
+        .map((provider) => `
+          <article class="result-card">
+            <header>
+              <div>
+                <strong>${escapeHtml(provider.full_name || "Prestador disponible")}</strong>
+                <span class="muted">
+                  ${escapeHtml(String(provider.rating?.toFixed?.(1) ?? provider.rating ?? "5.0"))} estrellas ·
+                  ${escapeHtml(String(provider.rating_count ?? 0))} reseñas
+                </span>
+              </div>
+              <strong>${currency(provider.total_price)}</strong>
+            </header>
 
-        ${(provider.bio || provider.description)
-          ? `<p class="muted">${escapeHtml(provider.bio || provider.description)}</p>`
-          : ""}
+            ${(provider.bio || provider.description)
+              ? `<p class="muted">${escapeHtml(provider.bio || provider.description)}</p>`
+              : ""}
 
-        <div class="result-meta">
-          <div class="metric">
-            <span>Prestador</span>
-            <strong>${currency(provider.provider_price)}</strong>
-          </div>
-          <div class="metric">
-            <span>Fee</span>
-            <strong>${currency(provider.fee ?? provider.platform_fee)}</strong>
-          </div>
-          <div class="metric">
-            <span>Distancia</span>
-            <strong>${escapeHtml(String(provider.distance_km ?? "-"))} km</strong>
-          </div>
-          <div class="metric">
-            <span>ETA</span>
-            <strong>${escapeHtml(String(provider.estimated_eta_min ?? "-"))} min</strong>
-          </div>
-        </div>
-
-        ${providerCapabilityChips(provider).length
-          ? `
-            <div class="chip-row">
-              ${providerCapabilityChips(provider).map((chip) => `<span class="inline-chip">${escapeHtml(chip)}</span>`).join("")}
+            <div class="result-meta">
+              <div class="metric">
+                <span>Prestador</span>
+                <strong>${currency(provider.provider_price)}</strong>
+              </div>
+              <div class="metric">
+                <span>Fee</span>
+                <strong>${currency(provider.fee ?? provider.platform_fee)}</strong>
+              </div>
+              <div class="metric">
+                <span>Distancia</span>
+                <strong>${escapeHtml(String(provider.distance_km ?? "-"))} km</strong>
+              </div>
+              <div class="metric">
+                <span>ETA</span>
+                <strong>${escapeHtml(String(provider.estimated_eta_min ?? "-"))} min</strong>
+              </div>
             </div>
-          `
-          : ""}
 
-        ${(provider.next_available_at || provider.last_service_completed_at)
-          ? `
-            <div class="provider-facts">
-              ${provider.next_available_at ? `<span class="muted">Próxima ventana: ${escapeHtml(formatDate(provider.next_available_at))}</span>` : ""}
-              ${provider.last_service_completed_at ? `<span class="muted">Último cierre: ${escapeHtml(formatDate(provider.last_service_completed_at))}</span>` : ""}
+            ${providerCapabilityChips(provider).length
+              ? `
+                <div class="chip-row">
+                  ${providerCapabilityChips(provider)
+                    .map((chip) => `<span class="inline-chip">${escapeHtml(chip)}</span>`)
+                    .join("")}
+                </div>
+              `
+              : ""}
+
+            ${(provider.next_available_at || provider.last_service_completed_at)
+              ? `
+                <div class="provider-facts">
+                  ${provider.next_available_at
+                    ? `<span class="muted">Próxima ventana: ${escapeHtml(formatDate(provider.next_available_at))}</span>`
+                    : ""}
+                  ${provider.last_service_completed_at
+                    ? `<span class="muted">Último cierre: ${escapeHtml(formatDate(provider.last_service_completed_at))}</span>`
+                    : ""}
+                </div>
+              `
+              : ""}
+
+            <div class="action-row">
+              <button
+                class="btn-primary"
+                data-provider-select="${escapeHtml(provider.provider_id)}"
+                type="button"
+              >
+                Elegir prestador
+              </button>
             </div>
-          `
-          : ""}
-
-        <div class="action-row">
-          <button class="btn-primary" data-provider-select="${escapeHtml(provider.provider_id)}" type="button">
-            Elegir prestador
-          </button>
-        </div>
-      </article>
-    `).join("")
+          </article>
+        `)
+        .join("")
     : `
       <div class="client-empty-state">
         <strong>Elegí la categoría y completá la dirección</strong>
@@ -247,11 +284,13 @@ export function renderRequestSummary(state) {
   const summary = document.getElementById("requestSummary");
   const timeline = document.getElementById("requestTimeline");
   const actions = document.getElementById("requestActions");
+
   if (!chip || !summary || !timeline || !actions) return;
 
   const request = state.client.activeRequest;
+
   chip.textContent = request
-    ? (stateLabels[request.status] ?? request.status)
+    ? stateLabels[request.status] ?? request.status
     : "Sin solicitud activa";
 
   if (!request) {
@@ -310,12 +349,14 @@ export function renderRequestSummary(state) {
     </div>
   `;
 
-  timeline.innerHTML = appConfig.serviceStates.map((status) => `
-    <div class="timeline-step ${status === request.status ? "is-active" : ""}">
-      <strong>${escapeHtml(stateLabels[status] ?? status)}</strong>
-      <span>${escapeHtml(status)}</span>
-    </div>
-  `).join("");
+  timeline.innerHTML = appConfig.serviceStates
+    .map((status) => `
+      <div class="timeline-step ${status === request.status ? "is-active" : ""}">
+        <strong>${escapeHtml(stateLabels[status] ?? status)}</strong>
+        <span>${escapeHtml(status)}</span>
+      </div>
+    `)
+    .join("");
 
   actions.innerHTML = [
     ["SEARCHING", "PENDING_PROVIDER_RESPONSE"].includes(request.status)
@@ -326,7 +367,7 @@ export function renderRequestSummary(state) {
       : "",
     request.status === "COMPLETED"
       ? `<button class="btn-secondary" data-request-action="rate" type="button">Calificar</button>`
-      : "",
+      : ""
   ].join("");
 }
 
@@ -414,29 +455,31 @@ function renderMatchingPanel(state) {
   }
 
   const rankingHtml = candidates.length
-    ? candidates.map((item) => `
-      <article class="summary-card compact-stack">
-        <strong>#${escapeHtml(String(item.rank_position ?? "-"))}</strong>
-        <div class="summary-metrics">
-          <div class="metric">
-            <span>Score</span>
-            <strong>${escapeHtml(String(item.score ?? "-"))}</strong>
-          </div>
-          <div class="metric">
-            <span>Distancia</span>
-            <strong>${escapeHtml(String(item.distance_km ?? "-"))} km</strong>
-          </div>
-          <div class="metric">
-            <span>Precio</span>
-            <strong>${currency(item.provider_price_snapshot ?? 0)}</strong>
-          </div>
-          <div class="metric">
-            <span>Rating</span>
-            <strong>${escapeHtml(String(item.rating_snapshot ?? "-"))}</strong>
-          </div>
-        </div>
-      </article>
-    `).join("")
+    ? candidates
+        .map((item) => `
+          <article class="summary-card compact-stack">
+            <strong>#${escapeHtml(String(item.rank_position ?? "-"))}</strong>
+            <div class="summary-metrics">
+              <div class="metric">
+                <span>Score</span>
+                <strong>${escapeHtml(String(item.score ?? "-"))}</strong>
+              </div>
+              <div class="metric">
+                <span>Distancia</span>
+                <strong>${escapeHtml(String(item.distance_km ?? "-"))} km</strong>
+              </div>
+              <div class="metric">
+                <span>Precio</span>
+                <strong>${currency(item.provider_price_snapshot ?? 0)}</strong>
+              </div>
+              <div class="metric">
+                <span>Rating</span>
+                <strong>${escapeHtml(String(item.rating_snapshot ?? "-"))}</strong>
+              </div>
+            </div>
+          </article>
+        `)
+        .join("")
     : `
       <div class="summary-card">
         <strong>Sin candidatos visibles</strong>
@@ -445,16 +488,18 @@ function renderMatchingPanel(state) {
     `;
 
   const offersHtml = offers.length
-    ? offers.map((item) => `
-      <article class="summary-card compact-stack">
-        <strong>${item.provider_id === selectedProviderId ? "Prestador elegido" : "Oferta enviada"}</strong>
-        <div class="chip-row">
-          <span class="inline-chip">${escapeHtml(item.status ?? "PENDING")}</span>
-          ${item.sent_at ? `<span class="inline-chip">Enviada ${escapeHtml(formatDate(item.sent_at))}</span>` : ""}
-          ${item.expires_at ? `<span class="inline-chip">Vence ${escapeHtml(formatDate(item.expires_at))}</span>` : ""}
-        </div>
-      </article>
-    `).join("")
+    ? offers
+        .map((item) => `
+          <article class="summary-card compact-stack">
+            <strong>${item.provider_id === selectedProviderId ? "Prestador elegido" : "Oferta enviada"}</strong>
+            <div class="chip-row">
+              <span class="inline-chip">${escapeHtml(item.status ?? "PENDING")}</span>
+              ${item.sent_at ? `<span class="inline-chip">Enviada ${escapeHtml(formatDate(item.sent_at))}</span>` : ""}
+              ${item.expires_at ? `<span class="inline-chip">Vence ${escapeHtml(formatDate(item.expires_at))}</span>` : ""}
+            </div>
+          </article>
+        `)
+        .join("")
     : `
       <div class="summary-card">
         <strong>Sin offers registradas</strong>
@@ -486,19 +531,26 @@ function renderProviderSpotlight(state) {
   }
 
   const categoryChips = providerSpotlightChips(profile, categories);
+
   const pricingHtml = pricing.length
-    ? pricing.map((item) => `
-      <span class="inline-chip">${escapeHtml(item.svc_categories?.name ?? item.category_id ?? "Categoría")}: ${currency(item.price_per_hour, item.currency)}</span>
-    `).join("")
+    ? pricing
+        .map((item) => `
+          <span class="inline-chip">
+            ${escapeHtml(item.svc_categories?.name ?? item.category_id ?? "Categoría")}: ${currency(item.price_per_hour, item.currency)}
+          </span>
+        `)
+        .join("")
     : `<span class="muted">Sin pricing visible todavía.</span>`;
 
   const reviewsHtml = reviews.length
-    ? reviews.map((item) => `
-      <article class="summary-card compact-stack">
-        <strong>${escapeHtml(Number(item.rating ?? 5).toFixed(1))} / 5</strong>
-        <p class="muted">${escapeHtml(item.comment || "Sin comentario")}</p>
-      </article>
-    `).join("")
+    ? reviews
+        .map((item) => `
+          <article class="summary-card compact-stack">
+            <strong>${escapeHtml(Number(item.rating ?? 5).toFixed(1))} / 5</strong>
+            <p class="muted">${escapeHtml(item.comment || "Sin comentario")}</p>
+          </article>
+        `)
+        .join("")
     : `
       <div class="summary-card">
         <strong>Sin reseñas recientes</strong>
@@ -523,19 +575,23 @@ function renderProviderSpotlight(state) {
 }
 
 export function renderNotifications(state) {
-  const items = Array.isArray(state.notifications.items) ? state.notifications.items : [];
+  const items = Array.isArray(state.notifications.items)
+    ? state.notifications.items
+    : [];
   const unread = items.filter((item) => !item.read_at).length;
 
   setBadgeCount("notificationsCount", unread);
 
   const html = items.length
-    ? items.map((item) => `
-      <article class="notification-card">
-        <strong>${escapeHtml(item.title ?? "Notificación")}</strong>
-        <p class="muted">${escapeHtml(item.body ?? "")}</p>
-        <span class="muted">${escapeHtml(formatDate(item.created_at))}</span>
-      </article>
-    `).join("")
+    ? items
+        .map((item) => `
+          <article class="notification-card">
+            <strong>${escapeHtml(item.title ?? "Notificación")}</strong>
+            <p class="muted">${escapeHtml(item.body ?? "")}</p>
+            <span class="muted">${escapeHtml(formatDate(item.created_at))}</span>
+          </article>
+        `)
+        .join("")
     : `
       <div class="summary-card">
         <strong>Sin notificaciones</strong>
@@ -551,20 +607,25 @@ export function renderNotifications(state) {
 }
 
 export function renderChat(state) {
-  const messages = Array.isArray(state.chat.messages) ? state.chat.messages : [];
+  const messages = Array.isArray(state.chat.messages)
+    ? state.chat.messages
+    : [];
+
   setBadgeCount("chatUnreadCount", state.chat.unreadCount ?? 0);
 
   const chatMessages = document.getElementById("chatMessages");
   if (!chatMessages) return;
 
   chatMessages.innerHTML = messages.length
-    ? messages.map((message) => `
-      <article class="message-bubble ${message.sender_user_id === state.session.userId || message.sender_user_id === "self" ? "is-own" : ""}">
-        <strong>${message.sender_user_id === state.session.userId || message.sender_user_id === "self" ? "Vos" : "Operador"}</strong>
-        <p>${escapeHtml(message.body ?? "")}</p>
-        <span class="muted">${escapeHtml(formatDate(message.created_at))}</span>
-      </article>
-    `).join("")
+    ? messages
+        .map((message) => `
+          <article class="message-bubble ${message.sender_user_id === state.session.userId || message.sender_user_id === "self" ? "is-own" : ""}">
+            <strong>${message.sender_user_id === state.session.userId || message.sender_user_id === "self" ? "Vos" : "Operador"}</strong>
+            <p>${escapeHtml(message.body ?? "")}</p>
+            <span class="muted">${escapeHtml(formatDate(message.created_at))}</span>
+          </article>
+        `)
+        .join("")
     : `
       <div class="summary-card">
         <strong>Chat listo</strong>
@@ -579,7 +640,7 @@ function renderMapStatus(state) {
 
   const activeRequest = state.client.activeRequest;
   mapStatus.textContent = activeRequest
-    ? (stateLabels[activeRequest.status] ?? activeRequest.status)
+    ? stateLabels[activeRequest.status] ?? activeRequest.status
     : "Esperando actividad";
 }
 
