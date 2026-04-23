@@ -25,12 +25,11 @@ import { playNotificationSound } from "./services/sound.js";
 import {
   getCurrentSession,
   hasSupabaseEnv,
-  redirectAfterLoginByRole,
   signInWithGoogle,
   signOut,
   subscribeToAuthChanges,
 } from "./services/supabase.js";
-import { patchState, setState, state, subscribe } from "./state/app-state.js";
+import { patchState, setActiveMode, setState, state, subscribe } from "./state/app-state.js";
 import { renderClientScreen } from "./ui/render-client.js";
 
 let addressLookupToken = 0;
@@ -375,19 +374,8 @@ async function bootstrapAsyncData() {
       description: category.description,
     }));
   }
-const mode = state.ui.activeMode;
-
-if (mode === "provider" && !window.location.pathname.includes("prestador")) {
-  window.location.href = "./prestador.html";
-  return;
-}
-
-if (mode === "client" && !window.location.pathname.includes("cliente")) {
-  window.location.href = "./cliente.html";
-  return;
-}
 if (session.isAuthenticated && session.role === "provider") {
-  // no redirigimos automáticamente
+  // mismo usuario puede usar ambos modos; no redirigimos automáticamente
 }
   setState((draft) => {
     draft.session.userId = session.userId;
@@ -549,19 +537,24 @@ function bindBasicControls() {
     }
   });
 
-  document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
-    try {
-      await signOut();
-      window.location.reload();
-    } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
-    }
-  });
+document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
+  try {
+    await signOut();
+    window.location.reload();
+  } catch (error) {
+    setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
+  }
+});
 
-  document.getElementById("enterServicesHub")?.addEventListener("click", () => {
-    patchState("ui.appEntered", true);
-  });
+document.getElementById("switchToProvider")?.addEventListener("click", () => {
+  setActiveMode("provider");
+  window.location.href = "./prestador.html";
+});
 
+document.getElementById("enterServicesHub")?.addEventListener("click", () => {
+  patchState("ui.appEntered", true);
+});
+  
   document.getElementById("notificationsButton")?.addEventListener("click", () => {
     toggleDrawer("notificationsDrawer", true);
   });
@@ -755,26 +748,35 @@ async function init() {
     navigator.serviceWorker.register("./sw.js").catch(() => null);
   }
 
-  await bootstrapAsyncData();
+await bootstrapAsyncData();
 
-  if (window.location.hash && window.location.hash.includes("access_token")) {
-    history.replaceState(
-      {},
-      document.title,
-      window.location.pathname + window.location.search
-    );
-  }
-
-  setupRealtime();
-  renderClientScreen(state);
+if (window.location.hash && window.location.hash.includes("access_token")) {
+  history.replaceState(
+    {},
+    document.title,
+    window.location.pathname + window.location.search
+  );
 }
 
+if (state.ui.activeMode === "provider") {
+  window.location.href = "./prestador.html";
+  return;
+}
+
+setupRealtime();
+renderClientScreen(state);
+  
 const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
   if (event === "SIGNED_IN" && session) {
-    await redirectAfterLoginByRole(session);
+    if (state.ui.activeMode === "provider") {
+      window.location.href = "./prestador.html";
+      return;
+    }
+
+    window.location.href = "./cliente.html";
   }
 });
-
+  
 init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
