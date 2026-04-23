@@ -105,18 +105,11 @@ async function registerCurrentDevice() {
   if (!state.session.userId) return;
 
   try {
-    await registerDevice({
-      deviceId: buildDeviceId(),
-      pushToken: null,
-      platform: "web",
-      notificationsEnabled: true,
-      marketingOptIn: false
-    });
-  } catch {
-    // no-op
+    await registerDevice(null);
+  } catch (error) {
+    console.warn("[MIMI Servicios] No se pudo registrar el dispositivo:", error);
   }
 }
-
 async function getCurrentCoords() {
   if (!navigator.geolocation) {
     throw new Error("Tu dispositivo no soporta geolocalización.");
