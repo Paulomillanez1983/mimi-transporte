@@ -149,10 +149,9 @@ async function hydrateLiveContext(activeRequestOverride) {
 async function bootstrapAsyncData() {
   const session = await bootstrapSession();
 
-  if (session.isAuthenticated && session.role !== "provider") {
-    await redirectAfterLoginByRole(await getCurrentSession());
-    return;
-  }
+if (session.isAuthenticated && session.role !== "provider") {
+  // no redirigimos automáticamente
+}
 
   setState((draft) => {
     draft.session.userId = session.userId;
