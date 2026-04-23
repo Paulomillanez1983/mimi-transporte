@@ -30,14 +30,35 @@
           }
         });
 
-        const { data } = await client.auth.getSession();
+        const { data, error } = await client.auth.getSession();
+        if (error) {
+          window.location.replace("./cliente.html");
+          return;
+        }
+
         const session = data?.session ?? null;
-        const role =
+        if (!session?.user?.id) {
+          window.location.replace("./cliente.html");
+          return;
+        }
+
+        const { data: providers, error: providerError } = await client
+          .from("svc_providers")
+          .select("id")
+          .eq("user_id", session.user.id)
+          .limit(1);
+
+        if (!providerError && Array.isArray(providers) && providers.length > 0) {
+          window.location.replace("./prestador.html");
+          return;
+        }
+
+        const metadataRole =
           session?.user?.app_metadata?.role ||
           session?.user?.user_metadata?.role ||
           "client";
 
-        if (role === "provider") {
+        if (metadataRole === "provider") {
           window.location.replace("./prestador.html");
           return;
         }
