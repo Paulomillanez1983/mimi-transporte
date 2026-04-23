@@ -512,19 +512,21 @@ async function init() {
     navigator.serviceWorker.register("./sw.js").catch(() => null);
   }
 
-await bootstrapAsyncData();
+  await bootstrapAsyncData();
 
-if (window.location.hash && window.location.hash.includes("access_token")) {
-  history.replaceState(
-    {},
-    document.title,
-    window.location.pathname + window.location.search
-  );
+  if (window.location.hash && window.location.hash.includes("access_token")) {
+    history.replaceState(
+      {},
+      document.title,
+      window.location.pathname + window.location.search
+    );
+  }
+
+  startProviderTrackingLoop();
+  setupRealtime();
+  renderProviderScreen(state);
 }
 
-startProviderTrackingLoop();
-setupRealtime();
-renderProviderScreen(state);
 const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
   if (event === "SIGNED_IN" && session) {
     await redirectAfterLoginByRole(session);
@@ -533,7 +535,10 @@ const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
 
 init().catch((error) => {
   setState((draft) => {
-    draft.meta.error = normalizeAuthError(error, "La app cargó con fallback local. Revisá la configuración de Supabase.");
+    draft.meta.error = normalizeAuthError(
+      error,
+      "La app cargó con fallback local. Revisá la configuración de Supabase."
+    );
     draft.meta.info = null;
   });
 });
