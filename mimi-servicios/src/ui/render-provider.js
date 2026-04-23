@@ -676,19 +676,21 @@ function renderProviderTrust(state) {
       ? "Tu cuenta está aprobada para operar cuando estés online."
       : totalDocs > 0
         ? "Ya recibimos tus documentos. Si alguno queda observado, vas a poder reenviarlo desde acá."
-        : "Subí DNI frente, DNI dorso y selfie. No pedimos carnet de conducir para MIMI Servicios.";
+        : "Subí DNI frente, DNI dorso, selfie y comprobante de domicilio. No pedimos carnet, vehículo ni licencia para MIMI Servicios.";
 
   const documentOptions = [
     ["dni_front", "DNI frente"],
     ["dni_back", "DNI dorso"],
     ["selfie", "Selfie de verificación"],
-    ["certification", "Matrícula / certificado / constancia"],
-    ["address_proof", "Comprobante de domicilio"]
+    ["address_proof", "Comprobante de domicilio"],
+    ["background_check", "Antecedentes / constancia"],
+    ["certificate_optional", "Certificado / matrícula / curso"],
+    ["work_reference_optional", "Referencia laboral"]
   ];
 
   const uploadFormHtml = state.session.providerId
     ? `
-      <form class="provider-verification-form" id="providerVerificationForm">
+      <form class="provider-verification-form provider-onboarding-upload" id="providerVerificationForm">
         <div class="provider-form-grid">
           <label class="input-group">
             <span>Tipo de documento</span>
@@ -790,7 +792,7 @@ function renderProviderTrust(state) {
     `;
 
   container.innerHTML = `
-    <section class="provider-stack">
+    <section class="provider-stack provider-onboarding-shell">
       <article class="provider-verification-card ${isApproved ? "is-approved" : "is-pending"}">
         <div class="provider-verification-head">
           <div>
