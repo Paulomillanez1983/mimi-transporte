@@ -9,6 +9,7 @@ import {
   loadOffers,
   loadProviderWorkspace,
   registerDevice,
+  saveProviderWorkspace,
   sendMessage,
   trackLocation,
   updateProviderStatus,
@@ -36,9 +37,15 @@ let realtimeSubscription = null;
 let authSubscription = null;
 let providerTrackingIntervalId = null;
 let providerTrackingInFlight = false;
+let presenceTimer = null;
+let presenceInFlight = false;
 
 function currentConversationId() {
   return state.provider.activeService?.conversation_id ?? null;
+}
+
+function currentRequestId() {
+  return state.provider.activeService?.request_id ?? state.provider.activeService?.id ?? null;
 }
 
 function setInfo(message, error = null) {
@@ -110,6 +117,139 @@ async function registerCurrentDevice() {
   }
 }
 
+async function getCurrentCoords() {
+  if (!navigator.geolocation) {
+    throw new Error("Tu dispositivo no soporta geolocalización.");
+  }
+
+  const position = await new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 15000
+    });
+  });
+
+  return {
+    lat: position.coords.latitude,
+    lng: position.coords.longitude,
+    accuracy: position.coords.accuracy,
+    heading: position.coords.heading,
+    speed: position.coords.speed
+  };
+}
+
+function updateProviderMapFromState() {
+  updateProviderMap({
+    providerPosition: state.tracking.providerPosition,
+    servicePosition: state.tracking.clientPosition
+  });
+}
+
+function isTrackableServiceStatus(status) {
+  return ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(status);
+}
+
+function syncWorkspaceIntoState(workspace) {
+  const documents = workspace.documents ?? [];
+  const reviews = workspace.reviews ?? [];
+  const categories = workspace.categories ?? [];
+  const profile = workspace.profile ?? null;
+
+  const documentsSummary = documents.reduce(
+    (acc, item) => {
+      const status = String(item.review_status ?? "PENDING").toUpperCase();
+
+      if (status === "APPROVED") acc.approved += 1;
+      else if (status === "REJECTED" || status === "NEEDS_RESUBMISSION") {
+        acc.observed += 1;
+      } else {
+        acc.pending += 1;
+      }
+
+      return acc;
+    },
+    { approved: 0, pending: 0, observed: 0 }
+  );
+
+  const reviewAverage = reviews.length
+    ? reviews.reduce((sum, item) => sum + Number(item.rating ?? 0), 0) / reviews.length
+    : Number(profile?.rating_avg ?? state.provider.stats.rating ?? 5);
+
+  setState((draft) => {
+    draft.provider.profile = profile;
+    draft.provider.business.profile = workspace.profileDetail ?? null;
+    draft.provider.business.pricing = workspace.pricing ?? [];
+    draft.provider.business.availability = workspace.availability ?? [];
+    draft.provider.business.documents = documents;
+    draft.provider.business.reviews = reviews;
+    draft.provider.business.categories = categories;
+    draft.provider.categories = categories;
+    draft.provider.documentsSummary = documentsSummary;
+    draft.provider.reviewSummary = {
+      average: reviewAverage,
+      count: Number(profile?.rating_count ?? reviews.length ?? 0)
+    };
+    draft.provider.stats.rating = Number(profile?.rating_avg ?? draft.provider.stats.rating);
+    draft.provider.stats.completed = workspace.completedCount ?? draft.provider.stats.completed;
+    draft.provider.status = profile?.status ?? draft.provider.status;
+    draft.provider.availability.isOnline =
+      (profile?.status ?? draft.provider.status) === "ONLINE_IDLE";
+    draft.provider.availability.lastSeenAt =
+      profile?.last_seen_at ?? draft.provider.availability.lastSeenAt;
+
+    if (
+      Number.isFinite(Number(profile?.last_lat)) &&
+      Number.isFinite(Number(profile?.last_lng))
+    ) {
+      draft.tracking.providerPosition = {
+        lat: Number(profile.last_lat),
+        lng: Number(profile.last_lng)
+      };
+      draft.provider.availability.locationLabel =
+        profile.last_location ?? "Ubicación actualizada";
+    }
+  });
+}
+
+async function refreshNotifications() {
+  const notifications = await loadNotifications(state.session.userId);
+
+  setState((draft) => {
+    draft.notifications.items = notifications ?? [];
+    draft.notifications.unreadCount = (notifications ?? []).filter(
+      (item) => !item.read_at
+    ).length;
+  });
+}
+
+async function refreshOffers() {
+  const offers = await loadOffers(state.session.providerId);
+
+  setState((draft) => {
+    draft.provider.offers = offers ?? [];
+    draft.provider.stats.offers = offers?.length ?? 0;
+    draft.provider.offerDeadlineAt = offers?.[0]?.expires_at ?? null;
+  });
+}
+
+async function refreshWorkspace() {
+  const workspace = state.session.providerId
+    ? await loadProviderWorkspace(state.session.providerId)
+    : {
+        profile: null,
+        profileDetail: null,
+        pricing: [],
+        availability: [],
+        documents: [],
+        reviews: [],
+        categories: [],
+        completedCount: 0
+      };
+
+  syncWorkspaceIntoState(workspace);
+}
+
 async function hydrateLiveContext(activeRequestOverride) {
   const activeRequest =
     activeRequestOverride ??
@@ -150,18 +290,122 @@ async function hydrateLiveContext(activeRequestOverride) {
         lat: activeRequest.service_lat,
         lng: activeRequest.service_lng
       };
+    } else if (!activeRequest) {
+      draft.tracking.clientPosition = null;
     }
   });
 
-  updateProviderMap({
-    providerPosition: state.tracking.providerPosition,
-    servicePosition: state.tracking.clientPosition
-  });
+  updateProviderMapFromState();
+  setupRealtime(currentRequestId(), conversation?.id ?? null);
+}
 
-  setupRealtime(
-    activeRequest?.id ?? activeRequest?.request_id ?? null,
-    conversation?.id ?? null
-  );
+async function syncProviderPresence(reason = "presence") {
+  const status = state.provider.profile?.status ?? state.provider.status;
+  const active = state.provider.activeService;
+  const shouldTrackPresence = status === "ONLINE_IDLE" || Boolean(active);
+
+  if (!shouldTrackPresence || presenceInFlight) return;
+
+  presenceInFlight = true;
+
+  try {
+    const coords = await getCurrentCoords();
+
+    setState((draft) => {
+      draft.tracking.providerPosition = {
+        lat: coords.lat,
+        lng: coords.lng
+      };
+      draft.provider.availability.lastSeenAt = new Date().toISOString();
+      draft.provider.availability.locationLabel =
+        reason === "online"
+          ? "Ubicación actual al entrar online"
+          : "Ubicación actualizada";
+    });
+
+    updateProviderMapFromState();
+
+    if (currentRequestId()) {
+      await trackLocation({
+        requestId: currentRequestId(),
+        ...coords
+      });
+    }
+  } catch (error) {
+    if (reason === "online" || reason === "manual") {
+      setInfo(null, normalizeAuthError(error, "No pudimos obtener tu ubicación actual."));
+    }
+  } finally {
+    presenceInFlight = false;
+  }
+}
+
+function stopProviderPresenceLoop() {
+  if (presenceTimer) {
+    window.clearInterval(presenceTimer);
+    presenceTimer = null;
+  }
+}
+
+function startProviderPresenceLoop() {
+  stopProviderPresenceLoop();
+
+  if (!navigator.geolocation) return;
+
+  presenceTimer = window.setInterval(() => {
+    void syncProviderPresence();
+  }, appConfig.providerPresenceIntervalMs ?? 15000);
+}
+
+function stopProviderTrackingLoop() {
+  if (providerTrackingIntervalId) {
+    window.clearInterval(providerTrackingIntervalId);
+    providerTrackingIntervalId = null;
+  }
+}
+
+function startProviderTrackingLoop() {
+  stopProviderTrackingLoop();
+
+  if (!navigator.geolocation) return;
+
+  providerTrackingIntervalId = window.setInterval(async () => {
+    const active = state.provider.activeService;
+    if (!active || !isTrackableServiceStatus(active.status)) return;
+    if (providerTrackingInFlight) return;
+
+    providerTrackingInFlight = true;
+
+    try {
+      const coords = await getCurrentCoords();
+
+      const payload = {
+        requestId: active.request_id ?? active.id,
+        ...coords
+      };
+
+      setState((draft) => {
+        draft.tracking.providerPosition = {
+          lat: payload.lat,
+          lng: payload.lng
+        };
+        draft.provider.availability.lastSeenAt = new Date().toISOString();
+        draft.provider.availability.locationLabel = "Ubicación actualizada en servicio";
+      });
+
+      updateProviderMapFromState();
+
+      try {
+        await trackLocation(payload);
+      } catch {
+        // no-op
+      }
+    } catch {
+      // no-op
+    } finally {
+      providerTrackingInFlight = false;
+    }
+  }, 12000);
 }
 
 async function bootstrapAsyncData() {
@@ -185,42 +429,15 @@ async function bootstrapAsyncData() {
     draft.provider.status = draft.provider.status || "OFFLINE";
   });
 
-  const [notifications, offers] = await Promise.all([
-    loadNotifications(session.userId),
-    loadOffers(session.providerId)
+  await Promise.all([
+    refreshNotifications(),
+    refreshOffers(),
+    refreshWorkspace()
   ]);
-
-  const workspace = session.providerId
-    ? await loadProviderWorkspace(session.providerId)
-    : {
-        profile: null,
-        profileDetail: null,
-        pricing: [],
-        availability: [],
-        documents: [],
-        reviews: [],
-        completedCount: 0
-      };
-
-  setState((draft) => {
-    draft.notifications.items = notifications ?? [];
-    draft.provider.offers = offers ?? [];
-    draft.provider.stats.offers = (offers ?? []).length;
-    draft.provider.profile = workspace.profile ?? null;
-    draft.provider.business.profile = workspace.profileDetail ?? null;
-    draft.provider.business.pricing = workspace.pricing ?? [];
-    draft.provider.business.availability = workspace.availability ?? [];
-    draft.provider.business.documents = workspace.documents ?? [];
-    draft.provider.business.reviews = workspace.reviews ?? [];
-    draft.provider.stats.rating =
-      workspace.profile?.rating_avg ?? draft.provider.stats.rating;
-    draft.provider.stats.completed =
-      workspace.completedCount ?? draft.provider.stats.completed;
-    draft.provider.status = workspace.profile?.status ?? draft.provider.status;
-  });
 
   await hydrateLiveContext();
   await registerCurrentDevice();
+  await syncProviderPresence("bootstrap");
 
   if (!hasSupabaseEnv()) {
     setInfo(
@@ -247,72 +464,6 @@ function registerInstallPrompt() {
   });
 }
 
-function isTrackableServiceStatus(status) {
-  return ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(status);
-}
-
-function stopProviderTrackingLoop() {
-  if (providerTrackingIntervalId) {
-    window.clearInterval(providerTrackingIntervalId);
-    providerTrackingIntervalId = null;
-  }
-}
-
-function startProviderTrackingLoop() {
-  stopProviderTrackingLoop();
-
-  if (!navigator.geolocation) return;
-
-  providerTrackingIntervalId = window.setInterval(async () => {
-    const active = state.provider.activeService;
-    if (!active || !isTrackableServiceStatus(active.status)) return;
-    if (providerTrackingInFlight) return;
-
-    providerTrackingInFlight = true;
-
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 15000
-        });
-      });
-
-      const payload = {
-        requestId: active.request_id ?? active.id,
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        heading: position.coords.heading,
-        speed: position.coords.speed
-      };
-
-      setState((draft) => {
-        draft.tracking.providerPosition = {
-          lat: payload.lat,
-          lng: payload.lng
-        };
-      });
-
-      updateProviderMap({
-        providerPosition: state.tracking.providerPosition,
-        servicePosition: state.tracking.clientPosition
-      });
-
-      try {
-        await trackLocation(payload);
-      } catch {
-        // no-op
-      }
-    } catch {
-      // no-op
-    } finally {
-      providerTrackingInFlight = false;
-    }
-  }, 12000);
-}
-
 async function handleAuthPrimary() {
   if (!hasSupabaseEnv()) {
     setInfo(
@@ -330,16 +481,16 @@ async function handleOfferAction(action, offerId) {
     action: action === "accept" ? "ACCEPT" : "REJECT"
   });
 
-  setState((draft) => {
-    draft.provider.offers = draft.provider.offers.filter((item) => item.id !== offerId);
-    draft.provider.stats.offers = draft.provider.offers.length;
-    draft.meta.info =
-      action === "accept"
-        ? "Oferta aceptada correctamente."
-        : "Oferta rechazada.";
-  });
+  setInfo(
+    action === "accept"
+      ? "Oferta aceptada correctamente."
+      : "Oferta rechazada."
+  );
 
-  await hydrateLiveContext();
+  await Promise.all([
+    refreshOffers(),
+    hydrateLiveContext()
+  ]);
 }
 
 async function handleProviderStatusChange(status) {
@@ -349,10 +500,39 @@ async function handleProviderStatusChange(status) {
   if (!profile) return;
 
   setState((draft) => {
+    draft.provider.profile = {
+      ...draft.provider.profile,
+      ...profile
+    };
     draft.provider.status = profile.status ?? status;
     draft.provider.stats.rating =
       profile.rating_avg ?? draft.provider.stats.rating;
+    draft.provider.availability.isOnline =
+      (profile.status ?? status) === "ONLINE_IDLE";
+    draft.provider.availability.lastSeenAt =
+      profile.last_seen_at ?? new Date().toISOString();
+
+    if (
+      Number.isFinite(Number(profile.last_lat)) &&
+      Number.isFinite(Number(profile.last_lng))
+    ) {
+      draft.tracking.providerPosition = {
+        lat: Number(profile.last_lat),
+        lng: Number(profile.last_lng)
+      };
+      draft.provider.availability.locationLabel =
+        profile.last_location ?? "Ubicación actualizada";
+    }
   });
+
+  updateProviderMapFromState();
+
+  if (status === "ONLINE_IDLE") {
+    await syncProviderPresence("online");
+    setInfo("Estás online y tu ubicación quedó marcada en el mapa.");
+  } else {
+    setInfo("Estado operativo actualizado.");
+  }
 }
 
 async function handleProviderFlow(action) {
@@ -378,9 +558,7 @@ async function handleProviderFlow(action) {
   if (!functionName) return;
 
   await updateRequestStatus(functionName, {
-    request_id:
-      state.provider.activeService?.request_id ??
-      state.provider.activeService?.id
+    request_id: currentRequestId()
   });
 
   setState((draft) => {
@@ -391,6 +569,86 @@ async function handleProviderFlow(action) {
   });
 
   await hydrateLiveContext();
+  await syncProviderPresence(action);
+  setInfo("Estado del servicio actualizado.");
+}
+
+async function handleBusinessAction(action) {
+  if (action === "refresh-location") {
+    await syncProviderPresence("manual");
+    setInfo("Ubicación refrescada.");
+    return;
+  }
+
+  if (action === "refresh-workspace") {
+    await Promise.all([
+      refreshWorkspace(),
+      refreshOffers(),
+      hydrateLiveContext()
+    ]);
+    setInfo("Panel operativo refrescado.");
+    return;
+  }
+
+  if (action === "focus-map") {
+    document.getElementById("trackingMap")?.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
+}
+
+async function handleBusinessFormSubmit(event) {
+  event.preventDefault();
+
+  if (!state.session.providerId) return;
+
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+  const categories = Array.isArray(appConfig.categories) ? appConfig.categories : [];
+
+  const pricing = categories
+    .map((category) => ({
+      categoryId: category.id,
+      active: formData.get(`categoryActive:${category.id}`) === "on",
+      pricePerHour: Number(formData.get(`price:${category.id}`) || 0),
+      minimumHours: Number(formData.get(`min:${category.id}`) || 1),
+      maximumHours: Number(
+        formData.get(`max:${category.id}`) ||
+          formData.get("maxHoursPerService") ||
+          8
+      ),
+      currency: "ARS"
+    }))
+    .filter((item) => item.active && item.pricePerHour > 0);
+
+  const selectedCategories = pricing.map((item) => ({
+    categoryId: item.categoryId
+  }));
+
+  const availability = Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    dayOfWeek,
+    active: formData.get(`dayActive:${dayOfWeek}`) === "on",
+    startTime: formData.get(`dayStart:${dayOfWeek}`) || null,
+    endTime: formData.get(`dayEnd:${dayOfWeek}`) || null
+  })).filter((item) => item.active && item.startTime && item.endTime);
+
+  await saveProviderWorkspace(state.session.providerId, {
+    bio: formData.get("providerBio") || "",
+    city: formData.get("providerCity") || "",
+    province: formData.get("providerProvince") || "",
+    addressText: formData.get("providerAddressText") || "",
+    pricingMode: formData.get("pricingMode") || "POR_HORA",
+    maxHoursPerService: Number(formData.get("maxHoursPerService") || 8),
+    acceptsImmediate: formData.get("acceptsImmediate") === "on",
+    acceptsScheduled: formData.get("acceptsScheduled") === "on",
+    categories: selectedCategories,
+    pricing,
+    availability
+  });
+
+  await refreshWorkspace();
+  setInfo("Tarifas, disponibilidad y perfil comercial actualizados.");
 }
 
 function bindBasicControls() {
@@ -464,6 +722,17 @@ function bindBasicControls() {
     }
   });
 
+  document.addEventListener("submit", async (event) => {
+    if (!(event.target instanceof HTMLFormElement)) return;
+    if (event.target.id !== "providerBusinessForm") return;
+
+    try {
+      await handleBusinessFormSubmit(event);
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo guardar el setup comercial."));
+    }
+  });
+
   document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
     try {
       const offerAction = event.target.closest("[data-offer-action]");
@@ -484,6 +753,12 @@ function bindBasicControls() {
       const providerFlow = event.target.closest("[data-provider-flow]");
       if (providerFlow) {
         await handleProviderFlow(providerFlow.dataset.providerFlow);
+        return;
+      }
+
+      const businessAction = event.target.closest("[data-provider-business-action]");
+      if (businessAction) {
+        await handleBusinessAction(businessAction.dataset.providerBusinessAction);
       }
     } catch (error) {
       setInfo(null, normalizeAuthError(error, "No se pudo completar la acción."));
@@ -492,7 +767,7 @@ function bindBasicControls() {
 }
 
 function setupRealtime(
-  requestId = state.provider.activeService?.request_id ?? state.provider.activeService?.id ?? null,
+  requestId = currentRequestId(),
   conversationId = currentConversationId()
 ) {
   realtimeSubscription?.unsubscribe?.();
@@ -507,11 +782,13 @@ function setupRealtime(
     providerId: state.session.providerId,
     requestId,
     conversationId,
-    onNotification: ({ new: payload }) => {
+    onNotification: async ({ new: payload }) => {
       if (!payload) return;
 
       setState((draft) => {
         draft.notifications.items.unshift(payload);
+        draft.notifications.unreadCount =
+          (draft.notifications.unreadCount ?? 0) + 1;
       });
 
       playNotificationSound();
@@ -540,12 +817,11 @@ function setupRealtime(
           lat: payload.lat,
           lng: payload.lng
         };
+        draft.provider.availability.locationLabel =
+          "Ubicación actualizada en servicio";
       });
 
-      updateProviderMap({
-        providerPosition: state.tracking.providerPosition,
-        servicePosition: state.tracking.clientPosition
-      });
+      updateProviderMapFromState();
     },
     onRequest: ({ new: payload }) => {
       if (!payload) return;
@@ -570,6 +846,8 @@ function setupRealtime(
         if (!exists) {
           draft.provider.offers.unshift(payload);
           draft.provider.stats.offers = draft.provider.offers.length;
+          draft.provider.offerDeadlineAt =
+            payload.expires_at ?? draft.provider.offerDeadlineAt;
         }
       });
 
@@ -602,6 +880,7 @@ async function init() {
   }
 
   startProviderTrackingLoop();
+  startProviderPresenceLoop();
   setupRealtime();
   renderProviderScreen(state);
 
@@ -631,6 +910,7 @@ init().catch((error) => {
 
 window.addEventListener("beforeunload", () => {
   stopProviderTrackingLoop();
+  stopProviderPresenceLoop();
   realtimeSubscription?.unsubscribe?.();
   authSubscription?.unsubscribe?.();
 });
