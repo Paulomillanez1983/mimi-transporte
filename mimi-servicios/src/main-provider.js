@@ -24,7 +24,7 @@ import {
   signOut,
   subscribeToAuthChanges,
 } from "./services/supabase.js";
-import { patchState, setState, state, subscribe } from "./state/app-state.js";
+import { patchState, setActiveMode, setState, state, subscribe } from "./state/app-state.js";
 import { renderProviderScreen } from "./ui/render-provider.js";
 
 function currentConversationId() {
@@ -150,18 +150,7 @@ async function bootstrapAsyncData() {
   const session = await bootstrapSession();
 
 if (session.isAuthenticated && session.role !== "provider") {
-  // no redirigimos automáticamente
-}
-const mode = state.ui.activeMode;
-
-if (mode === "provider" && !window.location.pathname.includes("prestador")) {
-  window.location.href = "./prestador.html";
-  return;
-}
-
-if (mode === "client" && !window.location.pathname.includes("cliente")) {
-  window.location.href = "./cliente.html";
-  return;
+  // el usuario puede existir como cliente puro; no redirigimos automáticamente
 }
   setState((draft) => {
     draft.session.userId = session.userId;
@@ -352,19 +341,24 @@ function bindBasicControls() {
     }
   });
 
-  document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
-    try {
-      await signOut();
-      window.location.reload();
-    } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
-    }
-  });
+document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
+  try {
+    await signOut();
+    window.location.reload();
+  } catch (error) {
+    setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
+  }
+});
 
-  document.getElementById("notificationsButton")?.addEventListener("click", () => {
-    toggleDrawer("notificationsDrawer", true);
-  });
+document.getElementById("switchToClient")?.addEventListener("click", () => {
+  setActiveMode("client");
+  window.location.href = "./cliente.html";
+});
 
+document.getElementById("notificationsButton")?.addEventListener("click", () => {
+  toggleDrawer("notificationsDrawer", true);
+});
+  
   document.getElementById("chatButton")?.addEventListener("click", async () => {
     try {
       toggleDrawer("chatDrawer", true);
@@ -531,14 +525,23 @@ async function init() {
     );
   }
 
+  if (state.ui.activeMode === "client") {
+    window.location.href = "./cliente.html";
+    return;
+  }
+
   startProviderTrackingLoop();
   setupRealtime();
   renderProviderScreen(state);
 }
-
 const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
   if (event === "SIGNED_IN" && session) {
-    await redirectAfterLoginByRole(session);
+    if (state.ui.activeMode === "client") {
+      window.location.href = "./cliente.html";
+      return;
+    }
+
+    window.location.href = "./prestador.html";
   }
 });
 
