@@ -1,16 +1,18 @@
-const CACHE_NAME = "mimi-servicios-v5";
+const CACHE_NAME = "mimi-servicios-v6";
+
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./cliente.html",
   "./prestador.html",
-  "./src/config.js",
-  "./styles/app.css",
-  "./styles/client.css",
-  "./styles/provider.css",
+  "./manifest.json",
   "./env.js",
   "./favicon.ico",
   "../favicon.png",
+  "./styles/app.css",
+  "./styles/client.css",
+  "./styles/provider.css",
+  "./src/config.js",
   "./src/main-client.js",
   "./src/main-provider.js",
   "./src/services/map.js",
@@ -22,44 +24,25 @@ const APP_ASSETS = [
   "./src/services/mock-data.js",
   "./src/state/app-state.js",
   "./src/ui/render-client.js",
-  "./src/ui/render-provider.js",
-  "./manifest.json",
+  "./src/ui/render-provider.js"
 ];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      const results = await Promise.allSettled(
-        APP_ASSETS.map((asset) => cache.add(asset))
-      );
-
-      results.forEach((result, index) => {
-        if (result.status === "rejected") {
-          console.warn("[SW] No se pudo precachear:", APP_ASSETS[index], result.reason);
-        }
-      });
-    }),
-  );
+  event.waitUntil(precacheAppAssets());
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key)),
-      )
-    ),
-  );
+  event.waitUntil(cleanupOldCaches());
   self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-  const request = event.request;
+  const { request } = event;
 
-  if (request.method !== "GET") return;
+  if (request.method !== "GET") {
+    return;
+  }
 
   let url;
   try {
@@ -68,43 +51,155 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // No interceptar esquemas no soportados por Cache Storage
   if (!["http:", "https:"].includes(url.protocol)) {
     return;
   }
 
   const isNavigation = request.mode === "navigate";
+  const isSameOrigin = url.origin === self.location.origin;
+  const isStaticAsset = isSameOrigin && isAppAsset(url);
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
+  if (isNavigation) {
+    event.respondWith(networkFirstPage(request));
+    return;
+  }
 
-      return fetch(request)
-        .then((response) => {
-          if (!response || response.status !== 200 || response.type === "opaque") {
-            return response;
-          }
+  if (isStaticAsset) {
+    event.respondWith(cacheFirstAsset(request));
+    return;
+  }
 
-          const responseUrl = new URL(response.url);
-
-          // Solo cachear recursos http/https válidos
-          if (["http:", "https:"].includes(responseUrl.protocol)) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, copy).catch((error) => {
-                console.warn("[SW] No se pudo guardar en cache:", request.url, error);
-              });
-            });
-          }
-
-          return response;
-        })
-        .catch(() => {
-          if (isNavigation) {
-            return caches.match("./index.html");
-          }
-          return Response.error();
-        });
-    }),
-  );
+  event.respondWith(staleWhileRevalidate(request));
 });
+
+async function precacheAppAssets() {
+  const cache = await caches.open(CACHE_NAME);
+
+  const results = await Promise.allSettled(
+    APP_ASSETS.map(async (asset) => {
+      try {
+        await cache.add(asset);
+      } catch (error) {
+        console.warn("[SW] No se pudo precachear:", asset, error);
+      }
+    })
+  );
+
+  return results;
+}
+
+async function cleanupOldCaches() {
+  const keys = await caches.keys();
+
+  await Promise.all(
+    keys
+      .filter((key) => key !== CACHE_NAME)
+      .map((key) => caches.delete(key))
+  );
+}
+
+async function networkFirstPage(request) {
+  try {
+    const response = await fetch(request);
+
+    if (shouldCacheResponse(response)) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+
+    return response;
+  } catch {
+    const cached =
+      (await caches.match(request)) ||
+      (await caches.match("./index.html"));
+
+    if (cached) {
+      return cached;
+    }
+
+    return new Response("Sin conexión y sin página disponible en cache.", {
+      status: 503,
+      statusText: "Service Unavailable",
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8"
+      }
+    });
+  }
+}
+
+async function cacheFirstAsset(request) {
+  const cached = await caches.match(request);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const response = await fetch(request);
+
+    if (shouldCacheResponse(response)) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+
+    return response;
+  } catch {
+    return Response.error();
+  }
+}
+
+async function staleWhileRevalidate(request) {
+  const cached = await caches.match(request);
+
+  const networkPromise = fetch(request)
+    .then(async (response) => {
+      if (shouldCacheResponse(response)) {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(request, response.clone());
+      }
+
+      return response;
+    })
+    .catch(() => null);
+
+  if (cached) {
+    return cached;
+  }
+
+  const networkResponse = await networkPromise;
+  if (networkResponse) {
+    return networkResponse;
+  }
+
+  return Response.error();
+}
+
+function shouldCacheResponse(response) {
+  if (!response) {
+    return false;
+  }
+
+  if (response.status !== 200) {
+    return false;
+  }
+
+  if (response.type === "opaque") {
+    return false;
+  }
+
+  let responseUrl;
+  try {
+    responseUrl = new URL(response.url);
+  } catch {
+    return false;
+  }
+
+  return ["http:", "https:"].includes(responseUrl.protocol);
+}
+
+function isAppAsset(url) {
+  const pathname = url.pathname;
+  return APP_ASSETS.some((asset) => {
+    const normalizedAsset = asset.replace(/^\.\//, "/");
+    return pathname.endsWith(normalizedAsset);
+  });
+}
