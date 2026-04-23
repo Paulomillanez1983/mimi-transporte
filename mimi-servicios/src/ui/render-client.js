@@ -438,7 +438,7 @@ function renderMatchingPanel(state) {
     : `
       <div class="summary-card">
         <strong>Sin candidatos visibles</strong>
-        <span class="muted">Si `svc_request_candidates` se completa en backend, el ranking va a aparecer acá.</span>
+        <span class="muted">Si svc_request_candidates se completa en backend, el ranking va a aparecer acá.</span>
       </div>
     `;
 
@@ -456,7 +456,7 @@ function renderMatchingPanel(state) {
     : `
       <div class="summary-card">
         <strong>Sin offers registradas</strong>
-        <span class="muted">Cuando el dispatch cargue `svc_request_offers`, verás acá el avance del contacto con prestadores.</span>
+        <span class="muted">Cuando el dispatch cargue svc_request_offers, verás acá el avance del contacto con prestadores.</span>
       </div>
     `;
 
@@ -500,7 +500,7 @@ function renderProviderSpotlight(state) {
     : `
       <div class="summary-card">
         <strong>Sin reseñas recientes</strong>
-        <span class="muted">El backend ya soporta `svc_reviews`; se van a mostrar acá cuando existan.</span>
+        <span class="muted">El backend ya soporta svc_reviews; se van a mostrar acá cuando existan.</span>
       </div>
     `;
 
