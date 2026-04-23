@@ -1,4 +1,4 @@
-import { appConfig } from "../../config.js";
+import { appConfig } from "../config.js";
 import {
   callRpc,
   fetchSingle,
@@ -53,7 +53,7 @@ export async function bootstrapSession() {
       )
     : [];
 
-  const metadataRole = resolveSessionRole(session);
+  const metadataRole = await resolveSessionRole(session);
 
   return {
     isAuthenticated: Boolean(session?.user),
@@ -342,6 +342,110 @@ export async function loadConversationForRequest(requestId) {
   return rows[0] ?? null;
 }
 
+export async function loadClientRequestInsights(requestId, providerId = null) {
+  if (!requestId || !hasBackend()) {
+    return {
+      paymentIntent: null,
+      escrowHold: null,
+      candidates: [],
+      offers: [],
+      providerProfile: null,
+      providerPricing: [],
+      providerReviews: [],
+      providerCategories: [],
+    };
+  }
+
+  await requireSession();
+
+  const [
+    paymentRows,
+    escrowRows,
+    candidateRows,
+    offerRows,
+    providerProfileRows,
+    providerPricingRows,
+    providerReviewRows,
+    providerCategoryRows,
+  ] = await Promise.all([
+    fetchTable("svc_payment_intents", (query) =>
+      query
+        .select("id,request_id,amount_total,amount_provider,amount_platform_fee,currency,status,authorized_at,captured_at,voided_at,refunded_at,created_at,updated_at")
+        .eq("request_id", requestId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+    ),
+    fetchTable("svc_escrow_holds", (query) =>
+      query
+        .select("id,request_id,amount,currency,status,held_at,released_at,voided_at,created_at,updated_at")
+        .eq("request_id", requestId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+    ),
+    fetchTable("svc_request_candidates", (query) =>
+      query
+        .select("id,provider_id,rank_position,score,distance_km,rating_snapshot,provider_price_snapshot,created_at")
+        .eq("request_id", requestId)
+        .order("rank_position", { ascending: true })
+        .limit(5)
+    ),
+    fetchTable("svc_request_offers", (query) =>
+      query
+        .select("id,provider_id,status,sent_at,expires_at,responded_at,created_at,updated_at")
+        .eq("request_id", requestId)
+        .order("created_at", { ascending: false })
+        .limit(5)
+    ),
+    providerId
+      ? fetchTable("svc_provider_profiles", (query) =>
+          query
+            .select("id,provider_id,bio,address_text,city,province,country_code,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,onboarding_completed")
+            .eq("provider_id", providerId)
+            .limit(1)
+        )
+      : Promise.resolve([]),
+    providerId
+      ? fetchTable("svc_provider_pricing", (query) =>
+          query
+            .select("id,provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active,svc_categories(name,code)")
+            .eq("provider_id", providerId)
+            .eq("active", true)
+            .order("price_per_hour", { ascending: true })
+            .limit(6)
+        )
+      : Promise.resolve([]),
+    providerId
+      ? fetchTable("svc_reviews", (query) =>
+          query
+            .select("id,rating,comment,created_at")
+            .eq("provider_id", providerId)
+            .order("created_at", { ascending: false })
+            .limit(3)
+        )
+      : Promise.resolve([]),
+    providerId
+      ? fetchTable("svc_provider_categories", (query) =>
+          query
+            .select("id,provider_id,category_id,active,svc_categories(name,code)")
+            .eq("provider_id", providerId)
+            .eq("active", true)
+            .limit(8)
+        )
+      : Promise.resolve([]),
+  ]);
+
+  return {
+    paymentIntent: paymentRows[0] ?? null,
+    escrowHold: escrowRows[0] ?? null,
+    candidates: candidateRows ?? [],
+    offers: offerRows ?? [],
+    providerProfile: providerProfileRows[0] ?? null,
+    providerPricing: providerPricingRows ?? [],
+    providerReviews: providerReviewRows ?? [],
+    providerCategories: providerCategoryRows ?? [],
+  };
+}
+
 export async function updateProviderStatus(providerId, status) {
   const supabase = getSupabaseClient();
   if (!supabase || !providerId) return null;
@@ -359,4 +463,89 @@ export async function updateProviderStatus(providerId, status) {
 
   if (error) throw error;
   return data?.[0] ?? null;
+}
+
+export async function loadProviderWorkspace(providerId) {
+  const supabase = getSupabaseClient();
+  if (!supabase || !providerId) {
+    return {
+      profile: null,
+      pricing: [],
+      availability: [],
+      documents: [],
+      reviews: [],
+      completedCount: 0,
+    };
+  }
+
+  await requireSession();
+
+  const [
+    profileRows,
+    profileDetailRows,
+    pricingRows,
+    availabilityRows,
+    documentRows,
+    reviewRows,
+    completedRows,
+  ] = await Promise.all([
+    fetchTable("svc_providers", (query) =>
+      query
+        .select("id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
+        .eq("id", providerId)
+        .limit(1)
+    ),
+    fetchTable("svc_provider_profiles", (query) =>
+      query
+        .select("id,provider_id,bio,address_text,city,province,country_code,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,onboarding_completed,created_at,updated_at")
+        .eq("provider_id", providerId)
+        .limit(1)
+    ),
+    fetchTable("svc_provider_pricing", (query) =>
+      query
+        .select("id,provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active,svc_categories(name,code)")
+        .eq("provider_id", providerId)
+        .eq("active", true)
+        .order("price_per_hour", { ascending: true })
+    ),
+    fetchTable("svc_provider_availability", (query) =>
+      query
+        .select("id,provider_id,day_of_week,start_time,end_time,active")
+        .eq("provider_id", providerId)
+        .eq("active", true)
+        .order("day_of_week", { ascending: true })
+        .order("start_time", { ascending: true })
+    ),
+    fetchTable("svc_provider_documents", (query) =>
+      query
+        .select("id,provider_id,document_type,review_status,review_notes,reviewed_at,created_at,updated_at")
+        .eq("provider_id", providerId)
+        .order("created_at", { ascending: false })
+        .limit(6)
+    ),
+    fetchTable("svc_reviews", (query) =>
+      query
+        .select("id,rating,comment,created_at")
+        .eq("provider_id", providerId)
+        .order("created_at", { ascending: false })
+        .limit(4)
+    ),
+    fetchTable("svc_requests", (query) =>
+      query
+        .select("id")
+        .eq("accepted_provider_id", providerId)
+        .eq("status", "COMPLETED")
+        .limit(200)
+    ),
+  ]);
+
+  return {
+    profile: profileRows[0] ?? null,
+    pricing: pricingRows ?? [],
+    availability: availabilityRows ?? [],
+    documents: documentRows ?? [],
+    reviews: reviewRows ?? [],
+    profileDetail: profileDetailRows[0] ?? null,
+    completedCount: completedRows?.length ?? 0,
+  };
 }
