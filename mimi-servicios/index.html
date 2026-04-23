@@ -26,8 +26,8 @@
           auth: {
             persistSession: true,
             autoRefreshToken: true,
-            detectSessionInUrl: true
-          }
+            detectSessionInUrl: true,
+          },
         });
 
         const { data, error } = await client.auth.getSession();
@@ -44,7 +44,7 @@
 
         const { data: providers, error: providerError } = await client
           .from("svc_providers")
-          .select("id,user_id,status,approved,blocked")
+          .select("id")
           .eq("user_id", session.user.id)
           .limit(1);
 
