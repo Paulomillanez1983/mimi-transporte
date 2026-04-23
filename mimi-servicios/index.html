@@ -124,17 +124,11 @@
         });
 
         const { data, error } = await client.auth.getSession();
-if (error) {
-  console.warn("Error sesión, limpiando...", error);
+        if (error) {
+          window.location.replace("./cliente.html");
+          return;
+        }
 
-  try {
-    await client.auth.signOut();
-  } catch {}
-
-  localStorage.clear();
-  window.location.replace("./cliente.html");
-  return;
-}
         const session = data?.session ?? null;
         if (!session?.user?.id) {
           window.location.replace("./cliente.html");
