@@ -13,12 +13,12 @@ import {
   registerDevice,
   searchProviders,
   sendMessage,
-  updateRequestStatus,
+  updateRequestStatus
 } from "./services/service-api.js";
 import {
   buscarDireccionServicio,
   guardarFeedbackGeocodingServicio,
-  obtenerRecentServicePlaces,
+  obtenerRecentServicePlaces
 } from "./services/service-geocoding.js";
 import { subscribeToClientRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
@@ -27,21 +27,31 @@ import {
   redirectAfterLoginByRole,
   signInWithGoogle,
   signOut,
-  subscribeToAuthChanges,
+  subscribeToAuthChanges
 } from "./services/supabase.js";
-import { patchState, setActiveMode, setState, state, subscribe } from "./state/app-state.js";
+import {
+  patchState,
+  setActiveMode,
+  setState,
+  state,
+  subscribe
+} from "./state/app-state.js";
 import { renderClientScreen } from "./ui/render-client.js";
 
 let addressLookupToken = 0;
+let realtimeSubscription = null;
+let authSubscription = null;
 
 function currentUserId() {
   return state.session.userId ?? appConfig.demoClientUserId ?? null;
 }
 
 function currentConversationId() {
-  return state.client.activeConversationId ??
+  return (
+    state.client.activeConversationId ??
     state.client.activeRequest?.conversation_id ??
-    null;
+    null
+  );
 }
 
 function setInfo(message, error = null) {
@@ -92,10 +102,12 @@ function toggleDrawer(id, force) {
 
 function buildDeviceId() {
   let deviceId = localStorage.getItem("mimi_services_device_id");
+
   if (!deviceId) {
     deviceId = crypto.randomUUID();
     localStorage.setItem("mimi_services_device_id", deviceId);
   }
+
   return deviceId;
 }
 
@@ -108,20 +120,52 @@ async function registerCurrentDevice() {
       pushToken: null,
       platform: "web",
       notificationsEnabled: true,
-      marketingOptIn: false,
+      marketingOptIn: false
     });
   } catch {
-    // silent
+    // no-op
   }
 }
 
+function parseNumberOrFallback(value, fallback = null) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function syncDraftFromForm() {
-  patchState("requestDraft.address", document.getElementById("serviceAddressInput")?.value?.trim() ?? "");
-  patchState("requestDraft.lat", Number(document.getElementById("serviceLatInput")?.value || state.requestDraft.lat));
-  patchState("requestDraft.lng", Number(document.getElementById("serviceLngInput")?.value || state.requestDraft.lng));
-  patchState("requestDraft.requestType", document.getElementById("requestTypeSelect")?.value ?? "IMMEDIATE");
-  patchState("requestDraft.scheduledFor", document.getElementById("scheduledForInput")?.value ?? "");
-  patchState("requestDraft.requestedHours", Number(document.getElementById("requestedHoursInput")?.value || 2));
+  patchState(
+    "requestDraft.address",
+    document.getElementById("serviceAddressInput")?.value?.trim() ?? ""
+  );
+  patchState(
+    "requestDraft.lat",
+    parseNumberOrFallback(
+      document.getElementById("serviceLatInput")?.value,
+      state.requestDraft.lat
+    )
+  );
+  patchState(
+    "requestDraft.lng",
+    parseNumberOrFallback(
+      document.getElementById("serviceLngInput")?.value,
+      state.requestDraft.lng
+    )
+  );
+  patchState(
+    "requestDraft.requestType",
+    document.getElementById("requestTypeSelect")?.value ?? "IMMEDIATE"
+  );
+  patchState(
+    "requestDraft.scheduledFor",
+    document.getElementById("scheduledForInput")?.value ?? ""
+  );
+  patchState(
+    "requestDraft.requestedHours",
+    parseNumberOrFallback(
+      document.getElementById("requestedHoursInput")?.value,
+      2
+    )
+  );
 }
 
 function seedForm() {
@@ -132,23 +176,46 @@ function seedForm() {
   const requestTypeSelect = document.getElementById("requestTypeSelect");
   const scheduledForInput = document.getElementById("scheduledForInput");
 
-  if (addressInput) addressInput.value = state.requestDraft.address || "";
-  if (latInput) latInput.value = Number.isFinite(Number(state.requestDraft.lat)) ? String(state.requestDraft.lat) : "";
-  if (lngInput) lngInput.value = Number.isFinite(Number(state.requestDraft.lng)) ? String(state.requestDraft.lng) : "";
-  if (requestedHoursInput) requestedHoursInput.value = String(state.requestDraft.requestedHours);
-  if (requestTypeSelect) requestTypeSelect.value = state.requestDraft.requestType;
-  if (scheduledForInput) scheduledForInput.value = state.requestDraft.scheduledFor || "";
+  if (addressInput) {
+    addressInput.value = state.requestDraft.address || "";
+  }
+
+  if (latInput) {
+    latInput.value = Number.isFinite(Number(state.requestDraft.lat))
+      ? String(state.requestDraft.lat)
+      : "";
+  }
+
+  if (lngInput) {
+    lngInput.value = Number.isFinite(Number(state.requestDraft.lng))
+      ? String(state.requestDraft.lng)
+      : "";
+  }
+
+  if (requestedHoursInput) {
+    requestedHoursInput.value = String(state.requestDraft.requestedHours);
+  }
+
+  if (requestTypeSelect) {
+    requestTypeSelect.value = state.requestDraft.requestType;
+  }
+
+  if (scheduledForInput) {
+    scheduledForInput.value = state.requestDraft.scheduledFor || "";
+  }
 }
 
 function updateScheduledVisibility() {
   const wrapper = document.getElementById("scheduledForWrapper");
   if (!wrapper) return;
+
   wrapper.hidden = state.requestDraft.requestType !== "SCHEDULED";
 }
 
 function toggleClearAddressButton() {
   const addressInput = document.getElementById("serviceAddressInput");
   const clearButton = document.getElementById("btnClearServiceAddress");
+
   if (!addressInput || !clearButton) return;
 
   clearButton.hidden = !(addressInput.value || "").trim();
@@ -157,6 +224,7 @@ function toggleClearAddressButton() {
 function renderServiceAddressSuggestions(items) {
   const container = document.getElementById("serviceAddressSuggestions");
   const addressInput = document.getElementById("serviceAddressInput");
+
   if (!container) return;
 
   if (!items.length) {
@@ -167,17 +235,21 @@ function renderServiceAddressSuggestions(items) {
     return;
   }
 
-  container.innerHTML = items.map((item, index) => `
-    <button
-      type="button"
-      class="suggestion-item"
-      data-service-suggestion-index="${index}"
-      role="option"
-    >
-      <strong>${item.display_name || item.direccion || "Dirección"}</strong>
-      <span class="muted">${item.source || item.barrio || "Sugerencia"}</span>
-    </button>
-  `).join("");
+  container.innerHTML = items
+    .map(
+      (item, index) => `
+        <button
+          type="button"
+          class="suggestion-item"
+          data-service-suggestion-index="${index}"
+          role="option"
+        >
+          <strong>${item.display_name || item.direccion || "Dirección"}</strong>
+          <span class="muted">${item.source || item.barrio || "Sugerencia"}</span>
+        </button>
+      `
+    )
+    .join("");
 
   container.hidden = false;
   container._items = items;
@@ -190,6 +262,7 @@ async function selectServiceAddressSuggestion(index) {
   const latInput = document.getElementById("serviceLatInput");
   const lngInput = document.getElementById("serviceLngInput");
   const item = suggestions?._items?.[index];
+
   if (!item || !input || !latInput || !lngInput) return;
 
   const rawQuery = input.value;
@@ -210,7 +283,7 @@ async function selectServiceAddressSuggestion(index) {
 
   updateClientMap({
     servicePosition: { lat, lng },
-    providerPosition: state.tracking.providerPosition,
+    providerPosition: state.tracking.providerPosition
   });
 
   await guardarFeedbackGeocodingServicio(rawQuery, item);
@@ -226,16 +299,20 @@ async function handleServiceAddressInput(event) {
 
   if (latInput) latInput.value = "";
   if (lngInput) lngInput.value = "";
+
   patchState("requestDraft.lat", null);
   patchState("requestDraft.lng", null);
 
   if (value.length < 2) {
-    renderServiceAddressSuggestions(value.length === 0 ? obtenerRecentServicePlaces() : []);
+    renderServiceAddressSuggestions(
+      value.length === 0 ? obtenerRecentServicePlaces() : []
+    );
     return;
   }
 
   const token = ++addressLookupToken;
   const result = await buscarDireccionServicio(value);
+
   if (token !== addressLookupToken) return;
 
   renderServiceAddressSuggestions(result.resultados || []);
@@ -267,7 +344,7 @@ async function handleUseCurrentServiceLocation() {
     navigator.geolocation.getCurrentPosition(resolve, reject, {
       enableHighAccuracy: true,
       timeout: 10000,
-      maximumAge: 30000,
+      maximumAge: 30000
     });
   });
 
@@ -287,7 +364,7 @@ async function handleUseCurrentServiceLocation() {
 
   updateClientMap({
     servicePosition: { lat, lng },
-    providerPosition: state.tracking.providerPosition,
+    providerPosition: state.tracking.providerPosition
   });
 
   renderServiceAddressSuggestions([]);
@@ -295,10 +372,12 @@ async function handleUseCurrentServiceLocation() {
 }
 
 async function hydrateLiveContext(activeRequestOverride) {
-  const activeRequest = activeRequestOverride ?? await loadActiveRequest({
-    userId: state.session.userId,
-    providerId: null,
-  });
+  const activeRequest =
+    activeRequestOverride ??
+    (await loadActiveRequest({
+      userId: state.session.userId,
+      providerId: null
+    }));
 
   const providerId =
     activeRequest?.accepted_provider_id ??
@@ -324,7 +403,7 @@ async function hydrateLiveContext(activeRequestOverride) {
         providerProfile: null,
         providerPricing: [],
         providerReviews: [],
-        providerCategories: [],
+        providerCategories: []
       };
 
   setState((draft) => {
@@ -335,7 +414,7 @@ async function hydrateLiveContext(activeRequestOverride) {
           conversation_id:
             conversation?.id ??
             draft.client.activeRequest?.conversation_id ??
-            null,
+            null
         }
       : null;
 
@@ -343,20 +422,21 @@ async function hydrateLiveContext(activeRequestOverride) {
     draft.client.insights = insights;
     draft.chat.messages = messages;
     draft.chat.unreadCount = messages.filter(
-      (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
+      (message) =>
+        !message.read_at && message.sender_user_id !== draft.session.userId
     ).length;
 
     if (activeRequest?.service_lat && activeRequest?.service_lng) {
       draft.tracking.clientPosition = {
         lat: activeRequest.service_lat,
-        lng: activeRequest.service_lng,
+        lng: activeRequest.service_lng
       };
     }
   });
 
   updateClientMap({
     servicePosition: state.tracking.clientPosition,
-    providerPosition: state.tracking.providerPosition,
+    providerPosition: state.tracking.providerPosition
   });
 
   setupRealtime(activeRequest?.id ?? null, conversation?.id ?? null);
@@ -371,27 +451,40 @@ async function bootstrapAsyncData() {
       id: category.id,
       code: category.code,
       name: category.name,
-      description: category.description,
+      description: category.description
     }));
   }
-if (session.isAuthenticated && session.role === "provider") {
-  // mismo usuario puede usar ambos modos; no redirigimos automáticamente
-}
+
+  if (session.isAuthenticated && session.role === "provider") {
+    // mismo usuario puede usar ambos modos; no redirigimos automáticamente
+  }
+
   setState((draft) => {
     draft.session.userId = session.userId;
     draft.session.providerId = session.providerId;
     draft.session.role = "client";
     draft.session.userEmail = session.userEmail ?? null;
     draft.session.userName = session.userName ?? null;
-    draft.meta.backendMode = session.userId ? "supabase" : (hasSupabaseEnv() ? "supabase" : "mock");
-    draft.ui.appEntered = draft.meta.backendMode === "mock" ? true : Boolean(session.userId);
+    draft.meta.backendMode = session.userId
+      ? "supabase"
+      : hasSupabaseEnv()
+        ? "supabase"
+        : "mock";
+    draft.ui.appEntered =
+      draft.meta.backendMode === "mock" ? true : Boolean(session.userId);
 
-    if (appConfig.categories.length && !appConfig.categories.some((item) => item.id === draft.ui.selectedCategoryId)) {
+    if (
+      appConfig.categories.length &&
+      !appConfig.categories.some(
+        (item) => item.id === draft.ui.selectedCategoryId
+      )
+    ) {
       draft.ui.selectedCategoryId = appConfig.categories[0].id;
     }
   });
 
   const notifications = await loadNotifications(session.userId);
+
   setState((draft) => {
     draft.notifications.items = notifications;
   });
@@ -400,9 +493,13 @@ if (session.isAuthenticated && session.role === "provider") {
   await registerCurrentDevice();
 
   if (!hasSupabaseEnv()) {
-    setInfo("La app está funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real.");
+    setInfo(
+      "La app está funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real."
+    );
   } else if (!session.userId) {
-    setInfo("Ingresá con Google para ver categorías activas, buscar prestadores y usar el flujo real.");
+    setInfo(
+      "Ingresá con Google para ver categorías activas, buscar prestadores y usar el flujo real."
+    );
   } else {
     setInfo("Sesión iniciada correctamente.");
   }
@@ -417,6 +514,7 @@ function registerInstallPrompt() {
   document.getElementById("installButton")?.addEventListener("click", async () => {
     const promptEvent = state.ui.installPromptEvent;
     if (!promptEvent) return;
+
     await promptEvent.prompt();
   });
 }
@@ -424,7 +522,9 @@ function registerInstallPrompt() {
 async function handleAuthPrimary() {
   if (!hasSupabaseEnv()) {
     patchState("ui.appEntered", true);
-    setInfo("Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real.");
+    setInfo(
+      "Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real."
+    );
     return;
   }
 
@@ -437,7 +537,7 @@ async function handleSearchSubmit(event) {
 
   const providers = await searchProviders(
     state.ui.selectedCategoryId,
-    state.requestDraft,
+    state.requestDraft
   );
 
   setState((draft) => {
@@ -452,19 +552,22 @@ async function handleSearchSubmit(event) {
 
 async function handleProviderSelection(providerId) {
   const provider = state.client.providers.find(
-    (item) => item.provider_id === providerId,
+    (item) => item.provider_id === providerId
   );
+
   if (!provider) return;
 
   const pricing = await prepareRequestPricing({
     clientUserId: currentUserId(),
     categoryId: state.ui.selectedCategoryId,
     providerId: provider.provider_id,
-    draft: state.requestDraft,
+    draft: state.requestDraft
   });
 
   if (!pricing?.eligible) {
-    throw new Error(`No se pudo confirmar el prestador: ${pricing?.reason ?? "pricing_error"}`);
+    throw new Error(
+      `No se pudo confirmar el prestador: ${pricing?.reason ?? "pricing_error"}`
+    );
   }
 
   const request = await createRequest({
@@ -479,7 +582,7 @@ async function handleProviderSelection(providerId) {
     providerPrice: pricing.provider_price,
     platformFee: pricing.platform_fee,
     totalPrice: pricing.total_price,
-    currency: pricing.currency,
+    currency: pricing.currency
   });
 
   setState((draft) => {
@@ -490,7 +593,7 @@ async function handleProviderSelection(providerId) {
       requestType: draft.requestDraft.requestType,
       requestedHours: draft.requestDraft.requestedHours,
       total_price: pricing.total_price,
-      conversation_id: request?.conversation_id ?? null,
+      conversation_id: request?.conversation_id ?? null
     };
     draft.client.insights.providerProfile = {
       bio: provider.bio ?? null,
@@ -499,11 +602,11 @@ async function handleProviderSelection(providerId) {
       pricing_mode: provider.pricing_mode ?? null,
       accepts_immediate: provider.accepts_immediate ?? null,
       accepts_scheduled: provider.accepts_scheduled ?? null,
-      max_hours_per_service: provider.maximum_hours ?? null,
+      max_hours_per_service: provider.maximum_hours ?? null
     };
     draft.tracking.clientPosition = {
       lat: draft.requestDraft.lat,
-      lng: draft.requestDraft.lng,
+      lng: draft.requestDraft.lng
     };
     draft.meta.error = null;
     draft.meta.info = "Solicitud creada correctamente.";
@@ -517,11 +620,13 @@ async function handleRequestAction(action) {
 
   await updateRequestStatus(appConfig.functions.cancelRequest, {
     request_id: state.client.activeRequest?.id,
-    reason: "cancelled_from_client_ui",
+    reason: "cancelled_from_client_ui"
   });
 
   setState((draft) => {
-    if (draft.client.activeRequest) draft.client.activeRequest.status = "CANCELLED";
+    if (draft.client.activeRequest) {
+      draft.client.activeRequest.status = "CANCELLED";
+    }
     draft.meta.info = "Solicitud cancelada correctamente.";
   });
 
@@ -537,24 +642,24 @@ function bindBasicControls() {
     }
   });
 
-document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
-  try {
-    await signOut();
-    window.location.reload();
-  } catch (error) {
-    setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
-  }
-});
+  document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
+    try {
+      await signOut();
+      window.location.reload();
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
+    }
+  });
 
-document.getElementById("switchToProvider")?.addEventListener("click", () => {
-  setActiveMode("provider");
-  window.location.href = "./prestador.html";
-});
+  document.getElementById("switchToProvider")?.addEventListener("click", () => {
+    setActiveMode("provider");
+    window.location.href = "./prestador.html";
+  });
 
-document.getElementById("enterServicesHub")?.addEventListener("click", () => {
-  patchState("ui.appEntered", true);
-});
-  
+  document.getElementById("enterServicesHub")?.addEventListener("click", () => {
+    patchState("ui.appEntered", true);
+  });
+
   document.getElementById("notificationsButton")?.addEventListener("click", () => {
     toggleDrawer("notificationsDrawer", true);
   });
@@ -574,7 +679,9 @@ document.getElementById("enterServicesHub")?.addEventListener("click", () => {
   });
 
   document.querySelectorAll("[data-close-drawer]").forEach((button) => {
-    button.addEventListener("click", () => toggleDrawer(button.dataset.closeDrawer, false));
+    button.addEventListener("click", () => {
+      toggleDrawer(button.dataset.closeDrawer, false);
+    });
   });
 
   document.getElementById("requestTypeSelect")?.addEventListener("change", () => {
@@ -596,13 +703,19 @@ document.getElementById("enterServicesHub")?.addEventListener("click", () => {
     }
   });
 
-  document.getElementById("btnClearServiceAddress")?.addEventListener("click", handleClearServiceAddress);
+  document.getElementById("btnClearServiceAddress")?.addEventListener(
+    "click",
+    handleClearServiceAddress
+  );
 
   document.getElementById("btnUseCurrentServiceLocation")?.addEventListener("click", async () => {
     try {
       await handleUseCurrentServiceLocation();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No pudimos obtener tu ubicación actual."));
+      setInfo(
+        null,
+        normalizeAuthError(error, "No pudimos obtener tu ubicación actual.")
+      );
     }
   });
 
@@ -619,12 +732,13 @@ document.getElementById("enterServicesHub")?.addEventListener("click", () => {
 
     const input = document.getElementById("chatInput");
     const body = input?.value?.trim();
+
     if (!body) return;
 
     try {
       const message = await sendMessage({
         conversationId: currentConversationId(),
-        body,
+        body
       });
 
       setState((draft) => {
@@ -648,7 +762,9 @@ document.getElementById("enterServicesHub")?.addEventListener("click", () => {
 
       const suggestionButton = event.target.closest("[data-service-suggestion-index]");
       if (suggestionButton) {
-        await selectServiceAddressSuggestion(Number(suggestionButton.dataset.serviceSuggestionIndex));
+        await selectServiceAddressSuggestion(
+          Number(suggestionButton.dataset.serviceSuggestionIndex)
+        );
         return;
       }
 
@@ -668,13 +784,23 @@ document.getElementById("enterServicesHub")?.addEventListener("click", () => {
         toggleDrawer("chatDrawer", true);
       }
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo completar la accion."));
+      setInfo(null, normalizeAuthError(error, "No se pudo completar la acción."));
     }
   });
 }
 
-function setupRealtime(requestId = state.client.activeRequest?.id ?? null, conversationId = currentConversationId()) {
-  subscribeToClientRealtime({
+function setupRealtime(
+  requestId = state.client.activeRequest?.id ?? null,
+  conversationId = currentConversationId()
+) {
+  realtimeSubscription?.unsubscribe?.();
+  realtimeSubscription = null;
+
+  if (!state.session.userId) {
+    return;
+  }
+
+  realtimeSubscription = subscribeToClientRealtime({
     userId: state.session.userId,
     requestId,
     conversationId,
@@ -692,7 +818,10 @@ function setupRealtime(requestId = state.client.activeRequest?.id ?? null, conve
 
       setState((draft) => {
         const exists = draft.chat.messages.some((msg) => msg.id === payload.id);
-        if (!exists) draft.chat.messages.push(payload);
+        if (!exists) {
+          draft.chat.messages.push(payload);
+        }
+
         if (payload.sender_user_id !== draft.session.userId) {
           draft.chat.unreadCount += 1;
         }
@@ -706,7 +835,7 @@ function setupRealtime(requestId = state.client.activeRequest?.id ?? null, conve
       setState((draft) => {
         draft.tracking.providerPosition = {
           lat: payload.lat,
-          lng: payload.lng,
+          lng: payload.lng
         };
       });
 
@@ -714,8 +843,8 @@ function setupRealtime(requestId = state.client.activeRequest?.id ?? null, conve
         servicePosition: state.tracking.clientPosition,
         providerPosition: {
           lat: payload.lat,
-          lng: payload.lng,
-        },
+          lng: payload.lng
+        }
       });
     },
     onRequest: ({ new: payload }) => {
@@ -725,15 +854,13 @@ function setupRealtime(requestId = state.client.activeRequest?.id ?? null, conve
         if (draft.client.activeRequest?.id === payload.id) {
           draft.client.activeRequest = {
             ...draft.client.activeRequest,
-            ...payload,
+            ...payload
           };
         }
       });
-    },
+    }
   });
 }
-
-let authSubscription = null;
 
 async function init() {
   subscribe(renderClientScreen);
@@ -756,7 +883,7 @@ async function init() {
     history.replaceState(
       {},
       document.title,
-      window.location.pathname + window.location.search,
+      window.location.pathname + window.location.search
     );
   }
 
@@ -768,28 +895,30 @@ async function init() {
   setupRealtime();
   renderClientScreen(state);
 
-  authSubscription = subscribeToAuthChanges?.(async (event, session) => {
-    if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
-      await redirectAfterLoginByRole(session);
-      return;
-    }
+  authSubscription =
+    subscribeToAuthChanges?.(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
+        await redirectAfterLoginByRole(session);
+        return;
+      }
 
-    if (event === "SIGNED_OUT") {
-      window.location.href = "./cliente.html";
-    }
-  }) ?? null;
+      if (event === "SIGNED_OUT") {
+        window.location.href = "./cliente.html";
+      }
+    }) ?? null;
 }
 
 init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
       error,
-      "La app cargó con fallback local. Revisá la configuración de Supabase.",
+      "La app cargó con fallback local. Revisá la configuración de Supabase."
     );
     draft.meta.info = null;
   });
 });
 
 window.addEventListener("beforeunload", () => {
+  realtimeSubscription?.unsubscribe?.();
   authSubscription?.unsubscribe?.();
 });
