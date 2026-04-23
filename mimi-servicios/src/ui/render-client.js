@@ -114,11 +114,8 @@ function renderAuth(state) {
     state.session.userName || state.session.userEmail || "Cliente";
 
   if (sessionChip) {
-    const activeClient = state.ui.activeMode === "client";
-    const activeProvider = state.ui.activeMode === "provider";
-
     sessionChip.textContent = isAuthenticated
-      ? `${activeClient ? "Cliente" : "Cliente"} | ${activeProvider ? "Prestador" : "Prestador"} · ${displayName}`
+      ? `Cliente · ${displayName}`
       : hasBackend
         ? "Cliente | Prestador"
         : "Modo demo";
@@ -152,6 +149,22 @@ function renderEntryState(state) {
     state.meta.backendMode !== "supabase";
 
   enterButton.hidden = appVisible;
+}
+
+function renderClientOnboarding(state) {
+  const hero = document.getElementById("clientHero");
+  const insights = document.getElementById("clientHeroInsights");
+  const flowGuide = document.getElementById("clientFlowGuide");
+  const dismissButton = document.getElementById("dismissClientOnboarding");
+
+  if (!hero || !insights || !flowGuide || !dismissButton) return;
+
+  const showOnboarding = Boolean(state.ui.showClientOnboarding);
+
+  hero.classList.toggle("is-compact", !showOnboarding);
+  insights.hidden = !showOnboarding;
+  flowGuide.hidden = !showOnboarding;
+  dismissButton.hidden = !showOnboarding;
 }
 
 function renderCategories(state) {
@@ -648,6 +661,7 @@ export function renderClientScreen(state) {
   renderStatusBanner(state);
   renderAuth(state);
   renderEntryState(state);
+  renderClientOnboarding(state);
   renderCategories(state);
   renderProvidersList(state);
   renderRequestSummary(state);
