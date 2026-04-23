@@ -6,7 +6,6 @@
   <meta name="theme-color" content="#163867">
   <meta name="description" content="MIMI Servicios para prestadores. Operá ofertas, estados y seguimiento en vivo desde un panel móvil y confiable.">
   <title>MIMI Servicios | Prestador</title>
-  <link rel="icon" href="./favicon.ico">
 
   <link rel="manifest" href="./manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -140,6 +139,16 @@
               <div id="providerActiveService"></div>
               <div class="action-row" id="providerActions"></div>
             </article>
+
+            <article class="planner-block">
+              <div class="block-header">
+                <div>
+                  <span class="eyebrow">Perfil</span>
+                  <h3>Ficha profesional</h3>
+                </div>
+              </div>
+              <div id="providerProfilePanel"></div>
+            </article>
           </section>
 
           <aside class="summary-panel">
@@ -162,6 +171,26 @@
                 </div>
               </div>
               <div class="card-list compact" id="notificationsList"></div>
+            </section>
+
+            <section class="activity-card">
+              <div class="block-header compact">
+                <div>
+                  <span class="eyebrow">Setup comercial</span>
+                  <h3>Tarifas y disponibilidad</h3>
+                </div>
+              </div>
+              <div class="card-list compact" id="providerBusinessPanel"></div>
+            </section>
+
+            <section class="activity-card">
+              <div class="block-header compact">
+                <div>
+                  <span class="eyebrow">Confianza</span>
+                  <h3>Documentos y reseñas</h3>
+                </div>
+              </div>
+              <div class="card-list compact" id="providerTrustPanel"></div>
             </section>
           </aside>
         </div>
