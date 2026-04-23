@@ -181,11 +181,15 @@ export async function resolveSessionRole(session) {
 
 export async function redirectAfterLoginByRole(session) {
   const role = await resolveSessionRole(session);
-  const preferred =
-    sessionStorage.getItem("mimi_services_auth_redirect_in_progress");
-  const target =
-    preferred ||
-    (role === "provider" ? "./prestador.html" : "./cliente.html");
+  const preferred = sessionStorage.getItem("mimi_services_auth_redirect_in_progress");
+
+  let target = role === "provider" ? "./prestador.html" : "./cliente.html";
+
+  if (preferred === "./prestador.html" && role === "provider") {
+    target = "./prestador.html";
+  } else if (preferred === "./cliente.html" && role === "client") {
+    target = "./cliente.html";
+  }
 
   sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
 
