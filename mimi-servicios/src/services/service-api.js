@@ -35,14 +35,16 @@ async function invokeFunction(functionName, body = {}) {
   }
 
   const { data, error } = await supabase.functions.invoke(functionName, {
-    body
+    body,
+    headers: {
+      "Content-Type": "application/json"
+    }
   });
 
   if (error) throw error;
 
   return data;
 }
-
 async function fetchTable(tableName, buildQuery) {
   const supabase = getSupabaseClient();
 
