@@ -18,7 +18,8 @@ import {
 import {
   buscarDireccionServicio,
   guardarFeedbackGeocodingServicio,
-  obtenerRecentServicePlaces
+  obtenerRecentServicePlaces,
+  resolverDireccionActualServicio
 } from "./services/service-geocoding.js";
 import { subscribeToClientRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
@@ -42,6 +43,8 @@ let addressLookupToken = 0;
 let realtimeSubscription = null;
 let authSubscription = null;
 
+const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
+
 function currentUserId() {
   return state.session.userId ?? appConfig.demoClientUserId ?? null;
 }
@@ -59,6 +62,24 @@ function setInfo(message, error = null) {
     draft.meta.info = message || null;
     draft.meta.error = error;
   });
+}
+
+function setButtonLoading(button, loading, loadingLabel, idleLabel = null) {
+  if (!button) return;
+
+  if (!button.dataset.idleLabel) {
+    button.dataset.idleLabel = idleLabel ?? button.textContent ?? "";
+  }
+
+  button.disabled = loading;
+  button.classList.toggle("is-loading", loading);
+  button.setAttribute("aria-busy", String(loading));
+  button.textContent = loading ? loadingLabel : button.dataset.idleLabel;
+}
+
+function dismissClientOnboarding() {
+  localStorage.setItem(CLIENT_ONBOARDING_KEY, "1");
+  patchState("ui.showClientOnboarding", false);
 }
 
 function normalizeAuthError(error, fallbackMessage) {
@@ -336,39 +357,64 @@ function handleClearServiceAddress() {
 }
 
 async function handleUseCurrentServiceLocation() {
+  const button = document.getElementById("btnUseCurrentServiceLocation");
+
   if (!navigator.geolocation) {
     throw new Error("Tu dispositivo no permite geolocalización.");
   }
 
-  const position = await new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 30000
+  setButtonLoading(button, true, "...");
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 30000
+      });
     });
-  });
 
-  const lat = Number(position.coords.latitude);
-  const lng = Number(position.coords.longitude);
-  const addressInput = document.getElementById("serviceAddressInput");
-  const latInput = document.getElementById("serviceLatInput");
-  const lngInput = document.getElementById("serviceLngInput");
+    const lat = Number(position.coords.latitude);
+    const lng = Number(position.coords.longitude);
+    const addressInput = document.getElementById("serviceAddressInput");
+    const latInput = document.getElementById("serviceLatInput");
+    const lngInput = document.getElementById("serviceLngInput");
 
-  if (addressInput) addressInput.value = "Mi ubicación actual";
-  if (latInput) latInput.value = String(lat);
-  if (lngInput) lngInput.value = String(lng);
+    if (addressInput) addressInput.value = "Ubicando dirección...";
+    if (latInput) latInput.value = String(lat);
+    if (lngInput) lngInput.value = String(lng);
 
-  patchState("requestDraft.address", "Mi ubicación actual");
-  patchState("requestDraft.lat", lat);
-  patchState("requestDraft.lng", lng);
+    patchState("requestDraft.address", "Ubicando dirección...");
+    patchState("requestDraft.lat", lat);
+    patchState("requestDraft.lng", lng);
 
-  updateClientMap({
-    servicePosition: { lat, lng },
-    providerPosition: state.tracking.providerPosition
-  });
+    updateClientMap({
+      servicePosition: { lat, lng },
+      providerPosition: state.tracking.providerPosition
+    });
 
-  renderServiceAddressSuggestions([]);
-  toggleClearAddressButton();
+    const resolved = await resolverDireccionActualServicio(lat, lng, {
+      bias: { lat, lng }
+    });
+
+    const displayAddress =
+      resolved?.display_name ||
+      resolved?.direccion ||
+      "Mi ubicación actual";
+
+    if (addressInput) addressInput.value = displayAddress;
+    if (latInput) latInput.value = String(lat);
+    if (lngInput) lngInput.value = String(lng);
+
+    patchState("requestDraft.address", displayAddress);
+    patchState("requestDraft.lat", lat);
+    patchState("requestDraft.lng", lng);
+
+    renderServiceAddressSuggestions([]);
+    toggleClearAddressButton();
+  } finally {
+    setButtonLoading(button, false, "...");
+  }
 }
 
 async function hydrateLiveContext(activeRequestOverride) {
@@ -472,6 +518,8 @@ async function bootstrapAsyncData() {
         : "mock";
     draft.ui.appEntered =
       draft.meta.backendMode === "mock" ? true : Boolean(session.userId);
+    draft.ui.showClientOnboarding =
+      localStorage.getItem(CLIENT_ONBOARDING_KEY) !== "1";
 
     if (
       appConfig.categories.length &&
@@ -535,19 +583,37 @@ async function handleSearchSubmit(event) {
   event.preventDefault();
   syncDraftFromForm();
 
-  const providers = await searchProviders(
-    state.ui.selectedCategoryId,
-    state.requestDraft
+  const searchButton = document.getElementById("searchProvidersButton");
+
+  setButtonLoading(
+    searchButton,
+    true,
+    "Buscando...",
+    "Ver prestadores y cotizar"
   );
 
-  setState((draft) => {
-    draft.client.providers = providers;
-    draft.meta.error = null;
-    draft.meta.info = providers.length
-      ? "Prestadores actualizados."
-      : "No encontramos prestadores para este criterio.";
-    draft.meta.lastSearchAt = new Date().toISOString();
-  });
+  try {
+    const providers = await searchProviders(
+      state.ui.selectedCategoryId,
+      state.requestDraft
+    );
+
+    setState((draft) => {
+      draft.client.providers = providers;
+      draft.meta.error = null;
+      draft.meta.info = providers.length
+        ? "Prestadores actualizados."
+        : "No encontramos prestadores para este criterio.";
+      draft.meta.lastSearchAt = new Date().toISOString();
+    });
+  } finally {
+    setButtonLoading(
+      searchButton,
+      false,
+      "Buscando...",
+      "Ver prestadores y cotizar"
+    );
+  }
 }
 
 async function handleProviderSelection(providerId) {
@@ -658,6 +724,10 @@ function bindBasicControls() {
 
   document.getElementById("enterServicesHub")?.addEventListener("click", () => {
     patchState("ui.appEntered", true);
+  });
+
+  document.getElementById("dismissClientOnboarding")?.addEventListener("click", () => {
+    dismissClientOnboarding();
   });
 
   document.getElementById("notificationsButton")?.addEventListener("click", () => {
