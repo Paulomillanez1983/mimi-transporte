@@ -50,8 +50,26 @@ function toggleDrawer(id, force) {
   if (!drawer) return;
 
   const open = force ?? !drawer.classList.contains("is-open");
+
+  if (!open && drawer.contains(document.activeElement)) {
+    const fallbackButton =
+      id === "notificationsDrawer"
+        ? document.getElementById("notificationsButton")
+        : id === "chatDrawer"
+          ? document.getElementById("chatButton")
+          : null;
+
+    fallbackButton?.focus();
+  }
+
   drawer.classList.toggle("is-open", open);
   drawer.setAttribute("aria-hidden", String(!open));
+
+  if (open) {
+    drawer.removeAttribute("inert");
+  } else {
+    drawer.setAttribute("inert", "");
+  }
 }
 
 function buildDeviceId() {
