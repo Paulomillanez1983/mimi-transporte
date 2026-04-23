@@ -17,51 +17,79 @@ function writeJson(key, value) {
   }
 }
 
+function getStorageKey(name, fallback) {
+  return appConfig?.storageKeys?.[name] ?? fallback;
+}
+
 export function saveProviderStatus(status) {
-  localStorage.setItem(appConfig.storageKeys.providerStatus, status ?? "OFFLINE");
+  localStorage.setItem(
+    getStorageKey("providerStatus", "mimi_provider_status"),
+    status ?? "OFFLINE"
+  );
 }
 
 export function loadProviderStatus() {
-  return localStorage.getItem(appConfig.storageKeys.providerStatus) ?? "OFFLINE";
+  return (
+    localStorage.getItem(getStorageKey("providerStatus", "mimi_provider_status")) ??
+    "OFFLINE"
+  );
 }
 
 export function saveActiveService(service) {
-  writeJson(appConfig.storageKeys.activeService, service ?? null);
+  writeJson(getStorageKey("activeService", "mimi_active_service"), service ?? null);
 }
 
 export function loadActiveService() {
-  return readJson(appConfig.storageKeys.activeService, null);
+  return readJson(getStorageKey("activeService", "mimi_active_service"), null);
 }
 
 export function saveNotifications(items) {
-  const limit = appConfig.providerUi.notificationsMaxItems ?? 50;
-  writeJson(appConfig.storageKeys.notifications, Array.isArray(items) ? items.slice(0, limit) : []);
+  const limit = appConfig?.providerUi?.notificationsMaxItems ?? 50;
+  writeJson(
+    getStorageKey("notifications", "mimi_provider_notifications"),
+    Array.isArray(items) ? items.slice(0, limit) : []
+  );
 }
 
 export function loadNotifications() {
-  return readJson(appConfig.storageKeys.notifications, []);
+  return readJson(
+    getStorageKey("notifications", "mimi_provider_notifications"),
+    []
+  );
 }
 
 export function saveProviderMode(mode) {
-  localStorage.setItem(appConfig.storageKeys.providerMode, mode ?? "client");
+  localStorage.setItem(
+    getStorageKey("providerMode", "mimi_provider_mode"),
+    mode ?? "client"
+  );
 }
 
 export function loadProviderMode() {
-  return localStorage.getItem(appConfig.storageKeys.providerMode) ?? "client";
+  return (
+    localStorage.getItem(getStorageKey("providerMode", "mimi_provider_mode")) ??
+    "client"
+  );
 }
 
 export function saveChatDraft(value) {
-  localStorage.setItem(appConfig.storageKeys.chatDraft, value ?? "");
+  localStorage.setItem(
+    getStorageKey("chatDraft", "mimi_provider_chat_draft"),
+    value ?? ""
+  );
 }
 
 export function loadChatDraft() {
-  return localStorage.getItem(appConfig.storageKeys.chatDraft) ?? "";
+  return (
+    localStorage.getItem(getStorageKey("chatDraft", "mimi_provider_chat_draft")) ??
+    ""
+  );
 }
 
 export function clearProviderSessionUi() {
   try {
-    localStorage.removeItem(appConfig.storageKeys.activeService);
-    localStorage.removeItem(appConfig.storageKeys.chatDraft);
+    localStorage.removeItem(getStorageKey("activeService", "mimi_active_service"));
+    localStorage.removeItem(getStorageKey("chatDraft", "mimi_provider_chat_draft"));
   } catch {
     // noop
   }
