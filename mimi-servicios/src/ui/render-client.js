@@ -108,14 +108,16 @@ function renderAuth(state) {
   const hasBackend = state.meta.backendMode === "supabase";
   const displayName = state.session.userName || state.session.userEmail || "Cliente";
 
-  if (sessionChip) {
-    sessionChip.textContent = isAuthenticated
-      ? `Cliente: ${displayName}`
-      : hasBackend
-        ? "Invitado"
-        : "Modo demo";
-  }
+if (sessionChip) {
+  const activeClient = state.ui.activeMode === "client";
+  const activeProvider = state.ui.activeMode === "provider";
 
+  sessionChip.textContent = isAuthenticated
+    ? `${activeClient ? "🧑‍💼 Cliente" : "Cliente"} | ${activeProvider ? "🚗 Prestador" : "Prestador"} · ${displayName}`
+    : hasBackend
+      ? "🧑‍💼 Cliente | Prestador"
+      : "Modo demo";
+}
   if (authPrimaryButton) {
     authPrimaryButton.hidden = isAuthenticated;
     authPrimaryButton.textContent = hasBackend ? "Ingresar" : "Entrar";
