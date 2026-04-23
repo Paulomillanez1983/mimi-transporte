@@ -1,4 +1,4 @@
-import { appConfig } from "../../config.js";
+import { appConfig } from "../config.js";
 
 const stateLabels = {
   SEARCHING: "Buscando prestador",
@@ -127,10 +127,10 @@ function renderAuth(state) {
 
   if (authHint) {
     authHint.textContent = isAuthenticated
-      ? "Ya podes buscar prestadores, crear solicitudes, chatear y seguir el servicio."
+      ? "Ya podés buscar prestadores, crear solicitudes, chatear y seguir el servicio."
       : hasBackend
-        ? "Ingresa con Google para usar busquedas, solicitudes, chat y seguimiento real."
-        : "Sin credenciales de Supabase cargadas. Podes navegar la experiencia en modo demo.";
+        ? "Ingresá con Google para usar búsquedas, solicitudes, chat y seguimiento real."
+        : "Sin credenciales de Supabase cargadas. Podés navegar la experiencia en modo demo.";
   }
 }
 
@@ -158,7 +158,7 @@ function renderCategories(state) {
         <span class="muted">${escapeHtml(category.description || "Servicio disponible")}</span>
       </button>
     `).join("")
-    : `<div class="summary-empty"><strong>Sin categorias</strong><p>Cuando carguemos categorias del backend apareceran aca.</p></div>`;
+    : `<div class="summary-empty"><strong>Sin categorías</strong><p>Cuando carguemos categorías del backend aparecerán acá.</p></div>`;
 }
 
 export function renderProvidersList(state) {
@@ -168,8 +168,8 @@ export function renderProvidersList(state) {
 
   const providers = Array.isArray(state.client.providers) ? state.client.providers : [];
   meta.textContent = providers.length
-    ? `${providers.length} prestadores ordenados por cercania y score`
-    : (state.meta.info || "Esperando busqueda");
+    ? `${providers.length} prestadores ordenados por cercanía y score`
+    : (state.meta.info || "Esperando búsqueda");
 
   list.innerHTML = providers.length
     ? providers.map((provider) => `
@@ -234,7 +234,7 @@ export function renderProvidersList(state) {
     `).join("")
     : `
       <div class="client-empty-state">
-        <strong>Elegi la categoria y completa la dirección</strong>
+        <strong>Elegí la categoría y completá la dirección</strong>
         <span class="muted">Cuando busques, te mostramos opciones con precio, distancia y tiempo estimado.</span>
       </div>
     `;
@@ -255,7 +255,7 @@ export function renderRequestSummary(state) {
   if (!request) {
     summary.innerHTML = `
       <div class="summary-card">
-        <strong>Tu servicio va a aparecer aca</strong>
+        <strong>Tu servicio va a aparecer acá</strong>
         <span class="muted">Una vez que elijas un prestador, vas a ver el precio, el estado y las acciones disponibles.</span>
       </div>
     `;
@@ -438,8 +438,8 @@ function renderMatchingPanel(state) {
     : `
       <div class="summary-card">
         <strong>Sin candidatos visibles</strong>
-<span class="muted">Si <code>svc_request_candidates</code> se completa en backend...</span>
-</div>
+        <span class="muted">Si `svc_request_candidates` se completa en backend, el ranking va a aparecer acá.</span>
+      </div>
     `;
 
   const offersHtml = offers.length
@@ -456,7 +456,7 @@ function renderMatchingPanel(state) {
     : `
       <div class="summary-card">
         <strong>Sin offers registradas</strong>
-        <span class="muted">Cuando el dispatch cargue "svc_request_offers", verás acá el avance del contacto con prestadores.</span>
+        <span class="muted">Cuando el dispatch cargue `svc_request_offers`, verás acá el avance del contacto con prestadores.</span>
       </div>
     `;
 
@@ -500,7 +500,7 @@ function renderProviderSpotlight(state) {
     : `
       <div class="summary-card">
         <strong>Sin reseñas recientes</strong>
-        <span class="muted">El backend ya soporta "svc_reviews"; se van a mostrar acá cuando existan.</span>
+        <span class="muted">El backend ya soporta `svc_reviews`; se van a mostrar acá cuando existan.</span>
       </div>
     `;
 
@@ -529,7 +529,7 @@ export function renderNotifications(state) {
   const html = items.length
     ? items.map((item) => `
       <article class="notification-card">
-        <strong>${escapeHtml(item.title ?? "Notificacion")}</strong>
+        <strong>${escapeHtml(item.title ?? "Notificación")}</strong>
         <p class="muted">${escapeHtml(item.body ?? "")}</p>
         <span class="muted">${escapeHtml(formatDate(item.created_at))}</span>
       </article>
@@ -537,7 +537,7 @@ export function renderNotifications(state) {
     : `
       <div class="summary-card">
         <strong>Sin notificaciones</strong>
-        <span class="muted">Las novedades del servicio van a aparecer aca.</span>
+        <span class="muted">Las novedades del servicio van a aparecer acá.</span>
       </div>
     `;
 
@@ -566,7 +566,7 @@ export function renderChat(state) {
     : `
       <div class="summary-card">
         <strong>Chat listo</strong>
-        <span class="muted">Los mensajes del servicio van a aparecer aca en tiempo real.</span>
+        <span class="muted">Los mensajes del servicio van a aparecer acá en tiempo real.</span>
       </div>
     `;
 }
