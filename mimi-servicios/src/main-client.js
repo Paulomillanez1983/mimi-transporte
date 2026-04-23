@@ -23,8 +23,8 @@ import {
 import { subscribeToClientRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
 import {
-  getCurrentSession,
   hasSupabaseEnv,
+  redirectAfterLoginByRole,
   signInWithGoogle,
   signOut,
   subscribeToAuthChanges,
@@ -756,7 +756,7 @@ async function init() {
     history.replaceState(
       {},
       document.title,
-      window.location.pathname + window.location.search
+      window.location.pathname + window.location.search,
     );
   }
 
@@ -767,24 +767,24 @@ async function init() {
 
   setupRealtime();
   renderClientScreen(state);
-}
 
-authSubscription = subscribeToAuthChanges?.(async (event, session) => {
-  if (event === "SIGNED_IN" && session) {
-    if (state.ui.activeMode === "provider") {
-      window.location.href = "./prestador.html";
+  authSubscription = subscribeToAuthChanges?.(async (event, session) => {
+    if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
+      await redirectAfterLoginByRole(session);
       return;
     }
 
-    window.location.href = "./cliente.html";
-  }
-}) ?? null;
+    if (event === "SIGNED_OUT") {
+      window.location.href = "./cliente.html";
+    }
+  }) ?? null;
+}
 
 init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
       error,
-      "La app cargó con fallback local. Revisá la configuración de Supabase."
+      "La app cargó con fallback local. Revisá la configuración de Supabase.",
     );
     draft.meta.info = null;
   });
