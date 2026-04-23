@@ -48,25 +48,26 @@ export async function getCurrentSession() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
 
-if (error) {
-  console.warn("Session corrupta, limpiando...", error);
+  if (error) {
+    console.warn("Session corrupta, limpiando...", error);
 
-  try {
-    await supabase.auth.signOut();
-  } catch {}
+    try {
+      await supabase.auth.signOut();
+    } catch {}
 
-  localStorage.clear();
-  return null;
+    localStorage.clear();
+    return null;
+  }
+
+  return data?.session ?? null;
 }
 
-return data?.session ?? null;
 export async function getCurrentUser() {
   const session = await getCurrentSession();
   return session?.user ?? null;
 }
-
 export async function signInWithGoogle() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
