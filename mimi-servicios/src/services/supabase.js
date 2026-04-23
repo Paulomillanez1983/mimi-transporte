@@ -18,9 +18,10 @@ function projectRefFromUrl() {
 function authStorageKeys() {
   const ref = projectRefFromUrl();
   if (!ref) return [];
+
   return [
     `sb-${ref}-auth-token`,
-    `sb-${ref}-auth-token-code-verifier`,
+    `sb-${ref}-auth-token-code-verifier`
   ];
 }
 
@@ -28,20 +29,27 @@ export function forceCleanSession() {
   try {
     authStorageKeys().forEach((key) => localStorage.removeItem(key));
     sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
-  } catch {}
+  } catch {
+    // noop
+  }
 }
 
 export function hasSupabaseEnv() {
   return Boolean(
     appConfig.supabaseUrl &&
     appConfig.supabaseAnonKey &&
-    window.supabase?.createClient,
+    window.supabase?.createClient
   );
 }
 
 export function getSupabaseClient() {
-  if (client) return client;
-  if (!hasSupabaseEnv()) return null;
+  if (client) {
+    return client;
+  }
+
+  if (!hasSupabaseEnv()) {
+    return null;
+  }
 
   client = window.supabase.createClient(
     appConfig.supabaseUrl,
@@ -51,17 +59,17 @@ export function getSupabaseClient() {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        flowType: "pkce",
+        flowType: "pkce"
       },
       realtime: {
-        params: { eventsPerSecond: 10 },
+        params: { eventsPerSecond: 10 }
       },
       global: {
         headers: {
-          "x-client-info": "mimi-servicios-web",
-        },
-      },
-    },
+          "x-client-info": "mimi-servicios-web"
+        }
+      }
+    }
   );
 
   return client;
@@ -75,9 +83,13 @@ export async function recoverSessionSafely() {
 
   if (error) {
     console.warn("[auth] sesión inválida, limpiando", error);
+
     try {
       await supabase.auth.signOut({ scope: "local" });
-    } catch {}
+    } catch {
+      // noop
+    }
+
     forceCleanSession();
     return null;
   }
@@ -105,7 +117,7 @@ export async function signInWithGoogle() {
 
   sessionStorage.setItem(
     "mimi_services_auth_redirect_in_progress",
-    redirectTarget,
+    redirectTarget
   );
 
   const redirectTo = new URL(redirectTarget, window.location.href).toString();
@@ -116,12 +128,15 @@ export async function signInWithGoogle() {
       redirectTo,
       skipBrowserRedirect: false,
       queryParams: {
-        prompt: "select_account",
-      },
-    },
+        prompt: "select_account"
+      }
+    }
   });
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
+
   return data;
 }
 
@@ -140,7 +155,9 @@ export async function signOut() {
 
 export function subscribeToAuthChanges(callback) {
   const supabase = getSupabaseClient();
-  if (!supabase || typeof callback !== "function") return null;
+  if (!supabase || typeof callback !== "function") {
+    return null;
+  }
 
   authSubscription?.unsubscribe?.();
 
@@ -148,6 +165,7 @@ export function subscribeToAuthChanges(callback) {
     if (event === "SIGNED_OUT") {
       forceCleanSession();
     }
+
     callback(event, session ?? null);
   });
 
@@ -156,9 +174,12 @@ export function subscribeToAuthChanges(callback) {
 }
 
 export async function resolveSessionRole(session) {
-  if (!session?.user?.id) return "client";
+  if (!session?.user?.id) {
+    return "client";
+  }
 
   const supabase = getSupabaseClient();
+
   if (supabase) {
     const { data, error } = await supabase
       .from("svc_providers")
@@ -181,7 +202,9 @@ export async function resolveSessionRole(session) {
 
 export async function redirectAfterLoginByRole(session) {
   const role = await resolveSessionRole(session);
-  const preferred = sessionStorage.getItem("mimi_services_auth_redirect_in_progress");
+  const preferred = sessionStorage.getItem(
+    "mimi_services_auth_redirect_in_progress"
+  );
 
   let target = role === "provider" ? "./prestador.html" : "./cliente.html";
 
@@ -194,7 +217,9 @@ export async function redirectAfterLoginByRole(session) {
   sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
 
   const currentPath = currentPageName();
-  if (currentPath === target.replace("./", "")) return;
+  if (currentPath === target.replace("./", "")) {
+    return;
+  }
 
   window.location.href = target;
 }
@@ -205,10 +230,13 @@ export async function invokeFunction(name, body = {}, options = {}) {
 
   const { data, error } = await supabase.functions.invoke(name, {
     body,
-    ...options,
+    ...options
   });
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
+
   return data;
 }
 
@@ -217,7 +245,11 @@ export async function callRpc(name, params = {}) {
   if (!supabase) return null;
 
   const { data, error } = await supabase.rpc(name, params);
-  if (error) throw error;
+
+  if (error) {
+    throw error;
+  }
+
   return data;
 }
 
@@ -227,7 +259,11 @@ export async function fetchTable(table, queryBuilder) {
 
   const query = queryBuilder(supabase.from(table));
   const { data, error } = await query;
-  if (error) throw error;
+
+  if (error) {
+    throw error;
+  }
+
   return data ?? [];
 }
 
