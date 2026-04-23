@@ -14,7 +14,9 @@
 
 .offer-card .action-row,
 #providerActions {
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
 }
 
 .provider-operational-note {
@@ -23,10 +25,42 @@
   background: rgba(43, 182, 115, 0.08);
   color: #12623d;
   border: 1px solid rgba(43, 182, 115, 0.14);
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .planner-shell-provider {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 860px) {
   .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .provider-toggle .toggle-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .provider-toggle {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-operational-note {
+    padding: 12px;
+    font-size: 0.94rem;
+  }
+
+  #providerActions {
     grid-template-columns: 1fr;
   }
 }
