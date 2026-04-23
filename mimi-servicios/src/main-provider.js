@@ -13,7 +13,8 @@ import {
   sendMessage,
   trackLocation,
   updateProviderStatus,
-  updateRequestStatus
+  updateRequestStatus,
+  uploadProviderDocument
 } from "./services/service-api.js";
 import { subscribeToProviderRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
@@ -487,6 +488,18 @@ async function handleOfferAction(action, offerId) {
 }
 
 async function handleProviderStatusChange(status) {
+  if (status === "ONLINE_IDLE" && !state.provider.profile?.approved) {
+    patchState("provider.status", "OFFLINE");
+    document.getElementById("providerTrustPanel")?.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+    setInfo(
+      "Para ponerte online primero tenés que completar la verificación y esperar aprobación."
+    );
+    return;
+  }
+
   patchState("provider.status", status);
 
   const profile = await updateProviderStatus(state.session.providerId, status);
@@ -588,6 +601,42 @@ async function handleBusinessAction(action) {
       behavior: "smooth",
       block: "center"
     });
+  }
+}
+
+async function handleProviderDocumentSubmit(event) {
+  event.preventDefault();
+
+  if (!state.session.providerId) {
+    setInfo(null, "Necesitás iniciar sesión como prestador para subir documentos.");
+    return;
+  }
+
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+  const documentType = formData.get("providerDocumentType");
+  const file = formData.get("providerDocumentFile");
+
+  if (!(file instanceof File) || !file.size) {
+    setInfo(null, "Seleccioná una foto o PDF para subir.");
+    return;
+  }
+
+  const submitButton = form.querySelector("button[type='submit']");
+  submitButton?.setAttribute("disabled", "");
+
+  try {
+    await uploadProviderDocument({
+      providerId: state.session.providerId,
+      documentType,
+      file
+    });
+
+    form.reset();
+    await refreshWorkspace();
+    setInfo("Documento cargado correctamente. Quedó pendiente de revisión.");
+  } finally {
+    submitButton?.removeAttribute("disabled");
   }
 }
 
@@ -717,6 +766,15 @@ function bindBasicControls() {
 
   document.addEventListener("submit", async (event) => {
     if (!(event.target instanceof HTMLFormElement)) return;
+    if (event.target.id === "providerVerificationForm") {
+      try {
+        await handleProviderDocumentSubmit(event);
+      } catch (error) {
+        setInfo(null, normalizeAuthError(error, "No se pudo subir el documento."));
+      }
+      return;
+    }
+
     if (event.target.id !== "providerBusinessForm") return;
 
     try {
