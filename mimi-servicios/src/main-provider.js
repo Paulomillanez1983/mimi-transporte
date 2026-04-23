@@ -17,7 +17,6 @@ import {
 import { subscribeToProviderRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
 import {
-  getCurrentSession,
   hasSupabaseEnv,
   redirectAfterLoginByRole,
   signInWithGoogle,
@@ -503,6 +502,8 @@ function setupRealtime(
   });
 }
 
+let authSubscription = null;
+
 async function init() {
   subscribe(renderProviderScreen);
   renderProviderScreen(state);
@@ -521,7 +522,7 @@ async function init() {
     history.replaceState(
       {},
       document.title,
-      window.location.pathname + window.location.search
+      window.location.pathname + window.location.search,
     );
   }
 
@@ -533,23 +534,24 @@ async function init() {
   startProviderTrackingLoop();
   setupRealtime();
   renderProviderScreen(state);
-}
-const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
-  if (event === "SIGNED_IN" && session) {
-    if (state.ui.activeMode === "client") {
-      window.location.href = "./cliente.html";
+
+  authSubscription = subscribeToAuthChanges?.(async (event, session) => {
+    if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
+      await redirectAfterLoginByRole(session);
       return;
     }
 
-    window.location.href = "./prestador.html";
-  }
-});
+    if (event === "SIGNED_OUT") {
+      window.location.href = "./prestador.html";
+    }
+  }) ?? null;
+}
 
 init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
       error,
-      "La app cargó con fallback local. Revisá la configuración de Supabase."
+      "La app cargó con fallback local. Revisá la configuración de Supabase.",
     );
     draft.meta.info = null;
   });
