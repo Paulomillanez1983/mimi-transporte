@@ -1,11 +1,12 @@
 import { appConfig } from "../../config.js";
 import {
-  loadCategories,
+  bootstrapSession,
   loadActiveRequest,
+  loadCategories,
   loadConversationForRequest,
   loadMessages,
   loadNotifications,
-  registerDevice,
+  registerDevice
 } from "../services/service-api.js";
 import {
   disconnectRealtime,
@@ -13,11 +14,14 @@ import {
   subscribeToProviderOffers,
   subscribeToRequestState,
   subscribeToRequestTracking,
-  subscribeToUserNotifications,
+  subscribeToUserNotifications
 } from "../services/realtime.js";
-import { bootstrapSession } from "../services/service-api.js";
 import { setState, state } from "../state/app-state.js";
-import { bootstrapProviderContext, handleIncomingOffer, restoreProviderActiveService } from "./provider-controller.js";
+import {
+  bootstrapProviderContext,
+  handleIncomingOffer,
+  restoreProviderActiveService
+} from "./provider-controller.js";
 import { handleIncomingMessage } from "./chat-controller.js";
 import { updateTrackingMarkers } from "../services/map.js";
 
@@ -44,7 +48,7 @@ async function registerCurrentDevice() {
       pushToken: null,
       platform: "web",
       notificationsEnabled: true,
-      marketingOptIn: false,
+      marketingOptIn: false
     });
   } catch {
     // noop
@@ -55,16 +59,34 @@ async function refreshNotifications() {
   if (!state.session.userId) return;
 
   const notifications = await loadNotifications(state.session.userId);
+
   setState((draft) => {
     draft.notifications.items = notifications;
-    draft.notifications.unreadCount = notifications.filter((item) => !item.read_at).length;
+    draft.notifications.unreadCount = notifications.filter(
+      (item) => !item.read_at
+    ).length;
   });
 }
 
 async function hydrateActiveClientContext() {
+  if (!state.session.userId && !state.session.providerId) {
+    setState((draft) => {
+      draft.client.activeRequest = null;
+      draft.client.activeConversationId = null;
+      draft.chat.conversationId = null;
+      draft.chat.messages = [];
+      draft.chat.unreadCount = 0;
+    });
+
+    return {
+      activeRequest: null,
+      conversation: null
+    };
+  }
+
   const activeRequest = await loadActiveRequest({
     userId: state.session.userId,
-    providerId: state.session.providerId,
+    providerId: state.session.providerId
   });
 
   const conversation = activeRequest?.id
@@ -81,43 +103,56 @@ async function hydrateActiveClientContext() {
     draft.chat.conversationId = conversation?.id ?? null;
     draft.chat.messages = messages;
     draft.chat.unreadCount = messages.filter(
-      (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
+      (message) =>
+        !message.read_at && message.sender_user_id !== draft.session.userId
     ).length;
 
     if (activeRequest?.service_lat && activeRequest?.service_lng) {
       draft.tracking.clientPosition = {
         lat: activeRequest.service_lat,
-        lng: activeRequest.service_lng,
+        lng: activeRequest.service_lng
       };
     }
   });
 
   updateTrackingMarkers({
     clientPosition: state.tracking.clientPosition,
-    providerPosition: state.tracking.providerPosition,
+    providerPosition: state.tracking.providerPosition
   });
 
   return {
     activeRequest,
-    conversation,
+    conversation
   };
 }
 
+function stopRealtimeFallback() {
+  if (reconnectTimer) {
+    window.clearInterval(reconnectTimer);
+    reconnectTimer = null;
+  }
+}
+
 function startRealtimeFallback() {
-  if (reconnectTimer) return;
+  stopRealtimeFallback();
 
   reconnectTimer = window.setInterval(async () => {
-    if (state.session.providerId) {
-      await bootstrapProviderContext();
-    }
+    try {
+      if (state.session.providerId) {
+        await bootstrapProviderContext();
+      }
 
-    await refreshNotifications();
-    await restoreProviderActiveService();
-  }, appConfig.providerUi.reconnectPollingMs ?? 15000);
+      await refreshNotifications();
+      await restoreProviderActiveService();
+    } catch {
+      // noop
+    }
+  }, appConfig.providerUi?.reconnectPollingMs ?? 15000);
 }
 
 export function setupRealtime({ requestId, conversationId, providerId, userId }) {
   disconnectRealtime();
+  stopRealtimeFallback();
 
   if (userId) {
     subscribeToUserNotifications(userId, async () => {
@@ -137,14 +172,14 @@ export function setupRealtime({ requestId, conversationId, providerId, userId })
       setState((draft) => {
         draft.tracking.providerPosition = {
           lat: tracking.lat,
-          lng: tracking.lng,
+          lng: tracking.lng
         };
         draft.tracking.active = true;
       });
 
       updateTrackingMarkers({
         clientPosition: state.tracking.clientPosition,
-        providerPosition: state.tracking.providerPosition,
+        providerPosition: state.tracking.providerPosition
       });
     });
 
@@ -158,7 +193,7 @@ export function setupRealtime({ requestId, conversationId, providerId, userId })
         if (state.session.providerId) {
           await bootstrapProviderContext();
         }
-      },
+      }
     );
   }
 
@@ -182,16 +217,24 @@ export async function bootstrapApp() {
     draft.session.providerId = sessionData.providerId;
     draft.session.role = sessionData.role;
     draft.provider.profile = sessionData.providerProfile ?? null;
-    draft.provider.status = sessionData.providerProfile?.status ?? draft.provider.status;
-    draft.ui.activeMode = sessionData.providerId && draft.ui.activeMode === "provider"
-      ? "provider"
-      : "client";
+    draft.provider.status =
+      sessionData.providerProfile?.status ?? draft.provider.status;
+    draft.ui.activeMode =
+      sessionData.providerId && draft.ui.activeMode === "provider"
+        ? "provider"
+        : "client";
     draft.meta.backendMode = sessionData.userId ? "supabase" : "mock";
   });
 
   const categories = await loadCategories();
+
+  if (Array.isArray(categories) && categories.length) {
+    appConfig.categories = categories;
+  }
+
   setState((draft) => {
     draft.meta.categories = categories;
+
     if (!categories.some((category) => category.id === draft.ui.selectedCategoryId)) {
       draft.ui.selectedCategoryId = categories[0]?.id ?? draft.ui.selectedCategoryId;
     }
@@ -212,6 +255,11 @@ export async function bootstrapApp() {
     requestId: activeRequest?.id ?? state.provider.activeService?.id ?? null,
     conversationId: conversation?.id ?? state.chat.conversationId ?? null,
     providerId: state.session.providerId,
-    userId: state.session.userId,
+    userId: state.session.userId
   });
+}
+
+export function cleanupBootstrapRealtime() {
+  disconnectRealtime();
+  stopRealtimeFallback();
 }
