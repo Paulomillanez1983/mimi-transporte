@@ -1,14 +1,36 @@
 import { appConfig } from "../config.js";
+
 let client = null;
+let authSubscription = null;
 
 function currentPageName() {
   return window.location.pathname.split("/").pop() || "";
 }
+
+function projectRefFromUrl() {
+  try {
+    return new URL(appConfig.supabaseUrl).hostname.split(".")[0] || null;
+  } catch {
+    return null;
+  }
+}
+
+function authStorageKeys() {
+  const ref = projectRefFromUrl();
+  if (!ref) return [];
+  return [
+    `sb-${ref}-auth-token`,
+    `sb-${ref}-auth-token-code-verifier`,
+  ];
+}
+
 export function forceCleanSession() {
   try {
-    localStorage.removeItem(`sb-${appConfig.supabaseUrl.split("//")[1].split(".")[0]}-auth-token`);
+    authStorageKeys().forEach((key) => localStorage.removeItem(key));
+    sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
   } catch {}
 }
+
 export function hasSupabaseEnv() {
   return Boolean(
     appConfig.supabaseUrl &&
@@ -29,6 +51,7 @@ export function getSupabaseClient() {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
+        flowType: "pkce",
       },
       realtime: {
         params: { eventsPerSecond: 10 },
@@ -44,37 +67,46 @@ export function getSupabaseClient() {
   return client;
 }
 
-export async function getCurrentSession() {
+export async function recoverSessionSafely() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
   const { data, error } = await supabase.auth.getSession();
 
   if (error) {
-    console.warn("Session corrupta, limpiando...", error);
-
+    console.warn("[auth] sesión inválida, limpiando", error);
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
     } catch {}
-
-    localStorage.clear();
+    forceCleanSession();
     return null;
   }
 
   return data?.session ?? null;
 }
 
+export async function getCurrentSession() {
+  return recoverSessionSafely();
+}
+
 export async function getCurrentUser() {
   const session = await getCurrentSession();
   return session?.user ?? null;
 }
+
 export async function signInWithGoogle() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  const redirectTarget = currentPageName() === "prestador.html"
-    ? "./prestador.html"
-    : "./cliente.html";
+  const redirectTarget =
+    currentPageName() === "prestador.html"
+      ? "./prestador.html"
+      : "./cliente.html";
+
+  sessionStorage.setItem(
+    "mimi_services_auth_redirect_in_progress",
+    redirectTarget,
+  );
 
   const redirectTo = new URL(redirectTarget, window.location.href).toString();
 
@@ -82,6 +114,7 @@ export async function signInWithGoogle() {
     provider: "google",
     options: {
       redirectTo,
+      skipBrowserRedirect: false,
       queryParams: {
         prompt: "select_account",
       },
@@ -96,8 +129,12 @@ export async function signOut() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } finally {
+    forceCleanSession();
+  }
+
   return true;
 }
 
@@ -105,11 +142,17 @@ export function subscribeToAuthChanges(callback) {
   const supabase = getSupabaseClient();
   if (!supabase || typeof callback !== "function") return null;
 
+  authSubscription?.unsubscribe?.();
+
   const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_OUT") {
+      forceCleanSession();
+    }
     callback(event, session ?? null);
   });
 
-  return data?.subscription ?? null;
+  authSubscription = data?.subscription ?? null;
+  return authSubscription;
 }
 
 export async function resolveSessionRole(session) {
@@ -138,10 +181,17 @@ export async function resolveSessionRole(session) {
 
 export async function redirectAfterLoginByRole(session) {
   const role = await resolveSessionRole(session);
-  const target = role === "provider" ? "./prestador.html" : "./cliente.html";
-  const currentPath = currentPageName();
+  const preferred =
+    sessionStorage.getItem("mimi_services_auth_redirect_in_progress");
+  const target =
+    preferred ||
+    (role === "provider" ? "./prestador.html" : "./cliente.html");
 
+  sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
+
+  const currentPath = currentPageName();
   if (currentPath === target.replace("./", "")) return;
+
   window.location.href = target;
 }
 
