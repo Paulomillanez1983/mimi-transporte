@@ -64,3 +64,22 @@
     grid-template-columns: 1fr;
   }
 }
+.service-badge {
+  background: linear-gradient(135deg, rgba(22, 56, 103, 0.98), rgba(36, 86, 156, 0.94));
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 14px 34px rgba(22, 56, 103, 0.20);
+  letter-spacing: 0.08em;
+}
+
+.provider-premium-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(22, 56, 103, 0.08);
+  color: #163867;
+  font-weight: 700;
+  border: 1px solid rgba(22, 56, 103, 0.10);
+}
