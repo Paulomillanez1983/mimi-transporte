@@ -376,11 +376,9 @@ async function bootstrapAsyncData() {
     }));
   }
 
-  if (session.isAuthenticated && session.role === "provider") {
-    await redirectAfterLoginByRole(await getCurrentSession());
-    return;
-  }
-
+if (session.isAuthenticated && session.role === "provider") {
+  // no redirigimos automáticamente
+}
   setState((draft) => {
     draft.session.userId = session.userId;
     draft.session.providerId = session.providerId;
