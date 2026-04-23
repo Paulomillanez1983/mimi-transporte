@@ -2,21 +2,35 @@ import { getSupabaseClient } from "./supabase.js";
 
 let channels = [];
 
+function addChannel(channel) {
+  if (!channel) return null;
+  channels.push(channel);
+  return channel;
+}
+
 export function disconnectRealtime() {
   const supabase = getSupabaseClient();
-  if (!supabase) return;
+  if (!supabase) {
+    channels = [];
+    return;
+  }
 
   channels.forEach((channel) => {
-    supabase.removeChannel(channel);
+    try {
+      supabase.removeChannel(channel);
+    } catch {
+      // noop
+    }
   });
+
   channels = [];
 }
 
 function subscribeNotifications(userId, onNotification) {
   const supabase = getSupabaseClient();
-  if (!supabase || !userId || typeof onNotification !== "function") return;
+  if (!supabase || !userId || typeof onNotification !== "function") return null;
 
-  channels.push(
+  return addChannel(
     supabase
       .channel(`mimi-servicios-notifications-${userId}`)
       .on(
@@ -25,19 +39,19 @@ function subscribeNotifications(userId, onNotification) {
           event: "*",
           schema: "public",
           table: "svc_notifications",
-          filter: `user_id=eq.${userId}`,
+          filter: `user_id=eq.${userId}`
         },
-        onNotification,
+        onNotification
       )
-      .subscribe(),
+      .subscribe()
   );
 }
 
 function subscribeMessages(conversationId, onMessage) {
   const supabase = getSupabaseClient();
-  if (!supabase || !conversationId || typeof onMessage !== "function") return;
+  if (!supabase || !conversationId || typeof onMessage !== "function") return null;
 
-  channels.push(
+  return addChannel(
     supabase
       .channel(`mimi-servicios-messages-${conversationId}`)
       .on(
@@ -46,20 +60,20 @@ function subscribeMessages(conversationId, onMessage) {
           event: "*",
           schema: "public",
           table: "svc_messages",
-          filter: `conversation_id=eq.${conversationId}`,
+          filter: `conversation_id=eq.${conversationId}`
         },
-        onMessage,
+        onMessage
       )
-      .subscribe(),
+      .subscribe()
   );
 }
 
 function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
   const supabase = getSupabaseClient();
-  if (!supabase || !requestId) return;
+  if (!supabase || !requestId) return null;
 
   if (typeof onTracking === "function") {
-    channels.push(
+    addChannel(
       supabase
         .channel(`mimi-servicios-tracking-${requestId}`)
         .on(
@@ -68,16 +82,16 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
             event: "*",
             schema: "public",
             table: "svc_tracking",
-            filter: `request_id=eq.${requestId}`,
+            filter: `request_id=eq.${requestId}`
           },
-          onTracking,
+          onTracking
         )
-        .subscribe(),
+        .subscribe()
     );
   }
 
   const requestChannel = supabase.channel(`mimi-servicios-requests-${requestId}`);
-  let hasRequestSubscriptions = false;
+  let hasSubscriptions = false;
 
   if (typeof onRequest === "function") {
     requestChannel.on(
@@ -86,11 +100,11 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
         event: "*",
         schema: "public",
         table: "svc_requests",
-        filter: `id=eq.${requestId}`,
+        filter: `id=eq.${requestId}`
       },
-      onRequest,
+      onRequest
     );
-    hasRequestSubscriptions = true;
+    hasSubscriptions = true;
   }
 
   if (typeof onOffer === "function") {
@@ -100,23 +114,25 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
         event: "*",
         schema: "public",
         table: "svc_request_offers",
-        filter: `request_id=eq.${requestId}`,
+        filter: `request_id=eq.${requestId}`
       },
-      onOffer,
+      onOffer
     );
-    hasRequestSubscriptions = true;
+    hasSubscriptions = true;
   }
 
-  if (hasRequestSubscriptions) {
-    channels.push(requestChannel.subscribe());
+  if (!hasSubscriptions) {
+    return null;
   }
+
+  return addChannel(requestChannel.subscribe());
 }
 
 function subscribeProviderOffers(providerId, onOffer) {
   const supabase = getSupabaseClient();
-  if (!supabase || !providerId || typeof onOffer !== "function") return;
+  if (!supabase || !providerId || typeof onOffer !== "function") return null;
 
-  channels.push(
+  return addChannel(
     supabase
       .channel(`mimi-servicios-provider-offers-${providerId}`)
       .on(
@@ -125,11 +141,11 @@ function subscribeProviderOffers(providerId, onOffer) {
           event: "*",
           schema: "public",
           table: "svc_request_offers",
-          filter: `provider_id=eq.${providerId}`,
+          filter: `provider_id=eq.${providerId}`
         },
-        onOffer,
+        onOffer
       )
-      .subscribe(),
+      .subscribe()
   );
 }
 
@@ -140,15 +156,18 @@ export function subscribeToClientRealtime({
   onNotification,
   onMessage,
   onTracking,
-  onRequest,
+  onRequest
 }) {
   const supabase = getSupabaseClient();
-  if (!supabase) return;
+  if (!supabase) return () => {};
 
   disconnectRealtime();
+
   subscribeNotifications(userId, onNotification);
   subscribeMessages(conversationId, onMessage);
   subscribeRequest(requestId, onTracking, onRequest, null);
+
+  return disconnectRealtime;
 }
 
 export function subscribeToProviderRealtime({
@@ -160,21 +179,25 @@ export function subscribeToProviderRealtime({
   onMessage,
   onTracking,
   onRequest,
-  onOffer,
+  onOffer
 }) {
   const supabase = getSupabaseClient();
-  if (!supabase) return;
+  if (!supabase) return () => {};
 
   disconnectRealtime();
+
   subscribeNotifications(userId, onNotification);
   subscribeMessages(conversationId, onMessage);
   subscribeRequest(requestId, onTracking, onRequest, onOffer);
   subscribeProviderOffers(providerId, onOffer);
+
+  return disconnectRealtime;
 }
 
 export function subscribeToServiceRealtime(options) {
   if (options?.providerId) {
     return subscribeToProviderRealtime(options);
   }
+
   return subscribeToClientRealtime(options);
 }
