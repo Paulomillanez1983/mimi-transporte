@@ -5,19 +5,20 @@ import {
   loadActiveRequest,
   loadConversationForRequest,
   loadMessages,
-  loadProviderOffers,
+  loadOffers,
   markProviderArrived,
   markProviderEnRoute,
   rejectOffer,
-  sendProviderLocation,
   startService,
-  updateProviderStatus,
+  trackLocation,
+  updateProviderStatus
 } from "../services/service-api.js";
 import { playOfferSound, playStatusSound } from "../services/sound.js";
 import { setState, state } from "../state/app-state.js";
 import { updateTrackingMarkers } from "../services/map.js";
 
 let trackingTimer = null;
+let trackingInFlight = false;
 
 function getRequestId(service) {
   return service?.request_id ?? service?.id ?? null;
@@ -29,7 +30,8 @@ function hydrateConversationState(conversation, messages) {
     draft.client.activeConversationId = conversation?.id ?? null;
     draft.chat.messages = messages ?? [];
     draft.chat.unreadCount = (messages ?? []).filter(
-      (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
+      (message) =>
+        !message.read_at && message.sender_user_id !== draft.session.userId
     ).length;
   });
 }
@@ -39,11 +41,11 @@ export async function bootstrapProviderContext() {
   if (!providerId) return;
 
   const [offers, activeService] = await Promise.all([
-    loadProviderOffers(providerId),
+    loadOffers(providerId),
     loadActiveRequest({
       userId: null,
-      providerId,
-    }),
+      providerId
+    })
   ]);
 
   let conversation = null;
@@ -55,10 +57,11 @@ export async function bootstrapProviderContext() {
   }
 
   setState((draft) => {
-    draft.provider.offers = offers;
-    draft.provider.stats.offers = offers.length;
-    draft.provider.activeService = activeService;
-    draft.provider.offerDeadlineAt = offers[0]?.expires_at ?? null;
+    draft.provider.offers = offers ?? [];
+    draft.provider.stats.offers = (offers ?? []).length;
+    draft.provider.activeService = activeService ?? null;
+    draft.provider.offerDeadlineAt = offers?.[0]?.expires_at ?? null;
+    draft.provider.availability = draft.provider.availability ?? {};
     draft.provider.availability.isOnline = draft.provider.status === "ONLINE_IDLE";
 
     if (draft.provider.profile) {
@@ -68,7 +71,7 @@ export async function bootstrapProviderContext() {
     if (activeService?.service_lat && activeService?.service_lng) {
       draft.tracking.clientPosition = {
         lat: activeService.service_lat,
-        lng: activeService.service_lng,
+        lng: activeService.service_lng
       };
     }
   });
@@ -77,7 +80,7 @@ export async function bootstrapProviderContext() {
 
   updateTrackingMarkers({
     clientPosition: state.tracking.clientPosition,
-    providerPosition: state.tracking.providerPosition,
+    providerPosition: state.tracking.providerPosition
   });
 
   startProviderTrackingLoop();
@@ -86,19 +89,21 @@ export async function bootstrapProviderContext() {
 export async function refreshProviderOffers() {
   if (!state.session.providerId) return [];
 
-  const offers = await loadProviderOffers(state.session.providerId);
+  const offers = await loadOffers(state.session.providerId);
+
   setState((draft) => {
-    draft.provider.offers = offers;
-    draft.provider.stats.offers = offers.length;
-    draft.provider.offerDeadlineAt = offers[0]?.expires_at ?? null;
+    draft.provider.offers = offers ?? [];
+    draft.provider.stats.offers = (offers ?? []).length;
+    draft.provider.offerDeadlineAt = offers?.[0]?.expires_at ?? null;
   });
 
-  return offers;
+  return offers ?? [];
 }
 
 export async function acceptProviderOffer(offerId) {
   const response = await acceptOffer(offerId);
   await restoreProviderActiveService();
+  await refreshProviderOffers();
   playStatusSound();
   return response;
 }
@@ -114,13 +119,15 @@ export async function setProviderStatus(status) {
   let profile = state.provider.profile;
 
   if (state.session.providerId) {
-    profile = await updateProviderStatus(state.session.providerId, status) ?? profile;
+    profile = (await updateProviderStatus(state.session.providerId, status)) ?? profile;
   }
 
   setState((draft) => {
     draft.provider.profile = profile ?? draft.provider.profile;
     draft.provider.status = profile?.status ?? status;
-    draft.provider.availability.isOnline = (profile?.status ?? status) === "ONLINE_IDLE";
+    draft.provider.availability = draft.provider.availability ?? {};
+    draft.provider.availability.isOnline =
+      (profile?.status ?? status) === "ONLINE_IDLE";
     draft.provider.availability.lastSeenAt = now;
   });
 }
@@ -130,7 +137,7 @@ export async function restoreProviderActiveService() {
 
   const activeService = await loadActiveRequest({
     userId: null,
-    providerId: state.session.providerId,
+    providerId: state.session.providerId
   });
 
   let conversation = null;
@@ -142,18 +149,19 @@ export async function restoreProviderActiveService() {
   }
 
   setState((draft) => {
-    draft.provider.activeService = activeService;
+    draft.provider.activeService = activeService ?? null;
     draft.client.activeConversationId = conversation?.id ?? null;
     draft.chat.conversationId = conversation?.id ?? null;
     draft.chat.messages = messages;
     draft.chat.unreadCount = messages.filter(
-      (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
+      (message) =>
+        !message.read_at && message.sender_user_id !== draft.session.userId
     ).length;
 
     if (activeService?.service_lat && activeService?.service_lng) {
       draft.tracking.clientPosition = {
         lat: activeService.service_lat,
-        lng: activeService.service_lng,
+        lng: activeService.service_lng
       };
     }
 
@@ -162,7 +170,7 @@ export async function restoreProviderActiveService() {
 
   updateTrackingMarkers({
     clientPosition: state.tracking.clientPosition,
-    providerPosition: state.tracking.providerPosition,
+    providerPosition: state.tracking.providerPosition
   });
 
   return activeService;
@@ -207,46 +215,71 @@ export function handleIncomingOffer(offerPayload) {
   playOfferSound();
 }
 
+export function stopProviderTrackingLoop() {
+  if (trackingTimer) {
+    window.clearInterval(trackingTimer);
+    trackingTimer = null;
+  }
+}
+
 export function startProviderTrackingLoop() {
-  if (trackingTimer) return;
+  stopProviderTrackingLoop();
+
   if (!navigator.geolocation) return;
 
-  trackingTimer = window.setInterval(() => {
+  trackingTimer = window.setInterval(async () => {
     const activeService = state.provider.activeService;
     const requestId = getRequestId(activeService);
 
-    if (!requestId) return;
+    if (!requestId || trackingInFlight) return;
 
     const allowed = ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"];
     if (!allowed.includes(activeService?.status)) return;
 
-    navigator.geolocation.getCurrentPosition(async (position) => {
+    trackingInFlight = true;
+
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 15000
+        });
+      });
+
       const coords = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         accuracy: position.coords.accuracy,
         heading: position.coords.heading,
-        speed: position.coords.speed,
+        speed: position.coords.speed
       };
 
       setState((draft) => {
         draft.tracking.providerPosition = {
           lat: coords.lat,
-          lng: coords.lng,
+          lng: coords.lng
         };
         draft.tracking.active = true;
       });
 
       updateTrackingMarkers({
         clientPosition: state.tracking.clientPosition,
-        providerPosition: state.tracking.providerPosition,
+        providerPosition: state.tracking.providerPosition
       });
 
       try {
-        await sendProviderLocation(requestId, coords);
+        await trackLocation({
+          requestId,
+          ...coords
+        });
       } catch {
         // noop
       }
-    });
-  }, appConfig.providerUi.trackingIntervalMs ?? 12000);
+    } catch {
+      // noop
+    } finally {
+      trackingInFlight = false;
+    }
+  }, appConfig.providerUi?.trackingIntervalMs ?? 12000);
 }
