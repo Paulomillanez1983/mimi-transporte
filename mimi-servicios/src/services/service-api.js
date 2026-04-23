@@ -1,6 +1,9 @@
 import { appConfig } from "../config.js";
 import { getSupabaseClient } from "./supabase.js";
 
+const SERVICE_PROVIDER_DOCUMENTS_BUCKET = "service-provider-documents";
+const PROVIDER_DOCUMENT_SELECT = "id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,metadata_json,created_at,updated_at";
+
 function hasBackend() {
   return Boolean(getSupabaseClient());
 }
@@ -77,6 +80,47 @@ function normalizeProviderDocuments(rows = []) {
   });
 }
 
+function isProviderPage() {
+  return (window.location.pathname.split("/").pop() || "").toLowerCase() === "prestador.html";
+}
+
+function inferFileExtension(file) {
+  const name = String(file?.name ?? "");
+  const parts = name.split(".");
+  const fromName = parts.length > 1 ? parts.pop().toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+
+  if (fromName && fromName.length <= 8) {
+    return fromName;
+  }
+
+  const mime = String(file?.type ?? "").toLowerCase();
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "jpg";
+  if (mime.includes("png")) return "png";
+  if (mime.includes("webp")) return "webp";
+  if (mime.includes("pdf")) return "pdf";
+
+  return "bin";
+}
+
+function normalizeDocumentType(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+function buildProviderDocumentPath(providerId, documentType, file) {
+  const safeType = normalizeDocumentType(documentType) || "documento";
+  const extension = inferFileExtension(file);
+  const unique = typeof crypto?.randomUUID === "function"
+    ? crypto.randomUUID()
+    : Date.now() + "-" + Math.random().toString(16).slice(2);
+
+  return providerId + "/" + safeType + "/" + Date.now() + "-" + unique + "." + extension;
+}
+
 export async function bootstrapSession() {
   const supabase = getSupabaseClient();
 
@@ -112,15 +156,43 @@ export async function bootstrapSession() {
   let providerId = null;
   let role = "client";
 
-  const { data: providerRows } = await supabase
+  const providerSelect =
+    "id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_location,last_seen_at";
+
+  const { data: providerRows, error: providerLookupError } = await supabase
     .from("svc_providers")
-    .select("id,user_id,status,approved,blocked")
+    .select(providerSelect)
     .eq("user_id", user.id)
     .limit(1);
+
+  if (providerLookupError) throw providerLookupError;
 
   if (providerRows?.[0]?.id) {
     providerId = providerRows[0].id;
     role = "provider";
+  } else if (isProviderPage()) {
+    const { data: createdProvider, error: createProviderError } = await supabase
+      .from("svc_providers")
+      .insert({
+        user_id: user.id,
+        full_name:
+          user.user_metadata?.full_name ??
+          user.user_metadata?.name ??
+          user.email ??
+          null,
+        email: user.email ?? null,
+        avatar_url: user.user_metadata?.avatar_url ?? null,
+        status: "OFFLINE",
+        approved: false,
+        blocked: false
+      })
+      .select(providerSelect)
+      .single();
+
+    if (createProviderError) throw createProviderError;
+
+    providerId = createdProvider?.id ?? null;
+    role = providerId ? "provider" : "client";
   }
 
   return {
@@ -507,7 +579,7 @@ export async function loadProviderWorkspace(providerId) {
 
     fetchTable("svc_provider_documents", (query) =>
       query
-        .select("id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,created_at,updated_at")
+        .select(PROVIDER_DOCUMENT_SELECT)
         .eq("provider_id", providerId)
         .order("created_at", { ascending: false })
         .limit(10)
@@ -675,6 +747,81 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
   }
 
   return loadProviderWorkspace(providerId);
+}
+
+
+export async function uploadProviderDocument({ providerId, documentType, file }) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase || !providerId || !file) {
+    return null;
+  }
+
+  await requireSession();
+
+  const safeDocumentType = normalizeDocumentType(documentType);
+  if (!safeDocumentType) {
+    throw new Error("Seleccioná un tipo de documento válido.");
+  }
+
+  const maxBytes = 8 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error("El archivo supera los 8 MB. Subí una foto o PDF más liviano.");
+  }
+
+  const allowedTypes = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/pdf"
+  ]);
+
+  if (file.type && !allowedTypes.has(file.type)) {
+    throw new Error("Formato no permitido. Usá JPG, PNG, WEBP o PDF.");
+  }
+
+  const storagePath = buildProviderDocumentPath(providerId, safeDocumentType, file);
+
+  const { error: uploadError } = await supabase.storage
+    .from(SERVICE_PROVIDER_DOCUMENTS_BUCKET)
+    .upload(storagePath, file, {
+      upsert: true,
+      cacheControl: "3600",
+      contentType: file.type || "application/octet-stream"
+    });
+
+  if (uploadError) {
+    const message = String(uploadError.message ?? uploadError.error ?? uploadError);
+    if (/bucket/i.test(message) || /not found/i.test(message)) {
+      throw new Error(
+        "No existe o no está habilitado el bucket service-provider-documents para MIMI Servicios."
+      );
+    }
+    throw uploadError;
+  }
+
+  const { data, error } = await supabase
+    .from("svc_provider_documents")
+    .insert({
+      provider_id: providerId,
+      document_type: safeDocumentType,
+      storage_bucket: SERVICE_PROVIDER_DOCUMENTS_BUCKET,
+      storage_path: storagePath,
+      mime_type: file.type || null,
+      file_size_bytes: file.size || null,
+      review_status: "PENDING",
+      metadata_json: {
+        original_name: file.name || null,
+        uploaded_from: "prestador.html",
+        uploaded_at: new Date().toISOString()
+      }
+    })
+    .select(PROVIDER_DOCUMENT_SELECT)
+    .single();
+
+  if (error) throw error;
+
+  return normalizeProviderDocuments([data])[0] ?? data;
 }
 
 export async function loadClientRequestInsights(requestId, providerId = null) {
