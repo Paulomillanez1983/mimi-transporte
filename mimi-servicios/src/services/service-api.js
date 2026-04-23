@@ -1,4 +1,4 @@
-import { appConfig } from "../../config.js";
+import { appConfig } from "../config.js";
 import {
   callRpc,
   fetchSingle,
@@ -32,7 +32,7 @@ function validateDraftLocation(draft) {
 }
 
 function buildAuthError() {
-  const error = new Error("Necesitas iniciar sesion para continuar.");
+  const error = new Error("Necesitás iniciar sesión para continuar.");
   error.code = "AUTH_REQUIRED";
   return error;
 }
