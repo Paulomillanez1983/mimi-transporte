@@ -2,17 +2,29 @@ import { appConfig } from "../config.js";
 
 const listeners = new Set();
 
+function getInitialCategoryId() {
+  const categories = Array.isArray(appConfig.categories) ? appConfig.categories : [];
+  return categories[0]?.id ?? null;
+}
+
+function getInitialActiveMode() {
+  const stored = localStorage.getItem("mimi_active_mode");
+  return stored === "provider" ? "provider" : "client";
+}
+
 export const state = {
   ui: {
     appEntered: false,
-    activeMode: localStorage.getItem("mimi_active_mode") || "client",
-    selectedCategoryId: appConfig.categories[0].id,
-    installPromptEvent: null,
+    activeMode: getInitialActiveMode(),
+    selectedCategoryId: getInitialCategoryId(),
+    installPromptEvent: null
   },
   session: {
     userId: null,
     providerId: null,
     role: "client",
+    userEmail: null,
+    userName: null
   },
   requestDraft: {
     address: "",
@@ -20,7 +32,7 @@ export const state = {
     lng: -64.1888,
     requestType: "IMMEDIATE",
     scheduledFor: "",
-    requestedHours: 2,
+    requestedHours: 2
   },
   client: {
     providers: [],
@@ -35,8 +47,8 @@ export const state = {
       providerProfile: null,
       providerPricing: [],
       providerReviews: [],
-      providerCategories: [],
-    },
+      providerCategories: []
+    }
   },
   provider: {
     status: "OFFLINE",
@@ -48,33 +60,33 @@ export const state = {
       pricing: [],
       availability: [],
       documents: [],
-      reviews: [],
+      reviews: []
     },
     stats: {
       rating: 5,
       offers: 0,
-      completed: 0,
-    },
+      completed: 0
+    }
   },
   chat: {
     messages: [],
-    unreadCount: 0,
+    unreadCount: 0
   },
   notifications: {
     items: [],
-    unreadCount: 0,
+    unreadCount: 0
   },
   tracking: {
     providerPosition: null,
-    clientPosition: null,
+    clientPosition: null
   },
   meta: {
     loading: {},
     lastSearchAt: null,
     error: null,
     info: "Configuración lista para integrar con Supabase.",
-    backendMode: "mock",
-  },
+    backendMode: "mock"
+  }
 };
 
 export function subscribe(listener) {
@@ -89,19 +101,33 @@ export function setState(updater) {
 
 export function patchState(path, value) {
   const segments = path.split(".");
+
   setState((draft) => {
     let current = draft;
-    for (let i = 0; i < segments.length - 1; i += 1) {
-      current = current[segments[i]];
+
+    for (let index = 0; index < segments.length - 1; index += 1) {
+      const key = segments[index];
+
+      if (
+        current[key] === null ||
+        typeof current[key] !== "object" ||
+        Array.isArray(current[key])
+      ) {
+        current[key] = {};
+      }
+
+      current = current[key];
     }
-    current[segments.at(-1)] = value;
+
+    current[segments[segments.length - 1]] = value;
   });
 }
 
 export function setActiveMode(mode) {
-  localStorage.setItem("mimi_active_mode", mode);
+  const safeMode = mode === "provider" ? "provider" : "client";
+  localStorage.setItem("mimi_active_mode", safeMode);
 
   setState((draft) => {
-    draft.ui.activeMode = mode;
+    draft.ui.activeMode = safeMode;
   });
 }
