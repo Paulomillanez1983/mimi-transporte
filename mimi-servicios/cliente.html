@@ -99,7 +99,7 @@
     </header>
 
     <main class="container" role="main">
-      <section class="hero-text hero-text-client" aria-labelledby="heroTitle">
+      <section class="hero-text hero-text-client" id="clientHero" aria-labelledby="heroTitle">
         <span class="hero-kicker">Cliente · solicitud, matching y seguimiento</span>
         <h1 class="hero-title" id="heroTitle">Pedí un servicio sin vueltas</h1>
         <p class="hero-subtitle">
@@ -107,7 +107,13 @@
           chat, tracking en vivo y estado financiero en un solo flujo.
         </p>
 
-        <div class="hero-insights" aria-label="Ventajas del flujo">
+        <div class="hero-actions hero-actions-client">
+          <button class="btn-secondary" id="dismissClientOnboarding" type="button">
+            Ocultar guía
+          </button>
+        </div>
+
+        <div class="hero-insights" id="clientHeroInsights" aria-label="Ventajas del flujo">
           <div class="hero-insight-card">
             <strong>Geolocalización actual</strong>
             <span>Usá tu ubicación real o elegí una dirección sugerida para buscar mejor.</span>
@@ -160,6 +166,7 @@
 
             <article
               class="planner-block planner-block-highlight"
+              id="clientFlowGuide"
               aria-label="Resumen del flujo"
             >
               <div class="block-header">
