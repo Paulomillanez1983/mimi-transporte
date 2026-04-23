@@ -44,11 +44,20 @@ export async function getCurrentSession() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  return data?.session ?? null;
+const { data, error } = await supabase.auth.getSession();
+
+if (error) {
+  console.warn("Session corrupta, limpiando...", error);
+
+  try {
+    await supabase.auth.signOut();
+  } catch {}
+
+  localStorage.clear();
+  return null;
 }
 
+return data?.session ?? null;
 export async function getCurrentUser() {
   const session = await getCurrentSession();
   return session?.user ?? null;
