@@ -2,13 +2,31 @@ import { appConfig } from "../config.js";
 
 const listeners = new Set();
 
+const ACTIVE_MODE_KEY = "mimi_active_mode";
+
 function getInitialCategoryId() {
   const categories = Array.isArray(appConfig.categories) ? appConfig.categories : [];
   return categories[0]?.id ?? null;
 }
 
+function safeLocalStorageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeLocalStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // noop
+  }
+}
+
 function getInitialActiveMode() {
-  const stored = localStorage.getItem("mimi_active_mode");
+  const stored = safeLocalStorageGet(ACTIVE_MODE_KEY);
   return stored === "provider" ? "provider" : "client";
 }
 
@@ -17,8 +35,10 @@ export const state = {
     appEntered: false,
     activeMode: getInitialActiveMode(),
     selectedCategoryId: getInitialCategoryId(),
-    installPromptEvent: null
+    installPromptEvent: null,
+    showClientOnboarding: true
   },
+
   session: {
     userId: null,
     providerId: null,
@@ -26,6 +46,7 @@ export const state = {
     userEmail: null,
     userName: null
   },
+
   requestDraft: {
     address: "",
     lat: -31.4201,
@@ -34,6 +55,7 @@ export const state = {
     scheduledFor: "",
     requestedHours: 2
   },
+
   client: {
     providers: [],
     selectedProvider: null,
@@ -50,17 +72,35 @@ export const state = {
       providerCategories: []
     }
   },
+
   provider: {
     status: "OFFLINE",
     offers: [],
+    offerDeadlineAt: null,
     activeService: null,
     profile: null,
+    categories: [],
+    documentsSummary: {
+      approved: 0,
+      pending: 0,
+      observed: 0
+    },
+    reviewSummary: {
+      average: 5,
+      count: 0
+    },
+    availability: {
+      isOnline: false,
+      lastSeenAt: null,
+      locationLabel: "Sin ubicación reciente"
+    },
     business: {
       profile: null,
       pricing: [],
       availability: [],
       documents: [],
-      reviews: []
+      reviews: [],
+      categories: []
     },
     stats: {
       rating: 5,
@@ -68,18 +108,22 @@ export const state = {
       completed: 0
     }
   },
+
   chat: {
     messages: [],
     unreadCount: 0
   },
+
   notifications: {
     items: [],
     unreadCount: 0
   },
+
   tracking: {
     providerPosition: null,
     clientPosition: null
   },
+
   meta: {
     loading: {},
     lastSearchAt: null,
@@ -90,17 +134,39 @@ export const state = {
 };
 
 export function subscribe(listener) {
+  if (typeof listener !== "function") {
+    return () => {};
+  }
+
   listeners.add(listener);
-  return () => listeners.delete(listener);
+
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function notifyStateChanged() {
+  listeners.forEach((listener) => {
+    try {
+      listener(state);
+    } catch {
+      // noop
+    }
+  });
 }
 
 export function setState(updater) {
+  if (typeof updater !== "function") return;
+
   updater(state);
-  listeners.forEach((listener) => listener(state));
+  notifyStateChanged();
 }
 
 export function patchState(path, value) {
-  const segments = path.split(".");
+  if (!path || typeof path !== "string") return;
+
+  const segments = path.split(".").filter(Boolean);
+  if (!segments.length) return;
 
   setState((draft) => {
     let current = draft;
@@ -125,7 +191,8 @@ export function patchState(path, value) {
 
 export function setActiveMode(mode) {
   const safeMode = mode === "provider" ? "provider" : "client";
-  localStorage.setItem("mimi_active_mode", safeMode);
+
+  safeLocalStorageSet(ACTIVE_MODE_KEY, safeMode);
 
   setState((draft) => {
     draft.ui.activeMode = safeMode;
