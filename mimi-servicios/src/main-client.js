@@ -1,4 +1,4 @@
-import { appConfig } from "../config.js";
+import { appConfig } from "./config.js";
 import { initMap, updateClientMap } from "./services/map.js";
 import {
   bootstrapSession,
@@ -6,6 +6,7 @@ import {
   loadActiveRequest,
   loadCategories,
   loadConversationForRequest,
+  loadClientRequestInsights,
   loadMessages,
   loadNotifications,
   prepareRequestPricing,
@@ -100,9 +101,7 @@ function buildDeviceId() {
 }
 
 async function registerCurrentDevice() {
-  const session = await getCurrentSession();
-  if (!session?.user?.id) return;
-  if (!hasSupabaseEnv()) return;
+  if (!state.session.userId) return;
 
   try {
     await registerDevice({
@@ -302,6 +301,12 @@ async function hydrateLiveContext(activeRequestOverride) {
     providerId: null,
   });
 
+  const providerId =
+    activeRequest?.accepted_provider_id ??
+    activeRequest?.selected_provider_id ??
+    state.client.selectedProvider?.provider_id ??
+    null;
+
   const conversation = activeRequest?.id
     ? await loadConversationForRequest(activeRequest.id)
     : null;
@@ -309,6 +314,19 @@ async function hydrateLiveContext(activeRequestOverride) {
   const messages = conversation?.id
     ? await loadMessages(conversation.id)
     : [];
+
+  const insights = activeRequest?.id
+    ? await loadClientRequestInsights(activeRequest.id, providerId)
+    : {
+        paymentIntent: null,
+        escrowHold: null,
+        candidates: [],
+        offers: [],
+        providerProfile: null,
+        providerPricing: [],
+        providerReviews: [],
+        providerCategories: [],
+      };
 
   setState((draft) => {
     draft.client.activeRequest = activeRequest
@@ -323,6 +341,7 @@ async function hydrateLiveContext(activeRequestOverride) {
       : null;
 
     draft.client.activeConversationId = conversation?.id ?? null;
+    draft.client.insights = insights;
     draft.chat.messages = messages;
     draft.chat.unreadCount = messages.filter(
       (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
@@ -358,7 +377,7 @@ async function bootstrapAsyncData() {
   }
 
   if (session.isAuthenticated && session.role === "provider") {
-    redirectAfterLoginByRole(await getCurrentSession());
+    await redirectAfterLoginByRole(await getCurrentSession());
     return;
   }
 
@@ -476,6 +495,15 @@ async function handleProviderSelection(providerId) {
       requestedHours: draft.requestDraft.requestedHours,
       total_price: pricing.total_price,
       conversation_id: request?.conversation_id ?? null,
+    };
+    draft.client.insights.providerProfile = {
+      bio: provider.bio ?? null,
+      city: provider.city ?? null,
+      province: provider.province ?? null,
+      pricing_mode: provider.pricing_mode ?? null,
+      accepts_immediate: provider.accepts_immediate ?? null,
+      accepts_scheduled: provider.accepts_scheduled ?? null,
+      max_hours_per_service: provider.maximum_hours ?? null,
     };
     draft.tracking.clientPosition = {
       lat: draft.requestDraft.lat,
