@@ -152,7 +152,17 @@ async function bootstrapAsyncData() {
 if (session.isAuthenticated && session.role !== "provider") {
   // no redirigimos automáticamente
 }
+const mode = state.ui.activeMode;
 
+if (mode === "provider" && !window.location.pathname.includes("prestador")) {
+  window.location.href = "./prestador.html";
+  return;
+}
+
+if (mode === "client" && !window.location.pathname.includes("cliente")) {
+  window.location.href = "./cliente.html";
+  return;
+}
   setState((draft) => {
     draft.session.userId = session.userId;
     draft.session.providerId = session.providerId;
