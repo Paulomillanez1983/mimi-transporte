@@ -64,3 +64,20 @@
   background: linear-gradient(135deg, rgba(30, 60, 114, 0.05) 0%, rgba(43, 182, 115, 0.08) 100%);
   border: 1px dashed rgba(30, 60, 114, 0.14);
 }
+
+.provider-facts {
+  justify-content: space-between;
+}
+
+#financialPanel,
+#matchingPanel,
+#providerSpotlightPanel {
+  display: grid;
+  gap: 12px;
+}
+
+#providerSpotlightPanel .summary-card,
+#financialPanel .summary-card,
+#matchingPanel .summary-card {
+  gap: 10px;
+}
