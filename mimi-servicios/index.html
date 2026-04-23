@@ -44,21 +44,11 @@
 
         const { data: providers, error: providerError } = await client
           .from("svc_providers")
-          .select("id")
+          .select("id,user_id,status,approved,blocked")
           .eq("user_id", session.user.id)
           .limit(1);
 
         if (!providerError && Array.isArray(providers) && providers.length > 0) {
-          window.location.replace("./prestador.html");
-          return;
-        }
-
-        const metadataRole =
-          session?.user?.app_metadata?.role ||
-          session?.user?.user_metadata?.role ||
-          "client";
-
-        if (metadataRole === "provider") {
           window.location.replace("./prestador.html");
           return;
         }
