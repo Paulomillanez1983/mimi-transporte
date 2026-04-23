@@ -1,5 +1,4 @@
-import { appConfig } from "../../config.js";
-
+import { appConfig } from "../config.js";
 let client = null;
 
 function currentPageName() {
