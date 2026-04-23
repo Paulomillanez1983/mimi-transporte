@@ -542,7 +542,9 @@ authSubscription = subscribeToAuthChanges?.(async (event, session) => {
     window.location.href = "./prestador.html";
   }
 }) ?? null;
-  
+
+} // 👈 ESTA LLAVE FALTABA (cierra init)
+
 init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
