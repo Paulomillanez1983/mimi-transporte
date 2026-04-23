@@ -1,5 +1,5 @@
 .planner-shell-provider {
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(0, 1.28fr) minmax(340px, 0.88fr);
 }
 
 .stats-grid {
@@ -13,7 +13,8 @@
 }
 
 .offer-card .action-row,
-#providerActions {
+#providerActions,
+.provider-action-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
@@ -29,7 +30,11 @@
 }
 
 .service-badge {
-  background: linear-gradient(135deg, rgba(22, 56, 103, 0.98), rgba(36, 86, 156, 0.94));
+  background: linear-gradient(
+    135deg,
+    rgba(22, 56, 103, 0.98),
+    rgba(36, 86, 156, 0.94)
+  );
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 14px 34px rgba(22, 56, 103, 0.2);
@@ -48,8 +53,190 @@
   border: 1px solid rgba(22, 56, 103, 0.1);
 }
 
+.provider-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.provider-hero-card {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background:
+    linear-gradient(145deg, rgba(237, 247, 255, 0.96), rgba(250, 252, 255, 0.98)),
+    #fff;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.07);
+}
+
+.provider-hero-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.provider-avatar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #102a43, #2f6fed);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.provider-identity {
+  display: grid;
+  gap: 6px;
+}
+
+.provider-identity strong {
+  font-size: 1.18rem;
+}
+
+.provider-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 12px;
+}
+
+.provider-kpi-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.provider-kpi-card span,
+.provider-kpi-card small {
+  color: #516176;
+}
+
+.provider-kpi-card strong {
+  font-size: 1.4rem;
+  color: #102a43;
+}
+
+.provider-category-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.provider-settings-form,
+.provider-inline-section,
+.provider-form-grid,
+.provider-editor-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.provider-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.provider-check-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.provider-check-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.provider-check-item input {
+  width: 18px;
+  height: 18px;
+}
+
+.provider-editor-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.provider-editor-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.provider-inline-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.provider-pricing-grid,
+.provider-slot-grid,
+.provider-doc-grid,
+.provider-review-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.provider-pricing-card,
+.provider-slot-card,
+.provider-doc-card,
+.provider-review-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+}
+
+.provider-slot-card strong,
+.provider-pricing-card strong,
+.provider-doc-card strong,
+.provider-review-card strong {
+  color: #102a43;
+}
+
+.provider-slot-card span {
+  color: #516176;
+  font-weight: 600;
+}
+
 @media (max-width: 1100px) {
   .planner-shell-provider {
+    grid-template-columns: 1fr;
+  }
+
+  #providerActions,
+  .provider-action-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-hero-head {
+    flex-direction: column;
+  }
+
+  .provider-avatar {
+    width: 56px;
+    height: 56px;
+    flex-basis: 56px;
+  }
+
+  .provider-inline-fields {
     grid-template-columns: 1fr;
   }
 }
@@ -80,7 +267,8 @@
     font-size: 0.94rem;
   }
 
-  #providerActions {
+  #providerActions,
+  .provider-action-strip {
     grid-template-columns: 1fr;
   }
 }
