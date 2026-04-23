@@ -1,4 +1,4 @@
-import { appConfig } from "../../config.js";
+import { appConfig } from "../config.js";
 
 const listeners = new Set();
 
@@ -27,11 +27,29 @@ export const state = {
     selectedProvider: null,
     activeRequest: null,
     activeConversationId: null,
+    insights: {
+      paymentIntent: null,
+      escrowHold: null,
+      candidates: [],
+      offers: [],
+      providerProfile: null,
+      providerPricing: [],
+      providerReviews: [],
+      providerCategories: [],
+    },
   },
   provider: {
     status: "OFFLINE",
     offers: [],
     activeService: null,
+    profile: null,
+    business: {
+      profile: null,
+      pricing: [],
+      availability: [],
+      documents: [],
+      reviews: [],
+    },
     stats: {
       rating: 5,
       offers: 0,
