@@ -1,4 +1,4 @@
-const CACHE_NAME = "mimi-servicios-v4";
+const CACHE_NAME = "mimi-servicios-v5";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -28,7 +28,17 @@ const APP_ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_ASSETS)),
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const results = await Promise.allSettled(
+        APP_ASSETS.map((asset) => cache.add(asset))
+      );
+
+      results.forEach((result, index) => {
+        if (result.status === "rejected") {
+          console.warn("[SW] No se pudo precachear:", APP_ASSETS[index], result.reason);
+        }
+      });
+    }),
   );
   self.skipWaiting();
 });
@@ -47,8 +57,22 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
   const request = event.request;
+
+  if (request.method !== "GET") return;
+
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return;
+  }
+
+  // No interceptar esquemas no soportados por Cache Storage
+  if (!["http:", "https:"].includes(url.protocol)) {
+    return;
+  }
+
   const isNavigation = request.mode === "navigate";
 
   event.respondWith(
@@ -61,10 +85,18 @@ self.addEventListener("fetch", (event) => {
             return response;
           }
 
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, copy);
-          });
+          const responseUrl = new URL(response.url);
+
+          // Solo cachear recursos http/https válidos
+          if (["http:", "https:"].includes(responseUrl.protocol)) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, copy).catch((error) => {
+                console.warn("[SW] No se pudo guardar en cache:", request.url, error);
+              });
+            });
+          }
+
           return response;
         })
         .catch(() => {
