@@ -85,7 +85,11 @@
 }
 
 .planner-block-highlight {
-  background: linear-gradient(135deg, rgba(30, 60, 114, 0.06) 0%, rgba(43, 182, 115, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(30, 60, 114, 0.06) 0%,
+    rgba(43, 182, 115, 0.08) 100%
+  );
 }
 
 .input-helper {
@@ -129,7 +133,11 @@
 .suggestion-item:hover,
 .suggestion-item.is-active {
   border-color: rgba(43, 182, 115, 0.24);
-  background: linear-gradient(135deg, rgba(43, 182, 115, 0.08) 0%, rgba(125, 224, 177, 0.16) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(43, 182, 115, 0.08) 0%,
+    rgba(125, 224, 177, 0.16) 100%
+  );
 }
 
 .suggestion-item strong {
@@ -140,12 +148,20 @@
 .client-empty-state {
   padding: 16px;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(30, 60, 114, 0.05) 0%, rgba(43, 182, 115, 0.08) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(30, 60, 114, 0.05) 0%,
+    rgba(43, 182, 115, 0.08) 100%
+  );
   border: 1px dashed rgba(30, 60, 114, 0.14);
 }
 
 .request-tips-card {
-  background: linear-gradient(135deg, rgba(30, 60, 114, 0.05) 0%, rgba(255, 255, 255, 0.98) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(30, 60, 114, 0.05) 0%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
 }
 
 .results-explainer {
