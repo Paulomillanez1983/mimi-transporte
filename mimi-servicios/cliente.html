@@ -2,20 +2,28 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+  >
   <meta name="theme-color" content="#163867">
-  <meta name="description" content="MIMI Servicios para clientes. Pedí ayuda en minutos con una experiencia simple, mobile-first y confiable.">
+  <meta
+    name="description"
+    content="MIMI Servicios para clientes. Pedí ayuda en minutos con una experiencia simple, mobile-first y confiable."
+  >
   <title>MIMI Servicios | Cliente</title>
 
   <link rel="manifest" href="./manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap"
     rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap"
   >
-
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+  >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/client.css">
 </head>
@@ -33,24 +41,56 @@
         </div>
 
         <div class="header-actions">
-          <div class="header-notifications-wrapper">
-            <button id="notificationsButton" class="trip-notifications" type="button" aria-label="Abrir notificaciones">
+          <div class="header-notifications-wrapper" aria-label="Accesos rápidos">
+            <button
+              id="notificationsButton"
+              class="trip-notifications"
+              type="button"
+              aria-label="Abrir notificaciones"
+              aria-controls="notificationsDrawer"
+              aria-expanded="false"
+            >
               &#128276;
-              <span class="trip-notifications-badge" id="notificationsCount" hidden>0</span>
+              <span
+                class="trip-notifications-badge"
+                id="notificationsCount"
+                hidden
+              >0</span>
             </button>
 
-            <button id="chatButton" class="trip-notifications" type="button" aria-label="Abrir chat">
+            <button
+              id="chatButton"
+              class="trip-notifications"
+              type="button"
+              aria-label="Abrir chat"
+              aria-controls="chatDrawer"
+              aria-expanded="false"
+            >
               &#128172;
-              <span class="trip-notifications-badge" id="chatUnreadCount" hidden>0</span>
+              <span
+                class="trip-notifications-badge"
+                id="chatUnreadCount"
+                hidden
+              >0</span>
             </button>
           </div>
 
           <div class="header-user" id="headerUser">
             <span class="status-chip session-chip" id="sessionChip">Invitado</span>
-            <button class="header-login-btn" id="authPrimaryButton" data-auth-action="login" type="button">
+            <button
+              class="header-login-btn"
+              id="authPrimaryButton"
+              data-auth-action="login"
+              type="button"
+            >
               Ingresar
             </button>
-            <button class="header-logout-btn" id="authSecondaryButton" type="button" hidden>
+            <button
+              class="header-logout-btn"
+              id="authSecondaryButton"
+              type="button"
+              hidden
+            >
               Salir
             </button>
           </div>
@@ -83,20 +123,33 @@
         </div>
       </section>
 
-      <div class="status-banner is-info" id="statusBanner" hidden></div>
+      <div
+        class="status-banner is-info"
+        id="statusBanner"
+        hidden
+        role="status"
+        aria-live="polite"
+      ></div>
 
       <section class="main-card" aria-label="Planificador de servicio">
         <div class="planner-shell">
-          <section class="planner-panel">
+          <section class="planner-panel" aria-label="Flujo principal del cliente">
             <div class="planner-topbar">
               <div class="planner-topbar-copy">
                 <span class="eyebrow">Cliente</span>
                 <h2>Planificá tu servicio</h2>
-                <p id="authHint">Ingresá con Google para usar búsquedas, solicitudes, chat y seguimiento real.</p>
+                <p id="authHint">
+                  Ingresá con Google para usar búsquedas, solicitudes, chat y seguimiento real.
+                </p>
               </div>
 
               <div class="hero-actions">
-                <button class="btn-secondary" id="enterServicesHub" data-auth-action="enter" type="button">
+                <button
+                  class="btn-secondary"
+                  id="enterServicesHub"
+                  data-auth-action="enter"
+                  type="button"
+                >
                   Entrar
                 </button>
                 <button class="btn-secondary" id="installButton" type="button">
@@ -105,7 +158,10 @@
               </div>
             </div>
 
-            <article class="planner-block planner-block-highlight" aria-label="Resumen del flujo">
+            <article
+              class="planner-block planner-block-highlight"
+              aria-label="Resumen del flujo"
+            >
               <div class="block-header">
                 <div>
                   <span class="eyebrow">Flujo</span>
@@ -140,7 +196,12 @@
                     <span class="status-chip" id="requestStateChip">Sin solicitud activa</span>
                   </div>
 
-                  <div class="category-grid" id="categoryGrid"></div>
+                  <div
+                    class="category-grid"
+                    id="categoryGrid"
+                    role="list"
+                    aria-label="Categorías disponibles"
+                  ></div>
                 </article>
 
                 <article class="planner-block">
@@ -177,14 +238,18 @@
                             class="btn-input-action clear"
                             aria-label="Borrar dirección"
                             hidden
-                          >X</button>
+                          >
+                            ×
+                          </button>
                           <button
                             id="btnUseCurrentServiceLocation"
                             type="button"
                             class="btn-input-action"
                             aria-label="Usar mi ubicación"
                             title="Usar mi ubicación"
-                          >&#128205;</button>
+                          >
+                            &#128205;
+                          </button>
                         </div>
                       </div>
                       <small class="input-helper">
@@ -212,16 +277,30 @@
 
                       <label class="input-group">
                         <span>Duración</span>
-                        <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2">
+                        <input
+                          id="requestedHoursInput"
+                          name="requestedHours"
+                          type="number"
+                          min="1"
+                          max="8"
+                          value="2"
+                        >
                       </label>
                     </div>
 
                     <label class="input-group" id="scheduledForWrapper" hidden>
                       <span>Fecha y hora</span>
-                      <input id="scheduledForInput" name="scheduledFor" type="datetime-local">
+                      <input
+                        id="scheduledForInput"
+                        name="scheduledFor"
+                        type="datetime-local"
+                      >
                     </label>
 
-                    <div class="request-tips-card" aria-label="Ayuda para completar la solicitud">
+                    <div
+                      class="request-tips-card"
+                      aria-label="Ayuda para completar la solicitud"
+                    >
                       <strong>Tip de precisión</strong>
                       <span>
                         Cuanto mejor quede definida la dirección y la modalidad, mejor será el ranking de prestadores
@@ -229,7 +308,11 @@
                       </span>
                     </div>
 
-                    <button class="btn-primary" type="submit" id="searchProvidersButton">
+                    <button
+                      class="btn-primary"
+                      type="submit"
+                      id="searchProvidersButton"
+                    >
                       Ver prestadores y cotizar
                     </button>
                   </form>
@@ -248,22 +331,32 @@
                     <span>Ordenamos por cercanía, score, disponibilidad y precio total.</span>
                   </div>
 
-                  <div class="card-list" id="providersList"></div>
+                  <div
+                    class="card-list"
+                    id="providersList"
+                    role="list"
+                    aria-live="polite"
+                  ></div>
                 </article>
               </div>
             </div>
           </section>
 
-          <aside class="summary-panel">
-            <section class="map-card">
+          <aside class="summary-panel" aria-label="Resumen del servicio">
+            <section class="map-card" aria-labelledby="mapTitle">
               <div class="map-card-header">
                 <div>
                   <span class="eyebrow">Mapa</span>
-                  <h3>Seguimiento en vivo</h3>
+                  <h3 id="mapTitle">Seguimiento en vivo</h3>
                 </div>
                 <span class="helper-text" id="mapStatus">Esperando actividad</span>
               </div>
-              <div id="trackingMap" class="map-surface"></div>
+              <div
+                id="trackingMap"
+                class="map-surface"
+                role="img"
+                aria-label="Mapa del servicio y del prestador"
+              ></div>
               <div class="map-caption">
                 La ubicación del servicio y el tracking del prestador se actualizan acá cuando la solicitud entra en curso.
               </div>
@@ -279,7 +372,12 @@
 
               <div id="requestSummary"></div>
               <div class="timeline" id="requestTimeline"></div>
-              <div class="action-row" id="requestActions"></div>
+              <div
+                class="action-row"
+                id="requestActions"
+                role="group"
+                aria-label="Acciones de la solicitud"
+              ></div>
             </section>
 
             <section class="activity-card summary-callout-card">
@@ -312,7 +410,12 @@
                   <h3>Notificaciones recientes</h3>
                 </div>
               </div>
-              <div class="card-list compact" id="notificationsList"></div>
+              <div
+                class="card-list compact"
+                id="notificationsList"
+                role="list"
+                aria-live="polite"
+              ></div>
             </section>
 
             <section class="activity-card">
@@ -349,30 +452,72 @@
       </section>
     </main>
 
-    <aside class="drawer" id="notificationsDrawer" aria-hidden="true">
+    <aside
+      class="drawer"
+      id="notificationsDrawer"
+      aria-hidden="true"
+      aria-labelledby="notificationsDrawerTitle"
+    >
       <div class="drawer-header">
-        <h3>Centro de notificaciones</h3>
-        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">X</button>
+        <h3 id="notificationsDrawerTitle">Centro de notificaciones</h3>
+        <button
+          class="icon-button"
+          type="button"
+          data-close-drawer="notificationsDrawer"
+          aria-label="Cerrar notificaciones"
+        >
+          ×
+        </button>
       </div>
       <div class="drawer-body" id="notificationsDrawerBody"></div>
     </aside>
 
-    <aside class="drawer" id="chatDrawer" aria-hidden="true">
+    <aside
+      class="drawer"
+      id="chatDrawer"
+      aria-hidden="true"
+      aria-labelledby="chatDrawerTitle"
+    >
       <div class="drawer-header">
-        <h3>Chat en tiempo real</h3>
-        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">X</button>
+        <h3 id="chatDrawerTitle">Chat en tiempo real</h3>
+        <button
+          class="icon-button"
+          type="button"
+          data-close-drawer="chatDrawer"
+          aria-label="Cerrar chat"
+        >
+          ×
+        </button>
       </div>
 
       <div class="drawer-body chat-body">
-        <div class="chat-list" id="chatMessages"></div>
+        <div
+          class="chat-list"
+          id="chatMessages"
+          aria-live="polite"
+          aria-label="Mensajes del chat"
+        ></div>
 
         <form class="chat-form" id="chatForm">
-          <input id="chatInput" type="text" maxlength="500" placeholder="Escribí un mensaje...">
+          <label class="sr-only" for="chatInput">Escribí un mensaje</label>
+          <input
+            id="chatInput"
+            type="text"
+            maxlength="500"
+            placeholder="Escribí un mensaje..."
+            autocomplete="off"
+          >
           <button class="btn-primary" type="submit">Enviar</button>
         </form>
       </div>
     </aside>
   </div>
+
+  <noscript>
+    <div style="padding:16px; background:#fff4d6; color:#5b4300; font-family:Arial,sans-serif;">
+      Esta aplicación necesita JavaScript para funcionar correctamente.
+    </div>
+  </noscript>
 
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
