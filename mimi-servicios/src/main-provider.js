@@ -12,7 +12,7 @@ import {
   sendMessage,
   trackLocation,
   updateProviderStatus,
-  updateRequestStatus,
+  updateRequestStatus
 } from "./services/service-api.js";
 import { subscribeToProviderRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
@@ -21,10 +21,21 @@ import {
   redirectAfterLoginByRole,
   signInWithGoogle,
   signOut,
-  subscribeToAuthChanges,
+  subscribeToAuthChanges
 } from "./services/supabase.js";
-import { patchState, setActiveMode, setState, state, subscribe } from "./state/app-state.js";
+import {
+  patchState,
+  setActiveMode,
+  setState,
+  state,
+  subscribe
+} from "./state/app-state.js";
 import { renderProviderScreen } from "./ui/render-provider.js";
+
+let realtimeSubscription = null;
+let authSubscription = null;
+let providerTrackingIntervalId = null;
+let providerTrackingInFlight = false;
 
 function currentConversationId() {
   return state.provider.activeService?.conversation_id ?? null;
@@ -74,10 +85,12 @@ function toggleDrawer(id, force) {
 
 function buildDeviceId() {
   let deviceId = localStorage.getItem("mimi_services_device_id");
+
   if (!deviceId) {
     deviceId = crypto.randomUUID();
     localStorage.setItem("mimi_services_device_id", deviceId);
   }
+
   return deviceId;
 }
 
@@ -90,18 +103,20 @@ async function registerCurrentDevice() {
       pushToken: null,
       platform: "web",
       notificationsEnabled: true,
-      marketingOptIn: false,
+      marketingOptIn: false
     });
   } catch {
-    // silent
+    // no-op
   }
 }
 
 async function hydrateLiveContext(activeRequestOverride) {
-  const activeRequest = activeRequestOverride ?? await loadActiveRequest({
-    userId: null,
-    providerId: state.session.providerId,
-  });
+  const activeRequest =
+    activeRequestOverride ??
+    (await loadActiveRequest({
+      userId: null,
+      providerId: state.session.providerId
+    }));
 
   const conversation = activeRequest?.id
     ? await loadConversationForRequest(activeRequest.id)
@@ -120,50 +135,59 @@ async function hydrateLiveContext(activeRequestOverride) {
           conversation_id:
             conversation?.id ??
             draft.provider.activeService?.conversation_id ??
-            null,
+            null
         }
       : null;
 
     draft.chat.messages = messages;
     draft.chat.unreadCount = messages.filter(
-      (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
+      (message) =>
+        !message.read_at && message.sender_user_id !== draft.session.userId
     ).length;
 
     if (activeRequest?.service_lat && activeRequest?.service_lng) {
       draft.tracking.clientPosition = {
         lat: activeRequest.service_lat,
-        lng: activeRequest.service_lng,
+        lng: activeRequest.service_lng
       };
     }
   });
 
   updateProviderMap({
     providerPosition: state.tracking.providerPosition,
-    servicePosition: state.tracking.clientPosition,
+    servicePosition: state.tracking.clientPosition
   });
 
-  setupRealtime(activeRequest?.id ?? activeRequest?.request_id ?? null, conversation?.id ?? null);
+  setupRealtime(
+    activeRequest?.id ?? activeRequest?.request_id ?? null,
+    conversation?.id ?? null
+  );
 }
 
 async function bootstrapAsyncData() {
   const session = await bootstrapSession();
 
-if (session.isAuthenticated && session.role !== "provider") {
-  // el usuario puede existir como cliente puro; no redirigimos automáticamente
-}
+  if (session.isAuthenticated && session.role !== "provider") {
+    // el usuario puede existir como cliente puro; no redirigimos automáticamente
+  }
+
   setState((draft) => {
     draft.session.userId = session.userId;
     draft.session.providerId = session.providerId;
-    draft.session.role = session.role;
+    draft.session.role = session.role ?? "provider";
     draft.session.userEmail = session.userEmail ?? null;
     draft.session.userName = session.userName ?? null;
-    draft.meta.backendMode = session.userId ? "supabase" : (hasSupabaseEnv() ? "supabase" : "mock");
+    draft.meta.backendMode = session.userId
+      ? "supabase"
+      : hasSupabaseEnv()
+        ? "supabase"
+        : "mock";
     draft.provider.status = draft.provider.status || "OFFLINE";
   });
 
   const [notifications, offers] = await Promise.all([
     loadNotifications(session.userId),
-    loadOffers(session.providerId),
+    loadOffers(session.providerId)
   ]);
 
   const workspace = session.providerId
@@ -175,21 +199,23 @@ if (session.isAuthenticated && session.role !== "provider") {
         availability: [],
         documents: [],
         reviews: [],
-        completedCount: 0,
+        completedCount: 0
       };
 
   setState((draft) => {
-    draft.notifications.items = notifications;
+    draft.notifications.items = notifications ?? [];
     draft.provider.offers = offers ?? [];
-    draft.provider.stats.offers = offers?.length ?? 0;
-    draft.provider.profile = workspace.profile;
-    draft.provider.business.profile = workspace.profileDetail;
-    draft.provider.business.pricing = workspace.pricing;
-    draft.provider.business.availability = workspace.availability;
-    draft.provider.business.documents = workspace.documents;
-    draft.provider.business.reviews = workspace.reviews;
-    draft.provider.stats.rating = workspace.profile?.rating_avg ?? draft.provider.stats.rating;
-    draft.provider.stats.completed = workspace.completedCount ?? draft.provider.stats.completed;
+    draft.provider.stats.offers = (offers ?? []).length;
+    draft.provider.profile = workspace.profile ?? null;
+    draft.provider.business.profile = workspace.profileDetail ?? null;
+    draft.provider.business.pricing = workspace.pricing ?? [];
+    draft.provider.business.availability = workspace.availability ?? [];
+    draft.provider.business.documents = workspace.documents ?? [];
+    draft.provider.business.reviews = workspace.reviews ?? [];
+    draft.provider.stats.rating =
+      workspace.profile?.rating_avg ?? draft.provider.stats.rating;
+    draft.provider.stats.completed =
+      workspace.completedCount ?? draft.provider.stats.completed;
     draft.provider.status = workspace.profile?.status ?? draft.provider.status;
   });
 
@@ -197,7 +223,9 @@ if (session.isAuthenticated && session.role !== "provider") {
   await registerCurrentDevice();
 
   if (!hasSupabaseEnv()) {
-    setInfo("La app está funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real.");
+    setInfo(
+      "La app está funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real."
+    );
   } else if (!session.userId) {
     setInfo("Ingresá con Google para operar como prestador.");
   } else {
@@ -214,54 +242,82 @@ function registerInstallPrompt() {
   document.getElementById("installButton")?.addEventListener("click", async () => {
     const promptEvent = state.ui.installPromptEvent;
     if (!promptEvent) return;
+
     await promptEvent.prompt();
   });
 }
 
+function isTrackableServiceStatus(status) {
+  return ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(status);
+}
+
+function stopProviderTrackingLoop() {
+  if (providerTrackingIntervalId) {
+    window.clearInterval(providerTrackingIntervalId);
+    providerTrackingIntervalId = null;
+  }
+}
+
 function startProviderTrackingLoop() {
+  stopProviderTrackingLoop();
+
   if (!navigator.geolocation) return;
 
-  window.setInterval(() => {
+  providerTrackingIntervalId = window.setInterval(async () => {
     const active = state.provider.activeService;
-    if (!active) return;
+    if (!active || !isTrackableServiceStatus(active.status)) return;
+    if (providerTrackingInFlight) return;
 
-    const allowed = ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"];
-    if (!allowed.includes(active.status)) return;
+    providerTrackingInFlight = true;
 
-    navigator.geolocation.getCurrentPosition(async (position) => {
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 15000
+        });
+      });
+
       const payload = {
         requestId: active.request_id ?? active.id,
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         accuracy: position.coords.accuracy,
         heading: position.coords.heading,
-        speed: position.coords.speed,
+        speed: position.coords.speed
       };
 
       setState((draft) => {
         draft.tracking.providerPosition = {
           lat: payload.lat,
-          lng: payload.lng,
+          lng: payload.lng
         };
       });
 
       updateProviderMap({
         providerPosition: state.tracking.providerPosition,
-        servicePosition: state.tracking.clientPosition,
+        servicePosition: state.tracking.clientPosition
       });
 
       try {
         await trackLocation(payload);
       } catch {
-        // silent
+        // no-op
       }
-    });
+    } catch {
+      // no-op
+    } finally {
+      providerTrackingInFlight = false;
+    }
   }, 12000);
 }
 
 async function handleAuthPrimary() {
   if (!hasSupabaseEnv()) {
-    setInfo("Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real.");
+    setInfo(
+      "Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real."
+    );
     return;
   }
 
@@ -271,15 +327,16 @@ async function handleAuthPrimary() {
 async function handleOfferAction(action, offerId) {
   await updateRequestStatus(appConfig.functions.providerRespondOffer, {
     offer_id: offerId,
-    action: action === "accept" ? "ACCEPT" : "REJECT",
+    action: action === "accept" ? "ACCEPT" : "REJECT"
   });
 
   setState((draft) => {
     draft.provider.offers = draft.provider.offers.filter((item) => item.id !== offerId);
     draft.provider.stats.offers = draft.provider.offers.length;
-    draft.meta.info = action === "accept"
-      ? "Oferta aceptada correctamente."
-      : "Oferta rechazada.";
+    draft.meta.info =
+      action === "accept"
+        ? "Oferta aceptada correctamente."
+        : "Oferta rechazada.";
   });
 
   await hydrateLiveContext();
@@ -293,7 +350,8 @@ async function handleProviderStatusChange(status) {
 
   setState((draft) => {
     draft.provider.status = profile.status ?? status;
-    draft.provider.stats.rating = profile.rating_avg ?? draft.provider.stats.rating;
+    draft.provider.stats.rating =
+      profile.rating_avg ?? draft.provider.stats.rating;
   });
 }
 
@@ -307,18 +365,22 @@ async function handleProviderFlow(action) {
     "en-route": "PROVIDER_EN_ROUTE",
     arrived: "PROVIDER_ARRIVED",
     start: "IN_PROGRESS",
-    complete: "COMPLETED",
+    complete: "COMPLETED"
   };
 
   const functionName = {
     "en-route": appConfig.functions.providerEnRoute,
     arrived: appConfig.functions.providerArrived,
     start: appConfig.functions.startService,
-    complete: appConfig.functions.completeService,
+    complete: appConfig.functions.completeService
   }[action];
 
+  if (!functionName) return;
+
   await updateRequestStatus(functionName, {
-    request_id: state.provider.activeService?.request_id ?? state.provider.activeService?.id,
+    request_id:
+      state.provider.activeService?.request_id ??
+      state.provider.activeService?.id
   });
 
   setState((draft) => {
@@ -340,24 +402,24 @@ function bindBasicControls() {
     }
   });
 
-document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
-  try {
-    await signOut();
-    window.location.reload();
-  } catch (error) {
-    setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
-  }
-});
+  document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
+    try {
+      await signOut();
+      window.location.reload();
+    } catch (error) {
+      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
+    }
+  });
 
-document.getElementById("switchToClient")?.addEventListener("click", () => {
-  setActiveMode("client");
-  window.location.href = "./cliente.html";
-});
+  document.getElementById("switchToClient")?.addEventListener("click", () => {
+    setActiveMode("client");
+    window.location.href = "./cliente.html";
+  });
 
-document.getElementById("notificationsButton")?.addEventListener("click", () => {
-  toggleDrawer("notificationsDrawer", true);
-});
-  
+  document.getElementById("notificationsButton")?.addEventListener("click", () => {
+    toggleDrawer("notificationsDrawer", true);
+  });
+
   document.getElementById("chatButton")?.addEventListener("click", async () => {
     try {
       toggleDrawer("chatDrawer", true);
@@ -373,7 +435,9 @@ document.getElementById("notificationsButton")?.addEventListener("click", () => 
   });
 
   document.querySelectorAll("[data-close-drawer]").forEach((button) => {
-    button.addEventListener("click", () => toggleDrawer(button.dataset.closeDrawer, false));
+    button.addEventListener("click", () => {
+      toggleDrawer(button.dataset.closeDrawer, false);
+    });
   });
 
   document.getElementById("chatForm")?.addEventListener("submit", async (event) => {
@@ -386,7 +450,7 @@ document.getElementById("notificationsButton")?.addEventListener("click", () => 
     try {
       const message = await sendMessage({
         conversationId: currentConversationId(),
-        body,
+        body
       });
 
       setState((draft) => {
@@ -404,7 +468,10 @@ document.getElementById("notificationsButton")?.addEventListener("click", () => 
     try {
       const offerAction = event.target.closest("[data-offer-action]");
       if (offerAction) {
-        await handleOfferAction(offerAction.dataset.offerAction, offerAction.dataset.offerId);
+        await handleOfferAction(
+          offerAction.dataset.offerAction,
+          offerAction.dataset.offerId
+        );
         return;
       }
 
@@ -417,19 +484,25 @@ document.getElementById("notificationsButton")?.addEventListener("click", () => 
       const providerFlow = event.target.closest("[data-provider-flow]");
       if (providerFlow) {
         await handleProviderFlow(providerFlow.dataset.providerFlow);
-        return;
       }
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo completar la accion."));
+      setInfo(null, normalizeAuthError(error, "No se pudo completar la acción."));
     }
   });
 }
 
 function setupRealtime(
   requestId = state.provider.activeService?.request_id ?? state.provider.activeService?.id ?? null,
-  conversationId = currentConversationId(),
+  conversationId = currentConversationId()
 ) {
-  subscribeToProviderRealtime({
+  realtimeSubscription?.unsubscribe?.();
+  realtimeSubscription = null;
+
+  if (!state.session.userId) {
+    return;
+  }
+
+  realtimeSubscription = subscribeToProviderRealtime({
     userId: state.session.userId,
     providerId: state.session.providerId,
     requestId,
@@ -448,7 +521,10 @@ function setupRealtime(
 
       setState((draft) => {
         const exists = draft.chat.messages.some((msg) => msg.id === payload.id);
-        if (!exists) draft.chat.messages.push(payload);
+        if (!exists) {
+          draft.chat.messages.push(payload);
+        }
+
         if (payload.sender_user_id !== draft.session.userId) {
           draft.chat.unreadCount += 1;
         }
@@ -462,13 +538,13 @@ function setupRealtime(
       setState((draft) => {
         draft.tracking.providerPosition = {
           lat: payload.lat,
-          lng: payload.lng,
+          lng: payload.lng
         };
       });
 
       updateProviderMap({
         providerPosition: state.tracking.providerPosition,
-        servicePosition: state.tracking.clientPosition,
+        servicePosition: state.tracking.clientPosition
       });
     },
     onRequest: ({ new: payload }) => {
@@ -481,7 +557,7 @@ function setupRealtime(
         ) {
           draft.provider.activeService = {
             ...draft.provider.activeService,
-            ...payload,
+            ...payload
           };
         }
       });
@@ -498,11 +574,9 @@ function setupRealtime(
       });
 
       playNotificationSound();
-    },
+    }
   });
 }
-
-let authSubscription = null;
 
 async function init() {
   setActiveMode("provider");
@@ -523,7 +597,7 @@ async function init() {
     history.replaceState(
       {},
       document.title,
-      window.location.pathname + window.location.search,
+      window.location.pathname + window.location.search
     );
   }
 
@@ -531,30 +605,32 @@ async function init() {
   setupRealtime();
   renderProviderScreen(state);
 
-authSubscription = subscribeToAuthChanges?.(async (event, session) => {
-  if (event === "SIGNED_IN" && session) {
-    await redirectAfterLoginByRole(session);
-    return;
-  }
+  authSubscription =
+    subscribeToAuthChanges?.(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
+        await redirectAfterLoginByRole(session);
+        return;
+      }
 
-  if (event === "SIGNED_OUT") {
-    setActiveMode("provider");
-    window.location.href = "./prestador.html";
-  }
-}) ?? null;
-
-} // 👈 ESTA LLAVE FALTABA (cierra init)
+      if (event === "SIGNED_OUT") {
+        setActiveMode("provider");
+        window.location.href = "./prestador.html";
+      }
+    }) ?? null;
+}
 
 init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
       error,
-      "La app cargó con fallback local. Revisá la configuración de Supabase.",
+      "La app cargó con fallback local. Revisá la configuración de Supabase."
     );
     draft.meta.info = null;
   });
 });
 
 window.addEventListener("beforeunload", () => {
+  stopProviderTrackingLoop();
+  realtimeSubscription?.unsubscribe?.();
   authSubscription?.unsubscribe?.();
 });
