@@ -1,4 +1,4 @@
-import { appConfig } from "../config.js";
+import { appConfig } from "./config.js";
 import { initMap, updateClientMap } from "./services/map.js";
 import {
   bootstrapSession,
@@ -54,7 +54,7 @@ function setInfo(message, error = null) {
 
 function normalizeAuthError(error, fallbackMessage) {
   if (error?.code === "AUTH_REQUIRED") {
-    return "Necesitas iniciar sesion con Google para continuar.";
+    return "Necesitás iniciar sesión con Google para continuar.";
   }
 
   if (error?.message === "SERVICE_LOCATION_REQUIRED") {
@@ -404,11 +404,11 @@ async function bootstrapAsyncData() {
   await registerCurrentDevice();
 
   if (!hasSupabaseEnv()) {
-    setInfo("La app esta funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real.");
+    setInfo("La app está funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real.");
   } else if (!session.userId) {
-    setInfo("Ingresa con Google para ver categorias activas, buscar prestadores y usar el flujo real.");
+    setInfo("Ingresá con Google para ver categorías activas, buscar prestadores y usar el flujo real.");
   } else {
-    setInfo("Sesion iniciada correctamente.");
+    setInfo("Sesión iniciada correctamente.");
   }
 }
 
@@ -537,7 +537,7 @@ function bindBasicControls() {
     try {
       await handleAuthPrimary();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesion."));
+      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesión."));
     }
   });
 
@@ -546,7 +546,7 @@ function bindBasicControls() {
       await signOut();
       window.location.reload();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesion."));
+      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
     }
   });
 
@@ -760,7 +760,7 @@ const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
 
 init().catch((error) => {
   setState((draft) => {
-    draft.meta.error = normalizeAuthError(error, "La app cargo con fallback local. Revisa la configuracion de Supabase.");
+    draft.meta.error = normalizeAuthError(error, "La app cargó con fallback local. Revisá la configuración de Supabase.");
     draft.meta.info = null;
   });
 });
