@@ -4,7 +4,11 @@ let client = null;
 function currentPageName() {
   return window.location.pathname.split("/").pop() || "";
 }
-
+export function forceCleanSession() {
+  try {
+    localStorage.removeItem(`sb-${appConfig.supabaseUrl.split("//")[1].split(".")[0]}-auth-token`);
+  } catch {}
+}
 export function hasSupabaseEnv() {
   return Boolean(
     appConfig.supabaseUrl &&
