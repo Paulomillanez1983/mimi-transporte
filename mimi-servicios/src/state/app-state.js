@@ -5,7 +5,7 @@ const listeners = new Set();
 export const state = {
   ui: {
     appEntered: false,
-    activeMode: "client",
+    activeMode: localStorage.getItem("mimi_active_mode") || "client",
     selectedCategoryId: appConfig.categories[0].id,
     installPromptEvent: null,
   },
@@ -95,5 +95,12 @@ export function patchState(path, value) {
       current = current[segments[i]];
     }
     current[segments.at(-1)] = value;
+  });
+}
+export function setActiveMode(mode) {
+  localStorage.setItem("mimi_active_mode", mode);
+
+  setState((draft) => {
+    draft.ui.activeMode = mode;
   });
 }
