@@ -2,7 +2,7 @@ import { getSupabaseClient } from "./supabase.js";
 
 let channels = [];
 
-function addChannel(channel) {
+function rememberChannel(channel) {
   if (!channel) return null;
   channels.push(channel);
   return channel;
@@ -10,6 +10,7 @@ function addChannel(channel) {
 
 export function disconnectRealtime() {
   const supabase = getSupabaseClient();
+
   if (!supabase) {
     channels = [];
     return;
@@ -28,9 +29,12 @@ export function disconnectRealtime() {
 
 function subscribeNotifications(userId, onNotification) {
   const supabase = getSupabaseClient();
-  if (!supabase || !userId || typeof onNotification !== "function") return null;
 
-  return addChannel(
+  if (!supabase || !userId || typeof onNotification !== "function") {
+    return null;
+  }
+
+  return rememberChannel(
     supabase
       .channel(`mimi-servicios-notifications-${userId}`)
       .on(
@@ -49,9 +53,12 @@ function subscribeNotifications(userId, onNotification) {
 
 function subscribeMessages(conversationId, onMessage) {
   const supabase = getSupabaseClient();
-  if (!supabase || !conversationId || typeof onMessage !== "function") return null;
 
-  return addChannel(
+  if (!supabase || !conversationId || typeof onMessage !== "function") {
+    return null;
+  }
+
+  return rememberChannel(
     supabase
       .channel(`mimi-servicios-messages-${conversationId}`)
       .on(
@@ -70,10 +77,13 @@ function subscribeMessages(conversationId, onMessage) {
 
 function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
   const supabase = getSupabaseClient();
-  if (!supabase || !requestId) return null;
+
+  if (!supabase || !requestId) {
+    return null;
+  }
 
   if (typeof onTracking === "function") {
-    addChannel(
+    rememberChannel(
       supabase
         .channel(`mimi-servicios-tracking-${requestId}`)
         .on(
@@ -91,7 +101,7 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
   }
 
   const requestChannel = supabase.channel(`mimi-servicios-requests-${requestId}`);
-  let hasSubscriptions = false;
+  let hasRequestSubscriptions = false;
 
   if (typeof onRequest === "function") {
     requestChannel.on(
@@ -104,7 +114,8 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
       },
       onRequest
     );
-    hasSubscriptions = true;
+
+    hasRequestSubscriptions = true;
   }
 
   if (typeof onOffer === "function") {
@@ -118,21 +129,25 @@ function subscribeRequest(requestId, onTracking, onRequest, onOffer) {
       },
       onOffer
     );
-    hasSubscriptions = true;
+
+    hasRequestSubscriptions = true;
   }
 
-  if (!hasSubscriptions) {
+  if (!hasRequestSubscriptions) {
     return null;
   }
 
-  return addChannel(requestChannel.subscribe());
+  return rememberChannel(requestChannel.subscribe());
 }
 
 function subscribeProviderOffers(providerId, onOffer) {
   const supabase = getSupabaseClient();
-  if (!supabase || !providerId || typeof onOffer !== "function") return null;
 
-  return addChannel(
+  if (!supabase || !providerId || typeof onOffer !== "function") {
+    return null;
+  }
+
+  return rememberChannel(
     supabase
       .channel(`mimi-servicios-provider-offers-${providerId}`)
       .on(
@@ -159,7 +174,10 @@ export function subscribeToClientRealtime({
   onRequest
 }) {
   const supabase = getSupabaseClient();
-  if (!supabase) return () => {};
+
+  if (!supabase) {
+    return () => {};
+  }
 
   disconnectRealtime();
 
@@ -182,7 +200,10 @@ export function subscribeToProviderRealtime({
   onOffer
 }) {
   const supabase = getSupabaseClient();
-  if (!supabase) return () => {};
+
+  if (!supabase) {
+    return () => {};
+  }
 
   disconnectRealtime();
 
@@ -194,8 +215,8 @@ export function subscribeToProviderRealtime({
   return disconnectRealtime;
 }
 
-export function subscribeToServiceRealtime(options) {
-  if (options?.providerId) {
+export function subscribeToServiceRealtime(options = {}) {
+  if (options.providerId) {
     return subscribeToProviderRealtime(options);
   }
 
