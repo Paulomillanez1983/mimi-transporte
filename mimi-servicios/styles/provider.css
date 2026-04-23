@@ -272,3 +272,99 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Verificación/KYC prestador - MIMI Servicios */
+.provider-verification-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(22, 56, 103, 0.12);
+  background:
+    linear-gradient(145deg, rgba(245, 250, 255, 0.98), rgba(255, 255, 255, 0.98)),
+    #fff;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.07);
+}
+
+.provider-verification-card.is-approved {
+  border-color: rgba(43, 182, 115, 0.22);
+  background:
+    linear-gradient(145deg, rgba(237, 255, 246, 0.98), rgba(255, 255, 255, 0.98)),
+    #fff;
+}
+
+.provider-verification-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.provider-verification-head h3 {
+  margin: 4px 0 6px;
+  color: #102a43;
+}
+
+.provider-verification-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(22, 56, 103, 0.08);
+  color: #163867;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.provider-verification-form {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px dashed rgba(22, 56, 103, 0.22);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.provider-verification-form input[type="file"] {
+  min-height: 46px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+}
+
+.provider-doc-link {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(22, 56, 103, 0.08);
+  color: #163867;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.provider-doc-card--approved {
+  border-color: rgba(43, 182, 115, 0.22);
+}
+
+.provider-doc-card--rejected,
+.provider-doc-card--needs_resubmission {
+  border-color: rgba(220, 38, 38, 0.2);
+  background: rgba(255, 247, 247, 0.96);
+}
+
+@media (max-width: 560px) {
+  .provider-verification-head {
+    display: grid;
+  }
+
+  .provider-verification-badge {
+    width: fit-content;
+  }
+}
