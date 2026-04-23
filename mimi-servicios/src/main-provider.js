@@ -505,9 +505,10 @@ function setupRealtime(
 let authSubscription = null;
 
 async function init() {
+  setActiveMode("provider");
+
   subscribe(renderProviderScreen);
   renderProviderScreen(state);
-
   bindBasicControls();
   registerInstallPrompt();
   initMap("trackingMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
@@ -526,27 +527,22 @@ async function init() {
     );
   }
 
-  if (state.ui.activeMode === "client") {
-    window.location.href = "./cliente.html";
-    return;
-  }
-
   startProviderTrackingLoop();
   setupRealtime();
   renderProviderScreen(state);
 
-  authSubscription = subscribeToAuthChanges?.(async (event, session) => {
-    if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
-      await redirectAfterLoginByRole(session);
-      return;
-    }
+authSubscription = subscribeToAuthChanges?.(async (event, session) => {
+  if (event === "SIGNED_IN" && session) {
+    await redirectAfterLoginByRole(session);
+    return;
+  }
 
-    if (event === "SIGNED_OUT") {
-      window.location.href = "./prestador.html";
-    }
-  }) ?? null;
-}
-
+  if (event === "SIGNED_OUT") {
+    setActiveMode("provider");
+    window.location.href = "./prestador.html";
+  }
+}) ?? null;
+  
 init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
