@@ -375,7 +375,17 @@ async function bootstrapAsyncData() {
       description: category.description,
     }));
   }
+const mode = state.ui.activeMode;
 
+if (mode === "provider" && !window.location.pathname.includes("prestador")) {
+  window.location.href = "./prestador.html";
+  return;
+}
+
+if (mode === "client" && !window.location.pathname.includes("cliente")) {
+  window.location.href = "./cliente.html";
+  return;
+}
 if (session.isAuthenticated && session.role === "provider") {
   // no redirigimos automáticamente
 }
