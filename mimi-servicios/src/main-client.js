@@ -747,11 +747,19 @@ async function init() {
     navigator.serviceWorker.register("./sw.js").catch(() => null);
   }
 
-  await bootstrapAsyncData();
-  setupRealtime();
-  renderClientScreen(state);
+await bootstrapAsyncData();
+
+if (window.location.hash && window.location.hash.includes("access_token")) {
+  history.replaceState(
+    {},
+    document.title,
+    window.location.pathname + window.location.search
+  );
 }
 
+startProviderTrackingLoop();
+setupRealtime();
+renderProviderScreen(state);
 const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
   if (event === "SIGNED_IN" && session) {
     await redirectAfterLoginByRole(session);
