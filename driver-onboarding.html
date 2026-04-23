@@ -3254,20 +3254,35 @@ function applySpanishTextFixes() {
 
 function explainUploadError(err) {
   const msg = String(err?.message || err || "");
+  const code = String(err?.code || "").toUpperCase();
 
-  if (err?.code === "OFFLINE" || isProbablyOffline()) {
+  console.error("[explainUploadError]", { code, msg, err });
+
+  if (code === "OFFLINE" || isProbablyOffline()) {
     return "❌ No hay conexión a internet. Revisá la señal y volvé a intentar.";
   }
 
-  if (err?.code === "TIMEOUT") {
-    return "❌ La carga demoró demasiado. Puede ser por internet lento o por el servidor.";
+  if (code === "TIMEOUT") {
+    return "❌ La carga demoró demasiado. Puede ser por internet lento, Storage o la base de documentos.";
   }
 
   if (/row-level security|rls|policy/i.test(msg)) {
-    return "❌ El servidor rechazó la carga por permisos de base de datos.";
+    return "❌ El servidor rechazó la carga por permisos. Revisá RLS de storage.objects o driver_documents.";
   }
 
-  if (/storage|bucket|object/i.test(msg)) {
+  if (/bucket.*not.*found|not found.*bucket/i.test(msg)) {
+    return "❌ No existe el bucket driver-documents.";
+  }
+
+  if (/duplicate|already exists|409/i.test(msg)) {
+    return "❌ El archivo ya existe con ese nombre. Probá nuevamente.";
+  }
+
+  if (/driver_documents/i.test(msg)) {
+    return "❌ El archivo subió, pero falló el guardado del registro en driver_documents.";
+  }
+
+  if (/storage|object/i.test(msg)) {
     return "❌ Hubo un problema al subir el archivo al almacenamiento.";
   }
 
@@ -3277,7 +3292,85 @@ function explainUploadError(err) {
 
   return "❌ " + (msg || "No pudimos enviar la documentación.");
 }
+    
+  function buildDriverDocumentPath(docType, file) {
+  const ext = fileExt(file);
+  const safeName = sanitizeFileName(file.name || `${docType}.${ext}`);
+  const stamp = Date.now();
+  return `${currentUser.id}/${docType}/${stamp}_${safeName}`;
+}
 
+async function storageUploadPro(docType, uploadFile) {
+  const safePath = buildDriverDocumentPath(docType, uploadFile);
+
+  const uploadResult = await retryOperation(
+    async (attempt) => {
+      console.log(`[storageUploadPro] intento ${attempt}`, {
+        docType,
+        name: uploadFile?.name,
+        type: uploadFile?.type,
+        size: uploadFile?.size
+      });
+
+      const result = await withTimeout(
+        supabaseService.client.storage
+          .from("driver-documents")
+          .upload(safePath, uploadFile, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: uploadFile.type || "application/octet-stream"
+          }),
+        getUploadTimeoutMs("storage"),
+        `La subida de ${DOC_META[docType]?.label || docType} tardó demasiado`
+      );
+
+      console.log("[storageUploadPro] result", result);
+
+      if (result?.error) {
+        throw result.error;
+      }
+
+      return {
+        safePath,
+        storageData: result?.data || null
+      };
+    },
+    { label: `storage upload ${docType}` }
+  );
+
+  return uploadResult;
+}
+
+async function upsertDriverDocumentPro(payload, docType) {
+  const result = await retryOperation(
+    async (attempt) => {
+      console.log(`[upsertDriverDocumentPro] intento ${attempt}`, { docType, payload });
+
+      const response = await withTimeout(
+        supabaseService.client
+          .from("driver_documents")
+          .upsert(payload, {
+            onConflict: "user_id,doc_type"
+          })
+          .select()
+          .single(),
+        getUploadTimeoutMs("document-upsert"),
+        `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
+      );
+
+      console.log("[upsertDriverDocumentPro] response", response);
+
+      if (response?.error) {
+        throw response.error;
+      }
+
+      return response?.data || null;
+    },
+    { label: `driver_documents upsert ${docType}` }
+  );
+
+  return result;
+}
 async function uploadDocument(docType, file) {
   try {
     if (!file) {
@@ -3302,13 +3395,20 @@ async function uploadDocument(docType, file) {
       throw new Error("Usuario no autenticado");
     }
 
-    setDocStatus(docType, "Preparando archivo.", "pending");
-    setGlobalStatus(`Preparando ${DOC_META[docType]?.label || docType}.`, "success");
-
     let uploadFile = file;
 
+    setDocStatus(docType, "Preparando archivo...", "pending");
+    setGlobalStatus(`Preparando ${DOC_META[docType]?.label || docType}.`, "success");
+
+    console.log("[uploadDocument] archivo original", {
+      docType,
+      name: file.name,
+      type: file.type,
+      size: file.size
+    });
+
     if (isImageFile(file)) {
-      setDocStatus(docType, "Comprimiendo imagen.", "pending");
+      setDocStatus(docType, "Comprimiendo imagen...", "pending");
       setGlobalStatus(`Comprimiendo ${DOC_META[docType]?.label || docType}.`, "success");
 
       uploadFile = await withTimeout(
@@ -3321,37 +3421,27 @@ async function uploadDocument(docType, file) {
         35000,
         "La compresión del archivo tardó demasiado"
       );
+
+      console.log("[uploadDocument] archivo comprimido", {
+        docType,
+        name: uploadFile.name,
+        type: uploadFile.type,
+        size: uploadFile.size
+      });
     }
 
-    setDocStatus(docType, "Subiendo archivo.", "pending");
+    setDocStatus(docType, "Subiendo archivo...", "pending");
     setGlobalStatus(`Subiendo ${DOC_META[docType]?.label || docType}.`, "success");
 
-    const ext = fileExt(uploadFile);
-    const safeName = sanitizeFileName(uploadFile.name || `${docType}.${ext}`);
-    const safePath = `${currentUser.id}/${docType}_${Date.now()}_${safeName}`;
+    const { safePath, storageData } = await storageUploadPro(docType, uploadFile);
 
-    const { error: uploadError } = await retryOperation(
-      () =>
-        withTimeout(
-          supabaseService.client.storage
-            .from("driver-documents")
-            .upload(safePath, uploadFile, {
-              cacheControl: "3600",
-              upsert: true,
-              contentType: uploadFile.type || "application/octet-stream"
-            }),
-          getUploadTimeoutMs("storage"),
-          `La subida de ${DOC_META[docType]?.label || docType} tardó demasiado`
-        ),
-      { label: `storage upload ${docType}` }
-    );
+    console.log("[uploadDocument] storage ok", {
+      docType,
+      safePath,
+      storageData
+    });
 
-    if (uploadError) {
-      console.error("[UPLOAD STORAGE ERROR]", uploadError);
-      throw uploadError;
-    }
-
-    setDocStatus(docType, "Guardando registro.", "pending");
+    setDocStatus(docType, "Guardando registro...", "pending");
     setGlobalStatus(`Registrando ${DOC_META[docType]?.label || docType} en el sistema.`, "success");
 
     const payload = {
@@ -3377,26 +3467,12 @@ async function uploadDocument(docType, file) {
       auto_checked_at: null
     };
 
-    const { data: savedRow, error: upsertError } = await retryOperation(
-      () =>
-        withTimeout(
-          supabaseService.client
-            .from("driver_documents")
-            .upsert(payload, {
-              onConflict: "user_id,doc_type"
-            })
-            .select()
-            .single(),
-          getUploadTimeoutMs("document-upsert"),
-          `El registro de ${DOC_META[docType]?.label || docType} tardó demasiado`
-        ),
-      { label: `driver_documents upsert ${docType}` }
-    );
+    const savedRow = await upsertDriverDocumentPro(payload, docType);
 
-    if (upsertError) {
-      console.error("[DB ERROR driver_documents]", upsertError, payload);
-      throw upsertError;
-    }
+    console.log("[uploadDocument] db ok", {
+      docType,
+      savedRow
+    });
 
     setDocStatus(
       docType,
@@ -3420,12 +3496,11 @@ async function uploadDocument(docType, file) {
       validation: null
     };
   } catch (err) {
-    console.error("[uploadDocument] " + docType, err);
+    console.error(`[uploadDocument] ${docType}`, err);
     setDocStatus(docType, explainUploadError(err), "error");
     throw err;
   }
-}
-    
+}    
 async function triggerRemoteValidationInBackground({
   docType,
   file,
