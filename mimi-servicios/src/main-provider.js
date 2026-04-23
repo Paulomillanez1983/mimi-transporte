@@ -1,4 +1,4 @@
-import { appConfig } from "../config.js";
+import { appConfig } from "./config.js";
 import { initMap, updateProviderMap } from "./services/map.js";
 import {
   bootstrapSession,
@@ -7,6 +7,7 @@ import {
   loadMessages,
   loadNotifications,
   loadOffers,
+  loadProviderWorkspace,
   registerDevice,
   sendMessage,
   trackLocation,
@@ -39,7 +40,7 @@ function setInfo(message, error = null) {
 
 function normalizeAuthError(error, fallbackMessage) {
   if (error?.code === "AUTH_REQUIRED") {
-    return "Necesitas iniciar sesion con Google para continuar.";
+    return "Necesitás iniciar sesión con Google para continuar.";
   }
 
   return error?.message || fallbackMessage;
@@ -82,9 +83,7 @@ function buildDeviceId() {
 }
 
 async function registerCurrentDevice() {
-  const session = await getCurrentSession();
-  if (!session?.user?.id) return;
-  if (!hasSupabaseEnv()) return;
+  if (!state.session.userId) return;
 
   try {
     await registerDevice({
@@ -151,7 +150,7 @@ async function bootstrapAsyncData() {
   const session = await bootstrapSession();
 
   if (session.isAuthenticated && session.role !== "provider") {
-    redirectAfterLoginByRole(await getCurrentSession());
+    await redirectAfterLoginByRole(await getCurrentSession());
     return;
   }
 
@@ -170,21 +169,42 @@ async function bootstrapAsyncData() {
     loadOffers(session.providerId),
   ]);
 
+  const workspace = session.providerId
+    ? await loadProviderWorkspace(session.providerId)
+    : {
+        profile: null,
+        profileDetail: null,
+        pricing: [],
+        availability: [],
+        documents: [],
+        reviews: [],
+        completedCount: 0,
+      };
+
   setState((draft) => {
     draft.notifications.items = notifications;
     draft.provider.offers = offers ?? [];
     draft.provider.stats.offers = offers?.length ?? 0;
+    draft.provider.profile = workspace.profile;
+    draft.provider.business.profile = workspace.profileDetail;
+    draft.provider.business.pricing = workspace.pricing;
+    draft.provider.business.availability = workspace.availability;
+    draft.provider.business.documents = workspace.documents;
+    draft.provider.business.reviews = workspace.reviews;
+    draft.provider.stats.rating = workspace.profile?.rating_avg ?? draft.provider.stats.rating;
+    draft.provider.stats.completed = workspace.completedCount ?? draft.provider.stats.completed;
+    draft.provider.status = workspace.profile?.status ?? draft.provider.status;
   });
 
   await hydrateLiveContext();
   await registerCurrentDevice();
 
   if (!hasSupabaseEnv()) {
-    setInfo("La app esta funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real.");
+    setInfo("La app está funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real.");
   } else if (!session.userId) {
-    setInfo("Ingresa con Google para operar como prestador.");
+    setInfo("Ingresá con Google para operar como prestador.");
   } else {
-    setInfo("Sesion iniciada correctamente.");
+    setInfo("Sesión iniciada correctamente.");
   }
 }
 
@@ -319,7 +339,7 @@ function bindBasicControls() {
     try {
       await handleAuthPrimary();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesion."));
+      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesión."));
     }
   });
 
@@ -328,7 +348,7 @@ function bindBasicControls() {
       await signOut();
       window.location.reload();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesion."));
+      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
     }
   });
 
@@ -506,7 +526,7 @@ const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
 
 init().catch((error) => {
   setState((draft) => {
-    draft.meta.error = normalizeAuthError(error, "La app cargo con fallback local. Revisa la configuracion de Supabase.");
+    draft.meta.error = normalizeAuthError(error, "La app cargó con fallback local. Revisá la configuración de Supabase.");
     draft.meta.info = null;
   });
 });
