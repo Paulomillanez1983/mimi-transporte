@@ -654,17 +654,93 @@ function renderProviderTrust(state) {
   const reviews = state.provider.business.reviews ?? [];
   const documentsSummary = state.provider.documentsSummary ?? {};
   const reviewSummary = state.provider.reviewSummary ?? {};
+  const profile = state.provider.profile ?? null;
+  const isApproved = Boolean(profile?.approved);
+  const isBlocked = Boolean(profile?.blocked);
+  const totalDocs =
+    Number(documentsSummary.approved ?? 0) +
+    Number(documentsSummary.pending ?? 0) +
+    Number(documentsSummary.observed ?? 0);
+
+  const verificationTitle = isBlocked
+    ? "Cuenta bloqueada"
+    : isApproved
+      ? "Verificación aprobada"
+      : totalDocs > 0
+        ? "Verificación en revisión"
+        : "Completá tu verificación";
+
+  const verificationText = isBlocked
+    ? "Tu cuenta necesita revisión del equipo MIMI antes de operar."
+    : isApproved
+      ? "Tu cuenta está aprobada para operar cuando estés online."
+      : totalDocs > 0
+        ? "Ya recibimos tus documentos. Si alguno queda observado, vas a poder reenviarlo desde acá."
+        : "Subí DNI frente, DNI dorso y selfie. No pedimos carnet de conducir para MIMI Servicios.";
+
+  const documentOptions = [
+    ["dni_front", "DNI frente"],
+    ["dni_back", "DNI dorso"],
+    ["selfie", "Selfie de verificación"],
+    ["certification", "Matrícula / certificado / constancia"],
+    ["address_proof", "Comprobante de domicilio"]
+  ];
+
+  const uploadFormHtml = state.session.providerId
+    ? `
+      <form class="provider-verification-form" id="providerVerificationForm">
+        <div class="provider-form-grid">
+          <label class="input-group">
+            <span>Tipo de documento</span>
+            <select name="providerDocumentType" required>
+              ${documentOptions
+                .map(
+                  ([value, label]) =>
+                    `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`
+                )
+                .join("")}
+            </select>
+          </label>
+          <label class="input-group">
+            <span>Archivo</span>
+            <input
+              name="providerDocumentFile"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              required
+            >
+          </label>
+        </div>
+        <div class="provider-action-strip">
+          <button class="btn-primary" type="submit">Subir documento</button>
+        </div>
+        <p class="muted">
+          Formatos permitidos: JPG, PNG, WEBP o PDF. Máximo 8 MB. Se guarda en
+          <strong>svc_provider_documents</strong> usando el bucket de Servicios.
+        </p>
+      </form>
+    `
+    : `
+      <div class="summary-card">
+        <strong>Ingresá con Google</strong>
+        <span class="muted">Necesitás una sesión de prestador para subir documentos.</span>
+      </div>
+    `;
 
   const documentsHtml = documents.length
     ? `
       <div class="provider-doc-grid">
         ${documents
-          .map(
-            (item) => `
-              <article class="provider-doc-card">
+          .map((item) => {
+            const status = String(item.review_status ?? "PENDING").toUpperCase();
+            const statusLabel = reviewStatusLabels[status] ?? status;
+            const fileUrl = item.file_url ?? null;
+
+            return `
+              <article class="provider-doc-card provider-doc-card--${escapeHtml(status.toLowerCase())}">
                 <strong>${escapeHtml(item.document_type ?? "Documento")}</strong>
                 <div class="chip-row">
-                  <span class="inline-chip">${escapeHtml(reviewStatusLabels[item.review_status] ?? item.review_status ?? "Pendiente")}</span>
+                  <span class="inline-chip">${escapeHtml(statusLabel)}</span>
                   <span class="inline-chip">Actualizado ${escapeHtml(formatDate(item.updated_at ?? item.created_at))}</span>
                 </div>
                 ${
@@ -672,16 +748,21 @@ function renderProviderTrust(state) {
                     ? `<p class="muted">${escapeHtml(item.review_notes)}</p>`
                     : `<p class="muted">Sin observaciones cargadas.</p>`
                 }
+                ${
+                  fileUrl
+                    ? `<a class="provider-doc-link" href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener">Ver archivo</a>`
+                    : ""
+                }
               </article>
-            `
-          )
+            `;
+          })
           .join("")}
       </div>
     `
     : `
       <div class="summary-card">
-        <strong>Sin documentos visibles</strong>
-        <span class="muted">Cuando se carguen documentos en svc_provider_documents, vas a ver acá su estado de revisión.</span>
+        <strong>Sin documentos cargados</strong>
+        <span class="muted">Subí tus documentos para habilitar la revisión del equipo MIMI.</span>
       </div>
     `;
 
@@ -710,8 +791,18 @@ function renderProviderTrust(state) {
 
   container.innerHTML = `
     <section class="provider-stack">
-      <article class="summary-card">
-        <strong>Confianza y cumplimiento</strong>
+      <article class="provider-verification-card ${isApproved ? "is-approved" : "is-pending"}">
+        <div class="provider-verification-head">
+          <div>
+            <span class="eyebrow">Verificación prestador</span>
+            <h3>${escapeHtml(verificationTitle)}</h3>
+            <p class="muted">${escapeHtml(verificationText)}</p>
+          </div>
+          <span class="provider-verification-badge">
+            ${isApproved ? "✅ Aprobado" : isBlocked ? "⛔ Bloqueado" : "⏳ Pendiente"}
+          </span>
+        </div>
+
         <div class="provider-kpi-grid">
           <article class="provider-kpi-card">
             <span>Aprobados</span>
@@ -734,6 +825,8 @@ function renderProviderTrust(state) {
             <small>${escapeHtml(String(reviewSummary.count ?? 0))} reseñas</small>
           </article>
         </div>
+
+        ${uploadFormHtml}
       </article>
 
       ${documentsHtml}
