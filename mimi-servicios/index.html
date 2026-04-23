@@ -2,9 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+  >
   <meta name="theme-color" content="#163867">
-  <meta name="description" content="MIMI Servicios. Redirección automática según el rol del usuario autenticado.">
+  <meta
+    name="description"
+    content="MIMI Servicios. Redirección automática según el rol del usuario autenticado."
+  >
   <title>MIMI Servicios</title>
   <style>
     :root {
@@ -79,6 +85,11 @@
       animation: spin 0.9s linear infinite;
     }
 
+    .helper {
+      margin-top: 12px;
+      font-size: 0.94rem;
+    }
+
     @keyframes spin {
       to {
         transform: rotate(360deg);
@@ -96,9 +107,11 @@
   <main class="boot-card" aria-live="polite">
     <div class="spinner" aria-hidden="true"></div>
     <h1>Abriendo MIMI Servicios</h1>
-    <p>Estamos validando tu sesión y redirigiéndote a la experiencia correcta.</p>
+    <p id="bootMessage">
+      Estamos validando tu sesión y redirigiéndote a la experiencia correcta.
+    </p>
     <noscript>
-      <p style="margin-top: 12px;">Necesitás habilitar JavaScript para continuar.</p>
+      <p class="helper">Necesitás habilitar JavaScript para continuar.</p>
     </noscript>
   </main>
 
@@ -106,49 +119,62 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     (async () => {
-      try {
-        const url = window.MIMI_SERVICES_ENV?.SUPABASE_URL;
-        const key = window.MIMI_SERVICES_ENV?.SUPABASE_ANON_KEY;
+      const bootMessage = document.getElementById("bootMessage");
 
-        if (!url || !key || !window.supabase?.createClient) {
-          window.location.replace("./cliente.html");
+      try {
+        const env = window.MIMI_SERVICES_ENV ?? window.MIMI_SERVICES_CONFIG ?? {};
+        const supabaseUrl =
+          env.SUPABASE_URL ??
+          env.supabaseUrl ??
+          "";
+        const supabaseAnonKey =
+          env.SUPABASE_ANON_KEY ??
+          env.supabaseAnonKey ??
+          "";
+
+        if (!supabaseUrl || !supabaseAnonKey || !window.supabase?.createClient) {
+          redirectTo("./cliente.html");
           return;
         }
 
-        const client = window.supabase.createClient(url, key, {
+        const client = window.supabase.createClient(supabaseUrl, supabaseAnonKey, {
           auth: {
             persistSession: true,
             autoRefreshToken: true,
-            detectSessionInUrl: true,
-          },
+            detectSessionInUrl: true
+          }
         });
 
-        const { data, error } = await client.auth.getSession();
-        if (error) {
-          window.location.replace("./cliente.html");
+        const {
+          data: { session },
+          error: sessionError
+        } = await client.auth.getSession();
+
+        if (sessionError || !session?.user?.id) {
+          redirectTo("./cliente.html");
           return;
         }
 
-        const session = data?.session ?? null;
-        if (!session?.user?.id) {
-          window.location.replace("./cliente.html");
-          return;
-        }
+        bootMessage.textContent = "Sesión detectada. Verificando tu rol operativo.";
 
         const { data: providers, error: providerError } = await client
           .from("svc_providers")
-          .select("id")
+          .select("id,user_id")
           .eq("user_id", session.user.id)
           .limit(1);
 
         if (!providerError && Array.isArray(providers) && providers.length > 0) {
-          window.location.replace("./prestador.html");
+          redirectTo("./prestador.html");
           return;
         }
 
-        window.location.replace("./cliente.html");
+        redirectTo("./cliente.html");
       } catch {
-        window.location.replace("./cliente.html");
+        redirectTo("./cliente.html");
+      }
+
+      function redirectTo(path) {
+        window.location.replace(path);
       }
     })();
   </script>
