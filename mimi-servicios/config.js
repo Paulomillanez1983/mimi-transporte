@@ -52,5 +52,23 @@ export const appConfig = {
       name: "Limpieza",
       description: "Hogar, oficinas y express.",
     },
+    {
+      id: "plumbing",
+      code: "plumbing",
+      name: "Plomería",
+      description: "Urgencias, pérdidas y reparaciones.",
+    },
+    {
+      id: "electricity",
+      code: "electricity",
+      name: "Electricidad",
+      description: "Instalaciones, arreglos y mantenimiento.",
+    },
+    {
+      id: "handyman",
+      code: "handyman",
+      name: "Soporte hogar",
+      description: "Mantenimiento general y tareas del día a día.",
+    },
   ],
 };
