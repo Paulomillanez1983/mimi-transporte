@@ -1,318 +1,351 @@
 import { appConfig } from "../config.js";
-import {
-  callRpc,
-  fetchSingle,
-  fetchTable,
-  getCurrentSession,
-  getSupabaseClient,
-  invokeFunction,
-  resolveSessionRole
-} from "./supabase.js";
-import {
-  buildMockMessages,
-  buildMockNotifications,
-  buildMockOffers,
-  buildMockProviders
-} from "./mock-data.js";
+import { getSupabaseClient } from "./supabase.js";
 
 function hasBackend() {
   return Boolean(getSupabaseClient());
 }
 
-function validateDraftLocation(draft) {
-  if (
-    !draft?.address ||
-    !Number.isFinite(Number(draft?.lat)) ||
-    !Number.isFinite(Number(draft?.lng))
-  ) {
-    const error = new Error("SERVICE_LOCATION_REQUIRED");
-    error.code = "SERVICE_LOCATION_REQUIRED";
-    throw error;
-  }
-}
-
-function buildAuthError() {
-  const error = new Error("Necesitás iniciar sesión para continuar.");
-  error.code = "AUTH_REQUIRED";
-  return error;
-}
-
 async function requireSession() {
-  const session = await getCurrentSession();
-  if (!session?.user) {
-    throw buildAuthError();
+  const supabase = getSupabaseClient();
+
+  if (!supabase) {
+    return null;
   }
+
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) throw error;
+
+  const session = data?.session ?? null;
+
+  if (!session?.access_token) {
+    const authError = new Error("AUTH_REQUIRED");
+    authError.code = "AUTH_REQUIRED";
+    throw authError;
+  }
+
   return session;
 }
 
+async function invokeFunction(functionName, body = {}) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase || !functionName) {
+    return null;
+  }
+
+  const { data, error } = await supabase.functions.invoke(functionName, {
+    body
+  });
+
+  if (error) throw error;
+
+  return data;
+}
+
+async function fetchTable(tableName, buildQuery) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) return [];
+
+  const query = buildQuery(supabase.from(tableName));
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
 export async function bootstrapSession() {
-  const session = await getCurrentSession();
-  const userId = session?.user?.id ?? appConfig.demoClientUserId ?? null;
+  const supabase = getSupabaseClient();
 
-  const providerRows =
-    userId && hasBackend()
-      ? await fetchTable("svc_providers", (query) =>
-          query
-            .select("id,user_id,status,approved,blocked")
-            .eq("user_id", userId)
-            .limit(1)
-        )
-      : [];
+  if (!supabase) {
+    return {
+      isAuthenticated: false,
+      userId: null,
+      providerId: appConfig.demoProviderUserId ?? null,
+      role: null,
+      userEmail: null,
+      userName: null
+    };
+  }
 
-  const metadataRole = await resolveSessionRole(session);
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) throw error;
+
+  const session = data?.session ?? null;
+  const user = session?.user ?? null;
+
+  if (!user) {
+    return {
+      isAuthenticated: false,
+      userId: null,
+      providerId: null,
+      role: null,
+      userEmail: null,
+      userName: null
+    };
+  }
+
+  let providerId = null;
+  let role = "client";
+
+  const { data: providerRows } = await supabase
+    .from("svc_providers")
+    .select("id,user_id,status,approved,blocked")
+    .eq("user_id", user.id)
+    .limit(1);
+
+  if (providerRows?.[0]?.id) {
+    providerId = providerRows[0].id;
+    role = "provider";
+  }
 
   return {
-    isAuthenticated: Boolean(session?.user),
-    userId,
-    userEmail: session?.user?.email ?? null,
+    isAuthenticated: true,
+    userId: user.id,
+    providerId,
+    role,
+    userEmail: user.email ?? null,
     userName:
-      session?.user?.user_metadata?.full_name ??
-      session?.user?.user_metadata?.name ??
-      null,
-    providerId: providerRows[0]?.id ?? null,
-    role: providerRows[0]?.id ? "provider" : metadataRole
+      user.user_metadata?.full_name ??
+      user.user_metadata?.name ??
+      user.email ??
+      null
   };
 }
 
 export async function loadCategories() {
   if (!hasBackend()) {
-    return appConfig.categories;
+    return appConfig.categories ?? [];
   }
 
-  try {
-    await requireSession();
-
-    const rows = await fetchTable("svc_categories", (query) =>
-      query
-        .select("id,code,name,description,active,sort_order")
-        .eq("active", true)
-        .order("sort_order", { ascending: true })
-    );
-
-    return rows.length ? rows : appConfig.categories;
-  } catch {
-    return appConfig.categories;
-  }
+  return fetchTable("svc_categories", (query) =>
+    query
+      .select("id,code,name,description,active")
+      .eq("active", true)
+      .order("name", { ascending: true })
+  );
 }
 
-export async function searchProviders(categoryId, draft) {
-  validateDraftLocation(draft);
-
+export async function registerDevice(payload = {}) {
   if (!hasBackend()) {
-    return buildMockProviders(categoryId, draft);
+    return { ok: true };
   }
 
   await requireSession();
 
-  const response = await invokeFunction(appConfig.functions.searchProviders, {
+  return invokeFunction(appConfig.functions.registerDevice, payload);
+}
+
+export async function searchProviders(categoryId, draft = {}) {
+  if (!hasBackend()) {
+    return [];
+  }
+
+  await requireSession();
+
+  const payload = {
     category_id: categoryId,
-    service_lat: Number(draft.lat),
-    service_lng: Number(draft.lng),
-    address: draft.address,
-    request_type: draft.requestType,
+    address: draft.address ?? "",
+    service_lat: draft.lat ?? null,
+    service_lng: draft.lng ?? null,
+    request_type: draft.requestType ?? "IMMEDIATE",
     scheduled_for: draft.scheduledFor || null,
-    requested_hours: Number(draft.requestedHours),
-    max_results: 10
-  });
+    requested_hours: Number(draft.requestedHours ?? 2)
+  };
 
-  const providers = response?.providers ?? [];
+  const data = await invokeFunction(appConfig.functions.searchProviders, payload);
 
-  return providers.map((item) => {
-    const fee = Math.max(500, Math.round((item.provider_price ?? 0) * 0.15));
-
-    return {
-      ...item,
-      fee,
-      platform_fee: fee,
-      total_price: (item.provider_price ?? 0) + fee,
-      estimated_eta_min: Math.max(6, Math.round((item.distance_km ?? 1) * 6))
-    };
-  });
+  return data?.providers ?? data?.data ?? data ?? [];
 }
 
 export async function prepareRequestPricing({
   clientUserId,
   categoryId,
   providerId,
-  draft
+  draft = {}
 }) {
-  validateDraftLocation(draft);
-
-  if (!hasBackend()) {
-    const candidates = buildMockProviders(categoryId, draft);
-    const provider = candidates.find((item) => item.provider_id === providerId);
-
-    return provider
-      ? {
-          eligible: true,
-          provider_id: provider.provider_id,
-          client_user_id: clientUserId,
-          provider_price: provider.provider_price,
-          platform_fee: provider.fee,
-          total_price: provider.total_price,
-          currency: provider.currency,
-          visible_candidates: candidates
-        }
-      : {
-          eligible: false,
-          reason: "provider_not_found"
-        };
-  }
-
-  await requireSession();
-
-  return callRpc(appConfig.rpc.prepareRequestPricing, {
-    p_client_user_id: clientUserId,
-    p_category_id: categoryId,
-    p_provider_id: providerId,
-    p_service_lat: Number(draft.lat),
-    p_service_lng: Number(draft.lng),
-    p_request_type: draft.requestType,
-    p_scheduled_for: draft.scheduledFor || null,
-    p_requested_hours: Number(draft.requestedHours)
-  });
-}
-
-export async function createRequest(payload) {
-  validateDraftLocation({
-    address: payload.address,
-    lat: payload.serviceLat,
-    lng: payload.serviceLng
-  });
-
   if (!hasBackend()) {
     return {
-      id: crypto.randomUUID(),
-      status: payload.requestType === "SCHEDULED" ? "SCHEDULED" : "SEARCHING",
-      ...payload,
-      created_at: new Date().toISOString()
+      eligible: true,
+      provider_price: 0,
+      platform_fee: 0,
+      total_price: 0,
+      currency: "ARS"
     };
   }
 
   await requireSession();
 
-  const response = await invokeFunction(
-    appConfig.functions.createRequest,
-    {
-      category_id: payload.categoryId,
-      selected_provider_id: payload.selectedProviderId,
-      address_text: payload.address,
-      service_lat: payload.serviceLat,
-      service_lng: payload.serviceLng,
-      request_type: payload.requestType,
-      scheduled_for: payload.scheduledFor,
-      requested_hours: payload.requestedHours,
-      notes: payload.notes ?? null
-    },
-    {
-      headers: {
-        "x-idempotency-key": payload.idempotencyKey ?? crypto.randomUUID()
-      }
-    }
-  );
+  const data = await invokeFunction(appConfig.functions.prepareRequestPricing, {
+    client_user_id: clientUserId,
+    category_id: categoryId,
+    provider_id: providerId,
+    address: draft.address ?? "",
+    service_lat: draft.lat ?? null,
+    service_lng: draft.lng ?? null,
+    request_type: draft.requestType ?? "IMMEDIATE",
+    scheduled_for: draft.scheduledFor || null,
+    requested_hours: Number(draft.requestedHours ?? 2)
+  });
 
-  return response?.request ?? response;
+  return data?.pricing ?? data;
 }
 
-export async function updateRequestStatus(actionName, payload) {
+export async function createRequest(payload = {}) {
   if (!hasBackend()) {
-    return { ok: true, actionName, payload };
+    return {
+      id: crypto.randomUUID(),
+      request_id: crypto.randomUUID(),
+      status: "PENDING",
+      ...payload
+    };
   }
 
   await requireSession();
-  return invokeFunction(actionName, payload);
+
+  const data = await invokeFunction(appConfig.functions.createRequest, {
+    category_id: payload.categoryId,
+    selected_provider_id: payload.selectedProviderId,
+    address: payload.address,
+    service_lat: payload.serviceLat,
+    service_lng: payload.serviceLng,
+    request_type: payload.requestType,
+    scheduled_for: payload.scheduledFor,
+    requested_hours: payload.requestedHours,
+    provider_price: payload.providerPrice,
+    platform_fee: payload.platformFee,
+    total_price: payload.totalPrice,
+    currency: payload.currency ?? "ARS"
+  });
+
+  return data?.request ?? data;
 }
 
-export async function loadNotifications(userId) {
-  if (!hasBackend()) {
-    return buildMockNotifications();
+export async function loadActiveRequest({ userId = null, providerId = null } = {}) {
+  if (!hasBackend()) return null;
+
+  await requireSession();
+
+  let query = getSupabaseClient()
+    .from("svc_requests")
+    .select("*")
+    .not("status", "in", '("COMPLETED","CANCELLED","EXPIRED")')
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (providerId) {
+    query = query.or(
+      `selected_provider_id.eq.${providerId},accepted_provider_id.eq.${providerId}`
+    );
+  } else if (userId) {
+    query = query.eq("client_user_id", userId);
+  } else {
+    return null;
   }
 
-  if (!userId) {
-    return [];
-  }
+  const { data, error } = await query;
 
-  if (!(await getCurrentSession())?.user) {
-    return [];
-  }
+  if (error) throw error;
 
-  return fetchTable("svc_notifications", (query) =>
+  return data?.[0] ?? null;
+}
+
+export async function loadConversationForRequest(requestId) {
+  if (!hasBackend() || !requestId) return null;
+
+  await requireSession();
+
+  const rows = await fetchTable("svc_conversations", (query) =>
     query
       .select("*")
-      .eq("user_id", userId)
+      .eq("request_id", requestId)
       .order("created_at", { ascending: false })
-      .limit(20)
+      .limit(1)
   );
-}
 
-export async function loadOffers(providerId) {
-  if (!hasBackend()) {
-    return buildMockOffers();
-  }
-
-  if (!providerId) {
-    return [];
-  }
-
-  if (!(await getCurrentSession())?.user) {
-    return [];
-  }
-
-  return fetchTable("svc_request_offers", (query) =>
-    query
-      .select("*, svc_requests(*)")
-      .eq("provider_id", providerId)
-      .order("created_at", { ascending: false })
-      .limit(10)
-  );
+  return rows?.[0] ?? null;
 }
 
 export async function loadMessages(conversationId) {
-  if (!conversationId) {
-    return [];
-  }
+  if (!hasBackend() || !conversationId) return [];
 
-  if (!hasBackend()) {
-    return buildMockMessages();
-  }
-
-  if (!(await getCurrentSession())?.user) {
-    return [];
-  }
+  await requireSession();
 
   return fetchTable("svc_messages", (query) =>
     query
       .select("*")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: true })
-      .limit(50)
+      .limit(100)
   );
 }
 
-export async function sendMessage(payload) {
+export async function sendMessage({ conversationId, body }) {
   if (!hasBackend()) {
     return {
       id: crypto.randomUUID(),
-      conversation_id: payload.conversationId,
-      body: payload.body,
-      sender_user_id: "self",
+      conversation_id: conversationId,
+      body,
       created_at: new Date().toISOString()
     };
   }
 
   await requireSession();
 
-  const response = await invokeFunction(appConfig.functions.sendMessage, {
-    conversation_id: payload.conversationId,
-    body: payload.body
+  const data = await invokeFunction(appConfig.functions.sendMessage, {
+    conversation_id: conversationId,
+    body
   });
 
-  return response?.message ?? response;
+  return data?.message ?? data;
 }
 
-export async function trackLocation(payload) {
+export async function loadNotifications(userId) {
+  if (!hasBackend() || !userId) return [];
+
+  await requireSession();
+
+  return fetchTable("svc_notifications", (query) =>
+    query
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50)
+  );
+}
+
+export async function loadOffers(providerId) {
+  if (!hasBackend() || !providerId) return [];
+
+  await requireSession();
+
+  return fetchTable("svc_request_offers", (query) =>
+    query
+      .select("*")
+      .eq("provider_id", providerId)
+      .in("status", ["PENDING", "SENT"])
+      .order("created_at", { ascending: false })
+      .limit(20)
+  );
+}
+
+export async function updateRequestStatus(functionName, payload = {}) {
   if (!hasBackend()) {
-    return { tracked: true };
+    return { ok: true };
+  }
+
+  await requireSession();
+
+  return invokeFunction(functionName, payload);
+}
+
+export async function trackLocation(payload = {}) {
+  if (!hasBackend()) {
+    return { ok: true };
   }
 
   await requireSession();
@@ -327,88 +360,293 @@ export async function trackLocation(payload) {
   });
 }
 
-export async function registerDevice(payload) {
-  if (!hasBackend()) {
+export async function updateProviderStatus(providerId, status) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase || !providerId) return null;
+
+  await requireSession();
+
+  let location = null;
+
+  try {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.geolocation &&
+      status !== "OFFLINE"
+    ) {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 30000
+        });
+      });
+
+      location = {
+        last_lat: position.coords.latitude,
+        last_lng: position.coords.longitude,
+        last_location: `POINT(${position.coords.longitude} ${position.coords.latitude})`
+      };
+    }
+  } catch {
+    location = null;
+  }
+
+  const { data, error } = await supabase
+    .from("svc_providers")
+    .update({
+      status,
+      last_seen_at: new Date().toISOString(),
+      ...(location ?? {})
+    })
+    .eq("id", providerId)
+    .select(
+      "id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_location,last_seen_at"
+    )
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function loadProviderWorkspace(providerId) {
+  const supabase = getSupabaseClient();
+
+  if (!providerId || !supabase) {
+    return {
+      profile: null,
+      profileDetail: null,
+      pricing: [],
+      availability: [],
+      documents: [],
+      reviews: [],
+      categories: [],
+      completedCount: 0
+    };
+  }
+
+  await requireSession();
+
+  const [
+    profileRows,
+    profileDetailRows,
+    pricingRows,
+    availabilityRows,
+    documentRows,
+    reviewRows,
+    categoryRows,
+    completedRows
+  ] = await Promise.all([
+    fetchTable("svc_providers", (query) =>
+      query
+        .select(
+          "id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_location,last_seen_at"
+        )
+        .eq("id", providerId)
+        .limit(1)
+    ),
+
+    fetchTable("svc_provider_profiles", (query) =>
+      query
+        .select("*")
+        .eq("provider_id", providerId)
+        .limit(1)
+    ),
+
+    fetchTable("svc_provider_pricing", (query) =>
+      query
+        .select(
+          "id,provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active"
+        )
+        .eq("provider_id", providerId)
+        .eq("active", true)
+        .limit(50)
+    ),
+
+    fetchTable("svc_provider_availability", (query) =>
+      query
+        .select("id,provider_id,day_of_week,start_time,end_time,active")
+        .eq("provider_id", providerId)
+        .eq("active", true)
+        .order("day_of_week", { ascending: true })
+    ),
+
+    fetchTable("svc_provider_documents", (query) =>
+      query
+        .select("id,provider_id,document_type,file_url,review_status,created_at")
+        .eq("provider_id", providerId)
+        .order("created_at", { ascending: false })
+        .limit(10)
+    ),
+
+    fetchTable("svc_provider_reviews", (query) =>
+      query
+        .select("id,provider_id,client_user_id,rating,comment,created_at")
+        .eq("provider_id", providerId)
+        .order("created_at", { ascending: false })
+        .limit(4)
+    ),
+
+    fetchTable("svc_provider_categories", (query) =>
+      query
+        .select("id,provider_id,category_id,active,svc_categories(name,code,description)")
+        .eq("provider_id", providerId)
+        .eq("active", true)
+        .limit(20)
+    ),
+
+    fetchTable("svc_requests", (query) =>
+      query
+        .select("id")
+        .eq("selected_provider_id", providerId)
+        .eq("status", "COMPLETED")
+        .limit(500)
+    )
+  ]);
+
+  return {
+    profile: profileRows?.[0] ?? null,
+    profileDetail: profileDetailRows?.[0] ?? null,
+    pricing: pricingRows ?? [],
+    availability: availabilityRows ?? [],
+    documents: documentRows ?? [],
+    reviews: reviewRows ?? [],
+    categories: categoryRows ?? [],
+    completedCount: completedRows?.length ?? 0
+  };
+}
+
+export async function saveProviderWorkspace(providerId, payload = {}) {
+  const supabase = getSupabaseClient();
+
+  if (!providerId || !supabase) {
     return { ok: true };
   }
 
   await requireSession();
 
-  return invokeFunction(appConfig.functions.registerDevice, {
-    device_id: payload.deviceId,
-    push_token: payload.pushToken ?? null,
-    platform: payload.platform,
-    notifications_enabled: payload.notificationsEnabled,
-    marketing_opt_in: payload.marketingOptIn
-  });
-}
+  const profileInput = {
+    provider_id: providerId,
+    pricing_mode: payload.pricingMode ?? "POR_HORA",
+    accepts_immediate: Boolean(payload.acceptsImmediate),
+    accepts_scheduled: Boolean(payload.acceptsScheduled),
+    max_hours_per_service: Number(payload.maxHoursPerService ?? 8),
+    onboarding_completed: true
+  };
 
-export async function loadActiveRequest({ userId, providerId }) {
-  if (!hasBackend()) {
-    return null;
+  if (typeof payload.bio === "string") {
+    profileInput.bio = payload.bio.trim();
   }
 
-  if (!(await getCurrentSession())?.user) {
-    return null;
+  if (typeof payload.addressText === "string") {
+    profileInput.address_text = payload.addressText.trim();
   }
 
-  const activeStatuses = [
-    "SEARCHING",
-    "PENDING_PROVIDER_RESPONSE",
-    "ACCEPTED",
-    "SCHEDULED",
-    "PROVIDER_EN_ROUTE",
-    "PROVIDER_ARRIVED",
-    "IN_PROGRESS"
-  ];
-
-  const providerRow = providerId
-    ? await fetchSingle("svc_requests", (query) =>
-        query
-          .select("*")
-          .eq("accepted_provider_id", providerId)
-          .in("status", activeStatuses)
-          .order("created_at", { ascending: false })
-          .limit(1)
-      )
-    : null;
-
-  if (providerRow) {
-    return providerRow;
+  if (typeof payload.city === "string") {
+    profileInput.city = payload.city.trim();
   }
 
-  const clientRows = userId
-    ? await fetchTable("svc_requests", (query) =>
-        query
-          .select("*")
-          .eq("client_user_id", userId)
-          .in("status", activeStatuses)
-          .order("created_at", { ascending: false })
-          .limit(1)
-      )
+  if (typeof payload.province === "string") {
+    profileInput.province = payload.province.trim();
+  }
+
+  const { error: profileError } = await supabase
+    .from("svc_provider_profiles")
+    .upsert(profileInput, {
+      onConflict: "provider_id"
+    });
+
+  if (profileError) throw profileError;
+
+  const categories = Array.isArray(payload.categories)
+    ? payload.categories.filter((item) => item?.categoryId)
     : [];
 
-  return clientRows[0] ?? null;
-}
+  const pricing = Array.isArray(payload.pricing)
+    ? payload.pricing.filter((item) => item?.categoryId)
+    : [];
 
-export async function loadConversationForRequest(requestId) {
-  if (!requestId || !hasBackend()) {
-    return null;
+  const availability = Array.isArray(payload.availability)
+    ? payload.availability
+    : [];
+
+  await supabase
+    .from("svc_provider_categories")
+    .update({ active: false })
+    .eq("provider_id", providerId);
+
+  await supabase
+    .from("svc_provider_pricing")
+    .update({ active: false })
+    .eq("provider_id", providerId);
+
+  await supabase
+    .from("svc_provider_availability")
+    .update({ active: false })
+    .eq("provider_id", providerId);
+
+  if (categories.length) {
+    const { error: categoriesError } = await supabase
+      .from("svc_provider_categories")
+      .upsert(
+        categories.map((item) => ({
+          provider_id: providerId,
+          category_id: item.categoryId,
+          active: true
+        })),
+        { onConflict: "provider_id,category_id" }
+      );
+
+    if (categoriesError) throw categoriesError;
   }
 
-  if (!(await getCurrentSession())?.user) {
-    return null;
+  if (pricing.length) {
+    const { error: pricingError } = await supabase
+      .from("svc_provider_pricing")
+      .upsert(
+        pricing.map((item) => ({
+          provider_id: providerId,
+          category_id: item.categoryId,
+          currency: item.currency ?? "ARS",
+          price_per_hour: Number(item.pricePerHour ?? 0),
+          minimum_hours: Number(item.minimumHours ?? 1),
+          maximum_hours: Number(
+            item.maximumHours ?? payload.maxHoursPerService ?? 8
+          ),
+          active: true
+        })),
+        { onConflict: "provider_id,category_id" }
+      );
+
+    if (pricingError) throw pricingError;
   }
 
-  const rows = await fetchTable("svc_conversations", (query) =>
-    query.select("*").eq("request_id", requestId).limit(1)
-  );
+  if (availability.length) {
+    const { error: availabilityError } = await supabase
+      .from("svc_provider_availability")
+      .upsert(
+        availability
+          .filter((item) => item?.active && item?.startTime && item?.endTime)
+          .map((item) => ({
+            provider_id: providerId,
+            day_of_week: Number(item.dayOfWeek),
+            start_time: item.startTime,
+            end_time: item.endTime,
+            active: true
+          })),
+        { onConflict: "provider_id,day_of_week,start_time,end_time" }
+      );
 
-  return rows[0] ?? null;
+    if (availabilityError) throw availabilityError;
+  }
+
+  return loadProviderWorkspace(providerId);
 }
 
 export async function loadClientRequestInsights(requestId, providerId = null) {
-  if (!requestId || !hasBackend()) {
+  if (!hasBackend() || !requestId) {
     return {
       paymentIntent: null,
       escrowHold: null,
@@ -424,8 +662,8 @@ export async function loadClientRequestInsights(requestId, providerId = null) {
   await requireSession();
 
   const [
-    paymentRows,
-    escrowRows,
+    paymentIntentRows,
+    escrowHoldRows,
     candidateRows,
     offerRows,
     providerProfileRows,
@@ -434,192 +672,74 @@ export async function loadClientRequestInsights(requestId, providerId = null) {
     providerCategoryRows
   ] = await Promise.all([
     fetchTable("svc_payment_intents", (query) =>
-      query
-        .select("id,request_id,amount_total,amount_provider,amount_platform_fee,currency,status,authorized_at,captured_at,voided_at,refunded_at,created_at,updated_at")
-        .eq("request_id", requestId)
-        .order("created_at", { ascending: false })
-        .limit(1)
+      query.select("*").eq("request_id", requestId).limit(1)
     ),
+
     fetchTable("svc_escrow_holds", (query) =>
-      query
-        .select("id,request_id,amount,currency,status,held_at,released_at,voided_at,created_at,updated_at")
-        .eq("request_id", requestId)
-        .order("created_at", { ascending: false })
-        .limit(1)
+      query.select("*").eq("request_id", requestId).limit(1)
     ),
+
     fetchTable("svc_request_candidates", (query) =>
       query
-        .select("id,provider_id,rank_position,score,distance_km,rating_snapshot,provider_price_snapshot,created_at")
+        .select("*")
         .eq("request_id", requestId)
-        .order("rank_position", { ascending: true })
-        .limit(5)
+        .order("rank_score", { ascending: false })
+        .limit(10)
     ),
+
     fetchTable("svc_request_offers", (query) =>
       query
-        .select("id,provider_id,status,sent_at,expires_at,responded_at,created_at,updated_at")
+        .select("*")
         .eq("request_id", requestId)
         .order("created_at", { ascending: false })
-        .limit(5)
+        .limit(10)
     ),
+
     providerId
       ? fetchTable("svc_provider_profiles", (query) =>
-          query
-            .select("id,provider_id,bio,address_text,city,province,country_code,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,onboarding_completed")
-            .eq("provider_id", providerId)
-            .limit(1)
+          query.select("*").eq("provider_id", providerId).limit(1)
         )
       : Promise.resolve([]),
+
     providerId
       ? fetchTable("svc_provider_pricing", (query) =>
           query
-            .select("id,provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active,svc_categories(name,code)")
+            .select("*")
             .eq("provider_id", providerId)
             .eq("active", true)
-            .order("price_per_hour", { ascending: true })
-            .limit(6)
+            .limit(20)
         )
       : Promise.resolve([]),
+
     providerId
-      ? fetchTable("svc_reviews", (query) =>
+      ? fetchTable("svc_provider_reviews", (query) =>
           query
-            .select("id,rating,comment,created_at")
+            .select("*")
             .eq("provider_id", providerId)
             .order("created_at", { ascending: false })
-            .limit(3)
+            .limit(5)
         )
       : Promise.resolve([]),
+
     providerId
       ? fetchTable("svc_provider_categories", (query) =>
           query
-            .select("id,provider_id,category_id,active,svc_categories(name,code)")
+            .select("id,provider_id,category_id,active,svc_categories(name,code,description)")
             .eq("provider_id", providerId)
             .eq("active", true)
-            .limit(8)
+            .limit(10)
         )
       : Promise.resolve([])
   ]);
 
   return {
-    paymentIntent: paymentRows[0] ?? null,
-    escrowHold: escrowRows[0] ?? null,
+    paymentIntent: paymentIntentRows?.[0] ?? null,
+    escrowHold: escrowHoldRows?.[0] ?? null,
     candidates: candidateRows ?? [],
     offers: offerRows ?? [],
-    providerProfile: providerProfileRows[0] ?? null,
+    providerProfile: providerProfileRows?.[0] ?? null,
     providerPricing: providerPricingRows ?? [],
     providerReviews: providerReviewRows ?? [],
     providerCategories: providerCategoryRows ?? []
-  };
-}
-
-export async function updateProviderStatus(providerId, status) {
-  const supabase = getSupabaseClient();
-
-  if (!supabase || !providerId) {
-    return null;
-  }
-
-  await requireSession();
-
-  const { data, error } = await supabase
-    .from("svc_providers")
-    .update({
-      status,
-      last_seen_at: new Date().toISOString()
-    })
-    .eq("id", providerId)
-    .select("id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
-    .limit(1);
-
-  if (error) {
-    throw error;
-  }
-
-  return data?.[0] ?? null;
-}
-
-export async function loadProviderWorkspace(providerId) {
-  const supabase = getSupabaseClient();
-
-  if (!supabase || !providerId) {
-    return {
-      profile: null,
-      pricing: [],
-      availability: [],
-      documents: [],
-      reviews: [],
-      completedCount: 0,
-      profileDetail: null
-    };
-  }
-
-  await requireSession();
-
-  const [
-    profileRows,
-    profileDetailRows,
-    pricingRows,
-    availabilityRows,
-    documentRows,
-    reviewRows,
-    completedRows
-  ] = await Promise.all([
-    fetchTable("svc_providers", (query) =>
-      query
-        .select("id,user_id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
-        .eq("id", providerId)
-        .limit(1)
-    ),
-    fetchTable("svc_provider_profiles", (query) =>
-      query
-        .select("id,provider_id,bio,address_text,city,province,country_code,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,onboarding_completed,created_at,updated_at")
-        .eq("provider_id", providerId)
-        .limit(1)
-    ),
-    fetchTable("svc_provider_pricing", (query) =>
-      query
-        .select("id,provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active,svc_categories(name,code)")
-        .eq("provider_id", providerId)
-        .eq("active", true)
-        .order("price_per_hour", { ascending: true })
-    ),
-    fetchTable("svc_provider_availability", (query) =>
-      query
-        .select("id,provider_id,day_of_week,start_time,end_time,active")
-        .eq("provider_id", providerId)
-        .eq("active", true)
-        .order("day_of_week", { ascending: true })
-        .order("start_time", { ascending: true })
-    ),
-    fetchTable("svc_provider_documents", (query) =>
-      query
-        .select("id,provider_id,document_type,review_status,review_notes,reviewed_at,created_at,updated_at")
-        .eq("provider_id", providerId)
-        .order("created_at", { ascending: false })
-        .limit(6)
-    ),
-    fetchTable("svc_reviews", (query) =>
-      query
-        .select("id,rating,comment,created_at")
-        .eq("provider_id", providerId)
-        .order("created_at", { ascending: false })
-        .limit(4)
-    ),
-    fetchTable("svc_requests", (query) =>
-      query
-        .select("id")
-        .eq("accepted_provider_id", providerId)
-        .eq("status", "COMPLETED")
-        .limit(200)
-    )
-  ]);
-
-  return {
-    profile: profileRows[0] ?? null,
-    pricing: pricingRows ?? [],
-    availability: availabilityRows ?? [],
-    documents: documentRows ?? [],
-    reviews: reviewRows ?? [],
-    profileDetail: profileDetailRows[0] ?? null,
-    completedCount: completedRows?.length ?? 0
   };
 }
