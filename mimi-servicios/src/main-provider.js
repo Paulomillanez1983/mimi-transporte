@@ -694,6 +694,17 @@ async function handleBusinessFormSubmit(event) {
 }
 
 function bindBasicControls() {
+  document.addEventListener("change", (event) => {
+    if (event.target?.name !== "providerDocumentFile") return;
+
+    const file = event.target.files?.[0] ?? null;
+    const preview = document.getElementById("providerDocumentPreview");
+    if (!preview) return;
+
+    preview.textContent = file
+      ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB`
+      : "Todavía no seleccionaste archivo.";
+  });
   document.getElementById("authPrimaryButton")?.addEventListener("click", async () => {
     try {
       await handleAuthPrimary();
