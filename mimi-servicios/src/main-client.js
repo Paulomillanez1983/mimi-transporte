@@ -733,6 +733,8 @@ function setupRealtime(requestId = state.client.activeRequest?.id ?? null, conve
   });
 }
 
+let authSubscription = null;
+
 async function init() {
   subscribe(renderClientScreen);
   renderClientScreen(state);
@@ -748,26 +750,26 @@ async function init() {
     navigator.serviceWorker.register("./sw.js").catch(() => null);
   }
 
-await bootstrapAsyncData();
+  await bootstrapAsyncData();
 
-if (window.location.hash && window.location.hash.includes("access_token")) {
-  history.replaceState(
-    {},
-    document.title,
-    window.location.pathname + window.location.search
-  );
-}
-
-if (state.ui.activeMode === "provider") {
-  window.location.href = "./prestador.html";
-  return;
-}
-
-setupRealtime();
-renderClientScreen(state);
+  if (window.location.hash && window.location.hash.includes("access_token")) {
+    history.replaceState(
+      {},
+      document.title,
+      window.location.pathname + window.location.search
+    );
   }
-  
-const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
+
+  if (state.ui.activeMode === "provider") {
+    window.location.href = "./prestador.html";
+    return;
+  }
+
+  setupRealtime();
+  renderClientScreen(state);
+}
+
+authSubscription = subscribeToAuthChanges?.(async (event, session) => {
   if (event === "SIGNED_IN" && session) {
     if (state.ui.activeMode === "provider") {
       window.location.href = "./prestador.html";
@@ -776,8 +778,8 @@ const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
 
     window.location.href = "./cliente.html";
   }
-});
-  
+}) ?? null;
+
 init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
