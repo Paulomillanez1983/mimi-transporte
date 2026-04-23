@@ -368,3 +368,73 @@
     width: fit-content;
   }
 }
+
+/* Onboarding prestador estilo Transporte, adaptado 100% a MIMI Servicios */
+.provider-onboarding-shell {
+  gap: 16px;
+}
+
+.provider-onboarding-upload {
+  position: relative;
+}
+
+.provider-upload-dropzone,
+.provider-verification-form .provider-upload-dropzone {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px dashed rgba(22, 56, 103, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+  color: #163867;
+}
+
+.provider-upload-dropzone strong {
+  color: #102a43;
+}
+
+.provider-upload-dropzone small,
+.provider-upload-preview {
+  color: #516176;
+  font-weight: 600;
+}
+
+.provider-upload-preview {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(22, 56, 103, 0.08);
+}
+
+.provider-verification-form select,
+.provider-verification-form input[type="file"] {
+  width: 100%;
+}
+
+.provider-verification-form button[type="submit"] {
+  min-height: 48px;
+}
+
+@media (max-width: 560px) {
+  .provider-verification-head {
+    flex-direction: column;
+  }
+
+  .provider-verification-badge {
+    width: 100%;
+  }
+
+  .provider-onboarding-upload .provider-action-strip {
+    position: sticky;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    z-index: 8;
+    padding: 10px;
+    margin-inline: -10px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
+  }
+}
