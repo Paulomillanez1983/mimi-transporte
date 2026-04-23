@@ -57,6 +57,24 @@ async function fetchTable(tableName, buildQuery) {
   return data ?? [];
 }
 
+function normalizeProviderDocuments(rows = []) {
+  const supabase = getSupabaseClient();
+
+  return (rows ?? []).map((item) => {
+    const bucket = item.storage_bucket ?? "service-provider-documents";
+    const path = item.storage_path ?? null;
+    const publicUrl =
+      supabase && bucket && path
+        ? supabase.storage.from(bucket).getPublicUrl(path).data?.publicUrl ?? null
+        : null;
+
+    return {
+      ...item,
+      file_url: item.file_url ?? publicUrl
+    };
+  });
+}
+
 export async function bootstrapSession() {
   const supabase = getSupabaseClient();
 
@@ -475,13 +493,13 @@ export async function loadProviderWorkspace(providerId) {
 
     fetchTable("svc_provider_documents", (query) =>
       query
-        .select("id,provider_id,document_type,file_url,review_status,created_at")
+        .select("id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,created_at,updated_at")
         .eq("provider_id", providerId)
         .order("created_at", { ascending: false })
         .limit(10)
     ),
 
-    fetchTable("svc_provider_reviews", (query) =>
+    fetchTable("svc_reviews", (query) =>
       query
         .select("id,provider_id,client_user_id,rating,comment,created_at")
         .eq("provider_id", providerId)
@@ -511,7 +529,7 @@ export async function loadProviderWorkspace(providerId) {
     profileDetail: profileDetailRows?.[0] ?? null,
     pricing: pricingRows ?? [],
     availability: availabilityRows ?? [],
-    documents: documentRows ?? [],
+    documents: normalizeProviderDocuments(documentRows),
     reviews: reviewRows ?? [],
     categories: categoryRows ?? [],
     completedCount: completedRows?.length ?? 0
@@ -712,7 +730,7 @@ export async function loadClientRequestInsights(requestId, providerId = null) {
       : Promise.resolve([]),
 
     providerId
-      ? fetchTable("svc_provider_reviews", (query) =>
+      ? fetchTable("svc_reviews", (query) =>
           query
             .select("*")
             .eq("provider_id", providerId)
