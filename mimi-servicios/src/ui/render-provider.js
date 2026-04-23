@@ -655,8 +655,10 @@ function renderProviderTrust(state) {
   const documentsSummary = state.provider.documentsSummary ?? {};
   const reviewSummary = state.provider.reviewSummary ?? {};
   const profile = state.provider.profile ?? null;
+
   const isApproved = Boolean(profile?.approved);
   const isBlocked = Boolean(profile?.blocked);
+
   const totalDocs =
     Number(documentsSummary.approved ?? 0) +
     Number(documentsSummary.pending ?? 0) +
@@ -676,167 +678,95 @@ function renderProviderTrust(state) {
       ? "Tu cuenta está aprobada para operar cuando estés online."
       : totalDocs > 0
         ? "Ya recibimos tus documentos. Si alguno queda observado, vas a poder reenviarlo desde acá."
-        : "Subí DNI frente, DNI dorso, selfie y comprobante de domicilio. No pedimos carnet, vehículo ni licencia para MIMI Servicios.";
+        : "Subí DNI frente, DNI dorso, selfie y comprobante de domicilio.";
 
-  const documentOptions = [
-    ["dni_front", "DNI frente"],
-    ["dni_back", "DNI dorso"],
-    ["selfie", "Selfie de verificación"],
-    ["address_proof", "Comprobante de domicilio"],
-    ["background_check", "Antecedentes / constancia"],
-    ["certificate_optional", "Certificado / matrícula / curso"],
-    ["work_reference_optional", "Referencia laboral"]
-  ];
-
+  // 🔥 WIZARD PRO CORRECTO
   const uploadFormHtml = state.session.providerId
     ? `
-      <form class="provider-verification-form provider-onboarding-upload" id="providerVerificationForm">
-        <div class="provider-form-grid">
-          <label class="input-group">
-            <span>Tipo de documento</span>
-            <select name="providerDocumentType" required>
-              ${documentOptions
-                .map(
-                  ([value, label]) =>
-                    `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`
-                )
-                .join("")}
-            </select>
-          </label>
-          <label class="input-group">
-            <span>Archivo</span>
-            <input
-              name="providerDocumentFile"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              required
-            >
-          </label>
+    <div class="doc-wizard-shell">
+
+      <div class="doc-wizard-progress">
+        <strong>Verificación de identidad</strong>
+        <div class="docs-progress-bar">
+          <div class="docs-progress-bar__fill" id="docProgressBar"></div>
         </div>
-        <div class="provider-action-strip">
-          <button class="btn-primary" type="submit">Subir documento</button>
+      </div>
+
+      ${[
+        ["dni_front", "DNI frente"],
+        ["dni_back", "DNI dorso"],
+        ["selfie", "Selfie"],
+        ["address_proof", "Comprobante de domicilio"]
+      ].map(([id, title]) => `
+        <div class="doc-wizard-card" data-doc="${id}">
+          
+          <div class="doc-wizard-card__content">
+            <h3>${title}</h3>
+            <p>Tomá una foto clara o subí una imagen.</p>
+          </div>
+
+          <div class="doc-preview" id="preview-${id}"></div>
+
+          <div class="doc-actions-inline--wizard">
+            <button type="button" class="doc-camera-btn" data-camera="${id}">
+              📸 Sacar foto
+            </button>
+
+            <button type="button" class="doc-upload-btn" data-upload="${id}">
+              📂 Subir archivo
+            </button>
+
+            <input type="file" class="hidden-input" data-input="${id}" accept="image/*" />
+          </div>
+
+          <div class="doc-status" id="status-${id}"></div>
+
         </div>
-        <p class="muted">
-          Formatos permitidos: JPG, PNG, WEBP o PDF. Máximo 8 MB. Se guarda en
-          <strong>svc_provider_documents</strong> usando el bucket de Servicios.
-        </p>
-      </form>
+      `).join("")}
+
+    </div>
     `
     : `
-      <div class="summary-card">
-        <strong>Ingresá con Google</strong>
-        <span class="muted">Necesitás una sesión de prestador para subir documentos.</span>
-      </div>
+    <div class="summary-card">
+      <strong>Ingresá con Google</strong>
+      <span class="muted">Necesitás una sesión de prestador.</span>
+    </div>
     `;
 
   const documentsHtml = documents.length
-    ? `
-      <div class="provider-doc-grid">
-        ${documents
-          .map((item) => {
-            const status = String(item.review_status ?? "PENDING").toUpperCase();
-            const statusLabel = reviewStatusLabels[status] ?? status;
-            const fileUrl = item.file_url ?? null;
-
-            return `
-              <article class="provider-doc-card provider-doc-card--${escapeHtml(status.toLowerCase())}">
-                <strong>${escapeHtml(item.document_type ?? "Documento")}</strong>
-                <div class="chip-row">
-                  <span class="inline-chip">${escapeHtml(statusLabel)}</span>
-                  <span class="inline-chip">Actualizado ${escapeHtml(formatDate(item.updated_at ?? item.created_at))}</span>
-                </div>
-                ${
-                  item.review_notes
-                    ? `<p class="muted">${escapeHtml(item.review_notes)}</p>`
-                    : `<p class="muted">Sin observaciones cargadas.</p>`
-                }
-                ${
-                  fileUrl
-                    ? `<a class="provider-doc-link" href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener">Ver archivo</a>`
-                    : ""
-                }
-              </article>
-            `;
-          })
-          .join("")}
+    ? documents.map(doc => `
+      <div class="provider-doc-card">
+        <strong>${doc.document_type}</strong>
+        <span>${doc.review_status}</span>
       </div>
-    `
-    : `
-      <div class="summary-card">
-        <strong>Sin documentos cargados</strong>
-        <span class="muted">Subí tus documentos para habilitar la revisión del equipo MIMI.</span>
-      </div>
-    `;
+    `).join("")
+    : `<div class="summary-card">Sin documentos cargados</div>`;
 
   const reviewsHtml = reviews.length
-    ? `
-      <div class="provider-review-grid">
-        ${reviews
-          .map(
-            (item) => `
-              <article class="provider-review-card">
-                <strong>${escapeHtml(Number(item.rating ?? 5).toFixed(1))} / 5</strong>
-                <p class="muted">${escapeHtml(item.comment || "Sin comentario")}</p>
-                <span class="muted">${escapeHtml(formatDate(item.created_at))}</span>
-              </article>
-            `
-          )
-          .join("")}
+    ? reviews.map(r => `
+      <div class="provider-review-card">
+        <strong>${r.rating}</strong>
+        <p>${r.comment}</p>
       </div>
-    `
-    : `
-      <div class="summary-card">
-        <strong>Sin reseñas recientes</strong>
-        <span class="muted">A medida que completes servicios, las últimas reseñas van a quedar visibles acá.</span>
-      </div>
-    `;
+    `).join("")
+    : `<div class="summary-card">Sin reseñas</div>`;
 
   container.innerHTML = `
     <section class="provider-stack provider-onboarding-shell">
-      <article class="provider-verification-card ${isApproved ? "is-approved" : "is-pending"}">
-        <div class="provider-verification-head">
-          <div>
-            <span class="eyebrow">Verificación prestador</span>
-            <h3>${escapeHtml(verificationTitle)}</h3>
-            <p class="muted">${escapeHtml(verificationText)}</p>
-          </div>
-          <span class="provider-verification-badge">
-            ${isApproved ? "✅ Aprobado" : isBlocked ? "⛔ Bloqueado" : "⏳ Pendiente"}
-          </span>
-        </div>
 
-        <div class="provider-kpi-grid">
-          <article class="provider-kpi-card">
-            <span>Aprobados</span>
-            <strong>${escapeHtml(String(documentsSummary.approved ?? 0))}</strong>
-            <small>documentos</small>
-          </article>
-          <article class="provider-kpi-card">
-            <span>Pendientes</span>
-            <strong>${escapeHtml(String(documentsSummary.pending ?? 0))}</strong>
-            <small>en revisión</small>
-          </article>
-          <article class="provider-kpi-card">
-            <span>Observados</span>
-            <strong>${escapeHtml(String(documentsSummary.observed ?? 0))}</strong>
-            <small>para corregir</small>
-          </article>
-          <article class="provider-kpi-card">
-            <span>Promedio</span>
-            <strong>${Number(reviewSummary.average ?? 5).toFixed(1)}</strong>
-            <small>${escapeHtml(String(reviewSummary.count ?? 0))} reseñas</small>
-          </article>
-        </div>
+      <article class="provider-verification-card">
+        <h3>${verificationTitle}</h3>
+        <p>${verificationText}</p>
 
         ${uploadFormHtml}
       </article>
 
       ${documentsHtml}
       ${reviewsHtml}
+
     </section>
   `;
 }
-
 export function renderNotifications(state) {
   const items = Array.isArray(state.notifications.items)
     ? state.notifications.items
