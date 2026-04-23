@@ -765,6 +765,7 @@ if (state.ui.activeMode === "provider") {
 
 setupRealtime();
 renderClientScreen(state);
+  }
   
 const authSubscription = subscribeToAuthChanges?.(async (event, session) => {
   if (event === "SIGNED_IN" && session) {
