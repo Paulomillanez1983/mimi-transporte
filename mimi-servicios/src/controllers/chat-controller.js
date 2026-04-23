@@ -1,4 +1,4 @@
-import { loadMessages, sendProviderMessage } from "../services/service-api.js";
+import { loadMessages, sendMessage } from "../services/service-api.js";
 import { playMessageSound } from "../services/sound.js";
 import { setState, state } from "../state/app-state.js";
 import { loadChatDraft, saveChatDraft } from "../services/provider-storage.js";
@@ -33,7 +33,8 @@ export async function loadConversationMessages(conversationId) {
     draft.chat.conversationId = conversationId;
     draft.chat.messages = messages;
     draft.chat.unreadCount = messages.filter(
-      (message) => !message.read_at && message.sender_user_id !== draft.session.userId,
+      (message) =>
+        !message.read_at && message.sender_user_id !== draft.session.userId
     ).length;
   });
 
@@ -41,13 +42,23 @@ export async function loadConversationMessages(conversationId) {
 }
 
 export async function sendChatMessage(body) {
-  const conversationId = state.chat.conversationId || state.client.activeConversationId;
-  if (!conversationId || !body?.trim()) return null;
+  const conversationId =
+    state.chat.conversationId ||
+    state.provider.activeService?.conversation_id ||
+    state.client.activeConversationId;
 
-  const message = await sendProviderMessage(conversationId, body.trim());
+  if (!conversationId || !body?.trim()) {
+    return null;
+  }
+
+  const message = await sendMessage({
+    conversationId,
+    body: body.trim()
+  });
 
   setState((draft) => {
     draft.chat.messages.push(message);
+    draft.chat.unreadCount = 0;
   });
 
   saveChatDraft("");
@@ -66,6 +77,7 @@ export function handleIncomingMessage(payload) {
 
   setState((draft) => {
     const exists = draft.chat.messages.some((item) => item.id === message.id);
+
     if (!exists) {
       draft.chat.messages.push(message);
 
@@ -85,6 +97,7 @@ export function bindChatDraftPersistence() {
   if (!input) return;
 
   input.value = loadChatDraft();
+
   input.addEventListener("input", () => {
     saveChatDraft(input.value);
   });
