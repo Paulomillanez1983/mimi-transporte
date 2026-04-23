@@ -148,16 +148,28 @@ export async function loadCategories() {
   );
 }
 
-export async function registerDevice(payload = {}) {
-  if (!hasBackend()) {
-    return { ok: true };
-  }
+export async function registerDevice(pushToken = null) {
+  const deviceId =
+    localStorage.getItem("mimi_services_device_id") ||
+    crypto.randomUUID();
 
-  await requireSession();
+  localStorage.setItem("mimi_services_device_id", deviceId);
 
-  return invokeFunction(appConfig.functions.registerDevice, payload);
+  const platform =
+    /Android/i.test(navigator.userAgent)
+      ? "android"
+      : /iPhone|iPad|iPod/i.test(navigator.userAgent)
+        ? "ios"
+        : "web";
+
+  return invokeFunction("svc-register-device", {
+    device_id: deviceId,
+    push_token: pushToken,
+    platform,
+    notifications_enabled: Boolean(pushToken),
+    marketing_opt_in: false,
+  });
 }
-
 export async function searchProviders(categoryId, draft = {}) {
   if (!hasBackend()) {
     return [];
