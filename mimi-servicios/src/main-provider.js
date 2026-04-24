@@ -1057,7 +1057,6 @@ window.addEventListener("beforeunload", () => {
   authSubscription?.unsubscribe?.();
 });
 let uploading = false;
-
 async function openCamera(docType) {
   let stream;
   let modal;
@@ -1131,6 +1130,31 @@ async function openCamera(docType) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      // 🔹 Antifraude gratis: control básico de brillo/calidad
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let totalBrightness = 0;
+
+      for (let i = 0; i < imageData.length; i += 4) {
+        const r = imageData[i];
+        const g = imageData[i + 1];
+        const b = imageData[i + 2];
+        totalBrightness += (r + g + b) / 3;
+      }
+
+      const avgBrightness = totalBrightness / (imageData.length / 4);
+
+      if (avgBrightness < 40) {
+        uploading = false;
+        setInfo(null, "La imagen está muy oscura. Buscá mejor luz e intentá nuevamente.");
+        return;
+      }
+
+      if (avgBrightness > 220) {
+        uploading = false;
+        setInfo(null, "La imagen está demasiado clara. Evitá luz directa e intentá nuevamente.");
+        return;
+      }
+
       canvas.toBlob(async (blob) => {
         if (!blob) {
           uploading = false;
@@ -1194,3 +1218,5 @@ async function openCamera(docType) {
     setInfo(null, "No pudimos abrir la cámara. Revisá permisos del navegador.");
   }
 }
+
+
