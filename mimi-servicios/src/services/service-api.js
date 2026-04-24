@@ -966,7 +966,7 @@ export async function getProviderDashboard(providerId) {
   // 🔥 servicios completados
   const { data: completedRows, error: completedError } = await supabase
     .from("svc_requests")
-    .select("id,total_price,created_at,address_text,status")
+    .select("id,total_price_snapshot,created_at,address_text,status")
     .eq("selected_provider_id", providerId)
     .eq("status", "COMPLETED");
 
