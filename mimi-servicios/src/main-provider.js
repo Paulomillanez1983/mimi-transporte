@@ -478,12 +478,12 @@ const [workspace, notifications, offers, activeRequest, dashboard] = await Promi
           jobRate: null,
           mode: "hourly"
         },
-        stats: {
-          rating: Number(profile?.rating_avg ?? 5),
-          completedServices: Number(workspace.completedCount ?? 0),
-          totalOffers: 0,
-          earnings: Number(workspace.earningsTotal ?? 0)
-        },
+stats: {
+  rating: Number(profile?.rating_avg ?? 0),
+  completedServices: Number(workspace.completedCount ?? 0),
+  totalOffers: Number(workspace.offersCount ?? 0),
+  earnings: Number(workspace.earningsTotal ?? 0)
+},
         documents: {
           approved: approvedDocs,
           pending: pendingDocs,
@@ -1268,9 +1268,10 @@ this.renderChatMessages();
     if (this.elements.drawerServices) {
       this.elements.drawerServices.textContent = stats.completedServices;
     }
-    if (this.elements.drawerEarnings) {
-      this.elements.drawerEarnings.textContent = `$${(stats.earnings || 0).toLocaleString('es-AR')}`;
-    }
+if (this.elements.drawerEarnings) {
+  const dashboardEarnings = this.state?.provider?.dashboard?.earnings ?? stats.earnings ?? 0;
+  this.elements.drawerEarnings.textContent = `$${Number(dashboardEarnings).toLocaleString("es-AR")}`;
+}
   }
 
   /**
@@ -1513,15 +1514,36 @@ renderDrawer() {
     this.elements.drawerOverlay.hidden = !isOpen;
   }
 
-  // User info
-  if (this.state.session.userName && this.elements.drawerName) {
-    this.elements.drawerName.textContent = this.state.session.userName;
-  }
+const profile = this.state.provider.profile ?? {};
+const name =
+  profile.full_name ||
+  this.state.session.userName ||
+  this.state.session.userEmail ||
+  "Prestador";
 
-  if (this.state.session.userEmail && this.elements.drawerEmail) {
-    this.elements.drawerEmail.textContent = this.state.session.userEmail;
-  }
+const email =
+  profile.email ||
+  this.state.session.userEmail ||
+  "Sin email";
 
+if (this.elements.drawerName) {
+  this.elements.drawerName.textContent = name;
+}
+
+if (this.elements.drawerEmail) {
+  this.elements.drawerEmail.textContent = email;
+}
+
+if (this.elements.drawerInitials) {
+  const initials = name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  this.elements.drawerInitials.textContent = initials || "PR";
+}
   if (this.state.session.userName && this.elements.drawerInitials) {
     const initials = this.state.session.userName
       .split(" ")
