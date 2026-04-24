@@ -1,5 +1,5 @@
 import { appConfig } from "../config.js";
-import { getSupabaseClient } from "./supabase.js";
+import { getSupabaseClient, callRpc } from "./supabase.js";
 
 const SERVICE_PROVIDER_DOCUMENTS_BUCKET = "service-provider-documents";
 const PROVIDER_DOCUMENT_SELECT = "id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,metadata_json,created_at,updated_at";
@@ -292,19 +292,16 @@ export async function prepareRequestPricing({
 
   await requireSession();
 
-  const data = await invokeFunction(appConfig.functions.prepareRequestPricing, {
-    client_user_id: clientUserId,
-    category_id: categoryId,
-    provider_id: providerId,
-    address: draft.address ?? "",
-    service_lat: draft.lat ?? null,
-    service_lng: draft.lng ?? null,
-    request_type: draft.requestType ?? "IMMEDIATE",
-    scheduled_for: draft.scheduledFor || null,
-    requested_hours: Number(draft.requestedHours ?? 2)
+  return callRpc(appConfig.rpc.prepareRequestPricing, {
+    p_client_user_id: clientUserId,
+    p_category_id: categoryId,
+    p_provider_id: providerId,
+    p_service_lat: Number(draft.lat ?? 0),
+    p_service_lng: Number(draft.lng ?? 0),
+    p_request_type: draft.requestType ?? "IMMEDIATE",
+    p_scheduled_for: draft.scheduledFor || null,
+    p_requested_hours: Number(draft.requestedHours ?? 2)
   });
-
-  return data?.pricing ?? data;
 }
 
 export async function createRequest(payload = {}) {
