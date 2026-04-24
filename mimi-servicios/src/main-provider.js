@@ -1,1222 +1,1575 @@
-import { appConfig } from "./config.js";
-import { initMap, updateProviderMap } from "./services/map.js";
-import {
-  bootstrapSession,
-  loadActiveRequest,
-  loadConversationForRequest,
-  loadMessages,
-  loadNotifications,
-  loadOffers,
-  loadProviderWorkspace,
-  registerDevice,
-  saveProviderWorkspace,
-  sendMessage,
-  trackLocation,
-  updateProviderStatus,
-  updateRequestStatus,
-  uploadProviderDocument,
-  invokeFunction
-} from "./services/service-api.js";
-import { subscribeToProviderRealtime } from "./services/realtime.js";
-import { playNotificationSound } from "./services/sound.js";
-import {
-  hasSupabaseEnv,
-  redirectAfterLoginByRole,
-  signInWithGoogle,
-  signOut,
-  subscribeToAuthChanges
-} from "./services/supabase.js";
-import {
-  patchState,
-  setActiveMode,
-  setState,
-  state,
-  subscribe
-} from "./state/app-state.js";
-import { renderProviderScreen } from "./ui/render-provider.js";
+/**
+ * MIMI Servicios - Panel Prestador 2026
+ * Main entry point with Uber Driver-style UX
+ */
 
-let realtimeSubscription = null;
-let authSubscription = null;
-let providerTrackingIntervalId = null;
-let providerTrackingInFlight = false;
-let presenceTimer = null;
-let presenceInFlight = false;
+import { 
+  initState, 
+  subscribe, 
+  actions, 
+  selectors,
+  getDeviceId,
+  STORAGE_KEYS 
+} from './state/app-state-2026.js';
 
-function currentConversationId() {
-  return state.provider.activeService?.conversation_id ?? null;
-}
+// ============================================
+// APP CONTROLLER
+// ============================================
 
-function currentRequestId() {
-  return state.provider.activeService?.request_id ?? state.provider.activeService?.id ?? null;
-}
-
-function setInfo(message, error = null) {
-  setState((draft) => {
-    draft.meta.info = message || null;
-    draft.meta.error = error;
-  });
-}
-
-function normalizeAuthError(error, fallbackMessage) {
-  if (error?.code === "AUTH_REQUIRED") {
-    return "Necesitás iniciar sesión con Google para continuar.";
+class MimiProviderApp {
+  constructor() {
+    this.state = null;
+    this.unsubscribe = null;
+    this.map = null;
+    this.markers = {};
+    this.bottomSheet = null;
+    this.offerTimer = null;
+    this.trackingInterval = null;
+    this.notificationsInterval = null;
+    
+    // DOM Elements cache
+    this.elements = {};
+    
+    // Touch handling for bottom sheet
+    this.touchState = {
+      startY: 0,
+      currentY: 0,
+      startHeight: 0,
+      isDragging: false
+    };
   }
 
-  return error?.message || fallbackMessage;
-}
-
-function toggleDrawer(id, force) {
-  const drawer = document.getElementById(id);
-  if (!drawer) return;
-
-  const open = force ?? !drawer.classList.contains("is-open");
-
-  if (!open && drawer.contains(document.activeElement)) {
-    const fallbackButton =
-      id === "notificationsDrawer"
-        ? document.getElementById("notificationsButton")
-        : id === "chatDrawer"
-          ? document.getElementById("chatButton")
-          : null;
-
-    fallbackButton?.focus();
-  }
-
-  drawer.classList.toggle("is-open", open);
-  drawer.setAttribute("aria-hidden", String(!open));
-
-  if (open) {
-    drawer.removeAttribute("inert");
-  } else {
-    drawer.setAttribute("inert", "");
-  }
-}
-
-function buildDeviceId() {
-  let deviceId = localStorage.getItem("mimi_services_device_id");
-
-  if (!deviceId) {
-    deviceId = crypto.randomUUID();
-    localStorage.setItem("mimi_services_device_id", deviceId);
-  }
-
-  return deviceId;
-}
-
-async function registerCurrentDevice() {
-  if (!state.session.userId) return;
-
-  try {
-    await registerDevice(null);
-  } catch (error) {
-    console.warn("[MIMI Servicios] No se pudo registrar el dispositivo:", error);
-  }
-}
-async function getCurrentCoords() {
-  if (!navigator.geolocation) {
-    throw new Error("Tu dispositivo no soporta geolocalización.");
-  }
-
-  const position = await new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 15000
+  /**
+   * Initialize the app
+   */
+  async init() {
+    console.log('[MIMI] Initializing Provider App 2026...');
+    
+    // Initialize state
+    initState();
+    
+    // Cache DOM elements
+    this.cacheElements();
+    
+    // Subscribe to state changes
+    this.unsubscribe = subscribe((state) => {
+      this.state = state;
+      this.render();
     });
-  });
+    
+    // Initialize UI
+    this.initUI();
+    
+    // Initialize map
+    this.initMap();
+    
+    // Setup event listeners
+    this.setupEventListeners();
+    
+    // Setup bottom sheet gestures
+    this.setupBottomSheetGestures();
+    
+    // Check install prompt
+    this.setupInstallPrompt();
+    
+    // Check location permission
+    this.checkLocationPermission();
+    
+    // Start background sync
+    this.startBackgroundSync();
+    
+    console.log('[MIMI] App initialized');
+  }
 
-  return {
-    lat: position.coords.latitude,
-    lng: position.coords.longitude,
-    accuracy: position.coords.accuracy,
-    heading: position.coords.heading,
-    speed: position.coords.speed
-  };
-}
+  /**
+   * Cache DOM elements
+   */
+  cacheElements() {
+    this.elements = {
+      // Header
+      header: document.getElementById('header'),
+      statusBadge: document.getElementById('statusBadge'),
+      statusDot: document.getElementById('statusDot'),
+      statusText: document.getElementById('statusText'),
+      menuButton: document.getElementById('menuButton'),
+      
+      // Online button
+      onlineButtonContainer: document.getElementById('onlineButtonContainer'),
+      goOnlineButton: document.getElementById('goOnlineButton'),
+      
+      // Offer card
+      offerCard: document.getElementById('offerCard'),
+      offerTimer: document.getElementById('offerTimer'),
+      offerService: document.getElementById('offerService'),
+      offerLocation: document.getElementById('offerLocation'),
+      offerClient: document.getElementById('offerClient'),
+      offerPrice: document.getElementById('offerPrice'),
+      acceptOffer: document.getElementById('acceptOffer'),
+      rejectOffer: document.getElementById('rejectOffer'),
+      
+      // Active service
+      activeServiceCard: document.getElementById('activeServiceCard'),
+      serviceStatusBadge: document.getElementById('serviceStatusBadge'),
+      activeServiceType: document.getElementById('activeServiceType'),
+      activeServiceLocation: document.getElementById('activeServiceLocation'),
+      activeServiceClient: document.getElementById('activeServiceClient'),
+      serviceActionBtn: document.getElementById('serviceActionBtn'),
+      
+      // Distance alert
+      distanceAlert: document.getElementById('distanceAlert'),
+      alertTitle: document.getElementById('alertTitle'),
+      alertText: document.getElementById('alertText'),
+      alertAction: document.getElementById('alertAction'),
+      
+      // Bottom sheet
+      bottomSheet: document.getElementById('bottomSheet'),
+      sheetHandle: document.querySelector('.sheet-handle-container'),
+      sheetStatus: document.getElementById('sheetStatus'),
+      sheetStatusDot: document.getElementById('sheetStatusDot'),
+      sheetStatusText: document.getElementById('sheetStatusText'),
+      sheetInfo: document.getElementById('sheetInfo'),
+      sheetUpcoming: document.getElementById('sheetUpcoming'),
+      
+      // Tabs
+      tabButtons: document.querySelectorAll('.tab-btn'),
+      tabPanels: document.querySelectorAll('.tab-panel'),
+      
+      // Status toggle
+      statusToggleModern: document.getElementById('statusToggleModern'),
+      
+      // Quick actions
+      quickNotifications: document.getElementById('quickNotifications'),
+      quickChat: document.getElementById('quickChat'),
+      quickSupport: document.getElementById('quickSupport'),
+      notificationBadge: document.getElementById('notificationBadge'),
+      chatBadge: document.getElementById('chatBadge'),
+      
+      // Scheduled list
+      scheduledList: document.getElementById('scheduledList'),
+      
+      // Verification
+      verificationCard: document.getElementById('verificationCard'),
+      verificationStatus: document.getElementById('verificationStatus'),
+      verificationBtn: document.getElementById('verificationBtn'),
+      
+      // Services chips
+      servicesChips: document.getElementById('servicesChips'),
+      
+      // Stats
+      statRating: document.getElementById('statRating'),
+      statCompleted: document.getElementById('statCompleted'),
+      statOffers: document.getElementById('statOffers'),
+      
+      // Drawer
+      drawerOverlay: document.getElementById('drawerOverlay'),
+      sideDrawer: document.getElementById('sideDrawer'),
+      drawerClose: document.getElementById('drawerClose'),
+      drawerAvatar: document.getElementById('drawerAvatar'),
+      drawerInitials: document.getElementById('drawerInitials'),
+      drawerName: document.getElementById('drawerName'),
+      drawerEmail: document.getElementById('drawerEmail'),
+      drawerRating: document.getElementById('drawerRating'),
+      drawerServices: document.getElementById('drawerServices'),
+      drawerEarnings: document.getElementById('drawerEarnings'),
+      logoutBtn: document.getElementById('logoutBtn'),
+      
+      // Notifications drawer
+      notificationsDrawer: document.getElementById('notificationsDrawer'),
+      notificationsList: document.getElementById('notificationsList'),
+      markAllRead: document.getElementById('markAllRead'),
+      
+      // Chat drawer
+      chatDrawer: document.getElementById('chatDrawer'),
+      chatClose: document.getElementById('chatClose'),
+      chatMessages: document.getElementById('chatMessages'),
+      chatInput: document.getElementById('chatInput'),
+      chatSend: document.getElementById('chatSend'),
+      
+      // Modal
+      verificationModal: document.getElementById('verificationModal'),
+      modalClose: document.getElementById('modalClose'),
+      wizardProgress: document.getElementById('wizardProgress'),
+      wizardNext: document.getElementById('wizardNext'),
+      wizardPrev: document.getElementById('wizardPrev'),
+      
+      // Toast
+      toastContainer: document.getElementById('toastContainer'),
+      
+      // Install
+      installBanner: document.getElementById('installBanner'),
+      installBtn: document.getElementById('installBtn'),
+      installDismiss: document.getElementById('installDismiss'),
+      
+      // Map
+      mapContainer: document.getElementById('mapContainer'),
+      map: document.getElementById('map'),
+      mapFallback: document.getElementById('mapFallback')
+    };
+  }
 
-function updateProviderMapFromState() {
-  updateProviderMap({
-    providerPosition: state.tracking.providerPosition,
-    servicePosition: state.tracking.clientPosition
-  });
-}
+  /**
+   * Initialize UI state
+   */
+  initUI() {
+    // Set initial bottom sheet state
+    this.setBottomSheetState('peek');
+    
+    // Load scheduled services
+    this.renderScheduledServices();
+    
+    // Load verification status
+    this.renderVerificationStatus();
+    
+    // Load stats
+    this.renderStats();
+  }
 
-function isTrackableServiceStatus(status) {
-  return ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(status);
-}
-
-function syncWorkspaceIntoState(workspace) {
-  const documents = workspace.documents ?? [];
-  const reviews = workspace.reviews ?? [];
-  const categories = workspace.categories ?? [];
-  const profile = workspace.profile ?? null;
-
-  const documentsSummary = documents.reduce(
-    (acc, item) => {
-      const status = String(item.review_status ?? "PENDING").toUpperCase();
-
-      if (status === "APPROVED") acc.approved += 1;
-      else if (status === "REJECTED" || status === "NEEDS_RESUBMISSION") {
-        acc.observed += 1;
-      } else {
-        acc.pending += 1;
+  /**
+   * Initialize map
+   */
+  initMap() {
+    try {
+      // Check if maplibre is available
+      if (!window.maplibregl) {
+        console.warn('[MIMI] MapLibre not available');
+        this.showMapFallback();
+        return;
       }
 
-      return acc;
-    },
-    { approved: 0, pending: 0, observed: 0 }
-  );
+      const defaultCenter = [-64.1888, -31.4201]; // Córdoba, Argentina
+      
+      this.map = new window.maplibregl.Map({
+        container: 'map',
+        style: {
+          version: 8,
+          sources: {
+            osm: {
+              type: 'raster',
+              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution: '&copy; OpenStreetMap contributors'
+            }
+          },
+          layers: [{
+            id: 'osm',
+            type: 'raster',
+            source: 'osm'
+          }]
+        },
+        center: defaultCenter,
+        zoom: 14,
+        attributionControl: false
+      });
 
-  const reviewAverage = reviews.length
-    ? reviews.reduce((sum, item) => sum + Number(item.rating ?? 0), 0) / reviews.length
-    : Number(profile?.rating_avg ?? state.provider.stats.rating ?? 5);
+      this.map.on('load', () => {
+        console.log('[MIMI] Map loaded');
+        actions.setMapReady(true);
+        
+        // Try to get current position
+        this.updateMapToCurrentPosition();
+      });
 
-  setState((draft) => {
-    draft.provider.profile = profile;
-    draft.provider.business.profile = workspace.profileDetail ?? null;
-    draft.provider.business.pricing = workspace.pricing ?? [];
-    draft.provider.business.availability = workspace.availability ?? [];
-    draft.provider.business.documents = documents;
-    draft.provider.business.reviews = reviews;
-    draft.provider.business.categories = categories;
-    draft.provider.categories = categories;
-    draft.provider.documentsSummary = documentsSummary;
-    draft.provider.reviewSummary = {
-      average: reviewAverage,
-      count: Number(profile?.rating_count ?? reviews.length ?? 0)
-    };
-    draft.provider.stats.rating = Number(profile?.rating_avg ?? draft.provider.stats.rating);
-    draft.provider.stats.completed = workspace.completedCount ?? draft.provider.stats.completed;
-    draft.provider.status = profile?.status ?? draft.provider.status;
-    draft.provider.availability.isOnline =
-      (profile?.status ?? draft.provider.status) === "ONLINE_IDLE";
-    draft.provider.availability.lastSeenAt =
-      profile?.last_seen_at ?? draft.provider.availability.lastSeenAt;
+      this.map.on('error', (e) => {
+        console.error('[MIMI] Map error:', e);
+        this.showMapFallback();
+      });
 
-    if (
-      Number.isFinite(Number(profile?.last_lat)) &&
-      Number.isFinite(Number(profile?.last_lng))
-    ) {
-      draft.tracking.providerPosition = {
-        lat: Number(profile.last_lat),
-        lng: Number(profile.last_lng)
-      };
-      draft.provider.availability.locationLabel =
-        profile.last_location ?? "Ubicación actualizada";
+    } catch (error) {
+      console.error('[MIMI] Map init error:', error);
+      this.showMapFallback();
     }
-  });
-}
+  }
 
-async function refreshNotifications() {
-  const notifications = await loadNotifications(state.session.userId);
+  /**
+   * Show map fallback
+   */
+  showMapFallback() {
+    this.elements.map.hidden = true;
+    this.elements.mapFallback.hidden = false;
+  }
 
-  setState((draft) => {
-    draft.notifications.items = notifications ?? [];
-    draft.notifications.unreadCount = (notifications ?? []).filter(
-      (item) => !item.read_at
-    ).length;
-  });
-}
+  /**
+   * Update map to current position
+   */
+  updateMapToCurrentPosition() {
+    if (!navigator.geolocation) return;
 
-async function refreshOffers() {
-  const offers = await loadOffers(state.session.providerId);
-
-  setState((draft) => {
-    draft.provider.offers = offers ?? [];
-    draft.provider.stats.offers = offers?.length ?? 0;
-    draft.provider.offerDeadlineAt = offers?.[0]?.expires_at ?? null;
-  });
-}
-
-async function refreshWorkspace() {
-  const workspace = state.session.providerId
-    ? await loadProviderWorkspace(state.session.providerId)
-    : {
-        profile: null,
-        profileDetail: null,
-        pricing: [],
-        availability: [],
-        documents: [],
-        reviews: [],
-        categories: [],
-        completedCount: 0
-      };
-
-  syncWorkspaceIntoState(workspace);
-}
-
-async function hydrateLiveContext(activeRequestOverride) {
-  const activeRequest =
-    activeRequestOverride ??
-    (await loadActiveRequest({
-      userId: null,
-      providerId: state.session.providerId
-    }));
-
-  const conversation = activeRequest?.id
-    ? await loadConversationForRequest(activeRequest.id)
-    : null;
-
-  const messages = conversation?.id
-    ? await loadMessages(conversation.id)
-    : [];
-
-  setState((draft) => {
-    draft.provider.activeService = activeRequest
-      ? {
-          ...draft.provider.activeService,
-          ...activeRequest,
-          request_id: activeRequest.request_id ?? activeRequest.id,
-          conversation_id:
-            conversation?.id ??
-            draft.provider.activeService?.conversation_id ??
-            null
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        if (this.map) {
+          this.map.setCenter([longitude, latitude]);
+          
+          // Add or update provider marker
+          this.updateProviderMarker(latitude, longitude);
         }
-      : null;
+        
+        actions.setLocation({
+          lat: latitude,
+          lng: longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: Date.now()
+        });
+      },
+      (error) => {
+        console.warn('[MIMI] Geolocation error:', error);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
 
-    draft.chat.messages = messages;
-    draft.chat.unreadCount = messages.filter(
-      (message) =>
-        !message.read_at && message.sender_user_id !== draft.session.userId
-    ).length;
+  /**
+   * Update provider marker on map
+   */
+  updateProviderMarker(lat, lng) {
+    if (!this.map) return;
 
-    if (activeRequest?.service_lat && activeRequest?.service_lng) {
-      draft.tracking.clientPosition = {
-        lat: activeRequest.service_lat,
-        lng: activeRequest.service_lng
-      };
-    } else if (!activeRequest) {
-      draft.tracking.clientPosition = null;
+    // Remove existing marker
+    if (this.markers.provider) {
+      this.markers.provider.remove();
     }
-  });
 
-  updateProviderMapFromState();
-  setupRealtime(currentRequestId(), conversation?.id ?? null);
-}
+    // Create marker element
+    const el = document.createElement('div');
+    el.className = 'provider-marker';
+    el.style.cssText = `
+      width: 24px;
+      height: 24px;
+      background: #30d158;
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    `;
 
-async function syncProviderPresence(reason = "presence") {
-  const status = state.provider.profile?.status ?? state.provider.status;
-  const active = state.provider.activeService;
-  const shouldTrackPresence = status === "ONLINE_IDLE" || Boolean(active);
+    this.markers.provider = new window.maplibregl.Marker({ element: el })
+      .setLngLat([lng, lat])
+      .addTo(this.map);
+  }
 
-  if (!shouldTrackPresence || presenceInFlight) return;
-
-  presenceInFlight = true;
-
-  try {
-    const coords = await getCurrentCoords();
-
-    setState((draft) => {
-      draft.tracking.providerPosition = {
-        lat: coords.lat,
-        lng: coords.lng
-      };
-      draft.provider.availability.lastSeenAt = new Date().toISOString();
-      draft.provider.availability.locationLabel =
-        reason === "online"
-          ? "Ubicación actual al entrar online"
-          : "Ubicación actualizada";
+  /**
+   * Setup event listeners
+   */
+  setupEventListeners() {
+    // Online button
+    this.elements.goOnlineButton?.addEventListener('click', () => {
+      this.handleGoOnline();
     });
 
-    updateProviderMapFromState();
+    // Menu button
+    this.elements.menuButton?.addEventListener('click', () => {
+      actions.toggleDrawer();
+    });
 
-    if (currentRequestId()) {
-      await trackLocation({
-        requestId: currentRequestId(),
-        ...coords
+    // Drawer close
+    this.elements.drawerClose?.addEventListener('click', () => {
+      actions.closeDrawer();
+    });
+
+    this.elements.drawerOverlay?.addEventListener('click', () => {
+      actions.closeDrawer();
+    });
+
+    // Tab buttons
+    this.elements.tabButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const tab = e.target.dataset.tab;
+        this.switchTab(tab);
       });
-    }
-  } catch (error) {
-    if (reason === "online" || reason === "manual") {
-      setInfo(null, normalizeAuthError(error, "No pudimos obtener tu ubicación actual."));
-    }
-  } finally {
-    presenceInFlight = false;
-  }
-}
+    });
 
-function stopProviderPresenceLoop() {
-  if (presenceTimer) {
-    window.clearInterval(presenceTimer);
-    presenceTimer = null;
-  }
-}
-
-function startProviderPresenceLoop() {
-  stopProviderPresenceLoop();
-
-  if (!navigator.geolocation) return;
-
-  presenceTimer = window.setInterval(() => {
-    void syncProviderPresence();
-  }, appConfig.providerPresenceIntervalMs ?? 15000);
-}
-
-function stopProviderTrackingLoop() {
-  if (providerTrackingIntervalId) {
-    window.clearInterval(providerTrackingIntervalId);
-    providerTrackingIntervalId = null;
-  }
-}
-
-function startProviderTrackingLoop() {
-  stopProviderTrackingLoop();
-
-  if (!navigator.geolocation) return;
-
-  providerTrackingIntervalId = window.setInterval(async () => {
-    const active = state.provider.activeService;
-    if (!active || !isTrackableServiceStatus(active.status)) return;
-    if (providerTrackingInFlight) return;
-
-    providerTrackingInFlight = true;
-
-    try {
-      const coords = await getCurrentCoords();
-
-      const payload = {
-        requestId: active.request_id ?? active.id,
-        ...coords
-      };
-
-      setState((draft) => {
-        draft.tracking.providerPosition = {
-          lat: payload.lat,
-          lng: payload.lng
-        };
-        draft.provider.availability.lastSeenAt = new Date().toISOString();
-        draft.provider.availability.locationLabel = "Ubicación actualizada en servicio";
-      });
-
-      updateProviderMapFromState();
-
-      try {
-        await trackLocation(payload);
-      } catch {
-        // no-op
+    // Status toggle
+    this.elements.statusToggleModern?.addEventListener('click', (e) => {
+      const option = e.target.closest('.toggle-option');
+      if (option) {
+        const status = option.dataset.status;
+        this.handleStatusToggle(status);
       }
-    } catch {
-      // no-op
-    } finally {
-      providerTrackingInFlight = false;
-    }
-  }, 12000);
-}
-
-async function bootstrapAsyncData() {
-  const session = await bootstrapSession();
-
-  if (session.isAuthenticated && session.role !== "provider") {
-    // el usuario puede existir como cliente puro; no redirigimos automáticamente
-  }
-
-  setState((draft) => {
-    draft.session.userId = session.userId;
-    draft.session.providerId = session.providerId;
-    draft.session.role = session.role ?? "provider";
-    draft.session.userEmail = session.userEmail ?? null;
-    draft.session.userName = session.userName ?? null;
-    draft.meta.backendMode = session.userId
-      ? "supabase"
-      : hasSupabaseEnv()
-        ? "supabase"
-        : "mock";
-    draft.provider.status = draft.provider.status || "OFFLINE";
-  });
-
-  await Promise.all([
-    refreshNotifications(),
-    refreshOffers(),
-    refreshWorkspace()
-  ]);
-
-  await hydrateLiveContext();
-  await registerCurrentDevice();
-  await syncProviderPresence("bootstrap");
-
-  if (!hasSupabaseEnv()) {
-    setInfo(
-      "La app está funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real."
-    );
-  } else if (!session.userId) {
-    setInfo("Ingresá con Google para operar como prestador.");
-  } else {
-    setInfo("Sesión iniciada correctamente.");
-  }
-}
-
-function registerInstallPrompt() {
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    patchState("ui.installPromptEvent", event);
-  });
-
-  document.getElementById("installButton")?.addEventListener("click", async () => {
-    const promptEvent = state.ui.installPromptEvent;
-    if (!promptEvent) return;
-
-    await promptEvent.prompt();
-  });
-}
-
-async function handleAuthPrimary() {
-  if (!hasSupabaseEnv()) {
-    setInfo(
-      "Entraste en modo demo. Cuando cargues tus claves de Supabase se habilita el flujo real."
-    );
-    return;
-  }
-
-  await signInWithGoogle();
-}
-
-async function handleOfferAction(action, offerId) {
-  await updateRequestStatus(appConfig.functions.providerRespondOffer, {
-    offer_id: offerId,
-    action: action === "accept" ? "ACCEPT" : "REJECT"
-  });
-
-  setInfo(
-    action === "accept"
-      ? "Oferta aceptada correctamente."
-      : "Oferta rechazada."
-  );
-
-  await Promise.all([
-    refreshOffers(),
-    hydrateLiveContext()
-  ]);
-}
-
-async function handleProviderStatusChange(status) {
-  if (status === "ONLINE_IDLE" && !state.provider.profile?.approved) {
-    patchState("provider.status", "OFFLINE");
-    document.getElementById("providerTrustPanel")?.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
     });
-    setInfo(
-      "Para ponerte online primero tenés que completar la verificación y esperar aprobación."
-    );
-    return;
+
+    // Quick actions
+    this.elements.quickNotifications?.addEventListener('click', () => {
+      actions.toggleNotifications();
+    });
+
+    this.elements.quickChat?.addEventListener('click', () => {
+      actions.toggleChat();
+    });
+
+    this.elements.quickSupport?.addEventListener('click', () => {
+      this.showToast('Soporte disponible próximamente', 'info');
+    });
+
+    // Notification drawer
+    this.elements.markAllRead?.addEventListener('click', () => {
+      actions.markNotificationsRead();
+      this.showToast('Notificaciones marcadas como leídas', 'success');
+    });
+
+    // Chat
+    this.elements.chatClose?.addEventListener('click', () => {
+      actions.closeChat();
+    });
+
+    this.elements.chatSend?.addEventListener('click', () => {
+      this.sendChatMessage();
+    });
+
+    this.elements.chatInput?.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.sendChatMessage();
+    });
+
+    // Offer actions
+    this.elements.acceptOffer?.addEventListener('click', () => {
+      this.handleAcceptOffer();
+    });
+
+    this.elements.rejectOffer?.addEventListener('click', () => {
+      this.handleRejectOffer();
+    });
+
+    // Service action
+    this.elements.serviceActionBtn?.addEventListener('click', () => {
+      this.handleServiceAction();
+    });
+
+    // Verification
+    this.elements.verificationBtn?.addEventListener('click', () => {
+      actions.openModal('verification');
+    });
+
+    // Modal
+    this.elements.modalClose?.addEventListener('click', () => {
+      actions.closeModal();
+    });
+
+    this.elements.wizardNext?.addEventListener('click', () => {
+      this.handleWizardNext();
+    });
+
+    this.elements.wizardPrev?.addEventListener('click', () => {
+      this.handleWizardPrev();
+    });
+
+    // Logout
+    this.elements.logoutBtn?.addEventListener('click', () => {
+      this.handleLogout();
+    });
+
+    // Install banner
+    this.elements.installBtn?.addEventListener('click', () => {
+      this.handleInstall();
+    });
+
+    this.elements.installDismiss?.addEventListener('click', () => {
+      this.elements.installBanner.hidden = true;
+    });
+
+    // Drawer links
+    document.getElementById('linkProfile')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showToast('Perfil - próximamente', 'info');
+    });
+
+    document.getElementById('linkDocuments')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      actions.openModal('verification');
+      actions.closeDrawer();
+    });
+
+    document.getElementById('linkServices')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.switchTab('account');
+      actions.closeDrawer();
+    });
+
+    document.getElementById('linkEarnings')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showToast('Ganancias - próximamente', 'info');
+    });
+
+    document.getElementById('linkSettings')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showToast('Configuración - próximamente', 'info');
+    });
+
+    document.getElementById('linkSupport')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.showToast('Soporte - próximamente', 'info');
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (this.state?.ui.drawerOpen) actions.closeDrawer();
+        if (this.state?.ui.notificationDrawerOpen) actions.closeNotifications();
+        if (this.state?.ui.chatDrawerOpen) actions.closeChat();
+        if (this.state?.ui.modalOpen) actions.closeModal();
+      }
+    });
+
+    // Visibility change (background/foreground)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        this.onAppForeground();
+      } else {
+        this.onAppBackground();
+      }
+    });
+
+    // Online/offline
+    window.addEventListener('online', () => {
+      this.showToast('Conexión restaurada', 'success');
+    });
+
+    window.addEventListener('offline', () => {
+      this.showToast('Sin conexión - modo offline', 'warning');
+    });
   }
 
-  patchState("provider.status", status);
+  /**
+   * Setup bottom sheet gestures
+   */
+  setupBottomSheetGestures() {
+    const handle = this.elements.sheetHandle;
+    const sheet = this.elements.bottomSheet;
+    
+    if (!handle || !sheet) return;
 
-  const profile = await updateProviderStatus(state.session.providerId, status);
-  if (!profile) return;
-
-  setState((draft) => {
-    draft.provider.profile = {
-      ...draft.provider.profile,
-      ...profile
+    const onTouchStart = (e) => {
+      this.touchState.isDragging = true;
+      this.touchState.startY = e.touches?.[0]?.clientY || e.clientY;
+      this.touchState.startHeight = sheet.offsetHeight;
+      sheet.style.transition = 'none';
     };
-    draft.provider.status = profile.status ?? status;
-    draft.provider.stats.rating =
-      profile.rating_avg ?? draft.provider.stats.rating;
-    draft.provider.availability.isOnline =
-      (profile.status ?? status) === "ONLINE_IDLE";
-    draft.provider.availability.lastSeenAt =
-      profile.last_seen_at ?? new Date().toISOString();
 
-    if (
-      Number.isFinite(Number(profile.last_lat)) &&
-      Number.isFinite(Number(profile.last_lng))
-    ) {
-      draft.tracking.providerPosition = {
-        lat: Number(profile.last_lat),
-        lng: Number(profile.last_lng)
-      };
-      draft.provider.availability.locationLabel =
-        profile.last_location ?? "Ubicación actualizada";
-    }
-  });
-
-  updateProviderMapFromState();
-
-  if (status === "ONLINE_IDLE") {
-    await syncProviderPresence("online");
-    setInfo("Estás online y tu ubicación quedó marcada en el mapa.");
-  } else {
-    setInfo("Estado operativo actualizado.");
-  }
-}
-
-async function handleProviderFlow(action) {
-  if (action === "chat") {
-    toggleDrawer("chatDrawer", true);
-    return;
-  }
-
-  const nextStatuses = {
-    "en-route": "PROVIDER_EN_ROUTE",
-    arrived: "PROVIDER_ARRIVED",
-    start: "IN_PROGRESS",
-    complete: "COMPLETED"
-  };
-
-  const functionName = {
-    "en-route": appConfig.functions.providerEnRoute,
-    arrived: appConfig.functions.providerArrived,
-    start: appConfig.functions.startService,
-    complete: appConfig.functions.completeService
-  }[action];
-
-  if (!functionName) return;
-
-  await updateRequestStatus(functionName, {
-    request_id: currentRequestId()
-  });
-
-  setState((draft) => {
-    if (draft.provider.activeService) {
-      draft.provider.activeService.status = nextStatuses[action];
-    }
-    draft.meta.info = "Estado del servicio actualizado.";
-  });
-
-  await hydrateLiveContext();
-  await syncProviderPresence(action);
-  setInfo("Estado del servicio actualizado.");
-}
-
-async function handleBusinessAction(action) {
-  if (action === "refresh-location") {
-    await syncProviderPresence("manual");
-    setInfo("Ubicación refrescada.");
-    return;
-  }
-
-  if (action === "refresh-workspace") {
-    await Promise.all([
-      refreshWorkspace(),
-      refreshOffers(),
-      hydrateLiveContext()
-    ]);
-    setInfo("Panel operativo refrescado.");
-    return;
-  }
-
-  if (action === "focus-map") {
-    document.getElementById("trackingMap")?.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-  }
-}
-
-async function handleProviderDocumentSubmit(event) {
-  event.preventDefault();
-
-  if (!state.session.providerId) {
-    setInfo(null, "Necesitás iniciar sesión como prestador para subir documentos.");
-    return;
-  }
-
-  const form = event.currentTarget;
-  const formData = new FormData(form);
-  const documentType = formData.get("providerDocumentType");
-  const file = formData.get("providerDocumentFile");
-
-  if (!(file instanceof File) || !file.size) {
-    setInfo(null, "Seleccioná una foto o PDF para subir.");
-    return;
-  }
-
-  const submitButton = form.querySelector("button[type='submit']");
-  submitButton?.setAttribute("disabled", "");
-
-  try {
-    await uploadProviderDocument({
-      providerId: state.session.providerId,
-      documentType,
-      file
-    });
-
-    form.reset();
-    await refreshWorkspace();
-    setInfo("Documento cargado correctamente. Quedó pendiente de revisión.");
-  } finally {
-    submitButton?.removeAttribute("disabled");
-  }
-}
-
-async function handleBusinessFormSubmit(event) {
-  event.preventDefault();
-
-  if (!state.session.providerId) return;
-
-  const form = event.currentTarget;
-  const formData = new FormData(form);
-  const categories = Array.isArray(appConfig.categories) ? appConfig.categories : [];
-
-  const pricing = categories
-    .map((category) => ({
-      categoryId: category.id,
-      active: formData.get(`categoryActive:${category.id}`) === "on",
-      pricePerHour: Number(formData.get(`price:${category.id}`) || 0),
-      minimumHours: Number(formData.get(`min:${category.id}`) || 1),
-      maximumHours: Number(
-        formData.get(`max:${category.id}`) ||
-          formData.get("maxHoursPerService") ||
-          8
-      ),
-      currency: "ARS"
-    }))
-    .filter((item) => item.active && item.pricePerHour > 0);
-
-  const selectedCategories = pricing.map((item) => ({
-    categoryId: item.categoryId
-  }));
-
-  const availability = Array.from({ length: 7 }, (_, dayOfWeek) => ({
-    dayOfWeek,
-    active: formData.get(`dayActive:${dayOfWeek}`) === "on",
-    startTime: formData.get(`dayStart:${dayOfWeek}`) || null,
-    endTime: formData.get(`dayEnd:${dayOfWeek}`) || null
-  })).filter((item) => item.active && item.startTime && item.endTime);
-
-  await saveProviderWorkspace(state.session.providerId, {
-    bio: formData.get("providerBio") || "",
-    city: formData.get("providerCity") || "",
-    province: formData.get("providerProvince") || "",
-    addressText: formData.get("providerAddressText") || "",
-    pricingMode: formData.get("pricingMode") || "POR_HORA",
-    maxHoursPerService: Number(formData.get("maxHoursPerService") || 8),
-    acceptsImmediate: formData.get("acceptsImmediate") === "on",
-    acceptsScheduled: formData.get("acceptsScheduled") === "on",
-    categories: selectedCategories,
-    pricing,
-    availability
-  });
-
-  await refreshWorkspace();
-  setInfo("Tarifas, disponibilidad y perfil comercial actualizados.");
-}
-
-function bindBasicControls() {
-document.addEventListener("change", async (e) => {
-
-  // 🔹 NUEVO: wizard onboarding
-if (e.target.dataset.input) {
-  if (uploading) return;
-  uploading = true;
-
-  const file = e.target.files[0];
-  if (!file) {
-    uploading = false;
-    return;
-  }
-
-  const docType = e.target.dataset.input;
-
-  const preview = document.getElementById(`preview-${docType}`);
-  const status = document.getElementById(`status-${docType}`);
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    if (preview) {
-      preview.innerHTML = `<img src="${reader.result}" />`;
-      preview.classList.add("visible");
-    }
-  };
-  reader.readAsDataURL(file);
-
-  if (status) {
-    status.textContent = "Subiendo...";
-    status.className = "doc-status pending";
-  }
-
-  try {
-    await uploadProviderDocument({
-      providerId: state.session.providerId,
-      documentType: docType,
-      file
-    });
-
-    if (status) {
-      status.textContent = "✅ Subido";
-      status.className = "doc-status ok";
-    }
-
-    updateProgress();
-
-  } catch {
-    if (status) {
-      status.textContent = "❌ Error";
-      status.className = "doc-status error";
-    }
-  } finally {
-    uploading = false;
-  }
-
-  return;
-}
-  // 🔹 LEGACY
-  if (e.target?.name !== "providerDocumentFile") return;
-
-  const file = e.target.files?.[0] ?? null;
-  const preview = document.getElementById("providerDocumentPreview");
-  if (!preview) return;
-
-  preview.textContent = file
-    ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB`
-    : "Todavía no seleccionaste archivo.";
-});
-  document.getElementById("authPrimaryButton")?.addEventListener("click", async () => {
-    try {
-      await handleAuthPrimary();
-    } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesión."));
-    }
-  });
-
-  document.getElementById("authSecondaryButton")?.addEventListener("click", async () => {
-    try {
-      await signOut();
-      window.location.reload();
-    } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
-    }
-  });
-document.addEventListener("click", (e) => {
-  const cam = e.target.closest("[data-camera]");
-  if (cam) {
-    openCamera(cam.dataset.camera);
-    return;
-  }
-
-  const upload = e.target.closest("[data-upload]");
-  if (upload) {
-    document
-      .querySelector(`[data-input="${upload.dataset.upload}"]`)
-      ?.click();
-  }
-});
-  document.getElementById("switchToClient")?.addEventListener("click", () => {
-    setActiveMode("client");
-    window.location.href = "./cliente.html";
-  });
-
-  document.getElementById("notificationsButton")?.addEventListener("click", () => {
-    toggleDrawer("notificationsDrawer", true);
-  });
-
-  document.getElementById("chatButton")?.addEventListener("click", async () => {
-    try {
-      toggleDrawer("chatDrawer", true);
-
-      if (!state.chat.messages.length && currentConversationId()) {
-        const messages = await loadMessages(currentConversationId());
-        patchState("chat.messages", messages);
-        patchState("chat.unreadCount", 0);
+    const onTouchMove = (e) => {
+      if (!this.touchState.isDragging) return;
+      
+      const clientY = e.touches?.[0]?.clientY || e.clientY;
+      const delta = this.touchState.startY - clientY;
+      
+      // Determine direction and update sheet position
+      if (delta > 50) {
+        // Dragging up
+        sheet.classList.add('expanded');
+        sheet.classList.remove('collapsed');
+      } else if (delta < -50) {
+        // Dragging down
+        if (sheet.classList.contains('expanded')) {
+          sheet.classList.remove('expanded');
+        } else {
+          sheet.classList.add('collapsed');
+        }
       }
-    } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo abrir el chat."));
-    }
-  });
+    };
 
-  document.querySelectorAll("[data-close-drawer]").forEach((button) => {
-    button.addEventListener("click", () => {
-      toggleDrawer(button.dataset.closeDrawer, false);
+    const onTouchEnd = () => {
+      this.touchState.isDragging = false;
+      sheet.style.transition = '';
+    };
+
+    handle.addEventListener('touchstart', onTouchStart, { passive: true });
+    handle.addEventListener('mousedown', onTouchStart);
+    
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('mousemove', onTouchMove);
+    
+    document.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('mouseup', onTouchEnd);
+  }
+
+  /**
+   * Set bottom sheet state
+   */
+  setBottomSheetState(state) {
+    const sheet = this.elements.bottomSheet;
+    if (!sheet) return;
+
+    sheet.classList.remove('collapsed', 'expanded');
+    
+    switch (state) {
+      case 'collapsed':
+        sheet.classList.add('collapsed');
+        break;
+      case 'peek':
+        // Default state
+        break;
+      case 'expanded':
+        sheet.classList.add('expanded');
+        break;
+    }
+    
+    actions.setBottomSheetState(state);
+  }
+
+  /**
+   * Switch tab
+   */
+  switchTab(tab) {
+    // Update buttons
+    this.elements.tabButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === tab);
     });
-  });
+    
+    // Update panels
+    this.elements.tabPanels.forEach(panel => {
+      panel.classList.toggle('active', panel.id === `tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`);
+    });
+    
+    actions.setTab(tab);
+  }
 
-  document.getElementById("chatForm")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const input = document.getElementById("chatInput");
-    const body = input?.value?.trim();
-    if (!body) return;
-
-    try {
-      const message = await sendMessage({
-        conversationId: currentConversationId(),
-        body
-      });
-
-      setState((draft) => {
-        draft.chat.messages.push(message);
-        draft.chat.unreadCount = 0;
-      });
-
-      input.value = "";
-    } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo enviar el mensaje."));
-    }
-  });
-
-  document.addEventListener("submit", async (event) => {
-    if (!(event.target instanceof HTMLFormElement)) return;
-    if (event.target.id === "providerVerificationForm") {
-      try {
-        await handleProviderDocumentSubmit(event);
-      } catch (error) {
-        setInfo(null, normalizeAuthError(error, "No se pudo subir el documento."));
-      }
+  /**
+   * Handle go online button
+   */
+  handleGoOnline() {
+    // Check if verified
+    if (!this.state?.provider.isVerified) {
+      this.showToast('Necesitás completar tu verificación primero', 'warning');
+      actions.openModal('verification');
       return;
     }
 
-    if (event.target.id !== "providerBusinessForm") return;
+    // Set online status
+    actions.setProviderStatus('ONLINE_IDLE');
+    actions.setBottomSheetState('peek');
+    this.showToast('Estás online - recibiendo servicios', 'success');
+    
+    // Request location
+    this.startLocationTracking();
+  }
 
+  /**
+   * Handle status toggle
+   */
+  handleStatusToggle(status) {
+    if (status === 'ONLINE_IDLE' && !this.state?.provider.isVerified) {
+      this.showToast('Necesitás completar tu verificación', 'warning');
+      actions.openModal('verification');
+      return;
+    }
+
+    actions.setProviderStatus(status);
+    
+    if (status === 'ONLINE_IDLE') {
+      this.showToast('Estás online', 'success');
+      this.startLocationTracking();
+    } else {
+      this.showToast('Estás offline', 'info');
+      this.stopLocationTracking();
+    }
+  }
+
+  /**
+   * Start location tracking
+   */
+  startLocationTracking() {
+    if (!navigator.geolocation) return;
+    
+    actions.setTracking(true);
+    
+    this.trackingInterval = setInterval(() => {
+      this.updateMapToCurrentPosition();
+    }, 30000); // Every 30 seconds
+  }
+
+  /**
+   * Stop location tracking
+   */
+  stopLocationTracking() {
+    actions.setTracking(false);
+    
+    if (this.trackingInterval) {
+      clearInterval(this.trackingInterval);
+      this.trackingInterval = null;
+    }
+  }
+
+  /**
+   * Check location permission
+   */
+  async checkLocationPermission() {
+    if (!navigator.permissions) return;
+    
     try {
-      await handleBusinessFormSubmit(event);
+      const result = await navigator.permissions.query({ name: 'geolocation' });
+      actions.setLocationPermission(result.state);
+      
+      result.addEventListener('change', () => {
+        actions.setLocationPermission(result.state);
+      });
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo guardar el setup comercial."));
+      console.warn('[MIMI] Permission check error:', error);
     }
-  });
+  }
 
-  document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
-    try {
-      const offerAction = event.target.closest("[data-offer-action]");
-      if (offerAction) {
-        await handleOfferAction(
-          offerAction.dataset.offerAction,
-          offerAction.dataset.offerId
-        );
-        return;
-      }
+  /**
+   * Handle accept offer
+   */
+  handleAcceptOffer() {
+    if (!this.state?.activeOffer) return;
 
-      const providerStatus = event.target.closest("[data-provider-status]");
-      if (providerStatus) {
-        await handleProviderStatusChange(providerStatus.dataset.providerStatus);
-        return;
-      }
+    // Create active service from offer
+    const service = {
+      id: this.state.activeOffer.id,
+      requestId: this.state.activeOffer.requestId,
+      status: 'ACCEPTED',
+      serviceType: this.state.activeOffer.serviceType,
+      clientName: this.state.activeOffer.clientName,
+      location: this.state.activeOffer.location,
+      price: this.state.activeOffer.price,
+      startedAt: Date.now()
+    };
 
-      const providerFlow = event.target.closest("[data-provider-flow]");
-      if (providerFlow) {
-        await handleProviderFlow(providerFlow.dataset.providerFlow);
-        return;
-      }
-
-      const businessAction = event.target.closest("[data-provider-business-action]");
-      if (businessAction) {
-        await handleBusinessAction(businessAction.dataset.providerBusinessAction);
-      }
-    } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo completar la acción."));
+    actions.setActiveService(service);
+    actions.clearActiveOffer();
+    actions.setProviderStatus('BOOKED_UPCOMING');
+    
+    this.showToast('¡Servicio aceptado!', 'success');
+    
+    // Clear timer
+    if (this.offerTimer) {
+      clearInterval(this.offerTimer);
+      this.offerTimer = null;
     }
-  });
-}
-
-function setupRealtime(
-  requestId = currentRequestId(),
-  conversationId = currentConversationId()
-) {
-  realtimeSubscription?.unsubscribe?.();
-  realtimeSubscription = null;
-
-  if (!state.session.userId) {
-    return;
   }
 
-  realtimeSubscription = subscribeToProviderRealtime({
-    userId: state.session.userId,
-    providerId: state.session.providerId,
-    requestId,
-    conversationId,
-    onNotification: async ({ new: payload }) => {
-      if (!payload) return;
-
-      setState((draft) => {
-        draft.notifications.items.unshift(payload);
-        draft.notifications.unreadCount =
-          (draft.notifications.unreadCount ?? 0) + 1;
-      });
-
-      playNotificationSound();
-    },
-    onMessage: ({ new: payload }) => {
-      if (!payload) return;
-
-      setState((draft) => {
-        const exists = draft.chat.messages.some((msg) => msg.id === payload.id);
-        if (!exists) {
-          draft.chat.messages.push(payload);
-        }
-
-        if (payload.sender_user_id !== draft.session.userId) {
-          draft.chat.unreadCount += 1;
-        }
-      });
-
-      playNotificationSound();
-    },
-    onTracking: ({ new: payload }) => {
-      if (!payload) return;
-
-      setState((draft) => {
-        draft.tracking.providerPosition = {
-          lat: payload.lat,
-          lng: payload.lng
-        };
-        draft.provider.availability.locationLabel =
-          "Ubicación actualizada en servicio";
-      });
-
-      updateProviderMapFromState();
-    },
-    onRequest: ({ new: payload }) => {
-      if (!payload) return;
-
-      setState((draft) => {
-        if (
-          draft.provider.activeService?.id === payload.id ||
-          draft.provider.activeService?.request_id === payload.id
-        ) {
-          draft.provider.activeService = {
-            ...draft.provider.activeService,
-            ...payload
-          };
-        }
-      });
-    },
-    onOffer: ({ new: payload }) => {
-      if (!payload) return;
-
-      setState((draft) => {
-        const exists = draft.provider.offers.some((offer) => offer.id === payload.id);
-        if (!exists) {
-          draft.provider.offers.unshift(payload);
-          draft.provider.stats.offers = draft.provider.offers.length;
-          draft.provider.offerDeadlineAt =
-            payload.expires_at ?? draft.provider.offerDeadlineAt;
-        }
-      });
-
-      playNotificationSound();
+  /**
+   * Handle reject offer
+   */
+  handleRejectOffer() {
+    actions.clearActiveOffer();
+    this.showToast('Oferta rechazada', 'info');
+    
+    // Clear timer
+    if (this.offerTimer) {
+      clearInterval(this.offerTimer);
+      this.offerTimer = null;
     }
-  });
-}
-function updateProgress() {
-  const total = 4;
-  const completed = document.querySelectorAll(".doc-status.ok").length;
-  const percent = (completed / total) * 100;
-
-  const bar = document.getElementById("docProgressBar");
-  if (bar) {
-    bar.style.width = percent + "%";
-  }
-}
-async function init() {
-  setActiveMode("provider");
-
-  subscribe(renderProviderScreen);
-  renderProviderScreen(state);
-  bindBasicControls();
-  registerInstallPrompt();
-  initMap("trackingMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
-
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => null);
   }
 
-  await bootstrapAsyncData();
+  /**
+   * Handle service action button
+   */
+  handleServiceAction() {
+    const service = this.state?.activeService;
+    if (!service) return;
 
-  if (window.location.hash && window.location.hash.includes("access_token")) {
-    history.replaceState(
-      {},
-      document.title,
-      window.location.pathname + window.location.search
-    );
+    const statusFlow = {
+      'ACCEPTED': { next: 'EN_ROUTE', text: 'En camino', btn: 'Llegué al domicilio' },
+      'EN_ROUTE': { next: 'ARRIVED', text: 'Llegaste', btn: 'Iniciar servicio' },
+      'ARRIVED': { next: 'IN_PROGRESS', text: 'Servicio iniciado', btn: 'Finalizar servicio' },
+      'IN_PROGRESS': { next: 'COMPLETED', text: 'Servicio completado', btn: null }
+    };
+
+    const current = statusFlow[service.status];
+    if (!current) return;
+
+    if (current.next === 'COMPLETED') {
+      // Complete service
+      actions.clearActiveService();
+      actions.setProviderStatus('ONLINE_IDLE');
+      this.showToast('Servicio completado', 'success');
+      
+      // Update stats
+      const completed = (this.state?.provider.stats.completedServices || 0) + 1;
+      actions.updateState({
+        provider: {
+          ...this.state.provider,
+          stats: { ...this.state.provider.stats, completedServices: completed }
+        }
+      });
+    } else {
+      // Advance status
+      actions.updateServiceStatus(current.next);
+      this.showToast(current.text, 'success');
+    }
   }
 
-  startProviderTrackingLoop();
-  startProviderPresenceLoop();
-  setupRealtime();
-  renderProviderScreen(state);
+  /**
+   * Send chat message
+   */
+  sendChatMessage() {
+    const input = this.elements.chatInput;
+    const text = input?.value.trim();
+    
+    if (!text) return;
 
-  authSubscription =
-    subscribeToAuthChanges?.(async (event, session) => {
-      if ((event === "SIGNED_IN" || event === "TOKEN_REFRESHED") && session) {
-        await redirectAfterLoginByRole(session);
+    const message = {
+      id: Date.now(),
+      text,
+      type: 'outgoing',
+      timestamp: Date.now()
+    };
+
+    actions.addMessage(message);
+    input.value = '';
+    
+    this.renderChatMessages();
+
+    // Simulate reply (for demo)
+    setTimeout(() => {
+      const reply = {
+        id: Date.now() + 1,
+        text: 'Mensaje recibido. Gracias.',
+        type: 'incoming',
+        timestamp: Date.now()
+      };
+      actions.addMessage(reply);
+      this.renderChatMessages();
+    }, 2000);
+  }
+
+  /**
+   * Render chat messages
+   */
+  renderChatMessages() {
+    const container = this.elements.chatMessages;
+    if (!container) return;
+
+    const messages = this.state?.chat.messages || [];
+    
+    container.innerHTML = messages.map(msg => `
+      <div class="chat-message ${msg.type}">
+        ${msg.text}
+        <div class="chat-message-time">
+          ${new Date(msg.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </div>
+    `).join('');
+    
+    container.scrollTop = container.scrollHeight;
+  }
+
+  /**
+   * Render scheduled services
+   */
+  renderScheduledServices() {
+    const container = this.elements.scheduledList;
+    if (!container) return;
+
+    const services = this.state?.scheduledServices || [];
+    
+    if (services.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>No tenés servicios programados</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = services.map(service => `
+      <div class="scheduled-item" data-id="${service.id}">
+        <div class="scheduled-time">
+          ${new Date(service.scheduledFor).toLocaleString('es-AR', { 
+            weekday: 'short', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })}
+        </div>
+        <div class="scheduled-service">${service.serviceType}</div>
+        <div class="scheduled-location">${service.location}</div>
+        <div class="scheduled-meta">
+          <span class="scheduled-price">$${service.price?.toLocaleString('es-AR') || 'A convenir'}</span>
+          <span class="scheduled-distance">${service.distance || ''}</span>
+        </div>
+        <div class="scheduled-actions">
+          <button class="scheduled-btn" onclick="app.showServiceDetail('${service.id}')">Ver detalle</button>
+          <button class="scheduled-btn primary" onclick="app.prepareService('${service.id}')">Preparar</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  /**
+   * Render verification status
+   */
+  renderVerificationStatus() {
+    const status = this.state?.provider.verificationStatus;
+    const card = this.elements.verificationCard;
+    const statusEl = this.elements.verificationStatus;
+    const btn = this.elements.verificationBtn;
+    
+    if (!card || !statusEl || !btn) return;
+
+    if (status === 'approved') {
+      card.classList.add('verified');
+      statusEl.innerHTML = '<span class="status-icon">✅</span><span class="status-text">Verificado</span>';
+      btn.textContent = 'Ver documentos';
+    } else if (status === 'in_review') {
+      statusEl.innerHTML = '<span class="status-icon">⏳</span><span class="status-text">En revisión</span>';
+      btn.textContent = 'Ver progreso';
+    } else {
+      statusEl.innerHTML = '<span class="status-icon">⚠️</span><span class="status-text">Pendiente</span>';
+      btn.textContent = 'Completar ahora';
+    }
+  }
+
+  /**
+   * Render stats
+   */
+  renderStats() {
+    const stats = this.state?.provider.stats;
+    if (!stats) return;
+
+    if (this.elements.statRating) {
+      this.elements.statRating.textContent = stats.rating.toFixed(1);
+    }
+    if (this.elements.statCompleted) {
+      this.elements.statCompleted.textContent = stats.completedServices;
+    }
+    if (this.elements.statOffers) {
+      this.elements.statOffers.textContent = stats.totalOffers;
+    }
+    
+    // Drawer stats
+    if (this.elements.drawerRating) {
+      this.elements.drawerRating.textContent = stats.rating.toFixed(1);
+    }
+    if (this.elements.drawerServices) {
+      this.elements.drawerServices.textContent = stats.completedServices;
+    }
+    if (this.elements.drawerEarnings) {
+      this.elements.drawerEarnings.textContent = `$${(stats.earnings || 0).toLocaleString('es-AR')}`;
+    }
+  }
+
+  /**
+   * Main render function
+   */
+  render() {
+    if (!this.state) return;
+
+    this.renderHeader();
+    this.renderOnlineButton();
+    this.renderOfferCard();
+    this.renderActiveService();
+    this.renderBottomSheet();
+    this.renderDrawer();
+    this.renderNotifications();
+    this.renderChat();
+    this.renderModal();
+  }
+
+  /**
+   * Render header
+   */
+  renderHeader() {
+    const status = this.state.provider.status;
+    const isOnline = status !== 'OFFLINE';
+
+    // Status badge
+    if (this.elements.statusBadge) {
+      this.elements.statusBadge.textContent = isOnline ? 'ONLINE' : 'OFFLINE';
+      this.elements.statusBadge.classList.toggle('online', isOnline);
+    }
+
+    // Status dot
+    if (this.elements.statusDot) {
+      this.elements.statusDot.classList.toggle('online', isOnline);
+    }
+
+    // Status text
+    if (this.elements.statusText) {
+      const statusLabels = {
+        'OFFLINE': 'Desconectado',
+        'ONLINE_IDLE': 'Online - Esperando',
+        'INVITED': 'Nueva oferta',
+        'BOOKED_UPCOMING': 'Servicio reservado',
+        'EN_ROUTE': 'En camino',
+        'ARRIVED': 'En destino',
+        'IN_SERVICE': 'En servicio'
+      };
+      this.elements.statusText.textContent = statusLabels[status] || 'Desconectado';
+    }
+  }
+
+  /**
+   * Render online button
+   */
+  renderOnlineButton() {
+    const isOffline = this.state.provider.status === 'OFFLINE';
+    const hasActiveService = !!this.state.activeService;
+    
+    if (this.elements.onlineButtonContainer) {
+      this.elements.onlineButtonContainer.classList.toggle('hidden', !isOffline || hasActiveService);
+    }
+  }
+
+  /**
+   * Render offer card
+   */
+  renderOfferCard() {
+    const offer = this.state.activeOffer;
+    
+    if (!offer) {
+      if (this.elements.offerCard) this.elements.offerCard.hidden = true;
+      return;
+    }
+
+    if (this.elements.offerCard) {
+      this.elements.offerCard.hidden = false;
+      
+      if (this.elements.offerService) {
+        this.elements.offerService.textContent = offer.serviceType;
+      }
+      if (this.elements.offerLocation) {
+        this.elements.offerLocation.textContent = offer.location;
+      }
+      if (this.elements.offerClient) {
+        this.elements.offerClient.textContent = `Cliente: ${offer.clientName}`;
+      }
+      if (this.elements.offerPrice) {
+        this.elements.offerPrice.textContent = offer.price 
+          ? `$${offer.price.toLocaleString('es-AR')} estimado`
+          : 'Precio a convenir';
+      }
+    }
+
+    // Start countdown timer
+    this.startOfferTimer(offer);
+  }
+
+  /**
+   * Start offer timer
+   */
+  startOfferTimer(offer) {
+    if (this.offerTimer) {
+      clearInterval(this.offerTimer);
+    }
+
+    const updateTimer = () => {
+      if (!this.state?.activeOffer) {
+        clearInterval(this.offerTimer);
         return;
       }
 
-      if (event === "SIGNED_OUT") {
-        setActiveMode("provider");
-        window.location.href = "./prestador.html";
+      const expiresAt = new Date(offer.expiresAt).getTime();
+      const remaining = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
+
+      if (this.elements.offerTimer) {
+        this.elements.offerTimer.textContent = `${remaining}s`;
       }
-    }) ?? null;
-}
 
-init().catch((error) => {
-  setState((draft) => {
-    draft.meta.error = normalizeAuthError(
-      error,
-      "La app cargó con fallback local. Revisá la configuración de Supabase."
-    );
-    draft.meta.info = null;
-  });
-});
+      if (remaining <= 0) {
+        actions.clearActiveOffer();
+        clearInterval(this.offerTimer);
+        this.showToast('La oferta expiró', 'warning');
+      }
+    };
 
-window.addEventListener("beforeunload", () => {
-  stopProviderTrackingLoop();
-  stopProviderPresenceLoop();
-  realtimeSubscription?.unsubscribe?.();
-  authSubscription?.unsubscribe?.();
-});
-let uploading = false;
-async function openCamera(docType) {
-  let stream;
-  let modal;
+    updateTimer();
+    this.offerTimer = setInterval(updateTimer, 1000);
+  }
 
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user" }
+  /**
+   * Render active service
+   */
+  renderActiveService() {
+    const service = this.state.activeService;
+    
+    if (!service) {
+      if (this.elements.activeServiceCard) this.elements.activeServiceCard.hidden = true;
+      return;
+    }
+
+    if (this.elements.activeServiceCard) {
+      this.elements.activeServiceCard.hidden = false;
+      
+      // Status badge
+      const statusLabels = {
+        'ACCEPTED': 'Aceptado',
+        'EN_ROUTE': 'En camino',
+        'ARRIVED': 'Llegaste',
+        'IN_PROGRESS': 'En curso'
+      };
+      
+      if (this.elements.serviceStatusBadge) {
+        this.elements.serviceStatusBadge.textContent = statusLabels[service.status] || service.status;
+      }
+      
+      if (this.elements.activeServiceType) {
+        this.elements.activeServiceType.textContent = service.serviceType;
+      }
+      if (this.elements.activeServiceLocation) {
+        this.elements.activeServiceLocation.textContent = service.location;
+      }
+      if (this.elements.activeServiceClient) {
+        this.elements.activeServiceClient.textContent = service.clientName;
+      }
+      
+      // Button text
+      const buttonLabels = {
+        'ACCEPTED': 'Llegué al domicilio',
+        'EN_ROUTE': 'Llegué al domicilio',
+        'ARRIVED': 'Iniciar servicio',
+        'IN_PROGRESS': 'Finalizar servicio'
+      };
+      
+      if (this.elements.serviceActionBtn) {
+        this.elements.serviceActionBtn.textContent = buttonLabels[service.status] || 'Acción';
+      }
+    }
+  }
+
+  /**
+   * Render bottom sheet
+   */
+  renderBottomSheet() {
+    const isOnline = this.state.provider.status !== 'OFFLINE';
+    
+    // Sheet status
+    if (this.elements.sheetStatusDot) {
+      this.elements.sheetStatusDot.classList.toggle('online', isOnline);
+      this.elements.sheetStatusDot.classList.toggle('offline', !isOnline);
+    }
+    
+    if (this.elements.sheetStatusText) {
+      this.elements.sheetStatusText.textContent = isOnline ? 'Online' : 'Offline';
+    }
+
+    // Status toggle
+    this.elements.statusToggleModern?.querySelectorAll('.toggle-option').forEach(btn => {
+      btn.classList.toggle('active', 
+        (btn.dataset.status === 'ONLINE_IDLE' && isOnline) ||
+        (btn.dataset.status === 'OFFLINE' && !isOnline)
+      );
     });
 
-    modal = document.createElement("div");
-    modal.className = "camera-modal";
-    modal.innerHTML = `
-      <div class="camera-box">
-        <video autoplay playsinline></video>
-        <button id="captureBtn" type="button">Capturar</button>
-        <button id="cancelCamera" type="button">Cancelar</button>
-      </div>
-    `;
+    // Badges
+    if (this.elements.notificationBadge) {
+      this.elements.notificationBadge.textContent = this.state.notifications.unreadCount;
+      this.elements.notificationBadge.hidden = this.state.notifications.unreadCount === 0;
+    }
+    
+    if (this.elements.chatBadge) {
+      this.elements.chatBadge.textContent = this.state.chat.unreadCount;
+      this.elements.chatBadge.hidden = this.state.chat.unreadCount === 0;
+    }
+  }
 
-    document.body.appendChild(modal);
+  /**
+   * Render drawer
+   */
+  renderDrawer() {
+    const isOpen = this.state.ui.drawerOpen;
+    
+    if (this.elements.sideDrawer) {
+      this.elements.sideDrawer.classList.toggle('open', isOpen);
+      this.elements.sideDrawer.setAttribute('aria-hidden', !isOpen);
+    }
+    
+    if (this.elements.drawerOverlay) {
+      this.elements.drawerOverlay.hidden = !isOpen;
+    }
 
-    const video = modal.querySelector("video");
-    video.srcObject = stream;
-    await video.play();
+    // User info
+    if (this.state.session.userName && this.elements.drawerName) {
+      this.elements.drawerName.textContent = this.state.session.userName;
+    }
+    if (this.state.session.userEmail && this.elements.drawerEmail) {
+      this.elements.drawerEmail.textContent = this.state.session.userEmail;
+    }
+    if (this.state.session.userName && this.elements.drawerInitials) {
+      const initials = this.state.session.userName
+        .split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+      this.elements.drawerInitials.textContent = initials;
+    }
+  }
 
-    modal.querySelector("#cancelCamera").onclick = () => {
-      stream.getTracks().forEach((track) => track.stop());
-      modal.remove();
+  /**
+   * Render notifications
+   */
+  renderNotifications() {
+    const isOpen = this.state.ui.notificationDrawerOpen;
+    
+    if (this.elements.notificationsDrawer) {
+      this.elements.notificationsDrawer.classList.toggle('open', isOpen);
+      this.elements.notificationsDrawer.setAttribute('aria-hidden', !isOpen);
+    }
+
+    // Render list
+    const items = this.state.notifications.items || [];
+    if (this.elements.notificationsList) {
+      if (items.length === 0) {
+        this.elements.notificationsList.innerHTML = `
+          <div class="empty-state">
+            <p>No tenés notificaciones</p>
+          </div>
+        `;
+      } else {
+        this.elements.notificationsList.innerHTML = items.map(item => `
+          <div class="notification-item ${item.unread ? 'unread' : ''}">
+            <div class="notification-icon">${item.icon || '🔔'}</div>
+            <div class="notification-content">
+              <div class="notification-title">${item.title}</div>
+              <div class="notification-text">${item.text}</div>
+              <div class="notification-time">${new Date(item.timestamp).toLocaleString('es-AR')}</div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+  /**
+   * Render chat
+   */
+  renderChat() {
+    const isOpen = this.state.ui.chatDrawerOpen;
+    
+    if (this.elements.chatDrawer) {
+      this.elements.chatDrawer.classList.toggle('open', isOpen);
+      this.elements.chatDrawer.setAttribute('aria-hidden', !isOpen);
+    }
+
+    if (isOpen) {
+      this.renderChatMessages();
+    }
+  }
+
+  /**
+   * Render modal
+   */
+  renderModal() {
+    const isOpen = this.state.ui.modalOpen;
+    const modal = this.state.ui.currentModal;
+    
+    if (this.elements.verificationModal) {
+      this.elements.verificationModal.hidden = !isOpen || modal !== 'verification';
+    }
+  }
+
+  /**
+   * Show toast notification
+   */
+  showToast(message, type = 'info') {
+    const container = this.elements.toastContainer;
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    container.appendChild(toast);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-20px)';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  /**
+   * Setup install prompt
+   */
+  setupInstallPrompt() {
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      actions.updateState({ ui: { installPrompt: e } });
+      
+      // Show banner after 2 seconds
+      setTimeout(() => {
+        if (this.elements.installBanner) {
+          this.elements.installBanner.hidden = false;
+        }
+      }, 2000);
+    });
+
+    window.addEventListener('appinstalled', () => {
+      actions.updateState({ ui: { installPrompt: null } });
+      if (this.elements.installBanner) {
+        this.elements.installBanner.hidden = true;
+      }
+      this.showToast('App instalada correctamente', 'success');
+    });
+  }
+
+  /**
+   * Handle install
+   */
+  async handleInstall() {
+    const prompt = this.state?.ui.installPrompt;
+    if (!prompt) return;
+
+    prompt.prompt();
+    const result = await prompt.userChoice;
+    
+    if (result.outcome === 'accepted') {
+      this.showToast('Instalando app...', 'success');
+    }
+    
+    actions.updateState({ ui: { installPrompt: null } });
+  }
+
+  /**
+   * Start background sync
+   */
+  startBackgroundSync() {
+    // Simulate receiving offers (for demo)
+    setInterval(() => {
+      if (this.state?.provider.status === 'ONLINE_IDLE' && !this.state?.activeOffer && !this.state?.activeService) {
+        // 10% chance every 30 seconds to receive an offer
+        if (Math.random() < 0.1) {
+          this.simulateOffer();
+        }
+      }
+    }, 30000);
+
+    // Check distance alerts for scheduled services
+    setInterval(() => {
+      this.checkDistanceAlerts();
+    }, 60000);
+  }
+
+  /**
+   * Simulate receiving an offer (demo)
+   */
+  simulateOffer() {
+    const services = ['Plomería', 'Electricidad', 'Limpieza', 'Gasista', 'Jardinería'];
+    const locations = ['Nueva Córdoba', 'Alberdi', 'General Paz', 'Centro', 'Cerro de las Rosas'];
+    
+    const offer = {
+      id: `offer_${Date.now()}`,
+      requestId: `req_${Date.now()}`,
+      serviceType: services[Math.floor(Math.random() * services.length)],
+      clientName: ['María', 'Juan', 'Laura', 'Carlos', 'Ana'][Math.floor(Math.random() * 5)],
+      location: locations[Math.floor(Math.random() * locations.length)],
+      price: [12000, 15000, 8000, 20000, 10000][Math.floor(Math.random() * 5)],
+      expiresAt: new Date(Date.now() + 15000).toISOString(),
+      createdAt: new Date().toISOString()
     };
 
-    modal.querySelector("#captureBtn").onclick = async () => {
-      if (uploading) return;
+    actions.setActiveOffer(offer);
+    actions.setProviderStatus('INVITED');
+    
+    // Show notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Nueva solicitud de servicio', {
+        body: `${offer.serviceType} · ${offer.location}`,
+        icon: '/assets/icon-192.png',
+        badge: '/assets/icon-96.png',
+        tag: offer.id,
+        requireInteraction: true
+      });
+    }
 
-      if (docType === "selfie") {
-        try {
-          const createResult = await invokeFunction("svc-create-liveness-session");
-          const sessionId = createResult?.sessionId ?? createResult?.session_id;
+    // Play sound (if available)
+    this.playNotificationSound();
+  }
 
-          if (!sessionId) {
-            setInfo(null, "No se pudo iniciar la validación de vida.");
-            return;
-          }
+  /**
+   * Play notification sound
+   */
+  playNotificationSound() {
+    try {
+      const audio = new Audio('/assets/notification.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(() => {});
+    } catch (e) {
+      // Ignore audio errors
+    }
+  }
 
-          const livenessResult = await invokeFunction("svc-get-liveness-result", {
-            sessionId
-          });
-
-          const confidence = Number(
-            livenessResult?.confidence ??
-            livenessResult?.Confidence ??
-            0
-          );
-
-          if (confidence < 70) {
-            setInfo(null, "No pudimos validar que seas una persona real. Intentá nuevamente.");
-            return;
-          }
-        } catch (error) {
-          console.error("[MIMI Servicios] Liveness error:", error);
-          setInfo(null, "Error validando vida. Intentá nuevamente.");
-          return;
-        }
+  /**
+   * Check distance alerts
+   */
+  checkDistanceAlerts() {
+    const scheduled = this.state?.scheduledServices || [];
+    const now = Date.now();
+    
+    scheduled.forEach(service => {
+      const serviceTime = new Date(service.scheduledFor).getTime();
+      const timeUntil = serviceTime - now;
+      
+      // If service is within 1 hour
+      if (timeUntil > 0 && timeUntil < 60 * 60 * 1000) {
+        this.showDistanceAlert(service);
       }
+    });
+  }
 
-      uploading = true;
-
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth || 720;
-      canvas.height = video.videoHeight || 720;
-
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // 🔹 Antifraude gratis: control básico de brillo/calidad
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      let totalBrightness = 0;
-
-      for (let i = 0; i < imageData.length; i += 4) {
-        const r = imageData[i];
-        const g = imageData[i + 1];
-        const b = imageData[i + 2];
-        totalBrightness += (r + g + b) / 3;
+  /**
+   * Show distance alert
+   */
+  showDistanceAlert(service) {
+    if (this.elements.distanceAlert) {
+      this.elements.distanceAlert.hidden = false;
+      
+      if (this.elements.alertTitle) {
+        this.elements.alertTitle.textContent = 'Servicio próximo';
       }
-
-      const avgBrightness = totalBrightness / (imageData.length / 4);
-
-      if (avgBrightness < 40) {
-        uploading = false;
-        setInfo(null, "La imagen está muy oscura. Buscá mejor luz e intentá nuevamente.");
-        return;
+      if (this.elements.alertText) {
+        this.elements.alertText.textContent = `${service.serviceType} · ${new Date(service.scheduledFor).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
       }
+    }
 
-      if (avgBrightness > 220) {
-        uploading = false;
-        setInfo(null, "La imagen está demasiado clara. Evitá luz directa e intentá nuevamente.");
-        return;
+    // Auto hide after 10 seconds
+    setTimeout(() => {
+      if (this.elements.distanceAlert) {
+        this.elements.distanceAlert.hidden = true;
       }
+    }, 10000);
+  }
 
-      canvas.toBlob(async (blob) => {
-        if (!blob) {
-          uploading = false;
-          setInfo(null, "No se pudo capturar la imagen.");
-          return;
-        }
+  /**
+   * On app foreground
+   */
+  onAppForeground() {
+    console.log('[MIMI] App in foreground');
+    
+    // Refresh location
+    this.updateMapToCurrentPosition();
+    
+    // Check if offer expired
+    if (this.state?.activeOffer && !isOfferValid(this.state.activeOffer)) {
+      actions.clearActiveOffer();
+    }
+  }
 
-        const file = new File([blob], `${docType}.jpg`, {
-          type: "image/jpeg"
-        });
+  /**
+   * On app background
+   */
+  onAppBackground() {
+    console.log('[MIMI] App in background');
+    // State is persisted automatically
+  }
 
-        const preview = document.getElementById(`preview-${docType}`);
-        const status = document.getElementById(`status-${docType}`);
+  /**
+   * Handle logout
+   */
+  handleLogout() {
+    if (confirm('¿Seguro que querés cerrar sesión?')) {
+      localStorage.removeItem(STORAGE_KEYS.SESSION);
+      actions.clearSession();
+      window.location.href = '/index.html';
+    }
+  }
 
-        const reader = new FileReader();
-        reader.onload = () => {
-          if (preview) {
-            preview.innerHTML = `<img src="${reader.result}" alt="Vista previa ${docType}" />`;
-            preview.classList.add("visible");
-          }
-        };
-        reader.readAsDataURL(file);
+  /**
+   * Handle wizard next
+   */
+  handleWizardNext() {
+    const progress = this.state?.provider.verificationProgress || 0;
+    const newProgress = Math.min(100, progress + 25);
+    
+    actions.setVerificationProgress(newProgress);
+    
+    // Update UI
+    if (this.elements.wizardProgress) {
+      this.elements.wizardProgress.style.width = `${newProgress}%`;
+    }
+    
+    // Show next step
+    const currentStep = Math.floor(progress / 25) + 1;
+    document.querySelectorAll('.wizard-step').forEach((step, index) => {
+      step.classList.toggle('active', index === currentStep);
+    });
+    
+    // If complete
+    if (newProgress >= 100) {
+      actions.setVerificationStatus('in_review');
+      setTimeout(() => {
+        actions.closeModal();
+        this.showToast('Verificación enviada', 'success');
+      }, 1500);
+    }
+  }
 
-        if (status) {
-          status.textContent = "Subiendo...";
-          status.className = "doc-status pending";
-        }
+  /**
+   * Handle wizard prev
+   */
+  handleWizardPrev() {
+    // Not implemented for simplicity
+  }
 
-        try {
-          await uploadProviderDocument({
-            providerId: state.session.providerId,
-            documentType: docType,
-            file
-          });
+  /**
+   * Show service detail
+   */
+  showServiceDetail(id) {
+    this.showToast(`Detalle del servicio ${id}`, 'info');
+  }
 
-          if (status) {
-            status.textContent = "✅ Subido";
-            status.className = "doc-status ok";
-          }
-
-          updateProgress();
-
-          stream.getTracks().forEach((track) => track.stop());
-          modal.remove();
-        } catch (err) {
-          console.error("[MIMI Servicios] Upload doc error:", err);
-
-          if (status) {
-            status.textContent = "❌ Error";
-            status.className = "doc-status error";
-          }
-        } finally {
-          uploading = false;
-        }
-      }, "image/jpeg", 0.9);
-    };
-  } catch (err) {
-    console.error(err);
-    stream?.getTracks()?.forEach((track) => track.stop());
-    modal?.remove();
-    setInfo(null, "No pudimos abrir la cámara. Revisá permisos del navegador.");
+  /**
+   * Prepare service
+   */
+  prepareService(id) {
+    this.showToast('Preparando servicio...', 'success');
+    actions.setProviderStatus('EN_ROUTE');
+    
+    // Find service and set as active
+    const service = this.state?.scheduledServices.find(s => s.id === id);
+    if (service) {
+      actions.setActiveService({
+        ...service,
+        status: 'EN_ROUTE',
+        startedAt: Date.now()
+      });
+    }
   }
 }
 
+// ============================================
+// INITIALIZATION
+// ============================================
 
+// Create global app instance
+const app = new MimiProviderApp();
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => app.init());
+} else {
+  app.init();
+}
+
+// Export for global access
+window.app = app;
+
+// ============================================
+// SERVICE WORKER REGISTRATION
+// ============================================
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw-2026.js')
+      .then(registration => {
+        console.log('[MIMI] SW registered:', registration);
+      })
+      .catch(error => {
+        console.log('[MIMI] SW registration failed:', error);
+      });
+  });
+}
+
+// ============================================
+// NOTIFICATION PERMISSION
+// ============================================
+
+if ('Notification' in window && Notification.permission === 'default') {
+  // Request permission after user interaction
+  const requestNotificationPermission = () => {
+    Notification.requestPermission().then(permission => {
+      if (permission === 'granted') {
+        console.log('[MIMI] Notification permission granted');
+      }
+    });
+  };
+  
+  document.addEventListener('click', requestNotificationPermission, { once: true });
+}
+
+// Helper function for offer validation
+function isOfferValid(offer) {
+  if (!offer) return false;
+  if (offer.expiresAt && new Date(offer.expiresAt).getTime() < Date.now()) return false;
+  return true;
+}
