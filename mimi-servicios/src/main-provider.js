@@ -2186,7 +2186,17 @@ handleWizardNext() {
   this.showWizardStep(current + 1);
 }
 
+handleWizardPrev() {
+  const activeStep = document.querySelector(".wizard-step.active");
+  const current = Number(activeStep?.id?.replace("step", "") ?? 1);
+
+  if (current <= 1) return;
+
+  this.showWizardStep(current - 1);
 }
+
+}
+
 // ============================================
 // INITIALIZATION
 // ============================================
