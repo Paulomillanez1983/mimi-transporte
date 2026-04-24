@@ -3083,4 +3083,21 @@ body {
     border-color: #fff !important;
   }
 }
+#onlineButtonContainer,
+#goOnlineButton {
+  pointer-events: auto !important;
+}
+
+#onlineButtonContainer {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom) + 120px);
+  z-index: 9000;
+}
+
+#goOnlineButton {
+  position: relative;
+  z-index: 9001;
+}
 
