@@ -173,6 +173,11 @@ class MimiProviderApp {
       
       // Services chips
       servicesChips: document.getElementById('servicesChips'),
+      basePrice: document.getElementById("basePrice"),
+      hourPrice: document.getElementById("hourPrice"),
+      jobPrice: document.getElementById("jobPrice"),
+      pricingModeHourly: document.getElementById("pricingModeHourly"),
+      pricingModeJob: document.getElementById("pricingModeJob"),
       
       // Stats
       statRating: document.getElementById('statRating'),
