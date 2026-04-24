@@ -452,6 +452,7 @@ showMapFallback() {
     this.elements.mapFallback.hidden = false;
   }
 }
+  
   /**
    * Update map to current position
    */
@@ -485,6 +486,25 @@ if (this.map) {
     servicePosition
   });
 }        
+supportsWebGLMap() {
+  try {
+    const canvas = document.createElement("canvas");
+
+    if (!window.WebGLRenderingContext) {
+      return false;
+    }
+
+    const gl =
+      canvas.getContext("webgl", { antialias: true, alpha: true }) ||
+      canvas.getContext("experimental-webgl", { antialias: true, alpha: true });
+
+    return !!gl;
+  } catch (_) {
+    return false;
+  }
+}
+
+        
       actions.setLocation({
         lat: latitude,
          lng: longitude,
