@@ -17,21 +17,10 @@ async function requireSession() {
 
   const { data, error } = await supabase.auth.getSession();
 
-if (error) throw error;
+  if (error) throw error;
 
-const normalized = normalizeProviderDocuments([data])[0] ?? data;
+  const session = data?.session ?? null;
 
-if (["dni_front", "selfie"].includes(safeDocumentType)) {
-  try {
-    await invokeFunction("svc-verify-provider-identity", {
-      provider_id: providerId
-    });
-  } catch (verifyError) {
-    console.warn("[MIMI Servicios] Verificación IA pendiente:", verifyError);
-  }
-}
-
-return normalized;
   if (!session?.access_token) {
     const authError = new Error("AUTH_REQUIRED");
     authError.code = "AUTH_REQUIRED";
@@ -39,6 +28,14 @@ return normalized;
   }
 
   return session;
+}
+function normalizePricingMode(value) {
+  const mode = String(value ?? "").trim().toUpperCase();
+
+  if (mode === "FIXED") return "FIXED";
+  if (mode === "POR_HORA" || mode === "HOURLY") return "HOURLY";
+
+  return "HOURLY";
 }
 
 export async function invokeFunction(functionName, body = {}) {
@@ -325,7 +322,7 @@ export async function createRequest(payload = {}) {
   const data = await invokeFunction(appConfig.functions.createRequest, {
     category_id: payload.categoryId,
     selected_provider_id: payload.selectedProviderId,
-    address: payload.address,
+    address_text: payload.address,
     service_lat: payload.serviceLat,
     service_lng: payload.serviceLng,
     request_type: payload.requestType,
@@ -442,7 +439,7 @@ export async function loadOffers(providerId) {
     query
       .select("*")
       .eq("provider_id", providerId)
-      .in("status", ["PENDING", "SENT"])
+      .in("status", ["PENDING"])
       .order("created_at", { ascending: false })
       .limit(20)
   );
@@ -644,7 +641,7 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
 
   const profileInput = {
     provider_id: providerId,
-    pricing_mode: payload.pricingMode ?? "POR_HORA",
+    pricing_mode: normalizePricingMode(payload.pricingMode),
     accepts_immediate: Boolean(payload.acceptsImmediate),
     accepts_scheduled: Boolean(payload.acceptsScheduled),
     max_hours_per_service: Number(payload.maxHoursPerService ?? 8),
@@ -884,7 +881,7 @@ export async function loadClientRequestInsights(requestId, providerId = null) {
       query
         .select("*")
         .eq("request_id", requestId)
-        .order("rank_score", { ascending: false })
+        .order("rank_position", { ascending: true })
         .limit(10)
     ),
 
