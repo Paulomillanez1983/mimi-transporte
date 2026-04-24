@@ -17,18 +17,6 @@ import {
 
 import { renderProviderDashboard } from "./ui/render-provider.js";
 import { getSupabaseClient } from "./services/supabase.js";
-import {
-  bootstrapSession,
-  invokeFunction,
-  loadActiveRequest,
-  loadNotifications,
-  loadOffers,
-  loadProviderWorkspace,
-  getProviderDashboard, // 🔥 AGREGAR
-  signOut,
-  updateProviderStatus
-} from "./services/service-api.js";
-
 // ============================================
 // APP CONTROLLER
 // ============================================
