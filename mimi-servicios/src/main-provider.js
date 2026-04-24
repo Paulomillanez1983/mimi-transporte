@@ -12,7 +12,7 @@ import {
   STORAGE_KEYS 
 } from './state/app-state.js';
 import { invokeFunction } from "./services/service-api.js";
-import { supabase } from "./services/supabase.js";
+import { getSupabaseClient } from "./services/supabase.js";
 
 // ============================================
 // APP CONTROLLER
@@ -1280,6 +1280,8 @@ this.renderChatMessages();
   }
 subscribeRealtime() {
   try {
+    const supabase = getSupabaseClient();
+
     if (!supabase?.channel) {
       console.warn("[MIMI] Supabase realtime client not available");
       return;
@@ -1304,8 +1306,8 @@ subscribeRealtime() {
   } catch (err) {
     console.error("[MIMI] Realtime error:", err);
   }
-}  
-onNotification(payload) {
+}
+  onNotification(payload) {
   const notif = payload?.new;
   if (!notif) return;
 
