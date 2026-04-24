@@ -565,3 +565,60 @@ a:hover {
     color: black;
   }
 }
+/* ============================================
+   MIMI MOBILE FIX - APP SHELL 2026
+   ============================================ */
+html,
+body {
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+body {
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+#app,
+.app-container {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  :root {
+    --text-xs: 0.6875rem;
+    --text-sm: 0.78rem;
+    --text-base: 0.875rem;
+    --text-lg: 1rem;
+    --text-xl: 1.125rem;
+    --text-2xl: 1.35rem;
+    --text-3xl: 1.6rem;
+
+    --space-5: 16px;
+    --space-6: 18px;
+    --space-8: 24px;
+    --space-10: 30px;
+    --space-12: 36px;
+  }
+}
