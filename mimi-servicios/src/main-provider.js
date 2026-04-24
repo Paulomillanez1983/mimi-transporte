@@ -290,6 +290,13 @@ selfieStatus: document.getElementById("selfieStatus"),
       const defaultCenter = [-64.1888, -31.4201]; // Córdoba, Argentina
       
 this.map = initMap("map", defaultCenter, 14);
+      setTimeout(() => {
+  this.map?.resize?.();
+}, 300);
+
+window.addEventListener("resize", () => {
+  this.map?.resize?.();
+});
       
       this.map.on('load', () => {
         console.log('[MIMI] Map loaded');
