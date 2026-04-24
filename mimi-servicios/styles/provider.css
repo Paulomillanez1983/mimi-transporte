@@ -2246,12 +2246,14 @@ body {
   white-space: nowrap;
   border-width: 0;
 }
-/* ===== FIX MAPA MOBILE ===== */
+/* ===== FIX MAPA MOBILE PRO ===== */
 
-html,
-body {
+#app,
+.app-container {
   width: 100%;
+  height: 100dvh;
   min-height: 100dvh;
+  overflow: hidden;
 }
 
 .map-background {
@@ -2267,16 +2269,17 @@ body {
 .map-surface,
 #map {
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   min-height: 100dvh;
   display: block;
 }
 
-.maplibregl-map {
-  width: 100%;
-  height: 100%;
+.map-fallback {
+  z-index: 1;
 }
 
+.maplibregl-map,
+.maplibregl-canvas-container,
 .maplibregl-canvas {
   width: 100% !important;
   height: 100% !important;
