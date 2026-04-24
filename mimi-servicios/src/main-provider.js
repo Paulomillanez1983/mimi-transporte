@@ -12,6 +12,7 @@ import {
   STORAGE_KEYS 
 } from './state/app-state.js';
 import { invokeFunction } from "./services/service-api.js";
+import { supabase } from "./services/supabase.js";
 
 // ============================================
 // APP CONTROLLER
@@ -1279,14 +1280,12 @@ this.renderChatMessages();
   }
 subscribeRealtime() {
   try {
-    const supabaseClient = window.mimiSupabase || window.supabaseClient || window.sb;
-
-    if (!supabaseClient?.channel) {
+    if (!supabase?.channel) {
       console.warn("[MIMI] Supabase realtime client not available");
       return;
     }
 
-    const channel = supabaseClient
+    const channel = supabase
       .channel("mimi-notifications")
       .on(
         "postgres_changes",
@@ -1297,14 +1296,15 @@ subscribeRealtime() {
         },
         (payload) => this.onNotification(payload)
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[MIMI] Realtime status:", status);
+      });
 
     console.log("[MIMI] Realtime notifications subscribed", channel);
   } catch (err) {
     console.error("[MIMI] Realtime error:", err);
   }
-}
-  
+}  
 onNotification(payload) {
   const notif = payload?.new;
   if (!notif) return;
