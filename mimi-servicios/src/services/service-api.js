@@ -980,11 +980,10 @@ export async function getProviderDashboard(providerId) {
     .not("status", "in", '("COMPLETED","CANCELLED")')
     .limit(1);
 
-  const earnings = (completedRows ?? []).reduce(
-    (acc, item) => acc + Number(item.total_price ?? 0),
-    0
-  );
-
+const earnings = (completedRows ?? []).reduce(
+  (acc, item) => acc + Number(item.total_price_snapshot ?? 0),
+  0
+);
   return {
     earnings,
     completed: completedRows?.length ?? 0,
