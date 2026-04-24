@@ -15,20 +15,25 @@ export const appConfig = {
     window.MIMI_SERVICES_ENV?.SUPABASE_URL ??
     window.MIMI_SERVICES_CONFIG?.supabaseUrl ??
     "",
+
   supabaseAnonKey:
     window.MIMI_SERVICES_ENV?.SUPABASE_ANON_KEY ??
     window.MIMI_SERVICES_CONFIG?.supabaseAnonKey ??
     "",
-  demoClientUserId: window.MIMI_SERVICES_ENV?.DEMO_CLIENT_USER_ID ?? null,
-  demoProviderUserId: window.MIMI_SERVICES_ENV?.DEMO_PROVIDER_USER_ID ?? null,
+
+  // PRODUCCIÓN REAL: sin usuarios demo ni categorías hardcodeadas.
   mapInitialCenter: [-64.1888, -31.4201],
   mapInitialZoom: 12,
+
   rpc: {
     prepareRequestPricing: "svc_prepare_request_pricing"
   },
+
   functions: {
     searchProviders: "svc-search-providers",
     createRequest: "svc-create-request",
+    providerDashboard: "svc-provider-dashboard",
+    updateAvailability: "svc-provider-availability",
     providerRespondOffer: "svc-provider-respond-offer",
     providerEnRoute: "svc-provider-en-route",
     providerArrived: "svc-provider-arrived",
@@ -39,6 +44,7 @@ export const appConfig = {
     trackLocation: "svc-track-location",
     registerDevice: "svc-register-device"
   },
+
   serviceStates: [
     "SEARCHING",
     "PENDING_PROVIDER_RESPONSE",
@@ -50,27 +56,23 @@ export const appConfig = {
     "COMPLETED",
     "CANCELLED"
   ],
-  categories: [
-    {
-      id: "cleaning",
-      code: "cleaning",
-      name: "Limpieza",
-      description: "Hogar, oficinas y express."
-    }
-  ]
+
+  categories: []
 };
 
 export function loadConfig() {
   const raw = window.MIMI_SERVICES_CONFIG ?? {};
+
   const supabaseUrl = sanitizeUrl(
     raw.supabaseUrl ??
-    raw.SUPABASE_URL ??
-    appConfig.supabaseUrl
+      raw.SUPABASE_URL ??
+      appConfig.supabaseUrl
   );
+
   const functionsBaseUrl = sanitizeUrl(
     raw.functionsBaseUrl ??
-    raw.FUNCTIONS_BASE_URL ??
-    (supabaseUrl ? `${supabaseUrl}/functions/v1` : "")
+      raw.FUNCTIONS_BASE_URL ??
+      (supabaseUrl ? `${supabaseUrl}/functions/v1` : "")
   );
 
   return {
