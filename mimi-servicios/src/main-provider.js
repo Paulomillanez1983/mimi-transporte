@@ -71,12 +71,17 @@ class MimiProviderApp {
   /**
    * Initialize the app
    */
-  async init() {
-    console.log('[MIMI] Initializing Provider App 2026...');
-    
-    // Initialize state
-    initState();
-    
+async init() {
+  console.log('[MIMI] Initializing Provider App 2026...');
+
+  try {
+    localStorage.setItem("mimi_services_active_mode", "provider");
+    sessionStorage.setItem("mimi_services_active_mode", "provider");
+  } catch (_) {}
+
+  // Initialize state
+  initState();
+  
     // Cache DOM elements
     this.cacheElements();
     
