@@ -107,12 +107,18 @@ body {
 .map-fallback {
   position: absolute;
   inset: 0;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  pointer-events: none;
+  z-index: -1;
 }
 
+.map-fallback:not([hidden]) {
+  display: flex;
+  z-index: 2;
+}
 .fallback-content {
   text-align: center;
   padding: 2rem;
