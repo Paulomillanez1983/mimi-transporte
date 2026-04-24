@@ -251,16 +251,18 @@ body {
    ============================================ */
 .online-button-container {
   position: fixed;
-  top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  top: auto;
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
   z-index: 50;
   transition: all var(--transition-spring);
+  pointer-events: none;
 }
 
 .online-button-container.hidden {
   opacity: 0;
-  pointer-events: none;
+  pointer-events: auto;
   transform: translate(-50%, -40%);
 }
 
@@ -270,23 +272,23 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  width: min(58vw, 185px);
-  min-height: 142px;
-  padding: 18px 16px 16px;
+  gap: 4px;
+  width: clamp(108px, 34vw, 138px);
+  min-height: clamp(82px, 12svh, 104px);
+  padding: 10px 10px 9px;
   background:
     radial-gradient(circle at 30% 18%, rgba(255,255,255,.32), transparent 28%),
     linear-gradient(145deg, #39e86a 0%, var(--accent-primary) 52%, #22b948 100%);
   border: 1px solid rgba(255,255,255,.22);
-  border-radius: 28px;
+  border-radius: 22px;
   color: #020617;
   cursor: pointer;
   box-shadow:
-    0 0 0 10px rgba(48, 209, 88, 0.08),
-    0 0 44px rgba(48, 209, 88, 0.32),
-    0 18px 38px rgba(0, 0, 0, 0.46),
-    inset 0 1px 0 rgba(255,255,255,.38),
-    inset 0 -10px 24px rgba(0,0,0,.12);
+    0 0 0 6px rgba(48, 209, 88, 0.07),
+    0 0 28px rgba(48, 209, 88, 0.24),
+    0 12px 26px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255,255,255,.36),
+    inset 0 -8px 18px rgba(0,0,0,.10);
   transition: transform var(--transition-normal), box-shadow var(--transition-normal), filter var(--transition-normal);
   animation: online-soft-pulse 3.2s ease-in-out infinite;
 }
@@ -302,8 +304,8 @@ body {
     inset 0 -10px 24px rgba(0,0,0,.12);
 }
 .online-button-icon {
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
 }
 .online-button-icon svg {
   width: 100%;
@@ -313,15 +315,15 @@ body {
 
 .online-button-text {
   font-family: var(--font-display);
-  font-size: 0.98rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.05;
   text-align: center;
 }
 .online-button-subtext {
-  font-size: 0.74rem;
-  opacity: 0.72;
-  line-height: 1.25;
+  font-size: 0.62rem;
+  opacity: 0.68;
+  line-height: 1.1;
   text-align: center;
 }
 @keyframes online-soft-pulse {
