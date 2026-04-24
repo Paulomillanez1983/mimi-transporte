@@ -1481,36 +1481,48 @@ this.renderChatMessages();
   /**
    * Render drawer
    */
-  renderDrawer() {
-    const isOpen = this.state.ui.drawerOpen;
-    
-    if (this.elements.sideDrawer) {
-      this.elements.sideDrawer.classList.toggle('open', isOpen);
-      this.elements.sideDrawer.setAttribute('aria-hidden', !isOpen);
-    }
-    
-    if (this.elements.drawerOverlay) {
-      this.elements.drawerOverlay.hidden = !isOpen;
+renderDrawer() {
+  const isOpen = this.state.ui.drawerOpen;
+
+  if (this.elements.sideDrawer) {
+    if (!isOpen && this.elements.sideDrawer.contains(document.activeElement)) {
+      document.activeElement.blur();
     }
 
-    // User info
-    if (this.state.session.userName && this.elements.drawerName) {
-      this.elements.drawerName.textContent = this.state.session.userName;
-    }
-    if (this.state.session.userEmail && this.elements.drawerEmail) {
-      this.elements.drawerEmail.textContent = this.state.session.userEmail;
-    }
-    if (this.state.session.userName && this.elements.drawerInitials) {
-      const initials = this.state.session.userName
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2);
-      this.elements.drawerInitials.textContent = initials;
+    this.elements.sideDrawer.classList.toggle("open", isOpen);
+    this.elements.sideDrawer.setAttribute("aria-hidden", String(!isOpen));
+
+    if (isOpen) {
+      this.elements.sideDrawer.removeAttribute("inert");
+    } else {
+      this.elements.sideDrawer.setAttribute("inert", "");
     }
   }
 
+  if (this.elements.drawerOverlay) {
+    this.elements.drawerOverlay.hidden = !isOpen;
+  }
+
+  // User info
+  if (this.state.session.userName && this.elements.drawerName) {
+    this.elements.drawerName.textContent = this.state.session.userName;
+  }
+
+  if (this.state.session.userEmail && this.elements.drawerEmail) {
+    this.elements.drawerEmail.textContent = this.state.session.userEmail;
+  }
+
+  if (this.state.session.userName && this.elements.drawerInitials) {
+    const initials = this.state.session.userName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+
+    this.elements.drawerInitials.textContent = initials;
+  }
+}
   /**
    * Render notifications
    */
