@@ -411,15 +411,23 @@ async initMap() {
         resolve();
       });
 
-      setTimeout(() => {
-        if (this.map) {
-          console.warn("[MIMI][initMap] timeout load; continúo igual");
-          actions.setMapReady(true);
-          forceResize();
-          resolve();
-        }
-      }, 2500);
+let mapResolved = false;
 
+const resolveMapOnce = () => {
+  if (mapResolved) return;
+  mapResolved = true;
+  resolve();
+};
+
+setTimeout(() => {
+  if (!mapResolved && this.map) {
+    console.warn("[MIMI][initMap] timeout load; continúo igual");
+    actions.setMapReady(true);
+    forceResize();
+    resolveMapOnce();
+  }
+}, 2500);
+      
       window.addEventListener("resize", forceResize);
       window.addEventListener("orientationchange", () => {
         setTimeout(forceResize, 350);
@@ -435,7 +443,7 @@ async initMap() {
       this.map = null;
       actions.setMapReady(false);
       this.showMapFallback();
-      resolve();
+      resolveMapOnce();
     }
   });
 }
