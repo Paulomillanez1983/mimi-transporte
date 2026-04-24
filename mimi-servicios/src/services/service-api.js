@@ -938,3 +938,14 @@ export async function loadClientRequestInsights(requestId, providerId = null) {
     providerCategories: providerCategoryRows ?? []
   };
 }
+export async function signOut() {
+  const supabase = getSupabaseClient();
+
+  if (!supabase) return;
+
+  const { error } = await supabase.auth.signOut();
+
+  if (error) throw error;
+
+  return true;
+}
