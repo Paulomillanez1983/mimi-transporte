@@ -4,6 +4,14 @@
  */
 
 import {
+  initState,
+  subscribe,
+  actions,
+  getDeviceId,
+  STORAGE_KEYS
+} from "./state/app-state.js";
+
+import {
   bootstrapSession,
   invokeFunction,
   loadActiveRequest,
@@ -12,8 +20,6 @@ import {
   loadProviderWorkspace,
   getProviderDashboard,
   signOut,
-  initState,
-  subscribe,
   updateProviderStatus
 } from "./services/service-api.js";
 
