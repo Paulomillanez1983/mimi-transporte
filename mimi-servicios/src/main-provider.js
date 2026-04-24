@@ -2100,13 +2100,11 @@ async confirmCameraCapture() {
     this.applyWorkspaceToState(workspace);
     this.renderVerificationStatus();
 
-    const status = String(
-      verification?.status ??
-      verification?.review_status ??
-      workspace?.profile?.review_status ??
-      ""
-    ).toUpperCase();
+const status = String(
+  workspace?.profile?.review_status ?? ""
+).toUpperCase();
 
+    
     if (["REVIEW", "PENDING", "PENDING_DOCUMENTS"].includes(status)) {
       this.showToast("Revisión en curso. Te avisamos cuando esté aprobada.", "success");
     } else if (status === "NEEDS_RESUBMISSION") {
