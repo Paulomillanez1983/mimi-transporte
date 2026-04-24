@@ -1,23 +1,120 @@
 {
-  "name": "MIMI Servicios",
-  "short_name": "Servicios",
-  "start_url": "./index.html",
+  "name": "MIMI Servicios - Panel Prestador",
+  "short_name": "MIMI Prestador",
+  "description": "Panel del prestador para MIMI Servicios - Gestiona tus servicios, recibe ofertas y opera en tiempo real",
+  "start_url": "/prestador.html",
   "display": "standalone",
-  "background_color": "#edf4ff",
-  "theme_color": "#163867",
-  "description": "Marketplace de servicios domésticos de MIMI.",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "es-AR",
+  "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "../favicon.png",
-      "sizes": "192x192",
+      "src": "/assets/icon-72.png",
+      "sizes": "72x72",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable any"
     },
     {
-      "src": "../favicon.png",
+      "src": "/assets/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/assets/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "maskable any"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/screenshot-1.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Panel principal del prestador con mapa"
+    },
+    {
+      "src": "/assets/screenshot-2.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Nueva oferta de servicio"
+    },
+    {
+      "src": "/assets/screenshot-3.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Servicio activo en curso"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ponerme Online",
+      "short_name": "Online",
+      "description": "Activar modo online para recibir servicios",
+      "url": "/prestador.html?action=go-online",
+      "icons": [{ "src": "/assets/icon-online.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Mi Agenda",
+      "short_name": "Agenda",
+      "description": "Ver servicios programados",
+      "url": "/prestador.html?view=scheduled",
+      "icons": [{ "src": "/assets/icon-calendar.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Configuración",
+      "short_name": "Ajustes",
+      "description": "Configurar precios y servicios",
+      "url": "/prestador.html?view=settings",
+      "icons": [{ "src": "/assets/icon-settings.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["focus-existing", "auto"]
+  },
+  "dir": "ltr",
+  "display_override": ["standalone", "fullscreen", "minimal-ui", "browser"]
 }
