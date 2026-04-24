@@ -912,8 +912,9 @@ async handleGoOnline() {
 
   const providerId = this.state?.session?.providerId;
   if (!providerId) {
-    this.showToast("No se encontró tu perfil de prestador", "error");
-    return;
+      this.showToast("Primero tenés que tener creado tu perfil de prestador", "warning");
+      actions.closeModal();
+      return;
   }
 
   try {
