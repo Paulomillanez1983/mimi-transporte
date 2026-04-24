@@ -241,7 +241,59 @@ export function renderOffersList(state) {
       </div>
     `;
 }
+export function renderProviderDashboard(state) {
+  const container = document.getElementById("providerDashboardPanel");
+  if (!container) return;
 
+  const dashboard = state.provider.dashboard ?? {};
+
+  container.innerHTML = `
+    <section class="provider-kpi-grid">
+
+      <article class="provider-kpi-card">
+        <span>Ganancias</span>
+        <strong>${currency(dashboard.earnings ?? 0)}</strong>
+        <small>Total histórico</small>
+      </article>
+
+      <article class="provider-kpi-card">
+        <span>Servicios completados</span>
+        <strong>${dashboard.completed ?? 0}</strong>
+        <small>Servicios</small>
+      </article>
+
+      <article class="provider-kpi-card">
+        <span>Estado actual</span>
+        <strong>${
+          dashboard.active
+            ? stateLabels[dashboard.active.status] ?? dashboard.active.status
+            : "Sin servicio"
+        }</strong>
+        <small>Tiempo real</small>
+      </article>
+
+    </section>
+
+    <section class="provider-history">
+      <h3>Últimos servicios</h3>
+      ${
+        (dashboard.history ?? []).length
+          ? dashboard.history
+              .slice(0, 5)
+              .map(
+                (item) => `
+                  <div class="history-item">
+                    <span>${escapeHtml(item.address_text ?? "Servicio")}</span>
+                    <strong>${currency(item.total_price ?? 0)}</strong>
+                  </div>
+                `
+              )
+              .join("")
+          : `<span class="muted">Sin historial aún</span>`
+      }
+    </section>
+  `;
+}
 export function renderProviderActiveService(state) {
   const providerActiveService = document.getElementById("providerActiveService");
   const providerActions = document.getElementById("providerActions");
