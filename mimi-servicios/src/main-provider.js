@@ -246,6 +246,7 @@ class MimiProviderApp {
     
     // Load stats
     this.renderStats();
+    this.renderServicesAndPricing();
     renderProviderDashboard(this.state);
   }
 
@@ -1278,7 +1279,53 @@ if (this.elements.drawerEarnings) {
   this.elements.drawerEarnings.textContent = `$${Number(dashboardEarnings).toLocaleString("es-AR")}`;
 }
   }
+renderServicesAndPricing() {
+  const categories = this.state?.provider?.categories ?? [];
+  const pricing = this.state?.provider?.pricing ?? {};
 
+  if (this.elements.servicesChips) {
+    this.elements.servicesChips.innerHTML = categories.length
+      ? categories
+          .map(
+            (item) => `
+              <span class="service-chip active">
+                ${item.name || item.code || "Servicio"}
+              </span>
+            `
+          )
+          .join("")
+      : `<span class="service-chip">Sin servicios activos</span>`;
+  }
+
+  if (this.elements.basePrice) {
+    this.elements.basePrice.textContent =
+      pricing.basePrice > 0
+        ? `$${Number(pricing.basePrice).toLocaleString("es-AR")}`
+        : "Sin configurar";
+  }
+
+  if (this.elements.hourPrice) {
+    this.elements.hourPrice.textContent =
+      pricing.hourlyRate > 0
+        ? `$${Number(pricing.hourlyRate).toLocaleString("es-AR")}`
+        : "Sin configurar";
+  }
+
+  if (this.elements.jobPrice) {
+    this.elements.jobPrice.textContent =
+      pricing.jobRate > 0
+        ? `$${Number(pricing.jobRate).toLocaleString("es-AR")}`
+        : "A configurar";
+  }
+
+  if (this.elements.pricingModeHourly) {
+    this.elements.pricingModeHourly.checked = pricing.mode !== "job";
+  }
+
+  if (this.elements.pricingModeJob) {
+    this.elements.pricingModeJob.checked = pricing.mode === "job";
+  }
+}
   /**
    * Main render function
    */
@@ -1294,6 +1341,7 @@ if (this.elements.drawerEarnings) {
     this.renderNotifications();
     this.renderChat();
     this.renderModal();
+    this.renderServicesAndPricing();
   }
 
   /**
