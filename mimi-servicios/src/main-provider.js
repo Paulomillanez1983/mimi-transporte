@@ -911,12 +911,20 @@ async handleGoOnline() {
   }
 
   const providerId = this.state?.session?.providerId;
-  if (!providerId) {
-      this.showToast("Primero tenés que tener creado tu perfil de prestador", "warning");
-      actions.closeModal();
-      return;
+if (!providerId) {
+  this.showToast("Actualizando tu perfil de prestador...", "info");
+
+  await this.loadInitialData();
+
+  const refreshedProviderId = this.state?.session?.providerId;
+
+  if (!refreshedProviderId) {
+    this.showToast("No pudimos crear o cargar tu perfil. Cerrá sesión e ingresá nuevamente como prestador.", "error");
+    return;
   }
 
+  return this.openCameraCapture(documentType);
+}
   try {
     actions.setLoading(true);
 
@@ -2087,9 +2095,6 @@ async confirmCameraCapture() {
 
     this.showToast("Verificando identidad...", "info");
 
-    const verification = await invokeFunction("svc-verify-provider-identity", {
-      provider_id: providerId
-    });
 
     const workspace = await loadProviderWorkspace(providerId);
     this.applyWorkspaceToState(workspace);
