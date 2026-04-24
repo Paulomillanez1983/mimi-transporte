@@ -1540,7 +1540,7 @@ window.app = app;
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw-2026.js')
+    navigator.serviceWorker.register('./sw-2026.js')
       .then(registration => {
         console.log('[MIMI] SW registered:', registration);
       })
