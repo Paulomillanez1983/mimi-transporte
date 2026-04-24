@@ -10,6 +10,10 @@ import {
   getDeviceId,
   STORAGE_KEYS
 } from "./state/app-state.js";
+import {
+  initMap,
+  updateProviderMap
+} from "./services/map.js";
 
 import {
   bootstrapSession,
@@ -266,29 +270,8 @@ class MimiProviderApp {
 
       const defaultCenter = [-64.1888, -31.4201]; // Córdoba, Argentina
       
-      this.map = new window.maplibregl.Map({
-        container: 'map',
-        style: {
-          version: 8,
-          sources: {
-            osm: {
-              type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-              tileSize: 256,
-              attribution: '&copy; OpenStreetMap contributors'
-            }
-          },
-          layers: [{
-            id: 'osm',
-            type: 'raster',
-            source: 'osm'
-          }]
-        },
-        center: defaultCenter,
-        zoom: 14,
-        attributionControl: false
-      });
-
+this.map = initMap("map", defaultCenter, 14);
+      
       this.map.on('load', () => {
         console.log('[MIMI] Map loaded');
         actions.setMapReady(true);
@@ -323,19 +306,37 @@ class MimiProviderApp {
       (position) => {
         const { latitude, longitude } = position.coords;
         
-        if (this.map) {
-          this.map.setCenter([longitude, latitude]);
-          
-          // Add or update provider marker
-          this.updateProviderMarker(latitude, longitude);
-        }
-        
-        actions.setLocation({
-          lat: latitude,
-          lng: longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: Date.now()
-        });
+if (this.map) {
+  const providerPosition = {
+    lat: latitude,
+    lng: longitude
+  };
+
+  const activeService = this.state?.activeService;
+  const servicePosition = {
+    lat:
+      activeService?.raw?.service_lat ??
+      activeService?.raw?.lat ??
+      null,
+    lng:
+      activeService?.raw?.service_lng ??
+      activeService?.raw?.lng ??
+      null
+  };
+
+  updateProviderMap({
+    providerPosition,
+    servicePosition
+  });
+}        
+      actions.setLocation({
+        lat: latitude,
+         lng: longitude,
+        accuracy: position.coords.accuracy ?? null,
+        heading: position.coords.heading ?? null,
+        speed: position.coords.speed ?? null,
+        timestamp: Date.now()
+       });
       },
       (error) => {
         console.warn('[MIMI] Geolocation error:', error);
@@ -347,14 +348,12 @@ class MimiProviderApp {
   /**
    * Update provider marker on map
    */
-  updateProviderMarker(lat, lng) {
-    if (!this.map) return;
-
-    // Remove existing marker
-    if (this.markers.provider) {
-      this.markers.provider.remove();
-    }
-
+updateProviderMarker(lat, lng) {
+  updateProviderMap({
+    providerPosition: { lat, lng },
+    servicePosition: null
+  });
+}
     // Create marker element
     const el = document.createElement('div');
     el.className = 'provider-marker';
@@ -979,10 +978,13 @@ startLocationTracking() {
     if (!loc || !service?.requestId) return;
 
     try {
-      await invokeFunction("svc-track-location", {
+        await invokeFunction("svc-track-location", {
         request_id: service.requestId,
         lat: loc.lat,
-        lng: loc.lng
+        lng: loc.lng,
+         accuracy: loc.accuracy ?? null,
+        heading: loc.heading ?? null,
+        speed: loc.speed ?? null
       });
     } catch (err) {
       console.warn("[MIMI] Error tracking location:", err);
