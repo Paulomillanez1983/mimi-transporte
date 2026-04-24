@@ -279,70 +279,167 @@ selfieStatus: document.getElementById("selfieStatus"),
    * Initialize map
    */
 async initMap() {
-  try {
-    const mapEl = document.getElementById("map");
-    const fallbackEl = document.getElementById("mapFallback");
+  console.log("[MIMI][initMap] entrando", {
+    mapActual: this.map,
+    maplibre: !!window.maplibregl
+  });
 
-    if (!mapEl) {
-      console.error("[MIMI] No existe #map en prestador.html");
-      this.showMapFallback();
-      return;
-    }
+  if (this.map) {
+    console.log("[MIMI][initMap] ya existe mapa");
 
-    if (!window.maplibregl) {
-      console.warn("[MIMI] MapLibre no disponible todavía");
-      this.showMapFallback();
-      return;
-    }
-
-    mapEl.hidden = false;
-    if (fallbackEl) fallbackEl.hidden = true;
-
-    const defaultCenter = [-64.1888, -31.4201];
-
-    mapEl.style.width = "100%";
-    mapEl.style.height = "100dvh";
-    mapEl.style.minHeight = "100dvh";
-
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-
-    this.map = initMap("map", defaultCenter, 13);
-
-    const forceResize = () => {
+    setTimeout(() => {
       try {
-        this.map?.resize?.();
-      } catch (err) {
-        console.warn("[MIMI] Map resize warning:", err);
-      }
-    };
+        this.map.resize();
+      } catch (_) {}
+    }, 80);
 
-    this.map.on("load", () => {
-      console.log("[MIMI] Map loaded");
-      actions.setMapReady(true);
-
-      forceResize();
-
-      setTimeout(forceResize, 250);
-      setTimeout(forceResize, 800);
-      setTimeout(forceResize, 1500);
-
-      this.updateMapToCurrentPosition();
-    });
-
-    this.map.on("error", (e) => {
-      console.error("[MIMI] Map error:", e);
-    });
-
-    window.addEventListener("resize", forceResize);
-    window.addEventListener("orientationchange", () => {
-      setTimeout(forceResize, 350);
-    });
-
-  } catch (error) {
-    console.error("[MIMI] Map init error:", error);
-    this.showMapFallback();
+    return;
   }
+
+  const mapEl = document.getElementById("map");
+  const mapFallback = document.getElementById("mapFallback");
+
+  if (!mapEl) {
+    console.warn("[MIMI][initMap] no existe #map");
+    this.showMapFallback();
+    return;
+  }
+
+  if (!window.maplibregl) {
+    console.warn("[MIMI][initMap] MapLibre no disponible");
+    this.showMapFallback();
+    return;
+  }
+
+  if (!this.supportsWebGLMap()) {
+    console.warn("[MIMI][initMap] WebGL no disponible");
+    this.showMapFallback();
+    return;
+  }
+
+  mapEl.hidden = false;
+  mapEl.style.display = "block";
+  mapEl.style.visibility = "visible";
+  mapEl.style.width = "100%";
+  mapEl.style.height = "100dvh";
+  mapEl.style.minHeight = "100dvh";
+
+  if (mapFallback) {
+    mapFallback.hidden = true;
+  }
+
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+
+  return new Promise((resolve) => {
+    try {
+      const esMobile = window.innerWidth <= 768;
+      const temaOscuro = true;
+
+      this.map = new maplibregl.Map({
+        container: "map",
+        style: temaOscuro
+          ? "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+          : "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+        center: [-64.19, -31.42],
+        zoom: esMobile ? 11.8 : 12.4,
+        pitch: esMobile ? 0 : 18,
+        bearing: 0,
+        antialias: true,
+        attributionControl: false,
+        dragRotate: false,
+        pitchWithRotate: false,
+        renderWorldCopies: false
+      });
+
+      window.mimiProviderMap = this.map;
+      window.__mimiProviderMapDebug = this.map;
+
+      this.map.dragPan.disable();
+      this.map.scrollZoom.disable();
+      this.map.boxZoom.disable();
+      this.map.doubleClickZoom.disable();
+      this.map.touchZoomRotate.disable();
+      this.map.keyboard.disable();
+
+      const forceResize = () => {
+        try {
+          this.map?.resize?.();
+        } catch (err) {
+          console.warn("[MIMI][initMap] resize warning:", err);
+        }
+      };
+
+      this.map.on("load", () => {
+        console.log("[MIMI][initMap] map load OK");
+
+        actions.setMapReady(true);
+
+        setTimeout(() => {
+          forceResize();
+
+          try {
+            this.map.easeTo({
+              center: [-64.19, -31.42],
+              zoom: esMobile ? 11.8 : 12.4,
+              duration: 500
+            });
+          } catch (err) {
+            console.warn("[MIMI][initMap] easeTo warning:", err);
+          }
+
+          this.updateMapToCurrentPosition();
+
+          console.log("[MIMI][initMap] listo", {
+            mapExiste: !!this.map
+          });
+
+          resolve();
+        }, 180);
+      });
+
+      this.map.on("error", (e) => {
+        console.warn("[MIMI][initMap] map error:", e?.error || e);
+
+        try {
+          this.map?.remove?.();
+        } catch (_) {}
+
+        this.map = null;
+        actions.setMapReady(false);
+        this.showMapFallback();
+
+        resolve();
+      });
+
+      setTimeout(() => {
+        if (this.map) {
+          console.warn("[MIMI][initMap] timeout load; continúo igual");
+          actions.setMapReady(true);
+          forceResize();
+          resolve();
+        }
+      }, 2500);
+
+      window.addEventListener("resize", forceResize);
+      window.addEventListener("orientationchange", () => {
+        setTimeout(forceResize, 350);
+      });
+
+    } catch (err) {
+      console.error("[MIMI][initMap] error creando mapa:", err);
+
+      try {
+        this.map?.remove?.();
+      } catch (_) {}
+
+      this.map = null;
+      actions.setMapReady(false);
+      this.showMapFallback();
+      resolve();
+    }
+  });
 }
+  
   /**
    * Show map fallback
    */
