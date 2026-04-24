@@ -19,9 +19,11 @@ import {
   loadOffers,
   loadProviderWorkspace,
   getProviderDashboard,
+  uploadProviderDocument,
   signOut,
   updateProviderStatus
-} from "./services/service-api.js";
+  } from "./services/service-api.js";
+
 
 import { renderProviderDashboard } from "./ui/render-provider.js";
 import { getSupabaseClient } from "./services/supabase.js";
@@ -753,6 +755,12 @@ stats: {
       this.switchTab('account');
       actions.closeDrawer();
     });
+
+    document.querySelectorAll("[data-provider-doc]").forEach((input) => {
+  input.addEventListener("change", (event) => {
+    this.handleProviderDocumentUpload(event);
+  });
+});
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -1911,14 +1919,50 @@ if (this.elements.drawerInitials) {
       window.location.href = "./index.html";
     }
   }
+async handleProviderDocumentUpload(event) {
+  const input = event.target;
+  const file = input?.files?.[0];
+  const documentType = input?.dataset?.providerDoc;
+  const providerId = this.state?.session?.providerId;
 
+  if (!providerId) {
+    this.showToast("No se encontró tu perfil de prestador", "error");
+    return;
+  }
+
+  if (!file || !documentType) {
+    return;
+  }
+
+  try {
+    actions.setLoading(true);
+
+    await uploadProviderDocument({
+      providerId,
+      documentType,
+      file
+    });
+
+    const workspace = await loadProviderWorkspace(providerId);
+    this.applyWorkspaceToState(workspace);
+
+    this.renderVerificationStatus();
+
+    this.showToast("Documento subido correctamente. Queda pendiente de revisión.", "success");
+  } catch (err) {
+    console.error("[MIMI] Error subiendo documento:", err);
+    this.showToast(err?.message ?? "No pudimos subir el documento", "error");
+  } finally {
+    actions.setLoading(false);
+    input.value = "";
+  }
+}
   /**
    * Handle wizard next
    */
-  handleWizardNext() {
-    this.showToast("La verificación real se gestiona guardando documentos en Supabase", "info");
-  }
-
+handleWizardNext() {
+  this.showToast("Subí tus documentos. El equipo MIMI los revisará desde Supabase.", "info");
+}
   /**
    * Handle wizard prev
    */
