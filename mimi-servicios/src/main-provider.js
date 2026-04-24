@@ -1277,9 +1277,16 @@ this.renderChatMessages();
       this.elements.verificationModal.hidden = !isOpen || modal !== 'verification';
     }
   }
-  subscribeRealtime() {
+subscribeRealtime() {
   try {
-    const channel = window.supabase
+    const supabaseClient = window.mimiSupabase || window.supabaseClient || window.sb;
+
+    if (!supabaseClient?.channel) {
+      console.warn("[MIMI] Supabase realtime client not available");
+      return;
+    }
+
+    const channel = supabaseClient
       .channel("mimi-notifications")
       .on(
         "postgres_changes",
@@ -1292,11 +1299,12 @@ this.renderChatMessages();
       )
       .subscribe();
 
-    console.log("[MIMI] Realtime notifications subscribed");
+    console.log("[MIMI] Realtime notifications subscribed", channel);
   } catch (err) {
     console.error("[MIMI] Realtime error:", err);
   }
 }
+  
 onNotification(payload) {
   const notif = payload?.new;
   if (!notif) return;
