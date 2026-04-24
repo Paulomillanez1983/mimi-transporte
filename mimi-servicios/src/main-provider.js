@@ -346,11 +346,15 @@ async initMap() {
   /**
    * Show map fallback
    */
-  showMapFallback() {
+showMapFallback() {
+  if (this.elements.map) {
     this.elements.map.hidden = true;
-    this.elements.mapFallback.hidden = false;
   }
 
+  if (this.elements.mapFallback) {
+    this.elements.mapFallback.hidden = false;
+  }
+}
   /**
    * Update map to current position
    */
