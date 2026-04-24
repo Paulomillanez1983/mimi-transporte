@@ -354,23 +354,6 @@ updateProviderMarker(lat, lng) {
     servicePosition: null
   });
 }
-    // Create marker element
-    const el = document.createElement('div');
-    el.className = 'provider-marker';
-    el.style.cssText = `
-      width: 24px;
-      height: 24px;
-      background: #30d158;
-      border: 3px solid white;
-      border-radius: 50%;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    `;
-
-    this.markers.provider = new window.maplibregl.Marker({ element: el })
-      .setLngLat([lng, lat])
-      .addTo(this.map);
-  }
-
 
   /**
    * Load real provider session/workspace from Supabase.
