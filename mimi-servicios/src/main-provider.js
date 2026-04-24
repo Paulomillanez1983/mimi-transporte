@@ -266,9 +266,6 @@ class MimiProviderApp {
       this.map.on('load', () => {
         console.log('[MIMI] Map loaded');
         actions.setMapReady(true);
-        
-        // Try to get current position
-        this.updateMapToCurrentPosition();
       });
 
       this.map.on('error', (e) => {
