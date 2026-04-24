@@ -689,10 +689,10 @@ stats: {
     });
 
     // Verification
-    this.elements.verificationBtn?.addEventListener('click', () => {
-      actions.openModal('verification');
-    });
-
+this.elements.verificationBtn?.addEventListener('click', () => {
+  actions.openModal("verification");
+  this.showWizardStep(1);
+});
     // Modal
     this.elements.modalClose?.addEventListener('click', () => {
       actions.closeModal();
@@ -923,7 +923,9 @@ if (!providerId) {
     return;
   }
 
-  return this.openCameraCapture(documentType);
+  actions.openModal("verification");
+  this.showWizardStep(1);
+  return;
 }
   try {
     actions.setLoading(true);
@@ -1265,27 +1267,30 @@ this.renderChatMessages();
   /**
    * Render verification status
    */
-  renderVerificationStatus() {
-    const status = this.state?.provider.verificationStatus;
-    const card = this.elements.verificationCard;
-    const statusEl = this.elements.verificationStatus;
-    const btn = this.elements.verificationBtn;
-    
-    if (!card || !statusEl || !btn) return;
+renderVerificationStatus() {
+  const status = this.state?.provider.verificationStatus;
+  const card = this.elements.verificationCard;
+  const statusEl = this.elements.verificationStatus;
+  const btn = this.elements.verificationBtn;
+  
+  if (!card || !statusEl || !btn) return;
 
-    if (status === 'approved') {
-      card.classList.add('verified');
-      statusEl.innerHTML = '<span class="status-icon">✅</span><span class="status-text">Verificado</span>';
-      btn.textContent = 'Ver documentos';
-    } else if (status === 'in_review') {
-      statusEl.innerHTML = '<span class="status-icon">⏳</span><span class="status-text">En revisión</span>';
-      btn.textContent = 'Ver progreso';
-    } else {
-      statusEl.innerHTML = '<span class="status-icon">⚠️</span><span class="status-text">Pendiente</span>';
-      btn.textContent = 'Completar ahora';
-    }
+  card.classList.toggle("verified", status === "approved");
+
+  if (status === "approved") {
+    statusEl.innerHTML = '<span class="status-icon">✅</span><span class="status-text">Verificado</span>';
+    btn.textContent = "Ver documentos";
+  } else if (status === "in_review") {
+    statusEl.innerHTML = '<span class="status-icon">⏳</span><span class="status-text">En revisión</span>';
+    btn.textContent = "Ver progreso";
+  } else if (status === "rejected") {
+    statusEl.innerHTML = '<span class="status-icon">❌</span><span class="status-text">Requiere corrección</span>';
+    btn.textContent = "Repetir fotos";
+  } else {
+    statusEl.innerHTML = '<span class="status-icon">⚠️</span><span class="status-text">Pendiente</span>';
+    btn.textContent = "Completar ahora";
   }
-
+}
   /**
    * Render stats
    */
