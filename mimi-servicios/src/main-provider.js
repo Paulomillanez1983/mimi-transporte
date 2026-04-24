@@ -439,20 +439,40 @@ async initMap() {
     }
   });
 }
-  
+    /**
+   * Check WebGL support for MapLibre
+   */
+  supportsWebGLMap() {
+    try {
+      const canvas = document.createElement("canvas");
+
+      if (!window.WebGLRenderingContext) {
+        return false;
+      }
+
+      const gl =
+        canvas.getContext("webgl", { antialias: true, alpha: true }) ||
+        canvas.getContext("experimental-webgl", { antialias: true, alpha: true });
+
+      return !!gl;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /**
    * Show map fallback
    */
-showMapFallback() {
-  if (this.elements.map) {
-    this.elements.map.hidden = true;
+  showMapFallback() {
+    if (this.elements.map) {
+      this.elements.map.hidden = true;
+    }
+
+    if (this.elements.mapFallback) {
+      this.elements.mapFallback.hidden = false;
+    }
   }
 
-  if (this.elements.mapFallback) {
-    this.elements.mapFallback.hidden = false;
-  }
-}
-  
   /**
    * Update map to current position
    */
@@ -462,65 +482,46 @@ showMapFallback() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        
-if (this.map) {
-  const providerPosition = {
-    lat: latitude,
-    lng: longitude
-  };
 
-  const activeService = this.state?.activeService;
-  const servicePosition = {
-    lat:
-      activeService?.raw?.service_lat ??
-      activeService?.raw?.lat ??
-      null,
-    lng:
-      activeService?.raw?.service_lng ??
-      activeService?.raw?.lng ??
-      null
-  };
+        if (this.map) {
+          const providerPosition = {
+            lat: latitude,
+            lng: longitude
+          };
 
-  updateProviderMap({
-    providerPosition,
-    servicePosition
-  });
-}        
-supportsWebGLMap() {
-  try {
-    const canvas = document.createElement("canvas");
+          const activeService = this.state?.activeService;
+          const servicePosition = {
+            lat:
+              activeService?.raw?.service_lat ??
+              activeService?.raw?.lat ??
+              null,
+            lng:
+              activeService?.raw?.service_lng ??
+              activeService?.raw?.lng ??
+              null
+          };
 
-    if (!window.WebGLRenderingContext) {
-      return false;
-    }
+          updateProviderMap({
+            providerPosition,
+            servicePosition
+          });
+        }
 
-    const gl =
-      canvas.getContext("webgl", { antialias: true, alpha: true }) ||
-      canvas.getContext("experimental-webgl", { antialias: true, alpha: true });
-
-    return !!gl;
-  } catch (_) {
-    return false;
-  }
-}
-
-        
-      actions.setLocation({
-        lat: latitude,
-         lng: longitude,
-        accuracy: position.coords.accuracy ?? null,
-        heading: position.coords.heading ?? null,
-        speed: position.coords.speed ?? null,
-        timestamp: Date.now()
-       });
+        actions.setLocation({
+          lat: latitude,
+          lng: longitude,
+          accuracy: position.coords.accuracy ?? null,
+          heading: position.coords.heading ?? null,
+          speed: position.coords.speed ?? null,
+          timestamp: Date.now()
+        });
       },
       (error) => {
-        console.warn('[MIMI] Geolocation error:', error);
+        console.warn("[MIMI] Geolocation error:", error);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   }
-
   /**
    * Update provider marker on map
    */
