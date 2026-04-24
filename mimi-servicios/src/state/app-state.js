@@ -483,6 +483,9 @@ export const selectors = {
 // ============================================
 
 export const actions = {
+  updateState: (updates) => updateState(updates),
+  setMapReady: (ready) => patchState('ui.mapReady', ready),
+
   // UI Actions
   setTab: (tab) => patchState('ui.activeTab', tab),
   setBottomSheetState: (state) => patchState('ui.bottomSheetState', state),
