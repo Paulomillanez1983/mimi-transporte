@@ -949,3 +949,46 @@ export async function signOut() {
 
   return true;
 }
+export async function getProviderDashboard(providerId) {
+  const supabase = getSupabaseClient();
+
+  if (!providerId || !supabase) {
+    return {
+      earnings: 0,
+      completed: 0,
+      active: null,
+      history: []
+    };
+  }
+
+  await requireSession();
+
+  // 🔥 servicios completados
+  const { data: completedRows, error: completedError } = await supabase
+    .from("svc_requests")
+    .select("id,total_price,created_at,address_text,status")
+    .eq("selected_provider_id", providerId)
+    .eq("status", "COMPLETED");
+
+  if (completedError) throw completedError;
+
+  // 🔥 servicio activo
+  const { data: activeRows } = await supabase
+    .from("svc_requests")
+    .select("*")
+    .eq("selected_provider_id", providerId)
+    .not("status", "in", '("COMPLETED","CANCELLED")')
+    .limit(1);
+
+  const earnings = (completedRows ?? []).reduce(
+    (acc, item) => acc + Number(item.total_price ?? 0),
+    0
+  );
+
+  return {
+    earnings,
+    completed: completedRows?.length ?? 0,
+    active: activeRows?.[0] ?? null,
+    history: completedRows ?? []
+  };
+}
