@@ -18,10 +18,10 @@ import {
   loadNotifications,
   loadOffers,
   loadProviderWorkspace,
+  getProviderDashboard, // 🔥 AGREGAR
   signOut,
   updateProviderStatus
 } from "./services/service-api.js";
-import { getSupabaseClient } from "./services/supabase.js";
 
 // ============================================
 // APP CONTROLLER
@@ -239,6 +239,7 @@ class MimiProviderApp {
     
     // Load stats
     this.renderStats();
+    renderProviderDashboard(this.state);
   }
 
   /**
@@ -393,14 +394,21 @@ class MimiProviderApp {
         return;
       }
 
-      const [workspace, notifications, offers, activeRequest] = await Promise.all([
-        loadProviderWorkspace(session.providerId),
-        loadNotifications(session.userId),
-        loadOffers(session.providerId),
-        loadActiveRequest({ providerId: session.providerId })
-      ]);
-
+const [workspace, notifications, offers, activeRequest, dashboard] = await Promise.all([
+  loadProviderWorkspace(session.providerId),
+  loadNotifications(session.userId),
+  loadOffers(session.providerId),
+  loadActiveRequest({ providerId: session.providerId }),
+  getProviderDashboard(session.providerId) // 🔥 NUEVO
+]);
+      
       this.applyWorkspaceToState(workspace);
+      actions.updateState({
+  provider: {
+    ...this.state.provider,
+    dashboard
+  }
+});
 
       actions.updateState({
         notifications: {
