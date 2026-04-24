@@ -1284,7 +1284,11 @@ subscribeRealtime() {
       return;
     }
 
-    const channel = supabase
+    if (this.realtimeChannel) {
+      this.realtimeChannel.unsubscribe();
+    }
+
+    this.realtimeChannel = supabase
       .channel("mimi-notifications")
       .on(
         "postgres_changes",
@@ -1299,12 +1303,13 @@ subscribeRealtime() {
         console.log("[MIMI] Realtime status:", status);
       });
 
-    console.log("[MIMI] Realtime notifications subscribed", channel);
+    console.log("[MIMI] Realtime notifications subscribed", this.realtimeChannel);
   } catch (err) {
     console.error("[MIMI] Realtime error:", err);
   }
 }
-  onNotification(payload) {
+  
+onNotification(payload) {
   const notif = payload?.new;
   if (!notif) return;
 
