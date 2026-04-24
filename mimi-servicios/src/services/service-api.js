@@ -17,10 +17,21 @@ async function requireSession() {
 
   const { data, error } = await supabase.auth.getSession();
 
-  if (error) throw error;
+if (error) throw error;
 
-  const session = data?.session ?? null;
+const normalized = normalizeProviderDocuments([data])[0] ?? data;
 
+if (["dni_front", "selfie"].includes(safeDocumentType)) {
+  try {
+    await invokeFunction("svc-verify-provider-identity", {
+      provider_id: providerId
+    });
+  } catch (verifyError) {
+    console.warn("[MIMI Servicios] Verificación IA pendiente:", verifyError);
+  }
+}
+
+return normalized;
   if (!session?.access_token) {
     const authError = new Error("AUTH_REQUIRED");
     authError.code = "AUTH_REQUIRED";
