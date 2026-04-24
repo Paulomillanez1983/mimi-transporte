@@ -298,3 +298,652 @@
     padding: 12px;
   }
 }
+
+/* ==========================================================
+   MIMI SERVICIOS CLIENTE - MOBILE PRO 2026 FINAL
+   Identidad cliente: azul/violeta premium, diferenciada del provider verde
+   Pegar/reemplazar como styles/client.css
+   ========================================================== */
+
+:root {
+  /* Identidad CLIENTE: distinta al prestador */
+  --client-primary: #2563eb;
+  --client-primary-2: #4f46e5;
+  --client-primary-soft: rgba(37, 99, 235, 0.10);
+  --client-secondary: #7c3aed;
+  --client-accent: #06b6d4;
+  --client-success: #22c55e;
+  --client-warning: #f59e0b;
+  --client-danger: #ef4444;
+
+  --client-bg: #f6f8ff;
+  --client-surface: rgba(255, 255, 255, 0.88);
+  --client-surface-solid: #ffffff;
+  --client-text: #0f172a;
+  --client-muted: #64748b;
+  --client-border: rgba(37, 99, 235, 0.12);
+  --client-shadow: 0 18px 42px rgba(15, 23, 42, 0.10);
+  --client-shadow-soft: 0 10px 28px rgba(37, 99, 235, 0.08);
+
+  --primary: var(--client-primary);
+  --primary-2: var(--client-primary-2);
+  --accent: var(--client-accent);
+  --success: var(--client-success);
+  --warning: var(--client-warning);
+  --danger: var(--client-danger);
+  --text: var(--client-text);
+  --muted: var(--client-muted);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --client-vh: 100vh;
+  --client-svh: 100svh;
+  --client-dvh: 100dvh;
+
+  --client-radius-sm: 12px;
+  --client-radius-md: 16px;
+  --client-radius-lg: 22px;
+  --client-radius-xl: 28px;
+}
+
+/* ---------- Base estable mobile ---------- */
+
+html {
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  background:
+    radial-gradient(circle at 12% 5%, rgba(37, 99, 235, 0.16), transparent 28%),
+    radial-gradient(circle at 88% 10%, rgba(124, 58, 237, 0.12), transparent 24%),
+    var(--client-bg);
+}
+
+body {
+  width: 100%;
+  min-height: var(--client-vh);
+  min-height: var(--client-svh);
+  min-height: var(--client-dvh);
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    linear-gradient(180deg, rgba(246, 248, 255, 0.94), rgba(255, 255, 255, 0.98)),
+    var(--client-bg);
+  color: var(--client-text);
+  overscroll-behavior-y: contain;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+/* ---------- Contenedores generales inteligentes ---------- */
+
+.container,
+.client-container,
+.main-client,
+.client-shell,
+.planner-shell,
+.planner-shell-client {
+  width: min(100%, 1180px);
+  margin-inline: auto;
+  padding-inline: max(14px, var(--safe-left));
+  padding-right: max(14px, var(--safe-right));
+}
+
+.client-shell,
+.main-client,
+.planner-shell-client {
+  min-height: var(--client-svh);
+}
+
+/* ---------- Cards estilo cliente premium ---------- */
+
+.main-card,
+.client-card,
+.summary-card,
+.planner-card,
+.hero-insight-card,
+.flow-step-card,
+.request-tips-card,
+.summary-callout-item,
+.client-empty-state {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.86));
+  border: 1px solid var(--client-border);
+  box-shadow: var(--client-shadow-soft);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+/* ---------- Hero cliente diferenciado ---------- */
+
+.hero-text-client,
+.hero-text {
+  color: var(--client-text);
+}
+
+.hero-title,
+.hero-text-client h1,
+.hero-text-client strong {
+  color: var(--client-text);
+  letter-spacing: -0.04em;
+}
+
+.hero-subtitle,
+.hero-text-client p {
+  color: var(--client-muted);
+}
+
+.hero-kicker {
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.10), rgba(124, 58, 237, 0.10));
+  color: var(--client-primary);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+}
+
+.hero-insights,
+.flow-grid,
+.summary-callout-grid {
+  align-items: stretch;
+}
+
+.hero-insight-card,
+.flow-step-card,
+.request-tips-card,
+.summary-callout-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-insight-card::before,
+.flow-step-card::before,
+.summary-callout-item::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--client-primary), var(--client-secondary), var(--client-accent));
+  opacity: 0.88;
+}
+
+/* ---------- Inputs / buscador / direcciones ---------- */
+
+.service-address-wrapper,
+.route-input-wrapper,
+.input-shell,
+.search-shell {
+  min-width: 0;
+}
+
+.service-address-wrapper input,
+.route-input,
+.client-input,
+input[type="text"],
+input[type="search"],
+textarea {
+  min-height: 48px;
+  border-radius: var(--client-radius-md);
+  border: 1px solid rgba(37, 99, 235, 0.13);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--client-text);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.service-address-wrapper input:focus,
+.route-input:focus,
+.client-input:focus,
+input[type="text"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  border-color: rgba(37, 99, 235, 0.46);
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.10),
+    0 14px 28px rgba(15, 23, 42, 0.08);
+  background: #fff;
+}
+
+.btn-input-action {
+  min-width: 46px;
+  min-height: 46px;
+  border-radius: 15px;
+  background:
+    linear-gradient(180deg, #ffffff, #f8fbff);
+  color: var(--client-primary);
+  border-color: rgba(37, 99, 235, 0.16);
+}
+
+.btn-input-action.clear {
+  color: var(--client-danger);
+}
+
+/* ---------- Sugerencias mobile friendly ---------- */
+
+.sugerencias {
+  position: relative;
+  z-index: 30;
+}
+
+.suggestion-item {
+  min-height: 48px;
+  background: rgba(255, 255, 255, 0.98);
+  border-color: rgba(37, 99, 235, 0.12);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.suggestion-item:hover,
+.suggestion-item.is-active {
+  border-color: rgba(37, 99, 235, 0.28);
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(6, 182, 212, 0.10)),
+    #fff;
+}
+
+/* ---------- Botones cliente ---------- */
+
+.btn-primary,
+.client-primary-btn,
+#searchProvidersButton,
+#confirmRequestButton,
+#requestServiceButton {
+  min-height: 50px;
+  border: none;
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.34), transparent 24%),
+    linear-gradient(135deg, var(--client-primary), var(--client-primary-2));
+  color: #fff;
+  font-weight: 800;
+  box-shadow:
+    0 16px 34px rgba(37, 99, 235, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.btn-primary:active,
+.client-primary-btn:active,
+#searchProvidersButton:active,
+#confirmRequestButton:active,
+#requestServiceButton:active {
+  transform: scale(0.985);
+}
+
+.btn-secondary,
+.client-secondary-btn {
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--client-primary);
+  font-weight: 750;
+}
+
+/* ---------- Mapa cliente / resultados ---------- */
+
+.map-section,
+.map-card,
+.client-map-section {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--client-radius-xl);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  background: #dbeafe;
+  box-shadow: var(--client-shadow);
+}
+
+.map-container,
+#map,
+#clientMap,
+.map-surface {
+  width: 100%;
+  min-height: clamp(260px, 42svh, 520px);
+}
+
+.maplibregl-map,
+.maplibregl-canvas-container,
+.maplibregl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.map-caption {
+  color: var(--client-muted);
+}
+
+/* ---------- Paneles de matching/financial/provider ---------- */
+
+#financialPanel,
+#matchingPanel,
+#providerSpotlightPanel {
+  isolation: isolate;
+}
+
+#providerSpotlightPanel .summary-card,
+#financialPanel .summary-card,
+#matchingPanel .summary-card {
+  border-radius: var(--client-radius-lg);
+}
+
+/* ---------- Bottom sheets / modales si existen en cliente ---------- */
+
+.client-bottom-sheet,
+.bottom-sheet,
+.support-sheet,
+.modal-content,
+.sheet-content {
+  border-radius: 26px 26px 0 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.94));
+  color: var(--client-text);
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  box-shadow: 0 -16px 48px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+
+.modal-overlay,
+.support-sheet-overlay {
+  background: rgba(15, 23, 42, 0.46);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.support-sheet,
+.client-bottom-sheet,
+.bottom-sheet {
+  max-height: calc(var(--client-dvh) - var(--safe-top) - 10px);
+  padding-bottom: var(--safe-bottom);
+}
+
+.support-chat-body,
+.sheet-content,
+.modal-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- FAB / soporte / notificaciones ---------- */
+
+.support-launcher,
+.client-floating-action,
+.trip-notifications,
+.notification-button {
+  box-shadow:
+    0 14px 32px rgba(37, 99, 235, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.support-launcher,
+.client-floating-action {
+  background: linear-gradient(135deg, var(--client-primary), var(--client-secondary));
+  color: #fff;
+}
+
+/* ---------- Diferenciación visual de estados ---------- */
+
+.client-empty-state {
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(6, 182, 212, 0.08));
+  border-color: rgba(37, 99, 235, 0.16);
+}
+
+.input-helper,
+.results-explainer {
+  color: var(--client-muted);
+}
+
+/* ---------- Responsive tablets ---------- */
+
+@media (min-width: 760px) {
+  .hero-insights,
+  .flow-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .client-bottom-sheet,
+  .bottom-sheet,
+  .support-sheet {
+    width: min(560px, calc(100vw - 32px));
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- Responsive celulares grandes ---------- */
+
+@media (max-width: 760px) {
+  .container,
+  .client-container,
+  .main-client,
+  .client-shell,
+  .planner-shell,
+  .planner-shell-client {
+    padding-inline: max(12px, var(--safe-left));
+    padding-right: max(12px, var(--safe-right));
+  }
+
+  .hero-insights,
+  .flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-text-client {
+    gap: 12px;
+  }
+
+  .hero-kicker {
+    min-height: 32px;
+    font-size: clamp(0.72rem, 3.3vw, 0.82rem);
+    letter-spacing: 0.10em;
+  }
+
+  .hero-insight-card,
+  .flow-step-card,
+  .request-tips-card,
+  .summary-callout-item {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .service-address-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .service-address-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .btn-input-action {
+    width: 100%;
+  }
+
+  .map-container,
+  #map,
+  #clientMap,
+  .map-surface {
+    min-height: clamp(240px, 38svh, 420px);
+  }
+
+  .support-sheet,
+  .client-bottom-sheet,
+  .bottom-sheet,
+  .modal-content {
+    width: 100%;
+    max-height: calc(var(--client-dvh) - var(--safe-top));
+    border-radius: 24px 24px 0 0;
+  }
+
+  .support-sheet-header,
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .support-sheet-composer,
+  .modal-footer {
+    padding-bottom: calc(12px + var(--safe-bottom));
+  }
+}
+
+/* ---------- Celulares chicos ---------- */
+
+@media (max-width: 430px) {
+  .hero-kicker {
+    width: 100%;
+    padding-inline: 10px;
+    text-align: center;
+  }
+
+  .hero-insight-card,
+  .flow-step-card,
+  .request-tips-card,
+  .summary-callout-item,
+  .client-empty-state {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .service-address-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .client-primary-btn,
+  .client-secondary-btn,
+  #searchProvidersButton,
+  #confirmRequestButton,
+  #requestServiceButton {
+    min-height: 48px;
+    border-radius: 15px;
+    font-size: 0.94rem;
+  }
+
+  .suggestion-item {
+    padding: 11px 12px;
+    border-radius: 13px;
+  }
+
+  .map-container,
+  #map,
+  #clientMap,
+  .map-surface {
+    min-height: clamp(220px, 35svh, 360px);
+  }
+}
+
+/* ---------- Celulares muy bajos / teclado / landscape ---------- */
+
+@media (max-height: 700px) {
+  .map-container,
+  #map,
+  #clientMap,
+  .map-surface {
+    min-height: 210px;
+  }
+
+  .hero-text-client {
+    gap: 9px;
+  }
+
+  .hero-insight-card,
+  .flow-step-card,
+  .request-tips-card,
+  .summary-callout-item {
+    padding: 11px;
+  }
+
+  .support-sheet,
+  .client-bottom-sheet,
+  .bottom-sheet,
+  .modal-content {
+    max-height: calc(var(--client-dvh) - 6px);
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .container,
+  .client-container,
+  .main-client,
+  .client-shell {
+    padding-inline: 10px;
+  }
+
+  .hero-insights,
+  .flow-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .map-container,
+  #map,
+  #clientMap,
+  .map-surface {
+    min-height: 190px;
+  }
+
+  .support-sheet,
+  .client-bottom-sheet,
+  .bottom-sheet {
+    max-height: 92dvh;
+  }
+}
+
+/* ---------- Accesibilidad ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  :root {
+    --client-border: rgba(15, 23, 42, 0.55);
+  }
+
+  .main-card,
+  .client-card,
+  .summary-card,
+  .planner-card,
+  .hero-insight-card,
+  .flow-step-card,
+  .request-tips-card,
+  .summary-callout-item {
+    border-width: 2px;
+  }
+}
