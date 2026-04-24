@@ -119,16 +119,15 @@ function normalizeDocumentType(value) {
     .replace(/^_|_$/g, "");
 }
 
-function buildProviderDocumentPath(providerId, documentType, file) {
+function buildProviderDocumentPath(userId, documentType, file) {
   const safeType = normalizeDocumentType(documentType) || "documento";
   const extension = inferFileExtension(file);
   const unique = typeof crypto?.randomUUID === "function"
     ? crypto.randomUUID()
     : Date.now() + "-" + Math.random().toString(16).slice(2);
 
-  return providerId + "/" + safeType + "/" + Date.now() + "-" + unique + "." + extension;
+  return userId + "/" + safeType + "/" + Date.now() + "-" + unique + "." + extension;
 }
-
 export async function bootstrapSession() {
   const supabase = getSupabaseClient();
 
@@ -762,9 +761,14 @@ export async function uploadProviderDocument({ providerId, documentType, file })
     return null;
   }
 
-  await requireSession();
+const session = await requireSession();
+const userId = session?.user?.id;
 
-  const safeDocumentType = normalizeDocumentType(documentType);
+if (!userId) {
+  throw new Error("No hay usuario autenticado para subir documentos.");
+}
+
+const safeDocumentType = normalizeDocumentType(documentType);
   if (!safeDocumentType) {
     throw new Error("Seleccioná un tipo de documento válido.");
   }
@@ -785,7 +789,7 @@ export async function uploadProviderDocument({ providerId, documentType, file })
     throw new Error("Formato no permitido. Usá JPG, PNG, WEBP o PDF.");
   }
 
-  const storagePath = buildProviderDocumentPath(providerId, safeDocumentType, file);
+  const storagePath = buildProviderDocumentPath(userId, safeDocumentType, file);
 
   const { error: uploadError } = await supabase.storage
     .from(SERVICE_PROVIDER_DOCUMENTS_BUCKET)
