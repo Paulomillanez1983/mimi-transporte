@@ -11,6 +11,7 @@ import {
   getDeviceId,
   STORAGE_KEYS 
 } from './state/app-state.js';
+import { invokeFunction } from "./services/service-api.js";
 
 // ============================================
 // APP CONTROLLER
@@ -77,7 +78,7 @@ class MimiProviderApp {
     
     // Start background sync
     this.startBackgroundSync();
-    
+    this.subscribeRealtime();
     console.log('[MIMI] App initialized');
   }
 
@@ -664,16 +665,36 @@ class MimiProviderApp {
   /**
    * Start location tracking
    */
-  startLocationTracking() {
-    if (!navigator.geolocation) return;
-    
-    actions.setTracking(true);
-    
-    this.trackingInterval = setInterval(() => {
-      this.updateMapToCurrentPosition();
-    }, 30000); // Every 30 seconds
+startLocationTracking() {
+  if (!navigator.geolocation) return;
+
+  actions.setTracking(true);
+
+  if (this.trackingInterval) {
+    clearInterval(this.trackingInterval);
   }
 
+  this.updateMapToCurrentPosition();
+
+  this.trackingInterval = setInterval(async () => {
+    this.updateMapToCurrentPosition();
+
+    const loc = this.state?.location?.current;
+    const service = this.state?.activeService;
+
+    if (!loc || !service?.requestId) return;
+
+    try {
+      await invokeFunction("svc-track-location", {
+        request_id: service.requestId,
+        lat: loc.lat,
+        lng: loc.lng
+      });
+    } catch (err) {
+      console.warn("[MIMI] Error tracking location:", err);
+    }
+  }, 10000);
+}
   /**
    * Stop location tracking
    */
@@ -707,34 +728,41 @@ class MimiProviderApp {
   /**
    * Handle accept offer
    */
-  handleAcceptOffer() {
-    if (!this.state?.activeOffer) return;
+async handleAcceptOffer() {
+  const offer = this.state?.activeOffer;
+  if (!offer) return;
 
-    // Create active service from offer
-    const service = {
-      id: this.state.activeOffer.id,
-      requestId: this.state.activeOffer.requestId,
-      status: 'ACCEPTED',
-      serviceType: this.state.activeOffer.serviceType,
-      clientName: this.state.activeOffer.clientName,
-      location: this.state.activeOffer.location,
-      price: this.state.activeOffer.price,
+  try {
+    await invokeFunction("svc-provider-respond-offer", {
+      offer_id: offer.id,
+      accepted: true
+    });
+
+    actions.setActiveService({
+      id: offer.id,
+      requestId: offer.requestId,
+      status: "ACCEPTED",
+      serviceType: offer.serviceType,
+      clientName: offer.clientName,
+      location: offer.location,
+      price: offer.price,
       startedAt: Date.now()
-    };
+    });
 
-    actions.setActiveService(service);
     actions.clearActiveOffer();
-    actions.setProviderStatus('BOOKED_UPCOMING');
-    
-    this.showToast('¡Servicio aceptado!', 'success');
-    
-    // Clear timer
+    actions.setProviderStatus("BOOKED_UPCOMING");
+
     if (this.offerTimer) {
       clearInterval(this.offerTimer);
       this.offerTimer = null;
     }
-  }
 
+    this.showToast("Servicio aceptado 🚀", "success");
+  } catch (err) {
+    console.error("[MIMI] Error accepting offer:", err);
+    this.showToast("Error aceptando servicio", "error");
+  }
+}
   /**
    * Handle reject offer
    */
@@ -752,41 +780,56 @@ class MimiProviderApp {
   /**
    * Handle service action button
    */
-  handleServiceAction() {
-    const service = this.state?.activeService;
-    if (!service) return;
+async handleServiceAction() {
+  const service = this.state?.activeService;
+  if (!service) return;
 
-    const statusFlow = {
-      'ACCEPTED': { next: 'EN_ROUTE', text: 'En camino', btn: 'Llegué al domicilio' },
-      'EN_ROUTE': { next: 'ARRIVED', text: 'Llegaste', btn: 'Iniciar servicio' },
-      'ARRIVED': { next: 'IN_PROGRESS', text: 'Servicio iniciado', btn: 'Finalizar servicio' },
-      'IN_PROGRESS': { next: 'COMPLETED', text: 'Servicio completado', btn: null }
-    };
+  try {
+    switch (service.status) {
+      case "ACCEPTED":
+        await invokeFunction("svc-provider-en-route", {
+          request_id: service.requestId
+        });
+        actions.updateServiceStatus("EN_ROUTE");
+        actions.setProviderStatus("EN_ROUTE");
+        this.showToast("Vas en camino", "success");
+        break;
 
-    const current = statusFlow[service.status];
-    if (!current) return;
+      case "EN_ROUTE":
+        await invokeFunction("svc-provider-arrived", {
+          request_id: service.requestId
+        });
+        actions.updateServiceStatus("ARRIVED");
+        actions.setProviderStatus("ARRIVED");
+        this.showToast("Llegaste al domicilio", "success");
+        break;
 
-    if (current.next === 'COMPLETED') {
-      // Complete service
-      actions.clearActiveService();
-      actions.setProviderStatus('ONLINE_IDLE');
-      this.showToast('Servicio completado', 'success');
-      
-      // Update stats
-      const completed = (this.state?.provider.stats.completedServices || 0) + 1;
-      actions.updateState({
-        provider: {
-          ...this.state.provider,
-          stats: { ...this.state.provider.stats, completedServices: completed }
-        }
-      });
-    } else {
-      // Advance status
-      actions.updateServiceStatus(current.next);
-      this.showToast(current.text, 'success');
+      case "ARRIVED":
+        await invokeFunction("svc-start-service", {
+          request_id: service.requestId
+        });
+        actions.updateServiceStatus("IN_PROGRESS");
+        actions.setProviderStatus("IN_SERVICE");
+        this.showToast("Servicio iniciado", "success");
+        break;
+
+      case "IN_PROGRESS":
+        await invokeFunction("svc-complete-service", {
+          request_id: service.requestId
+        });
+        actions.clearActiveService();
+        actions.setProviderStatus("ONLINE_IDLE");
+        this.showToast("Servicio completado", "success");
+        break;
+
+      default:
+        console.warn("[MIMI] Estado de servicio no manejado:", service.status);
     }
+  } catch (err) {
+    console.error("[MIMI] Error updating service:", err);
+    this.showToast("Error actualizando servicio", "error");
   }
-
+}
   /**
    * Send chat message
    */
@@ -806,19 +849,7 @@ class MimiProviderApp {
     actions.addMessage(message);
     input.value = '';
     
-    this.renderChatMessages();
-
-    // Simulate reply (for demo)
-    setTimeout(() => {
-      const reply = {
-        id: Date.now() + 1,
-        text: 'Mensaje recibido. Gracias.',
-        type: 'incoming',
-        timestamp: Date.now()
-      };
-      actions.addMessage(reply);
-      this.renderChatMessages();
-    }, 2000);
+this.renderChatMessages();
   }
 
   /**
@@ -1246,7 +1277,41 @@ class MimiProviderApp {
       this.elements.verificationModal.hidden = !isOpen || modal !== 'verification';
     }
   }
+  subscribeRealtime() {
+  try {
+    const channel = window.supabase
+      .channel("mimi-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "svc_notifications"
+        },
+        (payload) => this.onNotification(payload)
+      )
+      .subscribe();
 
+    console.log("[MIMI] Realtime notifications subscribed");
+  } catch (err) {
+    console.error("[MIMI] Realtime error:", err);
+  }
+}
+onNotification(payload) {
+  const notif = payload?.new;
+  if (!notif) return;
+
+  actions.addNotification({
+    id: notif.id || Date.now(),
+    title: notif.title || "Nueva notificación",
+    text: notif.body || notif.message || "",
+    timestamp: notif.created_at || Date.now(),
+    unread: true,
+    icon: notif.icon || "🔔"
+  });
+
+  this.showToast(notif.title || "Nueva notificación", "info");
+}
   /**
    * Show toast notification
    */
@@ -1314,70 +1379,17 @@ class MimiProviderApp {
    * Start background sync
    */
   startBackgroundSync() {
-    // Simulate receiving offers (for demo)
-    setInterval(() => {
-      if (this.state?.provider.status === 'ONLINE_IDLE' && !this.state?.activeOffer && !this.state?.activeService) {
-        // 10% chance every 30 seconds to receive an offer
-        if (Math.random() < 0.1) {
-          this.simulateOffer();
-        }
-      }
-    }, 30000);
+// Producción: las ofertas llegan por realtime / backend.
+// No simulamos ofertas locales.
 
+    
     // Check distance alerts for scheduled services
     setInterval(() => {
       this.checkDistanceAlerts();
     }, 60000);
   }
 
-  /**
-   * Simulate receiving an offer (demo)
-   */
-  simulateOffer() {
-    const services = ['Plomería', 'Electricidad', 'Limpieza', 'Gasista', 'Jardinería'];
-    const locations = ['Nueva Córdoba', 'Alberdi', 'General Paz', 'Centro', 'Cerro de las Rosas'];
-    
-    const offer = {
-      id: `offer_${Date.now()}`,
-      requestId: `req_${Date.now()}`,
-      serviceType: services[Math.floor(Math.random() * services.length)],
-      clientName: ['María', 'Juan', 'Laura', 'Carlos', 'Ana'][Math.floor(Math.random() * 5)],
-      location: locations[Math.floor(Math.random() * locations.length)],
-      price: [12000, 15000, 8000, 20000, 10000][Math.floor(Math.random() * 5)],
-      expiresAt: new Date(Date.now() + 15000).toISOString(),
-      createdAt: new Date().toISOString()
-    };
 
-    actions.setActiveOffer(offer);
-    actions.setProviderStatus('INVITED');
-    
-    // Show notification
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('Nueva solicitud de servicio', {
-        body: `${offer.serviceType} · ${offer.location}`,
-        icon: '/assets/icon-192.png',
-        badge: '/assets/icon-96.png',
-        tag: offer.id,
-        requireInteraction: true
-      });
-    }
-
-    // Play sound (if available)
-    this.playNotificationSound();
-  }
-
-  /**
-   * Play notification sound
-   */
-  playNotificationSound() {
-    try {
-      const audio = new Audio('/assets/notification.mp3');
-      audio.volume = 0.5;
-      audio.play().catch(() => {});
-    } catch (e) {
-      // Ignore audio errors
-    }
-  }
 
   /**
    * Check distance alerts
