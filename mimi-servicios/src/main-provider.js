@@ -2196,6 +2196,8 @@ async openCameraCapture(documentType) {
 
   try {
     this.elements.cameraCaptureModal.hidden = false;
+    this.elements.cameraCaptureModal.style.display = "block";
+    this.elements.cameraCaptureModal.style.zIndex = "999999";
 
     this.cameraStream = await navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -2206,9 +2208,19 @@ async openCameraCapture(documentType) {
       }
     });
 
-    this.elements.cameraVideo.srcObject = this.cameraStream;
-    await this.elements.cameraVideo.play();
+const video = this.elements.cameraVideo;
 
+video.setAttribute("playsinline", "");
+video.setAttribute("webkit-playsinline", "");
+video.muted = true;
+video.autoplay = true;
+video.srcObject = this.cameraStream;
+
+await new Promise((resolve) => {
+  video.onloadedmetadata = resolve;
+});
+
+await video.play();
     if (this.elements.cameraStatus) {
       this.elements.cameraStatus.textContent = "Cámara lista";
     }
@@ -2218,7 +2230,6 @@ async openCameraCapture(documentType) {
     this.showToast("No pudimos abrir la cámara. Revisá permisos del navegador.", "error");
   }
 }
-
 captureCameraFrame() {
   const video = this.elements.cameraVideo;
   const canvas = this.elements.cameraCanvas;
