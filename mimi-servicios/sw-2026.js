@@ -1,4 +1,4 @@
-const CACHE_NAME = "mimi-servicios-provider-2026-v1";
+const CACHE_NAME = "mimi-servicios-provider-2026-v2";
 
 const APP_ASSETS = [
   "./",
@@ -27,8 +27,8 @@ const APP_ASSETS = [
   "./sw-2026.js",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
-  "./assets/notification.mp3",
-  "./src/ui/render-provider.js"
+"./assets/notification.mp3",
+"./src/ui/render-provider.js"
 ];
 self.addEventListener("install", (event) => {
   event.waitUntil(precacheAppAssets());
