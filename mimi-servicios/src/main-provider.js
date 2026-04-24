@@ -697,53 +697,60 @@ function bindBasicControls() {
 document.addEventListener("change", async (e) => {
 
   // 🔹 NUEVO: wizard onboarding
-  if (e.target.dataset.input) {
-    const file = e.target.files[0];
-    if (!file) return;
+if (e.target.dataset.input) {
+  if (uploading) return;
+  uploading = true;
 
-    const docType = e.target.dataset.input;
-
-    const preview = document.getElementById(`preview-${docType}`);
-    const status = document.getElementById(`status-${docType}`);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (preview) {
-        preview.innerHTML = `<img src="${reader.result}" />`;
-        preview.classList.add("visible");
-      }
-    };
-    reader.readAsDataURL(file);
-
-    if (status) {
-      status.textContent = "Subiendo...";
-      status.className = "doc-status pending";
-    }
-
-    try {
-      await uploadProviderDocument({
-        providerId: state.session.providerId,
-        documentType: docType,
-        file
-      });
-
-      if (status) {
-        status.textContent = "✅ Subido";
-        status.className = "doc-status ok";
-      }
-
-      updateProgress();
-
-    } catch {
-      if (status) {
-        status.textContent = "❌ Error";
-        status.className = "doc-status error";
-      }
-    }
-
+  const file = e.target.files[0];
+  if (!file) {
+    uploading = false;
     return;
   }
 
+  const docType = e.target.dataset.input;
+
+  const preview = document.getElementById(`preview-${docType}`);
+  const status = document.getElementById(`status-${docType}`);
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    if (preview) {
+      preview.innerHTML = `<img src="${reader.result}" />`;
+      preview.classList.add("visible");
+    }
+  };
+  reader.readAsDataURL(file);
+
+  if (status) {
+    status.textContent = "Subiendo...";
+    status.className = "doc-status pending";
+  }
+
+  try {
+    await uploadProviderDocument({
+      providerId: state.session.providerId,
+      documentType: docType,
+      file
+    });
+
+    if (status) {
+      status.textContent = "✅ Subido";
+      status.className = "doc-status ok";
+    }
+
+    updateProgress();
+
+  } catch {
+    if (status) {
+      status.textContent = "❌ Error";
+      status.className = "doc-status error";
+    }
+  } finally {
+    uploading = false;
+  }
+
+  return;
+}
   // 🔹 LEGACY
   if (e.target?.name !== "providerDocumentFile") return;
 
