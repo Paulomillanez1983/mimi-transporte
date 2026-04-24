@@ -59,8 +59,15 @@ class MimiProviderApp {
       startHeight: 0,
       isDragging: false
     };
-  }
 
+    this.cameraStream = null;
+    this.cameraCapture = {
+      documentType: null,
+      blob: null,
+      file: null
+    };
+  }
+  
   /**
    * Initialize the app
    */
@@ -131,7 +138,19 @@ class MimiProviderApp {
       offerPrice: document.getElementById('offerPrice'),
       acceptOffer: document.getElementById('acceptOffer'),
       rejectOffer: document.getElementById('rejectOffer'),
-      
+      cameraCaptureModal: document.getElementById("cameraCaptureModal"),
+cameraVideo: document.getElementById("cameraVideo"),
+cameraCanvas: document.getElementById("cameraCanvas"),
+cameraGuide: document.getElementById("cameraGuide"),
+cameraTitle: document.getElementById("cameraTitle"),
+cameraHint: document.getElementById("cameraHint"),
+cameraStatus: document.getElementById("cameraStatus"),
+cameraCancelBtn: document.getElementById("cameraCancelBtn"),
+cameraCaptureBtn: document.getElementById("cameraCaptureBtn"),
+cameraRetakeBtn: document.getElementById("cameraRetakeBtn"),
+cameraUseBtn: document.getElementById("cameraUseBtn"),
+dniFrontStatus: document.getElementById("dniFrontStatus"),
+selfieStatus: document.getElementById("selfieStatus"),
       // Active service
       activeServiceCard: document.getElementById('activeServiceCard'),
       serviceStatusBadge: document.getElementById('serviceStatusBadge'),
@@ -738,12 +757,27 @@ stats: {
       actions.closeDrawer();
     });
 
-    document.querySelectorAll("[data-provider-doc]").forEach((input) => {
-  input.addEventListener("change", (event) => {
-    this.handleProviderDocumentUpload(event);
+document.querySelectorAll("[data-camera-doc]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    this.openCameraCapture(btn.dataset.cameraDoc);
   });
 });
 
+this.elements.cameraCancelBtn?.addEventListener("click", () => {
+  this.closeCameraCapture();
+});
+
+this.elements.cameraCaptureBtn?.addEventListener("click", () => {
+  this.captureCameraFrame();
+});
+
+this.elements.cameraRetakeBtn?.addEventListener("click", () => {
+  this.resetCameraPreview();
+});
+
+this.elements.cameraUseBtn?.addEventListener("click", () => {
+  this.confirmCameraCapture();
+});
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -1904,10 +1938,7 @@ if (this.elements.drawerInitials) {
       window.location.href = "./index.html";
     }
   }
-async handleProviderDocumentUpload(event) {
-  const input = event.target;
-  const file = input?.files?.[0];
-  const documentType = input?.dataset?.providerDoc;
+async openCameraCapture(documentType) {
   const providerId = this.state?.session?.providerId;
 
   if (!providerId) {
@@ -1915,12 +1946,121 @@ async handleProviderDocumentUpload(event) {
     return;
   }
 
-  if (!file || !documentType) {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    this.showToast("Tu navegador no permite cámara. Probá desde Chrome o instalá la PWA.", "error");
+    return;
+  }
+
+  const isSelfie = documentType === "selfie";
+
+  this.cameraCapture = { documentType, blob: null, file: null };
+
+  if (this.elements.cameraTitle) {
+    this.elements.cameraTitle.textContent = isSelfie ? "Selfie de verificación" : "Foto del DNI";
+  }
+
+  if (this.elements.cameraHint) {
+    this.elements.cameraHint.textContent = isSelfie
+      ? "Centrate dentro del círculo, con buena luz."
+      : "Ubicá el frente del DNI dentro del rectángulo.";
+  }
+
+  this.elements.cameraGuide?.classList.toggle("selfie", isSelfie);
+  this.elements.cameraGuide?.classList.toggle("dni", !isSelfie);
+
+  this.resetCameraPreview();
+
+  try {
+    this.elements.cameraCaptureModal.hidden = false;
+
+    this.cameraStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: isSelfie ? "user" : { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    });
+
+    this.elements.cameraVideo.srcObject = this.cameraStream;
+    await this.elements.cameraVideo.play();
+
+    if (this.elements.cameraStatus) {
+      this.elements.cameraStatus.textContent = "Cámara lista";
+    }
+  } catch (err) {
+    console.error("[MIMI] Error abriendo cámara:", err);
+    this.closeCameraCapture();
+    this.showToast("No pudimos abrir la cámara. Revisá permisos del navegador.", "error");
+  }
+}
+
+captureCameraFrame() {
+  const video = this.elements.cameraVideo;
+  const canvas = this.elements.cameraCanvas;
+
+  if (!video || !canvas || !video.videoWidth) {
+    this.showToast("La cámara todavía no está lista", "warning");
+    return;
+  }
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      this.showToast("No pudimos capturar la imagen", "error");
+      return;
+    }
+
+    const documentType = this.cameraCapture.documentType;
+    const fileName = `${documentType}-${Date.now()}.jpg`;
+
+    this.cameraCapture.blob = blob;
+    this.cameraCapture.file = new File([blob], fileName, { type: "image/jpeg" });
+
+    video.pause();
+
+    if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = true;
+    if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = false;
+    if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = false;
+    if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Foto capturada. Confirmá o repetí.";
+  }, "image/jpeg", 0.92);
+}
+
+resetCameraPreview() {
+  this.cameraCapture.blob = null;
+  this.cameraCapture.file = null;
+
+  if (this.elements.cameraVideo?.srcObject) {
+    this.elements.cameraVideo.play().catch(() => {});
+  }
+
+  if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = false;
+  if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = true;
+  if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = true;
+  if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Cámara lista";
+}
+
+async confirmCameraCapture() {
+  const providerId = this.state?.session?.providerId;
+  const documentType = this.cameraCapture.documentType;
+  const file = this.cameraCapture.file;
+
+  if (!providerId || !documentType || !file) {
+    this.showToast("Falta capturar la foto", "warning");
     return;
   }
 
   try {
     actions.setLoading(true);
+
+    if (this.elements.cameraStatus) {
+      this.elements.cameraStatus.textContent = "Subiendo imagen segura...";
+    }
 
     await uploadProviderDocument({
       providerId,
@@ -1928,59 +2068,121 @@ async handleProviderDocumentUpload(event) {
       file
     });
 
+    if (documentType === "dni_front" && this.elements.dniFrontStatus) {
+      this.elements.dniFrontStatus.textContent = "Documento recibido ✅";
+    }
+
+    if (documentType === "selfie" && this.elements.selfieStatus) {
+      this.elements.selfieStatus.textContent = "Selfie recibida ✅";
+    }
+
+    this.closeCameraCapture();
+
+    if (documentType === "dni_front") {
+      this.showToast("DNI recibido. Ahora sacate una selfie.", "success");
+      this.showWizardStep(2);
+      return;
+    }
+
+    this.showToast("Verificando identidad...", "info");
+
+    const verification = await invokeFunction("svc-verify-provider-identity", {
+      provider_id: providerId
+    });
+
     const workspace = await loadProviderWorkspace(providerId);
     this.applyWorkspaceToState(workspace);
-
     this.renderVerificationStatus();
 
-    this.showToast("Documento subido correctamente. Queda pendiente de revisión.", "success");
+    const status = String(
+      verification?.status ??
+      verification?.review_status ??
+      workspace?.profile?.review_status ??
+      ""
+    ).toUpperCase();
+
+    if (["REVIEW", "PENDING", "PENDING_DOCUMENTS"].includes(status)) {
+      this.showToast("Revisión en curso. Te avisamos cuando esté aprobada.", "success");
+    } else if (status === "NEEDS_RESUBMISSION") {
+      this.showToast("Necesitamos que repitas una foto con mejor calidad.", "warning");
+    } else if (status === "REJECTED") {
+      this.showToast("No pudimos validar la identidad. Contactá soporte.", "error");
+    } else {
+      this.showToast("Verificación enviada correctamente.", "success");
+    }
+
+    this.showWizardStep(4);
   } catch (err) {
-    console.error("[MIMI] Error subiendo documento:", err);
-    this.showToast(err?.message ?? "No pudimos subir el documento", "error");
+    console.error("[MIMI] Error en verificación por cámara:", err);
+    this.showToast(err?.message ?? "No pudimos completar la verificación", "error");
   } finally {
     actions.setLoading(false);
-    input.value = "";
   }
 }
-  /**
-   * Handle wizard next
-   */
+
+closeCameraCapture() {
+  if (this.cameraStream) {
+    this.cameraStream.getTracks().forEach((track) => track.stop());
+    this.cameraStream = null;
+  }
+
+  if (this.elements.cameraVideo) {
+    this.elements.cameraVideo.pause();
+    this.elements.cameraVideo.srcObject = null;
+  }
+
+  if (this.elements.cameraCaptureModal) {
+    this.elements.cameraCaptureModal.hidden = true;
+  }
+
+  this.cameraCapture = {
+    documentType: null,
+    blob: null,
+    file: null
+  };
+}
+
+showWizardStep(stepNumber) {
+  document.querySelectorAll(".wizard-step").forEach((step) => {
+    step.classList.toggle("active", step.id === `step${stepNumber}`);
+  });
+
+  if (this.elements.wizardProgress) {
+    this.elements.wizardProgress.style.width = `${Math.min(100, stepNumber * 25)}%`;
+  }
+
+  if (this.elements.wizardPrev) {
+    this.elements.wizardPrev.hidden = stepNumber <= 1;
+  }
+
+  if (this.elements.wizardNext) {
+    this.elements.wizardNext.textContent = stepNumber >= 4 ? "Cerrar" : "Continuar";
+  }
+}
+
 handleWizardNext() {
-  this.showToast("Subí tus documentos. El equipo MIMI los revisará desde Supabase.", "info");
-}
-  /**
-   * Handle wizard prev
-   */
-  handleWizardPrev() {
-    // Not implemented for simplicity
+  const activeStep = document.querySelector(".wizard-step.active");
+  const current = Number(activeStep?.id?.replace("step", "") ?? 1);
+
+  if (current === 1) {
+    this.openCameraCapture("dni_front");
+    return;
   }
 
-  /**
-   * Show service detail
-   */
-  showServiceDetail(id) {
-    this.showToast(`Detalle del servicio ${id}`, 'info');
+  if (current === 2) {
+    this.openCameraCapture("selfie");
+    return;
   }
 
-  /**
-   * Prepare service
-   */
-  prepareService(id) {
-    this.showToast('Preparando servicio...', 'success');
-    actions.setProviderStatus('EN_ROUTE');
-    
-    // Find service and set as active
-    const service = this.state?.scheduledServices.find(s => s.id === id);
-    if (service) {
-      actions.setActiveService({
-        ...service,
-        status: 'PROVIDER_EN_ROUTE',
-        startedAt: Date.now()
-      });
-    }
+  if (current >= 4) {
+    actions.closeModal();
+    return;
   }
+
+  this.showWizardStep(current + 1);
 }
 
+}
 // ============================================
 // INITIALIZATION
 // ============================================
