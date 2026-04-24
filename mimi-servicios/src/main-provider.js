@@ -1980,48 +1980,92 @@ if (this.elements.drawerInitials) {
     }, 3000);
   }
 
-  /**
-   * Setup install prompt
-   */
-  setupInstallPrompt() {
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      actions.updateState({ ui: { installPrompt: e } });
-      
-      // Show banner after 2 seconds
-      setTimeout(() => {
-        if (this.elements.installBanner) {
-          this.elements.installBanner.hidden = false;
-        }
-      }, 2000);
-    });
+/**
+ * Setup install prompt
+ */
+setupInstallPrompt() {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
 
-    window.addEventListener('appinstalled', () => {
-      actions.updateState({ ui: { installPrompt: null } });
-      if (this.elements.installBanner) {
-        this.elements.installBanner.hidden = true;
+    this.deferredInstallPrompt = e;
+    window.deferredInstallPrompt = e;
+
+    actions.updateState({
+      ui: {
+        installPrompt: e
       }
-      this.showToast('App instalada correctamente', 'success');
     });
-  }
 
-  /**
-   * Handle install
-   */
-  async handleInstall() {
-    const prompt = this.state?.ui.installPrompt;
-    if (!prompt) return;
-
-    prompt.prompt();
-    const result = await prompt.userChoice;
-    
-    if (result.outcome === 'accepted') {
-      this.showToast('Instalando app...', 'success');
+    if (this.elements.installBanner) {
+      this.elements.installBanner.hidden = false;
     }
-    
-    actions.updateState({ ui: { installPrompt: null } });
+
+    console.log("[MIMI] PWA install prompt listo");
+  });
+
+  window.addEventListener("appinstalled", () => {
+    this.deferredInstallPrompt = null;
+    window.deferredInstallPrompt = null;
+
+    actions.updateState({
+      ui: {
+        installPrompt: null
+      }
+    });
+
+    if (this.elements.installBanner) {
+      this.elements.installBanner.hidden = true;
+    }
+
+    this.showToast("App instalada correctamente", "success");
+  });
+}
+
+/**
+ * Handle install
+ */
+async handleInstall() {
+  const promptEvent =
+    this.deferredInstallPrompt ||
+    window.deferredInstallPrompt ||
+    this.state?.ui?.installPrompt;
+
+  if (!promptEvent) {
+    this.showToast("La instalación aún no está disponible. Recargá la página e intentá de nuevo.", "warning");
+    console.warn("[MIMI] No hay beforeinstallprompt guardado");
+    return;
   }
 
+  try {
+    await promptEvent.prompt();
+
+    const choice = await promptEvent.userChoice;
+    console.log("[MIMI] PWA install choice:", choice);
+
+    this.deferredInstallPrompt = null;
+    window.deferredInstallPrompt = null;
+
+    actions.updateState({
+      ui: {
+        installPrompt: null
+      }
+    });
+
+    if (this.elements.installBanner) {
+      this.elements.installBanner.hidden = true;
+    }
+
+    if (choice?.outcome === "accepted") {
+      this.showToast("Instalando app...", "success");
+    } else {
+      this.showToast("Instalación cancelada", "info");
+    }
+  } catch (err) {
+    console.error("[MIMI] Error instalando PWA:", err);
+    this.showToast("No pudimos abrir la instalación", "error");
+  }
+}
+  
   /**
    * Start background sync
    */
