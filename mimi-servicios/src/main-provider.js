@@ -1250,7 +1250,7 @@ this.renderChatMessages();
     if (!stats) return;
 
     if (this.elements.statRating) {
-      this.elements.statRating.textContent = stats.rating.toFixed(1);
+      this.elements.statRating.textContent = (Number(stats.rating ?? 0) || 0).toFixed(1);
     }
     if (this.elements.statCompleted) {
       this.elements.statCompleted.textContent = stats.completedServices;
@@ -1261,7 +1261,7 @@ this.renderChatMessages();
     
     // Drawer stats
     if (this.elements.drawerRating) {
-      this.elements.drawerRating.textContent = stats.rating.toFixed(1);
+      this.elements.drawerRating.textContent = (Number(stats.rating ?? 0) || 0).toFixed(1);
     }
     if (this.elements.drawerServices) {
       this.elements.drawerServices.textContent = stats.completedServices;
