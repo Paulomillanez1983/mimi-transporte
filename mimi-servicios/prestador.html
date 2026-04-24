@@ -457,26 +457,29 @@
             <span class="progress-text">Paso 1 de 4</span>
           </div>
           
-          <div class="wizard-step active" id="step1">
-            <h3>Documento de identidad</h3>
-            <p>Subí una foto clara de tu DNI (frente)</p>
-            <label class="upload-zone" for="docDniFront">
-              <span class="upload-icon">📄</span>
-              <span class="upload-text">Subir DNI frente</span>
-             </label>
-            <input id="docDniFront" type="file" accept="image/*,.pdf" hidden data-provider-doc="dni_front">
-          </div>
-          
-          <div class="wizard-step" id="step2">
-            <h3>Selfie</h3>
-            <p>Sacate una foto para verificar tu identidad</p>
-            <label class="upload-zone" for="docSelfie">
-             <span class="upload-icon">📸</span>
-              <span class="upload-text">Subir selfie</span>
-            </label>
-            <input id="docSelfie" type="file" accept="image/*" capture="user" hidden data-provider-doc="selfie">
-          </div>
-          
+<div class="wizard-step active" id="step1">
+  <h3>DNI frente</h3>
+  <p>Fotografiá el frente de tu DNI. No podés subir imágenes desde galería.</p>
+
+  <button class="upload-zone camera-start-btn" type="button" data-camera-doc="dni_front">
+    <span class="upload-icon">📷</span>
+    <span class="upload-text">Abrir cámara trasera</span>
+  </button>
+
+  <div class="camera-step-status" id="dniFrontStatus">Pendiente</div>
+</div>
+
+<div class="wizard-step" id="step2">
+  <h3>Selfie</h3>
+  <p>Sacate una selfie clara para comparar con el documento.</p>
+
+  <button class="upload-zone camera-start-btn" type="button" data-camera-doc="selfie">
+    <span class="upload-icon">🤳</span>
+    <span class="upload-text">Abrir cámara frontal</span>
+  </button>
+
+  <div class="camera-step-status" id="selfieStatus">Pendiente</div>
+</div>          
           <div class="wizard-step" id="step3">
             <h3>Servicios que prestás</h3>
             <p>Seleccioná los servicios que ofrecés</p>
@@ -513,9 +516,35 @@
       </div>
     </div>
 
-    <!-- Toast Container -->
-    <div class="toast-container" id="toastContainer"></div>
+<div class="camera-capture-modal" id="cameraCaptureModal" hidden>
+  <div class="camera-shell">
+    <div class="camera-topbar">
+      <button class="camera-close-btn" id="cameraCancelBtn" type="button">✕</button>
+      <div>
+        <strong id="cameraTitle">Verificación</strong>
+        <span id="cameraHint">Ubicá el documento dentro de la guía</span>
+      </div>
+    </div>
 
+    <div class="camera-preview-wrap">
+      <video id="cameraVideo" class="camera-video" autoplay playsinline muted></video>
+      <canvas id="cameraCanvas" hidden></canvas>
+      <div class="camera-guide dni" id="cameraGuide"></div>
+    </div>
+
+    <div class="camera-actions">
+      <button class="camera-secondary" id="cameraRetakeBtn" type="button" hidden>Repetir</button>
+      <button class="camera-primary" id="cameraCaptureBtn" type="button">📸 Capturar</button>
+      <button class="camera-primary" id="cameraUseBtn" type="button" hidden>Usar foto</button>
+    </div>
+
+    <p class="camera-status" id="cameraStatus">Cámara lista</p>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+    
     <!-- Install Prompt -->
     <div class="install-banner" id="installBanner" hidden>
       <div class="install-content">
