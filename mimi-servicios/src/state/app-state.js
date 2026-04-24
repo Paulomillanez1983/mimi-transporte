@@ -606,3 +606,27 @@ export function clearPersistedState() {
 }
 
 export { STORAGE_KEYS };
+export function setActiveMode(mode) {
+  const normalized = mode === "provider" ? "provider" : "client";
+
+  try {
+    localStorage.setItem("mimi_services_active_mode", normalized);
+    sessionStorage.setItem("mimi_services_active_mode", normalized);
+  } catch (err) {
+    console.warn("[MIMI] No se pudo guardar active mode:", err);
+  }
+
+  return normalized;
+}
+
+export function getActiveMode() {
+  try {
+    return (
+      sessionStorage.getItem("mimi_services_active_mode") ||
+      localStorage.getItem("mimi_services_active_mode") ||
+      "client"
+    );
+  } catch (_) {
+    return "client";
+  }
+}
