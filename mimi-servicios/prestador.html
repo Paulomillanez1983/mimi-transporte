@@ -1,363 +1,526 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="es-AR">
 <head>
-  <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
-  >
-  <meta name="theme-color" content="#163867">
-  <meta
-    name="description"
-    content="MIMI Servicios para prestadores. Operá ofertas, estados y seguimiento en vivo desde un panel móvil y confiable."
-  >
-  <title>MIMI Servicios | Prestador</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Panel del prestador - MIMI Servicios">
+  
+  <title>MIMI Servicios - Panel Prestador</title>
+  
+  <!-- PWA -->
   <link rel="manifest" href="./manifest.json">
-  <link rel="icon" href="./favicon.ico" sizes="any">
-  <link rel="shortcut icon" href="./favicon.ico">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
+  
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap"
-  >
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
-  >
+  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- MapLibre -->
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js" crossorigin></script>
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" crossorigin>
+  
+  <!-- Styles -->
   <link rel="stylesheet" href="./styles/app.css">
-  <link rel="stylesheet" href="./styles/provider.css">
+  <link rel="stylesheet" href="./styles/provider-2026.css">
 </head>
 <body>
-  <div class="app-shell">
-    <header class="header" role="banner">
-      <div class="header-content">
-        <div class="vehicle-section" aria-hidden="true">
-          <div class="vehicle-badge">PRESTADOR</div>
+  <!-- App Shell -->
+  <div id="app" class="app-container">
+    
+    <!-- Map Background -->
+    <div id="mapContainer" class="map-background">
+      <div id="map" class="map-surface"></div>
+      <div class="map-fallback" id="mapFallback" hidden>
+        <div class="fallback-content">
+          <svg class="fallback-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9.553 4.553A1 1 0 009 4.118v.006"/>
+          </svg>
+          <h3 class="fallback-title">Mapa no disponible</h3>
+          <p class="fallback-text">Seguimos mostrando tu operación</p>
         </div>
+      </div>
+    </div>
 
-        <div class="logo-section">
-          <div class="logo-title">MIMI</div>
-          <div class="logo-subtitle">Panel operativo para tomar y ejecutar servicios</div>
-        </div>
-
-        <div class="header-actions">
-          <div class="header-notifications-wrapper" aria-label="Accesos rápidos">
-            <button
-              id="notificationsButton"
-              class="trip-notifications"
-              type="button"
-              aria-label="Abrir notificaciones"
-              aria-controls="notificationsDrawer"
-              aria-expanded="false"
-            >
-              &#128276;
-              <span
-                class="trip-notifications-badge"
-                id="notificationsCount"
-                hidden
-              >0</span>
-            </button>
-
-            <button
-              id="chatButton"
-              class="trip-notifications"
-              type="button"
-              aria-label="Abrir chat"
-              aria-controls="chatDrawer"
-              aria-expanded="false"
-            >
-              &#128172;
-              <span
-                class="trip-notifications-badge"
-                id="chatUnreadCount"
-                hidden
-              >0</span>
-            </button>
+    <!-- Floating Header -->
+    <header class="floating-header" id="header">
+      <div class="header-glass">
+        <div class="header-content">
+          <!-- Brand -->
+          <div class="header-brand">
+            <span class="brand-text">MIMI</span>
+            <span class="brand-badge" id="statusBadge">OFFLINE</span>
           </div>
-
-          <div class="header-user">
-            <span class="status-chip session-chip" id="sessionChip">Prestador</span>
-            <button
-              class="header-login-btn"
-              id="authPrimaryButton"
-              data-auth-action="login"
-              type="button"
-            >
-              Ingresar
-            </button>
-            <button
-              class="header-logout-btn"
-              id="authSecondaryButton"
-              type="button"
-              hidden
-            >
-              Salir
-            </button>
+          
+          <!-- Status Indicator -->
+          <div class="header-status" id="headerStatus">
+            <span class="status-dot" id="statusDot"></span>
+            <span class="status-text" id="statusText">Desconectado</span>
           </div>
+          
+          <!-- Menu Button -->
+          <button class="menu-button" id="menuButton" aria-label="Menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
 
-    <main class="container" role="main">
-      <section class="hero-text" aria-labelledby="heroTitle">
-        <h1 class="hero-title" id="heroTitle">Gestioná tu jornada en tiempo real</h1>
-        <p class="hero-subtitle">
-          Activá tu disponibilidad, respondé ofertas y seguí el servicio activo desde un panel operativo dedicado.
-        </p>
-      </section>
+    <!-- Online Button (when offline) -->
+    <div class="online-button-container" id="onlineButtonContainer">
+      <button class="online-button" id="goOnlineButton">
+        <span class="online-button-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </span>
+        <span class="online-button-text">Ponerme en línea</span>
+        <span class="online-button-subtext">Para recibir servicios</span>
+      </button>
+    </div>
 
-      <div
-        class="status-banner is-info"
-        id="statusBanner"
-        hidden
-        role="status"
-        aria-live="polite"
-      ></div>
+    <!-- Floating Offer Card -->
+    <div class="offer-card-float" id="offerCard" hidden>
+      <div class="offer-glass">
+        <div class="offer-header">
+          <span class="offer-label">Nueva solicitud</span>
+          <span class="offer-timer" id="offerTimer">15s</span>
+        </div>
+        <div class="offer-body">
+          <div class="offer-service" id="offerService">Plomería</div>
+          <div class="offer-location" id="offerLocation">Nueva Córdoba</div>
+          <div class="offer-client" id="offerClient">Cliente: Mariana</div>
+          <div class="offer-price" id="offerPrice">$18.000 estimado</div>
+        </div>
+        <div class="offer-actions">
+          <button class="offer-btn reject" id="rejectOffer">Rechazar</button>
+          <button class="offer-btn accept" id="acceptOffer">Aceptar</button>
+        </div>
+      </div>
+    </div>
 
-      <section class="main-card" aria-label="Panel operativo del prestador">
-        <div class="planner-shell planner-shell-provider">
-          <section class="planner-panel" aria-label="Operación principal">
-            <div class="planner-topbar">
-              <div class="planner-topbar-copy">
-                <span class="eyebrow">Prestador</span>
-                <h2>Panel operativo</h2>
-                <p id="authHint">
-                  Ingresá con Google para ver tus ofertas, actualizar estados y seguir tu servicio activo.
-                </p>
+    <!-- Active Service Card -->
+    <div class="active-service-float" id="activeServiceCard" hidden>
+      <div class="service-glass">
+        <div class="service-header">
+          <span class="service-label">Servicio activo</span>
+          <span class="service-status" id="serviceStatusBadge">En camino</span>
+        </div>
+        <div class="service-body">
+          <div class="service-type" id="activeServiceType">Electricista</div>
+          <div class="service-location" id="activeServiceLocation">Nueva Córdoba</div>
+          <div class="service-client" id="activeServiceClient">Mariana</div>
+        </div>
+        <button class="service-action-btn" id="serviceActionBtn">
+          Llegué al domicilio
+        </button>
+      </div>
+    </div>
+
+    <!-- Distance Alert -->
+    <div class="distance-alert" id="distanceAlert" hidden>
+      <div class="alert-glass alert-warning" id="alertContent">
+        <div class="alert-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div class="alert-content">
+          <div class="alert-title" id="alertTitle">Conviene salir ahora</div>
+          <div class="alert-text" id="alertText">Para llegar a tiempo al servicio</div>
+        </div>
+        <button class="alert-action" id="alertAction">Ver ruta</button>
+      </div>
+    </div>
+
+    <!-- Bottom Sheet -->
+    <div class="bottom-sheet" id="bottomSheet">
+      <div class="sheet-handle-container">
+        <div class="sheet-handle"></div>
+      </div>
+      
+      <!-- Sheet Header (Compact) -->
+      <div class="sheet-header" id="sheetHeader">
+        <div class="sheet-summary">
+          <div class="sheet-status" id="sheetStatus">
+            <span class="status-indicator offline" id="sheetStatusDot"></span>
+            <span class="status-text" id="sheetStatusText">Offline</span>
+          </div>
+          <div class="sheet-info" id="sheetInfo">
+            <span class="info-price">Base $8.000</span>
+            <span class="info-separator">·</span>
+            <span class="info-mode">Por hora</span>
+          </div>
+        </div>
+        <div class="sheet-upcoming" id="sheetUpcoming">
+          <span class="upcoming-label">Próximo:</span>
+          <span class="upcoming-time">Hoy 16:30</span>
+        </div>
+      </div>
+      
+      <!-- Sheet Content (Scrollable) -->
+      <div class="sheet-content" id="sheetContent">
+        <!-- Tabs -->
+        <div class="sheet-tabs">
+          <button class="tab-btn active" data-tab="now">Ahora</button>
+          <button class="tab-btn" data-tab="scheduled">Agenda</button>
+          <button class="tab-btn" data-tab="pricing">Precios</button>
+          <button class="tab-btn" data-tab="account">Cuenta</button>
+        </div>
+        
+        <!-- Tab: Now -->
+        <div class="tab-panel active" id="tabNow">
+          <div class="panel-section">
+            <h3 class="section-title">Estado actual</h3>
+            <div class="status-toggle-modern" id="statusToggleModern">
+              <button class="toggle-option active" data-status="OFFLINE">
+                <span class="toggle-icon">⭕</span>
+                <span>Offline</span>
+              </button>
+              <button class="toggle-option" data-status="ONLINE_IDLE">
+                <span class="toggle-icon">🟢</span>
+                <span>Online</span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="panel-section" id="nextServiceSection" hidden>
+            <h3 class="section-title">Próximo servicio</h3>
+            <div class="next-service-card" id="nextServiceCard">
+              <div class="next-time">Hoy 16:30</div>
+              <div class="next-type">Electricista</div>
+              <div class="next-location">Nueva Córdoba</div>
+              <div class="next-distance">A 7.8 km · 18 min</div>
+            </div>
+          </div>
+          
+          <div class="panel-section">
+            <h3 class="section-title">Acciones rápidas</h3>
+            <div class="quick-actions">
+              <button class="quick-btn" id="quickNotifications">
+                <span class="quick-icon">🔔</span>
+                <span>Notificaciones</span>
+                <span class="quick-badge" id="notificationBadge">0</span>
+              </button>
+              <button class="quick-btn" id="quickChat">
+                <span class="quick-icon">💬</span>
+                <span>Mensajes</span>
+                <span class="quick-badge" id="chatBadge">0</span>
+              </button>
+              <button class="quick-btn" id="quickSupport">
+                <span class="quick-icon">🎧</span>
+                <span>Soporte</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tab: Scheduled -->
+        <div class="tab-panel" id="tabScheduled">
+          <div class="panel-section">
+            <h3 class="section-title">Servicios programados</h3>
+            <div class="scheduled-list" id="scheduledList">
+              <!-- Items injected via JS -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tab: Pricing -->
+        <div class="tab-panel" id="tabPricing">
+          <div class="panel-section">
+            <h3 class="section-title">Tu tarifa</h3>
+            <div class="pricing-card">
+              <div class="pricing-row">
+                <span class="pricing-label">Precio base</span>
+                <span class="pricing-value" id="basePrice">$8.000</span>
               </div>
-
-              <div class="hero-actions">
-                <button class="btn-secondary" id="installButton" type="button">
-                  Instalar app
-                </button>
+              <div class="pricing-row">
+                <span class="pricing-label">Por hora</span>
+                <span class="pricing-value" id="hourPrice">$4.000</span>
+              </div>
+              <div class="pricing-row">
+                <span class="pricing-label">Por trabajo</span>
+                <span class="pricing-value" id="jobPrice">A convenir</span>
               </div>
             </div>
-
-            <article class="planner-block" aria-labelledby="providerStateTitle">
-              <div class="block-header">
-                <div>
-                  <span class="eyebrow">Estado</span>
-                  <h3 id="providerStateTitle">Disponibilidad actual</h3>
-                </div>
-                <span class="status-chip" id="providerStateChip">OFFLINE</span>
-              </div>
-
-              <div
-                class="provider-toggle"
-                role="group"
-                aria-label="Cambiar estado de disponibilidad"
-              >
-                <button
-                  class="toggle-button is-active"
-                  data-provider-status="OFFLINE"
-                  type="button"
-                  aria-pressed="true"
-                >
-                  Offline
-                </button>
-                <button
-                  class="toggle-button"
-                  data-provider-status="ONLINE_IDLE"
-                  type="button"
-                  aria-pressed="false"
-                >
-                  Online
-                </button>
-              </div>
-
-              <div class="provider-operational-note">
-                Cuando estés online vas a recibir ofertas, notificaciones y actualizaciones del servicio en tiempo real.
-              </div>
-
-              <div class="stats-grid" aria-label="Métricas del prestador">
-                <div class="stat-card">
-                  <span>Rating</span>
-                  <strong id="providerRating">5.0</strong>
-                </div>
-                <div class="stat-card">
-                  <span>Ofertas</span>
-                  <strong id="providerOffersCount">0</strong>
-                </div>
-                <div class="stat-card">
-                  <span>Servicios</span>
-                  <strong id="providerCompletedCount">0</strong>
-                </div>
-              </div>
-            </article>
-
-            <article class="planner-block" aria-labelledby="offersTitle">
-              <div class="block-header">
-                <div>
-                  <span class="eyebrow">Ofertas</span>
-                  <h3 id="offersTitle">Bandeja entrante</h3>
-                </div>
-              </div>
-              <div
-                class="card-list"
-                id="offersList"
-                role="list"
-                aria-live="polite"
-              ></div>
-            </article>
-
-            <article class="planner-block" aria-labelledby="activeServiceTitle">
-              <div class="block-header">
-                <div>
-                  <span class="eyebrow">Servicio activo</span>
-                  <h3 id="activeServiceTitle">Control operativo</h3>
-                </div>
-              </div>
-              <div
-                id="providerActiveService"
-                aria-live="polite"
-              ></div>
-              <div
-                class="action-row"
-                id="providerActions"
-                role="group"
-                aria-label="Acciones del servicio activo"
-              ></div>
-            </article>
-
-            <article class="planner-block" aria-labelledby="providerProfileTitle">
-              <div class="block-header">
-                <div>
-                  <span class="eyebrow">Perfil</span>
-                  <h3 id="providerProfileTitle">Ficha profesional</h3>
-                </div>
-              </div>
-              <div id="providerProfilePanel"></div>
-            </article>
-          </section>
-
-          <aside class="summary-panel" aria-label="Resumen lateral">
-            <section class="map-card" aria-labelledby="mapTitle">
-              <div class="map-card-header">
-                <div>
-                  <span class="eyebrow">Mapa</span>
-                  <h3 id="mapTitle">Posición y objetivo</h3>
-                </div>
-                <span class="helper-text" id="mapStatus">Esperando actividad</span>
-              </div>
-              <div
-                id="trackingMap"
-                class="map-surface"
-                role="img"
-                aria-label="Mapa de seguimiento del servicio"
-              ></div>
-            </section>
-
-            <section class="activity-card" aria-labelledby="notificationsTitle">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Actividad</span>
-                  <h3 id="notificationsTitle">Notificaciones recientes</h3>
-                </div>
-              </div>
-              <div
-                class="card-list compact"
-                id="notificationsList"
-                role="list"
-                aria-live="polite"
-              ></div>
-            </section>
-
-            <section class="activity-card" aria-labelledby="businessTitle">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Setup comercial</span>
-                  <h3 id="businessTitle">Tarifas y disponibilidad</h3>
-                </div>
-              </div>
-              <div class="card-list compact" id="providerBusinessPanel"></div>
-            </section>
-
-            <section class="activity-card" aria-labelledby="trustTitle">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Confianza</span>
-                  <h3 id="trustTitle">Documentos y reseñas</h3>
-                </div>
-              </div>
-              <div class="card-list compact" id="providerTrustPanel"></div>
-            </section>
-          </aside>
+          </div>
+          
+          <div class="panel-section">
+            <h3 class="section-title">Modalidad</h3>
+            <div class="mode-selector">
+              <label class="mode-option">
+                <input type="radio" name="mode" value="hourly" checked>
+                <span class="mode-card">
+                  <span class="mode-name">Por hora</span>
+                  <span class="mode-desc">Cobro por tiempo trabajado</span>
+                </span>
+              </label>
+              <label class="mode-option">
+                <input type="radio" name="mode" value="job">
+                <span class="mode-card">
+                  <span class="mode-name">Por trabajo</span>
+                  <span class="mode-desc">Presupuesto cerrado</span>
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
-      </section>
-    </main>
+        
+        <!-- Tab: Account -->
+        <div class="tab-panel" id="tabAccount">
+          <div class="panel-section">
+            <h3 class="section-title">Verificación</h3>
+            <div class="verification-card" id="verificationCard">
+              <div class="verification-status" id="verificationStatus">
+                <span class="status-icon">⚠️</span>
+                <span class="status-text">Pendiente</span>
+              </div>
+              <p class="verification-text">Completá tu verificación para recibir servicios</p>
+              <button class="verification-btn" id="verificationBtn">Completar ahora</button>
+            </div>
+          </div>
+          
+          <div class="panel-section">
+            <h3 class="section-title">Tus servicios</h3>
+            <div class="services-chips" id="servicesChips">
+              <span class="service-chip active">Plomería</span>
+              <span class="service-chip active">Electricidad</span>
+              <span class="service-chip">Gasista</span>
+            </div>
+          </div>
+          
+          <div class="panel-section">
+            <h3 class="section-title">Estadísticas</h3>
+            <div class="stats-grid-modern">
+              <div class="stat-card">
+                <span class="stat-value" id="statRating">5.0</span>
+                <span class="stat-label">Rating</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value" id="statCompleted">12</span>
+                <span class="stat-label">Completados</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-value" id="statOffers">24</span>
+                <span class="stat-label">Ofertas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-    <aside
-      class="drawer"
-      id="notificationsDrawer"
-      aria-hidden="true"
-      aria-labelledby="notificationsDrawerTitle"
-    >
+    <!-- Side Drawer (Hamburger Menu) -->
+    <div class="drawer-overlay" id="drawerOverlay" hidden></div>
+    <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
       <div class="drawer-header">
-        <h3 id="notificationsDrawerTitle">Centro de notificaciones</h3>
-        <button
-          class="icon-button"
-          type="button"
-          data-close-drawer="notificationsDrawer"
-          aria-label="Cerrar notificaciones"
-        >
-          ×
+        <div class="drawer-user">
+          <div class="user-avatar" id="drawerAvatar">
+            <span id="drawerInitials">PR</span>
+          </div>
+          <div class="user-info">
+            <div class="user-name" id="drawerName">Prestador</div>
+            <div class="user-email" id="drawerEmail">email@ejemplo.com</div>
+          </div>
+        </div>
+        <button class="drawer-close" id="drawerClose" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
         </button>
       </div>
-      <div class="drawer-body" id="notificationsDrawerBody"></div>
-    </aside>
-
-    <aside
-      class="drawer"
-      id="chatDrawer"
-      aria-hidden="true"
-      aria-labelledby="chatDrawerTitle"
-    >
-      <div class="drawer-header">
-        <h3 id="chatDrawerTitle">Chat en tiempo real</h3>
-        <button
-          class="icon-button"
-          type="button"
-          data-close-drawer="chatDrawer"
-          aria-label="Cerrar chat"
-        >
-          ×
+      
+      <div class="drawer-stats">
+        <div class="drawer-stat">
+          <span class="drawer-stat-value" id="drawerRating">5.0</span>
+          <span class="drawer-stat-label">Rating</span>
+        </div>
+        <div class="drawer-stat">
+          <span class="drawer-stat-value" id="drawerServices">12</span>
+          <span class="drawer-stat-label">Servicios</span>
+        </div>
+        <div class="drawer-stat">
+          <span class="drawer-stat-value" id="drawerEarnings">$0</span>
+          <span class="drawer-stat-label">Ganancias</span>
+        </div>
+      </div>
+      
+      <nav class="drawer-nav">
+        <a href="#" class="drawer-link" id="linkProfile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+          <span>Mi perfil</span>
+        </a>
+        <a href="#" class="drawer-link" id="linkDocuments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span>Documentos</span>
+          <span class="link-badge" id="docBadge">!</span>
+        </a>
+        <a href="#" class="drawer-link" id="linkServices">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span>Mis servicios</span>
+        </a>
+        <a href="#" class="drawer-link" id="linkEarnings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Ganancias</span>
+        </a>
+        <a href="#" class="drawer-link" id="linkSettings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span>Configuración</span>
+        </a>
+        <a href="#" class="drawer-link" id="linkSupport">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            <path d="M12 9v2m0 4h.01"/>
+          </svg>
+          <span>Ayuda y soporte</span>
+        </a>
+      </nav>
+      
+      <div class="drawer-footer">
+        <button class="logout-btn" id="logoutBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          <span>Cerrar sesión</span>
         </button>
       </div>
-
-      <div class="drawer-body chat-body">
-        <div
-          class="chat-list"
-          id="chatMessages"
-          aria-live="polite"
-          aria-label="Mensajes del chat"
-        ></div>
-
-        <form class="chat-form" id="chatForm">
-          <label class="sr-only" for="chatInput">Escribí un mensaje</label>
-          <input
-            id="chatInput"
-            type="text"
-            maxlength="500"
-            placeholder="Escribí un mensaje..."
-            autocomplete="off"
-          >
-          <button class="btn-primary" type="submit">Enviar</button>
-        </form>
-      </div>
     </aside>
+
+    <!-- Notifications Drawer -->
+    <div class="notifications-drawer" id="notificationsDrawer" aria-hidden="true">
+      <div class="drawer-handle"></div>
+      <div class="notifications-header">
+        <h3>Notificaciones</h3>
+        <button class="mark-read-btn" id="markAllRead">Marcar leídas</button>
+      </div>
+      <div class="notifications-list" id="notificationsList">
+        <!-- Notifications injected via JS -->
+      </div>
+    </div>
+
+    <!-- Chat Drawer -->
+    <div class="chat-drawer" id="chatDrawer" aria-hidden="true">
+      <div class="drawer-handle"></div>
+      <div class="chat-header">
+        <h3>Chat con cliente</h3>
+        <button class="chat-close" id="chatClose">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Escribí un mensaje...">
+        <button class="chat-send" id="chatSend">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div class="modal-overlay" id="verificationModal" hidden>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Verificación de perfil</h2>
+          <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="wizard-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="wizardProgress" style="width: 25%"></div>
+            </div>
+            <span class="progress-text">Paso 1 de 4</span>
+          </div>
+          
+          <div class="wizard-step active" id="step1">
+            <h3>Documento de identidad</h3>
+            <p>Subí una foto clara de tu DNI (frente)</p>
+            <div class="upload-zone" id="uploadDni">
+              <span class="upload-icon">📄</span>
+              <span class="upload-text">Tocá para subir</span>
+            </div>
+          </div>
+          
+          <div class="wizard-step" id="step2">
+            <h3>Selfie</h3>
+            <p>Sacate una foto para verificar tu identidad</p>
+            <div class="upload-zone" id="uploadSelfie">
+              <span class="upload-icon">📸</span>
+              <span class="upload-text">Tocá para sacar foto</span>
+            </div>
+          </div>
+          
+          <div class="wizard-step" id="step3">
+            <h3>Servicios que prestás</h3>
+            <p>Seleccioná los servicios que ofrecés</p>
+            <div class="services-select" id="servicesSelect">
+              <label class="service-checkbox">
+                <input type="checkbox" value="plumbing">
+                <span>Plomería</span>
+              </label>
+              <label class="service-checkbox">
+                <input type="checkbox" value="electricity">
+                <span>Electricidad</span>
+              </label>
+              <label class="service-checkbox">
+                <input type="checkbox" value="cleaning">
+                <span>Limpieza</span>
+              </label>
+              <label class="service-checkbox">
+                <input type="checkbox" value="gardening">
+                <span>Jardinería</span>
+              </label>
+            </div>
+          </div>
+          
+          <div class="wizard-step" id="step4">
+            <h3>¡Listo!</h3>
+            <p>Tu verificación está en proceso. Te avisamos cuando esté aprobada.</p>
+            <div class="success-icon">✅</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" id="wizardPrev" hidden>Anterior</button>
+          <button class="btn-primary" id="wizardNext">Continuar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Install Prompt -->
+    <div class="install-banner" id="installBanner" hidden>
+      <div class="install-content">
+        <span class="install-text">Instalá la app para mejor experiencia</span>
+        <button class="install-btn" id="installBtn">Instalar</button>
+      </div>
+      <button class="install-dismiss" id="installDismiss">&times;</button>
+    </div>
+
   </div>
 
-  <noscript>
-    <div style="padding:16px; background:#fff4d6; color:#5b4300; font-family:Arial,sans-serif;">
-      Esta aplicación necesita JavaScript para funcionar correctamente.
-    </div>
-  </noscript>
-
-  <script src="./env.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script type="module" src="./src/main-provider.js"></script>
+  <!-- Scripts -->
+  <script type="module" src="./src/main-provider-2026.js"></script>
 </body>
 </html>
