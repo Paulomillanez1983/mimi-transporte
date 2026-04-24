@@ -11,7 +11,16 @@ import {
   getDeviceId,
   STORAGE_KEYS 
 } from './state/app-state.js';
-import { invokeFunction } from "./services/service-api.js";
+import {
+  bootstrapSession,
+  invokeFunction,
+  loadActiveRequest,
+  loadNotifications,
+  loadOffers,
+  loadProviderWorkspace,
+  signOut,
+  updateProviderStatus
+} from "./services/service-api.js";
 import { getSupabaseClient } from "./services/supabase.js";
 
 // ============================================
@@ -28,6 +37,9 @@ class MimiProviderApp {
     this.offerTimer = null;
     this.trackingInterval = null;
     this.notificationsInterval = null;
+    this.realtimeChannel = null;
+    this.offerRealtimeChannel = null;
+    this.notificationRealtimeChannel = null;
     
     // DOM Elements cache
     this.elements = {};
@@ -59,6 +71,9 @@ class MimiProviderApp {
       this.render();
     });
     
+    // Load authenticated provider data from Supabase before rendering operational UI
+    await this.loadInitialData();
+
     // Initialize UI
     this.initUI();
     
@@ -346,6 +361,227 @@ class MimiProviderApp {
       .addTo(this.map);
   }
 
+
+  /**
+   * Load real provider session/workspace from Supabase.
+   * This replaces every previous demo fallback with backend-driven state.
+   */
+  async loadInitialData() {
+    try {
+      actions.setLoading(true);
+      actions.clearError?.();
+
+      const session = await bootstrapSession();
+
+      actions.setSession({
+        userId: session?.userId ?? null,
+        providerId: session?.providerId ?? null,
+        userEmail: session?.userEmail ?? null,
+        userName: session?.userName ?? null,
+        isAuthenticated: Boolean(session?.isAuthenticated),
+        token: session?.token ?? null,
+        expiresAt: session?.expiresAt ?? null
+      });
+
+      if (!session?.isAuthenticated) {
+        this.showToast("Ingresá con tu cuenta para operar como prestador", "warning");
+        return;
+      }
+
+      if (!session?.providerId) {
+        this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
+        return;
+      }
+
+      const [workspace, notifications, offers, activeRequest] = await Promise.all([
+        loadProviderWorkspace(session.providerId),
+        loadNotifications(session.userId),
+        loadOffers(session.providerId),
+        loadActiveRequest({ providerId: session.providerId })
+      ]);
+
+      this.applyWorkspaceToState(workspace);
+
+      actions.updateState({
+        notifications: {
+          items: this.normalizeNotifications(notifications),
+          unreadCount: (notifications ?? []).filter((item) => !item.read_at).length
+        }
+      });
+
+      const firstOffer = Array.isArray(offers) ? offers[0] : null;
+      if (firstOffer) {
+        actions.setActiveOffer(this.normalizeOfferForState(firstOffer));
+      }
+
+      if (activeRequest) {
+        actions.setActiveService(this.normalizeServiceForState(activeRequest));
+      }
+
+      this.subscribeRealtime();
+    } catch (err) {
+      console.error("[MIMI] Error cargando datos iniciales:", err);
+      actions.setError?.(err?.message ?? "No pudimos cargar tu panel de prestador");
+      this.showToast("No pudimos cargar tus datos reales", "error");
+    } finally {
+      actions.setLoading(false);
+    }
+  }
+
+  applyWorkspaceToState(workspace = {}) {
+    const profile = workspace.profile ?? null;
+    const documents = Array.isArray(workspace.documents) ? workspace.documents : [];
+    const categories = Array.isArray(workspace.categories) ? workspace.categories : [];
+    const pricingRows = Array.isArray(workspace.pricing) ? workspace.pricing : [];
+
+    const approvedDocs = documents.filter((doc) => this.normalizeReviewStatus(doc.review_status) === "APPROVED").length;
+    const rejectedDocs = documents.filter((doc) => ["REJECTED", "NEEDS_RESUBMISSION"].includes(this.normalizeReviewStatus(doc.review_status))).length;
+    const pendingDocs = documents.filter((doc) => !["APPROVED", "REJECTED", "NEEDS_RESUBMISSION"].includes(this.normalizeReviewStatus(doc.review_status))).length;
+
+    const isVerified = Boolean(profile?.approved) && rejectedDocs === 0 && approvedDocs > 0;
+    const verificationStatus = isVerified
+      ? "approved"
+      : rejectedDocs > 0
+        ? "rejected"
+        : pendingDocs > 0 || documents.length > 0
+          ? "in_review"
+          : "pending";
+
+    const firstPricing = pricingRows[0] ?? null;
+
+    actions.updateState({
+      provider: {
+        status: profile?.status ?? "OFFLINE",
+        isVerified,
+        verificationStatus,
+        verificationProgress: isVerified ? 100 : documents.length ? 60 : 0,
+        profile,
+        categories: categories.map((item) => ({
+          id: item.category_id ?? item.id,
+          name: item.svc_categories?.name ?? item.name ?? "Servicio",
+          code: item.svc_categories?.code ?? item.code ?? null,
+          description: item.svc_categories?.description ?? item.description ?? ""
+        })),
+        pricing: {
+          basePrice: Number(firstPricing?.price_per_hour ?? 0),
+          hourlyRate: Number(firstPricing?.price_per_hour ?? 0),
+          jobRate: null,
+          mode: "hourly"
+        },
+        stats: {
+          rating: Number(profile?.rating_avg ?? 5),
+          completedServices: Number(workspace.completedCount ?? 0),
+          totalOffers: 0,
+          earnings: Number(workspace.earningsTotal ?? 0)
+        },
+        documents: {
+          approved: approvedDocs,
+          pending: pendingDocs,
+          rejected: rejectedDocs,
+          items: documents
+        }
+      }
+    });
+  }
+
+  normalizeReviewStatus(value) {
+    return String(value ?? "PENDING").trim().toUpperCase();
+  }
+
+  normalizeServiceForState(service = {}) {
+    return {
+      id: service.id ?? service.request_id ?? crypto.randomUUID?.() ?? String(Date.now()),
+      requestId: service.request_id ?? service.id ?? null,
+      status: this.normalizeRequestStatus(service.status),
+      serviceType:
+        service.service_type ??
+        service.category_name ??
+        service.title ??
+        service.svc_categories?.name ??
+        "Servicio",
+      clientName:
+        service.client_name ??
+        service.client?.full_name ??
+        service.svc_clients?.full_name ??
+        "Cliente",
+      clientAvatar: service.client_avatar ?? service.client?.avatar_url ?? null,
+      location: service.address_text ?? service.location ?? "Ubicación a confirmar",
+      address: service.address_text ?? null,
+      price:
+        Number(service.total_price_snapshot ?? service.total_price ?? service.provider_amount ?? 0),
+      scheduledFor: service.scheduled_for ?? null,
+      startedAt: service.started_at ?? null,
+      conversationId: service.conversation_id ?? null,
+      raw: service
+    };
+  }
+
+  normalizeOfferForState(offer = {}) {
+    const request = offer.svc_requests ?? offer.request ?? {};
+
+    return {
+      id: offer.id,
+      requestId: offer.request_id ?? request.id ?? null,
+      serviceType:
+        offer.title ??
+        request.title ??
+        request.category_name ??
+        request.svc_categories?.name ??
+        "Servicio",
+      clientName: offer.client_name ?? request.client_name ?? "Cliente",
+      location: offer.address_text ?? request.address_text ?? "Ubicación a confirmar",
+      price: Number(offer.total_price_snapshot ?? request.total_price_snapshot ?? request.total_price ?? 0),
+      mode: request.request_type ?? "IMMEDIATE",
+      expiresAt: offer.expires_at ?? null,
+      createdAt: offer.created_at ?? new Date().toISOString(),
+      raw: offer
+    };
+  }
+
+  normalizeNotifications(items = []) {
+    return (items ?? []).map((item) => ({
+      id: item.id ?? crypto.randomUUID?.() ?? String(Date.now()),
+      title: item.title ?? "Nueva notificación",
+      text: item.body ?? item.message ?? "",
+      timestamp: item.created_at ?? new Date().toISOString(),
+      unread: !item.read_at,
+      icon: item.icon ?? "🔔",
+      raw: item
+    }));
+  }
+
+  normalizeRequestStatus(status) {
+    const value = String(status ?? "").trim().toUpperCase();
+    const aliases = {
+      EN_ROUTE: "PROVIDER_EN_ROUTE",
+      ARRIVED: "PROVIDER_ARRIVED",
+      STARTED: "IN_PROGRESS"
+    };
+
+    return aliases[value] ?? value;
+  }
+
+  async applyServiceTransition(functionName, nextProviderStatus, successMessage) {
+    const service = this.state?.activeService;
+    if (!service?.requestId) return;
+
+    const response = await invokeFunction(functionName, {
+      request_id: service.requestId
+    });
+
+    const updatedService = response?.service ?? response?.request ?? response?.data ?? null;
+
+    if (updatedService) {
+      actions.setActiveService(this.normalizeServiceForState(updatedService));
+    }
+
+    if (nextProviderStatus) {
+      actions.setProviderStatus(nextProviderStatus);
+    }
+
+    this.showToast(successMessage, "success");
+  }
+
   /**
    * Setup event listeners
    */
@@ -396,7 +632,8 @@ class MimiProviderApp {
     });
 
     this.elements.quickSupport?.addEventListener('click', () => {
-      this.showToast('Soporte disponible próximamente', 'info');
+      this.switchTab('account');
+      this.showToast('Abrí Cuenta para gestionar ayuda y verificación', 'info');
     });
 
     // Notification drawer
@@ -467,7 +704,8 @@ class MimiProviderApp {
     // Drawer links
     document.getElementById('linkProfile')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.showToast('Perfil - próximamente', 'info');
+      this.switchTab('account');
+      actions.closeDrawer();
     });
 
     document.getElementById('linkDocuments')?.addEventListener('click', (e) => {
@@ -484,17 +722,20 @@ class MimiProviderApp {
 
     document.getElementById('linkEarnings')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.showToast('Ganancias - próximamente', 'info');
+      this.switchTab('pricing');
+      actions.closeDrawer();
     });
 
     document.getElementById('linkSettings')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.showToast('Configuración - próximamente', 'info');
+      this.switchTab('account');
+      actions.closeDrawer();
     });
 
     document.getElementById('linkSupport')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.showToast('Soporte - próximamente', 'info');
+      this.switchTab('account');
+      actions.closeDrawer();
     });
 
     // Keyboard shortcuts
@@ -622,44 +863,75 @@ class MimiProviderApp {
   /**
    * Handle go online button
    */
-  handleGoOnline() {
-    // Check if verified
-    if (!this.state?.provider.isVerified) {
-      this.showToast('Necesitás completar tu verificación primero', 'warning');
-      actions.openModal('verification');
-      return;
-    }
-
-    // Set online status
-    actions.setProviderStatus('ONLINE_IDLE');
-    actions.setBottomSheetState('peek');
-    this.showToast('Estás online - recibiendo servicios', 'success');
-    
-    // Request location
-    this.startLocationTracking();
+async handleGoOnline() {
+  if (!this.state?.provider.isVerified) {
+    this.showToast("Necesitás completar tu verificación primero", "warning");
+    actions.openModal("verification");
+    return;
   }
 
+  const providerId = this.state?.session?.providerId;
+  if (!providerId) {
+    this.showToast("No se encontró tu perfil de prestador", "error");
+    return;
+  }
+
+  try {
+    actions.setLoading(true);
+
+    const profile = await updateProviderStatus(providerId, "ONLINE_IDLE");
+
+    actions.setProfile(profile);
+    actions.setProviderStatus(profile?.status ?? "ONLINE_IDLE");
+    actions.setBottomSheetState("peek");
+
+    this.showToast("Estás online - recibiendo servicios", "success");
+    this.startLocationTracking();
+  } catch (err) {
+    console.error("[MIMI] Error poniendo online:", err);
+    this.showToast("No pudimos ponerte online", "error");
+  } finally {
+    actions.setLoading(false);
+  }
+}
   /**
    * Handle status toggle
    */
-  handleStatusToggle(status) {
-    if (status === 'ONLINE_IDLE' && !this.state?.provider.isVerified) {
-      this.showToast('Necesitás completar tu verificación', 'warning');
-      actions.openModal('verification');
-      return;
-    }
-
-    actions.setProviderStatus(status);
-    
-    if (status === 'ONLINE_IDLE') {
-      this.showToast('Estás online', 'success');
-      this.startLocationTracking();
-    } else {
-      this.showToast('Estás offline', 'info');
-      this.stopLocationTracking();
-    }
+async handleStatusToggle(status) {
+  if (status === "ONLINE_IDLE" && !this.state?.provider.isVerified) {
+    this.showToast("Necesitás completar tu verificación", "warning");
+    actions.openModal("verification");
+    return;
   }
 
+  const providerId = this.state?.session?.providerId;
+  if (!providerId) {
+    this.showToast("No se encontró tu perfil de prestador", "error");
+    return;
+  }
+
+  try {
+    actions.setLoading(true);
+
+    const profile = await updateProviderStatus(providerId, status);
+
+    actions.setProfile(profile);
+    actions.setProviderStatus(profile?.status ?? status);
+
+    if (status === "ONLINE_IDLE") {
+      this.showToast("Estás online", "success");
+      this.startLocationTracking();
+    } else {
+      this.showToast("Estás offline", "info");
+      this.stopLocationTracking();
+    }
+  } catch (err) {
+    console.error("[MIMI] Error cambiando disponibilidad:", err);
+    this.showToast("No pudimos actualizar tu estado", "error");
+  } finally {
+    actions.setLoading(false);
+  }
+}
   /**
    * Start location tracking
    */
@@ -726,108 +998,133 @@ startLocationTracking() {
   /**
    * Handle accept offer
    */
-async handleAcceptOffer() {
-  const offer = this.state?.activeOffer;
-  if (!offer) return;
+  async handleAcceptOffer() {
+    const offer = this.state?.activeOffer;
+    if (!offer) return;
 
-  try {
-    await invokeFunction("svc-provider-respond-offer", {
-      offer_id: offer.id,
-      accepted: true
-    });
+    try {
+      actions.setLoading(true);
 
-    actions.setActiveService({
-      id: offer.id,
-      requestId: offer.requestId,
-      status: "ACCEPTED",
-      serviceType: offer.serviceType,
-      clientName: offer.clientName,
-      location: offer.location,
-      price: offer.price,
-      startedAt: Date.now()
-    });
+      const response = await invokeFunction("svc-provider-respond-offer", {
+        offer_id: offer.id,
+        accepted: true
+      });
 
-    actions.clearActiveOffer();
-    actions.setProviderStatus("BOOKED_UPCOMING");
+      const service = response?.service ?? response?.request ?? response?.data ?? null;
 
-    if (this.offerTimer) {
-      clearInterval(this.offerTimer);
-      this.offerTimer = null;
+      if (!service) {
+        throw new Error("La función no devolvió response.service");
+      }
+
+      actions.setActiveService(this.normalizeServiceForState(service));
+      actions.clearActiveOffer();
+      actions.setProviderStatus("BOOKED_UPCOMING");
+
+      if (this.offerTimer) {
+        clearInterval(this.offerTimer);
+        this.offerTimer = null;
+      }
+
+      this.showToast("Servicio aceptado 🚀", "success");
+    } catch (err) {
+      console.error("[MIMI] Error accepting offer:", err);
+      this.showToast("Error aceptando servicio", "error");
+    } finally {
+      actions.setLoading(false);
     }
-
-    this.showToast("Servicio aceptado 🚀", "success");
-  } catch (err) {
-    console.error("[MIMI] Error accepting offer:", err);
-    this.showToast("Error aceptando servicio", "error");
   }
-}
+
   /**
    * Handle reject offer
    */
-  handleRejectOffer() {
-    actions.clearActiveOffer();
-    this.showToast('Oferta rechazada', 'info');
-    
-    // Clear timer
-    if (this.offerTimer) {
-      clearInterval(this.offerTimer);
-      this.offerTimer = null;
+  async handleRejectOffer() {
+    const offer = this.state?.activeOffer;
+
+    try {
+      if (offer?.id) {
+        await invokeFunction("svc-provider-respond-offer", {
+          offer_id: offer.id,
+          accepted: false
+        });
+      }
+
+      actions.clearActiveOffer();
+      this.showToast("Oferta rechazada", "info");
+    } catch (err) {
+      console.error("[MIMI] Error rejecting offer:", err);
+      this.showToast("No pudimos rechazar la oferta", "error");
+    } finally {
+      if (this.offerTimer) {
+        clearInterval(this.offerTimer);
+        this.offerTimer = null;
+      }
     }
   }
 
   /**
    * Handle service action button
    */
-async handleServiceAction() {
-  const service = this.state?.activeService;
-  if (!service) return;
+  async handleServiceAction() {
+    const service = this.state?.activeService;
+    if (!service) return;
 
-  try {
-    switch (service.status) {
-      case "ACCEPTED":
-        await invokeFunction("svc-provider-en-route", {
-          request_id: service.requestId
-        });
-        actions.updateServiceStatus("EN_ROUTE");
-        actions.setProviderStatus("EN_ROUTE");
-        this.showToast("Vas en camino", "success");
-        break;
+    try {
+      actions.setLoading(true);
 
-      case "EN_ROUTE":
-        await invokeFunction("svc-provider-arrived", {
-          request_id: service.requestId
-        });
-        actions.updateServiceStatus("ARRIVED");
-        actions.setProviderStatus("ARRIVED");
-        this.showToast("Llegaste al domicilio", "success");
-        break;
+      switch (this.normalizeRequestStatus(service.status)) {
+        case "ACCEPTED":
+        case "SCHEDULED":
+          await this.applyServiceTransition(
+            "svc-provider-en-route",
+            "EN_ROUTE",
+            "Vas en camino"
+          );
+          break;
 
-      case "ARRIVED":
-        await invokeFunction("svc-start-service", {
-          request_id: service.requestId
-        });
-        actions.updateServiceStatus("IN_PROGRESS");
-        actions.setProviderStatus("IN_SERVICE");
-        this.showToast("Servicio iniciado", "success");
-        break;
+        case "PROVIDER_EN_ROUTE":
+          await this.applyServiceTransition(
+            "svc-provider-arrived",
+            "ARRIVED",
+            "Llegaste al domicilio"
+          );
+          break;
 
-      case "IN_PROGRESS":
-        await invokeFunction("svc-complete-service", {
-          request_id: service.requestId
-        });
-        actions.clearActiveService();
-        actions.setProviderStatus("ONLINE_IDLE");
-        this.showToast("Servicio completado", "success");
-        break;
+        case "PROVIDER_ARRIVED":
+          await this.applyServiceTransition(
+            "svc-start-service",
+            "IN_SERVICE",
+            "Servicio iniciado"
+          );
+          break;
 
-      default:
-        console.warn("[MIMI] Estado de servicio no manejado:", service.status);
+        case "IN_PROGRESS": {
+          const response = await invokeFunction("svc-complete-service", {
+            request_id: service.requestId
+          });
+
+          const updatedService = response?.service ?? response?.request ?? response?.data ?? null;
+          if (updatedService && this.normalizeRequestStatus(updatedService.status) !== "COMPLETED") {
+            actions.setActiveService(this.normalizeServiceForState(updatedService));
+          } else {
+            actions.clearActiveService();
+          }
+
+          actions.setProviderStatus("ONLINE_IDLE");
+          this.showToast("Servicio completado", "success");
+          break;
+        }
+
+        default:
+          console.warn("[MIMI] Estado de servicio no manejado:", service.status);
+      }
+    } catch (err) {
+      console.error("[MIMI] Error updating service:", err);
+      this.showToast("Error actualizando servicio", "error");
+    } finally {
+      actions.setLoading(false);
     }
-  } catch (err) {
-    console.error("[MIMI] Error updating service:", err);
-    this.showToast("Error actualizando servicio", "error");
   }
-}
+
   /**
    * Send chat message
    */
@@ -1099,6 +1396,7 @@ this.renderChatMessages();
    */
   renderActiveService() {
     const service = this.state.activeService;
+    const serviceStatus = this.normalizeRequestStatus(service?.status);
     
     if (!service) {
       if (this.elements.activeServiceCard) this.elements.activeServiceCard.hidden = true;
@@ -1111,13 +1409,13 @@ this.renderChatMessages();
       // Status badge
       const statusLabels = {
         'ACCEPTED': 'Aceptado',
-        'EN_ROUTE': 'En camino',
-        'ARRIVED': 'Llegaste',
+        'PROVIDER_EN_ROUTE': 'En camino',
+        'PROVIDER_ARRIVED': 'Llegaste',
         'IN_PROGRESS': 'En curso'
       };
       
       if (this.elements.serviceStatusBadge) {
-        this.elements.serviceStatusBadge.textContent = statusLabels[service.status] || service.status;
+        this.elements.serviceStatusBadge.textContent = statusLabels[serviceStatus] || serviceStatus || service.status;
       }
       
       if (this.elements.activeServiceType) {
@@ -1133,13 +1431,13 @@ this.renderChatMessages();
       // Button text
       const buttonLabels = {
         'ACCEPTED': 'Llegué al domicilio',
-        'EN_ROUTE': 'Llegué al domicilio',
-        'ARRIVED': 'Iniciar servicio',
+        'PROVIDER_EN_ROUTE': 'Llegué al domicilio',
+        'PROVIDER_ARRIVED': 'Iniciar servicio',
         'IN_PROGRESS': 'Finalizar servicio'
       };
       
       if (this.elements.serviceActionBtn) {
-        this.elements.serviceActionBtn.textContent = buttonLabels[service.status] || 'Acción';
+        this.elements.serviceActionBtn.textContent = buttonLabels[serviceStatus] || 'Acción';
       }
     }
   }
@@ -1275,55 +1573,88 @@ this.renderChatMessages();
       this.elements.verificationModal.hidden = !isOpen || modal !== 'verification';
     }
   }
-subscribeRealtime() {
-  try {
-    const supabase = getSupabaseClient();
+  subscribeRealtime() {
+    try {
+      const supabase = getSupabaseClient();
+      const userId = this.state?.session?.userId;
+      const providerId = this.state?.session?.providerId;
 
-    if (!supabase?.channel) {
-      console.warn("[MIMI] Supabase realtime client not available");
+      if (!supabase?.channel || (!userId && !providerId)) {
+        console.warn("[MIMI] Supabase realtime client/session not available");
+        return;
+      }
+
+      this.notificationRealtimeChannel?.unsubscribe?.();
+      this.offerRealtimeChannel?.unsubscribe?.();
+      this.realtimeChannel?.unsubscribe?.();
+
+      if (userId) {
+        this.notificationRealtimeChannel = supabase
+          .channel(`mimi-services-provider-notifications-${userId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "INSERT",
+              schema: "public",
+              table: "svc_notifications",
+              filter: `user_id=eq.${userId}`
+            },
+            (payload) => this.onNotification(payload)
+          )
+          .subscribe((status) => console.log("[MIMI] Notifications realtime:", status));
+      }
+
+      if (providerId) {
+        this.offerRealtimeChannel = supabase
+          .channel(`mimi-services-provider-offers-${providerId}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "svc_request_offers",
+              filter: `provider_id=eq.${providerId}`
+            },
+            (payload) => this.onOfferChange(payload)
+          )
+          .subscribe((status) => console.log("[MIMI] Offers realtime:", status));
+      }
+    } catch (err) {
+      console.error("[MIMI] Realtime error:", err);
+    }
+  }
+
+  onNotification(payload) {
+    const notif = payload?.new;
+    if (!notif) return;
+
+    const normalized = this.normalizeNotifications([notif])[0];
+    actions.addNotification(normalized);
+
+    this.showToast(normalized.title || "Nueva notificación", "info");
+  }
+
+  onOfferChange(payload) {
+    const eventType = payload?.eventType;
+    const row = payload?.new ?? payload?.old;
+    if (!row) return;
+
+    const status = String(row.status ?? "").toUpperCase();
+
+    if (eventType === "DELETE" || ["EXPIRED", "REJECTED", "CANCELLED", "ACCEPTED_BY_OTHER"].includes(status)) {
+      if (this.state?.activeOffer?.id === row.id) {
+        actions.clearActiveOffer();
+      }
       return;
     }
 
-    if (this.realtimeChannel) {
-      this.realtimeChannel.unsubscribe();
+    if (["PENDING", "PENDING_PROVIDER_RESPONSE"].includes(status)) {
+      actions.setActiveOffer(this.normalizeOfferForState(row));
+      actions.setProviderStatus("INVITED");
+      this.showToast("Nueva solicitud disponible", "info");
     }
-
-    this.realtimeChannel = supabase
-      .channel("mimi-notifications")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "svc_notifications"
-        },
-        (payload) => this.onNotification(payload)
-      )
-      .subscribe((status) => {
-        console.log("[MIMI] Realtime status:", status);
-      });
-
-    console.log("[MIMI] Realtime notifications subscribed", this.realtimeChannel);
-  } catch (err) {
-    console.error("[MIMI] Realtime error:", err);
   }
-}
-  
-onNotification(payload) {
-  const notif = payload?.new;
-  if (!notif) return;
 
-  actions.addNotification({
-    id: notif.id || Date.now(),
-    title: notif.title || "Nueva notificación",
-    text: notif.body || notif.message || "",
-    timestamp: notif.created_at || Date.now(),
-    unread: true,
-    icon: notif.icon || "🔔"
-  });
-
-  this.showToast(notif.title || "Nueva notificación", "info");
-}
   /**
    * Show toast notification
    */
@@ -1470,11 +1801,17 @@ onNotification(payload) {
   /**
    * Handle logout
    */
-  handleLogout() {
-    if (confirm('¿Seguro que querés cerrar sesión?')) {
+  async handleLogout() {
+    if (!confirm("¿Seguro que querés cerrar sesión?")) return;
+
+    try {
+      await signOut();
+    } catch (err) {
+      console.warn("[MIMI] Error cerrando sesión:", err);
+    } finally {
       localStorage.removeItem(STORAGE_KEYS.SESSION);
       actions.clearSession();
-      window.location.href = '/index.html';
+      window.location.href = "./index.html";
     }
   }
 
@@ -1482,30 +1819,7 @@ onNotification(payload) {
    * Handle wizard next
    */
   handleWizardNext() {
-    const progress = this.state?.provider.verificationProgress || 0;
-    const newProgress = Math.min(100, progress + 25);
-    
-    actions.setVerificationProgress(newProgress);
-    
-    // Update UI
-    if (this.elements.wizardProgress) {
-      this.elements.wizardProgress.style.width = `${newProgress}%`;
-    }
-    
-    // Show next step
-    const currentStep = Math.floor(progress / 25) + 1;
-    document.querySelectorAll('.wizard-step').forEach((step, index) => {
-      step.classList.toggle('active', index === currentStep);
-    });
-    
-    // If complete
-    if (newProgress >= 100) {
-      actions.setVerificationStatus('in_review');
-      setTimeout(() => {
-        actions.closeModal();
-        this.showToast('Verificación enviada', 'success');
-      }, 1500);
-    }
+    this.showToast("La verificación real se gestiona guardando documentos en Supabase", "info");
   }
 
   /**
@@ -1534,7 +1848,7 @@ onNotification(payload) {
     if (service) {
       actions.setActiveService({
         ...service,
-        status: 'EN_ROUTE',
+        status: 'PROVIDER_EN_ROUTE',
         startedAt: Date.now()
       });
     }
