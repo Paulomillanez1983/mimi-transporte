@@ -1072,16 +1072,22 @@ async function openCamera(docType) {
 
     modal = document.createElement("div");
     modal.className = "camera-modal";
-    modal.innerHTML = `
-      <div class="camera-box">
-        <video autoplay playsinline></video>
-        <button id="captureBtn">Capturar</button>
-      </div>
-    `;
+modal.innerHTML = `
+  <div class="camera-box">
+    <video autoplay playsinline></video>
+    <button id="captureBtn">Capturar</button>
+    <button id="cancelCamera">Cancelar</button>
+  </div>
+`;
 
-    document.body.appendChild(modal);
-    modal.querySelector("video").srcObject = stream;
+document.body.appendChild(modal);
 
+modal.querySelector("video").srcObject = stream;
+
+modal.querySelector("#cancelCamera").onclick = () => {
+  stream.getTracks().forEach(t => t.stop());
+  modal.remove();
+};
     modal.querySelector("#captureBtn").onclick = async () => {
       if (uploading) return;
       uploading = true;
