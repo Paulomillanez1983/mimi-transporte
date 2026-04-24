@@ -1066,40 +1066,77 @@ async function openCamera(docType) {
       video: { facingMode: "user" }
     });
 
-    const video = document.createElement("video");
-    video.srcObject = stream;
-    video.play();
-
     modal = document.createElement("div");
     modal.className = "camera-modal";
-modal.innerHTML = `
-  <div class="camera-box">
-    <video autoplay playsinline></video>
-    <button id="captureBtn">Capturar</button>
-    <button id="cancelCamera">Cancelar</button>
-  </div>
-`;
+    modal.innerHTML = `
+      <div class="camera-box">
+        <video autoplay playsinline></video>
+        <button id="captureBtn" type="button">Capturar</button>
+        <button id="cancelCamera" type="button">Cancelar</button>
+      </div>
+    `;
 
-document.body.appendChild(modal);
+    document.body.appendChild(modal);
 
-modal.querySelector("video").srcObject = stream;
+    const video = modal.querySelector("video");
+    video.srcObject = stream;
+    await video.play();
 
-modal.querySelector("#cancelCamera").onclick = () => {
-  stream.getTracks().forEach(t => t.stop());
-  modal.remove();
-};
+    modal.querySelector("#cancelCamera").onclick = () => {
+      stream.getTracks().forEach((track) => track.stop());
+      modal.remove();
+    };
+
     modal.querySelector("#captureBtn").onclick = async () => {
       if (uploading) return;
+
+      if (docType === "selfie") {
+        try {
+          const createResult = await invokeFunction("svc-create-liveness-session");
+          const sessionId = createResult?.sessionId ?? createResult?.session_id;
+
+          if (!sessionId) {
+            setInfo(null, "No se pudo iniciar la validación de vida.");
+            return;
+          }
+
+          const livenessResult = await invokeFunction("svc-get-liveness-result", {
+            sessionId
+          });
+
+          const confidence = Number(
+            livenessResult?.confidence ??
+            livenessResult?.Confidence ??
+            0
+          );
+
+          if (confidence < 70) {
+            setInfo(null, "No pudimos validar que seas una persona real. Intentá nuevamente.");
+            return;
+          }
+        } catch (error) {
+          console.error("[MIMI Servicios] Liveness error:", error);
+          setInfo(null, "Error validando vida. Intentá nuevamente.");
+          return;
+        }
+      }
+
       uploading = true;
 
       const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = video.videoWidth || 720;
+      canvas.height = video.videoHeight || 720;
 
       const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       canvas.toBlob(async (blob) => {
+        if (!blob) {
+          uploading = false;
+          setInfo(null, "No se pudo capturar la imagen.");
+          return;
+        }
+
         const file = new File([blob], `${docType}.jpg`, {
           type: "image/jpeg"
         });
@@ -1110,7 +1147,7 @@ modal.querySelector("#cancelCamera").onclick = () => {
         const reader = new FileReader();
         reader.onload = () => {
           if (preview) {
-            preview.innerHTML = `<img src="${reader.result}" />`;
+            preview.innerHTML = `<img src="${reader.result}" alt="Vista previa ${docType}" />`;
             preview.classList.add("visible");
           }
         };
@@ -1135,7 +1172,11 @@ modal.querySelector("#cancelCamera").onclick = () => {
 
           updateProgress();
 
+          stream.getTracks().forEach((track) => track.stop());
+          modal.remove();
         } catch (err) {
+          console.error("[MIMI Servicios] Upload doc error:", err);
+
           if (status) {
             status.textContent = "❌ Error";
             status.className = "doc-status error";
@@ -1144,14 +1185,11 @@ modal.querySelector("#cancelCamera").onclick = () => {
           uploading = false;
         }
       }, "image/jpeg", 0.9);
-
-      stream.getTracks().forEach(t => t.stop());
-      modal.remove();
     };
-
   } catch (err) {
     console.error(err);
-    stream?.getTracks()?.forEach(t => t.stop());
+    stream?.getTracks()?.forEach((track) => track.stop());
     modal?.remove();
+    setInfo(null, "No pudimos abrir la cámara. Revisá permisos del navegador.");
   }
 }
