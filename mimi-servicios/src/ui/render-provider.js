@@ -284,7 +284,7 @@ export function renderProviderDashboard(state) {
                 (item) => `
                   <div class="history-item">
                     <span>${escapeHtml(item.address_text ?? "Servicio")}</span>
-                    <strong>${currency(item.total_price ?? 0)}</strong>
+                    <strong>${currency(item.total_price_snapshot ?? 0)}</strong>
                   </div>
                 `
               )
