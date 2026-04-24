@@ -3,14 +3,20 @@
  * Main entry point with Uber Driver-style UX
  */
 
-import { 
-  initState, 
-  subscribe, 
-  actions, 
-  selectors,
-  getDeviceId,
-  STORAGE_KEYS 
-} from './state/app-state.js';
+import {
+  bootstrapSession,
+  invokeFunction,
+  loadActiveRequest,
+  loadNotifications,
+  loadOffers,
+  loadProviderWorkspace,
+  getProviderDashboard,
+  signOut,
+  updateProviderStatus
+} from "./services/service-api.js";
+
+import { renderProviderDashboard } from "./ui/render-provider.js";
+import { getSupabaseClient } from "./services/supabase.js";
 import {
   bootstrapSession,
   invokeFunction,
