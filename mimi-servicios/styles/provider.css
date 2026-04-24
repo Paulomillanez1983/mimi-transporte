@@ -2246,36 +2246,112 @@ body {
   white-space: nowrap;
   border-width: 0;
 }
-/* ===== FIX MAPA MOBILE PRO ===== */
+
+
+/* ==========================================================
+   MIMI SERVICIOS - PROVIDER CSS FINAL MOBILE PRO 2026
+   Mapa visible + capas correctas + onboarding compacto
+   Cámara real estable para Android/iOS/PWA
+   Pegar al final si no reemplazás el archivo completo.
+   ========================================================== */
+
+:root {
+  --mimi-safe-top: env(safe-area-inset-top, 0px);
+  --mimi-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mimi-safe-left: env(safe-area-inset-left, 0px);
+  --mimi-safe-right: env(safe-area-inset-right, 0px);
+
+  --mimi-vh: 100vh;
+  --mimi-svh: 100svh;
+  --mimi-dvh: 100dvh;
+
+  --mimi-map-z: 1;
+  --mimi-online-z: 50;
+  --mimi-banner-z: 60;
+  --mimi-service-z: 70;
+  --mimi-alert-z: 75;
+  --mimi-offer-z: 80;
+  --mimi-sheet-z: 90;
+  --mimi-header-z: 100;
+  --mimi-drawer-overlay-z: 150;
+  --mimi-drawer-z: 160;
+  --mimi-drawer-sheet-z: 180;
+  --mimi-modal-z: 200;
+  --mimi-toast-z: 250;
+  --mimi-camera-z: 9999;
+}
+
+/* ---------- Base estable para celulares con barras dinámicas ---------- */
+
+html {
+  width: 100%;
+  min-height: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  background: #000;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  width: 100%;
+  min-height: var(--mimi-vh);
+  min-height: var(--mimi-svh);
+  min-height: var(--mimi-dvh);
+  height: var(--mimi-vh);
+  height: var(--mimi-svh);
+  height: var(--mimi-dvh);
+  overflow: hidden;
+  background: #000;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
 
 #app,
 .app-container {
+  position: relative;
   width: 100%;
-  height: 100dvh;
-  min-height: 100dvh;
+  height: var(--mimi-vh);
+  height: var(--mimi-svh);
+  height: var(--mimi-dvh);
+  min-height: var(--mimi-vh);
+  min-height: var(--mimi-svh);
+  min-height: var(--mimi-dvh);
   overflow: hidden;
+  background: transparent !important;
+  isolation: isolate;
 }
 
+/* ---------- Mapa: visible detrás de la UI ---------- */
+
 .map-background {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  min-height: 100dvh;
-  z-index: 0;
-  background: #0f172a;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: var(--mimi-vh) !important;
+  height: var(--mimi-svh) !important;
+  height: var(--mimi-dvh) !important;
+  min-height: var(--mimi-vh) !important;
+  min-height: var(--mimi-svh) !important;
+  min-height: var(--mimi-dvh) !important;
+  z-index: var(--mimi-map-z) !important;
+  background: #0f172a !important;
+  overflow: hidden !important;
+  pointer-events: auto;
 }
 
 .map-surface,
 #map {
-  width: 100%;
-  height: 100dvh;
-  min-height: 100dvh;
-  display: block;
-}
-
-.map-fallback {
-  z-index: 1;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: var(--mimi-vh) !important;
+  min-height: var(--mimi-svh) !important;
+  min-height: var(--mimi-dvh) !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background: #0f172a !important;
 }
 
 .maplibregl-map,
@@ -2284,3 +2360,719 @@ body {
   width: 100% !important;
   height: 100% !important;
 }
+
+.maplibregl-control-container {
+  display: none !important;
+}
+
+.map-fallback {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+}
+
+/* ---------- Capas UI sobre mapa ---------- */
+
+.floating-header {
+  z-index: var(--mimi-header-z) !important;
+}
+
+.online-button-container {
+  z-index: var(--mimi-online-z) !important;
+}
+
+.offer-card-float {
+  z-index: var(--mimi-offer-z) !important;
+}
+
+.active-service-float {
+  z-index: var(--mimi-service-z) !important;
+}
+
+.distance-alert {
+  z-index: var(--mimi-alert-z) !important;
+}
+
+.bottom-sheet {
+  z-index: var(--mimi-sheet-z) !important;
+}
+
+.install-banner {
+  z-index: var(--mimi-banner-z) !important;
+}
+
+.drawer-overlay {
+  z-index: var(--mimi-drawer-overlay-z) !important;
+}
+
+.side-drawer {
+  z-index: var(--mimi-drawer-z) !important;
+}
+
+.notifications-drawer,
+.chat-drawer {
+  z-index: var(--mimi-drawer-sheet-z) !important;
+}
+
+.modal-overlay {
+  z-index: var(--mimi-modal-z) !important;
+}
+
+.toast-container {
+  z-index: var(--mimi-toast-z) !important;
+}
+
+/* ---------- Header compacto y seguro ---------- */
+
+.floating-header {
+  top: var(--mimi-safe-top) !important;
+  left: var(--mimi-safe-left) !important;
+  right: var(--mimi-safe-right) !important;
+  padding: clamp(8px, 2.3vw, 12px) clamp(10px, 3vw, 16px) !important;
+}
+
+.header-content {
+  min-height: clamp(50px, 8svh, 62px);
+  padding: clamp(8px, 2.5vw, 12px) clamp(10px, 3vw, 16px) !important;
+  gap: clamp(8px, 2.4vw, 12px) !important;
+}
+
+.brand-text {
+  font-size: clamp(0.98rem, 4vw, 1.25rem) !important;
+}
+
+.brand-badge {
+  font-size: clamp(0.52rem, 2.5vw, 0.625rem) !important;
+  padding: 3px 6px !important;
+}
+
+.header-status {
+  font-size: clamp(0.72rem, 3vw, 0.8125rem) !important;
+}
+
+.menu-button {
+  width: clamp(36px, 10vw, 40px) !important;
+  height: clamp(36px, 10vw, 40px) !important;
+  border-radius: 12px !important;
+  flex: 0 0 auto;
+}
+
+/* ---------- Botón online compacto ---------- */
+
+.online-button-container {
+  top: 50%;
+}
+
+.online-button {
+  width: clamp(124px, 42vw, 176px) !important;
+  min-height: clamp(106px, 28svh, 142px) !important;
+  padding: clamp(12px, 3.5vw, 18px) clamp(10px, 3vw, 16px) !important;
+  border-radius: clamp(22px, 6vw, 28px) !important;
+}
+
+.online-button-icon {
+  width: clamp(23px, 7vw, 30px) !important;
+  height: clamp(23px, 7vw, 30px) !important;
+}
+
+.online-button-text {
+  font-size: clamp(0.82rem, 3.8vw, 0.98rem) !important;
+}
+
+.online-button-subtext {
+  font-size: clamp(0.64rem, 3vw, 0.74rem) !important;
+}
+
+/* ---------- Bottom sheet inteligente ---------- */
+
+.bottom-sheet {
+  max-height: calc(var(--mimi-dvh) - var(--mimi-safe-top) - 10px) !important;
+  padding-bottom: var(--mimi-safe-bottom) !important;
+  border-radius: clamp(22px, 7vw, 28px) clamp(22px, 7vw, 28px) 0 0 !important;
+  transform: translateY(calc(100% - clamp(104px, 19svh, 140px))) !important;
+}
+
+.bottom-sheet.collapsed {
+  transform: translateY(calc(100% - clamp(82px, 15svh, 100px))) !important;
+}
+
+.bottom-sheet.expanded {
+  transform: translateY(0) !important;
+}
+
+.sheet-content {
+  max-height: calc(var(--mimi-dvh) - 170px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(24px + var(--mimi-safe-bottom)) !important;
+}
+
+.sheet-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.tab-btn {
+  min-height: 40px;
+  padding: 9px 10px !important;
+  font-size: clamp(0.72rem, 3vw, 0.82rem) !important;
+}
+
+/* ---------- Modal verificación compacto ---------- */
+
+.modal-overlay {
+  align-items: flex-end !important;
+  padding:
+    calc(8px + var(--mimi-safe-top))
+    max(10px, var(--mimi-safe-right))
+    var(--mimi-safe-bottom)
+    max(10px, var(--mimi-safe-left)) !important;
+}
+
+.modal-content {
+  width: min(100%, 480px) !important;
+  max-height: calc(var(--mimi-dvh) - var(--mimi-safe-top) - 12px) !important;
+  border-radius: clamp(22px, 7vw, 28px) clamp(22px, 7vw, 28px) 0 0 !important;
+  overflow: hidden !important;
+}
+
+.modal-header {
+  padding: clamp(12px, 3.5vw, 18px) clamp(14px, 4vw, 20px) !important;
+  min-height: 54px !important;
+}
+
+.modal-header h2 {
+  font-size: clamp(1rem, 4.3vw, 1.25rem) !important;
+}
+
+.modal-close {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  font-size: 1.22rem !important;
+}
+
+.modal-body {
+  padding: clamp(12px, 3.7vw, 18px) !important;
+  max-height: calc(var(--mimi-dvh) - 160px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-footer {
+  padding:
+    clamp(10px, 3vw, 14px)
+    clamp(12px, 3.5vw, 18px)
+    calc(clamp(10px, 3vw, 14px) + var(--mimi-safe-bottom)) !important;
+  gap: 10px !important;
+}
+
+.btn-primary,
+.btn-secondary {
+  min-height: 48px !important;
+  padding: 12px 14px !important;
+  border-radius: 14px !important;
+  font-size: clamp(0.88rem, 3.8vw, 1rem) !important;
+}
+
+.wizard-progress {
+  gap: 10px !important;
+  margin-bottom: 16px !important;
+}
+
+.progress-bar {
+  height: 5px !important;
+}
+
+.progress-text {
+  font-size: 0.74rem !important;
+}
+
+.wizard-step h3 {
+  font-size: clamp(1rem, 4.5vw, 1.22rem) !important;
+  margin-bottom: 6px !important;
+}
+
+.wizard-step p {
+  font-size: clamp(0.84rem, 3.7vw, 0.96rem) !important;
+  margin-bottom: 14px !important;
+  line-height: 1.42 !important;
+}
+
+.upload-zone {
+  min-height: 104px !important;
+  padding: clamp(14px, 5vw, 24px) !important;
+  gap: 8px !important;
+  border-radius: 16px !important;
+}
+
+.upload-icon {
+  font-size: clamp(1.45rem, 8vw, 2.25rem) !important;
+  line-height: 1 !important;
+}
+
+.upload-text {
+  font-size: clamp(0.82rem, 3.6vw, 0.94rem) !important;
+  line-height: 1.3 !important;
+  text-align: center !important;
+}
+
+[data-camera-doc] {
+  min-height: 48px !important;
+  padding: 11px 14px !important;
+  border-radius: 14px !important;
+  font-size: clamp(0.84rem, 3.6vw, 0.96rem) !important;
+}
+
+/* ---------- Cámara real: compacta para celulares chicos ---------- */
+
+.camera-capture-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: var(--mimi-camera-z) !important;
+  width: 100vw !important;
+  height: var(--mimi-vh) !important;
+  height: var(--mimi-svh) !important;
+  height: var(--mimi-dvh) !important;
+  background: #000 !important;
+  color: #fff !important;
+  overflow: hidden !important;
+}
+
+.camera-capture-modal[hidden] {
+  display: none !important;
+}
+
+.camera-shell {
+  width: 100% !important;
+  height: var(--mimi-vh) !important;
+  height: var(--mimi-svh) !important;
+  height: var(--mimi-dvh) !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr) auto auto !important;
+  gap: clamp(7px, 1.8svh, 14px) !important;
+  padding:
+    calc(var(--mimi-safe-top) + clamp(8px, 2svh, 14px))
+    max(10px, var(--mimi-safe-right))
+    calc(var(--mimi-safe-bottom) + clamp(10px, 2svh, 16px))
+    max(10px, var(--mimi-safe-left)) !important;
+  overflow: hidden !important;
+}
+
+.camera-topbar {
+  min-height: 42px !important;
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.camera-topbar strong {
+  font-size: clamp(0.95rem, 4.2vw, 1.15rem) !important;
+  line-height: 1.15 !important;
+}
+
+.camera-topbar span {
+  margin-top: 2px !important;
+  font-size: clamp(0.7rem, 3.2vw, 0.84rem) !important;
+  line-height: 1.25 !important;
+}
+
+.camera-close-btn {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  border-radius: 999px !important;
+  font-size: 18px !important;
+}
+
+.camera-preview-wrap {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  margin: 0 !important;
+  border-radius: clamp(18px, 5vw, 28px) !important;
+  overflow: hidden !important;
+  background: #070707 !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+.camera-video,
+#cameraVideo {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  object-fit: cover !important;
+  display: block !important;
+  background: #050505 !important;
+}
+
+#cameraCanvas {
+  display: none !important;
+}
+
+.camera-guide {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  border: 2px solid rgba(255, 255, 255, 0.94) !important;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.30) !important;
+  pointer-events: none !important;
+}
+
+.camera-guide.dni {
+  width: min(82vw, 360px) !important;
+  max-height: 38svh !important;
+  aspect-ratio: 1.58 / 1 !important;
+  border-radius: clamp(12px, 4vw, 18px) !important;
+}
+
+.camera-guide.selfie {
+  width: min(58vw, 230px, 32svh) !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 999px !important;
+}
+
+.camera-actions {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.camera-primary,
+.camera-secondary,
+#cameraCaptureBtn,
+#cameraRetakeBtn,
+#cameraUseBtn {
+  width: 100% !important;
+  min-height: clamp(44px, 7svh, 54px) !important;
+  max-height: 56px !important;
+  border-radius: 16px !important;
+  font-size: clamp(0.9rem, 4vw, 1rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+}
+
+.camera-status,
+.camera-step-status {
+  font-size: clamp(0.7rem, 3.2vw, 0.82rem) !important;
+  line-height: 1.35 !important;
+  min-height: 18px !important;
+}
+
+.camera-step-status {
+  margin-top: 8px !important;
+}
+
+/* ---------- Cards flotantes compactas ---------- */
+
+.offer-card-float {
+  width: min(calc(100vw - 24px), 380px) !important;
+}
+
+.offer-glass {
+  padding: clamp(14px, 4vw, 20px) !important;
+  border-radius: 22px !important;
+}
+
+.offer-service {
+  font-size: clamp(1.08rem, 5vw, 1.5rem) !important;
+}
+
+.offer-location,
+.offer-client {
+  font-size: clamp(0.82rem, 3.6vw, 1rem) !important;
+}
+
+.offer-actions {
+  gap: 10px !important;
+}
+
+.offer-btn {
+  min-height: 48px !important;
+  padding: 12px 14px !important;
+}
+
+.active-service-float,
+.distance-alert {
+  left: max(12px, var(--mimi-safe-left)) !important;
+  right: max(12px, var(--mimi-safe-right)) !important;
+}
+
+.active-service-float {
+  top: calc(var(--mimi-safe-top) + 86px) !important;
+}
+
+/* ---------- Drawers y chat ---------- */
+
+.side-drawer {
+  width: min(86vw, 336px) !important;
+  padding-bottom: var(--mimi-safe-bottom) !important;
+}
+
+.notifications-drawer,
+.chat-drawer {
+  height: min(82dvh, 680px) !important;
+  padding-bottom: var(--mimi-safe-bottom) !important;
+}
+
+.chat-input-area {
+  padding-bottom: calc(12px + var(--mimi-safe-bottom)) !important;
+}
+
+/* ---------- Breakpoints celulares ---------- */
+
+@media (max-width: 480px) {
+  .header-status {
+    display: none !important;
+  }
+
+  .stats-grid-modern {
+    gap: 8px !important;
+  }
+
+  .stat-card {
+    padding: 12px 6px !important;
+    border-radius: 14px !important;
+  }
+
+  .stat-value {
+    font-size: 1.12rem !important;
+  }
+
+  .stat-label {
+    font-size: 0.58rem !important;
+  }
+
+  .quick-actions {
+    gap: 8px !important;
+  }
+
+  .quick-btn {
+    padding: 12px 6px !important;
+    border-radius: 14px !important;
+  }
+
+  .quick-icon {
+    font-size: 1.25rem !important;
+  }
+
+  .camera-guide.dni {
+    width: min(86vw, 330px) !important;
+  }
+
+  .camera-guide.selfie {
+    width: min(62vw, 215px, 30svh) !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .brand-badge {
+    display: none !important;
+  }
+
+  .online-button {
+    width: clamp(116px, 39vw, 150px) !important;
+    min-height: 104px !important;
+  }
+
+  .modal-body {
+    padding: 12px !important;
+  }
+
+  .upload-zone {
+    min-height: 88px !important;
+    padding: 12px !important;
+  }
+
+  .upload-icon {
+    font-size: 1.45rem !important;
+  }
+
+  .camera-topbar {
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+    min-height: 36px !important;
+  }
+
+  .camera-close-btn {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+  }
+
+  .camera-guide.dni {
+    width: min(88vw, 300px) !important;
+    max-height: 34svh !important;
+  }
+
+  .camera-guide.selfie {
+    width: min(60vw, 190px, 28svh) !important;
+  }
+
+  .camera-primary,
+  .camera-secondary,
+  #cameraCaptureBtn,
+  #cameraRetakeBtn,
+  #cameraUseBtn {
+    min-height: 42px !important;
+  }
+}
+
+@media (max-height: 700px) {
+  .camera-shell {
+    gap: 7px !important;
+  }
+
+  .camera-topbar {
+    min-height: 36px !important;
+  }
+
+  .camera-topbar span {
+    display: none !important;
+  }
+
+  .camera-guide.dni {
+    max-height: 32svh !important;
+  }
+
+  .camera-guide.selfie {
+    width: min(52vw, 180px, 27svh) !important;
+  }
+
+  .camera-primary,
+  .camera-secondary,
+  #cameraCaptureBtn,
+  #cameraRetakeBtn,
+  #cameraUseBtn {
+    min-height: 42px !important;
+  }
+
+  .camera-status {
+    display: none !important;
+  }
+
+  .modal-header {
+    min-height: 50px !important;
+    padding: 10px 14px !important;
+  }
+
+  .modal-body {
+    max-height: calc(var(--mimi-dvh) - 140px) !important;
+  }
+
+  .wizard-step p {
+    margin-bottom: 10px !important;
+  }
+
+  .upload-zone {
+    min-height: 84px !important;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .floating-header {
+    padding: 6px 10px !important;
+  }
+
+  .header-content {
+    min-height: 44px !important;
+  }
+
+  .online-button-container {
+    top: 52% !important;
+  }
+
+  .online-button {
+    min-height: 84px !important;
+    width: 136px !important;
+  }
+
+  .bottom-sheet {
+    max-height: 92dvh !important;
+    transform: translateY(calc(100% - 82px)) !important;
+  }
+
+  .camera-shell {
+    grid-template-columns: 0.86fr 1.14fr !important;
+    grid-template-rows: auto 1fr auto !important;
+    column-gap: 12px !important;
+  }
+
+  .camera-topbar {
+    grid-column: 1 / 3 !important;
+  }
+
+  .camera-preview-wrap {
+    grid-row: 2 / 4 !important;
+  }
+
+  .camera-actions {
+    align-self: end !important;
+  }
+
+  .camera-guide.dni {
+    width: min(52vw, 330px) !important;
+    max-height: 54svh !important;
+  }
+
+  .camera-guide.selfie {
+    width: min(28vw, 180px, 48svh) !important;
+  }
+}
+
+/* ---------- Desktop/tablet conserva estética ---------- */
+
+@media (min-width: 768px) {
+  .bottom-sheet {
+    max-width: 480px;
+    left: 50%;
+    transform: translateX(-50%) translateY(calc(100% - 140px)) !important;
+  }
+
+  .bottom-sheet.expanded {
+    transform: translateX(-50%) translateY(0) !important;
+  }
+
+  .bottom-sheet.collapsed {
+    transform: translateX(-50%) translateY(calc(100% - 100px)) !important;
+  }
+}
+
+/* ---------- Accesibilidad ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .online-button,
+  .offer-card-float:not([hidden]),
+  .wizard-step.active,
+  .toast,
+  .install-banner {
+    animation: none !important;
+  }
+
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .header-glass,
+  .offer-glass,
+  .service-glass,
+  .bottom-sheet,
+  .modal-content,
+  .side-drawer,
+  .notifications-drawer,
+  .chat-drawer {
+    background: #000 !important;
+    border-color: #fff !important;
+  }
+}
+
