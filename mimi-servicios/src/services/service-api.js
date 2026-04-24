@@ -41,7 +41,7 @@ return normalized;
   return session;
 }
 
-async function invokeFunction(functionName, body = {}) {
+export async function invokeFunction(functionName, body = {}) {
   const supabase = getSupabaseClient();
 
   if (!supabase || !functionName) {
@@ -830,10 +830,21 @@ export async function uploadProviderDocument({ providerId, documentType, file })
     .select(PROVIDER_DOCUMENT_SELECT)
     .single();
 
-  if (error) throw error;
+if (error) throw error;
 
-  return normalizeProviderDocuments([data])[0] ?? data;
+const normalized = normalizeProviderDocuments([data])[0] ?? data;
+
+if (["dni_front", "selfie"].includes(safeDocumentType)) {
+  try {
+    await invokeFunction("svc-verify-provider-identity", {
+      provider_id: providerId
+    });
+  } catch (verifyError) {
+    console.warn("[MIMI Servicios] Verificación IA pendiente:", verifyError);
+  }
 }
+
+return normalized;}
 
 export async function loadClientRequestInsights(requestId, providerId = null) {
   if (!hasBackend() || !requestId) {
