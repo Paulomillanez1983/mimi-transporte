@@ -278,42 +278,71 @@ selfieStatus: document.getElementById("selfieStatus"),
   /**
    * Initialize map
    */
-  initMap() {
-    try {
-      // Check if maplibre is available
-      if (!window.maplibregl) {
-        console.warn('[MIMI] MapLibre not available');
-        this.showMapFallback();
-        return;
-      }
+async initMap() {
+  try {
+    const mapEl = document.getElementById("map");
+    const fallbackEl = document.getElementById("mapFallback");
 
-      const defaultCenter = [-64.1888, -31.4201]; // Córdoba, Argentina
-      
-this.map = initMap("map", defaultCenter, 14);
-      setTimeout(() => {
-  this.map?.resize?.();
-}, 300);
-
-window.addEventListener("resize", () => {
-  this.map?.resize?.();
-});
-      
-      this.map.on('load', () => {
-        console.log('[MIMI] Map loaded');
-        actions.setMapReady(true);
-      });
-
-      this.map.on('error', (e) => {
-        console.error('[MIMI] Map error:', e);
-        this.showMapFallback();
-      });
-
-    } catch (error) {
-      console.error('[MIMI] Map init error:', error);
+    if (!mapEl) {
+      console.error("[MIMI] No existe #map en prestador.html");
       this.showMapFallback();
+      return;
     }
-  }
 
+    if (!window.maplibregl) {
+      console.warn("[MIMI] MapLibre no disponible todavía");
+      this.showMapFallback();
+      return;
+    }
+
+    mapEl.hidden = false;
+    if (fallbackEl) fallbackEl.hidden = true;
+
+    const defaultCenter = [-64.1888, -31.4201];
+
+    mapEl.style.width = "100%";
+    mapEl.style.height = "100dvh";
+    mapEl.style.minHeight = "100dvh";
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    this.map = initMap("map", defaultCenter, 13);
+
+    const forceResize = () => {
+      try {
+        this.map?.resize?.();
+      } catch (err) {
+        console.warn("[MIMI] Map resize warning:", err);
+      }
+    };
+
+    this.map.on("load", () => {
+      console.log("[MIMI] Map loaded");
+      actions.setMapReady(true);
+
+      forceResize();
+
+      setTimeout(forceResize, 250);
+      setTimeout(forceResize, 800);
+      setTimeout(forceResize, 1500);
+
+      this.updateMapToCurrentPosition();
+    });
+
+    this.map.on("error", (e) => {
+      console.error("[MIMI] Map error:", e);
+    });
+
+    window.addEventListener("resize", forceResize);
+    window.addEventListener("orientationchange", () => {
+      setTimeout(forceResize, 350);
+    });
+
+  } catch (error) {
+    console.error("[MIMI] Map init error:", error);
+    this.showMapFallback();
+  }
+}
   /**
    * Show map fallback
    */
