@@ -10,7 +10,7 @@ import {
   selectors,
   getDeviceId,
   STORAGE_KEYS 
-} from './state/app-state-2026.js';
+} from './state/app-state.js';
 
 // ============================================
 // APP CONTROLLER
