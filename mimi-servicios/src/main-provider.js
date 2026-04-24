@@ -694,17 +694,67 @@ async function handleBusinessFormSubmit(event) {
 }
 
 function bindBasicControls() {
-  document.addEventListener("change", (event) => {
-    if (event.target?.name !== "providerDocumentFile") return;
+document.addEventListener("change", async (e) => {
 
-    const file = event.target.files?.[0] ?? null;
-    const preview = document.getElementById("providerDocumentPreview");
-    if (!preview) return;
+  // 🔹 NUEVO: wizard onboarding
+  if (e.target.dataset.input) {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    preview.textContent = file
-      ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB`
-      : "Todavía no seleccionaste archivo.";
-  });
+    const docType = e.target.dataset.input;
+
+    const preview = document.getElementById(`preview-${docType}`);
+    const status = document.getElementById(`status-${docType}`);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (preview) {
+        preview.innerHTML = `<img src="${reader.result}" />`;
+        preview.classList.add("visible");
+      }
+    };
+    reader.readAsDataURL(file);
+
+    if (status) {
+      status.textContent = "Subiendo...";
+      status.className = "doc-status pending";
+    }
+
+    try {
+      await uploadProviderDocument({
+        providerId: state.session.providerId,
+        documentType: docType,
+        file
+      });
+
+      if (status) {
+        status.textContent = "✅ Subido";
+        status.className = "doc-status ok";
+      }
+
+      updateProgress();
+
+    } catch {
+      if (status) {
+        status.textContent = "❌ Error";
+        status.className = "doc-status error";
+      }
+    }
+
+    return;
+  }
+
+  // 🔹 LEGACY
+  if (e.target?.name !== "providerDocumentFile") return;
+
+  const file = e.target.files?.[0] ?? null;
+  const preview = document.getElementById("providerDocumentPreview");
+  if (!preview) return;
+
+  preview.textContent = file
+    ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB`
+    : "Todavía no seleccionaste archivo.";
+});
   document.getElementById("authPrimaryButton")?.addEventListener("click", async () => {
     try {
       await handleAuthPrimary();
@@ -721,7 +771,20 @@ function bindBasicControls() {
       setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
     }
   });
+document.addEventListener("click", (e) => {
+  const cam = e.target.closest("[data-camera]");
+  if (cam) {
+    openCamera(cam.dataset.camera);
+    return;
+  }
 
+  const upload = e.target.closest("[data-upload]");
+  if (upload) {
+    document
+      .querySelector(`[data-input="${upload.dataset.upload}"]`)
+      ?.click();
+  }
+});
   document.getElementById("switchToClient")?.addEventListener("click", () => {
     setActiveMode("client");
     window.location.href = "./cliente.html";
@@ -917,7 +980,16 @@ function setupRealtime(
     }
   });
 }
+function updateProgress() {
+  const total = 4;
+  const completed = document.querySelectorAll(".doc-status.ok").length;
+  const percent = (completed / total) * 100;
 
+  const bar = document.getElementById("docProgressBar");
+  if (bar) {
+    bar.style.width = percent + "%";
+  }
+}
 async function init() {
   setActiveMode("provider");
 
@@ -976,3 +1048,97 @@ window.addEventListener("beforeunload", () => {
   realtimeSubscription?.unsubscribe?.();
   authSubscription?.unsubscribe?.();
 });
+let uploading = false;
+
+async function openCamera(docType) {
+  let stream;
+  let modal;
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" }
+    });
+
+    const video = document.createElement("video");
+    video.srcObject = stream;
+    video.play();
+
+    modal = document.createElement("div");
+    modal.className = "camera-modal";
+    modal.innerHTML = `
+      <div class="camera-box">
+        <video autoplay playsinline></video>
+        <button id="captureBtn">Capturar</button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.querySelector("video").srcObject = stream;
+
+    modal.querySelector("#captureBtn").onclick = async () => {
+      if (uploading) return;
+      uploading = true;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0);
+
+      canvas.toBlob(async (blob) => {
+        const file = new File([blob], `${docType}.jpg`, {
+          type: "image/jpeg"
+        });
+
+        const preview = document.getElementById(`preview-${docType}`);
+        const status = document.getElementById(`status-${docType}`);
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (preview) {
+            preview.innerHTML = `<img src="${reader.result}" />`;
+            preview.classList.add("visible");
+          }
+        };
+        reader.readAsDataURL(file);
+
+        if (status) {
+          status.textContent = "Subiendo...";
+          status.className = "doc-status pending";
+        }
+
+        try {
+          await uploadProviderDocument({
+            providerId: state.session.providerId,
+            documentType: docType,
+            file
+          });
+
+          if (status) {
+            status.textContent = "✅ Subido";
+            status.className = "doc-status ok";
+          }
+
+          updateProgress();
+
+        } catch (err) {
+          if (status) {
+            status.textContent = "❌ Error";
+            status.className = "doc-status error";
+          }
+        } finally {
+          uploading = false;
+        }
+      }, "image/jpeg", 0.9);
+
+      stream.getTracks().forEach(t => t.stop());
+      modal.remove();
+    };
+
+  } catch (err) {
+    console.error(err);
+    stream?.getTracks()?.forEach(t => t.stop());
+    modal?.remove();
+  }
+}
