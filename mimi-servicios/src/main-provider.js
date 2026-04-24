@@ -292,12 +292,12 @@ async initMap() {
         this.map.resize();
       } catch (_) {}
     }, 80);
-
+    
     return;
   }
 
   const mapEl = document.getElementById("map");
-  const mapFallback = document.getElementById("mapFallback");
+  const mapFallback = this.elements.mapFallback;
 
   if (!mapEl) {
     console.warn("[MIMI][initMap] no existe #map");
@@ -321,7 +321,7 @@ async initMap() {
   mapEl.style.display = "block";
   mapEl.style.visibility = "visible";
   mapEl.style.width = "100%";
-  mapEl.style.height = "100dvh";
+  mapEl.style.height = "100%";
   mapEl.style.minHeight = "100dvh";
 
   if (mapFallback) {
