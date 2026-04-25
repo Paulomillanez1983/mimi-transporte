@@ -75,19 +75,51 @@
       </div>
     </header>
 
-    <!-- Online Button (when offline) -->
-    <div class="online-button-container" id="onlineButtonContainer">
-      <button class="online-button" id="goOnlineButton">
-        <span class="online-button-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-          </svg>
-        </span>
-        <span class="online-button-text">Ponerme en línea</span>
-        <span class="online-button-subtext">Para recibir servicios</span>
-      </button>
+<!-- Provider Login Gate -->
+<div class="online-button-container" id="onlineButtonContainer">
+  <div class="provider-login-gate">
+    
+    <div class="provider-login-logo">
+      <img src="./assets/icons/icon-192.png" alt="MIMI Servicios">
     </div>
 
+    <div class="provider-login-kicker">Panel Prestador</div>
+
+    <div class="provider-login-copy">
+      <h1>MIMI<br>Servicios</h1>
+      <p>
+        Ingresá para verificar tu identidad, configurar tus servicios y empezar
+        a recibir solicitudes reales.
+      </p>
+    </div>
+
+    <button class="provider-login-google" id="goOnlineButton" type="button">
+      <span class="provider-google-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.2l6.5-6.5C35.3 2.6 30 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.7c-.3 2-1.6 5-4.4 7l6.9 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+          <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.2.8-4.6l-7.8-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.8-6.1z"/>
+          <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-6.9-5.3c-1.9 1.3-4.5 2.2-9 2.2-6.3 0-11.7-3.9-13.6-9.4l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
+        </svg>
+      </span>
+
+      <span class="provider-google-text">
+        <strong>Continuar con Google</strong>
+        <small>Cuenta de prestador</small>
+      </span>
+
+      <span class="provider-google-arrow">›</span>
+    </button>
+
+    <div class="provider-login-trust">
+      <span>🔒<small>Sesión segura</small></span>
+      <span>🛠️<small>Verificación profesional</small></span>
+      <span>⚡<small>Servicios reales</small></span>
+    </div>
+
+  </div>
+</div>
+    
     <!-- Floating Offer Card -->
     <div class="offer-card-float" id="offerCard" hidden>
       <div class="offer-glass">
