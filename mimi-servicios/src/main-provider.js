@@ -768,90 +768,95 @@ dismissInstallBanner(event = null) {
    * Load real provider session/workspace from Supabase.
    * This replaces every previous demo fallback with backend-driven state.
    */
-  async loadInitialData() {
-    try {
-      actions.setLoading(true);
-      actions.clearError?.();
+async loadInitialData() {
+  try {
+    actions.setLoading(true);
+    actions.clearError?.();
 
-      const session = await bootstrapSession();
+    const session = await bootstrapSession();
 
-actions.setSession({
-  userId: session?.userId ?? null,
-  providerId: session?.providerId ?? null,
-  userEmail: session?.userEmail ?? null,
-  userName: session?.userName ?? session?.userEmail ?? null,
-  userAvatar: session?.userAvatar ?? null,
-  isAuthenticated: Boolean(session?.isAuthenticated),
-  token: session?.token ?? null,
-  expiresAt: session?.expiresAt ?? null
-});
-      
-if (!session?.isAuthenticated) {
-  this.showToast("Ingresá con Google para operar como prestador", "warning");
-  this.showProviderLoginGate();
-  return;
-}
-document.body.classList.remove("provider-auth-required");
+    actions.setSession({
+      userId: session?.userId ?? null,
+      providerId: session?.providerId ?? null,
+      userEmail: session?.userEmail ?? null,
+      userName: session?.userName ?? session?.userEmail ?? null,
+      userAvatar: session?.userAvatar ?? null,
+      isAuthenticated: Boolean(session?.isAuthenticated),
+      token: session?.token ?? null,
+      expiresAt: session?.expiresAt ?? null
+    });
 
-if (this.elements.bottomSheet) {
-  this.elements.bottomSheet.style.display = "";
-}
+    if (!session?.isAuthenticated) {
+      document.body.classList.remove("provider-auth-loading", "provider-authenticated");
+      document.body.classList.add("provider-auth-required");
 
-if (this.elements.header) {
-  this.elements.header.style.display = "";
-}
-
-if (this.elements.mapContainer) {
-  this.elements.mapContainer.style.display = "";
-}
-      
-      if (!session?.providerId) {
-        this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
-        return;
-      }
-
-const [workspace, notifications, offers, activeRequest, dashboard] = await Promise.all([
-  loadProviderWorkspace(session.providerId),
-  loadNotifications(session.userId),
-  loadOffers(session.providerId),
-  loadActiveRequest({ providerId: session.providerId }),
-  getProviderDashboard(session.providerId) // 🔥 NUEVO
-]);
-      
-      this.applyWorkspaceToState(workspace);
-      actions.updateState({
-  provider: {
-    ...this.state.provider,
-    dashboard
-  }
-});
-
-      actions.updateState({
-        notifications: {
-          items: this.normalizeNotifications(notifications),
-          unreadCount: (notifications ?? []).filter((item) => !item.read_at).length
-        }
-      });
-
-      const firstOffer = Array.isArray(offers) ? offers[0] : null;
-      if (firstOffer) {
-        actions.setActiveOffer(this.normalizeOfferForState(firstOffer));
-      }
-
-      if (activeRequest) {
-        actions.setActiveService(this.normalizeServiceForState(activeRequest));
-      }
-
-      this.subscribeRealtime();
-    } catch (err) {
-      console.error("[MIMI] Error cargando datos iniciales:", err);
-      actions.setError?.(err?.message ?? "No pudimos cargar tu panel de prestador");
-      this.showToast("No pudimos cargar tus datos reales", "error");
-    } finally {
-      actions.setLoading(false);
+      this.showProviderLoginGate();
+      return false;
     }
-  }
 
+    document.body.classList.remove("provider-auth-loading", "provider-auth-required");
+    document.body.classList.add("provider-authenticated");
+
+    if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "";
+    if (this.elements.header) this.elements.header.style.display = "";
+    if (this.elements.mapContainer) this.elements.mapContainer.style.display = "";
+
+    if (!session?.providerId) {
+      this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
+      this.showProviderLoginGate();
+      return false;
+    }
+
+    const [workspace, notifications, offers, activeRequest, dashboard] = await Promise.all([
+      loadProviderWorkspace(session.providerId),
+      loadNotifications(session.userId),
+      loadOffers(session.providerId),
+      loadActiveRequest({ providerId: session.providerId }),
+      getProviderDashboard(session.providerId)
+    ]);
+
+    this.applyWorkspaceToState(workspace);
+
+    actions.updateState({
+      provider: {
+        ...this.state.provider,
+        dashboard
+      }
+    });
+
+    actions.updateState({
+      notifications: {
+        items: this.normalizeNotifications(notifications),
+        unreadCount: (notifications ?? []).filter((item) => !item.read_at).length
+      }
+    });
+
+    const firstOffer = Array.isArray(offers) ? offers[0] : null;
+    if (firstOffer) {
+      actions.setActiveOffer(this.normalizeOfferForState(firstOffer));
+    }
+
+    if (activeRequest) {
+      actions.setActiveService(this.normalizeServiceForState(activeRequest));
+    }
+
+    this.renderDrawerProfile();
+    return true;
+  } catch (err) {
+    console.error("[MIMI] Error cargando datos iniciales:", err);
+
+    actions.setError?.(err?.message ?? "No pudimos cargar tu panel de prestador");
+    this.showToast("No pudimos cargar tus datos reales", "error");
+
+    document.body.classList.remove("provider-auth-loading", "provider-authenticated");
+    document.body.classList.add("provider-auth-required");
+
+    this.showProviderLoginGate();
+    return false;
+  } finally {
+    actions.setLoading(false);
+  }
+}
   applyWorkspaceToState(workspace = {}) {
     const profile = workspace.profile ?? null;
     const documents = Array.isArray(workspace.documents) ? workspace.documents : [];
