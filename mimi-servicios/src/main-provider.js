@@ -2296,19 +2296,23 @@ async handleInstall() {
   /**
    * Handle logout
    */
-  async handleLogout() {
-    if (!confirm("¿Seguro que querés cerrar sesión?")) return;
+async handleLogout() {
+  if (!confirm("¿Seguro que querés cerrar sesión?")) return;
 
-    try {
-      await signOut();
-    } catch (err) {
-      console.warn("[MIMI] Error cerrando sesión:", err);
-    } finally {
-      localStorage.removeItem(STORAGE_KEYS.SESSION);
-      actions.clearSession();
-      window.location.href = "./index.html";
-    }
+  try {
+    await signOut();
+  } catch (err) {
+    console.warn("[MIMI] Error cerrando sesión:", err);
+  } finally {
+    localStorage.removeItem(STORAGE_KEYS.SESSION);
+    actions.clearSession();
+
+    localStorage.setItem("mimi_services_active_mode", "provider");
+    sessionStorage.setItem("mimi_services_active_mode", "provider");
+
+    window.location.href = "./prestador.html";
   }
+}  
 async openCameraCapture(documentType) {
   const providerId = this.state?.session?.providerId;
 
