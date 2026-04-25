@@ -76,52 +76,45 @@ class MimiProviderApp {
    * Initialize the app
    */
 async init() {
-  console.log('[MIMI] Initializing Provider App 2026...');
+  console.log("[MIMI] Initializing Provider App 2026...");
+
+  document.body.classList.add("provider-auth-loading");
+  document.body.classList.remove("provider-authenticated", "provider-auth-required");
 
   try {
     localStorage.setItem("mimi_services_active_mode", "provider");
     sessionStorage.setItem("mimi_services_active_mode", "provider");
   } catch (_) {}
 
-  // Initialize state
   initState();
-  
-    // Cache DOM elements
-    this.cacheElements();
-    
-    // Subscribe to state changes
-    this.unsubscribe = subscribe((state) => {
-      this.state = state;
-      this.render();
-    });
-    
-    // Load authenticated provider data from Supabase before rendering operational UI
-    await this.loadInitialData();
 
-    // Initialize UI
-    this.initUI();
-    
-    // Initialize map
-    this.initMap();
-    
-    // Setup event listeners
-    this.setupEventListeners();
-    
-    // Setup bottom sheet gestures
-    this.setupBottomSheetGestures();
-    
-    // Check install prompt
+  this.cacheElements();
+
+  this.unsubscribe = subscribe((state) => {
+    this.state = state;
+    this.render();
+  });
+
+  const canBootProviderPanel = await this.loadInitialData();
+
+  if (!canBootProviderPanel) {
     this.setupInstallPrompt();
-    
-    // Check location permission
-    this.checkLocationPermission();
-    
-    // Start background sync
-    this.startBackgroundSync();
-    this.subscribeRealtime();
-    console.log('[MIMI] App initialized');
+    console.log("[MIMI] Provider auth gate active");
+    return;
   }
 
+  this.initUI();
+  await this.initMap();
+
+  this.setupEventListeners();
+  this.setupBottomSheetGestures();
+  this.setupInstallPrompt();
+  this.checkLocationPermission();
+  this.startBackgroundSync();
+  this.subscribeRealtime();
+
+  console.log("[MIMI] App initialized");
+}
   /**
    * Cache DOM elements
    */
