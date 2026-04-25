@@ -371,14 +371,14 @@ async initMap() {
         }
       };
 
-      this.map.on("load", () => {
-        console.log("[MIMI][initMap] map load OK");
+this.map.on("load", () => {
+  console.log("[MIMI][initMap] map load OK");
 
-        actions.setMapReady(true);
+  actions.setMapReady(true);
+  resolveMapOnce();
 
-        setTimeout(() => {
-          forceResize();
-
+  setTimeout(() => {
+    forceResize();
           try {
             this.map.easeTo({
               center: [-64.19, -31.42],
