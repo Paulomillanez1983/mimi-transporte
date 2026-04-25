@@ -3166,7 +3166,8 @@ body:not(.provider-auth-required) .online-button-container {
   }
 }
 /* ==========================================================
-   MIMI LOGIN GATE — FINAL PREMIUM OVERRIDE
+   MIMI LOGIN GATE — SAFE FINAL POLISH
+   Solo visual. No toca lógica.
    ========================================================== */
 
 body.provider-auth-required #onlineButtonContainer {
@@ -3179,12 +3180,11 @@ body.provider-auth-required #onlineButtonContainer {
   width: min(100%, 430px) !important;
   min-height: auto !important;
   max-height: calc(100dvh - 28px) !important;
+  margin: auto !important;
   padding: clamp(22px, 3.2dvh, 30px) 20px !important;
   gap: clamp(10px, 1.8dvh, 16px) !important;
+  justify-content: center !important;
   transform: translateY(-1dvh);
-  background:
-    radial-gradient(circle at 50% 0%, rgba(48,209,88,.13), transparent 30%),
-    linear-gradient(180deg, rgba(8,15,45,.97), rgba(2,6,23,.99)) !important;
 }
 
 .provider-login-logo {
@@ -3199,7 +3199,7 @@ body.provider-auth-required #onlineButtonContainer {
 }
 
 .provider-login-copy h1 {
-  font-size: clamp(38px, 11.5vw, 56px) !important;
+  font-size: clamp(36px, 10.8vw, 54px) !important;
   line-height: .9 !important;
   letter-spacing: -.05em !important;
 }
@@ -3211,8 +3211,9 @@ body.provider-auth-required #onlineButtonContainer {
 }
 
 .provider-login-google {
-  min-height: 72px !important;
+  min-height: 70px !important;
   border-radius: 23px !important;
+  padding: 11px 18px !important;
 }
 
 .provider-login-google strong {
