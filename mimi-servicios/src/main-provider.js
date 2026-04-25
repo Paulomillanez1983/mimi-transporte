@@ -749,6 +749,21 @@ renderDrawerProfile() {
     }).format(Number(this.state?.provider?.stats?.earnings ?? 0));
   }
 }
+
+  dismissInstallBanner(event = null) {
+  event?.preventDefault?.();
+  event?.stopPropagation?.();
+
+  if (this.elements.installBanner) {
+    this.elements.installBanner.hidden = true;
+    this.elements.installBanner.style.display = "none";
+    this.elements.installBanner.setAttribute("aria-hidden", "true");
+  }
+
+  try {
+    localStorage.setItem("mimi_services_install_banner_dismissed", "true");
+  } catch (_) {}
+}
   /**
    * Load real provider session/workspace from Supabase.
    * This replaces every previous demo fallback with backend-driven state.
@@ -1107,19 +1122,14 @@ this.elements.verificationBtn?.addEventListener('click', () => {
     });
 
 this.elements.installDismiss?.addEventListener("click", (event) => {
-  event.preventDefault();
-  event.stopPropagation();
-
-  if (this.elements.installBanner) {
-    this.elements.installBanner.hidden = true;
-    this.elements.installBanner.style.display = "none";
-  }
-
-  try {
-    localStorage.setItem("mimi_services_install_banner_dismissed", "true");
-  } catch (_) {}
+  this.dismissInstallBanner(event);
 });
-    
+
+document.addEventListener("click", (event) => {
+  if (event.target?.closest?.("#installDismiss")) {
+    this.dismissInstallBanner(event);
+  }
+});    
     // Drawer links
     document.getElementById('linkProfile')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1818,7 +1828,34 @@ renderServicesAndPricing() {
       this.elements.statusText.textContent = statusLabels[status] || 'Desconectado';
     }
   }
+restoreProviderOnlineButton() {
+  const container = this.elements.onlineButtonContainer;
+  if (!container) return;
 
+  const hasNormalButton = Boolean(container.querySelector("#goOnlineButton"));
+
+  if (!hasNormalButton) {
+    container.innerHTML = `
+      <button class="online-button" id="goOnlineButton" type="button">
+        <span class="online-button-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </span>
+        <span class="online-button-text">Ponerme en línea</span>
+        <span class="online-button-subtext">Para recibir servicios</span>
+      </button>
+    `;
+
+    this.elements.goOnlineButton = document.getElementById("goOnlineButton");
+
+    this.elements.goOnlineButton?.addEventListener("click", () => {
+      this.handleGoOnline();
+    });
+  }
+
+  container.removeAttribute("style");
+}
   /**
    * Render online button
    */
@@ -1835,8 +1872,6 @@ renderOnlineButton() {
     document.getElementById("providerGoogleLoginButton")
   );
 
-  // Si todavía no está logueado y mostramos login Google,
-  // NO lo ocultes desde el render.
   if (!isAuthenticated && hasLoginButton) {
     container.hidden = false;
     container.classList.remove("hidden");
@@ -1847,6 +1882,10 @@ renderOnlineButton() {
     return;
   }
 
+  if (isAuthenticated) {
+    this.restoreProviderOnlineButton();
+  }
+
   const shouldShow =
     isAuthenticated &&
     status === "OFFLINE" &&
@@ -1855,8 +1894,7 @@ renderOnlineButton() {
 
   container.hidden = false;
   container.classList.toggle("hidden", !shouldShow);
-}
-  
+}  
   /**
    * Render offer card
    */
