@@ -1,27 +1,36 @@
 {
+  "id": "/mimi-transporte/mimi-servicios/prestador.html",
   "name": "MIMI Servicios - Panel Prestador",
   "short_name": "MIMI Prestador",
   "description": "Panel del prestador para MIMI Servicios",
   "start_url": "./prestador.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#000000",
   "theme_color": "#000000",
   "orientation": "portrait",
   "lang": "es-AR",
+  "dir": "ltr",
   "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "./assets/icon-192.png",
+      "src": "./assets/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./assets/icon-512.png",
+      "src": "./assets/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
@@ -32,7 +41,7 @@
       "url": "./prestador.html?action=go-online",
       "icons": [
         {
-          "src": "./assets/icon-192.png",
+          "src": "./assets/icons/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -45,7 +54,7 @@
       "url": "./prestador.html?view=scheduled",
       "icons": [
         {
-          "src": "./assets/icon-192.png",
+          "src": "./assets/icons/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -58,7 +67,7 @@
       "url": "./prestador.html?view=settings",
       "icons": [
         {
-          "src": "./assets/icon-192.png",
+          "src": "./assets/icons/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -67,8 +76,6 @@
   ],
   "related_applications": [],
   "prefer_related_applications": false,
-  "dir": "ltr",
-  "display_override": ["standalone", "minimal-ui", "browser"],
   "launch_handler": {
     "client_mode": ["focus-existing", "auto"]
   }
