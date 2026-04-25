@@ -205,11 +205,9 @@ export async function redirectAfterLoginByRole(session) {
     "mimi_services_auth_redirect_in_progress"
   );
 
-  // IMPORTANTE:
   // Si el usuario inició login desde prestador.html,
-  // SIEMPRE debe volver a prestador.html aunque todavía no exista svc_providers.
-  // prestador.html es quien crea/asegura el perfil del provider.
-  if (preferred === "./prestador.html") {
+  // siempre debe volver a prestador.html aunque todavía no exista svc_providers.
+  if (preferred === "./prestador.html" || currentPageName() === "prestador.html") {
     sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
 
     if (currentPageName() !== "prestador.html") {
@@ -237,6 +235,7 @@ export async function redirectAfterLoginByRole(session) {
 
   window.location.href = target;
 }
+
 export async function invokeFunction(name, body = {}, options = {}) {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
