@@ -1,4 +1,5 @@
-const CACHE_NAME = "mimi-servicios-provider-2026-v2";
+const APP_VERSION = "2026-04-25-01";
+const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
   "./",
@@ -9,12 +10,15 @@ const APP_ASSETS = [
   "./env.js",
   "./favicon.ico",
   "../favicon.png",
+
   "./styles/app.css",
   "./styles/client.css",
   "./styles/provider.css",
+
   "./src/config.js",
   "./src/main-client.js",
   "./src/main-provider.js",
+
   "./src/services/map.js",
   "./src/services/realtime.js",
   "./src/services/service-api.js",
@@ -22,14 +26,22 @@ const APP_ASSETS = [
   "./src/services/sound.js",
   "./src/services/supabase.js",
   "./src/services/mock-data.js",
+
   "./src/state/app-state.js",
+
   "./src/ui/render-client.js",
-  "./sw-2026.js",
-  "./assets/icon-192.png",
-  "./assets/icon-512.png",
-"./assets/notification.mp3",
-"./src/ui/render-provider.js"
+  "./src/ui/render-provider.js",
+
+  "./assets/icons/icon-192.png",
+  "./assets/icons/icon-512.png",
+  "./assets/icons/icon-512-maskable.png",
+  "./assets/icons/apple-touch-icon.png",
+  "./assets/icons/favicon-32.png",
+  "./assets/icons/favicon-16.png",
+
+  "./sw-2026.js"
 ];
+
 self.addEventListener("install", (event) => {
   event.waitUntil(precacheAppAssets());
   self.skipWaiting();
@@ -40,12 +52,16 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
-  if (request.method !== "GET") {
-    return;
-  }
+  if (request.method !== "GET") return;
 
   let url;
   try {
@@ -54,9 +70,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (!["http:", "https:"].includes(url.protocol)) {
-    return;
-  }
+  if (!["http:", "https:"].includes(url.protocol)) return;
 
   const isNavigation = request.mode === "navigate";
   const isSameOrigin = url.origin === self.location.origin;
@@ -78,7 +92,7 @@ self.addEventListener("fetch", (event) => {
 async function precacheAppAssets() {
   const cache = await caches.open(CACHE_NAME);
 
-  const results = await Promise.allSettled(
+  return Promise.allSettled(
     APP_ASSETS.map(async (asset) => {
       try {
         await cache.add(asset);
@@ -87,8 +101,6 @@ async function precacheAppAssets() {
       }
     })
   );
-
-  return results;
 }
 
 async function cleanupOldCaches() {
@@ -96,7 +108,7 @@ async function cleanupOldCaches() {
 
   await Promise.all(
     keys
-      .filter((key) => key !== CACHE_NAME)
+      .filter((key) => key.startsWith("mimi-servicios-provider-") && key !== CACHE_NAME)
       .map((key) => caches.delete(key))
   );
 }
@@ -114,11 +126,10 @@ async function networkFirstPage(request) {
   } catch {
     const cached =
       (await caches.match(request)) ||
+      (await caches.match("./prestador.html")) ||
       (await caches.match("./index.html"));
 
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
     return new Response("Sin conexión y sin página disponible en cache.", {
       status: 503,
@@ -132,9 +143,7 @@ async function networkFirstPage(request) {
 
 async function cacheFirstAsset(request) {
   const cached = await caches.match(request);
-  if (cached) {
-    return cached;
-  }
+  if (cached) return cached;
 
   try {
     const response = await fetch(request);
@@ -164,30 +173,18 @@ async function staleWhileRevalidate(request) {
     })
     .catch(() => null);
 
-  if (cached) {
-    return cached;
-  }
+  if (cached) return cached;
 
   const networkResponse = await networkPromise;
-  if (networkResponse) {
-    return networkResponse;
-  }
+  if (networkResponse) return networkResponse;
 
   return Response.error();
 }
 
 function shouldCacheResponse(response) {
-  if (!response) {
-    return false;
-  }
-
-  if (response.status !== 200) {
-    return false;
-  }
-
-  if (response.type === "opaque") {
-    return false;
-  }
+  if (!response) return false;
+  if (response.status !== 200) return false;
+  if (response.type === "opaque") return false;
 
   let responseUrl;
   try {
@@ -201,6 +198,7 @@ function shouldCacheResponse(response) {
 
 function isAppAsset(url) {
   const pathname = url.pathname;
+
   return APP_ASSETS.some((asset) => {
     const normalizedAsset = asset.replace(/^\.\//, "/");
     return pathname.endsWith(normalizedAsset);
