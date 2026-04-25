@@ -2204,10 +2204,10 @@ body {
     transform: translateX(-50%) translateY(0);
   }
   
-  .online-button-container {
-    top: 55%;
-  }
-  
+.online-button-container {
+  top: auto !important;
+  bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+}  
   .offer-card-float {
     max-width: 400px;
   }
@@ -3088,18 +3088,27 @@ body {
 }
 
 #onlineButtonContainer {
-  position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: calc(env(safe-area-inset-bottom) + 120px);
-  z-index: 9000;
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+  transform: translateX(-50%) !important;
+  z-index: 120 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 32px) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  opacity: 1;
+  visibility: visible;
 }
 
 #goOnlineButton {
   position: relative;
-  z-index: 9001;
+  z-index: 121 !important;
 }
-
 /* FIX MIMI Provider mobile touch + overlays */
 .install-dismiss {
   min-width: 44px !important;
@@ -3128,19 +3137,27 @@ body {
 }
 
 body:not(.provider-auth-required) .online-button-container {
-  bottom: calc(34vh + env(safe-area-inset-bottom, 0px)) !important;
-  z-index: 95 !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+  transform: translateX(-50%) !important;
+  z-index: 120 !important;
+  width: auto !important;
 }
-
 body:not(.provider-auth-required) .bottom-sheet {
   z-index: 90 !important;
 }
 
 @media (max-width: 768px) {
-  body:not(.provider-auth-required) .online-button-container {
-    bottom: calc(38vh + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
+body:not(.provider-auth-required) .online-button-container {
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+  transform: translateX(-50%) !important;
+  width: auto !important;
+}
   .install-banner {
     left: 12px !important;
     right: 12px !important;
