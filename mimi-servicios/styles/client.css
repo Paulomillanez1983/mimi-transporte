@@ -947,3 +947,44 @@ textarea:focus {
     border-width: 2px;
   }
 }
+/* ==========================================================
+   MIMI Provider Auth Gate Fix 2026
+   Evita mostrar mapa/panel/demo antes de validar sesión real
+   ========================================================== */
+
+body.provider-auth-loading #mapContainer,
+body.provider-auth-loading #map,
+body.provider-auth-loading #header,
+body.provider-auth-loading #bottomSheet,
+body.provider-auth-loading #sideDrawer,
+body.provider-auth-loading #drawerOverlay,
+body.provider-auth-loading #offerCard,
+body.provider-auth-loading #activeServiceCard,
+body.provider-auth-loading #distanceAlert,
+body.provider-auth-required #mapContainer,
+body.provider-auth-required #map,
+body.provider-auth-required #header,
+body.provider-auth-required #bottomSheet,
+body.provider-auth-required #sideDrawer,
+body.provider-auth-required #drawerOverlay,
+body.provider-auth-required #offerCard,
+body.provider-auth-required #activeServiceCard,
+body.provider-auth-required #distanceAlert {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+body.provider-auth-required #onlineButtonContainer {
+  display: grid !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+body.provider-authenticated #mapContainer,
+body.provider-authenticated #header,
+body.provider-authenticated #bottomSheet {
+  visibility: visible;
+}
