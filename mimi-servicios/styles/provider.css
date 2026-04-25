@@ -3100,3 +3100,51 @@ body {
   z-index: 9001;
 }
 
+/* FIX MIMI Provider mobile touch + overlays */
+.install-dismiss {
+  min-width: 44px !important;
+  min-height: 44px !important;
+  width: 44px !important;
+  height: 44px !important;
+  display: grid !important;
+  place-items: center !important;
+  touch-action: manipulation;
+  z-index: 99999;
+}
+
+.menu-button {
+  min-width: 44px !important;
+  min-height: 44px !important;
+  width: 44px !important;
+  height: 44px !important;
+  touch-action: manipulation;
+}
+
+.install-banner[hidden],
+.install-banner[aria-hidden="true"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+body:not(.provider-auth-required) .online-button-container {
+  bottom: calc(34vh + env(safe-area-inset-bottom, 0px)) !important;
+  z-index: 95 !important;
+}
+
+body:not(.provider-auth-required) .bottom-sheet {
+  z-index: 90 !important;
+}
+
+@media (max-width: 768px) {
+  body:not(.provider-auth-required) .online-button-container {
+    bottom: calc(38vh + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .install-banner {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px) !important;
+    min-height: 64px !important;
+  }
+}
