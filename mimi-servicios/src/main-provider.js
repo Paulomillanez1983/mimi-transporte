@@ -30,7 +30,11 @@ import {
 
 
 import { renderProviderDashboard } from "./ui/render-provider.js";
-import { getSupabaseClient } from "./services/supabase.js";
+import {
+  getSupabaseClient,
+  signInWithGoogle
+} from "./services/supabase.js";
+
 // ============================================
 // APP CONTROLLER
 // ============================================
@@ -544,7 +548,34 @@ updateProviderMarker(lat, lng) {
     servicePosition: null
   });
 }
+showProviderLoginGate() {
+  const container = this.elements.onlineButtonContainer;
 
+  if (!container) return;
+
+  container.classList.remove("hidden");
+  container.hidden = false;
+  container.style.pointerEvents = "auto";
+  container.style.zIndex = "99999";
+
+  container.innerHTML = `
+    <button class="go-online-button" id="providerGoogleLoginButton" type="button">
+      <span>Ingresar con Google</span>
+      <small>Para operar como prestador</small>
+    </button>
+  `;
+
+  document.getElementById("providerGoogleLoginButton")?.addEventListener("click", async () => {
+    try {
+      localStorage.setItem("mimi_services_active_mode", "provider");
+      sessionStorage.setItem("mimi_services_active_mode", "provider");
+      await signInWithGoogle();
+    } catch (err) {
+      console.error("[MIMI] Error iniciando sesión prestador:", err);
+      this.showToast("No pudimos iniciar sesión con Google", "error");
+    }
+  });
+}
   /**
    * Load real provider session/workspace from Supabase.
    * This replaces every previous demo fallback with backend-driven state.
@@ -566,11 +597,11 @@ updateProviderMarker(lat, lng) {
         expiresAt: session?.expiresAt ?? null
       });
 
-      if (!session?.isAuthenticated) {
-        this.showToast("Ingresá con tu cuenta para operar como prestador", "warning");
-        return;
-      }
-
+if (!session?.isAuthenticated) {
+  this.showToast("Ingresá con Google para operar como prestador", "warning");
+  this.showProviderLoginGate();
+  return;
+}
       if (!session?.providerId) {
         this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
         return;
