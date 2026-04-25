@@ -750,20 +750,27 @@ renderDrawerProfile() {
   }
 }
 
-  dismissInstallBanner(event = null) {
+dismissInstallBanner(event = null) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
 
-  if (this.elements.installBanner) {
-    this.elements.installBanner.hidden = true;
-    this.elements.installBanner.style.display = "none";
-    this.elements.installBanner.setAttribute("aria-hidden", "true");
+  const banner =
+    this.elements.installBanner ||
+    document.getElementById("installBanner");
+
+  if (banner) {
+    banner.hidden = true;
+    banner.style.setProperty("display", "none", "important");
+    banner.style.opacity = "0";
+    banner.style.pointerEvents = "none";
+    banner.setAttribute("aria-hidden", "true");
   }
 
   try {
     localStorage.setItem("mimi_services_install_banner_dismissed", "true");
   } catch (_) {}
 }
+  
   /**
    * Load real provider session/workspace from Supabase.
    * This replaces every previous demo fallback with backend-driven state.
@@ -1314,12 +1321,16 @@ this.elements.cameraUseBtn?.addEventListener("click", () => {
    * Handle go online button
    */
 async handleGoOnline() {
-  if (!this.state?.provider.isVerified) {
-    this.showToast("Necesitás completar tu verificación primero", "warning");
-    actions.openModal("verification");
-    return;
-  }
+if (!this.state?.provider.isVerified) {
+  this.showToast("Necesitás completar tu verificación primero", "warning");
+  actions.openModal("verification");
 
+  setTimeout(() => {
+    this.showWizardStep?.(1);
+  }, 50);
+
+  return;
+}
   const providerId = this.state?.session?.providerId;
 if (!providerId) {
   this.showToast("Actualizando tu perfil de prestador...", "info");
