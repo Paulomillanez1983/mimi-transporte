@@ -201,29 +201,42 @@ export async function resolveSessionRole(session) {
 }
 
 export async function redirectAfterLoginByRole(session) {
-  const role = await resolveSessionRole(session);
   const preferred = sessionStorage.getItem(
     "mimi_services_auth_redirect_in_progress"
   );
 
+  // IMPORTANTE:
+  // Si el usuario inició login desde prestador.html,
+  // SIEMPRE debe volver a prestador.html aunque todavía no exista svc_providers.
+  // prestador.html es quien crea/asegura el perfil del provider.
+  if (preferred === "./prestador.html") {
+    sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
+
+    if (currentPageName() !== "prestador.html") {
+      window.location.href = "./prestador.html";
+    }
+
+    return;
+  }
+
+  const role = await resolveSessionRole(session);
+
   let target = role === "provider" ? "./prestador.html" : "./cliente.html";
 
-  if (preferred === "./prestador.html" && role === "provider") {
-    target = "./prestador.html";
-  } else if (preferred === "./cliente.html" && role === "client") {
+  if (preferred === "./cliente.html") {
     target = "./cliente.html";
   }
 
   sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
 
   const currentPath = currentPageName();
+
   if (currentPath === target.replace("./", "")) {
     return;
   }
 
   window.location.href = target;
 }
-
 export async function invokeFunction(name, body = {}, options = {}) {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
