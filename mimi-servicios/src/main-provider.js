@@ -558,13 +558,13 @@ showProviderLoginGate() {
   container.style.pointerEvents = "auto";
   container.style.zIndex = "99999";
 
-  container.innerHTML = `
-    <button class="go-online-button" id="providerGoogleLoginButton" type="button">
-      <span>Ingresar con Google</span>
-      <small>Para operar como prestador</small>
-    </button>
-  `;
-
+container.innerHTML = `
+  <button class="online-button" id="providerGoogleLoginButton" type="button">
+    <span class="online-button-icon">🔐</span>
+    <span class="online-button-text">Ingresar con Google</span>
+    <span class="online-button-subtext">Para operar como prestador</span>
+  </button>
+`;
   document.getElementById("providerGoogleLoginButton")?.addEventListener("click", async () => {
     try {
       localStorage.setItem("mimi_services_active_mode", "provider");
@@ -575,6 +575,77 @@ showProviderLoginGate() {
       this.showToast("No pudimos iniciar sesión con Google", "error");
     }
   });
+}
+  renderDrawerProfile() {
+  const session = this.state?.session ?? {};
+  const profile = this.state?.provider?.profile ?? {};
+
+  const name =
+    profile.full_name ||
+    session.userName ||
+    session.userEmail ||
+    "Prestador MIMI";
+
+  const email =
+    profile.email ||
+    session.userEmail ||
+    "Sin email conectado";
+
+  const avatar =
+    profile.avatar_url ||
+    session.userAvatar ||
+    null;
+
+  const initials = String(name)
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "PR";
+
+  if (this.elements.drawerName) {
+    this.elements.drawerName.textContent = name;
+  }
+
+  if (this.elements.drawerEmail) {
+    this.elements.drawerEmail.textContent = email;
+  }
+
+  if (this.elements.drawerInitials) {
+    this.elements.drawerInitials.textContent = initials;
+  }
+
+  if (this.elements.drawerAvatar) {
+    if (avatar) {
+      this.elements.drawerAvatar.style.backgroundImage = `url("${avatar}")`;
+      this.elements.drawerAvatar.style.backgroundSize = "cover";
+      this.elements.drawerAvatar.style.backgroundPosition = "center";
+      this.elements.drawerInitials.style.display = "none";
+    } else {
+      this.elements.drawerAvatar.style.backgroundImage = "";
+      this.elements.drawerInitials.style.display = "";
+    }
+  }
+
+  if (this.elements.drawerRating) {
+    this.elements.drawerRating.textContent = Number(
+      this.state?.provider?.stats?.rating ?? 0
+    ).toFixed(1);
+  }
+
+  if (this.elements.drawerServices) {
+    this.elements.drawerServices.textContent = String(
+      this.state?.provider?.stats?.completedServices ?? 0
+    );
+  }
+
+  if (this.elements.drawerEarnings) {
+    this.elements.drawerEarnings.textContent = new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0
+    }).format(Number(this.state?.provider?.stats?.earnings ?? 0));
+  }
 }
   /**
    * Load real provider session/workspace from Supabase.
@@ -1585,6 +1656,7 @@ renderServicesAndPricing() {
     this.renderChat();
     this.renderModal();
     this.renderServicesAndPricing();
+    this.renderDrawerProfile();
   }
 
   /**
@@ -1623,15 +1695,23 @@ renderServicesAndPricing() {
   /**
    * Render online button
    */
-  renderOnlineButton() {
-    const isOffline = this.state.provider.status === 'OFFLINE';
-    const hasActiveService = !!this.state.activeService;
-    
-    if (this.elements.onlineButtonContainer) {
-      this.elements.onlineButtonContainer.classList.toggle('hidden', !isOffline || hasActiveService);
-    }
-  }
+renderOnlineButton() {
+  const status = this.state?.provider?.status ?? "OFFLINE";
+  const hasActiveService = Boolean(this.state?.activeService);
+  const hasActiveOffer = Boolean(this.state?.activeOffer);
+  const isAuthenticated = Boolean(this.state?.session?.isAuthenticated);
 
+  if (!this.elements.onlineButtonContainer) return;
+
+  const shouldShow =
+    isAuthenticated &&
+    status === "OFFLINE" &&
+    !hasActiveService &&
+    !hasActiveOffer;
+
+  this.elements.onlineButtonContainer.hidden = false;
+  this.elements.onlineButtonContainer.classList.toggle("hidden", !shouldShow);
+}
   /**
    * Render offer card
    */
