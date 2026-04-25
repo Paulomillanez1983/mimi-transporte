@@ -658,16 +658,17 @@ container.innerHTML = `
 
       const session = await bootstrapSession();
 
-      actions.setSession({
-        userId: session?.userId ?? null,
-        providerId: session?.providerId ?? null,
-        userEmail: session?.userEmail ?? null,
-        userName: session?.userName ?? null,
-        isAuthenticated: Boolean(session?.isAuthenticated),
-        token: session?.token ?? null,
-        expiresAt: session?.expiresAt ?? null
-      });
-
+actions.setSession({
+  userId: session?.userId ?? null,
+  providerId: session?.providerId ?? null,
+  userEmail: session?.userEmail ?? null,
+  userName: session?.userName ?? session?.userEmail ?? null,
+  userAvatar: session?.userAvatar ?? null,
+  isAuthenticated: Boolean(session?.isAuthenticated),
+  token: session?.token ?? null,
+  expiresAt: session?.expiresAt ?? null
+});
+      
 if (!session?.isAuthenticated) {
   this.showToast("Ingresá con Google para operar como prestador", "warning");
   this.showProviderLoginGate();
