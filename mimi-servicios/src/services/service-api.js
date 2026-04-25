@@ -212,6 +212,10 @@ export async function bootstrapSession() {
       user.user_metadata?.full_name ??
       user.user_metadata?.name ??
       user.email ??
+      null,
+    userAvatar:
+      user.user_metadata?.avatar_url ??
+      user.user_metadata?.picture ??
       null
   };
 }
