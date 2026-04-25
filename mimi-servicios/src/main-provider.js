@@ -989,10 +989,20 @@ this.elements.verificationBtn?.addEventListener('click', () => {
       this.handleInstall();
     });
 
-    this.elements.installDismiss?.addEventListener('click', () => {
-      this.elements.installBanner.hidden = true;
-    });
+this.elements.installDismiss?.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
 
+  if (this.elements.installBanner) {
+    this.elements.installBanner.hidden = true;
+    this.elements.installBanner.style.display = "none";
+  }
+
+  try {
+    localStorage.setItem("mimi_services_install_banner_dismissed", "true");
+  } catch (_) {}
+});
+    
     // Drawer links
     document.getElementById('linkProfile')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1696,12 +1706,29 @@ renderServicesAndPricing() {
    * Render online button
    */
 renderOnlineButton() {
+  const container = this.elements.onlineButtonContainer;
+  if (!container) return;
+
   const status = this.state?.provider?.status ?? "OFFLINE";
   const hasActiveService = Boolean(this.state?.activeService);
   const hasActiveOffer = Boolean(this.state?.activeOffer);
   const isAuthenticated = Boolean(this.state?.session?.isAuthenticated);
 
-  if (!this.elements.onlineButtonContainer) return;
+  const hasLoginButton = Boolean(
+    document.getElementById("providerGoogleLoginButton")
+  );
+
+  // Si todavía no está logueado y mostramos login Google,
+  // NO lo ocultes desde el render.
+  if (!isAuthenticated && hasLoginButton) {
+    container.hidden = false;
+    container.classList.remove("hidden");
+    container.style.display = "block";
+    container.style.visibility = "visible";
+    container.style.opacity = "1";
+    container.style.pointerEvents = "auto";
+    return;
+  }
 
   const shouldShow =
     isAuthenticated &&
@@ -1709,9 +1736,10 @@ renderOnlineButton() {
     !hasActiveService &&
     !hasActiveOffer;
 
-  this.elements.onlineButtonContainer.hidden = false;
-  this.elements.onlineButtonContainer.classList.toggle("hidden", !shouldShow);
+  container.hidden = false;
+  container.classList.toggle("hidden", !shouldShow);
 }
+  
   /**
    * Render offer card
    */
@@ -2112,10 +2140,13 @@ setupInstallPrompt() {
       }
     });
 
-    if (this.elements.installBanner) {
-      this.elements.installBanner.hidden = false;
-    }
+const installDismissed =
+  localStorage.getItem("mimi_services_install_banner_dismissed") === "true";
 
+if (this.elements.installBanner && !installDismissed) {
+  this.elements.installBanner.hidden = false;
+  this.elements.installBanner.style.display = "";
+}
     console.log("[MIMI] PWA install prompt listo");
   });
 
