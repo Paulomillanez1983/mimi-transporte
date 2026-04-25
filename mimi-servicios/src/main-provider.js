@@ -551,24 +551,125 @@ updateProviderMarker(lat, lng) {
 showProviderLoginGate() {
   const container = this.elements.onlineButtonContainer;
 
+  document.body.classList.add("provider-auth-required");
+
+  if (this.elements.bottomSheet) {
+    this.elements.bottomSheet.style.display = "none";
+  }
+
+  if (this.elements.header) {
+    this.elements.header.style.display = "none";
+  }
+
+  if (this.elements.mapContainer) {
+    this.elements.mapContainer.style.display = "none";
+  }
+
+  if (this.elements.offerCard) {
+    this.elements.offerCard.hidden = true;
+  }
+
+  if (this.elements.activeServiceCard) {
+    this.elements.activeServiceCard.hidden = true;
+  }
+
+  if (this.elements.distanceAlert) {
+    this.elements.distanceAlert.hidden = true;
+  }
+
   if (!container) return;
 
   container.classList.remove("hidden");
   container.hidden = false;
-  container.style.pointerEvents = "auto";
-  container.style.zIndex = "99999";
 
-container.innerHTML = `
-  <button class="online-button" id="providerGoogleLoginButton" type="button">
-    <span class="online-button-icon">🔐</span>
-    <span class="online-button-text">Ingresar con Google</span>
-    <span class="online-button-subtext">Para operar como prestador</span>
-  </button>
-`;
+  container.style.display = "grid";
+  container.style.placeItems = "center";
+  container.style.position = "fixed";
+  container.style.inset = "0";
+  container.style.left = "0";
+  container.style.top = "0";
+  container.style.right = "0";
+  container.style.bottom = "0";
+  container.style.transform = "none";
+  container.style.width = "100%";
+  container.style.minHeight = "100dvh";
+  container.style.zIndex = "99999";
+  container.style.pointerEvents = "auto";
+  container.style.opacity = "1";
+  container.style.visibility = "visible";
+  container.style.background =
+    "radial-gradient(circle at top, rgba(48,209,88,.18), transparent 36%), linear-gradient(180deg, #020617 0%, #000 100%)";
+
+  container.innerHTML = `
+    <section style="
+      width:min(430px, calc(100% - 32px));
+      padding:30px 24px;
+      border-radius:30px;
+      background:rgba(15,23,42,.94);
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:0 24px 80px rgba(0,0,0,.48);
+      text-align:center;
+      color:white;
+    ">
+      <div style="
+        width:72px;
+        height:72px;
+        margin:0 auto 16px;
+        display:grid;
+        place-items:center;
+        border-radius:24px;
+        background:rgba(48,209,88,.16);
+        font-size:38px;
+      ">🛠️</div>
+
+      <h1 style="
+        margin:0 0 8px;
+        font-size:30px;
+        line-height:1.08;
+        letter-spacing:-.04em;
+      ">MIMI Servicios</h1>
+
+      <p style="
+        margin:0 0 24px;
+        color:rgba(255,255,255,.72);
+        font-size:15px;
+        line-height:1.45;
+      ">
+        Ingresá para operar como prestador, completar tu verificación y recibir servicios reales.
+      </p>
+
+      <button class="online-button" id="providerGoogleLoginButton" type="button"
+        style="
+          width:100%;
+          max-width:none;
+          min-height:76px;
+          border-radius:22px;
+        ">
+        <span class="online-button-icon">🔐</span>
+        <span class="online-button-text">Ingresar con Google</span>
+        <span class="online-button-subtext">Cuenta de prestador</span>
+      </button>
+
+      <p style="
+        margin:18px 0 0;
+        color:rgba(255,255,255,.48);
+        font-size:12px;
+        line-height:1.35;
+      ">
+        Tu sesión se usa para asociar tu perfil, documentos y servicios con Supabase.
+      </p>
+    </section>
+  `;
+
   document.getElementById("providerGoogleLoginButton")?.addEventListener("click", async () => {
     try {
       localStorage.setItem("mimi_services_active_mode", "provider");
       sessionStorage.setItem("mimi_services_active_mode", "provider");
+      sessionStorage.setItem(
+        "mimi_services_auth_redirect_in_progress",
+        "./prestador.html"
+      );
+
       await signInWithGoogle();
     } catch (err) {
       console.error("[MIMI] Error iniciando sesión prestador:", err);
@@ -576,7 +677,8 @@ container.innerHTML = `
     }
   });
 }
-  renderDrawerProfile() {
+  
+renderDrawerProfile() {
   const session = this.state?.session ?? {};
   const profile = this.state?.provider?.profile ?? {};
 
@@ -674,6 +776,20 @@ if (!session?.isAuthenticated) {
   this.showProviderLoginGate();
   return;
 }
+document.body.classList.remove("provider-auth-required");
+
+if (this.elements.bottomSheet) {
+  this.elements.bottomSheet.style.display = "";
+}
+
+if (this.elements.header) {
+  this.elements.header.style.display = "";
+}
+
+if (this.elements.mapContainer) {
+  this.elements.mapContainer.style.display = "";
+}
+      
       if (!session?.providerId) {
         this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
         return;
@@ -1724,7 +1840,7 @@ renderOnlineButton() {
   if (!isAuthenticated && hasLoginButton) {
     container.hidden = false;
     container.classList.remove("hidden");
-    container.style.display = "block";
+    container.style.display = "grid";
     container.style.visibility = "visible";
     container.style.opacity = "1";
     container.style.pointerEvents = "auto";
