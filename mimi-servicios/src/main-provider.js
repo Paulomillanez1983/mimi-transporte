@@ -1855,7 +1855,25 @@ restoreProviderOnlineButton() {
   }
 
   container.removeAttribute("style");
+
+  container.style.position = "";
+  container.style.inset = "";
+  container.style.left = "";
+  container.style.top = "";
+  container.style.right = "";
+  container.style.bottom = "";
+  container.style.transform = "";
+  container.style.width = "";
+  container.style.minHeight = "";
+  container.style.zIndex = "";
+  container.style.background = "";
+  container.style.display = "";
+  container.style.placeItems = "";
+  container.style.opacity = "1";
+  container.style.visibility = "visible";
+  container.style.pointerEvents = "auto";
 }
+  
   /**
    * Render online button
    */
