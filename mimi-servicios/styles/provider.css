@@ -4877,4 +4877,34 @@ font-size: clamp(16px, 4.4vw, 21px) !important;
 line-height: 1.34 !important;
 }
 
+/* Ajuste final login provider */
+.provider-login-copy h1 {
+  font-size: clamp(30px, 8.8vw, 44px) !important;
+  line-height: .92 !important;
+}
 
+.provider-login-google {
+  min-height: 62px !important;
+  border-radius: 20px !important;
+  padding: 9px 16px !important;
+}
+
+.provider-google-icon {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  border-radius: 15px !important;
+}
+
+.provider-google-icon svg {
+  width: 29px !important;
+  height: 29px !important;
+}
+
+.provider-login-google strong {
+  font-size: clamp(18px, 4.4vw, 23px) !important;
+}
+
+.provider-google-arrow {
+  font-size: 34px !important;
+}
