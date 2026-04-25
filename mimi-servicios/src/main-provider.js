@@ -617,10 +617,12 @@ container.innerHTML = `
   </svg>
 </span>
 
-<strong>Continuar con Google</strong>
-        <small>Cuenta de prestador</small>
-      </span>
-    </button>
+<span class="provider-google-text">
+  <strong>Continuar con Google</strong>
+  <small>Cuenta de prestador</small>
+</span>
+<span class="provider-google-arrow">›</span>
+</button>
 
     <div class="provider-login-trust">
       <span>🔒 Sesión segura</span>
