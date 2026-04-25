@@ -593,67 +593,36 @@ showProviderLoginGate() {
   container.style.background =
     "radial-gradient(circle at top, rgba(48,209,88,.18), transparent 36%), linear-gradient(180deg, #020617 0%, #000 100%)";
 
-  container.innerHTML = `
-    <section style="
-      width:min(430px, calc(100% - 32px));
-      padding:30px 24px;
-      border-radius:30px;
-      background:rgba(15,23,42,.94);
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow:0 24px 80px rgba(0,0,0,.48);
-      text-align:center;
-      color:white;
-    ">
-      <div style="
-        width:72px;
-        height:72px;
-        margin:0 auto 16px;
-        display:grid;
-        place-items:center;
-        border-radius:24px;
-        background:rgba(48,209,88,.16);
-        font-size:38px;
-      ">🛠️</div>
+container.innerHTML = `
+  <section class="provider-login-gate">
+    <div class="provider-login-logo">
+      <img src="./assets/icons/icon-192.png" alt="MIMI Servicios">
+    </div>
 
-      <h1 style="
-        margin:0 0 8px;
-        font-size:30px;
-        line-height:1.08;
-        letter-spacing:-.04em;
-      ">MIMI Servicios</h1>
-
-      <p style="
-        margin:0 0 24px;
-        color:rgba(255,255,255,.72);
-        font-size:15px;
-        line-height:1.45;
-      ">
-        Ingresá para operar como prestador, completar tu verificación y recibir servicios reales.
+    <div class="provider-login-copy">
+      <span class="provider-login-kicker">Panel prestador</span>
+      <h1>MIMI Servicios</h1>
+      <p>
+        Ingresá para verificar tu identidad, configurar tus servicios y empezar a recibir solicitudes reales.
       </p>
+    </div>
 
-      <button class="online-button" id="providerGoogleLoginButton" type="button"
-        style="
-          width:100%;
-          max-width:none;
-          min-height:76px;
-          border-radius:22px;
-        ">
-        <span class="online-button-icon">🔐</span>
-        <span class="online-button-text">Ingresar con Google</span>
-        <span class="online-button-subtext">Cuenta de prestador</span>
-      </button>
+    <button class="provider-login-google" id="providerGoogleLoginButton" type="button">
+      <span class="provider-google-icon">G</span>
+      <span>
+        <strong>Continuar con Google</strong>
+        <small>Cuenta de prestador</small>
+      </span>
+    </button>
 
-      <p style="
-        margin:18px 0 0;
-        color:rgba(255,255,255,.48);
-        font-size:12px;
-        line-height:1.35;
-      ">
-        Tu sesión se usa para asociar tu perfil, documentos y servicios con Supabase.
-      </p>
-    </section>
-  `;
-
+    <div class="provider-login-trust">
+      <span>🔒 Sesión segura</span>
+      <span>🛠️ Verificación profesional</span>
+      <span>⚡ Servicios reales</span>
+    </div>
+  </section>
+`;
+  
   document.getElementById("providerGoogleLoginButton")?.addEventListener("click", async () => {
     try {
       localStorage.setItem("mimi_services_active_mode", "provider");
