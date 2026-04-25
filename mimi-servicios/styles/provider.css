@@ -3288,13 +3288,24 @@ body.provider-auth-required #onlineButtonContainer {
   height: 34px;
 }
 
-.provider-login-google span:last-child {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+.provider-login-google {
+  flex-direction: row !important;
+}
+
+.provider-google-text {
+  flex: 1;
+  display: grid;
+  gap: 4px;
   text-align: left;
 }
 
+.provider-google-arrow {
+  margin-left: auto;
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1;
+  opacity: .75;
+}
 .provider-login-google strong {
   font-size: clamp(24px, 6vw, 32px);
   line-height: 1.05;
