@@ -4225,7 +4225,7 @@ async function loadOrCreateSupportTicketContext() {
 
   // Usar sbRealtime (cliente con auth) en lugar de supabase (cliente anónimo)
   const { data: existingTickets, error: ticketLookupError } = await window.sbRealtime
-    .from("soporte_tickets")
+    .from("svc_conversations")
     .select("id, estado, last_message_at, user_id, created_at")
     .eq("user_id", userId)
     .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -4247,7 +4247,7 @@ async function loadOrCreateSupportTicketContext() {
 
   // También usar sbRealtime aquí
   const { data: messages, error: messagesError } = await window.sbRealtime
-    .from("soporte_mensajes")
+    .from("svc_messages")
     .select("id, sender_role, mensaje, created_at")
     .eq("ticket_id", currentSupportTicketId)
     .order("created_at", { ascending: true });
@@ -4318,7 +4318,7 @@ async function handleIncomingSupportMessage(payload) {
       attempts++;
 
       const { data, error } = await window.sbRealtime
-        .from("soporte_tickets")
+        .from("svc_conversations")
         .select("id, user_id, created_by, estado, asunto, updated_at")
         .eq("id", msg.ticket_id)
         .maybeSingle();
