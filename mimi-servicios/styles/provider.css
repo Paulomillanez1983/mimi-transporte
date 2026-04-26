@@ -3081,33 +3081,7 @@ body {
     border-color: #fff !important;
   }
 }
-#onlineButtonContainer,
-#goOnlineButton {
-  pointer-events: auto !important;
-}
 
-#onlineButtonContainer {
-  position: fixed !important;
-  left: 50% !important;
-  right: auto !important;
-  top: auto !important;
-  bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
-  transform: translateX(-50%) !important;
-  z-index: 120 !important;
-  width: auto !important;
-  min-width: 0 !important;
-  max-width: calc(100vw - 32px) !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  opacity: 1;
-  visibility: visible;
-}
-
-#goOnlineButton {
-  position: relative;
-  z-index: 121 !important;
-}
 /* FIX MIMI Provider mobile touch + overlays */
 .install-dismiss {
   min-width: 44px !important;
@@ -3135,28 +3109,10 @@ body {
   pointer-events: none !important;
 }
 
-body:not(.provider-auth-required) .online-button-container {
-  left: 50% !important;
-  right: auto !important;
-  top: auto !important;
-  bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
-  transform: translateX(-50%) !important;
-  z-index: 120 !important;
-  width: auto !important;
-}
 body:not(.provider-auth-required) .bottom-sheet {
   z-index: 90 !important;
 }
 
-@media (max-width: 768px) {
-body:not(.provider-auth-required) .online-button-container {
-  left: 50% !important;
-  right: auto !important;
-  top: auto !important;
-  bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
-  transform: translateX(-50%) !important;
-  width: auto !important;
-}
   .install-banner {
     left: 12px !important;
     right: 12px !important;
@@ -3212,7 +3168,7 @@ body.provider-auth-required #onlineButtonContainer {
     0 24px 80px rgba(0, 0, 0, .6),
     0 0 80px rgba(48, 209, 88, .16) !important;
   overflow: hidden !important;
-  transform: translateY(-1dvh);
+  transform: none !important;
 }
 
 .provider-login-logo {
@@ -3270,10 +3226,10 @@ body.provider-auth-required #onlineButtonContainer {
   position: relative !important;
   overflow: hidden !important;
   width: 100% !important;
-  min-height: 62px !important;
+  min-height: 58px !important;
   border: 0 !important;
   border-radius: 20px !important;
-  padding: 9px 16px !important;
+  padding: 8px 14px !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -3339,10 +3295,11 @@ body.provider-auth-required #onlineButtonContainer {
 }
 
 .provider-google-text {
-  flex: 1 !important;
-  display: grid !important;
-  gap: 3px !important;
-  text-align: left !important;
+   flex: 1 !important;
+   display: flex !important;
+   align-items: center !important;
+   gap: 0 !important;
+   text-align: left !important;
 }
 
 .provider-login-google strong {
@@ -3356,7 +3313,7 @@ body.provider-auth-required #onlineButtonContainer {
 }
 
 .provider-login-google small {
-  display: block !important;
+  display: none !important;
   margin-top: 3px !important;
   color: rgba(4, 19, 10, .68) !important;
   font-size: clamp(13px, 3.4vw, 16px) !important;
