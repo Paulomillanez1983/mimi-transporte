@@ -129,7 +129,7 @@ if (!canBootProviderPanel) {
       // Online button
       onlineButtonContainer: document.getElementById('onlineButtonContainer'),
       goOnlineButton: document.getElementById('goOnlineButton'),
-      
+      providerGoogleLoginButton: document.getElementById('providerGoogleLoginButton'),      
       // Offer card
       offerCard: document.getElementById('offerCard'),
       offerTimer: document.getElementById('offerTimer'),
