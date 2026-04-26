@@ -3700,3 +3700,24 @@ select:focus-visible {
     border-color: rgba(255,255,255,0.12);
   }
 }
+.trip-notification-item.is-unread {
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+  border-color: rgba(37, 99, 235, .22);
+  box-shadow: 0 14px 34px rgba(37, 99, 235, .10);
+}
+
+.trip-notification-item.is-read {
+  background: #f4f4f5;
+  border-color: rgba(15, 23, 42, .08);
+  opacity: .72;
+}
+
+.trip-notification-item.is-read .trip-notification-main strong,
+.trip-notification-item.is-read .trip-notification-main span {
+  color: #64748b;
+}
+
+.trip-notification-delete {
+  pointer-events: auto;
+  z-index: 3;
+}
