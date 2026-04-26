@@ -9,6 +9,8 @@ const moduleSections = Array.from(document.querySelectorAll("[data-admin-section
 const mobileDockButtons = Array.from(document.querySelectorAll("[data-admin-mobile-view-target]"));
 
 let activeModule = "transport";
+let selectedSupportConversation = null;
+
 
 function setActiveModule(moduleName = "transport") {
   activeModule = moduleName;
@@ -143,7 +145,7 @@ function openSupportConversation(conversation) {
   const messagesEl = document.getElementById("supportMessages");
 
   if (!conversation || !panel || !messagesEl) return;
-
+  selectedSupportConversation = conversation;
   empty?.setAttribute("hidden", "true");
   panel.removeAttribute("hidden");
 
@@ -166,7 +168,72 @@ messagesEl.innerHTML = messages.length
   `).join("")
   : `<div class="support-empty-state">Esta conversación todavía no tiene mensajes.</div>`;
 }
+async function sendSupportReply() {
+  const input = document.getElementById("supportReplyInput");
+  const button = document.getElementById("supportSendReplyBtn");
 
+  const body = input?.value?.trim();
+
+  if (!selectedSupportConversation?.id) {
+    alert("Primero seleccioná una conversación.");
+    return;
+  }
+
+  if (!body) {
+    alert("Escribí una respuesta.");
+    return;
+  }
+
+  const session = await supabaseAdminService.refreshSessionIfNeeded();
+
+  if (!session?.access_token) {
+    alert("Sesión admin inválida.");
+    return;
+  }
+
+  try {
+    if (button) button.disabled = true;
+
+    const res = await fetch(
+      `${window.MIMI_ADMIN_ENV.SUPABASE_URL}/functions/v1/admin-send-support-message`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          conversation_id: selectedSupportConversation.id,
+          body
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok || data?.ok === false) {
+      throw new Error(data?.error || "No se pudo enviar la respuesta.");
+    }
+
+    input.value = "";
+
+    const refreshed = await loadSupportInbox();
+    const updated = refreshed?.conversations?.find(
+      (c) => c.id === selectedSupportConversation.id
+    );
+
+    if (updated) {
+      openSupportConversation(updated);
+    }
+
+    console.log("[MIMI Admin Support] Respuesta enviada", data);
+  } catch (err) {
+    console.error("[MIMI Admin Support] Error enviando respuesta", err);
+    alert(err.message || "Error enviando respuesta.");
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
 async function loadSupportInbox() {
   const session = await supabaseAdminService.refreshSessionIfNeeded();
 
@@ -215,7 +282,6 @@ async function loadSupportInbox() {
       avatarEl.src = "../assets/icons/logo-mimi.png";
     };
   }
-
   setActiveModule("transport");
   await loadSupportInbox();
 }
@@ -227,4 +293,14 @@ logoutBtn?.addEventListener("click", async () => {
 initAdaptiveTheme();
 setupDynamicHeader();
 setupModuleNavigation();
+
+document.getElementById("supportSendReplyBtn")?.addEventListener("click", sendSupportReply);
+
+document.getElementById("supportReplyInput")?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendSupportReply();
+  }
+});
+
 bootstrapAdminShell();
