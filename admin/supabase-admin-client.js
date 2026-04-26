@@ -268,7 +268,7 @@ class SupabaseAdminService {
     try {
       const { data, error } = await this.client
         .from("admin_users")
-        .select("user_id, full_name, active, is_super_admin")
+        .select("user_id, active, is_super_admin")
         .eq("user_id", user.id)
         .eq("active", true)
         .maybeSingle();
