@@ -1987,10 +1987,14 @@ async function openLegalGate(actorType, missingDocuments = []) {
 
   if (!token) return false;
 
-  gate.hidden = false;
-  gate.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('legal-gate-open');
+gate.hidden = false;
+gate.removeAttribute('hidden');
+gate.setAttribute('aria-hidden', 'false');
+gate.classList.add('is-open');
 
+document.documentElement.classList.add('legal-gate-open');
+document.body.classList.add('legal-gate-open');
+  
   body.innerHTML = `<div class="legal-gate-loading">Cargando documentos…</div>`;
   acceptBtn.disabled = true;
 
@@ -2120,12 +2124,15 @@ function closeLegalGate() {
     acceptBtn.onclick = null;
   }
 
-  if (gate) {
-    gate.hidden = true;
-    gate.setAttribute('aria-hidden', 'true');
-  }
+if (gate) {
+  gate.classList.remove('is-open');
+  gate.hidden = true;
+  gate.setAttribute('hidden', '');
+  gate.setAttribute('aria-hidden', 'true');
+}
 
-  document.body.classList.remove('legal-gate-open');
+document.documentElement.classList.remove('legal-gate-open');
+document.body.classList.remove('legal-gate-open');
 }
   function showSuggestions(el) {
   if (!el) return;
