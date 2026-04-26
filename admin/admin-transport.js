@@ -241,10 +241,6 @@ async function updateSupportStatus() {
   }
 }
 
-  supportComposerForm?.addEventListener("submit", sendSupportMessage);
-  supportStatusEl?.addEventListener("change", updateSupportStatus);
-
-  fetchSupportConversations();
 supportComposerForm?.addEventListener("submit", sendSupportMessage);
 supportStatusEl?.addEventListener("change", updateSupportStatus);
 
