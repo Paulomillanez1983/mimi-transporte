@@ -4025,3 +4025,29 @@ select:focus-visible {
     padding: 16px 18px 18px;
   }
 }
+body.legal-gate-open {
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+body.legal-gate-open #legalGate {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+#legalGate.legal-gate {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+}
+
+#legalGate .legal-gate-backdrop {
+  z-index: 1 !important;
+}
+
+#legalGate .legal-gate-modal {
+  z-index: 2 !important;
+  pointer-events: auto !important;
+}
