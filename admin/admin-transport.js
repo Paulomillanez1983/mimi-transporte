@@ -245,4 +245,16 @@ async function updateSupportStatus() {
   supportStatusEl?.addEventListener("change", updateSupportStatus);
 
   fetchSupportConversations();
+supportComposerForm?.addEventListener("submit", sendSupportMessage);
+supportStatusEl?.addEventListener("change", updateSupportStatus);
 
+supportListEl?.addEventListener("click", (event) => {
+  const item = event.target.closest("[data-conversation-id]");
+  if (!item) return;
+
+  activeConversationId = item.dataset.conversationId;
+  renderConversationList();
+  renderMessages();
+});
+
+fetchSupportConversations();
