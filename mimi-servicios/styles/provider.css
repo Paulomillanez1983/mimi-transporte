@@ -710,7 +710,51 @@ body {
   padding: 0 20px 16px;
   flex-shrink: 0;
 }
+.sheet-header {
+  position: relative;
+  padding-right: 150px;
+}
 
+.sheet-online-action {
+  position: absolute;
+  top: 4px;
+  right: 18px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #30d158, #19b947);
+  color: #02140a;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 12px 28px rgba(48, 209, 88, 0.26);
+}
+
+.sheet-online-action.online {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: none;
+}
+
+.bottom-sheet.expanded .sheet-online-action {
+  opacity: 0;
+  transform: translateY(-8px) scale(.96);
+  pointer-events: none;
+}
+
+@media (max-width: 420px) {
+  .sheet-header {
+    padding-right: 126px;
+  }
+
+  .sheet-online-action {
+    right: 14px;
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 0.7rem;
+  }
+}
 .sheet-summary {
   display: flex;
   align-items: center;
