@@ -2275,7 +2275,27 @@ function cargarNotificacionesDesdeStorage() {
   actualizarBadgeNotificaciones();
   guardarNotificacionesEnStorage();
 }
+function marcarNotificacionComoLeidaPorId(id) {
+  let cambio = false;
 
+  historial = historial.map(item => {
+    if (String(item.id) !== String(id)) return item;
+
+    if (!item.read) {
+      cambio = true;
+      return { ...item, read: true };
+    }
+
+    return item;
+  });
+
+  if (cambio) {
+    unreadCount = historial.filter(item => !item.read).length;
+    renderizarCentroNotificaciones();
+    actualizarBadgeNotificaciones();
+    guardarNotificacionesEnStorage();
+  }
+}
 function vaciarNotificaciones() {
   historial = [];
   unreadCount = 0;
@@ -3151,14 +3171,18 @@ function actualizarCentroNotificacionesViaje({ estado, texto }) {
 
 function eliminarNotificacionPorId(id) {
   const before = historial.length;
-  historial = historial.filter(item => item.id !== id);
+
+  historial = historial.filter(item => String(item.id) !== String(id));
+  unreadCount = historial.filter(item => !item.read).length;
 
   if (historial.length !== before) {
     renderizarCentroNotificaciones();
+    actualizarBadgeNotificaciones();
     guardarNotificacionesEnStorage();
   }
 }
-function mapearEstadoANotificacion(estado) {
+  
+  function mapearEstadoANotificacion(estado) {
   const e = normalizarEstadoUpper(estado);
 
   switch (e) {
@@ -4113,7 +4137,28 @@ notifClearBtn?.addEventListener('click', (event) => {
   event.stopPropagation();
   vaciarNotificaciones();
 });
+if (notifList && notifList.dataset.bound !== '1') {
+  notifList.dataset.bound = '1';
 
+  notifList.addEventListener('click', (event) => {
+    const deleteBtn = event.target.closest('[data-action="delete"]');
+
+    if (deleteBtn) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const id = deleteBtn.dataset.id;
+      if (id) eliminarNotificacionPorId(id);
+      return;
+    }
+
+    const item = event.target.closest('.trip-notification-item');
+    if (!item) return;
+
+    const id = item.dataset.id;
+    if (id) marcarNotificacionComoLeidaPorId(id);
+  });
+}
 const processedSupportMessageIds = new Set();
 function markSupportMessageProcessed(messageId) {
   const id = String(messageId || "").trim();
