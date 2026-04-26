@@ -149,9 +149,11 @@ async function loadSupportInbox() {
   console.table(data.conversations || []);
 
   renderSupportInbox(data.conversations || []);
-    }
 
-  return data;async function bootstrapAdminShell() {
+  return data;
+}  
+  
+  async function bootstrapAdminShell() {
   const result = await supabaseAdminService.waitForActiveAdmin(3200);
 
   if (!result?.ok) {
