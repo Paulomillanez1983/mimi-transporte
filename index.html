@@ -1952,7 +1952,25 @@ async function asegurarSesionCliente() {
   await loginConGoogleParaViaje();
   return null;
 }
-  
+  async function enforceLegalGate(actorType) {
+  const session = await supabase.auth.getSession();
+  const token = session?.data?.session?.access_token;
+  if (!token) return false;
+
+  const verify = await fetch(`${SUPABASE_URL}/functions/v1/verify-legal-acceptance`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ actor_type: actorType })
+  }).then(r => r.json());
+
+  if (verify?.accepted) return true;
+
+  await openLegalGate(actorType, verify?.missing_documents || []);
+  return false;
+}
 function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
@@ -2027,11 +2045,14 @@ async function reanudarViajePendientePostLogin() {
     }
 
     renderSesionUI(session);
-    localStorage.removeItem('mimi_pending_trip_request');
+localStorage.removeItem('mimi_pending_trip_request');
 
-    if (typeof window.subscribeSupportRealtimeForUser === 'function') {
-      await window.subscribeSupportRealtimeForUser();
-    } else {
+const legalOk = await enforceLegalGate("user");
+if (!legalOk) return;
+
+if (typeof window.subscribeSupportRealtimeForUser === 'function') {
+  await window.subscribeSupportRealtimeForUser();
+}else {
       console.warn('[reanudarViajePendientePostLogin] subscribeSupportRealtimeForUser no disponible todavía');
     }
 
