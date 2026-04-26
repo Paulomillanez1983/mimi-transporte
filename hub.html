@@ -6,118 +6,183 @@
   <title>MIMI</title>
   <meta name="description" content="Elegí entre MIMI Transporte y MIMI Servicios.">
   <link rel="icon" type="image/svg+xml" href="./assets/icons/mimi-mark.svg">
-  <style>
-    :root{
-      --bg:#0b1220;
-      --bg-2:#111a2e;
-      --text:#ffffff;
-      --muted:#cbd5e1;
-      --card:#ffffff14;
-      --card-border:#ffffff1f;
-      --transport:#7cc7ff;
-      --transport-text:#062033;
-      --services:#4adea4;
-      --services-text:#052116;
-      --shadow:0 20px 60px rgba(0,0,0,.28);
-    }
+<style>
+  :root{
+    --bg:#081120;
+    --bg-2:#0f1b33;
+    --text:#ffffff;
+    --muted:#aebbd1;
 
-    *{box-sizing:border-box}
+    --card:rgba(255,255,255,.08);
+    --card-border:rgba(255,255,255,.10);
 
+    --transport:#7cc7ff;
+    --transport-text:#062033;
+
+    --services:#4adea4;
+    --services-text:#052116;
+
+    --shadow:0 18px 44px rgba(0,0,0,.28);
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px 20px;
+
+    background:
+      radial-gradient(circle at top, #16284a 0%, #0c1730 40%, #081120 100%);
+  }
+
+  .wrap{
+    width:min(100%, 460px);
+    text-align:center;
+  }
+
+  h1{
+    margin:0;
+    font-size:clamp(3.2rem, 9vw, 4.8rem);
+    font-weight:800;
+    letter-spacing:-.03em;
+  }
+
+  .subtitle{
+    margin:10px 0 30px;
+    color:var(--muted);
+    font-size:1.08rem;
+    line-height:1.45;
+  }
+
+  .grid{
+    display:grid;
+    gap:16px;
+  }
+
+  .card{
+    position:relative;
+    overflow:hidden;
+    text-align:left;
+    padding:24px;
+    border-radius:28px;
+
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+    border:1px solid var(--card-border);
+
+    box-shadow:var(--shadow);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+
+    transition:
+      transform .18s ease,
+      border-color .18s ease,
+      box-shadow .18s ease;
+  }
+
+  .card:hover{
+    transform:translateY(-2px);
+    border-color:rgba(255,255,255,.16);
+    box-shadow:0 24px 56px rgba(0,0,0,.34);
+  }
+
+  .card h2{
+    margin:0 0 8px;
+    font-size:2rem;
+    font-weight:800;
+    letter-spacing:-.03em;
+  }
+
+  .card p{
+    margin:0;
+    color:var(--muted);
+    line-height:1.5;
+    font-size:1.02rem;
+    max-width:26ch;
+  }
+
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:52px;
+    margin-top:18px;
+    padding:0 20px;
+    border-radius:999px;
+    text-decoration:none;
+    font-weight:800;
+    font-size:1rem;
+    transition:
+      transform .18s ease,
+      box-shadow .18s ease,
+      opacity .18s ease;
+  }
+
+  .btn:hover{
+    transform:translateY(-1px);
+    opacity:.98;
+  }
+
+  .btn-transport{
+    background:var(--transport);
+    color:var(--transport-text);
+    box-shadow:0 10px 24px rgba(124,199,255,.22);
+  }
+
+  .btn-services{
+    background:var(--services);
+    color:var(--services-text);
+    box-shadow:0 10px 24px rgba(74,222,164,.20);
+  }
+
+  .footer-note{
+    margin-top:22px;
+    color:#7f8ca3;
+    font-size:.95rem;
+  }
+
+  @media (max-width: 480px){
     body{
-      margin:0;
-      font-family:Arial,sans-serif;
-      background:
-        radial-gradient(circle at top, #1a2642 0%, var(--bg) 55%),
-        linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
-      color:var(--text);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:100vh;
-      padding:24px;
-    }
-
-    .wrap{
-      width:min(960px,100%);
-      text-align:center;
+      padding:24px 16px;
     }
 
     h1{
-      font-size:clamp(2.4rem, 6vw, 4rem);
-      margin:0 0 12px;
-      letter-spacing:.04em;
+      font-size:3.4rem;
     }
 
     .subtitle{
-      color:var(--muted);
-      margin:0 0 32px;
-      font-size:1.05rem;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-      gap:20px;
+      font-size:1rem;
+      margin:10px 0 24px;
     }
 
     .card{
-      background:var(--card);
-      border:1px solid var(--card-border);
+      padding:22px;
       border-radius:24px;
-      padding:28px;
-      text-align:left;
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(10px);
     }
 
     .card h2{
-      margin:0 0 10px;
-      font-size:1.7rem;
-    }
-
-    .card p{
-      margin:0;
-      color:var(--muted);
-      line-height:1.55;
+      font-size:1.85rem;
     }
 
     .btn{
-      display:inline-block;
-      margin-top:20px;
-      padding:14px 20px;
-      border-radius:999px;
-      text-decoration:none;
-      font-weight:700;
-      transition:transform .18s ease, opacity .18s ease;
+      width:100%;
+      min-height:54px;
+      font-size:1rem;
     }
-
-    .btn:hover{
-      transform:translateY(-1px);
-      opacity:.96;
-    }
-
-    .btn-transport{
-      background:var(--transport);
-      color:var(--transport-text);
-    }
-
-    .btn-services{
-      background:var(--services);
-      color:var(--services-text);
-    }
-
-    .footer-note{
-      margin-top:22px;
-      color:#94a3b8;
-      font-size:.95rem;
-    }
-  </style>
+  }
+</style>
 </head>
 <body>
   <main class="wrap">
-    <h1>MIMI</h1>
-    <p class="subtitle">Elegí cómo querés usar la plataforma.</p>
-
+<h1>MIMI</h1>
+<p class="subtitle">Tu plataforma de movilidad y servicios.</p>
+    
     <div class="grid">
       <section class="card">
         <h2>Transporte</h2>
