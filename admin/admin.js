@@ -90,6 +90,41 @@ function initAdaptiveTheme() {
     media.addListener(applyTheme);
   }
 }
+
+function renderSupportInbox(conversations = []) {
+  const list = document.getElementById("supportConversationList");
+
+  if (!list) {
+    console.warn("[MIMI Admin Support] No existe #supportConversationList");
+    return;
+  }
+
+  if (!conversations.length) {
+    list.innerHTML = `
+      <div class="support-empty-state">
+        Todavía no hay conversaciones.
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = conversations.map((c) => `
+    <button class="support-thread-item" type="button" data-conversation-id="${c.id}">
+      <div class="support-thread-item-top">
+        <strong>${c.subject || "Consulta de soporte"}</strong>
+        <span>${c.unread_admin_count || 0}</span>
+      </div>
+
+      <div class="support-thread-item-meta">
+        ${c.app_context || "sin contexto"} · ${c.participant_role || "sin rol"}
+      </div>
+
+      <div class="support-thread-item-preview">
+        ${c.last_message_preview || "Sin mensajes"}
+      </div>
+    </button>
+  `).join("");
+}
 async function loadSupportInbox() {
   const session = await supabaseAdminService.refreshSessionIfNeeded();
 
@@ -113,9 +148,10 @@ async function loadSupportInbox() {
   console.log("[MIMI Admin Support]", data);
   console.table(data.conversations || []);
 
-  return data;
-}
-async function bootstrapAdminShell() {
+  renderSupportInbox(data.conversations || []);
+    }
+
+  return data;async function bootstrapAdminShell() {
   const result = await supabaseAdminService.waitForActiveAdmin(3200);
 
   if (!result?.ok) {
