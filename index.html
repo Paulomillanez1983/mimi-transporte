@@ -4210,7 +4210,7 @@ function renderSupportMessages(messages = []) {
   messages.forEach((msg) => {
     const senderRole = String(msg?.sender_role || "").toLowerCase();
     const type = senderRole === "admin" ? "agent" : "user";
-    appendSupportMessage(msg?.mensaje || "", type, msg?.id || null);
+    appendSupportMessage(msg?.body || "", type, msg?.id || null);
   });
 }
 
@@ -4226,8 +4226,8 @@ async function loadOrCreateSupportTicketContext() {
   // Usar sbRealtime (cliente con auth) en lugar de supabase (cliente anónimo)
   const { data: existingTickets, error: ticketLookupError } = await window.sbRealtime
     .from("svc_conversations")
-    .select("id, estado, last_message_at, user_id, created_at")
-    .eq("user_id", userId)
+    .select("id, status, last_message_at, client_user_id, created_at")
+    .eq("client_user_id", userId)
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(1);
@@ -4248,8 +4248,8 @@ async function loadOrCreateSupportTicketContext() {
   // También usar sbRealtime aquí
   const { data: messages, error: messagesError } = await window.sbRealtime
     .from("svc_messages")
-    .select("id, sender_role, mensaje, created_at")
-    .eq("ticket_id", currentSupportTicketId)
+    .select("id, sender_role, body, created_at")
+    .eq("conversation_id", currentSupportTicketId)
     .order("created_at", { ascending: true });
 
   if (messagesError) {
@@ -4290,11 +4290,10 @@ async function handleIncomingSupportMessage(payload) {
     console.log("[support realtime payload]", payload);
 
     const msg = payload?.new;
-    if (!msg?.ticket_id) {
-      console.warn("[support realtime] mensaje sin ticket_id", msg);
-      return;
-    }
-
+if (!msg?.conversation_id) {
+  console.warn("[support realtime] mensaje sin conversation_id", msg);
+  return;
+}
     if (msg.id && markSupportMessageProcessed(msg.id)) {
       console.log("[support realtime] mensaje duplicado ignorado", msg.id);
       return;
@@ -4319,8 +4318,8 @@ async function handleIncomingSupportMessage(payload) {
 
       const { data, error } = await window.sbRealtime
         .from("svc_conversations")
-        .select("id, user_id, created_by, estado, asunto, updated_at")
-        .eq("id", msg.ticket_id)
+        .select("id, client_user_id, provider_user_id, status, subject, updated_at")
+        .eq("id", msg.conversation_id)
         .maybeSingle();
 
       if (error) {
@@ -4348,7 +4347,7 @@ async function handleIncomingSupportMessage(payload) {
       return;
     }
 
-    const ownerId = ticket.user_id || ticket.created_by || null;
+    const ownerId = ticket.client_user_id || ticket.provider_user_id || null;
     const belongsToUser = !!ownerId && String(ownerId) === String(userId);
 
     if (!belongsToUser) {
@@ -4363,7 +4362,7 @@ async function handleIncomingSupportMessage(payload) {
     const senderRole = String(msg.sender_role || "").toLowerCase();
 
     if (senderRole === "admin") {
-      appendSupportMessage(msg.mensaje || "", "agent", msg.id);
+      appendSupportMessage(msg.body || "", "agent", msg.id);
 
       if (!supportSheet?.classList.contains("is-open")) {
         notif.show("Soporte", "Tenés una nueva respuesta", "success", 4000);
@@ -4424,7 +4423,7 @@ async function subscribeSupportRealtimeForUser(force = false) {
       {
         event: "INSERT",
         schema: "public",
-        table: "soporte_mensajes",
+        table: "svc_messages",
       },
       handleIncomingSupportMessage
     )
@@ -4545,79 +4544,82 @@ supportSendBtn?.addEventListener("click", async () => {
       ? `Consulta sobre viaje ${viajeId}`
       : "Consulta general desde app cliente";
 
-    if (!currentSupportTicketId) {
-      const { data: ticket, error: ticketError } = await window.supabaseInsert(
-        "soporte_tickets",
-        {
-          created_by: userId,
-          rol_origen: "client",
-          user_id: userId,
-          asunto,
-          canal: "in_app",
-          categoria: viajeId ? "viaje" : "general",
-          prioridad: "normal",
-          estado: "abierto",
-          ultimo_mensaje: mensaje,
-          last_message_at: new Date().toISOString(),
-          metadata
-        },
-        session.access_token
-      );
+if (!currentSupportTicketId) {
+  const { data: ticket, error: ticketError } = await window.supabaseInsert(
+    "svc_conversations",
+    {
+      request_id: null,
+      client_user_id: userId,
+      provider_user_id: null,
+      status: "open",
+      last_message_at: new Date().toISOString(),
+      last_message_preview: mensaje,
+      app_context: "transport",
+      subject: asunto,
+      participant_role: "client",
+      admin_status: "abierto",
+      unread_admin_count: 1,
+      metadata_json: metadata
+    },
+    session.access_token
+  );
 
-      if (ticketError || !ticket?.id) {
-        console.error("[supportSendBtn] ticketError:", ticketError);
-        notif.show(
-          "Error",
-          ticketError?.message || "No se pudo crear el ticket de soporte",
-          "error"
-        );
-        return;
-      }
+  if (ticketError || !ticket?.id) {
+    console.error("[supportSendBtn] ticketError:", ticketError);
+    notif.show(
+      "Error",
+      ticketError?.message || "No se pudo crear la conversación de soporte",
+      "error"
+    );
+    return;
+  }
 
-      currentSupportTicketId = ticket.id;
-      await subscribeSupportRealtimeForUser(false);
-    } else {
-const { error: ticketUpdateError } = await window.supabaseUpdate(
-  "soporte_tickets",
-  "id",
-  currentSupportTicketId,
+  currentSupportTicketId = ticket.id;
+  await subscribeSupportRealtimeForUser(false);
+} else {
+  const { error: ticketUpdateError } = await window.supabaseUpdate(
+    "svc_conversations",
+    "id",
+    currentSupportTicketId,
+    {
+      last_message_preview: mensaje,
+      last_message_at: new Date().toISOString(),
+      status: "open",
+      admin_status: "abierto",
+      unread_admin_count: 1
+    },
+    session.access_token
+  );
+
+  if (ticketUpdateError) {
+    console.warn("[supportSendBtn] ticketUpdateError:", ticketUpdateError);
+  }
+}
+
+const { data: soporteMensaje, error: mensajeError } = await window.supabaseInsert(
+  "svc_messages",
   {
-    ultimo_mensaje: mensaje,
-    last_message_at: new Date().toISOString(),
-    estado: "abierto"
+    conversation_id: currentSupportTicketId,
+    sender_user_id: userId,
+    sender_role: "client",
+    message_type: "text",
+    body: mensaje,
+    metadata_json: metadata,
+    delivery_status: "sent",
+    attachments_json: []
   },
   session.access_token
 );
 
-      if (ticketUpdateError) {
-        console.warn("[supportSendBtn] ticketUpdateError:", ticketUpdateError);
-      }
-    }
-
-    const { data: soporteMensaje, error: mensajeError } = await window.supabaseInsert(
-      "soporte_mensajes",
-      {
-        ticket_id: currentSupportTicketId,
-        sender_user_id: userId,
-        sender_role: "client",
-        mensaje,
-        leido: false,
-        mensaje_tipo: "texto",
-        metadata
-      },
-      session.access_token
-    );
-
-    if (mensajeError || !soporteMensaje?.id) {
-      console.error("[supportSendBtn] mensajeError:", mensajeError);
-      notif.show(
-        "Error",
-        mensajeError?.message || "No se pudo guardar el mensaje",
-        "error"
-      );
-      return;
-    }
-
+if (mensajeError || !soporteMensaje?.id) {
+  console.error("[supportSendBtn] mensajeError:", mensajeError);
+  notif.show(
+    "Error",
+    mensajeError?.message || "No se pudo guardar el mensaje",
+    "error"
+  );
+  return;
+}
     appendSupportMessage(mensaje, "user", soporteMensaje.id);
     supportMessageInput.value = "";
 
