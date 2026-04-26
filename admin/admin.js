@@ -137,8 +137,8 @@ async function bootstrapAdminShell() {
   }
 
   setActiveModule("transport");
+  await loadSupportInbox();
 }
-
 logoutBtn?.addEventListener("click", async () => {
   await supabaseAdminService.signOut();
   window.location.href = "./admin-login.html";
