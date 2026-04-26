@@ -1808,12 +1808,9 @@ renderServicesAndPricing() {
     this.elements.pricingModeJob.checked = pricing.mode === "job";
   }
 }
-  /* 👇 PEGALO ACÁ, JUSTO ACÁ */
 renderSheetSummary() {
   const provider = this.state?.provider ?? {};
   const pricing = provider.pricing ?? {};
-  const status = provider.status ?? "OFFLINE";
-  const isOnline = status === "ONLINE_IDLE";
 
   const money = (value) => {
     const amount = Number(value ?? 0);
@@ -1847,8 +1844,7 @@ renderSheetSummary() {
         })
       : "Sin agenda";
   }
-  }
-    
+}    
 
 
 
