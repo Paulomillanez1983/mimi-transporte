@@ -2210,7 +2210,7 @@ async function reanudarViajePendientePostLogin() {
     renderSesionUI(session);
 localStorage.removeItem('mimi_pending_trip_request');
 
-const legalOk = await enforceLegalGate("user");
+const legalOk = await enforceLegalGate("client");
 if (!legalOk) return;
 
 if (typeof window.subscribeSupportRealtimeForUser === 'function') {
@@ -9933,6 +9933,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 document.addEventListener('DOMContentLoaded', () => {
   
   bindUIActions();
+
+  setTimeout(async () => {
+    try {
+      const session = await obtenerSesionCliente(false);
+
+      if (!session?.access_token || !session?.user) {
+        console.log('[legal-gate] auto check omitido: sin sesión');
+        return;
+      }
+
+      console.log('[legal-gate] auto check client');
+      await enforceLegalGate('client');
+    } catch (err) {
+      console.error('[legal-gate] auto check error:', err);
+    }
+  }, 1200);
 
   try {
     if (!state.currentLocation && navigator.geolocation) {
