@@ -1972,6 +1972,161 @@ async function enforceLegalGate(actorType) {
   await openLegalGate(actorType, verify?.missing_documents || []);
   return false;
 }
+async function openLegalGate(actorType, missingDocuments = []) {
+  const gate = document.getElementById('legalGate');
+  const body = document.getElementById('legalGateBody');
+  const acceptBtn = document.getElementById('legalGateAcceptBtn');
+
+  if (!gate || !body || !acceptBtn) {
+    console.error('[legal-gate] elementos no encontrados');
+    return false;
+  }
+
+  const sessionData = await window.sbRealtime.auth.getSession();
+  const token = sessionData?.data?.session?.access_token;
+
+  if (!token) return false;
+
+  gate.hidden = false;
+  gate.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('legal-gate-open');
+
+  body.innerHTML = `<div class="legal-gate-loading">Cargando documentos…</div>`;
+  acceptBtn.disabled = true;
+
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/get-legal-center`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ actor_type: actorType })
+    });
+
+    const result = await response.json();
+
+    if (!result?.ok || !Array.isArray(result.documents)) {
+      body.innerHTML = `<div class="legal-gate-loading">No pudimos cargar los documentos legales.</div>`;
+      return false;
+    }
+
+    const pendingDocs = result.documents.filter(doc =>
+      missingDocuments.includes(doc.code) || !doc.accepted
+    );
+
+    if (!pendingDocs.length) {
+      closeLegalGate();
+      return true;
+    }
+
+    let currentIndex = 0;
+
+    const renderDoc = () => {
+      const doc = pendingDocs[currentIndex];
+      if (!doc) return;
+
+      body.innerHTML = `
+        <article class="legal-gate-doc">
+          <div class="legal-gate-doc-head">
+            <div class="legal-gate-doc-meta">
+              <h3>${escapeHtml(doc.title || doc.code)}</h3>
+              <span>${escapeHtml(doc.version_label || doc.version || 'Versión vigente')}</span>
+            </div>
+            <div class="legal-gate-doc-status">Obligatorio</div>
+          </div>
+
+          <div class="legal-gate-doc-content">${escapeHtml(doc.content_markdown || 'Contenido no disponible')}</div>
+
+          <div class="legal-gate-doc-actions">
+            <label class="legal-gate-check">
+              <input type="checkbox" id="legalGateCheck">
+              <span>Leí y acepto este documento</span>
+            </label>
+          </div>
+        </article>
+      `;
+
+      acceptBtn.disabled = true;
+
+      const checkbox = document.getElementById('legalGateCheck');
+      checkbox?.addEventListener('change', () => {
+        acceptBtn.disabled = !checkbox.checked;
+      });
+    };
+
+    renderDoc();
+
+    acceptBtn.onclick = async () => {
+      const doc = pendingDocs[currentIndex];
+      if (!doc) return;
+
+      acceptBtn.disabled = true;
+      acceptBtn.textContent = 'Registrando...';
+
+      try {
+        const acceptRes = await fetch(`${SUPABASE_URL}/functions/v1/accept-legal-document`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            actor_type: actorType,
+            document_code: doc.code,
+            version: doc.version,
+            acceptance_method: 'checkbox_cta'
+          })
+        });
+
+        const acceptJson = await acceptRes.json();
+
+        if (!acceptJson?.ok) {
+          throw new Error(acceptJson?.error || 'No se pudo registrar la aceptación');
+        }
+
+        currentIndex += 1;
+
+        if (currentIndex >= pendingDocs.length) {
+          closeLegalGate();
+          return true;
+        }
+
+        acceptBtn.textContent = 'Aceptar y continuar';
+        renderDoc();
+      } catch (err) {
+        console.error('[legal-gate] error aceptando documento:', err);
+        acceptBtn.textContent = 'Aceptar y continuar';
+        acceptBtn.disabled = false;
+        notif.show('Error', 'No pudimos registrar tu aceptación legal.', 'error');
+      }
+    };
+
+    return true;
+  } catch (err) {
+    console.error('[legal-gate] error:', err);
+    body.innerHTML = `<div class="legal-gate-loading">Ocurrió un error cargando el centro legal.</div>`;
+    return false;
+  }
+}
+
+function closeLegalGate() {
+  const gate = document.getElementById('legalGate');
+  const acceptBtn = document.getElementById('legalGateAcceptBtn');
+
+  if (acceptBtn) {
+    acceptBtn.textContent = 'Aceptar y continuar';
+    acceptBtn.disabled = true;
+    acceptBtn.onclick = null;
+  }
+
+  if (gate) {
+    gate.hidden = true;
+    gate.setAttribute('aria-hidden', 'true');
+  }
+
+  document.body.classList.remove('legal-gate-open');
+}
   function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
