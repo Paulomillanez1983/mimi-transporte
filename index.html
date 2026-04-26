@@ -2983,31 +2983,62 @@ if (Array.isArray(coords) && coords.length >= 2) {
 }
 function abrirPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
-  notifPanel.classList.add('is-open');
-  notifOverlay?.classList.add('is-open');
-  notifOverlay && (notifOverlay.hidden = false);
+
+  notifPanel.hidden = false;
+  notifPanel.classList.add('is-open', 'open', 'visible', 'active');
   notifPanel.setAttribute('aria-hidden', 'false');
+
+  if (notifOverlay) {
+    notifOverlay.hidden = false;
+    notifOverlay.classList.add('is-open', 'open', 'visible', 'active');
+  }
+
   notifBtn.setAttribute('aria-expanded', 'true');
+
   unreadCount = 0;
   actualizarBadgeNotificaciones();
   guardarNotificacionesEnStorage();
+  renderizarCentroNotificaciones();
 }
-
 function cerrarPanelNotificaciones() {
   if (!notifBtn || !notifPanel) return;
-  notifPanel.classList.remove('is-open');
-  notifOverlay?.classList.remove('is-open');
+
+  notifPanel.classList.remove('is-open', 'open', 'visible', 'active');
   notifPanel.setAttribute('aria-hidden', 'true');
-  notifBtn.setAttribute('aria-expanded', 'false');
+  notifPanel.hidden = true;
 
   if (notifOverlay) {
-    setTimeout(() => {
-      if (!notifOverlay.classList.contains('is-open')) {
-        notifOverlay.hidden = true;
-      }
-    }, 220);
+    notifOverlay.classList.remove('is-open', 'open', 'visible', 'active');
+    notifOverlay.hidden = true;
+  }
+
+  notifBtn.setAttribute('aria-expanded', 'false');
+}
+function togglePanelNotificaciones() {
+  const abierto = notifPanel?.getAttribute('aria-hidden') === 'false';
+
+  if (abierto) {
+    cerrarPanelNotificaciones();
+  } else {
+    abrirPanelNotificaciones();
   }
 }
+
+if (notifBtn && notifBtn.dataset.bound !== '1') {
+  notifBtn.dataset.bound = '1';
+
+  notifBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    togglePanelNotificaciones();
+  });
+}
+
+if (notifOverlay && notifOverlay.dataset.bound !== '1') {
+  notifOverlay.dataset.bound = '1';
+  notifOverlay.addEventListener('click', cerrarPanelNotificaciones);
+}
+  
   function panelNotificacionesAbierto() {
   return !!notifPanel?.classList.contains('is-open');
 }
