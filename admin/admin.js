@@ -90,7 +90,31 @@ function initAdaptiveTheme() {
     media.addListener(applyTheme);
   }
 }
+async function loadSupportInbox() {
+  const session = await supabaseAdminService.refreshSessionIfNeeded();
 
+  if (!session?.access_token) {
+    console.warn("[MIMI Admin Support] Sin sesión admin");
+    return;
+  }
+
+  const res = await fetch(
+    `${window.MIMI_ADMIN_ENV.SUPABASE_URL}/functions/v1/admin-list-support-conversations`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
+    }
+  );
+
+  const data = await res.json();
+
+  console.log("[MIMI Admin Support]", data);
+  console.table(data.conversations || []);
+
+  return data;
+}
 async function bootstrapAdminShell() {
   const result = await supabaseAdminService.waitForActiveAdmin(3200);
 
