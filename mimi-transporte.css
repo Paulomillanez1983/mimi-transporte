@@ -3721,3 +3721,13 @@ select:focus-visible {
   pointer-events: auto;
   z-index: 3;
 }
+.trip-notification-delete.confirm-delete {
+  width: auto;
+  min-width: 74px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #fff1f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 800;
+}
