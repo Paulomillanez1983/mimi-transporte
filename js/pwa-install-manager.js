@@ -102,7 +102,7 @@ async function ensureAppServiceWorkerRegistered() {
   if (!("serviceWorker" in navigator)) return null;
 
   const appBasePath = getAppBasePath();
-  const swUrl = `${appBasePath}js/service-worker.js`;
+  const swUrl = `${appBasePath}firebase-messaging-sw.js`;
 
   try {
     const existing = await navigator.serviceWorker.getRegistration(appBasePath);
