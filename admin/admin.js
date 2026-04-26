@@ -202,10 +202,10 @@ async function sendSupportReply() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({
+       body: JSON.stringify({
           conversation_id: selectedSupportConversation.id,
-          body
-        })
+         message: body
+       })
       }
     );
 
