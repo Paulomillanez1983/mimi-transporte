@@ -177,7 +177,6 @@ selfieStatus: document.getElementById("selfieStatus"),
       sheetBasePrice: document.getElementById("sheetBasePrice"),
       sheetPricingMode: document.getElementById("sheetPricingMode"),
       sheetUpcomingTime: document.getElementById("sheetUpcomingTime"),
-      sheetOnlineAction: document.getElementById("sheetOnlineAction"),
       
       // Tabs
       tabButtons: document.querySelectorAll('.tab-btn'),
@@ -1066,11 +1065,6 @@ this.elements.tabButtons.forEach((btn) => {
     this.setBottomSheetState("expanded");
   });
 });
-    this.elements.sheetOnlineAction?.addEventListener("click", () => {
-  const currentStatus = this.state?.provider?.status ?? "OFFLINE";
-  const nextStatus = currentStatus === "ONLINE_IDLE" ? "OFFLINE" : "ONLINE_IDLE";
-  this.handleStatusToggle(nextStatus);
-});
     // Status toggle
     this.elements.statusToggleModern?.addEventListener('click', (e) => {
       const option = e.target.closest('.toggle-option');
@@ -1853,15 +1847,9 @@ renderSheetSummary() {
         })
       : "Sin agenda";
   }
+    
 
-  if (this.elements.sheetOnlineAction) {
-    this.elements.sheetOnlineAction.textContent = isOnline
-      ? "Salir de línea"
-      : "Ponerme en línea";
 
-    this.elements.sheetOnlineAction.classList.toggle("online", isOnline);
-  }
-}
 
   /**
    * Main render function
