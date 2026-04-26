@@ -798,20 +798,41 @@ if (this.elements.mapContainer) this.elements.mapContainer.style.display = "";
       return false;
     }
 
-    const [workspace, notifications, offers, activeRequest, dashboard] = await Promise.all([
-      loadProviderWorkspace(session.providerId),
-      loadNotifications(session.userId),
-      loadOffers(session.providerId),
-      loadActiveRequest({ providerId: session.providerId }),
-      getProviderDashboard(session.providerId)
-    ]);
+const [workspace, notifications, offers, activeRequest] = await Promise.all([
+  loadProviderWorkspace(session.providerId),
+  loadNotifications(session.userId),
+  loadOffers(session.providerId),
+  loadActiveRequest({ providerId: session.providerId })
+]);
 
-    this.applyWorkspaceToState(workspace);
+let dashboard = {
+  earnings: 0,
+  completed: 0,
+  active: null,
+  history: []
+};
+
+setTimeout(async () => {
+  try {
+    const freshDashboard = await getProviderDashboard(session.providerId);
 
     actions.updateState({
       provider: {
         ...this.state.provider,
-        dashboard
+        dashboard: freshDashboard
+      }
+    });
+  } catch (err) {
+    console.warn("[MIMI] Dashboard diferido no disponible:", err);
+  }
+}, 800);
+    
+    this.applyWorkspaceToState(workspace);
+
+    actions.updateState({
+      provider: {
+        ...(this.state?.provider ?? {}),
+        dashboard: freshDashboard
       }
     });
 
