@@ -9886,5 +9886,40 @@ function initTripLiveCardDraggable() {
   card.addEventListener('touchend', onEnd);
 }
 </script>
+  <!-- LEGAL GATE -->
+<div id="legalGate" class="legal-gate" hidden aria-hidden="true">
+  <div class="legal-gate-backdrop"></div>
+
+  <section
+    class="legal-gate-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="legalGateTitle"
+    aria-describedby="legalGateText"
+  >
+    <div class="legal-gate-header">
+      <div class="legal-gate-badge">⚖️</div>
+      <h2 id="legalGateTitle">Actualización legal requerida</h2>
+      <p id="legalGateText">
+        Necesitamos que revises y aceptes los documentos legales vigentes para continuar usando MIMI.
+      </p>
+    </div>
+
+    <div id="legalGateBody" class="legal-gate-body">
+      <div class="legal-gate-loading">Cargando documentos…</div>
+    </div>
+
+    <div class="legal-gate-footer">
+      <button
+        id="legalGateAcceptBtn"
+        type="button"
+        class="legal-gate-btn"
+        disabled
+      >
+        Aceptar y continuar
+      </button>
+    </div>
+  </section>
+</div>
 </body>
 </html>
