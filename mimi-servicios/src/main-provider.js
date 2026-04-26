@@ -97,12 +97,10 @@ async init() {
 
   const canBootProviderPanel = await this.loadInitialData();
 
-  if (!canBootProviderPanel) {
-    this.setupInstallPrompt();
-    console.log("[MIMI] Provider auth gate active");
-    return;
-  }
-
+if (!canBootProviderPanel) {
+  console.log("[MIMI] Provider auth gate active");
+  return;
+}
   this.initUI();
   await this.initMap();
 
@@ -574,6 +572,15 @@ showProviderLoginGate() {
 
   container.classList.remove("hidden");
   container.hidden = false;
+  const installBanner = this.elements.installBanner || document.getElementById("installBanner");
+
+if (installBanner) {
+  installBanner.hidden = true;
+  installBanner.style.setProperty("display", "none", "important");
+  installBanner.style.opacity = "0";
+  installBanner.style.pointerEvents = "none";
+  installBanner.setAttribute("aria-hidden", "true");
+}
 
   container.style.display = "grid";
   container.style.placeItems = "center";
@@ -771,13 +778,20 @@ async loadInitialData() {
       return false;
     }
 
-    document.body.classList.remove("provider-auth-loading", "provider-auth-required");
-    document.body.classList.add("provider-authenticated");
+document.body.classList.remove("provider-auth-loading", "provider-auth-required");
+document.body.classList.add("provider-authenticated");
 
-    if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "";
-    if (this.elements.header) this.elements.header.style.display = "";
-    if (this.elements.mapContainer) this.elements.mapContainer.style.display = "";
+if (this.elements.onlineButtonContainer) {
+  this.elements.onlineButtonContainer.hidden = true;
+  this.elements.onlineButtonContainer.classList.add("hidden");
+  this.elements.onlineButtonContainer.style.display = "none";
+  this.elements.onlineButtonContainer.innerHTML = "";
+}
 
+if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "";
+if (this.elements.header) this.elements.header.style.display = "";
+if (this.elements.mapContainer) this.elements.mapContainer.style.display = "";
+    
     if (!session?.providerId) {
       this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
       this.showProviderLoginGate();
@@ -1605,7 +1619,6 @@ this.renderChatMessages();
     if (!container) return;
 
     const messages = this.state?.chat.messages || [];
-    
     container.innerHTML = messages.map(msg => `
       <div class="chat-message ${msg.type}">
         ${msg.text}
