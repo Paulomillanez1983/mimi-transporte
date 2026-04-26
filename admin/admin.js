@@ -1,10 +1,7 @@
 import supabaseAdminService from "./supabase-admin-client.js";
-window.supabaseAdminService = supabaseAdminService;
-¿const API_URL =
-  "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/admin-review-driver";
 
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhycGhwcW11dHZhZGpydWNxaWNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0MDY5ODgsImV4cCI6MjA4OTk4Mjk4OH0.0nsO3GBevQzMBCvne17I9L5_Yi4VPYiWedxyntLr4uM";
+const API_URL =
+  "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/admin-review-driver";
 
 const CORDOBA_CENTER = [-64.1888, -31.4201];
 const CORDOBA_ZOOM = 11.7;
@@ -1615,20 +1612,18 @@ async function reviewDriver(driverId, action, button) {
 
     if (button) button.disabled = true;
 
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: SUPABASE_ANON_KEY
-      },
-      body: JSON.stringify({
-        driver_user_id: driverId,
-        action,
-        review_notes: note
-      })
-    });
-
+const response = await fetch(API_URL, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${session.access_token}`
+  },
+  body: JSON.stringify({
+    driver_user_id: driverId,
+    action,
+    review_notes: note
+  })
+});
     const rawText = await response.text();
     let data = {};
 
