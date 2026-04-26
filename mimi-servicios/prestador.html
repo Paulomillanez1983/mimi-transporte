@@ -184,16 +184,19 @@
           <div class="sheet-status" id="sheetStatus">
             <span class="status-indicator offline" id="sheetStatusDot"></span>
             <span class="status-text" id="sheetStatusText">Offline</span>
+            <button class="sheet-online-action" id="sheetOnlineAction" type="button">
+            Ponerme en línea
+          </button>
           </div>
-          <div class="sheet-info" id="sheetInfo">
-            <span class="info-price">Base $8.000</span>
-            <span class="info-separator">·</span>
-            <span class="info-mode">Por hora</span>
-          </div>
+         <div class="sheet-info" id="sheetInfo">
+         <span class="info-price" id="sheetBasePrice">Base —</span>
+         <span class="info-separator">·</span>
+         <span class="info-mode" id="sheetPricingMode">—</span>
+        </div>
         </div>
         <div class="sheet-upcoming" id="sheetUpcoming">
           <span class="upcoming-label">Próximo:</span>
-          <span class="upcoming-time">Hoy 16:30</span>
+          <span class="upcoming-time" id="sheetUpcomingTime">Sin agenda</span>
         </div>
       </div>
       
