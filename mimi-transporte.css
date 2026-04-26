@@ -4126,3 +4126,44 @@ body.legal-gate-open {
   visibility: visible !important;
   pointer-events: auto !important;
 }
+.legal-gate-check {
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+}
+
+.legal-gate-check input {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  border: 2px solid #94a3b8 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  display: grid !important;
+  place-items: center !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+}
+
+.legal-gate-check input:checked {
+  background: #16a34a !important;
+  border-color: #16a34a !important;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.28) !important;
+}
+
+.legal-gate-check input:checked::after {
+  content: "✓" !important;
+  color: #ffffff !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.legal-gate-check input:focus-visible {
+  outline: 4px solid rgba(34, 197, 94, 0.25) !important;
+  outline-offset: 3px !important;
+}
