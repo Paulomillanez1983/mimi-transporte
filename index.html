@@ -1952,9 +1952,10 @@ async function asegurarSesionCliente() {
   await loginConGoogleParaViaje();
   return null;
 }
-  async function enforceLegalGate(actorType) {
+async function enforceLegalGate(actorType) {
   const sessionData = await window.sbRealtime.auth.getSession();
-  const token = session?.data?.session?.access_token;
+  const token = sessionData?.data?.session?.access_token;
+
   if (!token) return false;
 
   const verify = await fetch(`${SUPABASE_URL}/functions/v1/verify-legal-acceptance`, {
@@ -1971,7 +1972,7 @@ async function asegurarSesionCliente() {
   await openLegalGate(actorType, verify?.missing_documents || []);
   return false;
 }
-function showSuggestions(el) {
+  function showSuggestions(el) {
   if (!el) return;
   el.classList.add('visible');
   el.style.display = 'block';
