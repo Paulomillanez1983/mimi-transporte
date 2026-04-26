@@ -309,4 +309,11 @@ async requireActiveAdmin() {
  }
 
 const supabaseAdminService = new SupabaseAdminService();
+
+window.supabaseAdminService = supabaseAdminService;
+
+supabaseAdminService.init().then(() => {
+  window.supabaseAdmin = supabaseAdminService.client;
+});
+
 export default supabaseAdminService;
