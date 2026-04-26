@@ -1262,7 +1262,7 @@ async function buscarDireccion(query) {
     <div class="support-sheet-avatar" aria-hidden="true">🎧</div>
     <div class="support-sheet-header-copy">
       <h3 id="supportSheetTitle">Soporte MIMICAR</h3>
-      <p>Contanos qué pasó y te ayudamos.</p>
+<p>Contanos qué pasó y te ayudamos. Soporte legal: mimi.legal.ar@gmail.com</p>
     </div>
 
     <button
@@ -2040,8 +2040,12 @@ document.body.classList.add('legal-gate-open');
             <div class="legal-gate-doc-status">Obligatorio</div>
           </div>
 
-          <div class="legal-gate-doc-content">${escapeHtml(doc.content_markdown || 'Contenido no disponible')}</div>
-
+<div class="legal-gate-doc-content">
+  ${escapeHtml(doc.content_markdown || 'Contenido no disponible')}
+  <div style="margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);font-size:13px;opacity:.85;">
+    Contacto legal: mimi.legal.ar@gmail.com
+  </div>
+</div>
           <div class="legal-gate-doc-actions">
             <label class="legal-gate-check">
               <input type="checkbox" id="legalGateCheck">
