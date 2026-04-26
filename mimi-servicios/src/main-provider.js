@@ -90,13 +90,14 @@ async init() {
 
   this.cacheElements();
 
-  this.unsubscribe = subscribe((state) => {
-    this.state = state;
-    this.render();
-  });
+this.unsubscribe = subscribe((state) => {
+  this.state = state;
+  this.render();
+});
 
-  const canBootProviderPanel = await this.loadInitialData();
 
+const canBootProviderPanel = await this.loadInitialData();
+  
 if (!canBootProviderPanel) {
   console.log("[MIMI] Provider auth gate active");
   return;
@@ -791,6 +792,16 @@ if (this.elements.onlineButtonContainer) {
 if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "";
 if (this.elements.header) this.elements.header.style.display = "";
 if (this.elements.mapContainer) this.elements.mapContainer.style.display = "";
+    const installDismissed =
+  localStorage.getItem("mimi_services_install_banner_dismissed") === "true";
+
+if (this.elements.installBanner && this.deferredInstallPrompt && !installDismissed) {
+  this.elements.installBanner.hidden = false;
+  this.elements.installBanner.style.display = "";
+  this.elements.installBanner.style.opacity = "1";
+  this.elements.installBanner.style.pointerEvents = "auto";
+  this.elements.installBanner.removeAttribute("aria-hidden");
+}
     
     if (!session?.providerId) {
       this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
@@ -2336,9 +2347,16 @@ setupInstallPrompt() {
 const installDismissed =
   localStorage.getItem("mimi_services_install_banner_dismissed") === "true";
 
-if (this.elements.installBanner && !installDismissed) {
+const isAuthenticated =
+  document.body.classList.contains("provider-authenticated") ||
+  Boolean(this.state?.session?.isAuthenticated);
+
+if (this.elements.installBanner && !installDismissed && isAuthenticated) {
   this.elements.installBanner.hidden = false;
   this.elements.installBanner.style.display = "";
+} else if (this.elements.installBanner) {
+  this.elements.installBanner.hidden = true;
+  this.elements.installBanner.style.setProperty("display", "none", "important");
 }
     console.log("[MIMI] PWA install prompt listo");
   });
