@@ -2263,6 +2263,28 @@ function cargarNotificacionesDesdeStorage() {
     ultimoEstadoNotificado = null;
   }
 }
+  function marcarNotificacionesComoLeidas() {
+  historial = historial.map(item => ({
+    ...item,
+    read: true
+  }));
+
+  unreadCount = 0;
+
+  renderizarCentroNotificaciones();
+  actualizarBadgeNotificaciones();
+  guardarNotificacionesEnStorage();
+}
+
+function vaciarNotificaciones() {
+  historial = [];
+  unreadCount = 0;
+
+  renderizarCentroNotificaciones();
+  actualizarBadgeNotificaciones();
+  guardarNotificacionesEnStorage();
+}
+
 function resolverEstadoViajeCliente(viajeLike = {}) {
   const estadoBase = normalizarEstadoUpper(viajeLike?.estado);
 
@@ -3070,7 +3092,7 @@ function renderizarCentroNotificaciones() {
   }
 
   notifList.innerHTML = historial.map(item => `
-    <div class="trip-notification-item ${item.read ? 'is-read' : ''}" data-id="${escapeHtml(item.id)}">
+    <div class="trip-notification-item ${item.read ? 'is-read' : 'is-unread'}" data-id="${escapeHtml(item.id)}">
       <div class="trip-notification-main">
         <strong>${escapeHtml(item.estado)}</strong>
         <span>${escapeHtml(item.texto)}</span>
@@ -3136,21 +3158,6 @@ function eliminarNotificacionPorId(id) {
     guardarNotificacionesEnStorage();
   }
 }
-
-function vaciarNotificaciones() {
-  historial = [];
-  unreadCount = 0;
-  renderizarCentroNotificaciones();
-  guardarNotificacionesEnStorage();
-}
-
-function marcarNotificacionesComoLeidas() {
-  historial = historial.map(item => ({ ...item, read: true }));
-  unreadCount = 0;
-  renderizarCentroNotificaciones();
-  guardarNotificacionesEnStorage();
-}
-
 function mapearEstadoANotificacion(estado) {
   const e = normalizarEstadoUpper(estado);
 
@@ -4094,8 +4101,20 @@ document.addEventListener('touchstart', (e) => {
     cerrarPanelNotificaciones();
   }
 }, { passive: true });
-const processedSupportMessageIds = new Set();
 
+notifMarkReadBtn?.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  marcarNotificacionesComoLeidas();
+});
+
+notifClearBtn?.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  vaciarNotificaciones();
+});
+
+const processedSupportMessageIds = new Set();
 function markSupportMessageProcessed(messageId) {
   const id = String(messageId || "").trim();
   if (!id) return false;
