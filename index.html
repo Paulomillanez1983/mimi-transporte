@@ -3751,7 +3751,7 @@ async function restaurarViajeActivoCliente() {
     const clienteId = session.user.id;
     const clienteEmail = String(session.user.email || '').toLowerCase();
 
-    let { data: viaje, error } = await window.supabase
+    let { data: viaje, error } = await window.supabaseRest
       .from('viajes')
       .select(`
         id,
