@@ -816,12 +816,6 @@ const [workspace, notifications, offers, activeRequest] = await Promise.all([
   loadActiveRequest({ providerId: session.providerId })
 ]);
 
-let dashboard = {
-  earnings: 0,
-  completed: 0,
-  active: null,
-  history: []
-};
 
 setTimeout(async () => {
   try {
