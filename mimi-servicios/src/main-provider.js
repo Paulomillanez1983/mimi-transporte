@@ -174,6 +174,10 @@ selfieStatus: document.getElementById("selfieStatus"),
       sheetStatusText: document.getElementById('sheetStatusText'),
       sheetInfo: document.getElementById('sheetInfo'),
       sheetUpcoming: document.getElementById('sheetUpcoming'),
+      sheetBasePrice: document.getElementById("sheetBasePrice"),
+      sheetPricingMode: document.getElementById("sheetPricingMode"),
+      sheetUpcomingTime: document.getElementById("sheetUpcomingTime"),
+      sheetOnlineAction: document.getElementById("sheetOnlineAction"),
       
       // Tabs
       tabButtons: document.querySelectorAll('.tab-btn'),
@@ -273,6 +277,7 @@ selfieStatus: document.getElementById("selfieStatus"),
     // Load stats
     this.renderStats();
     this.renderServicesAndPricing();
+    this.renderSheetSummary();
     renderProviderDashboard(this.state);
   }
 
@@ -1044,13 +1049,28 @@ stats: {
     });
 
     // Tab buttons
-    this.elements.tabButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const tab = e.target.dataset.tab;
-        this.switchTab(tab);
-      });
-    });
+this.elements.tabButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
 
+    const isSameTab =
+      btn.classList.contains("active") &&
+      this.elements.bottomSheet?.classList.contains("expanded");
+
+    if (isSameTab) {
+      this.setBottomSheetState("peek");
+      return;
+    }
+
+    this.switchTab(tab);
+    this.setBottomSheetState("expanded");
+  });
+});
+    this.elements.sheetOnlineAction?.addEventListener("click", () => {
+  const currentStatus = this.state?.provider?.status ?? "OFFLINE";
+  const nextStatus = currentStatus === "ONLINE_IDLE" ? "OFFLINE" : "ONLINE_IDLE";
+  this.handleStatusToggle(nextStatus);
+});
     // Status toggle
     this.elements.statusToggleModern?.addEventListener('click', (e) => {
       const option = e.target.closest('.toggle-option');
@@ -1794,25 +1814,74 @@ renderServicesAndPricing() {
     this.elements.pricingModeJob.checked = pricing.mode === "job";
   }
 }
+  /* 👇 PEGALO ACÁ, JUSTO ACÁ */
+renderSheetSummary() {
+  const provider = this.state?.provider ?? {};
+  const pricing = provider.pricing ?? {};
+  const status = provider.status ?? "OFFLINE";
+  const isOnline = status === "ONLINE_IDLE";
+
+  const money = (value) => {
+    const amount = Number(value ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) return "—";
+
+    return new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const basePrice = pricing.basePrice || pricing.hourlyRate || 0;
+
+  if (this.elements.sheetBasePrice) {
+    this.elements.sheetBasePrice.textContent = `Base ${money(basePrice)}`;
+  }
+
+  if (this.elements.sheetPricingMode) {
+    this.elements.sheetPricingMode.textContent =
+      pricing.mode === "job" ? "Por trabajo" : "Por hora";
+  }
+
+  if (this.elements.sheetUpcomingTime) {
+    const nextService = this.state?.scheduledServices?.[0] ?? null;
+    this.elements.sheetUpcomingTime.textContent = nextService?.scheduledFor
+      ? new Date(nextService.scheduledFor).toLocaleString("es-AR", {
+          weekday: "short",
+          hour: "2-digit",
+          minute: "2-digit"
+        })
+      : "Sin agenda";
+  }
+
+  if (this.elements.sheetOnlineAction) {
+    this.elements.sheetOnlineAction.textContent = isOnline
+      ? "Salir de línea"
+      : "Ponerme en línea";
+
+    this.elements.sheetOnlineAction.classList.toggle("online", isOnline);
+  }
+}
+
   /**
    * Main render function
    */
-  render() {
-    if (!this.state) return;
+render() {
+  if (!this.state) return;
 
-    this.renderHeader();
-    this.renderOnlineButton();
-    this.renderOfferCard();
-    this.renderActiveService();
-    this.renderBottomSheet();
-    this.renderDrawer();
-    this.renderNotifications();
-    this.renderChat();
-    this.renderModal();
-    this.renderServicesAndPricing();
-    this.renderDrawerProfile();
-  }
-
+  this.renderHeader();
+  this.renderOnlineButton();
+  this.renderOfferCard();
+  this.renderActiveService();
+  this.renderBottomSheet();
+  this.renderDrawer();
+  this.renderNotifications();
+  this.renderChat();
+  this.renderModal();
+  this.renderServicesAndPricing();
+  this.renderSheetSummary();
+  this.renderDrawerProfile();
+}
   /**
    * Render header
    */
