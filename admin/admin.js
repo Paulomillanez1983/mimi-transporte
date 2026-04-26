@@ -1,7 +1,6 @@
 import supabaseAdminService from "./supabase-admin-client.js";
 window.supabaseAdminService = supabaseAdminService;
-import { initAdminSupport } from "./admin-support.js";
-const API_URL =
+¿const API_URL =
   "https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/admin-review-driver";
 
 const SUPABASE_ANON_KEY =
@@ -1519,7 +1518,6 @@ async function bootstrap() {
   }
 
 initMap();
-initAdminSupport();
 await loadDrivers();
 window.setTimeout(() => map?.resize(), 120);
 window.setTimeout(() => map?.resize(), 320);
