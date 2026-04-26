@@ -3731,3 +3731,33 @@ select:focus-visible {
   font-size: 12px;
   font-weight: 800;
 }
+  .footer-signature {
+  width: 100%;
+  margin: 18px auto 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  opacity: .72;
+}
+
+.footer-signature-line {
+  width: 56px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(37,99,235,.22), transparent);
+}
+
+.footer-signature-mark {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #1d4ed8;
+}
+
+.footer-signature-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  color: #475569;
+}
+
