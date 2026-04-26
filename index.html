@@ -4143,15 +4143,35 @@ if (notifList && notifList.dataset.bound !== '1') {
   notifList.addEventListener('click', (event) => {
     const deleteBtn = event.target.closest('[data-action="delete"]');
 
-    if (deleteBtn) {
-      event.preventDefault();
-      event.stopPropagation();
+if (deleteBtn) {
+  event.preventDefault();
+  event.stopPropagation();
 
-      const id = deleteBtn.dataset.id;
-      if (id) eliminarNotificacionPorId(id);
-      return;
+  const id = deleteBtn.dataset.id;
+  if (!id) return;
+
+  const isConfirming = deleteBtn.dataset.confirming === '1';
+
+  if (isConfirming) {
+    eliminarNotificacionPorId(id);
+    return;
+  }
+
+  deleteBtn.dataset.confirming = '1';
+  deleteBtn.dataset.original = deleteBtn.innerHTML;
+  deleteBtn.innerHTML = '¿Borrar?';
+  deleteBtn.classList.add('confirm-delete');
+
+  setTimeout(() => {
+    if (deleteBtn.dataset.confirming === '1') {
+      deleteBtn.dataset.confirming = '0';
+      deleteBtn.innerHTML = deleteBtn.dataset.original || '✕';
+      deleteBtn.classList.remove('confirm-delete');
     }
+  }, 2200);
 
+  return;
+}
     const item = event.target.closest('.trip-notification-item');
     if (!item) return;
 
@@ -4159,8 +4179,9 @@ if (notifList && notifList.dataset.bound !== '1') {
     if (id) marcarNotificacionComoLeidaPorId(id);
   });
 }
+
 const processedSupportMessageIds = new Set();
-function markSupportMessageProcessed(messageId) {
+  function markSupportMessageProcessed(messageId) {
   const id = String(messageId || "").trim();
   if (!id) return false;
 
