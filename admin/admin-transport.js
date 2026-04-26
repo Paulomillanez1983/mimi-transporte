@@ -245,4 +245,4 @@ async function updateSupportStatus() {
   supportStatusEl?.addEventListener("change", updateSupportStatus);
 
   fetchSupportConversations();
-}
+
