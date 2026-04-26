@@ -12,7 +12,6 @@ const supportStatusEl = document.getElementById("supportStatus");
 const supportComposerForm = document.getElementById("supportComposerForm");
 const supportComposerInput = document.getElementById("supportComposerInput");
 const supportSendBtn = document.getElementById("supportSendBtn");
-const supportEmptyEl = document.getElementById("supportEmpty");
 
 let supportConversations = [];
 let activeConversationId = null;
@@ -241,16 +240,6 @@ async function updateSupportStatus() {
     console.error("[admin-support.updateSupportStatus]", error);
   }
 }
-
-export function initAdminSupport() {
-  supportListEl?.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-conversation-id]");
-    if (!button) return;
-
-    activeConversationId = button.getAttribute("data-conversation-id");
-    renderConversationList();
-    renderMessages();
-  });
 
   supportComposerForm?.addEventListener("submit", sendSupportMessage);
   supportStatusEl?.addEventListener("change", updateSupportStatus);
