@@ -2296,10 +2296,10 @@ function resolverEstadoViajeCliente(viajeLike = {}) {
   }
 
   const choferId = viajeLike?.assigned_driver_id || viajeLike?.chofer_id_uuid || null;
-  if (!choferId || !window.supabase) return viajeLike;
+  if (!choferId || !window.supabaseRest) return viajeLike;
 
   try {
-const { data, error } = await window.supabase
+const { data, error } = await window.supabaseRest
   .from('choferes')
   .select('id_uuid, nombre, telefono, email, lat, lng, heading, last_seen_at')
   .eq('id_uuid', choferId)
