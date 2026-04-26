@@ -273,38 +273,40 @@ async requireActiveAdmin() {
       .eq("active", true)
       .maybeSingle();
 
-    if (error) {
-      console.error("[SupabaseAdminService.requireActiveAdmin]", error);
-      return { ok: false, reason: "admin_lookup_error", error };
-    }
+       if (error) {
+         console.error("[SupabaseAdminService.requireActiveAdmin]", error);
+         return { ok: false, reason: "admin_lookup_error", error };
+       }
 
-    if (!data) {
-      return { ok: false, reason: "not_admin" };
-    }
+       if (!data) {
+         return { ok: false, reason: "not_admin" };
+       }
 
-    return {
-      ok: true,
-      user,
-      admin: {
-        ...data,
-        email: user.email || null,
-        full_name:
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.email ||
-          null,
-        avatar_url:
-          user.user_metadata?.avatar_url ||
-          user.user_metadata?.picture ||
-          null,
-        is_super_admin: false
-      },
-      session
-    };
-  } catch (err) {
-    console.error("[SupabaseAdminService.requireActiveAdmin.catch]", err);
-    return { ok: false, reason: "unexpected_error", error: err };
-  }
-}
+       return {
+         ok: true,
+         user,
+         admin: {
+           ...data,
+           email: user.email || null,
+           full_name:
+             user.user_metadata?.full_name ||
+             user.user_metadata?.name ||
+             user.email ||
+             null,
+           avatar_url:
+             user.user_metadata?.avatar_url ||
+             user.user_metadata?.picture ||
+             null,
+           is_super_admin: false
+         },
+         session
+       };
+     } catch (err) {
+       console.error("[SupabaseAdminService.requireActiveAdmin.catch]", err);
+       return { ok: false, reason: "unexpected_error", error: err };
+     }
+   }
+ }
+
 const supabaseAdminService = new SupabaseAdminService();
 export default supabaseAdminService;
