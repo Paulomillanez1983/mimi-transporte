@@ -95,6 +95,7 @@ this.unsubscribe = subscribe((state) => {
   this.render();
 });
 
+this.setupInstallPrompt();
 
 const canBootProviderPanel = await this.loadInitialData();
   
@@ -107,7 +108,6 @@ if (!canBootProviderPanel) {
 
   this.setupEventListeners();
   this.setupBottomSheetGestures();
-  this.setupInstallPrompt();
   this.checkLocationPermission();
   this.startBackgroundSync();
   this.subscribeRealtime();
@@ -829,23 +829,15 @@ setTimeout(async () => {
 
     actions.updateState({
       provider: {
-        ...this.state.provider,
+        ...(this.state?.provider ?? {}),
         dashboard: freshDashboard
       }
     });
   } catch (err) {
     console.warn("[MIMI] Dashboard diferido no disponible:", err);
   }
-}, 800);
-    
+}, 800);    
     this.applyWorkspaceToState(workspace);
-
-    actions.updateState({
-      provider: {
-        ...(this.state?.provider ?? {}),
-        dashboard: freshDashboard
-      }
-    });
 
     actions.updateState({
       notifications: {
