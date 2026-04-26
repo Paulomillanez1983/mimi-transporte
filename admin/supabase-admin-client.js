@@ -252,48 +252,59 @@ class SupabaseAdminService {
     }
   }
 
-  async requireActiveAdmin() {
-    const ready = await this.init();
-    if (!ready || !this.client) {
-      return { ok: false, reason: "init_failed" };
+async requireActiveAdmin() {
+  const ready = await this.init();
+  if (!ready || !this.client) {
+    return { ok: false, reason: "init_failed" };
+  }
+
+  const session = await this.refreshSessionIfNeeded();
+  const user = session?.user || null;
+
+  if (!user?.id) {
+    return { ok: false, reason: "no_session" };
+  }
+
+  try {
+    const { data, error } = await this.client
+      .from("admin_users")
+      .select("user_id, active")
+      .eq("user_id", user.id)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[SupabaseAdminService.requireActiveAdmin]", error);
+      return { ok: false, reason: "admin_lookup_error", error };
     }
 
-    const session = await this.refreshSessionIfNeeded();
-    const user = session?.user || null;
-
-    if (!user?.id) {
-      return { ok: false, reason: "no_session" };
+    if (!data) {
+      return { ok: false, reason: "not_admin" };
     }
 
-    try {
-      const { data, error } = await this.client
-        .from("admin_users")
-        .select("user_id, active")
-        .eq("user_id", user.id)
-        .eq("active", true)
-        .maybeSingle();
-
-      if (error) {
-        console.error("[SupabaseAdminService.requireActiveAdmin]", error);
-        return { ok: false, reason: "admin_lookup_error", error };
-      }
-
-      if (!data) {
-        return { ok: false, reason: "not_admin" };
-      }
-
-      return {
-        ok: true,
-        user,
-        admin: data,
-        session
-      };
-    } catch (err) {
-      console.error("[SupabaseAdminService.requireActiveAdmin.catch]", err);
-      return { ok: false, reason: "unexpected_error", error: err };
-    }
+    return {
+      ok: true,
+      user,
+      admin: {
+        ...data,
+        email: user.email || null,
+        full_name:
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email ||
+          null,
+        avatar_url:
+          user.user_metadata?.avatar_url ||
+          user.user_metadata?.picture ||
+          null,
+        is_super_admin: false
+      },
+      session
+    };
+  } catch (err) {
+    console.error("[SupabaseAdminService.requireActiveAdmin.catch]", err);
+    return { ok: false, reason: "unexpected_error", error: err };
   }
 }
-
 const supabaseAdminService = new SupabaseAdminService();
 export default supabaseAdminService;
