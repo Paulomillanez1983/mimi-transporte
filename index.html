@@ -334,7 +334,7 @@ function createQueryBuilder(table) {
 
   return builder;
 }
-window.supabase = {
+window.supabaseRest = {
   from(table) {
     return createQueryBuilder(table);
   },
@@ -381,6 +381,11 @@ window.supabase = {
   }
 };
 
+/* compat layer */
+window.supabaseFrom = (table) => window.supabaseRest.from(table);
+window.supabaseRpc = (functionName, params = {}) =>
+  window.supabaseRest.rpc(functionName, params);
+  
 if (SupabaseSDK?.createClient) {
   window.sbRealtime = SupabaseSDK.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
