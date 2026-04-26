@@ -3286,8 +3286,46 @@ select:focus-visible {
 
 @media (max-width: 480px) {
   .support-launcher {
-    width: 100%;
-    max-width: 250px;
+    width: min(82vw, 320px) !important;
+    min-height: 68px !important;
+    max-width: 320px !important;
+    margin: 22px auto 14px !important;
+    padding: 0 20px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 12px !important;
+
+    border-radius: 999px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+
+    box-shadow:
+      0 10px 24px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255,255,255,.88) !important;
+  }
+
+  .support-launcher:hover,
+  .support-launcher:focus-visible {
+    transform: translateX(-50%) translateY(-1px) !important;
+  }
+
+  .support-launcher:active {
+    transform: translateX(-50%) scale(.985) !important;
+  }
+
+  .support-launcher-icon {
+    width: 48px !important;
+    height: 48px !important;
+    font-size: 1.05rem !important;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22) !important;
+  }
+
+  .support-launcher-text {
+    font-size: 1.32rem !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.02em !important;
   }
 
   .support-sheet {
@@ -3301,7 +3339,6 @@ select:focus-visible {
     max-width: 90%;
   }
 }
-
 @media (prefers-color-scheme: dark) {
   .support-launcher {
     color: #eef2ff;
