@@ -124,7 +124,49 @@ function renderSupportInbox(conversations = []) {
       </div>
     </button>
   `).join("");
+  list.querySelectorAll("[data-conversation-id]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const conversation = conversations.find(
+      (c) => c.id === button.dataset.conversationId
+    );
+
+    openSupportConversation(conversation);
+  });
+});
 }
+
+function openSupportConversation(conversation) {
+  const empty = document.getElementById("supportThreadEmpty");
+  const panel = document.getElementById("supportThreadPanel");
+  const name = document.getElementById("supportThreadName");
+  const submeta = document.getElementById("supportThreadSubmeta");
+  const messagesEl = document.getElementById("supportMessages");
+
+  if (!conversation || !panel || !messagesEl) return;
+
+  empty?.setAttribute("hidden", "true");
+  panel.removeAttribute("hidden");
+
+  if (name) {
+    name.textContent = conversation.subject || "Consulta de soporte";
+  }
+
+  if (submeta) {
+    submeta.textContent = `${conversation.app_context || "sin contexto"} · ${conversation.participant_role || "sin rol"}`;
+  }
+
+  const messages = conversation.svc_messages || [];
+
+messagesEl.innerHTML = messages.length
+  ? messages.map((m) => `
+    <div class="support-message">
+      <strong>${m.sender_role || "usuario"}</strong>
+      <p>${m.body || m.message || m.content || ""}</p>
+    </div>
+  `).join("")
+  : `<div class="support-empty-state">Esta conversación todavía no tiene mensajes.</div>`;
+}
+
 async function loadSupportInbox() {
   const session = await supabaseAdminService.refreshSessionIfNeeded();
 
