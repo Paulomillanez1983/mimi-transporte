@@ -4090,3 +4090,39 @@ body.legal-gate-open #legalGate {
   border-radius: 24px !important;
   overflow: hidden !important;
 }
+html.legal-gate-open,
+body.legal-gate-open {
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+#legalGate.is-open {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  box-sizing: border-box !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+#legalGate.is-open .legal-gate-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+}
+
+#legalGate.is-open .legal-gate-modal {
+  position: relative !important;
+  z-index: 2 !important;
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
