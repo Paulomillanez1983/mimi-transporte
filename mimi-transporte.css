@@ -3007,28 +3007,39 @@ select:focus-visible {
 }
 
 .support-launcher {
-  display: inline-flex;
+  width: min(100%, 420px);
+  margin: 22px auto 8px;
+  min-height: 76px;
+  padding: 0 24px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin: 4px auto 14px;
-  padding: 13px 18px;
-  min-height: 50px;
-  border: 1px solid rgba(21, 101, 192, 0.14);
+  gap: 14px;
+
+  border: 1px solid rgba(59, 130, 246, 0.14);
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(21, 101, 192, 0.08), rgba(30, 60, 114, 0.10));
-  color: var(--azul-oscuro);
-  font-weight: 800;
-  font-size: 0.96rem;
-  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(241,245,249,0.94) 100%);
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.06),
+    inset 0 1px 0 rgba(255,255,255,0.85);
+
+  color: #1e3a8a;
+  font-weight: 700;
+  font-size: 1.08rem;
+  letter-spacing: -0.01em;
+
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+
   cursor: pointer;
   transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease,
-    border-color 0.18s ease;
+    transform .18s ease,
+    box-shadow .18s ease,
+    background .18s ease;
 }
-
 .support-launcher:hover,
 .support-launcher:focus-visible {
   transform: translateY(-1px);
@@ -3042,14 +3053,24 @@ select:focus-visible {
 }
 
 .support-launcher-icon {
-  font-size: 1.05rem;
-  line-height: 1;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  font-size: 1.15rem;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.24);
+  flex-shrink: 0;
 }
 
 .support-launcher-text {
-  line-height: 1;
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  letter-spacing: -0.01em;
 }
-
 .support-sheet-overlay {
   position: fixed;
   inset: 0;
