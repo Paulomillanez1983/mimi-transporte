@@ -53,11 +53,13 @@ async invokeAdminFunction(functionName, body = {}) {
 
   return json;
 }
-  async init() {
-    if (!this.root) return;
-    await this.load();
-  }
+async init() {
+  if (!this.root || !this.list) return;
 
+  this.bindActions();
+  await this.load();
+}
+  
   async load() {
     const result = await this.invokeAdminFunction("admin-list-service-providers", {});
     const providers = result?.providers ?? [];
@@ -135,24 +137,45 @@ renderList(rows) {
 
   this.bindActions();
 }
-  bindActions() {
-    this.list.querySelectorAll("[data-action]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const providerId = btn.dataset.id;
-        const action = btn.dataset.action;
-        const notes = this.list.querySelector(`[data-note="${providerId}"]`)?.value || null;
+bindActions() {
+  if (this._actionsBound) return;
+  this._actionsBound = true;
 
-await this.invokeAdminFunction("admin-review-service-provider", {
-  provider_id: providerId,
-  action,
-  notes
-});
-        
-        await this.load();
+  this.list.addEventListener("click", async (event) => {
+    const btn = event.target.closest("[data-action]");
+    if (!btn) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const providerId = btn.dataset.id;
+    const action = btn.dataset.action;
+
+    if (!providerId || !action) return;
+
+    const notes =
+      this.list.querySelector(`[data-note="${providerId}"]`)?.value?.trim() || null;
+
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Procesando...";
+
+    try {
+      await this.invokeAdminFunction("admin-review-service-provider", {
+        provider_id: providerId,
+        action,
+        notes
       });
-    });
-  }
-}
 
-window.adminServicesProviders = new AdminServicesProviders();
+      await this.load();
+    } catch (error) {
+      console.error("[adminServicesProviders.bindActions]", error);
+      alert(error?.message || "No se pudo actualizar el prestador.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  });
+}
+  window.adminServicesProviders = new AdminServicesProviders();
 window.addEventListener("DOMContentLoaded", () => window.adminServicesProviders.init());
