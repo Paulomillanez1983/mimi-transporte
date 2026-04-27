@@ -1162,3 +1162,11 @@ export function initAdminSupport() {
   loadSupportConversations({ preserveSelection: true, silent: false });
   startSupportPolling();
 }
+window.adminSupport = {
+  initAdminSupport,
+  loadSupportConversations
+};
+
+window.addEventListener("DOMContentLoaded", () => {
+  initAdminSupport();
+});
