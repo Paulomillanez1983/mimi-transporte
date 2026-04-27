@@ -2154,7 +2154,7 @@ body.modal-open {
     padding:
       12px
       max(10px, var(--safe-right))
-      calc(24px + var(--safe-bottom))
+      calc(110px + var(--safe-bottom))
       max(10px, var(--safe-left));
   }
 
@@ -2193,8 +2193,7 @@ body.modal-open {
     right: 8px;
     height: 2px;
   }
-}
-  
+
   .drivers-map {
     min-height: 260px;
     border-radius: 18px;
@@ -2238,6 +2237,7 @@ body.modal-open {
     gap: 14px;
   }
 }
+
 @media (max-width: 390px) {
   .hero-stats {
     gap: 5px;
@@ -3693,4 +3693,83 @@ header.is-condensed h1 {
   color: #0f172a;
   opacity: 0.78;
   line-height: 1.35;
+}
+/* =========================================================
+   MOBILE DOCK
+   ========================================================= */
+
+.admin-mobile-dock {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 140;
+  display: none;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 10px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.admin-mobile-dock-btn {
+  border: 0;
+  background: transparent;
+  min-height: 58px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--muted);
+  position: relative;
+}
+
+.admin-mobile-dock-btn.is-active {
+  background: color-mix(in srgb, var(--pending) 14%, transparent);
+  color: var(--pending);
+}
+
+.admin-mobile-dock-icon {
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.admin-mobile-dock-label {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-mobile-dock-badge {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 980px) {
+  .admin-mobile-dock {
+    display: grid;
+  }
+
+  .admin-main {
+    padding-bottom: calc(110px + var(--safe-bottom));
+  }
 }
