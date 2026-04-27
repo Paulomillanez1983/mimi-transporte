@@ -12,14 +12,54 @@ class AdminServicesProviders {
       blocked: document.getElementById("svcMetricBlocked")
     };
   }
+async invokeAdminFunction(functionName, body = {}) {
+  if (!functionName) {
+    throw new Error("Nombre de función requerido.");
+  }
 
+  await supabaseAdminService.waitForActiveAdmin?.();
+
+  const { data, error } = await supabaseAdminService.client.auth.getSession();
+
+  if (error) throw error;
+
+  const token = data?.session?.access_token;
+
+  if (!token) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  const supabaseUrl =
+    window.MIMI_ADMIN_ENV?.SUPABASE_URL ||
+    window.MIMI_ENV?.SUPABASE_URL ||
+    window.SUPABASE_URL ||
+    "https://xrphpqmutvadjrucqicn.supabase.co";
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(body || {})
+  });
+
+  const text = await response.text();
+  const json = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    throw new Error(json?.error || json?.message || `Error ${response.status}`);
+  }
+
+  return json;
+}
   async init() {
     if (!this.root) return;
     await this.load();
   }
 
   async load() {
-    const result = await supabaseAdminService.invoke("admin-list-service-providers", {});
+    const result = await this.invokeAdminFunction("admin-list-service-providers", {});
     const providers = result?.providers ?? [];
 
     this.renderMetrics(providers);
@@ -90,12 +130,12 @@ class AdminServicesProviders {
         const action = btn.dataset.action;
         const notes = this.list.querySelector(`[data-note="${providerId}"]`)?.value || null;
 
-        await supabaseAdminService.invoke("admin-review-service-provider", {
-          provider_id: providerId,
-          action,
-          notes
-        });
-
+await this.invokeAdminFunction("admin-review-service-provider", {
+  provider_id: providerId,
+  action,
+  notes
+});
+        
         await this.load();
       });
     });
