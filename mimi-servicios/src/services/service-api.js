@@ -836,7 +836,7 @@ if (error) throw error;
 
 const normalized = normalizeProviderDocuments([data])[0] ?? data;
 
-if (["dni_front", "selfie"].includes(safeDocumentType)) {
+if (safeDocumentType === "selfie") {
   try {
     const verifyResult = await invokeFunction("svc-verify-provider-identity", {
       provider_id: providerId,
@@ -860,8 +860,9 @@ if (["dni_front", "selfie"].includes(safeDocumentType)) {
     );
   }
 }
-return normalized;}
 
+return normalized;
+}
 export async function loadClientRequestInsights(requestId, providerId = null) {
   if (!hasBackend() || !requestId) {
     return {
