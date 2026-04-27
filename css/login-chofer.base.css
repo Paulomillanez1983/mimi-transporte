@@ -386,3 +386,170 @@ button:active {
     padding-top: 72px;
   }
 }
+/* =========================================================
+   MOBILE FIT FINAL — Login sin scroll innecesario
+   ========================================================= */
+
+@media (max-width: 480px) {
+  body {
+    min-height: 100dvh;
+    padding: 8px 14px 10px;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .shell {
+    max-width: 100%;
+    padding-top: 72px;
+  }
+
+  .login-brand {
+    top: 2px;
+  }
+
+  .login-brand img {
+    width: 96px;
+  }
+
+  .login-brand span {
+    font-size: 9px;
+    letter-spacing: 0.48em;
+  }
+
+  .card {
+    padding: 52px 22px 22px;
+    border-radius: 30px;
+    min-height: auto;
+  }
+
+  .card::after {
+    top: -30px;
+    left: 26%;
+    width: 56%;
+    height: 78px;
+  }
+
+  .login-hero-icon {
+    width: 58px;
+    height: 58px;
+    margin-bottom: 14px;
+    border-radius: 20px;
+    font-size: 28px;
+  }
+
+  h1 {
+    font-size: 34px;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  .subtitle {
+    font-size: 15.5px;
+    line-height: 1.35;
+    margin-bottom: 18px;
+  }
+
+  .login-security-box {
+    padding: 14px;
+    gap: 12px;
+    border-radius: 18px;
+    margin-bottom: 14px;
+  }
+
+  .login-security-icon {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 16px;
+    font-size: 18px;
+  }
+
+  .login-security-box strong {
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+
+  .login-security-box span {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .google-btn {
+    min-height: 56px;
+    border-radius: 20px;
+    font-size: 15.5px;
+  }
+
+  .google-mark {
+    width: 26px;
+    height: 26px;
+    font-size: 24px;
+  }
+
+  .login-trust-row {
+    margin-top: 18px;
+  }
+
+  .login-trust-row span {
+    font-size: 20px;
+  }
+
+  .login-trust-row small {
+    font-size: 10.5px;
+  }
+
+  .footer-note {
+    margin-top: 18px;
+    padding-top: 16px;
+    font-size: 12.5px;
+    line-height: 1.42;
+  }
+}
+
+@media (max-height: 760px) and (max-width: 480px) {
+  .shell {
+    padding-top: 58px;
+  }
+
+  .login-brand img {
+    width: 84px;
+  }
+
+  .card {
+    padding-top: 44px;
+    padding-bottom: 18px;
+  }
+
+  .login-hero-icon {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 12px;
+    font-size: 25px;
+  }
+
+  h1 {
+    font-size: 31px;
+  }
+
+  .subtitle {
+    font-size: 14.5px;
+    margin-bottom: 14px;
+  }
+
+  .login-security-box {
+    padding: 12px;
+  }
+
+  .google-btn {
+    min-height: 52px;
+  }
+
+  .login-trust-row {
+    margin-top: 14px;
+  }
+
+  .footer-note {
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+}
