@@ -105,8 +105,10 @@ class AdminServicesProviders {
   }
 
   getProviderStatus(provider) {
-    const profile = provider?.svc_provider_profiles?.[0] || {};
-
+const profile = Array.isArray(provider?.svc_provider_profiles)
+  ? provider.svc_provider_profiles[0] || {}
+  : provider?.svc_provider_profiles || {};
+    
     if (provider?.blocked) return "blocked";
     if (profile?.kyc_status === "rejected") return "rejected";
     if (provider?.approved && !provider?.blocked) return "approved";
@@ -160,8 +162,10 @@ class AdminServicesProviders {
 
     const htmlRows = await Promise.all(
       rows.map(async (provider) => {
-        const profile = provider.svc_provider_profiles?.[0] || {};
-        const docs = provider.svc_provider_documents || [];
+const profile = Array.isArray(provider?.svc_provider_profiles)
+  ? provider.svc_provider_profiles[0] || {}
+  : provider?.svc_provider_profiles || {};        const docs = provider.svc_provider_documents || [];
+        
 
         const dni = docs.find((d) => d.document_type === "dni_front");
         const selfie = docs.find((d) => d.document_type === "selfie");
