@@ -1,20 +1,53 @@
 import supabaseAdminService from "./supabase-admin-client.js";
 
 const emailEl = document.getElementById("email");
-const avatarEl = document.getElementById("avatar"); 
+const avatarEl = document.getElementById("avatar");
 const logoutBtn = document.getElementById("logout");
 
 const moduleButtons = Array.from(document.querySelectorAll("[data-admin-module]"));
 const moduleSections = Array.from(document.querySelectorAll("[data-admin-section]"));
 const mobileDockButtons = Array.from(document.querySelectorAll("[data-admin-mobile-view-target]"));
 
-let activeModule = "transport";
-let selectedSupportConversation = null;
+const MOBILE_BREAKPOINT = 980;
 
+function isAdminMobile() {
+  return window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches;
+}
+
+function normalizeMobileView(view = "choferes") {
+  const allowed = new Set(["choferes", "map", "support", "ai"]);
+  return allowed.has(view) ? view : "choferes";
+}
+
+function setActiveMobileView(view = "choferes") {
+  const nextView = normalizeMobileView(view);
+
+  document.body.setAttribute("data-admin-mobile-view", nextView);
+
+  mobileDockButtons.forEach((button) => {
+    const active = button.dataset.adminMobileViewTarget === nextView;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+
+  window.dispatchEvent(
+    new CustomEvent("mimi-admin:mobile-view-change", {
+      detail: { view: nextView }
+    })
+  );
+
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    if (nextView === "map") {
+      window.dispatchEvent(new Event("resize"));
+      window.mimiAdminMap?.resize?.();
+      window.adminMap?.resize?.();
+    }
+  });
+}
 
 function setActiveModule(moduleName = "transport") {
-  activeModule = moduleName;
-
   document.body.setAttribute("data-admin-module", moduleName);
 
   moduleButtons.forEach((button) => {
@@ -27,12 +60,6 @@ function setActiveModule(moduleName = "transport") {
     const visible = section.dataset.adminSection === moduleName;
     section.classList.toggle("is-active", visible);
     section.toggleAttribute("hidden", !visible);
-  });
-
-  mobileDockButtons.forEach((button) => {
-    const active = button.dataset.adminMobileViewTarget === moduleName;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", active ? "true" : "false");
   });
 
   window.dispatchEvent(
@@ -50,9 +77,12 @@ function setupModuleNavigation() {
   });
 
   mobileDockButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      setActiveModule(button.dataset.adminMobileViewTarget || "transport");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const view = button.dataset.adminMobileViewTarget || "choferes";
+      setActiveMobileView(view);
     });
   });
 }
@@ -93,176 +123,24 @@ function initAdaptiveTheme() {
   }
 }
 
-function renderSupportInbox(conversations = []) {
-  const list = document.getElementById("supportConversationList");
+function setupMobileViewSync() {
+  const sync = () => {
+    if (isAdminMobile()) {
+      const current = document.body.getAttribute("data-admin-mobile-view") || "choferes";
+      setActiveMobileView(current);
+    } else {
+      document.body.removeAttribute("data-admin-mobile-view");
+    }
+  };
 
-  if (!list) {
-    console.warn("[MIMI Admin Support] No existe #supportConversationList");
-    return;
-  }
-
-  if (!conversations.length) {
-    list.innerHTML = `
-      <div class="support-empty-state">
-        Todavía no hay conversaciones.
-      </div>
-    `;
-    return;
-  }
-
-  list.innerHTML = conversations.map((c) => `
-    <button class="support-thread-item" type="button" data-conversation-id="${c.id}">
-      <div class="support-thread-item-top">
-        <strong>${c.subject || "Consulta de soporte"}</strong>
-        <span>${c.unread_admin_count || 0}</span>
-      </div>
-
-      <div class="support-thread-item-meta">
-        ${c.app_context || "sin contexto"} · ${c.participant_role || "sin rol"}
-      </div>
-
-      <div class="support-thread-item-preview">
-        ${c.last_message_preview || "Sin mensajes"}
-      </div>
-    </button>
-  `).join("");
-  list.querySelectorAll("[data-conversation-id]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const conversation = conversations.find(
-      (c) => c.id === button.dataset.conversationId
-    );
-
-    openSupportConversation(conversation);
+  sync();
+  window.addEventListener("resize", sync, { passive: true });
+  window.addEventListener("orientationchange", () => {
+    setTimeout(sync, 250);
   });
-});
 }
 
-function openSupportConversation(conversation) {
-  const empty = document.getElementById("supportThreadEmpty");
-  const panel = document.getElementById("supportThreadPanel");
-  const name = document.getElementById("supportThreadName");
-  const submeta = document.getElementById("supportThreadSubmeta");
-  const messagesEl = document.getElementById("supportMessages");
-
-  if (!conversation || !panel || !messagesEl) return;
-  selectedSupportConversation = conversation;
-  empty?.setAttribute("hidden", "true");
-  panel.removeAttribute("hidden");
-
-  if (name) {
-    name.textContent = conversation.subject || "Consulta de soporte";
-  }
-
-  if (submeta) {
-    submeta.textContent = `${conversation.app_context || "sin contexto"} · ${conversation.participant_role || "sin rol"}`;
-  }
-
-  const messages = conversation.svc_messages || [];
-
-messagesEl.innerHTML = messages.length
-  ? messages.map((m) => `
-    <div class="support-message">
-      <strong>${m.sender_role || "usuario"}</strong>
-      <p>${m.body || m.message || m.content || ""}</p>
-    </div>
-  `).join("")
-  : `<div class="support-empty-state">Esta conversación todavía no tiene mensajes.</div>`;
-}
-async function sendSupportReply() {
-  const input = document.getElementById("supportReplyInput");
-  const button = document.getElementById("supportSendReplyBtn");
-
-  const body = input?.value?.trim();
-
-  if (!selectedSupportConversation?.id) {
-    alert("Primero seleccioná una conversación.");
-    return;
-  }
-
-  if (!body) {
-    alert("Escribí una respuesta.");
-    return;
-  }
-
-  const session = await supabaseAdminService.refreshSessionIfNeeded();
-
-  if (!session?.access_token) {
-    alert("Sesión admin inválida.");
-    return;
-  }
-
-  try {
-    if (button) button.disabled = true;
-
-    const res = await fetch(
-      `${window.MIMI_ADMIN_ENV.SUPABASE_URL}/functions/v1/admin-send-support-message`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`
-        },
-       body: JSON.stringify({
-          conversation_id: selectedSupportConversation.id,
-         message: body
-       })
-      }
-    );
-
-    const data = await res.json();
-
-    if (!res.ok || data?.ok === false) {
-      throw new Error(data?.error || "No se pudo enviar la respuesta.");
-    }
-
-    input.value = "";
-
-    const refreshed = await loadSupportInbox();
-    const updated = refreshed?.conversations?.find(
-      (c) => c.id === selectedSupportConversation.id
-    );
-
-    if (updated) {
-      openSupportConversation(updated);
-    }
-
-    console.log("[MIMI Admin Support] Respuesta enviada", data);
-  } catch (err) {
-    console.error("[MIMI Admin Support] Error enviando respuesta", err);
-    alert(err.message || "Error enviando respuesta.");
-  } finally {
-    if (button) button.disabled = false;
-  }
-}
-async function loadSupportInbox() {
-  const session = await supabaseAdminService.refreshSessionIfNeeded();
-
-  if (!session?.access_token) {
-    console.warn("[MIMI Admin Support] Sin sesión admin");
-    return;
-  }
-
-  const res = await fetch(
-    `${window.MIMI_ADMIN_ENV.SUPABASE_URL}/functions/v1/admin-list-support-conversations`,
-    {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      }
-    }
-  );
-
-  const data = await res.json();
-
-  console.log("[MIMI Admin Support]", data);
-  console.table(data.conversations || []);
-
-  renderSupportInbox(data.conversations || []);
-
-  return data;
-}  
-  
-  async function bootstrapAdminShell() {
+async function bootstrapAdminShell() {
   const result = await supabaseAdminService.waitForActiveAdmin(3200);
 
   if (!result?.ok) {
@@ -282,8 +160,11 @@ async function loadSupportInbox() {
       avatarEl.src = "../assets/icons/logo-mimi.png";
     };
   }
+
   setActiveModule("transport");
+  setActiveMobileView("choferes");
 }
+
 logoutBtn?.addEventListener("click", async () => {
   await supabaseAdminService.signOut();
   window.location.href = "./admin-login.html";
@@ -292,14 +173,5 @@ logoutBtn?.addEventListener("click", async () => {
 initAdaptiveTheme();
 setupDynamicHeader();
 setupModuleNavigation();
-
-document.getElementById("supportSendReplyBtn")?.addEventListener("click", sendSupportReply);
-
-document.getElementById("supportReplyInput")?.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" && !event.shiftKey) {
-    event.preventDefault();
-    sendSupportReply();
-  }
-});
-
+setupMobileViewSync();
 bootstrapAdminShell();
