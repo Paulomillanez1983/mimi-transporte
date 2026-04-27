@@ -19,10 +19,17 @@ class AdminServicesProviders {
     this._filtersBound = false;
   }
 
+  escapeHtml(value = "") {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
   async invokeAdminFunction(functionName, body = {}) {
-    if (!functionName) {
-      throw new Error("Nombre de función requerido.");
-    }
+    if (!functionName) throw new Error("Nombre de función requerido.");
 
     await supabaseAdminService.waitForActiveAdmin?.();
 
@@ -57,6 +64,29 @@ class AdminServicesProviders {
     return json;
   }
 
+  async getSignedDocumentUrl(doc) {
+    const bucket = doc?.storage_bucket;
+    const path = doc?.storage_path;
+
+    if (!bucket || !path) return null;
+
+    try {
+      const { data, error } = await supabaseAdminService.client.storage
+        .from(bucket)
+        .createSignedUrl(path, 60 * 5);
+
+      if (error) {
+        console.warn("[admin-services-providers.getSignedDocumentUrl]", error, doc);
+        return null;
+      }
+
+      return data?.signedUrl || null;
+    } catch (error) {
+      console.warn("[admin-services-providers.getSignedDocumentUrl.catch]", error, doc);
+      return null;
+    }
+  }
+
   async init() {
     if (!this.root || !this.list) return;
 
@@ -71,7 +101,7 @@ class AdminServicesProviders {
 
     this.renderMetrics(this.providers);
     this.renderActiveFilter();
-    this.renderList();
+    await this.renderList();
   }
 
   getProviderStatus(provider) {
@@ -116,7 +146,7 @@ class AdminServicesProviders {
     });
   }
 
-  renderList() {
+  async renderList() {
     const rows = this.getFilteredProviders();
 
     if (!rows.length) {
@@ -128,75 +158,77 @@ class AdminServicesProviders {
       return;
     }
 
-    this.list.innerHTML = rows.map((provider) => {
-      const profile = provider.svc_provider_profiles?.[0] || {};
-      const docs = provider.svc_provider_documents || [];
+    const htmlRows = await Promise.all(
+      rows.map(async (provider) => {
+        const profile = provider.svc_provider_profiles?.[0] || {};
+        const docs = provider.svc_provider_documents || [];
 
-      const dni = docs.find((d) => d.document_type === "dni_front");
-      const selfie = docs.find((d) => d.document_type === "selfie");
+        const dni = docs.find((d) => d.document_type === "dni_front");
+        const selfie = docs.find((d) => d.document_type === "selfie");
 
-      const bucketBase = "https://xrphpqmutvadjrucqicn.supabase.co/storage/v1/object/public/";
+        const dniUrl = await this.getSignedDocumentUrl(dni);
+        const selfieUrl = await this.getSignedDocumentUrl(selfie);
 
-      const dniUrl =
-        dni?.storage_bucket && dni?.storage_path
-          ? `${bucketBase}${dni.storage_bucket}/${dni.storage_path}`
-          : null;
+        const providerId = this.escapeHtml(provider.id);
+        const fullName = this.escapeHtml(provider.full_name || "Sin nombre");
+        const email = this.escapeHtml(provider.email || "Sin email");
+        const kycStatus = this.escapeHtml(profile.kyc_status || "pending");
+        const aiScore = this.escapeHtml(profile.ai_score ?? 0);
+        const aiScoreLabel = this.escapeHtml(profile.ai_score_label || "pending");
+        const reviewStatus = this.escapeHtml(profile.review_status || "pending");
 
-      const selfieUrl =
-        selfie?.storage_bucket && selfie?.storage_path
-          ? `${bucketBase}${selfie.storage_bucket}/${selfie.storage_path}`
-          : null;
-
-      return `
-        <article class="provider-review-card">
-          <div class="provider-review-head">
-            <div>
-              <h3>${provider.full_name || "Sin nombre"}</h3>
-              <p>${provider.email || "Sin email"}</p>
+        return `
+          <article class="provider-review-card">
+            <div class="provider-review-head">
+              <div>
+                <h3>${fullName}</h3>
+                <p>${email}</p>
+              </div>
+              <span class="score-pill">${aiScore}</span>
             </div>
-            <span class="score-pill">${profile.ai_score ?? 0}</span>
-          </div>
 
-          <div class="provider-review-grid">
-            <div><strong>KYC:</strong> ${profile.kyc_status || "pending"}</div>
-            <div><strong>Score:</strong> ${profile.ai_score_label || "pending"}</div>
-            <div><strong>Review:</strong> ${profile.review_status || "pending"}</div>
-          </div>
+            <div class="provider-review-grid">
+              <div><strong>KYC:</strong> ${kycStatus}</div>
+              <div><strong>Score:</strong> ${aiScoreLabel}</div>
+              <div><strong>Review:</strong> ${reviewStatus}</div>
+            </div>
 
-          <div class="provider-docs">
-            ${dniUrl ? `<a target="_blank" href="${dniUrl}">DNI</a>` : ""}
-            ${selfieUrl ? `<a target="_blank" href="${selfieUrl}">Selfie</a>` : ""}
-          </div>
+            <div class="provider-docs">
+              ${dniUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(dniUrl)}">DNI</a>` : ""}
+              ${selfieUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(selfieUrl)}">Selfie</a>` : ""}
+            </div>
 
-          <textarea class="review-note" data-note="${provider.id}" placeholder="Notas de revisión"></textarea>
+            <textarea class="review-note" data-note="${providerId}" placeholder="Notas de revisión"></textarea>
 
-          <div class="provider-review-actions">
-            <button class="btn approve" data-action="approve" data-id="${provider.id}">Aprobar</button>
-            <button class="btn reject" data-action="reject" data-id="${provider.id}">Rechazar</button>
-            <button class="btn block" data-action="needs_resubmission" data-id="${provider.id}">Revisión</button>
-            <button class="btn block" data-action="block" data-id="${provider.id}">Bloquear</button>
-          </div>
-        </article>
-      `;
-    }).join("");
+            <div class="provider-review-actions">
+              <button class="btn approve" data-action="approve" data-id="${providerId}">Aprobar</button>
+              <button class="btn reject" data-action="reject" data-id="${providerId}">Rechazar</button>
+              <button class="btn block" data-action="needs_resubmission" data-id="${providerId}">Revisión</button>
+              <button class="btn block" data-action="block" data-id="${providerId}">Bloquear</button>
+            </div>
+          </article>
+        `;
+      })
+    );
+
+    this.list.innerHTML = htmlRows.join("");
   }
 
   bindFilters() {
     if (this._filtersBound) return;
     this._filtersBound = true;
 
-    document.addEventListener("click", (event) => {
+    document.addEventListener("click", async (event) => {
       const btn = event.target.closest("[data-provider-filter]");
       if (!btn) return;
 
       event.preventDefault();
       event.stopPropagation();
 
-      const nextFilter = btn.dataset.providerFilter || "all";
-      this.activeFilter = nextFilter;
+      this.activeFilter = btn.dataset.providerFilter || "all";
 
       this.renderActiveFilter();
-      this.renderList();
+      await this.renderList();
     });
   }
 
@@ -216,7 +248,7 @@ class AdminServicesProviders {
       if (!providerId || !action) return;
 
       const notes =
-        this.list.querySelector(`[data-note="${providerId}"]`)?.value?.trim() || null;
+        this.list.querySelector(`[data-note="${CSS.escape(providerId)}"]`)?.value?.trim() || null;
 
       const originalText = btn.textContent;
       btn.disabled = true;
@@ -242,6 +274,7 @@ class AdminServicesProviders {
 }
 
 window.adminServicesProviders = new AdminServicesProviders();
+
 window.addEventListener("DOMContentLoaded", () => {
   window.adminServicesProviders.init();
 });
