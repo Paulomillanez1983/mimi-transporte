@@ -283,7 +283,6 @@ async function loadSupportInbox() {
     };
   }
   setActiveModule("transport");
-  await loadSupportInbox();
 }
 logoutBtn?.addEventListener("click", async () => {
   await supabaseAdminService.signOut();
