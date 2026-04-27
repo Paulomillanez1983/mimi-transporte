@@ -1,8 +1,6 @@
 /* =========================================================
    MIMI Driver Login — Base
    Archivo: login-chofer.base.css
-   Rol: reset, variables, estructura principal, card, formulario,
-   botones, mensajes y caja de seguridad Google.
    ========================================================= */
 
 * {
@@ -13,9 +11,8 @@
 
 :root {
   --bg: #000;
-  --card: #111214;
   --muted: rgba(255,255,255,0.62);
-  --line: rgba(255,255,255,0.1);
+  --line: rgba(255,255,255,0.10);
   --primary: #276EF1;
   --primary-hover: #448AFF;
   --danger: #E11900;
@@ -30,18 +27,21 @@ body {
 
 body {
   font-family: 'Inter', sans-serif;
-  background: var(--bg);
   color: #fff;
   min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 20px;
   overflow-x: hidden;
+  background:
+    radial-gradient(circle at 18% 24%, rgba(39,110,241,0.18), transparent 30%),
+    radial-gradient(circle at 82% 30%, rgba(255,43,214,0.18), transparent 32%),
+    linear-gradient(180deg, #03050b 0%, #000 100%);
 }
 
 .shell {
   width: 100%;
-  max-width: 380px;
+  max-width: 430px;
 }
 
 .shell--hidden {
@@ -56,189 +56,7 @@ body {
   transform: translateY(0) scale(1);
   filter: blur(0);
   pointer-events: auto;
-  transition:
-    opacity .45s ease,
-    transform .45s ease,
-    filter .45s ease;
-}
-
-.card {
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)),
-    radial-gradient(circle at top, rgba(255,255,255,0.05), transparent 44%);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  padding: 24px;
-  backdrop-filter: blur(10px);
-  box-shadow:
-    0 20px 60px rgba(0,0,0,0.45),
-    inset 0 1px 0 rgba(255,255,255,0.04);
-}
-
-.logo {
-  text-align: center;
-  margin-bottom: 8px;
-}
-
-.logo img {
-  width: 60px;
-  height: 60px;
-  object-fit: contain;
-  display: block;
-  margin: 0 auto;
-  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.32));
-}
-
-h1 {
-  font-size: 28px;
-  font-weight: 800;
-  text-align: center;
-  margin-bottom: 8px;
-}
-
-.subtitle {
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 24px;
-  line-height: 1.45;
-}
-
-.login-form {
-  width: 100%;
-}
-
-.form-group {
-  margin-bottom: 14px;
-}
-
-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: rgba(255,255,255,0.82);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-input {
-  width: 100%;
-  padding: 15px 16px;
-  background: #1C1C1E;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  color: #fff;
-  font-size: 16px;
-  transition: border-color .16s ease, transform .12s ease, opacity .12s ease;
-}
-
-input:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-button {
-  width: 100%;
-  padding: 16px;
-  border: none;
-  border-radius: var(--radius);
-  font-size: 16px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform .12s ease, opacity .12s ease, background .12s ease;
-}
-
-button:active {
-  transform: scale(0.99);
-}
-
-.primary-btn {
-  background: var(--primary);
-  color: #fff;
-  margin-top: 8px;
-}
-
-.primary-btn:hover {
-  background: var(--primary-hover);
-}
-
-.google-btn {
-  margin-top: 12px;
-  background: #fff;
-  color: #000;
-}
-
-.google-btn--main {
-  margin-top: 0;
-  min-height: 54px;
-}
-
-.link-btn {
-  margin-top: 12px;
-  padding: 10px 0 0;
-  background: transparent;
-  color: #8ab4ff;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.login-security-box {
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--line);
-  display: grid;
-  gap: 6px;
-  text-align: center;
-}
-
-.login-security-box strong {
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.login-security-box span {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.45;
-}
-
-.error,
-.ok {
-  font-size: 14px;
-  margin-top: 14px;
-  text-align: center;
-  display: none;
-  line-height: 1.45;
-}
-
-.error.visible {
-  display: block;
-  color: var(--danger);
-}
-
-.ok.visible {
-  display: block;
-  color: var(--success);
-}
-
-.footer-note {
-  margin-top: 16px;
-  text-align: center;
-  color: rgba(255,255,255,0.48);
-  font-size: 12px;
-  line-height: 1.45;
-}
-body {
-  background:
-    radial-gradient(circle at 18% 24%, rgba(39,110,241,0.18), transparent 30%),
-    radial-gradient(circle at 82% 30%, rgba(255,43,214,0.18), transparent 32%),
-    linear-gradient(180deg, #03050b 0%, #000 100%);
-}
-
-.shell {
-  max-width: 430px;
+  transition: opacity .45s ease, transform .45s ease, filter .45s ease;
 }
 
 .card {
@@ -251,6 +69,7 @@ body {
     radial-gradient(circle at 100% 10%, rgba(255,43,214,0.20), transparent 34%),
     linear-gradient(180deg, rgba(17,20,31,0.96), rgba(6,8,14,0.98));
   border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(10px);
   box-shadow:
     0 28px 90px rgba(0,0,0,0.72),
     0 0 0 1px rgba(39,110,241,0.10) inset,
@@ -264,9 +83,7 @@ body {
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(135deg, rgba(39,110,241,0.85), transparent 35%, rgba(255,43,214,0.72));
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -312,17 +129,73 @@ h1 {
   font-size: clamp(34px, 8vw, 44px);
   line-height: 1.02;
   letter-spacing: -0.045em;
+  font-weight: 800;
+  text-align: center;
   margin-bottom: 14px;
 }
 
 .subtitle {
   max-width: 330px;
   margin: 0 auto 26px;
-  font-size: 17px;
   color: rgba(255,255,255,0.70);
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.login-form {
+  width: 100%;
+}
+
+button {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .12s ease, opacity .12s ease, background .12s ease;
+}
+
+button:active {
+  transform: scale(0.99);
+}
+
+.google-btn {
+  margin-top: 12px;
+  background: #fff;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 62px;
+  border-radius: 22px;
+  font-size: 17px;
+  box-shadow:
+    0 18px 34px rgba(0,0,0,0.28),
+    inset 0 -1px 0 rgba(0,0,0,0.08);
+}
+
+.google-btn--main {
+  margin-top: 0;
+}
+
+.google-mark {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 22px;
+  font-weight: 900;
+  color: #4285f4;
+  background: #fff;
 }
 
 .login-security-box {
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -348,6 +221,7 @@ h1 {
 .login-security-box strong {
   display: block;
   font-size: 16px;
+  font-weight: 800;
   margin-bottom: 6px;
 }
 
@@ -355,38 +229,13 @@ h1 {
   display: block;
   font-size: 14px;
   color: rgba(255,255,255,0.58);
-}
-
-.google-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  min-height: 62px;
-  border-radius: 22px;
-  font-size: 17px;
-  box-shadow:
-    0 18px 34px rgba(0,0,0,0.28),
-    inset 0 -1px 0 rgba(0,0,0,0.08);
-}
-
-.google-mark {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  font-size: 22px;
-  font-weight: 900;
-  color: #4285f4;
-  background: #fff;
+  line-height: 1.45;
 }
 
 .login-trust-row {
   margin-top: 24px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0;
 }
 
 .login-trust-row div {
@@ -412,12 +261,33 @@ h1 {
   line-height: 1.25;
 }
 
+.error,
+.ok {
+  font-size: 14px;
+  margin-top: 14px;
+  text-align: center;
+  display: none;
+  line-height: 1.45;
+}
+
+.error.visible {
+  display: block;
+  color: var(--danger);
+}
+
+.ok.visible {
+  display: block;
+  color: var(--success);
+}
+
 .footer-note {
   margin-top: 26px;
   padding-top: 22px;
   border-top: 1px solid rgba(255,255,255,0.08);
-  font-size: 14px;
+  text-align: center;
   color: rgba(255,255,255,0.54);
+  font-size: 14px;
+  line-height: 1.45;
 }
 
 @media (max-width: 420px) {
