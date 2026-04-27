@@ -612,25 +612,33 @@
 <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
 
 <script type="module">
-  import { supabaseAdminService } from "./supabase-admin-client.js?v=2026.04.27.10";
-
-  window.supabaseAdminService = supabaseAdminService;
+  import "./supabase-admin-client.js?v=2026.04.27.11";
 
   window.getAdminAccessToken = async function getAdminAccessToken() {
-    const session = await supabaseAdminService.auth.getSession();
+    const client =
+      window.supabaseAdminService ||
+      window.supabaseAdmin ||
+      window.adminSupabase ||
+      window.sbAdmin;
+
+    if (!client?.auth?.getSession) {
+      throw new Error("No existe cliente admin Supabase global");
+    }
+
+    const session = await client.auth.getSession();
     return session?.data?.session?.access_token || null;
   };
 
   window.requireActiveAdmin = async function requireActiveAdmin() {
-    const session = await supabaseAdminService.auth.getSession();
-    const token = session?.data?.session?.access_token;
+    const token = await window.getAdminAccessToken();
 
     if (!token) {
       throw new Error("No hay sesión admin activa");
     }
 
-    return session.data.session;
+    return true;
   };
+</script>
 </script>
   <script type="module" src="./admin.js?v=2026.04.27.8"></script>
 <script type="module" src="./admin-map.js?v=2026.04.27.8"></script>
