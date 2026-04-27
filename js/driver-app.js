@@ -1303,30 +1303,34 @@ async _rejectTrip() {
     if (this._destroyed) return;
     if (!position || !Number.isFinite(position.lat) || !Number.isFinite(position.lng)) return;
 
-    const currentTrip = tripManager.getCurrentTrip();
+const currentTrip = tripManager.getCurrentTrip();
 
-    if (!this._onlineStatus && !currentTrip) {
-      uiController.hideArrival?.();
-      return;
-    }
+if (!this._onlineStatus && !currentTrip) {
+  uiController.hideArrival?.();
+  return;
+}
 
-    mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
+mapService.updateDriverPosition?.(position.lng, position.lat, position.heading);
 
-    if (!currentTrip) {
-      uiController.hideArrival?.();
-      return;
-    }
+/*
+  IMPORTANTE:
+  Persistimos ubicación SIEMPRE que el chofer esté online,
+  aunque todavía no tenga viaje activo.
+  Esto alimenta el mapa admin en tiempo real.
+*/
+const shouldPersistLocation = this._onlineStatus || !!currentTrip;
+    
+const currentTripStatus = String(currentTrip?.estado || '').toUpperCase();
 
-    if (String(currentTrip.estado || '').toUpperCase() === 'EN_CURSO') {
-      this._locationUpdateInterval = 5000;
-    } else if (this._onlineStatus) {
-      this._locationUpdateInterval = 15000;
-    } else {
-      this._locationUpdateInterval = 30000;
-    }
-
+if (currentTripStatus === 'EN_CURSO') {
+  this._locationUpdateInterval = 5000;
+} else if (this._onlineStatus) {
+  this._locationUpdateInterval = 15000;
+} else {
+  this._locationUpdateInterval = 30000;
+}
     const now = Date.now();
-    if (now - this._lastLocationUpdate >= this._locationUpdateInterval) {
+    if (shouldPersistLocation && now - this._lastLocationUpdate >= this._locationUpdateInterval) {
       this._lastLocationUpdate = now;
 
       try {
