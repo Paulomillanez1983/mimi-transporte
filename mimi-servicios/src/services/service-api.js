@@ -863,6 +863,7 @@ if (safeDocumentType === "selfie") {
 
 return normalized;
 }
+
 export async function loadClientRequestInsights(requestId, providerId = null) {
   if (!hasBackend() || !requestId) {
     return {
