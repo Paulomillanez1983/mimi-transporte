@@ -1,17 +1,30 @@
 /* =========================================================
    MIMI Driver Login — Layout / Motion
    Archivo: login-chofer.layout.css
-   Rol: splash, skeleton, animaciones, estados visuales.
    ========================================================= */
+
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .app-splash {
   position: fixed;
   inset: 0;
   z-index: 9999;
   background:
-    radial-gradient(circle at center, rgba(255,255,255,0.05), transparent 42%),
-    radial-gradient(circle at center, rgba(34,197,94,0.06), transparent 55%),
-    #000;
+    radial-gradient(circle at center, rgba(39,110,241,0.12), transparent 34%),
+    radial-gradient(circle at center, rgba(255,43,214,0.10), transparent 42%),
+    #03050b;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -28,6 +41,7 @@
 
 .app-splash__inner {
   width: 100%;
+  min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -35,13 +49,14 @@
   justify-content: center;
   gap: 18px;
   padding: 24px;
+  text-align: center;
   animation: splashEnter .55s cubic-bezier(.22,1,.36,1) both;
 }
 
 .app-splash__stage {
   position: relative;
-  width: min(72vw, 340px);
-  height: min(72vw, 340px);
+  width: min(62vw, 260px);
+  height: min(62vw, 260px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -51,7 +66,7 @@
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 320px;
+  max-width: 220px;
   height: auto;
   object-fit: contain;
   filter:
@@ -71,7 +86,7 @@
 }
 
 .app-splash__brand {
-  font-size: clamp(20px, 4vw, 30px);
+  font-size: clamp(18px, 4vw, 28px);
   font-weight: 800;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -80,9 +95,8 @@
 
 .app-splash__status {
   font-size: 13px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(255,255,255,0.62);
   text-align: center;
-  margin-top: -6px;
   letter-spacing: 0.04em;
 }
 
@@ -117,55 +131,8 @@
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255,255,255,0.12),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
   animation: skeletonShimmer 1.25s infinite;
-}
-
-.card.loading .logo,
-.card.loading h1,
-.card.loading .subtitle,
-.card.loading .footer-note {
-  border-radius: 12px;
-}
-
-.card.loading .logo {
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 8px;
-}
-
-.card.loading h1 {
-  width: 56%;
-  height: 28px;
-  margin: 0 auto 8px;
-}
-
-.card.loading .subtitle {
-  width: 84%;
-  height: 18px;
-  margin: 0 auto 24px;
-}
-
-.card.loading .form-group label {
-  width: 72px;
-  height: 12px;
-  border-radius: 999px;
-  margin-bottom: 8px;
-}
-
-.card.loading input,
-.card.loading button,
-.card.loading .footer-note {
-  border-radius: 16px;
-}
-
-.card.loading input {
-  color: transparent;
 }
 
 .page-enter {
@@ -173,36 +140,18 @@
 }
 
 @keyframes splashEnter {
-  from {
-    opacity: 0;
-    transform: scale(1.035);
-    filter: blur(10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0);
-  }
+  from { opacity: 0; transform: scale(1.035); filter: blur(10px); }
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
 }
 
 @keyframes splashLogoFloat {
-  0%, 100% {
-    transform: scale(1) translateY(0);
-  }
-  50% {
-    transform: scale(1.03) translateY(-4px);
-  }
+  0%,100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.03) translateY(-4px); }
 }
 
 @keyframes splashGlowPulse {
-  0%, 100% {
-    transform: scale(0.96);
-    opacity: 0.68;
-  }
-  50% {
-    transform: scale(1.06);
-    opacity: 1;
-  }
+  0%,100% { transform: scale(.96); opacity: .68; }
+  50% { transform: scale(1.06); opacity: 1; }
 }
 
 @keyframes splashLoader {
@@ -211,20 +160,42 @@
 }
 
 @keyframes skeletonShimmer {
-  100% {
-    transform: translateX(100%);
-  }
+  100% { transform: translateX(100%); }
 }
 
 @keyframes pageEnter {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.992);
+    transform: translateY(14px) scale(.992);
     filter: blur(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 14px;
+  }
+
+  .shell {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .app-splash__inner {
+    padding: 20px;
+  }
+
+  .app-splash__stage {
+    width: min(64vw, 220px);
+    height: min(64vw, 220px);
+  }
+
+  .app-splash__logo {
+    max-width: 180px;
   }
 }
