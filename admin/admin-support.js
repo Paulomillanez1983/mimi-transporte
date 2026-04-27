@@ -138,7 +138,7 @@ function supportMessageTicks(status) {
 }
 
 function isMobileSupport() {
-  return window.matchMedia("(max-width: 720px)").matches;
+  return window.matchMedia("(max-width: 980px)").matches;
 }
 
 function normalizeSupportRole(role) {
@@ -223,7 +223,7 @@ function getConversationSecondary(item) {
     parts.push(subject);
   }
 
-  return parts.join(" Â· ");
+  return parts.join(" · ");
 }
 
 function getMessageText(msg) {
