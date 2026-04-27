@@ -147,7 +147,8 @@
 </div>
 
 <div class="map-surface">
-<div class="map-floating-controls" aria-label="Controles flotantes del mapa">
+  <div class="map-canvas-frame">
+    <div class="map-floating-controls" aria-label="Controles flotantes del mapa">
   <button id="fitDriversBtn" type="button" class="map-fab map-fab-primary" title="Ver todos los choferes">
     ⤢
   </button>
@@ -208,14 +209,17 @@
   </select>
 </div>
   
-          <div
-            id="driversMap"
-            class="drivers-map"
-            aria-label="Mapa con ubicación de choferes"
-          ></div>
+    <div
+      id="driversMap"
+      class="drivers-map"
+      aria-label="Mapa con ubicación de choferes"
+    ></div>
 
-          <div class="map-overlay">
-            <div class="map-legend" aria-label="Leyenda del mapa">
+  </div>
+
+  <div class="map-overlay">
+
+    <div class="map-legend" aria-label="Leyenda del mapa">
               <span><i class="dot dot-online"></i> Activo</span>
               <span><i class="dot dot-pending"></i> Pendiente</span>
               <span><i class="dot dot-blocked"></i> Bloqueado</span>
