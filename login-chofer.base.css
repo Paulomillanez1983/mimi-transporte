@@ -314,3 +314,66 @@ button:active {
     min-width: 52px;
   }
 }
+.shell {
+  position: relative;
+  padding-top: 118px;
+  overflow: visible;
+}
+
+.login-brand {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  margin: 0;
+}
+
+.card {
+  overflow: visible;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  top: -44px;
+  left: 28%;
+  width: 52%;
+  height: 110px;
+  border-top: 3px solid rgba(124,74,255,0.45);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(.2px);
+}
+
+.login-hero-icon {
+  position: relative;
+  z-index: 2;
+}
+
+.card > * {
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 480px) {
+  .shell {
+    padding-top: 104px;
+  }
+
+  .login-brand img {
+    width: 112px;
+  }
+
+  h1 {
+    font-size: 34px;
+  }
+
+  .subtitle {
+    font-size: 16px;
+  }
+
+  .card {
+    padding-top: 72px;
+  }
+}
