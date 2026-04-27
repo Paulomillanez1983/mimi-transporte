@@ -614,21 +614,20 @@
 <script type="module">
   import "./supabase-admin-client.js?v=2026.04.27.11";
 
-  window.getAdminAccessToken = async function getAdminAccessToken() {
-    const client =
-      window.supabaseAdminService ||
-      window.supabaseAdmin ||
-      window.adminSupabase ||
-      window.sbAdmin;
+window.getAdminAccessToken = async function getAdminAccessToken() {
+  const client =
+    window.supabaseAdminService?.client ||
+    window.supabaseAdmin ||
+    window.adminSupabase ||
+    window.sbAdmin;
 
-    if (!client?.auth?.getSession) {
-      throw new Error("No existe cliente admin Supabase global");
-    }
+  if (!client?.auth?.getSession) {
+    throw new Error("No existe cliente admin Supabase global");
+  }
 
-    const session = await client.auth.getSession();
-    return session?.data?.session?.access_token || null;
-  };
-
+  const session = await client.auth.getSession();
+  return session?.data?.session?.access_token || null;
+};
   window.requireActiveAdmin = async function requireActiveAdmin() {
     const token = await window.getAdminAccessToken();
 
