@@ -70,33 +70,55 @@
 </div>
   <div class="shell shell--hidden" id="loginShell">
     <div class="card">
-<div class="logo">
+<div class="login-brand">
   <img src="./assets/icons/logo-mimi.png" alt="MIMI Driver" />
+  <span>DRIVER</span>
 </div>
-      <h1>MIMI Driver</h1>
-      <p class="subtitle">
-        Ingresá de forma segura con Google
-      </p>
+
+<div class="login-hero-icon">🛡️</div>
+
+<h1>Bienvenido, chofer</h1>
+
+<p class="subtitle">
+  Ingresá de forma segura con Google para acceder a tu cuenta.
+</p>
 
 <form class="login-form" id="loginForm">
   <div class="login-security-box">
-    <strong>Ingreso seguro para choferes</strong>
-    <span>Usamos Google para validar tu identidad y proteger el acceso a tu cuenta.</span>
+    <div class="login-security-icon">🔒</div>
+    <div>
+      <strong>Tu seguridad es lo primero</strong>
+      <span>Validamos tu identidad y protegemos tus datos en cada viaje.</span>
+    </div>
   </div>
 
   <button type="button" class="google-btn google-btn--main" id="googleLoginBtn">
-    Continuar con Google
+    <span class="google-mark">G</span>
+    <span>Continuar con Google</span>
   </button>
+
+  <div class="login-trust-row">
+    <div>
+      <span>🛡️</span>
+      <small>Acceso seguro</small>
+    </div>
+    <div>
+      <span>👤</span>
+      <small>Solo choferes</small>
+    </div>
+    <div>
+      <span>🪪</span>
+      <small>Validación de identidad</small>
+    </div>
+  </div>
 
   <div class="error" id="error"></div>
   <div class="ok" id="ok"></div>
 </form>
-      <p class="footer-note">
-        Si ingresás por primera vez como chofer, luego del login te pediremos validar identidad y documentación.
-      </p>
-    </div>
-  </div>
 
+<p class="footer-note">
+  Si ingresás por primera vez como chofer, luego del login te pediremos validar identidad y documentación.
+</p>
 <script type="module">
   import supabaseService from "./js/supabase-client.js";
   import CONFIG from "./js/config.js";
