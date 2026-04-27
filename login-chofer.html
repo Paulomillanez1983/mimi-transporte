@@ -484,34 +484,22 @@
 </div>
       <h1>MIMI Driver</h1>
       <p class="subtitle">
-        Ingresá con tu cuenta o continuá con Google
+        Ingresá de forma segura con Google
       </p>
 
-      <form class="login-form" id="loginForm">
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" required autocomplete="username" />
-        </div>
+<form class="login-form" id="loginForm">
+  <div class="login-security-box">
+    <strong>Ingreso seguro para choferes</strong>
+    <span>Usamos Google para validar tu identidad y proteger el acceso a tu cuenta.</span>
+  </div>
 
-        <div class="form-group">
-          <label for="password">Contraseña</label>
-          <input type="password" id="password" required autocomplete="current-password" />
-        </div>
+  <button type="button" class="google-btn google-btn--main" id="googleLoginBtn">
+    Continuar con Google
+  </button>
 
-        <button type="submit" class="primary-btn" id="loginBtn">Ingresar</button>
-
-        <button type="button" class="google-btn" id="googleLoginBtn">
-          Continuar con Google
-        </button>
-
-        <button type="button" class="link-btn" id="forgotPasswordBtn">
-          Olvidé mi contraseña
-        </button>
-
-        <div class="error" id="error"></div>
-        <div class="ok" id="ok"></div>
-      </form>
-
+  <div class="error" id="error"></div>
+  <div class="ok" id="ok"></div>
+</form>
       <p class="footer-note">
         Si ingresás por primera vez como chofer, luego del login te pediremos validar identidad y documentación.
       </p>
