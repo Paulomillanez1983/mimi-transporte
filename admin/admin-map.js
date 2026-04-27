@@ -289,8 +289,6 @@ async function fetchDriverLocations() {
       .from("driver_profiles")
       .select(`
         user_id,
-        full_name,
-        email,
         review_status,
         is_blocked,
         last_lat,
@@ -303,14 +301,19 @@ async function fetchDriverLocations() {
 
     if (error) throw error;
 
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data)
+      ? data.map((row) => ({
+          ...row,
+          full_name: row.full_name || "Chofer",
+          email: row.email || ""
+        }))
+      : [];
   } catch (err) {
     console.warn("[admin-map] No se pudieron cargar ubicaciones", err);
-    setMapMeta("Mapa listo · sin datos de choferes");
+    setMapMeta("Mapa listo · sin ubicaciones válidas");
     return [];
   }
 }
-
 async function refreshDriverMarkers() {
   const drivers = await fetchDriverLocations();
   renderDriverMarkers(drivers);
