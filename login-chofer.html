@@ -450,6 +450,32 @@
   margin-top: -6px;
   letter-spacing: 0.04em;
 } 
+    .login-security-box {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+  text-align: center;
+}
+
+.login-security-box strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.login-security-box span {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.google-btn--main {
+  margin-top: 0;
+  min-height: 54px;
+}
   </style>
 </head>
 
@@ -512,10 +538,7 @@
 
   const errorEl = document.getElementById("error");
   const okEl = document.getElementById("ok");
-  const loginBtn = document.getElementById("loginBtn");
-  const googleLoginBtn = document.getElementById("googleLoginBtn");
-  const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
-
+const googleLoginBtn = document.getElementById("googleLoginBtn");
   const splashEl = document.getElementById("appSplash");
   const loginShell = document.getElementById("loginShell");
   const loginCard = document.querySelector(".card");
@@ -574,33 +597,22 @@ function setSplashStatus(text = "") {
     okEl.classList.remove("visible");
   }
 
-  function setLoading(loading, target = null) {
-    const buttons = [loginBtn, googleLoginBtn, forgotPasswordBtn];
+function setLoading(loading, target = null) {
+  const buttons = [googleLoginBtn];
 
-    buttons.forEach((btn) => {
-      if (!btn) return;
-      btn.disabled = loading;
-      btn.style.opacity = loading ? "0.7" : "1";
-      btn.style.pointerEvents = loading ? "none" : "auto";
-    });
+  buttons.forEach((btn) => {
+    if (!btn) return;
+    btn.disabled = loading;
+    btn.style.opacity = loading ? "0.7" : "1";
+    btn.style.pointerEvents = loading ? "none" : "auto";
+  });
 
-    if (loginBtn) loginBtn.textContent = "Ingresar";
-    if (googleLoginBtn) googleLoginBtn.textContent = "Continuar con Google";
-    if (forgotPasswordBtn) forgotPasswordBtn.textContent = "Olvidé mi contraseña";
+  if (googleLoginBtn) googleLoginBtn.textContent = "Continuar con Google";
 
-    if (loading && target === loginBtn && loginBtn) {
-      loginBtn.textContent = "Ingresando...";
-    }
-
-    if (loading && target === googleLoginBtn && googleLoginBtn) {
-      googleLoginBtn.textContent = "Abriendo Google...";
-    }
-
-    if (loading && target === forgotPasswordBtn && forgotPasswordBtn) {
-      forgotPasswordBtn.textContent = "Enviando...";
-    }
+  if (loading && target === googleLoginBtn && googleLoginBtn) {
+    googleLoginBtn.textContent = "Abriendo Google...";
   }
-
+}
   function addSkeletons() {
     document.querySelector(".logo")?.classList.add("skeleton");
     document.querySelector("h1")?.classList.add("skeleton");
@@ -786,46 +798,6 @@ if (session?.access_token) {
     }
   }
 
-  document.getElementById("loginForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    clearMessages();
-    setLoading(true, loginBtn);
-
-    try {
-      await supabaseService.init();
-
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-
-      if (!email || !password) {
-        showError("Ingresá email y contraseña");
-        return;
-      }
-
-      showSplash("Iniciando sesión...");
-
-      const { error } = await supabaseService.client.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        splashEl?.classList.add("hidden");
-        showError("❌ " + error.message);
-        return;
-      }
-
-      showOk("✅ Login correcto...");
-      await redirectAfterAuth();
-    } catch (err) {
-      console.error("[login] error:", err);
-      splashEl?.classList.add("hidden");
-      showError("❌ No pudimos iniciar sesión");
-    } finally {
-      setLoading(false);
-    }
-  });
-
   googleLoginBtn.addEventListener("click", async () => {
     clearMessages();
     setLoading(true, googleLoginBtn);
@@ -863,39 +835,6 @@ if (session?.access_token) {
     }
   });
 
-  forgotPasswordBtn.addEventListener("click", async () => {
-    clearMessages();
-    setLoading(true, forgotPasswordBtn);
-
-    try {
-      await supabaseService.init();
-
-      const email = document.getElementById("email").value.trim();
-
-      if (!email) {
-        showError("Ingresá tu email para recuperar la contraseña");
-        return;
-      }
-
-      const redirectTo = new URL("./reset-password.html", window.location.href).toString();
-
-      const { error } = await supabaseService.client.auth.resetPasswordForEmail(email, {
-        redirectTo
-      });
-
-      if (error) {
-        showError("❌ " + error.message);
-        return;
-      }
-
-      showOk("✅ Te enviamos un email para restablecer la contraseña");
-    } catch (err) {
-      console.error("[forgotPassword] error:", err);
-      showError("❌ No pudimos enviar el email de recuperación");
-    } finally {
-      setLoading(false);
-    }
-  });
 
   showInitialLoadingUI();
   checkSession();
