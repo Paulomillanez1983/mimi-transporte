@@ -899,7 +899,7 @@ async function loadSupportConversations(options = {}) {
       setSupportBusy(true);
     }
 
-    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/support-list-conversation`, {
+    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/admin-list-support-conversations`, {
       method: "GET",
       headers: {}
     });
@@ -1023,7 +1023,7 @@ async function persistConversationStatus(status) {
   }
 
   try {
-    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/support-update-status`, {
+    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/admin-update-support-status`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
