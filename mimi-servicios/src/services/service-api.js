@@ -838,14 +838,28 @@ const normalized = normalizeProviderDocuments([data])[0] ?? data;
 
 if (["dni_front", "selfie"].includes(safeDocumentType)) {
   try {
-    await invokeFunction("svc-verify-provider-identity", {
-      provider_id: providerId
+    const verifyResult = await invokeFunction("svc-verify-provider-identity", {
+      provider_id: providerId,
+      document_type: safeDocumentType,
+      document_id: normalized?.id ?? null
     });
+
+    console.log("[MIMI Servicios][KYC] Resultado verificación IA:", verifyResult);
   } catch (verifyError) {
-    console.warn("[MIMI Servicios] Verificación IA pendiente:", verifyError);
+    console.error("[MIMI Servicios][KYC] Falló svc-verify-provider-identity:", {
+      message: verifyError?.message,
+      name: verifyError?.name,
+      context: verifyError?.context,
+      details: verifyError?.details,
+      error: verifyError
+    });
+
+    throw new Error(
+      verifyError?.message ||
+      "No pudimos ejecutar la verificación IA del documento."
+    );
   }
 }
-
 return normalized;}
 
 export async function loadClientRequestInsights(requestId, providerId = null) {
