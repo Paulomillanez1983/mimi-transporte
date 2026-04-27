@@ -2699,12 +2699,14 @@ async confirmCameraCapture() {
       this.elements.cameraStatus.textContent = "Subiendo imagen segura...";
     }
 
-    await uploadProviderDocument({
-      providerId,
-      documentType,
-      file
-    });
+const uploadedDocument = await uploadProviderDocument({
+  providerId,
+  documentType,
+  file
+});
 
+console.log("[MIMI][KYC] Documento subido:", uploadedDocument);
+    
     if (documentType === "dni_front" && this.elements.dniFrontStatus) {
       this.elements.dniFrontStatus.textContent = "Documento recibido ✅";
     }
@@ -2722,6 +2724,9 @@ async confirmCameraCapture() {
     }
 
     this.showToast("Verificando identidad...", "info");
+    await invokeFunction("svc-provider-identity-check", {
+  provider_id: providerId
+});
 
 
     const workspace = await loadProviderWorkspace(providerId);
