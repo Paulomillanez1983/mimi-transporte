@@ -1657,7 +1657,8 @@ import { openCameraCaptureModal } from "./js/onboarding-camera-capture.js";
 import supabaseService from "./js/supabase-client.js";
 
 window.supabaseDriverService = supabaseService;
-window.supabaseClient = supabaseService;
+window.supabaseDriverClient = supabaseService.client;
+window.supabaseClient = supabaseService.client;
     import {
   getDocumentsProgress,
   getOverallOnboardingState
