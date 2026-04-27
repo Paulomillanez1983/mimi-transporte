@@ -1,7 +1,7 @@
 import supabaseAdminService from "./supabase-admin-client.js";
 
 const emailEl = document.getElementById("email");
-const avatarEl = document.getElementById("avatar");
+const avatarEl = document.getElementById("avatar"); 
 const logoutBtn = document.getElementById("logout");
 
 const moduleButtons = Array.from(document.querySelectorAll("[data-admin-module]"));
