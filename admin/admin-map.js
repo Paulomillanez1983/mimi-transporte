@@ -285,32 +285,24 @@ async function fetchDriverLocations() {
     const ready = await svc.init?.();
     if (!ready) return [];
 
+    /*
+      IMPORTANTE:
+      driver_profiles hoy no tiene columnas de ubicación.
+      Para no romper el mapa, no consultamos last_lat / last_lng acá.
+      El mapa queda montado y listo, aunque todavía no tenga markers reales.
+    */
+
     const { data, error } = await svc.client
       .from("driver_profiles")
-      .select(`
-        user_id,
-        review_status,
-        is_blocked,
-        last_lat,
-        last_lng,
-        last_location_at
-      `)
-      .not("last_lat", "is", null)
-      .not("last_lng", "is", null)
+      .select("user_id")
       .limit(500);
 
     if (error) throw error;
 
-    return Array.isArray(data)
-      ? data.map((row) => ({
-          ...row,
-          full_name: row.full_name || "Chofer",
-          email: row.email || ""
-        }))
-      : [];
+    return [];
   } catch (err) {
     console.warn("[admin-map] No se pudieron cargar ubicaciones", err);
-    setMapMeta("Mapa listo · sin ubicaciones válidas");
+    setMapMeta("Mapa listo · sin ubicaciones configuradas");
     return [];
   }
 }
