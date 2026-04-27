@@ -786,7 +786,7 @@ async function sendSupportReply() {
 
     const uploadedAttachments = await uploadSupportAttachments(current.id, files);
 
-    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/support-send-message`, {
+    const response = await fetchSupportApiWithAdminRetry(`${SUPPORT_API_BASE}/admin-send-support-message`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -934,79 +934,21 @@ async function loadSupportConversations(options = {}) {
     updateSupportDockBadge();
   } catch (err) {
     console.error("[support.loadSupportConversations]", err);
-    try {
-      const ready = await supabaseAdminService.init();
-      if (!ready || !supabaseAdminService.client) {
-        throw new Error("No se pudo inicializar Supabase admin");
-      }
 
-      const previousSelectedId = preserveSelection ? supportState.selectedId : null;
+    supportState.conversations = [];
+    supportState.filtered = [];
+    supportState.selectedId = null;
+    supportState.mobileThreadOpen = false;
 
-      const { data: tickets, error: ticketError } = await supabaseAdminService.client
-        .from("soporte_tickets")
-        .select("*")
-        .order("last_message_at", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false });
+    renderConversationList();
+    renderSelectedConversation();
+    updateSupportDockBadge();
 
-      if (ticketError) {
-        throw new Error(ticketError.message || "No se pudieron cargar los tickets");
-      }
-
-      const conversations = await Promise.all(
-        (Array.isArray(tickets) ? tickets : []).map(async (ticket) => {
-          const { data: messages } = await supabaseAdminService.client
-            .from("soporte_mensajes")
-            .select("*")
-            .eq("ticket_id", ticket.id)
-            .order("created_at", { ascending: true });
-
-          return normalizeConversation({
-            ...ticket,
-            id: ticket.id,
-            status: ticket.estado,
-            subject: ticket.asunto,
-            last_message: ticket.ultimo_mensaje,
-            messages: Array.isArray(messages) ? messages : []
-          });
-        })
+    if (!silent) {
+      showSupportToast(
+        err?.message || "No se pudieron cargar las conversaciones",
+        "error"
       );
-
-      supportState.conversations = conversations.filter((item) => item && item.id);
-      applySupportFilters();
-
-      const stillExists = previousSelectedId && supportState.conversations.some((item) => item.id === previousSelectedId);
-
-      if (stillExists) {
-        supportState.selectedId = previousSelectedId;
-      } else if (supportState.filtered[0]) {
-        supportState.selectedId = supportState.filtered[0].id;
-      } else {
-        supportState.selectedId = null;
-        supportState.mobileThreadOpen = false;
-      }
-
-      renderConversationList();
-      renderSelectedConversation();
-      updateSupportDockBadge();
-
-      if (!silent) {
-        showSupportToast("Soporte cargado", "success");
-      }
-    } catch (fallbackErr) {
-      console.error("[support.fallbackLoadSupportConversations]", fallbackErr);
-
-      supportState.conversations = [];
-      supportState.filtered = [];
-      supportState.selectedId = null;
-      supportState.mobileThreadOpen = false;
-
-      renderConversationList();
-      renderSelectedConversation();
-      updateSupportDockBadge();
-
-      if (!silent) {
-        showSupportToast(fallbackErr?.message || "No se pudieron cargar las conversaciones", "error");
-      }
     }
   } finally {
     if (!silent) {
