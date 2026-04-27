@@ -2889,14 +2889,18 @@ function getChosenFile(docType) {
 
     async function getUserOrRedirect() {
       try {
-        const dbReady = await supabaseService.init();
+const dbReady = await supabaseService.init();
 
-        if (!dbReady || !supabaseService?.client?.auth) {
-          console.error("[onboarding] Supabase/Auth no inicializado");
-          window.location.replace("login-chofer.html");
-          return null;
-        }
+window.supabaseDriverService = supabaseService;
+window.supabaseDriverClient = supabaseService.client;
+window.supabaseClient = supabaseService.client;
 
+if (!dbReady || !supabaseService?.client?.auth) {
+  console.error("[onboarding] Supabase/Auth no inicializado");
+  window.location.replace("login-chofer.html");
+  return null;
+}
+        
         let { data: sessionData, error: sessionError } = await supabaseService.client.auth.getSession();
 
         if (sessionError) {
