@@ -1338,6 +1338,47 @@
   color: rgba(15,23,42,0.68);
   line-height: 1.45;
 }
+  /* UX PRO Step 3: evita botones duplicados y baja confusión */
+.step-3-secondary-actions {
+  display: none !important;
+}
+
+.doc-actions-inline--wizard.has-file {
+  grid-template-columns: 1fr;
+}
+
+.doc-actions-inline--wizard.has-file .doc-upload-btn {
+  display: none;
+}
+
+.doc-actions-inline--wizard.has-file .doc-camera-btn {
+  background: #eff4ff !important;
+  color: #1e3a8a !important;
+  border: 1px solid rgba(47,111,237,0.14) !important;
+}
+
+.doc-actions-inline--wizard.has-file .doc-camera-btn::after {
+  content: " / cambiar";
+}
+
+.doc-wizard-nav {
+  margin-top: 14px;
+}
+
+@media (max-width: 720px) {
+  .doc-wizard-nav {
+    gap: 10px;
+  }
+
+  .doc-wizard-nav .btn-secondary {
+    flex: 0 0 auto;
+    min-width: 112px;
+  }
+
+  .doc-wizard-nav .btn-primary {
+    flex: 1 1 auto;
+  }
+}
   </style>
 </head>
 <body>
@@ -1609,16 +1650,17 @@
       </div>
     </div>
 
-    <div class="actions">
-      <button class="btn-secondary" id="docWizardBackBtn" type="button">Volver</button>
-      <button class="btn-primary" id="docWizardNextBtn" type="button">Continuar</button>
-    </div>
+<div class="actions doc-wizard-nav">
+  <button class="btn-secondary" id="docWizardBackBtn" type="button">Anterior</button>
+  <button class="btn-primary" id="docWizardNextBtn" type="button">Continuar</button>
+</div>  
   </div>
+  
 
-  <div class="actions">
-    <button class="btn-secondary" id="backTo2" type="button">Volver</button>
-    <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentación</button>
-  </div>
+<div class="actions step-3-secondary-actions">
+  <button class="btn-secondary" id="backTo2" type="button">Volver al vehículo</button>
+  <button class="btn-primary" id="submitAllBtn" type="button">Enviar documentación</button>
+</div>
   <div class="upload-runtime-box" id="uploadRuntimeBox" style="display:none;">
   <div class="upload-runtime-box__top">
     <strong id="uploadRuntimeTitle">Preparando envío...</strong>
@@ -2071,22 +2113,65 @@ function updateWizardPrimaryState() {
   const docType = getCurrentDocType();
   const meta = DOC_META[docType];
   const hasFile = !!getChosenFile(docType);
-
   const state = docValidationState.get(docType);
   const hasBlockingError = state === "error";
 
-  const allowContinue = onboardingBusy ? false : (meta?.optional ? true : hasFile && !hasBlockingError);
+  const isLastDoc = currentDocumentIndex >= DOCUMENT_FLOW.length - 1;
+  const requiredCompleted = getRequiredDocsCompletedCount();
+  const allRequiredDone = requiredCompleted >= REQUIRED_DOCS.length;
+
+  const allowContinue = onboardingBusy
+    ? false
+    : (meta?.optional ? true : hasFile && !hasBlockingError);
 
   if (docWizardNextBtn) {
     docWizardNextBtn.disabled = !allowContinue;
     docWizardNextBtn.classList.toggle("doc-wizard-next-ready", allowContinue);
+
+    if (isLastDoc && allRequiredDone) {
+      docWizardNextBtn.textContent = "Enviar documentación";
+    } else if (hasFile || meta?.optional) {
+      docWizardNextBtn.textContent = "Continuar";
+    } else {
+      docWizardNextBtn.textContent = "Primero cargá este documento";
+    }
+  }
+
+  if (docWizardBackBtn) {
+    docWizardBackBtn.textContent = currentDocumentIndex === 0
+      ? "Volver al vehículo"
+      : "Anterior";
+  }
+
+  const actions = document.querySelector(".doc-actions-inline--wizard");
+  if (actions) {
+    actions.classList.toggle("has-file", hasFile);
+  }
+
+  if (docWizardCameraLabel) {
+    docWizardCameraLabel.textContent = hasFile ? "Cambiar foto" : "📷 Sacar foto";
+  }
+
+  if (docWizardUploadLabel) {
+    docWizardUploadLabel.textContent = hasFile ? "Cambiar archivo" : "⬆ Subir archivo";
+  }
+
+  if (submitAllBtn) {
+    submitAllBtn.style.display = "none";
   }
 
   if (stickyPrimaryBtn && currentStep === 3) {
     stickyPrimaryBtn.disabled = !allowContinue;
+
+    if (isLastDoc && allRequiredDone) {
+      stickyPrimaryBtn.textContent = "Enviar documentación";
+    } else if (allowContinue) {
+      stickyPrimaryBtn.textContent = "Continuar";
+    } else {
+      stickyPrimaryBtn.textContent = "Cargá el documento";
+    }
   }
 }
-
 function clearAutoAdvanceTimer() {
   if (!autoAdvanceTimer) return;
   clearTimeout(autoAdvanceTimer);
@@ -2421,7 +2506,6 @@ function renderDocumentWizard() {
   renderDocWizardPreview(docType);
   syncDocWizardStatus();
   updateWizardPrimaryState();
-
   const state = docValidationState.get(docType);
   const isValidated = !!file && (state === "ok" || state === "warning");
 
