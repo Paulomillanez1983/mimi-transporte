@@ -80,49 +80,61 @@ async invokeAdminFunction(functionName, body = {}) {
     this.metrics.blocked.textContent = blocked;
   }
 
-  renderList(rows) {
-    this.list.innerHTML = rows.map(provider => {
-      const profile = provider.svc_provider_profiles?.[0] || {};
-      const docs = provider.svc_provider_documents || [];
-      const dni = docs.find(d => d.document_type === "dni_front");
-      const selfie = docs.find(d => d.document_type === "selfie");
+renderList(rows) {
+  this.list.innerHTML = rows.map(provider => {
+    const profile = provider.svc_provider_profiles?.[0] || {};
+    const docs = provider.svc_provider_documents || [];
 
-      return `
-        <article class="provider-review-card">
-          <div class="provider-review-head">
-            <div>
-              <h3>${provider.full_name || "Sin nombre"}</h3>
-              <p>${provider.email || "Sin email"}</p>
-            </div>
-            <span class="score-pill">${profile.ai_score ?? 0}</span>
+    const dni = docs.find(d => d.document_type === "dni_front");
+    const selfie = docs.find(d => d.document_type === "selfie");
+
+    const bucketBase = "https://xrphpqmutvadjrucqicn.supabase.co/storage/v1/object/public/";
+
+    const dniUrl =
+      dni?.storage_bucket && dni?.storage_path
+        ? `${bucketBase}${dni.storage_bucket}/${dni.storage_path}`
+        : null;
+
+    const selfieUrl =
+      selfie?.storage_bucket && selfie?.storage_path
+        ? `${bucketBase}${selfie.storage_bucket}/${selfie.storage_path}`
+        : null;
+
+    return `
+      <article class="provider-review-card">
+        <div class="provider-review-head">
+          <div>
+            <h3>${provider.full_name || "Sin nombre"}</h3>
+            <p>${provider.email || "Sin email"}</p>
           </div>
+          <span class="score-pill">${profile.ai_score ?? 0}</span>
+        </div>
 
-          <div class="provider-review-grid">
-            <div><strong>KYC:</strong> ${profile.kyc_status || "pending"}</div>
-            <div><strong>Score:</strong> ${profile.ai_score_label || "pending"}</div>
-            <div><strong>Review:</strong> ${profile.review_status || "pending"}</div>
-          </div>
+        <div class="provider-review-grid">
+          <div><strong>KYC:</strong> ${profile.kyc_status || "pending"}</div>
+          <div><strong>Score:</strong> ${profile.ai_score_label || "pending"}</div>
+          <div><strong>Review:</strong> ${profile.review_status || "pending"}</div>
+        </div>
 
-          <div class="provider-docs">
-            ${dni ? `<a target="_blank" href="${dni.metadata_json?.public_url || "#"}">DNI</a>` : ""}
-            ${selfie ? `<a target="_blank" href="${selfie.metadata_json?.public_url || "#"}">Selfie</a>` : ""}
-          </div>
+        <div class="provider-docs">
+          ${dniUrl ? `<a target="_blank" href="${dniUrl}">DNI</a>` : ""}
+          ${selfieUrl ? `<a target="_blank" href="${selfieUrl}">Selfie</a>` : ""}
+        </div>
 
-          <textarea class="review-note" data-note="${provider.id}" placeholder="Notas de revisión"></textarea>
+        <textarea class="review-note" data-note="${provider.id}" placeholder="Notas de revisión"></textarea>
 
-          <div class="provider-review-actions">
-            <button class="btn approve" data-action="approve" data-id="${provider.id}">Aprobar</button>
-            <button class="btn reject" data-action="reject" data-id="${provider.id}">Rechazar</button>
-            <button class="btn block" data-action="needs_resubmission" data-id="${provider.id}">Revisión</button>
-            <button class="btn block" data-action="block" data-id="${provider.id}">Bloquear</button>
-          </div>
-        </article>
-      `;
-    }).join("");
+        <div class="provider-review-actions">
+          <button class="btn approve" data-action="approve" data-id="${provider.id}">Aprobar</button>
+          <button class="btn reject" data-action="reject" data-id="${provider.id}">Rechazar</button>
+          <button class="btn block" data-action="needs_resubmission" data-id="${provider.id}">Revisión</button>
+          <button class="btn block" data-action="block" data-id="${provider.id}">Bloquear</button>
+        </div>
+      </article>
+    `;
+  }).join("");
 
-    this.bindActions();
-  }
-
+  this.bindActions();
+}
   bindActions() {
     this.list.querySelectorAll("[data-action]").forEach((btn) => {
       btn.addEventListener("click", async () => {
