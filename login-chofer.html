@@ -68,67 +68,85 @@
     </div>
   </div>
 </div>
-  <div class="shell shell--hidden" id="loginShell">
-    <div class="card">
-<div class="login-brand">
-  <img src="./assets/icons/logo-mimi.png" alt="MIMI Driver" />
-  <span>DRIVER</span>
-</div>
+<div class="driver-auth-shell shell--hidden" id="loginShell">
+  <div class="driver-auth-stage">
 
-<div class="login-hero-icon">🛡️</div>
+    <!-- HERO -->
+    <section class="driver-auth-hero">
+      <div class="driver-auth-brand">
+        <span>MiMI</span>
+      </div>
 
-<h1>Bienvenido, chofer</h1>
+      <h1 class="driver-auth-title">
+        Elegí cómo, cuándo y dónde trabajar
+        <span class="check">✔</span>
+      </h1>
 
-<p class="subtitle">
-  Ingresá de forma segura con Google para acceder a tu cuenta.
-</p>
+      <p class="driver-auth-copy">
+        Activá tu cuenta de conductor y empezá a generar ingresos con una experiencia profesional, segura y simple.
+      </p>
 
-<form class="login-form" id="loginForm">
-<div class="login-security-box">
-  <div class="login-security-icon">✦</div>
-  <div>
-    <strong>Acceso verificado</strong>
-    <span>Verificamos identidad y documentación para operar dentro de la plataforma.</span>
+      <img
+        src="./assets/auto-mimicar-safe.png"
+        alt="MIMICAR"
+        class="driver-auth-image"
+      />
+    </section>
+
+    <!-- CARD -->
+    <section class="driver-auth-card">
+      <h2>MIMICAR</h2>
+      <div class="driver-auth-kicker">Para conductores</div>
+
+      <p class="driver-auth-desc">
+        Movilidad inteligente. Más viajes, más ingresos.
+      </p>
+
+      <div class="driver-auth-security">
+        <div class="driver-auth-security-icon">✦</div>
+        <div>
+          <strong>Acceso verificado</strong>
+          <span>Validamos identidad y documentación para operar dentro de la plataforma.</span>
+        </div>
+      </div>
+
+      <button type="button" class="driver-auth-google" id="googleLoginBtn">
+        <span class="google-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" role="img" aria-hidden="true">
+            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.207 36 24 36c-6.627 0-12-5.373-12-12S17.373 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.277 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.277 4 24 4c-7.682 0-14.347 4.337-17.694 10.691z"/>
+            <path fill="#4CAF50" d="M24 44c5.176 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.143 35.091 26.715 36 24 36c-5.186 0-9.625-3.329-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.084 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+          </svg>
+        </span>
+        <span>Continuar con Google</span>
+      </button>
+
+      <div class="driver-auth-trust">
+        <div>
+          <span>🛡️</span>
+          <small>Acceso seguro</small>
+        </div>
+        <div>
+          <span>👤</span>
+          <small>Solo choferes</small>
+        </div>
+        <div>
+          <span>🪪</span>
+          <small>Identidad validada</small>
+        </div>
+      </div>
+
+      <div class="auth-error" id="error"></div>
+      <div class="auth-ok" id="ok"></div>
+
+      <p class="driver-auth-note">
+        MIMI actúa como plataforma de intermediación tecnológica. El acceso requiere validación de identidad y documentación.
+      </p>
+    </section>
+
   </div>
 </div>
-  
-  <button type="button" class="google-btn google-btn--main" id="googleLoginBtn">
-<span class="google-mark" aria-hidden="true">
-  <svg viewBox="0 0 48 48" role="img" aria-hidden="true">
-    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.207 36 24 36c-6.627 0-12-5.373-12-12S17.373 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.277 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
-    <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.277 4 24 4c-7.682 0-14.347 4.337-17.694 10.691z"/>
-    <path fill="#4CAF50" d="M24 44c5.176 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.143 35.091 26.715 36 24 36c-5.186 0-9.625-3.329-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
-    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.084 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
-  </svg>
-  </span>
-    <span>Continuar con Google</span>
-  </button>
-
-  <div class="login-trust-row">
-    <div>
-      <span>🛡️</span>
-      <small>Acceso seguro</small>
-    </div>
-    <div>
-      <span>👤</span>
-      <small>Solo choferes</small>
-    </div>
-    <div>
-      <span>🪪</span>
-      <small>Validación de identidad</small>
-    </div>
-  </div>
-
-  <div class="error" id="error"></div>
-  <div class="ok" id="ok"></div>
-</form>
-
-<p class="footer-note">
-  MIMI actúa como plataforma de intermediación tecnológica. El acceso requiere validación de identidad y documentación.
-</p>
-    </div>
-  </div>
-
 <script type="module">
   import supabaseService from "./js/supabase-client.js";
   import CONFIG from "./js/config.js";
