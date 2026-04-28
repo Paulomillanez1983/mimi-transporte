@@ -39,13 +39,12 @@
     }
 
     .viewport{
-      width:1080px;
+      width:min(1080px,100%);
       margin:0 auto;
-      transform-origin:top center;
     }
 
     .shell{
-      width:1080px;
+      width:100%;
       border-radius:38px;
       border:1px solid var(--border);
       background:
@@ -61,6 +60,7 @@
       justify-content:space-between;
       align-items:center;
       padding:34px 42px 12px;
+      gap:16px;
     }
 
     .brand{
@@ -68,6 +68,7 @@
       font-weight:950;
       letter-spacing:-.08em;
       line-height:1;
+      white-space:nowrap;
     }
 
     .brand span{color:var(--blue2)}
@@ -82,6 +83,7 @@
       border:1px solid rgba(255,255,255,.10);
       font-size:18px;
       font-weight:800;
+      white-space:nowrap;
     }
 
     .status::before{
@@ -91,6 +93,7 @@
       border-radius:50%;
       background:var(--green);
       box-shadow:0 0 18px rgba(53,216,111,.9);
+      flex:0 0 auto;
     }
 
     .hero{
@@ -115,6 +118,7 @@
       letter-spacing:.08em;
       text-transform:uppercase;
       margin-bottom:28px;
+      white-space:nowrap;
     }
 
     .eyebrow::before{
@@ -124,6 +128,7 @@
       border-radius:50%;
       background:var(--blue);
       box-shadow:0 0 16px rgba(47,115,255,.9);
+      flex:0 0 auto;
     }
 
     h1{
@@ -183,6 +188,7 @@
 
     .hero-car{
       width:430px;
+      max-width:100%;
       position:relative;
       z-index:2;
       filter:drop-shadow(0 26px 34px rgba(0,0,0,.58));
@@ -242,6 +248,7 @@
       place-items:center;
       border:1px solid rgba(255,255,255,.14);
       box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 18px 34px rgba(0,0,0,.26);
+      flex:0 0 auto;
     }
 
     .app-icon.blue{background:linear-gradient(145deg,#69b7ff,#2458ff)}
@@ -293,6 +300,7 @@
 
     .driver-product img{
       width:390px;
+      max-width:100%;
       position:relative;
       z-index:1;
       filter:drop-shadow(0 26px 26px rgba(0,0,0,.5));
@@ -321,6 +329,7 @@
     .trust-pill b{
       color:#3b82ff;
       font-size:24px;
+      flex:0 0 auto;
     }
 
     .services-grid{
@@ -374,18 +383,81 @@
       font-size:25px;
       font-weight:950;
       letter-spacing:-.03em;
+      position:relative;
+      overflow:hidden;
+      isolation:isolate;
+      transform:translateZ(0);
+    }
+
+    .btn::before{
+      content:"";
+      position:absolute;
+      top:-35%;
+      left:-45%;
+      width:34%;
+      height:170%;
+      background:linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255,255,255,.10) 22%,
+        rgba(255,255,255,.75) 50%,
+        rgba(255,255,255,.10) 78%,
+        transparent 100%
+      );
+      transform:skewX(-22deg);
+      filter:blur(.2px);
+      opacity:.95;
+      z-index:-1;
+      animation:shineMove 2.65s ease-in-out infinite;
+    }
+
+    .btn::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:inherit;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(255,255,255,.32), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,.18), transparent 46%);
+      opacity:.72;
+      z-index:-2;
     }
 
     .btn-blue{
       color:white;
       background:linear-gradient(180deg,#3b82ff,#1d4ed8);
-      box-shadow:0 18px 34px rgba(47,115,255,.28);
+      box-shadow:
+        0 18px 34px rgba(47,115,255,.28),
+        0 0 26px rgba(47,115,255,.18);
     }
 
     .btn-green{
       color:#06220f;
       background:linear-gradient(180deg,#7df5a5,#28c865);
-      box-shadow:0 18px 34px rgba(53,216,111,.24);
+      box-shadow:
+        0 18px 34px rgba(53,216,111,.24),
+        0 0 26px rgba(53,216,111,.18);
+    }
+
+    .btn-blue::before{
+      box-shadow:0 0 28px rgba(255,255,255,.55), 0 0 36px rgba(124,199,255,.35);
+    }
+
+    .btn-green::before{
+      box-shadow:0 0 28px rgba(255,255,255,.55), 0 0 36px rgba(134,239,172,.35);
+    }
+
+    .btn span{
+      position:relative;
+      z-index:2;
+    }
+
+    @keyframes shineMove{
+      0%{left:-55%;opacity:0}
+      18%{opacity:.95}
+      54%{left:120%;opacity:.95}
+      70%,100%{left:130%;opacity:0}
     }
 
     .benefits{
@@ -438,12 +510,14 @@
       font-weight:950;
       color:white;
       letter-spacing:-.08em;
+      white-space:nowrap;
     }
 
     .footer-sep{
       width:1px;
       height:34px;
       background:rgba(124,199,255,.35);
+      flex:0 0 auto;
     }
 
     .footer-copy{
@@ -456,20 +530,246 @@
       color:#9ab7ff;
       font-size:18px;
       font-weight:700;
+      white-space:nowrap;
     }
 
     svg{display:block}
 
     @media (max-width:900px){
       body{
-        padding:8px 8px 18px;
-        min-height:calc(1530px * ((100vw - 16px) / 1080));
+        padding:0;
       }
 
       .viewport{
-        transform:scale(calc((100vw - 16px) / 1080));
-        transform-origin:top left;
+        width:100%;
         margin:0;
+      }
+
+      .shell{
+        width:100%;
+        min-height:100vh;
+        border-radius:0;
+        border-left:none;
+        border-right:none;
+      }
+
+      .topbar{
+        padding:20px 18px 8px;
+      }
+
+      .brand{
+        font-size:34px;
+      }
+
+      .status{
+        font-size:11px;
+        padding:8px 11px;
+        gap:7px;
+      }
+
+      .status::before{
+        width:7px;
+        height:7px;
+      }
+
+      .hero{
+        display:block;
+        padding:26px 18px 18px;
+      }
+
+      .eyebrow{
+        font-size:11px;
+        padding:8px 13px;
+        margin-bottom:20px;
+      }
+
+      h1{
+        font-size:42px;
+        line-height:1.02;
+        letter-spacing:-.065em;
+        margin-bottom:16px;
+      }
+
+      .hero-copy{
+        font-size:16px;
+        line-height:1.5;
+        max-width:100%;
+      }
+
+      .hero-visual{
+        height:160px;
+        margin-top:18px;
+      }
+
+      .city{
+        inset:0 0 34px;
+      }
+
+      .headlight{
+        left:5%;
+        bottom:66px;
+        width:160px;
+        height:32px;
+      }
+
+      .hero-car{
+        width:280px;
+        max-width:88%;
+      }
+
+      .cards{
+        grid-template-columns:1fr;
+        gap:16px;
+        padding:0 14px 22px;
+      }
+
+      .card{
+        min-height:auto;
+        padding:22px;
+        border-radius:26px;
+      }
+
+      .card-head{
+        gap:14px;
+        margin-bottom:18px;
+      }
+
+      .app-icon{
+        width:58px;
+        height:58px;
+        border-radius:18px;
+      }
+
+      .app-icon svg{
+        width:30px;
+        height:30px;
+      }
+
+      .card h2{
+        font-size:30px;
+      }
+
+      .role{
+        font-size:17px;
+      }
+
+      .card p{
+        font-size:17px;
+      }
+
+      .driver-product{
+        height:150px;
+        margin:12px 0 18px;
+      }
+
+      .driver-product img{
+        width:280px;
+        max-width:100%;
+      }
+
+      .trust-row{
+        grid-template-columns:1fr;
+        gap:10px;
+      }
+
+      .trust-pill{
+        min-height:54px;
+        font-size:15px;
+        border-radius:16px;
+      }
+
+      .services-grid{
+        grid-template-columns:1fr 1fr;
+        gap:12px;
+        margin:24px 0 24px;
+      }
+
+      .service-box{
+        height:104px;
+        border-radius:18px;
+      }
+
+      .service-box svg{
+        width:36px;
+        height:36px;
+      }
+
+      .service-box strong{
+        font-size:15px;
+      }
+
+      .plus{
+        font-size:30px;
+      }
+
+      .btn{
+        height:58px;
+        border-radius:18px;
+        font-size:17px;
+      }
+
+      .benefits{
+        margin:0 14px 22px;
+        padding:22px;
+        border-radius:24px;
+        grid-template-columns:1fr;
+        gap:18px;
+      }
+
+      .benefit{
+        gap:14px;
+      }
+
+      .benefit-icon{
+        width:42px;
+      }
+
+      .benefit h3{
+        font-size:17px;
+      }
+
+      .benefit p{
+        font-size:15px;
+      }
+
+      .footer{
+        padding:22px 18px;
+        gap:14px;
+        flex-wrap:wrap;
+      }
+
+      .footer-brand{
+        font-size:28px;
+      }
+
+      .footer-copy{
+        font-size:15px;
+      }
+
+      .footer-link{
+        font-size:14px;
+      }
+    }
+
+    @media (max-width:380px){
+      h1{
+        font-size:38px;
+      }
+
+      .hero-copy{
+        font-size:15px;
+      }
+
+      .card{
+        padding:20px;
+      }
+
+      .card h2{
+        font-size:27px;
+      }
+
+      .btn{
+        font-size:16px;
       }
     }
   </style>
