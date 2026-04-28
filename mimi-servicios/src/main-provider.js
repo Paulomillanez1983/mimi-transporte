@@ -2578,23 +2578,26 @@ async handleInstall() {
    * Handle logout
    */
 async handleLogout() {
-  if (!confirm("¿Seguro que querés cerrar sesión?")) return;
-
   try {
     await signOut();
+
+    this.state = null;
+    this.map = null;
+
+    document.body.classList.remove(
+      "provider-authenticated",
+      "provider-auth-submitting"
+    );
+
+    document.body.classList.add("provider-auth-required");
+
+    this.showProviderLoginGate();
   } catch (err) {
-    console.warn("[MIMI] Error cerrando sesión:", err);
-  } finally {
-    localStorage.removeItem(STORAGE_KEYS.SESSION);
-    actions.clearSession();
-
-    localStorage.setItem("mimi_services_active_mode", "provider");
-    sessionStorage.setItem("mimi_services_active_mode", "provider");
-
-    window.location.href = "./prestador.html";
+    console.error("[MIMI] logout error:", err);
+    this.showToast("No pudimos cerrar sesión", "error");
   }
-}  
-async openCameraCapture(documentType) {
+}
+  async openCameraCapture(documentType) {
   const providerId = this.state?.session?.providerId;
 
   if (!providerId) {
