@@ -775,9 +775,9 @@ body{
 }
 @media (max-width:390px){
   .driver-auth-hero{
-    height:332px;
-    min-height:332px;
-    padding:24px 20px 0;
+    height:292px;
+    min-height:292px;
+    padding:18px 20px 0;
   }
 
   .driver-auth-brand{
@@ -804,13 +804,13 @@ body{
   }
 
   .driver-auth-image{
-    width:238px;
-    right:-34px;
-    bottom:16px;
+    width:220px;
+    right:-26px;
+    bottom:8px;
   }
 
   .driver-auth-card{
-    margin:-6px 12px 16px;
+    margin:-2px 12px 16px;
     padding:20px 16px 20px;
     border-radius:22px;
   }
