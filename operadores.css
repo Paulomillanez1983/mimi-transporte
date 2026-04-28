@@ -1254,3 +1254,69 @@ h1{
     font-size:11px;
   }
 }
+/* =========================================================
+   MIMI Hub → Servicios transition
+   ========================================================= */
+
+body.is-entering-services {
+  overflow: hidden;
+}
+
+body.is-entering-services .services-card {
+  position: relative;
+  z-index: 20;
+  animation: mimiServicesZoomIn .52s cubic-bezier(.22,1,.36,1) forwards;
+  transform-origin: center center;
+}
+
+body.is-entering-services .transport-card,
+body.is-entering-services .benefits,
+body.is-entering-services .footer,
+body.is-entering-services .topbar,
+body.is-entering-services .hero {
+  animation: mimiHubFadeOut .38s ease forwards;
+}
+
+body.is-entering-services::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(53,216,111,.28), transparent 34%),
+    radial-gradient(circle at 70% 20%, rgba(134,239,172,.16), transparent 36%),
+    linear-gradient(180deg, #03140b 0%, #020617 100%);
+  opacity: 0;
+  animation: mimiServicesOverlay .52s ease forwards;
+}
+
+@keyframes mimiServicesZoomIn {
+  0% {
+    transform: scale(1);
+    filter: blur(0);
+  }
+
+  100% {
+    transform: scale(1.08) translateY(-8px);
+    filter: blur(.2px);
+  }
+}
+
+@keyframes mimiHubFadeOut {
+  to {
+    opacity: 0;
+    transform: scale(.985);
+    filter: blur(8px);
+  }
+}
+
+@keyframes mimiServicesOverlay {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
