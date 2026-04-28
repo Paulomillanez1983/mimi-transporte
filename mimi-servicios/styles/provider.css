@@ -3391,3 +3391,257 @@ body.provider-auth-required #onlineButtonContainer {
     transition: none !important;
   }
 }
+/* =========================================================
+   MIMI Servicios — Provider Login Premium
+   ========================================================= */
+
+.provider-login-shell{
+  width:min(100%, 980px);
+  margin:0 auto;
+  padding:18px;
+  border-radius:32px;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(48,209,88,.16), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(94,230,125,.12), transparent 34%),
+    linear-gradient(180deg, rgba(9,18,13,.88), rgba(8,10,16,.94));
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:
+    0 24px 80px rgba(0,0,0,.48),
+    inset 0 1px 0 rgba(255,255,255,.04);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.provider-login-hero{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:18px;
+  align-items:center;
+  margin-bottom:18px;
+}
+
+.provider-login-kicker{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:.72rem;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#86efac;
+  margin-bottom:14px;
+}
+
+.provider-login-kicker::before{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:#30d158;
+  box-shadow:0 0 12px rgba(48,209,88,.8);
+}
+
+.provider-login-title{
+  font-size:clamp(2.2rem, 5vw, 4.2rem);
+  line-height:.95;
+  letter-spacing:-.04em;
+  margin:0;
+}
+
+.provider-login-subtitle{
+  margin-top:14px;
+  max-width:540px;
+  font-size:1rem;
+  line-height:1.55;
+  color:rgba(255,255,255,.72);
+}
+
+.provider-login-hero-art{
+  position:relative;
+  min-height:280px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.provider-art-glow{
+  position:absolute;
+  inset:14%;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(48,209,88,.22), transparent 68%);
+  filter:blur(24px);
+}
+
+.provider-art-stack{
+  position:relative;
+  width:100%;
+  height:100%;
+}
+
+.provider-art-card{
+  position:absolute;
+  width:118px;
+  height:118px;
+  border-radius:28px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  color:#fff;
+  font-weight:700;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+  box-shadow:0 18px 34px rgba(0,0,0,.26);
+  backdrop-filter:blur(16px);
+}
+
+.provider-art-card span{
+  font-size:2rem;
+}
+
+.provider-art-card small{
+  font-size:.78rem;
+  color:rgba(255,255,255,.8);
+}
+
+.card-clean{ top:8%; left:10%; }
+.card-care{ top:0; right:14%; }
+.card-home{ bottom:12%; left:18%; }
+.card-wellness{ bottom:0; right:8%; }
+
+.provider-login-panel{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  padding:20px;
+  border-radius:28px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.06);
+}
+
+.provider-login-logo{
+  width:76px;
+  height:76px;
+  border-radius:24px;
+  margin:0 auto 4px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.provider-login-logo img{
+  width:56px;
+  height:56px;
+  object-fit:contain;
+}
+
+.provider-login-google{
+  min-height:64px;
+  border-radius:20px;
+  background:linear-gradient(180deg,#ffffff 0%,#f3fdf6 100%);
+  color:#04130a;
+  border:0;
+  box-shadow:
+    0 18px 40px rgba(48,209,88,.16),
+    inset 0 1px 0 rgba(255,255,255,.8);
+}
+
+.provider-login-google:hover{
+  transform:translateY(-1px);
+}
+
+.provider-google-text strong{
+  font-size:1rem;
+  font-weight:800;
+}
+
+.provider-google-arrow{
+  width:32px;
+  height:32px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+  background:#fff;
+  color:#111827;
+  font-size:20px;
+  font-weight:800;
+}
+
+.provider-login-trust{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  flex-wrap:wrap;
+  padding-top:2px;
+}
+
+.provider-login-trust span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:.78rem;
+  color:rgba(255,255,255,.72);
+}
+
+.provider-login-trust small{
+  font-size:.78rem;
+}
+
+@media (max-width: 860px){
+  .provider-login-hero{
+    grid-template-columns:1fr;
+  }
+
+  .provider-login-hero-art{
+    min-height:220px;
+  }
+}
+
+@media (max-width: 560px){
+  .provider-login-shell{
+    padding:14px;
+    border-radius:26px;
+  }
+
+  .provider-login-title{
+    font-size:2.2rem;
+  }
+
+  .provider-login-subtitle{
+    font-size:.92rem;
+  }
+
+  .provider-art-card{
+    width:94px;
+    height:94px;
+    border-radius:22px;
+  }
+
+  .provider-art-card span{
+    font-size:1.5rem;
+  }
+
+  .provider-art-card small{
+    font-size:.68rem;
+  }
+
+  .provider-login-panel{
+    padding:14px;
+    border-radius:22px;
+  }
+
+  .provider-login-google{
+    min-height:58px;
+  }
+
+  .provider-login-trust{
+    gap:10px;
+  }
+
+  .provider-login-trust span{
+    font-size:.7rem;
+  }
+}
