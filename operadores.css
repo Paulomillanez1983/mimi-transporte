@@ -214,8 +214,8 @@ h1{
   z-index:3;
   pointer-events:none;
   background:
-    linear-gradient(90deg, rgba(3,7,18,.96) 0%, rgba(3,7,18,.84) 36%, rgba(3,7,18,.28) 68%, rgba(3,7,18,.06) 100%),
-    linear-gradient(180deg, rgba(3,7,18,.08) 0%, rgba(3,7,18,.55) 100%);
+    linear-gradient(90deg, rgba(3,7,18,.98) 0%, rgba(3,7,18,.88) 34%, rgba(3,7,18,.22) 62%, rgba(3,7,18,.02) 100%),
+    linear-gradient(180deg, rgba(3,7,18,.04) 0%, rgba(3,7,18,.42) 100%);
 }
 
 .cards{
@@ -871,27 +871,29 @@ svg{
   }
 
   .hero{
-    min-height:255px;
-    padding:28px 14px 26px;
-  }
+  min-height:235px;
+  padding:18px 14px 18px;
+  align-items:flex-start;
+}
 
-  .hero > div:first-child{
-    max-width:82%;
-  }
+.hero > div:first-child{
+  max-width:68%;
+  padding-top:10px;
+}
 
-  .eyebrow{
-    font-size:10px;
-    padding:7px 12px;
-    margin-bottom:16px;
-  }
-
-  h1{
-    font-size:38px;
-  }
+h1{
+  font-size:34px;
+  line-height:.98;
+  margin-bottom:12px;
+  text-shadow:0 4px 18px rgba(0,0,0,.75);
+}
 
   .hero-copy{
-    font-size:14.5px;
-  }
+  max-width:260px;
+  font-size:13.5px;
+  line-height:1.42;
+  text-shadow:0 3px 14px rgba(0,0,0,.72);
+}
 
   .city{
     top:24px;
@@ -901,12 +903,12 @@ svg{
   }
 
   .hero-car{
-    right:-26px;
-    bottom:24px;
-    width:255px;
-    max-width:74%;
-    opacity:.68;
-  }
+  right:-34px;
+  bottom:30px;
+  width:250px;
+  max-width:72%;
+  opacity:.78;
+}
 
   .headlight{
     left:auto;
