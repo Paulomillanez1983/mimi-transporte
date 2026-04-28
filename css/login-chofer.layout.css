@@ -1,414 +1,491 @@
 /* =========================================================
-   MIMI Driver Login — Layout / Motion
+   MIMI Driver Login — Layout / Motion FINAL
    Archivo: login-chofer.layout.css
+   UI: MIMICAR Driver Premium
    ========================================================= */
 
 html,
-body {
-  width: 100%;
-  min-height: 100%;
+body{
+  width:100%;
+  min-height:100%;
 }
-
-body {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.app-splash {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  background:
-    radial-gradient(circle at center, rgba(39,110,241,0.12), transparent 34%),
-    radial-gradient(circle at center, rgba(255,43,214,0.10), transparent 42%),
-    #03050b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 1;
-  visibility: visible;
-  transition: opacity .42s ease, visibility .42s ease;
-}
-
-.app-splash.hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.app-splash__inner {
-  width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 24px;
-  text-align: center;
-  animation: splashEnter .55s cubic-bezier(.22,1,.36,1) both;
-}
-
-.app-splash__stage {
-  position: relative;
-  width: min(62vw, 260px);
-  height: min(62vw, 260px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.app-splash__logo {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 220px;
-  height: auto;
-  object-fit: contain;
-  filter:
-    drop-shadow(0 0 18px rgba(255,255,255,0.08))
-    drop-shadow(0 10px 30px rgba(0,0,0,0.45));
-  animation: splashLogoFloat 1.8s ease-in-out infinite;
-}
-
-.app-splash__glow {
-  position: absolute;
-  inset: 12%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%);
-  filter: blur(22px);
-  opacity: .9;
-  animation: splashGlowPulse 1.8s ease-in-out infinite;
-}
-
-.app-splash__brand {
-  font-size: clamp(18px, 4vw, 28px);
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.96);
-}
-
-.app-splash__status {
-  font-size: 13px;
-  color: rgba(255,255,255,0.62);
-  text-align: center;
-  letter-spacing: 0.04em;
-}
-
-.app-splash__loader {
-  width: min(34vw, 120px);
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.10);
-  overflow: hidden;
-  position: relative;
-}
-
-.app-splash__loader span {
-  display: block;
-  width: 46%;
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgba(255,255,255,0.18), #fff, rgba(255,255,255,0.18));
-  animation: splashLoader 1s ease-in-out infinite;
-}
-
-.skeleton {
-  position: relative;
-  overflow: hidden;
-  background: rgba(255,255,255,0.06) !important;
-  color: transparent !important;
-  user-select: none;
-}
-
-.skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
-  animation: skeletonShimmer 1.25s infinite;
-}
-
-.page-enter {
-  animation: pageEnter .38s ease both;
-}
-
-@keyframes splashEnter {
-  from { opacity: 0; transform: scale(1.035); filter: blur(10px); }
-  to { opacity: 1; transform: scale(1); filter: blur(0); }
-}
-
-@keyframes splashLogoFloat {
-  0%,100% { transform: scale(1) translateY(0); }
-  50% { transform: scale(1.03) translateY(-4px); }
-}
-
-@keyframes splashGlowPulse {
-  0%,100% { transform: scale(.96); opacity: .68; }
-  50% { transform: scale(1.06); opacity: 1; }
-}
-
-@keyframes splashLoader {
-  0% { transform: translateX(-120%); }
-  100% { transform: translateX(260%); }
-}
-
-@keyframes skeletonShimmer {
-  100% { transform: translateX(100%); }
-}
-
-@keyframes pageEnter {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(.992);
-    filter: blur(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
-}
-
-@media (max-width: 480px) {
-  body {
-    padding: 14px;
-  }
-
-  .shell {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .app-splash__inner {
-    padding: 20px;
-  }
-
-  .app-splash__stage {
-    width: min(64vw, 220px);
-    height: min(64vw, 220px);
-  }
-
-  .app-splash__logo {
-    max-width: 180px;
-  }
-}
-/* =========================================================
-   DRIVER AUTH PREMIUM — Paridad visual Hub / Prestador
-   ========================================================= */
 
 body{
+  min-height:100vh;
+  min-height:100dvh;
+  margin:0;
   padding:0;
-  overflow:hidden;
+  overflow-x:hidden;
+  background:#020617;
 }
 
-.driver-auth-shell{
+/* =========================================================
+   SPLASH
+   ========================================================= */
+
+.app-splash{
   position:fixed;
   inset:0;
+  z-index:9999;
+  background:
+    radial-gradient(circle at center, rgba(39,110,241,.14), transparent 34%),
+    radial-gradient(circle at center, rgba(124,58,237,.12), transparent 44%),
+    #03050b;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:1;
+  visibility:visible;
+  transition:opacity .42s ease, visibility .42s ease;
+}
+
+.app-splash.hidden{
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+
+.app-splash__inner{
   width:100%;
   min-height:100vh;
   min-height:100dvh;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
+  gap:18px;
   padding:24px;
+  text-align:center;
+  animation:splashEnter .55s cubic-bezier(.22,1,.36,1) both;
+}
+
+.app-splash__stage{
+  position:relative;
+  width:min(62vw,260px);
+  height:min(62vw,260px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.app-splash__logo{
+  position:relative;
+  z-index:2;
+  width:100%;
+  max-width:220px;
+  height:auto;
+  object-fit:contain;
+  filter:
+    drop-shadow(0 0 18px rgba(255,255,255,.08))
+    drop-shadow(0 10px 30px rgba(0,0,0,.45));
+  animation:splashLogoFloat 1.8s ease-in-out infinite;
+}
+
+.app-splash__glow{
+  position:absolute;
+  inset:12%;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.12), transparent 70%);
+  filter:blur(22px);
+  opacity:.9;
+  animation:splashGlowPulse 1.8s ease-in-out infinite;
+}
+
+.app-splash__brand{
+  font-size:clamp(18px,4vw,28px);
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:rgba(255,255,255,.96);
+}
+
+.app-splash__status{
+  font-size:13px;
+  color:rgba(255,255,255,.62);
+  text-align:center;
+  letter-spacing:.04em;
+}
+
+.app-splash__loader{
+  width:min(34vw,120px);
+  height:4px;
+  border-radius:999px;
+  background:rgba(255,255,255,.10);
+  overflow:hidden;
+  position:relative;
+}
+
+.app-splash__loader span{
+  display:block;
+  width:46%;
+  height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg, rgba(255,255,255,.18), #fff, rgba(255,255,255,.18));
+  animation:splashLoader 1s ease-in-out infinite;
+}
+
+/* =========================================================
+   STATES
+   ========================================================= */
+
+.shell--hidden{
+  opacity:0;
+  transform:translateY(18px) scale(.985);
+  filter:blur(10px);
+  pointer-events:none;
+}
+
+.shell--ready{
+  opacity:1;
+  transform:translateY(0) scale(1);
+  filter:blur(0);
+  pointer-events:auto;
+  transition:opacity .45s ease, transform .45s ease, filter .45s ease;
+}
+
+.page-enter{
+  animation:pageEnter .38s ease both;
+}
+
+.skeleton{
+  position:relative;
+  overflow:hidden;
+  background:rgba(255,255,255,.06) !important;
+  color:transparent !important;
+  user-select:none;
+}
+
+.skeleton::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  transform:translateX(-100%);
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+  animation:skeletonShimmer 1.25s infinite;
+}
+
+/* =========================================================
+   DRIVER AUTH — DESKTOP / TABLET
+   ========================================================= */
+
+.driver-auth-shell{
+  position:relative;
+  min-height:100vh;
+  min-height:100dvh;
+  width:100%;
+  padding:0;
   background:
-    radial-gradient(circle at 14% 8%, rgba(47,115,255,.24), transparent 30%),
-    radial-gradient(circle at 86% 14%, rgba(124,58,237,.24), transparent 32%),
-    linear-gradient(180deg,#020617 0%,#030712 56%,#020617 100%);
+    radial-gradient(circle at 82% 14%, rgba(111,49,255,.34), transparent 34%),
+    radial-gradient(circle at 25% 18%, rgba(37,99,235,.34), transparent 36%),
+    linear-gradient(180deg,#020617 0%,#030712 55%,#020617 100%);
+  overflow-x:hidden;
 }
 
 .driver-auth-stage{
   width:100%;
-  max-width:1120px;
-  display:grid;
-  grid-template-columns:minmax(0,1.1fr) minmax(330px,420px);
-  gap:34px;
-  align-items:center;
+  max-width:1024px;
+  min-height:100dvh;
+  margin:0 auto;
+  overflow:hidden;
+  background:
+    linear-gradient(180deg, rgba(6,13,31,.98), rgba(2,6,23,.99));
 }
 
+/* =========================================================
+   HERO
+   ========================================================= */
+
 .driver-auth-hero{
-  min-height:560px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
   position:relative;
+  height:430px;
+  min-height:430px;
+  padding:54px 54px 0;
+  overflow:hidden;
+  text-align:left;
+  background:
+    linear-gradient(90deg, rgba(2,6,23,.98) 0%, rgba(3,10,28,.78) 46%, rgba(65,22,107,.48) 100%),
+    radial-gradient(circle at 74% 38%, rgba(59,130,246,.34), transparent 32%),
+    radial-gradient(circle at 93% 22%, rgba(147,51,234,.34), transparent 36%);
+}
+
+.driver-auth-hero::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:1;
+  background:
+    linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,.10) 58%, rgba(2,6,23,.94) 100%);
+  pointer-events:none;
 }
 
 .driver-auth-brand{
-  font-size:clamp(34px,5vw,58px);
+  position:relative;
+  z-index:4;
+  font-size:50px;
+  line-height:.86;
   font-weight:900;
-  letter-spacing:-.06em;
-  margin-bottom:16px;
+  letter-spacing:-.08em;
+  margin:0 0 48px;
 }
 
 .driver-auth-brand span{
-  background:linear-gradient(135deg,#fff,#7cc7ff);
+  background:linear-gradient(135deg,#fff 0%,#fff 42%,#35a8ff 43%,#35a8ff 100%);
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
 }
 
+.driver-auth-brand span::after{
+  content:" DRIVER";
+  color:#38a2ff;
+  font-size:25px;
+  letter-spacing:.08em;
+  margin-left:8px;
+  vertical-align:middle;
+}
+
 .driver-auth-title{
-  max-width:620px;
-  font-size:clamp(34px,5vw,64px);
-  line-height:.95;
-  letter-spacing:-.07em;
+  position:relative;
+  z-index:4;
+  max-width:410px;
+  font-size:54px;
+  line-height:.94;
+  letter-spacing:-.078em;
   font-weight:900;
+  text-align:left;
   margin:0;
 }
 
 .driver-auth-title .check{
-  color:#35d86f;
-  font-size:.68em;
+  color:#22e68a;
+  font-size:.72em;
 }
 
 .driver-auth-copy{
-  max-width:520px;
-  margin-top:18px;
-  color:rgba(255,255,255,.68);
-  font-size:clamp(15px,2vw,18px);
+  position:relative;
+  z-index:4;
+  max-width:390px;
+  margin:28px 0 0;
+  font-size:18px;
   line-height:1.45;
+  color:rgba(255,255,255,.72);
+  text-align:left;
 }
 
 .driver-auth-image{
-  width:min(92%,520px);
-  margin-top:24px;
+  position:absolute;
+  z-index:3;
+  right:12px;
+  bottom:10px;
+  width:470px;
+  max-width:none;
+  margin:0;
   object-fit:contain;
   filter:
-    drop-shadow(0 34px 46px rgba(0,0,0,.46))
-    drop-shadow(0 0 34px rgba(47,115,255,.22));
+    drop-shadow(0 34px 52px rgba(0,0,0,.72))
+    drop-shadow(0 0 38px rgba(59,130,246,.48));
 }
+
+/* =========================================================
+   CARD
+   ========================================================= */
 
 .driver-auth-card{
   position:relative;
-  overflow:hidden;
+  z-index:5;
+  margin:0 36px 36px;
+  padding:42px 44px 38px;
   border-radius:34px;
-  padding:30px;
   background:
-    radial-gradient(circle at 18% 0%, rgba(47,115,255,.22), transparent 36%),
-    linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.045));
-  border:1px solid rgba(255,255,255,.14);
-  box-shadow:0 28px 90px rgba(0,0,0,.48);
+    radial-gradient(circle at 9% 0%, rgba(59,130,246,.28), transparent 38%),
+    linear-gradient(180deg, rgba(17,35,72,.95), rgba(3,10,25,.99));
+  border:1px solid rgba(103,139,255,.32);
+  box-shadow:
+    0 30px 90px rgba(0,0,0,.62),
+    inset 0 0 0 1px rgba(255,255,255,.035);
   backdrop-filter:blur(18px);
 }
 
 .driver-auth-card h2{
-  font-size:32px;
-  line-height:1;
-  letter-spacing:-.04em;
-  margin-bottom:6px;
+  font-size:48px;
+  line-height:.95;
+  letter-spacing:-.055em;
+  margin:0 0 10px;
 }
 
 .driver-auth-kicker{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  color:#7cc7ff;
-  font-size:13px;
-  font-weight:800;
-  letter-spacing:.08em;
+  display:block;
+  color:#4ab0ff;
+  font-size:15px;
+  font-weight:900;
+  letter-spacing:.19em;
   text-transform:uppercase;
-  margin-bottom:18px;
+  margin:0 0 30px;
 }
 
 .driver-auth-desc{
-  color:rgba(255,255,255,.68);
-  font-size:15px;
-  line-height:1.45;
-  margin-bottom:22px;
+  max-width:330px;
+  font-size:25px;
+  line-height:1.32;
+  color:rgba(223,234,255,.84);
+  margin:0 0 28px;
+}
+
+.driver-auth-desc::after{
+  content:"";
+  display:block;
+  width:118px;
+  height:5px;
+  border-radius:999px;
+  margin-top:24px;
+  background:#22a8ff;
+  box-shadow:0 0 18px rgba(34,168,255,.55);
 }
 
 .driver-auth-security{
   display:flex;
-  gap:14px;
-  padding:15px;
-  border-radius:22px;
+  align-items:center;
+  gap:20px;
+  padding:22px 22px;
+  min-height:118px;
+  margin:0 0 28px;
+  border-radius:26px;
   background:rgba(255,255,255,.055);
-  border:1px solid rgba(255,255,255,.09);
-  margin-bottom:16px;
+  border:1px solid rgba(116,148,255,.22);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025);
+}
+
+.driver-auth-security-icon{
+  width:74px;
+  height:74px;
+  flex:0 0 74px;
+  border-radius:22px;
+  font-size:34px;
+  display:grid;
+  place-items:center;
+  color:#8cc8ff;
+  background:linear-gradient(145deg, rgba(37,99,235,.34), rgba(15,23,42,.72));
 }
 
 .driver-auth-security strong{
   display:block;
-  font-size:15px;
-  margin-bottom:4px;
+  font-size:22px;
+  line-height:1.12;
+  margin-bottom:8px;
 }
 
 .driver-auth-security span{
   display:block;
-  color:rgba(255,255,255,.58);
-  font-size:13px;
+  font-size:17px;
   line-height:1.35;
+  color:rgba(226,237,255,.72);
 }
 
-.driver-auth-security-icon{
-  width:48px;
-  height:48px;
-  flex:0 0 48px;
-  border-radius:17px;
+.driver-auth-trust{
   display:grid;
-  place-items:center;
-  background:rgba(47,115,255,.15);
-  color:#7cc7ff;
-  font-size:22px;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+  margin:28px 0 0;
+}
+
+.driver-auth-trust div{
+  min-height:116px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:14px 10px;
+  border-radius:22px;
+  background:rgba(255,255,255,.047);
+  border:1px solid rgba(116,148,255,.16);
+}
+
+.driver-auth-trust span{
+  font-size:28px;
+}
+
+.driver-auth-trust small{
+  font-size:13px;
+  line-height:1.2;
+  color:rgba(226,237,255,.62);
+  text-align:center;
 }
 
 .driver-auth-google{
+  position:relative;
   width:100%;
-  min-height:60px;
+  min-height:76px;
   border:0;
-  border-radius:22px;
-  display:flex;
+  border-radius:25px;
+  padding:0 28px;
+  margin:0;
+  display:grid;
+  grid-template-columns:42px 1fr 30px;
   align-items:center;
-  justify-content:center;
   gap:12px;
-  background:linear-gradient(180deg,#fff,#eef2ff);
-  color:#101827;
-  font-size:16px;
-  font-weight:900;
+  background:linear-gradient(180deg,#fff 0%,#f1f5ff 100%);
+  color:#0f172a;
   cursor:pointer;
-  box-shadow:0 18px 34px rgba(0,0,0,.26);
+  box-shadow:
+    0 22px 40px rgba(0,0,0,.32),
+    inset 0 -2px 0 rgba(0,0,0,.06);
 }
 
 .driver-auth-google:active{
   transform:scale(.99);
 }
 
-.driver-auth-google svg{
-  width:24px;
-  height:24px;
+.driver-auth-google .google-mark,
+.driver-auth-google .google-mark svg{
+  width:34px;
+  height:34px;
 }
 
-.driver-auth-trust{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:8px;
-  margin-top:18px;
-}
-
-.driver-auth-trust div{
-  min-height:64px;
-  display:grid;
-  place-items:center;
+.driver-auth-google .google-text{
+  font-size:24px;
+  font-weight:900;
   text-align:center;
-  gap:5px;
-  padding:9px 6px;
-  border-radius:18px;
-  background:rgba(255,255,255,.045);
-  border:1px solid rgba(255,255,255,.07);
+  white-space:nowrap;
 }
 
-.driver-auth-trust small{
-  color:rgba(255,255,255,.6);
-  font-size:10.5px;
-  line-height:1.2;
+.driver-auth-google .google-arrow{
+  font-size:34px;
+  font-weight:800;
+  line-height:1;
+}
+
+.driver-auth-pills{
+  display:flex;
+  justify-content:center;
+  gap:16px;
+  margin:28px 0 0;
+  flex-wrap:wrap;
+}
+
+.driver-auth-pills span{
+  min-height:46px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 22px;
+  border-radius:999px;
+  border:1px solid rgba(120,151,255,.25);
+  background:rgba(3,10,28,.42);
+  color:rgba(255,255,255,.86);
+  font-size:15px;
+  font-weight:800;
+}
+
+.driver-auth-note{
+  max-width:520px;
+  margin:28px auto 0;
+  padding-top:0;
+  border-top:none;
+  font-size:17px;
+  line-height:1.5;
+  color:rgba(226,237,255,.60);
+  text-align:center;
 }
 
 .auth-error,
@@ -430,611 +507,331 @@ body{
   color:#35d86f;
 }
 
-.driver-auth-note{
-  margin-top:18px;
-  padding-top:16px;
-  border-top:1px solid rgba(255,255,255,.08);
-  color:rgba(255,255,255,.48);
-  text-align:center;
-  font-size:12.5px;
-  line-height:1.45;
-}
+/* =========================================================
+   MOBILE — IGUAL FORMATO PROVIDER, ADAPTADO CHOFER
+   ========================================================= */
 
-@media(max-width:820px){
-  body{
-    overflow:auto;
-  }
-
-  .driver-auth-shell{
-    position:relative;
-    min-height:100dvh;
-    padding:18px 14px calc(18px + env(safe-area-inset-bottom));
-  }
-
+@media (max-width:820px){
   .driver-auth-stage{
-    grid-template-columns:1fr;
-    gap:14px;
+    max-width:728px;
   }
 
   .driver-auth-hero{
-    min-height:auto;
-    align-items:center;
-    text-align:center;
-    padding-top:8px;
+    height:414px;
+    min-height:414px;
+    padding:42px 28px 0;
+  }
+
+  .driver-auth-brand{
+    font-size:48px;
+    margin-bottom:34px;
+  }
+
+  .driver-auth-brand span::after{
+    font-size:24px;
   }
 
   .driver-auth-title{
-    font-size:clamp(31px,10vw,46px);
+    max-width:360px;
+    font-size:48px;
   }
 
   .driver-auth-copy{
-    margin-top:12px;
-    font-size:14px;
+    max-width:350px;
+    margin-top:24px;
+    font-size:17px;
   }
 
   .driver-auth-image{
-    width:min(92vw,390px);
-    margin-top:12px;
+    right:-38px;
+    bottom:6px;
+    width:405px;
   }
 
   .driver-auth-card{
-    padding:24px 20px 22px;
+    margin:-2px 20px 24px;
+    padding:28px 24px 28px;
     border-radius:30px;
   }
-}
-/* =========================================================
-   MIMICAR LOGIN — Compacto estilo Provider
-   PEGAR ABAJO DE TODO
-   ========================================================= */
-
-@media (max-width: 820px){
-  body{
-    padding:0 !important;
-    overflow-y:auto !important;
-    background:#020617 !important;
-  }
-
-  .driver-auth-shell{
-    position:relative !important;
-    min-height:100dvh !important;
-    padding:0 10px 14px !important;
-    display:block !important;
-    background:
-      linear-gradient(180deg, rgba(6,18,42,.25), rgba(2,6,23,.98)),
-      radial-gradient(circle at 85% 14%, rgba(124,58,237,.36), transparent 34%),
-      radial-gradient(circle at 18% 12%, rgba(47,115,255,.35), transparent 32%),
-      #020617 !important;
-  }
-
-  .driver-auth-stage{
-    display:block !important;
-    width:100% !important;
-    max-width:720px !important;
-    margin:0 auto !important;
-  }
-
-  .driver-auth-hero{
-    min-height:390px !important;
-    height:390px !important;
-    align-items:flex-start !important;
-    justify-content:flex-start !important;
-    text-align:left !important;
-    padding:32px 18px 0 !important;
-    overflow:hidden !important;
-    border-radius:0 0 28px 28px !important;
-    background:
-      linear-gradient(90deg, rgba(2,6,23,.98) 0%, rgba(2,6,23,.72) 42%, rgba(30,20,74,.36) 100%),
-      radial-gradient(circle at 84% 38%, rgba(59,130,246,.28), transparent 34%);
-  }
-
-  .driver-auth-hero::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:
-      linear-gradient(180deg, rgba(2,6,23,.04), rgba(2,6,23,.68)),
-      radial-gradient(circle at 72% 32%, rgba(47,115,255,.28), transparent 30%);
-    pointer-events:none;
-  }
-
-  .driver-auth-brand{
-    position:relative;
-    z-index:3;
-    font-size:48px !important;
-    line-height:.9 !important;
-    margin:0 0 26px !important;
-    letter-spacing:-.08em !important;
-  }
-
-  .driver-auth-brand span::after{
-    content:" DRIVER";
-    color:#38a2ff;
-    font-size:24px;
-    letter-spacing:.08em;
-    margin-left:6px;
-  }
-
-  .driver-auth-title{
-    position:relative;
-    z-index:3;
-    max-width:330px !important;
-    font-size:43px !important;
-    line-height:.93 !important;
-    letter-spacing:-.075em !important;
-    text-align:left !important;
-  }
-
-  .driver-auth-title .check{
-    color:#22e68a !important;
-  }
-
-  .driver-auth-copy{
-    position:relative;
-    z-index:3;
-    max-width:315px !important;
-    margin-top:16px !important;
-    font-size:15.5px !important;
-    line-height:1.45 !important;
-    text-align:left !important;
-    color:rgba(255,255,255,.72) !important;
-  }
-
-  .driver-auth-image{
-    position:absolute !important;
-    z-index:2;
-    right:-52px !important;
-    bottom:0 !important;
-    width:340px !important;
-    max-width:none !important;
-    margin:0 !important;
-    filter:
-      drop-shadow(0 30px 45px rgba(0,0,0,.68))
-      drop-shadow(0 0 34px rgba(47,115,255,.42)) !important;
-  }
-
-  .driver-auth-card{
-    margin:-18px 10px 0 !important;
-    padding:24px 24px 22px !important;
-    border-radius:30px !important;
-    background:
-      radial-gradient(circle at 12% 0%, rgba(47,115,255,.28), transparent 36%),
-      linear-gradient(180deg, rgba(20,34,66,.94), rgba(5,12,28,.98)) !important;
-    border:1px solid rgba(107,147,255,.25) !important;
-    box-shadow:0 28px 80px rgba(0,0,0,.55) !important;
-  }
 
   .driver-auth-card h2{
-    font-size:34px !important;
-    margin-bottom:6px !important;
+    font-size:40px;
   }
 
   .driver-auth-kicker{
-    font-size:13px !important;
-    letter-spacing:.16em !important;
-    color:#48a8ff !important;
-    margin-bottom:18px !important;
+    font-size:14px;
+    margin-bottom:26px;
   }
 
   .driver-auth-desc{
-    font-size:17px !important;
-    line-height:1.35 !important;
-    margin-bottom:20px !important;
+    font-size:21px;
+    max-width:320px;
   }
 
   .driver-auth-security{
-    margin-bottom:18px !important;
-  }
-
-  .driver-auth-trust{
-    grid-template-columns:repeat(3,1fr) !important;
-    gap:8px !important;
-    margin-top:18px !important;
-  }
-
-  .driver-auth-trust div{
-    min-height:76px !important;
-    border-radius:18px !important;
-  }
-
-  .driver-auth-google{
-    min-height:66px !important;
-    border-radius:22px !important;
-    font-size:18px !important;
-  }
-
-  .driver-auth-note{
-    font-size:13px !important;
-    max-width:330px;
-    margin-left:auto;
-    margin-right:auto;
-  }
-}
-
-@media (max-width: 390px){
-  .driver-auth-hero{
-    height:370px !important;
-    min-height:370px !important;
-  }
-
-  .driver-auth-title{
-    font-size:39px !important;
-  }
-
-  .driver-auth-image{
-    width:315px !important;
-    right:-58px !important;
-  }
-
-  .driver-auth-card{
-    padding:22px 20px !important;
-  }
-}
-/* =========================================================
-   MIMICAR LOGIN — Pixel Match Mock Final
-   PEGAR ABAJO DE TODO
-   ========================================================= */
-
-@media (max-width: 820px){
-  body{
-    padding:0 !important;
-    margin:0 !important;
-    overflow-y:auto !important;
-    background:#020617 !important;
-  }
-
-  .driver-auth-shell{
-    position:relative !important;
-    display:block !important;
-    min-height:100dvh !important;
-    padding:0 8px 12px !important;
-    background:
-      linear-gradient(180deg, rgba(4,10,26,.10), rgba(2,6,23,.98)),
-      radial-gradient(circle at 82% 14%, rgba(111,49,255,.34), transparent 34%),
-      radial-gradient(circle at 25% 18%, rgba(37,99,235,.34), transparent 36%),
-      #020617 !important;
-  }
-
-  .driver-auth-stage{
-    display:block !important;
-    width:100% !important;
-    max-width:720px !important;
-    margin:0 auto !important;
-    border-radius:0 0 22px 22px !important;
-    overflow:hidden !important;
-    background:
-      linear-gradient(180deg, rgba(6,13,31,.98), rgba(2,6,23,.99)) !important;
-  }
-
-  .driver-auth-hero{
-    position:relative !important;
-    height:506px !important;
-    min-height:506px !important;
-    padding:38px 30px 0 !important;
-    display:block !important;
-    overflow:hidden !important;
-    text-align:left !important;
-    background:
-      linear-gradient(90deg, rgba(2,6,23,.98) 0%, rgba(3,10,28,.82) 45%, rgba(65,22,107,.45) 100%),
-      radial-gradient(circle at 74% 38%, rgba(59,130,246,.32), transparent 32%),
-      radial-gradient(circle at 93% 22%, rgba(147,51,234,.32), transparent 36%) !important;
-  }
-
-  .driver-auth-hero::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    z-index:1;
-    background:
-      linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,.12) 58%, rgba(2,6,23,.94) 100%);
-    pointer-events:none;
-  }
-
-  .driver-auth-brand{
-    position:relative !important;
-    z-index:4 !important;
-    font-size:47px !important;
-    line-height:.86 !important;
-    font-weight:900 !important;
-    margin:0 0 38px !important;
-    letter-spacing:-.08em !important;
-  }
-
-  .driver-auth-brand span{
-    background:linear-gradient(135deg,#ffffff 0%,#ffffff 42%,#35a8ff 43%,#35a8ff 100%) !important;
-    -webkit-background-clip:text !important;
-    background-clip:text !important;
-    color:transparent !important;
-  }
-
-  .driver-auth-brand span::after{
-    content:" DRIVER";
-    color:#38a2ff !important;
-    font-size:24px !important;
-    letter-spacing:.08em !important;
-    margin-left:8px !important;
-    vertical-align:middle !important;
-  }
-
-  .driver-auth-title{
-    position:relative !important;
-    z-index:4 !important;
-    max-width:360px !important;
-    font-size:43px !important;
-    line-height:.94 !important;
-    letter-spacing:-.078em !important;
-    font-weight:900 !important;
-    text-align:left !important;
-    margin:0 !important;
-  }
-
-  .driver-auth-title .check{
-    color:#22e68a !important;
-    font-size:.72em !important;
-  }
-
-  .driver-auth-copy{
-    position:relative !important;
-    z-index:4 !important;
-    max-width:350px !important;
-    margin:25px 0 0 !important;
-    font-size:17px !important;
-    line-height:1.45 !important;
-    color:rgba(255,255,255,.72) !important;
-    text-align:left !important;
-  }
-
-  .driver-auth-image{
-    position:absolute !important;
-    z-index:3 !important;
-    right:-72px !important;
-    bottom:18px !important;
-    width:390px !important;
-    max-width:none !important;
-    margin:0 !important;
-    object-fit:contain !important;
-    filter:
-      drop-shadow(0 34px 52px rgba(0,0,0,.72))
-      drop-shadow(0 0 38px rgba(59,130,246,.48)) !important;
-  }
-
-  .driver-auth-card{
-    position:relative !important;
-    z-index:5 !important;
-    margin:-8px 20px 0 !important;
-    padding:30px 28px 28px !important;
-    border-radius:32px !important;
-    background:
-      radial-gradient(circle at 9% 0%, rgba(59,130,246,.28), transparent 38%),
-      linear-gradient(180deg, rgba(17,35,72,.95), rgba(3,10,25,.99)) !important;
-    border:1px solid rgba(103,139,255,.32) !important;
-    box-shadow:
-      0 30px 90px rgba(0,0,0,.62),
-      inset 0 0 0 1px rgba(255,255,255,.035) !important;
-    backdrop-filter:blur(18px) !important;
-  }
-
-  .driver-auth-card h2{
-    font-size:40px !important;
-    line-height:.95 !important;
-    letter-spacing:-.055em !important;
-    margin:0 0 10px !important;
-  }
-
-  .driver-auth-kicker{
-    display:block !important;
-    color:#4ab0ff !important;
-    font-size:14px !important;
-    font-weight:900 !important;
-    letter-spacing:.19em !important;
-    text-transform:uppercase !important;
-    margin:0 0 28px !important;
-  }
-
-  .driver-auth-desc{
-    max-width:300px !important;
-    font-size:20px !important;
-    line-height:1.35 !important;
-    color:rgba(223,234,255,.84) !important;
-    margin:0 0 25px !important;
-  }
-
-  .driver-auth-desc::after{
-    content:"";
-    display:block;
-    width:92px;
-    height:4px;
-    border-radius:999px;
-    margin-top:22px;
-    background:#22a8ff;
-    box-shadow:0 0 18px rgba(34,168,255,.55);
-  }
-
-  .driver-auth-security{
-    display:flex !important;
-    align-items:center !important;
-    gap:18px !important;
-    padding:19px 18px !important;
-    min-height:118px !important;
-    margin:0 0 24px !important;
-    border-radius:24px !important;
-    background:rgba(255,255,255,.055) !important;
-    border:1px solid rgba(116,148,255,.22) !important;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.025) !important;
+    min-height:110px;
+    padding:18px;
+    gap:18px;
   }
 
   .driver-auth-security-icon{
-    width:70px !important;
-    height:70px !important;
-    flex:0 0 70px !important;
-    border-radius:20px !important;
-    font-size:32px !important;
-    color:#8cc8ff !important;
-    background:linear-gradient(145deg, rgba(37,99,235,.34), rgba(15,23,42,.72)) !important;
+    width:66px;
+    height:66px;
+    flex-basis:66px;
+    font-size:30px;
   }
 
   .driver-auth-security strong{
-    font-size:20px !important;
-    line-height:1.12 !important;
-    margin-bottom:8px !important;
+    font-size:20px;
   }
 
   .driver-auth-security span{
-    font-size:16px !important;
-    line-height:1.35 !important;
-    color:rgba(226,237,255,.72) !important;
-  }
-
-  .driver-auth-trust{
-    display:grid !important;
-    grid-template-columns:repeat(3,1fr) !important;
-    gap:10px !important;
-    margin:25px 0 0 !important;
-  }
-
-  .driver-auth-trust div{
-    min-height:104px !important;
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:center !important;
-    justify-content:center !important;
-    gap:9px !important;
-    padding:12px 8px !important;
-    border-radius:20px !important;
-    background:rgba(255,255,255,.047) !important;
-    border:1px solid rgba(116,148,255,.16) !important;
-  }
-
-  .driver-auth-trust span{
-    font-size:25px !important;
-  }
-
-  .driver-auth-trust small{
-    font-size:12px !important;
-    line-height:1.2 !important;
-    color:rgba(226,237,255,.62) !important;
+    font-size:16px;
   }
 
   .driver-auth-google{
-    position:relative !important;
-    min-height:72px !important;
-    border-radius:24px !important;
-    padding:0 26px !important;
-    margin:0 !important;
-    display:grid !important;
-    grid-template-columns:42px 1fr 28px !important;
-    align-items:center !important;
-    gap:12px !important;
-    background:linear-gradient(180deg,#ffffff 0%,#f1f5ff 100%) !important;
-    color:#0f172a !important;
-    box-shadow:
-      0 22px 40px rgba(0,0,0,.32),
-      inset 0 -2px 0 rgba(0,0,0,.06) !important;
-  }
-
-  .driver-auth-google .google-mark{
-    width:32px !important;
-    height:32px !important;
-  }
-
-  .driver-auth-google .google-mark svg{
-    width:32px !important;
-    height:32px !important;
+    min-height:70px;
+    border-radius:23px;
   }
 
   .driver-auth-google .google-text{
-    font-size:21px !important;
-    font-weight:900 !important;
-    text-align:center !important;
-    white-space:nowrap !important;
+    font-size:20px;
   }
 
-  .driver-auth-google .google-arrow{
-    font-size:32px !important;
-    font-weight:800 !important;
-    line-height:1 !important;
+  .driver-auth-trust{
+    gap:10px;
   }
 
-  .driver-auth-pills{
-    display:flex !important;
-    justify-content:center !important;
-    gap:14px !important;
-    margin:25px 0 0 !important;
-    flex-wrap:wrap !important;
-  }
-
-  .driver-auth-pills span{
-    min-height:44px !important;
-    display:inline-flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    padding:0 19px !important;
-    border-radius:999px !important;
-    border:1px solid rgba(120,151,255,.25) !important;
-    background:rgba(3,10,28,.42) !important;
-    color:rgba(255,255,255,.86) !important;
-    font-size:14px !important;
-    font-weight:800 !important;
+  .driver-auth-trust div{
+    min-height:96px;
   }
 
   .driver-auth-note{
-    max-width:360px !important;
-    margin:25px auto 0 !important;
-    padding-top:0 !important;
-    border-top:none !important;
-    font-size:15px !important;
-    line-height:1.5 !important;
-    color:rgba(226,237,255,.60) !important;
+    max-width:360px;
+    font-size:15px;
+  }
+}
+
+@media (max-width:430px){
+  .driver-auth-shell{
+    padding:0;
+  }
+
+  .driver-auth-stage{
+    width:100%;
+    max-width:none;
+  }
+
+  .driver-auth-hero{
+    height:486px;
+    min-height:486px;
+    padding:34px 28px 0;
+  }
+
+  .driver-auth-brand{
+    font-size:41px;
+    margin-bottom:30px;
+  }
+
+  .driver-auth-brand span::after{
+    font-size:20px;
+    margin-left:7px;
+  }
+
+  .driver-auth-title{
+    max-width:330px;
+    font-size:42px;
+  }
+
+  .driver-auth-copy{
+    max-width:328px;
+    margin-top:24px;
+    font-size:17px;
+  }
+
+  .driver-auth-image{
+    width:360px;
+    right:-80px;
+    bottom:28px;
+  }
+
+  .driver-auth-card{
+    margin:-20px 24px 22px;
+    padding:28px 26px 28px;
+    border-radius:30px;
+  }
+
+  .driver-auth-card h2{
+    font-size:42px;
+  }
+
+  .driver-auth-kicker{
+    font-size:13px;
+    margin-bottom:28px;
+  }
+
+  .driver-auth-desc{
+    font-size:20px;
+    margin-bottom:24px;
+  }
+
+  .driver-auth-security{
+    min-height:108px;
+    padding:17px;
+    gap:16px;
+  }
+
+  .driver-auth-security-icon{
+    width:64px;
+    height:64px;
+    flex-basis:64px;
+  }
+
+  .driver-auth-security strong{
+    font-size:20px;
+  }
+
+  .driver-auth-security span{
+    font-size:15.5px;
+  }
+
+  .driver-auth-google{
+    min-height:66px;
+    padding:0 18px;
+    grid-template-columns:34px 1fr 22px;
+  }
+
+  .driver-auth-google .google-mark,
+  .driver-auth-google .google-mark svg{
+    width:30px;
+    height:30px;
+  }
+
+  .driver-auth-google .google-text{
+    font-size:18px;
+  }
+
+  .driver-auth-google .google-arrow{
+    font-size:28px;
+  }
+
+  .driver-auth-pills{
+    gap:10px;
+    margin-top:22px;
+  }
+
+  .driver-auth-pills span{
+    min-height:42px;
+    padding:0 17px;
+    font-size:14px;
+  }
+
+  .driver-auth-trust{
+    margin-top:24px;
+    gap:10px;
+  }
+
+  .driver-auth-trust div{
+    min-height:104px;
+    border-radius:20px;
+  }
+
+  .driver-auth-trust small{
+    font-size:12px;
+  }
+
+  .driver-auth-note{
+    font-size:15px;
   }
 }
 
 @media (max-width:390px){
   .driver-auth-hero{
-    height:486px !important;
-    min-height:486px !important;
-    padding:34px 25px 0 !important;
+    height:460px;
+    min-height:460px;
+    padding:32px 24px 0;
+  }
+
+  .driver-auth-brand{
+    font-size:38px;
+    margin-bottom:28px;
+  }
+
+  .driver-auth-brand span::after{
+    font-size:18px;
   }
 
   .driver-auth-title{
-    font-size:39px !important;
-    max-width:326px !important;
+    font-size:38px;
+    max-width:300px;
   }
 
   .driver-auth-copy{
-    font-size:16px !important;
-    max-width:320px !important;
+    font-size:16px;
+    max-width:310px;
   }
 
   .driver-auth-image{
-    width:360px !important;
-    right:-82px !important;
-    bottom:14px !important;
+    width:330px;
+    right:-78px;
+    bottom:30px;
   }
 
   .driver-auth-card{
-    margin:-8px 14px 0 !important;
-    padding:28px 24px 26px !important;
+    margin:-18px 22px 20px;
+    padding:26px 24px 26px;
   }
 
   .driver-auth-card h2{
-    font-size:38px !important;
+    font-size:38px;
   }
 
   .driver-auth-desc{
-    font-size:19px !important;
-  }
-
-  .driver-auth-security{
-    min-height:112px !important;
-    padding:17px !important;
-  }
-
-  .driver-auth-security-icon{
-    width:64px !important;
-    height:64px !important;
-    flex-basis:64px !important;
+    font-size:19px;
   }
 
   .driver-auth-google .google-text{
-    font-size:19px !important;
+    font-size:16.5px;
+  }
+}
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes splashEnter{
+  from{opacity:0;transform:scale(1.035);filter:blur(10px);}
+  to{opacity:1;transform:scale(1);filter:blur(0);}
+}
+
+@keyframes splashLogoFloat{
+  0%,100%{transform:scale(1) translateY(0);}
+  50%{transform:scale(1.03) translateY(-4px);}
+}
+
+@keyframes splashGlowPulse{
+  0%,100%{transform:scale(.96);opacity:.68;}
+  50%{transform:scale(1.06);opacity:1;}
+}
+
+@keyframes splashLoader{
+  0%{transform:translateX(-120%);}
+  100%{transform:translateX(260%);}
+}
+
+@keyframes skeletonShimmer{
+  100%{transform:translateX(100%);}
+}
+
+@keyframes pageEnter{
+  from{
+    opacity:0;
+    transform:translateY(14px) scale(.992);
+    filter:blur(8px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0) scale(1);
+    filter:blur(0);
   }
 }
