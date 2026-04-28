@@ -589,19 +589,15 @@ container.style.background = "";
         <p>Oportunidades a tu tiempo.</p>
       </div>
 
-      <div class="provider-auth-visual" aria-hidden="true">
-        <div class="provider-auth-platform"></div>
-        <div class="provider-auth-house">
-          <span class="provider-auth-house-window one"></span>
-          <span class="provider-auth-house-window two"></span>
-          <span class="provider-auth-house-door"></span>
-        </div>
-        <div class="provider-auth-plus">+</div>
-        <div class="provider-auth-heart"></div>
-        <div class="provider-auth-bucket"></div>
-        <div class="provider-auth-bear"></div>
-      </div>
-    </div>
+<div class="provider-auth-hero-bg" aria-hidden="true">
+  <img
+    src="./assets/provider/provider-login-bg.png"
+    alt=""
+    loading="eager"
+    decoding="async"
+  >
+</div>
+</div>
 
 <div class="provider-auth-card">
   <div class="provider-auth-card-header">
