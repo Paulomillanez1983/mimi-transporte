@@ -228,20 +228,6 @@
     deferredPrompt = null;
     document.body.classList.remove("pwa-installable");
   }
-
-  document.querySelectorAll(".js-app-transition").forEach((link) => {
-    link.addEventListener("click", (event) => {
-      const href = link.getAttribute("href");
-      if (!href) return;
-
-      event.preventDefault();
-      document.body.classList.add("is-entering-services");
-
-      setTimeout(() => {
-        window.location.href = href;
-      }, 520);
-    });
-  });
 </script>
 </body>
 </html>
