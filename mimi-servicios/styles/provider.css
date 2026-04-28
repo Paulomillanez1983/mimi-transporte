@@ -10007,3 +10007,233 @@ body.provider-auth-required .provider-auth-card {
     font-size: 34px !important;
   }
 }
+
+/* ==========================================================
+   PROVIDER LOGIN - HUB VISUAL MATCH FINAL
+   ========================================================== */
+
+body.provider-auth-required .provider-auth-hero-bg {
+  z-index: 0 !important;
+}
+
+body.provider-auth-required .provider-auth-hero-bg img {
+  object-position: center 58% !important;
+}
+
+body.provider-auth-required .provider-auth-hero::after {
+  background:
+    linear-gradient(90deg, rgba(3, 7, 18, .98) 0%, rgba(3, 7, 18, .78) 36%, rgba(3, 7, 18, .18) 68%, rgba(3, 7, 18, .04) 100%),
+    linear-gradient(180deg, rgba(3, 7, 18, .05) 0%, rgba(3, 7, 18, .34) 100%) !important;
+}
+
+body.provider-auth-required .provider-auth-card-title {
+  font-size: 30px !important;
+  line-height: .95 !important;
+  letter-spacing: -.055em !important;
+}
+
+body.provider-auth-required .provider-auth-card-subtitle {
+  font-size: 17px !important;
+}
+
+body.provider-auth-required .provider-auth-card-copy {
+  font-size: 20px !important;
+  line-height: 1.15 !important;
+}
+
+body.provider-auth-required .provider-auth-card {
+  margin: -56px auto 24px !important;
+  padding: 20px 34px !important;
+}
+
+body.provider-auth-required .provider-auth-divider {
+  margin: 12px 0 14px !important;
+}
+
+body.provider-auth-required .provider-auth-services {
+  gap: 12px !important;
+  margin: 14px 0 10px !important;
+}
+
+body.provider-auth-required .provider-auth-service {
+  min-height: 62px !important;
+  padding: 8px 10px !important;
+  gap: 8px !important;
+}
+
+body.provider-auth-required .provider-auth-service::before {
+  display: none !important;
+}
+
+body.provider-auth-required .provider-auth-service strong {
+  font-size: 22px !important;
+}
+
+body.provider-auth-required .provider-auth-service span {
+  font-size: 12px !important;
+}
+
+body.provider-auth-required .provider-auth-login-label {
+  margin: 10px 0 8px !important;
+}
+
+body.provider-auth-required .provider-auth-google {
+  min-height: 50px !important;
+  border-radius: 16px !important;
+}
+
+body.provider-auth-required .provider-auth-google-copy strong {
+  font-size: 16px !important;
+}
+
+body.provider-auth-required .provider-auth-google-icon {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+body.provider-auth-required .provider-auth-trust {
+  margin-top: 10px !important;
+}
+
+body.provider-auth-required .provider-auth-trust span {
+  min-height: 32px !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
+}
+
+body.provider-auth-required .provider-auth-legal {
+  margin-top: 10px !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+}
+
+body.provider-auth-required .chat-drawer,
+body.provider-auth-required .notifications-drawer,
+body.provider-auth-required .side-drawer,
+body.provider-auth-required .provider-login-panel,
+body.provider-auth-required .provider-login-hero-art,
+body.provider-auth-required .toast-container,
+body.provider-auth-required .notification-container {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+@media (max-width: 430px) {
+  body.provider-auth-required .provider-auth-hero-bg img {
+    object-position: center 62% !important;
+  }
+
+  body.provider-auth-required .provider-auth-card {
+    width: calc(100% - 20px) !important;
+    margin: 0 auto 16px !important;
+    padding: 12px !important;
+    border-radius: 20px !important;
+  }
+
+  body.provider-auth-required .provider-auth-card-header {
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 9px !important;
+  }
+
+  body.provider-auth-required .provider-auth-card-title {
+    font-size: 18px !important;
+    line-height: 1 !important;
+    letter-spacing: -.045em !important;
+  }
+
+  body.provider-auth-required .provider-auth-card-subtitle {
+    margin-top: 3px !important;
+    font-size: 11px !important;
+  }
+
+  body.provider-auth-required .provider-auth-card-badge {
+    min-height: 30px !important;
+    padding: 0 10px !important;
+    gap: 6px !important;
+    font-size: 10px !important;
+  }
+
+  body.provider-auth-required .provider-auth-card-badge::before {
+    width: 8px !important;
+    height: 8px !important;
+  }
+
+  body.provider-auth-required .provider-auth-divider {
+    width: 58px !important;
+    height: 4px !important;
+    margin: 12px 0 14px !important;
+  }
+
+  body.provider-auth-required .provider-auth-card-copy {
+    font-size: 13px !important;
+    line-height: 1.28 !important;
+  }
+
+  body.provider-auth-required .provider-auth-services {
+    gap: 7px !important;
+    margin: 10px 0 10px !important;
+  }
+
+  body.provider-auth-required .provider-auth-service {
+    min-height: 68px !important;
+    padding: 7px !important;
+    border-radius: 14px !important;
+  }
+
+  body.provider-auth-required .provider-auth-service::before {
+    display: none !important;
+  }
+
+  body.provider-auth-required .provider-auth-service strong {
+    font-size: 20px !important;
+  }
+
+  body.provider-auth-required .provider-auth-service span {
+    font-size: 9.5px !important;
+  }
+
+  body.provider-auth-required .provider-auth-login-label {
+    margin: 10px 0 9px !important;
+    font-size: 11px !important;
+  }
+
+  body.provider-auth-required .provider-auth-google {
+    min-height: 42px !important;
+    padding: 0 10px !important;
+    border-radius: 13px !important;
+  }
+
+  body.provider-auth-required .provider-auth-google-icon {
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  body.provider-auth-required .provider-auth-google-copy strong {
+    font-size: 12px !important;
+  }
+
+  body.provider-auth-required .provider-auth-google-arrow {
+    width: 24px !important;
+    height: 24px !important;
+    font-size: 16px !important;
+  }
+
+  body.provider-auth-required .provider-auth-trust {
+    gap: 8px !important;
+    margin-top: 10px !important;
+  }
+
+  body.provider-auth-required .provider-auth-trust span {
+    min-height: 32px !important;
+    padding: 0 10px !important;
+    font-size: 10px !important;
+  }
+
+  body.provider-auth-required .provider-auth-legal {
+    margin-top: 10px !important;
+    font-size: 9.5px !important;
+    line-height: 1.35 !important;
+  }
+}
