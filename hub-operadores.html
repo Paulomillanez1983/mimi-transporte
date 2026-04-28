@@ -98,6 +98,31 @@
       line-height:1.5;
     }
 
+    .typewriter-line{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+
+    .typewriter-text{
+      display:inline-block;
+      overflow:hidden;
+      white-space:nowrap;
+      width:0;
+      animation:typeText 2.2s steps(36,end) .35s forwards;
+    }
+
+    .typewriter-check{
+      opacity:0;
+      transform:scale(.6) translateY(2px);
+      color:#22c55e;
+      font-weight:900;
+      font-size:1.15em;
+      filter:drop-shadow(0 0 10px rgba(34,197,94,.75));
+      animation:checkPop .35s ease 2.65s forwards;
+    }
+
     .grid{
       display:grid;
       grid-template-columns:repeat(2,minmax(0,1fr));
@@ -177,95 +202,22 @@
       opacity:.50;
     }
 
-.car{
-  position:absolute;
-  left:50%;
-  bottom:26px;
-  width:158px;
-  height:38px;
-  transform:translateX(-50%);
-  border-radius:20px 42px 14px 14px;
-  background:
-    linear-gradient(180deg,#f8fafc 0%,#e5e7eb 42%,#cbd5e1 68%,#94a3b8 100%);
-  box-shadow:
-    0 10px 26px rgba(148,163,184,.18),
-    0 0 18px rgba(255,255,255,.08),
-    inset 0 1px 0 rgba(255,255,255,.95),
-    inset 0 -5px 10px rgba(15,23,42,.14);
-}
-    
-.car::before,
-.car::after{
-  content:"";
-  position:absolute;
-  bottom:-8px;
-  width:22px;
-  height:22px;
-  border-radius:999px;
-  background:
-    radial-gradient(circle at 50% 50%, #475569 0 18%, #111827 19% 68%, #020617 69%);
-  border:2px solid rgba(255,255,255,.06);
-  box-shadow:0 0 0 2px rgba(15,23,42,.24);
-}    
-    .car::before{left:16px}
-    .car::after{right:16px}
+    .car-real{
+      position:absolute;
+      left:50%;
+      bottom:12px;
+      width:min(78%, 330px);
+      height:auto;
+      transform:translateX(-50%);
+      object-fit:contain;
+      filter:
+        drop-shadow(0 18px 28px rgba(0,0,0,.38))
+        drop-shadow(0 0 18px rgba(255,255,255,.10));
+      z-index:3;
+      pointer-events:none;
+      user-select:none;
+    }
 
-.car-top{
-  position:absolute;
-  left:34px;
-  right:18px;
-  top:4px;
-  height:17px;
-  border-radius:22px 34px 8px 8px;
-  background:
-    linear-gradient(180deg,#0f172a 0%,#111827 100%);
-  border:1px solid rgba(255,255,255,.08);
-  overflow:hidden;
-}
-.car-top::before{
-  content:"";
-  position:absolute;
-  left:50%;
-  top:0;
-  width:1px;
-  height:100%;
-  background:rgba(255,255,255,.10);
-}
-    .car-top::after{
-  content:"";
-  position:absolute;
-  inset:2px;
-  border-radius:18px 28px 6px 6px;
-  background:
-    linear-gradient(90deg,
-      rgba(148,163,184,.22) 0%,
-      rgba(30,41,59,.88) 28%,
-      rgba(15,23,42,.96) 52%,
-      rgba(30,41,59,.88) 76%,
-      rgba(148,163,184,.16) 100%);
-}
-.car-light{
-  position:absolute;
-  left:-4px;
-  bottom:11px;
-  width:16px;
-  height:6px;
-  border-radius:999px;
-  background:linear-gradient(90deg,#ffffff,#dbeafe);
-  box-shadow:
-    -10px 0 20px rgba(255,255,255,.65),
-    -24px 0 34px rgba(147,197,253,.32);
-}
-    .car-tail{
-  position:absolute;
-  right:-3px;
-  bottom:10px;
-  width:10px;
-  height:8px;
-  border-radius:999px;
-  background:#ef4444;
-  box-shadow:0 0 14px rgba(239,68,68,.65);
-}
     .pin{
       position:absolute;
       width:16px;
@@ -274,6 +226,7 @@
       transform:rotate(-45deg);
       background:#7cc7ff;
       box-shadow:0 0 0 5px rgba(124,199,255,.08);
+      z-index:2;
     }
 
     .pin::after{
@@ -397,6 +350,18 @@
       line-height:1.45;
     }
 
+    @keyframes typeText{
+      from{width:0}
+      to{width:36ch}
+    }
+
+    @keyframes checkPop{
+      to{
+        opacity:1;
+        transform:scale(1) translateY(0);
+      }
+    }
+
     @media (max-width:900px){
       .grid{grid-template-columns:1fr}
       .card{min-height:unset}
@@ -425,8 +390,9 @@
         margin-bottom:12px;
       }
 
-      .car{
-        transform:translateX(-50%) scale(.88);
+      .car-real{
+        width:min(84%, 290px);
+        bottom:14px;
       }
 
       .service-mini span{font-size:16px}
@@ -439,54 +405,16 @@
       .card-bottom{margin-top:16px}
       .btn{min-height:52px;border-radius:17px}
       .footer-note{font-size:.78rem}
+
+      .typewriter-text{
+        animation:typeTextMobile 2.2s steps(36,end) .35s forwards;
+      }
+
+      @keyframes typeTextMobile{
+        from{width:0}
+        to{width:31ch}
+      }
     }
-    .typewriter-line{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-}
-
-.typewriter-text{
-  display:inline-block;
-  overflow:hidden;
-  white-space:nowrap;
-  width:0;
-  animation:typeText 2.2s steps(36,end) .35s forwards;
-}
-
-.typewriter-check{
-  opacity:0;
-  transform:scale(.6) translateY(2px);
-  color:#22c55e;
-  font-weight:900;
-  font-size:1.15em;
-  filter:drop-shadow(0 0 10px rgba(34,197,94,.75));
-  animation:checkPop .35s ease 2.65s forwards;
-}
-
-@keyframes typeText{
-  from{width:0}
-  to{width:36ch}
-}
-
-@keyframes checkPop{
-  to{
-    opacity:1;
-    transform:scale(1) translateY(0);
-  }
-}
-
-@media (max-width:640px){
-  .typewriter-text{
-    animation:typeTextMobile 2.2s steps(36,end) .35s forwards;
-  }
-
-  @keyframes typeTextMobile{
-    from{width:0}
-    to{width:31ch}
-  }
-}
   </style>
 </head>
 
@@ -495,10 +423,10 @@
     <section class="hero">
       <div class="eyebrow">MIMI Platform Access</div>
       <h1>MIMI Operadores</h1>
-<p class="typewriter-line">
-  <span class="typewriter-text">Elegí cómo, cuándo y dónde trabajar.</span>
-  <span class="typewriter-check">✓</span>
-</p>
+      <p class="typewriter-line">
+        <span class="typewriter-text">Elegí cómo, cuándo y dónde trabajar.</span>
+        <span class="typewriter-check">✓</span>
+      </p>
     </section>
 
     <section class="grid">
@@ -508,11 +436,7 @@
             <div class="pin pin-a"></div>
             <div class="pin pin-b"></div>
             <div class="road"></div>
-<div class="car">
-  <div class="car-top"></div>
-  <div class="car-light"></div>
-  <div class="car-tail"></div>
-</div>
+            <img class="car-real" src="./assets/tesla-mimicar.png" alt="">
           </div>
 
           <h2>MIMICAR Chofer</h2>
