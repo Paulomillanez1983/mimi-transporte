@@ -6,458 +6,7 @@
   <title>MIMI Operadores</title>
   <meta name="description" content="Acceso para choferes y prestadores MIMI.">
   <link rel="icon" href="./favicon.ico">
-
-  <style>
-    :root{
-      --bg:#030712;
-      --text:#fff;
-      --muted:#aeb9d1;
-      --blue:#2f73ff;
-      --blue2:#7cc7ff;
-      --green:#35d86f;
-      --green2:#86efac;
-      --border:rgba(255,255,255,.12);
-      --shadow:0 28px 90px rgba(0,0,0,.48);
-    }
-
-    *{box-sizing:border-box;margin:0;padding:0}
-
-    html,body{
-      min-height:100%;
-      background:#020617;
-      font-family:Inter,Arial,sans-serif;
-      color:var(--text);
-      overflow-x:hidden;
-    }
-
-    body{
-      padding:12px;
-      background:
-        radial-gradient(circle at 14% 8%, rgba(47,115,255,.24), transparent 28%),
-        radial-gradient(circle at 86% 14%, rgba(124,58,237,.25), transparent 30%),
-        linear-gradient(180deg,#020617 0%,#030712 52%,#020617 100%);
-    }
-
-    .viewport{
-      width:min(1080px,100%);
-      margin:0 auto;
-    }
-
-    .shell{
-      width:100%;
-      border-radius:28px;
-      border:1px solid var(--border);
-      background:
-        radial-gradient(circle at 78% 20%, rgba(92,47,255,.28), transparent 34%),
-        linear-gradient(180deg,rgba(10,18,35,.86),rgba(5,9,20,.94));
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      position:relative;
-    }
-
-    .topbar{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding:18px 18px 8px;
-      gap:10px;
-    }
-
-    .brand{
-      font-size:34px;
-      font-weight:950;
-      letter-spacing:-.08em;
-      line-height:1;
-      white-space:nowrap;
-    }
-
-    .brand span{color:var(--blue2)}
-
-    .status{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      background:rgba(255,255,255,.07);
-      border:1px solid rgba(255,255,255,.10);
-      font-size:11px;
-      font-weight:800;
-      white-space:nowrap;
-    }
-
-    .status::before{
-      content:"";
-      width:7px;
-      height:7px;
-      border-radius:50%;
-      background:var(--green);
-      box-shadow:0 0 18px rgba(53,216,111,.9);
-      flex:0 0 auto;
-    }
-
-    .hero{
-      display:block;
-      padding:18px 16px 12px;
-    }
-
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 12px;
-      border-radius:999px;
-      background:rgba(47,115,255,.12);
-      border:1px solid rgba(124,199,255,.16);
-      color:#cfe1ff;
-      font-size:10px;
-      font-weight:900;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      margin-bottom:14px;
-      white-space:nowrap;
-    }
-
-    .eyebrow::before{
-      content:"";
-      width:7px;
-      height:7px;
-      border-radius:50%;
-      background:var(--blue);
-      box-shadow:0 0 16px rgba(47,115,255,.9);
-      flex:0 0 auto;
-    }
-
-    h1{
-      font-size:34px;
-      line-height:1.02;
-      letter-spacing:-.065em;
-      font-weight:950;
-      margin-bottom:12px;
-    }
-
-    .accent{
-      background:linear-gradient(90deg,#2f73ff,#8b5cf6);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-    }
-
-    .hero-copy{
-      color:var(--muted);
-      font-size:15px;
-      line-height:1.45;
-      max-width:100%;
-    }
-
-    .hero-visual{
-      height:145px;
-      position:relative;
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      margin-top:12px;
-    }
-
-    .city{
-      position:absolute;
-      inset:0 0 28px;
-      opacity:.45;
-      background:linear-gradient(90deg,
-        transparent 0 8%, rgba(255,255,255,.10) 8% 14%,
-        transparent 14% 21%, rgba(255,255,255,.08) 21% 28%,
-        transparent 28% 40%, rgba(255,255,255,.12) 40% 48%,
-        transparent 48% 58%, rgba(255,255,255,.09) 58% 66%,
-        transparent 66% 76%, rgba(255,255,255,.12) 76% 86%,
-        transparent 86% 100%);
-      clip-path:polygon(0 100%,0 55%,8% 55%,8% 40%,14% 40%,14% 100%,21% 100%,21% 62%,28% 62%,28% 38%,40% 38%,40% 100%,48% 100%,48% 50%,58% 50%,58% 30%,66% 30%,66% 100%,76% 100%,76% 48%,86% 48%,86% 36%,96% 36%,96% 100%);
-    }
-
-    .headlight{
-      position:absolute;
-      left:6%;
-      bottom:60px;
-      width:130px;
-      height:26px;
-      background:linear-gradient(90deg,rgba(124,199,255,.65),transparent);
-      filter:blur(14px);
-      opacity:.85;
-    }
-
-    .hero-car{
-      width:245px;
-      max-width:88%;
-      position:relative;
-      z-index:2;
-      filter:drop-shadow(0 18px 24px rgba(0,0,0,.58));
-    }
-
-    .cards{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
-      padding:0 10px 14px;
-    }
-
-    .card{
-      min-height:auto;
-      border-radius:22px;
-      border:1px solid rgba(255,255,255,.15);
-      padding:14px;
-      background:linear-gradient(180deg,rgba(13,24,45,.88),rgba(6,11,24,.96));
-      box-shadow:0 16px 40px rgba(0,0,0,.26);
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      position:relative;
-      overflow:hidden;
-    }
-
-    .card.transport-card::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background:radial-gradient(circle at 70% 0%, rgba(47,115,255,.26), transparent 42%);
-      pointer-events:none;
-    }
-
-    .card.services-card::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background:radial-gradient(circle at 70% 0%, rgba(53,216,111,.24), transparent 42%);
-      pointer-events:none;
-    }
-
-    .card > *{position:relative;z-index:1}
-
-    .card-head{
-      display:flex;
-      align-items:flex-start;
-      gap:10px;
-      margin-bottom:10px;
-    }
-
-    .app-icon{
-      width:44px;
-      height:44px;
-      border-radius:14px;
-      display:grid;
-      place-items:center;
-      border:1px solid rgba(255,255,255,.14);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 10px 18px rgba(0,0,0,.22);
-      flex:0 0 auto;
-    }
-
-    .app-icon svg{width:22px;height:22px}
-    .app-icon.blue{background:linear-gradient(145deg,#69b7ff,#2458ff)}
-    .app-icon.green{background:linear-gradient(145deg,#7df5a5,#1e9f52)}
-
-    .card h2{
-      font-size:20px;
-      line-height:1;
-      letter-spacing:-.05em;
-      font-weight:950;
-      margin-bottom:4px;
-    }
-
-    .role{
-      font-size:12px;
-      font-weight:900;
-    }
-
-    .blue-text{color:#3b82ff}
-    .green-text{color:#4ade80}
-
-    .card p{
-      color:var(--muted);
-      line-height:1.35;
-      font-size:13px;
-      font-weight:500;
-    }
-
-    .driver-product{
-      height:95px;
-      display:flex;
-      align-items:flex-end;
-      justify-content:center;
-      margin:8px 0 10px;
-      position:relative;
-    }
-
-    .driver-product img{
-      width:180px;
-      max-width:100%;
-      position:relative;
-      z-index:1;
-      filter:drop-shadow(0 18px 20px rgba(0,0,0,.5));
-    }
-
-    .trust-row{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:8px;
-    }
-
-    .trust-pill{
-      min-height:42px;
-      border-radius:14px;
-      background:rgba(255,255,255,.055);
-      border:1px solid rgba(255,255,255,.08);
-      display:flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 10px;
-      color:#dfe8ff;
-      font-size:11px;
-      font-weight:750;
-    }
-
-    .trust-pill b{
-      color:#3b82ff;
-      font-size:14px;
-      flex:0 0 auto;
-    }
-
-    .services-grid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:8px;
-      margin:12px 0 12px;
-    }
-
-    .service-box{
-      height:78px;
-      border-radius:14px;
-      background:rgba(255,255,255,.055);
-      border:1px solid rgba(255,255,255,.08);
-      display:grid;
-      place-items:center;
-      text-align:center;
-      padding:8px;
-      color:#f4fff7;
-    }
-
-    .service-box svg{
-      width:24px;
-      height:24px;
-      margin-bottom:6px;
-      color:var(--green2);
-    }
-
-    .service-box strong{
-      font-size:11px;
-      font-weight:900;
-    }
-
-    .plus{
-      font-size:22px;
-      color:var(--green2);
-      font-weight:950;
-      line-height:1;
-    }
-
-    .btn{
-      width:100%;
-      height:46px;
-      border-radius:14px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-      text-decoration:none;
-      font-size:14px;
-      font-weight:950;
-      letter-spacing:-.03em;
-    }
-
-    .btn-blue{
-      color:white;
-      background:linear-gradient(180deg,#3b82ff,#1d4ed8);
-    }
-
-    .btn-green{
-      color:#06220f;
-      background:linear-gradient(180deg,#7df5a5,#28c865);
-    }
-
-    .benefits{
-      margin:0 10px 14px;
-      padding:16px;
-      border-radius:20px;
-      display:grid;
-      grid-template-columns:1fr;
-      gap:14px;
-      background:rgba(255,255,255,.045);
-      border:1px solid rgba(255,255,255,.09);
-    }
-
-    .benefit{
-      display:flex;
-      gap:12px;
-      align-items:flex-start;
-    }
-
-    .benefit-icon{
-      width:30px;
-      color:#6ea8ff;
-      flex:0 0 auto;
-    }
-
-    .benefit-icon svg{width:30px;height:30px}
-
-    .benefit h3{
-      font-size:14px;
-      margin-bottom:4px;
-      letter-spacing:-.03em;
-    }
-
-    .benefit p{
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.4;
-    }
-
-    .footer{
-      border-top:1px solid rgba(255,255,255,.08);
-      padding:16px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      color:#9eaad0;
-    }
-
-    .footer-brand{
-      font-size:22px;
-      font-weight:950;
-      color:white;
-      letter-spacing:-.08em;
-      white-space:nowrap;
-    }
-
-    .footer-sep{
-      width:1px;
-      height:22px;
-      background:rgba(124,199,255,.35);
-      flex:0 0 auto;
-    }
-
-    .footer-copy{
-      margin-right:auto;
-      font-size:11px;
-      line-height:1.3;
-    }
-
-    .footer-link{
-      color:#9ab7ff;
-      font-size:11px;
-      font-weight:700;
-      white-space:nowrap;
-    }
-
-    svg{display:block}
-  </style>
+  <link rel="stylesheet" href="./operadores.css">
 </head>
 
 <body>
@@ -470,16 +19,18 @@
       </header>
 
       <section class="hero">
-        <div class="eyebrow">MIMI Access Hub</div>
+        <div>
+          <div class="eyebrow">MIMI Access Hub</div>
 
-        <h1>
-          Elegí cómo, cuándo<br>
-          y dónde <span class="accent">trabajar.</span>
-        </h1>
+          <h1>
+            Elegí cómo, cuándo<br>
+            y dónde <span class="accent">trabajar.</span>
+          </h1>
 
-        <p class="hero-copy">
-          Acceso seguro a la plataforma tecnológica que conecta movilidad y servicios.
-        </p>
+          <p class="hero-copy">
+            Acceso seguro a la plataforma tecnológica que conecta movilidad y servicios.
+          </p>
+        </div>
 
         <div class="hero-visual" aria-hidden="true">
           <div class="city"></div>
@@ -500,13 +51,17 @@
                   <path d="M9.4 12.2a2.6 2.6 0 1 0 5.2 0 2.6 2.6 0 0 0-5.2 0Z" stroke="white" stroke-width="1.8"/>
                 </svg>
               </div>
+
               <div>
                 <h2>MIMICAR</h2>
                 <div class="role blue-text">Para conductores</div>
               </div>
             </div>
 
-            <p>Movilidad inteligente.<br>Más viajes, más ingresos.</p>
+            <p>
+              Movilidad inteligente.<br>
+              Más viajes, más ingresos.
+            </p>
 
             <div class="driver-product">
               <img src="./assets/tesla-mimicar-safe.png" alt="">
@@ -519,7 +74,8 @@
           </div>
 
           <a class="btn btn-blue" href="./login-chofer.html">
-            <span>Entrar como chofer</span><span>→</span>
+            <span>Entrar como chofer</span>
+            <span>→</span>
           </a>
         </article>
 
@@ -533,27 +89,40 @@
                   <path d="M4.3 11.5h15.4M10 11.5v1.2c0 .7.6 1.3 1.3 1.3h1.4c.7 0 1.3-.6 1.3-1.3v-1.2" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
               </div>
+
               <div>
                 <h2>MIMI SERVICIOS</h2>
                 <div class="role green-text">Para prestadores</div>
               </div>
             </div>
 
-            <p>Ofrecé tus servicios.<br>Llegá a más personas.</p>
+            <p>
+              Ofrecé tus servicios.<br>
+              Llegá a más personas.
+            </p>
 
             <div class="services-grid">
               <div class="service-box">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 5l8 6.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 10.5V20h4v-5h3v5h4v-9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M4 11.5 12 5l8 6.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6.5 10.5V20h4v-5h3v5h4v-9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
                 <strong>Hogar</strong>
               </div>
 
               <div class="service-box">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-4.1-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.9-7 10-7 10Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8 12h2l1-2 2 4 1-2h2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 20s-7-4.1-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.9-7 10-7 10Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                  <path d="M8 12h2l1-2 2 4 1-2h2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                </svg>
                 <strong>Salud</strong>
               </div>
 
               <div class="service-box">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 21c-3.8-2.1-5.8-5.2-6-9 3.5.2 6.1 2.3 6 9Z" stroke="currentColor" stroke-width="1.9"/><path d="M12 21c3.8-2.1 5.8-5.2 6-9-3.5.2-6.1 2.3-6 9Z" stroke="currentColor" stroke-width="1.9"/></svg>
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 21c-3.8-2.1-5.8-5.2-6-9 3.5.2 6.1 2.3 6 9Z" stroke="currentColor" stroke-width="1.9"/>
+                  <path d="M12 21c3.8-2.1 5.8-5.2 6-9-3.5.2-6.1 2.3-6 9Z" stroke="currentColor" stroke-width="1.9"/>
+                </svg>
                 <strong>Bienestar</strong>
               </div>
 
@@ -565,15 +134,20 @@
           </div>
 
           <a class="btn btn-green" href="./mimi-servicios/prestador.html">
-            <span>Entrar como prestador</span><span>→</span>
+            <span>Entrar como prestador</span>
+            <span>→</span>
           </a>
         </article>
+
       </section>
 
       <section class="benefits">
         <div class="benefit">
           <div class="benefit-icon">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 2.8 8.5 7 10 4.2-1.5 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 3 5 6v5c0 4.5 2.8 8.5 7 10 4.2-1.5 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/>
+              <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
           </div>
           <div>
             <h3>Seguro y confiable</h3>
@@ -583,7 +157,10 @@
 
         <div class="benefit">
           <div class="benefit-icon">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12a7 7 0 0 1 14 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/><path d="M7 13v3M17 13v3M12 19h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M5 12a7 7 0 0 1 14 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M7 13v3M17 13v3M12 19h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
           </div>
           <div>
             <h3>Soporte 24/7</h3>
@@ -593,7 +170,10 @@
 
         <div class="benefit">
           <div class="benefit-icon">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 16v-4M12 16V9M16 16V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M4 19V5M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M8 16v-4M12 16V9M16 16V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
           </div>
           <div>
             <h3>Crecé con MIMI</h3>
@@ -605,7 +185,10 @@
       <footer class="footer">
         <div class="footer-brand">MiMI</div>
         <div class="footer-sep"></div>
-        <div class="footer-copy">Una sola plataforma.<br>Múltiples oportunidades.</div>
+        <div class="footer-copy">
+          Una sola plataforma.<br>
+          Múltiples oportunidades.
+        </div>
         <div class="footer-link">mimi.com</div>
       </footer>
 
