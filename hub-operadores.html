@@ -7,6 +7,7 @@
   <meta name="description" content="Acceso para choferes y prestadores MIMI.">
   <link rel="icon" href="./favicon.ico">
   <link rel="stylesheet" href="./operadores.css">
+ <link rel="manifest" href="./manifest.json"> 
   <meta name="theme-color" content="#020617">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -200,20 +201,25 @@
   </div>
 
   <script>
-    let deferredPrompt = null;
+  let deferredPrompt = null;
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.body.classList.add('pwa-installable');
-    });
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    document.body.classList.add("pwa-installable");
+  });
 
-    async function installPWA() {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
+  async function installPWA() {
+    if (!deferredPrompt) {
+      alert("Para instalar MIMI, tocá el menú de Chrome ⋮ y elegí 'Agregar a pantalla principal'.");
+      return;
     }
+
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.body.classList.remove("pwa-installable");
+  }
   </script>
 </body>
 </html>
