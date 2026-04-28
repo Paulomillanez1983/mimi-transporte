@@ -652,12 +652,11 @@ body{
     line-height:1.4;
   }
 
-  .driver-auth-image{
-    width:250px;
-    right:-28px;
-    bottom:18px;
-  }
-
+.driver-auth-image{
+  width:205px;
+  right:-18px;
+  bottom:34px;
+}
   .driver-auth-card{
     margin:-8px 14px 16px;
     padding:22px 18px 22px;
