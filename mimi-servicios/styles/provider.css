@@ -4864,7 +4864,58 @@ body.provider-auth-required .provider-auth-legal {
   display:block;
   opacity:.98;
 }
+/* ==========================================================
+   FIX FINAL PROVIDER LOGIN HERO BG
+   ========================================================== */
 
+.provider-auth-hero{
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 520px !important;
+  border-radius: 0 0 34px 34px !important;
+  isolation: isolate !important;
+  background: #020705 !important;
+}
+
+.provider-auth-hero-bg{
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+.provider-auth-hero-bg img{
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  object-fit: cover !important;
+  object-position: center top !important;
+  opacity: 1 !important;
+}
+
+.provider-auth-hero::after{
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1 !important;
+  pointer-events: none !important;
+  background: linear-gradient(
+    180deg,
+    rgba(2,7,5,.12) 0%,
+    rgba(2,7,5,.24) 34%,
+    rgba(2,7,5,.62) 72%,
+    rgba(2,7,5,.90) 100%
+  ) !important;
+}
+
+.provider-auth-topbar,
+.provider-auth-copy{
+  position: relative !important;
+  z-index: 2 !important;
+}
 .provider-auth-topbar,
 .provider-auth-copy{
   position:relative;
