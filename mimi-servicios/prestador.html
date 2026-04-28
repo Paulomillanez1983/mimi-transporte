@@ -77,20 +77,50 @@
 
 <!-- Provider Login Gate -->
 <div class="online-button-container" id="onlineButtonContainer">
-  <div class="provider-login-gate">
-    
-    <div class="provider-login-logo">
-      <img src="./assets/icons/icon-192.png" alt="MIMI Servicios">
+<div class="provider-login-gate provider-login-shell">
+  <div class="provider-login-hero">
+    <div class="provider-login-hero-copy">
+      <span class="provider-login-kicker">Panel Prestador</span>
+
+      <h1 class="provider-login-title">
+        Trabajá cómo,<br>
+        cuándo y dónde<br>
+        vos querés.
+      </h1>
+
+      <p class="provider-login-subtitle">
+        Activá tu perfil, verificá tu identidad y empezá a recibir solicitudes
+        reales en limpieza, cuidado, salud y bienestar.
+      </p>
     </div>
 
-    <div class="provider-login-kicker">Panel Prestador</div>
+    <div class="provider-login-hero-art" aria-hidden="true">
+      <div class="provider-art-glow"></div>
 
-    <div class="provider-login-copy">
-      <h1>MIMI<br>Servicios</h1>
-      <p>
-        Ingresá para verificar tu identidad, configurar tus servicios y empezar
-        a recibir solicitudes reales.
-      </p>
+      <div class="provider-art-stack">
+        <div class="provider-art-card card-clean">
+          <span>🧼</span>
+          <small>Limpieza</small>
+        </div>
+        <div class="provider-art-card card-care">
+          <span>🧑‍⚕️</span>
+          <small>Cuidado</small>
+        </div>
+        <div class="provider-art-card card-home">
+          <span>🏠</span>
+          <small>Hogar</small>
+        </div>
+        <div class="provider-art-card card-wellness">
+          <span>💆</span>
+          <small>Bienestar</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="provider-login-panel">
+    <div class="provider-login-logo">
+      <img src="./assets/icons/icon-192.png" alt="MIMI Servicios">
     </div>
 
     <button class="provider-login-google" id="providerGoogleLoginButton" type="button">
@@ -104,8 +134,9 @@
       </span>
 
       <span class="provider-google-text">
-       <strong>Continuar con Google</strong>
-     </span>
+        <strong>Continuar con Google</strong>
+      </span>
+
       <span class="provider-google-arrow">›</span>
     </button>
 
@@ -114,10 +145,8 @@
       <span>🛠️<small>Verificación profesional</small></span>
       <span>⚡<small>Servicios reales</small></span>
     </div>
-
   </div>
-</div>
-    
+</div>    
     <!-- Floating Offer Card -->
     <div class="offer-card-float" id="offerCard" hidden>
       <div class="offer-glass">
