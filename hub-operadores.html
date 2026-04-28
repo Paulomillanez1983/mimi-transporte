@@ -180,45 +180,47 @@
 .car{
   position:absolute;
   left:50%;
-  bottom:30px;
-  width:118px;
-  height:34px;
+  bottom:26px;
+  width:158px;
+  height:38px;
   transform:translateX(-50%);
-  border-radius:22px 28px 12px 12px;
+  border-radius:20px 42px 14px 14px;
   background:
-    linear-gradient(180deg,#ef4444 0%,#c1121f 62%,#7f1020 100%);
+    linear-gradient(180deg,#f8fafc 0%,#e5e7eb 42%,#cbd5e1 68%,#94a3b8 100%);
   box-shadow:
-    0 12px 24px rgba(193,18,31,.28),
-    inset 0 1px 0 rgba(255,255,255,.18),
-    inset 0 -6px 10px rgba(0,0,0,.24);
+    0 10px 26px rgba(148,163,184,.18),
+    0 0 18px rgba(255,255,255,.08),
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -5px 10px rgba(15,23,42,.14);
 }
     
 .car::before,
 .car::after{
   content:"";
   position:absolute;
-  bottom:-6px;
-  width:16px;
-  height:16px;
+  bottom:-8px;
+  width:22px;
+  height:22px;
   border-radius:999px;
   background:
-    radial-gradient(circle at 50% 50%, #6b7280 0 22%, #111827 23% 68%, #020617 69%);
-  border:1px solid rgba(255,255,255,.08);
-}
-    
+    radial-gradient(circle at 50% 50%, #475569 0 18%, #111827 19% 68%, #020617 69%);
+  border:2px solid rgba(255,255,255,.06);
+  box-shadow:0 0 0 2px rgba(15,23,42,.24);
+}    
     .car::before{left:16px}
     .car::after{right:16px}
 
 .car-top{
   position:absolute;
-  left:24px;
-  right:20px;
+  left:34px;
+  right:18px;
   top:4px;
-  height:13px;
-  border-radius:14px 18px 6px 6px;
+  height:17px;
+  border-radius:22px 34px 8px 8px;
   background:
-    linear-gradient(90deg,rgba(219,234,254,.82),rgba(147,197,253,.28));
-  border:1px solid rgba(255,255,255,.16);
+    linear-gradient(180deg,#0f172a 0%,#111827 100%);
+  border:1px solid rgba(255,255,255,.08);
+  overflow:hidden;
 }
 .car-top::before{
   content:"";
@@ -227,19 +229,43 @@
   top:0;
   width:1px;
   height:100%;
-  background:rgba(15,23,42,.22);
+  background:rgba(255,255,255,.10);
 }
-    .car-light{
-      position:absolute;
-      right:-2px;
-      bottom:12px;
-      width:8px;
-      height:7px;
-      border-radius:999px;
-      background:#fde68a;
-      box-shadow:0 0 14px rgba(253,230,138,.85);
-    }
-
+    .car-top::after{
+  content:"";
+  position:absolute;
+  inset:2px;
+  border-radius:18px 28px 6px 6px;
+  background:
+    linear-gradient(90deg,
+      rgba(148,163,184,.22) 0%,
+      rgba(30,41,59,.88) 28%,
+      rgba(15,23,42,.96) 52%,
+      rgba(30,41,59,.88) 76%,
+      rgba(148,163,184,.16) 100%);
+}
+.car-light{
+  position:absolute;
+  left:-4px;
+  bottom:11px;
+  width:16px;
+  height:6px;
+  border-radius:999px;
+  background:linear-gradient(90deg,#ffffff,#dbeafe);
+  box-shadow:
+    -10px 0 20px rgba(255,255,255,.65),
+    -24px 0 34px rgba(147,197,253,.32);
+}
+    .car-tail{
+  position:absolute;
+  right:-3px;
+  bottom:10px;
+  width:10px;
+  height:8px;
+  border-radius:999px;
+  background:#ef4444;
+  box-shadow:0 0 14px rgba(239,68,68,.65);
+}
     .pin{
       position:absolute;
       width:16px;
@@ -482,10 +508,11 @@
             <div class="pin pin-a"></div>
             <div class="pin pin-b"></div>
             <div class="road"></div>
-            <div class="car">
-              <div class="car-top"></div>
-              <div class="car-light"></div>
-            </div>
+<div class="car">
+  <div class="car-top"></div>
+  <div class="car-light"></div>
+  <div class="car-tail"></div>
+</div>
           </div>
 
           <h2>MIMICAR Chofer</h2>
