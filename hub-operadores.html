@@ -5,13 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MIMI Operadores</title>
   <meta name="description" content="Acceso para choferes y prestadores MIMI.">
+
   <link rel="icon" href="./favicon.ico">
   <link rel="stylesheet" href="./operadores.css">
- <link rel="manifest" href="./manifest.json"> 
+  <link rel="manifest" href="./manifest.json">
+
   <meta name="theme-color" content="#020617">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 
 <body>
@@ -30,9 +32,7 @@
             y dónde <span class="accent">trabajar.</span>
           </h1>
 
-          <p class="hero-copy">
-            Oportunidades a tu tiempo.
-          </p>
+          <p class="hero-copy">Oportunidades a tu tiempo.</p>
         </div>
 
         <div class="hero-visual" aria-hidden="true">
@@ -186,40 +186,45 @@
       </section>
 
       <footer class="footer">
-  <div class="footer-brand">MiMI</div>
-  <div class="footer-sep"></div>
-  <div class="footer-copy">
-    Una sola plataforma.<br>
-    Múltiples oportunidades.
-  </div>
-  <a class="footer-link install-app-btn" href="#" onclick="installPWA(); return false;">
-    Instalar app
-  </a>
+        <div class="footer-brand">MiMI</div>
+        <div class="footer-sep"></div>
+        <div class="footer-copy">
+          Una sola plataforma.<br>
+          Múltiples oportunidades.
+        </div>
+
+        <button class="install-app-btn" type="button" onclick="installPWA()">
+          <span class="install-icon">⬇</span>
+          <span class="install-copy">
+            <small>Disponible offline</small>
+            <strong>Instalar app</strong>
+          </span>
+        </button>
       </footer>
 
     </main>
   </div>
 
   <script>
-  let deferredPrompt = null;
+    let deferredPrompt = null;
 
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredPrompt = event;
-    document.body.classList.add("pwa-installable");
-  });
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredPrompt = event;
+      document.body.classList.add("pwa-installable");
+    });
 
-  async function installPWA() {
-    if (!deferredPrompt) {
-      alert("Para instalar MIMI, tocá el menú de Chrome ⋮ y elegí 'Agregar a pantalla principal'.");
-      return;
+    async function installPWA() {
+      if (!deferredPrompt) {
+        alert("Para instalar MIMI, tocá el menú de Chrome ⋮ y elegí 'Agregar a pantalla principal'.");
+        return;
+      }
+
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      document.body.classList.remove("pwa-installable");
     }
-
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    document.body.classList.remove("pwa-installable");
-  }
   </script>
 </body>
 </html>
