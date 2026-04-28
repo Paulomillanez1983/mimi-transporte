@@ -136,14 +136,14 @@
             </div>
           </div>
 
-          <a
-            class="btn btn-green js-app-transition"
-            href="./mimi-servicios/prestador.html?from=hub&app=services"
-            data-app="services"
+          <button
+           class="btn btn-green services-login-btn"
+           type="button"
+            id="servicesLoginBtn"
           >
-            <span>Entrar como prestador</span>
-            <span>→</span>
-          </a>
+            <span id="servicesLoginBtnText">Entrar como prestador</span>
+             <span id="servicesLoginBtnArrow">→</span>
+           </button>
         </article>
 
       </section>
@@ -210,6 +210,7 @@
 
 <script>
   let deferredPrompt = null;
+  let servicesLoginMode = false;
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -228,6 +229,39 @@
     deferredPrompt = null;
     document.body.classList.remove("pwa-installable");
   }
+
+  function enterServicesLoginMode() {
+    servicesLoginMode = true;
+    document.body.classList.add("services-login-mode");
+
+    document.getElementById("servicesLoginBtnText").textContent = "Continuar con Google";
+    document.getElementById("servicesLoginBtnArrow").textContent = "G";
+
+    history.pushState({ mimiMode: "services-login" }, "", "#prestador");
+  }
+
+  function exitServicesLoginMode() {
+    servicesLoginMode = false;
+    document.body.classList.remove("services-login-mode");
+
+    document.getElementById("servicesLoginBtnText").textContent = "Entrar como prestador";
+    document.getElementById("servicesLoginBtnArrow").textContent = "→";
+  }
+
+  document.getElementById("servicesLoginBtn")?.addEventListener("click", () => {
+    if (!servicesLoginMode) {
+      enterServicesLoginMode();
+      return;
+    }
+
+    window.location.href = "./mimi-servicios/prestador.html";
+  });
+
+  window.addEventListener("popstate", () => {
+    if (servicesLoginMode) {
+      exitServicesLoginMode();
+    }
+  });
 </script>
 </body>
 </html>
