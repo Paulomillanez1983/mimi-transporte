@@ -132,7 +132,7 @@
       border:1px solid var(--card-border);
       box-shadow:var(--shadow);
       backdrop-filter:blur(14px);
-      min-height:320px;
+      min-height:340px;
       display:flex;
       flex-direction:column;
       justify-content:space-between;
@@ -173,25 +173,33 @@
     }
 
     .icon{
-      width:62px;
-      height:62px;
+      width:66px;
+      height:66px;
       border-radius:20px;
       display:grid;
       place-items:center;
       margin-bottom:18px;
-      font-size:30px;
-      font-weight:700;
-      box-shadow:inset 0 0 24px rgba(255,255,255,.04);
+      box-shadow:
+        inset 0 0 24px rgba(255,255,255,.04),
+        0 10px 28px rgba(0,0,0,.18);
+    }
+
+    .icon svg{
+      width:34px;
+      height:34px;
+      display:block;
     }
 
     .transport-card .icon{
       background:rgba(124,199,255,.10);
       border:1px solid rgba(124,199,255,.18);
+      color:#8ed5ff;
     }
 
     .services-card .icon{
       background:rgba(74,222,128,.10);
       border:1px solid rgba(74,222,128,.18);
+      color:#7ef0a9;
     }
 
     .card h2{
@@ -325,11 +333,15 @@
       }
 
       .icon{
-        width:56px;
-        height:56px;
+        width:58px;
+        height:58px;
         border-radius:18px;
-        font-size:26px;
         margin-bottom:14px;
+      }
+
+      .icon svg{
+        width:30px;
+        height:30px;
       }
 
       .card h2{
@@ -362,7 +374,15 @@
     <section class="grid">
       <article class="card transport-card">
         <div class="card-top">
-          <div class="icon">🚘</div>
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M5 15L6.4 9.8C6.74 8.55 7.87 7.68 9.16 7.68H14.84C16.13 7.68 17.26 8.55 17.6 9.8L19 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7 15H17" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M8 18.2C8.66 18.2 9.2 17.66 9.2 17C9.2 16.34 8.66 15.8 8 15.8C7.34 15.8 6.8 16.34 6.8 17C6.8 17.66 7.34 18.2 8 18.2Z" fill="currentColor"/>
+              <path d="M16 18.2C16.66 18.2 17.2 17.66 17.2 17C17.2 16.34 16.66 15.8 16 15.8C15.34 15.8 14.8 16.34 14.8 17C14.8 17.66 15.34 18.2 16 18.2Z" fill="currentColor"/>
+            </svg>
+          </div>
+
           <h2>Chofer MIMI Transporte</h2>
           <p>Acceso para conductores de viajes, traslados programados y transporte escolar dentro de MIMI Transporte.</p>
 
@@ -382,13 +402,22 @@
 
       <article class="card services-card">
         <div class="card-top">
-          <div class="icon">🛠️</div>
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M12 4.8C14.32 4.8 16.2 6.68 16.2 9C16.2 11.32 14.32 13.2 12 13.2C9.68 13.2 7.8 11.32 7.8 9C7.8 6.68 9.68 4.8 12 4.8Z" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M4.8 18.8C5.84 16.2 8.38 14.6 12 14.6C15.62 14.6 18.16 16.2 19.2 18.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M18.6 7.2H21.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+              <path d="M19.9 5.9V8.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+          </div>
+
           <h2>Prestador MIMI Servicios</h2>
-          <p>Acceso para profesionales y proveedores que operan servicios dentro del ecosistema MIMI Servicios.</p>
+          <p>Acceso para servicios de asistencia, cuidado y acompañamiento dentro de MIMI Servicios.</p>
 
           <div class="meta">
-            <span class="pill">Profesionales</span>
-            <span class="pill">Servicios</span>
+            <span class="pill">Enfermería</span>
+            <span class="pill">Niñera</span>
+            <span class="pill">Cuidado adulto</span>
           </div>
         </div>
 
