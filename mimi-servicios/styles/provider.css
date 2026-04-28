@@ -3878,3 +3878,51 @@ body.provider-auth-required #onlineButtonContainer {
     font-size:.7rem;
   }
 }
+html,
+body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden !important;
+}
+
+.provider-auth-shell,
+.provider-auth-stage{
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
+}
+
+.provider-auth-stage{
+  box-sizing:border-box;
+}
+
+.provider-auth-media,
+.provider-auth-card,
+.provider-auth-hero,
+.provider-auth-copy{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+}
+
+.provider-auth-copy h1,
+.provider-auth-copy p{
+  max-width:100%;
+  word-break:break-word;
+}
+
+.provider-auth-google{
+  width:100%;
+  min-width:0;
+}
+
+.provider-auth-google-copy{
+  min-width:0;
+}
+
+.provider-auth-google-copy strong,
+.provider-auth-google-copy small{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
