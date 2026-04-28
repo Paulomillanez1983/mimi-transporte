@@ -1,24 +1,26 @@
 {
-  "name": "MIMI Transporte",
+  "id": "/mimi-transporte/hub-operadores",
+  "name": "MIMI Operadores",
   "short_name": "MIMI",
-  "description": "Solicitá viajes, recibí avisos y seguí tu recorrido en tiempo real.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "description": "Hub de acceso para conductores y prestadores MIMI.",
+  "start_url": "/mimi-transporte/hub-operadores.html",
+  "scope": "/mimi-transporte/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#1e3c72",
+  "display_override": ["standalone", "fullscreen"],
+  "background_color": "#020617",
+  "theme_color": "#020617",
   "orientation": "portrait",
   "lang": "es-AR",
-  "categories": ["travel", "navigation", "maps"],
+  "categories": ["business", "productivity", "travel"],
   "icons": [
     {
-      "src": "./assets/icons/icon-192x192.png",
+      "src": "/mimi-transporte/assets/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./assets/icons/icon-512x512.png",
+      "src": "/mimi-transporte/assets/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
