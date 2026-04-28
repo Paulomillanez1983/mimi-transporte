@@ -53,57 +53,30 @@
       opacity:.28;
     }
 
-    .wrap{
-      width:min(1100px,100%);
-      position:relative;
-      z-index:1;
-    }
-
-    .hero{
-      text-align:center;
-      margin-bottom:26px;
-    }
+    .wrap{width:min(1100px,100%);position:relative;z-index:1}
+    .hero{text-align:center;margin-bottom:26px}
 
     .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding:8px 14px;
-      border-radius:999px;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.08);
-      color:#d7e2f8;
-      font-size:.78rem;
-      font-weight:700;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      margin-bottom:18px;
-      backdrop-filter:blur(10px);
+      display:inline-flex;align-items:center;gap:10px;padding:8px 14px;border-radius:999px;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);
+      color:#d7e2f8;font-size:.78rem;font-weight:700;letter-spacing:.08em;
+      text-transform:uppercase;margin-bottom:18px;backdrop-filter:blur(10px);
     }
 
     .eyebrow::before{
-      content:"";
-      width:8px;
-      height:8px;
-      border-radius:999px;
+      content:"";width:8px;height:8px;border-radius:999px;
       background:linear-gradient(180deg,#60a5fa,#ec4899);
       box-shadow:0 0 14px rgba(96,165,250,.8);
     }
 
     h1{
       font-size:clamp(2.3rem,5vw,4.4rem);
-      line-height:1;
-      letter-spacing:-.04em;
-      font-weight:800;
-      margin-bottom:12px;
+      line-height:1;letter-spacing:-.04em;font-weight:800;margin-bottom:12px;
     }
 
     .hero p{
-      max-width:720px;
-      margin:0 auto;
-      color:var(--muted);
-      font-size:clamp(1rem,2vw,1.15rem);
-      line-height:1.55;
+      max-width:720px;margin:0 auto;color:var(--muted);
+      font-size:clamp(1rem,2vw,1.15rem);line-height:1.55;
     }
 
     .grid{
@@ -122,7 +95,7 @@
       border:1px solid var(--card-border);
       box-shadow:var(--shadow);
       backdrop-filter:blur(14px);
-      min-height:360px;
+      min-height:390px;
       display:flex;
       flex-direction:column;
       justify-content:space-between;
@@ -131,66 +104,138 @@
 
     .card::before{
       content:"";
-      position:absolute;
-      inset:-1px;
-      border-radius:inherit;
-      padding:1px;
+      position:absolute;inset:-1px;border-radius:inherit;padding:1px;
       background:linear-gradient(135deg,rgba(96,165,250,.65),transparent 38%,rgba(236,72,153,.5));
       -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
       -webkit-mask-composite:xor;
       mask-composite:exclude;
-      pointer-events:none;
-      opacity:.7;
+      pointer-events:none;opacity:.7;
     }
 
-    .card::after{
-      content:"";
-      position:absolute;
-      width:220px;
-      height:220px;
-      right:-70px;
-      top:-70px;
-      border-radius:50%;
-      background:radial-gradient(circle,rgba(255,255,255,.08),transparent 62%);
-      pointer-events:none;
-    }
-
-    .card-top,.card-bottom{
-      position:relative;
-      z-index:1;
-    }
+    .card-top,.card-bottom{position:relative;z-index:1}
 
     .operator-visual{
       width:100%;
-      height:138px;
+      height:150px;
       margin-bottom:18px;
       border-radius:24px;
+      position:relative;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+    }
+
+    .driver-scene{
+      background:
+        radial-gradient(circle at 70% 20%, rgba(124,199,255,.18), transparent 34%),
+        linear-gradient(180deg, rgba(124,199,255,.06), rgba(124,199,255,.02));
+    }
+
+    .road{
+      position:absolute;
+      left:10%;
+      right:10%;
+      bottom:28px;
+      height:42px;
+      border-radius:999px;
+      background:linear-gradient(180deg,#1a2238,#0d1324);
+      border:1px solid rgba(255,255,255,.06);
+    }
+
+    .road::before{
+      content:"";
+      position:absolute;
+      left:12%;
+      right:12%;
+      top:50%;
+      height:2px;
+      transform:translateY(-50%);
+      background:repeating-linear-gradient(90deg,#fff 0 14px,transparent 14px 26px);
+      opacity:.55;
+    }
+
+    .car{
+      position:absolute;
+      left:50%;
+      bottom:44px;
+      width:78px;
+      height:34px;
+      transform:translateX(-50%);
+      border-radius:14px 14px 10px 10px;
+      background:linear-gradient(180deg,#ff5c5c,#d81f1f);
+      box-shadow:0 10px 20px rgba(216,31,31,.35);
+    }
+
+    .car::before,.car::after{
+      content:"";
+      position:absolute;
+      bottom:-6px;
+      width:12px;height:12px;
+      border-radius:999px;
+      background:#0b1020;
+    }
+
+    .car::before{left:10px}
+    .car::after{right:10px}
+
+    .car-top{
+      position:absolute;
+      left:16px;right:16px;top:6px;height:10px;
+      border-radius:8px;
+      background:rgba(255,255,255,.22);
+    }
+
+    .pin{
+      position:absolute;
+      width:18px;height:18px;
+      border-radius:999px 999px 999px 0;
+      transform:rotate(-45deg);
+      background:#7cc7ff;
+      box-shadow:0 0 0 6px rgba(124,199,255,.08);
+    }
+
+    .pin::after{
+      content:"";
+      position:absolute;
+      inset:4px;
+      border-radius:999px;
+      background:#fff;
+    }
+
+    .pin-a{top:26px;left:22px}
+    .pin-b{top:22px;right:26px}
+
+    .services-scene{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      padding:12px;
+      background:
+        radial-gradient(circle at 70% 20%, rgba(74,222,128,.18), transparent 34%),
+        linear-gradient(180deg, rgba(74,222,128,.05), rgba(74,222,128,.02));
+    }
+
+    .service-mini{
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.06);
       display:grid;
       place-items:center;
-      overflow:hidden;
-      background:rgba(255,255,255,.045);
-      border:1px solid rgba(255,255,255,.08);
-      box-shadow:inset 0 0 28px rgba(255,255,255,.035),0 18px 38px rgba(0,0,0,.20);
+      gap:6px;
+      padding:10px 6px;
+      text-align:center;
     }
 
-    .operator-visual img{
-      width:100%;
-      height:100%;
-      object-fit:contain;
-      padding:10px;
-      display:block;
+    .service-mini span{
+      font-size:20px;
+      line-height:1;
     }
 
-    .operator-visual--driver{
-      background:
-        radial-gradient(circle at 50% 30%, rgba(124,199,255,.18), transparent 48%),
-        rgba(124,199,255,.055);
-    }
-
-    .operator-visual--services{
-      background:
-        radial-gradient(circle at 50% 30%, rgba(74,222,128,.16), transparent 48%),
-        rgba(74,222,128,.055);
+    .service-mini small{
+      font-size:10px;
+      color:#d9e6de;
+      line-height:1.15;
+      font-weight:700;
     }
 
     .card h2{
@@ -228,49 +273,21 @@
       color:#d8e2f6;
     }
 
-    .card-bottom{
-      margin-top:24px;
-    }
+    .card-bottom{margin-top:24px}
 
     .btn{
-      width:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-      min-height:58px;
-      border-radius:20px;
-      text-decoration:none;
-      font-weight:800;
-      font-size:1rem;
+      width:100%;display:flex;align-items:center;justify-content:center;gap:10px;
+      min-height:58px;border-radius:20px;text-decoration:none;font-weight:800;font-size:1rem;
       transition:transform .14s ease,box-shadow .14s ease,opacity .14s ease;
       box-shadow:0 14px 28px rgba(0,0,0,.22);
     }
 
-    .btn:hover{transform:translateY(-1px)}
-    .btn:active{transform:translateY(0) scale(.99)}
-
-    .transport{
-      background:linear-gradient(180deg,#9fdbff 0%,#7cc7ff 100%);
-      color:var(--transport-ink);
-    }
-
-    .services{
-      background:linear-gradient(180deg,#86efac 0%,#4ade80 100%);
-      color:var(--services-ink);
-    }
-
-    .btn-arrow{
-      font-size:1.05rem;
-      line-height:1;
-    }
+    .transport{background:linear-gradient(180deg,#9fdbff 0%,#7cc7ff 100%);color:var(--transport-ink)}
+    .services{background:linear-gradient(180deg,#86efac 0%,#4ade80 100%);color:var(--services-ink)}
+    .btn-arrow{font-size:1.05rem;line-height:1}
 
     .footer-note{
-      margin-top:18px;
-      text-align:center;
-      color:#7f8aa3;
-      font-size:.86rem;
-      line-height:1.5;
+      margin-top:18px;text-align:center;color:#7f8aa3;font-size:.86rem;line-height:1.5;
     }
 
     @media (max-width:900px){
@@ -279,32 +296,16 @@
     }
 
     @media (max-width:640px){
-      body{
-        align-items:flex-start;
-        padding:18px 14px 24px;
-      }
-
+      body{align-items:flex-start;padding:18px 14px 24px}
       .hero{margin-bottom:20px}
       .eyebrow{font-size:.72rem;margin-bottom:14px}
       h1{font-size:2.2rem}
       .hero p{font-size:.98rem}
       .grid{gap:16px;margin-top:22px}
-
-      .card{
-        padding:22px;
-        border-radius:24px;
-      }
-
-      .operator-visual{
-        height:118px;
-        border-radius:20px;
-        margin-bottom:14px;
-      }
-
-      .operator-visual img{
-        padding:8px;
-      }
-
+      .card{padding:22px;border-radius:24px}
+      .operator-visual{height:126px;border-radius:20px;margin-bottom:14px}
+      .service-mini span{font-size:18px}
+      .service-mini small{font-size:9px}
       .card h2{font-size:1.45rem}
       .card p{font-size:.95rem}
       .btn{min-height:54px;border-radius:18px}
@@ -324,8 +325,11 @@
     <section class="grid">
       <article class="card transport-card">
         <div class="card-top">
-          <div class="operator-visual operator-visual--driver" aria-hidden="true">
-            <img src="./assets/operator-driver.png" alt="">
+          <div class="operator-visual driver-scene" aria-hidden="true">
+            <div class="pin pin-a"></div>
+            <div class="pin pin-b"></div>
+            <div class="road"></div>
+            <div class="car"><div class="car-top"></div></div>
           </div>
 
           <h2>Chofer MIMI Transporte</h2>
@@ -347,8 +351,13 @@
 
       <article class="card services-card">
         <div class="card-top">
-          <div class="operator-visual operator-visual--services" aria-hidden="true">
-            <img src="./assets/operator-services.png" alt="">
+          <div class="operator-visual services-scene" aria-hidden="true">
+            <div class="service-mini"><span>🩺</span><small>Enfermería</small></div>
+            <div class="service-mini"><span>🧸</span><small>Niñera</small></div>
+            <div class="service-mini"><span>🧓</span><small>Cuidado</small></div>
+            <div class="service-mini"><span>🔥</span><small>Gasista</small></div>
+            <div class="service-mini"><span>❄️</span><small>Aire</small></div>
+            <div class="service-mini"><span>⚡</span><small>Electricista</small></div>
           </div>
 
           <h2>Prestador MIMI Servicios</h2>
