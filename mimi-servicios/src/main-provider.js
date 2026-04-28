@@ -567,15 +567,89 @@ showProviderLoginGate() {
   container.style.placeItems = "center";
   container.style.position = "fixed";
   container.style.inset = "0";
-  container.style.transform = "none";
   container.style.width = "100%";
   container.style.minHeight = "100dvh";
   container.style.zIndex = "99999";
+  container.style.padding = "16px";
   container.style.pointerEvents = "auto";
-  container.style.opacity = "1";
-  container.style.visibility = "visible";
   container.style.background =
-    "radial-gradient(circle at top, rgba(48,209,88,.18), transparent 36%), linear-gradient(180deg, #020617 0%, #000 100%)";
+    "radial-gradient(circle at top, rgba(48,209,88,.14), transparent 34%), linear-gradient(180deg,#08110d 0%,#090b11 100%)";
+
+  container.innerHTML = `
+    <section class="provider-auth-shell">
+      <div class="provider-auth-stage">
+        <div class="provider-auth-hero">
+          <div class="provider-auth-media">
+            <div class="provider-auth-media-glow"></div>
+            <div class="provider-auth-grid">
+              <article class="provider-auth-service">
+                <span>🏠</span>
+                <small>Hogar</small>
+              </article>
+              <article class="provider-auth-service">
+                <span>🧑‍⚕️</span>
+                <small>Salud</small>
+              </article>
+              <article class="provider-auth-service">
+                <span>💆</span>
+                <small>Bienestar</small>
+              </article>
+              <article class="provider-auth-service">
+                <span>+12</span>
+                <small>Servicios</small>
+              </article>
+            </div>
+          </div>
+
+          <div class="provider-auth-copy">
+            <span class="provider-auth-badge">Plataforma Operativa</span>
+
+            <h1>Trabajá cómo, cuándo y dónde vos querés.</h1>
+
+            <p>
+              Activá tu perfil, verificá tu identidad y empezá a recibir
+              solicitudes reales en servicios para el hogar, salud y bienestar.
+            </p>
+          </div>
+        </div>
+
+        <div class="provider-auth-card">
+          <div class="provider-auth-brand">
+            <img src="./assets/icons/icon-192.png" alt="MIMI Servicios">
+            <strong>MiMI</strong>
+          </div>
+
+          <button class="provider-auth-google" id="providerGoogleLoginButton" type="button">
+            <span class="provider-auth-google-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.2l6.5-6.5C35.3 2.6 30 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.7c-.3 2-1.6 5-4.4 7l6.9 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+                <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.2.8-4.6l-7.8-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.8-6.1z"/>
+                <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-6.9-5.3c-1.9 1.3-4.5 2.2-9 2.2-6.3 0-11.7-3.9-13.6-9.4l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
+              </svg>
+            </span>
+
+            <span class="provider-auth-google-copy">
+              <small>Continuar como prestador</small>
+              <strong>Ingresar con Google</strong>
+            </span>
+
+            <span class="provider-auth-google-arrow">›</span>
+          </button>
+
+          <div class="provider-auth-trust">
+            <span>Verificación profesional</span>
+            <span>Pagos seguros</span>
+            <span>Servicios reales</span>
+          </div>
+
+          <p class="provider-auth-legal">
+            Al continuar aceptás Términos y Política de privacidad.
+          </p>
+        </div>
+      </div>
+    </section>
+  `;
 
   const installBanner =
     this.elements.installBanner || document.getElementById("installBanner");
@@ -583,16 +657,10 @@ showProviderLoginGate() {
   if (installBanner) {
     installBanner.hidden = true;
     installBanner.style.setProperty("display", "none", "important");
-    installBanner.style.opacity = "0";
-    installBanner.style.pointerEvents = "none";
-    installBanner.setAttribute("aria-hidden", "true");
   }
 
   const googleButton = document.getElementById("providerGoogleLoginButton");
-
-  if (!googleButton || googleButton.dataset.bound === "true") return;
-
-  googleButton.dataset.bound = "true";
+  if (!googleButton) return;
 
   googleButton.addEventListener("click", async () => {
     try {
@@ -609,8 +677,7 @@ showProviderLoginGate() {
       this.showToast("No pudimos iniciar sesión con Google", "error");
     }
   });
-}
-  
+}  
   
 renderDrawerProfile() {
   const session = this.state?.session ?? {};
