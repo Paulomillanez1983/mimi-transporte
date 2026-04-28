@@ -136,7 +136,11 @@
             </div>
           </div>
 
-          <a class="btn btn-green" href="./mimi-servicios/prestador.html">
+          <a
+            class="btn btn-green js-app-transition"
+            href="./mimi-servicios/prestador.html?from=hub&app=services"
+            data-app="services"
+          >
             <span>Entrar como prestador</span>
             <span>→</span>
           </a>
@@ -204,26 +208,40 @@
     </main>
   </div>
 
-  <script>
-    let deferredPrompt = null;
+<script>
+  let deferredPrompt = null;
 
-    window.addEventListener("beforeinstallprompt", (event) => {
-      event.preventDefault();
-      deferredPrompt = event;
-      document.body.classList.add("pwa-installable");
-    });
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    document.body.classList.add("pwa-installable");
+  });
 
-    async function installPWA() {
-      if (!deferredPrompt) {
-        alert("Para instalar MIMI, tocá el menú de Chrome ⋮ y elegí 'Agregar a pantalla principal'.");
-        return;
-      }
-
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      document.body.classList.remove("pwa-installable");
+  async function installPWA() {
+    if (!deferredPrompt) {
+      alert("Para instalar MIMI, tocá el menú de Chrome ⋮ y elegí 'Agregar a pantalla principal'.");
+      return;
     }
-  </script>
+
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.body.classList.remove("pwa-installable");
+  }
+
+  document.querySelectorAll(".js-app-transition").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const href = link.getAttribute("href");
+      if (!href) return;
+
+      event.preventDefault();
+      document.body.classList.add("is-entering-services");
+
+      setTimeout(() => {
+        window.location.href = href;
+      }, 520);
+    });
+  });
+</script>
 </body>
 </html>
