@@ -93,12 +93,20 @@ body{
   flex:0 0 auto;
 }
 
+/* HERO COMO FONDO DE PANTALLA */
 .hero{
-  display:grid;
-  grid-template-columns:1.05fr .95fr;
-  gap:24px;
-  padding:54px 42px 30px;
+  position:relative;
+  min-height:380px;
+  padding:54px 42px 44px;
+  display:flex;
   align-items:center;
+  overflow:hidden;
+}
+
+.hero > div:first-child{
+  position:relative;
+  z-index:4;
+  max-width:560px;
 }
 
 .eyebrow{
@@ -151,16 +159,21 @@ h1{
 }
 
 .hero-visual{
-  height:300px;
-  position:relative;
-  display:flex;
-  align-items:flex-end;
-  justify-content:center;
+  position:absolute;
+  inset:0;
+  height:auto;
+  margin:0;
+  z-index:1;
+  display:block;
+  pointer-events:none;
 }
 
 .city{
   position:absolute;
-  inset:20px 0 46px;
+  top:42px;
+  right:0;
+  bottom:48px;
+  width:52%;
   opacity:.45;
   background:linear-gradient(90deg,
     transparent 0 8%, rgba(255,255,255,.10) 8% 14%,
@@ -174,21 +187,35 @@ h1{
 
 .headlight{
   position:absolute;
-  left:12%;
-  bottom:104px;
-  width:250px;
-  height:48px;
+  right:330px;
+  bottom:122px;
+  width:290px;
+  height:54px;
   background:linear-gradient(90deg,rgba(124,199,255,.65),transparent);
   filter:blur(16px);
   opacity:.85;
 }
 
 .hero-car{
-  width:430px;
-  max-width:100%;
-  position:relative;
+  position:absolute;
+  right:30px;
+  bottom:46px;
+  width:460px;
+  max-width:52%;
   z-index:2;
+  opacity:.92;
   filter:drop-shadow(0 26px 34px rgba(0,0,0,.58));
+}
+
+.hero::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(3,7,18,.96) 0%, rgba(3,7,18,.84) 36%, rgba(3,7,18,.28) 68%, rgba(3,7,18,.06) 100%),
+    linear-gradient(180deg, rgba(3,7,18,.08) 0%, rgba(3,7,18,.55) 100%);
 }
 
 .cards{
@@ -610,8 +637,14 @@ svg{
   }
 
   .hero{
-    display:block;
-    padding:26px 18px 18px;
+    min-height:280px;
+    padding:34px 18px 30px;
+    display:flex;
+    align-items:center;
+  }
+
+  .hero > div:first-child{
+    max-width:78%;
   }
 
   .eyebrow{
@@ -634,24 +667,33 @@ svg{
   }
 
   .hero-visual{
-    height:160px;
-    margin-top:18px;
+    position:absolute;
+    inset:0;
+    height:auto;
+    margin:0;
   }
 
   .city{
-    inset:0 0 34px;
+    top:28px;
+    right:0;
+    bottom:34px;
+    width:68%;
   }
 
   .headlight{
-    left:5%;
-    bottom:66px;
+    left:auto;
+    right:170px;
+    bottom:82px;
     width:160px;
     height:32px;
   }
 
   .hero-car{
-    width:280px;
-    max-width:88%;
+    right:-18px;
+    bottom:32px;
+    width:285px;
+    max-width:70%;
+    opacity:.72;
   }
 
   .cards{
@@ -829,7 +871,12 @@ svg{
   }
 
   .hero{
-    padding:22px 14px 16px;
+    min-height:255px;
+    padding:28px 14px 26px;
+  }
+
+  .hero > div:first-child{
+    max-width:82%;
   }
 
   .eyebrow{
@@ -846,19 +893,27 @@ svg{
     font-size:14.5px;
   }
 
-  .hero-visual{
-    height:138px;
-    margin-top:10px;
+  .city{
+    top:24px;
+    right:0;
+    bottom:28px;
+    width:72%;
   }
 
   .hero-car{
-    width:245px;
+    right:-26px;
+    bottom:24px;
+    width:255px;
+    max-width:74%;
+    opacity:.68;
   }
 
   .headlight{
+    left:auto;
+    right:140px;
+    bottom:70px;
     width:130px;
     height:26px;
-    bottom:58px;
   }
 
   .cards{
@@ -996,8 +1051,25 @@ svg{
     font-size:34px;
   }
 
+  .hero{
+    min-height:238px;
+  }
+
   .hero-copy{
     font-size:13.5px;
+  }
+
+  .hero-car{
+    width:230px;
+    right:-32px;
+    bottom:20px;
+    opacity:.62;
+  }
+
+  .headlight{
+    right:122px;
+    bottom:62px;
+    width:112px;
   }
 
   .cards{
@@ -1060,4 +1132,4 @@ svg{
   .benefit p{
     font-size:10.5px;
   }
-  }
+}
