@@ -675,6 +675,8 @@ container.style.background = "";
 
   googleButton.addEventListener("click", async () => {
     try {
+      googleButton.disabled = true;
+      document.body.classList.add("provider-auth-submitting");
       localStorage.setItem("mimi_services_active_mode", "provider");
       sessionStorage.setItem("mimi_services_active_mode", "provider");
       sessionStorage.setItem(
@@ -684,6 +686,8 @@ container.style.background = "";
 
       await signInWithGoogle();
     } catch (err) {
+      googleButton.disabled = false;
+      document.body.classList.remove("provider-auth-submitting");
       console.error("[MIMI] Error iniciando sesión prestador:", err);
       this.showToast("No pudimos iniciar sesión con Google", "error");
     }
