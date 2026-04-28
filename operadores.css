@@ -871,10 +871,10 @@ svg{
   }
 
   .hero{
-  min-height:235px;
-  padding:18px 14px 18px;
+  min-height:215px;
+  padding:16px 14px 10px;
   align-items:flex-start;
-}
+  }
 
 .hero > div:first-child{
   max-width:68%;
@@ -903,12 +903,12 @@ h1{
   }
 
   .hero-car{
-  right:-34px;
-  bottom:30px;
-  width:250px;
-  max-width:72%;
-  opacity:.78;
-}
+  right:-28px;
+  bottom:18px;
+  width:238px;
+  max-width:70%;
+  opacity:.72;
+  }
 
   .headlight{
     left:auto;
@@ -921,7 +921,7 @@ h1{
   .cards{
   gap:8px;
   padding:0 8px 16px;
-  margin-top:-18px;
+  margin-top:0;
   }
 
   .card{
