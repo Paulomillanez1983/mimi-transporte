@@ -416,6 +416,53 @@
       .btn{min-height:52px;border-radius:17px}
       .footer-note{font-size:.78rem}
     }
+    .typewriter-line{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+
+.typewriter-text{
+  display:inline-block;
+  overflow:hidden;
+  white-space:nowrap;
+  width:0;
+  animation:typeText 2.2s steps(36,end) .35s forwards;
+}
+
+.typewriter-check{
+  opacity:0;
+  transform:scale(.6) translateY(2px);
+  color:#22c55e;
+  font-weight:900;
+  font-size:1.15em;
+  filter:drop-shadow(0 0 10px rgba(34,197,94,.75));
+  animation:checkPop .35s ease 2.65s forwards;
+}
+
+@keyframes typeText{
+  from{width:0}
+  to{width:36ch}
+}
+
+@keyframes checkPop{
+  to{
+    opacity:1;
+    transform:scale(1) translateY(0);
+  }
+}
+
+@media (max-width:640px){
+  .typewriter-text{
+    animation:typeTextMobile 2.2s steps(36,end) .35s forwards;
+  }
+
+  @keyframes typeTextMobile{
+    from{width:0}
+    to{width:31ch}
+  }
+}
   </style>
 </head>
 
@@ -424,7 +471,10 @@
     <section class="hero">
       <div class="eyebrow">MIMI Platform Access</div>
       <h1>MIMI Operadores</h1>
-      <p>Elegí cómo, cuándo y dónde trabajar.</p>
+<p class="typewriter-line">
+  <span class="typewriter-text">Elegí cómo, cuándo y dónde trabajar.</span>
+  <span class="typewriter-check">✓</span>
+</p>
     </section>
 
     <section class="grid">
