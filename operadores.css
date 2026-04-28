@@ -1137,117 +1137,6 @@ h1{
   }
 }
 
-  .hero-car{
-    width:clamp(225px, 62vw, 310px);
-    right:clamp(-34px, -6vw, -16px);
-    bottom:12px;
-    opacity:.72;
-  }
-
-  .cards{
-    height:100%;
-    min-height:0;
-    grid-template-columns:1fr 1fr;
-    gap:8px;
-    padding:0 8px 10px;
-  }
-
-  .card{
-    min-height:0;
-    height:100%;
-    padding:clamp(9px, 2.8vw, 14px);
-    border-radius:20px;
-  }
-
-  .card-head{
-    gap:8px;
-    margin-bottom:8px;
-  }
-
-  .app-icon{
-    width:clamp(36px, 10vw, 44px);
-    height:clamp(36px, 10vw, 44px);
-    border-radius:13px;
-  }
-
-  .app-icon svg{
-    width:20px;
-    height:20px;
-  }
-
-  .card h2{
-    font-size:clamp(14px, 4.3vw, 18px);
-  }
-
-  .role{
-    font-size:clamp(10px, 3.1vw, 12px);
-  }
-
-  .card p{
-    font-size:clamp(10px, 3.1vw, 12.5px);
-    line-height:1.28;
-  }
-
-  .driver-product{
-    height:clamp(68px, 13dvh, 98px);
-    margin:6px 0 8px;
-  }
-
-  .driver-product img{
-    width:clamp(132px, 40vw, 175px);
-  }
-
-  .trust-row{
-    grid-template-columns:1fr;
-    gap:6px;
-  }
-
-  .trust-pill{
-    min-height:clamp(30px, 5.4dvh, 38px);
-    font-size:clamp(8.6px, 2.7vw, 10.5px);
-    padding:6px 8px;
-  }
-
-  .services-grid{
-    gap:7px;
-    margin:9px 0 9px;
-  }
-
-  .service-box{
-    height:clamp(58px, 10dvh, 74px);
-    padding:6px;
-  }
-
-  .service-box svg{
-    width:clamp(19px, 5.6vw, 23px);
-    height:clamp(19px, 5.6vw, 23px);
-    margin-bottom:4px;
-  }
-
-  .service-box strong{
-    font-size:clamp(8.6px, 2.7vw, 10.5px);
-  }
-
-  .plus{
-    font-size:clamp(19px, 5.8vw, 24px);
-  }
-
-  .btn{
-    height:clamp(38px, 6.8dvh, 45px);
-    border-radius:13px;
-    font-size:clamp(10px, 3.1vw, 12.5px);
-  }
-
-  .benefits{
-    margin:0 8px 10px;
-    padding:clamp(10px, 2.8vw, 14px);
-    border-radius:20px;
-    grid-template-columns:repeat(3,1fr);
-    gap:8px;
-  }
-
-  .benefit{
-
 
 @media (max-height:720px) and (max-width:900px){
   .hero{
@@ -1281,37 +1170,87 @@ h1{
 .install-app-btn{
   appearance:none;
   border:0;
-  min-height:38px;
-  padding:0 15px;
-  border-radius:999px;
+  min-height:52px;
+  padding:8px 14px;
+  border-radius:18px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:7px;
-  color:#06111f;
-  background:linear-gradient(180deg,#ffffff 0%,#bcd2ff 100%);
+  gap:10px;
+  background:linear-gradient(180deg,#ffffff 0%,#dbe7ff 100%);
   box-shadow:
-    0 10px 24px rgba(47,115,255,.25),
-    inset 0 1px 0 rgba(255,255,255,.7);
-  font-size:12px;
-  font-weight:950;
-  text-decoration:none;
+    0 12px 28px rgba(47,115,255,.22),
+    inset 0 1px 0 rgba(255,255,255,.82);
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease;
   white-space:nowrap;
 }
 
-.install-app-btn::before{
-  content:"⬇";
-  font-size:12px;
+.install-app-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:
+    0 14px 30px rgba(47,115,255,.26),
+    inset 0 1px 0 rgba(255,255,255,.88);
 }
 
 .install-app-btn:active{
   transform:scale(.97);
 }
 
+.install-icon{
+  width:30px;
+  height:30px;
+  border-radius:11px;
+  display:grid;
+  place-items:center;
+  flex:0 0 auto;
+  background:linear-gradient(180deg,#3b82ff,#1d4ed8);
+  color:#fff;
+  font-size:14px;
+  font-weight:900;
+  box-shadow:0 8px 18px rgba(47,115,255,.25);
+}
+
+.install-copy{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  line-height:1;
+}
+
+.install-copy small{
+  font-size:10px;
+  font-weight:700;
+  color:#64748b;
+  margin-bottom:4px;
+}
+
+.install-copy strong{
+  font-size:13px;
+  font-weight:950;
+  color:#07111f;
+}
+
 @media (max-width:430px){
   .install-app-btn{
-    min-height:34px;
-    padding:0 12px;
-    font-size:10.5px;
+    min-height:46px;
+    padding:7px 12px;
+    border-radius:16px;
+    gap:8px;
+  }
+
+  .install-icon{
+    width:26px;
+    height:26px;
+    font-size:12px;
+    border-radius:9px;
+  }
+
+  .install-copy small{
+    font-size:9px;
+  }
+
+  .install-copy strong{
+    font-size:11px;
   }
 }
