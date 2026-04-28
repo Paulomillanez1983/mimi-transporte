@@ -31,7 +31,7 @@
     }
 
     body{
-      padding:24px;
+      padding:12px;
       background:
         radial-gradient(circle at 14% 8%, rgba(47,115,255,.24), transparent 28%),
         radial-gradient(circle at 86% 14%, rgba(124,58,237,.25), transparent 30%),
@@ -45,7 +45,7 @@
 
     .shell{
       width:100%;
-      border-radius:38px;
+      border-radius:28px;
       border:1px solid var(--border);
       background:
         radial-gradient(circle at 78% 20%, rgba(92,47,255,.28), transparent 34%),
@@ -59,12 +59,12 @@
       display:flex;
       justify-content:space-between;
       align-items:center;
-      padding:34px 42px 12px;
-      gap:16px;
+      padding:18px 18px 8px;
+      gap:10px;
     }
 
     .brand{
-      font-size:54px;
+      font-size:34px;
       font-weight:950;
       letter-spacing:-.08em;
       line-height:1;
@@ -76,20 +76,20 @@
     .status{
       display:flex;
       align-items:center;
-      gap:11px;
-      padding:13px 22px;
+      gap:8px;
+      padding:8px 12px;
       border-radius:999px;
       background:rgba(255,255,255,.07);
       border:1px solid rgba(255,255,255,.10);
-      font-size:18px;
+      font-size:11px;
       font-weight:800;
       white-space:nowrap;
     }
 
     .status::before{
       content:"";
-      width:10px;
-      height:10px;
+      width:7px;
+      height:7px;
       border-radius:50%;
       background:var(--green);
       box-shadow:0 0 18px rgba(53,216,111,.9);
@@ -97,34 +97,31 @@
     }
 
     .hero{
-      display:grid;
-      grid-template-columns:1.05fr .95fr;
-      gap:24px;
-      padding:54px 42px 24px;
-      align-items:center;
+      display:block;
+      padding:18px 16px 12px;
     }
 
     .eyebrow{
       display:inline-flex;
       align-items:center;
-      gap:11px;
-      padding:10px 18px;
+      gap:8px;
+      padding:8px 12px;
       border-radius:999px;
       background:rgba(47,115,255,.12);
       border:1px solid rgba(124,199,255,.16);
       color:#cfe1ff;
-      font-size:16px;
+      font-size:10px;
       font-weight:900;
       letter-spacing:.08em;
       text-transform:uppercase;
-      margin-bottom:24px;
+      margin-bottom:14px;
       white-space:nowrap;
     }
 
     .eyebrow::before{
       content:"";
-      width:9px;
-      height:9px;
+      width:7px;
+      height:7px;
       border-radius:50%;
       background:var(--blue);
       box-shadow:0 0 16px rgba(47,115,255,.9);
@@ -132,11 +129,11 @@
     }
 
     h1{
-      font-size:58px;
-      line-height:1.03;
-      letter-spacing:-.06em;
+      font-size:34px;
+      line-height:1.02;
+      letter-spacing:-.065em;
       font-weight:950;
-      margin-bottom:20px;
+      margin-bottom:12px;
     }
 
     .accent{
@@ -148,23 +145,24 @@
 
     .hero-copy{
       color:var(--muted);
-      font-size:23px;
-      line-height:1.4;
-      max-width:540px;
+      font-size:15px;
+      line-height:1.45;
+      max-width:100%;
     }
 
     .hero-visual{
-      height:270px;
+      height:145px;
       position:relative;
       display:flex;
       align-items:flex-end;
       justify-content:center;
+      margin-top:12px;
     }
 
     .city{
       position:absolute;
-      inset:20px 0 40px;
-      opacity:.38;
+      inset:0 0 28px;
+      opacity:.45;
       background:linear-gradient(90deg,
         transparent 0 8%, rgba(255,255,255,.10) 8% 14%,
         transparent 14% 21%, rgba(255,255,255,.08) 21% 28%,
@@ -177,37 +175,37 @@
 
     .headlight{
       position:absolute;
-      left:12%;
-      bottom:92px;
-      width:220px;
-      height:42px;
+      left:6%;
+      bottom:60px;
+      width:130px;
+      height:26px;
       background:linear-gradient(90deg,rgba(124,199,255,.65),transparent);
-      filter:blur(16px);
+      filter:blur(14px);
       opacity:.85;
     }
 
     .hero-car{
-      width:390px;
-      max-width:100%;
+      width:245px;
+      max-width:88%;
       position:relative;
       z-index:2;
-      filter:drop-shadow(0 24px 30px rgba(0,0,0,.56));
+      filter:drop-shadow(0 18px 24px rgba(0,0,0,.58));
     }
 
     .cards{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:20px;
-      padding:0 42px 28px;
+      gap:10px;
+      padding:0 10px 14px;
     }
 
     .card{
       min-height:auto;
-      border-radius:28px;
+      border-radius:22px;
       border:1px solid rgba(255,255,255,.15);
-      padding:28px;
+      padding:14px;
       background:linear-gradient(180deg,rgba(13,24,45,.88),rgba(6,11,24,.96));
-      box-shadow:0 22px 60px rgba(0,0,0,.30);
+      box-shadow:0 16px 40px rgba(0,0,0,.26);
       display:flex;
       flex-direction:column;
       justify-content:space-between;
@@ -236,34 +234,35 @@
     .card-head{
       display:flex;
       align-items:flex-start;
-      gap:16px;
-      margin-bottom:18px;
+      gap:10px;
+      margin-bottom:10px;
     }
 
     .app-icon{
-      width:66px;
-      height:66px;
-      border-radius:20px;
+      width:44px;
+      height:44px;
+      border-radius:14px;
       display:grid;
       place-items:center;
       border:1px solid rgba(255,255,255,.14);
-      box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 18px 34px rgba(0,0,0,.26);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.24),0 10px 18px rgba(0,0,0,.22);
       flex:0 0 auto;
     }
 
+    .app-icon svg{width:22px;height:22px}
     .app-icon.blue{background:linear-gradient(145deg,#69b7ff,#2458ff)}
     .app-icon.green{background:linear-gradient(145deg,#7df5a5,#1e9f52)}
 
     .card h2{
-      font-size:32px;
+      font-size:20px;
       line-height:1;
       letter-spacing:-.05em;
       font-weight:950;
-      margin-bottom:6px;
+      margin-bottom:4px;
     }
 
     .role{
-      font-size:20px;
+      font-size:12px;
       font-weight:900;
     }
 
@@ -272,100 +271,87 @@
 
     .card p{
       color:var(--muted);
-      line-height:1.38;
-      font-size:20px;
+      line-height:1.35;
+      font-size:13px;
       font-weight:500;
     }
 
     .driver-product{
-      height:185px;
+      height:95px;
       display:flex;
       align-items:flex-end;
       justify-content:center;
-      margin:10px 0 18px;
+      margin:8px 0 10px;
       position:relative;
-    }
-
-    .driver-product::before{
-      content:"";
-      position:absolute;
-      left:10%;
-      right:10%;
-      bottom:18px;
-      height:28px;
-      border-radius:999px;
-      background:rgba(0,0,0,.34);
-      filter:blur(10px);
     }
 
     .driver-product img{
-      width:345px;
+      width:180px;
       max-width:100%;
       position:relative;
       z-index:1;
-      filter:drop-shadow(0 20px 20px rgba(0,0,0,.46));
+      filter:drop-shadow(0 18px 20px rgba(0,0,0,.5));
     }
 
     .trust-row{
       display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:10px;
+      grid-template-columns:1fr;
+      gap:8px;
     }
 
     .trust-pill{
-      min-height:54px;
-      border-radius:16px;
+      min-height:42px;
+      border-radius:14px;
       background:rgba(255,255,255,.055);
       border:1px solid rgba(255,255,255,.08);
       display:flex;
       align-items:center;
-      gap:10px;
-      padding:10px 14px;
+      gap:8px;
+      padding:8px 10px;
       color:#dfe8ff;
-      font-size:15px;
+      font-size:11px;
       font-weight:750;
     }
 
     .trust-pill b{
       color:#3b82ff;
-      font-size:18px;
+      font-size:14px;
       flex:0 0 auto;
     }
 
     .services-grid{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:12px;
-      margin:22px 0;
+      gap:8px;
+      margin:12px 0 12px;
     }
 
     .service-box{
-      height:104px;
-      border-radius:18px;
+      height:78px;
+      border-radius:14px;
       background:rgba(255,255,255,.055);
       border:1px solid rgba(255,255,255,.08);
       display:grid;
       place-items:center;
       text-align:center;
-      padding:14px;
+      padding:8px;
       color:#f4fff7;
     }
 
     .service-box svg{
-      width:36px;
-      height:36px;
-      margin-bottom:8px;
+      width:24px;
+      height:24px;
+      margin-bottom:6px;
       color:var(--green2);
-      filter:drop-shadow(0 0 14px rgba(74,222,128,.45));
     }
 
     .service-box strong{
-      font-size:16px;
+      font-size:11px;
       font-weight:900;
     }
 
     .plus{
-      font-size:30px;
+      font-size:22px;
       color:var(--green2);
       font-weight:950;
       line-height:1;
@@ -373,116 +359,77 @@
 
     .btn{
       width:100%;
-      height:58px;
-      border-radius:18px;
+      height:46px;
+      border-radius:14px;
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:14px;
+      gap:10px;
       text-decoration:none;
-      font-size:18px;
+      font-size:14px;
       font-weight:950;
       letter-spacing:-.03em;
-      position:relative;
-      overflow:hidden;
-      isolation:isolate;
-      transform:translateZ(0);
-    }
-
-    .btn::before{
-      content:"";
-      position:absolute;
-      top:-35%;
-      left:-45%;
-      width:34%;
-      height:170%;
-      background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.10) 22%,rgba(255,255,255,.75) 50%,rgba(255,255,255,.10) 78%,transparent 100%);
-      transform:skewX(-22deg);
-      filter:blur(.2px);
-      opacity:.95;
-      z-index:-1;
-      animation:shineMove 2.65s ease-in-out infinite;
-    }
-
-    .btn::after{
-      content:"";
-      position:absolute;
-      inset:0;
-      border-radius:inherit;
-      pointer-events:none;
-      background:
-        radial-gradient(circle at 20% 0%, rgba(255,255,255,.32), transparent 28%),
-        linear-gradient(180deg, rgba(255,255,255,.18), transparent 46%);
-      opacity:.72;
-      z-index:-2;
     }
 
     .btn-blue{
       color:white;
       background:linear-gradient(180deg,#3b82ff,#1d4ed8);
-      box-shadow:0 18px 34px rgba(47,115,255,.28),0 0 26px rgba(47,115,255,.18);
     }
 
     .btn-green{
       color:#06220f;
       background:linear-gradient(180deg,#7df5a5,#28c865);
-      box-shadow:0 18px 34px rgba(53,216,111,.24),0 0 26px rgba(53,216,111,.18);
-    }
-
-    @keyframes shineMove{
-      0%{left:-55%;opacity:0}
-      18%{opacity:.95}
-      54%{left:120%;opacity:.95}
-      70%,100%{left:130%;opacity:0}
     }
 
     .benefits{
-      margin:0 42px 28px;
-      padding:24px 28px;
-      border-radius:24px;
+      margin:0 10px 14px;
+      padding:16px;
+      border-radius:20px;
       display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:20px;
+      grid-template-columns:1fr;
+      gap:14px;
       background:rgba(255,255,255,.045);
       border:1px solid rgba(255,255,255,.09);
     }
 
     .benefit{
       display:flex;
-      gap:14px;
+      gap:12px;
       align-items:flex-start;
     }
 
     .benefit-icon{
-      width:42px;
+      width:30px;
       color:#6ea8ff;
       flex:0 0 auto;
     }
 
+    .benefit-icon svg{width:30px;height:30px}
+
     .benefit h3{
-      font-size:18px;
-      margin-bottom:6px;
+      font-size:14px;
+      margin-bottom:4px;
       letter-spacing:-.03em;
     }
 
     .benefit p{
       color:var(--muted);
-      font-size:15px;
+      font-size:12px;
       line-height:1.4;
     }
 
     .footer{
       border-top:1px solid rgba(255,255,255,.08);
-      padding:24px 42px;
+      padding:16px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:22px;
+      gap:10px;
       color:#9eaad0;
     }
 
     .footer-brand{
-      font-size:30px;
+      font-size:22px;
       font-weight:950;
       color:white;
       letter-spacing:-.08em;
@@ -491,71 +438,25 @@
 
     .footer-sep{
       width:1px;
-      height:28px;
+      height:22px;
       background:rgba(124,199,255,.35);
       flex:0 0 auto;
     }
 
     .footer-copy{
       margin-right:auto;
-      font-size:17px;
+      font-size:11px;
       line-height:1.3;
     }
 
     .footer-link{
       color:#9ab7ff;
-      font-size:16px;
+      font-size:11px;
       font-weight:700;
       white-space:nowrap;
     }
 
     svg{display:block}
-
-    @media (max-width:900px){
-      body{padding:0}
-      .viewport{width:100%;margin:0}
-      .shell{width:100%;min-height:100vh;border-radius:0;border-left:none;border-right:none}
-      .topbar{padding:20px 18px 8px}
-      .brand{font-size:34px}
-      .status{font-size:11px;padding:8px 11px;gap:7px}
-      .status::before{width:7px;height:7px}
-      .hero{display:block;padding:26px 18px 18px}
-      .eyebrow{font-size:11px;padding:8px 13px;margin-bottom:20px}
-      h1{font-size:42px;line-height:1.02;letter-spacing:-.065em;margin-bottom:16px}
-      .hero-copy{font-size:16px;line-height:1.5;max-width:100%}
-      .hero-visual{height:140px;margin-top:14px}
-      .city{inset:0 0 30px}
-      .headlight{left:5%;bottom:58px;width:140px;height:26px}
-      .hero-car{width:230px;max-width:84%}
-      .cards{grid-template-columns:1fr;gap:14px;padding:0 10px 18px}
-      .card{padding:18px;border-radius:24px}
-      .card-head{gap:12px;margin-bottom:14px}
-      .app-icon{width:54px;height:54px;border-radius:16px}
-      .app-icon svg{width:26px;height:26px}
-      .card h2{font-size:28px}
-      .role{font-size:16px}
-      .card p{font-size:16px}
-      .driver-product{height:112px;margin:8px 0 14px}
-      .driver-product img{width:220px}
-      .trust-row{grid-template-columns:1fr 1fr;gap:8px}
-      .trust-pill{min-height:44px;font-size:12px;padding:8px 10px}
-      .trust-pill b{font-size:14px}
-      .services-grid{gap:10px;margin:18px 0}
-      .service-box{height:86px;border-radius:16px}
-      .service-box svg{width:30px;height:30px}
-      .service-box strong{font-size:14px}
-      .plus{font-size:24px}
-      .btn{height:54px;border-radius:16px;font-size:16px}
-      .benefits{margin:0 10px 18px;padding:18px;border-radius:20px;grid-template-columns:1fr;gap:16px}
-      .benefit{gap:12px}
-      .benefit-icon{width:36px}
-      .benefit h3{font-size:16px}
-      .benefit p{font-size:14px}
-      .footer{padding:18px 16px;gap:12px;flex-wrap:wrap}
-      .footer-brand{font-size:24px}
-      .footer-copy{font-size:14px}
-      .footer-link{font-size:13px}
-    }
   </style>
 </head>
 
@@ -569,11 +470,16 @@
       </header>
 
       <section class="hero">
-        <div>
-          <div class="eyebrow">MIMI Access Hub</div>
-          <h1>Elegí cómo, cuándo<br>y dónde <span class="accent">trabajar.</span></h1>
-          <p class="hero-copy">Acceso seguro a la plataforma tecnológica que conecta movilidad y servicios.</p>
-        </div>
+        <div class="eyebrow">MIMI Access Hub</div>
+
+        <h1>
+          Elegí cómo, cuándo<br>
+          y dónde <span class="accent">trabajar.</span>
+        </h1>
+
+        <p class="hero-copy">
+          Acceso seguro a la plataforma tecnológica que conecta movilidad y servicios.
+        </p>
 
         <div class="hero-visual" aria-hidden="true">
           <div class="city"></div>
@@ -583,11 +489,12 @@
       </section>
 
       <section class="cards">
+
         <article class="card transport-card">
           <div>
             <div class="card-head">
               <div class="app-icon blue">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                <svg viewBox="0 0 24 24" fill="none">
                   <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Z" stroke="white" stroke-width="1.8"/>
                   <path d="M12 12.2 5.5 10M12 12.2l6.5-2.2M12 12.2v6.6" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
                   <path d="M9.4 12.2a2.6 2.6 0 1 0 5.2 0 2.6 2.6 0 0 0-5.2 0Z" stroke="white" stroke-width="1.8"/>
@@ -620,7 +527,7 @@
           <div>
             <div class="card-head">
               <div class="app-icon green">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+                <svg viewBox="0 0 24 24" fill="none">
                   <path d="M8 7V5.8C8 4.8 8.8 4 9.8 4h4.4c1 0 1.8.8 1.8 1.8V7" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
                   <path d="M5.5 7h13A1.5 1.5 0 0 1 20 8.5v9A2.5 2.5 0 0 1 17.5 20h-11A2.5 2.5 0 0 1 4 17.5v-9A1.5 1.5 0 0 1 5.5 7Z" stroke="white" stroke-width="1.8"/>
                   <path d="M4.3 11.5h15.4M10 11.5v1.2c0 .7.6 1.3 1.3 1.3h1.4c.7 0 1.3-.6 1.3-1.3v-1.2" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
@@ -635,10 +542,25 @@
             <p>Ofrecé tus servicios.<br>Llegá a más personas.</p>
 
             <div class="services-grid">
-              <div class="service-box"><strong>Hogar</strong></div>
-              <div class="service-box"><strong>Salud</strong></div>
-              <div class="service-box"><strong>Bienestar</strong></div>
-              <div class="service-box"><div class="plus">+12</div><strong>categorías</strong></div>
+              <div class="service-box">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M4 11.5 12 5l8 6.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 10.5V20h4v-5h3v5h4v-9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <strong>Hogar</strong>
+              </div>
+
+              <div class="service-box">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-4.1-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.9-7 10-7 10Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8 12h2l1-2 2 4 1-2h2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+                <strong>Salud</strong>
+              </div>
+
+              <div class="service-box">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 21c-3.8-2.1-5.8-5.2-6-9 3.5.2 6.1 2.3 6 9Z" stroke="currentColor" stroke-width="1.9"/><path d="M12 21c3.8-2.1 5.8-5.2 6-9-3.5.2-6.1 2.3-6 9Z" stroke="currentColor" stroke-width="1.9"/></svg>
+                <strong>Bienestar</strong>
+              </div>
+
+              <div class="service-box">
+                <div class="plus">+12</div>
+                <strong>categorías</strong>
+              </div>
             </div>
           </div>
 
@@ -649,9 +571,35 @@
       </section>
 
       <section class="benefits">
-        <div class="benefit"><div><h3>Seguro y confiable</h3><p>Protegemos tu cuenta y tu información.</p></div></div>
-        <div class="benefit"><div><h3>Soporte 24/7</h3><p>Estamos para ayudarte cuando lo necesitás.</p></div></div>
-        <div class="benefit"><div><h3>Crecé con MIMI</h3><p>Más oportunidades, más herramientas.</p></div></div>
+        <div class="benefit">
+          <div class="benefit-icon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3 5 6v5c0 4.5 2.8 8.5 7 10 4.2-1.5 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <h3>Seguro y confiable</h3>
+            <p>Protegemos tu cuenta y tu información.</p>
+          </div>
+        </div>
+
+        <div class="benefit">
+          <div class="benefit-icon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12a7 7 0 0 1 14 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/><path d="M7 13v3M17 13v3M12 19h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <h3>Soporte 24/7</h3>
+            <p>Estamos para ayudarte cuando lo necesitás.</p>
+          </div>
+        </div>
+
+        <div class="benefit">
+          <div class="benefit-icon">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 16v-4M12 16V9M16 16V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <h3>Crecé con MIMI</h3>
+            <p>Más oportunidades, más herramientas.</p>
+          </div>
+        </div>
       </section>
 
       <footer class="footer">
