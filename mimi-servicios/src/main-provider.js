@@ -544,49 +544,73 @@ updateProviderMarker(lat, lng) {
     servicePosition: null
   });
 }
+
 showProviderLoginGate() {
   const container = this.elements.onlineButtonContainer;
 
   document.body.classList.add("provider-auth-required");
+  document.body.classList.remove("provider-auth-loading", "provider-authenticated");
 
-  if (this.elements.bottomSheet) {
-    this.elements.bottomSheet.style.display = "none";
-  }
-
-  if (this.elements.header) {
-    this.elements.header.style.display = "none";
-  }
-
-  if (this.elements.mapContainer) {
-    this.elements.mapContainer.style.display = "none";
-  }
-
-  if (this.elements.offerCard) {
-    this.elements.offerCard.hidden = true;
-  }
-
-  if (this.elements.activeServiceCard) {
-    this.elements.activeServiceCard.hidden = true;
-  }
-
-  if (this.elements.distanceAlert) {
-    this.elements.distanceAlert.hidden = true;
-  }
+  if (this.elements.bottomSheet) this.elements.bottomSheet.style.display = "none";
+  if (this.elements.header) this.elements.header.style.display = "none";
+  if (this.elements.mapContainer) this.elements.mapContainer.style.display = "none";
+  if (this.elements.offerCard) this.elements.offerCard.hidden = true;
+  if (this.elements.activeServiceCard) this.elements.activeServiceCard.hidden = true;
+  if (this.elements.distanceAlert) this.elements.distanceAlert.hidden = true;
 
   if (!container) return;
 
   container.classList.remove("hidden");
   container.hidden = false;
-  const installBanner = this.elements.installBanner || document.getElementById("installBanner");
 
-if (installBanner) {
-  installBanner.hidden = true;
-  installBanner.style.setProperty("display", "none", "important");
-  installBanner.style.opacity = "0";
-  installBanner.style.pointerEvents = "none";
-  installBanner.setAttribute("aria-hidden", "true");
+  container.style.display = "grid";
+  container.style.placeItems = "center";
+  container.style.position = "fixed";
+  container.style.inset = "0";
+  container.style.transform = "none";
+  container.style.width = "100%";
+  container.style.minHeight = "100dvh";
+  container.style.zIndex = "99999";
+  container.style.pointerEvents = "auto";
+  container.style.opacity = "1";
+  container.style.visibility = "visible";
+  container.style.background =
+    "radial-gradient(circle at top, rgba(48,209,88,.18), transparent 36%), linear-gradient(180deg, #020617 0%, #000 100%)";
+
+  const installBanner =
+    this.elements.installBanner || document.getElementById("installBanner");
+
+  if (installBanner) {
+    installBanner.hidden = true;
+    installBanner.style.setProperty("display", "none", "important");
+    installBanner.style.opacity = "0";
+    installBanner.style.pointerEvents = "none";
+    installBanner.setAttribute("aria-hidden", "true");
+  }
+
+  const googleButton = document.getElementById("providerGoogleLoginButton");
+
+  if (!googleButton || googleButton.dataset.bound === "true") return;
+
+  googleButton.dataset.bound = "true";
+
+  googleButton.addEventListener("click", async () => {
+    try {
+      localStorage.setItem("mimi_services_active_mode", "provider");
+      sessionStorage.setItem("mimi_services_active_mode", "provider");
+      sessionStorage.setItem(
+        "mimi_services_auth_redirect_in_progress",
+        "./prestador.html"
+      );
+
+      await signInWithGoogle();
+    } catch (err) {
+      console.error("[MIMI] Error iniciando sesión prestador:", err);
+      this.showToast("No pudimos iniciar sesión con Google", "error");
+    }
+  });
 }
-
+  
   container.style.display = "grid";
   container.style.placeItems = "center";
   container.style.position = "fixed";
