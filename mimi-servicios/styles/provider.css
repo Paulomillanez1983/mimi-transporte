@@ -4841,3 +4841,32 @@ body.provider-auth-required .provider-auth-legal {
     font-size: 20px !important;
   }
 }
+.provider-auth-hero{
+  position:relative;
+  overflow:hidden;
+  border-radius:32px;
+  min-height:420px;
+  padding:24px;
+  background:#050505;
+  isolation:isolate;
+}
+
+.provider-auth-hero-bg{
+  position:absolute;
+  inset:0;
+  z-index:0;
+}
+
+.provider-auth-hero-bg img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  opacity:.98;
+}
+
+.provider-auth-topbar,
+.provider-auth-copy{
+  position:relative;
+  z-index:2;
+}
