@@ -623,128 +623,156 @@ body{
   }
 
   .driver-auth-hero{
-    height:486px;
-    min-height:486px;
-    padding:34px 28px 0;
+    height:356px;
+    min-height:356px;
+    padding:26px 22px 0;
   }
 
   .driver-auth-brand{
-    font-size:41px;
-    margin-bottom:30px;
+    font-size:34px;
+    margin-bottom:18px;
   }
 
   .driver-auth-brand span::after{
-    font-size:20px;
-    margin-left:7px;
+    font-size:16px;
+    margin-left:6px;
   }
 
   .driver-auth-title{
-    max-width:330px;
-    font-size:42px;
+    max-width:220px;
+    font-size:28px;
+    line-height:.94;
+    letter-spacing:-.06em;
   }
 
   .driver-auth-copy{
-    max-width:328px;
-    margin-top:24px;
-    font-size:17px;
+    max-width:210px;
+    margin-top:14px;
+    font-size:13px;
+    line-height:1.4;
   }
 
   .driver-auth-image{
-    width:360px;
-    right:-80px;
-    bottom:28px;
+    width:250px;
+    right:-28px;
+    bottom:18px;
   }
 
   .driver-auth-card{
-    margin:-20px 24px 22px;
-    padding:28px 26px 28px;
-    border-radius:30px;
+    margin:-8px 14px 16px;
+    padding:22px 18px 22px;
+    border-radius:24px;
   }
 
   .driver-auth-card h2{
-    font-size:42px;
+    font-size:28px;
+    margin-bottom:6px;
   }
 
   .driver-auth-kicker{
-    font-size:13px;
-    margin-bottom:28px;
+    font-size:11px;
+    letter-spacing:.16em;
+    margin-bottom:18px;
   }
 
   .driver-auth-desc{
-    font-size:20px;
-    margin-bottom:24px;
+    max-width:220px;
+    font-size:14px;
+    line-height:1.35;
+    margin-bottom:18px;
+  }
+
+  .driver-auth-desc::after{
+    width:74px;
+    height:4px;
+    margin-top:14px;
   }
 
   .driver-auth-security{
-    min-height:108px;
-    padding:17px;
-    gap:16px;
+    min-height:84px;
+    padding:14px;
+    gap:12px;
+    margin-bottom:18px;
+    border-radius:18px;
   }
 
   .driver-auth-security-icon{
-    width:64px;
-    height:64px;
-    flex-basis:64px;
+    width:46px;
+    height:46px;
+    flex-basis:46px;
+    border-radius:14px;
+    font-size:22px;
   }
 
   .driver-auth-security strong{
-    font-size:20px;
+    font-size:14px;
+    margin-bottom:4px;
   }
 
   .driver-auth-security span{
-    font-size:15.5px;
+    font-size:12px;
+    line-height:1.3;
   }
 
   .driver-auth-google{
-    min-height:66px;
-    padding:0 18px;
-    grid-template-columns:34px 1fr 22px;
+    min-height:58px;
+    padding:0 14px;
+    grid-template-columns:28px 1fr 18px;
+    border-radius:18px;
   }
 
   .driver-auth-google .google-mark,
   .driver-auth-google .google-mark svg{
-    width:30px;
-    height:30px;
+    width:24px;
+    height:24px;
   }
 
   .driver-auth-google .google-text{
-    font-size:18px;
+    font-size:15px;
   }
 
   .driver-auth-google .google-arrow{
-    font-size:28px;
+    font-size:22px;
   }
 
   .driver-auth-pills{
-    gap:10px;
-    margin-top:22px;
+    gap:8px;
+    margin-top:16px;
   }
 
   .driver-auth-pills span{
-    min-height:42px;
-    padding:0 17px;
-    font-size:14px;
-  }
-
-  .driver-auth-trust{
-    margin-top:24px;
-    gap:10px;
-  }
-
-  .driver-auth-trust div{
-    min-height:104px;
-    border-radius:20px;
-  }
-
-  .driver-auth-trust small{
+    min-height:36px;
+    padding:0 12px;
     font-size:12px;
   }
 
+  .driver-auth-trust{
+    margin-top:18px;
+    gap:8px;
+  }
+
+  .driver-auth-trust div{
+    min-height:82px;
+    padding:10px 6px;
+    border-radius:16px;
+  }
+
+  .driver-auth-trust span{
+    font-size:20px;
+  }
+
+  .driver-auth-trust small{
+    font-size:10px;
+    line-height:1.15;
+  }
+
   .driver-auth-note{
-    font-size:15px;
+    max-width:280px;
+    margin-top:18px;
+    font-size:12px;
+    line-height:1.4;
   }
 }
-
 @media (max-width:390px){
   .driver-auth-hero{
     height:460px;
