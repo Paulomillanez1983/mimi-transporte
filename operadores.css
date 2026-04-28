@@ -1247,41 +1247,7 @@ h1{
   }
 
   .benefit{
-    gap:6px;
-  }
 
-  .benefit-icon,
-  .benefit-icon svg{
-    width:clamp(22px, 6vw, 28px);
-    height:clamp(22px, 6vw, 28px);
-  }
-
-  .benefit h3{
-    font-size:clamp(9.2px, 2.8vw, 11px);
-    margin-bottom:3px;
-  }
-
-  .benefit p{
-    font-size:clamp(8.3px, 2.55vw, 10px);
-    line-height:1.25;
-  }
-
-  .footer{
-    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
-  }
-
-  .footer-brand{
-    font-size:22px;
-  }
-
-  .footer-copy{
-    font-size:11px;
-  }
-
-  .footer-link{
-    font-size:10px;
-  }
-}
 
 @media (max-height:720px) and (max-width:900px){
   .hero{
