@@ -196,5 +196,22 @@
 
     </main>
   </div>
+
+  <script>
+    let deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.body.classList.add('pwa-installable');
+    });
+
+    async function installPWA() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    }
+  </script>
 </body>
 </html>
