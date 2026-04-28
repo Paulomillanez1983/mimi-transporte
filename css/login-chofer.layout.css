@@ -669,3 +669,372 @@ body{
     padding:22px 20px !important;
   }
 }
+/* =========================================================
+   MIMICAR LOGIN — Pixel Match Mock Final
+   PEGAR ABAJO DE TODO
+   ========================================================= */
+
+@media (max-width: 820px){
+  body{
+    padding:0 !important;
+    margin:0 !important;
+    overflow-y:auto !important;
+    background:#020617 !important;
+  }
+
+  .driver-auth-shell{
+    position:relative !important;
+    display:block !important;
+    min-height:100dvh !important;
+    padding:0 8px 12px !important;
+    background:
+      linear-gradient(180deg, rgba(4,10,26,.10), rgba(2,6,23,.98)),
+      radial-gradient(circle at 82% 14%, rgba(111,49,255,.34), transparent 34%),
+      radial-gradient(circle at 25% 18%, rgba(37,99,235,.34), transparent 36%),
+      #020617 !important;
+  }
+
+  .driver-auth-stage{
+    display:block !important;
+    width:100% !important;
+    max-width:720px !important;
+    margin:0 auto !important;
+    border-radius:0 0 22px 22px !important;
+    overflow:hidden !important;
+    background:
+      linear-gradient(180deg, rgba(6,13,31,.98), rgba(2,6,23,.99)) !important;
+  }
+
+  .driver-auth-hero{
+    position:relative !important;
+    height:506px !important;
+    min-height:506px !important;
+    padding:38px 30px 0 !important;
+    display:block !important;
+    overflow:hidden !important;
+    text-align:left !important;
+    background:
+      linear-gradient(90deg, rgba(2,6,23,.98) 0%, rgba(3,10,28,.82) 45%, rgba(65,22,107,.45) 100%),
+      radial-gradient(circle at 74% 38%, rgba(59,130,246,.32), transparent 32%),
+      radial-gradient(circle at 93% 22%, rgba(147,51,234,.32), transparent 36%) !important;
+  }
+
+  .driver-auth-hero::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:1;
+    background:
+      linear-gradient(180deg, rgba(2,6,23,0) 0%, rgba(2,6,23,.12) 58%, rgba(2,6,23,.94) 100%);
+    pointer-events:none;
+  }
+
+  .driver-auth-brand{
+    position:relative !important;
+    z-index:4 !important;
+    font-size:47px !important;
+    line-height:.86 !important;
+    font-weight:900 !important;
+    margin:0 0 38px !important;
+    letter-spacing:-.08em !important;
+  }
+
+  .driver-auth-brand span{
+    background:linear-gradient(135deg,#ffffff 0%,#ffffff 42%,#35a8ff 43%,#35a8ff 100%) !important;
+    -webkit-background-clip:text !important;
+    background-clip:text !important;
+    color:transparent !important;
+  }
+
+  .driver-auth-brand span::after{
+    content:" DRIVER";
+    color:#38a2ff !important;
+    font-size:24px !important;
+    letter-spacing:.08em !important;
+    margin-left:8px !important;
+    vertical-align:middle !important;
+  }
+
+  .driver-auth-title{
+    position:relative !important;
+    z-index:4 !important;
+    max-width:360px !important;
+    font-size:43px !important;
+    line-height:.94 !important;
+    letter-spacing:-.078em !important;
+    font-weight:900 !important;
+    text-align:left !important;
+    margin:0 !important;
+  }
+
+  .driver-auth-title .check{
+    color:#22e68a !important;
+    font-size:.72em !important;
+  }
+
+  .driver-auth-copy{
+    position:relative !important;
+    z-index:4 !important;
+    max-width:350px !important;
+    margin:25px 0 0 !important;
+    font-size:17px !important;
+    line-height:1.45 !important;
+    color:rgba(255,255,255,.72) !important;
+    text-align:left !important;
+  }
+
+  .driver-auth-image{
+    position:absolute !important;
+    z-index:3 !important;
+    right:-72px !important;
+    bottom:18px !important;
+    width:390px !important;
+    max-width:none !important;
+    margin:0 !important;
+    object-fit:contain !important;
+    filter:
+      drop-shadow(0 34px 52px rgba(0,0,0,.72))
+      drop-shadow(0 0 38px rgba(59,130,246,.48)) !important;
+  }
+
+  .driver-auth-card{
+    position:relative !important;
+    z-index:5 !important;
+    margin:-8px 20px 0 !important;
+    padding:30px 28px 28px !important;
+    border-radius:32px !important;
+    background:
+      radial-gradient(circle at 9% 0%, rgba(59,130,246,.28), transparent 38%),
+      linear-gradient(180deg, rgba(17,35,72,.95), rgba(3,10,25,.99)) !important;
+    border:1px solid rgba(103,139,255,.32) !important;
+    box-shadow:
+      0 30px 90px rgba(0,0,0,.62),
+      inset 0 0 0 1px rgba(255,255,255,.035) !important;
+    backdrop-filter:blur(18px) !important;
+  }
+
+  .driver-auth-card h2{
+    font-size:40px !important;
+    line-height:.95 !important;
+    letter-spacing:-.055em !important;
+    margin:0 0 10px !important;
+  }
+
+  .driver-auth-kicker{
+    display:block !important;
+    color:#4ab0ff !important;
+    font-size:14px !important;
+    font-weight:900 !important;
+    letter-spacing:.19em !important;
+    text-transform:uppercase !important;
+    margin:0 0 28px !important;
+  }
+
+  .driver-auth-desc{
+    max-width:300px !important;
+    font-size:20px !important;
+    line-height:1.35 !important;
+    color:rgba(223,234,255,.84) !important;
+    margin:0 0 25px !important;
+  }
+
+  .driver-auth-desc::after{
+    content:"";
+    display:block;
+    width:92px;
+    height:4px;
+    border-radius:999px;
+    margin-top:22px;
+    background:#22a8ff;
+    box-shadow:0 0 18px rgba(34,168,255,.55);
+  }
+
+  .driver-auth-security{
+    display:flex !important;
+    align-items:center !important;
+    gap:18px !important;
+    padding:19px 18px !important;
+    min-height:118px !important;
+    margin:0 0 24px !important;
+    border-radius:24px !important;
+    background:rgba(255,255,255,.055) !important;
+    border:1px solid rgba(116,148,255,.22) !important;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.025) !important;
+  }
+
+  .driver-auth-security-icon{
+    width:70px !important;
+    height:70px !important;
+    flex:0 0 70px !important;
+    border-radius:20px !important;
+    font-size:32px !important;
+    color:#8cc8ff !important;
+    background:linear-gradient(145deg, rgba(37,99,235,.34), rgba(15,23,42,.72)) !important;
+  }
+
+  .driver-auth-security strong{
+    font-size:20px !important;
+    line-height:1.12 !important;
+    margin-bottom:8px !important;
+  }
+
+  .driver-auth-security span{
+    font-size:16px !important;
+    line-height:1.35 !important;
+    color:rgba(226,237,255,.72) !important;
+  }
+
+  .driver-auth-trust{
+    display:grid !important;
+    grid-template-columns:repeat(3,1fr) !important;
+    gap:10px !important;
+    margin:25px 0 0 !important;
+  }
+
+  .driver-auth-trust div{
+    min-height:104px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:9px !important;
+    padding:12px 8px !important;
+    border-radius:20px !important;
+    background:rgba(255,255,255,.047) !important;
+    border:1px solid rgba(116,148,255,.16) !important;
+  }
+
+  .driver-auth-trust span{
+    font-size:25px !important;
+  }
+
+  .driver-auth-trust small{
+    font-size:12px !important;
+    line-height:1.2 !important;
+    color:rgba(226,237,255,.62) !important;
+  }
+
+  .driver-auth-google{
+    position:relative !important;
+    min-height:72px !important;
+    border-radius:24px !important;
+    padding:0 26px !important;
+    margin:0 !important;
+    display:grid !important;
+    grid-template-columns:42px 1fr 28px !important;
+    align-items:center !important;
+    gap:12px !important;
+    background:linear-gradient(180deg,#ffffff 0%,#f1f5ff 100%) !important;
+    color:#0f172a !important;
+    box-shadow:
+      0 22px 40px rgba(0,0,0,.32),
+      inset 0 -2px 0 rgba(0,0,0,.06) !important;
+  }
+
+  .driver-auth-google .google-mark{
+    width:32px !important;
+    height:32px !important;
+  }
+
+  .driver-auth-google .google-mark svg{
+    width:32px !important;
+    height:32px !important;
+  }
+
+  .driver-auth-google .google-text{
+    font-size:21px !important;
+    font-weight:900 !important;
+    text-align:center !important;
+    white-space:nowrap !important;
+  }
+
+  .driver-auth-google .google-arrow{
+    font-size:32px !important;
+    font-weight:800 !important;
+    line-height:1 !important;
+  }
+
+  .driver-auth-pills{
+    display:flex !important;
+    justify-content:center !important;
+    gap:14px !important;
+    margin:25px 0 0 !important;
+    flex-wrap:wrap !important;
+  }
+
+  .driver-auth-pills span{
+    min-height:44px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    padding:0 19px !important;
+    border-radius:999px !important;
+    border:1px solid rgba(120,151,255,.25) !important;
+    background:rgba(3,10,28,.42) !important;
+    color:rgba(255,255,255,.86) !important;
+    font-size:14px !important;
+    font-weight:800 !important;
+  }
+
+  .driver-auth-note{
+    max-width:360px !important;
+    margin:25px auto 0 !important;
+    padding-top:0 !important;
+    border-top:none !important;
+    font-size:15px !important;
+    line-height:1.5 !important;
+    color:rgba(226,237,255,.60) !important;
+  }
+}
+
+@media (max-width:390px){
+  .driver-auth-hero{
+    height:486px !important;
+    min-height:486px !important;
+    padding:34px 25px 0 !important;
+  }
+
+  .driver-auth-title{
+    font-size:39px !important;
+    max-width:326px !important;
+  }
+
+  .driver-auth-copy{
+    font-size:16px !important;
+    max-width:320px !important;
+  }
+
+  .driver-auth-image{
+    width:360px !important;
+    right:-82px !important;
+    bottom:14px !important;
+  }
+
+  .driver-auth-card{
+    margin:-8px 14px 0 !important;
+    padding:28px 24px 26px !important;
+  }
+
+  .driver-auth-card h2{
+    font-size:38px !important;
+  }
+
+  .driver-auth-desc{
+    font-size:19px !important;
+  }
+
+  .driver-auth-security{
+    min-height:112px !important;
+    padding:17px !important;
+  }
+
+  .driver-auth-security-icon{
+    width:64px !important;
+    height:64px !important;
+    flex-basis:64px !important;
+  }
+
+  .driver-auth-google .google-text{
+    font-size:19px !important;
+  }
+}
