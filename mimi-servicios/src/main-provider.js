@@ -591,7 +591,7 @@ container.style.background = "";
 
 <div class="provider-auth-hero-bg" aria-hidden="true">
   <img
-    src="./assets/icons/provider/provider1-login-bg.png"
+    src="./assets/icons/provider/provider-login-bg.png"
     alt=""
     loading="eager"
     decoding="async"
