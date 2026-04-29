@@ -12,7 +12,12 @@ const STORAGE_KEYS = {
   OFFER: 'mimi_provider_offer',
   SETTINGS: 'mimi_provider_settings',
   DEVICE_ID: 'mimi_services_device_id',
-  LAST_SEEN: 'mimi_provider_last_seen'
+  LAST_SEEN: 'mimi_provider_last_seen',
+  CLIENT_DRAFT: 'mimi_client_request_draft',
+  CLIENT_ACTIVE_REQUEST: 'mimi_client_active_request',
+  CLIENT_SELECTED_PROVIDER: 'mimi_client_selected_provider',
+  CLIENT_UI: 'mimi_client_ui_state',
+  CLIENT_TRACKING: 'mimi_client_tracking'
 };
 
 // Initial State
@@ -29,7 +34,11 @@ const initialState = {
     toastQueue: [],
     mapReady: false,
     isOnline: false,
-    installPrompt: null
+    installPrompt: null,
+    appEntered: false,
+    activeMode: 'client',
+    selectedCategoryId: null,
+    showClientOnboarding: true
   },
 
   session: {
@@ -74,6 +83,38 @@ const initialState = {
   scheduledServices: [],
   activeOffer: null,
 
+  client: {
+    providers: [],
+    selectedProvider: null,
+    activeRequest: null,
+    activeConversationId: null,
+    insights: {
+      paymentIntent: null,
+      escrowHold: null,
+      candidates: [],
+      offers: [],
+      providerProfile: null,
+      providerPricing: [],
+      providerReviews: [],
+      providerCategories: []
+    }
+  },
+
+  requestDraft: {
+    categoryId: null,
+    address: '',
+    lat: null,
+    lng: null,
+    requestType: 'IMMEDIATE',
+    scheduledFor: '',
+    requestedHours: 2
+  },
+
+  tracking: {
+    clientPosition: null,
+    providerPosition: null
+  },
+
   notifications: {
     items: [],
     unreadCount: 0
@@ -95,7 +136,8 @@ const initialState = {
     lastSync: null,
     isLoading: false,
     error: null,
-    info: null
+    info: null,
+    backendMode: null
   }
 };
 
@@ -104,6 +146,11 @@ function deepClone(obj) {
 }
 
 let currentState = deepClone(initialState);
+export let state = deepClone(currentState);
+
+function syncExportedState() {
+  state = deepClone(currentState);
+}
 
 const listeners = new Set();
 
@@ -122,6 +169,7 @@ export function subscribe(listener) {
 }
 
 function notifyListeners() {
+  syncExportedState();
   const stateClone = deepClone(currentState);
 
   listeners.forEach((listener) => {
@@ -137,8 +185,15 @@ export function getState() {
   return deepClone(currentState);
 }
 
-export function setState(newState) {
-  currentState = deepClone(newState);
+export function setState(nextStateOrUpdater) {
+  if (typeof nextStateOrUpdater === 'function') {
+    const draft = deepClone(currentState);
+    const result = nextStateOrUpdater(draft);
+    currentState = deepClone(result ?? draft);
+  } else {
+    currentState = deepClone(nextStateOrUpdater);
+  }
+
   persistState();
   notifyListeners();
 }
@@ -260,6 +315,47 @@ function persistState() {
       })
     );
 
+    localStorage.setItem(
+      STORAGE_KEYS.CLIENT_UI,
+      JSON.stringify({
+        appEntered: currentState.ui.appEntered,
+        selectedCategoryId: currentState.ui.selectedCategoryId,
+        showClientOnboarding: currentState.ui.showClientOnboarding,
+        activeMode: currentState.ui.activeMode
+      })
+    );
+
+    localStorage.setItem(
+      STORAGE_KEYS.CLIENT_DRAFT,
+      JSON.stringify(currentState.requestDraft)
+    );
+
+    if (currentState.client.activeRequest) {
+      localStorage.setItem(
+        STORAGE_KEYS.CLIENT_ACTIVE_REQUEST,
+        JSON.stringify({
+          ...currentState.client.activeRequest,
+          persistedAt: Date.now()
+        })
+      );
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CLIENT_ACTIVE_REQUEST);
+    }
+
+    if (currentState.client.selectedProvider) {
+      localStorage.setItem(
+        STORAGE_KEYS.CLIENT_SELECTED_PROVIDER,
+        JSON.stringify(currentState.client.selectedProvider)
+      );
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CLIENT_SELECTED_PROVIDER);
+    }
+
+    localStorage.setItem(
+      STORAGE_KEYS.CLIENT_TRACKING,
+      JSON.stringify(currentState.tracking)
+    );
+
     localStorage.setItem(STORAGE_KEYS.LAST_SEEN, Date.now().toString());
   } catch (error) {
     console.error('[State] Persistence error:', error);
@@ -320,6 +416,48 @@ export function rehydrateState() {
       if (Array.isArray(settings.categories)) {
         currentState.provider.categories = settings.categories;
       }
+    }
+
+    const clientUi = safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_UI));
+    if (clientUi) {
+      currentState.ui = {
+        ...currentState.ui,
+        ...clientUi,
+        showClientOnboarding:
+          localStorage.getItem("mimi_services_client_onboarding_seen") === "1"
+            ? false
+            : clientUi.showClientOnboarding ?? currentState.ui.showClientOnboarding
+      };
+    }
+
+    const clientDraft = safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_DRAFT));
+    if (clientDraft) {
+      currentState.requestDraft = {
+        ...currentState.requestDraft,
+        ...clientDraft
+      };
+    }
+
+    const clientActiveRequest = safeParse(
+      localStorage.getItem(STORAGE_KEYS.CLIENT_ACTIVE_REQUEST)
+    );
+    if (clientActiveRequest && isClientRequestValid(clientActiveRequest)) {
+      currentState.client.activeRequest = clientActiveRequest;
+    }
+
+    const selectedProvider = safeParse(
+      localStorage.getItem(STORAGE_KEYS.CLIENT_SELECTED_PROVIDER)
+    );
+    if (selectedProvider) {
+      currentState.client.selectedProvider = selectedProvider;
+    }
+
+    const clientTracking = safeParse(localStorage.getItem(STORAGE_KEYS.CLIENT_TRACKING));
+    if (clientTracking) {
+      currentState.tracking = {
+        ...currentState.tracking,
+        ...clientTracking
+      };
     }
 
     currentState.ui.isInitialized = true;
@@ -389,6 +527,20 @@ function isOfferValid(offer) {
     if (age > 5 * 60 * 1000) {
       return false;
     }
+  }
+
+  return true;
+}
+
+function isClientRequestValid(request) {
+  if (!request) return false;
+
+  const closedStatuses = ['COMPLETED', 'CANCELLED', 'EXPIRED'];
+  if (closedStatuses.includes(request.status)) return false;
+
+  if (request.persistedAt) {
+    const age = Date.now() - request.persistedAt;
+    if (age > 24 * 60 * 60 * 1000) return false;
   }
 
   return true;
@@ -575,6 +727,11 @@ export const actions = {
 export function initState() {
   rehydrateState();
 
+  currentState.ui.activeMode = getActiveMode();
+  currentState.ui.showClientOnboarding =
+    localStorage.getItem("mimi_services_client_onboarding_seen") !== "1";
+  syncExportedState();
+
   window.addEventListener('beforeunload', persistState);
 
   setInterval(persistState, 5000);
@@ -616,6 +773,7 @@ export function setActiveMode(mode) {
     console.warn("[MIMI] No se pudo guardar active mode:", err);
   }
 
+  patchState("ui.activeMode", normalized);
   return normalized;
 }
 
