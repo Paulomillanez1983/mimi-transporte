@@ -832,10 +832,35 @@ function bindBasicControls() {
     }
   });
 
-  document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
-    try {
-      const categoryButton = event.target.closest("[data-category-id]");
-      if (categoryButton) {
+document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
+  try {
+    const scrollButton = event.target.closest("[data-scroll-target]");
+    if (scrollButton) {
+      const target = document.getElementById(scrollButton.dataset.scrollTarget);
+
+      if (target) {
+        target.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      }
+
+      return;
+    }
+
+    const supportButton = event.target.closest("[data-action='support']");
+    if (supportButton) {
+      toggleDrawer("supportDrawer", true);
+      return;
+    }
+
+    const notificationButton = event.target.closest("[data-action='notifications']");
+    if (notificationButton) {
+      toggleDrawer("notificationsDrawer", true);
+      return;
+    }
+
+    const categoryButton = event.target.closest("[data-category-id]");      if (categoryButton) {
         patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
         return;
       }
