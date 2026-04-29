@@ -860,7 +860,8 @@ document.querySelector(".app-shell")?.addEventListener("click", async (event) =>
       return;
     }
 
-    const categoryButton = event.target.closest("[data-category-id]");      if (categoryButton) {
+    const categoryButton = event.target.closest("[data-category-id]");      
+    if (categoryButton) {
         patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
         return;
       }
