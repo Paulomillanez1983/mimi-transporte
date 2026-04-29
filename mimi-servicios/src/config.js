@@ -57,7 +57,14 @@ export const appConfig = {
     "CANCELLED"
   ],
 
-  categories: []
+  categories: [
+    { id: "home-cleaning", code: "LIMPIEZA", name: "Limpieza", description: "Hogar, departamento, oficina y mantenimiento general." },
+    { id: "repairs", code: "REPARACIONES", name: "Reparaciones", description: "Plomería, electricidad, arreglos y urgencias simples." },
+    { id: "beauty-care", code: "BELLEZA", name: "Belleza", description: "Servicios personales, estética y cuidado a domicilio." },
+    { id: "moving-help", code: "MUDANZAS", name: "Mudanzas", description: "Ayuda para mover, cargar, ordenar y trasladar objetos." },
+    { id: "tech-help", code: "TECNOLOGIA", name: "Tecnología", description: "Instalaciones, soporte técnico y configuración de equipos." },
+    { id: "pet-care", code: "MASCOTAS", name: "Mascotas", description: "Paseos, cuidado, acompañamiento y asistencia básica." }
+  ]
 };
 
 export function loadConfig() {
