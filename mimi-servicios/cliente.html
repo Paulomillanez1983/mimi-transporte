@@ -47,6 +47,7 @@
             <button
               id="notificationsButton"
               class="trip-notifications"
+              data-action="notifications"
               type="button"
               aria-label="Abrir notificaciones"
               aria-controls="notificationsDrawer"
@@ -63,6 +64,7 @@
             <button
               id="chatButton"
               class="trip-notifications"
+              data-action="support"
               type="button"
               aria-label="Abrir chat"
               aria-controls="chatDrawer"
@@ -108,6 +110,19 @@
           Elegí la categoría, indicá el domicilio y recibí prestadores disponibles cerca tuyo con cotización,
           chat, tracking en vivo y estado financiero en un solo flujo.
         </p>
+
+        <div class="client-search-wrap" role="search" aria-label="Buscar servicios">
+          <span aria-hidden="true">🔎</span>
+          <input class="client-search" id="clientServiceSearch" type="search" placeholder="Buscar limpieza, plomería, belleza..." autocomplete="off">
+        </div>
+
+        <div class="client-hero-visual hero-visual" aria-hidden="true">
+          <div class="client-hero-phone">
+            <span class="hero-dot"></span>
+            <strong>Prestadores cerca</strong>
+            <small>Precio · ETA · Chat · Tracking</small>
+          </div>
+        </div>
 
         <div class="hero-actions hero-actions-client">
           <button class="btn-secondary" id="dismissClientOnboarding" type="button">
@@ -327,7 +342,7 @@
                   </form>
                 </article>
 
-                <article class="planner-block">
+                <article class="planner-block" id="providerResults">
                   <div class="block-header">
                     <div>
                       <span class="eyebrow">Prestadores</span>
@@ -361,7 +376,7 @@
                 <span class="helper-text" id="mapStatus">Esperando actividad</span>
               </div>
               <div
-                id="trackingMap"
+                id="clientMap"
                 class="map-surface"
                 role="img"
                 aria-label="Mapa del servicio y del prestador"
@@ -520,6 +535,27 @@
         </form>
       </div>
     </aside>
+
+
+    <aside class="drawer" id="supportDrawer" aria-hidden="true" aria-labelledby="supportDrawerTitle">
+      <div class="drawer-header">
+        <h3 id="supportDrawerTitle">Soporte MIMI</h3>
+        <button class="icon-button" type="button" data-close-drawer="supportDrawer" aria-label="Cerrar soporte">×</button>
+      </div>
+      <div class="drawer-body">
+        <div class="client-empty-state">
+          <strong>Centro de ayuda</strong>
+          <span class="muted">Cuando conectemos conversación de soporte, este panel va a mostrar tus consultas y respuestas del equipo MIMI.</span>
+        </div>
+      </div>
+    </aside>
+
+    <nav class="client-bottom-nav bottom-nav" aria-label="Navegación principal cliente">
+      <button type="button" data-scroll-target="clientHero">Inicio</button>
+      <button type="button" data-scroll-target="categoryGrid">Servicios</button>
+      <button type="button" data-scroll-target="providerResults">Prestadores</button>
+      <button type="button" data-action="support" id="openSupportDrawer">Soporte</button>
+    </nav>
   </div>
 
   <noscript>
