@@ -954,10 +954,13 @@ async function init() {
   registerInstallPrompt();
   initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
 
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => null);
-  }
-
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("../sw.js")
+    .catch((err) => {
+      console.warn("[MIMI Cliente] Service Worker no registrado:", err);
+    });
+}
   await bootstrapAsyncData();
 
   if (window.location.hash && window.location.hash.includes("access_token")) {
