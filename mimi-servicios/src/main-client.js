@@ -980,13 +980,15 @@ async function init() {
   registerInstallPrompt();
   initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
 
-if ("serviceWorker" in navigator) {
+// Service Worker desactivado temporalmente en Cliente.
+// Evita error 404 hasta crear el SW correcto en /mimi-servicios/sw.js.
+if (false && "serviceWorker" in navigator) {
   navigator.serviceWorker
-    .register("../sw.js")
+    .register("./sw.js")
     .catch((err) => {
       console.warn("[MIMI Cliente] Service Worker no registrado:", err);
     });
-}
+}  
   await bootstrapAsyncData();
 
   if (window.location.hash && window.location.hash.includes("access_token")) {
