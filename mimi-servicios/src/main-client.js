@@ -45,6 +45,16 @@ let authSubscription = null;
 
 const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
 
+function exposeClientDebugApi() {
+  window.MIMI = window.MIMI || {};
+  window.MIMI.servicesClient = {
+    mode: "client",
+    getState: () => state,
+    config: appConfig
+  };
+  window.MIMI_SERVICES_CLIENT = window.MIMI.servicesClient;
+}
+
 function currentUserId() {
   return state.session.userId ?? appConfig.demoClientUserId ?? null;
 }
@@ -933,6 +943,7 @@ function setupRealtime(
 }
 
 async function init() {
+  exposeClientDebugApi();
   subscribe(renderClientScreen);
   renderClientScreen(state);
 
@@ -941,7 +952,7 @@ async function init() {
   updateScheduledVisibility();
   bindBasicControls();
   registerInstallPrompt();
-  initMap("trackingMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
+  initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => null);
