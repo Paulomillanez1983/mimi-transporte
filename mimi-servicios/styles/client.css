@@ -988,3 +988,146 @@ body.provider-authenticated #header,
 body.provider-authenticated #bottomSheet {
   visibility: visible;
 }
+
+
+/* =========================================================
+   CLIENTE SERVICIOS — PARITY PATCH VS PROVIDER 2026
+   ========================================================= */
+.header-actions button,
+.trip-notifications,
+.header-login-btn,
+.header-logout-btn,
+.icon-button{
+  min-width:44px;
+  min-height:44px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  touch-action:manipulation;
+}
+
+.header-login-btn,
+.header-logout-btn{
+  padding:0 14px;
+  border-radius:999px;
+}
+
+.client-search-wrap{
+  width:min(100%,560px);
+  justify-self:center;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  align-items:center;
+  gap:10px;
+  padding:12px 14px;
+  border-radius:22px;
+  background:rgba(255,255,255,.94);
+  border:1px solid rgba(30,60,114,.12);
+  box-shadow:0 16px 42px rgba(17,41,86,.12);
+}
+
+.client-search{
+  width:100%;
+  border:0;
+  outline:0;
+  background:transparent;
+  font:inherit;
+  color:var(--text,#122033);
+}
+
+.client-hero-visual{
+  width:min(100%,520px);
+  min-height:124px;
+  justify-self:center;
+  display:grid;
+  place-items:center;
+  border-radius:30px;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 18%,rgba(43,182,115,.25),transparent 34%),
+    radial-gradient(circle at 82% 0%,rgba(30,60,114,.24),transparent 36%),
+    linear-gradient(135deg,rgba(255,255,255,.88),rgba(239,246,255,.96));
+  border:1px solid rgba(30,60,114,.12);
+  box-shadow:0 22px 60px rgba(17,41,86,.14);
+}
+
+.client-hero-phone{
+  width:min(88%,360px);
+  min-height:86px;
+  border-radius:24px;
+  padding:18px;
+  display:grid;
+  gap:4px;
+  background:rgba(255,255,255,.9);
+  border:1px solid rgba(30,60,114,.10);
+  box-shadow:0 18px 44px rgba(17,41,86,.16);
+}
+
+.hero-dot{
+  width:34px;
+  height:6px;
+  border-radius:999px;
+  background:linear-gradient(90deg,var(--primary,#1e3c72),var(--secondary,#2bb673));
+}
+
+.category-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+.category-card{
+  min-height:96px;
+  padding:14px;
+  border:1px solid rgba(30,60,114,.12);
+  border-radius:22px;
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.94));
+  color:var(--text,#122033);
+  text-align:left;
+  display:grid;
+  align-content:start;
+  gap:6px;
+  box-shadow:0 14px 34px rgba(17,41,86,.08);
+}
+
+.category-card.is-selected{
+  border-color:rgba(43,182,115,.45);
+  box-shadow:0 16px 42px rgba(43,182,115,.18);
+}
+
+.client-bottom-nav{
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:calc(10px + env(safe-area-inset-bottom,0px));
+  z-index:80;
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  padding:8px;
+  border-radius:24px;
+  background:rgba(255,255,255,.92);
+  border:1px solid rgba(30,60,114,.12);
+  box-shadow:0 18px 50px rgba(15,23,42,.20);
+  backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+}
+
+.client-bottom-nav button{
+  min-height:44px;
+  border:0;
+  border-radius:16px;
+  background:rgba(30,60,114,.06);
+  color:var(--primary,#1e3c72);
+  font-weight:800;
+}
+
+@media (min-width:821px){
+  .client-bottom-nav{display:none;}
+}
+
+@media (max-width:520px){
+  body{padding-bottom:92px;}
+  .category-grid{grid-template-columns:1fr;}
+  .client-hero-visual{min-height:112px;}
+}
