@@ -38,6 +38,8 @@ const initialState = {
     appEntered: false,
     activeMode: 'client',
     selectedCategoryId: null,
+    selectedProviderCandidateId: null,
+    hasCompletedClientSearch: false,
     showClientOnboarding: true
   },
 
@@ -267,6 +269,7 @@ function persistState() {
         providerId: currentState.session.providerId,
         userEmail: currentState.session.userEmail,
         userName: currentState.session.userName,
+        userAvatar: currentState.session.userAvatar,
         isAuthenticated: currentState.session.isAuthenticated
       })
     );
@@ -320,6 +323,8 @@ function persistState() {
       JSON.stringify({
         appEntered: currentState.ui.appEntered,
         selectedCategoryId: currentState.ui.selectedCategoryId,
+        selectedProviderCandidateId: currentState.ui.selectedProviderCandidateId,
+        hasCompletedClientSearch: currentState.ui.hasCompletedClientSearch,
         showClientOnboarding: currentState.ui.showClientOnboarding,
         activeMode: currentState.ui.activeMode
       })
