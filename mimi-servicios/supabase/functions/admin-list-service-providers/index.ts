@@ -7,26 +7,39 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response("ok", { status: 200, headers: corsHeaders });
+  }
+
+  if (!["GET", "POST"].includes(req.method)) {
+    return json({ error: "Method not allowed" }, 405);
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return json({ error: "Missing Supabase environment variables" }, 500);
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const authHeader = req.headers.get("Authorization") ?? "";
 
-    const token = authHeader.replace("Bearer ", "");
+    if (!authHeader.startsWith("Bearer ")) {
+      return json({ error: "Missing Authorization header" }, 401);
+    }
+
+    const token = authHeader.replace("Bearer ", "").trim();
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const {
       data: { user },
@@ -34,24 +47,21 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Invalid JWT" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return json({ error: "Invalid JWT", details: authError }, 401);
     }
 
     const { data: adminUser, error: adminError } = await supabase
       .from("admin_users")
-      .select("id,email,active,is_super_admin")
+      .select("user_id,active")
       .eq("user_id", user.id)
       .eq("active", true)
       .maybeSingle();
 
     if (adminError || !adminUser) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
+      return json({
+        error: "Forbidden",
+        details: adminError
+      }, 403);
     }
 
     const { data, error } = await supabase
@@ -93,17 +103,20 @@ serve(async (req) => {
       `)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      return json({
+        error: "No se pudieron listar prestadores.",
+        details: error
+      }, 500);
+    }
 
-    return new Response(JSON.stringify({ ok: true, providers: data ?? [] }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    return json({
+      ok: true,
+      providers: data ?? []
     });
   } catch (error) {
-    return new Response(JSON.stringify({
+    return json({
       error: error instanceof Error ? error.message : "Unexpected error"
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" }
-    });
+    }, 500);
   }
 });

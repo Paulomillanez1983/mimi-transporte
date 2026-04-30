@@ -32,6 +32,10 @@ function scoreLabel(score: number) {
   return "FAIL";
 }
 
+function normalizeDocumentReviewStatus(status: string) {
+  return status === "REJECTED" ? "REJECTED" : "PENDING";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200, headers: corsHeaders });
@@ -72,8 +76,7 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { data: userData, error: userError } =
-      await supabaseAdmin.auth.getUser(token);
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
 
     if (userError || !userData?.user?.id) {
       return fail("Sesión inválida.", 401, userError);
@@ -110,13 +113,13 @@ serve(async (req) => {
     const selfie = docs?.find((doc) => doc.document_type === "selfie");
     const imageExtRegex = /\.(jpg|jpeg|png|webp)$/i;
 
-if (dniFront && !imageExtRegex.test(dniFront.storage_path ?? "")) {
-  return fail("DNI inválido. Solo se permiten imágenes tomadas con cámara.", 400);
-}
+    if (dniFront && !imageExtRegex.test(dniFront.storage_path ?? "")) {
+      return fail("DNI inválido. Solo se permiten imágenes tomadas con cámara.", 400);
+    }
 
-if (selfie && !imageExtRegex.test(selfie.storage_path ?? "")) {
-  return fail("Selfie inválida. Solo se permiten imágenes tomadas con cámara.", 400);
-}
+    if (selfie && !imageExtRegex.test(selfie.storage_path ?? "")) {
+      return fail("Selfie inválida. Solo se permiten imágenes tomadas con cámara.", 400);
+    }
 
     if (!dniFront || !selfie) {
       return json({
@@ -127,9 +130,7 @@ if (selfie && !imageExtRegex.test(selfie.storage_path ?? "")) {
     }
 
     async function downloadBytes(path: string) {
-      const { data, error } = await supabaseAdmin.storage
-        .from(BUCKET)
-        .download(path);
+      const { data, error } = await supabaseAdmin.storage.from(BUCKET).download(path);
 
       if (error || !data) {
         throw error ?? new Error("No se pudo descargar archivo.");
@@ -172,160 +173,149 @@ if (selfie && !imageExtRegex.test(selfie.storage_path ?? "")) {
     let faceMatchScore = 0;
 
     if (faceDetected) {
-      const compare = await rekognition.send(
-        new CompareFacesCommand({
-          SourceImage: { Bytes: selfieBytes },
-          TargetImage: { Bytes: dniBytes },
-          SimilarityThreshold: 60,
-        }),
-      );
+      try {
+        const compare = await rekognition.send(
+          new CompareFacesCommand({
+            SourceImage: { Bytes: selfieBytes },
+            TargetImage: { Bytes: dniBytes },
+            SimilarityThreshold: 60,
+          }),
+        );
 
-      faceMatchScore = Number(compare.FaceMatches?.[0]?.Similarity ?? 0);
+        faceMatchScore = Number(compare.FaceMatches?.[0]?.Similarity ?? 0);
+      } catch (err) {
+        console.warn("[svc-verify-provider-identity] CompareFaces skipped:", err);
+        faceMatchScore = 0;
+      }
     }
 
-let riskFlags: string[] = [];
+    const riskFlags: string[] = [];
 
-if (!faceDetected) {
-  riskFlags.push("NO_FACE");
-}
-if (faceMatchScore > 0 && faceMatchScore < 45) {
-  riskFlags.push("VERY_LOW_FACE_MATCH");
-}
-if (faceMatchScore < 60) {
-  riskFlags.push("LOW_FACE_MATCH");
-}
+    if (!faceDetected) riskFlags.push("NO_FACE");
+    if (faceMatchScore > 0 && faceMatchScore < 45) riskFlags.push("VERY_LOW_FACE_MATCH");
+    if (faceMatchScore < 60) riskFlags.push("LOW_FACE_MATCH");
+    if (!ocrText || ocrText.length < 10) riskFlags.push("NO_OCR_DATA");
+    if (ocrText && !/\d{7,9}/.test(ocrText)) riskFlags.push("DNI_NOT_DETECTED");
+    if ((docs?.length ?? 0) > 10) riskFlags.push("TOO_MANY_ATTEMPTS");
 
-if (!ocrText || ocrText.length < 10) {
-  riskFlags.push("NO_OCR_DATA");
-}
+    const aiScore = Math.max(0, 100 - (riskFlags.length * 25) + (faceMatchScore * 0.5));
+    const aiScoreLabel = scoreLabel(aiScore);
 
-if (ocrText && !/\d{7,9}/.test(ocrText)) {
-  riskFlags.push("DNI_NOT_DETECTED");
-}
+    let nextReviewStatus = "REVIEW";
 
-if (docs.length > 10) {
-  riskFlags.push("TOO_MANY_ATTEMPTS");
-}
+    if (aiScoreLabel === "PASS" && riskFlags.length === 0) {
+      nextReviewStatus = "PENDING";
+    }
 
-const aiScore = Math.max(
-  0,
-  100
-  - (riskFlags.length * 25)
-  + (faceMatchScore * 0.5)
-);
+    if (
+      riskFlags.includes("NO_FACE") ||
+      riskFlags.includes("NO_OCR_DATA") ||
+      riskFlags.includes("DNI_NOT_DETECTED")
+    ) {
+      nextReviewStatus = "NEEDS_RESUBMISSION";
+    }
 
-const aiScoreLabel = scoreLabel(aiScore);
+    if (riskFlags.includes("VERY_LOW_FACE_MATCH") || riskFlags.length >= 3) {
+      nextReviewStatus = "REJECTED";
+    }
 
-// 🔥 NUEVA LÓGICA INTELIGENTE
-let nextReviewStatus = "REVIEW";
-
-if (aiScoreLabel === "PASS" && riskFlags.length === 0) {
-  nextReviewStatus = "PENDING";
-}
-
-if (
-  riskFlags.includes("NO_FACE") ||
-  riskFlags.includes("NO_OCR_DATA") ||
-  riskFlags.includes("DNI_NOT_DETECTED")
-) {
-  nextReviewStatus = "NEEDS_RESUBMISSION";
-}
-
-if (
-  riskFlags.includes("VERY_LOW_FACE_MATCH") ||
-  riskFlags.length >= 3
-) {
-  nextReviewStatus = "REJECTED";
-}
-const verificationPayload = {
-  provider_id: providerId,
-  verified_at: new Date().toISOString(),
-  face_detected: faceDetected,
-  face_match_score: faceMatchScore,
-  liveness_score: null,
-  ocr_text: ocrText,
-  ai_score: aiScore,
-  ai_score_label: aiScoreLabel,
-  risk_flags: riskFlags,
-  engine: "aws_rekognition",
-  note:
-          aiScoreLabel === "PASS"
+    const verificationPayload = {
+      provider_id: providerId,
+      verified_at: new Date().toISOString(),
+      face_detected: faceDetected,
+      face_match_score: faceMatchScore,
+      liveness_score: null,
+      ocr_text: ocrText,
+      ai_score: aiScore,
+      ai_score_label: aiScoreLabel,
+      risk_flags: riskFlags,
+      engine: "aws_rekognition",
+      note:
+        aiScoreLabel === "PASS"
           ? "Identidad validada por IA. Pendiente de revisión final."
           : aiScoreLabel === "REVIEW"
             ? "La IA recomienda revisión manual."
             : "La IA recomienda reenviar documentos.",
     };
 
-const { error: checkInsertError } = await supabaseAdmin
-  .from("svc_provider_identity_checks")
-  .insert({
-    provider_id: providerId,
-    dni_front_document_id: dniFront.id,
-    selfie_document_id: selfie.id,
+    const { error: checkInsertError } = await supabaseAdmin
+      .from("svc_provider_identity_checks")
+      .insert({
+        provider_id: providerId,
+        dni_front_document_id: dniFront.id,
+        selfie_document_id: selfie.id,
+        status: nextReviewStatus,
+        face_detected: faceDetected,
+        face_match_score: faceMatchScore,
+        liveness_score: null,
+        ocr_text: ocrText,
+        dni_number_detected: null,
+        full_name_detected: null,
+        ai_score: aiScore,
+        ai_score_label: aiScoreLabel,
+        risk_flags: riskFlags,
+        raw_result: verificationPayload,
+      });
 
-    status: nextReviewStatus,
-    engine: "aws_rekognition",
+    if (checkInsertError) {
+      return fail("No se pudo guardar auditoría de verificación.", 500, checkInsertError);
+    }
 
-    face_detected: faceDetected,
-    face_match_score: faceMatchScore,
-    liveness_score: null,
+    const docReviewStatus = normalizeDocumentReviewStatus(nextReviewStatus);
 
-    ocr_text: ocrText,
-    dni_number_detected: null,
-    full_name_detected: null,
+    for (const doc of [dniFront, selfie]) {
+      const { error: updateDocError } = await supabaseAdmin
+        .from("svc_provider_documents")
+        .update({
+          review_status: docReviewStatus,
+          review_notes: verificationPayload.note,
+          metadata_json: {
+            ...(doc.metadata_json ?? {}),
+            last_identity_check: {
+              ai_score: aiScore,
+              ai_score_label: aiScoreLabel,
+              face_match_score: faceMatchScore,
+              checked_at: verificationPayload.verified_at,
+            },
+          },
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", doc.id);
 
-    ai_score: aiScore,
-    ai_score_label: aiScoreLabel,
+      if (updateDocError) {
+        return fail("No se pudo actualizar estado de documentos.", 500, updateDocError);
+      }
+    }
 
-    risk_flags: riskFlags,
-    raw_result: verificationPayload,
-  });
+    await supabaseAdmin
+      .from("svc_providers")
+      .update({
+        approved: false,
+        blocked: nextReviewStatus === "REJECTED",
+        status: nextReviewStatus === "REJECTED" ? "BLOCKED" : "OFFLINE",
+        last_seen_at: new Date().toISOString(),
+      })
+      .eq("id", providerId);
 
-if (checkInsertError) {
-  return fail(
-    "No se pudo guardar auditoría de verificación.",
-    500,
-    checkInsertError,
+const { error: profileUpdateError } = await supabaseAdmin
+  .from("svc_provider_profiles")
+  .upsert(
+    {
+      provider_id: providerId,
+      ai_score: aiScore,
+      ai_score_label: aiScoreLabel,
+      kyc_status: nextReviewStatus.toLowerCase(),
+      review_status: nextReviewStatus.toLowerCase(),
+      review_required: nextReviewStatus !== "PENDING",
+      risk_flags: riskFlags,
+      reviewed_at: verificationPayload.verified_at,
+    },
+    { onConflict: "provider_id" }
   );
-}
 
-for (const doc of [dniFront, selfie]) {
-  const { error: updateDocError } = await supabaseAdmin
-    .from("svc_provider_documents")
-    .update({
-      review_status: nextReviewStatus,
-      review_notes: verificationPayload.note,
-      metadata_json: {
-        ...(doc.metadata_json ?? {}),
-        last_identity_check: {
-          ai_score: aiScore,
-          ai_score_label: aiScoreLabel,
-          face_match_score: faceMatchScore,
-          checked_at: verificationPayload.verified_at,
-        },
-      },
-      reviewed_at: new Date().toISOString(),
-    })
-    .eq("id", doc.id);
-
-  if (updateDocError) {
-    return fail(
-      "No se pudo actualizar estado de documentos.",
-      500,
-      updateDocError,
-    );
-  }
+if (profileUpdateError) {
+  return fail("No se pudo actualizar score del perfil.", 500, profileUpdateError);
 }
-await supabaseAdmin
-  .from("svc_providers")
-  .update({
-    approved: false,
-    blocked: nextReviewStatus === "REJECTED",
-    status: nextReviewStatus === "REJECTED" ? "BLOCKED" : "OFFLINE",
-    last_seen_at: new Date().toISOString(),
-  })
-  .eq("id", providerId);
-  
     return json({
       ok: true,
       status: nextReviewStatus,
