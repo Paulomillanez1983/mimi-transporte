@@ -1,20 +1,20 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 <head>
   <title>MIMIGo | Servicios cerca tuyo</title>
-  <meta name="description" content="Pedí limpieza, electricidad, instalación, cuidado y más desde una sola app.">
+  <meta name="description" content="PedÃ­ limpieza, electricidad, instalaciÃ³n, cuidado y mÃ¡s desde una sola app.">
   <meta name="theme-color" content="#020617">
-  <link rel="canonical" href="https://mimi-transporte-81b4.vercel.app/servicios">
+  <link rel="canonical" href="https://mimi-transporte.vercel.app/servicios">
 
   <!-- Social Preview / Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="MIMI Transporte">
   <meta property="og:locale" content="es_AR">
   <meta property="og:title" content="MIMIGo | Servicios cerca tuyo">
-  <meta property="og:description" content="Pedí limpieza, electricidad, instalación, cuidado y más desde una sola app.">
-  <meta property="og:url" content="https://mimi-transporte-81b4.vercel.app/servicios">
-  <meta property="og:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimigo-services.jpg">
-  <meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimigo-services.jpg">
+  <meta property="og:description" content="PedÃ­ limpieza, electricidad, instalaciÃ³n, cuidado y mÃ¡s desde una sola app.">
+  <meta property="og:url" content="https://mimi-transporte.vercel.app/servicios">
+  <meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimigo-services.jpg">
+  <meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-mimigo-services.jpg">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -22,8 +22,8 @@
   <!-- X / Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="MIMIGo | Servicios cerca tuyo">
-  <meta name="twitter:description" content="Pedí limpieza, electricidad, instalación, cuidado y más desde una sola app.">
-  <meta name="twitter:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimigo-services.jpg">
+  <meta name="twitter:description" content="PedÃ­ limpieza, electricidad, instalaciÃ³n, cuidado y mÃ¡s desde una sola app.">
+  <meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimigo-services.jpg">
 
   <meta charset="utf-8">
   <meta
@@ -68,7 +68,7 @@
           aria-controls="notificationsDrawer"
           aria-expanded="false"
         >
-          <span aria-hidden="true">🔔</span>
+          <span aria-hidden="true">ðŸ””</span>
           <b id="notificationsCount" hidden>0</b>
         </button>
         <button
@@ -80,7 +80,7 @@
           aria-controls="chatDrawer"
           aria-expanded="false"
         >
-          <span aria-hidden="true">💬</span>
+          <span aria-hidden="true">ðŸ’¬</span>
           <b id="chatUnreadCount" hidden>0</b>
         </button>
         <button class="login-pill" id="authPrimaryButton" data-auth-action="login" type="button">
@@ -103,7 +103,7 @@
       </div>
 
       <section class="hero-text-client" id="clientHero" data-client-screen="home" aria-labelledby="heroTitle">
-        <p>Buenos dias, <span id="clientGreetingName">Paulo</span> 👋</p>
+        <p>Buenos dias, <span id="clientGreetingName">Paulo</span> ðŸ‘‹</p>
         <h1 id="heroTitle">Que prestador necesitas hoy?</h1>
       </section>
 
@@ -151,8 +151,8 @@
               aria-controls="serviceAddressSuggestions"
               aria-expanded="false"
             >
-            <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar direccion" hidden>×</button>
-            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicacion" title="Usar mi ubicacion">📍</button>
+            <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar direccion" hidden>Ã—</button>
+            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicacion" title="Usar mi ubicacion">ðŸ“</button>
           </label>
 
           <div
@@ -285,7 +285,7 @@
     <aside class="drawer" id="notificationsDrawer" aria-hidden="true" aria-labelledby="notificationsDrawerTitle">
       <div class="drawer-header">
         <h3 id="notificationsDrawerTitle">Centro de notificaciones</h3>
-        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">×</button>
+        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">Ã—</button>
       </div>
       <div class="drawer-body" id="notificationsDrawerBody"></div>
     </aside>
@@ -293,7 +293,7 @@
     <aside class="drawer" id="chatDrawer" aria-hidden="true" aria-labelledby="chatDrawerTitle">
       <div class="drawer-header">
         <h3 id="chatDrawerTitle">Chat en tiempo real</h3>
-        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">×</button>
+        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">Ã—</button>
       </div>
       <div class="drawer-body chat-body">
         <div class="chat-list" id="chatMessages" aria-live="polite" aria-label="Mensajes del chat"></div>
@@ -308,7 +308,7 @@
     <aside class="drawer" id="supportDrawer" aria-hidden="true" aria-labelledby="supportDrawerTitle">
       <div class="drawer-header">
         <h3 id="supportDrawerTitle">Soporte MIMI Go</h3>
-        <button class="icon-button" type="button" data-close-drawer="supportDrawer" aria-label="Cerrar soporte">×</button>
+        <button class="icon-button" type="button" data-close-drawer="supportDrawer" aria-label="Cerrar soporte">Ã—</button>
       </div>
       <div class="drawer-body">
         <div class="support-panel">
@@ -352,3 +352,4 @@
   <script type="module" src="./src/main-client.js"></script>
 </body>
 </html>
+

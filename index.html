@@ -1,29 +1,29 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-  <title>MIMICar | Pedí tu viaje en segundos</title>
-  <meta name="description" content="Planificá tu viaje, agregá paradas y consultá el precio estimado desde tu celular.">
+  <title>MIMICar | PedÃ­ tu viaje en segundos</title>
+  <meta name="description" content="PlanificÃ¡ tu viaje, agregÃ¡ paradas y consultÃ¡ el precio estimado desde tu celular.">
   <meta name="theme-color" content="#020617">
-  <link rel="canonical" href="https://mimi-transporte-81b4.vercel.app/viaje">
+  <link rel="canonical" href="https://mimi-transporte.vercel.app/viaje">
 
   <!-- Social Preview / Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="MIMI Transporte">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:title" content="MIMICar | Pedí tu viaje en segundos">
-  <meta property="og:description" content="Planificá tu viaje, agregá paradas y consultá el precio estimado desde tu celular.">
-  <meta property="og:url" content="https://mimi-transporte-81b4.vercel.app/viaje">
-  <meta property="og:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimicar-client.jpg">
-  <meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimicar-client.jpg">
+  <meta property="og:title" content="MIMICar | PedÃ­ tu viaje en segundos">
+  <meta property="og:description" content="PlanificÃ¡ tu viaje, agregÃ¡ paradas y consultÃ¡ el precio estimado desde tu celular.">
+  <meta property="og:url" content="https://mimi-transporte.vercel.app/viaje">
+  <meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimicar-client.jpg">
+  <meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-mimicar-client.jpg">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
 
   <!-- X / Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="MIMICar | Pedí tu viaje en segundos">
-  <meta name="twitter:description" content="Planificá tu viaje, agregá paradas y consultá el precio estimado desde tu celular.">
-  <meta name="twitter:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimicar-client.jpg">
+  <meta name="twitter:title" content="MIMICar | PedÃ­ tu viaje en segundos">
+  <meta name="twitter:description" content="PlanificÃ¡ tu viaje, agregÃ¡ paradas y consultÃ¡ el precio estimado desde tu celular.">
+  <meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimicar-client.jpg">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -142,7 +142,7 @@ async function safeFetch(url, options = {}, timeoutMs = NETWORK_TIMEOUT_MS) {
 function buildNetworkError(result, fallbackMessage = "Error de red") {
   return {
     message: result?.timeout
-      ? "La solicitud tardó demasiado"
+      ? "La solicitud tardÃ³ demasiado"
       : (result?.error?.message || fallbackMessage),
     code: result?.timeout ? "CLIENT_TIMEOUT" : "NETWORK_ERROR",
     aborted: !!result?.aborted,
@@ -262,7 +262,7 @@ function createQueryBuilder(table) {
           return {
             data: null,
             error: {
-              message: "Tabla inválida",
+              message: "Tabla invÃ¡lida",
               code: "INVALID_TABLE"
             }
           };
@@ -375,7 +375,7 @@ window.supabaseRest = {
       if (!result.response) {
         return {
           data: null,
-          error: buildNetworkError(result, "No se pudo ejecutar la función RPC")
+          error: buildNetworkError(result, "No se pudo ejecutar la funciÃ³n RPC")
         };
       }
 
@@ -696,7 +696,7 @@ async function buscarDireccion(query) {
 
     if (!result.response.ok) {
       console.warn(
-        '⚠️ HTTP geocodificación:',
+        'âš ï¸ HTTP geocodificaciÃ³n:',
         json?.message || json?.error || json?.raw || result.response.status
       );
 
@@ -710,7 +710,7 @@ async function buscarDireccion(query) {
     }
 
     if (!json || !json.exito) {
-      console.warn('⚠️ Error geocodificación:', json?.error || 'Respuesta inválida');
+      console.warn('âš ï¸ Error geocodificaciÃ³n:', json?.error || 'Respuesta invÃ¡lida');
 
       const fallback = buscarDireccionFallbackLocal(normalizedQuery);
       return {
@@ -737,7 +737,7 @@ async function buscarDireccion(query) {
 
     return payload;
   } catch (err) {
-    console.error('❌ Error buscando dirección:', err);
+    console.error('âŒ Error buscando direcciÃ³n:', err);
 
     const fallback = buscarDireccionFallbackLocal(normalizedQuery);
     return {
@@ -784,9 +784,9 @@ async function buscarDireccion(query) {
 <body>
 <div id="clientInstallBanner" class="client-install-banner" hidden>
   <div class="client-install-banner__content">
-    <div class="client-install-banner__title">Instalá MIMI en tu celular</div>
+    <div class="client-install-banner__title">InstalÃ¡ MIMI en tu celular</div>
     <div id="clientInstallStatusText" class="client-install-banner__text">
-      Instalá la app para recibir avisos y entrar más rápido.
+      InstalÃ¡ la app para recibir avisos y entrar mÃ¡s rÃ¡pido.
     </div>
 
     <div class="client-install-banner__actions">
@@ -799,7 +799,7 @@ async function buscarDireccion(query) {
       </button>
 
       <button id="btnDismissClientInstall" type="button" class="client-install-banner__btn client-install-banner__btn--ghost">
-        Más tarde
+        MÃ¡s tarde
       </button>
     </div>
   </div>
@@ -835,7 +835,7 @@ async function buscarDireccion(query) {
           aria-expanded="false"
           aria-controls="tripNotificationsPanel"
         >
-          🔔
+          ðŸ””
           <span class="trip-notifications-dot"></span>
           <span
             class="trip-notifications-badge"
@@ -866,7 +866,7 @@ async function buscarDireccion(query) {
             class="trip-notifications-status-card"
             hidden
           >
-            <div class="trip-notifications-status-icon" aria-hidden="true">🚐</div>
+            <div class="trip-notifications-status-icon" aria-hidden="true">ðŸš</div>
             <div class="trip-notifications-status-copy">
               <strong id="tripNotificationsStatusTitle">Estado del viaje</strong>
               <span id="tripNotificationsStatusText">Sin novedades por ahora.</span>
@@ -904,7 +904,7 @@ async function buscarDireccion(query) {
             class="trip-notifications-list"
           >
             <div class="trip-notification-empty">
-              Todavía no hay notificaciones.
+              TodavÃ­a no hay notificaciones.
             </div>
           </div>
         </div>
@@ -926,8 +926,8 @@ async function buscarDireccion(query) {
         type="button"
         aria-label="Ingresar con Google"
       >
-        <span aria-hidden="true">👤</span>
-        <span>Iniciar sesión</span>
+        <span aria-hidden="true">ðŸ‘¤</span>
+        <span>Iniciar sesiÃ³n</span>
       </button>
 
       <div id="userSessionBox" class="user-session-box" hidden>
@@ -946,8 +946,8 @@ async function buscarDireccion(query) {
           id="btnLogoutHeader"
           class="header-logout-btn"
           type="button"
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
+          aria-label="Cerrar sesiÃ³n"
+          title="Cerrar sesiÃ³n"
         >
           Salir
         </button>
@@ -958,8 +958,8 @@ async function buscarDireccion(query) {
 
 <main class="container" role="main">
   <section class="hero-text" aria-labelledby="heroTitle">
-    <h1 class="hero-title" id="heroTitle">Planificá tu viaje</h1>
-    <p class="hero-subtitle">Agregá paradas y calculá el precio exacto</p>
+    <h1 class="hero-title" id="heroTitle">PlanificÃ¡ tu viaje</h1>
+    <p class="hero-subtitle">AgregÃ¡ paradas y calculÃ¡ el precio exacto</p>
   </section>
 
   <section class="main-card" aria-label="Planificador de viaje">
@@ -973,12 +973,12 @@ async function buscarDireccion(query) {
         <!-- Origen -->
         <div class="route-input-group route-input-group-origin">
         <div class="route-input-wrapper">
-        <span class="route-input-icon" aria-hidden="true">📍</span>
+        <span class="route-input-icon" aria-hidden="true">ðŸ“</span>
         <input
          type="text"
          id="inputOrigen"
         class="route-input"
-        placeholder="¿Dónde te buscamos?"
+        placeholder="Â¿DÃ³nde te buscamos?"
         autocomplete="off"
         autocapitalize="words"
         autocorrect="off"
@@ -998,7 +998,7 @@ async function buscarDireccion(query) {
        title="Borrar origen"
        aria-label="Borrar origen"
        hidden
-     >✕</button>
+     >âœ•</button>
    </div>
  </div>
           <div
@@ -1009,7 +1009,7 @@ async function buscarDireccion(query) {
           ></div>
         </div>
 
-        <!-- Botón intercambiar -->
+        <!-- BotÃ³n intercambiar -->
         <div class="route-swap-row" style="display:flex; justify-content:center; margin:8px 0; position:relative; z-index:5;">
           <button
             class="map-btn"
@@ -1018,19 +1018,19 @@ async function buscarDireccion(query) {
             title="Intercambiar origen y destino"
             aria-label="Intercambiar origen y destino"
           >
-            ⇅
+            â‡…
           </button>
         </div>
 
         <!-- Destino -->
         <div class="route-input-group route-input-group-destination">
         <div class="route-input-wrapper">
-        <span class="route-input-icon" aria-hidden="true">🏁</span>
+        <span class="route-input-icon" aria-hidden="true">ðŸ</span>
         <input
         type="text"
         id="inputDestino"
         class="route-input"
-        placeholder="¿A dónde vamos?"
+        placeholder="Â¿A dÃ³nde vamos?"
         autocomplete="off"
         autocapitalize="words"
         autocorrect="off"
@@ -1050,7 +1050,7 @@ async function buscarDireccion(query) {
          title="Borrar destino"
          aria-label="Borrar destino"
          hidden
-      >✕</button>
+      >âœ•</button>
       </div>
         </div>
           <div
@@ -1061,23 +1061,23 @@ async function buscarDireccion(query) {
           ></div>
         </div>
 
-        <!-- Waypoints dinámicos -->
+        <!-- Waypoints dinÃ¡micos -->
         <div id="waypointsContainer" aria-label="Paradas intermedias"></div>
       </div>
 
-      <!-- Botón agregar parada -->
+      <!-- BotÃ³n agregar parada -->
       <button
         class="btn-add-stop"
         id="btnAddStop"
         type="button"
         aria-label="Agregar parada"
       >
-        <span aria-hidden="true">➕</span>
+        <span aria-hidden="true">âž•</span>
         <span>Agregar parada</span>
       </button>
     </div>
 
-    <!-- Botón cotizar -->
+    <!-- BotÃ³n cotizar -->
     <button
       class="btn-calcular"
       id="btnCalcular"
@@ -1086,7 +1086,7 @@ async function buscarDireccion(query) {
       aria-busy="false"
     >
       <span class="btn-content">
-        <span aria-hidden="true">🚐</span>
+        <span aria-hidden="true">ðŸš</span>
         <span>Ver recorrido y cotizar</span>
       </span>
       <span class="btn-loader" aria-hidden="true">
@@ -1112,7 +1112,7 @@ async function buscarDireccion(query) {
             type="button"
             aria-label="Centrar ruta"
           >
-            📍
+            ðŸ“
           </button>
           <button
             class="map-btn"
@@ -1121,13 +1121,13 @@ async function buscarDireccion(query) {
             type="button"
             aria-label="Nueva ruta"
           >
-            🔄
+            ðŸ”„
           </button>
         </div>
       </div>
     </section>
 
-    <!-- CARD DE COTIZACIÓN -->
+    <!-- CARD DE COTIZACIÃ“N -->
     <section
       class="quote-card"
       id="quoteCard"
@@ -1152,7 +1152,7 @@ async function buscarDireccion(query) {
   type="button"
   aria-label="Chatear con el chofer"
 >
-  <span aria-hidden="true">💬</span>
+  <span aria-hidden="true">ðŸ’¬</span>
   <span>Chat</span>
   <span id="tripChatBadgeClient" class="trip-chat-fab-badge" hidden></span>
 </button>
@@ -1162,7 +1162,7 @@ async function buscarDireccion(query) {
           type="button"
           aria-label="Cancelar viaje"
         >
-          <span aria-hidden="true">✕</span>
+          <span aria-hidden="true">âœ•</span>
           <span>Cancelar</span>
         </button>
       </div>
@@ -1186,7 +1186,7 @@ async function buscarDireccion(query) {
         </div>
         <div class="quote-detail">
           <div class="quote-detail-value" id="detailDuration">0 min</div>
-          <div class="quote-detail-label">Duración</div>
+          <div class="quote-detail-label">DuraciÃ³n</div>
         </div>
         <div class="quote-detail">
           <div class="quote-detail-value" id="detailStops">0</div>
@@ -1202,7 +1202,7 @@ async function buscarDireccion(query) {
         aria-controls="priceBreakdown"
       >
         <span>Ver desglose del precio</span>
-        <span id="breakdownChevron" aria-hidden="true">▾</span>
+        <span id="breakdownChevron" aria-hidden="true">â–¾</span>
       </button>
 
       <div id="priceBreakdown" class="price-breakdown" hidden>
@@ -1217,7 +1217,7 @@ async function buscarDireccion(query) {
           type="button"
           aria-label="Confirmar viaje"
         >
-          <span aria-hidden="true">✓</span>
+          <span aria-hidden="true">âœ“</span>
           <span>Confirmar viaje</span>
         </button>
 
@@ -1227,7 +1227,7 @@ async function buscarDireccion(query) {
           type="button"
           aria-label="Compartir ruta"
         >
-          <span aria-hidden="true">📤</span>
+          <span aria-hidden="true">ðŸ“¤</span>
           <span>Compartir ruta</span>
         </button>
       </div>
@@ -1239,7 +1239,7 @@ async function buscarDireccion(query) {
         aria-label="Cancelar viaje"
         hidden
       >
-        <span aria-hidden="true">✕</span>
+        <span aria-hidden="true">âœ•</span>
         <span>Cancelar viaje</span>
       </button>
     </section>
@@ -1254,7 +1254,7 @@ async function buscarDireccion(query) {
     aria-label="Abrir soporte"
     title="Soporte"
   >
-    <span class="support-launcher-icon" aria-hidden="true">💬</span>
+    <span class="support-launcher-icon" aria-hidden="true">ðŸ’¬</span>
     <span class="support-launcher-text">Soporte</span>
   </button>
 
@@ -1281,10 +1281,10 @@ async function buscarDireccion(query) {
   </div>
 
   <div class="support-sheet-header">
-    <div class="support-sheet-avatar" aria-hidden="true">🎧</div>
+    <div class="support-sheet-avatar" aria-hidden="true">ðŸŽ§</div>
     <div class="support-sheet-header-copy">
       <h3 id="supportSheetTitle">Soporte MIMICAR</h3>
-<p>Contanos qué pasó y te ayudamos. Soporte legal: mimi.legal.ar@gmail.com</p>
+<p>Contanos quÃ© pasÃ³ y te ayudamos. Soporte legal: mimi.legal.ar@gmail.com</p>
     </div>
 
     <button
@@ -1293,7 +1293,7 @@ async function buscarDireccion(query) {
       type="button"
       aria-label="Cerrar soporte"
     >
-      ✕
+      âœ•
     </button>
   </div>
 
@@ -1306,7 +1306,7 @@ async function buscarDireccion(query) {
   </div>
 
   <div class="support-sheet-composer">
-    <label class="sr-only" for="supportMessageInput">Escribí tu mensaje</label>
+    <label class="sr-only" for="supportMessageInput">EscribÃ­ tu mensaje</label>
     <textarea
       id="supportMessageInput"
       class="support-message-input"
@@ -1330,7 +1330,7 @@ async function buscarDireccion(query) {
 
   
 // ==========================================
-// CONFIGURACIÓN
+// CONFIGURACIÃ“N
 // ==========================================
 const CONFIG = {
   COTIZAR_URL: 'https://xrphpqmutvadjrucqicn.supabase.co/functions/v1/cotizar',
@@ -1611,15 +1611,15 @@ async function cerrarSesionCliente() {
 
     renderSesionUI(null);
 
-    notif.show('Sesión cerrada', 'Ahora podés ingresar con otra cuenta', 'info', 1800);
+    notif.show('SesiÃ³n cerrada', 'Ahora podÃ©s ingresar con otra cuenta', 'info', 1800);
 
     setTimeout(() => {
       const cleanUrl = `${window.location.origin}${window.location.pathname}`;
       window.location.replace(cleanUrl);
     }, 250);
   } catch (err) {
-    console.error('[auth] error cerrando sesión:', err);
-    notif.show('Error', 'No se pudo cerrar sesión', 'error');
+    console.error('[auth] error cerrando sesiÃ³n:', err);
+    notif.show('Error', 'No se pudo cerrar sesiÃ³n', 'error');
 
     if (typeof setHeaderAuthLoading === 'function') {
       setHeaderAuthLoading(false);
@@ -1627,7 +1627,7 @@ async function cerrarSesionCliente() {
   }
 }  
   
- let sessionPromise = null; // Evita llamadas simultáneas duplicadas
+ let sessionPromise = null; // Evita llamadas simultÃ¡neas duplicadas
 let lastUserCheck = 0;
 const USER_CHECK_INTERVAL = 300000; // 5 minutos entre checks de getUser
 const SESSION_CACHE_MS = 30000; // 30 segundos de cache local
@@ -1637,14 +1637,14 @@ async function obtenerSesionCliente(forceRefresh = false) {
     typeof window.setHeaderAuthLoading === 'function';
 
   if (!window.sbRealtime?.auth) {
-    console.warn('[auth] Cliente de sesión no inicializado');
+    console.warn('[auth] Cliente de sesiÃ³n no inicializado');
     if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
     return null;
   }
 
   const now = Date.now();
 
-  // EVITAR RACE CONDITIONS: Si hay una petición en curso, esperarla
+  // EVITAR RACE CONDITIONS: Si hay una peticiÃ³n en curso, esperarla
   if (sessionPromise && !forceRefresh) {
     try {
       const cached = await sessionPromise;
@@ -1654,12 +1654,12 @@ async function obtenerSesionCliente(forceRefresh = false) {
         return cached;
       }
     } catch (e) {
-      // Si la anterior falló, continuar con nueva petición
+      // Si la anterior fallÃ³, continuar con nueva peticiÃ³n
       sessionPromise = null;
     }
   }
 
-  // Cache rápido (30 segundos) - si no forzamos refresh
+  // Cache rÃ¡pido (30 segundos) - si no forzamos refresh
   if (
     !forceRefresh &&
     cachedSession?.access_token &&
@@ -1669,7 +1669,7 @@ async function obtenerSesionCliente(forceRefresh = false) {
     const payload = decodificarJwtPayload(cachedSession.access_token);
     const expMs = Number(payload?.exp || 0) * 1000;
     
-    // Si vence en >2 minutos, usar cache sin más
+    // Si vence en >2 minutos, usar cache sin mÃ¡s
     if (expMs && (expMs - now > 120000)) {
       if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
       return cachedSession;
@@ -1682,12 +1682,12 @@ async function obtenerSesionCliente(forceRefresh = false) {
     }
   }
 
-  // Crear nueva promesa de obtención
+  // Crear nueva promesa de obtenciÃ³n
   sessionPromise = (async () => {
     if (canToggleHeaderLoading) window.setHeaderAuthLoading(true);
 
     try {
-      // 1. Obtener sesión actual
+      // 1. Obtener sesiÃ³n actual
       let { data, error } = await window.sbRealtime.auth.getSession();
 
       if (error) {
@@ -1698,12 +1698,12 @@ async function obtenerSesionCliente(forceRefresh = false) {
 
       let session = data?.session || null;
 
-      // 2. Si no hay sesión (ej: después de OAuth redirect), esperar
+      // 2. Si no hay sesiÃ³n (ej: despuÃ©s de OAuth redirect), esperar
       if (!session?.access_token) {
         session = await esperarSesionInicial(2500);
       }
 
-      // 3. Si sigue sin haber sesión y forzamos, intentar refresh explícito
+      // 3. Si sigue sin haber sesiÃ³n y forzamos, intentar refresh explÃ­cito
       if (!session?.access_token && forceRefresh) {
         try {
           const refreshResult = await window.sbRealtime.auth.refreshSession();
@@ -1720,7 +1720,7 @@ async function obtenerSesionCliente(forceRefresh = false) {
         return null;
       }
 
-      // 4. Verificar expiración (refresh automático si <2 minutos)
+      // 4. Verificar expiraciÃ³n (refresh automÃ¡tico si <2 minutos)
       const payload = decodificarJwtPayload(session.access_token);
       const expMs = Number(payload?.exp || 0) * 1000;
       const timeUntilExp = expMs - now;
@@ -1731,7 +1731,7 @@ async function obtenerSesionCliente(forceRefresh = false) {
           if (!refreshResult?.error && refreshResult?.data?.session?.access_token) {
             session = refreshResult.data.session;
           } else if (timeUntilExp < 0) {
-            // Ya expiró y no se pudo refrescar
+            // Ya expirÃ³ y no se pudo refrescar
             limpiarSesionCache();
             return null;
           }
@@ -1743,13 +1743,13 @@ async function obtenerSesionCliente(forceRefresh = false) {
         }
       }
 
-      // 5. Validar con getUser SOLO cada 5 minutos (optimización crítica)
+      // 5. Validar con getUser SOLO cada 5 minutos (optimizaciÃ³n crÃ­tica)
       if (forceRefresh || now - lastUserCheck > USER_CHECK_INTERVAL) {
         try {
           const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
           
           if (userCheck?.error || !userCheck?.data?.user) {
-            console.warn('[auth] getUser inválido:', userCheck?.error || 'sin user');
+            console.warn('[auth] getUser invÃ¡lido:', userCheck?.error || 'sin user');
             
             // Reintentar una vez con refresh
             if (!forceRefresh) {
@@ -1794,7 +1794,7 @@ async function obtenerSesionCliente(forceRefresh = false) {
       return cachedSession || null; // Fallback a anterior
     } finally {
       if (canToggleHeaderLoading) window.setHeaderAuthLoading(false);
-      // Limpiar promesa pendiente después de breve delay
+      // Limpiar promesa pendiente despuÃ©s de breve delay
       setTimeout(() => { sessionPromise = null; }, 50);
     }
   })();
@@ -1813,7 +1813,7 @@ async function syncRealtimeAuthToken(forceRefresh = false) {
       await window.sbRealtime.realtime.setAuth(token);
       console.log('[support realtime auth] token sincronizado');
     } else {
-      console.warn('[support realtime auth] sin token de sesión');
+      console.warn('[support realtime auth] sin token de sesiÃ³n');
     }
 
     return token;
@@ -1885,7 +1885,7 @@ async function solicitarPermisosClientePostLogin(session, { forcePrompt = false 
 
     if (permission === 'default') {
       notif.show(
-        'Activá notificaciones',
+        'ActivÃ¡ notificaciones',
         'Permiten recibir respuestas de soporte y avisos del viaje aunque no tengas la app abierta.',
         'info',
         4200
@@ -1923,8 +1923,8 @@ async function manejarPermisoNotificacionesEnSoporte(session) {
 
     if (permission === 'default') {
       notif.show(
-        'Activá notificaciones para soporte',
-        'Así te avisamos cuando soporte responda aunque estés fuera de la app.',
+        'ActivÃ¡ notificaciones para soporte',
+        'AsÃ­ te avisamos cuando soporte responda aunque estÃ©s fuera de la app.',
         'info',
         4200
       );
@@ -1938,7 +1938,7 @@ async function manejarPermisoNotificacionesEnSoporte(session) {
 
     notif.show(
       'Notificaciones desactivadas',
-      'Si querés recibir respuestas de soporte, habilitalas manualmente desde la configuración del navegador.',
+      'Si querÃ©s recibir respuestas de soporte, habilitalas manualmente desde la configuraciÃ³n del navegador.',
       'warning',
       5200
     );
@@ -1965,7 +1965,7 @@ async function asegurarSesionCliente() {
   }
 
   notif.show(
-    'Iniciando sesión',
+    'Iniciando sesiÃ³n',
     'Para confirmar el viaje te pedimos ingresar con Google.',
     'info',
     3500
@@ -2017,7 +2017,7 @@ gate.classList.add('is-open');
 document.documentElement.classList.add('legal-gate-open');
 document.body.classList.add('legal-gate-open');
   
-  body.innerHTML = `<div class="legal-gate-loading">Cargando documentos…</div>`;
+  body.innerHTML = `<div class="legal-gate-loading">Cargando documentosâ€¦</div>`;
   acceptBtn.disabled = true;
 
   try {
@@ -2057,7 +2057,7 @@ document.body.classList.add('legal-gate-open');
           <div class="legal-gate-doc-head">
             <div class="legal-gate-doc-meta">
               <h3>${escapeHtml(doc.title || doc.code)}</h3>
-              <span>${escapeHtml(doc.version_label || doc.version || 'Versión vigente')}</span>
+              <span>${escapeHtml(doc.version_label || doc.version || 'VersiÃ³n vigente')}</span>
             </div>
             <div class="legal-gate-doc-status">Obligatorio</div>
           </div>
@@ -2072,7 +2072,7 @@ document.body.classList.add('legal-gate-open');
   <label class="legal-gate-check">
     <input type="checkbox" id="legalGateCheck">
     <span>
-      Declaro que leí, comprendí y acepto este documento legal en su versión vigente.
+      Declaro que leÃ­, comprendÃ­ y acepto este documento legal en su versiÃ³n vigente.
     </span>
   </label>
 </div>      
@@ -2115,7 +2115,7 @@ document.body.classList.add('legal-gate-open');
         const acceptJson = await acceptRes.json();
 
         if (!acceptJson?.ok) {
-          throw new Error(acceptJson?.error || 'No se pudo registrar la aceptación');
+          throw new Error(acceptJson?.error || 'No se pudo registrar la aceptaciÃ³n');
         }
 
         currentIndex += 1;
@@ -2131,14 +2131,14 @@ document.body.classList.add('legal-gate-open');
         console.error('[legal-gate] error aceptando documento:', err);
         acceptBtn.textContent = 'Aceptar y continuar';
         acceptBtn.disabled = false;
-        notif.show('Error', 'No pudimos registrar tu aceptación legal.', 'error');
+        notif.show('Error', 'No pudimos registrar tu aceptaciÃ³n legal.', 'error');
       }
     };
 
     return true;
   } catch (err) {
     console.error('[legal-gate] error:', err);
-    body.innerHTML = `<div class="legal-gate-loading">Ocurrió un error cargando el centro legal.</div>`;
+    body.innerHTML = `<div class="legal-gate-loading">OcurriÃ³ un error cargando el centro legal.</div>`;
     return false;
   }
 }
@@ -2232,7 +2232,7 @@ async function reanudarViajePendientePostLogin() {
     const session = await obtenerSesionCliente(true);
 
     if (!session?.access_token || !session?.user) {
-      console.warn('[reanudarViajePendientePostLogin] todavía no hay sesión válida');
+      console.warn('[reanudarViajePendientePostLogin] todavÃ­a no hay sesiÃ³n vÃ¡lida');
       return;
     }
 
@@ -2245,7 +2245,7 @@ if (!legalOk) return;
 if (typeof window.subscribeSupportRealtimeForUser === 'function') {
   await window.subscribeSupportRealtimeForUser();
 }else {
-      console.warn('[reanudarViajePendientePostLogin] subscribeSupportRealtimeForUser no disponible todavía');
+      console.warn('[reanudarViajePendientePostLogin] subscribeSupportRealtimeForUser no disponible todavÃ­a');
     }
 
     if (typeof window.runClientPostLoginOnboarding === 'function') {
@@ -2255,7 +2255,7 @@ if (typeof window.subscribeSupportRealtimeForUser === 'function') {
     }
 
     notif.show(
-      'Sesión iniciada',
+      'SesiÃ³n iniciada',
       `Ingresaste como ${session.user.email || 'usuario'}`,
       'success',
       3000
@@ -2308,7 +2308,7 @@ function mostrarFallbackMapaSinWebGL() {
       box-sizing:border-box;
     ">
       <div>
-        <div style="font-size:28px; margin-bottom:8px;">🗺️</div>
+        <div style="font-size:28px; margin-bottom:8px;">ðŸ—ºï¸</div>
         <div style="font-weight:700; margin-bottom:6px;">Mapa no disponible en este entorno</div>
         <div style="opacity:.88;">
           El viaje puede seguir funcionando, pero este navegador o dispositivo no pudo iniciar WebGL.
@@ -2333,7 +2333,7 @@ let state = {
   choferId: null,
   choferLocation: null,
 
-  // 🔥 tracking persistente
+  // ðŸ”¥ tracking persistente
   driverETA: null,
   driverHeading: null,
   lastTrackingUpdate: null
@@ -2368,10 +2368,10 @@ class NotificationSystem {
     toast.className = `toast ${type}`;
 
     const icons = {
-      success: '✅',
-      info: 'ℹ️',
-      warning: '⚠️',
-      error: '❌'
+      success: 'âœ…',
+      info: 'â„¹ï¸',
+      warning: 'âš ï¸',
+      error: 'âŒ'
     };
 
     toast.innerHTML = `
@@ -2380,7 +2380,7 @@ class NotificationSystem {
         <div class="toast-title">${title}</div>
         <div class="toast-message">${message}</div>
       </div>
-      <button class="toast-close" type="button" aria-label="Cerrar notificación">×</button>
+      <button class="toast-close" type="button" aria-label="Cerrar notificaciÃ³n">Ã—</button>
     `;
 
     const closeBtn = toast.querySelector('.toast-close');
@@ -2580,7 +2580,7 @@ function construirMensajeEstadoViaje(viaje = {}, estado = '', fallback = '') {
   ).trim();
 
   if ((estadoUpper === 'ASIGNADO' || estadoUpper === 'ACEPTADO') && choferNombre) {
-    return `${choferNombre} aceptó tu viaje y está yendo a buscarte.`;
+    return `${choferNombre} aceptÃ³ tu viaje y estÃ¡ yendo a buscarte.`;
   }
 
   if (estadoUpper === 'EN_CAMINO' && choferNombre) {
@@ -2950,14 +2950,14 @@ function actualizarCardChofer(viaje = {}) {
 if (estado === 'OFERTANDO' || estado === 'OFERTADO') {
   meta.textContent = 'Estamos notificando choferes cercanos';
 } else if (estado === 'SIN_CHOFER') {
-  meta.textContent = 'Todavía no encontramos un chofer';
+  meta.textContent = 'TodavÃ­a no encontramos un chofer';
 } else {
   meta.textContent = 'Buscando chofer disponible';
 }
-    contact.textContent = 'Sin chofer asignado todavía';
+    contact.textContent = 'Sin chofer asignado todavÃ­a';
 
     if (avatar) {
-      avatar.textContent = '🚐';
+      avatar.textContent = 'ðŸš';
     }
 
 if (btnChat) {
@@ -2988,7 +2988,7 @@ if (btnChat) {
       };
 
       if (!window.tripChat?.openTripChatForClientTrip) {
-        notif.show('Chat', 'El módulo de chat todavía no está disponible', 'warning');
+        notif.show('Chat', 'El mÃ³dulo de chat todavÃ­a no estÃ¡ disponible', 'warning');
         return;
       }
 
@@ -3163,7 +3163,7 @@ if (!rutaSeguimientoDibujada && puntoObjetivo) {
       );
       rutaSeguimientoDibujada = true;
     } catch (err) {
-      console.warn('[restore-map] fallback de dibujo también falló', err);
+      console.warn('[restore-map] fallback de dibujo tambiÃ©n fallÃ³', err);
     }
   }
 
@@ -3204,7 +3204,7 @@ if (Array.isArray(coords) && coords.length >= 2) {
   }
 }
   } catch (err) {
-    console.warn('[restore-trip] no se pudo restaurar mapa/cotización:', err);
+    console.warn('[restore-trip] no se pudo restaurar mapa/cotizaciÃ³n:', err);
   }
 }
   function actualizarModoViajeLiveConTracking() {
@@ -3304,7 +3304,7 @@ function renderizarCentroNotificaciones() {
   if (!historial.length) {
     notifList.innerHTML = `
       <div class="trip-notification-empty">
-        Todavía no hay notificaciones.
+        TodavÃ­a no hay notificaciones.
       </div>
     `;
     notifSummary.textContent = 'Sin novedades por ahora.';
@@ -3325,16 +3325,16 @@ function renderizarCentroNotificaciones() {
         type="button"
         data-action="delete"
         data-id="${escapeHtml(item.id)}"
-        aria-label="Eliminar notificación"
+        aria-label="Eliminar notificaciÃ³n"
         title="Eliminar"
       >
-        ✕
+        âœ•
       </button>
     </div>
   `).join('');
 
   notifSummary.textContent =
-    historial[0]?.texto || 'Tenés novedades del viaje.';
+    historial[0]?.texto || 'TenÃ©s novedades del viaje.';
 
   actualizarBadgeNotificaciones();
 }
@@ -3343,7 +3343,7 @@ function agregarNotificacionViaje({ estado, texto, fecha = null, id = null, read
   const item = {
     id: id || `notif_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     estado: String(estado || 'INFO').trim() || 'INFO',
-    texto: String(texto || 'Tenés novedades del viaje.').trim(),
+    texto: String(texto || 'TenÃ©s novedades del viaje.').trim(),
     fecha: fecha || new Date().toLocaleTimeString('es-AR', {
       hour: '2-digit',
       minute: '2-digit'
@@ -3398,15 +3398,15 @@ function eliminarNotificacionPorId(id) {
     case 'EN_CAMINO':
       return { estado: 'EN_CAMINO', texto: 'El chofer va en camino al punto de retiro.' };
     case 'EN_CURSO':
-      return { estado: 'EN_CURSO', texto: 'Tu viaje está en curso.' };
+      return { estado: 'EN_CURSO', texto: 'Tu viaje estÃ¡ en curso.' };
     case 'COMPLETADO':
       return { estado: 'COMPLETADO', texto: 'El viaje fue completado.' };
     case 'CANCELADO':
       return { estado: 'CANCELADO', texto: 'El viaje fue cancelado.' };
     case 'SIN_CHOFER':
-      return { estado: 'SIN_CHOFER', texto: 'Todavía no encontramos chofer disponible.' };
+      return { estado: 'SIN_CHOFER', texto: 'TodavÃ­a no encontramos chofer disponible.' };
     default:
-      return { estado: e || 'INFO', texto: 'Hubo una actualización en tu viaje.' };
+      return { estado: e || 'INFO', texto: 'Hubo una actualizaciÃ³n en tu viaje.' };
   }
 }
 function actualizarStatusCardNotificaciones(estado) {
@@ -3568,7 +3568,7 @@ function actualizarEstadoLocalViaje(nuevoEstado) {
   state.viajeEstado = upper;
   state.estadoViaje = upper;
 
-  // 🔥 limpiar datos de cotización en estados de seguimiento
+  // ðŸ”¥ limpiar datos de cotizaciÃ³n en estados de seguimiento
   if ([
     'ASIGNADO',
     'ACEPTADO',
@@ -3667,10 +3667,10 @@ function suscribirseEstadoViajeRealtime(viajeId) {
 
                let nuevoEstado = resolverEstadoViajeCliente(newRow);
 
-             // No forzar ASIGNADO solo porque apareció assigned_driver_id.
-             // Esperamos confirmación real del backend.
+             // No forzar ASIGNADO solo porque apareciÃ³ assigned_driver_id.
+             // Esperamos confirmaciÃ³n real del backend.
              if (choferRecienAsignado && ['BUSCANDO_CHOFER', 'OFERTANDO', 'OFERTADO', 'PENDIENTE'].includes(nuevoEstado)) {
-             console.log('[cliente] chofer vinculado pero aún no aceptado:', {
+             console.log('[cliente] chofer vinculado pero aÃºn no aceptado:', {
              viajeId,
              estado_db: newRow?.estado || null,
              assigned_driver_id: newRow?.assigned_driver_id || null,
@@ -3694,7 +3694,7 @@ actualizarEstadoLocalViaje(nuevoEstado);
 if (['ASIGNADO', 'ACEPTADO', 'EN_CAMINO', 'INICIADO', 'EN_CURSO'].includes(nuevoEstado)) {
   activarModoViajeLive();
 }
-          // 🔥 REEMPLAZAR RUTA COTIZADA POR RUTA CHOFER → CLIENTE
+          // ðŸ”¥ REEMPLAZAR RUTA COTIZADA POR RUTA CHOFER â†’ CLIENTE
 if (
   nuevoEstado === 'ASIGNADO' ||
   nuevoEstado === 'ACEPTADO' ||
@@ -3702,7 +3702,7 @@ if (
   nuevoEstado === 'INICIADO' ||
   nuevoEstado === 'EN_CURSO'
 ) {
-  console.log('[MAP] cambiando a ruta chofer → cliente');
+  console.log('[MAP] cambiando a ruta chofer â†’ cliente');
 
   if (typeof limpiarCapasRutaMapa === 'function') {
     limpiarCapasRutaMapa();
@@ -3760,7 +3760,7 @@ if (
         );
       }
     }).catch((err) => {
-      console.warn('[MAP] no se pudo dibujar ruta chofer → cliente desde tracking', err);
+      console.warn('[MAP] no se pudo dibujar ruta chofer â†’ cliente desde tracking', err);
     });
   }
 }
@@ -3796,7 +3796,7 @@ if (nuevoEstado === 'ACEPTADO' || nuevoEstado === 'ASIGNADO') {
           if (nuevoEstado === 'EN_CURSO') {
             notif.show(
               'Viaje en curso',
-              'Tu viaje ya comenzó.',
+              'Tu viaje ya comenzÃ³.',
               'info',
               2800
             );
@@ -3805,7 +3805,7 @@ if (nuevoEstado === 'ACEPTADO' || nuevoEstado === 'ASIGNADO') {
           if (nuevoEstado === 'COMPLETADO') {
             notif.show(
               'Viaje completado',
-              'El viaje finalizó correctamente.',
+              'El viaje finalizÃ³ correctamente.',
               'success',
               3000
             );
@@ -3855,7 +3855,7 @@ function construirTextoEstadoChofer(estado) {
     case 'OFERTADO':
       return 'Estamos notificando choferes cercanos';
     case 'SIN_CHOFER':
-      return 'Todavía no encontramos un chofer';
+      return 'TodavÃ­a no encontramos un chofer';
     case 'ASIGNADO':
       return 'Chofer asignado';
     case 'ACEPTADO':
@@ -3878,7 +3878,7 @@ function construirTextoEstadoChofer(estado) {
   let texto = textoBase;
 
   if (Number.isFinite(Number(etaMin)) && Number(etaMin) > 0) {
-    texto += ` · ETA ${Math.round(Number(etaMin))} min`;
+    texto += ` Â· ETA ${Math.round(Number(etaMin))} min`;
   }
 
   if (lastTrackingUpdate) {
@@ -3886,7 +3886,7 @@ function construirTextoEstadoChofer(estado) {
     if (Number.isFinite(ms)) {
       const diffSec = Math.max(0, Math.round((Date.now() - ms) / 1000));
       if (diffSec <= 90) {
-        texto += ' · en vivo';
+        texto += ' Â· en vivo';
       }
     }
   }
@@ -3894,7 +3894,7 @@ function construirTextoEstadoChofer(estado) {
   metaEl.textContent = texto;
 }
 
-// 🔥 EXPONER HELPERS PARA cliente-chofer-tracking.js
+// ðŸ”¥ EXPONER HELPERS PARA cliente-chofer-tracking.js
 window.calcularEtaMinutosSimple = calcularEtaMinutosSimple;
 window.obtenerObjetivoSeguimientoSegunEstado = obtenerObjetivoSeguimientoSegunEstado;
 window.hidratarTrackingDesdeStorage = hidratarTrackingDesdeStorage;
@@ -3925,7 +3925,7 @@ async function restaurarViajeActivoCliente() {
     ]);
 
     // =========================================
-    // CASO 0: SIN SESIÓN TODAVÍA, PERO CON STORAGE
+    // CASO 0: SIN SESIÃ“N TODAVÃA, PERO CON STORAGE
     // =========================================
     if (!session?.user) {
       if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
@@ -3982,16 +3982,16 @@ async function restaurarViajeActivoCliente() {
 
           if (typeof actualizarEstadoSolicitudUI === 'function') {
             const textosEstado = {
-              PENDIENTE: 'Tu viaje sigue pendiente de confirmación.',
+              PENDIENTE: 'Tu viaje sigue pendiente de confirmaciÃ³n.',
               BUSCANDO_CHOFER: 'Estamos buscando un chofer para tu viaje.',
               OFERTANDO: 'Estamos notificando choferes cercanos.',
               OFERTADO: 'Tu solicitud fue enviada a choferes cercanos.',
-              SIN_CHOFER: 'Todavía no encontramos chofer disponible.',
+              SIN_CHOFER: 'TodavÃ­a no encontramos chofer disponible.',
               ASIGNADO: 'Tu viaje ya tiene chofer asignado.',
-              ACEPTADO: 'Tu chofer aceptó el viaje.',
+              ACEPTADO: 'Tu chofer aceptÃ³ el viaje.',
               EN_CAMINO: 'Tu chofer va en camino.',
-              INICIADO: 'Tu viaje está en curso.',
-              EN_CURSO: 'Tu viaje está en curso.'
+              INICIADO: 'Tu viaje estÃ¡ en curso.',
+              EN_CURSO: 'Tu viaje estÃ¡ en curso.'
             };
 
             actualizarEstadoSolicitudUI({
@@ -4263,16 +4263,16 @@ if (viajeLocal?.viajeId && viajeLocal?.estadoViaje) {
 
   if (typeof actualizarEstadoSolicitudUI === 'function') {
     const textosEstado = {
-      PENDIENTE: 'Tu viaje sigue pendiente de confirmación.',
+      PENDIENTE: 'Tu viaje sigue pendiente de confirmaciÃ³n.',
       BUSCANDO_CHOFER: 'Estamos buscando un chofer para tu viaje.',
       OFERTANDO: 'Estamos notificando choferes cercanos.',
       OFERTADO: 'Tu solicitud fue enviada a choferes cercanos.',
-      SIN_CHOFER: 'Todavía no encontramos chofer disponible.',
+      SIN_CHOFER: 'TodavÃ­a no encontramos chofer disponible.',
       ASIGNADO: 'Tu viaje ya tiene chofer asignado.',
-      ACEPTADO: 'Tu chofer aceptó el viaje.',
+      ACEPTADO: 'Tu chofer aceptÃ³ el viaje.',
       EN_CAMINO: 'Tu chofer va en camino.',
-      INICIADO: 'Tu viaje está en curso.',
-      EN_CURSO: 'Tu viaje está en curso.'
+      INICIADO: 'Tu viaje estÃ¡ en curso.',
+      EN_CURSO: 'Tu viaje estÃ¡ en curso.'
     };
 
     actualizarEstadoSolicitudUI({
@@ -4315,7 +4315,7 @@ notifBtn?.addEventListener('click', () => {
   notifBtn.classList.remove('pulse');
 });
 
-// Click fuera más robusto en mobile
+// Click fuera mÃ¡s robusto en mobile
 document.addEventListener('touchstart', (e) => {
   if (!notifPanel || !notifBtn) return;
 
@@ -4360,13 +4360,13 @@ if (deleteBtn) {
 
   deleteBtn.dataset.confirming = '1';
   deleteBtn.dataset.original = deleteBtn.innerHTML;
-  deleteBtn.innerHTML = '¿Borrar?';
+  deleteBtn.innerHTML = 'Â¿Borrar?';
   deleteBtn.classList.add('confirm-delete');
 
   setTimeout(() => {
     if (deleteBtn.dataset.confirming === '1') {
       deleteBtn.dataset.confirming = '0';
-      deleteBtn.innerHTML = deleteBtn.dataset.original || '✕';
+      deleteBtn.innerHTML = deleteBtn.dataset.original || 'âœ•';
       deleteBtn.classList.remove('confirm-delete');
     }
   }, 2200);
@@ -4412,8 +4412,8 @@ window.handleSupportPushForeground = function ({
     return;
   }
 
-  const finalTitle = title || `Soporte MIMICAR · ${senderName || "Soporte"}`;
-  const finalBody = body || "Tenés una nueva respuesta de soporte.";
+  const finalTitle = title || `Soporte MIMICAR Â· ${senderName || "Soporte"}`;
+  const finalBody = body || "TenÃ©s una nueva respuesta de soporte.";
 
   notif.show(finalTitle, finalBody, "success", 4000);
 
@@ -4540,12 +4540,12 @@ async function loadOrCreateSupportTicketContext() {
   const session = await obtenerSesionCliente(true);
 
   if (!session?.access_token || !session?.user) {
-    throw new Error("No hay sesión activa");
+    throw new Error("No hay sesiÃ³n activa");
   }
 
   const userId = session.user.id;
 
-  // Usar sbRealtime (cliente con auth) en lugar de supabase (cliente anónimo)
+  // Usar sbRealtime (cliente con auth) en lugar de supabase (cliente anÃ³nimo)
   const { data: existingTickets, error: ticketLookupError } = await window.sbRealtime
     .from("svc_conversations")
     .select("id, status, last_message_at, client_user_id, created_at")
@@ -4567,7 +4567,7 @@ async function loadOrCreateSupportTicketContext() {
     return { session, ticketId: null };
   }
 
-  // También usar sbRealtime aquí
+  // TambiÃ©n usar sbRealtime aquÃ­
   const { data: messages, error: messagesError } = await window.sbRealtime
     .from("svc_messages")
     .select("id, sender_role, body, created_at")
@@ -4625,7 +4625,7 @@ if (!msg?.conversation_id) {
     const userId = session?.user?.id;
 
     if (!userId) {
-      console.warn("[support realtime] sin sesión de cliente activa");
+      console.warn("[support realtime] sin sesiÃ³n de cliente activa");
       return;
     }
 
@@ -4662,7 +4662,7 @@ if (!msg?.conversation_id) {
     }
 
     if (!ticket) {
-      console.warn("[support realtime] ticket no recuperado después de reintentos", {
+      console.warn("[support realtime] ticket no recuperado despuÃ©s de reintentos", {
         ticketId: msg.ticket_id,
         userId
       });
@@ -4687,11 +4687,11 @@ if (!msg?.conversation_id) {
       appendSupportMessage(msg.body || "", "agent", msg.id);
 
       if (!supportSheet?.classList.contains("is-open")) {
-        notif.show("Soporte", "Tenés una nueva respuesta", "success", 4000);
+        notif.show("Soporte", "TenÃ©s una nueva respuesta", "success", 4000);
 
         agregarNotificacionViaje({
           estado: "SOPORTE",
-          texto: "Soporte respondió tu consulta",
+          texto: "Soporte respondiÃ³ tu consulta",
           read: false
         });
       }
@@ -4729,8 +4729,8 @@ async function subscribeSupportRealtimeForUser(force = false) {
   }
 
   if (supportRealtimeRetryCount >= MAX_SUPPORT_RETRIES) {
-    console.error("[support realtime] máximo de reintentos alcanzado");
-    notif.show("Error de conexión", "No se pudo conectar al soporte en tiempo real", "error");
+    console.error("[support realtime] mÃ¡ximo de reintentos alcanzado");
+    notif.show("Error de conexiÃ³n", "No se pudo conectar al soporte en tiempo real", "error");
     return null;
   }
 
@@ -4791,7 +4791,7 @@ async function subscribeSupportRealtimeForUser(force = false) {
   return currentSupportChannel;
 }
 
-// exponer API de soporte para código fuera de este DOMContentLoaded
+// exponer API de soporte para cÃ³digo fuera de este DOMContentLoaded
 window.subscribeSupportRealtimeForUser = subscribeSupportRealtimeForUser;
 window.cleanupSupportRealtime = cleanupSupportRealtime;
 window.loadOrCreateSupportTicketContext = loadOrCreateSupportTicketContext;
@@ -4802,8 +4802,8 @@ supportBtn?.addEventListener("click", async () => {
 
     if (!session?.access_token || !session?.user) {
       notif.show(
-        "Ingresá primero",
-        "Necesitás iniciar sesión para contactar soporte.",
+        "IngresÃ¡ primero",
+        "NecesitÃ¡s iniciar sesiÃ³n para contactar soporte.",
         "warning"
       );
       return;
@@ -4833,14 +4833,14 @@ supportSendBtn?.addEventListener("click", async () => {
     const mensaje = supportMessageInput?.value?.trim();
 
     if (!mensaje) {
-      notif.show("Mensaje vacío", "Escribí tu consulta antes de enviar.", "warning");
+      notif.show("Mensaje vacÃ­o", "EscribÃ­ tu consulta antes de enviar.", "warning");
       return;
     }
 
     const session = await obtenerSesionCliente(true);
 
     if (!session?.access_token || !session?.user) {
-      notif.show("Sesión requerida", "Volvé a iniciar sesión para enviar soporte.", "warning");
+      notif.show("SesiÃ³n requerida", "VolvÃ© a iniciar sesiÃ³n para enviar soporte.", "warning");
       return;
     }
 
@@ -4890,7 +4890,7 @@ if (!currentSupportTicketId) {
     console.error("[supportSendBtn] ticketError:", ticketError);
     notif.show(
       "Error",
-      ticketError?.message || "No se pudo crear la conversación de soporte",
+      ticketError?.message || "No se pudo crear la conversaciÃ³n de soporte",
       "error"
     );
     return;
@@ -4969,7 +4969,7 @@ if (window.initSupportPushFCM) {
 } catch (err) {
   console.error("[DOMContentLoaded bootstrap] error:", err);
 }
-  }); // ← CIERRA DOMContentLoaded
+  }); // â† CIERRA DOMContentLoaded
 
 // ==========================================
 // UI LOADING
@@ -5010,7 +5010,7 @@ function setLoadingCotizacion(isLoading, texto = 'Cotizando...') {
 }
 
 // ==========================================
-// GEOCODIFICACIÓN / FORMATEO
+// GEOCODIFICACIÃ“N / FORMATEO
 // ==========================================
 async function resolverPuntoDesdeTexto(texto) {
   if (!texto || texto.trim().length < 3) return null;
@@ -5033,13 +5033,13 @@ async function resolverPuntoDesdeTexto(texto) {
       raw: mejor
     };
   } catch (error) {
-    console.error('❌ Error resolviendo punto desde texto:', texto, error);
+    console.error('âŒ Error resolviendo punto desde texto:', texto, error);
     return null;
   }
 }
 
 function formatearDireccionCorta(r) {
-  if (!r || !r.display_name) return 'Dirección';
+  if (!r || !r.display_name) return 'DirecciÃ³n';
 
   const addr = r.address || {};
   const named = r.namedetails || {};
@@ -5063,7 +5063,7 @@ function formatearDireccionCorta(r) {
     '';
 
   if (nombreLugar && calle) {
-    return `${nombreLugar} · ${calle}${numero ? ' ' + numero : ''}`;
+    return `${nombreLugar} Â· ${calle}${numero ? ' ' + numero : ''}`;
   }
 
   if (calle) {
@@ -5090,14 +5090,14 @@ function formatearDireccionSecundaria(r) {
     addr.town ||
     addr.village ||
     addr.municipality ||
-    'Córdoba';
+    'CÃ³rdoba';
 
-  const provincia = addr.state || 'Córdoba';
+  const provincia = addr.state || 'CÃ³rdoba';
 
   return [barrio, ciudad, provincia]
     .filter(Boolean)
     .filter((v, i, arr) => arr.indexOf(v) === i)
-    .join(' · ');
+    .join(' Â· ');
 }
 
 // ==========================================
@@ -5183,7 +5183,7 @@ setTimeout(() => {
     timer = setTimeout(async () => {
       contenedor.innerHTML = `
         <div class="sugerencia-item sugerencia-loading" aria-disabled="true">
-          <div class="sugerencia-icon" aria-hidden="true">⏳</div>
+          <div class="sugerencia-icon" aria-hidden="true">â³</div>
           <div class="sugerencia-text">
             <div class="sugerencia-main">Buscando direcciones...</div>
           </div>
@@ -5252,10 +5252,10 @@ setTimeout(() => {
       if (!resultados.length) {
         contenedor.innerHTML = `
           <div class="sugerencia-item sugerencia-empty" aria-disabled="true">
-            <div class="sugerencia-icon" aria-hidden="true">⚠️</div>
+            <div class="sugerencia-icon" aria-hidden="true">âš ï¸</div>
             <div class="sugerencia-text">
               <div class="sugerencia-main">No encontramos coincidencias</div>
-              <div class="sugerencia-secondary">Probá con calle y altura</div>
+              <div class="sugerencia-secondary">ProbÃ¡ con calle y altura</div>
             </div>
           </div>
         `;
@@ -5308,7 +5308,7 @@ if (meta.source === 'history' && r?.suggested_alias) {
   badge = `<span class="sugerencia-badge">Aprox.</span>`;
 }
     item.innerHTML = `
-      <div class="sugerencia-icon" aria-hidden="true">📍</div>
+      <div class="sugerencia-icon" aria-hidden="true">ðŸ“</div>
       <div class="sugerencia-text">
         <div class="sugerencia-main">
           ${direccionPrincipal}
@@ -5338,7 +5338,7 @@ if (meta.source === 'history' && r?.suggested_alias) {
   if (meta.approximateMatch && resultados.length > 0) {
     const aviso = document.createElement('div');
     aviso.className = 'sugerencia-help';
-    aviso.innerHTML = 'Dirección aproximada. Verificá calle y altura.';
+    aviso.innerHTML = 'DirecciÃ³n aproximada. VerificÃ¡ calle y altura.';
     contenedor.appendChild(aviso);
   }
 
@@ -5361,7 +5361,7 @@ if (meta.source === 'history' && resultados.length > 0) {
 // ==========================================
 function agregarWaypoint() {
   if (state.waypoints.length >= CONFIG.MAX_WAYPOINTS) {
-    notif.show('Límite alcanzado', `Máximo ${CONFIG.MAX_WAYPOINTS} paradas permitidas`, 'warning');
+    notif.show('LÃ­mite alcanzado', `MÃ¡ximo ${CONFIG.MAX_WAYPOINTS} paradas permitidas`, 'warning');
     return;
   }
 
@@ -5377,7 +5377,7 @@ function agregarWaypoint() {
   div.id = `group-${waypointId}`;
   div.innerHTML = `
     <div class="route-input-wrapper">
-      <span class="route-input-icon" aria-hidden="true">📍</span>
+      <span class="route-input-icon" aria-hidden="true">ðŸ“</span>
       <input
         type="text"
         id="${waypointId}"
@@ -5398,7 +5398,7 @@ function agregarWaypoint() {
           title="Eliminar"
           aria-label="Eliminar parada ${numeroParada}"
           data-waypoint-id="${waypointId}"
-        >✕</button>
+        >âœ•</button>
       </div>
     </div>
     <div id="sugerencias-${waypointId}" class="sugerencias" role="listbox" aria-label="Sugerencias de parada"></div>
@@ -5593,7 +5593,7 @@ function obtenerPuntosOrdenados() {
     destinosAdicionales.push(wp);
   }
 
-  // NUEVA LÓGICA:
+  // NUEVA LÃ“GICA:
   // origen -> destino principal -> destinos adicionales
   const puntos = [origen, destinoPrincipal, ...destinosAdicionales];
 
@@ -5640,7 +5640,7 @@ function limpiarPuntos(puntos) {
   for (let i = 0; i < intermedios.length; i++) {
     for (let j = i + 1; j < intermedios.length; j++) {
       if (sonMismoPunto(intermedios[i], intermedios[j])) {
-        return `La parada ${i + 1} y la parada ${j + 1} son la misma ubicación`;
+        return `La parada ${i + 1} y la parada ${j + 1} son la misma ubicaciÃ³n`;
       }
     }
   }
@@ -5692,8 +5692,8 @@ function construirResumenRutaConPuntos(puntos) {
     return p.direccionCorta || `Parada ${index}`;
   });
 
-  const resumen = nombres.join(' → ');
-  return detectarRetornoAlOrigenConPuntos(puntos) ? `${resumen} ↺` : resumen;
+  const resumen = nombres.join(' â†’ ');
+  return detectarRetornoAlOrigenConPuntos(puntos) ? `${resumen} â†º` : resumen;
 }
 
 function construirPayloadWaypointsIntermedios() {
@@ -5712,7 +5712,7 @@ function construirPayloadWaypointsIntermedios() {
 function calcularEstimacionLocal(puntos) {
   const puntosValidos = puntos.filter((p) => p && coordenadasValidas(p.lat, p.lng));
   if (puntosValidos.length < 2) {
-    throw new Error('No hay suficientes coordenadas válidas');
+    throw new Error('No hay suficientes coordenadas vÃ¡lidas');
   }
 
   let distancia = 0;
@@ -5977,7 +5977,7 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
     }, 80);
 
   } catch (err) {
-    console.warn('[mapa] no se pudo dibujar ruta chofer→cliente:', err);
+    console.warn('[mapa] no se pudo dibujar ruta choferâ†’cliente:', err);
 
     try {
       const choferLat = Number(origenChofer?.lat);
@@ -6044,7 +6044,7 @@ async function dibujarRutaChoferHastaCliente(origenChofer, destinoCliente) {
         updatedAt: new Date().toISOString()
       };
     } catch (fallbackErr) {
-      console.warn('[mapa] también falló fallback chofer→cliente:', fallbackErr);
+      console.warn('[mapa] tambiÃ©n fallÃ³ fallback choferâ†’cliente:', fallbackErr);
     }
   }
 }  
@@ -6067,7 +6067,7 @@ function limpiarRutaChoferHastaCliente() {
       window.mapaCliente.removeSource(sourceId);
     }
   } catch (err) {
-    console.warn('[mapa] no se pudo limpiar ruta chofer→cliente:', err);
+    console.warn('[mapa] no se pudo limpiar ruta choferâ†’cliente:', err);
   }
 }  
 // ==========================================
@@ -6255,12 +6255,12 @@ mapaCliente.on('error', (e) => {
       mapSection.style.visibility = 'visible';
     }
 
-    resolve(); // 🔥 ESTO ES LO QUE TE FALTABA
+    resolve(); // ðŸ”¥ ESTO ES LO QUE TE FALTABA
   }
 });
       setTimeout(() => {
         if (!mapReady && mapaCliente) {
-          console.warn('[initMapa] timeout de espera load; continúo igual');
+          console.warn('[initMapa] timeout de espera load; continÃºo igual');
 
           mapReady = true;
           window.mapReady = true;
@@ -7124,7 +7124,7 @@ actualizarBotonCancelarViaje();
   setLoadingCotizacion(false);
   togglePriceBreakdown(false);
 
-  notif.show('Nueva ruta', 'Planificá tu nuevo viaje', 'info');
+  notif.show('Nueva ruta', 'PlanificÃ¡ tu nuevo viaje', 'info');
 }
 function limpiarMarkersRutaCotizacion() {
   try {
@@ -7138,7 +7138,7 @@ function limpiarMarkersRutaCotizacion() {
 
     state.markers = [];
   } catch (err) {
-    console.warn('[MAP] no se pudieron limpiar markers de cotización:', err);
+    console.warn('[MAP] no se pudieron limpiar markers de cotizaciÃ³n:', err);
   }
 }
   function mostrarSoloPickupClienteEnMapa() {
@@ -7215,7 +7215,7 @@ const clienteLng = Number(puntoObjetivo.lng);
     const dx = clienteLng - choferLng;
     const dy = clienteLat - choferLat;
 
-    // cámara un poco adelantada hacia el cliente
+    // cÃ¡mara un poco adelantada hacia el cliente
     let factorCentro = 0.42;
 
     if (distanciaMetros <= 300) {
@@ -7275,7 +7275,7 @@ const clienteLng = Number(puntoObjetivo.lng);
       essential: true
     });
   } catch (err) {
-    console.warn('[MAP] no se pudo actualizar cámara chofer/cliente:', err);
+    console.warn('[MAP] no se pudo actualizar cÃ¡mara chofer/cliente:', err);
   }
 }
 
@@ -7314,7 +7314,7 @@ async function actualizarRutaChoferDinamica() {
 
     const now = Date.now();
 
-    // Firma reducida para detectar cambio real de posición/ruta
+    // Firma reducida para detectar cambio real de posiciÃ³n/ruta
     const routeSignature = [
       choferLat.toFixed(5),
       choferLng.toFixed(5),
@@ -7325,7 +7325,7 @@ async function actualizarRutaChoferDinamica() {
 
     const cambioRuta = routeSignature !== lastRouteSignature;
 
-    // Si cambió realmente la posición o el objetivo, refrescar más rápido
+    // Si cambiÃ³ realmente la posiciÃ³n o el objetivo, refrescar mÃ¡s rÃ¡pido
     if (!cambioRuta && (now - lastRouteRefreshAt < 2500)) {
       return;
     }
@@ -7344,7 +7344,7 @@ async function actualizarRutaChoferDinamica() {
       }
     );
   } catch (err) {
-    console.warn('[tracking] no se pudo refrescar ruta dinámica del chofer:', err);
+    console.warn('[tracking] no se pudo refrescar ruta dinÃ¡mica del chofer:', err);
   }
 }  
 async function esperarMapaClienteListo(timeoutMs = 2500) {
@@ -7364,7 +7364,7 @@ async function esperarMapaClienteListo(timeoutMs = 2500) {
   return false;
 }
   // ==========================================
-// COTIZACIÓN
+// COTIZACIÃ“N
 // ==========================================
 
 async function calcularRuta() {
@@ -7384,7 +7384,7 @@ const estadosBloqueados = [
 if (state?.viajeId && estadosBloqueados.includes(estado)) {
   notif.show(
     'Viaje en proceso',
-    'No podés volver a cotizar mientras haya un viaje activo.',
+    'No podÃ©s volver a cotizar mientras haya un viaje activo.',
     'warning'
   );
   actualizarBotonCotizar?.();
@@ -7403,7 +7403,7 @@ if (state?.viajeId && estadosBloqueados.includes(estado)) {
     const textoDestino = document.getElementById('inputDestino')?.value?.trim();
 
     if (!textoOrigen || !textoDestino) {
-      throw new Error('Completá origen y destino');
+      throw new Error('CompletÃ¡ origen y destino');
     }
 
     let origenActual = state.origen;
@@ -7450,7 +7450,7 @@ if (!origenCoincideAproximado) {
   } else if (!origenActual || !coordenadasValidas(origenActual.lat, origenActual.lng)) {
     throw new Error(`No pudimos ubicar el origen: ${textoOrigen}`);
   } else {
-    console.warn('[calcularRuta] se conserva state.origen válido aunque no se pudo re-geocodificar', {
+    console.warn('[calcularRuta] se conserva state.origen vÃ¡lido aunque no se pudo re-geocodificar', {
       textoOrigen,
       origenActual
     });
@@ -7494,7 +7494,7 @@ if (!destinoCoincideAproximado) {
   } else if (!destinoActual || !coordenadasValidas(destinoActual.lat, destinoActual.lng)) {
     throw new Error(`No pudimos ubicar el destino: ${textoDestino}`);
   } else {
-    console.warn('[calcularRuta] se conserva state.destino válido aunque no se pudo re-geocodificar', {
+    console.warn('[calcularRuta] se conserva state.destino vÃ¡lido aunque no se pudo re-geocodificar', {
       textoDestino,
       destinoActual
     });
@@ -7505,7 +7505,7 @@ if (!destinoCoincideAproximado) {
     const erroresWaypoints = await resolverWaypointsPendientes();
 
     if (erroresWaypoints.length > 0) {
-      throw new Error(`No pudimos ubicar una o más paradas: ${erroresWaypoints.join(', ')}`);
+      throw new Error(`No pudimos ubicar una o mÃ¡s paradas: ${erroresWaypoints.join(', ')}`);
     }
 
     const puntos = obtenerPuntosOrdenados();
@@ -7516,7 +7516,7 @@ if (!destinoCoincideAproximado) {
     console.log('PUNTOS ORDENADOS FINAL:', puntos);
 
     if (!Array.isArray(puntos) || puntos.length < 2) {
-      throw new Error('Ruta inválida: faltan puntos válidos');
+      throw new Error('Ruta invÃ¡lida: faltan puntos vÃ¡lidos');
     }
 
     const errorRuta = validarPuntosRuta(puntos);
@@ -7530,21 +7530,21 @@ if (!destinoCoincideAproximado) {
     const payload = construirPayloadOptimizado(puntos, estimacionLocal);
 
     if (!payload) {
-      throw new Error('No se pudo construir el payload de cotización');
+      throw new Error('No se pudo construir el payload de cotizaciÃ³n');
     }
 
     payload.fechaHora = new Date().toISOString();
     payload.factor_zona = 1;
     payload.espera_min = 0;
 
-    console.log('📦 Payload enviado (optimizado):', payload);
+    console.log('ðŸ“¦ Payload enviado (optimizado):', payload);
 
     const resultado = await cotizarViajeOptimizado(payload, requestId);
 
     if (requestId !== currentQuoteRequestId) return;
 
     if (!resultado || !resultado.exito) {
-      throw new Error(resultado?.error || 'Error en la cotización');
+      throw new Error(resultado?.error || 'Error en la cotizaciÃ³n');
     }
 
     if (Array.isArray(resultado.puntos_ruta) && resultado.puntos_ruta.length >= 2) {
@@ -7607,7 +7607,7 @@ state.waypoints = puntosBackend
 // El dibujo del mapa ya lo resuelve procesarRespuestaCotizacion()
   } catch (err) {
     if (requestId !== currentQuoteRequestId) return;
-    console.error('❌ Error:', err);
+    console.error('âŒ Error:', err);
     notif.show('Error', err.message || 'No se pudo calcular la ruta', 'error');
   } finally {
     if (requestId === currentQuoteRequestId) {
@@ -7625,13 +7625,13 @@ async function cotizarViajeOptimizado(payload, requestId) {
   }, CONFIG.TIMEOUTS.COTIZACION);
 
   try {
-    console.log('📦 PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
-    console.log('⏱️ inicio cotización');
+    console.log('ðŸ“¦ PAYLOAD FINAL:', JSON.stringify(payload, null, 2));
+    console.log('â±ï¸ inicio cotizaciÃ³n');
 
     const apiKey = SUPABASE_ANON_KEY;
 
     if (!apiKey) {
-      throw new Error('No se encontró la API Key de Supabase');
+      throw new Error('No se encontrÃ³ la API Key de Supabase');
     }
 
     if (requestId !== currentQuoteRequestId) return null;
@@ -7655,14 +7655,14 @@ async function cotizarViajeOptimizado(payload, requestId) {
       signal: controller.signal
     });
 
-    console.log('⏱️ fetch respondió headers en ms:', Math.round(performance.now() - tFetch));
+    console.log('â±ï¸ fetch respondiÃ³ headers en ms:', Math.round(performance.now() - tFetch));
     console.log('Response status:', response.status);
 
     if (requestId !== currentQuoteRequestId) return null;
 
     const tBody = performance.now();
     const rawText = await response.text();
-    console.log('⏱️ body leído en ms:', Math.round(performance.now() - tBody));
+    console.log('â±ï¸ body leÃ­do en ms:', Math.round(performance.now() - tBody));
     console.log('Raw response:', rawText.substring(0, 1000));
 
     if (requestId !== currentQuoteRequestId) return null;
@@ -7673,7 +7673,7 @@ async function cotizarViajeOptimizado(payload, requestId) {
       dataRes = rawText ? JSON.parse(rawText) : null;
     } catch (parseErr) {
       console.error('Error parseando JSON:', parseErr);
-      throw new Error(`Respuesta inválida del servidor (${response.status})`);
+      throw new Error(`Respuesta invÃ¡lida del servidor (${response.status})`);
     }
 
     if (!response.ok) {
@@ -7682,11 +7682,11 @@ async function cotizarViajeOptimizado(payload, requestId) {
     }
 
     if (!dataRes?.exito) {
-      throw new Error(dataRes?.error || 'Error en la cotización');
+      throw new Error(dataRes?.error || 'Error en la cotizaciÃ³n');
     }
 
-    console.log('📥 RESPUESTA COTIZAR:', dataRes);
-    console.log('⏱️ cotización exitosa total ms:', Math.round(performance.now() - startedAt));
+    console.log('ðŸ“¥ RESPUESTA COTIZAR:', dataRes);
+    console.log('â±ï¸ cotizaciÃ³n exitosa total ms:', Math.round(performance.now() - startedAt));
 
     return dataRes;
   } catch (err) {
@@ -7701,17 +7701,17 @@ async function cotizarViajeOptimizado(payload, requestId) {
 function usarFallbackLocal(payload, requestId) {
   if (requestId !== currentQuoteRequestId) return;
 
-  // Fallback muy básico: calculamos distancia en línea recta entre origen y destino
-  // Como no tenemos coordenadas (el backend falló), usamos valores estimados genéricos
+  // Fallback muy bÃ¡sico: calculamos distancia en lÃ­nea recta entre origen y destino
+  // Como no tenemos coordenadas (el backend fallÃ³), usamos valores estimados genÃ©ricos
   // o podemos intentar geocodificar solo para el fallback (opcional)
   
   notif.show(
-    'Cotización rápida',
+    'CotizaciÃ³n rÃ¡pida',
     'Usando calculadora de emergencia (sin ruta exacta)',
     'warning'
   );
 
-  // Estimación muy básica basada en texto (puedes mejorar esto)
+  // EstimaciÃ³n muy bÃ¡sica basada en texto (puedes mejorar esto)
   const tarifaBase = 1200;
   const factorDistancia = 1.5; // asumimos 1.5km por defecto si no sabemos
   
@@ -7736,7 +7736,7 @@ function usarFallbackLocal(payload, requestId) {
       
       mostrarCotizacion(precioEstimado, distanciaKm, duracionMin);
       
-      // Dibujar línea simple
+      // Dibujar lÃ­nea simple
       setSectionVisible('mapSection', true);
       setTimeout(() => {
   try {
@@ -7748,13 +7748,13 @@ function usarFallbackLocal(payload, requestId) {
       });
     }
   }).catch(() => {
-    // Si incluso el fallback falla, mostrar precio genérico
+    // Si incluso el fallback falla, mostrar precio genÃ©rico
     mostrarCotizacion(2500, 0, 0);
   });
 }
 function procesarRespuestaCotizacion(data, payload) {
-  console.log('📦 PAYLOAD', payload);
-  console.log('📡 RESPUESTA', data);
+  console.log('ðŸ“¦ PAYLOAD', payload);
+  console.log('ðŸ“¡ RESPUESTA', data);
 
   const precio = numeroSeguro(data?.precio, 0);
 
@@ -7782,17 +7782,17 @@ function procesarRespuestaCotizacion(data, payload) {
     data?.source ||
     'desconocido';
 
-  console.log('📍 ORIGEN PAYLOAD', payload?.origen, payload?.origen_lat, payload?.origen_lng);
-  console.log('🏁 DESTINO PAYLOAD', payload?.destino, payload?.destino_lat, payload?.destino_lng);
-  console.log('📏 DISTANCIA BACKEND', data?.distancia_km);
-  console.log('⏱️ DURACION BACKEND', data?.duracion_min);
-  console.log('🧠 METODO', metodoCalculo);
-  console.log('⚠️ FALLBACK', fallbackUsado);
-  console.log('🧭 SOURCE', data?.source || 'sin-source');
-  console.log('🗺️ ROUTE_GEOMETRY puntos', Array.isArray(data?.route_geometry) ? data.route_geometry.length : 0);
-  console.log('🧵 GEOMETRY puntos', Array.isArray(data?.geometry) ? data.geometry.length : 0);
-  console.log('🦵 LEGS', Array.isArray(data?.legs) ? data.legs.length : 0);
-  console.log('📌 PUNTOS_RUTA', Array.isArray(data?.puntos_ruta) ? data.puntos_ruta.length : 0);
+  console.log('ðŸ“ ORIGEN PAYLOAD', payload?.origen, payload?.origen_lat, payload?.origen_lng);
+  console.log('ðŸ DESTINO PAYLOAD', payload?.destino, payload?.destino_lat, payload?.destino_lng);
+  console.log('ðŸ“ DISTANCIA BACKEND', data?.distancia_km);
+  console.log('â±ï¸ DURACION BACKEND', data?.duracion_min);
+  console.log('ðŸ§  METODO', metodoCalculo);
+  console.log('âš ï¸ FALLBACK', fallbackUsado);
+  console.log('ðŸ§­ SOURCE', data?.source || 'sin-source');
+  console.log('ðŸ—ºï¸ ROUTE_GEOMETRY puntos', Array.isArray(data?.route_geometry) ? data.route_geometry.length : 0);
+  console.log('ðŸ§µ GEOMETRY puntos', Array.isArray(data?.geometry) ? data.geometry.length : 0);
+  console.log('ðŸ¦µ LEGS', Array.isArray(data?.legs) ? data.legs.length : 0);
+  console.log('ðŸ“Œ PUNTOS_RUTA', Array.isArray(data?.puntos_ruta) ? data.puntos_ruta.length : 0);
 
   const resumenRuta =
     data?.resumen_ruta ||
@@ -7803,7 +7803,7 @@ function procesarRespuestaCotizacion(data, payload) {
       payload?.destino || ''
     ]
       .filter(Boolean)
-      .join(' → ');
+      .join(' â†’ ');
 
   const limpiarCoordsRuta = (arr) => {
     if (!Array.isArray(arr)) return null;
@@ -8038,7 +8038,7 @@ function procesarRespuestaCotizacion(data, payload) {
   if ((data?.source === 'fallback' || data?.source === 'mixed' || fallbackUsado) && !esRutaReal) {
     notif.show(
       'Ruta estimada',
-      'Se usó cálculo aproximado. El precio puede ajustarse levemente.',
+      'Se usÃ³ cÃ¡lculo aproximado. El precio puede ajustarse levemente.',
       'warning'
     );
   }
@@ -8053,7 +8053,7 @@ function procesarRespuestaCotizacion(data, payload) {
 
   
 // ==========================================
-// UI COTIZACIÓN
+// UI COTIZACIÃ“N
 // ==========================================
 
  function mostrarCotizacion(precio, km, minutos) {
@@ -8106,7 +8106,7 @@ function procesarRespuestaCotizacion(data, payload) {
   const quotePrice = document.getElementById('quotePrice');
   if (quotePrice) quotePrice.textContent = precioTexto;
 
-let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
+let label = fallbackUsado ? 'EstimaciÃ³n provisoria' : 'Precio calculado';
    
   const labelEl = document.querySelector('.quote-price-label');
   if (labelEl) labelEl.textContent = label;
@@ -8128,7 +8128,7 @@ let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
   const resumenParadas = document.getElementById('resumenParadas');
   if (resumenParadas) {
     resumenParadas.textContent = retornoAlOrigen
-      ? `${paradasIntermedias} paradas · retorno`
+      ? `${paradasIntermedias} paradas Â· retorno`
       : `${paradasIntermedias} paradas`;
     resumenParadas.title = resumenRuta;
   }
@@ -8157,12 +8157,12 @@ let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
         .join('');
 
       const metaRows = [
-        `<div>Método: <strong>${metodoCalculo}</strong></div>`,
+        `<div>MÃ©todo: <strong>${metodoCalculo}</strong></div>`,
         `<div>Hora pico: <strong>${dp.nombre_hora_pico || 'normal'}</strong></div>`,
         `<div>Factor zona: <strong>${dp.factor_zona || 1}</strong></div>`,
         `<div>Segmentos: <strong>${segmentos}</strong></div>`,
-        `<div>Retorno: <strong>${retornoAlOrigen ? 'Sí' : 'No'}</strong></div>`,
-        `<div>Ruta aproximada: <strong>${fallbackUsado ? 'Sí' : 'No'}</strong></div>`
+        `<div>Retorno: <strong>${retornoAlOrigen ? 'SÃ­' : 'No'}</strong></div>`,
+        `<div>Ruta aproximada: <strong>${fallbackUsado ? 'SÃ­' : 'No'}</strong></div>`
       ].join('');
 
       const meta = `
@@ -8204,7 +8204,7 @@ let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
   
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
-    notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
+    notif.show('Faltan datos', 'Primero calculÃ¡ el viaje', 'warning');
     return;
   }
 
@@ -8261,7 +8261,7 @@ async function confirmarViaje() {
 
     if (!authCheck?.data?.user) {
       notif.show(
-        'Ingresá para continuar',
+        'IngresÃ¡ para continuar',
         'Te llevamos a Google para solicitar el viaje',
         'info'
       );
@@ -8378,7 +8378,7 @@ const payload = {
       !Number.isFinite(payload.destino_lat) ||
       !Number.isFinite(payload.destino_lng)
     ) {
-      throw new Error('Coordenadas inválidas en origen o destino');
+      throw new Error('Coordenadas invÃ¡lidas en origen o destino');
     }
 
 actualizarEstadoSolicitudUI({
@@ -8412,7 +8412,7 @@ if (typeof actualizarCentroNotificacionesViaje === 'function') {
       json = rawText ? JSON.parse(rawText) : null;
     } catch (parseErr) {
       console.error('[confirmarViaje] JSON parse error:', parseErr);
-      throw new Error('La función solicitar-viaje devolvió una respuesta inválida');
+      throw new Error('La funciÃ³n solicitar-viaje devolviÃ³ una respuesta invÃ¡lida');
     }
 
     console.log('[confirmarViaje] response json:', json);
@@ -8442,7 +8442,7 @@ const estadoInicialSeguro =
 state.viajeEstado = estadoInicialSeguro;
 state.estadoViaje = normalizarEstadoUpper(estadoInicialSeguro);
 
-// 🔥 al pasar de cotización a viaje activo, no arrastrar ruta vieja
+// ðŸ”¥ al pasar de cotizaciÃ³n a viaje activo, no arrastrar ruta vieja
 state.routeData = null;
 state.cotizacion = null;
 
@@ -8470,8 +8470,8 @@ const choferDetectado =
   null;
     
 if (dispatchOk) {
-  // ✅ NO forzar "ASIGNADO" solo porque el dispatch vinculó un chofer.
-  // La asignación real debe venir por estado confirmado del backend/realtime.
+  // âœ… NO forzar "ASIGNADO" solo porque el dispatch vinculÃ³ un chofer.
+  // La asignaciÃ³n real debe venir por estado confirmado del backend/realtime.
   if (choferDetectado) {
     state.viajeEstado = 'ofertando';
     state.estadoViaje = 'OFERTANDO';
@@ -8534,12 +8534,12 @@ if (dispatchOk) {
 
   notif.show(
     'Viaje creado',
-    'La solicitud se guardó correctamente. Estamos iniciando la búsqueda de chofer.',
+    'La solicitud se guardÃ³ correctamente. Estamos iniciando la bÃºsqueda de chofer.',
     'info'
   );
 }
 
-// 🔥 ACTUALIZAR CARD INMEDIATAMENTE
+// ðŸ”¥ ACTUALIZAR CARD INMEDIATAMENTE
 actualizarCardChofer({
   estado: state.estadoViaje
 });
@@ -8570,7 +8570,7 @@ function actualizarBotonCancelarViaje() {
 
   const visible = !!state?.viajeId && !['CANCELADO', 'COMPLETADO'].includes(estado);
 
-  // Botón inferior viejo: siempre oculto para evitar duplicado
+  // BotÃ³n inferior viejo: siempre oculto para evitar duplicado
   if (btnCancelar) {
     btnCancelar.hidden = true;
     btnCancelar.style.display = 'none';
@@ -8742,23 +8742,23 @@ function confirmarViajePorWhatsAppFallback() {
   const puntos = obtenerPuntosOrdenados();
 
   const paradasTexto = puntos.slice(1, -1).map((p, i) =>
-    `📍 *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
+    `ðŸ“ *Parada ${i + 1}:* ${p.direccionCorta || p.direccion}`
   ).join('\n');
 
-  const mensaje = `🚐 *MIMI Transporte Escolar*
+  const mensaje = `ðŸš *MIMI Transporte Escolar*
 
-🧾 *Cotización:* ${cotizacionId}
+ðŸ§¾ *CotizaciÃ³n:* ${cotizacionId}
 
-📍 *Origen:* ${puntos[0].direccionCorta || puntos[0].direccion}
-${paradasTexto ? paradasTexto + '\n' : ''}🏁 *Destino:* ${puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion}
+ðŸ“ *Origen:* ${puntos[0].direccionCorta || puntos[0].direccion}
+${paradasTexto ? paradasTexto + '\n' : ''}ðŸ *Destino:* ${puntos[puntos.length - 1].direccionCorta || puntos[puntos.length - 1].direccion}
 
-🛣️ *Ruta:* ${resumenRuta}
-📏 *Distancia:* ${state.routeData?.distance || 0} km
-⏱️ *Duración:* ${state.routeData?.duration || 0} min
-💰 *Precio:* ${precioTexto}
+ðŸ›£ï¸ *Ruta:* ${resumenRuta}
+ðŸ“ *Distancia:* ${state.routeData?.distance || 0} km
+â±ï¸ *DuraciÃ³n:* ${state.routeData?.duration || 0} min
+ðŸ’° *Precio:* ${precioTexto}
 
-⚠️ No pudimos enviar la solicitud automática.
-¿Confirmamos el viaje por WhatsApp?`;
+âš ï¸ No pudimos enviar la solicitud automÃ¡tica.
+Â¿Confirmamos el viaje por WhatsApp?`;
 
   window.open(
     `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent(mensaje)}`,
@@ -8802,7 +8802,7 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#374151',
       badgeBg: 'rgba(120,120,120,0.16)',
       badgeColor: '#374151',
-      icon: '⏳'
+      icon: 'â³'
     },
     buscando_chofer: {
       label: 'Buscando chofer',
@@ -8812,7 +8812,7 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#0f3d91',
       badgeBg: 'rgba(21,101,192,0.14)',
       badgeColor: '#0f3d91',
-      icon: '🔎'
+      icon: 'ðŸ”Ž'
     },
     ofertando: {
       label: 'Ofertando',
@@ -8822,7 +8822,7 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#a15c00',
       badgeBg: 'rgba(255,152,0,0.16)',
       badgeColor: '#a15c00',
-      icon: '📣'
+      icon: 'ðŸ“£'
     },
     sin_chofer: {
       label: 'Sin chofer',
@@ -8832,7 +8832,7 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#b3261e',
       badgeBg: 'rgba(244,67,54,0.14)',
       badgeColor: '#b3261e',
-      icon: '⚠️'
+      icon: 'âš ï¸'
     },
     asignado: {
       label: 'Chofer asignado',
@@ -8842,47 +8842,47 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#1f6f37',
       badgeBg: 'rgba(76,175,80,0.16)',
       badgeColor: '#1f6f37',
-      icon: '✅'
+      icon: 'âœ…'
     },
     aceptado: {
       label: 'Chofer asignado',
-      texto: 'Tu chofer aceptó el viaje.',
+      texto: 'Tu chofer aceptÃ³ el viaje.',
       bg: 'rgba(76,175,80,0.10)',
       border: '1px solid rgba(76,175,80,0.22)',
       color: '#1f6f37',
       badgeBg: 'rgba(76,175,80,0.16)',
       badgeColor: '#1f6f37',
-      icon: '✅'
+      icon: 'âœ…'
     },
     en_camino: {
       label: 'En camino',
-      texto: 'El chofer está en camino.',
+      texto: 'El chofer estÃ¡ en camino.',
       bg: 'rgba(33,150,243,0.10)',
       border: '1px solid rgba(33,150,243,0.20)',
       color: '#0b63b6',
       badgeBg: 'rgba(33,150,243,0.16)',
       badgeColor: '#0b63b6',
-      icon: '🚗'
+      icon: 'ðŸš—'
     },
     en_viaje: {
       label: 'En viaje',
-      texto: 'Tu viaje está en curso.',
+      texto: 'Tu viaje estÃ¡ en curso.',
       bg: 'rgba(103,58,183,0.10)',
       border: '1px solid rgba(103,58,183,0.20)',
       color: '#5b32a3',
       badgeBg: 'rgba(103,58,183,0.16)',
       badgeColor: '#5b32a3',
-      icon: '🛣️'
+      icon: 'ðŸ›£ï¸'
     },
     en_curso: {
       label: 'En viaje',
-      texto: 'Tu viaje está en curso.',
+      texto: 'Tu viaje estÃ¡ en curso.',
       bg: 'rgba(103,58,183,0.10)',
       border: '1px solid rgba(103,58,183,0.20)',
       color: '#5b32a3',
       badgeBg: 'rgba(103,58,183,0.16)',
       badgeColor: '#5b32a3',
-      icon: '🛣️'
+      icon: 'ðŸ›£ï¸'
     },
     finalizado: {
       label: 'Finalizado',
@@ -8892,7 +8892,7 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#0d7a70',
       badgeBg: 'rgba(0,150,136,0.16)',
       badgeColor: '#0d7a70',
-      icon: '🏁'
+      icon: 'ðŸ'
     },
     completado: {
       label: 'Finalizado',
@@ -8902,7 +8902,7 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#0d7a70',
       badgeBg: 'rgba(0,150,136,0.16)',
       badgeColor: '#0d7a70',
-      icon: '🏁'
+      icon: 'ðŸ'
     },
     cancelado: {
       label: 'Cancelado',
@@ -8912,7 +8912,7 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#4b5563',
       badgeBg: 'rgba(96,96,96,0.16)',
       badgeColor: '#4b5563',
-      icon: '❌'
+      icon: 'âŒ'
     },
 
     // compatibilidad con estados viejos
@@ -8924,7 +8924,7 @@ const estadoUpper = estadoRaw.toUpperCase();
       color: '#0f3d91',
       badgeBg: 'rgba(21,101,192,0.14)',
       badgeColor: '#0f3d91',
-      icon: '🔎'
+      icon: 'ðŸ”Ž'
     }
   };
 
@@ -8936,7 +8936,7 @@ const estadoUpper = estadoRaw.toUpperCase();
     color: '#374151',
     badgeBg: 'rgba(120,120,120,0.16)',
     badgeColor: '#374151',
-    icon: 'ℹ️'
+    icon: 'â„¹ï¸'
   };
 
 box.style.background = estadoInfo.bg;
@@ -9048,11 +9048,11 @@ function escucharEstadoViajeCliente(viajeId) {
         }
 
         if (viaje.estado === 'EN_CURSO') {
-          notif.show('Viaje iniciado', 'Tu viaje comenzó', 'info');
+          notif.show('Viaje iniciado', 'Tu viaje comenzÃ³', 'info');
           if (typeof actualizarCentroNotificacionesViaje === 'function') {
             actualizarCentroNotificacionesViaje({
               estado: 'EN_CURSO',
-              texto: 'Tu viaje comenzó'
+              texto: 'Tu viaje comenzÃ³'
             });
           }
         }
@@ -9085,7 +9085,7 @@ function escucharEstadoViajeCliente(viajeId) {
   
 function compartirRuta() {
   if (!state.routeData) {
-    notif.show('Sin ruta', 'Primero calculá el recorrido', 'warning');
+    notif.show('Sin ruta', 'Primero calculÃ¡ el recorrido', 'warning');
     return;
   }
 
@@ -9094,12 +9094,12 @@ function compartirRuta() {
     state.routeData?.resumenRuta ||
     construirResumenRuta();
 
-  const texto = `🚐 MIMI Transporte Escolar
+  const texto = `ðŸš MIMI Transporte Escolar
 
-📍 Ruta: ${resumenRuta}
-📏 Distancia: ${state.routeData.distance} km
-⏱️ Duración: ${state.routeData.duration} min
-💰 Precio: ${state.cotizacion?.precio_formateado || document.getElementById('quotePrice').textContent}`;
+ðŸ“ Ruta: ${resumenRuta}
+ðŸ“ Distancia: ${state.routeData.distance} km
+â±ï¸ DuraciÃ³n: ${state.routeData.duration} min
+ðŸ’° Precio: ${state.cotizacion?.precio_formateado || document.getElementById('quotePrice').textContent}`;
 
   if (navigator.share) {
     navigator.share({
@@ -9145,7 +9145,7 @@ function intercambiarOrigenDestino() {
     }
   }
 
-  // Limpiar resultado anterior para no mostrar ruta/cotización vieja
+  // Limpiar resultado anterior para no mostrar ruta/cotizaciÃ³n vieja
   state.routeData = null;
   state.cotizacion = null;
 
@@ -9183,7 +9183,7 @@ limpiarCapasRutaMapa();
 
   if (!btn || !box) return;
 
-  // Si está oculto y nos piden cerrar, cerramos igual silenciosamente
+  // Si estÃ¡ oculto y nos piden cerrar, cerramos igual silenciosamente
   if (btn.style.display === 'none') {
     if (forceOpen === false) {
       btn.setAttribute('aria-expanded', 'false');
@@ -9234,7 +9234,7 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
   }
 
   if (!session?.access_token) {
-    throw new Error('No hay sesión válida para llamar la función protegida');
+    throw new Error('No hay sesiÃ³n vÃ¡lida para llamar la funciÃ³n protegida');
   }
 
   if (tokenExpiraPronto(session.access_token)) {
@@ -9243,7 +9243,7 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
   }
 
   if (!session?.access_token) {
-    throw new Error('No se pudo refrescar la sesión del usuario');
+    throw new Error('No se pudo refrescar la sesiÃ³n del usuario');
   }
 
   try {
@@ -9258,7 +9258,7 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
   }
 
   if (!session?.access_token) {
-    throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
+    throw new Error('La sesiÃ³n del usuario no es vÃ¡lida. VolvÃ© a iniciar sesiÃ³n.');
   }
 
   let headers = construirHeaders(session, options.headers);
@@ -9291,16 +9291,16 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
   session = await obtenerSesionCliente(true);
 
   if (!session?.access_token) {
-    throw new Error('No se pudo refrescar la sesión. Volvé a iniciar sesión.');
+    throw new Error('No se pudo refrescar la sesiÃ³n. VolvÃ© a iniciar sesiÃ³n.');
   }
 
   try {
     const userCheck = await window.sbRealtime.auth.getUser(session.access_token);
     if (!userCheck?.data?.user) {
-      throw new Error('JWT inválido luego del refresh');
+      throw new Error('JWT invÃ¡lido luego del refresh');
     }
   } catch (_) {
-    throw new Error('La sesión del usuario no es válida. Volvé a iniciar sesión.');
+    throw new Error('La sesiÃ³n del usuario no es vÃ¡lida. VolvÃ© a iniciar sesiÃ³n.');
   }
 
   headers = construirHeaders(session, options.headers);
@@ -9313,7 +9313,7 @@ async function fetchEdgeFunctionWithAuthRetry(url, options = {}) {
   rawText = await response.text();
 
   if (response.status === 401) {
-    throw new Error('La función protegida rechazó la sesión del usuario (401). Revisá la validación JWT en la Edge Function.');
+    throw new Error('La funciÃ³n protegida rechazÃ³ la sesiÃ³n del usuario (401). RevisÃ¡ la validaciÃ³n JWT en la Edge Function.');
   }
 
   return { response, rawText, session };
@@ -9335,11 +9335,11 @@ async function cancelarViajeCliente() {
       const isLive = btn.id === 'btnCancelarViajeLive';
 
       btn.innerHTML = loading
-        ? '<span aria-hidden="true">⏳</span><span>Cancelando...</span>'
+        ? '<span aria-hidden="true">â³</span><span>Cancelando...</span>'
         : (
             isLive
-              ? '<span aria-hidden="true">✕</span><span>Cancelar</span>'
-              : '<span aria-hidden="true">✕</span><span>Cancelar viaje</span>'
+              ? '<span aria-hidden="true">âœ•</span><span>Cancelar</span>'
+              : '<span aria-hidden="true">âœ•</span><span>Cancelar viaje</span>'
           );
     });
   };
@@ -9359,8 +9359,8 @@ async function cancelarViajeCliente() {
 
     if (!session?.access_token || !session?.user) {
       notif.show(
-        'Ingresá para continuar',
-        'Necesitás iniciar sesión para cancelar el viaje',
+        'IngresÃ¡ para continuar',
+        'NecesitÃ¡s iniciar sesiÃ³n para cancelar el viaje',
         'info'
       );
 
@@ -9378,15 +9378,15 @@ async function cancelarViajeCliente() {
 
     if (!session?.access_token || !session?.user) {
       notif.show(
-        'Sesión vencida',
-        'Volvé a iniciar sesión para cancelar el viaje',
+        'SesiÃ³n vencida',
+        'VolvÃ© a iniciar sesiÃ³n para cancelar el viaje',
         'warning'
       );
       await loginConGoogleParaViaje();
       return;
     }
 
-    const confirmar = window.confirm('¿Querés cancelar este viaje?');
+    const confirmar = window.confirm('Â¿QuerÃ©s cancelar este viaje?');
     if (!confirmar) return;
 
     setCancelBtnLoading(true);
@@ -9411,7 +9411,7 @@ async function cancelarViajeCliente() {
       data = rawText ? JSON.parse(rawText) : null;
     } catch (parseErr) {
       console.error('[cancelarViajeCliente] JSON parse error:', parseErr, rawText);
-      throw new Error('La función cancelar-viaje devolvió una respuesta inválida');
+      throw new Error('La funciÃ³n cancelar-viaje devolviÃ³ una respuesta invÃ¡lida');
     }
 
     if (!res.ok || !data?.exito) {
@@ -9475,14 +9475,14 @@ async function cancelarViajeCliente() {
 
     if (
       msg.includes('jwt') ||
-      msg.includes('sesión') ||
+      msg.includes('sesiÃ³n') ||
       msg.includes('sesion') ||
       msg.includes('unauthorized') ||
       msg.includes('401')
     ) {
       notif.show(
-        'Sesión vencida',
-        'Volvé a iniciar sesión para cancelar el viaje',
+        'SesiÃ³n vencida',
+        'VolvÃ© a iniciar sesiÃ³n para cancelar el viaje',
         'warning'
       );
       return;
@@ -9687,7 +9687,7 @@ if (btnChatChofer && !btnChatChofer.dataset.bound) {
         await loginConGoogleParaViaje();
       } catch (err) {
         console.error('[auth] login header error:', err);
-        notif.show('Error', 'No se pudo iniciar sesión con Google', 'error');
+        notif.show('Error', 'No se pudo iniciar sesiÃ³n con Google', 'error');
       }
     });
     btnLoginHeader.dataset.bound = '1';
@@ -9702,7 +9702,7 @@ if (btnChatChofer && !btnChatChofer.dataset.bound) {
   
   // ==========================================
   // MIMI NEXT LEVEL UI
-  // Seguro: no rompe la lógica existente
+  // Seguro: no rompe la lÃ³gica existente
   // ==========================================
 
   function initNextLevelUI() {
@@ -9968,7 +9968,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const session = await obtenerSesionCliente(false);
 
       if (!session?.access_token || !session?.user) {
-        console.log('[legal-gate] auto check omitido: sin sesión');
+        console.log('[legal-gate] auto check omitido: sin sesiÃ³n');
         return;
       }
 
@@ -10105,15 +10105,15 @@ function initTripLiveCardDraggable() {
     aria-describedby="legalGateText"
   >
     <div class="legal-gate-header">
-      <div class="legal-gate-badge">⚖️</div>
-      <h2 id="legalGateTitle">Actualización legal requerida</h2>
+      <div class="legal-gate-badge">âš–ï¸</div>
+      <h2 id="legalGateTitle">ActualizaciÃ³n legal requerida</h2>
       <p id="legalGateText">
         Necesitamos que revises y aceptes los documentos legales vigentes para continuar usando MIMI.
       </p>
     </div>
 
     <div id="legalGateBody" class="legal-gate-body">
-      <div class="legal-gate-loading">Cargando documentos…</div>
+      <div class="legal-gate-loading">Cargando documentosâ€¦</div>
     </div>
 
     <div class="legal-gate-footer">
@@ -10130,3 +10130,4 @@ function initTripLiveCardDraggable() {
 </div>
 </body>
 </html>
+
