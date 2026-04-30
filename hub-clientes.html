@@ -1,1283 +1,248 @@
-ChatGPT
-
-
-hub-clientes:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
-(async () => {
-  const pick = (sel) =>
-    document.querySelector(sel)?.content ||
-    document.querySelector(sel)?.href ||
-    null;
-
-  const data = {
-    title: document.title,
-    description: pick('meta[name="description"]'),
-    canonical: pick('link[rel="canonical"]'),
-    ogTitle: pick('meta[property="og:title"]'),
-    ogDescription: pick('meta[property="og:description"]'),
-    ogUrl: pick('meta[property="og:url"]'),
-    ogImage: pick('meta[property="og:image"]'),
-    twitterCard: pick('meta[name="twitter:card"]'),
-    twitterImage: pick('meta[name="twitter:image"]')
-  };
-
-  console.table(data);
-
-  if (data.ogImage) {
-    const res = await fetch(data.ogImage, { method: "HEAD" });
-    console.log("OG image HTTP status:", res.status);
-
-    const img = new Image();
-    img.onload = () =>
-      console.log("OG image decoded:", img.naturalWidth + "x" + img.naturalHeight);
-    img.onerror = () => console.error("OG image failed");
-    img.src = data.ogImage;
-  }
-})();
-VM2734:19 (índice)Valor(índice)Valortitle'MIMI Clientes | Viajes y servicios desde una app'description'Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.'canonical'https://mimi-transporte-81b4.vercel.app/cliente'ogTitle'MIMI Clientes | Viajes y servicios desde una app'ogDescription'Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.'ogUrl'https://mimi-transporte-81b4.vercel.app/cliente'ogImage'https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg'twitterCard'summary_large_image'twitterImage'https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg'Object
-Promise {<pending>}
-hub-clientes:1 Access to fetch at 'https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg' from origin 'https://mimi-transporte.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
-VM2734:22  HEAD https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg net::ERR_FAILED 404 (Not Found)
-(anónimo) @ VM2734:22
-(anónimo) @ VM2734:31
-VM2734:22   Uncaught (in promise) TypeError: Failed to fetch
-    at <anonymous>:22:23
-    at <anonymous>:31:3
-(anónimo) @ VM2734:22
-(anónimo) @ VM2734:31
-VM2734:22 Obtener no ha podido cargar: HEAD "https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg".
-(anónimo) @ VM2734:22
-(anónimo) @ VM2734:31
-
-Veo dos temas separados: el aviso del banner PWA no es el problema principal; el error real está en la imagen OG porque tu HTML apunta a otro dominio/deploy y además devuelve 404. Te dejo el arreglo puntual sin tocar el resto.
-
-Pensó durante un par de segundos
-El problema real es este:
-
-ogImage: https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg
-origin:  https://mimi-transporte.vercel.app
-404 Not Found
-Tu página está abierta en:
-
-https://mimi-transporte.vercel.app
-pero tus metas apuntan a:
-
-https://mimi-transporte-81b4.vercel.app
-Además, la imagen no existe ahí o está mal ubicada.
-
-Solución recomendada
-En hub-clientes.html o el archivo del hub, cambiá esto:
-
-<link rel="canonical" href="https://mimi-transporte-81b4.vercel.app/cliente">
-
-<meta property="og:url" content="https://mimi-transporte-81b4.vercel.app/cliente">
-<meta property="og:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg">
-
-<meta name="twitter:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg">
-por esto:
-
-<link rel="canonical" href="https://mimi-transporte.vercel.app/cliente">
-
-<meta property="og:url" content="https://mimi-transporte.vercel.app/cliente">
-<meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-
-<meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-Y verificá que exista esta ruta en tu proyecto:
-
-/public/assets/og/og-general.jpg
-o, si no usás carpeta public, que quede publicada como:
-
-https://mimi-transporte.vercel.app/assets/og/og-general.jpg
-Test corregido para consola
-Usá este, porque evita que el HEAD rompa todo:
-
-(async () => {
-  const pick = (sel) =>
-    document.querySelector(sel)?.content ||
-    document.querySelector(sel)?.href ||
-    null;
-
-  const data = {
-    title: document.title,
-    description: pick('meta[name="description"]'),
-    canonical: pick('link[rel="canonical"]'),
-    ogTitle: pick('meta[property="og:title"]'),
-    ogDescription: pick('meta[property="og:description"]'),
-    ogUrl: pick('meta[property="og:url"]'),
-    ogImage: pick('meta[property="og:image"]'),
-    twitterCard: pick('meta[name="twitter:card"]'),
-    twitterImage: pick('meta[name="twitter:image"]')
-  };
-
-  console.table(data);
-
-  if (data.ogImage) {
-    const img = new Image();
-
-    img.onload = () => {
-      console.log("✅ OG image decoded:", img.naturalWidth + "x" + img.naturalHeight);
-    };
-
-    img.onerror = () => {
-      console.error("❌ OG image failed:", data.ogImage);
-    };
-
-    img.src = data.ogImage + "?v=" + Date.now();
-  }
-})();
-Sobre este aviso
-Banner not shown: beforeinstallpromptevent.preventDefault()
-Eso no rompe nada. Solo significa que estás frenando el banner automático de instalación PWA y deberías mostrar tu propio botón de “Instalar app” llamando a:
-
-deferredPrompt.prompt();
-Pero lo urgente ahora es corregir el dominio y subir bien:
-
-/assets/og/og-general.jpg
-
-hub-clientes:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
-(async () => {
-  const pick = (sel) =>
-    document.querySelector(sel)?.content ||
-    document.querySelector(sel)?.href ||
-    null;
-
-  const data = {
-    title: document.title,
-    description: pick('meta[name="description"]'),
-    canonical: pick('link[rel="canonical"]'),
-    ogTitle: pick('meta[property="og:title"]'),
-    ogDescription: pick('meta[property="og:description"]'),
-    ogUrl: pick('meta[property="og:url"]'),
-    ogImage: pick('meta[property="og:image"]'),
-    twitterCard: pick('meta[name="twitter:card"]'),
-    twitterImage: pick('meta[name="twitter:image"]')
-  };
-
-  console.table(data);
-
-  if (data.ogImage) {
-    const img = new Image();
-
-    img.onload = () => {
-      console.log("✅ OG image decoded:", img.naturalWidth + "x" + img.naturalHeight);
-    };
-
-    img.onerror = () => {
-      console.error("❌ OG image failed:", data.ogImage);
-    };
-
-    img.src = data.ogImage + "?v=" + Date.now();
-  }
-})();
-VM4494:19 (índice)Valor(índice)Valortitle'MIMI Clientes | Viajes y servicios desde una app'description'Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.'canonical'https://mimi-transporte-81b4.vercel.app/cliente'ogTitle'MIMI Clientes | Viajes y servicios desde una app'ogDescription'Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.'ogUrl'https://mimi-transporte-81b4.vercel.app/cliente'ogImage'https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg'twitterCard'summary_large_image'twitterImage'https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg'Object
-Promise {<fulfilled>: undefined}
-mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg?v=1777567089993:1  GET https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg?v=1777567089993 404 (Not Found)
-Image
-(anónimo) @ VM4494:32
-(anónimo) @ VM4494:34
-VM4494:29 ❌ OG image failed: https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg
-img.onerror @ VM4494:29
-
-Está confirmado: la imagen OG no existe en esa ruta.
-
-Tu HTML sigue apuntando a:
-
-https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg
-y Vercel responde:
-
-404 Not Found
-Tenés que hacer una de estas dos cosas:
-
-Opción A — subir la imagen donde el HTML la busca
-En tu proyecto creá esta carpeta y archivo:
-
-public/assets/og/og-general.jpg
-Después hacé deploy.
-
-La URL debería abrir directo en el navegador:
-
-https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg
-Opción B — cambiar el HTML al dominio correcto
-Si tu dominio real actual es este:
-
-https://mimi-transporte.vercel.app
-cambiá las metas a:
-
-<link rel="canonical" href="https://mimi-transporte.vercel.app/cliente">
-
-<meta property="og:url" content="https://mimi-transporte.vercel.app/cliente">
-<meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-
-<meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-Y la imagen debe existir acá:
-
-public/assets/og/og-general.jpg
-Importante
-No alcanza con cambiar el código. También tenés que confirmar que el archivo realmente exista con este nombre exacto:
-
-og-general.jpg
-No debe ser:
-
-og-general.jpeg
-og-general.png
-OG-general.jpg
-og_general.jpg
-En Vercel/GitHub las mayúsculas y minúsculas importan.
-
-
-Dime que a ti te paso puntualmente para que lo revisemos.
-
-Pasame solo estas 2 cosas puntuales y con eso lo auditamos completo sin adivinar nada:
-
-1. El bloque <head> completo de hub-clientes.html
-Desde:
-
+<!doctype html>
+<html lang="es">
 <head>
-hasta:
+  <title>MIMI Clientes | Viajes y servicios desde una app</title>
+  <meta name="description" content="Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.">
+  <meta name="theme-color" content="#020617">
+  <link rel="canonical" href="https://mimi-transporte.vercel.app/cliente">
 
+  <!-- Social Preview / Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MIMI Transporte">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:title" content="MIMI Clientes | Viajes y servicios desde una app">
+  <meta property="og:description" content="Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.">
+  <meta property="og:url" content="https://mimi-transporte.vercel.app/cliente">
+  <meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
+  <meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- X / Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MIMI Clientes | Viajes y servicios desde una app">
+  <meta name="twitter:description" content="Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.">
+  <meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="./favicon.ico">
+  <link rel="stylesheet" href="./hub-clientes.css?v=2026.04.30.2">
+  <link rel="manifest" href="./manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-Ahí voy a revisar:
 
-canonical
-
-og tags
-
-twitter tags
-
-manifest
-
-iconos
-
-SEO
-
-PWA meta
-
-2. La ruta real donde guardaste la imagen OG
-Decime exactamente cómo la tenés en tu proyecto, por ejemplo:
-
-/public/assets/og/og-general.jpg
-o
-
-/assets/og/og-general.jpg
-o pasame captura del explorador de archivos de VS Code donde se vea la carpeta assets/og.
-
-Con esas 2 cosas te digo exactamente:
-
-qué está mal
-
-qué está apuntando mal
-
-qué corregir
-
-y por cuál línea reemplazarlo sin romper nada.
-
-
-
-Pegado text(1542).txt
-Documento
-
-Perfecto. Ya vi el problema exacto y está en una sola línea puntual del <head>.
-
-Tu <head> está casi bien, pero tenés una inconsistencia que rompe el preview social.
-
-El error exacto
-Tenés esto:
-
-<meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-<meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg">
-Ahí está el bug.
-
-Estás declarando dos URLs distintas para la misma imagen:
-
-og:image → dominio correcto
-
-og:image:secure_url → dominio viejo / roto
-
-Eso hace que varios crawlers (WhatsApp, Telegram, X, Facebook) intenten usar la secure_url y terminen en 404. 
-
-
-Qué tenés que cambiar
-Tenés esto:
-<meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg">
-Cambialo por esto:
-<meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-Bloque correcto final
-Dejalo así:
-
-<meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-<meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-<meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-Segundo punto a validar (importante)
-Además de eso, confirmá que el archivo exista exactamente en:
-
-/public/assets/og/og-general.jpg
-No parecido. Exacto.
-
-El warning del banner PWA
-Esto:
-
-Banner not shown: beforeinstallprompt.preventDefault()
-no es un error.
-
-Es normal porque vos mismo estás interceptando el banner con:
-
-event.preventDefault();
-y eso está bien, porque después lo mostrás manualmente con:
-
-deferredPrompt.prompt();
-Tu lógica PWA está correcta. No hay que tocarla.
-
-Resumen exacto
-Corregí solo esta línea:
-
-<meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg">
-por:
-
-<meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg">
-Ese es el bug puntual.
-
-
-
-Pegado text(1543).txt
-Documento
-hub-clientes:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
-(async () => {
-  const pick = (sel) =>
-    document.querySelector(sel)?.content ||
-    document.querySelector(sel)?.href ||
-    null;
-
-  const data = {
-    title: document.title,
-    description: pick('meta[name="description"]'),
-    canonical: pick('link[rel="canonical"]'),
-    ogTitle: pick('meta[property="og:title"]'),
-    ogDescription: pick('meta[property="og:description"]'),
-    ogUrl: pick('meta[property="og:url"]'),
-    ogImage: pick('meta[property="og:image"]'),
-    twitterCard: pick('meta[name="twitter:card"]'),
-    twitterImage: pick('meta[name="twitter:image"]')
-  };
-
-  console.table(data);
-
-  if (data.ogImage) {
-    const img = new Image();
-
-    img.onload = () => {
-      console.log("✅ OG image decoded:", img.naturalWidth + "x" + img.naturalHeight);
-    };
-
-    img.onerror = () => {
-      console.error("❌ OG image failed:", data.ogImage);
-    };
-
-    img.src = data.ogImage + "?v=" + Date.now();
-  }
-})();
-VM5449:19 (índice)Valor(índice)Valortitle'MIMI Clientes | Viajes y servicios desde una app'description'Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.'canonical'https://mimi-transporte-81b4.vercel.app/cliente'ogTitle'MIMI Clientes | Viajes y servicios desde una app'ogDescription'Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.'ogUrl'https://mimi-transporte-81b4.vercel.app/cliente'ogImage'https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg'twitterCard'summary_large_image'twitterImage'https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg'Object
-Promise {<fulfilled>: undefined}
-og-general.jpg:1  GET https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg?v=1777567861531 404 (Not Found)
-Image
-(anónimo) @ VM5449:32
-(anónimo) @ VM5449:34
-VM5449:29 ❌ OG image failed: https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg
-img.onerror @ VM5449:29
-
-Pensó durante un par de segundos
-Chat, tu archivo ya está corregido. El archivo que me pasaste tiene bien estas URLs:
-
-https://mimi-transporte.vercel.app
-Pero la consola sigue mostrando esto:
-
-https://mimi-transporte-81b4.vercel.app
-Eso significa una cosa puntual:
-
-Estás viendo una versión vieja en producción
-Tu navegador o Vercel todavía está sirviendo el HTML anterior, no el archivo nuevo. En el archivo actual, las metas están correctas. 
-
-
-Hacé esto
-Guardá el archivo.
-
-Subilo a GitHub.
-
-Esperá el deploy de Vercel.
-
-Abrí esta URL con cache limpia:
-
-https://mimi-transporte.vercel.app/hub-clientes.html?v=999
-Después corré otra vez el test.
-
-También verificá esto
-Abrí directo:
-
-https://mimi-transporte.vercel.app/assets/og/og-general.jpg
-Si da 404, te falta subir la imagen en:
-
-public/assets/og/og-general.jpg
-El warning del banner PWA está bien. No lo toques.
-
-
-The stash entry is kept in case you need it again.
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> code mimi-servicios/cliente.html
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git add mimi-servicios/cliente.html
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git commit -m "Resolve cliente merge conflict"
-[main 4b5d74d] Resolve cliente merge conflict
- 3 files changed, 365 insertions(+), 266 deletions(-)
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git status
-On branch main
-Your branch is ahead of 'origin/main' by 1 commit.
-  (use "git push" to publish your local commits)
-
-nothing to commit, working tree clean
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git push
-Enumerating objects: 21, done.
-Counting objects: 100% (21/21), done.
-Delta compression using up to 8 threads
-Compressing objects: 100% (8/8), done.
-Writing objects: 100% (11/11), 4.00 KiB | 1.33 MiB/s, done.
-Total 11 (delta 4), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (4/4), completed with 4 local objects.
-To https://github.com/Paulomillanez1983/mimi-transporte.git
-   08fbe5f..4b5d74d  main -> main
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git add .
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git commit -m "Fix production social preview URLs"
-On branch main
-Your branch is up to date with 'origin/main'.
-
-nothing to commit, working tree clean
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git push
-Everything up-to-date
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git add .
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git commit -m "Fix remaining production domain references"
-
-On branch main
-Your branch is up to date with 'origin/main'.
-
-nothing to commit, working tree clean
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git push
-To https://github.com/Paulomillanez1983/mimi-transporte.git
- ! [rejected]        main -> main (fetch first)
-error: failed to push some refs to 'https://github.com/Paulomillanez1983/mimi-transporte.git'
-hint: Updates were rejected because the remote contains work that you do not
-hint: have locally. This is usually caused by another repository pushing to
-hint: the same ref. If you want to integrate the remote changes, use
-hint: 'git pull' before pushing again.
-hint: See the 'Note about fast-forwards' in 'git push --help' for details.
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte>
-
-Te pasó esto: alguien/algún deploy/editor subió cambios a GitHub después de tu último push, entonces tu repo local quedó atrás.
-
-Hacé esto en PowerShell:
-
-git status
-Si dice working tree clean, seguí con:
-
-git pull --rebase origin main
-Después:
-
-git push origin main
-Si aparece conflicto, no hagas nada raro. Pasame lo que te muestre.
-
-Para revisar si todavía queda el dominio viejo en tu proyecto, corré:
-
-git grep "mimi-transporte-81b4"
-Si no devuelve nada, tu código local ya no tiene esa URL vieja.
-
-
-nothing to commit, working tree clean
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git pull --rebase origin main
-remote: Enumerating objects: 5, done.
-remote: Counting objects: 100% (5/5), done.
-remote: Compressing objects: 100% (3/3), done.
-remote: Total 3 (delta 2), reused 0 (delta 0), pack-reused 0 (from 0)
-Unpacking objects: 100% (3/3), 973 bytes | 42.00 KiB/s, done.
-From https://github.com/Paulomillanez1983/mimi-transporte
- * branch            main       -> FETCH_HEAD
-   4b5d74d..2871231  main       -> origin/main
-Updating 4b5d74d..2871231
-Fast-forward
- hub-clientes.html | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte>
->> git push origin main
-Everything up-to-date
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git grep "mimi-transporte-81b4"
-hub-clientes.html:  <meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-general.jpg">
-hub-operadores.html:  <link rel="canonical" href="https://mimi-transporte-81b4.vercel.app/operadores">
-hub-operadores.html:  <meta property="og:url" content="https://mimi-transporte-81b4.vercel.app/operadores">
-hub-operadores.html:  <meta property="og:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-operadores.jpg">
-hub-operadores.html:  <meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-operadores.jpg">
-hub-operadores.html:  <meta name="twitter:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-operadores.jpg">
-index.html:  <link rel="canonical" href="https://mimi-transporte-81b4.vercel.app/viaje">
-index.html:  <meta property="og:url" content="https://mimi-transporte-81b4.vercel.app/viaje">
-index.html:  <meta property="og:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimicar-client.jpg">
-index.html:  <meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimicar-client.jpg">
-index.html:  <meta name="twitter:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mimicar-client.jpg">
-login-chofer.html:  <link rel="canonical" href="https://mimi-transporte-81b4.vercel.app/chofer">
-login-chofer.html:  <meta property="og:url" content="https://mimi-transporte-81b4.vercel.app/chofer">
-login-chofer.html:  <meta property="og:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-choferes.jpg">
-login-chofer.html:  <meta property="og:image:secure_url" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-choferes.jpg">
-login-chofer.html:  <meta name="twitter:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-choferes.jpg">
-mimi-servicios/cliente.html:  <link rel="canonical" href="https://mimi-transporte-81b4.vercel.app/servicios">
-mimi-servicios/cliente.html:  <meta property="og:url" content="https://mimi-transporte-81b4.vercel.app/servicios">
-mimi-servicios/cliente.html:  <meta property="og:image" content="https://mimi-transporte-81b4.vercel.app/assets/og/og-mi:
-
-Perfecto, ahí apareció el problema: el pull te trajo cambios remotos que volvieron a meter el dominio viejo.
-
-Ejecutá esto:
-
-(Get-ChildItem -Recurse -File -Include *.html,*.js,*.css | Select-String "mimi-transporte-81b4").Path | Sort-Object -Unique
-Después reemplazá todo automático:
-
-Get-ChildItem -Recurse -File -Include *.html,*.js,*.css |
-  ForEach-Object {
-    (Get-Content $_.FullName -Raw) `
-      -replace "https://mimi-transporte-81b4\.vercel\.app", "https://mimi-transporte.vercel.app" |
-      Set-Content $_.FullName -Encoding UTF8
-  }
-Luego verificá:
-
-git grep "mimi-transporte-81b4"
-Si no devuelve nada:
-
-git add .
-git commit -m "Replace old Vercel domain references"
-git push origin main
-Después probá:
-
-https://mimi-transporte.vercel.app/hub-clientes.html?v=20260430
-
-
-Pegado text(1544).txt
-Documento
-
-Perfecto. No se rompió Git: lo que te pasó es que PowerShell abrió el resultado dentro de less (el paginador), por eso te apareció esa pantalla larguísima de ayuda.
-
-No es error del repo. Solo quedaste “adentro” de less.
-
-Salí de ahí
-Tocá:
-
-q
-y volvés a PowerShell normal.
-
-Después corré esto (uno por uno)
-1. Reemplazar todas las URLs viejas
-Get-ChildItem -Recurse -File -Include *.html |
-ForEach-Object {
-  (Get-Content $_.FullName -Raw) `
-    -replace 'https://mimi-transporte-81b4\.vercel\.app', 'https://mimi-transporte.vercel.app' |
-    Set-Content $_.FullName -Encoding UTF8
-}
-2. Verificar que no quede ninguna
-git grep "mimi-transporte-81b4"
-Si no devuelve nada, quedó limpio.
-
-3. Guardar y subir
-git add .
-git commit -m "Replace old Vercel domain references"
-git push origin main
-Qué pasó puntualmente
-No tenías un error de código.
-
-Te pasó esto:
-
-git grep devolvió muchas coincidencias
-
-PowerShell las abrió con less
-
-less mostró su pantalla de ayuda
-
-por eso viste ese bloque enorme raro
-
-Eso no rompió nada. Solo estabas dentro del visor. 
-
-
-
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> Get-ChildItem -Recurse -File -Include *.html |
->> ForEach-Object {
->>   (Get-Content $_.FullName -Raw) 
->>     -replace 'https://mimi-transporte-81b4\.vercel\.app', 'https://mimi-transporte.vercel.app' |
->>     Set-Content $_.FullName -Encoding UTF8
->> }
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git grep "mimi-transporte-81b4"
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git add .
-warning: in the working copy of 'e -File -Include .html,.js,.css  Select-String mimi-transporte-81b4).Path  Sort-Object -Unique', LF will be replaced by CRLF the next time Git touches it
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git commit -m "Replace old Vercel domain references"
-[main 5618ff5] Replace old Vercel domain references
- 18 files changed, 1137 insertions(+), 796 deletions(-)
- create mode 100644 "e -File -Include \357\200\252.html,\357\200\252.js,\357\200\252.css \357\201\274 Select-String \357\200\242mimi-transporte-81b4\357\200\242).Path \357\201\274 Sort-Object -Unique"
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte> git push origin main
-Enumerating objects: 42, done.
-Counting objects: 100% (42/42), done.
-Delta compression using up to 8 threads
-Compressing objects: 100% (22/22), done.
-Writing objects: 100% (22/22), 14.78 KiB | 1.34 MiB/s, done.
-Total 22 (delta 20), reused 0 (delta 0), pack-reused 0 (from 0)
-remote: Resolving deltas: 100% (20/20), completed with 20 local objects.
-To https://github.com/Paulomillanez1983/mimi-transporte.git
-   2871231..5618ff5  main -> main
-PS C:\Users\paulo\OneDrive\Documentos\GitHub\mimi-transporte>
-
-Perfecto. Ya quedó publicado y el dominio viejo salió del código.
-
-Hay una sola cosa para limpiar: accidentalmente Git subió un archivo basura con este nombre raro:
-
-e -File -Include … Select-String … Sort-Object -Unique
-Eso no rompe producción, pero hay que borrarlo del repo.
-
-Corré esto:
-
-git rm "e -File -Include .html,.js,.css  Select-String mimi-transporte-81b4).Path  Sort-Object -Unique"
-git commit -m "Remove accidental debug artifact"
-git push origin main
-Después probá:
-
-https://mimi-transporte.vercel.app/assets/og/og-general.jpg
-
-Si la imagen abre, quedó resuelto.
-
-
-y ahora que hago pasame los enlaces y los test4
-
-Probá estos enlaces directamente:
-
-Hub clientes: https://mimi-transporte.vercel.app/hub-clientes.html?v=20260430
-
-OG image: https://mimi-transporte.vercel.app/assets/og/og-general.jpg?v=20260430
-
-Si ambos abren bien, corré este test en consola dentro de hub-clientes.html:
-
-(async () => {
-  const pick = (sel) =>
-    document.querySelector(sel)?.content ||
-    document.querySelector(sel)?.href ||
-    null;
-
-  const data = {
-    title: document.title,
-    canonical: pick('link[rel="canonical"]'),
-    ogUrl: pick('meta[property="og:url"]'),
-    ogImage: pick('meta[property="og:image"]'),
-    ogSecure: pick('meta[property="og:image:secure_url"]'),
-    twitterImage: pick('meta[name="twitter:image"]')
-  };
-
-  console.table(data);
-
-  const allOk =
-    data.canonical?.includes("mimi-transporte.vercel.app") &&
-    data.ogUrl?.includes("mimi-transporte.vercel.app") &&
-    data.ogImage?.includes("mimi-transporte.vercel.app") &&
-    data.ogSecure?.includes("mimi-transporte.vercel.app") &&
-    data.twitterImage?.includes("mimi-transporte.vercel.app");
-
-  console.log(allOk ? "✅ DOMINIOS OK" : "❌ QUEDA ALGUNA URL VIEJA");
-
-  if (data.ogImage) {
-    const img = new Image();
-    img.onload = () =>
-      console.log("✅ OG image decoded:", img.naturalWidth + "x" + img.naturalHeight);
-    img.onerror = () =>
-      console.error("❌ OG image failed:", data.ogImage);
-    img.src = data.ogImage + "?v=" + Date.now();
-  }
-})();
-Resultado esperado:
-
-✅ DOMINIOS OK
-
-✅ OG image decoded: 1200x630 (o similar)
-
-Después test final social preview:
-
-WhatsApp / Telegram: pegá
-https://mimi-transporte.vercel.app/hub-clientes.html
-
-Verificador Open Graph: https://www.opengraph.xyz/url/https://mimi-transporte.vercel.app/hub-clientes.html
-
-Twitter Card Validator: https://cards-dev.twitter.com/validator
-
-
-hub-clientes:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
-(async () => {
-  const pick = (sel) =>
-    document.querySelector(sel)?.content ||
-    document.querySelector(sel)?.href ||
-    null;
-
-  const data = {
-    title: document.title,
-    canonical: pick('link[rel="canonical"]'),
-    ogUrl: pick('meta[property="og:url"]'),
-    ogImage: pick('meta[property="og:image"]'),
-    ogSecure: pick('meta[property="og:image:secure_url"]'),
-    twitterImage: pick('meta[name="twitter:image"]')
-  };
-
-  console.table(data);
-
-  const allOk =
-    data.canonical?.includes("mimi-transporte.vercel.app") &&
-    data.ogUrl?.includes("mimi-transporte.vercel.app") &&
-    data.ogImage?.includes("mimi-transporte.vercel.app") &&
-    data.ogSecure?.includes("mimi-transporte.vercel.app") &&
-    data.twitterImage?.includes("mimi-transporte.vercel.app");
-
-  console.log(allOk ? "✅ DOMINIOS OK" : "❌ QUEDA ALGUNA URL VIEJA");
-
-  if (data.ogImage) {
-    const img = new Image();
-    img.onload = () =>
-      console.log("✅ OG image decoded:", img.naturalWidth + "x" + img.naturalHeight);
-    img.onerror = () =>
-      console.error("❌ OG image failed:", data.ogImage);
-    img.src = data.ogImage + "?v=" + Date.now();
-  }
-})();
-VM564:16 (índice)Valor(índice)Valortitle'MIMI Clientes | Viajes y servicios desde una app'canonical'https://mimi-transporte.vercel.app/cliente'ogUrl'https://mimi-transporte.vercel.app/cliente'ogImage'https://mimi-transporte.vercel.app/assets/og/og-general.jpg'ogSecure'https://mimi-transporte.vercel.app/assets/og/og-general.jpg'twitterImage'https://mimi-transporte.vercel.app/assets/og/og-general.jpg'Object
-VM564:25 ✅ DOMINIOS OK
-Promise {<fulfilled>: undefined}
-VM564:30 ✅ OG image decoded: 1200x630
-
-Excelente. Ya quedó bien.
-
-Resultado confirmado:
-
-✅ DOMINIOS OK
-✅ OG image decoded: 1200x630
-El warning del banner PWA podés ignorarlo:
-
-Banner not shown...
-No es error. Tu botón de instalar app lo maneja manualmente con installPWA().
-
-Ahora solo faltaría probar compartiendo este enlace por WhatsApp/Telegram:
-
-https://mimi-transporte.vercel.app/hub-clientes.html
-
-Imagen cargada
-
-Perfecto. Ya quedó funcionando correctamente.
-
-WhatsApp está leyendo bien:
-
-Título OK
-
-Descripción OK
-
-Dominio OK
-
-Link preview OK
-
-Eso confirma que:
-
-Open Graph quedó corregido
-
-Twitter Card quedó corregido
-
-canonical quedó bien
-
-la imagen OG ya está resolviendo
-
-el dominio viejo salió de producción
-
-Ya quedó cerrado. El preview social del hub está funcionando bien.
-
-
-Perfecto, Chat, pero no veo la imagen que te pedí que se tiene que aparecer juntamente cuando compartís el enlace. ¿Me explico?
-
-Sí, te explicás perfecto.
-
-Tu imagen sí existe y carga bien, porque el test dio:
-
-✅ OG image decoded: 1200x630
-Pero WhatsApp todavía no la muestra porque suele pasar una de estas dos cosas:
-
-WhatsApp cacheó el preview anterior sin imagen.
-
-La imagen está bien, pero WhatsApp todavía no refrescó el crawler.
-
-La URL compartida fue la misma y WhatsApp reutilizó el preview viejo.
-
-Probá compartir así, con versión nueva:
-
-https://mimi-transporte.vercel.app/hub-clientes.html?v=img2
-Si ahí aparece la imagen, era cache de WhatsApp.
-
-También probá este test directo en navegador:
-
-https://mimi-transporte.vercel.app/assets/og/og-general.jpg
-Si abre la imagen, está todo correcto del lado de tu web.
-
-Para forzar más a WhatsApp, cambiá temporalmente las metas a esta URL con versión:
-
-<meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg?v=2">
-<meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg?v=2">
-<meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg?v=2">
-Después:
-
-git add .
-git commit -m "Refresh OG image cache"
-git push origin main
-WhatsApp debería mostrar la imagen cuando compartas:
-
-https://mimi-transporte.vercel.app/hub-clientes.html?v=img2
-
-Imagen cargada
-Imagen cargada
-Es el chat opcióna perfecto, OK.Pero la imagen que necesito que se vea cuando enviemos el enlace es una imagen en miniatura, por así decirlo, en el tamaño que acepte WhatsApp del cup, ¿OK?
-
-Sí, perfecto: ahora no es un problema técnico de Open Graph, es un problema de la imagen que estás usando como thumbnail.
-
-WhatsApp ya está leyendo imagen, pero está tomando una OG genérica (tipo tarjeta azul simple).
-Lo que vos querés es que el preview muestre la miniatura real del hub (la segunda imagen que mandaste), o sea una versión “thumbnail social” del diseño real de la screen.
-
-Eso es correcto y es exactamente como debería quedar.
-
-Qué hay que hacer ahora
-No hay que tocar más meta tags.
-Ahora hay que reemplazar el archivo OG actual:
-
-/assets/og/og-general.jpg
-por una nueva imagen optimizada para WhatsApp con:
-
-proporción 1200x630
-
-basada en tu UI real del hub
-
-recortada como thumbnail social
-
-texto grande legible
-
-contraste alto
-
-auto visible
-
-cards visibles
-
-branding limpio
-
-sin tanto aire vacío
-
-Lo correcto ahora
-La imagen OG actual (la azul simple) funciona técnicamente, pero es pobre visualmente.
-
-Tenés que reemplazarla por una versión social de esta screen:
-
-logo arriba
-
-título principal
-
-auto visible
-
-2 cards visibles
-
-CTA visual limpio
-
-estilo thumbnail
-
-O sea: convertir tu segunda captura en og-general.jpg final para social preview.
-
-En resumen
-Ya no hay error técnico.
-Lo único que falta es cambiar la imagen visual del preview.
-
-La URL ya funciona.
-WhatsApp ya la lee.
-Ahora solo falta reemplazar:
-
-/assets/og/og-general.jpg
-por una miniatura social basada en tu UI real del hub.
-
-
-Imagen cargada
-me pasas esta en el formato que necescitamos??
-
-Listo. Ya te la preparé en el formato correcto para WhatsApp / Open Graph (1200x630), optimizada como thumbnail social.
-
-Descargar og-general.jpg
-
-Reemplazala por:
-
-/assets/og/og-general.jpg
-y después hacé:
-
-git add .
-git commit -m "Update OG thumbnail for hub social preview"
-git push origin main
-
-
-
-Chat, fíjate bien, por favor, porque tiene error de coding que parece portugués en la imagen. Fíjate, por favor, y no aparece la imagen entera, o sea, aparece desde pedir lo que necesitas hasta mimicar mimicgo, nada más. Estás muy impreciso, Chat, ¿qué te pasa?
-
-Pensó durante 9s
-Tenés razón. La captura original ya venía con texto mal codificado (PedÃ­, necesitÃ¡s, etc.), por eso no sirve recortarla así.
-
-Te preparé una nueva versión limpia, correcta y en formato WhatsApp/Open Graph 1200x630, sin errores de codificación y pensada como miniatura social:
-
-Descargar og-general-clean-1200x630.jpg
-
-Usala reemplazando este archivo:
-
-/assets/og/og-general.jpg
-Después:
-
-git add .
-git commit -m "Update clean hub OG image"
-git push origin main
-
-
-
-Chat, corregamos el encoding. Decime dónde está el error en la aplicación, así después luego yo te paso la captura de la imagen del hub ya corregida para que no parezca portugués y después hacemos el tema de la imagen, por favor.
-
-Sí. El error de encoding está en el HTML, no en WhatsApp ni en la imagen.
-
-En tu screenshot se ve:
-
-PedÃ­ lo que necesitÃ¡s
-SolicitÃ¡ profesionales
-mÃ¡s
-âœ“ / â†’
-Eso pasa cuando el navegador interpreta mal caracteres UTF-8. En tu archivo tenés esto:
-
-<meta charset="utf-8">
-pero está demasiado abajo dentro del <head>. Tiene que estar casi al principio, antes de textos con acentos.
-
-Corregí el <head>
-Buscá esto:
-
-<head>
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-Cambialo por esto:
-
-<head>
-  <meta charset="utf-8">
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-Después eliminá la línea vieja que tenés más abajo:
-
-<meta charset="utf-8">
-Orden recomendado del inicio
-Dejalo así:
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-  <meta name="description" content="Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.">
-  <meta name="theme-color" content="#020617">
-  <link rel="canonical" href="https://mimi-transporte.vercel.app/cliente">
-Y quitá estas líneas de abajo si están repetidas:
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-Después subí
-git add hub-clientes.html
-git commit -m "Fix charset order in hub clientes"
-git push origin main
-Ese es el origen del texto tipo portugués.
-
-
-
-Pegado text(1545).txt
-Documento
-acaa?
-
-Sí, acá está el problema exacto.
-
-Tu <meta charset="utf-8"> está bien escrito, pero está demasiado abajo. 
-
-
-Ahora lo tenés así:
-
-<head>
-  <title>...</title>
-  <meta name="description" ...>
-  ...
-  <meta charset="utf-8">
-Eso es justamente lo que te rompe los acentos en previews / render parciales.
-
-Cómo tiene que quedar
-Mové estas dos líneas:
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-arriba de todo, apenas abre el <head>.
-
-Cambiá esto
-Tenés esto:
-
-<head>
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-Por esto
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-Y eliminá estas dos líneas de abajo
-Borrá estas que quedaron repetidas más abajo:
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-El inicio correcto del <head> te tiene que quedar así
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-  <meta name="description" content="Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.">
-  <meta name="theme-color" content="#020617">
-  <link rel="canonical" href="https://mimi-transporte.vercel.app/cliente">
-Ese es el cambio exacto.
-
-
-
-Pegado text(1546).txt
-Documento
-asi??
-
-Todavía no. El problema sigue porque no lo moviste: lo dejaste exactamente en el mismo lugar. 
-
-
-Sigue estando abajo de todo esto:
-
-title
-
-description
-
-og tags
-
-twitter tags
-
-y recién después aparece:
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-Ahí sigue mal.
-
-Tiene que quedar primero de todo
-Apenas abre <head>, las primeras dos líneas tienen que ser estas.
-
-Cambiá esto:
-<head>
-
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-por esto:
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-Y después borrá estas dos de abajo
-Borrá esta parte donde está ahora:
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-porque si no quedan duplicadas.
-
-El inicio correcto tiene que verse exactamente así
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>MIMI Clientes | Viajes y servicios desde una app</title>
-  <meta name="description" content="Entrá al hub de clientes MIMI y elegí entre pedir un viaje MIMICar o solicitar servicios MIMIGo.">
-Recién ahí queda bien.
-
-
-
-Pegado text(1547).txt
-Documento
-asi??
-
-Sí. Ahora sí está bien.
-
-
-  <header class="topbar">
-    <div class="brand">Mi<span>M</span>I</div>
-    <div class="status">Plataforma Cliente</div>
-  </header>
-
-  <section class="hero">
-    <div>
-      <h1>
-        Pedí lo que necesitás,<br>
-        cuando lo <span class="accent">necesitás.</span>
-      </h1>
-
-      <p class="hero-copy">Viajes, transporte escolar y servicios confiables en una sola app.</p>
-    </div>
-
-    <div class="hero-visual" aria-hidden="true">
-      <div class="city"></div>
-      <div class="headlight"></div>
-      <img class="hero-car" src="./assets/auto-mimicar-safe.png" alt="">
-    </div>
-  </section>
-
-  <section class="cards">
-
-    <article class="card transport-card">
-      <div>
-        <div class="card-head">
-          <div class="app-icon blue">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M6.5 16.8h11M7.2 16.8l1-5.1c.2-1 1.1-1.7 2.1-1.7h3.4c1 0 1.9.7 2.1 1.7l1 5.1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M8.5 17.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6ZM15.5 17.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6Z" stroke="white" stroke-width="1.8"/>
-              <path d="M12 4.2c2 0 3.7 1.6 3.7 3.7 0 2.6-3.7 5.7-3.7 5.7S8.3 10.5 8.3 7.9c0-2.1 1.7-3.7 3.7-3.7Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
-              <path d="M12 7.4h.01" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
-            </svg>
-          </div>
-
+<body>
+  <div class="viewport">
+    <main class="shell">
+
+      <header class="topbar">
+        <div class="brand">Mi<span>M</span>I</div>
+        <div class="status">Plataforma Cliente</div>
+      </header>
+
+      <section class="hero">
+        <div>
+          <h1>
+            Pedí lo que necesitás,<br>
+            cuando lo <span class="accent">necesitÃ¡s.</span>
+          </h1>
+
+          <p class="hero-copy">Viajes, transporte escolar y servicios confiables en una sola app.</p>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <div class="city"></div>
+          <div class="headlight"></div>
+          <img class="hero-car" src="./assets/auto-mimicar-safe.png" alt="">
+        </div>
+      </section>
+
+      <section class="cards">
+
+        <article class="card transport-card">
           <div>
-            <h2>MIMICAR</h2>
-            <div class="role blue-text">Para pasajeros</div>
-          </div>
-        </div>
+            <div class="card-head">
+              <div class="app-icon blue">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M6.5 16.8h11M7.2 16.8l1-5.1c.2-1 1.1-1.7 2.1-1.7h3.4c1 0 1.9.7 2.1 1.7l1 5.1" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M8.5 17.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6ZM15.5 17.2a1.3 1.3 0 1 0 0 2.6 1.3 1.3 0 0 0 0-2.6Z" stroke="white" stroke-width="1.8"/>
+                  <path d="M12 4.2c2 0 3.7 1.6 3.7 3.7 0 2.6-3.7 5.7-3.7 5.7S8.3 10.5 8.3 7.9c0-2.1 1.7-3.7 3.7-3.7Z" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+                  <path d="M12 7.4h.01" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+              </div>
 
-        <p>
-          Pedí tu viaje.<br>
-          Movete simple, seguro y rápido.
-        </p>
+              <div>
+                <h2>MIMICAR</h2>
+                <div class="role blue-text">Para pasajeros</div>
+              </div>
+            </div>
 
-        <div class="driver-product">
-          <img src="./assets/auto-mimicar-safe.png" alt="">
-        </div>
+            <p>
+              Pedí tu viaje.<br>
+              Movete simple y rápido.            </p>
 
-        <div class="trust-row">
-          <div class="trust-pill"><b>⌁</b><span>Precio estimado</span></div>
-          <div class="trust-pill"><b>✓</b><span>Seguimiento en vivo</span></div>
-        </div>
-      </div>
+            <div class="driver-product">
+              <img src="./assets/auto-mimicar-safe.png" alt="">
+            </div>
 
-      <a class="btn btn-blue" href="./index.html">
-        <span>Pedir un viaje</span>
-        <span>→</span>
-      </a>
-    </article>
-
-    <article class="card services-card">
-      <div>
-        <div class="card-head">
-          <div class="app-icon green">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 11.5 12 5l8 6.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M6.5 10.5V20h11v-9.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M9.5 20v-5h5v5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <div class="trust-row">
+              <div class="trust-pill"><b>⌁</b><span>Precio estimado</span></div>
+              <div class="trust-pill"><b>✓</b><span>Seguimiento en vivo</span></div>
+            </div>
           </div>
 
+          <a class="btn btn-blue" href="./index.html">
+            <span>Pedir un viaje</span>
+            <span>→</span>
+          </a>
+        </article>
+
+        <article class="card services-card">
           <div>
-            <h2>MIMIGo Servicios</h2>
-            <div class="role green-text">Para clientes</div>
+            <div class="card-head">
+              <div class="app-icon green">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 11.5 12 5l8 6.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6.5 10.5V20h11v-9.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M9.5 20v-5h5v5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+
+              <div>
+                <h2>MIMIGo Servicios</h2>
+                <div class="role green-text">Para clientes</div>
+              </div>
+            </div>
+
+            <p>
+              Solicitá prestadores.<br>
+              Hogar, salud, cuidado y más.
+            </p>
+
+            <div class="services-grid">
+              <div class="service-box">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 11.5 12 5l8 6.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M6.5 10.5V20h4v-5h3v5h4v-9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <strong>Limpieza</strong>
+              </div>
+
+              <div class="service-box">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M13 2 5 13h6l-1 9 9-13h-6l1-7Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                </svg>
+                <strong>Electricidad</strong>
+              </div>
+
+              <div class="service-box">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 20s-7-4.1-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.9-7 10-7 10Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+                  <path d="M8 12h2l1-2 2 4 1-2h2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+                </svg>
+                <strong>Cuidado</strong>
+              </div>
+
+              <div class="service-box">
+                <div class="plus">+12</div>
+                <strong>servicios</strong>
+              </div>
+            </div>
+          </div>
+
+          <a class="btn btn-green" href="./mimi-servicios/cliente.html">
+            <span>Buscar servicio</span>
+            <span>→</span>
+          </a>
+        </article>
+
+      </section>
+
+      <section class="benefits">
+        <div class="benefit">
+          <div class="benefit-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3 5 6v5c0 4.5 2.8 8.5 7 10 4.2-1.5 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/>
+              <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Seguro y confiable</h3>
+            <p>Prestadores y choferes validados.</p>
           </div>
         </div>
 
-        <p>
-          Solicitá profesionales.<br>
-          Hogar, salud, cuidado y más.
-        </p>
-
-        <div class="services-grid">
-          <div class="service-box">
+        <div class="benefit">
+          <div class="benefit-icon">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 11.5 12 5l8 6.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M6.5 10.5V20h4v-5h3v5h4v-9.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5 12a7 7 0 0 1 14 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M7 13v3M17 13v3M12 19h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
-            <strong>Limpieza</strong>
           </div>
-
-          <div class="service-box">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M13 2 5 13h6l-1 9 9-13h-6l1-7Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
-            </svg>
-            <strong>Electricidad</strong>
-          </div>
-
-          <div class="service-box">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 20s-7-4.1-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.9-7 10-7 10Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
-              <path d="M8 12h2l1-2 2 4 1-2h2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-            </svg>
-            <strong>Cuidado</strong>
-          </div>
-
-          <div class="service-box">
-            <div class="plus">+12</div>
-            <strong>servicios</strong>
+          <div>
+            <h3>Soporte 24/7</h3>
+            <p>Ayuda disponible durante cada solicitud.</p>
           </div>
         </div>
-      </div>
 
-      <a class="btn btn-green" href="./mimi-servicios/cliente.html">
-        <span>Buscar servicio</span>
-        <span>→</span>
-      </a>
-    </article>
+        <div class="benefit">
+          <div class="benefit-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 19V5M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M8 16v-4M12 16V9M16 16V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <h3>Todo en MIMI</h3>
+            <p>Movilidad y servicios desde un mismo lugar.</p>
+          </div>
+        </div>
+      </section>
 
-  </section>
+      <footer class="footer">
+        <div class="footer-brand">MiMI</div>
+        <div class="footer-sep"></div>
+        <div class="footer-copy">
+          Una sola app.<br>
+          Todo lo que necesitás.
+        </div>
 
-  <section class="benefits">
-    <div class="benefit">
-      <div class="benefit-icon">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 3 5 6v5c0 4.5 2.8 8.5 7 10 4.2-1.5 7-5.5 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.8"/>
-          <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div>
-        <h3>Seguro y confiable</h3>
-        <p>Prestadores y choferes validados.</p>
-      </div>
-    </div>
+        <button class="install-app-btn" type="button" onclick="installPWA()">
+          <span class="install-icon">⬇</span>
+          <span class="install-copy">
+            <strong>Instalar app</strong>
+          </span>
+        </button>
+      </footer>
 
-    <div class="benefit">
-      <div class="benefit-icon">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M5 12a7 7 0 0 1 14 0v4a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="1.8"/>
-          <path d="M7 13v3M17 13v3M12 19h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div>
-        <h3>Soporte 24/7</h3>
-        <p>Ayuda disponible durante cada solicitud.</p>
-      </div>
-    </div>
+    </main>
+  </div>
 
-    <div class="benefit">
-      <div class="benefit-icon">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 19V5M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          <path d="M8 16v-4M12 16V9M16 16V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-        </svg>
-      </div>
-      <div>
-        <h3>Todo en MIMI</h3>
-        <p>Movilidad y servicios desde un mismo lugar.</p>
-      </div>
-    </div>
-  </section>
+<script>
+  let deferredPrompt = null;
 
-  <footer class="footer">
-    <div class="footer-brand">MiMI</div>
-    <div class="footer-sep"></div>
-    <div class="footer-copy">
-      Una sola app.<br>
-      Todo lo que necesitás.
-    </div>
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    document.body.classList.add("pwa-installable");
+  });
 
-    <button class="install-app-btn" type="button" onclick="installPWA()">
-      <span class="install-icon">⬇</span>
-      <span class="install-copy">
-        <strong>Instalar app</strong>
-      </span>
-    </button>
-  </footer>
+  async function installPWA() {
+    if (!deferredPrompt) {
+      alert("Para instalar MIMI, tocá el menú de Chrome ⋮ y elegí 'Agregar a pantalla principal'.");
+      return;
+    }
 
-</main>
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.body.classList.remove("pwa-installable");
+  }
+</script>
+</body>
+</html>
 
-Cerrar
