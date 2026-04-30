@@ -4,6 +4,7 @@ const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 const APP_ASSETS = [
   "./",
   "./index.html",
+  "./auth-callback.html",
   "./cliente.html",
   "./prestador.html",
   "./manifest.json",
