@@ -5100,3 +5100,240 @@ body{
     font-size:17px;
   }
 }
+/* =========================================================
+   HERO MIMICAR KEMPES - MATCH BOCETO FINAL
+========================================================= */
+
+body{
+  background:#f4f7fb;
+}
+
+.header{
+  min-height:430px !important;
+  height:430px !important;
+  padding:calc(22px + var(--safe-top)) 0 0 !important;
+  margin-bottom:0 !important;
+  border-radius:0 !important;
+  background:#061021 !important;
+  box-shadow:none !important;
+  overflow:hidden !important;
+}
+
+.header-content{
+  width:100% !important;
+  max-width:none !important;
+  height:100% !important;
+  min-height:430px !important;
+  display:block !important;
+  position:relative !important;
+  z-index:1 !important;
+}
+
+.vehicle-section{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-height:0 !important;
+  margin:0 !important;
+  display:block !important;
+  overflow:hidden !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+}
+
+.vehicle-img{
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  object-fit:cover !important;
+  object-position:center top !important;
+  display:block !important;
+  opacity:1 !important;
+  filter:none !important;
+  transform:none !important;
+  left:auto !important;
+  right:auto !important;
+  bottom:auto !important;
+  z-index:1 !important;
+}
+
+.vehicle-section::after{
+  content:"" !important;
+  position:absolute !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:-1px !important;
+  width:100% !important;
+  height:150px !important;
+  z-index:3 !important;
+  background:linear-gradient(
+    to bottom,
+    rgba(244,247,251,0) 0%,
+    rgba(244,247,251,.25) 22%,
+    rgba(244,247,251,.72) 58%,
+    #f4f7fb 100%
+  ) !important;
+  filter:none !important;
+  pointer-events:none !important;
+}
+
+.client-header-city,
+.client-header-headlight{
+  display:none !important;
+}
+
+.logo-section{
+  position:absolute !important;
+  top:30px !important;
+  left:20px !important;
+  z-index:8 !important;
+  padding:0 !important;
+}
+
+.logo-title{
+  font-size:42px !important;
+  line-height:1 !important;
+  font-weight:950 !important;
+  color:#fff !important;
+}
+
+.trip-notifications{
+  top:28px !important;
+  right:20px !important;
+  width:56px !important;
+  height:56px !important;
+  border-radius:18px !important;
+  z-index:9 !important;
+}
+
+#headerUser{
+  position:absolute !important;
+  left:20px !important;
+  top:104px !important;
+  right:auto !important;
+  bottom:auto !important;
+  z-index:9 !important;
+}
+
+.header-login-btn{
+  min-height:54px !important;
+  padding:0 24px 0 12px !important;
+  border-radius:999px !important;
+  background:rgba(9,18,42,.58) !important;
+  border:1px solid rgba(255,255,255,.24) !important;
+  color:#fff !important;
+  backdrop-filter:blur(14px) !important;
+  -webkit-backdrop-filter:blur(14px) !important;
+  box-shadow:0 16px 34px rgba(0,0,0,.28) !important;
+  font-size:18px !important;
+  font-weight:900 !important;
+}
+
+.header-login-btn span:first-child{
+  width:44px !important;
+  height:44px !important;
+  border-radius:999px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  background:rgba(255,255,255,.10) !important;
+}
+
+.container{
+  position:relative !important;
+  z-index:5 !important;
+  margin-top:-72px !important;
+}
+
+.hero-text{
+  position:relative !important;
+  z-index:6 !important;
+  padding:0 12px 20px !important;
+  text-align:center !important;
+}
+
+.hero-title{
+  display:block !important;
+  color:#07111f !important;
+  font-size:30px !important;
+  font-weight:950 !important;
+  line-height:1.08 !important;
+  margin:0 0 8px !important;
+}
+
+.hero-subtitle{
+  color:#6b7280 !important;
+  font-size:19px !important;
+  font-weight:500 !important;
+  line-height:1.25 !important;
+  margin:0 !important;
+}
+
+.main-card{
+  margin-top:0 !important;
+  border-radius:28px !important;
+  padding:22px 22px 24px !important;
+  box-shadow:0 24px 60px rgba(15,23,42,.12) !important;
+  background:#fff !important;
+}
+
+/* Mobile */
+@media (max-width:480px){
+  .header{
+    min-height:405px !important;
+    height:405px !important;
+  }
+
+  .header-content{
+    min-height:405px !important;
+  }
+
+  .vehicle-img{
+    object-position:center top !important;
+  }
+
+  .vehicle-section::after{
+    height:155px !important;
+  }
+
+  .logo-section{
+    top:28px !important;
+    left:18px !important;
+  }
+
+  .logo-title{
+    font-size:40px !important;
+  }
+
+  #headerUser{
+    left:18px !important;
+    top:94px !important;
+  }
+
+  .trip-notifications{
+    top:28px !important;
+    right:18px !important;
+    width:54px !important;
+    height:54px !important;
+  }
+
+  .container{
+    margin-top:-76px !important;
+  }
+
+  .hero-title{
+    font-size:28px !important;
+  }
+
+  .hero-subtitle{
+    font-size:18px !important;
+  }
+
+  .main-card{
+    padding:20px 18px 22px !important;
+    border-radius:26px !important;
+  }
+}
