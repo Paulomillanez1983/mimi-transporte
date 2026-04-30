@@ -1053,6 +1053,7 @@ function setupRealtime(
 
 async function init() {
   exposeClientDebugApi();
+  document.body.dataset.clientView = "home";
   subscribe(renderClientScreen);
   renderClientScreen(state);
 
