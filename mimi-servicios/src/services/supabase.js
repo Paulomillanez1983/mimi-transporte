@@ -10,7 +10,6 @@ function currentPageName() {
 
 function servicesBasePath() {
   const origin = window.location.origin;
-  const path = window.location.pathname || "";
   const isGithubPages = origin.includes("github.io");
 
   // GitHub Pages
@@ -18,23 +17,7 @@ function servicesBasePath() {
     return "/mimi-transporte/mimi-servicios/";
   }
 
-  // Vercel (clean URLs)
-  if (/^\/(mimi-servicios\/)?(cliente|prestador|servicios|provider)\/?$/i.test(path.replace(/^\/+/, ""))) {
-    return "/mimi-servicios/";
-  }
-
-  // cualquier ruta real dentro de /mimi-servicios/*
-  if (path.includes("/mimi-servicios/")) {
-    return "/mimi-servicios/";
-  }
-
-  return "/mimi-servicios/";
-}
-  // GitHub Pages keeps the repository name in the path.
-  if (path.includes("/mimi-transporte/")) {
-    return "/mimi-transporte/mimi-servicios/";
-  }
-
+  // Vercel / dominio propio
   return "/mimi-servicios/";
 }
 
@@ -237,12 +220,14 @@ export async function redirectAfterLoginByRole(session) {
     "mimi_services_auth_redirect_in_progress"
   );
 
-  // Si el usuario inició login desde prestador.html,
-  // siempre debe volver a prestador.html aunque todavía no exista svc_providers.
   const preferredPage = String(preferred || "").replace(/^\.\//, "");
   const currentPage = currentPageName();
 
-  if (preferredPage === "prestador.html" || currentPage === "prestador.html" || currentPage === "prestador") {
+  if (
+    preferredPage === "prestador.html" ||
+    currentPage === "prestador.html" ||
+    currentPage === "prestador"
+  ) {
     sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
 
     if (currentPage !== "prestador.html") {
@@ -262,7 +247,10 @@ export async function redirectAfterLoginByRole(session) {
 
   sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
 
-  if (currentPage === targetPage || (currentPage === "servicios" && targetPage === "cliente.html")) {
+  if (
+    currentPage === targetPage ||
+    (currentPage === "servicios" && targetPage === "cliente.html")
+  ) {
     return;
   }
 
