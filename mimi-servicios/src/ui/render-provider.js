@@ -592,8 +592,7 @@ function renderProviderBusiness(state) {
           <label class="input-group">
             <span>Modalidad comercial</span>
             <select name="pricingMode">
-              <option value="POR_HORA" ${(detail?.pricing_mode ?? "POR_HORA") === "POR_HORA" ? "selected" : ""}>Por hora</option>
-              <option value="PRECIO_CERRADO" ${detail?.pricing_mode === "PRECIO_CERRADO" ? "selected" : ""}>Precio cerrado</option>
+              <option value="HOURLY" selected>Por hora</option>
             </select>
           </label>
           <label class="input-group">
