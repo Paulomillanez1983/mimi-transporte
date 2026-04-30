@@ -90,7 +90,8 @@ function normalizeProviderDocuments(rows = []) {
 }
 
 function isProviderPage() {
-  return (window.location.pathname.split("/").pop() || "").toLowerCase() === "prestador.html";
+  const page = (window.location.pathname.split("/").pop() || "").toLowerCase();
+  return page === "prestador.html" || page === "prestador";
 }
 
 function inferFileExtension(file) {
