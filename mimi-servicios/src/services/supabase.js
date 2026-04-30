@@ -4,7 +4,35 @@ let client = null;
 let authSubscription = null;
 
 function currentPageName() {
-  return window.location.pathname.split("/").pop() || "";
+  const cleanPath = window.location.pathname.replace(/\/+$/, "");
+  return cleanPath.split("/").pop() || "";
+}
+
+function servicesBasePath() {
+  const path = window.location.pathname || "/";
+  const marker = "/mimi-servicios/";
+  const markerIndex = path.indexOf(marker);
+
+  if (markerIndex >= 0) {
+    return path.slice(0, markerIndex + marker.length);
+  }
+
+  // Vercel clean URLs: /servicios and /prestador are rewrites to /mimi-servicios/*.html.
+  // OAuth redirects must go back to the real services files, not to the root /cliente(.html) app.
+  if (/\/(servicios|prestador)\/?$/i.test(path)) {
+    return "/mimi-servicios/";
+  }
+
+  // GitHub Pages keeps the repository name in the path.
+  if (path.includes("/mimi-transporte/")) {
+    return "/mimi-transporte/mimi-servicios/";
+  }
+
+  return "/mimi-servicios/";
+}
+
+function servicePageUrl(pageName) {
+  return new URL(`${servicesBasePath()}${pageName}`, window.location.origin).toString();
 }
 
 function projectRefFromUrl() {
@@ -110,17 +138,14 @@ export async function signInWithGoogle() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  const redirectTarget =
-    currentPageName() === "prestador.html"
-      ? "./prestador.html"
-      : "./cliente.html";
+  const isProviderEntry = /^(prestador|prestador\.html)$/i.test(currentPageName());
+  const redirectTarget = isProviderEntry ? "prestador.html" : "cliente.html";
+  const redirectTo = servicePageUrl(redirectTarget);
 
   sessionStorage.setItem(
     "mimi_services_auth_redirect_in_progress",
     redirectTarget
   );
-
-  const redirectTo = new URL(redirectTarget, window.location.href).toString();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -207,11 +232,14 @@ export async function redirectAfterLoginByRole(session) {
 
   // Si el usuario inició login desde prestador.html,
   // siempre debe volver a prestador.html aunque todavía no exista svc_providers.
-  if (preferred === "./prestador.html" || currentPageName() === "prestador.html") {
+  const preferredPage = String(preferred || "").replace(/^\.\//, "");
+  const currentPage = currentPageName();
+
+  if (preferredPage === "prestador.html" || currentPage === "prestador.html" || currentPage === "prestador") {
     sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
 
-    if (currentPageName() !== "prestador.html") {
-      window.location.href = "./prestador.html";
+    if (currentPage !== "prestador.html") {
+      window.location.href = servicePageUrl("prestador.html");
     }
 
     return;
@@ -219,21 +247,19 @@ export async function redirectAfterLoginByRole(session) {
 
   const role = await resolveSessionRole(session);
 
-  let target = role === "provider" ? "./prestador.html" : "./cliente.html";
+  let targetPage = role === "provider" ? "prestador.html" : "cliente.html";
 
-  if (preferred === "./cliente.html") {
-    target = "./cliente.html";
+  if (preferredPage === "cliente.html") {
+    targetPage = "cliente.html";
   }
 
   sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
 
-  const currentPath = currentPageName();
-
-  if (currentPath === target.replace("./", "")) {
+  if (currentPage === targetPage || (currentPage === "servicios" && targetPage === "cliente.html")) {
     return;
   }
 
-  window.location.href = target;
+  window.location.href = servicePageUrl(targetPage);
 }
 
 export async function invokeFunction(name, body = {}, options = {}) {
