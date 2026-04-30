@@ -9,9 +9,9 @@
   <meta name="theme-color" content="#1a56db">
   <meta
     name="description"
-    content="MIMI Servicios para clientes. Pedi profesionales cercanos con precio, ETA, chat y seguimiento."
+    content="MIMI Go para clientes. Pedi prestadores cercanos con precio, ETA, chat y seguimiento."
   >
-  <title>MIMI Servicios | Cliente</title>
+  <title>MIMI Go | Cliente</title>
 
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./favicon.ico" sizes="any">
@@ -36,9 +36,9 @@
         <span></span><span></span><span></span>
       </button>
 
-      <div class="brand-lockup" aria-label="MIMI Servicios">
+      <div class="brand-lockup" aria-label="MIMI Go">
         <div class="brand-mark">M</div>
-        <strong>MIMI <span>Servicios</span></strong>
+        <strong>MIMI <span>Go</span></strong>
       </div>
 
       <div class="header-actions">
@@ -66,24 +66,28 @@
           <span aria-hidden="true">💬</span>
           <b id="chatUnreadCount" hidden>0</b>
         </button>
-        <button class="profile-pill" id="authPrimaryButton" data-auth-action="login" type="button">
+        <button class="login-pill" id="authPrimaryButton" data-auth-action="login" type="button">
           Ingresar
         </button>
-        <button class="profile-pill" id="authSecondaryButton" type="button" hidden>
-          Salir
-        </button>
+        <div class="user-session-card" id="userSessionCard" hidden>
+          <img id="userAvatarImage" alt="" referrerpolicy="no-referrer">
+          <div>
+            <strong id="userSessionName">Cliente</strong>
+            <span id="userSessionEmail"></span>
+          </div>
+          <button id="authSecondaryButton" type="button">Salir</button>
+        </div>
       </div>
     </header>
 
     <main class="client-main" role="main">
       <div class="session-row">
         <span class="session-chip" id="sessionChip">Invitado</span>
-        <button class="ghost-link" id="switchToProvider" type="button">Soy prestador</button>
       </div>
 
       <section class="hero-text-client" id="clientHero" data-client-screen="home" aria-labelledby="heroTitle">
         <p>Buenos dias, <span id="clientGreetingName">Paulo</span> 👋</p>
-        <h1 id="heroTitle">Que profesional necesitas hoy?</h1>
+        <h1 id="heroTitle">Que prestador necesitas hoy?</h1>
       </section>
 
       <div
@@ -94,7 +98,7 @@
         aria-live="polite"
       ></div>
 
-      <section class="search-card" id="clientServicesScreen" data-client-screen="services" aria-label="Buscar profesionales">
+      <section class="search-card" id="clientServicesScreen" data-client-screen="home" aria-label="Buscar prestadores">
         <div class="search-card-top">
           <div>
             <span class="eyebrow">Cliente</span>
@@ -178,7 +182,7 @@
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
               <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path>
             </svg>
-            Buscar profesionales
+            Buscar prestadores
           </button>
         </form>
       </section>
@@ -216,7 +220,7 @@
       <section class="providers-section" id="providerResults" data-client-section="providers" aria-labelledby="providersTitle">
         <div class="section-header">
           <div>
-            <h2 id="providersTitle">Todos los profesionales</h2>
+            <h2 id="providersTitle">Todos los prestadores</h2>
             <span id="providersMeta">Esperando busqueda</span>
           </div>
           <button class="sort-chip" type="button" aria-label="Ordenar resultados">
@@ -286,13 +290,21 @@
 
     <aside class="drawer" id="supportDrawer" aria-hidden="true" aria-labelledby="supportDrawerTitle">
       <div class="drawer-header">
-        <h3 id="supportDrawerTitle">Soporte MIMI</h3>
+        <h3 id="supportDrawerTitle">Soporte MIMI Go</h3>
         <button class="icon-button" type="button" data-close-drawer="supportDrawer" aria-label="Cerrar soporte">×</button>
       </div>
       <div class="drawer-body">
-        <div class="client-empty-state">
-          <strong>Centro de ayuda</strong>
-          <span>Cuando conectemos conversacion de soporte, este panel va a mostrar tus consultas.</span>
+        <div class="support-panel">
+          <div class="client-empty-state">
+            <strong>Centro de ayuda</strong>
+            <span id="supportStatusText">Contanos que paso y el equipo MIMI Go lo va a revisar.</span>
+          </div>
+          <form class="support-form" id="supportForm">
+            <label class="sr-only" for="supportInput">Escribi tu consulta</label>
+            <textarea id="supportInput" maxlength="800" rows="4" placeholder="Escribi tu consulta de soporte..."></textarea>
+            <button class="btn-primary" type="submit">Enviar consulta</button>
+          </form>
+          <div class="support-thread" id="supportThread" aria-live="polite"></div>
         </div>
       </div>
     </aside>
