@@ -14,7 +14,7 @@
 <link rel="shortcut icon" href="./assets/icons/icon-192x192.png">
 <link rel="apple-touch-icon" href="./assets/icons/icon-192x192.png">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link rel="stylesheet" href="./mimi-transporte.css?v=20260426-legal-5">
+<link rel="stylesheet" href="./mimi-transporte.css?v=20260430-client-hub-ui-1">
   <link rel="stylesheet" href="./css/client-trip-live.css?v=20260418-5">
 <link rel="stylesheet" href="./css/trip-chat.css?v=20260420-12">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
@@ -790,9 +790,11 @@ async function buscarDireccion(query) {
 <header class="header" role="banner">
   <div class="header-content">
     <div class="vehicle-section" aria-hidden="true">
+      <div class="client-header-city"></div>
+      <div class="client-header-headlight"></div>
       <img
         class="vehicle-img"
-        src="./jeep-renegade.png"
+        src="./assets/auto-mimicar-safe.png"
         alt=""
         loading="eager"
         decoding="async"
@@ -800,7 +802,8 @@ async function buscarDireccion(query) {
     </div>
 
     <div class="logo-section">
-      <div class="logo-title">MIMICAR</div>
+      <div class="logo-title">MIMICar</div>
+      <div class="logo-subtitle">Pedí tu viaje seguro</div>
     </div>
 
     <div class="header-icons">
