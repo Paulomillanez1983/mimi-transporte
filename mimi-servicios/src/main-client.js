@@ -667,7 +667,7 @@ async function handleAuthPrimary() {
     return;
   }
 
-  await signInWithGoogle();
+  await signInWithGoogle({ mode: "client" });
 }
 
 async function handleSearchSubmit(event) {
