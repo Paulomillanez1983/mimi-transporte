@@ -4215,3 +4215,359 @@ body.legal-gate-open {
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
   box-shadow: 0 14px 30px rgba(22, 163, 74, 0.34) !important;
 }
+
+/* ==========================================
+   CLIENT HEADER 2026 - HUB CLIENTES SYNC
+   Solo UI: alinea la cabecera de index.html con hub-clientes.
+   No modifica lógica, IDs, eventos ni flujo JS.
+========================================== */
+:root {
+  --client-hub-bg: #030712;
+  --client-hub-blue: #2f73ff;
+  --client-hub-blue-soft: #7cc7ff;
+  --client-hub-purple: #8b5cf6;
+  --client-hub-green: #35d86f;
+  --client-hub-muted: #aeb9d1;
+}
+
+.header {
+  background:
+    radial-gradient(circle at 14% 8%, rgba(47,115,255,.26), transparent 30%),
+    radial-gradient(circle at 86% 14%, rgba(139,92,246,.24), transparent 32%),
+    linear-gradient(180deg, #020617 0%, #030712 58%, #020617 100%) !important;
+  padding: calc(14px + var(--safe-top)) clamp(13px, 4vw, 20px) 0 !important;
+  border-bottom-left-radius: 28px !important;
+  border-bottom-right-radius: 28px !important;
+  box-shadow: 0 20px 48px rgba(0,0,0,.30) !important;
+  margin-bottom: 10px !important;
+  min-height: 174px;
+}
+
+.header::before {
+  background:
+    linear-gradient(90deg, rgba(3,7,18,.98) 0%, rgba(3,7,18,.82) 38%, rgba(3,7,18,.25) 66%, rgba(3,7,18,.04) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.04) 0%, rgba(3,7,18,.34) 100%) !important;
+  z-index: 2;
+}
+
+.header::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 72px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(2,6,23,.72) 100%);
+  z-index: 3;
+}
+
+.header-content {
+  max-width: 600px !important;
+  min-height: 150px;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  grid-template-areas:
+    "brand user"
+    "vehicle vehicle" !important;
+  grid-template-rows: auto 1fr !important;
+  gap: 8px 10px !important;
+  align-items: start !important;
+  overflow: visible;
+}
+
+.logo-section {
+  position: relative;
+  z-index: 8;
+  padding-top: 0 !important;
+  max-width: 250px;
+}
+
+.logo-title {
+  font-size: clamp(1.45rem, 6.4vw, 2.15rem) !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.045em !important;
+  line-height: .95 !important;
+  color: #ffffff !important;
+  text-shadow: 0 10px 24px rgba(0,0,0,.42) !important;
+}
+
+.logo-title::after {
+  content: "";
+  display: inline-block;
+  width: .36em;
+  height: .36em;
+  margin-left: .18em;
+  border-radius: 50%;
+  background: var(--client-hub-green);
+  box-shadow: 0 0 18px rgba(53,216,111,.9);
+  transform: translateY(-.16em);
+}
+
+.logo-subtitle {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px !important;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(47,115,255,.14);
+  border: 1px solid rgba(124,199,255,.18);
+  color: #d7e6ff !important;
+  font-size: clamp(.64rem, 2.6vw, .78rem) !important;
+  font-weight: 900 !important;
+  letter-spacing: .055em !important;
+  text-transform: uppercase;
+  white-space: nowrap;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.logo-subtitle::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--client-hub-blue);
+  box-shadow: 0 0 14px rgba(47,115,255,.95);
+  flex: 0 0 auto;
+}
+
+.vehicle-section {
+  grid-area: vehicle !important;
+  position: absolute !important;
+  inset: 0 !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  display: block !important;
+  overflow: hidden !important;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.client-header-city {
+  position: absolute;
+  top: 20px;
+  right: -14px;
+  bottom: 34px;
+  width: 64%;
+  opacity: .42;
+  background: linear-gradient(90deg,
+    transparent 0 8%, rgba(255,255,255,.10) 8% 14%,
+    transparent 14% 21%, rgba(255,255,255,.08) 21% 28%,
+    transparent 28% 40%, rgba(255,255,255,.12) 40% 48%,
+    transparent 48% 58%, rgba(255,255,255,.09) 58% 66%,
+    transparent 66% 76%, rgba(255,255,255,.12) 76% 86%,
+    transparent 86% 100%);
+  clip-path: polygon(0 100%,0 55%,8% 55%,8% 40%,14% 40%,14% 100%,21% 100%,21% 62%,28% 62%,28% 38%,40% 38%,40% 100%,48% 100%,48% 50%,58% 50%,58% 30%,66% 30%,66% 100%,76% 100%,76% 48%,86% 48%,86% 36%,96% 36%,96% 100%);
+  z-index: 1;
+}
+
+.client-header-headlight {
+  position: absolute;
+  right: clamp(128px, 36vw, 240px);
+  bottom: 42px;
+  width: clamp(160px, 48vw, 300px);
+  height: 52px;
+  background: linear-gradient(90deg, rgba(124,199,255,.68), transparent);
+  filter: blur(16px);
+  opacity: .82;
+  z-index: 2;
+}
+
+.vehicle-img {
+  position: absolute !important;
+  right: clamp(-26px, -4vw, 8px) !important;
+  left: auto !important;
+  bottom: -8px !important;
+  width: clamp(230px, 58vw, 385px) !important;
+  max-width: 72% !important;
+  height: auto !important;
+  object-fit: contain !important;
+  opacity: .96;
+  z-index: 4 !important;
+  filter: drop-shadow(0 24px 34px rgba(0,0,0,.58)) !important;
+}
+
+.vehicle-section::after {
+  left: auto !important;
+  right: clamp(12px, 7vw, 62px) !important;
+  bottom: 2px !important;
+  width: clamp(190px, 48vw, 330px) !important;
+  height: 28px !important;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.42), transparent 72%) !important;
+  filter: blur(10px) !important;
+  z-index: 3 !important;
+}
+
+.header-icons,
+.header-user {
+  display: contents !important;
+}
+
+#headerUser {
+  grid-area: user !important;
+  justify-self: end !important;
+  align-self: start !important;
+  position: relative !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 12 !important;
+  margin: 0 !important;
+}
+
+.header-login-btn {
+  background: rgba(255,255,255,.12) !important;
+  border: 1px solid rgba(255,255,255,.18) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,.26) !important;
+}
+
+.header-login-btn:hover,
+.header-login-btn:focus-visible {
+  background: rgba(255,255,255,.18) !important;
+}
+
+.user-session-box {
+  background: rgba(15,23,42,.74) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  box-shadow: 0 14px 30px rgba(0,0,0,.30) !important;
+}
+
+.trip-notifications {
+  z-index: 13;
+}
+
+.hero-text {
+  padding-top: 12px !important;
+}
+
+@media (max-width: 480px) {
+  .header {
+    min-height: 158px !important;
+    padding: calc(12px + var(--safe-top)) 12px 0 !important;
+    border-bottom-left-radius: 24px !important;
+    border-bottom-right-radius: 24px !important;
+  }
+
+  .header-content {
+    min-height: 136px !important;
+    gap: 6px 8px !important;
+  }
+
+  .logo-section {
+    max-width: 190px;
+  }
+
+  .logo-title {
+    font-size: clamp(1.34rem, 8.2vw, 1.82rem) !important;
+  }
+
+  .logo-subtitle {
+    margin-top: 8px !important;
+    padding: 6px 9px;
+    font-size: clamp(.56rem, 2.65vw, .66rem) !important;
+    letter-spacing: .045em !important;
+  }
+
+  .vehicle-img {
+    right: clamp(-34px, -7vw, -10px) !important;
+    bottom: -5px !important;
+    width: clamp(236px, 70vw, 310px) !important;
+    max-width: 82% !important;
+  }
+
+  .client-header-city {
+    right: -28px;
+    top: 26px;
+    bottom: 36px;
+    width: 72%;
+    opacity: .36;
+  }
+
+  .client-header-headlight {
+    right: 112px;
+    bottom: 42px;
+    width: 175px;
+    height: 44px;
+    opacity: .72;
+  }
+
+  #headerUser {
+    transform: translateY(1px);
+  }
+
+  .header-login-btn {
+    min-height: 38px !important;
+    padding: 8px 12px !important;
+    font-size: .76rem !important;
+  }
+
+  .header-login-btn span:last-child {
+    display: inline !important;
+  }
+
+  .user-session-box {
+    grid-template-columns: 34px 1fr auto !important;
+    max-width: 184px !important;
+    min-height: 38px !important;
+    padding: 3px 4px 3px 3px !important;
+    border-radius: 14px !important;
+  }
+
+  .user-avatar {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .user-name {
+    font-size: .70rem !important;
+  }
+
+  .user-email {
+    font-size: .58rem !important;
+  }
+
+  .header-logout-btn {
+    min-height: 26px !important;
+    padding: 4px 6px !important;
+    font-size: .62rem !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .header {
+    min-height: 150px !important;
+  }
+
+  .header-content {
+    min-height: 128px !important;
+  }
+
+  .logo-section {
+    max-width: 168px;
+  }
+
+  .logo-title {
+    font-size: clamp(1.22rem, 8vw, 1.56rem) !important;
+  }
+
+  .logo-subtitle {
+    max-width: 156px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .vehicle-img {
+    right: -38px !important;
+    width: clamp(224px, 73vw, 286px) !important;
+  }
+
+  .header-login-btn span:last-child {
+    display: none !important;
+  }
+
+  .header-login-btn {
+    width: 38px !important;
+    min-width: 38px !important;
+    padding: 0 !important;
+    border-radius: 14px !important;
+  }
+}
