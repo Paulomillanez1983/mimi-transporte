@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'mimi-client-v10';
+const CACHE_NAME = 'mimi-client-v11-services-routing';
 const APP_BASE_PATH = (() => {
   const path = self.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
@@ -33,6 +33,14 @@ const DEFAULT_ICON = `${APP_BASE_PATH}assets/icons/icon-192x192.png`;
 const DEFAULT_BADGE = `${APP_BASE_PATH}assets/icons/badge-icon.png`;
 const DEFAULT_URL = `${APP_BASE_PATH}index.html`;
 const DEFAULT_TAG = 'mimi-client-notification';
+
+function isServicesNavigationPath(pathname) {
+  return (
+    pathname === `${APP_BASE_PATH}servicios` ||
+    pathname === `${APP_BASE_PATH}prestador` ||
+    pathname.startsWith(`${APP_BASE_PATH}mimi-servicios/`)
+  );
+}
 
 firebase.initializeApp({
   apiKey: 'AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjY',
@@ -97,6 +105,17 @@ function normalizeUrl(rawUrl) {
 function getNavigationFallback(requestUrl) {
   try {
     const url = new URL(requestUrl);
+
+    if (isServicesNavigationPath(url.pathname)) {
+      if (
+        url.pathname === `${APP_BASE_PATH}prestador` ||
+        url.pathname.endsWith('/prestador.html')
+      ) {
+        return `${APP_BASE_PATH}mimi-servicios/prestador.html`;
+      }
+
+      return `${APP_BASE_PATH}mimi-servicios/cliente.html`;
+    }
 
     if (url.pathname.endsWith('/chofer-panel.html')) {
       return `${APP_BASE_PATH}chofer-panel.html`;
@@ -230,6 +249,10 @@ self.addEventListener('fetch', (event) => {
           if (response && response.status === 200) {
             const cloned = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
+              if (sameOrigin) {
+                cache.put(request, cloned.clone()).catch(() => {});
+              }
+
               cache.put(fallbackUrl, cloned).catch(() => {});
             });
           }
