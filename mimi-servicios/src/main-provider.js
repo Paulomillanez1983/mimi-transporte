@@ -680,7 +680,7 @@ container.style.background = "";
         "./prestador.html"
       );
 
-      await signInWithGoogle();
+      await signInWithGoogle({ mode: "provider" });
     } catch (err) {
       googleButton.disabled = false;
       document.body.classList.remove("provider-auth-submitting");
