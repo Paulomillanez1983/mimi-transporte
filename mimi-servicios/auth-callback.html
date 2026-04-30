@@ -66,7 +66,15 @@
     import { getCurrentSession } from "./src/services/supabase.js";
 
     const params = new URLSearchParams(window.location.search);
-    const mode = params.get("mode") === "provider" ? "provider" : "client";
+    const storedMode =
+      sessionStorage.getItem("mimi_services_auth_intent") ||
+      localStorage.getItem("mimi_services_auth_intent") ||
+      sessionStorage.getItem("mimi_services_active_mode") ||
+      localStorage.getItem("mimi_services_active_mode");
+    const mode =
+      params.get("mode") === "provider" || storedMode === "provider"
+        ? "provider"
+        : "client";
     const target = mode === "provider" ? "./prestador.html" : "./cliente.html";
 
     try {
