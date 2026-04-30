@@ -33,7 +33,6 @@ async function requireSession() {
 function normalizePricingMode(value) {
   const mode = String(value ?? "").trim().toUpperCase();
 
-  if (mode === "FIXED") return "FIXED";
   if (mode === "POR_HORA" || mode === "HOURLY") return "HOURLY";
 
   return "HOURLY";
