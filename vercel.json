@@ -1,0 +1,41 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/cliente",
+      "destination": "/hub-clientes.html"
+    },
+    {
+      "source": "/viaje",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/servicios",
+      "destination": "/mimi-servicios/cliente.html"
+    },
+    {
+      "source": "/operadores",
+      "destination": "/hub-operadores.html"
+    },
+    {
+      "source": "/chofer",
+      "destination": "/login-chofer.html"
+    },
+    {
+      "source": "/prestador",
+      "destination": "/mimi-servicios/prestador.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/og/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, must-revalidate"
+        }
+      ]
+    }
+  ]
+}
