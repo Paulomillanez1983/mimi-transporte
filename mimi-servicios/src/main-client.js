@@ -32,7 +32,6 @@ import {
 } from "./services/supabase.js";
 import {
   patchState,
-  setActiveMode,
   setState,
   state,
   subscribe
@@ -171,7 +170,7 @@ function setClientView(view = "home", options = {}) {
 
   const targetByView = {
     home: "clientHero",
-    services: "categoryGrid",
+    services: "requestSummaryPanel",
     providers: "providerResults",
     activity: "requestSummaryPanel",
     support: "supportDrawer"
@@ -574,7 +573,14 @@ async function hydrateLiveContext(activeRequestOverride) {
 
 async function bootstrapAsyncData() {
   const session = await bootstrapSession();
-  const categories = await loadCategories();
+  let categories = [];
+
+  try {
+    categories = await loadCategories();
+  } catch (error) {
+    console.warn("[MIMI Go] No se pudieron cargar categorias remotas, uso fallback local.", error);
+    categories = appConfig.categories ?? [];
+  }
 
   if (Array.isArray(categories) && categories.length) {
     appConfig.categories = categories.map((category) => ({
@@ -595,6 +601,7 @@ async function bootstrapAsyncData() {
     draft.session.role = "client";
     draft.session.userEmail = session.userEmail ?? null;
     draft.session.userName = session.userName ?? null;
+    draft.session.userAvatar = session.userAvatar ?? null;
     draft.meta.backendMode = session.userId
       ? "supabase"
       : hasSupabaseEnv()
@@ -667,13 +674,17 @@ async function handleSearchSubmit(event) {
   event.preventDefault();
   syncDraftFromForm();
 
+  if (!state.ui.selectedCategoryId && appConfig.categories?.[0]?.id) {
+    patchState("ui.selectedCategoryId", appConfig.categories[0].id);
+  }
+
   const searchButton = document.getElementById("searchProvidersButton");
 
   setButtonLoading(
     searchButton,
     true,
     "Buscando...",
-    "Ver prestadores y cotizar"
+    "Buscar prestadores"
   );
 
   try {
@@ -686,18 +697,23 @@ async function handleSearchSubmit(event) {
       draft.client.providers = providers;
       draft.ui.selectedProviderCandidateId =
         providers[0]?.provider_id ?? draft.ui.selectedProviderCandidateId ?? null;
+      draft.ui.hasCompletedClientSearch = providers.length > 0;
       draft.meta.error = null;
       draft.meta.info = providers.length
         ? "Prestadores actualizados."
         : "No encontramos prestadores para este criterio.";
       draft.meta.lastSearchAt = new Date().toISOString();
     });
+
+    if (providers.length) {
+      setClientView("providers");
+    }
   } finally {
     setButtonLoading(
       searchButton,
       false,
       "Buscando...",
-      "Ver prestadores y cotizar"
+      "Buscar prestadores"
     );
   }
 }
@@ -803,11 +819,6 @@ function bindBasicControls() {
     }
   });
 
-  document.getElementById("switchToProvider")?.addEventListener("click", () => {
-    setActiveMode("provider");
-    window.location.href = "./prestador.html";
-  });
-
   document.getElementById("enterServicesHub")?.addEventListener("click", () => {
     patchState("ui.appEntered", true);
   });
@@ -902,6 +913,33 @@ function bindBasicControls() {
     }
   });
 
+  document.getElementById("supportForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const input = document.getElementById("supportInput");
+    const thread = document.getElementById("supportThread");
+    const status = document.getElementById("supportStatusText");
+    const body = input?.value?.trim();
+
+    if (!body) return;
+
+    if (thread) {
+      const item = document.createElement("article");
+      item.className = "support-message is-own";
+      item.innerHTML = `<strong>Vos</strong><p></p><span>Enviado ahora</span>`;
+      item.querySelector("p").textContent = body;
+      thread.prepend(item);
+    }
+
+    if (status) {
+      status.textContent = state.session.userId
+        ? "Recibimos tu consulta. Cuando conectemos el endpoint de soporte cliente, saldra al panel del equipo."
+        : "Tu consulta quedo preparada. Inicia sesion para asociarla a tu cuenta.";
+    }
+
+    input.value = "";
+  });
+
   document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
     try {
       const viewButton = event.target.closest("[data-client-view]");
@@ -947,7 +985,6 @@ function bindBasicControls() {
       const categoryButton = event.target.closest("[data-category-id]");
       if (categoryButton) {
         patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
-        setClientView("services", { behavior: "auto" });
         return;
       }
 
@@ -963,7 +1000,7 @@ function bindBasicControls() {
       if (selectProvider) {
         if (!selectProvider.dataset.providerSelect) return;
         await handleProviderSelection(selectProvider.dataset.providerSelect);
-        setClientView("activity");
+        setClientView("services");
         return;
       }
 
@@ -1094,11 +1131,6 @@ if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
       document.title,
       window.location.pathname + window.location.search
     );
-  }
-
-  if (state.ui.activeMode === "provider") {
-    window.location.href = "./prestador.html";
-    return;
   }
 
   setupRealtime();
