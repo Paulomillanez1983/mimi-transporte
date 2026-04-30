@@ -1,14 +1,14 @@
 {
-  "id": "/mimi-transporte/mimi-servicios/prestador.html",
-  "name": "MIMI Servicios - Panel Prestador",
-  "short_name": "MIMI Prestador",
-  "description": "Panel del prestador para MIMI Servicios",
-  "start_url": "./prestador.html",
+  "id": "/mimi-transporte/mimi-servicios/cliente.html",
+  "name": "MIMI Go",
+  "short_name": "MIMI Go",
+  "description": "App cliente para pedir prestadores cercanos con MIMI Go",
+  "start_url": "./cliente.html",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "background_color": "#f8fafc",
+  "theme_color": "#1a56db",
   "orientation": "portrait",
   "lang": "es-AR",
   "dir": "ltr",
@@ -35,10 +35,10 @@
   ],
   "shortcuts": [
     {
-      "name": "Ponerme Online",
-      "short_name": "Online",
-      "description": "Activar modo online para recibir servicios",
-      "url": "./prestador.html?action=go-online",
+      "name": "Pedir prestador",
+      "short_name": "Pedir",
+      "description": "Abrir MIMI Go para pedir un prestador",
+      "url": "./cliente.html?view=home",
       "icons": [
         {
           "src": "./assets/icons/icon-192.png",
@@ -48,23 +48,10 @@
       ]
     },
     {
-      "name": "Mi Agenda",
-      "short_name": "Agenda",
-      "description": "Ver servicios programados",
-      "url": "./prestador.html?view=scheduled",
-      "icons": [
-        {
-          "src": "./assets/icons/icon-192.png",
-          "sizes": "192x192",
-          "type": "image/png"
-        }
-      ]
-    },
-    {
-      "name": "Configuración",
-      "short_name": "Ajustes",
-      "description": "Configurar precios y servicios",
-      "url": "./prestador.html?view=settings",
+      "name": "Ver prestadores",
+      "short_name": "Prestadores",
+      "description": "Ver prestadores cercanos disponibles",
+      "url": "./cliente.html?view=providers",
       "icons": [
         {
           "src": "./assets/icons/icon-192.png",
