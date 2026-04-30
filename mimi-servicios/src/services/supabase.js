@@ -28,10 +28,8 @@ function servicePageUrl(pageName) {
   return new URL(`${servicesBasePath()}${pageName}`, window.location.origin).toString();
 }
 
-function authCallbackUrl(mode) {
-  const url = new URL(`${servicesBasePath()}auth-callback.html`, window.location.origin);
-  url.searchParams.set("mode", mode === "provider" ? "provider" : "client");
-  return url.toString();
+function authCallbackUrl() {
+  return new URL(`${servicesBasePath()}auth-callback.html`, window.location.origin).toString();
 }
 
 function projectRefFromUrl() {
@@ -164,7 +162,7 @@ export async function signInWithGoogle(options = {}) {
 
   const mode = currentEntryMode(options?.mode);
   const redirectTarget = mode === "provider" ? "prestador.html" : "cliente.html";
-  const redirectTo = authCallbackUrl(mode);
+  const redirectTo = authCallbackUrl();
 
   console.log("[MIMI servicios auth] redirectTo:", redirectTo);
 
