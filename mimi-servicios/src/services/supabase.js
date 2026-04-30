@@ -3,6 +3,9 @@ import { appConfig } from "../config.js";
 let client = null;
 let authSubscription = null;
 
+const AUTH_REDIRECT_KEY = "mimi_services_auth_redirect_in_progress";
+const AUTH_INTENT_KEY = "mimi_services_auth_intent";
+
 function currentPageName() {
   const cleanPath = window.location.pathname.replace(/\/+$/, "");
   return cleanPath.split("/").pop() || "";
@@ -46,7 +49,9 @@ function authStorageKeys() {
 export function forceCleanSession() {
   try {
     authStorageKeys().forEach((key) => localStorage.removeItem(key));
-    sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
+    sessionStorage.removeItem(AUTH_REDIRECT_KEY);
+    sessionStorage.removeItem(AUTH_INTENT_KEY);
+    localStorage.removeItem(AUTH_INTENT_KEY);
   } catch {
     // noop
   }
@@ -124,22 +129,49 @@ export async function getCurrentUser() {
   return session?.user ?? null;
 }
 
-export async function signInWithGoogle() {
+function currentEntryMode(explicitMode = null) {
+  if (explicitMode === "provider" || explicitMode === "client") {
+    return explicitMode;
+  }
+
+  const page = currentPageName().toLowerCase();
+  if (page === "prestador" || page === "prestador.html") {
+    return "provider";
+  }
+
+  return "client";
+}
+
+function clearAuthRedirectIntent() {
+  try {
+    sessionStorage.removeItem(AUTH_REDIRECT_KEY);
+    sessionStorage.removeItem(AUTH_INTENT_KEY);
+    localStorage.removeItem(AUTH_INTENT_KEY);
+  } catch {
+    // noop
+  }
+}
+
+export async function signInWithGoogle(options = {}) {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
 
-  const isProviderEntry = /^(prestador|prestador\.html)$/i.test(currentPageName());
-const redirectTarget = isProviderEntry ? "prestador.html" : "cliente.html";
+  const mode = currentEntryMode(options?.mode);
+  const redirectTarget = mode === "provider" ? "prestador.html" : "cliente.html";
 
-const redirectTo = window.location.origin.includes("github.io")
-  ? servicePageUrl(redirectTarget)
-  : `${window.location.origin}/mimi-servicios/${redirectTarget.replace(".html", "")}`;
+  const redirectTo = servicePageUrl(redirectTarget);
 
-console.log("[MIMI servicios auth] redirectTo:", redirectTo);
-  sessionStorage.setItem(
-    "mimi_services_auth_redirect_in_progress",
-    redirectTarget
-  );
+  console.log("[MIMI servicios auth] redirectTo:", redirectTo);
+
+  try {
+    sessionStorage.setItem(AUTH_REDIRECT_KEY, redirectTarget);
+    sessionStorage.setItem(AUTH_INTENT_KEY, mode);
+    localStorage.setItem(AUTH_INTENT_KEY, mode);
+    localStorage.setItem("mimi_services_active_mode", mode);
+    sessionStorage.setItem("mimi_services_active_mode", mode);
+  } catch {
+    // noop
+  }
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -220,21 +252,25 @@ export async function resolveSessionRole(session) {
 }
 
 export async function redirectAfterLoginByRole(session) {
-  const preferred = sessionStorage.getItem(
-    "mimi_services_auth_redirect_in_progress"
-  );
+  const preferred =
+    sessionStorage.getItem(AUTH_REDIRECT_KEY) ||
+    (sessionStorage.getItem(AUTH_INTENT_KEY) === "provider" ||
+    localStorage.getItem(AUTH_INTENT_KEY) === "provider"
+      ? "prestador.html"
+      : null);
 
   const preferredPage = String(preferred || "").replace(/^\.\//, "");
   const currentPage = currentPageName();
 
   if (
     preferredPage === "prestador.html" ||
+    preferredPage === "prestador" ||
     currentPage === "prestador.html" ||
     currentPage === "prestador"
   ) {
-    sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
+    clearAuthRedirectIntent();
 
-    if (currentPage !== "prestador.html") {
+    if (currentPage !== "prestador.html" && currentPage !== "prestador") {
       window.location.href = servicePageUrl("prestador.html");
     }
 
@@ -249,10 +285,12 @@ export async function redirectAfterLoginByRole(session) {
     targetPage = "cliente.html";
   }
 
-  sessionStorage.removeItem("mimi_services_auth_redirect_in_progress");
+  clearAuthRedirectIntent();
 
   if (
     currentPage === targetPage ||
+    (currentPage === "prestador" && targetPage === "prestador.html") ||
+    (currentPage === "cliente" && targetPage === "cliente.html") ||
     (currentPage === "servicios" && targetPage === "cliente.html")
   ) {
     return;
