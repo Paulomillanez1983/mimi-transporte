@@ -4571,3 +4571,105 @@ body.legal-gate-open {
     border-radius: 14px !important;
   }
 }
+
+/* =========================================================
+   MIMICar Cliente · Hero UI 2026
+   SOLO VISUAL: no modifica lógica, IDs, eventos ni endpoints.
+========================================================= */
+body{
+  background:linear-gradient(180deg, rgba(3,7,18,.02) 0%, rgba(248,250,252,.96) 44%, #f7f9fd 100%), radial-gradient(circle at 50% 0%, rgba(29,78,216,.18), transparent 42%), #f7f9fd !important;
+}
+.header{
+  isolation:isolate !important;
+  min-height:clamp(300px, 40vh, 420px) !important;
+  padding:calc(18px + var(--safe-top)) clamp(16px, 5vw, 28px) 0 !important;
+  margin-bottom:0 !important;
+  overflow:hidden !important;
+  border-bottom-left-radius:0 !important;
+  border-bottom-right-radius:0 !important;
+  box-shadow:none !important;
+  background:linear-gradient(180deg, rgba(1,6,20,.04) 0%, rgba(1,6,20,.16) 52%, rgba(247,249,253,1) 100%), radial-gradient(circle at 76% 22%, rgba(255,194,86,.18), transparent 18%), radial-gradient(circle at 16% 28%, rgba(17,108,255,.34), transparent 28%), linear-gradient(135deg, #020817 0%, #071937 48%, #10071d 100%) !important;
+}
+.header::before{
+  content:"" !important; position:absolute !important; inset:0 !important; z-index:-3 !important; pointer-events:none !important;
+  background:linear-gradient(to bottom, rgba(255,255,255,.08), transparent 20%), repeating-linear-gradient(90deg, transparent 0 26px, rgba(255,255,255,.10) 27px 28px, transparent 29px 46px), linear-gradient(to top, rgba(2,6,23,.78) 0 18%, transparent 19% 100%) !important;
+  opacity:.44 !important; mask-image:linear-gradient(to bottom, transparent 0%, #000 28%, #000 72%, transparent 100%); -webkit-mask-image:linear-gradient(to bottom, transparent 0%, #000 28%, #000 72%, transparent 100%);
+}
+.header::after{
+  content:"" !important; position:absolute !important; left:0 !important; right:0 !important; bottom:-1px !important; height:34% !important; z-index:4 !important; pointer-events:none !important;
+  background:linear-gradient(180deg, rgba(247,249,253,0) 0%, rgba(247,249,253,.74) 42%, #f7f9fd 100%) !important;
+}
+.header-content{
+  max-width:600px !important; min-height:clamp(282px, 38vh, 390px) !important; margin:0 auto !important; display:grid !important;
+  grid-template-columns:1fr auto !important; grid-template-rows:auto auto 1fr !important; grid-template-areas:"brand bell" "login bell" "hero hero" !important;
+  gap:18px 12px !important; align-items:start !important; position:relative !important; z-index:5 !important;
+}
+.logo-section{grid-area:brand !important; padding:0 !important; margin:0 !important; align-items:flex-start !important; justify-content:flex-start !important; z-index:9 !important;}
+.logo-title{font-size:clamp(2rem, 9.2vw, 3.2rem) !important; line-height:.95 !important; font-weight:950 !important; letter-spacing:-.055em !important; color:#fff !important; text-shadow:0 4px 18px rgba(0,0,0,.38) !important;}
+.logo-title::after{content:""; display:inline-block; width:.34em; height:.34em; margin-left:.13em; border-radius:50%; background:#22d66b; box-shadow:0 0 18px rgba(34,214,107,.72); vertical-align:.05em;}
+.logo-subtitle{display:none !important;}
+.header-icons{grid-area:bell !important; display:flex !important; justify-self:end !important; align-self:start !important; z-index:12 !important;}
+.header-notifications-wrapper{position:relative !important;}
+.trip-notifications{width:56px !important; height:56px !important; min-width:56px !important; border-radius:18px !important; background:rgba(255,255,255,.12) !important; border:1px solid rgba(255,255,255,.18) !important; color:#fff !important; box-shadow:0 18px 38px rgba(0,0,0,.30) !important; backdrop-filter:blur(14px) !important; -webkit-backdrop-filter:blur(14px) !important;}
+.header-user,#headerUser{grid-area:login !important; display:flex !important; justify-self:start !important; align-self:start !important; z-index:11 !important; position:relative !important; right:auto !important; bottom:auto !important; top:auto !important; margin:0 !important;}
+.header-login-btn{min-height:58px !important; padding:0 24px 0 14px !important; gap:12px !important; border-radius:22px !important; font-size:clamp(1rem, 4.2vw, 1.18rem) !important; font-weight:900 !important; letter-spacing:-.02em !important; color:#fff !important; background:linear-gradient(135deg, rgba(30,41,79,.70), rgba(15,23,42,.42)) !important; border:1px solid rgba(255,255,255,.20) !important; box-shadow:0 18px 40px rgba(0,0,0,.30) !important; backdrop-filter:blur(18px) !important; -webkit-backdrop-filter:blur(18px) !important;}
+.header-login-btn span:first-child{width:44px !important; height:44px !important; min-width:44px !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; border-radius:16px !important; background:linear-gradient(135deg, rgba(37,99,235,.98), rgba(29,78,216,.86)) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 10px 22px rgba(37,99,235,.25) !important; font-size:1.15rem !important;}
+.header-login-btn span:last-child{display:inline !important;}
+.user-session-box{min-height:58px !important; max-width:min(84vw, 300px) !important; border-radius:22px !important; background:linear-gradient(135deg, rgba(30,41,79,.76), rgba(15,23,42,.52)) !important; border:1px solid rgba(255,255,255,.20) !important; box-shadow:0 18px 40px rgba(0,0,0,.30) !important; backdrop-filter:blur(18px) !important; -webkit-backdrop-filter:blur(18px) !important;}
+.vehicle-section{grid-area:hero !important; position:absolute !important; inset:auto -24px -8px 0 !important; height:72% !important; min-height:210px !important; margin:0 !important; overflow:visible !important; display:block !important; z-index:6 !important; pointer-events:none !important;}
+.client-header-city{position:absolute !important; inset:-60px -30px 22% -30px !important; opacity:.64 !important; background:radial-gradient(circle at 78% 55%, rgba(255,191,89,.82) 0 4px, transparent 5px), linear-gradient(to top, rgba(15,23,42,.78) 0 28%, transparent 29%), linear-gradient(to top, rgba(255,255,255,.16) 0 32%, transparent 33%) 12% 100%/7% 78% no-repeat, linear-gradient(to top, rgba(255,255,255,.14) 0 36%, transparent 37%) 30% 100%/8% 58% no-repeat, linear-gradient(to top, rgba(255,255,255,.18) 0 30%, transparent 31%) 48% 100%/10% 92% no-repeat, linear-gradient(to top, rgba(255,255,255,.12) 0 38%, transparent 39%) 68% 100%/8% 70% no-repeat, linear-gradient(to top, rgba(255,255,255,.10) 0 40%, transparent 41%) 84% 100%/9% 82% no-repeat !important; filter:blur(.2px) !important; z-index:0 !important;}
+.client-header-headlight{position:absolute !important; right:26% !important; bottom:35% !important; width:36% !important; height:11% !important; opacity:.62 !important; background:radial-gradient(ellipse at center, rgba(124,196,255,.90), rgba(37,99,235,.32) 42%, transparent 72%) !important; filter:blur(12px) !important; transform:rotate(-5deg) !important; z-index:1 !important;}
+.vehicle-img{position:absolute !important; right:clamp(-70px, -8vw, -22px) !important; left:auto !important; bottom:clamp(18px, 3vw, 34px) !important; width:clamp(340px, 78vw, 520px) !important; max-width:none !important; height:auto !important; z-index:4 !important; filter:drop-shadow(0 28px 34px rgba(0,0,0,.45)) !important;}
+.vehicle-section::after{content:"" !important; position:absolute !important; right:0 !important; left:auto !important; bottom:22px !important; width:70% !important; height:34px !important; background:radial-gradient(ellipse at center, rgba(0,0,0,.36), transparent 72%) !important; filter:blur(12px) !important; z-index:3 !important;}
+.hero-text{padding:0 14px 12px !important; margin-top:-28px !important; position:relative !important; z-index:8 !important;}
+.hero-title{font-size:clamp(1.34rem, 6vw, 1.85rem) !important; line-height:1.05 !important; margin-bottom:6px !important; letter-spacing:-.045em !important; color:#0f172a !important;}
+.hero-subtitle{font-size:clamp(.90rem, 3.7vw, 1.08rem) !important; line-height:1.25 !important; color:#64748b !important;}
+.main-card{width:calc(100% - 22px) !important; margin:8px auto 18px !important; padding:16px !important; border-radius:26px !important; box-shadow:0 20px 54px rgba(15,23,42,.10) !important; border:1px solid rgba(15,23,42,.04) !important;}
+.route-inputs-container{padding-left:32px !important;}
+.route-input-group{margin-bottom:8px !important;}
+.route-input-wrapper{min-height:64px !important; border-radius:18px !important;}
+.route-input{min-height:62px !important; font-size:clamp(.92rem, 3.7vw, 1.02rem) !important;}
+.swap-button{width:46px !important; height:46px !important; margin:4px auto 10px !important; border-radius:16px !important;}
+.add-stop-btn{min-height:58px !important; border-radius:18px !important; font-size:clamp(.92rem, 3.8vw, 1rem) !important;}
+.btn-calculate{min-height:64px !important; border-radius:20px !important; font-size:clamp(1rem, 4vw, 1.12rem) !important;}
+.support-button-container,.footer{position:relative !important; z-index:8 !important;}
+@media (max-width:480px){
+  .header{min-height:330px !important;}
+  .header-content{min-height:306px !important; gap:16px 10px !important;}
+  .trip-notifications{width:48px !important;height:48px !important;min-width:48px !important;border-radius:16px !important;}
+  .header-login-btn{min-height:52px !important;padding:0 18px 0 10px !important;border-radius:18px !important;}
+  .header-login-btn span:first-child{width:40px !important;height:40px !important;min-width:40px !important;border-radius:14px !important;}
+  .vehicle-section{inset:auto -20px -8px 0 !important;height:70% !important;min-height:214px !important;}
+  .vehicle-img{right:clamp(-74px, -14vw, -34px) !important;bottom:34px !important;width:clamp(334px, 92vw, 430px) !important;}
+  .hero-text{margin-top:-32px !important;padding-bottom:10px !important;}
+  .main-card{padding:14px !important;border-radius:24px !important;margin-top:6px !important;}
+  .route-input-wrapper{min-height:58px !important;border-radius:16px !important;}
+  .route-input{min-height:56px !important;}
+  .swap-button{width:42px !important;height:42px !important;margin:2px auto 8px !important;}
+  .add-stop-btn{min-height:54px !important;}
+  .btn-calculate{min-height:60px !important;}
+}
+@media (max-width:390px){
+  .header{min-height:318px !important;padding-left:17px !important;padding-right:17px !important;}
+  .header-content{min-height:294px !important;}
+  .logo-title{font-size:clamp(1.82rem, 9vw, 2.18rem) !important;}
+  .header-login-btn{min-height:48px !important; padding:0 14px 0 8px !important; gap:9px !important; font-size:.98rem !important;}
+  .header-login-btn span:first-child{width:36px !important;height:36px !important;min-width:36px !important;}
+  .header-login-btn span:last-child{display:inline !important;}
+  .trip-notifications{width:46px !important;height:46px !important;min-width:46px !important;}
+  .vehicle-section{min-height:204px !important;}
+  .vehicle-img{width:clamp(318px, 95vw, 395px) !important; right:-62px !important; bottom:36px !important;}
+  .hero-title{font-size:1.35rem !important;}
+  .hero-subtitle{font-size:.92rem !important;}
+  .main-card{width:calc(100% - 20px) !important; padding:13px !important;}
+  .route-inputs-container{padding-left:28px !important;}
+  .route-input-wrapper{min-height:54px !important;}
+  .route-input{min-height:52px !important; font-size:.90rem !important;}
+  .add-stop-btn{min-height:50px !important;}
+  .btn-calculate{min-height:56px !important; font-size:1rem !important;}
+}
+@media (max-width:360px){
+  .header{min-height:306px !important;}
+  .header-content{grid-template-columns:1fr auto !important; grid-template-areas:"brand bell" "login bell" "hero hero" !important; min-height:282px !important;}
+  .vehicle-img{width:330px !important; right:-72px !important; bottom:38px !important; transform:none !important;}
+}
