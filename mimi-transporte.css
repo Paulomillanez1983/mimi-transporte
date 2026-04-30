@@ -4673,3 +4673,249 @@ body{
   .header-content{grid-template-columns:1fr auto !important; grid-template-areas:"brand bell" "login bell" "hero hero" !important; min-height:282px !important;}
   .vehicle-img{width:330px !important; right:-72px !important; bottom:38px !important; transform:none !important;}
 }
+
+/* =========================================================
+   MIMICAR CLIENT UI - AJUSTE FINAL FORMULARIO UNIFORME
+   Solo UI: compacta campos, botones y soporte sin tocar lógica.
+========================================================= */
+:root{
+  --mimi-form-control-width: min(100%, 420px);
+}
+
+.container{
+  max-width: 560px !important;
+}
+
+.hero-text{
+  padding-left: 18px !important;
+  padding-right: 18px !important;
+}
+
+.main-card{
+  width: min(calc(100% - 40px), 470px) !important;
+  margin: 8px auto 18px !important;
+  padding: 18px 16px 16px !important;
+  border-radius: 28px !important;
+}
+
+.route-planner{
+  align-items: center !important;
+}
+
+.route-inputs-container{
+  width: var(--mimi-form-control-width) !important;
+  padding-left: 34px !important;
+  margin: 0 auto !important;
+}
+
+.route-input-wrapper{
+  min-height: 58px !important;
+  padding: 10px 14px !important;
+  border-radius: 18px !important;
+}
+
+.route-input{
+  min-height: 36px !important;
+  font-size: clamp(.88rem, 3.5vw, .98rem) !important;
+}
+
+.route-input-icon{
+  font-size: 17px !important;
+}
+
+.route-timeline{
+  left: 11px !important;
+  top: 22px !important;
+  bottom: 22px !important;
+}
+
+.route-swap-row{
+  width: var(--mimi-form-control-width) !important;
+  margin: 6px auto 8px !important;
+}
+
+#btnSwapRoute.map-btn{
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  border-radius: 16px !important;
+  font-size: 1.05rem !important;
+}
+
+.btn-add-stop{
+  width: var(--mimi-form-control-width) !important;
+  min-height: 54px !important;
+  margin: 14px auto 0 !important;
+  padding: 11px 14px !important;
+  border-radius: 18px !important;
+  font-size: clamp(.90rem, 3.6vw, 1rem) !important;
+}
+
+.btn-calcular{
+  width: var(--mimi-form-control-width) !important;
+  min-height: 60px !important;
+  margin: 18px auto 0 !important;
+  padding: 14px 16px !important;
+  border-radius: 20px !important;
+  font-size: clamp(.95rem, 3.8vw, 1.05rem) !important;
+}
+
+.footer{
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+.support-launcher{
+  width: min(calc(100% - 48px), 390px) !important;
+  min-height: 64px !important;
+  margin: 18px auto 8px !important;
+  left: auto !important;
+  transform: none !important;
+  align-self: center !important;
+}
+
+.support-launcher:hover,
+.support-launcher:focus-visible{
+  transform: translateY(-1px) !important;
+}
+
+.support-launcher:active{
+  transform: scale(.985) !important;
+}
+
+@media (max-width:480px){
+  :root{
+    --mimi-form-control-width: min(100%, 360px);
+  }
+
+  .container{
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .hero-text{
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+
+  .main-card{
+    width: min(calc(100% - 34px), 430px) !important;
+    padding: 16px 14px 15px !important;
+    border-radius: 26px !important;
+  }
+
+  .route-inputs-container{
+    padding-left: 31px !important;
+  }
+
+  .route-input-group{
+    margin-bottom: 7px !important;
+  }
+
+  .route-input-wrapper{
+    min-height: 54px !important;
+    padding: 9px 13px !important;
+    border-radius: 17px !important;
+  }
+
+  .route-input{
+    min-height: 34px !important;
+    font-size: .90rem !important;
+  }
+
+  .route-input-icon{
+    font-size: 16px !important;
+  }
+
+  #btnSwapRoute.map-btn{
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border-radius: 15px !important;
+  }
+
+  .btn-add-stop{
+    min-height: 50px !important;
+    margin-top: 12px !important;
+    padding: 10px 13px !important;
+  }
+
+  .btn-calcular{
+    min-height: 56px !important;
+    margin-top: 16px !important;
+    padding: 13px 14px !important;
+  }
+
+  .support-launcher{
+    width: min(calc(100% - 60px), 380px) !important;
+    min-height: 62px !important;
+  }
+}
+
+@media (max-width:390px){
+  :root{
+    --mimi-form-control-width: min(100%, 326px);
+  }
+
+  .main-card{
+    width: min(calc(100% - 30px), 380px) !important;
+    padding: 15px 13px 14px !important;
+  }
+
+  .route-inputs-container{
+    padding-left: 29px !important;
+  }
+
+  .route-input-wrapper{
+    min-height: 52px !important;
+    padding: 8px 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .route-input{
+    min-height: 32px !important;
+    font-size: .86rem !important;
+  }
+
+  .btn-add-stop{
+    min-height: 48px !important;
+    font-size: .88rem !important;
+  }
+
+  .btn-calcular{
+    min-height: 54px !important;
+    font-size: .93rem !important;
+  }
+
+  .support-launcher{
+    width: min(calc(100% - 70px), 330px) !important;
+    min-height: 60px !important;
+  }
+
+  .support-launcher-icon{
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .support-launcher-text{
+    font-size: 1rem !important;
+  }
+}
+
+@media (max-width:360px){
+  :root{
+    --mimi-form-control-width: min(100%, 300px);
+  }
+
+  .main-card{
+    width: calc(100% - 24px) !important;
+    padding: 14px 12px !important;
+  }
+
+  .support-launcher{
+    width: min(calc(100% - 56px), 304px) !important;
+  }
+}
