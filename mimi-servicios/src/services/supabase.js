@@ -129,9 +129,13 @@ export async function signInWithGoogle() {
   if (!supabase) return null;
 
   const isProviderEntry = /^(prestador|prestador\.html)$/i.test(currentPageName());
-  const redirectTarget = isProviderEntry ? "prestador.html" : "cliente.html";
-  const redirectTo = servicePageUrl(redirectTarget);
+const redirectTarget = isProviderEntry ? "prestador.html" : "cliente.html";
 
+const redirectTo = window.location.origin.includes("github.io")
+  ? servicePageUrl(redirectTarget)
+  : `${window.location.origin}/mimi-servicios/${redirectTarget.replace(".html", "")}`;
+
+console.log("[MIMI servicios auth] redirectTo:", redirectTo);
   sessionStorage.setItem(
     "mimi_services_auth_redirect_in_progress",
     redirectTarget
