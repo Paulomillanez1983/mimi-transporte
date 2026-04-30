@@ -59,11 +59,11 @@ export const appConfig = {
 
   categories: [
     { id: "home-cleaning", code: "LIMPIEZA", name: "Limpieza", description: "Hogar, departamento, oficina y mantenimiento general." },
-    { id: "repairs", code: "REPARACIONES", name: "Reparaciones", description: "Plomería, electricidad, arreglos y urgencias simples." },
-    { id: "beauty-care", code: "BELLEZA", name: "Belleza", description: "Servicios personales, estética y cuidado a domicilio." },
+    { id: "repairs", code: "REPARACIONES", name: "Reparaciones", description: "Plomeria, electricidad, arreglos y urgencias simples." },
+    { id: "beauty-care", code: "BELLEZA", name: "Belleza", description: "Servicios personales, estetica y cuidado a domicilio." },
     { id: "moving-help", code: "MUDANZAS", name: "Mudanzas", description: "Ayuda para mover, cargar, ordenar y trasladar objetos." },
-    { id: "tech-help", code: "TECNOLOGIA", name: "Tecnología", description: "Instalaciones, soporte técnico y configuración de equipos." },
-    { id: "pet-care", code: "MASCOTAS", name: "Mascotas", description: "Paseos, cuidado, acompañamiento y asistencia básica." }
+    { id: "tech-help", code: "TECNOLOGIA", name: "Tecnologia", description: "Instalaciones, soporte tecnico y configuracion de equipos." },
+    { id: "pet-care", code: "MASCOTAS", name: "Mascotas", description: "Paseos, cuidado, acompanamiento y asistencia basica." }
   ]
 };
 
