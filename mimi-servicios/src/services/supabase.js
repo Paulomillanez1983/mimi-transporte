@@ -9,20 +9,27 @@ function currentPageName() {
 }
 
 function servicesBasePath() {
-  const path = window.location.pathname || "/";
-  const marker = "/mimi-servicios/";
-  const markerIndex = path.indexOf(marker);
+  const origin = window.location.origin;
+  const path = window.location.pathname || "";
+  const isGithubPages = origin.includes("github.io");
 
-  if (markerIndex >= 0) {
-    return path.slice(0, markerIndex + marker.length);
+  // GitHub Pages
+  if (isGithubPages) {
+    return "/mimi-transporte/mimi-servicios/";
   }
 
-  // Vercel clean URLs: /servicios and /prestador are rewrites to /mimi-servicios/*.html.
-  // OAuth redirects must go back to the real services files, not to the root /cliente(.html) app.
-  if (/\/(servicios|prestador)\/?$/i.test(path)) {
+  // Vercel (clean URLs)
+  if (/^\/(mimi-servicios\/)?(cliente|prestador|servicios|provider)\/?$/i.test(path.replace(/^\/+/, ""))) {
     return "/mimi-servicios/";
   }
 
+  // cualquier ruta real dentro de /mimi-servicios/*
+  if (path.includes("/mimi-servicios/")) {
+    return "/mimi-servicios/";
+  }
+
+  return "/mimi-servicios/";
+}
   // GitHub Pages keeps the repository name in the path.
   if (path.includes("/mimi-transporte/")) {
     return "/mimi-transporte/mimi-servicios/";
