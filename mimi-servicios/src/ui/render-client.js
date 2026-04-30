@@ -9,13 +9,46 @@ const stateLabels = {
   PROVIDER_ARRIVED: "Prestador en puerta",
   IN_PROGRESS: "Servicio en curso",
   COMPLETED: "Servicio completado",
-  CANCELLED: "Servicio cancelado"
+  CANCELLED: "Servicio cancelado",
+  PENDING: "Solicitud creada"
 };
+
+const categoryIcons = {
+  LIMPIEZA: "🧹",
+  ELECTRICIDAD: "⚡",
+  PLOMERIA: "🔧",
+  PLOMERÍA: "🔧",
+  REPARACIONES: "🛠️",
+  AC: "❄️",
+  CUIDADO: "🤝",
+  ENFERMERIA: "🩺",
+  ENFERMERÍA: "🩺",
+  JARDINERIA: "🌿",
+  JARDINERÍA: "🌿",
+  PINTURA: "🖌️",
+  CERRAJERIA: "🔑",
+  CERRAJERÍA: "🔑",
+  TECNICO: "🛠️",
+  TECNOLOGIA: "🛠️",
+  TECNOLOGÍA: "🛠️",
+  BELLEZA: "✨",
+  MUDANZAS: "📦",
+  MASCOTAS: "🐾"
+};
+
+const providerColors = [
+  "#1a56db",
+  "#059669",
+  "#7c3aed",
+  "#db2777",
+  "#d97706",
+  "#0891b2"
+];
 
 function currency(value, currencyCode = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
-    currency: currencyCode,
+    currency: currencyCode || "ARS",
     maximumFractionDigits: 0
   }).format(Number(value ?? 0));
 }
@@ -51,32 +84,73 @@ function setBadgeCount(id, count) {
   el.hidden = safeCount <= 0;
 }
 
-function providerCapabilityChips(provider) {
-  return [
-    provider.accepts_immediate ? "Disponible ahora" : null,
-    provider.accepts_scheduled ? "Agenda futura" : null,
-    provider.city || null,
-    provider.province || null,
-    provider.pricing_mode || null,
-    provider.minimum_hours ? `Mín. ${provider.minimum_hours} hs` : null,
-    provider.maximum_hours ? `Máx. ${provider.maximum_hours} hs` : null,
-    provider.completed_services_count
-      ? `${provider.completed_services_count} servicios`
-      : null
-  ].filter(Boolean);
+function initialsFromName(name) {
+  const parts = String(name || "Prestador")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  return parts.map((part) => part[0]?.toUpperCase() || "").join("") || "PR";
 }
 
-function providerSpotlightChips(profile, categories) {
-  return [
-    profile?.accepts_immediate ? "Toma inmediatos" : null,
-    profile?.accepts_scheduled ? "Toma programados" : null,
-    profile?.pricing_mode || null,
-    profile?.city || null,
-    profile?.province || null,
-    ...(categories ?? [])
-      .map((item) => item.svc_categories?.name || item.category_id)
-      .filter(Boolean)
-  ].slice(0, 8);
+function categoryIcon(category) {
+  const code = String(category?.code || category?.name || "")
+    .trim()
+    .toUpperCase();
+
+  return categoryIcons[code] || "🛠️";
+}
+
+function normalizeProvider(provider, index = 0) {
+  const providerPrice = Number(provider.provider_price ?? 0);
+  const totalPrice = Number(provider.total_price ?? providerPrice);
+  const distance = Number(provider.distance_km ?? 1 + index * 0.8);
+  const score = Number(provider.score ?? Math.max(78, 98 - index * 4));
+  const rating = Number(provider.rating ?? 5);
+
+  return {
+    ...provider,
+    displayName: provider.full_name || provider.name || "Prestador disponible",
+    initials: provider.initials || initialsFromName(provider.full_name || provider.name),
+    color: provider.color || providerColors[index % providerColors.length],
+    score,
+    rating,
+    ratingCount: Number(provider.rating_count ?? provider.completed_services_count ?? 0),
+    distance,
+    eta: Number(provider.estimated_eta_min ?? 8 + index * 4),
+    price: totalPrice || providerPrice,
+    providerPrice,
+    available: provider.accepts_immediate !== false,
+    specialty:
+      provider.specialty ||
+      provider.svc_categories?.name ||
+      provider.category_name ||
+      provider.pricing_mode ||
+      "Profesional MIMI",
+    jobs: Number(provider.completed_services_count ?? provider.rating_count ?? 0),
+    x: [52, 38, 65, 47, 72, 30, 80, 22, 60][index % 9],
+    y: [44, 56, 35, 62, 58, 42, 48, 30, 70][index % 9]
+  };
+}
+
+function starRating(rating) {
+  const full = Math.max(0, Math.min(5, Math.floor(Number(rating ?? 0))));
+  const half = Number(rating ?? 0) % 1 >= 0.5 ? "½" : "";
+  return `
+    <span class="stars" aria-label="${escapeHtml(String(rating))} estrellas">
+      ${"★".repeat(full)}${half}
+      <span>${escapeHtml(Number(rating || 0).toFixed(1))}</span>
+    </span>
+  `;
+}
+
+function providerStatusBadge(provider) {
+  return `
+    <span class="availability-badge ${provider.available ? "is-online" : "is-busy"}">
+      <i aria-hidden="true"></i>${provider.available ? "Disponible" : "Ocupado"}
+    </span>
+  `;
 }
 
 function renderStatusBanner(state) {
@@ -107,11 +181,14 @@ function renderAuth(state) {
   const authPrimaryButton = document.getElementById("authPrimaryButton");
   const authSecondaryButton = document.getElementById("authSecondaryButton");
   const authHint = document.getElementById("authHint");
+  const greetingName = document.getElementById("clientGreetingName");
 
   const isAuthenticated = Boolean(state.session.userId);
   const hasBackend = state.meta.backendMode === "supabase";
   const displayName =
-    state.session.userName || state.session.userEmail || "Cliente";
+    state.session.userName ||
+    state.session.userEmail?.split("@")[0] ||
+    "Paulo";
 
   if (sessionChip) {
     sessionChip.textContent = isAuthenticated
@@ -121,9 +198,13 @@ function renderAuth(state) {
         : "Modo demo";
   }
 
+  if (greetingName) {
+    greetingName.textContent = displayName;
+  }
+
   if (authPrimaryButton) {
     authPrimaryButton.hidden = isAuthenticated;
-    authPrimaryButton.textContent = hasBackend ? "Ingresar" : "Entrar";
+    authPrimaryButton.textContent = hasBackend ? "Ingresar" : "Demo";
   }
 
   if (authSecondaryButton) {
@@ -132,10 +213,10 @@ function renderAuth(state) {
 
   if (authHint) {
     authHint.textContent = isAuthenticated
-      ? "Ya podés buscar prestadores, crear solicitudes, chatear y seguir el servicio."
+      ? "Sesion lista para buscar, cotizar, chatear y seguir servicios."
       : hasBackend
-        ? "Ingresá con Google para usar búsquedas, solicitudes, chat y seguimiento real."
-        : "Sin credenciales de Supabase cargadas. Podés navegar la experiencia en modo demo.";
+        ? "Ingresa con Google para usar solicitudes reales."
+        : "Demo local activa: podes probar busqueda, seleccion y seguimiento.";
   }
 }
 
@@ -153,16 +234,13 @@ function renderEntryState(state) {
 
 function renderClientOnboarding(state) {
   const hero = document.getElementById("clientHero");
-  const insights = document.getElementById("clientHeroInsights");
   const flowGuide = document.getElementById("clientFlowGuide");
   const dismissButton = document.getElementById("dismissClientOnboarding");
 
-  if (!hero || !insights || !flowGuide || !dismissButton) return;
+  if (!hero || !flowGuide || !dismissButton) return;
 
   const showOnboarding = Boolean(state.ui.showClientOnboarding);
-
   hero.classList.toggle("is-compact", !showOnboarding);
-  insights.hidden = !showOnboarding;
   flowGuide.hidden = !showOnboarding;
   dismissButton.hidden = !showOnboarding;
 }
@@ -180,116 +258,166 @@ function renderCategories(state) {
         .map(
           (category) => `
             <button
-              class="category-card ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""}"
+              class="category-chip ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""}"
               data-category-id="${escapeHtml(category.id)}"
               type="button"
             >
+              <span aria-hidden="true">${categoryIcon(category)}</span>
               <strong>${escapeHtml(category.name)}</strong>
-              <span class="muted">${escapeHtml(category.description || "Servicio disponible")}</span>
             </button>
           `
         )
         .join("")
     : `
-      <div class="summary-empty">
-        <strong>Sin categorías</strong>
-        <p>Cuando carguemos categorías del backend aparecerán acá.</p>
+      <div class="client-empty-state">
+        <strong>Sin categorias</strong>
+        <span>Cuando el backend cargue categorias activas van a aparecer aca.</span>
       </div>
     `;
+}
+
+function renderRadarMap(providers, selectedId) {
+  const container = document.getElementById("clientRadarMap");
+  const count = document.getElementById("radarAvailableCount");
+  if (!container) return;
+
+  const visibleProviders = providers.slice(0, 9);
+  const pins = visibleProviders
+    .map((provider) => {
+      const isSelected = selectedId === provider.provider_id;
+      return `
+        <button
+          class="radar-pin ${isSelected ? "is-selected" : ""}"
+          type="button"
+          data-provider-focus="${escapeHtml(provider.provider_id)}"
+          style="--x:${provider.x}%;--y:${provider.y}%;--pin:${provider.color};"
+          aria-label="${escapeHtml(provider.displayName)}"
+        >
+          <span>${escapeHtml(provider.initials)}</span>
+          ${provider.score >= 90 ? `<b>${escapeHtml(String(Math.round(provider.score)))}%</b>` : ""}
+        </button>
+      `;
+    })
+    .join("");
+
+  container.innerHTML = `
+    <div class="radar-grid" aria-hidden="true"></div>
+    <div class="radar-road is-main" aria-hidden="true"></div>
+    <div class="radar-road is-cross" aria-hidden="true"></div>
+    <div class="radar-park is-one" aria-hidden="true"></div>
+    <div class="radar-park is-two" aria-hidden="true"></div>
+    <div class="radar-radius" aria-hidden="true"></div>
+    <div class="radar-user" aria-label="Tu ubicacion"><span></span></div>
+    ${pins}
+    <div class="radar-pill"><i></i>${visibleProviders.filter((item) => item.available).length || 0} disponibles en 15 km</div>
+  `;
+
+  if (count) {
+    count.textContent = String(visibleProviders.filter((item) => item.available).length || providers.length || 0);
+  }
+}
+
+function renderProviderCard(provider, selectedId) {
+  const selected = selectedId === provider.provider_id;
+  return `
+    <article class="provider-card ${selected ? "is-selected" : ""}" data-provider-focus="${escapeHtml(provider.provider_id)}">
+      <header>
+        <div class="provider-avatar" style="--avatar:${provider.color};">${escapeHtml(provider.initials)}</div>
+        <span class="score-badge">${escapeHtml(String(Math.round(provider.score)))}%</span>
+      </header>
+      <strong>${escapeHtml(provider.displayName)}</strong>
+      <small>${escapeHtml(provider.specialty)}</small>
+      ${starRating(provider.rating)}
+      <div class="provider-card-meta">
+        <span><b>${escapeHtml(String(provider.eta))} min</b>${escapeHtml(provider.distance.toFixed(1))} km</span>
+        <span><small>desde</small><b>${currency(provider.price, provider.currency)}</b></span>
+      </div>
+      ${providerStatusBadge(provider)}
+      <button class="provider-card-action" type="button" data-provider-select="${escapeHtml(provider.provider_id)}">
+        Solicitar
+      </button>
+    </article>
+  `;
+}
+
+function renderProviderRow(provider, selectedId) {
+  const selected = selectedId === provider.provider_id;
+  return `
+    <article class="provider-row ${selected ? "is-selected" : ""}" data-provider-focus="${escapeHtml(provider.provider_id)}">
+      <div class="provider-avatar is-row" style="--avatar:${provider.color};">${escapeHtml(provider.initials)}</div>
+      <div class="provider-row-main">
+        <div class="provider-row-title">
+          <strong>${escapeHtml(provider.displayName)}</strong>
+          ${provider.available ? providerStatusBadge(provider) : ""}
+        </div>
+        <span>${escapeHtml(provider.specialty)}</span>
+        <div class="provider-row-rating">
+          ${starRating(provider.rating)}
+          <i></i>
+          <small>${escapeHtml(String(provider.jobs))} trabajos</small>
+        </div>
+      </div>
+      <div class="provider-row-end">
+        <strong>${currency(provider.price, provider.currency)}</strong>
+        <span>${escapeHtml(String(provider.eta))} min</span>
+        <small>${escapeHtml(provider.distance.toFixed(1))} km</small>
+      </div>
+      <button class="row-chevron" type="button" data-provider-select="${escapeHtml(provider.provider_id)}" aria-label="Solicitar a ${escapeHtml(provider.displayName)}">›</button>
+    </article>
+  `;
 }
 
 export function renderProvidersList(state) {
   const meta = document.getElementById("providersMeta");
   const list = document.getElementById("providersList");
+  const carousel = document.getElementById("nearbyProvidersCarousel");
   if (!meta || !list) return;
 
-  const providers = Array.isArray(state.client.providers)
+  const providers = (Array.isArray(state.client.providers)
     ? state.client.providers
-    : [];
+    : []
+  )
+    .map(normalizeProvider)
+    .sort((a, b) => {
+      if (a.available !== b.available) return Number(b.available) - Number(a.available);
+      return a.distance - b.distance;
+    });
+
+  const selectedId =
+    state.ui.selectedProviderCandidateId ||
+    state.client.selectedProvider?.provider_id ||
+    null;
 
   meta.textContent = providers.length
-    ? `${providers.length} prestadores ordenados por cercanía y score`
-    : state.meta.info || "Esperando búsqueda";
+    ? `${providers.length} prestadores ordenados por cercania y score`
+    : state.meta.info || "Esperando busqueda";
+
+  renderRadarMap(providers, selectedId);
+
+  if (carousel) {
+    carousel.innerHTML = providers.length
+      ? providers
+          .filter((provider) => provider.available)
+          .map((provider) => renderProviderCard(provider, selectedId))
+          .join("")
+      : `
+        <div class="client-empty-state is-inline">
+          <strong>Busca para ver cercanos</strong>
+          <span>Te vamos a mostrar ETA, precio y reputacion.</span>
+        </div>
+      `;
+  }
 
   list.innerHTML = providers.length
-    ? providers
-        .map((provider) => `
-          <article class="result-card">
-            <header>
-              <div>
-                <strong>${escapeHtml(provider.full_name || "Prestador disponible")}</strong>
-                <span class="muted">
-                  ${escapeHtml(String(provider.rating?.toFixed?.(1) ?? provider.rating ?? "5.0"))} estrellas ·
-                  ${escapeHtml(String(provider.rating_count ?? 0))} reseñas
-                </span>
-              </div>
-              <strong>${currency(provider.total_price)}</strong>
-            </header>
-
-            ${(provider.bio || provider.description)
-              ? `<p class="muted">${escapeHtml(provider.bio || provider.description)}</p>`
-              : ""}
-
-            <div class="result-meta">
-              <div class="metric">
-                <span>Prestador</span>
-                <strong>${currency(provider.provider_price)}</strong>
-              </div>
-              <div class="metric">
-                <span>Fee</span>
-                <strong>${currency(provider.fee ?? provider.platform_fee)}</strong>
-              </div>
-              <div class="metric">
-                <span>Distancia</span>
-                <strong>${escapeHtml(String(provider.distance_km ?? "-"))} km</strong>
-              </div>
-              <div class="metric">
-                <span>ETA</span>
-                <strong>${escapeHtml(String(provider.estimated_eta_min ?? "-"))} min</strong>
-              </div>
-            </div>
-
-            ${providerCapabilityChips(provider).length
-              ? `
-                <div class="chip-row">
-                  ${providerCapabilityChips(provider)
-                    .map((chip) => `<span class="inline-chip">${escapeHtml(chip)}</span>`)
-                    .join("")}
-                </div>
-              `
-              : ""}
-
-            ${(provider.next_available_at || provider.last_service_completed_at)
-              ? `
-                <div class="provider-facts">
-                  ${provider.next_available_at
-                    ? `<span class="muted">Próxima ventana: ${escapeHtml(formatDate(provider.next_available_at))}</span>`
-                    : ""}
-                  ${provider.last_service_completed_at
-                    ? `<span class="muted">Último cierre: ${escapeHtml(formatDate(provider.last_service_completed_at))}</span>`
-                    : ""}
-                </div>
-              `
-              : ""}
-
-            <div class="action-row">
-              <button
-                class="btn-primary"
-                data-provider-select="${escapeHtml(provider.provider_id)}"
-                type="button"
-              >
-                Elegir prestador
-              </button>
-            </div>
-          </article>
-        `)
-        .join("")
+    ? providers.map((provider) => renderProviderRow(provider, selectedId)).join("")
     : `
       <div class="client-empty-state">
-        <strong>Elegí la categoría y completá la dirección</strong>
-        <span class="muted">Cuando busques, te mostramos opciones con precio, distancia y tiempo estimado.</span>
+        <strong>Elegi categoria y completa la direccion</strong>
+        <span>Cuando busques, aparecen opciones con precio, distancia y tiempo estimado.</span>
       </div>
     `;
+
+  renderStickyAction(state, providers);
 }
 
 export function renderRequestSummary(state) {
@@ -309,8 +437,8 @@ export function renderRequestSummary(state) {
   if (!request) {
     summary.innerHTML = `
       <div class="summary-card">
-        <strong>Tu servicio va a aparecer acá</strong>
-        <span class="muted">Una vez que elijas un prestador, vas a ver el precio, el estado y las acciones disponibles.</span>
+        <strong>Tu servicio va a aparecer aca</strong>
+        <span class="muted">Una vez que elijas un prestador, vas a ver precio, estado y acciones disponibles.</span>
       </div>
     `;
     timeline.innerHTML = "";
@@ -328,7 +456,7 @@ export function renderRequestSummary(state) {
       <strong>${escapeHtml(providerName)}</strong>
       <div class="summary-metrics">
         <div class="metric">
-          <span>Dirección</span>
+          <span>Direccion</span>
           <strong>${escapeHtml(request.address_text ?? state.requestDraft.address ?? "Pendiente")}</strong>
         </div>
         <div class="metric">
@@ -340,25 +468,10 @@ export function renderRequestSummary(state) {
           <strong>${currency(request.provider_price ?? request.provider_price_snapshot ?? state.client.selectedProvider?.provider_price ?? 0)}</strong>
         </div>
         <div class="metric">
-          <span>Fee plataforma</span>
-          <strong>${currency(request.platform_fee ?? request.platform_fee_snapshot ?? state.client.selectedProvider?.platform_fee ?? 0)}</strong>
-        </div>
-        <div class="metric">
           <span>Tipo</span>
           <strong>${escapeHtml(request.requestType ?? request.request_type ?? "IMMEDIATE")}</strong>
         </div>
-        <div class="metric">
-          <span>Inicio</span>
-          <strong>${escapeHtml(formatDate(request.scheduledFor ?? request.scheduled_for ?? request.created_at))}</strong>
-        </div>
-        <div class="metric">
-          <span>Duración</span>
-          <strong>${escapeHtml(String(request.requestedHours ?? request.requested_hours ?? 2))} hs</strong>
-        </div>
       </div>
-      ${request.provider_response_deadline_at
-        ? `<div class="chip-row"><span class="inline-chip">Respuesta límite: ${escapeHtml(formatDate(request.provider_response_deadline_at))}</span></div>`
-        : ""}
     </div>
   `;
 
@@ -372,7 +485,7 @@ export function renderRequestSummary(state) {
     .join("");
 
   actions.innerHTML = [
-    ["SEARCHING", "PENDING_PROVIDER_RESPONSE"].includes(request.status)
+    ["SEARCHING", "PENDING_PROVIDER_RESPONSE", "PENDING"].includes(request.status)
       ? `<button class="btn-secondary" data-request-action="cancel" type="button">Cancelar</button>`
       : "",
     ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(request.status)
@@ -396,7 +509,7 @@ function renderFinancialPanel(state) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin movimiento financiero</strong>
-        <span class="muted">Cuando exista una solicitud real, acá vas a ver payment intent, escrow y snapshots de cobro.</span>
+        <span class="muted">Al crear una solicitud real vas a ver payment intent, escrow y snapshots de cobro.</span>
       </div>
     `;
     return;
@@ -406,41 +519,11 @@ function renderFinancialPanel(state) {
     <article class="summary-card compact-stack">
       <strong>Snapshot del servicio</strong>
       <div class="summary-metrics">
-        <div class="metric">
-          <span>Total</span>
-          <strong>${currency(request.total_price ?? request.total_price_snapshot)}</strong>
-        </div>
-        <div class="metric">
-          <span>Prestador</span>
-          <strong>${currency(request.provider_price ?? request.provider_price_snapshot ?? state.client.selectedProvider?.provider_price ?? 0)}</strong>
-        </div>
-        <div class="metric">
-          <span>Fee</span>
-          <strong>${currency(request.platform_fee ?? request.platform_fee_snapshot ?? state.client.selectedProvider?.platform_fee ?? 0)}</strong>
-        </div>
-        <div class="metric">
-          <span>Moneda</span>
-          <strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong>
-        </div>
+        <div class="metric"><span>Total</span><strong>${currency(request.total_price ?? request.total_price_snapshot)}</strong></div>
+        <div class="metric"><span>Prestador</span><strong>${currency(request.provider_price ?? request.provider_price_snapshot ?? 0)}</strong></div>
+        <div class="metric"><span>Fee</span><strong>${currency(request.platform_fee ?? request.platform_fee_snapshot ?? 0)}</strong></div>
+        <div class="metric"><span>Moneda</span><strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong></div>
       </div>
-    </article>
-    <article class="summary-card compact-stack">
-      <strong>Payment intent</strong>
-      <div class="chip-row">
-        <span class="inline-chip">${escapeHtml(payment?.status ?? "Pendiente")}</span>
-        ${payment?.authorized_at ? `<span class="inline-chip">Autorizado ${escapeHtml(formatDate(payment.authorized_at))}</span>` : ""}
-        ${payment?.captured_at ? `<span class="inline-chip">Capturado ${escapeHtml(formatDate(payment.captured_at))}</span>` : ""}
-      </div>
-      <span class="muted">${payment ? "Estado del cobro registrado en backend." : "Aún no hay payment intent asociado a esta solicitud."}</span>
-    </article>
-    <article class="summary-card compact-stack">
-      <strong>Escrow / hold</strong>
-      <div class="chip-row">
-        <span class="inline-chip">${escapeHtml(escrow?.status ?? "Sin hold")}</span>
-        ${escrow?.held_at ? `<span class="inline-chip">Retenido ${escapeHtml(formatDate(escrow.held_at))}</span>` : ""}
-        ${escrow?.released_at ? `<span class="inline-chip">Liberado ${escapeHtml(formatDate(escrow.released_at))}</span>` : ""}
-      </div>
-      <span class="muted">${escrow ? `Monto retenido: ${currency(escrow.amount, escrow.currency)}` : "Todavía no hay un hold asociado a esta orden."}</span>
     </article>
   `;
 }
@@ -451,76 +534,39 @@ function renderMatchingPanel(state) {
 
   const candidates = state.client.insights?.candidates ?? [];
   const offers = state.client.insights?.offers ?? [];
-  const selectedProviderId =
-    state.client.activeRequest?.accepted_provider_id ??
-    state.client.activeRequest?.selected_provider_id ??
-    state.client.selectedProvider?.provider_id ??
-    null;
 
   if (!state.client.activeRequest) {
     container.innerHTML = `
       <div class="summary-card">
-        <strong>Sin matching aún</strong>
-        <span class="muted">Cuando generes una búsqueda real, vamos a mostrar ranking, ofertas enviadas y tiempos de respuesta.</span>
+        <strong>Sin matching aun</strong>
+        <span class="muted">Cuando generes una busqueda real, mostramos ranking, ofertas y tiempos de respuesta.</span>
       </div>
     `;
     return;
   }
 
-  const rankingHtml = candidates.length
-    ? candidates
-        .map((item) => `
-          <article class="summary-card compact-stack">
-            <strong>#${escapeHtml(String(item.rank_position ?? "-"))}</strong>
-            <div class="summary-metrics">
-              <div class="metric">
-                <span>Score</span>
-                <strong>${escapeHtml(String(item.score ?? "-"))}</strong>
+  container.innerHTML = `
+    ${candidates.length
+      ? candidates
+          .slice(0, 4)
+          .map((item) => `
+            <article class="summary-card compact-stack">
+              <strong>#${escapeHtml(String(item.rank_position ?? "-"))}</strong>
+              <div class="summary-metrics">
+                <div class="metric"><span>Score</span><strong>${escapeHtml(String(item.score ?? "-"))}</strong></div>
+                <div class="metric"><span>Distancia</span><strong>${escapeHtml(String(item.distance_km ?? "-"))} km</strong></div>
               </div>
-              <div class="metric">
-                <span>Distancia</span>
-                <strong>${escapeHtml(String(item.distance_km ?? "-"))} km</strong>
-              </div>
-              <div class="metric">
-                <span>Precio</span>
-                <strong>${currency(item.provider_price_snapshot ?? 0)}</strong>
-              </div>
-              <div class="metric">
-                <span>Rating</span>
-                <strong>${escapeHtml(String(item.rating_snapshot ?? "-"))}</strong>
-              </div>
-            </div>
-          </article>
-        `)
-        .join("")
-    : `
-      <div class="summary-card">
-        <strong>Sin candidatos visibles</strong>
-        <span class="muted">Si svc_request_candidates se completa en backend, el ranking va a aparecer acá.</span>
-      </div>
-    `;
-
-  const offersHtml = offers.length
-    ? offers
-        .map((item) => `
-          <article class="summary-card compact-stack">
-            <strong>${item.provider_id === selectedProviderId ? "Prestador elegido" : "Oferta enviada"}</strong>
-            <div class="chip-row">
-              <span class="inline-chip">${escapeHtml(item.status ?? "PENDING")}</span>
-              ${item.sent_at ? `<span class="inline-chip">Enviada ${escapeHtml(formatDate(item.sent_at))}</span>` : ""}
-              ${item.expires_at ? `<span class="inline-chip">Vence ${escapeHtml(formatDate(item.expires_at))}</span>` : ""}
-            </div>
-          </article>
-        `)
-        .join("")
-    : `
-      <div class="summary-card">
-        <strong>Sin offers registradas</strong>
-        <span class="muted">Cuando el dispatch cargue svc_request_offers, verás acá el avance del contacto con prestadores.</span>
-      </div>
-    `;
-
-  container.innerHTML = `${rankingHtml}${offersHtml}`;
+            </article>
+          `)
+          .join("")
+      : `<div class="summary-card"><strong>Ranking pendiente</strong><span class="muted">El backend completara los candidatos visibles.</span></div>`}
+    ${offers.length
+      ? offers
+          .slice(0, 4)
+          .map((item) => `<article class="summary-card compact-stack"><strong>Oferta enviada</strong><span class="inline-chip">${escapeHtml(item.status ?? "PENDING")}</span></article>`)
+          .join("")
+      : ""}
+  `;
 }
 
 function renderProviderSpotlight(state) {
@@ -529,62 +575,64 @@ function renderProviderSpotlight(state) {
 
   const selectedProvider = state.client.selectedProvider;
   const profile = state.client.insights?.providerProfile;
-  const pricing = state.client.insights?.providerPricing ?? [];
   const reviews = state.client.insights?.providerReviews ?? [];
-  const categories = state.client.insights?.providerCategories ?? [];
 
   if (!selectedProvider && !profile) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin prestador elegido</strong>
-        <span class="muted">Cuando confirmes una opción, acá vamos a mostrar bio, categorías, pricing y últimas reseñas.</span>
+        <span class="muted">Cuando confirmes una opcion, mostramos bio, categorias, pricing y ultimas reseñas.</span>
       </div>
     `;
     return;
   }
-
-  const categoryChips = providerSpotlightChips(profile, categories);
-
-  const pricingHtml = pricing.length
-    ? pricing
-        .map((item) => `
-          <span class="inline-chip">
-            ${escapeHtml(item.svc_categories?.name ?? item.category_id ?? "Categoría")}: ${currency(item.price_per_hour, item.currency)}
-          </span>
-        `)
-        .join("")
-    : `<span class="muted">Sin pricing visible todavía.</span>`;
-
-  const reviewsHtml = reviews.length
-    ? reviews
-        .map((item) => `
-          <article class="summary-card compact-stack">
-            <strong>${escapeHtml(Number(item.rating ?? 5).toFixed(1))} / 5</strong>
-            <p class="muted">${escapeHtml(item.comment || "Sin comentario")}</p>
-          </article>
-        `)
-        .join("")
-    : `
-      <div class="summary-card">
-        <strong>Sin reseñas recientes</strong>
-        <span class="muted">El backend ya soporta svc_reviews; se van a mostrar acá cuando existan.</span>
-      </div>
-    `;
 
   container.innerHTML = `
     <article class="summary-card compact-stack">
       <strong>${escapeHtml(selectedProvider?.full_name ?? "Prestador confirmado")}</strong>
       <p class="muted">${escapeHtml(profile?.bio ?? selectedProvider?.bio ?? "Perfil profesional cargado desde MIMI Servicios.")}</p>
       <div class="chip-row">
-        ${categoryChips.map((chip) => `<span class="inline-chip">${escapeHtml(chip)}</span>`).join("")}
+        ${(reviews.length ? reviews : [{ rating: selectedProvider?.rating ?? 5, comment: "Prestador verificado por MIMI." }])
+          .slice(0, 2)
+          .map((item) => `<span class="inline-chip">${escapeHtml(Number(item.rating ?? 5).toFixed(1))} / 5</span>`)
+          .join("")}
       </div>
     </article>
-    <article class="summary-card compact-stack">
-      <strong>Pricing visible</strong>
-      <div class="chip-row">${pricingHtml}</div>
-    </article>
-    ${reviewsHtml}
   `;
+}
+
+function renderStickyAction(state, normalizedProviders = null) {
+  const button = document.getElementById("requestNearestButton");
+  if (!button) return;
+
+  const providers =
+    normalizedProviders ||
+    (Array.isArray(state.client.providers)
+      ? state.client.providers.map(normalizeProvider)
+      : []);
+  const selectedId =
+    state.ui.selectedProviderCandidateId ||
+    state.client.selectedProvider?.provider_id ||
+    providers[0]?.provider_id ||
+    null;
+  const selected = providers.find((provider) => provider.provider_id === selectedId);
+
+  button.dataset.providerSelect = selected?.provider_id || "";
+  button.disabled = !selected;
+  button.classList.toggle("has-provider", Boolean(selected));
+  button.innerHTML = selected
+    ? `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m22 4-10 10.01-3-3"></path>
+      </svg>
+      Solicitar a ${escapeHtml(selected.displayName)}
+    `
+    : `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+        <path d="m13 2-10 12h9l-1 8 10-12h-9l1-8Z"></path>
+      </svg>
+      Solicitar al mas cercano
+    `;
 }
 
 export function renderNotifications(state) {
@@ -599,7 +647,7 @@ export function renderNotifications(state) {
     ? items
         .map((item) => `
           <article class="notification-card">
-            <strong>${escapeHtml(item.title ?? "Notificación")}</strong>
+            <strong>${escapeHtml(item.title ?? "Notificacion")}</strong>
             <p class="muted">${escapeHtml(item.body ?? "")}</p>
             <span class="muted">${escapeHtml(formatDate(item.created_at))}</span>
           </article>
@@ -608,7 +656,7 @@ export function renderNotifications(state) {
     : `
       <div class="summary-card">
         <strong>Sin notificaciones</strong>
-        <span class="muted">Las novedades del servicio van a aparecer acá.</span>
+        <span class="muted">Las novedades del servicio van a aparecer aca.</span>
       </div>
     `;
 
@@ -633,7 +681,7 @@ export function renderChat(state) {
     ? messages
         .map((message) => `
           <article class="message-bubble ${message.sender_user_id === state.session.userId || message.sender_user_id === "self" ? "is-own" : ""}">
-            <strong>${message.sender_user_id === state.session.userId || message.sender_user_id === "self" ? "Vos" : "Operador"}</strong>
+            <strong>${message.sender_user_id === state.session.userId || message.sender_user_id === "self" ? "Vos" : "Prestador"}</strong>
             <p>${escapeHtml(message.body ?? "")}</p>
             <span class="muted">${escapeHtml(formatDate(message.created_at))}</span>
           </article>
@@ -642,7 +690,7 @@ export function renderChat(state) {
     : `
       <div class="summary-card">
         <strong>Chat listo</strong>
-        <span class="muted">Los mensajes del servicio van a aparecer acá en tiempo real.</span>
+        <span class="muted">Los mensajes del servicio van a aparecer aca en tiempo real.</span>
       </div>
     `;
 }
@@ -654,7 +702,7 @@ function renderMapStatus(state) {
   const activeRequest = state.client.activeRequest;
   mapStatus.textContent = activeRequest
     ? stateLabels[activeRequest.status] ?? activeRequest.status
-    : "Esperando actividad";
+    : "Mapa en tiempo real";
 }
 
 export function renderClientScreen(state) {
