@@ -6,10 +6,10 @@
     name="viewport"
     content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
   >
-  <meta name="theme-color" content="#163867">
+  <meta name="theme-color" content="#1a56db">
   <meta
     name="description"
-    content="MIMI Servicios para clientes. Pedí ayuda en minutos con una experiencia simple, mobile-first y confiable."
+    content="MIMI Servicios para clientes. Pedi profesionales cercanos con precio, ETA, chat y seguimiento."
   >
   <title>MIMI Servicios | Cliente</title>
 
@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&family=DM+Sans:wght@400;500;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap"
   >
   <link
     rel="stylesheet"
@@ -31,119 +31,59 @@
 </head>
 <body data-client-view="home">
   <div class="app-shell">
-    <header class="header" role="banner">
-      <div class="header-content">
-        <div class="vehicle-section" aria-hidden="true">
-          <div class="vehicle-badge">CLIENTE</div>
-        </div>
+    <header class="client-header" role="banner">
+      <button class="hamburger-button" type="button" aria-label="Abrir menu">
+        <span></span><span></span><span></span>
+      </button>
 
-        <div class="logo-section">
-          <div class="logo-title">MIMI</div>
-          <div class="logo-subtitle">Servicios confiables para tu casa</div>
-        </div>
+      <div class="brand-lockup" aria-label="MIMI Servicios">
+        <div class="brand-mark">M</div>
+        <strong>MIMI <span>Servicios</span></strong>
+      </div>
 
-        <div class="header-actions">
-          <div class="header-notifications-wrapper" aria-label="Accesos rápidos">
-            <button
-              id="notificationsButton"
-              class="trip-notifications"
-              data-action="notifications"
-              type="button"
-              aria-label="Abrir notificaciones"
-              aria-controls="notificationsDrawer"
-              aria-expanded="false"
-            >
-              &#128276;
-              <span
-                class="trip-notifications-badge"
-                id="notificationsCount"
-                hidden
-              >0</span>
-            </button>
-
-            <button
-              id="chatButton"
-              class="trip-notifications"
-              data-action="chat"
-              type="button"
-              aria-label="Abrir chat"
-              aria-controls="chatDrawer"
-              aria-expanded="false"
-            >
-              &#128172;
-              <span
-                class="trip-notifications-badge"
-                id="chatUnreadCount"
-                hidden
-              >0</span>
-            </button>
-          </div>
-
-          <div class="header-user" id="headerUser">
-            <span class="status-chip session-chip" id="sessionChip">Invitado</span>
-            <button
-              class="header-login-btn"
-              id="authPrimaryButton"
-              data-auth-action="login"
-              type="button"
-            >
-              Ingresar
-            </button>
-            <button
-              class="header-logout-btn"
-              id="authSecondaryButton"
-              type="button"
-              hidden
-            >
-              Salir
-            </button>
-          </div>
-        </div>
+      <div class="header-actions">
+        <button
+          id="notificationsButton"
+          class="icon-pill"
+          data-action="notifications"
+          type="button"
+          aria-label="Abrir notificaciones"
+          aria-controls="notificationsDrawer"
+          aria-expanded="false"
+        >
+          <span aria-hidden="true">🔔</span>
+          <b id="notificationsCount" hidden>0</b>
+        </button>
+        <button
+          id="chatButton"
+          class="icon-pill"
+          data-action="chat"
+          type="button"
+          aria-label="Abrir chat"
+          aria-controls="chatDrawer"
+          aria-expanded="false"
+        >
+          <span aria-hidden="true">💬</span>
+          <b id="chatUnreadCount" hidden>0</b>
+        </button>
+        <button class="profile-pill" id="authPrimaryButton" data-auth-action="login" type="button">
+          Ingresar
+        </button>
+        <button class="profile-pill" id="authSecondaryButton" type="button" hidden>
+          Salir
+        </button>
       </div>
     </header>
 
-    <main class="container" role="main">
-      <section class="hero-text hero-text-client" id="clientHero" data-client-screen="home" aria-labelledby="heroTitle">
-        <span class="hero-kicker">Cliente · solicitud, matching y seguimiento</span>
-        <h1 class="hero-title" id="heroTitle">Pedí un servicio sin vueltas</h1>
-        <p class="hero-subtitle">
-          Elegí la categoría, indicá el domicilio y recibí prestadores disponibles cerca tuyo con cotización,
-          chat, tracking en vivo y estado financiero en un solo flujo.
-        </p>
+    <main class="client-main" role="main">
+      <div class="session-row">
+        <span class="session-chip" id="sessionChip">Invitado</span>
+        <button class="ghost-link" id="switchToProvider" type="button">Soy prestador</button>
+      </div>
 
-        <div class="client-search-wrap" role="search" aria-label="Buscar servicios">
-          <span aria-hidden="true">🔎</span>
-          <input class="client-search" id="clientServiceSearch" type="search" placeholder="Buscar limpieza, plomería, belleza..." autocomplete="off">
-        </div>
-
-        <div class="client-hero-visual hero-visual" aria-hidden="true">
-          <div class="client-hero-phone">
-            <span class="hero-dot"></span>
-            <strong>Prestadores cerca</strong>
-            <small>Precio · ETA · Chat · Tracking</small>
-          </div>
-        </div>
-
-        <div class="hero-actions hero-actions-client">
-          <button class="btn-secondary" id="dismissClientOnboarding" type="button">
-            Ocultar guía
-          </button>
-        </div>
-
-        <div class="hero-insights" id="clientHeroInsights" aria-label="Ventajas del flujo">
-          <div class="hero-insight-card">
-            <strong>Geolocalización actual</strong>
-            <span>Usá tu ubicación real o elegí una dirección sugerida para buscar mejor.</span>
-          </div>
-          <div class="hero-insight-card">
-            <strong>Cotización clara</strong>
-            <span>Precio total, fee de plataforma, ranking y ETA antes de confirmar.</span>
-          </div>
-          <div class="hero-insight-card">
-            <strong>Seguimiento completo</strong>
-            <span>Notificaciones, conversación y mapa del servicio desde el mismo panel.</span>
-          </div>
-        </div>
+      <section class="hero-text-client" id="clientHero" data-client-screen="home" aria-labelledby="heroTitle">
+        <p>Buenos dias, <span id="clientGreetingName">Paulo</span> 👋</p>
+        <h1 id="heroTitle">Que profesional necesitas hoy?</h1>
       </section>
 
       <div
@@ -154,388 +94,195 @@
         aria-live="polite"
       ></div>
 
-      <section class="main-card" id="clientServicesScreen" data-client-screen="services" aria-label="Planificador de servicio">
-        <div class="planner-shell">
-          <section class="planner-panel" aria-label="Flujo principal del cliente">
-            <div class="planner-topbar">
-              <div class="planner-topbar-copy">
-                <span class="eyebrow">Cliente</span>
-                <h2>Planificá tu servicio</h2>
-                <p id="authHint">
-                  Ingresá con Google para usar búsquedas, solicitudes, chat y seguimiento real.
-                </p>
-              </div>
-
-              <div class="hero-actions">
-                <button
-                  class="btn-secondary"
-                  id="enterServicesHub"
-                  data-auth-action="enter"
-                  type="button"
-                >
-                  Entrar
-                </button>
-                <button class="btn-secondary" id="installButton" type="button">
-                  Instalar app
-                </button>
-              </div>
-            </div>
-
-            <article
-              class="planner-block planner-block-highlight"
-              id="clientFlowGuide"
-              aria-label="Resumen del flujo"
-            >
-              <div class="block-header">
-                <div>
-                  <span class="eyebrow">Flujo</span>
-                  <h3>Todo el viaje del cliente, en una pantalla</h3>
-                </div>
-              </div>
-
-              <div class="flow-grid">
-                <div class="flow-step-card">
-                  <strong>1. Buscar</strong>
-                  <span>Seleccionás categoría, ubicación y modalidad del servicio.</span>
-                </div>
-                <div class="flow-step-card">
-                  <strong>2. Comparar</strong>
-                  <span>Ves ranking, distancia, ETA, precio total y perfil del prestador.</span>
-                </div>
-                <div class="flow-step-card">
-                  <strong>3. Confirmar</strong>
-                  <span>Seguís estados, notificaciones, cobro y chat en tiempo real.</span>
-                </div>
-              </div>
-            </article>
-
-            <div class="screen-stack">
-              <div class="screen-column" id="clientScreen">
-                <article class="planner-block">
-                  <div class="block-header">
-                    <div>
-                      <span class="eyebrow">Categoría</span>
-                      <h3>¿Qué necesitás hoy?</h3>
-                    </div>
-                    <span class="status-chip" id="requestStateChip">Sin solicitud activa</span>
-                  </div>
-
-                  <div
-                    class="category-grid"
-                    id="categoryGrid"
-                    role="list"
-                    aria-label="Categorías disponibles"
-                  ></div>
-                </article>
-
-                <article class="planner-block">
-                  <div class="block-header">
-                    <div>
-                      <span class="eyebrow">Detalles</span>
-                      <h3>Completá los datos</h3>
-                    </div>
-                  </div>
-
-                  <form class="form-stack" id="requestForm">
-                    <label class="input-group">
-                      <span>Ubicación del servicio</span>
-                      <div class="service-address-wrapper">
-                        <input
-                          id="serviceAddressInput"
-                          name="address"
-                          type="text"
-                          placeholder="Ej. Av. Recta Martinolli 7788"
-                          autocomplete="off"
-                          autocapitalize="words"
-                          autocorrect="off"
-                          spellcheck="false"
-                          inputmode="search"
-                          enterkeyhint="search"
-                          aria-autocomplete="list"
-                          aria-controls="serviceAddressSuggestions"
-                          aria-expanded="false"
-                        >
-                        <div class="service-address-actions">
-                          <button
-                            id="btnClearServiceAddress"
-                            type="button"
-                            class="btn-input-action clear"
-                            aria-label="Borrar dirección"
-                            hidden
-                          >
-                            ×
-                          </button>
-                          <button
-                            id="btnUseCurrentServiceLocation"
-                            type="button"
-                            class="btn-input-action"
-                            aria-label="Usar mi ubicación"
-                            title="Usar mi ubicación"
-                          >
-                            &#128205;
-                          </button>
-                        </div>
-                      </div>
-                      <small class="input-helper">
-                        Podés escribir la dirección o usar tu geolocalización actual para completar latitud y longitud automáticamente.
-                      </small>
-                      <div
-                        id="serviceAddressSuggestions"
-                        class="sugerencias"
-                        role="listbox"
-                        aria-label="Sugerencias de dirección"
-                        hidden
-                      ></div>
-                      <input id="serviceLatInput" name="lat" type="hidden">
-                      <input id="serviceLngInput" name="lng" type="hidden">
-                    </label>
-
-                    <div class="double-grid">
-                      <label class="input-group">
-                        <span>Tipo</span>
-                        <select id="requestTypeSelect" name="requestType">
-                          <option value="IMMEDIATE">Inmediato</option>
-                          <option value="SCHEDULED">Programado</option>
-                        </select>
-                      </label>
-
-                      <label class="input-group">
-                        <span>Duración</span>
-                        <input
-                          id="requestedHoursInput"
-                          name="requestedHours"
-                          type="number"
-                          min="1"
-                          max="8"
-                          value="2"
-                        >
-                      </label>
-                    </div>
-
-                    <label class="input-group" id="scheduledForWrapper" hidden>
-                      <span>Fecha y hora</span>
-                      <input
-                        id="scheduledForInput"
-                        name="scheduledFor"
-                        type="datetime-local"
-                      >
-                    </label>
-
-                    <div
-                      class="request-tips-card"
-                      aria-label="Ayuda para completar la solicitud"
-                    >
-                      <strong>Tip de precisión</strong>
-                      <span>
-                        Cuanto mejor quede definida la dirección y la modalidad, mejor será el ranking de prestadores
-                        y la estimación de llegada.
-                      </span>
-                    </div>
-
-                    <button
-                      class="btn-primary"
-                      type="submit"
-                      id="searchProvidersButton"
-                    >
-                      Ver prestadores y cotizar
-                    </button>
-                  </form>
-                </article>
-
-                <article class="planner-block" id="providerResults" data-client-section="providers">
-                  <div class="block-header">
-                    <div>
-                      <span class="eyebrow">Prestadores</span>
-                      <h3>Opciones disponibles</h3>
-                    </div>
-                    <span class="helper-text" id="providersMeta">Esperando búsqueda</span>
-                  </div>
-
-                  <div class="results-explainer">
-                    <span>Ordenamos por cercanía, score, disponibilidad y precio total.</span>
-                  </div>
-
-                  <div
-                    class="card-list"
-                    id="providersList"
-                    role="list"
-                    aria-live="polite"
-                  ></div>
-                </article>
-              </div>
-            </div>
-          </section>
-
-          <aside class="summary-panel" id="clientActivityScreen" data-client-screen="activity" aria-label="Resumen del servicio">
-            <section class="map-card" aria-labelledby="mapTitle">
-              <div class="map-card-header">
-                <div>
-                  <span class="eyebrow">Mapa</span>
-                  <h3 id="mapTitle">Seguimiento en vivo</h3>
-                </div>
-                <span class="helper-text" id="mapStatus">Esperando actividad</span>
-              </div>
-              <div
-                id="clientMap"
-                class="map-surface"
-                role="img"
-                aria-label="Mapa del servicio y del prestador"
-              ></div>
-              <div class="map-caption">
-                La ubicación del servicio y el tracking del prestador se actualizan acá cuando la solicitud entra en curso.
-              </div>
-            </section>
-
-            <section class="request-card" id="requestSummaryPanel">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Solicitud</span>
-                  <h3>Resumen del servicio</h3>
-                </div>
-              </div>
-
-              <div id="requestSummary"></div>
-              <div class="timeline" id="requestTimeline"></div>
-              <div
-                class="action-row"
-                id="requestActions"
-                role="group"
-                aria-label="Acciones de la solicitud"
-              ></div>
-            </section>
-
-            <section class="activity-card summary-callout-card">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Cobertura</span>
-                  <h3>Lo importante, visible</h3>
-                </div>
-              </div>
-              <div class="summary-callout-grid">
-                <div class="summary-callout-item">
-                  <strong>Matching</strong>
-                  <span>Ranking y ofertas en función de tu solicitud.</span>
-                </div>
-                <div class="summary-callout-item">
-                  <strong>Mensajería</strong>
-                  <span>Chat disponible apenas exista conversación.</span>
-                </div>
-                <div class="summary-callout-item">
-                  <strong>Finanzas</strong>
-                  <span>Seguimiento del cobro y estado del hold.</span>
-                </div>
-              </div>
-            </section>
-
-            <section class="activity-card">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Actividad</span>
-                  <h3>Notificaciones recientes</h3>
-                </div>
-              </div>
-              <div
-                class="card-list compact"
-                id="notificationsList"
-                role="list"
-                aria-live="polite"
-              ></div>
-            </section>
-
-            <section class="activity-card">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Cobro</span>
-                  <h3>Estado financiero</h3>
-                </div>
-              </div>
-              <div class="card-list compact" id="financialPanel"></div>
-            </section>
-
-            <section class="activity-card">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Matching</span>
-                  <h3>Ranking y ofertas</h3>
-                </div>
-              </div>
-              <div class="card-list compact" id="matchingPanel"></div>
-            </section>
-
-            <section class="activity-card">
-              <div class="block-header compact">
-                <div>
-                  <span class="eyebrow">Prestador elegido</span>
-                  <h3>Perfil profesional</h3>
-                </div>
-              </div>
-              <div class="card-list compact" id="providerSpotlightPanel"></div>
-            </section>
-          </aside>
+      <section class="search-card" id="clientServicesScreen" data-client-screen="services" aria-label="Buscar profesionales">
+        <div class="search-card-top">
+          <div>
+            <span class="eyebrow">Cliente</span>
+            <h2>Planifica tu servicio</h2>
+            <p id="authHint">Ingresa con Google para usar solicitudes reales.</p>
+          </div>
+          <div class="search-card-actions">
+            <button class="btn-secondary" id="enterServicesHub" type="button">Entrar</button>
+            <button class="btn-secondary" id="installButton" type="button">Instalar</button>
+          </div>
         </div>
+
+        <form class="request-form" id="requestForm">
+          <label class="address-field">
+            <span class="field-icon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0Z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </span>
+            <input
+              id="serviceAddressInput"
+              name="address"
+              type="text"
+              placeholder="Donde necesitas el servicio?"
+              autocomplete="off"
+              autocapitalize="words"
+              autocorrect="off"
+              spellcheck="false"
+              inputmode="search"
+              enterkeyhint="search"
+              aria-autocomplete="list"
+              aria-controls="serviceAddressSuggestions"
+              aria-expanded="false"
+            >
+            <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar direccion" hidden>×</button>
+            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicacion" title="Usar mi ubicacion">📍</button>
+          </label>
+
+          <div
+            id="serviceAddressSuggestions"
+            class="suggestions"
+            role="listbox"
+            aria-label="Sugerencias de direccion"
+            hidden
+          ></div>
+          <input id="serviceLatInput" name="lat" type="hidden">
+          <input id="serviceLngInput" name="lng" type="hidden">
+
+          <div class="category-section">
+            <div class="section-label">Categoria</div>
+            <div
+              class="category-grid"
+              id="categoryGrid"
+              role="list"
+              aria-label="Categorias disponibles"
+            ></div>
+          </div>
+
+          <div class="form-mini-grid">
+            <label class="compact-field">
+              <span>Tipo</span>
+              <select id="requestTypeSelect" name="requestType">
+                <option value="IMMEDIATE">Inmediato</option>
+                <option value="SCHEDULED">Programado</option>
+              </select>
+            </label>
+
+            <label class="compact-field">
+              <span>Duracion</span>
+              <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2">
+            </label>
+          </div>
+
+          <label class="compact-field" id="scheduledForWrapper" hidden>
+            <span>Fecha y hora</span>
+            <input id="scheduledForInput" name="scheduledFor" type="datetime-local">
+          </label>
+
+          <button class="btn-primary search-button" type="submit" id="searchProvidersButton">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path>
+            </svg>
+            Buscar profesionales
+          </button>
+        </form>
+      </section>
+
+      <section class="flow-guide" id="clientFlowGuide" aria-label="Resumen del flujo">
+        <article><strong>Buscar</strong><span>Categoria, direccion y modalidad.</span></article>
+        <article><strong>Comparar</strong><span>Score, precio, ETA y distancia.</span></article>
+        <article><strong>Confirmar</strong><span>Chat, tracking y estado del servicio.</span></article>
+        <button class="ghost-link" id="dismissClientOnboarding" type="button">Ocultar guia</button>
+      </section>
+
+      <section class="map-panel" data-client-screen="activity" aria-labelledby="mapTitle">
+        <div class="section-header">
+          <div>
+            <h2 id="mapTitle">Mapa en tiempo real</h2>
+            <span id="mapStatus">Mapa en tiempo real</span>
+          </div>
+          <button class="ghost-link" type="button" data-client-view="activity">Ver todo</button>
+        </div>
+
+        <div id="clientRadarMap" class="radar-map" aria-label="Prestadores cercanos"></div>
+        <div id="clientMap" class="map-surface" aria-label="Mapa real del servicio"></div>
+      </section>
+
+      <section class="nearby-section" data-client-screen="providers" aria-labelledby="nearbyTitle">
+        <div class="section-header">
+          <div>
+            <h2 id="nearbyTitle">Mas cercanos</h2>
+            <span><b id="radarAvailableCount">0</b> disponibles</span>
+          </div>
+        </div>
+        <div id="nearbyProvidersCarousel" class="provider-carousel" aria-live="polite"></div>
+      </section>
+
+      <section class="providers-section" id="providerResults" data-client-section="providers" aria-labelledby="providersTitle">
+        <div class="section-header">
+          <div>
+            <h2 id="providersTitle">Todos los profesionales</h2>
+            <span id="providersMeta">Esperando busqueda</span>
+          </div>
+          <button class="sort-chip" type="button" aria-label="Ordenar resultados">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <line x1="4" y1="6" x2="20" y2="6"></line><line x1="8" y1="12" x2="20" y2="12"></line><line x1="12" y1="18" x2="20" y2="18"></line>
+            </svg>
+            Ordenar
+          </button>
+        </div>
+        <div class="provider-list" id="providersList" role="list" aria-live="polite"></div>
+      </section>
+
+      <section class="activity-sheet" id="requestSummaryPanel" data-client-screen="activity" aria-label="Resumen del servicio">
+        <div class="section-header">
+          <div>
+            <h2>Resumen del servicio</h2>
+            <span class="status-chip" id="requestStateChip">Sin solicitud activa</span>
+          </div>
+        </div>
+        <div id="requestSummary"></div>
+        <div class="timeline" id="requestTimeline"></div>
+        <div class="action-row" id="requestActions" role="group" aria-label="Acciones de la solicitud"></div>
+      </section>
+
+      <section class="details-grid" data-client-screen="activity" aria-label="Detalles de actividad">
+        <article>
+          <h2>Notificaciones</h2>
+          <div class="card-list compact" id="notificationsList" role="list" aria-live="polite"></div>
+        </article>
+        <article>
+          <h2>Finanzas</h2>
+          <div class="card-list compact" id="financialPanel"></div>
+        </article>
+        <article>
+          <h2>Matching</h2>
+          <div class="card-list compact" id="matchingPanel"></div>
+        </article>
+        <article>
+          <h2>Prestador elegido</h2>
+          <div class="card-list compact" id="providerSpotlightPanel"></div>
+        </article>
       </section>
     </main>
 
-    <aside
-      class="drawer"
-      id="notificationsDrawer"
-      aria-hidden="true"
-      aria-labelledby="notificationsDrawerTitle"
-    >
+    <aside class="drawer" id="notificationsDrawer" aria-hidden="true" aria-labelledby="notificationsDrawerTitle">
       <div class="drawer-header">
         <h3 id="notificationsDrawerTitle">Centro de notificaciones</h3>
-        <button
-          class="icon-button"
-          type="button"
-          data-close-drawer="notificationsDrawer"
-          aria-label="Cerrar notificaciones"
-        >
-          ×
-        </button>
+        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">×</button>
       </div>
       <div class="drawer-body" id="notificationsDrawerBody"></div>
     </aside>
 
-    <aside
-      class="drawer"
-      id="chatDrawer"
-      aria-hidden="true"
-      aria-labelledby="chatDrawerTitle"
-    >
+    <aside class="drawer" id="chatDrawer" aria-hidden="true" aria-labelledby="chatDrawerTitle">
       <div class="drawer-header">
         <h3 id="chatDrawerTitle">Chat en tiempo real</h3>
-        <button
-          class="icon-button"
-          type="button"
-          data-close-drawer="chatDrawer"
-          aria-label="Cerrar chat"
-        >
-          ×
-        </button>
+        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">×</button>
       </div>
-
       <div class="drawer-body chat-body">
-        <div
-          class="chat-list"
-          id="chatMessages"
-          aria-live="polite"
-          aria-label="Mensajes del chat"
-        ></div>
-
+        <div class="chat-list" id="chatMessages" aria-live="polite" aria-label="Mensajes del chat"></div>
         <form class="chat-form" id="chatForm">
-          <label class="sr-only" for="chatInput">Escribí un mensaje</label>
-          <input
-            id="chatInput"
-            type="text"
-            maxlength="500"
-            placeholder="Escribí un mensaje..."
-            autocomplete="off"
-          >
+          <label class="sr-only" for="chatInput">Escribi un mensaje</label>
+          <input id="chatInput" type="text" maxlength="500" placeholder="Escribi un mensaje..." autocomplete="off">
           <button class="btn-primary" type="submit">Enviar</button>
         </form>
       </div>
     </aside>
-
 
     <aside class="drawer" id="supportDrawer" aria-hidden="true" aria-labelledby="supportDrawerTitle">
       <div class="drawer-header">
@@ -545,52 +292,28 @@
       <div class="drawer-body">
         <div class="client-empty-state">
           <strong>Centro de ayuda</strong>
-          <span class="muted">Cuando conectemos conversación de soporte, este panel va a mostrar tus consultas y respuestas del equipo MIMI.</span>
+          <span>Cuando conectemos conversacion de soporte, este panel va a mostrar tus consultas.</span>
         </div>
       </div>
     </aside>
 
-    <nav class="client-bottom-nav bottom-nav" aria-label="Navegación principal cliente">
-      <button
-        type="button"
-        class="is-active"
-        data-client-view="home"
-        data-scroll-target="clientHero"
-        aria-label="Ir al inicio"
-      >
-        Inicio
-      </button>
-      <button
-        type="button"
-        data-client-view="services"
-        data-scroll-target="categoryGrid"
-        aria-label="Ir a servicios"
-      >
-        Servicios
-      </button>
-      <button
-        type="button"
-        data-client-view="providers"
-        data-scroll-target="providerResults"
-        aria-label="Ir a prestadores"
-      >
-        Prestadores
-      </button>
-      <button
-        type="button"
-        data-client-view="support"
-        data-action="support"
-        id="openSupportDrawer"
-        aria-label="Abrir soporte"
-      >
-        Soporte
-      </button>
+    <nav class="client-bottom-nav" aria-label="Navegacion principal cliente">
+      <button type="button" class="is-active" data-client-view="home" aria-label="Ir al inicio">Inicio</button>
+      <button type="button" data-client-view="services" aria-label="Ir a servicios">Servicios</button>
+      <button type="button" data-client-view="providers" aria-label="Ir a prestadores">Prestadores</button>
+      <button type="button" data-client-view="support" data-action="support" id="openSupportDrawer" aria-label="Abrir soporte">Soporte</button>
     </nav>
+
+    <div class="sticky-request-bar">
+      <button class="btn-primary request-nearest" id="requestNearestButton" type="button" data-provider-select="" disabled>
+        Solicitar al mas cercano
+      </button>
+    </div>
   </div>
 
   <noscript>
     <div style="padding:16px; background:#fff4d6; color:#5b4300; font-family:Arial,sans-serif;">
-      Esta aplicación necesita JavaScript para funcionar correctamente.
+      Esta aplicacion necesita JavaScript para funcionar correctamente.
     </div>
   </noscript>
 
