@@ -19,10 +19,12 @@ import {
   bootstrapSession,
   invokeFunction,
   loadActiveRequest,
+  loadCategories,
   loadNotifications,
   loadOffers,
   loadProviderWorkspace,
   getProviderDashboard,
+  saveProviderWorkspace,
   uploadProviderDocument,
   signOut,
   updateProviderStatus
@@ -843,13 +845,22 @@ if (this.elements.installBanner && this.deferredInstallPrompt && !installDismiss
       return false;
     }
 
-const [workspace, notifications, offers, activeRequest] = await Promise.all([
+const [categories, workspace, notifications, offers, activeRequest] = await Promise.all([
+  loadCategories(),
   loadProviderWorkspace(session.providerId),
   loadNotifications(session.userId),
   loadOffers(session.providerId),
   loadActiveRequest({ providerId: session.providerId })
 ]);
 
+if (Array.isArray(categories) && categories.length) {
+  appConfig.categories = categories.map((category) => ({
+    id: category.id,
+    code: category.code,
+    name: category.name,
+    description: category.description
+  }));
+}
 
 setTimeout(async () => {
   try {
@@ -1246,6 +1257,19 @@ this.elements.cameraRetakeBtn?.addEventListener("click", () => {
 this.elements.cameraUseBtn?.addEventListener("click", () => {
   this.confirmCameraCapture();
 });
+
+document.addEventListener("submit", (event) => {
+  if (event.target?.id === "providerBusinessForm") {
+    this.handleProviderBusinessSubmit(event);
+  }
+});
+
+document.addEventListener("click", (event) => {
+  const actionButton = event.target?.closest?.("[data-provider-business-action]");
+  if (actionButton) {
+    this.handleProviderBusinessAction(actionButton.dataset.providerBusinessAction);
+  }
+});
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -1453,6 +1477,129 @@ async handleStatusToggle(status) {
     this.showToast("No pudimos actualizar tu estado", "error");
   } finally {
     actions.setLoading(false);
+  }
+}
+
+collectProviderBusinessPayload(form) {
+  const data = new FormData(form);
+  const categories = [];
+  const pricing = [];
+  const availability = [];
+
+  for (const category of appConfig.categories ?? []) {
+    const categoryId = category.id;
+    if (!categoryId || !data.has(`categoryActive:${categoryId}`)) continue;
+
+    const pricePerHour = Number(data.get(`price:${categoryId}`) ?? 0);
+    const minimumHours = Number(data.get(`min:${categoryId}`) ?? 1);
+    const maximumHours = Number(
+      data.get(`max:${categoryId}`) ??
+        data.get("maxHoursPerService") ??
+        8
+    );
+
+    categories.push({ categoryId });
+    pricing.push({
+      categoryId,
+      currency: "ARS",
+      pricePerHour,
+      minimumHours,
+      maximumHours
+    });
+  }
+
+  for (let dayOfWeek = 0; dayOfWeek <= 6; dayOfWeek += 1) {
+    if (!data.has(`dayActive:${dayOfWeek}`)) continue;
+
+    availability.push({
+      dayOfWeek,
+      startTime: data.get(`dayStart:${dayOfWeek}`) || "08:00",
+      endTime: data.get(`dayEnd:${dayOfWeek}`) || "18:00",
+      active: true
+    });
+  }
+
+  return {
+    bio: data.get("providerBio") ?? "",
+    city: data.get("providerCity") ?? "",
+    province: data.get("providerProvince") ?? "",
+    addressText: data.get("providerAddressText") ?? "",
+    pricingMode: "HOURLY",
+    acceptsImmediate: data.has("acceptsImmediate"),
+    acceptsScheduled: data.has("acceptsScheduled"),
+    maxHoursPerService: Number(data.get("maxHoursPerService") ?? 8),
+    categories,
+    pricing,
+    availability
+  };
+}
+
+async handleProviderBusinessSubmit(event) {
+  event.preventDefault();
+
+  const providerId = this.state?.session?.providerId;
+  if (!providerId) {
+    this.showToast("No se encontrÃ³ tu perfil de prestador", "error");
+    return;
+  }
+
+  const payload = this.collectProviderBusinessPayload(event.target);
+
+  if (!payload.categories.length) {
+    this.showToast("ElegÃ­ al menos una profesiÃ³n o categorÃ­a", "warning");
+    return;
+  }
+
+  if (payload.pricing.some((item) => !Number.isFinite(item.pricePerHour) || item.pricePerHour <= 0)) {
+    this.showToast("Cada categorÃ­a activa necesita precio por hora", "warning");
+    return;
+  }
+
+  try {
+    actions.setLoading(true);
+    const workspace = await saveProviderWorkspace(providerId, payload);
+    this.applyWorkspaceToState(workspace);
+    renderProviderDashboard(this.state);
+    this.renderServicesAndPricing();
+    this.renderSheetSummary();
+    this.showToast("Setup comercial guardado", "success");
+  } catch (err) {
+    console.error("[MIMI] Error guardando setup comercial:", err);
+    this.showToast(err?.message ?? "No pudimos guardar tus servicios", "error");
+  } finally {
+    actions.setLoading(false);
+  }
+}
+
+async handleProviderBusinessAction(action) {
+  if (action === "refresh-location") {
+    this.updateMapToCurrentPosition();
+    this.showToast("UbicaciÃ³n actualizada", "success");
+    return;
+  }
+
+  if (action === "focus-map") {
+    this.setBottomSheetState("collapsed");
+    setTimeout(() => this.map?.resize?.(), 80);
+    return;
+  }
+
+  if (action === "refresh-workspace") {
+    const providerId = this.state?.session?.providerId;
+    if (!providerId) return;
+
+    try {
+      actions.setLoading(true);
+      const workspace = await loadProviderWorkspace(providerId);
+      this.applyWorkspaceToState(workspace);
+      renderProviderDashboard(this.state);
+      this.showToast("Panel recargado", "success");
+    } catch (err) {
+      console.error("[MIMI] Error recargando panel:", err);
+      this.showToast("No pudimos recargar el panel", "error");
+    } finally {
+      actions.setLoading(false);
+    }
   }
 }
   /**
@@ -2757,7 +2904,7 @@ console.log("[MIMI][KYC] Documento subido:", uploadedDocument);
     }
 
     this.showToast("Verificando identidad...", "info");
-    await invokeFunction("svc-provider-identity-check", {
+    await invokeFunction("svc-verify-provider-identity", {
   provider_id: providerId
 });
 
