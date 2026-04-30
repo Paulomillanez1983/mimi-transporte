@@ -209,6 +209,94 @@ button {
   box-shadow: 0 3px 10px rgba(219, 39, 119, 0.35);
 }
 
+.login-pill {
+  min-width: 76px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--client-primary), #2563eb);
+  box-shadow: 0 8px 20px rgba(26, 86, 219, 0.22);
+}
+
+.user-session-card {
+  min-width: 0;
+  max-width: 176px;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 5px 4px 4px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--client-border);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.user-session-card img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+}
+
+.user-session-card:not(.has-avatar)::before {
+  content: "M";
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #db2777, #f472b6);
+}
+
+.user-session-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.user-session-card strong,
+.user-session-card span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-session-card strong {
+  color: var(--client-text);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.user-session-card span {
+  color: var(--client-muted);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.user-session-card button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 9px;
+  color: var(--client-primary);
+  background: #eff6ff;
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .session-row {
   justify-content: space-between;
   margin-bottom: 10px;
@@ -1244,6 +1332,14 @@ button {
   padding: 12px 20px calc(22px + var(--safe-bottom));
   background: linear-gradient(to top, #fff 72%, rgba(255, 255, 255, 0));
   transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.sticky-request-bar.is-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .request-nearest {
@@ -1269,6 +1365,80 @@ body[data-client-view="services"] #clientHero,
 body[data-client-view="providers"] #clientHero,
 body[data-client-view="activity"] #clientHero {
   display: none;
+}
+
+body[data-client-view="home"] .nearby-section,
+body[data-client-view="home"] .providers-section,
+body[data-client-view="home"] .activity-sheet,
+body[data-client-view="home"] .details-grid {
+  display: none;
+}
+
+body[data-client-view="services"] #clientHero,
+body[data-client-view="services"] .search-card,
+body[data-client-view="services"] .map-panel,
+body[data-client-view="services"] .nearby-section,
+body[data-client-view="services"] .providers-section {
+  display: none;
+}
+
+body[data-client-view="providers"] #clientHero,
+body[data-client-view="providers"] .search-card,
+body[data-client-view="providers"] .activity-sheet,
+body[data-client-view="providers"] .details-grid {
+  display: none;
+}
+
+body[data-client-view="support"] .nearby-section,
+body[data-client-view="support"] .providers-section,
+body[data-client-view="support"] .activity-sheet,
+body[data-client-view="support"] .details-grid {
+  display: none;
+}
+
+.support-panel,
+.support-form,
+.support-thread {
+  display: grid;
+  gap: 10px;
+}
+
+.support-form textarea {
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  border: 1px solid var(--client-border);
+  border-radius: 16px;
+  padding: 12px;
+  color: var(--client-text);
+  background: #f8fafc;
+  outline: 0;
+}
+
+.support-form textarea:focus {
+  border-color: rgba(26, 86, 219, 0.4);
+  box-shadow: 0 0 0 4px rgba(26, 86, 219, 0.1);
+  background: #fff;
+}
+
+.support-message {
+  padding: 12px;
+  border-radius: 16px;
+  background: #f1f5f9;
+  display: grid;
+  gap: 4px;
+}
+
+.support-message p {
+  margin: 0;
+  color: var(--client-text);
+  font-size: 12px;
+}
+
+.support-message span {
+  color: var(--client-muted);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 @media (min-width: 768px) {
