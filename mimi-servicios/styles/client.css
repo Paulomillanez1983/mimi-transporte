@@ -1491,3 +1491,61 @@ body[data-client-view="activity"] #requestSummaryPanel{
     border-width:2px;
   }
 }
+/* =========================================================
+   MIMI CLIENTE — VISTAS REALES MOBILE
+   ========================================================= */
+
+@media (max-width:820px){
+
+  body[data-client-view="home"] .main-card{
+    display:none;
+  }
+
+  body[data-client-view="home"] #clientHero{
+    display:grid;
+  }
+
+  body[data-client-view="services"] #clientHero,
+  body[data-client-view="services"] #providerResults,
+  body[data-client-view="services"] .summary-panel{
+    display:none;
+  }
+
+  body[data-client-view="services"] .main-card,
+  body[data-client-view="services"] .planner-panel,
+  body[data-client-view="services"] #clientScreen{
+    display:grid;
+  }
+
+  body[data-client-view="services"] #clientScreen > article:nth-child(3){
+    display:none;
+  }
+
+  body[data-client-view="providers"] #clientHero,
+  body[data-client-view="providers"] .summary-panel,
+  body[data-client-view="providers"] #clientScreen > article:nth-child(1),
+  body[data-client-view="providers"] #clientScreen > article:nth-child(2){
+    display:none;
+  }
+
+  body[data-client-view="providers"] .main-card,
+  body[data-client-view="providers"] .planner-panel,
+  body[data-client-view="providers"] #clientScreen,
+  body[data-client-view="providers"] #providerResults{
+    display:grid;
+  }
+
+  body[data-client-view="activity"] #clientHero,
+  body[data-client-view="activity"] .planner-panel{
+    display:none;
+  }
+
+  body[data-client-view="activity"] .main-card,
+  body[data-client-view="activity"] .summary-panel{
+    display:grid;
+  }
+
+  body[data-client-view="activity"] .summary-panel > section:not(#requestSummaryPanel):not(.map-card){
+    display:none;
+  }
+}
