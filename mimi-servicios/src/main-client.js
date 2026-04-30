@@ -684,6 +684,8 @@ async function handleSearchSubmit(event) {
 
     setState((draft) => {
       draft.client.providers = providers;
+      draft.ui.selectedProviderCandidateId =
+        providers[0]?.provider_id ?? draft.ui.selectedProviderCandidateId ?? null;
       draft.meta.error = null;
       draft.meta.info = providers.length
         ? "Prestadores actualizados."
@@ -959,8 +961,15 @@ function bindBasicControls() {
 
       const selectProvider = event.target.closest("[data-provider-select]");
       if (selectProvider) {
+        if (!selectProvider.dataset.providerSelect) return;
         await handleProviderSelection(selectProvider.dataset.providerSelect);
         setClientView("activity");
+        return;
+      }
+
+      const focusProvider = event.target.closest("[data-provider-focus]");
+      if (focusProvider) {
+        patchState("ui.selectedProviderCandidateId", focusProvider.dataset.providerFocus);
         return;
       }
 
