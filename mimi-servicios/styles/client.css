@@ -68,7 +68,7 @@ body{
   background:#111827;
   color:var(--client-text);
   overscroll-behavior-y:contain;
-  touch-action:manipulation;
+  touch-action:auto;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
@@ -1206,4 +1206,32 @@ textarea:focus{
   .notification-card{
     border-width:2px;
   }
+}
+html,
+body{
+  overflow-x:hidden;
+  overflow-y:auto;
+  height:auto;
+}
+
+.app-shell{
+  overflow-x:hidden;
+  overflow-y:visible;
+  height:auto;
+}
+
+.container{
+  overflow:visible;
+  touch-action:pan-y;
+}
+
+#clientMap,
+.map-surface,
+.maplibregl-map{
+  touch-action:none;
+}
+
+.client-bottom-nav,
+.client-bottom-nav *{
+  touch-action:manipulation;
 }
