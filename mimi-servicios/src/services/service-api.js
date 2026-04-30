@@ -1,5 +1,6 @@
 import { appConfig } from "../config.js";
 import { getSupabaseClient, callRpc } from "./supabase.js";
+import { buildMockProviders } from "./mock-data.js";
 
 const SERVICE_PROVIDER_DOCUMENTS_BUCKET = "service-provider-documents";
 const PROVIDER_DOCUMENT_SELECT = "id,provider_id,document_type,storage_bucket,storage_path,mime_type,file_size_bytes,review_status,review_notes,reviewed_at,metadata_json,created_at,updated_at";
@@ -257,10 +258,18 @@ export async function registerDevice(pushToken = null) {
 }
 export async function searchProviders(categoryId, draft = {}) {
   if (!hasBackend()) {
-    return [];
+    return buildMockProviders(categoryId, draft);
   }
 
-  await requireSession();
+  try {
+    await requireSession();
+  } catch (error) {
+    if (error?.code === "AUTH_REQUIRED" || error?.message === "AUTH_REQUIRED") {
+      return buildMockProviders(categoryId, draft);
+    }
+
+    throw error;
+  }
 
   const payload = {
     category_id: categoryId,
