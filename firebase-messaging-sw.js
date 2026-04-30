@@ -38,6 +38,7 @@ function isServicesNavigationPath(pathname) {
   return (
     pathname === `${APP_BASE_PATH}servicios` ||
     pathname === `${APP_BASE_PATH}prestador` ||
+    pathname === `${APP_BASE_PATH}mimi-servicios/auth-callback.html` ||
     pathname.startsWith(`${APP_BASE_PATH}mimi-servicios/`)
   );
 }
@@ -107,6 +108,10 @@ function getNavigationFallback(requestUrl) {
     const url = new URL(requestUrl);
 
     if (isServicesNavigationPath(url.pathname)) {
+      if (url.pathname.endsWith('/auth-callback.html')) {
+        return `${APP_BASE_PATH}mimi-servicios/auth-callback.html`;
+      }
+
       if (
         url.pathname === `${APP_BASE_PATH}prestador` ||
         url.pathname.endsWith('/prestador.html')
