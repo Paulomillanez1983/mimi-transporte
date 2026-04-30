@@ -1,6 +1,36 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
+  <script>
+    (function redirectServicesOAuthCallback() {
+      try {
+        var intent =
+          sessionStorage.getItem("mimi_services_auth_intent") ||
+          localStorage.getItem("mimi_services_auth_intent");
+        var pending =
+          sessionStorage.getItem("mimi_services_auth_redirect_in_progress") ||
+          "";
+        var hasSupabaseCallback =
+          window.location.search.indexOf("code=") !== -1 ||
+          window.location.hash.indexOf("access_token") !== -1;
+
+        if (
+          hasSupabaseCallback &&
+          (intent === "client" || pending.indexOf("cliente") !== -1)
+        ) {
+          window.location.replace("/servicios" + window.location.search + window.location.hash);
+          return;
+        }
+
+        if (
+          hasSupabaseCallback &&
+          (intent === "provider" || pending.indexOf("prestador") !== -1)
+        ) {
+          window.location.replace("/prestador" + window.location.search + window.location.hash);
+        }
+      } catch (_) {}
+    })();
+  </script>
   <title>MIMICar | PedÃ­ tu viaje en segundos</title>
   <meta name="description" content="PlanificÃ¡ tu viaje, agregÃ¡ paradas y consultÃ¡ el precio estimado desde tu celular.">
   <meta name="theme-color" content="#020617">
@@ -10130,4 +10160,3 @@ function initTripLiveCardDraggable() {
 </div>
 </body>
 </html>
-
