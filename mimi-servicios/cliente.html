@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/client.css">
 </head>
-<body>
+<body data-client-view="home">
   <div class="app-shell">
     <header class="header" role="banner">
       <div class="header-content">
@@ -64,7 +64,7 @@
             <button
               id="chatButton"
               class="trip-notifications"
-              data-action="support"
+              data-action="chat"
               type="button"
               aria-label="Abrir chat"
               aria-controls="chatDrawer"
@@ -103,7 +103,7 @@
     </header>
 
     <main class="container" role="main">
-      <section class="hero-text hero-text-client" id="clientHero" aria-labelledby="heroTitle">
+      <section class="hero-text hero-text-client" id="clientHero" data-client-screen="home" aria-labelledby="heroTitle">
         <span class="hero-kicker">Cliente · solicitud, matching y seguimiento</span>
         <h1 class="hero-title" id="heroTitle">Pedí un servicio sin vueltas</h1>
         <p class="hero-subtitle">
@@ -154,7 +154,7 @@
         aria-live="polite"
       ></div>
 
-      <section class="main-card" aria-label="Planificador de servicio">
+      <section class="main-card" id="clientServicesScreen" data-client-screen="services" aria-label="Planificador de servicio">
         <div class="planner-shell">
           <section class="planner-panel" aria-label="Flujo principal del cliente">
             <div class="planner-topbar">
@@ -342,7 +342,7 @@
                   </form>
                 </article>
 
-                <article class="planner-block" id="providerResults">
+                <article class="planner-block" id="providerResults" data-client-section="providers">
                   <div class="block-header">
                     <div>
                       <span class="eyebrow">Prestadores</span>
@@ -366,7 +366,7 @@
             </div>
           </section>
 
-          <aside class="summary-panel" aria-label="Resumen del servicio">
+          <aside class="summary-panel" id="clientActivityScreen" data-client-screen="activity" aria-label="Resumen del servicio">
             <section class="map-card" aria-labelledby="mapTitle">
               <div class="map-card-header">
                 <div>
@@ -551,10 +551,40 @@
     </aside>
 
     <nav class="client-bottom-nav bottom-nav" aria-label="Navegación principal cliente">
-      <button type="button" data-scroll-target="clientHero">Inicio</button>
-      <button type="button" data-scroll-target="categoryGrid">Servicios</button>
-      <button type="button" data-scroll-target="providerResults">Prestadores</button>
-      <button type="button" data-action="support" id="openSupportDrawer">Soporte</button>
+      <button
+        type="button"
+        class="is-active"
+        data-client-view="home"
+        data-scroll-target="clientHero"
+        aria-label="Ir al inicio"
+      >
+        Inicio
+      </button>
+      <button
+        type="button"
+        data-client-view="services"
+        data-scroll-target="categoryGrid"
+        aria-label="Ir a servicios"
+      >
+        Servicios
+      </button>
+      <button
+        type="button"
+        data-client-view="providers"
+        data-scroll-target="providerResults"
+        aria-label="Ir a prestadores"
+      >
+        Prestadores
+      </button>
+      <button
+        type="button"
+        data-client-view="support"
+        data-action="support"
+        id="openSupportDrawer"
+        aria-label="Abrir soporte"
+      >
+        Soporte
+      </button>
     </nav>
   </div>
 
