@@ -50,6 +50,9 @@ function exposeClientDebugApi() {
   window.MIMI.servicesClient = {
     mode: "client",
     getState: () => state,
+    setView: (view) => setClientView(view, { behavior: "auto" }),
+    openChat: () => openClientChat(),
+    openSupport: () => toggleDrawer("supportDrawer", true),
     config: appConfig
   };
   window.MIMI_SERVICES_CLIENT = window.MIMI.servicesClient;
@@ -106,7 +109,7 @@ function normalizeAuthError(error, fallbackMessage) {
 
 function toggleDrawer(id, force) {
   const drawer = document.getElementById(id);
-  if (!drawer) return;
+  if (!drawer) return false;
 
   const open = force ?? !drawer.classList.contains("is-open");
 
@@ -116,18 +119,89 @@ function toggleDrawer(id, force) {
         ? document.getElementById("notificationsButton")
         : id === "chatDrawer"
           ? document.getElementById("chatButton")
-          : null;
+          : id === "supportDrawer"
+            ? document.getElementById("openSupportDrawer")
+            : null;
 
-    fallbackButton?.focus();
+    fallbackButton?.focus?.();
   }
 
   drawer.classList.toggle("is-open", open);
   drawer.setAttribute("aria-hidden", String(!open));
 
+  const controlId =
+    id === "notificationsDrawer"
+      ? "notificationsButton"
+      : id === "chatDrawer"
+        ? "chatButton"
+        : id === "supportDrawer"
+          ? "openSupportDrawer"
+          : null;
+
+  if (controlId) {
+    document.getElementById(controlId)?.setAttribute("aria-expanded", String(open));
+  }
+
   if (open) {
     drawer.removeAttribute("inert");
   } else {
     drawer.setAttribute("inert", "");
+  }
+
+  return open;
+}
+
+function closeAllDrawers() {
+  ["notificationsDrawer", "chatDrawer", "supportDrawer"].forEach((id) => {
+    toggleDrawer(id, false);
+  });
+}
+
+function setClientView(view = "home", options = {}) {
+  const safeView = String(view || "home").trim() || "home";
+  const behavior = options.behavior ?? "smooth";
+
+  document.body.dataset.clientView = safeView;
+
+  document.querySelectorAll("[data-client-view]").forEach((button) => {
+    const active = button.dataset.clientView === safeView;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+
+  const targetByView = {
+    home: "clientHero",
+    services: "categoryGrid",
+    providers: "providerResults",
+    activity: "requestSummaryPanel",
+    support: "supportDrawer"
+  };
+
+  if (safeView === "support") {
+    toggleDrawer("supportDrawer", true);
+    return;
+  }
+
+  const targetId = targetByView[safeView];
+  const target = targetId ? document.getElementById(targetId) : null;
+
+  if (target) {
+    target.scrollIntoView({
+      behavior,
+      block: "start"
+    });
+  } else {
+    window.scrollTo({ top: 0, behavior });
+  }
+}
+
+async function openClientChat() {
+  toggleDrawer("chatDrawer", true);
+
+  if (!state.chat.messages.length && currentConversationId()) {
+    const messages = await loadMessages(currentConversationId());
+    patchState("chat.messages", messages);
+    patchState("chat.unreadCount", 0);
   }
 }
 
@@ -746,13 +820,7 @@ function bindBasicControls() {
 
   document.getElementById("chatButton")?.addEventListener("click", async () => {
     try {
-      toggleDrawer("chatDrawer", true);
-
-      if (!state.chat.messages.length && currentConversationId()) {
-        const messages = await loadMessages(currentConversationId());
-        patchState("chat.messages", messages);
-        patchState("chat.unreadCount", 0);
-      }
+      await openClientChat();
     } catch (error) {
       setInfo(null, normalizeAuthError(error, "No se pudo abrir el chat."));
     }
@@ -832,37 +900,52 @@ function bindBasicControls() {
     }
   });
 
-document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
-  try {
-    const scrollButton = event.target.closest("[data-scroll-target]");
-    if (scrollButton) {
-      const target = document.getElementById(scrollButton.dataset.scrollTarget);
-
-      if (target) {
-        target.scrollIntoView({
-          behavior: "smooth",
-          block: "start"
-        });
+  document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
+    try {
+      const viewButton = event.target.closest("[data-client-view]");
+      if (viewButton) {
+        const view = viewButton.dataset.clientView || "home";
+        setClientView(view);
+        return;
       }
 
-      return;
-    }
+      // Compatibilidad temporal con el cliente.html anterior.
+      const scrollButton = event.target.closest("[data-scroll-target]");
+      if (scrollButton) {
+        const target = document.getElementById(scrollButton.dataset.scrollTarget);
 
-    const supportButton = event.target.closest("[data-action='support']");
-    if (supportButton) {
-      toggleDrawer("supportDrawer", true);
-      return;
-    }
+        if (target) {
+          target.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        }
 
-    const notificationButton = event.target.closest("[data-action='notifications']");
-    if (notificationButton) {
-      toggleDrawer("notificationsDrawer", true);
-      return;
-    }
+        return;
+      }
 
-    const categoryButton = event.target.closest("[data-category-id]");      
-    if (categoryButton) {
+      const supportButton = event.target.closest("[data-action='support']");
+      if (supportButton) {
+        toggleDrawer("supportDrawer", true);
+        return;
+      }
+
+      const chatActionButton = event.target.closest("[data-action='chat']");
+      if (chatActionButton) {
+        await openClientChat();
+        return;
+      }
+
+      const notificationButton = event.target.closest("[data-action='notifications']");
+      if (notificationButton) {
+        toggleDrawer("notificationsDrawer", true);
+        return;
+      }
+
+      const categoryButton = event.target.closest("[data-category-id]");
+      if (categoryButton) {
         patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
+        setClientView("services", { behavior: "auto" });
         return;
       }
 
@@ -877,6 +960,7 @@ document.querySelector(".app-shell")?.addEventListener("click", async (event) =>
       const selectProvider = event.target.closest("[data-provider-select]");
       if (selectProvider) {
         await handleProviderSelection(selectProvider.dataset.providerSelect);
+        setClientView("activity");
         return;
       }
 
@@ -887,14 +971,13 @@ document.querySelector(".app-shell")?.addEventListener("click", async (event) =>
       }
 
       if (event.target.closest("[data-open-chat]")) {
-        toggleDrawer("chatDrawer", true);
+        await openClientChat();
       }
     } catch (error) {
       setInfo(null, normalizeAuthError(error, "No se pudo completar la acción."));
     }
   });
 }
-
 function setupRealtime(
   requestId = state.client.activeRequest?.id ?? null,
   conversationId = currentConversationId()
@@ -977,18 +1060,22 @@ async function init() {
   toggleClearAddressButton();
   updateScheduledVisibility();
   bindBasicControls();
+  setClientView(document.body.dataset.clientView || "home", { behavior: "auto" });
   registerInstallPrompt();
   initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
 
 // Service Worker desactivado temporalmente en Cliente.
 // Evita error 404 hasta crear el SW correcto en /mimi-servicios/sw.js.
-if (false && "serviceWorker" in navigator) {
+// Cuando exista el archivo, cambiar CLIENT_SW_ENABLED a true.
+const CLIENT_SW_ENABLED = false;
+
+if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("./sw.js")
     .catch((err) => {
       console.warn("[MIMI Cliente] Service Worker no registrado:", err);
     });
-}  
+}
   await bootstrapAsyncData();
 
   if (window.location.hash && window.location.hash.includes("access_token")) {
