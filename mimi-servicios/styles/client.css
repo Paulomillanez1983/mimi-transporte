@@ -1,8 +1,13 @@
 /* =========================================================
-   MIMI SERVICIOS CLIENTE — client.css FINAL 2026
+   MIMI SERVICIOS CLIENTE — client.css PRODUCCIÓN 2026
    Archivo estable, sin parches duplicados.
-   Reemplazar TODO el contenido actual de styles/client.css por este archivo.
+   Reemplazar TODO el contenido actual de:
+   mimi-servicios/styles/client.css
    No incluye reglas de Provider.
+   ========================================================= */
+
+/* =========================================================
+   1) TOKENS / BASE
    ========================================================= */
 
 :root{
@@ -16,16 +21,38 @@
   --client-danger:#ef4444;
 
   --client-bg:#f6f8ff;
+  --client-bg-dark:#111827;
   --client-surface:#ffffff;
-  --client-surface-soft:rgba(255,255,255,.88);
+  --client-surface-soft:rgba(255,255,255,.90);
   --client-text:#0f172a;
   --client-muted:#64748b;
   --client-border:rgba(37,99,235,.12);
-  --client-border-strong:rgba(37,99,235,.28);
-  --client-shadow:0 18px 42px rgba(15,23,42,.10);
-  --client-shadow-soft:0 10px 28px rgba(37,99,235,.08);
-  --client-shadow-strong:0 24px 70px rgba(15,23,42,.18);
+  --client-border-strong:rgba(37,99,235,.30);
 
+  --client-shadow-xs:0 6px 16px rgba(15,23,42,.06);
+  --client-shadow-sm:0 10px 28px rgba(37,99,235,.08);
+  --client-shadow-md:0 18px 42px rgba(15,23,42,.10);
+  --client-shadow-lg:0 24px 70px rgba(15,23,42,.18);
+  --client-shadow-nav:0 20px 55px rgba(15,23,42,.18);
+
+  --client-radius-xs:10px;
+  --client-radius-sm:12px;
+  --client-radius-md:16px;
+  --client-radius-lg:22px;
+  --client-radius-xl:28px;
+  --client-radius-2xl:34px;
+
+  --client-max:430px;
+  --client-header-z:80;
+  --client-nav-z:120;
+  --client-drawer-z:160;
+
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px);
+  --safe-right:env(safe-area-inset-right,0px);
+
+  /* Compatibilidad con app.css */
   --primary:var(--client-primary);
   --primary-2:var(--client-primary-2);
   --secondary:var(--client-success);
@@ -35,25 +62,16 @@
   --danger:var(--client-danger);
   --text:var(--client-text);
   --muted:var(--client-muted);
-
-  --safe-top:env(safe-area-inset-top,0px);
-  --safe-bottom:env(safe-area-inset-bottom,0px);
-  --safe-left:env(safe-area-inset-left,0px);
-  --safe-right:env(safe-area-inset-right,0px);
-
-  --client-radius-sm:12px;
-  --client-radius-md:16px;
-  --client-radius-lg:22px;
-  --client-radius-xl:28px;
-  --client-max:430px;
 }
 
 html{
   width:100%;
   min-height:100%;
+  height:auto;
   overflow-x:hidden;
+  overflow-y:auto;
   scroll-behavior:smooth;
-  background:#111827;
+  background:var(--client-bg-dark);
   -webkit-text-size-adjust:100%;
   text-size-adjust:100%;
 }
@@ -63,22 +81,29 @@ body{
   min-height:100vh;
   min-height:100svh;
   min-height:100dvh;
+  height:auto;
   margin:0;
   overflow-x:hidden;
-  background:#111827;
+  overflow-y:auto;
+  background:var(--client-bg-dark);
   color:var(--client-text);
-  overscroll-behavior-y:contain;
-  touch-action:auto;
+  overscroll-behavior-y:auto;
+  touch-action:pan-y;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
 
-*,*::before,*::after{
+*,
+*::before,
+*::after{
   box-sizing:border-box;
   -webkit-tap-highlight-color:transparent;
 }
 
-button,input,textarea,select{
+button,
+input,
+textarea,
+select{
   font:inherit;
 }
 
@@ -92,12 +117,29 @@ button:disabled{
   opacity:.68;
 }
 
+img,
+svg{
+  max-width:100%;
+}
+
 [hidden]{
   display:none!important;
 }
 
+.sr-only{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+
 /* =========================================================
-   APP SHELL CLIENTE
+   2) APP SHELL / LAYOUT
    ========================================================= */
 
 .app-shell{
@@ -105,30 +147,126 @@ button:disabled{
   min-height:100vh;
   min-height:100svh;
   min-height:100dvh;
+  height:auto;
   margin:0 auto;
   position:relative;
   overflow-x:hidden;
   overflow-y:visible;
-   background:
+  background:
     radial-gradient(circle at 18% 0%,rgba(37,99,235,.20),transparent 28%),
     radial-gradient(circle at 88% 8%,rgba(124,58,237,.14),transparent 26%),
     linear-gradient(180deg,#f7f9ff 0%,#ffffff 44%,#f4f7ff 100%);
   box-shadow:0 30px 90px rgba(15,23,42,.18);
+  touch-action:pan-y;
 }
 
 .container{
   width:100%;
-  padding:14px max(14px,var(--safe-left)) calc(104px + var(--safe-bottom)) max(14px,var(--safe-right));
+  padding:
+    14px
+    max(14px,var(--safe-right))
+    calc(104px + var(--safe-bottom))
+    max(14px,var(--safe-left));
+  overflow:visible;
+  touch-action:pan-y;
+}
+
+.main-card,
+.planner-shell,
+.planner-panel,
+.screen-stack,
+.screen-column,
+.summary-panel{
+  min-width:0;
+}
+
+.main-card{
+  display:block;
+  border:0;
+  background:transparent;
+  box-shadow:none;
+}
+
+.planner-shell{
+  display:grid;
+  gap:16px;
+}
+
+.planner-panel,
+.summary-panel{
+  display:grid;
+  gap:16px;
+}
+
+.planner-topbar,
+.block-header,
+.map-card-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+}
+
+.planner-topbar{
+  padding:16px;
+  border-radius:var(--client-radius-xl);
+  background:rgba(255,255,255,.80);
+  border:1px solid var(--client-border);
+  box-shadow:var(--client-shadow-sm);
+}
+
+.planner-topbar-copy{
+  min-width:0;
+}
+
+.planner-topbar h2,
+.block-header h3,
+.map-card-header h3{
+  margin:0;
+  color:var(--client-text);
+  line-height:1.05;
+  letter-spacing:-.035em;
+}
+
+.planner-topbar p{
+  margin:8px 0 0;
+  color:var(--client-muted);
+  line-height:1.45;
+}
+
+.eyebrow{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:0 9px;
+  margin-bottom:6px;
+  border-radius:999px;
+  background:rgba(37,99,235,.08);
+  color:var(--client-primary-dark);
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+}
+
+.helper-text{
+  color:var(--client-muted);
+  font-size:12px;
+  line-height:1.35;
+}
+
+.compact-stack{
+  gap:10px;
 }
 
 /* =========================================================
-   HEADER
+   3) HEADER
    ========================================================= */
 
 .header{
   position:sticky;
   top:0;
-  z-index:80;
+  z-index:var(--client-header-z);
   padding:calc(10px + var(--safe-top)) 14px 10px;
   background:rgba(247,249,255,.88);
   backdrop-filter:blur(18px) saturate(160%);
@@ -221,6 +359,13 @@ button:disabled{
   position:relative;
 }
 
+.trip-notifications:active,
+.header-login-btn:active,
+.header-logout-btn:active,
+.icon-button:active{
+  transform:scale(.97);
+}
+
 .header-login-btn,
 .header-logout-btn{
   padding:0 14px;
@@ -251,7 +396,7 @@ button:disabled{
 }
 
 /* =========================================================
-   HERO CLIENTE
+   4) HERO CLIENTE
    ========================================================= */
 
 .hero-text-client{
@@ -375,12 +520,20 @@ button:disabled{
   color:var(--client-muted);
 }
 
+.hero-actions,
+.hero-actions-client{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
 .hero-actions-client{
   display:none;
 }
 
 /* =========================================================
-   ONBOARDING / INSIGHTS / FLOW
+   5) CARDS / ONBOARDING / FLOW
    ========================================================= */
 
 .hero-insights,
@@ -392,6 +545,10 @@ button:disabled{
   align-items:stretch;
 }
 
+.planner-block,
+.map-card,
+.request-card,
+.activity-card,
 .hero-insight-card,
 .flow-step-card,
 .request-tips-card,
@@ -405,9 +562,18 @@ button:disabled{
   border-radius:var(--client-radius-lg);
   background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,255,255,.88));
   border:1px solid var(--client-border);
-  box-shadow:var(--client-shadow-soft);
+  box-shadow:var(--client-shadow-sm);
   backdrop-filter:blur(18px) saturate(160%);
   -webkit-backdrop-filter:blur(18px) saturate(160%);
+}
+
+.planner-block,
+.map-card,
+.request-card,
+.activity-card{
+  padding:16px;
+  display:grid;
+  gap:14px;
 }
 
 .hero-insight-card,
@@ -451,13 +617,29 @@ button:disabled{
 }
 
 /* =========================================================
-   PLANIFICADOR / FORMULARIO
+   6) FORMULARIO / INPUTS / SUGERENCIAS
    ========================================================= */
 
-.planner-shell,
-.planner-shell-client{
+.form-stack{
   display:grid;
-  gap:16px;
+  gap:14px;
+}
+
+.double-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+.input-group{
+  display:grid;
+  gap:8px;
+  min-width:0;
+}
+
+.input-group > span{
+  color:var(--client-text);
+  font-weight:900;
 }
 
 .planner-block-highlight{
@@ -594,7 +776,7 @@ textarea:focus{
 }
 
 /* =========================================================
-   BOTONES GENERALES
+   7) BOTONES
    ========================================================= */
 
 .btn-primary,
@@ -605,7 +787,9 @@ textarea:focus{
   min-height:50px;
   border:0;
   border-radius:17px;
-  background:radial-gradient(circle at 20% 10%,rgba(255,255,255,.34),transparent 24%),linear-gradient(135deg,var(--client-primary),var(--client-primary-2));
+  background:
+    radial-gradient(circle at 20% 10%,rgba(255,255,255,.34),transparent 24%),
+    linear-gradient(135deg,var(--client-primary),var(--client-primary-2));
   color:#fff;
   font-weight:900;
   box-shadow:0 16px 34px rgba(37,99,235,.28),inset 0 1px 0 rgba(255,255,255,.22);
@@ -651,7 +835,7 @@ textarea:focus{
 }
 
 /* =========================================================
-   CATEGORÍAS
+   8) CATEGORÍAS / RESULTADOS / RESUMEN
    ========================================================= */
 
 .category-grid{
@@ -691,10 +875,6 @@ textarea:focus{
   background:linear-gradient(135deg,rgba(37,99,235,.12),#fff);
   box-shadow:0 18px 40px rgba(37,99,235,.14);
 }
-
-/* =========================================================
-   RESULTADOS / PRESTADORES / RESUMEN
-   ========================================================= */
 
 .card-list,
 #providersList,
@@ -760,9 +940,11 @@ textarea:focus{
   gap:8px;
 }
 
-.inline-chip{
+.inline-chip,
+.status-chip{
   display:inline-flex;
   align-items:center;
+  justify-content:center;
   min-height:28px;
   padding:0 10px;
   border-radius:999px;
@@ -788,8 +970,13 @@ textarea:focus{
 }
 
 /* =========================================================
-   TIMELINE
+   9) TIMELINE / MAPA
    ========================================================= */
+
+.timeline{
+  display:grid;
+  gap:10px;
+}
 
 .timeline-step{
   padding:12px 14px;
@@ -815,10 +1002,6 @@ textarea:focus{
   background:linear-gradient(135deg,rgba(37,99,235,.12),#fff);
 }
 
-/* =========================================================
-   MAPA CLIENTE
-   ========================================================= */
-
 .map-section,
 .map-card,
 .client-map-section{
@@ -827,7 +1010,7 @@ textarea:focus{
   border-radius:var(--client-radius-xl);
   border:1px solid rgba(37,99,235,.12);
   background:#dbeafe;
-  box-shadow:var(--client-shadow);
+  box-shadow:var(--client-shadow-md);
 }
 
 .map-container,
@@ -836,6 +1019,14 @@ textarea:focus{
 .map-surface{
   width:100%;
   min-height:clamp(260px,42svh,520px);
+}
+
+#clientMap,
+.map-surface,
+.maplibregl-map,
+.maplibregl-canvas-container,
+.maplibregl-canvas{
+  touch-action:none;
 }
 
 .maplibregl-map,
@@ -855,7 +1046,7 @@ textarea:focus{
 }
 
 /* =========================================================
-   DRAWERS / CHAT / SOPORTE / NOTIFICACIONES
+   10) DRAWERS / CHAT / SOPORTE / NOTIFICACIONES
    ========================================================= */
 
 .drawer{
@@ -863,7 +1054,7 @@ textarea:focus{
   left:50%;
   bottom:0;
   transform:translate(-50%,105%);
-  z-index:160;
+  z-index:var(--client-drawer-z);
   width:min(100%,var(--client-max));
   max-height:78dvh;
   border-radius:28px 28px 0 0;
@@ -888,6 +1079,12 @@ textarea:focus{
   border-bottom:1px solid rgba(15,23,42,.08);
 }
 
+.drawer-header h3{
+  margin:0;
+  color:var(--client-text);
+  letter-spacing:-.035em;
+}
+
 .drawer-header button,
 [data-close-drawer]{
   min-width:42px;
@@ -903,6 +1100,23 @@ textarea:focus{
   overflow:auto;
   max-height:calc(78dvh - 68px);
   -webkit-overflow-scrolling:touch;
+}
+
+.chat-body{
+  display:grid;
+  gap:12px;
+}
+
+.chat-list{
+  display:grid;
+  gap:10px;
+}
+
+.chat-form{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:center;
 }
 
 .message-bubble{
@@ -925,7 +1139,7 @@ textarea:focus{
 }
 
 /* =========================================================
-   BOTTOM NAV CLIENTE
+   11) BOTTOM NAV / VISTAS
    ========================================================= */
 
 .client-bottom-nav{
@@ -933,7 +1147,7 @@ textarea:focus{
   left:50%;
   bottom:calc(10px + var(--safe-bottom));
   transform:translateX(-50%);
-  z-index:120;
+  z-index:var(--client-nav-z);
   width:min(calc(100% - 24px),406px);
   padding:8px;
   display:grid;
@@ -944,7 +1158,12 @@ textarea:focus{
   backdrop-filter:blur(20px) saturate(160%);
   -webkit-backdrop-filter:blur(20px) saturate(160%);
   border:1px solid rgba(37,99,235,.10);
-  box-shadow:0 20px 55px rgba(15,23,42,.18);
+  box-shadow:var(--client-shadow-nav);
+  touch-action:manipulation;
+}
+
+.client-bottom-nav *{
+  touch-action:manipulation;
 }
 
 .client-bottom-nav button{
@@ -957,12 +1176,31 @@ textarea:focus{
   font-weight:950;
 }
 
+.client-bottom-nav button.is-active,
+.client-bottom-nav button[aria-current="page"]{
+  background:linear-gradient(135deg,var(--client-primary),var(--client-primary-2));
+  color:#fff;
+  box-shadow:0 12px 28px rgba(37,99,235,.22);
+}
+
 .client-bottom-nav button:active{
   transform:scale(.97);
 }
 
+/* Preparado para navegación por vistas reales desde main-client.js */
+[data-client-screen]{
+  scroll-margin-top:86px;
+}
+
+body[data-client-view="home"] #clientHero,
+body[data-client-view="services"] #clientScreen,
+body[data-client-view="providers"] #providerResults,
+body[data-client-view="activity"] #requestSummaryPanel{
+  animation:client-view-pop .22s ease both;
+}
+
 /* =========================================================
-   STATUS / BANNERS
+   12) STATUS / BANNERS
    ========================================================= */
 
 .status-banner{
@@ -987,7 +1225,7 @@ textarea:focus{
 }
 
 /* =========================================================
-   ANIMACIONES
+   13) ANIMACIONES
    ========================================================= */
 
 @keyframes client-spin{
@@ -995,8 +1233,19 @@ textarea:focus{
   to{transform:rotate(360deg)}
 }
 
+@keyframes client-view-pop{
+  from{
+    opacity:.72;
+    transform:translateY(6px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
 /* =========================================================
-   RESPONSIVE
+   14) RESPONSIVE
    ========================================================= */
 
 @media (min-width:821px){
@@ -1009,12 +1258,34 @@ textarea:focus{
     margin-block:18px;
     min-height:calc(100dvh - 36px);
   }
+
+  .planner-shell{
+    grid-template-columns:minmax(0,1fr);
+  }
 }
 
 @media (max-width:960px){
   .hero-insights,
   .flow-grid{
     grid-template-columns:1fr;
+  }
+}
+
+@media (max-width:820px){
+  html,
+  body{
+    overflow-x:hidden;
+    overflow-y:auto;
+    height:auto;
+    touch-action:pan-y;
+  }
+
+  .app-shell,
+  .container{
+    overflow-x:hidden;
+    overflow-y:visible;
+    height:auto;
+    touch-action:pan-y;
   }
 }
 
@@ -1046,6 +1317,10 @@ textarea:focus{
   .results-explainer{
     font-size:.94rem;
   }
+
+  .chat-form{
+    grid-template-columns:1fr;
+  }
 }
 
 @media (max-width:430px){
@@ -1064,7 +1339,10 @@ textarea:focus{
     font-size:32px;
   }
 
-  .category-grid{
+  .double-grid,
+  .category-grid,
+  .result-meta,
+  .summary-metrics{
     grid-template-columns:1fr;
   }
 
@@ -1179,11 +1457,13 @@ textarea:focus{
 }
 
 /* =========================================================
-   ACCESIBILIDAD
+   15) ACCESIBILIDAD
    ========================================================= */
 
 @media (prefers-reduced-motion:reduce){
-  *,*::before,*::after{
+  *,
+  *::before,
+  *::after{
     animation-duration:.01ms!important;
     animation-iteration-count:1!important;
     transition-duration:.01ms!important;
@@ -1203,35 +1483,11 @@ textarea:focus{
   .request-tips-card,
   .summary-callout-item,
   .result-card,
-  .notification-card{
+  .notification-card,
+  .planner-block,
+  .map-card,
+  .request-card,
+  .activity-card{
     border-width:2px;
   }
-}
-html,
-body{
-  overflow-x:hidden;
-  overflow-y:auto;
-  height:auto;
-}
-
-.app-shell{
-  overflow-x:hidden;
-  overflow-y:visible;
-  height:auto;
-}
-
-.container{
-  overflow:visible;
-  touch-action:pan-y;
-}
-
-#clientMap,
-.map-surface,
-.maplibregl-map{
-  touch-action:none;
-}
-
-.client-bottom-nav,
-.client-bottom-nav *{
-  touch-action:manipulation;
 }
