@@ -127,7 +127,7 @@ function normalizeProvider(provider, index = 0) {
       provider.svc_categories?.name ||
       provider.category_name ||
       provider.pricing_mode ||
-      "Profesional MIMI",
+      "Prestador MIMI Go",
     jobs: Number(provider.completed_services_count ?? provider.rating_count ?? 0),
     x: [52, 38, 65, 47, 72, 30, 80, 22, 60][index % 9],
     y: [44, 56, 35, 62, 58, 42, 48, 30, 70][index % 9]
@@ -182,6 +182,10 @@ function renderAuth(state) {
   const authSecondaryButton = document.getElementById("authSecondaryButton");
   const authHint = document.getElementById("authHint");
   const greetingName = document.getElementById("clientGreetingName");
+  const userSessionCard = document.getElementById("userSessionCard");
+  const userAvatarImage = document.getElementById("userAvatarImage");
+  const userSessionName = document.getElementById("userSessionName");
+  const userSessionEmail = document.getElementById("userSessionEmail");
 
   const isAuthenticated = Boolean(state.session.userId);
   const hasBackend = state.meta.backendMode === "supabase";
@@ -192,9 +196,9 @@ function renderAuth(state) {
 
   if (sessionChip) {
     sessionChip.textContent = isAuthenticated
-      ? `Cliente · ${displayName}`
+      ? "Sesion activa"
       : hasBackend
-        ? "Cliente | Prestador"
+        ? "Cliente"
         : "Modo demo";
   }
 
@@ -207,15 +211,38 @@ function renderAuth(state) {
     authPrimaryButton.textContent = hasBackend ? "Ingresar" : "Demo";
   }
 
+  if (userSessionCard) {
+    userSessionCard.hidden = !isAuthenticated;
+  }
+
   if (authSecondaryButton) {
     authSecondaryButton.hidden = !isAuthenticated;
   }
 
+  if (userSessionName) {
+    userSessionName.textContent = displayName;
+  }
+
+  if (userSessionEmail) {
+    userSessionEmail.textContent = state.session.userEmail || "";
+  }
+
+  if (userAvatarImage) {
+    const avatar = state.session.userAvatar;
+    userAvatarImage.hidden = !avatar;
+    userAvatarImage.src = avatar || "";
+    userAvatarImage.alt = avatar ? `Foto de ${displayName}` : "";
+  }
+
+  if (userSessionCard) {
+    userSessionCard.classList.toggle("has-avatar", Boolean(state.session.userAvatar));
+  }
+
   if (authHint) {
     authHint.textContent = isAuthenticated
-      ? "Sesion lista para buscar, cotizar, chatear y seguir servicios."
+      ? "Sesion lista para buscar prestadores, cotizar y seguir servicios."
       : hasBackend
-        ? "Ingresa con Google para usar solicitudes reales."
+        ? "Ingresa para usar solicitudes reales."
         : "Demo local activa: podes probar busqueda, seleccion y seguimiento.";
   }
 }
@@ -389,7 +416,7 @@ export function renderProvidersList(state) {
     null;
 
   meta.textContent = providers.length
-    ? `${providers.length} prestadores ordenados por cercania y score`
+    ? `${providers.length} prestadores ordenados por cercania y disponibilidad`
     : state.meta.info || "Esperando busqueda";
 
   renderRadarMap(providers, selectedId);
@@ -590,7 +617,7 @@ function renderProviderSpotlight(state) {
   container.innerHTML = `
     <article class="summary-card compact-stack">
       <strong>${escapeHtml(selectedProvider?.full_name ?? "Prestador confirmado")}</strong>
-      <p class="muted">${escapeHtml(profile?.bio ?? selectedProvider?.bio ?? "Perfil profesional cargado desde MIMI Servicios.")}</p>
+      <p class="muted">${escapeHtml(profile?.bio ?? selectedProvider?.bio ?? "Perfil de prestador cargado desde MIMI Go.")}</p>
       <div class="chip-row">
         ${(reviews.length ? reviews : [{ rating: selectedProvider?.rating ?? 5, comment: "Prestador verificado por MIMI." }])
           .slice(0, 2)
@@ -610,6 +637,11 @@ function renderStickyAction(state, normalizedProviders = null) {
     (Array.isArray(state.client.providers)
       ? state.client.providers.map(normalizeProvider)
       : []);
+  const hasSearch = providers.length > 0 && Boolean(state.meta.lastSearchAt);
+  const hasDraft =
+    Boolean(state.ui.selectedCategoryId) &&
+    Boolean(String(state.requestDraft.address || "").trim()) &&
+    Number(state.requestDraft.requestedHours || 0) > 0;
   const selectedId =
     state.ui.selectedProviderCandidateId ||
     state.client.selectedProvider?.provider_id ||
@@ -617,10 +649,14 @@ function renderStickyAction(state, normalizedProviders = null) {
     null;
   const selected = providers.find((provider) => provider.provider_id === selectedId);
 
+  button.closest(".sticky-request-bar")?.classList.toggle(
+    "is-visible",
+    Boolean(hasSearch && hasDraft && selected)
+  );
   button.dataset.providerSelect = selected?.provider_id || "";
-  button.disabled = !selected;
-  button.classList.toggle("has-provider", Boolean(selected));
-  button.innerHTML = selected
+  button.disabled = !(hasSearch && hasDraft && selected);
+  button.classList.toggle("has-provider", Boolean(hasSearch && hasDraft && selected));
+  button.innerHTML = hasSearch && hasDraft && selected
     ? `
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m22 4-10 10.01-3-3"></path>
