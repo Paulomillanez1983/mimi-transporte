@@ -2,7 +2,8 @@
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
-  <!-- MIMICar Cliente Transporte V2: versión paralela segura. No reemplaza index.html actual. -->
+  <meta charset="UTF-8">
+  <!-- MIMICar Cliente Transporte: versión modular para producción. -->
   <script src="./js/cliente-transporte-v2/oauth-redirect.js"></script>
   <title>MIMICar | Pedí tu viaje en segundos</title>
   <meta name="description" content="Planificá tu viaje, agregá paradas y consultá el precio estimado desde tu celular.">
@@ -28,7 +29,6 @@
   <meta name="twitter:description" content="Planificá tu viaje, agregá paradas y consultá el precio estimado desde tu celular.">
   <meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimicar-client.jpg">
 
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -491,10 +491,10 @@
           class="btn-primary"
           id="btnConfirmarViaje"
           type="button"
-          aria-label="Confirmar viaje"
+          aria-label="Confirmar y pagar viaje"
         >
           <span aria-hidden="true">✓</span>
-          <span>Confirmar viaje</span>
+          <span>Confirmar y pagar</span>
         </button>
 
         <button
@@ -605,6 +605,7 @@
 <script src="./js/cliente-transporte-v2/config-auth-legal.js"></script>
 <script src="./js/cliente-transporte-v2/state-notifications-support.js"></script>
 <script src="./js/cliente-transporte-v2/ui-geocoding-waypoints-map.js"></script>
+<script src="./js/cliente-transporte-v2/payment-client.js"></script>
 <script src="./js/cliente-transporte-v2/quote-actions-next-ui.js"></script>
   <!-- LEGAL GATE -->
 <div id="legalGate" class="legal-gate" hidden aria-hidden="true">
