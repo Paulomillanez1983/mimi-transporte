@@ -39,6 +39,8 @@ const initialState = {
     activeMode: 'client',
     selectedCategoryId: null,
     selectedProviderCandidateId: null,
+    categorySearchTerm: '',
+    showAllCategories: false,
     hasCompletedClientSearch: false,
     showClientOnboarding: true
   },
@@ -324,6 +326,8 @@ function persistState() {
         appEntered: currentState.ui.appEntered,
         selectedCategoryId: currentState.ui.selectedCategoryId,
         selectedProviderCandidateId: currentState.ui.selectedProviderCandidateId,
+        categorySearchTerm: currentState.ui.categorySearchTerm,
+        showAllCategories: currentState.ui.showAllCategories,
         hasCompletedClientSearch: currentState.ui.hasCompletedClientSearch,
         showClientOnboarding: currentState.ui.showClientOnboarding,
         activeMode: currentState.ui.activeMode
