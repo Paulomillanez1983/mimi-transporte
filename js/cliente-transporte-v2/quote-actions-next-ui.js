@@ -836,6 +836,75 @@ let label = fallbackUsado ? 'Estimación provisoria' : 'Precio calculado';
 // ==========================================
 
   
+async function crearIntentoPagoViajeCliente(viajeId) {
+  if (!viajeId) return null;
+
+  if (!window.MimiTransportPayments?.createPaymentIntentForTrip) {
+    notif.show(
+      'Pago no disponible',
+      'El viaje se creo, pero el modulo de pagos no esta cargado.',
+      'warning',
+      7000
+    );
+    return null;
+  }
+
+  try {
+    actualizarEstadoSolicitudUI({
+      estado: state?.viajeEstado || 'buscando_chofer',
+      texto: 'Preparando pago seguro...'
+    });
+
+    if (typeof actualizarCentroNotificacionesViaje === 'function') {
+      actualizarCentroNotificacionesViaje({
+        estado: state?.estadoViaje || 'BUSCANDO_CHOFER',
+        texto: 'Preparando pago seguro...'
+      });
+    }
+
+    const payment = await window.MimiTransportPayments.createPaymentIntentForTrip(viajeId);
+    state.paymentIntent = payment || null;
+
+    if (!payment) {
+      throw new Error('No se pudo crear el intento de pago');
+    }
+
+    const textoPago = window.MimiTransportPayments.describePayment(payment);
+
+    actualizarEstadoSolicitudUI({
+      estado: state?.viajeEstado || 'buscando_chofer',
+      texto: textoPago
+    });
+
+    if (typeof actualizarCentroNotificacionesViaje === 'function') {
+      actualizarCentroNotificacionesViaje({
+        estado: state?.estadoViaje || 'BUSCANDO_CHOFER',
+        texto: textoPago
+      });
+    }
+
+    const redirigido = window.MimiTransportPayments.openCheckout(payment);
+
+    notif.show(
+      redirigido ? 'Redirigiendo al pago' : 'Pago preparado',
+      textoPago,
+      'success',
+      redirigido ? 2500 : 7000
+    );
+
+    return payment;
+  } catch (error) {
+    console.error('[payments] no se pudo crear payment intent:', error);
+    notif.show(
+      'Pago pendiente',
+      'El viaje se creo, pero no pudimos iniciar el pago. Reintentalo desde el estado del viaje.',
+      'warning',
+      8000
+    );
+    return null;
+  }
+}
+
 async function confirmarViaje() {
   if (!state.origen || !state.destino || !state.routeData) {
     notif.show('Faltan datos', 'Primero calculá el viaje', 'warning');
@@ -1017,13 +1086,13 @@ const payload = {
 
 actualizarEstadoSolicitudUI({
   estado: 'buscando_chofer',
-  texto: 'Enviando solicitud...'
+  texto: 'Confirmando viaje y preparando pago...'
 });
 
 if (typeof actualizarCentroNotificacionesViaje === 'function') {
   actualizarCentroNotificacionesViaje({
     estado: 'BUSCANDO_CHOFER',
-    texto: 'Enviando solicitud...'
+    texto: 'Confirmando viaje y preparando pago...'
   });
 }
     const { response: res, rawText } = await fetchEdgeFunctionWithAuthRetry(
@@ -1181,7 +1250,13 @@ actualizarCardChofer({
 if (typeof suscribirseEstadoViajeRealtime === 'function' && state?.viajeId) {
   suscribirseEstadoViajeRealtime(state.viajeId);
 }
-    notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
+
+    const paymentIntent = await crearIntentoPagoViajeCliente(state.viajeId);
+
+    if (!paymentIntent) {
+      notif.show('Solicitud enviada', 'Buscando chofer disponible...', 'success');
+    }
+
     activarModoViajeLive();
   } catch (err) {
     console.error('[confirmarViaje] ERROR completo:', err);
