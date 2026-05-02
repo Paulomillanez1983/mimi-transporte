@@ -1,17 +1,18 @@
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
-  <title>MIMIGo Prestadores | GanÃ¡ con tus habilidades</title>
-  <meta name="description" content="RecibÃ­ solicitudes de clientes y administrÃ¡ tus servicios desde tu panel.">
-  <meta name="theme-color" content="#020617">
+  <meta charset="UTF-8">
+  <title>MIMIGo Prestadores | Ganá con tus habilidades</title>
+  <meta name="description" content="Recibí solicitudes de clientes y administrá tus servicios desde tu panel.">
+  <meta name="theme-color" content="#f8fafc">
   <link rel="canonical" href="https://mimi-transporte.vercel.app/prestador">
 
   <!-- Social Preview / Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="MIMI Transporte">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:title" content="MIMIGo Prestadores | GanÃ¡ con tus habilidades">
-  <meta property="og:description" content="RecibÃ­ solicitudes de clientes y administrÃ¡ tus servicios desde tu panel.">
+  <meta property="og:title" content="MIMIGo Prestadores | Ganá con tus habilidades">
+  <meta property="og:description" content="Recibí solicitudes de clientes y administrá tus servicios desde tu panel.">
   <meta property="og:url" content="https://mimi-transporte.vercel.app/prestador">
   <meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-prestadores.jpg">
   <meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-prestadores.jpg">
@@ -21,49 +22,62 @@
 
   <!-- X / Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="MIMIGo Prestadores | GanÃ¡ con tus habilidades">
-  <meta name="twitter:description" content="RecibÃ­ solicitudes de clientes y administrÃ¡ tus servicios desde tu panel.">
+  <meta name="twitter:title" content="MIMIGo Prestadores | Ganá con tus habilidades">
+  <meta name="twitter:description" content="Recibí solicitudes de clientes y administrá tus servicios desde tu panel.">
   <meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-prestadores.jpg">
 
-  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon-32.png">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="./assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon.png">
   <link rel="icon" href="./favicon.ico">
-<!-- PWA -->
+
+  <!-- PWA -->
   <link rel="manifest" href="./manifest.json">
-  
+
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
+
   <!-- MapLibre -->
-<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
   <!-- Styles -->
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/provider.css">
+
+  <!-- Provider map theme: light, clean, professional -->
+  <script>
+    window.MIMI_PROVIDER_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+    window.MIMI_PROVIDER_MAP_DEFAULT = {
+      center: [-64.1888, -31.4201],
+      zoom: 12.2,
+      pitch: 0,
+      bearing: 0
+    };
+  </script>
 </head>
+
 <body class="provider-auth-loading">
   <!-- App Shell -->
   <div id="app" class="app-container">
-    
     <!-- Map Background -->
     <div id="mapContainer" class="map-background">
-      <div id="map" class="map-surface"></div>
+      <div id="map" class="map-surface" data-map-style="light"></div>
+
       <div class="map-fallback" id="mapFallback" hidden>
         <div class="fallback-content">
-          <svg class="fallback-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <svg class="fallback-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
             <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 7m0 13V7m0 0L9.553 4.553A1 1 0 009 4.118v.006"/>
           </svg>
           <h3 class="fallback-title">Mapa no disponible</h3>
-          <p class="fallback-text">Seguimos mostrando tu operaciÃ³n</p>
+          <p class="fallback-text">Seguimos mostrando tu operación</p>
         </div>
       </div>
     </div>
@@ -72,21 +86,18 @@
     <header class="floating-header" id="header">
       <div class="header-glass">
         <div class="header-content">
-          <!-- Brand -->
           <div class="header-brand">
             <span class="brand-text">MIMI</span>
             <span class="brand-badge" id="statusBadge">OFFLINE</span>
           </div>
-          
-          <!-- Status Indicator -->
+
           <div class="header-status" id="headerStatus">
             <span class="status-dot" id="statusDot"></span>
             <span class="status-text" id="statusText">Desconectado</span>
           </div>
-          
-          <!-- Menu Button -->
-          <button class="menu-button" id="menuButton" aria-label="MenÃº">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+          <button class="menu-button" id="menuButton" type="button" aria-label="Menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
           </button>
@@ -94,62 +105,61 @@
       </div>
     </header>
 
-<!-- Provider Login Gate -->
-<div class="online-button-container hidden" id="onlineButtonContainer" hidden></div>
+    <!-- Provider Login Gate -->
+    <div class="online-button-container hidden" id="onlineButtonContainer" hidden></div>
 
-    <div class="provider-login-hero-art" aria-hidden="true">
+    <section class="provider-login-hero-art" aria-hidden="true">
       <div class="provider-art-glow"></div>
 
       <div class="provider-art-stack">
         <div class="provider-art-card card-clean">
-          <span>ðŸ§¼</span>
+          <span>🧼</span>
           <small>Limpieza</small>
         </div>
         <div class="provider-art-card card-care">
-          <span>ðŸ§‘â€âš•ï¸</span>
+          <span>🧑‍⚕️</span>
           <small>Cuidado</small>
         </div>
         <div class="provider-art-card card-home">
-          <span>ðŸ </span>
+          <span>🏠</span>
           <small>Hogar</small>
         </div>
         <div class="provider-art-card card-wellness">
-          <span>ðŸ’†</span>
+          <span>💆</span>
           <small>Bienestar</small>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
 
-  <div class="provider-login-panel">
-    <div class="provider-login-logo">
-      <img src="./assets/icons/icon-192.png" alt="MIMI Servicios">
-    </div>
+    <section class="provider-login-panel" aria-label="Ingreso de prestadores">
+      <div class="provider-login-logo">
+        <img src="./assets/icons/icon-192.png" alt="MIMI Servicios">
+      </div>
 
-    <button class="provider-login-google" id="providerGoogleLoginButtonStatic" type="button" tabindex="-1">
-      <span class="provider-google-icon" aria-hidden="true">
-        <svg viewBox="0 0 48 48">
-          <path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.2l6.5-6.5C35.3 2.6 30 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.7c-.3 2-1.6 5-4.4 7l6.9 5.3c4-3.7 6.3-9.2 6.3-16z"/>
-          <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.2.8-4.6l-7.8-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.8-6.1z"/>
-          <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-6.9-5.3c-1.9 1.3-4.5 2.2-9 2.2-6.3 0-11.7-3.9-13.6-9.4l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
-        </svg>
-      </span>
+      <button class="provider-login-google" id="providerGoogleLoginButtonStatic" type="button">
+        <span class="provider-google-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.2 8.8 3.2l6.5-6.5C35.3 2.6 30 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.4 17.7 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.7c-.3 2-1.6 5-4.4 7l6.9 5.3c4-3.7 6.3-9.2 6.3-16z"/>
+            <path fill="#FBBC05" d="M10.4 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.2.8-4.6l-7.8-6.1C.9 16.6 0 20.2 0 24s.9 7.4 2.6 10.7l7.8-6.1z"/>
+            <path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-6.9-5.3c-1.9 1.3-4.5 2.2-9 2.2-6.3 0-11.7-3.9-13.6-9.4l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/>
+          </svg>
+        </span>
 
-      <span class="provider-google-text">
-        <strong>Continuar con Google</strong>
-      </span>
+        <span class="provider-google-text">
+          <strong>Continuar con Google</strong>
+        </span>
 
-      <span class="provider-google-arrow">â€º</span>
-    </button>
+        <span class="provider-google-arrow">›</span>
+      </button>
 
-    <div class="provider-login-trust">
-      <span>ðŸ”’<small>SesiÃ³n segura</small></span>
-      <span>ðŸ› ï¸<small>VerificaciÃ³n profesional</small></span>
-      <span>âš¡<small>Servicios reales</small></span>
-    </div>
-  </div>
-</div>    
+      <div class="provider-login-trust">
+        <span>🔒<small>Sesión segura</small></span>
+        <span>🛠️<small>Verificación profesional</small></span>
+        <span>⚡<small>Servicios reales</small></span>
+      </div>
+    </section>
+
     <!-- Floating Offer Card -->
     <div class="offer-card-float" id="offerCard" hidden>
       <div class="offer-glass">
@@ -158,14 +168,14 @@
           <span class="offer-timer" id="offerTimer">15s</span>
         </div>
         <div class="offer-body">
-          <div class="offer-service" id="offerService">PlomerÃ­a</div>
-          <div class="offer-location" id="offerLocation">Nueva CÃ³rdoba</div>
+          <div class="offer-service" id="offerService">Plomería</div>
+          <div class="offer-location" id="offerLocation">Nueva Córdoba</div>
           <div class="offer-client" id="offerClient">Cliente: Mariana</div>
           <div class="offer-price" id="offerPrice">$18.000 estimado</div>
         </div>
         <div class="offer-actions">
-          <button class="offer-btn reject" id="rejectOffer">Rechazar</button>
-          <button class="offer-btn accept" id="acceptOffer">Aceptar</button>
+          <button class="offer-btn reject" id="rejectOffer" type="button">Rechazar</button>
+          <button class="offer-btn accept" id="acceptOffer" type="button">Aceptar</button>
         </div>
       </div>
     </div>
@@ -179,11 +189,11 @@
         </div>
         <div class="service-body">
           <div class="service-type" id="activeServiceType">Electricista</div>
-          <div class="service-location" id="activeServiceLocation">Nueva CÃ³rdoba</div>
+          <div class="service-location" id="activeServiceLocation">Nueva Córdoba</div>
           <div class="service-client" id="activeServiceClient">Mariana</div>
         </div>
-        <button class="service-action-btn" id="serviceActionBtn">
-          LleguÃ© al domicilio
+        <button class="service-action-btn" id="serviceActionBtn" type="button">
+          Llegué al domicilio
         </button>
       </div>
     </div>
@@ -192,7 +202,7 @@
     <div class="distance-alert" id="distanceAlert" hidden>
       <div class="alert-glass alert-warning" id="alertContent">
         <div class="alert-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
           </svg>
         </div>
@@ -200,7 +210,7 @@
           <div class="alert-title" id="alertTitle">Conviene salir ahora</div>
           <div class="alert-text" id="alertText">Para llegar a tiempo al servicio</div>
         </div>
-        <button class="alert-action" id="alertAction">Ver ruta</button>
+        <button class="alert-action" id="alertAction" type="button">Ver ruta</button>
       </div>
     </div>
 
@@ -209,90 +219,85 @@
       <div class="sheet-handle-container">
         <div class="sheet-handle"></div>
       </div>
-      
-      <!-- Sheet Header (Compact) -->
-       <div class="sheet-header" id="sheetHeader">
-         <div class="sheet-summary">
-           <div class="sheet-status" id="sheetStatus">
-             <span class="status-indicator offline" id="sheetStatusDot"></span>
-             <span class="status-text" id="sheetStatusText">Offline</span>
-           </div>
 
-           <div class="sheet-info" id="sheetInfo">
-             <span class="info-price" id="sheetBasePrice">Base â€”</span>
-             <span class="info-separator">Â·</span>
-             <span class="info-mode" id="sheetPricingMode">â€”</span>
-           </div>
-         </div>
+      <div class="sheet-header" id="sheetHeader">
+        <div class="sheet-summary">
+          <div class="sheet-status" id="sheetStatus">
+            <span class="status-indicator offline" id="sheetStatusDot"></span>
+            <span class="status-text" id="sheetStatusText">Offline</span>
+          </div>
 
-         <div class="sheet-upcoming" id="sheetUpcoming">
-           <span class="upcoming-label">PrÃ³ximo:</span>
-           <span class="upcoming-time" id="sheetUpcomingTime">Sin agenda</span>
-         </div>
-       </div>
-      
-      <!-- Sheet Content (Scrollable) -->
-      <div class="sheet-content" id="sheetContent">
-        <!-- Tabs -->
-        <div class="sheet-tabs">
-          <button class="tab-btn active" data-tab="now">Ahora</button>
-          <button class="tab-btn" data-tab="scheduled">Agenda</button>
-          <button class="tab-btn" data-tab="pricing">Precios</button>
-          <button class="tab-btn" data-tab="account">Cuenta</button>
+          <div class="sheet-info" id="sheetInfo">
+            <span class="info-price" id="sheetBasePrice">Base —</span>
+            <span class="info-separator">·</span>
+            <span class="info-mode" id="sheetPricingMode">—</span>
+          </div>
         </div>
-        
-        <!-- Tab: Now -->
+
+        <div class="sheet-upcoming" id="sheetUpcoming">
+          <span class="upcoming-label">Próximo:</span>
+          <span class="upcoming-time" id="sheetUpcomingTime">Sin agenda</span>
+        </div>
+      </div>
+
+      <div class="sheet-content" id="sheetContent">
+        <div class="sheet-tabs">
+          <button class="tab-btn active" type="button" data-tab="now">Ahora</button>
+          <button class="tab-btn" type="button" data-tab="scheduled">Agenda</button>
+          <button class="tab-btn" type="button" data-tab="pricing">Precios</button>
+          <button class="tab-btn" type="button" data-tab="account">Cuenta</button>
+        </div>
+
         <div class="tab-panel active" id="tabNow">
-         <div class="panel-section">
-          <h3 class="section-title">Estado actual</h3>
+          <div class="panel-section">
+            <h3 class="section-title">Estado actual</h3>
 
-          <!-- ðŸ”¥ DASHBOARD REAL -->
-             <div id="providerDashboardPanel"></div>
+            <!-- Dashboard real -->
+            <div id="providerDashboardPanel"></div>
 
-              <div class="status-toggle-modern" id="statusToggleModern">
-               <button class="toggle-option active" data-status="OFFLINE">
-                <span class="toggle-icon">â­•</span>
+            <div class="status-toggle-modern" id="statusToggleModern">
+              <button class="toggle-option active" type="button" data-status="OFFLINE">
+                <span class="toggle-icon">⭕</span>
                 <span>Offline</span>
               </button>
-              <button class="toggle-option" data-status="ONLINE_IDLE">
-                <span class="toggle-icon">ðŸŸ¢</span>
+              <button class="toggle-option" type="button" data-status="ONLINE_IDLE">
+                <span class="toggle-icon">🟢</span>
                 <span>Online</span>
               </button>
             </div>
           </div>
-          
+
           <div class="panel-section" id="nextServiceSection" hidden>
-            <h3 class="section-title">PrÃ³ximo servicio</h3>
+            <h3 class="section-title">Próximo servicio</h3>
             <div class="next-service-card" id="nextServiceCard">
               <div class="next-time">Hoy 16:30</div>
               <div class="next-type">Electricista</div>
-              <div class="next-location">Nueva CÃ³rdoba</div>
-              <div class="next-distance">A 7.8 km Â· 18 min</div>
+              <div class="next-location">Nueva Córdoba</div>
+              <div class="next-distance">A 7.8 km · 18 min</div>
             </div>
           </div>
-          
+
           <div class="panel-section">
-            <h3 class="section-title">Acciones rÃ¡pidas</h3>
+            <h3 class="section-title">Acciones rápidas</h3>
             <div class="quick-actions">
-              <button class="quick-btn" id="quickNotifications">
-                <span class="quick-icon">ðŸ””</span>
+              <button class="quick-btn" id="quickNotifications" type="button">
+                <span class="quick-icon">🔔</span>
                 <span>Notificaciones</span>
                 <span class="quick-badge" id="notificationBadge">0</span>
               </button>
-              <button class="quick-btn" id="quickChat">
-                <span class="quick-icon">ðŸ’¬</span>
+              <button class="quick-btn" id="quickChat" type="button">
+                <span class="quick-icon">💬</span>
                 <span>Mensajes</span>
                 <span class="quick-badge" id="chatBadge">0</span>
               </button>
-              <button class="quick-btn" id="quickSupport">
-                <span class="quick-icon">ðŸŽ§</span>
+              <button class="quick-btn" id="quickSupport" type="button">
+                <span class="quick-icon">🎧</span>
                 <span>Soporte</span>
               </button>
             </div>
           </div>
         </div>
-        
-        <!-- Tab: Scheduled -->
+
         <div class="tab-panel" id="tabScheduled">
           <div class="panel-section">
             <h3 class="section-title">Servicios programados</h3>
@@ -301,8 +306,7 @@
             </div>
           </div>
         </div>
-        
-        <!-- Tab: Pricing -->
+
         <div class="tab-panel" id="tabPricing">
           <div class="panel-section">
             <h3 class="section-title">Tu tarifa</h3>
@@ -317,7 +321,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="panel-section">
             <h3 class="section-title">Modalidad</h3>
             <div class="mode-selector">
@@ -331,32 +335,31 @@
             </div>
           </div>
         </div>
-        
-        <!-- Tab: Account -->
+
         <div class="tab-panel" id="tabAccount">
           <div class="panel-section">
-            <h3 class="section-title">VerificaciÃ³n</h3>
+            <h3 class="section-title">Verificación</h3>
             <div class="verification-card" id="verificationCard">
               <div class="verification-status" id="verificationStatus">
-                <span class="status-icon">âš ï¸</span>
+                <span class="status-icon">⚠️</span>
                 <span class="status-text">Pendiente</span>
               </div>
-              <p class="verification-text">CompletÃ¡ tu verificaciÃ³n para recibir servicios</p>
-              <button class="verification-btn" id="verificationBtn">Completar ahora</button>
+              <p class="verification-text">Completá tu verificación para recibir servicios</p>
+              <button class="verification-btn" id="verificationBtn" type="button">Completar ahora</button>
             </div>
           </div>
-          
+
           <div class="panel-section">
             <h3 class="section-title">Tus servicios</h3>
             <div class="services-chips" id="servicesChips">
-              <span class="service-chip active">PlomerÃ­a</span>
+              <span class="service-chip active">Plomería</span>
               <span class="service-chip active">Electricidad</span>
               <span class="service-chip">Gasista</span>
             </div>
           </div>
-          
+
           <div class="panel-section">
-            <h3 class="section-title">EstadÃ­sticas</h3>
+            <h3 class="section-title">Estadísticas</h3>
             <div class="stats-grid-modern">
               <div class="stat-card">
                 <span class="stat-value" id="statRating">5.0</span>
@@ -376,7 +379,7 @@
       </div>
     </div>
 
-    <!-- Side Drawer (Hamburger Menu) -->
+    <!-- Side Drawer -->
     <div class="drawer-overlay" id="drawerOverlay" hidden></div>
     <aside class="side-drawer" id="sideDrawer" aria-hidden="true">
       <div class="drawer-header">
@@ -385,17 +388,17 @@
             <span id="drawerInitials">PR</span>
           </div>
           <div class="user-info">
-          <div class="user-name" id="drawerName">Cargando perfil...</div>
-          <div class="user-email" id="drawerEmail">Conectando con Supabase...</div>
+            <div class="user-name" id="drawerName">Cargando perfil...</div>
+            <div class="user-email" id="drawerEmail">Conectando con Supabase...</div>
           </div>
         </div>
-        <button class="drawer-close" id="drawerClose" aria-label="Cerrar">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="drawer-close" id="drawerClose" type="button" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
-      
+
       <div class="drawer-stats">
         <div class="drawer-stat">
           <span class="drawer-stat-value" id="drawerRating">5.0</span>
@@ -410,56 +413,61 @@
           <span class="drawer-stat-label">Ganancias</span>
         </div>
       </div>
-      
+
       <nav class="drawer-nav">
         <a href="#" class="drawer-link" id="linkProfile">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
           </svg>
           <span>Mi perfil</span>
         </a>
+
         <a href="#" class="drawer-link" id="linkDocuments">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
           <span>Documentos</span>
           <span class="link-badge" id="docBadge">!</span>
         </a>
+
         <a href="#" class="drawer-link" id="linkServices">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
             <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
           <span>Mis servicios</span>
         </a>
+
         <a href="#" class="drawer-link" id="linkEarnings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
           <span>Ganancias</span>
         </a>
+
         <a href="#" class="drawer-link" id="linkSettings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
             <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
-          <span>ConfiguraciÃ³n</span>
+          <span>Configuración</span>
         </a>
+
         <a href="#" class="drawer-link" id="linkSupport">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             <path d="M12 9v2m0 4h.01"/>
           </svg>
           <span>Ayuda y soporte</span>
         </a>
       </nav>
-      
+
       <div class="drawer-footer">
-        <button class="logout-btn" id="logoutBtn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="logout-btn" id="logoutBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
           </svg>
-          <span>Cerrar sesiÃ³n</span>
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </aside>
@@ -469,7 +477,7 @@
       <div class="drawer-handle"></div>
       <div class="notifications-header">
         <h3>Notificaciones</h3>
-        <button class="mark-read-btn" id="markAllRead">Marcar leÃ­das</button>
+        <button class="mark-read-btn" id="markAllRead" type="button">Marcar leídas</button>
       </div>
       <div class="notifications-list" id="notificationsList">
         <!-- Notifications injected via JS -->
@@ -481,17 +489,17 @@
       <div class="drawer-handle"></div>
       <div class="chat-header">
         <h3>Chat con cliente</h3>
-        <button class="chat-close" id="chatClose">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="chat-close" id="chatClose" type="button" aria-label="Cerrar chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
       <div class="chat-input-area">
-        <input type="text" class="chat-input" id="chatInput" placeholder="EscribÃ­ un mensaje...">
-        <button class="chat-send" id="chatSend">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Escribí un mensaje...">
+        <button class="chat-send" id="chatSend" type="button" aria-label="Enviar mensaje">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
           </svg>
         </button>
@@ -500,11 +508,12 @@
 
     <!-- Verification Modal -->
     <div class="modal-overlay" id="verificationModal" hidden>
-      <div class="modal-content">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="verificationTitle">
         <div class="modal-header">
-          <h2>VerificaciÃ³n de perfil</h2>
-          <button class="modal-close" id="modalClose">&times;</button>
+          <h2 id="verificationTitle">Verificación de perfil</h2>
+          <button class="modal-close" id="modalClose" type="button" aria-label="Cerrar">&times;</button>
         </div>
+
         <div class="modal-body">
           <div class="wizard-progress">
             <div class="progress-bar">
@@ -512,37 +521,38 @@
             </div>
             <span class="progress-text">Paso 1 de 4</span>
           </div>
-          
-<div class="wizard-step active" id="step1">
-  <h3>DNI frente</h3>
-  <p>FotografiÃ¡ el frente de tu DNI. No podÃ©s subir imÃ¡genes desde galerÃ­a.</p>
 
-  <button class="upload-zone camera-start-btn" type="button" data-camera-doc="dni_front">
-    <span class="upload-icon">ðŸ“·</span>
-    <span class="upload-text">Abrir cÃ¡mara trasera</span>
-  </button>
+          <div class="wizard-step active" id="step1">
+            <h3>DNI frente</h3>
+            <p>Fotografiá el frente de tu DNI. No podés subir imágenes desde galería.</p>
 
-  <div class="camera-step-status" id="dniFrontStatus">Pendiente</div>
-</div>
+            <button class="upload-zone camera-start-btn" type="button" data-camera-doc="dni_front">
+              <span class="upload-icon">📷</span>
+              <span class="upload-text">Abrir cámara trasera</span>
+            </button>
 
-<div class="wizard-step" id="step2">
-  <h3>Selfie</h3>
-  <p>Sacate una selfie clara para comparar con el documento.</p>
+            <div class="camera-step-status" id="dniFrontStatus">Pendiente</div>
+          </div>
 
-  <button class="upload-zone camera-start-btn" type="button" data-camera-doc="selfie">
-    <span class="upload-icon">ðŸ¤³</span>
-    <span class="upload-text">Abrir cÃ¡mara frontal</span>
-  </button>
+          <div class="wizard-step" id="step2">
+            <h3>Selfie</h3>
+            <p>Sacate una selfie clara para comparar con el documento.</p>
 
-  <div class="camera-step-status" id="selfieStatus">Pendiente</div>
-</div>          
+            <button class="upload-zone camera-start-btn" type="button" data-camera-doc="selfie">
+              <span class="upload-icon">🤳</span>
+              <span class="upload-text">Abrir cámara frontal</span>
+            </button>
+
+            <div class="camera-step-status" id="selfieStatus">Pendiente</div>
+          </div>
+
           <div class="wizard-step" id="step3">
-            <h3>Servicios que prestÃ¡s</h3>
-            <p>SeleccionÃ¡ los servicios que ofrecÃ©s</p>
+            <h3>Servicios que prestás</h3>
+            <p>Seleccioná los servicios que ofrecés</p>
             <div class="services-select" id="servicesSelect">
               <label class="service-checkbox">
                 <input type="checkbox" value="plumbing">
-                <span>PlomerÃ­a</span>
+                <span>Plomería</span>
               </label>
               <label class="service-checkbox">
                 <input type="checkbox" value="electricity">
@@ -554,70 +564,72 @@
               </label>
               <label class="service-checkbox">
                 <input type="checkbox" value="gardening">
-                <span>JardinerÃ­a</span>
+                <span>Jardinería</span>
               </label>
             </div>
           </div>
-          
+
           <div class="wizard-step" id="step4">
-            <h3>Â¡Listo!</h3>
-            <p>Tu verificaciÃ³n estÃ¡ en proceso. Te avisamos cuando estÃ© aprobada.</p>
-            <div class="success-icon">âœ…</div>
+            <h3>¡Listo!</h3>
+            <p>Tu verificación está en proceso. Te avisamos cuando esté aprobada.</p>
+            <div class="success-icon">✅</div>
           </div>
         </div>
+
         <div class="modal-footer">
-          <button class="btn-secondary" id="wizardPrev" hidden>Anterior</button>
-          <button class="btn-primary" id="wizardNext">Continuar</button>
+          <button class="btn-secondary" id="wizardPrev" type="button" hidden>Anterior</button>
+          <button class="btn-primary" id="wizardNext" type="button">Continuar</button>
         </div>
       </div>
     </div>
 
-<div class="camera-capture-modal" id="cameraCaptureModal" hidden>
-  <div class="camera-shell">
-    <div class="camera-topbar">
-      <button class="camera-close-btn" id="cameraCancelBtn" type="button">âœ•</button>
-      <div>
-        <strong id="cameraTitle">VerificaciÃ³n</strong>
-        <span id="cameraHint">UbicÃ¡ el documento dentro de la guÃ­a</span>
+    <!-- Camera Capture Modal -->
+    <div class="camera-capture-modal" id="cameraCaptureModal" hidden>
+      <div class="camera-shell">
+        <div class="camera-topbar">
+          <button class="camera-close-btn" id="cameraCancelBtn" type="button" aria-label="Cerrar cámara">✕</button>
+          <div>
+            <strong id="cameraTitle">Verificación</strong>
+            <span id="cameraHint">Ubicá el documento dentro de la guía</span>
+          </div>
+        </div>
+
+        <div class="camera-preview-wrap">
+          <video id="cameraVideo" class="camera-video" autoplay playsinline muted></video>
+          <canvas id="cameraCanvas" hidden></canvas>
+          <div class="camera-guide dni" id="cameraGuide"></div>
+        </div>
+
+        <div class="camera-actions">
+          <button class="camera-secondary" id="cameraRetakeBtn" type="button" hidden>Repetir</button>
+          <button class="camera-primary" id="cameraCaptureBtn" type="button">📸 Capturar</button>
+          <button class="camera-primary" id="cameraUseBtn" type="button" hidden>Usar foto</button>
+        </div>
+
+        <p class="camera-status" id="cameraStatus">Cámara lista</p>
       </div>
     </div>
 
-    <div class="camera-preview-wrap">
-      <video id="cameraVideo" class="camera-video" autoplay playsinline muted></video>
-      <canvas id="cameraCanvas" hidden></canvas>
-      <div class="camera-guide dni" id="cameraGuide"></div>
-    </div>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
-    <div class="camera-actions">
-      <button class="camera-secondary" id="cameraRetakeBtn" type="button" hidden>Repetir</button>
-      <button class="camera-primary" id="cameraCaptureBtn" type="button">ðŸ“¸ Capturar</button>
-      <button class="camera-primary" id="cameraUseBtn" type="button" hidden>Usar foto</button>
-    </div>
-
-    <p class="camera-status" id="cameraStatus">CÃ¡mara lista</p>
-  </div>
-</div>
-
-<!-- Toast Container -->
-<div class="toast-container" id="toastContainer"></div>
-    
     <!-- Install Prompt -->
-<div class="install-banner" id="installBanner" hidden>
-  <div class="install-text">InstalÃ¡ la app para mejor experiencia</div>
+    <div class="install-banner" id="installBanner" hidden>
+      <div class="install-text">Instalá la app para mejor experiencia</div>
 
-  <button class="install-btn" id="installBtn" type="button">
-    Instalar
-  </button>
+      <button class="install-btn" id="installBtn" type="button">
+        Instalar
+      </button>
 
-  <button class="install-dismiss" id="installDismiss" type="button" aria-label="Cerrar">
-    Ã—
-  </button>
-</div>
+      <button class="install-dismiss" id="installDismiss" type="button" aria-label="Cerrar">
+        ×
+      </button>
+    </div>
   </div>
 
-<!-- Scripts -->
-<script src="./env.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script type="module" src="./src/main-provider.js?v=2026.04.27.7"></script>
+  <!-- Scripts -->
+  <script src="./env.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="./src/main-provider.js?v=2026.05.02.1"></script>
 </body>
 </html>
