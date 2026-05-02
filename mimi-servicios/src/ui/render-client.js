@@ -18,26 +18,32 @@ const stateLabels = {
 };
 
 const categoryIcons = {
-  LIMPIEZA: "🧹",
-  ELECTRICIDAD: "⚡",
-  PLOMERIA: "🔧",
-  PLOMERÍA: "🔧",
-  REPARACIONES: "🛠️",
-  AC: "❄️",
-  CUIDADO: "🤝",
-  ENFERMERIA: "🩺",
-  ENFERMERÍA: "🩺",
-  JARDINERIA: "🌿",
-  JARDINERÍA: "🌿",
-  PINTURA: "🖌️",
-  CERRAJERIA: "🔑",
-  CERRAJERÍA: "🔑",
-  TECNICO: "🛠️",
-  TECNOLOGIA: "🛠️",
-  TECNOLOGÍA: "🛠️",
-  BELLEZA: "✨",
-  MUDANZAS: "📦",
-  MASCOTAS: "🐾"
+  SERVICIO_DOMESTICO: "SD",
+  LIMPIEZA: "LI",
+  ELECTRICIDAD: "EL",
+  PLOMERIA: "PL",
+  GASISTA: "GA",
+  INSTALACION_AIRE: "AC",
+  REFRIGERACION: "RF",
+  REPARACIONES: "RP",
+  CUIDADO: "CU",
+  CUIDADO_ADULTOS: "CA",
+  CUIDADO_NINOS: "CN",
+  ENFERMERIA: "EN",
+  JARDINERIA: "JA",
+  PINTURA: "PI",
+  CERRAJERIA: "CE",
+  CARPINTERIA: "CP",
+  ALBANILERIA: "AL",
+  TECNICO: "TC",
+  TECNICO_PC: "PC",
+  TECNOLOGIA: "TE",
+  PELUQUERIA: "PE",
+  MANICURIA: "MA",
+  MASAJISTA: "MS",
+  BELLEZA: "BE",
+  MUDANZAS: "MU",
+  MASCOTAS: "MC"
 };
 
 const providerColors = [
@@ -103,9 +109,31 @@ function categoryIcon(category) {
     .trim()
     .toUpperCase();
 
-  return categoryIcons[code] || "🛠️";
+  return categoryIcons[code] || "SV";
 }
 
+function normalizeSearch(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function categoryMatchesQuery(category, query) {
+  if (!query) return true;
+
+  const haystack = normalizeSearch([
+    category.name,
+    category.code,
+    category.description,
+    ...(Array.isArray(category.aliases) ? category.aliases : [])
+  ].join(" "));
+
+  return haystack.includes(query);
+}
 function normalizeProvider(provider, index = 0) {
   const providerPrice = Number(provider.provider_price ?? 0);
   const totalPrice = Number(provider.total_price ?? providerPrice);
@@ -140,10 +168,10 @@ function normalizeProvider(provider, index = 0) {
 
 function starRating(rating) {
   const full = Math.max(0, Math.min(5, Math.floor(Number(rating ?? 0))));
-  const half = Number(rating ?? 0) % 1 >= 0.5 ? "½" : "";
+  const half = Number(rating ?? 0) % 1 >= 0.5 ? "+" : "";
   return `
     <span class="stars" aria-label="${escapeHtml(String(rating))} estrellas">
-      ${"★".repeat(full)}${half}
+      ${"*".repeat(full)}${half}
       <span>${escapeHtml(Number(rating || 0).toFixed(1))}</span>
     </span>
   `;
@@ -278,31 +306,51 @@ function renderClientOnboarding(state) {
 
 function renderCategories(state) {
   const container = document.getElementById("categoryGrid");
+  const searchInput = document.getElementById("categorySearchInput");
   if (!container) return;
 
   const categories = Array.isArray(appConfig.categories)
     ? appConfig.categories
     : [];
+  const query = normalizeSearch(state.ui.categorySearchTerm ?? "");
+  const filtered = categories.filter((category) => categoryMatchesQuery(category, query));
+  const maxVisible = query || state.ui.showAllCategories ? filtered.length : 8;
+  const visibleCategories = filtered.slice(0, maxVisible);
 
-  container.innerHTML = categories.length
-    ? categories
+  if (searchInput && searchInput.value !== (state.ui.categorySearchTerm ?? "")) {
+    searchInput.value = state.ui.categorySearchTerm ?? "";
+  }
+
+  container.innerHTML = visibleCategories.length
+    ? visibleCategories
         .map(
           (category) => `
             <button
               class="category-chip ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""}"
               data-category-id="${escapeHtml(category.id)}"
               type="button"
+              title="${escapeHtml(category.description ?? category.name)}"
             >
               <span aria-hidden="true">${categoryIcon(category)}</span>
               <strong>${escapeHtml(category.name)}</strong>
+              <small>${escapeHtml(category.description ?? "")}</small>
             </button>
           `
         )
-        .join("")
+        .join("") +
+      (!query && filtered.length > maxVisible
+        ? `
+          <button class="category-chip category-more-chip" data-category-toggle="more" type="button">
+            <span aria-hidden="true">+</span>
+            <strong>Mas</strong>
+            <small>Ver categorias</small>
+          </button>
+        `
+        : "")
     : `
       <div class="client-empty-state">
-        <strong>Sin categorias</strong>
-        <span>Cuando el backend cargue categorias activas van a aparecer aca.</span>
+        <strong>Sin resultados</strong>
+        <span>Proba con plomero, cuidado, limpieza, electricista o gasista.</span>
       </div>
     `;
 }
@@ -393,7 +441,7 @@ function renderProviderRow(provider, selectedId) {
         <span>${escapeHtml(String(provider.eta))} min</span>
         <small>${escapeHtml(provider.distance.toFixed(1))} km</small>
       </div>
-      <button class="row-chevron" type="button" data-provider-select="${escapeHtml(provider.provider_id)}" aria-label="Solicitar a ${escapeHtml(provider.displayName)}">›</button>
+      <button class="row-chevron" type="button" data-provider-select="${escapeHtml(provider.provider_id)}" aria-label="Solicitar a ${escapeHtml(provider.displayName)}">&gt;</button>
     </article>
   `;
 }
