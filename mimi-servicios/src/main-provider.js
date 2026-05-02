@@ -428,7 +428,7 @@ const resolveMapOnce = () => {
 
 setTimeout(() => {
   if (!mapResolved && this.map) {
-    console.warn("[MIMI][initMap] timeout load; continúo igual");
+    console.warn("[MIMI][initMap] timeout load; contino igual");
     actions.setMapReady(true);
     forceResize();
     resolveMapOnce();
@@ -613,19 +613,19 @@ container.style.background = "";
   <div class="provider-auth-divider"></div>
 
   <p class="provider-auth-card-copy">
-    Ofrecé tus servicios.<br>
-    <span>Llegá a más personas.</span>
+    Ofrec tus servicios.<br>
+    <span>Lleg a ms personas.</span>
   </p>
 
   <div class="provider-auth-services">
-    <article class="provider-auth-service"><strong>⌂</strong><span>Hogar</span></article>
-    <article class="provider-auth-service"><strong>♡</strong><span>Salud</span></article>
-    <article class="provider-auth-service"><strong>♧</strong><span>Bienestar</span></article>
-    <article class="provider-auth-service"><strong>+12</strong><span>categorías</span></article>
+    <article class="provider-auth-service"><strong></strong><span>Hogar</span></article>
+    <article class="provider-auth-service"><strong></strong><span>Salud</span></article>
+    <article class="provider-auth-service"><strong></strong><span>Bienestar</span></article>
+    <article class="provider-auth-service"><strong>+12</strong><span>categoras</span></article>
   </div>
 
   <div class="provider-auth-login-label">
-    <span>Iniciá sesión para continuar</span>
+    <span>Inici sesin para continuar</span>
   </div>
 
   <button class="provider-auth-google" id="providerGoogleLoginButton" type="button">
@@ -642,17 +642,17 @@ container.style.background = "";
       <strong>Continuar con Google</strong>
     </span>
 
-    <span class="provider-auth-google-arrow">→</span>
+    <span class="provider-auth-google-arrow"></span>
   </button>
 
   <div class="provider-auth-trust">
     <span>Acceso seguro</span>
-    <span>Validación en tiempo real</span>
+    <span>Validacin en tiempo real</span>
   </div>
 
   <p class="provider-auth-legal">
-    Al continuar, aceptás nuestros <span>Términos y Condiciones</span><br>
-    y la <span>Política de Privacidad</span>.
+    Al continuar, acepts nuestros <span>Trminos y Condiciones</span><br>
+    y la <span>Poltica de Privacidad</span>.
   </p>
 </div>
   </div>
@@ -686,8 +686,8 @@ container.style.background = "";
     } catch (err) {
       googleButton.disabled = false;
       document.body.classList.remove("provider-auth-submitting");
-      console.error("[MIMI] Error iniciando sesión prestador:", err);
-      this.showToast("No pudimos iniciar sesión con Google", "error");
+      console.error("[MIMI] Error iniciando sesin prestador:", err);
+      this.showToast("No pudimos iniciar sesin con Google", "error");
     }
   });
 }  
@@ -831,16 +831,23 @@ if (this.elements.mapContainer) this.elements.mapContainer.style.display = "";
     const installDismissed =
   localStorage.getItem("mimi_services_install_banner_dismissed") === "true";
 
-if (this.elements.installBanner && this.deferredInstallPrompt && !installDismissed) {
+if (
+  this.elements.installBanner &&
+  this.deferredInstallPrompt &&
+  !installDismissed &&
+  !this.isRunningAsInstalledPwa()
+) {
   this.elements.installBanner.hidden = false;
   this.elements.installBanner.style.display = "";
   this.elements.installBanner.style.opacity = "1";
   this.elements.installBanner.style.pointerEvents = "auto";
   this.elements.installBanner.removeAttribute("aria-hidden");
+} else {
+  this.hideInstallBanner();
 }
     
     if (!session?.providerId) {
-      this.showToast("No se encontró un perfil de prestador para esta cuenta", "error");
+      this.showToast("No se encontr un perfil de prestador para esta cuenta", "error");
       this.showProviderLoginGate();
       return false;
     }
@@ -988,7 +995,7 @@ stats: {
         service.svc_clients?.full_name ??
         "Cliente",
       clientAvatar: service.client_avatar ?? service.client?.avatar_url ?? null,
-      location: service.address_text ?? service.location ?? "Ubicación a confirmar",
+      location: service.address_text ?? service.location ?? "Ubicacin a confirmar",
       address: service.address_text ?? null,
       price:
         Number(service.total_price_snapshot ?? service.total_price ?? service.provider_amount ?? 0),
@@ -1012,7 +1019,7 @@ stats: {
         request.svc_categories?.name ??
         "Servicio",
       clientName: offer.client_name ?? request.client_name ?? "Cliente",
-      location: offer.address_text ?? request.address_text ?? "Ubicación a confirmar",
+      location: offer.address_text ?? request.address_text ?? "Ubicacin a confirmar",
       price: Number(offer.total_price_snapshot ?? request.total_price_snapshot ?? request.total_price ?? 0),
       mode: request.request_type ?? "IMMEDIATE",
       expiresAt: offer.expires_at ?? null,
@@ -1024,11 +1031,11 @@ stats: {
   normalizeNotifications(items = []) {
     return (items ?? []).map((item) => ({
       id: item.id ?? crypto.randomUUID?.() ?? String(Date.now()),
-      title: item.title ?? "Nueva notificación",
+      title: item.title ?? "Nueva notificacin",
       text: item.body ?? item.message ?? "",
       timestamp: item.created_at ?? new Date().toISOString(),
       unread: !item.read_at,
-      icon: item.icon ?? "🔔",
+      icon: item.icon ?? "",
       raw: item
     }));
   }
@@ -1126,13 +1133,13 @@ this.elements.tabButtons.forEach((btn) => {
 
     this.elements.quickSupport?.addEventListener('click', () => {
       this.switchTab('account');
-      this.showToast('Abrí Cuenta para gestionar ayuda y verificación', 'info');
+      this.showToast('Abr Cuenta para gestionar ayuda y verificacin', 'info');
     });
 
     // Notification drawer
     this.elements.markAllRead?.addEventListener('click', () => {
       actions.markNotificationsRead();
-      this.showToast('Notificaciones marcadas como leídas', 'success');
+      this.showToast('Notificaciones marcadas como ledas', 'success');
     });
 
     // Chat
@@ -1291,11 +1298,11 @@ document.addEventListener("click", (event) => {
 
     // Online/offline
     window.addEventListener('online', () => {
-      this.showToast('Conexión restaurada', 'success');
+      this.showToast('Conexin restaurada', 'success');
     });
 
     window.addEventListener('offline', () => {
-      this.showToast('Sin conexión - modo offline', 'warning');
+      this.showToast('Sin conexin - modo offline', 'warning');
     });
   }
 
@@ -1397,7 +1404,7 @@ document.addEventListener("click", (event) => {
    */
 async handleGoOnline() {
 if (!this.state?.provider.isVerified) {
-  this.showToast("Necesitás completar tu verificación primero", "warning");
+  this.showToast("Necesits completar tu verificacin primero", "warning");
   actions.openModal("verification");
 
   setTimeout(() => {
@@ -1415,7 +1422,7 @@ if (!providerId) {
   const refreshedProviderId = this.state?.session?.providerId;
 
   if (!refreshedProviderId) {
-    this.showToast("No pudimos crear o cargar tu perfil. Cerrá sesión e ingresá nuevamente como prestador.", "error");
+    this.showToast("No pudimos crear o cargar tu perfil. Cerr sesin e ingres nuevamente como prestador.", "error");
     return;
   }
 
@@ -1432,7 +1439,7 @@ if (!providerId) {
     actions.setProviderStatus(profile?.status ?? "ONLINE_IDLE");
     actions.setBottomSheetState("peek");
 
-    this.showToast("Estás online - recibiendo servicios", "success");
+    this.showToast("Ests online - recibiendo servicios", "success");
     this.startLocationTracking();
   } catch (err) {
     console.error("[MIMI] Error poniendo online:", err);
@@ -1446,14 +1453,14 @@ if (!providerId) {
    */
 async handleStatusToggle(status) {
   if (status === "ONLINE_IDLE" && !this.state?.provider.isVerified) {
-    this.showToast("Necesitás completar tu verificación", "warning");
+    this.showToast("Necesits completar tu verificacin", "warning");
     actions.openModal("verification");
     return;
   }
 
   const providerId = this.state?.session?.providerId;
   if (!providerId) {
-    this.showToast("No se encontró tu perfil de prestador", "error");
+    this.showToast("No se encontr tu perfil de prestador", "error");
     return;
   }
 
@@ -1466,10 +1473,10 @@ async handleStatusToggle(status) {
     actions.setProviderStatus(profile?.status ?? status);
 
     if (status === "ONLINE_IDLE") {
-      this.showToast("Estás online", "success");
+      this.showToast("Ests online", "success");
       this.startLocationTracking();
     } else {
-      this.showToast("Estás offline", "info");
+      this.showToast("Ests offline", "info");
       this.stopLocationTracking();
     }
   } catch (err) {
@@ -1539,19 +1546,19 @@ async handleProviderBusinessSubmit(event) {
 
   const providerId = this.state?.session?.providerId;
   if (!providerId) {
-    this.showToast("No se encontrÃ³ tu perfil de prestador", "error");
+    this.showToast("No se encontro tu perfil de prestador", "error");
     return;
   }
 
   const payload = this.collectProviderBusinessPayload(event.target);
 
   if (!payload.categories.length) {
-    this.showToast("ElegÃ­ al menos una profesiÃ³n o categorÃ­a", "warning");
+    this.showToast("Elegi al menos una profesion o categoria", "warning");
     return;
   }
 
   if (payload.pricing.some((item) => !Number.isFinite(item.pricePerHour) || item.pricePerHour <= 0)) {
-    this.showToast("Cada categorÃ­a activa necesita precio por hora", "warning");
+    this.showToast("Cada categoria activa necesita precio por hora", "warning");
     return;
   }
 
@@ -1574,7 +1581,7 @@ async handleProviderBusinessSubmit(event) {
 async handleProviderBusinessAction(action) {
   if (action === "refresh-location") {
     this.updateMapToCurrentPosition();
-    this.showToast("UbicaciÃ³n actualizada", "success");
+    this.showToast("Ubicacion actualizada", "success");
     return;
   }
 
@@ -1686,7 +1693,7 @@ startLocationTracking() {
       const service = response?.service ?? response?.request ?? response?.data ?? null;
 
       if (!service) {
-        throw new Error("La función no devolvió response.service");
+        throw new Error("La funcin no devolvi response.service");
       }
 
       actions.setActiveService(this.normalizeServiceForState(service));
@@ -1698,7 +1705,7 @@ startLocationTracking() {
         this.offerTimer = null;
       }
 
-      this.showToast("Servicio aceptado 🚀", "success");
+      this.showToast("Servicio aceptado ", "success");
     } catch (err) {
       console.error("[MIMI] Error accepting offer:", err);
       this.showToast("Error aceptando servicio", "error");
@@ -1852,7 +1859,7 @@ this.renderChatMessages();
     if (services.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <p>No tenés servicios programados</p>
+          <p>No tens servicios programados</p>
         </div>
       `;
       return;
@@ -1896,16 +1903,16 @@ renderVerificationStatus() {
   card.classList.toggle("verified", status === "approved");
 
   if (status === "approved") {
-    statusEl.innerHTML = '<span class="status-icon">✅</span><span class="status-text">Verificado</span>';
+    statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Verificado</span>';
     btn.textContent = "Ver documentos";
   } else if (status === "in_review") {
-    statusEl.innerHTML = '<span class="status-icon">⏳</span><span class="status-text">En revisión</span>';
+    statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">En revisin</span>';
     btn.textContent = "Ver progreso";
   } else if (status === "rejected") {
-    statusEl.innerHTML = '<span class="status-icon">❌</span><span class="status-text">Requiere corrección</span>';
+    statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Requiere correccin</span>';
     btn.textContent = "Repetir fotos";
   } else {
-    statusEl.innerHTML = '<span class="status-icon">⚠️</span><span class="status-text">Pendiente</span>';
+    statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Pendiente</span>';
     btn.textContent = "Completar ahora";
   }
 }
@@ -1991,7 +1998,7 @@ renderSheetSummary() {
 
   const money = (value) => {
     const amount = Number(value ?? 0);
-    if (!Number.isFinite(amount) || amount <= 0) return "—";
+    if (!Number.isFinite(amount) || amount <= 0) return "";
 
     return new Intl.NumberFormat("es-AR", {
       style: "currency",
@@ -2090,7 +2097,7 @@ restoreProviderOnlineButton() {
             <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
           </svg>
         </span>
-        <span class="online-button-text">Ponerme en línea</span>
+        <span class="online-button-text">Ponerme en lnea</span>
         <span class="online-button-subtext">Para recibir servicios</span>
       </button>
     `;
@@ -2219,7 +2226,7 @@ renderOnlineButton() {
       if (remaining <= 0) {
         actions.clearActiveOffer();
         clearInterval(this.offerTimer);
-        this.showToast('La oferta expiró', 'warning');
+        this.showToast('La oferta expir', 'warning');
       }
     };
 
@@ -2266,14 +2273,14 @@ renderOnlineButton() {
       
       // Button text
       const buttonLabels = {
-        'ACCEPTED': 'Llegué al domicilio',
-        'PROVIDER_EN_ROUTE': 'Llegué al domicilio',
+        'ACCEPTED': 'Llegu al domicilio',
+        'PROVIDER_EN_ROUTE': 'Llegu al domicilio',
         'PROVIDER_ARRIVED': 'Iniciar servicio',
         'IN_PROGRESS': 'Finalizar servicio'
       };
       
       if (this.elements.serviceActionBtn) {
-        this.elements.serviceActionBtn.textContent = buttonLabels[serviceStatus] || 'Acción';
+        this.elements.serviceActionBtn.textContent = buttonLabels[serviceStatus] || 'Accin';
       }
     }
   }
@@ -2397,13 +2404,13 @@ if (this.elements.drawerInitials) {
       if (items.length === 0) {
         this.elements.notificationsList.innerHTML = `
           <div class="empty-state">
-            <p>No tenés notificaciones</p>
+            <p>No tens notificaciones</p>
           </div>
         `;
       } else {
         this.elements.notificationsList.innerHTML = items.map(item => `
           <div class="notification-item ${item.unread ? 'unread' : ''}">
-            <div class="notification-icon">${item.icon || '🔔'}</div>
+            <div class="notification-icon">${item.icon || ''}</div>
             <div class="notification-content">
               <div class="notification-title">${item.title}</div>
               <div class="notification-text">${item.text}</div>
@@ -2500,7 +2507,7 @@ if (this.elements.drawerInitials) {
     const normalized = this.normalizeNotifications([notif])[0];
     actions.addNotification(normalized);
 
-    this.showToast(normalized.title || "Nueva notificación", "info");
+    this.showToast(normalized.title || "Nueva notificacin", "info");
   }
 
   onOfferChange(payload) {
@@ -2548,8 +2555,42 @@ if (this.elements.drawerInitials) {
 /**
  * Setup install prompt
  */
+isRunningAsInstalledPwa() {
+  return (
+    window.matchMedia?.("(display-mode: standalone)")?.matches ||
+    window.matchMedia?.("(display-mode: fullscreen)")?.matches ||
+    window.navigator?.standalone === true
+  );
+}
+
+hideInstallBanner() {
+  if (!this.elements?.installBanner) return;
+
+  this.elements.installBanner.hidden = true;
+  this.elements.installBanner.style.setProperty("display", "none", "important");
+  this.elements.installBanner.style.opacity = "0";
+  this.elements.installBanner.style.pointerEvents = "none";
+  this.elements.installBanner.setAttribute("aria-hidden", "true");
+}
+
 setupInstallPrompt() {
+  if (this.isRunningAsInstalledPwa()) {
+    this.deferredInstallPrompt = null;
+    window.deferredInstallPrompt = null;
+    localStorage.setItem("mimi_services_pwa_installed", "true");
+    this.hideInstallBanner();
+    return;
+  }
+
+  this.hideInstallBanner();
+
   window.addEventListener("beforeinstallprompt", (e) => {
+    if (this.isRunningAsInstalledPwa()) {
+      e.preventDefault();
+      this.hideInstallBanner();
+      return;
+    }
+
     e.preventDefault();
 
     this.deferredInstallPrompt = e;
@@ -2568,12 +2609,11 @@ const isAuthenticated =
   document.body.classList.contains("provider-authenticated") ||
   Boolean(this.state?.session?.isAuthenticated);
 
-if (this.elements.installBanner && !installDismissed && isAuthenticated) {
+if (this.elements.installBanner && !installDismissed && isAuthenticated && !this.isRunningAsInstalledPwa()) {
   this.elements.installBanner.hidden = false;
   this.elements.installBanner.style.display = "";
 } else if (this.elements.installBanner) {
-  this.elements.installBanner.hidden = true;
-  this.elements.installBanner.style.setProperty("display", "none", "important");
+  this.hideInstallBanner();
 }
     console.log("[MIMI] PWA install prompt listo");
   });
@@ -2589,10 +2629,14 @@ if (this.elements.installBanner && !installDismissed && isAuthenticated) {
     });
 
     if (this.elements.installBanner) {
-      this.elements.installBanner.hidden = true;
+      this.hideInstallBanner();
     }
 
     this.showToast("App instalada correctamente", "success");
+  });
+
+  window.matchMedia?.("(display-mode: standalone)")?.addEventListener?.("change", () => {
+    this.hideInstallBanner();
   });
 }
 
@@ -2600,13 +2644,18 @@ if (this.elements.installBanner && !installDismissed && isAuthenticated) {
  * Handle install
  */
 async handleInstall() {
+  if (this.isRunningAsInstalledPwa()) {
+    this.hideInstallBanner();
+    return;
+  }
+
   const promptEvent =
     this.deferredInstallPrompt ||
     window.deferredInstallPrompt ||
     this.state?.ui?.installPrompt;
 
   if (!promptEvent) {
-    this.showToast("La instalación aún no está disponible. Recargá la página e intentá de nuevo.", "warning");
+    this.showToast("La instalacin an no est disponible. Recarg la pgina e intent de nuevo.", "warning");
     console.warn("[MIMI] No hay beforeinstallprompt guardado");
     return;
   }
@@ -2627,17 +2676,17 @@ async handleInstall() {
     });
 
     if (this.elements.installBanner) {
-      this.elements.installBanner.hidden = true;
+      this.hideInstallBanner();
     }
 
     if (choice?.outcome === "accepted") {
       this.showToast("Instalando app...", "success");
     } else {
-      this.showToast("Instalación cancelada", "info");
+      this.showToast("Instalacin cancelada", "info");
     }
   } catch (err) {
     console.error("[MIMI] Error instalando PWA:", err);
-    this.showToast("No pudimos abrir la instalación", "error");
+    this.showToast("No pudimos abrir la instalacin", "error");
   }
 }
   
@@ -2645,7 +2694,7 @@ async handleInstall() {
    * Start background sync
    */
   startBackgroundSync() {
-// Producción: las ofertas llegan por realtime / backend.
+// Produccin: las ofertas llegan por realtime / backend.
 // No simulamos ofertas locales.
 
     
@@ -2683,10 +2732,10 @@ async handleInstall() {
       this.elements.distanceAlert.hidden = false;
       
       if (this.elements.alertTitle) {
-        this.elements.alertTitle.textContent = 'Servicio próximo';
+        this.elements.alertTitle.textContent = 'Servicio prximo';
       }
       if (this.elements.alertText) {
-        this.elements.alertText.textContent = `${service.serviceType} · ${new Date(service.scheduledFor).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+        this.elements.alertText.textContent = `${service.serviceType}  ${new Date(service.scheduledFor).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
       }
     }
 
@@ -2741,19 +2790,19 @@ async handleLogout() {
     this.showProviderLoginGate();
   } catch (err) {
     console.error("[MIMI] logout error:", err);
-    this.showToast("No pudimos cerrar sesión", "error");
+    this.showToast("No pudimos cerrar sesin", "error");
   }
 }
   async openCameraCapture(documentType) {
   const providerId = this.state?.session?.providerId;
 
   if (!providerId) {
-    this.showToast("No se encontró tu perfil de prestador", "error");
+    this.showToast("No se encontr tu perfil de prestador", "error");
     return;
   }
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    this.showToast("Tu navegador no permite cámara. Probá desde Chrome o instalá la PWA.", "error");
+    this.showToast("Tu navegador no permite cmara. Prob desde Chrome o instal la PWA.", "error");
     return;
   }
 
@@ -2762,13 +2811,13 @@ async handleLogout() {
   this.cameraCapture = { documentType, blob: null, file: null };
 
   if (this.elements.cameraTitle) {
-    this.elements.cameraTitle.textContent = isSelfie ? "Selfie de verificación" : "Foto del DNI";
+    this.elements.cameraTitle.textContent = isSelfie ? "Selfie de verificacin" : "Foto del DNI";
   }
 
   if (this.elements.cameraHint) {
     this.elements.cameraHint.textContent = isSelfie
-      ? "Centrate dentro del círculo, con buena luz."
-      : "Ubicá el frente del DNI dentro del rectángulo.";
+      ? "Centrate dentro del crculo, con buena luz."
+      : "Ubic el frente del DNI dentro del rectngulo.";
   }
 
   this.elements.cameraGuide?.classList.toggle("selfie", isSelfie);
@@ -2804,12 +2853,12 @@ await new Promise((resolve) => {
 
 await video.play();
     if (this.elements.cameraStatus) {
-      this.elements.cameraStatus.textContent = "Cámara lista";
+      this.elements.cameraStatus.textContent = "Cmara lista";
     }
   } catch (err) {
-    console.error("[MIMI] Error abriendo cámara:", err);
+    console.error("[MIMI] Error abriendo cmara:", err);
     this.closeCameraCapture();
-    this.showToast("No pudimos abrir la cámara. Revisá permisos del navegador.", "error");
+    this.showToast("No pudimos abrir la cmara. Revis permisos del navegador.", "error");
   }
 }
 captureCameraFrame() {
@@ -2817,7 +2866,7 @@ captureCameraFrame() {
   const canvas = this.elements.cameraCanvas;
 
   if (!video || !canvas || !video.videoWidth) {
-    this.showToast("La cámara todavía no está lista", "warning");
+    this.showToast("La cmara todava no est lista", "warning");
     return;
   }
 
@@ -2844,7 +2893,7 @@ captureCameraFrame() {
     if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = true;
     if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = false;
     if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = false;
-    if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Foto capturada. Confirmá o repetí.";
+    if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Foto capturada. Confirm o repet.";
   }, "image/jpeg", 0.92);
 }
 
@@ -2859,7 +2908,7 @@ resetCameraPreview() {
   if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = false;
   if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = true;
   if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = true;
-  if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Cámara lista";
+  if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Cmara lista";
 }
 
 async confirmCameraCapture() {
@@ -2888,11 +2937,11 @@ const uploadedDocument = await uploadProviderDocument({
 console.log("[MIMI][KYC] Documento subido:", uploadedDocument);
     
     if (documentType === "dni_front" && this.elements.dniFrontStatus) {
-      this.elements.dniFrontStatus.textContent = "Documento recibido ✅";
+      this.elements.dniFrontStatus.textContent = "Documento recibido ";
     }
 
     if (documentType === "selfie" && this.elements.selfieStatus) {
-      this.elements.selfieStatus.textContent = "Selfie recibida ✅";
+      this.elements.selfieStatus.textContent = "Selfie recibida ";
     }
 
     this.closeCameraCapture();
@@ -2919,19 +2968,19 @@ const status = String(
 
     
     if (["REVIEW", "PENDING", "PENDING_DOCUMENTS"].includes(status)) {
-      this.showToast("Revisión en curso. Te avisamos cuando esté aprobada.", "success");
+      this.showToast("Revisin en curso. Te avisamos cuando est aprobada.", "success");
     } else if (status === "NEEDS_RESUBMISSION") {
       this.showToast("Necesitamos que repitas una foto con mejor calidad.", "warning");
     } else if (status === "REJECTED") {
-      this.showToast("No pudimos validar la identidad. Contactá soporte.", "error");
+      this.showToast("No pudimos validar la identidad. Contact soporte.", "error");
     } else {
-      this.showToast("Verificación enviada correctamente.", "success");
+      this.showToast("Verificacin enviada correctamente.", "success");
     }
 
     this.showWizardStep(4);
   } catch (err) {
-    console.error("[MIMI] Error en verificación por cámara:", err);
-    this.showToast(err?.message ?? "No pudimos completar la verificación", "error");
+    console.error("[MIMI] Error en verificacin por cmara:", err);
+    this.showToast(err?.message ?? "No pudimos completar la verificacin", "error");
   } finally {
     actions.setLoading(false);
   }
