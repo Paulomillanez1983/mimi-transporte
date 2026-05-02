@@ -899,8 +899,17 @@ export async function loadClientRequestInsights(requestId, providerId = null) {
     providerReviewRows,
     providerCategoryRows
   ] = await Promise.all([
-    fetchTable("svc_payment_intents", (query) =>
-      query.select("*").eq("request_id", requestId).limit(1)
+    fetchTable("payments", (query) =>
+      query
+        .select("*")
+        .eq("context_type", "SERVICE_REQUEST")
+        .eq("context_id", requestId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+    ).catch(() =>
+      fetchTable("svc_payment_intents", (query) =>
+        query.select("*").eq("request_id", requestId).limit(1)
+      )
     ),
 
     fetchTable("svc_escrow_holds", (query) =>
