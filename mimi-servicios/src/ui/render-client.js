@@ -3,6 +3,10 @@ import { appConfig } from "../config.js";
 const stateLabels = {
   SEARCHING: "Buscando prestador",
   PENDING_PROVIDER_RESPONSE: "Esperando respuesta",
+  CHECKOUT_CREATED: "Pago preparado",
+  PAYMENT_PENDING: "Pago pendiente",
+  PAYMENT_APPROVED: "Pago aprobado",
+  PAYMENT_REJECTED: "Pago rechazado",
   ACCEPTED: "Prestador confirmado",
   SCHEDULED: "Servicio agendado",
   PROVIDER_EN_ROUTE: "Prestador en camino",
@@ -536,20 +540,32 @@ function renderFinancialPanel(state) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin movimiento financiero</strong>
-        <span class="muted">Al crear una solicitud real vas a ver payment intent, escrow y snapshots de cobro.</span>
+        <span class="muted">Al crear una solicitud real vas a ver el intento de pago, la comision de plataforma y el neto del prestador.</span>
       </div>
     `;
     return;
   }
 
+  const total = payment?.total_amount ?? request.total_price ?? request.total_price_snapshot ?? 0;
+  const platformFee = payment?.platform_fee ?? request.platform_fee ?? request.platform_fee_snapshot ?? 0;
+  const providerAmount = payment?.provider_amount ?? request.provider_price ?? request.provider_price_snapshot ?? 0;
+  const paymentStatus = payment?.status ?? "PENDING";
+
   container.innerHTML = `
     <article class="summary-card compact-stack">
-      <strong>Snapshot del servicio</strong>
+      <strong>Resumen de pago</strong>
       <div class="summary-metrics">
-        <div class="metric"><span>Total</span><strong>${currency(request.total_price ?? request.total_price_snapshot)}</strong></div>
-        <div class="metric"><span>Prestador</span><strong>${currency(request.provider_price ?? request.provider_price_snapshot ?? 0)}</strong></div>
-        <div class="metric"><span>Fee</span><strong>${currency(request.platform_fee ?? request.platform_fee_snapshot ?? 0)}</strong></div>
+        <div class="metric"><span>Precio del servicio</span><strong>${currency(providerAmount)}</strong></div>
+        <div class="metric"><span>Comision MIMI</span><strong>${currency(platformFee)}</strong></div>
+        <div class="metric"><span>Total a pagar</span><strong>${currency(total)}</strong></div>
         <div class="metric"><span>Moneda</span><strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong></div>
+      </div>
+      <p class="muted">MIMI es una plataforma tecnologica de intermediacion. Los servicios son prestados por proveedores independientes. MIMI cobra una comision por uso de plataforma.</p>
+      <div class="chip-row">
+        <span class="inline-chip">${escapeHtml(paymentStatus)}</span>
+        ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Abrir checkout mock</button>` : ""}
+        ${payment?.id ? `<button class="btn-secondary" type="button" data-payment-action="refresh">Actualizar pago</button>` : ""}
+        ${["PENDING", "CHECKOUT_CREATED", "REJECTED"].includes(paymentStatus) ? `<button class="btn-secondary" type="button" data-payment-action="cancel">Cancelar pago</button>` : ""}
       </div>
     </article>
   `;
@@ -619,7 +635,7 @@ function renderProviderSpotlight(state) {
       <strong>${escapeHtml(selectedProvider?.full_name ?? "Prestador confirmado")}</strong>
       <p class="muted">${escapeHtml(profile?.bio ?? selectedProvider?.bio ?? "Perfil de prestador cargado desde MIMI Go.")}</p>
       <div class="chip-row">
-        ${(reviews.length ? reviews : [{ rating: selectedProvider?.rating ?? 5, comment: "Prestador verificado por MIMI." }])
+        ${(reviews.length ? reviews : [{ rating: selectedProvider?.rating ?? 5, comment: "Proveedor registrado en MIMI." }])
           .slice(0, 2)
           .map((item) => `<span class="inline-chip">${escapeHtml(Number(item.rating ?? 5).toFixed(1))} / 5</span>`)
           .join("")}
