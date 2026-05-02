@@ -97,11 +97,11 @@ function dismissClientOnboarding() {
 
 function normalizeAuthError(error, fallbackMessage) {
   if (error?.code === "AUTH_REQUIRED") {
-    return "Necesitás iniciar sesión con Google para continuar.";
+    return "Necesitas iniciar sesion con Google para continuar.";
   }
 
   if (error?.message === "SERVICE_LOCATION_REQUIRED") {
-    return "Necesitamos una dirección válida del servicio para buscar prestadores.";
+    return "Necesitamos una direccion valida del servicio para buscar prestadores.";
   }
 
   return error?.message || fallbackMessage;
@@ -273,6 +273,50 @@ function syncDraftFromForm() {
   );
 }
 
+function normalizeCategoryForMerge(category) {
+  if (!category) return null;
+
+  const code = String(category.code || category.name || category.id || "")
+    .trim()
+    .toUpperCase();
+
+  if (!code) return null;
+
+  return {
+    id: category.id,
+    code,
+    name: category.name || code,
+    description: category.description || "",
+    aliases: Array.isArray(category.aliases) ? category.aliases : []
+  };
+}
+
+function mergeCategories(remoteCategories = [], localCategories = []) {
+  const byCode = new Map();
+
+  localCategories
+    .map(normalizeCategoryForMerge)
+    .filter(Boolean)
+    .forEach((category) => byCode.set(category.code, category));
+
+  remoteCategories
+    .map(normalizeCategoryForMerge)
+    .filter(Boolean)
+    .forEach((category) => {
+      const fallback = byCode.get(category.code) ?? {};
+      byCode.set(category.code, {
+        ...fallback,
+        ...category,
+        aliases: [
+          ...(Array.isArray(fallback.aliases) ? fallback.aliases : []),
+          ...(Array.isArray(category.aliases) ? category.aliases : [])
+        ]
+      });
+    });
+
+  return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
+}
+
 function seedForm() {
   const addressInput = document.getElementById("serviceAddressInput");
   const latInput = document.getElementById("serviceLatInput");
@@ -349,7 +393,7 @@ function renderServiceAddressSuggestions(items) {
           data-service-suggestion-index="${index}"
           role="option"
         >
-          <strong>${item.display_name || item.direccion || "Dirección"}</strong>
+          <strong>${item.display_name || item.direccion || "Direccion"}</strong>
           <span class="muted">${item.source || item.barrio || "Sugerencia"}</span>
         </button>
       `
@@ -444,7 +488,7 @@ async function handleUseCurrentServiceLocation() {
   const button = document.getElementById("btnUseCurrentServiceLocation");
 
   if (!navigator.geolocation) {
-    throw new Error("Tu dispositivo no permite geolocalización.");
+    throw new Error("Tu dispositivo no permite geolocalizacion.");
   }
 
   setButtonLoading(button, true, "...");
@@ -464,11 +508,11 @@ async function handleUseCurrentServiceLocation() {
     const latInput = document.getElementById("serviceLatInput");
     const lngInput = document.getElementById("serviceLngInput");
 
-    if (addressInput) addressInput.value = "Ubicando dirección...";
+    if (addressInput) addressInput.value = "Ubicando direccion...";
     if (latInput) latInput.value = String(lat);
     if (lngInput) lngInput.value = String(lng);
 
-    patchState("requestDraft.address", "Ubicando dirección...");
+    patchState("requestDraft.address", "Ubicando direccion...");
     patchState("requestDraft.lat", lat);
     patchState("requestDraft.lng", lng);
 
@@ -484,7 +528,7 @@ async function handleUseCurrentServiceLocation() {
     const displayAddress =
       resolved?.display_name ||
       resolved?.direccion ||
-      "Mi ubicación actual";
+      "Mi ubicacion actual";
 
     if (addressInput) addressInput.value = displayAddress;
     if (latInput) latInput.value = String(lat);
@@ -583,17 +627,10 @@ async function bootstrapAsyncData() {
     categories = appConfig.categories ?? [];
   }
 
-  if (Array.isArray(categories) && categories.length) {
-    appConfig.categories = categories.map((category) => ({
-      id: category.id,
-      code: category.code,
-      name: category.name,
-      description: category.description
-    }));
-  }
+  appConfig.categories = mergeCategories(categories, appConfig.categories);
 
   if (session.isAuthenticated && session.role === "provider") {
-    // mismo usuario puede usar ambos modos; no redirigimos automáticamente
+    // mismo usuario puede usar ambos modos; no redirigimos automaticamente
   }
 
   setState((draft) => {
@@ -634,14 +671,14 @@ async function bootstrapAsyncData() {
 
   if (!hasSupabaseEnv()) {
     setInfo(
-      "La app está funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real."
+      "La app esta funcionando en modo demo local. Cuando cargues las credenciales, se conecta al backend real."
     );
   } else if (!session.userId) {
     setInfo(
-      "Ingresá con Google para ver categorías activas, buscar prestadores y usar el flujo real."
+      "Ingresa con Google para ver categorias activas, buscar prestadores y usar el flujo real."
     );
   } else {
-    setInfo("Sesión iniciada correctamente.");
+    setInfo("Sesion iniciada correctamente.");
   }
 }
 
@@ -850,7 +887,7 @@ function bindBasicControls() {
     try {
       await handleAuthPrimary();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesión."));
+      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesion."));
     }
   });
 
@@ -859,7 +896,7 @@ function bindBasicControls() {
       await signOut();
       window.location.reload();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
+      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesion."));
     }
   });
 
@@ -894,6 +931,11 @@ function bindBasicControls() {
     updateScheduledVisibility();
   });
 
+  document.getElementById("categorySearchInput")?.addEventListener("input", (event) => {
+    patchState("ui.categorySearchTerm", event.target.value || "");
+    patchState("ui.showAllCategories", Boolean(event.target.value));
+  });
+
   document.getElementById("serviceAddressInput")?.addEventListener("input", async (event) => {
     try {
       await handleServiceAddressInput(event);
@@ -919,7 +961,7 @@ function bindBasicControls() {
     } catch (error) {
       setInfo(
         null,
-        normalizeAuthError(error, "No pudimos obtener tu ubicación actual.")
+        normalizeAuthError(error, "No pudimos obtener tu ubicacion actual.")
       );
     }
   });
@@ -1032,6 +1074,12 @@ function bindBasicControls() {
         return;
       }
 
+      const categoryToggle = event.target.closest("[data-category-toggle]");
+      if (categoryToggle) {
+        patchState("ui.showAllCategories", true);
+        return;
+      }
+
       const suggestionButton = event.target.closest("[data-service-suggestion-index]");
       if (suggestionButton) {
         await selectServiceAddressSuggestion(
@@ -1070,7 +1118,7 @@ function bindBasicControls() {
         await openClientChat();
       }
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo completar la acción."));
+      setInfo(null, normalizeAuthError(error, "No se pudo completar la accion."));
     }
   });
 }
@@ -1203,7 +1251,7 @@ init().catch((error) => {
   setState((draft) => {
     draft.meta.error = normalizeAuthError(
       error,
-      "La app cargó con fallback local. Revisá la configuración de Supabase."
+      "La app cargo con fallback local. Revisa la configuracion de Supabase."
     );
     draft.meta.info = null;
   });
