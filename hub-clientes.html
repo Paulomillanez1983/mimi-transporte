@@ -28,7 +28,7 @@
   <meta name="twitter:description" content="Entrá al hub de clientes MIMI y coordiná viajes y servicios con más claridad, seguimiento y respaldo digital.">
 
 <link rel="icon" href="./favicon.ico">
-  <link rel="stylesheet" href="./hub-clientes.css?v=2026.05.02-10-10">
+  <link rel="stylesheet" href="./hub-clientes.css?v=2026.05.02-final-v2">
   <link rel="manifest" href="./manifest.json">
 <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -204,12 +204,52 @@
         </div>
       </section>
 
-      <footer class="footer">
+      <section class="clarity-card" aria-label="Más claridad en cada solicitud">
+        <div class="clarity-shield" aria-hidden="true">
+          <svg viewBox="0 0 80 96" fill="none">
+            <path d="M40 6 10 18v23c0 22 13.8 40.2 30 47 16.2-6.8 30-25 30-47V18L40 6Z" fill="rgba(124,199,255,.10)" stroke="currentColor" stroke-width="4"/>
+            <path d="m27 46 9 9 18-20" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div class="clarity-copy">
+          <h2>Más claridad en cada solicitud</h2>
+          <p>MIMI facilita la coordinación digital entre usuarios y prestadores independientes, con herramientas de validación, seguimiento y respaldo de plataforma.</p>
+          <strong>Vos tenés el control. Nosotros te damos las herramientas.</strong>
+        </div>
+
+        <div class="clarity-visual" aria-hidden="true">
+          <div class="person-avatar avatar-driver">
+            <span class="face face-driver"></span>
+            <b>✓</b>
+          </div>
+          <div class="phone-map">
+            <div class="phone-notch"></div>
+            <div class="route-line"></div>
+            <span class="pin pin-a"></span>
+            <span class="pin pin-b"></span>
+          </div>
+          <div class="person-avatar avatar-client">
+            <span class="face face-client"></span>
+            <b>✓</b>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer footer-pro">
         <div class="footer-brand">MiMI</div>
         <div class="footer-sep"></div>
         <div class="footer-copy">
           Una sola app.<br>
           Todo lo que necesitás.
+        </div>
+
+        <div class="footer-support">
+          <span class="support-icon">☏</span>
+          <span>
+            <strong>Soporte de plataforma</strong>
+            <small>Estamos para ayudarte.</small>
+          </span>
         </div>
 
         <button class="install-app-btn" type="button" onclick="installPWA()">
@@ -218,6 +258,8 @@
             <strong>Instalar app</strong>
           </span>
         </button>
+
+        <div class="footer-trust-line">🔒 Seguro <span>•</span> Confiable <span>•</span> Transparente</div>
       </footer>
 
     </main>
