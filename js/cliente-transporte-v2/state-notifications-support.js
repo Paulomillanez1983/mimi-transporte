@@ -10,6 +10,7 @@ let state = {
   cotizacion: null,
   viajeId: null,
   estadoViaje: null,
+  paymentIntent: null,
   choferId: null,
   choferLocation: null,
 
