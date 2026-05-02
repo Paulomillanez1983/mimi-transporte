@@ -44,6 +44,7 @@ let realtimeSubscription = null;
 let authSubscription = null;
 
 const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
+const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
 
 function exposeClientDebugApi() {
   window.MIMI = window.MIMI || {};
@@ -88,6 +89,24 @@ function setButtonLoading(button, loading, loadingLabel, idleLabel = null) {
   button.classList.toggle("is-loading", loading);
   button.setAttribute("aria-busy", String(loading));
   button.textContent = loading ? loadingLabel : button.dataset.idleLabel;
+}
+
+function isRunningAsInstalledPwa() {
+  return (
+    window.matchMedia?.("(display-mode: standalone)")?.matches ||
+    window.matchMedia?.("(display-mode: fullscreen)")?.matches ||
+    window.navigator?.standalone === true
+  );
+}
+
+function setInstallButtonVisible(visible) {
+  const installButton = document.getElementById("installButton");
+  if (!installButton) return;
+
+  const shouldShow = Boolean(visible) && !isRunningAsInstalledPwa();
+  installButton.hidden = !shouldShow;
+  installButton.style.display = shouldShow ? "" : "none";
+  installButton.setAttribute("aria-hidden", String(!shouldShow));
 }
 
 function dismissClientOnboarding() {
@@ -683,16 +702,49 @@ async function bootstrapAsyncData() {
 }
 
 function registerInstallPrompt() {
+  if (isRunningAsInstalledPwa()) {
+    localStorage.setItem(PWA_INSTALLED_KEY, "true");
+    patchState("ui.installPromptEvent", null);
+    setInstallButtonVisible(false);
+    return;
+  }
+
+  setInstallButtonVisible(false);
+
   window.addEventListener("beforeinstallprompt", (event) => {
+    if (isRunningAsInstalledPwa()) {
+      event.preventDefault();
+      setInstallButtonVisible(false);
+      return;
+    }
+
     event.preventDefault();
     patchState("ui.installPromptEvent", event);
+    setInstallButtonVisible(true);
   });
 
   document.getElementById("installButton")?.addEventListener("click", async () => {
+    if (isRunningAsInstalledPwa()) {
+      setInstallButtonVisible(false);
+      return;
+    }
+
     const promptEvent = state.ui.installPromptEvent;
     if (!promptEvent) return;
 
     await promptEvent.prompt();
+    patchState("ui.installPromptEvent", null);
+    setInstallButtonVisible(false);
+  });
+
+  window.addEventListener("appinstalled", () => {
+    localStorage.setItem(PWA_INSTALLED_KEY, "true");
+    patchState("ui.installPromptEvent", null);
+    setInstallButtonVisible(false);
+  });
+
+  window.matchMedia?.("(display-mode: standalone)")?.addEventListener?.("change", () => {
+    setInstallButtonVisible(false);
   });
 }
 
