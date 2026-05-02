@@ -1987,8 +1987,7 @@ body.services-login-mode #servicesLoginBtnArrow {
     display:grid;
   }
 
-  .footer-support,
-  .footer-trust-line{
+  .footer-support{
     display:flex;
   }
 
