@@ -542,6 +542,39 @@ button {
   min-width: 0;
 }
 
+.category-search-field {
+  min-height: 52px;
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid var(--client-border);
+}
+
+.category-search-field span {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.category-search-field input {
+  width: 100%;
+  min-height: 30px;
+  border: 0;
+  outline: 0;
+  color: var(--client-text);
+  background: transparent;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.category-search-field input::placeholder {
+  color: #94a3b8;
+}
+
 .category-grid {
   display: flex;
   gap: 8px;
@@ -550,13 +583,15 @@ button {
 }
 
 .category-chip {
-  min-width: 76px;
-  min-height: 65px;
+  width: 112px;
+  min-width: 112px;
+  min-height: 82px;
   flex: 0 0 auto;
   border: 2px solid var(--client-border);
   border-radius: 14px;
   display: grid;
-  place-items: center;
+  align-content: center;
+  justify-items: center;
   gap: 3px;
   padding: 8px 10px;
   color: var(--client-muted);
@@ -565,14 +600,39 @@ button {
 }
 
 .category-chip span {
-  font-size: 18px;
+  min-width: 30px;
+  min-height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--client-primary);
+  background: #eff6ff;
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .category-chip strong {
   color: inherit;
-  font-size: 9px;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
   font-weight: 900;
   white-space: nowrap;
+  text-align: center;
+}
+
+.category-chip small {
+  width: 100%;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #94a3b8;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .category-chip.is-selected {
@@ -670,8 +730,11 @@ button {
   position: relative;
   overflow: hidden;
   border-radius: 20px;
-  background: #f0f4f8;
+  margin-bottom: -200px;
+  background: rgba(240, 244, 248, 0.34);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  z-index: 2;
 }
 
 .radar-grid {
@@ -681,7 +744,7 @@ button {
     linear-gradient(to right, #d1d9e6 1px, transparent 1px),
     linear-gradient(to bottom, #d1d9e6 1px, transparent 1px);
   background-size: 50px 35px;
-  opacity: 0.8;
+  opacity: 0.36;
 }
 
 .radar-road {
@@ -690,7 +753,7 @@ button {
   right: -10%;
   top: 50%;
   height: 3px;
-  background: #c8d4e8;
+  background: rgba(100, 116, 139, 0.3);
 }
 
 .radar-road.is-cross {
@@ -704,7 +767,7 @@ button {
 .radar-park {
   position: absolute;
   border-radius: 7px;
-  background: #d1f5e0;
+  background: rgba(16, 185, 129, 0.18);
 }
 
 .radar-park.is-one {
@@ -734,7 +797,7 @@ button {
   height: 160px;
   border: 1.5px dashed var(--client-primary);
   border-radius: 50%;
-  background: rgba(26, 86, 219, 0.09);
+  background: rgba(26, 86, 219, 0.05);
 }
 
 .radar-user {
@@ -770,6 +833,7 @@ button {
   color: #fff;
   background: var(--pin);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  pointer-events: auto;
 }
 
 .radar-pin.is-selected {
@@ -823,10 +887,12 @@ button {
 
 .map-surface {
   width: 100%;
-  height: 0;
-  min-height: 0;
-  opacity: 0;
-  pointer-events: none;
+  height: 200px;
+  min-height: 200px;
+  border-radius: 20px;
+  overflow: hidden;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .provider-carousel {
