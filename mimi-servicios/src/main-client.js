@@ -37,6 +37,7 @@ import {
   subscribe
 } from "./state/app-state.js";
 import { renderClientScreen } from "./ui/render-client.js";
+import { cancelPayment, createPaymentIntent, getPaymentStatus } from "./payments/payment-api.js";
 
 let addressLookupToken = 0;
 let realtimeSubscription = null;
@@ -753,6 +754,17 @@ async function handleProviderSelection(providerId) {
     currency: pricing.currency
   });
 
+  let paymentIntent = null;
+
+  try {
+    paymentIntent = await createPaymentIntent({
+      serviceRequestId: request?.id ?? request?.request_id,
+      contextType: "SERVICE_REQUEST"
+    });
+  } catch (error) {
+    console.warn("[MIMI Go] No se pudo crear intento de pago mock/payment-agnostic.", error);
+  }
+
   setState((draft) => {
     draft.client.selectedProvider = provider;
     draft.client.activeRequest = {
@@ -763,6 +775,7 @@ async function handleProviderSelection(providerId) {
       total_price: pricing.total_price,
       conversation_id: request?.conversation_id ?? null
     };
+    draft.client.insights.paymentIntent = paymentIntent;
     draft.client.insights.providerProfile = {
       bio: provider.bio ?? null,
       city: provider.city ?? null,
@@ -777,7 +790,9 @@ async function handleProviderSelection(providerId) {
       lng: draft.requestDraft.lng
     };
     draft.meta.error = null;
-    draft.meta.info = "Solicitud creada correctamente.";
+    draft.meta.info = paymentIntent?.checkout_url
+      ? "Solicitud creada. El intento de pago quedo preparado."
+      : "Solicitud creada correctamente.";
   });
 
   await hydrateLiveContext(request);
@@ -799,6 +814,35 @@ async function handleRequestAction(action) {
   });
 
   await hydrateLiveContext();
+}
+
+async function handlePaymentAction(action) {
+  const payment = state.client.insights?.paymentIntent;
+
+  if (!payment?.id) {
+    throw new Error("No hay intento de pago activo.");
+  }
+
+  if (action === "checkout") {
+    if (payment.checkout_url) {
+      window.open(payment.checkout_url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    setInfo("Checkout mock preparado. Cuando conectes el PSP real, aca redirige al checkout seguro.");
+    return;
+  }
+
+  if (action === "refresh") {
+    const updated = await getPaymentStatus(payment.id);
+    patchState("client.insights.paymentIntent", updated);
+    return;
+  }
+
+  if (action === "cancel") {
+    const updated = await cancelPayment(payment.id);
+    patchState("client.insights.paymentIntent", updated);
+  }
 }
 
 function bindBasicControls() {
@@ -1013,6 +1057,12 @@ function bindBasicControls() {
       const requestAction = event.target.closest("[data-request-action]");
       if (requestAction) {
         await handleRequestAction(requestAction.dataset.requestAction);
+        return;
+      }
+
+      const paymentAction = event.target.closest("[data-payment-action]");
+      if (paymentAction) {
+        await handlePaymentAction(paymentAction.dataset.paymentAction);
         return;
       }
 
