@@ -1456,3 +1456,50 @@ body.services-login-mode #servicesLoginBtnArrow {
     font-size:14px;
   }
 }
+
+/* =========================================================
+   MIMI Hub Clientes 10/10 - Ajustes de confianza sin alargar mobile
+   Mantiene el slogan y el layout actual.
+   ========================================================= */
+.status{
+  letter-spacing:-.015em;
+}
+
+.trust-pill span{
+  line-height:1.15;
+}
+
+.benefit h3{
+  color:#f8fbff;
+}
+
+@media (max-width:900px){
+  .status{
+    max-width:235px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+}
+
+@media (max-width:430px){
+  .status{
+    max-width:190px;
+    font-size:9.5px;
+    padding:8px 9px;
+  }
+
+  .hero-copy{
+    max-width:268px;
+  }
+
+  .benefit p{
+    letter-spacing:-.015em;
+  }
+}
+
+@media (max-width:380px){
+  .status{
+    max-width:165px;
+    font-size:8.8px;
+  }
+}
