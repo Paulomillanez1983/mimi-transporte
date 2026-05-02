@@ -42,7 +42,11 @@ export const appConfig = {
     cancelRequest: "svc-cancel-request",
     sendMessage: "svc-send-message",
     trackLocation: "svc-track-location",
-    registerDevice: "svc-register-device"
+    registerDevice: "svc-register-device",
+    createPaymentIntent: "create-payment-intent",
+    getPaymentStatus: "get-payment-status",
+    cancelPayment: "cancel-payment",
+    refundPayment: "refund-payment"
   },
 
   serviceStates: [
