@@ -1,1 +1,645 @@
 
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <!-- MIMICar Cliente Transporte V2: versión paralela segura. No reemplaza index.html actual. -->
+  <script src="./js/cliente-transporte-v2/00-oauth-redirect.js"></script>
+  <title>MIMICar | Pedí tu viaje en segundos</title>
+  <meta name="description" content="Planificá tu viaje, agregá paradas y consultá el precio estimado desde tu celular.">
+  <meta name="theme-color" content="#020617">
+  <link rel="canonical" href="https://mimi-transporte.vercel.app/viaje">
+
+  <!-- Social Preview / Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="MIMI Transporte">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:title" content="MIMICar | Pedí tu viaje en segundos">
+  <meta property="og:description" content="Planificá tu viaje, agregá paradas y consultá el precio estimado desde tu celular.">
+  <meta property="og:url" content="https://mimi-transporte.vercel.app/viaje">
+  <meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimicar-client.jpg">
+  <meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-mimicar-client.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- X / Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MIMICar | Pedí tu viaje en segundos">
+  <meta name="twitter:description" content="Planificá tu viaje, agregá paradas y consultá el precio estimado desde tu celular.">
+  <meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimicar-client.jpg">
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="./assets/icons/mimi-mark.svg">
+<link rel="shortcut icon" href="./assets/icons/icon-192x192.png">
+<link rel="apple-touch-icon" href="./assets/icons/icon-192x192.png">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<link rel="stylesheet" href="./mimi-transporte.css?v=20260430-client-hub-ui-1">
+  <link rel="stylesheet" href="./css/client-trip-live.css?v=20260418-5">
+<link rel="stylesheet" href="./css/trip-chat.css?v=20260420-12">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+<script src="./mimi-driver-sim.js"></script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="/mimi-transporte/js/pwa-install-manager.js"></script>
+<script type="module" src="/mimi-transporte/js/client-pwa-onboarding.js"></script>
+<script type="module" src="/mimi-transporte/js/push-support.js"></script>
+<script src="/mimi-transporte/js/cliente-chofer-tracking.js"></script>
+<script type="module" src="/mimi-transporte/js/trip-chat.js?v=20260420-8"></script>
+  <!-- SUPABASE REST CLIENT -->
+<script src="./js/cliente-transporte-v2/01-supabase-rest-client.js"></script>
+<script src="./js/cliente-transporte-v2/02-geocoding-client.js"></script>
+</head>
+<body>
+<div id="clientInstallBanner" class="client-install-banner" hidden>
+  <div class="client-install-banner__content">
+    <div class="client-install-banner__title">Instalá MIMI en tu celular</div>
+    <div id="clientInstallStatusText" class="client-install-banner__text">
+      Instalá la app para recibir avisos y entrar más rápido.
+    </div>
+
+    <div class="client-install-banner__actions">
+      <button id="btnInstallClientApp" type="button" class="client-install-banner__btn client-install-banner__btn--primary">
+        Instalar app
+      </button>
+
+      <button id="btnOpenBrowserGuide" type="button" class="client-install-banner__btn client-install-banner__btn--primary" style="display:none;">
+        Abrir en navegador
+      </button>
+
+      <button id="btnDismissClientInstall" type="button" class="client-install-banner__btn client-install-banner__btn--ghost">
+        Más tarde
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+<header class="header" role="banner">
+  <div class="header-content">
+    <div class="vehicle-section" aria-hidden="true">
+      <div class="client-header-city"></div>
+      <div class="client-header-headlight"></div>
+      <img
+        class="vehicle-img"
+        src="./assets/hero/mimicar-hero-kempes-night.webp"
+        alt=""
+        loading="eager"
+        decoding="async"
+      >
+    </div>
+
+    <div class="logo-section">
+      <div class="logo-title">MIMICar</div>
+    </div>
+
+    <div class="header-icons">
+      <div class="header-notifications-wrapper">
+        <button
+          id="tripNotificationsBtn"
+          class="trip-notifications"
+          type="button"
+          aria-label="Notificaciones del viaje"
+          aria-expanded="false"
+          aria-controls="tripNotificationsPanel"
+        >
+          🔔
+          <span class="trip-notifications-dot"></span>
+          <span
+            class="trip-notifications-badge"
+            id="tripNotificationsBadge"
+            hidden
+          >0</span>
+        </button>
+
+        <div
+          id="tripNotificationsOverlay"
+          class="trip-notifications-overlay"
+          hidden
+        ></div>
+
+        <div
+          id="tripNotificationsPanel"
+          class="trip-notifications-panel"
+          role="dialog"
+          aria-label="Panel de notificaciones"
+          aria-hidden="true"
+        >
+          <div class="trip-notifications-sheet-handle" aria-hidden="true">
+            <span></span>
+          </div>
+
+          <div
+            id="tripNotificationsStatusCard"
+            class="trip-notifications-status-card"
+            hidden
+          >
+            <div class="trip-notifications-status-icon" aria-hidden="true">🚐</div>
+            <div class="trip-notifications-status-copy">
+              <strong id="tripNotificationsStatusTitle">Estado del viaje</strong>
+              <span id="tripNotificationsStatusText">Sin novedades por ahora.</span>
+            </div>
+          </div>
+
+          <div class="trip-notifications-panel-header">
+            <div class="trip-notifications-panel-title">
+              <strong>Notificaciones</strong>
+              <span>Estado del viaje y novedades</span>
+            </div>
+
+            <div class="trip-notifications-actions">
+
+              <button
+                id="tripNotificationsClearBtn"
+                class="trip-notifications-action-btn danger"
+                type="button"
+                aria-label="Vaciar notificaciones"
+              >
+                Vaciar
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="tripNotificationsSummary"
+            class="trip-notifications-summary"
+          >
+            Sin novedades por ahora.
+          </div>
+
+          <div
+            id="tripNotificationsList"
+            class="trip-notifications-list"
+          >
+            <div class="trip-notification-empty">
+              Todavía no hay notificaciones.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-user" id="headerUser">
+      <div class="header-auth-skeleton" aria-hidden="true">
+        <div class="header-auth-skeleton-avatar"></div>
+        <div class="header-auth-skeleton-lines">
+          <div class="header-auth-skeleton-line"></div>
+          <div class="header-auth-skeleton-line"></div>
+        </div>
+      </div>
+
+      <button
+        id="btnLoginHeader"
+        class="header-login-btn"
+        type="button"
+        aria-label="Ingresar con Google"
+      >
+        <span aria-hidden="true">👤</span>
+        <span>Iniciar sesión</span>
+      </button>
+
+      <div id="userSessionBox" class="user-session-box" hidden>
+        <img
+          id="userAvatar"
+          class="user-avatar"
+          src=""
+          alt="Foto de perfil"
+          referrerpolicy="no-referrer"
+        >
+        <div class="user-meta">
+          <div id="userName" class="user-name">Usuario</div>
+          <div id="userEmail" class="user-email">email@gmail.com</div>
+        </div>
+        <button
+          id="btnLogoutHeader"
+          class="header-logout-btn"
+          type="button"
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+        >
+          Salir
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container" role="main">
+  <section class="hero-text" aria-labelledby="heroTitle">
+    <h1 class="hero-title" id="heroTitle">Planificá tu viaje</h1>
+    <p class="hero-subtitle">Agregá paradas y calculá el precio exacto</p>
+  </section>
+
+  <section class="main-card" aria-label="Planificador de viaje">
+    <div class="route-planner" id="routePlanner">
+      <div class="route-inputs-container" aria-label="Campos de ruta">
+        <div class="route-timeline" id="routeTimeline" aria-hidden="true">
+          <div class="timeline-dot origin"></div>
+          <div class="timeline-dot destination"></div>
+        </div>
+
+        <!-- Origen -->
+        <div class="route-input-group route-input-group-origin">
+        <div class="route-input-wrapper">
+        <span class="route-input-icon" aria-hidden="true">📍</span>
+        <input
+         type="text"
+         id="inputOrigen"
+        class="route-input"
+        placeholder="¿Dónde te buscamos?"
+        autocomplete="off"
+        autocapitalize="words"
+        autocorrect="off"
+        spellcheck="false"
+        inputmode="search"
+        enterkeyhint="search"
+        aria-label="Origen"
+        aria-autocomplete="list"
+        aria-controls="sugerenciasOrigen"
+        aria-expanded="false"
+        >
+       <div class="route-input-actions">
+         <button
+       id="btnClearOrigen"
+       class="btn-input-action clear"
+       type="button"
+       title="Borrar origen"
+       aria-label="Borrar origen"
+       hidden
+     >✕</button>
+   </div>
+ </div>
+          <div
+            id="sugerenciasOrigen"
+            class="sugerencias"
+            role="listbox"
+            aria-label="Sugerencias de origen"
+          ></div>
+        </div>
+
+        <!-- Botón intercambiar -->
+        <div class="route-swap-row" style="display:flex; justify-content:center; margin:8px 0; position:relative; z-index:5;">
+          <button
+            class="map-btn"
+            id="btnSwapRoute"
+            type="button"
+            title="Intercambiar origen y destino"
+            aria-label="Intercambiar origen y destino"
+          >
+            ⇅
+          </button>
+        </div>
+
+        <!-- Destino -->
+        <div class="route-input-group route-input-group-destination">
+        <div class="route-input-wrapper">
+        <span class="route-input-icon" aria-hidden="true">🏁</span>
+        <input
+        type="text"
+        id="inputDestino"
+        class="route-input"
+        placeholder="¿A dónde vamos?"
+        autocomplete="off"
+        autocapitalize="words"
+        autocorrect="off"
+        spellcheck="false"
+        inputmode="search"
+        enterkeyhint="search"
+        aria-label="Destino"
+        aria-autocomplete="list"
+        aria-controls="sugerenciasDestino"
+        aria-expanded="false"
+        >
+     <div class="route-input-actions">
+       <button
+         id="btnClearDestino"
+         class="btn-input-action clear"
+         type="button"
+         title="Borrar destino"
+         aria-label="Borrar destino"
+         hidden
+      >✕</button>
+      </div>
+        </div>
+          <div
+            id="sugerenciasDestino"
+            class="sugerencias"
+            role="listbox"
+            aria-label="Sugerencias de destino"
+          ></div>
+        </div>
+
+        <!-- Waypoints dinámicos -->
+        <div id="waypointsContainer" aria-label="Paradas intermedias"></div>
+      </div>
+
+      <!-- Botón agregar parada -->
+      <button
+        class="btn-add-stop"
+        id="btnAddStop"
+        type="button"
+        aria-label="Agregar parada"
+      >
+        <span aria-hidden="true">➕</span>
+        <span>Agregar parada</span>
+      </button>
+    </div>
+
+    <!-- Botón cotizar -->
+    <button
+      class="btn-calcular"
+      id="btnCalcular"
+      type="button"
+      aria-label="Ver recorrido y cotizar"
+      aria-busy="false"
+    >
+      <span class="btn-content">
+        <span aria-hidden="true">🚐</span>
+        <span>Ver recorrido y cotizar</span>
+      </span>
+      <span class="btn-loader" aria-hidden="true">
+        <span class="btn-spinner"></span>
+        <span>Cotizando...</span>
+      </span>
+    </button>
+
+    <!-- MAPA -->
+    <section
+      class="map-section"
+      id="mapSection"
+      aria-hidden="true"
+      aria-label="Mapa del recorrido"
+    >
+      <div class="map-container">
+        <div id="map" role="img" aria-label="Mapa del recorrido"></div>
+        <div class="map-overlay">
+          <button
+            class="map-btn"
+            id="btnCentrarRuta"
+            title="Centrar ruta"
+            type="button"
+            aria-label="Centrar ruta"
+          >
+            📍
+          </button>
+          <button
+            class="map-btn"
+            id="btnReiniciarRuta"
+            title="Nueva ruta"
+            type="button"
+            aria-label="Nueva ruta"
+          >
+            🔄
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CARD DE COTIZACIÓN -->
+    <section
+      class="quote-card"
+      id="quoteCard"
+      aria-hidden="true"
+      aria-label="Resumen del viaje"
+    >
+      <div class="trip-driver-card" id="tripDriverCard" hidden>
+        <div class="trip-driver-card__avatar" id="tripDriverAvatar">C</div>
+
+        <div class="trip-driver-card__info">
+          <div class="trip-driver-card__name" id="tripDriverName">Estado del viaje</div>
+          <div class="trip-driver-card__meta" id="tripDriverMeta">Estamos buscando un chofer</div>
+          <div class="trip-driver-card__contact" id="tripDriverContact">Sin contacto disponible</div> 
+        </div>
+        
+      </div>
+
+      <div class="trip-active-actions" id="tripActiveActions" hidden>
+<button
+  class="btn-secondary btn-chat-trip has-chat-badge"
+  id="btnChatChofer"
+  type="button"
+  aria-label="Chatear con el chofer"
+>
+  <span aria-hidden="true">💬</span>
+  <span>Chat</span>
+  <span id="tripChatBadgeClient" class="trip-chat-fab-badge" hidden></span>
+</button>
+        <button
+          class="btn-secondary btn-cancel-trip"
+          id="btnCancelarViajeLive"
+          type="button"
+          aria-label="Cancelar viaje"
+        >
+          <span aria-hidden="true">✕</span>
+          <span>Cancelar</span>
+        </button>
+      </div>
+
+      <div class="quote-header">
+        <div class="quote-title">Resumen del viaje</div>
+        <div class="quote-route-info">
+          <span id="resumenParadas">0 paradas</span>
+        </div>
+      </div>
+
+      <div class="quote-main">
+        <div class="quote-price" id="quotePrice">$0</div>
+        <div class="quote-price-label">Precio estimado</div>
+      </div>
+
+      <div class="quote-details">
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailDistance">0 km</div>
+          <div class="quote-detail-label">Distancia</div>
+        </div>
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailDuration">0 min</div>
+          <div class="quote-detail-label">Duración</div>
+        </div>
+        <div class="quote-detail">
+          <div class="quote-detail-value" id="detailStops">0</div>
+          <div class="quote-detail-label">Paradas</div>
+        </div>
+      </div>
+
+      <button
+        id="btnToggleBreakdown"
+        class="breakdown-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="priceBreakdown"
+      >
+        <span>Ver desglose del precio</span>
+        <span id="breakdownChevron" aria-hidden="true">▾</span>
+      </button>
+
+      <div id="priceBreakdown" class="price-breakdown" hidden>
+        <div class="price-breakdown-title">Desglose del precio</div>
+        <div id="priceBreakdownContent"></div>
+      </div>
+
+      <div class="quote-actions">
+        <button
+          class="btn-primary"
+          id="btnConfirmarViaje"
+          type="button"
+          aria-label="Confirmar viaje"
+        >
+          <span aria-hidden="true">✓</span>
+          <span>Confirmar viaje</span>
+        </button>
+
+        <button
+          class="btn-secondary"
+          id="btnCompartirRuta"
+          type="button"
+          aria-label="Compartir ruta"
+        >
+          <span aria-hidden="true">📤</span>
+          <span>Compartir ruta</span>
+        </button>
+      </div>
+
+      <button
+        class="btn-secondary btn-cancel-trip"
+        id="btnCancelarViaje"
+        type="button"
+        aria-label="Cancelar viaje"
+        hidden
+      >
+        <span aria-hidden="true">✕</span>
+        <span>Cancelar viaje</span>
+      </button>
+    </section>
+  </section>
+</main>
+
+<footer class="footer">
+  <button
+    id="supportBtn"
+    class="support-launcher"
+    type="button"
+    aria-label="Abrir soporte"
+    title="Soporte"
+  >
+    <span class="support-launcher-icon" aria-hidden="true">💬</span>
+    <span class="support-launcher-text">Soporte</span>
+  </button>
+
+  <div class="footer-signature">
+    <span class="footer-signature-line"></span>
+    <span class="footer-signature-mark">VV</span>
+    <span class="footer-signature-text">Crafted by Vision Valley</span>
+    <span class="footer-signature-line"></span>
+  </div>
+</footer>
+  
+  <div id="supportSheetOverlay" class="support-sheet-overlay" hidden></div>
+
+<section
+  id="supportSheet"
+  class="support-sheet"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="supportSheetTitle"
+  aria-hidden="true"
+>
+  <div class="support-sheet-handle" aria-hidden="true">
+    <span></span>
+  </div>
+
+  <div class="support-sheet-header">
+    <div class="support-sheet-avatar" aria-hidden="true">🎧</div>
+    <div class="support-sheet-header-copy">
+      <h3 id="supportSheetTitle">Soporte MIMICAR</h3>
+<p>Contanos qué pasó y te ayudamos. Soporte legal: mimi.legal.ar@gmail.com</p>
+    </div>
+
+    <button
+      id="supportSheetClose"
+      class="support-sheet-close"
+      type="button"
+      aria-label="Cerrar soporte"
+    >
+      ✕
+    </button>
+  </div>
+
+  <div class="support-chat-body" id="supportChatBody">
+    <div class="support-msg support-msg-agent">
+      <div class="support-bubble">
+        Hola. Soy soporte de MIMICAR. Escribinos tu consulta y la recibimos con los datos de tu cuenta.
+      </div>
+    </div>
+  </div>
+
+  <div class="support-sheet-composer">
+    <label class="sr-only" for="supportMessageInput">Escribí tu mensaje</label>
+    <textarea
+      id="supportMessageInput"
+      class="support-message-input"
+      rows="3"
+      placeholder="Ej.: Necesito ayuda con mi viaje, no veo al chofer, quiero cambiar el destino..."
+    ></textarea>
+
+    <div class="support-sheet-actions">
+      <button
+        id="supportSendBtn"
+        class="support-send-btn"
+        type="button"
+      >
+        Enviar mensaje
+      </button>
+    </div>
+  </div>
+</section>
+
+<script src="./js/cliente-transporte-v2/03-config-auth-legal.js"></script>
+<script src="./js/cliente-transporte-v2/04-state-notifications-support.js"></script>
+<script src="./js/cliente-transporte-v2/05-ui-geocoding-waypoints-map.js"></script>
+<script src="./js/cliente-transporte-v2/06-quote-actions-next-ui.js"></script>
+  <!-- LEGAL GATE -->
+<div id="legalGate" class="legal-gate" hidden aria-hidden="true">
+  <div class="legal-gate-backdrop"></div>
+
+  <section
+    class="legal-gate-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="legalGateTitle"
+    aria-describedby="legalGateText"
+  >
+    <div class="legal-gate-header">
+      <div class="legal-gate-badge">⚖️</div>
+      <h2 id="legalGateTitle">Actualización legal requerida</h2>
+      <p id="legalGateText">
+        Necesitamos que revises y aceptes los documentos legales vigentes para continuar usando MIMI.
+      </p>
+    </div>
+
+    <div id="legalGateBody" class="legal-gate-body">
+      <div class="legal-gate-loading">Cargando documentos…</div>
+    </div>
+
+    <div class="legal-gate-footer">
+      <button
+        id="legalGateAcceptBtn"
+        type="button"
+        class="legal-gate-btn"
+        disabled
+      >
+        Aceptar y continuar
+      </button>
+    </div>
+  </section>
+</div>
+</body>
+</html>
