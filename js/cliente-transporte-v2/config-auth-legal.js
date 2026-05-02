@@ -869,7 +869,7 @@ async function loginConGoogleParaViaje() {
   sessionStorage.removeItem('mimi-cliente-auth');
   localStorage.setItem('mimi_pending_trip_request', '1');
 
-  const redirectTo = new URL("./index-v2.html", window.location.href).toString();
+  const redirectTo = new URL("./index.html", window.location.href).toString();
 
   const { data, error } = await window.sbRealtime.auth.signInWithOAuth({
     provider: 'google',
