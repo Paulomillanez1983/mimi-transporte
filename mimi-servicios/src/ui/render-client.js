@@ -443,6 +443,7 @@ function renderClientOnboarding(state) {
 function renderCategories(state) {
   const container = document.getElementById("categoryGrid");
   const searchInput = document.getElementById("categorySearchInput");
+  const intentAssist = document.getElementById("categoryIntentAssist");
   if (!container) return;
 
   const categories = Array.isArray(appConfig.categories)
@@ -460,9 +461,18 @@ function renderCategories(state) {
   const maxVisible = query || state.ui.showAllCategories ? filtered.length : 5;
   const visibleCategories = filtered.slice(0, maxVisible);
   const guideCategory = findGuideCategory(categories, query);
+  const selectedCategory = categories.find((category) => category.id === state.ui.selectedCategoryId);
 
   if (searchInput && searchInput.value !== (state.ui.categorySearchTerm ?? "")) {
     searchInput.value = state.ui.categorySearchTerm ?? "";
+  }
+
+  if (intentAssist) {
+    intentAssist.textContent = guideCategory
+      ? `Sugerencia: ${guideCategory.name}. Podes cambiarla si no coincide.`
+      : selectedCategory
+        ? `Categoria seleccionada: ${selectedCategory.name}.`
+        : "Escribi una situacion y MIMI sugiere la categoria mas probable.";
   }
 
   container.innerHTML = [
@@ -492,7 +502,7 @@ function renderCategories(state) {
               type="button"
               title="${escapeHtml(category.description ?? category.name)}"
             >
-              ${isPopular ? `<em class="category-popular-badge" aria-label="Popular">🔥</em>` : ""}
+              ${isPopular ? `<em class="category-popular-badge" aria-label="Popular">&#128293;</em>` : ""}
               <span aria-hidden="true">${categoryIcon(category)}</span>
               <strong>${escapeHtml(category.name)}</strong>
               <small>${escapeHtml(category.description ?? "")}</small>
@@ -504,7 +514,7 @@ function renderCategories(state) {
       (!query && filtered.length > maxVisible
         ? `
           <button class="category-chip category-more-chip" data-category-toggle="search" type="button">
-            <span aria-hidden="true">🔎</span>
+            <span aria-hidden="true">&#128269;</span>
             <strong>Buscar</strong>
             <small>Ver todos</small>
           </button>
