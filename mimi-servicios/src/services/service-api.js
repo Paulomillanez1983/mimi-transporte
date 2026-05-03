@@ -234,6 +234,24 @@ export async function loadCategories() {
   );
 }
 
+export async function resolveServiceIntent(query, { limit = 5 } = {}) {
+  const text = String(query ?? "").trim();
+
+  if (!hasBackend() || text.length < 3) {
+    return null;
+  }
+
+  try {
+    return await invokeFunction(appConfig.functions.resolveServiceIntent, {
+      query: text,
+      limit
+    });
+  } catch (error) {
+    console.warn("[service-api] resolveServiceIntent fallback", error);
+    return null;
+  }
+}
+
 export async function registerDevice(pushToken = null) {
   const deviceId =
     localStorage.getItem("mimi_services_device_id") ||

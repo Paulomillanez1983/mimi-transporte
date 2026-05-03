@@ -11,6 +11,7 @@ import {
   loadNotifications,
   prepareRequestPricing,
   registerDevice,
+  resolveServiceIntent,
   searchProviders,
   sendMessage,
   updateRequestStatus
@@ -40,6 +41,7 @@ import { renderClientScreen } from "./ui/render-client.js";
 import { cancelPayment, createPaymentIntent, getPaymentStatus } from "./payments/payment-api.js";
 
 let addressLookupToken = 0;
+let intentLookupToken = 0;
 let realtimeSubscription = null;
 let authSubscription = null;
 
@@ -64,6 +66,9 @@ const INTENT_CATEGORY_RULES = [
   { code: "CERRAJERIA", terms: ["llave", "cerradura", "cerrajero", "puerta", "abrir", "trabo", "candado"] },
   { code: "MUDANZAS", terms: ["mudanza", "mover", "cargar", "flete", "traslado", "muebles", "cajas"] },
   { code: "MASCOTAS", terms: ["perro", "gato", "mascota", "pasear", "paseador", "veterinario", "cuidado mascota"] },
+  { code: "GOMERIA_MOVIL", terms: ["pincho", "pinchadura", "rueda", "cubierta", "neumatico", "gomero", "gomeria", "auxilio"] },
+  { code: "MECANICA_MOVIL", terms: ["mecanico", "auto", "no arranca", "bateria", "motor", "me quede tirado", "auxilio mecanico"] },
+  { code: "HERRERIA", terms: ["herrero", "herreria", "reja", "porton", "soldadura", "metal", "estructura"] },
   { code: "ALBANILERIA", terms: ["albanil", "obra", "arreglo", "pared rota", "ladrillo", "cemento", "construccion"] },
   { code: "CARPINTERIA", terms: ["madera", "mueble", "puerta de madera", "carpintero", "estante", "placard"] },
   { code: "BELLEZA", terms: ["belleza", "estetica", "maquillaje", "depilacion", "cejas"] },
@@ -135,6 +140,35 @@ function findBestCategoryByIntent(rawText) {
   }
 
   return bestScore >= 12 ? best : null;
+}
+
+async function resolveCategoryByBackendIntent(value) {
+  const query = String(value ?? "").trim();
+  const token = ++intentLookupToken;
+
+  if (query.length < 3) return;
+
+  const result = await resolveServiceIntent(query, { limit: 3 });
+
+  if (token !== intentLookupToken || !result?.ok) return;
+
+  const categoryId = result.top_match?.category_id;
+
+  if (categoryId && appConfig.categories.some((category) => category.id === categoryId)) {
+    patchState("ui.selectedCategoryId", categoryId);
+  }
+}
+
+function scheduleBackendIntentResolution(value) {
+  const token = ++intentLookupToken;
+
+  window.setTimeout(() => {
+    if (token !== intentLookupToken) return;
+
+    resolveCategoryByBackendIntent(value).catch((error) => {
+      console.warn("[client] intent resolver unavailable", error);
+    });
+  }, 280);
 }
 
 function setupCategoryPlaceholderExamples() {
@@ -1152,6 +1186,8 @@ function bindBasicControls() {
     if (suggestedCategory?.id) {
       patchState("ui.selectedCategoryId", suggestedCategory.id);
     }
+
+    scheduleBackendIntentResolution(value);
   });
 
   document.getElementById("categorySearchInput")?.addEventListener("keydown", (event) => {
@@ -1164,6 +1200,8 @@ function bindBasicControls() {
       registerCategoryUsage(suggestedCategory.id);
       patchState("ui.selectedCategoryId", suggestedCategory.id);
     }
+
+    scheduleBackendIntentResolution(event.currentTarget.value || "");
 
     document.getElementById("searchProvidersButton")?.focus();
   });

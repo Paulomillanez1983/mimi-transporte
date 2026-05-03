@@ -43,6 +43,7 @@ export const appConfig = {
     sendMessage: "svc-send-message",
     trackLocation: "svc-track-location",
     registerDevice: "svc-register-device",
+    resolveServiceIntent: "svc-resolve-service-intent",
     createPaymentIntent: "create-payment-intent",
     getPaymentStatus: "get-payment-status",
     cancelPayment: "cancel-payment",
@@ -84,6 +85,9 @@ export const appConfig = {
     { id: "tecnico-pc", code: "TECNICO_PC", name: "Tecnico PC", description: "Soporte tecnico, computadoras, redes e impresoras.", aliases: ["computadora", "pc", "notebook", "impresora"] },
     { id: "tecnologia", code: "TECNOLOGIA", name: "Tecnologia", description: "Instalaciones, soporte tecnico y configuracion de equipos.", aliases: ["wifi", "router", "camaras", "smart tv"] },
     { id: "mascotas", code: "MASCOTAS", name: "Mascotas", description: "Paseos, cuidado, acompanamiento y asistencia basica.", aliases: ["perros", "gatos", "paseador"] },
+    { id: "gomeria-movil", code: "GOMERIA_MOVIL", name: "Gomeria movil", description: "Auxilio por pinchadura, cambio de rueda y reparaciones simples.", aliases: ["gomero", "pinchadura", "rueda", "cubierta"] },
+    { id: "mecanica-movil", code: "MECANICA_MOVIL", name: "Mecanica movil", description: "Diagnostico, auxilio mecanico y reparaciones simples en sitio.", aliases: ["mecanico", "auto no arranca", "bateria", "motor"] },
+    { id: "herreria", code: "HERRERIA", name: "Herreria", description: "Rejas, portones, soldaduras, estructuras y presupuestos.", aliases: ["herrero", "reja", "porton", "soldadura"] },
     { id: "belleza", code: "BELLEZA", name: "Belleza", description: "Servicios personales, estetica y cuidado a domicilio.", aliases: ["estetica", "maquillaje", "belleza"] }
   ]
 };

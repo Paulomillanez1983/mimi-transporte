@@ -1,4 +1,4 @@
-import { appConfig } from "../config.js";
+﻿import { appConfig } from "../config.js";
 
 const stateLabels = {
   SEARCHING: "Buscando prestador",
@@ -18,32 +18,35 @@ const stateLabels = {
 };
 
 const categoryIcons = {
-  SERVICIO_DOMESTICO: "🏠",
-  LIMPIEZA: "🧹",
-  ELECTRICIDAD: "💡",
-  PLOMERIA: "🔧",
-  GASISTA: "🔥",
-  INSTALACION_AIRE: "❄️",
-  REFRIGERACION: "🧊",
-  REPARACIONES: "🛠️",
-  CUIDADO: "🤝",
-  CUIDADO_ADULTOS: "🤝",
-  CUIDADO_NINOS: "🧸",
-  ENFERMERIA: "➕",
-  JARDINERIA: "🌿",
-  PINTURA: "🎨",
-  CERRAJERIA: "🔑",
-  CARPINTERIA: "🪚",
-  ALBANILERIA: "🧱",
-  TECNICO: "💻",
-  TECNICO_PC: "💻",
-  TECNOLOGIA: "📶",
-  PELUQUERIA: "✂️",
-  MANICURIA: "💅",
-  MASAJISTA: "🙌",
-  BELLEZA: "✨",
-  MUDANZAS: "📦",
-  MASCOTAS: "🐾"
+  SERVICIO_DOMESTICO: "SD",
+  LIMPIEZA: "LI",
+  ELECTRICIDAD: "EL",
+  PLOMERIA: "PL",
+  GASISTA: "GA",
+  INSTALACION_AIRE: "IA",
+  REFRIGERACION: "RF",
+  REPARACIONES: "RP",
+  CUIDADO: "CU",
+  CUIDADO_ADULTOS: "CA",
+  CUIDADO_NINOS: "CN",
+  ENFERMERIA: "EN",
+  JARDINERIA: "JA",
+  PINTURA: "PI",
+  CERRAJERIA: "CE",
+  CARPINTERIA: "CP",
+  ALBANILERIA: "AL",
+  TECNICO: "TC",
+  TECNICO_PC: "PC",
+  TECNOLOGIA: "TG",
+  PELUQUERIA: "PE",
+  MANICURIA: "MA",
+  MASAJISTA: "MS",
+  BELLEZA: "BE",
+  MUDANZAS: "MU",
+  MASCOTAS: "PA",
+  GOMERIA_MOVIL: "GM",
+  MECANICA_MOVIL: "MM",
+  HERRERIA: "HE"
 };
 
 const POPULAR_CATEGORY_CODES = [
@@ -69,7 +72,10 @@ const guideRules = [
   { code: "TECNOLOGIA", terms: ["wifi", "router", "camara", "smart tv", "internet"] },
   { code: "CERRAJERIA", terms: ["llave", "cerradura", "puerta"] },
   { code: "MUDANZAS", terms: ["mudanza", "mover", "flete", "cargar"] },
-  { code: "MASCOTAS", terms: ["perro", "gato", "mascota", "pasear"] }
+  { code: "MASCOTAS", terms: ["perro", "gato", "mascota", "pasear"] },
+  { code: "GOMERIA_MOVIL", terms: ["pincho", "pinchadura", "rueda", "cubierta", "neumatico", "gomero"] },
+  { code: "MECANICA_MOVIL", terms: ["mecanico", "auto", "no arranca", "bateria", "motor"] },
+  { code: "HERRERIA", terms: ["herrero", "herreria", "reja", "porton", "soldadura"] }
 ];
 
 const providerColors = [
@@ -135,7 +141,7 @@ function categoryIcon(category) {
     .trim()
     .toUpperCase();
 
-  return categoryIcons[code] || "🔎";
+  return categoryIcons[code] || "ðŸ”Ž";
 }
 
 function normalizeSearch(value) {
@@ -412,7 +418,7 @@ function renderAccountDrawer(state) {
   const address = request.address_text || state.requestDraft.address || "Direccion pendiente";
 
   if (lastTitle) lastTitle.textContent = status;
-  if (lastMeta) lastMeta.textContent = `${providerName} · ${address}`;
+  if (lastMeta) lastMeta.textContent = `${providerName} Â· ${address}`;
 }
 
 function renderEntryState(state) {
@@ -846,7 +852,7 @@ function renderProviderSpotlight(state) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin prestador elegido</strong>
-        <span class="muted">Cuando confirmes una opcion, mostramos bio, categorias, pricing y ultimas reseñas.</span>
+        <span class="muted">Cuando confirmes una opcion, mostramos bio, categorias, pricing y ultimas reseÃ±as.</span>
       </div>
     `;
     return;
