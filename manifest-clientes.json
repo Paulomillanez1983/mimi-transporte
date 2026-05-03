@@ -1,0 +1,27 @@
+{
+  "id": "/hub-clientes",
+  "name": "MIMI Clientes",
+  "short_name": "MIMI",
+  "description": "Hub de clientes MIMI para coordinar viajes y servicios.",
+  "start_url": "/hub-clientes.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait",
+  "lang": "es-AR",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
