@@ -33,6 +33,22 @@
     {
       "source": "/terminos",
       "destination": "/terminos.html"
+    },
+    {
+      "source": "/servicios",
+      "destination": "/mimi-servicios/cliente.html"
+    },
+    {
+      "source": "/prestador",
+      "destination": "/mimi-servicios/prestador.html"
+    },
+    {
+      "source": "/hub-operadores",
+      "destination": "/hub-operadores.html"
+    },
+    {
+      "source": "/partners",
+      "destination": "/hub-operadores.html"
     }
   ],
   "headers": [
