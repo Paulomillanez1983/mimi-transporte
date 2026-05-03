@@ -173,14 +173,14 @@
           <input id="serviceLngInput" name="lng" type="hidden">
 
           <div class="category-section">
-            <div class="section-label">Categoria</div>
+            <div class="section-label">Categoria sugerida</div>
             <label class="category-search-field" for="categorySearchInput">
-              <span>Buscar servicio</span>
+              <span>Contanos que te paso</span>
               <input
                 id="categorySearchInput"
                 type="search"
-                placeholder="Se me rompio un cano"
-                data-placeholder-examples="Se me rompio un cano|Quiero pintar mi living|Quiero cortar el pasto|Necesito una enfermera|Busco una ninera|No prende la luz|Quiero instalar un aire|Se trabo la cerradura|Necesito ayuda para una mudanza|Mi computadora no funciona"
+                placeholder="Se me pincho un cano en la cocina"
+                data-placeholder-examples="Se me pincho un cano en la cocina|Quiero pintar la casa|Quiero cortar el pasto|Tengo un familiar enfermo y necesito un enfermero|Necesito una ninera para la tarde|No prende la luz del living|Quiero instalar un aire|Se trabo la cerradura|Necesito ayuda para una mudanza|Mi computadora no funciona"
                 autocomplete="off"
                 autocapitalize="sentences"
                 autocorrect="off"
@@ -188,6 +188,9 @@
                 enterkeyhint="search"
               >
             </label>
+            <div class="intent-assist" id="categoryIntentAssist" aria-live="polite">
+              Escribi una situacion y MIMI sugiere la categoria mas probable.
+            </div>
             <div
               class="category-grid"
               id="categoryGrid"
@@ -197,18 +200,27 @@
           </div>
 
           <div class="form-mini-grid">
-            <label class="compact-field">
-              <span>Tipo</span>
-              <select id="requestTypeSelect" name="requestType">
+            <div class="compact-field request-type-card">
+              <span>Cuando</span>
+              <select id="requestTypeSelect" name="requestType" hidden aria-hidden="true" tabindex="-1">
                 <option value="IMMEDIATE">Inmediato</option>
                 <option value="SCHEDULED">Programado</option>
               </select>
-            </label>
+              <div class="request-type-toggle" role="group" aria-label="Elegir cuando necesitas el servicio">
+                <button class="is-active" type="button" data-request-type="IMMEDIATE">Lo quiero ya</button>
+                <button type="button" data-request-type="SCHEDULED">Programado</button>
+              </div>
+            </div>
 
-            <label class="compact-field">
+            <div class="compact-field duration-stepper-card">
               <span>Duracion</span>
-              <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2">
-            </label>
+              <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2" hidden>
+              <div class="duration-stepper" role="group" aria-label="Duracion estimada">
+                <button type="button" data-hours-step="-1" aria-label="Reducir duracion">-</button>
+                <strong><b id="requestedHoursValue">2</b> h</strong>
+                <button type="button" data-hours-step="1" aria-label="Aumentar duracion">+</button>
+              </div>
+            </div>
           </div>
 
           <label class="compact-field" id="scheduledForWrapper" hidden>
