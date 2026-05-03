@@ -130,6 +130,30 @@ function findBestCategoryByIntent(rawText) {
   return bestScore >= 12 ? best : null;
 }
 
+function setupCategoryPlaceholderExamples() {
+  const input = document.getElementById("categorySearchInput");
+  if (!input || input.dataset.placeholderReady === "1") return;
+
+  const examples = String(input.dataset.placeholderExamples || "")
+    .split("|")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (examples.length < 2) return;
+
+  input.dataset.placeholderReady = "1";
+  let index = Math.max(0, Math.floor(Math.random() * examples.length));
+
+  const updatePlaceholder = () => {
+    if (document.activeElement === input || input.value.trim()) return;
+    input.placeholder = examples[index % examples.length];
+    index += 1;
+  };
+
+  updatePlaceholder();
+  window.setInterval(updatePlaceholder, 2800);
+}
+
 function exposeClientDebugApi() {
   window.MIMI = window.MIMI || {};
   window.MIMI.servicesClient = {
@@ -1393,6 +1417,7 @@ async function init() {
   toggleClearAddressButton();
   updateScheduledVisibility();
   bindBasicControls();
+  setupCategoryPlaceholderExamples();
   setClientView(document.body.dataset.clientView || "home", { behavior: "auto" });
   registerInstallPrompt();
   initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
