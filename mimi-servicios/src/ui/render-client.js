@@ -18,33 +18,59 @@ const stateLabels = {
 };
 
 const categoryIcons = {
-  SERVICIO_DOMESTICO: "SD",
-  LIMPIEZA: "LI",
-  ELECTRICIDAD: "EL",
-  PLOMERIA: "PL",
-  GASISTA: "GA",
-  INSTALACION_AIRE: "AC",
-  REFRIGERACION: "RF",
-  REPARACIONES: "RP",
-  CUIDADO: "CU",
-  CUIDADO_ADULTOS: "CA",
-  CUIDADO_NINOS: "CN",
-  ENFERMERIA: "EN",
-  JARDINERIA: "JA",
-  PINTURA: "PI",
-  CERRAJERIA: "CE",
-  CARPINTERIA: "CP",
-  ALBANILERIA: "AL",
-  TECNICO: "TC",
-  TECNICO_PC: "PC",
-  TECNOLOGIA: "TE",
-  PELUQUERIA: "PE",
-  MANICURIA: "MA",
-  MASAJISTA: "MS",
-  BELLEZA: "BE",
-  MUDANZAS: "MU",
-  MASCOTAS: "MC"
+  SERVICIO_DOMESTICO: "🏠",
+  LIMPIEZA: "🧹",
+  ELECTRICIDAD: "💡",
+  PLOMERIA: "🔧",
+  GASISTA: "🔥",
+  INSTALACION_AIRE: "❄️",
+  REFRIGERACION: "🧊",
+  REPARACIONES: "🛠️",
+  CUIDADO: "🤝",
+  CUIDADO_ADULTOS: "🤝",
+  CUIDADO_NINOS: "🧸",
+  ENFERMERIA: "➕",
+  JARDINERIA: "🌿",
+  PINTURA: "🎨",
+  CERRAJERIA: "🔑",
+  CARPINTERIA: "🪚",
+  ALBANILERIA: "🧱",
+  TECNICO: "💻",
+  TECNICO_PC: "💻",
+  TECNOLOGIA: "📶",
+  PELUQUERIA: "✂️",
+  MANICURIA: "💅",
+  MASAJISTA: "🙌",
+  BELLEZA: "✨",
+  MUDANZAS: "📦",
+  MASCOTAS: "🐾"
 };
+
+const POPULAR_CATEGORY_CODES = [
+  "PLOMERIA",
+  "ELECTRICIDAD",
+  "LIMPIEZA",
+  "JARDINERIA",
+  "PINTURA"
+];
+
+const CATEGORY_USAGE_KEY = "mimi_services_category_usage_v1";
+
+const guideRules = [
+  { code: "PLOMERIA", terms: ["cano", "caneria", "agua", "perdida", "fuga", "griferia", "bano", "inodoro"] },
+  { code: "PINTURA", terms: ["pintar", "pintura", "pared", "humedad", "techo"] },
+  { code: "JARDINERIA", terms: ["pasto", "jardin", "cortar", "poda", "cesped"] },
+  { code: "ELECTRICIDAD", terms: ["luz", "electricidad", "enchufe", "cable", "termica"] },
+  { code: "GASISTA", terms: ["gas", "calefon", "cocina", "estufa"] },
+  { code: "INSTALACION_AIRE", terms: ["aire", "split", "acondicionado", "instalar aire"] },
+  { code: "CUIDADO_ADULTOS", terms: ["anciano", "adulto mayor", "cuidador", "acompanante"] },
+  { code: "CUIDADO_NINOS", terms: ["nino", "nina", "ninera", "chico"] },
+  { code: "TECNICO_PC", terms: ["pc", "computadora", "notebook", "impresora"] },
+  { code: "TECNOLOGIA", terms: ["wifi", "router", "camara", "smart tv", "internet"] },
+  { code: "CERRAJERIA", terms: ["llave", "cerradura", "puerta"] },
+  { code: "MUDANZAS", terms: ["mudanza", "mover", "flete", "cargar"] },
+  { code: "MASCOTAS", terms: ["perro", "gato", "mascota", "pasear"] }
+];
 
 const providerColors = [
   "#1a56db",
@@ -109,7 +135,7 @@ function categoryIcon(category) {
     .trim()
     .toUpperCase();
 
-  return categoryIcons[code] || "SV";
+  return categoryIcons[code] || "🔎";
 }
 
 function normalizeSearch(value) {
@@ -133,6 +159,75 @@ function categoryMatchesQuery(category, query) {
   ].join(" "));
 
   return haystack.includes(query);
+}
+
+function getCategoryUsage() {
+  try {
+    return JSON.parse(localStorage.getItem(CATEGORY_USAGE_KEY) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+function categoryGuideScore(category, query) {
+  if (!query) return 0;
+
+  const haystack = normalizeSearch([
+    category.name,
+    category.code,
+    category.description,
+    ...(Array.isArray(category.aliases) ? category.aliases : [])
+  ].join(" "));
+
+  let score = haystack.includes(query) ? 12 : 0;
+  const rule = guideRules.find((item) => item.code === category.code);
+
+  if (rule?.terms?.some((term) => query.includes(normalizeSearch(term)))) {
+    score += 30;
+  }
+
+  for (const word of query.split(" ")) {
+    if (word.length > 3 && haystack.includes(word)) score += 4;
+  }
+
+  return score;
+}
+
+function rankCategories(categories, query = "") {
+  const usage = getCategoryUsage();
+
+  return [...categories].sort((a, b) => {
+    if (query) {
+      const scoreDiff = categoryGuideScore(b, query) - categoryGuideScore(a, query);
+      if (scoreDiff) return scoreDiff;
+    }
+
+    const usageDiff = Number(usage[b.id] || 0) - Number(usage[a.id] || 0);
+    if (usageDiff) return usageDiff;
+
+    const aPopular = POPULAR_CATEGORY_CODES.includes(a.code)
+      ? POPULAR_CATEGORY_CODES.indexOf(a.code)
+      : 999;
+    const bPopular = POPULAR_CATEGORY_CODES.includes(b.code)
+      ? POPULAR_CATEGORY_CODES.indexOf(b.code)
+      : 999;
+    if (aPopular !== bPopular) return aPopular - bPopular;
+
+    return String(a.name || "").localeCompare(String(b.name || ""), "es");
+  });
+}
+
+function findGuideCategory(categories, query) {
+  if (!query || query.length < 3) return null;
+
+  const scored = rankCategories(categories, query)
+    .map((category) => ({
+      category,
+      score: categoryGuideScore(category, query)
+    }))
+    .filter((item) => item.score >= 12);
+
+  return scored[0]?.category || null;
 }
 function normalizeProvider(provider, index = 0) {
   const providerPrice = Number(provider.provider_price ?? 0);
@@ -313,46 +408,74 @@ function renderCategories(state) {
     ? appConfig.categories
     : [];
   const query = normalizeSearch(state.ui.categorySearchTerm ?? "");
-  const filtered = categories.filter((category) => categoryMatchesQuery(category, query));
-  const maxVisible = query || state.ui.showAllCategories ? filtered.length : 8;
+  const rankedCategories = rankCategories(categories, query);
+  const filtered = query
+    ? rankedCategories.filter(
+        (category) =>
+          categoryMatchesQuery(category, query) ||
+          categoryGuideScore(category, query) > 0
+      )
+    : rankedCategories;
+  const maxVisible = query || state.ui.showAllCategories ? filtered.length : 5;
   const visibleCategories = filtered.slice(0, maxVisible);
+  const guideCategory = findGuideCategory(categories, query);
 
   if (searchInput && searchInput.value !== (state.ui.categorySearchTerm ?? "")) {
     searchInput.value = state.ui.categorySearchTerm ?? "";
   }
 
-  container.innerHTML = visibleCategories.length
-    ? visibleCategories
+  container.innerHTML = [
+    guideCategory
+      ? `
+        <button
+          class="category-guide-card"
+          data-category-id="${escapeHtml(guideCategory.id)}"
+          type="button"
+          title="${escapeHtml(guideCategory.description ?? guideCategory.name)}"
+        >
+          <span class="guide-kicker">Guia MIMI</span>
+          <strong>${escapeHtml(guideCategory.name)}</strong>
+          <small>${escapeHtml(guideCategory.description ?? "Servicio sugerido segun tu consulta.")}</small>
+        </button>
+      `
+      : "",
+    visibleCategories.length
+      ? visibleCategories
         .map(
-          (category) => `
+          (category, index) => {
+            const isPopular = !query && index < 5;
+            return `
             <button
-              class="category-chip ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""}"
+              class="category-chip ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""} ${isPopular ? "is-popular" : ""}"
               data-category-id="${escapeHtml(category.id)}"
               type="button"
               title="${escapeHtml(category.description ?? category.name)}"
             >
+              ${isPopular ? `<em class="category-popular-badge" aria-label="Popular">🔥</em>` : ""}
               <span aria-hidden="true">${categoryIcon(category)}</span>
               <strong>${escapeHtml(category.name)}</strong>
               <small>${escapeHtml(category.description ?? "")}</small>
             </button>
-          `
+          `;
+          }
         )
         .join("") +
       (!query && filtered.length > maxVisible
         ? `
-          <button class="category-chip category-more-chip" data-category-toggle="more" type="button">
-            <span aria-hidden="true">+</span>
-            <strong>Mas</strong>
-            <small>Ver categorias</small>
+          <button class="category-chip category-more-chip" data-category-toggle="search" type="button">
+            <span aria-hidden="true">🔎</span>
+            <strong>Buscar</strong>
+            <small>Ver todos</small>
           </button>
         `
         : "")
-    : `
+      : `
       <div class="client-empty-state">
         <strong>Sin resultados</strong>
-        <span>Proba con plomero, cuidado, limpieza, electricista o gasista.</span>
+        <span>Proba con: se rompio un cano, quiero pintar, cortar pasto o necesito cuidar a alguien.</span>
       </div>
-    `;
+    `
+  ].join("");
 }
 
 function renderRadarMap(providers, selectedId) {
