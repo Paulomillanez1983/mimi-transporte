@@ -248,7 +248,9 @@ function toggleDrawer(id, force) {
           ? document.getElementById("chatButton")
           : id === "supportDrawer"
             ? document.getElementById("openSupportDrawer")
-            : null;
+            : id === "accountDrawer"
+              ? document.getElementById("userSessionCard")
+              : null;
 
     fallbackButton?.focus?.();
   }
@@ -263,7 +265,9 @@ function toggleDrawer(id, force) {
         ? "chatButton"
         : id === "supportDrawer"
           ? "openSupportDrawer"
-          : null;
+          : id === "accountDrawer"
+            ? "userSessionCard"
+            : null;
 
   if (controlId) {
     document.getElementById(controlId)?.setAttribute("aria-expanded", String(open));
@@ -279,7 +283,7 @@ function toggleDrawer(id, force) {
 }
 
 function closeAllDrawers() {
-  ["notificationsDrawer", "chatDrawer", "supportDrawer"].forEach((id) => {
+  ["notificationsDrawer", "chatDrawer", "supportDrawer", "accountDrawer"].forEach((id) => {
     toggleDrawer(id, false);
   });
 }
@@ -1242,6 +1246,9 @@ function bindBasicControls() {
       if (viewButton) {
         const view = viewButton.dataset.clientView || "home";
         setClientView(view);
+        if (viewButton.closest(".drawer")) {
+          closeAllDrawers();
+        }
         return;
       }
 
@@ -1262,6 +1269,7 @@ function bindBasicControls() {
 
       const supportButton = event.target.closest("[data-action='support']");
       if (supportButton) {
+        closeAllDrawers();
         toggleDrawer("supportDrawer", true);
         return;
       }
@@ -1274,7 +1282,15 @@ function bindBasicControls() {
 
       const notificationButton = event.target.closest("[data-action='notifications']");
       if (notificationButton) {
+        closeAllDrawers();
         toggleDrawer("notificationsDrawer", true);
+        return;
+      }
+
+      const accountButton = event.target.closest("[data-action='account']");
+      if (accountButton) {
+        closeAllDrawers();
+        toggleDrawer("accountDrawer", true);
         return;
       }
 
