@@ -10,6 +10,7 @@
   --shadow:0 28px 90px rgba(0,0,0,.48);
 }
 
+
 *{
   box-sizing:border-box;
   margin:0;
@@ -1256,7 +1257,7 @@ h1{
 }
 /* =========================================================
    MIMI Servicios Login Mode
-   Hub → Login prestador sin navegar
+   Hub â†’ Login prestador sin navegar
    ========================================================= */
 
 body.services-login-mode {
@@ -1953,7 +1954,7 @@ body.services-login-mode #servicesLoginBtnArrow {
   }
 }
 /* =========================================================
-   FIX FINAL — CLARITY CARD COMPACT + FOOTER MOBILE
+   FIX FINAL â€” CLARITY CARD COMPACT + FOOTER MOBILE
    Reemplaza todo tu bloque actual por este
    ========================================================= */
 
@@ -2126,5 +2127,227 @@ body.services-login-mode #servicesLoginBtnArrow {
     grid-column:3;
     min-height:48px;
     padding:10px 14px;
+  }
+}
+
+/* ==========================================================================
+   UI reference final 2026-05-03
+   Clarity card bitmap + footer support/install row
+   ========================================================================== */
+
+.phone-map,
+.person-avatar,
+.face-img,
+.route-line,
+.pin,
+.pin-a,
+.pin-b{
+  display:none !important;
+}
+
+.clarity-card{
+  display:grid !important;
+  grid-template-columns:120px minmax(0, 1fr) 360px !important;
+  align-items:center !important;
+  gap:24px !important;
+  min-height:150px !important;
+  height:auto !important;
+  padding:24px 30px !important;
+  overflow:hidden !important;
+}
+
+.clarity-shield{
+  align-self:center !important;
+}
+
+.clarity-copy{
+  min-width:0 !important;
+}
+
+.clarity-visual-image{
+  width:100% !important;
+  height:150px !important;
+  min-height:0 !important;
+  max-height:none !important;
+  overflow:hidden !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.clarity-card-img{
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  object-fit:contain !important;
+  object-position:center !important;
+  display:block !important;
+  border-radius:18px;
+}
+
+.footer-pro{
+  display:flex !important;
+  align-items:center !important;
+  flex-wrap:nowrap !important;
+  gap:18px !important;
+}
+
+.footer-copy{
+  margin-right:0 !important;
+  flex:1 1 auto !important;
+}
+
+.footer-support{
+  display:flex !important;
+  align-items:center !important;
+  flex:0 1 290px !important;
+  order:3 !important;
+  margin-left:auto !important;
+}
+
+.support-icon{
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  flex:0 0 auto !important;
+}
+
+.support-icon svg{
+  width:24px !important;
+  height:24px !important;
+  display:block !important;
+}
+
+.install-app-btn{
+  order:4 !important;
+  flex:0 0 auto !important;
+  margin-left:0 !important;
+}
+
+.footer-trust-line{
+  order:5 !important;
+  flex:0 0 100% !important;
+}
+
+@media (max-width:900px){
+  .clarity-card{
+    grid-template-columns:88px minmax(0, 1fr) 280px !important;
+    gap:16px !important;
+    padding:18px 20px !important;
+  }
+
+  .clarity-visual-image{
+    height:128px !important;
+  }
+
+  .footer-pro{
+    display:grid !important;
+    grid-template-columns:auto 1fr auto !important;
+    align-items:center !important;
+    gap:12px !important;
+  }
+
+  .footer-support{
+    grid-column:1 / 3 !important;
+    order:3 !important;
+    margin-left:0 !important;
+    width:100% !important;
+  }
+
+  .install-app-btn{
+    grid-column:3 !important;
+    order:4 !important;
+  }
+
+  .footer-trust-line{
+    grid-column:1 / -1 !important;
+  }
+}
+
+@media (max-width:430px){
+  .clarity-card{
+    height:auto !important;
+    min-height:0 !important;
+    padding:0 !important;
+    margin:0 8px 14px !important;
+    border-radius:20px !important;
+    display:block !important;
+  }
+
+  .clarity-shield,
+  .clarity-copy{
+    display:none !important;
+  }
+
+  .clarity-visual-image{
+    aspect-ratio:16 / 9 !important;
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    border-radius:20px !important;
+  }
+
+  .clarity-card-img{
+    object-fit:contain !important;
+    width:100% !important;
+    height:100% !important;
+    max-width:none !important;
+  }
+
+  .footer-pro{
+    display:grid !important;
+    grid-template-columns:auto minmax(0, 1fr) auto !important;
+    gap:8px !important;
+    padding:14px 12px !important;
+  }
+
+  .footer-brand{
+    grid-column:1 !important;
+  }
+
+  .footer-sep{
+    display:none !important;
+  }
+
+  .footer-copy{
+    grid-column:2 / 4 !important;
+    font-size:11px !important;
+  }
+
+  .footer-support{
+    display:flex !important;
+    grid-column:1 / 3 !important;
+    order:3 !important;
+    min-height:44px !important;
+    padding:8px 10px !important;
+  }
+
+  .footer-support strong{
+    font-size:11px !important;
+  }
+
+  .footer-support small{
+    font-size:10px !important;
+  }
+
+  .support-icon{
+    width:28px !important;
+    height:28px !important;
+  }
+
+  .support-icon svg{
+    width:20px !important;
+    height:20px !important;
+  }
+
+  .install-app-btn{
+    grid-column:3 !important;
+    min-height:44px !important;
+    padding:7px 10px !important;
+  }
+
+  .footer-trust-line{
+    grid-column:1 / -1 !important;
+    display:block !important;
   }
 }
