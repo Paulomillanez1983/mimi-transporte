@@ -1,8 +1,9 @@
 <!doctype html>
 <html lang="es">
 <head>
+  <meta charset="utf-8">
   <title>MIMIGo | Servicios cerca tuyo</title>
-  <meta name="description" content="PedÃ­ limpieza, electricidad, instalaciÃ³n, cuidado y mÃ¡s desde una sola app.">
+  <meta name="description" content="Pedi limpieza, electricidad, instalacion, cuidado y mas desde una sola app.">
   <meta name="theme-color" content="#020617">
   <link rel="canonical" href="https://mimi-transporte.vercel.app/servicios">
 
@@ -11,7 +12,7 @@
   <meta property="og:site_name" content="MIMI Transporte">
   <meta property="og:locale" content="es_AR">
   <meta property="og:title" content="MIMIGo | Servicios cerca tuyo">
-  <meta property="og:description" content="PedÃ­ limpieza, electricidad, instalaciÃ³n, cuidado y mÃ¡s desde una sola app.">
+  <meta property="og:description" content="Pedi limpieza, electricidad, instalacion, cuidado y mas desde una sola app.">
   <meta property="og:url" content="https://mimi-transporte.vercel.app/servicios">
   <meta property="og:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimigo-services.jpg">
   <meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-mimigo-services.jpg">
@@ -22,10 +23,9 @@
   <!-- X / Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="MIMIGo | Servicios cerca tuyo">
-  <meta name="twitter:description" content="PedÃ­ limpieza, electricidad, instalaciÃ³n, cuidado y mÃ¡s desde una sola app.">
+  <meta name="twitter:description" content="Pedi limpieza, electricidad, instalacion, cuidado y mas desde una sola app.">
   <meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-mimigo-services.jpg">
 
-  <meta charset="utf-8">
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
@@ -68,7 +68,7 @@
           aria-controls="notificationsDrawer"
           aria-expanded="false"
         >
-          <span aria-hidden="true">ðŸ””</span>
+          <span aria-hidden="true">!</span>
           <b id="notificationsCount" hidden>0</b>
         </button>
         <button
@@ -80,7 +80,7 @@
           aria-controls="chatDrawer"
           aria-expanded="false"
         >
-          <span aria-hidden="true">ðŸ’¬</span>
+          <span aria-hidden="true">C</span>
           <b id="chatUnreadCount" hidden>0</b>
         </button>
         <button class="login-pill" id="authPrimaryButton" data-auth-action="login" type="button">
@@ -103,7 +103,7 @@
       </div>
 
       <section class="hero-text-client" id="clientHero" data-client-screen="home" aria-labelledby="heroTitle">
-        <p>Buenos dias, <span id="clientGreetingName">Paulo</span> ðŸ‘‹</p>
+        <p>Buenos dias, <span id="clientGreetingName">Paulo</span></p>
         <h1 id="heroTitle">Que prestador necesitas hoy?</h1>
       </section>
 
@@ -151,8 +151,8 @@
               aria-controls="serviceAddressSuggestions"
               aria-expanded="false"
             >
-            <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar direccion" hidden>Ã—</button>
-            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicacion" title="Usar mi ubicacion">ðŸ“</button>
+            <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar direccion" hidden>x</button>
+            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicacion" title="Usar mi ubicacion">GPS</button>
           </label>
 
           <div
@@ -167,6 +167,19 @@
 
           <div class="category-section">
             <div class="section-label">Categoria</div>
+            <label class="category-search-field" for="categorySearchInput">
+              <span>Buscar servicio</span>
+              <input
+                id="categorySearchInput"
+                type="search"
+                placeholder="Ej: se rompio un cano, quiero pintar, cortar pasto..."
+                autocomplete="off"
+                autocapitalize="sentences"
+                autocorrect="off"
+                spellcheck="false"
+                enterkeyhint="search"
+              >
+            </label>
             <div
               class="category-grid"
               id="categoryGrid"
@@ -285,7 +298,7 @@
     <aside class="drawer" id="notificationsDrawer" aria-hidden="true" aria-labelledby="notificationsDrawerTitle">
       <div class="drawer-header">
         <h3 id="notificationsDrawerTitle">Centro de notificaciones</h3>
-        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">Ã—</button>
+        <button class="icon-button" type="button" data-close-drawer="notificationsDrawer" aria-label="Cerrar notificaciones">x</button>
       </div>
       <div class="drawer-body" id="notificationsDrawerBody"></div>
     </aside>
@@ -293,7 +306,7 @@
     <aside class="drawer" id="chatDrawer" aria-hidden="true" aria-labelledby="chatDrawerTitle">
       <div class="drawer-header">
         <h3 id="chatDrawerTitle">Chat en tiempo real</h3>
-        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">Ã—</button>
+        <button class="icon-button" type="button" data-close-drawer="chatDrawer" aria-label="Cerrar chat">x</button>
       </div>
       <div class="drawer-body chat-body">
         <div class="chat-list" id="chatMessages" aria-live="polite" aria-label="Mensajes del chat"></div>
@@ -308,7 +321,7 @@
     <aside class="drawer" id="supportDrawer" aria-hidden="true" aria-labelledby="supportDrawerTitle">
       <div class="drawer-header">
         <h3 id="supportDrawerTitle">Soporte MIMI Go</h3>
-        <button class="icon-button" type="button" data-close-drawer="supportDrawer" aria-label="Cerrar soporte">Ã—</button>
+        <button class="icon-button" type="button" data-close-drawer="supportDrawer" aria-label="Cerrar soporte">x</button>
       </div>
       <div class="drawer-body">
         <div class="support-panel">
