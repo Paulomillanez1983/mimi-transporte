@@ -1807,6 +1807,142 @@ body[data-client-view="support"] .details-grid {
   }
 }
 
+
+
+/* === MIMI Servicios cliente - ajuste mobile/header + UX 2026 === */
+.client-header {
+  overflow: hidden;
+}
+
+.brand-lockup strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-actions {
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.user-session-card {
+  cursor: pointer;
+  color: #fff;
+}
+
+.user-session-card[hidden] {
+  display: none !important;
+}
+
+#btnUseCurrentServiceLocation {
+  width: 36px;
+  height: 36px;
+  color: #1d4ed8;
+  background: #ffffff;
+  font-size: 20px;
+  font-weight: 900;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+}
+
+.section-label-strong {
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 1000;
+}
+
+.category-search-field span {
+  color: #64748b;
+  letter-spacing: 0.2px;
+}
+
+.category-search-field input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.drawer:not(.is-open) {
+  pointer-events: none;
+}
+
+.drawer.is-open {
+  pointer-events: auto;
+}
+
+[data-close-drawer] {
+  cursor: pointer;
+  color: #0f172a;
+}
+
+@media (max-width: 480px) {
+  .client-header {
+    grid-template-columns: 52px minmax(0, 1fr) minmax(132px, auto);
+    gap: 6px;
+    padding: 9px 8px;
+  }
+
+  .brand-lockup {
+    gap: 5px;
+    overflow: hidden;
+  }
+
+  .brand-mark {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    flex: 0 0 auto;
+  }
+
+  .brand-lockup strong {
+    max-width: 112px;
+    font-size: 12px;
+  }
+
+  .user-session-card {
+    max-width: 154px;
+    min-height: 40px;
+    grid-template-columns: 32px minmax(0, 1fr) 16px;
+    gap: 6px;
+  }
+
+  .user-session-card img,
+  .user-session-card:not(.has-avatar)::before {
+    width: 32px;
+    height: 32px;
+  }
+
+  .user-session-card strong {
+    font-size: 10px;
+  }
+
+  .user-session-card span {
+    font-size: 8px;
+  }
+
+  .session-menu-lines {
+    width: 16px;
+  }
+
+  .hub-back-link {
+    min-width: 46px;
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .client-header {
+    grid-template-columns: 48px minmax(0, 88px) minmax(124px, auto);
+  }
+
+  .brand-lockup strong {
+    max-width: 82px;
+    font-size: 11px;
+  }
+
+  .user-session-card {
+    max-width: 140px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
