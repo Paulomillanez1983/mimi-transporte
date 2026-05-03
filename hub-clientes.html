@@ -34,7 +34,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker-clientes.js")
+        .catch((err) => console.warn("SW clientes error:", err));
+    });
+  }
+</script>
 <body>
   <div class="viewport">
     <main class="shell">
