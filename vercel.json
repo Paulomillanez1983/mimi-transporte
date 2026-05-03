@@ -16,27 +16,27 @@
     },
     {
       "source": "/prestador",
-      "destination": "/mimi-servicios/prestador.html"
+      "destination": "/hub-operadores.html"
     },
     {
       "source": "/prestador/(.*)",
-      "destination": "/mimi-servicios/prestador.html"
+      "destination": "/hub-operadores.html"
     },
     {
       "source": "/servicios",
-      "destination": "/mimi-servicios/cliente.html"
+      "destination": "/mimi-servicios/cliente"
     },
     {
       "source": "/servicios/(.*)",
-      "destination": "/mimi-servicios/cliente.html"
+      "destination": "/mimi-servicios/cliente"
     },
     {
       "source": "/prestador-servicios",
-      "destination": "/mimi-servicios/prestador.html"
+      "destination": "/mimi-servicios/prestador"
     },
     {
       "source": "/prestador-servicios/(.*)",
-      "destination": "/mimi-servicios/prestador.html"
+      "destination": "/mimi-servicios/prestador"
     },
     {
       "source": "/viaje",
