@@ -374,6 +374,47 @@ function renderAuth(state) {
   }
 }
 
+function renderAccountDrawer(state) {
+  const name = document.getElementById("accountDrawerName");
+  const email = document.getElementById("accountDrawerEmail");
+  const avatar = document.getElementById("accountDrawerAvatar");
+  const lastTitle = document.getElementById("accountLastServiceTitle");
+  const lastMeta = document.getElementById("accountLastServiceMeta");
+
+  const displayName =
+    state.session.userName ||
+    state.session.userEmail?.split("@")[0] ||
+    "Cliente";
+
+  if (name) name.textContent = displayName;
+  if (email) email.textContent = state.session.userEmail || "Sesion activa";
+
+  if (avatar) {
+    const avatarUrl = state.session.userAvatar;
+    avatar.hidden = !avatarUrl;
+    avatar.src = avatarUrl || "";
+    avatar.alt = avatarUrl ? `Foto de ${displayName}` : "";
+  }
+
+  const request = state.client.activeRequest;
+
+  if (!request) {
+    if (lastTitle) lastTitle.textContent = "Todavia no tenes servicios recientes";
+    if (lastMeta) lastMeta.textContent = "Cuando contrates uno, aparece aca.";
+    return;
+  }
+
+  const status = stateLabels[request.status] ?? request.status ?? "Solicitud activa";
+  const providerName =
+    request.providerName ||
+    state.client.selectedProvider?.full_name ||
+    "Prestador pendiente";
+  const address = request.address_text || state.requestDraft.address || "Direccion pendiente";
+
+  if (lastTitle) lastTitle.textContent = status;
+  if (lastMeta) lastMeta.textContent = `${providerName} · ${address}`;
+}
+
 function renderEntryState(state) {
   const enterButton = document.getElementById("enterServicesHub");
   if (!enterButton) return;
@@ -931,6 +972,7 @@ function renderMapStatus(state) {
 export function renderClientScreen(state) {
   renderStatusBanner(state);
   renderAuth(state);
+  renderAccountDrawer(state);
   renderEntryState(state);
   renderClientOnboarding(state);
   renderCategories(state);
