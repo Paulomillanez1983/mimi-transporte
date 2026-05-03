@@ -15,24 +15,32 @@
       "destination": "/hub-clientes.html"
     },
     {
-      "source": "/viaje",
-      "destination": "/index.html"
-    },
-    {
       "source": "/servicios",
       "destination": "/mimi-servicios/cliente.html"
     },
     {
+      "source": "/prestador",
+      "destination": "/mimi-servicios/prestador.html"
+    },
+    {
+      "source": "/viaje",
+      "destination": "/index.html"
+    },
+    {
       "source": "/operadores",
-      "destination": "/hub-operadores.html"
+      "destination": "/admin/admin-panel.html"
     },
     {
       "source": "/chofer",
-      "destination": "/login-chofer.html"
+      "destination": "/chofer-panel.html"
     },
     {
-      "source": "/prestador",
-      "destination": "/mimi-servicios/prestador.html"
+      "source": "/privacidad",
+      "destination": "/privacidad.html"
+    },
+    {
+      "source": "/terminos",
+      "destination": "/terminos.html"
     }
   ],
   "headers": [
