@@ -45,6 +45,90 @@ let authSubscription = null;
 
 const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
 const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
+const CATEGORY_USAGE_KEY = "mimi_services_category_usage_v1";
+
+const INTENT_CATEGORY_RULES = [
+  { code: "PLOMERIA", terms: ["cano", "caneria", "agua", "perdida", "fuga", "griferia", "bano", "inodoro", "pileta"] },
+  { code: "PINTURA", terms: ["pintar", "pintura", "pared", "humedad", "techo", "revoque"] },
+  { code: "JARDINERIA", terms: ["pasto", "jardin", "cortar", "poda", "plantas", "cesped"] },
+  { code: "ELECTRICIDAD", terms: ["luz", "electricidad", "enchufe", "cable", "termica", "cortocircuito"] },
+  { code: "GASISTA", terms: ["gas", "calefon", "cocina", "horno", "estufa"] },
+  { code: "INSTALACION_AIRE", terms: ["aire", "split", "acondicionado", "instalar aire", "refrigeracion"] },
+  { code: "LIMPIEZA", terms: ["limpiar", "limpieza", "mucama", "casa", "departamento", "oficina"] },
+  { code: "CUIDADO_ADULTOS", terms: ["anciano", "adulto mayor", "cuidador", "acompanante", "cuidar adulto"] },
+  { code: "CUIDADO_NINOS", terms: ["nino", "nina", "ninera", "chico", "cuidar chico", "cuidar nene"] },
+  { code: "ENFERMERIA", terms: ["enfermero", "enfermera", "curacion", "inyeccion", "salud"] },
+  { code: "TECNICO_PC", terms: ["pc", "computadora", "notebook", "impresora", "windows"] },
+  { code: "TECNOLOGIA", terms: ["wifi", "router", "camara", "smart tv", "internet"] },
+  { code: "CERRAJERIA", terms: ["llave", "cerradura", "cerrajero", "puerta", "abrir"] },
+  { code: "MUDANZAS", terms: ["mudanza", "mover", "cargar", "flete", "traslado"] },
+  { code: "MASCOTAS", terms: ["perro", "gato", "mascota", "pasear", "paseador"] }
+];
+
+function normalizeServiceIntent(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ñ/g, "n")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function categoryIntentText(category) {
+  return normalizeServiceIntent([
+    category?.name,
+    category?.code,
+    category?.description,
+    ...(Array.isArray(category?.aliases) ? category.aliases : [])
+  ].join(" "));
+}
+
+function getCategoryUsage() {
+  try {
+    return JSON.parse(localStorage.getItem(CATEGORY_USAGE_KEY) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+function registerCategoryUsage(categoryId) {
+  if (!categoryId) return;
+
+  const usage = getCategoryUsage();
+  usage[categoryId] = Number(usage[categoryId] || 0) + 1;
+  localStorage.setItem(CATEGORY_USAGE_KEY, JSON.stringify(usage));
+}
+
+function findBestCategoryByIntent(rawText) {
+  const query = normalizeServiceIntent(rawText);
+  if (query.length < 3) return null;
+
+  let best = null;
+  let bestScore = 0;
+
+  for (const category of appConfig.categories || []) {
+    const haystack = categoryIntentText(category);
+    let score = haystack.includes(query) ? 12 : 0;
+
+    const rule = INTENT_CATEGORY_RULES.find((item) => item.code === category.code);
+    if (rule?.terms?.some((term) => query.includes(normalizeServiceIntent(term)))) {
+      score += 30;
+    }
+
+    if (query.split(" ").some((word) => word.length > 3 && haystack.includes(word))) {
+      score += 8;
+    }
+
+    if (score > bestScore) {
+      best = category;
+      bestScore = score;
+    }
+  }
+
+  return bestScore >= 12 ? best : null;
+}
 
 function exposeClientDebugApi() {
   window.MIMI = window.MIMI || {};
@@ -334,6 +418,31 @@ function mergeCategories(remoteCategories = [], localCategories = []) {
     });
 
   return [...byCode.values()].sort((a, b) => a.name.localeCompare(b.name, "es"));
+}
+
+function rankCategoriesForClient(categories = []) {
+  const usage = getCategoryUsage();
+  const priority = [
+    "PLOMERIA",
+    "ELECTRICIDAD",
+    "LIMPIEZA",
+    "JARDINERIA",
+    "PINTURA",
+    "GASISTA",
+    "INSTALACION_AIRE",
+    "CUIDADO_ADULTOS"
+  ];
+
+  return [...categories].sort((a, b) => {
+    const usageDiff = Number(usage[b.id] || 0) - Number(usage[a.id] || 0);
+    if (usageDiff) return usageDiff;
+
+    const aPriority = priority.includes(a.code) ? priority.indexOf(a.code) : 999;
+    const bPriority = priority.includes(b.code) ? priority.indexOf(b.code) : 999;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+
+    return String(a.name || "").localeCompare(String(b.name || ""), "es");
+  });
 }
 
 function seedForm() {
@@ -646,7 +755,9 @@ async function bootstrapAsyncData() {
     categories = appConfig.categories ?? [];
   }
 
-  appConfig.categories = mergeCategories(categories, appConfig.categories);
+  appConfig.categories = rankCategoriesForClient(
+    mergeCategories(categories, appConfig.categories)
+  );
 
   if (session.isAuthenticated && session.role === "provider") {
     // mismo usuario puede usar ambos modos; no redirigimos automaticamente
@@ -767,6 +878,8 @@ async function handleSearchSubmit(event) {
   if (!state.ui.selectedCategoryId && appConfig.categories?.[0]?.id) {
     patchState("ui.selectedCategoryId", appConfig.categories[0].id);
   }
+
+  registerCategoryUsage(state.ui.selectedCategoryId);
 
   const searchButton = document.getElementById("searchProvidersButton");
 
@@ -984,8 +1097,29 @@ function bindBasicControls() {
   });
 
   document.getElementById("categorySearchInput")?.addEventListener("input", (event) => {
-    patchState("ui.categorySearchTerm", event.target.value || "");
-    patchState("ui.showAllCategories", Boolean(event.target.value));
+    const value = event.target.value || "";
+    const suggestedCategory = findBestCategoryByIntent(value);
+
+    patchState("ui.categorySearchTerm", value);
+    patchState("ui.showAllCategories", Boolean(value.trim()));
+
+    if (suggestedCategory?.id) {
+      patchState("ui.selectedCategoryId", suggestedCategory.id);
+    }
+  });
+
+  document.getElementById("categorySearchInput")?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+    const suggestedCategory = findBestCategoryByIntent(event.currentTarget.value || "");
+
+    if (suggestedCategory?.id) {
+      registerCategoryUsage(suggestedCategory.id);
+      patchState("ui.selectedCategoryId", suggestedCategory.id);
+    }
+
+    document.getElementById("searchProvidersButton")?.focus();
   });
 
   document.getElementById("serviceAddressInput")?.addEventListener("input", async (event) => {
@@ -1122,6 +1256,7 @@ function bindBasicControls() {
 
       const categoryButton = event.target.closest("[data-category-id]");
       if (categoryButton) {
+        registerCategoryUsage(categoryButton.dataset.categoryId);
         patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
         return;
       }
@@ -1129,6 +1264,7 @@ function bindBasicControls() {
       const categoryToggle = event.target.closest("[data-category-toggle]");
       if (categoryToggle) {
         patchState("ui.showAllCategories", true);
+        document.getElementById("categorySearchInput")?.focus();
         return;
       }
 
