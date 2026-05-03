@@ -35,6 +35,10 @@
       "destination": "/terminos.html"
     },
     {
+      "source": "/delete-account",
+      "destination": "/delete-account.html"
+    },
+    {
       "source": "/servicios",
       "destination": "/mimi-servicios/cliente.html"
     },
