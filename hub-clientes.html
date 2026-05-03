@@ -34,16 +34,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
-<script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker-clientes.js", { scope: "./" })
-        .then((reg) => console.log("✅ SW Clientes registrado:", reg.scope))
-        .catch((err) => console.warn("❌ SW Clientes error:", err));
-    });
-  }
-</script>
-  <body>
+<body>
   <div class="viewport">
     <main class="shell">
 
@@ -292,6 +283,15 @@
     await deferredPrompt.userChoice;
     deferredPrompt = null;
     document.body.classList.remove("pwa-installable");
+  }
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("./service-worker-clientes.js", { scope: "./" })
+        .then((reg) => console.log("✅ SW Clientes registrado:", reg.scope))
+        .catch((err) => console.warn("❌ SW Clientes error:", err));
+    });
   }
 </script>
 </body>
