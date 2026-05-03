@@ -558,6 +558,7 @@ export async function loadProviderWorkspace(providerId) {
       profile: null,
       profileDetail: null,
       pricing: [],
+      offerings: [],
       availability: [],
       documents: [],
       reviews: [],
@@ -572,6 +573,7 @@ export async function loadProviderWorkspace(providerId) {
     profileRows,
     profileDetailRows,
     pricingRows,
+    offeringRows,
     availabilityRows,
     documentRows,
     reviewRows,
@@ -602,6 +604,17 @@ export async function loadProviderWorkspace(providerId) {
         .eq("provider_id", providerId)
         .eq("active", true)
         .limit(50)
+    ),
+
+    fetchTable("svc_provider_service_offerings", (query) =>
+      query
+        .select(
+          "id,provider_id,category_id,title,description,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,minimum_charge,minimum_hours,maximum_hours,quote_required,active,metadata,created_at,updated_at"
+        )
+        .eq("provider_id", providerId)
+        .eq("active", true)
+        .order("updated_at", { ascending: false })
+        .limit(80)
     ),
 
     fetchTable("svc_provider_availability", (query) =>
@@ -649,6 +662,7 @@ export async function loadProviderWorkspace(providerId) {
     profile: profileRows?.[0] ?? null,
     profileDetail: profileDetailRows?.[0] ?? null,
     pricing: pricingRows ?? [],
+    offerings: offeringRows ?? [],
     availability: availabilityRows ?? [],
     documents: normalizeProviderDocuments(documentRows),
     reviews: reviewRows ?? [],
@@ -707,6 +721,10 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
     ? payload.pricing.filter((item) => item?.categoryId)
     : [];
 
+  const offerings = Array.isArray(payload.offerings)
+    ? payload.offerings.filter((item) => item?.categoryId && item?.title)
+    : [];
+
   const availability = Array.isArray(payload.availability)
     ? payload.availability
     : [];
@@ -718,6 +736,11 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
 
   await supabase
     .from("svc_provider_pricing")
+    .update({ active: false })
+    .eq("provider_id", providerId);
+
+  await supabase
+    .from("svc_provider_service_offerings")
     .update({ active: false })
     .eq("provider_id", providerId);
 
@@ -760,6 +783,41 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
       );
 
     if (pricingError) throw pricingError;
+  }
+
+  if (offerings.length) {
+    const { error: offeringError } = await supabase
+      .from("svc_provider_service_offerings")
+      .upsert(
+        offerings.map((item) => {
+          const row = {
+            provider_id: providerId,
+            category_id: item.categoryId,
+            title: String(item.title ?? "").trim(),
+            description: String(item.description ?? "").trim() || null,
+            pricing_model: String(item.pricingModel ?? "HOURLY").trim().toUpperCase(),
+            currency: item.currency ?? "ARS",
+            price_per_hour: item.pricePerHour === "" || item.pricePerHour == null ? null : Number(item.pricePerHour),
+            base_visit_fee: item.baseVisitFee === "" || item.baseVisitFee == null ? null : Number(item.baseVisitFee),
+            fixed_price: item.fixedPrice === "" || item.fixedPrice == null ? null : Number(item.fixedPrice),
+            unit_name: String(item.unitName ?? "").trim() || null,
+            unit_price: item.unitPrice === "" || item.unitPrice == null ? null : Number(item.unitPrice),
+            minimum_charge: Number(item.minimumCharge ?? 0),
+            minimum_hours: item.minimumHours === "" || item.minimumHours == null ? null : Number(item.minimumHours),
+            maximum_hours: item.maximumHours === "" || item.maximumHours == null ? null : Number(item.maximumHours),
+            quote_required: Boolean(item.quoteRequired),
+            active: true,
+            metadata: item.metadata ?? {}
+          };
+
+          if (item.id) row.id = item.id;
+
+          return row;
+        }),
+        { onConflict: "id" }
+      );
+
+    if (offeringError) throw offeringError;
   }
 
   if (availability.length) {

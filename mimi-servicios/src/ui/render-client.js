@@ -78,6 +78,25 @@ const guideRules = [
   { code: "HERRERIA", terms: ["herrero", "herreria", "reja", "porton", "soldadura"] }
 ];
 
+const pricingModelLabels = {
+  HOURLY: "Por hora",
+  BASE_VISIT: "Visita base",
+  QUOTE: "A presupuestar",
+  FIXED: "Precio cerrado",
+  UNIT: "Por unidad",
+  SQUARE_METER: "Por m2",
+  LINEAR_METER: "Por metro lineal"
+};
+
+const nonHourlyCategoryModels = {
+  GOMERIA_MOVIL: "BASE_VISIT",
+  MECANICA_MOVIL: "BASE_VISIT",
+  HERRERIA: "QUOTE",
+  MUDANZAS: "QUOTE",
+  JARDINERIA: "SQUARE_METER",
+  PINTURA: "SQUARE_METER"
+};
+
 const providerColors = [
   "#1a56db",
   "#059669",
@@ -141,7 +160,23 @@ function categoryIcon(category) {
     .trim()
     .toUpperCase();
 
-  return categoryIcons[code] || "ðŸ”Ž";
+  return categoryIcons[code] || "SR";
+}
+
+function categoryPricingModel(category) {
+  if (!category) return "HOURLY";
+  const explicit = category.default_pricing_model || category.pricing_model || category.pricingModel;
+  const code = String(category.code || "").toUpperCase();
+  return String(explicit || nonHourlyCategoryModels[code] || "HOURLY").toUpperCase();
+}
+
+function isHourlyCategory(category) {
+  return categoryPricingModel(category) === "HOURLY";
+}
+
+function pricingModelLabel(category) {
+  const model = categoryPricingModel(category);
+  return pricingModelLabels[model] || "Definido por el prestador";
 }
 
 function normalizeSearch(value) {
@@ -418,7 +453,7 @@ function renderAccountDrawer(state) {
   const address = request.address_text || state.requestDraft.address || "Direccion pendiente";
 
   if (lastTitle) lastTitle.textContent = status;
-  if (lastMeta) lastMeta.textContent = `${providerName} Â· ${address}`;
+  if (lastMeta) lastMeta.textContent = `${providerName} ? ${address}`;
 }
 
 function renderEntryState(state) {
@@ -468,20 +503,49 @@ function renderCategories(state) {
   const visibleCategories = filtered.slice(0, maxVisible);
   const guideCategory = findGuideCategory(categories, query);
   const selectedCategory = categories.find((category) => category.id === state.ui.selectedCategoryId);
+  const intentResolution = state.ui.intentResolution ?? null;
+  const intentTop = intentResolution?.topMatch ?? intentResolution?.top_match ?? null;
+  const intentCategory = intentTop
+    ? categories.find(
+        (category) =>
+          category.id === intentTop.category_id ||
+          String(category.code || "").toUpperCase() === String(intentTop.code || "").toUpperCase()
+      )
+    : null;
+  const assistCategory = intentCategory || guideCategory || selectedCategory;
+  const intentConfidence = Math.round(
+    Math.max(0, Math.min(1, Number(intentTop?.confidence ?? intentTop?.score ?? 0.84))) * 100
+  );
 
   if (searchInput && searchInput.value !== (state.ui.categorySearchTerm ?? "")) {
     searchInput.value = state.ui.categorySearchTerm ?? "";
   }
 
   if (intentAssist) {
-    intentAssist.textContent = guideCategory
-      ? `Sugerencia: ${guideCategory.name}. Podes cambiarla si no coincide.`
-      : selectedCategory
-        ? `Categoria seleccionada: ${selectedCategory.name}.`
-        : "Escribi una situacion y MIMI sugiere la categoria mas probable.";
+    intentAssist.textContent = assistCategory
+      ? `MIMI sugiere ${assistCategory.name}. ${pricingModelLabel(assistCategory)} segun configuracion del prestador.`
+      : "Escribi una situacion y MIMI sugiere la categoria mas probable.";
   }
 
   container.innerHTML = [
+    intentCategory
+      ? `
+        <button
+          class="ai-intent-card"
+          data-category-id="${escapeHtml(intentCategory.id)}"
+          type="button"
+          title="${escapeHtml(intentCategory.description ?? intentCategory.name)}"
+        >
+          <span class="ai-intent-kicker">IA MIMI</span>
+          <strong>${escapeHtml(intentCategory.name)}</strong>
+          <small>${escapeHtml(intentCategory.description ?? "Categoria recomendada para tu situacion.")}</small>
+          <span class="ai-intent-meta">
+            <b>${escapeHtml(String(intentConfidence))}% coincidencia</b>
+            <i>${escapeHtml(pricingModelLabel(intentCategory))}</i>
+          </span>
+        </button>
+      `
+      : "",
     guideCategory
       ? `
         <button
@@ -508,10 +572,11 @@ function renderCategories(state) {
               type="button"
               title="${escapeHtml(category.description ?? category.name)}"
             >
-              ${isPopular ? `<em class="category-popular-badge" aria-label="Popular">&#128293;</em>` : ""}
+              ${isPopular ? `<em class="category-popular-badge" aria-label="Popular">Top</em>` : ""}
               <span aria-hidden="true">${categoryIcon(category)}</span>
               <strong>${escapeHtml(category.name)}</strong>
               <small>${escapeHtml(category.description ?? "")}</small>
+              <i>${escapeHtml(pricingModelLabel(category))}</i>
             </button>
           `;
           }
@@ -852,7 +917,7 @@ function renderProviderSpotlight(state) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin prestador elegido</strong>
-        <span class="muted">Cuando confirmes una opcion, mostramos bio, categorias, pricing y ultimas reseÃ±as.</span>
+        <span class="muted">Cuando confirmes una opcion, mostramos bio, categorias, pricing y ultimas rese?as.</span>
       </div>
     `;
     return;
@@ -882,10 +947,12 @@ function renderStickyAction(state, normalizedProviders = null) {
       ? state.client.providers.map(normalizeProvider)
       : []);
   const hasSearch = providers.length > 0 && Boolean(state.meta.lastSearchAt);
+  const selectedCategory = appConfig.categories.find((category) => category.id === state.ui.selectedCategoryId);
+  const needsHours = isHourlyCategory(selectedCategory);
   const hasDraft =
     Boolean(state.ui.selectedCategoryId) &&
     Boolean(String(state.requestDraft.address || "").trim()) &&
-    Number(state.requestDraft.requestedHours || 0) > 0;
+    (!needsHours || Number(state.requestDraft.requestedHours || 0) > 0);
   const selectedId =
     state.ui.selectedProviderCandidateId ||
     state.client.selectedProvider?.provider_id ||

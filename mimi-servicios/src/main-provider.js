@@ -923,6 +923,9 @@ setTimeout(async () => {
     const documents = Array.isArray(workspace.documents) ? workspace.documents : [];
     const categories = Array.isArray(workspace.categories) ? workspace.categories : [];
     const pricingRows = Array.isArray(workspace.pricing) ? workspace.pricing : [];
+    const offerings = Array.isArray(workspace.offerings) ? workspace.offerings : [];
+    const availability = Array.isArray(workspace.availability) ? workspace.availability : [];
+    const reviews = Array.isArray(workspace.reviews) ? workspace.reviews : [];
 
     const approvedDocs = documents.filter((doc) => this.normalizeReviewStatus(doc.review_status) === "APPROVED").length;
     const rejectedDocs = documents.filter((doc) => ["REJECTED", "NEEDS_RESUBMISSION"].includes(this.normalizeReviewStatus(doc.review_status))).length;
@@ -955,8 +958,16 @@ setTimeout(async () => {
         pricing: {
           basePrice: Number(firstPricing?.price_per_hour ?? 0),
           hourlyRate: Number(firstPricing?.price_per_hour ?? 0),
-          jobRate: null,
-          mode: "hourly"
+          jobRate: Number(offerings.find((item) => item.fixed_price > 0)?.fixed_price ?? 0) || null,
+          mode: offerings.some((item) => item.pricing_model && item.pricing_model !== "HOURLY") ? "flexible" : "hourly"
+        },
+        business: {
+          profile: workspace.profileDetail ?? null,
+          pricing: pricingRows,
+          offerings,
+          availability,
+          documents,
+          reviews
         },
 stats: {
   rating: Number(profile?.rating_avg ?? 0),
@@ -1491,13 +1502,53 @@ collectProviderBusinessPayload(form) {
   const data = new FormData(form);
   const categories = [];
   const pricing = [];
+  const offerings = [];
   const availability = [];
+
+  for (let index = 0; data.has(`offering:${index}:present`); index += 1) {
+    if (!data.has(`offering:${index}:active`)) continue;
+
+    const title = String(data.get(`offering:${index}:title`) ?? "").trim();
+    const categoryId = String(data.get(`offering:${index}:categoryId`) ?? "").trim();
+
+    if (!title || !categoryId) continue;
+
+    offerings.push({
+      id: String(data.get(`offering:${index}:id`) ?? "").trim() || null,
+      categoryId,
+      title,
+      description: data.get(`offering:${index}:description`) ?? "",
+      pricingModel: data.get(`offering:${index}:pricingModel`) ?? "HOURLY",
+      pricePerHour: data.get(`offering:${index}:pricePerHour`) ?? "",
+      baseVisitFee: data.get(`offering:${index}:baseVisitFee`) ?? "",
+      fixedPrice: data.get(`offering:${index}:fixedPrice`) ?? "",
+      unitName: data.get(`offering:${index}:unitName`) ?? "",
+      unitPrice: data.get(`offering:${index}:unitPrice`) ?? "",
+      minimumCharge: data.get(`offering:${index}:minimumCharge`) ?? 0,
+      minimumHours: data.get(`offering:${index}:minimumHours`) ?? "",
+      maximumHours: data.get(`offering:${index}:maximumHours`) ?? "",
+      quoteRequired: data.has(`offering:${index}:quoteRequired`)
+    });
+  }
 
   for (const category of appConfig.categories ?? []) {
     const categoryId = category.id;
     if (!categoryId || !data.has(`categoryActive:${categoryId}`)) continue;
 
-    const pricePerHour = Number(data.get(`price:${categoryId}`) ?? 0);
+    const offeringReference = offerings
+      .filter((item) => item.categoryId === categoryId)
+      .map((item) =>
+        Number(
+          item.pricePerHour ||
+            item.baseVisitFee ||
+            item.fixedPrice ||
+            item.unitPrice ||
+            item.minimumCharge ||
+            0
+        )
+      )
+      .find((value) => Number.isFinite(value) && value > 0);
+    const pricePerHour = Number(data.get(`price:${categoryId}`) || offeringReference || 0);
     const minimumHours = Number(data.get(`min:${categoryId}`) ?? 1);
     const maximumHours = Number(
       data.get(`max:${categoryId}`) ??
@@ -1512,6 +1563,28 @@ collectProviderBusinessPayload(form) {
       pricePerHour,
       minimumHours,
       maximumHours
+    });
+  }
+
+  for (const offering of offerings) {
+    if (categories.some((item) => item.categoryId === offering.categoryId)) continue;
+
+    const referencePrice = Number(
+      offering.pricePerHour ||
+        offering.baseVisitFee ||
+        offering.fixedPrice ||
+        offering.unitPrice ||
+        offering.minimumCharge ||
+        0
+    );
+
+    categories.push({ categoryId: offering.categoryId });
+    pricing.push({
+      categoryId: offering.categoryId,
+      currency: "ARS",
+      pricePerHour: referencePrice,
+      minimumHours: Number(offering.minimumHours || 1),
+      maximumHours: Number(offering.maximumHours || data.get("maxHoursPerService") || 8)
     });
   }
 
@@ -1537,6 +1610,7 @@ collectProviderBusinessPayload(form) {
     maxHoursPerService: Number(data.get("maxHoursPerService") ?? 8),
     categories,
     pricing,
+    offerings,
     availability
   };
 }
@@ -1558,7 +1632,12 @@ async handleProviderBusinessSubmit(event) {
   }
 
   if (payload.pricing.some((item) => !Number.isFinite(item.pricePerHour) || item.pricePerHour <= 0)) {
-    this.showToast("Cada categoria activa necesita precio por hora", "warning");
+    this.showToast("Cada categoria activa necesita una tarifa de referencia o un trabajo publicado con precio", "warning");
+    return;
+  }
+
+  if (payload.offerings.some((item) => !item.title || !item.categoryId)) {
+    this.showToast("Revisa los trabajos publicados: falta titulo o categoria", "warning");
     return;
   }
 

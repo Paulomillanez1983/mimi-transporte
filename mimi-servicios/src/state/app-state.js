@@ -40,6 +40,7 @@ const initialState = {
     selectedCategoryId: null,
     selectedProviderCandidateId: null,
     categorySearchTerm: '',
+    intentResolution: null,
     showAllCategories: false,
     hasCompletedClientSearch: false,
     showClientOnboarding: true
@@ -68,6 +69,14 @@ const initialState = {
       hourlyRate: null,
       jobRate: null,
       mode: null
+    },
+    business: {
+      profile: null,
+      pricing: [],
+      offerings: [],
+      availability: [],
+      documents: [],
+      reviews: []
     },
     stats: {
       rating: null,
@@ -327,6 +336,7 @@ function persistState() {
         selectedCategoryId: currentState.ui.selectedCategoryId,
         selectedProviderCandidateId: currentState.ui.selectedProviderCandidateId,
         categorySearchTerm: currentState.ui.categorySearchTerm,
+        intentResolution: currentState.ui.intentResolution,
         showAllCategories: currentState.ui.showAllCategories,
         hasCompletedClientSearch: currentState.ui.hasCompletedClientSearch,
         showClientOnboarding: currentState.ui.showClientOnboarding,

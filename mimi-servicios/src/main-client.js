@@ -49,6 +49,15 @@ const CLIENT_ONBOARDING_KEY = "mimi_services_client_onboarding_seen";
 const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
 const CATEGORY_USAGE_KEY = "mimi_services_category_usage_v1";
 
+const NON_HOURLY_CATEGORY_MODELS = {
+  GOMERIA_MOVIL: "BASE_VISIT",
+  MECANICA_MOVIL: "BASE_VISIT",
+  HERRERIA: "QUOTE",
+  MUDANZAS: "QUOTE",
+  JARDINERIA: "SQUARE_METER",
+  PINTURA: "SQUARE_METER"
+};
+
 const INTENT_CATEGORY_RULES = [
   { code: "PLOMERIA", terms: ["cano", "pincho un cano", "caneria", "agua", "perdida", "fuga", "gotea", "griferia", "bano", "inodoro", "pileta", "cocina", "destapar"] },
   { code: "PINTURA", terms: ["pintar", "pintura", "pintor", "pared", "living", "habitacion", "humedad", "techo", "revoque", "casa", "frente"] },
@@ -142,6 +151,27 @@ function findBestCategoryByIntent(rawText) {
   return bestScore >= 12 ? best : null;
 }
 
+function getSelectedCategory() {
+  return appConfig.categories.find((category) => category.id === state.ui.selectedCategoryId) ?? null;
+}
+
+function categoryPricingModel(category) {
+  if (!category) return "HOURLY";
+  const explicit = category.default_pricing_model || category.pricing_model || category.pricingModel;
+  const code = String(category.code || "").toUpperCase();
+  return String(explicit || NON_HOURLY_CATEGORY_MODELS[code] || "HOURLY").toUpperCase();
+}
+
+function selectedCategoryNeedsHours() {
+  return categoryPricingModel(getSelectedCategory()) === "HOURLY";
+}
+
+function requestedHoursForCurrentCategory() {
+  return selectedCategoryNeedsHours()
+    ? Math.max(1, parseNumberOrFallback(state.requestDraft.requestedHours, 2))
+    : 1;
+}
+
 async function resolveCategoryByBackendIntent(value) {
   const query = String(value ?? "").trim();
   const token = ++intentLookupToken;
@@ -155,8 +185,24 @@ async function resolveCategoryByBackendIntent(value) {
   const categoryId = result.top_match?.category_id;
 
   if (categoryId && appConfig.categories.some((category) => category.id === categoryId)) {
-    patchState("ui.selectedCategoryId", categoryId);
+    setState((draft) => {
+      draft.ui.selectedCategoryId = categoryId;
+      draft.ui.intentResolution = {
+        query,
+        topMatch: result.top_match,
+        matches: Array.isArray(result.matches) ? result.matches : [],
+        resolvedAt: new Date().toISOString()
+      };
+    });
+    return;
   }
+
+  patchState("ui.intentResolution", {
+    query,
+    topMatch: result.top_match ?? null,
+    matches: Array.isArray(result.matches) ? result.matches : [],
+    resolvedAt: new Date().toISOString()
+  });
 }
 
 function scheduleBackendIntentResolution(value) {
@@ -465,10 +511,9 @@ function syncDraftFromForm() {
   );
   patchState(
     "requestDraft.requestedHours",
-    parseNumberOrFallback(
-      document.getElementById("requestedHoursInput")?.value,
-      2
-    )
+    selectedCategoryNeedsHours()
+      ? parseNumberOrFallback(document.getElementById("requestedHoursInput")?.value, 2)
+      : 1
   );
 }
 
@@ -580,8 +625,10 @@ function seedForm() {
   const latInput = document.getElementById("serviceLatInput");
   const lngInput = document.getElementById("serviceLngInput");
   const requestedHoursInput = document.getElementById("requestedHoursInput");
+  const durationCard = document.querySelector(".duration-stepper-card");
   const requestTypeSelect = document.getElementById("requestTypeSelect");
   const scheduledForInput = document.getElementById("scheduledForInput");
+  const needsHours = selectedCategoryNeedsHours();
 
   if (addressInput) {
     addressInput.value = state.requestDraft.address || "";
@@ -600,12 +647,16 @@ function seedForm() {
   }
 
   if (requestedHoursInput) {
-    requestedHoursInput.value = String(state.requestDraft.requestedHours);
+    requestedHoursInput.value = String(requestedHoursForCurrentCategory());
   }
 
   const requestedHoursValue = document.getElementById("requestedHoursValue");
   if (requestedHoursValue) {
-    requestedHoursValue.textContent = String(state.requestDraft.requestedHours);
+    requestedHoursValue.textContent = String(requestedHoursForCurrentCategory());
+  }
+
+  if (durationCard) {
+    durationCard.hidden = !needsHours;
   }
 
   if (requestTypeSelect) {
@@ -1034,7 +1085,10 @@ async function handleSearchSubmit(event) {
   try {
     const providers = await searchProviders(
       state.ui.selectedCategoryId,
-      state.requestDraft
+      {
+        ...state.requestDraft,
+        requestedHours: requestedHoursForCurrentCategory()
+      }
     );
 
     setState((draft) => {
@@ -1069,11 +1123,15 @@ async function handleProviderSelection(providerId) {
 
   if (!provider) return;
 
+  const requestedHours = requestedHoursForCurrentCategory();
   const pricing = await prepareRequestPricing({
     clientUserId: currentUserId(),
     categoryId: state.ui.selectedCategoryId,
     providerId: provider.provider_id,
-    draft: state.requestDraft
+    draft: {
+      ...state.requestDraft,
+      requestedHours
+    }
   });
 
   if (!pricing?.eligible) {
@@ -1090,7 +1148,7 @@ async function handleProviderSelection(providerId) {
     serviceLng: state.requestDraft.lng,
     requestType: state.requestDraft.requestType,
     scheduledFor: state.requestDraft.scheduledFor || null,
-    requestedHours: state.requestDraft.requestedHours,
+    requestedHours,
     providerPrice: pricing.provider_price,
     platformFee: pricing.platform_fee,
     totalPrice: pricing.total_price,
@@ -1114,7 +1172,7 @@ async function handleProviderSelection(providerId) {
       ...request,
       providerName: provider.full_name,
       requestType: draft.requestDraft.requestType,
-      requestedHours: draft.requestDraft.requestedHours,
+      requestedHours,
       total_price: pricing.total_price,
       conversation_id: request?.conversation_id ?? null
     };
@@ -1341,7 +1399,20 @@ function bindBasicControls() {
     patchState("ui.showAllCategories", Boolean(value.trim()));
 
     if (suggestedCategory?.id) {
-      patchState("ui.selectedCategoryId", suggestedCategory.id);
+      setState((draft) => {
+        draft.ui.selectedCategoryId = suggestedCategory.id;
+        draft.ui.intentResolution = {
+          query: value,
+          topMatch: {
+            category_id: suggestedCategory.id,
+            code: suggestedCategory.code,
+            confidence: 0.82
+          },
+          matches: [],
+          resolvedAt: new Date().toISOString(),
+          source: "local"
+        };
+      });
     }
 
     scheduleBackendIntentResolution(value);
@@ -1355,7 +1426,20 @@ function bindBasicControls() {
 
     if (suggestedCategory?.id) {
       registerCategoryUsage(suggestedCategory.id);
-      patchState("ui.selectedCategoryId", suggestedCategory.id);
+      setState((draft) => {
+        draft.ui.selectedCategoryId = suggestedCategory.id;
+        draft.ui.intentResolution = {
+          query: event.currentTarget.value || "",
+          topMatch: {
+            category_id: suggestedCategory.id,
+            code: suggestedCategory.code,
+            confidence: 0.9
+          },
+          matches: [],
+          resolvedAt: new Date().toISOString(),
+          source: "local"
+        };
+      });
     }
 
     scheduleBackendIntentResolution(event.currentTarget.value || "");
@@ -1530,8 +1614,18 @@ function bindBasicControls() {
 
       const categoryButton = event.target.closest("[data-category-id]");
       if (categoryButton) {
-        registerCategoryUsage(categoryButton.dataset.categoryId);
-        patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
+        event.preventDefault();
+        event.stopPropagation();
+        const nextCategoryId = categoryButton.dataset.categoryId;
+        const nextCategory = appConfig.categories.find((category) => category.id === nextCategoryId);
+        const nextNeedsHours = categoryPricingModel(nextCategory) === "HOURLY";
+        registerCategoryUsage(nextCategoryId);
+        setState((draft) => {
+          draft.ui.selectedCategoryId = nextCategoryId;
+          draft.ui.showAllCategories = false;
+          draft.requestDraft.requestedHours = nextNeedsHours ? draft.requestDraft.requestedHours : 1;
+        });
+        seedForm();
         return;
       }
 
@@ -1551,6 +1645,8 @@ function bindBasicControls() {
 
       const categoryToggle = event.target.closest("[data-category-toggle]");
       if (categoryToggle) {
+        event.preventDefault();
+        event.stopPropagation();
         patchState("ui.showAllCategories", true);
         document.getElementById("categorySearchInput")?.focus();
         return;

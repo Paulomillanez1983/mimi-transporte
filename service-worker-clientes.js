@@ -4,7 +4,7 @@
    Scope esperado: /
    ========================================================================== */
 
-const SW_VERSION = "mimi-clientes-v2026.05.03-prod-3";
+const SW_VERSION = "mimi-clientes-v2026.05.03-ui-reference-final";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const IMAGE_CACHE = `${SW_VERSION}-images`;
@@ -27,7 +27,7 @@ const APP_SHELL = [
   "/assets/auto-mimicar-safe.png",
 
   // personas reales (card inferior)
-"/mimi-servicios/assets/ui/clarity-card-compact.png",
+"/assets/ui/clarity-card-compact.png",
 "/mimi-servicios/assets/people/driver-real.webp",
 "/mimi-servicios/assets/people/client-real.webp",
   // icons PWA

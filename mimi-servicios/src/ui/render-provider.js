@@ -33,6 +33,16 @@ const reviewStatusLabels = {
 
 const dayLabels = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
+const pricingModelLabels = {
+  HOURLY: "Por hora",
+  BASE_VISIT: "Visita / diagnóstico",
+  QUOTE: "A presupuestar",
+  FIXED: "Precio cerrado",
+  UNIT: "Por unidad",
+  SQUARE_METER: "Por m2",
+  LINEAR_METER: "Por metro lineal"
+};
+
 function currency(value, currencyCode = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -528,12 +538,107 @@ function renderPricing(pricing, detail) {
   `;
 }
 
+function renderPricingModelOptions(selected = "HOURLY") {
+  const current = String(selected || "HOURLY").toUpperCase();
+
+  return Object.entries(pricingModelLabels)
+    .map(([value, label]) => `
+      <option value="${value}" ${current === value ? "selected" : ""}>${escapeHtml(label)}</option>
+    `)
+    .join("");
+}
+
+function renderOfferingEditor(offering = null, index = 0, categories = []) {
+  const currentCategoryId = offering?.category_id ?? "";
+  const pricingModel = offering?.pricing_model ?? "HOURLY";
+  const checked = offering ? "checked" : "";
+
+  return `
+    <article class="provider-editor-card provider-offering-card">
+      <input type="hidden" name="offering:${index}:present" value="1">
+      <input type="hidden" name="offering:${index}:id" value="${escapeHtml(offering?.id ?? "")}">
+      <label class="provider-check-item">
+        <input type="checkbox" name="offering:${index}:active" ${checked}>
+        <span>${offering ? "Trabajo publicado" : "Agregar este trabajo"}</span>
+      </label>
+      <label class="input-group">
+        <span>Servicio o trabajo</span>
+        <input name="offering:${index}:title" type="text" maxlength="90" value="${escapeHtml(offering?.title ?? "")}" placeholder="Ej: Pintura de living, corte de pasto, reja a medida">
+      </label>
+      <label class="input-group">
+        <span>Categoría</span>
+        <select name="offering:${index}:categoryId">
+          <option value="">Elegí una categoría</option>
+          ${categories.map((category) => `
+            <option value="${escapeHtml(category.id)}" ${currentCategoryId === category.id ? "selected" : ""}>${escapeHtml(category.name)}</option>
+          `).join("")}
+        </select>
+      </label>
+      <label class="input-group">
+        <span>Cómo lo cobrás</span>
+        <select name="offering:${index}:pricingModel">
+          ${renderPricingModelOptions(pricingModel)}
+        </select>
+      </label>
+      <label class="input-group">
+        <span>Descripción breve</span>
+        <textarea name="offering:${index}:description" maxlength="220" rows="2" placeholder="Contá qué incluye, cómo presupuestás o qué necesita saber el cliente">${escapeHtml(offering?.description ?? "")}</textarea>
+      </label>
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>$/hora</span>
+          <input name="offering:${index}:pricePerHour" type="number" min="0" step="100" value="${escapeHtml(String(offering?.price_per_hour ?? ""))}" placeholder="0">
+        </label>
+        <label class="input-group">
+          <span>Visita base</span>
+          <input name="offering:${index}:baseVisitFee" type="number" min="0" step="100" value="${escapeHtml(String(offering?.base_visit_fee ?? ""))}" placeholder="0">
+        </label>
+      </div>
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>Precio cerrado</span>
+          <input name="offering:${index}:fixedPrice" type="number" min="0" step="100" value="${escapeHtml(String(offering?.fixed_price ?? ""))}" placeholder="0">
+        </label>
+        <label class="input-group">
+          <span>Mínimo</span>
+          <input name="offering:${index}:minimumCharge" type="number" min="0" step="100" value="${escapeHtml(String(offering?.minimum_charge ?? 0))}" placeholder="0">
+        </label>
+      </div>
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>Unidad</span>
+          <input name="offering:${index}:unitName" type="text" maxlength="40" value="${escapeHtml(offering?.unit_name ?? "")}" placeholder="m2, metro, unidad">
+        </label>
+        <label class="input-group">
+          <span>$/unidad</span>
+          <input name="offering:${index}:unitPrice" type="number" min="0" step="100" value="${escapeHtml(String(offering?.unit_price ?? ""))}" placeholder="0">
+        </label>
+      </div>
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>Min hs</span>
+          <input name="offering:${index}:minimumHours" type="number" min="1" max="24" value="${escapeHtml(String(offering?.minimum_hours ?? ""))}" placeholder="1">
+        </label>
+        <label class="input-group">
+          <span>Max hs</span>
+          <input name="offering:${index}:maximumHours" type="number" min="1" max="24" value="${escapeHtml(String(offering?.maximum_hours ?? ""))}" placeholder="8">
+        </label>
+      </div>
+      <label class="provider-check-item">
+        <input name="offering:${index}:quoteRequired" type="checkbox" ${offering?.quote_required ? "checked" : ""}>
+        <span>Requiere presupuesto antes de confirmar</span>
+      </label>
+    </article>
+  `;
+}
+
 function renderProviderBusiness(state) {
   const container = document.getElementById("providerBusinessPanel");
   if (!container) return;
 
   const detail = state.provider.business.profile;
   const pricing = state.provider.business.pricing ?? [];
+  const offerings = state.provider.business.offerings ?? [];
   const availability = state.provider.business.availability ?? [];
   const locationLabel = state.provider.availability?.locationLabel ?? "Sin posición tomada";
   const activeCategoryIds = new Set(
@@ -647,6 +752,21 @@ function renderProviderBusiness(state) {
                   </article>
                 `;
               })
+              .join("")}
+          </div>
+        </section>
+
+        <section class="provider-inline-section">
+          <div class="block-header compact">
+            <div>
+              <span class="eyebrow">Trabajos publicados</span>
+              <h3>Qué ofrecés y cómo lo cobrás</h3>
+              <p class="muted">MIMI sólo facilita la conexión. Vos definís si cobrás por hora, por visita, por trabajo, por unidad o por metro.</p>
+            </div>
+          </div>
+          <div class="provider-editor-grid">
+            ${[...offerings, null]
+              .map((offering, index) => renderOfferingEditor(offering, index, categories))
               .join("")}
           </div>
         </section>
