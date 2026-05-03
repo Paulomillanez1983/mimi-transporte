@@ -1952,3 +1952,128 @@ body.services-login-mode #servicesLoginBtnArrow {
     display:block;
   }
 }
+/* Compact clarity image + footer support inline */
+.clarity-visual-image{
+  height:auto;
+  overflow:hidden;
+  border-radius:18px;
+}
+
+.clarity-card-img{
+  width:100%;
+  max-width:220px;
+  height:auto;
+  display:block;
+  object-fit:contain;
+  border-radius:18px;
+}
+
+.support-icon svg{
+  width:20px;
+  height:20px;
+}
+
+.footer-pro{
+  display:flex;
+  align-items:center;
+}
+
+.footer-support{
+  order:3;
+  flex:1 1 260px;
+  max-width:300px;
+}
+
+.install-app-btn{
+  order:4;
+  margin-left:auto;
+}
+
+.footer-trust-line{
+  order:5;
+}
+
+@media (max-width:900px){
+  .clarity-card{
+    min-height:100px;
+    grid-template-columns:1fr;
+    padding:0;
+  }
+
+  .clarity-shield,
+  .clarity-copy{
+    display:none;
+  }
+
+  .clarity-visual-image{
+    width:100%;
+    height:112px;
+    border-radius:20px;
+  }
+
+  .clarity-card-img{
+    width:100%;
+    max-width:none;
+    height:100%;
+    object-fit:cover;
+    object-position:center;
+  }
+
+  .footer-pro{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:center;
+    gap:10px;
+  }
+
+  .footer-support{
+    order:3;
+    grid-column:2;
+    max-width:none;
+    min-height:48px;
+  }
+
+  .install-app-btn{
+    order:4;
+    grid-column:3;
+    margin-left:0;
+  }
+}
+
+@media (max-width:430px){
+  .clarity-card{
+    min-height:92px;
+    margin:0 8px 12px;
+  }
+
+  .clarity-visual-image{
+    height:104px;
+  }
+
+  .clarity-card-img{
+    object-fit:cover;
+    object-position:center;
+  }
+
+  .footer-pro{
+    grid-template-columns:auto 1fr auto;
+  }
+
+  .footer-support{
+    display:flex;
+    grid-column:2;
+    padding:8px 10px;
+    min-height:44px;
+  }
+
+  .support-icon{
+    width:28px;
+    height:28px;
+  }
+
+  .install-app-btn{
+    grid-column:3;
+    min-height:48px;
+    padding:10px 14px;
+  }
+}
