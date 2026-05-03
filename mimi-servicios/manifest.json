@@ -1,9 +1,9 @@
 {
-  "id": "/servicios",
+  "id": "/mimi-servicios/",
   "name": "MIMI Go Servicios",
   "short_name": "MIMI Go",
   "description": "App cliente para pedir prestadores cercanos con MIMI Go",
-  "start_url": "/servicios",
+  "start_url": "/mimi-servicios/cliente.html",
   "scope": "/mimi-servicios/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
@@ -23,14 +23,14 @@
       "name": "Pedir prestador",
       "short_name": "Pedir",
       "description": "Abrir MIMI Go para pedir un prestador",
-      "url": "/servicios?view=home",
+      "url": "/mimi-servicios/cliente.html?view=home",
       "icons": [{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Ver prestadores",
       "short_name": "Prestadores",
       "description": "Ver prestadores cercanos disponibles",
-      "url": "/servicios?view=providers",
+      "url": "/mimi-servicios/cliente.html?view=providers",
       "icons": [{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
