@@ -159,7 +159,7 @@
               aria-expanded="false"
             >
             <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar direccion" hidden>x</button>
-            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicacion" title="Usar mi ubicacion">GPS</button>
+            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicacion" title="Usar mi ubicacion actual"><span aria-hidden="true">⌖</span></button>
           </label>
 
           <div
@@ -173,13 +173,13 @@
           <input id="serviceLngInput" name="lng" type="hidden">
 
           <div class="category-section">
-            <div class="section-label">Categoria sugerida</div>
+            <div class="section-label section-label-strong">Encontré el prestador</div>
             <label class="category-search-field" for="categorySearchInput">
-              <span>Contanos que te paso</span>
+              <span>Contanos... ¿qué te pasó?</span>
               <input
                 id="categorySearchInput"
                 type="search"
-                placeholder="Se me pincho un cano en la cocina"
+                placeholder="Necesito ayuda para una mudanza"
                 data-placeholder-examples="Se me pincho un cano en la cocina|Quiero pintar la casa|Quiero cortar el pasto|Tengo un familiar enfermo y necesito un enfermero|Necesito una ninera para la tarde|No prende la luz del living|Quiero instalar un aire|Se trabo la cerradura|Necesito ayuda para una mudanza|Mi computadora no funciona"
                 autocomplete="off"
                 autocapitalize="sentences"
