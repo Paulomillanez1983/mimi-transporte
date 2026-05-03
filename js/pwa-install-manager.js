@@ -1,3 +1,5 @@
+import "./driver-bootstrap-2026.js";
+
 const PWA_STATE = {
   deferredPrompt: null,
   installed: false,
@@ -57,7 +59,6 @@ function shouldSuggestOpenInBrowser() {
   if (isStandalone()) return false;
   if (isFacebookInApp() || isTikTokInApp() || isGenericEmbeddedBrowser()) return true;
 
-  // En iOS, Chrome/Edge no disparan beforeinstallprompt para instalar; Safari sí.
   if (isIos()) {
     const ua = window.navigator.userAgent || "";
     const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
