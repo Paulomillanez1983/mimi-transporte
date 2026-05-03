@@ -196,7 +196,8 @@ function categoryMatchesQuery(category, query) {
     category.name,
     category.code,
     category.description,
-    ...(Array.isArray(category.aliases) ? category.aliases : [])
+    ...(Array.isArray(category.aliases) ? category.aliases : []),
+    ...(Array.isArray(category.search_keywords) ? category.search_keywords : [])
   ].join(" "));
 
   return haystack.includes(query);
@@ -217,18 +218,25 @@ function categoryGuideScore(category, query) {
     category.name,
     category.code,
     category.description,
-    ...(Array.isArray(category.aliases) ? category.aliases : [])
+    ...(Array.isArray(category.aliases) ? category.aliases : []),
+    ...(Array.isArray(category.search_keywords) ? category.search_keywords : [])
   ].join(" "));
 
   let score = haystack.includes(query) ? 12 : 0;
   const rule = guideRules.find((item) => item.code === category.code);
 
-  if (rule?.terms?.some((term) => query.includes(normalizeSearch(term)))) {
+  if (rule?.terms?.some((term) => {
+    const normalizedTerm = normalizeSearch(term);
+    return query.includes(normalizedTerm) || normalizedTerm.includes(query);
+  })) {
     score += 30;
   }
 
   for (const word of query.split(" ")) {
     if (word.length > 3 && haystack.includes(word)) score += 4;
+    if (word.length > 3 && rule?.terms?.some((term) => normalizeSearch(term).startsWith(word))) {
+      score += 8;
+    }
   }
 
   return score;
@@ -364,7 +372,7 @@ function renderAuth(state) {
 
   if (sessionChip) {
     sessionChip.textContent = isAuthenticated
-      ? "Sesion activa"
+      ? "Sesión activa"
       : hasBackend
         ? "Cliente"
         : "Modo demo";
@@ -408,10 +416,10 @@ function renderAuth(state) {
 
   if (authHint) {
     authHint.textContent = isAuthenticated
-      ? "Sesion lista para buscar prestadores, cotizar y seguir servicios."
+      ? "Sesión lista para buscar prestadores, cotizar y seguir servicios."
       : hasBackend
         ? "Ingresa para usar solicitudes reales."
-        : "Demo local activa: podes probar busqueda, seleccion y seguimiento.";
+        : "Demo local activa: podés probar búsqueda, seleccion y seguimiento.";
   }
 }
 
@@ -428,7 +436,7 @@ function renderAccountDrawer(state) {
     "Cliente";
 
   if (name) name.textContent = displayName;
-  if (email) email.textContent = state.session.userEmail || "Sesion activa";
+  if (email) email.textContent = state.session.userEmail || "Sesión activa";
 
   if (avatar) {
     const avatarUrl = state.session.userAvatar;
@@ -440,8 +448,8 @@ function renderAccountDrawer(state) {
   const request = state.client.activeRequest;
 
   if (!request) {
-    if (lastTitle) lastTitle.textContent = "Todavia no tenes servicios recientes";
-    if (lastMeta) lastMeta.textContent = "Cuando contrates uno, aparece aca.";
+    if (lastTitle) lastTitle.textContent = "Todavía no tenes servicios recientes";
+    if (lastMeta) lastMeta.textContent = "Cuando contrates uno, aparece acá.";
     return;
   }
 
@@ -512,7 +520,7 @@ function renderCategories(state) {
           String(category.code || "").toUpperCase() === String(intentTop.code || "").toUpperCase()
       )
     : null;
-  const assistCategory = intentCategory || guideCategory || selectedCategory;
+  const assistCategory = intentCategory || guideCategory || (!query ? selectedCategory : null);
   const intentConfidence = Math.round(
     Math.max(0, Math.min(1, Number(intentTop?.confidence ?? intentTop?.score ?? 0.84))) * 100
   );
@@ -521,10 +529,25 @@ function renderCategories(state) {
     searchInput.value = state.ui.categorySearchTerm ?? "";
   }
 
+  container.classList.toggle("is-expanded", Boolean(query || state.ui.showAllCategories));
+
   if (intentAssist) {
-    intentAssist.textContent = assistCategory
-      ? `MIMI sugiere ${assistCategory.name}. ${pricingModelLabel(assistCategory)} segun configuracion del prestador.`
-      : "Escribi una situacion y MIMI sugiere la categoria mas probable.";
+    if (assistCategory) {
+      const sourceLabel = intentCategory
+        ? "IA MIMI encontró"
+        : guideCategory
+          ? "Guía MIMI sugiere"
+          : "Servicio elegido";
+      intentAssist.innerHTML = `
+        <strong>${escapeHtml(sourceLabel)} ${escapeHtml(assistCategory.name)}</strong>
+        <span>${escapeHtml(pricingModelLabel(assistCategory))} según configuración del prestador.</span>
+      `;
+    } else {
+      intentAssist.innerHTML = `
+        <strong>Contanos qué pasó</strong>
+        <span>Ejemplos: se rompió un caño, quiero pintar, cortar pasto, necesito una enfermera.</span>
+      `;
+    }
   }
 
   container.innerHTML = [
@@ -543,6 +566,7 @@ function renderCategories(state) {
             <b>${escapeHtml(String(intentConfidence))}% coincidencia</b>
             <i>${escapeHtml(pricingModelLabel(intentCategory))}</i>
           </span>
+          <span class="ai-intent-action">Usar este servicio →</span>
         </button>
       `
       : "",
@@ -631,7 +655,7 @@ function renderRadarMap(providers, selectedId) {
     <div class="radar-park is-one" aria-hidden="true"></div>
     <div class="radar-park is-two" aria-hidden="true"></div>
     <div class="radar-radius" aria-hidden="true"></div>
-    <div class="radar-user" aria-label="Tu ubicacion"><span></span></div>
+    <div class="radar-user" aria-label="Tu ubicación"><span></span></div>
     ${pins}
     <div class="radar-pill"><i></i>${visibleProviders.filter((item) => item.available).length || 0} disponibles en 15 km</div>
   `;
@@ -714,7 +738,7 @@ export function renderProvidersList(state) {
 
   meta.textContent = providers.length
     ? `${providers.length} prestadores ordenados por cercania y disponibilidad`
-    : state.meta.info || "Esperando busqueda";
+    : state.meta.info || "Esperando búsqueda";
 
   renderRadarMap(providers, selectedId);
 
@@ -736,7 +760,7 @@ export function renderProvidersList(state) {
     ? providers.map((provider) => renderProviderRow(provider, selectedId)).join("")
     : `
       <div class="client-empty-state">
-        <strong>Elegi categoria y completa la direccion</strong>
+        <strong>Elegi categoría y completa la dirección</strong>
         <span>Cuando busques, aparecen opciones con precio, distancia y tiempo estimado.</span>
       </div>
     `;
@@ -761,7 +785,7 @@ export function renderRequestSummary(state) {
   if (!request) {
     summary.innerHTML = `
       <div class="summary-card">
-        <strong>Tu servicio va a aparecer aca</strong>
+        <strong>Tu servicio va a aparecer acá</strong>
         <span class="muted">Una vez que elijas un prestador, vas a ver precio, estado y acciones disponibles.</span>
       </div>
     `;
@@ -833,7 +857,7 @@ function renderFinancialPanel(state) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin movimiento financiero</strong>
-        <span class="muted">Al crear una solicitud real vas a ver el intento de pago, la comision de plataforma y el neto del prestador.</span>
+        <span class="muted">Al crear una solicitud real vas a ver el intento de pago, la comisión de plataforma y el neto del prestador.</span>
       </div>
     `;
     return;
@@ -853,7 +877,7 @@ function renderFinancialPanel(state) {
         <div class="metric"><span>Total a pagar</span><strong>${currency(total)}</strong></div>
         <div class="metric"><span>Moneda</span><strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong></div>
       </div>
-      <p class="muted">MIMI es una plataforma tecnologica de intermediacion. Los servicios son prestados por proveedores independientes. MIMI cobra una comision por uso de plataforma.</p>
+      <p class="muted">MIMI es una plataforma tecnológica de intermediación. Los servicios son prestados por proveedores independientes. MIMI cobra una comisión por uso de plataforma.</p>
       <div class="chip-row">
         <span class="inline-chip">${escapeHtml(paymentStatus)}</span>
         ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Abrir checkout mock</button>` : ""}
@@ -875,7 +899,7 @@ function renderMatchingPanel(state) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin matching aun</strong>
-        <span class="muted">Cuando generes una busqueda real, mostramos ranking, ofertas y tiempos de respuesta.</span>
+        <span class="muted">Cuando generes una búsqueda real, mostramos ranking, ofertas y tiempos de respuesta.</span>
       </div>
     `;
     return;
@@ -917,7 +941,7 @@ function renderProviderSpotlight(state) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin prestador elegido</strong>
-        <span class="muted">Cuando confirmes una opcion, mostramos bio, categorias, pricing y ultimas rese?as.</span>
+        <span class="muted">Cuando confirmes una opcion, mostramos bio, categorías, pricing y últimas reseñas.</span>
       </div>
     `;
     return;
@@ -1003,7 +1027,7 @@ export function renderNotifications(state) {
     : `
       <div class="summary-card">
         <strong>Sin notificaciones</strong>
-        <span class="muted">Las novedades del servicio van a aparecer aca.</span>
+        <span class="muted">Las novedades del servicio van a aparecer acá.</span>
       </div>
     `;
 
@@ -1037,7 +1061,7 @@ export function renderChat(state) {
     : `
       <div class="summary-card">
         <strong>Chat listo</strong>
-        <span class="muted">Los mensajes del servicio van a aparecer aca en tiempo real.</span>
+        <span class="muted">Los mensajes del servicio van a aparecer acá en tiempo real.</span>
       </div>
     `;
 }
@@ -1050,6 +1074,39 @@ function renderMapStatus(state) {
   mapStatus.textContent = activeRequest
     ? stateLabels[activeRequest.status] ?? activeRequest.status
     : "Mapa en tiempo real";
+}
+
+function renderRequestControls(state) {
+  const selectedCategory = appConfig.categories.find((category) => category.id === state.ui.selectedCategoryId);
+  const needsHours = isHourlyCategory(selectedCategory);
+  const durationCard = document.querySelector(".duration-stepper-card");
+  const requestedHoursValue = document.getElementById("requestedHoursValue");
+  const requestedHoursInput = document.getElementById("requestedHoursInput");
+  const currentRequestType = state.requestDraft.requestType || "IMMEDIATE";
+
+  if (durationCard) {
+    durationCard.hidden = !needsHours;
+    durationCard.style.display = needsHours ? "" : "none";
+    durationCard.setAttribute("aria-hidden", String(!needsHours));
+  }
+
+  const safeHours = needsHours
+    ? Math.max(1, Number(state.requestDraft.requestedHours || 2))
+    : 1;
+
+  if (requestedHoursInput) {
+    requestedHoursInput.value = String(safeHours);
+  }
+
+  if (requestedHoursValue) {
+    requestedHoursValue.textContent = String(safeHours);
+  }
+
+  document.querySelectorAll("[data-request-type]").forEach((button) => {
+    const active = button.dataset.requestType === currentRequestType;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
 }
 
 export function renderClientScreen(state) {
@@ -1067,4 +1124,5 @@ export function renderClientScreen(state) {
   renderNotifications(state);
   renderChat(state);
   renderMapStatus(state);
+  renderRequestControls(state);
 }

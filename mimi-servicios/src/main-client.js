@@ -59,9 +59,9 @@ const NON_HOURLY_CATEGORY_MODELS = {
 };
 
 const INTENT_CATEGORY_RULES = [
-  { code: "PLOMERIA", terms: ["cano", "pincho un cano", "caneria", "agua", "perdida", "fuga", "gotea", "griferia", "bano", "inodoro", "pileta", "cocina", "destapar"] },
-  { code: "PINTURA", terms: ["pintar", "pintura", "pintor", "pared", "living", "habitacion", "humedad", "techo", "revoque", "casa", "frente"] },
-  { code: "JARDINERIA", terms: ["pasto", "jardin", "cortar el pasto", "poda", "plantas", "cesped", "patio", "maleza", "jardinero"] },
+  { code: "PLOMERIA", terms: ["cano", "canio", "caño", "pincho un cano", "caneria", "agua", "perdida", "fuga", "gotea", "griferia", "bano", "baño", "inodoro", "pileta", "cocina", "destapar", "se rompio un cano", "se rompió un caño"] },
+  { code: "PINTURA", terms: ["pintar", "pintura", "pintor", "pared", "living", "habitacion", "habitación", "humedad", "techo", "revoque", "casa", "frente", "quiero pintar"] },
+  { code: "JARDINERIA", terms: ["pasto", "jardin", "jardín", "cortar el pasto", "cortar pasto", "poda", "plantas", "cesped", "césped", "patio", "maleza", "jardinero", "quiero cortar"] },
   { code: "ELECTRICIDAD", terms: ["luz", "no prende", "electricidad", "enchufe", "cable", "termica", "cortocircuito", "disyuntor", "lampara", "instalacion electrica"] },
   { code: "GASISTA", terms: ["gas", "olor a gas", "calefon", "cocina", "horno", "estufa", "termotanque", "gasista", "matriculado"] },
   { code: "INSTALACION_AIRE", terms: ["aire", "split", "acondicionado", "instalar aire", "instalacion de aire", "mantenimiento aire"] },
@@ -79,7 +79,7 @@ const INTENT_CATEGORY_RULES = [
   { code: "MECANICA_MOVIL", terms: ["mecanico", "auto", "no arranca", "bateria", "motor", "me quede tirado", "auxilio mecanico"] },
   { code: "HERRERIA", terms: ["herrero", "herreria", "reja", "porton", "soldadura", "metal", "estructura"] },
   { code: "ALBANILERIA", terms: ["albanil", "obra", "arreglo", "pared rota", "ladrillo", "cemento", "construccion"] },
-  { code: "CARPINTERIA", terms: ["madera", "mueble", "puerta de madera", "carpintero", "estante", "placard"] },
+  { code: "CARPINTERIA", terms: ["madera", "mueble", "puerta de madera", "carpintero", "estante", "placárd"] },
   { code: "BELLEZA", terms: ["belleza", "estetica", "maquillaje", "depilacion", "cejas"] },
   { code: "MANICURIA", terms: ["unas", "manos", "manicura", "manicuria", "esmaltado"] },
   { code: "PELUQUERIA", terms: ["pelo", "cabello", "corte", "peinado", "peluquero", "peluqueria", "color"] },
@@ -134,12 +134,18 @@ function findBestCategoryByIntent(rawText) {
     let score = haystack.includes(query) ? 12 : 0;
 
     const rule = INTENT_CATEGORY_RULES.find((item) => item.code === category.code);
-    if (rule?.terms?.some((term) => query.includes(normalizeServiceIntent(term)))) {
-      score += 30;
+    if (rule?.terms?.some((term) => {
+      const normalizedTerm = normalizeServiceIntent(term);
+      return query.includes(normalizedTerm) || normalizedTerm.includes(query);
+    })) {
+      score += 34;
     }
 
-    if (query.split(" ").some((word) => word.length > 3 && haystack.includes(word))) {
-      score += 8;
+    for (const word of query.split(" ")) {
+      if (word.length > 3 && haystack.includes(word)) score += 8;
+      if (word.length > 3 && rule?.terms?.some((term) => normalizeServiceIntent(term).startsWith(word))) {
+        score += 10;
+      }
     }
 
     if (score > bestScore) {
@@ -149,6 +155,28 @@ function findBestCategoryByIntent(rawText) {
   }
 
   return bestScore >= 12 ? best : null;
+}
+
+function selectCategoryById(categoryId, { keepSearch = true, intentResolution = undefined } = {}) {
+  const nextCategory = appConfig.categories.find((category) => category.id === categoryId);
+  if (!nextCategory) return false;
+
+  const nextNeedsHours = categoryPricingModel(nextCategory) === "HOURLY";
+  registerCategoryUsage(categoryId);
+
+  setState((draft) => {
+    draft.ui.selectedCategoryId = categoryId;
+    draft.ui.showAllCategories = false;
+    if (!keepSearch) draft.ui.categorySearchTerm = "";
+    if (intentResolution !== undefined) draft.ui.intentResolution = intentResolution;
+    draft.requestDraft.categoryId = categoryId;
+    draft.requestDraft.requestedHours = nextNeedsHours
+      ? Math.max(1, parseNumberOrFallback(draft.requestDraft.requestedHours, 2))
+      : 1;
+  });
+
+  seedForm();
+  return true;
 }
 
 function getSelectedCategory() {
@@ -185,14 +213,13 @@ async function resolveCategoryByBackendIntent(value) {
   const categoryId = result.top_match?.category_id;
 
   if (categoryId && appConfig.categories.some((category) => category.id === categoryId)) {
-    setState((draft) => {
-      draft.ui.selectedCategoryId = categoryId;
-      draft.ui.intentResolution = {
+    selectCategoryById(categoryId, {
+      intentResolution: {
         query,
         topMatch: result.top_match,
         matches: Array.isArray(result.matches) ? result.matches : [],
         resolvedAt: new Date().toISOString()
-      };
+      }
     });
     return;
   }
@@ -311,11 +338,11 @@ function dismissClientOnboarding() {
 
 function normalizeAuthError(error, fallbackMessage) {
   if (error?.code === "AUTH_REQUIRED") {
-    return "Necesitas iniciar sesion con Google para continuar.";
+    return "Necesitás iniciar sesión con Google para continuar.";
   }
 
   if (error?.message === "SERVICE_LOCATION_REQUIRED") {
-    return "Necesitamos una direccion valida del servicio para buscar prestadores.";
+    return "Necesitamos una dirección valida del servicio para buscar prestadores.";
   }
 
   return error?.message || fallbackMessage;
@@ -565,8 +592,26 @@ function normalizeCategoryForMerge(category) {
     code,
     name: category.name || code,
     description: category.description || "",
-    aliases: Array.isArray(category.aliases) ? category.aliases : []
+    aliases: Array.isArray(category.aliases) ? category.aliases : [],
+    search_keywords: Array.isArray(category.search_keywords) ? category.search_keywords : [],
+    default_pricing_model: normalizePricingModelForCategory(category.default_pricing_model || category.pricing_model || category.pricingModel),
+    requires_provider_quote: Boolean(category.requires_provider_quote)
   };
+}
+
+function normalizePricingModelForCategory(value) {
+  const model = String(value || "").trim().toUpperCase();
+  return [
+    "HOURLY",
+    "BASE_VISIT",
+    "QUOTE",
+    "FIXED",
+    "UNIT",
+    "SQUARE_METER",
+    "LINEAR_METER"
+  ].includes(model)
+    ? model
+    : "";
 }
 
 function mergeCategories(remoteCategories = [], localCategories = []) {
@@ -657,6 +702,8 @@ function seedForm() {
 
   if (durationCard) {
     durationCard.hidden = !needsHours;
+    durationCard.style.display = needsHours ? "" : "none";
+    durationCard.setAttribute("aria-hidden", String(!needsHours));
   }
 
   if (requestTypeSelect) {
@@ -713,7 +760,7 @@ function renderServiceAddressSuggestions(items) {
           data-service-suggestion-index="${index}"
           role="option"
         >
-          <strong>${item.display_name || item.direccion || "Direccion"}</strong>
+          <strong>${item.display_name || item.dirección || "Direccion"}</strong>
           <span class="muted">${item.source || item.barrio || "Sugerencia"}</span>
         </button>
       `
@@ -735,7 +782,7 @@ async function selectServiceAddressSuggestion(index) {
   if (!item || !input || !latInput || !lngInput) return;
 
   const rawQuery = input.value;
-  const address = item.display_name || item.direccion || "";
+  const address = item.display_name || item.dirección || "";
   const lat = Number(item.lat);
   const lng = Number(item.lon ?? item.lng);
 
@@ -828,11 +875,11 @@ async function handleUseCurrentServiceLocation() {
     const latInput = document.getElementById("serviceLatInput");
     const lngInput = document.getElementById("serviceLngInput");
 
-    if (addressInput) addressInput.value = "Ubicando direccion...";
+    if (addressInput) addressInput.value = "Ubicando dirección...";
     if (latInput) latInput.value = String(lat);
     if (lngInput) lngInput.value = String(lng);
 
-    patchState("requestDraft.address", "Ubicando direccion...");
+    patchState("requestDraft.address", "Ubicando dirección...");
     patchState("requestDraft.lat", lat);
     patchState("requestDraft.lng", lng);
 
@@ -847,8 +894,8 @@ async function handleUseCurrentServiceLocation() {
 
     const displayAddress =
       resolved?.display_name ||
-      resolved?.direccion ||
-      "Mi ubicacion actual";
+      resolved?.dirección ||
+      "Mi ubicación actual";
 
     if (addressInput) addressInput.value = displayAddress;
     if (latInput) latInput.value = String(lat);
@@ -943,7 +990,7 @@ async function bootstrapAsyncData() {
   try {
     categories = await loadCategories();
   } catch (error) {
-    console.warn("[MIMI Go] No se pudieron cargar categorias remotas, uso fallback local.", error);
+    console.warn("[MIMI Go] No se pudieron cargar categorías remotas, uso fallback local.", error);
     categories = appConfig.categories ?? [];
   }
 
@@ -997,10 +1044,10 @@ async function bootstrapAsyncData() {
     );
   } else if (!session.userId) {
     setInfo(
-      "Ingresa con Google para ver categorias activas, buscar prestadores y usar el flujo real."
+      "Ingresa con Google para ver categorías activas, buscar prestadores y usar el flujo real."
     );
   } else {
-    setInfo("Sesion iniciada correctamente.");
+    setInfo("Sesión iniciada correctamente.");
   }
 }
 
@@ -1230,7 +1277,7 @@ async function handlePaymentAction(action) {
       return;
     }
 
-    setInfo("Checkout mock preparado. Cuando conectes el PSP real, aca redirige al checkout seguro.");
+    setInfo("Checkout mock preparado. Cuando conectes el PSP real, acá redirige al checkout seguro.");
     return;
   }
 
@@ -1325,7 +1372,7 @@ function bindBasicControls() {
     try {
       await handleAuthPrimary();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesion."));
+      setInfo(null, normalizeAuthError(error, "No se pudo iniciar sesión."));
     }
   });
 
@@ -1334,7 +1381,7 @@ function bindBasicControls() {
       await signOut();
       window.location.reload();
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesion."));
+      setInfo(null, normalizeAuthError(error, "No se pudo cerrar la sesión."));
     }
   });
 
@@ -1395,12 +1442,16 @@ function bindBasicControls() {
     const value = event.target.value || "";
     const suggestedCategory = findBestCategoryByIntent(value);
 
-    patchState("ui.categorySearchTerm", value);
-    patchState("ui.showAllCategories", Boolean(value.trim()));
-
     if (suggestedCategory?.id) {
       setState((draft) => {
+        const needsHours = categoryPricingModel(suggestedCategory) === "HOURLY";
+        draft.ui.categorySearchTerm = value;
+        draft.ui.showAllCategories = Boolean(value.trim());
         draft.ui.selectedCategoryId = suggestedCategory.id;
+        draft.requestDraft.categoryId = suggestedCategory.id;
+        draft.requestDraft.requestedHours = needsHours
+          ? Math.max(1, parseNumberOrFallback(draft.requestDraft.requestedHours, 2))
+          : 1;
         draft.ui.intentResolution = {
           query: value,
           topMatch: {
@@ -1412,6 +1463,13 @@ function bindBasicControls() {
           resolvedAt: new Date().toISOString(),
           source: "local"
         };
+      });
+      seedForm();
+    } else {
+      setState((draft) => {
+        draft.ui.categorySearchTerm = value;
+        draft.ui.showAllCategories = Boolean(value.trim());
+        draft.ui.intentResolution = value.trim().length >= 3 ? null : draft.ui.intentResolution;
       });
     }
 
@@ -1425,10 +1483,8 @@ function bindBasicControls() {
     const suggestedCategory = findBestCategoryByIntent(event.currentTarget.value || "");
 
     if (suggestedCategory?.id) {
-      registerCategoryUsage(suggestedCategory.id);
-      setState((draft) => {
-        draft.ui.selectedCategoryId = suggestedCategory.id;
-        draft.ui.intentResolution = {
+      selectCategoryById(suggestedCategory.id, {
+        intentResolution: {
           query: event.currentTarget.value || "",
           topMatch: {
             category_id: suggestedCategory.id,
@@ -1438,13 +1494,37 @@ function bindBasicControls() {
           matches: [],
           resolvedAt: new Date().toISOString(),
           source: "local"
-        };
+        }
       });
     }
 
     scheduleBackendIntentResolution(event.currentTarget.value || "");
 
     document.getElementById("searchProvidersButton")?.focus();
+  });
+
+  document.getElementById("categoryGrid")?.addEventListener("click", (event) => {
+    const toggleButton = event.target.closest("[data-category-toggle]");
+    if (toggleButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      setState((draft) => {
+        draft.ui.showAllCategories = true;
+        draft.ui.categorySearchTerm = "";
+      });
+      seedForm();
+      window.setTimeout(() => document.getElementById("categorySearchInput")?.focus(), 0);
+      return;
+    }
+
+    const categoryButton = event.target.closest("[data-category-id]");
+    if (!categoryButton) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    selectCategoryById(categoryButton.dataset.categoryId, {
+      intentResolution: null
+    });
   });
 
   document.getElementById("serviceAddressInput")?.addEventListener("input", async (event) => {
@@ -1472,7 +1552,7 @@ function bindBasicControls() {
     } catch (error) {
       setInfo(
         null,
-        normalizeAuthError(error, "No pudimos obtener tu ubicacion actual.")
+        normalizeAuthError(error, "No pudimos obtener tu ubicación actual.")
       );
     }
   });
@@ -1530,8 +1610,8 @@ function bindBasicControls() {
 
     if (status) {
       status.textContent = state.session.userId
-        ? "Recibimos tu consulta. Cuando conectemos el endpoint de soporte cliente, saldra al panel del equipo."
-        : "Tu consulta quedo preparada. Inicia sesion para asociarla a tu cuenta.";
+        ? "Recibimos tu consulta. Cuando conectemos el endpoint de soporte cliente, saldrá al panel del equipo."
+        : "Tu consulta quedo preparada. Iniciá sesión para asociarla a tu cuenta.";
     }
 
     input.value = "";
@@ -1612,20 +1692,26 @@ function bindBasicControls() {
         return;
       }
 
+      const categoryToggle = event.target.closest("[data-category-toggle]");
+      if (categoryToggle) {
+        event.preventDefault();
+        event.stopPropagation();
+        setState((draft) => {
+          draft.ui.showAllCategories = true;
+          draft.ui.categorySearchTerm = "";
+        });
+        seedForm();
+        window.setTimeout(() => document.getElementById("categorySearchInput")?.focus(), 0);
+        return;
+      }
+
       const categoryButton = event.target.closest("[data-category-id]");
       if (categoryButton) {
         event.preventDefault();
         event.stopPropagation();
-        const nextCategoryId = categoryButton.dataset.categoryId;
-        const nextCategory = appConfig.categories.find((category) => category.id === nextCategoryId);
-        const nextNeedsHours = categoryPricingModel(nextCategory) === "HOURLY";
-        registerCategoryUsage(nextCategoryId);
-        setState((draft) => {
-          draft.ui.selectedCategoryId = nextCategoryId;
-          draft.ui.showAllCategories = false;
-          draft.requestDraft.requestedHours = nextNeedsHours ? draft.requestDraft.requestedHours : 1;
+        selectCategoryById(categoryButton.dataset.categoryId, {
+          intentResolution: null
         });
-        seedForm();
         return;
       }
 
@@ -1643,14 +1729,6 @@ function bindBasicControls() {
         return;
       }
 
-      const categoryToggle = event.target.closest("[data-category-toggle]");
-      if (categoryToggle) {
-        event.preventDefault();
-        event.stopPropagation();
-        patchState("ui.showAllCategories", true);
-        document.getElementById("categorySearchInput")?.focus();
-        return;
-      }
 
       const suggestionButton = event.target.closest("[data-service-suggestion-index]");
       if (suggestionButton) {

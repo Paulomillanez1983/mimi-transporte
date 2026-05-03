@@ -74,6 +74,14 @@ function scoreCategory(query: string, category: CategoryRow, rules: IntentRuleRo
       score += 4;
       matched.add(token);
     }
+
+    for (const word of haystack.split(" ")) {
+      if (token.length >= 3 && word.startsWith(token)) {
+        score += 3;
+        matched.add(token);
+        break;
+      }
+    }
   }
 
   for (const rule of rules) {
@@ -81,7 +89,7 @@ function scoreCategory(query: string, category: CategoryRow, rules: IntentRuleRo
     const keywords = Array.isArray(rule.keywords) ? rule.keywords.map(normalize) : [];
     const weight = Number(rule.weight || 1);
 
-    if (phrase && normalizedQuery.includes(phrase)) {
+    if (phrase && (normalizedQuery.includes(phrase) || phrase.includes(normalizedQuery))) {
       score += 16 * weight;
       matched.add(rule.phrase);
     }
@@ -89,14 +97,23 @@ function scoreCategory(query: string, category: CategoryRow, rules: IntentRuleRo
     for (const keyword of keywords) {
       if (!keyword) continue;
 
-      if (normalizedQuery.includes(keyword)) {
+      if (normalizedQuery.includes(keyword) || keyword.includes(normalizedQuery)) {
         score += 7 * weight;
         matched.add(keyword);
+        continue;
+      }
+
+      for (const token of tokens) {
+        if (token.length >= 3 && keyword.split(" ").some((word) => word.startsWith(token))) {
+          score += 3 * weight;
+          matched.add(token);
+          break;
+        }
       }
     }
   }
 
-  const confidence = Math.max(0, Math.min(0.98, score / 100));
+  const confidence = Math.max(0, Math.min(0.98, score / 85));
 
   return {
     score,

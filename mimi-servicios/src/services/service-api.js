@@ -34,6 +34,18 @@ function normalizePricingMode(value) {
   const mode = String(value ?? "").trim().toUpperCase();
 
   if (mode === "POR_HORA" || mode === "HOURLY") return "HOURLY";
+  if (
+    [
+      "BASE_VISIT",
+      "QUOTE",
+      "FIXED",
+      "UNIT",
+      "SQUARE_METER",
+      "LINEAR_METER"
+    ].includes(mode)
+  ) {
+    return mode;
+  }
 
   return "HOURLY";
 }
@@ -228,7 +240,7 @@ export async function loadCategories() {
 
   return fetchTable("svc_categories", (query) =>
     query
-      .select("id,code,name,description,active")
+      .select("id,code,name,description,active,aliases,search_keywords,default_pricing_model,requires_provider_quote")
       .eq("active", true)
       .order("name", { ascending: true })
   );

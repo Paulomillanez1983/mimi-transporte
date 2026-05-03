@@ -110,8 +110,8 @@
       </div>
 
       <section class="hero-text-client" id="clientHero" data-client-screen="home" aria-labelledby="heroTitle">
-        <p>Buenos dias, <span id="clientGreetingName">Paulo</span></p>
-        <h1 id="heroTitle">Que prestador necesitas hoy?</h1>
+        <p>Buenos días, <span id="clientGreetingName">Paulo</span></p>
+        <h1 id="heroTitle">Qué prestador necesitás hoy?</h1>
       </section>
 
       <div
@@ -126,8 +126,8 @@
         <div class="search-card-top">
           <div>
             <span class="eyebrow">Cliente</span>
-            <h2>Planifica tu servicio</h2>
-            <p id="authHint">Ingresa con Google para usar solicitudes reales.</p>
+            <h2>Planificá tu servicio</h2>
+            <p id="authHint">Ingresá con Google para usar solicitudes reales.</p>
           </div>
           <div class="search-card-actions">
             <button class="btn-secondary" id="enterServicesHub" type="button">Entrar</button>
@@ -147,7 +147,7 @@
               id="serviceAddressInput"
               name="address"
               type="text"
-              placeholder="Donde necesitas el servicio?"
+              placeholder="Dónde necesitás el servicio?"
               autocomplete="off"
               autocapitalize="words"
               autocorrect="off"
@@ -158,15 +158,15 @@
               aria-controls="serviceAddressSuggestions"
               aria-expanded="false"
             >
-            <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar direccion" hidden>x</button>
-            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicacion" title="Usar mi ubicacion actual"><span aria-hidden="true">⌖</span></button>
+            <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar dirección" hidden>x</button>
+            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicación" title="Usar mi ubicación actual"><span aria-hidden="true">⌖</span></button>
           </label>
 
           <div
             id="serviceAddressSuggestions"
             class="suggestions"
             role="listbox"
-            aria-label="Sugerencias de direccion"
+            aria-label="Sugerencias de dirección"
             hidden
           ></div>
           <input id="serviceLatInput" name="lat" type="hidden">
@@ -180,7 +180,7 @@
                 id="categorySearchInput"
                 type="search"
                 placeholder="Necesito ayuda para una mudanza"
-                data-placeholder-examples="Se me pincho un cano en la cocina|Quiero pintar la casa|Quiero cortar el pasto|Tengo un familiar enfermo y necesito un enfermero|Necesito una ninera para la tarde|No prende la luz del living|Quiero instalar un aire|Se trabo la cerradura|Necesito ayuda para una mudanza|Mi computadora no funciona"
+                data-placeholder-examples="Se me pinchó un caño en la cocina|Quiero pintar la casa|Quiero cortar el pasto|Tengo un familiar enfermo y necesito un enfermero|Necesito una niñera para la tarde|No prende la luz del living|Quiero instalar un aire|Se trabó la cerradura|Necesito ayuda para una mudanza|Mi computadora no funciona"
                 autocomplete="off"
                 autocapitalize="sentences"
                 autocorrect="off"
@@ -189,36 +189,36 @@
               >
             </label>
             <div class="intent-assist" id="categoryIntentAssist" aria-live="polite">
-              Escribi una situacion y MIMI sugiere la categoria mas probable.
+              Escribí una situación y MIMI sugiere la categoría más probable.
             </div>
             <div
               class="category-grid"
               id="categoryGrid"
               role="list"
-              aria-label="Categorias disponibles"
+              aria-label="Categorías disponibles"
             ></div>
           </div>
 
           <div class="form-mini-grid">
             <div class="compact-field request-type-card">
-              <span>Cuando</span>
+              <span>Cuándo</span>
               <select id="requestTypeSelect" name="requestType" hidden aria-hidden="true" tabindex="-1">
                 <option value="IMMEDIATE">Inmediato</option>
                 <option value="SCHEDULED">Programado</option>
               </select>
-              <div class="request-type-toggle" role="group" aria-label="Elegir cuando necesitas el servicio">
+              <div class="request-type-toggle" role="group" aria-label="Elegir cuándo necesitás el servicio">
                 <button class="is-active" type="button" data-request-type="IMMEDIATE">Lo quiero ya</button>
                 <button type="button" data-request-type="SCHEDULED">Programado</button>
               </div>
             </div>
 
             <div class="compact-field duration-stepper-card">
-              <span>Duracion</span>
+              <span>Duración</span>
               <input id="requestedHoursInput" name="requestedHours" type="number" min="1" max="8" value="2" hidden>
-              <div class="duration-stepper" role="group" aria-label="Duracion estimada">
-                <button type="button" data-hours-step="-1" aria-label="Reducir duracion">-</button>
+              <div class="duration-stepper" role="group" aria-label="Duración estimada">
+                <button type="button" data-hours-step="-1" aria-label="Reducir duración">-</button>
                 <strong><b id="requestedHoursValue">2</b> h</strong>
-                <button type="button" data-hours-step="1" aria-label="Aumentar duracion">+</button>
+                <button type="button" data-hours-step="1" aria-label="Aumentar duración">+</button>
               </div>
             </div>
           </div>
@@ -376,7 +376,7 @@
         <article class="account-menu-card">
           <span class="eyebrow">Ultimo movimiento</span>
           <strong id="accountLastServiceTitle">Todavia no tenes servicios recientes</strong>
-          <small id="accountLastServiceMeta">Cuando contrates uno, aparece aca.</small>
+          <small id="accountLastServiceMeta">Cuándo contrates uno, aparece aca.</small>
         </article>
 
         <div class="account-actions-grid">

@@ -273,8 +273,30 @@ from (
     ('HERRERIA', 'soldar una estructura', array['soldar','soldadura','estructura','metal'], 8),
     ('PLOMERIA', 'se pincho un cano', array['cano','agua','perdida','plomero'], 10),
     ('PINTURA', 'quiero pintar la casa', array['pintar','pintura','casa','pared'], 9),
+    ('PINTURA', 'quiero pintar el living', array['pintar','living','pared','pintor'], 9),
+    ('PINTURA', 'tengo humedad en una pared', array['humedad','pared','pintura','pintor'], 8),
     ('JARDINERIA', 'quiero cortar el pasto', array['pasto','cortar','jardinero'], 9),
-    ('ENFERMERIA', 'necesito un enfermero', array['enfermero','enfermera','salud','cuidado'], 9)
+    ('JARDINERIA', 'necesito limpiar el jardin', array['jardin','poda','maleza','plantas','pasto'], 8),
+    ('ENFERMERIA', 'necesito un enfermero', array['enfermero','enfermera','salud','cuidado'], 9),
+    ('ENFERMERIA', 'un familiar enfermo necesita asistencia', array['familiar','enfermo','enfermera','medicacion','curacion'], 9),
+    ('CUIDADO_ADULTOS', 'necesito cuidar a un adulto mayor', array['adulto mayor','anciano','abuelo','cuidador','acompanante'], 9),
+    ('CUIDADO_NINOS', 'necesito una ninera', array['ninera','nino','nina','bebe','cuidar chico'], 9),
+    ('ELECTRICIDAD', 'no tengo luz', array['luz','termica','disyuntor','electricista','corto'], 9),
+    ('ELECTRICIDAD', 'se quemo un enchufe', array['enchufe','cable','electricidad','electricista'], 8),
+    ('GASISTA', 'siento olor a gas', array['gas','olor','gasista','matriculado','calefon'], 10),
+    ('INSTALACION_AIRE', 'quiero instalar un aire acondicionado', array['aire','split','instalar','acondicionado'], 9),
+    ('REFRIGERACION', 'la heladera no enfria', array['heladera','freezer','no enfria','refrigeracion'], 9),
+    ('LIMPIEZA', 'necesito limpiar mi casa', array['limpieza','casa','departamento','oficina','mucama'], 8),
+    ('CERRAJERIA', 'me quede afuera sin llave', array['llave','cerradura','cerrajero','puerta','abrir'], 9),
+    ('MUDANZAS', 'necesito hacer una mudanza', array['mudanza','flete','muebles','cajas','traslado'], 9),
+    ('TECNICO_PC', 'mi computadora no funciona', array['computadora','pc','notebook','impresora','virus'], 9),
+    ('TECNOLOGIA', 'necesito configurar el wifi', array['wifi','router','internet','camara','smart tv'], 8),
+    ('CARPINTERIA', 'necesito arreglar un mueble', array['mueble','madera','carpintero','placard','puerta'], 8),
+    ('ALBANILERIA', 'necesito un albanil', array['albanil','obra','cemento','pared','construccion'], 8),
+    ('MASCOTAS', 'necesito pasear mi perro', array['perro','gato','mascota','paseador','cuidado'], 8),
+    ('PELUQUERIA', 'necesito un corte de pelo', array['pelo','cabello','corte','peluquero','peinado'], 8),
+    ('MANICURIA', 'necesito arreglarme las unas', array['unas','manicura','manicuria','esmaltado'], 8),
+    ('MASAJISTA', 'me duele la espalda', array['masaje','contractura','espalda','dolor','masajista'], 8)
 ) as seed(code, phrase, keywords, weight)
 join public.svc_categories c on c.code = seed.code
 where not exists (
@@ -283,3 +305,32 @@ where not exists (
   where r.category_id = c.id
     and lower(r.phrase) = lower(seed.phrase)
 );
+
+update public.svc_categories
+set
+  default_pricing_model = seed.default_pricing_model,
+  requires_provider_quote = seed.requires_provider_quote,
+  search_keywords = array(
+    select distinct keyword
+    from unnest(coalesce(public.svc_categories.search_keywords, '{}'::text[]) || seed.search_keywords) as keyword
+  )
+from (
+  values
+    ('PLOMERIA', 'HOURLY', false, array['plomero','cano','caneria','perdida','fuga','agua','griferia']),
+    ('ELECTRICIDAD', 'HOURLY', false, array['electricista','luz','enchufe','termica','disyuntor','cable']),
+    ('LIMPIEZA', 'HOURLY', false, array['limpieza','mucama','casa','departamento','oficina']),
+    ('JARDINERIA', 'SQUARE_METER', false, array['jardinero','pasto','cesped','poda','jardin','maleza']),
+    ('PINTURA', 'SQUARE_METER', false, array['pintor','pintura','pintar','pared','living','humedad']),
+    ('MUDANZAS', 'QUOTE', true, array['mudanza','flete','muebles','cajas','traslado']),
+    ('HERRERIA', 'QUOTE', true, array['herrero','reja','porton','soldadura','metal']),
+    ('GOMERIA_MOVIL', 'BASE_VISIT', false, array['gomero','pinchadura','rueda','cubierta','neumatico','auxilio']),
+    ('MECANICA_MOVIL', 'BASE_VISIT', false, array['mecanico','auto','bateria','motor','no arranca']),
+    ('CERRAJERIA', 'BASE_VISIT', false, array['cerrajero','llave','cerradura','puerta']),
+    ('GASISTA', 'HOURLY', false, array['gasista','gas','calefon','cocina','estufa']),
+    ('INSTALACION_AIRE', 'FIXED', false, array['aire acondicionado','split','instalar aire','mantenimiento aire']),
+    ('REFRIGERACION', 'BASE_VISIT', false, array['heladera','freezer','refrigeracion','no enfria']),
+    ('ENFERMERIA', 'HOURLY', false, array['enfermero','enfermera','curacion','medicacion','salud']),
+    ('CUIDADO_ADULTOS', 'HOURLY', false, array['adulto mayor','anciano','cuidador','acompanante']),
+    ('CUIDADO_NINOS', 'HOURLY', false, array['ninera','nino','nina','bebe','cuidado infantil'])
+) as seed(code, default_pricing_model, requires_provider_quote, search_keywords)
+where public.svc_categories.code = seed.code;

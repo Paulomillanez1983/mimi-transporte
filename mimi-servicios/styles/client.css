@@ -2008,6 +2008,85 @@ body[data-client-view="support"] .details-grid {
   cursor: pointer;
   touch-action: manipulation;
 }
+
+/* Final MIMIGo service picker polish */
+.category-grid.is-expanded {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: visible;
+  gap: 10px;
+}
+
+.category-grid.is-expanded .category-chip,
+.category-grid.is-expanded .category-guide-card,
+.category-grid.is-expanded .ai-intent-card {
+  width: 100%;
+  min-width: 0;
+}
+
+.category-chip,
+.category-guide-card,
+.ai-intent-card {
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.category-chip:focus-visible,
+.category-guide-card:focus-visible,
+.ai-intent-card:focus-visible,
+.category-more-chip:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 2px;
+}
+
+#categoryIntentAssist {
+  display: grid;
+  gap: 3px;
+}
+
+#categoryIntentAssist strong {
+  color: #0f766e;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+#categoryIntentAssist span {
+  color: #0f766e;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.ai-intent-card {
+  position: relative;
+  grid-column: 1 / -1;
+}
+
+.ai-intent-action {
+  width: max-content;
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: #fff;
+  background: linear-gradient(135deg, #059669, #2563eb);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.duration-stepper-card[aria-hidden="true"] {
+  display: none !important;
+}
+
+@media (max-width: 430px) {
+  .category-grid.is-expanded {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: 310px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .category-grid.is-expanded .category-chip {
+    min-height: 96px;
+  }
+}
 .category-popular-badge {
   position: absolute;
   top: 7px;
