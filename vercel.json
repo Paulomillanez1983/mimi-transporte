@@ -16,7 +16,7 @@
     },
     {
       "source": "/prestador",
-      "destination": "/hub-clientes.html"
+      "destination": "/mimi-servicios/prestador.html"
     },
     {
       "source": "/servicios",
