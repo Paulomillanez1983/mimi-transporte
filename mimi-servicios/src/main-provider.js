@@ -861,14 +861,17 @@ const [categories, workspace, notifications, offers, activeRequest] = await Prom
 ]);
 
 if (Array.isArray(categories) && categories.length) {
-  appConfig.categories = categories.map((category) => ({
-    id: category.id,
-    code: category.code,
-    name: category.name,
-    description: category.description
-  }));
+  actions.updateState({
+    appConfig: {
+      categories: categories.map((category) => ({
+        id: category.id,
+        code: category.code,
+        name: category.name,
+        description: category.description
+      }))
+    }
+  });
 }
-
 setTimeout(async () => {
   try {
     const freshDashboard = await getProviderDashboard(session.providerId);
@@ -1531,8 +1534,13 @@ collectProviderBusinessPayload(form) {
     });
   }
 
-  for (const category of appConfig.categories ?? []) {
-    const categoryId = category.id;
+const availableCategories =
+  this.state?.appConfig?.categories ??
+  this.state?.categories ??
+  [];
+
+for (const category of availableCategories) {
+  const categoryId = category.id;
     if (!categoryId || !data.has(`categoryActive:${categoryId}`)) continue;
 
     const offeringReference = offerings
