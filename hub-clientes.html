@@ -37,12 +37,13 @@
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker-clientes.js")
-        .catch((err) => console.warn("SW clientes error:", err));
+      navigator.serviceWorker.register("./service-worker-clientes.js", { scope: "./" })
+        .then((reg) => console.log("✅ SW Clientes registrado:", reg.scope))
+        .catch((err) => console.warn("❌ SW Clientes error:", err));
     });
   }
 </script>
-<body>
+  <body>
   <div class="viewport">
     <main class="shell">
 
