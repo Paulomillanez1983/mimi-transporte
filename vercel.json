@@ -15,30 +15,6 @@
       "destination": "/hub-clientes.html"
     },
     {
-      "source": "/prestador",
-      "destination": "/hub-operadores.html"
-    },
-    {
-      "source": "/prestador/(.*)",
-      "destination": "/hub-operadores.html"
-    },
-    {
-      "source": "/servicios",
-      "destination": "/mimi-servicios/cliente"
-    },
-    {
-      "source": "/servicios/(.*)",
-      "destination": "/mimi-servicios/cliente"
-    },
-    {
-      "source": "/prestador-servicios",
-      "destination": "/mimi-servicios/prestador"
-    },
-    {
-      "source": "/prestador-servicios/(.*)",
-      "destination": "/mimi-servicios/prestador"
-    },
-    {
       "source": "/viaje",
       "destination": "/index.html"
     },
