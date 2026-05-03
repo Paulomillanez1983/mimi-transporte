@@ -3,6 +3,8 @@ let providerMarker = null;
 let clientMarker = null;
 let routeSourceReady = false;
 
+const LIGHT_MAP_STYLE = window.MIMI_PROVIDER_MAP_STYLE || "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+
 function createMarkerElement(color) {
   const element = document.createElement("div");
   element.style.width = "18px";
@@ -15,18 +17,11 @@ function createMarkerElement(color) {
 }
 
 function ensureMarker(marker, color) {
-  if (marker) {
-    return marker;
-  }
-
-  return new window.maplibregl.Marker({
-    element: createMarkerElement(color)
-  });
+  return marker || new window.maplibregl.Marker({ element: createMarkerElement(color) });
 }
 
 export function initMap(containerId, initialCenter, zoom) {
   if (!window.maplibregl) return null;
-
   if (map) {
     map.remove();
     map = null;
@@ -37,205 +32,66 @@ export function initMap(containerId, initialCenter, zoom) {
 
   map = new window.maplibregl.Map({
     container: containerId,
-    style: {
-      version: 8,
-      sources: {
-        osm: {
-          type: "raster",
-          tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-          tileSize: 256,
-          attribution: "&copy; OpenStreetMap contributors"
-        }
-      },
-      layers: [
-        {
-          id: "osm",
-          type: "raster",
-          source: "osm"
-        }
-      ]
-    },
+    style: LIGHT_MAP_STYLE,
     center: initialCenter,
     zoom,
-    attributionControl: true
+    pitch: 0,
+    bearing: 0,
+    attributionControl: false
   });
 
-  map.addControl(new window.maplibregl.NavigationControl(), "top-right");
-
-  map.on("load", () => {
-    ensureRouteLayer();
-  });
-
+  map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }), "top-right");
+  map.addControl(new window.maplibregl.AttributionControl({ compact: true }));
+  map.on("load", ensureRouteLayer);
   return map;
 }
 
-function clearMarker(marker) {
-  marker?.remove?.();
-  return null;
-}
+function clearMarker(marker) { marker?.remove?.(); return null; }
+function emptyRoute() { return { type: "Feature", geometry: { type: "LineString", coordinates: [] }, properties: {} }; }
 
 function fitToPoints(points) {
-  const safePoints = points.filter(
-    (point) =>
-      point &&
-      Number.isFinite(Number(point.lng)) &&
-      Number.isFinite(Number(point.lat))
-  );
-
+  const safePoints = points.filter((p) => p && Number.isFinite(Number(p.lng)) && Number.isFinite(Number(p.lat)));
   if (!map || !safePoints.length) return;
-
-  if (safePoints.length === 1) {
-    map.flyTo({
-      center: [safePoints[0].lng, safePoints[0].lat],
-      zoom: 14,
-      speed: 0.8
-    });
-    return;
-  }
-
+  if (safePoints.length === 1) return map.easeTo({ center: [safePoints[0].lng, safePoints[0].lat], zoom: 14, duration: 700 });
   const bounds = new window.maplibregl.LngLatBounds();
-  safePoints.forEach((point) => bounds.extend([point.lng, point.lat]));
-
-  map.fitBounds(bounds, {
-    padding: 64,
-    maxZoom: 15,
-    duration: 700
-  });
+  safePoints.forEach((p) => bounds.extend([p.lng, p.lat]));
+  map.fitBounds(bounds, { padding: 72, maxZoom: 15.2, duration: 800 });
 }
 
 function ensureRouteLayer() {
   if (!map || routeSourceReady || !map.isStyleLoaded()) return;
-
-  if (!map.getSource("tracking-route")) {
-    map.addSource("tracking-route", {
-      type: "geojson",
-      data: emptyRoute()
-    });
-  }
-
-  if (!map.getLayer("tracking-route-line")) {
-    map.addLayer({
-      id: "tracking-route-line",
-      type: "line",
-      source: "tracking-route",
-      layout: {
-        "line-cap": "round",
-        "line-join": "round"
-      },
-      paint: {
-        "line-color": "#163867",
-        "line-width": 4,
-        "line-opacity": 0.7
-      }
-    });
-  }
-
+  if (!map.getSource("tracking-route")) map.addSource("tracking-route", { type: "geojson", data: emptyRoute() });
+  if (!map.getLayer("tracking-route-glow")) map.addLayer({ id: "tracking-route-glow", type: "line", source: "tracking-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#60a5fa", "line-width": 10, "line-opacity": 0.18 } });
+  if (!map.getLayer("tracking-route-line")) map.addLayer({ id: "tracking-route-line", type: "line", source: "tracking-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#2563eb", "line-width": 5, "line-opacity": 0.9 } });
   routeSourceReady = true;
 }
 
 function updateRoute(points) {
   if (!map) return;
-
-  if (!map.isStyleLoaded()) {
-    map.once("load", () => updateRoute(points));
-    return;
-  }
-
+  if (!map.isStyleLoaded()) return map.once("load", () => updateRoute(points));
   ensureRouteLayer();
-
   const source = map.getSource("tracking-route");
   if (!source) return;
-
-  const safePoints = points.filter(
-    (point) =>
-      point &&
-      Number.isFinite(Number(point.lng)) &&
-      Number.isFinite(Number(point.lat))
-  );
-
-  if (safePoints.length < 2) {
-    source.setData(emptyRoute());
-    return;
-  }
-
-  source.setData({
-    type: "Feature",
-    geometry: {
-      type: "LineString",
-      coordinates: safePoints.map((point) => [point.lng, point.lat])
-    },
-    properties: {}
-  });
-}
-
-function emptyRoute() {
-  return {
-    type: "Feature",
-    geometry: {
-      type: "LineString",
-      coordinates: []
-    },
-    properties: {}
-  };
+  const safePoints = points.filter((p) => p && Number.isFinite(Number(p.lng)) && Number.isFinite(Number(p.lat)));
+  source.setData(safePoints.length < 2 ? emptyRoute() : { type: "Feature", geometry: { type: "LineString", coordinates: safePoints.map((p) => [p.lng, p.lat]) }, properties: {} });
 }
 
 export function updateClientMap({ servicePosition, providerPosition }) {
   if (!map) return;
-
-  if (
-    Number.isFinite(Number(servicePosition?.lng)) &&
-    Number.isFinite(Number(servicePosition?.lat))
-  ) {
-    clientMarker = ensureMarker(clientMarker, "#38bdf8");
-    clientMarker.setLngLat([servicePosition.lng, servicePosition.lat]).addTo(map);
-  } else {
-    clientMarker = clearMarker(clientMarker);
-  }
-
-  if (
-    Number.isFinite(Number(providerPosition?.lng)) &&
-    Number.isFinite(Number(providerPosition?.lat))
-  ) {
-    providerMarker = ensureMarker(providerMarker, "#49dea4");
-    providerMarker.setLngLat([providerPosition.lng, providerPosition.lat]).addTo(map);
-  } else {
-    providerMarker = clearMarker(providerMarker);
-  }
-
+  clientMarker = Number.isFinite(Number(servicePosition?.lng)) && Number.isFinite(Number(servicePosition?.lat)) ? ensureMarker(clientMarker, "#38bdf8").setLngLat([servicePosition.lng, servicePosition.lat]).addTo(map) : clearMarker(clientMarker);
+  providerMarker = Number.isFinite(Number(providerPosition?.lng)) && Number.isFinite(Number(providerPosition?.lat)) ? ensureMarker(providerMarker, "#22c55e").setLngLat([providerPosition.lng, providerPosition.lat]).addTo(map) : clearMarker(providerMarker);
   updateRoute([servicePosition, providerPosition]);
   fitToPoints([servicePosition, providerPosition]);
 }
 
 export function updateProviderMap({ providerPosition, servicePosition }) {
   if (!map) return;
-
-  if (
-    Number.isFinite(Number(providerPosition?.lng)) &&
-    Number.isFinite(Number(providerPosition?.lat))
-  ) {
-    providerMarker = ensureMarker(providerMarker, "#49dea4");
-    providerMarker.setLngLat([providerPosition.lng, providerPosition.lat]).addTo(map);
-  } else {
-    providerMarker = clearMarker(providerMarker);
-  }
-
-  if (
-    Number.isFinite(Number(servicePosition?.lng)) &&
-    Number.isFinite(Number(servicePosition?.lat))
-  ) {
-    clientMarker = ensureMarker(clientMarker, "#f59e0b");
-    clientMarker.setLngLat([servicePosition.lng, servicePosition.lat]).addTo(map);
-  } else {
-    clientMarker = clearMarker(clientMarker);
-  }
-
+  providerMarker = Number.isFinite(Number(providerPosition?.lng)) && Number.isFinite(Number(providerPosition?.lat)) ? ensureMarker(providerMarker, "#22c55e").setLngLat([providerPosition.lng, providerPosition.lat]).addTo(map) : clearMarker(providerMarker);
+  clientMarker = Number.isFinite(Number(servicePosition?.lng)) && Number.isFinite(Number(servicePosition?.lat)) ? ensureMarker(clientMarker, "#f59e0b").setLngLat([servicePosition.lng, servicePosition.lat]).addTo(map) : clearMarker(clientMarker);
   updateRoute([providerPosition, servicePosition]);
   fitToPoints([providerPosition, servicePosition]);
 }
 
 export function updateTrackingMarkers({ clientPosition, providerPosition }) {
-  updateClientMap({
-    servicePosition: clientPosition,
-    providerPosition
-  });
+  updateClientMap({ servicePosition: clientPosition, providerPosition });
 }
