@@ -48,21 +48,28 @@ const PWA_INSTALLED_KEY = "mimi_services_pwa_installed";
 const CATEGORY_USAGE_KEY = "mimi_services_category_usage_v1";
 
 const INTENT_CATEGORY_RULES = [
-  { code: "PLOMERIA", terms: ["cano", "caneria", "agua", "perdida", "fuga", "griferia", "bano", "inodoro", "pileta"] },
-  { code: "PINTURA", terms: ["pintar", "pintura", "pared", "humedad", "techo", "revoque"] },
-  { code: "JARDINERIA", terms: ["pasto", "jardin", "cortar", "poda", "plantas", "cesped"] },
-  { code: "ELECTRICIDAD", terms: ["luz", "electricidad", "enchufe", "cable", "termica", "cortocircuito"] },
-  { code: "GASISTA", terms: ["gas", "calefon", "cocina", "horno", "estufa"] },
-  { code: "INSTALACION_AIRE", terms: ["aire", "split", "acondicionado", "instalar aire", "refrigeracion"] },
-  { code: "LIMPIEZA", terms: ["limpiar", "limpieza", "mucama", "casa", "departamento", "oficina"] },
-  { code: "CUIDADO_ADULTOS", terms: ["anciano", "adulto mayor", "cuidador", "acompanante", "cuidar adulto"] },
-  { code: "CUIDADO_NINOS", terms: ["nino", "nina", "ninera", "chico", "cuidar chico", "cuidar nene"] },
-  { code: "ENFERMERIA", terms: ["enfermero", "enfermera", "curacion", "inyeccion", "salud"] },
-  { code: "TECNICO_PC", terms: ["pc", "computadora", "notebook", "impresora", "windows"] },
-  { code: "TECNOLOGIA", terms: ["wifi", "router", "camara", "smart tv", "internet"] },
-  { code: "CERRAJERIA", terms: ["llave", "cerradura", "cerrajero", "puerta", "abrir"] },
-  { code: "MUDANZAS", terms: ["mudanza", "mover", "cargar", "flete", "traslado"] },
-  { code: "MASCOTAS", terms: ["perro", "gato", "mascota", "pasear", "paseador"] }
+  { code: "PLOMERIA", terms: ["cano", "pincho un cano", "caneria", "agua", "perdida", "fuga", "gotea", "griferia", "bano", "inodoro", "pileta", "cocina", "destapar"] },
+  { code: "PINTURA", terms: ["pintar", "pintura", "pintor", "pared", "living", "habitacion", "humedad", "techo", "revoque", "casa", "frente"] },
+  { code: "JARDINERIA", terms: ["pasto", "jardin", "cortar el pasto", "poda", "plantas", "cesped", "patio", "maleza", "jardinero"] },
+  { code: "ELECTRICIDAD", terms: ["luz", "no prende", "electricidad", "enchufe", "cable", "termica", "cortocircuito", "disyuntor", "lampara", "instalacion electrica"] },
+  { code: "GASISTA", terms: ["gas", "olor a gas", "calefon", "cocina", "horno", "estufa", "termotanque", "gasista", "matriculado"] },
+  { code: "INSTALACION_AIRE", terms: ["aire", "split", "acondicionado", "instalar aire", "instalacion de aire", "mantenimiento aire"] },
+  { code: "REFRIGERACION", terms: ["heladera", "freezer", "frio", "no enfria", "refrigeracion", "camara frigorifica"] },
+  { code: "LIMPIEZA", terms: ["limpiar", "limpieza", "mucama", "casa", "departamento", "oficina", "ordenar", "servicio domestico"] },
+  { code: "CUIDADO_ADULTOS", terms: ["anciano", "adulto mayor", "cuidador", "acompanante", "familiar enfermo", "cuidar adulto", "abuelo", "abuela"] },
+  { code: "CUIDADO_NINOS", terms: ["nino", "nina", "ninera", "chico", "cuidar chico", "cuidar nene", "bebes", "bebe", "hijo", "hija"] },
+  { code: "ENFERMERIA", terms: ["enfermero", "enfermera", "curacion", "inyeccion", "salud", "medicacion", "familiar enfermo", "postoperatorio", "control"] },
+  { code: "TECNICO_PC", terms: ["pc", "computadora", "notebook", "impresora", "windows", "virus", "no enciende", "tecnico pc"] },
+  { code: "TECNOLOGIA", terms: ["wifi", "router", "camara", "smart tv", "internet", "alarma", "domotica", "configurar"] },
+  { code: "CERRAJERIA", terms: ["llave", "cerradura", "cerrajero", "puerta", "abrir", "trabo", "candado"] },
+  { code: "MUDANZAS", terms: ["mudanza", "mover", "cargar", "flete", "traslado", "muebles", "cajas"] },
+  { code: "MASCOTAS", terms: ["perro", "gato", "mascota", "pasear", "paseador", "veterinario", "cuidado mascota"] },
+  { code: "ALBANILERIA", terms: ["albanil", "obra", "arreglo", "pared rota", "ladrillo", "cemento", "construccion"] },
+  { code: "CARPINTERIA", terms: ["madera", "mueble", "puerta de madera", "carpintero", "estante", "placard"] },
+  { code: "BELLEZA", terms: ["belleza", "estetica", "maquillaje", "depilacion", "cejas"] },
+  { code: "MANICURIA", terms: ["unas", "manos", "manicura", "manicuria", "esmaltado"] },
+  { code: "PELUQUERIA", terms: ["pelo", "cabello", "corte", "peinado", "peluquero", "peluqueria", "color"] },
+  { code: "MASAJISTA", terms: ["masaje", "contractura", "dolor de espalda", "relajante", "masajista"] }
 ];
 
 function normalizeServiceIntent(value) {
@@ -501,9 +508,20 @@ function seedForm() {
     requestedHoursInput.value = String(state.requestDraft.requestedHours);
   }
 
+  const requestedHoursValue = document.getElementById("requestedHoursValue");
+  if (requestedHoursValue) {
+    requestedHoursValue.textContent = String(state.requestDraft.requestedHours);
+  }
+
   if (requestTypeSelect) {
     requestTypeSelect.value = state.requestDraft.requestType;
   }
+
+  document.querySelectorAll("[data-request-type]").forEach((button) => {
+    const active = button.dataset.requestType === state.requestDraft.requestType;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
 
   if (scheduledForInput) {
     scheduledForInput.value = state.requestDraft.scheduledFor || "";
@@ -1246,6 +1264,11 @@ function bindBasicControls() {
       if (viewButton) {
         const view = viewButton.dataset.clientView || "home";
         setClientView(view);
+        if (viewButton.dataset.action === "support") {
+          closeAllDrawers();
+          toggleDrawer("supportDrawer", true);
+          return;
+        }
         if (viewButton.closest(".drawer")) {
           closeAllDrawers();
         }
@@ -1298,6 +1321,34 @@ function bindBasicControls() {
       if (categoryButton) {
         registerCategoryUsage(categoryButton.dataset.categoryId);
         patchState("ui.selectedCategoryId", categoryButton.dataset.categoryId);
+        return;
+      }
+
+      const requestTypeButton = event.target.closest("[data-request-type]");
+      if (requestTypeButton) {
+        const select = document.getElementById("requestTypeSelect");
+        if (select) {
+          select.value = requestTypeButton.dataset.requestType || "IMMEDIATE";
+        }
+        syncDraftFromForm();
+        updateScheduledVisibility();
+        return;
+      }
+
+      const hoursButton = event.target.closest("[data-hours-step]");
+      if (hoursButton) {
+        const input = document.getElementById("requestedHoursInput");
+        const current = parseNumberOrFallback(input?.value, state.requestDraft.requestedHours || 2);
+        const min = parseNumberOrFallback(input?.min, 1);
+        const max = parseNumberOrFallback(input?.max, 8);
+        const step = parseNumberOrFallback(hoursButton.dataset.hoursStep, 0);
+        const next = Math.min(max, Math.max(min, current + step));
+
+        if (input) {
+          input.value = String(next);
+        }
+
+        syncDraftFromForm();
         return;
       }
 
