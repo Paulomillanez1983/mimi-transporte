@@ -2122,3 +2122,155 @@ body.services-login-mode #servicesLoginBtnArrow {
     grid-column:3 !important;
   }
 }
+
+/* =========================================================
+   FIX DEFINITIVO ZIP - clarity card + footer mobile
+   Este bloque va al FINAL del archivo y pisa reglas anteriores.
+   ========================================================= */
+
+.clarity-visual-image,
+.clarity-visual-image .clarity-card-img{
+  box-sizing:border-box !important;
+}
+
+.clarity-card-img{
+  display:block !important;
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  object-fit:contain !important;
+  object-position:center center !important;
+  border-radius:18px !important;
+}
+
+.clarity-visual-image{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  overflow:hidden !important;
+}
+
+.support-icon svg{
+  width:20px !important;
+  height:20px !important;
+}
+
+.footer-pro{
+  display:grid !important;
+  grid-template-columns:auto auto 1fr auto !important;
+  align-items:center !important;
+}
+
+.footer-support{
+  display:flex !important;
+  align-items:center !important;
+}
+
+@media (max-width:900px){
+  .clarity-card{
+    display:block !important;
+    min-height:0 !important;
+    height:auto !important;
+    padding:0 !important;
+    margin:0 10px 16px !important;
+    overflow:hidden !important;
+    border-radius:22px !important;
+  }
+
+  .clarity-shield,
+  .clarity-copy{
+    display:none !important;
+  }
+
+  .clarity-visual-image{
+    width:100% !important;
+    height:auto !important;
+    aspect-ratio:16 / 9 !important;
+    border-radius:22px !important;
+  }
+
+  .clarity-card-img{
+    width:100% !important;
+    height:100% !important;
+    max-width:none !important;
+    object-fit:contain !important;
+    object-position:center center !important;
+  }
+
+  .footer-pro{
+    grid-template-columns:auto 1fr auto !important;
+    gap:10px !important;
+  }
+
+  .footer-brand{
+    grid-column:1 !important;
+  }
+
+  .footer-sep{
+    display:none !important;
+  }
+
+  .footer-copy{
+    grid-column:2 !important;
+    margin-right:0 !important;
+  }
+
+  .footer-support{
+    grid-column:1 / 3 !important;
+    order:3 !important;
+    min-height:46px !important;
+    padding:8px 11px !important;
+    max-width:none !important;
+  }
+
+  .install-app-btn{
+    grid-column:3 !important;
+    order:4 !important;
+    margin-left:0 !important;
+  }
+
+  .footer-trust-line{
+    grid-column:1 / -1 !important;
+    order:5 !important;
+  }
+}
+
+@media (max-width:430px){
+  .clarity-card{
+    margin:0 8px 14px !important;
+  }
+
+  .clarity-visual-image{
+    aspect-ratio:16 / 9 !important;
+    min-height:0 !important;
+    height:auto !important;
+  }
+
+  .clarity-card-img{
+    object-fit:contain !important;
+  }
+
+  .footer-pro{
+    grid-template-columns:auto 1fr auto !important;
+    padding:16px 14px !important;
+    gap:9px !important;
+  }
+
+  .footer-support{
+    display:flex !important;
+    grid-column:1 / 3 !important;
+    min-height:44px !important;
+    padding:8px 10px !important;
+  }
+
+  .support-icon{
+    width:30px !important;
+    height:30px !important;
+  }
+
+  .install-app-btn{
+    grid-column:3 !important;
+    min-height:48px !important;
+    padding:10px 14px !important;
+  }
+}
