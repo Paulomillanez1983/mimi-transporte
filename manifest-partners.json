@@ -1,0 +1,35 @@
+{
+  "id": "/partners",
+  "name": "MIMI Partners",
+  "short_name": "MIMI Partners",
+  "description": "App para choferes y prestadores independientes de MIMI.",
+  "start_url": "/hub-operadores",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait",
+  "lang": "es-AR",
+  "categories": [
+    "business",
+    "productivity",
+    "travel"
+  ],
+  "icons": [
+    {
+      "src": "/assets/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
