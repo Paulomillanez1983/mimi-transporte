@@ -2077,3 +2077,48 @@ body.services-login-mode #servicesLoginBtnArrow {
     padding:10px 14px;
   }
 }
+/* FIX FINAL compact clarity card */
+@media (max-width:430px){
+  .clarity-card{
+    height:96px !important;
+    min-height:96px !important;
+    padding:0 !important;
+    margin:0 8px 14px !important;
+    overflow:hidden !important;
+  }
+
+  .clarity-visual-image{
+    width:100% !important;
+    height:100% !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    overflow:hidden !important;
+  }
+
+  .clarity-card-img{
+    width:100% !important;
+    height:100% !important;
+    object-fit:contain !important;
+    object-position:center !important;
+    border-radius:18px !important;
+  }
+
+  .footer-pro{
+    display:grid !important;
+    grid-template-columns:auto 1fr auto !important;
+    align-items:center !important;
+    gap:10px !important;
+  }
+
+  .footer-support{
+    display:flex !important;
+    grid-column:2 !important;
+    min-height:46px !important;
+    padding:8px 10px !important;
+  }
+
+  .install-app-btn{
+    grid-column:3 !important;
+  }
+}
