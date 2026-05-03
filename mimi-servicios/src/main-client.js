@@ -445,6 +445,40 @@ function syncDraftFromForm() {
   );
 }
 
+
+function setRequestTypeFromButton(value) {
+  const safeType = value === "SCHEDULED" ? "SCHEDULED" : "IMMEDIATE";
+  const select = document.getElementById("requestTypeSelect");
+
+  if (select) {
+    select.value = safeType;
+  }
+
+  patchState("requestDraft.requestType", safeType);
+  updateScheduledVisibility();
+  seedForm();
+
+  if (safeType === "SCHEDULED") {
+    document.getElementById("scheduledForInput")?.focus?.();
+  }
+}
+
+function changeRequestedHours(stepValue) {
+  const input = document.getElementById("requestedHoursInput");
+  const current = parseNumberOrFallback(input?.value, state.requestDraft.requestedHours || 2);
+  const min = parseNumberOrFallback(input?.min, 1);
+  const max = parseNumberOrFallback(input?.max, 8);
+  const step = parseNumberOrFallback(stepValue, 0);
+  const next = Math.min(max, Math.max(min, current + step));
+
+  if (input) {
+    input.value = String(next);
+  }
+
+  patchState("requestDraft.requestedHours", next);
+  seedForm();
+}
+
 function normalizeCategoryForMerge(category) {
   if (!category) return null;
 
@@ -1145,6 +1179,26 @@ function bindBasicControls() {
     }
   });
 
+  document.getElementById("userSessionCard")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    closeAllDrawers();
+    toggleDrawer("accountDrawer", true);
+  });
+
+  document.querySelectorAll("[data-request-type]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      setRequestTypeFromButton(button.dataset.requestType);
+    });
+  });
+
+  document.querySelectorAll("[data-hours-step]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      changeRequestedHours(button.dataset.hoursStep);
+    });
+  });
+
   document.getElementById("enterServicesHub")?.addEventListener("click", () => {
     patchState("ui.appEntered", true);
   });
@@ -1364,29 +1418,15 @@ function bindBasicControls() {
 
       const requestTypeButton = event.target.closest("[data-request-type]");
       if (requestTypeButton) {
-        const select = document.getElementById("requestTypeSelect");
-        if (select) {
-          select.value = requestTypeButton.dataset.requestType || "IMMEDIATE";
-        }
-        syncDraftFromForm();
-        updateScheduledVisibility();
+        event.preventDefault();
+        setRequestTypeFromButton(requestTypeButton.dataset.requestType);
         return;
       }
 
       const hoursButton = event.target.closest("[data-hours-step]");
       if (hoursButton) {
-        const input = document.getElementById("requestedHoursInput");
-        const current = parseNumberOrFallback(input?.value, state.requestDraft.requestedHours || 2);
-        const min = parseNumberOrFallback(input?.min, 1);
-        const max = parseNumberOrFallback(input?.max, 8);
-        const step = parseNumberOrFallback(hoursButton.dataset.hoursStep, 0);
-        const next = Math.min(max, Math.max(min, current + step));
-
-        if (input) {
-          input.value = String(next);
-        }
-
-        syncDraftFromForm();
+        event.preventDefault();
+        changeRequestedHours(hoursButton.dataset.hoursStep);
         return;
       }
 
