@@ -19,11 +19,23 @@
       "destination": "/mimi-servicios/prestador.html"
     },
     {
+      "source": "/prestador/(.*)",
+      "destination": "/mimi-servicios/prestador.html"
+    },
+    {
       "source": "/servicios",
       "destination": "/mimi-servicios/cliente.html"
     },
     {
+      "source": "/servicios/(.*)",
+      "destination": "/mimi-servicios/cliente.html"
+    },
+    {
       "source": "/prestador-servicios",
+      "destination": "/mimi-servicios/prestador.html"
+    },
+    {
+      "source": "/prestador-servicios/(.*)",
       "destination": "/mimi-servicios/prestador.html"
     },
     {
