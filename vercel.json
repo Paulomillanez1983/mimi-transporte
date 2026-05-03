@@ -15,11 +15,15 @@
       "destination": "/hub-clientes.html"
     },
     {
+      "source": "/prestador",
+      "destination": "/hub-clientes.html"
+    },
+    {
       "source": "/servicios",
       "destination": "/mimi-servicios/cliente.html"
     },
     {
-      "source": "/prestador",
+      "source": "/prestador-servicios",
       "destination": "/mimi-servicios/prestador.html"
     },
     {
