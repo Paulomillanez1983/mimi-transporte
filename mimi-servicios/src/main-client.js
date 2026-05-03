@@ -1861,13 +1861,13 @@ async function init() {
   initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
 
 // Service Worker desactivado temporalmente en Cliente.
-// Evita error 404 hasta crear el SW correcto en /mimi-servicios/sw.js.
+// Evita error 404 hasta usar el SW real en /mimi-servicios/sw-2026.js.
 // Cuando exista el archivo, cambiar CLIENT_SW_ENABLED a true.
 const CLIENT_SW_ENABLED = false;
 
 if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
   navigator.serviceWorker
-    .register("./sw.js")
+    .register("./sw-2026.js")
     .catch((err) => {
       console.warn("[MIMI Cliente] Service Worker no registrado:", err);
     });
