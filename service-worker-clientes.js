@@ -27,9 +27,9 @@ const APP_SHELL = [
   "/assets/auto-mimicar-safe.png",
 
   // personas reales (card inferior)
-  "/assets/people/driver-real.webp",
-  "/assets/people/client-real.webp",
-
+"/mimi-servicios/assets/ui/clarity-card-compact.png",
+"/mimi-servicios/assets/people/driver-real.webp",
+"/mimi-servicios/assets/people/client-real.webp",
   // icons PWA
   "/assets/icons/icon-192x192.png",
   "/assets/icons/icon-512x512.png"
