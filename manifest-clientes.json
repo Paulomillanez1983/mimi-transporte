@@ -1,15 +1,23 @@
 {
-  "id": "/hub-clientes",
-  "name": "MIMI Clientes",
-  "short_name": "MIMI",
-  "description": "Hub de clientes MIMI para coordinar viajes y servicios.",
-  "start_url": "/hub-clientes.html",
+  "id": "/clientes",
+  "name": "MIMI Go",
+  "short_name": "MIMI Go",
+  "description": "App de clientes MIMI Go para solicitar viajes y servicios.",
+  "start_url": "/hub-clientes",
   "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
   "background_color": "#020617",
   "theme_color": "#020617",
   "orientation": "portrait",
   "lang": "es-AR",
+  "categories": [
+    "travel",
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "/assets/icons/icon-192x192.png",
