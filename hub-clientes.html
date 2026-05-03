@@ -7,7 +7,7 @@
   <title>MIMI Clientes | Coordiná viajes y servicios con respaldo digital</title>
   <meta name="description" content="Entrá al hub de clientes MIMI y coordiná viajes y servicios con más claridad, seguimiento y respaldo digital.">
   <meta name="theme-color" content="#020617">
-  <link rel="canonical" href="https://mimi-transporte.vercel.app/cliente">
+  <link rel="canonical" href="https://mimi-transporte.vercel.app/hub-clientes">
 
   <!-- Social Preview / Open Graph -->
   <meta property="og:type" content="website">
@@ -15,7 +15,7 @@
   <meta property="og:locale" content="es_AR">
   <meta property="og:title" content="MIMI Clientes | Coordiná viajes y servicios con respaldo digital">
   <meta property="og:description" content="Entrá al hub de clientes MIMI y coordiná viajes y servicios con más claridad, seguimiento y respaldo digital.">
-  <meta property="og:url" content="https://mimi-transporte.vercel.app/cliente">
+  <meta property="og:url" content="https://mimi-transporte.vercel.app/hub-clientes">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -287,7 +287,7 @@
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register("./service-worker-clientes.js", { scope: "./" })
+        .register("/service-worker-clientes.js", { scope: "/" })
         .then((reg) => console.log("SW Clientes registrado:", reg.scope))
         .catch((err) => console.warn("SW Clientes error:", err));
     });
