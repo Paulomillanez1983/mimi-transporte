@@ -1,26 +1,32 @@
 {
-  "id": "/hub-operadores",
-  "name": "MIMI Operadores",
-  "short_name": "MIMI",
-  "description": "Hub de acceso para conductores y prestadores MIMI.",
-  "start_url": "/hub-operadores.html",
+  "id": "/clientes",
+  "name": "MIMI Go",
+  "short_name": "MIMI Go",
+  "description": "App de clientes MIMI Go para solicitar viajes y servicios.",
+  "start_url": "/hub-clientes",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen"],
+  "display_override": [
+    "standalone"
+  ],
   "background_color": "#020617",
   "theme_color": "#020617",
   "orientation": "portrait",
   "lang": "es-AR",
-  "categories": ["business", "productivity", "travel"],
+  "categories": [
+    "travel",
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
-      "src": "assets/icons/icon-192x192.png",
+      "src": "/assets/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-512x512.png",
+      "src": "/assets/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
