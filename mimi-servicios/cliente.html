@@ -49,13 +49,11 @@
 <body data-client-view="home">
   <div class="app-shell">
     <header class="client-header" role="banner">
-      <button class="hamburger-button" type="button" aria-label="Abrir menu">
-        <span></span><span></span><span></span>
-      </button>
+      <a class="hub-back-link" href="../hub-clientes.html" aria-label="Volver al hub de clientes">Hub</a>
 
-      <div class="brand-lockup" aria-label="MIMI Go">
-        <div class="brand-mark">M</div>
-        <strong>MIMI <span>Go</span></strong>
+      <div class="brand-lockup" aria-label="MIMIGo Servicios">
+        <div class="brand-mark">S</div>
+        <strong>MIMIGo <span>Servicios</span></strong>
       </div>
 
       <div class="header-actions">
@@ -86,14 +84,23 @@
         <button class="login-pill" id="authPrimaryButton" data-auth-action="login" type="button">
           Ingresar
         </button>
-        <div class="user-session-card" id="userSessionCard" hidden>
+        <button
+          class="user-session-card"
+          id="userSessionCard"
+          data-action="account"
+          type="button"
+          aria-label="Abrir cuenta"
+          aria-controls="accountDrawer"
+          aria-expanded="false"
+          hidden
+        >
           <img id="userAvatarImage" alt="" referrerpolicy="no-referrer">
           <div>
             <strong id="userSessionName">Cliente</strong>
             <span id="userSessionEmail"></span>
           </div>
-          <button id="authSecondaryButton" type="button">Salir</button>
-        </div>
+          <span class="session-menu-lines" aria-hidden="true"><i></i><i></i><i></i></span>
+        </button>
       </div>
     </header>
 
@@ -336,6 +343,35 @@
             <button class="btn-primary" type="submit">Enviar consulta</button>
           </form>
           <div class="support-thread" id="supportThread" aria-live="polite"></div>
+        </div>
+      </div>
+    </aside>
+
+    <aside class="drawer" id="accountDrawer" aria-hidden="true" aria-labelledby="accountDrawerTitle" inert>
+      <div class="drawer-header">
+        <h3 id="accountDrawerTitle">Tu cuenta</h3>
+        <button class="icon-button" type="button" data-close-drawer="accountDrawer" aria-label="Cerrar cuenta">x</button>
+      </div>
+      <div class="drawer-body account-drawer-body">
+        <article class="account-profile-card">
+          <img id="accountDrawerAvatar" alt="" referrerpolicy="no-referrer">
+          <div>
+            <strong id="accountDrawerName">Cliente</strong>
+            <span id="accountDrawerEmail">Sesion activa</span>
+          </div>
+        </article>
+
+        <article class="account-menu-card">
+          <span class="eyebrow">Ultimo movimiento</span>
+          <strong id="accountLastServiceTitle">Todavia no tenes servicios recientes</strong>
+          <small id="accountLastServiceMeta">Cuando contrates uno, aparece aca.</small>
+        </article>
+
+        <div class="account-actions-grid">
+          <button type="button" data-client-view="services">Buscar servicios</button>
+          <button type="button" data-client-view="providers">Ver prestadores</button>
+          <button type="button" data-action="support">Soporte</button>
+          <button id="authSecondaryButton" class="danger-action" type="button">Salir</button>
         </div>
       </div>
     </aside>
