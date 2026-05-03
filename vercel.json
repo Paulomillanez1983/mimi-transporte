@@ -3,6 +3,14 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/hub-clientes.html"
+    },
+    {
+      "source": "/hub-clientes",
+      "destination": "/hub-clientes.html"
+    },
+    {
       "source": "/cliente",
       "destination": "/hub-clientes.html"
     },
@@ -34,6 +42,33 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=86400, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/mimi-servicios/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/mimi-servicios/sw-2026.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/mimi-servicios/manifest.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
         }
       ]
     }
