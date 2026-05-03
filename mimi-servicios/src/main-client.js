@@ -275,6 +275,24 @@ function normalizeAuthError(error, fallbackMessage) {
   return error?.message || fallbackMessage;
 }
 
+
+let mimiBackStateReady = false;
+let suppressDrawerHistory = false;
+
+function hasOpenDrawer() {
+  return Boolean(document.querySelector(".drawer.is-open"));
+}
+
+function ensureMimiBackState() {
+  if (mimiBackStateReady) return;
+  try {
+    window.history.replaceState({ ...(window.history.state || {}), mimiClient: true }, "");
+    mimiBackStateReady = true;
+  } catch {
+    mimiBackStateReady = true;
+  }
+}
+
 function toggleDrawer(id, force) {
   const drawer = document.getElementById(id);
   if (!drawer) return false;
@@ -316,6 +334,15 @@ function toggleDrawer(id, force) {
 
   if (open) {
     drawer.removeAttribute("inert");
+
+    if (!suppressDrawerHistory) {
+      ensureMimiBackState();
+      try {
+        window.history.pushState({ mimiClient: true, drawerId: id }, "");
+      } catch {
+        // Si el navegador no permite manipular history, el drawer igual abre.
+      }
+    }
   } else {
     drawer.setAttribute("inert", "");
   }
@@ -1161,7 +1188,81 @@ async function handlePaymentAction(action) {
   }
 }
 
+
+function startCategoryPlaceholderDemo() {
+  const input = document.getElementById("categorySearchInput");
+  if (!input || input.dataset.typewriterReady === "true") return;
+
+  input.dataset.typewriterReady = "true";
+
+  const examples = String(input.dataset.placeholderExamples || "")
+    .split("|")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const demoExamples = [
+    "Necesito ayuda para una mudanza",
+    "Mi computadora no funciona",
+    ...examples
+  ];
+
+  const uniqueExamples = [...new Set(demoExamples)].slice(0, 8);
+  if (!uniqueExamples.length) return;
+
+  let exampleIndex = 0;
+  let charIndex = 0;
+  let deleting = false;
+
+  const tick = () => {
+    if (document.activeElement === input || input.value.trim()) {
+      window.setTimeout(tick, 900);
+      return;
+    }
+
+    const text = uniqueExamples[exampleIndex] || "";
+    input.placeholder = text.slice(0, charIndex) || "Contanos... ¿qué te pasó?";
+
+    if (!deleting && charIndex < text.length) {
+      charIndex += 1;
+      window.setTimeout(tick, 58);
+      return;
+    }
+
+    if (!deleting && charIndex >= text.length) {
+      deleting = true;
+      window.setTimeout(tick, 1500);
+      return;
+    }
+
+    if (deleting && charIndex > 0) {
+      charIndex -= 1;
+      window.setTimeout(tick, 28);
+      return;
+    }
+
+    deleting = false;
+    exampleIndex = (exampleIndex + 1) % uniqueExamples.length;
+    window.setTimeout(tick, 360);
+  };
+
+  tick();
+}
+
 function bindBasicControls() {
+  ensureMimiBackState();
+  startCategoryPlaceholderDemo();
+
+  window.addEventListener("popstate", () => {
+    if (hasOpenDrawer()) {
+      suppressDrawerHistory = true;
+      closeAllDrawers();
+      suppressDrawerHistory = false;
+      return;
+    }
+
+    setClientView("home", { behavior: "auto" });
+  });
+
   document.getElementById("authPrimaryButton")?.addEventListener("click", async () => {
     try {
       await handleAuthPrimary();
@@ -1220,7 +1321,9 @@ function bindBasicControls() {
   });
 
   document.querySelectorAll("[data-close-drawer]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       toggleDrawer(button.dataset.closeDrawer, false);
     });
   });
@@ -1352,6 +1455,22 @@ function bindBasicControls() {
 
   document.querySelector(".app-shell")?.addEventListener("click", async (event) => {
     try {
+      const closeDrawerButton = event.target.closest("[data-close-drawer]");
+      if (closeDrawerButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleDrawer(closeDrawerButton.dataset.closeDrawer, false);
+        return;
+      }
+
+      const authLogoutButton = event.target.closest("#authSecondaryButton");
+      if (authLogoutButton) {
+        event.preventDefault();
+        await signOut();
+        window.location.reload();
+        return;
+      }
+
       const viewButton = event.target.closest("[data-client-view]");
       if (viewButton) {
         const view = viewButton.dataset.clientView || "home";
