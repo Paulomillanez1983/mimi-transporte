@@ -207,7 +207,7 @@ function conversationSecondary(item) {
     String(item?.subject || item?.asunto || "").trim()
   ].filter(Boolean);
 
-  return parts.join(" Â· ");
+  return parts.join(" · ");
 }
 function normalizeConversation(item) {
   if (!item || typeof item !== "object") return null;
@@ -294,7 +294,7 @@ function updateSupportUIState() {
 
     btn.disabled = false;
     btn.innerHTML = `
-      <span class="support-utility-btn-icon" aria-hidden="true">ðŸ””</span>
+      <span class="support-utility-btn-icon" aria-hidden="true"></span>
       <span class="support-utility-btn-text">Activar alertas</span>
     `;
   };
@@ -317,11 +317,11 @@ function updateSupportUIState() {
 
   if (setupStatus) {
     if (enabled) {
-      setupStatus.textContent = "Ya tenÃ©s activadas las alertas de soporte.";
+      setupStatus.textContent = "Ya tenés activadas las alertas de soporte.";
     } else if (permission === "denied") {
-      setupStatus.textContent = "Las alertas estÃ¡n bloqueadas en el navegador.";
+      setupStatus.textContent = "Las alertas están bloqueadas en el navegador.";
     } else {
-      setupStatus.textContent = "Las alertas estÃ¡n desactivadas.";
+      setupStatus.textContent = "Las alertas están desactivadas.";
     }
   }
 }
@@ -641,7 +641,7 @@ if (!current) {
       roleLabel(current.role),
       statusLabel(current.status),
       formatDateTime(current.updated_at)
-    ].filter(Boolean).join(" Â· ");
+    ].filter(Boolean).join(" · ");
   }
 
   const msgList = Array.isArray(current.messages) ? current.messages : [];
@@ -673,7 +673,7 @@ if (!current) {
               ${getMessageText(msg) ? `<div>${escapeHtml(getMessageText(msg))}</div>` : ""}
               ${attachmentsHtml}
               <div class="support-message-meta">
-                ${escapeHtml(roleLabel(role))} Â· ${formatTime(msg.created_at)}
+                ${escapeHtml(roleLabel(role))} · ${formatTime(msg.created_at)}
               </div>
             </div>
           </div>
@@ -752,7 +752,7 @@ async function createConversationIfNeeded(initialMessage) {
 
   const user = await getCurrentUser();
   const subject = initialMessage
-    ? `Consulta chofer Â· ${new Date().toLocaleDateString("es-AR")}`
+    ? `Consulta chofer · ${new Date().toLocaleDateString("es-AR")}`
     : "Consulta general chofer";
 
   const { data, error } = await supabaseService.client

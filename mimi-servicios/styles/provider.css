@@ -2259,8 +2259,8 @@ body {
 /* ==========================================================
    MIMI SERVICIOS - PROVIDER CSS FINAL MOBILE PRO 2026
    Mapa visible + capas correctas + onboarding compacto
-   CÃ¡mara real estable para Android/iOS/PWA
-   Pegar al final si no reemplazÃ¡s el archivo completo.
+   Cámara real estable para Android/iOS/PWA
+   Pegar al final si no reemplazás el archivo completo.
    ========================================================== */
 
 :root {
@@ -2289,7 +2289,7 @@ body {
   --mimi-camera-z: 9999;
 }
 
-/* ---------- Base estable para celulares con barras dinÃ¡micas ---------- */
+/* ---------- Base estable para celulares con barras dinámicas ---------- */
 
 html {
   width: 100%;
@@ -2330,7 +2330,7 @@ body {
   isolation: isolate;
 }
 
-/* ---------- Mapa: visible detrÃ¡s de la UI ---------- */
+/* ---------- Mapa: visible detrás de la UI ---------- */
 
 .map-background {
   position: fixed !important;
@@ -2465,7 +2465,7 @@ body {
   flex: 0 0 auto;
 }
 
-/* ---------- BotÃ³n online compacto ---------- */
+/* ---------- Botón online compacto ---------- */
 
 .online-button-container {
   top: 50%;
@@ -2529,7 +2529,7 @@ body {
   font-size: clamp(0.72rem, 3vw, 0.82rem) !important;
 }
 
-/* ---------- Modal verificaciÃ³n compacto ---------- */
+/* ---------- Modal verificación compacto ---------- */
 
 .modal-overlay {
   align-items: flex-end !important;
@@ -2635,7 +2635,7 @@ body {
   font-size: clamp(0.84rem, 3.6vw, 0.96rem) !important;
 }
 
-/* ---------- CÃ¡mara real: compacta para celulares chicos ---------- */
+/* ---------- Cámara real: compacta para celulares chicos ---------- */
 
 .camera-capture-modal {
   position: fixed !important;
@@ -3036,7 +3036,7 @@ body {
   }
 }
 
-/* ---------- Desktop/tablet conserva estÃ©tica ---------- */
+/* ---------- Desktop/tablet conserva estética ---------- */
 
 @media (min-width: 768px) {
   .bottom-sheet {
@@ -7182,8 +7182,8 @@ body {
 /* ==========================================================
    MIMI SERVICIOS - PROVIDER CSS FINAL MOBILE PRO 2026
    Mapa visible + capas correctas + onboarding compacto
-   CÃ¡mara real estable para Android/iOS/PWA
-   Pegar al final si no reemplazÃ¡s el archivo completo.
+   Cámara real estable para Android/iOS/PWA
+   Pegar al final si no reemplazás el archivo completo.
    ========================================================== */
 
 :root {
@@ -7212,7 +7212,7 @@ body {
   --mimi-camera-z: 9999;
 }
 
-/* ---------- Base estable para celulares con barras dinÃ¡micas ---------- */
+/* ---------- Base estable para celulares con barras dinámicas ---------- */
 
 html {
   width: 100%;
@@ -7253,7 +7253,7 @@ body {
   isolation: isolate;
 }
 
-/* ---------- Mapa: visible detrÃ¡s de la UI ---------- */
+/* ---------- Mapa: visible detrás de la UI ---------- */
 
 .map-background {
   position: fixed !important;
@@ -7388,7 +7388,7 @@ body {
   flex: 0 0 auto;
 }
 
-/* ---------- BotÃ³n online compacto ---------- */
+/* ---------- Botón online compacto ---------- */
 
 .online-button-container {
   top: 50%;
@@ -7452,7 +7452,7 @@ body {
   font-size: clamp(0.72rem, 3vw, 0.82rem) !important;
 }
 
-/* ---------- Modal verificaciÃ³n compacto ---------- */
+/* ---------- Modal verificación compacto ---------- */
 
 .modal-overlay {
   align-items: flex-end !important;
@@ -7558,7 +7558,7 @@ body {
   font-size: clamp(0.84rem, 3.6vw, 0.96rem) !important;
 }
 
-/* ---------- CÃ¡mara real: compacta para celulares chicos ---------- */
+/* ---------- Cámara real: compacta para celulares chicos ---------- */
 
 .camera-capture-modal {
   position: fixed !important;
@@ -7959,7 +7959,7 @@ body {
   }
 }
 
-/* ---------- Desktop/tablet conserva estÃ©tica ---------- */
+/* ---------- Desktop/tablet conserva estética ---------- */
 
 @media (min-width: 768px) {
   .bottom-sheet {

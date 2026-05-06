@@ -534,18 +534,18 @@ function renderCategories(state) {
   if (intentAssist) {
     if (assistCategory) {
       const sourceLabel = intentCategory
-        ? "IA MIMI encontró"
+        ? "MIMI interpretó tu solicitud y detectó"
         : guideCategory
-          ? "Guía MIMI sugiere"
+          ? "MIMI sugiere revisar"
           : "Servicio elegido";
       intentAssist.innerHTML = `
         <strong>${escapeHtml(sourceLabel)} ${escapeHtml(assistCategory.name)}</strong>
-        <span>${escapeHtml(pricingModelLabel(assistCategory))} según configuración del prestador.</span>
+        <span>Vamos a buscar prestadores compatibles. ${escapeHtml(pricingModelLabel(assistCategory))} según configuración del prestador.</span>
       `;
     } else {
       intentAssist.innerHTML = `
-        <strong>Contanos qué pasó</strong>
-        <span>Ejemplos: se rompió un caño, quiero pintar, cortar pasto, necesito una enfermera.</span>
+        <strong>Contanos qué necesitás resolver</strong>
+        <span>MIMI interpreta tu solicitud y la conecta con prestadores compatibles.</span>
       `;
     }
   }
@@ -566,7 +566,7 @@ function renderCategories(state) {
             <b>${escapeHtml(String(intentConfidence))}% coincidencia</b>
             <i>${escapeHtml(pricingModelLabel(intentCategory))}</i>
           </span>
-          <span class="ai-intent-action">Usar este servicio →</span>
+          <span class="ai-intent-action">Usar este servicio -></span>
         </button>
       `
       : "",
