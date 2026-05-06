@@ -53,6 +53,8 @@ const NON_HOURLY_CATEGORY_MODELS = {
   GOMERIA_MOVIL: "BASE_VISIT",
   MECANICA_MOVIL: "BASE_VISIT",
   HERRERIA: "QUOTE",
+  ABOGACIA: "QUOTE",
+  CONTABILIDAD: "QUOTE",
   MUDANZAS: "QUOTE",
   JARDINERIA: "SQUARE_METER",
   PINTURA: "SQUARE_METER"
@@ -70,6 +72,12 @@ const INTENT_CATEGORY_RULES = [
   { code: "CUIDADO_ADULTOS", terms: ["anciano", "adulto mayor", "cuidador", "acompanante", "familiar enfermo", "cuidar adulto", "abuelo", "abuela"] },
   { code: "CUIDADO_NINOS", terms: ["nino", "nina", "ninera", "chico", "cuidar chico", "cuidar nene", "bebes", "bebe", "hijo", "hija"] },
   { code: "ENFERMERIA", terms: ["enfermero", "enfermera", "curacion", "inyeccion", "salud", "medicacion", "familiar enfermo", "postoperatorio", "control"] },
+  { code: "PSICOLOGIA", terms: ["psicologo", "psicologa", "psicologia", "terapia", "terapeuta", "ansiedad", "depresion", "panico", "angustia", "salud mental", "necesito hablar", "acompanamiento emocional"] },
+  { code: "NUTRICION", terms: ["nutricionista", "nutricion", "alimentacion", "dieta", "bajar de peso", "subir de peso", "plan alimentario", "comer mejor"] },
+  { code: "KINESIOLOGIA", terms: ["kinesiologo", "kinesiologia", "fisio", "fisioterapia", "rehabilitacion", "dolor muscular", "contractura", "lesion", "movilidad"] },
+  { code: "ABOGACIA", terms: ["abogado", "abogada", "abogacia", "legal", "contrato", "laboral", "despido", "familia", "alquiler", "carta documento"] },
+  { code: "CONTABILIDAD", terms: ["contador", "contadora", "contabilidad", "impuestos", "monotributo", "afip", "facturacion", "balances", "iva"] },
+  { code: "CLASES_PARTICULARES", terms: ["profesor", "profesora", "clases", "apoyo escolar", "matematica", "ingles", "idiomas", "particular", "examen"] },
   { code: "TECNICO_PC", terms: ["pc", "computadora", "notebook", "impresora", "windows", "virus", "no enciende", "tecnico pc"] },
   { code: "TECNOLOGIA", terms: ["wifi", "router", "camara", "smart tv", "internet", "alarma", "domotica", "configurar"] },
   { code: "CERRAJERIA", terms: ["llave", "cerradura", "cerrajero", "puerta", "abrir", "trabo", "candado"] },
@@ -188,6 +196,68 @@ function categoryPricingModel(category) {
   const explicit = category.default_pricing_model || category.pricing_model || category.pricingModel;
   const code = String(category.code || "").toUpperCase();
   return String(explicit || NON_HOURLY_CATEGORY_MODELS[code] || "HOURLY").toUpperCase();
+}
+
+function formatCurrency(value, currencyCode = "ARS") {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: currencyCode || "ARS",
+    maximumFractionDigits: 0
+  }).format(Number(value ?? 0));
+}
+
+function textFromProvider(provider) {
+  return provider?.full_name || provider?.name || "Prestador disponible";
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || "")
+  );
+}
+
+function openRequestConfirmation(provider, pricing) {
+  const overlay = document.getElementById("requestConfirmOverlay");
+  const acceptButton = overlay?.querySelector("[data-confirm-provider='accept']");
+  const cancelButton = overlay?.querySelector("[data-confirm-provider='cancel']");
+
+  if (!overlay || !acceptButton || !cancelButton) {
+    return Promise.resolve(window.confirm("Confirmas enviar la solicitud al prestador seleccionado?"));
+  }
+
+  const selectedCategory = getSelectedCategory();
+  document.getElementById("confirmProviderName").textContent = textFromProvider(provider);
+  document.getElementById("confirmCategoryName").textContent = selectedCategory?.name || "Servicio";
+  document.getElementById("confirmAddress").textContent = state.requestDraft.address || "Direccion pendiente";
+  document.getElementById("confirmTotalPrice").textContent = formatCurrency(
+    pricing?.total_price,
+    pricing?.currency || "ARS"
+  );
+
+  overlay.hidden = false;
+  acceptButton.focus();
+
+  return new Promise((resolve) => {
+    const finish = (confirmed) => {
+      overlay.hidden = true;
+      overlay.removeEventListener("click", onClick);
+      window.removeEventListener("keydown", onKeydown);
+      resolve(confirmed);
+    };
+
+    const onClick = (event) => {
+      const action = event.target.closest("[data-confirm-provider]")?.dataset.confirmProvider;
+      if (action === "accept") finish(true);
+      if (action === "cancel" || event.target === overlay) finish(false);
+    };
+
+    const onKeydown = (event) => {
+      if (event.key === "Escape") finish(false);
+    };
+
+    overlay.addEventListener("click", onClick);
+    window.addEventListener("keydown", onKeydown);
+  });
 }
 
 function selectedCategoryNeedsHours() {
@@ -650,7 +720,9 @@ function rankCategoriesForClient(categories = []) {
     "PINTURA",
     "GASISTA",
     "INSTALACION_AIRE",
-    "CUIDADO_ADULTOS"
+    "CUIDADO_ADULTOS",
+    "PSICOLOGIA",
+    "NUTRICION"
   ];
 
   return [...categories].sort((a, b) => {
@@ -1120,6 +1192,19 @@ async function handleSearchSubmit(event) {
 
   registerCategoryUsage(state.ui.selectedCategoryId);
 
+  if (hasSupabaseEnv() && !isUuid(state.ui.selectedCategoryId)) {
+    const selectedCategory = getSelectedCategory();
+    setState((draft) => {
+      draft.client.providers = [];
+      draft.ui.hasCompletedClientSearch = false;
+      draft.meta.error = null;
+      draft.meta.info = `La categoria ${selectedCategory?.name || "elegida"} esta preparada en la app. Para usarla con prestadores reales, ejecuta docs/services-professional-categories.sql en Supabase.`;
+      draft.meta.lastSearchAt = new Date().toISOString();
+    });
+    setClientView("providers");
+    return;
+  }
+
   const searchButton = document.getElementById("searchProvidersButton");
 
   setButtonLoading(
@@ -1145,8 +1230,8 @@ async function handleSearchSubmit(event) {
       draft.ui.hasCompletedClientSearch = providers.length > 0;
       draft.meta.error = null;
       draft.meta.info = providers.length
-        ? "Prestadores actualizados."
-        : "No encontramos prestadores para este criterio.";
+        ? "Encontramos prestadores compatibles. Revisalos antes de enviar la solicitud."
+        : "No encontramos prestadores disponibles ahora para este criterio.";
       draft.meta.lastSearchAt = new Date().toISOString();
     });
 
@@ -1168,7 +1253,7 @@ async function handleProviderSelection(providerId) {
     (item) => item.provider_id === providerId
   );
 
-  if (!provider) return;
+  if (!provider) return false;
 
   const requestedHours = requestedHoursForCurrentCategory();
   const pricing = await prepareRequestPricing({
@@ -1185,6 +1270,12 @@ async function handleProviderSelection(providerId) {
     throw new Error(
       `No se pudo confirmar el prestador: ${pricing?.reason ?? "pricing_error"}`
     );
+  }
+
+  const confirmed = await openRequestConfirmation(provider, pricing);
+  if (!confirmed) {
+    setInfo("Solicitud no enviada. Podes revisar la categoria, direccion o elegir otro prestador.");
+    return false;
   }
 
   const request = await createRequest({
@@ -1244,6 +1335,7 @@ async function handleProviderSelection(providerId) {
   });
 
   await hydrateLiveContext(request);
+  return true;
 }
 
 async function handleRequestAction(action) {
@@ -1741,8 +1833,8 @@ function bindBasicControls() {
       const selectProvider = event.target.closest("[data-provider-select]");
       if (selectProvider) {
         if (!selectProvider.dataset.providerSelect) return;
-        await handleProviderSelection(selectProvider.dataset.providerSelect);
-        setClientView("services");
+        const created = await handleProviderSelection(selectProvider.dataset.providerSelect);
+        if (created) setClientView("services");
         return;
       }
 

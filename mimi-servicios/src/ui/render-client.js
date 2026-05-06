@@ -30,6 +30,12 @@ const categoryIcons = {
   CUIDADO_ADULTOS: "CA",
   CUIDADO_NINOS: "CN",
   ENFERMERIA: "EN",
+  PSICOLOGIA: "PS",
+  NUTRICION: "NU",
+  KINESIOLOGIA: "KI",
+  ABOGACIA: "AB",
+  CONTABILIDAD: "CO",
+  CLASES_PARTICULARES: "CL",
   JARDINERIA: "JA",
   PINTURA: "PI",
   CERRAJERIA: "CE",
@@ -68,6 +74,12 @@ const guideRules = [
   { code: "INSTALACION_AIRE", terms: ["aire", "split", "acondicionado", "instalar aire"] },
   { code: "CUIDADO_ADULTOS", terms: ["anciano", "adulto mayor", "cuidador", "acompanante"] },
   { code: "CUIDADO_NINOS", terms: ["nino", "nina", "ninera", "chico"] },
+  { code: "PSICOLOGIA", terms: ["psicologo", "psicologa", "terapia", "ansiedad", "emocional", "salud mental"] },
+  { code: "NUTRICION", terms: ["nutricionista", "dieta", "alimentacion", "plan alimentario"] },
+  { code: "KINESIOLOGIA", terms: ["kinesiologo", "fisio", "rehabilitacion", "lesion", "dolor muscular"] },
+  { code: "ABOGACIA", terms: ["abogado", "legal", "contrato", "laboral", "alquiler"] },
+  { code: "CONTABILIDAD", terms: ["contador", "impuestos", "monotributo", "afip", "facturacion"] },
+  { code: "CLASES_PARTICULARES", terms: ["profesor", "clases", "apoyo escolar", "matematica", "ingles"] },
   { code: "TECNICO_PC", terms: ["pc", "computadora", "notebook", "impresora"] },
   { code: "TECNOLOGIA", terms: ["wifi", "router", "camara", "smart tv", "internet"] },
   { code: "CERRAJERIA", terms: ["llave", "cerradura", "puerta"] },
@@ -92,6 +104,8 @@ const nonHourlyCategoryModels = {
   GOMERIA_MOVIL: "BASE_VISIT",
   MECANICA_MOVIL: "BASE_VISIT",
   HERRERIA: "QUOTE",
+  ABOGACIA: "QUOTE",
+  CONTABILIDAD: "QUOTE",
   MUDANZAS: "QUOTE",
   JARDINERIA: "SQUARE_METER",
   PINTURA: "SQUARE_METER"
@@ -278,6 +292,39 @@ function findGuideCategory(categories, query) {
 
   return scored[0]?.category || null;
 }
+
+function selectedCategoryForState(state) {
+  return appConfig.categories.find((category) => category.id === state.ui.selectedCategoryId) ?? null;
+}
+
+function providerMatchReason(provider, category) {
+  if (provider.match_reason) return provider.match_reason;
+  const categoryName = provider.category_name || provider.svc_categories?.name || category?.name || provider.specialty;
+  const parts = [
+    categoryName ? `Coincide con ${categoryName}` : "Coincide con tu solicitud",
+    provider.accepts_immediate !== false ? "disponible ahora" : "puede responder programado",
+    Number(provider.distance_km) ? `${Number(provider.distance_km).toFixed(1)} km` : null
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+function requestStatusDescription(status) {
+  const descriptions = {
+    SEARCHING: "MIMI esta buscando prestadores compatibles con tu solicitud.",
+    PENDING_PROVIDER_RESPONSE: "La solicitud fue enviada y esperamos respuesta del prestador.",
+    PENDING: "La solicitud quedo creada y lista para ser aceptada.",
+    ACCEPTED: "El prestador acepto. Ya podes seguir el avance en tiempo real.",
+    SCHEDULED: "El servicio quedo programado para el horario elegido.",
+    PROVIDER_EN_ROUTE: "El prestador informo que esta en camino.",
+    PROVIDER_ARRIVED: "El prestador marco llegada al punto indicado.",
+    IN_PROGRESS: "El servicio esta en curso.",
+    COMPLETED: "El servicio fue completado.",
+    CANCELLED: "La solicitud fue cancelada."
+  };
+
+  return descriptions[status] || "Seguimos actualizando el estado desde Supabase Realtime.";
+}
+
 function normalizeProvider(provider, index = 0) {
   const providerPrice = Number(provider.provider_price ?? 0);
   const totalPrice = Number(provider.total_price ?? providerPrice);
@@ -285,7 +332,7 @@ function normalizeProvider(provider, index = 0) {
   const score = Number(provider.score ?? Math.max(78, 98 - index * 4));
   const rating = Number(provider.rating ?? 5);
 
-  return {
+  const normalized = {
     ...provider,
     displayName: provider.full_name || provider.name || "Prestador disponible",
     initials: provider.initials || initialsFromName(provider.full_name || provider.name),
@@ -308,6 +355,9 @@ function normalizeProvider(provider, index = 0) {
     x: [52, 38, 65, 47, 72, 30, 80, 22, 60][index % 9],
     y: [44, 56, 35, 62, 58, 42, 48, 30, 70][index % 9]
   };
+
+  normalized.matchReason = providerMatchReason(normalized, null);
+  return normalized;
 }
 
 function starRating(rating) {
@@ -532,20 +582,40 @@ function renderCategories(state) {
   container.classList.toggle("is-expanded", Boolean(query || state.ui.showAllCategories));
 
   if (intentAssist) {
+    const hasQuery = Boolean(query);
+    const stageCategory = assistCategory?.name || "categoria";
+    const searchReady = Boolean(state.requestDraft.address && assistCategory);
+
     if (assistCategory) {
       const sourceLabel = intentCategory
-        ? "MIMI interpretó tu solicitud y detectó"
+        ? "MIMI interpreto tu solicitud y detecto"
         : guideCategory
           ? "MIMI sugiere revisar"
           : "Servicio elegido";
       intentAssist.innerHTML = `
-        <strong>${escapeHtml(sourceLabel)} ${escapeHtml(assistCategory.name)}</strong>
-        <span>Vamos a buscar prestadores compatibles. ${escapeHtml(pricingModelLabel(assistCategory))} según configuración del prestador.</span>
+        <div class="intent-assist-head">
+          <strong>${escapeHtml(sourceLabel)} ${escapeHtml(assistCategory.name)}</strong>
+          <span>${escapeHtml(pricingModelLabel(assistCategory))} segun configuracion del prestador.</span>
+        </div>
+        <div class="intent-steps" aria-label="Analisis de solicitud">
+          <span class="${hasQuery ? "is-done" : "is-active"}">1. Interpretar</span>
+          <span class="${assistCategory ? "is-done" : "is-active"}">2. Categoria</span>
+          <span class="${searchReady ? "is-active" : ""}">3. Buscar compatibles</span>
+        </div>
+        <p>Vamos a buscar prestadores compatibles con ${escapeHtml(stageCategory)}. MIMI conecta la solicitud; el servicio lo realiza cada prestador independiente.</p>
       `;
     } else {
       intentAssist.innerHTML = `
-        <strong>Contanos qué necesitás resolver</strong>
-        <span>MIMI interpreta tu solicitud y la conecta con prestadores compatibles.</span>
+        <div class="intent-assist-head">
+          <strong>Contanos que necesitas resolver</strong>
+          <span>MIMI interpreta la necesidad y sugiere el tipo de prestador.</span>
+        </div>
+        <div class="intent-steps" aria-label="Analisis de solicitud">
+          <span class="is-active">1. Interpretar</span>
+          <span>2. Categoria</span>
+          <span>3. Buscar compatibles</span>
+        </div>
+        <p>Ejemplos: necesito un psicologo, quiero una nutricionista, se rompio un cano, busco una ninera.</p>
       `;
     }
   }
@@ -566,7 +636,7 @@ function renderCategories(state) {
             <b>${escapeHtml(String(intentConfidence))}% coincidencia</b>
             <i>${escapeHtml(pricingModelLabel(intentCategory))}</i>
           </span>
-          <span class="ai-intent-action">Usar este servicio -></span>
+          <span class="ai-intent-action">Usar este servicio</span>
         </button>
       `
       : "",
@@ -618,7 +688,7 @@ function renderCategories(state) {
       : `
       <div class="client-empty-state">
         <strong>Sin resultados</strong>
-        <span>Proba con: se rompio un cano, quiero pintar, cortar pasto o necesito cuidar a alguien.</span>
+        <span>Proba con: necesito un psicologo, nutricionista, se rompio un cano, quiero pintar o necesito cuidar a alguien.</span>
       </div>
     `
   ].join("");
@@ -676,6 +746,7 @@ function renderProviderCard(provider, selectedId) {
       <strong>${escapeHtml(provider.displayName)}</strong>
       <small>${escapeHtml(provider.specialty)}</small>
       ${starRating(provider.rating)}
+      <p class="provider-match-reason">${escapeHtml(provider.matchReason)}</p>
       <div class="provider-card-meta">
         <span><b>${escapeHtml(String(provider.eta))} min</b>${escapeHtml(provider.distance.toFixed(1))} km</span>
         <span><small>desde</small><b>${currency(provider.price, provider.currency)}</b></span>
@@ -699,6 +770,7 @@ function renderProviderRow(provider, selectedId) {
           ${provider.available ? providerStatusBadge(provider) : ""}
         </div>
         <span>${escapeHtml(provider.specialty)}</span>
+        <p class="provider-match-reason">${escapeHtml(provider.matchReason)}</p>
         <div class="provider-row-rating">
           ${starRating(provider.rating)}
           <i></i>
@@ -735,10 +807,15 @@ export function renderProvidersList(state) {
     state.ui.selectedProviderCandidateId ||
     state.client.selectedProvider?.provider_id ||
     null;
+  const selectedCategory = selectedCategoryForState(state);
+  const hasSearched = Boolean(state.meta.lastSearchAt);
+  const selectedCategoryName = selectedCategory?.name || "la categoria elegida";
 
   meta.textContent = providers.length
-    ? `${providers.length} prestadores ordenados por cercania y disponibilidad`
-    : state.meta.info || "Esperando búsqueda";
+    ? `${providers.length} prestadores compatibles ordenados por cercania y disponibilidad`
+    : hasSearched
+      ? `Sin prestadores disponibles para ${selectedCategoryName}`
+      : "Esperando busqueda";
 
   renderRadarMap(providers, selectedId);
 
@@ -756,6 +833,15 @@ export function renderProvidersList(state) {
       `;
   }
 
+  if (carousel && !providers.length) {
+    carousel.innerHTML = `
+      <div class="client-empty-state is-inline">
+        <strong>${hasSearched ? "Sin disponibles ahora" : "Busca para ver cercanos"}</strong>
+        <span>${hasSearched ? `No encontramos prestadores activos para ${escapeHtml(selectedCategoryName)} en este momento.` : "Te vamos a mostrar ETA, precio y reputacion."}</span>
+      </div>
+    `;
+  }
+
   list.innerHTML = providers.length
     ? providers.map((provider) => renderProviderRow(provider, selectedId)).join("")
     : `
@@ -764,6 +850,15 @@ export function renderProvidersList(state) {
         <span>Cuando busques, aparecen opciones con precio, distancia y tiempo estimado.</span>
       </div>
     `;
+
+  if (!providers.length) {
+    list.innerHTML = `
+      <div class="client-empty-state">
+        <strong>${hasSearched ? "No encontramos prestadores disponibles" : "Elegi categoria y completa la direccion"}</strong>
+        <span>${hasSearched ? "Podes ajustar la necesidad, cambiar la zona o intentar mas tarde. MIMI no inventa disponibilidad si el backend no devuelve prestadores compatibles." : "Cuando busques, aparecen opciones con precio, distancia y tiempo estimado."}</span>
+      </div>
+    `;
+  }
 
   renderStickyAction(state, providers);
 }
@@ -823,11 +918,12 @@ export function renderRequestSummary(state) {
     </div>
   `;
 
+  const statusIndex = appConfig.serviceStates.indexOf(request.status);
   timeline.innerHTML = appConfig.serviceStates
-    .map((status) => `
-      <div class="timeline-step ${status === request.status ? "is-active" : ""}">
+    .map((status, index) => `
+      <div class="timeline-step ${status === request.status ? "is-active" : ""} ${statusIndex >= index ? "is-done" : ""}">
         <strong>${escapeHtml(stateLabels[status] ?? status)}</strong>
-        <span>${escapeHtml(status)}</span>
+        <span>${escapeHtml(requestStatusDescription(status))}</span>
       </div>
     `)
     .join("");
@@ -1072,7 +1168,7 @@ function renderMapStatus(state) {
 
   const activeRequest = state.client.activeRequest;
   mapStatus.textContent = activeRequest
-    ? stateLabels[activeRequest.status] ?? activeRequest.status
+    ? `${stateLabels[activeRequest.status] ?? activeRequest.status}: ${requestStatusDescription(activeRequest.status)}`
     : "Mapa en tiempo real";
 }
 

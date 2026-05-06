@@ -111,8 +111,8 @@
       </div>
 
       <section class="hero-text-client" id="clientHero" data-client-screen="home" aria-labelledby="heroTitle">
-        <p>Buenos días, <span id="clientGreetingName">Paulo</span></p>
-        <h1 id="heroTitle">Qué prestador necesitás hoy?</h1>
+        <p>Hola, <span id="clientGreetingName">Paulo</span></p>
+        <h1 id="heroTitle">Contanos qué necesitás resolver</h1>
       </section>
 
       <div
@@ -128,7 +128,7 @@
           <div>
             <span class="eyebrow">Cliente</span>
             <h2>Planificá tu servicio</h2>
-            <p id="authHint">Ingresá con Google para usar solicitudes reales.</p>
+            <p id="authHint">Ingresá con Google para usar solicitudes reales y seguimiento en tiempo real.</p>
           </div>
           <div class="search-card-actions">
             <button class="btn-secondary" id="enterServicesHub" type="button">Entrar</button>
@@ -174,14 +174,14 @@
           <input id="serviceLngInput" name="lng" type="hidden">
 
           <div class="category-section">
-            <div class="section-label section-label-strong">Encontré el prestador</div>
+            <div class="section-label section-label-strong">MIMI AI busca el prestador compatible</div>
             <label class="category-search-field" for="categorySearchInput">
-              <span>Contanos... ¿qué te pasó?</span>
+              <span>Contanos qué necesitás resolver</span>
               <input
                 id="categorySearchInput"
                 type="search"
-                placeholder="Necesito ayuda para una mudanza"
-                data-placeholder-examples="Se me pinchó un caño en la cocina|Quiero pintar la casa|Quiero cortar el pasto|Tengo un familiar enfermo y necesito un enfermero|Necesito una niñera para la tarde|No prende la luz del living|Quiero instalar un aire|Se trabó la cerradura|Necesito ayuda para una mudanza|Mi computadora no funciona"
+                placeholder="Ej: necesito un psicólogo online"
+                data-placeholder-examples="Necesito un psicólogo online|Quiero una nutricionista|Busco un kinesiólogo por una lesión|Necesito un abogado laboral|Necesito un contador para monotributo|Se me pinchó un caño en la cocina|Necesito una niñera para la tarde|Mi computadora no funciona"
                 autocomplete="off"
                 autocapitalize="sentences"
                 autocorrect="off"
@@ -400,6 +400,26 @@
       <button class="btn-primary request-nearest" id="requestNearestButton" type="button" data-provider-select="" disabled>
         Solicitar al mas cercano
       </button>
+    </div>
+
+    <div class="request-confirm-overlay" id="requestConfirmOverlay" hidden>
+      <section class="request-confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="requestConfirmTitle">
+        <div>
+          <span class="eyebrow">Confirmar solicitud</span>
+          <h2 id="requestConfirmTitle">Revisá antes de enviar</h2>
+          <p>MIMI conecta tu solicitud con un prestador independiente. No promete disponibilidad, calidad ni resultado del servicio.</p>
+        </div>
+        <dl class="confirm-summary">
+          <div><dt>Prestador</dt><dd id="confirmProviderName">Prestador</dd></div>
+          <div><dt>Categoría</dt><dd id="confirmCategoryName">Servicio</dd></div>
+          <div><dt>Dirección</dt><dd id="confirmAddress">Pendiente</dd></div>
+          <div><dt>Total estimado</dt><dd id="confirmTotalPrice">$0</dd></div>
+        </dl>
+        <div class="confirm-actions">
+          <button class="btn-secondary" type="button" data-confirm-provider="cancel">Volver</button>
+          <button class="btn-primary" type="button" data-confirm-provider="accept">Enviar solicitud</button>
+        </div>
+      </section>
     </div>
   </div>
 
