@@ -31,7 +31,7 @@ import {
   } from "./services/service-api.js";
 
 
-import { renderProviderDashboard } from "./ui/render-provider.js";
+import { renderProviderScreen } from "./ui/render-provider.js";
 import {
   getSupabaseClient,
   signInWithGoogle
@@ -284,7 +284,7 @@ verificationResultList: document.getElementById("verificationResultList"),
     this.renderStats();
     this.renderServicesAndPricing();
     this.renderSheetSummary();
-    renderProviderDashboard(this.state);
+    renderProviderScreen(this.state);
   }
 
   /**
@@ -1553,6 +1553,11 @@ if (!this.state?.provider.isVerified) {
 
   return;
 }
+if (!this.providerHasPublishedService()) {
+  this.showToast("Primero publica que servicio ofreces y cuanto cobras", "warning");
+  this.openProviderBusinessSetup();
+  return;
+}
   const providerId = this.state?.session?.providerId;
 if (!providerId) {
   this.showToast("Actualizando tu perfil de prestador...", "info");
@@ -1599,6 +1604,12 @@ async handleStatusToggle(status) {
     return;
   }
 
+  if (status === "ONLINE_IDLE" && !this.providerHasPublishedService()) {
+    this.showToast("Primero publica al menos un servicio", "warning");
+    this.openProviderBusinessSetup();
+    return;
+  }
+
   const providerId = this.state?.session?.providerId;
   if (!providerId) {
     this.showToast("No se encontr tu perfil de prestador", "error");
@@ -1626,6 +1637,25 @@ async handleStatusToggle(status) {
   } finally {
     actions.setLoading(false);
   }
+}
+
+providerHasPublishedService() {
+  const offerings = this.state?.provider?.business?.offerings ?? [];
+  return Array.isArray(offerings) && offerings.some((item) => item?.active !== false && item?.title && item?.category_id);
+}
+
+openProviderBusinessSetup() {
+  this.switchTab("pricing");
+  this.setBottomSheetState("expanded");
+
+  setTimeout(() => {
+    const target =
+      document.querySelector("#providerBusinessPanel .provider-offering-card-v2 input[name$=':title']") ??
+      document.getElementById("providerBusinessPanel");
+
+    target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    target?.focus?.({ preventScroll: true });
+  }, 80);
 }
 
 collectProviderBusinessPayload(form) {
@@ -1800,7 +1830,7 @@ async handleProviderBusinessSubmit(event) {
     actions.setLoading(true);
     const workspace = await saveProviderWorkspace(providerId, payload);
     this.applyWorkspaceToState(workspace);
-    renderProviderDashboard(this.state);
+    renderProviderScreen(this.state);
     this.renderServicesAndPricing();
     this.renderSheetSummary();
     this.showToast("Setup comercial guardado", "success");
@@ -1813,6 +1843,11 @@ async handleProviderBusinessSubmit(event) {
 }
 
 async handleProviderBusinessAction(action) {
+  if (action === "focus-offering-editor") {
+    this.openProviderBusinessSetup();
+    return;
+  }
+
   if (action === "refresh-location") {
     this.updateMapToCurrentPosition();
     this.showToast("Ubicacion actualizada", "success");
@@ -1833,7 +1868,7 @@ async handleProviderBusinessAction(action) {
       actions.setLoading(true);
       const workspace = await loadProviderWorkspace(providerId);
       this.applyWorkspaceToState(workspace);
-      renderProviderDashboard(this.state);
+      renderProviderScreen(this.state);
       this.showToast("Panel recargado", "success");
     } catch (err) {
       console.error("[MIMI] Error recargando panel:", err);
@@ -2200,6 +2235,34 @@ if (this.elements.drawerEarnings) {
 renderServicesAndPricing() {
   const categories = this.state?.provider?.categories ?? [];
   const pricing = this.state?.provider?.pricing ?? {};
+  const offerings = this.state?.provider?.business?.offerings ?? [];
+  const primaryOffering = Array.isArray(offerings)
+    ? offerings.find((item) => item?.active !== false) ?? offerings[0] ?? null
+    : null;
+  const money = (value) => {
+    const amount = Number(value ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) return "";
+
+    return `$${amount.toLocaleString("es-AR")}`;
+  };
+  const offeringPrice = (offering) => {
+    if (!offering) return "";
+
+    const model = String(offering.pricing_model ?? "HOURLY").toUpperCase();
+    if (model === "QUOTE" || offering.quote_required) return "A presupuestar";
+    if (model === "UNIT") {
+      const amount = money(offering.unit_price);
+      return amount ? `${amount} / ${offering.unit_name || "sesion"}` : "";
+    }
+    if (model === "FIXED") return money(offering.fixed_price);
+    if (model === "BASE_VISIT") {
+      const amount = money(offering.base_visit_fee);
+      return amount ? `${amount} visita` : "";
+    }
+
+    const amount = money(offering.price_per_hour ?? pricing.hourlyRate);
+    return amount ? `${amount} / hora` : "";
+  };
 
   if (this.elements.servicesChips) {
     this.elements.servicesChips.innerHTML = categories.length
@@ -2216,17 +2279,11 @@ renderServicesAndPricing() {
   }
 
   if (this.elements.basePrice) {
-    this.elements.basePrice.textContent =
-      pricing.basePrice > 0
-        ? `$${Number(pricing.basePrice).toLocaleString("es-AR")}`
-        : "Sin configurar";
+    this.elements.basePrice.textContent = primaryOffering?.title || "Sin configurar";
   }
 
   if (this.elements.hourPrice) {
-    this.elements.hourPrice.textContent =
-      pricing.hourlyRate > 0
-        ? `$${Number(pricing.hourlyRate).toLocaleString("es-AR")}`
-        : "Sin configurar";
+    this.elements.hourPrice.textContent = offeringPrice(primaryOffering) || "Sin configurar";
   }
 
   if (this.elements.jobPrice) {
@@ -2247,6 +2304,10 @@ renderServicesAndPricing() {
 renderSheetSummary() {
   const provider = this.state?.provider ?? {};
   const pricing = provider.pricing ?? {};
+  const offerings = provider.business?.offerings ?? [];
+  const primaryOffering = Array.isArray(offerings)
+    ? offerings.find((item) => item?.active !== false) ?? offerings[0] ?? null
+    : null;
 
   const money = (value) => {
     const amount = Number(value ?? 0);
@@ -2262,12 +2323,21 @@ renderSheetSummary() {
   const basePrice = pricing.basePrice || pricing.hourlyRate || 0;
 
   if (this.elements.sheetBasePrice) {
-    this.elements.sheetBasePrice.textContent = `Base ${money(basePrice)}`;
+    this.elements.sheetBasePrice.textContent = primaryOffering?.title
+      ? primaryOffering.title
+      : `Base ${money(basePrice)}`;
   }
 
   if (this.elements.sheetPricingMode) {
+    const model = String(primaryOffering?.pricing_model ?? "").toUpperCase();
     this.elements.sheetPricingMode.textContent =
-      pricing.mode === "job" ? "Por trabajo" : "Por hora";
+      model === "UNIT"
+        ? `Por ${primaryOffering?.unit_name || "sesion"}`
+        : model === "QUOTE"
+          ? "A presupuestar"
+          : pricing.mode === "job"
+            ? "Por trabajo"
+            : "Por hora";
   }
 
   if (this.elements.sheetUpcomingTime) {
@@ -3311,6 +3381,7 @@ async uploadVerificationFile(documentType, file, input = null) {
 
     const workspace = await loadProviderWorkspace(providerId);
     this.applyWorkspaceToState(workspace);
+    renderProviderScreen(this.state);
     this.renderVerificationStatus();
     this.updateVerificationResultScreen();
 

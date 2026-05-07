@@ -10398,6 +10398,22 @@ body.provider-auth-required .notification-container {
   box-shadow: 0 14px 38px rgba(16, 21, 19, 0.08);
 }
 
+#providerBusinessPanel .provider-business-hero {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #eef8f2;
+  border: 1px solid rgba(8, 131, 72, 0.18);
+}
+
+#providerBusinessPanel .provider-business-hero h3 {
+  margin: 3px 0 5px;
+  color: #101513;
+  font-size: 1.12rem;
+  line-height: 1.15;
+}
+
 #providerBusinessPanel .provider-offering-step {
   display: flex;
   align-items: center;
@@ -10493,6 +10509,10 @@ body.provider-auth-required .notification-container {
 #providerBusinessPanel .provider-action-strip button,
 #providerBusinessPanel .provider-settings-form button {
   min-height: 44px;
+}
+
+.full-width {
+  width: 100%;
 }
 
 #providerBusinessPanel .provider-price-helper {

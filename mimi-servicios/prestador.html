@@ -245,7 +245,7 @@
         <div class="sheet-tabs">
           <button class="tab-btn active" type="button" data-tab="now">Ahora</button>
           <button class="tab-btn" type="button" data-tab="scheduled">Agenda</button>
-          <button class="tab-btn" type="button" data-tab="pricing">Precios</button>
+          <button class="tab-btn" type="button" data-tab="pricing">Servicios</button>
           <button class="tab-btn" type="button" data-tab="account">Cuenta</button>
         </div>
 
@@ -310,21 +310,22 @@
 
         <div class="tab-panel" id="tabPricing">
           <div class="panel-section">
-            <h3 class="section-title">Tu tarifa</h3>
+            <h3 class="section-title">Tus servicios</h3>
             <div class="pricing-card">
               <div class="pricing-row">
-                <span class="pricing-label">Precio base</span>
+                <span class="pricing-label">Servicio principal</span>
                 <span class="pricing-value" id="basePrice">$8.000</span>
               </div>
               <div class="pricing-row">
-                <span class="pricing-label">Por hora</span>
+                <span class="pricing-label">Precio visible</span>
                 <span class="pricing-value" id="hourPrice">$4.000</span>
               </div>
+              <button class="btn-primary full-width" type="button" data-provider-business-action="focus-offering-editor">Configurar servicio</button>
             </div>
           </div>
 
           <div class="panel-section">
-            <h3 class="section-title">Modalidad</h3>
+            <h3 class="section-title">Modalidad visible</h3>
             <div class="mode-selector">
               <label class="mode-option">
                 <input type="radio" name="mode" value="hourly" id="pricingModeHourly" disabled>

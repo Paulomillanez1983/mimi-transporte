@@ -141,3 +141,25 @@ Pruebas:
 - `node qa/audit-routes.js`: OK.
 - `node qa/audit-inline-scripts.js`: OK.
 - `git diff --check`: OK.
+
+## Actualizacion servicios provider 2026-05-07
+
+Correcciones aplicadas:
+- `mimi-servicios/src/main-provider.js`: el panel extendido del prestador ahora renderiza realmente `providerBusinessPanel`; antes la pestana visible quedaba solo con la tarjeta vieja de precio. El prestador no puede ponerse online sin al menos un servicio publicado.
+- `mimi-servicios/prestador.html`: la pestana `Precios` pasa a `Servicios`, muestra servicio principal/precio visible y agrega CTA `Configurar servicio`.
+- `mimi-servicios/src/ui/render-provider.js`: se agrega bloque destacado para crear oficio/profesion como publicacion tipo marketplace.
+- `mimi-servicios/src/services/service-api.js`: las categorias cargan modalidad y requisitos profesionales desde Supabase para soportar servicios online, sesion, matricula y buena conducta.
+- `mimi-servicios/styles/provider.css`: estilos mobile-first para el bloque de creacion de servicios.
+
+Backend verificado:
+- Existen columnas `allowed_service_modes`, `requires_professional_license` y `requires_background_check` en `svc_categories`.
+- RLS permite self read/write en categorias, pricing, disponibilidad, perfil y publicaciones del prestador.
+
+Pruebas:
+- `node --check mimi-servicios/src/main-provider.js`: OK.
+- `node --check mimi-servicios/src/ui/render-provider.js`: OK.
+- `node --check mimi-servicios/src/services/service-api.js`: OK.
+- `node qa/audit-encoding.js`: OK, 0 hallazgos.
+- `node qa/audit-routes.js`: OK.
+- `node qa/audit-inline-scripts.js`: OK.
+- `git diff --check`: OK.

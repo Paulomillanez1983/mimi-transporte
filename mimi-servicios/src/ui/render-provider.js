@@ -1008,6 +1008,14 @@ function renderProviderBusiness(state) {
   container.innerHTML = `
     <section class="provider-stack">
       <form class="summary-card provider-settings-form" id="providerBusinessForm">
+        <section class="provider-inline-section provider-business-hero">
+          <div>
+            <span class="eyebrow">Mis servicios</span>
+            <h3>Publica que vendes en MIMI</h3>
+            <p class="muted">Crea tu oficio o profesion como una publicacion: psicologia online por sesion, kinesiologia a domicilio, manicuria, limpieza, corte de pasto, albanileria o cualquier servicio.</p>
+          </div>
+          <button class="btn-primary" data-provider-business-action="focus-offering-editor" type="button">Crear servicio</button>
+        </section>
         <strong>Tarifas y disponibilidad</strong>
         <p class="muted">Este bloque se alimenta del backend real: pricing por categoría, franjas activas y refresco de ubicación para el mapa.</p>
 
