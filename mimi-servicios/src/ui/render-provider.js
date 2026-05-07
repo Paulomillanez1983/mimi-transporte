@@ -145,6 +145,33 @@ function recommendedDefaultsForCategory(category = {}) {
   };
 }
 
+function providerProfileQuality({ offerings = [], detail = null, categories = [] } = {}) {
+  let score = 0;
+  const tips = [];
+
+  if (offerings.length) score += 35;
+  else tips.push("Publica al menos un servicio concreto.");
+
+  if (categories.length) score += 15;
+  else tips.push("Elegi el rubro donde queres aparecer.");
+
+  if (detail?.public_headline || detail?.bio) score += 15;
+  else tips.push("Agrega un titulo o bio corta.");
+
+  if (detail?.city || detail?.province || detail?.address_text) score += 15;
+  else tips.push("Indica zona de trabajo o ciudad base.");
+
+  if (offerings.some((item) => item.public_summary || item.description)) score += 10;
+  else tips.push("Conta brevemente que incluye tu servicio.");
+
+  if (offerings.some((item) => item.price_per_hour || item.unit_price || item.fixed_price || item.base_visit_fee || item.quote_required)) score += 10;
+  else tips.push("Agrega precio de referencia o marca que requiere presupuesto.");
+
+  const label = score >= 80 ? "Perfil bien cargado" : score >= 45 ? "Perfil basico" : "Perfil incompleto";
+
+  return { score, label, tips: tips.slice(0, 3) };
+}
+
 function categoryRequirementText(category = {}) {
   const items = [];
   if (category.requires_professional_license) items.push("requiere matricula o titulo");
@@ -997,15 +1024,17 @@ function renderProviderBusiness(state) {
   const activeCategoryIds = new Set(
     (state.provider.categories ?? []).map((item) => item.category_id ?? item.id)
   );
+  const quality = providerProfileQuality({
+    offerings,
+    detail,
+    categories: state.provider.categories ?? []
+  });
   const categories = sortedCategories(
     Array.isArray(state.appConfig?.categories) && state.appConfig.categories.length
       ? state.appConfig.categories
       : appConfig.categories
   );
   const pricingByCategory = new Map(pricing.map((item) => [item.category_id, item]));
-  const availabilityByDay = new Map(
-    availability.map((item) => [String(item.day_of_week), item])
-  );
 
   container.innerHTML = `
     <section class="provider-stack">
@@ -1018,8 +1047,37 @@ function renderProviderBusiness(state) {
           </div>
           <button class="btn-primary" data-provider-business-action="focus-offering-editor" type="button">Crear servicio</button>
         </section>
-        <strong>Tarifas y disponibilidad</strong>
-        <p class="muted">Este bloque se alimenta del backend real: pricing por categoría, franjas activas y refresco de ubicación para el mapa.</p>
+
+        <div class="provider-setup-progress" aria-label="Progreso de configuracion">
+          ${["Servicio", "Rubro", "Descripcion", "Zona", "Fotos", "Revision", "Terminos"].map((label, index) => `
+            <span class="${index < 2 || offerings.length ? "is-done" : ""}">${index + 1}. ${escapeHtml(label)}</span>
+          `).join("")}
+        </div>
+
+        <section class="provider-ai-card provider-inline-section">
+          <span class="eyebrow">Asistente MIMI</span>
+          <h3>Contanos con tus palabras que trabajos haces</h3>
+          <p class="muted">Nosotros te ayudamos a ordenarlo en rubros. Las sugerencias no certifican ni garantizan el servicio: vos revisas y confirmas la informacion antes de publicar.</p>
+          <textarea name="providerAiPrompt" rows="3" maxlength="500" placeholder="Ej: arreglo paredes, pinto, hago revoques, coloco ceramicos">${escapeHtml(offerings[0]?.description ?? "")}</textarea>
+          <div class="provider-action-strip">
+            <button class="btn-primary" data-provider-business-action="suggest-provider-service" type="button">Sugerir rubros</button>
+            <button class="btn-secondary" data-provider-business-action="focus-offering-editor" type="button">Completar manualmente</button>
+          </div>
+          <div class="provider-ai-suggestions" id="providerAiSuggestions" hidden></div>
+        </section>
+
+        <section class="provider-profile-quality provider-inline-section">
+          <div>
+            <span class="eyebrow">Solo para vos</span>
+            <h3>${escapeHtml(quality.label)}</h3>
+            <p class="muted">Este nivel es privado y sirve para ayudarte a completar mejor tu perfil. No se muestra como ranking, garantia ni certificacion publica.</p>
+          </div>
+          <strong>${quality.score}%</strong>
+          ${quality.tips.length ? `<ul>${quality.tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join("")}</ul>` : ""}
+        </section>
+
+        <strong>Configuracion guiada</strong>
+        <p class="muted">No hace falta cargar disponibilidad aca. Vas a estar disponible cuando te conectes en la plataforma.</p>
 
         <div class="provider-action-strip">
           <button class="btn-primary" data-provider-business-action="refresh-location" type="button">Actualizar ubicación</button>
@@ -1098,7 +1156,8 @@ function renderProviderBusiness(state) {
           <div class="block-header compact">
             <div>
               <span class="eyebrow">Pricing</span>
-              <h3>Categorías activas</h3>
+              <h3>Etapa 2: oficio o profesion sugerida</h3>
+              <p class="muted">Podes elegir mas de una categoria si ofreces varios servicios.</p>
             </div>
           </div>
           <div class="provider-editor-grid">
@@ -1137,7 +1196,7 @@ function renderProviderBusiness(state) {
           <div class="block-header compact">
             <div>
               <span class="eyebrow">Trabajos publicados</span>
-              <h3>Qué ofrecés y cómo lo cobrás</h3>
+              <h3>Etapa 1 y 3: que ofreces y como lo describis</h3>
               <p class="muted">MIMI sólo facilita la conexión. Vos definís si cobrás por hora, visita, trabajo, sesión, unidad o metro, y si atendés online, presencial o mixto.</p>
             </div>
           </div>
@@ -1148,40 +1207,23 @@ function renderProviderBusiness(state) {
           </div>
         </section>
 
-        <section class="provider-inline-section">
-          <div class="block-header compact">
-            <div>
-              <span class="eyebrow">Agenda</span>
-              <h3>Disponibilidad semanal</h3>
-            </div>
-          </div>
-          <div class="provider-editor-grid">
-            ${dayLabels
-              .map((dayLabel, index) => {
-                const slot = availabilityByDay.get(String(index));
-
-                return `
-                  <article class="provider-editor-card">
-                    <label class="provider-check-item">
-                      <input type="checkbox" name="dayActive:${index}" ${slot ? "checked" : ""}>
-                      <span>${escapeHtml(dayLabel)}</span>
-                    </label>
-                    <div class="provider-inline-fields">
-                      <label class="input-group">
-                        <span>Desde</span>
-                        <input name="dayStart:${index}" type="time" value="${escapeHtml(String(slot?.start_time ?? "08:00").slice(0, 5))}">
-                      </label>
-                      <label class="input-group">
-                        <span>Hasta</span>
-                        <input name="dayEnd:${index}" type="time" value="${escapeHtml(String(slot?.end_time ?? "18:00").slice(0, 5))}">
-                      </label>
-                    </div>
-                  </article>
-                `;
-              })
-              .join("")}
-          </div>
+        <section class="provider-inline-section provider-optional-media">
+          <span class="eyebrow">Etapa 5: fotos o ejemplos opcionales</span>
+          <h3>Mostra tu trabajo si queres</h3>
+          <p class="muted">Este paso es opcional. Podes cargar ejemplos mas adelante; no bloquea la configuracion del oficio.</p>
+          <input type="file" name="providerExamples" accept="image/*" multiple>
         </section>
+
+        <section class="provider-inline-section provider-review-card">
+          <span class="eyebrow">Etapa 6: revision final</span>
+          <h3>Revisa antes de publicar</h3>
+          <p class="muted">Confirmá que el rubro, la descripcion, la zona y el precio representan lo que realmente ofreces. MIMI facilita la conexion entre partes; no contrata, no certifica y no garantiza servicios.</p>
+        </section>
+
+        <label class="provider-check-item provider-terms-box">
+          <input name="providerTermsAccepted" type="checkbox" required>
+          <span>Acepto los <a href="../terminos.html" target="_blank" rel="noopener">Terminos y Condiciones para prestadores</a> y la Politica de Privacidad. Entiendo que MIMI es una plataforma tecnologica intermediaria.</span>
+        </label>
 
         <div class="provider-action-strip">
           <button class="btn-primary" type="submit">Guardar setup comercial</button>

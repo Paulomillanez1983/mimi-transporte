@@ -24,6 +24,7 @@ import {
   loadOffers,
   loadProviderWorkspace,
   getProviderDashboard,
+  resolveServiceIntent,
   saveProviderWorkspace,
   uploadProviderDocument,
   signOut,
@@ -1781,6 +1782,7 @@ for (const category of availableCategories) {
     acceptsImmediate: data.has("acceptsImmediate"),
     acceptsScheduled: data.has("acceptsScheduled"),
     maxHoursPerService: Number(data.get("maxHoursPerService") ?? 8),
+    termsAccepted: data.has("providerTermsAccepted"),
     categories,
     pricing,
     offerings,
@@ -1826,8 +1828,15 @@ async handleProviderBusinessSubmit(event) {
     return;
   }
 
+  if (!payload.termsAccepted) {
+    this.showToast("Acepta los terminos para finalizar tu configuracion", "warning");
+    event.target?.querySelector?.("[name='providerTermsAccepted']")?.focus?.();
+    return;
+  }
+
   try {
     actions.setLoading(true);
+    await this.acceptProviderTerms();
     const workspace = await saveProviderWorkspace(providerId, payload);
     this.applyWorkspaceToState(workspace);
     renderProviderScreen(this.state);
@@ -1842,9 +1851,33 @@ async handleProviderBusinessSubmit(event) {
   }
 }
 
+async acceptProviderTerms() {
+  const userId = this.state?.session?.userId;
+  if (!userId) throw new Error("No se encontro la sesion del prestador");
+
+  await invokeFunction("accept-legal-document", {
+    actor_type: "provider",
+    document_code: "terms_providers",
+    version: "2026.1.0",
+    acceptance_method: "provider_service_setup"
+  });
+
+  await invokeFunction("accept-legal-document", {
+    actor_type: "all",
+    document_code: "privacy_policy",
+    version: "2026.1.0",
+    acceptance_method: "provider_service_setup"
+  });
+}
+
 async handleProviderBusinessAction(action) {
   if (action === "focus-offering-editor") {
     this.openProviderBusinessSetup();
+    return;
+  }
+
+  if (action === "suggest-provider-service") {
+    await this.handleProviderServiceSuggestion();
     return;
   }
 
@@ -1877,6 +1910,134 @@ async handleProviderBusinessAction(action) {
       actions.setLoading(false);
     }
   }
+}
+
+async handleProviderServiceSuggestion() {
+  const form = document.getElementById("providerBusinessForm");
+  const promptInput = form?.querySelector?.("[name='providerAiPrompt']");
+  const text = String(promptInput?.value ?? "").trim();
+
+  if (text.length < 8) {
+    this.showToast("Contanos un poco mas que trabajos haces", "warning");
+    promptInput?.focus?.();
+    return;
+  }
+
+  const firstIndex = this.firstEditableOfferingIndex(form);
+  const titleInput = form?.querySelector?.(`[name='offering:${firstIndex}:title']`);
+  const summaryInput = form?.querySelector?.(`[name='offering:${firstIndex}:publicSummary']`);
+  const descriptionInput = form?.querySelector?.(`[name='offering:${firstIndex}:description']`);
+  const categorySelect = form?.querySelector?.(`[name='offering:${firstIndex}:categoryId']`);
+  const activeInput = form?.querySelector?.(`[name='offering:${firstIndex}:active']`);
+  const suggestionBox = document.getElementById("providerAiSuggestions");
+
+  try {
+    actions.setLoading(true);
+    const result = await resolveServiceIntent(text, { limit: 5 });
+    const matches = Array.isArray(result?.matches) ? result.matches : this.localProviderCategorySuggestions(text);
+    const top = matches[0] ?? null;
+
+    if (!top) {
+      this.showToast("No encontramos una categoria clara. Elegi el rubro mas parecido.", "info");
+      return;
+    }
+
+    if (activeInput) activeInput.checked = true;
+    if (categorySelect) {
+      categorySelect.value = top.category_id ?? top.id ?? "";
+      categorySelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    if (titleInput && !titleInput.value.trim()) {
+      titleInput.value = this.providerTitleFromPrompt(text, top.name);
+    }
+    if (summaryInput && !summaryInput.value.trim()) {
+      summaryInput.value = `${top.name}: ${text}`.slice(0, 140);
+    }
+    if (descriptionInput && !descriptionInput.value.trim()) {
+      descriptionInput.value = text.slice(0, 220);
+    }
+
+    if (suggestionBox) {
+      suggestionBox.innerHTML = matches
+        .slice(0, 5)
+        .map((item) => `<span class="provider-ai-chip">${this.escapeHtml(item.name ?? "Servicio sugerido")}</span>`)
+        .join("");
+      suggestionBox.hidden = false;
+    }
+
+    this.showToast("Te sugerimos rubros compatibles. Revisalos antes de guardar.", "success");
+  } catch (err) {
+    console.warn("[MIMI] Sugerencia provider fallback:", err);
+    const matches = this.localProviderCategorySuggestions(text);
+    if (!matches.length) {
+      this.showToast("No pudimos sugerir rubros ahora. Podes completarlo manualmente.", "info");
+      return;
+    }
+    if (categorySelect) categorySelect.value = matches[0].id;
+    this.showToast("Usamos sugerencias locales. Revisalas antes de guardar.", "info");
+  } finally {
+    actions.setLoading(false);
+  }
+}
+
+firstEditableOfferingIndex(form) {
+  if (!form) return 0;
+
+  for (let index = 0; form.querySelector(`[name='offering:${index}:present']`); index += 1) {
+    const id = form.querySelector(`[name='offering:${index}:id']`)?.value;
+    if (!id) return index;
+  }
+
+  return 0;
+}
+
+localProviderCategorySuggestions(text) {
+  const normalized = this.normalizeText(text);
+  const categories = this.state?.appConfig?.categories ?? [];
+
+  return categories
+    .map((category) => {
+      const haystack = this.normalizeText([
+        category.name,
+        category.description,
+        ...(category.aliases ?? []),
+        ...(category.search_keywords ?? [])
+      ].join(" "));
+      const score = normalized
+        .split(" ")
+        .filter((word) => word.length >= 3 && haystack.includes(word)).length;
+
+      return { ...category, category_id: category.id, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+}
+
+providerTitleFromPrompt(text, categoryName = "Servicio") {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= 70) return clean;
+  return `${categoryName} - ${clean.slice(0, 54).trim()}`;
+}
+
+normalizeText(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
   /**
    * Start location tracking

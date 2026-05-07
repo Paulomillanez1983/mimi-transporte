@@ -193,3 +193,29 @@ Pruebas:
 - `node --check mimi-servicios/src/main-provider.js`: OK.
 - `node qa/audit-routes.js`: OK.
 - `git diff --check`: OK.
+
+## Actualizacion setup guiado provider 2026-05-07
+
+Correcciones aplicadas:
+- `mimi-servicios/src/ui/render-provider.js`: se agrega flujo guiado mobile-first para configurar servicios con progreso visible, asistente de rubros, etapas, ayuda contextual, calidad privada del perfil y aceptacion de terminos.
+- `mimi-servicios/src/main-provider.js`: se conecta el asistente con `svc-resolve-service-intent`, fallback local por aliases/categorias, autocompletado de primer servicio y validacion obligatoria de terminos antes de guardar.
+- `mimi-servicios/styles/provider.css`: estilos para wizard, chips de sugerencias, calidad privada, ayuda y terminos.
+- `mimi-servicios/prestador.html` y `mimi-servicios/sw-2026.js`: cache-busting/version nueva para forzar assets frescos.
+
+Backend reutilizado:
+- IA/capa inteligente: Edge Function `svc-resolve-service-intent`.
+- Legal: Edge Function `accept-legal-document` y documentos existentes `terms_providers` / `privacy_policy` version `2026.1.0`.
+- No se duplicaron tablas legales; se reutilizan `legal_acceptances`, `legal_versions`, `legal_documents` y `consent_ledger`.
+
+Decisiones:
+- La disponibilidad semanal ya no se pide en esta etapa. La disponibilidad operativa depende de estar online/offline.
+- La calidad del perfil es privada para el prestador; no se muestra como rating, garantia, certificacion ni ranking publico.
+
+Pruebas:
+- `node --check mimi-servicios/src/main-provider.js`: OK.
+- `node --check mimi-servicios/src/ui/render-provider.js`: OK.
+- `node --check mimi-servicios/src/services/service-api.js`: OK.
+- `node qa/audit-encoding.js`: OK, 0 hallazgos.
+- `node qa/audit-routes.js`: OK.
+- `node qa/audit-inline-scripts.js`: OK.
+- `git diff --check`: OK.

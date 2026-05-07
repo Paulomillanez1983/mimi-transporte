@@ -10414,6 +10414,92 @@ body.provider-auth-required .notification-container {
   line-height: 1.15;
 }
 
+#providerBusinessPanel .provider-setup-progress {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: none;
+}
+
+#providerBusinessPanel .provider-setup-progress span,
+#providerBusinessPanel .provider-ai-chip {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: #f3f5f4;
+  color: #4e5c56;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+#providerBusinessPanel .provider-setup-progress .is-done,
+#providerBusinessPanel .provider-ai-chip {
+  background: #e4f7eb;
+  color: #08733f;
+}
+
+#providerBusinessPanel .provider-ai-card,
+#providerBusinessPanel .provider-profile-quality,
+#providerBusinessPanel .provider-optional-media,
+#providerBusinessPanel .provider-review-card,
+#providerBusinessPanel .provider-terms-box {
+  padding: 14px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(16, 21, 19, 0.1);
+}
+
+#providerBusinessPanel .provider-ai-card h3,
+#providerBusinessPanel .provider-profile-quality h3,
+#providerBusinessPanel .provider-optional-media h3,
+#providerBusinessPanel .provider-review-card h3 {
+  margin: 4px 0 6px;
+  color: #101513;
+  font-size: 1.04rem;
+}
+
+#providerBusinessPanel .provider-ai-card textarea {
+  width: 100%;
+  min-height: 92px;
+  border: 1px solid rgba(16, 21, 19, 0.14);
+  border-radius: 14px;
+  padding: 12px;
+  font: inherit;
+  resize: vertical;
+}
+
+#providerBusinessPanel .provider-ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#providerBusinessPanel .provider-profile-quality {
+  display: grid;
+  gap: 10px;
+}
+
+#providerBusinessPanel .provider-profile-quality > strong {
+  font-size: 1.45rem;
+  color: #08733f;
+}
+
+#providerBusinessPanel .provider-profile-quality ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #66736d;
+}
+
+#providerBusinessPanel .provider-terms-box {
+  align-items: flex-start;
+}
+
+#providerBusinessPanel .provider-terms-box a {
+  color: #08733f;
+  font-weight: 900;
+}
+
 #providerBusinessPanel .provider-offering-step {
   display: flex;
   align-items: center;
