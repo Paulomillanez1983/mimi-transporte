@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-07-provider-guided-setup-4";
+const APP_VERSION = "2026-05-07-provider-ui-refresh-5";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

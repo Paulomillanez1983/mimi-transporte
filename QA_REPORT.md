@@ -219,3 +219,16 @@ Pruebas:
 - `node qa/audit-routes.js`: OK.
 - `node qa/audit-inline-scripts.js`: OK.
 - `git diff --check`: OK.
+
+## Refresh UI/UX real provider 2026-05-07
+
+Correcciones aplicadas:
+- `mimi-servicios/prestador.html`: se elimina la pantalla vieja de `Precios` con datos estaticos y chips hardcodeados; ahora el tab muestra solo el configurador real y los chips se alimentan del backend.
+- `mimi-servicios/src/ui/render-provider.js`: el flujo de configurar servicio pasa a una experiencia tipo publicador por etapas, con hero, resumen del servicio publicado, asistente visible, perfil publico, categorias, publicacion, revision y CTA final claro.
+- `mimi-servicios/src/main-provider.js`: la disponibilidad inmediata/programada ya no depende de checkboxes del setup; el servicio queda configurable sin pedir horarios.
+- `mimi-servicios/styles/provider.css`: nuevo shell visual mobile-first, tarjetas por etapa, progreso, resumen oscuro de publicacion, ayuda contextual y datos tecnicos plegados.
+- `mimi-servicios/sw-2026.js` y `mimi-servicios/prestador.html`: cache-busting actualizado a `2026.05.07.5`.
+
+Decision UX:
+- Los datos tecnicos viejos de precio quedan plegados en `Ver datos tecnicos guardados`; el prestador ve primero la experiencia guiada y no un formulario legacy.
+- No se muestran rankings, certificaciones ni garantias publicas. La completitud sigue siendo privada.

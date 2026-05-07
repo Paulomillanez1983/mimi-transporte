@@ -309,33 +309,6 @@
         </div>
 
         <div class="tab-panel" id="tabPricing">
-          <div class="panel-section">
-            <h3 class="section-title">Tus servicios</h3>
-            <div class="pricing-card">
-              <div class="pricing-row">
-                <span class="pricing-label">Servicio principal</span>
-                <span class="pricing-value" id="basePrice">$8.000</span>
-              </div>
-              <div class="pricing-row">
-                <span class="pricing-label">Precio visible</span>
-                <span class="pricing-value" id="hourPrice">$4.000</span>
-              </div>
-              <button class="btn-primary full-width" type="button" data-provider-business-action="focus-offering-editor">Configurar servicio</button>
-            </div>
-          </div>
-
-          <div class="panel-section">
-            <h3 class="section-title">Modalidad visible</h3>
-            <div class="mode-selector">
-              <label class="mode-option">
-                <input type="radio" name="mode" value="hourly" id="pricingModeHourly" disabled>
-                <span class="mode-card">
-                  <span class="mode-name">Por hora</span>
-                  <span class="mode-desc">Cobro por tiempo trabajado</span>
-                </span>
-              </label>
-            </div>
-          </div>
           <div id="providerBusinessPanel"></div>
         </div>
 
@@ -357,9 +330,7 @@
           <div class="panel-section">
             <h3 class="section-title">Tus servicios</h3>
             <div class="services-chips" id="servicesChips">
-              <span class="service-chip active">Plomería</span>
-              <span class="service-chip active">Electricidad</span>
-              <span class="service-chip">Gasista</span>
+              <span class="service-chip">Cargando tus servicios...</span>
             </div>
           </div>
 
@@ -648,6 +619,6 @@
   <!-- Scripts -->
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="./src/main-provider.js?v=2026.05.07.4"></script>
+  <script type="module" src="./src/main-provider.js?v=2026.05.07.5"></script>
 </body>
 </html>

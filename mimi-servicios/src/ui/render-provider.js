@@ -1035,17 +1035,34 @@ function renderProviderBusiness(state) {
       : appConfig.categories
   );
   const pricingByCategory = new Map(pricing.map((item) => [item.category_id, item]));
+  const primaryOffering = offerings.find((item) => item?.active !== false) ?? offerings[0] ?? null;
+  const primaryPrice =
+    primaryOffering?.quote_required || primaryOffering?.pricing_model === "QUOTE"
+      ? "A presupuestar"
+      : primaryOffering?.pricing_model === "UNIT"
+        ? `${currency(primaryOffering?.unit_price, primaryOffering?.currency)} / ${primaryOffering?.unit_name || "sesion"}`
+        : currency(
+            primaryOffering?.fixed_price ||
+              primaryOffering?.base_visit_fee ||
+              primaryOffering?.price_per_hour ||
+              pricing[0]?.price_per_hour,
+            primaryOffering?.currency || pricing[0]?.currency
+          );
 
   container.innerHTML = `
-    <section class="provider-stack">
-      <form class="summary-card provider-settings-form" id="providerBusinessForm">
-        <section class="provider-inline-section provider-business-hero">
+    <section class="provider-stack provider-publisher-app">
+      <form class="provider-settings-form provider-publisher-shell" id="providerBusinessForm">
+        <section class="provider-business-hero">
           <div>
-            <span class="eyebrow">Mis servicios</span>
-            <h3>Publica que vendes en MIMI</h3>
-            <p class="muted">Crea tu oficio o profesion como una publicacion: psicologia online por sesion, kinesiologia a domicilio, manicuria, limpieza, corte de pasto, albanileria o cualquier servicio.</p>
+            <span class="eyebrow">Configurador guiado</span>
+            <h3>Arma tu perfil de prestador</h3>
+            <p class="muted">Escribi que sabes hacer. MIMI te ayuda a ordenarlo en rubros, descripcion, precio y zona sin prometer certificaciones ni garantias.</p>
           </div>
-          <button class="btn-primary" data-provider-business-action="focus-offering-editor" type="button">Crear servicio</button>
+          <div class="provider-publish-summary">
+            <span>${offerings.length ? "Publicado" : "Sin publicar"}</span>
+            <strong>${escapeHtml(primaryOffering?.title ?? "Crea tu primer servicio")}</strong>
+            <small>${escapeHtml(primaryOffering ? primaryPrice : "El cliente necesita saber que ofreces antes de verte online.")}</small>
+          </div>
         </section>
 
         <div class="provider-setup-progress" aria-label="Progreso de configuracion">
@@ -1054,9 +1071,14 @@ function renderProviderBusiness(state) {
           `).join("")}
         </div>
 
-        <section class="provider-ai-card provider-inline-section">
-          <span class="eyebrow">Asistente MIMI</span>
-          <h3>Contanos con tus palabras que trabajos haces</h3>
+        <section class="provider-ai-card provider-step-card is-featured">
+          <div class="provider-step-heading">
+            <span>1</span>
+            <div>
+              <small>Asistente MIMI</small>
+              <h3>Contanos con tus palabras que trabajos haces</h3>
+            </div>
+          </div>
           <p class="muted">Nosotros te ayudamos a ordenarlo en rubros. Las sugerencias no certifican ni garantizan el servicio: vos revisas y confirmas la informacion antes de publicar.</p>
           <textarea name="providerAiPrompt" rows="3" maxlength="500" placeholder="Ej: arreglo paredes, pinto, hago revoques, coloco ceramicos">${escapeHtml(offerings[0]?.description ?? "")}</textarea>
           <div class="provider-action-strip">
@@ -1066,7 +1088,7 @@ function renderProviderBusiness(state) {
           <div class="provider-ai-suggestions" id="providerAiSuggestions" hidden></div>
         </section>
 
-        <section class="provider-profile-quality provider-inline-section">
+        <section class="provider-profile-quality provider-step-card">
           <div>
             <span class="eyebrow">Solo para vos</span>
             <h3>${escapeHtml(quality.label)}</h3>
@@ -1076,38 +1098,27 @@ function renderProviderBusiness(state) {
           ${quality.tips.length ? `<ul>${quality.tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join("")}</ul>` : ""}
         </section>
 
-        <strong>Configuracion guiada</strong>
-        <p class="muted">No hace falta cargar disponibilidad aca. Vas a estar disponible cuando te conectes en la plataforma.</p>
-
-        <div class="provider-action-strip">
-          <button class="btn-primary" data-provider-business-action="refresh-location" type="button">Actualizar ubicación</button>
-          <button class="btn-secondary" data-provider-business-action="focus-map" type="button">Ver mapa</button>
-          <button class="btn-secondary" data-provider-business-action="refresh-workspace" type="button">Recargar panel</button>
+        <div class="provider-help-note">
+          <strong>No cargues horarios aca</strong>
+          <span>Tu disponibilidad depende de estar conectado. Esta pantalla solo define que ofreces y como se entiende tu perfil.</span>
         </div>
 
-        <div class="summary-metrics">
-          <div class="metric">
-            <span>Modalidad</span>
-            <strong>${escapeHtml(detail?.pricing_mode ?? "POR_HORA")}</strong>
+        <section class="provider-step-card provider-profile-basics">
+          <div class="provider-step-heading">
+            <span>2</span>
+            <div>
+              <small>Perfil publico</small>
+              <h3>Completa lo minimo para que el cliente entienda tu propuesta</h3>
+            </div>
           </div>
-          <div class="metric">
-            <span>Máximo por servicio</span>
-            <strong>${escapeHtml(String(detail?.max_hours_per_service ?? 8))} hs</strong>
-          </div>
-          <div class="metric">
-            <span>Posición actual</span>
-            <strong>${escapeHtml(locationLabel)}</strong>
-          </div>
-        </div>
-
-        <div class="provider-form-grid">
+          <div class="provider-form-grid">
           <label class="input-group">
             <span>Bio corta</span>
-            <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Describe en una línea tu servicio">
+            <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Describe en una linea tu servicio">
           </label>
           <label class="input-group">
-            <span>Título público</span>
-            <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Ej: Psicóloga clínica - sesiones online">
+            <span>Titulo publico</span>
+            <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Ej: Psicologa clinica - sesiones online">
           </label>
           <label class="input-group">
             <span>Video o sala online</span>
@@ -1122,41 +1133,22 @@ function renderProviderBusiness(state) {
             <input name="providerProvince" type="text" maxlength="80" value="${escapeHtml(detail?.province ?? "")}" placeholder="Provincia">
           </label>
           <label class="input-group">
-            <span>Dirección base</span>
-            <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Zona o dirección de referencia">
-          </label>
-          <label class="input-group">
-            <span>Modalidad comercial</span>
-            <select name="pricingMode">
-              <option value="HOURLY" selected>Por hora</option>
-            </select>
-          </label>
-          <label class="input-group">
-            <span>Máximo por servicio</span>
-            <input name="maxHoursPerService" type="number" min="1" max="12" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
+            <span>Zona base</span>
+            <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Barrio, zona o referencia">
           </label>
         </div>
-        <label class="input-group">
+        <label class="input-group provider-field-wide">
           <span>Resumen profesional</span>
-          <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Contá tu especialidad, alcance, experiencia y cómo coordinás el servicio sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
+          <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Conta tu especialidad, alcance, experiencia y como coordinas el servicio sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
         </label>
+        <input name="maxHoursPerService" type="hidden" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
+        </section>
 
-        <div class="provider-check-grid">
-          <label class="provider-check-item">
-            <input name="acceptsImmediate" type="checkbox" ${detail?.accepts_immediate ? "checked" : ""}>
-            <span>Tomo inmediatos</span>
-          </label>
-          <label class="provider-check-item">
-            <input name="acceptsScheduled" type="checkbox" ${(detail?.accepts_scheduled ?? true) ? "checked" : ""}>
-            <span>Tomo programados</span>
-          </label>
-        </div>
-
-        <section class="provider-inline-section">
+        <section class="provider-step-card">
           <div class="block-header compact">
             <div>
-              <span class="eyebrow">Pricing</span>
-              <h3>Etapa 2: oficio o profesion sugerida</h3>
+              <span class="eyebrow">Etapa 3</span>
+              <h3>Oficio o profesion sugerida</h3>
               <p class="muted">Podes elegir mas de una categoria si ofreces varios servicios.</p>
             </div>
           </div>
@@ -1192,12 +1184,12 @@ function renderProviderBusiness(state) {
           </div>
         </section>
 
-        <section class="provider-inline-section">
+        <section class="provider-step-card">
           <div class="block-header compact">
             <div>
-              <span class="eyebrow">Trabajos publicados</span>
-              <h3>Etapa 1 y 3: que ofreces y como lo describis</h3>
-              <p class="muted">MIMI sólo facilita la conexión. Vos definís si cobrás por hora, visita, trabajo, sesión, unidad o metro, y si atendés online, presencial o mixto.</p>
+              <span class="eyebrow">Etapa 4</span>
+              <h3>Que vendes y como lo cobras</h3>
+              <p class="muted">MIMI solo facilita la conexion. Vos definis si cobras por hora, visita, trabajo, sesion, unidad o metro, y si atendes online, presencial o mixto.</p>
             </div>
           </div>
           <div class="provider-editor-grid">
@@ -1207,17 +1199,17 @@ function renderProviderBusiness(state) {
           </div>
         </section>
 
-        <section class="provider-inline-section provider-optional-media">
+        <section class="provider-step-card provider-optional-media">
           <span class="eyebrow">Etapa 5: fotos o ejemplos opcionales</span>
           <h3>Mostra tu trabajo si queres</h3>
           <p class="muted">Este paso es opcional. Podes cargar ejemplos mas adelante; no bloquea la configuracion del oficio.</p>
           <input type="file" name="providerExamples" accept="image/*" multiple>
         </section>
 
-        <section class="provider-inline-section provider-review-card">
+        <section class="provider-step-card provider-review-card">
           <span class="eyebrow">Etapa 6: revision final</span>
           <h3>Revisa antes de publicar</h3>
-          <p class="muted">Confirmá que el rubro, la descripcion, la zona y el precio representan lo que realmente ofreces. MIMI facilita la conexion entre partes; no contrata, no certifica y no garantiza servicios.</p>
+          <p class="muted">Confirma que el rubro, la descripcion, la zona y el precio representan lo que realmente ofreces. MIMI facilita la conexion entre partes; no contrata, no certifica y no garantiza servicios.</p>
         </section>
 
         <label class="provider-check-item provider-terms-box">
@@ -1226,13 +1218,15 @@ function renderProviderBusiness(state) {
         </label>
 
         <div class="provider-action-strip">
-          <button class="btn-primary" type="submit">Guardar setup comercial</button>
+          <button class="btn-primary provider-save-button" type="submit">Guardar y publicar mi servicio</button>
         </div>
       </form>
 
       ${renderOfferingsSummary(offerings)}
-      ${renderPricing(pricing, detail)}
-      ${renderAvailability(availability)}
+      <details class="provider-advanced-summary">
+        <summary>Ver datos tecnicos guardados</summary>
+        ${renderPricing(pricing, detail)}
+      </details>
     </section>
   `;
 }
