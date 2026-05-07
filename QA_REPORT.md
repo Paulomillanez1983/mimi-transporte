@@ -180,3 +180,16 @@ Pruebas:
 - `node qa/audit-routes.js`: OK.
 - `node qa/audit-inline-scripts.js`: OK.
 - `git diff --check`: OK.
+
+## Hotfix provider categoria nula 2026-05-07
+
+Correcciones aplicadas:
+- `mimi-servicios/src/ui/render-provider.js`: `recommendedDefaultsForCategory` ahora tolera `null`, evitando el crash `Cannot read properties of null (reading 'default_pricing_model')` cuando el prestador aun no eligio rubro.
+- `mimi-servicios/prestador.html`: cache-busting de `main-provider.js` actualizado a `2026.05.07.3`.
+- `mimi-servicios/sw-2026.js`: version de service worker actualizada para invalidar cache anterior.
+
+Pruebas:
+- `node --check mimi-servicios/src/ui/render-provider.js`: OK.
+- `node --check mimi-servicios/src/main-provider.js`: OK.
+- `node qa/audit-routes.js`: OK.
+- `git diff --check`: OK.

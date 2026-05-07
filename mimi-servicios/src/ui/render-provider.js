@@ -129,9 +129,10 @@ function categoryById(categories = [], id = "") {
 }
 
 function recommendedDefaultsForCategory(category = {}) {
-  const model = String(category.default_pricing_model || "HOURLY").toUpperCase();
-  const modes = Array.isArray(category.allowed_service_modes) && category.allowed_service_modes.length
-    ? category.allowed_service_modes
+  const safeCategory = category ?? {};
+  const model = String(safeCategory.default_pricing_model || "HOURLY").toUpperCase();
+  const modes = Array.isArray(safeCategory.allowed_service_modes) && safeCategory.allowed_service_modes.length
+    ? safeCategory.allowed_service_modes
     : ["IN_PERSON"];
   const serviceMode = modes.includes("ONLINE") ? "ONLINE" : modes[0] || "IN_PERSON";
 
