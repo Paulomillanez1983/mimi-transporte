@@ -2303,7 +2303,7 @@ improveProviderDescription(source = null) {
   const selectedNames = [...form.querySelectorAll("[data-provider-suggestion-card].is-selected strong")]
     .map((item) => item.textContent.trim())
     .filter(Boolean);
-  const base = String(summary?.value ?? bio || prompt).trim();
+  const base = String(summary?.value || bio || prompt).trim();
 
   if (!base && !prompt) {
     this.showToast("Primero escribi que servicio ofreces", "warning");
