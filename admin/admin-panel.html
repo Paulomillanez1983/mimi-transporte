@@ -432,7 +432,7 @@
 </section>  
     <section
   id="servicesProvidersModule"
-  class="services-providers-section admin-mobile-panel"
+  class="services-providers-section admin-mobile-panel admin-mobile-providers"
   aria-label="Prestadores de servicios"
 >
   <div class="section-head">
@@ -522,6 +522,10 @@
     <button class="admin-mobile-dock-btn is-active" type="button" data-admin-mobile-view-target="choferes" aria-pressed="true">
       <span class="admin-mobile-dock-icon">Cho</span>
       <span class="admin-mobile-dock-label">Choferes</span>
+    </button>
+    <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="providers" aria-pressed="false">
+      <span class="admin-mobile-dock-icon">Pro</span>
+      <span class="admin-mobile-dock-label">Prestadores</span>
     </button>
     <button class="admin-mobile-dock-btn" type="button" data-admin-mobile-view-target="map" aria-pressed="false">
       <span class="admin-mobile-dock-icon">Map</span>
@@ -638,11 +642,11 @@ window.getAdminAccessToken = async function getAdminAccessToken() {
     return true;
 };
 </script>
-  <script type="module" src="./admin.js?v=2026.04.27.8"></script>
+  <script type="module" src="./admin.js?v=2026.05.07.1"></script>
 <script type="module" src="./admin-map.js?v=2026.04.27.8"></script>
 <script type="module" src="./admin-support.js?v=2026.04.27.8"></script>
-<script type="module" src="./admin-services-providers.js?v=2026.04.27.8"></script>
-<script type="module" src="./admin-transport.js?v=2026.04.27.8"></script>
+<script type="module" src="./admin-services-providers.js?v=2026.05.07.1"></script>
+<script type="module" src="./admin-transport.js?v=2026.05.07.1"></script>
 </body>
 </html>
 

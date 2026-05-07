@@ -73,3 +73,32 @@ Resultado verificado:
 3. Rotar secreto Vercel y mantener `.env.local` fuera de Git.
 4. Ejecutar QA manual completo con usuarios reales de cliente, chofer, prestador y admin.
 5. Deploy Vercel y smoke test de rutas limpias/PWA.
+
+## Actualizacion admin 2026-05-07
+
+Correcciones aplicadas:
+- `admin/admin-transport.js`: reemplazado el controlador incorrecto de soporte por un controlador real de choferes. Ahora carga `driver_profiles`, `driver_documents` y `choferes`, calcula metricas, cola prioritaria, score, cards, detalle y acciones.
+- `admin/admin-services-providers.js`: cards de prestadores mas claras, score explicado, DNI frente/dorso, selfie, matricula y buena conducta visibles como pendientes o accesibles, acciones con confirmacion y nota obligatoria en rechazo/correccion/bloqueo.
+- `admin/admin-panel.html`: nueva vista movil independiente para Prestadores y cache-busting de scripts admin.
+- `admin/admin.js`: agrega `providers` como vista movil valida.
+- `admin/admin.css`: layout movil compacto para choferes/prestadores, dock de 5 items, score y documentos legibles.
+- `docs/admin-driver-review-policies.sql`: politicas RLS admin para revisar choferes, documentos, filas operativas y auditoria.
+- `docs/phone-otp-production-plan.md`: plan seguro para agregar telefono/OTP/IP/dispositivo sin romper Google Login.
+
+Backend aplicado:
+- Politicas RLS admin para `driver_profiles`, `driver_documents`, `choferes`, `audit_logs` y lectura admin de storage `driver-documents`.
+- Verificado en `pg_policies`: 9 politicas admin activas.
+
+Pruebas:
+- `node --check admin/admin-transport.js`: OK.
+- `node --check admin/admin-services-providers.js`: OK.
+- `node --check admin/admin.js`: OK.
+- `node qa/audit-encoding.js`: OK, 0 hallazgos.
+- `node qa/audit-routes.js`: OK.
+- `node qa/audit-inline-scripts.js`: OK.
+- `git diff --check`: OK.
+
+Pendiente operativo:
+- Probar manualmente en admin con un chofer real: aprobar, pedir correccion, rechazar y bloquear.
+- Probar manualmente en admin con un prestador real y confirmar que Edge Function `admin-review-service-provider` persiste cada accion.
+- Activar OTP telefonico requiere configurar proveedor SMS/WhatsApp en Supabase Auth antes de implementar pantallas obligatorias.

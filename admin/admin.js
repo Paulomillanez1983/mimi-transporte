@@ -15,7 +15,7 @@ function isAdminMobile() {
 }
 
 function normalizeMobileView(view = "choferes") {
-  const allowed = new Set(["choferes", "map", "support", "ai"]);
+  const allowed = new Set(["choferes", "providers", "map", "support", "ai"]);
   return allowed.has(view) ? view : "choferes";
 }
 

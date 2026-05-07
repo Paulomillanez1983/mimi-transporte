@@ -3813,6 +3813,10 @@ header.is-condensed h1 {
     display: block !important;
   }
 
+  body[data-admin-mobile-view="providers"] .admin-mobile-providers {
+    display: block !important;
+  }
+
   body[data-admin-mobile-view="ai"] .admin-mobile-ai {
     display: block !important;
   }
@@ -3841,12 +3845,243 @@ body[data-admin-mobile-view="map"] #driversMap {
   }
 
   body[data-admin-mobile-view="choferes"] #servicesProvidersModule {
-    display: block !important;
+    display: none !important;
   }
 
   body[data-admin-mobile-view="choferes"] .admin-mobile-map,
+  body[data-admin-mobile-view="choferes"] .admin-mobile-providers,
   body[data-admin-mobile-view="choferes"] .admin-mobile-support,
   body[data-admin-mobile-view="choferes"] .admin-mobile-ai {
     display: none !important;
+  }
+}
+
+/* =========================================================
+   ADMIN REVIEW HARDENING
+   ========================================================= */
+
+.review-chart-bar {
+  width: 100%;
+  height: 14px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      var(--success) 0 var(--approved),
+      var(--pending) var(--approved) calc(var(--approved) + var(--pending)),
+      var(--danger) calc(var(--approved) + var(--pending)) calc(var(--approved) + var(--pending) + var(--rejected)),
+      var(--warning) calc(var(--approved) + var(--pending) + var(--rejected)) 100%
+    );
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.ai-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.ai-summary-grid div,
+.provider-review-grid div {
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel-2) 92%, transparent);
+  border-radius: 14px;
+  padding: 10px;
+  min-width: 0;
+}
+
+.ai-summary-grid strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.ai-summary-grid span,
+.provider-review-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 4px;
+}
+
+.priority-item {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 16px;
+  padding: 12px;
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  box-shadow: none;
+}
+
+.priority-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.score-pill.compact {
+  min-height: 34px;
+  min-width: 52px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.driver-doc-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.driver-doc-mini span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.driver-doc-mini .ok {
+  color: var(--success);
+  border-color: rgba(34, 197, 94, 0.24);
+}
+
+.driver-doc-mini .missing,
+.doc-pending,
+.doc-missing-file {
+  color: var(--warning);
+}
+
+.provider-review-card {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.provider-review-head,
+.provider-review-side {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.provider-review-head h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.provider-review-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.provider-review-side {
+  align-items: flex-end;
+  flex-direction: column;
+  flex: 0 0 auto;
+}
+
+.provider-review-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.provider-docs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.provider-docs a,
+.provider-docs span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--panel-2);
+  text-decoration: none;
+}
+
+.provider-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.provider-review-actions .btn {
+  flex: 1 1 130px;
+}
+
+@media (max-width: 980px) {
+  .admin-mobile-dock {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+
+  body[data-admin-mobile-view="providers"] .admin-mobile-panel:not(.admin-mobile-providers),
+  body[data-admin-mobile-view="choferes"] .admin-mobile-providers {
+    display: none !important;
+  }
+
+  body[data-admin-mobile-view="providers"] #servicesProvidersModule {
+    display: block !important;
+  }
+
+  .providers-review-list,
+  .drivers {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .provider-review-card,
+  .driver-card-surface {
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .provider-review-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ai-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .provider-review-actions .btn,
+  .driver-actions .btn {
+    flex-basis: calc(50% - 6px);
+    min-height: 44px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 520px) {
+  .provider-review-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-mobile-dock-label {
+    font-size: 9px !important;
+  }
+
+  .admin-mobile-dock-icon {
+    font-size: 10px !important;
   }
 }

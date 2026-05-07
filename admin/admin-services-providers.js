@@ -4,7 +4,6 @@ class AdminServicesProviders {
   constructor() {
     this.root = document.getElementById("servicesProvidersModule");
     this.list = document.getElementById("providersReviewList");
-
     this.metrics = {
       total: document.getElementById("svcMetricTotal"),
       pending: document.getElementById("svcMetricPending"),
@@ -12,7 +11,6 @@ class AdminServicesProviders {
       rejected: document.getElementById("svcMetricRejected"),
       blocked: document.getElementById("svcMetricBlocked")
     };
-
     this.providers = [];
     this.activeFilter = "all";
     this._actionsBound = false;
@@ -28,14 +26,56 @@ class AdminServicesProviders {
       .replaceAll("'", "&#039;");
   }
 
+  normalize(value = "") {
+    return String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  formatDate(value) {
+    if (!value) return "Sin fecha";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Sin fecha";
+    return new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" }).format(date);
+  }
+
+  getProfile(provider) {
+    return Array.isArray(provider?.svc_provider_profiles)
+      ? provider.svc_provider_profiles[0] || {}
+      : provider?.svc_provider_profiles || {};
+  }
+
+  getDocs(provider) {
+    return Array.isArray(provider?.svc_provider_documents) ? provider.svc_provider_documents : [];
+  }
+
+  scoreNumber(provider) {
+    const value = Number(this.getProfile(provider)?.ai_score ?? 0);
+    return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+  }
+
+  scoreGuidance(score) {
+    if (score >= 80) return "Candidato fuerte: validar documentos y aprobar si la identidad coincide.";
+    if (score >= 60) return "Revisión manual: pedir soporte si falta DNI dorso, selfie o matrícula.";
+    return "Riesgo alto: no aprobar sin corrección documental.";
+  }
+
+  actionCopy(action) {
+    return {
+      approve: "aprobar este prestador",
+      reject: "rechazar esta verificación",
+      needs_resubmission: "pedir corrección de documentación",
+      block: "bloquear este prestador"
+    }[action] || "actualizar este prestador";
+  }
+
   async invokeAdminFunction(functionName, body = {}) {
     if (!functionName) throw new Error("Nombre de función requerido.");
-
     await supabaseAdminService.waitForActiveAdmin?.();
-
     const { data, error } = await supabaseAdminService.client.auth.getSession();
     if (error) throw error;
-
     const token = data?.session?.access_token;
     if (!token) throw new Error("AUTH_REQUIRED");
 
@@ -49,89 +89,85 @@ class AdminServicesProviders {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        Authorization: `Bearer ${token}`
       },
       body: JSON.stringify(body || {})
     });
 
     const text = await response.text();
     const json = text ? JSON.parse(text) : null;
-
-    if (!response.ok) {
-      throw new Error(json?.error || json?.message || `Error ${response.status}`);
-    }
-
+    if (!response.ok) throw new Error(json?.error || json?.message || `Error ${response.status}`);
     return json;
+  }
+
+  async insertAuditLog(eventType, provider, metadata = {}) {
+    try {
+      const admin = await supabaseAdminService.waitForActiveAdmin(1800);
+      if (!admin?.user?.id) return;
+
+      await supabaseAdminService.client.from("audit_logs").insert({
+        user_id: admin.user.id,
+        actor_type: "admin",
+        event_type: eventType,
+        entity_type: "svc_provider",
+        entity_id: provider?.id || null,
+        metadata: {
+          provider_id: provider?.id || null,
+          provider_user_id: provider?.user_id || null,
+          provider_name: provider?.full_name || null,
+          ...metadata
+        },
+        user_agent: navigator.userAgent
+      });
+    } catch (error) {
+      console.info("[admin-services-providers.insertAuditLog] Auditoría no persistida", error?.message || error);
+    }
   }
 
   async getSignedDocumentUrl(doc) {
     const bucket = doc?.storage_bucket;
     const path = doc?.storage_path;
-
     if (!bucket || !path) return null;
 
     try {
       const { data, error } = await supabaseAdminService.client.storage
         .from(bucket)
         .createSignedUrl(path, 60 * 5);
-
-      if (error) {
-        console.info("[admin-services-providers.getSignedDocumentUrl] Documento no accesible", {
-          id: doc?.id,
-          type: doc?.document_type,
-          path,
-          message: error?.message || error?.error || String(error)
-        });
-        return null;
-      }
-
+      if (error) return null;
       return data?.signedUrl || null;
-    } catch (error) {
-      console.info("[admin-services-providers.getSignedDocumentUrl.catch] Documento no accesible", {
-        id: doc?.id,
-        type: doc?.document_type,
-        path,
-        message: error?.message || String(error)
-      });
+    } catch {
       return null;
     }
   }
 
   async init() {
     if (!this.root || !this.list) return;
-
     this.bindFilters();
     this.bindActions();
     await this.load();
   }
 
   async load() {
+    this.list.innerHTML = `<div class="admin-empty-state">Cargando prestadores...</div>`;
     const result = await this.invokeAdminFunction("admin-list-service-providers", {});
     this.providers = Array.isArray(result?.providers) ? result.providers : [];
-
     this.renderMetrics(this.providers);
     this.renderActiveFilter();
     await this.renderList();
   }
 
   getProviderStatus(provider) {
-const profile = Array.isArray(provider?.svc_provider_profiles)
-  ? provider.svc_provider_profiles[0] || {}
-  : provider?.svc_provider_profiles || {};
-    
+    const profile = this.getProfile(provider);
+    const reviewStatus = this.normalize(profile?.review_status || profile?.kyc_status || provider?.status);
     if (provider?.blocked) return "blocked";
-    if (profile?.kyc_status === "rejected") return "rejected";
+    if (["rejected", "rechazado"].includes(reviewStatus)) return "rejected";
     if (provider?.approved && !provider?.blocked) return "approved";
-
     return "pending";
   }
 
   getFilteredProviders() {
     if (this.activeFilter === "all") return this.providers;
-
-    return this.providers.filter((provider) => {
-      return this.getProviderStatus(provider) === this.activeFilter;
-    });
+    return this.providers.filter((provider) => this.getProviderStatus(provider) === this.activeFilter);
   }
 
   renderMetrics(rows) {
@@ -140,7 +176,6 @@ const profile = Array.isArray(provider?.svc_provider_profiles)
     const approved = rows.filter((x) => this.getProviderStatus(x) === "approved").length;
     const rejected = rows.filter((x) => this.getProviderStatus(x) === "rejected").length;
     const blocked = rows.filter((x) => this.getProviderStatus(x) === "blocked").length;
-
     if (this.metrics.total) this.metrics.total.textContent = total;
     if (this.metrics.pending) this.metrics.pending.textContent = pending;
     if (this.metrics.approved) this.metrics.approved.textContent = approved;
@@ -149,78 +184,84 @@ const profile = Array.isArray(provider?.svc_provider_profiles)
   }
 
   renderActiveFilter() {
-    const filterButtons = document.querySelectorAll("[data-provider-filter]");
-
-    filterButtons.forEach((btn) => {
+    document.querySelectorAll("[data-provider-filter]").forEach((btn) => {
       const isActive = btn.dataset.providerFilter === this.activeFilter;
       btn.classList.toggle("is-active", isActive);
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
     });
   }
 
+  renderDocumentBadge(docs, type, label, urls) {
+    const doc = docs.find((d) => d.document_type === type);
+    const url = urls[type];
+    const status = doc?.review_status || doc?.status || "pendiente";
+    if (url) {
+      return `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(url)}">${this.escapeHtml(label)} · ${this.escapeHtml(status)}</a>`;
+    }
+    return `<span class="${doc ? "doc-missing-file" : "doc-pending"}">${this.escapeHtml(label)} · ${doc ? "archivo no accesible" : "pendiente"}</span>`;
+  }
+
   async renderList() {
     const rows = this.getFilteredProviders();
-
     if (!rows.length) {
-      this.list.innerHTML = `
-        <div class="admin-empty-state">
-          <p>No hay prestadores para este filtro.</p>
-        </div>
-      `;
+      this.list.innerHTML = `<div class="admin-empty-state"><p>No hay prestadores para este filtro.</p></div>`;
       return;
     }
 
     const htmlRows = await Promise.all(
       rows.map(async (provider) => {
-const profile = Array.isArray(provider?.svc_provider_profiles)
-  ? provider.svc_provider_profiles[0] || {}
-  : provider?.svc_provider_profiles || {};        const docs = provider.svc_provider_documents || [];
-        
-
-        const dni = docs.find((d) => d.document_type === "dni_front");
-        const dniBack = docs.find((d) => d.document_type === "dni_back");
-        const selfie = docs.find((d) => d.document_type === "selfie");
-
-        const dniUrl = await this.getSignedDocumentUrl(dni);
-        const dniBackUrl = await this.getSignedDocumentUrl(dniBack);
-        const selfieUrl = await this.getSignedDocumentUrl(selfie);
+        const profile = this.getProfile(provider);
+        const docs = this.getDocs(provider);
+        const wantedDocs = ["dni_front", "dni_back", "selfie", "professional_license", "background_check"];
+        const urls = {};
+        await Promise.all(wantedDocs.map(async (type) => {
+          const doc = docs.find((d) => d.document_type === type);
+          urls[type] = await this.getSignedDocumentUrl(doc);
+        }));
 
         const providerId = this.escapeHtml(provider.id);
-        const fullName = this.escapeHtml(provider.full_name || "Sin nombre");
-        const email = this.escapeHtml(provider.email || "Sin email");
-        const kycStatus = this.escapeHtml(profile.kyc_status || "pending");
-        const aiScore = this.escapeHtml(profile.ai_score ?? 0);
-        const aiScoreLabel = this.escapeHtml(profile.ai_score_label || "pending");
-        const reviewStatus = this.escapeHtml(profile.review_status || "pending");
+        const score = this.scoreNumber(provider);
+        const status = this.getProviderStatus(provider);
+        const modes = Array.isArray(profile.service_modes) ? profile.service_modes.join(", ") : profile.service_modes || "Sin modalidad";
+        const category = provider.category || provider.service_type || profile.primary_category || "Servicio";
+        const reviewedAt = profile.reviewed_at || docs.find((d) => d.reviewed_at)?.reviewed_at;
 
         return `
-          <article class="provider-review-card">
+          <article class="provider-review-card" data-provider-id="${providerId}">
             <div class="provider-review-head">
               <div>
-                <h3>${fullName}</h3>
-                <p>${email}</p>
+                <h3>${this.escapeHtml(provider.full_name || "Prestador sin nombre")}</h3>
+                <p>${this.escapeHtml(provider.email || "Sin email")} · ${this.escapeHtml(provider.phone || "Sin teléfono")}</p>
               </div>
-              <span class="score-pill">${aiScore}</span>
+              <div class="provider-review-side">
+                <span class="status-badge ${this.escapeHtml(status)}">${this.escapeHtml(status)}</span>
+                <span class="score-pill compact">${this.escapeHtml(score)}</span>
+              </div>
             </div>
 
             <div class="provider-review-grid">
-              <div><strong>KYC:</strong> ${kycStatus}</div>
-              <div><strong>Score:</strong> ${aiScoreLabel}</div>
-              <div><strong>Review:</strong> ${reviewStatus}</div>
+              <div><strong>Categoría</strong><span>${this.escapeHtml(category)}</span></div>
+              <div><strong>KYC</strong><span>${this.escapeHtml(profile.kyc_status || "pending")}</span></div>
+              <div><strong>Review</strong><span>${this.escapeHtml(profile.review_status || "pending")}</span></div>
+              <div><strong>Modalidad</strong><span>${this.escapeHtml(modes)}</span></div>
+              <div><strong>Última revisión</strong><span>${this.escapeHtml(this.formatDate(reviewedAt))}</span></div>
+              <div><strong>Regla score</strong><span>${this.escapeHtml(this.scoreGuidance(score))}</span></div>
             </div>
 
             <div class="provider-docs">
-              ${dniUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(dniUrl)}">DNI frente</a>` : `<span>DNI frente no disponible</span>`}
-              ${dniBackUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(dniBackUrl)}">DNI dorso</a>` : `<span>DNI dorso pendiente</span>`}
-              ${selfieUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(selfieUrl)}">Selfie</a>` : `<span>Selfie no disponible</span>`}
+              ${this.renderDocumentBadge(docs, "dni_front", "DNI frente", urls)}
+              ${this.renderDocumentBadge(docs, "dni_back", "DNI dorso", urls)}
+              ${this.renderDocumentBadge(docs, "selfie", "Selfie", urls)}
+              ${this.renderDocumentBadge(docs, "professional_license", "Matrícula", urls)}
+              ${this.renderDocumentBadge(docs, "background_check", "Buena conducta", urls)}
             </div>
 
-            <textarea class="review-note" data-note="${providerId}" placeholder="Notas de revisión"></textarea>
+            <textarea class="review-note" data-note="${providerId}" placeholder="Nota clara para auditoría, aprobación o corrección"></textarea>
 
             <div class="provider-review-actions">
               <button class="btn approve" data-action="approve" data-id="${providerId}">Aprobar</button>
+              <button class="btn" data-action="needs_resubmission" data-id="${providerId}">Pedir corrección</button>
               <button class="btn reject" data-action="reject" data-id="${providerId}">Rechazar</button>
-              <button class="btn block" data-action="needs_resubmission" data-id="${providerId}">Revisión</button>
               <button class="btn block" data-action="block" data-id="${providerId}">Bloquear</button>
             </div>
           </article>
@@ -234,38 +275,36 @@ const profile = Array.isArray(provider?.svc_provider_profiles)
   bindFilters() {
     if (this._filtersBound) return;
     this._filtersBound = true;
-
     document.addEventListener("click", async (event) => {
       const btn = event.target.closest("[data-provider-filter]");
       if (!btn) return;
-
       event.preventDefault();
-      event.stopPropagation();
-
       this.activeFilter = btn.dataset.providerFilter || "all";
-
       this.renderActiveFilter();
       await this.renderList();
     });
   }
 
   bindActions() {
-    if (this._actionsBound) return;
+    if (this._actionsBound || !this.list) return;
     this._actionsBound = true;
-
     this.list.addEventListener("click", async (event) => {
       const btn = event.target.closest("[data-action]");
       if (!btn) return;
-
       event.preventDefault();
-      event.stopPropagation();
 
       const providerId = btn.dataset.id;
       const action = btn.dataset.action;
-      if (!providerId || !action) return;
+      const provider = this.providers.find((row) => row.id === providerId);
+      if (!providerId || !action || !provider) return;
 
-      const notes =
-        this.list.querySelector(`[data-note="${CSS.escape(providerId)}"]`)?.value?.trim() || null;
+      const notes = this.list.querySelector(`[data-note="${CSS.escape(providerId)}"]`)?.value?.trim() || "";
+      if (["reject", "needs_resubmission", "block"].includes(action) && !notes) {
+        alert("Agregá una nota clara antes de rechazar, pedir corrección o bloquear.");
+        return;
+      }
+
+      if (!window.confirm(`Vas a ${this.actionCopy(action)}. La acción queda auditada. ¿Continuamos?`)) return;
 
       const originalText = btn.textContent;
       btn.disabled = true;
@@ -277,7 +316,7 @@ const profile = Array.isArray(provider?.svc_provider_profiles)
           action,
           notes
         });
-
+        await this.insertAuditLog(`admin.provider.${action}`, provider, { action, notes });
         await this.load();
       } catch (error) {
         console.error("[adminServicesProviders.bindActions]", error);
@@ -291,7 +330,6 @@ const profile = Array.isArray(provider?.svc_provider_profiles)
 }
 
 window.adminServicesProviders = new AdminServicesProviders();
-
 window.addEventListener("DOMContentLoaded", () => {
   window.adminServicesProviders.init();
 });
