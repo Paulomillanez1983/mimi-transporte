@@ -951,7 +951,7 @@ setTimeout(async () => {
         .filter((type) => ["dni_front", "dni_back", "selfie"].includes(type))
     );
 
-    const isVerified = Boolean(profile?.approved) && rejectedDocs === 0 && uploadedRequiredDocs.size >= 3;
+    const isVerified = Boolean(profile?.approved) && rejectedDocs === 0;
     const verificationStatus = isVerified
       ? "approved"
       : rejectedDocs > 0
@@ -1151,6 +1151,7 @@ stats: {
   }
 
   updateVerificationResultScreen() {
+    const accountApproved = Boolean(this.state?.provider?.profile?.approved);
     const required = [
       ["dni_front", "DNI frente", "Obligatorio"],
       ["dni_back", "DNI dorso", "Obligatorio"],
@@ -1180,13 +1181,17 @@ stats: {
       this.elements.verificationResultList.innerHTML = required
         .map(([type, title, rule]) => {
           const doc = this.documentByType(type);
+          const missingLabel =
+            accountApproved && type !== "criminal_record_certificate"
+              ? "Aprobado por admin"
+              : "Pendiente";
           return `
             <article class="verification-result-item ${doc ? "has-doc" : "missing-doc"}">
               <div>
                 <strong>${title}</strong>
                 <span>${rule}</span>
               </div>
-              <span>${doc ? statusLabel(doc.review_status) : "Pendiente"}</span>
+              <span>${doc ? statusLabel(doc.review_status) : missingLabel}</span>
             </article>
           `;
         })
@@ -1542,12 +1547,9 @@ document.addEventListener("click", (event) => {
    */
 async handleGoOnline() {
 if (!this.state?.provider.isVerified) {
-  this.showToast("Necesits completar tu verificacin primero", "warning");
+  this.showToast("Necesitas completar tu verificacion primero", "warning");
   actions.openModal("verification");
-
-  setTimeout(() => {
-    this.showWizardStep?.(1);
-  }, 50);
+  setTimeout(() => this.showVerificationEntry(true), 50);
 
   return;
 }
@@ -1591,8 +1593,9 @@ if (!providerId) {
    */
 async handleStatusToggle(status) {
   if (status === "ONLINE_IDLE" && !this.state?.provider.isVerified) {
-    this.showToast("Necesits completar tu verificacin", "warning");
+    this.showToast("Necesitas completar tu verificacion", "warning");
     actions.openModal("verification");
+    setTimeout(() => this.showVerificationEntry(true), 50);
     return;
   }
 
@@ -2128,6 +2131,7 @@ renderVerificationStatus() {
   const card = this.elements.verificationCard;
   const statusEl = this.elements.verificationStatus;
   const btn = this.elements.verificationBtn;
+  const accountApproved = Boolean(this.state?.provider?.profile?.approved);
   
   if (!card || !statusEl || !btn) return;
 
@@ -2150,9 +2154,13 @@ renderVerificationStatus() {
   const setStepStatus = (element, type, fallback) => {
     if (!element) return;
     const doc = this.documentByType(type);
+    const missingLabel =
+      accountApproved && type !== "criminal_record_certificate"
+        ? "Aprobado por admin"
+        : fallback;
     element.textContent = doc
       ? `Recibido - ${this.normalizeReviewStatus(doc.review_status) === "APPROVED" ? "aprobado" : "en revisión"}`
-      : fallback;
+      : missingLabel;
   };
 
   setStepStatus(this.elements.dniFrontStatus, "dni_front", "Pendiente");

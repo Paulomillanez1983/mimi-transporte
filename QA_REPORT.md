@@ -123,3 +123,21 @@ Pruebas:
 - `node qa/audit-inline-scripts.js`: OK.
 - `node qa/audit-encoding.js`: OK.
 - `git diff --check`: OK.
+
+## Actualizacion verificacion provider 2026-05-07
+
+Correcciones aplicadas:
+- `mimi-servicios/src/main-provider.js`: si el admin aprueba la cuenta del prestador (`profile.approved=true`) y no hay documentos rechazados, el prestador queda operativamente verificado aunque existan filas antiguas o faltantes de DNI/selfie. El boton para ponerse online ya abre el estado de verificacion y no reinicia el wizard.
+- `mimi-servicios/src/ui/render-provider.js`: las tarjetas de confianza muestran `Aprobado por admin` para documentos requeridos faltantes cuando la cuenta ya fue aprobada por administracion. El certificado de buena conducta sigue como pendiente/opcional hasta que se cargue y revise.
+- `mimi-servicios/supabase/functions/admin-review-service-provider/index.ts`: las acciones admin sobre prestadores registran `reviewed_by` en los documentos existentes junto con estado, nota y fecha.
+
+Backend aplicado:
+- Edge Function `admin-review-service-provider` desplegada en Supabase con `--use-api --workdir mimi-servicios`.
+
+Pruebas:
+- `node --check mimi-servicios/src/main-provider.js`: OK.
+- `node --check mimi-servicios/src/ui/render-provider.js`: OK.
+- `node qa/audit-encoding.js`: OK, 0 hallazgos.
+- `node qa/audit-routes.js`: OK.
+- `node qa/audit-inline-scripts.js`: OK.
+- `git diff --check`: OK.

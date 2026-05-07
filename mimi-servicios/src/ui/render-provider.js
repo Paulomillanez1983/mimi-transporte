@@ -1204,7 +1204,11 @@ function renderProviderTrust(state) {
   });
   const documentStatusLabel = (type) => {
     const doc = documentsByType.get(String(type).toLowerCase());
-    if (!doc) return "Pendiente";
+    if (!doc) {
+      return isApproved && String(type).toLowerCase() !== "criminal_record_certificate"
+        ? "Aprobado por admin"
+        : "Pendiente";
+    }
     const status = String(doc.review_status ?? "PENDING").toUpperCase();
     if (status === "APPROVED") return "Aprobado";
     if (status === "REJECTED") return "Rechazado";

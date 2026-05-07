@@ -114,6 +114,7 @@ serve(async (req) => {
       docsPatch = {
         review_status: "APPROVED",
         review_notes: notes,
+        reviewed_by: user.id,
         reviewed_at: now
       };
     }
@@ -135,6 +136,7 @@ serve(async (req) => {
       docsPatch = {
         review_status: "REJECTED",
         review_notes: notes || "Documentación rechazada por administración.",
+        reviewed_by: user.id,
         reviewed_at: now
       };
     }
@@ -156,6 +158,7 @@ serve(async (req) => {
       docsPatch = {
         review_status: "REJECTED",
         review_notes: notes || "Documentación observada. Requiere reenvío.",
+        reviewed_by: user.id,
         reviewed_at: now
       };
     }
@@ -178,6 +181,7 @@ serve(async (req) => {
       docsPatch = {
         review_status: "REJECTED",
         review_notes: notes || "Prestador bloqueado por administración.",
+        reviewed_by: user.id,
         reviewed_at: now
       };
     }
