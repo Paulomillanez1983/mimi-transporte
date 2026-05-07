@@ -38,9 +38,22 @@ const pricingModelLabels = {
   BASE_VISIT: "Visita / diagnóstico",
   QUOTE: "A presupuestar",
   FIXED: "Precio cerrado",
-  UNIT: "Por unidad",
+  UNIT: "Por sesión / unidad",
   SQUARE_METER: "Por m2",
   LINEAR_METER: "Por metro lineal"
+};
+
+const serviceModeLabels = {
+  IN_PERSON: "Presencial",
+  ONLINE: "Online",
+  HYBRID: "Online y presencial"
+};
+
+const locationPolicyLabels = {
+  CLIENT_ADDRESS: "Domicilio del cliente",
+  PROVIDER_ADDRESS: "Consultorio / base del prestador",
+  ONLINE_ONLY: "Videollamada",
+  FLEXIBLE: "A coordinar"
 };
 
 function currency(value, currencyCode = "ARS") {
@@ -548,9 +561,32 @@ function renderPricingModelOptions(selected = "HOURLY") {
     .join("");
 }
 
+function renderServiceModeOptions(selected = "IN_PERSON") {
+  const current = String(selected || "IN_PERSON").toUpperCase();
+
+  return Object.entries(serviceModeLabels)
+    .map(([value, label]) => `
+      <option value="${value}" ${current === value ? "selected" : ""}>${escapeHtml(label)}</option>
+    `)
+    .join("");
+}
+
+function renderLocationPolicyOptions(selected = "CLIENT_ADDRESS") {
+  const current = String(selected || "CLIENT_ADDRESS").toUpperCase();
+
+  return Object.entries(locationPolicyLabels)
+    .map(([value, label]) => `
+      <option value="${value}" ${current === value ? "selected" : ""}>${escapeHtml(label)}</option>
+    `)
+    .join("");
+}
+
 function renderOfferingEditor(offering = null, index = 0, categories = []) {
   const currentCategoryId = offering?.category_id ?? "";
   const pricingModel = offering?.pricing_model ?? "HOURLY";
+  const serviceMode = offering?.service_mode ?? "IN_PERSON";
+  const locationPolicy =
+    offering?.location_policy ?? (serviceMode === "ONLINE" ? "ONLINE_ONLY" : "CLIENT_ADDRESS");
   const checked = offering ? "checked" : "";
 
   return `
@@ -580,9 +616,27 @@ function renderOfferingEditor(offering = null, index = 0, categories = []) {
           ${renderPricingModelOptions(pricingModel)}
         </select>
       </label>
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>Modalidad</span>
+          <select name="offering:${index}:serviceMode">
+            ${renderServiceModeOptions(serviceMode)}
+          </select>
+        </label>
+        <label class="input-group">
+          <span>Atención</span>
+          <select name="offering:${index}:locationPolicy">
+            ${renderLocationPolicyOptions(locationPolicy)}
+          </select>
+        </label>
+      </div>
       <label class="input-group">
         <span>Descripción breve</span>
         <textarea name="offering:${index}:description" maxlength="220" rows="2" placeholder="Contá qué incluye, cómo presupuestás o qué necesita saber el cliente">${escapeHtml(offering?.description ?? "")}</textarea>
+      </label>
+      <label class="input-group">
+        <span>Resumen para la card</span>
+        <input name="offering:${index}:publicSummary" type="text" maxlength="140" value="${escapeHtml(offering?.public_summary ?? "")}" placeholder="Ej: Sesiones online para ansiedad, estrés y orientación adulta">
       </label>
       <div class="provider-inline-fields">
         <label class="input-group">
@@ -607,10 +661,10 @@ function renderOfferingEditor(offering = null, index = 0, categories = []) {
       <div class="provider-inline-fields">
         <label class="input-group">
           <span>Unidad</span>
-          <input name="offering:${index}:unitName" type="text" maxlength="40" value="${escapeHtml(offering?.unit_name ?? "")}" placeholder="m2, metro, unidad">
+          <input name="offering:${index}:unitName" type="text" maxlength="40" value="${escapeHtml(offering?.unit_name ?? "")}" placeholder="sesión, clase, consulta">
         </label>
         <label class="input-group">
-          <span>$/unidad</span>
+          <span>$/sesión o unidad</span>
           <input name="offering:${index}:unitPrice" type="number" min="0" step="100" value="${escapeHtml(String(offering?.unit_price ?? ""))}" placeholder="0">
         </label>
       </div>
@@ -623,12 +677,91 @@ function renderOfferingEditor(offering = null, index = 0, categories = []) {
           <span>Max hs</span>
           <input name="offering:${index}:maximumHours" type="number" min="1" max="24" value="${escapeHtml(String(offering?.maximum_hours ?? ""))}" placeholder="8">
         </label>
+        <label class="input-group">
+          <span>Duración sesión</span>
+          <input name="offering:${index}:durationMinutes" type="number" min="15" max="240" step="5" value="${escapeHtml(String(offering?.duration_minutes ?? ""))}" placeholder="45">
+        </label>
       </div>
       <label class="provider-check-item">
         <input name="offering:${index}:quoteRequired" type="checkbox" ${offering?.quote_required ? "checked" : ""}>
         <span>Requiere presupuesto antes de confirmar</span>
       </label>
+      <label class="input-group">
+        <span>Indicaciones para el cliente</span>
+        <textarea name="offering:${index}:clientInstructions" maxlength="220" rows="2" placeholder="Ej: La videollamada se coordina por chat luego de aceptar la solicitud">${escapeHtml(offering?.client_instructions ?? "")}</textarea>
+      </label>
     </article>
+  `;
+}
+
+function renderOfferingsSummary(offerings = []) {
+  if (!offerings.length) {
+    return `
+      <section class="summary-card">
+        <strong>Trabajos publicados</strong>
+        <p class="muted">Todavía no tenés trabajos activos. Publicá al menos una propuesta concreta para que los clientes vean modalidad, duración y precio.</p>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="summary-card">
+      <div class="block-header compact">
+        <div>
+          <span class="eyebrow">Visible para clientes</span>
+          <h3>Ofertas activas</h3>
+        </div>
+      </div>
+      <div class="provider-pricing-grid">
+        ${offerings
+          .map((offering) => {
+            const pricingModel = String(offering.pricing_model ?? "HOURLY").toUpperCase();
+            const serviceMode = String(offering.service_mode ?? "IN_PERSON").toUpperCase();
+            const locationPolicy = String(offering.location_policy ?? "CLIENT_ADDRESS").toUpperCase();
+            const unitName = offering.unit_name || (pricingModel === "UNIT" ? "sesión" : "unidad");
+            const amount =
+              pricingModel === "UNIT"
+                ? offering.unit_price
+                : pricingModel === "FIXED"
+                  ? offering.fixed_price
+                  : pricingModel === "BASE_VISIT"
+                    ? offering.base_visit_fee
+                    : offering.price_per_hour;
+            const priceLabel =
+              pricingModel === "QUOTE"
+                ? "A presupuestar"
+                : pricingModel === "UNIT"
+                  ? `${currency(amount, offering.currency)} / ${unitName}`
+                  : `${currency(amount, offering.currency)}${pricingModel === "HOURLY" ? " / hora" : ""}`;
+
+            return `
+              <article class="provider-pricing-card">
+                <strong>${escapeHtml(offering.title ?? "Trabajo publicado")}</strong>
+                <p class="muted">${escapeHtml(offering.public_summary ?? offering.description ?? "Sin resumen público")}</p>
+                <div class="summary-metrics">
+                  <div class="metric">
+                    <span>Precio</span>
+                    <strong>${escapeHtml(priceLabel)}</strong>
+                  </div>
+                  <div class="metric">
+                    <span>Modalidad</span>
+                    <strong>${escapeHtml(serviceModeLabels[serviceMode] ?? serviceMode)}</strong>
+                  </div>
+                  <div class="metric">
+                    <span>Atención</span>
+                    <strong>${escapeHtml(locationPolicyLabels[locationPolicy] ?? locationPolicy)}</strong>
+                  </div>
+                  <div class="metric">
+                    <span>Duración</span>
+                    <strong>${offering.duration_minutes ? `${escapeHtml(String(offering.duration_minutes))} min` : "A coordinar"}</strong>
+                  </div>
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
   `;
 }
 
@@ -683,6 +816,14 @@ function renderProviderBusiness(state) {
             <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Describe en una línea tu servicio">
           </label>
           <label class="input-group">
+            <span>Título público</span>
+            <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Ej: Psicóloga clínica - sesiones online">
+          </label>
+          <label class="input-group">
+            <span>Video o sala online</span>
+            <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Link profesional, sitio o sala a coordinar">
+          </label>
+          <label class="input-group">
             <span>Ciudad</span>
             <input name="providerCity" type="text" maxlength="80" value="${escapeHtml(detail?.city ?? "")}" placeholder="Ciudad base">
           </label>
@@ -705,6 +846,10 @@ function renderProviderBusiness(state) {
             <input name="maxHoursPerService" type="number" min="1" max="12" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
           </label>
         </div>
+        <label class="input-group">
+          <span>Resumen profesional</span>
+          <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Contá tu especialidad, alcance, experiencia y cómo coordinás el servicio sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
+        </label>
 
         <div class="provider-check-grid">
           <label class="provider-check-item">
@@ -761,7 +906,7 @@ function renderProviderBusiness(state) {
             <div>
               <span class="eyebrow">Trabajos publicados</span>
               <h3>Qué ofrecés y cómo lo cobrás</h3>
-              <p class="muted">MIMI sólo facilita la conexión. Vos definís si cobrás por hora, por visita, por trabajo, por unidad o por metro.</p>
+              <p class="muted">MIMI sólo facilita la conexión. Vos definís si cobrás por hora, visita, trabajo, sesión, unidad o metro, y si atendés online, presencial o mixto.</p>
             </div>
           </div>
           <div class="provider-editor-grid">
@@ -811,6 +956,7 @@ function renderProviderBusiness(state) {
         </div>
       </form>
 
+      ${renderOfferingsSummary(offerings)}
       ${renderPricing(pricing, detail)}
       ${renderAvailability(availability)}
     </section>
@@ -849,7 +995,7 @@ function renderProviderTrust(state) {
       ? "Tu cuenta está aprobada para operar cuando estés online."
       : totalDocs > 0
         ? "Ya recibimos tus documentos. Si alguno queda observado, vas a poder reenviarlo desde acá."
-        : "Subí DNI frente, DNI dorso, selfie y comprobante de domicilio.";
+        : "Subí identidad, antecedentes y, si corresponde, matrícula o título profesional.";
 
   // 🔥 WIZARD PRO CORRECTO
   const uploadFormHtml = state.session.providerId
@@ -857,7 +1003,7 @@ function renderProviderTrust(state) {
     <div class="doc-wizard-shell">
 
       <div class="doc-wizard-progress">
-        <strong>Verificación de identidad</strong>
+        <strong>Verificación y habilitación</strong>
         <div class="docs-progress-bar">
           <div class="docs-progress-bar__fill" id="docProgressBar"></div>
         </div>
@@ -867,13 +1013,16 @@ function renderProviderTrust(state) {
         ["dni_front", "DNI frente"],
         ["dni_back", "DNI dorso"],
         ["selfie", "Selfie"],
+        ["criminal_record_certificate", "Certificado de antecedentes"],
+        ["professional_license", "Matrícula profesional"],
+        ["degree_certificate", "Título o constancia"],
         ["address_proof", "Comprobante de domicilio"]
       ].map(([id, title]) => `
         <div class="doc-wizard-card" data-doc="${id}">
           
           <div class="doc-wizard-card__content">
             <h3>${title}</h3>
-            <p>Tomá una foto clara o subí una imagen.</p>
+            <p>Tomá una foto clara o subí imagen/PDF. El certificado de antecedentes se tramita en Argentina.gob.ar.</p>
           </div>
 
           <div class="doc-preview" id="preview-${id}"></div>
@@ -887,7 +1036,7 @@ function renderProviderTrust(state) {
               📂 Subir archivo
             </button>
 
-            <input type="file" class="hidden-input" data-input="${id}" accept="image/*" />
+            <input type="file" class="hidden-input" data-input="${id}" accept="image/*,application/pdf" />
           </div>
 
           <div class="doc-status" id="status-${id}"></div>

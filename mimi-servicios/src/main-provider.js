@@ -1522,6 +1522,9 @@ collectProviderBusinessPayload(form) {
       title,
       description: data.get(`offering:${index}:description`) ?? "",
       pricingModel: data.get(`offering:${index}:pricingModel`) ?? "HOURLY",
+      serviceMode: data.get(`offering:${index}:serviceMode`) ?? "IN_PERSON",
+      locationPolicy: data.get(`offering:${index}:locationPolicy`) ?? "CLIENT_ADDRESS",
+      publicSummary: data.get(`offering:${index}:publicSummary`) ?? "",
       pricePerHour: data.get(`offering:${index}:pricePerHour`) ?? "",
       baseVisitFee: data.get(`offering:${index}:baseVisitFee`) ?? "",
       fixedPrice: data.get(`offering:${index}:fixedPrice`) ?? "",
@@ -1530,6 +1533,8 @@ collectProviderBusinessPayload(form) {
       minimumCharge: data.get(`offering:${index}:minimumCharge`) ?? 0,
       minimumHours: data.get(`offering:${index}:minimumHours`) ?? "",
       maximumHours: data.get(`offering:${index}:maximumHours`) ?? "",
+      durationMinutes: data.get(`offering:${index}:durationMinutes`) ?? "",
+      clientInstructions: data.get(`offering:${index}:clientInstructions`) ?? "",
       quoteRequired: data.has(`offering:${index}:quoteRequired`)
     });
   }
@@ -1609,6 +1614,9 @@ for (const category of availableCategories) {
 
   return {
     bio: data.get("providerBio") ?? "",
+    publicHeadline: data.get("providerPublicHeadline") ?? "",
+    professionalSummary: data.get("providerProfessionalSummary") ?? "",
+    videoIntroUrl: data.get("providerVideoIntroUrl") ?? "",
     city: data.get("providerCity") ?? "",
     province: data.get("providerProvince") ?? "",
     addressText: data.get("providerAddressText") ?? "",

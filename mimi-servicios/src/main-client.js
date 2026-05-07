@@ -216,6 +216,14 @@ function isUuid(value) {
   );
 }
 
+function serviceModeLabel(value) {
+  const mode = String(value || "").toUpperCase();
+  if (mode === "ONLINE") return "Online";
+  if (mode === "HYBRID") return "Online o presencial";
+  if (mode === "IN_PERSON") return "Presencial";
+  return "A coordinar";
+}
+
 function openRequestConfirmation(provider, pricing) {
   const overlay = document.getElementById("requestConfirmOverlay");
   const acceptButton = overlay?.querySelector("[data-confirm-provider='accept']");
@@ -229,6 +237,18 @@ function openRequestConfirmation(provider, pricing) {
   document.getElementById("confirmProviderName").textContent = textFromProvider(provider);
   document.getElementById("confirmCategoryName").textContent = selectedCategory?.name || "Servicio";
   document.getElementById("confirmAddress").textContent = state.requestDraft.address || "Direccion pendiente";
+  const serviceMode = document.getElementById("confirmServiceMode");
+  const sessionDuration = document.getElementById("confirmSessionDuration");
+
+  if (serviceMode) {
+    serviceMode.textContent = serviceModeLabel(pricing?.service_mode || pricing?.serviceMode);
+  }
+
+  if (sessionDuration) {
+    const minutes = Number(pricing?.session_duration_minutes ?? pricing?.sessionDurationMinutes ?? 0);
+    sessionDuration.textContent = minutes > 0 ? `${minutes} min` : "A coordinar";
+  }
+
   document.getElementById("confirmTotalPrice").textContent = formatCurrency(
     pricing?.total_price,
     pricing?.currency || "ARS"
@@ -1312,6 +1332,12 @@ async function handleProviderSelection(providerId) {
       requestType: draft.requestDraft.requestType,
       requestedHours,
       total_price: pricing.total_price,
+      offering_id: pricing.offering_id ?? null,
+      service_mode: pricing.service_mode ?? null,
+      pricing_model: pricing.pricing_model ?? null,
+      unit_name: pricing.unit_name ?? null,
+      session_duration_minutes: pricing.session_duration_minutes ?? null,
+      price_label: pricing.price_label ?? null,
       conversation_id: request?.conversation_id ?? null
     };
     draft.client.insights.paymentIntent = paymentIntent;

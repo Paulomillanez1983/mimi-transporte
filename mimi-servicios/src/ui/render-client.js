@@ -95,7 +95,7 @@ const pricingModelLabels = {
   BASE_VISIT: "Visita base",
   QUOTE: "A presupuestar",
   FIXED: "Precio cerrado",
-  UNIT: "Por unidad",
+  UNIT: "Por sesión / unidad",
   SQUARE_METER: "Por m2",
   LINEAR_METER: "Por metro lineal"
 };
@@ -104,8 +104,12 @@ const nonHourlyCategoryModels = {
   GOMERIA_MOVIL: "BASE_VISIT",
   MECANICA_MOVIL: "BASE_VISIT",
   HERRERIA: "QUOTE",
-  ABOGACIA: "QUOTE",
-  CONTABILIDAD: "QUOTE",
+  PSICOLOGIA: "UNIT",
+  KINESIOLOGIA: "UNIT",
+  NUTRICION: "UNIT",
+  ABOGACIA: "UNIT",
+  CONTABILIDAD: "UNIT",
+  CLASES_PARTICULARES: "UNIT",
   MUDANZAS: "QUOTE",
   JARDINERIA: "SQUARE_METER",
   PINTURA: "SQUARE_METER"

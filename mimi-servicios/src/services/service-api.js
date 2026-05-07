@@ -621,7 +621,7 @@ export async function loadProviderWorkspace(providerId) {
     fetchTable("svc_provider_service_offerings", (query) =>
       query
         .select(
-          "id,provider_id,category_id,title,description,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,minimum_charge,minimum_hours,maximum_hours,quote_required,active,metadata,created_at,updated_at"
+          "id,provider_id,category_id,title,description,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,minimum_charge,minimum_hours,maximum_hours,quote_required,active,metadata,service_mode,duration_minutes,location_policy,public_summary,client_instructions,created_at,updated_at"
         )
         .eq("provider_id", providerId)
         .eq("active", true)
@@ -703,6 +703,18 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
 
   if (typeof payload.bio === "string") {
     profileInput.bio = payload.bio.trim();
+  }
+
+  if (typeof payload.publicHeadline === "string") {
+    profileInput.public_headline = payload.publicHeadline.trim();
+  }
+
+  if (typeof payload.professionalSummary === "string") {
+    profileInput.professional_summary = payload.professionalSummary.trim();
+  }
+
+  if (typeof payload.videoIntroUrl === "string") {
+    profileInput.video_intro_url = payload.videoIntroUrl.trim();
   }
 
   if (typeof payload.addressText === "string") {
@@ -818,6 +830,11 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
             minimum_hours: item.minimumHours === "" || item.minimumHours == null ? null : Number(item.minimumHours),
             maximum_hours: item.maximumHours === "" || item.maximumHours == null ? null : Number(item.maximumHours),
             quote_required: Boolean(item.quoteRequired),
+            service_mode: String(item.serviceMode ?? "IN_PERSON").trim().toUpperCase(),
+            duration_minutes: item.durationMinutes === "" || item.durationMinutes == null ? null : Number(item.durationMinutes),
+            location_policy: String(item.locationPolicy ?? "CLIENT_ADDRESS").trim().toUpperCase(),
+            public_summary: String(item.publicSummary ?? "").trim() || null,
+            client_instructions: String(item.clientInstructions ?? "").trim() || null,
             active: true,
             metadata: item.metadata ?? {}
           };
