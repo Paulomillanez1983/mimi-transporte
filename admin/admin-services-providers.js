@@ -76,13 +76,23 @@ class AdminServicesProviders {
         .createSignedUrl(path, 60 * 5);
 
       if (error) {
-        console.warn("[admin-services-providers.getSignedDocumentUrl]", error, doc);
+        console.info("[admin-services-providers.getSignedDocumentUrl] Documento no accesible", {
+          id: doc?.id,
+          type: doc?.document_type,
+          path,
+          message: error?.message || error?.error || String(error)
+        });
         return null;
       }
 
       return data?.signedUrl || null;
     } catch (error) {
-      console.warn("[admin-services-providers.getSignedDocumentUrl.catch]", error, doc);
+      console.info("[admin-services-providers.getSignedDocumentUrl.catch] Documento no accesible", {
+        id: doc?.id,
+        type: doc?.document_type,
+        path,
+        message: error?.message || String(error)
+      });
       return null;
     }
   }
@@ -168,9 +178,11 @@ const profile = Array.isArray(provider?.svc_provider_profiles)
         
 
         const dni = docs.find((d) => d.document_type === "dni_front");
+        const dniBack = docs.find((d) => d.document_type === "dni_back");
         const selfie = docs.find((d) => d.document_type === "selfie");
 
         const dniUrl = await this.getSignedDocumentUrl(dni);
+        const dniBackUrl = await this.getSignedDocumentUrl(dniBack);
         const selfieUrl = await this.getSignedDocumentUrl(selfie);
 
         const providerId = this.escapeHtml(provider.id);
@@ -198,8 +210,9 @@ const profile = Array.isArray(provider?.svc_provider_profiles)
             </div>
 
             <div class="provider-docs">
-              ${dniUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(dniUrl)}">DNI</a>` : ""}
-              ${selfieUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(selfieUrl)}">Selfie</a>` : ""}
+              ${dniUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(dniUrl)}">DNI frente</a>` : `<span>DNI frente no disponible</span>`}
+              ${dniBackUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(dniBackUrl)}">DNI dorso</a>` : `<span>DNI dorso pendiente</span>`}
+              ${selfieUrl ? `<a target="_blank" rel="noopener noreferrer" href="${this.escapeHtml(selfieUrl)}">Selfie</a>` : `<span>Selfie no disponible</span>`}
             </div>
 
             <textarea class="review-note" data-note="${providerId}" placeholder="Notas de revisión"></textarea>

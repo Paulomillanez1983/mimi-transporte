@@ -70,6 +70,12 @@ class SupabaseAdminService {
           throw new Error("Falta configurar SUPABASE_URL o SUPABASE_ANON_KEY.");
         }
 
+        if (window.__mimiSupabaseAdminClient?.auth) {
+          this.client = window.__mimiSupabaseAdminClient;
+          this.initialized = true;
+          return true;
+        }
+
         this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           auth: {
             persistSession: true,
@@ -79,6 +85,8 @@ class SupabaseAdminService {
             flowType: "pkce"
           }
         });
+
+        window.__mimiSupabaseAdminClient = this.client;
 
         if (!this.authListenerRegistered) {
           this.client.auth.onAuthStateChange((event, session) => {
@@ -308,9 +316,12 @@ async requireActiveAdmin() {
    }
  }
 
-const supabaseAdminService = new SupabaseAdminService();
+const supabaseAdminService =
+  window.__mimiSupabaseAdminService ||
+  new SupabaseAdminService();
 
 window.supabaseAdminService = supabaseAdminService;
+window.__mimiSupabaseAdminService = supabaseAdminService;
 
 supabaseAdminService.init().then(() => {
   window.supabaseAdmin = supabaseAdminService.client;
