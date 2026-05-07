@@ -232,3 +232,22 @@ Correcciones aplicadas:
 Decision UX:
 - Los datos tecnicos viejos de precio quedan plegados en `Ver datos tecnicos guardados`; el prestador ve primero la experiencia guiada y no un formulario legacy.
 - No se muestran rankings, certificaciones ni garantias publicas. La completitud sigue siendo privada.
+
+## Hotfix UX provider wizard compacto 2026-05-07
+
+Problema detectado por QA visual:
+- La pantalla de configurar servicio quedaba demasiado larga en mobile: aunque tenia mejores textos y tarjetas, seguia obligando al prestador a scrollear una lista enorme.
+
+Correcciones aplicadas:
+- `mimi-servicios/src/ui/render-provider.js`: cada etapa del configurador ahora es un paso independiente; solo se muestra una etapa por vez.
+- `mimi-servicios/src/main-provider.js`: se agrega navegacion `Siguiente`, `Atras` y salto por chips de progreso.
+- `mimi-servicios/styles/provider.css`: las etapas ocultas no ocupan alto, los rubros/precios usan scroll interno y la navegacion del wizard queda sticky dentro del paso.
+- `mimi-servicios/prestador.html` y `mimi-servicios/sw-2026.js`: cache-busting actualizado a `2026.05.07.6` / `provider-wizard-ui-6`.
+
+Pruebas:
+- `node --check mimi-servicios/src/main-provider.js`: OK.
+- `node --check mimi-servicios/src/ui/render-provider.js`: OK.
+- `node qa/audit-encoding.js`: OK, 0 hallazgos.
+- `node qa/audit-routes.js`: OK.
+- `node qa/audit-inline-scripts.js`: OK.
+- `git diff --check`: OK.

@@ -1418,7 +1418,7 @@ document.addEventListener("submit", (event) => {
 document.addEventListener("click", (event) => {
   const actionButton = event.target?.closest?.("[data-provider-business-action]");
   if (actionButton) {
-    this.handleProviderBusinessAction(actionButton.dataset.providerBusinessAction);
+    this.handleProviderBusinessAction(actionButton.dataset.providerBusinessAction, actionButton);
   }
 });
     // Keyboard shortcuts
@@ -1870,7 +1870,12 @@ async acceptProviderTerms() {
   });
 }
 
-async handleProviderBusinessAction(action) {
+async handleProviderBusinessAction(action, source = null) {
+  if (action === "provider-setup-next" || action === "provider-setup-prev" || action === "provider-setup-go") {
+    this.moveProviderSetupStep(action, source);
+    return;
+  }
+
   if (action === "focus-offering-editor") {
     this.openProviderBusinessSetup();
     return;
@@ -1910,6 +1915,32 @@ async handleProviderBusinessAction(action) {
       actions.setLoading(false);
     }
   }
+}
+
+moveProviderSetupStep(action, source = null) {
+  const form = document.getElementById("providerBusinessForm");
+  if (!form) return;
+
+  const steps = [...form.querySelectorAll("[data-provider-setup-step]")];
+  if (!steps.length) return;
+
+  const activeStep = form.querySelector("[data-provider-setup-step].is-active") ?? steps[0];
+  const current = Number(activeStep.dataset.providerSetupStep ?? 1);
+  const target = action === "provider-setup-go"
+    ? Number(source?.dataset?.providerSetupTarget ?? current)
+    : current + (action === "provider-setup-next" ? 1 : -1);
+  const next = Math.min(Math.max(target, 1), steps.length);
+
+  steps.forEach((step) => {
+    step.classList.toggle("is-active", Number(step.dataset.providerSetupStep) === next);
+  });
+
+  form.querySelectorAll("[data-provider-setup-target]").forEach((button) => {
+    button.classList.toggle("is-active", Number(button.dataset.providerSetupTarget) === next);
+  });
+
+  const nextStep = form.querySelector(`[data-provider-setup-step="${next}"]`);
+  nextStep?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 }
 
 async handleProviderServiceSuggestion() {

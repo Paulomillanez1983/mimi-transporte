@@ -10378,6 +10378,13 @@ body.provider-auth-required .notification-container {
   grid-template-columns: 1fr;
 }
 
+#providerBusinessPanel .provider-step-card .provider-editor-grid {
+  max-height: min(48vh, 430px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 3px;
+}
+
 #providerBusinessPanel .provider-editor-card,
 #providerBusinessPanel .provider-pricing-card,
 #providerBusinessPanel .provider-kpi-card,
@@ -10427,21 +10434,28 @@ body.provider-auth-required .notification-container {
   scrollbar-width: none;
 }
 
-#providerBusinessPanel .provider-setup-progress span,
+#providerBusinessPanel .provider-setup-progress button,
 #providerBusinessPanel .provider-ai-chip {
   flex: 0 0 auto;
   padding: 8px 10px;
   border-radius: 999px;
+  border: 0;
   background: #f3f5f4;
   color: #4e5c56;
   font-size: 0.78rem;
   font-weight: 800;
 }
 
+#providerBusinessPanel .provider-setup-progress .is-active,
 #providerBusinessPanel .provider-setup-progress .is-done,
 #providerBusinessPanel .provider-ai-chip {
   background: #e4f7eb;
   color: #08733f;
+}
+
+#providerBusinessPanel .provider-setup-progress .is-active {
+  background: #101513;
+  color: #fff;
 }
 
 #providerBusinessPanel .provider-publisher-app {
@@ -10486,13 +10500,26 @@ body.provider-auth-required .notification-container {
 }
 
 #providerBusinessPanel .provider-step-card {
-  display: grid;
+  display: none;
   gap: 13px;
   padding: 15px;
   border-radius: 20px;
   background: #fff;
   border: 1px solid rgba(16, 21, 19, 0.09);
   box-shadow: 0 14px 34px rgba(16, 21, 19, 0.07);
+}
+
+#providerBusinessPanel .provider-step-card.is-active {
+  display: grid;
+}
+
+#providerBusinessPanel .provider-insight-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 18px;
+  background: #eef8f2;
+  border: 1px solid rgba(8, 131, 72, 0.14);
 }
 
 #providerBusinessPanel .provider-step-card.is-featured {
@@ -10707,6 +10734,29 @@ body.provider-auth-required .notification-container {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+#providerBusinessPanel .provider-wizard-nav {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px -4px -4px;
+  padding: 10px 4px 4px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 30%);
+}
+
+#providerBusinessPanel .provider-wizard-nav span {
+  color: #66736d;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+#providerBusinessPanel .provider-wizard-nav button {
+  flex: 0 0 auto;
 }
 
 #providerBusinessPanel .provider-action-strip button,

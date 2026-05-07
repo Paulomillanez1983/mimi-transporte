@@ -1067,11 +1067,11 @@ function renderProviderBusiness(state) {
 
         <div class="provider-setup-progress" aria-label="Progreso de configuracion">
           ${["Servicio", "Rubro", "Descripcion", "Zona", "Fotos", "Revision", "Terminos"].map((label, index) => `
-            <span class="${index < 2 || offerings.length ? "is-done" : ""}">${index + 1}. ${escapeHtml(label)}</span>
+            <button class="${index === 0 ? "is-active" : ""} ${index < 2 || offerings.length ? "is-done" : ""}" type="button" data-provider-business-action="provider-setup-go" data-provider-setup-target="${index + 1}">${index + 1}. ${escapeHtml(label)}</button>
           `).join("")}
         </div>
 
-        <section class="provider-ai-card provider-step-card is-featured">
+        <section class="provider-ai-card provider-step-card is-featured is-active" data-provider-setup-step="1">
           <div class="provider-step-heading">
             <span>1</span>
             <div>
@@ -1086,9 +1086,13 @@ function renderProviderBusiness(state) {
             <button class="btn-secondary" data-provider-business-action="focus-offering-editor" type="button">Completar manualmente</button>
           </div>
           <div class="provider-ai-suggestions" id="providerAiSuggestions" hidden></div>
+          <div class="provider-wizard-nav">
+            <span>Empeza por describirlo simple. Despues lo ajustamos.</span>
+            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
+          </div>
         </section>
 
-        <section class="provider-profile-quality provider-step-card">
+        <section class="provider-profile-quality provider-insight-card">
           <div>
             <span class="eyebrow">Solo para vos</span>
             <h3>${escapeHtml(quality.label)}</h3>
@@ -1103,7 +1107,7 @@ function renderProviderBusiness(state) {
           <span>Tu disponibilidad depende de estar conectado. Esta pantalla solo define que ofreces y como se entiende tu perfil.</span>
         </div>
 
-        <section class="provider-step-card provider-profile-basics">
+        <section class="provider-step-card provider-profile-basics" data-provider-setup-step="2">
           <div class="provider-step-heading">
             <span>2</span>
             <div>
@@ -1142,9 +1146,13 @@ function renderProviderBusiness(state) {
           <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Conta tu especialidad, alcance, experiencia y como coordinas el servicio sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
         </label>
         <input name="maxHoursPerService" type="hidden" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
+          <div class="provider-wizard-nav">
+            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
+            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
+          </div>
         </section>
 
-        <section class="provider-step-card">
+        <section class="provider-step-card" data-provider-setup-step="3">
           <div class="block-header compact">
             <div>
               <span class="eyebrow">Etapa 3</span>
@@ -1182,9 +1190,13 @@ function renderProviderBusiness(state) {
               })
               .join("")}
           </div>
+          <div class="provider-wizard-nav">
+            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
+            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
+          </div>
         </section>
 
-        <section class="provider-step-card">
+        <section class="provider-step-card" data-provider-setup-step="4">
           <div class="block-header compact">
             <div>
               <span class="eyebrow">Etapa 4</span>
@@ -1197,29 +1209,45 @@ function renderProviderBusiness(state) {
               .map((offering, index) => renderOfferingEditorV2(offering, index, categories))
               .join("")}
           </div>
+          <div class="provider-wizard-nav">
+            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
+            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
+          </div>
         </section>
 
-        <section class="provider-step-card provider-optional-media">
+        <section class="provider-step-card provider-optional-media" data-provider-setup-step="5">
           <span class="eyebrow">Etapa 5: fotos o ejemplos opcionales</span>
           <h3>Mostra tu trabajo si queres</h3>
           <p class="muted">Este paso es opcional. Podes cargar ejemplos mas adelante; no bloquea la configuracion del oficio.</p>
           <input type="file" name="providerExamples" accept="image/*" multiple>
+          <div class="provider-wizard-nav">
+            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
+            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
+          </div>
         </section>
 
-        <section class="provider-step-card provider-review-card">
+        <section class="provider-step-card provider-review-card" data-provider-setup-step="6">
           <span class="eyebrow">Etapa 6: revision final</span>
           <h3>Revisa antes de publicar</h3>
           <p class="muted">Confirma que el rubro, la descripcion, la zona y el precio representan lo que realmente ofreces. MIMI facilita la conexion entre partes; no contrata, no certifica y no garantiza servicios.</p>
+          <div class="provider-wizard-nav">
+            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
+            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
+          </div>
         </section>
 
-        <label class="provider-check-item provider-terms-box">
-          <input name="providerTermsAccepted" type="checkbox" required>
-          <span>Acepto los <a href="../terminos.html" target="_blank" rel="noopener">Terminos y Condiciones para prestadores</a> y la Politica de Privacidad. Entiendo que MIMI es una plataforma tecnologica intermediaria.</span>
-        </label>
-
-        <div class="provider-action-strip">
-          <button class="btn-primary provider-save-button" type="submit">Guardar y publicar mi servicio</button>
-        </div>
+        <section class="provider-step-card provider-final-step" data-provider-setup-step="7">
+          <span class="eyebrow">Etapa 7: terminos</span>
+          <h3>Ultimo paso</h3>
+          <label class="provider-check-item provider-terms-box">
+            <input name="providerTermsAccepted" type="checkbox" required>
+            <span>Acepto los <a href="../terminos.html" target="_blank" rel="noopener">Terminos y Condiciones para prestadores</a> y la Politica de Privacidad. Entiendo que MIMI es una plataforma tecnologica intermediaria.</span>
+          </label>
+          <div class="provider-wizard-nav">
+            <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
+            <button class="btn-primary provider-save-button" type="submit">Guardar y publicar mi servicio</button>
+          </div>
+        </section>
       </form>
 
       ${renderOfferingsSummary(offerings)}
