@@ -10336,3 +10336,186 @@ body.provider-auth-required .notification-container {
   font-weight: 850;
 }
 @keyframes mimi-spin { to { transform: rotate(360deg); } }
+
+/* Provider marketplace setup: compact, predictable, mobile-first. */
+#providerBusinessPanel .provider-stack,
+#providerBusinessPanel .provider-settings-form,
+#providerBusinessPanel .provider-editor-grid {
+  display: grid;
+  gap: 14px;
+}
+
+#providerBusinessPanel .provider-settings-form {
+  padding: 16px;
+  border-radius: 22px;
+}
+
+#providerBusinessPanel .provider-settings-form > strong {
+  color: #101513;
+  font-size: 1.08rem;
+  letter-spacing: -0.01em;
+}
+
+#providerBusinessPanel .provider-form-grid,
+#providerBusinessPanel .provider-inline-fields,
+#providerBusinessPanel .provider-check-grid,
+#providerBusinessPanel .summary-metrics,
+#providerBusinessPanel .provider-kpi-grid,
+#providerBusinessPanel .provider-pricing-grid {
+  display: grid;
+  gap: 10px;
+}
+
+#providerBusinessPanel .provider-form-grid,
+#providerBusinessPanel .provider-inline-fields,
+#providerBusinessPanel .summary-metrics,
+#providerBusinessPanel .provider-kpi-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#providerBusinessPanel .provider-editor-grid,
+#providerBusinessPanel .provider-pricing-grid {
+  grid-template-columns: 1fr;
+}
+
+#providerBusinessPanel .provider-editor-card,
+#providerBusinessPanel .provider-pricing-card,
+#providerBusinessPanel .provider-kpi-card,
+#providerBusinessPanel .metric,
+#providerBusinessPanel .summary-card {
+  min-width: 0;
+  border: 1px solid rgba(16, 21, 19, 0.1);
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 18px;
+  padding: 14px;
+  color: #101513;
+}
+
+#providerBusinessPanel .provider-offering-card-v2 {
+  display: grid;
+  gap: 12px;
+  border-color: rgba(8, 131, 72, 0.22);
+  box-shadow: 0 14px 38px rgba(16, 21, 19, 0.08);
+}
+
+#providerBusinessPanel .provider-offering-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#providerBusinessPanel .provider-offering-step > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #e7f8ee;
+  color: #087a43;
+  font-weight: 900;
+}
+
+#providerBusinessPanel .provider-offering-step strong,
+#providerBusinessPanel .provider-price-helper strong {
+  display: block;
+}
+
+#providerBusinessPanel .provider-offering-step small,
+#providerBusinessPanel .provider-price-helper span,
+#providerBusinessPanel .input-group small,
+#providerBusinessPanel .muted {
+  color: #66736d;
+  line-height: 1.35;
+}
+
+#providerBusinessPanel .input-group {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+#providerBusinessPanel .input-group span,
+#providerBusinessPanel .provider-check-item span {
+  color: #24302b;
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+#providerBusinessPanel .input-group input,
+#providerBusinessPanel .input-group select,
+#providerBusinessPanel .input-group textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(16, 21, 19, 0.14);
+  border-radius: 14px;
+  background: #fff;
+  color: #101513;
+  padding: 12px;
+  font: inherit;
+  outline: none;
+}
+
+#providerBusinessPanel .input-group textarea {
+  resize: vertical;
+}
+
+#providerBusinessPanel .input-group input:focus,
+#providerBusinessPanel .input-group select:focus,
+#providerBusinessPanel .input-group textarea:focus {
+  border-color: rgba(8, 131, 72, 0.46);
+  box-shadow: 0 0 0 4px rgba(8, 131, 72, 0.1);
+}
+
+#providerBusinessPanel .provider-field-wide,
+#providerBusinessPanel .provider-inline-section {
+  grid-column: 1 / -1;
+}
+
+#providerBusinessPanel .provider-check-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+#providerBusinessPanel .provider-check-item input {
+  width: 18px;
+  height: 18px;
+  accent-color: #088348;
+}
+
+#providerBusinessPanel .provider-action-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+#providerBusinessPanel .provider-action-strip button,
+#providerBusinessPanel .provider-settings-form button {
+  min-height: 44px;
+}
+
+#providerBusinessPanel .provider-price-helper {
+  padding: 12px;
+  border-radius: 16px;
+  background: #f1f8f4;
+  border: 1px solid rgba(8, 131, 72, 0.14);
+}
+
+@media (max-width: 720px) {
+  #providerBusinessPanel .provider-form-grid,
+  #providerBusinessPanel .provider-inline-fields,
+  #providerBusinessPanel .summary-metrics,
+  #providerBusinessPanel .provider-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #providerBusinessPanel .provider-editor-card,
+  #providerBusinessPanel .provider-pricing-card,
+  #providerBusinessPanel .provider-kpi-card,
+  #providerBusinessPanel .metric,
+  #providerBusinessPanel .summary-card {
+    border-radius: 16px;
+    padding: 12px;
+  }
+}

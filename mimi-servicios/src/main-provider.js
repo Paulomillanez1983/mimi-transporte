@@ -872,7 +872,14 @@ if (Array.isArray(categories) && categories.length) {
         id: category.id,
         code: category.code,
         name: category.name,
-        description: category.description
+        description: category.description,
+        aliases: category.aliases ?? [],
+        search_keywords: category.search_keywords ?? [],
+        default_pricing_model: category.default_pricing_model ?? "HOURLY",
+        requires_provider_quote: Boolean(category.requires_provider_quote),
+        allowed_service_modes: category.allowed_service_modes ?? ["IN_PERSON"],
+        requires_professional_license: Boolean(category.requires_professional_license),
+        requires_background_check: Boolean(category.requires_background_check)
       }))
     }
   });
@@ -1764,8 +1771,20 @@ async handleProviderBusinessSubmit(event) {
     return;
   }
 
-  if (payload.pricing.some((item) => !Number.isFinite(item.pricePerHour) || item.pricePerHour <= 0)) {
-    this.showToast("Cada categoria activa necesita una tarifa de referencia o un trabajo publicado con precio", "warning");
+  const hasInvalidPricing = payload.pricing.some((item) => {
+    const hasReferencePrice = Number.isFinite(item.pricePerHour) && item.pricePerHour > 0;
+    const hasQuoteOffering = payload.offerings.some((offering) => {
+      return (
+        offering.categoryId === item.categoryId &&
+        (String(offering.pricingModel || "").toUpperCase() === "QUOTE" || offering.quoteRequired)
+      );
+    });
+
+    return !hasReferencePrice && !hasQuoteOffering;
+  });
+
+  if (hasInvalidPricing) {
+    this.showToast("Cada rubro necesita un precio de referencia o marcar que requiere presupuesto", "warning");
     return;
   }
 

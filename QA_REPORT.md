@@ -102,3 +102,24 @@ Pendiente operativo:
 - Probar manualmente en admin con un chofer real: aprobar, pedir correccion, rechazar y bloquear.
 - Probar manualmente en admin con un prestador real y confirmar que Edge Function `admin-review-service-provider` persiste cada accion.
 - Activar OTP telefonico requiere configurar proveedor SMS/WhatsApp en Supabase Auth antes de implementar pantallas obligatorias.
+
+## Actualizacion provider marketplace 2026-05-07
+
+Correcciones aplicadas:
+- `mimi-servicios/src/ui/render-provider.js`: el editor de trabajos publicados ahora usa categorias reales del backend, agrupadas por profesion/oficio, hogar, cuidado, belleza y tecnicos. El prestador puede escribir el servicio exacto aunque elija un rubro amplio para matching.
+- `mimi-servicios/src/main-provider.js`: conserva metadata real de categorias (`default_pricing_model`, modalidades permitidas, requerimiento de matricula y buena conducta) y permite rubros a presupuestar sin bloquear por precio cero.
+- `mimi-servicios/src/services/service-api.js`: carga datos de categoria junto con pricing y publicaciones para mostrar mejor contexto.
+- `mimi-servicios/styles/provider.css`: mejora UI mobile-first del bloque comercial sin afectar verificacion/login porque queda acotado a `#providerBusinessPanel`.
+- `docs/provider-offerings-self-read-policy.sql`: politica RLS para que cada prestador lea sus propias publicaciones antes de aprobacion admin.
+
+Backend aplicado:
+- Politica `svc_provider_service_offerings_provider_select_own` aplicada y verificada.
+
+Pruebas:
+- `node --check mimi-servicios/src/ui/render-provider.js`: OK.
+- `node --check mimi-servicios/src/main-provider.js`: OK.
+- `node --check mimi-servicios/src/services/service-api.js`: OK.
+- `node qa/audit-routes.js`: OK.
+- `node qa/audit-inline-scripts.js`: OK.
+- `node qa/audit-encoding.js`: OK.
+- `git diff --check`: OK.

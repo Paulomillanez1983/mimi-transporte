@@ -56,6 +56,15 @@ const locationPolicyLabels = {
   FLEXIBLE: "A coordinar"
 };
 
+const categoryGroupLabels = {
+  professional: "Profesionales",
+  home: "Hogar y mantenimiento",
+  care: "Cuidado y bienestar",
+  beauty: "Belleza y personales",
+  technical: "Tecnicos y movilidad",
+  other: "Otros oficios"
+};
+
 function currency(value, currencyCode = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -84,6 +93,64 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function categoryGroup(category = {}) {
+  const code = String(category.code ?? "").toUpperCase();
+  if (["PSICOLOGIA", "NUTRICION", "KINESIOLOGIA", "ABOGACIA", "CONTABILIDAD", "ENFERMERIA", "CLASES_PARTICULARES"].includes(code)) {
+    return "professional";
+  }
+  if (["LIMPIEZA", "SERVICIO_DOMESTICO", "PLOMERIA", "ELECTRICIDAD", "GASISTA", "PINTURA", "CARPINTERIA", "ALBANILERIA", "JARDINERIA", "CERRAJERIA", "HERRERIA"].includes(code)) {
+    return "home";
+  }
+  if (["CUIDADO_ADULTOS", "CUIDADO_NINOS", "MASAJISTA", "MASCOTAS"].includes(code)) {
+    return "care";
+  }
+  if (["BELLEZA", "MANICURIA", "PELUQUERIA"].includes(code)) {
+    return "beauty";
+  }
+  if (["INSTALACION_AIRE", "REFRIGERACION", "TECNICO_PC", "TECNOLOGIA", "GOMERIA_MOVIL", "MECANICA_MOVIL", "MUDANZAS"].includes(code)) {
+    return "technical";
+  }
+  return "other";
+}
+
+function sortedCategories(categories = []) {
+  const order = ["professional", "home", "care", "beauty", "technical", "other"];
+  return [...categories].sort((a, b) => {
+    const groupDelta = order.indexOf(categoryGroup(a)) - order.indexOf(categoryGroup(b));
+    if (groupDelta !== 0) return groupDelta;
+    return String(a.name ?? "").localeCompare(String(b.name ?? ""), "es");
+  });
+}
+
+function categoryById(categories = [], id = "") {
+  return categories.find((category) => String(category.id) === String(id)) ?? null;
+}
+
+function recommendedDefaultsForCategory(category = {}) {
+  const model = String(category.default_pricing_model || "HOURLY").toUpperCase();
+  const modes = Array.isArray(category.allowed_service_modes) && category.allowed_service_modes.length
+    ? category.allowed_service_modes
+    : ["IN_PERSON"];
+  const serviceMode = modes.includes("ONLINE") ? "ONLINE" : modes[0] || "IN_PERSON";
+
+  return {
+    pricingModel: model,
+    serviceMode,
+    locationPolicy: serviceMode === "ONLINE" ? "ONLINE_ONLY" : "CLIENT_ADDRESS",
+    unitName: model === "UNIT" ? "sesion" : "",
+    durationMinutes: model === "UNIT" ? 45 : ""
+  };
+}
+
+function categoryRequirementText(category = {}) {
+  const items = [];
+  if (category.requires_professional_license) items.push("requiere matricula o titulo");
+  if (category.requires_background_check) items.push("requiere buena conducta");
+  const modes = Array.isArray(category.allowed_service_modes) ? category.allowed_service_modes : [];
+  if (modes.includes("ONLINE")) items.push("admite online");
+  return items.join(" · ");
 }
 
 function setBadgeCount(id, count) {
@@ -765,6 +832,157 @@ function renderOfferingsSummary(offerings = []) {
   `;
 }
 
+function renderOfferingEditorV2(offering = null, index = 0, categories = []) {
+  const currentCategoryId = offering?.category_id ?? "";
+  const currentCategory = categoryById(categories, currentCategoryId);
+  const defaults = recommendedDefaultsForCategory(currentCategory);
+  const pricingModel = offering?.pricing_model ?? defaults.pricingModel;
+  const serviceMode = offering?.service_mode ?? defaults.serviceMode;
+  const locationPolicy = offering?.location_policy ?? defaults.locationPolicy;
+  const checked = offering ? "checked" : "checked";
+  const groupedCategories = sortedCategories(categories).reduce((acc, category) => {
+    const group = categoryGroup(category);
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(category);
+    return acc;
+  }, {});
+  const requirement = currentCategory ? categoryRequirementText(currentCategory) : "";
+
+  return `
+    <article class="provider-editor-card provider-offering-card provider-offering-card-v2">
+      <input type="hidden" name="offering:${index}:present" value="1">
+      <input type="hidden" name="offering:${index}:id" value="${escapeHtml(offering?.id ?? "")}">
+
+      <div class="provider-offering-step">
+        <span>${index + 1}</span>
+        <div>
+          <strong>${offering ? "Editar publicacion" : "Nueva publicacion"}</strong>
+          <small>Esto es lo que despues ve el cliente en la card.</small>
+        </div>
+      </div>
+
+      <label class="provider-check-item">
+        <input type="checkbox" name="offering:${index}:active" ${checked}>
+        <span>Publicar este servicio</span>
+      </label>
+
+      <label class="input-group provider-field-wide">
+        <span>Que ofreces exactamente</span>
+        <input name="offering:${index}:title" type="text" maxlength="90" value="${escapeHtml(offering?.title ?? "")}" placeholder="Ej: sesion de psicologia online, corte de pasto, unas semi">
+      </label>
+
+      <label class="input-group provider-field-wide">
+        <span>Rubro donde te tienen que encontrar</span>
+        <select name="offering:${index}:categoryId">
+          <option value="">Elegi el rubro mas cercano</option>
+          ${Object.entries(groupedCategories).map(([group, items]) => `
+            <optgroup label="${escapeHtml(categoryGroupLabels[group] ?? group)}">
+              ${items.map((category) => `
+                <option value="${escapeHtml(category.id)}" ${String(currentCategoryId) === String(category.id) ? "selected" : ""}>${escapeHtml(category.name)}</option>
+              `).join("")}
+            </optgroup>
+          `).join("")}
+        </select>
+        <small>${escapeHtml(requirement || "Si no ves tu oficio exacto, elegi el rubro mas parecido y escribi el nombre exacto arriba.")}</small>
+      </label>
+
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>Como lo cobras</span>
+          <select name="offering:${index}:pricingModel">
+            ${renderPricingModelOptions(pricingModel)}
+          </select>
+        </label>
+        <label class="input-group">
+          <span>Modalidad</span>
+          <select name="offering:${index}:serviceMode">
+            ${renderServiceModeOptions(serviceMode)}
+          </select>
+        </label>
+        <label class="input-group">
+          <span>Atencion</span>
+          <select name="offering:${index}:locationPolicy">
+            ${renderLocationPolicyOptions(locationPolicy)}
+          </select>
+        </label>
+      </div>
+
+      <label class="input-group provider-field-wide">
+        <span>Que incluye</span>
+        <textarea name="offering:${index}:description" maxlength="220" rows="2" placeholder="Conta el alcance, que incluye, que no incluye y que necesita saber el cliente">${escapeHtml(offering?.description ?? "")}</textarea>
+      </label>
+
+      <label class="input-group provider-field-wide">
+        <span>Resumen para la card</span>
+        <input name="offering:${index}:publicSummary" type="text" maxlength="140" value="${escapeHtml(offering?.public_summary ?? "")}" placeholder="Ej: sesiones online para ansiedad, estres y orientacion adulta">
+      </label>
+
+      <div class="provider-price-helper">
+        <strong>Precio</strong>
+        <span>Completa el campo que corresponda al modelo elegido. Para psicologia o consultas, usa unidad: sesion.</span>
+      </div>
+
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>$/hora</span>
+          <input name="offering:${index}:pricePerHour" type="number" min="0" step="100" value="${escapeHtml(String(offering?.price_per_hour ?? ""))}" placeholder="0">
+        </label>
+        <label class="input-group">
+          <span>Visita base</span>
+          <input name="offering:${index}:baseVisitFee" type="number" min="0" step="100" value="${escapeHtml(String(offering?.base_visit_fee ?? ""))}" placeholder="0">
+        </label>
+      </div>
+
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>Precio cerrado</span>
+          <input name="offering:${index}:fixedPrice" type="number" min="0" step="100" value="${escapeHtml(String(offering?.fixed_price ?? ""))}" placeholder="0">
+        </label>
+        <label class="input-group">
+          <span>Minimo</span>
+          <input name="offering:${index}:minimumCharge" type="number" min="0" step="100" value="${escapeHtml(String(offering?.minimum_charge ?? 0))}" placeholder="0">
+        </label>
+      </div>
+
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>Unidad</span>
+          <input name="offering:${index}:unitName" type="text" maxlength="40" value="${escapeHtml(offering?.unit_name ?? defaults.unitName)}" placeholder="sesion, clase, consulta">
+        </label>
+        <label class="input-group">
+          <span>$/sesion o unidad</span>
+          <input name="offering:${index}:unitPrice" type="number" min="0" step="100" value="${escapeHtml(String(offering?.unit_price ?? ""))}" placeholder="0">
+        </label>
+        <label class="input-group">
+          <span>Duracion</span>
+          <input name="offering:${index}:durationMinutes" type="number" min="15" max="240" step="5" value="${escapeHtml(String(offering?.duration_minutes ?? defaults.durationMinutes))}" placeholder="45">
+        </label>
+      </div>
+
+      <div class="provider-inline-fields">
+        <label class="input-group">
+          <span>Min hs</span>
+          <input name="offering:${index}:minimumHours" type="number" min="1" max="24" value="${escapeHtml(String(offering?.minimum_hours ?? ""))}" placeholder="1">
+        </label>
+        <label class="input-group">
+          <span>Max hs</span>
+          <input name="offering:${index}:maximumHours" type="number" min="1" max="24" value="${escapeHtml(String(offering?.maximum_hours ?? ""))}" placeholder="8">
+        </label>
+      </div>
+
+      <label class="provider-check-item">
+        <input name="offering:${index}:quoteRequired" type="checkbox" ${offering?.quote_required ? "checked" : ""}>
+        <span>Requiere presupuesto antes de confirmar</span>
+      </label>
+
+      <label class="input-group provider-field-wide">
+        <span>Indicaciones para el cliente</span>
+        <textarea name="offering:${index}:clientInstructions" maxlength="220" rows="2" placeholder="Ej: la videollamada se coordina por chat luego de aceptar la solicitud">${escapeHtml(offering?.client_instructions ?? "")}</textarea>
+      </label>
+    </article>
+  `;
+}
+
 function renderProviderBusiness(state) {
   const container = document.getElementById("providerBusinessPanel");
   if (!container) return;
@@ -775,9 +993,13 @@ function renderProviderBusiness(state) {
   const availability = state.provider.business.availability ?? [];
   const locationLabel = state.provider.availability?.locationLabel ?? "Sin posición tomada";
   const activeCategoryIds = new Set(
-    (state.provider.categories ?? []).map((item) => item.category_id)
+    (state.provider.categories ?? []).map((item) => item.category_id ?? item.id)
   );
-  const categories = Array.isArray(appConfig.categories) ? appConfig.categories : [];
+  const categories = sortedCategories(
+    Array.isArray(state.appConfig?.categories) && state.appConfig.categories.length
+      ? state.appConfig.categories
+      : appConfig.categories
+  );
   const pricingByCategory = new Map(pricing.map((item) => [item.category_id, item]));
   const availabilityByDay = new Map(
     availability.map((item) => [String(item.day_of_week), item])
@@ -911,7 +1133,7 @@ function renderProviderBusiness(state) {
           </div>
           <div class="provider-editor-grid">
             ${[...offerings, null]
-              .map((offering, index) => renderOfferingEditor(offering, index, categories))
+              .map((offering, index) => renderOfferingEditorV2(offering, index, categories))
               .join("")}
           </div>
         </section>

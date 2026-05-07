@@ -611,7 +611,7 @@ export async function loadProviderWorkspace(providerId) {
     fetchTable("svc_provider_pricing", (query) =>
       query
         .select(
-          "id,provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active"
+          "id,provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active,svc_categories(name,code,description,default_pricing_model,allowed_service_modes,requires_professional_license,requires_background_check)"
         )
         .eq("provider_id", providerId)
         .eq("active", true)
@@ -621,7 +621,7 @@ export async function loadProviderWorkspace(providerId) {
     fetchTable("svc_provider_service_offerings", (query) =>
       query
         .select(
-          "id,provider_id,category_id,title,description,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,minimum_charge,minimum_hours,maximum_hours,quote_required,active,metadata,service_mode,duration_minutes,location_policy,public_summary,client_instructions,created_at,updated_at"
+          "id,provider_id,category_id,title,description,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,minimum_charge,minimum_hours,maximum_hours,quote_required,active,metadata,service_mode,duration_minutes,location_policy,public_summary,client_instructions,created_at,updated_at,svc_categories(name,code,description,default_pricing_model,allowed_service_modes,requires_professional_license,requires_background_check)"
         )
         .eq("provider_id", providerId)
         .eq("active", true)
