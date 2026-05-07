@@ -457,7 +457,7 @@ function renderProviderProfile(state) {
   if (!container) return;
 
   const profile = state.provider.profile;
-  const detail = state.provider.business.profile;
+  const detail = state.provider.business?.profile ?? null;
   const categories = state.provider.categories ?? [];
   const documentsSummary = state.provider.documentsSummary ?? {};
   const reviewSummary = state.provider.reviewSummary ?? {};
@@ -987,10 +987,11 @@ function renderProviderBusiness(state) {
   const container = document.getElementById("providerBusinessPanel");
   if (!container) return;
 
-  const detail = state.provider.business.profile;
-  const pricing = state.provider.business.pricing ?? [];
-  const offerings = state.provider.business.offerings ?? [];
-  const availability = state.provider.business.availability ?? [];
+  const business = state.provider.business ?? {};
+  const detail = business.profile ?? null;
+  const pricing = business.pricing ?? [];
+  const offerings = business.offerings ?? [];
+  const availability = business.availability ?? [];
   const locationLabel = state.provider.availability?.locationLabel ?? "Sin posición tomada";
   const activeCategoryIds = new Set(
     (state.provider.categories ?? []).map((item) => item.category_id ?? item.id)
@@ -1197,8 +1198,9 @@ function renderProviderTrust(state) {
   const container = document.getElementById("providerTrustPanel");
   if (!container) return;
 
-  const documents = state.provider.business.documents ?? [];
-  const reviews = state.provider.business.reviews ?? [];
+  const business = state.provider.business ?? {};
+  const documents = business.documents ?? [];
+  const reviews = business.reviews ?? [];
   const documentsSummary = state.provider.documentsSummary ?? {};
   const reviewSummary = state.provider.reviewSummary ?? {};
   const profile = state.provider.profile ?? null;

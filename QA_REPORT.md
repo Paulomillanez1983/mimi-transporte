@@ -163,3 +163,20 @@ Pruebas:
 - `node qa/audit-routes.js`: OK.
 - `node qa/audit-inline-scripts.js`: OK.
 - `git diff --check`: OK.
+
+## Hotfix provider online sin servicio 2026-05-07
+
+Correcciones aplicadas:
+- `mimi-servicios/src/ui/render-provider.js`: los renders de perfil, negocio y documentos ya no rompen si `state.provider.business` todavia no esta hidratado. Esto evita pantalla negra durante el arranque o con datos parciales.
+- `mimi-servicios/src/main-provider.js`: el render completo del provider se ejecuta en cada actualizacion normal del estado para que el panel de servicios aparezca despues de cargar workspace.
+
+Backend corregido:
+- Se detectaron 3 prestadores en `ONLINE_IDLE` sin publicaciones activas y se pasaron a `OFFLINE`: `emunaclothingshop@gmail.com`, `maricelkarra@gmail.com`, `voltex.electromantenimiento@gmail.com`.
+
+Pruebas:
+- `node --check mimi-servicios/src/main-provider.js`: OK.
+- `node --check mimi-servicios/src/ui/render-provider.js`: OK.
+- `node qa/audit-encoding.js`: OK, 0 hallazgos.
+- `node qa/audit-routes.js`: OK.
+- `node qa/audit-inline-scripts.js`: OK.
+- `git diff --check`: OK.

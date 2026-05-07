@@ -2369,6 +2369,7 @@ render() {
   this.renderNotifications();
   this.renderChat();
   this.renderModal();
+  renderProviderScreen(this.state);
   this.renderServicesAndPricing();
   this.renderSheetSummary();
   this.renderDrawerProfile();
