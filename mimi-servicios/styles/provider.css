@@ -10237,3 +10237,102 @@ body.provider-auth-required .notification-container {
     line-height: 1.35 !important;
   }
 }
+
+/* Final verification overrides: keep after responsive blocks. */
+.camera-preview-wrap { background: #f7f9fb !important; }
+.camera-guide.selfie {
+  width: min(64vw, 260px, 34svh) !important;
+  aspect-ratio: 0.78 / 1 !important;
+  border-radius: 46% 46% 42% 42% / 34% 34% 52% 52% !important;
+  border: 3px solid rgba(255, 255, 255, 0.96) !important;
+}
+.camera-guide.selfie::before,
+.camera-guide.selfie::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.camera-guide.selfie::before {
+  top: 14%;
+  width: 36%;
+  height: 26%;
+  border-radius: 50%;
+}
+.camera-guide.selfie::after {
+  bottom: 10%;
+  width: 68%;
+  height: 34%;
+  border-radius: 50% 50% 24% 24%;
+  border-bottom-color: transparent;
+}
+.camera-busy-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  color: #fff;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(3px);
+}
+.camera-busy-overlay[hidden] { display: none !important; }
+.button-spinner {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: mimi-spin 760ms linear infinite;
+}
+.is-loading { pointer-events: none; opacity: 0.82; }
+.is-loading > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.verification-help-link {
+  display: inline-flex;
+  justify-content: center;
+  margin-top: 12px;
+  color: #0f8f50;
+  font-weight: 800;
+  text-decoration: none;
+}
+.verification-result-list { display: grid; gap: 10px; margin-top: 16px; }
+.verification-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  color: #101513;
+  background: #f4f6f5;
+}
+.verification-result-item div { display: grid; gap: 2px; }
+.verification-result-item span {
+  color: #5d6863;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+.verification-result-item.has-doc > span { color: #088348; }
+.doc-status-pill {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #0b5e37;
+  background: #e7f8ee;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+@keyframes mimi-spin { to { transform: rotate(360deg); } }

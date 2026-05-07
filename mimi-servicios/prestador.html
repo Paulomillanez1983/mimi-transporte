@@ -335,6 +335,7 @@
               </label>
             </div>
           </div>
+          <div id="providerBusinessPanel"></div>
         </div>
 
         <div class="tab-panel" id="tabAccount">
@@ -349,6 +350,8 @@
               <button class="verification-btn" id="verificationBtn" type="button">Completar ahora</button>
             </div>
           </div>
+          <div id="providerTrustPanel"></div>
+          <div id="providerProfilePanel"></div>
 
           <div class="panel-section">
             <h3 class="section-title">Tus servicios</h3>
@@ -374,6 +377,14 @@
                 <span class="stat-value" id="statOffers">24</span>
                 <span class="stat-label">Ofertas</span>
               </div>
+            </div>
+          </div>
+
+          <div class="panel-section" id="providerSupportPanel">
+            <h3 class="section-title">Ayuda y soporte</h3>
+            <div class="summary-card">
+              <strong>Soporte MIMI</strong>
+              <span class="muted">Para dudas de cuenta, verificación o servicios, escribinos desde el chat o a soporte@mimigo.app.</span>
             </div>
           </div>
         </div>
@@ -536,6 +547,18 @@
           </div>
 
           <div class="wizard-step" id="step2">
+            <h3>DNI dorso</h3>
+            <p>Fotografiá el dorso de tu DNI. Necesitamos que se vean bien los datos y el código.</p>
+
+            <button class="upload-zone camera-start-btn" type="button" data-camera-doc="dni_back">
+              <span class="upload-icon">📷</span>
+              <span class="upload-text">Abrir cámara trasera</span>
+            </button>
+
+            <div class="camera-step-status" id="dniBackStatus">Pendiente</div>
+          </div>
+
+          <div class="wizard-step" id="step3">
             <h3>Selfie</h3>
             <p>Sacate una selfie clara para comparar con el documento.</p>
 
@@ -547,33 +570,22 @@
             <div class="camera-step-status" id="selfieStatus">Pendiente</div>
           </div>
 
-          <div class="wizard-step" id="step3">
-            <h3>Servicios que prestás</h3>
-            <p>Seleccioná los servicios que ofrecés</p>
-            <div class="services-select" id="servicesSelect">
-              <label class="service-checkbox">
-                <input type="checkbox" value="plumbing">
-                <span>Plomería</span>
-              </label>
-              <label class="service-checkbox">
-                <input type="checkbox" value="electricity">
-                <span>Electricidad</span>
-              </label>
-              <label class="service-checkbox">
-                <input type="checkbox" value="cleaning">
-                <span>Limpieza</span>
-              </label>
-              <label class="service-checkbox">
-                <input type="checkbox" value="gardening">
-                <span>Jardinería</span>
-              </label>
-            </div>
+          <div class="wizard-step" id="step4">
+            <h3>Antecedentes penales</h3>
+            <p>Podés subirlo ahora o dentro de los próximos 15 días. El trámite oficial corresponde al Registro Nacional de Reincidencia.</p>
+            <button class="upload-zone camera-start-btn" type="button" data-upload="criminal_record_certificate">
+              <span class="upload-icon">📂</span>
+              <span class="upload-text">Subir PDF o foto</span>
+            </button>
+            <input type="file" class="hidden-input" data-input="criminal_record_certificate" accept="image/*,application/pdf" />
+            <a class="verification-help-link" href="https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales" target="_blank" rel="noopener">Ir al trámite oficial</a>
+            <div class="camera-step-status" id="criminalRecordStatus">Opcional por 15 días</div>
           </div>
 
-          <div class="wizard-step" id="step4">
-            <h3>¡Listo!</h3>
-            <p>Tu verificación está en proceso. Te avisamos cuando esté aprobada.</p>
-            <div class="success-icon">✅</div>
+          <div class="wizard-step verification-result-step" id="step5">
+            <h3>Estado de verificación</h3>
+            <p id="verificationResultText">Tu verificación está pendiente de revisión.</p>
+            <div class="verification-result-list" id="verificationResultList"></div>
           </div>
         </div>
 
@@ -599,6 +611,10 @@
           <video id="cameraVideo" class="camera-video" autoplay playsinline muted></video>
           <canvas id="cameraCanvas" hidden></canvas>
           <div class="camera-guide dni" id="cameraGuide"></div>
+          <div class="camera-busy-overlay" id="cameraBusyOverlay" hidden>
+            <span class="button-spinner"></span>
+            <strong>Procesando imagen...</strong>
+          </div>
         </div>
 
         <div class="camera-actions">

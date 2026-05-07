@@ -122,6 +122,7 @@ create table if not exists public.svc_provider_document_requirements (
   title text not null,
   description text,
   required boolean not null default true,
+  due_after_days integer,
   renew_every_days integer,
   external_url text,
   applies_to_service_modes text[] not null default array['IN_PERSON','ONLINE'],
@@ -131,6 +132,9 @@ create table if not exists public.svc_provider_document_requirements (
   updated_at timestamptz not null default now(),
   unique(category_id, document_type)
 );
+
+alter table public.svc_provider_document_requirements
+  add column if not exists due_after_days integer;
 
 alter table public.svc_provider_credentials enable row level security;
 alter table public.svc_provider_document_requirements enable row level security;
@@ -228,11 +232,11 @@ with requirement_rows as (
   from public.svc_categories c
   join lateral (
     values
-      ('dni_front', 'DNI frente', 'Foto clara del frente del DNI.', true, null::integer, null::text, 10),
-      ('dni_back', 'DNI dorso', 'Foto clara del dorso del DNI.', true, null::integer, null::text, 20),
-      ('selfie', 'Selfie de identidad', 'Selfie actual para comparar identidad.', true, null::integer, null::text, 30),
-      ('criminal_record_certificate', 'Certificado de antecedentes penales', 'Certificado oficial emitido por Registro Nacional de Reincidencia.', true, 90, 'https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales', 40)
-  ) as x(document_type,title,description,required,renew_every_days,external_url,sort_order)
+      ('dni_front', 'DNI frente', 'Foto clara del frente del DNI.', true, null::integer, null::integer, null::text, 10),
+      ('dni_back', 'DNI dorso', 'Foto clara del dorso del DNI.', true, null::integer, null::integer, null::text, 20),
+      ('selfie', 'Selfie de identidad', 'Selfie actual para comparar identidad.', true, null::integer, null::integer, null::text, 30),
+      ('criminal_record_certificate', 'Certificado de antecedentes penales', 'Certificado oficial emitido por Registro Nacional de Reincidencia. Puede presentarse dentro de los primeros 15 dias.', false, 15, 90, 'https://www.argentina.gob.ar/justicia/reincidencia/antecedentespenales', 40)
+  ) as x(document_type,title,description,required,due_after_days,renew_every_days,external_url,sort_order)
     on true
   where c.active = true
 ),
@@ -241,9 +245,9 @@ professional_requirement_rows as (
   from public.svc_categories c
   join lateral (
     values
-      ('professional_license', 'Matricula profesional', 'Constancia o credencial de matricula profesional vigente.', true, 365, null::text, 50),
-      ('degree_certificate', 'Titulo o constancia profesional', 'Titulo, certificado o constancia profesional relacionada con la categoria.', false, null::integer, null::text, 60)
-  ) as x(document_type,title,description,required,renew_every_days,external_url,sort_order)
+      ('professional_license', 'Matricula profesional', 'Constancia o credencial de matricula profesional vigente.', true, null::integer, 365, null::text, 50),
+      ('degree_certificate', 'Titulo o constancia profesional', 'Titulo, certificado o constancia profesional relacionada con la categoria.', false, null::integer, null::integer, null::text, 60)
+  ) as x(document_type,title,description,required,due_after_days,renew_every_days,external_url,sort_order)
     on true
   where c.code in ('PSICOLOGIA','NUTRICION','KINESIOLOGIA','ABOGACIA','CONTABILIDAD')
 )
@@ -253,20 +257,22 @@ insert into public.svc_provider_document_requirements (
   title,
   description,
   required,
+  due_after_days,
   renew_every_days,
   external_url,
   sort_order,
   active
 )
-select category_id, document_type, title, description, required, renew_every_days, external_url, sort_order, true
+select category_id, document_type, title, description, required, due_after_days, renew_every_days, external_url, sort_order, true
 from requirement_rows
 union all
-select category_id, document_type, title, description, required, renew_every_days, external_url, sort_order, true
+select category_id, document_type, title, description, required, due_after_days, renew_every_days, external_url, sort_order, true
 from professional_requirement_rows
 on conflict (category_id, document_type) do update set
   title = excluded.title,
   description = excluded.description,
   required = excluded.required,
+  due_after_days = excluded.due_after_days,
   renew_every_days = excluded.renew_every_days,
   external_url = excluded.external_url,
   sort_order = excluded.sort_order,

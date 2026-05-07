@@ -975,6 +975,20 @@ function renderProviderTrust(state) {
 
   const isApproved = Boolean(profile?.approved);
   const isBlocked = Boolean(profile?.blocked);
+  const documentsByType = new Map();
+  documents.forEach((doc) => {
+    const type = String(doc.document_type ?? "").toLowerCase();
+    if (type && !documentsByType.has(type)) documentsByType.set(type, doc);
+  });
+  const documentStatusLabel = (type) => {
+    const doc = documentsByType.get(String(type).toLowerCase());
+    if (!doc) return "Pendiente";
+    const status = String(doc.review_status ?? "PENDING").toUpperCase();
+    if (status === "APPROVED") return "Aprobado";
+    if (status === "REJECTED") return "Rechazado";
+    if (status === "NEEDS_RESUBMISSION") return "Reenviar";
+    return "En revisión";
+  };
 
   const totalDocs =
     Number(documentsSummary.approved ?? 0) +
@@ -1013,21 +1027,24 @@ function renderProviderTrust(state) {
         ["dni_front", "DNI frente"],
         ["dni_back", "DNI dorso"],
         ["selfie", "Selfie"],
-        ["criminal_record_certificate", "Certificado de antecedentes"],
+        ["criminal_record_certificate", "Certificado de antecedentes", "Opcional por 15 días"],
         ["professional_license", "Matrícula profesional"],
         ["degree_certificate", "Título o constancia"],
         ["address_proof", "Comprobante de domicilio"]
-      ].map(([id, title]) => `
+      ].map(([id, title, note]) => {
+        const current = documentsByType.get(id);
+        return `
         <div class="doc-wizard-card" data-doc="${id}">
           
           <div class="doc-wizard-card__content">
             <h3>${title}</h3>
-            <p>Tomá una foto clara o subí imagen/PDF. El certificado de antecedentes se tramita en Argentina.gob.ar.</p>
+            <p>${escapeHtml(note ?? "Tomá una foto clara o subí imagen/PDF.")}</p>
+            <span class="doc-status-pill">${escapeHtml(documentStatusLabel(id))}</span>
           </div>
 
           <div class="doc-preview" id="preview-${id}"></div>
 
-          <div class="doc-actions-inline--wizard">
+          <div class="doc-actions-inline--wizard" ${current ? "hidden" : ""}>
             <button type="button" class="doc-camera-btn" data-camera="${id}">
               📸 Sacar foto
             </button>
@@ -1042,7 +1059,8 @@ function renderProviderTrust(state) {
           <div class="doc-status" id="status-${id}"></div>
 
         </div>
-      `).join("")}
+      `;
+      }).join("")}
 
     </div>
     `

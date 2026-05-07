@@ -145,6 +145,7 @@ if (!canBootProviderPanel) {
 cameraVideo: document.getElementById("cameraVideo"),
 cameraCanvas: document.getElementById("cameraCanvas"),
 cameraGuide: document.getElementById("cameraGuide"),
+cameraBusyOverlay: document.getElementById("cameraBusyOverlay"),
 cameraTitle: document.getElementById("cameraTitle"),
 cameraHint: document.getElementById("cameraHint"),
 cameraStatus: document.getElementById("cameraStatus"),
@@ -153,7 +154,11 @@ cameraCaptureBtn: document.getElementById("cameraCaptureBtn"),
 cameraRetakeBtn: document.getElementById("cameraRetakeBtn"),
 cameraUseBtn: document.getElementById("cameraUseBtn"),
 dniFrontStatus: document.getElementById("dniFrontStatus"),
+dniBackStatus: document.getElementById("dniBackStatus"),
 selfieStatus: document.getElementById("selfieStatus"),
+criminalRecordStatus: document.getElementById("criminalRecordStatus"),
+verificationResultText: document.getElementById("verificationResultText"),
+verificationResultList: document.getElementById("verificationResultList"),
       // Active service
       activeServiceCard: document.getElementById('activeServiceCard'),
       serviceStatusBadge: document.getElementById('serviceStatusBadge'),
@@ -340,7 +345,7 @@ async initMap() {
   return new Promise((resolve) => {
     try {
       const esMobile = window.innerWidth <= 768;
-      const temaOscuro = true;
+      const temaOscuro = false;
 
       this.map = new maplibregl.Map({
         container: "map",
@@ -933,8 +938,13 @@ setTimeout(async () => {
     const approvedDocs = documents.filter((doc) => this.normalizeReviewStatus(doc.review_status) === "APPROVED").length;
     const rejectedDocs = documents.filter((doc) => ["REJECTED", "NEEDS_RESUBMISSION"].includes(this.normalizeReviewStatus(doc.review_status))).length;
     const pendingDocs = documents.filter((doc) => !["APPROVED", "REJECTED", "NEEDS_RESUBMISSION"].includes(this.normalizeReviewStatus(doc.review_status))).length;
+    const uploadedRequiredDocs = new Set(
+      documents
+        .map((doc) => String(doc.document_type ?? "").toLowerCase())
+        .filter((type) => ["dni_front", "dni_back", "selfie"].includes(type))
+    );
 
-    const isVerified = Boolean(profile?.approved) && rejectedDocs === 0 && approvedDocs > 0;
+    const isVerified = Boolean(profile?.approved) && rejectedDocs === 0 && uploadedRequiredDocs.size >= 3;
     const verificationStatus = isVerified
       ? "approved"
       : rejectedDocs > 0
@@ -950,7 +960,7 @@ setTimeout(async () => {
         status: profile?.status ?? "OFFLINE",
         isVerified,
         verificationStatus,
-        verificationProgress: isVerified ? 100 : documents.length ? 60 : 0,
+        verificationProgress: isVerified ? 100 : Math.round((uploadedRequiredDocs.size / 3) * 80),
         profile,
         categories: categories.map((item) => ({
           id: item.category_id ?? item.id,
@@ -1086,6 +1096,97 @@ stats: {
     this.showToast(successMessage, "success");
   }
 
+  setButtonBusy(button, busy, label = null) {
+    if (!button) return;
+
+    if (busy) {
+      if (!button.dataset.idleHtml) button.dataset.idleHtml = button.innerHTML;
+      button.disabled = true;
+      button.classList.add("is-loading");
+      button.setAttribute("aria-busy", "true");
+      button.innerHTML = `<span class="button-spinner" aria-hidden="true"></span><span>${label || "Procesando..."}</span>`;
+      return;
+    }
+
+    button.disabled = false;
+    button.classList.remove("is-loading");
+    button.removeAttribute("aria-busy");
+    if (button.dataset.idleHtml) {
+      button.innerHTML = button.dataset.idleHtml;
+      delete button.dataset.idleHtml;
+    }
+  }
+
+  openProviderSection(section) {
+    const route = {
+      profile: { tab: "account", target: "providerProfilePanel" },
+      documents: { tab: "account", target: "providerTrustPanel" },
+      services: { tab: "pricing", target: "providerBusinessPanel" },
+      earnings: { tab: "now", target: "providerDashboardPanel" },
+      settings: { tab: "pricing", target: "providerBusinessPanel" },
+      support: { tab: "account", target: "providerSupportPanel" }
+    }[section] ?? { tab: "account", target: null };
+
+    this.switchTab(route.tab);
+    this.setBottomSheetState("expanded");
+    actions.closeDrawer();
+
+    window.requestAnimationFrame(() => {
+      const target = route.target ? document.getElementById(route.target) : null;
+      target?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  documentByType(type) {
+    const docs = this.state?.provider?.documents?.items ?? [];
+    const target = String(type || "").toLowerCase();
+    return docs.find((doc) => String(doc.document_type || "").toLowerCase() === target) ?? null;
+  }
+
+  updateVerificationResultScreen() {
+    const required = [
+      ["dni_front", "DNI frente", "Obligatorio"],
+      ["dni_back", "DNI dorso", "Obligatorio"],
+      ["selfie", "Selfie", "Obligatorio"],
+      ["criminal_record_certificate", "Antecedentes penales", "Opcional por 15 días"]
+    ];
+
+    const statusLabel = (status) => {
+      const value = String(status || "PENDING").toUpperCase();
+      if (value === "APPROVED") return "Aprobado";
+      if (value === "REJECTED") return "Rechazado";
+      if (value === "NEEDS_RESUBMISSION") return "Requiere reenvío";
+      return "En revisión";
+    };
+
+    if (this.elements.verificationResultText) {
+      const status = this.state?.provider?.verificationStatus;
+      this.elements.verificationResultText.textContent =
+        status === "approved"
+          ? "Tu verificación está aprobada."
+          : status === "rejected"
+            ? "Hay documentos que necesitan corrección."
+            : "Recibimos tus documentos. La revisión queda pendiente del equipo MIMI.";
+    }
+
+    if (this.elements.verificationResultList) {
+      this.elements.verificationResultList.innerHTML = required
+        .map(([type, title, rule]) => {
+          const doc = this.documentByType(type);
+          return `
+            <article class="verification-result-item ${doc ? "has-doc" : "missing-doc"}">
+              <div>
+                <strong>${title}</strong>
+                <span>${rule}</span>
+              </div>
+              <span>${doc ? statusLabel(doc.review_status) : "Pendiente"}</span>
+            </article>
+          `;
+        })
+        .join("");
+    }
+  }
+
   /**
    * Setup event listeners
    */
@@ -1146,8 +1247,7 @@ this.elements.tabButtons.forEach((btn) => {
     });
 
     this.elements.quickSupport?.addEventListener('click', () => {
-      this.switchTab('account');
-      this.showToast('Abr Cuenta para gestionar ayuda y verificacin', 'info');
+      this.openProviderSection("support");
     });
 
     // Notification drawer
@@ -1183,10 +1283,10 @@ this.elements.tabButtons.forEach((btn) => {
       this.handleServiceAction();
     });
 
-    // Verification
+// Verification
 this.elements.verificationBtn?.addEventListener('click', () => {
   actions.openModal("verification");
-  this.showWizardStep(1);
+  this.showVerificationEntry();
 });
     // Modal
     this.elements.modalClose?.addEventListener('click', () => {
@@ -1223,44 +1323,61 @@ document.addEventListener("click", (event) => {
     // Drawer links
     document.getElementById('linkProfile')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.switchTab('account');
-      actions.closeDrawer();
+      this.openProviderSection("profile");
     });
 
     document.getElementById('linkDocuments')?.addEventListener('click', (e) => {
       e.preventDefault();
-      actions.openModal('verification');
-      actions.closeDrawer();
+      actions.openModal("verification");
+      this.showVerificationEntry(true);
+      this.openProviderSection("documents");
     });
 
     document.getElementById('linkServices')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.switchTab('account');
-      actions.closeDrawer();
+      this.openProviderSection("services");
     });
 
     document.getElementById('linkEarnings')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.switchTab('pricing');
-      actions.closeDrawer();
+      this.openProviderSection("earnings");
     });
 
     document.getElementById('linkSettings')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.switchTab('account');
-      actions.closeDrawer();
+      this.openProviderSection("settings");
     });
 
     document.getElementById('linkSupport')?.addEventListener('click', (e) => {
       e.preventDefault();
-      this.switchTab('account');
-      actions.closeDrawer();
+      this.openProviderSection("support");
     });
 
 document.querySelectorAll("[data-camera-doc]").forEach((btn) => {
   btn.addEventListener("click", () => {
     this.openCameraCapture(btn.dataset.cameraDoc);
   });
+});
+
+document.addEventListener("click", (event) => {
+  const cameraButton = event.target?.closest?.("[data-camera]");
+  if (cameraButton) {
+    this.openCameraCapture(cameraButton.dataset.camera);
+    return;
+  }
+
+  const uploadButton = event.target?.closest?.("[data-upload]");
+  if (!uploadButton) return;
+
+  const input = document.querySelector(`[data-input="${uploadButton.dataset.upload}"]`);
+  input?.click();
+});
+
+document.addEventListener("change", (event) => {
+  const input = event.target?.matches?.("[data-input]") ? event.target : null;
+  if (!input?.files?.length) return;
+
+  this.uploadVerificationFile(input.dataset.input, input.files[0], input);
 });
 
 this.elements.cameraCancelBtn?.addEventListener("click", () => {
@@ -2002,14 +2119,27 @@ renderVerificationStatus() {
     btn.textContent = "Ver documentos";
   } else if (status === "in_review") {
     statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">En revisin</span>';
-    btn.textContent = "Ver progreso";
+    btn.textContent = "Ver estado";
   } else if (status === "rejected") {
     statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Requiere correccin</span>';
-    btn.textContent = "Repetir fotos";
+    btn.textContent = "Ver observaciones";
   } else {
     statusEl.innerHTML = '<span class="status-icon"></span><span class="status-text">Pendiente</span>';
     btn.textContent = "Completar ahora";
   }
+
+  const setStepStatus = (element, type, fallback) => {
+    if (!element) return;
+    const doc = this.documentByType(type);
+    element.textContent = doc
+      ? `Recibido - ${this.normalizeReviewStatus(doc.review_status) === "APPROVED" ? "aprobado" : "en revisión"}`
+      : fallback;
+  };
+
+  setStepStatus(this.elements.dniFrontStatus, "dni_front", "Pendiente");
+  setStepStatus(this.elements.dniBackStatus, "dni_back", "Pendiente");
+  setStepStatus(this.elements.selfieStatus, "selfie", "Pendiente");
+  setStepStatus(this.elements.criminalRecordStatus, "criminal_record_certificate", "Opcional por 15 días");
 }
   /**
    * Render stats
@@ -2542,6 +2672,10 @@ if (this.elements.drawerInitials) {
     
     if (this.elements.verificationModal) {
       this.elements.verificationModal.hidden = !isOpen || modal !== 'verification';
+      if (isOpen && modal === "verification") {
+        this.renderVerificationStatus();
+        this.updateVerificationResultScreen();
+      }
     }
   }
   subscribeRealtime() {
@@ -2633,9 +2767,25 @@ if (this.elements.drawerInitials) {
     const container = this.elements.toastContainer;
     if (!container) return;
 
+    const normalized = String(message ?? "").trim();
+    if (!normalized) return;
+
+    const duplicate = [...container.querySelectorAll(".toast")].find(
+      (item) => item.dataset.message === normalized
+    );
+
+    if (duplicate) {
+      duplicate.remove();
+    }
+
+    while (container.children.length >= 2) {
+      container.firstElementChild?.remove();
+    }
+
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.textContent = message;
+    toast.dataset.message = normalized;
+    toast.textContent = normalized;
     
     container.appendChild(toast);
     
@@ -2902,17 +3052,24 @@ async handleLogout() {
   }
 
   const isSelfie = documentType === "selfie";
+  const isDniBack = documentType === "dni_back";
 
   this.cameraCapture = { documentType, blob: null, file: null };
 
   if (this.elements.cameraTitle) {
-    this.elements.cameraTitle.textContent = isSelfie ? "Selfie de verificacin" : "Foto del DNI";
+    this.elements.cameraTitle.textContent = isSelfie
+      ? "Selfie de verificación"
+      : isDniBack
+        ? "DNI dorso"
+        : "DNI frente";
   }
 
   if (this.elements.cameraHint) {
     this.elements.cameraHint.textContent = isSelfie
-      ? "Centrate dentro del crculo, con buena luz."
-      : "Ubic el frente del DNI dentro del rectngulo.";
+      ? "Centrate dentro de la silueta, con buena luz."
+      : isDniBack
+        ? "Ubicá el dorso del DNI dentro del rectángulo."
+        : "Ubicá el frente del DNI dentro del rectángulo.";
   }
 
   this.elements.cameraGuide?.classList.toggle("selfie", isSelfie);
@@ -2959,11 +3116,16 @@ await video.play();
 captureCameraFrame() {
   const video = this.elements.cameraVideo;
   const canvas = this.elements.cameraCanvas;
+  const captureButton = this.elements.cameraCaptureBtn;
 
   if (!video || !canvas || !video.videoWidth) {
     this.showToast("La cmara todava no est lista", "warning");
     return;
   }
+
+  this.setButtonBusy(captureButton, true, "Capturando...");
+  if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = false;
+  if (this.elements.cameraStatus) this.elements.cameraStatus.textContent = "Capturando imagen...";
 
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
@@ -2973,6 +3135,8 @@ captureCameraFrame() {
 
   canvas.toBlob((blob) => {
     if (!blob) {
+      this.setButtonBusy(captureButton, false);
+      if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
       this.showToast("No pudimos capturar la imagen", "error");
       return;
     }
@@ -2985,6 +3149,8 @@ captureCameraFrame() {
 
     video.pause();
 
+    this.setButtonBusy(captureButton, false);
+    if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
     if (this.elements.cameraCaptureBtn) this.elements.cameraCaptureBtn.hidden = true;
     if (this.elements.cameraRetakeBtn) this.elements.cameraRetakeBtn.hidden = false;
     if (this.elements.cameraUseBtn) this.elements.cameraUseBtn.hidden = false;
@@ -2995,6 +3161,7 @@ captureCameraFrame() {
 resetCameraPreview() {
   this.cameraCapture.blob = null;
   this.cameraCapture.file = null;
+  if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
 
   if (this.elements.cameraVideo?.srcObject) {
     this.elements.cameraVideo.play().catch(() => {});
@@ -3018,6 +3185,8 @@ async confirmCameraCapture() {
 
   try {
     actions.setLoading(true);
+    this.setButtonBusy(this.elements.cameraUseBtn, true, "Subiendo...");
+    if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = false;
 
     if (this.elements.cameraStatus) {
       this.elements.cameraStatus.textContent = "Subiendo imagen segura...";
@@ -3032,18 +3201,28 @@ const uploadedDocument = await uploadProviderDocument({
 console.log("[MIMI][KYC] Documento subido:", uploadedDocument);
     
     if (documentType === "dni_front" && this.elements.dniFrontStatus) {
-      this.elements.dniFrontStatus.textContent = "Documento recibido ";
+      this.elements.dniFrontStatus.textContent = "Frente recibido";
+    }
+
+    if (documentType === "dni_back" && this.elements.dniBackStatus) {
+      this.elements.dniBackStatus.textContent = "Dorso recibido";
     }
 
     if (documentType === "selfie" && this.elements.selfieStatus) {
-      this.elements.selfieStatus.textContent = "Selfie recibida ";
+      this.elements.selfieStatus.textContent = "Selfie recibida";
     }
 
     this.closeCameraCapture();
 
     if (documentType === "dni_front") {
-      this.showToast("DNI recibido. Ahora sacate una selfie.", "success");
+      this.showToast("DNI frente recibido. Ahora cargá el dorso.", "success");
       this.showWizardStep(2);
+      return;
+    }
+
+    if (documentType === "dni_back") {
+      this.showToast("DNI dorso recibido. Ahora sacate una selfie.", "success");
+      this.showWizardStep(3);
       return;
     }
 
@@ -3072,12 +3251,55 @@ const status = String(
       this.showToast("Verificacin enviada correctamente.", "success");
     }
 
-    this.showWizardStep(4);
+    this.showWizardStep(5);
   } catch (err) {
     console.error("[MIMI] Error en verificacin por cmara:", err);
     this.showToast(err?.message ?? "No pudimos completar la verificacin", "error");
   } finally {
+    this.setButtonBusy(this.elements.cameraUseBtn, false);
+    if (this.elements.cameraBusyOverlay) this.elements.cameraBusyOverlay.hidden = true;
     actions.setLoading(false);
+  }
+}
+
+async uploadVerificationFile(documentType, file, input = null) {
+  const providerId = this.state?.session?.providerId;
+
+  if (!providerId || !documentType || !file) {
+    this.showToast("No pudimos preparar el archivo", "warning");
+    return;
+  }
+
+  const trigger = document.querySelector(`[data-upload="${documentType}"]`);
+
+  try {
+    actions.setLoading(true);
+    this.setButtonBusy(trigger, true, "Subiendo...");
+
+    if (documentType === "criminal_record_certificate" && this.elements.criminalRecordStatus) {
+      this.elements.criminalRecordStatus.textContent = "Subiendo certificado...";
+    }
+
+    await uploadProviderDocument({ providerId, documentType, file });
+
+    const workspace = await loadProviderWorkspace(providerId);
+    this.applyWorkspaceToState(workspace);
+    this.renderVerificationStatus();
+    this.updateVerificationResultScreen();
+
+    if (documentType === "criminal_record_certificate" && this.elements.criminalRecordStatus) {
+      this.elements.criminalRecordStatus.textContent = "Certificado recibido";
+    }
+
+    this.showToast("Documento recibido. Quedó pendiente de revisión.", "success");
+    this.showWizardStep(5);
+  } catch (err) {
+    console.error("[MIMI] Error subiendo documento:", err);
+    this.showToast(err?.message ?? "No pudimos subir el documento", "error");
+  } finally {
+    this.setButtonBusy(trigger, false);
+    actions.setLoading(false);
+    if (input) input.value = "";
   }
 }
 
@@ -3108,17 +3330,33 @@ showWizardStep(stepNumber) {
     step.classList.toggle("active", step.id === `step${stepNumber}`);
   });
 
+  if (stepNumber === 5) {
+    this.updateVerificationResultScreen();
+  }
+
   if (this.elements.wizardProgress) {
-    this.elements.wizardProgress.style.width = `${Math.min(100, stepNumber * 25)}%`;
+    this.elements.wizardProgress.style.width = `${Math.min(100, stepNumber * 20)}%`;
   }
 
   if (this.elements.wizardPrev) {
-    this.elements.wizardPrev.hidden = stepNumber <= 1;
+    this.elements.wizardPrev.hidden = stepNumber <= 1 || stepNumber === 5;
   }
 
   if (this.elements.wizardNext) {
-    this.elements.wizardNext.textContent = stepNumber >= 4 ? "Cerrar" : "Continuar";
+    this.elements.wizardNext.textContent =
+      stepNumber === 4 ? "Hacer luego" : stepNumber >= 5 ? "Cerrar" : "Continuar";
   }
+}
+
+showVerificationEntry(forceStatus = false) {
+  const hasDocuments = Boolean((this.state?.provider?.documents?.items ?? []).length);
+
+  if (forceStatus || hasDocuments) {
+    this.showWizardStep(5);
+    return;
+  }
+
+  this.showWizardStep(1);
 }
 
 handleWizardNext() {
@@ -3131,11 +3369,21 @@ handleWizardNext() {
   }
 
   if (current === 2) {
+    this.openCameraCapture("dni_back");
+    return;
+  }
+
+  if (current === 3) {
     this.openCameraCapture("selfie");
     return;
   }
 
-  if (current >= 4) {
+  if (current === 4) {
+    this.showWizardStep(5);
+    return;
+  }
+
+  if (current >= 5) {
     actions.closeModal();
     return;
   }
