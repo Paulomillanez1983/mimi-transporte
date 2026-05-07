@@ -1876,6 +1876,32 @@ async handleProviderBusinessAction(action, source = null) {
     return;
   }
 
+  if (action === "toggle-provider-suggestion") {
+    this.toggleProviderSuggestion(source);
+    return;
+  }
+
+  if (action === "start-provider-dictation") {
+    this.startProviderDictation(source);
+    return;
+  }
+
+  if (action === "improve-provider-description") {
+    this.improveProviderDescription(source);
+    return;
+  }
+
+  if (action === "use-provider-description") {
+    this.useProviderDescription(source);
+    return;
+  }
+
+  if (action === "hide-provider-description") {
+    const box = source?.closest?.(".provider-description-suggestion");
+    if (box) box.hidden = true;
+    return;
+  }
+
   if (action === "focus-offering-editor") {
     this.openProviderBusinessSetup();
     return;
@@ -1926,6 +1952,11 @@ moveProviderSetupStep(action, source = null) {
 
   const activeStep = form.querySelector("[data-provider-setup-step].is-active") ?? steps[0];
   const current = Number(activeStep.dataset.providerSetupStep ?? 1);
+  if (action === "provider-setup-next" && current === 1 && !this.providerSetupSelectedCategoryIds(form).length) {
+    this.showToast("Primero elegi al menos un rubro sugerido", "warning");
+    return;
+  }
+
   const target = action === "provider-setup-go"
     ? Number(source?.dataset?.providerSetupTarget ?? current)
     : current + (action === "provider-setup-next" ? 1 : -1);
@@ -1943,10 +1974,70 @@ moveProviderSetupStep(action, source = null) {
   nextStep?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 }
 
+providerSetupSelectedCategoryIds(form = document.getElementById("providerBusinessForm")) {
+  if (!form) return [];
+
+  return [...form.querySelectorAll("[data-provider-suggestion-card].is-selected")]
+    .map((item) => item.dataset.categoryId)
+    .filter(Boolean);
+}
+
+syncProviderSelectedCategories(form = document.getElementById("providerBusinessForm")) {
+  if (!form) return;
+
+  const selectedIds = this.providerSetupSelectedCategoryIds(form);
+  const selectedSet = new Set(selectedIds.map(String));
+
+  form.querySelectorAll("[name^='categoryActive:']").forEach((input) => {
+    const categoryId = String(input.name).replace("categoryActive:", "");
+    input.checked = selectedSet.has(categoryId);
+  });
+
+  form.querySelectorAll("[data-category-editor-card]").forEach((card) => {
+    const visible = !selectedSet.size || selectedSet.has(String(card.dataset.categoryId));
+    card.classList.toggle("is-filtered-out", !visible);
+  });
+
+  const firstSelected = selectedIds[0] ?? "";
+  const firstIndex = this.firstEditableOfferingIndex(form);
+  const categorySelect = form.querySelector(`[name='offering:${firstIndex}:categoryId']`);
+  const activeInput = form.querySelector(`[name='offering:${firstIndex}:active']`);
+  if (categorySelect && firstSelected) categorySelect.value = firstSelected;
+  if (activeInput && firstSelected) activeInput.checked = true;
+
+  const nextButton = form.querySelector("[data-provider-setup-step='1'] [data-provider-business-action='provider-setup-next']");
+  if (nextButton) nextButton.disabled = !selectedIds.length;
+
+  const selectedNames = [...form.querySelectorAll("[data-provider-suggestion-card].is-selected strong")]
+    .map((item) => item.textContent.trim())
+    .filter(Boolean);
+  const hint = document.getElementById("providerSelectionHint");
+  if (hint) {
+    hint.textContent = selectedNames.length
+      ? `Elegiste: ${selectedNames.join(", ")}`
+      : "Elegi al menos una sugerencia para seguir.";
+  }
+}
+
+toggleProviderSuggestion(source = null) {
+  const card = source?.closest?.("[data-provider-suggestion-card]");
+  if (!card) return;
+
+  card.classList.toggle("is-selected");
+  card.setAttribute("aria-pressed", card.classList.contains("is-selected") ? "true" : "false");
+  this.syncProviderSelectedCategories(card.closest("form"));
+
+  if (card.classList.contains("is-selected")) {
+    this.showToast("Perfecto. Podes elegir mas de una opcion.", "success");
+  }
+}
+
 async handleProviderServiceSuggestion() {
   const form = document.getElementById("providerBusinessForm");
   const promptInput = form?.querySelector?.("[name='providerAiPrompt']");
   const text = String(promptInput?.value ?? "").trim();
+  const trigger = form?.querySelector?.("[data-provider-business-action='suggest-provider-service']");
+  const emptyBox = document.getElementById("providerAiEmpty");
 
   if (text.length < 8) {
     this.showToast("Contanos un poco mas que trabajos haces", "warning");
@@ -1958,25 +2049,29 @@ async handleProviderServiceSuggestion() {
   const titleInput = form?.querySelector?.(`[name='offering:${firstIndex}:title']`);
   const summaryInput = form?.querySelector?.(`[name='offering:${firstIndex}:publicSummary']`);
   const descriptionInput = form?.querySelector?.(`[name='offering:${firstIndex}:description']`);
-  const categorySelect = form?.querySelector?.(`[name='offering:${firstIndex}:categoryId']`);
-  const activeInput = form?.querySelector?.(`[name='offering:${firstIndex}:active']`);
   const suggestionBox = document.getElementById("providerAiSuggestions");
 
   try {
     actions.setLoading(true);
+    this.setButtonBusy(trigger, true, "Buscando...");
     const result = await resolveServiceIntent(text, { limit: 5 });
-    const matches = Array.isArray(result?.matches) ? result.matches : this.localProviderCategorySuggestions(text);
+    const matches = this.mergeProviderCategorySuggestions(
+      Array.isArray(result?.matches) ? result.matches : [],
+      this.localProviderCategorySuggestions(text)
+    );
     const top = matches[0] ?? null;
 
     if (!top) {
-      this.showToast("No encontramos una categoria clara. Elegi el rubro mas parecido.", "info");
+      if (suggestionBox) {
+        suggestionBox.innerHTML = "";
+        suggestionBox.hidden = true;
+      }
+      if (emptyBox) {
+        emptyBox.hidden = false;
+        emptyBox.textContent = "No encontramos una coincidencia clara. Proba describirlo con mas detalle, por ejemplo: pinto casas, cuido adultos mayores, hago electricidad domiciliaria.";
+      }
+      this.showToast("No encontramos una coincidencia clara. Proba con mas detalle.", "info");
       return;
-    }
-
-    if (activeInput) activeInput.checked = true;
-    if (categorySelect) {
-      categorySelect.value = top.category_id ?? top.id ?? "";
-      categorySelect.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
     if (titleInput && !titleInput.value.trim()) {
@@ -1992,22 +2087,44 @@ async handleProviderServiceSuggestion() {
     if (suggestionBox) {
       suggestionBox.innerHTML = matches
         .slice(0, 5)
-        .map((item) => `<span class="provider-ai-chip">${this.escapeHtml(item.name ?? "Servicio sugerido")}</span>`)
+        .map((item) => `
+          <button class="provider-suggestion-card" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${this.escapeHtml(item.category_id ?? item.id ?? "")}" data-category-code="${this.escapeHtml(item.code ?? "")}" aria-pressed="false">
+            <strong>${this.escapeHtml(item.name ?? "Servicio sugerido")}</strong>
+            <span>${this.escapeHtml(item.description ?? this.providerSuggestionReason(text, item))}</span>
+          </button>
+        `)
         .join("");
       suggestionBox.hidden = false;
     }
+    if (emptyBox) emptyBox.hidden = true;
+    this.syncProviderSelectedCategories(form);
 
-    this.showToast("Te sugerimos rubros compatibles. Revisalos antes de guardar.", "success");
+    this.showToast("Revisa estas opciones y elegi las que representen tu servicio.", "success");
   } catch (err) {
     console.warn("[MIMI] Sugerencia provider fallback:", err);
     const matches = this.localProviderCategorySuggestions(text);
     if (!matches.length) {
-      this.showToast("No pudimos sugerir rubros ahora. Podes completarlo manualmente.", "info");
+      if (emptyBox) {
+        emptyBox.hidden = false;
+        emptyBox.textContent = "No encontramos una coincidencia clara. Proba describirlo con mas detalle.";
+      }
+      this.showToast("No pudimos sugerir rubros ahora. Proba con mas detalle.", "info");
       return;
     }
-    if (categorySelect) categorySelect.value = matches[0].id;
-    this.showToast("Usamos sugerencias locales. Revisalas antes de guardar.", "info");
+    if (suggestionBox) {
+      suggestionBox.innerHTML = matches.slice(0, 5).map((item) => `
+        <button class="provider-suggestion-card" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${this.escapeHtml(item.category_id ?? item.id ?? "")}" data-category-code="${this.escapeHtml(item.code ?? "")}" aria-pressed="false">
+          <strong>${this.escapeHtml(item.name ?? "Servicio sugerido")}</strong>
+          <span>${this.escapeHtml(item.description ?? this.providerSuggestionReason(text, item))}</span>
+        </button>
+      `).join("");
+      suggestionBox.hidden = false;
+    }
+    if (emptyBox) emptyBox.hidden = true;
+    this.syncProviderSelectedCategories(form);
+    this.showToast("Usamos sugerencias locales. Elegi una o varias.", "info");
   } finally {
+    this.setButtonBusy(trigger, false);
     actions.setLoading(false);
   }
 }
@@ -2023,11 +2140,92 @@ firstEditableOfferingIndex(form) {
   return 0;
 }
 
+mergeProviderCategorySuggestions(...groups) {
+  const categories = this.state?.appConfig?.categories ?? [];
+  const byCode = new Map(categories.map((category) => [String(category.code ?? "").toUpperCase(), category]));
+  const byId = new Map(categories.map((category) => [String(category.id), category]));
+  const merged = new Map();
+
+  for (const group of groups) {
+    for (const raw of group ?? []) {
+      const category =
+        byId.get(String(raw.category_id ?? raw.id ?? "")) ??
+        byCode.get(String(raw.code ?? "").toUpperCase()) ??
+        raw;
+      const id = category?.id ?? raw.category_id ?? raw.id;
+      if (!id) continue;
+
+      const previous = merged.get(String(id));
+      const score = Number(raw.score ?? 0) + Number(raw.localScore ?? 0);
+      if (!previous || score > Number(previous.score ?? 0)) {
+        merged.set(String(id), {
+          ...category,
+          ...raw,
+          id,
+          category_id: id,
+          name: category?.name ?? raw.name,
+          code: category?.code ?? raw.code,
+          description: category?.description ?? raw.description,
+          score
+        });
+      }
+    }
+  }
+
+  return [...merged.values()]
+    .filter((item) => item.category_id || item.id)
+    .sort((a, b) => Number(b.score ?? 0) - Number(a.score ?? 0))
+    .slice(0, 6);
+}
+
+providerIntentBlueprints() {
+  return [
+    {
+      codes: ["PINTURA", "ALBANILERIA", "REPARACIONES_HOGAR", "COLOCACION_CERAMICOS"],
+      terms: ["pinto", "pintar", "pintura", "pared", "paredes", "revoque", "revoques", "ceramico", "ceramicos", "arreglo paredes", "albanil", "albanileria"]
+    },
+    {
+      codes: ["CUIDADO_NINOS", "CUIDADO_ADULTOS", "ACOMPANAMIENTO_DOMICILIARIO"],
+      terms: ["cuido", "cuidar", "ninos", "niños", "chicos", "bebe", "adultos", "adultos mayores", "ancianos", "acompanamiento", "domiciliario"]
+    },
+    {
+      codes: ["LIMPIEZA", "LIMPIEZA_OFICINAS", "SERVICIO_DOMESTICO"],
+      terms: ["limpieza", "limpio", "limpiar", "casas", "casa", "oficinas", "oficina", "departamento", "domestico"]
+    },
+    {
+      codes: ["ELECTRICIDAD"],
+      terms: ["electricista", "electricidad", "instalaciones", "instalacion", "arreglos", "enchufe", "termica", "disyuntor", "cableado"]
+    },
+    {
+      codes: ["BELLEZA", "MANICURIA", "PESTANAS", "MAQUILLAJE"],
+      terms: ["unas", "uñas", "manicura", "manicuria", "esmaltado", "pestanas", "pestañas", "maquillaje", "makeup", "belleza"]
+    }
+  ];
+}
+
 localProviderCategorySuggestions(text) {
   const normalized = this.normalizeText(text);
   const categories = this.state?.appConfig?.categories ?? [];
+  const categoryByCode = new Map(categories.map((category) => [String(category.code ?? "").toUpperCase(), category]));
+  const blueprintMatches = [];
 
-  return categories
+  for (const blueprint of this.providerIntentBlueprints()) {
+    const hitCount = blueprint.terms.filter((term) => normalized.includes(this.normalizeText(term))).length;
+    if (!hitCount) continue;
+
+    blueprint.codes.forEach((code, index) => {
+      const category = categoryByCode.get(code);
+      if (!category) return;
+      blueprintMatches.push({
+        ...category,
+        category_id: category.id,
+        localScore: hitCount * 14 - index,
+        score: hitCount * 14 - index
+      });
+    });
+  }
+
+  const keywordMatches = categories
     .map((category) => {
       const haystack = this.normalizeText([
         category.name,
@@ -2042,8 +2240,109 @@ localProviderCategorySuggestions(text) {
       return { ...category, category_id: category.id, score };
     })
     .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .sort((a, b) => b.score - a.score);
+
+  return this.mergeProviderCategorySuggestions(blueprintMatches, keywordMatches);
+}
+
+providerSuggestionReason(text, item = {}) {
+  const name = item.name ?? "este rubro";
+  return `Puede coincidir con lo que describiste para ${name}. Revisalo antes de confirmar.`;
+}
+
+startProviderDictation(source = null) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const form = source?.closest?.("form") ?? document.getElementById("providerBusinessForm");
+  const input = form?.querySelector?.("[name='providerAiPrompt']");
+  const status = document.getElementById("providerVoiceStatus");
+
+  if (!SpeechRecognition || !input) {
+    if (status) {
+      status.hidden = false;
+      status.textContent = "Tu navegador no permite dictado por voz. Podes escribirlo.";
+    }
+    this.showToast("Tu navegador no permite dictado por voz. Podes escribirlo.", "info");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "es-AR";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  if (status) {
+    status.hidden = false;
+    status.textContent = "Escuchando...";
+  }
+  this.setButtonBusy(source, true, "Escuchando");
+
+  recognition.onresult = (event) => {
+    const transcript = event.results?.[0]?.[0]?.transcript ?? "";
+    input.value = [input.value, transcript].filter(Boolean).join(" ").trim();
+    input.focus();
+    if (status) status.textContent = "Listo. Revisá el texto y tocá Sugerir.";
+  };
+
+  recognition.onerror = () => {
+    if (status) status.textContent = "No pudimos escuchar bien. Podes escribirlo.";
+    this.showToast("No pudimos escuchar bien. Podes escribirlo.", "warning");
+  };
+
+  recognition.onend = () => {
+    this.setButtonBusy(source, false);
+  };
+
+  recognition.start();
+}
+
+improveProviderDescription(source = null) {
+  const form = source?.closest?.("form") ?? document.getElementById("providerBusinessForm");
+  const prompt = String(form?.querySelector?.("[name='providerAiPrompt']")?.value ?? "").trim();
+  const bio = String(form?.querySelector?.("[name='providerBio']")?.value ?? "").trim();
+  const summary = form?.querySelector?.("[name='providerProfessionalSummary']");
+  const selectedNames = [...form.querySelectorAll("[data-provider-suggestion-card].is-selected strong")]
+    .map((item) => item.textContent.trim())
+    .filter(Boolean);
+  const base = String(summary?.value ?? bio || prompt).trim();
+
+  if (!base && !prompt) {
+    this.showToast("Primero escribi que servicio ofreces", "warning");
+    return;
+  }
+
+  const intro = selectedNames.length
+    ? `Ofrezco servicios relacionados con ${selectedNames.join(", ")}.`
+    : "Ofrezco servicios a coordinar con cada cliente.";
+  const body = base || prompt;
+  const improved = `${intro} ${body}. Coordino previamente el alcance, la modalidad y los detalles necesarios para realizar el servicio de forma clara.`
+    .replace(/\s+/g, " ")
+    .slice(0, 600);
+  const box = document.getElementById("providerDescriptionSuggestion");
+
+  if (box) {
+    box.hidden = false;
+    box.innerHTML = `
+      <strong>Propuesta de MIMI</strong>
+      <p>${this.escapeHtml(improved)}</p>
+      <div class="provider-description-actions">
+        <button class="btn-primary" type="button" data-provider-business-action="use-provider-description" data-description="${this.escapeHtml(improved)}">Usar esta descripcion</button>
+        <button class="btn-secondary" type="button" data-provider-business-action="hide-provider-description">Editar manualmente</button>
+      </div>
+    `;
+  }
+
+  this.showToast("MIMI preparo una descripcion editable.", "success");
+}
+
+useProviderDescription(source = null) {
+  const description = source?.dataset?.description ?? "";
+  const form = source?.closest?.("form") ?? document.getElementById("providerBusinessForm");
+  const summary = form?.querySelector?.("[name='providerProfessionalSummary']");
+  if (summary && description) {
+    summary.value = description;
+    summary.focus();
+    this.showToast("Descripcion aplicada. Podes editarla antes de guardar.", "success");
+  }
 }
 
 providerTitleFromPrompt(text, categoryName = "Servicio") {

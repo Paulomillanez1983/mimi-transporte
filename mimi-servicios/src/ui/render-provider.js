@@ -65,6 +65,20 @@ const categoryGroupLabels = {
   other: "Otros oficios"
 };
 
+const argentinaZones = {
+  "Buenos Aires": ["La Plata", "Mar del Plata", "Bahia Blanca", "Tandil", "San Isidro", "Quilmes", "Moron", "Lomas de Zamora"],
+  "CABA": ["Ciudad Autonoma de Buenos Aires"],
+  "Cordoba": ["Cordoba Capital", "Villa Carlos Paz", "Rio Cuarto", "Villa Maria", "Alta Gracia", "Carlos Paz"],
+  "Santa Fe": ["Rosario", "Santa Fe Capital", "Rafaela", "Venado Tuerto", "Santo Tome"],
+  "Mendoza": ["Mendoza Capital", "Godoy Cruz", "Guaymallen", "San Rafael", "Maipu"],
+  "Tucuman": ["San Miguel de Tucuman", "Yerba Buena", "Tafi Viejo"],
+  "Salta": ["Salta Capital", "Oran", "Tartagal"],
+  "Neuquen": ["Neuquen Capital", "Plottier", "San Martin de los Andes"],
+  "Rio Negro": ["Bariloche", "General Roca", "Viedma", "Cipolletti"],
+  "Entre Rios": ["Parana", "Concordia", "Gualeguaychu"],
+  "Misiones": ["Posadas", "Obera", "Eldorado"]
+};
+
 function currency(value, currencyCode = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -100,13 +114,13 @@ function categoryGroup(category = {}) {
   if (["PSICOLOGIA", "NUTRICION", "KINESIOLOGIA", "ABOGACIA", "CONTABILIDAD", "ENFERMERIA", "CLASES_PARTICULARES"].includes(code)) {
     return "professional";
   }
-  if (["LIMPIEZA", "SERVICIO_DOMESTICO", "PLOMERIA", "ELECTRICIDAD", "GASISTA", "PINTURA", "CARPINTERIA", "ALBANILERIA", "JARDINERIA", "CERRAJERIA", "HERRERIA"].includes(code)) {
+  if (["LIMPIEZA", "LIMPIEZA_OFICINAS", "SERVICIO_DOMESTICO", "PLOMERIA", "ELECTRICIDAD", "GASISTA", "PINTURA", "CARPINTERIA", "ALBANILERIA", "REPARACIONES_HOGAR", "COLOCACION_CERAMICOS", "JARDINERIA", "CERRAJERIA", "HERRERIA"].includes(code)) {
     return "home";
   }
-  if (["CUIDADO_ADULTOS", "CUIDADO_NINOS", "MASAJISTA", "MASCOTAS"].includes(code)) {
+  if (["CUIDADO_ADULTOS", "CUIDADO_NINOS", "ACOMPANAMIENTO_DOMICILIARIO", "MASAJISTA", "MASCOTAS"].includes(code)) {
     return "care";
   }
-  if (["BELLEZA", "MANICURIA", "PELUQUERIA"].includes(code)) {
+  if (["BELLEZA", "MANICURIA", "PELUQUERIA", "PESTANAS", "MAQUILLAJE"].includes(code)) {
     return "beauty";
   }
   if (["INSTALACION_AIRE", "REFRIGERACION", "TECNICO_PC", "TECNOLOGIA", "GOMERIA_MOVIL", "MECANICA_MOVIL", "MUDANZAS"].includes(code)) {
@@ -895,14 +909,14 @@ function renderOfferingEditorV2(offering = null, index = 0, categories = []) {
       </label>
 
       <label class="input-group provider-field-wide">
-        <span>Que ofreces exactamente</span>
-        <input name="offering:${index}:title" type="text" maxlength="90" value="${escapeHtml(offering?.title ?? "")}" placeholder="Ej: sesion de psicologia online, corte de pasto, unas semi">
+        <span>Nombre del servicio</span>
+        <input name="offering:${index}:title" type="text" maxlength="90" value="${escapeHtml(offering?.title ?? "")}" placeholder="Ej: pintura interior, cuidado de adultos, manicuria">
       </label>
 
       <label class="input-group provider-field-wide">
-        <span>Rubro donde te tienen que encontrar</span>
+        <span>Rubro seleccionado</span>
         <select name="offering:${index}:categoryId">
-          <option value="">Elegi el rubro mas cercano</option>
+          <option value="">Elegilo desde las sugerencias</option>
           ${Object.entries(groupedCategories).map(([group, items]) => `
             <optgroup label="${escapeHtml(categoryGroupLabels[group] ?? group)}">
               ${items.map((category) => `
@@ -911,7 +925,7 @@ function renderOfferingEditorV2(offering = null, index = 0, categories = []) {
             </optgroup>
           `).join("")}
         </select>
-        <small>${escapeHtml(requirement || "Si no ves tu oficio exacto, elegi el rubro mas parecido y escribi el nombre exacto arriba.")}</small>
+        <small>${escapeHtml(requirement || "El rubro viene de las opciones que elegiste. Si falta uno, volve al primer paso y agregalo.")}</small>
       </label>
 
       <div class="provider-inline-fields">
@@ -936,12 +950,12 @@ function renderOfferingEditorV2(offering = null, index = 0, categories = []) {
       </div>
 
       <label class="input-group provider-field-wide">
-        <span>Que incluye</span>
-        <textarea name="offering:${index}:description" maxlength="220" rows="2" placeholder="Conta el alcance, que incluye, que no incluye y que necesita saber el cliente">${escapeHtml(offering?.description ?? "")}</textarea>
+          <span>Descripcion del servicio</span>
+          <textarea name="offering:${index}:description" maxlength="220" rows="2" placeholder="Conta el alcance, que incluye, que no incluye y que necesita saber el cliente">${escapeHtml(offering?.description ?? "")}</textarea>
       </label>
 
       <label class="input-group provider-field-wide">
-        <span>Resumen para la card</span>
+        <span>Resumen para mostrar al cliente</span>
         <input name="offering:${index}:publicSummary" type="text" maxlength="140" value="${escapeHtml(offering?.public_summary ?? "")}" placeholder="Ej: sesiones online para ansiedad, estres y orientacion adulta">
       </label>
 
@@ -1035,6 +1049,20 @@ function renderProviderBusiness(state) {
       : appConfig.categories
   );
   const pricingByCategory = new Map(pricing.map((item) => [item.category_id, item]));
+  const selectedCategoryIds = new Set([
+    ...activeCategoryIds,
+    ...offerings.map((item) => item?.category_id).filter(Boolean)
+  ]);
+  const selectedCategories = categories.filter((category) => selectedCategoryIds.has(category.id));
+  const offeringCategories = selectedCategories.length ? selectedCategories : categories;
+  const selectedCategoryLabel = selectedCategories.length
+    ? selectedCategories.map((category) => category.name).join(", ")
+    : "Primero elegi rubros sugeridos";
+  const hasSelectedRubros = selectedCategoryIds.size > 0;
+  const provinceOptions = Object.keys(argentinaZones);
+  const cityOptions = Object.entries(argentinaZones).flatMap(([province, cities]) =>
+    cities.map((city) => ({ province, city }))
+  );
   const primaryOffering = offerings.find((item) => item?.active !== false) ?? offerings[0] ?? null;
   const primaryPrice =
     primaryOffering?.quote_required || primaryOffering?.pricing_model === "QUOTE"
@@ -1076,30 +1104,31 @@ function renderProviderBusiness(state) {
             <span>1</span>
             <div>
               <small>Asistente MIMI</small>
-              <h3>Contanos con tus palabras que trabajos haces</h3>
+              <h3>Contanos que ofrecés</h3>
             </div>
           </div>
-          <p class="muted">Nosotros te ayudamos a ordenarlo en rubros. Las sugerencias no certifican ni garantizan el servicio: vos revisas y confirmas la informacion antes de publicar.</p>
-          <textarea name="providerAiPrompt" rows="3" maxlength="500" placeholder="Ej: arreglo paredes, pinto, hago revoques, coloco ceramicos">${escapeHtml(offerings[0]?.description ?? "")}</textarea>
-          <div class="provider-action-strip">
-            <button class="btn-primary" data-provider-business-action="suggest-provider-service" type="button">Sugerir rubros</button>
-            <button class="btn-secondary" data-provider-business-action="focus-offering-editor" type="button">Completar manualmente</button>
+          <p class="muted">Escribí o dictá qué trabajos hacés. MIMI lo ordena en rubros para que revises y confirmes.</p>
+          <div class="provider-ai-input-shell">
+            <textarea name="providerAiPrompt" rows="3" maxlength="500" placeholder="Ej: arreglo paredes, pinto, hago revoques, coloco ceramicos">${escapeHtml(offerings[0]?.description ?? "")}</textarea>
+            <div class="provider-ai-controls">
+              <button class="provider-icon-action" data-provider-business-action="start-provider-dictation" type="button" aria-label="Dictar por voz" title="Dictar por voz">🎙</button>
+              <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Sugerir</button>
+            </div>
           </div>
-          <div class="provider-ai-suggestions" id="providerAiSuggestions" hidden></div>
+          <div class="provider-voice-status" id="providerVoiceStatus" hidden></div>
+          <div class="provider-ai-empty" id="providerAiEmpty" ${hasSelectedRubros ? "hidden" : ""}>Primero escribí qué hacés. Después elegí una o varias opciones sugeridas.</div>
+          <div class="provider-ai-suggestions" id="providerAiSuggestions" ${hasSelectedRubros ? "" : "hidden"}>
+            ${selectedCategories.map((category) => `
+              <button class="provider-suggestion-card is-selected" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${escapeHtml(category.id)}" data-category-code="${escapeHtml(category.code)}" aria-pressed="true">
+                <strong>${escapeHtml(category.name)}</strong>
+                <span>${escapeHtml(category.description ?? "Rubro seleccionado")}</span>
+              </button>
+            `).join("")}
+          </div>
           <div class="provider-wizard-nav">
-            <span>Empeza por describirlo simple. Despues lo ajustamos.</span>
-            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
+            <span id="providerSelectionHint">${escapeHtml(hasSelectedRubros ? selectedCategoryLabel : "Elegí al menos una sugerencia para seguir.")}</span>
+            <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button" ${hasSelectedRubros ? "" : "disabled"}>Siguiente</button>
           </div>
-        </section>
-
-        <section class="provider-profile-quality provider-insight-card">
-          <div>
-            <span class="eyebrow">Solo para vos</span>
-            <h3>${escapeHtml(quality.label)}</h3>
-            <p class="muted">Este nivel es privado y sirve para ayudarte a completar mejor tu perfil. No se muestra como ranking, garantia ni certificacion publica.</p>
-          </div>
-          <strong>${quality.score}%</strong>
-          ${quality.tips.length ? `<ul>${quality.tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join("")}</ul>` : ""}
         </section>
 
         <div class="provider-help-note">
@@ -1112,39 +1141,51 @@ function renderProviderBusiness(state) {
             <span>2</span>
             <div>
               <small>Perfil publico</small>
-              <h3>Completa lo minimo para que el cliente entienda tu propuesta</h3>
+              <h3>Ahora armamos una presentación clara</h3>
             </div>
           </div>
           <div class="provider-form-grid">
           <label class="input-group">
             <span>Bio corta</span>
-            <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Describe en una linea tu servicio">
+            <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Ej: trabajos de pintura, arreglos y mantenimiento del hogar">
           </label>
           <label class="input-group">
-            <span>Titulo publico</span>
-            <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Ej: Psicologa clinica - sesiones online">
+            <span>Presentación o título profesional</span>
+            <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Opcional. Usalo si aplica a tu oficio o profesión.">
+            <small>Si tenés matrícula, título o habilitación relacionada, podés aclararlo sin prometer validación pública.</small>
           </label>
           <label class="input-group">
             <span>Video o sala online</span>
             <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Link profesional, sitio o sala a coordinar">
           </label>
           <label class="input-group">
-            <span>Ciudad</span>
-            <input name="providerCity" type="text" maxlength="80" value="${escapeHtml(detail?.city ?? "")}" placeholder="Ciudad base">
+            <span>Ciudad o localidad principal</span>
+            <input name="providerCity" type="text" maxlength="80" value="${escapeHtml(detail?.city ?? "")}" placeholder="Ej: Córdoba Capital" list="providerCityOptions">
           </label>
           <label class="input-group">
             <span>Provincia</span>
-            <input name="providerProvince" type="text" maxlength="80" value="${escapeHtml(detail?.province ?? "")}" placeholder="Provincia">
+            <select name="providerProvince">
+              <option value="">Elegí provincia</option>
+              ${provinceOptions.map((province) => `<option value="${escapeHtml(province)}" ${String(detail?.province ?? "") === province ? "selected" : ""}>${escapeHtml(province)}</option>`).join("")}
+            </select>
           </label>
           <label class="input-group">
-            <span>Zona base</span>
-            <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Barrio, zona o referencia">
+            <span>Área donde podés trabajar</span>
+            <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Ej: Nueva Córdoba, Centro y zonas cercanas">
+            <small>Esto ayuda a mostrar tu servicio donde corresponde. Después podés ajustar cobertura.</small>
           </label>
+          <datalist id="providerCityOptions">
+            ${cityOptions.map((item) => `<option value="${escapeHtml(item.city)}" label="${escapeHtml(item.province)}"></option>`).join("")}
+          </datalist>
         </div>
         <label class="input-group provider-field-wide">
           <span>Resumen profesional</span>
           <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Conta tu especialidad, alcance, experiencia y como coordinas el servicio sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
         </label>
+        <div class="provider-ai-description-tools">
+          <button class="btn-secondary" data-provider-business-action="improve-provider-description" type="button">Mejorar con MIMI</button>
+          <div class="provider-description-suggestion" id="providerDescriptionSuggestion" hidden></div>
+        </div>
         <input name="maxHoursPerService" type="hidden" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
           <div class="provider-wizard-nav">
             <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
@@ -1160,15 +1201,16 @@ function renderProviderBusiness(state) {
               <p class="muted">Podes elegir mas de una categoria si ofreces varios servicios.</p>
             </div>
           </div>
-          <div class="provider-editor-grid">
+          <div class="provider-editor-grid provider-category-editor-grid">
             ${categories
               .map((category) => {
                 const current = pricingByCategory.get(category.id);
+                const filtered = selectedCategoryIds.size && !selectedCategoryIds.has(category.id);
 
                 return `
-                  <article class="provider-editor-card">
+                  <article class="provider-editor-card ${filtered ? "is-filtered-out" : ""}" data-category-editor-card data-category-id="${escapeHtml(category.id)}">
                     <label class="provider-check-item">
-                      <input type="checkbox" name="categoryActive:${escapeHtml(category.id)}" ${activeCategoryIds.has(category.id) || current ? "checked" : ""}>
+                      <input type="checkbox" name="categoryActive:${escapeHtml(category.id)}" ${selectedCategoryIds.has(category.id) || current ? "checked" : ""}>
                       <span>${escapeHtml(category.name)}</span>
                     </label>
                     <label class="input-group">
@@ -1206,7 +1248,7 @@ function renderProviderBusiness(state) {
           </div>
           <div class="provider-editor-grid">
             ${[...offerings, null]
-              .map((offering, index) => renderOfferingEditorV2(offering, index, categories))
+              .map((offering, index) => renderOfferingEditorV2(offering, index, offeringCategories))
               .join("")}
           </div>
           <div class="provider-wizard-nav">
@@ -1230,6 +1272,15 @@ function renderProviderBusiness(state) {
           <span class="eyebrow">Etapa 6: revision final</span>
           <h3>Revisa antes de publicar</h3>
           <p class="muted">Confirma que el rubro, la descripcion, la zona y el precio representan lo que realmente ofreces. MIMI facilita la conexion entre partes; no contrata, no certifica y no garantiza servicios.</p>
+          <div class="provider-profile-quality provider-insight-card">
+            <div>
+              <span class="eyebrow">Estado de tu perfil</span>
+              <h3>${escapeHtml(quality.label)}</h3>
+              <p class="muted">Esto solo lo ves vos. Sirve para saber si falta informacion para que tu perfil se entienda mejor.</p>
+            </div>
+            <strong>${quality.score}%</strong>
+            ${quality.tips.length ? `<ul>${quality.tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join("")}</ul>` : ""}
+          </div>
           <div class="provider-wizard-nav">
             <button class="btn-secondary" data-provider-business-action="provider-setup-prev" type="button">Atras</button>
             <button class="btn-primary" data-provider-business-action="provider-setup-next" type="button">Siguiente</button>
@@ -1251,10 +1302,6 @@ function renderProviderBusiness(state) {
       </form>
 
       ${renderOfferingsSummary(offerings)}
-      <details class="provider-advanced-summary">
-        <summary>Ver datos tecnicos guardados</summary>
-        ${renderPricing(pricing, detail)}
-      </details>
     </section>
   `;
 }

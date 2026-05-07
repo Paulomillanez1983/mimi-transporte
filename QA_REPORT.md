@@ -251,3 +251,34 @@ Pruebas:
 - `node qa/audit-routes.js`: OK.
 - `node qa/audit-inline-scripts.js`: OK.
 - `git diff --check`: OK.
+
+## Enterprise provider setup 2026-05-07
+
+Auditoria aplicada:
+- El flujo real guarda en `svc_provider_profiles`, `svc_provider_categories`, `svc_provider_pricing` y `svc_provider_service_offerings`.
+- La aceptacion de terminos reutiliza `accept-legal-document` con `terms_providers` y `privacy_policy` version `2026.1.0`.
+- La IA/sugerencia usa `svc-resolve-service-intent` y reglas en `svc_service_intent_rules`.
+
+Cambios aplicados:
+- `mimi-servicios/src/ui/render-provider.js`: el primer paso queda centrado en MIMI; las sugerencias son cards seleccionables y el boton `Siguiente` queda bloqueado hasta elegir al menos un rubro. Se quita `Ver datos tecnicos guardados`.
+- `mimi-servicios/src/main-provider.js`: se agrega seleccion real de rubros sugeridos, sincronizacion con checkboxes/categorias/precios, dictado por Web Speech API, mejora local de descripcion con MIMI y filtrado de oficios no relacionados.
+- `mimi-servicios/src/config.js`: fallback local actualizado con rubros escalables: reparaciones del hogar, colocacion de ceramicos, limpieza de oficinas, acompanamiento domiciliario, pestanas y maquillaje.
+- `mimi-servicios/styles/provider.css`: cards de sugerencias compactas, boton sugerir mas proporcionado, estados disabled/loading, panel de descripcion mejorada y ocultamiento de rubros no seleccionados.
+- `docs/provider-enterprise-intent-categories.sql`: migracion idempotente aplicada en Supabase para categorias y reglas de intencion reales.
+- `mimi-servicios/supabase/functions/svc-resolve-service-intent/index.ts`: se redujo el peso de terminos genericos para evitar sugerencias irrelevantes como pintura por la palabra `casa`.
+
+Pruebas de backend real:
+- `arreglo paredes, pinto, hago revoques, coloco ceramicos` => `PINTURA`, `ALBANILERIA`, `COLOCACION_CERAMICOS`, `REPARACIONES_HOGAR`.
+- `cuido niños y adultos mayores` => `CUIDADO_ADULTOS`, `ACOMPANAMIENTO_DOMICILIARIO`, `CUIDADO_NINOS`.
+- `hago limpieza de casas y oficinas` => `LIMPIEZA`, `LIMPIEZA_OFICINAS`.
+- `soy electricista hago instalaciones y arreglos` => `ELECTRICIDAD`.
+- `hago uñas, pestañas y maquillaje` => `MAQUILLAJE`, `BELLEZA`, `PESTANAS`.
+
+Pruebas tecnicas:
+- `node --check mimi-servicios/src/main-provider.js`: OK.
+- `node --check mimi-servicios/src/ui/render-provider.js`: OK.
+- `node --check mimi-servicios/src/config.js`: OK.
+- `node qa/audit-encoding.js`: OK, 0 hallazgos.
+- `node qa/audit-routes.js`: OK.
+- `node qa/audit-inline-scripts.js`: OK.
+- `git diff --check`: OK.

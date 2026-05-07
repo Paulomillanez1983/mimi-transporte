@@ -53,6 +53,21 @@ function tokenize(value: string) {
 function scoreCategory(query: string, category: CategoryRow, rules: IntentRuleRow[]) {
   const normalizedQuery = normalize(query);
   const tokens = tokenize(normalizedQuery);
+  const genericTerms = new Set([
+    "casa",
+    "casas",
+    "hogar",
+    "servicio",
+    "servicios",
+    "trabajo",
+    "trabajos",
+    "arreglo",
+    "arreglos",
+    "instalacion",
+    "instalaciones",
+    "cuidado",
+    "limpieza",
+  ]);
   const haystack = normalize([
     category.code,
     category.name,
@@ -98,7 +113,7 @@ function scoreCategory(query: string, category: CategoryRow, rules: IntentRuleRo
       if (!keyword) continue;
 
       if (normalizedQuery.includes(keyword) || keyword.includes(normalizedQuery)) {
-        score += 7 * weight;
+        score += (genericTerms.has(keyword) ? 1.2 : 7) * weight;
         matched.add(keyword);
         continue;
       }
@@ -114,11 +129,16 @@ function scoreCategory(query: string, category: CategoryRow, rules: IntentRuleRo
   }
 
   const confidence = Math.max(0, Math.min(0.98, score / 85));
+  const matchedTerms = Array.from(matched).slice(0, 8);
+  const genericOnly =
+    matchedTerms.length > 0 &&
+    matchedTerms.every((term) => genericTerms.has(normalize(term)));
 
   return {
     score,
     confidence,
-    matched_terms: Array.from(matched).slice(0, 8),
+    matched_terms: matchedTerms,
+    generic_only: genericOnly,
   };
 }
 
@@ -188,9 +208,10 @@ serve(async (req) => {
           score: scored.score,
           confidence: scored.confidence,
           matched_terms: scored.matched_terms,
+          generic_only: scored.generic_only,
         };
       })
-      .filter((item) => item.score > 0)
+      .filter((item) => item.score > 0 && !("generic_only" in item && item.generic_only))
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
