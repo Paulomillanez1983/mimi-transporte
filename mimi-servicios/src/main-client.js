@@ -2133,8 +2133,26 @@ function bindBasicControls() {
 
       const selectProvider = event.target.closest("[data-provider-select]");
       if (selectProvider) {
-        if (!selectProvider.dataset.providerSelect) return;
-        const created = await handleProviderSelection(selectProvider.dataset.providerSelect);
+        const providerId = selectProvider.dataset.providerSelect;
+        console.log("[MIMI Solicitar] click detected on Solicitar button", {
+          targetTag: event.target.tagName,
+          targetClass: event.target.className,
+          buttonId: selectProvider.id,
+          buttonText: selectProvider.textContent?.trim()?.slice(0, 50),
+          providerId,
+          disabled: selectProvider.disabled,
+          ariaDisabled: selectProvider.getAttribute("aria-disabled")
+        });
+        if (!providerId) {
+          console.warn("[MIMI Solicitar] BLOCKED: data-provider-select está vacío. El estado no tiene un provider seleccionado todavía.");
+          setInfo(null, "Tocá primero un prestador de la lista para elegirlo.");
+          return;
+        }
+        if (selectProvider.disabled) {
+          console.warn("[MIMI Solicitar] BLOCKED: button.disabled === true");
+          return;
+        }
+        const created = await handleProviderSelection(providerId);
         if (created) setClientView("services");
         return;
       }
