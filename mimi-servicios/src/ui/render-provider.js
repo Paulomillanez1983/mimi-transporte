@@ -34,12 +34,12 @@ const reviewStatusLabels = {
 const dayLabels = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
 const pricingModelLabels = {
+  QUOTE: "A coordinar con el cliente",
+  FIXED: "Precio cerrado por trabajo",
   HOURLY: "Por hora",
-  BASE_VISIT: "Visita / diagnóstico",
-  QUOTE: "A presupuestar",
-  FIXED: "Precio cerrado",
-  UNIT: "Por sesión / unidad",
-  SQUARE_METER: "Por m2",
+  BASE_VISIT: "Por visita",
+  UNIT: "Por sesion / unidad",
+  SQUARE_METER: "Por m2 / unidad",
   LINEAR_METER: "Por metro lineal"
 };
 
@@ -1143,7 +1143,18 @@ function renderProviderBusiness(state) {
             <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Buscar rubros</button>
           </div>
           <div class="provider-voice-status" id="providerVoiceStatus" hidden></div>
-          <div class="provider-ai-empty" id="providerAiEmpty" ${hasSelectedRubros ? "hidden" : ""}>Buscá rubros para poder publicar. Las opciones aparecen acá mismo.</div>
+          <p class="provider-search-helper">Busca rubros para poder publicar. Las opciones aparecen en el panel de abajo.</p>
+        </section>
+
+        <section class="provider-ai-results-panel ${hasSelectedRubros ? "is-visible" : ""}" id="providerAiSuggestionsPanel" ${hasSelectedRubros ? "" : "hidden"} aria-live="polite">
+          <div class="provider-results-title">
+            <div>
+              <strong>Rubros sugeridos</strong>
+              <span>Elegi una o varias opciones que representen tu servicio.</span>
+            </div>
+          </div>
+          <div class="provider-ai-empty" id="providerAiEmpty" ${hasSelectedRubros ? "hidden" : ""}>Busca un rubro para ver sugerencias reales de MIMI.</div>
+          <div class="provider-ai-results-scroll">
           <div class="provider-ai-suggestions" id="providerAiSuggestions" ${hasSelectedRubros ? "" : "hidden"}>
             ${selectedCategories.length ? `
               <div class="provider-suggestions-heading">
@@ -1157,6 +1168,7 @@ function renderProviderBusiness(state) {
                 <span>${escapeHtml(category.description ?? "Rubro seleccionado")}</span>
               </button>
             `).join("")}
+          </div>
           </div>
         </section>
 
@@ -1179,18 +1191,21 @@ function renderProviderBusiness(state) {
             `).join("")}
           </div>
 
-          <label class="input-group provider-field-wide">
-            <span>Rubro elegido</span>
-            <select name="offering:0:categoryId">
+          <div class="provider-selected-summary" id="providerSelectedRubrosSummary">
+            ${selectedCategories.length
+              ? `Rubro seleccionado: ${escapeHtml(selectedCategories.map((category) => category.name).join(", "))}`
+              : "Primero elegi un rubro sugerido para completar el servicio."}
+          </div>
+
+          <select name="offering:0:categoryId" hidden aria-hidden="true" tabindex="-1">
               <option value="">Primero elegi una card sugerida</option>
               ${categories.map((category) => `
                 <option value="${escapeHtml(category.id)}" data-pricing-model="${escapeHtml(category.default_pricing_model ?? "HOURLY")}" data-service-modes="${escapeHtml((category.allowed_service_modes ?? ["IN_PERSON"]).join(","))}" ${(firstOffering?.category_id ?? selectedCategories[0]?.id ?? "") === category.id ? "selected" : ""}>${escapeHtml(category.name)}</option>
               `).join("")}
-            </select>
-          </label>
+          </select>
 
           <label class="input-group provider-field-wide">
-            <span>Nombre del servicio</span>
+            <span>Nombre visible para clientes</span>
             <input name="offering:0:title" type="text" maxlength="90" value="${escapeHtml(firstOffering?.title ?? "")}" placeholder="Ej: asesoramiento penal, manicura, pintura interior">
           </label>
 
@@ -1200,7 +1215,7 @@ function renderProviderBusiness(state) {
           </label>
 
           <label class="input-group provider-field-wide">
-            <span>Resumen para la card</span>
+            <span>Como se vera en la card del cliente</span>
             <input name="offering:0:publicSummary" type="text" maxlength="140" value="${escapeHtml(firstOffering?.public_summary ?? "")}" placeholder="Ej: consultas online y presenciales a coordinar">
           </label>
 
@@ -1218,11 +1233,11 @@ function renderProviderBusiness(state) {
               <select name="offering:0:locationPolicy">${renderLocationPolicyOptionsForMode(serviceMode, locationPolicy)}</select>
             </label>
             <label class="input-group">
-              <span>Precio principal</span>
+              <span>Precio aproximado</span>
               <input name="offering:0:unitPrice" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.unit_price ?? ""))}" placeholder="Ej: 15000">
             </label>
             <label class="input-group">
-              <span>Unidad</span>
+              <span>Unidad de referencia</span>
               <input name="offering:0:unitName" type="text" maxlength="40" value="${escapeHtml(firstOffering?.unit_name ?? defaults.unitName)}" placeholder="sesion, consulta, trabajo">
             </label>
             <label class="input-group">
@@ -1234,7 +1249,7 @@ function renderProviderBusiness(state) {
               <input name="offering:0:fixedPrice" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.fixed_price ?? ""))}" placeholder="Opcional">
             </label>
             <label class="input-group">
-              <span>Duracion</span>
+              <span>Duracion estimada</span>
               <input name="offering:0:durationMinutes" type="number" min="15" max="240" step="5" value="${escapeHtml(String(firstOffering?.duration_minutes ?? defaults.durationMinutes))}" placeholder="45">
             </label>
           </div>
@@ -1254,15 +1269,11 @@ function renderProviderBusiness(state) {
           <div class="provider-simple-card-heading">
             <span>3</span>
             <div>
-              <strong>Zona y perfil</strong>
+              <strong>Tu ubicacion y zona de trabajo</strong>
               <small>No cargues horarios: estas disponible cuando te conectas.</small>
             </div>
           </div>
           <div class="provider-form-grid provider-compact-grid">
-            <label class="input-group">
-              <span>Ciudad</span>
-              <input name="providerCity" type="text" maxlength="80" value="${escapeHtml(detail?.city ?? "")}" placeholder="Ej: Cordoba Capital" list="providerCityOptions">
-            </label>
             <label class="input-group">
               <span>Provincia</span>
               <select name="providerProvince">
@@ -1270,9 +1281,30 @@ function renderProviderBusiness(state) {
                 ${provinceOptions.map((province) => `<option value="${escapeHtml(province)}" ${String(detail?.province ?? "") === province ? "selected" : ""}>${escapeHtml(province)}</option>`).join("")}
               </select>
             </label>
+            <label class="input-group">
+              <span>Ciudad</span>
+              <input name="providerCity" type="text" maxlength="80" value="${escapeHtml(detail?.city ?? "")}" placeholder="Ej: Cordoba Capital" list="providerCityOptions">
+            </label>
             <label class="input-group provider-field-wide">
-              <span>Zonas donde podes trabajar</span>
-              <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Ej: Centro, Nueva Cordoba y zonas cercanas">
+              <span>Direccion/base aproximada</span>
+              <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Ej: barrio Centro, Nueva Cordoba o zona de referencia">
+            </label>
+            <label class="input-group provider-field-wide" id="providerCoverageRadiusField">
+              <span>Radio de cobertura</span>
+              <select name="providerCoverageRadius">
+                ${[
+                  ["100", "100 m"],
+                  ["500", "500 m"],
+                  ["1000", "1 km"],
+                  ["3000", "3 km"],
+                  ["5000", "5 km"],
+                  ["10000", "10 km"],
+                  ["15000", "15 km"],
+                  ["20000", "20 km"],
+                  ["25000", "25 km"]
+                ].map(([value, label]) => `<option value="${value}" ${String(detail?.metadata?.coverage_radius_meters ?? "10000") === value ? "selected" : ""}>${label}</option>`).join("")}
+              </select>
+              <small>Para servicios online, podes atender en todo el pais.</small>
             </label>
             <label class="input-group provider-field-wide">
               <span>Bio corta</span>

@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.07.14";
+const MIMI_PROVIDER_BUILD = "2026.05.07.15";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -114,28 +114,35 @@ async init() {
   try {
     console.log("[MIMI] Loading categories...");
     const cats = await loadCategories();
-    if (Array.isArray(cats) && cats.length) {
+    const normalizedCategories = Array.isArray(cats)
+      ? cats.map((c) => ({
+          id: c.id,
+          code: c.code,
+          slug: c.slug ?? null,
+          name: c.name,
+          description: c.description,
+          aliases: c.aliases ?? [],
+          search_keywords: c.search_keywords ?? [],
+          default_pricing_model: c.default_pricing_model ?? "HOURLY",
+          requires_provider_quote: Boolean(c.requires_provider_quote),
+          allowed_service_modes: c.allowed_service_modes ?? ["IN_PERSON"],
+          requires_professional_license: Boolean(c.requires_professional_license),
+          requires_background_check: Boolean(c.requires_background_check),
+          source: c.source ?? null,
+          discovery_status: c.discovery_status ?? null,
+          auto_created: Boolean(c.auto_created)
+        }))
+      : [];
+    if (normalizedCategories.length) {
       actions.updateState({
         appConfig: {
-          categories: cats.map((c) => ({
-            id: c.id,
-            code: c.code,
-            slug: c.slug ?? null,
-            name: c.name,
-            description: c.description,
-            aliases: c.aliases ?? [],
-            search_keywords: c.search_keywords ?? [],
-            default_pricing_model: c.default_pricing_model ?? "HOURLY",
-            requires_provider_quote: Boolean(c.requires_provider_quote),
-            allowed_service_modes: c.allowed_service_modes ?? ["IN_PERSON"],
-            requires_professional_license: Boolean(c.requires_professional_license),
-            requires_background_check: Boolean(c.requires_background_check),
-          })),
+          categories: normalizedCategories,
           categoriesLoaded: true,
           categoriesError: null,
-        }
+        },
+        categories: normalizedCategories
       });
-      console.log(`[MIMI] Categories loaded: ${cats.length} items`);
+      console.log(`[MIMI] Categories loaded: ${normalizedCategories.length} items`);
       console.log("[MIMI] Categories saved to state");
     }
   } catch (catErr) {
@@ -1484,6 +1491,10 @@ document.addEventListener("change", (event) => {
   if (target?.matches?.("[name='offering:0:categoryId'], [name='offering:0:serviceMode']")) {
     this.applyProviderCategoryUiRules(target.closest("form"));
   }
+  if (target?.matches?.("[name='offering:0:pricingModel']")) {
+    target.dataset.touched = "1";
+    this.applyProviderCategoryUiRules(target.closest("form"));
+  }
 });
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -1757,14 +1768,14 @@ collectProviderBusinessPayload(form) {
       maximumHours: data.get(`offering:${index}:maximumHours`) ?? "",
       durationMinutes: data.get(`offering:${index}:durationMinutes`) ?? "",
       clientInstructions: data.get(`offering:${index}:clientInstructions`) ?? "",
-      quoteRequired: data.has(`offering:${index}:quoteRequired`)
+      quoteRequired: data.has(`offering:${index}:quoteRequired`),
+      metadata: {
+        coverage_radius_meters: Number(data.get("providerCoverageRadius") ?? 0) || null
+      }
     });
   }
 
-const availableCategories =
-  this.state?.appConfig?.categories ??
-  this.state?.categories ??
-  [];
+const availableCategories = this.getProviderCategories();
 
 for (const category of availableCategories) {
   const categoryId = category.id;
@@ -1842,6 +1853,7 @@ for (const category of availableCategories) {
     city: data.get("providerCity") ?? "",
     province: data.get("providerProvince") ?? "",
     addressText: data.get("providerAddressText") ?? "",
+    coverageRadiusMeters: Number(data.get("providerCoverageRadius") ?? 0) || null,
     pricingMode: "HOURLY",
     acceptsImmediate: true,
     acceptsScheduled: true,
@@ -2038,6 +2050,15 @@ moveProviderSetupStep(action, source = null) {
   nextStep?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 }
 
+getProviderCategories() {
+  const categories =
+    this.state?.appConfig?.categories ??
+    this.state?.categories ??
+    [];
+
+  return Array.isArray(categories) ? categories.filter((item) => item?.id) : [];
+}
+
 providerSetupSelectedCategoryIds(form = document.getElementById("providerBusinessForm")) {
   if (!form) return [];
 
@@ -2051,6 +2072,8 @@ syncProviderSelectedCategories(form = document.getElementById("providerBusinessF
 
   const selectedIds = this.providerSetupSelectedCategoryIds(form);
   const selectedSet = new Set(selectedIds.map(String));
+  const categories = this.getProviderCategories();
+  const categoriesById = new Map(categories.map((category) => [String(category.id), category]));
 
   form.querySelectorAll("[name^='categoryActive:']").forEach((input) => {
     const categoryId = String(input.name).replace("categoryActive:", "");
@@ -2077,6 +2100,25 @@ syncProviderSelectedCategories(form = document.getElementById("providerBusinessF
     categorySelect.value = firstSelected;
   }
   if (activeInput && firstSelected) activeInput.checked = true;
+
+  const selectedCategories = selectedIds
+    .map((id) => categoriesById.get(String(id)) ?? {
+      id,
+      name: form.querySelector(`[data-provider-suggestion-card][data-category-id="${CSS.escape(String(id))}"] strong`)?.textContent?.trim() || "Rubro sugerido"
+    })
+    .filter(Boolean);
+  const summary = form.querySelector("#providerSelectedRubrosSummary");
+  if (summary) {
+    summary.textContent = selectedCategories.length
+      ? `Rubro seleccionado: ${selectedCategories.map((category) => category.name).join(", ")}`
+      : "Primero elegi un rubro sugerido para completar el servicio.";
+  }
+
+  const titleInput = form.querySelector(`[name='offering:${firstIndex}:title']`);
+  if (titleInput && firstSelected && !titleInput.value.trim()) {
+    titleInput.value = selectedCategories[0]?.name ?? "";
+  }
+
   this.applyProviderCategoryUiRules(form);
 
   const nextButton = form.querySelector("[data-provider-setup-step='1'] [data-provider-business-action='provider-setup-next']");
@@ -2100,6 +2142,8 @@ applyProviderCategoryUiRules(form = document.getElementById("providerBusinessFor
   const serviceModeSelect = form.querySelector("[name='offering:0:serviceMode']");
   const locationPolicySelect = form.querySelector("[name='offering:0:locationPolicy']");
   const pricingModelSelect = form.querySelector("[name='offering:0:pricingModel']");
+  const unitNameInput = form.querySelector("[name='offering:0:unitName']");
+  const coverageField = form.querySelector("#providerCoverageRadiusField");
   if (!categorySelect || !serviceModeSelect || !locationPolicySelect) return;
 
   const selectedOption = categorySelect.selectedOptions?.[0];
@@ -2142,24 +2186,54 @@ applyProviderCategoryUiRules(form = document.getElementById("providerBusinessFor
   locationPolicySelect.innerHTML = policies
     .map((policy) => `<option value="${policy}" ${policy === currentPolicy ? "selected" : ""}>${policyLabels[policy]}</option>`)
     .join("");
+
+  if (unitNameInput && !unitNameInput.value.trim()) {
+    const unitByModel = {
+      QUOTE: "",
+      FIXED: "trabajo",
+      HOURLY: "hora",
+      BASE_VISIT: "visita",
+      UNIT: "sesion",
+      SQUARE_METER: "m2",
+      LINEAR_METER: "metro"
+    };
+    unitNameInput.value = unitByModel[String(pricingModelSelect?.value || "").toUpperCase()] ?? "";
+  }
+
+  if (coverageField) {
+    const onlineOnly = serviceModeSelect.value === "ONLINE" || locationPolicySelect.value === "ONLINE_ONLY";
+    coverageField.classList.toggle("is-online-only", onlineOnly);
+    coverageField.querySelector("select")?.toggleAttribute("required", !onlineOnly);
+  }
 }
 
 renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
+  const panel = form?.querySelector?.("#providerAiSuggestionsPanel");
   const suggestionBox = form?.querySelector?.("#providerAiSuggestions");
   const emptyBox = form?.querySelector?.("#providerAiEmpty");
-  if (!suggestionBox) return false;
+  if (!panel || !suggestionBox) return false;
 
   const cards = (matches ?? []).slice(0, 5).map((item) => {
     const categoryId = item.category_id ?? item.id ?? "";
     const code = item.code ?? "";
     const description = item.description ?? this.providerSuggestionReason(text, item);
     const isDynamic = item.auto_created || item.discovery_status === "auto";
+    const modes = Array.isArray(item.allowed_service_modes) && item.allowed_service_modes.length
+      ? item.allowed_service_modes
+      : ["IN_PERSON"];
+    const modeLabel = modes.includes("ONLINE")
+      ? "Online"
+      : modes.includes("HYBRID")
+        ? "Online y presencial"
+        : "Presencial";
+    const badge = isDynamic ? "Nuevo rubro sugerido por MIMI" : "Rubro existente";
 
     return `
       <button class="provider-suggestion-card" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${this.escapeHtml(categoryId)}" data-category-code="${this.escapeHtml(code)}" aria-pressed="false">
         <strong>${this.escapeHtml(item.name ?? "Servicio sugerido")}</strong>
         <span>${this.escapeHtml(description)}</span>
-        ${isDynamic ? `<small>Nuevo rubro ordenado por MIMI</small>` : ""}
+        <em>${this.escapeHtml(modeLabel)}</em>
+        <small>${this.escapeHtml(badge)}</small>
       </button>
     `;
   }).join("");
@@ -2173,6 +2247,9 @@ renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
       ${cards}
     `
     : "";
+  panel.hidden = false;
+  panel.removeAttribute("hidden");
+  panel.classList.add("is-visible");
   suggestionBox.hidden = false;
   suggestionBox.removeAttribute("hidden");
   suggestionBox.classList.toggle("has-suggestions", Boolean(cards));
@@ -2185,6 +2262,18 @@ renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
 
   this.syncProviderSelectedCategories(form);
 
+  window.setTimeout(() => {
+    const visibleCards = suggestionBox.querySelectorAll("[data-provider-suggestion-card]");
+    if (cards && !visibleCards.length) {
+      console.warn("[MIMI] Provider suggestions render diagnostic", {
+        matches: matches?.length ?? 0,
+        panelVisible: !panel.hidden,
+        suggestionHtml: suggestionBox.innerHTML.length
+      });
+      this.showProviderSuggestionEmpty(form, "Recibimos sugerencias, pero no pudimos mostrarlas. Proba de nuevo en unos segundos.");
+    }
+  }, 0);
+
   if (!fallback && cards) {
     this.revealProviderSuggestions(form);
   }
@@ -2193,13 +2282,34 @@ renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
 }
 
 revealProviderSuggestions(form = document.getElementById("providerBusinessForm")) {
-  const suggestionBox = form?.querySelector?.("#providerAiSuggestions");
-  const firstCard = suggestionBox?.querySelector?.("[data-provider-suggestion-card]");
-  const target = firstCard ?? suggestionBox;
+  const panel = form?.querySelector?.("#providerAiSuggestionsPanel");
 
   window.setTimeout(() => {
-    this.scrollElementIntoView(target, { block: "center" });
+    this.scrollElementIntoView(panel, { block: "start" });
   }, 80);
+}
+
+showProviderSuggestionEmpty(form, message) {
+  const panel = form?.querySelector?.("#providerAiSuggestionsPanel");
+  const suggestionBox = form?.querySelector?.("#providerAiSuggestions");
+  const emptyBox = form?.querySelector?.("#providerAiEmpty");
+
+  if (panel) {
+    panel.hidden = false;
+    panel.removeAttribute("hidden");
+    panel.classList.add("is-visible");
+  }
+  if (suggestionBox) {
+    suggestionBox.innerHTML = "";
+    suggestionBox.hidden = true;
+    suggestionBox.classList.remove("has-suggestions", "is-searching");
+  }
+  if (emptyBox) {
+    emptyBox.hidden = false;
+    emptyBox.removeAttribute("hidden");
+    emptyBox.textContent = message;
+  }
+  this.revealProviderSuggestions(form);
 }
 
 scrollElementIntoView(target, { block = "center" } = {}) {
@@ -2278,12 +2388,19 @@ async handleProviderServiceSuggestion() {
   const titleInput = form?.querySelector?.(`[name='offering:${firstIndex}:title']`);
   const summaryInput = form?.querySelector?.(`[name='offering:${firstIndex}:publicSummary']`);
   const descriptionInput = form?.querySelector?.(`[name='offering:${firstIndex}:description']`);
+  const panel = form?.querySelector?.("#providerAiSuggestionsPanel");
   const suggestionBox = form?.querySelector?.("#providerAiSuggestions");
+  let provisionalTimer = null;
 
   try {
     actions.setLoading(true);
     this.setButtonBusy(trigger, true, "Buscando...");
     promptInput?.blur?.();
+    if (panel) {
+      panel.hidden = false;
+      panel.removeAttribute("hidden");
+      panel.classList.add("is-visible");
+    }
     if (suggestionBox) {
       suggestionBox.hidden = false;
       suggestionBox.removeAttribute("hidden");
@@ -2294,13 +2411,22 @@ async handleProviderServiceSuggestion() {
           <strong>Buscando rubros compatibles...</strong>
         </div>
       `;
-      this.scrollElementIntoView(suggestionBox, { block: "center" });
+      this.scrollElementIntoView(panel ?? suggestionBox, { block: "start" });
     }
     if (emptyBox) {
       emptyBox.hidden = true;
       emptyBox.setAttribute("hidden", "");
     }
+    provisionalTimer = window.setTimeout(() => {
+      const provisionalMatches = this.localProviderCategorySuggestions(text);
+      if (!provisionalMatches.length) return;
+      this.renderProviderSuggestionCards(form, provisionalMatches, text, { fallback: true });
+    }, 1200);
     const result = await resolveServiceIntent(text, { limit: 5 });
+    if (provisionalTimer) {
+      window.clearTimeout(provisionalTimer);
+      provisionalTimer = null;
+    }
     const matches = this.mergeProviderCategorySuggestions(
       Array.isArray(result?.matches) ? result.matches : [],
       this.localProviderCategorySuggestions(text)
@@ -2308,20 +2434,16 @@ async handleProviderServiceSuggestion() {
     const top = matches[0] ?? null;
 
     if (!top) {
-      if (suggestionBox) {
-        suggestionBox.innerHTML = "";
-        suggestionBox.hidden = true;
-      }
-      if (emptyBox) {
-        emptyBox.hidden = false;
-        emptyBox.textContent = "No encontramos una coincidencia clara. Proba describirlo con mas detalle, por ejemplo: pinto casas, cuido adultos mayores, hago electricidad domiciliaria.";
-      }
+      this.showProviderSuggestionEmpty(
+        form,
+        "No encontramos un rubro claro. Proba describirlo con mas detalle, por ejemplo: pinto casas, hago electricidad domiciliaria, cuido adultos mayores."
+      );
       this.showToast("No encontramos una coincidencia clara. Proba con mas detalle.", "info");
       return;
     }
 
     if (titleInput && !titleInput.value.trim()) {
-      titleInput.value = this.providerTitleFromPrompt(text, top.name);
+      titleInput.value = top.name ?? this.providerTitleFromPrompt(text, top.name);
     }
     if (summaryInput && !summaryInput.value.trim()) {
       summaryInput.value = `${top.name}: ${text}`.slice(0, 140);
@@ -2335,16 +2457,14 @@ async handleProviderServiceSuggestion() {
     console.warn("[MIMI] Sugerencia provider fallback:", err);
     const matches = this.localProviderCategorySuggestions(text);
     if (!matches.length) {
-      if (emptyBox) {
-        emptyBox.hidden = false;
-        emptyBox.textContent = "No encontramos una coincidencia clara. Proba describirlo con mas detalle.";
-      }
+      this.showProviderSuggestionEmpty(form, "No encontramos un rubro claro. Proba describirlo con mas detalle, por ejemplo: pinto casas, hago electricidad domiciliaria, cuido adultos mayores.");
       this.showToast("No pudimos sugerir rubros ahora. Proba con mas detalle.", "info");
       return;
     }
     this.renderProviderSuggestionCards(form, matches, text, { fallback: true });
     this.showToast("Usamos sugerencias locales. Elegi una o varias.", "info");
   } finally {
+    if (provisionalTimer) window.clearTimeout(provisionalTimer);
     suggestionBox?.classList?.remove("is-searching");
     this.setButtonBusy(trigger, false);
     actions.setLoading(false);
@@ -2363,7 +2483,7 @@ firstEditableOfferingIndex(form) {
 }
 
 mergeProviderCategorySuggestions(...groups) {
-  const categories = this.state?.appConfig?.categories ?? [];
+  const categories = this.getProviderCategories();
   const byCode = new Map(categories.map((category) => [String(category.code ?? "").toUpperCase(), category]));
   const byId = new Map(categories.map((category) => [String(category.id), category]));
   const merged = new Map();
@@ -2427,44 +2547,41 @@ providerIntentBlueprints() {
 
 localProviderCategorySuggestions(text) {
   const normalized = this.normalizeText(text);
-  const categories = this.state?.appConfig?.categories ?? [];
-  const categoryByCode = new Map(categories.map((category) => [String(category.code ?? "").toUpperCase(), category]));
-  const blueprintMatches = [];
-
-  for (const blueprint of this.providerIntentBlueprints()) {
-    const hitCount = blueprint.terms.filter((term) => normalized.includes(this.normalizeText(term))).length;
-    if (!hitCount) continue;
-
-    blueprint.codes.forEach((code, index) => {
-      const category = categoryByCode.get(code);
-      if (!category) return;
-      blueprintMatches.push({
-        ...category,
-        category_id: category.id,
-        localScore: hitCount * 14 - index,
-        score: hitCount * 14 - index
-      });
-    });
-  }
+  const categories = this.getProviderCategories();
+  const stopWords = new Set(["soy", "hago", "hacer", "ofrezco", "brindo", "servicio", "servicios", "trabajo", "trabajos", "de", "del", "la", "el", "los", "las", "un", "una", "y", "en", "para", "por", "con", "a"]);
+  const tokens = normalized
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length >= 3 && !stopWords.has(word));
+  const variants = new Set(tokens);
+  tokens.forEach((word) => {
+    if (word.endsWith("es") && word.length > 4) variants.add(word.slice(0, -2));
+    if (word.endsWith("s") && word.length > 4) variants.add(word.slice(0, -1));
+    if (word.endsWith("or") && word.length > 4) variants.add(`${word}a`);
+    if (word.length >= 5) variants.add(word.slice(0, 4));
+  });
 
   const keywordMatches = categories
     .map((category) => {
       const haystack = this.normalizeText([
         category.name,
+        category.code,
         category.description,
         ...(category.aliases ?? []),
         ...(category.search_keywords ?? [])
       ].join(" "));
-      const score = normalized
-        .split(" ")
-        .filter((word) => word.length >= 3 && haystack.includes(word)).length;
+      let score = 0;
+      variants.forEach((word) => {
+        if (haystack.includes(word)) score += 10;
+        if (haystack.split(" ").some((item) => item.startsWith(word) || word.startsWith(item))) score += 3;
+      });
 
       return { ...category, category_id: category.id, score };
     })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
 
-  return this.mergeProviderCategorySuggestions(blueprintMatches, keywordMatches);
+  return this.mergeProviderCategorySuggestions(keywordMatches);
 }
 
 providerSuggestionReason(text, item = {}) {
