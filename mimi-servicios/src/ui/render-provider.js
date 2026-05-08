@@ -871,20 +871,30 @@ function renderOfferingsSummary(offerings = []) {
             const serviceMode = String(offering.service_mode ?? "IN_PERSON").toUpperCase();
             const locationPolicy = String(offering.location_policy ?? "CLIENT_ADDRESS").toUpperCase();
             const unitName = offering.unit_name || (pricingModel === "UNIT" ? "sesión" : "unidad");
+            // Precio según modelo. Para SQUARE_METER / LINEAR_METER también se usa unit_price.
             const amount =
-              pricingModel === "UNIT"
-                ? offering.unit_price
-                : pricingModel === "FIXED"
-                  ? offering.fixed_price
-                  : pricingModel === "BASE_VISIT"
-                    ? offering.base_visit_fee
+              pricingModel === "FIXED"
+                ? offering.fixed_price
+                : pricingModel === "BASE_VISIT"
+                  ? offering.base_visit_fee
+                  : ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(pricingModel)
+                    ? offering.unit_price
                     : offering.price_per_hour;
+
             const priceLabel =
               pricingModel === "QUOTE"
                 ? "A presupuestar"
-                : pricingModel === "UNIT"
-                  ? `${currency(amount, offering.currency)} / ${unitName}`
-                  : `${currency(amount, offering.currency)}${pricingModel === "HOURLY" ? " / hora" : ""}`;
+                : pricingModel === "SQUARE_METER"
+                  ? `${currency(amount, offering.currency)} / m²`
+                  : pricingModel === "LINEAR_METER"
+                    ? `${currency(amount, offering.currency)} / m`
+                    : pricingModel === "UNIT"
+                      ? `${currency(amount, offering.currency)} / ${unitName}`
+                      : pricingModel === "BASE_VISIT"
+                        ? `${currency(amount, offering.currency)} visita`
+                        : pricingModel === "FIXED"
+                          ? `${currency(amount, offering.currency)} cerrado`
+                          : `${currency(amount, offering.currency)} / hora`;
 
             return `
               <article class="provider-pricing-card" data-offering-id="${escapeHtml(offering.id ?? "")}">
@@ -1771,14 +1781,66 @@ function renderProviderTrust(state) {
     </div>
     `;
 
-  const documentsHtml = documents.length
-    ? documents.map(doc => `
-      <div class="provider-doc-card">
-        <strong>${doc.document_type}</strong>
-        <span>${doc.review_status}</span>
-      </div>
-    `).join("")
-    : `<div class="summary-card">Sin documentos cargados</div>`;
+  // Documentos: deduplicar por document_type (cada tipo aparece UNA vez, con la
+  // versión más reciente). Antes mostraba "selfie APPROVED" 9 veces porque
+  // listaba TODOS los registros sin agrupar.
+  const docsByType = new Map();
+  for (const doc of documents) {
+    const type = String(doc.document_type ?? "").toLowerCase();
+    if (!type) continue;
+    const existing = docsByType.get(type);
+    if (!existing || new Date(doc.created_at ?? 0) > new Date(existing.created_at ?? 0)) {
+      docsByType.set(type, doc);
+    }
+  }
+  const dedupedDocs = [...docsByType.values()];
+  const docTypeLabels = {
+    dni_front: "DNI frente",
+    dni_back: "DNI dorso",
+    selfie: "Selfie",
+    criminal_record: "Antecedentes",
+    criminal_record_certificate: "Antecedentes",
+    professional_license: "Matrícula",
+    professional_title: "Título",
+    address_proof: "Domicilio"
+  };
+  const statusLabels = {
+    APPROVED: { text: "✓ Aprobado", cls: "status-approved" },
+    PENDING: { text: "Pendiente", cls: "status-pending" },
+    PENDING_REVIEW: { text: "En revisión", cls: "status-pending" },
+    REVIEW: { text: "En revisión", cls: "status-pending" },
+    REJECTED: { text: "✗ Rechazado", cls: "status-rejected" },
+    NEEDS_RESUBMISSION: { text: "Reenviar", cls: "status-rejected" }
+  };
+
+  const documentsHtml = dedupedDocs.length
+    ? `
+      <section class="summary-card provider-docs-summary">
+        <div class="block-header compact">
+          <div>
+            <span class="eyebrow">Verificación</span>
+            <h3>Estado de documentos</h3>
+          </div>
+        </div>
+        <div class="provider-docs-grid">
+          ${dedupedDocs
+            .map((doc) => {
+              const type = String(doc.document_type ?? "").toLowerCase();
+              const label = docTypeLabels[type] || type;
+              const status = String(doc.review_status ?? "PENDING").toUpperCase();
+              const meta = statusLabels[status] || { text: status, cls: "status-pending" };
+              return `
+                <div class="provider-doc-row ${meta.cls}">
+                  <strong>${escapeHtml(label)}</strong>
+                  <span>${escapeHtml(meta.text)}</span>
+                </div>
+              `;
+            })
+            .join("")}
+        </div>
+      </section>
+    `
+    : "";
 
   const reviewsHtml = reviews.length
     ? reviews.map(r => `

@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-fix-supabase-redeclare-14";
+const APP_VERSION = "2026-05-08-account-cleanup-services-mgmt-15";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

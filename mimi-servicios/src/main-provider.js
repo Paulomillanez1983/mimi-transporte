@@ -3352,17 +3352,48 @@ renderServicesAndPricing() {
   };
 
   if (this.elements.servicesChips) {
-    this.elements.servicesChips.innerHTML = categories.length
-      ? categories
-          .map(
-            (item) => `
-              <span class="service-chip active">
-                ${item.name || item.code || "Servicio"}
-              </span>
-            `
-          )
-          .join("")
-      : `<span class="service-chip">Sin servicios activos</span>`;
+    // Mostrar OFFERINGS reales (no solo categorías) con botones de gestión.
+    const activeOfferings = (this.state?.provider?.business?.offerings ?? [])
+      .filter((o) => o?.active !== false);
+
+    if (!activeOfferings.length) {
+      this.elements.servicesChips.innerHTML = `
+        <p class="muted">Todavía no publicaste servicios. Andá a la pestaña <b>Servicios</b> para crear el primero.</p>
+      `;
+    } else {
+      this.elements.servicesChips.innerHTML = activeOfferings
+        .map((offering) => {
+          const model = String(offering.pricing_model ?? "HOURLY").toUpperCase();
+          const amount =
+            model === "FIXED" ? offering.fixed_price :
+            model === "BASE_VISIT" ? offering.base_visit_fee :
+            ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(model) ? offering.unit_price :
+            offering.price_per_hour;
+          const priceText = !amount || amount <= 0
+            ? "A coordinar"
+            : model === "SQUARE_METER" ? `$${Number(amount).toLocaleString("es-AR")} / m²`
+            : model === "LINEAR_METER" ? `$${Number(amount).toLocaleString("es-AR")} / m`
+            : model === "UNIT" ? `$${Number(amount).toLocaleString("es-AR")} / ${offering.unit_name || "sesión"}`
+            : model === "BASE_VISIT" ? `$${Number(amount).toLocaleString("es-AR")} visita`
+            : model === "FIXED" ? `$${Number(amount).toLocaleString("es-AR")} cerrado`
+            : `$${Number(amount).toLocaleString("es-AR")} / hora`;
+
+          const offeringId = String(offering.id ?? "");
+          return `
+            <article class="provider-service-mini-card">
+              <div class="provider-service-mini-info">
+                <strong>${this.escapeHtml(offering.title || "Servicio")}</strong>
+                <span>${this.escapeHtml(priceText)}</span>
+              </div>
+              <div class="provider-service-mini-actions">
+                <button type="button" class="btn-secondary" data-provider-business-action="edit-offering" data-offering-id="${this.escapeHtml(offeringId)}">Editar</button>
+                <button type="button" class="btn-link-danger" data-provider-business-action="delete-offering" data-offering-id="${this.escapeHtml(offeringId)}">Eliminar</button>
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+    }
   }
 
   if (this.elements.basePrice) {
