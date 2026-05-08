@@ -1518,27 +1518,51 @@ async function handleSearchSubmit(event) {
 }
 
 async function handleProviderSelection(providerId) {
+  console.log("[MIMI Solicitar] step 1: clicked provider", { providerId });
+
   const provider = state.client.providers.find(
     (item) => item.provider_id === providerId
   );
 
-  if (!provider) return false;
+  if (!provider) {
+    console.warn("[MIMI Solicitar] step 1 FAIL: provider not found in state");
+    return false;
+  }
+  console.log("[MIMI Solicitar] step 2: provider found", {
+    name: provider.name || provider.full_name,
+    pricing_model: provider.pricing_model,
+    quote_required: provider.quote_required,
+    price: provider.price ?? provider.total_price ?? provider.provider_price
+  });
 
   const requestedHours = requestedHoursForCurrentCategory();
-  let pricing = await pricingForProviderSelection(provider, requestedHours);
+  console.log("[MIMI Solicitar] step 3: calling pricing edge", { requestedHours });
+
+  let pricing;
+  try {
+    pricing = await pricingForProviderSelection(provider, requestedHours);
+    console.log("[MIMI Solicitar] step 3 OK: pricing received", pricing);
+  } catch (err) {
+    console.error("[MIMI Solicitar] step 3 FAIL: pricing error", err);
+    throw err;
+  }
 
   if (!pricing?.eligible) {
+    console.warn("[MIMI Solicitar] step 3 FAIL: not eligible", { reason: pricing?.reason, pricing });
     throw new Error(
       `No se pudo confirmar el prestador: ${pricing?.reason ?? "pricing_error"}`
     );
   }
 
+  console.log("[MIMI Solicitar] step 4: opening confirmation overlay");
   const confirmation = await openRequestConfirmation(provider, pricing);
   if (!confirmation?.confirmed) {
+    console.log("[MIMI Solicitar] step 4 CANCELLED by user");
     setInfo("Solicitud no enviada. Podes revisar la categoria, direccion o elegir otro prestador.");
     return false;
   }
   pricing = confirmation.pricing || pricing;
+  console.log("[MIMI Solicitar] step 5: creating request");
 
   const request = await createRequest({
     categoryId: state.ui.selectedCategoryId,
@@ -1561,6 +1585,7 @@ async function handleProviderSelection(providerId) {
     sessionDurationMinutes: pricing.session_duration_minutes,
     priceLabel: pricing.price_label
   });
+  console.log("[MIMI Solicitar] step 5 OK: request created", { request });
 
   let paymentIntent = null;
 
@@ -2136,7 +2161,17 @@ function bindBasicControls() {
         await openClientChat();
       }
     } catch (error) {
-      setInfo(null, normalizeAuthError(error, "No se pudo completar la accion."));
+      // Logging completo para debug — antes solo aparecía un toast genérico sin causa.
+      console.error("[MIMI] Click handler error:", error);
+      console.error("[MIMI] Error details:", {
+        name: error?.name,
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        stack: error?.stack
+      });
+      const friendlyMsg = error?.message || "No se pudo completar la accion.";
+      setInfo(null, normalizeAuthError(error, friendlyMsg));
     }
   });
 }

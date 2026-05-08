@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-fix-price-quote-required-4";
+const APP_VERSION = "2026-05-08-debug-solicitar-button-5";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
