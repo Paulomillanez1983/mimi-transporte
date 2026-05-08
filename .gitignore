@@ -1,2 +1,5 @@
 .vercel
 .env*.local
+mimi-servicios/supabase/.temp/
+supabase/.temp/
+.temp/
