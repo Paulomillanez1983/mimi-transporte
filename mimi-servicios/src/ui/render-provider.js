@@ -1077,6 +1077,224 @@ function renderProviderBusiness(state) {
             primaryOffering?.currency || pricing[0]?.currency
           );
 
+  const firstOffering = primaryOffering ?? null;
+  const defaultCategory = selectedCategories[0] ?? categories[0] ?? null;
+  const defaults = recommendedDefaultsForCategory(defaultCategory);
+  const pricingModel = firstOffering?.pricing_model ?? defaults.pricingModel;
+  const serviceMode = firstOffering?.service_mode ?? defaults.serviceMode;
+  const locationPolicy = firstOffering?.location_policy ?? defaults.locationPolicy;
+
+  container.innerHTML = `
+    <section class="provider-stack provider-publisher-app provider-publisher-app-v3">
+      <form class="provider-settings-form provider-publisher-shell provider-simple-builder" id="providerBusinessForm">
+        <section class="provider-simple-hero">
+          <div>
+            <span class="eyebrow">Servicios</span>
+            <h3>${escapeHtml(firstOffering?.title ?? "Crea tu servicio")}</h3>
+            <p>Deci que haces, elegi el rubro sugerido y completa solo lo necesario para publicar.</p>
+          </div>
+          <div class="provider-simple-status ${offerings.length ? "is-ready" : ""}">
+            <span>${offerings.length ? "Publicado" : "Pendiente"}</span>
+            <strong>${escapeHtml(firstOffering ? primaryPrice : "Falta configurar")}</strong>
+          </div>
+        </section>
+
+        <section class="provider-simple-card provider-ai-card" data-provider-setup-step="1">
+          <div class="provider-simple-card-heading">
+            <span>1</span>
+            <div>
+              <strong>Que servicio prestas</strong>
+              <small>Escribilo con tus palabras. MIMI lo ordena en rubros para que confirmes.</small>
+            </div>
+          </div>
+          <div class="provider-ai-input-shell provider-search-box">
+            <textarea name="providerAiPrompt" rows="3" maxlength="500" placeholder="Ej: soy abogado penalista, hago manicura, pinto casas">${escapeHtml(firstOffering?.description ?? "")}</textarea>
+            <div class="provider-ai-controls">
+              <button class="provider-icon-action" data-provider-business-action="start-provider-dictation" type="button" aria-label="Dictar por voz" title="Dictar por voz">🎙</button>
+              <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Buscar rubros</button>
+            </div>
+          </div>
+          <div class="provider-voice-status" id="providerVoiceStatus" hidden></div>
+          <div class="provider-ai-empty" id="providerAiEmpty" ${hasSelectedRubros ? "hidden" : ""}>Buscá rubros para poder publicar. Las opciones aparecen acá mismo.</div>
+          <div class="provider-ai-suggestions" id="providerAiSuggestions" ${hasSelectedRubros ? "" : "hidden"}>
+            ${selectedCategories.length ? `
+              <div class="provider-suggestions-heading">
+                <strong>Rubros elegidos</strong>
+                <span>Podés cambiar la selección antes de guardar.</span>
+              </div>
+            ` : ""}
+            ${selectedCategories.map((category) => `
+              <button class="provider-suggestion-card is-selected" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${escapeHtml(category.id)}" data-category-code="${escapeHtml(category.code)}" aria-pressed="true">
+                <strong>${escapeHtml(category.name)}</strong>
+                <span>${escapeHtml(category.description ?? "Rubro seleccionado")}</span>
+              </button>
+            `).join("")}
+          </div>
+        </section>
+
+        <section class="provider-simple-card provider-service-details" id="providerServiceDetails">
+          <div class="provider-simple-card-heading">
+            <span>2</span>
+            <div>
+              <strong>Datos del servicio</strong>
+              <small>Esto es lo que el cliente ve antes de pedirte un servicio.</small>
+            </div>
+          </div>
+
+          <input type="hidden" name="offering:0:present" value="1">
+          <input type="hidden" name="offering:0:id" value="${escapeHtml(firstOffering?.id ?? "")}">
+          <input type="checkbox" name="offering:0:active" checked hidden>
+
+          <div class="provider-hidden-category-inputs" aria-hidden="true">
+            ${categories.map((category) => `
+              <input type="checkbox" name="categoryActive:${escapeHtml(category.id)}" ${selectedCategoryIds.has(category.id) || pricingByCategory.has(category.id) ? "checked" : ""} tabindex="-1">
+            `).join("")}
+          </div>
+
+          <label class="input-group provider-field-wide">
+            <span>Rubro elegido</span>
+            <select name="offering:0:categoryId">
+              <option value="">Primero elegi una card sugerida</option>
+              ${categories.map((category) => `
+                <option value="${escapeHtml(category.id)}" ${(firstOffering?.category_id ?? selectedCategories[0]?.id ?? "") === category.id ? "selected" : ""}>${escapeHtml(category.name)}</option>
+              `).join("")}
+            </select>
+          </label>
+
+          <label class="input-group provider-field-wide">
+            <span>Nombre del servicio</span>
+            <input name="offering:0:title" type="text" maxlength="90" value="${escapeHtml(firstOffering?.title ?? "")}" placeholder="Ej: asesoramiento penal, manicura, pintura interior">
+          </label>
+
+          <label class="input-group provider-field-wide">
+            <span>Descripcion clara</span>
+            <textarea name="offering:0:description" maxlength="220" rows="3" placeholder="Conta que incluye, como coordinas y que necesita saber el cliente">${escapeHtml(firstOffering?.description ?? "")}</textarea>
+          </label>
+
+          <label class="input-group provider-field-wide">
+            <span>Resumen para la card</span>
+            <input name="offering:0:publicSummary" type="text" maxlength="140" value="${escapeHtml(firstOffering?.public_summary ?? "")}" placeholder="Ej: consultas online y presenciales a coordinar">
+          </label>
+
+          <div class="provider-form-grid provider-compact-grid">
+            <label class="input-group">
+              <span>Como cobras</span>
+              <select name="offering:0:pricingModel">${renderPricingModelOptions(pricingModel)}</select>
+            </label>
+            <label class="input-group">
+              <span>Modalidad</span>
+              <select name="offering:0:serviceMode">${renderServiceModeOptions(serviceMode)}</select>
+            </label>
+            <label class="input-group">
+              <span>Atencion</span>
+              <select name="offering:0:locationPolicy">${renderLocationPolicyOptions(locationPolicy)}</select>
+            </label>
+            <label class="input-group">
+              <span>Precio principal</span>
+              <input name="offering:0:unitPrice" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.unit_price ?? ""))}" placeholder="Ej: 15000">
+            </label>
+            <label class="input-group">
+              <span>Unidad</span>
+              <input name="offering:0:unitName" type="text" maxlength="40" value="${escapeHtml(firstOffering?.unit_name ?? defaults.unitName)}" placeholder="sesion, consulta, trabajo">
+            </label>
+            <label class="input-group">
+              <span>$/hora si aplica</span>
+              <input name="offering:0:pricePerHour" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.price_per_hour ?? ""))}" placeholder="Opcional">
+            </label>
+            <label class="input-group">
+              <span>Precio cerrado</span>
+              <input name="offering:0:fixedPrice" type="number" min="0" step="100" value="${escapeHtml(String(firstOffering?.fixed_price ?? ""))}" placeholder="Opcional">
+            </label>
+            <label class="input-group">
+              <span>Duracion</span>
+              <input name="offering:0:durationMinutes" type="number" min="15" max="240" step="5" value="${escapeHtml(String(firstOffering?.duration_minutes ?? defaults.durationMinutes))}" placeholder="45">
+            </label>
+          </div>
+
+          <input name="offering:0:baseVisitFee" type="hidden" value="${escapeHtml(String(firstOffering?.base_visit_fee ?? ""))}">
+          <input name="offering:0:minimumCharge" type="hidden" value="${escapeHtml(String(firstOffering?.minimum_charge ?? 0))}">
+          <input name="offering:0:minimumHours" type="hidden" value="${escapeHtml(String(firstOffering?.minimum_hours ?? ""))}">
+          <input name="offering:0:maximumHours" type="hidden" value="${escapeHtml(String(firstOffering?.maximum_hours ?? detail?.max_hours_per_service ?? 8))}">
+          <label class="provider-check-item">
+            <input name="offering:0:quoteRequired" type="checkbox" ${firstOffering ? (firstOffering.quote_required ? "checked" : "") : "checked"}>
+            <span>Prefiero presupuestar antes de confirmar</span>
+          </label>
+          <input name="offering:0:clientInstructions" type="hidden" value="${escapeHtml(firstOffering?.client_instructions ?? "")}">
+        </section>
+
+        <section class="provider-simple-card">
+          <div class="provider-simple-card-heading">
+            <span>3</span>
+            <div>
+              <strong>Zona y perfil</strong>
+              <small>No cargues horarios: estas disponible cuando te conectas.</small>
+            </div>
+          </div>
+          <div class="provider-form-grid provider-compact-grid">
+            <label class="input-group">
+              <span>Ciudad</span>
+              <input name="providerCity" type="text" maxlength="80" value="${escapeHtml(detail?.city ?? "")}" placeholder="Ej: Cordoba Capital" list="providerCityOptions">
+            </label>
+            <label class="input-group">
+              <span>Provincia</span>
+              <select name="providerProvince">
+                <option value="">Elegi provincia</option>
+                ${provinceOptions.map((province) => `<option value="${escapeHtml(province)}" ${String(detail?.province ?? "") === province ? "selected" : ""}>${escapeHtml(province)}</option>`).join("")}
+              </select>
+            </label>
+            <label class="input-group provider-field-wide">
+              <span>Zonas donde podes trabajar</span>
+              <input name="providerAddressText" type="text" maxlength="140" value="${escapeHtml(detail?.address_text ?? "")}" placeholder="Ej: Centro, Nueva Cordoba y zonas cercanas">
+            </label>
+            <label class="input-group provider-field-wide">
+              <span>Bio corta</span>
+              <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Ej: abogado penalista, consultas online y presenciales">
+            </label>
+            <label class="input-group provider-field-wide">
+              <span>Titulo, matricula o aclaracion profesional</span>
+              <input name="providerPublicHeadline" type="text" maxlength="120" value="${escapeHtml(detail?.public_headline ?? "")}" placeholder="Opcional. Usalo solo si aplica.">
+            </label>
+            <label class="input-group provider-field-wide">
+              <span>Video, sitio o sala online</span>
+              <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Opcional">
+            </label>
+          </div>
+          <datalist id="providerCityOptions">
+            ${cityOptions.map((item) => `<option value="${escapeHtml(item.city)}" label="${escapeHtml(item.province)}"></option>`).join("")}
+          </datalist>
+          <label class="input-group provider-field-wide">
+            <span>Presentacion profesional</span>
+            <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Explica tu alcance, experiencia y forma de coordinar sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
+          </label>
+          <div class="provider-ai-description-tools">
+            <button class="btn-secondary" data-provider-business-action="improve-provider-description" type="button">Mejorar descripcion con MIMI</button>
+            <div class="provider-description-suggestion" id="providerDescriptionSuggestion" hidden></div>
+          </div>
+          <input name="maxHoursPerService" type="hidden" value="${escapeHtml(String(detail?.max_hours_per_service ?? 8))}">
+        </section>
+
+        <section class="provider-simple-footer">
+          <div class="provider-profile-quality provider-insight-card">
+            <div>
+              <span class="eyebrow">Estado privado</span>
+              <h3>${escapeHtml(quality.label)}</h3>
+              <p class="muted">Esto solo lo ves vos. No es ranking ni garantia publica.</p>
+            </div>
+            <strong>${quality.score}%</strong>
+          </div>
+          <label class="provider-check-item provider-terms-box">
+            <input name="providerTermsAccepted" type="checkbox" required>
+            <span>Acepto los <a href="../terminos.html" target="_blank" rel="noopener">Terminos para prestadores</a>. Entiendo que MIMI es una plataforma tecnologica intermediaria.</span>
+          </label>
+          <button class="btn-primary provider-save-button" type="submit">Guardar y publicar servicio</button>
+        </section>
+      </form>
+
+      ${renderOfferingsSummary(offerings)}
+    </section>
+  `;
+  return;
+
   container.innerHTML = `
     <section class="provider-stack provider-publisher-app">
       <form class="provider-settings-form provider-publisher-shell" id="providerBusinessForm">

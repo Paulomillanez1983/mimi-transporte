@@ -10985,3 +10985,187 @@ body.provider-auth-required .notification-container {
     display: grid;
   }
 }
+
+/* Provider service builder v3: one clear flow instead of a long wizard. */
+#providerBusinessPanel .provider-publisher-app-v3 {
+  gap: 12px;
+}
+
+#providerBusinessPanel .provider-simple-builder {
+  gap: 12px;
+  padding: 10px;
+  border-radius: 22px;
+  background: #f6faf7;
+}
+
+#providerBusinessPanel .provider-simple-hero,
+#providerBusinessPanel .provider-simple-card,
+#providerBusinessPanel .provider-simple-footer {
+  border: 1px solid rgba(16, 21, 19, 0.08);
+  background: #fff;
+  border-radius: 18px;
+  padding: 14px;
+  color: #101513;
+  box-shadow: 0 10px 26px rgba(16, 21, 19, 0.06);
+}
+
+#providerBusinessPanel .provider-simple-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  background: linear-gradient(135deg, #f0fbf5, #fff);
+}
+
+#providerBusinessPanel .provider-simple-hero h3 {
+  margin: 4px 0 5px;
+  font-size: 1.2rem;
+  line-height: 1.1;
+}
+
+#providerBusinessPanel .provider-simple-hero p {
+  margin: 0;
+  color: #5a6862;
+  line-height: 1.35;
+}
+
+#providerBusinessPanel .provider-simple-status {
+  display: grid;
+  gap: 3px;
+  min-width: 112px;
+  padding: 10px;
+  border-radius: 16px;
+  background: #101513;
+  color: #fff;
+}
+
+#providerBusinessPanel .provider-simple-status span {
+  color: #9ee6ba;
+  font-size: 0.7rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+#providerBusinessPanel .provider-simple-status strong {
+  font-size: 0.86rem;
+  line-height: 1.15;
+}
+
+#providerBusinessPanel .provider-simple-card {
+  display: grid;
+  gap: 12px;
+  scroll-margin-top: 94px;
+}
+
+#providerBusinessPanel .provider-simple-card-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+#providerBusinessPanel .provider-simple-card-heading > span {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #101513;
+  color: #fff;
+  font-weight: 950;
+}
+
+#providerBusinessPanel .provider-simple-card-heading strong {
+  display: block;
+  font-size: 1rem;
+}
+
+#providerBusinessPanel .provider-simple-card-heading small {
+  display: block;
+  margin-top: 2px;
+  color: #63736c;
+  line-height: 1.3;
+}
+
+#providerBusinessPanel .provider-search-box {
+  gap: 10px;
+}
+
+#providerBusinessPanel .provider-search-box textarea {
+  min-height: 88px;
+  border-radius: 16px;
+}
+
+#providerBusinessPanel .provider-ai-suggestions.has-suggestions {
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+  align-items: stretch;
+  padding: 10px;
+}
+
+#providerBusinessPanel .provider-suggestions-heading {
+  grid-column: 1 / -1;
+}
+
+#providerBusinessPanel .provider-suggestion-card {
+  min-height: 94px;
+  padding: 11px;
+  border-radius: 14px;
+}
+
+#providerBusinessPanel .provider-suggestion-card strong {
+  font-size: 0.9rem;
+}
+
+#providerBusinessPanel .provider-suggestion-card span {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.78rem;
+}
+
+#providerBusinessPanel .provider-service-details {
+  border-color: rgba(8, 131, 72, 0.18);
+}
+
+#providerBusinessPanel .provider-compact-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#providerBusinessPanel .provider-hidden-category-inputs {
+  display: none !important;
+}
+
+#providerBusinessPanel .provider-simple-footer {
+  display: grid;
+  gap: 12px;
+}
+
+#providerBusinessPanel .provider-simple-footer .provider-save-button {
+  margin-top: 0;
+}
+
+#providerBusinessPanel .provider-setup-progress,
+#providerBusinessPanel .provider-business-hero,
+#providerBusinessPanel .provider-help-note,
+#providerBusinessPanel .provider-wizard-nav {
+  display: none !important;
+}
+
+@media (max-width: 520px) {
+  #providerBusinessPanel .provider-simple-hero {
+    grid-template-columns: 1fr;
+  }
+
+  #providerBusinessPanel .provider-simple-status {
+    min-width: 0;
+  }
+
+  #providerBusinessPanel .provider-compact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #providerBusinessPanel .provider-ai-suggestions.has-suggestions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

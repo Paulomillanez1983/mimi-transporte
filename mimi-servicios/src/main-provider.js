@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.07.12";
+const MIMI_PROVIDER_BUILD = "2026.05.07.13";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -2059,7 +2059,16 @@ syncProviderSelectedCategories(form = document.getElementById("providerBusinessF
   const firstIndex = this.firstEditableOfferingIndex(form);
   const categorySelect = form.querySelector(`[name='offering:${firstIndex}:categoryId']`);
   const activeInput = form.querySelector(`[name='offering:${firstIndex}:active']`);
-  if (categorySelect && firstSelected) categorySelect.value = firstSelected;
+  if (categorySelect && firstSelected) {
+    if (![...categorySelect.options].some((option) => option.value === firstSelected)) {
+      const selectedCard = form.querySelector(`[data-provider-suggestion-card][data-category-id="${CSS.escape(firstSelected)}"]`);
+      const option = document.createElement("option");
+      option.value = firstSelected;
+      option.textContent = selectedCard?.querySelector("strong")?.textContent?.trim() || "Rubro sugerido";
+      categorySelect.appendChild(option);
+    }
+    categorySelect.value = firstSelected;
+  }
   if (activeInput && firstSelected) activeInput.checked = true;
 
   const nextButton = form.querySelector("[data-provider-setup-step='1'] [data-provider-business-action='provider-setup-next']");
@@ -2144,8 +2153,18 @@ toggleProviderSuggestion(source = null) {
   this.syncProviderSelectedCategories(card.closest("form"));
 
   if (card.classList.contains("is-selected")) {
-    this.showToast("Perfecto. Podes elegir mas de una opcion.", "success");
+    this.showToast("Rubro elegido. Completa los datos del servicio.", "success");
+    this.revealProviderServiceDetails(card.closest("form"));
   }
+}
+
+revealProviderServiceDetails(form = document.getElementById("providerBusinessForm")) {
+  window.setTimeout(() => {
+    const details = form?.querySelector?.("#providerServiceDetails");
+    const title = form?.querySelector?.("[name='offering:0:title']");
+    details?.scrollIntoView?.({ behavior: "smooth", block: "start", inline: "nearest" });
+    title?.focus?.({ preventScroll: true });
+  }, 120);
 }
 
 async handleProviderServiceSuggestion() {
