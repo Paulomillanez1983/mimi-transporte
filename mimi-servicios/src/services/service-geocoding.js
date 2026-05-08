@@ -243,44 +243,6 @@ export async function resolverDireccionActualServicio(lat, lng, options = {}) {
   }
 
   try {
-    const supabase = getSupabaseClient();
-
-    if (supabase?.functions?.invoke) {
-      const { data, error } = await withTimeout(
-        supabase.functions.invoke("geocodificar", {
-          body: {
-            mode: "reverse",
-            lat: safeLat,
-            lng: safeLng,
-            client_lat: options?.bias?.lat ?? null,
-            client_lng: options?.bias?.lng ?? null,
-            vertical: "services"
-          }
-        })
-      );
-
-      const rawItem = Array.isArray(data?.data)
-        ? data.data[0]
-        : data?.data ?? data?.result ?? null;
-
-      const normalized =
-        !error && data?.exito !== false
-          ? normalizarReverseResult(
-              rawItem,
-              data?.source || "geocodificar-reverse"
-            )
-          : null;
-
-      if (normalized) {
-        pushRecentServicePlace(normalized);
-        return normalized;
-      }
-    }
-  } catch {
-    // noop
-  }
-
-  try {
     const fallback = await reverseGeocodeWithNominatim(safeLat, safeLng);
 
     if (fallback) {

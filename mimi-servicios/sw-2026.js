@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-fix-quote-required-and-deadline-10";
+const APP_VERSION = "2026-05-08-client-provider-sync-3";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

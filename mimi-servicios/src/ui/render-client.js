@@ -432,6 +432,19 @@ function providerStatusBadge(provider) {
   `;
 }
 
+function providerAvatarMarkup(provider, extraClass = "") {
+  const avatarUrl = String(provider.avatar_url || provider.avatar || "").trim();
+  const className = `provider-avatar ${extraClass}`.trim();
+  if (avatarUrl) {
+    return `
+      <div class="${escapeHtml(className)} has-photo" style="--avatar:${provider.color};">
+        <img src="${escapeHtml(avatarUrl)}" alt="Foto de ${escapeHtml(provider.displayName)}" loading="lazy">
+      </div>
+    `;
+  }
+  return `<div class="${escapeHtml(className)}" style="--avatar:${provider.color};">${escapeHtml(provider.initials)}</div>`;
+}
+
 function renderStatusBanner(state) {
   const banner = document.getElementById("statusBanner");
   if (!banner) return;
@@ -610,11 +623,13 @@ function renderCategories(state) {
           categoryGuideScore(category, query) > 0
       )
     : rankedCategories;
-  // UI limpia: mostrar solo 3 cards por defecto. Si el usuario tipea o pide ampliar, se ven todas.
-  const maxVisible = query || state.ui.showAllCategories ? filtered.length : 3;
-  const visibleCategories = filtered.slice(0, maxVisible);
+<<  const maxVisible = state.ui.showAllCategories ? filtered.length : query ? 3 : 5;
   const guideCategory = findGuideCategory(categories, query);
   const selectedCategory = categories.find((category) => category.id === state.ui.selectedCategoryId);
+  let visibleCategories = filtered.slice(0, maxVisible);
+  if (!state.ui.showAllCategories && selectedCategory && !visibleCategories.some((category) => category.id === selectedCategory.id)) {
+    visibleCategories = [selectedCategory, ...visibleCategories].slice(0, maxVisible);
+  }
   const intentResolution = state.ui.intentResolution ?? null;
   const intentTop = intentResolution?.topMatch ?? intentResolution?.top_match ?? null;
   const intentCategory = intentTop
@@ -730,12 +745,9 @@ function renderCategories(state) {
           }
         )
         .join("") +
-      (!query && filtered.length > maxVisible
+      (!state.ui.showAllCategories && filtered.length > maxVisible
         ? `
-          <button class="category-chip category-more-chip" data-category-toggle="expand" type="button">
-            <span aria-hidden="true">&#10133;</span>
-            <strong>Ampliar</strong>
-            <small>Ver ${filtered.length - maxVisible} más</small>
+<<          <button class="category-chip category-more-chip" data-category-toggle="expand" type="button">`r`n            <span aria-hidden="true">&#10133;</span>`r`n            <strong>Ampliar</strong>`r`n            <small>Ver mas rubros</small>
           </button>
         `
         : "")
@@ -794,7 +806,7 @@ function renderProviderCard(provider, selectedId) {
   return `
     <article class="provider-card ${selected ? "is-selected" : ""}" data-provider-focus="${escapeHtml(provider.provider_id)}">
       <header>
-        <div class="provider-avatar" style="--avatar:${provider.color};">${escapeHtml(provider.initials)}</div>
+        ${providerAvatarMarkup(provider)}
         <span class="score-badge" title="Compatibilidad con tu busqueda">${escapeHtml(String(Math.round(provider.score)))}%</span>
       </header>
       <strong>${escapeHtml(provider.displayName)}</strong>
@@ -817,7 +829,7 @@ function renderProviderRow(provider, selectedId) {
   const selected = selectedId === provider.provider_id;
   return `
     <article class="provider-row ${selected ? "is-selected" : ""}" data-provider-focus="${escapeHtml(provider.provider_id)}">
-      <div class="provider-avatar is-row" style="--avatar:${provider.color};">${escapeHtml(provider.initials)}</div>
+      ${providerAvatarMarkup(provider, "is-row")}
       <div class="provider-row-main">
         <div class="provider-row-title">
           <strong>${escapeHtml(provider.displayName)}</strong>

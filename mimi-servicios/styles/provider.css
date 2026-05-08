@@ -11096,6 +11096,55 @@ body.provider-auth-required .notification-container {
   scroll-margin-top: 94px;
 }
 
+#providerBusinessPanel .provider-photo-card {
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: center;
+}
+
+#providerBusinessPanel .provider-photo-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #101513;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+#providerBusinessPanel .provider-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#providerBusinessPanel .provider-photo-card p {
+  margin: 4px 0 10px;
+  color: #5f6d67;
+}
+
+#providerBusinessPanel .provider-file-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #eef8f1;
+  color: #0a7a35;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+#providerBusinessPanel .provider-file-pill input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 #providerBusinessPanel .provider-simple-card-heading {
   display: flex;
   gap: 10px;

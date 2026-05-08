@@ -45,6 +45,7 @@ import {
   getProviderDashboard,
   resolveServiceIntent,
   saveProviderWorkspace,
+  uploadProviderAvatar,
   uploadProviderDocument,
   signOut,
   updateProviderStatus
@@ -1937,6 +1938,10 @@ async handleProviderBusinessSubmit(event) {
   try {
     actions.setLoading(true);
     await this.acceptProviderTerms();
+    const avatarFile = event.target?.querySelector?.("[name='providerAvatarFile']")?.files?.[0] ?? null;
+    if (avatarFile) {
+      await uploadProviderAvatar({ providerId, file: avatarFile });
+    }
     const workspace = await saveProviderWorkspace(providerId, payload);
     this.applyWorkspaceToState(workspace);
     this.switchTab("now");

@@ -1130,6 +1130,8 @@ function renderProviderBusiness(state) {
   const pricingModel = firstOffering?.pricing_model ?? defaults.pricingModel;
   const serviceMode = firstOffering?.service_mode ?? defaults.serviceMode;
   const locationPolicy = firstOffering?.location_policy ?? defaults.locationPolicy;
+  const providerAvatarUrl = String(state.provider.profile?.avatar_url || "").trim();
+  const canPreviewProviderAvatar = /^https?:\/\//i.test(providerAvatarUrl) || /^data:image\//i.test(providerAvatarUrl);
 
   container.innerHTML = `
     <section class="provider-stack provider-publisher-app provider-publisher-app-v3">
@@ -1143,6 +1145,22 @@ function renderProviderBusiness(state) {
           <div class="provider-simple-status ${offerings.length ? "is-ready" : ""}">
             <span>${offerings.length ? "Publicado" : "Pendiente"}</span>
             <strong>${escapeHtml(firstOffering ? primaryPrice : "Falta configurar")}</strong>
+          </div>
+        </section>
+
+        <section class="provider-simple-card provider-photo-card">
+          <div class="provider-photo-preview">
+            ${canPreviewProviderAvatar
+              ? `<img src="${escapeHtml(providerAvatarUrl)}" alt="Foto de perfil" loading="lazy">`
+              : `<span>${escapeHtml(initialsFromName(state.provider.profile?.full_name || state.session.userName || "MIMI"))}</span>`}
+          </div>
+          <div>
+            <strong>Foto de perfil</strong>
+            <p>Opcional. Se muestra al cliente cuando solicita tu servicio.</p>
+            <label class="provider-file-pill">
+              <input name="providerAvatarFile" type="file" accept="image/jpeg,image/png,image/webp">
+              Elegir foto
+            </label>
           </div>
         </section>
 

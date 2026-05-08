@@ -94,6 +94,32 @@ function providerPublicName(
   );
 }
 
+function parseStorageAvatar(value: unknown) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return { url: raw };
+  const match = raw.match(/^storage:\/\/([^/]+)\/(.+)$/i);
+  if (!match) return null;
+  return { bucket: match[1], path: match[2] };
+}
+
+async function publicAvatarUrl(admin: ReturnType<typeof createClient>, avatarValue: unknown) {
+  const parsed = parseStorageAvatar(avatarValue);
+  if (!parsed) return null;
+  if ("url" in parsed) return parsed.url;
+
+  const { data, error } = await admin.storage
+    .from(parsed.bucket)
+    .createSignedUrl(parsed.path, 60 * 60);
+
+  if (error) {
+    console.warn("svc-search-providers avatar signing failed", error.message);
+    return null;
+  }
+
+  return data?.signedUrl || null;
+}
+
 function referencePrice(pricing?: Record<string, unknown>, offering?: Record<string, unknown>) {
   const model = String(offering?.pricing_model || "").toUpperCase();
   const candidates = [
@@ -181,25 +207,27 @@ serve(async (req) => {
             .from("svc_provider_identity_checks")
             .select("provider_id,full_name_detected,status,created_at")
             .in("provider_id", rpcProviderIds)
-            .order("created_at", { ascending: false, nullsFirst: false })
+<<    .order("created_at", { ascending: false })
             .limit(150)
         : { data: [], error: null };
 
       if (identityError) throw identityError;
 
       const identityByProvider = firstByProviderId(identities || []);
-      const publicProviders = providersFromRpc.map((provider) => {
+      const publicProviders = await Promise.all(providersFromRpc.map(async (provider) => {
         const providerId = String(provider.provider_id || provider.id || "");
         const identity = identityByProvider.get(providerId) || {};
         const publicName = providerPublicName(provider, identity);
+        const avatarUrl = await publicAvatarUrl(admin, provider.avatar_url);
         return {
           ...provider,
           full_name: publicName,
           name: publicName,
           public_name: publicName,
           verified_first_name: firstNameFromText(identity.full_name_detected),
+          avatar_url: avatarUrl,
         };
-      });
+      }));
 
       return json({ ok: true, providers: publicProviders, count: publicProviders.length, source: "rpc" });
     }
@@ -251,7 +279,7 @@ serve(async (req) => {
         .from("svc_provider_identity_checks")
         .select("provider_id,full_name_detected,status,created_at")
         .in("provider_id", providerIds)
-        .order("created_at", { ascending: false, nullsFirst: false })
+<<    .order("created_at", { ascending: false })
         .limit(150),
     ]);
 
@@ -265,8 +293,8 @@ serve(async (req) => {
     const categoryByProvider = firstByProviderId(categoryLinks || []);
     const identity = firstByProviderId(identityResult.data || []);
 
-    const providers = ((providersResult.data || []) as ProviderRow[])
-      .map((provider, index) => {
+    const providers = (await Promise.all(((providersResult.data || []) as ProviderRow[])
+      .map(async (provider, index) => {
         const profile = profiles.get(provider.id) || {};
         const priceRow = pricing.get(provider.id) || {};
         const offering = offerings.get(provider.id) || {};
@@ -275,6 +303,7 @@ serve(async (req) => {
         const publicName = providerPublicName(provider as unknown as Record<string, unknown>, identityRow, profile);
         const km = distanceKm(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
         const price = referencePrice(priceRow, offering);
+        const avatarUrl = await publicAvatarUrl(admin, provider.avatar_url);
 
         return {
           provider_id: provider.id,
@@ -282,7 +311,7 @@ serve(async (req) => {
           name: publicName,
           public_name: publicName,
           verified_first_name: firstNameFromText(identityRow.full_name_detected),
-          avatar_url: provider.avatar_url,
+          avatar_url: avatarUrl,
           status: provider.status,
           category_id: categoryId,
           category_name: category.name || "Servicio",
@@ -317,7 +346,7 @@ serve(async (req) => {
               : null,
           source: "tables",
         };
-      })
+      })))
       .filter((provider) => provider.accepts_immediate !== false)
       .sort((a, b) => Number(a.distance_km || 999) - Number(b.distance_km || 999))
       .slice(0, limit);

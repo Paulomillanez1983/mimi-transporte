@@ -437,7 +437,7 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
     .from("svc_provider_identity_checks")
     .select("provider_id,full_name_detected,status,created_at")
     .in("provider_id", providerIds)
-    .order("created_at", { ascending: false, nullsFirst: false })
+<<    .order("created_at", { ascending: false })
     .limit(120);
 
   const [providersResult, profilesResult, pricingResult, offeringsResult, identityResult] = await Promise.all([
@@ -1218,6 +1218,59 @@ if (safeDocumentType === "selfie") {
 }
 
 return normalized;
+}
+
+export async function uploadProviderAvatar({ providerId, file }) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase || !providerId || !file) {
+    return null;
+  }
+
+  const session = await requireSession();
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    throw new Error("No hay usuario autenticado para subir la foto.");
+  }
+
+  const maxBytes = 4 * 1024 * 1024;
+  if (file.size > maxBytes) {
+    throw new Error("La foto supera los 4 MB. Subi una imagen mas liviana.");
+  }
+
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+  if (file.type && !allowedTypes.has(file.type)) {
+    throw new Error("Formato no permitido. Usa JPG, PNG o WEBP.");
+  }
+
+  const extensionFromName = String(file.name || "").split(".").pop()?.toLowerCase();
+  const extensionFromType = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const extension = /^[a-z0-9]{2,5}$/.test(extensionFromName || "") ? extensionFromName : extensionFromType;
+  const randomId = typeof crypto?.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}`;
+  const storagePath = `${userId}/profile/avatar-${Date.now()}-${randomId}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(SERVICE_PROVIDER_DOCUMENTS_BUCKET)
+    .upload(storagePath, file, {
+      upsert: true,
+      cacheControl: "3600",
+      contentType: file.type || "image/jpeg"
+    });
+
+  if (uploadError) throw uploadError;
+
+  const avatarReference = `storage://${SERVICE_PROVIDER_DOCUMENTS_BUCKET}/${storagePath}`;
+  const { data, error } = await supabase
+    .from("svc_providers")
+    .update({ avatar_url: avatarReference })
+    .eq("id", providerId)
+    .select("id,avatar_url")
+    .single();
+
+  if (error) throw error;
+
+  return data;
 }
 
 export async function loadClientRequestInsights(requestId, providerId = null) {

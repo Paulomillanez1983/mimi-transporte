@@ -480,6 +480,34 @@ function requestedHoursForCurrentCategory() {
     : 1;
 }
 
+function hasConfirmedServiceAddress() {
+  const address = String(state.requestDraft.address || "").trim();
+  const lat = Number(state.requestDraft.lat);
+  const lng = Number(state.requestDraft.lng);
+  return address.length >= 5 && Number.isFinite(lat) && Number.isFinite(lng);
+}
+
+function requireConfirmedServiceAddress() {
+  if (hasConfirmedServiceAddress()) return true;
+
+  setState((draft) => {
+    draft.client.providers = [];
+    draft.ui.hasCompletedClientSearch = false;
+    draft.meta.error = null;
+    draft.meta.info = "Primero carga una direccion y elegi una sugerencia, o usa tu ubicacion actual.";
+  });
+
+  setClientView("home");
+
+  window.setTimeout(() => {
+    const input = document.getElementById("serviceAddressInput");
+    input?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    input?.focus?.();
+  }, 80);
+
+  return false;
+}
+
 async function resolveCategoryByBackendIntent(value) {
   const query = String(value ?? "").trim();
   const token = ++intentLookupToken;
@@ -1438,22 +1466,7 @@ async function handleSearchSubmit(event) {
   event.preventDefault();
   syncDraftFromForm();
 
-  // Validación: la dirección es obligatoria para buscar prestadores
-  const address = String(state.requestDraft.address || "").trim();
-  if (!address) {
-    const addressInput = document.getElementById("serviceAddressInput");
-    setState((draft) => {
-      draft.meta.error = "Cargá una dirección antes de buscar prestadores.";
-      draft.meta.info = null;
-    });
-    if (addressInput) {
-      addressInput.focus();
-      addressInput.scrollIntoView({ behavior: "smooth", block: "center" });
-      addressInput.classList.add("address-required-flash");
-      setTimeout(() => addressInput.classList.remove("address-required-flash"), 1600);
-    }
-    return;
-  }
+<<  if (!requireConfirmedServiceAddress()) return;
 
   if (!state.ui.selectedCategoryId && appConfig.categories?.[0]?.id) {
     patchState("ui.selectedCategoryId", appConfig.categories[0].id);
@@ -1518,7 +1531,7 @@ async function handleSearchSubmit(event) {
 }
 
 async function handleProviderSelection(providerId) {
-  console.log("[MIMI Solicitar] step 1: clicked provider", { providerId });
+<<  console.log("[MIMI Solicitar] step 1: clicked provider", { providerId });`r`n  if (!requireConfirmedServiceAddress()) return false;
 
   const provider = state.client.providers.find(
     (item) => item.provider_id === providerId
@@ -1855,7 +1868,7 @@ function bindBasicControls() {
       setState((draft) => {
         const needsHours = categoryPricingModel(suggestedCategory) === "HOURLY";
         draft.ui.categorySearchTerm = value;
-        draft.ui.showAllCategories = Boolean(value.trim());
+        draft.ui.showAllCategories = false;
         draft.ui.selectedCategoryId = suggestedCategory.id;
         draft.requestDraft.categoryId = suggestedCategory.id;
         draft.requestDraft.requestedHours = needsHours
@@ -1877,7 +1890,7 @@ function bindBasicControls() {
     } else {
       setState((draft) => {
         draft.ui.categorySearchTerm = value;
-        draft.ui.showAllCategories = Boolean(value.trim());
+        draft.ui.showAllCategories = false;
         draft.ui.intentResolution = value.trim().length >= 3 ? null : draft.ui.intentResolution;
       });
     }
