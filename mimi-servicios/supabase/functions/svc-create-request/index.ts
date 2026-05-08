@@ -1,0 +1,257 @@
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function json(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+function assertUuid(value: unknown) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || ""),
+  );
+}
+
+function asNumber(value: unknown, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeMode(value: unknown) {
+  const mode = String(value || "").toUpperCase();
+  if (["HOURLY", "BASE_VISIT", "QUOTE", "FIXED", "UNIT", "SQUARE_METER", "LINEAR_METER"].includes(mode)) {
+    return mode;
+  }
+  return "HOURLY";
+}
+
+function priceFromOffering(offering: Record<string, unknown>, pricing: Record<string, unknown>, requestedHours: number, unitQuantity: number) {
+  const model = normalizeMode(offering.pricing_model || pricing.pricing_model);
+  const currency = String(offering.currency || pricing.currency || "ARS");
+
+  if (model === "QUOTE" || offering.quote_required === true) {
+    return { model, providerPrice: 0, platformFee: 0, totalPrice: 0, currency, priceLabel: "A coordinar" };
+  }
+
+  let unitPrice = 0;
+  let multiplier = 1;
+
+  if (model === "FIXED") unitPrice = asNumber(offering.fixed_price);
+  else if (model === "BASE_VISIT") unitPrice = asNumber(offering.base_visit_fee);
+  else if (["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(model)) {
+    unitPrice = asNumber(offering.unit_price);
+    multiplier = Math.max(1, unitQuantity);
+  } else {
+    unitPrice = asNumber(offering.price_per_hour, asNumber(pricing.price_per_hour));
+    multiplier = Math.max(1, requestedHours);
+  }
+
+  const providerPrice = Math.max(0, Math.round(unitPrice * multiplier * 100) / 100);
+  return { model, providerPrice, platformFee: 0, totalPrice: providerPrice, currency, priceLabel: null };
+}
+
+async function requireUser(req: Request, supabaseUrl: string, anonKey: string) {
+  const auth = req.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "").trim();
+
+  if (!token) throw new Error("AUTH_REQUIRED");
+
+  const client = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data, error } = await client.auth.getUser(token);
+
+  if (error || !data?.user) throw new Error("AUTH_REQUIRED");
+
+  return data.user;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { status: 200, headers: corsHeaders });
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error("SUPABASE_ENV_MISSING");
+
+    const user = await requireUser(req, supabaseUrl, anonKey);
+    const admin = createClient(supabaseUrl, serviceRoleKey);
+    const body = await req.json().catch(() => ({}));
+
+    const categoryId = String(body.category_id || "").trim();
+    const providerId = String(body.selected_provider_id || "").trim();
+    const serviceLat = asNumber(body.service_lat, Number.NaN);
+    const serviceLng = asNumber(body.service_lng, Number.NaN);
+    const requestType = String(body.request_type || "IMMEDIATE").toUpperCase() === "SCHEDULED" ? "SCHEDULED" : "IMMEDIATE";
+    const requestedHours = Math.max(1, Math.min(8, Math.round(asNumber(body.requested_hours, 1))));
+    const unitQuantity = Math.max(1, asNumber(body.unit_quantity, 1));
+    const deadlineSeconds = requestType === "SCHEDULED" ? 900 : 90;
+    const expiresAt = new Date(Date.now() + deadlineSeconds * 1000).toISOString();
+
+    if (!assertUuid(categoryId)) return json({ ok: false, error: "category_id_invalid" }, 400);
+    if (!assertUuid(providerId)) return json({ ok: false, error: "selected_provider_id_invalid" }, 400);
+    if (!Number.isFinite(serviceLat) || !Number.isFinite(serviceLng)) {
+      return json({ ok: false, error: "service_coordinates_required" }, 400);
+    }
+
+    const { data: provider, error: providerError } = await admin
+      .from("svc_providers")
+      .select("id,user_id,full_name,status,approved,blocked")
+      .eq("id", providerId)
+      .single();
+
+    if (providerError) throw providerError;
+    if (!provider?.approved || provider?.blocked) return json({ ok: false, error: "provider_not_available" }, 400);
+    if (!["ONLINE_IDLE", "BOOKED_UPCOMING"].includes(String(provider.status || ""))) {
+      return json({ ok: false, error: "provider_offline" }, 400);
+    }
+
+    const [{ data: offering }, { data: pricing }] = await Promise.all([
+      admin
+        .from("svc_provider_service_offerings")
+        .select("id,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,quote_required,service_mode,duration_minutes,active")
+        .eq("provider_id", providerId)
+        .eq("category_id", categoryId)
+        .eq("active", true)
+        .limit(1)
+        .maybeSingle(),
+      admin
+        .from("svc_provider_pricing")
+        .select("provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active")
+        .eq("provider_id", providerId)
+        .eq("category_id", categoryId)
+        .eq("active", true)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (!offering && !pricing) return json({ ok: false, error: "provider_pricing_not_found" }, 400);
+
+    const pricingResult = priceFromOffering(offering || {}, pricing || {}, requestedHours, unitQuantity);
+    const notes = [
+      body.notes ? String(body.notes) : "",
+      pricingResult.model !== "HOURLY"
+        ? `Cotizacion de referencia: ${pricingResult.model}; cantidad=${unitQuantity}; unidad=${body.unit_name || offering?.unit_name || ""}`.trim()
+        : "",
+    ].filter(Boolean).join("\n");
+
+    const { data: requestRow, error: requestError } = await admin
+      .from("svc_requests")
+      .insert({
+        client_user_id: user.id,
+        category_id: categoryId,
+        selected_provider_id: providerId,
+        request_type: requestType,
+        status: "PENDING_PROVIDER_RESPONSE",
+        address_text: body.address_text || null,
+        service_lat: serviceLat,
+        service_lng: serviceLng,
+        scheduled_for: body.scheduled_for || null,
+        requested_hours: requestedHours,
+        notes: notes || null,
+        provider_price_snapshot: pricingResult.providerPrice,
+        platform_fee_snapshot: pricingResult.platformFee,
+        total_price_snapshot: pricingResult.totalPrice,
+        currency: pricingResult.currency,
+        provider_response_deadline_at: expiresAt,
+        created_via: "CLIENT_APP",
+      })
+      .select("*")
+      .single();
+
+    if (requestError) throw requestError;
+
+    const { data: offerRow, error: offerError } = await admin
+      .from("svc_request_offers")
+      .insert({
+        request_id: requestRow.id,
+        provider_id: providerId,
+        status: "PENDING",
+        sent_at: new Date().toISOString(),
+        expires_at: expiresAt,
+      })
+      .select("*")
+      .single();
+
+    if (offerError) throw offerError;
+
+    const { data: conversation } = await admin
+      .from("svc_conversations")
+      .upsert({
+        request_id: requestRow.id,
+        client_user_id: user.id,
+        provider_user_id: provider.user_id,
+        status: "OPEN",
+        app_context: "services",
+        subject: "Solicitud de servicio",
+      }, { onConflict: "request_id" })
+      .select("id")
+      .single();
+
+    await admin.from("svc_payment_intents").insert({
+      request_id: requestRow.id,
+      client_user_id: user.id,
+      provider_id: providerId,
+      amount_total: pricingResult.totalPrice,
+      amount_provider: pricingResult.providerPrice,
+      amount_platform_fee: pricingResult.platformFee,
+      currency: pricingResult.currency,
+      status: "CREATED",
+      metadata_json: {
+        source: "svc-create-request",
+        pricing_model: pricingResult.model,
+        unit_quantity: ["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(pricingResult.model) ? unitQuantity : null,
+        unit_name: body.unit_name || offering?.unit_name || null,
+        offering_id: offering?.id || null,
+      },
+    });
+
+    await admin.from("svc_notifications").insert({
+      user_id: provider.user_id,
+      type: "SERVICE_REQUEST_CREATED",
+      title: "Nueva solicitud de servicio",
+      body: "Tenes una solicitud pendiente para revisar.",
+      data_json: {
+        request_id: requestRow.id,
+        provider_id: providerId,
+        category_id: categoryId,
+        offer_id: offerRow.id,
+      },
+    });
+
+    return json({
+      ok: true,
+      request: { ...requestRow, conversation_id: conversation?.id || null },
+      offer: offerRow,
+      provider_user_id: provider.user_id,
+      provider_response_deadline_at: expiresAt,
+      pricing: {
+        provider_price: pricingResult.providerPrice,
+        platform_fee: pricingResult.platformFee,
+        total_price: pricingResult.totalPrice,
+        currency: pricingResult.currency,
+        pricing_model: pricingResult.model,
+        unit_quantity: unitQuantity,
+        unit_name: body.unit_name || offering?.unit_name || null,
+        offering_id: offering?.id || null,
+        price_label: pricingResult.priceLabel,
+      },
+    });
+  } catch (error) {
+    console.error("svc-create-request error:", error);
+    return json(
+      { ok: false, error: error instanceof Error ? error.message : "unexpected_error" },
+      error instanceof Error && error.message === "AUTH_REQUIRED" ? 401 : 400,
+    );
+  }
+});
