@@ -137,6 +137,37 @@ serve(async (req) => {
 
     if (!offering && !pricing) return json({ ok: false, error: "provider_pricing_not_found" }, 400);
 
+    // Auto-cleanup: cancelar requests vencidos del mismo cliente (deadline pasó pero
+    // siguen como PENDING). Sin esto, el unique index ux_svc_active_request_per_client
+    // bloquea cualquier solicitud nueva del cliente.
+    await admin
+      .from("svc_requests")
+      .update({ status: "CANCELLED", updated_at: new Date().toISOString() })
+      .eq("client_user_id", user.id)
+      .in("status", ["SEARCHING", "PENDING_PROVIDER_RESPONSE"])
+      .lt("provider_response_deadline_at", new Date().toISOString());
+
+    // Si el cliente todavía tiene un request realmente activo (no vencido) en estados
+    // de "in-flight", no se puede crear otro. Devolvemos un mensaje claro en vez del
+    // 23505 críptico de Postgres.
+    const { data: blockingActive } = await admin
+      .from("svc_requests")
+      .select("id, status, provider_response_deadline_at")
+      .eq("client_user_id", user.id)
+      .in("status", ["SEARCHING", "PENDING_PROVIDER_RESPONSE", "ACCEPTED", "SCHEDULED",
+                     "PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"])
+      .limit(1)
+      .maybeSingle();
+
+    if (blockingActive) {
+      return json({
+        ok: false,
+        error: "active_request_exists",
+        active_request_id: blockingActive.id,
+        active_request_status: blockingActive.status,
+      }, 409);
+    }
+
     const pricingResult = priceFromOffering(offering || {}, pricing || {}, requestedHours, unitQuantity);
     const notes = [
       body.notes ? String(body.notes) : "",
