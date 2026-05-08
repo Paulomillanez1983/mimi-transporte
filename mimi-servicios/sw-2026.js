@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-client-ux-address-prompt-19";
+const APP_VERSION = "2026-05-08-locate-chip-phone-collect-20";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

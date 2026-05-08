@@ -25,6 +25,7 @@ import {
 import { subscribeToClientRealtime } from "./services/realtime.js";
 import { playNotificationSound } from "./services/sound.js";
 import {
+  getSupabaseClient,
   hasSupabaseEnv,
   redirectAfterLoginByRole,
   signInWithGoogle,
@@ -2346,6 +2347,110 @@ function setupRealtime(
   });
 }
 
+/**
+ * Pide el teléfono al usuario si todavía no lo cargó.
+ * Persiste en auth.users.user_metadata.phone (nativo Supabase, sin schema nuevo).
+ * Skip queda guardado en localStorage para no molestar en cada login.
+ */
+function setupPhoneCollector() {
+  const overlay = document.getElementById("phoneCollectOverlay");
+  if (!overlay) return;
+
+  const supabase = getSupabaseClient?.();
+  if (!supabase) return;
+
+  const SKIP_KEY = "mimi_services_phone_skip_until";
+  const userId = state.session.userId;
+  if (!userId) return; // sólo si está logueado
+
+  // Leer phone actual del state/auth metadata
+  const currentPhone =
+    state.session.userPhone ||
+    null;
+
+  // Si ya tiene phone, no mostrar
+  if (currentPhone) return;
+
+  // Si el usuario apretó "Más tarde" hace menos de 24h, respetarlo
+  const skipUntil = Number(localStorage.getItem(SKIP_KEY) || 0);
+  if (skipUntil && Date.now() < skipUntil) return;
+
+  // Verificar metadata de auth (puede no estar en state)
+  supabase.auth.getUser().then(({ data, error }) => {
+    if (error || !data?.user) return;
+    const phoneFromMeta = data.user.user_metadata?.phone || data.user.phone;
+    if (phoneFromMeta) {
+      // Ya tiene phone — sincronizar al state y no abrir modal
+      patchState("session.userPhone", phoneFromMeta);
+      return;
+    }
+    openPhoneCollectModal(overlay, supabase);
+  });
+}
+
+function openPhoneCollectModal(overlay, supabase) {
+  const form = overlay.querySelector("#phoneCollectForm");
+  const input = overlay.querySelector("#phoneCollectInput");
+  const status = overlay.querySelector("#phoneCollectStatus");
+  const submit = overlay.querySelector("#phoneCollectSubmit");
+  const skip = overlay.querySelector("#phoneCollectSkip");
+  if (!form || !input || !submit || !skip) return;
+
+  overlay.hidden = false;
+  setTimeout(() => input.focus(), 200);
+
+  const close = () => {
+    overlay.hidden = true;
+    form.removeEventListener("submit", onSubmit);
+    skip.removeEventListener("click", onSkip);
+  };
+
+  const onSkip = () => {
+    // Posponer 24 horas
+    localStorage.setItem("mimi_services_phone_skip_until", String(Date.now() + 24 * 60 * 60 * 1000));
+    close();
+  };
+
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    const raw = String(input.value || "").trim();
+    const cleaned = raw.replace(/\s+/g, "").replace(/-/g, "");
+
+    // Validación: 8-20 dígitos, opcional + al inicio
+    if (!/^\+?\d{8,20}$/.test(cleaned)) {
+      input.classList.add("is-invalid");
+      status.textContent = "Ingresá un número válido. Ej: +5493511234567";
+      status.classList.remove("is-success");
+      return;
+    }
+
+    input.classList.remove("is-invalid");
+    submit.disabled = true;
+    submit.textContent = "Guardando...";
+    status.textContent = "";
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { phone: cleaned }
+      });
+      if (error) throw error;
+
+      patchState("session.userPhone", cleaned);
+      status.textContent = "✓ Teléfono guardado";
+      status.classList.add("is-success");
+      setTimeout(close, 800);
+    } catch (err) {
+      console.error("[MIMI] guardar phone:", err);
+      status.textContent = err?.message || "No se pudo guardar. Intentá de nuevo.";
+      submit.disabled = false;
+      submit.textContent = "Guardar y continuar";
+    }
+  };
+
+  form.addEventListener("submit", onSubmit);
+  skip.addEventListener("click", onSkip);
+}
+
 async function init() {
   exposeClientDebugApi();
   document.body.dataset.clientView = "home";
@@ -2385,6 +2490,9 @@ if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
 
   setupRealtime();
   renderClientScreen(state);
+
+  // Tras login, si el cliente no tiene teléfono cargado, pedirlo.
+  setupPhoneCollector();
 
   authSubscription =
     subscribeToAuthChanges?.(async (event, session) => {
