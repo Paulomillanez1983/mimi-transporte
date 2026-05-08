@@ -2078,7 +2078,15 @@ renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
     `;
   }).join("");
 
-  suggestionBox.innerHTML = cards;
+  suggestionBox.innerHTML = cards
+    ? `
+      <div class="provider-suggestions-heading">
+        <strong>Opciones sugeridas</strong>
+        <span>Elegí una o varias. Después tocá Siguiente.</span>
+      </div>
+      ${cards}
+    `
+    : "";
   suggestionBox.hidden = false;
   suggestionBox.removeAttribute("hidden");
   suggestionBox.classList.toggle("has-suggestions", Boolean(cards));
@@ -2092,10 +2100,21 @@ renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
   this.syncProviderSelectedCategories(form);
 
   if (!fallback && cards) {
-    suggestionBox.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    this.revealProviderSuggestions(form);
   }
 
   return Boolean(cards);
+}
+
+revealProviderSuggestions(form = document.getElementById("providerBusinessForm")) {
+  const suggestionBox = form?.querySelector?.("#providerAiSuggestions");
+  const firstCard = suggestionBox?.querySelector?.("[data-provider-suggestion-card]");
+  const target = firstCard ?? suggestionBox;
+
+  window.setTimeout(() => {
+    target?.scrollIntoView?.({ behavior: "smooth", block: "center", inline: "nearest" });
+    firstCard?.focus?.({ preventScroll: true });
+  }, 80);
 }
 
 toggleProviderSuggestion(source = null) {
@@ -2136,6 +2155,7 @@ async handleProviderServiceSuggestion() {
   try {
     actions.setLoading(true);
     this.setButtonBusy(trigger, true, "Buscando...");
+    promptInput?.blur?.();
     const result = await resolveServiceIntent(text, { limit: 5 });
     const matches = this.mergeProviderCategorySuggestions(
       Array.isArray(result?.matches) ? result.matches : [],
@@ -2168,7 +2188,7 @@ async handleProviderServiceSuggestion() {
 
     this.renderProviderSuggestionCards(form, matches, text);
 
-    this.showToast("Revisa estas opciones y elegi las que representen tu servicio.", "success");
+    this.showToast("Listo. Bajamos a las opciones sugeridas.", "info");
   } catch (err) {
     console.warn("[MIMI] Sugerencia provider fallback:", err);
     const matches = this.localProviderCategorySuggestions(text);

@@ -10657,7 +10657,7 @@ body.provider-auth-required .notification-container {
 
 #providerBusinessPanel .provider-ai-suggestions {
   display: grid;
-  gap: 9px;
+  gap: 10px;
 }
 
 #providerBusinessPanel .provider-ai-suggestions[hidden] {
@@ -10665,19 +10665,52 @@ body.provider-auth-required .notification-container {
 }
 
 #providerBusinessPanel .provider-ai-suggestions.has-suggestions {
-  margin-top: 2px;
+  margin-top: 4px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(8, 131, 72, 0.22);
+  background: #f4fcf7;
+  box-shadow: 0 14px 34px rgba(8, 131, 72, 0.08);
+  scroll-margin-top: 120px;
+  scroll-margin-bottom: 120px;
+}
+
+#providerBusinessPanel .provider-suggestions-heading {
+  display: grid;
+  gap: 2px;
+  padding: 2px 2px 4px;
+}
+
+#providerBusinessPanel .provider-suggestions-heading strong {
+  color: #0c5131;
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+#providerBusinessPanel .provider-suggestions-heading span {
+  color: #4d6258;
+  font-size: 0.82rem;
+  line-height: 1.3;
 }
 
 #providerBusinessPanel .provider-suggestion-card {
   width: 100%;
   display: grid;
-  gap: 4px;
+  gap: 5px;
   text-align: left;
-  padding: 12px;
+  padding: 14px;
   border-radius: 16px;
-  border: 1px solid rgba(16, 21, 19, 0.1);
+  border: 1px solid rgba(8, 131, 72, 0.16);
   background: #fff;
   color: #101513;
+  box-shadow: 0 8px 20px rgba(16, 21, 19, 0.06);
+  scroll-margin-top: 120px;
+  scroll-margin-bottom: 120px;
+}
+
+#providerBusinessPanel .provider-suggestion-card:focus-visible {
+  outline: 3px solid rgba(8, 131, 72, 0.32);
+  outline-offset: 3px;
 }
 
 #providerBusinessPanel .provider-suggestion-card strong {
@@ -10856,7 +10889,7 @@ body.provider-auth-required .notification-container {
 }
 
 #providerBusinessPanel .provider-wizard-nav {
-  position: sticky;
+  position: relative;
   bottom: 0;
   z-index: 2;
   display: flex;
@@ -10865,7 +10898,8 @@ body.provider-auth-required .notification-container {
   gap: 10px;
   margin: 4px -4px -4px;
   padding: 10px 4px 4px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 30%);
+  background: #fff;
+  border-top: 1px solid rgba(16, 21, 19, 0.08);
 }
 
 #providerBusinessPanel .provider-wizard-nav span {
