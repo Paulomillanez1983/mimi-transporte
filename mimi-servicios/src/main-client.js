@@ -1589,13 +1589,23 @@ async function handleProviderSelection(providerId) {
 
   let paymentIntent = null;
 
-  try {
-    paymentIntent = await createPaymentIntent({
-      serviceRequestId: request?.id ?? request?.request_id,
-      contextType: "SERVICE_REQUEST"
-    });
-  } catch (error) {
-    console.warn("[MIMI Go] No se pudo crear intento de pago mock/payment-agnostic.", error);
+  // Solo crear payment intent si hay un total > 0.
+  // Para precios "a coordinar" (SQUARE_METER, QUOTE, etc. sin cantidad),
+  // el pago se difiere hasta que cliente y prestador definan el monto final.
+  const totalForPayment = Number(pricing.total_price ?? 0);
+  if (totalForPayment > 0) {
+    try {
+      console.log("[MIMI Solicitar] step 6: creating payment intent", { total: totalForPayment });
+      paymentIntent = await createPaymentIntent({
+        serviceRequestId: request?.id ?? request?.request_id,
+        contextType: "SERVICE_REQUEST"
+      });
+      console.log("[MIMI Solicitar] step 6 OK: payment intent created");
+    } catch (error) {
+      console.warn("[MIMI Go] No se pudo crear intento de pago mock/payment-agnostic.", error);
+    }
+  } else {
+    console.log("[MIMI Solicitar] step 6 SKIPPED: precio a coordinar (total=0). Payment se crea cuando se defina el monto.");
   }
 
   setState((draft) => {

@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-fix-data-client-view-selector-7";
+const APP_VERSION = "2026-05-08-skip-payment-when-total-zero-8";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
