@@ -85,6 +85,17 @@ const STOPWORDS = new Set([
   "con",
   "mi",
   "mis",
+  "casa",
+  "casas",
+  "distinta",
+  "distintas",
+  "diferente",
+  "diferentes",
+  "varia",
+  "varias",
+  "varios",
+  "etc",
+  "ect",
 ]);
 
 function json(body: unknown, status = 200) {
@@ -279,6 +290,25 @@ function isContextualFalsePositive(query: string, match: ScoredMatch) {
   }
 
   return false;
+}
+
+function isLowValueDynamicNoise(match: ScoredMatch, allMatches: ScoredMatch[]) {
+  if (!match.auto_created && match.source !== "provider_discovery") return false;
+
+  const strongApprovedMatch = allMatches.some((item) =>
+    item.category_id !== match.category_id &&
+    !item.auto_created &&
+    item.discovery_status === "approved" &&
+    Number(item.score) >= 55
+  );
+
+  if (!strongApprovedMatch) return false;
+
+  const weakTerms = new Set(["casa", "casas", "distinta", "distintas", "diferente", "diferentes", "varias", "varios", "etc", "ect"]);
+  const terms = (match.matched_terms ?? []).flatMap((term) => tokenize(term));
+  const hasOnlyWeakTerms = terms.length > 0 && terms.every((term) => weakTerms.has(term));
+
+  return Number(match.score) < 40 || hasOnlyWeakTerms;
 }
 
 
@@ -549,6 +579,7 @@ serve(async (req) => {
       .slice(0, limit);
 
     matches = dedupeMatchesByCategory([...matches, ...inferredKnownMatches(query, categoryRows, matches)])
+      .filter((match, _index, all) => !isLowValueDynamicNoise(match, all))
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
 
@@ -578,6 +609,7 @@ serve(async (req) => {
             source: dynamicCategory.source ?? "provider_discovery",
           },
         ])
+          .filter((match, _index, all) => !isLowValueDynamicNoise(match, all))
           .sort((a, b) => b.score - a.score)
           .slice(0, limit);
       }

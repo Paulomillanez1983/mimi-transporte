@@ -10660,6 +10660,14 @@ body.provider-auth-required .notification-container {
   gap: 9px;
 }
 
+#providerBusinessPanel .provider-ai-suggestions[hidden] {
+  display: none;
+}
+
+#providerBusinessPanel .provider-ai-suggestions.has-suggestions {
+  margin-top: 2px;
+}
+
 #providerBusinessPanel .provider-suggestion-card {
   width: 100%;
   display: grid;

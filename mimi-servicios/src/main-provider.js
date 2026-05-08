@@ -2050,12 +2050,52 @@ syncProviderSelectedCategories(form = document.getElementById("providerBusinessF
   const selectedNames = [...form.querySelectorAll("[data-provider-suggestion-card].is-selected strong")]
     .map((item) => item.textContent.trim())
     .filter(Boolean);
-  const hint = document.getElementById("providerSelectionHint");
+  const hint = form.querySelector("#providerSelectionHint");
   if (hint) {
     hint.textContent = selectedNames.length
       ? `Elegiste: ${selectedNames.join(", ")}`
       : "Elegi al menos una sugerencia para seguir.";
   }
+}
+
+renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
+  const suggestionBox = form?.querySelector?.("#providerAiSuggestions");
+  const emptyBox = form?.querySelector?.("#providerAiEmpty");
+  if (!suggestionBox) return false;
+
+  const cards = (matches ?? []).slice(0, 5).map((item) => {
+    const categoryId = item.category_id ?? item.id ?? "";
+    const code = item.code ?? "";
+    const description = item.description ?? this.providerSuggestionReason(text, item);
+    const isDynamic = item.auto_created || item.discovery_status === "auto";
+
+    return `
+      <button class="provider-suggestion-card" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${this.escapeHtml(categoryId)}" data-category-code="${this.escapeHtml(code)}" aria-pressed="false">
+        <strong>${this.escapeHtml(item.name ?? "Servicio sugerido")}</strong>
+        <span>${this.escapeHtml(description)}</span>
+        ${isDynamic ? `<small>Nuevo rubro ordenado por MIMI</small>` : ""}
+      </button>
+    `;
+  }).join("");
+
+  suggestionBox.innerHTML = cards;
+  suggestionBox.hidden = false;
+  suggestionBox.removeAttribute("hidden");
+  suggestionBox.classList.toggle("has-suggestions", Boolean(cards));
+  suggestionBox.setAttribute("aria-live", "polite");
+
+  if (emptyBox) {
+    emptyBox.hidden = true;
+    emptyBox.setAttribute("hidden", "");
+  }
+
+  this.syncProviderSelectedCategories(form);
+
+  if (!fallback && cards) {
+    suggestionBox.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  }
+
+  return Boolean(cards);
 }
 
 toggleProviderSuggestion(source = null) {
@@ -2072,11 +2112,14 @@ toggleProviderSuggestion(source = null) {
 }
 
 async handleProviderServiceSuggestion() {
-  const form = document.getElementById("providerBusinessForm");
+  const form =
+    [...document.querySelectorAll("#providerBusinessForm")]
+      .find((item) => item.offsetParent !== null) ??
+    document.getElementById("providerBusinessForm");
   const promptInput = form?.querySelector?.("[name='providerAiPrompt']");
   const text = String(promptInput?.value ?? "").trim();
   const trigger = form?.querySelector?.("[data-provider-business-action='suggest-provider-service']");
-  const emptyBox = document.getElementById("providerAiEmpty");
+  const emptyBox = form?.querySelector?.("#providerAiEmpty");
 
   if (text.length < 8) {
     this.showToast("Contanos un poco mas que trabajos haces", "warning");
@@ -2088,7 +2131,7 @@ async handleProviderServiceSuggestion() {
   const titleInput = form?.querySelector?.(`[name='offering:${firstIndex}:title']`);
   const summaryInput = form?.querySelector?.(`[name='offering:${firstIndex}:publicSummary']`);
   const descriptionInput = form?.querySelector?.(`[name='offering:${firstIndex}:description']`);
-  const suggestionBox = document.getElementById("providerAiSuggestions");
+  const suggestionBox = form?.querySelector?.("#providerAiSuggestions");
 
   try {
     actions.setLoading(true);
@@ -2123,21 +2166,7 @@ async handleProviderServiceSuggestion() {
       descriptionInput.value = text.slice(0, 220);
     }
 
-    if (suggestionBox) {
-      suggestionBox.innerHTML = matches
-        .slice(0, 5)
-        .map((item) => `
-          <button class="provider-suggestion-card" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${this.escapeHtml(item.category_id ?? item.id ?? "")}" data-category-code="${this.escapeHtml(item.code ?? "")}" aria-pressed="false">
-            <strong>${this.escapeHtml(item.name ?? "Servicio sugerido")}</strong>
-            <span>${this.escapeHtml(item.description ?? this.providerSuggestionReason(text, item))}</span>
-            ${item.auto_created || item.discovery_status === "auto" ? `<small>Nuevo rubro ordenado por MIMI</small>` : ""}
-          </button>
-        `)
-        .join("");
-      suggestionBox.hidden = false;
-    }
-    if (emptyBox) emptyBox.hidden = true;
-    this.syncProviderSelectedCategories(form);
+    this.renderProviderSuggestionCards(form, matches, text);
 
     this.showToast("Revisa estas opciones y elegi las que representen tu servicio.", "success");
   } catch (err) {
@@ -2151,17 +2180,7 @@ async handleProviderServiceSuggestion() {
       this.showToast("No pudimos sugerir rubros ahora. Proba con mas detalle.", "info");
       return;
     }
-    if (suggestionBox) {
-      suggestionBox.innerHTML = matches.slice(0, 5).map((item) => `
-        <button class="provider-suggestion-card" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${this.escapeHtml(item.category_id ?? item.id ?? "")}" data-category-code="${this.escapeHtml(item.code ?? "")}" aria-pressed="false">
-          <strong>${this.escapeHtml(item.name ?? "Servicio sugerido")}</strong>
-          <span>${this.escapeHtml(item.description ?? this.providerSuggestionReason(text, item))}</span>
-        </button>
-      `).join("");
-      suggestionBox.hidden = false;
-    }
-    if (emptyBox) emptyBox.hidden = true;
-    this.syncProviderSelectedCategories(form);
+    this.renderProviderSuggestionCards(form, matches, text, { fallback: true });
     this.showToast("Usamos sugerencias locales. Elegi una o varias.", "info");
   } finally {
     this.setButtonBusy(trigger, false);
