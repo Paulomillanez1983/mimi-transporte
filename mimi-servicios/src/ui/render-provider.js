@@ -513,102 +513,128 @@ function renderProviderProfile(state) {
 
   const profile = state.provider.profile;
   const detail = state.provider.business?.profile ?? null;
+  const documents = state.provider.business?.documents ?? [];
   const categories = state.provider.categories ?? [];
-  const documentsSummary = state.provider.documentsSummary ?? {};
   const reviewSummary = state.provider.reviewSummary ?? {};
-  const availability = state.provider.availability ?? {};
 
   if (!profile && !detail) {
     container.innerHTML = `
-      <div class="summary-card">
+      <article class="account-empty">
         <strong>Perfil pendiente</strong>
-        <span class="muted">Cuando carguemos tu información del backend, vas a ver tu bio, cobertura y modalidad de trabajo.</span>
-      </div>
+        <p>Cuando carguemos tu información del backend, vas a ver tu bio, cobertura y modalidad de trabajo.</p>
+      </article>
     `;
     return;
   }
 
+  // Nombre real: profile.first_name (cargado por el prestador) tiene prioridad.
+  const firstName = detail?.first_name?.trim();
   const displayName =
+    firstName ||
     profile?.full_name ||
     state.session.userName ||
-    state.session.userEmail ||
+    state.session.userEmail?.split("@")[0] ||
     "Prestador";
 
-  const location = [detail?.city, detail?.province, detail?.country_code]
-    .filter(Boolean)
-    .join(", ");
+  const avatarUrl = detail?.avatar_public_url || profile?.avatar_url || null;
+  const location = [detail?.city, detail?.province].filter(Boolean).join(", ");
+  const isVerified = Boolean(profile?.approved) && !profile?.blocked;
+  const isBlocked = Boolean(profile?.blocked);
 
-  const chips = [
-    detail?.accepts_immediate ? "Toma inmediatos" : null,
-    detail?.accepts_scheduled ? "Agenda futura" : null,
-    detail?.pricing_mode || "Precio por hora",
-    profile?.approved ? "Aprobado" : "En revisión",
-    profile?.blocked ? "Bloqueado" : null,
-    detail?.onboarding_completed ? "Onboarding completo" : "Onboarding pendiente"
-  ].filter(Boolean);
+  // Cálculo de % completitud del perfil
+  const checklist = {
+    "Nombre de pila": Boolean(detail?.first_name),
+    "Foto de perfil": Boolean(detail?.avatar_public_url),
+    "Bio corta": Boolean(detail?.bio),
+    "Ciudad y provincia": Boolean(detail?.city && detail?.province),
+    "Al menos un servicio": (state.provider.business?.offerings ?? []).filter((o) => o?.active !== false).length > 0,
+    "DNI verificado": isVerified,
+  };
+  const completedKeys = Object.keys(checklist).filter((k) => checklist[k]);
+  const totalKeys = Object.keys(checklist).length;
+  const completePct = Math.round((completedKeys.length / totalKeys) * 100);
+
+  const offerings = (state.provider.business?.offerings ?? []).filter((o) => o?.active !== false);
+  const completedSvcs = Number(state.provider.stats?.completedServices ?? state.provider.stats?.completed ?? 0);
+  const ratingValue = Number(reviewSummary.average ?? state.provider.stats?.rating ?? 5);
+  const reviewsCount = Number(reviewSummary.count ?? 0);
 
   container.innerHTML = `
-    <section class="provider-hero-card">
-      <div class="provider-hero-head">
-        <div class="provider-avatar">${escapeHtml(initialsFromName(displayName))}</div>
-        <div class="provider-identity">
-          <strong>${escapeHtml(displayName)}</strong>
-          <span class="muted">${escapeHtml(detail?.bio ?? "Completá tu bio, cobertura y pricing para generar más confianza y mejorar conversión.")}</span>
+    <!-- HERO con avatar, badge verificado y completitud -->
+    <section class="account-hero">
+      <div class="account-hero-top">
+        <div class="account-avatar ${isVerified ? "is-verified" : ""}">
+          ${avatarUrl
+            ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(displayName)}" loading="lazy">`
+            : `<span>${escapeHtml(initialsFromName(displayName))}</span>`}
+          ${isVerified ? `<svg class="verified-badge" viewBox="0 0 24 24" aria-label="Verificado">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" fill="#10b981"/>
+            <path d="M9 12l2 2 4-4" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>` : ""}
+        </div>
+        <div class="account-hero-info">
+          <h2>${escapeHtml(displayName)}</h2>
+          ${isBlocked
+            ? `<span class="account-status-pill is-blocked">Cuenta bloqueada</span>`
+            : isVerified
+              ? `<span class="account-status-pill is-verified">✓ Verificado</span>`
+              : `<span class="account-status-pill is-pending">Verificación en revisión</span>`}
+          ${location ? `<p class="account-location">📍 ${escapeHtml(location)}</p>` : ""}
         </div>
       </div>
 
-      <div class="chip-row">
-        ${chips.map((chip) => `<span class="inline-chip">${escapeHtml(chip)}</span>`).join("")}
-      </div>
-
-      <div class="provider-kpi-grid">
-        <article class="provider-kpi-card">
-          <span>Rating</span>
-          <strong>${Number(reviewSummary.average ?? state.provider.stats.rating ?? 5).toFixed(1)}</strong>
-          <small>${escapeHtml(String(reviewSummary.count ?? 0))} reseñas</small>
-        </article>
-        <article class="provider-kpi-card">
-          <span>Completados</span>
-          <strong>${escapeHtml(String(state.provider.stats.completed ?? 0))}</strong>
-          <small>servicios</small>
-        </article>
-        <article class="provider-kpi-card">
-          <span>Documentos</span>
-          <strong>${escapeHtml(String((documentsSummary.approved ?? 0) + (documentsSummary.pending ?? 0) + (documentsSummary.observed ?? 0)))}</strong>
-          <small>${escapeHtml(String(documentsSummary.approved ?? 0))} aprobados</small>
-        </article>
-      </div>
-
-      <div class="summary-metrics">
-        <div class="metric">
-          <span>Contacto</span>
-          <strong>${escapeHtml(profile?.email ?? profile?.phone ?? "Pendiente")}</strong>
+      <div class="account-progress">
+        <div class="account-progress-header">
+          <span>Perfil completo</span>
+          <strong>${completePct}%</strong>
         </div>
-        <div class="metric">
-          <span>Cobertura</span>
-          <strong>${escapeHtml(location || detail?.address_text || "Sin zona cargada")}</strong>
+        <div class="account-progress-bar">
+          <div class="account-progress-fill" style="width: ${completePct}%"></div>
         </div>
-        <div class="metric">
-          <span>Última actividad</span>
-          <strong>${escapeHtml(formatDate(availability.lastSeenAt ?? profile?.last_seen_at))}</strong>
-        </div>
-        <div class="metric">
-          <span>Ubicación viva</span>
-          <strong>${escapeHtml(availability.locationLabel ?? "Esperando geolocalización")}</strong>
-        </div>
-      </div>
-
-      <div class="provider-category-strip">
-        ${(categories.length
-          ? categories
-              .map((item) => item.svc_categories?.name ?? item.category_id)
-              .filter(Boolean)
-          : ["Sin categorías activas"]
-        )
-          .map((label) => `<span class="inline-chip">${escapeHtml(label)}</span>`)
-          .join("")}
+        ${completePct < 100 ? `
+          <div class="account-progress-checklist">
+            ${Object.entries(checklist).map(([label, done]) => `
+              <span class="account-checklist-item ${done ? "is-done" : ""}">
+                ${done ? "✓" : "○"} ${escapeHtml(label)}
+              </span>
+            `).join("")}
+          </div>
+        ` : ""}
       </div>
     </section>
+
+    <!-- KPIs en cards limpias -->
+    <section class="account-kpis">
+      <article class="account-kpi-card">
+        <span class="account-kpi-icon">⭐</span>
+        <div>
+          <strong>${ratingValue.toFixed(1)}</strong>
+          <small>${reviewsCount} reseña${reviewsCount === 1 ? "" : "s"}</small>
+        </div>
+      </article>
+      <article class="account-kpi-card">
+        <span class="account-kpi-icon">✓</span>
+        <div>
+          <strong>${completedSvcs}</strong>
+          <small>servicio${completedSvcs === 1 ? "" : "s"} completado${completedSvcs === 1 ? "" : "s"}</small>
+        </div>
+      </article>
+      <article class="account-kpi-card">
+        <span class="account-kpi-icon">💼</span>
+        <div>
+          <strong>${offerings.length}</strong>
+          <small>servicio${offerings.length === 1 ? "" : "s"} activo${offerings.length === 1 ? "" : "s"}</small>
+        </div>
+      </article>
+    </section>
+
+    <!-- BIO si existe -->
+    ${detail?.bio ? `
+      <section class="account-section">
+        <h3>Sobre vos</h3>
+        <p class="account-bio">${escapeHtml(detail.bio)}</p>
+      </section>
+    ` : ""}
   `;
 }
 
@@ -1842,28 +1868,34 @@ function renderProviderTrust(state) {
     `
     : "";
 
+  // Reseñas: solo se muestran si hay (cuando no hay, no mostramos un bloque "Sin reseñas"
+  // suelto que queda feo — el dato ya aparece en el KPI de rating del hero).
   const reviewsHtml = reviews.length
-    ? reviews.map(r => `
-      <div class="provider-review-card">
-        <strong>${r.rating}</strong>
-        <p>${r.comment}</p>
-      </div>
-    `).join("")
-    : `<div class="summary-card">Sin reseñas</div>`;
+    ? `
+      <section class="account-section">
+        <h3>Reseñas recientes</h3>
+        <div class="account-reviews-grid">
+          ${reviews.slice(0, 5).map((r) => `
+            <article class="account-review-card">
+              <div class="account-review-rating">${"★".repeat(Math.min(5, Math.max(0, Number(r.rating || 0))))}</div>
+              ${r.comment ? `<p>${escapeHtml(r.comment)}</p>` : ""}
+              <small>${escapeHtml(formatDate(r.created_at))}</small>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    `
+    : "";
 
   container.innerHTML = `
     <section class="provider-stack provider-onboarding-shell">
-
       <article class="provider-verification-card">
         <h3>${verificationTitle}</h3>
         <p>${verificationText}</p>
-
         ${uploadFormHtml}
       </article>
-
       ${documentsHtml}
       ${reviewsHtml}
-
     </section>
   `;
 }

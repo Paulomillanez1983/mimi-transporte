@@ -881,7 +881,10 @@ export async function loadProviderWorkspace(providerId) {
         .select(PROVIDER_DOCUMENT_SELECT)
         .eq("provider_id", providerId)
         .order("created_at", { ascending: false })
-        .limit(10)
+        // Limit 200 (no 10) — algunos prestadores tienen muchos retries de selfie
+        // y con limit 10 los DNI quedaban afuera del fetch, mostrándose como
+        // "Pendiente" aunque estuvieran APPROVED en DB.
+        .limit(200)
     ),
 
     fetchTable("svc_reviews", (query) =>
