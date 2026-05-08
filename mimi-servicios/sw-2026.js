@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-debug-solicitar-click-6";
+const APP_VERSION = "2026-05-08-fix-data-client-view-selector-7";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

@@ -2028,7 +2028,10 @@ function bindBasicControls() {
         return;
       }
 
-      const viewButton = event.target.closest("[data-client-view]");
+      // BUG: body tiene data-client-view="home" como state global → closest() matcheaba
+      // body para CUALQUIER click y disparaba setClientView() + return, bloqueando
+      // todos los demás handlers (Solicitar, etc.). Restringimos a button/a explícitos.
+      const viewButton = event.target.closest("button[data-client-view], a[data-client-view]");
       if (viewButton) {
         const view = viewButton.dataset.clientView || "home";
         setClientView(view);
