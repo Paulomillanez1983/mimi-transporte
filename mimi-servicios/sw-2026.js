@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-edit-flow-pricing-tab-18";
+const APP_VERSION = "2026-05-08-client-ux-address-prompt-19";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

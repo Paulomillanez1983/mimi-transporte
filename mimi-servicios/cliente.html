@@ -137,31 +137,47 @@
         </div>
 
         <form class="request-form" id="requestForm">
-          <label class="address-field">
-            <span class="field-icon" aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0Z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
+          <!-- DIRECCIÓN — header pequeño + botón "Usar mi ubicación" debajo, prominente -->
+          <div class="address-block">
+            <span class="address-block-label">¿Dónde necesitás el servicio?</span>
+            <label class="address-field">
+              <span class="field-icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0Z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+              </span>
+              <input
+                id="serviceAddressInput"
+                name="address"
+                type="text"
+                placeholder="Calle y número, barrio o referencia..."
+                autocomplete="off"
+                autocapitalize="words"
+                autocorrect="off"
+                spellcheck="false"
+                inputmode="search"
+                enterkeyhint="search"
+                aria-autocomplete="list"
+                aria-controls="serviceAddressSuggestions"
+                aria-expanded="false"
+              >
+              <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar dirección" hidden>x</button>
+            </label>
+
+            <!-- Chip prominente de geolocalización: el usuario sabe que va a cargar SU ubicación -->
+            <button id="btnUseCurrentServiceLocation" type="button" class="address-use-location">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"></circle>
+                <line x1="12" y1="3" x2="12" y2="6"></line>
+                <line x1="12" y1="18" x2="12" y2="21"></line>
+                <line x1="3" y1="12" x2="6" y2="12"></line>
+                <line x1="18" y1="12" x2="21" y2="12"></line>
+                <circle cx="12" cy="12" r="2" fill="currentColor"></circle>
               </svg>
-            </span>
-            <input
-              id="serviceAddressInput"
-              name="address"
-              type="text"
-              placeholder="Dónde necesitás el servicio?"
-              autocomplete="off"
-              autocapitalize="words"
-              autocorrect="off"
-              spellcheck="false"
-              inputmode="search"
-              enterkeyhint="search"
-              aria-autocomplete="list"
-              aria-controls="serviceAddressSuggestions"
-              aria-expanded="false"
-            >
-            <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar dirección" hidden>x</button>
-            <button id="btnUseCurrentServiceLocation" type="button" class="input-icon-button" aria-label="Usar mi ubicación" title="Usar mi ubicación actual"><span aria-hidden="true">⌖</span></button>
-          </label>
+              <span>Usar mi ubicación actual</span>
+            </button>
+          </div>
 
           <div
             id="serviceAddressSuggestions"
@@ -173,25 +189,34 @@
           <input id="serviceLatInput" name="lat" type="hidden">
           <input id="serviceLngInput" name="lng" type="hidden">
 
+          <!-- INPUT IA — estilo prompt premium (ChatGPT/Rork) -->
           <div class="category-section">
-            <div class="section-label section-label-strong">MIMI AI busca el prestador compatible</div>
-            <label class="category-search-field" for="categorySearchInput">
-              <span>Contanos qué necesitás resolver</span>
-              <input
-                id="categorySearchInput"
-                type="search"
-                placeholder="Ej: necesito un psicólogo online"
-                data-placeholder-examples="Necesito un psicólogo online|Quiero una nutricionista|Busco un kinesiólogo por una lesión|Necesito un abogado laboral|Necesito un contador para monotributo|Se me pinchó un caño en la cocina|Necesito una niñera para la tarde|Mi computadora no funciona"
-                autocomplete="off"
-                autocapitalize="sentences"
-                autocorrect="off"
-                spellcheck="false"
-                enterkeyhint="search"
-              >
-            </label>
-            <div class="intent-assist" id="categoryIntentAssist" aria-live="polite">
-              Escribí una situación y MIMI sugiere la categoría más probable.
+            <div class="ai-prompt-card">
+              <div class="ai-prompt-header">
+                <span class="ai-prompt-badge">✨ MIMI AI</span>
+                <span class="ai-prompt-headline">Contanos qué necesitás resolver</span>
+              </div>
+              <div class="ai-prompt-input-wrap">
+                <input
+                  id="categorySearchInput"
+                  type="search"
+                  class="ai-prompt-input"
+                  placeholder="Ej: se me rompió un caño en la cocina..."
+                  data-placeholder-examples="Se me pinchó un caño en la cocina|Necesito un psicólogo online|Quiero una nutricionista|Busco un kinesiólogo por una lesión|Necesito un abogado laboral|Necesito un contador para monotributo|Necesito una niñera para la tarde|Mi computadora no funciona"
+                  autocomplete="off"
+                  autocapitalize="sentences"
+                  autocorrect="off"
+                  spellcheck="false"
+                  enterkeyhint="search"
+                  aria-label="Describí qué servicio necesitás"
+                >
+                <button type="button" id="categorySearchClear" class="ai-prompt-clear" aria-label="Limpiar" hidden>×</button>
+              </div>
+              <div class="intent-assist" id="categoryIntentAssist" aria-live="polite">
+                Describilo con tus palabras. La IA te sugiere el rubro indicado.
+              </div>
             </div>
+
             <div
               class="category-grid"
               id="categoryGrid"

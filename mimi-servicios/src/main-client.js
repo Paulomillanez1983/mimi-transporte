@@ -1880,8 +1880,22 @@ function bindBasicControls() {
     updateScheduledVisibility();
   });
 
+  // Botón clear (×) del input IA
+  document.getElementById("categorySearchClear")?.addEventListener("click", () => {
+    const input = document.getElementById("categorySearchInput");
+    if (input) {
+      input.value = "";
+      input.focus();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
+
   document.getElementById("categorySearchInput")?.addEventListener("input", (event) => {
     const value = event.target.value || "";
+    // Mostrar/ocultar el botón × según haya contenido
+    const clearBtn = document.getElementById("categorySearchClear");
+    if (clearBtn) clearBtn.hidden = !value;
+
     const suggestedCategory = findBestCategoryByIntent(value);
 
     if (suggestedCategory?.id) {
@@ -1988,14 +2002,28 @@ function bindBasicControls() {
     handleClearServiceAddress
   );
 
-  document.getElementById("btnUseCurrentServiceLocation")?.addEventListener("click", async () => {
+  document.getElementById("btnUseCurrentServiceLocation")?.addEventListener("click", async (event) => {
+    const btn = event.currentTarget;
+    const labelSpan = btn.querySelector("span");
+    const originalText = labelSpan?.textContent;
+
+    btn.classList.add("is-loading");
+    if (labelSpan) labelSpan.textContent = "Buscando ubicación...";
+
     try {
       await handleUseCurrentServiceLocation();
+      if (labelSpan) labelSpan.textContent = "Ubicación cargada ✓";
+      window.setTimeout(() => {
+        if (labelSpan && originalText) labelSpan.textContent = originalText;
+      }, 2000);
     } catch (error) {
       setInfo(
         null,
         normalizeAuthError(error, "No pudimos obtener tu ubicación actual.")
       );
+      if (labelSpan && originalText) labelSpan.textContent = originalText;
+    } finally {
+      btn.classList.remove("is-loading");
     }
   });
 

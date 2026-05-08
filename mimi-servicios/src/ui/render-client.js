@@ -623,7 +623,9 @@ function renderCategories(state) {
           categoryGuideScore(category, query) > 0
       )
     : rankedCategories;
-<<  const maxVisible = state.ui.showAllCategories ? filtered.length : query ? 3 : 5;
+  // Si el usuario tipeó algo: mostrar 3 (top matches). Si pidió ampliar: todas.
+  // Sin query: 5 visibles + card "Ampliar".
+  const maxVisible = state.ui.showAllCategories ? filtered.length : query ? 3 : 5;
   const guideCategory = findGuideCategory(categories, query);
   const selectedCategory = categories.find((category) => category.id === state.ui.selectedCategoryId);
   let visibleCategories = filtered.slice(0, maxVisible);
