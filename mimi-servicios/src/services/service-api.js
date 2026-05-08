@@ -240,7 +240,7 @@ export async function loadCategories() {
 
   return fetchTable("svc_categories", (query) =>
     query
-      .select("id,code,name,description,active,aliases,search_keywords,default_pricing_model,requires_provider_quote,allowed_service_modes,requires_professional_license,requires_background_check")
+      .select("id,code,name,description,active,aliases,search_keywords,default_pricing_model,requires_provider_quote,allowed_service_modes,requires_professional_license,requires_background_check,parent_category_id,source,discovery_status,auto_created,created_from_query,usage_count,last_matched_at")
       .eq("active", true)
       .order("name", { ascending: true })
   );

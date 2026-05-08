@@ -10683,6 +10683,17 @@ body.provider-auth-required .notification-container {
   line-height: 1.3;
 }
 
+#providerBusinessPanel .provider-suggestion-card small {
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #eaf8ef;
+  color: #087344;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
 #providerBusinessPanel .provider-suggestion-card.is-selected {
   border-color: rgba(8, 131, 72, 0.52);
   background: #ecf9f1;

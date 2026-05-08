@@ -2130,6 +2130,7 @@ async handleProviderServiceSuggestion() {
           <button class="provider-suggestion-card" type="button" data-provider-suggestion-card data-provider-business-action="toggle-provider-suggestion" data-category-id="${this.escapeHtml(item.category_id ?? item.id ?? "")}" data-category-code="${this.escapeHtml(item.code ?? "")}" aria-pressed="false">
             <strong>${this.escapeHtml(item.name ?? "Servicio sugerido")}</strong>
             <span>${this.escapeHtml(item.description ?? this.providerSuggestionReason(text, item))}</span>
+            ${item.auto_created || item.discovery_status === "auto" ? `<small>Nuevo rubro ordenado por MIMI</small>` : ""}
           </button>
         `)
         .join("");
