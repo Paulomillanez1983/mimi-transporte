@@ -1466,7 +1466,7 @@ async function handleSearchSubmit(event) {
   event.preventDefault();
   syncDraftFromForm();
 
-<<  if (!requireConfirmedServiceAddress()) return;
+  if (!requireConfirmedServiceAddress()) return;
 
   if (!state.ui.selectedCategoryId && appConfig.categories?.[0]?.id) {
     patchState("ui.selectedCategoryId", appConfig.categories[0].id);
@@ -1531,7 +1531,8 @@ async function handleSearchSubmit(event) {
 }
 
 async function handleProviderSelection(providerId) {
-<<  console.log("[MIMI Solicitar] step 1: clicked provider", { providerId });`r`n  if (!requireConfirmedServiceAddress()) return false;
+  console.log("[MIMI Solicitar] step 1: clicked provider", { providerId });
+  if (!requireConfirmedServiceAddress()) return false;
 
   const provider = state.client.providers.find(
     (item) => item.provider_id === providerId
