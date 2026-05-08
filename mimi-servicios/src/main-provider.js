@@ -28,6 +28,7 @@ import {
   getDeviceId,
   STORAGE_KEYS
 } from "./state/app-state.js";
+import { appConfig } from "./config.js";
 import {
   initMap,
   updateProviderMap
@@ -109,46 +110,65 @@ async init() {
 
   initState();
 
-  // Cargar categorías siempre, independientemente del modo o sesión
-  // Esto garantiza que appConfig.categories nunca sea undefined
+  // Cargar categorías — si la DB devuelve vacío o falla, usar el catálogo local de config.js
   try {
     console.log("[MIMI] Loading categories...");
     const cats = await loadCategories();
-    const normalizedCategories = Array.isArray(cats)
-      ? cats.map((c) => ({
-          id: c.id,
-          code: c.code,
-          slug: c.slug ?? null,
-          name: c.name,
-          description: c.description,
-          aliases: c.aliases ?? [],
-          search_keywords: c.search_keywords ?? [],
-          default_pricing_model: c.default_pricing_model ?? "HOURLY",
-          requires_provider_quote: Boolean(c.requires_provider_quote),
-          allowed_service_modes: c.allowed_service_modes ?? ["IN_PERSON"],
-          requires_professional_license: Boolean(c.requires_professional_license),
-          requires_background_check: Boolean(c.requires_background_check),
-          source: c.source ?? null,
-          discovery_status: c.discovery_status ?? null,
-          auto_created: Boolean(c.auto_created)
-        }))
-      : [];
-    if (normalizedCategories.length) {
-      actions.updateState({
-        appConfig: {
-          categories: normalizedCategories,
-          categoriesLoaded: true,
-          categoriesError: null,
-        },
-        categories: normalizedCategories
-      });
-      console.log(`[MIMI] Categories loaded: ${normalizedCategories.length} items`);
-      console.log("[MIMI] Categories saved to state");
-    }
+    // Fallback: si DB devolvió 0 categorías, usar appConfig.categories (catálogo local)
+    const sourceCats = (Array.isArray(cats) && cats.length > 0) ? cats : (appConfig.categories ?? []);
+
+    const normalizedCategories = sourceCats.map((c) => ({
+      id: c.id,
+      code: c.code,
+      slug: c.slug ?? null,
+      name: c.name,
+      description: c.description,
+      aliases: c.aliases ?? [],
+      search_keywords: c.search_keywords ?? [],
+      default_pricing_model: c.default_pricing_model ?? "HOURLY",
+      requires_provider_quote: Boolean(c.requires_provider_quote),
+      allowed_service_modes: c.allowed_service_modes ?? ["IN_PERSON"],
+      requires_professional_license: Boolean(c.requires_professional_license),
+      requires_background_check: Boolean(c.requires_background_check),
+      source: c.source ?? null,
+      discovery_status: c.discovery_status ?? null,
+      auto_created: Boolean(c.auto_created)
+    }));
+
+    // Sincronizar el módulo appConfig (lo usa render-client.js directamente)
+    appConfig.categories = sourceCats;
+
+    actions.updateState({
+      appConfig: {
+        categories: normalizedCategories,
+        categoriesLoaded: true,
+        categoriesError: null,
+      },
+      categories: normalizedCategories
+    });
+    console.log(`[MIMI] Categories loaded: ${normalizedCategories.length} items (DB: ${cats?.length ?? 0}, fallback: ${normalizedCategories.length - (cats?.length ?? 0)})`);
   } catch (catErr) {
     console.error("[MIMI] loadCategories failed:", catErr.message);
+    // En error: igual cargar el catálogo local para que la UI nunca quede vacía
+    const fallbackCats = appConfig.categories ?? [];
+    appConfig.categories = fallbackCats;
+    const normalizedFallback = fallbackCats.map((c) => ({
+      id: c.id,
+      code: c.code,
+      slug: c.slug ?? null,
+      name: c.name,
+      description: c.description,
+      aliases: c.aliases ?? [],
+      search_keywords: c.search_keywords ?? [],
+      default_pricing_model: c.default_pricing_model ?? "HOURLY",
+      requires_provider_quote: Boolean(c.requires_provider_quote),
+      allowed_service_modes: c.allowed_service_modes ?? ["IN_PERSON"],
+      requires_professional_license: Boolean(c.requires_professional_license),
+      requires_background_check: Boolean(c.requires_background_check),
+    }));
     actions.updateState({
-      appConfig: { categories: [], categoriesLoaded: false, categoriesError: catErr.message }
+      appConfig: { categories: normalizedFallback, categoriesLoaded: false, categoriesError: catErr.message },
+      categories: normalizedFallback
     });
   }
 

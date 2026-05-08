@@ -1396,6 +1396,23 @@ async function handleSearchSubmit(event) {
   event.preventDefault();
   syncDraftFromForm();
 
+  // Validación: la dirección es obligatoria para buscar prestadores
+  const address = String(state.requestDraft.address || "").trim();
+  if (!address) {
+    const addressInput = document.getElementById("serviceAddressInput");
+    setState((draft) => {
+      draft.meta.error = "Cargá una dirección antes de buscar prestadores.";
+      draft.meta.info = null;
+    });
+    if (addressInput) {
+      addressInput.focus();
+      addressInput.scrollIntoView({ behavior: "smooth", block: "center" });
+      addressInput.classList.add("address-required-flash");
+      setTimeout(() => addressInput.classList.remove("address-required-flash"), 1600);
+    }
+    return;
+  }
+
   if (!state.ui.selectedCategoryId && appConfig.categories?.[0]?.id) {
     patchState("ui.selectedCategoryId", appConfig.categories[0].id);
   }

@@ -607,7 +607,8 @@ function renderCategories(state) {
           categoryGuideScore(category, query) > 0
       )
     : rankedCategories;
-  const maxVisible = query || state.ui.showAllCategories ? filtered.length : 5;
+  // UI limpia: mostrar solo 3 cards por defecto. Si el usuario tipea o pide ampliar, se ven todas.
+  const maxVisible = query || state.ui.showAllCategories ? filtered.length : 3;
   const visibleCategories = filtered.slice(0, maxVisible);
   const guideCategory = findGuideCategory(categories, query);
   const selectedCategory = categories.find((category) => category.id === state.ui.selectedCategoryId);
@@ -728,10 +729,10 @@ function renderCategories(state) {
         .join("") +
       (!query && filtered.length > maxVisible
         ? `
-          <button class="category-chip category-more-chip" data-category-toggle="search" type="button">
-            <span aria-hidden="true">&#128269;</span>
-            <strong>Buscar</strong>
-            <small>Ver todos</small>
+          <button class="category-chip category-more-chip" data-category-toggle="expand" type="button">
+            <span aria-hidden="true">&#10133;</span>
+            <strong>Ampliar</strong>
+            <small>Ver ${filtered.length - maxVisible} más</small>
           </button>
         `
         : "")
