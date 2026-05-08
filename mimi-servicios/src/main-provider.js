@@ -91,6 +91,42 @@ async init() {
 
   initState();
 
+  // Cargar categorías siempre, independientemente del modo o sesión
+  // Esto garantiza que appConfig.categories nunca sea undefined
+  try {
+    console.log("[MIMI] Loading categories...");
+    const cats = await loadCategories();
+    if (Array.isArray(cats) && cats.length) {
+      actions.updateState({
+        appConfig: {
+          categories: cats.map((c) => ({
+            id: c.id,
+            code: c.code,
+            slug: c.slug ?? null,
+            name: c.name,
+            description: c.description,
+            aliases: c.aliases ?? [],
+            search_keywords: c.search_keywords ?? [],
+            default_pricing_model: c.default_pricing_model ?? "HOURLY",
+            requires_provider_quote: Boolean(c.requires_provider_quote),
+            allowed_service_modes: c.allowed_service_modes ?? ["IN_PERSON"],
+            requires_professional_license: Boolean(c.requires_professional_license),
+            requires_background_check: Boolean(c.requires_background_check),
+          })),
+          categoriesLoaded: true,
+          categoriesError: null,
+        }
+      });
+      console.log(`[MIMI] Categories loaded: ${cats.length} items`);
+      console.log("[MIMI] Categories saved to state");
+    }
+  } catch (catErr) {
+    console.error("[MIMI] loadCategories failed:", catErr.message);
+    actions.updateState({
+      appConfig: { categories: [], categoriesLoaded: false, categoriesError: catErr.message }
+    });
+  }
+
   this.cacheElements();
 
 this.unsubscribe = subscribe((state) => {
@@ -859,7 +895,10 @@ if (
     }
 
 const [categories, workspace, notifications, offers, activeRequest] = await Promise.all([
-  loadCategories(),
+  // Reusar categorías ya cargadas en init(); si están vacías, recargar
+  (this.state?.appConfig?.categories?.length
+    ? Promise.resolve(this.state.appConfig.categories)
+    : loadCategories()),
   loadProviderWorkspace(session.providerId),
   loadNotifications(session.userId),
   loadOffers(session.providerId),
