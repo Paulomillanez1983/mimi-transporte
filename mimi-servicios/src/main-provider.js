@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.07.16";
+const MIMI_PROVIDER_BUILD = "2026.05.07.17";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -1495,6 +1495,9 @@ document.addEventListener("change", (event) => {
     target.dataset.touched = "1";
     this.applyProviderCategoryUiRules(target.closest("form"));
   }
+  if (target?.matches?.("[name='providerProvince']")) {
+    this.updateProviderCityOptions(target);
+  }
 });
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -1931,19 +1934,25 @@ async acceptProviderTerms() {
   const userId = this.state?.session?.userId;
   if (!userId) throw new Error("No se encontro la sesion del prestador");
 
-  await invokeFunction("accept-legal-document", {
-    actor_type: "provider",
-    document_code: "terms_providers",
-    version: "2026.1.0",
-    acceptance_method: "provider_service_setup"
-  });
+  const documents = [
+    { actor_type: "provider", document_code: "terms_providers" },
+    { actor_type: "all", document_code: "privacy_policy" }
+  ];
 
-  await invokeFunction("accept-legal-document", {
-    actor_type: "all",
-    document_code: "privacy_policy",
-    version: "2026.1.0",
-    acceptance_method: "provider_service_setup"
-  });
+  for (const documentPayload of documents) {
+    try {
+      await invokeFunction("accept-legal-document", {
+        ...documentPayload,
+        version: "2026.1.0",
+        acceptance_method: "provider_service_setup"
+      });
+    } catch (err) {
+      console.warn("[MIMI] No se pudo registrar aceptacion legal por Edge Function", {
+        document: documentPayload.document_code,
+        message: err?.message ?? err
+      });
+    }
+  }
 }
 
 async handleProviderBusinessAction(action, source = null) {
@@ -2057,6 +2066,27 @@ getProviderCategories() {
     [];
 
   return Array.isArray(categories) ? categories.filter((item) => item?.id) : [];
+}
+
+updateProviderCityOptions(provinceSelect) {
+  const form = provinceSelect?.closest?.("form");
+  const citySelect = form?.querySelector?.("[name='providerCity']");
+  if (!citySelect) return;
+
+  const selectedOption = provinceSelect.selectedOptions?.[0];
+  const cities = String(selectedOption?.dataset?.cities ?? "")
+    .split("|")
+    .map((city) => city.trim())
+    .filter(Boolean);
+  const current = citySelect.value;
+  citySelect.innerHTML = [
+    `<option value="">${cities.length ? "Elegi ciudad" : "Primero elegi provincia"}</option>`,
+    ...cities.map((city) => `<option value="${this.escapeHtml(city)}">${this.escapeHtml(city)}</option>`),
+    `<option value="Otra localidad">Otra localidad</option>`
+  ].join("");
+  if (cities.includes(current) || current === "Otra localidad") {
+    citySelect.value = current;
+  }
 }
 
 providerSetupSelectedCategoryIds(form = document.getElementById("providerBusinessForm")) {

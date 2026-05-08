@@ -66,17 +66,30 @@ const categoryGroupLabels = {
 };
 
 const argentinaZones = {
-  "Buenos Aires": ["La Plata", "Mar del Plata", "Bahia Blanca", "Tandil", "San Isidro", "Quilmes", "Moron", "Lomas de Zamora"],
+  "Buenos Aires": ["La Plata", "Mar del Plata", "Bahia Blanca", "Tandil", "San Isidro", "Quilmes", "Moron", "Lomas de Zamora", "Avellaneda", "Lanus", "San Justo", "Merlo", "Moreno", "Pilar", "Tigre", "San Fernando", "Vicente Lopez", "Tres de Febrero", "San Martin", "Pergamino", "Junin", "Olavarria", "Necochea", "Azul", "Chivilcoy", "Campana", "Zarate", "Escobar", "Ezeiza", "Berazategui", "Florencio Varela", "Almirante Brown", "Esteban Echeverria"],
+  "Catamarca": ["San Fernando del Valle de Catamarca", "Valle Viejo", "Fray Mamerto Esquiu", "Andalgala", "Belen", "Tinogasta", "Santa Maria"],
+  "Chaco": ["Resistencia", "Barranqueras", "Fontana", "Presidencia Roque Saenz Pena", "Villa Angela", "Charata", "General San Martin"],
+  "Chubut": ["Rawson", "Trelew", "Puerto Madryn", "Comodoro Rivadavia", "Esquel", "Sarmiento", "Gaiman"],
   "CABA": ["Ciudad Autonoma de Buenos Aires"],
-  "Cordoba": ["Cordoba Capital", "Villa Carlos Paz", "Rio Cuarto", "Villa Maria", "Alta Gracia", "Carlos Paz"],
-  "Santa Fe": ["Rosario", "Santa Fe Capital", "Rafaela", "Venado Tuerto", "Santo Tome"],
-  "Mendoza": ["Mendoza Capital", "Godoy Cruz", "Guaymallen", "San Rafael", "Maipu"],
-  "Tucuman": ["San Miguel de Tucuman", "Yerba Buena", "Tafi Viejo"],
-  "Salta": ["Salta Capital", "Oran", "Tartagal"],
-  "Neuquen": ["Neuquen Capital", "Plottier", "San Martin de los Andes"],
-  "Rio Negro": ["Bariloche", "General Roca", "Viedma", "Cipolletti"],
-  "Entre Rios": ["Parana", "Concordia", "Gualeguaychu"],
-  "Misiones": ["Posadas", "Obera", "Eldorado"]
+  "Cordoba": ["Cordoba Capital", "Villa Carlos Paz", "Rio Cuarto", "Villa Maria", "Alta Gracia", "Carlos Paz", "San Francisco", "Rio Tercero", "Jesus Maria", "La Calera", "Bell Ville", "Marcos Juarez"],
+  "Corrientes": ["Corrientes Capital", "Goya", "Paso de los Libres", "Curuzu Cuatia", "Mercedes", "Santo Tome", "Bella Vista"],
+  "Entre Rios": ["Parana", "Concordia", "Gualeguaychu", "Concepcion del Uruguay", "Villaguay", "Victoria", "La Paz", "Colon"],
+  "Formosa": ["Formosa Capital", "Clorinda", "Pirané", "El Colorado", "Las Lomitas", "Ingeniero Juarez"],
+  "Jujuy": ["San Salvador de Jujuy", "Palpala", "Perico", "San Pedro de Jujuy", "Libertador General San Martin", "Tilcara", "Humahuaca"],
+  "La Pampa": ["Santa Rosa", "General Pico", "Toay", "General Acha", "Realico", "Eduardo Castex"],
+  "La Rioja": ["La Rioja Capital", "Chilecito", "Aimogasta", "Chamical", "Chepes", "Villa Union"],
+  "Mendoza": ["Mendoza Capital", "Godoy Cruz", "Guaymallen", "San Rafael", "Maipu", "Las Heras", "Lujan de Cuyo", "Tunuyan", "San Martin", "Rivadavia", "Malargue"],
+  "Misiones": ["Posadas", "Obera", "Eldorado", "Puerto Iguazu", "Apostoles", "Leandro N. Alem", "San Vicente"],
+  "Neuquen": ["Neuquen Capital", "Plottier", "San Martin de los Andes", "Cutral Co", "Zapala", "Centenario", "Villa La Angostura", "Chos Malal"],
+  "Rio Negro": ["Bariloche", "General Roca", "Viedma", "Cipolletti", "Villa Regina", "Allen", "Cinco Saltos"],
+  "Salta": ["Salta Capital", "Oran", "Tartagal", "General Guemes", "Metan", "Cafayate", "Rosario de la Frontera"],
+  "San Juan": ["San Juan Capital", "Rawson", "Rivadavia", "Chimbas", "Santa Lucia", "Pocito", "Caucete"],
+  "San Luis": ["San Luis Capital", "Villa Mercedes", "Merlo", "La Punta", "Juana Koslay", "Justo Daract"],
+  "Santa Cruz": ["Rio Gallegos", "Caleta Olivia", "Pico Truncado", "Puerto Deseado", "El Calafate", "Las Heras"],
+  "Santa Fe": ["Rosario", "Santa Fe Capital", "Rafaela", "Venado Tuerto", "Santo Tome", "Reconquista", "Villa Gobernador Galvez", "Esperanza", "Casilda", "Cañada de Gomez"],
+  "Santiago del Estero": ["Santiago del Estero Capital", "La Banda", "Termas de Rio Hondo", "Fernandez", "Añatuya", "Frías"],
+  "Tierra del Fuego": ["Ushuaia", "Rio Grande", "Tolhuin"],
+  "Tucuman": ["San Miguel de Tucuman", "Yerba Buena", "Tafi Viejo", "Banda del Rio Sali", "Concepcion", "Aguilares", "Famailla"]
 };
 
 function currency(value, currencyCode = "ARS") {
@@ -1090,9 +1103,13 @@ function renderProviderBusiness(state) {
     : "Primero elegi rubros sugeridos";
   const hasSelectedRubros = selectedCategoryIds.size > 0;
   const provinceOptions = Object.keys(argentinaZones);
-  const cityOptions = Object.entries(argentinaZones).flatMap(([province, cities]) =>
-    cities.map((city) => ({ province, city }))
-  );
+  const selectedProvince = String(detail?.province ?? "");
+  const selectedCity = String(detail?.city ?? "");
+  const cityOptions = selectedProvince && argentinaZones[selectedProvince]
+    ? argentinaZones[selectedProvince]
+    : [];
+  const citySelectOptions = [...cityOptions];
+  if (selectedCity && !citySelectOptions.includes(selectedCity)) citySelectOptions.unshift(selectedCity);
   const primaryOffering = offerings.find((item) => item?.active !== false) ?? offerings[0] ?? null;
   const primaryPrice =
     primaryOffering?.quote_required || primaryOffering?.pricing_model === "QUOTE"
@@ -1278,12 +1295,16 @@ function renderProviderBusiness(state) {
               <span>Provincia</span>
               <select name="providerProvince">
                 <option value="">Elegi provincia</option>
-                ${provinceOptions.map((province) => `<option value="${escapeHtml(province)}" ${String(detail?.province ?? "") === province ? "selected" : ""}>${escapeHtml(province)}</option>`).join("")}
+                ${provinceOptions.map((province) => `<option value="${escapeHtml(province)}" data-cities="${escapeHtml((argentinaZones[province] ?? []).join("|"))}" ${selectedProvince === province ? "selected" : ""}>${escapeHtml(province)}</option>`).join("")}
               </select>
             </label>
             <label class="input-group">
               <span>Ciudad</span>
-              <input name="providerCity" type="text" maxlength="80" value="${escapeHtml(detail?.city ?? "")}" placeholder="Ej: Cordoba Capital" list="providerCityOptions">
+              <select name="providerCity" data-provider-city-select>
+                <option value="">Primero elegi provincia</option>
+                ${citySelectOptions.map((city) => `<option value="${escapeHtml(city)}" ${selectedCity === city ? "selected" : ""}>${escapeHtml(city)}</option>`).join("")}
+                <option value="Otra localidad" ${selectedCity === "Otra localidad" ? "selected" : ""}>Otra localidad</option>
+              </select>
             </label>
             <label class="input-group provider-field-wide">
               <span>Direccion/base aproximada</span>
@@ -1319,9 +1340,6 @@ function renderProviderBusiness(state) {
               <input name="providerVideoIntroUrl" type="url" maxlength="240" value="${escapeHtml(detail?.video_intro_url ?? "")}" placeholder="Opcional">
             </label>
           </div>
-          <datalist id="providerCityOptions">
-            ${cityOptions.map((item) => `<option value="${escapeHtml(item.city)}" label="${escapeHtml(item.province)}"></option>`).join("")}
-          </datalist>
           <label class="input-group provider-field-wide">
             <span>Presentacion profesional</span>
             <textarea name="providerProfessionalSummary" maxlength="600" rows="3" placeholder="Explica tu alcance, experiencia y forma de coordinar sin prometer resultados">${escapeHtml(detail?.professional_summary ?? "")}</textarea>
