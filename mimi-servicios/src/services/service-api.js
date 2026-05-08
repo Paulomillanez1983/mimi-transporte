@@ -358,6 +358,28 @@ function firstByProviderId(rows = []) {
   return map;
 }
 
+function firstNameFromText(value) {
+  const text = String(value ?? "")
+    .replace(/@.*/, "")
+    .replace(/[^a-zA-ZÀ-ÿ\s'-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const first = text.split(" ").find(Boolean);
+  if (!first || first.length < 2) return null;
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
+function providerPublicName(provider, identity = null) {
+  return (
+    firstNameFromText(identity?.full_name_detected) ||
+    firstNameFromText(provider?.full_name) ||
+    firstNameFromText(provider?.name) ||
+    firstNameFromText(provider?.email) ||
+    "Prestador"
+  );
+}
+
 function referencePriceFromRows(pricing, offering) {
   const pricingModel = String(offering?.pricing_model ?? "").toUpperCase();
   const candidates = [
@@ -396,7 +418,14 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
   const providerIds = [...new Set((categoryLinks ?? []).map((row) => row.provider_id).filter(Boolean))];
   if (!providerIds.length) return [];
 
-  const [providersResult, profilesResult, pricingResult, offeringsResult] = await Promise.all([
+  const identityPromise = supabase
+    .from("svc_provider_identity_checks")
+    .select("provider_id,full_name_detected,status,reviewed_at,created_at")
+    .in("provider_id", providerIds)
+    .order("reviewed_at", { ascending: false, nullsFirst: false })
+    .limit(120);
+
+  const [providersResult, profilesResult, pricingResult, offeringsResult, identityResult] = await Promise.all([
     supabase
       .from("svc_providers")
       .select("id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
@@ -423,7 +452,8 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
       .in("provider_id", providerIds)
       .eq("category_id", categoryId)
       .eq("active", true)
-      .limit(80)
+      .limit(80),
+    identityPromise
   ]);
 
   for (const result of [providersResult, profilesResult, pricingResult, offeringsResult]) {
@@ -432,11 +462,15 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
       return [];
     }
   }
+  if (identityResult.error) {
+    console.warn("[MIMI servicios] fallback providers: identidad no disponible por RLS; se usa nombre publico del provider.", identityResult.error);
+  }
 
   const profilesByProvider = firstByProviderId(profilesResult.data);
   const pricingByProvider = firstByProviderId(pricingResult.data);
   const offeringsByProvider = firstByProviderId(offeringsResult.data);
   const categoryByProvider = firstByProviderId(categoryLinks);
+  const identityByProvider = firstByProviderId(identityResult.data || []);
   const serviceLat = Number(draft.lat ?? draft.service_lat);
   const serviceLng = Number(draft.lng ?? draft.service_lng);
 
@@ -446,13 +480,17 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
       const pricing = pricingByProvider.get(provider.id) ?? {};
       const offering = offeringsByProvider.get(provider.id) ?? {};
       const category = categoryByProvider.get(provider.id)?.svc_categories ?? {};
+      const identity = identityByProvider.get(provider.id) ?? {};
+      const publicName = providerPublicName(provider, identity);
       const distanceKm = distanceKmBetween(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
       const price = referencePriceFromRows(pricing, offering);
 
       return {
         provider_id: provider.id,
-        full_name: provider.full_name,
-        name: provider.full_name,
+        full_name: publicName,
+        name: publicName,
+        public_name: publicName,
+        verified_first_name: firstNameFromText(identity.full_name_detected),
         avatar_url: provider.avatar_url,
         status: provider.status,
         category_id: categoryId,
@@ -540,7 +578,14 @@ export async function createRequest(payload = {}) {
     provider_price: payload.providerPrice,
     platform_fee: payload.platformFee,
     total_price: payload.totalPrice,
-    currency: payload.currency ?? "ARS"
+    currency: payload.currency ?? "ARS",
+    offering_id: payload.offeringId ?? null,
+    service_mode: payload.serviceMode ?? null,
+    pricing_model: payload.pricingModel ?? null,
+    unit_name: payload.unitName ?? null,
+    unit_quantity: payload.unitQuantity ?? null,
+    session_duration_minutes: payload.sessionDurationMinutes ?? null,
+    price_label: payload.priceLabel ?? null
   });
 
   return data?.request ?? data;

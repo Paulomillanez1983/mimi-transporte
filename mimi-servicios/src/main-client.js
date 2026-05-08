@@ -207,7 +207,14 @@ function formatCurrency(value, currencyCode = "ARS") {
 }
 
 function textFromProvider(provider) {
-  return provider?.full_name || provider?.name || "Prestador disponible";
+  return (
+    provider?.displayName ||
+    provider?.public_name ||
+    provider?.verified_first_name ||
+    provider?.full_name ||
+    provider?.name ||
+    "Prestador disponible"
+  );
 }
 
 function isUuid(value) {
@@ -224,16 +231,191 @@ function serviceModeLabel(value) {
   return "A coordinar";
 }
 
-function openRequestConfirmation(provider, pricing) {
+function providerPricingModel(provider, pricing = null) {
+  const selectedCategory = getSelectedCategory();
+  return String(
+    pricing?.pricing_model ||
+    pricing?.pricingModel ||
+    provider?.pricing_model ||
+    provider?.pricingMode ||
+    provider?.pricing_mode ||
+    categoryPricingModel(selectedCategory)
+  ).toUpperCase();
+}
+
+function providerUnitName(provider, pricing = null) {
+  const model = providerPricingModel(provider, pricing);
+  if (model === "SQUARE_METER") return "m2";
+  if (model === "LINEAR_METER") return "metro lineal";
+  if (model === "HOURLY") return "hora";
+  const explicit = String(pricing?.unit_name || provider?.unit_name || "").trim();
+  if (explicit) return explicit;
+  if (model === "UNIT") return "unidad";
+  return "";
+}
+
+function providerNeedsQuantity(provider, pricing = null) {
+  return ["SQUARE_METER", "LINEAR_METER", "UNIT"].includes(providerPricingModel(provider, pricing));
+}
+
+function quantityCopyForProvider(provider, pricing = null) {
+  const model = providerPricingModel(provider, pricing);
+  if (model === "SQUARE_METER") {
+    return {
+      label: "Metros cuadrados aproximados",
+      helper: "Ejemplo: si queres pintar una pared o ambiente, carga un estimado. Despues coordinan detalles.",
+      unit: "m2",
+      min: 1,
+      step: 1,
+      placeholder: "Ej: 20"
+    };
+  }
+  if (model === "LINEAR_METER") {
+    return {
+      label: "Metros lineales aproximados",
+      helper: "Carga un estimado para orientar el pedido. El prestador puede ajustar al coordinar.",
+      unit: "metro lineal",
+      min: 1,
+      step: 1,
+      placeholder: "Ej: 5"
+    };
+  }
+  return {
+    label: `Cantidad de ${providerUnitName(provider, pricing) || "unidades"}`,
+    helper: "Carga una cantidad aproximada para orientar la solicitud.",
+    unit: providerUnitName(provider, pricing) || "unidad",
+    min: 1,
+    step: 1,
+    placeholder: "Ej: 1"
+  };
+}
+
+function amountFromProvider(provider, pricing = null) {
+  return Number(
+    pricing?.provider_price ??
+    provider?.provider_price ??
+    provider?.unit_price ??
+    provider?.price ??
+    provider?.total_price ??
+    0
+  );
+}
+
+function buildLocalPricing(provider, { requestedHours = 1, quantity = 1, basePricing = null } = {}) {
+  const model = providerPricingModel(provider, basePricing);
+  const unitName = providerUnitName(provider, basePricing);
+  const price = amountFromProvider(provider, basePricing);
+  const safeQuantity = Math.max(1, Number(quantity || 1));
+  const safeHours = Math.max(0.25, Number(requestedHours || 1));
+  const isQuote = model === "QUOTE" || provider?.quote_required === true || basePricing?.quote_required === true;
+  const multiplier = model === "HOURLY" ? safeHours : providerNeedsQuantity(provider, basePricing) ? safeQuantity : 1;
+  const subtotal = isQuote ? 0 : Math.max(0, price * multiplier);
+  const platformFee = Number(basePricing?.platform_fee ?? 0);
+
+  return {
+    eligible: true,
+    provider_price: price,
+    platform_fee: platformFee,
+    total_price: subtotal + platformFee,
+    currency: basePricing?.currency || provider?.currency || "ARS",
+    offering_id: basePricing?.offering_id ?? provider?.offering_id ?? null,
+    service_mode: basePricing?.service_mode ?? provider?.service_mode ?? null,
+    pricing_model: model,
+    unit_name: unitName || null,
+    unit_quantity: providerNeedsQuantity(provider, basePricing) ? safeQuantity : null,
+    session_duration_minutes:
+      basePricing?.session_duration_minutes ??
+      basePricing?.sessionDurationMinutes ??
+      provider?.session_duration_minutes ??
+      provider?.duration_minutes ??
+      null,
+    price_label: isQuote ? "A coordinar" : null
+  };
+}
+
+function formatPricingTotal(pricing) {
+  if (pricing?.price_label === "A coordinar" || String(pricing?.pricing_model || "").toUpperCase() === "QUOTE") {
+    return "A coordinar";
+  }
+  return formatCurrency(pricing?.total_price, pricing?.currency || "ARS");
+}
+
+function upsertConfirmQuantityField(overlay, provider, pricing, onQuantityChange) {
+  let container = overlay.querySelector("#confirmQuantityField");
+  if (!providerNeedsQuantity(provider, pricing)) {
+    container?.remove();
+    return null;
+  }
+
+  if (!container) {
+    container = document.createElement("label");
+    container.id = "confirmQuantityField";
+    container.className = "confirm-quantity-field";
+    const summary = overlay.querySelector(".confirm-summary");
+    summary?.insertAdjacentElement("afterend", container);
+  }
+
+  const copy = quantityCopyForProvider(provider, pricing);
+  const initialQuantity = Number(pricing?.unit_quantity || 1);
+  container.innerHTML = `
+    <span>${copy.label}</span>
+    <div>
+      <input
+        id="confirmUnitQuantity"
+        type="number"
+        inputmode="decimal"
+        min="${copy.min}"
+        step="${copy.step}"
+        value="${initialQuantity}"
+        placeholder="${copy.placeholder}"
+      >
+      <b>${copy.unit}</b>
+    </div>
+    <small>${copy.helper}</small>
+  `;
+
+  const input = container.querySelector("#confirmUnitQuantity");
+  input?.addEventListener("input", () => onQuantityChange(Math.max(copy.min, Number(input.value || copy.min))));
+  return input;
+}
+
+async function pricingForProviderSelection(provider, requestedHours) {
+  const needsLocalQuantityPricing = providerNeedsQuantity(provider) || providerPricingModel(provider) === "QUOTE";
+
+  if (needsLocalQuantityPricing) {
+    return buildLocalPricing(provider, { requestedHours, quantity: 1 });
+  }
+
+  try {
+    const pricing = await prepareRequestPricing({
+      clientUserId: currentUserId(),
+      categoryId: state.ui.selectedCategoryId,
+      providerId: provider.provider_id,
+      draft: {
+        ...state.requestDraft,
+        requestedHours
+      }
+    });
+
+    if (pricing?.eligible) return pricing;
+    return buildLocalPricing(provider, { requestedHours, basePricing: pricing });
+  } catch (error) {
+    console.warn("[client] prepareRequestPricing fallback", error);
+    return buildLocalPricing(provider, { requestedHours });
+  }
+}
+
+function openRequestConfirmation(provider, initialPricing) {
   const overlay = document.getElementById("requestConfirmOverlay");
   const acceptButton = overlay?.querySelector("[data-confirm-provider='accept']");
   const cancelButton = overlay?.querySelector("[data-confirm-provider='cancel']");
 
   if (!overlay || !acceptButton || !cancelButton) {
-    return Promise.resolve(window.confirm("Confirmas enviar la solicitud al prestador seleccionado?"));
+    return Promise.resolve({ confirmed: window.confirm("Confirmas enviar la solicitud al prestador seleccionado?"), pricing: initialPricing });
   }
 
   const selectedCategory = getSelectedCategory();
+  let pricing = { ...(initialPricing || {}) };
   document.getElementById("confirmProviderName").textContent = textFromProvider(provider);
   document.getElementById("confirmCategoryName").textContent = selectedCategory?.name || "Servicio";
   document.getElementById("confirmAddress").textContent = state.requestDraft.address || "Direccion pendiente";
@@ -249,10 +431,18 @@ function openRequestConfirmation(provider, pricing) {
     sessionDuration.textContent = minutes > 0 ? `${minutes} min` : "A coordinar";
   }
 
-  document.getElementById("confirmTotalPrice").textContent = formatCurrency(
-    pricing?.total_price,
-    pricing?.currency || "ARS"
-  );
+  const totalEl = document.getElementById("confirmTotalPrice");
+  const refreshTotal = (nextQuantity = pricing.unit_quantity || 1) => {
+    pricing = buildLocalPricing(provider, {
+      requestedHours: requestedHoursForCurrentCategory(),
+      quantity: nextQuantity,
+      basePricing: pricing
+    });
+    if (totalEl) totalEl.textContent = formatPricingTotal(pricing);
+  };
+
+  if (totalEl) totalEl.textContent = formatPricingTotal(pricing);
+  upsertConfirmQuantityField(overlay, provider, pricing, refreshTotal);
 
   overlay.hidden = false;
   acceptButton.focus();
@@ -262,7 +452,7 @@ function openRequestConfirmation(provider, pricing) {
       overlay.hidden = true;
       overlay.removeEventListener("click", onClick);
       window.removeEventListener("keydown", onKeydown);
-      resolve(confirmed);
+      resolve({ confirmed, pricing });
     };
 
     const onClick = (event) => {
@@ -1276,15 +1466,7 @@ async function handleProviderSelection(providerId) {
   if (!provider) return false;
 
   const requestedHours = requestedHoursForCurrentCategory();
-  const pricing = await prepareRequestPricing({
-    clientUserId: currentUserId(),
-    categoryId: state.ui.selectedCategoryId,
-    providerId: provider.provider_id,
-    draft: {
-      ...state.requestDraft,
-      requestedHours
-    }
-  });
+  let pricing = await pricingForProviderSelection(provider, requestedHours);
 
   if (!pricing?.eligible) {
     throw new Error(
@@ -1292,11 +1474,12 @@ async function handleProviderSelection(providerId) {
     );
   }
 
-  const confirmed = await openRequestConfirmation(provider, pricing);
-  if (!confirmed) {
+  const confirmation = await openRequestConfirmation(provider, pricing);
+  if (!confirmation?.confirmed) {
     setInfo("Solicitud no enviada. Podes revisar la categoria, direccion o elegir otro prestador.");
     return false;
   }
+  pricing = confirmation.pricing || pricing;
 
   const request = await createRequest({
     categoryId: state.ui.selectedCategoryId,
@@ -1310,7 +1493,14 @@ async function handleProviderSelection(providerId) {
     providerPrice: pricing.provider_price,
     platformFee: pricing.platform_fee,
     totalPrice: pricing.total_price,
-    currency: pricing.currency
+    currency: pricing.currency,
+    offeringId: pricing.offering_id,
+    serviceMode: pricing.service_mode,
+    pricingModel: pricing.pricing_model,
+    unitName: pricing.unit_name,
+    unitQuantity: pricing.unit_quantity,
+    sessionDurationMinutes: pricing.session_duration_minutes,
+    priceLabel: pricing.price_label
   });
 
   let paymentIntent = null;
@@ -1328,7 +1518,7 @@ async function handleProviderSelection(providerId) {
     draft.client.selectedProvider = provider;
     draft.client.activeRequest = {
       ...request,
-      providerName: provider.full_name,
+      providerName: textFromProvider(provider),
       requestType: draft.requestDraft.requestType,
       requestedHours,
       total_price: pricing.total_price,
@@ -1336,6 +1526,7 @@ async function handleProviderSelection(providerId) {
       service_mode: pricing.service_mode ?? null,
       pricing_model: pricing.pricing_model ?? null,
       unit_name: pricing.unit_name ?? null,
+      unit_quantity: pricing.unit_quantity ?? null,
       session_duration_minutes: pricing.session_duration_minutes ?? null,
       price_label: pricing.price_label ?? null,
       conversation_id: request?.conversation_id ?? null

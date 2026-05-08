@@ -173,6 +173,28 @@ function initialsFromName(name) {
   return parts.map((part) => part[0]?.toUpperCase() || "").join("") || "PR";
 }
 
+function firstNameFromText(value) {
+  const text = String(value ?? "")
+    .replace(/@.*/, "")
+    .replace(/[^a-zA-ZÀ-ÿ\s'-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const first = text.split(" ").find(Boolean);
+  if (!first || first.length < 2) return null;
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
+function providerDisplayName(provider) {
+  return (
+    firstNameFromText(provider.verified_first_name) ||
+    firstNameFromText(provider.public_name) ||
+    firstNameFromText(provider.display_name) ||
+    firstNameFromText(provider.full_name) ||
+    firstNameFromText(provider.name) ||
+    "Prestador"
+  );
+}
+
 function categoryIcon(category) {
   const code = String(category?.code || category?.name || "")
     .trim()
@@ -305,11 +327,33 @@ function providerMatchReason(provider, category) {
   if (provider.match_reason) return provider.match_reason;
   const categoryName = provider.category_name || provider.svc_categories?.name || category?.name || provider.specialty;
   const parts = [
-    categoryName ? `Coincide con ${categoryName}` : "Coincide con tu solicitud",
-    provider.accepts_immediate !== false ? "disponible ahora" : "puede responder programado",
-    Number(provider.distance_km) ? `${Number(provider.distance_km).toFixed(1)} km` : null
+    categoryName ? `Rubro: ${categoryName}` : "Coincide con tu solicitud",
+    Number(provider.distance_km) ? `a ${Number(provider.distance_km).toFixed(1)} km` : null
   ].filter(Boolean);
   return parts.join(" · ");
+}
+
+function normalizePricingModel(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function providerPriceLabel(provider) {
+  if (provider.price_label === "A coordinar" || provider.quote_required === true) return "A coordinar";
+
+  const price = Number(provider.price ?? provider.total_price ?? provider.provider_price ?? 0);
+  if (!Number.isFinite(price) || price <= 0) return "A coordinar";
+
+  const model = normalizePricingModel(provider.pricing_model || provider.pricingMode || provider.pricing_mode);
+  const unit = String(provider.unit_name || "").trim();
+
+  if (model === "SQUARE_METER") return `${currency(price, provider.currency)}/m2`;
+  if (model === "LINEAR_METER") return `${currency(price, provider.currency)}/m lineal`;
+  if (model === "HOURLY") return `${currency(price, provider.currency)}/hora`;
+  if (model === "UNIT") return `${currency(price, provider.currency)}/${unit || "unidad"}`;
+  if (model === "BASE_VISIT") return `${currency(price, provider.currency)} visita`;
+  if (model === "FIXED") return `${currency(price, provider.currency)} cerrado`;
+
+  return currency(price, provider.currency);
 }
 
 function requestStatusDescription(status) {
@@ -335,11 +379,12 @@ function normalizeProvider(provider, index = 0) {
   const distance = Number(provider.distance_km ?? 1 + index * 0.8);
   const score = Number(provider.score ?? Math.max(78, 98 - index * 4));
   const rating = Number(provider.rating ?? 5);
+  const displayName = providerDisplayName(provider);
 
   const normalized = {
     ...provider,
-    displayName: provider.full_name || provider.name || "Prestador disponible",
-    initials: provider.initials || initialsFromName(provider.full_name || provider.name),
+    displayName,
+    initials: provider.initials || initialsFromName(displayName),
     color: provider.color || providerColors[index % providerColors.length],
     score,
     rating,
@@ -361,6 +406,7 @@ function normalizeProvider(provider, index = 0) {
   };
 
   normalized.matchReason = providerMatchReason(normalized, null);
+  normalized.priceLabel = providerPriceLabel(normalized);
   return normalized;
 }
 
@@ -378,7 +424,7 @@ function starRating(rating) {
 function providerStatusBadge(provider) {
   return `
     <span class="availability-badge ${provider.available ? "is-online" : "is-busy"}">
-      <i aria-hidden="true"></i>${provider.available ? "Disponible" : "Ocupado"}
+      <i aria-hidden="true"></i>${provider.available ? "Online" : "Ocupado"}
     </span>
   `;
 }
@@ -745,7 +791,7 @@ function renderProviderCard(provider, selectedId) {
     <article class="provider-card ${selected ? "is-selected" : ""}" data-provider-focus="${escapeHtml(provider.provider_id)}">
       <header>
         <div class="provider-avatar" style="--avatar:${provider.color};">${escapeHtml(provider.initials)}</div>
-        <span class="score-badge">${escapeHtml(String(Math.round(provider.score)))}%</span>
+        <span class="score-badge" title="Compatibilidad con tu busqueda">${escapeHtml(String(Math.round(provider.score)))}%</span>
       </header>
       <strong>${escapeHtml(provider.displayName)}</strong>
       <small>${escapeHtml(provider.specialty)}</small>
@@ -753,7 +799,7 @@ function renderProviderCard(provider, selectedId) {
       <p class="provider-match-reason">${escapeHtml(provider.matchReason)}</p>
       <div class="provider-card-meta">
         <span><b>${escapeHtml(String(provider.eta))} min</b>${escapeHtml(provider.distance.toFixed(1))} km</span>
-        <span><small>desde</small><b>${currency(provider.price, provider.currency)}</b></span>
+        <span><small>Referencia</small><b>${escapeHtml(provider.priceLabel)}</b></span>
       </div>
       ${providerStatusBadge(provider)}
       <button class="provider-card-action" type="button" data-provider-select="${escapeHtml(provider.provider_id)}">
@@ -782,7 +828,7 @@ function renderProviderRow(provider, selectedId) {
         </div>
       </div>
       <div class="provider-row-end">
-        <strong>${currency(provider.price, provider.currency)}</strong>
+        <strong>${escapeHtml(provider.priceLabel)}</strong>
         <span>${escapeHtml(String(provider.eta))} min</span>
         <small>${escapeHtml(provider.distance.toFixed(1))} km</small>
       </div>

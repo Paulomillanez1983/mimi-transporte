@@ -69,6 +69,26 @@ function firstByProviderId(rows: Array<Record<string, unknown>> = []) {
   return map;
 }
 
+function firstNameFromText(value: unknown) {
+  const text = String(value ?? "")
+    .replace(/@.*/, "")
+    .replace(/[^a-zA-ZÀ-ÿ\s'-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const first = text.split(" ").find(Boolean);
+  if (!first || first.length < 2) return null;
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
+function providerPublicName(provider: Record<string, unknown>, identity?: Record<string, unknown>) {
+  return (
+    firstNameFromText(identity?.full_name_detected) ||
+    firstNameFromText(provider.full_name) ||
+    firstNameFromText(provider.name) ||
+    "Prestador"
+  );
+}
+
 function referencePrice(pricing?: Record<string, unknown>, offering?: Record<string, unknown>) {
   const model = String(offering?.pricing_model || "").toUpperCase();
   const candidates = [
@@ -149,7 +169,33 @@ serve(async (req) => {
     }
 
     if (providersFromRpc.length) {
-      return json({ ok: true, providers: providersFromRpc, count: providersFromRpc.length, source: "rpc" });
+      const rpcProviderIds = [...new Set(providersFromRpc.map((row) => String(row.provider_id || row.id || "")).filter(Boolean))];
+      const { data: identities, error: identityError } = rpcProviderIds.length
+        ? await admin
+            .from("svc_provider_identity_checks")
+            .select("provider_id,full_name_detected,status,reviewed_at,created_at")
+            .in("provider_id", rpcProviderIds)
+            .order("reviewed_at", { ascending: false, nullsFirst: false })
+            .limit(150)
+        : { data: [], error: null };
+
+      if (identityError) throw identityError;
+
+      const identityByProvider = firstByProviderId(identities || []);
+      const publicProviders = providersFromRpc.map((provider) => {
+        const providerId = String(provider.provider_id || provider.id || "");
+        const identity = identityByProvider.get(providerId) || {};
+        const publicName = providerPublicName(provider, identity);
+        return {
+          ...provider,
+          full_name: publicName,
+          name: publicName,
+          public_name: publicName,
+          verified_first_name: firstNameFromText(identity.full_name_detected),
+        };
+      });
+
+      return json({ ok: true, providers: publicProviders, count: publicProviders.length, source: "rpc" });
     }
 
     const { data: categoryLinks, error: categoryError } = await admin
@@ -167,7 +213,7 @@ serve(async (req) => {
       return json({ ok: true, providers: [], count: 0, source: "tables" });
     }
 
-    const [providersResult, profilesResult, pricingResult, offeringsResult] = await Promise.all([
+    const [providersResult, profilesResult, pricingResult, offeringsResult, identityResult] = await Promise.all([
       admin
         .from("svc_providers")
         .select("id,full_name,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
@@ -195,9 +241,15 @@ serve(async (req) => {
         .eq("category_id", categoryId)
         .eq("active", true)
         .limit(100),
+      admin
+        .from("svc_provider_identity_checks")
+        .select("provider_id,full_name_detected,status,reviewed_at,created_at")
+        .in("provider_id", providerIds)
+        .order("reviewed_at", { ascending: false, nullsFirst: false })
+        .limit(150),
     ]);
 
-    for (const result of [providersResult, profilesResult, pricingResult, offeringsResult]) {
+    for (const result of [providersResult, profilesResult, pricingResult, offeringsResult, identityResult]) {
       if (result.error) throw result.error;
     }
 
@@ -205,6 +257,7 @@ serve(async (req) => {
     const pricing = firstByProviderId(pricingResult.data || []);
     const offerings = firstByProviderId(offeringsResult.data || []);
     const categoryByProvider = firstByProviderId(categoryLinks || []);
+    const identity = firstByProviderId(identityResult.data || []);
 
     const providers = ((providersResult.data || []) as ProviderRow[])
       .map((provider, index) => {
@@ -212,13 +265,17 @@ serve(async (req) => {
         const priceRow = pricing.get(provider.id) || {};
         const offering = offerings.get(provider.id) || {};
         const category = (categoryByProvider.get(provider.id)?.svc_categories || {}) as Record<string, unknown>;
+        const identityRow = identity.get(provider.id) || {};
+        const publicName = providerPublicName(provider as unknown as Record<string, unknown>, identityRow);
         const km = distanceKm(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
         const price = referencePrice(priceRow, offering);
 
         return {
           provider_id: provider.id,
-          full_name: provider.full_name,
-          name: provider.full_name,
+          full_name: publicName,
+          name: publicName,
+          public_name: publicName,
+          verified_first_name: firstNameFromText(identityRow.full_name_detected),
           avatar_url: provider.avatar_url,
           status: provider.status,
           category_id: categoryId,
