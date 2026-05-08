@@ -909,6 +909,25 @@ export async function loadProviderWorkspace(providerId) {
     )
   ]);
 
+  // ¿Ya aceptó los términos de la versión actual? (para no pedirlos cada vez)
+  const supabase = getSupabaseClient();
+  let legalAcceptances = [];
+  if (supabase && profileRows?.[0]?.user_id) {
+    try {
+      const { data } = await supabase
+        .from("legal_acceptances")
+        .select("document_code, document_version, accepted_at")
+        .eq("user_id", profileRows[0].user_id)
+        .eq("accepted", true)
+        .in("document_code", ["terms_providers", "privacy_policy"])
+        .order("accepted_at", { ascending: false })
+        .limit(20);
+      legalAcceptances = data ?? [];
+    } catch (e) {
+      console.warn("[MIMI] no se pudieron leer aceptaciones legales:", e?.message);
+    }
+  }
+
   return {
     profile: profileRows?.[0] ?? null,
     profileDetail: profileDetailRows?.[0] ?? null,
@@ -918,7 +937,8 @@ export async function loadProviderWorkspace(providerId) {
     documents: normalizeProviderDocuments(documentRows),
     reviews: reviewRows ?? [],
     categories: categoryRows ?? [],
-    completedCount: completedRows?.length ?? 0
+    completedCount: completedRows?.length ?? 0,
+    legalAcceptances
   };
 }
 

@@ -1073,7 +1073,8 @@ setTimeout(async () => {
           offerings,
           availability,
           documents,
-          reviews
+          reviews,
+          legalAcceptances: Array.isArray(workspace.legalAcceptances) ? workspace.legalAcceptances : []
         },
 stats: {
   rating: Number(profile?.rating_avg ?? 0),
@@ -2043,6 +2044,31 @@ async handleProviderBusinessAction(action, source = null) {
     return;
   }
 
+  if (action === "edit-offering") {
+    const offeringId = source?.dataset?.offeringId;
+    if (!offeringId) return;
+    actions.updateState({
+      provider: {
+        ...this.state.provider,
+        editingOfferingId: offeringId,
+      },
+    });
+    // re-render con el offering precargado en el form
+    renderProviderScreen(this.state);
+    // scroll al form
+    document.getElementById("providerBusinessForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    this.showToast("Editando servicio. Modificá y guardá.", "info");
+    return;
+  }
+
+  if (action === "delete-offering") {
+    const offeringId = source?.dataset?.offeringId;
+    if (!offeringId) return;
+    if (!window.confirm("¿Eliminar este servicio? El cliente ya no podrá solicitarlo.")) return;
+    await this.handleProviderOfferingDelete(offeringId);
+    return;
+  }
+
   if (action === "refresh-location") {
     this.updateMapToCurrentPosition();
     this.showToast("Ubicacion actualizada", "success");
@@ -2444,6 +2470,34 @@ revealProviderServiceDetails(form = document.getElementById("providerBusinessFor
   }, 120);
 }
 
+async handleProviderOfferingDelete(offeringId) {
+  const providerId = this.state?.session?.providerId;
+  if (!providerId || !offeringId) return;
+
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error("Sin conexión con Supabase");
+
+    // Soft-delete: marcamos active=false para no perder histórico de requests asociados
+    const { error } = await supabase
+      .from("svc_provider_service_offerings")
+      .update({ active: false, updated_at: new Date().toISOString() })
+      .eq("id", offeringId)
+      .eq("provider_id", providerId);
+
+    if (error) throw error;
+
+    // Refrescar workspace para que desaparezca de la UI
+    const workspace = await loadProviderWorkspace(providerId);
+    this.applyWorkspaceToState(workspace);
+    renderProviderScreen(this.state);
+    this.showToast("Servicio eliminado.", "success");
+  } catch (error) {
+    console.error("[MIMI] delete offering error:", error);
+    this.showToast(`No se pudo eliminar: ${error?.message || "error"}`, "error");
+  }
+}
+
 async handleProviderAvatarUpload(file) {
   const status = document.getElementById("providerAvatarStatus");
   const preview = document.getElementById("providerAvatarPreview");
@@ -2491,13 +2545,30 @@ async handleProviderAvatarUpload(file) {
       );
     if (updateError) throw updateError;
 
-    // Actualizar UI sin recargar
+    // Actualizar UI sin recargar — el preview es un div con <img> o <span>.
+    // Reemplazamos por un <img> con la URL nueva.
     if (preview) {
-      preview.style.backgroundImage = `url('${publicUrl}')`;
-      const initialSpan = preview.querySelector("span");
-      if (initialSpan) initialSpan.remove();
+      preview.innerHTML = `<img src="${publicUrl}" alt="Foto de perfil" loading="lazy">`;
     }
     if (hiddenUrl) hiddenUrl.value = publicUrl;
+
+    // Sincronizar con el state para que próximos renders muestren la nueva foto
+    if (this.state?.provider?.business?.profile) {
+      this.state.provider.business.profile.avatar_public_url = publicUrl;
+    }
+    actions.updateState({
+      provider: {
+        ...this.state.provider,
+        business: {
+          ...(this.state.provider?.business ?? {}),
+          profile: {
+            ...(this.state.provider?.business?.profile ?? {}),
+            avatar_public_url: publicUrl,
+          },
+        },
+      },
+    });
+
     if (status) status.textContent = "Foto actualizada.";
     this.showToast("Foto de perfil actualizada.", "success");
   } catch (error) {
@@ -2525,15 +2596,29 @@ async handleProviderAvatarRemove() {
       );
     if (updateError) throw updateError;
 
+    // Reemplazar preview por iniciales
     if (preview) {
-      preview.style.backgroundImage = "";
-      if (!preview.querySelector("span")) {
-        const span = document.createElement("span");
-        span.textContent = (this.state?.provider?.profile?.first_name || "P").slice(0, 1).toUpperCase();
-        preview.appendChild(span);
-      }
+      const initial = ((this.state?.provider?.business?.profile?.first_name ||
+                        this.state?.session?.userName ||
+                        "P").slice(0, 1)).toUpperCase();
+      preview.innerHTML = `<span>${initial}</span>`;
     }
     if (hiddenUrl) hiddenUrl.value = "";
+
+    // Sincronizar state
+    actions.updateState({
+      provider: {
+        ...this.state.provider,
+        business: {
+          ...(this.state.provider?.business ?? {}),
+          profile: {
+            ...(this.state.provider?.business?.profile ?? {}),
+            avatar_public_url: null,
+          },
+        },
+      },
+    });
+
     if (status) status.textContent = "Foto eliminada.";
     this.showToast("Foto de perfil eliminada.", "info");
   } catch (error) {

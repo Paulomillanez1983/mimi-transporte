@@ -887,7 +887,7 @@ function renderOfferingsSummary(offerings = []) {
                   : `${currency(amount, offering.currency)}${pricingModel === "HOURLY" ? " / hora" : ""}`;
 
             return `
-              <article class="provider-pricing-card">
+              <article class="provider-pricing-card" data-offering-id="${escapeHtml(offering.id ?? "")}">
                 <strong>${escapeHtml(offering.title ?? "Trabajo publicado")}</strong>
                 <p class="muted">${escapeHtml(offering.public_summary ?? offering.description ?? "Sin resumen público")}</p>
                 <div class="summary-metrics">
@@ -907,6 +907,14 @@ function renderOfferingsSummary(offerings = []) {
                     <span>Duración</span>
                     <strong>${offering.duration_minutes ? `${escapeHtml(String(offering.duration_minutes))} min` : "A coordinar"}</strong>
                   </div>
+                </div>
+                <div class="provider-offering-actions">
+                  <button type="button" class="btn-secondary" data-provider-business-action="edit-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">
+                    Editar
+                  </button>
+                  <button type="button" class="btn-link-danger" data-provider-business-action="delete-offering" data-offering-id="${escapeHtml(offering.id ?? "")}">
+                    Eliminar
+                  </button>
                 </div>
               </article>
             `;
@@ -1124,7 +1132,10 @@ function renderProviderBusiness(state) {
             primaryOffering?.currency || pricing[0]?.currency
           );
 
-  const firstOffering = primaryOffering ?? null;
+  // Si el usuario tocó "Editar" en una card, usar ese offering específico en el form
+  const editingId = state.provider?.editingOfferingId ?? null;
+  const editingOffering = editingId ? offerings.find((o) => o?.id === editingId) : null;
+  const firstOffering = editingOffering ?? primaryOffering ?? null;
   const defaultCategory = selectedCategories[0] ?? categories[0] ?? null;
   const defaults = recommendedDefaultsForCategory(defaultCategory);
   const pricingModel = firstOffering?.pricing_model ?? defaults.pricingModel;
@@ -1149,19 +1160,22 @@ function renderProviderBusiness(state) {
         </section>
 
         <section class="provider-simple-card provider-photo-card">
-          <div class="provider-photo-preview">
+          <div class="provider-photo-preview" id="providerAvatarPreview">
             ${canPreviewProviderAvatar
               ? `<img src="${escapeHtml(providerAvatarUrl)}" alt="Foto de perfil" loading="lazy">`
               : `<span>${escapeHtml(initialsFromName(state.provider.profile?.full_name || state.session.userName || "MIMI"))}</span>`}
           </div>
           <div>
             <strong>Foto de perfil</strong>
-            <p>Opcional. Se muestra al cliente cuando solicita tu servicio.</p>
+            <p>Se muestra al cliente cuando solicita tu servicio. Se sube apenas la elegís.</p>
             <label class="provider-file-pill">
-              <input name="providerAvatarFile" type="file" accept="image/jpeg,image/png,image/webp">
-              Elegir foto
+              <input name="providerAvatarFile" id="providerAvatarInput" type="file" accept="image/jpeg,image/png,image/webp">
+              ${canPreviewProviderAvatar ? "Cambiar foto" : "Elegir foto"}
             </label>
+            ${canPreviewProviderAvatar ? `<button type="button" class="provider-avatar-remove-link" data-provider-business-action="remove-avatar">Quitar foto</button>` : ""}
+            <small id="providerAvatarStatus" class="provider-avatar-status"></small>
           </div>
+          <input type="hidden" name="providerAvatarPublicUrl" value="${escapeHtml(providerAvatarUrl ?? "")}">
         </section>
 
         <section class="provider-simple-card provider-ai-card" data-provider-setup-step="1">
@@ -1349,21 +1363,6 @@ function renderProviderBusiness(state) {
               <span>Nombre de pila <small style="color:#dc2626;font-weight:600">*</small></span>
               <input name="providerFirstName" type="text" maxlength="40" required value="${escapeHtml(detail?.first_name ?? "")}" placeholder="Ej: Juan, María, Paulo">
             </label>
-            <div class="input-group provider-field-wide provider-avatar-uploader">
-              <span>Foto de perfil <small>(visible cuando el cliente te selecciona)</small></span>
-              <div class="provider-avatar-row">
-                <div class="provider-avatar-preview" id="providerAvatarPreview" style="${detail?.avatar_public_url ? `background-image:url('${escapeHtml(detail.avatar_public_url)}')` : ""}">
-                  ${detail?.avatar_public_url ? "" : `<span>${escapeHtml((detail?.first_name ?? "P").slice(0,1).toUpperCase())}</span>`}
-                </div>
-                <div class="provider-avatar-actions">
-                  <input type="file" id="providerAvatarInput" accept="image/jpeg,image/png,image/webp" hidden>
-                  <button class="btn-secondary" type="button" data-provider-business-action="open-avatar-picker">${detail?.avatar_public_url ? "Cambiar foto" : "Subir foto"}</button>
-                  ${detail?.avatar_public_url ? `<button class="btn-link" type="button" data-provider-business-action="remove-avatar">Quitar</button>` : ""}
-                </div>
-              </div>
-              <input type="hidden" name="providerAvatarPublicUrl" value="${escapeHtml(detail?.avatar_public_url ?? "")}">
-              <small id="providerAvatarStatus" class="provider-avatar-status"></small>
-            </div>
             <label class="input-group provider-field-wide">
               <span>Bio corta</span>
               <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Ej: abogado penalista, consultas online y presenciales">
@@ -1397,10 +1396,30 @@ function renderProviderBusiness(state) {
             </div>
             <strong>${quality.score}%</strong>
           </div>
-          <label class="provider-check-item provider-terms-box">
-            <input name="providerTermsAccepted" type="checkbox" required>
-            <span>Acepto los <a href="../terminos.html" target="_blank" rel="noopener">Terminos para prestadores</a>. Entiendo que MIMI es una plataforma tecnologica intermediaria.</span>
-          </label>
+          ${(() => {
+            // Si el usuario ya aceptó terms_providers v2026.1.0 antes, no le pedimos volver a aceptar.
+            const acceptances = state.provider?.business?.legalAcceptances ?? [];
+            const acceptedTerms = acceptances.find(
+              (a) => a.document_code === "terms_providers" && a.document_version === "2026.1.0"
+            );
+            const acceptedPrivacy = acceptances.find(
+              (a) => a.document_code === "privacy_policy" && a.document_version === "2026.1.0"
+            );
+            const alreadyAccepted = Boolean(acceptedTerms && acceptedPrivacy);
+            return alreadyAccepted
+              ? `
+                <div class="provider-terms-accepted">
+                  <span>✓ Términos y privacidad aceptados (${new Date(acceptedTerms.accepted_at).toLocaleDateString("es-AR")})</span>
+                  <input name="providerTermsAccepted" type="checkbox" checked hidden>
+                </div>
+              `
+              : `
+                <label class="provider-check-item provider-terms-box">
+                  <input name="providerTermsAccepted" type="checkbox" required>
+                  <span>Acepto los <a href="../terminos.html" target="_blank" rel="noopener">Términos para prestadores</a> y la <a href="../privacidad.html" target="_blank" rel="noopener">Política de privacidad</a>. Entiendo que MIMI es una plataforma tecnológica intermediaria.</span>
+                </label>
+              `;
+          })()}
           <button class="btn-primary provider-save-button" type="submit">Guardar y publicar servicio</button>
         </section>
       </form>

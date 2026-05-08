@@ -11353,6 +11353,60 @@ body.provider-auth-required .notification-container {
   display: none !important;
 }
 
+/* Términos ya aceptados — pill verde discreto */
+#providerBusinessPanel .provider-terms-accepted {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+  color: #065f46;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Botones edit/delete en cada offering */
+#providerBusinessPanel .provider-offering-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e2e8f0;
+}
+#providerBusinessPanel .provider-offering-actions .btn-secondary {
+  flex: 1;
+  min-height: 36px;
+  font-size: 13px;
+}
+#providerBusinessPanel .provider-offering-actions .btn-link-danger {
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#providerBusinessPanel .provider-offering-actions .btn-link-danger:hover {
+  background: #fee2e2;
+}
+
+/* Link "Quitar foto" debajo del uploader */
+#providerBusinessPanel .provider-avatar-remove-link {
+  background: none;
+  border: 0;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 4px;
+  display: inline-block;
+}
+
 /* Avatar uploader del prestador */
 #providerBusinessPanel .provider-avatar-uploader {
   padding: 12px;
