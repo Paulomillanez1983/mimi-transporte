@@ -311,9 +311,179 @@ export async function searchProviders(categoryId, draft = {}) {
     requested_hours: Number(draft.requestedHours ?? 2)
   };
 
-  const data = await invokeFunction(appConfig.functions.searchProviders, payload);
+  try {
+    const data = await invokeFunction(appConfig.functions.searchProviders, payload);
+    const providers = data?.providers ?? data?.data ?? data ?? [];
 
-  return data?.providers ?? data?.data ?? data ?? [];
+    if (Array.isArray(providers) && providers.length) {
+      return providers;
+    }
+  } catch (error) {
+    console.warn("[MIMI servicios] svc-search-providers no devolvio resultados usables; probando fallback directo.", error);
+  }
+
+  return searchProvidersFromTables(categoryId, draft);
+}
+
+function distanceKmBetween(latA, lngA, latB, lngB) {
+  const aLat = Number(latA);
+  const aLng = Number(lngA);
+  const bLat = Number(latB);
+  const bLng = Number(lngB);
+
+  if (![aLat, aLng, bLat, bLng].every(Number.isFinite)) return null;
+
+  const toRad = (value) => (value * Math.PI) / 180;
+  const earthKm = 6371;
+  const deltaLat = toRad(bLat - aLat);
+  const deltaLng = toRad(bLng - aLng);
+  const sinLat = Math.sin(deltaLat / 2);
+  const sinLng = Math.sin(deltaLng / 2);
+  const a =
+    sinLat * sinLat +
+    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * sinLng * sinLng;
+
+  return earthKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function firstByProviderId(rows = []) {
+  const map = new Map();
+
+  for (const row of rows ?? []) {
+    if (row?.provider_id && !map.has(row.provider_id)) {
+      map.set(row.provider_id, row);
+    }
+  }
+
+  return map;
+}
+
+function referencePriceFromRows(pricing, offering) {
+  const pricingModel = String(offering?.pricing_model ?? "").toUpperCase();
+  const candidates = [
+    pricingModel === "FIXED" ? offering?.fixed_price : null,
+    pricingModel === "BASE_VISIT" ? offering?.base_visit_fee : null,
+    pricingModel === "UNIT" || pricingModel === "SQUARE_METER" || pricingModel === "LINEAR_METER"
+      ? offering?.unit_price
+      : null,
+    offering?.price_per_hour,
+    pricing?.price_per_hour,
+    offering?.fixed_price,
+    offering?.base_visit_fee,
+    offering?.unit_price
+  ];
+
+  return Number(candidates.find((value) => Number(value) > 0) ?? 0);
+}
+
+async function searchProvidersFromTables(categoryId, draft = {}) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase || !categoryId) return [];
+
+  const { data: categoryLinks, error: categoryError } = await supabase
+    .from("svc_provider_categories")
+    .select("provider_id,category_id,active,svc_categories(name,code,description)")
+    .eq("category_id", categoryId)
+    .eq("active", true)
+    .limit(80);
+
+  if (categoryError) {
+    console.warn("[MIMI servicios] fallback providers: categorias no disponibles", categoryError);
+    return [];
+  }
+
+  const providerIds = [...new Set((categoryLinks ?? []).map((row) => row.provider_id).filter(Boolean))];
+  if (!providerIds.length) return [];
+
+  const [providersResult, profilesResult, pricingResult, offeringsResult] = await Promise.all([
+    supabase
+      .from("svc_providers")
+      .select("id,full_name,email,phone,avatar_url,status,approved,blocked,rating_avg,rating_count,last_lat,last_lng,last_seen_at")
+      .in("id", providerIds)
+      .eq("approved", true)
+      .eq("blocked", false)
+      .in("status", ["ONLINE_IDLE", "BOOKED_UPCOMING"])
+      .limit(80),
+    supabase
+      .from("svc_provider_profiles")
+      .select("provider_id,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
+      .in("provider_id", providerIds)
+      .limit(80),
+    supabase
+      .from("svc_provider_pricing")
+      .select("provider_id,category_id,currency,price_per_hour,minimum_hours,maximum_hours,active")
+      .in("provider_id", providerIds)
+      .eq("category_id", categoryId)
+      .eq("active", true)
+      .limit(80),
+    supabase
+      .from("svc_provider_service_offerings")
+      .select("id,provider_id,category_id,title,description,pricing_model,currency,price_per_hour,base_visit_fee,fixed_price,unit_name,unit_price,minimum_charge,minimum_hours,maximum_hours,quote_required,service_mode,duration_minutes,location_policy,public_summary,active")
+      .in("provider_id", providerIds)
+      .eq("category_id", categoryId)
+      .eq("active", true)
+      .limit(80)
+  ]);
+
+  for (const result of [providersResult, profilesResult, pricingResult, offeringsResult]) {
+    if (result.error) {
+      console.warn("[MIMI servicios] fallback providers: tabla no disponible", result.error);
+      return [];
+    }
+  }
+
+  const profilesByProvider = firstByProviderId(profilesResult.data);
+  const pricingByProvider = firstByProviderId(pricingResult.data);
+  const offeringsByProvider = firstByProviderId(offeringsResult.data);
+  const categoryByProvider = firstByProviderId(categoryLinks);
+  const serviceLat = Number(draft.lat ?? draft.service_lat);
+  const serviceLng = Number(draft.lng ?? draft.service_lng);
+
+  return (providersResult.data ?? [])
+    .map((provider, index) => {
+      const profile = profilesByProvider.get(provider.id) ?? {};
+      const pricing = pricingByProvider.get(provider.id) ?? {};
+      const offering = offeringsByProvider.get(provider.id) ?? {};
+      const category = categoryByProvider.get(provider.id)?.svc_categories ?? {};
+      const distanceKm = distanceKmBetween(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
+      const price = referencePriceFromRows(pricing, offering);
+
+      return {
+        provider_id: provider.id,
+        full_name: provider.full_name,
+        name: provider.full_name,
+        avatar_url: provider.avatar_url,
+        status: provider.status,
+        category_id: categoryId,
+        category_name: category.name,
+        specialty: offering.title || category.name || profile.public_headline || "Prestador MIMI",
+        provider_price: price,
+        total_price: price,
+        currency: offering.currency || pricing.currency || "ARS",
+        distance_km: distanceKm ?? 1 + index * 0.8,
+        estimated_eta_min: distanceKm ? Math.max(5, Math.round(distanceKm * 4)) : 10 + index * 3,
+        score: Math.max(70, 96 - index * 3),
+        rating: provider.rating_avg ?? 5,
+        rating_count: provider.rating_count ?? 0,
+        accepts_immediate: profile.accepts_immediate !== false && provider.status === "ONLINE_IDLE",
+        accepts_scheduled: profile.accepts_scheduled !== false,
+        bio: profile.bio ?? profile.professional_summary ?? offering.description ?? null,
+        city: profile.city ?? null,
+        province: profile.province ?? null,
+        pricing_mode: profile.pricing_mode ?? offering.pricing_model ?? pricing.pricing_model ?? null,
+        offering_id: offering.id ?? null,
+        service_mode: offering.service_mode ?? null,
+        pricing_model: offering.pricing_model ?? null,
+        unit_name: offering.unit_name ?? null,
+        session_duration_minutes: offering.duration_minutes ?? null,
+        price_label: offering.quote_required ? "A coordinar" : null,
+        source: "table_fallback"
+      };
+    })
+    .filter((provider) => provider.accepts_immediate !== false)
+    .sort((a, b) => Number(a.distance_km ?? 999) - Number(b.distance_km ?? 999))
+    .slice(0, 20);
 }
 
 export async function prepareRequestPricing({

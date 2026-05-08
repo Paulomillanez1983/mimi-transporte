@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.07.17";
+const MIMI_PROVIDER_BUILD = "2026.05.08.1";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -1918,10 +1918,12 @@ async handleProviderBusinessSubmit(event) {
     await this.acceptProviderTerms();
     const workspace = await saveProviderWorkspace(providerId, payload);
     this.applyWorkspaceToState(workspace);
+    this.switchTab("now");
+    this.setBottomSheetState("peek");
     renderProviderScreen(this.state);
     this.renderServicesAndPricing();
     this.renderSheetSummary();
-    this.showToast("Setup comercial guardado", "success");
+    this.showToast("Servicio publicado. Ya podes ponerte online.", "success");
   } catch (err) {
     console.error("[MIMI] Error guardando setup comercial:", err);
     this.showToast(err?.message ?? "No pudimos guardar tus servicios", "error");
