@@ -910,7 +910,7 @@ export async function loadProviderWorkspace(providerId) {
   ]);
 
   // ¿Ya aceptó los términos de la versión actual? (para no pedirlos cada vez)
-  const supabase = getSupabaseClient();
+  // El cliente `supabase` ya está declarado al inicio de la función.
   let legalAcceptances = [];
   if (supabase && profileRows?.[0]?.user_id) {
     try {
