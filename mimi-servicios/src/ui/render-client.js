@@ -338,10 +338,13 @@ function normalizePricingModel(value) {
 }
 
 function providerPriceLabel(provider) {
-  if (provider.price_label === "A coordinar" || provider.quote_required === true) return "A coordinar";
-
   const price = Number(provider.price ?? provider.total_price ?? provider.provider_price ?? 0);
-  if (!Number.isFinite(price) || price <= 0) return "A coordinar";
+  const hasPrice = Number.isFinite(price) && price > 0;
+
+  // Solo "A coordinar" si NO hay precio cargado.
+  // quote_required indica que el prestador prefiere coordinar antes de confirmar,
+  // pero si tiene un precio referencial cargado, lo mostramos.
+  if (!hasPrice) return "A coordinar";
 
   const model = normalizePricingModel(provider.pricing_model || provider.pricingMode || provider.pricing_mode);
   const unit = String(provider.unit_name || "").trim();

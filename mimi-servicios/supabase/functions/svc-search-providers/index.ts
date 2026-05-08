@@ -306,7 +306,15 @@ serve(async (req) => {
           pricing_model: offering.pricing_model || null,
           unit_name: offering.unit_name || null,
           session_duration_minutes: offering.duration_minutes || null,
-          price_label: offering.quote_required ? "A coordinar" : null,
+          // "A coordinar" SOLO si quote_required Y no hay precio cargado
+          price_label:
+            offering.quote_required &&
+            !offering.unit_price &&
+            !offering.price_per_hour &&
+            !offering.fixed_price &&
+            !offering.base_visit_fee
+              ? "A coordinar"
+              : null,
           source: "tables",
         };
       })
