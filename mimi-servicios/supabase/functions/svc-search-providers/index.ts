@@ -207,7 +207,7 @@ serve(async (req) => {
             .from("svc_provider_identity_checks")
             .select("provider_id,full_name_detected,status,created_at")
             .in("provider_id", rpcProviderIds)
-<<    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
             .limit(150)
         : { data: [], error: null };
 
@@ -258,7 +258,7 @@ serve(async (req) => {
         .limit(100),
       admin
         .from("svc_provider_profiles")
-        .select("provider_id,first_name,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
+        .select("provider_id,first_name,avatar_public_url,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
         .in("provider_id", providerIds)
         .limit(100),
       admin
@@ -279,7 +279,7 @@ serve(async (req) => {
         .from("svc_provider_identity_checks")
         .select("provider_id,full_name_detected,status,created_at")
         .in("provider_id", providerIds)
-<<    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
         .limit(150),
     ]);
 
@@ -303,7 +303,11 @@ serve(async (req) => {
         const publicName = providerPublicName(provider as unknown as Record<string, unknown>, identityRow, profile);
         const km = distanceKm(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
         const price = referencePrice(priceRow, offering);
-        const avatarUrl = await publicAvatarUrl(admin, provider.avatar_url);
+        // Priorizar avatar pública subida por el prestador (provider-avatars bucket)
+        // sobre el avatar de Google OAuth.
+        const avatarUrl =
+          (profile as { avatar_public_url?: string })?.avatar_public_url ||
+          (await publicAvatarUrl(admin, provider.avatar_url));
 
         return {
           provider_id: provider.id,

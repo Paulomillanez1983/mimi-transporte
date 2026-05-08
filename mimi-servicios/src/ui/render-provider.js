@@ -1349,6 +1349,21 @@ function renderProviderBusiness(state) {
               <span>Nombre de pila <small style="color:#dc2626;font-weight:600">*</small></span>
               <input name="providerFirstName" type="text" maxlength="40" required value="${escapeHtml(detail?.first_name ?? "")}" placeholder="Ej: Juan, María, Paulo">
             </label>
+            <div class="input-group provider-field-wide provider-avatar-uploader">
+              <span>Foto de perfil <small>(visible cuando el cliente te selecciona)</small></span>
+              <div class="provider-avatar-row">
+                <div class="provider-avatar-preview" id="providerAvatarPreview" style="${detail?.avatar_public_url ? `background-image:url('${escapeHtml(detail.avatar_public_url)}')` : ""}">
+                  ${detail?.avatar_public_url ? "" : `<span>${escapeHtml((detail?.first_name ?? "P").slice(0,1).toUpperCase())}</span>`}
+                </div>
+                <div class="provider-avatar-actions">
+                  <input type="file" id="providerAvatarInput" accept="image/jpeg,image/png,image/webp" hidden>
+                  <button class="btn-secondary" type="button" data-provider-business-action="open-avatar-picker">${detail?.avatar_public_url ? "Cambiar foto" : "Subir foto"}</button>
+                  ${detail?.avatar_public_url ? `<button class="btn-link" type="button" data-provider-business-action="remove-avatar">Quitar</button>` : ""}
+                </div>
+              </div>
+              <input type="hidden" name="providerAvatarPublicUrl" value="${escapeHtml(detail?.avatar_public_url ?? "")}">
+              <small id="providerAvatarStatus" class="provider-avatar-status"></small>
+            </div>
             <label class="input-group provider-field-wide">
               <span>Bio corta</span>
               <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Ej: abogado penalista, consultas online y presenciales">

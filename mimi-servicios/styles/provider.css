@@ -11353,6 +11353,67 @@ body.provider-auth-required .notification-container {
   display: none !important;
 }
 
+/* Avatar uploader del prestador */
+#providerBusinessPanel .provider-avatar-uploader {
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+#providerBusinessPanel .provider-avatar-uploader > span {
+  font-weight: 600;
+  font-size: 13px;
+  color: #334155;
+  margin-bottom: 8px;
+  display: block;
+}
+#providerBusinessPanel .provider-avatar-uploader > span > small {
+  font-weight: 400;
+  color: #64748b;
+  margin-left: 6px;
+}
+#providerBusinessPanel .provider-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+#providerBusinessPanel .provider-avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  background-size: cover;
+  background-position: center;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+#providerBusinessPanel .provider-avatar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+#providerBusinessPanel .provider-avatar-actions .btn-link {
+  background: none;
+  border: 0;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+#providerBusinessPanel .provider-avatar-status {
+  display: block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #64748b;
+  min-height: 14px;
+}
+
 #providerBusinessPanel .provider-simple-footer {
   display: grid;
   gap: 12px;

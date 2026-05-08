@@ -747,7 +747,10 @@ function renderCategories(state) {
         .join("") +
       (!state.ui.showAllCategories && filtered.length > maxVisible
         ? `
-<<          <button class="category-chip category-more-chip" data-category-toggle="expand" type="button">`r`n            <span aria-hidden="true">&#10133;</span>`r`n            <strong>Ampliar</strong>`r`n            <small>Ver mas rubros</small>
+          <button class="category-chip category-more-chip" data-category-toggle="expand" type="button">
+            <span aria-hidden="true">&#10133;</span>
+            <strong>Ampliar</strong>
+            <small>Ver más rubros</small>
           </button>
         `
         : "")

@@ -1509,6 +1509,14 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("change", (event) => {
   const target = event.target;
+
+  // Avatar uploader: cuando el usuario elige un archivo, lo subimos
+  if (target?.id === "providerAvatarInput") {
+    const file = target.files?.[0];
+    if (file) this.handleProviderAvatarUpload(file);
+    return;
+  }
+
   if (target?.matches?.("[name='offering:0:categoryId'], [name='offering:0:serviceMode']")) {
     this.applyProviderCategoryUiRules(target.closest("form"));
   }
@@ -2025,6 +2033,16 @@ async handleProviderBusinessAction(action, source = null) {
     return;
   }
 
+  if (action === "open-avatar-picker") {
+    document.getElementById("providerAvatarInput")?.click();
+    return;
+  }
+
+  if (action === "remove-avatar") {
+    await this.handleProviderAvatarRemove();
+    return;
+  }
+
   if (action === "refresh-location") {
     this.updateMapToCurrentPosition();
     this.showToast("Ubicacion actualizada", "success");
@@ -2424,6 +2442,104 @@ revealProviderServiceDetails(form = document.getElementById("providerBusinessFor
     this.scrollElementIntoView(details, { block: "start" });
     title?.focus?.({ preventScroll: true });
   }, 120);
+}
+
+async handleProviderAvatarUpload(file) {
+  const status = document.getElementById("providerAvatarStatus");
+  const preview = document.getElementById("providerAvatarPreview");
+  const hiddenUrl = document.querySelector("[name='providerAvatarPublicUrl']");
+  const providerId = this.state?.session?.providerId;
+
+  if (!file) return;
+  if (!providerId) {
+    if (status) status.textContent = "Tenés que iniciar sesión antes de subir foto.";
+    return;
+  }
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+    if (status) status.textContent = "Formato no soportado. Subí JPG, PNG o WEBP.";
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    if (status) status.textContent = "La imagen supera 5 MB. Reducila antes de subir.";
+    return;
+  }
+
+  if (status) status.textContent = "Subiendo foto...";
+
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error("No hay conexión con Supabase");
+
+    const ext = file.type === "image/png" ? "png" : (file.type === "image/webp" ? "webp" : "jpg");
+    const path = `${providerId}/avatar-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("provider-avatars")
+      .upload(path, file, { upsert: true, cacheControl: "3600", contentType: file.type });
+    if (uploadError) throw uploadError;
+
+    const { data: pub } = supabase.storage.from("provider-avatars").getPublicUrl(path);
+    const publicUrl = pub?.publicUrl;
+    if (!publicUrl) throw new Error("No se pudo obtener la URL pública");
+
+    // Persistir en svc_provider_profiles
+    const { error: updateError } = await supabase
+      .from("svc_provider_profiles")
+      .upsert(
+        { provider_id: providerId, avatar_public_url: publicUrl, updated_at: new Date().toISOString() },
+        { onConflict: "provider_id" }
+      );
+    if (updateError) throw updateError;
+
+    // Actualizar UI sin recargar
+    if (preview) {
+      preview.style.backgroundImage = `url('${publicUrl}')`;
+      const initialSpan = preview.querySelector("span");
+      if (initialSpan) initialSpan.remove();
+    }
+    if (hiddenUrl) hiddenUrl.value = publicUrl;
+    if (status) status.textContent = "Foto actualizada.";
+    this.showToast("Foto de perfil actualizada.", "success");
+  } catch (error) {
+    console.error("[MIMI] avatar upload error:", error);
+    if (status) status.textContent = `No se pudo subir la foto: ${error?.message || "error desconocido"}`;
+  }
+}
+
+async handleProviderAvatarRemove() {
+  const status = document.getElementById("providerAvatarStatus");
+  const preview = document.getElementById("providerAvatarPreview");
+  const hiddenUrl = document.querySelector("[name='providerAvatarPublicUrl']");
+  const providerId = this.state?.session?.providerId;
+  if (!providerId) return;
+
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) throw new Error("Sin conexión con Supabase");
+
+    const { error: updateError } = await supabase
+      .from("svc_provider_profiles")
+      .upsert(
+        { provider_id: providerId, avatar_public_url: null, updated_at: new Date().toISOString() },
+        { onConflict: "provider_id" }
+      );
+    if (updateError) throw updateError;
+
+    if (preview) {
+      preview.style.backgroundImage = "";
+      if (!preview.querySelector("span")) {
+        const span = document.createElement("span");
+        span.textContent = (this.state?.provider?.profile?.first_name || "P").slice(0, 1).toUpperCase();
+        preview.appendChild(span);
+      }
+    }
+    if (hiddenUrl) hiddenUrl.value = "";
+    if (status) status.textContent = "Foto eliminada.";
+    this.showToast("Foto de perfil eliminada.", "info");
+  } catch (error) {
+    console.error("[MIMI] avatar remove error:", error);
+    if (status) status.textContent = `No se pudo eliminar: ${error?.message || "error desconocido"}`;
+  }
 }
 
 async handleProviderServiceSuggestion() {

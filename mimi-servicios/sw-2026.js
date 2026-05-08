@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-syntax-fix-and-dni-name-11";
+const APP_VERSION = "2026-05-08-avatar-and-syntax-cleanup-12";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

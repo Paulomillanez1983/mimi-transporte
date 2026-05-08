@@ -451,7 +451,7 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
       .limit(80),
     supabase
       .from("svc_provider_profiles")
-      .select("provider_id,first_name,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
+      .select("provider_id,first_name,avatar_public_url,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
       .in("provider_id", providerIds)
       .limit(80),
     supabase
@@ -506,7 +506,8 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
         name: publicName,
         public_name: publicName,
         verified_first_name: firstNameFromText(identity.full_name_detected),
-        avatar_url: provider.avatar_url,
+        // Priorizar avatar pública (subida por el prestador) sobre OAuth/Google
+        avatar_url: profile.avatar_public_url || provider.avatar_url,
         status: provider.status,
         category_id: categoryId,
         category_name: category.name,
