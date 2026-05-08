@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-07-provider-suggestion-render-9";
+const APP_VERSION = "2026-05-07-provider-suggestion-render-10";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -83,7 +83,7 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (isStaticAsset) {
-    event.respondWith(cacheFirstAsset(request));
+    event.respondWith(isCoreUiAsset(url) ? networkFirstAsset(request) : cacheFirstAsset(request));
     return;
   }
 
@@ -160,6 +160,24 @@ async function cacheFirstAsset(request) {
   }
 }
 
+async function networkFirstAsset(request) {
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+
+    if (shouldCacheResponse(response)) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+    }
+
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    return Response.error();
+  }
+}
+
 async function staleWhileRevalidate(request) {
   const cached = await caches.match(request);
 
@@ -204,4 +222,17 @@ function isAppAsset(url) {
     const normalizedAsset = asset.replace(/^\.\//, "/");
     return pathname.endsWith(normalizedAsset);
   });
+}
+
+function isCoreUiAsset(url) {
+  const pathname = url.pathname;
+  return [
+    "/mimi-servicios/prestador.html",
+    "/mimi-servicios/prestador",
+    "/mimi-servicios/styles/provider.css",
+    "/mimi-servicios/src/main-provider.js",
+    "/mimi-servicios/src/services/service-api.js",
+    "/mimi-servicios/src/ui/render-provider.js",
+    "/mimi-servicios/sw-2026.js"
+  ].some((asset) => pathname.endsWith(asset));
 }

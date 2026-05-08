@@ -4077,6 +4077,20 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw-2026.js')
       .then(registration => {
         console.log('[MIMI] SW registered:', registration);
+        registration.update?.();
+
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
+        registration.addEventListener?.('updatefound', () => {
+          const worker = registration.installing;
+          worker?.addEventListener?.('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              worker.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
       })
       .catch(error => {
         console.log('[MIMI] SW registration failed:', error);
