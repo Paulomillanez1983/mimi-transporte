@@ -1143,13 +1143,55 @@ async function handleUseCurrentServiceLocation() {
   setButtonLoading(button, true, "...");
 
   try {
+    // Usamos watchPosition: el primer fix suele venir de WiFi/IP (~50-200m),
+    // y los siguientes del GPS (~5-20m). Esperamos hasta que la precisión sea
+    // <= 30m o pasen 15s. maximumAge:0 fuerza un fix fresco (no del cache).
+    const ACCURACY_TARGET_M = 30;
+    const MAX_WAIT_MS = 15000;
     const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 30000
-      });
+      let watchId = null;
+      let bestPosition = null;
+      let timeoutId = null;
+      let resolved = false;
+
+      const finish = (pos) => {
+        if (resolved) return;
+        resolved = true;
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        if (timeoutId !== null) clearTimeout(timeoutId);
+        if (pos) resolve(pos);
+        else reject(new Error("No se pudo obtener una ubicación precisa."));
+      };
+
+      timeoutId = setTimeout(() => finish(bestPosition), MAX_WAIT_MS);
+
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (!bestPosition || pos.coords.accuracy < bestPosition.coords.accuracy) {
+            bestPosition = pos;
+          }
+          if (pos.coords.accuracy <= ACCURACY_TARGET_M) {
+            finish(pos);
+          }
+        },
+        (err) => {
+          // Si watchPosition falla y no tenemos ningún fix, devolvemos el error
+          if (!bestPosition) {
+            if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+            if (timeoutId !== null) clearTimeout(timeoutId);
+            resolved = true;
+            reject(err);
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: MAX_WAIT_MS,
+          maximumAge: 0
+        }
+      );
     });
+
+    console.log(`[MIMI] GPS accuracy: ${Math.round(position.coords.accuracy)}m`);
 
     const lat = Number(position.coords.latitude);
     const lng = Number(position.coords.longitude);

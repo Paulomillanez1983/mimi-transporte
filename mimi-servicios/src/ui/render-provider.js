@@ -1328,6 +1328,10 @@ function renderProviderBusiness(state) {
               <small>Para servicios online, podes atender en todo el pais.</small>
             </label>
             <label class="input-group provider-field-wide">
+              <span>Nombre de pila <small style="color:#dc2626;font-weight:600">*</small></span>
+              <input name="providerFirstName" type="text" maxlength="40" required value="${escapeHtml(detail?.first_name ?? "")}" placeholder="Ej: Juan, María, Paulo">
+            </label>
+            <label class="input-group provider-field-wide">
               <span>Bio corta</span>
               <input name="providerBio" type="text" maxlength="180" value="${escapeHtml(detail?.bio ?? "")}" placeholder="Ej: abogado penalista, consultas online y presenciales">
             </label>

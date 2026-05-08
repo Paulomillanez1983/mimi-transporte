@@ -1869,6 +1869,7 @@ for (const category of availableCategories) {
   }
 
   return {
+    firstName: data.get("providerFirstName") ?? "",
     bio: data.get("providerBio") ?? "",
     publicHeadline: data.get("providerPublicHeadline") ?? "",
     professionalSummary: data.get("providerProfessionalSummary") ?? "",

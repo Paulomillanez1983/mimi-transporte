@@ -80,8 +80,13 @@ function firstNameFromText(value: unknown) {
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
-function providerPublicName(provider: Record<string, unknown>, identity?: Record<string, unknown>) {
+function providerPublicName(
+  provider: Record<string, unknown>,
+  identity?: Record<string, unknown>,
+  profile?: Record<string, unknown>,
+) {
   return (
+    firstNameFromText(profile?.first_name) ||
     firstNameFromText(identity?.full_name_detected) ||
     firstNameFromText(provider.full_name) ||
     firstNameFromText(provider.name) ||
@@ -225,7 +230,7 @@ serve(async (req) => {
         .limit(100),
       admin
         .from("svc_provider_profiles")
-        .select("provider_id,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
+        .select("provider_id,first_name,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
         .in("provider_id", providerIds)
         .limit(100),
       admin
@@ -267,7 +272,7 @@ serve(async (req) => {
         const offering = offerings.get(provider.id) || {};
         const category = (categoryByProvider.get(provider.id)?.svc_categories || {}) as Record<string, unknown>;
         const identityRow = identity.get(provider.id) || {};
-        const publicName = providerPublicName(provider as unknown as Record<string, unknown>, identityRow);
+        const publicName = providerPublicName(provider as unknown as Record<string, unknown>, identityRow, profile);
         const km = distanceKm(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
         const price = referencePrice(priceRow, offering);
 

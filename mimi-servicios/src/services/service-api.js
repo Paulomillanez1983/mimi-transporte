@@ -381,8 +381,10 @@ function firstNameFromText(value) {
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
-function providerPublicName(provider, identity = null) {
+function providerPublicName(provider, identity = null, profile = null) {
+  // Prioridad: nombre cargado por el prestador → identidad verificada → OAuth → email → fallback
   return (
+    firstNameFromText(profile?.first_name) ||
     firstNameFromText(identity?.full_name_detected) ||
     firstNameFromText(provider?.full_name) ||
     firstNameFromText(provider?.name) ||
@@ -449,7 +451,7 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
       .limit(80),
     supabase
       .from("svc_provider_profiles")
-      .select("provider_id,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
+      .select("provider_id,first_name,bio,public_headline,professional_summary,city,province,pricing_mode,accepts_immediate,accepts_scheduled,max_hours_per_service,address_text")
       .in("provider_id", providerIds)
       .limit(80),
     supabase
@@ -494,7 +496,7 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
       const offering = offeringsByProvider.get(provider.id) ?? {};
       const category = categoryByProvider.get(provider.id)?.svc_categories ?? {};
       const identity = identityByProvider.get(provider.id) ?? {};
-      const publicName = providerPublicName(provider, identity);
+      const publicName = providerPublicName(provider, identity, profile);
       const distanceKm = distanceKmBetween(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
       const price = referencePriceFromRows(pricing, offering);
 
@@ -928,6 +930,10 @@ export async function saveProviderWorkspace(providerId, payload = {}) {
     max_hours_per_service: Number(payload.maxHoursPerService ?? 8),
     onboarding_completed: true
   };
+
+  if (typeof payload.firstName === "string") {
+    profileInput.first_name = payload.firstName.trim();
+  }
 
   if (typeof payload.bio === "string") {
     profileInput.bio = payload.bio.trim();
