@@ -527,7 +527,7 @@ function renderProviderProfile(state) {
     return;
   }
 
-  // Nombre real: profile.first_name (cargado por el prestador) tiene prioridad.
+  // Nombre real: profile.first_name (cargado por el prestador o extraído del DNI) tiene prioridad.
   const firstName = detail?.first_name?.trim();
   const displayName =
     firstName ||
@@ -538,8 +538,24 @@ function renderProviderProfile(state) {
 
   const avatarUrl = detail?.avatar_public_url || profile?.avatar_url || null;
   const location = [detail?.city, detail?.province].filter(Boolean).join(", ");
-  const isVerified = Boolean(profile?.approved) && !profile?.blocked;
+
+  // Verificado = aprobado por admin Y dni_front + selfie aprobados.
+  // Esto refleja el estado real, no solo el flag de admin.
+  const docByType = new Map();
+  for (const d of documents) {
+    const t = String(d.document_type ?? "").toLowerCase();
+    if (!t) continue;
+    const existing = docByType.get(t);
+    if (!existing || new Date(d.created_at ?? 0) > new Date(existing.created_at ?? 0)) {
+      docByType.set(t, d);
+    }
+  }
+  const dniFrontApproved = String(docByType.get("dni_front")?.review_status ?? "").toUpperCase() === "APPROVED";
+  const selfieApproved = String(docByType.get("selfie")?.review_status ?? "").toUpperCase() === "APPROVED";
+  const adminApproved = Boolean(profile?.approved);
   const isBlocked = Boolean(profile?.blocked);
+  const isVerified = adminApproved && dniFrontApproved && selfieApproved && !isBlocked;
+  const inReview = !isVerified && !isBlocked && (docByType.size > 0);
 
   // Cálculo de % completitud del perfil
   const checklist = {
@@ -1769,31 +1785,42 @@ function renderProviderTrust(state) {
         ["address_proof", "Comprobante de domicilio"]
       ].map(([id, title, note]) => {
         const current = documentsByType.get(id);
+        const status = String(current?.review_status ?? "PENDING").toUpperCase();
+        const cardClass =
+          status === "APPROVED" ? "is-approved"
+          : status === "REJECTED" ? "is-rejected"
+          : status === "NEEDS_RESUBMISSION" ? "is-rejected"
+          : "";
+        const pillStatus =
+          status === "APPROVED" ? "approved"
+          : status === "REJECTED" ? "rejected"
+          : status === "NEEDS_RESUBMISSION" ? "rejected"
+          : "pending";
+        const pillStyle =
+          status === "APPROVED" ? "background:rgba(16,185,129,0.15);color:#34d399;border-color:rgba(16,185,129,0.4)"
+          : status === "REJECTED" || status === "NEEDS_RESUBMISSION" ? "background:rgba(239,68,68,0.15);color:#f87171;border-color:rgba(239,68,68,0.4)"
+          : "";
         return `
-        <div class="doc-wizard-card" data-doc="${id}">
-          
+        <div class="doc-wizard-card ${cardClass}" data-doc="${id}">
           <div class="doc-wizard-card__content">
             <h3>${title}</h3>
             <p>${escapeHtml(note ?? "Tomá una foto clara o subí imagen/PDF.")}</p>
-            <span class="doc-status-pill">${escapeHtml(documentStatusLabel(id))}</span>
+            <span class="doc-status-pill" data-status="${pillStatus}" style="${pillStyle}">${escapeHtml(documentStatusLabel(id))}</span>
           </div>
 
           <div class="doc-preview" id="preview-${id}"></div>
 
-          <div class="doc-actions-inline--wizard" ${current ? "hidden" : ""}>
+          <div class="doc-actions-inline--wizard" ${status === "APPROVED" ? "hidden" : ""}>
             <button type="button" class="doc-camera-btn" data-camera="${id}">
               📸 Sacar foto
             </button>
-
             <button type="button" class="doc-upload-btn" data-upload="${id}">
               📂 Subir archivo
             </button>
-
             <input type="file" class="hidden-input" data-input="${id}" accept="image/*,application/pdf" />
           </div>
 
           <div class="doc-status" id="status-${id}"></div>
-
         </div>
       `;
       }).join("")}
@@ -1839,34 +1866,9 @@ function renderProviderTrust(state) {
     NEEDS_RESUBMISSION: { text: "Reenviar", cls: "status-rejected" }
   };
 
-  const documentsHtml = dedupedDocs.length
-    ? `
-      <section class="summary-card provider-docs-summary">
-        <div class="block-header compact">
-          <div>
-            <span class="eyebrow">Verificación</span>
-            <h3>Estado de documentos</h3>
-          </div>
-        </div>
-        <div class="provider-docs-grid">
-          ${dedupedDocs
-            .map((doc) => {
-              const type = String(doc.document_type ?? "").toLowerCase();
-              const label = docTypeLabels[type] || type;
-              const status = String(doc.review_status ?? "PENDING").toUpperCase();
-              const meta = statusLabels[status] || { text: status, cls: "status-pending" };
-              return `
-                <div class="provider-doc-row ${meta.cls}">
-                  <strong>${escapeHtml(label)}</strong>
-                  <span>${escapeHtml(meta.text)}</span>
-                </div>
-              `;
-            })
-            .join("")}
-        </div>
-      </section>
-    `
-    : "";
+  // Resumen aparte de docs YA NO se muestra: el estado está en cada card del wizard
+  // de arriba con badges de color. Mantener esto duplicaría info y rompía la UI.
+  const documentsHtml = "";
 
   // Reseñas: solo se muestran si hay (cuando no hay, no mostramos un bloque "Sin reseñas"
   // suelto que queda feo — el dato ya aparece en el KPI de rating del hero).

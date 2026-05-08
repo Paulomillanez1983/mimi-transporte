@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-account-redesign-modern-16";
+const APP_VERSION = "2026-05-08-edit-fix-and-doc-wizard-modern-17";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

@@ -2047,16 +2047,32 @@ async handleProviderBusinessAction(action, source = null) {
   if (action === "edit-offering") {
     const offeringId = source?.dataset?.offeringId;
     if (!offeringId) return;
+
+    // 1) Marcar que estamos editando este offering
     actions.updateState({
       provider: {
         ...this.state.provider,
         editingOfferingId: offeringId,
       },
     });
-    // re-render con el offering precargado en el form
+
+    // 2) Cambiar a la pestaña Servicios (sin esto, el form no es visible)
+    this.switchTab("services");
+
+    // 3) Forzar re-render para que el form precargue los datos del offering
     renderProviderScreen(this.state);
-    // scroll al form
-    document.getElementById("providerBusinessForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    this.renderServicesAndPricing();
+
+    // 4) Scroll al form (con timeout para que termine el layout)
+    window.setTimeout(() => {
+      const form = document.getElementById("providerBusinessForm");
+      if (form) {
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        // foco en el primer input editable
+        form.querySelector("[name='offering:0:title']")?.focus({ preventScroll: true });
+      }
+    }, 200);
+
     this.showToast("Editando servicio. Modificá y guardá.", "info");
     return;
   }
