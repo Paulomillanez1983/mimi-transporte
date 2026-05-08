@@ -170,12 +170,13 @@ serve(async (req) => {
 
     if (providersFromRpc.length) {
       const rpcProviderIds = [...new Set(providersFromRpc.map((row) => String(row.provider_id || row.id || "")).filter(Boolean))];
+      // svc_provider_identity_checks no tiene reviewed_at en este schema; usamos created_at
       const { data: identities, error: identityError } = rpcProviderIds.length
         ? await admin
             .from("svc_provider_identity_checks")
-            .select("provider_id,full_name_detected,status,reviewed_at,created_at")
+            .select("provider_id,full_name_detected,status,created_at")
             .in("provider_id", rpcProviderIds)
-            .order("reviewed_at", { ascending: false, nullsFirst: false })
+            .order("created_at", { ascending: false, nullsFirst: false })
             .limit(150)
         : { data: [], error: null };
 
@@ -243,9 +244,9 @@ serve(async (req) => {
         .limit(100),
       admin
         .from("svc_provider_identity_checks")
-        .select("provider_id,full_name_detected,status,reviewed_at,created_at")
+        .select("provider_id,full_name_detected,status,created_at")
         .in("provider_id", providerIds)
-        .order("reviewed_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false, nullsFirst: false })
         .limit(150),
     ]);
 

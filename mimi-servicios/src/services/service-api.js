@@ -286,6 +286,12 @@ export async function registerDevice(pushToken = null) {
     marketing_opt_in: false,
   });
 }
+function isUuidLike(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || "")
+  );
+}
+
 export async function searchProviders(categoryId, draft = {}) {
   if (!hasBackend()) {
     return buildMockProviders(categoryId, draft);
@@ -311,15 +317,20 @@ export async function searchProviders(categoryId, draft = {}) {
     requested_hours: Number(draft.requestedHours ?? 2)
   };
 
-  try {
-    const data = await invokeFunction(appConfig.functions.searchProviders, payload);
-    const providers = data?.providers ?? data?.data ?? data ?? [];
+  // Si la categoría es del catálogo local (id string, no UUID), la edge function la rechaza con 400.
+  // Saltamos directo al fallback de tablas (que tampoco va a encontrar providers reales,
+  // pero al menos no genera ruido en consola ni network).
+  if (isUuidLike(categoryId)) {
+    try {
+      const data = await invokeFunction(appConfig.functions.searchProviders, payload);
+      const providers = data?.providers ?? data?.data ?? data ?? [];
 
-    if (Array.isArray(providers) && providers.length) {
-      return providers;
+      if (Array.isArray(providers) && providers.length) {
+        return providers;
+      }
+    } catch (error) {
+      console.warn("[MIMI servicios] svc-search-providers no devolvio resultados usables; probando fallback directo.", error);
     }
-  } catch (error) {
-    console.warn("[MIMI servicios] svc-search-providers no devolvio resultados usables; probando fallback directo.", error);
   }
 
   return searchProvidersFromTables(categoryId, draft);
@@ -418,11 +429,13 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
   const providerIds = [...new Set((categoryLinks ?? []).map((row) => row.provider_id).filter(Boolean))];
   if (!providerIds.length) return [];
 
+  // Nota: la tabla svc_provider_identity_checks no tiene columna reviewed_at en este schema.
+  // Ordenamos por created_at desc como aproximación (el último check creado suele ser el más reciente).
   const identityPromise = supabase
     .from("svc_provider_identity_checks")
-    .select("provider_id,full_name_detected,status,reviewed_at,created_at")
+    .select("provider_id,full_name_detected,status,created_at")
     .in("provider_id", providerIds)
-    .order("reviewed_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
     .limit(120);
 
   const [providersResult, profilesResult, pricingResult, offeringsResult, identityResult] = await Promise.all([
