@@ -1672,19 +1672,38 @@ async function handleProviderSelection(providerId) {
 async function handleRequestAction(action) {
   if (action !== "cancel") return;
 
-  await updateRequestStatus(appConfig.functions.cancelRequest, {
-    request_id: state.client.activeRequest?.id,
-    reason: "cancelled_from_client_ui"
-  });
+  const requestId = state.client.activeRequest?.id;
+  console.log("[MIMI Cancel] step 1: cancel clicked", { requestId, hasActiveRequest: !!state.client.activeRequest });
+
+  if (!requestId) {
+    console.warn("[MIMI Cancel] BLOCKED: no hay request activo en state.client.activeRequest");
+    setInfo(null, "No hay una solicitud activa para cancelar.");
+    return;
+  }
+
+  try {
+    console.log("[MIMI Cancel] step 2: calling cancel edge");
+    const result = await updateRequestStatus(appConfig.functions.cancelRequest, {
+      request_id: requestId,
+      reason: "cancelled_from_client_ui"
+    });
+    console.log("[MIMI Cancel] step 2 OK: cancel edge response", result);
+  } catch (err) {
+    console.error("[MIMI Cancel] step 2 FAIL:", err);
+    setInfo(null, `No se pudo cancelar: ${err?.message || "error desconocido"}`);
+    throw err;
+  }
 
   setState((draft) => {
     if (draft.client.activeRequest) {
       draft.client.activeRequest.status = "CANCELLED";
     }
+    draft.client.selectedProvider = null;
     draft.meta.info = "Solicitud cancelada correctamente.";
   });
 
   await hydrateLiveContext();
+  console.log("[MIMI Cancel] step 3 OK: state actualizado y context refrescado");
 }
 
 async function handlePaymentAction(action) {

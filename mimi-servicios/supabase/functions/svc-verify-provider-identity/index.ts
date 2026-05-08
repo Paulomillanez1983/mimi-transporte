@@ -7,6 +7,89 @@ import {
   CompareFacesCommand,
 } from "npm:@aws-sdk/client-rekognition";
 
+/**
+ * Extrae nombre completo y DNI desde el texto OCR de un DNI argentino.
+ * Patrón típico:
+ *   ...
+ *   Apellido / Surname
+ *   MILLANEZ
+ *   Nombre / Name
+ *   PAULO ALBERTO
+ *   ...
+ *   30.658.227
+ */
+function parseDniOcr(ocrText: string): { fullName: string | null; dniNumber: string | null } {
+  if (!ocrText || typeof ocrText !== "string") return { fullName: null, dniNumber: null };
+
+  const lines = ocrText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  // Encontrar líneas que sean MAYÚSCULAS puras (típico del DNI)
+  const isUpperNamePart = (s: string) =>
+    /^[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ\s]{1,40}$/.test(s) && s.length >= 2 && s.length <= 50;
+
+  let surname: string | null = null;
+  let names: string | null = null;
+
+  for (let i = 0; i < lines.length - 1; i++) {
+    const cur = lines[i].toLowerCase();
+    const next = lines[i + 1];
+
+    // Apellido / Surname
+    if (
+      !surname &&
+      (cur.includes("apellido") || cur.includes("surname")) &&
+      isUpperNamePart(next)
+    ) {
+      surname = next;
+    }
+
+    // Nombre / Name (también acepta typos OCR como "Nombra", "Numbra")
+    if (
+      !names &&
+      (cur.includes("nombre") ||
+        cur.includes("name") ||
+        cur.includes("nombra") ||
+        cur.includes("numbra")) &&
+      isUpperNamePart(next)
+    ) {
+      names = next;
+    }
+  }
+
+  // DNI: número con formato X.XXX.XXX o XX.XXX.XXX (separador opcional . o espacio)
+  let dniNumber: string | null = null;
+  const dniMatch = ocrText.match(/\b(\d{1,2})[.\s](\d{3})[.\s](\d{3})\b/);
+  if (dniMatch) {
+    dniNumber = `${dniMatch[1]}${dniMatch[2]}${dniMatch[3]}`;
+  } else {
+    // fallback: cualquier secuencia de 7-8 dígitos juntos
+    const alt = ocrText.match(/\b(\d{7,8})\b/);
+    if (alt) dniNumber = alt[1];
+  }
+
+  let fullName: string | null = null;
+  if (names && surname) {
+    fullName = `${names} ${surname}`.replace(/\s+/g, " ").trim();
+  } else if (names) {
+    fullName = names.trim();
+  } else if (surname) {
+    fullName = surname.trim();
+  }
+
+  return { fullName, dniNumber };
+}
+
+/** Devuelve solo el primer nombre, capitalizado (ej "PAULO ALBERTO MILLANEZ" → "Paulo") */
+function firstNameFromFullName(fullName: string | null): string | null {
+  if (!fullName) return null;
+  const first = fullName.trim().split(/\s+/).find(Boolean);
+  if (!first || first.length < 2) return null;
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -249,13 +332,42 @@ serve(async (req) => {
         face_match_score: faceMatchScore,
         liveness_score: null,
         ocr_text: ocrText,
-        dni_number_detected: null,
-        full_name_detected: null,
+        // Parser: extrae nombre y DNI del texto OCR del DNI argentino.
+        // Antes hardcodeado a null → ningún prestador tenía nombre real,
+        // por eso aparecía "Voltex" (nombre comercial del email) en los cards.
+        dni_number_detected: parseDniOcr(ocrText).dniNumber,
+        full_name_detected: parseDniOcr(ocrText).fullName,
         ai_score: aiScore,
         ai_score_label: aiScoreLabel,
         risk_flags: riskFlags,
         raw_result: verificationPayload,
       });
+
+    // Si la OCR detectó un nombre y el profile no tiene first_name cargado, lo populamos
+    // con el primer nombre del DNI. Esto evita que aparezca el nombre del email/Google
+    // (ej "Voltex") al cliente cuando busca prestadores.
+    const parsed = parseDniOcr(ocrText);
+    const firstNameFromDni = firstNameFromFullName(parsed.fullName);
+    if (firstNameFromDni) {
+      const { data: existingProfile } = await supabaseAdmin
+        .from("svc_provider_profiles")
+        .select("first_name")
+        .eq("provider_id", providerId)
+        .maybeSingle();
+
+      if (!existingProfile?.first_name) {
+        await supabaseAdmin
+          .from("svc_provider_profiles")
+          .upsert(
+            {
+              provider_id: providerId,
+              first_name: firstNameFromDni,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "provider_id" }
+          );
+      }
+    }
 
     if (checkInsertError) {
       return fail("No se pudo guardar auditoría de verificación.", 500, checkInsertError);

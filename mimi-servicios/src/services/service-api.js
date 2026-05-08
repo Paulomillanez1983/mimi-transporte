@@ -437,7 +437,7 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
     .from("svc_provider_identity_checks")
     .select("provider_id,full_name_detected,status,created_at")
     .in("provider_id", providerIds)
-<<    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false, nullsFirst: false })
     .limit(120);
 
   const [providersResult, profilesResult, pricingResult, offeringsResult, identityResult] = await Promise.all([
