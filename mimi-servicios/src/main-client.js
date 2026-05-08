@@ -1770,27 +1770,30 @@ function startCategoryPlaceholderDemo() {
     const text = uniqueExamples[exampleIndex] || "";
     input.placeholder = text.slice(0, charIndex) || "Contanos... ¿qué te pasó?";
 
+    // Tipeo más relajado para sentirse "humano" — antes era 58ms y muy rápido.
     if (!deleting && charIndex < text.length) {
       charIndex += 1;
-      window.setTimeout(tick, 58);
+      window.setTimeout(tick, 110);
       return;
     }
 
+    // Pausa más larga al terminar la frase para que el usuario alcance a leerla
     if (!deleting && charIndex >= text.length) {
       deleting = true;
-      window.setTimeout(tick, 1500);
+      window.setTimeout(tick, 2400);
       return;
     }
 
+    // Borrado más lento también, para que el efecto sea suave
     if (deleting && charIndex > 0) {
       charIndex -= 1;
-      window.setTimeout(tick, 28);
+      window.setTimeout(tick, 45);
       return;
     }
 
     deleting = false;
     exampleIndex = (exampleIndex + 1) % uniqueExamples.length;
-    window.setTimeout(tick, 360);
+    window.setTimeout(tick, 600);
   };
 
   tick();

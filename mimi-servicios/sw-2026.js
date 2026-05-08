@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-locate-chip-phone-collect-20";
+const APP_VERSION = "2026-05-08-pin-rork-style-push-21";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -88,6 +88,51 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(staleWhileRevalidate(request));
+});
+
+// =================================================================
+// Push notifications: muestra notificación nativa cuando llega un
+// push del backend, incluso si la app está cerrada. Soportada en
+// Chrome/Firefox/Edge desktop y Android. Safari iOS solo si la PWA
+// está instalada (iOS 16.4+).
+// =================================================================
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (_) {
+    payload = { title: "MIMI", body: event.data?.text?.() ?? "" };
+  }
+
+  const title = payload.title || payload.notification?.title || "MIMI Servicios";
+  const options = {
+    body: payload.body || payload.notification?.body || "Tenés una novedad en MIMI",
+    icon: payload.icon || "./assets/icons/icon-192.png",
+    badge: payload.badge || "./assets/icons/favicon-32.png",
+    tag: payload.tag || "mimi-services-push",
+    renotify: true,
+    requireInteraction: payload.requireInteraction || false,
+    data: payload.data || {},
+    vibrate: [120, 60, 120],
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "./prestador.html";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes("/mimi-servicios/") && "focus" in client) {
+          client.postMessage({ type: "NOTIFICATION_CLICKED", data: event.notification.data });
+          return client.focus();
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
 });
 
 async function precacheAppAssets() {

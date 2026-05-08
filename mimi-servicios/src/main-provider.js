@@ -43,6 +43,7 @@ import {
   loadOffers,
   loadProviderWorkspace,
   getProviderDashboard,
+  registerDevice,
   resolveServiceIntent,
   saveProviderWorkspace,
   uploadProviderAvatar,
@@ -197,7 +198,28 @@ if (!canBootProviderPanel) {
   this.startBackgroundSync();
   this.subscribeRealtime();
 
+  // Push notifications: si Firebase Messaging logró obtener token FCM,
+  // lo registramos en svc_user_devices para que el backend pueda enviar
+  // pushes cuando entre una solicitud nueva (incluso con la app cerrada).
+  this.registerProviderPushToken();
+
   console.log("[MIMI] App initialized");
+}
+
+async registerProviderPushToken() {
+  try {
+    if (!this.state?.session?.userId) return;
+    // window.__mimiPushReady fue creado por el módulo inline en prestador.html
+    const token = await (window.__mimiPushReady || Promise.resolve(null));
+    if (!token) {
+      console.info("[MIMI Push] sin token, no registramos device para push");
+      return;
+    }
+    await registerDevice(token);
+    console.log("[MIMI Push] device registrado con FCM token");
+  } catch (err) {
+    console.warn("[MIMI Push] no se pudo registrar device:", err?.message ?? err);
+  }
 }
   /**
    * Cache DOM elements

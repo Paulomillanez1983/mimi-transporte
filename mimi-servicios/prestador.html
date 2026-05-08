@@ -619,6 +619,74 @@
   <!-- Scripts -->
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="./src/main-provider.js?v=2026.05.08.2"></script>
+  <!-- Firebase Cloud Messaging para push notifications en background.
+       Registra el SW de Firebase y obtiene el token FCM del prestador. -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNrB9kyK_adPItK911AuRdv_r8WnvxAjY",
+      authDomain: "mimi-transporte.firebaseapp.com",
+      projectId: "mimi-transporte",
+      storageBucket: "mimi-transporte.firebasestorage.app",
+      messagingSenderId: "1066211116754",
+      appId: "1:1066211116754:web:8cfb14cfb15ecd0cb28f0b",
+    };
+
+    // VAPID key pública del proyecto (para Web Push). Si no la tenés, el getToken falla.
+    const VAPID_KEY = "BKHvLJ5xJM9pJdPmOhq2JcXg_W7Oqmsy-qqZYsKtgHvD9QnCKbqJ8JnbBtV5xBp4kGV7c8mZ5Q9QmZpL3hX7dY8";
+
+    window.__mimiPushReady = (async () => {
+      if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+        console.info("[MIMI Push] Browser no soporta web push");
+        return null;
+      }
+      try {
+        // El SW principal está en /mimi-servicios/sw-2026.js (lo registra main-provider.js).
+        // Esperamos a que esté listo para asociar el FCM token a ese scope.
+        const registration = await navigator.serviceWorker.ready;
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+
+        // Pedir permiso si no está concedido
+        let permission = Notification.permission;
+        if (permission === "default") permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          console.info("[MIMI Push] permiso de notificaciones:", permission);
+          return null;
+        }
+
+        const token = await getToken(messaging, {
+          vapidKey: VAPID_KEY,
+          serviceWorkerRegistration: registration,
+        });
+        if (!token) {
+          console.warn("[MIMI Push] no se pudo obtener token FCM");
+          return null;
+        }
+        console.log("[MIMI Push] FCM token obtenido", token.slice(0, 20) + "...");
+
+        // Cuando llega un mensaje con la app en foreground, mostrar también
+        onMessage(messaging, (payload) => {
+          console.log("[MIMI Push] foreground message:", payload);
+          if (payload?.notification && registration?.showNotification) {
+            registration.showNotification(payload.notification.title || "MIMI", {
+              body: payload.notification.body || "",
+              icon: "./assets/icons/icon-192.png",
+              tag: "mimi-foreground-" + Date.now(),
+              data: payload.data || {},
+            });
+          }
+        });
+
+        return token;
+      } catch (error) {
+        console.warn("[MIMI Push] init falló:", error?.message ?? error);
+        return null;
+      }
+    })();
+  </script>
+  <script type="module" src="./src/main-provider.js?v=2026.05.08.3"></script>
 </body>
 </html>

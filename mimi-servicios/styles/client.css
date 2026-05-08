@@ -2404,90 +2404,143 @@ body[data-client-view="support"] .details-grid {
 }
 .address-field .input-icon-button:hover { background: rgba(15, 23, 42, 0.12); }
 
-/* Fila: input + chip lateral "Mi ubicación" */
-.address-row {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
+/* Fix padding del input: removido el ícono izquierdo, ahora el placeholder
+   no se encima con nada. El padding-right deja espacio para el pin de la derecha. */
+.address-field {
+  padding: 14px 50px 14px 16px !important;
 }
-.address-row .address-field { flex: 1; min-width: 0; }
+.address-field input {
+  padding: 0 !important;
+}
 
-/* Chip "Mi ubicación" lateral compacto */
-.address-locate-chip {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 14px;
-  min-height: 50px;
-  border-radius: 14px;
+/* Pin pequeño estilo WhatsApp — verde, redondito, a la derecha del input */
+.address-locate-pin {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   border: 0;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: #10b981;
   color: #fff;
-  font-size: 12px;
-  font-weight: 700;
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  white-space: nowrap;
-  transition: transform 0.12s, box-shadow 0.18s;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  flex-shrink: 0;
+  transition: transform 0.12s, background 0.18s, box-shadow 0.18s;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
 }
-.address-locate-chip:hover {
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+.address-locate-pin:hover {
+  background: #059669;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.5);
 }
-.address-locate-chip:active { transform: scale(0.96); }
-.address-locate-chip svg { color: #fff; flex-shrink: 0; }
-.address-locate-chip.is-loading {
+.address-locate-pin:active {
+  transform: translateY(-50%) scale(0.92);
+}
+.address-locate-pin svg {
+  color: #fff;
+}
+.address-locate-pin.is-loading {
   opacity: 0.7;
   pointer-events: none;
 }
-.address-locate-chip.is-loading svg {
-  animation: locate-spin 1.4s linear infinite;
+.address-locate-pin.is-loading svg {
+  animation: locate-pulse 1.2s ease-in-out infinite;
 }
-@keyframes locate-spin {
-  from { transform: rotate(0); }
-  to { transform: rotate(360deg); }
+@keyframes locate-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
 }
 
-/* En pantallas chicas el label se oculta y queda solo el ícono */
-@media (max-width: 360px) {
-  .address-locate-label { display: none; }
-  .address-locate-chip { padding: 0 12px; }
+/* Si hay un botón clear (×) DENTRO del input, ubicarlo a la izquierda del pin */
+.address-field .input-icon-button {
+  position: absolute;
+  right: 52px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 /* ============================================================
-   CLIENTE — Input IA minimalista, fondo blanco, claro
+   CLIENTE — Input IA estilo Rork / Base44 (presencia + brillo)
    ============================================================ */
 .ai-prompt-card {
-  background: #fff;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
+  position: relative;
+  background:
+    radial-gradient(120% 100% at 0% 0%, rgba(124, 58, 237, 0.06) 0%, transparent 50%),
+    radial-gradient(120% 100% at 100% 100%, rgba(37, 99, 235, 0.06) 0%, transparent 50%),
+    #fafaff;
+  border: 1.5px solid rgba(124, 58, 237, 0.18);
+  border-radius: 18px;
   margin-top: 8px;
   margin-bottom: 4px;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  padding: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.18s;
+  overflow: hidden;
+}
+.ai-prompt-card::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 18px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.5) 0%, rgba(124, 58, 237, 0.5) 50%, rgba(236, 72, 153, 0.4) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 .ai-prompt-card:focus-within {
-  border-color: var(--client-primary);
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+  border-color: transparent;
+  box-shadow: 0 8px 28px rgba(37, 99, 235, 0.16), 0 4px 12px rgba(124, 58, 237, 0.12);
 }
+.ai-prompt-card:focus-within::before { opacity: 1; }
 
 .ai-prompt-input-wrap {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 12px;
+  padding: 16px 16px;
+  background: rgba(255, 255, 255, 0.65);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
 }
 
+/* Ícono con brillo pulsante sutil — señal de "es la IA, escribí acá" */
 .ai-prompt-icon {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #db2777 100%);
   color: #fff;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+  animation: ai-icon-pulse 2.8s ease-in-out infinite;
+}
+.ai-prompt-icon::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 14px;
+  background: inherit;
+  opacity: 0.4;
+  filter: blur(8px);
+  z-index: -1;
+  animation: ai-icon-glow 2.8s ease-in-out infinite;
+}
+@keyframes ai-icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes ai-icon-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.6; }
 }
 
 .ai-prompt-input {
@@ -2495,12 +2548,14 @@ body[data-client-view="support"] .details-grid {
   border: 0;
   outline: none;
   background: transparent;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--client-text);
   min-width: 0;
-  padding: 4px 0;
+  padding: 6px 0;
+  min-height: 28px;
   -webkit-appearance: none;
+  letter-spacing: -0.005em;
 }
 .ai-prompt-input::placeholder {
   color: #94a3b8;
@@ -2509,8 +2564,8 @@ body[data-client-view="support"] .details-grid {
 .ai-prompt-input::-webkit-search-cancel-button { -webkit-appearance: none; }
 
 .ai-prompt-clear {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border: 0;
   background: rgba(15, 23, 42, 0.08);
   border-radius: 50%;
@@ -2521,12 +2576,13 @@ body[data-client-view="support"] .details-grid {
   color: #475569;
   cursor: pointer;
   flex-shrink: 0;
+  transition: background 0.15s;
 }
 .ai-prompt-clear:hover { background: rgba(15, 23, 42, 0.16); }
 
 /* Hint debajo de la card: sutil, sin caja, no compite */
 .category-section > .intent-assist {
-  margin: 6px 4px 12px;
+  margin: 8px 6px 12px;
   padding: 0;
   background: transparent;
   border: 0;

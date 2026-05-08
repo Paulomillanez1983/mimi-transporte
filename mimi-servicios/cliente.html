@@ -137,46 +137,33 @@
         </div>
 
         <form class="request-form" id="requestForm">
-          <!-- DIRECCIÓN — input con chip "Mi ubicación" lateral, simple y claro -->
+          <!-- DIRECCIÓN — input con botón pin pequeño tipo WhatsApp a la derecha -->
           <div class="address-block">
             <span class="address-block-label">¿Dónde necesitás el servicio?</span>
-            <div class="address-row">
-              <label class="address-field">
-                <span class="field-icon" aria-hidden="true">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0Z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
-                  </svg>
-                </span>
-                <input
-                  id="serviceAddressInput"
-                  name="address"
-                  type="text"
-                  placeholder="Calle y número o barrio"
-                  autocomplete="off"
-                  autocapitalize="words"
-                  autocorrect="off"
-                  spellcheck="false"
-                  inputmode="search"
-                  enterkeyhint="search"
-                  aria-autocomplete="list"
-                  aria-controls="serviceAddressSuggestions"
-                  aria-expanded="false"
-                >
-                <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar dirección" hidden>×</button>
-              </label>
-              <button id="btnUseCurrentServiceLocation" type="button" class="address-locate-chip" title="Usar mi ubicación actual" aria-label="Usar mi ubicación actual">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
-                  <circle cx="12" cy="12" r="9"></circle>
-                  <line x1="12" y1="2" x2="12" y2="5"></line>
-                  <line x1="12" y1="19" x2="12" y2="22"></line>
-                  <line x1="2" y1="12" x2="5" y2="12"></line>
-                  <line x1="19" y1="12" x2="22" y2="12"></line>
+            <label class="address-field">
+              <input
+                id="serviceAddressInput"
+                name="address"
+                type="text"
+                placeholder="Calle y número o barrio"
+                autocomplete="off"
+                autocapitalize="words"
+                autocorrect="off"
+                spellcheck="false"
+                inputmode="search"
+                enterkeyhint="search"
+                aria-autocomplete="list"
+                aria-controls="serviceAddressSuggestions"
+                aria-expanded="false"
+              >
+              <button id="btnClearServiceAddress" type="button" class="input-icon-button" aria-label="Borrar dirección" hidden>×</button>
+              <!-- Pin estilo WhatsApp (verde) — pequeño, familiar, click = usar mi ubicación -->
+              <button id="btnUseCurrentServiceLocation" type="button" class="address-locate-pin" title="Usar mi ubicación actual" aria-label="Usar mi ubicación actual">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2C7.6 2 4 5.6 4 10c0 5.5 7 11.6 7.3 11.9.2.1.5.1.7-.1.3-.3 7-6.3 7-11.8 0-4.4-3.6-8-8-8zm0 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"/>
                 </svg>
-                <span class="address-locate-label">Mi ubicación</span>
               </button>
-            </div>
+            </label>
           </div>
 
           <div
@@ -468,7 +455,7 @@
         </svg>
       </div>
       <h2 id="phoneCollectTitle">Tu número de teléfono</h2>
-      <p>Lo necesitamos para que el prestador pueda contactarte cuando acepte tu solicitud y para mantenerte avisado del estado del servicio.</p>
+      <p>Sirve para identificar tu cuenta de forma segura y enviarte avisos importantes del servicio. La comunicación con el prestador es siempre por el chat dentro de la app.</p>
       <form id="phoneCollectForm" novalidate>
         <label class="phone-collect-field">
           <span>Teléfono (con código de país)</span>
@@ -483,7 +470,7 @@
             pattern="^\+?[0-9\s\-]{8,20}$"
             aria-describedby="phoneCollectHint"
           >
-          <small id="phoneCollectHint">Solo lo ven prestadores que aceptan tu solicitud y MIMI para mantenimiento.</small>
+          <small id="phoneCollectHint">Lo usamos solo internamente. No se comparte con prestadores ni terceros.</small>
         </label>
         <div class="phone-collect-status" id="phoneCollectStatus" aria-live="polite"></div>
         <div class="phone-collect-actions">
