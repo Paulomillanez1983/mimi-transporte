@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.07.15";
+const MIMI_PROVIDER_BUILD = "2026.05.07.16";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -2393,7 +2393,6 @@ async handleProviderServiceSuggestion() {
   let provisionalTimer = null;
 
   try {
-    actions.setLoading(true);
     this.setButtonBusy(trigger, true, "Buscando...");
     promptInput?.blur?.();
     if (panel) {
@@ -2467,7 +2466,6 @@ async handleProviderServiceSuggestion() {
     if (provisionalTimer) window.clearTimeout(provisionalTimer);
     suggestionBox?.classList?.remove("is-searching");
     this.setButtonBusy(trigger, false);
-    actions.setLoading(false);
   }
 }
 
