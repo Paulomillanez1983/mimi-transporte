@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-skip-payment-when-total-zero-8";
+const APP_VERSION = "2026-05-08-fix-confirm-overlay-zindex-9";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
