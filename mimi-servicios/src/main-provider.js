@@ -3,6 +3,24 @@
  * Main entry point with Uber Driver-style UX
  */
 
+const MIMI_PROVIDER_BUILD = "2026.05.07.12";
+
+window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
+
+try {
+  const previousBuild = sessionStorage.getItem("mimi_provider_build");
+  const reloadFlag = `mimi_provider_reloaded_${MIMI_PROVIDER_BUILD}`;
+
+  if (previousBuild && previousBuild !== MIMI_PROVIDER_BUILD && !sessionStorage.getItem(reloadFlag)) {
+    sessionStorage.setItem(reloadFlag, "1");
+    caches?.keys?.()
+      ?.then((keys) => Promise.all(keys.filter((key) => key.startsWith("mimi-servicios-provider-")).map((key) => caches.delete(key))))
+      ?.finally(() => location.reload());
+  }
+
+  sessionStorage.setItem("mimi_provider_build", MIMI_PROVIDER_BUILD);
+} catch (_) {}
+
 import {
   initState,
   subscribe,
@@ -4075,18 +4093,30 @@ handleWizardPrev() {
 // INITIALIZATION
 // ============================================
 
-// Create global app instance
-const app = new MimiProviderApp();
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => app.init());
+if (window.__MIMI_PROVIDER_APP_BUILD && window.__MIMI_PROVIDER_APP_BUILD !== MIMI_PROVIDER_BUILD) {
+  console.warn("[MIMI] Ignorando instancia provider anterior", {
+    active: window.__MIMI_PROVIDER_APP_BUILD,
+    incoming: MIMI_PROVIDER_BUILD
+  });
+} else if (window.__MIMI_PROVIDER_APP_READY) {
+  console.warn("[MIMI] Provider App ya inicializada", MIMI_PROVIDER_BUILD);
 } else {
-  app.init();
-}
+  window.__MIMI_PROVIDER_APP_BUILD = MIMI_PROVIDER_BUILD;
+  window.__MIMI_PROVIDER_APP_READY = true;
 
-// Export for global access
-window.app = app;
+  // Create global app instance
+  const app = new MimiProviderApp();
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => app.init());
+  } else {
+    app.init();
+  }
+
+  // Export for global access
+  window.app = app;
+}
 
 // ============================================
 // SERVICE WORKER REGISTRATION
