@@ -22,6 +22,12 @@ const STORAGE_KEYS = {
 
 // Initial State
 const initialState = {
+  appConfig: {
+    categories: [],          // NUNCA undefined — se llena en init
+    categoriesLoaded: false,
+    categoriesError: null,
+  },
+
   ui: {
     isInitialized: false,
     activeTab: 'now',
