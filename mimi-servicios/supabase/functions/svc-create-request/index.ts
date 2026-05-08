@@ -37,10 +37,10 @@ function priceFromOffering(offering: Record<string, unknown>, pricing: Record<st
   const model = normalizeMode(offering.pricing_model || pricing.pricing_model);
   const currency = String(offering.currency || pricing.currency || "ARS");
 
-  if (model === "QUOTE" || offering.quote_required === true) {
-    return { model, providerPrice: 0, platformFee: 0, totalPrice: 0, currency, priceLabel: "A coordinar" };
-  }
-
+  // Calcular el precio según el modelo, ignorando quote_required acá:
+  // quote_required indica que el prestador prefiere confirmar antes,
+  // pero si tiene precio cargado, lo usamos como referencia (el prestador
+  // ajusta después si hace falta).
   let unitPrice = 0;
   let multiplier = 1;
 
@@ -49,12 +49,22 @@ function priceFromOffering(offering: Record<string, unknown>, pricing: Record<st
   else if (["UNIT", "SQUARE_METER", "LINEAR_METER"].includes(model)) {
     unitPrice = asNumber(offering.unit_price);
     multiplier = Math.max(1, unitQuantity);
+  } else if (model === "QUOTE") {
+    // QUOTE puro = sin precio referencial, queda en 0 a presupuestar
+    return { model, providerPrice: 0, platformFee: 0, totalPrice: 0, currency, priceLabel: "A coordinar" };
   } else {
     unitPrice = asNumber(offering.price_per_hour, asNumber(pricing.price_per_hour));
     multiplier = Math.max(1, requestedHours);
   }
 
   const providerPrice = Math.max(0, Math.round(unitPrice * multiplier * 100) / 100);
+
+  // Si el prestador tiene quote_required=true PERO no hay precio cargado, mostrar "A coordinar"
+  // Si hay precio cargado, lo usamos como referencia (quote_required pasa a ser info, no fuerza 0).
+  if (providerPrice <= 0 && offering.quote_required === true) {
+    return { model, providerPrice: 0, platformFee: 0, totalPrice: 0, currency, priceLabel: "A coordinar" };
+  }
+
   return { model, providerPrice, platformFee: 0, totalPrice: providerPrice, currency, priceLabel: null };
 }
 
@@ -95,7 +105,12 @@ serve(async (req) => {
     const requestType = String(body.request_type || "IMMEDIATE").toUpperCase() === "SCHEDULED" ? "SCHEDULED" : "IMMEDIATE";
     const requestedHours = Math.max(1, Math.min(8, Math.round(asNumber(body.requested_hours, 1))));
     const unitQuantity = Math.max(1, asNumber(body.unit_quantity, 1));
-    const deadlineSeconds = requestType === "SCHEDULED" ? 900 : 90;
+    // Deadline para que el prestador acepte/rechace.
+    // SCHEDULED: 1 hora (3600s). El cliente está agendando con anticipación.
+    // IMMEDIATE: 5 minutos (300s). 90s era muy poco — el prestador necesita
+    // tiempo para abrir la app, ver la oferta y decidir. Si quedan dudas,
+    // mejor dejar al provider responder vs caducar al instante.
+    const deadlineSeconds = requestType === "SCHEDULED" ? 3600 : 300;
     const expiresAt = new Date(Date.now() + deadlineSeconds * 1000).toISOString();
 
     if (!assertUuid(categoryId)) return json({ ok: false, error: "category_id_invalid" }, 400);

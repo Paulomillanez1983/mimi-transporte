@@ -1590,9 +1590,15 @@ async function handleProviderSelection(providerId) {
   let paymentIntent = null;
 
   // Solo crear payment intent si hay un total > 0.
-  // Para precios "a coordinar" (SQUARE_METER, QUOTE, etc. sin cantidad),
-  // el pago se difiere hasta que cliente y prestador definan el monto final.
-  const totalForPayment = Number(pricing.total_price ?? 0);
+  // Usamos el total del REQUEST guardado (snapshot real), no el local.
+  // Si la edge function lo guardó en 0 (ej: quote_required sin precio), saltamos
+  // el payment intent — lo creamos después cuando se acuerde el monto.
+  const totalForPayment = Number(
+    request?.total_price_snapshot ??
+    request?.totalPrice ??
+    pricing.total_price ??
+    0
+  );
   if (totalForPayment > 0) {
     try {
       console.log("[MIMI Solicitar] step 6: creating payment intent", { total: totalForPayment });

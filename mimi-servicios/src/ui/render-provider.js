@@ -1276,8 +1276,8 @@ function renderProviderBusiness(state) {
           <input name="offering:0:minimumHours" type="hidden" value="${escapeHtml(String(firstOffering?.minimum_hours ?? ""))}">
           <input name="offering:0:maximumHours" type="hidden" value="${escapeHtml(String(firstOffering?.maximum_hours ?? detail?.max_hours_per_service ?? 8))}">
           <label class="provider-check-item">
-            <input name="offering:0:quoteRequired" type="checkbox" ${firstOffering ? (firstOffering.quote_required ? "checked" : "") : "checked"}>
-            <span>Prefiero presupuestar antes de confirmar</span>
+            <input name="offering:0:quoteRequired" type="checkbox" ${firstOffering?.quote_required ? "checked" : ""}>
+            <span>Prefiero presupuestar antes de confirmar (opcional)</span>
           </label>
           <input name="offering:0:clientInstructions" type="hidden" value="${escapeHtml(firstOffering?.client_instructions ?? "")}">
         </section>
