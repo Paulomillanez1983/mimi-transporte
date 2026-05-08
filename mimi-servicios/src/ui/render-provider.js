@@ -680,6 +680,36 @@ function renderServiceModeOptions(selected = "IN_PERSON") {
     .join("");
 }
 
+function renderServiceModeOptionsForCategory(category = null, selected = "IN_PERSON") {
+  const allowed = Array.isArray(category?.allowed_service_modes) && category.allowed_service_modes.length
+    ? category.allowed_service_modes.map((item) => String(item).toUpperCase())
+    : ["IN_PERSON"];
+  const current = allowed.includes(String(selected || "").toUpperCase())
+    ? String(selected || "").toUpperCase()
+    : allowed[0] || "IN_PERSON";
+
+  return allowed
+    .filter((value) => serviceModeLabels[value])
+    .map((value) => `<option value="${value}" ${current === value ? "selected" : ""}>${escapeHtml(serviceModeLabels[value])}</option>`)
+    .join("");
+}
+
+function renderLocationPolicyOptionsForMode(serviceMode = "IN_PERSON", selected = "CLIENT_ADDRESS") {
+  const mode = String(serviceMode || "IN_PERSON").toUpperCase();
+  const allowed = mode === "ONLINE"
+    ? ["ONLINE_ONLY"]
+    : mode === "HYBRID"
+      ? ["FLEXIBLE", "CLIENT_ADDRESS", "PROVIDER_ADDRESS", "ONLINE_ONLY"]
+      : ["CLIENT_ADDRESS", "PROVIDER_ADDRESS", "FLEXIBLE"];
+  const current = allowed.includes(String(selected || "").toUpperCase())
+    ? String(selected || "").toUpperCase()
+    : allowed[0];
+
+  return allowed
+    .map((value) => `<option value="${value}" ${current === value ? "selected" : ""}>${escapeHtml(locationPolicyLabels[value])}</option>`)
+    .join("");
+}
+
 function renderLocationPolicyOptions(selected = "CLIENT_ADDRESS") {
   const current = String(selected || "CLIENT_ADDRESS").toUpperCase();
 
@@ -1109,10 +1139,8 @@ function renderProviderBusiness(state) {
           </div>
           <div class="provider-ai-input-shell provider-search-box">
             <textarea name="providerAiPrompt" rows="3" maxlength="500" placeholder="Ej: soy abogado penalista, hago manicura, pinto casas">${escapeHtml(firstOffering?.description ?? "")}</textarea>
-            <div class="provider-ai-controls">
-              <button class="provider-icon-action" data-provider-business-action="start-provider-dictation" type="button" aria-label="Dictar por voz" title="Dictar por voz">🎙</button>
-              <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Buscar rubros</button>
-            </div>
+            <button class="provider-icon-action provider-mic-inside" data-provider-business-action="start-provider-dictation" type="button" aria-label="Dictar por voz" title="Dictar por voz">🎙</button>
+            <button class="btn-primary provider-suggest-button" data-provider-business-action="suggest-provider-service" type="button">Buscar rubros</button>
           </div>
           <div class="provider-voice-status" id="providerVoiceStatus" hidden></div>
           <div class="provider-ai-empty" id="providerAiEmpty" ${hasSelectedRubros ? "hidden" : ""}>Buscá rubros para poder publicar. Las opciones aparecen acá mismo.</div>
@@ -1156,7 +1184,7 @@ function renderProviderBusiness(state) {
             <select name="offering:0:categoryId">
               <option value="">Primero elegi una card sugerida</option>
               ${categories.map((category) => `
-                <option value="${escapeHtml(category.id)}" ${(firstOffering?.category_id ?? selectedCategories[0]?.id ?? "") === category.id ? "selected" : ""}>${escapeHtml(category.name)}</option>
+                <option value="${escapeHtml(category.id)}" data-pricing-model="${escapeHtml(category.default_pricing_model ?? "HOURLY")}" data-service-modes="${escapeHtml((category.allowed_service_modes ?? ["IN_PERSON"]).join(","))}" ${(firstOffering?.category_id ?? selectedCategories[0]?.id ?? "") === category.id ? "selected" : ""}>${escapeHtml(category.name)}</option>
               `).join("")}
             </select>
           </label>
@@ -1183,11 +1211,11 @@ function renderProviderBusiness(state) {
             </label>
             <label class="input-group">
               <span>Modalidad</span>
-              <select name="offering:0:serviceMode">${renderServiceModeOptions(serviceMode)}</select>
+              <select name="offering:0:serviceMode">${renderServiceModeOptionsForCategory(defaultCategory, serviceMode)}</select>
             </label>
             <label class="input-group">
               <span>Atencion</span>
-              <select name="offering:0:locationPolicy">${renderLocationPolicyOptions(locationPolicy)}</select>
+              <select name="offering:0:locationPolicy">${renderLocationPolicyOptionsForMode(serviceMode, locationPolicy)}</select>
             </label>
             <label class="input-group">
               <span>Precio principal</span>

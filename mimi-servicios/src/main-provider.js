@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.07.13";
+const MIMI_PROVIDER_BUILD = "2026.05.07.14";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -1478,6 +1478,13 @@ document.addEventListener("click", (event) => {
     this.handleProviderBusinessAction(actionButton.dataset.providerBusinessAction, actionButton);
   }
 });
+
+document.addEventListener("change", (event) => {
+  const target = event.target;
+  if (target?.matches?.("[name='offering:0:categoryId'], [name='offering:0:serviceMode']")) {
+    this.applyProviderCategoryUiRules(target.closest("form"));
+  }
+});
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -2070,6 +2077,7 @@ syncProviderSelectedCategories(form = document.getElementById("providerBusinessF
     categorySelect.value = firstSelected;
   }
   if (activeInput && firstSelected) activeInput.checked = true;
+  this.applyProviderCategoryUiRules(form);
 
   const nextButton = form.querySelector("[data-provider-setup-step='1'] [data-provider-business-action='provider-setup-next']");
   if (nextButton) nextButton.disabled = !selectedIds.length;
@@ -2083,6 +2091,57 @@ syncProviderSelectedCategories(form = document.getElementById("providerBusinessF
       ? `Elegiste: ${selectedNames.join(", ")}`
       : "Elegi al menos una sugerencia para seguir.";
   }
+}
+
+applyProviderCategoryUiRules(form = document.getElementById("providerBusinessForm")) {
+  if (!form) return;
+
+  const categorySelect = form.querySelector("[name='offering:0:categoryId']");
+  const serviceModeSelect = form.querySelector("[name='offering:0:serviceMode']");
+  const locationPolicySelect = form.querySelector("[name='offering:0:locationPolicy']");
+  const pricingModelSelect = form.querySelector("[name='offering:0:pricingModel']");
+  if (!categorySelect || !serviceModeSelect || !locationPolicySelect) return;
+
+  const selectedOption = categorySelect.selectedOptions?.[0];
+  const allowedModes = String(selectedOption?.dataset?.serviceModes || "IN_PERSON")
+    .split(",")
+    .map((item) => item.trim().toUpperCase())
+    .filter(Boolean);
+  const safeModes = allowedModes.length ? allowedModes : ["IN_PERSON"];
+  const modeLabels = {
+    IN_PERSON: "Presencial",
+    ONLINE: "Online",
+    HYBRID: "Online y presencial"
+  };
+  const pricingModel = String(selectedOption?.dataset?.pricingModel || "").toUpperCase();
+
+  const currentMode = safeModes.includes(serviceModeSelect.value) ? serviceModeSelect.value : safeModes[0];
+  serviceModeSelect.innerHTML = safeModes
+    .filter((mode) => modeLabels[mode])
+    .map((mode) => `<option value="${mode}" ${mode === currentMode ? "selected" : ""}>${modeLabels[mode]}</option>`)
+    .join("");
+
+  if (pricingModel && pricingModelSelect && !pricingModelSelect.dataset.touched) {
+    pricingModelSelect.value = pricingModel;
+  }
+
+  const policyLabels = {
+    CLIENT_ADDRESS: "Domicilio del cliente",
+    PROVIDER_ADDRESS: "Base del prestador",
+    ONLINE_ONLY: "Videollamada",
+    FLEXIBLE: "A coordinar"
+  };
+  const selectedMode = serviceModeSelect.value || currentMode;
+  const policies = selectedMode === "ONLINE"
+    ? ["ONLINE_ONLY"]
+    : selectedMode === "HYBRID"
+      ? ["FLEXIBLE", "CLIENT_ADDRESS", "PROVIDER_ADDRESS", "ONLINE_ONLY"]
+      : ["CLIENT_ADDRESS", "PROVIDER_ADDRESS", "FLEXIBLE"];
+  const currentPolicy = policies.includes(locationPolicySelect.value) ? locationPolicySelect.value : policies[0];
+
+  locationPolicySelect.innerHTML = policies
+    .map((policy) => `<option value="${policy}" ${policy === currentPolicy ? "selected" : ""}>${policyLabels[policy]}</option>`)
+    .join("");
 }
 
 renderProviderSuggestionCards(form, matches, text, { fallback = false } = {}) {
@@ -2139,9 +2198,41 @@ revealProviderSuggestions(form = document.getElementById("providerBusinessForm")
   const target = firstCard ?? suggestionBox;
 
   window.setTimeout(() => {
-    target?.scrollIntoView?.({ behavior: "smooth", block: "center", inline: "nearest" });
-    firstCard?.focus?.({ preventScroll: true });
+    this.scrollElementIntoView(target, { block: "center" });
   }, 80);
+}
+
+scrollElementIntoView(target, { block = "center" } = {}) {
+  if (!target) return;
+
+  const scrollParent = this.findScrollableParent(target);
+  if (!scrollParent || scrollParent === document.documentElement || scrollParent === document.body) {
+    target.scrollIntoView?.({ behavior: "smooth", block, inline: "nearest" });
+    return;
+  }
+
+  const parentRect = scrollParent.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const offset = block === "start"
+    ? targetRect.top - parentRect.top - 18
+    : targetRect.top - parentRect.top - (parentRect.height / 2) + (targetRect.height / 2);
+  scrollParent.scrollTo({
+    top: scrollParent.scrollTop + offset,
+    behavior: "smooth"
+  });
+}
+
+findScrollableParent(element) {
+  let node = element?.parentElement;
+  while (node && node !== document.body) {
+    const style = getComputedStyle(node);
+    const overflow = `${style.overflowY} ${style.overflow}`;
+    if (/(auto|scroll)/.test(overflow) && node.scrollHeight > node.clientHeight + 8) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return document.scrollingElement || document.documentElement;
 }
 
 toggleProviderSuggestion(source = null) {
@@ -2162,7 +2253,7 @@ revealProviderServiceDetails(form = document.getElementById("providerBusinessFor
   window.setTimeout(() => {
     const details = form?.querySelector?.("#providerServiceDetails");
     const title = form?.querySelector?.("[name='offering:0:title']");
-    details?.scrollIntoView?.({ behavior: "smooth", block: "start", inline: "nearest" });
+    this.scrollElementIntoView(details, { block: "start" });
     title?.focus?.({ preventScroll: true });
   }, 120);
 }
@@ -2193,6 +2284,22 @@ async handleProviderServiceSuggestion() {
     actions.setLoading(true);
     this.setButtonBusy(trigger, true, "Buscando...");
     promptInput?.blur?.();
+    if (suggestionBox) {
+      suggestionBox.hidden = false;
+      suggestionBox.removeAttribute("hidden");
+      suggestionBox.classList.add("has-suggestions", "is-searching");
+      suggestionBox.innerHTML = `
+        <div class="provider-suggestions-loading">
+          <span class="button-spinner" aria-hidden="true"></span>
+          <strong>Buscando rubros compatibles...</strong>
+        </div>
+      `;
+      this.scrollElementIntoView(suggestionBox, { block: "center" });
+    }
+    if (emptyBox) {
+      emptyBox.hidden = true;
+      emptyBox.setAttribute("hidden", "");
+    }
     const result = await resolveServiceIntent(text, { limit: 5 });
     const matches = this.mergeProviderCategorySuggestions(
       Array.isArray(result?.matches) ? result.matches : [],
@@ -2224,8 +2331,6 @@ async handleProviderServiceSuggestion() {
     }
 
     this.renderProviderSuggestionCards(form, matches, text);
-
-    this.showToast("Listo. Bajamos a las opciones sugeridas.", "info");
   } catch (err) {
     console.warn("[MIMI] Sugerencia provider fallback:", err);
     const matches = this.localProviderCategorySuggestions(text);
@@ -2240,6 +2345,7 @@ async handleProviderServiceSuggestion() {
     this.renderProviderSuggestionCards(form, matches, text, { fallback: true });
     this.showToast("Usamos sugerencias locales. Elegi una o varias.", "info");
   } finally {
+    suggestionBox?.classList?.remove("is-searching");
     this.setButtonBusy(trigger, false);
     actions.setLoading(false);
   }
