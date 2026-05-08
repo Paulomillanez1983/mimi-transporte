@@ -1774,6 +1774,46 @@ collectProviderBusinessPayload(form) {
   const offerings = [];
   const availability = [];
 
+  // Recolectar IDs de offerings que el form está editando ahora.
+  const formOfferingIds = new Set();
+  for (let i = 0; data.has(`offering:${i}:present`); i++) {
+    const idValue = String(data.get(`offering:${i}:id`) ?? "").trim();
+    if (idValue) formOfferingIds.add(idValue);
+  }
+
+  // Preservar offerings activos del provider que NO están en el form.
+  // Sin esto, el upsert con onConflict:"id" desactiva todos los que no
+  // vengan en el payload (porque saveProviderWorkspace primero pone active=false
+  // a TODOS los offerings del provider antes de re-activar los del payload).
+  const existingOfferings = this.state?.provider?.business?.offerings ?? [];
+  for (const existing of existingOfferings) {
+    if (!existing?.id || existing.active === false) continue;
+    if (formOfferingIds.has(String(existing.id))) continue;
+    // Este offering no está en el form → preservarlo tal cual está en BD
+    offerings.push({
+      id: existing.id,
+      categoryId: existing.category_id,
+      title: existing.title ?? "",
+      description: existing.description ?? "",
+      pricingModel: existing.pricing_model ?? "HOURLY",
+      serviceMode: existing.service_mode ?? "IN_PERSON",
+      locationPolicy: existing.location_policy ?? "CLIENT_ADDRESS",
+      publicSummary: existing.public_summary ?? "",
+      pricePerHour: existing.price_per_hour ?? "",
+      baseVisitFee: existing.base_visit_fee ?? "",
+      fixedPrice: existing.fixed_price ?? "",
+      unitName: existing.unit_name ?? "",
+      unitPrice: existing.unit_price ?? "",
+      minimumCharge: existing.minimum_charge ?? 0,
+      minimumHours: existing.minimum_hours ?? "",
+      maximumHours: existing.maximum_hours ?? "",
+      durationMinutes: existing.duration_minutes ?? "",
+      clientInstructions: existing.client_instructions ?? "",
+      quoteRequired: Boolean(existing.quote_required),
+      metadata: existing.metadata ?? {}
+    });
+  }
+
   for (let index = 0; data.has(`offering:${index}:present`); index += 1) {
     if (!data.has(`offering:${index}:active`)) continue;
 
@@ -1951,14 +1991,24 @@ async handleProviderBusinessSubmit(event) {
     if (avatarFile) {
       await uploadProviderAvatar({ providerId, file: avatarFile });
     }
+    const wasEditing = Boolean(this.state?.provider?.editingOfferingId);
     const workspace = await saveProviderWorkspace(providerId, payload);
     this.applyWorkspaceToState(workspace);
+
+    // Si estábamos editando, limpiar el editingOfferingId para no quedar pegados
+    // a ese offering en próximos renders (sino el form siempre lo precargaría).
+    if (wasEditing) {
+      actions.updateState({
+        provider: { ...this.state.provider, editingOfferingId: null }
+      });
+    }
+
     this.switchTab("now");
     this.setBottomSheetState("peek");
     renderProviderScreen(this.state);
     this.renderServicesAndPricing();
     this.renderSheetSummary();
-    this.showToast("Servicio publicado. Ya podes ponerte online.", "success");
+    this.showToast(wasEditing ? "Servicio actualizado correctamente." : "Servicio publicado. Ya podés ponerte online.", "success");
   } catch (err) {
     console.error("[MIMI] Error guardando setup comercial:", err);
     this.showToast(err?.message ?? "No pudimos guardar tus servicios", "error");
@@ -2048,7 +2098,17 @@ async handleProviderBusinessAction(action, source = null) {
     const offeringId = source?.dataset?.offeringId;
     if (!offeringId) return;
 
-    // 1) Marcar que estamos editando este offering
+    // Verificar que el offering exista en el state actual
+    const offerings = this.state?.provider?.business?.offerings ?? [];
+    const target = offerings.find((o) => o?.id === offeringId);
+    if (!target) {
+      this.showToast("No encontré ese servicio. Recargá la página.", "error");
+      console.warn("[MIMI Edit] offering no encontrado:", offeringId, "ofertas disponibles:", offerings.map((o) => o?.id));
+      return;
+    }
+    console.log("[MIMI Edit] editando offering:", { id: offeringId, title: target.title, pricing_model: target.pricing_model });
+
+    // 1) Marcar que estamos editando este offering en el state global
     actions.updateState({
       provider: {
         ...this.state.provider,
@@ -2056,24 +2116,34 @@ async handleProviderBusinessAction(action, source = null) {
       },
     });
 
-    // 2) Cambiar a la pestaña Servicios (sin esto, el form no es visible)
-    this.switchTab("services");
+    // 2) Cambiar a la pestaña "Servicios" — el panel se llama internamente "pricing"
+    //    (data-tab="pricing" en el HTML, NO "services" — nombre histórico).
+    this.switchTab("pricing");
 
-    // 3) Forzar re-render para que el form precargue los datos del offering
+    // 3) Re-render con el state actualizado (editingOfferingId define qué offering
+    //    se carga como firstOffering en el form).
     renderProviderScreen(this.state);
     this.renderServicesAndPricing();
 
-    // 4) Scroll al form (con timeout para que termine el layout)
+    // 4) Scroll y foco al form, después del layout
     window.setTimeout(() => {
       const form = document.getElementById("providerBusinessForm");
-      if (form) {
-        form.scrollIntoView({ behavior: "smooth", block: "start" });
-        // foco en el primer input editable
-        form.querySelector("[name='offering:0:title']")?.focus({ preventScroll: true });
+      if (!form) {
+        console.warn("[MIMI Edit] providerBusinessForm no apareció en DOM");
+        return;
       }
-    }, 200);
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+      const titleInput = form.querySelector("[name='offering:0:title']");
+      titleInput?.focus({ preventScroll: true });
+      // Verificar que el form tiene los datos del offering
+      const loadedId = form.querySelector("[name='offering:0:id']")?.value;
+      console.log("[MIMI Edit] form cargado con offering id =", loadedId, "(esperado:", offeringId + ")");
+      if (loadedId !== offeringId) {
+        console.warn("[MIMI Edit] el form NO precargó el offering correcto. State:", this.state?.provider?.editingOfferingId);
+      }
+    }, 250);
 
-    this.showToast("Editando servicio. Modificá y guardá.", "info");
+    this.showToast(`Editando "${target.title || "servicio"}". Modificá y guardá.`, "info");
     return;
   }
 
