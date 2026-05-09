@@ -555,7 +555,8 @@ function scheduleBackendIntentResolution(value) {
 
 function setupCategoryPlaceholderExamples() {
   const input = document.getElementById("categorySearchInput");
-  if (!input || input.dataset.placeholderReady === "1") return;
+  // La demo typewriter controla los ejemplos. Evita dos timers pisándose.
+  if (!input || input.dataset.placeholderReady === "1" || input.dataset.typewriterReady === "true") return;
 
   const examples = String(input.dataset.placeholderExamples || "")
     .split("|")
@@ -629,6 +630,20 @@ function setInfo(message, error = null) {
 
 function setButtonLoading(button, loading, loadingLabel, idleLabel = null) {
   if (!button) return;
+
+  // Los botones con SVG interno (ej: ubicación actual) no deben perder el icono.
+  // Antes se usaba textContent y eso borraba el SVG al presionar el pin.
+  if (button.classList?.contains("address-locate-pin")) {
+    button.disabled = loading;
+    button.classList.toggle("is-loading", loading);
+    button.setAttribute("aria-busy", String(loading));
+    button.setAttribute(
+      "aria-label",
+      loading ? "Buscando tu ubicación actual" : "Usar mi ubicación actual"
+    );
+    button.title = loading ? "Buscando tu ubicación..." : "Usar mi ubicación actual";
+    return;
+  }
 
   if (!button.dataset.idleLabel) {
     button.dataset.idleLabel = idleLabel ?? button.textContent ?? "";
@@ -1841,7 +1856,9 @@ function startCategoryPlaceholderDemo() {
 
     deleting = false;
     exampleIndex = (exampleIndex + 1) % uniqueExamples.length;
-    window.setTimeout(tick, 750);
+    paint("");
+    // Pausa limpia entre un ejemplo y el siguiente: no se enciman los textos.
+    window.setTimeout(tick, 1100);
   };
 
   tick();
