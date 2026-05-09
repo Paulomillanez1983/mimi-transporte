@@ -178,7 +178,7 @@
 
           <!-- INPUT IA — minimalista, blanco, foco en el campo -->
           <div class="category-section">
-            <span class="address-block-label">¿Qué necesitás resolver?</span>
+            <span id="aiPromptLabel" class="address-block-label ai-question-type" data-label-text="¿Qué necesitás resolver?">¿Qué necesitás resolver?</span>
             <div class="ai-prompt-card">
               <div class="ai-prompt-input-wrap">
                 <span class="ai-prompt-icon" aria-hidden="true">
@@ -191,7 +191,7 @@
                   id="categorySearchInput"
                   type="search"
                   class="ai-prompt-input"
-                  placeholder="Ej: se me rompió un caño..."
+                  placeholder=""
                   data-placeholder-examples="Se me rompió un caño|Necesito un psicólogo online|Quiero una nutricionista|Busco un kinesiólogo|Necesito un abogado|Necesito un contador|Una niñera para la tarde|Mi computadora no funciona"
                   autocomplete="off"
                   autocapitalize="sentences"
@@ -200,6 +200,7 @@
                   enterkeyhint="search"
                   aria-label="Describí qué servicio necesitás"
                 >
+                <div id="aiPromptGhost" class="ai-prompt-ghost" aria-hidden="true">Ej: se me rompió un caño...</div>
                 <button type="button" id="categorySearchClear" class="ai-prompt-clear" aria-label="Limpiar" hidden>×</button>
               </div>
             </div>
