@@ -9,6 +9,7 @@ const files = {
   rpc: "supabase/migrations/20260509221209_enterprise_02_rpc_permissions.sql",
   rls: "supabase/migrations/20260509221309_enterprise_03_rls_policy_hardening.sql",
   audit: "supabase/migrations/20260509221409_enterprise_04_service_audit_and_expiration.sql",
+  residualRpc: "supabase/migrations/20260509233520_enterprise_05_close_residual_rpc_exposure.sql",
   validation: "docs/backend-hardening/enterprise_validation.sql",
   releasePlan: "docs/backend-hardening/enterprise_release_plan_2026-05-09.md"
 };
@@ -34,6 +35,7 @@ const searchPath = read(files.searchPath);
 const rpc = read(files.rpc);
 const rls = read(files.rls);
 const audit = read(files.audit);
+const residualRpc = read(files.residualRpc);
 const validation = read(files.validation);
 const releasePlan = read(files.releasePlan);
 
@@ -46,6 +48,15 @@ const releasePlan = read(files.releasePlan);
   "svc_complete_service_atomic",
   "svc_search_providers_ranked"
 ].forEach((fn) => check(`rpc hardens ${fn}`, rpc.includes(fn)));
+
+[
+  "dispatch_aceptar_oferta_pro",
+  "dispatch_rechazar_oferta_pro",
+  "dispatch_viaje",
+  "expirar_ofertas_vencidas",
+  "buscar_choferes_cercanos",
+  "search_categories_hybrid"
+].forEach((fn) => check(`residual rpc hardens ${fn}`, residualRpc.includes(fn)));
 
 [
   "push_tokens_insert_own",
