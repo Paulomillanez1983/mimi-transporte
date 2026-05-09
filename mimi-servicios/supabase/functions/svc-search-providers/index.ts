@@ -207,7 +207,7 @@ serve(async (req) => {
             .from("svc_provider_identity_checks")
             .select("provider_id,full_name_detected,status,created_at")
             .in("provider_id", rpcProviderIds)
-    .order("created_at", { ascending: false, nullsFirst: false })
+            .order("created_at", { ascending: false, nullsFirst: false })
             .limit(150)
         : { data: [], error: null };
 
@@ -279,7 +279,7 @@ serve(async (req) => {
         .from("svc_provider_identity_checks")
         .select("provider_id,full_name_detected,status,created_at")
         .in("provider_id", providerIds)
-    .order("created_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false, nullsFirst: false })
         .limit(150),
     ]);
 

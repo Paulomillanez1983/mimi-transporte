@@ -54,6 +54,9 @@ serve(async (req) => {
         .select("*")
         .maybeSingle();
       if (offerError) throw offerError;
+      if (!offer) {
+        return json({ ok: false, rejected: false, error: "offer_not_pending_or_forbidden" }, 409);
+      }
       return json({ ok: true, rejected: true, offer });
     }
     const { data: result, error } = await admin.rpc("svc_accept_offer_atomic", {
@@ -61,6 +64,14 @@ serve(async (req) => {
       p_provider_user_id: user.id,
     });
     if (error) throw error;
+    if (result?.ok === false) {
+      return json({
+        ok: false,
+        accepted: false,
+        error: String(result.error || result.reason || "offer_not_available"),
+        result,
+      }, 409);
+    }
     const requestId = String(result?.request_id || "");
     let request = null;
     if (assertUuid(requestId)) {
