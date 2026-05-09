@@ -602,11 +602,29 @@ function currentConversationId() {
   );
 }
 
+let infoAutoHideTimer = null;
+
 function setInfo(message, error = null) {
   setState((draft) => {
     draft.meta.info = message || null;
     draft.meta.error = error;
   });
+
+  if (infoAutoHideTimer) {
+    window.clearTimeout(infoAutoHideTimer);
+    infoAutoHideTimer = null;
+  }
+
+  if (message && !error) {
+    const messageSnapshot = message;
+    infoAutoHideTimer = window.setTimeout(() => {
+      setState((draft) => {
+        if (draft.meta.info === messageSnapshot && !draft.meta.error) {
+          draft.meta.info = null;
+        }
+      });
+    }, 4200);
+  }
 }
 
 function setButtonLoading(button, loading, loadingLabel, idleLabel = null) {
@@ -1739,9 +1757,25 @@ async function handlePaymentAction(action) {
 
 function startCategoryPlaceholderDemo() {
   const input = document.getElementById("categorySearchInput");
+  const ghost = document.getElementById("aiPromptGhost");
+  const label = document.getElementById("aiPromptLabel");
   if (!input || input.dataset.typewriterReady === "true") return;
 
   input.dataset.typewriterReady = "true";
+
+  const labelText = String(label?.dataset.labelText || label?.textContent || "¿Qué necesitás resolver?");
+  if (label) {
+    label.textContent = "";
+    let labelIndex = 0;
+    const typeLabel = () => {
+      label.textContent = labelText.slice(0, labelIndex);
+      if (labelIndex < labelText.length) {
+        labelIndex += 1;
+        window.setTimeout(typeLabel, 95);
+      }
+    };
+    window.setTimeout(typeLabel, 320);
+  }
 
   const examples = String(input.dataset.placeholderExamples || "")
     .split("|")
@@ -1749,51 +1783,65 @@ function startCategoryPlaceholderDemo() {
     .filter(Boolean);
 
   const demoExamples = [
-    "Necesito ayuda para una mudanza",
-    "Mi computadora no funciona",
+    "Mi computadora no funciona y necesito un técnico",
+    "Se me rompió un caño del baño",
+    "Necesito una niñera para la tarde",
     ...examples
   ];
 
-  const uniqueExamples = [...new Set(demoExamples)].slice(0, 8);
+  const uniqueExamples = [...new Set(demoExamples)].slice(0, 9);
   if (!uniqueExamples.length) return;
+
+  const syncGhostVisibility = () => {
+    const hide = Boolean(input.value.trim()) || document.activeElement === input;
+    input.closest(".ai-prompt-input-wrap")?.classList.toggle("has-user-text", hide);
+  };
+
+  input.addEventListener("focus", syncGhostVisibility);
+  input.addEventListener("blur", syncGhostVisibility);
+  input.addEventListener("input", syncGhostVisibility);
 
   let exampleIndex = 0;
   let charIndex = 0;
   let deleting = false;
 
+  const paint = (value) => {
+    if (ghost) ghost.textContent = value;
+    input.placeholder = ghost ? "" : value;
+  };
+
   const tick = () => {
     if (document.activeElement === input || input.value.trim()) {
+      syncGhostVisibility();
       window.setTimeout(tick, 900);
       return;
     }
 
+    input.closest(".ai-prompt-input-wrap")?.classList.remove("has-user-text");
     const text = uniqueExamples[exampleIndex] || "";
-    input.placeholder = text.slice(0, charIndex) || "Contanos... ¿qué te pasó?";
+    paint(text.slice(0, charIndex) || "Contanos... ¿qué te pasó?");
 
-    // Tipeo más relajado para sentirse "humano" — antes era 58ms y muy rápido.
     if (!deleting && charIndex < text.length) {
       charIndex += 1;
-      window.setTimeout(tick, 110);
+      window.setTimeout(tick, 125);
       return;
     }
 
-    // Pausa más larga al terminar la frase para que el usuario alcance a leerla
     if (!deleting && charIndex >= text.length) {
       deleting = true;
-      window.setTimeout(tick, 2400);
+      window.setTimeout(tick, 2600);
       return;
     }
 
-    // Borrado más lento también, para que el efecto sea suave
     if (deleting && charIndex > 0) {
       charIndex -= 1;
-      window.setTimeout(tick, 45);
+      window.setTimeout(tick, 55);
       return;
     }
 
     deleting = false;
     exampleIndex = (exampleIndex + 1) % uniqueExamples.length;
-    window.setTimeout(tick, 600);
+    window.setTimeout(tick, 750);
   };
 
   tick();
