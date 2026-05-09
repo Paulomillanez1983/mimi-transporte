@@ -124,6 +124,21 @@ const providerColors = [
   "#0891b2"
 ];
 
+const categoryAccentPalette = [
+  { solid: "#059669", soft: "rgba(5, 150, 105, 0.16)", border: "rgba(5, 150, 105, 0.45)", text: "#047857" },
+  { solid: "#2563eb", soft: "rgba(37, 99, 235, 0.15)", border: "rgba(37, 99, 235, 0.42)", text: "#1d4ed8" },
+  { solid: "#7c3aed", soft: "rgba(124, 58, 237, 0.15)", border: "rgba(124, 58, 237, 0.40)", text: "#6d28d9" },
+  { solid: "#db2777", soft: "rgba(219, 39, 119, 0.14)", border: "rgba(219, 39, 119, 0.38)", text: "#be185d" },
+  { solid: "#d97706", soft: "rgba(217, 119, 6, 0.15)", border: "rgba(217, 119, 6, 0.42)", text: "#b45309" },
+  { solid: "#0891b2", soft: "rgba(8, 145, 178, 0.15)", border: "rgba(8, 145, 178, 0.40)", text: "#0e7490" }
+];
+
+function categoryAccent(category) {
+  const key = String(category?.code || category?.id || category?.name || "MIMI");
+  const sum = [...key].reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return categoryAccentPalette[sum % categoryAccentPalette.length];
+}
+
 function currency(value, currencyCode = "ARS") {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -730,12 +745,14 @@ function renderCategories(state) {
         .map(
           (category, index) => {
             const isPopular = !query && index < 5;
+            const accent = categoryAccent(category);
             return `
             <button
               class="category-chip ${category.id === state.ui.selectedCategoryId ? "is-selected" : ""} ${isPopular ? "is-popular" : ""}"
               data-category-id="${escapeHtml(category.id)}"
               type="button"
               title="${escapeHtml(category.description ?? category.name)}"
+              style="--category-accent:${accent.solid};--category-accent-soft:${accent.soft};--category-accent-border:${accent.border};--category-accent-text:${accent.text};"
             >
               ${isPopular ? `<em class="category-popular-badge" aria-label="Popular">Top</em>` : ""}
               <span aria-hidden="true">${categoryIcon(category)}</span>
