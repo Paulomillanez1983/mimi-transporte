@@ -2732,3 +2732,125 @@ body[data-client-view="support"] .details-grid {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ============================================================
+   MIMI Servicios Cliente — UI polish seguro 2026-05-09
+   Objetivo: icono de ubicación visible, selección de rubros con
+   transparencia/colores variables, tipeo lento en IA y banner efímero.
+   ============================================================ */
+.status-banner.is-info {
+  transition: opacity .25s ease, transform .25s ease;
+}
+
+.address-block-label.ai-question-type {
+  color: #2563eb;
+  letter-spacing: .04em;
+  min-height: 16px;
+}
+
+.address-block-label.ai-question-type::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: -2px;
+  background: #2563eb;
+  animation: ai-label-caret 1s steps(1) infinite;
+}
+
+@keyframes ai-label-caret {
+  0%, 48% { opacity: 1; }
+  49%, 100% { opacity: 0; }
+}
+
+.ai-prompt-input-wrap {
+  position: relative;
+}
+
+.ai-prompt-ghost {
+  position: absolute;
+  left: 56px;
+  right: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ai-prompt-input {
+  position: relative;
+  z-index: 2;
+}
+
+.ai-prompt-input-wrap.has-user-text .ai-prompt-ghost {
+  opacity: 0;
+}
+
+.ai-prompt-input-wrap:not(.has-user-text) .ai-prompt-input {
+  color: transparent;
+  caret-color: var(--client-primary);
+}
+
+.category-chip {
+  --category-accent: #2563eb;
+  --category-accent-soft: rgba(37, 99, 235, .14);
+  --category-accent-border: rgba(37, 99, 235, .38);
+  --category-accent-text: #1d4ed8;
+}
+
+.category-chip.is-selected {
+  color: var(--category-accent-text) !important;
+  border-color: var(--category-accent-border) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.55)),
+    var(--category-accent-soft) !important;
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--category-accent) 22%, transparent) !important;
+  backdrop-filter: blur(10px);
+}
+
+.category-chip.is-selected::after {
+  color: #fff !important;
+  background: var(--category-accent) !important;
+}
+
+.category-chip.is-selected span,
+.category-chip.is-selected i,
+.category-chip.is-selected small,
+.category-chip.is-selected strong {
+  color: var(--category-accent-text) !important;
+}
+
+.category-chip.is-selected span[aria-hidden] {
+  color: #fff !important;
+  background: var(--category-accent) !important;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--category-accent) 32%, transparent);
+}
+
+.address-locate-pin {
+  background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px rgba(34, 197, 94, .34), 0 0 0 6px rgba(34, 197, 94, .10) !important;
+  z-index: 4;
+}
+
+.address-locate-pin svg {
+  display: block !important;
+  width: 20px;
+  height: 20px;
+  color: #fff !important;
+  fill: currentColor !important;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.16));
+}
+
+@supports not (color: color-mix(in srgb, #000 50%, transparent)) {
+  .category-chip.is-selected {
+    box-shadow: 0 14px 28px rgba(37, 99, 235, .18) !important;
+  }
+}
