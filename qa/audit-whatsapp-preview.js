@@ -19,6 +19,36 @@ const SOCIAL_USER_AGENTS = [
     name: "facebookexternalhit",
     value: "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
   },
+  {
+    name: "facebot",
+    value: "Facebot",
+  },
+  {
+    name: "twitterbot",
+    value: "Twitterbot/1.0",
+  },
+  {
+    name: "linkedinbot",
+    value: "LinkedInBot/1.0",
+  },
+  {
+    name: "telegrambot",
+    value: "TelegramBot (like TwitterBot)",
+  },
+  {
+    name: "discordbot",
+    value: "Discordbot/2.0",
+  },
+];
+
+const REQUIRED_ROBOTS_AGENTS = [
+  "facebookexternalhit",
+  "facebot",
+  "whatsapp",
+  "twitterbot",
+  "linkedinbot",
+  "telegrambot",
+  "discordbot",
 ];
 
 const args = process.argv.slice(2);
@@ -87,16 +117,21 @@ async function auditRobots(origin) {
   });
   const text = await response.text();
   const lower = text.toLowerCase();
-  const hasFacebookAllow =
+  const missingAgents = REQUIRED_ROBOTS_AGENTS.filter(
+    (agent) => !lower.includes(`user-agent: ${agent}`),
+  );
+  const hasSocialAllow =
     lower.includes("allow: /") &&
+    missingAgents.length === 0 &&
     !lower.includes("disallow: /share") &&
     !lower.includes("disallow: /assets") &&
     !lower.includes("disallow: /");
   return {
     url: robotsUrl,
     status: response.status,
-    ok: response.ok && hasFacebookAllow,
-    hasFacebookAllow,
+    ok: response.ok && hasSocialAllow,
+    hasSocialAllow,
+    missingAgents,
     cacheControl: response.headers.get("cache-control") || "",
   };
 }
