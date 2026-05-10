@@ -19,6 +19,7 @@ Se aplico la capa de notificaciones push nativas y tracking realtime para MIMI S
   - `FIREBASE_PROJECT_ID`
   - `FIREBASE_CLIENT_EMAIL`
   - `FIREBASE_PRIVATE_KEY`
+- El canal interno usa `PUSH_INTERNAL_KEY` si existe o `INTERNAL_WORKER_SECRET` como fallback ya configurado en Supabase.
 - `dispatch-viaje` envia push nativa al chofer cuando se crea una oferta.
 - `aceptar-viaje-multi`, `iniciar-viaje-ts`, `completar-viaje-ts` y `cancelar-viaje-ts` notifican al cliente o chofer segun corresponda.
 - `js/driver-app.js` solicita/actualiza push cuando el chofer se conecta.

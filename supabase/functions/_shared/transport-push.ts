@@ -22,7 +22,9 @@ async function sendTransportPushTokens(
     data?: Record<string, unknown>;
   }
 ) {
-  const internalKey = safeText(Deno.env.get("PUSH_INTERNAL_KEY"));
+  const internalKey = safeText(
+    Deno.env.get("PUSH_INTERNAL_KEY") || Deno.env.get("INTERNAL_WORKER_SECRET")
+  );
   const functionBearer = safeText(
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")
   );

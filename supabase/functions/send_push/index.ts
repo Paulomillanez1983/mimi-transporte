@@ -251,7 +251,9 @@ serve(async (req)=>{
   let supabaseAdmin = null;
   try {
     const internalKey = sanitizeString(req.headers.get("x-internal-key"));
-    const expectedInternalKey = sanitizeString(Deno.env.get("PUSH_INTERNAL_KEY"));
+    const expectedInternalKey = sanitizeString(
+      Deno.env.get("PUSH_INTERNAL_KEY") || Deno.env.get("INTERNAL_WORKER_SECRET")
+    );
     if (!expectedInternalKey) {
       return jsonResponse({
         ok: false,
