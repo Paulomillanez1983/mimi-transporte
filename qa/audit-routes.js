@@ -34,7 +34,8 @@ const manifests = [
   "manifest-clientes.json",
   "manifest-driver.json",
   "manifest-partners.json",
-  "mimi-servicios/manifest.json"
+  "mimi-servicios/manifest.json",
+  "mimi-servicios/manifest-prestador.json"
 ].map((file) => {
   const full = path.join(ROOT, file);
   try {

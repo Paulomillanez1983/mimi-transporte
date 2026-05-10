@@ -1,4 +1,4 @@
-import "./driver-bootstrap-2026.js";
+import "./driver-bootstrap-2026.js?v=2026.05.09.1";
 
 const PWA_STATE = {
   deferredPrompt: null,

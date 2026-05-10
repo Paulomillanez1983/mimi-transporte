@@ -4,15 +4,15 @@ const isDriverRuntime =
   document.getElementById("map-container");
 
 if (isDriverRuntime) {
-  import("./driver-map-light-2026.js").catch((err) => {
+  import("./driver-map-light-2026.js?v=2026.05.09.1").catch((err) => {
     console.warn("[driver-bootstrap] map patch failed", err);
   });
 
-  import("./driver-runtime-hardening-2026.js").catch((err) => {
+  import("./driver-runtime-hardening-2026.js?v=2026.05.09.1").catch((err) => {
     console.warn("[driver-bootstrap] hardening failed", err);
   });
 
-  import("./driver-text-fix-2026.js").catch((err) => {
+  import("./driver-text-fix-2026.js?v=2026.05.09.1").catch((err) => {
     console.warn("[driver-bootstrap] text fix failed", err);
   });
 }

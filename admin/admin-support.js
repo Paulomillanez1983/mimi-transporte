@@ -452,8 +452,50 @@ function showSupportToast(message, type = "info") {
   console.log(`[support.${type}]`, message);
 }
 
+function isSupportAuthGate(error) {
+  return ["ADMIN_AUTH_REQUIRED", "Sesion admin expirada"].includes(error?.message);
+}
+
+function renderSupportAuthGate(reason = "no_session") {
+  const els = getSupportElements();
+  const message = reason === "not_admin"
+    ? "Tu usuario no tiene permisos de administrador para ver soporte."
+    : "Ingresá como administrador para ver las conversaciones de soporte.";
+
+  supportState.conversations = [];
+  supportState.filtered = [];
+  supportState.selectedId = null;
+  supportState.mobileThreadOpen = false;
+
+  if (els.list) {
+    els.list.innerHTML = `
+      <div class="support-empty-state">
+        ${escapeHtmlSupport(message)}
+      </div>
+    `;
+  }
+
+  if (els.empty) {
+    els.empty.hidden = false;
+    els.empty.querySelector("h3")?.replaceChildren(document.createTextNode("Soporte protegido"));
+    els.empty.querySelector("p")?.replaceChildren(document.createTextNode(message));
+  }
+
+  if (els.panel) {
+    els.panel.hidden = true;
+  }
+
+  updateSupportDockBadge();
+}
+
 async function getAdminAccessToken() {
   const activeAdmin = await supabaseAdminService.requireActiveAdmin();
+  if (!activeAdmin?.ok) {
+    const error = new Error("ADMIN_AUTH_REQUIRED");
+    error.reason = activeAdmin?.reason || "no_session";
+    throw error;
+  }
+
   const token =
     activeAdmin?.session?.access_token ||
     activeAdmin?.user?.access_token ||
@@ -933,6 +975,12 @@ async function loadSupportConversations(options = {}) {
     renderSelectedConversation();
     updateSupportDockBadge();
   } catch (err) {
+    if (isSupportAuthGate(err)) {
+      stopSupportPolling();
+      renderSupportAuthGate(err.reason);
+      return;
+    }
+
     console.error("[support.loadSupportConversations]", err);
 
     supportState.conversations = [];
@@ -1021,7 +1069,7 @@ function stopSupportPolling() {
 }
 
 function handleVisibilitySupportRefresh() {
-  if (!document.hidden) {
+  if (!document.hidden && supportState.initialized) {
     loadSupportConversations({ preserveSelection: true, silent: true });
   }
 }
@@ -1101,8 +1149,19 @@ export function initAdminSupport() {
 
   handleSupportResize();
   updateSupportActionState();
-  loadSupportConversations({ preserveSelection: true, silent: false });
-  startSupportPolling();
+  supabaseAdminService.waitForActiveAdmin?.(4500)
+    .then((adminStatus) => {
+      if (!adminStatus?.ok) {
+        renderSupportAuthGate(adminStatus?.reason);
+        return;
+      }
+
+      loadSupportConversations({ preserveSelection: true, silent: false });
+      startSupportPolling();
+    })
+    .catch(() => {
+      renderSupportAuthGate("no_session");
+    });
 }
 window.adminSupport = {
   initAdminSupport,

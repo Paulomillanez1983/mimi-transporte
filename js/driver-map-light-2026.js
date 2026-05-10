@@ -42,7 +42,6 @@ function installMapLibreLightStylePatch() {
   };
 
   Object.setPrototypeOf(window.maplibregl.Map, OriginalMap);
-  window.maplibregl.Map.prototype = OriginalMap.prototype;
   window.__MIMI_DRIVER_LIGHT_MAP_PATCHED__ = true;
   window.MIMI_DRIVER_MAP_STYLE = PREMIUM_LIGHT_STYLE;
 }

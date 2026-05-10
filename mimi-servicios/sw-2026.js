@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-08-pin-rork-style-push-21";
+const APP_VERSION = "2026-05-09-enterprise-frontend-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -8,6 +8,7 @@ const APP_ASSETS = [
   "./cliente.html",
   "./prestador.html",
   "./manifest.json",
+  "./manifest-prestador.json",
   "./env.js",
   "./favicon.ico",
   "../favicon.png",
