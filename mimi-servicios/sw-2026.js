@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-10-branding-v2";
+const APP_VERSION = "2026-05-10-branding-v2-auth-gate";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [

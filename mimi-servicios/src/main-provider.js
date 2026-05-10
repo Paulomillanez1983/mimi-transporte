@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.11";
+const MIMI_PROVIDER_BUILD = "2026.05.10.12";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -132,6 +132,32 @@ async init() {
   } catch (_) {}
 
   initState();
+
+  this.cacheElements();
+
+  let earlySession = null;
+  try {
+    earlySession = await bootstrapSession();
+  } catch (err) {
+    console.warn("[MIMI] Provider early auth check failed; showing login gate:", err?.message ?? err);
+  }
+
+  if (!earlySession?.isAuthenticated) {
+    actions.setSession({
+      userId: null,
+      providerId: null,
+      userEmail: null,
+      userName: null,
+      userAvatar: null,
+      isAuthenticated: false,
+      token: null,
+      expiresAt: null
+    });
+    this.showProviderLoginGate();
+    actions.setLoading(false);
+    console.log("[MIMI] Provider auth gate active");
+    return;
+  }
 
   // Cargar categorías — si la DB devuelve vacío o falla, usar el catálogo local de config.js
   try {
