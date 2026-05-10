@@ -8,7 +8,8 @@ const expectedRoutes = [
   "/", "/hub-clientes", "/hub-clientes.html", "/cliente", "/servicios",
   "/prestador", "/viaje", "/operadores", "/chofer", "/privacidad",
   "/terminos", "/delete-account", "/share/servicios", "/share/prestador",
-  "/share/servicios-v4", "/share/prestador-v4"
+  "/share/servicios-v4", "/share/prestador-v4",
+  "/share/servicios-v5", "/share/prestador-v5"
 ];
 
 function existsWebPath(webPath) {

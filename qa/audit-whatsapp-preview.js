@@ -7,6 +7,8 @@ const DEFAULT_URLS = [
   "https://mimi-transporte.vercel.app/share/prestador",
   "https://mimi-transporte.vercel.app/share/servicios-v4",
   "https://mimi-transporte.vercel.app/share/prestador-v4",
+  "https://mimi-transporte.vercel.app/share/servicios-v5",
+  "https://mimi-transporte.vercel.app/share/prestador-v5",
 ];
 
 const SOCIAL_USER_AGENTS = [
@@ -87,6 +89,49 @@ function readPngSize(buffer) {
   };
 }
 
+function readJpegSize(buffer) {
+  if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+  let offset = 2;
+  while (offset < buffer.length) {
+    if (buffer[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+    const marker = buffer[offset + 1];
+    offset += 2;
+    if (marker === 0xd9 || marker === 0xda) break;
+    if (offset + 2 > buffer.length) break;
+    const length = buffer.readUInt16BE(offset);
+    if (length < 2 || offset + length > buffer.length) break;
+    if (
+      marker === 0xc0 ||
+      marker === 0xc1 ||
+      marker === 0xc2 ||
+      marker === 0xc3 ||
+      marker === 0xc5 ||
+      marker === 0xc6 ||
+      marker === 0xc7 ||
+      marker === 0xc9 ||
+      marker === 0xca ||
+      marker === 0xcb ||
+      marker === 0xcd ||
+      marker === 0xce ||
+      marker === 0xcf
+    ) {
+      return {
+        height: buffer.readUInt16BE(offset + 3),
+        width: buffer.readUInt16BE(offset + 5),
+      };
+    }
+    offset += length;
+  }
+  return null;
+}
+
+function readImageSize(buffer) {
+  return readPngSize(buffer) || readJpegSize(buffer);
+}
+
 async function fetchText(url, userAgent) {
   const response = await fetch(url, {
     redirect: "follow",
@@ -153,7 +198,7 @@ async function fetchImage(url, userAgent) {
     contentType: response.headers.get("content-type") || "",
     cacheControl: response.headers.get("cache-control") || "",
     bytes: buffer.length,
-    dimensions: readPngSize(buffer),
+    dimensions: readImageSize(buffer),
   };
 }
 
@@ -175,7 +220,7 @@ function evaluatePage(page, image) {
   if (!/^image\/(png|jpeg|jpg|webp)/i.test(image.contentType)) failures.push(`image_content_type_${image.contentType || "missing"}`);
   if (!image.bytes || image.bytes < 10000) failures.push("image_too_small_or_empty");
   if (image.bytes > 5 * 1024 * 1024) failures.push("image_too_large_for_social_preview");
-  if (!image.dimensions) failures.push("image_dimensions_not_detected_png");
+  if (!image.dimensions) failures.push("image_dimensions_not_detected");
   if (image.dimensions) {
     if (image.dimensions.width < 1200 || image.dimensions.height < 630) {
       failures.push(`image_dimensions_too_small_${image.dimensions.width}x${image.dimensions.height}`);
