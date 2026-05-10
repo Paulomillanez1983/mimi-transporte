@@ -878,6 +878,27 @@ export async function updateProviderStatus(providerId, status) {
   return data;
 }
 
+export async function touchProviderPresence(providerId) {
+  const supabase = getSupabaseClient();
+
+  if (!supabase || !providerId) return null;
+
+  await requireSession();
+
+  const { data, error } = await supabase
+    .from("svc_providers")
+    .update({
+      last_seen_at: new Date().toISOString()
+    })
+    .eq("id", providerId)
+    .select("id,status,last_seen_at")
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
 export async function loadProviderWorkspace(providerId) {
   const supabase = getSupabaseClient();
 

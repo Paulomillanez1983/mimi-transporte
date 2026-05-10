@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.7";
+const MIMI_PROVIDER_BUILD = "2026.05.10.8";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -46,6 +46,7 @@ import {
   resolveServiceIntent,
   saveProviderWorkspace,
   sendMessage,
+  touchProviderPresence,
   uploadProviderAvatar,
   uploadProviderDocument,
   signOut,
@@ -77,6 +78,7 @@ class MimiProviderApp {
     this.bottomSheet = null;
     this.offerTimer = null;
     this.trackingInterval = null;
+    this.presenceHeartbeatInterval = null;
     this.notificationsInterval = null;
     this.realtimeChannel = null;
     this.offerRealtimeChannel = null;
@@ -670,6 +672,66 @@ setTimeout(() => {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
+  }
+
+  applyProviderLocationSnapshot(profile = null) {
+    const lat = Number(profile?.last_lat);
+    const lng = Number(profile?.last_lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return false;
+    }
+
+    const timestamp = profile?.last_seen_at
+      ? Date.parse(profile.last_seen_at)
+      : Date.now();
+
+    const location = {
+      lat,
+      lng,
+      accuracy: null,
+      heading: null,
+      speed: null,
+      timestamp: Number.isFinite(timestamp) ? timestamp : Date.now(),
+      source: "online_snapshot"
+    };
+
+    actions.setLocation(location);
+
+    this.updateProviderRouteOnMap({
+      providerPosition: location,
+      servicePosition: this.servicePositionFromState()
+    });
+
+    return true;
+  }
+
+  startPresenceHeartbeat() {
+    if (this.presenceHeartbeatInterval) {
+      clearInterval(this.presenceHeartbeatInterval);
+    }
+
+    this.presenceHeartbeatInterval = setInterval(async () => {
+      const providerId = this.state?.session?.providerId;
+      const status = String(this.state?.provider?.status ?? "").toUpperCase();
+
+      if (!providerId || status === "OFFLINE") {
+        return;
+      }
+
+      try {
+        await touchProviderPresence(providerId);
+      } catch (err) {
+        console.warn("[MIMI] Error actualizando presencia liviana:", err);
+      }
+    }, 15 * 60 * 1000);
+  }
+
+  stopPresenceHeartbeat() {
+    if (this.presenceHeartbeatInterval) {
+      clearInterval(this.presenceHeartbeatInterval);
+      this.presenceHeartbeatInterval = null;
+    }
   }
 
   servicePositionFromState() {
@@ -2372,9 +2434,11 @@ if (!providerId) {
     actions.setProfile(profile);
     actions.setProviderStatus(profile?.status ?? "ONLINE_IDLE");
     actions.setBottomSheetState("peek");
+    this.stopLocationTracking();
+    this.applyProviderLocationSnapshot(profile);
+    this.startPresenceHeartbeat();
 
-    this.showToast("Ests online - recibiendo servicios", "success");
-    this.startLocationTracking();
+    this.showToast("Ests online. Usamos tu ubicacion actual como referencia.", "success");
   } catch (err) {
     console.error("[MIMI] Error poniendo online:", err);
     this.showToast("No pudimos ponerte online", "error");
@@ -2414,11 +2478,14 @@ async handleStatusToggle(status) {
     actions.setProviderStatus(profile?.status ?? status);
 
     if (status === "ONLINE_IDLE") {
-      this.showToast("Ests online", "success");
-      this.startLocationTracking();
+      this.stopLocationTracking();
+      this.applyProviderLocationSnapshot(profile);
+      this.startPresenceHeartbeat();
+      this.showToast("Ests online. Tu ubicacion se actualizo una vez.", "success");
     } else {
       this.showToast("Ests offline", "info");
       this.stopLocationTracking();
+      this.stopPresenceHeartbeat();
     }
   } catch (err) {
     console.error("[MIMI] Error cambiando disponibilidad:", err);
@@ -3947,11 +4014,12 @@ startLocationTracking() {
           if (updatedService && this.normalizeRequestStatus(updatedService.status) !== "COMPLETED") {
             actions.setActiveService(this.normalizeServiceForState(updatedService));
           } else {
-            actions.clearActiveService();
+          actions.clearActiveService();
           }
 
           actions.setProviderStatus("ONLINE_IDLE");
           this.stopLocationTracking();
+          this.startPresenceHeartbeat();
           this.showToast("Servicio completado", "success");
           break;
         }
@@ -5372,6 +5440,8 @@ async handleInstall() {
    */
 async handleLogout() {
   try {
+    this.stopLocationTracking();
+    this.stopPresenceHeartbeat();
     await signOut();
 
     this.state = null;

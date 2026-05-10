@@ -4,16 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <title>MIMI Clientes | Coordiná viajes y servicios con respaldo digital</title>
-  <meta name="description" content="Entrá al hub de clientes MIMI y coordiná viajes y servicios con más claridad, seguimiento y respaldo digital.">
+  <title>MIMI Servicios | Pedí prestadores cerca tuyo</title>
+  <meta name="description" content="Encontrá prestadores para hogar, salud, belleza, oficios y servicios profesionales con claridad, respaldo digital y seguimiento de solicitud.">
   <meta name="theme-color" content="#020617">
   <link rel="canonical" href="https://mimi-transporte.vercel.app/hub-clientes">
 
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="MIMI Transporte">
+  <meta property="og:site_name" content="MIMI Servicios">
   <meta property="og:locale" content="es_AR">
-  <meta property="og:title" content="MIMI Clientes | Coordiná viajes y servicios con respaldo digital">
-  <meta property="og:description" content="Entrá al hub de clientes MIMI y coordiná viajes y servicios con más claridad, seguimiento y respaldo digital.">
+  <meta property="og:title" content="MIMI Servicios | Pedí prestadores cerca tuyo">
+  <meta property="og:description" content="Encontrá prestadores para hogar, salud, belleza, oficios y servicios profesionales con claridad, respaldo digital y seguimiento de solicitud.">
   <meta property="og:url" content="https://mimi-transporte.vercel.app/hub-clientes">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
@@ -22,12 +22,12 @@
   <meta property="og:image:secure_url" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg?v=2">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="MIMI Clientes | Coordiná viajes y servicios con respaldo digital">
-  <meta name="twitter:description" content="Entrá al hub de clientes MIMI y coordiná viajes y servicios con más claridad, seguimiento y respaldo digital.">
+  <meta name="twitter:title" content="MIMI Servicios | Pedí prestadores cerca tuyo">
+  <meta name="twitter:description" content="Encontrá prestadores para hogar, salud, belleza, oficios y servicios profesionales con claridad, respaldo digital y seguimiento de solicitud.">
   <meta name="twitter:image" content="https://mimi-transporte.vercel.app/assets/og/og-general.jpg?v=2">
 
   <link rel="icon" href="./favicon.ico">
-  <link rel="stylesheet" href="./hub-clientes.css?v=2026.05.04-utf8-fixed-final">
+  <link rel="stylesheet" href="./hub-clientes.css?v=2026.05.10-services-first">
   <link rel="manifest" href="./manifest-clientes.json?v=2026.05.03">
 
   <meta name="mobile-web-app-capable" content="yes">
@@ -41,17 +41,17 @@
 
       <header class="topbar">
         <div class="brand">Mi<span>M</span>I</div>
-        <div class="status">Validación · Seguimiento · Respaldo</div>
+        <div class="status">Servicios · Prestadores · Respaldo</div>
       </header>
 
       <section class="hero">
         <div>
           <h1>
-            Pedí lo que necesitás,<br>
-            cuando lo <span class="accent">necesitás.</span>
+            Servicios cerca tuyo,<br>
+            simples y <span class="accent">claros.</span>
           </h1>
 
-          <p class="hero-copy">Coordiná viajes y servicios con más claridad, control y respaldo digital.</p>
+          <p class="hero-copy">Contá qué necesitás, elegí un rubro y coordiná con prestadores disponibles sin tracking permanente ni pantallas confusas.</p>
         </div>
 
         <div class="hero-visual" aria-hidden="true">
@@ -61,7 +61,7 @@
         </div>
       </section>
 
-      <section class="cards">
+      <section class="cards services-first">
 
         <article class="card transport-card">
           <div>
@@ -77,13 +77,13 @@
 
               <div>
                 <h2>MIMICAR</h2>
-                <div class="role blue-text">Para pasajeros</div>
+                <div class="role blue-text">Módulo de viajes</div>
               </div>
             </div>
 
             <p>
-              Coordiná tu viaje.<br>
-              Más visibilidad y seguimiento.
+              Transporte queda disponible,<br>
+              pero no es el foco principal ahora.
             </p>
 
             <div class="driver-product">
@@ -96,8 +96,8 @@
             </div>
           </div>
 
-          <a class="btn btn-blue" href="/index.html?v=cliente-final-2026">
-            <span>Pedir un viaje</span>
+          <a class="btn btn-blue btn-secondary-product" href="/viaje">
+            <span>Ir a viajes</span>
             <span>→</span>
           </a>
         </article>
@@ -115,13 +115,13 @@
 
               <div>
                 <h2>MIMIGo Servicios</h2>
-                <div class="role green-text">Para clientes</div>
+                <div class="role green-text">Producto principal</div>
               </div>
             </div>
 
             <p>
-              Encontrá servicios.<br>
-              Con más claridad y control.
+              Buscá prestadores por rubro.<br>
+              Recibí confirmación y avisos claros.
             </p>
 
             <div class="services-grid">
@@ -155,10 +155,13 @@
             </div>
           </div>
 
-          <a class="btn btn-green" href="/servicios">
-            <span>Buscar servicio</span>
-            <span>→</span>
-          </a>
+          <div class="service-actions">
+            <a class="btn btn-green" href="/servicios">
+              <span>Buscar prestador</span>
+              <span>→</span>
+            </a>
+            <a class="service-provider-link" href="/prestador">Soy prestador y quiero publicar mis servicios</a>
+          </div>
         </article>
 
       </section>
@@ -185,8 +188,8 @@
             </svg>
           </div>
           <div>
-            <h3>Seguimiento real</h3>
-            <p>Más visibilidad durante cada solicitud.</p>
+            <h3>Avisos importantes</h3>
+            <p>Notificaciones para cambios de estado y solicitudes.</p>
           </div>
         </div>
 
@@ -214,7 +217,7 @@
 
         <div class="clarity-copy">
           <h2>Más claridad en cada solicitud</h2>
-          <p>MIMI facilita la coordinación digital entre usuarios y prestadores independientes, con herramientas de validación, seguimiento y respaldo de plataforma.</p>
+          <p>MIMI facilita la coordinación digital entre usuarios y prestadores independientes, con herramientas de validación, solicitud, avisos y respaldo de plataforma.</p>
           <strong>Vos tenés el control. Nosotros te damos las herramientas.</strong>
         </div>
 

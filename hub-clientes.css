@@ -10,6 +10,144 @@
   --shadow:0 28px 90px rgba(0,0,0,.48);
 }
 
+/* =========================================================
+   MIMI Servicios first - Fase 1 producto principal
+   Mantiene Transporte vivo como acceso secundario sin romper rutas.
+   ========================================================= */
+
+.cards.services-first{
+  grid-template-columns:minmax(0,1.18fr) minmax(280px,.82fr);
+  align-items:stretch;
+}
+
+.cards.services-first .services-card{
+  order:-1;
+  border-color:rgba(134,239,172,.28);
+  box-shadow:
+    0 26px 70px rgba(0,0,0,.34),
+    0 0 0 1px rgba(134,239,172,.08) inset;
+}
+
+.cards.services-first .services-card::after{
+  content:"Principal";
+  position:absolute;
+  top:22px;
+  right:22px;
+  z-index:2;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(134,239,172,.14);
+  border:1px solid rgba(134,239,172,.28);
+  color:#dcfce7;
+  font-size:12px;
+  font-weight:950;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+.cards.services-first .transport-card{
+  opacity:.82;
+  min-height:auto;
+}
+
+.cards.services-first .transport-card::before{
+  background:radial-gradient(circle at 70% 0%, rgba(47,115,255,.16), transparent 42%);
+}
+
+.cards.services-first .transport-card .driver-product{
+  height:150px;
+}
+
+.cards.services-first .transport-card .trust-row{
+  grid-template-columns:1fr;
+}
+
+.cards.services-first .transport-card .trust-pill:last-child{
+  display:none;
+}
+
+.btn-secondary-product{
+  opacity:.88;
+  min-height:58px;
+}
+
+.service-actions{
+  display:grid;
+  gap:12px;
+}
+
+.service-provider-link{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+  padding:12px 16px;
+  border-radius:16px;
+  border:1px solid rgba(134,239,172,.18);
+  background:rgba(134,239,172,.07);
+  color:#dcfce7;
+  text-decoration:none;
+  text-align:center;
+  font-size:15px;
+  font-weight:850;
+  line-height:1.25;
+}
+
+.service-provider-link:focus-visible,
+.btn:focus-visible{
+  outline:3px solid rgba(134,239,172,.72);
+  outline-offset:3px;
+}
+
+@media (max-width:900px){
+  .cards.services-first{
+    grid-template-columns:1fr;
+    padding:0 14px 20px;
+  }
+
+  .cards.services-first .services-card,
+  .cards.services-first .transport-card{
+    min-height:auto;
+  }
+
+  .cards.services-first .services-card::after{
+    top:16px;
+    right:16px;
+    font-size:10px;
+    padding:7px 10px;
+  }
+
+  .cards.services-first .transport-card{
+    padding:18px;
+  }
+
+  .cards.services-first .transport-card .driver-product,
+  .cards.services-first .transport-card .trust-row{
+    display:none;
+  }
+}
+
+@media (max-width:430px){
+  .cards.services-first{
+    padding:0 10px 16px;
+    gap:12px;
+  }
+
+  .service-provider-link{
+    min-height:42px;
+    font-size:12.5px;
+    border-radius:14px;
+  }
+
+  .cards.services-first .transport-card{
+    opacity:.74;
+  }
+
+  .cards.services-first .transport-card .btn{
+    height:42px;
+  }
+}
+
 
 *{
   box-sizing:border-box;
