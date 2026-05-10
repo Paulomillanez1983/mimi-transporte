@@ -88,9 +88,10 @@ async function auditRobots(origin) {
   const text = await response.text();
   const lower = text.toLowerCase();
   const hasFacebookAllow =
-    lower.includes("user-agent: facebookexternalhit") &&
-    lower.includes("user-agent: facebot") &&
-    lower.includes("allow: /");
+    lower.includes("allow: /") &&
+    !lower.includes("disallow: /share") &&
+    !lower.includes("disallow: /assets") &&
+    !lower.includes("disallow: /");
   return {
     url: robotsUrl,
     status: response.status,
