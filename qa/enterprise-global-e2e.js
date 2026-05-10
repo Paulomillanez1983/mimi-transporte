@@ -215,6 +215,13 @@ async function createRequest(clientSession, provider, offering) {
   return created;
 }
 
+function providersFromSearchResponse(data) {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.providers)) return data.providers;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
 async function verifyRequestVisible(session, requestId, label) {
   return first(await restSelect(
     `svc_requests?select=*&id=eq.${encodeURIComponent(requestId)}&limit=1`,
@@ -358,7 +365,7 @@ async function run() {
   result.ids.offering_id = offering.id;
   result.ids.category_id = offering.category_id;
 
-  await invokeFunction("svc-search-providers", clientSession.token, {
+  const searchResult = await invokeFunction("svc-search-providers", clientSession.token, {
     category_id: offering.category_id,
     service_lat: SERVICE_LAT,
     service_lng: SERVICE_LNG,
@@ -366,6 +373,23 @@ async function run() {
     requested_hours: 1,
     limit: 5
   }, "search_providers");
+  const searchProviders = providersFromSearchResponse(searchResult);
+  const foundProvider = searchProviders.find((item) => item.provider_id === provider.id || item.id === provider.id);
+  if (!foundProvider) {
+    const error = new Error("search_provider_not_found");
+    error.details = {
+      provider_id: provider.id,
+      category_id: offering.category_id,
+      providers_count: searchProviders.length,
+      provider_ids: searchProviders.map((item) => item.provider_id || item.id).filter(Boolean)
+    };
+    throw error;
+  }
+  result.states.push({
+    step: "search",
+    providersCount: searchProviders.length,
+    providerFound: true
+  });
 
   const created = await createRequest(clientSession, provider, offering);
   const requestId = created.request.id;
@@ -376,17 +400,21 @@ async function run() {
 
   const realtimePromise = maybeOpenRealtime(clientSession.token, requestId);
 
-  const providerRequest = await verifyRequestVisible(providerSession, requestId, "provider");
+  // Before accepting, the provider receives the pending work through
+  // svc_request_offers. The request row is deliberately not readable by the
+  // provider until accepted_provider_id is set.
   const providerOffer = await verifyOfferVisible(providerSession, provider.id, requestId);
-  result.states.push({ step: "offered", requestStatus: providerRequest.status, offerStatus: providerOffer.status });
+  result.states.push({ step: "offered", offerStatus: providerOffer.status });
 
   const accept = await invokeFunction("svc-provider-respond-offer", providerSession.token, {
     offer_id: offerId,
     accepted: true
   }, "accept_offer");
   const acceptedOffer = await verifyOfferVisible(providerSession, provider.id, requestId);
+  const providerRequestAfterAccept = await verifyRequestVisible(providerSession, requestId, "provider_after_accept");
   result.states.push({
     step: "accepted",
+    requestStatus: providerRequestAfterAccept.status,
     response: accept?.request_status || accept?.request?.status || accept?.status || null,
     offerStatus: acceptedOffer.status
   });

@@ -159,6 +159,14 @@ Current execution result:
 
 Earlier blocker `provider_not_approved_or_blocked` is resolved for `testprestador@mimi-go.app`.
 
+Second blocker `provider_request_not_found` was traced to the E2E fixture, not to the production flow:
+
+- Before accepting, the provider should see the pending work through `svc_request_offers`.
+- `svc_requests` is intentionally not visible to the provider until `accepted_provider_id` is set.
+- The E2E runner now verifies `svc_request_offers` first, accepts through `svc-provider-respond-offer`, then verifies the request with the provider JWT after acceptance.
+
+The runner also now asserts that `svc-search-providers` returns the prepared test provider before creating the request.
+
 Current blocker in the Codex execution environment: missing E2E credential env vars. The script must be re-run in the terminal where the client/provider/admin test credentials are configured.
 
 ## Events currently present
