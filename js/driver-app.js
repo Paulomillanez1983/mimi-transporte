@@ -683,7 +683,7 @@ if (currentTrip) {
         session = retrySessionData?.session || null;
       }
 
-      if (!session?.access_token) {
+      if (!session?.access_token && session?.refresh_token) {
         const {
           data: refreshData,
           error: refreshError
