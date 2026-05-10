@@ -76,6 +76,30 @@ async function fetchText(url, userAgent) {
   };
 }
 
+async function auditRobots(origin) {
+  const robotsUrl = new URL("/robots.txt", origin).toString();
+  const response = await fetch(robotsUrl, {
+    redirect: "follow",
+    headers: {
+      "user-agent": SOCIAL_USER_AGENTS[1].value,
+      accept: "text/plain,*/*;q=0.8",
+    },
+  });
+  const text = await response.text();
+  const lower = text.toLowerCase();
+  const hasFacebookAllow =
+    lower.includes("user-agent: facebookexternalhit") &&
+    lower.includes("user-agent: facebot") &&
+    lower.includes("allow: /");
+  return {
+    url: robotsUrl,
+    status: response.status,
+    ok: response.ok && hasFacebookAllow,
+    hasFacebookAllow,
+    cacheControl: response.headers.get("cache-control") || "",
+  };
+}
+
 async function fetchImage(url, userAgent) {
   const response = await fetch(url, {
     redirect: "follow",
@@ -187,6 +211,22 @@ async function auditUrl(url, crawler) {
 
 async function main() {
   const results = [];
+  const origins = [...new Set(urls.map((url) => new URL(url).origin))];
+  const robots = [];
+  for (const origin of origins) {
+    try {
+      robots.push(await auditRobots(origin));
+    } catch (error) {
+      robots.push({
+        url: new URL("/robots.txt", origin).toString(),
+        status: 0,
+        ok: false,
+        hasFacebookAllow: false,
+        error: error?.message || String(error),
+      });
+    }
+  }
+
   for (const url of urls) {
     for (const crawler of SOCIAL_USER_AGENTS) {
       try {
@@ -207,11 +247,13 @@ async function main() {
   }
 
   const failed = results.filter((result) => !result.evaluation.ok);
+  const failedRobots = robots.filter((item) => !item.ok);
   const output = {
-    ok: failed.length === 0,
+    ok: failed.length === 0 && failedRobots.length === 0,
     checkedAt: new Date().toISOString(),
     note:
       "This validates crawler-readable Open Graph metadata and image assets. It cannot force or clear WhatsApp/Meta client-side cache.",
+    robots,
     results,
   };
 
