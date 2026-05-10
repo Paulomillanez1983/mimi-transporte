@@ -849,11 +849,11 @@ function buildDeviceId() {
   return deviceId;
 }
 
-async function registerCurrentDevice() {
+async function registerCurrentDevice({ prompt = false } = {}) {
   if (!state.session.userId) return;
 
   try {
-    const pushToken = await getMimiPushToken({ prompt: true });
+    const pushToken = await getMimiPushToken({ prompt });
     await registerDevice({
       deviceId: buildDeviceId(),
       pushToken,
@@ -861,8 +861,8 @@ async function registerCurrentDevice() {
       notificationsEnabled: Boolean(pushToken),
       marketingOptIn: false
     });
-  } catch {
-    // no-op
+  } catch (error) {
+    console.warn("[MIMI Cliente] device registration skipped:", error?.message ?? error);
   }
 }
 
@@ -964,9 +964,9 @@ function renderSupportThread(messages = []) {
 }
 
 function retryDeviceRegistrationAfterUserGesture() {
-  if (!("Notification" in window) || Notification.permission !== "default") return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
   document.addEventListener("click", () => {
-    registerCurrentDevice().catch(() => {});
+    registerCurrentDevice({ prompt: false }).catch(() => {});
   }, { once: true });
 }
 
@@ -1572,7 +1572,7 @@ async function bootstrapAsyncData() {
   });
 
   await hydrateLiveContext();
-  await registerCurrentDevice();
+  await registerCurrentDevice({ prompt: false });
   retryDeviceRegistrationAfterUserGesture();
 
   if (!hasSupabaseEnv()) {
@@ -1767,6 +1767,7 @@ async function handleProviderSelection(providerId) {
     setInfo("Solicitud no enviada. Podes revisar la categoria, direccion o elegir otro prestador.");
     return false;
   }
+  const pushRegistration = registerCurrentDevice({ prompt: true }).catch(() => {});
   pricing = confirmation.pricing || pricing;
   console.log("[MIMI Solicitar] step 5: creating request");
 
@@ -1859,10 +1860,22 @@ async function handleProviderSelection(providerId) {
   });
 
   await hydrateLiveContext(request);
+  pushRegistration.catch(() => {});
   return true;
 }
 
 async function handleRequestAction(action) {
+  if (action === "refresh") {
+    await hydrateLiveContext();
+    setInfo("Estado actualizado. Si el prestador respondio, lo vas a ver aca.");
+    return;
+  }
+
+  if (action === "rate") {
+    setInfo("La calificacion se habilita cuando el servicio queda cerrado.");
+    return;
+  }
+
   if (action !== "cancel") return;
 
   const requestId = state.client.activeRequest?.id;

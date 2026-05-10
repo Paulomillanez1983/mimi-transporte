@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.9";
+const MIMI_PROVIDER_BUILD = "2026.05.10.10";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -222,18 +222,15 @@ if (!canBootProviderPanel) {
   // Push notifications: si Firebase Messaging logró obtener token FCM,
   // lo registramos en svc_user_devices para que el backend pueda enviar
   // pushes cuando entre una solicitud nueva (incluso con la app cerrada).
-  this.registerProviderPushToken();
-  if ("Notification" in window && Notification.permission === "default") {
-    document.addEventListener("click", () => this.registerProviderPushToken(), { once: true });
-  }
+  this.registerProviderPushToken({ prompt: false });
 
   console.log("[MIMI] App initialized");
 }
 
-async registerProviderPushToken() {
+async registerProviderPushToken({ prompt = false } = {}) {
   try {
     if (!this.state?.session?.userId) return;
-    const token = await getMimiPushToken({ prompt: true });
+    const token = await getMimiPushToken({ prompt });
     if (!token) {
       console.info("[MIMI Push] sin token, no registramos device para push");
       return;
@@ -2468,6 +2465,7 @@ if (!providerId) {
   this.showWizardStep(1);
   return;
 }
+  const pushRegistration = this.registerProviderPushToken({ prompt: true }).catch(() => {});
   try {
     actions.setLoading(true);
 
@@ -2479,6 +2477,7 @@ if (!providerId) {
     this.stopLocationTracking();
     this.applyProviderLocationSnapshot(profile);
     this.startPresenceHeartbeat();
+    pushRegistration.catch(() => {});
 
     this.showToast("Ests online. Usamos tu ubicacion actual como referencia.", "success");
   } catch (err) {
@@ -2511,6 +2510,10 @@ async handleStatusToggle(status) {
     return;
   }
 
+  const pushRegistration = status === "ONLINE_IDLE"
+    ? this.registerProviderPushToken({ prompt: true }).catch(() => {})
+    : Promise.resolve();
+
   try {
     actions.setLoading(true);
 
@@ -2523,6 +2526,7 @@ async handleStatusToggle(status) {
       this.stopLocationTracking();
       this.applyProviderLocationSnapshot(profile);
       this.startPresenceHeartbeat();
+      pushRegistration.catch(() => {});
       this.showToast("Ests online. Tu ubicacion se actualizo una vez.", "success");
     } else {
       this.showToast("Ests offline", "info");
@@ -5924,23 +5928,6 @@ if ('serviceWorker' in navigator) {
         console.log('[MIMI] SW registration failed:', error);
       });
   });
-}
-
-// ============================================
-// NOTIFICATION PERMISSION
-// ============================================
-
-if ('Notification' in window && Notification.permission === 'default') {
-  // Request permission after user interaction
-  const requestNotificationPermission = () => {
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted') {
-        console.log('[MIMI] Notification permission granted');
-      }
-    });
-  };
-  
-  document.addEventListener('click', requestNotificationPermission, { once: true });
 }
 
 // Helper function for offer validation

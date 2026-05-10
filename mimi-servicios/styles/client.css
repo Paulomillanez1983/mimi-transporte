@@ -1396,6 +1396,72 @@ button {
   font-size: 12px;
 }
 
+.request-flow-card {
+  padding: 14px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ecfdf5, #f8fafc 70%);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  display: grid;
+  gap: 12px;
+}
+
+.request-flow-head {
+  display: grid;
+  gap: 4px;
+}
+
+.request-flow-head strong {
+  color: var(--client-text);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.request-flow-head span {
+  color: #475569;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.request-flow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.request-flow-step {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.request-flow-step i {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background: #dbe4ee;
+}
+
+.request-flow-step.is-done {
+  color: #047857;
+}
+
+.request-flow-step.is-done i {
+  background: #10b981;
+}
+
+.request-flow-step.is-active {
+  color: #0f172a;
+}
+
+.request-flow-step.is-active i {
+  background: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
 .summary-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;

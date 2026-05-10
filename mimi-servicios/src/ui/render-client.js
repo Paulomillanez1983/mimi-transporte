@@ -391,6 +391,66 @@ function requestStatusDescription(status) {
   return descriptions[status] || "Seguimos actualizando el estado desde Supabase Realtime.";
 }
 
+function requestFlowStatus(status) {
+  const current = String(status || "PENDING").toUpperCase();
+  const order = ["created", "notified", "response", "service"];
+
+  const activeByStatus = {
+    SEARCHING: "created",
+    PENDING: "notified",
+    PENDING_PROVIDER_RESPONSE: "response",
+    CHECKOUT_CREATED: "response",
+    PAYMENT_PENDING: "response",
+    PAYMENT_APPROVED: "response",
+    ACCEPTED: "service",
+    SCHEDULED: "service",
+    PROVIDER_EN_ROUTE: "service",
+    PROVIDER_ARRIVED: "service",
+    IN_PROGRESS: "service",
+    COMPLETED: "service",
+    CANCELLED: "response"
+  };
+
+  const activeKey = activeByStatus[current] || "created";
+  const activeIndex = order.indexOf(activeKey);
+  return { current, order, activeKey, activeIndex };
+}
+
+function requestFlowSteps(status) {
+  const flow = requestFlowStatus(status);
+  const labels = {
+    created: "Solicitud enviada",
+    notified: "Prestador avisado",
+    response: flow.current === "CANCELLED" ? "Solicitud cancelada" : "Esperando respuesta",
+    service: flow.current === "COMPLETED" ? "Servicio completado" : "Servicio activo"
+  };
+
+  return flow.order.map((key, index) => ({
+    key,
+    label: labels[key],
+    active: key === flow.activeKey,
+    done: flow.current === "COMPLETED" || index < flow.activeIndex
+  }));
+}
+
+function requestFlowHint(status) {
+  const current = String(status || "PENDING").toUpperCase();
+  const hints = {
+    SEARCHING: "Estamos preparando la solicitud con los datos del servicio.",
+    PENDING: "MIMI ya creo la solicitud. El prestador recibe el aviso cuando esta disponible.",
+    PENDING_PROVIDER_RESPONSE: "El prestador ya fue avisado. Podes actualizar el estado o cancelar si todavia no respondio.",
+    ACCEPTED: "El prestador acepto. Desde ahora el servicio queda coordinado en MIMI.",
+    SCHEDULED: "El servicio quedo agendado. Te avisamos cuando cambie el estado.",
+    PROVIDER_EN_ROUTE: "El prestador informo que esta en camino.",
+    PROVIDER_ARRIVED: "El prestador marco llegada al domicilio indicado.",
+    IN_PROGRESS: "El servicio esta en curso.",
+    COMPLETED: "Servicio finalizado y registrado.",
+    CANCELLED: "La solicitud fue cancelada."
+  };
+
+  return hints[current] || "MIMI mantiene el estado sincronizado con el backend.";
+}
+
 function normalizeProvider(provider, index = 0) {
   const providerPrice = Number(provider.provider_price ?? 0);
   const totalPrice = Number(provider.total_price ?? providerPrice);
@@ -960,9 +1020,10 @@ export function renderRequestSummary(state) {
   if (!chip || !summary || !timeline || !actions) return;
 
   const request = state.client.activeRequest;
+  const currentStatus = String(request?.status || "PENDING").toUpperCase();
 
   chip.textContent = request
-    ? stateLabels[request.status] ?? request.status
+    ? stateLabels[currentStatus] ?? currentStatus
     : "Sin solicitud activa";
 
   if (!request) {
@@ -981,8 +1042,25 @@ export function renderRequestSummary(state) {
     request.providerName ||
     state.client.selectedProvider?.full_name ||
     "Prestador confirmado";
+  const flowSteps = requestFlowSteps(currentStatus);
 
   summary.innerHTML = `
+    <div class="request-flow-card">
+      <div class="request-flow-head">
+        <strong>${escapeHtml(stateLabels[currentStatus] ?? currentStatus)}</strong>
+        <span>${escapeHtml(requestFlowHint(currentStatus))}</span>
+      </div>
+      <div class="request-flow-steps" aria-label="Estado de la solicitud">
+        ${flowSteps
+          .map((step) => `
+            <span class="request-flow-step ${step.active ? "is-active" : ""} ${step.done ? "is-done" : ""}">
+              <i aria-hidden="true"></i>
+              ${escapeHtml(step.label)}
+            </span>
+          `)
+          .join("")}
+      </div>
+    </div>
     <div class="summary-card">
       <strong>${escapeHtml(providerName)}</strong>
       <div class="summary-metrics">
@@ -1006,10 +1084,10 @@ export function renderRequestSummary(state) {
     </div>
   `;
 
-  const statusIndex = appConfig.serviceStates.indexOf(request.status);
+  const statusIndex = appConfig.serviceStates.indexOf(currentStatus);
   timeline.innerHTML = appConfig.serviceStates
     .map((status, index) => `
-      <div class="timeline-step ${status === request.status ? "is-active" : ""} ${statusIndex >= index ? "is-done" : ""}">
+      <div class="timeline-step ${status === currentStatus ? "is-active" : ""} ${statusIndex >= index ? "is-done" : ""}">
         <strong>${escapeHtml(stateLabels[status] ?? status)}</strong>
         <span>${escapeHtml(requestStatusDescription(status))}</span>
       </div>
@@ -1017,13 +1095,16 @@ export function renderRequestSummary(state) {
     .join("");
 
   actions.innerHTML = [
-    ["SEARCHING", "PENDING_PROVIDER_RESPONSE", "PENDING"].includes(request.status)
+    !["COMPLETED", "CANCELLED"].includes(currentStatus)
+      ? `<button class="btn-secondary" data-request-action="refresh" type="button">Actualizar estado</button>`
+      : "",
+    ["SEARCHING", "PENDING_PROVIDER_RESPONSE", "PENDING"].includes(currentStatus)
       ? `<button class="btn-secondary" data-request-action="cancel" type="button">Cancelar</button>`
       : "",
-    ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(request.status)
+    ["PROVIDER_EN_ROUTE", "PROVIDER_ARRIVED", "IN_PROGRESS"].includes(currentStatus)
       ? `<button class="btn-primary" data-open-chat="true" type="button">Abrir chat</button>`
       : "",
-    request.status === "COMPLETED"
+    currentStatus === "COMPLETED"
       ? `<button class="btn-secondary" data-request-action="rate" type="button">Calificar</button>`
       : ""
   ].join("");
