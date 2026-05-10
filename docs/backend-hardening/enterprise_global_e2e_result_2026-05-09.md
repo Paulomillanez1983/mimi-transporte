@@ -9,7 +9,7 @@ The backend hardening is applied and the security validation is passing in produ
 ## Production baseline confirmed
 
 - Supabase project: `xrphpqmutvadjrucqicn`
-- Vercel production deployment: `dpl_MkYLTyCsWq64B7ymgHGWjcdGYWMv`
+- Vercel production deployment: Ready at validation time; inspect the current alias for the live deployment id.
 - Production alias: `https://mimi-transporte.vercel.app`
 - Backend migrations local/remote: aligned through `20260509234909`
 - Realtime publication: 8 required tables present
