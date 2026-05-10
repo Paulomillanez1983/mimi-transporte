@@ -72,7 +72,7 @@
     },
     {
       "source": "/operadores",
-      "destination": "/admin/admin-panel.html"
+      "destination": "/hub-operadores.html"
     },
     {
       "source": "/chofer",

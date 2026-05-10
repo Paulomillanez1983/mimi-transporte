@@ -141,6 +141,7 @@ Cambios:
 - `/`, `/cliente`, `/hub-clientes`, `/viaje`, `/viaje/`, `/chofer`, `/chofer/`, `/index.html`, `/chofer-panel.html` y `/login-chofer.html` redirigen publicamente a `/servicios`.
 - `/operadores` muestra una sola app: MIMI Servicios para prestadores.
 - Se retiro el asset visual del auto del hub de operadores para evitar referencias publicas a transporte.
+- La ruta publica `/operadores` y el fallback `operadores/index.html` apuntan al hub de prestadores; el panel admin queda preservado por `/admin/admin-panel.html`.
 - `chofer/index.html` y `viaje/index.html` redirigen a `/servicios`.
 - Manifest de partners queda enfocado en prestadores.
 - Textos legales publicos quedan enfocados en Servicios y prestadores.
