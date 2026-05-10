@@ -3,6 +3,8 @@
 const DEFAULT_URLS = [
   "https://mimi-transporte.vercel.app/servicios",
   "https://mimi-transporte.vercel.app/prestador",
+  "https://mimi-transporte.vercel.app/share/servicios",
+  "https://mimi-transporte.vercel.app/share/prestador",
 ];
 
 const SOCIAL_USER_AGENTS = [
