@@ -12593,7 +12593,7 @@ body.provider-navigation-active .bottom-sheet {
 }
 
 .offer-glass {
-  max-height: min(40vh, 330px) !important;
+  max-height: min(36vh, 300px) !important;
   padding: 11px !important;
   border-radius: 19px !important;
   background: rgba(17, 17, 17, 0.76) !important;
@@ -12623,8 +12623,9 @@ body.provider-navigation-active .bottom-sheet {
 }
 
 .offer-price {
-  font-size: 1.05rem !important;
+  font-size: .98rem !important;
   margin-bottom: 7px !important;
+  line-height: 1.1 !important;
 }
 
 .offer-detail-grid {
@@ -12652,8 +12653,13 @@ body.provider-navigation-active .bottom-sheet {
 }
 
 .offer-btn {
-  min-height: 40px !important;
+  min-height: 38px !important;
   padding: 8px 10px !important;
   border-radius: 12px !important;
   font-size: .82rem !important;
+}
+
+.offer-detail-pill:nth-child(4),
+.offer-detail-pill:nth-child(5) {
+  background: rgba(34, 197, 94, .12) !important;
 }

@@ -14,7 +14,7 @@ function roundAmount(value: number, mode: string) {
 
 export function calculateCommission(totalAmount: number, rule: CommissionRule | null = null) {
   const safeTotal = Math.max(0, Number(totalAmount || 0));
-  const percentage = Number(rule?.percentage ?? 10);
+  const percentage = Number(rule?.percentage ?? 30);
   const minimumFee = Number(rule?.minimum_fee ?? 0);
   const fixedFee = Number(rule?.fixed_fee ?? 0);
   const rawFee = safeTotal * (percentage / 100) + fixedFee;

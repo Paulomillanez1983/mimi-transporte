@@ -1715,7 +1715,7 @@ stats: {
       location: service.address_text ?? service.location ?? "Ubicacin a confirmar",
       address: service.address_text ?? null,
       price:
-        Number(details.total_price ?? service.total_price_snapshot ?? service.total_price ?? service.provider_amount ?? 0),
+        Number(details.provider_price ?? service.provider_price_snapshot ?? service.provider_amount ?? service.total_price_snapshot ?? 0),
       details,
       scheduledFor: service.scheduled_for ?? null,
       startedAt: service.started_at ?? null,
@@ -1783,6 +1783,8 @@ stats: {
     const quantity = Number(details.unit_quantity || 0);
     const unitName = details.unit_name || "";
     const unitPrice = Number(details.unit_price || 0);
+    const providerAmount = Number(details.provider_price ?? request.provider_price_snapshot ?? offer.provider_price_snapshot ?? 0);
+    const platformFee = Number(details.platform_fee ?? request.platform_fee_snapshot ?? offer.platform_fee_snapshot ?? 0);
     const total = Number(details.total_price ?? request.total_price_snapshot ?? offer.total_price_snapshot ?? 0);
     const currency = details.currency || request.currency || "ARS";
 
@@ -1805,12 +1807,16 @@ stats: {
       });
     }
 
-    if (details.service_mode_label) {
-      rows.push({ label: "Modalidad", value: details.service_mode_label });
+    if (providerAmount > 0) {
+      rows.push({ label: "Tu precio", value: this.formatMoney(providerAmount, currency) });
+    }
+
+    if (platformFee > 0) {
+      rows.push({ label: "Comision MIMI GO", value: `+${this.formatMoney(platformFee, currency)}` });
     }
 
     if (total > 0) {
-      rows.push({ label: "Total calculado", value: this.formatMoney(total, currency) });
+      rows.push({ label: "Total cliente", value: this.formatMoney(total, currency) });
     } else {
       rows.push({ label: "Precio", value: "A coordinar" });
     }
@@ -1823,14 +1829,16 @@ stats: {
       });
     }
 
-    return rows.slice(0, 4);
+    return rows.slice(0, 5);
   }
 
   normalizeOfferForState(offer = {}) {
     const request = offer.svc_requests ?? offer.request ?? {};
     const details = this.extractServiceDetails(offer);
     const detailRows = this.buildServiceDetailRows(offer);
+    const providerAmount = Number(details.provider_price ?? offer.provider_price_snapshot ?? request.provider_price_snapshot ?? 0);
     const total = Number(details.total_price ?? offer.total_price_snapshot ?? request.total_price_snapshot ?? request.total_price ?? 0);
+    const displayAmount = providerAmount > 0 ? providerAmount : total;
 
     return {
       id: offer.id,
@@ -1844,8 +1852,9 @@ stats: {
         "Servicio",
       clientName: offer.client_name ?? request.client_name ?? "Cliente",
       location: offer.address_text ?? request.address_text ?? "Ubicacin a confirmar",
-      price: total,
-      priceLabel: total > 0 ? this.formatMoney(total, details.currency || request.currency || "ARS") : "Precio a coordinar",
+      price: displayAmount,
+      clientTotal: total,
+      priceLabel: displayAmount > 0 ? `Tu precio ${this.formatMoney(displayAmount, details.currency || request.currency || "ARS")}` : "Precio a coordinar",
       detailRows,
       details,
       mode: request.request_type ?? "IMMEDIATE",

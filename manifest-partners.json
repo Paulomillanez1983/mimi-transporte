@@ -2,7 +2,7 @@
   "id": "/partners",
   "name": "MIMI Partners",
   "short_name": "MIMI Partners",
-  "description": "App para choferes y prestadores independientes de MIMI.",
+  "description": "App para prestadores independientes de MIMI Servicios.",
   "start_url": "/hub-operadores",
   "scope": "/",
   "display": "standalone",

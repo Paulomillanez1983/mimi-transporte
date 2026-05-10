@@ -10,7 +10,6 @@ import {
   loadClientRequestInsights,
   loadMessages,
   loadNotifications,
-  prepareRequestPricing,
   registerDevice,
   resolveServiceIntent,
   searchProviders,
@@ -305,23 +304,37 @@ function amountFromProvider(provider, pricing = null) {
   );
 }
 
+const MIMI_PLATFORM_FEE_PERCENT = 30;
+
+function roundCurrencyAmount(value, currency = "ARS") {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (String(currency).toUpperCase() === "ARS") return Math.round(amount);
+  return Math.round(amount * 100) / 100;
+}
+
 function buildLocalPricing(provider, { requestedHours = 1, quantity = 1, basePricing = null } = {}) {
   const model = providerPricingModel(provider, basePricing);
   const unitName = providerUnitName(provider, basePricing);
   const price = amountFromProvider(provider, basePricing);
+  const currency = basePricing?.currency || provider?.currency || "ARS";
   const safeQuantity = Math.max(1, Number(quantity || 1));
   const safeHours = Math.max(0.25, Number(requestedHours || 1));
   const isQuote = model === "QUOTE" || provider?.quote_required === true || basePricing?.quote_required === true;
   const multiplier = model === "HOURLY" ? safeHours : providerNeedsQuantity(provider, basePricing) ? safeQuantity : 1;
-  const subtotal = isQuote ? 0 : Math.max(0, price * multiplier);
-  const platformFee = Number(basePricing?.platform_fee ?? 0);
+  const subtotal = isQuote ? 0 : roundCurrencyAmount(price * multiplier, currency);
+  const platformFeePercent = Number(basePricing?.platform_fee_percent ?? provider?.platform_fee_percent ?? MIMI_PLATFORM_FEE_PERCENT);
+  const platformFee = subtotal > 0 ? roundCurrencyAmount(subtotal * (platformFeePercent / 100), currency) : 0;
 
   return {
     eligible: true,
-    provider_price: price,
+    provider_price: subtotal,
+    unit_provider_price: price,
+    platform_fee_percent: platformFeePercent,
     platform_fee: platformFee,
     total_price: subtotal + platformFee,
-    currency: basePricing?.currency || provider?.currency || "ARS",
+    client_total_amount: subtotal + platformFee,
+    currency,
     offering_id: basePricing?.offering_id ?? provider?.offering_id ?? null,
     service_mode: basePricing?.service_mode ?? provider?.service_mode ?? null,
     pricing_model: model,
@@ -420,29 +433,9 @@ function upsertConfirmQuantityField(overlay, provider, pricing, onQuantityChange
 }
 
 async function pricingForProviderSelection(provider, requestedHours) {
-  const needsLocalQuantityPricing = providerNeedsQuantity(provider) || providerPricingModel(provider) === "QUOTE";
-
-  if (needsLocalQuantityPricing) {
-    return buildLocalPricing(provider, { requestedHours, quantity: 1 });
-  }
-
-  try {
-    const pricing = await prepareRequestPricing({
-      clientUserId: currentUserId(),
-      categoryId: state.ui.selectedCategoryId,
-      providerId: provider.provider_id,
-      draft: {
-        ...state.requestDraft,
-        requestedHours
-      }
-    });
-
-    if (pricing?.eligible) return pricing;
-    return buildLocalPricing(provider, { requestedHours, basePricing: pricing });
-  } catch (error) {
-    console.warn("[client] prepareRequestPricing fallback", error);
-    return buildLocalPricing(provider, { requestedHours });
-  }
+  // Preview local, source of truth server-side in svc-create-request.
+  // This avoids legacy RPC pricing and keeps the visible 30% commission consistent.
+  return buildLocalPricing(provider, { requestedHours, quantity: 1 });
 }
 
 function openRequestConfirmation(provider, initialPricing) {
@@ -482,6 +475,8 @@ function openRequestConfirmation(provider, initialPricing) {
   }
 
   const totalEl = document.getElementById("confirmTotalPrice");
+  const serviceAmountEl = document.getElementById("confirmServiceAmount");
+  const platformFeeEl = document.getElementById("confirmPlatformFee");
   const refreshTotal = (nextQuantity = pricing.unit_quantity || 1) => {
     pricing = buildLocalPricing(provider, {
       requestedHours: requestedHoursForCurrentCategory(),
@@ -489,9 +484,17 @@ function openRequestConfirmation(provider, initialPricing) {
       basePricing: pricing
     });
     if (totalEl) totalEl.textContent = formatPricingTotal(pricing);
+    if (serviceAmountEl) serviceAmountEl.textContent = formatCurrency(pricing.provider_price, pricing.currency);
+    if (platformFeeEl) {
+      platformFeeEl.textContent = `${formatCurrency(pricing.platform_fee, pricing.currency)} (${pricing.platform_fee_percent}%)`;
+    }
   };
 
   if (totalEl) totalEl.textContent = formatPricingTotal(pricing);
+  if (serviceAmountEl) serviceAmountEl.textContent = formatCurrency(pricing.provider_price, pricing.currency);
+  if (platformFeeEl) {
+    platformFeeEl.textContent = `${formatCurrency(pricing.platform_fee, pricing.currency)} (${pricing.platform_fee_percent ?? MIMI_PLATFORM_FEE_PERCENT}%)`;
+  }
   upsertConfirmQuantityField(overlay, provider, pricing, refreshTotal);
 
   overlay.hidden = false;

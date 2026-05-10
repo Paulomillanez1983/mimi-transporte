@@ -1111,7 +1111,7 @@ export function renderRequestSummary(state) {
           <strong>${currency(request.total_price ?? request.total_price_snapshot)}</strong>
         </div>
         <div class="metric">
-          <span>Prestador</span>
+          <span>Servicio</span>
           <strong>${currency(request.provider_price ?? request.provider_price_snapshot ?? state.client.selectedProvider?.provider_price ?? 0)}</strong>
         </div>
         <div class="metric">
@@ -1181,13 +1181,13 @@ function renderFinancialPanel(state) {
         <b>${currency(total)}</b>
       </summary>
       <div class="summary-metrics payment-metrics">
-        <div class="metric"><span>Precio del servicio</span><strong>${currency(providerAmount)}</strong></div>
-        <div class="metric"><span>Cargo de plataforma</span><strong>${currency(platformFee)}</strong></div>
+        <div class="metric"><span>Servicio</span><strong>${currency(providerAmount)}</strong></div>
+        <div class="metric"><span>Comision MIMI GO</span><strong>${currency(platformFee)}</strong></div>
         <div class="metric"><span>Total a pagar</span><strong>${currency(total)}</strong></div>
         <div class="metric"><span>Moneda</span><strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong></div>
         <div class="metric"><span>Estado</span><strong>${escapeHtml(paymentStatus)}</strong></div>
       </div>
-      <p class="muted payment-note">Este importe resume lo acordado para esta solicitud. El detalle completo queda disponible para seguimiento.</p>
+      <p class="muted payment-note">El total incluye la comision de plataforma MIMI GO. El servicio lo presta un proveedor independiente.</p>
       <div class="chip-row">
         <span class="inline-chip">${escapeHtml(paymentStatus)}</span>
         ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Abrir checkout mock</button>` : ""}

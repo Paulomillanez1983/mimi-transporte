@@ -1,9 +1,9 @@
 const DEFAULT_COMMISSION_RULE = {
   serviceType: "DEFAULT",
-  percentage: 10,
+  percentage: 30,
   minimumFee: 0,
   fixedFee: 0,
-  rounding: "ceil"
+  rounding: "round"
 };
 
 function roundAmount(value, mode = "ceil") {
@@ -17,7 +17,7 @@ function roundAmount(value, mode = "ceil") {
 }
 
 export function calculateCommission(input = {}) {
-  const serviceAmount = Math.max(0, Number(input.serviceAmount ?? input.totalAmount ?? 0));
+  const serviceAmount = Math.max(0, Number(input.serviceAmount ?? input.providerAmount ?? input.totalAmount ?? 0));
   const rule = {
     ...DEFAULT_COMMISSION_RULE,
     ...(input.rule ?? {})
@@ -28,11 +28,13 @@ export function calculateCommission(input = {}) {
     Number(rule.minimumFee ?? 0),
     percentageFee + Number(rule.fixedFee ?? 0)
   );
-  const platformFee = Math.min(serviceAmount, roundAmount(rawPlatformFee, rule.rounding));
-  const providerAmount = Math.max(0, serviceAmount - platformFee);
+  const platformFee = roundAmount(rawPlatformFee, rule.rounding);
+  const providerAmount = serviceAmount;
+  const totalAmount = providerAmount + platformFee;
 
   return {
     service_amount: serviceAmount,
+    total_amount: totalAmount,
     platform_fee: platformFee,
     provider_amount: providerAmount,
     currency: input.currency ?? "ARS",

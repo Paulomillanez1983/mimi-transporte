@@ -2545,6 +2545,34 @@ body[data-client-view="support"] .details-grid {
   text-align: right;
 }
 
+.confirm-fee-breakdown {
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.confirm-fee-breakdown span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.confirm-fee-breakdown b {
+  color: var(--client-text);
+  font-weight: 800;
+}
+
+.confirm-fee-breakdown small {
+  color: #64748b;
+  font-size: 10.5px;
+}
+
 .confirm-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

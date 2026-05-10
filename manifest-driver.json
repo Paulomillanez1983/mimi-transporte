@@ -1,9 +1,9 @@
 {
-  "id": "/chofer",
-  "name": "MIMI Driver",
-  "short_name": "Chofer",
-  "description": "App del chofer MIMI para recibir viajes, navegar y gestionar soporte.",
-  "start_url": "/chofer",
+  "id": "/servicios",
+  "name": "MIMI Servicios",
+  "short_name": "MIMI",
+  "description": "App de MIMI Servicios para solicitar asistencia de prestadores independientes.",
+  "start_url": "/servicios",
   "scope": "/",
   "display": "standalone",
   "display_override": [

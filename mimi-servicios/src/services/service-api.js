@@ -422,6 +422,20 @@ function referencePriceFromRows(pricing, offering) {
   return Number(candidates.find((value) => Number(value) > 0) ?? 0);
 }
 
+function serviceClientPricing(providerAmount, currency = "ARS") {
+  const safeProviderAmount = Math.max(0, Number(providerAmount || 0));
+  const providerPrice = String(currency).toUpperCase() === "ARS"
+    ? Math.round(safeProviderAmount)
+    : Math.round(safeProviderAmount * 100) / 100;
+  const platformFee = providerPrice > 0 ? Math.round(providerPrice * 0.3) : 0;
+  return {
+    provider_price: providerPrice,
+    platform_fee_percent: 30,
+    platform_fee: platformFee,
+    total_price: providerPrice + platformFee
+  };
+}
+
 async function searchProvidersFromTables(categoryId, draft = {}) {
   const supabase = getSupabaseClient();
 
@@ -510,6 +524,8 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
       const publicName = providerPublicName(provider, identity, profile);
       const distanceKm = distanceKmBetween(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
       const price = referencePriceFromRows(pricing, offering);
+      const currency = offering.currency || pricing.currency || "ARS";
+      const pricingBreakdown = serviceClientPricing(price, currency);
 
       return {
         provider_id: provider.id,
@@ -523,9 +539,11 @@ async function searchProvidersFromTables(categoryId, draft = {}) {
         category_id: categoryId,
         category_name: category.name,
         specialty: offering.title || category.name || profile.public_headline || "Prestador MIMI",
-        provider_price: price,
-        total_price: price,
-        currency: offering.currency || pricing.currency || "ARS",
+        provider_price: pricingBreakdown.provider_price,
+        platform_fee_percent: pricingBreakdown.platform_fee_percent,
+        platform_fee: pricingBreakdown.platform_fee,
+        total_price: pricingBreakdown.total_price,
+        currency,
         distance_km: distanceKm ?? 1 + index * 0.8,
         estimated_eta_min: distanceKm ? Math.max(5, Math.round(distanceKm * 4)) : 10 + index * 3,
         score: Math.max(70, 96 - index * 3),

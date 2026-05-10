@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { calculateCommission } from "../_shared/payments/commission-engine.ts";
 import { corsHeaders, fail, json, readJson } from "../_shared/payments/http.ts";
 import { getPaymentProvider } from "../_shared/payments/providers.ts";
+import { calculateServicePricingFromProviderAmount } from "../_shared/services/pricing.ts";
 
 function normalizeContextType(value: unknown) {
   const type = String(value ?? "").trim().toUpperCase();
@@ -37,6 +38,12 @@ serve(async (req) => {
   let customerId = userId;
   let serviceType = contextType;
   let currency = "ARS";
+  let serviceSnapshotAmounts: null | {
+    total_amount: number;
+    platform_fee: number;
+    provider_amount: number;
+    rule: Record<string, unknown>;
+  } = null;
 
   if (contextType === "SERVICE_REQUEST") {
     const { data, error } = await supabase
@@ -51,8 +58,26 @@ serve(async (req) => {
     context = data;
     customerId = data.client_user_id;
     providerId = data.accepted_provider_id ?? data.selected_provider_id ?? null;
-    totalAmount = Number(data.total_price_snapshot ?? 0);
     currency = data.currency ?? "ARS";
+    const providerAmount = Number(data.provider_price_snapshot ?? 0);
+    const platformFeeSnapshot = Number(data.platform_fee_snapshot ?? 0);
+    const totalSnapshot = Number(data.total_price_snapshot ?? 0);
+    const fallbackPricing = calculateServicePricingFromProviderAmount(providerAmount, currency);
+    const platformFee = platformFeeSnapshot > 0 ? platformFeeSnapshot : fallbackPricing.platformFee;
+    const serviceTotal = totalSnapshot > 0 ? totalSnapshot : providerAmount + platformFee;
+    totalAmount = serviceTotal;
+    serviceSnapshotAmounts = providerAmount > 0
+      ? {
+          total_amount: serviceTotal,
+          platform_fee: platformFee,
+          provider_amount: providerAmount,
+          rule: {
+            service_type: "SERVICE_REQUEST",
+            percentage: fallbackPricing.platformFeePercent,
+            source: "svc_requests_snapshots",
+          },
+        }
+      : null;
     serviceType = "SERVICE_REQUEST";
   }
 
@@ -106,7 +131,9 @@ serve(async (req) => {
     rules?.find((item) => item.service_type === "DEFAULT") ??
     null;
 
-  const amounts = calculateCommission(totalAmount, rule);
+  const amounts = contextType === "SERVICE_REQUEST" && serviceSnapshotAmounts
+    ? serviceSnapshotAmounts
+    : calculateCommission(totalAmount, rule);
 
   const { data: existing } = await supabase
     .from("payments")

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { calculateServicePricingFromProviderAmount } from "../_shared/services/pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -303,6 +304,8 @@ serve(async (req) => {
         const publicName = providerPublicName(provider as unknown as Record<string, unknown>, identityRow, profile);
         const km = distanceKm(serviceLat, serviceLng, provider.last_lat, provider.last_lng);
         const price = referencePrice(priceRow, offering);
+        const currency = String(offering.currency || priceRow.currency || "ARS");
+        const pricingBreakdown = calculateServicePricingFromProviderAmount(price, currency);
         // Priorizar avatar pública subida por el prestador (provider-avatars bucket)
         // sobre el avatar de Google OAuth.
         const avatarUrl =
@@ -320,9 +323,11 @@ serve(async (req) => {
           category_id: categoryId,
           category_name: category.name || "Servicio",
           specialty: offering.title || category.name || profile.public_headline || "Prestador MIMI",
-          provider_price: price,
-          total_price: price,
-          currency: offering.currency || priceRow.currency || "ARS",
+          provider_price: pricingBreakdown.providerPrice,
+          platform_fee_percent: pricingBreakdown.platformFeePercent,
+          platform_fee: pricingBreakdown.platformFee,
+          total_price: pricingBreakdown.totalPrice,
+          currency,
           distance_km: km ?? 1 + index * 0.8,
           estimated_eta_min: km ? Math.max(5, Math.round(km * 4)) : 10 + index * 3,
           score: Math.max(70, 96 - index * 3),

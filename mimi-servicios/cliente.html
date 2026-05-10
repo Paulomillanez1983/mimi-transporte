@@ -46,7 +46,7 @@
   >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.7">
-  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.12">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.13">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -451,6 +451,11 @@
             <strong id="confirmTotalPrice">$0</strong>
           </div>
         </div>
+        <div class="confirm-fee-breakdown" aria-label="Detalle del total estimado">
+          <span>Servicio: <b id="confirmServiceAmount">$0</b></span>
+          <span>Comision MIMI GO: <b id="confirmPlatformFee">$0 (30%)</b></span>
+          <small>El total incluye la comision de plataforma. El prestador conserva su precio publicado.</small>
+        </div>
         <dl class="confirm-summary">
           <div><dt>Categoría</dt><dd id="confirmCategoryName">Servicio</dd></div>
           <div><dt>Modalidad</dt><dd id="confirmServiceMode">A coordinar</dd></div>
@@ -551,6 +556,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script type="module" src="./src/main-client.js?v=2026.05.10.12"></script>
+  <script type="module" src="./src/main-client.js?v=2026.05.10.13"></script>
 </body>
 </html>

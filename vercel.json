@@ -23,7 +23,32 @@
       "permanent": false
     },
     {
+      "source": "/viaje/",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
       "source": "/chofer",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/chofer/",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/index.html",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/chofer-panel.html",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/login-chofer.html",
       "destination": "/servicios",
       "permanent": false
     }
@@ -43,7 +68,7 @@
     },
     {
       "source": "/viaje",
-      "destination": "/index.html"
+      "destination": "/mimi-servicios/cliente.html"
     },
     {
       "source": "/operadores",
@@ -51,7 +76,7 @@
     },
     {
       "source": "/chofer",
-      "destination": "/chofer-panel.html"
+      "destination": "/mimi-servicios/cliente.html"
     },
     {
       "source": "/privacidad",

@@ -1,5 +1,5 @@
 function buildFee(amount) {
-  return Math.max(500, Math.round((amount ?? 0) * 0.15));
+  return Math.round((amount ?? 0) * 0.3);
 }
 
 export function buildMockProviders(categoryId, draft) {
@@ -93,7 +93,9 @@ export function buildMockOffers() {
       title: "Limpieza profunda",
       address_text: "Villa Allende Golf",
       requested_hours: 3,
-      total_price_snapshot: 12000,
+      provider_price_snapshot: 12000,
+      platform_fee_snapshot: 3600,
+      total_price_snapshot: 15600,
       status: "PENDING_PROVIDER_RESPONSE",
       created_at: new Date().toISOString()
     }

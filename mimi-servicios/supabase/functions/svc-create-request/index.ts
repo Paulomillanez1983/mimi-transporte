@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { createUserNotificationWithPush } from "../_shared/push-notifications.ts";
+import { calculateServicePricingFromProviderAmount } from "../_shared/services/pricing.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,7 +53,7 @@ function priceFromOffering(offering: Record<string, unknown>, pricing: Record<st
     multiplier = Math.max(1, unitQuantity);
   } else if (model === "QUOTE") {
     // QUOTE puro = sin precio referencial, queda en 0 a presupuestar
-    return { model, providerPrice: 0, platformFee: 0, totalPrice: 0, currency, priceLabel: "A coordinar" };
+    return { model, providerPrice: 0, platformFeePercent: 30, platformFee: 0, totalPrice: 0, currency, priceLabel: "A coordinar" };
   } else {
     unitPrice = asNumber(offering.price_per_hour, asNumber(pricing.price_per_hour));
     multiplier = Math.max(1, requestedHours);
@@ -63,10 +64,11 @@ function priceFromOffering(offering: Record<string, unknown>, pricing: Record<st
   // Si el prestador tiene quote_required=true PERO no hay precio cargado, mostrar "A coordinar"
   // Si hay precio cargado, lo usamos como referencia (quote_required pasa a ser info, no fuerza 0).
   if (providerPrice <= 0 && offering.quote_required === true) {
-    return { model, providerPrice: 0, platformFee: 0, totalPrice: 0, currency, priceLabel: "A coordinar" };
+    return { model, providerPrice: 0, platformFeePercent: 30, platformFee: 0, totalPrice: 0, currency, priceLabel: "A coordinar" };
   }
 
-  return { model, providerPrice, platformFee: 0, totalPrice: providerPrice, currency, priceLabel: null };
+  const pricingBreakdown = calculateServicePricingFromProviderAmount(providerPrice, currency);
+  return { model, ...pricingBreakdown, priceLabel: null };
 }
 
 function unitNameForModel(model: string, explicit: unknown) {
@@ -266,6 +268,7 @@ serve(async (req) => {
       unit_price: unitPrice || null,
       price_label: pricingResult.priceLabel,
       provider_price: pricingResult.providerPrice,
+      platform_fee_percent: pricingResult.platformFeePercent,
       platform_fee: pricingResult.platformFee,
       total_price: pricingResult.totalPrice,
       total_price_label: money(pricingResult.totalPrice, pricingResult.currency),
@@ -351,6 +354,7 @@ serve(async (req) => {
       metadata_json: {
         source: "svc-create-request",
         pricing_model: pricingResult.model,
+        platform_fee_percent: pricingResult.platformFeePercent,
         unit_quantity: appliesUnitQuantity ? unitQuantity : null,
         unit_name: appliesUnitQuantity ? unitName : null,
         offering_id: offering?.id || null,
@@ -399,6 +403,7 @@ serve(async (req) => {
       provider_response_deadline_at: expiresAt,
       pricing: {
         provider_price: pricingResult.providerPrice,
+        platform_fee_percent: pricingResult.platformFeePercent,
         platform_fee: pricingResult.platformFee,
         total_price: pricingResult.totalPrice,
         currency: pricingResult.currency,
