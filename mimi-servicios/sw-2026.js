@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-10-brand-assets-1";
+const APP_VERSION = "2026-05-10-branding-v2";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -57,6 +57,7 @@ const APP_ASSETS = [
   "./assets/brand/mimigo-partners-wordmark.png",
   "./assets/brand/mimigo-client-splash-1536x1024.png",
   "./assets/brand/mimigo-partners-splash-1536x1024.png",
+  "./assets/brand/mimigo-partners-workspace-hero-1600x1100.png",
 
   "./sw-2026.js"
 ];

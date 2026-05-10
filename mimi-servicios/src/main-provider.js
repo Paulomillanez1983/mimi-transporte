@@ -1273,7 +1273,7 @@ container.style.background = "";
 
 <div class="provider-auth-hero-bg" aria-hidden="true">
   <img
-    src="./assets/brand/mimigo-partners-splash-1536x1024.png"
+    src="./assets/brand/mimigo-partners-workspace-hero-1600x1100.png"
     alt=""
     loading="eager"
     decoding="async"
@@ -1293,19 +1293,19 @@ container.style.background = "";
   <div class="provider-auth-divider"></div>
 
   <p class="provider-auth-card-copy">
-    Ofrec tus servicios.<br>
-    <span>Lleg a ms personas.</span>
+    Ofrec&eacute; tus servicios.<br>
+    <span>Lleg&aacute; a m&aacute;s personas.</span>
   </p>
 
   <div class="provider-auth-services">
     <article class="provider-auth-service"><strong></strong><span>Hogar</span></article>
     <article class="provider-auth-service"><strong></strong><span>Salud</span></article>
     <article class="provider-auth-service"><strong></strong><span>Bienestar</span></article>
-    <article class="provider-auth-service"><strong>+12</strong><span>categoras</span></article>
+    <article class="provider-auth-service"><strong>+12</strong><span>categor&iacute;as</span></article>
   </div>
 
   <div class="provider-auth-login-label">
-    <span>Inici sesin para continuar</span>
+    <span>Inici&aacute; sesi&oacute;n para continuar</span>
   </div>
 
   <button class="provider-auth-google" id="providerGoogleLoginButton" type="button">
@@ -1327,12 +1327,12 @@ container.style.background = "";
 
   <div class="provider-auth-trust">
     <span>Acceso seguro</span>
-    <span>Validacin en tiempo real</span>
+    <span>Validaci&oacute;n en tiempo real</span>
   </div>
 
   <p class="provider-auth-legal">
-    Al continuar, acepts nuestros <span>Trminos y Condiciones</span><br>
-    y la <span>Poltica de Privacidad</span>.
+    Al continuar, acept&aacute;s nuestros <span>T&eacute;rminos y Condiciones</span><br>
+    y la <span>Pol&iacute;tica de Privacidad</span>.
   </p>
 </div>
   </div>

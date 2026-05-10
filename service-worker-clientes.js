@@ -4,7 +4,7 @@
    Scope esperado: /
    ========================================================================== */
 
-const SW_VERSION = "mimi-clientes-v2026.05.10-brand-assets";
+const SW_VERSION = "mimi-clientes-v2026.05.10-branding-v2";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const IMAGE_CACHE = `${SW_VERSION}-images`;
@@ -26,6 +26,7 @@ const APP_SHELL = [
   "/favicon.ico",
   "/assets/brand/mimigo-client-splash-1536x1024.png",
   "/assets/brand/mimigo-client-wordmark.png",
+  "/assets/og/og-mimigo-client-branding-v2.png",
 
   // personas reales (card inferior)
 "/assets/ui/clarity-card-compact.png",
