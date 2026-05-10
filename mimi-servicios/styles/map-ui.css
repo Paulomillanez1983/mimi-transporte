@@ -1,0 +1,49 @@
+@import url("../../css/mimi-maps.css");
+
+.client-map,
+.map-surface,
+#clientMap,
+#map {
+  touch-action: pan-x pan-y;
+}
+
+.map-background,
+.client-map-panel,
+.client-map-shell {
+  background: #f8fafc;
+}
+
+.mimi-map-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+.mimi-map-status-chip::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.12);
+}
+
+@media (max-width: 768px) {
+  .maplibregl-ctrl-top-right {
+    top: max(84px, env(safe-area-inset-top) + 72px);
+    right: 12px;
+  }
+
+  .maplibregl-ctrl-bottom-right,
+  .maplibregl-ctrl-bottom-left {
+    bottom: max(92px, env(safe-area-inset-bottom) + 78px);
+  }
+}

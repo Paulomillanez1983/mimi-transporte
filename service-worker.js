@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mimi-driver-v7';
+const CACHE_NAME = 'mimi-driver-v8-mimi-maps';
 const APP_BASE_PATH = (() => {
   const path = self.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
@@ -11,7 +11,11 @@ const STATIC_ASSETS = [
   `${APP_BASE_PATH}chofer-panel.html`,
   `${APP_BASE_PATH}manifest.json`,
   `${APP_BASE_PATH}manifest-driver.json`,
-  `${APP_BASE_PATH}libs/supabase-js.js`
+  `${APP_BASE_PATH}libs/supabase-js.js`,
+  `${APP_BASE_PATH}css/mimi-maps.css`,
+  `${APP_BASE_PATH}js/mimi-maps/map-core.js`,
+  `${APP_BASE_PATH}js/mimi-maps/map-markers.js`,
+  `${APP_BASE_PATH}js/mimi-maps/map-routing.js`
 ];
 
 function isCacheableAsset(requestUrl) {
@@ -91,7 +95,9 @@ self.addEventListener('fetch', (event) => {
     url.pathname.endsWith('/css/design-system.css') ||
     url.pathname.endsWith('/css/components.css') ||
     url.pathname.endsWith('/css/animations.css') ||
-    url.pathname.endsWith('/css/panel.css');
+    url.pathname.endsWith('/css/panel.css') ||
+    url.pathname.endsWith('/css/mimi-maps.css') ||
+    url.pathname.includes('/js/mimi-maps/');
 
   if (isDriverShellAsset) {
     event.respondWith(

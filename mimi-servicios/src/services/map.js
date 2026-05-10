@@ -1,97 +1,181 @@
+import {
+  createMimiMap,
+  fitMapToPositions,
+  isValidLngLat,
+  normalizePosition,
+  scheduleMapResize,
+  supportsWebGL,
+  waitForMapLibre
+} from "../../../js/mimi-maps/map-core.js";
+import { createOrMoveMarker, removeMarker } from "../../../js/mimi-maps/map-markers.js";
+import { etaMinutes, updateRouteLine } from "../../../js/mimi-maps/map-routing.js";
+
 let map = null;
 let providerMarker = null;
 let clientMarker = null;
-let routeSourceReady = false;
+let lastFitKey = "";
+let lastCameraMoveAt = 0;
 
-const LIGHT_MAP_STYLE = window.MIMI_PROVIDER_MAP_STYLE || "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+const SERVICE_ROUTE_SOURCE = "mimi-services-tracking-route";
+const LIGHT_MAP_STYLE =
+  window.MIMI_PROVIDER_MAP_STYLE ||
+  "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 
-function createMarkerElement(color) {
-  const element = document.createElement("div");
-  element.style.width = "18px";
-  element.style.height = "18px";
-  element.style.borderRadius = "50%";
-  element.style.border = "3px solid white";
-  element.style.background = color;
-  element.style.boxShadow = "0 6px 18px rgba(0,0,0,0.35)";
-  return element;
+function cameraKey(positions = []) {
+  return positions
+    .map((position) => normalizePosition(position))
+    .filter(isValidLngLat)
+    .map((position) => `${position.lat.toFixed(4)}:${position.lng.toFixed(4)}`)
+    .join("|");
 }
 
-function ensureMarker(marker, color) {
-  return marker || new window.maplibregl.Marker({ element: createMarkerElement(color) });
+function shouldMoveCamera(nextKey) {
+  const now = Date.now();
+  if (nextKey && nextKey === lastFitKey && now - lastCameraMoveAt < 12000) {
+    return false;
+  }
+  lastFitKey = nextKey;
+  lastCameraMoveAt = now;
+  return true;
 }
 
-export function initMap(containerId, initialCenter, zoom) {
-  if (!window.maplibregl) return null;
+function removeMap() {
+  try {
+    map?.remove?.();
+  } catch {
+    // noop
+  }
+  map = null;
+  providerMarker = null;
+  clientMarker = null;
+  lastFitKey = "";
+}
+
+export async function initMap(containerId, initialCenter, zoom) {
+  const container = document.getElementById(containerId);
+  if (!container) return null;
+
+  const mapLibreReady = await waitForMapLibre();
+  if (!mapLibreReady || !supportsWebGL()) return null;
+
   if (map) {
-    map.remove();
-    map = null;
-    providerMarker = null;
-    clientMarker = null;
-    routeSourceReady = false;
+    removeMap();
   }
 
-  map = new window.maplibregl.Map({
+  map = createMimiMap({
     container: containerId,
     style: LIGHT_MAP_STYLE,
     center: initialCenter,
     zoom,
-    pitch: 0,
-    bearing: 0,
+    interactive: true,
     attributionControl: false
   });
 
-  map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }), "top-right");
+  if (!map) return null;
+
+  map.addControl(
+    new window.maplibregl.NavigationControl({ visualizePitch: false, showCompass: false }),
+    "top-right"
+  );
   map.addControl(new window.maplibregl.AttributionControl({ compact: true }));
-  map.on("load", ensureRouteLayer);
+
+  map.on("load", () => {
+    updateRouteLine(map, [], {
+      sourceId: SERVICE_ROUTE_SOURCE,
+      lineColor: "#10b981",
+      glowColor: "#0f766e"
+    });
+    scheduleMapResize(map);
+  });
+
+  map.on("error", (event) => {
+    console.warn("[MIMI Maps] services map error:", event?.error || event);
+  });
+
+  scheduleMapResize(map);
   return map;
 }
 
-function clearMarker(marker) { marker?.remove?.(); return null; }
-function emptyRoute() { return { type: "Feature", geometry: { type: "LineString", coordinates: [] }, properties: {} }; }
+function setMarkers({ servicePosition, providerPosition }) {
+  const service = normalizePosition(servicePosition);
+  const provider = normalizePosition(providerPosition);
 
-function fitToPoints(points) {
-  const safePoints = points.filter((p) => p && Number.isFinite(Number(p.lng)) && Number.isFinite(Number(p.lat)));
-  if (!map || !safePoints.length) return;
-  if (safePoints.length === 1) return map.easeTo({ center: [safePoints[0].lng, safePoints[0].lat], zoom: 14, duration: 700 });
-  const bounds = new window.maplibregl.LngLatBounds();
-  safePoints.forEach((p) => bounds.extend([p.lng, p.lat]));
-  map.fitBounds(bounds, { padding: 72, maxZoom: 15.2, duration: 800 });
+  clientMarker = isValidLngLat(service)
+    ? createOrMoveMarker({
+        map,
+        marker: clientMarker,
+        position: service,
+        type: "service",
+        anchor: "center",
+        options: { label: "C", pulse: true, title: "Domicilio del cliente" }
+      })
+    : removeMarker(clientMarker);
+
+  providerMarker = isValidLngLat(provider)
+    ? createOrMoveMarker({
+        map,
+        marker: providerMarker,
+        position: provider,
+        type: "provider",
+        anchor: "center",
+        options: { label: "P", pulse: true, title: "Prestador asignado" }
+      })
+    : removeMarker(providerMarker);
+
+  return { service, provider };
 }
 
-function ensureRouteLayer() {
-  if (!map || routeSourceReady || !map.isStyleLoaded()) return;
-  if (!map.getSource("tracking-route")) map.addSource("tracking-route", { type: "geojson", data: emptyRoute() });
-  if (!map.getLayer("tracking-route-glow")) map.addLayer({ id: "tracking-route-glow", type: "line", source: "tracking-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#60a5fa", "line-width": 10, "line-opacity": 0.18 } });
-  if (!map.getLayer("tracking-route-line")) map.addLayer({ id: "tracking-route-line", type: "line", source: "tracking-route", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#2563eb", "line-width": 5, "line-opacity": 0.9 } });
-  routeSourceReady = true;
-}
-
-function updateRoute(points) {
+function updateServiceMap({ servicePosition, providerPosition, fitPadding = null }) {
   if (!map) return;
-  if (!map.isStyleLoaded()) return map.once("load", () => updateRoute(points));
-  ensureRouteLayer();
-  const source = map.getSource("tracking-route");
-  if (!source) return;
-  const safePoints = points.filter((p) => p && Number.isFinite(Number(p.lng)) && Number.isFinite(Number(p.lat)));
-  source.setData(safePoints.length < 2 ? emptyRoute() : { type: "Feature", geometry: { type: "LineString", coordinates: safePoints.map((p) => [p.lng, p.lat]) }, properties: {} });
+
+  const { service, provider } = setMarkers({ servicePosition, providerPosition });
+  const positions = [service, provider].filter(isValidLngLat);
+
+  updateRouteLine(map, positions, {
+    sourceId: SERVICE_ROUTE_SOURCE,
+    lineColor: "#10b981",
+    glowColor: "#0f766e"
+  });
+
+  const nextKey = cameraKey(positions);
+  if (positions.length && shouldMoveCamera(nextKey)) {
+    fitMapToPositions(map, positions, {
+      padding: fitPadding,
+      maxZoom: provider && service ? 15.8 : 14.8,
+      duration: 620
+    });
+  }
+
+  const eta = provider && service ? etaMinutes(provider, service) : null;
+  if (Number.isFinite(eta)) {
+    map.getCanvasContainer()?.setAttribute("data-mimi-eta-min", String(eta));
+  }
 }
 
 export function updateClientMap({ servicePosition, providerPosition }) {
-  if (!map) return;
-  clientMarker = Number.isFinite(Number(servicePosition?.lng)) && Number.isFinite(Number(servicePosition?.lat)) ? ensureMarker(clientMarker, "#38bdf8").setLngLat([servicePosition.lng, servicePosition.lat]).addTo(map) : clearMarker(clientMarker);
-  providerMarker = Number.isFinite(Number(providerPosition?.lng)) && Number.isFinite(Number(providerPosition?.lat)) ? ensureMarker(providerMarker, "#22c55e").setLngLat([providerPosition.lng, providerPosition.lat]).addTo(map) : clearMarker(providerMarker);
-  updateRoute([servicePosition, providerPosition]);
-  fitToPoints([servicePosition, providerPosition]);
+  updateServiceMap({
+    servicePosition,
+    providerPosition,
+    fitPadding: window.innerWidth <= 768
+      ? { top: 104, right: 24, bottom: 300, left: 24 }
+      : { top: 96, right: 96, bottom: 190, left: 96 }
+  });
 }
 
 export function updateProviderMap({ providerPosition, servicePosition }) {
-  if (!map) return;
-  providerMarker = Number.isFinite(Number(providerPosition?.lng)) && Number.isFinite(Number(providerPosition?.lat)) ? ensureMarker(providerMarker, "#22c55e").setLngLat([providerPosition.lng, providerPosition.lat]).addTo(map) : clearMarker(providerMarker);
-  clientMarker = Number.isFinite(Number(servicePosition?.lng)) && Number.isFinite(Number(servicePosition?.lat)) ? ensureMarker(clientMarker, "#f59e0b").setLngLat([servicePosition.lng, servicePosition.lat]).addTo(map) : clearMarker(clientMarker);
-  updateRoute([providerPosition, servicePosition]);
-  fitToPoints([providerPosition, servicePosition]);
+  updateServiceMap({
+    servicePosition,
+    providerPosition,
+    fitPadding: window.innerWidth <= 768
+      ? { top: 112, right: 28, bottom: 280, left: 28 }
+      : { top: 112, right: 96, bottom: 220, left: 96 }
+  });
 }
 
 export function updateTrackingMarkers({ clientPosition, providerPosition }) {
   updateClientMap({ servicePosition: clientPosition, providerPosition });
+}
+
+export function getServicesMap() {
+  return map;
 }

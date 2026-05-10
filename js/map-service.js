@@ -5,6 +5,7 @@
  */
 
 import CONFIG from "./config.js";
+import { scheduleMapResize } from "./mimi-maps/map-core.js";
 
 class MapService {
   constructor() {
@@ -128,6 +129,7 @@ class MapService {
       this._addCustomLayers();
       this._setupTouchEvents();
       this._createRecenterButton();
+      scheduleMapResize(this.map, [80, 260, 700]);
 
       this.isInitialized = true;
       return true;

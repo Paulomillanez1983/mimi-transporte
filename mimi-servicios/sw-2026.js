@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-10-enterprise-push-1";
+const APP_VERSION = "2026-05-10-enterprise-maps-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -14,8 +14,14 @@ const APP_ASSETS = [
   "../favicon.png",
 
   "./styles/app.css",
+  "./styles/map-ui.css",
   "./styles/client.css",
   "./styles/provider.css",
+  "../css/mimi-maps.css",
+
+  "../js/mimi-maps/map-core.js",
+  "../js/mimi-maps/map-markers.js",
+  "../js/mimi-maps/map-routing.js",
 
   "./src/config.js",
   "./src/main-client.js",
@@ -266,8 +272,13 @@ function isAppAsset(url) {
   const pathname = url.pathname;
 
   return APP_ASSETS.some((asset) => {
-    const normalizedAsset = asset.replace(/^\.\//, "/");
-    return pathname.endsWith(normalizedAsset);
+    try {
+      const assetUrl = new URL(asset, self.location.href);
+      return pathname === assetUrl.pathname;
+    } catch {
+      const normalizedAsset = asset.replace(/^\.\//, "/");
+      return pathname.endsWith(normalizedAsset);
+    }
   });
 }
 
@@ -276,10 +287,20 @@ function isCoreUiAsset(url) {
   return [
     "/mimi-servicios/prestador.html",
     "/mimi-servicios/prestador",
+    "/mimi-servicios/cliente.html",
+    "/mimi-servicios/styles/map-ui.css",
     "/mimi-servicios/styles/provider.css",
+    "/mimi-servicios/styles/client.css",
     "/mimi-servicios/src/main-provider.js",
+    "/mimi-servicios/src/main-client.js",
+    "/mimi-servicios/src/services/map.js",
     "/mimi-servicios/src/services/service-api.js",
     "/mimi-servicios/src/ui/render-provider.js",
+    "/mimi-servicios/src/ui/render-client.js",
+    "/js/mimi-maps/map-core.js",
+    "/js/mimi-maps/map-markers.js",
+    "/js/mimi-maps/map-routing.js",
+    "/css/mimi-maps.css",
     "/mimi-servicios/sw-2026.js"
   ].some((asset) => pathname.endsWith(asset));
 }
