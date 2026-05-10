@@ -1,6 +1,13 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/hub-clientes",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/",

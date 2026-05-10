@@ -25,10 +25,16 @@ El hub principal seguia comunicando MIMI como una experiencia pareja de viajes y
   - Ajustes responsive para mobile sin crear scroll horizontal.
   - Focus visible para CTA principal y link de prestador.
 
+- `vercel.json`
+  - Redirect temporal de `/` a `/hub-clientes`.
+  - Motivo: Vercel servia el `index.html` fisico antes del rewrite de `/`, por lo que la home seguia mostrando Transporte.
+  - `/viaje` sigue apuntando al producto de Transporte.
+
 ## Riesgos
 
 - Riesgo bajo: solo se tocaron HTML/CSS del hub publico.
-- No se modificaron rutas, backend, Supabase, RLS, Edge Functions, auth, PWA ni service workers.
+- No se modificaron backend, Supabase, RLS, Edge Functions, auth, PWA ni service workers.
+- Se agrego un redirect seguro para que la home publica apunte al hub de Servicios.
 - Transporte sigue accesible por `/viaje` y no fue eliminado.
 
 ## QA ejecutado
@@ -45,10 +51,11 @@ El hub principal seguia comunicando MIMI como una experiencia pareja de viajes y
 ## Como probar
 
 1. Abrir `/` o `/hub-clientes`.
-2. Confirmar que el primer mensaje visible posiciona Servicios como producto principal.
-3. Tocar `Buscar prestador` y verificar que navega a `/servicios`.
-4. Tocar `Soy prestador y quiero publicar mis servicios` y verificar que navega a `/prestador`.
-5. Tocar `Ir a viajes` y verificar que Transporte sigue disponible en `/viaje`.
+2. Confirmar que `/` redirige a `/hub-clientes`.
+3. Confirmar que el primer mensaje visible posiciona Servicios como producto principal.
+4. Tocar `Buscar prestador` y verificar que navega a `/servicios`.
+5. Tocar `Soy prestador y quiero publicar mis servicios` y verificar que navega a `/prestador`.
+6. Tocar `Ir a viajes` y verificar que Transporte sigue disponible en `/viaje`.
 
 ## Estado
 
