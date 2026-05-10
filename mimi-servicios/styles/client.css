@@ -1501,6 +1501,68 @@ button {
   font-weight: 900;
 }
 
+.payment-details-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.payment-details-card summary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+
+.payment-details-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.payment-details-card summary span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.payment-details-card summary small {
+  color: var(--client-muted);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.payment-details-card summary b {
+  color: #047857;
+  font-size: 15px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.payment-details-card .payment-metrics,
+.payment-details-card .payment-note,
+.payment-details-card .chip-row {
+  margin: 0 12px 12px;
+}
+
+.payment-details-card .payment-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.payment-details-card .payment-note {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.search-progress-card {
+  background: linear-gradient(135deg, #eff6ff, #fff);
+}
+
+.provider-spotlight-card {
+  background: linear-gradient(135deg, #f8fafc, #fff);
+}
+
 .timeline {
   display: grid;
   gap: 8px;
@@ -1648,12 +1710,43 @@ button {
 
 .details-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .details-grid > article {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+}
+
+.current-service-updates {
+  order: 1;
+}
+
+.current-provider-detail {
+  order: 2;
+}
+
+.current-payment-detail {
+  order: 3;
+}
+
+.current-search-detail {
+  order: 4;
+}
+
+.service-history-detail {
+  order: 5;
+  margin-top: 4px;
+}
+
+.service-history-detail h2 {
+  color: #475569;
+}
+
+.current-payment-detail,
+.current-search-detail,
+.service-history-detail {
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
 }
 
 .card-list {
@@ -2355,7 +2448,7 @@ body[data-client-view="support"] .details-grid {
   z-index: 200;
   display: grid;
   align-items: end;
-  padding: 16px;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
   background: rgba(15, 23, 42, 0.42);
 }
 
@@ -2368,12 +2461,13 @@ body[data-client-view="support"] .details-grid {
   width: min(100%, 520px);
   margin: 0 auto;
   display: grid;
-  gap: 10px;
-  max-height: min(86vh, 640px);
+  gap: 8px;
+  max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border-radius: 22px 22px 16px 16px;
-  padding: 14px;
+  padding: 12px;
   background: #fff;
   border: 1px solid rgba(15, 23, 42, 0.1);
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
@@ -2384,10 +2478,16 @@ body[data-client-view="support"] .details-grid {
   gap: 3px;
 }
 
+.request-confirm-head .eyebrow {
+  margin-bottom: 0;
+  line-height: 1.2;
+}
+
 .request-confirm-sheet h2 {
   margin: 0;
   color: var(--client-text);
-  font-size: 17px;
+  font-size: 16px;
+  line-height: 1.12;
   font-weight: 900;
 }
 
@@ -2409,8 +2509,8 @@ body[data-client-view="support"] .details-grid {
   min-width: 0;
   display: grid;
   gap: 2px;
-  padding: 10px 12px;
-  border-radius: 16px;
+  padding: 9px 10px;
+  border-radius: 15px;
   background: #f8fafc;
   border: 1px solid var(--client-border);
 }
@@ -2434,14 +2534,14 @@ body[data-client-view="support"] .details-grid {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--client-text);
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.15;
   font-weight: 950;
 }
 
 .confirm-priority div:last-child strong {
   color: #047857;
-  font-size: 17px;
+  font-size: 16px;
   text-align: right;
 }
 
@@ -2454,9 +2554,10 @@ body[data-client-view="support"] .details-grid {
 
 .confirm-quantity-field {
   display: grid;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 16px;
+  gap: 6px;
+  margin: 2px 0 4px;
+  padding: 10px;
+  border-radius: 15px;
   background: #ecfdf5;
   border: 1px solid #bbf7d0;
 }
@@ -2475,7 +2576,7 @@ body[data-client-view="support"] .details-grid {
 }
 
 .confirm-quantity-field input {
-  min-height: 44px;
+  min-height: 40px;
   width: 100%;
   border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 12px;
@@ -2487,7 +2588,7 @@ body[data-client-view="support"] .details-grid {
 }
 
 .confirm-quantity-field b {
-  min-height: 44px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   padding: 0 12px;
@@ -2508,7 +2609,7 @@ body[data-client-view="support"] .details-grid {
 .confirm-summary div {
   display: grid;
   gap: 3px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 14px;
   background: #f8fafc;
   border: 1px solid var(--client-border);
@@ -2542,9 +2643,20 @@ body[data-client-view="support"] .details-grid {
 }
 
 .confirm-actions {
+  position: sticky;
+  bottom: -12px;
+  z-index: 2;
   display: grid;
   grid-template-columns: 1fr 1.4fr;
   gap: 8px;
+  margin: 0 -2px -4px;
+  padding: 8px 2px max(2px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), #fff 46%);
+}
+
+.confirm-actions .btn-primary,
+.confirm-actions .btn-secondary {
+  min-height: 44px;
 }
 
 .request-progress-overlay {
@@ -2632,13 +2744,13 @@ body[data-client-view="support"] .details-grid {
 @media (max-width: 430px) {
   .request-confirm-overlay,
   .request-progress-overlay {
-    padding: 10px;
+    padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
   }
 
   .request-confirm-sheet {
-    gap: 9px;
-    max-height: min(84vh, 620px);
-    padding: 12px;
+    gap: 8px;
+    max-height: calc(100dvh - 22px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 11px;
     border-radius: 20px 20px 14px 14px;
   }
 
@@ -2655,6 +2767,18 @@ body[data-client-view="support"] .details-grid {
   }
 
   .confirm-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .confirm-summary dd {
+    font-size: 11px;
+  }
+
+  .confirm-actions {
+    grid-template-columns: 0.82fr 1.18fr;
+  }
+
+  .payment-details-card .payment-metrics {
     grid-template-columns: 1fr;
   }
 

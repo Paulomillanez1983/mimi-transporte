@@ -484,7 +484,7 @@ function requestFlowHint(status) {
     CANCELLED: "La solicitud fue cancelada."
   };
 
-  return hints[current] || "MIMI mantiene el estado sincronizado con el backend.";
+  return hints[current] || "MIMI mantiene el estado actualizado en tiempo real.";
 }
 
 function normalizeProvider(provider, index = 0) {
@@ -1039,7 +1039,7 @@ export function renderProvidersList(state) {
     list.innerHTML = `
       <div class="client-empty-state">
         <strong>${hasSearched ? "No encontramos prestadores disponibles" : "Elegi categoria y completa la direccion"}</strong>
-        <span>${hasSearched ? "Podes ajustar la necesidad, cambiar la zona o intentar mas tarde. MIMI no inventa disponibilidad si el backend no devuelve prestadores compatibles." : "Cuando busques, aparecen opciones con precio, distancia y tiempo estimado."}</span>
+        <span>${hasSearched ? "Podes ajustar la necesidad, cambiar la zona o intentar mas tarde. Solo mostramos prestadores compatibles y disponibles." : "Cuando busques, aparecen opciones con precio, distancia y tiempo estimado."}</span>
       </div>
     `;
   }
@@ -1159,8 +1159,8 @@ function renderFinancialPanel(state) {
   if (!request) {
     container.innerHTML = `
       <div class="summary-card">
-        <strong>Sin movimiento financiero</strong>
-        <span class="muted">Al crear una solicitud real vas a ver el intento de pago, la comisión de plataforma y el neto del prestador.</span>
+        <strong>Sin detalle de pago</strong>
+        <span class="muted">Cuando confirmes un servicio, vas a ver el total estimado y el detalle de pago.</span>
       </div>
     `;
     return;
@@ -1172,22 +1172,29 @@ function renderFinancialPanel(state) {
   const paymentStatus = payment?.status ?? "PENDING";
 
   container.innerHTML = `
-    <article class="summary-card compact-stack">
-      <strong>Resumen de pago</strong>
-      <div class="summary-metrics">
+    <details class="summary-card payment-details-card">
+      <summary>
+        <span>
+          <strong>Total estimado</strong>
+          <small>${escapeHtml(paymentStatus === "PENDING" ? "Pendiente de confirmacion" : paymentStatus)}</small>
+        </span>
+        <b>${currency(total)}</b>
+      </summary>
+      <div class="summary-metrics payment-metrics">
         <div class="metric"><span>Precio del servicio</span><strong>${currency(providerAmount)}</strong></div>
-        <div class="metric"><span>Comision MIMI</span><strong>${currency(platformFee)}</strong></div>
+        <div class="metric"><span>Cargo de plataforma</span><strong>${currency(platformFee)}</strong></div>
         <div class="metric"><span>Total a pagar</span><strong>${currency(total)}</strong></div>
         <div class="metric"><span>Moneda</span><strong>${escapeHtml(request.currency ?? payment?.currency ?? escrow?.currency ?? "ARS")}</strong></div>
+        <div class="metric"><span>Estado</span><strong>${escapeHtml(paymentStatus)}</strong></div>
       </div>
-      <p class="muted">MIMI es una plataforma tecnológica de intermediación. Los servicios son prestados por proveedores independientes. MIMI cobra una comisión por uso de plataforma.</p>
+      <p class="muted payment-note">Este importe resume lo acordado para esta solicitud. El detalle completo queda disponible para seguimiento.</p>
       <div class="chip-row">
         <span class="inline-chip">${escapeHtml(paymentStatus)}</span>
         ${payment?.checkout_url ? `<button class="btn-primary" type="button" data-payment-action="checkout">Abrir checkout mock</button>` : ""}
         ${payment?.id ? `<button class="btn-secondary" type="button" data-payment-action="refresh">Actualizar pago</button>` : ""}
         ${["PENDING", "CHECKOUT_CREATED", "REJECTED"].includes(paymentStatus) ? `<button class="btn-secondary" type="button" data-payment-action="cancel">Cancelar pago</button>` : ""}
       </div>
-    </article>
+    </details>
   `;
 }
 
@@ -1201,8 +1208,8 @@ function renderMatchingPanel(state) {
   if (!state.client.activeRequest) {
     container.innerHTML = `
       <div class="summary-card">
-        <strong>Sin matching aun</strong>
-        <span class="muted">Cuando generes una búsqueda real, mostramos ranking, ofertas y tiempos de respuesta.</span>
+        <strong>Sin busqueda activa</strong>
+        <span class="muted">Cuando envies una solicitud, mostramos el avance de la busqueda y la respuesta del prestador.</span>
       </div>
     `;
     return;
@@ -1211,22 +1218,22 @@ function renderMatchingPanel(state) {
   container.innerHTML = `
     ${candidates.length
       ? candidates
-          .slice(0, 4)
+          .slice(0, 2)
           .map((item) => `
-            <article class="summary-card compact-stack">
-              <strong>#${escapeHtml(String(item.rank_position ?? "-"))}</strong>
+            <article class="summary-card compact-stack search-progress-card">
+              <strong>Prestador compatible</strong>
               <div class="summary-metrics">
-                <div class="metric"><span>Score</span><strong>${escapeHtml(String(item.score ?? "-"))}</strong></div>
-                <div class="metric"><span>Distancia</span><strong>${escapeHtml(String(item.distance_km ?? "-"))} km</strong></div>
+                <div class="metric"><span>Cercania</span><strong>${escapeHtml(String(item.distance_km ?? "-"))} km</strong></div>
+                <div class="metric"><span>Coincidencia</span><strong>${escapeHtml(String(item.score ?? "-"))}</strong></div>
               </div>
             </article>
           `)
           .join("")
-      : `<div class="summary-card"><strong>Ranking pendiente</strong><span class="muted">El backend completara los candidatos visibles.</span></div>`}
+      : `<div class="summary-card search-progress-card"><strong>Solicitud enviada</strong><span class="muted">Estamos esperando la respuesta del prestador seleccionado.</span></div>`}
     ${offers.length
       ? offers
-          .slice(0, 4)
-          .map((item) => `<article class="summary-card compact-stack"><strong>Oferta enviada</strong><span class="inline-chip">${escapeHtml(item.status ?? "PENDING")}</span></article>`)
+          .slice(0, 2)
+          .map((item) => `<article class="summary-card compact-stack"><strong>Solicitud al prestador</strong><span class="inline-chip">${escapeHtml(stateLabels[String(item.status || "").toUpperCase()] ?? item.status ?? "Enviada")}</span></article>`)
           .join("")
       : ""}
   `;
@@ -1244,14 +1251,14 @@ function renderProviderSpotlight(state) {
     container.innerHTML = `
       <div class="summary-card">
         <strong>Sin prestador elegido</strong>
-        <span class="muted">Cuando confirmes una opcion, mostramos bio, categorías, pricing y últimas reseñas.</span>
+        <span class="muted">Cuando confirmes una opcion, mostramos perfil, calificacion y datos utiles del prestador.</span>
       </div>
     `;
     return;
   }
 
   container.innerHTML = `
-    <article class="summary-card compact-stack">
+    <article class="summary-card compact-stack provider-spotlight-card">
       <strong>${escapeHtml(selectedProvider?.full_name ?? "Prestador confirmado")}</strong>
       <p class="muted">${escapeHtml(profile?.bio ?? selectedProvider?.bio ?? "Perfil de prestador cargado desde MIMI Go.")}</p>
       <div class="chip-row">
@@ -1378,15 +1385,30 @@ function renderStickyAction(state, normalizedProviders = null) {
     `;
 }
 
-export function renderNotifications(state) {
-  const items = Array.isArray(state.notifications.items)
-    ? state.notifications.items
-    : [];
-  const unread = items.filter((item) => !item.read_at).length;
+function notificationRequestId(item) {
+  const rawMetadata = item?.metadata || item?.metadata_json || item?.data || item?.data_json || {};
+  let metadata = rawMetadata;
+  if (typeof rawMetadata === "string") {
+    try {
+      metadata = JSON.parse(rawMetadata);
+    } catch (_) {
+      metadata = {};
+    }
+  }
+  return (
+    item?.request_id ||
+    item?.service_request_id ||
+    item?.svc_request_id ||
+    item?.request?.id ||
+    metadata?.request_id ||
+    metadata?.requestId ||
+    metadata?.service_request_id ||
+    null
+  );
+}
 
-  setBadgeCount("notificationsCount", unread);
-
-  const html = items.length
+function notificationListHtml(items, emptyTitle, emptyText) {
+  return items.length
     ? items
         .map((item) => `
           <article class="notification-card">
@@ -1398,16 +1420,40 @@ export function renderNotifications(state) {
         .join("")
     : `
       <div class="summary-card">
-        <strong>Sin notificaciones</strong>
-        <span class="muted">Las novedades del servicio van a aparecer acá.</span>
+        <strong>${escapeHtml(emptyTitle)}</strong>
+        <span class="muted">${escapeHtml(emptyText)}</span>
       </div>
     `;
+}
+
+export function renderNotifications(state) {
+  const items = Array.isArray(state.notifications.items)
+    ? state.notifications.items
+    : [];
+  const unread = items.filter((item) => !item.read_at).length;
+  const activeRequestId = state.client.activeRequest?.id || state.client.activeRequest?.request_id || null;
+  const currentItems = activeRequestId
+    ? items.filter((item) => String(notificationRequestId(item) || "") === String(activeRequestId))
+    : [];
+
+  setBadgeCount("notificationsCount", unread);
+
+  const currentHtml = notificationListHtml(
+    currentItems,
+    "Sin novedades de este servicio",
+    "Cuando el prestador responda o cambie el estado, aparece aca."
+  );
+  const drawerHtml = notificationListHtml(
+    items,
+    "Sin notificaciones",
+    "Las novedades de tus servicios van a aparecer aca."
+  );
 
   const notificationsList = document.getElementById("notificationsList");
   const notificationsDrawerBody = document.getElementById("notificationsDrawerBody");
 
-  if (notificationsList) notificationsList.innerHTML = html;
-  if (notificationsDrawerBody) notificationsDrawerBody.innerHTML = html;
+  if (notificationsList) notificationsList.innerHTML = currentHtml;
+  if (notificationsDrawerBody) notificationsDrawerBody.innerHTML = drawerHtml;
 }
 
 export function renderChat(state) {

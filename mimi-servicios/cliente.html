@@ -46,7 +46,7 @@
   >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.7">
-  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.11">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.12">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -325,24 +325,24 @@
       </section>
 
       <section class="details-grid" data-client-screen="activity" aria-label="Detalles de actividad">
-        <article>
-          <h2>Notificaciones</h2>
+        <article class="current-service-updates">
+          <h2>Novedades de este servicio</h2>
           <div class="card-list compact" id="notificationsList" role="list" aria-live="polite"></div>
         </article>
-        <article>
-          <h2>Pagos y plataforma</h2>
-          <div class="card-list compact" id="financialPanel"></div>
-        </article>
-        <article>
-          <h2>Matching</h2>
-          <div class="card-list compact" id="matchingPanel"></div>
-        </article>
-        <article>
+        <article class="current-provider-detail">
           <h2>Prestador elegido</h2>
           <div class="card-list compact" id="providerSpotlightPanel"></div>
         </article>
-        <article>
-          <h2>Historial de servicios</h2>
+        <article class="current-payment-detail">
+          <h2>Detalle de pago</h2>
+          <div class="card-list compact" id="financialPanel"></div>
+        </article>
+        <article class="current-search-detail">
+          <h2>Búsqueda de prestador</h2>
+          <div class="card-list compact" id="matchingPanel"></div>
+        </article>
+        <article class="service-history-detail">
+          <h2>Servicios anteriores</h2>
           <div class="card-list compact" id="serviceHistoryPanel"></div>
         </article>
       </section>
@@ -551,6 +551,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script type="module" src="./src/main-client.js?v=2026.05.10.11"></script>
+  <script type="module" src="./src/main-client.js?v=2026.05.10.12"></script>
 </body>
 </html>
