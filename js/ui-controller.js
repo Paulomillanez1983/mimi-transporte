@@ -156,6 +156,9 @@ this.state = {
       'nav-next': 'nav-next',
       'nav-distance': 'nav-distance',
       'nav-progress-bar': 'nav-progress-bar',
+      'driver-nav-mode': 'driver-nav-mode',
+      'driver-nav-follow-toggle': 'driver-nav-follow-toggle',
+      'driver-nav-steps': 'driver-nav-steps',
       'maneuver-icon': 'maneuver-icon',
 
       'arrival-panel': 'arrival-panel',
@@ -1284,7 +1287,48 @@ if (sheet) {
       distanceEl.textContent = dist;
     }
 
+    const progress = this.elements['nav-progress-bar'];
+    if (progress) {
+      const percent = irADestino ? 68 : 36;
+      progress.style.width = `${percent}%`;
+    }
+
+    this._renderDriverNavSteps(trip, { irADestino });
+
     this._updateNavigateButton?.(trip);
+  }
+
+  _renderDriverNavSteps(trip, { irADestino = false } = {}) {
+    const stepsEl = this.elements['driver-nav-steps'];
+    const modeEl = this.elements['driver-nav-mode'];
+    if (!stepsEl) return;
+
+    const target = irADestino
+      ? (trip.destino_direccion || trip.destino || 'Destino final')
+      : (trip.origen_direccion || trip.origen || 'Punto de recogida');
+    const action = irADestino ? 'Conduci al destino' : 'Conduci al retiro';
+    const final = irADestino ? 'Finaliza el viaje cuando termine' : 'Avisa llegada e inicia el viaje';
+
+    stepsEl.innerHTML = `
+      <div class="driver-nav-step is-current">
+        <b>1</b>
+        <span>${this._escapeHtml(action)}</span>
+      </div>
+      <div class="driver-nav-step">
+        <b>2</b>
+        <span>${this._escapeHtml(target)}</span>
+      </div>
+      <div class="driver-nav-step">
+        <b>3</b>
+        <span>${this._escapeHtml(final)}</span>
+      </div>
+    `;
+
+    if (modeEl) {
+      modeEl.textContent = document.body.classList.contains('driver-navigation-active')
+        ? 'Camara siguiendo tu ubicacion'
+        : 'Toca Seguir en app para navegar sin salir de MIMI';
+    }
   }
 
   _showTripActions(trip) {

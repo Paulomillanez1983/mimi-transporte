@@ -39,6 +39,7 @@ class DriverApp {
     this._session = null;
 
     this._driverFlowState = 'OFFLINE';
+    this._driverNavigationMode = false;
 
     this._destroyed = false;
     this._actionLock = false;
@@ -57,6 +58,7 @@ class DriverApp {
     this._backgroundServicesStarting = false;
     this._backgroundServicesStarted = false;
     this._fabNavClickHandler = null;
+    this._navFollowClickHandler = null;
     this._unlockAudioOnClick = () => {
       soundManager.enableOnUserInteraction?.();
     };
@@ -1104,6 +1106,11 @@ async _startLocationTracking() {
 
       if (typeof mapService.showRoute === 'function') {
         await mapService.showRoute(origin, destination);
+        this._syncInAppNavigationButton();
+        if (this._driverNavigationMode) {
+          mapService.setNavigationMode?.(true);
+          mapService.recenterOnDriver?.();
+        }
 
         setTimeout(() => {
           try {
@@ -1116,6 +1123,11 @@ async _startLocationTracking() {
 
       if (typeof mapService.drawRoute === 'function') {
         await mapService.drawRoute(origin, destination);
+        this._syncInAppNavigationButton();
+        if (this._driverNavigationMode) {
+          mapService.setNavigationMode?.(true);
+          mapService.recenterOnDriver?.();
+        }
 
         setTimeout(() => {
           try {
@@ -1128,6 +1140,11 @@ async _startLocationTracking() {
 
       if (typeof mapService.showTripRoute === 'function') {
         await mapService.showTripRoute(origin, destination);
+        this._syncInAppNavigationButton();
+        if (this._driverNavigationMode) {
+          mapService.setNavigationMode?.(true);
+          mapService.recenterOnDriver?.();
+        }
 
         setTimeout(() => {
           try {
@@ -1474,6 +1491,7 @@ if (currentTripStatus === 'EN_CURSO') {
 _setupUI() {
   const btnFab = document.getElementById('fab-online');
   const fabNav = document.getElementById('fab-nav');
+  const navFollowToggle = document.getElementById('driver-nav-follow-toggle');
   const supportBtn = document.getElementById('menu-support');
   const earningsBtn = document.getElementById('menu-earnings');
   const historyBtn = document.getElementById('menu-history');
@@ -1632,11 +1650,17 @@ this._fabClickHandler = async (ev) => {
       }
     }
 this._fabNavClickHandler = () => {
-  this._openExternalNav();
+  this._toggleInAppNavigation();
+};
+this._navFollowClickHandler = () => {
+  this._toggleInAppNavigation();
 };
 
 if (fabNav) {
   fabNav.addEventListener('click', this._fabNavClickHandler);
+}
+if (navFollowToggle) {
+  navFollowToggle.addEventListener('click', this._navFollowClickHandler);
 }
   if (supportBtn) {
       supportBtn.addEventListener('click', async () => {
@@ -1844,6 +1868,53 @@ default:
 // =========================================================
 // EXTERNAL ACTIONS
 // =========================================================
+_syncInAppNavigationButton() {
+  const active = Boolean(this._driverNavigationMode);
+  document.body.classList.toggle('driver-navigation-active', active);
+
+  const navFollowToggle = document.getElementById('driver-nav-follow-toggle');
+  const fabNav = document.getElementById('fab-nav');
+  const mode = document.getElementById('driver-nav-mode');
+
+  if (navFollowToggle) {
+    navFollowToggle.textContent = active ? 'Pausar guia' : 'Seguir en app';
+    navFollowToggle.classList.toggle('is-active', active);
+  }
+
+  if (fabNav) {
+    fabNav.classList.toggle('is-active', active);
+    fabNav.setAttribute('aria-label', active ? 'Pausar navegacion in-app' : 'Seguir viaje en app');
+  }
+
+  if (mode) {
+    mode.textContent = active
+      ? 'Camara siguiendo tu ubicacion'
+      : 'Toca Seguir en app para navegar sin salir de MIMI';
+  }
+}
+
+_toggleInAppNavigation() {
+  const trip = tripManager.getCurrentTrip?.();
+  if (!trip?.id) {
+    uiController.showToast('No hay viaje activo para navegar', 'warning');
+    return;
+  }
+
+  this._driverNavigationMode = !this._driverNavigationMode;
+  mapService.setNavigationMode?.(this._driverNavigationMode);
+  mapService.followDriver = this._driverNavigationMode;
+
+  if (this._driverNavigationMode) {
+    mapService.recenterOnDriver?.();
+    uiController.showToast('Guia in-app activada', 'success');
+  } else {
+    uiController.showToast('Guia in-app pausada', 'info');
+  }
+
+  this._syncInAppNavigationButton();
+  uiController.showNavigationState?.(trip);
+}
+
 _openExternalNav() {
   const trip = tripManager.getCurrentTrip();
   if (!trip || !window.uiController?._getNavigateMeta) return;
@@ -1906,10 +1977,14 @@ _openExternalNav() {
       if (btnFab && this._fabClickHandler) {
         btnFab.removeEventListener('click', this._fabClickHandler);
       }
-      const fabNav = document.getElementById('fab-nav');
+const fabNav = document.getElementById('fab-nav');
 if (fabNav && this._fabNavClickHandler) {
   fabNav.removeEventListener('click', this._fabNavClickHandler);
 }
+      const navFollowToggle = document.getElementById('driver-nav-follow-toggle');
+      if (navFollowToggle && this._navFollowClickHandler) {
+        navFollowToggle.removeEventListener('click', this._navFollowClickHandler);
+      }
       
       window.removeEventListener('driverAction', this._driverActionHandler);
       document.removeEventListener('visibilitychange', this._visibilityChangeHandler);
