@@ -51,6 +51,36 @@
       "source": "/login-chofer.html",
       "destination": "/servicios",
       "permanent": false
+    },
+    {
+      "source": "/operadores",
+      "destination": "/prestador",
+      "permanent": false
+    },
+    {
+      "source": "/operadores/",
+      "destination": "/prestador",
+      "permanent": false
+    },
+    {
+      "source": "/hub-operadores",
+      "destination": "/prestador",
+      "permanent": false
+    },
+    {
+      "source": "/hub-operadores.html",
+      "destination": "/prestador",
+      "permanent": false
+    },
+    {
+      "source": "/partners",
+      "destination": "/prestador",
+      "permanent": false
+    },
+    {
+      "source": "/partners.html",
+      "destination": "/prestador",
+      "permanent": false
     }
   ],
   "rewrites": [

@@ -140,6 +140,7 @@ Cambios:
 
 - `/`, `/cliente`, `/hub-clientes`, `/viaje`, `/viaje/`, `/chofer`, `/chofer/`, `/index.html`, `/chofer-panel.html` y `/login-chofer.html` redirigen publicamente a `/servicios`.
 - `/operadores`, `/hub-operadores` y `/partners` abren directo la app de prestador para login con Google, sin hub intermedio.
+- Se agregaron redirects explicitos para evitar que `cleanUrls` sirva `hub-operadores.html` o `partners.html` como pantalla intermedia.
 - Se retiro el asset visual del auto del hub de operadores para evitar referencias publicas a transporte.
 - Los fallbacks `operadores/index.html` y `partners.html` tambien redirigen directo a `/mimi-servicios/prestador.html`; el panel admin queda preservado por `/admin/admin-panel.html`.
 - `chofer/index.html` y `viaje/index.html` redirigen a `/servicios`.
