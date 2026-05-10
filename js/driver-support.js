@@ -756,19 +756,20 @@ async function createConversationIfNeeded(initialMessage) {
     : "Consulta general chofer";
 
   const { data, error } = await supabaseService.client
-.from("soporte_tickets")
+.from("svc_conversations")
 .insert({
-  created_by: user.id,
-  user_id: user.id,
-  rol_origen: "driver",
-  asunto: subject,
-  canal: "in_app",
-  categoria: "driver",
-  prioridad: "normal",
-  estado: "abierto",
-  ultimo_mensaje: initialMessage || "",
+  request_id: null,
+  client_user_id: user.id,
+  provider_user_id: null,
+  status: "OPEN",
   last_message_at: new Date().toISOString(),
-  metadata: {
+  last_message_preview: initialMessage || "",
+  app_context: "support",
+  subject,
+  participant_role: "driver",
+  admin_status: "abierto",
+  unread_admin_count: initialMessage ? 1 : 0,
+  metadata_json: {
     email: user.email || null,
     role: "driver",
     source: "chofer-panel"
@@ -784,9 +785,9 @@ async function createConversationIfNeeded(initialMessage) {
   const normalized = normalizeConversation({
     ...data,
     id: data.id,
-    status: data.estado,
-    subject: data.asunto,
-    last_message: data.ultimo_mensaje,
+    status: data.admin_status,
+    subject: data.subject,
+    last_message: data.last_message_preview,
     messages: []
   });
 
@@ -845,54 +846,32 @@ async function sendSupportReply() {
     );
 
     const nowIso = new Date().toISOString();
-    const messagePayload = {
-      ticket_id: conversationId,
-      sender_user_id: session.user.id,
-      sender_role: "driver",
-      mensaje: previousText || "",
-      leido: false,
-      mensaje_tipo: uploadedAttachments.length
-        ? (previousText ? "mixto" : "archivo")
-        : "texto",
-      metadata: {
-        attachments: uploadedAttachments,
-        sender_name: "Chofer MIMI",
-        source: "chofer-panel",
-        created_at: nowIso
-      }
-    };
-
-    const { error: ticketUpdateError } = await withTimeout(
-      supabaseService.client
-        .from("soporte_tickets")
-        .update({
-          ultimo_mensaje: previousText || (uploadedAttachments.length ? "Adjunto enviado" : ""),
-          last_message_at: nowIso,
-          estado: "esperando_usuario",
-          updated_at: nowIso
-        })
-        .eq("id", conversationId),
-      SUPPORT_REQUEST_TIMEOUT_MS,
-      "No se pudo actualizar la conversacion"
-    );
-
-    if (ticketUpdateError) {
-      console.warn("[driver-support.sendSupportReply] ticket update warning:", ticketUpdateError);
-    }
-
-    const { data: insertedMessage, error: messageError } = await withTimeout(
-      supabaseService.client
-        .from("soporte_mensajes")
-        .insert(messagePayload)
-        .select("*")
-        .single(),
+    const { data: sendResult, error: messageError } = await withTimeout(
+      supabaseService.client.functions.invoke("svc-send-message", {
+        body: {
+          conversation_id: conversationId,
+          body: previousText || "",
+          attachments_json: uploadedAttachments,
+          metadata_json: {
+            attachments: uploadedAttachments,
+            sender_name: "Chofer MIMI",
+            source: "chofer-panel",
+            created_at: nowIso
+          }
+        },
+        headers: session.access_token
+          ? { Authorization: `Bearer ${session.access_token}` }
+          : undefined
+      }),
       SUPPORT_REQUEST_TIMEOUT_MS,
       "No se pudo enviar el mensaje"
     );
 
-    if (messageError || !insertedMessage?.id) {
-      throw new Error(messageError?.message || "No se pudo enviar el mensaje");
+    if (messageError || sendResult?.ok === false || !sendResult?.message?.id) {
+      throw new Error(messageError?.message || sendResult?.error || "No se pudo enviar el mensaje");
     }
+
+    const insertedMessage = sendResult.message;
 
     if (reply) {
       reply.value = "";
@@ -931,10 +910,10 @@ async function fallbackLoadConversations(preferredId = null) {
   const user = await getCurrentUser();
 
   const { data: tickets, error } = await supabaseService.client
-    .from("soporte_tickets")
+    .from("svc_conversations")
     .select("*")
-    .in("rol_origen", ["driver", "chofer"])
-    .or(`user_id.eq.${user.id},created_by.eq.${user.id}`)
+    .eq("app_context", "support")
+    .eq("client_user_id", user.id)
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
 
@@ -943,17 +922,17 @@ async function fallbackLoadConversations(preferredId = null) {
   const conversations = await Promise.all(
     (Array.isArray(tickets) ? tickets : []).map(async (ticket) => {
       const { data: messages } = await supabaseService.client
-        .from("soporte_mensajes")
+        .from("svc_messages")
         .select("*")
-        .eq("ticket_id", ticket.id)
+        .eq("conversation_id", ticket.id)
         .order("created_at", { ascending: true });
 
       return normalizeConversation({
         ...ticket,
         id: ticket.id,
-        status: ticket.estado,
-        subject: ticket.asunto,
-        last_message: ticket.ultimo_mensaje,
+        status: ticket.admin_status,
+        subject: ticket.subject,
+        last_message: ticket.last_message_preview,
         messages: Array.isArray(messages) ? messages : []
       });
     })
@@ -1094,7 +1073,7 @@ async function subscribeRealtime() {
       {
         event: "*",
         schema: "public",
-        table: "soporte_mensajes"
+        table: "svc_messages"
       },
       async () => {
         await loadSupportConversations({ preserveSelection: true, silent: true });

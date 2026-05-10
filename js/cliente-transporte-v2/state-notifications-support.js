@@ -2599,26 +2599,26 @@ if (!currentSupportTicketId) {
   }
 }
 
-const { data: soporteMensaje, error: mensajeError } = await window.supabaseInsert(
-  "svc_messages",
+const { data: soporteResult, error: mensajeError } = await window.sbRealtime.functions.invoke(
+  "svc-send-message",
   {
-    conversation_id: currentSupportTicketId,
-    sender_user_id: userId,
-    sender_role: "client",
-    message_type: "TEXT",
-    body: mensaje,
-    metadata_json: metadata,
-    delivery_status: "sent",
-    attachments_json: []
-  },
-  session.access_token
+    body: {
+      conversation_id: currentSupportTicketId,
+      body: mensaje,
+      metadata_json: metadata
+    },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`
+    }
+  }
 );
+const soporteMensaje = soporteResult?.message || null;
 
-if (mensajeError || !soporteMensaje?.id) {
+if (mensajeError || soporteResult?.ok === false || !soporteMensaje?.id) {
   console.error("[supportSendBtn] mensajeError:", mensajeError);
   notif.show(
     "Error",
-    mensajeError?.message || "No se pudo guardar el mensaje",
+    mensajeError?.message || soporteResult?.error || "No se pudo guardar el mensaje",
     "error"
   );
   return;

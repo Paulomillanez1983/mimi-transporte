@@ -360,19 +360,12 @@ async function resolveDriverAuthUser(driverIdUuid) {
 }
 
 async function resolveTripClientContext(trip = {}) {
-  const directClientUserId =
-    trip?.cliente_auth_id ||
-    trip?.cliente_user_id ||
-    trip?.user_id ||
-    trip?.cliente_id ||
-    trip?.client_user_id ||
-    trip?.pasajero_user_id ||
-    null;
+  const directClientUserId = trip?.cliente_auth_id || null;
 
   if (directClientUserId) {
     return {
       clientUserId: directClientUserId,
-      clientName: trip?.pasajero_nombre || trip?.cliente_nombre || trip?.cliente || "Cliente"
+      clientName: trip?.cliente || "Cliente"
     };
   }
 
@@ -380,16 +373,14 @@ async function resolveTripClientContext(trip = {}) {
   if (!tripId) {
     return {
       clientUserId: null,
-      clientName: trip?.pasajero_nombre || trip?.cliente_nombre || trip?.cliente || "Cliente"
+      clientName: trip?.cliente || "Cliente"
     };
   }
 
   const { client } = await getClientSession();
   const { data, error } = await client
     .from("viajes")
-    .select(
-      "id, cliente_auth_id, cliente_user_id, user_id, cliente_id, client_user_id, pasajero_user_id, pasajero_nombre, cliente_nombre, cliente"
-    )
+    .select("id, cliente_auth_id, cliente_email, cliente")
     .eq("id", tripId)
     .maybeSingle();
 
@@ -398,22 +389,8 @@ async function resolveTripClientContext(trip = {}) {
   }
 
   return {
-    clientUserId:
-      data?.cliente_auth_id ||
-      data?.cliente_user_id ||
-      data?.user_id ||
-      data?.cliente_id ||
-      data?.client_user_id ||
-      data?.pasajero_user_id ||
-      null,
-    clientName:
-      data?.pasajero_nombre ||
-      data?.cliente_nombre ||
-      data?.cliente ||
-      trip?.pasajero_nombre ||
-      trip?.cliente_nombre ||
-      trip?.cliente ||
-      "Cliente"
+    clientUserId: data?.cliente_auth_id || null,
+    clientName: data?.cliente || trip?.cliente || "Cliente"
   };
 }
 
@@ -426,78 +403,51 @@ function getParticipantNames(ctx) {
   };
 }
 
+async function invokeCommunicationFunction(functionName, body = {}) {
+  const { client, session } = await getClientSession();
+
+  if (!client?.functions?.invoke) {
+    throw new Error("Funciones de comunicacion no disponibles");
+  }
+
+  const { data, error } = await client.functions.invoke(functionName, {
+    body,
+    headers: session?.access_token
+      ? { Authorization: `Bearer ${session.access_token}` }
+      : undefined
+  });
+
+  if (error) {
+    throw new Error(error.message || `No se pudo ejecutar ${functionName}`);
+  }
+
+  if (data?.ok === false) {
+    throw new Error(data.error || `Error en ${functionName}`);
+  }
+
+  return data;
+}
+
 async function findOrCreateTripChat(context) {
-  const { client, user } = await getClientSession();
+  const data = await invokeCommunicationFunction("communication-ensure-conversation", {
+    context_type: "trip",
+    trip_id: context.tripId
+  });
 
-  const metadataFilter = {
-    thread_kind: "client_driver_trip",
-    viaje_id: String(context.tripId),
-    client_user_id: String(context.clientUserId),
-    driver_user_id: String(context.driverUserId)
-  };
-
-  const { data: existing, error: existingError } = await client
-    .from("soporte_tickets")
-    .select("*")
-    .eq("categoria", "viaje")
-    .contains("metadata", metadataFilter)
-    .order("created_at", { ascending: false })
-    .limit(1);
-
-  if (existingError) {
-    throw new Error(existingError.message || "No se pudo consultar el chat del viaje");
+  if (!data?.conversation?.id) {
+    throw new Error("No se pudo abrir el chat del viaje");
   }
 
-  const ticket = Array.isArray(existing) ? existing[0] : null;
-  if (ticket?.id) return ticket;
-
-  const subject = `Chat viaje ${context.tripId}`;
-
-  const payload = {
-    created_by: user.id,
-    user_id: user.id,
-    rol_origen: TRIP_CHAT.role === "driver" ? "driver" : "client",
-    asunto: subject,
-    canal: "in_app",
-    categoria: "viaje",
-    prioridad: "normal",
-    estado: "abierto",
-    ultimo_mensaje: "",
-    last_message_at: new Date().toISOString(),
-    metadata: {
-      thread_kind: "client_driver_trip",
-      viaje_id: String(context.tripId),
-      client_user_id: String(context.clientUserId),
-      driver_user_id: String(context.driverUserId),
-      driver_id_uuid: String(context.driverIdUuid || ""),
-      client_name: context.clientName || "",
-      driver_name: context.driverName || "",
-      created_by_role: TRIP_CHAT.role,
-      created_from: TRIP_CHAT.role,
-      opened_by: user.id
-    }
-  };
-
-  const { data: created, error: createError } = await client
-    .from("soporte_tickets")
-    .insert(payload)
-    .select("*")
-    .single();
-
-  if (createError || !created?.id) {
-    throw new Error(createError?.message || "No se pudo crear el chat del viaje");
-  }
-
-  return created;
+  return data.conversation;
 }
 
 async function loadMessages(ticketId) {
   const { client } = await getClientSession();
 
   const { data, error } = await client
-    .from("soporte_mensajes")
-    .select("id, ticket_id, sender_user_id, sender_role, mensaje, created_at, metadata, leido")
-    .eq("ticket_id", ticketId)
+    .from("svc_messages")
+    .select("id, conversation_id, sender_user_id, sender_role, body, created_at, metadata_json, read_at, delivery_status")
+    .eq("conversation_id", ticketId)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -528,7 +478,7 @@ function renderMessages(messages = []) {
       return `
         <div class="trip-chat-row ${rowClass}" data-message-id="${escapeHtml(msg?.id || "")}">
           <div class="trip-chat-bubble">
-            <div>${escapeHtml(msg?.mensaje || "")}</div>
+            <div>${escapeHtml(msg?.body || msg?.mensaje || "")}</div>
             <div class="trip-chat-time">${escapeHtml(formatHour(msg?.created_at))}</div>
           </div>
         </div>
@@ -555,7 +505,7 @@ function appendMessage(message) {
 
   row.innerHTML = `
     <div class="trip-chat-bubble">
-      <div>${escapeHtml(message?.mensaje || "")}</div>
+      <div>${escapeHtml(message?.body || message?.mensaje || "")}</div>
       <div class="trip-chat-time">${escapeHtml(formatHour(message?.created_at))}</div>
     </div>
   `;
@@ -581,10 +531,10 @@ async function refreshUnreadBadge(ticketId) {
     const meUserId = String(TRIP_CHAT.activeContext?.meUserId || "");
 
     const { data, error } = await client
-      .from("soporte_mensajes")
-      .select("id, sender_user_id, leido")
-      .eq("ticket_id", ticketId)
-      .eq("leido", false);
+      .from("svc_messages")
+      .select("id, sender_user_id, read_at")
+      .eq("conversation_id", ticketId)
+      .is("read_at", null);
 
     if (error) {
       console.warn("[trip-chat.refreshUnreadBadge]", error);
@@ -606,20 +556,9 @@ async function markMessagesAsRead(ticketId) {
   if (!ticketId) return;
 
   try {
-    const { client } = await getClientSession();
-    const meUserId = String(TRIP_CHAT.activeContext?.meUserId || "");
-
-    const { error } = await client
-      .from("soporte_mensajes")
-      .update({ leido: true })
-      .eq("ticket_id", ticketId)
-      .neq("sender_user_id", meUserId)
-      .eq("leido", false);
-
-    if (error) {
-      console.warn("[trip-chat.markMessagesAsRead]", error);
-      return;
-    }
+    await invokeCommunicationFunction("communication-mark-read", {
+      conversation_id: ticketId
+    });
 
     TRIP_CHAT.unreadCount = 0;
     setChatBadge(0);
@@ -645,8 +584,8 @@ async function subscribeRealtime(ticketId) {
       {
         event: "INSERT",
         schema: "public",
-        table: "soporte_mensajes",
-        filter: `ticket_id=eq.${ticketId}`
+        table: "svc_messages",
+        filter: `conversation_id=eq.${ticketId}`
       },
       async (payload) => {
         const msg = payload?.new;
@@ -702,45 +641,18 @@ async function sendCurrentMessage() {
   try {
     enableIncomingMessageAudio();
 
-    const { client, user } = await getClientSession();
-    const senderRole = TRIP_CHAT.role === "driver" ? "driver" : "client";
-    const nowIso = new Date().toISOString();
+    const result = await invokeCommunicationFunction("svc-send-message", {
+      conversation_id: TRIP_CHAT.activeTicketId,
+      body: text,
+      metadata_json: {
+        source: "trip_chat",
+        viaje_id: String(TRIP_CHAT.activeTripId || ""),
+        thread_kind: "client_driver_trip"
+      }
+    });
 
-    const { error: ticketUpdateError } = await client
-      .from("soporte_tickets")
-      .update({
-        ultimo_mensaje: text,
-        last_message_at: nowIso,
-        estado: "abierto",
-        updated_at: nowIso
-      })
-      .eq("id", TRIP_CHAT.activeTicketId);
-
-    if (ticketUpdateError) {
-      console.warn("[trip-chat] update ticket warning:", ticketUpdateError);
-    }
-
-    const { data: inserted, error } = await client
-      .from("soporte_mensajes")
-      .insert({
-        ticket_id: TRIP_CHAT.activeTicketId,
-        sender_user_id: user.id,
-        sender_role: senderRole,
-        mensaje: text,
-        leido: false,
-        mensaje_tipo: "texto",
-        metadata: {
-          source: "trip_chat",
-          viaje_id: String(TRIP_CHAT.activeTripId || ""),
-          thread_kind: "client_driver_trip"
-        }
-      })
-      .select("*")
-      .single();
-
-    if (error || !inserted?.id) {
-      throw new Error(error?.message || "No se pudo enviar el mensaje");
-    }
+    const inserted = result?.message;
+    if (!inserted?.id) throw new Error("No se pudo enviar el mensaje");
 
     TRIP_CHAT.input.value = "";
     TRIP_CHAT.input.style.height = "auto";
@@ -822,7 +734,7 @@ export async function openTripChatForClientTrip(viaje = {}) {
     clientUserId,
     driverUserId: driverInfo.user_id,
     driverIdUuid,
-    clientName: viaje?.cliente_nombre || "Cliente",
+    clientName: viaje?.cliente || "Cliente",
     driverName:
       viaje?.chofer_nombre ||
       viaje?.choferNombre ||
