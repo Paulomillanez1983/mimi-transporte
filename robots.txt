@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /viaje
+Disallow: /chofer
+Disallow: /index.html
+Disallow: /chofer-panel.html
+Disallow: /login-chofer.html
+Disallow: /driver-onboarding.html
+Disallow: /driver-review-pending.html
+Disallow: /driver-review-rejected.html
+Disallow: /driver-documents-observed.html
+
+Sitemap: https://mimi-transporte.vercel.app/sitemap.xml

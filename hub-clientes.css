@@ -11,12 +11,12 @@
 }
 
 /* =========================================================
-   MIMI Servicios first - Fase 1 producto principal
-   Mantiene Transporte vivo como acceso secundario sin romper rutas.
+   MIMI Servicios focus - producto principal publico.
+   Los modulos internos no se borran; no se promocionan en UX.
    ========================================================= */
 
 .cards.services-first{
-  grid-template-columns:minmax(0,1.18fr) minmax(280px,.82fr);
+  grid-template-columns:1fr;
   align-items:stretch;
 }
 
@@ -46,8 +46,7 @@
 }
 
 .cards.services-first .transport-card{
-  opacity:.82;
-  min-height:auto;
+  display:none;
 }
 
 .cards.services-first .transport-card::before{
@@ -67,7 +66,7 @@
 }
 
 .btn-secondary-product{
-  opacity:.88;
+  display:none;
   min-height:58px;
 }
 
@@ -125,6 +124,19 @@
   .cards.services-first .transport-card .trust-row{
     display:none;
   }
+
+  .service-orbit{
+    right:18px;
+    bottom:34px;
+    width:min(360px,42vw);
+    gap:10px;
+  }
+
+  .service-orbit span{
+    min-height:72px;
+    border-radius:18px;
+    font-size:14px;
+  }
 }
 
 @media (max-width:430px){
@@ -145,6 +157,12 @@
 
   .cards.services-first .transport-card .btn{
     height:42px;
+  }
+
+  .service-orbit{
+    opacity:.18;
+    right:-30px;
+    width:250px;
   }
 }
 
@@ -333,6 +351,40 @@ h1{
   background:linear-gradient(90deg,rgba(124,199,255,.65),transparent);
   filter:blur(16px);
   opacity:.85;
+}
+
+.service-orbit{
+  position:absolute;
+  right:42px;
+  bottom:54px;
+  width:min(420px,44vw);
+  min-height:220px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  z-index:2;
+}
+
+.service-orbit span{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:92px;
+  border-radius:24px;
+  border:1px solid rgba(134,239,172,.18);
+  background:
+    radial-gradient(circle at 80% 0%, rgba(134,239,172,.18), transparent 42%),
+    rgba(255,255,255,.07);
+  color:#ecfdf5;
+  font-size:18px;
+  font-weight:950;
+  box-shadow:0 24px 52px rgba(0,0,0,.30);
+  backdrop-filter:blur(12px);
+}
+
+.service-orbit span:nth-child(2),
+.service-orbit span:nth-child(3){
+  transform:translateY(18px);
 }
 
 .hero-car{

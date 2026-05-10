@@ -4,7 +4,27 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "/hub-clientes",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/cliente",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/hub-clientes",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/viaje",
+      "destination": "/servicios",
+      "permanent": false
+    },
+    {
+      "source": "/chofer",
+      "destination": "/servicios",
       "permanent": false
     }
   ],
@@ -69,6 +89,33 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=86400, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/chofer-panel.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
+        }
+      ]
+    },
+    {
+      "source": "/login-chofer.html",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow, noarchive"
         }
       ]
     },

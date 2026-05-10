@@ -20,10 +20,13 @@ function existsWebPath(webPath) {
 }
 
 const rewrites = new Map((vercel.rewrites || []).map((item) => [item.source, item.destination]));
+const redirects = new Map((vercel.redirects || []).map((item) => [item.source, item.destination]));
 const routeResults = expectedRoutes.map((route) => {
-  const destination = rewrites.get(route) || route;
+  const redirectedTo = redirects.get(route) || null;
+  const destination = redirectedTo || rewrites.get(route) || route;
   return {
     route,
+    redirectedTo,
     destination,
     ok: route.endsWith(".html") ? existsWebPath(route) : existsWebPath(destination)
   };

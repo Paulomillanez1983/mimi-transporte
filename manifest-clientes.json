@@ -1,9 +1,9 @@
 {
   "id": "/clientes",
-  "name": "MIMI Go",
-  "short_name": "MIMI Go",
-  "description": "App de clientes MIMI Go para solicitar viajes y servicios.",
-  "start_url": "/hub-clientes",
+  "name": "MIMI Servicios",
+  "short_name": "MIMI",
+  "description": "App de clientes MIMI para solicitar servicios y prestadores cerca tuyo.",
+  "start_url": "/servicios",
   "scope": "/",
   "display": "standalone",
   "display_override": [
@@ -14,9 +14,9 @@
   "orientation": "portrait",
   "lang": "es-AR",
   "categories": [
-    "travel",
     "business",
-    "productivity"
+    "productivity",
+    "utilities"
   ],
   "icons": [
     {

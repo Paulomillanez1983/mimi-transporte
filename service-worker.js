@@ -1,21 +1,18 @@
-const CACHE_NAME = 'mimi-driver-v8-mimi-maps';
+const CACHE_NAME = 'mimi-services-v1';
 const APP_BASE_PATH = (() => {
   const path = self.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
 })();
 const STATIC_ASSETS = [
-  `${APP_BASE_PATH}login-chofer.html`,
-  `${APP_BASE_PATH}driver-review-pending.html`,
-  `${APP_BASE_PATH}driver-documents-observed.html`,
+  `${APP_BASE_PATH}hub-clientes.html`,
+  `${APP_BASE_PATH}mimi-servicios/cliente.html`,
   `${APP_BASE_PATH}reset-password.html`,
-  `${APP_BASE_PATH}chofer-panel.html`,
   `${APP_BASE_PATH}manifest.json`,
-  `${APP_BASE_PATH}manifest-driver.json`,
+  `${APP_BASE_PATH}manifest-clientes.json`,
   `${APP_BASE_PATH}libs/supabase-js.js`,
-  `${APP_BASE_PATH}css/mimi-maps.css`,
-  `${APP_BASE_PATH}js/mimi-maps/map-core.js`,
-  `${APP_BASE_PATH}js/mimi-maps/map-markers.js`,
-  `${APP_BASE_PATH}js/mimi-maps/map-routing.js`
+  `${APP_BASE_PATH}hub-clientes.css`,
+  `${APP_BASE_PATH}mimi-servicios/styles/app.css`,
+  `${APP_BASE_PATH}mimi-servicios/styles/client.css`
 ];
 
 function isCacheableAsset(requestUrl) {
@@ -84,22 +81,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   const url = new URL(requestUrl);
-  const isDriverShellAsset =
-    url.pathname.endsWith('/chofer-panel.html') ||
-    url.pathname.endsWith('/js/driver-app.js') ||
-    url.pathname.endsWith('/js/trip-manager.js') ||
-    url.pathname.endsWith('/js/ui-controller.js') ||
-    url.pathname.endsWith('/js/config.js') ||
-    url.pathname.endsWith('/js/supabase-client.js') ||
-    url.pathname.endsWith('/js/driver-pwa-onboarding.js') ||
-    url.pathname.endsWith('/css/design-system.css') ||
-    url.pathname.endsWith('/css/components.css') ||
-    url.pathname.endsWith('/css/animations.css') ||
-    url.pathname.endsWith('/css/panel.css') ||
-    url.pathname.endsWith('/css/mimi-maps.css') ||
-    url.pathname.includes('/js/mimi-maps/');
+  const isServicesShellAsset =
+    url.pathname.endsWith('/hub-clientes.html') ||
+    url.pathname.endsWith('/mimi-servicios/cliente.html') ||
+    url.pathname.endsWith('/hub-clientes.css') ||
+    url.pathname.includes('/mimi-servicios/src/') ||
+    url.pathname.includes('/mimi-servicios/styles/');
 
-  if (isDriverShellAsset) {
+  if (isServicesShellAsset) {
     event.respondWith(
       fetch(request)
         .then((response) => {
