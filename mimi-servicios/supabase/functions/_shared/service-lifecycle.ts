@@ -71,13 +71,23 @@ async function requestForProvider(admin: ReturnType<typeof createClient>, reques
 }
 
 function statusCodeForError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = messageForError(error);
   if (message === "AUTH_REQUIRED") return 401;
   if (message === "request_forbidden" || message === "provider_not_allowed") return 403;
   if (message.endsWith("_invalid")) return 400;
   if (message.endsWith("_not_found")) return 404;
   if (message === "invalid_request_status") return 409;
   return 400;
+}
+
+function messageForError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (message) return String(message);
+  }
+  const fallback = String(error || "").trim();
+  return fallback && fallback !== "[object Object]" ? fallback : "unexpected_error";
 }
 
 type TransitionConfig = {
@@ -141,7 +151,7 @@ export async function handleProviderTransition(req: Request, config: TransitionC
   } catch (error) {
     console.error(`${config.functionName} error:`, error);
     return json(
-      { ok: false, error: error instanceof Error ? error.message : "unexpected_error" },
+      { ok: false, error: messageForError(error) },
       statusCodeForError(error),
     );
   }
@@ -206,7 +216,7 @@ export async function handleProviderComplete(req: Request) {
   } catch (error) {
     console.error("svc-complete-service error:", error);
     return json(
-      { ok: false, error: error instanceof Error ? error.message : "unexpected_error" },
+      { ok: false, error: messageForError(error) },
       statusCodeForError(error),
     );
   }

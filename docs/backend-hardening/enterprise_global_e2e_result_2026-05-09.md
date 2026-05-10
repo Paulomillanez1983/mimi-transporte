@@ -2,16 +2,18 @@
 
 ## Executive status
 
-Global enterprise 10/10 is **not declared yet**.
+Global enterprise 10/10 is **not declared by this runner yet**.
 
-The backend hardening is applied and the security validation is passing in production, but the final authenticated E2E could not be completed because there are no controlled client/provider/admin test credentials available to this release runner. I did not fake JWTs, did not use service-role shortcuts from the frontend path, and did not create uncontrolled production users.
+The backend hardening is applied and the security validation is passing in production. The last production blocker in `svc-complete-service` was fixed and the current E2E request was completed with the corrected backend path. The only remaining declaration gate is re-running `node qa\enterprise-global-e2e.js` in a terminal that has the controlled client/provider/admin credentials configured, so the script itself can return `"ok": true`.
+
+I did not fake JWTs, did not disable JWT verification, did not weaken RLS, and did not expose service-role credentials to the frontend path.
 
 ## Production baseline confirmed
 
 - Supabase project: `xrphpqmutvadjrucqicn`
 - Vercel production deployment: Ready at validation time; inspect the current alias for the live deployment id.
 - Production alias: `https://mimi-transporte.vercel.app`
-- Backend migrations local/remote: aligned through `20260509234909`
+- Backend migrations local/remote: aligned through `20260510020223`
 - Realtime publication: 8 required tables present
 - Stale service requests/offers: `0/0`
 - RPC internal exposure: `0`
@@ -21,6 +23,30 @@ The backend hardening is applied and the security validation is passing in produ
 - `svc_request_events` participant/admin read policy: present
 
 ## Fix applied during final gate
+
+### Final completion ledger fix
+
+`supabase/migrations/20260510020223_fix_svc_complete_service_ledger_entries.sql`
+
+Production error found in `svc-complete-service`:
+
+```text
+code: 23514
+constraint: svc_financial_ledger_entry_type_check
+failing entry_type: PLATFORM_FEE
+```
+
+The enterprise ledger constraint currently allows:
+
+- `ESCROW_RELEASE`
+- `PLATFORM_FEE_ACCRUAL`
+- `PROVIDER_EARNING_ACCRUAL`
+- `REFUND`
+- `CANCELLATION_FEE`
+
+The old RPC `svc_complete_service_atomic` still inserted legacy values `PLATFORM_FEE` and `PROVIDER_EARNING`. The migration replaced those with `PLATFORM_FEE_ACCRUAL` and `PROVIDER_EARNING_ACCRUAL`, kept `search_path = public, pg_temp`, preserved internal-only execute grants, validates provider ownership, completes the active assignment, returns the provider to `ONLINE_IDLE`, and keeps the audit trigger path intact.
+
+`svc-complete-service` was redeployed after updating `_shared/service-lifecycle.ts` so Supabase error objects are surfaced with their real `message` instead of collapsing to `unexpected_error`.
 
 ### Migration
 
@@ -147,6 +173,8 @@ Current execution result:
   "skipped": true,
   "reason": "missing_required_env",
   "missing": [
+    "MIMI_SUPABASE_URL",
+    "MIMI_SUPABASE_ANON_KEY",
     "MIMI_E2E_CLIENT_EMAIL",
     "MIMI_E2E_CLIENT_PASSWORD",
     "MIMI_E2E_PROVIDER_EMAIL",
@@ -207,20 +235,33 @@ Implementation notes:
 
 Current blocker in the Codex execution environment: missing E2E credential env vars. The script must be re-run in the terminal where the client/provider/admin test credentials are configured.
 
+Final `svc-complete-service` blocker was fixed and verified against the current E2E request:
+
+- Request: `0b3d9815-8677-417f-8122-8ba7ac02dc01`
+- Status after fix: `COMPLETED`
+- `completed_at`: `2026-05-10 02:06:09.721681+00`
+- Provider: `testprestador@mimi-go.app`
+- Provider status after completion: `ONLINE_IDLE`
+- Ledger rows:
+  - `ESCROW_RELEASE` / `ARS 15000.00`
+  - `PLATFORM_FEE_ACCRUAL` / `ARS 0.00`
+  - `PROVIDER_EARNING_ACCRUAL` / `ARS 15000.00`
+
 ## Events currently present
 
-Current `svc_request_events` production counts:
+Current E2E request event trail:
 
 ```text
-offer_accepted: 1
-offer_created: 1
-offer_expired: 8
-request_cancelled: 3
-request_created: 1
-request_expired: 3
+request_created
+offer_created
+offer_accepted
+request_provider_en_route
+request_provider_arrived
+request_started
+request_completed
 ```
 
-Important: there are no `request_started` or `request_completed` events yet from the new E2E gate. This is exactly why global 10/10 is still pending.
+Production validation after the fix reports `service_events.total_events = 32` and `service_expiration.stale_active_requests/stale_pending_offers = 0/0`.
 
 ## QA commands executed
 
@@ -232,6 +273,7 @@ node qa\backend-hardening-rpc-smoke.js --require-env
 node qa\audit-supabase.js
 node qa\audit-routes.js
 node qa\audit-encoding.js
+node qa\enterprise-global-e2e.js
 node --check qa\enterprise-global-e2e.js
 node --check mimi-servicios\src\services\service-api.js
 git diff --check
@@ -248,10 +290,12 @@ curl.exe -L -s -o NUL -w "%{http_code} %{url_effective}" https://mimi-transporte
 - RPC smoke with real anon key: pass, internal RPCs return `42501 permission denied`.
 - `backend-hardening-static.js`: pass.
 - `audit-supabase.js`: pass.
-- `audit-routes.js`: pass.
+- `audit-routes.js`: pass in previous route validation.
 - `audit-encoding.js`: pass.
 - `service-api.js` syntax: pass.
 - `git diff --check`: pass, only LF/CRLF warnings.
+- `svc-complete-service` unauthenticated smoke: controlled `401`, no BOOT_ERROR.
+- `enterprise-global-e2e.js` in this runner: skipped because E2E env secrets are not available in this process.
 - Production routes:
   - `/servicios`: 200
   - `/prestador`: 200
@@ -272,9 +316,9 @@ Remote production functions are active for the service lifecycle:
 - `svc-complete-service`
 - `svc-cancel-request`
 
-Residual governance issue:
+Source-of-truth status:
 
-The local directories for `svc-provider-en-route`, `svc-provider-arrived`, `svc-start-service`, and `svc-complete-service` are present but empty in the workspace, while the remote functions are active. This does not break current production, but it prevents a clean source-of-truth guarantee until the deployed source is recovered into the repository or intentionally recreated and redeployed.
+The service lifecycle function source has been recreated in the repository and redeployed. The earlier empty-directory governance issue for `svc-provider-en-route`, `svc-provider-arrived`, `svc-start-service`, and `svc-complete-service` is resolved.
 
 ## Frontend/PWA/Vercel audit
 
@@ -305,7 +349,7 @@ Production checks are passing after hardening phases 01-06.
 
 ### Global enterprise 10/10
 
-No-go until the authenticated E2E runs with controlled credentials and produces:
+Go for backend hardening. Global enterprise 10/10 remains gated only on the authenticated E2E script returning `"ok": true` from a shell with the controlled credentials. The current request lifecycle evidence is complete, but the release rule requires the runner output.
 
 - one completed test request,
 - accepted offer,
