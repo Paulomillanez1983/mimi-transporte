@@ -125,6 +125,27 @@ realtime_health as (
   left join pg_publication_rel pr on pr.prpubid = pub.oid
   left join pg_class c on c.oid = pr.prrelid
   left join pg_namespace n on n.oid = c.relnamespace
+),
+provider_guard_health as (
+  select
+    count(*) filter (
+      where p.proname = 'svc_guard_provider_admin_fields'
+        and p.prosecdef
+        and exists (
+          select 1
+          from unnest(p.proconfig) cfg
+          where cfg like 'search_path=%'
+        )
+        and not has_function_privilege('anon', p.oid, 'EXECUTE')
+        and not has_function_privilege('authenticated', p.oid, 'EXECUTE')
+    ) as guard_function_hardened,
+    count(*) filter (
+      where t.tgname = 'trg_svc_providers_guard_admin_fields'
+        and not t.tgisinternal
+    ) as guard_trigger_present
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace and n.nspname = 'public'
+  left join pg_trigger t on t.tgfoid = p.oid
 )
 select *
 from (
@@ -207,5 +228,21 @@ from (
     required_realtime_tables::text,
     '8'
   from realtime_health
+  union all
+  select
+    'provider_admin_guard',
+    case when guard_function_hardened = 1 then 'pass' else 'fail' end,
+    'guard_function_hardened',
+    guard_function_hardened::text,
+    '1 after phase 06'
+  from provider_guard_health
+  union all
+  select
+    'provider_admin_guard',
+    case when guard_trigger_present = 1 then 'pass' else 'fail' end,
+    'guard_trigger_present',
+    guard_trigger_present::text,
+    '1 after phase 06'
+  from provider_guard_health
 ) checks
 order by check_name, metric;

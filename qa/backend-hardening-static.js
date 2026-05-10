@@ -10,6 +10,7 @@ const files = {
   rls: "supabase/migrations/20260509221309_enterprise_03_rls_policy_hardening.sql",
   audit: "supabase/migrations/20260509221409_enterprise_04_service_audit_and_expiration.sql",
   residualRpc: "supabase/migrations/20260509233520_enterprise_05_close_residual_rpc_exposure.sql",
+  providerGuard: "supabase/migrations/20260509234909_enterprise_06_guard_provider_admin_fields.sql",
   validation: "docs/backend-hardening/enterprise_validation.sql",
   releasePlan: "docs/backend-hardening/enterprise_release_plan_2026-05-09.md"
 };
@@ -36,6 +37,7 @@ const rpc = read(files.rpc);
 const rls = read(files.rls);
 const audit = read(files.audit);
 const residualRpc = read(files.residualRpc);
+const providerGuard = read(files.providerGuard);
 const validation = read(files.validation);
 const releasePlan = read(files.releasePlan);
 
@@ -57,6 +59,19 @@ const releasePlan = read(files.releasePlan);
   "buscar_choferes_cercanos",
   "search_categories_hybrid"
 ].forEach((fn) => check(`residual rpc hardens ${fn}`, residualRpc.includes(fn)));
+
+[
+  "svc_guard_provider_admin_fields",
+  "provider_approved_admin_only",
+  "provider_blocked_admin_only",
+  "provider_notes_internal_admin_only",
+  "trg_svc_providers_guard_admin_fields"
+].forEach((guard) => check(`provider admin field guard ${guard}`, providerGuard.includes(guard)));
+
+check(
+  "provider admin guard is not executable by authenticated",
+  /revoke execute on function public\.svc_guard_provider_admin_fields\(\) from public, anon, authenticated/i.test(providerGuard)
+);
 
 [
   "push_tokens_insert_own",
