@@ -72,7 +72,7 @@
     },
     {
       "source": "/operadores",
-      "destination": "/hub-operadores.html"
+      "destination": "/mimi-servicios/prestador.html"
     },
     {
       "source": "/chofer",
@@ -100,11 +100,11 @@
     },
     {
       "source": "/hub-operadores",
-      "destination": "/hub-operadores.html"
+      "destination": "/mimi-servicios/prestador.html"
     },
     {
       "source": "/partners",
-      "destination": "/hub-operadores.html"
+      "destination": "/mimi-servicios/prestador.html"
     }
   ],
   "headers": [
