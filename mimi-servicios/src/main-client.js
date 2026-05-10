@@ -606,6 +606,7 @@ function currentConversationId() {
 
 let infoAutoHideTimer = null;
 let clientSupportConversationId = null;
+const clientPendingActions = new Set();
 
 function setInfo(message, error = null) {
   setState((draft) => {
@@ -655,6 +656,22 @@ function setButtonLoading(button, loading, loadingLabel, idleLabel = null) {
   button.classList.toggle("is-loading", loading);
   button.setAttribute("aria-busy", String(loading));
   button.textContent = loading ? loadingLabel : button.dataset.idleLabel;
+}
+
+async function runClientAction(key, button, loadingLabel, idleLabel, action) {
+  if (clientPendingActions.has(key)) {
+    return null;
+  }
+
+  clientPendingActions.add(key);
+  setButtonLoading(button, true, loadingLabel, idleLabel);
+
+  try {
+    return await action();
+  } finally {
+    setButtonLoading(button, false, loadingLabel, idleLabel);
+    clientPendingActions.delete(key);
+  }
 }
 
 function isRunningAsInstalledPwa() {
@@ -1657,6 +1674,12 @@ async function handleSearchSubmit(event) {
 
   const searchButton = document.getElementById("searchProvidersButton");
 
+  if (clientPendingActions.has("search-providers")) {
+    return;
+  }
+
+  clientPendingActions.add("search-providers");
+
   setButtonLoading(
     searchButton,
     true,
@@ -1695,6 +1718,7 @@ async function handleSearchSubmit(event) {
       "Buscando...",
       "Buscar prestadores"
     );
+    clientPendingActions.delete("search-providers");
   }
 }
 
@@ -2437,7 +2461,13 @@ function bindBasicControls() {
           console.warn("[MIMI Solicitar] BLOCKED: button.disabled === true");
           return;
         }
-        const created = await handleProviderSelection(providerId);
+        const created = await runClientAction(
+          `select-provider:${providerId}`,
+          selectProvider,
+          "Preparando solicitud...",
+          "Solicitar",
+          () => handleProviderSelection(providerId)
+        );
         if (created) setClientView("services");
         return;
       }
@@ -2450,13 +2480,25 @@ function bindBasicControls() {
 
       const requestAction = event.target.closest("[data-request-action]");
       if (requestAction) {
-        await handleRequestAction(requestAction.dataset.requestAction);
+        await runClientAction(
+          `request-action:${requestAction.dataset.requestAction}`,
+          requestAction,
+          requestAction.dataset.requestAction === "cancel" ? "Cancelando..." : "Procesando...",
+          null,
+          () => handleRequestAction(requestAction.dataset.requestAction)
+        );
         return;
       }
 
       const paymentAction = event.target.closest("[data-payment-action]");
       if (paymentAction) {
-        await handlePaymentAction(paymentAction.dataset.paymentAction);
+        await runClientAction(
+          `payment-action:${paymentAction.dataset.paymentAction}`,
+          paymentAction,
+          "Procesando...",
+          null,
+          () => handlePaymentAction(paymentAction.dataset.paymentAction)
+        );
         return;
       }
 

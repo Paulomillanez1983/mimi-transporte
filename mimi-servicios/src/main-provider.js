@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.8";
+const MIMI_PROVIDER_BUILD = "2026.05.10.9";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -91,6 +91,7 @@ class MimiProviderApp {
     this.lastRoadRouteData = null;
     this.navigationMode = false;
     this.navigationCameraFollowing = true;
+    this.pendingActions = new Set();
     this.lastProviderTrackingPoint = null;
     this.lastProviderTrackingSentAt = 0;
     this.lastProviderTrackingRequestId = null;
@@ -1922,6 +1923,22 @@ stats: {
     }
   }
 
+  async runProviderAction(key, button, loadingLabel, action) {
+    if (this.pendingActions.has(key)) {
+      return null;
+    }
+
+    this.pendingActions.add(key);
+    this.setButtonBusy(button, true, loadingLabel);
+
+    try {
+      return await action();
+    } finally {
+      this.setButtonBusy(button, false);
+      this.pendingActions.delete(key);
+    }
+  }
+
   openProviderSection(section) {
     const route = {
       profile: { tab: "account", target: "providerProfilePanel" },
@@ -2002,8 +2019,13 @@ stats: {
    */
   setupEventListeners() {
     // Online button
-    this.elements.goOnlineButton?.addEventListener('click', () => {
-      this.handleGoOnline();
+    this.elements.goOnlineButton?.addEventListener('click', (event) => {
+      this.runProviderAction(
+        "go-online",
+        event.currentTarget,
+        "Conectando...",
+        () => this.handleGoOnline()
+      );
     });
 
     // Menu button
@@ -2043,7 +2065,12 @@ this.elements.tabButtons.forEach((btn) => {
       const option = e.target.closest('.toggle-option');
       if (option) {
         const status = option.dataset.status;
-        this.handleStatusToggle(status);
+        this.runProviderAction(
+          "status-toggle",
+          option,
+          status === "ONLINE_IDLE" ? "Conectando..." : "Desconectando...",
+          () => this.handleStatusToggle(status)
+        );
       }
     });
 
@@ -2106,17 +2133,32 @@ this.elements.tabButtons.forEach((btn) => {
     });
 
     // Offer actions
-    this.elements.acceptOffer?.addEventListener('click', () => {
-      this.handleAcceptOffer();
+    this.elements.acceptOffer?.addEventListener('click', (event) => {
+      this.runProviderAction(
+        "accept-offer",
+        event.currentTarget,
+        "Aceptando...",
+        () => this.handleAcceptOffer()
+      );
     });
 
-    this.elements.rejectOffer?.addEventListener('click', () => {
-      this.handleRejectOffer();
+    this.elements.rejectOffer?.addEventListener('click', (event) => {
+      this.runProviderAction(
+        "reject-offer",
+        event.currentTarget,
+        "Rechazando...",
+        () => this.handleRejectOffer()
+      );
     });
 
     // Service action
-    this.elements.serviceActionBtn?.addEventListener('click', () => {
-      this.handleServiceAction();
+    this.elements.serviceActionBtn?.addEventListener('click', (event) => {
+      this.runProviderAction(
+        "service-action",
+        event.currentTarget,
+        "Actualizando...",
+        () => this.handleServiceAction()
+      );
     });
 
 // Verification
