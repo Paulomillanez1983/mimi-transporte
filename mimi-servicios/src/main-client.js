@@ -344,6 +344,42 @@ function formatPricingTotal(pricing) {
   return formatCurrency(pricing?.total_price, pricing?.currency || "ARS");
 }
 
+function compactServiceAddress(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "Direccion pendiente";
+
+  const parts = raw
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 2) return raw;
+
+  const zip = parts.find((part) => /\b[A-Z]?\d{4}[A-Z]{0,3}\b/i.test(part));
+  let used = 1;
+  let street = parts[0];
+
+  if (/^\d+[A-Za-z]?$/.test(parts[0] || "") && parts[1]) {
+    street = `${parts[0]} ${parts[1]}`;
+    used = 2;
+  }
+
+  const administrative = /^(argentina|municipio|pedania|pedan[ií]a|departamento|provincia)(\b| de\b)/i;
+  const locality = parts
+    .slice(used)
+    .find((part) => {
+      if (zip && part === zip) return false;
+      if (administrative.test(part)) return false;
+      if (/^cordoba$/i.test(part.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) return false;
+      return part.length <= 42;
+    });
+
+  return [street, locality, zip]
+    .filter(Boolean)
+    .filter((part, index, arr) => arr.indexOf(part) === index)
+    .join(" - ");
+}
+
 function upsertConfirmQuantityField(overlay, provider, pricing, onQuantityChange) {
   let container = overlay.querySelector("#confirmQuantityField");
   if (!providerNeedsQuantity(provider, pricing)) {
@@ -422,9 +458,19 @@ function openRequestConfirmation(provider, initialPricing) {
   let pricing = { ...(initialPricing || {}) };
   document.getElementById("confirmProviderName").textContent = textFromProvider(provider);
   document.getElementById("confirmCategoryName").textContent = selectedCategory?.name || "Servicio";
-  document.getElementById("confirmAddress").textContent = state.requestDraft.address || "Direccion pendiente";
+  const compactAddress = compactServiceAddress(state.requestDraft.address);
+  const confirmAddress = document.getElementById("confirmAddress");
+  if (confirmAddress) {
+    confirmAddress.textContent = compactAddress;
+    confirmAddress.title = state.requestDraft.address || compactAddress;
+  }
   const serviceMode = document.getElementById("confirmServiceMode");
   const sessionDuration = document.getElementById("confirmSessionDuration");
+
+  acceptButton.disabled = false;
+  cancelButton.disabled = false;
+  acceptButton.classList.remove("is-loading");
+  acceptButton.textContent = acceptButton.dataset.idleLabel || "Enviar solicitud";
 
   if (serviceMode) {
     serviceMode.textContent = serviceModeLabel(pricing?.service_mode || pricing?.serviceMode);
@@ -452,7 +498,16 @@ function openRequestConfirmation(provider, initialPricing) {
   acceptButton.focus();
 
   return new Promise((resolve) => {
+    let settled = false;
     const finish = (confirmed) => {
+      if (settled) return;
+      settled = true;
+      acceptButton.disabled = true;
+      cancelButton.disabled = true;
+      if (confirmed) {
+        acceptButton.classList.add("is-loading");
+        acceptButton.textContent = "Enviando...";
+      }
       overlay.hidden = true;
       overlay.removeEventListener("click", onClick);
       window.removeEventListener("keydown", onKeydown);
@@ -472,6 +527,45 @@ function openRequestConfirmation(provider, initialPricing) {
     overlay.addEventListener("click", onClick);
     window.addEventListener("keydown", onKeydown);
   });
+}
+
+function setRequestProgress({ visible = true, step = "sending", title = "", message = "", providerName = "" } = {}) {
+  const overlay = document.getElementById("requestProgressOverlay");
+  if (!overlay) return;
+
+  overlay.hidden = !visible;
+  if (!visible) return;
+
+  const titleEl = document.getElementById("requestProgressTitle");
+  const messageEl = document.getElementById("requestProgressMessage");
+  const kickerEl = document.getElementById("requestProgressKicker");
+
+  if (titleEl) titleEl.textContent = title || "Enviando solicitud...";
+  if (messageEl) {
+    messageEl.textContent = message || (
+      providerName
+        ? `Estamos notificando a ${providerName}.`
+        : "Estamos preparando tu solicitud y notificando al prestador."
+    );
+  }
+  if (kickerEl) kickerEl.textContent = providerName ? `Solicitud a ${providerName}` : "Solicitud en curso";
+
+  overlay.querySelectorAll("[data-progress-step]").forEach((item) => {
+    const name = item.dataset.progressStep;
+    const done =
+      (step === "notifying" && name === "sending") ||
+      (step === "ready" && ["sending", "notifying"].includes(name));
+    item.classList.toggle("is-active", name === step);
+    item.classList.toggle("is-done", done);
+  });
+}
+
+function hideRequestProgress() {
+  setRequestProgress({ visible: false });
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function selectedCategoryNeedsHours() {
@@ -1894,6 +1988,17 @@ async function handleProviderSelection(providerId) {
     setInfo("Solicitud no enviada. Podes revisar la categoria, direccion o elegir otro prestador.");
     return false;
   }
+  const progressStartedAt = Date.now();
+  const providerName = textFromProvider(provider);
+  const categoryName = getSelectedCategory()?.name || "servicio";
+  setRequestProgress({
+    visible: true,
+    step: "sending",
+    title: "Enviando solicitud...",
+    message: `Estamos armando la solicitud de ${categoryName} y validando los datos.`,
+    providerName
+  });
+
   const pushRegistration = registerCurrentDevice({ prompt: true }).catch(() => {});
   pricing = confirmation.pricing || pricing;
   console.log("[MIMI Solicitar] step 5: creating request");
@@ -1921,6 +2026,13 @@ async function handleProviderSelection(providerId) {
     priceLabel: pricing.price_label
   });
   console.log("[MIMI Solicitar] step 5 OK: request created", { request });
+  setRequestProgress({
+    visible: true,
+    step: "notifying",
+    title: "Solicitud enviada",
+    message: `Estamos notificando a ${providerName} para que responda desde su panel.`,
+    providerName
+  });
 
   let paymentIntent = null;
 
@@ -1953,7 +2065,7 @@ async function handleProviderSelection(providerId) {
     draft.client.selectedProvider = provider;
     draft.client.activeRequest = {
       ...request,
-      providerName: textFromProvider(provider),
+      providerName,
       requestType: draft.requestDraft.requestType,
       requestedHours,
       total_price: pricing.total_price,
@@ -1986,7 +2098,17 @@ async function handleProviderSelection(providerId) {
       : "Solicitud creada correctamente.";
   });
 
+  setRequestProgress({
+    visible: true,
+    step: "ready",
+    title: "Preparando seguimiento",
+    message: "Ya creamos la solicitud. Ahora abrimos el estado en vivo para que sigas la respuesta.",
+    providerName
+  });
   await hydrateLiveContext(request);
+  setClientView("services", { behavior: "auto" });
+  await delay(Math.max(360, 820 - (Date.now() - progressStartedAt)));
+  hideRequestProgress();
   pushRegistration.catch(() => {});
   return true;
 }
@@ -2685,6 +2807,7 @@ function bindBasicControls() {
       }
     } catch (error) {
       // Logging completo para debug — antes solo aparecía un toast genérico sin causa.
+      hideRequestProgress();
       console.error("[MIMI] Click handler error:", error);
       console.error("[MIMI] Error details:", {
         name: error?.name,

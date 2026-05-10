@@ -160,6 +160,42 @@ function formatDate(value) {
   }
 }
 
+function compactServiceAddress(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "Direccion pendiente";
+
+  const parts = raw
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 2) return raw;
+
+  const zip = parts.find((part) => /\b[A-Z]?\d{4}[A-Z]{0,3}\b/i.test(part));
+  let used = 1;
+  let street = parts[0];
+
+  if (/^\d+[A-Za-z]?$/.test(parts[0] || "") && parts[1]) {
+    street = `${parts[0]} ${parts[1]}`;
+    used = 2;
+  }
+
+  const administrative = /^(argentina|municipio|pedania|pedan[ií]a|departamento|provincia)(\b| de\b)/i;
+  const locality = parts
+    .slice(used)
+    .find((part) => {
+      if (zip && part === zip) return false;
+      if (administrative.test(part)) return false;
+      if (/^cordoba$/i.test(part.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) return false;
+      return part.length <= 42;
+    });
+
+  return [street, locality, zip]
+    .filter(Boolean)
+    .filter((part, index, arr) => arr.indexOf(part) === index)
+    .join(" - ");
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -649,10 +685,10 @@ function renderAccountDrawer(state) {
     request.providerName ||
     state.client.selectedProvider?.full_name ||
     "Prestador pendiente";
-  const address = request.address_text || state.requestDraft.address || "Direccion pendiente";
+  const address = compactServiceAddress(request.address_text || state.requestDraft.address || "Direccion pendiente");
 
   if (lastTitle) lastTitle.textContent = status;
-  if (lastMeta) lastMeta.textContent = `${providerName} ? ${address}`;
+  if (lastMeta) lastMeta.textContent = `${providerName} - ${address}`;
 }
 
 function renderEntryState(state) {
@@ -1043,6 +1079,8 @@ export function renderRequestSummary(state) {
     state.client.selectedProvider?.full_name ||
     "Prestador confirmado";
   const flowSteps = requestFlowSteps(currentStatus);
+  const rawAddress = request.address_text ?? state.requestDraft.address ?? "Pendiente";
+  const compactAddress = compactServiceAddress(rawAddress);
 
   summary.innerHTML = `
     <div class="request-flow-card">
@@ -1066,7 +1104,7 @@ export function renderRequestSummary(state) {
       <div class="summary-metrics">
         <div class="metric">
           <span>Direccion</span>
-          <strong>${escapeHtml(request.address_text ?? state.requestDraft.address ?? "Pendiente")}</strong>
+          <strong title="${escapeHtml(rawAddress)}">${escapeHtml(compactAddress)}</strong>
         </div>
         <div class="metric">
           <span>Total</span>

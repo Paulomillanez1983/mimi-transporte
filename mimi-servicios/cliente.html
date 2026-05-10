@@ -46,7 +46,7 @@
   >
   <link rel="stylesheet" href="./styles/app.css">
   <link rel="stylesheet" href="./styles/map-ui.css?v=2026.05.10.7">
-  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.8">
+  <link rel="stylesheet" href="./styles/client.css?v=2026.05.10.11">
 </head>
 <body data-client-view="home">
   <div class="app-shell">
@@ -436,18 +436,26 @@
 
     <div class="request-confirm-overlay" id="requestConfirmOverlay" hidden>
       <section class="request-confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="requestConfirmTitle">
-        <div>
+        <div class="request-confirm-head">
           <span class="eyebrow">Confirmar solicitud</span>
-          <h2 id="requestConfirmTitle">Revisá antes de enviar</h2>
-          <p>MIMI conecta tu solicitud con un prestador independiente. No promete disponibilidad, calidad ni resultado del servicio.</p>
+          <h2 id="requestConfirmTitle">Revisa antes de enviar</h2>
+          <p>Confirmamos los datos clave antes de notificar al prestador.</p>
+        </div>
+        <div class="confirm-priority">
+          <div>
+            <span>Prestador</span>
+            <strong id="confirmProviderName">Prestador</strong>
+          </div>
+          <div>
+            <span>Total estimado</span>
+            <strong id="confirmTotalPrice">$0</strong>
+          </div>
         </div>
         <dl class="confirm-summary">
-          <div><dt>Prestador</dt><dd id="confirmProviderName">Prestador</dd></div>
           <div><dt>Categoría</dt><dd id="confirmCategoryName">Servicio</dd></div>
           <div><dt>Modalidad</dt><dd id="confirmServiceMode">A coordinar</dd></div>
           <div><dt>Duración</dt><dd id="confirmSessionDuration">A coordinar</dd></div>
           <div><dt>Dirección</dt><dd id="confirmAddress">Pendiente</dd></div>
-          <div><dt>Total estimado</dt><dd id="confirmTotalPrice">$0</dd></div>
         </dl>
         <div class="confirm-actions">
           <button class="btn-secondary" type="button" data-confirm-provider="cancel">Volver</button>
@@ -456,9 +464,23 @@
       </section>
     </div>
 
+    <div class="request-progress-overlay" id="requestProgressOverlay" hidden>
+      <section class="request-progress-sheet" role="status" aria-live="polite" aria-atomic="true">
+        <div class="request-progress-spinner" aria-hidden="true"></div>
+        <span class="eyebrow" id="requestProgressKicker">Solicitud en curso</span>
+        <h2 id="requestProgressTitle">Enviando solicitud...</h2>
+        <p id="requestProgressMessage">Estamos preparando tu solicitud y notificando al prestador.</p>
+        <div class="request-progress-steps" aria-label="Progreso de solicitud">
+          <span data-progress-step="sending" class="is-active">Enviar</span>
+          <span data-progress-step="notifying">Notificar</span>
+          <span data-progress-step="ready">Seguimiento</span>
+        </div>
+      </section>
+    </div>
+
     <div class="request-confirm-overlay" id="reviewOverlay" hidden>
       <section class="request-confirm-sheet review-sheet" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
-        <div>
+        <div class="request-confirm-head">
           <span class="eyebrow">Servicio completado</span>
           <h2 id="reviewTitle">Califica tu experiencia</h2>
           <p id="reviewServiceTitle">Calificar servicio</p>
@@ -529,6 +551,6 @@
   <script src="./env.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script type="module" src="./src/main-client.js?v=2026.05.10.10"></script>
+  <script type="module" src="./src/main-client.js?v=2026.05.10.11"></script>
 </body>
 </html>
