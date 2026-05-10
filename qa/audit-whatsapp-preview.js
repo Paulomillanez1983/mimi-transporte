@@ -5,6 +5,8 @@ const DEFAULT_URLS = [
   "https://mimi-transporte.vercel.app/prestador",
   "https://mimi-transporte.vercel.app/share/servicios",
   "https://mimi-transporte.vercel.app/share/prestador",
+  "https://mimi-transporte.vercel.app/share/servicios-v4",
+  "https://mimi-transporte.vercel.app/share/prestador-v4",
 ];
 
 const SOCIAL_USER_AGENTS = [

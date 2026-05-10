@@ -7,7 +7,8 @@ const vercel = JSON.parse(fs.readFileSync(path.join(ROOT, "vercel.json"), "utf8"
 const expectedRoutes = [
   "/", "/hub-clientes", "/hub-clientes.html", "/cliente", "/servicios",
   "/prestador", "/viaje", "/operadores", "/chofer", "/privacidad",
-  "/terminos", "/delete-account", "/share/servicios", "/share/prestador"
+  "/terminos", "/delete-account", "/share/servicios", "/share/prestador",
+  "/share/servicios-v4", "/share/prestador-v4"
 ];
 
 function existsWebPath(webPath) {
