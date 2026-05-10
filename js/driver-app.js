@@ -31,6 +31,8 @@ class DriverApp {
 
     this._lastLocationUpdate = 0;
     this._locationUpdateInterval = 15000;
+    this._lastTripTrackingInsert = 0;
+    this._tripTrackingInterval = 5000;
 
     this._authUserId = null;
     this._driverProfileSummary = null;
@@ -89,6 +91,21 @@ async _startRealtimeServicesInBackground() {
     console.warn('[DriverApp] Error iniciando servicios background:', err);
   } finally {
     this._backgroundServicesStarting = false;
+  }
+}
+
+async _ensureDriverPushNotifications({ promptIfNeeded = false, forcePrompt = false, source = 'runtime' } = {}) {
+  try {
+    const token = await initSupportPushFCM({ promptIfNeeded, forcePrompt });
+    console.log('[DriverApp] Push transporte verificado', {
+      source,
+      prompted: !!promptIfNeeded,
+      token: !!token
+    });
+    return token;
+  } catch (err) {
+    console.warn('[DriverApp] No se pudo activar push transporte:', err);
+    return null;
   }
 }
   _syncConnectionMenuItem() {
@@ -1344,6 +1361,7 @@ if (currentTripStatus === 'EN_CURSO') {
             heading: position.heading || 0,
             speed: position.speed || 0,
             accuracy: position.accuracy || null,
+            last_location_at: new Date().toISOString(),
             last_seen_at: new Date().toISOString()
           })
           .eq('user_id', this._authUserId);
@@ -1353,6 +1371,41 @@ if (currentTripStatus === 'EN_CURSO') {
         }
       } catch (err) {
         console.error('[DriverApp] Falló update ubicación:', err);
+      }
+    }
+
+    const tripDriverId = currentTrip?.chofer_id_uuid || currentTrip?.assigned_driver_id || null;
+    const isAssignedTrip =
+      !!currentTrip?.id &&
+      !!this.driverId &&
+      (!tripDriverId || String(tripDriverId) === String(this.driverId));
+    const shouldPublishTripTracking =
+      isAssignedTrip &&
+      ['ASIGNADO', 'ACEPTADO', 'EN_CAMINO', 'EN_ORIGEN', 'EN_CURSO'].includes(currentTripStatus) &&
+      now - this._lastTripTrackingInsert >= this._tripTrackingInterval;
+
+    if (shouldPublishTripTracking) {
+      this._lastTripTrackingInsert = now;
+
+      try {
+        const { error } = await supabaseService.client
+          .from('viaje_tracking')
+          .insert({
+            viaje_id: currentTrip.id,
+            chofer_id_uuid: this.driverId,
+            lat: position.lat,
+            lng: position.lng,
+            accuracy: position.accuracy || null,
+            heading: position.heading || 0,
+            speed: position.speed || 0,
+            timestamp: new Date().toISOString()
+          });
+
+        if (error) {
+          console.warn('[DriverApp] No se pudo publicar tracking del viaje:', error);
+        }
+      } catch (err) {
+        console.warn('[DriverApp] Error publicando tracking del viaje:', err);
       }
     }
 
@@ -1500,6 +1553,14 @@ this._fabClickHandler = async (ev) => {
       this._setFlowState('ONLINE_IDLE');
       this._syncOnlinePresentation();
       uiController.showWaitingState();
+
+      this._ensureDriverPushNotifications({
+        promptIfNeeded: true,
+        forcePrompt: false,
+        source: 'driver-online'
+      }).catch((err) => {
+        console.warn('[DriverApp] Push prompt online error:', err);
+      });
 
       this._startRealtimeServicesInBackground().catch((err) => {
         console.warn('[DriverApp] Background start error:', err);

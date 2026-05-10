@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createUserNotificationWithPush } from "../_shared/push-notifications.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,12 +43,39 @@ serve(async (req) => {
     const reason = String(body.reason || "cancelled_from_ui").trim();
     if (!assertUuid(requestId)) return json({ ok: false, error: "request_id_invalid" }, 400);
     const admin = createClient(supabaseUrl, serviceRoleKey);
+    const { data: requestBefore } = await admin
+      .from("svc_requests")
+      .select("id,client_user_id,selected_provider_id,accepted_provider_id,status")
+      .eq("id", requestId)
+      .maybeSingle();
     const { data, error } = await admin.rpc("svc_cancel_request_atomic", {
       p_request_id: requestId,
       p_actor_user_id: user.id,
       p_reason: reason,
     });
     if (error) throw error;
+    const providerId = requestBefore?.accepted_provider_id || requestBefore?.selected_provider_id || null;
+    if (providerId && requestBefore?.client_user_id === user.id) {
+      const { data: provider } = await admin
+        .from("svc_providers")
+        .select("user_id")
+        .eq("id", providerId)
+        .maybeSingle();
+      if (provider?.user_id) {
+        await createUserNotificationWithPush(admin, {
+          userId: provider.user_id,
+          type: "REQUEST_CANCELLED",
+          title: "Solicitud cancelada",
+          body: "El cliente canceló la solicitud de servicio.",
+          fallbackTag: `svc-request-${requestId}-CANCELLED`,
+          data: {
+            request_id: requestId,
+            status: "CANCELLED",
+            url: "/mimi-servicios/prestador.html",
+          },
+        });
+      }
+    }
     return json({ ok: true, result: data, request_id: requestId });
   } catch (error) {
     console.error("svc-cancel-request error:", error);

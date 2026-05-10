@@ -32,6 +32,7 @@ import {
   signOut,
   subscribeToAuthChanges
 } from "./services/supabase.js";
+import { getMimiPushToken } from "./services/push.js";
 import {
   patchState,
   setState,
@@ -834,15 +835,49 @@ async function registerCurrentDevice() {
   if (!state.session.userId) return;
 
   try {
+    const pushToken = await getMimiPushToken({ prompt: true });
     await registerDevice({
       deviceId: buildDeviceId(),
-      pushToken: null,
+      pushToken,
       platform: "web",
-      notificationsEnabled: true,
+      notificationsEnabled: Boolean(pushToken),
       marketingOptIn: false
     });
   } catch {
     // no-op
+  }
+}
+
+function retryDeviceRegistrationAfterUserGesture() {
+  if (!("Notification" in window) || Notification.permission !== "default") return;
+  document.addEventListener("click", () => {
+    registerCurrentDevice().catch(() => {});
+  }, { once: true });
+}
+
+async function showClientForegroundNotification(title, body, data = {}) {
+  try {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    const registration = await navigator.serviceWorker?.ready;
+    const options = {
+      body: body || "",
+      icon: "./assets/icons/icon-192.png",
+      badge: "./assets/icons/favicon-32.png",
+      tag: data?.tag || `mimi-client-${data?.request_id || Date.now()}`,
+      renotify: true,
+      data: {
+        url: "./cliente.html",
+        ...(data || {})
+      }
+    };
+
+    if (registration?.showNotification) {
+      await registration.showNotification(title || "MIMI Servicios", options);
+    } else {
+      new Notification(title || "MIMI Servicios", options);
+    }
+  } catch (error) {
+    console.warn("[MIMI Cliente] foreground notification skipped:", error);
   }
 }
 
@@ -1423,6 +1458,7 @@ async function bootstrapAsyncData() {
 
   await hydrateLiveContext();
   await registerCurrentDevice();
+  retryDeviceRegistrationAfterUserGesture();
 
   if (!hasSupabaseEnv()) {
     setInfo(
@@ -2366,6 +2402,7 @@ function setupRealtime(
       });
 
       playNotificationSound();
+      showClientForegroundNotification(payload.title, payload.body, payload.data_json);
     },
     onMessage: ({ new: payload }) => {
       if (!payload) return;
@@ -2535,10 +2572,7 @@ async function init() {
   registerInstallPrompt();
   initMap("clientMap", appConfig.mapInitialCenter, appConfig.mapInitialZoom);
 
-// Service Worker desactivado temporalmente en Cliente.
-// Evita error 404 hasta usar el SW real en /mimi-servicios/sw-2026.js.
-// Cuando exista el archivo, cambiar CLIENT_SW_ENABLED a true.
-const CLIENT_SW_ENABLED = false;
+const CLIENT_SW_ENABLED = true;
 
 if (CLIENT_SW_ENABLED && "serviceWorker" in navigator) {
   navigator.serviceWorker

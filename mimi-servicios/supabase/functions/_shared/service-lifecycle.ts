@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createUserNotificationWithPush } from "./push-notifications.ts";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -96,6 +97,9 @@ type TransitionConfig = {
   targetStatus: string;
   timestampColumn: "en_route_at" | "arrived_at" | "started_at";
   providerStatus: string;
+  notificationType: string;
+  notificationTitle: string;
+  notificationBody: string;
 };
 
 export async function handleProviderTransition(req: Request, config: TransitionConfig) {
@@ -146,6 +150,19 @@ export async function handleProviderTransition(req: Request, config: TransitionC
       .from("svc_providers")
       .update({ status: config.providerStatus, last_seen_at: now })
       .eq("id", provider.id);
+
+    await createUserNotificationWithPush(admin, {
+      userId: request.client_user_id,
+      type: config.notificationType,
+      title: config.notificationTitle,
+      body: config.notificationBody,
+      fallbackTag: `svc-request-${requestId}-${config.targetStatus}`,
+      data: {
+        request_id: requestId,
+        status: config.targetStatus,
+        url: "/mimi-servicios/cliente.html",
+      },
+    });
 
     return json({ ok: true, request: updatedRequest, service: updatedRequest });
   } catch (error) {
@@ -211,6 +228,19 @@ export async function handleProviderComplete(req: Request) {
       .single();
 
     if (requestError) throw requestError;
+
+    await createUserNotificationWithPush(admin, {
+      userId: request.client_user_id,
+      type: "REQUEST_COMPLETED",
+      title: "Servicio completado",
+      body: "El prestador marcó el servicio como completado.",
+      fallbackTag: `svc-request-${requestId}-COMPLETED`,
+      data: {
+        request_id: requestId,
+        status: "COMPLETED",
+        url: "/mimi-servicios/cliente.html",
+      },
+    });
 
     return json({ ok: true, result, request: updatedRequest, service: updatedRequest });
   } catch (error) {

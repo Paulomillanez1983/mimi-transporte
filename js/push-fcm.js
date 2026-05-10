@@ -229,11 +229,8 @@ export async function initSupportPushFCM(options = {}) {
     console.log("[push-support] hostname:", window.location.hostname);
     console.log("[push-support] sw path:", getSwPath());
     console.log("[push-support] scope:", getAppBasePath());
-    console.log("[push-support] apiKey:", firebaseConfig.apiKey);
     console.log("[push-support] projectId:", firebaseConfig.projectId);
     console.log("[push-support] senderId:", firebaseConfig.messagingSenderId);
-    console.log("[push-support] appId:", firebaseConfig.appId);
-    console.log("[push-support] vapid:", FIREBASE_VAPID_KEY);
 
     const token = await getToken(messaging, {
       vapidKey: FIREBASE_VAPID_KEY,
@@ -246,7 +243,7 @@ export async function initSupportPushFCM(options = {}) {
       return null;
     }
 
-    console.log("[push-support] token FCM:", token);
+    console.log("[push-support] token FCM listo");
 
     await upsertPushToken({
       userId: session.user.id,

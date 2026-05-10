@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createUserNotificationWithPush } from "../_shared/push-notifications.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -107,107 +108,6 @@ function money(value: number, currency = "ARS") {
     currency,
     maximumFractionDigits: 0,
   }).format(value);
-}
-
-async function dispatchPushDeliveries(
-  admin: ReturnType<typeof createClient>,
-  notification: Record<string, unknown> | null,
-  userId: string,
-  payload: Record<string, unknown>,
-) {
-  if (!notification?.id) return;
-
-  try {
-    const { data: devices, error } = await admin
-      .from("svc_user_devices")
-      .select("id,push_token,platform")
-      .eq("user_id", userId)
-      .eq("active", true)
-      .eq("notifications_enabled", true)
-      .not("push_token", "is", null);
-
-    if (error) throw error;
-    if (!devices?.length) return;
-
-    const serverKey = Deno.env.get("FCM_SERVER_KEY") || Deno.env.get("FIREBASE_SERVER_KEY") || "";
-    let sent = 0;
-    let failed = 0;
-
-    for (const device of devices) {
-      const token = String(device.push_token || "").trim();
-      if (!token) continue;
-
-      let status = "QUEUED";
-      let providerMessageId: string | null = null;
-      let errorMessage: string | null = null;
-      let sentAt: string | null = null;
-
-      if (!serverKey) {
-        errorMessage = "FCM_SERVER_KEY_MISSING";
-      } else {
-        try {
-          const response = await fetch("https://fcm.googleapis.com/fcm/send", {
-            method: "POST",
-            headers: {
-              "Authorization": `key=${serverKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              to: token,
-              priority: "high",
-              notification: {
-                title: String(notification.title || "Nueva solicitud MIMI"),
-                body: String(notification.body || "Tenes una solicitud pendiente."),
-                icon: "/mimi-servicios/assets/icons/icon-192.png",
-                tag: `svc-request-${payload.request_id || notification.id}`,
-              },
-              data: Object.fromEntries(
-                Object.entries(payload).map(([key, value]) => [key, String(value ?? "")]),
-              ),
-            }),
-          });
-          const result = await response.json().catch(() => ({}));
-          if (!response.ok || Number(result?.failure || 0) > 0) {
-            status = "FAILED";
-            failed += 1;
-            errorMessage = JSON.stringify(result).slice(0, 500);
-          } else {
-            status = "SENT";
-            sent += 1;
-            sentAt = new Date().toISOString();
-            providerMessageId = String(result?.results?.[0]?.message_id || result?.message_id || "");
-          }
-        } catch (sendError) {
-          status = "FAILED";
-          failed += 1;
-          errorMessage = sendError instanceof Error ? sendError.message : "push_send_failed";
-        }
-      }
-
-      await admin.from("svc_notification_deliveries").insert({
-        notification_id: notification.id,
-        user_device_id: device.id,
-        channel: "PUSH",
-        status,
-        provider_message_id: providerMessageId,
-        error_message: errorMessage,
-        sent_at: sentAt,
-        provider_status: serverKey ? status : "queued_missing_fcm_server_key",
-      });
-    }
-
-    if (sent > 0 || failed > 0 || devices.length > 0) {
-      await admin
-        .from("svc_notifications")
-        .update({
-          delivery_status: sent === devices.length ? "SENT" : sent > 0 ? "PARTIAL" : "PENDING",
-          delivered_at: sent > 0 ? new Date().toISOString() : null,
-        })
-        .eq("id", notification.id);
-    }
-  } catch (error) {
-    console.warn("svc-create-request push dispatch skipped:", error);
-  }
 }
 
 async function requireUser(req: Request, supabaseUrl: string, anonKey: string) {
@@ -466,39 +366,29 @@ serve(async (req) => {
     const notificationBody = [
       category?.name || offering?.title || "Servicio",
       quantityText,
-      body.address_text ? `en ${String(body.address_text)}` : null,
+      serviceDetails.service_mode_label || "Ruta al abrir la app",
       pricingResult.totalPrice > 0 ? `total ${money(pricingResult.totalPrice, pricingResult.currency)}` : "precio a coordinar",
     ].filter(Boolean).join(" · ");
 
-    const { data: notificationRow } = await admin.from("svc_notifications").insert({
-      user_id: provider.user_id,
+    await createUserNotificationWithPush(admin, {
+      userId: provider.user_id,
       type: "SERVICE_REQUEST_CREATED",
       title: "Nueva solicitud de servicio",
       body: notificationBody,
-      data_json: {
+      fallbackTag: `svc-request-${requestRow.id}-CREATED`,
+      data: {
         request_id: requestRow.id,
         provider_id: providerId,
         category_id: categoryId,
         offer_id: offerRow.id,
         service_details: serviceDetails,
         url: "/mimi-servicios/prestador",
+        pricing_model: pricingResult.model,
+        unit_quantity: appliesUnitQuantity ? unitQuantity : "",
+        unit_name: appliesUnitQuantity ? unitName : "",
+        total_price: pricingResult.totalPrice,
+        currency: pricingResult.currency,
       },
-    }).select("*").maybeSingle();
-
-    await dispatchPushDeliveries(admin, notificationRow, provider.user_id, {
-      type: "SERVICE_REQUEST_CREATED",
-      request_id: requestRow.id,
-      provider_id: providerId,
-      category_id: categoryId,
-      offer_id: offerRow.id,
-      title: "Nueva solicitud de servicio",
-      body: notificationBody,
-      url: "/mimi-servicios/prestador",
-      pricing_model: pricingResult.model,
-      unit_quantity: appliesUnitQuantity ? unitQuantity : "",
-      unit_name: appliesUnitQuantity ? unitName : "",
-      total_price: pricingResult.totalPrice,
-      currency: pricingResult.currency,
     });
 
     return json({

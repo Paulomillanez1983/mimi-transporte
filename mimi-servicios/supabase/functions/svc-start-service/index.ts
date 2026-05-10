@@ -8,5 +8,8 @@ serve((req) =>
     targetStatus: "IN_PROGRESS",
     timestampColumn: "started_at",
     providerStatus: "IN_SERVICE",
+    notificationType: "REQUEST_STARTED",
+    notificationTitle: "Servicio iniciado",
+    notificationBody: "El prestador marcó el inicio del servicio.",
   })
 );

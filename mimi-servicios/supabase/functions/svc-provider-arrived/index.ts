@@ -8,5 +8,8 @@ serve((req) =>
     targetStatus: "PROVIDER_ARRIVED",
     timestampColumn: "arrived_at",
     providerStatus: "ARRIVED",
+    notificationType: "REQUEST_PROVIDER_ARRIVED",
+    notificationTitle: "El prestador llegó",
+    notificationBody: "El prestador marcó que ya llegó al lugar del servicio.",
   })
 );

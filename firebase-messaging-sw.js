@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'mimi-client-v11-services-routing';
+const CACHE_NAME = 'mimi-client-v12-transport-push-tracking';
 const APP_BASE_PATH = (() => {
   const path = self.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');

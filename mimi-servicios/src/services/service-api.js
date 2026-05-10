@@ -264,26 +264,37 @@ export async function resolveServiceIntent(query, { limit = 5 } = {}) {
   }
 }
 
-export async function registerDevice(pushToken = null) {
+export async function registerDevice(input = null) {
+  const options =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? input
+      : { pushToken: input };
+
   const deviceId =
+    options.deviceId ||
+    options.device_id ||
     localStorage.getItem("mimi_services_device_id") ||
     crypto.randomUUID();
 
   localStorage.setItem("mimi_services_device_id", deviceId);
 
+  const pushToken = options.pushToken ?? options.push_token ?? null;
   const platform =
-    /Android/i.test(navigator.userAgent)
+    options.platform ||
+    (/Android/i.test(navigator.userAgent)
       ? "android"
       : /iPhone|iPad|iPod/i.test(navigator.userAgent)
         ? "ios"
-        : "web";
+        : "web");
+  const notificationsEnabled =
+    options.notificationsEnabled ?? options.notifications_enabled ?? Boolean(pushToken);
 
   return invokeFunction("svc-register-device", {
     device_id: deviceId,
     push_token: pushToken,
     platform,
-    notifications_enabled: Boolean(pushToken),
-    marketing_opt_in: false,
+    notifications_enabled: notificationsEnabled,
+    marketing_opt_in: Boolean(options.marketingOptIn ?? options.marketing_opt_in ?? false),
   });
 }
 function isUuidLike(value) {

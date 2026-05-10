@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { createUserNotificationWithPush } from "../_shared/push-notifications.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,6 +58,26 @@ serve(async (req) => {
       if (!offer) {
         return json({ ok: false, rejected: false, error: "offer_not_pending_or_forbidden" }, 409);
       }
+      const { data: requestRow } = await admin
+        .from("svc_requests")
+        .select("id,client_user_id,status")
+        .eq("id", offer.request_id)
+        .maybeSingle();
+      if (requestRow?.client_user_id) {
+        await createUserNotificationWithPush(admin, {
+          userId: requestRow.client_user_id,
+          type: "OFFER_REJECTED",
+          title: "El prestador no tomó la solicitud",
+          body: "Podés elegir otro prestador disponible o volver a buscar.",
+          fallbackTag: `svc-request-${requestRow.id}-REJECTED`,
+          data: {
+            request_id: requestRow.id,
+            offer_id: offer.id,
+            status: requestRow.status || "PENDING_PROVIDER_RESPONSE",
+            url: "/mimi-servicios/cliente.html",
+          },
+        });
+      }
       return json({ ok: true, rejected: true, offer });
     }
     const { data: result, error } = await admin.rpc("svc_accept_offer_atomic", {
@@ -78,6 +99,19 @@ serve(async (req) => {
       const { data: requestRow, error: requestError } = await admin.from("svc_requests").select("*").eq("id", requestId).single();
       if (requestError) throw requestError;
       request = requestRow;
+      await createUserNotificationWithPush(admin, {
+        userId: request.client_user_id,
+        type: "OFFER_ACCEPTED",
+        title: "Solicitud aceptada",
+        body: "El prestador aceptó tu solicitud. Ya podés seguir el avance.",
+        fallbackTag: `svc-request-${requestId}-ACCEPTED`,
+        data: {
+          request_id: requestId,
+          offer_id: offerId,
+          status: request.status || "ACCEPTED",
+          url: "/mimi-servicios/cliente.html",
+        },
+      });
     }
     return json({ ok: true, accepted: true, result, request, service: request });
   } catch (error) {

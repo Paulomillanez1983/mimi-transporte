@@ -8,5 +8,8 @@ serve((req) =>
     targetStatus: "PROVIDER_EN_ROUTE",
     timestampColumn: "en_route_at",
     providerStatus: "EN_ROUTE",
+    notificationType: "REQUEST_PROVIDER_EN_ROUTE",
+    notificationTitle: "El prestador está en camino",
+    notificationBody: "Tu prestador ya salió hacia el domicilio del servicio.",
   })
 );

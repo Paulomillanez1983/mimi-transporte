@@ -1,4 +1,4 @@
-const APP_VERSION = "2026-05-10-provider-request-details-1";
+const APP_VERSION = "2026-05-10-enterprise-push-1";
 const CACHE_NAME = `mimi-servicios-provider-${APP_VERSION}`;
 
 const APP_ASSETS = [
@@ -28,6 +28,7 @@ const APP_ASSETS = [
   "./src/services/sound.js",
   "./src/services/supabase.js",
   "./src/services/mock-data.js",
+  "./src/services/push.js",
 
   "./src/state/app-state.js",
 

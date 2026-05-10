@@ -12084,3 +12084,153 @@ body.provider-auth-required .notification-container {
   color: #94a3b8;
   min-height: 1em;
 }
+
+/* Enterprise compact offer: mapa como protagonista, card solo para decidir. */
+.offer-card-float {
+  top: calc(var(--safe-top) + 118px) !important;
+  left: 50% !important;
+  right: auto !important;
+  width: min(92vw, 360px) !important;
+  transform: translateX(-50%) !important;
+}
+
+.offer-card-float[hidden] {
+  transform: translateX(-50%) translateY(-12px) scale(0.96) !important;
+}
+
+.offer-card-float:not([hidden]) {
+  animation: none !important;
+}
+
+.offer-glass {
+  max-height: min(52vh, 470px) !important;
+  overflow-y: auto !important;
+  padding: 14px !important;
+  border-radius: 22px !important;
+  background: rgba(17, 17, 17, 0.82) !important;
+  box-shadow: 0 18px 42px rgba(0,0,0,.34) !important;
+}
+
+.offer-header {
+  margin-bottom: 8px !important;
+}
+
+.offer-label {
+  font-size: 0.66rem !important;
+}
+
+.offer-timer {
+  font-size: 1rem !important;
+}
+
+.offer-body {
+  margin-bottom: 12px !important;
+}
+
+.offer-service {
+  font-size: 1.18rem !important;
+  margin-bottom: 2px !important;
+}
+
+.offer-location {
+  display: inline-flex !important;
+  width: auto !important;
+  max-width: 100% !important;
+  padding: 5px 9px !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.10) !important;
+  color: rgba(255,255,255,.84) !important;
+  font-size: .77rem !important;
+  line-height: 1.2 !important;
+  margin-bottom: 7px !important;
+}
+
+.offer-client {
+  font-size: .76rem !important;
+  margin-bottom: 8px !important;
+}
+
+.offer-price {
+  font-size: 1.2rem !important;
+  margin-bottom: 8px !important;
+}
+
+.offer-detail-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 7px !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.offer-detail-pill {
+  min-height: 0 !important;
+  padding: 7px 8px !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,.075) !important;
+}
+
+.offer-detail-pill span {
+  display: block !important;
+  font-size: .58rem !important;
+  letter-spacing: .055em !important;
+  line-height: 1.1 !important;
+}
+
+.offer-detail-pill strong {
+  display: block !important;
+  margin-top: 2px !important;
+  font-size: .76rem !important;
+  line-height: 1.15 !important;
+}
+
+.offer-actions {
+  position: sticky !important;
+  bottom: 0 !important;
+  padding-top: 9px !important;
+  background: linear-gradient(to top, rgba(17,17,17,.98), rgba(17,17,17,.78), transparent) !important;
+  grid-template-columns: .85fr 1.25fr !important;
+  gap: 8px !important;
+}
+
+.offer-btn {
+  min-height: 44px !important;
+  padding: 10px 12px !important;
+  border-radius: 13px !important;
+  font-size: .9rem !important;
+}
+
+.provider-route-marker {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.24));
+}
+
+.provider-route-marker-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #20d463;
+  border: 4px solid #fff;
+  box-shadow: 0 0 0 7px rgba(32,212,99,.22);
+}
+
+.provider-route-marker-pin {
+  width: 22px;
+  height: 22px;
+  border-radius: 50% 50% 50% 6px;
+  transform: rotate(-45deg);
+  background: #111827;
+  border: 3px solid #20d463;
+  box-shadow: 0 0 0 5px rgba(255,255,255,.7);
+}
+
+.provider-route-marker-pin::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 999px;
+  background: #20d463;
+}

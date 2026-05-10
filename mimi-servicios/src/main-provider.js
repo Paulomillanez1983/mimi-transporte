@@ -3,7 +3,7 @@
  * Main entry point with Uber Driver-style UX
  */
 
-const MIMI_PROVIDER_BUILD = "2026.05.10.1";
+const MIMI_PROVIDER_BUILD = "2026.05.10.2";
 
 window.MIMI_PROVIDER_BUILD = MIMI_PROVIDER_BUILD;
 
@@ -30,11 +30,6 @@ import {
 } from "./state/app-state.js";
 import { appConfig } from "./config.js";
 import {
-  initMap,
-  updateProviderMap
-} from "./services/map.js";
-
-import {
   bootstrapSession,
   invokeFunction,
   loadActiveRequest,
@@ -59,6 +54,7 @@ import {
   getSupabaseClient,
   signInWithGoogle
 } from "./services/supabase.js";
+import { getMimiPushToken } from "./services/push.js";
 
 // ============================================
 // APP CONTROLLER
@@ -70,6 +66,10 @@ class MimiProviderApp {
     this.unsubscribe = null;
     this.map = null;
     this.markers = {};
+    this.routeSourceId = "provider-service-route";
+    this.routeLayerId = "provider-service-route-line";
+    this.routeOutlineLayerId = "provider-service-route-outline";
+    this.lastRouteFitKey = null;
     this.bottomSheet = null;
     this.offerTimer = null;
     this.trackingInterval = null;
@@ -203,6 +203,9 @@ if (!canBootProviderPanel) {
   // lo registramos en svc_user_devices para que el backend pueda enviar
   // pushes cuando entre una solicitud nueva (incluso con la app cerrada).
   this.registerProviderPushToken();
+  if ("Notification" in window && Notification.permission === "default") {
+    document.addEventListener("click", () => this.registerProviderPushToken(), { once: true });
+  }
 
   console.log("[MIMI] App initialized");
 }
@@ -210,8 +213,7 @@ if (!canBootProviderPanel) {
 async registerProviderPushToken() {
   try {
     if (!this.state?.session?.userId) return;
-    // window.__mimiPushReady fue creado por el módulo inline en prestador.html
-    const token = await (window.__mimiPushReady || Promise.resolve(null));
+    const token = await getMimiPushToken({ prompt: true });
     if (!token) {
       console.info("[MIMI Push] sin token, no registramos device para push");
       return;
@@ -616,19 +618,9 @@ setTimeout(() => {
             lng: longitude
           };
 
-          const activeService = this.state?.activeService;
-          const servicePosition = {
-            lat:
-              activeService?.raw?.service_lat ??
-              activeService?.raw?.lat ??
-              null,
-            lng:
-              activeService?.raw?.service_lng ??
-              activeService?.raw?.lng ??
-              null
-          };
+          const servicePosition = this.servicePositionFromState();
 
-          updateProviderMap({
+          this.updateProviderRouteOnMap({
             providerPosition,
             servicePosition
           });
@@ -649,11 +641,197 @@ setTimeout(() => {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   }
+
+  servicePositionFromState() {
+    const activeService = this.state?.activeService;
+    const offerRequest = this.state?.activeOffer?.raw?.svc_requests ?? this.state?.activeOffer?.raw?.request ?? {};
+    const offerDetails = this.state?.activeOffer?.details ?? {};
+
+    return {
+      lat:
+        activeService?.raw?.service_lat ??
+        activeService?.raw?.lat ??
+        offerRequest?.service_lat ??
+        offerDetails?.service_lat ??
+        null,
+      lng:
+        activeService?.raw?.service_lng ??
+        activeService?.raw?.lng ??
+        offerRequest?.service_lng ??
+        offerDetails?.service_lng ??
+        null
+    };
+  }
+
+  isValidLatLng(position) {
+    const lat = Number(position?.lat);
+    const lng = Number(position?.lng);
+    return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  }
+
+  createRouteMarker(type) {
+    const el = document.createElement("div");
+    el.className = `provider-route-marker provider-route-marker--${type}`;
+    el.innerHTML = type === "provider"
+      ? '<span class="provider-route-marker-dot"></span>'
+      : '<span class="provider-route-marker-pin"></span>';
+
+    return new maplibregl.Marker({
+      element: el,
+      anchor: type === "provider" ? "center" : "bottom"
+    });
+  }
+
+  ensureProviderRouteLayer() {
+    if (!this.map?.isStyleLoaded?.()) return false;
+
+    if (!this.map.getSource(this.routeSourceId)) {
+      this.map.addSource(this.routeSourceId, {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: [] },
+          properties: {}
+        }
+      });
+    }
+
+    if (!this.map.getLayer(this.routeOutlineLayerId)) {
+      this.map.addLayer({
+        id: this.routeOutlineLayerId,
+        type: "line",
+        source: this.routeSourceId,
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 7,
+          "line-opacity": 0.9
+        },
+        layout: {
+          "line-cap": "round",
+          "line-join": "round"
+        }
+      });
+    }
+
+    if (!this.map.getLayer(this.routeLayerId)) {
+      this.map.addLayer({
+        id: this.routeLayerId,
+        type: "line",
+        source: this.routeSourceId,
+        paint: {
+          "line-color": "#20d463",
+          "line-width": 4,
+          "line-opacity": 0.95
+        },
+        layout: {
+          "line-cap": "round",
+          "line-join": "round"
+        }
+      });
+    }
+
+    return true;
+  }
+
+  updateProviderRouteOnMap({ providerPosition, servicePosition = null }) {
+    if (!this.map || !window.maplibregl) return;
+
+    const hasProvider = this.isValidLatLng(providerPosition);
+    const hasService = this.isValidLatLng(servicePosition);
+
+    if (!hasProvider && !hasService) return;
+
+    if (!this.map.isStyleLoaded?.()) {
+      this.map.once("load", () => this.updateProviderRouteOnMap({ providerPosition, servicePosition }));
+      return;
+    }
+
+    if (hasProvider) {
+      const providerLngLat = [Number(providerPosition.lng), Number(providerPosition.lat)];
+      if (!this.markers.provider) {
+        this.markers.provider = this.createRouteMarker("provider").addTo(this.map);
+      }
+      this.markers.provider.setLngLat(providerLngLat);
+    }
+
+    if (hasService) {
+      const serviceLngLat = [Number(servicePosition.lng), Number(servicePosition.lat)];
+      if (!this.markers.service) {
+        this.markers.service = this.createRouteMarker("service").addTo(this.map);
+      }
+      this.markers.service.setLngLat(serviceLngLat);
+    } else if (this.markers.service) {
+      this.markers.service.remove();
+      this.markers.service = null;
+    }
+
+    const routeReady = this.ensureProviderRouteLayer();
+    const routeSource = routeReady ? this.map.getSource(this.routeSourceId) : null;
+
+    if (routeSource) {
+      const coordinates = hasProvider && hasService
+        ? [
+            [Number(providerPosition.lng), Number(providerPosition.lat)],
+            [Number(servicePosition.lng), Number(servicePosition.lat)]
+          ]
+        : [];
+
+      routeSource.setData({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates },
+        properties: {}
+      });
+    }
+
+    if (hasProvider && hasService) {
+      const fitKey = [
+        Number(providerPosition.lat).toFixed(4),
+        Number(providerPosition.lng).toFixed(4),
+        Number(servicePosition.lat).toFixed(4),
+        Number(servicePosition.lng).toFixed(4)
+      ].join(":");
+
+      if (fitKey !== this.lastRouteFitKey) {
+        this.lastRouteFitKey = fitKey;
+        const bounds = new maplibregl.LngLatBounds()
+          .extend([Number(providerPosition.lng), Number(providerPosition.lat)])
+          .extend([Number(servicePosition.lng), Number(servicePosition.lat)]);
+
+        this.map.fitBounds(bounds, {
+          padding: { top: 112, right: 28, bottom: 280, left: 28 },
+          maxZoom: 15.5,
+          duration: 450
+        });
+      }
+      return;
+    }
+
+    if (hasProvider) {
+      this.map.easeTo({
+        center: [Number(providerPosition.lng), Number(providerPosition.lat)],
+        zoom: Math.max(this.map.getZoom(), 13),
+        duration: 350
+      });
+    }
+  }
+
+  serviceRouteLabel(service) {
+    const servicePosition = {
+      lat: service?.raw?.service_lat ?? service?.raw?.lat ?? service?.service_lat ?? null,
+      lng: service?.raw?.service_lng ?? service?.raw?.lng ?? service?.service_lng ?? null
+    };
+
+    if (this.isValidLatLng(servicePosition)) {
+      return "Ruta activa en el mapa";
+    }
+
+    return service?.location || "Ubicacion a confirmar";
+  }
   /**
    * Update provider marker on map
    */
 updateProviderMarker(lat, lng) {
-  updateProviderMap({
+  this.updateProviderRouteOnMap({
     providerPosition: { lat, lng },
     servicePosition: null
   });
@@ -1173,6 +1351,40 @@ stats: {
       currency,
       maximumFractionDigits: 0
     }).format(amount);
+  }
+
+  distanceKmBetween(latA, lngA, latB, lngB) {
+    const aLat = Number(latA);
+    const aLng = Number(lngA);
+    const bLat = Number(latB);
+    const bLng = Number(lngB);
+    if (![aLat, aLng, bLat, bLng].every(Number.isFinite)) return null;
+    const toRad = (value) => (value * Math.PI) / 180;
+    const earthKm = 6371;
+    const deltaLat = toRad(bLat - aLat);
+    const deltaLng = toRad(bLng - aLng);
+    const sinLat = Math.sin(deltaLat / 2);
+    const sinLng = Math.sin(deltaLng / 2);
+    const h =
+      sinLat * sinLat +
+      Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * sinLng * sinLng;
+    return earthKm * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  }
+
+  routeLabelForOffer(offer = {}) {
+    const origin = this.state?.location?.current ?? {};
+    const request = offer.raw?.svc_requests ?? offer.raw?.request ?? {};
+    const details = offer.details ?? {};
+    const lat = request.service_lat ?? details.service_lat;
+    const lng = request.service_lng ?? details.service_lng;
+    const distance = this.distanceKmBetween(origin.lat, origin.lng, lat, lng);
+    if (distance !== null) {
+      const text = distance < 1
+        ? `${Math.max(100, Math.round(distance * 1000 / 50) * 50)} m`
+        : `${distance.toLocaleString("es-AR", { maximumFractionDigits: 1 })} km`;
+      return `Ruta marcada en el mapa · ${text}`;
+    }
+    return "Domicilio marcado en el mapa";
   }
 
   buildServiceDetailRows(offer = {}) {
@@ -3241,22 +3453,37 @@ startLocationTracking() {
         accepted: true
       });
 
-      const service = response?.service ?? response?.request ?? response?.data ?? null;
+      let service = response?.service ?? response?.request ?? response?.data ?? null;
 
       if (!service) {
         throw new Error("La funcin no devolvi response.service");
       }
 
+      const requestType = String(service.request_type ?? offer.mode ?? "IMMEDIATE").toUpperCase();
+      const isImmediate = requestType !== "SCHEDULED";
+
+      if (isImmediate) {
+        const enRoute = await invokeFunction("svc-provider-en-route", {
+          request_id: service.id ?? service.request_id
+        });
+        service = enRoute?.service ?? enRoute?.request ?? service;
+      }
+
       actions.setActiveService(this.normalizeServiceForState(service));
       actions.clearActiveOffer();
-      actions.setProviderStatus("BOOKED_UPCOMING");
+      actions.setProviderStatus(isImmediate ? "EN_ROUTE" : "BOOKED_UPCOMING");
 
       if (this.offerTimer) {
         clearInterval(this.offerTimer);
         this.offerTimer = null;
       }
 
-      this.showToast("Servicio aceptado ", "success");
+      if (isImmediate) {
+        this.startLocationTracking();
+        this.showToast("Servicio aceptado. Ruta iniciada.", "success");
+      } else {
+        this.showToast("Servicio programado aceptado.", "success");
+      }
     } catch (err) {
       console.error("[MIMI] Error accepting offer:", err);
       this.showToast("Error aceptando servicio", "error");
@@ -3329,7 +3556,7 @@ startLocationTracking() {
           break;
 
         case "IN_PROGRESS": {
-          const response = await invokeFunction("svc-complete-service", {
+        const response = await invokeFunction("svc-complete-service", {
             request_id: service.requestId
           });
 
@@ -3341,6 +3568,7 @@ startLocationTracking() {
           }
 
           actions.setProviderStatus("ONLINE_IDLE");
+          this.stopLocationTracking();
           this.showToast("Servicio completado", "success");
           break;
         }
@@ -3822,7 +4050,7 @@ renderOnlineButton() {
         this.elements.offerService.textContent = offer.serviceType;
       }
       if (this.elements.offerLocation) {
-        this.elements.offerLocation.textContent = offer.location;
+        this.elements.offerLocation.textContent = this.routeLabelForOffer(offer);
       }
       if (this.elements.offerClient) {
         this.elements.offerClient.textContent = `Cliente: ${offer.clientName}`;
@@ -3846,6 +4074,8 @@ renderOnlineButton() {
           : "";
       }
     }
+
+    this.updateMapToCurrentPosition();
 
     // Start countdown timer
     this.startOfferTimer(offer);
@@ -3914,7 +4144,7 @@ renderOnlineButton() {
         this.elements.activeServiceType.textContent = service.serviceType;
       }
       if (this.elements.activeServiceLocation) {
-        this.elements.activeServiceLocation.textContent = service.location;
+        this.elements.activeServiceLocation.textContent = this.serviceRouteLabel(service);
       }
       if (this.elements.activeServiceClient) {
         this.elements.activeServiceClient.textContent = service.clientName;
