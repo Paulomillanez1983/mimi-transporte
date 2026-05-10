@@ -1189,8 +1189,8 @@ async function showClientForegroundNotification(title, body, data = {}) {
     const registration = await navigator.serviceWorker?.ready;
     const options = {
       body: body || "",
-      icon: "./assets/icons/icon-192.png",
-      badge: "./assets/icons/favicon-32.png",
+      icon: "./assets/icons/mimigo-client-icon-192.png",
+      badge: "./assets/icons/mimigo-client-icon-32.png",
       tag: data?.tag || `mimi-client-${data?.request_id || Date.now()}`,
       renotify: true,
       data: {

@@ -7,16 +7,16 @@
   "scope": "/mimi-servicios/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
-  "background_color": "#f8fafc",
-  "theme_color": "#1a56db",
+  "background_color": "#020617",
+  "theme_color": "#020617",
   "orientation": "portrait",
   "lang": "es-AR",
   "dir": "ltr",
   "categories": ["business", "productivity", "utilities"],
   "icons": [
-    { "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "./assets/icons/mimigo-client-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/mimigo-client-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/mimigo-client-icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
     {
@@ -24,14 +24,14 @@
       "short_name": "Pedir",
       "description": "Abrir MIMI Go para pedir un prestador",
       "url": "/mimi-servicios/cliente.html?view=home",
-      "icons": [{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "./assets/icons/mimigo-client-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Ver prestadores",
       "short_name": "Prestadores",
       "description": "Ver prestadores cercanos disponibles",
       "url": "/mimi-servicios/cliente.html?view=providers",
-      "icons": [{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "./assets/icons/mimigo-client-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "prefer_related_applications": false,

@@ -8,15 +8,15 @@ Alcance: Android TWA / Play Store, sin tocar backend ni frontend enterprise.
 
 La estrategia queda cerrada en **2 apps Android**, no 3:
 
-1. **MIMI Go**  
+1. **MIMI GO Servicios**
    Package name: `com.mimigo.clientes`  
-   Uso: clientes de transporte y servicios.
+   Uso: clientes para solicitar servicios.
 
-2. **MIMI Partners**  
+2. **MIMI GO Partners**
    Package name: `com.mimigo.partners`  
-   Uso: choferes y prestadores.
+   Uso: prestadores independientes.
 
-No se recomienda publicar una tercera app separada para chofer/prestador en esta etapa. `MIMI Partners` concentra ambos roles operativos, reduce friccion de publicacion, simplifica soporte y mantiene los package names ya firmados y vinculados por Digital Asset Links.
+No se recomienda publicar una tercera app en esta etapa. `MIMI GO Partners` concentra el rol operativo de prestadores, reduce friccion de publicacion, simplifica soporte y mantiene los package names ya firmados y vinculados por Digital Asset Links. MIMI Transporte queda hibernado internamente, sin promocion publica.
 
 ## Estado de archivos existentes auditados
 
@@ -26,7 +26,6 @@ Ya existian y fueron validados:
 - `PLAY_STORE_READINESS.md`
 - `manifest-clientes.json`
 - `manifest-partners.json`
-- `manifest-driver.json`
 - `mimi-servicios/manifest.json`
 - `mimi-servicios/manifest-prestador.json`
 - `/privacidad`
@@ -42,9 +41,8 @@ Validacion local JSON:
 
 | Archivo | App | Start URL | Scope | 512 icon | Estado |
 |---|---|---:|---:|---:|---|
-| `manifest-clientes.json` | MIMI Go | `/hub-clientes` | `/` | si | OK |
-| `manifest-partners.json` | MIMI Partners | `/hub-operadores` | `/` | si | OK |
-| `manifest-driver.json` | MIMI Driver | `/chofer` | `/` | si | OK |
+| `manifest-clientes.json` | MIMI GO Servicios | `/servicios` | `/` | si | OK |
+| `manifest-partners.json` | MIMI GO Partners | `/mimi-servicios/prestador.html` | `/` | si | OK |
 | `mimi-servicios/manifest.json` | MIMI Go Servicios | `/mimi-servicios/cliente.html` | `/mimi-servicios/` | si | OK |
 | `mimi-servicios/manifest-prestador.json` | MIMI Go Prestadores | `/mimi-servicios/prestador.html` | `/mimi-servicios/` | si | OK |
 
@@ -78,7 +76,7 @@ Google Digital Asset Links API:
 { "linked": true }
 ```
 
-### MIMI Partners
+### MIMI GO Partners
 
 Package:
 
@@ -109,8 +107,8 @@ Configuracion verificada:
 
 | Proyecto | Package | Host | Start URL | Manifest |
 |---|---|---|---|---|
-| `mimi-android-clientes` | `com.mimigo.clientes` | `mimi-transporte.vercel.app` | `/hub-clientes` | `manifest-clientes.json` |
-| `mimi-android-partners` | `com.mimigo.partners` | `mimi-transporte.vercel.app` | `/hub-operadores` | `manifest-partners.json` |
+| `mimi-android-clientes` | `com.mimigo.clientes` | `mimi-transporte.vercel.app` | `/servicios` | `manifest-clientes.json` |
+| `mimi-android-partners` | `com.mimigo.partners` | `mimi-transporte.vercel.app` | `/mimi-servicios/prestador.html` | `manifest-partners.json` |
 
 Nota operativa: `bubblewrap build` pide la contrasena del keystore local. No se hardcodeo ni se intento forzar ese secreto. Los AAB existentes ya estaban generados, firmados y fueron verificados.
 
@@ -120,8 +118,8 @@ Se consolidaron los AAB firmados en el repo para entrega:
 
 | App | AAB | SHA-256 archivo | Firma |
 |---|---|---|---|
-| MIMI Go | `docs/playstore/dist/mimigo-clientes-release-v1.aab` | `40C907EC1BB8C439B078543D4D1C0841EAFEEEF977EB11117C9E34D5E5F6BD98` | `jar verified` |
-| MIMI Partners | `docs/playstore/dist/mimigo-partners-release-v1.aab` | `7FE2DF212E6411BE998F931531E54789847CCF113316428FD3A1AAC6ACE24DDB` | `jar verified` |
+| MIMI GO Servicios | `docs/playstore/dist/mimigo-clientes-release-v1.aab` | `40C907EC1BB8C439B078543D4D1C0841EAFEEEF977EB11117C9E34D5E5F6BD98` | `jar verified` |
+| MIMI GO Partners | `docs/playstore/dist/mimigo-partners-release-v1.aab` | `7FE2DF212E6411BE998F931531E54789847CCF113316428FD3A1AAC6ACE24DDB` | `jar verified` |
 
 Firma de los bundles:
 
@@ -135,12 +133,12 @@ Advertencias esperadas de `jarsigner`: certificado self-signed y sin timestamp. 
 
 Se crearon assets visibles para Play Store, usando identidad negra/blanca y variante partners con acento dorado:
 
-### MIMI Go
+### MIMI GO Servicios
 
 - Icono 512: `docs/playstore/assets/mimigo-clientes-icon-512.png`
 - Feature graphic 1024x500: `docs/playstore/assets/mimigo-clientes-feature-graphic.png`
 
-### MIMI Partners
+### MIMI GO Partners
 
 - Icono 512: `docs/playstore/assets/mimigo-partners-icon-512.png`
 - Feature graphic 1024x500: `docs/playstore/assets/mimigo-partners-feature-graphic.png`
@@ -172,9 +170,9 @@ Resultado:
 
 ### Crear apps
 
-- Crear app Android: `MIMI Go`
+- Crear app Android: `MIMI GO Servicios`
 - Package name al subir AAB: `com.mimigo.clientes`
-- Crear app Android: `MIMI Partners`
+- Crear app Android: `MIMI GO Partners`
 - Package name al subir AAB: `com.mimigo.partners`
 
 ### Bundles
@@ -184,19 +182,19 @@ Resultado:
 
 ### Store listing
 
-MIMI Go:
+MIMI GO Servicios:
 
 - Icono: `docs/playstore/assets/mimigo-clientes-icon-512.png`
 - Feature graphic: `docs/playstore/assets/mimigo-clientes-feature-graphic.png`
-- Descripcion corta sugerida: `Solicita viajes y servicios desde MIMI Go.`
-- Descripcion larga sugerida: `MIMI Go es una plataforma tecnologica que conecta usuarios con viajes y prestadores de servicios disponibles. Gestiona solicitudes, ubicacion, seguimiento y comunicacion desde una experiencia simple y mobile-first. MIMI actua como intermediario tecnologico.`
+- Descripcion corta sugerida: `Solicita servicios cerca tuyo con MIMI GO.`
+- Descripcion larga sugerida: `MIMI GO Servicios es una plataforma tecnologica que conecta usuarios con prestadores independientes disponibles. Gestiona busqueda, solicitud, estado del servicio, comunicacion y notificaciones desde una experiencia simple y mobile-first. MIMI actua como intermediario tecnologico.`
 
-MIMI Partners:
+MIMI GO Partners:
 
 - Icono: `docs/playstore/assets/mimigo-partners-icon-512.png`
 - Feature graphic: `docs/playstore/assets/mimigo-partners-feature-graphic.png`
-- Descripcion corta sugerida: `Panel para choferes y prestadores MIMI.`
-- Descripcion larga sugerida: `MIMI Partners permite a choferes y prestadores independientes gestionar su perfil, verificaciones, disponibilidad, solicitudes, servicios y seguimiento operativo dentro del ecosistema MIMI. MIMI facilita la conexion tecnologica entre partes.`
+- Descripcion corta sugerida: `Panel para prestadores MIMI GO.`
+- Descripcion larga sugerida: `MIMI GO Partners permite a prestadores independientes gestionar su perfil, verificaciones, disponibilidad, solicitudes y servicios dentro del ecosistema MIMI. MIMI facilita la conexion tecnologica entre partes.`
 
 ### Politicas y formularios
 
@@ -204,18 +202,17 @@ MIMI Partners:
 - Eliminacion de cuenta: `https://mimi-transporte.vercel.app/delete-account`
 - Terminos: `https://mimi-transporte.vercel.app/terminos`
 - Completar Data Safety declarando datos segun uso real:
-  - ubicacion aproximada/precisa para viajes, servicios y prestadores cercanos;
+  - ubicacion aproximada/precisa para servicios y prestadores cercanos;
   - informacion personal de cuenta;
   - fotos/documentos solo para verificaciones donde aplique;
   - notificaciones push si se habilitan;
   - datos de uso/diagnostico si se activa monitoreo.
-- Clasificacion de contenido: marketplace/intermediacion tecnologica, transporte/servicios.
+- Clasificacion de contenido: marketplace/intermediacion tecnologica de servicios.
 - Subir capturas reales mobile para:
-  - hub clientes;
+  - experiencia cliente de servicios;
   - busqueda/solicitud cliente;
-  - seguimiento;
-  - hub operadores;
-  - panel prestador/chofer;
+  - estado y seguimiento de la solicitud;
+  - panel prestador;
   - verificacion/cuenta.
 
 ## Estado final honesto
@@ -234,4 +231,3 @@ No se declara "publicado" porque falta la accion manual dentro de Play Console:
 Riesgo residual principal:
 
 - Si se quiere regenerar un AAB nuevo desde Bubblewrap, se necesita la contrasena del keystore local. No debe perderse ese keystore, porque cambiarlo rompe continuidad de firma salvo proceso formal de Play App Signing.
-

@@ -12663,3 +12663,42 @@ body.provider-navigation-active .bottom-sheet {
 .offer-detail-pill:nth-child(5) {
   background: rgba(34, 197, 94, .12) !important;
 }
+/* Brand assets 2026: MIMI GO Partners */
+.provider-auth-logo-image {
+  width: min(360px, 54vw) !important;
+  max-width: 100% !important;
+  height: auto !important;
+  font-size: 0 !important;
+  letter-spacing: 0 !important;
+}
+
+.provider-auth-logo-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 26px rgba(255, 255, 255, 0.12));
+}
+
+.provider-login-logo {
+  width: min(260px, 68vw) !important;
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.provider-login-logo img {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+@media (max-width: 480px) {
+  .provider-auth-logo-image {
+    width: min(280px, 72vw) !important;
+  }
+}

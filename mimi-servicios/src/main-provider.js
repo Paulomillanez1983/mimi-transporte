@@ -1260,7 +1260,9 @@ container.style.background = "";
   <div class="provider-auth-stage">
     <div class="provider-auth-hero">
       <div class="provider-auth-topbar">
-        <div class="provider-auth-logo" aria-label="MiMI">Mi<span>M</span>I</div>
+        <div class="provider-auth-logo provider-auth-logo-image" aria-label="MIMI GO Partners">
+          <img src="./assets/brand/mimigo-partners-wordmark.png" alt="MIMI GO Partners">
+        </div>
         <div class="provider-auth-status-pill">Plataforma Operativa</div>
       </div>
 
@@ -1271,7 +1273,7 @@ container.style.background = "";
 
 <div class="provider-auth-hero-bg" aria-hidden="true">
   <img
-    src="./assets/provider/provider1-login-bg.png"
+    src="./assets/brand/mimigo-partners-splash-1536x1024.png"
     alt=""
     loading="eager"
     decoding="async"
@@ -5154,8 +5156,8 @@ if (this.elements.drawerInitials) {
       const registration = await navigator.serviceWorker?.ready;
       const options = {
         body: body || "",
-        icon: "./assets/icons/icon-192.png",
-        badge: "./assets/icons/icon-192.png",
+        icon: "./assets/icons/mimigo-partners-icon-192.png",
+        badge: "./assets/icons/mimigo-partners-icon-32.png",
         tag: `mimi-service-${data?.request_id || data?.offer_id || Date.now()}`,
         renotify: true,
         data: {

@@ -52,8 +52,8 @@ export async function getMimiPushToken({ prompt = true } = {}) {
         if (!payload?.notification && !payload?.data) return;
         registration.showNotification(payload.notification?.title || payload.data?.title || "MIMI", {
           body: payload.notification?.body || payload.data?.body || "",
-          icon: "./assets/icons/icon-192.png",
-          badge: "./assets/icons/favicon-32.png",
+          icon: "./assets/icons/mimigo-client-icon-192.png",
+          badge: "./assets/icons/mimigo-client-icon-32.png",
           tag: payload.data?.tag || `mimi-foreground-${Date.now()}`,
           data: payload.data || {}
         });

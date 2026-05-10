@@ -1,7 +1,7 @@
 {
   "id": "/clientes",
-  "name": "MIMI Servicios",
-  "short_name": "MIMI",
+  "name": "MIMI GO Servicios",
+  "short_name": "MIMI GO",
   "description": "App de clientes MIMI para solicitar servicios y prestadores cerca tuyo.",
   "start_url": "/servicios",
   "scope": "/",
@@ -20,16 +20,22 @@
   ],
   "icons": [
     {
-      "src": "/assets/icons/icon-192x192.png",
+      "src": "/assets/icons/mimigo-client-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/assets/icons/icon-512x512.png",
+      "src": "/assets/icons/mimigo-client-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/mimigo-client-icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

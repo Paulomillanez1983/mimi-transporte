@@ -3485,3 +3485,23 @@ body[data-client-view="support"] .details-grid {
     font-size: .76rem;
   }
 }
+/* Brand assets 2026: MIMI GO client wordmark */
+.brand-lockup-image {
+  min-width: 0;
+}
+
+.brand-lockup-image img {
+  display: block;
+  width: clamp(86px, 22vw, 124px);
+  height: auto;
+  max-height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.08));
+}
+
+@media (max-width: 480px) {
+  .brand-lockup-image img {
+    width: clamp(74px, 24vw, 104px);
+    max-height: 28px;
+  }
+}

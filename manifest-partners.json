@@ -1,6 +1,6 @@
 {
   "id": "/partners",
-  "name": "MIMI Partners",
+  "name": "MIMI GO Partners",
   "short_name": "MIMI Partners",
   "description": "App para prestadores independientes de MIMI Servicios.",
   "start_url": "/mimi-servicios/prestador.html",
@@ -16,20 +16,26 @@
   "categories": [
     "business",
     "productivity",
-    "travel"
+    "utilities"
   ],
   "icons": [
     {
-      "src": "/assets/icons/icon-192x192.png",
+      "src": "/assets/icons/mimigo-partners-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/assets/icons/icon-512x512.png",
+      "src": "/assets/icons/mimigo-partners-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icons/mimigo-partners-icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

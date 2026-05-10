@@ -1,22 +1,22 @@
 {
   "id": "/mimi-servicios/prestador",
-  "name": "MIMI Go Prestadores",
-  "short_name": "MIMI Go",
+  "name": "MIMI GO Partners",
+  "short_name": "MIMI Partners",
   "description": "Panel para prestadores MIMI Go: servicios, solicitudes, seguimiento y cuenta.",
   "start_url": "/mimi-servicios/prestador.html",
   "scope": "/mimi-servicios/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
-  "background_color": "#f8fafc",
-  "theme_color": "#f8fafc",
+  "background_color": "#020617",
+  "theme_color": "#020617",
   "orientation": "portrait",
   "lang": "es-AR",
   "dir": "ltr",
   "categories": ["business", "productivity", "utilities"],
   "icons": [
-    { "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "./assets/icons/mimigo-partners-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/mimigo-partners-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./assets/icons/mimigo-partners-icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
     {
@@ -24,14 +24,14 @@
       "short_name": "Panel",
       "description": "Abrir el panel para recibir y gestionar servicios",
       "url": "/mimi-servicios/prestador.html?view=now",
-      "icons": [{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "./assets/icons/mimigo-partners-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Mis servicios",
       "short_name": "Servicios",
       "description": "Configurar o revisar servicios publicados",
       "url": "/mimi-servicios/prestador.html?view=services",
-      "icons": [{ "src": "./assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "./assets/icons/mimigo-partners-icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "prefer_related_applications": false,

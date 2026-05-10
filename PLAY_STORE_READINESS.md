@@ -4,16 +4,13 @@
 ## Estado actual
 Base web preparada para publicar dos aplicaciones Android mediante Trusted Web Activity / Bubblewrap:
 
-1. **MIMI Go**: clientes para viajes y servicios.
-2. **MIMI Partners**: choferes y prestadores independientes.
+1. **MIMI GO Servicios**: clientes para solicitar servicios.
+2. **MIMI GO Partners**: prestadores independientes.
 
 ## URLs finales
-- https://mimi-transporte.vercel.app/hub-clientes
 - https://mimi-transporte.vercel.app/servicios
 - https://mimi-transporte.vercel.app/prestador
-- https://mimi-transporte.vercel.app/viaje
-- https://mimi-transporte.vercel.app/hub-operadores
-- https://mimi-transporte.vercel.app/chofer
+- https://mimi-transporte.vercel.app/operadores
 - https://mimi-transporte.vercel.app/privacidad
 - https://mimi-transporte.vercel.app/terminos
 - https://mimi-transporte.vercel.app/.well-known/assetlinks.json
@@ -22,14 +19,18 @@ Base web preparada para publicar dos aplicaciones Android mediante Trusted Web A
 ### App clientes
 - Manifest: https://mimi-transporte.vercel.app/manifest-clientes.json
 - Package ID sugerido: `com.mimigo.clientes`
-- App name: `MIMI Go`
-- Start URL: `/hub-clientes`
+- App name: `MIMI GO Servicios`
+- Start URL: `/servicios`
+- Icono 512: `docs/playstore/assets/mimigo-clientes-icon-512.png`
+- Feature graphic: `docs/playstore/assets/mimigo-clientes-feature-graphic.png`
 
 ### App partners
 - Manifest: https://mimi-transporte.vercel.app/manifest-partners.json
 - Package ID sugerido: `com.mimigo.partners`
-- App name: `MIMI Partners`
-- Start URL: `/hub-operadores`
+- App name: `MIMI GO Partners`
+- Start URL: `/mimi-servicios/prestador.html`
+- Icono 512: `docs/playstore/assets/mimigo-partners-icon-512.png`
+- Feature graphic: `docs/playstore/assets/mimigo-partners-feature-graphic.png`
 
 ## Prueba local
 Si no hay scripts npm definidos, servir como sitio estático:
@@ -66,19 +67,19 @@ bubblewrap build
 ```
 
 ## Datos sugeridos Bubblewrap
-### MIMI Go
+### MIMI GO Servicios
 - packageId: `com.mimigo.clientes`
-- appName: `MIMI Go`
-- launcherName: `MIMI Go`
+- appName: `MIMI GO Servicios`
+- launcherName: `MIMI GO`
 - host: `mimi-transporte.vercel.app`
-- startUrl: `/hub-clientes`
+- startUrl: `/servicios`
 
-### MIMI Partners
+### MIMI GO Partners
 - packageId: `com.mimigo.partners`
-- appName: `MIMI Partners`
+- appName: `MIMI GO Partners`
 - launcherName: `MIMI Partners`
 - host: `mimi-transporte.vercel.app`
-- startUrl: `/hub-operadores`
+- startUrl: `/mimi-servicios/prestador.html`
 
 ## Digital Asset Links
 Después de generar keystore o configurar Play App Signing, obtener los SHA-256 reales de cada app y reemplazarlos en:
@@ -87,7 +88,7 @@ Después de generar keystore o configurar Play App Signing, obtener los SHA-256 
 
 ## Checklist Play Console
 - Crear app MIMI Go.
-- Crear app MIMI Partners.
+- Crear app MIMI GO Partners.
 - Cargar App Bundle `.aab` de cada una.
 - Cargar política de privacidad.
 - Completar ficha de Play Store.

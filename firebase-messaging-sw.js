@@ -1,7 +1,7 @@
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-const CACHE_NAME = 'mimi-client-v12-transport-push-tracking';
+const CACHE_NAME = 'mimi-client-v13-services-brand-push';
 const APP_BASE_PATH = (() => {
   const path = self.location.pathname || '/';
   return path.endsWith('/') ? path : path.replace(/[^/]*$/, '');
@@ -22,14 +22,15 @@ const STATIC_ASSETS = [
   `${APP_BASE_PATH}js/driver-support.js`,
   `${APP_BASE_PATH}js/trip-manager.js`,
   `${APP_BASE_PATH}js/ui-controller.js`,
-  `${APP_BASE_PATH}assets/icons/icon-192x192.png`,
+  `${APP_BASE_PATH}assets/icons/mimigo-client-icon-192.png`,
+  `${APP_BASE_PATH}assets/icons/mimigo-partners-icon-192.png`,
   `${APP_BASE_PATH}assets/icons/badge-icon.png`,
   `${APP_BASE_PATH}assets/icons/mimi-mark.svg`,
   `${APP_BASE_PATH}manifest.json`,
   `${APP_BASE_PATH}manifest-driver.json`
 ];
 
-const DEFAULT_ICON = `${APP_BASE_PATH}assets/icons/icon-192x192.png`;
+const DEFAULT_ICON = `${APP_BASE_PATH}assets/icons/mimigo-client-icon-192.png`;
 const DEFAULT_BADGE = `${APP_BASE_PATH}assets/icons/badge-icon.png`;
 const DEFAULT_URL = `${APP_BASE_PATH}index.html`;
 const DEFAULT_TAG = 'mimi-client-notification';

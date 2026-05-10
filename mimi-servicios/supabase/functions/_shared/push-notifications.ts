@@ -122,6 +122,16 @@ async function sendPushMessage(
   const title = String(notification.title || payload.title || "MIMI Servicios");
   const body = String(notification.body || payload.body || "Tenes una novedad en MIMI.");
   const tag = String(payload.tag || `mimi-svc-${notification.id || Date.now()}`);
+  const targetUrl = String(payload.url || "");
+  const isProviderTarget = targetUrl.includes("prestador");
+  const defaultIcon = isProviderTarget
+    ? "/mimi-servicios/assets/icons/mimigo-partners-icon-192.png"
+    : "/mimi-servicios/assets/icons/mimigo-client-icon-192.png";
+  const defaultBadge = isProviderTarget
+    ? "/mimi-servicios/assets/icons/mimigo-partners-icon-32.png"
+    : "/mimi-servicios/assets/icons/mimigo-client-icon-32.png";
+  const icon = String(payload.icon || defaultIcon);
+  const badge = String(payload.badge || defaultBadge);
 
   if (serviceAccount) {
     const accessToken = await firebaseAccessToken(serviceAccount);
@@ -150,8 +160,8 @@ async function sendPushMessage(
               notification: {
                 title,
                 body,
-                icon: "/mimi-servicios/assets/icons/icon-192.png",
-                badge: "/mimi-servicios/assets/icons/favicon-32.png",
+                icon,
+                badge,
                 tag,
                 renotify: true,
               },
@@ -185,7 +195,8 @@ async function sendPushMessage(
       notification: {
         title,
         body,
-        icon: "/mimi-servicios/assets/icons/icon-192.png",
+        icon,
+        badge,
         tag,
       },
       data: toPushData(payload),

@@ -4,7 +4,7 @@
    Scope esperado: /
    ========================================================================== */
 
-const SW_VERSION = "mimi-clientes-v2026.05.03-encoding-intent-final";
+const SW_VERSION = "mimi-clientes-v2026.05.10-brand-assets";
 const STATIC_CACHE = `${SW_VERSION}-static`;
 const RUNTIME_CACHE = `${SW_VERSION}-runtime`;
 const IMAGE_CACHE = `${SW_VERSION}-images`;
@@ -24,15 +24,17 @@ const APP_SHELL = [
 
   // branding / assets
   "/favicon.ico",
-  "/assets/auto-mimicar-safe.png",
+  "/assets/brand/mimigo-client-splash-1536x1024.png",
+  "/assets/brand/mimigo-client-wordmark.png",
 
   // personas reales (card inferior)
 "/assets/ui/clarity-card-compact.png",
 "/mimi-servicios/assets/people/driver-real.webp",
 "/mimi-servicios/assets/people/client-real.webp",
   // icons PWA
-  "/assets/icons/icon-192x192.png",
-  "/assets/icons/icon-512x512.png"
+  "/assets/icons/mimigo-client-icon-192.png",
+  "/assets/icons/mimigo-client-icon-512.png",
+  "/assets/icons/mimigo-client-icon-512-maskable.png"
 ];
 
 /* --------------------------------------------------------------------------
