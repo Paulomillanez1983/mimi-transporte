@@ -125,6 +125,46 @@ supabase functions list --output json
 - `git diff --check`: OK, solo warnings normales LF/CRLF de Windows.
 - Migrations locales/remotas: alineadas.
 - Edge Functions: inspeccionadas, no se requirio redeploy backend.
+- GitHub: commit `25a685e feat: introduce enterprise mimi maps layer` subido a `main`.
+- Vercel: deploy productivo ejecutado y aliasado a `https://mimi-transporte.vercel.app`.
+
+## Validacion produccion
+
+Assets verificados por `curl` en produccion:
+
+```text
+https://mimi-transporte.vercel.app/mimi-servicios/cliente.html
+  map-ui.css?v=2026.05.10.3
+  main-client.js?v=2026.05.10.3
+
+https://mimi-transporte.vercel.app/mimi-servicios/prestador.html
+  map-ui.css?v=2026.05.10.3
+  main-provider.js?v=2026.05.10.3
+
+https://mimi-transporte.vercel.app/chofer-panel.html
+  css/mimi-maps.css?v=2026.05.10.3
+
+https://mimi-transporte.vercel.app/mimi-servicios/sw-2026.js
+  2026-05-10-enterprise-maps-1
+  ../js/mimi-maps/map-core.js
+
+https://mimi-transporte.vercel.app/service-worker.js
+  mimi-driver-v8-mimi-maps
+  js/mimi-maps/map-core.js
+```
+
+Rutas criticas verificadas:
+
+```text
+/ 200
+/servicios 200
+/prestador 200
+/chofer 200
+/viaje 200
+/operadores 200
+/privacidad 200
+/delete-account 200
+```
 
 ## No ejecutado
 
