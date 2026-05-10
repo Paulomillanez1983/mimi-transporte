@@ -42,6 +42,21 @@ Se aplico una fase acotada de hardening de producto para que la superficie publi
 - `git diff --check`: PASSED con warnings CRLF no bloqueantes.
 - JSON parse de `vercel.json`, `manifest.json`, `manifest-clientes.json`: PASSED.
 
+## Deploy y validacion produccion
+
+- Commit: `d6272b1 chore: focus public app on services`.
+- Deploy Vercel produccion: PASSED.
+- Alias activo: `https://mimi-transporte.vercel.app`.
+- `npx vercel inspect https://mimi-transporte.vercel.app`: Ready.
+- `/`: 200, destino final `/servicios`.
+- `/cliente`: 200, destino final `/servicios`.
+- `/viaje`: 200, destino final `/servicios`.
+- `/chofer`: 200, destino final `/servicios`.
+- `/prestador`: 200, destino final `/prestador`.
+- `/robots.txt`: publicado con desindexacion de transporte/chofer.
+- `/sitemap.xml`: publicado solo con Servicios, prestador y legales.
+- `/manifest.json` y `/manifest-clientes.json`: publicados con `MIMI Servicios` y `start_url` `/servicios`.
+
 ## Recomendacion CTO
 
 Deploy aprobado para ocultamiento publico de Transporte y foco principal en MIMI Servicios. No se tocaron tablas, RLS, Edge Functions ni flujos internos de Transporte.
